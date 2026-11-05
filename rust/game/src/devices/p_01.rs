@@ -7,8 +7,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- what the skeleton cannot give yet (each one line in notes.md)
-/// devices.ts:370 `out[k].mkey = …`: a made box has no row to write (ids.rs "Box: no table here", StaticCollision.boxes is Vec<BoxId>); the one blocked step of deviceBoxes
+// ---------------------------------------------------------------- seams
+/// devices.ts:370 `out[k].mkey = …`: the made box's row in `g.tab.boxes`
 fn seam_set_mkey(g: &mut Game, b: BoxId, mkey: f64) { g.tab.boxes[b].mkey = Some(mkey); }
 
 // ---------------------------------------------------------------- small readers of this file
@@ -30,7 +30,7 @@ fn bits_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 // ---------------------------------------------------------------- runtime records
 /// A camera of the level: its machine is rust/sim's row `slot`.   (devices.ts CameraRt)
-pub fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: Option<LightId>, smoke_key: &str) -> CameraRtId {
+pub fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: LightId, smoke_key: &str) -> CameraRtId {
     g.tab.devices_camera_rt.push(CameraRt { smoke_trans: 1.0, def: def.clone(), index, target, cone, smoke_key: String::from(smoke_key), slot, st })
 }
 /// A tripwire of the level: its machine is rust/sim's row `slot`.   (devices.ts LaserRt)
@@ -72,11 +72,11 @@ pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
                 let k = cone();
                 let lamp = g.tab.light.push(crate::render_lights::RtLight { name: format!("{}_cone", d.name), group: String::from("devices"), kind: 1.0, pos: v3::copy(d.pos), dir: [0.0, -1.0, 0.0], color: v3::copy(k.color), intensity: k.intensity, range: d.range.unwrap_or(dd.range) * k.range_k,
                     inner_deg: m::max(1.0, m::min(half, k.outer_max_deg) - 6.0), outer_deg: m::min(half, k.outer_max_deg), radius: k.radius, volumetric: k.volumetric, owner: 0.0, enabled: false, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: k.intensity, ..crate::render_lights::RtLight::zeroed() });
-                g.engine.lights.lights.push(lamp);   // LightSet.add's one line: its stub has no part (see notes, Skeleton)
+                crate::render_lights::light_set_add(g, lamp);
                 let cone = lamp;
                 let slot = crate::sim_lightshome::light_home_camera(g, target, d.yaw, d.sweep, d.sweep_period.unwrap_or(dd.sweep_period), d.pitch.unwrap_or(dd.pitch), d.pos);
                 ci += 1.0;
-                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, Some(cone), &format!("smokeCam{}", ci));
+                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, cone, &format!("smokeCam{}", ci));
                 this.cameras.push(rt);
             }
             crate::scene_level::DeviceDef::Laser(d) => {

@@ -18,7 +18,7 @@ impl SimExports {
 }
 impl Default for SimExports { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/sim.ts:280 RUST, src/sim/sim.ts:280)
+/// (TypeScript: inline at src/sim/sim.ts:311 RUST, src/sim/sim.ts:311)
 #[derive(Clone, Copy, Debug)]
 pub struct SimSimModRUST {
 }
@@ -31,7 +31,7 @@ impl SimSimModRUST {
 }
 impl Default for SimSimModRUST { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/sim.ts:314 FELL, src/sim/sim.ts:314)
+/// (TypeScript: inline at src/sim/sim.ts:345 FELL, src/sim/sim.ts:345)
 #[derive(Clone, Debug)]
 pub struct SimSimModFELL {
     pub on: bool,
@@ -66,49 +66,49 @@ pub enum ArrayBufferLike {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SimSimMod {
-    /// (src/sim/sim.ts:162 X)
+    /// (src/sim/sim.ts:193 X)
     pub x: Option<crate::sim_sim::SimExports>,
-    /// (src/sim/sim.ts:162 why)
+    /// (src/sim/sim.ts:193 why)
     pub why: Option<String>,
-    /// (src/sim/sim.ts:164 simBootMs)
+    /// (src/sim/sim.ts:195 simBootMs)
     pub sim_boot_ms: f64,
-    /// (src/sim/sim.ts:192 F64)
+    /// (src/sim/sim.ts:223 F64)
     pub f64: Option<Vec<f64>>,
-    /// (src/sim/sim.ts:192 U8)
+    /// (src/sim/sim.ts:223 U8)
     pub u8: Option<Vec<u8>>,
-    /// (src/sim/sim.ts:192 U32)
+    /// (src/sim/sim.ts:223 U32)
     pub u32: Option<Vec<u32>>,
-    /// (src/sim/sim.ts:192 I32)
+    /// (src/sim/sim.ts:223 I32)
     pub i32: Option<Vec<i32>>,
-    /// (src/sim/sim.ts:192 F32)
+    /// (src/sim/sim.ts:223 F32)
     pub f32: Option<Vec<f32>>,
-    /// (src/sim/sim.ts:206 rustMaths)
+    /// (src/sim/sim.ts:237 rustMaths)
     pub rust_maths: Option<crate::math_exact::Maths>,
-    /// (src/sim/sim.ts:227 mathsOn)
+    /// (src/sim/sim.ts:258 mathsOn)
     pub maths_on: bool,
-    /// (src/sim/sim.ts:227 linesOn)
+    /// (src/sim/sim.ts:258 linesOn)
     pub lines_on: bool,
-    /// (src/sim/sim.ts:227 circlesOn)
+    /// (src/sim/sim.ts:258 circlesOn)
     pub circles_on: bool,
-    /// (src/sim/sim.ts:227 posesOn)
+    /// (src/sim/sim.ts:258 posesOn)
     pub poses_on: bool,
-    /// (src/sim/sim.ts:227 diceOn)
+    /// (src/sim/sim.ts:258 diceOn)
     pub dice_on: bool,
-    /// (src/sim/sim.ts:228 doorsOn)
+    /// (src/sim/sim.ts:259 doorsOn)
     pub doors_on: bool,
-    /// (src/sim/sim.ts:228 fallsOn)
+    /// (src/sim/sim.ts:259 fallsOn)
     pub falls_on: bool,
-    /// (src/sim/sim.ts:228 propsOn)
+    /// (src/sim/sim.ts:259 propsOn)
     pub props_on: bool,
-    /// (src/sim/sim.ts:228 slabsOn)
+    /// (src/sim/sim.ts:259 slabsOn)
     pub slabs_on: bool,
-    /// (src/sim/sim.ts:228 itemsOn)
+    /// (src/sim/sim.ts:259 itemsOn)
     pub items_on: bool,
-    /// (src/sim/sim.ts:228 raysOn)
+    /// (src/sim/sim.ts:259 raysOn)
     pub rays_on: bool,
-    /// (src/sim/sim.ts:280 RUST)
+    /// (src/sim/sim.ts:311 RUST)
     pub rust: crate::sim_sim::SimSimModRUST,
-    /// (src/sim/sim.ts:314 FELL)
+    /// (src/sim/sim.ts:345 FELL)
     pub fell: crate::sim_sim::SimSimModFELL,
 }
 impl SimSimMod {
@@ -141,10 +141,10 @@ impl SimSimMod {
 }
 
 /// (src/sim/sim.ts:21 SIM_ABI)
-pub const SIM_ABI: f64 = 30.0;
+pub const SIM_ABI: f64 = 34.0;
 
-/// (src/sim/sim.ts:332 RULES_ROW)
+/// (src/sim/sim.ts:363 RULES_ROW)
 pub const RULES_ROW: &str = "a rule's step (doors, furniture, leaves, thrown things)";
 
-/// (src/sim/sim.ts:358 OWN_MATHS: a table nothing writes)
+/// (src/sim/sim.ts:389 OWN_MATHS: a table nothing writes)
 pub fn own_maths() -> Vec<String> { alloc::vec![String::from("maths"), String::from("poses"), String::from("doors"), String::from("props"), String::from("slabs"), String::from("items")] }

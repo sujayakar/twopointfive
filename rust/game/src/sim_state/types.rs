@@ -107,7 +107,7 @@ impl SimStateMod {
 }
 
 /// (src/sim/state.ts:39 SIM_PARTS: a table nothing writes)
-pub fn sim_parts() -> [String; 11] { [String::from("head"), String::from("dice"), String::from("doors"), String::from("falls"), String::from("props"), String::from("slabs"), String::from("items"), String::from("men"), String::from("lights"), String::from("smoke"), String::from("poses")] }
+pub fn sim_parts() -> [String; 13] { [String::from("head"), String::from("dice"), String::from("doors"), String::from("falls"), String::from("props"), String::from("slabs"), String::from("items"), String::from("men"), String::from("lights"), String::from("weather"), String::from("smoke"), String::from("poses"), String::from("panes")] }
 
 /// (src/sim/state.ts:40 P_DOORS)
 pub const P_DOORS: f64 = 2.0;
@@ -127,11 +127,17 @@ pub const P_ITEMS: f64 = 6.0;
 /// (src/sim/state.ts:40 P_LIGHTS)
 pub const P_LIGHTS: f64 = 8.0;
 
+/// (src/sim/state.ts:40 P_WEATHER)
+pub const P_WEATHER: f64 = 9.0;
+
 /// (src/sim/state.ts:40 P_SMOKE)
-pub const P_SMOKE: f64 = 9.0;
+pub const P_SMOKE: f64 = 10.0;
 
 /// (src/sim/state.ts:40 P_POSES)
-pub const P_POSES: f64 = 10.0;
+pub const P_POSES: f64 = 11.0;
+
+/// (src/sim/state.ts:40 P_PANES)
+pub const P_PANES: f64 = 12.0;
 
 /// (src/sim/state.ts:42 H_LAYOUT)
 pub const H_LAYOUT: f64 = 0.0;

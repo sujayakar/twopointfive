@@ -1,4 +1,4 @@
-//! src/sim/sim.ts lines 1 to 396
+//! src/sim/sim.ts lines 1 to 427
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -42,32 +42,32 @@ pub fn sim_owns(b: crate::sim_sim::ArrayBufferLike) -> bool {
 
 /// The views over the module's memory. (sim.ts views)
 pub fn views() -> Vec<f64> {
-    todo!("needs: a view that writes through; Vec<f64> by value would be a copy of the memory, and a write through it would be lost (sim.ts:193)")
+    todo!("needs: a view that writes through; Vec<f64> by value would be a copy of the memory, and a write through it would be lost (sim.ts:224)")
 }
 
 /// The module's memory as doubles. (sim.ts f64)
 pub fn f64() -> Vec<f64> {
-    todo!("needs: a view that writes through, not Vec<f64> by value (sim.ts:196)")
+    todo!("needs: a view that writes through, not Vec<f64> by value (sim.ts:227)")
 }
 
 /// The module's memory as bytes. (sim.ts u8)
 pub fn u8() -> Vec<u8> {
-    todo!("needs: a view that writes through, not Vec<u8> by value (sim.ts:198)")
+    todo!("needs: a view that writes through, not Vec<u8> by value (sim.ts:229)")
 }
 
 /// The module's memory as unsigned words. (sim.ts u32)
 pub fn u32() -> Vec<u32> {
-    todo!("needs: a view that writes through, not Vec<u32> by value (sim.ts:200)")
+    todo!("needs: a view that writes through, not Vec<u32> by value (sim.ts:231)")
 }
 
 /// The module's memory as signed words. (sim.ts i32)
 pub fn i32() -> Vec<i32> {
-    todo!("needs: a view that writes through, not Vec<i32> by value (sim.ts:201)")
+    todo!("needs: a view that writes through, not Vec<i32> by value (sim.ts:232)")
 }
 
 /// The module's memory as singles. (sim.ts f32)
 pub fn f32() -> Vec<f32> {
-    todo!("needs: a view that writes through, not Vec<f32> by value (sim.ts:203)")
+    todo!("needs: a view that writes through, not Vec<f32> by value (sim.ts:234)")
 }
 
 /// The length of any number of terms as the module works it out: the closure `hypot` of mathsOfRust, through the plain function behind the
@@ -98,9 +98,9 @@ pub fn rule_red(row: &str) -> bool {
     false
 }
 
-/// sim.ts:220: Maths holds FnField, which can name no function.
+/// sim.ts:251: Maths holds FnField, which can name no function.
 fn seam_maths_of_the_module() -> crate::math_exact::Maths {
-    todo!("needs: Maths' fields as something that can hold rust/sim's functions, and hypot_of_rust for its hypot (sim.ts:220)")
+    todo!("needs: Maths' fields as something that can hold rust/sim's functions, and hypot_of_rust for its hypot (sim.ts:251)")
 }
 
 #[cfg(test)]

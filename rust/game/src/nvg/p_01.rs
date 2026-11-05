@@ -114,7 +114,7 @@ pub fn loud_t(g: &mut crate::game::Game) -> f64 {
 /// The light of the place at a point: the fixtures, nothing carried, plus the moon.   (nvg.ts nvgPlaceLight)
 pub fn nvg_place_light(g: &mut crate::game::Game, p: V3) -> f64 {
     let mut every_owner = |_: &mut Game, _: f64| true;
-    let mut e = crate::guards::light_estimate_at(g, p, Some(&mut every_owner), None, None, None);
+    let mut e = crate::guards::light_estimate_at(g, p, Some(&mut every_owner), None, None, None, None);
     let mut i = 0;
     while i < g.engine.lights.lights.len() {
         let l = g.engine.lights.lights[i];

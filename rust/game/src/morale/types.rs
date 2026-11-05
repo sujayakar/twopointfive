@@ -8,8 +8,8 @@ use alloc::{string::String, vec::Vec};
 pub enum Training {
     None,
     Trained,
-    Difficulty,
     Green,
+    Difficulty,
     Mixed,
 }
 impl Training {
@@ -17,8 +17,8 @@ impl Training {
         match self {
             Training::None => "none",
             Training::Trained => "trained",
-            Training::Difficulty => "difficulty",
             Training::Green => "green",
+            Training::Difficulty => "difficulty",
             Training::Mixed => "mixed",
         }
     }
@@ -40,6 +40,25 @@ impl Nerve {
         }
     }
 }
+
+/// (TypeScript: MoraleSnap, src/game/morale.ts:586)
+#[derive(Clone, Debug)]
+pub struct MoraleSnap {
+    pub men: Vec<Option<Vec<f64>>>,
+    pub holes: Vec<Option<Vec<f64>>>,
+    pub blasts: Vec<Vec<f64>>,
+}
+impl MoraleSnap {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        MoraleSnap {
+            men: Vec::new(),
+            holes: Vec::new(),
+            blasts: Vec::new(),
+        }
+    }
+}
+impl Default for MoraleSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -170,9 +189,9 @@ pub enum LineKind {
     Lost,
     Spent,
     Order,
-    Call,
     Again,
     Duck,
+    Call,
     Okay,
 }
 impl LineKind {
@@ -183,9 +202,9 @@ impl LineKind {
             LineKind::Lost => "lost",
             LineKind::Spent => "spent",
             LineKind::Order => "order",
-            LineKind::Call => "call",
             LineKind::Again => "again",
             LineKind::Duck => "duck",
+            LineKind::Call => "call",
             LineKind::Okay => "okay",
         }
     }
@@ -209,25 +228,6 @@ impl Kept {
     }
 }
 impl Default for Kept { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: MoraleSnap, src/game/morale.ts:586)
-#[derive(Clone, Debug)]
-pub struct MoraleSnap {
-    pub men: Vec<Option<Vec<f64>>>,
-    pub holes: Vec<Option<Vec<f64>>>,
-    pub blasts: Vec<Vec<f64>>,
-}
-impl MoraleSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MoraleSnap {
-            men: Vec::new(),
-            holes: Vec::new(),
-            blasts: Vec::new(),
-        }
-    }
-}
-impl Default for MoraleSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/morale.ts:111 MORALE_LOG, src/game/morale.ts:111)
 #[derive(Clone, Copy, Debug)]
@@ -378,19 +378,20 @@ pub struct MoraleOf {
     pub lost: bool,
     pub next: f64,
     pub hole: Option<V3>,
-    pub goal: Option<V3>,
     pub act: crate::morale::MoraleAct,
+    pub goal: Option<V3>,
     pub lit: f64,
-    pub said: bool,
     pub alone: bool,
+    pub said: bool,
     pub ask: f64,
     pub by: Option<GuardId>,
     pub green: bool,
     pub dark: bool,
-    pub rounds: f64,
     pub fall: f64,
     pub drive_t: f64,
     pub calls: f64,
+    pub rounds: f64,
+    pub shout: bool,
     pub shock: f64,
     pub rung: f64,
     pub leader_down: bool,
@@ -399,7 +400,6 @@ pub struct MoraleOf {
     pub baits: f64,
     pub at_hole: bool,
     pub bark: f64,
-    pub shout: bool,
 }
 impl MoraleOf {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -411,19 +411,20 @@ impl MoraleOf {
             lost: false,
             next: 0.0,
             hole: None,
-            goal: None,
             act: crate::morale::MoraleAct::Down,
+            goal: None,
             lit: 0.0,
-            said: false,
             alone: false,
+            said: false,
             ask: 0.0,
             by: None,
             green: false,
             dark: false,
-            rounds: 0.0,
             fall: 0.0,
             drive_t: 0.0,
             calls: 0.0,
+            rounds: 0.0,
+            shout: false,
             shock: 0.0,
             rung: 0.0,
             leader_down: false,
@@ -432,7 +433,6 @@ impl MoraleOf {
             baits: 0.0,
             at_hole: false,
             bark: 0.0,
-            shout: false,
         }
     }
 }

@@ -18,6 +18,7 @@
 //   journal     a recording carries the switch, one from before the table replays with it off; the page opens with it on and ?winbars=0 puts it off
 //   showcase    inert while a showcase runs
 // WINBARS_BREAK=1: the switch reads on and the rule does nothing — red.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync, readdirSync } from 'fs';
 import { resolve } from 'path';
 type Vec3 = [number, number, number];

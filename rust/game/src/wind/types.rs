@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: WindTune, src/game/wind.ts:50)
+/// (TypeScript: WindTune, src/game/wind.ts:55)
 #[derive(Clone, Copy, Debug)]
 pub struct WindTune {
     pub wind: Option<f64>,
@@ -39,7 +39,7 @@ impl WindWhy {
     }
 }
 
-/// (TypeScript: WindSource, src/game/wind.ts:132)
+/// (TypeScript: WindSource, src/game/wind.ts:108)
 #[derive(Clone, Debug)]
 pub struct WindSource {
     pub why: crate::wind::WindWhy,
@@ -115,7 +115,7 @@ impl WindSourceKind {
     }
 }
 
-/// (TypeScript: PoolList, src/game/wind.ts:137)
+/// (TypeScript: PoolList, src/game/wind.ts:113)
 #[derive(Clone, Debug)]
 pub struct PoolList {
     pub list: Vec<WindWindSourceId>,
@@ -130,7 +130,7 @@ impl PoolList {
 }
 impl Default for PoolList { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Wind, src/game/wind.ts:142)
+/// (TypeScript: Wind, src/game/wind.ts:118)
 #[derive(Clone, Debug)]
 pub struct Wind {
     pub all: Vec<WindWindSourceId>,
@@ -157,38 +157,32 @@ impl Wind {
 }
 impl Default for Wind { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/wind.ts:35 WIND_FIELD, src/game/wind.ts:35)
+/// (TypeScript: inline at src/game/wind.ts:37 WIND_FIELD, src/game/wind.ts:37)
 #[derive(Clone, Copy, Debug)]
 pub struct WINDFIELD {
-    pub deflect_h: f64,
-    pub deflect_loss: f64,
-    pub support_sigma: f64,
-    pub storm_top: f64,
-    pub storm_lee: f64,
-    pub storm_low: f64,
-    pub storm_gain: f64,
-    pub storm_full_at: f64,
-    pub cut_k: f64,
-    pub core_k: f64,
 }
 impl WINDFIELD {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         WINDFIELD {
-            deflect_h: 0.0,
-            deflect_loss: 0.0,
-            support_sigma: 0.0,
-            storm_top: 0.0,
-            storm_lee: 0.0,
-            storm_low: 0.0,
-            storm_gain: 0.0,
-            storm_full_at: 0.0,
-            cut_k: 0.0,
-            core_k: 0.0,
         }
     }
 }
 impl Default for WINDFIELD { fn default() -> Self { Self::zeroed() } }
+
+/// the state this module keeps at its top level
+#[derive(Clone, Debug)]
+pub struct WindMod {
+    /// (src/game/wind.ts:38 SHAPE)
+    pub shape: Option<Vec<f64>>,
+}
+impl WindMod {
+    pub fn blank() -> Self {
+        WindMod {
+            shape: None,
+        }
+    }
+}
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
@@ -202,32 +196,32 @@ pub struct WindStats {
     pub at_calls: i32,
 }
 
-/// (src/game/wind.ts:35 WIND_FIELD: a table nothing writes)
-pub fn wind_field() -> crate::wind::WINDFIELD { crate::wind::WINDFIELD { deflect_h: 0.55, deflect_loss: 0.35, support_sigma: 2.6, storm_top: 8.0, storm_lee: 1.5, storm_low: 0.55, storm_gain: 0.45, storm_full_at: 2.5, cut_k: 2.5, core_k: 0.4 } }
+/// (src/game/wind.ts:37 WIND_FIELD: a table nothing writes)
+pub fn wind_field() -> crate::wind::WINDFIELD { todo!() }
 
-/// (src/game/wind.ts:48 WIND_DEFAULTS: a table nothing writes)
+/// (src/game/wind.ts:53 WIND_DEFAULTS: a table nothing writes)
 pub fn wind_defaults() -> crate::knobs::WindK { crate::knobs::page_wind() }
 
-/// (src/game/wind.ts:49 LS_KEY)
+/// (src/game/wind.ts:54 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.wind";
 
-/// (src/game/wind.ts:51 PERSISTED: a table nothing writes)
+/// (src/game/wind.ts:56 PERSISTED: a table nothing writes)
 pub fn persisted() -> [String; 12] { [String::from("vents"), String::from("ventK"), String::from("storm"), String::from("stormK"), String::from("doors"), String::from("doorK"), String::from("gusts"), String::from("gustAmp"), String::from("smokeRelax"), String::from("sheetWake"), String::from("sheetKick"), String::from("debrisK")] }
 
-/// (src/game/wind.ts:135 DEG)
+/// (src/game/wind.ts:111 DEG)
 pub const DEG: f64 = 0.017453292519943295;
 
-/// (src/game/wind.ts:140 SCRATCH_P: a table nothing writes)
+/// (src/game/wind.ts:116 SCRATCH_P: a table nothing writes)
 pub fn scratch_p() -> V3 { [0.0, 0.0, 0.0] }
 
-/// (src/game/wind.ts:140 SCRATCH_Q: a table nothing writes)
+/// (src/game/wind.ts:116 SCRATCH_Q: a table nothing writes)
 pub fn scratch_q() -> V3 { [0.0, 0.0, 0.0] }
 
-/// (src/game/wind.ts:140 SCRATCH_W: a table nothing writes)
+/// (src/game/wind.ts:116 SCRATCH_W: a table nothing writes)
 pub fn scratch_w() -> V3 { [0.0, 0.0, 0.0] }
 
-/// (src/game/wind.ts:332 KNOBS0: a table nothing writes)
+/// (src/game/wind.ts:308 KNOBS0: a table nothing writes)
 pub fn knobs0() -> [f64; 3] { [0.35, 2.0, 0.15] }
 
-/// (src/game/wind.ts:333 UNIT_X: a table nothing writes)
+/// (src/game/wind.ts:309 UNIT_X: a table nothing writes)
 pub fn unit_x() -> V3 { [1.0, 0.0, 0.0] }

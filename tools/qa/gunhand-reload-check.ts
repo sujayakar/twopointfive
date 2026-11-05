@@ -24,6 +24,7 @@
 //
 //   bun run tools/qa/gunhand-reload-check.ts [--verbose]     (both stands: it raises the switch itself)
 //   GUNHAND_BREAK=1 …                                        (the rule left off for the 'on' lines: (3), (4), (5), (6), (9), (10), (10b) and (10c) must fail)
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 

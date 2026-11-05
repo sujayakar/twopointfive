@@ -161,16 +161,16 @@ impl Default for AnimNodes { fn default() -> Self { Self::zeroed() } }
 pub enum UpperMode {
     None,
     Torch,
-    Relaxed,
     Aim,
+    Relaxed,
 }
 impl UpperMode {
     pub const fn as_str(self) -> &'static str {
         match self {
             UpperMode::None => "none",
             UpperMode::Torch => "torch",
-            UpperMode::Relaxed => "relaxed",
             UpperMode::Aim => "aim",
+            UpperMode::Relaxed => "relaxed",
         }
     }
 }
@@ -6162,11 +6162,11 @@ pub enum MvOnK {
     Reload,
     Fold,
     Steady,
-    Toss,
     On,
     Entry,
     Flinch,
     Fall,
+    Toss,
     Squeeze,
     Snap,
     Recoil,
@@ -6183,11 +6183,11 @@ impl MvOnK {
             MvOnK::Reload => "reload",
             MvOnK::Fold => "fold",
             MvOnK::Steady => "steady",
-            MvOnK::Toss => "toss",
             MvOnK::On => "on",
             MvOnK::Entry => "entry",
             MvOnK::Flinch => "flinch",
             MvOnK::Fall => "fall",
+            MvOnK::Toss => "toss",
             MvOnK::Squeeze => "squeeze",
             MvOnK::Snap => "snap",
             MvOnK::Recoil => "recoil",
@@ -6345,15 +6345,15 @@ impl Default for AnimFeedClock { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum AnimThrowRead {
-    Toss,
     Short,
+    Toss,
     Full,
 }
 impl AnimThrowRead {
     pub const fn as_str(self) -> &'static str {
         match self {
-            AnimThrowRead::Toss => "toss",
             AnimThrowRead::Short => "short",
+            AnimThrowRead::Toss => "toss",
             AnimThrowRead::Full => "full",
         }
     }

@@ -6,7 +6,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (src/game/throwables.ts:78 spongeBoxes)
-pub fn sponge_boxes(out: &mut Vec<BoxId>, c_2: V3, rot: Quat, yaw: f64) { todo!() }
+pub fn sponge_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>, c_2: V3, rot: Quat, yaw: f64) { todo!() }
 
 /// (src/game/throwables.ts:140 Item.constructor)
 pub fn item_new(g: &mut crate::game::Game, r: f64) -> ItemId { todo!() }
@@ -186,7 +186,7 @@ pub fn item_on(g: &mut crate::game::Game, id: ItemId) -> Option<PropId> { todo!(
 pub fn item_set_on(g: &mut crate::game::Game, id: ItemId, p: Option<PropId>) { todo!() }
 
 /// (src/game/throwables.ts:186 itemBox)
-pub fn item_box(c_2: V3, h: V3, yaw: f64, rot: Quat, albedo: V3, flags: f64) -> BoxId { todo!() }
+pub fn item_box(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, rot: Quat, albedo: V3, flags: f64) -> BoxId { todo!() }
 
 /// (src/game/throwables.ts:190 bogSlide)
 pub fn bog_slide(g: &mut crate::game::Game, bog: f64) -> f64 { todo!() }
@@ -227,8 +227,8 @@ pub fn throwables_walk_there(g: &mut crate::game::Game, dt: f64, from: f64, ev: 
 /// (src/game/throwables.ts:358 Throwables.say)
 pub fn throwables_say(g: &mut crate::game::Game, e: &[f64]) { todo!() }
 
-/// (src/game/throwables.ts:436 Throwables.boxes)
+/// (src/game/throwables.ts:437 Throwables.boxes)
 pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) { todo!() }
 
-/// (src/game/throwables.ts:514 liveCan)
+/// (src/game/throwables.ts:515 liveCan)
 pub fn live_can(g: &mut crate::game::Game, x: ItemId) -> bool { todo!() }

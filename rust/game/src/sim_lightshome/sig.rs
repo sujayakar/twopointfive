@@ -122,32 +122,35 @@ pub fn light_home_laser(g: &mut crate::game::Game, target: FixtureId, len: f64) 
 /// (src/sim/lightshome.ts:180 LightHome.stand)
 pub fn light_home_stand(g: &mut crate::game::Game, list: &[LightId], targets: &[FixtureId], beacons: &[crate::sim_lightshome::BeaconFact], cones: &[crate::sim_lightshome::LightHomeStandConesItem]) { todo!() }
 
-/// (src/sim/lightshome.ts:203 LightHome.feed)
+/// (src/sim/lightshome.ts:204 LightHome.feed)
 pub fn light_home_feed(g: &mut crate::game::Game, l: LightId) { todo!() }
 
-/// (src/sim/lightshome.ts:214 LightHome.feedBurning)
+/// (src/sim/lightshome.ts:215 LightHome.feedBurning)
 pub fn light_home_feed_burning(g: &mut crate::game::Game, l: LightId) { todo!() }
 
-/// (src/sim/lightshome.ts:220 LightHome.in)
+/// (src/sim/lightshome.ts:221 LightHome.in)
 pub fn light_home_in(g: &mut crate::game::Game, kind: f64, t: Option<FixtureId>, a: Option<f64>, b: Option<f64>, c_2: Option<f64>, d: Option<f64>) -> f64 { todo!() }
 
-/// (src/sim/lightshome.ts:230 LightHome.flip)
+/// (src/sim/lightshome.ts:231 LightHome.flip)
 pub fn light_home_flip(g: &mut crate::game::Game, targets: &[FixtureId], on: bool, time: f64, strike: bool) { todo!() }
 
-/// (src/sim/lightshome.ts:236 LightHome.step)
+/// (src/sim/lightshome.ts:237 LightHome.step)
 pub fn light_home_step(g: &mut crate::game::Game, time: f64, dt: f64, near: bool, fumble: f64, emissive_scale: f64) -> f64 { todo!() }
 
-/// (src/sim/lightshome.ts:240 LightHome.paint)
+/// (src/sim/lightshome.ts:241 LightHome.paint)
 pub fn light_home_paint(g: &mut crate::game::Game) { todo!() }
 
-/// (src/sim/lightshome.ts:250 LightHome.cameraPan)
-pub fn light_home_camera_pan(g: &mut crate::game::Game, slot: f64, cone: Option<LightId>, dt: f64, live: bool, cones: bool) -> f64 { todo!() }
+/// (src/sim/lightshome.ts:251 LightHome.cameraPan)
+pub fn light_home_camera_pan(g: &mut crate::game::Game, slot: f64, cone: LightId, dt: f64, live: bool, cones: bool) -> f64 { todo!() }
 
-/// (src/sim/lightshome.ts:256 LightHome.cameraSee)
+/// (src/sim/lightshome.ts:257 LightHome.cameraSee)
 pub fn light_home_camera_see(g: &mut crate::game::Game, slot: f64, time: f64, dt: f64, visible: bool, gain: f64, p: V3, suspicion: f64, alarm: f64) -> f64 { todo!() }
 
-/// (src/sim/lightshome.ts:260 LightHome.laserOpen)
+/// (src/sim/lightshome.ts:261 LightHome.laserOpen)
 pub fn light_home_laser_open(g: &mut crate::game::Game, slot: f64) -> f64 { todo!() }
 
-/// (src/sim/lightshome.ts:264 LightHome.laserClose)
+/// (src/sim/lightshome.ts:265 LightHome.laserClose)
 pub fn light_home_laser_close(g: &mut crate::game::Game, slot: f64, time: f64, live: bool, cut: f64, sense: f64, held: bool) -> f64 { todo!() }
+
+/// (src/sim/lightshome.ts:271 LightHome.block)
+pub fn light_home_block(g: &mut crate::game::Game) -> crate::Opaque { todo!() }

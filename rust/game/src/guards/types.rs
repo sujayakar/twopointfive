@@ -10,7 +10,7 @@ pub enum LitSeenTgt {
     Pt,
 }
 
-/// (TypeScript: Engagement, src/game/guards.ts:3526)
+/// (TypeScript: Engagement, src/game/guards.ts:3532)
 #[derive(Clone, Debug)]
 pub struct Engagement {
     pub operatives: Vec<GuardId>,
@@ -41,7 +41,7 @@ impl Engagement {
 }
 impl Default for Engagement { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: EngageResult, src/game/guards.ts:3525)
+/// (TypeScript: EngageResult, src/game/guards.ts:3531)
 #[derive(Clone, Debug)]
 pub struct EngageResult {
     pub outcome: crate::guards::EngageResultOutcome,
@@ -87,7 +87,7 @@ impl EngageResultOutcome {
     }
 }
 
-/// (TypeScript: inline at src/game/guards.ts:3525 EngageResult.kills, src/game/guards.ts:3525)
+/// (TypeScript: inline at src/game/guards.ts:3531 EngageResult.kills, src/game/guards.ts:3531)
 #[derive(Clone, Debug)]
 pub struct EngageResultKillsItem {
     pub victim: String,
@@ -108,7 +108,7 @@ impl EngageResultKillsItem {
 }
 impl Default for EngageResultKillsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:3525 EngageResult.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/guards.ts:3531 EngageResult.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]
 pub struct EngageResultRounds {
     pub guard: Option<f64>,
@@ -131,7 +131,7 @@ impl EngageResultRounds {
 }
 impl Default for EngageResultRounds { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:3528 Engagement.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/guards.ts:3534 Engagement.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]
 pub struct EngagementRounds {
     pub guard: Option<f64>,
@@ -244,9 +244,9 @@ impl Default for PairKey { fn default() -> Self { Self::zeroed() } }
 pub enum StandoffMoment {
     Lost,
     Enter,
-    Line,
     Cornered,
     NoShot,
+    Line,
     Dropped,
     Freed,
     HitHim,
@@ -256,9 +256,9 @@ impl StandoffMoment {
         match self {
             StandoffMoment::Lost => "lost",
             StandoffMoment::Enter => "enter",
-            StandoffMoment::Line => "line",
             StandoffMoment::Cornered => "cornered",
             StandoffMoment::NoShot => "noShot",
+            StandoffMoment::Line => "line",
             StandoffMoment::Dropped => "dropped",
             StandoffMoment::Freed => "freed",
             StandoffMoment::HitHim => "hitHim",
@@ -497,7 +497,7 @@ impl PieingPhase {
     }
 }
 
-/// (TypeScript: Rollcall, src/game/guards.ts:3028)
+/// (TypeScript: Rollcall, src/game/guards.ts:3034)
 #[derive(Clone, Copy, Debug)]
 pub struct Rollcall {
     pub next_at: f64,
@@ -541,7 +541,7 @@ impl RollcallStage {
     }
 }
 
-/// (TypeScript: UnitOpts, src/game/guards.ts:3453)
+/// (TypeScript: UnitOpts, src/game/guards.ts:3459)
 #[derive(Clone, Debug)]
 pub struct UnitOpts {
     pub team: crate::teams::Team,
@@ -742,9 +742,9 @@ impl Default for STANDOFFLINESValue { fn default() -> Self { Self::zeroed() } }
 pub struct STANDOFFNAMELESS {
     pub lost: Option<String>,
     pub enter: Option<String>,
-    pub line: Option<String>,
     pub cornered: Option<String>,
     pub no_shot: Option<String>,
+    pub line: Option<String>,
     pub dropped: Option<String>,
     pub freed: Option<String>,
     pub hit_him: Option<String>,
@@ -755,9 +755,9 @@ impl STANDOFFNAMELESS {
         STANDOFFNAMELESS {
             lost: None,
             enter: None,
-            line: None,
             cornered: None,
             no_shot: None,
+            line: None,
             dropped: None,
             freed: None,
             hit_him: None,
@@ -901,7 +901,7 @@ impl NOSIGHT {
 }
 impl Default for NOSIGHT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:3585 BREACH_HOOKS, src/game/guards.ts:3585)
+/// (TypeScript: inline at src/game/guards.ts:3591 BREACH_HOOKS, src/game/guards.ts:3591)
 #[derive(Clone, Copy, Debug)]
 pub struct BREACHHOOKS {
 }
@@ -1317,6 +1317,13 @@ impl ChaseFix {
 }
 impl Default for ChaseFix { fn default() -> Self { Self::zeroed() } }
 
+/// (TypeScript: a union)
+#[derive(Clone, Copy, Debug)]
+pub enum SteadyLamps {
+    Bool(bool),
+    LampRows(crate::scene_collision::LampRows),
+}
+
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RigOf {
@@ -1488,11 +1495,11 @@ pub struct GuardsMod {
     pub lit_man_seen: JsMap<GuardId, crate::guards::GuardsModLitManSeenValue>,
     /// (src/game/guards.ts:1801 doorCellsOf)
     pub door_cells_of: Option<JsMap<crate::Num, DoorId>>,
-    /// (src/game/guards.ts:3029 rollcalls)
+    /// (src/game/guards.ts:3035 rollcalls)
     pub rollcalls: Option<crate::guards::Rollcall>,
-    /// (src/game/guards.ts:3466 unitSerial)
+    /// (src/game/guards.ts:3472 unitSerial)
     pub unit_serial: f64,
-    /// (src/game/guards.ts:3529 engagements)
+    /// (src/game/guards.ts:3535 engagements)
     pub engagements: Option<crate::guards::Engagement>,
 }
 impl GuardsMod {
@@ -1692,7 +1699,7 @@ pub fn standoff_lines() -> JsMap<String, crate::guards::STANDOFFLINESValue> { { 
 pub fn standoff_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("{held}, stay loose — I'm coming round"), String::from("{held}, stay loose — I'm coming around")); t.set(String::from("{held}! —I can't— I haven't got a line—"), String::from("{held}! —I can't— I don't have a shot—")); t.set(String::from("I have him."), String::from("I've got him.")); t.set(String::from("I— I think I have him—"), String::from("I— I think I've got him—")); t.set(String::from("can't get round him — hold what you've got"), String::from("can't get around him — hold what you've got")); t.set(String::from("no way round. {held}, hang on"), String::from("no way around. {held}, hang on")); t } }
 
 /// (src/game/guards.ts:1020 STANDOFF_NAMELESS: a table nothing writes)
-pub fn standoff_nameless() -> crate::guards::STANDOFFNAMELESS { crate::guards::STANDOFFNAMELESS { lost: None, enter: None, line: None, cornered: None, no_shot: None, dropped: Some(String::from("he's dropped {him} — TAKE HIM")), freed: Some(String::from("he's loose — get clear!")), hit_him: Some(String::from("…christ— I hit {him}—")) } }
+pub fn standoff_nameless() -> crate::guards::STANDOFFNAMELESS { crate::guards::STANDOFFNAMELESS { lost: None, enter: None, cornered: None, no_shot: None, line: None, dropped: Some(String::from("he's dropped {him} — TAKE HIM")), freed: Some(String::from("he's loose — get clear!")), hit_him: Some(String::from("…christ— I hit {him}—")) } }
 
 /// (src/game/guards.ts:1318 SIGHTS_COS)
 pub const SIGHTS_COS: f64 = 0.866;
@@ -1808,107 +1815,107 @@ pub const SEP_SETTLE_MIN: f64 = 0.02;
 /// (src/game/guards.ts:2601 NO_SIGHT: a table nothing writes)
 pub fn no_sight() -> crate::guards::NOSIGHT { crate::guards::NOSIGHT { visible: false, dist: 99.0, in_cone: false } }
 
-/// (src/game/guards.ts:2793 BURST_BROKEN_CD)
+/// (src/game/guards.ts:2799 BURST_BROKEN_CD)
 pub const BURST_BROKEN_CD: f64 = 0.4;
 
-/// (src/game/guards.ts:2793 SUPPRESS_FIRST_MIN_M)
+/// (src/game/guards.ts:2799 SUPPRESS_FIRST_MIN_M)
 pub const SUPPRESS_FIRST_MIN_M: f64 = 10.0;
 
-/// (src/game/guards.ts:2793 SUPPRESS_FIRST_OFF_M)
+/// (src/game/guards.ts:2799 SUPPRESS_FIRST_OFF_M)
 pub const SUPPRESS_FIRST_OFF_M: f64 = 0.6;
 
-/// (src/game/guards.ts:2793 SUPPRESS_FIRST_JITTER_M)
+/// (src/game/guards.ts:2799 SUPPRESS_FIRST_JITTER_M)
 pub const SUPPRESS_FIRST_JITTER_M: f64 = 0.4;
 
-/// (src/game/guards.ts:2793 SUPPRESS_FIRST_UP_M)
+/// (src/game/guards.ts:2799 SUPPRESS_FIRST_UP_M)
 pub const SUPPRESS_FIRST_UP_M: f64 = 0.3;
 
-/// (src/game/guards.ts:2793 SUPPRESS_FIRST_WALK_M)
+/// (src/game/guards.ts:2799 SUPPRESS_FIRST_WALK_M)
 pub const SUPPRESS_FIRST_WALK_M: f64 = 0.07;
 
-/// (src/game/guards.ts:2793 SUPPRESS_FIRST_COVER_M)
+/// (src/game/guards.ts:2799 SUPPRESS_FIRST_COVER_M)
 pub const SUPPRESS_FIRST_COVER_M: f64 = 2.5;
 
-/// (src/game/guards.ts:2793 SUPPRESS_FIRST_LAPSE)
+/// (src/game/guards.ts:2799 SUPPRESS_FIRST_LAPSE)
 pub const SUPPRESS_FIRST_LAPSE: f64 = 8.0;
 
-/// (src/game/guards.ts:2953 HEIGHTENED_SECS)
+/// (src/game/guards.ts:2959 HEIGHTENED_SECS)
 pub const HEIGHTENED_SECS: f64 = 75.0;
 
-/// (src/game/guards.ts:2953 LOCKDOWN_SECS)
+/// (src/game/guards.ts:2959 LOCKDOWN_SECS)
 pub const LOCKDOWN_SECS: f64 = 120.0;
 
-/// (src/game/guards.ts:2953 STEPDOWN_SECS)
+/// (src/game/guards.ts:2959 STEPDOWN_SECS)
 pub const STEPDOWN_SECS: f64 = 45.0;
 
-/// (src/game/guards.ts:2955 KEEN)
+/// (src/game/guards.ts:2961 KEEN)
 pub const KEEN: f64 = 1.25;
 
-/// (src/game/guards.ts:3017 ROLLCALL_CALM_SECS)
+/// (src/game/guards.ts:3023 ROLLCALL_CALM_SECS)
 pub const ROLLCALL_CALM_SECS: f64 = 90.0;
 
-/// (src/game/guards.ts:3017 ROLLCALL_ALARMED_SECS)
+/// (src/game/guards.ts:3023 ROLLCALL_ALARMED_SECS)
 pub const ROLLCALL_ALARMED_SECS: f64 = 45.0;
 
-/// (src/game/guards.ts:3017 ROLLCALL_JITTER)
+/// (src/game/guards.ts:3023 ROLLCALL_JITTER)
 pub const ROLLCALL_JITTER: f64 = 0.1;
 
-/// (src/game/guards.ts:3019 ROLLCALL_ANSWER_SECS)
+/// (src/game/guards.ts:3025 ROLLCALL_ANSWER_SECS)
 pub const ROLLCALL_ANSWER_SECS: f64 = 2.2;
 
-/// (src/game/guards.ts:3019 ROLLCALL_ASK_SECS)
+/// (src/game/guards.ts:3025 ROLLCALL_ASK_SECS)
 pub const ROLLCALL_ASK_SECS: f64 = 4.0;
 
-/// (src/game/guards.ts:3019 ROLLCALL_SEND_SECS)
+/// (src/game/guards.ts:3025 ROLLCALL_SEND_SECS)
 pub const ROLLCALL_SEND_SECS: f64 = 8.0;
 
-/// (src/game/guards.ts:3022 ROLLCALL_BUSY_RETRY_SECS)
+/// (src/game/guards.ts:3028 ROLLCALL_BUSY_RETRY_SECS)
 pub const ROLLCALL_BUSY_RETRY_SECS: f64 = 15.0;
 
-/// (src/game/guards.ts:3022 ROLLCALL_QUIET_AFTER_SECS)
+/// (src/game/guards.ts:3028 ROLLCALL_QUIET_AFTER_SECS)
 pub const ROLLCALL_QUIET_AFTER_SECS: f64 = 30.0;
 
-/// (src/game/guards.ts:3022 ROLLCALL_SEND_GIVEUP_SECS)
+/// (src/game/guards.ts:3028 ROLLCALL_SEND_GIVEUP_SECS)
 pub const ROLLCALL_SEND_GIVEUP_SECS: f64 = 40.0;
 
-/// (src/game/guards.ts:3024 CHECK_LOOK_SECS)
+/// (src/game/guards.ts:3030 CHECK_LOOK_SECS)
 pub const CHECK_LOOK_SECS: f64 = 1.2;
 
-/// (src/game/guards.ts:3024 CHECK_CAP_SECS)
+/// (src/game/guards.ts:3030 CHECK_CAP_SECS)
 pub const CHECK_CAP_SECS: f64 = 150.0;
 
-/// (src/game/guards.ts:3026 PARTNER_UNSEEN_SECS)
+/// (src/game/guards.ts:3032 PARTNER_UNSEEN_SECS)
 pub const PARTNER_UNSEEN_SECS: f64 = 20.0;
 
-/// (src/game/guards.ts:3026 PARTNER_SPOT_M)
+/// (src/game/guards.ts:3032 PARTNER_SPOT_M)
 pub const PARTNER_SPOT_M: f64 = 2.5;
 
-/// (src/game/guards.ts:3199 RECLEAR_SECS)
+/// (src/game/guards.ts:3205 RECLEAR_SECS)
 pub const RECLEAR_SECS: f64 = 60.0;
 
-/// (src/game/guards.ts:3201 TAMPER_MEMORY_SECS)
+/// (src/game/guards.ts:3207 TAMPER_MEMORY_SECS)
 pub const TAMPER_MEMORY_SECS: f64 = 120.0;
 
-/// (src/game/guards.ts:3335 PARTNER_TRUST_SECS)
+/// (src/game/guards.ts:3341 PARTNER_TRUST_SECS)
 pub const PARTNER_TRUST_SECS: f64 = 3.0;
 
-/// (src/game/guards.ts:3461 MAX_CHARACTERS)
+/// (src/game/guards.ts:3467 MAX_CHARACTERS)
 pub const MAX_CHARACTERS: f64 = 8.0;
 
-/// (src/game/guards.ts:3463 MAX_SKINNED)
+/// (src/game/guards.ts:3469 MAX_SKINNED)
 pub const MAX_SKINNED: f64 = 16.0;
 
-/// (src/game/guards.ts:3465 UNIT_ID0)
+/// (src/game/guards.ts:3471 UNIT_ID0)
 pub const UNIT_ID0: f64 = 20.0;
 
-/// (src/game/guards.ts:3465 UNIT_ID1)
+/// (src/game/guards.ts:3471 UNIT_ID1)
 pub const UNIT_ID1: f64 = 250.0;
 
-/// (src/game/guards.ts:3468 TEAM_TINT: a table nothing writes)
+/// (src/game/guards.ts:3474 TEAM_TINT: a table nothing writes)
 pub fn team_tint() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("guard"), [0.42, 0.36, 0.25]); t.set(String::from("operative"), [0.07, 0.09, 0.1]); t.set(String::from("hostile"), [0.36, 0.33, 0.24]); t.set(String::from("player"), [0.05, 0.06, 0.07]); t.set(String::from("civilian"), [0.75, 0.62, 0.08]); t } }
 
-/// (src/game/guards.ts:3469 TEAM_TINT2: a table nothing writes)
+/// (src/game/guards.ts:3475 TEAM_TINT2: a table nothing writes)
 pub fn team_tint2() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("guard"), [0.02, 0.02, 0.025]); t.set(String::from("operative"), [0.05, 0.07, 0.06]); t.set(String::from("hostile"), [0.09, 0.08, 0.05]); t.set(String::from("player"), [0.1, 0.32, 0.18]); t.set(String::from("civilian"), [0.05, 0.06, 0.1]); t } }
 
-/// (src/game/guards.ts:3585 BREACH_HOOKS: a table nothing writes)
+/// (src/game/guards.ts:3591 BREACH_HOOKS: a table nothing writes)
 pub fn breach_hooks() -> crate::guards::BREACHHOOKS { crate::guards::BREACHHOOKS {  } }

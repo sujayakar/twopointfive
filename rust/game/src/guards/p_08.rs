@@ -1,4 +1,4 @@
-//! src/game/guards.ts lines 2542 to 2913
+//! src/game/guards.ts lines 2542 to 2914
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -17,7 +17,7 @@ fn lend<'a, 'b>(s: &'a mut Option<&'b mut (dyn FnMut(&mut Game, f64) -> bool + '
     }
 }
 
-/// field.grid.fed. A LightField is g.cpu_smoke with a grid, by its type. (guards.ts:2666)
+/// field.grid.fed. A LightField is g.cpu_smoke with a grid, by its type. (guards.ts:2672)
 fn field_fed(g: &Game) -> bool {
     g.cpu_smoke.grid.as_ref().unwrap().fed
 }
@@ -27,7 +27,7 @@ fn def_row(g: &Game, w: FirearmId) -> crate::weapons::WeaponDef {
     g.m.weapons.weapons.get(g.fa[w].def).unwrap().clone()
 }
 
-/// f === gd.foe. (guards.ts:2702, 2709)
+/// f === gd.foe. (guards.ts:2708, 2715)
 fn same_foe(a: crate::game::Foe, b: Option<crate::game::Foe>) -> bool {
     match (a, b) {
         (crate::game::Foe::Player, Some(crate::game::Foe::Player)) => true,
@@ -99,8 +99,8 @@ pub fn sweep_statics(g: &mut crate::game::Game, c_2: CharId, fx: f64, fz: f64) {
 
 // ------------------------------------------------------------ the light meter
 
-/// The CPU's estimate of the renderer's light meter at a point. `field` None takes lightField(g). (guards.ts lightEstimateAt)
-pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: Option<bool>, field: Option<&mut crate::sense::LightField>, moon: Option<bool>) -> f64 {
+/// The CPU's estimate of the renderer's light meter at a point. `field` None takes lightField(g); `leave` = lamps of the level's own the asker leaves out, by what feeds them. (guards.ts lightEstimateAt)
+pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: Option<bool>, field: Option<&mut crate::sense::LightField>, moon: Option<bool>, leave: Option<f64>) -> f64 {
     let mut skip_owner = skip_owner;
     let steady_only = steady_only.unwrap_or(false);
     let mut own;
@@ -112,18 +112,19 @@ pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&m
         }
     };
     let moon = moon.unwrap_or(g.k.sense.moon);
+    let leave = leave.unwrap_or(0.0);
     if g.col.mirror.live {
-        light_estimate_in(g, p, lend(&mut skip_owner), steady_only, field, moon)
+        light_estimate_in(g, p, lend(&mut skip_owner), steady_only, field, moon, leave)
     } else {
-        crate::scene_collision::window(g, &mut |g: &mut Game| light_estimate_in(g, p, lend(&mut skip_owner), steady_only, field.as_deref_mut(), moon))
+        crate::scene_collision::window(g, &mut |g: &mut Game| light_estimate_in(g, p, lend(&mut skip_owner), steady_only, field.as_deref_mut(), moon, leave))
     }
 }
 
 /// The lamps, the hour, the moon, the stroke, onto six faces; the best of them, plus the light that comes round. The order is the bits. (guards.ts lightEstimateIn)
-pub fn light_estimate_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, field: Option<&mut crate::sense::LightField>, moon: bool) -> f64 {
+pub fn light_estimate_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, field: Option<&mut crate::sense::LightField>, moon: bool, leave: f64) -> f64 {
     let mut skip_owner = skip_owner;
     let mut acc: Vec<f64> = vec![0.0; 6];
-    lamps_on(g, p, lend(&mut skip_owner), steady_only, &mut acc, field.as_deref().copied());
+    lamps_on(g, p, lend(&mut skip_owner), steady_only, &mut acc, field.as_deref().copied(), leave);
     crate::hours::hour_light(g, p, &mut acc);
     if moon { crate::hours::moon_light(g, p, &mut acc); }
     if !steady_only { crate::weather::stroke_light(g, p, &mut acc); }
@@ -144,23 +145,36 @@ pub fn light_field(g: &mut crate::game::Game) -> Option<crate::sense::LightField
     }
 }
 
-/// Is this lamp one of a light question's: the one copy of the gates. (guards.ts lampAsked)
+/// Is this lamp, one no fixture feeds, one of a light question's. The level's own lamps have these gates in the module (light.rs `row`). (guards.ts lampAsked)
 pub fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
     if !g.tab.light[l].enabled || g.tab.light[l].intensity <= 0.0 || g.tab.light[l].kind == 2.0 { return false; }
     if let Some(f) = skip_owner {
         let owner = g.tab.light[l].owner;
         if js::truthy(owner) && f(g, owner) { return false; }
     }
-    !(steady_only && (g.tab.light[l].ttl >= 0.0 || g.tab.light[l].transient.unwrap_or(false) || g.beacons.iter().any(|b| b.light == l)))
+    !(steady_only && (g.tab.light[l].ttl >= 0.0 || g.tab.light[l].transient.unwrap_or(false)))
 }
 
-/// A light question's lamps written to the module, in the list's order. False = the module cannot take them. (guards.ts writeLamps)
+/// What a light question says of the level's own lamps: this game's rows, less the passing ones and each as its steady self to who asks what the place lights, less what the asker leaves out. (guards.ts rowsOf)
+pub fn rows_of(g: &mut crate::game::Game, steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
+    let st = crate::sim_lightshome::light_home_block(g);
+    let leave = if steady_only { (js::to_i32(leave) | js::to_i32(crate::sim_lightshome::row_bit().passing)) as f64 } else { leave };
+    crate::scene_collision::LampRows { st, leave, steady: steady_only }
+}
+
+/// A light question's own lamps written to the module, in the list's order, each with how many of the level's rows stand before it; the rows themselves are the module's to read. False = no question stands and the table is full. (guards.ts writeLamps)
 pub fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
     let mut skip_owner = skip_owner;
+    let mut rows = 0.0;
     let mut i = 0;
     while i < g.engine.lights.lights.len() {
         let l = g.engine.lights.lights[i];
         i += 1;
+        if let Some(r) = g.tab.light[l].row {
+            if r != rows { panic!("light: the lamp '{}' is row {} of the level's lights and stands after {} of them in the engine's list: the rows are that list's order (sim/lightshome.ts stand)", g.tab.light[l].name, r, rows); }
+            rows += 1.0;
+            continue;
+        }
         if !lamp_asked(g, l, lend(&mut skip_owner), steady_only) { continue; }
         let row = &g.tab.light[l];
         let sp = if steady_only { row.steady } else { None };
@@ -170,7 +184,7 @@ pub fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<
             let (dx, dy, dz) = (lp[0] - q[0], lp[1] - q[1], lp[2] - q[2]);
             if dx > range || -dx > range || dy > range || -dy > range || dz > range || -dz > range { continue; }
         }
-        if !crate::scene_collision::lamp(g, lp, range, radius, kind, dir, outer, inner, color, intensity) { return false; }
+        if !crate::scene_collision::lamp(g, lp, range, radius, kind, dir, outer, inner, color, intensity, Some(rows)) { return false; }
     }
     true
 }
@@ -180,23 +194,14 @@ pub fn carried() -> bool {
     true
 }
 
-/// The level's own steady lamps, written for the light that comes round to be swept from. (guards.ts steadyLamps)
-pub fn steady_lamps(g: &mut crate::game::Game) -> bool {
-    write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| carried()), true)
+/// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds. (guards.ts steadyLamps)
+pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
+    if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| carried()), true) { return crate::guards::SteadyLamps::Bool(false); }
+    crate::guards::SteadyLamps::LampRows(rows_of(g, true, 0.0))
 }
 
-/// The most lamps the sweep can come to take of the game as it stands, lit now or not. (guards.ts steadyMost)
-pub fn steady_most(g: &mut crate::game::Game) -> f64 {
-    let mut n = 0.0;
-    for &l in &g.engine.lights.lights {
-        let row = &g.tab.light[l];
-        if row.kind != 2.0 && !js::truthy(row.owner) && !(row.ttl >= 0.0 || row.transient.unwrap_or(false) || g.beacons.iter().any(|b| b.light == l)) { n += 1.0; }
-    }
-    n
-}
-
-/// The lamps' part of the estimate: every lamp past the gates, in the list's order, summed by the module onto the six faces. (guards.ts lampsOn)
-pub fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, acc: &mut Vec<f64>, field: Option<crate::sense::LightField>) {
+/// The lamps' part of the estimate: the level's own read where they stand, the question's own written, summed by the module onto the six faces as one list in the engine's order. (guards.ts lampsOn)
+pub fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, acc: &mut Vec<f64>, field: Option<crate::sense::LightField>, leave: f64) {
     use crate::scene_collision::{BlobRow, LampsBeginShade, LampsBeginShadeGrid, SmokeNumbers};
     let shade = if field.is_some() && field_fed(g) {
         let grid = g.cpu_smoke.grid.as_ref().unwrap();
@@ -208,7 +213,8 @@ pub fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn Fn
     };
     let s = &g.k.sense.smoke;
     let k = SmokeNumbers { sigma: s.sigma, spread: s.spread, widest: s.widest, rise: s.rise, rise_rate: s.rise_rate };
-    crate::scene_collision::lamps_begin(g, p, shade.as_ref(), Some(k));
+    let rows = rows_of(g, steady_only, leave);
+    crate::scene_collision::lamps_begin(g, p, shade.as_ref(), Some(k), Some(rows));
     write_lamps(g, Some(p), skip_owner, steady_only);
     crate::scene_collision::lamps_on(g, acc);
 }
@@ -229,8 +235,8 @@ pub fn meter_of(g: &mut crate::game::Game, c_2: CharId, prefix: &str) -> f64 {
     if let (Some(a), Some(b)) = (r1, r2) {
         if a.is_finite() && b.is_finite() { return m::max(a, b); }
     }
-    let a = light_estimate_at(g, pc, None, None, None, None);
-    let b = light_estimate_at(g, ph, None, None, None, None);
+    let a = light_estimate_at(g, pc, None, None, None, None, None);
+    let b = light_estimate_at(g, ph, None, None, None, None, None);
     m::max(a, b)
 }
 
@@ -246,7 +252,7 @@ pub fn unit_light_meter(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
 
 // ------------------------------------------------------------ a unit's foe
 
-/// The closure of acquireFoe: one enemy looked at; the most salient is kept. (guards.ts:2699 consider)
+/// The closure of acquireFoe: one enemy looked at; the most salient is kept. (guards.ts:2705 consider)
 fn consider(g: &mut Game, gd: GuardId, f: crate::game::Foe, ch: CharId, best: &mut Option<crate::game::Foe>, best_rate: &mut f64, cur_visible: &mut bool) {
     let rate = match f {
         crate::game::Foe::Player => {
@@ -354,7 +360,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     }
 }
 
-/// Nobody calls a floor clear with an enemy still up on it. (guards.ts:2723, WORDS.on settled on)
+/// Nobody calls a floor clear with an enemy still up on it. (guards.ts:2729, WORDS.on settled on)
 fn enemy_up_on_floor(g: &mut Game, team: crate::teams::Team) -> bool {
     let mut i = 0;
     while i < g.guards.len() {
@@ -367,7 +373,7 @@ fn enemy_up_on_floor(g: &mut Game, team: crate::teams::Team) -> bool {
     crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[g.player].down
 }
 
-/// One of his side said it in the last three seconds. (guards.ts:2724)
+/// One of his side said it in the last three seconds. (guards.ts:2730)
 fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
     g.guards.iter().any(|&o| {
         if o == gd || g.gd[o].team != team { return false; }
@@ -789,12 +795,6 @@ fn in_view_of(vp: impl Fn(usize) -> f64, p: V3) -> bool {
 /// How long a line stands over a man's head, by its length (the language's: UTF-16 units). (guards.ts bubbleSecs)
 pub fn bubble_secs(text: &str) -> f64 {
     m::min(4.0, m::max(2.0, 1.5 + text.encode_utf16().count() as f64 * 0.055))
-}
-
-/// His head, or where it would be. (guards.ts headOf)
-pub fn head_of(g: &mut crate::game::Game, gd: GuardId) -> V3 {
-    let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.7, 0.0]) }
 }
 
 #[cfg(test)]

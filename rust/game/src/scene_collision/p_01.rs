@@ -1,4 +1,4 @@
-//! src/scene/collision.ts lines 1 to 1076
+//! src/scene/collision.ts lines 1 to 1101
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -55,7 +55,7 @@ fn relend<'a>(p: &'a mut Option<&mut dyn FnMut(&mut Game, f64, f64) -> f64>) -> 
 }
 /// the block's stamp (SimState.stamp): the tables made from the game's state are kept by it. The skeleton has no SimState: `st`, `Q.sim` are Opaque.
 fn seam_sim_stamp(g: &mut Game) -> f64 {
-    todo!("needs: SimState.stamp of the game's block (collision.ts:623, :692; skeleton has st: Opaque)")
+    todo!("needs: SimState.stamp of the game's block (collision.ts:647, :717; skeleton has st: Opaque)")
 }
 
 // ---- the line through a box
@@ -152,6 +152,18 @@ pub fn no_number(ro: Option<V3>, rd: Option<V3>, tmax: Option<f64>) -> String {
         _ => String::new(),
     };
     alloc::format!("a ray that is no number{} — where it starts, the way it goes and how far are numbers, and how far is finite (a way worked out of two points that are one point is none)", at)
+}
+
+/// the level's rows as the module is told them: 1 they are read, 2 their steady selves. (collision.ts rowsHow)
+pub fn rows_how(r: Option<crate::scene_collision::LampRows>) -> f64 {
+    match r {
+        Some(r) => if r.steady { 3.0 } else { 1.0 },
+        None => 0.0,
+    }
+}
+/// a question's word of the rows as a call of the module takes it (lib.rs light_rows over `rowsHow`). `LampRows.st` is Opaque: the block that holds the rows is this game's, `g.sim`
+fn rows_for(g: &Game, r: Option<LampRows>) -> Option<sim::light::Rows> {
+    r.map(|r| sim::light::Rows { g: g.sim, leave: js::to_u32(r.leave), steady: js::to_u32(rows_how(Some(r))) & 2 != 0 })
 }
 
 /// a sense's question the module handed back, in words
@@ -306,6 +318,25 @@ pub fn rules_world(g: &mut crate::game::Game, dyn_: &[BoxId]) {
 pub fn rules_statics(g: &mut crate::game::Game) {
     ready(g);
     if alone(g) { crate::scene_box_mirror::box_mirror_shut(g); }
+}
+
+/// the copy as a rule in the module that asks its own lines takes it: standing, with the game's leaves in it; `rule_set` and `rule_panes` on the mirror say what to hand it. (collision.ts StaticCollision.ruleOpen)
+pub fn rule_open(g: &mut crate::game::Game) {
+    ready(g);
+    if !g.col.mirror.live { open_copy(g, true); }
+    let d = g.col.dynamic_boxes.clone();
+    let set = crate::scene_box_mirror::box_mirror_leaves(g, &d);
+    if set == -2.0 { panic!("a rule of the module was asked with more door leaves than its copy holds"); }
+    g.col.mirror.rule_set = set;
+    g.col.mirror.rule_panes = if g.col.pane_rule.is_some() && crate::scene_box_mirror::box_mirror_glass_in(g) { 1.0 } else { 0.0 };
+}
+
+/// the window a rule that takes `rule_open` stands in; where there is none at all the copy `rule_open` stood is shut behind it. (collision.ts StaticCollision.rule)
+pub fn rule<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
+    let was = g.col.mirror.live;
+    let r = window(g, fn_);
+    if !was && g.col.mirror.live && !g.col.windowed { crate::scene_box_mirror::box_mirror_shut(g); }
+    r
 }
 
 /// the pane rule as a rule's step takes it. (collision.ts StaticCollision.rulesPanes)
@@ -486,6 +517,8 @@ pub fn glass_open(g: &mut crate::game::Game) -> Option<crate::scene_collision::P
 pub fn glass_rule(g: &mut crate::game::Game, rule: Option<crate::scene_collision::PaneRule>, rows: Option<crate::scene_collision::PaneRows>) {
     g.col.pane_rule = rule;
     g.col.pane_rows = if rule.is_none() { None } else { rows };
+    // (mirror.glassIs takes it only under a standing copy. `glassPanes` is the object in the TypeScript and reads nothing; here it reads `sheets`, a cache whose first read must not come as GlassBreak's constructor hangs the rule)
+    if !g.col.mirror.live { return; }
     let glass = glass_panes(g);
     crate::scene_box_mirror::box_mirror_glass_is(g, glass.as_ref());
 }
@@ -493,19 +526,12 @@ pub fn glass_rule(g: &mut crate::game::Game, rule: Option<crate::scene_collision
 /// the game's glass as the world's rows read it, or none. (collision.ts StaticCollision.glassPanes)
 pub fn glass_panes(g: &mut crate::game::Game) -> Option<crate::scene_box_mirror::PaneSource> {
     match g.col.pane_rows {
-        Some(PaneRows::GlassBreak) => Some(crate::scene_box_mirror::PaneSource { view: crate::glassbreak::glass_break_view(g) }),
+        Some(PaneRows::GlassBreak) => {
+            let (view, home, sheets) = (crate::glassbreak::glass_break_view(g), crate::glassbreak::glass_break_home(g), crate::glassbreak::glass_break_sheets(g));
+            Some(crate::scene_box_mirror::PaneSource { view, home, sheets: Some(sheets) })
+        }
         None => None,
     }
-}
-
-/// the glass is being worked on: every question owes the panes' rows, until the first after `glass_end`. (collision.ts StaticCollision.glassBegin)
-pub fn glass_begin(g: &mut crate::game::Game) {
-    crate::scene_box_mirror::box_mirror_glass_begin(g);
-}
-
-/// (collision.ts StaticCollision.glassEnd)
-pub fn glass_end(g: &mut crate::game::Game) {
-    crate::scene_box_mirror::box_mirror_glass_end(g);
 }
 
 /// the glass was written with no question of its own between. (collision.ts StaticCollision.glassWrote)
@@ -516,6 +542,14 @@ pub fn glass_wrote(g: &mut crate::game::Game) {
 /// a burst's view of the glass was put on or taken off. (collision.ts StaticCollision.glassViewed)
 pub fn glass_viewed(g: &mut crate::game::Game) {
     crate::scene_box_mirror::box_mirror_viewed(g);
+}
+
+/// `g.col.glassOpen && g.col.glassOpen(bi, p)` (wallpen.ts:178, glasspen): false with no rule hung, else the rule glassbreak.ts:229 hangs, its whole answer at a point. (collision.ts StaticCollision.glassOpen, called)
+pub fn pane_open(g: &mut crate::game::Game, bi: f64, p: V3) -> bool {
+    match g.col.pane_rule {
+        None => false,
+        Some(PaneRule::GlassBreak) => crate::glassbreak::glass_break_rule_open(g, bi, p),
+    }
 }
 
 /// the pane rule as a question takes it: 0 none, 1 it has one and rows behind it, −1 a rule with no rows. EXACT.on is settled for the module, so no −2. (collision.ts StaticCollision.paneAsk)
@@ -932,8 +966,8 @@ pub fn eye_contact_ask(g: &mut crate::game::Game, e: crate::scene_collision::Eye
     EyeContactAsk { visible: r & sim::sight::A_VISIBLE != 0, dist, in_cone: r & sim::sight::A_IN_CONE != 0 }
 }
 
-/// a question about the light begins; `shade` = the smoke's shadow. (collision.ts StaticCollision.lampsBegin)
-pub fn lamps_begin(g: &mut crate::game::Game, p: V3, shade: Option<&crate::scene_collision::LampsBeginShade>, k: Option<crate::scene_collision::SmokeNumbers>) {
+/// a question about the light begins; `shade` = the smoke's shadow, `rows` = what it says of the level's own lamps, which the module reads where they stand. (collision.ts StaticCollision.lampsBegin)
+pub fn lamps_begin(g: &mut crate::game::Game, p: V3, shade: Option<&crate::scene_collision::LampsBeginShade>, k: Option<crate::scene_collision::SmokeNumbers>, rows: Option<crate::scene_collision::LampRows>) {
     lamps_over(g);
     g.col.mirror.lamp_set = sense(g, "light");
     g.col.mirror.lamp_n = 0.0;
@@ -950,6 +984,7 @@ pub fn lamps_begin(g: &mut crate::game::Game, p: V3, shade: Option<&crate::scene
         q.nb = g.col.mirror.blob_n;
     }
     g.col.lamp_q.p = Some(p);
+    g.col.lamp_q.rows = rows;
     g.col.lamp_q.on = true;
 }
 
@@ -963,21 +998,24 @@ pub fn lamps_over(g: &mut crate::game::Game) {
     q.stands = 0.0;
     q.nb = 0.0;
     q.parts = 0.0;
+    q.rows = None;
 }
 
-/// the lamps written so far, asked as a part; the six faces so far into `out` (the module's scratch, in the TypeScript)
-fn lamps_part_into(g: &mut Game, out: &mut [f64; 6]) {
+/// the lamps written so far, asked as a part; `last`: no part follows, and the rows after the last written lamp are taken; the six faces so far into `out` (the module's scratch, in the TypeScript)
+fn lamps_part_into(g: &mut Game, last: bool, out: &mut [f64; 6]) {
     let w = slot(g);
     let q = g.col.lamp_q;
     let p = q.p.unwrap_or([0.0; 3]);
     let more = q.parts > 0.0;
     let (set, n) = (g.col.mirror.lamp_set as i32, g.col.mirror.lamp_n as usize);
+    let rows = rows_for(g, q.rows);
     let r = match (q.sim, q.k) {
         (Some(_), Some(k)) => {
             let stamp = seam_sim_stamp(g);
-            sim::light::asked(w, set, n, p, k.sigma, g.sim, stamp, q.stands != 0.0, more, q.nb as usize, [k.spread, k.widest, k.rise, k.rise_rate], out)
+            let shade = sim::light::Shade { sigma: k.sigma, g: g.sim, stamp, stands: q.stands != 0.0, nb: q.nb as usize, k: [k.spread, k.widest, k.rise, k.rise_rate] };
+            sim::light::asked(w, set, n, p, &shade, more, rows, last, out)
         }
-        _ => sim::light::asked(w, set, n, p, 0.0, 0, 0.0, false, more, 0, [0.0; 4], out),
+        _ => sim::light::asked(w, set, n, p, &sim::light::NO_SHADE, more, rows, last, out),
     };
     g.col.lamp_q.parts += 1.0;
     g.col.mirror.lamp_n = 0.0;
@@ -988,22 +1026,23 @@ fn lamps_part_into(g: &mut Game, out: &mut [f64; 6]) {
 }
 
 /// the lamps written so far, asked as a part of the question. (collision.ts StaticCollision.lampsPart)
-pub fn lamps_part(g: &mut crate::game::Game) {
+pub fn lamps_part(g: &mut crate::game::Game, last: Option<bool>) {
     let mut out = [0.0; 6];
-    lamps_part_into(g, &mut out);
+    lamps_part_into(g, last.unwrap_or(false), &mut out);
 }
 
-/// one lamp of the question, or of the grid's sweep; past the table's room a question sends the table on as a part, and a sweep answers false. (collision.ts StaticCollision.lamp)
-pub fn lamp(g: &mut crate::game::Game, pos: V3, range: f64, radius: f64, kind: f64, dir: V3, outer_deg: f64, inner_deg: f64, color: V3, intensity: f64) -> bool {
+/// one lamp of the question, or of the grid's sweep; past the table's room a question sends the table on as a part, and a sweep answers false. `rows`: how many of the level's rows stand before it in the engine's list. (collision.ts StaticCollision.lamp)
+pub fn lamp(g: &mut crate::game::Game, pos: V3, range: f64, radius: f64, kind: f64, dir: V3, outer_deg: f64, inner_deg: f64, color: V3, intensity: f64, rows: Option<f64>) -> bool {
+    let rows = rows.unwrap_or(0.0);
     if g.col.mirror.lamp_n as usize >= sim::light::MAX_LAMPS {
         if !g.col.lamp_q.on { return false; }
         g.m.scene_collision.lamps.parts += 1.0;
-        lamps_part(g);
+        lamps_part(g, None);
     }
     let at = sim::light::lamps_addr();
     let o = g.col.mirror.lamp_n as usize * sim::light::LAMP;
     g.col.mirror.lamp_n += 1.0;
-    let row = [pos[0], pos[1], pos[2], range, radius, kind, dir[0], dir[1], dir[2], outer_deg, inner_deg, color[0], color[1], color[2], intensity];
+    let row = [pos[0], pos[1], pos[2], range, radius, kind, dir[0], dir[1], dir[2], outer_deg, inner_deg, color[0], color[1], color[2], intensity, rows];
     for (i, v) in row.iter().enumerate() {
         put_f64(at, o + i, *v);
     }
@@ -1014,7 +1053,7 @@ pub fn lamp(g: &mut crate::game::Game, pos: V3, range: f64, radius: f64, kind: f
 pub fn lamps_on(g: &mut crate::game::Game, acc: &mut Vec<f64>) {
     if !g.col.lamp_q.on { panic!("light: lampsOn with no question begun (lampsBegin)"); }
     let mut out = [0.0; 6];
-    lamps_part_into(g, &mut out);
+    lamps_part_into(g, true, &mut out);
     lamps_over(g);
     for k in 0..6 {
         if k < acc.len() { acc[k] = out[k]; } else { acc.push(out[k]); }
@@ -1079,12 +1118,17 @@ pub fn grid_step(g: &mut crate::game::Game, st: &mut crate::Opaque, pending: &[f
         return false;
     }
     let set = set as i32;
-    // the light that comes round: the only `lamps` hung is guards.ts steadyLamps (sense.ts step, called from game.ts)
+    // the light that comes round: the only `lamps` hung is guards.ts steadyLamps (sense.ts step, called from game.ts), which writes the lamps of nobody's fixture and answers with the rows' word
     let mut lamps = -1i32;
+    let mut said_rows: Option<LampRows> = None;
     if glow.is_some() {
         g.col.mirror.lamp_n = 0.0;
         lamps_over(g);
-        if crate::guards::steady_lamps(g) { lamps = g.col.mirror.lamp_n as i32; }
+        match crate::guards::steady_lamps(g) {
+            crate::guards::SteadyLamps::Bool(false) => {}
+            crate::guards::SteadyLamps::Bool(true) => { lamps = g.col.mirror.lamp_n as i32; }
+            crate::guards::SteadyLamps::LampRows(r) => { lamps = g.col.mirror.lamp_n as i32; said_rows = Some(r); }
+        }
     }
     let all = pending.len() - pending.len() % 6;
     let cap = sim::SCRATCH_LEN - sim::SCRATCH_LEN % 6;
@@ -1126,9 +1170,10 @@ pub fn grid_step(g: &mut crate::game::Game, st: &mut crate::Opaque, pending: &[f
     let stamp = seam_sim_stamp(g);
     let copy = crate::scene_box_mirror::box_mirror_grid_copy(g);
     let (w, block) = (slot(g), g.sim);
+    let rows = rows_for(g, said_rows);
     let r = match (&glow, lamps >= 0) {
         (Some(gl), true) => {
-            let gk = sim::glow::K { albedo: gl.k.albedo, share: gl.k.share, passes: js::to_u32(gl.k.passes), sweep: gl.k.sweep, lamps: lamps as usize };
+            let gk = sim::glow::K { albedo: gl.k.albedo, share: gl.k.share, passes: js::to_u32(gl.k.passes), sweep: gl.k.sweep, lamps: lamps as usize, rows };
             sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), emits, &bk, Some(&gk))
         }
         _ => sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), emits, &bk, None),
@@ -1514,6 +1559,32 @@ mod tests {
         assert_eq!(no_number(None, None, None), alloc::format!("a ray that is no number{}", tail));
         assert_eq!(no_number(Some([1.5, 0.0, -0.0]), Some([f64::NAN, 1.0, 2.0]), Some(3.0)), alloc::format!("a ray that is no number: from [1.5, 0, 0] along [NaN, 1, 2] for 3{}", tail));
         assert_eq!(handed_back_words("sound", "why", &[1.0, 2.5, 3.0], &[4.0, 5.0, 6.0]), "sound: the Rust module handed the question back (why): [1, 2.5, 3] → [4, 5, 6]");
+    }
+
+    #[test]
+    fn a_question_says_how_the_rows_are_read() {
+        let r = |steady| LampRows { st: crate::Opaque, leave: 4.0, steady };
+        assert_eq!(rows_how(None), 0.0);
+        assert_eq!(rows_how(Some(r(false))), 1.0);
+        assert_eq!(rows_how(Some(r(true))), 3.0);
+        let mut g = Box::new(Game::blank());
+        g.sim = 2;
+        let rows = rows_for(&g, Some(r(true))).unwrap();
+        assert_eq!((rows.g, rows.leave, rows.steady), (2, 4, true));
+        assert!(rows_for(&g, None).is_none());
+    }
+
+    #[test]
+    fn a_lamp_is_sixteen_doubles_and_the_last_is_the_rows_before_it() {
+        assert_eq!(sim::light::LAMP, 16);
+        let mut g = Box::new(Game::blank());
+        let g = &mut *g;
+        assert!(lamp(g, [1.0, 2.0, 3.0], 4.0, 5.0, 6.0, [7.0, 8.0, 9.0], 10.0, 11.0, [12.0, 13.0, 14.0], 15.0, Some(16.0)));
+        assert!(lamp(g, [1.0, 2.0, 3.0], 4.0, 5.0, 6.0, [7.0, 8.0, 9.0], 10.0, 11.0, [12.0, 13.0, 14.0], 15.0, None));
+        let at = sim::light::lamps_addr();
+        for i in 0..16 { assert_eq!(get_f64(at, i), (i + 1) as f64); }
+        assert_eq!(get_f64(at, 16 + 15), 0.0);
+        assert_eq!(g.col.mirror.lamp_n, 2.0);
     }
 
     #[test]

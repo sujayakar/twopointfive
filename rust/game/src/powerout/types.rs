@@ -225,12 +225,12 @@ pub struct CalmSnap {
     pub hold: bool,
     pub home: V3,
     pub watch: f64,
-    pub awareness: f64,
+    pub pt: V3,
     pub pinned: bool,
+    pub awareness: f64,
     pub station: V3,
     pub ev: Vec<f64>,
     pub want: f64,
-    pub pt: V3,
     pub room: f64,
 }
 impl CalmSnap {
@@ -240,12 +240,12 @@ impl CalmSnap {
             hold: false,
             home: [0.0; 3],
             watch: 0.0,
-            awareness: 0.0,
+            pt: [0.0; 3],
             pinned: false,
+            awareness: 0.0,
             station: [0.0; 3],
             ev: Vec::new(),
             want: 0.0,
-            pt: [0.0; 3],
             room: 0.0,
         }
     }

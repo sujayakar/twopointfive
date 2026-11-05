@@ -90,6 +90,23 @@ impl WeaponId {
     }
 }
 
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum FireMode {
+    Semi,
+    Auto,
+    Burst,
+}
+impl FireMode {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            FireMode::Semi => "semi",
+            FireMode::Auto => "auto",
+            FireMode::Burst => "burst",
+        }
+    }
+}
+
 /// (TypeScript: WeaponDef, src/game/weapons.ts:55)
 #[derive(Clone, Debug)]
 pub struct WeaponDef {
@@ -213,23 +230,6 @@ impl WeaponDefReload {
     }
 }
 impl Default for WeaponDefReload { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum FireMode {
-    Semi,
-    Auto,
-    Burst,
-}
-impl FireMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FireMode::Semi => "semi",
-            FireMode::Auto => "auto",
-            FireMode::Burst => "burst",
-        }
-    }
-}
 
 /// (TypeScript: BurstSpec, src/game/weapons.ts:32)
 #[derive(Clone, Copy, Debug)]

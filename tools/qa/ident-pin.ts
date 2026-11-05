@@ -17,6 +17,7 @@
 // IT IS A LOWER BAR than two languages a call: a mistake both recordings share is held as firmly as the truth.
 // A tool that uses it: makes a `Fold`, folds each watched call, and after its run hands `hold` its words (tools/qa/layer-ident.ts is the first; how a
 // family takes it up, step by step: docs/agents/rust.md, the same bullet). Not game code.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { resolve } from 'node:path';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';

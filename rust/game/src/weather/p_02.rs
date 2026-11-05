@@ -1,4 +1,4 @@
-//! src/game/weather.ts lines 469 to 503
+//! src/game/weather.ts lines 496 to 530
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -41,7 +41,7 @@ pub fn loud_len(g: &mut crate::game::Game, path_len: f64, ear: V3) -> f64 {
 
 /// A stroke of lightning under a picked weather, added to the six faces of the light meter's stand-in.   (weather.ts strokeLight)
 pub fn stroke_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
-    let l = if g.weather.kind.is_some() { g.weather.flash.as_ref().map(|f| f.light) } else { None };
+    let l = if weather_kind(g).is_some() { g.weather.flash.as_ref().map(|f| f.light) } else { None };
     let Some(l) = l else { return };
     let (enabled, color, intensity, dir) = { let r = &g.tab.light[l]; (r.enabled, r.color, r.intensity, r.dir) };
     if !enabled { return; }

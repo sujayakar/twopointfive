@@ -42,6 +42,7 @@
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
 // THE STAND THIS CHECK STANDS ON HAS NO ROW UP: it raises and drops the rows it asks about itself. This check's own arm (tools/qa/headless.ts hold), held
 // before a game is stood: a stand-up puts every row where the build has it, which is up (src/sim/sim.ts RUST_ON).
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 export {};   // (a module, for the top-level awaits)
 const { standUp, ROOT, hold } = await import('./headless.ts');
 hold({ rows: false });
@@ -203,7 +204,7 @@ const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.l
 const FIXED: number = ST.simLayout().parts.reduce((n: number, q: any) => n + (q.pool ? 0 : q.len), 0);   // (the parts that are not pools are carried whole: the doors' columns and the falls' store among them; what a parked block saves is the pool's unused room)
 { const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), st = new ST.SimState(); st.bind();
   const set = new SK.PoseSet(4); SK.poseSetIn(set, st); const a = set.make(55), b = set.make(55);
-  const AT = ST.simPart(ST.P_POSES), BEFORE = AT - FIXED;   // (the pose pool is the block's LAST part, so a parked block is the parts before it, whole, and what is in use of the pool: under 16 KB here. Of the parts before it the fixed ones follow the layout (FIXED); a POOL standing before the last is carried whole by a parked block, in use or not, and is a budget of its own, a quarter megabyte: the smoke grid's 236 KB is nearly all of it, and the next pool to stand there is red)
+  const AT = ST.simPart(ST.P_POSES), BEFORE = AT - FIXED;   // (the pose pool is the last part a game with no pane touched is using, so a parked block is the parts before it, whole, and what is in use of the pool: under 16 KB here. Of the parts before it the fixed ones follow the layout (FIXED); a POOL standing before the last is carried whole by a parked block, in use or not, and is a budget of its own, a quarter megabyte: the smoke grid's 236 KB is nearly all of it, and the next pool to stand there is red)
   for (let i = 0; i < 550; i++) { a.cols[i] = i + 0.5; b.cols[i] = -i; }
   const small = st.take(), crowd = () => Array.from({ length: L.games }, () => { const o = new ST.SimState(); o.bind(); return o; }), gone = (os: any[]) => { for (const o of os) o.put([]); };
   const s0 = st.stamp; a.cols[0] = 0.5; const quiet = st.stamp === s0;

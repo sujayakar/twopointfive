@@ -7,15 +7,15 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SpottedMode {
     Calm,
-    Caught,
     Wary,
+    Caught,
 }
 impl SpottedMode {
     pub const fn as_str(self) -> &'static str {
         match self {
             SpottedMode::Calm => "calm",
-            SpottedMode::Caught => "caught",
             SpottedMode::Wary => "wary",
+            SpottedMode::Caught => "caught",
         }
     }
 }

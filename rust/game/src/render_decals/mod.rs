@@ -4,4 +4,4 @@ pub mod sig;
 pub use sig::*;
 // the parts' bodies: a named re-export wins over the stubs of sig.rs
 pub mod b_01;
-pub use b_01::{decals_clear, decals_touch};
+pub use b_01::{decals_clear, decals_touch, decals_add};

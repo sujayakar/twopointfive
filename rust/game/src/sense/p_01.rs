@@ -1,4 +1,4 @@
-//! src/game/sense.ts lines 1 to 260
+//! src/game/sense.ts lines 1 to 261
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -61,7 +61,7 @@ pub fn smoke_grid_step(g: &mut crate::game::Game, dt: f64, lamps: bool, wind: Op
     }
     let s = g.k.sense.smoke;
     let k = crate::scene_collision::GridStepK { decay: s.decay, spread: s.spread, rise: s.rise, rise_rate: s.rise_rate, gone: s.gone, in_wind: s.in_wind };
-    // (`lamps` says only whether: grid_step itself calls guards::steady_lamps, the one lamps there is.)
+    // (`lamps` says only whether: grid_step itself calls guards::steady_lamps, the one lamps there is, and takes the rows' word from its answer.)
     let glow = if lamps {
         let gk = g.k.sense.glow;
         Some(crate::scene_collision::GridStepGlow { k: crate::scene_collision::GridStepGlowK { albedo: gk.albedo, share: gk.share, passes: gk.passes, sweep: gk.sweep } })
@@ -122,9 +122,9 @@ pub fn smoke_grid_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     sim::bricks::trans(g.sim, stamp, a, b, g.k.sense.smoke.sigma)
 }
 
-/// The stamp of the game's block (SimState.stamp): bricks' tables are remade when it differs. No guess will do: 0 never remakes them after a reset.   (sense.ts:150)
+/// The stamp of the game's block (SimState.stamp): bricks' tables are remade when it differs. No guess will do: 0 never remakes them after a reset.   (sense.ts:151)
 fn seam_sim_stamp(g: &mut crate::game::Game) -> f64 {
-    todo!("needs: SimState.stamp of the game's block (sense.ts:150; SmokeGrid.sim is Opaque, and neither the skeleton nor rust/sim's state.rs holds a stamp)")
+    todo!("needs: SimState.stamp of the game's block (sense.ts:151; SmokeGrid.sim is Opaque, and neither the skeleton nor rust/sim's state.rs holds a stamp)")
 }
 
 /// The light that comes round on a point: the nearest square metre in clear sight, else 0.   (sense.ts SmokeGrid.glowAt)
@@ -155,7 +155,7 @@ pub fn smoke_grid_glow_at(g: &mut crate::game::Game, p: V3) -> f64 {
     0.0
 }
 
-/// As a tick opens the grid comes, empty, or goes, by SENSE's switches: this file's one tenant.   (sense.ts:171-174, by state.ts SimState.settle)
+/// As a tick opens the grid comes, empty, or goes, by SENSE's switches: this file's one tenant.   (sense.ts:172-175, by state.ts SimState.settle)
 pub fn settle_grid(g: &mut crate::game::Game) {
     let want = g.k.sense.cpu && g.k.sense.grid && crate::sim_sim::sim_why_not().is_empty();
     let have = g.cpu_smoke.grid.is_some();
@@ -172,7 +172,7 @@ pub fn settle_grid(g: &mut crate::game::Game) {
     }
 }
 
-/// What a blob holds and has still to let out.   (sense.ts:206 worth)
+/// What a blob holds and has still to let out.   (sense.ts:207 worth)
 fn worth(b: &crate::sense::Blob) -> f64 {
     b.mass + b.rate * m::max(0.0, b.ttl - b.age)
 }
@@ -226,7 +226,7 @@ pub fn cpu_smoke_step(g: &mut crate::game::Game, dt: f64) {
     step_lists(&k, &mut own.lives, &mut own.blobs, dt);
 }
 
-/// `step`'s statements over the two lists.   (sense.ts:217-223)
+/// `step`'s statements over the two lists.   (sense.ts:217-224)
 fn step_lists(k: &crate::knobs::SenseKSmoke, lives: &mut Vec<f64>, blobs: &mut Vec<crate::sense::Blob>, dt: f64) {
     let keep = m::exp(-k.decay * dt);
     let mut w = 0;

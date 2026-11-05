@@ -1,4 +1,4 @@
-//! src/game/wind.ts lines 1 to 334
+//! src/game/wind.ts lines 1 to 310
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,8 +7,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// STILL A GAP, wind.ts:328: `(g.smoke as { stats? }).stats`; SmokeSystemLike has no stats. None = the solver is off.
-fn seam_smoke_wind_srcs(g: &mut Game) -> Option<Option<f64>> { todo!("needs: SmokeSystemLike.stats.windSrcs (wind.ts:328)") }
+/// STILL A GAP, wind.ts:304: `(g.smoke as { stats? }).stats`; SmokeSystemLike has no stats. None = the solver is off.
+fn seam_smoke_wind_srcs(g: &mut Game) -> Option<Option<f64>> { todo!("needs: SmokeSystemLike.stats.windSrcs (wind.ts:304)") }
 
 /// Hand back `v`, and write it to the caller's `out` where one was given: the TypeScript's every path fills all three.
 fn put(out: Option<&mut V3>, v: V3) -> V3 {
@@ -16,6 +16,21 @@ fn put(out: Option<&mut V3>, v: V3) -> V3 {
         *o = v;
     }
     v
+}
+
+// WIND_FIELD by place (wind.ts:37): the numbers this file reads, each `shape(g, …)`
+const STORM_LOW: f64 = 5.0;
+const STORM_GAIN: f64 = 6.0;
+const STORM_FULL_AT: f64 = 7.0;
+const CUT_K: f64 = 8.0;
+const CORE_K: f64 = 9.0;
+
+/// A number of the field's shape, read off the module once. (wind.ts shape)
+pub fn shape(g: &mut crate::game::Game, i: f64) -> f64 {
+    if g.m.wind.shape.is_none() {
+        g.m.wind.shape = Some(::sim::wind::SHAPE.to_vec());
+    }
+    g.m.wind.shape.as_ref().unwrap()[i as usize]
 }
 
 /// Nothing of the game's: the whole body is the host's browser storage. (wind.ts saveWind)
@@ -33,10 +48,18 @@ pub fn wind_of(g: &mut crate::game::Game) -> f64 {
     m::max(0.0, m::min(1.0, g.tune.wind))
 }
 
-/// (wind.ts smoothstep)
-pub fn smoothstep(a: f64, b: f64, x: f64) -> f64 {
-    let t = m::max(0.0, m::min(1.0, (x - a) / (b - a)));
-    t * t * (3.0 - 2.0 * t)
+/// The answer in the module's scratch → `out`. Nothing here calls it: the plain functions of `sim::wind` hand their answers back. (wind.ts airOut)
+pub fn air_out(out: &mut V3) -> V3 {
+    let m = unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, 3) };
+    out[0] = m[0];
+    out[1] = m[1];
+    out[2] = m[2];
+    *out
+}
+
+/// A diffuser's air at p, m/s: rust/sim's. (wind.ts jetVel)
+pub fn jet_vel(pos: V3, dir: V3, speed: f64, reach: f64, tan_spread: f64, r0: f64, d_max: f64, floor_y: f64, p: V3, out: Option<&mut V3>) -> V3 {
+    put(out, ::sim::wind::jet_vel(pos, dir, speed, reach, tan_spread, r0, d_max, floor_y, p))
 }
 
 /// (wind.ts inRect)
@@ -44,138 +67,29 @@ pub fn in_rect(x: f64, z: f64, r: &[f64]) -> bool {
     x > r[0] && z > r[1] && x < r[2] && z < r[3]
 }
 
-/// A diffuser's air at p, m/s: a jet from `pos` along unit `dir`, turning to run along a floor it is blown at. (wind.ts jetVel)
-pub fn jet_vel(pos: V3, dir: V3, speed: f64, reach: f64, tan_spread: f64, r0: f64, d_max: f64, floor_y: f64, p: V3, out: Option<&mut V3>) -> V3 {
-    let wf = wind_field();
-    let zero: V3 = [0.0, 0.0, 0.0];
-    if !(speed > 0.0) {
-        return put(out, zero);
-    }
-    let qx = p[0] - pos[0];
-    let qy = p[1] - pos[1];
-    let qz = p[2] - pos[2];
-    let d = qx * dir[0] + qy * dir[1] + qz * dir[2];
-    if d <= 0.0 || d >= d_max {
-        return put(out, zero);
-    }
-    let rx = qx - dir[0] * d;
-    let ry = qy - dir[1] * d;
-    let rz = qz - dir[2] * d;
-    let r = m::hyp3(rx, ry, rz);
-    let sigma = r0 + d * tan_spread;
-    if r > wf.support_sigma * sigma {
-        return put(out, zero);
-    }
-    let x = d / m::max(reach, 1e-3);
-    let rs = r / sigma;
-    let mut s = speed * m::exp(-rs * rs) / (1.0 + x * x) * (1.0 - smoothstep(0.7 * d_max, d_max, d));
-    let ap = d + r0 / m::max(tan_spread, 0.02);
-    let mut ux = dir[0] * ap + rx;
-    let mut uy = dir[1] * ap + ry;
-    let mut uz = dir[2] * ap + rz;
-    {
-        let l = js::or(m::hyp3(ux, uy, uz), 1.0);
-        ux /= l;
-        uy /= l;
-        uz /= l;
-    }
-    if floor_y > -100.0 && dir[1] < -0.5 {
-        let h = p[1] - floor_y;
-        if h < 0.0 {
-            return put(out, zero);
-        }
-        if h < wf.deflect_h {
-            let t = 1.0 - h / wf.deflect_h;
-            let mut hx = rx;
-            let mut hz = rz;
-            let hl = m::hyp2(hx, hz);
-            if hl > 1e-3 {
-                hx /= hl;
-                hz /= hl;
-            } else {
-                hx = dir[2] + 0.37;
-                hz = 0.29 - dir[0];
-                let l = m::hyp2(hx, hz);
-                hx /= l;
-                hz /= l;
-            }
-            let k = t * t;
-            let mx = ux + (hx - ux) * k;
-            let my = uy + (0.0 - uy) * k;
-            let mz = uz + (hz - uz) * k;
-            let ml = js::or(m::hyp3(mx, my, mz), 1.0);
-            ux = mx / ml;
-            uy = my / ml;
-            uz = mz / ml;
-            s *= 1.0 - wf.deflect_loss * t;
-        }
-    }
-    put(out, [ux * s, uy * s, uz * s])
-}
-
-/// The storm's air at p: `wind` outdoors, nothing inside the two footprints or over stormTop. (wind.ts stormVel)
+/// The storm's air at p: rust/sim's. (wind.ts stormVel)
 pub fn storm_vel(wind: V3, interior: &[f64], annex: &[f64], p: V3, out: Option<&mut V3>) -> V3 {
-    let wf = wind_field();
-    if p[1] > wf.storm_top || p[1] < 0.0 || in_rect(p[0], p[2], interior) || in_rect(p[0], p[2], annex) {
-        return put(out, [0.0, 0.0, 0.0]);
-    }
-    let d_out = m::max(m::max(interior[0] - p[0], p[0] - interior[2]), m::max(interior[1] - p[2], p[2] - interior[3]));
-    let k = smoothstep(0.0, wf.storm_lee, d_out) * (wf.storm_low + wf.storm_gain * m::max(0.0, m::min(1.0, p[1] / wf.storm_full_at)));
-    put(out, [wind[0] * k, wind[1] * k, wind[2] * k])
+    put(out, ::sim::wind::storm_vel(wind, interior, annex, p))
 }
 
-/// Metres (x, z) stands outside roof R along its nearer axis; a footprint with no width is far away. (wind.ts roofOut)
-pub fn roof_out(x: f64, z: f64, r: &[f64]) -> f64 {
-    if !(r[2] > r[0]) || !(r[3] > r[1]) {
-        1e6
-    } else {
-        m::max(m::max(r[0] - x, x - r[2]), m::max(r[1] - z, z - r[3]))
-    }
-}
-
-/// The storm's air roof by roof: `wind` wherever none of `roofs` (≤ 4) is overhead, easing in off the nearest. (wind.ts stormVelRoofs)
+/// The storm's air roof by roof, the first four of `roofs`: rust/sim's. (wind.ts stormVelRoofs)
 pub fn storm_vel_roofs(wind: V3, roofs: &[Vec<f64>], p: V3, out: Option<&mut V3>) -> V3 {
-    let wf = wind_field();
-    if p[1] > wf.storm_top || p[1] < 0.0 {
-        return put(out, [0.0, 0.0, 0.0]);
+    let n = core::cmp::min(roofs.len(), 4);
+    let mut flat = [0.0; 16];
+    for i in 0..n {
+        let r = &roofs[i];
+        let q = i * 4;
+        flat[q] = r[0];
+        flat[q + 1] = r[1];
+        flat[q + 2] = r[2];
+        flat[q + 3] = r[3];
     }
-    let mut d_out = 1e6;
-    let mut i = 0;
-    while i < roofs.len() && i < 4 {
-        d_out = m::min(d_out, roof_out(p[0], p[2], &roofs[i]));
-        i += 1;
-    }
-    if d_out <= 0.0 {
-        return put(out, [0.0, 0.0, 0.0]);
-    }
-    let k = smoothstep(0.0, wf.storm_lee, d_out) * (wf.storm_low + wf.storm_gain * m::max(0.0, m::min(1.0, p[1] / wf.storm_full_at)));
-    put(out, [wind[0] * k, wind[1] * k, wind[2] * k])
+    put(out, ::sim::wind::storm_vel_roofs(wind, &flat, n, p))
 }
 
-/// Noise off the clock: a hash of a 32-bit word. (wind.ts hashU)
-pub fn hash_u(x: f64) -> f64 {
-    let mut u = (js::to_i32(x) ^ (0x9E3779B9u32 as i32)) as u32;
-    u = m::imul(u as i32, 0x85EBCA6Bu32 as i32) as u32;
-    u ^= u >> 13;
-    u = m::imul(u as i32, 0xC2B2AE35u32 as i32) as u32;
-    u ^= u >> 16;
-    u as f64
-}
-
-/// (wind.ts hash01)
-pub fn hash01(x: f64) -> f64 {
-    (js::to_u32(hash_u(x)) >> 8) as f64 / 16777216.0
-}
-
-/// Smooth value noise in [−1, 1] at x, one lattice value per integer, per seed. (wind.ts vnoise)
+/// Smooth value noise in [−1, 1] at x, per seed: rust/sim's. The seed crosses as a u32, as it does into the module. (wind.ts vnoise)
 pub fn vnoise(seed: f64, x: f64) -> f64 {
-    let i = m::floor(x);
-    let f = x - i;
-    let mult = js::to_i32(2654435761.0);
-    let a = hash01((js::to_i32(seed) ^ m::imul(js::to_i32(i), mult)) as f64) * 2.0 - 1.0;
-    let b = hash01((js::to_i32(seed) ^ m::imul(js::to_i32(i + 1.0), mult)) as f64) * 2.0 - 1.0;
-    let t = f * f * (3.0 - 2.0 * f);
-    a + (b - a) * t
+    ::sim::wind::vnoise(js::to_u32(seed), x)
 }
 
 /// Whether a vent's own cycle has it blowing at game time `t`. (wind.ts ventDue)
@@ -199,7 +113,6 @@ pub fn wind_for_particles(g: &mut crate::game::Game) -> Vec<WindWindSourceId> {
 
 /// Every source the level can have, built once. `reroof` is reached with this Wind stood at `g.wind` for the call. (wind.ts Wind.constructor)
 pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
-    let wf = wind_field();
     let mut w = crate::wind::Wind::blank();
     let vents = g.level.vents.clone().unwrap_or_default();
     for v in vents {
@@ -208,9 +121,9 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
             Some(s) => s,
             None => crate::scene_level_data::vent_defaults().size,
         };
-        let d_max = wf.cut_k * v.reach;
+        let d_max = shape(g, CUT_K) * v.reach;
         let tan_spread = m::tan(m::max(0.0, m::min(89.0, v.spread)) * DEG);
-        let r0 = wf.core_k * size;
+        let r0 = shape(g, CORE_K) * size;
         let bc = v3::mad(v.pos, dir, d_max / 2.0);
         let br = m::hyp2(d_max / 2.0, r0 + d_max * tan_spread) * 1.05 + 0.3;
         let seed = crate::math_dice::hash_str(&v.name);
@@ -290,7 +203,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
         w.all.push(s);
     }
     if crate::weather::weather_level_roofs(g) {
-        let roofs = g.weather.roofs.clone();
+        let roofs = crate::weather::weather_roofs(g);
         let own = crate::weather::weather_own_storm(g);
         let before = core::mem::replace(&mut g.wind, w);
         wind_reroof(g, Some(&roofs), Some(own));
@@ -303,7 +216,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
 pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWindSourceId {
     let fc = g.dr[d].frame_centre;
     let reach = g.k.wind.door_reach;
-    let d_max = wind_field().cut_k * reach;
+    let d_max = shape(g, CUT_K) * reach;
     let tan_spread = m::tan(g.k.wind.door_spread_deg * DEG);
     let r0 = g.dr[d].def.width * 0.4;
     let pos: V3 = [fc[0] - inward[0] * 0.15, 1.05, fc[2] - inward[2] * 0.15];
@@ -366,14 +279,14 @@ fn gpu_of(s: &WindSource) -> crate::smoke_types::WindGpuSource {
     }
 }
 
-/// wind.ts:189 in1, :197 under: is (x, z) under any of the roofs (edges in)?
+/// wind.ts:165 in1, :173 under: is (x, z) under any of the roofs (edges in)?
 fn under_any(roofs: &[[f64; 4]], x: f64, z: f64) -> bool {
     roofs.iter().any(|r| x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3])
 }
 
 /// Weather kinds: the footprints the storm's air keeps out of, and which way every exterior door's gust blows. `None` = the office's two. (wind.ts Wind.reroof)
 pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[[f64; 4]]>, own: Option<bool>) {
-    // weather.ts:229 `wind?.reroof`: before the constructor there is no Wind; here a blank one, whose `storm` names no row. A real one holds at least the storm.
+    // weather.ts:240 `wind?.reroof`: before the constructor there is no Wind; here a blank one, whose `storm` names no row. A real one holds at least the storm.
     if g.wind.all.is_empty() {
         return;
     }
@@ -482,7 +395,8 @@ pub fn wind_share_under(g: &mut crate::game::Game, x: f64, z: f64, roofs: Option
             storm_vel(unit_x(), &s.interior.unwrap(), &s.annex.unwrap(), p, None)
         }
     };
-    m::max(0.0, m::min(1.0, q[0] / wind_field().storm_low))
+    let low = shape(g, STORM_LOW);
+    m::max(0.0, m::min(1.0, q[0] / low))
 }
 
 /// The wind the game's own smoke drifts by, or none in still air: no machine's settings and no gust in it. (wind.ts Wind.stormDrift)
@@ -496,9 +410,9 @@ pub fn wind_storm_drift(g: &mut crate::game::Game) -> Option<crate::scene_collis
         return None;
     }
     let roofs = wind_field_roofs(g);
-    let wf = wind_field();
+    let (low, gain, full_at) = (shape(g, STORM_LOW), shape(g, STORM_GAIN), shape(g, STORM_FULL_AT));
     let share = crate::scene_collision::GridWindShare::Under { roofs };
-    Some(crate::scene_collision::GridWind { x, z, low: wf.storm_low, gain: wf.storm_gain, full_at: wf.storm_full_at, share })
+    Some(crate::scene_collision::GridWind { x, z, low, gain, full_at, share })
 }
 
 /// Does the weather blow at all; `session` adds the weather's own switch, which the game's drift does not ask. (wind.ts Wind.blows)
@@ -506,10 +420,10 @@ pub fn wind_blows(g: &mut crate::game::Game, session: bool) -> bool {
     if session && !crate::weather::weather_enabled(g) {
         return false;
     }
-    if crate::lighting::is_daylight(g) && g.weather.kind.is_none() {
+    if crate::lighting::is_daylight(g) && crate::weather::weather_kind(g).is_none() {
         return false;
     }
-    g.weather.kind.is_some() || g.weather.rain_rate > 0.001 || g.weather.storm > 0.01
+    crate::weather::weather_kind(g).is_some() || crate::weather::weather_rain_rate(g) > 0.001 || crate::weather::weather_storm(g) > 0.01
 }
 
 /// The storm's wind vector when it should be felt, none otherwise. (wind.ts Wind.stormWind)
@@ -849,7 +763,7 @@ mod tests {
         (g, id)
     }
 
-    // weather.ts:229 asks before the Wind is built: a blank one has no storm row to write
+    // weather.ts:240 asks before the Wind is built: a blank one has no storm row to write
     #[test]
     fn a_reroof_before_the_wind_exists_is_nothing() {
         let mut g = Game::blank();
@@ -857,7 +771,7 @@ mod tests {
         assert!(g.wind.lv_roofs.is_none());
     }
 
-    // wind.ts:161,187: `storm` and its row in `all` are one thing, and a row of `extra` leaves `all` by identity, however many share its name
+    // wind.ts:137,163: `storm` and its row in `all` are one thing, and a row of `extra` leaves `all` by identity, however many share its name
     #[test]
     fn a_reroof_writes_the_one_storm_and_takes_out_only_extra() {
         let (mut g, st) = with_storm();
@@ -879,7 +793,7 @@ mod tests {
         assert_eq!(g.wind.lv_roofs, Some(vec![vec![1.0, 2.0, 3.0, 4.0], vec![5.0, 6.0, 7.0, 8.0]]));
     }
 
-    // wind.ts:144: `active` names the row itself, so what a holder writes through its ID is what `at` reads
+    // wind.ts:120: `active` names the row itself, so what a holder writes through its ID is what `at` reads
     #[test]
     fn at_reads_the_row_through_active() {
         let (mut g, st) = with_storm();
@@ -900,6 +814,19 @@ mod tests {
         assert_eq!(wind_share_under(&mut g, 5.0, 5.0, None), 0.0);
         assert_eq!(wind_storm_share(&mut g, 5.0, 5.0), 0.0);
         assert_eq!(wind_share_under(&mut g, -50.0, 5.0, None), 1.0);
+    }
+
+    // wind.ts:37-40: the table by place, read off the module once and kept
+    #[test]
+    fn shape_reads_the_modules_table_once() {
+        let mut g = Game::blank();
+        assert!(g.m.wind.shape.is_none());
+        assert_eq!(shape(&mut g, CUT_K), 2.5);
+        assert_eq!(shape(&mut g, CORE_K), 0.4);
+        assert_eq!(shape(&mut g, STORM_LOW), 0.55);
+        assert_eq!(shape(&mut g, STORM_GAIN), 0.45);
+        assert_eq!(shape(&mut g, STORM_FULL_AT), 2.5);
+        assert_eq!(g.m.wind.shape.as_ref().map(|s| s.len()), Some(10));
     }
 
     #[test]

@@ -3,80 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum F {
-    Fill,
-    Radius,
-    Yaw,
-    Vx,
-    Vz,
-    Fuse,
-    Restitution,
-    Friction,
-    Spin,
-    Age,
-    Life,
-    Tumble,
-    TumbleRate,
-    EmitT,
-    Heading,
-    OnPose,
-    Px,
-    Py,
-    Pz,
-    Vy,
-}
-impl F {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            F::Fill => "fill",
-            F::Radius => "radius",
-            F::Yaw => "yaw",
-            F::Vx => "vx",
-            F::Vz => "vz",
-            F::Fuse => "fuse",
-            F::Restitution => "restitution",
-            F::Friction => "friction",
-            F::Spin => "spin",
-            F::Age => "age",
-            F::Life => "life",
-            F::Tumble => "tumble",
-            F::TumbleRate => "tumbleRate",
-            F::EmitT => "emitT",
-            F::Heading => "heading",
-            F::OnPose => "onPose",
-            F::Px => "px",
-            F::Py => "py",
-            F::Pz => "pz",
-            F::Vy => "vy",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum U {
-    Kind,
-    Flags,
-    Who,
-    Serial,
-    On,
-    Bounces,
-}
-impl U {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            U::Kind => "kind",
-            U::Flags => "flags",
-            U::Who => "who",
-            U::Serial => "serial",
-            U::On => "on",
-            U::Bounces => "bounces",
-        }
-    }
-}
-
 /// (TypeScript: ItemStore, src/sim/itemshome.ts:58)
 #[derive(Clone, Debug)]
 pub struct ItemStore {
@@ -115,23 +41,23 @@ pub struct ItemStoreO {
     pub vx: f64,
     pub vz: f64,
     pub serial: f64,
-    pub fuse: f64,
     pub on: f64,
-    pub restitution: f64,
-    pub friction: f64,
-    pub spin: f64,
-    pub age: f64,
-    pub life: f64,
-    pub tumble: f64,
-    pub tumble_rate: f64,
-    pub emit_t: f64,
-    pub bounces: f64,
-    pub heading: f64,
-    pub on_pose: f64,
     pub px: f64,
     pub py: f64,
     pub pz: f64,
     pub vy: f64,
+    pub spin: f64,
+    pub tumble: f64,
+    pub tumble_rate: f64,
+    pub age: f64,
+    pub life: f64,
+    pub restitution: f64,
+    pub friction: f64,
+    pub heading: f64,
+    pub on_pose: f64,
+    pub fuse: f64,
+    pub emit_t: f64,
+    pub bounces: f64,
 }
 impl ItemStoreO {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -147,27 +73,101 @@ impl ItemStoreO {
             vx: 0.0,
             vz: 0.0,
             serial: 0.0,
-            fuse: 0.0,
             on: 0.0,
-            restitution: 0.0,
-            friction: 0.0,
-            spin: 0.0,
-            age: 0.0,
-            life: 0.0,
-            tumble: 0.0,
-            tumble_rate: 0.0,
-            emit_t: 0.0,
-            bounces: 0.0,
-            heading: 0.0,
-            on_pose: 0.0,
             px: 0.0,
             py: 0.0,
             pz: 0.0,
             vy: 0.0,
+            spin: 0.0,
+            tumble: 0.0,
+            tumble_rate: 0.0,
+            age: 0.0,
+            life: 0.0,
+            restitution: 0.0,
+            friction: 0.0,
+            heading: 0.0,
+            on_pose: 0.0,
+            fuse: 0.0,
+            emit_t: 0.0,
+            bounces: 0.0,
         }
     }
 }
 impl Default for ItemStoreO { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum F {
+    Fill,
+    Radius,
+    Yaw,
+    Vx,
+    Vz,
+    Px,
+    Py,
+    Pz,
+    Vy,
+    Spin,
+    Tumble,
+    TumbleRate,
+    Age,
+    Life,
+    Restitution,
+    Friction,
+    Heading,
+    OnPose,
+    Fuse,
+    EmitT,
+}
+impl F {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            F::Fill => "fill",
+            F::Radius => "radius",
+            F::Yaw => "yaw",
+            F::Vx => "vx",
+            F::Vz => "vz",
+            F::Px => "px",
+            F::Py => "py",
+            F::Pz => "pz",
+            F::Vy => "vy",
+            F::Spin => "spin",
+            F::Tumble => "tumble",
+            F::TumbleRate => "tumbleRate",
+            F::Age => "age",
+            F::Life => "life",
+            F::Restitution => "restitution",
+            F::Friction => "friction",
+            F::Heading => "heading",
+            F::OnPose => "onPose",
+            F::Fuse => "fuse",
+            F::EmitT => "emitT",
+        }
+    }
+}
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum U {
+    Kind,
+    Flags,
+    Who,
+    Serial,
+    On,
+    Bounces,
+}
+impl U {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            U::Kind => "kind",
+            U::Flags => "flags",
+            U::Who => "who",
+            U::Serial => "serial",
+            U::On => "on",
+            U::Bounces => "bounces",
+        }
+    }
+}
 
 /// (TypeScript: ItemIo, src/sim/itemshome.ts:120)
 #[derive(Clone, Copy, Debug)]
@@ -360,23 +360,23 @@ pub struct ItemCols {
     pub vx: f64,
     pub vz: f64,
     pub serial: f64,
-    pub fuse: f64,
     pub on: f64,
-    pub restitution: f64,
-    pub friction: f64,
-    pub spin: f64,
-    pub age: f64,
-    pub life: f64,
-    pub tumble: f64,
-    pub tumble_rate: f64,
-    pub emit_t: f64,
-    pub bounces: f64,
-    pub heading: f64,
-    pub on_pose: f64,
     pub px: f64,
     pub py: f64,
     pub pz: f64,
     pub vy: f64,
+    pub spin: f64,
+    pub tumble: f64,
+    pub tumble_rate: f64,
+    pub age: f64,
+    pub life: f64,
+    pub restitution: f64,
+    pub friction: f64,
+    pub heading: f64,
+    pub on_pose: f64,
+    pub fuse: f64,
+    pub emit_t: f64,
+    pub bounces: f64,
 }
 impl ItemCols {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -392,23 +392,23 @@ impl ItemCols {
             vx: 0.0,
             vz: 0.0,
             serial: 0.0,
-            fuse: 0.0,
             on: 0.0,
-            restitution: 0.0,
-            friction: 0.0,
-            spin: 0.0,
-            age: 0.0,
-            life: 0.0,
-            tumble: 0.0,
-            tumble_rate: 0.0,
-            emit_t: 0.0,
-            bounces: 0.0,
-            heading: 0.0,
-            on_pose: 0.0,
             px: 0.0,
             py: 0.0,
             pz: 0.0,
             vy: 0.0,
+            spin: 0.0,
+            tumble: 0.0,
+            tumble_rate: 0.0,
+            age: 0.0,
+            life: 0.0,
+            restitution: 0.0,
+            friction: 0.0,
+            heading: 0.0,
+            on_pose: 0.0,
+            fuse: 0.0,
+            emit_t: 0.0,
+            bounces: 0.0,
         }
     }
 }

@@ -18,7 +18,7 @@ pub fn pack_mask(g: &mut crate::game::Game, ch: RigId, mask: f64, carries: bool)
 pub fn side_bind(g: &mut crate::game::Game, e: crate::packside::PackExt, what: crate::packside::SideBindWhat, dims: crate::packside::SideBindDims) -> crate::packside::SidePlace { todo!() }
 
 /// (src/game/packside.ts:109 backLine)
-pub fn back_line(ch: RigId, x: f64) -> Vec<crate::packside::BackPt> { todo!() }
+pub fn back_line(g: &mut crate::game::Game, ch: RigId, x: f64) -> Vec<crate::packside::BackPt> { todo!() }
 
 /// (src/game/packside.ts:121 sidePitch)
 pub fn side_pitch(g: &mut crate::game::Game, p: crate::packside::SidePlace, c: CharId) -> f64 { todo!() }

@@ -22,6 +22,74 @@ impl Entry {
 }
 impl Default for Entry { fn default() -> Self { Self::zeroed() } }
 
+/// (TypeScript: RoomFight, src/game/roomfight.ts:378)
+#[derive(Clone, Debug)]
+pub struct RoomFight {
+    pub skill: JsMap<crate::roomfight::RoomFightSkillKey, crate::roomfight::FightSkill>,
+    pub live: bool,
+    pub blind_fire: bool,
+    pub blind_rounds: f64,
+    pub trans: JsMap<String, f64>,
+    pub defs: Vec<RoomfightDefId>,
+    pub ops: Vec<RoomfightOpId>,
+    pub log: Vec<crate::roomfight::FightNote>,
+    pub stats: crate::roomfight::RoomFightStats,
+    pub rooms: Vec<RoomfightRoomId>,
+    pub room_of_cell: JsMap<crate::Num, RoomfightRoomId>,
+    pub fill_mark: Vec<u8>,
+    pub called: JsSet<GuardId>,
+    pub down_called: JsSet<GuardId>,
+    pub rr: f64,
+    pub hot_t: f64,
+    pub reports: Vec<crate::roomfight::RoomFightReportsItem>,
+    pub heard_ev: JsSet<u32>,
+    pub sams: Vec<crate::roomfight::RoomFightSamsItem>,
+    pub drill_said: bool,
+}
+impl RoomFight {
+    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    pub fn blank() -> Self {
+        RoomFight {
+            skill: { let mut t = JsMap::new(); t.set(crate::roomfight::RoomFightSkillKey::Operative, crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], rally: [0.0, 0.0], rally_chance: 0.0, funnel: 0.35, line: 0.5 }); t.set(crate::roomfight::RoomFightSkillKey::Hostile, crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], rally: [1.5, 4.0], rally_chance: 0.75, funnel: f64::INFINITY, line: f64::INFINITY }); t },
+            live: false,
+            blind_fire: true,
+            blind_rounds: 0.0,
+            trans: JsMap::new(),
+            defs: Vec::new(),
+            ops: Vec::new(),
+            log: Vec::new(),
+            stats: crate::roomfight::RoomFightStats { op_rounds: 0.0, held_for_friend: 0.0, fell_back: 0.0, fall_back_out: 0.0, took_cover: 0.0, rallied: 0.0, surprised: 0.0, broke: 0.0, stepped: 0.0, startled: 0.0 },
+            rooms: Vec::new(),
+            room_of_cell: JsMap::new(),
+            fill_mark: alloc::vec![0; 0],
+            called: JsSet::new(),
+            down_called: JsSet::new(),
+            rr: 0.0,
+            hot_t: -100.0,
+            reports: Vec::new(),
+            heard_ev: JsSet::new(),
+            sams: Vec::new(),
+            drill_said: false,
+        }
+    }
+}
+impl Default for RoomFight { fn default() -> Self { Self::blank() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum RoomFightSkillKey {
+    Operative,
+    Hostile,
+}
+impl RoomFightSkillKey {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            RoomFightSkillKey::Operative => "operative",
+            RoomFightSkillKey::Hostile => "hostile",
+        }
+    }
+}
+
 /// (TypeScript: FightSkill, src/game/roomfight.ts:228)
 #[derive(Clone, Copy, Debug)]
 pub struct FightSkill {
@@ -76,6 +144,102 @@ impl FightSkill {
     }
 }
 impl Default for FightSkill { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: FightNote, src/game/roomfight.ts:344)
+#[derive(Clone, Debug)]
+pub struct FightNote {
+    pub t: f64,
+    pub who: String,
+    pub what: String,
+}
+impl FightNote {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        FightNote {
+            t: 0.0,
+            who: String::new(),
+            what: String::new(),
+        }
+    }
+}
+impl Default for FightNote { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/roomfight.ts:388 RoomFight.stats, src/game/roomfight.ts:388)
+#[derive(Clone, Copy, Debug)]
+pub struct RoomFightStats {
+    pub op_rounds: f64,
+    pub held_for_friend: f64,
+    pub fell_back: f64,
+    pub fall_back_out: f64,
+    pub took_cover: f64,
+    pub rallied: f64,
+    pub surprised: f64,
+    pub broke: f64,
+    pub stepped: f64,
+    pub startled: f64,
+}
+impl RoomFightStats {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        RoomFightStats {
+            op_rounds: 0.0,
+            held_for_friend: 0.0,
+            fell_back: 0.0,
+            fall_back_out: 0.0,
+            took_cover: 0.0,
+            rallied: 0.0,
+            surprised: 0.0,
+            broke: 0.0,
+            stepped: 0.0,
+            startled: 0.0,
+        }
+    }
+}
+impl Default for RoomFightStats { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/roomfight.ts:396 RoomFight.reports, src/game/roomfight.ts:396)
+#[derive(Clone, Copy, Debug)]
+pub struct RoomFightReportsItem {
+    pub by: GuardId,
+    pub t: f64,
+    pub from: Option<V3>,
+    pub to: Option<V3>,
+}
+impl RoomFightReportsItem {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        RoomFightReportsItem {
+            by: GuardId(0),
+            t: 0.0,
+            from: None,
+            to: None,
+        }
+    }
+}
+impl Default for RoomFightReportsItem { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/roomfight.ts:399 RoomFight.sams, src/game/roomfight.ts:399)
+#[derive(Clone, Copy, Debug)]
+pub struct RoomFightSamsItem {
+    pub x: f64,
+    pub z: f64,
+    pub t: f64,
+    pub v: [f64; 2],
+    pub known: f64,
+}
+impl RoomFightSamsItem {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        RoomFightSamsItem {
+            x: 0.0,
+            z: 0.0,
+            t: 0.0,
+            v: [0.0; 2],
+            known: 0.0,
+        }
+    }
+}
+impl Default for RoomFightSamsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Room, src/game/roomfight.ts:292)
 #[derive(Clone, Debug)]
@@ -523,170 +687,6 @@ pub enum OpLineBy {
     Guard(GuardId),
     Player,
 }
-
-/// (TypeScript: FightNote, src/game/roomfight.ts:344)
-#[derive(Clone, Debug)]
-pub struct FightNote {
-    pub t: f64,
-    pub who: String,
-    pub what: String,
-}
-impl FightNote {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FightNote {
-            t: 0.0,
-            who: String::new(),
-            what: String::new(),
-        }
-    }
-}
-impl Default for FightNote { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: RoomFight, src/game/roomfight.ts:378)
-#[derive(Clone, Debug)]
-pub struct RoomFight {
-    pub skill: JsMap<crate::roomfight::RoomFightSkillKey, crate::roomfight::FightSkill>,
-    pub live: bool,
-    pub blind_fire: bool,
-    pub blind_rounds: f64,
-    pub trans: JsMap<String, f64>,
-    pub defs: Vec<RoomfightDefId>,
-    pub ops: Vec<RoomfightOpId>,
-    pub log: Vec<crate::roomfight::FightNote>,
-    pub stats: crate::roomfight::RoomFightStats,
-    pub rooms: Vec<RoomfightRoomId>,
-    pub room_of_cell: JsMap<crate::Num, RoomfightRoomId>,
-    pub fill_mark: Vec<u8>,
-    pub called: JsSet<GuardId>,
-    pub down_called: JsSet<GuardId>,
-    pub rr: f64,
-    pub hot_t: f64,
-    pub reports: Vec<crate::roomfight::RoomFightReportsItem>,
-    pub heard_ev: JsSet<u32>,
-    pub sams: Vec<crate::roomfight::RoomFightSamsItem>,
-    pub drill_said: bool,
-}
-impl RoomFight {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
-    pub fn blank() -> Self {
-        RoomFight {
-            skill: { let mut t = JsMap::new(); t.set(crate::roomfight::RoomFightSkillKey::Operative, crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], rally: [0.0, 0.0], rally_chance: 0.0, funnel: 0.35, line: 0.5 }); t.set(crate::roomfight::RoomFightSkillKey::Hostile, crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], rally: [1.5, 4.0], rally_chance: 0.75, funnel: f64::INFINITY, line: f64::INFINITY }); t },
-            live: false,
-            blind_fire: true,
-            blind_rounds: 0.0,
-            trans: JsMap::new(),
-            defs: Vec::new(),
-            ops: Vec::new(),
-            log: Vec::new(),
-            stats: crate::roomfight::RoomFightStats { op_rounds: 0.0, held_for_friend: 0.0, fell_back: 0.0, fall_back_out: 0.0, took_cover: 0.0, rallied: 0.0, surprised: 0.0, broke: 0.0, stepped: 0.0, startled: 0.0 },
-            rooms: Vec::new(),
-            room_of_cell: JsMap::new(),
-            fill_mark: alloc::vec![0; 0],
-            called: JsSet::new(),
-            down_called: JsSet::new(),
-            rr: 0.0,
-            hot_t: -100.0,
-            reports: Vec::new(),
-            heard_ev: JsSet::new(),
-            sams: Vec::new(),
-            drill_said: false,
-        }
-    }
-}
-impl Default for RoomFight { fn default() -> Self { Self::blank() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RoomFightSkillKey {
-    Operative,
-    Hostile,
-}
-impl RoomFightSkillKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RoomFightSkillKey::Operative => "operative",
-            RoomFightSkillKey::Hostile => "hostile",
-        }
-    }
-}
-
-/// (TypeScript: inline at src/game/roomfight.ts:388 RoomFight.stats, src/game/roomfight.ts:388)
-#[derive(Clone, Copy, Debug)]
-pub struct RoomFightStats {
-    pub op_rounds: f64,
-    pub held_for_friend: f64,
-    pub fell_back: f64,
-    pub fall_back_out: f64,
-    pub took_cover: f64,
-    pub rallied: f64,
-    pub surprised: f64,
-    pub broke: f64,
-    pub stepped: f64,
-    pub startled: f64,
-}
-impl RoomFightStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomFightStats {
-            op_rounds: 0.0,
-            held_for_friend: 0.0,
-            fell_back: 0.0,
-            fall_back_out: 0.0,
-            took_cover: 0.0,
-            rallied: 0.0,
-            surprised: 0.0,
-            broke: 0.0,
-            stepped: 0.0,
-            startled: 0.0,
-        }
-    }
-}
-impl Default for RoomFightStats { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/roomfight.ts:396 RoomFight.reports, src/game/roomfight.ts:396)
-#[derive(Clone, Copy, Debug)]
-pub struct RoomFightReportsItem {
-    pub by: GuardId,
-    pub t: f64,
-    pub from: Option<V3>,
-    pub to: Option<V3>,
-}
-impl RoomFightReportsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomFightReportsItem {
-            by: GuardId(0),
-            t: 0.0,
-            from: None,
-            to: None,
-        }
-    }
-}
-impl Default for RoomFightReportsItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/roomfight.ts:399 RoomFight.sams, src/game/roomfight.ts:399)
-#[derive(Clone, Copy, Debug)]
-pub struct RoomFightSamsItem {
-    pub x: f64,
-    pub z: f64,
-    pub t: f64,
-    pub v: [f64; 2],
-    pub known: f64,
-}
-impl RoomFightSamsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomFightSamsItem {
-            x: 0.0,
-            z: 0.0,
-            t: 0.0,
-            v: [0.0; 2],
-            known: 0.0,
-        }
-    }
-}
-impl Default for RoomFightSamsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:429 sightOn ->, src/game/roomfight.ts:429)
 #[derive(Clone, Copy, Debug)]

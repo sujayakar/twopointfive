@@ -77,7 +77,7 @@ pub fn glass_shards_new(g: &mut crate::game::Game) -> crate::shards::GlassShards
 
 /// One fragment lets go: its plates, its spray, its landing. False = the model is not live.   (shards.ts GlassShards.release)
 pub fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassFragmentLike) -> bool {
-    use crate::glassbreak::GlassType;
+    use crate::glasspen::PaneType;
     use crate::shards::{GlassFragmentLikeCause as Cause, GlassFragmentLikeKind as Kind};
     use crate::sim_fallshome::FallSound;
     if !shards_live(g) { return false; }
@@ -86,14 +86,15 @@ pub fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassF
     let n = v3::normalize(f.normal);
     let a = m::max(1e-4, f.area);
     let mut plated = 0.0;
-    let dice = f.kind == Kind::Clump || f.type_ == GlassType::Tempered;
+    let dice = f.kind == Kind::Clump || f.type_ == PaneType::Tempered;
     let powder = !dice && f.kind != Kind::Sheet && f.grain > 0.0;
     let plateable = !dice && !powder && a >= g.k.shards.plate_min_area;
     if plateable { plated = glass_shards_plates(g, f, n); }
     let sp = g.k.shards.speed;
     let tint = f.tint;
     let spread = m::sqrt(a) * 0.45;
-    let fall = glass_shards_fall_of(g, f.centre, f.velocity);
+    let fall = match f.fall { Some(r) => GlassShardsFallOf { t: r.t, pos: r.pos }, None => glass_shards_fall_of(g, f.centre, f.velocity) };
+    let own = f.landed != Some(true);
     let hit_or_blast = f.cause == Cause::Hit || f.cause == Cause::Blast;
     let by_fall = g.k.shards.by_fall;
     let fine_life = g.k.shards.fine_life;
@@ -108,7 +109,7 @@ pub fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassF
             let nb = glass_shards_budget(g, want);
             glass_shards_emit(g, v3::mad(f.centre, n, -0.03), v3::scale(n, -1.0), nb, spray((1.0 + 0.8 * e) * sp, 0.8, 1.0, fine_life * 0.8, 0.4, f.grain, 0.6, 1.3, 45.0, 1.0, spread * 0.6, None, tint), xor_u32(f.seed, 0xBACC as f64));
         }
-        glass_shards_schedule(g, GlassShardsScheduleFall { t: fall.t + 0.05, pos: fall.pos }, FallSound::GlassTinkle, 0.0, 1.0, a, f.who, Some(false));
+        if own { glass_shards_schedule(g, GlassShardsScheduleFall { t: fall.t + 0.05, pos: fall.pos }, FallSound::GlassTinkle, 0.0, 1.0, a, f.who, Some(false)); }
     } else if dice {
         let grain = if f.grain > 0.0 { f.grain } else { 0.009 };
         let want = clamp_i(m::round(a * m::min(g.k.shards.dice_per_m2, 0.5 / (grain * grain))), g.k.shards.dice_min, g.k.shards.dice_max);
@@ -118,11 +119,12 @@ pub fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassF
         let want = clamp_i(m::round(a * g.k.shards.fine_per_m2 * g.k.shards.dice_fine_share), 4.0, fine_max);
         let nf = glass_shards_budget(g, want);
         glass_shards_emit(g, f.centre, n, nf, spray(1.6 * sp, 0.85, 1.2, fine_life, 0.4, fine_size * 0.8, 0.5, 1.2, 45.0, 1.0, spread, Some(v3::scale(f.velocity, 0.5)), tint), xor_u32(f.seed, 0xF17E as f64));
-        glass_shards_schedule(g, to_sched(fall), FallSound::GlassShatter, m::min(1.0, 0.35 + a * 4.0), 1.15 + 0.3 * crate::debris::hash01(f.seed), a * 0.8, f.who, None);
+        if own { glass_shards_schedule(g, to_sched(fall), FallSound::GlassShatter, m::min(1.0, 0.35 + a * 4.0), 1.15 + 0.3 * crate::debris::hash01(f.seed), a * 0.8, f.who, None); }
     } else if f.kind == Kind::Sheet {
         let nf = glass_shards_budget(g, clamp_i(m::round(a * 60.0), 4.0, 40.0));
         glass_shards_emit(g, f.centre, n, nf, spray(0.8 * sp, 0.8, 1.2, fine_life, 0.4, fine_size, 0.5, 1.2, 40.0, 1.0, spread, Some(f.velocity), tint), xor_u32(f.seed, 0xF17E as f64));
-        if by_fall { glass_shards_landing(g, to_landing(fall), if plateable { 0.0 } else { 0.5 }, 0.8, a * 0.3, f.who); }
+        if !own { /* the rule's */ }
+        else if by_fall { glass_shards_landing(g, to_landing(fall), if plateable { 0.0 } else { 0.5 }, 0.8, a * 0.3, f.who); }
         else if !js::truthy(plated) { glass_shards_schedule(g, to_sched(fall), FallSound::GlassTinkle, 0.5, 0.8, a * 0.3, f.who, None); }
     } else {
         let k = (0.5 + 0.5 * e) * (if js::truthy(plated) { 1.0 } else { 2.0 });
@@ -139,7 +141,8 @@ pub fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassF
             let nb = glass_shards_budget(g, m::round(nf * share));
             glass_shards_emit(g, v3::mad(f.centre, n, -0.03), v3::scale(n, -1.0), nb, spray((1.0 + 0.8 * e) * sp, 0.8, 1.0, fine_life * 0.8, 0.4, fine_size * 0.9, 0.6, 1.3, 45.0, 1.0, spread * 0.6, None, tint), xor_u32(f.seed, 0xBACC as f64));
         }
-        if by_fall { glass_shards_landing(g, to_landing(fall), if plateable { 0.0 } else { m::min(0.9, 0.3 + a * 8.0) }, 0.9 + 0.5 * crate::debris::hash01(f.seed), a, f.who); }
+        if !own { /* the rule's */ }
+        else if by_fall { glass_shards_landing(g, to_landing(fall), if plateable { 0.0 } else { m::min(0.9, 0.3 + a * 8.0) }, 0.9 + 0.5 * crate::debris::hash01(f.seed), a, f.who); }
         else if !js::truthy(plated) { glass_shards_schedule(g, to_sched(fall), FallSound::GlassTinkle, m::min(0.9, 0.3 + a * 8.0), 0.9 + 0.5 * crate::debris::hash01(f.seed), a, f.who, None); }
         else { glass_shards_schedule(g, GlassShardsScheduleFall { t: fall.t + 0.05, pos: fall.pos }, FallSound::GlassTinkle, 0.0, 1.0, a * 0.35, f.who, Some(false)); }
     }
@@ -163,7 +166,7 @@ pub fn glass_shards_spall(g: &mut crate::game::Game, at: V3, n: V3, dir: Option<
 
 /// The interim hookup: a shard box the pool was about to spawn, read back as the fragment it stands for. None = not ours.   (shards.ts GlassShards.take)
 pub fn glass_shards_take(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who: f64) -> Option<DebrisChunkId> {
-    use crate::glassbreak::GlassType;
+    use crate::glasspen::PaneType;
     use crate::shards::{GlassFragmentLikeCause as Cause, GlassShardsPaneMemValueCause as MemCause};
     if g.shards.hooked || !shards_live(g) { return None; }
     g.shards.serial += 1.0;
@@ -186,7 +189,7 @@ pub fn glass_shards_take(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, w
         f.pane = st.bi;
         f.type_ = st.type_;
         f.cause = if now - mem_t < 0.35 { match mem_cause { MemCause::Hit => Cause::Hit, MemCause::Blast => Cause::Blast } } else { Cause::Support };
-        if st.type_ == GlassType::Tempered {
+        if st.type_ == PaneType::Tempered {
             let diced = g.shards.pane_mem.get(key).unwrap().diced_t;
             if now - diced > 2.0 {
                 g.shards.pane_mem.get_mut(key).unwrap().diced_t = now;
@@ -204,11 +207,11 @@ pub fn glass_shards_take(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, w
 
 /// The pane whose face a dropped cell's box lies in.   (shards.ts GlassShards.paneAt)
 pub fn glass_shards_pane_at(g: &mut crate::game::Game, c_2: V3) -> Option<crate::glassbreak::PaneState> {
-    let rows: Vec<(crate::Num, BoxId)> = g.glass_break.panes.iter().map(|(k, st)| (k, st.box_)).collect();
+    let panes = crate::glassbreak::glass_break_panes(g);
     let mut best = None;
     let mut best_d = 0.12;
-    for (key, bx) in rows {
-        let (bc, bh, yaw) = { let b = &*seam_box(g, bx); (b.c, b.h, b.yaw) };
+    for (key, st) in panes.iter() {
+        let (bc, bh, yaw) = { let b = &*seam_box(g, st.box_); (b.c, b.h, b.yaw) };
         let (dx, dz) = (c_2[0] - bc[0], c_2[2] - bc[2]);
         let (cy, sy) = (m::cos(yaw), m::sin(yaw));
         let l = [dx * cy - dz * sy, c_2[1] - bc[1], dx * sy + dz * cy];
@@ -217,12 +220,12 @@ pub fn glass_shards_pane_at(g: &mut crate::game::Game, c_2: V3) -> Option<crate:
         let out = m::max_n(&[0.0, m::abs(l[2 - thin]) - bh[2 - thin], m::abs(l[1]) - bh[1]]);
         if out < best_d { best_d = out; best = Some(key); }
     }
-    best.and_then(|k| g.glass_break.panes.get(k).cloned())
+    best.and_then(|k| panes.get(k).cloned())
 }
 
 /// A tempered pane gone to dice, whole: its face as a grid of clumps, each a release.   (shards.ts GlassShards.dicePane)
 pub fn glass_shards_dice_pane(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, f0: &crate::shards::GlassFragmentLike) {
-    use crate::glassbreak::GlassType;
+    use crate::glasspen::PaneType;
     use crate::shards::{GlassFragmentLikeCause as Cause, GlassFragmentLikeKind as Kind};
     let (bc, bh, yaw) = { let b = &*seam_box(g, st.box_); (b.c, b.h, b.yaw) };
     let thin = if bh[0] < bh[2] { 0 } else { 2 };
@@ -241,7 +244,7 @@ pub fn glass_shards_dice_pane(g: &mut crate::game::Game, st: &crate::glassbreak:
             let c: V3 = [bc[0] + u_ax[0] * du, bc[1] + dv, bc[2] + u_ax[2] * du];
             let corner = |a: f64, e: f64| -> V3 { [c[0] + u_ax[0] * su * a, c[1] + sv * e, c[2] + u_ax[2] * su * a] };
             let f = GlassFragmentLike {
-                pane: st.bi, type_: GlassType::Tempered, kind: Kind::Clump, grain: 0.009, cause: Cause::Dice,
+                pane: st.bi, type_: PaneType::Tempered, kind: Kind::Clump, grain: 0.009, cause: Cause::Dice,
                 outline: vec![corner(-1.0, -1.0), corner(1.0, -1.0), corner(1.0, 1.0), corner(-1.0, 1.0)],
                 centre: c, area: 4.0 * su * sv, thickness: 2.0 * bh[thin],
                 velocity: [f0.velocity[0], f0.velocity[1] - 0.2 * crate::debris::hash01(f0.seed + i * 7.0 + j), f0.velocity[2]],
@@ -336,7 +339,7 @@ pub fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, 
         Some(c) => c,
         None => { g.stats.shards.plates_refused += 1; return None; }
     };
-    let contact = if meta.type_ == crate::glassbreak::GlassType::Laminated { None } else {
+    let contact = if meta.type_ == crate::glasspen::PaneType::Laminated { None } else {
         let k = g.k.shards.contact;
         Some(crate::debris::ChunkContact { keep_floor: k.keep_floor, keep_wall: k.keep_wall, rest: k.rest })
     };
@@ -407,7 +410,7 @@ pub fn glass_shards_landed(g: &mut crate::game::Game, c_2: DebrisChunkId, speed:
     let (serial, who, bx) = { let c = &g.tab.debris_chunk[c_2]; (c.serial, c.who, c.box_) };
     let (v0, v1) = (g.k.shards.shatter_v0, g.k.shards.shatter_v1);
     let p = if v1 > v0 { m::max(0.0, m::min(1.0, (speed - v0) / (v1 - v0))) } else { 1.0 };
-    let laminated = meta.type_ == crate::glassbreak::GlassType::Laminated;
+    let laminated = meta.type_ == crate::glasspen::PaneType::Laminated;
     let breaks = shards_live(g) && !laminated && meta.gen_ < g.k.shards.max_gen && meta.area >= g.k.shards.child_min_area * 2.0
         && crate::debris::hash01(serial * 61.0 + 7.0) < p * (if js::truthy(meta.gen_) { 0.6 } else { 1.0 });
     if breaks { g.shards.breaks.push(GlassShardsBreaksItem { c: c_2, speed }); }
@@ -603,7 +606,7 @@ fn level_box_albedo(g: &mut Game, bi: f64) -> V3 {
 pub fn glass_shards_crossed(g: &mut crate::game::Game, x: crate::shards::PaneCrossLike, who: f64) -> bool {
     if !shards_live(g) { return false; }
     g.stats.shards.crossings += 1;
-    let k = v3::clamp(x.take / 0.1, 0.5, 2.0) * (if x.hole { 0.2 } else { 1.0 }) * (if x.type_ == crate::glassbreak::GlassType::Laminated { 0.35 } else { 1.0 });
+    let k = v3::clamp(x.take / 0.1, 0.5, 2.0) * (if x.hole { 0.2 } else { 1.0 }) * (if x.type_ == crate::glasspen::PaneType::Laminated { 0.35 } else { 1.0 });
     let want = m::round(g.k.shards.exit_fines * k);
     let n = glass_shards_budget(g, want);
     let (fine_life, fine_size) = (g.k.shards.fine_life, g.k.shards.fine_size);
@@ -612,8 +615,8 @@ pub fn glass_shards_crossed(g: &mut crate::game::Game, x: crate::shards::PaneCro
         if want <= 0.0 { return true; }
         let d = v3::normalize(x.dir_out);
         let sp = (g.k.shards.exit_speed + 5.0 * v3::clamp(x.e_out, 0.0, 1.0)) * g.k.shards.speed;
-        let fall = glass_shards_fall_of(g, x.exit, v3::scale(d, sp * 0.35));
-        glass_shards_schedule(g, to_sched(fall), sound, 0.0, 1.0, want * fine_size * fine_size, who, Some(false));
+        let amount = want * fine_size * fine_size;
+        crate::glassbreak::glass_break_asking(g, &mut |_g, _s, _w| ::sim::panes_jet(x.exit[0], x.exit[1], x.exit[2], d[0], d[1], d[2], sp, amount, who));
         if n > 0.0 {
             let tint = level_box_albedo(g, x.bi);
             g.shards.serial += 1.0;
@@ -871,12 +874,12 @@ pub fn glass_shards_summary(g: &mut crate::game::Game) -> String {
 }
 
 /// A hand test: a fragment of `area` m² let go at `at`, thrown along `dir`.   (shards.ts GlassShards.test)
-pub fn glass_shards_test(g: &mut crate::game::Game, at: V3, dir: Option<V3>, area: Option<f64>, kind: Option<crate::shards::GlassShardsTestKind>, type_: Option<crate::glassbreak::GlassType>) -> bool {
+pub fn glass_shards_test(g: &mut crate::game::Game, at: V3, dir: Option<V3>, area: Option<f64>, kind: Option<crate::shards::GlassShardsTestKind>, type_: Option<crate::glasspen::PaneType>) -> bool {
     use crate::shards::{GlassFragmentLikeCause as Cause, GlassFragmentLikeKind as Kind, GlassShardsTestKind as TestKind};
     let dir = dir.unwrap_or([0.0, 0.0, 1.0]);
     let area = area.unwrap_or(0.06);
     let kind = match kind.unwrap_or(TestKind::Piece) { TestKind::Piece => Kind::Piece, TestKind::Sheet => Kind::Sheet, TestKind::Dagger => Kind::Dagger, TestKind::Clump => Kind::Clump };
-    let type_ = type_.unwrap_or(crate::glassbreak::GlassType::Annealed);
+    let type_ = type_.unwrap_or(crate::glasspen::PaneType::Annealed);
     let n: V3 = if m::hyp2(dir[0], dir[2]) > 1e-6 { v3::normalize([dir[0], 0.0, dir[2]]) } else { [0.0, 0.0, 1.0] };
     let s = m::sqrt(area) / 2.0;
     let u_: V3 = [n[2], 0.0, -n[0]];
@@ -886,7 +889,7 @@ pub fn glass_shards_test(g: &mut crate::game::Game, at: V3, dir: Option<V3>, are
     let seed = u32(m::imul(js::to_i32(g.shards.serial), js::to_i32(2654435761.0)) as f64);
     let f = GlassFragmentLike {
         pane: -1.0, type_, kind, outline, centre: v3::copy(at), normal: n, thickness: 0.006, area, velocity: [n[0] * 0.8, -0.3, n[2] * 0.8], spin: [2.0, 0.5, -1.5], tint: [0.72, 0.8, 0.82],
-        grain: if kind == Kind::Clump { 0.009 } else { 0.0 }, cause: Cause::Hit, who: crate::consts::NOBODY_ID, seed,
+        grain: if kind == Kind::Clump { 0.009 } else { 0.0 }, cause: Cause::Hit, who: crate::consts::NOBODY_ID, seed, fall: None, landed: None,
     };
     glass_shards_release(g, &f)
 }

@@ -33,11 +33,6 @@ fn bx_mut(g: &mut Game, id: BoxId) -> &mut Bx { &mut g.tab.boxes[id] }
 /// a new box into the table of every box (boxes.ts:186 and :204 hand back the object itself)
 #[cfg(not(test))]
 fn seam_box_push(g: &mut Game, b: Bx) -> BoxId { crate::scene_boxes::box_new(g, b) }
-/// the same for `box_of`, whose stub takes no `g`
-#[cfg(not(test))]
-fn seam_box_push_no_g(b: Bx) -> BoxId {
-    todo!("needs: `g` on box_of's stub, and a table of Box rows")
-}
 
 /// `device.queue.writeBuffer(matBuf, offset, data, 0, bytes)` (boxes.ts:332, :337). No Rust part calls its two callers: the air grid and the hills go to the host.
 fn seam_write_mat_buf(g: &mut Game, offset: f64, data: &[f32], bytes: f64) {
@@ -60,8 +55,8 @@ fn box_value(c: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner
 }
 
 /// A box with every field in place. (boxes.ts boxOf)
-pub fn box_of(c_2: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner: f64, rot: Option<Quat>, name: Option<&str>) -> BoxId {
-    seam_box_push_no_g(box_value(c_2, h, yaw, albedo, emissive, flags, owner, rot, name.map(String::from)))
+pub fn box_of(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner: f64, rot: Option<Quat>, name: Option<&str>) -> BoxId {
+    seam_box_push(g, box_value(c_2, h, yaw, albedo, emissive, flags, owner, rot, name.map(String::from)))   // (skeleton 5.2: box_of takes g)
 }
 
 /// Is this piece of trim drawn: while the box that says it is. (boxes.ts trimDrawn)

@@ -549,25 +549,11 @@ fn shover_at(g: &mut Game, ch: PropId, c: CharId) -> V3 {
 
 /// the light on a sleeper's face that is news to him: everything but his own side's lamps and the room's screens (doze.ts faceLight)
 pub fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
-    let mut off: Vec<LightId> = Vec::new();
-    for ti in 0..g.targets.len() {
-        let t = g.targets[ti];
-        if g.tab.sim_lightshome_fixture[t].group != "monitors" { continue; }
-        let Some(items) = g.tab.sim_lightshome_fixture[t].area_lights.clone() else { continue };
-        for al in items.iter() {
-            if g.tab.light[al.light].enabled {
-                g.tab.light[al.light].enabled = false;
-                off.push(al.light);
-            }
-        }
-    }
     let me = g.ch[g.gd[gd].ch].id;
     let team = g.gd[gd].team;
     let mut skip = move |g: &mut Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
-    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), None, None, None);
-    let v = crate::game::game_visibility_of(g, est);
-    for l in off { g.tab.light[l].enabled = true; }
-    v
+    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), None, None, Some(crate::sim_lightshome::row_bit().screen));
+    crate::game::game_visibility_of(g, est)
 }
 /// a man of this team carries the lamp with this owner (doze.ts:307, 314)
 fn own_side_owns(g: &Game, owner: f64, team: crate::teams::Team) -> bool {

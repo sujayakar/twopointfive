@@ -1014,8 +1014,8 @@ pub fn director_restore_weather(g: &mut crate::game::Game, s_key: DirectorRunId)
     let s = g.tab.director_run[s_key].show.as_mut().unwrap();
     let Some(w) = s.weather_saved else { return };
     s.weather_saved = None;
-    g.weather.storm = w.storm;
-    g.weather.rain_rate = w.rain;
+    crate::weather::weather_set_storm(g, w.storm);
+    crate::weather::weather_set_rain_rate(g, w.rain);
 }
 
 /// The program's own destruction knob dropped. (director.ts Director.restoreChaos)

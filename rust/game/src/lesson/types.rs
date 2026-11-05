@@ -43,6 +43,46 @@ pub enum LessonTest {
     Any { of: Vec<crate::lesson::LessonTest> },
 }
 
+/// (TypeScript: LessonSnap, src/game/lesson.ts:298)
+#[derive(Clone, Debug)]
+pub struct LessonSnap {
+    pub i: f64,
+    pub done: Vec<(String, f64)>,
+}
+impl LessonSnap {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        LessonSnap {
+            i: 0.0,
+            done: Vec::new(),
+        }
+    }
+}
+impl Default for LessonSnap { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: Lesson, src/game/lesson.ts:300)
+#[derive(Clone, Debug)]
+pub struct Lesson {
+    pub i: f64,
+    pub done_at: JsMap<String, f64>,
+    pub log: Vec<String>,
+    pub seen: Option<crate::lesson::StepSeen>,
+    pub run: Option<u32>,
+}
+impl Lesson {
+    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    pub fn blank() -> Self {
+        Lesson {
+            i: 0.0,
+            done_at: JsMap::new(),
+            log: Vec::new(),
+            seen: None,
+            run: None,
+        }
+    }
+}
+impl Default for Lesson { fn default() -> Self { Self::blank() } }
+
 /// (TypeScript: StepSeen, src/game/lesson.ts:91)
 #[derive(Clone, Debug)]
 pub struct StepSeen {
@@ -116,6 +156,19 @@ impl StepSeenLastPair {
 }
 impl Default for StepSeenLastPair { fn default() -> Self { Self::zeroed() } }
 
+/// (TypeScript: inline at quiet Lesson.run, quiet Lesson.run)
+#[derive(Clone, Copy, Debug)]
+pub struct LessonRun {
+}
+impl LessonRun {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        LessonRun {
+        }
+    }
+}
+impl Default for LessonRun { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: TestKind, src/game/lesson.ts:104)
 #[derive(Clone, Copy, Debug)]
 pub struct TestKind {
@@ -145,59 +198,6 @@ impl PairSel {
         }
     }
 }
-
-/// (TypeScript: LessonSnap, src/game/lesson.ts:298)
-#[derive(Clone, Debug)]
-pub struct LessonSnap {
-    pub i: f64,
-    pub done: Vec<(String, f64)>,
-}
-impl LessonSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LessonSnap {
-            i: 0.0,
-            done: Vec::new(),
-        }
-    }
-}
-impl Default for LessonSnap { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: Lesson, src/game/lesson.ts:300)
-#[derive(Clone, Debug)]
-pub struct Lesson {
-    pub i: f64,
-    pub done_at: JsMap<String, f64>,
-    pub log: Vec<String>,
-    pub seen: Option<crate::lesson::StepSeen>,
-    pub run: Option<u32>,
-}
-impl Lesson {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
-    pub fn blank() -> Self {
-        Lesson {
-            i: 0.0,
-            done_at: JsMap::new(),
-            log: Vec::new(),
-            seen: None,
-            run: None,
-        }
-    }
-}
-impl Default for Lesson { fn default() -> Self { Self::blank() } }
-
-/// (TypeScript: inline at quiet Lesson.run, quiet Lesson.run)
-#[derive(Clone, Copy, Debug)]
-pub struct LessonRun {
-}
-impl LessonRun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LessonRun {
-        }
-    }
-}
-impl Default for LessonRun { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lesson.ts:113 after(log), src/game/lesson.ts:113 after(log))
 #[derive(Clone, Copy, Debug)]

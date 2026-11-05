@@ -304,7 +304,7 @@ impl WhistleK {
 }
 impl Default for WhistleK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wet.ts:47 WET, src/game/wet.ts:29)
+/// (TypeScript: inline at src/game/wet.ts:49 WET, src/game/wet.ts:31)
 #[derive(Clone, Copy, Debug)]
 pub struct WetK {
     pub soak_per_sec: f64,
@@ -347,7 +347,7 @@ impl WetK {
 }
 impl Default for WetK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wind.ts:37 WIND, src/game/wind.ts:37)
+/// (TypeScript: inline at src/game/wind.ts:42 WIND, src/game/wind.ts:42)
 #[derive(Clone, Copy, Debug)]
 pub struct WindK {
     pub def: f64,
@@ -1415,7 +1415,7 @@ impl ShotgunK {
 }
 impl Default for ShotgunK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glass.ts:23 GLASS, src/game/glass.ts:23)
+/// (TypeScript: inline at src/game/glass.ts:25 GLASS, src/game/glass.ts:25)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassK {
     pub hear_m: f64,
@@ -1448,7 +1448,7 @@ impl GlassK {
 }
 impl Default for GlassK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glass.ts:42 GLASSFX, src/game/glass.ts:42)
+/// (TypeScript: inline at src/game/glass.ts:44 GLASSFX, src/game/glass.ts:44)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassfxK {
     pub on: bool,
@@ -1463,7 +1463,7 @@ impl GlassfxK {
 }
 impl Default for GlassfxK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:53 GLASSBREAK, src/game/glassbreak.ts:53)
+/// (TypeScript: inline at src/game/glassbreak.ts:56 GLASSBREAK, src/game/glassbreak.ts:56)
 #[derive(Clone, Debug)]
 pub struct GlassbreakK {
     pub max_sites: f64,
@@ -1566,7 +1566,7 @@ impl GlassbreakK {
 }
 impl Default for GlassbreakK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:56 GlassbreakK.breakE, src/game/glassbreak.ts:56)
+/// (TypeScript: inline at src/game/glassbreak.ts:59 GlassbreakK.breakE, src/game/glassbreak.ts:59)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassbreakKBreakE {
     pub annealed: f64,
@@ -1613,7 +1613,7 @@ impl GlassbreakKRadialsKey {
     }
 }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:75 GlassbreakK.grip, src/game/glassbreak.ts:75)
+/// (TypeScript: inline at src/game/glassbreak.ts:78 GlassbreakK.grip, src/game/glassbreak.ts:78)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassbreakKGrip {
     pub side: f64,
@@ -1632,14 +1632,14 @@ impl GlassbreakKGrip {
 }
 impl Default for GlassbreakKGrip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glasspen.ts:60 GLASSPEN, src/game/glasspen.ts:60)
+/// (TypeScript: inline at src/game/glasspen.ts:61 GLASSPEN, src/game/glasspen.ts:61)
 #[derive(Clone, Debug)]
 pub struct GlasspenK {
     pub on: bool,
     pub energy: JsMap<String, f64>,
     pub by_class: JsMap<String, f64>,
     pub default_energy: f64,
-    pub cost: JsMap<crate::glassbreak::GlassType, f64>,
+    pub cost: JsMap<crate::glasspen::PaneType, f64>,
     pub ref_thick: f64,
     pub oblique_max: f64,
     pub graze_cos: f64,
@@ -1689,7 +1689,7 @@ impl GlasspenK {
 }
 impl Default for GlasspenK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:64 SHARDS, src/game/shards.ts:64)
+/// (TypeScript: inline at src/game/shards.ts:66 SHARDS, src/game/shards.ts:66)
 #[derive(Clone, Debug)]
 pub struct ShardsK {
     pub mid_per_m2: f64,
@@ -1826,7 +1826,7 @@ impl ShardsK {
 }
 impl Default for ShardsK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:101 ShardsK.contact, src/game/shards.ts:101)
+/// (TypeScript: inline at src/game/shards.ts:103 ShardsK.contact, src/game/shards.ts:103)
 #[derive(Clone, Copy, Debug)]
 pub struct ShardsKContact {
     pub keep_floor: f64,
@@ -4547,7 +4547,7 @@ impl DoorthrowK {
 }
 impl Default for DoorthrowK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/winbars.ts:40 WINBARS, src/game/winbars.ts:40)
+/// (TypeScript: inline at src/game/winbars.ts:42 WINBARS, src/game/winbars.ts:42)
 #[derive(Clone, Copy, Debug)]
 pub struct WinbarsK {
     pub on: bool,
@@ -5228,7 +5228,7 @@ impl FurnKRider {
 }
 impl Default for FurnKRider { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/snowBog.ts:18 SNOWBOG, src/game/snowBog.ts:18)
+/// (TypeScript: inline at src/game/snowBog.ts:20 SNOWBOG, src/game/snowBog.ts:20)
 #[derive(Clone, Copy, Debug)]
 pub struct SnowbogK {
     pub on: bool,
@@ -5361,7 +5361,7 @@ impl LightwallK {
 }
 impl Default for LightwallK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/airDust.ts:34 AIRDUST, src/game/airDust.ts:34)
+/// (TypeScript: inline at src/game/airDust.ts:37 AIRDUST, src/game/airDust.ts:37)
 #[derive(Clone, Copy, Debug)]
 pub struct AirdustK {
     pub on: bool,
@@ -6715,7 +6715,7 @@ impl SlotsetupK {
 }
 impl Default for SlotsetupK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:113 GLASSREAL, src/game/glassbreak.ts:113)
+/// (TypeScript: inline at src/game/glassbreak.ts:116 GLASSREAL, src/game/glassbreak.ts:116)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassrealK {
     pub drop: bool,
@@ -12336,7 +12336,7 @@ impl BuddyK {
 }
 impl Default for BuddyK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weather.ts:56 WX_SIM, src/game/weather.ts:56)
+/// (TypeScript: inline at src/game/weather.ts:58 WX_SIM, src/game/weather.ts:58)
 #[derive(Clone, Copy, Debug)]
 pub struct WxSimK {
     pub rain_k: f64,
@@ -12361,7 +12361,7 @@ impl WxSimK {
 }
 impl Default for WxSimK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weatherKinds.ts:172 WX_OWN, src/game/weatherKinds.ts:172)
+/// (TypeScript: inline at src/game/weatherKinds.ts:171 WX_OWN, src/game/weatherKinds.ts:171)
 #[derive(Clone, Copy, Debug)]
 pub struct WxOwnK {
     pub roofs: bool,
@@ -12378,7 +12378,7 @@ impl WxOwnK {
 }
 impl Default for WxOwnK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weatherKinds.ts:58 SNOW, src/game/weatherKinds.ts:58)
+/// (TypeScript: inline at src/game/weatherKinds.ts:60 SNOW, src/game/weatherKinds.ts:60)
 #[derive(Clone, Copy, Debug)]
 pub struct SnowK {
     pub on: bool,
@@ -12393,7 +12393,7 @@ impl SnowK {
 }
 impl Default for SnowK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weatherKinds.ts:105 SNOW_LOOK, src/game/weatherKinds.ts:105)
+/// (TypeScript: inline at src/game/weatherKinds.ts:107 SNOW_LOOK, src/game/weatherKinds.ts:107)
 #[derive(Clone, Copy, Debug)]
 pub struct SnowLookK {
     pub on: bool,
@@ -13418,7 +13418,7 @@ pub fn page_glassbreak() -> GlassbreakK {
 }
 
 pub fn page_glasspen() -> GlasspenK {
-    crate::knobs::GlasspenK { on: true, energy: { let mut t = JsMap::new(); t.set(String::from("fn2000"), 1.0); t.set(String::from("mk18bare"), 1.0); t.set(String::from("g19bare"), 0.6); t.set(String::from("ak74m"), 1.0); t.set(String::from("akms"), 1.1); t.set(String::from("pkm"), 1.3); t.set(String::from("aks74u"), 0.9); t.set(String::from("fiveseven"), 0.6); t.set(String::from("guard9mm"), 0.5); t.set(String::from("m870"), 0.3); t.set(String::from("m1014"), 0.3); t.set(String::from("mp7"), 0.6); t }, by_class: { let mut t = JsMap::new(); t.set(String::from("rifle"), 1.0); t.set(String::from("carbine"), 0.9); t.set(String::from("pistol"), 0.5); t }, default_energy: 0.5, cost: { let mut t = JsMap::new(); t.set(crate::glassbreak::GlassType::Annealed, 0.1); t.set(crate::glassbreak::GlassType::Tempered, 0.16); t.set(crate::glassbreak::GlassType::Laminated, 0.42); t }, ref_thick: 0.012, oblique_max: 3.0, graze_cos: 0.17, min_energy: 0.12, max_panes: 4.0, deflect_deg: 5.0, bend_k: 0.5, hole_r: 0.04, hole_k: 0.25, holes: 24.0, shell_r: 0.04, stack_eyes: 3.0, stack_energy: 1.0, stack_least: true, stack_least_k: 0.75, fracture_k: 2.0, foes_through: true }
+    crate::knobs::GlasspenK { on: true, energy: { let mut t = JsMap::new(); t.set(String::from("fn2000"), 1.0); t.set(String::from("mk18bare"), 1.0); t.set(String::from("g19bare"), 0.6); t.set(String::from("ak74m"), 1.0); t.set(String::from("akms"), 1.1); t.set(String::from("pkm"), 1.3); t.set(String::from("aks74u"), 0.9); t.set(String::from("fiveseven"), 0.6); t.set(String::from("guard9mm"), 0.5); t.set(String::from("m870"), 0.3); t.set(String::from("m1014"), 0.3); t.set(String::from("mp7"), 0.6); t }, by_class: { let mut t = JsMap::new(); t.set(String::from("rifle"), 1.0); t.set(String::from("carbine"), 0.9); t.set(String::from("pistol"), 0.5); t }, default_energy: 0.5, cost: { let mut t = JsMap::new(); t.set(crate::glasspen::PaneType::Annealed, 0.1); t.set(crate::glasspen::PaneType::Tempered, 0.16); t.set(crate::glasspen::PaneType::Laminated, 0.42); t }, ref_thick: 0.012, oblique_max: 3.0, graze_cos: 0.17, min_energy: 0.12, max_panes: 4.0, deflect_deg: 5.0, bend_k: 0.5, hole_r: 0.04, hole_k: 0.25, holes: 24.0, shell_r: 0.04, stack_eyes: 3.0, stack_energy: 1.0, stack_least: true, stack_least_k: 0.75, fracture_k: 2.0, foes_through: true }
 }
 
 pub fn page_shards() -> ShardsK {

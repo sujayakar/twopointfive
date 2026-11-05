@@ -1,4 +1,4 @@
-//! src/game/glass.ts lines 1 to 255
+//! src/game/glass.ts lines 1 to 245
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,9 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ---- seams: what skeleton 5 still cannot give ----
+// ---- the box table ----
 
-/// a box's row (Box.* in the TypeScript). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows; where the table comes back this is the one line `&mut g.<table>[b]`
+/// a box's row (Box.* in the TypeScript)
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ---- private helpers ----
@@ -21,15 +21,12 @@ fn box_at(g: &mut Game, i: f64) -> Option<BoxId> {
     g.col.boxes.get(ix).copied()
 }
 
-/// the seed's word of a box's centre and half sizes (glass.ts:113 boxSeed, with the box read)
+/// the seed's word of a box's centre and half sizes: the module's (glass.ts:115 boxSeed, with the box read)
 fn box_word(c: V3, hs: V3) -> f64 {
-    let mut h = 0x9E3779B1u32 as f64;
-    for k in 0..3 { h = seed_mix(h, c[k]); }
-    for k in 0..3 { h = seed_mix(h, hs[k]); }
-    imul_word(h, 0xC2B2AE3D)
+    ::sim::panes_box_seed(c[0], c[1], c[2], hs[0], hs[1], hs[2]) as f64
 }
 
-/// the thin axis's world direction of a box of this turn and these half sizes (glass.ts:77 paneNormal, with the box read)
+/// the thin axis's world direction of a box of this turn and these half sizes (glass.ts:79 paneNormal, with the box read)
 fn normal_of(yaw: f64, h: V3) -> V3 {
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     if h[0] < h[2] { [cs, 0.0, -sn] } else { [sn, 0.0, cs] }
@@ -47,12 +44,7 @@ fn raise_noise(g: &mut Game, who: f64) {
     }
 }
 
-/// `Math.imul(h, k) >>> 0`, as a number
-fn imul_word(h: f64, k: u32) -> f64 {
-    m::imul(js::to_i32(h), k as i32) as u32 as f64
-}
-
-/// one draw of a blast's word (glass.ts:211)
+/// one draw of a blast's word (glass.ts:201)
 fn blast_step(s: u32) -> u32 {
     (m::imul((s ^ (s >> 15)) as i32, 0x2C1B3C6Du32 as i32) as u32).wrapping_add(0x297A2D39)
 }
@@ -84,18 +76,18 @@ pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::Gl
             let b = g.col.boxes[i];
             if glass_flagged(seam_box(g, b).flags) { panes.push(i as f64); }
         }
-        g.m.glass.states = Some(GlassState { panes, seen: JsSet::new(), hits: 0.0, last_hit_t: -100.0, log: Vec::new(), event_at: JsMap::new(), crack_at: -1e9 });
+        g.m.glass.states = Some(GlassState { panes, seen: JsSet::new(), hits: 0.0, last_hit_t: -100.0, log: Vec::new(), crack_at: -1e9 });
     }
     g.m.glass.states.as_mut().unwrap()
 }
 
-/// beside decals.clear(): the encounter's hit count, last-hit clock and log go; the pane list and the seen set stand (glass.ts resetGlass)
+/// beside decals.clear(): the floor's last 'glass' events go (the module's), then the encounter's hit count, last-hit clock and log; the pane list and the seen set stand (glass.ts resetGlass)
 pub fn reset_glass(g: &mut crate::game::Game) {
+    ::sim::panes::forget_heard(g.sim);   // its first test is panesUntouched's: the part's first word
     let s = match g.m.glass.states.as_mut() { Some(s) => s, None => return };
     s.hits = 0.0;
     s.last_hit_t = -100.0;
     s.log.clear();
-    s.event_at.clear();
     s.crack_at = -1e9;
 }
 
@@ -166,9 +158,7 @@ pub fn box_seed(g: &mut crate::game::Game, b: BoxId) -> f64 {
 
 /// a box's word and a point to the millimetre, as one 32-bit word (glass.ts pointSeed)
 pub fn point_seed(word: f64, p: V3) -> f64 {
-    let mut h = js::to_u32(word) as f64;
-    for k in 0..3 { h = seed_mix(h, p[k]); }
-    imul_word(h, 0xC2B2AE3D)
+    ::sim::panes::point_seed(js::to_u32(word), p[0], p[1], p[2]) as f64
 }
 
 /// a 32-bit hash of where a box was hit (glass.ts hitSeed)
@@ -187,7 +177,7 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
     let quiet = quiet.unwrap_or(false);
     let through = opts.and_then(|o| o.through);
     let bx = box_at(g, pane);
-    let mut res = crate::glassbreak::GlassImpact { pane: is_pane(g, bx), live: false, type_: crate::glassbreak::GlassType::Laminated, thickness: 0.0, was_open: false, punched: false, diced: false, released: 0.0, cracked: false };
+    let mut res = crate::glassbreak::GlassImpact { pane: is_pane(g, bx), live: false, type_: crate::glasspen::PaneType::Laminated, thickness: 0.0, was_open: false, punched: false, diced: false, released: 0.0, cracked: false };
     if !res.pane { return res; }
     let b = bx.unwrap();
     let h = seam_box(g, b).h;
@@ -197,7 +187,7 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
     if cause != GlassImpactCause::Bang {
         res = crate::glassbreak::glass_break_impact(g, pane, point, dir, energy, who, through);
     } else {
-        res.type_ = crate::glassbreak::glass_break_type_of_pane(g, pane).unwrap_or(crate::glassbreak::GlassType::Laminated);
+        res.type_ = crate::glassbreak::glass_break_type_of_pane(g, pane).unwrap_or(crate::glasspen::PaneType::Laminated);
     }
     if res.was_open { return res; }
     glass_state(g);   // made here at the latest, as `const S = glassState(g)`; written below through the row
@@ -241,14 +231,11 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
         let since_any = time - s.crack_at;
         let sound = !(crack_gap > 0.0 && since_any >= 0.0 && since_any < crack_gap);
         if sound { s.crack_at = time; }
-        let key = pane * 1024.0 + (js::to_i32(who) & 1023) as f64;
-        let since = match s.event_at.get(crate::Num(key)) { None => 1e9, Some(last) => time - *last };
-        if live_gap > 0.0 && since >= 0.0 && since < live_gap {
+        if live_gap > 0.0 && !::sim::panes::heard_gap(g.sim, js::to_u32(pane), who, time, live_gap) {
             if sound { crate::audio_iface::game_audio_like_play(g, "glassCrack", Some(point), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.94 + 0.08 * u + 0.3 * w })); }
             raise_noise(g, who);
             return res;
         }
-        if live_gap > 0.0 { s.event_at.set(crate::Num(key), time); }
         if !sound {   // the event is the floor's, the voice is skipped
             glass_event(g, b, point, hear_level, who);
             raise_noise(g, who);
@@ -408,7 +395,7 @@ mod tests {
         for (s, next) in cases { assert_eq!(blast_step(s), next, "{}", s); }
     }
 
-    // bun's own values for four boxes: two sheets, a solid pane, a box that is no glass. The bodies that read a box's row wait on seam_box; the arithmetic they do with it is here.
+    // bun's own values for four boxes: two sheets, a solid pane, a box that is no glass.
     const FOUR: [(V3, V3, f64, f64); 4] = [
         ([1.2345, 1.5, -3.25], [0.02, 1.5, 2.0], 0.0, 131072.0),
         ([10.0, 0.4, 7.777], [1.1, 0.4, 0.05], 0.7, 131074.0),
@@ -453,6 +440,21 @@ mod tests {
         g.events.push(e);
         update_glass(&mut g);
         assert!(!glass_state(&mut g).seen.has(7));
+    }
+
+    #[test]
+    fn a_crash_is_filed_with_an_ear_off_each_face() {
+        let mut g = Game::blank();
+        let ear_off = g.k.glass.ear_off;
+        let b = g.tab.boxes.push(crate::scene_boxes::Box { c: [0.0, 1.0, 3.0], h: [1.0, 1.0, 0.02], ..Default::default() });
+        glass_event(&mut g, b, [0.5, 1.5, 3.25], 0.85, 7.0);
+        let e = g.events[g.events.len() - 1];
+        assert!(e.kind == crate::director::EventKind::Glass && e.loud);
+        assert_eq!((e.pos, e.level, e.who), ([0.5, 0.0, 3.25], Some(0.85), Some(7.0)));
+        let ears = e.ears.unwrap();
+        let r = 0.02 + ear_off;
+        assert_eq!(ears[0], [0.5, 0.0, 3.25 + (r - 0.25)]);
+        assert_eq!(ears[1], [0.5, 0.0, 3.25 - (r + 0.25)]);
     }
 
     #[test]

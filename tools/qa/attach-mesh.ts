@@ -22,6 +22,7 @@
 //   left   for a thing two hands hold: the support hand's gap to the part it takes (the foregrip post, the handguard, the pistol's grip), cm.
 // Measured unscaled against unscaled: stature.ts draws the man and his boxes scaled together.
 // Sampled at every worn vertex, edge midpoint and triangle centroid: good to under a centimetre on this mesh.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { execSync } from 'node:child_process';

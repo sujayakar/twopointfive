@@ -11,6 +11,8 @@
 // a session past the tape's length), and a level that is not this checkout's (the fingerprint differs: the words name the commit to check out).
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import './stand.ts';   // (the stand's word, written down before this file reads it)
+import { standOf } from '../../src/host/standEnv.ts';
 import type { Headless } from './headless.ts';   // (the harness itself is imported inside rerun(), once the stand the tape was made on is known: it reads TPS_PROFILE as it loads)
 import type { ReplayFile, RunTape, Decoded } from '../../src/replay/format.ts';
 import { decode, clock, tapeShield, TAPE_SHIELD } from '../../src/replay/format.ts';
@@ -56,16 +58,17 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   const { startFromQuery, activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
   const warnings: string[] = [], rc = tape.recipe as RunTape['recipe'] & { env: any; knobs: any };
   if ((rc.words as Record<string, string> | undefined)?.QA_HOLD) return out(`this replay was recorded under a check's own arm (QA_HOLD=${(rc.words as Record<string, string>).QA_HOLD}): it is no recording of the game as it is played, and is not walked`);
-  // ---- THE STAND the tape was made on: the real page plays the shipped rules, a headless tool the frozen ones unless it said TPS_PROFILE=shipped (src/host/profile.ts).
+  // ---- THE STAND the tape was made on: the real page plays the shipped rules, and so does a headless tool unless it said TPS_PROFILE=frozen (src/host/profile.ts;
+  // a headless tape from before 2026-11-05 with no stand written in it was made on the old stand, which was the default then).
   // A page tape walked on the frozen stand parts on its first step (a room clear's fresh deal alone puts every defender on another mark), so the harness is
   // loaded and the game stood under the tape's own stand word and its other stand words (the harness reads them as it loads and as it stands), the page's boot
   // switches are written for the tape's query, then the tape's own tables and kit. A harness this process had ALREADY loaded on another stand is brought over only
   // as far as those tables reach: a tape that carries none says so in its report.
   const want = rc.stand ?? (F.userAgent ? 'page' : 'frozen'), need = want === 'frozen' ? 'frozen' : 'shipped', env = process.env;
-  const loaded = typeof require !== 'undefined' && !!(require as unknown as { cache?: Record<string, unknown> }).cache?.[resolve(ROOT, 'tools/qa/headless.ts')], stoodAs = env.TPS_PROFILE === 'shipped' ? 'shipped' : 'frozen';
+  const loaded = typeof require !== 'undefined' && !!(require as unknown as { cache?: Record<string, unknown> }).cache?.[resolve(ROOT, 'tools/qa/headless.ts')], stoodAs = standOf(env.TPS_PROFILE);
   const { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`), kept: Record<string, string | undefined> = { TPS_PROFILE: env.TPS_PROFILE };
   const setEnv = (k: string, v: string | undefined) => { if (v === undefined) delete env[k]; else env[k] = v; };
-  setEnv('TPS_PROFILE', need === 'shipped' ? 'shipped' : undefined);
+  setEnv('TPS_PROFILE', need);   // (by name: no word is the page's stand, so a tape of the old stand says 'frozen')
   const { retiredEnvWord } = await import(`${ROOT}/src/sim/sim.ts`);   // (a tape from before the rows and the maths stopped being switches may carry their words: it is walked on today's rows and maths, and the word is not said again — said, it would stop this tool by name)
   if (rc.words) for (const w of STAND_ENV as string[]) if (w !== 'TPS_PROFILE' && w !== 'TPS_SEED' && !retiredEnvWord(w)) { kept[w] = env[w]; setEnv(w, rc.words[w]); }
   let W: Headless, level: any;

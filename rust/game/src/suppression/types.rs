@@ -62,8 +62,8 @@ impl Default for Sup { fn default() -> Self { Self::blank() } }
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SupMoment {
     Flinch,
-    Pinned,
     Friendly,
+    Pinned,
     Displace,
     Recover,
 }
@@ -71,8 +71,8 @@ impl SupMoment {
     pub const fn as_str(self) -> &'static str {
         match self {
             SupMoment::Flinch => "flinch",
-            SupMoment::Pinned => "pinned",
             SupMoment::Friendly => "friendly",
+            SupMoment::Pinned => "pinned",
             SupMoment::Displace => "displace",
             SupMoment::Recover => "recover",
         }

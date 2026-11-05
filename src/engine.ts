@@ -19,7 +19,7 @@ import { WallSides } from './render/wallSides';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame, lookExpoBound, lookNightSkyE } from './render/lookexpo';
 import { planOpeningsSteps, openAreas, openingLooks, openingReach, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
-import { buildWallRaster, wallRasterHandOnSteps, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
+import { buildWallRaster, wallRasterHandOnSteps, rasterRect, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob, type ReachOnly } from './render/reach';
 import { Steps, WHOLE, clock, spend, type Pace } from './render/steps';
 import { PLAN_PACE } from './render/planPace';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
@@ -29,7 +29,7 @@ import { Particles } from './render/particles';
 import { cutSwap } from './render/cutSwap';
 import { TexturePool } from './render/texpool';
 import { reachLevel } from './render/reach';
-import { ReachKeep } from './render/reachKeep';
+import { ReachKeep, type KeepGuest } from './render/reachKeep';
 import { WORLD } from './scene/world';
 import { FollowCamera } from './game/camera';
 import { Vec3, m4, v3, smoothstep } from './math/vec';
@@ -50,6 +50,23 @@ export interface SmokeBinding { uniform: GPUBuffer; atlasView: GPUTextureView; p
 /** glassLightMasks' sample lattice: three stations along a pane × a cell just off either face (module consts — review R1.4: no per-light-per-pane literals) */
 const GLASS_STATIONS: readonly number[] = [-0.7, 0, 0.7], GLASS_SIDES: readonly number[] = [-0.55, 0.55];
 
+/** the walls as the daylight's reach masks read them, with their jump field: nobody's state (render/reach.ts ReachJob.own) */
+type OpenWalls = { solid: Uint8Array; jumps?: Uint8Array };
+type Rect4 = [number, number, number, number];
+/** ONE OPENING THE LOOK LIGHTS (engine.ts dayOpenings): where it is now, its light, its reach mask with the place that was decided at, the mask in
+ *  the making (of the walls and the place it was begun with, decided again from `only` or whole), and what the next one is OWED: the rects the
+ *  walls have changed in since the last was begun, or all of it. */
+interface OpenRec { o: Opening; l: RtLight; mask: Uint32Array | null; at: Opening | null;
+  job: (ReachJob & { own: OpenWalls; at: Opening; only: ReachOnly | undefined }) | null; owed: Rect4[] | 'all' }
+/** rects of changed walls an opening's next mask is owed one by one; past these it is owed all of it */
+const OWED_MOST = 8;
+/** was a mask decided at `a` decided for the light `b` gives: the same points along the same wall, under the same roof (all that render/reach.ts
+ *  reads of a light's place: a sill or a head that moved is the same mask) */
+const sameSpot = (a: Opening | null, b: Opening): boolean => a !== null && (a === b || (a.mid[0] === b.mid[0] && a.mid[2] === b.mid[2] && a.dir[0] === b.dir[0] && a.dir[2] === b.dir[2] && a.half[0] === b.half[0] && (a.mid[1] > WORLD.ceilingY) === (b.mid[1] > WORLD.ceilingY)));
+/** an opening's mask is an OLD one (it serves, and is decided again): the walls changed since it was begun, or it was decided somewhere else */
+const maskOld = (r: OpenRec): boolean => r.mask !== null && (r.owed === 'all' || r.owed.length > 0 || !sameSpot(r.at, r.o));
+/** an opening has a mask to be decided: none yet, one in the making, or an old one (a check's too) */
+export const openMaskOwed = (r: OpenRec): boolean => r.mask === null || r.job !== null || maskOld(r);
 export class Engine {
   device: GPUDevice;
   world: BoxWorld;
@@ -148,14 +165,14 @@ export class Engine {
    *  cells it can reach (render/reach.ts, as a lamp has: without them it is a candidate in every room of the level), decided here against this
    *  method's own raster of the walls, a frame's share of the work at a time, the open and the near first; the old one serves until the new one is whole.
    *  None off the look page or with the row at 0. At every hour: one is out only while the picture would show nothing of what it looks out on. */
-  private openRecs: { o: Opening; l: RtLight; mask: Uint32Array | null; old: boolean; job: (ReachJob & { own: { solid: Uint8Array; jumps?: Uint8Array } }) | null }[] = [];
+  private openRecs: OpenRec[] = [];
   private openLevel: unknown = null; private openSerial = -1; private openTick = 0; private openSeen = NaN; private openPlanned = NaN; private openWait = 0; private openLeaves = NaN;
-  private openWalls: { solid: Uint8Array; jumps?: Uint8Array } | null = null;
+  private openWalls: OpenWalls | null = null;
   /** the masks have had their first frame on this level with the rooms row up: from then on none is decided whole at once (lookOpeningLights, the reach masks) */
   private openBegun = false;
   /** the openings being found again and the walls being read again, a little a frame (render/steps.ts, render/planPace.ts): what was last planned serves
    *  until it is whole. `openJobKey` = the boxes' key (openingsKey) as the job took them. */
-  private openJob = new Steps<{ plan: Opening[]; walls: { solid: Uint8Array; jumps?: Uint8Array }; changed: boolean }>(); private openJobKey = NaN;
+  private openJob = new Steps<{ plan: Opening[]; walls: OpenWalls; changed: boolean; rect: Rect4 | null }>(); private openJobKey = NaN;
   /** THE PLANNERS' PACE (render/planPace.ts): the wait for a stale draw order (scene/boxes.ts upload), and the drawn frames left in which every plan is
    *  made at once whatever the pace: a page's first frames, and after the level has been put back to another state under the picture (startPlansOver:
    *  a restart, a save put back). The level then is not the one the plans in use were made for. */
@@ -173,22 +190,54 @@ export class Engine {
   /** EVERYTHING THAT CAN CHANGE UNDER IT IS TAKEN BEFORE ITS FIRST STOP: a copy of what the planners ask of each static (scene/boxes.ts planBoxes) and the
    *  doors' lines. So it is finished whatever moves meanwhile, and what it returns is of ONE level, as it stood in the call that began it. In turn: the
    *  openings the walls leave (scene/openings.ts), the walls as the reach masks read them (render/reach.ts: full-height walls, a doorway open ground that
-   *  is ranked down, as the lamps' own raster has it, render/reachKeep.ts), and whether that raster differs from the one in use (where the walls only opened, a blast, the
-   *  old raster's jump field is handed on: reach.ts wallRasterHandOnSteps). */
-  private *openReplan(): Generator<void, { plan: Opening[]; walls: { solid: Uint8Array; jumps?: Uint8Array }; changed: boolean }, void> {
+   *  is ranked down, as the lamps' own raster has it, render/reachKeep.ts), and whether that raster differs from the one in use, with WHERE (`rect`, in
+   *  metres; null with `changed` = no telling: all of it) (where the walls only opened, a blast, the old raster's jump field is handed on: reach.ts
+   *  wallRasterHandOnSteps). */
+  private *openReplan(): Generator<void, { plan: Opening[]; walls: OpenWalls; changed: boolean; rect: Rect4 | null }, void> {
     const boxes = planBoxes(this.world.statics), doors = (lookConfig.doorGaps?.() ?? []).map(g => ({ hinge: [g[0], g[1]] as [number, number], closedDir: Math.atan2(g[3] - g[1], g[2] - g[0]), width: Math.hypot(g[2] - g[0], g[3] - g[1]) }));
     yield;
     const plan = yield* planOpeningsSteps(boxes); yield;
-    const walls: { solid: Uint8Array; jumps?: Uint8Array } = { solid: buildWallRaster(boxes, doors) }; yield;
-    const was = this.openWalls, changed = !was || (yield* wallRasterHandOnSteps(was, walls));
-    return { plan, walls, changed };
+    const walls: OpenWalls = { solid: buildWallRaster(boxes, doors) }; yield;
+    const was = this.openWalls, d = was ? yield* wallRasterHandOnSteps(was, walls) : true;
+    return { plan, walls, changed: d !== null, rect: d === null || d === true ? null : rasterRect(d) };
   }
   /** this frame's opening lights, for the upload (lights.ts upload `own`) and the glass masks */
   private dayLights: RtLight[] = [];
-  private lookOpeningLights(pace: Pace = WHOLE) {
+  /** A SHARE OF ONE OPENING'S MASK: at most `steps` sight-line steps of it; true when it is whole. BEGUN, it is of the walls as they stand and the
+   *  opening where it is, and it is finished as begun whatever changes after: walls that change every few frames, or an opening found again a little
+   *  way off each time, keep no light waiting. Whole, it is the record's, and an OLD one (maskOld: it serves, and is decided again) if the walls
+   *  changed or the opening moved while it was made. DECIDED AGAIN ONLY BEHIND WHAT CHANGED, the lamps' own rule (render/reach.ts ReachOnly: a cell
+   *  whose line to the opening passes no rect the walls changed in keeps its level; the same mask as one decided whole), where the old mask was
+   *  decided at this very place. Until 11-05 every change of the walls anywhere had every opening's mask decided whole again: on a real box 63 to
+   *  70 ms of sight lines after each charge, the larger part of all mask work. */
+  private openMaskSome(r: OpenRec, walls: OpenWalls, steps: number): boolean {
+    let job = r.job;
+    if (!job) { job = r.job = { budget: steps, own: walls, at: r.o, only: r.mask && r.owed !== 'all' && sameSpot(r.at, r.o) ? { prev: r.mask, rects: r.owed } : undefined }; r.owed = []; }
+    job.budget = steps;
+    const got = reachMaskSome(job.own.solid, job.at.mid, job.at.dir, job.at.half[0], null, job.only, job);   // (the spread of the light's own points along the wall)
+    if (!got) return false;
+    r.mask = got; r.at = job.at; r.job = null; return true;
+  }
+  /** A DRAWN FRAME'S MASK WORK AND THE OPENING LIGHTS. On the count (no clock in the frame's pace: a stand with none to keep, a check's;
+   *  `?reachpace=old`) the keeper's step and then the openings, each with its own share of sight-line steps, as they always had. On the clock the
+   *  openings are found, the keeper's ONE step works the lamps' masks and the openings' owed ones as its guests in one allowance of time
+   *  (render/reachKeep.ts), and then the lights are written: a mask is used on the frame it is whole. */
+  private lightMasks(plan: Pace): void {
+    if (plan.ms === undefined || REACH_PACE.whole) { this.reach.tick(); this.lookOpeningLights(plan); return; }
+    // (a finding that throws ends the frame before the keeper's step: the next frame has it, since a finding that threw is not begun again)
+    const day = this.dayOpenings(plan, true);
+    this.reach.tickTimed(8, day?.guests);
+    day?.light();
+  }
+  /** the opening lights of a frame on the count: found, their masks given a share of steps each, written */
+  private lookOpeningLights(pace: Pace = WHOLE): void { this.dayOpenings(pace, false)?.light(); }
+  /** THE OPENINGS OF A FRAME: found again where the walls have changed, and what each is owed noted. On the count their masks are worked here; on
+   *  the clock (`clocked`) the masks owed are returned as the keeper's `guests`. `light()` then writes the lights' records. Null where there is
+   *  nothing to light (off the look's page, the row down, a sky that gives nothing). */
+  private dayOpenings(pace: Pace, clocked: boolean): { guests: KeepGuest[] | undefined; light: () => void } | null {
     const L = this.lights, W = this.world, K = LOOK_OPENINGS, recs = this.openRecs, day = this.dayLights;
     const none = () => { for (const r of recs) r.l.slot = -1; recs.length = 0; day.length = 0; this.openLevel = null; this.openWalls = null; this.openBegun = false; this.openJob.drop(); };
-    if (!lookConfig.on || !(lookConfig.windows > 0)) { if (recs.length || day.length || this.openJob.busy) none(); return; }
+    if (!lookConfig.on || !(lookConfig.windows > 0)) { if (recs.length || day.length || this.openJob.busy) none(); return null; }
     const level = W.statics[0] ?? null;
     if (level !== this.openLevel) { none(); this.openLevel = level; this.openSerial = -1; this.openSeen = this.openPlanned = this.openLeaves = NaN; this.openWait = 0; }   // (a new level: its statics are new boxes)
     const sun = L.lights.find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0);
@@ -197,7 +246,7 @@ export class Engine {
     // then, behind a row, each was a disk as bright as one guess at all it looks out on, by day only, beside the bounce's own share of the same sky.
     const isOpen = (o: Opening) => o.ajar > 0;
     const rad = openingLooks(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, sun), m = Math.max(rad[0], rad[1], rad[2]);
-    if (!(m > 1e-6)) { for (const r of recs) r.l.enabled = false; this.openJob.drop(); return; }   // (a sky that gives nothing; a finding in hand is given up, and the openings are found again when the sky is back)
+    if (!(m > 1e-6)) { for (const r of recs) r.l.enabled = false; this.openJob.drop(); return null; }   // (a sky that gives nothing; a finding in hand is given up, and the openings are found again when the sky is back)
     // the walls: looked at when the world says a box has changed, and every eighth frame besides (not every change moves the world's serial); found again
     // once they have changed and then stood still (at once on a level's first frame), A LITTLE A FRAME (render/planPace.ts: found whole on the frame
     // the walls had stood still, the plan, the raster and its scan were 9 to 15 ms of that frame in Chromium on the office, cold each time). The
@@ -216,21 +265,28 @@ export class Engine {
       this.openPlanned = this.openJobKey; this.openLeaves = NaN;
       const plan = found.plan, was = recs.slice(), next: typeof recs = [], used = new Set<unknown>();
       const at = (a: Opening, b: Opening) => a.dir[0] * b.dir[0] + a.dir[2] * b.dir[2] > 0.9 ? Math.hypot(a.pos[0] - b.pos[0], a.pos[1] - b.pos[1], a.pos[2] - b.pos[2]) : Infinity;
-      // one that is where it was keeps its light, its mask and the job in hand on it (a replan that moved no wall costs it nothing: until 11-05 every replan
-      // dropped every job, and a crate shot to bits every few frames could keep a mask from ever being whole); one that has moved a little keeps its light
-      // and its mask as an OLD mask. ONE THAT IS NEW WHERE ANOTHER STOOD (a second hole blown beside the first makes one opening of the two, its middle
-      // somewhere else; a hole takes in a window) takes the mask of the nearest it lies over, as its old mask, and that one's light if it is free: what was
-      // lit stays lit until its own mask is whole. Only an opening where none was has no mask, and no light until it has one.
-      for (const pass of [0.05, K.same]) for (const o of plan) { if (used.has(o)) continue; const r = was.find(w => !used.has(w) && at(w.o, o) < pass); if (r) { used.add(o); used.add(r); next.push({ o, l: r.l, mask: r.mask, old: r.old || pass > 0.05, job: pass > 0.05 ? null : r.job }); } }
+      // one that is where it was, or a little way off, keeps its light, its mask and the job in hand on it (a replan that moved no wall costs it nothing:
+      // until 11-05 every replan dropped every job, and a crate shot to bits every few frames could keep a mask from ever being whole); a mask decided
+      // anywhere but exactly here is an OLD mask (maskOld). ONE THAT IS NEW WHERE ANOTHER STOOD (a second hole blown beside the first makes one opening of the
+      // two, its middle somewhere else; a hole takes in a window) takes the mask of the nearest it lies over, as its old mask, and that one's light
+      // and its job in hand if they are free: what was lit stays lit until its own mask is whole, and a mask half made for a hole that has since
+      // grown is finished and serves; its own is owed whole. Only an opening where none was has no mask, and no light until it has one.
+      for (const pass of [0.05, K.same]) for (const o of plan) { if (used.has(o)) continue; const r = was.find(w => !used.has(w) && at(w.o, o) < pass); if (r) { used.add(o); used.add(r); next.push({ ...r, o }); } }
       for (const o of plan) { if (used.has(o)) continue;
-        let over: (typeof recs)[number] | null = null, od = Infinity; for (const w of was) { const d = at(w.o, o); if (w.mask && d < w.o.half[0] + o.half[0] && d < od) { od = d; over = w; } }
+        let over: OpenRec | null = null, od = Infinity;   // (the nearest with a mask; with none, the nearest with one in the making)
+        for (const w of was) { if (!w.mask && !w.job) continue; const d = at(w.o, o), s = d + (w.mask ? 0 : 1e6); if (d < w.o.half[0] + o.half[0] && s < od) { od = s; over = w; } }
         const mine = over !== null && !used.has(over); if (mine) used.add(over!);
-        next.push({ o, l: mine ? over!.l : { name: 'opening', group: 'sky', kind: 3, pos: [0, 0, 0], dir: [1, 0, 0], color: [1, 1, 1], intensity: 0, range: 0, innerDeg: 0, outerDeg: 90, radius: 0.1, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0, broad: true, portal: { halfWide: 0, share: 1 } }, mask: over ? over.mask : null, old: over !== null, job: null }); }
+        next.push({ o, l: mine ? over!.l : { name: 'opening', group: 'sky', kind: 3, pos: [0, 0, 0], dir: [1, 0, 0], color: [1, 1, 1], intensity: 0, range: 0, innerDeg: 0, outerDeg: 90, radius: 0.1, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0, broad: true, portal: { halfWide: 0, share: 1 } }, mask: over ? over.mask : null, at: over ? over.at : null, job: mine ? over!.job : null, owed: over ? 'all' : [] }); }   // (another opening's mask: owed all of it)
       for (const r of was) if (!used.has(r)) r.l.slot = -1;
       recs.length = 0; for (const r of next) recs.push(r);
       // the walls as the reach masks read them: only where THEY have changed is any mask decided again (a pane shot out, a crate gone: none is), the old
-      // one serving until the new is whole
-      if (found.changed) { this.openWalls = found.walls; for (const r of recs) r.old = !!r.mask; }   // (a job in hand is finished against the walls it began with, and its mask is then an old one: walls that change every few frames keep no light waiting)
+      // one serving until the new is whole. Each mask, and each in the making, is owed the rect that changed (a job in hand is finished against the
+      // walls it began with, and its mask is then an old one), or all of it where there is no telling or the rects have piled up
+      if (found.changed) { this.openWalls = found.walls;
+        const c = found.rect;
+        for (const r of recs) { if ((!r.mask && !r.job) || r.owed === 'all') continue;
+          if (!c) r.owed = 'all'; else if (r.owed.some(q => q[0] <= c[0] && q[1] <= c[1] && q[2] >= c[2] && q[3] >= c[3])) continue;   // (a rect inside one already owed adds nothing: a wall chewed in one place)
+          else if (r.owed.length >= OWED_MOST) r.owed = 'all'; else r.owed.push(c); } }
     }
     const leaves = leavesKey(W.dynamics); if (leaves !== this.openLeaves) { this.openLeaves = leaves; openAreas(recs.map(r => r.o), W.dynamics); }   // (a leaf swung)
     // more open than can be lit at once: the nearest to Sam are (as the pane list is the nearest glass)
@@ -244,31 +300,42 @@ export class Engine {
     // decided whole on the frame the blast's walls were read: tens of milliseconds, with the jump field made again beside it. `?reachpace=old`
     // (REACH_PACE.whole, the game's own word for the pace as it was) decides such a one whole at once here too.
     if (!masks) this.openBegun = false;
+    let guests: KeepGuest[] | undefined;
     if (masks && this.openWalls) { const c0 = REACH_WORK.steps, walls = this.openWalls, first = !this.openBegun; this.openBegun = true;
-      for (;;) {
-        let best: (typeof recs)[number] | null = null, score = Infinity, now = false;
-        for (const r of recs) { if (r.mask && !r.old) continue; const d = Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz), urgent = !r.mask && (first || (REACH_PACE.whole && isOpen(r.o) && d <= cut));
-          const s = d + (urgent ? -5000 : 0) + (isOpen(r.o) ? 0 : 1000) + (r.mask ? 500 : 0) - (r.job ? 2000 : 0); if (s < score) { score = s; best = r; now = urgent; } }   // (one begun is finished first; then one with no mask at all before one whose old mask still serves)
+      // one begun is finished first; then the open before the shut, one with no mask at all before one whose old mask still serves, the near before the far
+      const rank = (r: OpenRec, d: number): number => d + (isOpen(r.o) ? 0 : 1000) + (r.mask ? 500 : 0) - (r.job ? 2000 : 0);
+      if (first || !clocked) for (;;) {
+        let best: OpenRec | null = null, score = Infinity, now = false;
+        for (const r of recs) { if (!openMaskOwed(r)) continue; const d = Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz), urgent = !r.mask && (first || (REACH_PACE.whole && isOpen(r.o) && d <= cut));
+          const s = rank(r, d) + (urgent ? -5000 : 0); if (s < score) { score = s; best = r; now = urgent; } }
         if (!best) break;
         const left = now ? Infinity : REACH_PACE.steps - (REACH_WORK.steps - c0); if (left <= 0) break;
-        const job = best.job ??= { budget: left, own: walls }; job.budget = left;
-        const got = reachMaskSome(job.own.solid, best.o.mid, best.o.dir, best.o.half[0], null, undefined, job);   // (the spread of the light's own points along the wall)
-        if (!got) break; best.mask = got; best.old = job.own !== walls; best.job = null; } }   // (begun before the walls last changed: it serves, and is decided again)
-    day.length = 0;
-    for (const r of recs) {
-      // A portal's record is as bright as what is open of its rectangle now, which is all that a pass whose ray stops short of it can know; beside it the
-      // record says what share of the rectangle that is, and the picture's direct light takes the whole and lets its own rays find what of it is wall
-      // or leaf (common.wgsl LIGHT_PORTAL, "its record")
-      const o = r.o, l = r.l, whole = 4 * o.half[0] * o.half[1], open = Math.min(Math.max(o.ajar, 1e-6 * whole), whole), I = m * open;   // (radiance × area = its strength straight out)
-      const at = o.mid;   // (a portal is its rectangle, about the rectangle's middle)
-      l.pos[0] = at[0]; l.pos[1] = at[1]; l.pos[2] = at[2]; l.dir[0] = o.dir[0]; l.dir[1] = o.dir[1]; l.dir[2] = o.dir[2]; l.radius = Math.hypot(o.half[0], o.half[1]);
-      l.range = openingReach(m * this.settings.exposure, Math.max(whole, o.of), l.radius, this.settings.portalWorth > 0 ? this.settings.portalWorth : undefined);   // (as far as its own light is worth a ray, wide open: a swinging leaf does not move it. &portalworth=0.003 = the reach it had until 11-05)
-      l.color[0] = rad[0] / m; l.color[1] = rad[1] / m; l.color[2] = rad[2] / m; l.intensity = I; l.peakIntensity = I; this.reach.give(l, masks ? r.mask ?? undefined : undefined);
-      l.portal!.halfWide = o.half[0]; l.portal!.share = open / whole; l.portal!.deep = this.settings.portalHole ? o.deep : 0; l.portal!.rims = o.rims;   // (&holedepth=0: no depth, the whole rectangle and every ray for itself, as it was)
-      // (lit from the first hand's width a door opens, where its own rays let next to nothing through, and while the picture would show anything of what it looks out on)
-      l.enabled = o.ajar > 0 && m * this.settings.exposure > K.seen && Math.hypot(o.pos[0] - fx, o.pos[2] - fz) <= cut && (!masks || !!r.mask);
-      day.push(l);
-    }
+        if (!this.openMaskSome(best, walls, left)) break; }
+      else {
+        // ON THE CLOCK (the frame's pace carries one, and this is not the masks' first frame): THE MASKS ARE THE KEEPER'S GUESTS (render/reachKeep.ts
+        // KeepGuest), worked in its one allowance of time with the lamps', in the same order. A guest is `first`, in the class that leads most
+        // often, when its light is OUT for want of the mask and would be lit with it (open, among the lit few, under a sky the picture shows): a
+        // hole just blown.
+        const shows = m * this.settings.exposure > K.seen;
+        for (const r of recs) { if (!openMaskOwed(r)) continue; const d = Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz);
+          (guests ??= []).push({ rank: rank(r, d), first: !r.mask && isOpen(r.o) && d <= cut && shows, some: steps => this.openMaskSome(r, walls, steps) }); } } }
+    return { guests, light: () => {
+      day.length = 0;
+      for (const r of recs) {
+        // A portal's record is as bright as what is open of its rectangle now, which is all that a pass whose ray stops short of it can know; beside it the
+        // record says what share of the rectangle that is, and the picture's direct light takes the whole and lets its own rays find what of it is wall
+        // or leaf (common.wgsl LIGHT_PORTAL, "its record")
+        const o = r.o, l = r.l, whole = 4 * o.half[0] * o.half[1], open = Math.min(Math.max(o.ajar, 1e-6 * whole), whole), I = m * open;   // (radiance × area = its strength straight out)
+        const at = o.mid;   // (a portal is its rectangle, about the rectangle's middle)
+        l.pos[0] = at[0]; l.pos[1] = at[1]; l.pos[2] = at[2]; l.dir[0] = o.dir[0]; l.dir[1] = o.dir[1]; l.dir[2] = o.dir[2]; l.radius = Math.hypot(o.half[0], o.half[1]);
+        l.range = openingReach(m * this.settings.exposure, Math.max(whole, o.of), l.radius, this.settings.portalWorth > 0 ? this.settings.portalWorth : undefined);   // (as far as its own light is worth a ray, wide open: a swinging leaf does not move it. &portalworth=0.003 = the reach it had until 11-05)
+        l.color[0] = rad[0] / m; l.color[1] = rad[1] / m; l.color[2] = rad[2] / m; l.intensity = I; l.peakIntensity = I; this.reach.give(l, masks ? r.mask ?? undefined : undefined);
+        l.portal!.halfWide = o.half[0]; l.portal!.share = open / whole; l.portal!.deep = this.settings.portalHole ? o.deep : 0; l.portal!.rims = o.rims;   // (&holedepth=0: no depth, the whole rectangle and every ray for itself, as it was)
+        // (lit from the first hand's width a door opens, where its own rays let next to nothing through, and while the picture would show anything of what it looks out on)
+        l.enabled = o.ajar > 0 && m * this.settings.exposure > K.seen && Math.hypot(o.pos[0] - fx, o.pos[2] - fz) <= cut && (!masks || !!r.mask);
+        day.push(l);
+      }
+    } };
   }
   private powderLive(): PowderField | null {
     const air = this.air;
@@ -583,7 +650,6 @@ export class Engine {
   render(cam: FollowCamera, time: number, dt: number, present = true) {
     if (!this.ready) throw new Error('Engine.render() before init() resolved — await engine.init() / Engine.create() first');   // (a readable line instead of setPipeline(undefined) deep in a pass)
     this.lastDt = dt; this.viewFocus = cam.focus;
-    this.reach.tick();   // (the lights' reach masks: where a wall changed, a step of deciding them again, before anything of this frame reads one. Its own budget of sight-line steps, REACH_PACE)
     if (this.outline) { this.outline.exposure = this.settings.exposure; outlineBoxes(this.outline, p => cam.project(p, 1, 1)); }   // THE OUTLINE IN THE DARK (host/findme.ts → render/outline.ts): the box round each man on THIS camera's picture
     this.passes.outline = this.settings.debugView === 0 ? this.outline : null;   // (never under a debug view, as the fog)
     this.passes.dustLook = !!this.smoke.dusty;   // (look only: destruction dust alive in the bound smoke system → render/dustLookVol.ts)
@@ -675,7 +741,7 @@ export class Engine {
       if (n > 0 && this.cutSeen > 0 && (whole > 0) !== (this.cutWhole > 0)) { if (taauOn) this.resetTaa('cut pieces change shape'); else this.passes.dropRestirBeliefs(); }
       this.cutWhole = whole; this.cutSeen = n;
     }
-    this.lookOpeningLights(plan);   // (THE LOOK PROTOTYPE: each opening to the sky is a light of its own, scene/openings.ts)
+    this.lightMasks(plan);   // (the lights' reach masks: where a wall changed, a step of deciding them again, before anything of this frame reads one; and THE LOOK PROTOTYPE's opening lights, each opening to the sky a light of its own, scene/openings.ts, whose masks are decided in the same step)
     const hourExp = lookConfig.on ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1;   // (THE LOOK PROTOTYPE: the exposure of the hour that is up against the night's, render/photometry.ts)
     const shadeCfg = lookConfig.on && lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined;   // (THE LOOK PROTOTYPE's shade row, below: the share of a darker place's dark the one exposure model brings up, render/lookexpo.ts; at 0 no place takes a gain)
     const placeOn = !!shadeCfg && shadeCfg[0] > 0;   // (THE LOOK PROTOTYPE's place field, above: wherever the model runs, which is wherever the shade row is up, at every hour)

@@ -3,6 +3,29 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
+/// (TypeScript: ChronEvent, src/game/chronicle.ts:85)
+#[derive(Clone, Debug)]
+pub struct ChronEvent {
+    pub t: f64,
+    pub kind: crate::chronicle::ChronKind,
+    pub room: String,
+    pub pos: V3,
+    pub data: JsMap<String, Option<crate::chronicle::ChronEventDataValue>>,
+}
+impl ChronEvent {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ChronEvent {
+            t: 0.0,
+            kind: crate::chronicle::ChronKind::Down,
+            room: String::new(),
+            pos: [0.0; 3],
+            data: JsMap::new(),
+        }
+    }
+}
+impl Default for ChronEvent { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ChronKind {
@@ -88,100 +111,10 @@ impl ChronKind {
 
 /// (TypeScript: a union)
 #[derive(Clone, Debug)]
-pub enum ChronDataValue {
-    Text(String),
-    Num(f64),
-    Bool(bool),
-}
-
-/// (TypeScript: ChronEvent, src/game/chronicle.ts:85)
-#[derive(Clone, Debug)]
-pub struct ChronEvent {
-    pub t: f64,
-    pub kind: crate::chronicle::ChronKind,
-    pub room: String,
-    pub pos: V3,
-    pub data: JsMap<String, Option<crate::chronicle::ChronEventDataValue>>,
-}
-impl ChronEvent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChronEvent {
-            t: 0.0,
-            kind: crate::chronicle::ChronKind::Down,
-            room: String::new(),
-            pos: [0.0; 3],
-            data: JsMap::new(),
-        }
-    }
-}
-impl Default for ChronEvent { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: a union)
-#[derive(Clone, Debug)]
 pub enum ChronEventDataValue {
     Text(String),
     Num(f64),
     Bool(bool),
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum ChronCountKey {
-    Heard,
-    SeenUp,
-    Esc1,
-    Esc2,
-    ShotsNearMen,
-    LightsShot,
-    Ocps,
-    Blackouts,
-    Kicked,
-    Picked,
-    Intel,
-    Thrown,
-    Grabs,
-    Contacts,
-    Radio,
-    CivSeen,
-    CivReported,
-    CivComplied,
-    CivKO,
-    CivKilled,
-    Devices,
-    Hits,
-    Saves,
-    Loads,
-}
-impl ChronCountKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ChronCountKey::Heard => "heard",
-            ChronCountKey::SeenUp => "seenUp",
-            ChronCountKey::Esc1 => "esc1",
-            ChronCountKey::Esc2 => "esc2",
-            ChronCountKey::ShotsNearMen => "shotsNearMen",
-            ChronCountKey::LightsShot => "lightsShot",
-            ChronCountKey::Ocps => "ocps",
-            ChronCountKey::Blackouts => "blackouts",
-            ChronCountKey::Kicked => "kicked",
-            ChronCountKey::Picked => "picked",
-            ChronCountKey::Intel => "intel",
-            ChronCountKey::Thrown => "thrown",
-            ChronCountKey::Grabs => "grabs",
-            ChronCountKey::Contacts => "contacts",
-            ChronCountKey::Radio => "radio",
-            ChronCountKey::CivSeen => "civSeen",
-            ChronCountKey::CivReported => "civReported",
-            ChronCountKey::CivComplied => "civComplied",
-            ChronCountKey::CivKO => "civKO",
-            ChronCountKey::CivKilled => "civKilled",
-            ChronCountKey::Devices => "devices",
-            ChronCountKey::Hits => "hits",
-            ChronCountKey::Saves => "saves",
-            ChronCountKey::Loads => "loads",
-        }
-    }
 }
 
 /// (TypeScript: ChronCounts, src/game/chronicle.ts:105)
@@ -281,6 +214,73 @@ impl Chronicle {
     }
 }
 impl Default for Chronicle { fn default() -> Self { Self::blank() } }
+
+/// (TypeScript: a union)
+#[derive(Clone, Debug)]
+pub enum ChronDataValue {
+    Text(String),
+    Num(f64),
+    Bool(bool),
+}
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum ChronCountKey {
+    Heard,
+    SeenUp,
+    Esc1,
+    Esc2,
+    ShotsNearMen,
+    LightsShot,
+    Ocps,
+    Blackouts,
+    Kicked,
+    Picked,
+    Intel,
+    Thrown,
+    Grabs,
+    Contacts,
+    Radio,
+    CivSeen,
+    CivReported,
+    CivComplied,
+    CivKO,
+    CivKilled,
+    Devices,
+    Hits,
+    Saves,
+    Loads,
+}
+impl ChronCountKey {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            ChronCountKey::Heard => "heard",
+            ChronCountKey::SeenUp => "seenUp",
+            ChronCountKey::Esc1 => "esc1",
+            ChronCountKey::Esc2 => "esc2",
+            ChronCountKey::ShotsNearMen => "shotsNearMen",
+            ChronCountKey::LightsShot => "lightsShot",
+            ChronCountKey::Ocps => "ocps",
+            ChronCountKey::Blackouts => "blackouts",
+            ChronCountKey::Kicked => "kicked",
+            ChronCountKey::Picked => "picked",
+            ChronCountKey::Intel => "intel",
+            ChronCountKey::Thrown => "thrown",
+            ChronCountKey::Grabs => "grabs",
+            ChronCountKey::Contacts => "contacts",
+            ChronCountKey::Radio => "radio",
+            ChronCountKey::CivSeen => "civSeen",
+            ChronCountKey::CivReported => "civReported",
+            ChronCountKey::CivComplied => "civComplied",
+            ChronCountKey::CivKO => "civKO",
+            ChronCountKey::CivKilled => "civKilled",
+            ChronCountKey::Devices => "devices",
+            ChronCountKey::Hits => "hits",
+            ChronCountKey::Saves => "saves",
+            ChronCountKey::Loads => "loads",
+        }
+    }
+}
 
 /// (TypeScript: RunCounts, src/game/chronicle.ts:325)
 #[derive(Clone, Debug)]

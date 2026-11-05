@@ -18,6 +18,7 @@
 //   3  on: more doors end wedged over the deals than off, and no deal ends with fewer
 //   4  a recording from before the key replays with it off; one that carries the key keeps its own word (journal.ts applyKnobs)
 // NOT ASKED: what the hauled thing looks or sounds like on the page — never seen on a GPU, never heard.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 export { };
 const { standUp, ROOT } = await import('./headless.ts');
 const { DOORWAY, DOORSTAY } = await import(`${ROOT}/src/game/doors.ts`);

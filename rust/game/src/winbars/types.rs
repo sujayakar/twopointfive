@@ -3,24 +3,22 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: BarState, src/game/winbars.ts:61)
+/// (TypeScript: BarState, src/game/winbars.ts:63)
 #[derive(Clone, Debug)]
 pub struct BarState {
-    pub gone: JsMap<crate::Num, f64>,
     pub met: Vec<crate::winbars::BarMet>,
 }
 impl BarState {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         BarState {
-            gone: JsMap::new(),
             met: Vec::new(),
         }
     }
 }
 impl Default for BarState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BarMet, src/game/winbars.ts:85)
+/// (TypeScript: BarMet, src/game/winbars.ts:87)
 #[derive(Clone, Copy, Debug)]
 pub struct BarMet {
     pub index: f64,
@@ -43,7 +41,7 @@ impl BarMet {
 }
 impl Default for BarMet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BarsSave, src/game/winbars.ts:174)
+/// (TypeScript: BarsSave, src/game/winbars.ts:164)
 #[derive(Clone, Debug)]
 pub struct BarsSave {
     pub v: f64,
@@ -78,9 +76,9 @@ impl BreakBarCause {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct WinbarsMod {
-    /// (src/game/winbars.ts:55 LOG)
+    /// (src/game/winbars.ts:57 LOG)
     pub log: Vec<String>,
-    /// (src/game/winbars.ts:62 STATE)
+    /// (src/game/winbars.ts:64 STATE)
     pub state: Option<crate::winbars::BarState>,
 }
 impl WinbarsMod {
@@ -103,8 +101,8 @@ pub struct WinbarsStats {
     pub spared: i32,
 }
 
-/// (src/game/winbars.ts:57 WINBARS_BREAK)
+/// (src/game/winbars.ts:59 WINBARS_BREAK)
 pub const WINBARS_BREAK: bool = false;
 
-/// (src/game/winbars.ts:58 HIDE)
+/// (src/game/winbars.ts:60 HIDE)
 pub const HIDE: f64 = 3.0;

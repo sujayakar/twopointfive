@@ -113,9 +113,9 @@ pub fn in_the_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let id = g.ch[c].id;
     let mut own = |_g: &mut Game, owner: f64| owner == id;
     let chest = chest_of(g, c);
-    let a = crate::guards::light_estimate_at(g, chest, Some(&mut own), Some(true), None, None);
+    let a = crate::guards::light_estimate_at(g, chest, Some(&mut own), Some(true), None, None, None);
     let head = head_of(g, c);
-    let b = crate::guards::light_estimate_at(g, head, Some(&mut own), Some(true), None, None);
+    let b = crate::guards::light_estimate_at(g, head, Some(&mut own), Some(true), None, None, None);
     m::max(a, b) < g.tune.vis_floor
 }
 

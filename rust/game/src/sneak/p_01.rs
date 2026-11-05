@@ -175,12 +175,12 @@ pub fn cpu_lit(g: &mut crate::game::Game, a: V3, b: V3, own: Option<&mut dyn FnM
     let steady = steady.unwrap_or(true);
     let mut own = own;
     let at_a = match own.as_mut() {
-        Some(f) => crate::guards::light_estimate_at(g, a, Some(&mut **f), Some(steady), None, None),
-        None => crate::guards::light_estimate_at(g, a, None, Some(steady), None, None),
+        Some(f) => crate::guards::light_estimate_at(g, a, Some(&mut **f), Some(steady), None, None, None),
+        None => crate::guards::light_estimate_at(g, a, None, Some(steady), None, None, None),
     };
     let at_b = match own.as_mut() {
-        Some(f) => crate::guards::light_estimate_at(g, b, Some(&mut **f), Some(steady), None, None),
-        None => crate::guards::light_estimate_at(g, b, None, Some(steady), None, None),
+        Some(f) => crate::guards::light_estimate_at(g, b, Some(&mut **f), Some(steady), None, None, None),
+        None => crate::guards::light_estimate_at(g, b, None, Some(steady), None, None, None),
     };
     crate::game::game_visibility_of(g, m::max(at_a, at_b))
 }

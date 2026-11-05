@@ -46,6 +46,48 @@ impl ItemKind {
     }
 }
 
+/// (TypeScript: ThrowSolution, src/game/throwables.ts:180)
+#[derive(Clone, Debug)]
+pub struct ThrowSolution {
+    pub v0: V3,
+    pub t: f64,
+    pub points: Vec<V3>,
+    pub land: V3,
+}
+impl ThrowSolution {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ThrowSolution {
+            v0: [0.0; 3],
+            t: 0.0,
+            points: Vec::new(),
+            land: [0.0; 3],
+        }
+    }
+}
+impl Default for ThrowSolution { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: Throwables, src/game/throwables.ts:203)
+#[derive(Clone, Debug)]
+pub struct Throwables {
+    pub items: Vec<ItemId>,
+    pub rows: Vec<ItemId>,
+    pub store: crate::sim_itemshome::ItemStore,
+    pub serial: f64,
+}
+impl Throwables {
+    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    pub fn blank() -> Self {
+        Throwables {
+            items: Vec::new(),
+            rows: Vec::new(),
+            store: crate::sim_itemshome::ItemStore::blank(),
+            serial: 1.0,
+        }
+    }
+}
+impl Default for Throwables { fn default() -> Self { Self::blank() } }
+
 /// (TypeScript: ItemFields, src/game/throwables.ts:102)
 #[derive(Clone, Copy, Debug)]
 pub struct ItemFields {
@@ -136,27 +178,6 @@ impl Item {
 }
 impl Default for Item { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: ThrowSolution, src/game/throwables.ts:180)
-#[derive(Clone, Debug)]
-pub struct ThrowSolution {
-    pub v0: V3,
-    pub t: f64,
-    pub points: Vec<V3>,
-    pub land: V3,
-}
-impl ThrowSolution {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ThrowSolution {
-            v0: [0.0; 3],
-            t: 0.0,
-            points: Vec::new(),
-            land: [0.0; 3],
-        }
-    }
-}
-impl Default for ThrowSolution { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: BogGround, src/game/throwables.ts:201)
 #[derive(Clone, Copy, Debug)]
 pub struct BogGround {
@@ -169,27 +190,6 @@ impl BogGround {
     }
 }
 impl Default for BogGround { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: Throwables, src/game/throwables.ts:203)
-#[derive(Clone, Debug)]
-pub struct Throwables {
-    pub items: Vec<ItemId>,
-    pub rows: Vec<ItemId>,
-    pub store: crate::sim_itemshome::ItemStore,
-    pub serial: f64,
-}
-impl Throwables {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
-    pub fn blank() -> Self {
-        Throwables {
-            items: Vec::new(),
-            rows: Vec::new(),
-            store: crate::sim_itemshome::ItemStore::blank(),
-            serial: 1.0,
-        }
-    }
-}
-impl Default for Throwables { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/throwables.ts:40 SC20K_ITEM, src/game/throwables.ts:40)
 #[derive(Clone, Copy, Debug)]

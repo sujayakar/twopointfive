@@ -36,7 +36,7 @@ fn has_data(g: &Game) -> bool {
 /// A new overlay with its van rule. (snatch.ts Snatch.constructor)
 pub fn snatch_new(g: &mut crate::game::Game) -> crate::snatch::Snatch {
     let mut s = Snatch::blank();
-    s.out = crate::snatchout::snatch_out_new(g);
+    s.out = Box::new(crate::snatchout::snatch_out_new(g));
     s
 }
 

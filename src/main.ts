@@ -89,6 +89,7 @@ import { WEAPONS } from './game/weapons';
 import { Overlay } from './ui/overlay';
 import { Bubbles } from './ui/bubbles';
 import { SmokeSystem } from './smoke/smoke';
+import { pageIndirect } from './smoke/dispatch';
 import { Panel } from './ui/panel';
 import { AudioEngine, SFX_TABLE, SFX_WARM, warmSfx, warmState } from './audio/audio';
 import { setlistOfQuery, setlistOf, setlistLevel } from './audio/setlist';
@@ -356,6 +357,11 @@ async function main() {
   const ch = await chP;
   if (lookConfig.on && ch.cast) { lookParts.suit = ch.cast.parts.indexOf('op_suit') + 1; lookParts.rig = ch.cast.parts.indexOf('chest_rig') + 1; engine.gbuffer.setLook(); }   // (THE LOOK PROTOTYPE's men: which part is the plate carrier's and which the chest rig, look.wgsl manWeb)
   const smoke = new SmokeSystem(engine);
+  // THE SOLVER'S DISPATCH AS THIS PAGE OPENS (smoke/dispatch.ts): the whole pool, the GPU's own count on a software adapter. ?smokeindirect=1 = the GPU's
+  // count on any card (the dispatch of before), =0 = the whole pool on any adapter. Not a setting to play with: the word is kept to set the two ways side by
+  // side on a machine nobody has read (a Mac, a D3D card), and goes when they have been. The visit's word, never a run's (ui/replaykey.ts VISIT_FLAGS); a
+  // benchmark asked beside it carries it (ui/benchrun.ts CARRIED)
+  smoke.sparse.indirect = pageIndirect(q.get('smokeindirect'), gpu.adapterFallback === true);
   engine.setSmoke(smoke.binding);
   const smokeInit = timed('smoke', smoke.init())!; smokeInit.catch(() => { /* awaited below */ });   // (its kernels join the ones in flight)
   await tick();

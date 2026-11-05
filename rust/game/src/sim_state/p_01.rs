@@ -1,4 +1,4 @@
-//! src/sim/state.ts lines 1 to 284
+//! src/sim/state.ts lines 1 to 297
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -80,7 +80,7 @@ mod tests {
         }
     }
 
-    /// The bits of the TypeScript's own liveOf (state.ts:273, lines copied as they stand, run under bun) on this same layout.
+    /// The bits of the TypeScript's own liveOf (state.ts:286, lines copied as they stand, run under bun) on this same layout.
     #[test]
     fn live_of_has_the_typescripts_bits() {
         let l = lay();

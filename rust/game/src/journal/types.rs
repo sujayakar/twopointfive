@@ -274,7 +274,7 @@ impl Default for InputRec { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct SessionRecorderSlots {
     pub index: Option<String>,
-    pub last_auto: Option<crate::journal::SessionRecorderSlotsLastAuto>,
+    pub last_auto: Option<crate::savestate::TapeSlotsLastAuto>,
     pub loads: Vec<(f64, String, String)>,
 }
 impl SessionRecorderSlots {
@@ -288,23 +288,6 @@ impl SessionRecorderSlots {
     }
 }
 impl Default for SessionRecorderSlots { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/savestate.ts:873 SessionRecorderSlots.lastAuto, src/game/savestate.ts:873)
-#[derive(Clone, Debug)]
-pub struct SessionRecorderSlotsLastAuto {
-    pub key: String,
-    pub t: f64,
-}
-impl SessionRecorderSlotsLastAuto {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SessionRecorderSlotsLastAuto {
-            key: String::new(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for SessionRecorderSlotsLastAuto { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SessionFile, src/game/journal.ts:231)
 #[derive(Clone, Debug)]
@@ -374,7 +357,7 @@ impl SessionFileGame {
 #[derive(Clone, Debug)]
 pub struct SessionFileSlots {
     pub index: Option<String>,
-    pub last_auto: Option<crate::journal::SessionRecorderSlotsLastAuto>,
+    pub last_auto: Option<crate::savestate::TapeSlotsLastAuto>,
     pub loads: Vec<(f64, String, String)>,
 }
 impl SessionFileSlots {

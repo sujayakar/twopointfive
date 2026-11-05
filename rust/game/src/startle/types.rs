@@ -3,21 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: StartleSnap, src/game/startle.ts:156)
-#[derive(Clone, Debug)]
-pub struct StartleSnap {
-    pub men: Vec<Option<Vec<f64>>>,
-}
-impl StartleSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StartleSnap {
-            men: Vec::new(),
-        }
-    }
-}
-impl Default for StartleSnap { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: St, src/game/startle.ts:44)
 #[derive(Clone, Copy, Debug)]
 pub struct St {
@@ -62,6 +47,21 @@ impl St {
     }
 }
 impl Default for St { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: StartleSnap, src/game/startle.ts:156)
+#[derive(Clone, Debug)]
+pub struct StartleSnap {
+    pub men: Vec<Option<Vec<f64>>>,
+}
+impl StartleSnap {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        StartleSnap {
+            men: Vec::new(),
+        }
+    }
+}
+impl Default for StartleSnap { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

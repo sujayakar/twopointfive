@@ -22,14 +22,17 @@
 // every AIRDUST.recheckSecs — which is how a wall that breaks or a pane that falls out is noticed, without this file knowing who breaks walls.
 // KNOWN: an opening is whole 0.5 m edges, so a 0.9 m doorway lets in one cell's width or two by where it sits on the lattice (no part-open edge).
 //
+// THE RULE IS THE MODULE'S (rust/sim/src/air.rs): the field, the openings' tables and the clocks are a part of the weather's table in the game's block, and a rollback carries
+// them with it. What stays here is the caller and the picture's copy: `send` hands the renderer the field when it has moved enough.
+//
 // DETERMINISM. No dice, no clock but the game's dt: fixed steps of AIRDUST.step off an accumulator. A checkpoint carries the field, the statics' half of the
 // openings, the re-check's cursor and the accumulator (snapshot / restore below); the leaves' half is re-read from the doors as the file put them back.
 // restartEncounter → resetLevelState seeds it afresh (reset()).
 import type { Game } from './game';
-import type { Vec3 } from '../math/vec';
-import type { Box } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import { AIR_CELL, AIR_W, AIR_H, AIR_ROWS } from '../scene/airGrid';
+import { sim, u8, u32 } from '../sim/sim';
+import { WX, WX_KNOBS, WX_WATCH, wxAt, wxCap, wxGet, wxOut, wxSet } from '../sim/weatherhome';
 
 export const AIRDUST = {
   /** the men's eyes read the field (and the dust moves through openings). The module's own default is the frozen stand's; the page raises it (host/profile.ts) */
@@ -44,40 +47,49 @@ export const AIRDUST = {
   recheckSecs: 3,
 };
 
-/** the heights a way between two cells is asked at (m): under a sill, a man's chest, over the furniture but under a door's head */
-const PROBE_Y = [1.6, 0.4, 2.05];
 const N = AIR_W * AIR_H;
-/** a share this close to the leak IS the leak (the tail of a settling room: no denormals, and a checkpoint lists only the cells that differ) */
-const SNAP = 1e-6;
 /** the renderer's copy is sent again once the cells have moved this far (summed over the steps since it last was): the picture never stands further than this from the men's eyes */
 const SEND = 2e-4;
 
 export interface AirDustSnap { acc: number; cur: number; /** [cell, share, cell, share …] for the roofed cells off the leak */ s: number[]; /** the statics' half of the openings, a bit an edge of `edges`, as hex */ stat: string }
 
+/** where the module says a step's tale stands: how far the field moved, the steps taken, the lines asked, the open ways the last step found */
+const said = (): number[] => wxOut(4);
+/** one word of a run of numbers, for a check */
+function wordOf(d: ArrayLike<number>, n = d.length): number { let h = 2166136261; const f = new Float64Array(1), u = new Uint32Array(f.buffer); for (let i = 0; i < n; i++) { f[0] = d[i]; h = Math.imul(h ^ u[0], 16777619); h = Math.imul(h ^ u[1], 16777619); } return h >>> 0; }
+
 export class AirDust {
-  /** the field: the share of the open air's density at each cell (scene/airGrid.ts order). The sim's own numbers (doubles); `gpu` is the copy the renderer takes */
-  readonly s = new Float64Array(N).fill(1);
+  /** the field: the share of the open air's density at each cell (scene/airGrid.ts order). The module's numbers (rust/sim/src/air.rs, the weather's table in the block; a view made for the asker, never kept); `gpu` is the copy the renderer takes */
+  get s(): Float64Array { const o = wxAt(WX.airS) >>> 3; return this.g.sim.d.subarray(o, o + N); }
   /** the men's eyes read the field this run (AIRDUST.on, a weather with fog in) */
   get live(): boolean { this.ensure(); return this.on; }
-  private on = false; private dirty = true; private drift = 0;
-  private indoor = new Uint8Array(N);
-  private cells = new Int32Array(0);          // the roofed cells
-  private edges = new Int32Array(0);          // the edges with a roofed cell at either end: id = cell × 2 + dir (0: to +x, 1: to +z)
-  private stat = new Uint8Array(N * 2);       // by edge id: 1 = no static stands across it
-  private leaf = new Uint8Array(N * 2);       // by edge id: how many leaves stand across it
-  private next = new Float64Array(N);
+  /** the field stands: built now if it is owed (a reader in the module's own hands asks first: weather.ts airTrans) */
+  ready(): void { this.ensure(); }
+  private get on(): boolean { return wxGet(this.g.sim, WX.airOn) !== 0; }
+  private get leak(): number { return wxGet(this.g.sim, WX.airLeak); }
+  /** the roofed cells, and the edges with a roofed cell at either end (id = cell × 2 + dir, 0: to +x, 1: to +z): the module's lists, views made for the asker and never kept */
+  private get cells(): Uint32Array { const o = this.table(0) >>> 2; return u32().subarray(o, o + wxGet(this.g.sim, WX.airCells)); }
+  private get edges(): Uint32Array { const o = this.table(1) >>> 2; return u32().subarray(o, o + wxGet(this.g.sim, WX.airEdges)); }
+  /** where a table of the slot's stands (rust/sim/src/air.rs Plan: made from the block's roofs and the leaves, never in the block) */
+  private table(which: number): number { return sim().air_table(this.g.sim.bind(), this.g.sim.stamp, which); }
+  private tableBytes(which: number, n: number): Uint8Array { const a = this.table(which); return u8().subarray(a, a + n); }
+  private bytes(c: number, n: number): Uint8Array { const w = this.g.sim.w; return new Uint8Array(w.buffer, w.byteOffset + wxAt(c), n); }
+  private dirty = true; private drift = 0;
   private gpu = new Float32Array(AIR_ROWS * 4);
-  private leak = 1; private acc = 0; private cur = 0; private leafSig = NaN; private seeded = false;
-  private pa: Vec3 = [0, 0, 0]; private pb: Vec3 = [0, 0, 0];
+  private seeded = false;
   stats = { steps: 0, probes: 0, sends: 0, roofed: 0, edges: 0, open: 0 };
 
-  constructor(private g: Game) { this.ensure(); }
+  constructor(private g: Game) {
+    if (wxCap(2) !== AIR_W || wxCap(3) !== AIR_H || AIR_CELL !== 0.5 || WORLD.min[0] !== 0 || WORLD.min[2] !== 0) throw new Error(`the dust's plan is ${AIR_W} × ${AIR_H}, and rust/sim/src/air.rs holds ${wxCap(2)} × ${wxCap(3)}`);
+    this.s.fill(1);   // (a block's zeros are no air at all: every cell starts as the open air's. A game with no weather makes no call into the module: it is bound as its first tick or question opens)
+    if (g.weather?.kind) this.ensure();
+  }
 
-  /** the share at a spot of the plan (the cell it stands in; off the grid = the open air) */
+  /** the share at a spot of the plan (the cell it stands in; off the grid = the open air): reads the module's field */
   shareAt(x: number, z: number): number {
     if (this.dirty) this.ensure();
     const ix = Math.floor((x - WORLD.min[0]) / AIR_CELL), iz = Math.floor((z - WORLD.min[2]) / AIR_CELL);
-    return ix < 0 || iz < 0 || ix >= AIR_W || iz >= AIR_H ? 1 : this.s[ix + iz * AIR_W];
+    return ix < 0 || iz < 0 || ix >= AIR_W || iz >= AIR_H ? 1 : this.g.sim.d[(wxAt(WX.airS) >>> 3) + ix + iz * AIR_W];
   }
 
   /** the roofs or the weather changed (weather.ts setKind), or the level was put back as authored (game.ts resetLevelState): the field from nothing — every roofed
@@ -85,103 +97,42 @@ export class AirDust {
    *  call only marks the field stale, the first reader builds it (a checkpoint's load asks three times — the level put back, the weather set, the file's slice — and pays once) */
   reseed() { this.dirty = true; }
   private ensure() { if (this.dirty) { this.dirty = false; this.build(); } }
+  private tally(t: readonly number[]) { this.stats.steps += t[1]; this.stats.probes += t[2]; if (t[1] > 0) this.stats.open = t[3]; }   // (the open ways the last step found: a tick with no step leaves them)
   private build() {
-    const g = this.g, W = g.weather, f = W?.fog ?? null, has = !!W?.kind && !!f;
-    this.on = has && AIRDUST.on; this.acc = 0; this.drift = 0; this.cur = 0; this.leafSig = NaN; this.leaf.fill(0); this.stat.fill(0);
-    if (!has) { if (this.seeded) { this.seeded = false; this.s.fill(1); this.indoor.fill(0); this.cells = new Int32Array(0); this.edges = new Int32Array(0); } return; }
-    this.seeded = true; this.leak = f!.leak;
-    const cells: number[] = [], edges: number[] = [];
-    for (let iz = 0, i = 0; iz < AIR_H; iz++) for (let ix = 0; ix < AIR_W; ix++, i++) {
-      const r = W!.underRoof(WORLD.min[0] + (ix + 0.5) * AIR_CELL, WORLD.min[2] + (iz + 0.5) * AIR_CELL);
-      this.indoor[i] = r ? 1 : 0; this.s[i] = r ? this.leak : 1; if (r) cells.push(i);
-    }
-    for (let iz = 0, i = 0; iz < AIR_H; iz++) for (let ix = 0; ix < AIR_W; ix++, i++) {
-      if (ix + 1 < AIR_W && (this.indoor[i] || this.indoor[i + 1])) edges.push(i * 2);
-      if (iz + 1 < AIR_H && (this.indoor[i] || this.indoor[i + AIR_W])) edges.push(i * 2 + 1);
-    }
-    this.cells = Int32Array.from(cells); this.edges = Int32Array.from(edges);
-    this.stats.roofed = cells.length; this.stats.edges = edges.length;
-    if (this.on) {
-      this.clearOfLeaves(() => { for (const e of this.edges) this.stat[e] = this.ask(e) ? 1 : 0; });
-      this.leaves();
-      for (let k = 0; k < 1500 && this.stepOnce(stepSecs()) > 1e-4; k++);
+    const g = this.g, W = g.weather, f = W?.fog ?? null, has = !!W?.kind && !!f, x = sim(), st = g.sim.bind(), on = has && AIRDUST.on;
+    x.air_begin(st, g.sim.stamp, on ? 1 : 0); this.drift = 0;
+    if (!has) { if (this.seeded) { this.seeded = false; x.air_clear(st, g.sim.stamp); } return; }
+    this.seeded = true; W.roofsNow(); x.air_seed(st, g.sim.stamp, f!.leak);
+    this.stats.roofed = wxGet(g.sim, WX.airCells); this.stats.edges = wxGet(g.sim, WX.airEdges);
+    if (on) {
+      WX_KNOBS.here();
+      g.col.rule(() => {
+        const M = g.col.ruleOpen();
+        x.air_settle(g.sim.bind(), g.sim.stamp, M.slot, M.ruleSet, M.rulePanes);
+        const t = said(); this.tally(t);
+        if (WX_WATCH.on) WX_WATCH.saidMany('air.settle', this.tale(t), []);
+      });
     }
     this.send();
   }
+  /** what a check holds a step of the field to: its tale's lines and open ways, and the field and its clocks as they stand */
+  private tale(t: readonly number[]): number[] { const st = this.g.sim; return [t[0], t[2], t[3], wxGet(st, WX.airAcc), wxGet(st, WX.airCur), wordOf(this.s), wordOf(this.bytes(WX.airStat, N * 2)), wordOf(this.tableBytes(3, N * 2))]; }
   /** the level as authored again (game.ts resetLevelState, after the doors and the walls are back) */
   reset() { this.reseed(); }
 
-  /** once a frame, after the doors and whatever breaks have moved (game.ts) */
+  /** once a frame, after the doors and whatever breaks have moved (game.ts): through the openings as they stand (rust/sim/src/air.rs update) */
   update(dt: number) {
     this.ensure(); if (!this.on) return;
-    const h = stepSecs(); this.acc += dt; let n = 0;
-    while (this.acc >= h && n++ < 4) {
-      this.acc -= h;
-      this.recheck(h); this.leaves();
-      this.drift += this.stepOnce(h);
-    }
-    if (this.acc > h) this.acc = h;   // (a long frame: the rest of it is dropped, not owed)
+    const g = this.g; WX_KNOBS.here();
+    g.col.rule(() => {
+      const M = g.col.ruleOpen();
+      sim().air_update(g.sim.bind(), g.sim.stamp, M.slot, M.ruleSet, M.rulePanes, dt);
+      const t = said(); this.drift += t[0]; this.tally(t);
+      if (WX_WATCH.on) WX_WATCH.saidMany('air.update', this.tale(t), [dt]);
+    });
     if (this.drift > SEND) this.send();
   }
 
-  // ---- the openings
-  private clearOfLeaves(fn: () => void) { const col = this.g.col, dyn = col.dynamicBoxes; col.dynamicBoxes = []; try { fn(); } finally { col.dynamicBoxes = dyn; } }
-  /** is the way along edge e clear of every static (call inside clearOfLeaves) */
-  private ask(e: number): boolean {
-    const i = e >> 1, j = e & 1 ? i + AIR_W : i + 1, col = this.g.col, a = this.pa, b = this.pb;
-    a[0] = WORLD.min[0] + (i % AIR_W + 0.5) * AIR_CELL; a[2] = WORLD.min[2] + (((i / AIR_W) | 0) + 0.5) * AIR_CELL;
-    b[0] = WORLD.min[0] + (j % AIR_W + 0.5) * AIR_CELL; b[2] = WORLD.min[2] + (((j / AIR_W) | 0) + 0.5) * AIR_CELL;
-    for (const y of PROBE_Y) { a[1] = b[1] = y; this.stats.probes++; if (!col.solidBlocked(a, b) && !col.solidBlocked(b, a)) return true; }
-    return false;
-  }
-  /** the shut edges asked again, a share of the list each step (a wall that broke, a pane that fell out) */
-  private recheck(h: number) {
-    const E = this.edges; if (!E.length) return;
-    const per = Math.min(E.length, Math.max(1, Math.ceil(E.length * h / Math.max(0.25, +AIRDUST.recheckSecs || 0))));
-    this.clearOfLeaves(() => { for (let k = 0; k < per; k++) { const e = E[this.cur]; this.cur = (this.cur + 1) % E.length; if (!this.stat[e] && this.ask(e)) this.stat[e] = 1; } });
-  }
-  /** which edges the door leaves stand across — re-read only when a leaf has moved since the last look */
-  private leaves() {
-    const dyn = this.g.col.dynamicBoxes as Box[]; let sig = dyn.length | 0;   // (a 32-bit hash of every leaf's pose to the millimetre / milliradian: any number of leaves)
-    for (const b of dyn) { sig = Math.imul(sig ^ Math.round(b.c[0] * 1000), 16777619); sig = Math.imul(sig ^ Math.round(b.c[2] * 1000), 16777619); sig = Math.imul(sig ^ Math.round(b.yaw * 1000), 16777619); sig = Math.imul(sig ^ Math.round(b.c[1] * 1000) ^ (b.rot ? 0x5bd1e995 : 0), 16777619); }
-    if (sig === this.leafSig) return;
-    this.leafSig = sig; this.leaf.fill(0);
-    const x0 = WORLD.min[0], z0 = WORLD.min[2];
-    for (const b of dyn) {
-      if (b.rot || b.c[1] - b.h[1] > 1.0 || b.c[1] + b.h[1] < 1.0) continue;   // (a leaf off its hinges lies where it fell: nothing to the air)
-      const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw), hx = b.h[0] + 0.02, hz = b.h[2] + 0.02, R = Math.hypot(b.h[0], b.h[2]) + AIR_CELL;
-      const ix0 = Math.max(0, Math.floor((b.c[0] - R - x0) / AIR_CELL - 0.5)), ix1 = Math.min(AIR_W - 1, Math.ceil((b.c[0] + R - x0) / AIR_CELL - 0.5));
-      const iz0 = Math.max(0, Math.floor((b.c[2] - R - z0) / AIR_CELL - 0.5)), iz1 = Math.min(AIR_H - 1, Math.ceil((b.c[2] + R - z0) / AIR_CELL - 0.5));
-      for (let iz = iz0; iz <= iz1; iz++) for (let ix = ix0; ix <= ix1; ix++) {
-        const px = x0 + (ix + 0.5) * AIR_CELL - b.c[0], pz = z0 + (iz + 0.5) * AIR_CELL - b.c[2];
-        const lx = cs * px - sn * pz, lz = sn * px + cs * pz, i = ix + iz * AIR_W;
-        // the edge to +x is the local segment (lx, lz) → (lx + cs·h, lz + sn·h); to +z: → (lx − sn·h, lz + cs·h)
-        if (ix + 1 < AIR_W && crosses(lx, lz, cs * AIR_CELL, sn * AIR_CELL, hx, hz)) this.leaf[i * 2]++;
-        if (iz + 1 < AIR_H && crosses(lx, lz, -sn * AIR_CELL, cs * AIR_CELL, hx, hz)) this.leaf[i * 2 + 1]++;
-      }
-    }
-  }
-
-  // ---- the field
-  /** one step of the equation at the head of the file → the most any cell moved */
-  private stepOnce(dt: number): number {
-    const s = this.s, nx = this.next, C = this.cells, st = this.stat, lf = this.leaf, leak = this.leak;
-    const k = Math.min(0.2, Math.max(0, +AIRDUST.diffuse || 0) * dt / (AIR_CELL * AIR_CELL)), r = Math.min(0.5, Math.max(0, +AIRDUST.settle || 0) * dt); let moved = 0, open = 0;   // (the explicit step stands under ¼ whatever the knobs say)
-    for (let q = 0; q < C.length; q++) {
-      const i = C[q], v = s[i], ix = i % AIR_W; let a = 0, e: number;
-      if (ix > 0) { e = (i - 1) * 2; if (st[e] && !lf[e]) { a += s[i - 1] - v; open++; } }
-      if (ix + 1 < AIR_W) { e = i * 2; if (st[e] && !lf[e]) { a += s[i + 1] - v; open++; } }
-      if (i >= AIR_W) { e = (i - AIR_W) * 2 + 1; if (st[e] && !lf[e]) { a += s[i - AIR_W] - v; open++; } }
-      if (i + AIR_W < N) { e = i * 2 + 1; if (st[e] && !lf[e]) { a += s[i + AIR_W] - v; open++; } }
-      let w = v + k * a - r * (v - leak);
-      if (Math.abs(w - leak) < SNAP) w = leak;
-      const d = Math.abs(w - v); if (d > moved) moved = d;
-      nx[i] = w;
-    }
-    for (let q = 0; q < C.length; q++) { const i = C[q]; s[i] = nx[i]; }
-    this.stats.steps++; this.stats.open = open;
-    return moved;
-  }
   /** the field as it stands, written again (host/putback.ts: a save put back in memory took the field back, not the GPU's copy of it); no book of this module moves */
   resend() { if (!this.on) return; const s = this.s, o = this.gpu; for (let i = 0; i < N; i++) o[i] = s[i]; this.g.engine.world.setAirGrid(o); }
   private send() {
@@ -192,10 +143,10 @@ export class AirDust {
   // ---- checkpoints (savestate.ts)
   snapshot(): AirDustSnap | null {
     if (!this.live) return null;
-    const out: number[] = [], C = this.cells, E = this.edges;
-    for (let q = 0; q < C.length; q++) { const i = C[q]; if (this.s[i] !== this.leak) out.push(i, this.s[i]); }
-    let hex = ''; for (let k = 0; k < E.length; k += 4) { let nib = 0; for (let b = 0; b < 4 && k + b < E.length; b++) if (this.stat[E[k + b]]) nib |= 1 << b; hex += nib.toString(16); }
-    return { acc: this.acc, cur: this.cur, s: out, stat: hex };
+    const out: number[] = [], C = this.cells, E = this.edges, s = this.s, leak = this.leak, stat = this.bytes(WX.airStat, N * 2);
+    for (let q = 0; q < C.length; q++) { const i = C[q]; if (s[i] !== leak) out.push(i, s[i]); }
+    let hex = ''; for (let k = 0; k < E.length; k += 4) { let nib = 0; for (let b = 0; b < 4 && k + b < E.length; b++) if (stat[E[k + b]]) nib |= 1 << b; hex += nib.toString(16); }
+    return { acc: wxGet(this.g.sim, WX.airAcc), cur: wxGet(this.g.sim, WX.airCur), s: out, stat: hex };
   }
   /** the file's field over the one just seeded (savestate.ts loadState: after the weather, the walls, the doors and the glass are the file's). A file without the
    *  slice, malformed, or of another plan: the seeded field stands. An opening is the file's only where the level as loaded still has it (a pane that was shot out
@@ -203,30 +154,19 @@ export class AirDust {
   restore(sn: AirDustSnap | null | undefined) {
     this.dirty = true; this.ensure();
     if (!sn || !this.on) return;
-    const E = this.edges; if (typeof sn.stat !== 'string' || sn.stat.length !== Math.ceil(E.length / 4) || !Array.isArray(sn.s)) return;
-    for (let k = 0; k < E.length; k++) this.stat[E[k]] &= (parseInt(sn.stat[k >> 2], 16) >> (k & 3)) & 1;
-    for (let q = 0; q < this.cells.length; q++) this.s[this.cells[q]] = this.leak;
-    for (let k = 0; k + 1 < sn.s.length; k += 2) { const i = sn.s[k] | 0; if (i >= 0 && i < N && this.indoor[i]) this.s[i] = +sn.s[k + 1]; }
-    this.acc = +sn.acc || 0; this.cur = E.length ? ((sn.cur | 0) % E.length + E.length) % E.length : 0;
-    this.leafSig = NaN; this.leaves(); this.send();
+    const g = this.g, E = this.edges; if (typeof sn.stat !== 'string' || sn.stat.length !== Math.ceil(E.length / 4) || !Array.isArray(sn.s)) return;
+    const stat = this.bytes(WX.airStat, N * 2), C = this.cells, s = this.s, leak = this.leak, indoor = this.tableBytes(2, N);
+    for (let k = 0; k < E.length; k++) stat[E[k]] &= (parseInt(sn.stat[k >> 2], 16) >> (k & 3)) & 1;
+    for (let q = 0; q < C.length; q++) s[C[q]] = leak;
+    for (let k = 0; k + 1 < sn.s.length; k += 2) { const i = sn.s[k] | 0; if (i >= 0 && i < N && indoor[i]) s[i] = +sn.s[k + 1]; }
+    wxSet(g.sim, WX.airAcc, +sn.acc || 0); wxSet(g.sim, WX.airCur, E.length ? ((sn.cur | 0) % E.length + E.length) % E.length : 0);
+    g.col.rule(() => { const M = g.col.ruleOpen(); sim().air_reread(g.sim.bind(), g.sim.stamp, M.slot, M.ruleSet); });
+    this.send();
   }
 
   summary(): string {
     this.ensure(); if (!this.seeded) return 'no weather in the air';
-    let mx = 0, sum = 0; for (const i of this.cells) { sum += this.s[i]; if (this.s[i] > mx) mx = this.s[i]; }
-    return `${this.on ? 'moving' : 'still (switch off)'} · ${this.cells.length} roofed cells · mean share ${(sum / Math.max(1, this.cells.length)).toFixed(3)} (leak ${this.leak.toFixed(3)}, max ${mx.toFixed(3)}) · ${this.stats.open} open ways`;
+    const s = this.s, C = this.cells; let mx = 0, sum = 0; for (const i of C) { sum += s[i]; if (s[i] > mx) mx = s[i]; }
+    return `${this.on ? 'moving' : 'still (switch off)'} · ${C.length} roofed cells · mean share ${(sum / Math.max(1, C.length)).toFixed(3)} (leak ${this.leak.toFixed(3)}, max ${mx.toFixed(3)}) · ${this.stats.open} open ways`;
   }
 }
-
-/** does the plan segment from (x, z) along (dx, dz) — t in [0, 1], a leaf's own frame — enter the rectangle |x| ≤ hx, |z| ≤ hz */
-function crosses(x: number, z: number, dx: number, dz: number, hx: number, hz: number): boolean {
-  let t0 = 0, t1 = 1;
-  if (Math.abs(dx) < 1e-9) { if (Math.abs(x) > hx) return false; }
-  else { let a = (-hx - x) / dx, b = (hx - x) / dx; if (a > b) { const t = a; a = b; b = t; } if (a > t0) t0 = a; if (b < t1) t1 = b; if (t0 > t1) return false; }
-  if (Math.abs(dz) < 1e-9) { if (Math.abs(z) > hz) return false; }
-  else { let a = (-hz - z) / dz, b = (hz - z) / dz; if (a > b) { const t = a; a = b; b = t; } if (a > t0) t0 = a; if (b < t1) t1 = b; if (t0 > t1) return false; }
-  return true;
-}
-
-/** the fixed step in use: AIRDUST.step held to what the explicit scheme and a frame can take */
-function stepSecs(): number { const h = +AIRDUST.step; return h >= 1 / 240 && h <= 0.1 ? h : 1 / 30; }

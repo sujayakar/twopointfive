@@ -346,8 +346,8 @@ impl Default for Bodies { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum ShotOf {
-    Shot(crate::squad40::Shot),
     Close,
+    Shot(crate::squad40::Shot),
 }
 
 /// (TypeScript: a union)

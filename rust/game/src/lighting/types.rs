@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: DayState, src/game/lighting.ts:180)
+/// (TypeScript: DayState, src/game/lighting.ts:177)
 #[derive(Clone, Debug)]
 pub struct DayState {
     pub hour: crate::hours::HourId,
@@ -36,7 +36,7 @@ impl DayState {
 }
 impl Default for DayState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lighting.ts:180 DayState.sky, src/game/lighting.ts:180)
+/// (TypeScript: inline at src/game/lighting.ts:177 DayState.sky, src/game/lighting.ts:177)
 #[derive(Clone, Copy, Debug)]
 pub struct DayStateSky {
     pub zenith: V3,
@@ -53,7 +53,7 @@ impl DayStateSky {
 }
 impl Default for DayStateSky { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lighting.ts:180 DayState.blackout, src/game/lighting.ts:180)
+/// (TypeScript: inline at src/game/lighting.ts:177 DayState.blackout, src/game/lighting.ts:177)
 #[derive(Clone, Copy, Debug)]
 pub struct DayStateBlackout {
     pub active: bool,
@@ -113,7 +113,7 @@ impl LightEventCause {
 pub struct LightingMod {
     /// (src/game/lighting.ts:33 LENS_FROM)
     pub lens_from: JsMap<LightId, V3>,
-    /// (src/game/lighting.ts:181 dayStates)
+    /// (src/game/lighting.ts:178 dayStates)
     pub day_states: Option<crate::lighting::DayState>,
 }
 impl LightingMod {

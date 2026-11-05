@@ -1,4 +1,4 @@
-//! src/game/shards.ts lines 670 to 764
+//! src/game/shards.ts lines 672 to 766
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -20,7 +20,7 @@ pub fn edge_colour(tint: V3, k: f64) -> V3 {
 }
 
 /// a CUT plate's face colour: dark body in the air, lifted toward the edge at rest, the floor through the tint when opaque at rest.   (shards.ts cutFaceAlbedo)
-pub fn cut_face_albedo(g: &mut crate::game::Game, tint: V3, under: V3, type_: crate::glassbreak::GlassType, resting: bool) -> V3 {
+pub fn cut_face_albedo(g: &mut crate::game::Game, tint: V3, under: V3, type_: crate::glasspen::PaneType, resting: bool) -> V3 {
     let k = g.k.shards.cut_body;
     if !(k > 0.0) {
         return plate_albedo(tint, under, type_);
@@ -34,8 +34,8 @@ pub fn cut_face_albedo(g: &mut crate::game::Game, tint: V3, under: V3, type_: cr
 }
 
 /// a plate seen through: the surface under it × the tint, a little of the glass's grey-green; laminated is milky.   (shards.ts plateAlbedo)
-pub fn plate_albedo(tint: V3, under: V3, type_: crate::glassbreak::GlassType) -> V3 {
-    let k = if type_ == crate::glassbreak::GlassType::Laminated { 0.45 } else { 0.82 };
+pub fn plate_albedo(tint: V3, under: V3, type_: crate::glasspen::PaneType) -> V3 {
+    let k = if type_ == crate::glasspen::PaneType::Laminated { 0.45 } else { 0.82 };
     [
         under[0] * tint[0] * k + tint[0] * (1.0 - k) * 0.6,
         under[1] * tint[1] * k + tint[1] * (1.0 - k) * 0.6,
@@ -238,7 +238,7 @@ pub fn fragment_of_box(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who
     let tinted = m::abs(albedo[0] - albedo[2]) > 0.02 || albedo[0] < 0.9;
     crate::shards::GlassFragmentLike {
         pane: -1.0,
-        type_: crate::glassbreak::GlassType::Annealed,
+        type_: crate::glasspen::PaneType::Annealed,
         kind: if hb > 2.2 * ha { crate::shards::GlassFragmentLikeKind::Dagger } else { crate::shards::GlassFragmentLikeKind::Piece },
         outline: vec![corner(-1.0, -1.0), corner(1.0, -1.0), corner(1.0, 1.0), corner(-1.0, 1.0)],
         centre: v3::copy(c),
@@ -252,13 +252,15 @@ pub fn fragment_of_box(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who
         cause: crate::shards::GlassFragmentLikeCause::Hit,
         who,
         seed,
+        fall: None,
+        landed: None,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::glassbreak::GlassType;
+    use crate::glasspen::PaneType;
 
     // Bits printed by the TypeScript's own functions (EXACT on), under bun.
     fn same(what: &str, got: &[f64], want: &[u64]) {
@@ -287,24 +289,24 @@ mod tests {
         same("clamp_b", &[clamp_i(-0.0, 0.0, 1.0)], &[0x0000000000000000]);
         same("edge", &edge_colour(TINT, 0.37), &[0x3fe74d91eeaa6d27, 0x3feb479f666234a8, 0x3feab52220bc382a]);
         same("edge2", &edge_colour(TINT, 1.25), &[0x3fe7ae147ae147ae, 0x3fee147ae147ae14, 0x3feb851eb851eb85]);
-        same("plate", &plate_albedo(TINT, UNDER, GlassType::Annealed), &[0x3fd49e877d6aed68, 0x3fd5630e264d3582, 0x3fd22f182a8802b2]);
-        same("plate_lam", &plate_albedo(TINT, UNDER, GlassType::Laminated), &[0x3fd7d0338ef8abce, 0x3fd99e0472807b10, 0x3fd82e8ad2816ca7]);
+        same("plate", &plate_albedo(TINT, UNDER, PaneType::Annealed), &[0x3fd49e877d6aed68, 0x3fd5630e264d3582, 0x3fd22f182a8802b2]);
+        same("plate_lam", &plate_albedo(TINT, UNDER, PaneType::Laminated), &[0x3fd7d0338ef8abce, 0x3fd99e0472807b10, 0x3fd82e8ad2816ca7]);
     }
 
     #[test]
     fn cut_faces_match_the_typescripts_bits() {
         let mut g = Game::blank();
-        let mut run = |body: f64, see: f64, rest: f64, ty: GlassType, resting: bool| {
+        let mut run = |body: f64, see: f64, rest: f64, ty: PaneType, resting: bool| {
             g.k.shards.cut_body = body;
             g.k.shards.cut_see = see;
             g.k.shards.cut_rest_body = rest;
             cut_face_albedo(&mut g, TINT, UNDER, ty, resting)
         };
-        same("no_body", &run(0.0, 1.0, 0.3, GlassType::Laminated, true), &[0x3fd7d0338ef8abce, 0x3fd99e0472807b10, 0x3fd82e8ad2816ca7]);
-        same("opaque_rest", &run(0.37, 0.0, 0.3, GlassType::Annealed, true), &[0x3fd310be28c51b28, 0x3fd3543576da51f1, 0x3fce883d50c366f2]);
-        same("see_rest", &run(0.37, 1.0, 0.3, GlassType::Annealed, true), &[0x3fda2a0d8523c0d0, 0x3fdf53b87958b172, 0x3fde196ed16ef2fc]);
-        same("see_rest_clamped", &run(0.37, 1.0, 1.7, GlassType::Annealed, true), &[0x3fe7ae147ae147ae, 0x3fee147ae147ae14, 0x3feb851eb851eb84]);
-        same("in_air", &run(0.37, 1.0, 0.3, GlassType::Annealed, false), &[0x3fd114940bbb1f26, 0x3fd2f85510d38cdb, 0x3fd36916440f2389]);
+        same("no_body", &run(0.0, 1.0, 0.3, PaneType::Laminated, true), &[0x3fd7d0338ef8abce, 0x3fd99e0472807b10, 0x3fd82e8ad2816ca7]);
+        same("opaque_rest", &run(0.37, 0.0, 0.3, PaneType::Annealed, true), &[0x3fd310be28c51b28, 0x3fd3543576da51f1, 0x3fce883d50c366f2]);
+        same("see_rest", &run(0.37, 1.0, 0.3, PaneType::Annealed, true), &[0x3fda2a0d8523c0d0, 0x3fdf53b87958b172, 0x3fde196ed16ef2fc]);
+        same("see_rest_clamped", &run(0.37, 1.0, 1.7, PaneType::Annealed, true), &[0x3fe7ae147ae147ae, 0x3fee147ae147ae14, 0x3feb851eb851eb84]);
+        same("in_air", &run(0.37, 1.0, 0.3, PaneType::Annealed, false), &[0x3fd114940bbb1f26, 0x3fd2f85510d38cdb, 0x3fd36916440f2389]);
     }
 
     #[test]

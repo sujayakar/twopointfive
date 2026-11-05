@@ -147,8 +147,8 @@ pub fn game_meter_read(g: &mut crate::game::Game, dt: f64, k: &str) {
     let mut r1 = crate::sensors::sensors_read(g, &alloc::format!("playerChest{}", k));
     let mut r2 = crate::sensors::sensors_read(g, &alloc::format!("playerHead{}", k));
     if g.sensors.own.is_some() {
-        let p = bone_or(g, pc, Bone::Chest, 1.2); r1 = Some(crate::guards::light_estimate_at(g, p, None, None, None, None));
-        let p = bone_or(g, pc, Bone::Head, 1.6); r2 = Some(crate::guards::light_estimate_at(g, p, None, None, None, None));
+        let p = bone_or(g, pc, Bone::Chest, 1.2); r1 = Some(crate::guards::light_estimate_at(g, p, None, None, None, None, None));
+        let p = bone_or(g, pc, Bone::Head, 1.6); r2 = Some(crate::guards::light_estimate_at(g, p, None, None, None, None, None));
     }
     if let (Some(a), Some(b)) = (r1, r2) {
         if a.is_finite() && b.is_finite() {

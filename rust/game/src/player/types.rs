@@ -3,6 +3,50 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
+/// (TypeScript: WallSnap, src/game/player.ts:1223)
+#[derive(Clone, Debug)]
+pub struct WallSnap {
+    pub hold: Option<crate::player::WallHold>,
+    pub press: Option<crate::player::WallSnapPress>,
+}
+impl WallSnap {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        WallSnap {
+            hold: None,
+            press: None,
+        }
+    }
+}
+impl Default for WallSnap { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/player.ts:1223 WallSnap.press, src/game/player.ts:1223)
+#[derive(Clone, Debug)]
+pub struct WallSnapPress {
+    pub t: f64,
+    pub at: f64,
+    pub n: Option<Vec<f64>>,
+    pub dx: f64,
+    pub dz: f64,
+    pub held: bool,
+    pub until: f64,
+}
+impl WallSnapPress {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        WallSnapPress {
+            t: 0.0,
+            at: 0.0,
+            n: None,
+            dx: 0.0,
+            dz: 0.0,
+            held: false,
+            until: 0.0,
+        }
+    }
+}
+impl Default for WallSnapPress { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: Hold, src/game/player.ts:132)
 #[derive(Clone, Debug)]
 pub struct Hold {
@@ -314,50 +358,6 @@ impl WhKind {
         }
     }
 }
-
-/// (TypeScript: WallSnap, src/game/player.ts:1223)
-#[derive(Clone, Debug)]
-pub struct WallSnap {
-    pub hold: Option<crate::player::WallHold>,
-    pub press: Option<crate::player::WallSnapPress>,
-}
-impl WallSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallSnap {
-            hold: None,
-            press: None,
-        }
-    }
-}
-impl Default for WallSnap { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/player.ts:1223 WallSnap.press, src/game/player.ts:1223)
-#[derive(Clone, Debug)]
-pub struct WallSnapPress {
-    pub t: f64,
-    pub at: f64,
-    pub n: Option<Vec<f64>>,
-    pub dx: f64,
-    pub dz: f64,
-    pub held: bool,
-    pub until: f64,
-}
-impl WallSnapPress {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallSnapPress {
-            t: 0.0,
-            at: 0.0,
-            n: None,
-            dx: 0.0,
-            dz: 0.0,
-            held: false,
-            until: 0.0,
-        }
-    }
-}
-impl Default for WallSnapPress { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/player.ts:149 DOOR_FIT, src/game/player.ts:149)
 #[derive(Clone, Copy, Debug)]

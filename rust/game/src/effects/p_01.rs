@@ -108,6 +108,12 @@ pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::eff
             }
         }
     }
+    // unburnt powder: a narrow fast cone about the bore (effects.ts:220). ROUND THREE: the part had dropped it as the picture's, but the sparks' pool is the game's and the
+    // frame's box list takes a box a spark (room-clear-four tick 1794: 20 boxes short). The TypeScript's `sp` is `gpu ? null : g.sparks` (combat.ts:152, the one caller):
+    // the skeleton's signature has no `sp`, so the caller's test is made here.
+    if !crate::particle_fx::gpu_fx(g) && flags().shot_sparks && s.spark_count > 0.0 {
+        crate::sparks::sparks_emit_cone(g, v3::mad(muzzle, d, 0.04), [d[0], d[1] + 0.08, d[2]], crate::sparks::SparksEmitConeO { count: s.spark_count, speed: s.spark_speed, cone: s.spark_cone, life: s.spark_life }, o.seed);
+    }
     vec![FxLight {
         pos: v3::mad(muzzle, d, s.standoff * 0.4),
         color: s.light_color,

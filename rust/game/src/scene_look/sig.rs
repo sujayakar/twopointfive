@@ -6,7 +6,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (src/scene/look.ts:27 suitAs)
-pub fn suit_as(g: &mut crate::game::Game) -> Option<crate::scene_look::SuitAs> { todo!() }
+pub fn suit_as(g: &mut crate::game::Game) -> Option<Option<crate::scene_look::SuitAs>> { todo!() }
 
 /// (src/scene/look.ts:39 lookDress)
 pub fn look_dress(g: &mut crate::game::Game) -> bool { todo!() }

@@ -17,5 +17,5 @@ pub fn sim_part_len(p: f64) -> f64 { todo!() }
 /// (src/sim/state.ts:102 simTenant)
 pub fn sim_tenant(t: &crate::sim_state::SimTenant) { todo!() }
 
-/// (src/sim/state.ts:273 liveOf)
+/// (src/sim/state.ts:286 liveOf)
 pub fn live_of(l: &crate::sim_state::Layout, i: f64, first: f64) -> f64 { todo!() }

@@ -34,3 +34,6 @@ pub fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/blastLook.ts:320 stunSparks)
 pub fn stun_sparks(g: &mut crate::game::Game, pl: PlayerId, at: V3) {}
+
+/// BOUNDARY NO-OP (round three; dress, "LOOK ONLY": false = not this module's burst, the caller's own sparks stand)   (blastLook.ts:246 blastSparks)
+pub fn blast_sparks(g: &mut crate::game::Game, at: V3) -> bool { false }

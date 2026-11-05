@@ -3,31 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: DarkDoorSnap, src/game/darkdoor.ts:361)
-#[derive(Clone, Debug)]
-pub struct DarkDoorSnap {
-    pub men: Vec<Option<Vec<f64>>>,
-    pub quits: Vec<Option<Vec<f64>>>,
-    pub pass: Vec<Option<Vec<f64>>>,
-    pub tried: Vec<Option<Vec<f64>>>,
-    pub reads: Vec<Vec<f64>>,
-    pub dealt: Option<f64>,
-}
-impl DarkDoorSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DarkDoorSnap {
-            men: Vec::new(),
-            quits: Vec::new(),
-            pass: Vec::new(),
-            tried: Vec::new(),
-            reads: Vec::new(),
-            dealt: None,
-        }
-    }
-}
-impl Default for DarkDoorSnap { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DarkDoorAct {
@@ -179,6 +154,31 @@ impl LineKind {
         }
     }
 }
+
+/// (TypeScript: DarkDoorSnap, src/game/darkdoor.ts:361)
+#[derive(Clone, Debug)]
+pub struct DarkDoorSnap {
+    pub men: Vec<Option<Vec<f64>>>,
+    pub quits: Vec<Option<Vec<f64>>>,
+    pub pass: Vec<Option<Vec<f64>>>,
+    pub tried: Vec<Option<Vec<f64>>>,
+    pub reads: Vec<Vec<f64>>,
+    pub dealt: Option<f64>,
+}
+impl DarkDoorSnap {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        DarkDoorSnap {
+            men: Vec::new(),
+            quits: Vec::new(),
+            pass: Vec::new(),
+            tried: Vec::new(),
+            reads: Vec::new(),
+            dealt: None,
+        }
+    }
+}
+impl Default for DarkDoorSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/darkdoor.ts:88 LINES, src/game/darkdoor.ts:88)
 #[derive(Clone, Debug)]

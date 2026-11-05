@@ -98,34 +98,6 @@ impl GuardScriptOver {
 }
 impl Default for GuardScriptOver { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
-pub enum Foe {
-    Guard(GuardId),
-    Player,
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GuardState {
-    Patrol,
-    Suspicious,
-    Alert,
-    Search,
-    Dead,
-}
-impl GuardState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardState::Patrol => "patrol",
-            GuardState::Suspicious => "suspicious",
-            GuardState::Alert => "alert",
-            GuardState::Search => "search",
-            GuardState::Dead => "dead",
-        }
-    }
-}
-
 /// (TypeScript: Interactable, src/game/game.ts:256)
 #[derive(Clone, Debug)]
 pub struct Interactable {
@@ -273,6 +245,427 @@ impl Verb {
             Verb::LightsOn => "lightsOn",
             Verb::Lead => "lead",
             Verb::Stay => "stay",
+        }
+    }
+}
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum SlotKind {
+    Pistol,
+    Rifle,
+    Smoke,
+    Flash,
+    Frag,
+}
+impl SlotKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            SlotKind::Pistol => "pistol",
+            SlotKind::Rifle => "rifle",
+            SlotKind::Smoke => "smoke",
+            SlotKind::Flash => "flash",
+            SlotKind::Frag => "frag",
+        }
+    }
+}
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum GuardState {
+    Patrol,
+    Suspicious,
+    Alert,
+    Search,
+    Dead,
+}
+impl GuardState {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            GuardState::Patrol => "patrol",
+            GuardState::Suspicious => "suspicious",
+            GuardState::Alert => "alert",
+            GuardState::Search => "search",
+            GuardState::Dead => "dead",
+        }
+    }
+}
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum DownKind {
+    Shot,
+    Struck,
+    Choked,
+    Wounded,
+}
+impl DownKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            DownKind::Shot => "shot",
+            DownKind::Struck => "struck",
+            DownKind::Choked => "choked",
+            DownKind::Wounded => "wounded",
+        }
+    }
+}
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum DownBy {
+    Guard,
+    Player,
+    World,
+}
+impl DownBy {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            DownBy::Guard => "guard",
+            DownBy::Player => "player",
+            DownBy::World => "world",
+        }
+    }
+}
+
+/// (TypeScript: Witness, src/game/game.ts:544)
+#[derive(Clone, Debug)]
+pub struct Witness {
+    pub heard: crate::game::WitnessHeard,
+    pub peak_awareness: f64,
+    pub alerted_by: Option<crate::game::WitnessAlertedBy>,
+    pub alert_t: f64,
+    pub saw_act: Option<crate::game::WitnessSawAct>,
+    pub saw_body: Option<crate::game::WitnessSawBody>,
+    pub called_to_body: Option<crate::game::WitnessCalledToBody>,
+    pub saw_held: Option<crate::game::WitnessSawHeld>,
+    pub was_held: f64,
+    pub dazzled: f64,
+}
+impl Witness {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        Witness {
+            heard: crate::game::WitnessHeard::zeroed(),
+            peak_awareness: 0.0,
+            alerted_by: None,
+            alert_t: 0.0,
+            saw_act: None,
+            saw_body: None,
+            called_to_body: None,
+            saw_held: None,
+            was_held: 0.0,
+            dazzled: 0.0,
+        }
+    }
+}
+impl Default for Witness { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/game.ts:547 Witness.heard, src/game/game.ts:547)
+#[derive(Clone, Copy, Debug)]
+pub struct WitnessHeard {
+    pub shots: f64,
+    pub last_shot_t: f64,
+    pub kick: f64,
+    pub bang: f64,
+    pub small: f64,
+    pub small_where: Option<V3>,
+    pub loud_at: Option<V3>,
+    pub last_t: f64,
+}
+impl WitnessHeard {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        WitnessHeard {
+            shots: 0.0,
+            last_shot_t: 0.0,
+            kick: 0.0,
+            bang: 0.0,
+            small: 0.0,
+            small_where: None,
+            loud_at: None,
+            last_t: 0.0,
+        }
+    }
+}
+impl Default for WitnessHeard { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum WitnessAlertedBy {
+    Body,
+    Held,
+    Radio,
+    Sound,
+    Sight,
+}
+impl WitnessAlertedBy {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            WitnessAlertedBy::Body => "body",
+            WitnessAlertedBy::Held => "held",
+            WitnessAlertedBy::Radio => "radio",
+            WitnessAlertedBy::Sound => "sound",
+            WitnessAlertedBy::Sight => "sight",
+        }
+    }
+}
+
+/// (TypeScript: inline at src/game/game.ts:554 Witness.sawAct, src/game/game.ts:554)
+#[derive(Clone, Debug)]
+pub struct WitnessSawAct {
+    pub kind: crate::game::WitnessSawActKind,
+    pub victim: String,
+    pub t: f64,
+}
+impl WitnessSawAct {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        WitnessSawAct {
+            kind: crate::game::WitnessSawActKind::Shot,
+            victim: String::new(),
+            t: 0.0,
+        }
+    }
+}
+impl Default for WitnessSawAct { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum WitnessSawActKind {
+    Shot,
+    Struck,
+    Choked,
+    Wounded,
+    Grab,
+}
+impl WitnessSawActKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            WitnessSawActKind::Shot => "shot",
+            WitnessSawActKind::Struck => "struck",
+            WitnessSawActKind::Choked => "choked",
+            WitnessSawActKind::Wounded => "wounded",
+            WitnessSawActKind::Grab => "grab",
+        }
+    }
+}
+
+/// (TypeScript: inline at src/game/game.ts:556 Witness.sawBody, src/game/game.ts:556)
+#[derive(Clone, Debug)]
+pub struct WitnessSawBody {
+    pub victim: String,
+    pub t: f64,
+    pub breathing: bool,
+}
+impl WitnessSawBody {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        WitnessSawBody {
+            victim: String::new(),
+            t: 0.0,
+            breathing: false,
+        }
+    }
+}
+impl Default for WitnessSawBody { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/game.ts:557 Witness.calledToBody, src/game/game.ts:557)
+#[derive(Clone, Debug)]
+pub struct WitnessCalledToBody {
+    pub victim: String,
+    pub t: f64,
+    pub breathing: bool,
+}
+impl WitnessCalledToBody {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        WitnessCalledToBody {
+            victim: String::new(),
+            t: 0.0,
+            breathing: false,
+        }
+    }
+}
+impl Default for WitnessCalledToBody { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/game.ts:561 Witness.sawHeld, src/game/game.ts:561)
+#[derive(Clone, Debug)]
+pub struct WitnessSawHeld {
+    pub who: String,
+    pub t: f64,
+}
+impl WitnessSawHeld {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        WitnessSawHeld {
+            who: String::new(),
+            t: 0.0,
+        }
+    }
+}
+impl Default for WitnessSawHeld { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum MissionStage {
+    Drive,
+    Infiltrate,
+    Exfil,
+    Done,
+    Failed,
+}
+impl MissionStage {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            MissionStage::Drive => "drive",
+            MissionStage::Infiltrate => "infiltrate",
+            MissionStage::Exfil => "exfil",
+            MissionStage::Done => "done",
+            MissionStage::Failed => "failed",
+        }
+    }
+}
+
+/// (TypeScript: Mission, src/game/game.ts:277)
+#[derive(Clone, Debug)]
+pub struct Mission {
+    pub stage: crate::game::MissionStage,
+    pub t0: f64,
+    pub drive_t: f64,
+    pub pulled: bool,
+    pub alarm_on: bool,
+    pub sweep_at: f64,
+    pub spotted_t: f64,
+    pub debrief: bool,
+    pub down_card_at: f64,
+    pub hands_on: bool,
+    pub stats: crate::game::MissionStats,
+    /// INVENTED: g.serial() where g.mission is written whole (game.ts:1638, savestate.ts:812, demo.ts:152, 190, 313, 331): dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity
+    pub serial: u32,
+}
+impl Mission {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        Mission {
+            stage: crate::game::MissionStage::Drive,
+            t0: 0.0,
+            drive_t: 0.0,
+            pulled: false,
+            alarm_on: false,
+            sweep_at: 0.0,
+            spotted_t: 0.0,
+            debrief: false,
+            down_card_at: 0.0,
+            hands_on: false,
+            stats: crate::game::MissionStats::zeroed(),
+            serial: 0,
+        }
+    }
+}
+impl Default for Mission { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: MissionStats, src/game/game.ts:276)
+#[derive(Clone, Debug)]
+pub struct MissionStats {
+    pub qrf_who: Option<String>,
+    pub elapsed: f64,
+    pub alerts: f64,
+    pub spotted: f64,
+    pub bodies: f64,
+    pub shots: f64,
+    pub kills: f64,
+    pub knockouts: f64,
+    pub keys: f64,
+    pub blackout: bool,
+    pub sandbox: bool,
+    pub qrf: f64,
+    pub qrf_at: f64,
+}
+impl MissionStats {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        MissionStats {
+            qrf_who: None,
+            elapsed: 0.0,
+            alerts: 0.0,
+            spotted: 0.0,
+            bodies: 0.0,
+            shots: 0.0,
+            kills: 0.0,
+            knockouts: 0.0,
+            keys: 0.0,
+            blackout: false,
+            sandbox: false,
+            qrf: 0.0,
+            qrf_at: 0.0,
+        }
+    }
+}
+impl Default for MissionStats { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: GameEvent, src/game/game.ts:242)
+#[derive(Clone, Copy, Debug)]
+pub struct GameEvent {
+    pub announced: Option<bool>,
+    pub kind: crate::director::EventKind,
+    pub pos: V3,
+    pub time: f64,
+    pub loud: bool,
+    pub level: Option<f64>,
+    pub id: Option<f64>,
+    pub who: Option<f64>,
+    pub weapon: Option<crate::weapons::WeaponId>,
+    pub from: Option<V3>,
+    pub to: Option<V3>,
+    pub cause: Option<crate::game::GameEventCause>,
+    pub sw_at: Option<V3>,
+    pub blind: Option<bool>,
+    pub lure: Option<bool>,
+    pub frag: Option<bool>,
+    pub charge: Option<bool>,
+    pub ears: Option<[V3; 2]>,
+    /// INVENTED: dealt at birth, what the TypeScript asks by identity (heard sets, Rescue.noise, Def.noise0)
+    pub serial: u32,
+}
+impl GameEvent {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        GameEvent {
+            announced: None,
+            kind: crate::director::EventKind::Shot,
+            pos: [0.0; 3],
+            time: 0.0,
+            loud: false,
+            level: None,
+            id: None,
+            who: None,
+            weapon: None,
+            from: None,
+            to: None,
+            cause: None,
+            sw_at: None,
+            blind: None,
+            lure: None,
+            frag: None,
+            charge: None,
+            ears: None,
+            serial: 0,
+        }
+    }
+}
+impl Default for GameEvent { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum GameEventCause {
+    Shot,
+    Ocp,
+}
+impl GameEventCause {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            GameEventCause::Shot => "shot",
+            GameEventCause::Ocp => "ocp",
         }
     }
 }
@@ -649,73 +1042,6 @@ impl GameRigFitOfValue {
 }
 impl Default for GameRigFitOfValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GameEvent, src/game/game.ts:242)
-#[derive(Clone, Copy, Debug)]
-pub struct GameEvent {
-    pub announced: Option<bool>,
-    pub kind: crate::director::EventKind,
-    pub pos: V3,
-    pub time: f64,
-    pub loud: bool,
-    pub level: Option<f64>,
-    pub id: Option<f64>,
-    pub who: Option<f64>,
-    pub weapon: Option<crate::weapons::WeaponId>,
-    pub from: Option<V3>,
-    pub to: Option<V3>,
-    pub cause: Option<crate::game::GameEventCause>,
-    pub sw_at: Option<V3>,
-    pub blind: Option<bool>,
-    pub lure: Option<bool>,
-    pub frag: Option<bool>,
-    pub charge: Option<bool>,
-    pub ears: Option<[V3; 2]>,
-    /// INVENTED: dealt at birth, what the TypeScript asks by identity (heard sets, Rescue.noise, Def.noise0)
-    pub serial: u32,
-}
-impl GameEvent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GameEvent {
-            announced: None,
-            kind: crate::director::EventKind::Shot,
-            pos: [0.0; 3],
-            time: 0.0,
-            loud: false,
-            level: None,
-            id: None,
-            who: None,
-            weapon: None,
-            from: None,
-            to: None,
-            cause: None,
-            sw_at: None,
-            blind: None,
-            lure: None,
-            frag: None,
-            charge: None,
-            ears: None,
-            serial: 0,
-        }
-    }
-}
-impl Default for GameEvent { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameEventCause {
-    Shot,
-    Ocp,
-}
-impl GameEventCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameEventCause::Shot => "shot",
-            GameEventCause::Ocp => "ocp",
-        }
-    }
-}
-
 /// (TypeScript: inline at quiet Game.smokeOwned, src/game/game.ts:839)
 #[derive(Clone, Copy, Debug)]
 pub struct GameSmokeOwned {
@@ -728,339 +1054,6 @@ impl GameSmokeOwned {
     }
 }
 impl Default for GameSmokeOwned { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum MissionStage {
-    Drive,
-    Infiltrate,
-    Exfil,
-    Done,
-    Failed,
-}
-impl MissionStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MissionStage::Drive => "drive",
-            MissionStage::Infiltrate => "infiltrate",
-            MissionStage::Exfil => "exfil",
-            MissionStage::Done => "done",
-            MissionStage::Failed => "failed",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SlotKind {
-    Pistol,
-    Rifle,
-    Smoke,
-    Flash,
-    Frag,
-}
-impl SlotKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SlotKind::Pistol => "pistol",
-            SlotKind::Rifle => "rifle",
-            SlotKind::Smoke => "smoke",
-            SlotKind::Flash => "flash",
-            SlotKind::Frag => "frag",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DownKind {
-    Shot,
-    Struck,
-    Choked,
-    Wounded,
-}
-impl DownKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DownKind::Shot => "shot",
-            DownKind::Struck => "struck",
-            DownKind::Choked => "choked",
-            DownKind::Wounded => "wounded",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DownBy {
-    Guard,
-    Player,
-    World,
-}
-impl DownBy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DownBy::Guard => "guard",
-            DownBy::Player => "player",
-            DownBy::World => "world",
-        }
-    }
-}
-
-/// (TypeScript: Witness, src/game/game.ts:544)
-#[derive(Clone, Debug)]
-pub struct Witness {
-    pub heard: crate::game::WitnessHeard,
-    pub peak_awareness: f64,
-    pub alerted_by: Option<crate::game::WitnessAlertedBy>,
-    pub alert_t: f64,
-    pub saw_act: Option<crate::game::WitnessSawAct>,
-    pub saw_body: Option<crate::game::WitnessSawBody>,
-    pub called_to_body: Option<crate::game::WitnessCalledToBody>,
-    pub saw_held: Option<crate::game::WitnessSawHeld>,
-    pub was_held: f64,
-    pub dazzled: f64,
-}
-impl Witness {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Witness {
-            heard: crate::game::WitnessHeard::zeroed(),
-            peak_awareness: 0.0,
-            alerted_by: None,
-            alert_t: 0.0,
-            saw_act: None,
-            saw_body: None,
-            called_to_body: None,
-            saw_held: None,
-            was_held: 0.0,
-            dazzled: 0.0,
-        }
-    }
-}
-impl Default for Witness { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/game.ts:547 Witness.heard, src/game/game.ts:547)
-#[derive(Clone, Copy, Debug)]
-pub struct WitnessHeard {
-    pub shots: f64,
-    pub last_shot_t: f64,
-    pub kick: f64,
-    pub bang: f64,
-    pub small: f64,
-    pub small_where: Option<V3>,
-    pub loud_at: Option<V3>,
-    pub last_t: f64,
-}
-impl WitnessHeard {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WitnessHeard {
-            shots: 0.0,
-            last_shot_t: 0.0,
-            kick: 0.0,
-            bang: 0.0,
-            small: 0.0,
-            small_where: None,
-            loud_at: None,
-            last_t: 0.0,
-        }
-    }
-}
-impl Default for WitnessHeard { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WitnessAlertedBy {
-    Body,
-    Held,
-    Radio,
-    Sound,
-    Sight,
-}
-impl WitnessAlertedBy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WitnessAlertedBy::Body => "body",
-            WitnessAlertedBy::Held => "held",
-            WitnessAlertedBy::Radio => "radio",
-            WitnessAlertedBy::Sound => "sound",
-            WitnessAlertedBy::Sight => "sight",
-        }
-    }
-}
-
-/// (TypeScript: inline at src/game/game.ts:554 Witness.sawAct, src/game/game.ts:554)
-#[derive(Clone, Debug)]
-pub struct WitnessSawAct {
-    pub kind: crate::game::WitnessSawActKind,
-    pub victim: String,
-    pub t: f64,
-}
-impl WitnessSawAct {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WitnessSawAct {
-            kind: crate::game::WitnessSawActKind::Shot,
-            victim: String::new(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for WitnessSawAct { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WitnessSawActKind {
-    Shot,
-    Struck,
-    Choked,
-    Wounded,
-    Grab,
-}
-impl WitnessSawActKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WitnessSawActKind::Shot => "shot",
-            WitnessSawActKind::Struck => "struck",
-            WitnessSawActKind::Choked => "choked",
-            WitnessSawActKind::Wounded => "wounded",
-            WitnessSawActKind::Grab => "grab",
-        }
-    }
-}
-
-/// (TypeScript: inline at src/game/game.ts:556 Witness.sawBody, src/game/game.ts:556)
-#[derive(Clone, Debug)]
-pub struct WitnessSawBody {
-    pub victim: String,
-    pub t: f64,
-    pub breathing: bool,
-}
-impl WitnessSawBody {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WitnessSawBody {
-            victim: String::new(),
-            t: 0.0,
-            breathing: false,
-        }
-    }
-}
-impl Default for WitnessSawBody { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/game.ts:557 Witness.calledToBody, src/game/game.ts:557)
-#[derive(Clone, Debug)]
-pub struct WitnessCalledToBody {
-    pub victim: String,
-    pub t: f64,
-    pub breathing: bool,
-}
-impl WitnessCalledToBody {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WitnessCalledToBody {
-            victim: String::new(),
-            t: 0.0,
-            breathing: false,
-        }
-    }
-}
-impl Default for WitnessCalledToBody { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/game.ts:561 Witness.sawHeld, src/game/game.ts:561)
-#[derive(Clone, Debug)]
-pub struct WitnessSawHeld {
-    pub who: String,
-    pub t: f64,
-}
-impl WitnessSawHeld {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WitnessSawHeld {
-            who: String::new(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for WitnessSawHeld { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: Mission, src/game/game.ts:277)
-#[derive(Clone, Debug)]
-pub struct Mission {
-    pub stage: crate::game::MissionStage,
-    pub t0: f64,
-    pub drive_t: f64,
-    pub pulled: bool,
-    pub alarm_on: bool,
-    pub sweep_at: f64,
-    pub spotted_t: f64,
-    pub debrief: bool,
-    pub down_card_at: f64,
-    pub hands_on: bool,
-    pub stats: crate::game::MissionStats,
-    /// INVENTED: g.serial() where g.mission is written whole (game.ts:1638, savestate.ts:812, demo.ts:152, 190, 313, 331): dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity
-    pub serial: u32,
-}
-impl Mission {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Mission {
-            stage: crate::game::MissionStage::Drive,
-            t0: 0.0,
-            drive_t: 0.0,
-            pulled: false,
-            alarm_on: false,
-            sweep_at: 0.0,
-            spotted_t: 0.0,
-            debrief: false,
-            down_card_at: 0.0,
-            hands_on: false,
-            stats: crate::game::MissionStats::zeroed(),
-            serial: 0,
-        }
-    }
-}
-impl Default for Mission { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: MissionStats, src/game/game.ts:276)
-#[derive(Clone, Debug)]
-pub struct MissionStats {
-    pub qrf_who: Option<String>,
-    pub elapsed: f64,
-    pub alerts: f64,
-    pub spotted: f64,
-    pub bodies: f64,
-    pub shots: f64,
-    pub kills: f64,
-    pub knockouts: f64,
-    pub keys: f64,
-    pub blackout: bool,
-    pub sandbox: bool,
-    pub qrf: f64,
-    pub qrf_at: f64,
-}
-impl MissionStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MissionStats {
-            qrf_who: None,
-            elapsed: 0.0,
-            alerts: 0.0,
-            spotted: 0.0,
-            bodies: 0.0,
-            shots: 0.0,
-            kills: 0.0,
-            knockouts: 0.0,
-            keys: 0.0,
-            blackout: false,
-            sandbox: false,
-            qrf: 0.0,
-            qrf_at: 0.0,
-        }
-    }
-}
-impl Default for MissionStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/game.ts:912 Game.puppet, src/game/game.ts:912)
 #[derive(Clone, Copy, Debug)]
@@ -1391,7 +1384,7 @@ impl AsideOwn {
 }
 impl Default for AsideOwn { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/game.ts:1864 Game.fogHeld, src/game/game.ts:1864)
+/// (TypeScript: inline at src/game/game.ts:1865 Game.fogHeld, src/game/game.ts:1865)
 #[derive(Clone, Debug)]
 pub struct GameFogHeld {
     pub dyn_: Vec<BoxId>,
@@ -1408,7 +1401,7 @@ impl GameFogHeld {
 }
 impl Default for GameFogHeld { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:2126 Game.doorHandRecs, src/game/game.ts:2126)
+/// (TypeScript: inline at src/game/game.ts:2127 Game.doorHandRecs, src/game/game.ts:2127)
 #[derive(Clone, Copy, Debug)]
 pub struct GameDoorHandRecsValue {
     pub door: DoorId,
@@ -1434,6 +1427,13 @@ impl GameDoorHandRecsValue {
     }
 }
 impl Default for GameDoorHandRecsValue { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: a union)
+#[derive(Clone, Copy, Debug)]
+pub enum Foe {
+    Guard(GuardId),
+    Player,
+}
 
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -2918,7 +2918,7 @@ impl GameLightEventCause {
     }
 }
 
-/// (TypeScript: inline at src/game/game.ts:1860 viewPx(cam), src/game/game.ts:1860)
+/// (TypeScript: inline at src/game/game.ts:1861 viewPx(cam), src/game/game.ts:1861)
 #[derive(Clone, Copy, Debug)]
 pub struct GameViewPxCam {
     pub distance: f64,
@@ -2935,7 +2935,7 @@ impl GameViewPxCam {
 }
 impl Default for GameViewPxCam { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:1860 viewPx(canvas), src/game/game.ts:1860)
+/// (TypeScript: inline at src/game/game.ts:1861 viewPx(canvas), src/game/game.ts:1861)
 #[derive(Clone, Copy, Debug)]
 pub struct GameViewPxCanvas {
     pub height: f64,
@@ -3083,7 +3083,6 @@ pub struct Tabs {
     pub wallbreak_breakable: Tab<WallbreakBreakableId, crate::wallbreak::Breakable>,
     pub furnblast_member: Tab<FurnblastMemberId, crate::furnblast::Member>,
     pub wind_wind_source: Tab<WindWindSourceId, crate::wind::WindSource>,
-    pub stickycam_sticky_cam: Tab<StickyCamId, crate::stickycam::StickyCam>,
     pub doortools_door_op: Tab<DoorOpId, crate::doortools::DoorOp>,
     pub orders_assignment: Tab<OrdersAssignmentId, crate::orders::Assignment>,
     pub doortools_room_search: Tab<DoortoolsRoomSearchId, crate::doortools::RoomSearch>,
@@ -3096,20 +3095,21 @@ pub struct Tabs {
     pub roomfight_room: Tab<RoomfightRoomId, crate::roomfight::Room>,
     pub cover_opening: Tab<CoverOpeningId, crate::cover::Opening>,
     pub wallreact_breach: Tab<WallreactBreachId, crate::wallreact::Breach>,
-    pub lanes_lane: Tab<LanesLaneId, crate::lanes::Lane>,
     pub tactics_role: Tab<TacticsRoleId, crate::tactics::Role>,
     pub tactics_plan: Tab<TacticsPlanId, crate::tactics::Plan>,
     pub tactics_danger_rec: Tab<TacticsDangerRecId, crate::tactics::DangerRec>,
+    pub lanes_lane: Tab<LanesLaneId, crate::lanes::Lane>,
     pub pressure_man: Tab<PressureManId, crate::pressure::Man>,
-    pub roomfight_op: Tab<RoomfightOpId, crate::roomfight::Op>,
-    pub enemysquads_squad: Tab<EnemysquadsSquadId, crate::enemysquads::Squad>,
+    pub stickycam_sticky_cam: Tab<StickyCamId, crate::stickycam::StickyCam>,
     pub rescueflow_region: Tab<RescueflowRegionId, crate::rescueflow::Region>,
-    pub wallcharge_set_wall_charge: Tab<WallChargeId, crate::wallcharge::SetWallCharge>,
-    pub director_live_beat: Tab<DirectorLiveBeatId, crate::director::LiveBeat>,
     pub squad_room_clear: Tab<RoomClearId, crate::squad::RoomClear>,
     pub director_run: Tab<DirectorRunId, crate::director::Run>,
+    pub roomfight_op: Tab<RoomfightOpId, crate::roomfight::Op>,
     pub wallcharge_wall_op: Tab<WallOpId, crate::wallcharge::WallOp>,
+    pub wallcharge_set_wall_charge: Tab<WallChargeId, crate::wallcharge::SetWallCharge>,
     pub route: Tab<RouteId, crate::scene_level::PatrolRoute>,
+    pub enemysquads_squad: Tab<EnemysquadsSquadId, crate::enemysquads::Squad>,
+    pub director_live_beat: Tab<DirectorLiveBeatId, crate::director::LiveBeat>,
     pub guards_standoff: Tab<GuardsStandoffId, crate::guards::Standoff>,
     pub game_talk: Tab<GameTalkId, crate::game::Talk>,
 }
@@ -3137,7 +3137,6 @@ impl Tabs {
             wallbreak_breakable: Tab::new(),
             furnblast_member: Tab::new(),
             wind_wind_source: Tab::new(),
-            stickycam_sticky_cam: Tab::new(),
             doortools_door_op: Tab::new(),
             orders_assignment: Tab::new(),
             doortools_room_search: Tab::new(),
@@ -3150,20 +3149,21 @@ impl Tabs {
             roomfight_room: Tab::new(),
             cover_opening: Tab::new(),
             wallreact_breach: Tab::new(),
-            lanes_lane: Tab::new(),
             tactics_role: Tab::new(),
             tactics_plan: Tab::new(),
             tactics_danger_rec: Tab::new(),
+            lanes_lane: Tab::new(),
             pressure_man: Tab::new(),
-            roomfight_op: Tab::new(),
-            enemysquads_squad: Tab::new(),
+            stickycam_sticky_cam: Tab::new(),
             rescueflow_region: Tab::new(),
-            wallcharge_set_wall_charge: Tab::new(),
-            director_live_beat: Tab::new(),
             squad_room_clear: Tab::new(),
             director_run: Tab::new(),
+            roomfight_op: Tab::new(),
             wallcharge_wall_op: Tab::new(),
+            wallcharge_set_wall_charge: Tab::new(),
             route: Tab::new(),
+            enemysquads_squad: Tab::new(),
+            director_live_beat: Tab::new(),
             guards_standoff: Tab::new(),
             game_talk: Tab::new(),
         }
@@ -3208,6 +3208,7 @@ pub struct Mods {
     pub teams: crate::teams::TeamsMod,
     pub host_keymap: crate::host_keymap::HostKeymapMod,
     pub opening: crate::opening::OpeningMod,
+    pub sim_weatherhome: crate::sim_weatherhome::SimWeatherhomeMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,
     pub kitload: crate::kitload::KitloadMod,
     pub holdfire: crate::holdfire::HoldfireMod,
@@ -3224,16 +3225,13 @@ pub struct Mods {
     pub fire: crate::fire::FireMod,
     pub winbars: crate::winbars::WinbarsMod,
     pub destruction: crate::destruction::DestructionMod,
-    pub glass: crate::glass::GlassMod,
+    pub wind: crate::wind::WindMod,
     pub glasspen: crate::glasspen::GlasspenMod,
-    pub wallpen: crate::wallpen::WallpenMod,
     pub doorway: crate::doorway::DoorwayMod,
-    pub difficulty: crate::difficulty::DifficultyMod,
-    pub stickycam: crate::stickycam::StickycamMod,
-    pub quietfog: crate::quietfog::QuietfogMod,
     pub nightbreach: crate::nightbreach::NightbreachMod,
     pub handleside: crate::handleside::HandlesideMod,
     pub doornames: crate::doornames::DoornamesMod,
+    pub runner: crate::runner::RunnerMod,
     pub netquietfeed: crate::netquietfeed::NetquietfeedMod,
     pub netquiet: crate::netquiet::NetquietMod,
     pub laststand: crate::laststand::LaststandMod,
@@ -3241,46 +3239,71 @@ pub struct Mods {
     pub rearwatch: crate::rearwatch::RearwatchMod,
     pub coverfire: crate::coverfire::CoverfireMod,
     pub wallreact: crate::wallreact::WallreactMod,
-    pub lanes: crate::lanes::LanesMod,
     pub tactics: crate::tactics::TacticsMod,
-    pub pressure: crate::pressure::PressureMod,
+    pub lanes: crate::lanes::LanesMod,
     pub digin: crate::digin::DiginMod,
-    pub runner: crate::runner::RunnerMod,
-    pub flinch: crate::flinch::FlinchMod,
-    pub suppression: crate::suppression::SuppressionMod,
+    pub pressure: crate::pressure::PressureMod,
+    pub difficulty: crate::difficulty::DifficultyMod,
+    pub stickycam: crate::stickycam::StickycamMod,
+    pub quietfog: crate::quietfog::QuietfogMod,
+    pub calmtorch: crate::calmtorch::CalmtorchMod,
     pub buddy: crate::buddy::BuddyMod,
-    pub clearline: crate::clearline::ClearlineMod,
-    pub gunwall: crate::gunwall::GunwallMod,
-    pub enemysquads: crate::enemysquads::EnemysquadsMod,
     pub powerout: crate::powerout::PoweroutMod,
     pub darkfoe: crate::darkfoe::DarkfoeMod,
-    pub morale: crate::morale::MoraleMod,
-    pub irlight: crate::irlight::IrlightMod,
-    pub nvg: crate::nvg::NvgMod,
-    pub calmtorch: crate::calmtorch::CalmtorchMod,
     pub whistle: crate::whistle::WhistleMod,
     pub attention: crate::attention::AttentionMod,
     pub doze: crate::doze::DozeMod,
+    pub needs: crate::needs::NeedsMod,
+    pub gunwall: crate::gunwall::GunwallMod,
     pub lightswitch: crate::lightswitch::LightswitchMod,
-    pub doortools: crate::doortools::DoortoolsMod,
-    pub shotgun: crate::shotgun::ShotgunMod,
-    pub kitanim: crate::kitanim::KitanimMod,
-    pub he40: crate::he40::He40Mod,
-    pub rescuecheck: crate::rescuecheck::RescuecheckMod,
-    pub rescue: crate::rescue::RescueMod,
     pub stalk: crate::stalk::StalkMod,
     pub tapstep: crate::tapstep::TapstepMod,
+    pub darkdoor: crate::darkdoor::DarkdoorMod,
+    pub startle: crate::startle::StartleMod,
+    pub flinch: crate::flinch::FlinchMod,
+    pub rescue: crate::rescue::RescueMod,
+    pub rescuecheck: crate::rescuecheck::RescuecheckMod,
+    pub planlay: crate::planlay::PlanlayMod,
+    pub seenwalk: crate::seenwalk::SeenwalkMod,
+    pub rollback: crate::rollback::RollbackMod,
+    pub savestate: crate::savestate::SavestateMod,
     pub wet: crate::wet::WetMod,
+    pub he40: crate::he40::He40Mod,
+    pub samlook: crate::samlook::SamlookMod,
+    pub irlight: crate::irlight::IrlightMod,
+    pub nvg: crate::nvg::NvgMod,
+    pub irlaser: crate::irlaser::IrlaserMod,
+    pub gunhold: crate::gunhold::GunholdMod,
+    pub air_sim: crate::air_sim::AirSimMod,
+    pub clearline: crate::clearline::ClearlineMod,
+    pub unseen: crate::unseen::UnseenMod,
+    pub squadsmoke: crate::squadsmoke::SquadsmokeMod,
+    pub squad40: crate::squad40::Squad40Mod,
+    pub squadthrow: crate::squadthrow::SquadthrowMod,
+    pub kitanim: crate::kitanim::KitanimMod,
+    pub smokebreak: crate::smokebreak::SmokebreakMod,
+    pub showwhy: crate::showwhy::ShowwhyMod,
+    pub cmd: crate::cmd::CmdMod,
+    pub render_reach: crate::render_reach::RenderReachMod,
+    pub fireline: crate::fireline::FirelineMod,
+    pub doorforce: crate::doorforce::DoorforceMod,
+    pub rustknobs: crate::rustknobs::RustknobsMod,
+    pub glassbreak: crate::glassbreak::GlassbreakMod,
+    pub glass: crate::glass::GlassMod,
+    pub wallpen: crate::wallpen::WallpenMod,
+    pub suppression: crate::suppression::SuppressionMod,
+    pub enemysquads: crate::enemysquads::EnemysquadsMod,
+    pub morale: crate::morale::MoraleMod,
+    pub doortools: crate::doortools::DoortoolsMod,
+    pub shotgun: crate::shotgun::ShotgunMod,
     pub player: crate::player::PlayerMod,
     pub close: crate::close::CloseMod,
     pub takedown: crate::takedown::TakedownMod,
     pub spotted: crate::spotted::SpottedMod,
     pub pairorders: crate::pairorders::PairordersMod,
-    pub irlaser: crate::irlaser::IrlaserMod,
     pub teamfeel: crate::teamfeel::TeamfeelMod,
     pub pairup: crate::pairup::PairupMod,
     pub sneak: crate::sneak::SneakMod,
-    pub unseen: crate::unseen::UnseenMod,
     pub silent: crate::silent::SilentMod,
     pub cast: crate::cast::CastMod,
     pub char_look: crate::char_look::CharLookMod,
@@ -3299,46 +3322,26 @@ pub struct Mods {
     pub hours: crate::hours::HoursMod,
     pub chronicle: crate::chronicle::ChronicleMod,
     pub mission: crate::mission::MissionMod,
-    pub squadsmoke: crate::squadsmoke::SquadsmokeMod,
-    pub squadthrow: crate::squadthrow::SquadthrowMod,
-    pub squad40: crate::squad40::Squad40Mod,
     pub kit: crate::kit::KitMod,
     pub wandorder: crate::wandorder::WandorderMod,
     pub fogofwar: crate::fogofwar::FogofwarMod,
-    pub darkdoor: crate::darkdoor::DarkdoorMod,
-    pub needs: crate::needs::NeedsMod,
-    pub startle: crate::startle::StartleMod,
-    pub doorforce: crate::doorforce::DoorforceMod,
-    pub gunhold: crate::gunhold::GunholdMod,
     pub guards: crate::guards::GuardsMod,
     pub dialogue: crate::dialogue::DialogueMod,
     pub civilians: crate::civilians::CiviliansMod,
     pub deathrecap: crate::deathrecap::DeathrecapMod,
-    pub seenwalk: crate::seenwalk::SeenwalkMod,
-    pub fireline: crate::fireline::FirelineMod,
-    pub planlay: crate::planlay::PlanlayMod,
     pub orders: crate::orders::OrdersMod,
-    pub cmd: crate::cmd::CmdMod,
     pub seats: crate::seats::SeatsMod,
     pub wallcharge: crate::wallcharge::WallchargeMod,
     pub blast_look: crate::blast_look::BlastLookMod,
     pub particle_fx: crate::particle_fx::ParticleFxMod,
     pub snow_breath: crate::snow_breath::SnowBreathMod,
     pub snow_tracks: crate::snow_tracks::SnowTracksMod,
-    pub air_sim: crate::air_sim::AirSimMod,
     pub snow_blast: crate::snow_blast::SnowBlastMod,
     pub snow_fx: crate::snow_fx::SnowFxMod,
     pub rain_fx: crate::rain_fx::RainFxMod,
-    pub smokebreak: crate::smokebreak::SmokebreakMod,
-    pub render_reach: crate::render_reach::RenderReachMod,
     pub snow_marks: crate::snow_marks::SnowMarksMod,
-    pub showwhy: crate::showwhy::ShowwhyMod,
-    pub samlook: crate::samlook::SamlookMod,
     pub shutdoor: crate::shutdoor::ShutdoorMod,
-    pub rollback: crate::rollback::RollbackMod,
-    pub savestate: crate::savestate::SavestateMod,
     pub fixture_break: crate::fixture_break::FixtureBreakMod,
-    pub rustknobs: crate::rustknobs::RustknobsMod,
     pub weapons: crate::weapons::WeaponsMod,
     pub smoke_smoke_grid: crate::smoke_smoke_grid::SmokeSmokeGridMod,
     pub render_frame: crate::render_frame::RenderFrameMod,
@@ -3381,6 +3384,7 @@ impl Mods {
             teams: crate::teams::TeamsMod::blank(),
             host_keymap: crate::host_keymap::HostKeymapMod::blank(),
             opening: crate::opening::OpeningMod::blank(),
+            sim_weatherhome: crate::sim_weatherhome::SimWeatherhomeMod::blank(),
             weather_kinds: crate::weather_kinds::WeatherKindsMod::blank(),
             kitload: crate::kitload::KitloadMod::blank(),
             holdfire: crate::holdfire::HoldfireMod::blank(),
@@ -3397,16 +3401,13 @@ impl Mods {
             fire: crate::fire::FireMod::blank(),
             winbars: crate::winbars::WinbarsMod::blank(),
             destruction: crate::destruction::DestructionMod::blank(),
-            glass: crate::glass::GlassMod::blank(),
+            wind: crate::wind::WindMod::blank(),
             glasspen: crate::glasspen::GlasspenMod::blank(),
-            wallpen: crate::wallpen::WallpenMod::blank(),
             doorway: crate::doorway::DoorwayMod::blank(),
-            difficulty: crate::difficulty::DifficultyMod::blank(),
-            stickycam: crate::stickycam::StickycamMod::blank(),
-            quietfog: crate::quietfog::QuietfogMod::blank(),
             nightbreach: crate::nightbreach::NightbreachMod::blank(),
             handleside: crate::handleside::HandlesideMod::blank(),
             doornames: crate::doornames::DoornamesMod::blank(),
+            runner: crate::runner::RunnerMod::blank(),
             netquietfeed: crate::netquietfeed::NetquietfeedMod::blank(),
             netquiet: crate::netquiet::NetquietMod::blank(),
             laststand: crate::laststand::LaststandMod::blank(),
@@ -3414,46 +3415,71 @@ impl Mods {
             rearwatch: crate::rearwatch::RearwatchMod::blank(),
             coverfire: crate::coverfire::CoverfireMod::blank(),
             wallreact: crate::wallreact::WallreactMod::blank(),
-            lanes: crate::lanes::LanesMod::blank(),
             tactics: crate::tactics::TacticsMod::blank(),
-            pressure: crate::pressure::PressureMod::blank(),
+            lanes: crate::lanes::LanesMod::blank(),
             digin: crate::digin::DiginMod::blank(),
-            runner: crate::runner::RunnerMod::blank(),
-            flinch: crate::flinch::FlinchMod::blank(),
-            suppression: crate::suppression::SuppressionMod::blank(),
+            pressure: crate::pressure::PressureMod::blank(),
+            difficulty: crate::difficulty::DifficultyMod::blank(),
+            stickycam: crate::stickycam::StickycamMod::blank(),
+            quietfog: crate::quietfog::QuietfogMod::blank(),
+            calmtorch: crate::calmtorch::CalmtorchMod::blank(),
             buddy: crate::buddy::BuddyMod::blank(),
-            clearline: crate::clearline::ClearlineMod::blank(),
-            gunwall: crate::gunwall::GunwallMod::blank(),
-            enemysquads: crate::enemysquads::EnemysquadsMod::blank(),
             powerout: crate::powerout::PoweroutMod::blank(),
             darkfoe: crate::darkfoe::DarkfoeMod::blank(),
-            morale: crate::morale::MoraleMod::blank(),
-            irlight: crate::irlight::IrlightMod::blank(),
-            nvg: crate::nvg::NvgMod::blank(),
-            calmtorch: crate::calmtorch::CalmtorchMod::blank(),
             whistle: crate::whistle::WhistleMod::blank(),
             attention: crate::attention::AttentionMod::blank(),
             doze: crate::doze::DozeMod::blank(),
+            needs: crate::needs::NeedsMod::blank(),
+            gunwall: crate::gunwall::GunwallMod::blank(),
             lightswitch: crate::lightswitch::LightswitchMod::blank(),
-            doortools: crate::doortools::DoortoolsMod::blank(),
-            shotgun: crate::shotgun::ShotgunMod::blank(),
-            kitanim: crate::kitanim::KitanimMod::blank(),
-            he40: crate::he40::He40Mod::blank(),
-            rescuecheck: crate::rescuecheck::RescuecheckMod::blank(),
-            rescue: crate::rescue::RescueMod::blank(),
             stalk: crate::stalk::StalkMod::blank(),
             tapstep: crate::tapstep::TapstepMod::blank(),
+            darkdoor: crate::darkdoor::DarkdoorMod::blank(),
+            startle: crate::startle::StartleMod::blank(),
+            flinch: crate::flinch::FlinchMod::blank(),
+            rescue: crate::rescue::RescueMod::blank(),
+            rescuecheck: crate::rescuecheck::RescuecheckMod::blank(),
+            planlay: crate::planlay::PlanlayMod::blank(),
+            seenwalk: crate::seenwalk::SeenwalkMod::blank(),
+            rollback: crate::rollback::RollbackMod::blank(),
+            savestate: crate::savestate::SavestateMod::blank(),
             wet: crate::wet::WetMod::blank(),
+            he40: crate::he40::He40Mod::blank(),
+            samlook: crate::samlook::SamlookMod::blank(),
+            irlight: crate::irlight::IrlightMod::blank(),
+            nvg: crate::nvg::NvgMod::blank(),
+            irlaser: crate::irlaser::IrlaserMod::blank(),
+            gunhold: crate::gunhold::GunholdMod::blank(),
+            air_sim: crate::air_sim::AirSimMod::blank(),
+            clearline: crate::clearline::ClearlineMod::blank(),
+            unseen: crate::unseen::UnseenMod::blank(),
+            squadsmoke: crate::squadsmoke::SquadsmokeMod::blank(),
+            squad40: crate::squad40::Squad40Mod::blank(),
+            squadthrow: crate::squadthrow::SquadthrowMod::blank(),
+            kitanim: crate::kitanim::KitanimMod::blank(),
+            smokebreak: crate::smokebreak::SmokebreakMod::blank(),
+            showwhy: crate::showwhy::ShowwhyMod::blank(),
+            cmd: crate::cmd::CmdMod::blank(),
+            render_reach: crate::render_reach::RenderReachMod::blank(),
+            fireline: crate::fireline::FirelineMod::blank(),
+            doorforce: crate::doorforce::DoorforceMod::blank(),
+            rustknobs: crate::rustknobs::RustknobsMod::blank(),
+            glassbreak: crate::glassbreak::GlassbreakMod::blank(),
+            glass: crate::glass::GlassMod::blank(),
+            wallpen: crate::wallpen::WallpenMod::blank(),
+            suppression: crate::suppression::SuppressionMod::blank(),
+            enemysquads: crate::enemysquads::EnemysquadsMod::blank(),
+            morale: crate::morale::MoraleMod::blank(),
+            doortools: crate::doortools::DoortoolsMod::blank(),
+            shotgun: crate::shotgun::ShotgunMod::blank(),
             player: crate::player::PlayerMod::blank(),
             close: crate::close::CloseMod::blank(),
             takedown: crate::takedown::TakedownMod::blank(),
             spotted: crate::spotted::SpottedMod::blank(),
             pairorders: crate::pairorders::PairordersMod::blank(),
-            irlaser: crate::irlaser::IrlaserMod::blank(),
             teamfeel: crate::teamfeel::TeamfeelMod::blank(),
             pairup: crate::pairup::PairupMod::blank(),
             sneak: crate::sneak::SneakMod::blank(),
-            unseen: crate::unseen::UnseenMod::blank(),
             silent: crate::silent::SilentMod::blank(),
             cast: crate::cast::CastMod::blank(),
             char_look: crate::char_look::CharLookMod::blank(),
@@ -3472,46 +3498,26 @@ impl Mods {
             hours: crate::hours::HoursMod::blank(),
             chronicle: crate::chronicle::ChronicleMod::blank(),
             mission: crate::mission::MissionMod::blank(),
-            squadsmoke: crate::squadsmoke::SquadsmokeMod::blank(),
-            squadthrow: crate::squadthrow::SquadthrowMod::blank(),
-            squad40: crate::squad40::Squad40Mod::blank(),
             kit: crate::kit::KitMod::blank(),
             wandorder: crate::wandorder::WandorderMod::blank(),
             fogofwar: crate::fogofwar::FogofwarMod::blank(),
-            darkdoor: crate::darkdoor::DarkdoorMod::blank(),
-            needs: crate::needs::NeedsMod::blank(),
-            startle: crate::startle::StartleMod::blank(),
-            doorforce: crate::doorforce::DoorforceMod::blank(),
-            gunhold: crate::gunhold::GunholdMod::blank(),
             guards: crate::guards::GuardsMod::blank(),
             dialogue: crate::dialogue::DialogueMod::blank(),
             civilians: crate::civilians::CiviliansMod::blank(),
             deathrecap: crate::deathrecap::DeathrecapMod::blank(),
-            seenwalk: crate::seenwalk::SeenwalkMod::blank(),
-            fireline: crate::fireline::FirelineMod::blank(),
-            planlay: crate::planlay::PlanlayMod::blank(),
             orders: crate::orders::OrdersMod::blank(),
-            cmd: crate::cmd::CmdMod::blank(),
             seats: crate::seats::SeatsMod::blank(),
             wallcharge: crate::wallcharge::WallchargeMod::blank(),
             blast_look: crate::blast_look::BlastLookMod::blank(),
             particle_fx: crate::particle_fx::ParticleFxMod::blank(),
             snow_breath: crate::snow_breath::SnowBreathMod::blank(),
             snow_tracks: crate::snow_tracks::SnowTracksMod::blank(),
-            air_sim: crate::air_sim::AirSimMod::blank(),
             snow_blast: crate::snow_blast::SnowBlastMod::blank(),
             snow_fx: crate::snow_fx::SnowFxMod::blank(),
             rain_fx: crate::rain_fx::RainFxMod::blank(),
-            smokebreak: crate::smokebreak::SmokebreakMod::blank(),
-            render_reach: crate::render_reach::RenderReachMod::blank(),
             snow_marks: crate::snow_marks::SnowMarksMod::blank(),
-            showwhy: crate::showwhy::ShowwhyMod::blank(),
-            samlook: crate::samlook::SamlookMod::blank(),
             shutdoor: crate::shutdoor::ShutdoorMod::blank(),
-            rollback: crate::rollback::RollbackMod::blank(),
-            savestate: crate::savestate::SavestateMod::blank(),
             fixture_break: crate::fixture_break::FixtureBreakMod::blank(),
-            rustknobs: crate::rustknobs::RustknobsMod::blank(),
             weapons: crate::weapons::WeaponsMod::blank(),
             smoke_smoke_grid: crate::smoke_smoke_grid::SmokeSmokeGridMod::blank(),
             render_frame: crate::render_frame::RenderFrameMod::blank(),
@@ -3538,14 +3544,12 @@ pub struct Stats {
     pub floormess: crate::floormess::FloormessStats,
     pub break_table: crate::break_table::BreakTableStats,
     pub wind: crate::wind::WindStats,
-    pub glassbreak: crate::glassbreak::GlassbreakStats,
     pub glasspen: crate::glasspen::GlasspenStats,
-    pub wallpen: crate::wallpen::WallpenStats,
-    pub doorway: crate::doorway::DoorwayStats,
     pub gunroles: crate::gunroles::GunrolesStats,
-    pub stickycam: crate::stickycam::StickycamStats,
+    pub doorway: crate::doorway::DoorwayStats,
     pub handleside: crate::handleside::HandlesideStats,
     pub aimcost: crate::aimcost::AimcostStats,
+    pub runner: crate::runner::RunnerStats,
     pub netquiet: crate::netquiet::NetquietStats,
     pub stackroom: crate::stackroom::StackroomStats,
     pub rearwatch: crate::rearwatch::RearwatchStats,
@@ -3555,71 +3559,73 @@ pub struct Stats {
     pub wallreact: crate::wallreact::WallreactStats,
     pub tactics: crate::tactics::TacticsStats,
     pub digin: crate::digin::DiginStats,
-    pub runner: crate::runner::RunnerStats,
-    pub flinch: crate::flinch::FlinchStats,
-    pub condition: crate::condition::ConditionStats,
-    pub clearline: crate::clearline::ClearlineStats,
-    pub gunwall: crate::gunwall::GunwallStats,
-    pub friendlyfire: crate::friendlyfire::FriendlyfireStats,
-    pub darkfoe: crate::darkfoe::DarkfoeStats,
-    pub morale: crate::morale::MoraleStats,
-    pub autopilot: crate::autopilot::AutopilotStats,
+    pub stickycam: crate::stickycam::StickycamStats,
+    pub par: crate::par::ParStats,
+    pub defuse: crate::defuse::DefuseStats,
+    pub wounds: crate::wounds::WoundsStats,
+    pub aimweight: crate::aimweight::AimweightStats,
     pub calmtorch: crate::calmtorch::CalmtorchStats,
+    pub darkfoe: crate::darkfoe::DarkfoeStats,
     pub whistle: crate::whistle::WhistleStats,
     pub attention: crate::attention::AttentionStats,
     pub doze: crate::doze::DozeStats,
+    pub needs: crate::needs::NeedsStats,
+    pub gunwall: crate::gunwall::GunwallStats,
     pub lightswitch: crate::lightswitch::LightswitchStats,
     pub samstun: crate::samstun::SamstunStats,
-    pub shotgun: crate::shotgun::ShotgunStats,
-    pub kitanim: crate::kitanim::KitanimStats,
-    pub bigkit: crate::bigkit::BigkitStats,
-    pub he40: crate::he40::He40Stats,
-    pub friends: crate::friends::FriendsStats,
-    pub noshove: crate::noshove::NoshoveStats,
-    pub sprintdoor: crate::sprintdoor::SprintdoorStats,
-    pub aimweight: crate::aimweight::AimweightStats,
-    pub defuse: crate::defuse::DefuseStats,
     pub stalk: crate::stalk::StalkStats,
     pub tapstep: crate::tapstep::TapstepStats,
+    pub darkdoor: crate::darkdoor::DarkdoorStats,
+    pub startle: crate::startle::StartleStats,
+    pub flinch: crate::flinch::FlinchStats,
+    pub planlay: crate::planlay::PlanlayStats,
+    pub sprintdoor: crate::sprintdoor::SprintdoorStats,
+    pub seenwalk: crate::seenwalk::SeenwalkStats,
     pub wet: crate::wet::WetStats,
+    pub he40: crate::he40::He40Stats,
+    pub clearline: crate::clearline::ClearlineStats,
+    pub stackline: crate::stackline::StacklineStats,
+    pub unseen: crate::unseen::UnseenStats,
+    pub squadsmoke: crate::squadsmoke::SquadsmokeStats,
+    pub squad40: crate::squad40::Squad40Stats,
+    pub throwplan: crate::throwplan::ThrowplanStats,
+    pub squadthrow: crate::squadthrow::SquadthrowStats,
+    pub autopilot: crate::autopilot::AutopilotStats,
+    pub kitanim: crate::kitanim::KitanimStats,
+    pub peeksight: crate::peeksight::PeeksightStats,
+    pub friends: crate::friends::FriendsStats,
+    pub friendlyfire: crate::friendlyfire::FriendlyfireStats,
+    pub cleanrestart: crate::cleanrestart::CleanrestartStats,
+    pub fireline: crate::fireline::FirelineStats,
+    pub noshove: crate::noshove::NoshoveStats,
+    pub doorforce: crate::doorforce::DoorforceStats,
+    pub glassbreak: crate::glassbreak::GlassbreakStats,
+    pub wallpen: crate::wallpen::WallpenStats,
+    pub condition: crate::condition::ConditionStats,
+    pub morale: crate::morale::MoraleStats,
+    pub shotgun: crate::shotgun::ShotgunStats,
+    pub bigkit: crate::bigkit::BigkitStats,
     pub close: crate::close::CloseStats,
     pub takedown: crate::takedown::TakedownStats,
     pub spotted: crate::spotted::SpottedStats,
     pub pairorders: crate::pairorders::PairordersStats,
     pub pairup: crate::pairup::PairupStats,
     pub sneak: crate::sneak::SneakStats,
-    pub unseen: crate::unseen::UnseenStats,
     pub silent: crate::silent::SilentStats,
     pub lesson: crate::lesson::LessonStats,
     pub rails: crate::rails::RailsStats,
-    pub wounds: crate::wounds::WoundsStats,
     pub frag: crate::frag::FragStats,
     pub teampace: crate::teampace::TeampaceStats,
     pub quiet: crate::quiet::QuietStats,
     pub workthings: crate::workthings::WorkthingsStats,
     pub lighting: crate::lighting::LightingStats,
-    pub par: crate::par::ParStats,
     pub handwork: crate::handwork::HandworkStats,
-    pub squadsmoke: crate::squadsmoke::SquadsmokeStats,
-    pub throwplan: crate::throwplan::ThrowplanStats,
-    pub squadthrow: crate::squadthrow::SquadthrowStats,
-    pub squad40: crate::squad40::Squad40Stats,
     pub wandorder: crate::wandorder::WandorderStats,
-    pub peeksight: crate::peeksight::PeeksightStats,
-    pub darkdoor: crate::darkdoor::DarkdoorStats,
-    pub needs: crate::needs::NeedsStats,
-    pub startle: crate::startle::StartleStats,
-    pub doorforce: crate::doorforce::DoorforceStats,
     pub civilians: crate::civilians::CiviliansStats,
     pub deathrecap: crate::deathrecap::DeathrecapStats,
-    pub seenwalk: crate::seenwalk::SeenwalkStats,
-    pub stackline: crate::stackline::StacklineStats,
-    pub fireline: crate::fireline::FirelineStats,
-    pub planlay: crate::planlay::PlanlayStats,
     pub planmode: crate::planmode::PlanmodeStats,
     pub doorthrow: crate::doorthrow::DoorthrowStats,
     pub shutdoor: crate::shutdoor::ShutdoorStats,
-    pub cleanrestart: crate::cleanrestart::CleanrestartStats,
     pub fixture_break: crate::fixture_break::FixtureBreakStats,
     pub moths: crate::moths::MothsStats,
 }

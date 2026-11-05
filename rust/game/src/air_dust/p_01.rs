@@ -1,4 +1,4 @@
-//! The weather's dust in the rooms: a field over the plan, carried through openings, read by the men's eyes. (src/game/airDust.ts)
+//! The weather's dust in the rooms: the caller of rust/sim/src/air.rs, whose table in the block holds the field, and the picture's copy. (src/game/airDust.ts)
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -9,35 +9,122 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 const AIR_CELL: f64 = crate::scene_air_grid::AIR_CELL;
 
-/// Cells on the plan. (airDust.ts N)
-fn cell_count() -> usize {
-    n() as usize
+/// The block's stamp, what the slot's Plan goes by (SimState.stamp; airDust.ts:74, 103, 104, 105, 111, 129, 163). Neither the skeleton nor rust/sim's state.rs holds one (notes, ## Skeleton).
+fn seam_sim_stamp(g: &mut Game) -> f64 {
+    todo!("needs: SimState.stamp of the game's block (airDust.ts:74, 103; g.sim is the slot and no stamp exists)")
 }
 
-/// A door leaf's `c`, `h`, `yaw` and whether it has `rot` (airDust.ts:146, 151, 152). Skeleton 5 holds no Box row for a BoxId (notes, ## Skeleton).
-/// Once `g.col.boxes` is the `Tab<BoxId, Box>` the index says, the body is: `let x = &g.col.boxes[b]; (x.c, x.h, x.yaw, x.rot.is_some())`.
-fn seam_box_pose(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot.is_some()) }
+/// The dust's table in the game's block.
+fn air(g: &Game) -> &'static mut ::sim::air::Air {
+    &mut ::sim::weather::of(g.sim).air
+}
+
+/// The slot's tables, made if they are owed. (rust/sim/src/lib.rs air_of)
+fn plan(g: &mut Game) -> &'static mut ::sim::air::Plan {
+    let stamp = seam_sim_stamp(g);
+    let wx = ::sim::weather::of(g.sim);
+    ::sim::air::plan(g.sim, stamp, &wx.air, &wx.roofs, wx.roofs_n as usize)
+}
+
+/// The knobs current for a question asked of the module now. WX_KNOBS.here is set by rustknobs.ts:59 and reads the knobs; the skeleton's `here()` has no g (notes, ## Skeleton).
+fn knobs_here(g: &mut Game) {
+    if !g.m.rustknobs.rust_knobs.tick {
+        crate::rustknobs::knobs_to_rust(g);
+    }
+}
+
+/// What `ruleOpen` left on the copy: its slot, which list of leaves, which pane rule. Call after `rule_open`.
+fn rule_args(g: &Game) -> (usize, i32, u32) {
+    let c = &g.col.mirror;
+    (c.slot as usize, c.rule_set as i32, c.rule_panes as u32)
+}
+
+/// A step's tale, from the module's scratch: how far the field moved, the steps taken, the lines asked, the open ways the last step found. (airDust.ts said)
+pub fn said() -> Vec<f64> {
+    crate::sim_weatherhome::wx_out(4.0)
+}
+
+/// One word of a run of numbers, for a check. (airDust.ts wordOf)
+pub fn word_of(d: &[f64], n: Option<f64>) -> f64 {
+    let n = n.unwrap_or(d.len() as f64) as usize;
+    let mut h = js::to_i32(2166136261.0);
+    for i in 0..n {
+        let bits = d[i].to_bits();
+        h = m::imul(h ^ (bits as u32 as i32), 16777619);
+        h = m::imul(h ^ ((bits >> 32) as u32 as i32), 16777619);
+    }
+    h as u32 as f64
+}
+
+/// The field, a copy for the asker; a writer goes to the block itself. (airDust.ts AirDust.s)
+pub fn air_dust_s(g: &mut crate::game::Game) -> Vec<f64> {
+    air(g).s.to_vec()
+}
 
 /// The men's eyes read the field this run. (airDust.ts AirDust.live)
 pub fn air_dust_live(g: &mut crate::game::Game) -> bool {
     air_dust_ensure(g);
-    g.air_dust.on
+    air_dust_on(g)
 }
 
-/// A new field, built against the game as it stands; the caller stores it at `g.air_dust`. (airDust.ts AirDust.constructor)
-pub fn air_dust_new(g: &mut crate::game::Game) -> crate::air_dust::AirDust {
-    let n = cell_count();
-    let fresh = AirDust {
-        s: vec![1.0; n],
-        indoor: vec![0; n],
-        stat: vec![0; n * 2],
-        leaf: vec![0; n * 2],
-        next: vec![0.0; n],
-        gpu: vec![0.0; crate::scene_air_grid::air_rows() as usize * 4],
-        ..AirDust::blank()
-    };
-    let was = core::mem::replace(&mut g.air_dust, fresh);
+/// The field stands: built now if it is owed. (airDust.ts AirDust.ready)
+pub fn air_dust_ready(g: &mut crate::game::Game) {
     air_dust_ensure(g);
+}
+
+/// The module's switch. (airDust.ts AirDust.on)
+pub fn air_dust_on(g: &mut crate::game::Game) -> bool {
+    air(g).on != 0.0
+}
+
+/// The module's leak. (airDust.ts AirDust.leak)
+pub fn air_dust_leak(g: &mut crate::game::Game) -> f64 {
+    air(g).leak
+}
+
+/// The roofed cells, a copy for the asker. (airDust.ts AirDust.cells)
+pub fn air_dust_cells(g: &mut crate::game::Game) -> Vec<u32> {
+    let n = air(g).n_cells as usize;
+    plan(g).cells[..n].to_vec()
+}
+
+/// The edges with a roofed cell at either end, a copy for the asker. (airDust.ts AirDust.edges)
+pub fn air_dust_edges(g: &mut crate::game::Game) -> Vec<u32> {
+    let n = air(g).n_edges as usize;
+    plan(g).edges[..n].to_vec()
+}
+
+/// Where a table of the slot's stands: 0 the roofed cells · 1 the edges · 2 which cells are roofed · 3 the leaves across each edge. (airDust.ts AirDust.table)
+pub fn air_dust_table(g: &mut crate::game::Game, which: f64) -> f64 {
+    let stamp = seam_sim_stamp(g);
+    ::sim::air_table(g.sim, stamp, js::to_u32(which)) as f64
+}
+
+/// `n` bytes of a table of the slot's, a copy for the asker. (airDust.ts AirDust.tableBytes)
+pub fn air_dust_table_bytes(g: &mut crate::game::Game, which: f64, n: f64) -> Vec<u8> {
+    let a = air_dust_table(g, which) as usize;
+    unsafe { core::slice::from_raw_parts(a as *const u8, n as usize) }.to_vec()
+}
+
+/// `n` bytes of a column of the weather's table, a copy for the asker. (airDust.ts AirDust.bytes)
+pub fn air_dust_bytes(g: &mut crate::game::Game, c_2: f64, n: f64) -> Vec<u8> {
+    let base = ::sim::weather::of(g.sim) as *const ::sim::weather::Weather as *const u8;
+    unsafe { core::slice::from_raw_parts(base.add(::sim::weather::col(js::to_u32(c_2))), n as usize) }.to_vec()
+}
+
+/// A new one, against the game as it stands; the caller stores it at `g.air_dust`. (airDust.ts AirDust.constructor)
+pub fn air_dust_new(g: &mut crate::game::Game) -> crate::air_dust::AirDust {
+    let (w, h) = (crate::scene_air_grid::air_w(), crate::scene_air_grid::air_h());
+    let (cap_w, cap_h) = (::sim::weather_cap(2) as f64, ::sim::weather_cap(3) as f64);
+    let min = crate::scene_world::world().min;
+    if cap_w != w || cap_h != h || AIR_CELL != 0.5 || min[0] != 0.0 || min[2] != 0.0 {
+        panic!("the dust's plan is {} × {}, and rust/sim/src/air.rs holds {} × {}", w, h, cap_w, cap_h);
+    }
+    air(g).s.fill(1.0); // (a block's zeros are no air at all)
+    let was = core::mem::replace(&mut g.air_dust, AirDust::blank());
+    if crate::weather::weather_kind(g).is_some() {
+        air_dust_ensure(g);
+    }
     core::mem::replace(&mut g.air_dust, was)
 }
 
@@ -57,7 +144,7 @@ pub fn air_dust_share_at(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     if ix.is_nan() || iz.is_nan() {
         return m::NAN;
     }
-    g.air_dust.s[(ix + iz * w) as usize]
+    air(g).s[(ix + iz * w) as usize]
 }
 
 /// The roofs or the weather changed: marks the field stale, the first reader builds it. (airDust.ts AirDust.reseed)
@@ -73,91 +160,61 @@ pub fn air_dust_ensure(g: &mut crate::game::Game) {
     }
 }
 
-/// The field from nothing: every roofed cell at the leak, every opening asked, then run on until it stands still. (airDust.ts AirDust.build)
-pub fn air_dust_build(g: &mut crate::game::Game) {
-    let leak = g.weather.fog.as_ref().map(|f| f.leak);
-    let has = g.weather.kind.is_some() && leak.is_some();
-    {
-        let d = &mut g.air_dust;
-        d.on = has; // (AIRDUST.on is settled true on the page)
-        d.acc = 0.0;
-        d.drift = 0.0;
-        d.cur = 0.0;
-        d.leaf_sig = m::NAN;
-        d.leaf.fill(0);
-        d.stat.fill(0);
+/// A tale's count into the book. (airDust.ts AirDust.tally)
+pub fn air_dust_tally(g: &mut crate::game::Game, t: &[f64]) {
+    let st = &mut g.air_dust.stats;
+    st.steps += t[1];
+    st.probes += t[2];
+    if t[1] > 0.0 {
+        st.open = t[3]; // (the open ways the last step found: a tick with no step leaves them)
     }
-    let leak = match (has, leak) {
-        (true, Some(l)) => l,
+}
+
+/// The field from nothing, in the module: every roofed cell at the leak, every opening asked, then run on until it stands still. (airDust.ts AirDust.build)
+pub fn air_dust_build(g: &mut crate::game::Game) {
+    let fog = crate::weather::weather_fog(g);
+    let has = crate::weather::weather_kind(g).is_some() && fog.is_some();
+    let on = has; // (AIRDUST.on is settled true on the page)
+    let stamp = seam_sim_stamp(g);
+    ::sim::air_begin(g.sim, stamp, if on { 1 } else { 0 });
+    g.air_dust.drift = 0.0;
+    let leak = match (has, fog) {
+        (true, Some(f)) => f.leak,
         _ => {
-            let d = &mut g.air_dust;
-            if d.seeded {
-                d.seeded = false;
-                d.s.fill(1.0);
-                d.indoor.fill(0);
-                d.cells = Vec::new();
-                d.edges = Vec::new();
+            if g.air_dust.seeded {
+                g.air_dust.seeded = false;
+                let stamp = seam_sim_stamp(g);
+                ::sim::air_clear(g.sim, stamp);
             }
             return;
         }
     };
     g.air_dust.seeded = true;
-    g.air_dust.leak = leak;
-
-    let min = crate::scene_world::world().min;
-    let w = crate::scene_air_grid::air_w() as usize;
-    let h = crate::scene_air_grid::air_h() as usize;
-    let mut cells: Vec<i32> = Vec::new();
-    let mut edges: Vec<i32> = Vec::new();
-    let mut i = 0usize;
-    for iz in 0..h {
-        for ix in 0..w {
-            let r = crate::weather::weather_under_roof(g, min[0] + (ix as f64 + 0.5) * AIR_CELL, min[2] + (iz as f64 + 0.5) * AIR_CELL);
-            g.air_dust.indoor[i] = if r { 1 } else { 0 };
-            g.air_dust.s[i] = if r { leak } else { 1.0 };
-            if r {
-                cells.push(i as i32);
-            }
-            i += 1;
-        }
-    }
-    let mut i = 0usize;
-    for iz in 0..h {
-        for ix in 0..w {
-            let d = &g.air_dust;
-            if ix + 1 < w && (d.indoor[i] != 0 || d.indoor[i + 1] != 0) {
-                edges.push((i * 2) as i32);
-            }
-            if iz + 1 < h && (d.indoor[i] != 0 || d.indoor[i + w] != 0) {
-                edges.push((i * 2 + 1) as i32);
-            }
-            i += 1;
-        }
-    }
-    g.air_dust.stats.roofed = cells.len() as f64;
-    g.air_dust.stats.edges = edges.len() as f64;
-    g.air_dust.cells = cells;
-    g.air_dust.edges = edges;
-
-    if g.air_dust.on {
-        air_dust_clear_of_leaves(g, &mut |g: &mut Game| {
-            for q in 0..g.air_dust.edges.len() {
-                let e = g.air_dust.edges[q];
-                let open = air_dust_ask(g, e as f64);
-                g.air_dust.stat[e as usize] = if open { 1 } else { 0 };
-            }
+    crate::weather::weather_roofs_now(g);
+    let stamp = seam_sim_stamp(g);
+    ::sim::air_seed(g.sim, stamp, leak);
+    g.air_dust.stats.roofed = air(g).n_cells;
+    g.air_dust.stats.edges = air(g).n_edges;
+    if on {
+        knobs_here(g);
+        crate::scene_collision::rule(g, &mut |g: &mut Game| {
+            crate::scene_collision::rule_open(g);
+            let (w, set, ask) = rule_args(g);
+            let stamp = seam_sim_stamp(g);
+            ::sim::air_settle(g.sim, stamp, w, set, ask);
+            let t = said();
+            air_dust_tally(g, &t);
         });
-        air_dust_leaves(g);
-        let mut k = 0;
-        while k < 1500 {
-            let h = step_secs(g);
-            if !(air_dust_step_once(g, h) > 1e-4) {
-                break;
-            }
-            k += 1;
-        }
     }
     air_dust_send(g);
+}
+
+/// What a check holds a step of the field to: its tale's lines and open ways, and the field and its clocks as they stand. (airDust.ts AirDust.tale)
+pub fn air_dust_tale(g: &mut crate::game::Game, t: &[f64]) -> Vec<f64> {
+    let (acc, cur) = (air(g).acc, air(g).cur);
+    let stat: Vec<f64> = air_dust_bytes(g, crate::sim_weatherhome::wx().air_stat, n() * 2.0).iter().map(|&b| b as f64).collect();
+    let leaf: Vec<f64> = air_dust_table_bytes(g, 3.0, n() * 2.0).iter().map(|&b| b as f64).collect();
+    vec![t[0], t[2], t[3], acc, cur, word_of(&air(g).s[..], None), word_of(&stat, None), word_of(&leaf, None)]
 }
 
 /// The level as authored again. (airDust.ts AirDust.reset)
@@ -165,215 +222,30 @@ pub fn air_dust_reset(g: &mut crate::game::Game) {
     air_dust_reseed(g);
 }
 
-/// Once a frame, after the doors and whatever breaks have moved: fixed steps off an accumulator. (airDust.ts AirDust.update)
+/// Once a frame, after the doors and whatever breaks have moved: through the openings as they stand, in the module. (airDust.ts AirDust.update)
 pub fn air_dust_update(g: &mut crate::game::Game, dt: f64) {
     air_dust_ensure(g);
-    if !g.air_dust.on {
+    if !air_dust_on(g) {
         return;
     }
-    let h = step_secs(g);
-    g.air_dust.acc += dt;
-    let mut n = 0;
-    while g.air_dust.acc >= h && n < 4 {
-        n += 1;
-        g.air_dust.acc -= h;
-        air_dust_recheck(g, h);
-        air_dust_leaves(g);
-        let moved = air_dust_step_once(g, h);
-        g.air_dust.drift += moved;
-    }
-    if g.air_dust.acc > h {
-        g.air_dust.acc = h; // (a long frame: the rest of it is dropped, not owed)
-    }
+    knobs_here(g);
+    crate::scene_collision::rule(g, &mut |g: &mut Game| {
+        crate::scene_collision::rule_open(g);
+        let (w, set, ask) = rule_args(g);
+        let stamp = seam_sim_stamp(g);
+        ::sim::air_update(g.sim, stamp, w, set, ask, dt);
+        let t = said();
+        g.air_dust.drift += t[0];
+        air_dust_tally(g, &t);
+    });
     if g.air_dust.drift > SEND {
         air_dust_send(g);
     }
 }
 
-/// Runs `fn_` with the door leaves taken out of the collision's list. (airDust.ts AirDust.clearOfLeaves)
-pub fn air_dust_clear_of_leaves(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game)) {
-    let dyn_ = core::mem::take(&mut g.col.dynamic_boxes);
-    fn_(g);
-    g.col.dynamic_boxes = dyn_;
-}
-
-/// Is the way along edge `e` clear of every static (call inside clearOfLeaves). (airDust.ts AirDust.ask)
-pub fn air_dust_ask(g: &mut crate::game::Game, e: f64) -> bool {
-    let e = js::to_i32(e);
-    let min = crate::scene_world::world().min;
-    let w = crate::scene_air_grid::air_w() as i32;
-    let i = e >> 1;
-    let j = if e & 1 != 0 { i + w } else { i + 1 };
-    let mut a: V3 = [0.0; 3];
-    let mut b: V3 = [0.0; 3];
-    a[0] = min[0] + ((i % w) as f64 + 0.5) * AIR_CELL;
-    a[2] = min[2] + ((i / w) as f64 + 0.5) * AIR_CELL;
-    b[0] = min[0] + ((j % w) as f64 + 0.5) * AIR_CELL;
-    b[2] = min[2] + ((j / w) as f64 + 0.5) * AIR_CELL;
-    for y in probe_y() {
-        a[1] = y;
-        b[1] = y;
-        g.air_dust.stats.probes += 1.0;
-        if !crate::scene_collision::solid_blocked(g, a, b, None) && !crate::scene_collision::solid_blocked(g, b, a, None) {
-            return true;
-        }
-    }
-    false
-}
-
-/// The shut edges asked again, a share of the list each step (a wall that broke, a pane that fell out). (airDust.ts AirDust.recheck)
-pub fn air_dust_recheck(g: &mut crate::game::Game, h: f64) {
-    let len = g.air_dust.edges.len();
-    if len == 0 {
-        return;
-    }
-    let l = len as f64;
-    let per = m::min(l, m::max(1.0, m::ceil(l * h / m::max(0.25, js::or(g.k.airdust.recheck_secs, 0.0)))));
-    let per = per as usize;
-    air_dust_clear_of_leaves(g, &mut |g: &mut Game| {
-        for _ in 0..per {
-            let e = g.air_dust.edges[g.air_dust.cur as usize];
-            g.air_dust.cur = js::rem(g.air_dust.cur + 1.0, l);
-            if g.air_dust.stat[e as usize] == 0 && air_dust_ask(g, e as f64) {
-                g.air_dust.stat[e as usize] = 1;
-            }
-        }
-    });
-}
-
-/// Which edges the door leaves stand across: re-read only when a leaf has moved since the last look. (airDust.ts AirDust.leaves)
-pub fn air_dust_leaves(g: &mut crate::game::Game) {
-    let count = g.col.dynamic_boxes.len();
-    // (a 32-bit hash of every leaf's pose to the millimetre / milliradian)
-    let mut sig = count as i32;
-    for q in 0..count {
-        let b = g.col.dynamic_boxes[q];
-        let (c, _h, yaw, rot) = seam_box_pose(g, b);
-        sig = m::imul(sig ^ milli(c[0]), 16777619);
-        sig = m::imul(sig ^ milli(c[2]), 16777619);
-        sig = m::imul(sig ^ milli(yaw), 16777619);
-        sig = m::imul(sig ^ milli(c[1]) ^ (if rot { 0x5bd1e995 } else { 0 }), 16777619);
-    }
-    if sig as f64 == g.air_dust.leaf_sig {
-        return;
-    }
-    g.air_dust.leaf_sig = sig as f64;
-    g.air_dust.leaf.fill(0);
-
-    let min = crate::scene_world::world().min;
-    let (x0, z0) = (min[0], min[2]);
-    let w = crate::scene_air_grid::air_w();
-    let h = crate::scene_air_grid::air_h();
-    for q in 0..count {
-        let bx = g.col.dynamic_boxes[q];
-        let (c, bh, yaw, rot) = seam_box_pose(g, bx);
-        if rot || c[1] - bh[1] > 1.0 || c[1] + bh[1] < 1.0 {
-            continue; // (a leaf off its hinges lies where it fell: nothing to the air)
-        }
-        let cs = m::cos(yaw);
-        let sn = m::sin(yaw);
-        let hx = bh[0] + 0.02;
-        let hz = bh[2] + 0.02;
-        let r = m::hyp2(bh[0], bh[2]) + AIR_CELL;
-        let ix0 = m::max(0.0, m::floor((c[0] - r - x0) / AIR_CELL - 0.5));
-        let ix1 = m::min(w - 1.0, m::ceil((c[0] + r - x0) / AIR_CELL - 0.5));
-        let iz0 = m::max(0.0, m::floor((c[2] - r - z0) / AIR_CELL - 0.5));
-        let iz1 = m::min(h - 1.0, m::ceil((c[2] + r - z0) / AIR_CELL - 0.5));
-        let leaf = &mut g.air_dust.leaf;
-        // (doubles, as the TypeScript's: a NaN bound walks nothing)
-        let mut iz = iz0;
-        while iz <= iz1 {
-            let mut ix = ix0;
-            while ix <= ix1 {
-                let px = x0 + (ix + 0.5) * AIR_CELL - c[0];
-                let pz = z0 + (iz + 0.5) * AIR_CELL - c[2];
-                let lx = cs * px - sn * pz;
-                let lz = sn * px + cs * pz;
-                let i = (ix + iz * w) as usize;
-                // the edge to +x is the local segment (lx, lz) → (lx + cs·h, lz + sn·h); to +z: → (lx − sn·h, lz + cs·h)
-                if ix + 1.0 < w && crosses(lx, lz, cs * AIR_CELL, sn * AIR_CELL, hx, hz) {
-                    leaf[i * 2] = leaf[i * 2].wrapping_add(1);
-                }
-                if iz + 1.0 < h && crosses(lx, lz, -sn * AIR_CELL, cs * AIR_CELL, hx, hz) {
-                    leaf[i * 2 + 1] = leaf[i * 2 + 1].wrapping_add(1);
-                }
-                ix += 1.0;
-            }
-            iz += 1.0;
-        }
-    }
-}
-
-/// `Math.round(x * 1000)` as an operand of `^`. (airDust.ts:146)
-fn milli(x: f64) -> i32 {
-    js::to_i32(m::round(x * 1000.0))
-}
-
-/// One step of the diffusion → the most any cell moved. (airDust.ts AirDust.stepOnce)
-pub fn air_dust_step_once(g: &mut crate::game::Game, dt: f64) -> f64 {
-    let k = m::min(0.2, m::max(0.0, js::or(g.k.airdust.diffuse, 0.0)) * dt / (AIR_CELL * AIR_CELL));
-    let r = m::min(0.5, m::max(0.0, js::or(g.k.airdust.settle, 0.0)) * dt);
-    let w = crate::scene_air_grid::air_w() as usize;
-    let n = cell_count();
-    let d = &mut g.air_dust;
-    let leak = d.leak;
-    let mut moved = 0.0;
-    let mut open = 0.0;
-    for q in 0..d.cells.len() {
-        let i = d.cells[q] as usize;
-        let v = d.s[i];
-        let ix = i % w;
-        let mut a = 0.0;
-        if ix > 0 {
-            let e = (i - 1) * 2;
-            if d.stat[e] != 0 && d.leaf[e] == 0 {
-                a += d.s[i - 1] - v;
-                open += 1.0;
-            }
-        }
-        if ix + 1 < w {
-            let e = i * 2;
-            if d.stat[e] != 0 && d.leaf[e] == 0 {
-                a += d.s[i + 1] - v;
-                open += 1.0;
-            }
-        }
-        if i >= w {
-            let e = (i - w) * 2 + 1;
-            if d.stat[e] != 0 && d.leaf[e] == 0 {
-                a += d.s[i - w] - v;
-                open += 1.0;
-            }
-        }
-        if i + w < n {
-            let e = i * 2 + 1;
-            if d.stat[e] != 0 && d.leaf[e] == 0 {
-                a += d.s[i + w] - v;
-                open += 1.0;
-            }
-        }
-        let mut c = v + k * a - r * (v - leak);
-        if m::abs(c - leak) < SNAP {
-            c = leak;
-        }
-        let dv = m::abs(c - v);
-        if dv > moved {
-            moved = dv;
-        }
-        d.next[i] = c;
-    }
-    for q in 0..d.cells.len() {
-        let i = d.cells[q] as usize;
-        d.s[i] = d.next[i];
-    }
-    d.stats.steps += 1.0;
-    d.stats.open = open;
-    moved
-}
-
 /// The field as it stands, copied again for the renderer; no book of this module moves. The host calls this through `game_rehand` and takes `gpu` itself. (airDust.ts AirDust.resend)
 pub fn air_dust_resend(g: &mut crate::game::Game) {
-    if !g.air_dust.on {
+    if !air_dust_on(g) {
         return;
     }
     copy_to_gpu(g);
@@ -387,12 +259,12 @@ pub fn air_dust_send(g: &mut crate::game::Game) {
     d.drift = 0.0;
 }
 
-/// `gpu` written from the field, a Float32Array store per cell. (airDust.ts:186, 188)
+/// `gpu` written from the field, a Float32Array store per cell. (airDust.ts:137, 139)
 fn copy_to_gpu(g: &mut Game) {
-    let n = cell_count();
-    let d = &mut g.air_dust;
-    for i in 0..n {
-        d.gpu[i] = d.s[i] as f32;
+    let s = &air(g).s;
+    let o = &mut g.air_dust.gpu;
+    for i in 0..n() as usize {
+        o[i] = s[i] as f32;
     }
 }
 
@@ -412,86 +284,26 @@ pub fn air_dust_summary(g: &mut crate::game::Game) -> String {
     if !g.air_dust.seeded {
         return String::from("no weather in the air");
     }
-    let d = &g.air_dust;
+    let c = air_dust_cells(g);
+    let s = &air(g).s;
     let mut mx = 0.0;
     let mut sum = 0.0;
-    for &i in &d.cells {
-        let v = d.s[i as usize];
+    for &i in &c {
+        let v = s[i as usize];
         sum += v;
         if v > mx {
             mx = v;
         }
     }
-    let len = d.cells.len();
+    let len = c.len();
     alloc::format!(
         "moving · {} roofed cells · mean share {} (leak {}, max {}) · {} open ways",
         len,
         js::to_fixed(sum / m::max(1.0, len as f64), 3),
-        js::to_fixed(d.leak, 3),
+        js::to_fixed(air_dust_leak(g), 3),
         js::to_fixed(mx, 3),
-        js::num_str(d.stats.open)
+        js::num_str(g.air_dust.stats.open)
     )
-}
-
-/// Does the plan segment from (x, z) along (dx, dz), t in [0, 1], a leaf's own frame, enter the rectangle |x| ≤ hx, |z| ≤ hz. (airDust.ts crosses)
-pub fn crosses(x: f64, z: f64, dx: f64, dz: f64, hx: f64, hz: f64) -> bool {
-    let mut t0 = 0.0;
-    let mut t1 = 1.0;
-    if m::abs(dx) < 1e-9 {
-        if m::abs(x) > hx {
-            return false;
-        }
-    } else {
-        let mut a = (-hx - x) / dx;
-        let mut b = (hx - x) / dx;
-        if a > b {
-            let t = a;
-            a = b;
-            b = t;
-        }
-        if a > t0 {
-            t0 = a;
-        }
-        if b < t1 {
-            t1 = b;
-        }
-        if t0 > t1 {
-            return false;
-        }
-    }
-    if m::abs(dz) < 1e-9 {
-        if m::abs(z) > hz {
-            return false;
-        }
-    } else {
-        let mut a = (-hz - z) / dz;
-        let mut b = (hz - z) / dz;
-        if a > b {
-            let t = a;
-            a = b;
-            b = t;
-        }
-        if a > t0 {
-            t0 = a;
-        }
-        if b < t1 {
-            t1 = b;
-        }
-        if t0 > t1 {
-            return false;
-        }
-    }
-    true
-}
-
-/// The fixed step in use: AIRDUST.step held to what the explicit scheme and a frame can take. (airDust.ts stepSecs)
-pub fn step_secs(g: &mut crate::game::Game) -> f64 {
-    let h = g.k.airdust.step;
-    if h >= 1.0 / 240.0 && h <= 0.1 {
-        h
-    } else {
-        1.0 / 30.0
-    }
 }
 
 #[cfg(test)]
@@ -500,25 +312,10 @@ mod tests {
 
     /// The answers are the TypeScript function's own, run under bun.
     #[test]
-    fn crosses_matches_the_typescript() {
-        let cases: [(f64, f64, f64, f64, f64, f64, bool); 14] = [
-            (0.0, 0.0, 0.5, 0.0, 0.45, 0.05, true),
-            (-1.0, 0.0, 0.5, 0.0, 0.45, 0.05, false),
-            (-0.6, 0.0, 0.5, 0.0, 0.45, 0.05, true),
-            (0.6, 0.0, -0.5, 0.0, 0.45, 0.05, true),
-            (1.0, 0.0, 0.5, 0.0, 0.45, 0.05, false),
-            (0.3, 0.2, 0.0, 0.5, 0.45, 0.05, false),
-            (0.3, -0.2, 0.0, 0.5, 0.45, 0.05, true),
-            (0.3, -0.6, 0.0, 0.5, 0.45, 0.05, false),
-            (0.5, 0.1, 0.0, 0.5, 0.45, 0.05, false),
-            (-0.7, -0.3, 0.35, 0.35, 0.45, 0.05, true),
-            (-0.7, 0.3, 0.35, 0.35, 0.45, 0.05, false),
-            (0.45, 0.0, 0.5, 0.0, 0.45, 0.05, true),
-            (-0.95, 0.0, 0.5, 0.0, 0.45, 0.05, true),
-            (0.0, 0.05, 1e-10, 0.0, 0.45, 0.05, true),
-        ];
-        for (x, z, dx, dz, hx, hz, want) in cases {
-            assert_eq!(crosses(x, z, dx, dz, hx, hz), want, "{x} {z} {dx} {dz}");
-        }
+    fn word_of_matches_the_typescript() {
+        assert_eq!(word_of(&[], None), 2166136261.0);
+        assert_eq!(word_of(&[1.5, -0.0, 0.1], None), 2148598732.0);
+        assert_eq!(word_of(&[1.0, 2.0, 3.0], Some(2.0)), 686159125.0);
+        assert_eq!(word_of(&[0.0, 1.0, 255.0, 17.0], None), 3844378981.0);
     }
 }

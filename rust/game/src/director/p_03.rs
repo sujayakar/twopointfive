@@ -24,7 +24,7 @@ fn push(g: &mut Game, b: DirectorLiveBeatId, kind: DirectorPushRowKind, what: St
     director_push(g, &DirectorPushRow { kind, what, data, beat, t: None });
 }
 fn unit_ref_of(g: &Game, gd: GuardId) -> UnitRef {
-    UnitRef { kind: UnitRefKind::Unit, id: g.ch[g.gd[gd].ch].id, callsign: g.gd[gd].callsign.clone() }
+    UnitRef { id: g.ch[g.gd[gd].ch].id, callsign: g.gd[gd].callsign.clone() }
 }
 fn touch(g: &mut Game, b: DirectorLiveBeatId, u: &UnitRef) { g.tab.director_live_beat[b].touched.add(crate::Num(u.id)); }
 

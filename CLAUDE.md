@@ -35,13 +35,15 @@ Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`
 - **No GPU in the cloud.** The headless harness (`tools/qa/`, the whole Game over a Proxy GPU device) cannot see rendering, the GPU
   light meter, smoke sight lines or audio; a page check there runs on the software adapter. Say what was checked and how, and say
   "never seen on a GPU" of anything that was not. "Verified" in full also means driven in a real browser with no console / GPU errors.
-- **Two stands** (`src/host/profile.ts`). FROZEN (the harness default) = the stand every frozen digest, tally and fixture was recorded
-  on: newer rules are held off. SHIPPED (`TPS_PROFILE=shipped` in front of any headless tool) = the page as it opens. `FROZEN_HOLDS`
-  lists every row they differ in, with the word that raises each on a frozen run (`TPS_<NAME>=1`).
-- **A new rule is a switch.** ON in the page (a URL flag puts it off), OFF in the module and on the frozen stand; a `FROZEN_HOLDS` row;
-  its table registered in `src/game/knobs.ts` (`knobs-check` is red otherwise) and carried by the session journal so that a recording
-  from before the key replays with it off (`journal.ts applyKnobs`). Off = the build as it was, by run digest. It ships with a check
-  whose `<NAME>_BREAK=1` path must fail, run on BOTH stands. A new default-on rule joins the frozen-digest pin lists.
+- **One stand** (`src/host/profile.ts`). A headless tool stands the game AS THE PAGE OPENS IT, and a check is run once, with no word
+  in front (`TPS_PROFILE=shipped` is accepted and changes nothing). The old FROZEN stand, every newer rule held off (`FROZEN_HOLDS`
+  lists the rows and the word that raises each there), is `TPS_PROFILE=frozen`: kept for the switch cleanup until the off paths are
+  gone, said on stderr by a run that uses it, and no new fixture is recorded on it. A header that says "both stands" is older.
+- **A new rule is a switch.** ON in the page (a URL flag puts it off), OFF in its module: so a switch's value is read off the page's
+  stand (`bun run tools/qa/stand-dump.ts`), never off the module's own table. A `FROZEN_HOLDS` row while that list stands; its table
+  registered in `src/game/knobs.ts` (`knobs-check` is red otherwise) and carried by the session journal so that a recording from
+  before the key replays with it off (`journal.ts applyKnobs`). Off = the build as it was, by run digest. It ships with a check
+  whose `<NAME>_BREAK=1` path must fail.
 - **No `Math.random` in `src/game`** — `simRandom()` (`src/math/dice.ts`); `bun run tools/qa/dice-check.ts` is red on one. No wall
   clock inside the update either.
 - **Module state is registered** (`src/math/side.ts`; `docs/agents/replays.md`, the rollback snapshot). In the simulation's folders: `SideMap` /
@@ -61,7 +63,7 @@ Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`
   the head of branch `twopointsix`.
 - **Servers.** Never `pkill -f tools/serve.ts`; stop a server by pid or port. Do not edit `src/` under a running measurement: every
   run is a fresh bun that imports the tree as it is.
-- **A change that players read or that moves a tally** says, in its area file: the switch, both stands' words, the check, what was
+- **A change that players read or that moves a tally** says, in its area file: the switch and its words, the check, what was
   measured and on how many seeds, and what nobody has seen or played.
 
 ## Writing for the player
@@ -98,7 +100,7 @@ happened when; the live queue is outside the repo.
 
 - `overview.md` — what the game is, one model for picture and AI, where the module families live, a line per small module, the
   architecture map (files, frame flags, box flags, the Frame layout), the removed Mac app, the import cycle.
-- `qa.md` — run / build / check in full, the two stands, the knob registry, the gates, driving the page headlessly (hooks, URL flags,
+- `qa.md` — run / build / check in full, the stand and the old one, the knob registry, the gates, driving the page headlessly (hooks, URL flags,
   `__stage`, `__ready`), checkpoints + autosave.
 - `missions.md` — scenario kinds, fresh deals and ways in, the lesson engine (the old Training lessons are out), the par clock, the snatch, timed charges, Mousehole, the
   long hall, the vault, quiet missions, lights-out, the glasshouse, the solo night's opening.

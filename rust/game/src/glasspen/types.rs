@@ -3,10 +3,26 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: PenState, src/game/glasspen.ts:167)
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum PaneType {
+    Annealed,
+    Laminated,
+    Tempered,
+}
+impl PaneType {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            PaneType::Annealed => "annealed",
+            PaneType::Laminated => "laminated",
+            PaneType::Tempered => "tempered",
+        }
+    }
+}
+
+/// (TypeScript: PenState, src/game/glasspen.ts:151)
 #[derive(Clone, Debug)]
 pub struct PenState {
-    pub holes: JsMap<crate::Num, Vec<f64>>,
     pub log: Vec<String>,
     pub rev: f64,
 }
@@ -14,7 +30,6 @@ impl PenState {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         PenState {
-            holes: JsMap::new(),
             log: Vec::new(),
             rev: 0.0,
         }
@@ -22,10 +37,10 @@ impl PenState {
 }
 impl Default for PenState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PaneToll, src/game/glasspen.ts:198)
+/// (TypeScript: PaneToll, src/game/glasspen.ts:179)
 #[derive(Clone, Copy, Debug)]
 pub struct PaneToll {
-    pub type_: crate::glassbreak::GlassType,
+    pub type_: crate::glasspen::PaneType,
     pub n: V3,
     pub cos: f64,
     pub take: f64,
@@ -36,7 +51,7 @@ impl PaneToll {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         PaneToll {
-            type_: crate::glassbreak::GlassType::Annealed,
+            type_: crate::glasspen::PaneType::Annealed,
             n: [0.0; 3],
             cos: 0.0,
             take: 0.0,
@@ -47,7 +62,7 @@ impl PaneToll {
 }
 impl Default for PaneToll { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PaneCross, src/game/glasspen.ts:212)
+/// (TypeScript: PaneCross, src/game/glasspen.ts:194)
 #[derive(Clone, Copy, Debug)]
 pub struct PaneCross {
     pub bi: f64,
@@ -60,7 +75,7 @@ pub struct PaneCross {
     pub turn_deg: f64,
     pub thru: f64,
     pub into: f64,
-    pub type_: crate::glassbreak::GlassType,
+    pub type_: crate::glasspen::PaneType,
     pub n: V3,
     pub cos: f64,
     pub take: f64,
@@ -81,7 +96,7 @@ impl PaneCross {
             turn_deg: 0.0,
             thru: 0.0,
             into: 0.0,
-            type_: crate::glassbreak::GlassType::Annealed,
+            type_: crate::glasspen::PaneType::Annealed,
             n: [0.0; 3],
             cos: 0.0,
             take: 0.0,
@@ -92,7 +107,7 @@ impl PaneCross {
 }
 impl Default for PaneCross { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RoundSeg, src/game/glasspen.ts:247)
+/// (TypeScript: RoundSeg, src/game/glasspen.ts:213)
 #[derive(Clone, Copy, Debug)]
 pub struct RoundSeg {
     pub o: V3,
@@ -115,7 +130,7 @@ impl RoundSeg {
 }
 impl Default for RoundSeg { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RoundPath, src/game/glasspen.ts:248)
+/// (TypeScript: RoundPath, src/game/glasspen.ts:214)
 #[derive(Clone, Debug)]
 pub struct RoundPath {
     pub segs: Vec<crate::glasspen::RoundSeg>,
@@ -136,7 +151,7 @@ impl RoundPath {
 }
 impl Default for RoundPath { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glasspen.ts:251 RoundPath.st, src/game/glasspen.ts:251)
+/// (TypeScript: inline at src/game/glasspen.ts:217 RoundPath.st, src/game/glasspen.ts:217)
 #[derive(Clone, Copy, Debug)]
 pub struct RoundPathSt {
     pub t: f64,
@@ -155,7 +170,7 @@ impl RoundPathSt {
 }
 impl Default for RoundPathSt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glasspen.ts:255 StaticHit, src/game/glasspen.ts:255)
+/// (TypeScript: inline at src/game/glasspen.ts:221 StaticHit, src/game/glasspen.ts:221)
 #[derive(Clone, Copy, Debug)]
 pub struct StaticHit2 {
     pub t: f64,
@@ -174,7 +189,7 @@ impl StaticHit2 {
 }
 impl Default for StaticHit2 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ShellGlass, src/game/glasspen.ts:288)
+/// (TypeScript: ShellGlass, src/game/glasspen.ts:251)
 #[derive(Clone, Debug)]
 pub struct ShellGlass {
     pub glass: JsMap<crate::Num, Vec<f64>>,
@@ -206,7 +221,7 @@ impl ShellMark {
     }
 }
 
-/// (TypeScript: inline at src/game/glasspen.ts:343 armThroughGlass ->, src/game/glasspen.ts:343)
+/// (TypeScript: inline at src/game/glasspen.ts:296 armThroughGlass ->, src/game/glasspen.ts:296)
 #[derive(Clone, Copy, Debug)]
 pub struct ArmThroughGlass {
     pub e: f64,
@@ -223,7 +238,7 @@ impl ArmThroughGlass {
 }
 impl Default for ArmThroughGlass { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glasspen.ts:361 shotPasses(panes), src/game/glasspen.ts:361)
+/// (TypeScript: inline at src/game/glasspen.ts:308 shotPasses(panes), src/game/glasspen.ts:308)
 #[derive(Clone, Copy, Debug)]
 pub struct ShotPassesPanesItem {
     pub bi: f64,
@@ -243,7 +258,7 @@ impl Default for ShotPassesPanesItem { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct GlasspenMod {
-    /// (src/game/glasspen.ts:168 states)
+    /// (src/game/glasspen.ts:152 states)
     pub states: Option<crate::glasspen::PenState>,
 }
 impl GlasspenMod {
@@ -267,14 +282,20 @@ pub struct GlasspenStats {
     pub shell_joined: i32,
 }
 
-/// (src/game/glasspen.ts:109 OFF_WORD)
+/// (src/game/glasspen.ts:110 OFF_WORD)
 pub const OFF_WORD: &str = "/^(0|off|false|no)$/i";
 
-/// (src/game/glasspen.ts:113 LS_KEY)
+/// (src/game/glasspen.ts:114 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.glasspen";
 
-/// (src/game/glasspen.ts:151 EXIT_EPS)
-pub const EXIT_EPS: f64 = 0.001;
+/// (src/game/glasspen.ts:186 PANE_TYPES: a table nothing writes)
+pub fn pane_types() -> Vec<String> { alloc::vec![String::from("annealed"), String::from("tempered"), String::from("laminated")] }
 
-/// (src/game/glasspen.ts:152 embedScratch: a table nothing writes)
-pub fn embed_scratch() -> Vec<i32> { alloc::vec![0; 64] }
+/// (src/game/glasspen.ts:191 CROSS)
+pub const CROSS: f64 = 25.0;
+
+/// (src/game/glasspen.ts:191 LEG)
+pub const LEG: f64 = 9.0;
+
+/// (src/game/glasspen.ts:191 MAX_CROSS)
+pub const MAX_CROSS: f64 = 16.0;

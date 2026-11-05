@@ -24,6 +24,68 @@ impl Sweep {
 }
 impl Default for Sweep { fn default() -> Self { Self::blank() } }
 
+/// (TypeScript: Clearing, src/game/squad.ts:490)
+#[derive(Clone, Debug)]
+pub struct Clearing {
+    pub stage: crate::squad::ClearStage,
+    pub room_i: usize,
+    pub drill: Option<RoomClearId>,
+    pub cur: Option<crate::scene_level::RoomClearPlan>,
+    pub t: f64,
+    pub total: f64,
+    pub eta: f64,
+    pub t_drill: f64,
+    pub t_near: f64,
+    pub aw: Vec<f64>,
+    pub wps: [Vec<V3>; 2],
+    pub dark: bool,
+    pub rooms: Vec<Vec<crate::scene_level::RoomClearPlan>>,
+    pub a: GuardId,
+    pub b: Option<GuardId>,
+}
+impl Clearing {
+    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    pub fn blank() -> Self {
+        Clearing {
+            stage: crate::squad::ClearStage::Muster,
+            room_i: 0,
+            drill: None,
+            cur: None,
+            t: 0.0,
+            total: 0.0,
+            eta: 0.0,
+            t_drill: 0.0,
+            t_near: f64::NAN,
+            aw: alloc::vec![0.0, 0.0],
+            wps: [Vec::new(), Vec::new()],
+            dark: false,
+            rooms: Vec::new(),
+            a: GuardId(0),
+            b: None,
+        }
+    }
+}
+impl Default for Clearing { fn default() -> Self { Self::blank() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum ClearStage {
+    Approach,
+    Done,
+    Muster,
+    Drill,
+}
+impl ClearStage {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            ClearStage::Approach => "approach",
+            ClearStage::Done => "done",
+            ClearStage::Muster => "muster",
+            ClearStage::Drill => "drill",
+        }
+    }
+}
+
 /// (TypeScript: RoomClear, src/game/squad.ts:184)
 #[derive(Clone, Debug)]
 pub struct RoomClear {
@@ -117,68 +179,6 @@ impl RoomClearPhase {
         }
     }
 }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum ClearStage {
-    Approach,
-    Done,
-    Muster,
-    Drill,
-}
-impl ClearStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ClearStage::Approach => "approach",
-            ClearStage::Done => "done",
-            ClearStage::Muster => "muster",
-            ClearStage::Drill => "drill",
-        }
-    }
-}
-
-/// (TypeScript: Clearing, src/game/squad.ts:490)
-#[derive(Clone, Debug)]
-pub struct Clearing {
-    pub stage: crate::squad::ClearStage,
-    pub room_i: usize,
-    pub drill: Option<RoomClearId>,
-    pub cur: Option<crate::scene_level::RoomClearPlan>,
-    pub t: f64,
-    pub total: f64,
-    pub eta: f64,
-    pub t_drill: f64,
-    pub t_near: f64,
-    pub aw: Vec<f64>,
-    pub wps: [Vec<V3>; 2],
-    pub dark: bool,
-    pub rooms: Vec<Vec<crate::scene_level::RoomClearPlan>>,
-    pub a: GuardId,
-    pub b: Option<GuardId>,
-}
-impl Clearing {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
-    pub fn blank() -> Self {
-        Clearing {
-            stage: crate::squad::ClearStage::Muster,
-            room_i: 0,
-            drill: None,
-            cur: None,
-            t: 0.0,
-            total: 0.0,
-            eta: 0.0,
-            t_drill: 0.0,
-            t_near: f64::NAN,
-            aw: alloc::vec![0.0, 0.0],
-            wps: [Vec::new(), Vec::new()],
-            dark: false,
-            rooms: Vec::new(),
-            a: GuardId(0),
-            b: None,
-        }
-    }
-}
-impl Default for Clearing { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/squad.ts:39 settleWatch, src/game/squad.ts:39)
 #[derive(Clone, Copy, Debug)]

@@ -9,8 +9,8 @@ pub enum Why {
     Door,
     Stack,
     Line,
-    Hurt,
     Keep,
+    Hurt,
 }
 impl Why {
     pub const fn as_str(self) -> &'static str {
@@ -18,8 +18,8 @@ impl Why {
             Why::Door => "door",
             Why::Stack => "stack",
             Why::Line => "line",
-            Why::Hurt => "hurt",
             Why::Keep => "keep",
+            Why::Hurt => "hurt",
         }
     }
 }

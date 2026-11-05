@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Line, src/game/rustknobs.ts:14)
+/// (TypeScript: Line, src/game/rustknobs.ts:15)
 #[derive(Clone, Debug)]
 pub struct Line {
     pub path: String,
@@ -22,7 +22,7 @@ impl Line {
 }
 impl Default for Line { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rustknobs.ts:17 RUST_KNOBS, src/game/rustknobs.ts:17)
+/// (TypeScript: inline at src/game/rustknobs.ts:18 RUST_KNOBS, src/game/rustknobs.ts:18)
 #[derive(Clone, Debug)]
 pub struct RustknobsModRUSTKNOBS {
     pub lines: Option<Vec<crate::rustknobs::Line>>,
@@ -43,7 +43,7 @@ impl RustknobsModRUSTKNOBS {
 }
 impl Default for RustknobsModRUSTKNOBS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rustknobs.ts:28 rustKnobLines ->, src/game/rustknobs.ts:28)
+/// (TypeScript: inline at src/game/rustknobs.ts:29 rustKnobLines ->, src/game/rustknobs.ts:29)
 #[derive(Clone, Debug)]
 pub struct RustKnobLinesItem {
     pub path: String,
@@ -63,7 +63,7 @@ impl Default for RustKnobLinesItem { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct RustknobsMod {
-    /// (src/game/rustknobs.ts:17 RUST_KNOBS)
+    /// (src/game/rustknobs.ts:18 RUST_KNOBS)
     pub rust_knobs: crate::rustknobs::RustknobsModRUSTKNOBS,
 }
 impl RustknobsMod {

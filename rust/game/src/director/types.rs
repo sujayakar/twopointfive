@@ -31,6 +31,477 @@ pub enum NearWhat {
     Place { p: crate::director::Place },
 }
 
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum EventKind {
+    Shot,
+    Bang,
+    Kick,
+    Door,
+    LightOut,
+    GuardShot,
+    Step,
+    Prop,
+    Whistle,
+    Glass,
+}
+impl EventKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            EventKind::Shot => "shot",
+            EventKind::Bang => "bang",
+            EventKind::Kick => "kick",
+            EventKind::Door => "door",
+            EventKind::LightOut => "lightOut",
+            EventKind::GuardShot => "guardShot",
+            EventKind::Step => "step",
+            EventKind::Prop => "prop",
+            EventKind::Whistle => "whistle",
+            EventKind::Glass => "glass",
+        }
+    }
+}
+
+/// (TypeScript: Director, src/game/director.ts:423)
+#[derive(Clone, Debug)]
+pub struct Director {
+    pub manifest: Option<crate::director::Manifest>,
+    pub problems: Vec<crate::director::LintProblem>,
+    pub armed: bool,
+    pub log: Vec<crate::director::LogRow>,
+    pub run: Option<DirectorRunId>,
+    pub last_run: Option<crate::director::DirectorLastRun>,
+    pub strict: bool,
+    pub frame: Option<crate::director::DirectorFrame>,
+    pub cam: Option<CameraId>,
+    pub input: Option<InputId>,
+    pub serial: f64,
+    pub seen: JsSet<u32>,
+    pub exiting: bool,
+    pub due_keys: JsSet<String>,
+    pub due_clicks: f64,
+    pub shown: JsSet<GuardId>,
+}
+impl Director {
+    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    pub fn blank() -> Self {
+        Director {
+            manifest: None,
+            problems: Vec::new(),
+            armed: false,
+            log: Vec::new(),
+            run: None,
+            last_run: None,
+            strict: false,
+            frame: None,
+            cam: None,
+            input: None,
+            serial: 0.0,
+            seen: JsSet::new(),
+            exiting: false,
+            due_keys: JsSet::new(),
+            due_clicks: 0.0,
+            shown: JsSet::new(),
+        }
+    }
+}
+impl Default for Director { fn default() -> Self { Self::blank() } }
+
+/// (TypeScript: Manifest, src/game/director.ts:281)
+#[derive(Clone, Debug)]
+pub struct Manifest {
+    pub marks: JsMap<String, crate::director::ManifestMarksValue>,
+    pub volumes: JsSet<String>,
+    pub routes: JsSet<String>,
+    pub doors: JsSet<String>,
+    pub devices: JsSet<String>,
+    pub plans: JsMap<String, crate::director::PlanKind>,
+    pub loadouts: JsMap<String, crate::director::LoadoutSpec>,
+    pub groups: JsSet<String>,
+    pub variants: JsSet<String>,
+    pub programs: JsMap<String, crate::director::ProgramDef>,
+    pub expects: Vec<crate::director::ManifestExpectsItem>,
+    pub systems: JsMap<&'static str, bool>,
+}
+impl Manifest {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        Manifest {
+            marks: JsMap::new(),
+            volumes: JsSet::new(),
+            routes: JsSet::new(),
+            doors: JsSet::new(),
+            devices: JsSet::new(),
+            plans: JsMap::new(),
+            loadouts: JsMap::new(),
+            groups: JsSet::new(),
+            variants: JsSet::new(),
+            programs: JsMap::new(),
+            expects: Vec::new(),
+            systems: JsMap::new(),
+        }
+    }
+}
+impl Default for Manifest { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/director.ts:282 Manifest.marks, src/game/director.ts:282)
+#[derive(Clone, Copy, Debug)]
+pub struct ManifestMarksValue {
+    pub pos: Option<V3>,
+    pub yaw: Option<f64>,
+}
+impl ManifestMarksValue {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ManifestMarksValue {
+            pos: None,
+            yaw: None,
+        }
+    }
+}
+impl Default for ManifestMarksValue { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum PlanKind {
+    Breach,
+    RoomClear,
+}
+impl PlanKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            PlanKind::Breach => "breach",
+            PlanKind::RoomClear => "roomClear",
+        }
+    }
+}
+
+/// (TypeScript: LoadoutSpec, src/game/director.ts:93)
+#[derive(Clone, Copy, Debug)]
+pub struct LoadoutSpec {
+    pub team: crate::teams::Team,
+    pub weapon: Option<crate::weapons::WeaponId>,
+    pub tint: Option<V3>,
+    pub tint2: Option<V3>,
+    pub light: Option<bool>,
+    pub trained: Option<bool>,
+    pub god: Option<bool>,
+}
+impl LoadoutSpec {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        LoadoutSpec {
+            team: crate::teams::Team::Guard,
+            weapon: None,
+            tint: None,
+            tint2: None,
+            light: None,
+            trained: None,
+            god: None,
+        }
+    }
+}
+impl Default for LoadoutSpec { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: ProgramDef, src/game/director.ts:288)
+#[derive(Clone, Debug)]
+pub struct ProgramDef {
+    pub name: String,
+    pub opts: crate::director::ProgramOpts,
+    pub beats: JsMap<String, crate::director::ProgramDefBeatsValue>,
+    pub triggers: Vec<crate::director::TriggerDef>,
+}
+impl ProgramDef {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ProgramDef {
+            name: String::new(),
+            opts: crate::director::ProgramOpts::zeroed(),
+            beats: JsMap::new(),
+            triggers: Vec::new(),
+        }
+    }
+}
+impl Default for ProgramDef { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: ProgramOpts, src/game/director.ts:244)
+#[derive(Clone, Copy, Debug)]
+pub struct ProgramOpts {
+    pub showcase: Option<bool>,
+    pub lower_third: Option<bool>,
+    pub end_veil: Option<f64>,
+    pub end_hold: Option<f64>,
+    pub fresh_encounter: Option<bool>,
+}
+impl ProgramOpts {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ProgramOpts {
+            showcase: None,
+            lower_third: None,
+            end_veil: None,
+            end_hold: None,
+            fresh_encounter: None,
+        }
+    }
+}
+impl Default for ProgramOpts { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/director.ts:288 ProgramDef.beats, src/game/director.ts:288)
+#[derive(Clone, Copy, Debug)]
+pub struct ProgramDefBeatsValue {
+    pub fn_: crate::scene_level::LevelScriptFn,
+    pub atomic: bool,
+}
+impl ProgramDefBeatsValue {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ProgramDefBeatsValue {
+            fn_: crate::scene_level::LevelScriptFn::TutSky,
+            atomic: false,
+        }
+    }
+}
+impl Default for ProgramDefBeatsValue { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: TriggerDef, src/game/director.ts:287)
+#[derive(Clone, Debug)]
+pub struct TriggerDef {
+    pub kind: crate::director::TriggerDefKind,
+    pub beat: String,
+    pub secs: Option<f64>,
+    pub event: Option<crate::director::EventKind>,
+    pub name: Option<String>,
+    pub volume: Option<String>,
+    pub who: Option<crate::director::TriggerDefWho>,
+    pub once: Option<bool>,
+    pub label: Option<String>,
+}
+impl TriggerDef {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        TriggerDef {
+            kind: crate::director::TriggerDefKind::Start,
+            beat: String::new(),
+            secs: None,
+            event: None,
+            name: None,
+            volume: None,
+            who: None,
+            once: None,
+            label: None,
+        }
+    }
+}
+impl Default for TriggerDef { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum TriggerDefKind {
+    Start,
+    Enter,
+    After,
+    Event,
+    Signal,
+    When,
+}
+impl TriggerDefKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            TriggerDefKind::Start => "start",
+            TriggerDefKind::Enter => "enter",
+            TriggerDefKind::After => "after",
+            TriggerDefKind::Event => "event",
+            TriggerDefKind::Signal => "signal",
+            TriggerDefKind::When => "when",
+        }
+    }
+}
+
+/// (TypeScript: a union)
+#[derive(Clone, Debug)]
+pub enum TriggerDefWho {
+    Sam,
+    AnyUnit,
+    Unit(crate::director::UnitRef),
+}
+
+/// (TypeScript: UnitRef, src/game/director.ts:89)
+#[derive(Clone, Debug)]
+pub struct UnitRef {
+    pub id: f64,
+    pub callsign: String,
+}
+impl UnitRef {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        UnitRef {
+            id: 0.0,
+            callsign: String::new(),
+        }
+    }
+}
+impl Default for UnitRef { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/director.ts:284 Manifest.expects, src/game/director.ts:284)
+#[derive(Clone, Debug)]
+pub struct ManifestExpectsItem {
+    pub kind: crate::director::ManifestExpectsItemKind,
+    pub program: Option<String>,
+    pub beats: Option<Vec<String>>,
+    pub a: Option<String>,
+    pub b: Option<String>,
+    pub max: Option<f64>,
+    pub what: Option<String>,
+}
+impl ManifestExpectsItem {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ManifestExpectsItem {
+            kind: crate::director::ManifestExpectsItemKind::Order,
+            program: None,
+            beats: None,
+            a: None,
+            b: None,
+            max: None,
+            what: None,
+        }
+    }
+}
+impl Default for ManifestExpectsItem { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum ManifestExpectsItemKind {
+    Order,
+    Within,
+    Never,
+}
+impl ManifestExpectsItemKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            ManifestExpectsItemKind::Order => "order",
+            ManifestExpectsItemKind::Within => "within",
+            ManifestExpectsItemKind::Never => "never",
+        }
+    }
+}
+
+/// (TypeScript: inline at quiet Manifest.systems, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+#[derive(Clone, Copy, Debug)]
+pub struct ManifestSystems {
+    pub civilians: Option<bool>,
+    pub needs: Option<bool>,
+    pub qrf: Option<bool>,
+    pub autosave: Option<bool>,
+    pub their_frags: Option<bool>,
+}
+impl ManifestSystems {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ManifestSystems {
+            civilians: None,
+            needs: None,
+            qrf: None,
+            autosave: None,
+            their_frags: None,
+        }
+    }
+}
+impl Default for ManifestSystems { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: LintProblem, src/game/director.ts:289)
+#[derive(Clone, Debug)]
+pub struct LintProblem {
+    pub level: crate::director::LintProblemLevel,
+    pub what: String,
+}
+impl LintProblem {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        LintProblem {
+            level: crate::director::LintProblemLevel::Error,
+            what: String::new(),
+        }
+    }
+}
+impl Default for LintProblem { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum LintProblemLevel {
+    Error,
+    Warn,
+}
+impl LintProblemLevel {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            LintProblemLevel::Error => "error",
+            LintProblemLevel::Warn => "warn",
+        }
+    }
+}
+
+/// (TypeScript: LogRow, src/game/director.ts:397)
+#[derive(Clone, Debug)]
+pub struct LogRow {
+    pub t: f64,
+    pub run: f64,
+    pub program: String,
+    pub beat: String,
+    pub kind: crate::director::LogRowKind,
+    pub what: String,
+    pub data: Option<crate::director::Json>,
+}
+impl LogRow {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        LogRow {
+            t: 0.0,
+            run: 0.0,
+            program: String::new(),
+            beat: String::new(),
+            kind: crate::director::LogRowKind::Camera,
+            what: String::new(),
+            data: None,
+        }
+    }
+}
+impl Default for LogRow { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum LogRowKind {
+    Camera,
+    Radio,
+    Error,
+    Spawn,
+    Drill,
+    Note,
+    Program,
+    Beat,
+    Trigger,
+    Yield,
+    Stimulus,
+}
+impl LogRowKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            LogRowKind::Camera => "camera",
+            LogRowKind::Radio => "radio",
+            LogRowKind::Error => "error",
+            LogRowKind::Spawn => "spawn",
+            LogRowKind::Drill => "drill",
+            LogRowKind::Note => "note",
+            LogRowKind::Program => "program",
+            LogRowKind::Beat => "beat",
+            LogRowKind::Trigger => "trigger",
+            LogRowKind::Yield => "yield",
+            LogRowKind::Stimulus => "stimulus",
+        }
+    }
+}
+
 /// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum Json {
@@ -40,6 +511,54 @@ pub enum Json {
     Array(Vec<Option<crate::director::Json>>),
     Arm4(JsMap<String, Option<crate::director::Json>>),
 }
+
+/// (TypeScript: inline at src/game/director.ts:428 Director.lastRun, src/game/director.ts:428)
+#[derive(Clone, Debug)]
+pub struct DirectorLastRun {
+    pub serial: f64,
+    pub name: String,
+    pub t: f64,
+    pub finished: bool,
+}
+impl DirectorLastRun {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        DirectorLastRun {
+            serial: 0.0,
+            name: String::new(),
+            t: 0.0,
+            finished: false,
+        }
+    }
+}
+impl Default for DirectorLastRun { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: DirectorFrame, src/game/director.ts:400)
+#[derive(Clone, Debug)]
+pub struct DirectorFrame {
+    pub look: Option<V3>,
+    pub caption: String,
+    pub sub: String,
+    pub fade: f64,
+    pub lower_third: bool,
+    pub program: String,
+    pub handed_over: bool,
+}
+impl DirectorFrame {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        DirectorFrame {
+            look: None,
+            caption: String::new(),
+            sub: String::new(),
+            fade: 0.0,
+            lower_third: false,
+            program: String::new(),
+            handed_over: false,
+        }
+    }
+}
+impl Default for DirectorFrame { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: MarkRef, src/game/director.ts:78)
 #[derive(Clone, Debug)]
@@ -294,86 +813,12 @@ impl DeviceRefKind {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum PlanKind {
-    Breach,
-    RoomClear,
-}
-impl PlanKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PlanKind::Breach => "breach",
-            PlanKind::RoomClear => "roomClear",
-        }
-    }
-}
-
-/// (TypeScript: UnitRef, src/game/director.ts:89)
-#[derive(Clone, Debug)]
-pub struct UnitRef {
-    pub kind: crate::director::UnitRefKind,
-    pub id: f64,
-    pub callsign: String,
-}
-impl UnitRef {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        UnitRef {
-            kind: crate::director::UnitRefKind::Unit,
-            id: 0.0,
-            callsign: String::new(),
-        }
-    }
-}
-impl Default for UnitRef { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum UnitRefKind {
-    Unit,
-}
-impl UnitRefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            UnitRefKind::Unit => "unit",
-        }
-    }
-}
-
 /// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum Place {
     List(V3),
     Mark(crate::director::MarkRef),
 }
-
-/// (TypeScript: LoadoutSpec, src/game/director.ts:93)
-#[derive(Clone, Copy, Debug)]
-pub struct LoadoutSpec {
-    pub team: crate::teams::Team,
-    pub weapon: Option<crate::weapons::WeaponId>,
-    pub tint: Option<V3>,
-    pub tint2: Option<V3>,
-    pub light: Option<bool>,
-    pub trained: Option<bool>,
-    pub god: Option<bool>,
-}
-impl LoadoutSpec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LoadoutSpec {
-            team: crate::teams::Team::Guard,
-            weapon: None,
-            tint: None,
-            tint2: None,
-            light: None,
-            trained: None,
-            god: None,
-        }
-    }
-}
-impl Default for LoadoutSpec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:97 OrderPatch, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
@@ -425,37 +870,6 @@ pub enum OrderPatch2AimAt {
     List(V3),
     Unit(crate::director::UnitRef),
     Mark(crate::director::MarkRef),
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum EventKind {
-    Shot,
-    Bang,
-    Kick,
-    Door,
-    LightOut,
-    GuardShot,
-    Step,
-    Prop,
-    Whistle,
-    Glass,
-}
-impl EventKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EventKind::Shot => "shot",
-            EventKind::Bang => "bang",
-            EventKind::Kick => "kick",
-            EventKind::Door => "door",
-            EventKind::LightOut => "lightOut",
-            EventKind::GuardShot => "guardShot",
-            EventKind::Step => "step",
-            EventKind::Prop => "prop",
-            EventKind::Whistle => "whistle",
-            EventKind::Glass => "glass",
-        }
-    }
 }
 
 /// (TypeScript: EventView, src/game/director.ts:101)
@@ -1059,29 +1473,6 @@ impl SamViewHolding {
 }
 impl Default for SamViewHolding { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ProgramOpts, src/game/director.ts:244)
-#[derive(Clone, Copy, Debug)]
-pub struct ProgramOpts {
-    pub showcase: Option<bool>,
-    pub lower_third: Option<bool>,
-    pub end_veil: Option<f64>,
-    pub end_hold: Option<f64>,
-    pub fresh_encounter: Option<bool>,
-}
-impl ProgramOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ProgramOpts {
-            showcase: None,
-            lower_third: None,
-            end_veil: None,
-            end_hold: None,
-            fresh_encounter: None,
-        }
-    }
-}
-impl Default for ProgramOpts { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: ProgramApi, src/game/director.ts:256)
 #[derive(Clone, Copy, Debug)]
 pub struct ProgramApi {
@@ -1107,346 +1498,6 @@ impl DirectorApi {
     }
 }
 impl Default for DirectorApi { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: Manifest, src/game/director.ts:281)
-#[derive(Clone, Debug)]
-pub struct Manifest {
-    pub marks: JsMap<String, crate::director::ManifestMarksValue>,
-    pub volumes: JsSet<String>,
-    pub routes: JsSet<String>,
-    pub doors: JsSet<String>,
-    pub devices: JsSet<String>,
-    pub plans: JsMap<String, crate::director::PlanKind>,
-    pub loadouts: JsMap<String, crate::director::LoadoutSpec>,
-    pub groups: JsSet<String>,
-    pub variants: JsSet<String>,
-    pub programs: JsMap<String, crate::director::ProgramDef>,
-    pub expects: Vec<crate::director::ManifestExpectsItem>,
-    pub systems: JsMap<&'static str, bool>,
-}
-impl Manifest {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Manifest {
-            marks: JsMap::new(),
-            volumes: JsSet::new(),
-            routes: JsSet::new(),
-            doors: JsSet::new(),
-            devices: JsSet::new(),
-            plans: JsMap::new(),
-            loadouts: JsMap::new(),
-            groups: JsSet::new(),
-            variants: JsSet::new(),
-            programs: JsMap::new(),
-            expects: Vec::new(),
-            systems: JsMap::new(),
-        }
-    }
-}
-impl Default for Manifest { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/director.ts:282 Manifest.marks, src/game/director.ts:282)
-#[derive(Clone, Copy, Debug)]
-pub struct ManifestMarksValue {
-    pub pos: Option<V3>,
-    pub yaw: Option<f64>,
-}
-impl ManifestMarksValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ManifestMarksValue {
-            pos: None,
-            yaw: None,
-        }
-    }
-}
-impl Default for ManifestMarksValue { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: ProgramDef, src/game/director.ts:288)
-#[derive(Clone, Debug)]
-pub struct ProgramDef {
-    pub name: String,
-    pub opts: crate::director::ProgramOpts,
-    pub beats: JsMap<String, crate::director::ProgramDefBeatsValue>,
-    pub triggers: Vec<crate::director::TriggerDef>,
-}
-impl ProgramDef {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ProgramDef {
-            name: String::new(),
-            opts: crate::director::ProgramOpts::zeroed(),
-            beats: JsMap::new(),
-            triggers: Vec::new(),
-        }
-    }
-}
-impl Default for ProgramDef { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/director.ts:288 ProgramDef.beats, src/game/director.ts:288)
-#[derive(Clone, Copy, Debug)]
-pub struct ProgramDefBeatsValue {
-    pub fn_: crate::scene_level::LevelScriptFn,
-    pub atomic: bool,
-}
-impl ProgramDefBeatsValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ProgramDefBeatsValue {
-            fn_: crate::scene_level::LevelScriptFn::TutSky,
-            atomic: false,
-        }
-    }
-}
-impl Default for ProgramDefBeatsValue { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: TriggerDef, src/game/director.ts:287)
-#[derive(Clone, Debug)]
-pub struct TriggerDef {
-    pub kind: crate::director::TriggerDefKind,
-    pub beat: String,
-    pub secs: Option<f64>,
-    pub event: Option<crate::director::EventKind>,
-    pub name: Option<String>,
-    pub volume: Option<String>,
-    pub who: Option<crate::director::TriggerDefWho>,
-    pub once: Option<bool>,
-    pub label: Option<String>,
-}
-impl TriggerDef {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TriggerDef {
-            kind: crate::director::TriggerDefKind::Start,
-            beat: String::new(),
-            secs: None,
-            event: None,
-            name: None,
-            volume: None,
-            who: None,
-            once: None,
-            label: None,
-        }
-    }
-}
-impl Default for TriggerDef { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum TriggerDefKind {
-    Start,
-    Enter,
-    After,
-    Event,
-    Signal,
-    When,
-}
-impl TriggerDefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TriggerDefKind::Start => "start",
-            TriggerDefKind::Enter => "enter",
-            TriggerDefKind::After => "after",
-            TriggerDefKind::Event => "event",
-            TriggerDefKind::Signal => "signal",
-            TriggerDefKind::When => "when",
-        }
-    }
-}
-
-/// (TypeScript: a union)
-#[derive(Clone, Debug)]
-pub enum TriggerDefWho {
-    Sam,
-    AnyUnit,
-    Unit(crate::director::UnitRef),
-}
-
-/// (TypeScript: inline at src/game/director.ts:284 Manifest.expects, src/game/director.ts:284)
-#[derive(Clone, Debug)]
-pub struct ManifestExpectsItem {
-    pub kind: crate::director::ManifestExpectsItemKind,
-    pub program: Option<String>,
-    pub beats: Option<Vec<String>>,
-    pub a: Option<String>,
-    pub b: Option<String>,
-    pub max: Option<f64>,
-    pub what: Option<String>,
-}
-impl ManifestExpectsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ManifestExpectsItem {
-            kind: crate::director::ManifestExpectsItemKind::Order,
-            program: None,
-            beats: None,
-            a: None,
-            b: None,
-            max: None,
-            what: None,
-        }
-    }
-}
-impl Default for ManifestExpectsItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum ManifestExpectsItemKind {
-    Order,
-    Within,
-    Never,
-}
-impl ManifestExpectsItemKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ManifestExpectsItemKind::Order => "order",
-            ManifestExpectsItemKind::Within => "within",
-            ManifestExpectsItemKind::Never => "never",
-        }
-    }
-}
-
-/// (TypeScript: inline at quiet Manifest.systems, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
-pub struct ManifestSystems {
-    pub civilians: Option<bool>,
-    pub needs: Option<bool>,
-    pub qrf: Option<bool>,
-    pub autosave: Option<bool>,
-    pub their_frags: Option<bool>,
-}
-impl ManifestSystems {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ManifestSystems {
-            civilians: None,
-            needs: None,
-            qrf: None,
-            autosave: None,
-            their_frags: None,
-        }
-    }
-}
-impl Default for ManifestSystems { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: LintProblem, src/game/director.ts:289)
-#[derive(Clone, Debug)]
-pub struct LintProblem {
-    pub level: crate::director::LintProblemLevel,
-    pub what: String,
-}
-impl LintProblem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LintProblem {
-            level: crate::director::LintProblemLevel::Error,
-            what: String::new(),
-        }
-    }
-}
-impl Default for LintProblem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum LintProblemLevel {
-    Error,
-    Warn,
-}
-impl LintProblemLevel {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LintProblemLevel::Error => "error",
-            LintProblemLevel::Warn => "warn",
-        }
-    }
-}
-
-/// (TypeScript: LogRow, src/game/director.ts:397)
-#[derive(Clone, Debug)]
-pub struct LogRow {
-    pub t: f64,
-    pub run: f64,
-    pub program: String,
-    pub beat: String,
-    pub kind: crate::director::LogRowKind,
-    pub what: String,
-    pub data: Option<crate::director::Json>,
-}
-impl LogRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LogRow {
-            t: 0.0,
-            run: 0.0,
-            program: String::new(),
-            beat: String::new(),
-            kind: crate::director::LogRowKind::Camera,
-            what: String::new(),
-            data: None,
-        }
-    }
-}
-impl Default for LogRow { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum LogRowKind {
-    Camera,
-    Radio,
-    Error,
-    Spawn,
-    Beat,
-    Drill,
-    Note,
-    Program,
-    Trigger,
-    Yield,
-    Stimulus,
-}
-impl LogRowKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LogRowKind::Camera => "camera",
-            LogRowKind::Radio => "radio",
-            LogRowKind::Error => "error",
-            LogRowKind::Spawn => "spawn",
-            LogRowKind::Beat => "beat",
-            LogRowKind::Drill => "drill",
-            LogRowKind::Note => "note",
-            LogRowKind::Program => "program",
-            LogRowKind::Trigger => "trigger",
-            LogRowKind::Yield => "yield",
-            LogRowKind::Stimulus => "stimulus",
-        }
-    }
-}
-
-/// (TypeScript: DirectorFrame, src/game/director.ts:400)
-#[derive(Clone, Debug)]
-pub struct DirectorFrame {
-    pub look: Option<V3>,
-    pub caption: String,
-    pub sub: String,
-    pub fade: f64,
-    pub lower_third: bool,
-    pub program: String,
-    pub handed_over: bool,
-}
-impl DirectorFrame {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DirectorFrame {
-            look: None,
-            caption: String::new(),
-            sub: String::new(),
-            fade: 0.0,
-            lower_third: false,
-            program: String::new(),
-            handed_over: false,
-        }
-    }
-}
-impl Default for DirectorFrame { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LiveBeat, src/game/director.ts:402)
 #[derive(Clone, Debug)]
@@ -2001,72 +2052,6 @@ impl BeatFailure {
 }
 impl Default for BeatFailure { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Director, src/game/director.ts:423)
-#[derive(Clone, Debug)]
-pub struct Director {
-    pub manifest: Option<crate::director::Manifest>,
-    pub problems: Vec<crate::director::LintProblem>,
-    pub armed: bool,
-    pub log: Vec<crate::director::LogRow>,
-    pub run: Option<DirectorRunId>,
-    pub last_run: Option<crate::director::DirectorLastRun>,
-    pub strict: bool,
-    pub frame: Option<crate::director::DirectorFrame>,
-    pub cam: Option<CameraId>,
-    pub input: Option<InputId>,
-    pub serial: f64,
-    pub seen: JsSet<u32>,
-    pub exiting: bool,
-    pub due_keys: JsSet<String>,
-    pub due_clicks: f64,
-    pub shown: JsSet<GuardId>,
-}
-impl Director {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
-    pub fn blank() -> Self {
-        Director {
-            manifest: None,
-            problems: Vec::new(),
-            armed: false,
-            log: Vec::new(),
-            run: None,
-            last_run: None,
-            strict: false,
-            frame: None,
-            cam: None,
-            input: None,
-            serial: 0.0,
-            seen: JsSet::new(),
-            exiting: false,
-            due_keys: JsSet::new(),
-            due_clicks: 0.0,
-            shown: JsSet::new(),
-        }
-    }
-}
-impl Default for Director { fn default() -> Self { Self::blank() } }
-
-/// (TypeScript: inline at src/game/director.ts:428 Director.lastRun, src/game/director.ts:428)
-#[derive(Clone, Debug)]
-pub struct DirectorLastRun {
-    pub serial: f64,
-    pub name: String,
-    pub t: f64,
-    pub finished: bool,
-}
-impl DirectorLastRun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DirectorLastRun {
-            serial: 0.0,
-            name: String::new(),
-            t: 0.0,
-            finished: false,
-        }
-    }
-}
-impl Default for DirectorLastRun { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/director.ts:330 UTIL, src/game/director.ts:272)
 #[derive(Clone, Copy, Debug)]
 pub struct UTIL {
@@ -2221,10 +2206,10 @@ pub enum DirectorPushRowKind {
     Radio,
     Error,
     Spawn,
-    Beat,
     Drill,
     Note,
     Program,
+    Beat,
     Trigger,
     Yield,
     Stimulus,
@@ -2236,10 +2221,10 @@ impl DirectorPushRowKind {
             DirectorPushRowKind::Radio => "radio",
             DirectorPushRowKind::Error => "error",
             DirectorPushRowKind::Spawn => "spawn",
-            DirectorPushRowKind::Beat => "beat",
             DirectorPushRowKind::Drill => "drill",
             DirectorPushRowKind::Note => "note",
             DirectorPushRowKind::Program => "program",
+            DirectorPushRowKind::Beat => "beat",
             DirectorPushRowKind::Trigger => "trigger",
             DirectorPushRowKind::Yield => "yield",
             DirectorPushRowKind::Stimulus => "stimulus",

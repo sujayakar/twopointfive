@@ -9,8 +9,8 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The mission a host asked the men to be dressed for.   (look.ts suitAs)
-// SKELETON-GAP: suit_as -> Option<Option<SuitAs>> (look.ts:26 `'quiet' | null | undefined`: undefined = nobody asked, null = no mission). None here is "nobody asked".
-pub fn suit_as(g: &mut Game) -> Option<SuitAs> { g.m.scene_look.suit_asked.map(|_| SuitAs::Quiet) }
+// (skeleton 5.2: `'quiet' | null | undefined` is Option<Option<SuitAs>>: None = nobody asked, Some(None) = no mission. The module's own row can still say only asked or not.)
+pub fn suit_as(g: &mut Game) -> Option<Option<SuitAs>> { g.m.scene_look.suit_asked.map(|_| Some(SuitAs::Quiet)) }
 /// Do the men wear the look's dress here.   (look.ts lookDress)
 pub fn look_dress(g: &mut Game) -> bool { g.k.look.on && g.m.scene_look.look_place }
 /// The look on, in a place that is not the look's.   (look.ts lookOffice)

@@ -3,26 +3,22 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Ground, src/game/snowBog.ts:38)
+/// (TypeScript: Ground, src/game/snowBog.ts:40)
 #[derive(Clone, Debug)]
 pub struct Ground {
     pub kinds: Vec<u8>,
-    pub lays: Vec<usize>,
-    pub banks: Vec<usize>,
 }
 impl Ground {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         Ground {
             kinds: Vec::new(),
-            lays: Vec::new(),
-            banks: Vec::new(),
         }
     }
 }
 impl Default for Ground { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/snowBog.ts:37 SNOW_KIND, src/game/snowBog.ts:37)
+/// (TypeScript: inline at src/game/snowBog.ts:39 SNOW_KIND, src/game/snowBog.ts:39)
 #[derive(Clone, Copy, Debug)]
 pub struct SNOWKIND {
     pub none: f64,
@@ -48,7 +44,7 @@ impl Default for SNOWKIND { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SnowBogMod {
-    /// (src/game/snowBog.ts:39 groundOf)
+    /// (src/game/snowBog.ts:41 groundOf)
     pub ground_of: Option<crate::snow_bog::Ground>,
 }
 impl SnowBogMod {
@@ -59,5 +55,5 @@ impl SnowBogMod {
     }
 }
 
-/// (src/game/snowBog.ts:37 SNOW_KIND: a table nothing writes)
+/// (src/game/snowBog.ts:39 SNOW_KIND: a table nothing writes)
 pub fn snow_kind() -> crate::snow_bog::SNOWKIND { crate::snow_bog::SNOWKIND { none: 0.0, bare: 1.0, packed: 2.0, old: 3.0, bank: 4.0 } }

@@ -93,27 +93,6 @@ impl LaidOrderFound {
     }
 }
 
-/// (TypeScript: LaySnap, src/game/planlay.ts:55)
-#[derive(Clone, Debug)]
-pub struct LaySnap {
-    pub laid: Vec<crate::planlay::LaidOrder>,
-    pub kept: Option<Vec<crate::planlay::LaidOrder>>,
-    pub kept_for: String,
-    pub started: bool,
-}
-impl LaySnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LaySnap {
-            laid: Vec::new(),
-            kept: None,
-            kept_for: String::new(),
-            started: false,
-        }
-    }
-}
-impl Default for LaySnap { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: LaidWhere, src/game/planlay.ts:50)
 #[derive(Clone, Debug)]
 pub struct LaidWhere {
@@ -170,6 +149,27 @@ impl LaidWhereFound {
         }
     }
 }
+
+/// (TypeScript: LaySnap, src/game/planlay.ts:55)
+#[derive(Clone, Debug)]
+pub struct LaySnap {
+    pub laid: Vec<crate::planlay::LaidOrder>,
+    pub kept: Option<Vec<crate::planlay::LaidOrder>>,
+    pub kept_for: String,
+    pub started: bool,
+}
+impl LaySnap {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        LaySnap {
+            laid: Vec::new(),
+            kept: None,
+            kept_for: String::new(),
+            started: false,
+        }
+    }
+}
+impl Default for LaySnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
 #[derive(Clone, Debug)]

@@ -163,9 +163,9 @@ impl SuitId {
 pub enum TrimId {
     Red,
     Blue,
-    Green,
     Issued,
     Black,
+    Green,
     Amber,
     White,
 }
@@ -174,9 +174,9 @@ impl TrimId {
         match self {
             TrimId::Red => "red",
             TrimId::Blue => "blue",
-            TrimId::Green => "green",
             TrimId::Issued => "issued",
             TrimId::Black => "black",
+            TrimId::Green => "green",
             TrimId::Amber => "amber",
             TrimId::White => "white",
         }

@@ -187,7 +187,7 @@ pub fn cloud_total(d: &crate::hours::HourDef, c_2: f64) -> f64 {
 pub fn under_weather(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_ref() else { return };
     let (d, was_off, sun) = (st.def.clone(), st.was_off, st.sun);
-    let kind = g.weather.kind.is_some();
+    let kind = crate::weather::weather_kind(g).is_some();
     if !kind && crate::weather::weather_enabled(g) {
         if was_off {
             crate::weather::weather_set_enabled_2(g, false);
@@ -263,7 +263,7 @@ pub fn apply_hour(g: &mut crate::game::Game, id_2: crate::hours::HourId) -> bool
 /// The moon out, the hour's sun in at the moon's place, the sky, haze and exposure, the weather over it, the photocell. (hours.ts putIn)
 pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Option<&crate::hours::HourState>) {
     let to_sun = to_sun_of(def);
-    let kind = g.weather.kind.is_some();
+    let kind = crate::weather::weather_kind(g).is_some();
     let hour = g.m.hours.hour;
     let sun_k = match from { Some(f) => f.sun_k, None => v3::clamp(hour.sun, 0.0, 1.0) };
     let given = match from { Some(f) => f.given, None => hour.sun_given || hour.sun != 1.0 };
@@ -633,7 +633,7 @@ pub fn hour_summary(g: &mut crate::game::Game) -> String {
     let why = if given {
         String::from(" set")
     } else {
-        match g.weather.kind { Some(k) => alloc::format!(" under {}'s cloud", k.as_str()), None => String::new() }
+        match crate::weather::weather_kind(g) { Some(k) => alloc::format!(" under {}'s cloud", k.as_str()), None => String::new() }
     };
     let sky = if sky_k != 1.0 { alloc::format!(", sky ×{}", js::to_fixed(sky_k, 2)) } else { String::new() };
     let lamps = if d.lamps { String::from("as authored") } else { alloc::format!("out ({})", out) };

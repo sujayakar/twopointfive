@@ -1,4 +1,4 @@
-//! src/game/winbars.ts lines 1 to 196
+//! src/game/winbars.ts lines 1 to 186
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -34,10 +34,16 @@ fn seed_word(box_seed: f64, hit_u: f64) -> f64 { js::to_u32(box_seed + 131.0 + m
 fn hash_key(seed: f64, k: f64) -> f64 { m::imul(js::to_i32(seed + k), js::to_i32(2654435761.0)) as f64 }
 /// the k-th choice of a break   (breakBar's `R`)
 fn choice(seed: f64, k: f64) -> f64 { crate::debris::hash01(hash_key(seed, k)) }
+/// nothing of a pane's stands in this game's block   (glassbreak.ts panesUntouched; its stub takes no slot, see notes)
+fn untouched(g: &Game) -> bool { ::sim::state::state(g.sim).panes.used == 0 }
+/// the module's answers: `x.sim_scratch()` over `f64()`, its `o` being 0 here. Read before any other call into the module
+fn scratch() -> &'static [f64] {
+    unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, ::sim::sim_scratch_len()) }
+}
 
 // ---------------------------------------------------------------- the part
 /// The game's row, made if it is not there.   (winbars.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::winbars::BarState { g.m.winbars.state.get_or_insert_with(BarState::zeroed) }
+pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::winbars::BarState { g.m.winbars.state.get_or_insert_with(|| BarState { met: Vec::new() }) }
 
 /// The one gate: no showcase running.   (winbars.ts barsLive)
 pub fn bars_live(g: &mut crate::game::Game) -> bool { !g.touring }
@@ -61,14 +67,21 @@ pub fn bars_standing(g: &mut crate::game::Game) -> Vec<f64> {
 
 /// The bars a round or a blast has taken, ascending.   (winbars.ts barsGone)
 pub fn bars_gone(g: &mut crate::game::Game) -> Vec<f64> {
-    let mut v: Vec<f64> = state_of(g).gone.keys().iter().map(|k| k.0).collect();
-    js::sort_by(&mut v, |p, q| *p - *q);
-    v
+    let mut out = Vec::new();
+    if untouched(g) { return out; }
+    let s = g.sim;
+    for i in 0..::sim::panes::bars_gone(s) as usize { out.push(::sim::panes::bar_gone(s, i) as f64); }
+    out
 }
 
 /// The flags a bar this rule took was authored with, or None.   (winbars.ts barFlags0)
 pub fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
-    g.m.winbars.state.as_ref().and_then(|s| s.gone.get(crate::Num(index)).copied())
+    if untouched(g) { return None; }
+    let s = g.sim;
+    for i in 0..::sim::panes::bars_gone(s) as usize {
+        if ::sim::panes::bar_gone(s, i) as f64 == index { return Some(::sim::panes::bar_flags(s, i) as f64); }
+    }
+    None
 }
 
 /// Once, as the game is made: the line of fire's question and the blasts' list.   (winbars.ts bootBars)
@@ -126,11 +139,13 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
 
 /// Bar `index` goes: hidden to every question, its pieces thrown the way `dir` from where it was struck. False = gone already or no standing bar.   (winbars.ts breakBar)
 pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, cause: crate::winbars::BreakBarCause) -> bool {
-    state_of(g);
     let Some(b) = box_of(g, index) else { return false };
-    if state_of(g).gone.has(crate::Num(index)) || !bar_at(g, index) { return false; }
+    let taken = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| {
+        let flags = seam_box(g, b).flags;
+        ::sim::bars_take(js::to_u32(index), js::to_u32(flags)) == 1
+    });
+    if !taken { return false; }
     let flags = seam_box(g, b).flags;
-    state_of(g).gone.set(crate::Num(index), flags);
     seam_box(g, b).flags = bor(flags, HIDE);
     changed(g, b);
     g.stats.winbars.broken += 1;
@@ -233,41 +248,13 @@ pub fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastEvent) {
     if !bars_live(g) || g.k.winbars.blast_k <= 0.0 { return; }
     let r = ev.radius * g.k.winbars.blast_k;
     let from: V3 = [ev.at[0], m::max(0.3, ev.at[1]), ev.at[2]];
-    let mut near: Vec<f64> = Vec::new();
-    for i in bars_standing(g) {
-        let b = box_at(g, i);
-        let (c, h) = { let r = seam_box(g, b); (r.c, r.h) };
-        if m::hyp2(c[0] - from[0], c[2] - from[2]) <= r + m::max(h[0], h[2]) { near.push(i); }
-    }
-    if near.is_empty() { return; }
-    let mut took: Vec<(f64, V3)> = Vec::new();
-    let mut was: Vec<f64> = Vec::new();
-    for &i in &near {
-        let b = box_at(g, i);
-        was.push(seam_box(g, b).flags);
-    }
-    for &i in &near {
-        let b = box_at(g, i);
-        let r = seam_box(g, b);
-        r.flags = bor(r.flags, HIDE);
-    }
-    crate::scene_collision::wrote(g);
-    for &i in &near {
-        let b = box_at(g, i);
-        let (c, h) = { let r = seam_box(g, b); (r.c, r.h) };
-        for u in [0.0, 0.6, -0.6] {
-            let q: V3 = [c[0], c[1] + u * h[1], c[2]];
-            if v3::dist(from, q) > r + m::max(h[0], h[2]) { continue; }
-            if crate::scene_collision::solid_blocked(g, from, q, None) { continue; }
-            took.push((i, q));
-            break;
-        }
-    }
-    for (k, &i) in near.iter().enumerate() {
-        let b = box_at(g, i);
-        seam_box(g, b).flags = was[k];
-    }
-    crate::scene_collision::wrote(g);
+    let took: Vec<(f64, V3)> = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| {
+        let n = ::sim::bars_blast(from[0], from[1], from[2], r, built_boxes(g));
+        let m = scratch();
+        let mut out = Vec::new();
+        for k in 0..n { out.push((m[4 * k], [m[4 * k + 1], m[4 * k + 2], m[4 * k + 3]])); }
+        out
+    });
     for (i, at) in took {
         let b = box_at(g, i);
         let c = seam_box(g, b).c;
@@ -280,17 +267,16 @@ pub fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastEvent) {
 
 /// As a level resets: every bar stands again.   (winbars.ts resetBars)
 pub fn reset_bars(g: &mut crate::game::Game) {
-    let Some(s) = g.m.winbars.state.as_mut() else { return };
-    s.met.clear();
-    if s.gone.is_empty() { return; }
-    let gone: Vec<(crate::Num, f64)> = s.gone.iter().map(|(k, v)| (k, *v)).collect();
-    for (i, f) in gone {
-        if let Some(b) = box_of(g, i.0) {
-            seam_box(g, b).flags = f;
+    if let Some(s) = g.m.winbars.state.as_mut() { s.met.clear(); }
+    if untouched(g) { return; }
+    let s = g.sim;
+    for k in 0..::sim::panes::bars_gone(s) as usize {
+        if let Some(b) = box_of(g, ::sim::panes::bar_gone(s, k) as f64) {
+            seam_box(g, b).flags = ::sim::panes::bar_flags(s, k) as f64;
             changed(g, b);
         }
     }
-    state_of(g).gone.clear();
+    ::sim::panes::bars_clear(s);
 }
 
 /// Can this file's slice be applied to this level? None = yes.   (winbars.ts barsCheck)
@@ -313,7 +299,7 @@ pub fn bars_check(g: &mut crate::game::Game, s: Option<&crate::winbars::BarsSave
 /// Panel and console line.   (winbars.ts winBarsSummary)
 pub fn win_bars_summary(g: &mut crate::game::Game) -> String {
     let up = bars_standing(g).len();
-    let gone = state_of(g).gone.len();
+    let gone = bars_gone(g).len();
     let state = if bars_live(g) { "ON" } else { "on — inert while a showcase runs" };
     let st = g.stats.winbars.clone();
     let last = match g.m.winbars.log.last() {

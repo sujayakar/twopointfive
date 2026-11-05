@@ -80,38 +80,38 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) { todo!() }
 /// (src/game/doze.ts:304 faceLight)
 pub fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 { todo!() }
 
-/// (src/game/doze.ts:311 lampOn)
+/// (src/game/doze.ts:308 lampOn)
 pub fn lamp_on(g: &mut crate::game::Game, gd: GuardId, head: V3) -> V3 { todo!() }
 
-/// (src/game/doze.ts:322 dozeInChair)
+/// (src/game/doze.ts:319 dozeInChair)
 pub fn doze_in_chair(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
-/// (src/game/doze.ts:327 dozeAsleep)
+/// (src/game/doze.ts:324 dozeAsleep)
 pub fn doze_asleep(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
-/// (src/game/doze.ts:329 dozeDark)
+/// (src/game/doze.ts:326 dozeDark)
 pub fn doze_dark(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
-/// (src/game/doze.ts:331 dozeAt)
+/// (src/game/doze.ts:328 dozeAt)
 pub fn doze_at(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::DozeAt> { todo!() }
 
-/// (src/game/doze.ts:333 dozeEar)
+/// (src/game/doze.ts:330 dozeEar)
 pub fn doze_ear(g: &mut crate::game::Game, gd: GuardId) -> [f64; 2] { todo!() }
 
-/// (src/game/doze.ts:337 dozeWoke)
+/// (src/game/doze.ts:334 dozeWoke)
 pub fn doze_woke(g: &mut crate::game::Game, gd: GuardId, secs: Option<f64>) -> Option<crate::doze::DozeWhy> { todo!() }
 
-/// (src/game/doze.ts:339 dozeBreath)
+/// (src/game/doze.ts:336 dozeBreath)
 pub fn doze_breath(g: &mut crate::game::Game, gd: GuardId) -> f64 { todo!() }
 
-/// (src/game/doze.ts:341 dozeMark)
+/// (src/game/doze.ts:338 dozeMark)
 pub fn doze_mark(g: &mut crate::game::Game, gd: GuardId) -> String { todo!() }
 
-/// (src/game/doze.ts:344 dozeOf)
+/// (src/game/doze.ts:341 dozeOf)
 pub fn doze_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::DozeOf> { todo!() }
 
-/// (src/game/doze.ts:346 dozeSummary)
+/// (src/game/doze.ts:343 dozeSummary)
 pub fn doze_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/doze.ts:352 dozeReset)
+/// (src/game/doze.ts:349 dozeReset)
 pub fn doze_reset(g: &mut crate::game::Game, load: Option<bool>) { todo!() }

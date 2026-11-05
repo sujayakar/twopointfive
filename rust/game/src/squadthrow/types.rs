@@ -775,16 +775,16 @@ impl Word {
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum None {
-    NoFragsLeft,
-    NoFragsInThisKit,
     NoBangsLeft,
+    NoFragsInThisKit,
+    NoFragsLeft,
 }
 impl None {
     pub const fn as_str(self) -> &'static str {
         match self {
-            None::NoFragsLeft => "no frags left.",
-            None::NoFragsInThisKit => "no frags in this kit.",
             None::NoBangsLeft => "no bangs left.",
+            None::NoFragsInThisKit => "no frags in this kit.",
+            None::NoFragsLeft => "no frags left.",
         }
     }
 }

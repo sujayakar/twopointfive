@@ -861,8 +861,8 @@ pub struct LaterP {
     pub key: Option<String>,
     pub pos: Option<V3>,
     pub armed: Option<bool>,
-    pub o: Option<GuardId>,
     pub lvl: Option<f64>,
+    pub o: Option<GuardId>,
     pub cv: GuardId,
 }
 impl LaterP {
@@ -874,8 +874,8 @@ impl LaterP {
             key: None,
             pos: None,
             armed: None,
-            o: None,
             lvl: None,
+            o: None,
             cv: GuardId(0),
         }
     }

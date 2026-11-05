@@ -39,3 +39,23 @@ pub fn light_set_fog_class(g: &mut crate::game::Game, l: LightId) -> f64 {
     let other = if by != 0.0 { !t.owners.has(crate::Num(by)) } else { row.ttl >= 0.0 || row.transient.unwrap_or(false) };
     if t.on && row.kind != 2.0 && !t.lights.has(l) && other { 1.0 } else { 0.0 }
 }
+
+/// A flash's envelope for the frame, and its retirement once a frame has shown it. THE HOST calls it between ticks (headless.ts:226, the page's frame), and the
+/// tick's light estimate reads what it left: round three, room-clear-four tick 1622, the stun's flash stood at 1600 for good and two men's irradiance was off.
+/// `time` is not read (lights.ts:187 `void time`).   (render/lights.ts:174 LightSet.update)
+pub fn light_set_update(g: &mut crate::game::Game, dt: f64, time: f64) {
+    let f = |x: f64| -m::pow(1.0 - x, 3.2) / 3.2;
+    let mut i = g.engine.lights.lights.len();
+    while i > 0 {
+        i -= 1;
+        let id = g.engine.lights.lights[i];
+        let l = &mut g.tab.light[id];
+        if l.ttl >= 0.0 {
+            if l.age >= l.ttl { g.engine.lights.lights.remove(i); continue; }
+            let x0 = l.age / l.ttl;
+            let x1 = m::min(1.0, (l.age + m::max(dt, 1e-4)) / l.ttl);
+            l.intensity = l.peak_intensity * (f(x1) - f(x0)) / m::max(x1 - x0, 1e-6);
+            l.age += dt;
+        }
+    }
+}

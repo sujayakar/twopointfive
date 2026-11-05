@@ -1,4 +1,4 @@
-//! src/game/shards.ts lines 1 to 154
+//! src/game/shards.ts lines 1 to 156
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;

@@ -18,7 +18,7 @@ const ALL_KINDS: [WeatherKind; 7] = [
     WeatherKind::Snow,
 ];
 
-/// `URLSearchParams.get(key)` of a query the host holds. (weatherKinds.ts:110, :175, :180)
+/// `URLSearchParams.get(key)` of a query the host holds. (weatherKinds.ts:112, :174, :179)
 fn seam_query_get(q: crate::Opaque, key: &str) -> Option<String> {
     todo!("needs: URLSearchParams as a type that can answer get(key)")
 }
@@ -71,7 +71,7 @@ fn text_query_get(search: &str, key: &str) -> Option<String> {
     None
 }
 
-/// `/^[\w.-]+\.json$/`: a plain file name of a level. (weatherKinds.ts:110)
+/// `/^[\w.-]+\.json$/`: a plain file name of a level. (weatherKinds.ts:112)
 fn is_level_file(lf: &str) -> bool {
     match lf.strip_suffix(".json") {
         Some(stem) => !stem.is_empty() && stem.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'.' || c == b'-'),
@@ -190,18 +190,9 @@ pub fn unpack_fog(w: f64) -> Option<crate::weather_kinds::FogSpec> {
     })
 }
 
-/// Optical depth of the fog along a → b, before any roof. (weatherKinds.ts fogTau)
+/// Optical depth of the fog along a → b, before any roof: the module's. (weatherKinds.ts fogTau)
 pub fn fog_tau(f: crate::weather_kinds::FogSpec, a: V3, b: V3) -> f64 {
-    let l = m::hyp3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
-    if !(l > 0.0) {
-        return 0.0;
-    }
-    if !(f.h > 0.0) {
-        return f.sigma * l;
-    }
-    let ya = m::max(a[1], 0.0) / f.h;
-    let k = (m::max(b[1], 0.0) - m::max(a[1], 0.0)) / f.h;
-    f.sigma * m::exp(-ya) * l * (if m::abs(k) < 1e-3 { 1.0 - 0.5 * k } else { (1.0 - m::exp(-k)) / k })
+    ::sim::weather::fog_tau(f.sigma, f.h, a, b)
 }
 
 /// A roof's footprint in 32 bits, rounded outward; 0 = none. (weatherKinds.ts packRect)

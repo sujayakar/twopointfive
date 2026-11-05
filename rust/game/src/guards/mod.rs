@@ -18,8 +18,8 @@ pub use p_06::{search_probes, score_spots, spot_taken, pick_next_spot, search_su
 pub mod p_07;
 pub use p_07::{update_guard};
 pub mod p_08;
-pub use p_08::{collide_guard, sweep_statics, light_estimate_at, light_estimate_in, light_field, lamp_asked, write_lamps, carried, steady_lamps, steady_most, lamps_on, meter_of, unit_light_meter, acquire_foe, rig_of, long_rig_of, hand_carry, gun_back, in_hand, start_reload_beat, tick_reload_beat, burst_trigger, burst_summary, attach_flashlight, pose_flashlight, on_screen, in_view, bubble_secs, head_of};
+pub use p_08::{collide_guard, sweep_statics, light_estimate_at, light_estimate_in, light_field, lamp_asked, rows_of, write_lamps, carried, steady_lamps, lamps_on, meter_of, unit_light_meter, acquire_foe, rig_of, long_rig_of, hand_carry, gun_back, in_hand, start_reload_beat, tick_reload_beat, burst_trigger, burst_summary, attach_flashlight, pose_flashlight, on_screen, in_view, bubble_secs};
 pub mod p_09;
-pub use p_09::{say, reset_guards, escalation_of, escalation_name, escalation_summary, clearing_summary, spokesman, raise_escalation, stand_down_escalation, off_net, rollcall_state, rollcall_interval, radio_caller, checker_for, still_looking, pick_checker, send_check_on, check_on_tick, advance_check_on, check_on_done, update_rollcall, partner_watch, plan_clears, clear_queue_summary, force_clear, step_down_escalation, update_escalation, supervise_lockdown};
+pub use p_09::{head_of, say, reset_guards, escalation_of, escalation_name, escalation_summary, clearing_summary, spokesman, raise_escalation, stand_down_escalation, off_net, rollcall_state, rollcall_interval, radio_caller, checker_for, still_looking, pick_checker, send_check_on, check_on_tick, advance_check_on, check_on_done, update_rollcall, partner_watch, plan_clears, clear_queue_summary, force_clear, step_down_escalation, update_escalation, supervise_lockdown};
 pub mod p_10;
 pub use p_10::{assign_lockdown, clear_lockdown, route_length, follow_leader, hold_post, lockdown_doors, tension, spawn_unit, release_unit, despawn_unit, despawn_units, units, engagement_of, name_of_id, end_engagement, tick_engagement};

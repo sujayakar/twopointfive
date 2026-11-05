@@ -22,6 +22,7 @@
 //   bun run tools/qa/gunhand-whistle-check.ts           (both stands: it raises the switch itself)
 //   bun run tools/qa/probes.ts gunhand-whistle          (the same, as a probe of the 'gunhand' family; --verbose here prints each bench set)
 //   GUNHAND_BREAK=1 …                                   (the rule left off for the 'on' lines: (3), (4) and (9) must fail — (5) and (6) hold of the low carry too)
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 

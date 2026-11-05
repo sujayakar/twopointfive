@@ -1,4 +1,4 @@
-//! src/sim/lightshome.ts lines 1 to 276
+//! src/sim/lightshome.ts lines 1 to 277
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -286,7 +286,7 @@ pub fn light_home_add(g: &mut crate::game::Game, def: &crate::sim_lightshome::Fi
         panic!("a level of more than {} light fixtures got past game/levelfit.ts", TARGETS);
     }
     l.n = (n + 1) as u32;
-    l.bits[n] = if def.on { T_ON } else { 0 }
+    l.bits[n] = if def.on { T_ON | T_AUTHORED } else { 0 }
         | if def.broken { T_BROKEN } else { 0 }
         | if def.fluorescent_flicker { T_FLICKER } else { 0 }
         | if def.mains { T_MAINS } else { 0 }
@@ -366,9 +366,7 @@ pub fn light_home_stand(g: &mut crate::game::Game, list: &[LightId], targets: &[
         who.set(b.light, (R_BEACON, b.target, base));
     }
     for c in cones {
-        if let Some(l) = c.light {
-            who.set(l, (R_CONE, c.target, 0.0));
-        }
+        who.set(c.light, (R_CONE, c.target, 0.0));
     }
     let mut r: usize = 0;
     g.light_home.lamps = Vec::new();
@@ -380,7 +378,7 @@ pub fn light_home_stand(g: &mut crate::game::Game, list: &[LightId], targets: &[
             None => continue,
         };
         if js::truthy(g.tab.light[l].owner) {
-            continue; // (a lamp with an owner gets no row: `skipOwner` is the question's, and only the question's own lamps have one)
+            panic!("the lamp '{}' has an owner, and a fixture feeds it: `skipOwner` is the question's, and only the question's own lamps have one", g.tab.light[l].name);
         }
         if r >= ROWS {
             panic!("a level of more than {} lamps on its fixtures got past game/levelfit.ts", ROWS);
@@ -407,10 +405,8 @@ pub fn light_home_stand(g: &mut crate::game::Game, list: &[LightId], targets: &[
     }
     lights(g).beacons = beacons.len() as u32;
     for c in cones {
-        if let Some(l) = c.light {
-            let row = row_of(g, l);
-            lights(g).cam_row[c.slot as usize] = row;
-        }
+        let row = row_of(g, c.light);
+        lights(g).cam_row[c.slot as usize] = row;
     }
 }
 
@@ -514,16 +510,14 @@ pub fn light_home_paint(g: &mut crate::game::Game) {
 }
 
 /// A camera before its picture, and its cone to what the picture reads. → CAM bits. (lightshome.ts LightHome.cameraPan)
-pub fn light_home_camera_pan(g: &mut crate::game::Game, slot: f64, cone: Option<LightId>, dt: f64, live: bool, cones: bool) -> f64 {
+pub fn light_home_camera_pan(g: &mut crate::game::Game, slot: f64, cone: LightId, dt: f64, live: bool, cones: bool) -> f64 {
     let out = rs::camera_pan(g.sim, slot as usize, dt, live, cones);
-    if let Some(cone) = cone {
-        if let Some(r) = lamp_row(g, cone) {
-            let c = lights(g);
-            let lamp = &mut g.tab.light[cone];
-            lamp.enabled = c.row_bits[r] & R_ON != 0;
-            lamp.pos = [c.x[r], c.y[r], c.z[r]];
-            lamp.dir = [c.dx[r], c.dy[r], c.dz[r]];
-        }
+    if let Some(r) = lamp_row(g, cone) {
+        let c = lights(g);
+        let lamp = &mut g.tab.light[cone];
+        lamp.enabled = c.row_bits[r] & R_ON != 0;
+        lamp.pos = [c.x[r], c.y[r], c.z[r]];
+        lamp.dir = [c.dx[r], c.dy[r], c.dz[r]];
     }
     out as f64
 }
@@ -541,6 +535,11 @@ pub fn light_home_laser_open(g: &mut crate::game::Game, slot: f64) -> f64 {
 /// …and after it. → LASER bits. (lightshome.ts LightHome.laserClose)
 pub fn light_home_laser_close(g: &mut crate::game::Game, slot: f64, time: f64, live: bool, cut: f64, sense: f64, held: bool) -> f64 {
     rs::laser_close(g.sim, slot as usize, time, live, cut, sense, held) as f64
+}
+
+/// The block (a check's, and the reader's `rowsOf`): `st` is what the TypeScript's getter hands back; the slot it stands for is `g.sim`. (lightshome.ts LightHome.block)
+pub fn light_home_block(g: &mut crate::game::Game) -> crate::Opaque {
+    g.light_home.st
 }
 
 #[cfg(test)]
@@ -562,6 +561,7 @@ mod tests {
 
             g.light_home = light_home_new(g, crate::Opaque);
             assert_eq!(::sim::state::state(3).head.homes & 512, 512);
+            assert_eq!(light_home_block(g), crate::Opaque);
             assert_eq!((mains_active(g), mains_until(g), mains_since(g), mains_restored_at(g)), (false, -1.0, -1.0, -100.0));
 
             let a = light_home_add(g, &def(true, FixtureDefKind::Analytic));
@@ -569,13 +569,16 @@ mod tests {
             assert_eq!((g.tab.sim_lightshome_fixture[a].i, g.tab.sim_lightshome_fixture[b].i), (0.0, 1.0));
             assert_eq!(g.tab.sim_lightshome_fixture[b].kind, FixtureKind::Emissive);
             assert_eq!((fixture_on(g, a), fixture_on(g, b)), (true, false));
-            assert_eq!(lights(g).bits[1], T_MAINS | T_EMISSIVE);
+            assert_eq!((lights(g).bits[0], lights(g).bits[1]), (T_ON | T_AUTHORED | T_MAINS, T_MAINS | T_EMISSIVE));
             assert_eq!((fixture_factor(g, a), fixture_stagger(g, a), fixture_base_intensity(g, a), fixture_disabled_until(g, a)), (0.5, 0.25, 7.0, -1.0));
 
             // a kind and a fixture reach the right row; the default numbers are zeros
             light_home_in(g, light_in().on, Some(b), Some(1.0), None, None, None);
             assert!(fixture_on(g, b));
+            // on in the level is authored, by `add`; the event still says it of one fixture
+            assert!(fixture_authored(g, a) && !fixture_authored(g, b));
             light_home_in(g, light_in().authored, Some(b), Some(1.0), None, None, None);
+            light_home_in(g, light_in().authored, Some(a), Some(0.0), None, None, None);
             assert!(fixture_authored(g, b) && !fixture_authored(g, a));
 
             // the circuit reaches the module by its scratch table
@@ -637,13 +640,13 @@ mod tests {
 
             let a = light_home_add(g, &FixtureDef { light: Some(own), ..def(true, FixtureDefKind::Analytic) });
             let b = light_home_add(g, &FixtureDef { group: String::from("monitors"), area_lights: Some(vec![FixtureDefAreaLightsItem { light: panel, base: 2.5 }]), ..def(true, FixtureDefKind::Emissive) });
-            let c = light_home_add(g, &FixtureDef { light: Some(owned), ..def(true, FixtureDefKind::Analytic) });
+            let c = light_home_add(g, &def(true, FixtureDefKind::Analytic));
             let s = light_home_camera(g, c, 0.0, None, 6.0, 0.0, [0.0, 0.0, 0.0]);
             let (fa, fb, fc) = (&g.tab.sim_lightshome_fixture[a], &g.tab.sim_lightshome_fixture[b], &g.tab.sim_lightshome_fixture[c]);
-            assert!(fa.area_lights.is_none() && fb.area_lights.is_some() && fc.light == Some(owned));
+            assert!(fa.area_lights.is_none() && fb.area_lights.is_some() && fc.light.is_none());
 
-            // the list's order deals the rows, not the roles' order; no fixture's or an owner's lamp has none
-            light_home_stand(g, &[spot, none, own, owned, panel, cone], &[a, b, c], &[BeaconFact { light: spot, phase: 0.25, target: a }], &[LightHomeStandConesItem { light: Some(cone), target: c, slot: s }]);
+            // the list's order deals the rows, not the roles' order; a lamp nothing feeds has none, owner or not
+            light_home_stand(g, &[spot, none, own, owned, panel, cone], &[a, b, c], &[BeaconFact { light: spot, phase: 0.25, target: a }], &[LightHomeStandConesItem { light: cone, target: c, slot: s }]);
             let rows = |g: &Game, l: LightId| g.tab.light[l].row;
             assert_eq!((rows(g, spot), rows(g, none), rows(g, own), rows(g, owned), rows(g, panel), rows(g, cone)), (Some(0.0), None, Some(1.0), None, Some(2.0), Some(3.0)));
             assert_eq!(g.light_home.lamps, vec![spot, own, panel, cone]);
@@ -696,14 +699,41 @@ mod tests {
             assert_eq!(g.tab.light[cone].intensity, 0.0);
 
             // the cone copy: what camera_pan left in the row reaches the lamp; a cone with no row stays as it stood
-            let bits = light_home_camera_pan(g, s, Some(cone), 0.0, true, true);
+            let bits = light_home_camera_pan(g, s, cone, 0.0, true, true);
             let l = lights(g);
             assert_eq!((g.tab.light[cone].enabled, g.tab.light[cone].pos, g.tab.light[cone].dir), (l.row_bits[3] & R_ON != 0, [l.x[3], l.y[3], l.z[3]], [l.dx[3], l.dy[3], l.dz[3]]));
             assert_eq!(g.tab.light[cone].dir, [0.0, 0.0, 1.0]);
             g.tab.light[none].dir = [1.0, 0.0, 0.0];
-            assert_eq!(light_home_camera_pan(g, s, Some(none), 0.0, true, true), bits);
-            assert_eq!(light_home_camera_pan(g, s, None, 0.0, true, true), bits);
+            assert_eq!(light_home_camera_pan(g, s, none, 0.0, true, true), bits);
             assert_eq!(g.tab.light[none].dir, [1.0, 0.0, 0.0]);
         }).unwrap().join().unwrap();
+    }
+
+    /// a fixture's lamp with an owner, or a cone with no row, is a fault by name, not a lamp left out (lightshome.ts:189, :197; slots 0 and 1: the block has four, each one game's)
+    #[test]
+    fn stand_refuses_by_name() {
+        fn said(slot: usize, make: fn(&mut Game)) -> String {
+            let e = std::thread::Builder::new().stack_size(64 << 20).spawn(move || {
+                let mut g = Box::new(Game::blank());
+                g.sim = slot;
+                let g = &mut *g;
+                g.light_home = light_home_new(g, crate::Opaque);
+                make(g);
+            }).unwrap().join().unwrap_err();
+            e.downcast_ref::<String>().unwrap().clone()
+        }
+        let m = said(0, |g| {
+            let l = lamp(g, "owned", true);
+            g.tab.light[l].owner = 7.0;
+            let f = light_home_add(g, &FixtureDef { light: Some(l), ..def(true, FixtureDefKind::Analytic) });
+            light_home_stand(g, &[l], &[f], &[], &[]);
+        });
+        assert!(m.starts_with("the lamp 'owned' has an owner, and a fixture feeds it"), "{}", m);
+        let m = said(1, |g| {
+            let l = lamp(g, "lost", true);
+            let f = light_home_add(g, &def(true, FixtureDefKind::Device));
+            light_home_stand(g, &[], &[f], &[], &[LightHomeStandConesItem { light: l, target: f, slot: 0.0 }]);
+        });
+        assert!(m.starts_with("the lamp 'lost' has an owner or is not in the list"), "{}", m);
     }
 }

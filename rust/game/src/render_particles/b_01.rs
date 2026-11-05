@@ -22,3 +22,9 @@ pub fn particles_clear(g: &mut crate::game::Game) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/render/particles.ts:425 Particles.clearRain)
 pub fn particles_clear_rain(g: &mut crate::game::Game) {}
+
+/// BOUNDARY NO-OP (round three; the host's GPU particles: the callers ask `gpu_fx` first, which is false on a host with none): how many it took, none   (render/particles.ts:363 Particles.emit)
+pub fn particles_emit(g: &mut crate::game::Game, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 { 0.0 }
+
+/// BOUNDARY NO-OP (round three; the host's GPU particles)   (render/particles.ts:386 Particles.impulse)
+pub fn particles_impulse(g: &mut crate::game::Game, pos: V3, radius: f64, strength: f64, o: Option<&crate::render_particles::ImpulseOpts>) -> bool { false }

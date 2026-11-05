@@ -37,6 +37,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     crate::guards::load_body_light(g);
     let name = crate::scene_level_load::level_name_of(g);
     g.col = crate::scene_collision::new(g, &ids, name.as_deref());
+    crate::particle_fx::apply_dust_look(g);   // the dust LOOK table onto the kind the host attached, whether or not the switch is on yet; no system = nothing to do (game.ts:1108)
     let (men, fn2000) = (g.men, g.fn2000);
     let spawn = level.player_spawn;
     g.player = crate::game::player_new(g, men, ch, spawn, Some(fn2000), None);   // (first.player: g.seat is seats[0] all through the constructor)
@@ -122,14 +123,11 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
             let f = &g.tab.sim_lightshome_fixture[t];
             (f.kind, f.group.clone(), f.name.clone(), f.boxes.clone(), f.base_emissive)
         };
-        if kind != crate::sim_lightshome::FixtureKind::Emissive || group == "server_leds" || group == "emergency" || group == crate::carlamps::VEHICLE_GROUP { continue; }
+        if kind != crate::sim_lightshome::FixtureKind::Emissive { continue; }
         for &bi in boxes.iter() {
             let (h, c, yaw) = { let b = seam_box_row(g, ids[bi as usize]); (b.h, b.c, b.yaw) };
-            let thin: usize = if h[0] <= h[1] && h[0] <= h[2] { 0 } else if h[1] <= h[2] { 1 } else { 2 };
-            if h[thin] > 0.06 { continue; }
-            let (a0, a1) = ((thin + 1) % 3, (thin + 2) % 3);
-            let area = 4.0 * h[a0] * h[a1];
-            if area < 0.01 { continue; }
+            let Some(panel) = crate::levelfit::flat_panel(&group, &h) else { continue };   // (levelfit.ts: the one rule for which fixture box is an area light; the lamp bound asks it too)
+            let (thin, a0, a1, area) = (panel.thin as usize, panel.a0 as usize, panel.a1 as usize, panel.area);
             // emitting side: ceiling fixtures face down; wall / desk fixtures whichever side is open
             let n: V3 = if thin == 1 {
                 [0.0, if c[1] > 1.5 { -1.0 } else { 1.0 }, 0.0]
@@ -278,15 +276,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.shards = crate::shards::glass_shards_new(g);
     g.wind = crate::wind::wind_new(g);            // after the doors exist
     g.air_dust = crate::air_dust::air_dust_new(g);   // after the weather, the doors and the collision exist
-    for &t in g.targets.clone().iter() {
-        let on = if crate::sim_lightshome::fixture_on(g, t) { 1.0 } else { 0.0 };
-        crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().authored, Some(t), Some(on), None, None, None);   // the level as authored, for resetLevelState()
-    }
-    let list_now: Vec<LightId> = g.engine.lights.lights.clone();
-    let targets_now: Vec<FixtureId> = g.targets.clone();
-    let beacons_now: Vec<crate::sim_lightshome::BeaconFact> = g.beacons.iter().map(|b| crate::sim_lightshome::BeaconFact { light: b.light, phase: b.phase, target: b.target }).collect();
-    let cones: Vec<crate::sim_lightshome::LightHomeStandConesItem> = g.devices.cameras.iter().map(|&c| { let r = &g.tab.devices_camera_rt[c]; crate::sim_lightshome::LightHomeStandConesItem { light: r.cone, target: r.target, slot: r.slot } }).collect();
-    crate::sim_lightshome::light_home_stand(g, &list_now, &targets_now, &beacons_now, &cones);
+    crate::game::game_stand_lights(g);   // the lamps the fixtures feed, as rows in the list's order (rust/sim/src/lights.rs); a fixture's authored bit is said by its `add` now
     crate::civilians::spawn_civilians(g);   // after the shift, whose construction and dice they must not disturb
     g.fog_of_war = crate::fogofwar::fog_of_war_new(g);
     g.quiet = crate::quiet::quiet_mission_new(g);
@@ -312,6 +302,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     stand_each_seat(g, &mut |v: &mut Game| { crate::shutdoor::register_shut_door(v); });
     crate::seats::stand_men(g);   // a second seat's man and his light, made last
     g.director = crate::director::director_new(g, level.script.clone());   // the level's script: its define pass run and linted here, programs start on demand
+    crate::glassbreak::glass_break_stood(g);   // which glass each pane is, settled as the level stands
     let stood = stood_of(g, &level);
     let tables = crate::scene_box_mirror::box_mirror_tables(g);
     if let Some(over) = crate::levelfit::stood_over(g, &stood, &tables) { panic!("{}", over); }

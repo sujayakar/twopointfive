@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: LevelFit, src/game/levelfit.ts:59)
+/// (TypeScript: LevelFit, src/game/levelfit.ts:60)
 #[derive(Clone, Copy, Debug)]
 pub struct LevelFit {
     pub doors: f64,
@@ -34,7 +34,7 @@ impl LevelFit {
 }
 impl Default for LevelFit { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BreakRoom, src/game/levelfit.ts:89)
+/// (TypeScript: BreakRoom, src/game/levelfit.ts:99)
 #[derive(Clone, Copy, Debug)]
 pub struct BreakRoom {
     pub boxes: f64,
@@ -53,7 +53,7 @@ impl BreakRoom {
 }
 impl Default for BreakRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: FitRow, src/game/levelfit.ts:102)
+/// (TypeScript: FitRow, src/game/levelfit.ts:112)
 #[derive(Clone, Debug)]
 pub struct FitRow {
     pub row: String,
@@ -78,7 +78,7 @@ impl FitRow {
 }
 impl Default for FitRow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Stood, src/game/levelfit.ts:104)
+/// (TypeScript: Stood, src/game/levelfit.ts:114)
 #[derive(Clone, Debug)]
 pub struct Stood {
     pub level: crate::levelfit::StoodLevel,
@@ -109,7 +109,7 @@ impl Stood {
 }
 impl Default for Stood { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/levelfit.ts:105 Stood.level, src/game/levelfit.ts:105 Stood.level)
+/// (TypeScript: inline at src/game/levelfit.ts:115 Stood.level, src/game/levelfit.ts:115 Stood.level)
 #[derive(Clone, Debug)]
 pub struct StoodLevel {
     pub doors: Vec<crate::Opaque>,
@@ -138,7 +138,7 @@ impl StoodLevel {
 }
 impl Default for StoodLevel { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/levelfit.ts:62 StoodLevel.props, src/game/levelfit.ts:62)
+/// (TypeScript: inline at src/game/levelfit.ts:63 StoodLevel.props, src/game/levelfit.ts:63)
 #[derive(Clone, Debug)]
 pub struct StoodLevelPropsItem {
     pub parts: Vec<crate::Opaque>,
@@ -153,7 +153,7 @@ impl StoodLevelPropsItem {
 }
 impl Default for StoodLevelPropsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/levelfit.ts:62 StoodLevel.switchables, src/game/levelfit.ts:62)
+/// (TypeScript: inline at src/game/levelfit.ts:63 StoodLevel.switchables, src/game/levelfit.ts:63)
 #[derive(Clone, Debug)]
 pub struct StoodLevelSwitchablesItem {
     pub boxes: Vec<f64>,
@@ -170,7 +170,7 @@ impl StoodLevelSwitchablesItem {
 }
 impl Default for StoodLevelSwitchablesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/levelfit.ts:62 StoodLevel.devices, src/game/levelfit.ts:62)
+/// (TypeScript: inline at src/game/levelfit.ts:63 StoodLevel.devices, src/game/levelfit.ts:63)
 #[derive(Clone, Debug)]
 pub struct StoodLevelDevicesItem {
     pub kind: String,
@@ -185,7 +185,7 @@ impl StoodLevelDevicesItem {
 }
 impl Default for StoodLevelDevicesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/levelfit.ts:106 Stood.col, src/game/levelfit.ts:106)
+/// (TypeScript: inline at src/game/levelfit.ts:116 Stood.col, src/game/levelfit.ts:116)
 #[derive(Clone, Debug)]
 pub struct StoodCol {
     pub boxes: Vec<BoxId>,
@@ -202,7 +202,7 @@ impl StoodCol {
 }
 impl Default for StoodCol { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/levelfit.ts:107 Stood.props, src/game/levelfit.ts:107)
+/// (TypeScript: inline at src/game/levelfit.ts:117 Stood.props, src/game/levelfit.ts:117)
 #[derive(Clone, Debug)]
 pub struct StoodProps {
     pub all: Vec<crate::levelfit::StoodPropsAllItem>,
@@ -217,7 +217,7 @@ impl StoodProps {
 }
 impl Default for StoodProps { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/levelfit.ts:107 StoodProps.all, src/game/levelfit.ts:107)
+/// (TypeScript: inline at src/game/levelfit.ts:117 StoodProps.all, src/game/levelfit.ts:117)
 #[derive(Clone, Debug)]
 pub struct StoodPropsAllItem {
     pub boxes: Vec<crate::Opaque>,
@@ -232,7 +232,7 @@ impl StoodPropsAllItem {
 }
 impl Default for StoodPropsAllItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/levelfit.ts:54 handOverMost ->, src/game/levelfit.ts:54)
+/// (TypeScript: inline at src/game/levelfit.ts:55 handOverMost ->, src/game/levelfit.ts:55)
 #[derive(Clone, Copy, Debug)]
 pub struct HandOverMost {
     pub door_men: f64,
@@ -249,7 +249,7 @@ impl HandOverMost {
 }
 impl Default for HandOverMost { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/levelfit.ts:62 levelCounts(level), src/game/levelfit.ts:62)
+/// (TypeScript: inline at src/game/levelfit.ts:63 levelCounts(level), src/game/levelfit.ts:63)
 #[derive(Clone, Debug)]
 pub struct LevelCountsLevel {
     pub doors: Vec<crate::Opaque>,
@@ -275,3 +275,24 @@ impl LevelCountsLevel {
     }
 }
 impl Default for LevelCountsLevel { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/levelfit.ts:76 flatPanel ->, src/game/levelfit.ts:76)
+#[derive(Clone, Copy, Debug)]
+pub struct FlatPanel {
+    pub thin: f64,
+    pub a0: f64,
+    pub a1: f64,
+    pub area: f64,
+}
+impl FlatPanel {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        FlatPanel {
+            thin: 0.0,
+            a0: 0.0,
+            a1: 0.0,
+            area: 0.0,
+        }
+    }
+}
+impl Default for FlatPanel { fn default() -> Self { Self::zeroed() } }

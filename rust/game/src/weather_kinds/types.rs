@@ -28,7 +28,7 @@ impl WeatherKind {
     }
 }
 
-/// (TypeScript: FogSpec, src/game/weatherKinds.ts:19)
+/// (TypeScript: FogSpec, src/game/weatherKinds.ts:21)
 #[derive(Clone, Copy, Debug)]
 pub struct FogSpec {
     pub sigma: f64,
@@ -51,7 +51,7 @@ impl FogSpec {
 }
 impl Default for FogSpec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WeatherPreset, src/game/weatherKinds.ts:25)
+/// (TypeScript: WeatherPreset, src/game/weatherKinds.ts:27)
 #[derive(Clone, Debug)]
 pub struct WeatherPreset {
     pub title: String,
@@ -80,7 +80,7 @@ impl WeatherPreset {
 }
 impl Default for WeatherPreset { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weatherKinds.ts:159 WEATHER_BOOT, src/game/weatherKinds.ts:159)
+/// (TypeScript: inline at src/game/weatherKinds.ts:158 WEATHER_BOOT, src/game/weatherKinds.ts:158)
 #[derive(Clone, Copy, Debug)]
 pub struct WeatherKindsModWEATHERBOOT {
     pub kind: Option<crate::weather_kinds::WeatherKind>,
@@ -109,9 +109,9 @@ pub enum WeatherOfSearchSearch {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct WeatherKindsMod {
-    /// (src/game/weatherKinds.ts:39 WEATHER_PRESETS)
+    /// (src/game/weatherKinds.ts:41 WEATHER_PRESETS)
     pub weather_presets: JsMap<crate::weather_kinds::WeatherKind, crate::weather_kinds::WeatherPreset>,
-    /// (src/game/weatherKinds.ts:159 WEATHER_BOOT)
+    /// (src/game/weatherKinds.ts:158 WEATHER_BOOT)
     pub weather_boot: crate::weather_kinds::WeatherKindsModWEATHERBOOT,
 }
 impl WeatherKindsMod {
@@ -123,17 +123,17 @@ impl WeatherKindsMod {
     }
 }
 
-/// (src/game/weatherKinds.ts:14 MAX_ROOFS)
+/// (src/game/weatherKinds.ts:16 MAX_ROOFS)
 pub const MAX_ROOFS: f64 = 4.0;
 
-/// (src/game/weatherKinds.ts:17 WEATHER_KINDS: a table nothing writes)
+/// (src/game/weatherKinds.ts:19 WEATHER_KINDS: a table nothing writes)
 pub fn weather_kinds() -> Vec<String> { alloc::vec![String::from("clear"), String::from("overcast"), String::from("rain"), String::from("downpour"), String::from("fog"), String::from("dust")] }
 
-/// (src/game/weatherKinds.ts:106 SNOW_LEVELS: a table nothing writes)
+/// (src/game/weatherKinds.ts:108 SNOW_LEVELS: a table nothing writes)
 pub fn snow_levels() -> Vec<String> { alloc::vec![String::from("pass"), String::from("tut-sky"), String::from("tut-team"), String::from("tut-quiet"), String::from("tut-road")] }
 
-/// (src/game/weatherKinds.ts:144 ROOF_Q)
+/// (src/game/weatherKinds.ts:143 ROOF_Q)
 pub const ROOF_Q: f64 = 0.2;
 
-/// (src/game/weatherKinds.ts:173 WEATHER_KEY)
+/// (src/game/weatherKinds.ts:172 WEATHER_KEY)
 pub const WEATHER_KEY: &str = "weather";

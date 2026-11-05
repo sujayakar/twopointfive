@@ -689,7 +689,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
     let r = crate::game::game_light_at(g, &key);
     let e = match r {
         Some(x) if x.is_finite() => x,
-        _ => crate::guards::light_estimate_at(g, at, None, None, None, None),
+        _ => crate::guards::light_estimate_at(g, at, None, None, None, None, None),
     };
     let dt = match was {
         Some(row) => m::min(0.1, m::max(0.0, now - row.t)),

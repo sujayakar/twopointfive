@@ -17,6 +17,7 @@
 //! √, floor and trunc, which the core library lacks, come from rust/prim.
 #![no_std]
 
+pub mod air;
 pub mod bricks;
 pub mod clips;
 pub mod collide;
@@ -35,6 +36,9 @@ pub mod lines;
 pub mod maths;
 pub mod men;
 pub mod nav;
+pub mod panes;
+pub mod pattern;
+pub mod pen;
 pub mod poses;
 pub mod props;
 mod pow10;
@@ -44,7 +48,10 @@ pub mod skeleton;
 pub mod items;
 pub mod slabs;
 pub mod smoke;
+pub mod snow;
 pub mod state;
+pub mod weather;
+pub mod wind;
 pub mod world;
 
 /// How many doubles the scratch holds.
@@ -53,7 +60,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 30;
+pub const ABI: u32 = 34;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -151,6 +158,16 @@ pub extern "C" fn lines_leaves(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1:
 #[no_mangle]
 pub extern "C" fn world_glass(w: usize, n: u32) {
     world::world(w).glass_n = if (n as usize) < world::MAX_GLASS { n } else { world::MAX_GLASS as u32 };
+}
+/// the level's sheets of glass for world `w` (scratch: a static, how far it stands from a door's opening, which face has the sky, each)
+#[no_mangle]
+pub extern "C" fn world_sheets(w: usize, n: usize) {
+    let (o, d) = (world::world(w), scratch());
+    let n = if n < world::MAX_SHEETS { n } else { world::MAX_SHEETS };
+    for i in 0..n {
+        o.sheets[i] = world::Sheet { bi: d[3 * i] as u32, gap: d[3 * i + 1], sky: d[3 * i + 2] as i32 };
+    }
+    o.sheet_n = n as u32;
 }
 /// a burst's view of the glass of world `w` for the judgment in hand (glass.rs VIEW_*; 0 = none), and how many panes its rows name
 #[no_mangle]
@@ -841,14 +858,26 @@ pub extern "C" fn light_lamps() -> usize {
 pub extern "C" fn light_cap() -> usize {
     light::MAX_LAMPS
 }
-/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `more` ≠ 0: a later
-/// PART of the question the call before began (the faces are kept in light.rs SUM from part to part and summed on, not begun again).
+/// what a question says of the level's rows (light.rs Rows), from the three numbers the host hands over: the slot of the block whose lights' part
+/// holds them, the bits it leaves out (lights.rs R_*), and `how` (1: the rows are read at all · 2: a row's steady self is taken · 4: this is the
+/// question's last part)
+fn light_rows(lg: usize, leave: u32, how: u32) -> Option<light::Rows> {
+    if how & 1 != 0 && lg < state::GAMES {
+        Some(light::Rows { g: lg, leave, steady: how & 2 != 0 })
+    } else {
+        None
+    }
+}
+/// guards.ts lightEstimateAt's lamps: the first `n` written and the level's rows (`lg`, `leave`, `how`: light_rows), as one list in the engine's order:
+/// the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `more` ≠ 0: a later PART of the question the call before began (the faces and the
+/// place among the rows are kept in light.rs from part to part and gone on from, not begun again).
 /// `sigma` > 0: each lamp is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is `stamp` (bricks.rs; `stands` = 0:
 /// no grid stands there), and where the grid cannot answer by the first `nb` blobs written (smoke.rs) under `spread`, `widest`, `rise`, `rise_rate`;
 /// 0: none of those is read
 #[no_mangle]
-pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64, stands: u32, more: u32, nb: usize, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> u32 {
-    light::asked(w, set, n, [p0, p1, p2], sigma, g, stamp, stands != 0, more != 0, nb, [spread, widest, rise, rise_rate], &mut scratch()[..6])
+pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64, stands: u32, more: u32, nb: usize, spread: f64, widest: f64, rise: f64, rise_rate: f64, lg: usize, leave: u32, how: u32) -> u32 {
+    let shade = light::Shade { sigma, g, stamp, stands: stands != 0, nb, k: [spread, widest, rise, rise_rate] };
+    light::asked(w, set, n, [p0, p1, p2], &shade, more != 0, light_rows(lg, leave, how), how & 4 != 0, &mut scratch()[..6])
 }
 /// where a question's blobs are written (smoke::BLOB doubles a blob), and how many it can carry
 #[no_mangle]
@@ -944,11 +973,11 @@ pub extern "C" fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
 /// `n` steps of a tenth of a second under the model's numbers, over the copy as it stands and the leaves of list `set`: 0 · 0xffffffff = no grid stands
 /// on this level, and nothing was done. `emits`: that many emitters join the list first, written in the scratch from its start, six doubles each
 /// (where, how wide in metres, what it lets out a second in unit·m³, for how long). `lamps` ≥ 0 = the light that comes round is stepped too (glow.rs),
-/// from that many lamps written as for a question about the light. `wind_x`, `wind_z` not both 0 = the smoke under the open sky drifts by that
+/// from the level's rows (`lg`, `leave`, `how`: light_rows) and that many lamps written beside them as for a question about the light. `wind_x`, `wind_z` not both 0 = the smoke under the open sky drifts by that
 /// vector (m/s), by the shares of it written at `grid_wind` and its rise with height (`wind_low` of it at the ground, `wind_gain` more by
 /// `wind_full_at` metres up); there the smoke keeps `wind_keep` of its own spread
 #[no_mangle]
-pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64, wind_x: f64, wind_z: f64, wind_low: f64, wind_gain: f64, wind_full_at: f64, wind_keep: f64) -> u32 {
+pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64, wind_x: f64, wind_z: f64, wind_low: f64, wind_gain: f64, wind_full_at: f64, wind_keep: f64, lg: usize, leave: u32, how: u32) -> u32 {
     // (a wind that is no number, or whose rise with height is none, is still air: the block is the game's state, and what is no number spreads)
     let real = |v: f64| v - v == 0.0;
     let windy = real(wind_x) && real(wind_z) && real(wind_low) && real(wind_gain) && real(wind_full_at) && real(wind_keep) && wind_low >= 0.0 && wind_gain >= 0.0 && wind_full_at > 0.0;
@@ -958,7 +987,7 @@ pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32,
     if lamps < 0 {
         bricks::step(g, stamp, w, copy, set, n, emits, &k, None)
     } else {
-        bricks::step(g, stamp, w, copy, set, n, emits, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize }))
+        bricks::step(g, stamp, w, copy, set, n, emits, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize, rows: light_rows(lg, leave, how) }))
     }
 }
 /// where the host writes the wind's share of each square metre of the plan before a step that has wind (bricks.rs WIND: `grid_wind_cap` doubles, row
@@ -975,4 +1004,536 @@ pub extern "C" fn grid_wind_cap() -> usize {
 #[no_mangle]
 pub extern "C" fn grid_trans(g: usize, stamp: f64, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64) -> f64 {
     bricks::trans(g, stamp, [a0, a1, a2], [b0, b1, b2], sigma)
+}
+
+// ---- WHAT A PANE OF GLASS IS TO PLAY (panes.rs, pen.rs): the state in the game's block, the rule, a round's toll. A rule's call names its game, its world, the leaves
+// and the time once (`panes_ctx`), and what it let go is read from `panes_out_*` and cleared before the next pane's.
+static mut PANE_CTX: panes::Ctx = panes::Ctx { g: 0, w: 0, set: -1, now: 0.0, shards: false, gravity: 9.81 };
+#[inline(always)]
+fn cx() -> panes::Ctx {
+    unsafe { PANE_CTX }
+}
+#[no_mangle]
+pub extern "C" fn panes_ctx(g: usize, w: usize, set: i32, now: f64, shards: u32, gravity: f64) {
+    unsafe { PANE_CTX = panes::Ctx { g, w, set, now, shards: shards != 0, gravity } };
+}
+#[no_mangle]
+pub extern "C" fn panes_world(w: usize, g: i32) {
+    world::world(w).panes_g = (g + 1) as u32;
+}
+#[no_mangle]
+pub extern "C" fn panes_view(w: usize, kind: u32, x: f64, y: f64, z: f64, radius: f64, power: f64, sure: f64) {
+    let o = world::world(w);
+    o.view_kind = kind;
+    o.view_n = 0;
+    o.view_at = [x, y, z, radius, power, sure];
+}
+/// glassbreak.ts impact: live 1 · was open 2 · punched 4 · diced 8 · cracked 16 · the glass × 32 · fragments let go × 256
+#[no_mangle]
+pub extern "C" fn panes_impact(bi: u32, x: f64, y: f64, z: f64, has_dir: u32, dx: f64, dy: f64, dz: f64, energy: f64, who: f64, through: i32) -> u32 {
+    let r = panes::impact(&cx(), bi, [x, y, z], if has_dir != 0 { Some([dx, dy, dz]) } else { None }, energy, who, through);
+    r.live as u32 | (r.was_open as u32) << 1 | (r.punched as u32) << 2 | (r.diced as u32) << 3 | (r.cracked as u32) << 4 | r.ty << 5 | r.released << 8
+}
+#[no_mangle]
+pub extern "C" fn panes_widen(bi: u32, x: f64, y: f64, z: f64) -> u32 {
+    panes::widen(&cx(), bi, [x, y, z])
+}
+#[no_mangle]
+pub extern "C" fn panes_blast_begin(x: f64, y: f64, z: f64) {
+    panes::blast_begin(&cx(), [x, y, z]);
+}
+#[no_mangle]
+pub extern "C" fn panes_blast_sheet(s: usize, x: f64, y: f64, z: f64, radius: f64, power: f64, who: f64) -> u32 {
+    panes::blast_sheet(&cx(), s, [x, y, z], radius, power, who) as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_sheets() -> u32 {
+    panes::sheet_count(&cx())
+}
+#[no_mangle]
+pub extern "C" fn panes_frame_begin(g: usize) {
+    panes::frame_begin(g);
+}
+#[no_mangle]
+pub extern "C" fn panes_men_addr() -> usize {
+    panes::men_addr()
+}
+#[no_mangle]
+pub extern "C" fn panes_men(n: usize) {
+    panes::men_set(n);
+}
+#[no_mangle]
+pub extern "C" fn panes_step(r: usize) {
+    panes::step_row(&cx(), r);
+}
+#[no_mangle]
+pub extern "C" fn panes_reset(g: usize) {
+    panes::reset(g);
+}
+#[no_mangle]
+pub extern "C" fn panes_set_type(g: usize, bi: u32, ty: u32) {
+    panes::set_type(g, bi, ty);
+}
+#[no_mangle]
+pub extern "C" fn panes_type(bi: u32) -> u32 {
+    panes::type_of_pane(&cx(), bi)
+}
+/// glassbreak.ts typeOf: by its wall or its place, whatever word it has been given
+/// glassbreak.ts typeOf of a box the level does not hold: indoors, by its place
+#[no_mangle]
+pub extern "C" fn panes_type_box(h0: f64, h1: f64, h2: f64, cy: f64, gap: f64) -> u32 {
+    panes::place_rule(false, h0, h1, h2, cy, gap)
+}
+#[no_mangle]
+pub extern "C" fn panes_type_place(bi: u32) -> u32 {
+    panes::type_place(&cx(), bi)
+}
+/// the open threshold the renderer reads (clumps whose key is under it are out)
+#[no_mangle]
+pub extern "C" fn panes_dice_threshold(g: usize, bi: u32) -> f64 {
+    panes::dice_threshold(g, bi)
+}
+#[no_mangle]
+pub extern "C" fn panes_sky(bi: u32) -> i32 {
+    panes::sky_known(&cx(), bi)
+}
+#[no_mangle]
+pub extern "C" fn panes_open_at(g: usize, bi: u32, x: f64, y: f64, z: f64) -> u32 {
+    panes::open_at(g, bi, x, y, z) as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_walkable(g: usize, bi: u32) -> u32 {
+    panes::walkable(g, bi) as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_fraction(g: usize, bi: u32) -> f64 {
+    panes::open_fraction(g, bi)
+}
+#[no_mangle]
+pub extern "C" fn panes_sig(g: usize) -> i32 {
+    panes::open_sig(g)
+}
+#[no_mangle]
+pub extern "C" fn panes_out_addr() -> usize {
+    panes::out_addr()
+}
+#[no_mangle]
+pub extern "C" fn panes_out_pts_addr() -> usize {
+    panes::out_pts_addr()
+}
+#[no_mangle]
+pub extern "C" fn panes_out_n() -> usize {
+    panes::out_n()
+}
+#[no_mangle]
+pub extern "C" fn panes_out_clear() {
+    panes::out_clear();
+}
+#[no_mangle]
+pub extern "C" fn panes_take_wrote() -> u32 {
+    panes::take_wrote() as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_take_gust(g: usize) -> u32 {
+    panes::take_gust(g) as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_field(i: u32) -> usize {
+    panes::field(i)
+}
+#[no_mangle]
+pub extern "C" fn panes_row_addr(g: usize, r: usize) -> usize {
+    panes::row_addr(g, r)
+}
+#[no_mangle]
+pub extern "C" fn panes_q_addr(g: usize) -> usize {
+    panes::q_addr(g)
+}
+#[no_mangle]
+pub extern "C" fn panes_row_n(g: usize) -> u32 {
+    panes::row_n(g)
+}
+#[no_mangle]
+pub extern "C" fn panes_row_index(g: usize, bi: u32) -> i32 {
+    panes::row_index(g, bi)
+}
+/// which pieces of pane `bi` are held, a bit a piece (`without`: as if this piece were out, a tool's question): where the 21 words are
+#[no_mangle]
+pub extern "C" fn panes_held(g: usize, bi: u32, without: i32) -> usize {
+    panes::held_bits(g, bi, without).as_ptr() as usize
+}
+#[no_mangle]
+pub extern "C" fn panes_tally() -> usize {
+    core::ptr::addr_of!(panes::TALLY) as usize
+}
+#[no_mangle]
+pub extern "C" fn panes_heard(g: usize, pane: u32, who: f64, now: f64, gap: f64) -> u32 {
+    panes::heard_gap(g, pane, who, now, gap) as u32
+}
+#[no_mangle]
+pub extern "C" fn panes_forget_heard(g: usize) {
+    panes::forget_heard(g);
+}
+/// glass.ts boxSeed of a box of the world; pointSeed
+#[no_mangle]
+pub extern "C" fn panes_box_seed(cx0: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64) -> u32 {
+    let mut b = [0.0; world::REC];
+    b[world::R_C] = cx0;
+    b[world::R_C + 1] = cy;
+    b[world::R_C + 2] = cz;
+    b[world::R_H] = hx;
+    b[world::R_H + 1] = hy;
+    b[world::R_H + 2] = hz;
+    panes::box_seed(&b)
+}
+#[no_mangle]
+pub extern "C" fn panes_point_seed(word: u32, x: f64, y: f64, z: f64) -> u32 {
+    panes::point_seed(word, x, y, z)
+}
+/// shards.ts crossed: a round's exit jet, its glass comes down where the jet does. `amount`: m² of it.
+#[no_mangle]
+pub extern "C" fn panes_jet(x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, speed: f64, amount: f64, who: f64) {
+    panes::jet(&cx(), [x, y, z], [dx, dy, dz], speed, amount, who);
+}
+
+/// what a game holds of what levelfit.ts counts: 0 window's bars gone · 1 clumps of a sheet
+#[no_mangle]
+pub extern "C" fn panes_cap(i: u32) -> u32 {
+    (if i == 0 { panes::MAX_BARS } else { pattern::MAX_CLUMPS }) as u32
+}
+
+// ---- a window's bar
+/// winbars.ts breakBar: 1 this bar goes, its flags as it stood filed
+#[no_mangle]
+pub extern "C" fn bars_take(bi: u32, flags: u32) -> u32 {
+    panes::bar_take(&cx(), bi, flags) as u32
+}
+/// winbars.ts barsBlast: how many bars a charge takes, and in scratch a static and the point each
+#[no_mangle]
+pub extern "C" fn bars_blast(x: f64, y: f64, z: f64, reach: f64, statics: usize) -> usize {
+    panes::bars_blast(&cx(), [x, y, z], reach, statics, scratch())
+}
+#[no_mangle]
+pub extern "C" fn bars_gone(g: usize) -> u32 {
+    panes::bars_gone(g)
+}
+#[no_mangle]
+pub extern "C" fn bar_gone(g: usize, i: usize) -> u32 {
+    panes::bar_gone(g, i)
+}
+#[no_mangle]
+pub extern "C" fn bar_flags(g: usize, i: usize) -> u32 {
+    panes::bar_flags(g, i)
+}
+#[no_mangle]
+pub extern "C" fn bars_clear(g: usize) {
+    panes::bars_clear(g);
+}
+
+// ---- a round and a pane (pen.rs)
+/// glasspen.ts paneToll: 1 and scratch 0 … 7 (the glass, the normal, the cosine, what it takes, what is left, by a hole) · 0 spent in it
+#[no_mangle]
+pub extern "C" fn pen_toll(bi: u32, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, e: f64, nth: usize) -> u32 {
+    match pen::pane_toll(&cx(), bi, [x, y, z], [dx, dy, dz], e, nth) {
+        Some(t) => {
+            let s = scratch();
+            s[0] = t.ty as f64;
+            s[1] = t.n[0];
+            s[2] = t.n[1];
+            s[3] = t.n[2];
+            s[4] = t.cos;
+            s[5] = t.take;
+            s[6] = t.e_out;
+            s[7] = t.hole as u32 as f64;
+            1
+        }
+        None => 0,
+    }
+}
+/// glasspen.ts paneCrossing: 1 and the crossing → scratch 0 … 24, what it is born in → scratch 25 · 0 spent in it
+#[no_mangle]
+pub extern "C" fn pen_cross(bi: u32, ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t: f64, e: f64, nth: usize) -> u32 {
+    match pen::pane_crossing(&cx(), bi, [ox, oy, oz], [dx, dy, dz], t, e, nth) {
+        Some(x) => {
+            let s = scratch();
+            pen::write_cross(&x, &mut s[..pen::CROSS]);
+            s[pen::CROSS] = x.into as f64;
+            1
+        }
+        None => 0,
+    }
+}
+/// glasspen.ts roundPath. `fi` < −1: no first ray given is no case here, the caller always has one (−1: it met nothing). → 0: it crosses no pane · 1, and what it comes to →
+/// `pen_path_head`, the legs and crossings → scratch
+#[no_mangle]
+pub extern "C" fn pen_path(x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, range: f64, energy: f64, nth0: usize, ft: f64, fi: i32, fnx: f64, fny: f64, fnz: f64) -> u32 {
+    let first = if fi >= 0 { Some((ft, fi, [fnx, fny, fnz])) } else { None };
+    let s = scratch();
+    match pen::round_path(&cx(), [x, y, z], [dx, dy, dz], range, energy, first, nth0, &mut s[..]) {
+        Some(p) => {
+            let head = unsafe { &mut *core::ptr::addr_of_mut!(PEN_HEAD) };
+            head[0] = p.legs as f64;
+            head[1] = p.crosses as f64;
+            head[2] = p.len;
+            match p.st {
+                Some((t, i, n)) => {
+                    head[3] = i as f64;
+                    head[4] = t;
+                    head[5] = n[0];
+                    head[6] = n[1];
+                    head[7] = n[2];
+                }
+                None => head[3] = -1.0,
+            }
+            head[8..8 + pen::MAX_CROSS].copy_from_slice(&p.into);
+            1
+        }
+        None => 0,
+    }
+}
+static mut PEN_HEAD: [f64; 8 + pen::MAX_CROSS] = [0.0; 8 + pen::MAX_CROSS];
+#[no_mangle]
+pub extern "C" fn pen_path_head() -> usize {
+    core::ptr::addr_of!(PEN_HEAD) as usize
+}
+/// glasspen.ts armThroughGlass's walk: −1 the old rule stands · n panes took, their crossings → scratch; the energy left → the last double of the scratch
+#[no_mangle]
+pub extern "C" fn pen_arm(fx: f64, fy: f64, fz: f64, mx: f64, my: f64, mz: f64, dx: f64, dy: f64, dz: f64, energy: f64) -> i32 {
+    let s = scratch();
+    let mut left = 0.0;
+    let n = pen::arm_walk(&cx(), [fx, fy, fz], [mx, my, mz], [dx, dy, dz], energy, &mut s[..SCRATCH_LEN - 1], &mut left);
+    s[SCRATCH_LEN - 1] = left;
+    n
+}
+/// glasspen.ts shotPasses over the panes in scratch (a static and how far along each)
+#[no_mangle]
+pub extern "C" fn pen_passes(ax: f64, ay: f64, az: f64, rx: f64, ry: f64, rz: f64, n: usize, energy: f64) -> u32 {
+    let s = scratch();
+    let mut list = [0.0; 2 * world::MAX_PANES];
+    let n = if n > world::MAX_PANES { world::MAX_PANES } else { n };
+    list[..2 * n].copy_from_slice(&s[..2 * n]);
+    pen::shot_passes(&cx(), [ax, ay, az], [rx, ry, rz], &list[..2 * n], energy) as u32
+}
+#[no_mangle]
+pub extern "C" fn pen_add_hole(g: usize, bi: u32, x: f64, y: f64, z: f64) {
+    pen::add_hole(g, bi, [x, y, z]);
+}
+/// how many rows of holes; row r's pane, how many crossings it holds, and where its points are from the block's start
+#[no_mangle]
+pub extern "C" fn pen_hole_rows(g: usize) -> u32 {
+    panes::hole_rows(g)
+}
+#[no_mangle]
+pub extern "C" fn pen_hole_bi(g: usize, r: usize) -> u32 {
+    panes::hole_bi(g, r)
+}
+#[no_mangle]
+pub extern "C" fn pen_hole_n(g: usize, r: usize) -> u32 {
+    panes::hole_n(g, r)
+}
+#[no_mangle]
+pub extern "C" fn pen_hole_pt(g: usize, r: usize, i: usize) -> f64 {
+    panes::hole_pt(g, r, i)
+}
+#[no_mangle]
+pub extern "C" fn pen_clear_holes(g: usize) {
+    panes::clear_holes(g);
+}
+
+// ---- the weather that play reads (wind.rs, weather.rs, air.rs, snow.rs; src/sim/weatherhome.ts is the host's half)
+/// the field's shape by place (wind.rs SHAPE)
+#[no_mangle]
+pub extern "C" fn wind_shape(i: usize) -> f64 {
+    wind::SHAPE[i]
+}
+/// wind.ts jetVel: the air → scratch 0‥2
+#[no_mangle]
+pub extern "C" fn wind_jet(o0: f64, o1: f64, o2: f64, d0: f64, d1: f64, d2: f64, speed: f64, reach: f64, tan_spread: f64, r0: f64, d_max: f64, floor_y: f64, p0: f64, p1: f64, p2: f64) {
+    let v = wind::jet_vel([o0, o1, o2], [d0, d1, d2], speed, reach, tan_spread, r0, d_max, floor_y, [p0, p1, p2]);
+    scratch()[..3].copy_from_slice(&v);
+}
+/// wind.ts stormVel: the air → scratch 0‥2
+#[no_mangle]
+pub extern "C" fn wind_storm(w0: f64, w1: f64, w2: f64, i0: f64, i1: f64, i2: f64, i3: f64, a0: f64, a1: f64, a2: f64, a3: f64, p0: f64, p1: f64, p2: f64) {
+    let v = wind::storm_vel([w0, w1, w2], &[i0, i1, i2, i3], &[a0, a1, a2, a3], [p0, p1, p2]);
+    scratch()[..3].copy_from_slice(&v);
+}
+/// wind.ts stormVelRoofs: the `n` roofs at scratch 0, four doubles each; the air → scratch 0‥2
+#[no_mangle]
+pub extern "C" fn wind_storm_roofs(w0: f64, w1: f64, w2: f64, n: usize, p0: f64, p1: f64, p2: f64) {
+    let v = wind::storm_vel_roofs([w0, w1, w2], &scratch()[..16], n, [p0, p1, p2]);
+    scratch()[..3].copy_from_slice(&v);
+}
+/// wind.ts vnoise
+#[no_mangle]
+pub extern "C" fn wind_noise(seed: u32, x: f64) -> f64 {
+    wind::vnoise(seed, x)
+}
+/// where a column of the weather's table stands in its part, in bytes (weather.rs col)
+#[no_mangle]
+pub extern "C" fn weather_col(i: u32) -> usize {
+    weather::col(i)
+}
+/// sizes the host holds its own to: 0 roofs · 1 thunder rows · 2 the plan's cells across · 3 down
+#[no_mangle]
+pub extern "C" fn weather_cap(i: u32) -> usize {
+    match i {
+        0 => weather::ROOFS,
+        1 => weather::THUNDERS,
+        2 => air::AIR_W,
+        _ => air::AIR_H,
+    }
+}
+#[no_mangle]
+pub extern "C" fn weather_under_roof(g: usize, x: f64, z: f64) -> u32 {
+    weather::under_roof(weather::of(g), x, z) as u32
+}
+#[no_mangle]
+pub extern "C" fn weather_rain_bed(g: usize, x: f64, z: f64) -> f64 {
+    weather::rain_bed(weather::of(g), x, z)
+}
+#[no_mangle]
+pub extern "C" fn weather_hear_mask(g: usize, time: f64, x: f64, z: f64) -> f64 {
+    weather::hear_mask(weather::of(g), time, x, z)
+}
+#[no_mangle]
+pub extern "C" fn weather_fog_tau(sigma: f64, h: f64, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> f64 {
+    weather::fog_tau(sigma, h, [a0, a1, a2], [b0, b1, b2])
+}
+#[no_mangle]
+pub extern "C" fn weather_air_trans(g: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> f64 {
+    weather::air_trans(weather::of(g), [a0, a1, a2], [b0, b1, b2])
+}
+/// roofsOf, a box at a time: begin · each box · end (how many, the footprints → scratch)
+#[no_mangle]
+pub extern "C" fn weather_roofs_begin() {
+    weather::roofs_begin()
+}
+#[no_mangle]
+pub extern "C" fn weather_roofs_box(cx: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64, ceiling: f64) {
+    weather::roofs_box(cx, cy, cz, hx, hy, hz, ceiling)
+}
+#[no_mangle]
+pub extern "C" fn weather_roofs_end() -> usize {
+    weather::roofs_end(&mut scratch()[..])
+}
+#[no_mangle]
+pub extern "C" fn weather_roofs_seen() -> usize {
+    weather::roofs_seen()
+}
+#[no_mangle]
+pub extern "C" fn weather_gap(g: usize, first: u32) -> f64 {
+    weather::gap(weather::of(g), first != 0)
+}
+#[no_mangle]
+pub extern "C" fn weather_stroke_due(g: usize, time: f64) -> u32 {
+    weather::stroke_due(weather::of(g), time) as u32
+}
+/// Weather.strike's dice: NaN = thrown for. → scratch 0‥7
+#[no_mangle]
+pub extern "C" fn weather_strike(g: usize, time: f64, bearing: f64, elev_deg: f64, dist_km: f64, peak: f64) {
+    weather::strike(weather::of(g), time, bearing, elev_deg, dist_km, peak, &mut scratch()[..])
+}
+/// a thunder put on its way by hand
+#[no_mangle]
+pub extern "C" fn weather_thunder_add(g: usize, at: f64, dist: f64, bearing: f64, loud: f64) {
+    weather::thunder_push(weather::of(g), at, dist, bearing, loud)
+}
+/// thunder `i` asked: 1 = due, gone from the list, its numbers and dice → scratch 0‥6
+#[no_mangle]
+pub extern "C" fn weather_thunder_due(g: usize, i: usize, time: f64) -> u32 {
+    weather::thunder_due(weather::of(g), i, time, &mut scratch()[..]) as u32
+}
+/// strokeMean: the `n` pulses at scratch 0, three doubles each
+#[no_mangle]
+pub extern "C" fn weather_stroke_mean(n: usize, a: f64, b: f64) -> f64 {
+    weather::stroke_mean(&scratch()[..n * 3], n, a, b)
+}
+#[no_mangle]
+pub extern "C" fn weather_lot_step(g: usize, dt: f64) -> u32 {
+    weather::lot_step(weather::of(g), dt) as u32
+}
+/// wet.ts openSky: the man's sky memory at scratch 0 (when, open), and back. 1 open · +2 the rays were asked
+#[no_mangle]
+pub extern "C" fn wet_open_sky(g: usize, w: usize, set: i32, ask: u32, time: f64, x: f64, z: f64, head: f64) -> u32 {
+    let s = scratch();
+    let (mut t, mut o) = (s[0], s[1]);
+    let (open, asked) = weather::open_sky(weather::of(g), w, set, ask, time, x, z, head, &mut t, &mut o);
+    s[0] = t;
+    s[1] = o;
+    open as u32 | (asked as u32) << 1
+}
+/// wet.ts updateWetness, one man: his coat at scratch 0‥5, and back (weather.rs M_*)
+#[no_mangle]
+pub extern "C" fn wet_step(g: usize, w: usize, set: i32, ask: u32, time: f64, dt: f64, x: f64, z: f64, head: f64) {
+    weather::wet_step(weather::of(g), w, set, ask, time, dt, x, z, head, &mut scratch()[..weather::M_LEN])
+}
+/// snowBog.ts snowBogAt over world w's table of the snow
+#[no_mangle]
+pub extern "C" fn snow_bog_at(g: usize, w: usize, x: f64, y: f64, z: f64) -> f64 {
+    snow::bog_at(g, w, x, y, z)
+}
+/// the dust's table of the block in slot `g`, whose stamp is `stamp`, and the slot's tables made from it (air.rs plan)
+fn air_of(g: usize, stamp: f64) -> (&'static mut air::Air, &'static mut air::Plan) {
+    let wx = weather::of(g);
+    let p = air::plan(g, stamp, &wx.air, &wx.roofs, wx.roofs_n as usize);
+    (&mut wx.air, p)
+}
+/// the dust's field stood up afresh: every cell the open air's, no opening asked, no list
+#[no_mangle]
+pub extern "C" fn air_clear(g: usize, stamp: f64) {
+    let (a, p) = air_of(g, stamp);
+    a.clear(p)
+}
+/// the field begun: its switch, nothing owed, no opening known
+#[no_mangle]
+pub extern "C" fn air_begin(g: usize, stamp: f64, on: u32) {
+    let (a, p) = air_of(g, stamp);
+    a.begin(p, on != 0)
+}
+/// the field seeded under the roofs in force at the leak given
+#[no_mangle]
+pub extern "C" fn air_seed(g: usize, stamp: f64, leak: f64) {
+    let (a, p) = air_of(g, stamp);
+    let wx = weather::of(g);
+    let (roofs, n) = (wx.roofs, wx.roofs_n as usize);
+    a.seed(p, leak, |x, z| weather::under(&roofs, n, x, z))
+}
+/// …every opening asked and run on until it stands still. Said → scratch 0‥3 (air.rs Said)
+#[no_mangle]
+pub extern "C" fn air_settle(g: usize, stamp: f64, w: usize, set: i32, ask: u32) {
+    let mut said = air::Said { moved: 0.0, steps: 0.0, probes: 0.0, open: 0.0 };
+    let (a, p) = air_of(g, stamp);
+    a.settle(p, w, set, ask, &mut said);
+    said.tell(scratch());
+}
+/// one tick of it: said → scratch 0‥3
+#[no_mangle]
+pub extern "C" fn air_update(g: usize, stamp: f64, w: usize, set: i32, ask: u32, dt: f64) {
+    let mut said = air::Said { moved: 0.0, steps: 0.0, probes: 0.0, open: 0.0 };
+    let (a, p) = air_of(g, stamp);
+    a.update(p, w, set, ask, dt, &mut said);
+    said.tell(scratch());
+}
+/// the leaves read again over a field put back
+#[no_mangle]
+pub extern "C" fn air_reread(g: usize, stamp: f64, w: usize, set: i32) {
+    let (_, p) = air_of(g, stamp);
+    air::Air::reread(p, w, set)
+}
+/// where a table of the dust's stands in the module's memory, made if it is owed: 0 the roofed cells · 1 the edges · 2 which cells are roofed · 3 the leaves across each edge
+#[no_mangle]
+pub extern "C" fn air_table(g: usize, stamp: f64, which: u32) -> usize {
+    let (_, p) = air_of(g, stamp);
+    match which {
+        0 => p.cells.as_ptr() as usize,
+        1 => p.edges.as_ptr() as usize,
+        2 => p.indoor.as_ptr() as usize,
+        _ => p.leaf.as_ptr() as usize,
+    }
+}
+/// the knobs the weather's rules read (weather.rs READS), by their place in the list: −1 past the last
+#[no_mangle]
+pub extern "C" fn weather_read(i: usize) -> i32 {
+    if i < weather::READS.len() { weather::READS[i] as i32 } else { -1 }
 }

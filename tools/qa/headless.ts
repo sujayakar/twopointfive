@@ -13,16 +13,19 @@
 //     plays tens of thousands of footsteps.
 // Usage:  const W = await standUp();  W.step(1/60);  // = game.update + camera + lights + box upload + input.endFrame, as main.ts's step() does
 import { resolve } from 'node:path';
+import './stand.ts';   // (the stand's word, written before anything below reads it)
 
 export const ROOT = resolve(import.meta.dir, '../..');
-// ONE-WAY DOORS (src/game/doors.ts DOORWAY — the shipped default is ON): the harness stands the game up with the leaves double-acting, as every older probe, frozen
-// digest, tally and session fixture met them. `probes.ts oneway` turns it on for itself, playthrough.ts plays the shipped doors (--set '{"DOORWAY":{"oneWay":false}}'
-// = the old ones), and ONEWAY=1 (env) runs any tool here — the tour, the soak, a probe family — on the shipped doors.
-// (OUTSIDE DOORS OPENING OUTWARD — DOORWAY.exitsOut, shipped OFF — is off here too, whatever ONEWAY says; QA_EXITSOUT=1 turns it on for any tool.)
-// THE TWO STANDS (src/host/profile.ts): every pin in this file and in standGame's harness block holds on the FROZEN stand — the default — and, under TPS_PROFILE=shipped,
-// only where the run's environment names that pin's own word; otherwise the table keeps its module's default, which is what the page plays. shippedBoot() = the few rows
+// ONE-WAY DOORS (src/game/doors.ts DOORWAY — the shipped default is ON): ON THE OLD FROZEN STAND (TPS_PROFILE=frozen; a run with no word is the page's, below) the
+// harness stands the game up with the leaves double-acting, as every older probe, frozen digest, tally and session fixture met them. `probes.ts oneway` turns it on for itself, playthrough.ts plays the shipped doors (--set '{"DOORWAY":{"oneWay":false}}'
+// = the old ones), and ONEWAY=1 (env) runs any tool there — the tour, the soak, a probe family — on the shipped doors.
+// (OUTSIDE DOORS OPENING OUTWARD — DOORWAY.exitsOut, shipped OFF — is off there too, whatever ONEWAY says; QA_EXITSOUT=1 turns it on for any tool.)
+// THE TWO STANDS (src/host/profile.ts): every pin in this file and in standGame's harness block holds on the old FROZEN stand (TPS_PROFILE=frozen) and, on the
+// stand a tool has with no word (the page's: 'shipped'), only where the run's environment names that pin's own word; otherwise the table keeps its module's default, which is what the page plays. shippedBoot() = the few rows
 // the page's boot writes over those defaults. First, before any level is built.
 const { pinned, harnessProfile, shippedBoot } = await import(`${ROOT}/src/host/profile.ts`);
+// THE STAND IS THE PAGE'S (2026-11-05): with no word a tool stands the game as the page opens it (stand.ts, imported above, has written the word down for the
+// tools that read it themselves and for a child, which inherits it). The old stand is one word, TPS_PROFILE=frozen, and a run on it says so (stand.ts).
 if (harnessProfile() === 'shipped') shippedBoot();
 /** the stand this file was loaded on. A tool that names its stand (`process.env.TPS_PROFILE ??= 'shipped'`) above a STATIC import of this file names it too late: imports load first, so the pins
  *  were lifted at stand-up and shippedBoot never ran, a stand that is neither of the two. standUp refuses that out loud. */
@@ -221,7 +224,7 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     get audioLog() { return audioLog; }, set audioLog(v: AudioCall[] | null) { audioLog = v; },
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
-      if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks at the head of each render: here only where a tool asked for one, and never a real engine's, which steps its own)
+      if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view; cam.update(dt, follow ?? me.followPos(), follow || game.spectate >= 0 ? null : me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
       engine.lights.update(dt, game.time);
       engine.world.dynamics = game.dynBoxes;

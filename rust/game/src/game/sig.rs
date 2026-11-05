@@ -98,265 +98,268 @@ pub fn game_breaker_fix_t(g: &mut crate::game::Game) -> f64 { todo!() }
 /// (src/game/game.ts:1082 Game.constructor)
 pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::GameNewOpts>) { todo!() }
 
-/// (src/game/game.ts:1268 Game.msg)
+/// (src/game/game.ts:1267 Game.msg)
 pub fn game_msg(g: &mut crate::game::Game, text: &str) { todo!() }
 
-/// (src/game/game.ts:1269 Game.say)
+/// (src/game/game.ts:1268 Game.say)
 pub fn game_say(g: &mut crate::game::Game, g_2: GuardId, text: &str, radio: Option<bool>, force: Option<bool>, row: Option<bool>) { todo!() }
 
-/// (src/game/game.ts:1271 Game.note)
+/// (src/game/game.ts:1270 Game.note)
 pub fn game_note(g: &mut crate::game::Game, text: &str) { todo!() }
 
-/// (src/game/game.ts:1273 Game.onDoorEvent)
+/// (src/game/game.ts:1272 Game.onDoorEvent)
 pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent) { todo!() }
 
-/// (src/game/game.ts:1298 Game.rollTick)
+/// (src/game/game.ts:1297 Game.rollTick)
 pub fn game_roll_tick(g: &mut crate::game::Game, dt: f64) { todo!() }
 
-/// (src/game/game.ts:1314 Game.onPropEvent)
+/// (src/game/game.ts:1313 Game.onPropEvent)
 pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent) { todo!() }
 
-/// (src/game/game.ts:1328 Game.resetGuards)
+/// (src/game/game.ts:1327 Game.resetGuards)
 pub fn game_reset_guards(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1329 Game.tension)
+/// (src/game/game.ts:1328 Game.tension)
 pub fn game_tension(g: &mut crate::game::Game, theirs: Option<bool>) -> f64 { todo!() }
 
-/// (src/game/game.ts:1331 Game.escalationSummary)
+/// (src/game/game.ts:1330 Game.escalationSummary)
 pub fn game_escalation_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1333 Game.escalate)
+/// (src/game/game.ts:1332 Game.escalate)
 pub fn game_escalate(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1334 Game.standDown)
+/// (src/game/game.ts:1333 Game.standDown)
 pub fn game_stand_down(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1336 Game.clearingSummary)
+/// (src/game/game.ts:1335 Game.clearingSummary)
 pub fn game_clearing_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1339 Game.searchSummary)
+/// (src/game/game.ts:1338 Game.searchSummary)
 pub fn game_search_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1346 Game.standoffSummary)
+/// (src/game/game.ts:1345 Game.standoffSummary)
 pub fn game_standoff_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1348 Game.bodyLightSummary)
+/// (src/game/game.ts:1347 Game.bodyLightSummary)
 pub fn game_body_light_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1351 Game.suppressionSummary)
+/// (src/game/game.ts:1350 Game.suppressionSummary)
 pub fn game_suppression_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1352 Game.conditionSummary)
+/// (src/game/game.ts:1351 Game.conditionSummary)
 pub fn game_condition_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1355 Game.aimSummary)
+/// (src/game/game.ts:1354 Game.aimSummary)
 pub fn game_aim_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1358 Game.tacticsSummary)
+/// (src/game/game.ts:1357 Game.tacticsSummary)
 pub fn game_tactics_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1360 Game.needsSummary)
+/// (src/game/game.ts:1359 Game.needsSummary)
 pub fn game_needs_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1362 Game.civiliansSummary)
+/// (src/game/game.ts:1361 Game.civiliansSummary)
 pub fn game_civilians_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1364 Game.onFloor)
+/// (src/game/game.ts:1363 Game.onFloor)
 pub fn game_on_floor(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
-/// (src/game/game.ts:1367 Game.witnessSummary)
+/// (src/game/game.ts:1366 Game.witnessSummary)
 pub fn game_witness_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1378 Game.interrogate)
+/// (src/game/game.ts:1377 Game.interrogate)
 pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> { todo!() }
 
-/// (src/game/game.ts:1393 Game.freeHeld)
+/// (src/game/game.ts:1392 Game.freeHeld)
 pub fn game_free_held(g: &mut crate::game::Game, why: crate::game::GameFreeHeldWhy) { todo!() }
 
-/// (src/game/game.ts:1395 Game.nearestLivingGuard)
+/// (src/game/game.ts:1394 Game.nearestLivingGuard)
 pub fn game_nearest_living_guard(g: &mut crate::game::Game, reach: Option<f64>, foe: Option<bool>) -> Option<GuardId> { todo!() }
 
-/// (src/game/game.ts:1401 Game.interrogateNearest)
+/// (src/game/game.ts:1400 Game.interrogateNearest)
 pub fn game_interrogate_nearest(g: &mut crate::game::Game, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> { todo!() }
 
-/// (src/game/game.ts:1411 Game.dialogueSummary)
+/// (src/game/game.ts:1410 Game.dialogueSummary)
 pub fn game_dialogue_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1417 Game.clearQueueSummary)
+/// (src/game/game.ts:1416 Game.clearQueueSummary)
 pub fn game_clear_queue_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1418 Game.clearNearestRoom)
+/// (src/game/game.ts:1417 Game.clearNearestRoom)
 pub fn game_clear_nearest_room(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1420 Game.followPos)
+/// (src/game/game.ts:1419 Game.followPos)
 pub fn game_follow_pos(g: &mut crate::game::Game, at: Option<V3>) -> V3 { todo!() }
 
-/// (src/game/game.ts:1421 Game.teleportPlayer)
+/// (src/game/game.ts:1420 Game.teleportPlayer)
 pub fn game_teleport_player(g: &mut crate::game::Game, p: V3) { todo!() }
 
-/// (src/game/game.ts:1423 Game.floorUnderPlayer)
+/// (src/game/game.ts:1422 Game.floorUnderPlayer)
 pub fn game_floor_under_player(g: &mut crate::game::Game) -> crate::floor::FloorMat { todo!() }
 
-/// (src/game/game.ts:1426 Game.bodyThud)
+/// (src/game/game.ts:1425 Game.bodyThud)
 pub fn game_body_thud(g: &mut crate::game::Game, c_2: CharId) { todo!() }
 
-/// (src/game/game.ts:1430 Game.repairLights)
+/// (src/game/game.ts:1429 Game.repairLights)
 pub fn game_repair_lights(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1433 Game.clearAftermath)
+/// (src/game/game.ts:1432 Game.clearAftermath)
 pub fn game_clear_aftermath(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1436 Game.setLoadout)
+/// (src/game/game.ts:1435 Game.setLoadout)
 pub fn game_set_loadout(g: &mut crate::game::Game, with_rifle: bool) { todo!() }
 
-/// (src/game/game.ts:1445 Game.authoredOn)
+/// (src/game/game.ts:1444 Game.authoredOn)
 pub fn game_authored_on(g: &mut crate::game::Game, t: FixtureId) -> bool { todo!() }
 
-/// (src/game/game.ts:1446 Game.resetLevelState)
+/// (src/game/game.ts:1446 Game.standLights)
+pub fn game_stand_lights(g: &mut crate::game::Game) { todo!() }
+
+/// (src/game/game.ts:1447 Game.resetLevelState)
 pub fn game_reset_level_state(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1462 Game.crackTest)
+/// (src/game/game.ts:1463 Game.crackTest)
 pub fn game_crack_test(g: &mut crate::game::Game) -> f64 { todo!() }
 
-/// (src/game/game.ts:1463 Game.glassSummary)
+/// (src/game/game.ts:1464 Game.glassSummary)
 pub fn game_glass_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1465 Game.wetSummary)
+/// (src/game/game.ts:1466 Game.wetSummary)
 pub fn game_wet_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1467 Game.rainSummary)
+/// (src/game/game.ts:1468 Game.rainSummary)
 pub fn game_rain_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/game.ts:1470 Game.cleanSlate)
+/// (src/game/game.ts:1471 Game.cleanSlate)
 pub fn game_clean_slate(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1481 Game.restart)
+/// (src/game/game.ts:1482 Game.restart)
 pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) { todo!() }
 
-/// (src/game/game.ts:1489 Game.restartEncounter)
+/// (src/game/game.ts:1490 Game.restartEncounter)
 pub fn game_restart_encounter(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1519 Game.setGroup)
+/// (src/game/game.ts:1520 Game.setGroup)
 pub fn game_set_group(g: &mut crate::game::Game, group: &str, on: bool) { todo!() }
 
-/// (src/game/game.ts:1520 Game.toggleTarget)
+/// (src/game/game.ts:1521 Game.toggleTarget)
 pub fn game_toggle_target(g: &mut crate::game::Game, t: FixtureId) { todo!() }
 
-/// (src/game/game.ts:1521 Game.setBlackout)
+/// (src/game/game.ts:1522 Game.setBlackout)
 pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::game::GameSetBlackoutCause) { todo!() }
 
-/// (src/game/game.ts:1522 Game.endBlackout)
+/// (src/game/game.ts:1523 Game.endBlackout)
 pub fn game_end_blackout(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1523 Game.lightEvent)
+/// (src/game/game.ts:1524 Game.lightEvent)
 pub fn game_light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate::game::GameLightEventCause>, sw_at: Option<V3>) { todo!() }
 
-/// (src/game/game.ts:1524 Game.ocp)
+/// (src/game/game.ts:1525 Game.ocp)
 pub fn game_ocp(g: &mut crate::game::Game, t: Option<FixtureId>) { todo!() }
 
-/// (src/game/game.ts:1525 Game.toggleDrag)
+/// (src/game/game.ts:1526 Game.toggleDrag)
 pub fn game_toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) { todo!() }
 
-/// (src/game/game.ts:1531 Game.update)
+/// (src/game/game.ts:1532 Game.update)
 pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) { todo!() }
 
-/// (src/game/game.ts:1548 Game.hostBefore)
+/// (src/game/game.ts:1549 Game.hostBefore)
 pub fn game_host_before(g: &mut crate::game::Game, input: InputId) { todo!() }
 
-/// (src/game/game.ts:1551 Game.hostAfter)
+/// (src/game/game.ts:1552 Game.hostAfter)
 pub fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) { todo!() }
 
-/// (src/game/game.ts:1560 Game.step)
+/// (src/game/game.ts:1561 Game.step)
 pub fn game_step(g: &mut crate::game::Game, dt: f64, cmd: &crate::cmd::PlayerCmd) { todo!() }
 
-/// (src/game/game.ts:1575 Game.hostSeat)
+/// (src/game/game.ts:1576 Game.hostSeat)
 pub fn game_host_seat(g: &mut crate::game::Game) -> SeatId { todo!() }
 
-/// (src/game/game.ts:1579 Game.aside)
+/// (src/game/game.ts:1580 Game.aside)
 pub fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T { todo!() }
 
-/// (src/game/game.ts:1581 Game.asideLens)
+/// (src/game/game.ts:1582 Game.asideLens)
 pub fn game_aside_lens(g: &mut crate::game::Game) -> CameraId { todo!() }
 
-/// (src/game/game.ts:1586 Game.stepSeats)
+/// (src/game/game.ts:1587 Game.stepSeats)
 pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) { todo!() }
 
-/// (src/game/game.ts:1731 Game.threatTick)
+/// (src/game/game.ts:1732 Game.threatTick)
 pub fn game_threat_tick(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1750 Game.dealWeapons)
+/// (src/game/game.ts:1751 Game.dealWeapons)
 pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) { todo!() }
 
-/// (src/game/game.ts:1797 Game.stepFxAndDynBoxes)
+/// (src/game/game.ts:1798 Game.stepFxAndDynBoxes)
 pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64, cam: CameraId, canvas: crate::host_hud::View) -> bool { todo!() }
 
-/// (src/game/game.ts:1828 Game.smokeWake)
+/// (src/game/game.ts:1829 Game.smokeWake)
 pub fn game_smoke_wake(g: &mut crate::game::Game, all: &[CharId]) { todo!() }
 
-/// (src/game/game.ts:1853 Game.drawCharacters)
+/// (src/game/game.ts:1854 Game.drawCharacters)
 pub fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured: bool) { todo!() }
 
-/// (src/game/game.ts:1860 Game.viewPx)
+/// (src/game/game.ts:1861 Game.viewPx)
 pub fn game_view_px(g: &mut crate::game::Game, cam: crate::game::GameViewPxCam, canvas: crate::game::GameViewPxCanvas) -> f64 { todo!() }
 
-/// (src/game/game.ts:1875 Game.fogLift)
+/// (src/game/game.ts:1876 Game.fogLift)
 pub fn game_fog_lift(g: &mut crate::game::Game, want: bool, tube: Option<bool>, px: Option<f64>) { todo!() }
 
-/// (src/game/game.ts:1894 Game.fogBack)
+/// (src/game/game.ts:1895 Game.fogBack)
 pub fn game_fog_back(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/game.ts:1903 Game.drawMen)
+/// (src/game/game.ts:1904 Game.drawMen)
 pub fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, bare: bool, draw: Option<bool>) { todo!() }
 
-/// (src/game/game.ts:1937 Game.senseStep)
+/// (src/game/game.ts:1938 Game.senseStep)
 pub fn game_sense_step(g: &mut crate::game::Game, dt: f64) { todo!() }
 
-/// (src/game/game.ts:1953 Game.lightMeter)
+/// (src/game/game.ts:1954 Game.lightMeter)
 pub fn game_light_meter(g: &mut crate::game::Game, dt: f64) { todo!() }
 
-/// (src/game/game.ts:1971 Game.meterRead)
+/// (src/game/game.ts:1972 Game.meterRead)
 pub fn game_meter_read(g: &mut crate::game::Game, dt: f64, k: &str) { todo!() }
 
-/// (src/game/game.ts:1984 Game.selectVerb)
+/// (src/game/game.ts:1985 Game.selectVerb)
 pub fn game_select_verb(g: &mut crate::game::Game, kind: crate::game::InteractableKind, verb: Option<crate::game::Verb>) -> bool { todo!() }
 
-/// (src/game/game.ts:1990 Game.escape)
+/// (src/game/game.ts:1991 Game.escape)
 pub fn game_escape(g: &mut crate::game::Game) -> bool { todo!() }
 
-/// (src/game/game.ts:1992 Game.backable)
+/// (src/game/game.ts:1993 Game.backable)
 pub fn game_backable(g: &mut crate::game::Game) -> bool { todo!() }
 
-/// (src/game/game.ts:1995 Game.visibilityOf)
+/// (src/game/game.ts:1996 Game.visibilityOf)
 pub fn game_visibility_of(g: &mut crate::game::Game, e: f64) -> f64 { todo!() }
 
-/// (src/game/game.ts:1998 Game.updateDoors)
+/// (src/game/game.ts:1999 Game.updateDoors)
 pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) { todo!() }
 
-/// (src/game/game.ts:2035 Game.doorContact)
+/// (src/game/game.ts:2036 Game.doorContact)
 pub fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::DoorContact> { todo!() }
 
-/// (src/game/game.ts:2039 Game.doorActs)
+/// (src/game/game.ts:2040 Game.doorActs)
 pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) { todo!() }
 
-/// (src/game/game.ts:2111 Game.doorAfter)
+/// (src/game/game.ts:2112 Game.doorAfter)
 pub fn game_door_after(g: &mut crate::game::Game, own: Option<&mut crate::doors::DoorContact>, bx: f64, bz: f64) { todo!() }
 
-/// (src/game/game.ts:2139 Game.handsOnDoors)
+/// (src/game/game.ts:2140 Game.handsOnDoors)
 pub fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) { todo!() }
 
-/// (src/game/game.ts:2235 Game.updateProps)
+/// (src/game/game.ts:2236 Game.updateProps)
 pub fn game_update_props(g: &mut crate::game::Game, dt: f64) { todo!() }
 
-/// (src/game/game.ts:2249 Game.dropThrowable)
+/// (src/game/game.ts:2250 Game.dropThrowable)
 pub fn game_drop_throwable(g: &mut crate::game::Game, kind: crate::game::ThrowKind, p: V3) { todo!() }
 
-/// (src/game/game.ts:2250 Game.throwCount)
+/// (src/game/game.ts:2251 Game.throwCount)
 pub fn game_throw_count(g: &mut crate::game::Game, kind: crate::game::ThrowKind) -> f64 { todo!() }
 
-/// (src/game/game.ts:2262 Game.objectivePos)
+/// (src/game/game.ts:2263 Game.objectivePos)
 pub fn game_objective_pos(g: &mut crate::game::Game) -> Option<V3> { todo!() }
 
-/// (src/game/game.ts:2263 Game.objectiveText)
+/// (src/game/game.ts:2264 Game.objectiveText)
 pub fn game_objective_text(g: &mut crate::game::Game) -> String { todo!() }
 
 

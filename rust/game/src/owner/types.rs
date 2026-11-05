@@ -493,4 +493,4 @@ pub fn own() -> crate::owner::OWN { crate::owner::OWN { frag: 16384.0, breaker: 
 pub fn owner_qa() -> crate::owner::OWNERQA { crate::owner::OWNERQA { read: None, drop: 0.0 } }
 
 /// (src/game/owner.ts:90 SCRIPT_RANK: a table nothing writes)
-pub fn script_rank() -> f64 { todo!() }
+pub fn script_rank() -> f64 { 12.0 }

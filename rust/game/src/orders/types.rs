@@ -23,6 +23,7 @@ pub enum OrderLabel {
     Work,
     Smoke,
     PairGo,
+    DoorThrWord,
 }
 /// OrderDef.can: this man can do his part (true in the TypeScript), or the word for why not. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]
@@ -50,6 +51,7 @@ pub enum OrderOnly {
     Smoke,
     PairTake,
     PairGo,
+    DoorThrWord,
 }
 /// OrderDef.valid: these men together can carry it out here (true), or not (false, or the word for why). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
@@ -74,6 +76,7 @@ pub enum OrderValid {
     PairTake,
     PairWatch,
     PairGo,
+    DoorThrWord,
 }
 /// OrderDef.issue: hand each man his assignment; a String back is a refusal. Nothing: a row that only opens a page (give() refuses it at orders.ts:862, so it is never run). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
@@ -105,6 +108,7 @@ pub enum OrderIssue {
     PairWatch,
     PairDark,
     PairGo,
+    DoorThrWord,
 }
 /// OrderDef.tick: once a frame for each man under the order, before he is posed. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]
@@ -125,6 +129,7 @@ pub enum OrderWhen {
     ShutDoor,
     Loud,
     PairDark,
+    DoorHeld,
 }
 /// OrderDef.gone: the flat ring does not offer the row on this target at all. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]

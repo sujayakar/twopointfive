@@ -3,25 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: QuietDeal, src/game/quiet.ts:47)
-#[derive(Clone, Copy, Debug)]
-pub struct QuietDeal {
-    pub start: f64,
-    pub spot: f64,
-    pub patrol: f64,
-}
-impl QuietDeal {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietDeal {
-            start: 0.0,
-            spot: 0.0,
-            patrol: 0.0,
-        }
-    }
-}
-impl Default for QuietDeal { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: QuietSnap, src/game/quiet.ts:49)
 #[derive(Clone, Copy, Debug)]
 pub struct QuietSnap {
@@ -41,30 +22,24 @@ impl QuietSnap {
 }
 impl Default for QuietSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Held, src/game/quiet.ts:61)
+/// (TypeScript: QuietDeal, src/game/quiet.ts:47)
 #[derive(Clone, Copy, Debug)]
-pub struct Held {
-    pub pairup: bool,
-    pub pair: bool,
-    pub sneak: bool,
-    pub spotted: bool,
-    pub silent: bool,
-    pub silent_start: bool,
+pub struct QuietDeal {
+    pub start: f64,
+    pub spot: f64,
+    pub patrol: f64,
 }
-impl Held {
+impl QuietDeal {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
-        Held {
-            pairup: false,
-            pair: false,
-            sneak: false,
-            spotted: false,
-            silent: false,
-            silent_start: false,
+        QuietDeal {
+            start: 0.0,
+            spot: 0.0,
+            patrol: 0.0,
         }
     }
 }
-impl Default for Held { fn default() -> Self { Self::zeroed() } }
+impl Default for QuietDeal { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: QuietMission, src/game/quiet.ts:73)
 #[derive(Clone, Debug)]
@@ -194,6 +169,31 @@ impl QuietMissionAuthoredMissionRack {
     }
 }
 impl Default for QuietMissionAuthoredMissionRack { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: Held, src/game/quiet.ts:61)
+#[derive(Clone, Copy, Debug)]
+pub struct Held {
+    pub pairup: bool,
+    pub pair: bool,
+    pub sneak: bool,
+    pub spotted: bool,
+    pub silent: bool,
+    pub silent_start: bool,
+}
+impl Held {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        Held {
+            pairup: false,
+            pair: false,
+            sneak: false,
+            spotted: false,
+            silent: false,
+            silent_start: false,
+        }
+    }
+}
+impl Default for Held { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/quiet.ts:287 holderStand(area), src/game/quiet.ts:287)
 #[derive(Clone, Copy, Debug)]

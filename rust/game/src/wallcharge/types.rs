@@ -189,19 +189,19 @@ impl Default for WallChargeDoneItem { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Phase {
     Wait,
-    Enter,
     Place,
     Standoff,
     Armed,
+    Enter,
 }
 impl Phase {
     pub const fn as_str(self) -> &'static str {
         match self {
             Phase::Wait => "wait",
-            Phase::Enter => "enter",
             Phase::Place => "place",
             Phase::Standoff => "standoff",
             Phase::Armed => "armed",
+            Phase::Enter => "enter",
         }
     }
 }

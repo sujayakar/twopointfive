@@ -23,40 +23,40 @@ pub fn smoke_grid_smoky(g: &mut crate::game::Game) -> bool { todo!() }
 /// (src/game/sense.ts:128 SmokeGrid.emit)
 pub fn smoke_grid_emit(g: &mut crate::game::Game, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) { todo!() }
 
-/// (src/game/sense.ts:135 SmokeGrid.step)
+/// (src/game/sense.ts:136 SmokeGrid.step)
 pub fn smoke_grid_step(g: &mut crate::game::Game, dt: f64, lamps: bool, wind: Option<&mut dyn FnMut(&mut crate::game::Game) -> Option<crate::scene_collision::GridWind>>) { todo!() }
 
-/// (src/game/sense.ts:144 SmokeGrid.clear)
+/// (src/game/sense.ts:145 SmokeGrid.clear)
 pub fn smoke_grid_clear(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/sense.ts:147 SmokeGrid.renew)
+/// (src/game/sense.ts:148 SmokeGrid.renew)
 pub fn smoke_grid_renew(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/sense.ts:150 SmokeGrid.along)
+/// (src/game/sense.ts:151 SmokeGrid.along)
 pub fn smoke_grid_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 { todo!() }
 
-/// (src/game/sense.ts:154 SmokeGrid.glowAt)
+/// (src/game/sense.ts:155 SmokeGrid.glowAt)
 pub fn smoke_grid_glow_at(g: &mut crate::game::Game, p: V3) -> f64 { todo!() }
 
-/// (src/game/sense.ts:199 CpuSmoke.emit)
+/// (src/game/sense.ts:200 CpuSmoke.emit)
 pub fn cpu_smoke_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) { todo!() }
 
-/// (src/game/sense.ts:214 CpuSmoke.budget)
+/// (src/game/sense.ts:215 CpuSmoke.budget)
 pub fn cpu_smoke_budget(g: &mut crate::game::Game) -> f64 { todo!() }
 
-/// (src/game/sense.ts:215 CpuSmoke.step)
+/// (src/game/sense.ts:216 CpuSmoke.step)
 pub fn cpu_smoke_step(g: &mut crate::game::Game, dt: f64) { todo!() }
 
-/// (src/game/sense.ts:225 CpuSmoke.clear)
+/// (src/game/sense.ts:226 CpuSmoke.clear)
 pub fn cpu_smoke_clear(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/sense.ts:228 CpuSmoke.along)
+/// (src/game/sense.ts:229 CpuSmoke.along)
 pub fn cpu_smoke_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 { todo!() }
 
-/// (src/game/sense.ts:236 CpuSmoke.blobsAlong)
+/// (src/game/sense.ts:237 CpuSmoke.blobsAlong)
 pub fn cpu_smoke_blobs_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 { todo!() }
 
-/// (src/game/sense.ts:241 CpuSmoke.blobsAsk)
+/// (src/game/sense.ts:242 CpuSmoke.blobsAsk)
 pub fn cpu_smoke_blobs_ask(g: &mut crate::game::Game, a: V3, b: V3) -> f64 { todo!() }
 
 

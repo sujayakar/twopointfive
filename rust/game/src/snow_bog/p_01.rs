@@ -1,4 +1,4 @@
-//! src/game/snowBog.ts lines 1 to 74
+//! src/game/snowBog.ts lines 1 to 73
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -20,12 +20,12 @@ fn run_on(bog: f64, run: f64) -> f64 {
     if bog > 0.0 { m::pow(m::max(0.0, 1.0 - bog), run) } else { 1.0 }
 }
 
-/// What snow each box of the level is, worked out once a level. (snowBog.ts ground)
+/// What snow each box of the level is, a byte a box, worked out once a level. (snowBog.ts ground)
 pub fn ground(g: &mut crate::game::Game) -> crate::snow_bog::Ground {
     if let Some(found) = &g.m.snow_bog.ground_of { return found.clone(); }
     let kind = snow_kind();
     let count = g.col.boxes.len();
-    let mut made = Ground { kinds: vec![0u8; count], lays: Vec::new(), banks: Vec::new() };
+    let mut made = Ground { kinds: vec![0u8; count] };
     for bi in 0..count {
         let b = g.col.boxes[bi];
         let does = seam_box(g, b).does.map(|w| String::from(w.as_str()));
@@ -34,30 +34,17 @@ pub fn ground(g: &mut crate::game::Game) -> crate::snow_bog::Ground {
             let packed = p == Some(crate::scene_materials::SnowKind::SnowPacked);
             let old = p == Some(crate::scene_materials::SnowKind::SnowOld);
             if packed || old || crate::render_snow_field::snow_lay_bare(g, b) {
-                made.lays.push(bi);
                 made.kinds[bi] = (if packed { kind.packed } else if old { kind.old } else { kind.bare }) as u8;
             }
         } else if p == Some(crate::scene_materials::SnowKind::Snow) {
             let found = seam_box(g, b);
             if (js::to_i32(found.flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) == 0 && found.c[1] + found.h[1] > 0.03 {
-                made.banks.push(bi);
                 made.kinds[bi] = kind.bank as u8;
             }
         }
     }
     g.m.snow_bog.ground_of = Some(made.clone());
     made
-}
-
-/// Is (x, z) over the box's footprint, turned by its yaw. (snowBog.ts over)
-pub fn over(g: &mut crate::game::Game, b: BoxId, x: f64, z: f64) -> bool {
-    over_row(seam_box(g, b), x, z)
-}
-
-/// over's arithmetic, on the row.
-fn over_row(found: &crate::scene_boxes::Box, x: f64, z: f64) -> bool {
-    let (cs, sn, px, pz) = (m::cos(found.yaw), m::sin(found.yaw), x - found.c[0], z - found.c[2]);
-    m::abs(cs * px - sn * pz) <= found.h[0] && m::abs(sn * px + cs * pz) <= found.h[2]
 }
 
 /// May the ground bog anything in this game now. (snowBog.ts snowBogMay)
@@ -72,33 +59,17 @@ pub fn snow_bog_kinds(g: &mut crate::game::Game) -> Vec<u8> {
     ground(g).kinds
 }
 
-/// How boggy the ground is where a thing touched down, 0 to 1. (snowBog.ts snowBogAt)
+/// How boggy the ground is where a thing touched down, 0 to 1: the module's rule, over its table of the snow and the weather's roofs. (snowBog.ts snowBogAt)
 pub fn snow_bog_at(g: &mut crate::game::Game, x: f64, y: f64, z: f64) -> f64 {
     if !snow_bog_may(g) { return 0.0; }
-    let found = ground(g);
-    let n = g.col.boxes.len();
-    if !(y < g.k.snowbog.top) {
-        for &bi in &found.banks {
-            if bi >= n { break; }
-            let b = g.col.boxes[bi];
-            let row = seam_box(g, b);
-            let top = row.c[1] + row.h[1];
-            if m::abs(top - y) <= g.k.snowbog.bank_m && over(g, b, x, z) { return 1.0; }
-        }
-        return 0.0;
-    }
-    if crate::weather::weather_under_roof(g, x, z) { return 0.0; }
-    let names = snow_kind();
-    let mut k = 1.0;
-    for &bi in &found.lays {
-        if bi >= n { break; }
-        let b = g.col.boxes[bi];
-        if !over(g, b, x, z) { continue; }
-        let kind = found.kinds[bi] as f64;
-        let v = if kind == names.packed { g.k.snowbog.packed } else if kind == names.old { g.k.snowbog.old } else { 0.0 };
-        if v < k { k = v; }
-    }
-    m::max(0.0, m::min(1.0, k))
+    crate::weather::weather_roofs_now(g);
+    if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); } // WX_KNOBS.here
+    crate::scene_collision::rule(g, &mut |g: &mut Game| {
+        crate::scene_collision::rule_open(g);
+        let kinds = ground(g).kinds;
+        crate::scene_box_mirror::box_mirror_snow(g, &kinds);
+        ::sim::snow::bog_at(g.sim, g.col.mirror.slot as usize, x, y, z)
+    })
 }
 
 #[cfg(test)]
@@ -117,16 +88,5 @@ mod tests {
             (-1.0, 0x3ff0000000000000),
         ];
         for (bog, bits) in cases { assert_eq!(run_on(bog, 2.0).to_bits(), bits, "bog {bog}"); }
-    }
-
-    #[test]
-    fn over_turns_the_point_by_the_yaw() {
-        let mut made = crate::scene_boxes::Box::zeroed();
-        made.c = [1.0, 0.0, 2.0];
-        made.h = [2.0, 1.0, 0.5];
-        made.yaw = m::atan2(1.0, 0.0);
-        // a quarter turn: the long side runs along z
-        assert!(over_row(&made, 1.4, 3.5));
-        assert!(!over_row(&made, 2.0, 2.0));
     }
 }

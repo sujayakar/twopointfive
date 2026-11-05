@@ -22,15 +22,15 @@ pub enum DrillAtRow {
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SquadChoice {
-    Flank,
     Barricade,
+    Flank,
     Help,
 }
 impl SquadChoice {
     pub const fn as_str(self) -> &'static str {
         match self {
-            SquadChoice::Flank => "flank",
             SquadChoice::Barricade => "barricade",
+            SquadChoice::Flank => "flank",
             SquadChoice::Help => "help",
         }
     }
@@ -42,9 +42,9 @@ pub enum SquadState {
     Down,
     Contact,
     Hold,
-    Flank,
     Alerted,
     Barricade,
+    Flank,
     Help,
 }
 impl SquadState {
@@ -53,9 +53,9 @@ impl SquadState {
             SquadState::Down => "down",
             SquadState::Contact => "contact",
             SquadState::Hold => "hold",
-            SquadState::Flank => "flank",
             SquadState::Alerted => "alerted",
             SquadState::Barricade => "barricade",
+            SquadState::Flank => "flank",
             SquadState::Help => "help",
         }
     }
@@ -214,9 +214,8 @@ pub enum SquadEventWhat {
     Found,
     Said,
     Sweep,
-    Flank,
-    Glimpse,
     Barricade,
+    Flank,
     Help,
     Reinforce,
     InPosition,
@@ -228,6 +227,7 @@ pub enum SquadEventWhat {
     Asks,
     Looks,
     NoSign,
+    Glimpse,
     Calls,
     CutOff,
     NetCheck,
@@ -247,9 +247,8 @@ impl SquadEventWhat {
             SquadEventWhat::Found => "found",
             SquadEventWhat::Said => "said",
             SquadEventWhat::Sweep => "sweep",
-            SquadEventWhat::Flank => "flank",
-            SquadEventWhat::Glimpse => "glimpse",
             SquadEventWhat::Barricade => "barricade",
+            SquadEventWhat::Flank => "flank",
             SquadEventWhat::Help => "help",
             SquadEventWhat::Reinforce => "reinforce",
             SquadEventWhat::InPosition => "in position",
@@ -261,6 +260,7 @@ impl SquadEventWhat {
             SquadEventWhat::Asks => "asks",
             SquadEventWhat::Looks => "looks",
             SquadEventWhat::NoSign => "no sign",
+            SquadEventWhat::Glimpse => "glimpse",
             SquadEventWhat::Calls => "calls",
             SquadEventWhat::CutOff => "cut off",
             SquadEventWhat::NetCheck => "net check",
@@ -975,9 +975,8 @@ pub enum EventWhat {
     Found,
     Said,
     Sweep,
-    Flank,
-    Glimpse,
     Barricade,
+    Flank,
     Help,
     Reinforce,
     InPosition,
@@ -989,6 +988,7 @@ pub enum EventWhat {
     Asks,
     Looks,
     NoSign,
+    Glimpse,
     Calls,
     CutOff,
     NetCheck,
@@ -1008,9 +1008,8 @@ impl EventWhat {
             EventWhat::Found => "found",
             EventWhat::Said => "said",
             EventWhat::Sweep => "sweep",
-            EventWhat::Flank => "flank",
-            EventWhat::Glimpse => "glimpse",
             EventWhat::Barricade => "barricade",
+            EventWhat::Flank => "flank",
             EventWhat::Help => "help",
             EventWhat::Reinforce => "reinforce",
             EventWhat::InPosition => "in position",
@@ -1022,6 +1021,7 @@ impl EventWhat {
             EventWhat::Asks => "asks",
             EventWhat::Looks => "looks",
             EventWhat::NoSign => "no sign",
+            EventWhat::Glimpse => "glimpse",
             EventWhat::Calls => "calls",
             EventWhat::CutOff => "cut off",
             EventWhat::NetCheck => "net check",

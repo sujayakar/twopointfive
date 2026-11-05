@@ -7,7 +7,7 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy, Debug)]
 pub struct PaneCrossLike {
     pub bi: f64,
-    pub type_: crate::glassbreak::GlassType,
+    pub type_: crate::glasspen::PaneType,
     pub exit: V3,
     pub dir_out: V3,
     pub take: f64,
@@ -19,7 +19,7 @@ impl PaneCrossLike {
     pub fn zeroed() -> Self {
         PaneCrossLike {
             bi: 0.0,
-            type_: crate::glassbreak::GlassType::Annealed,
+            type_: crate::glasspen::PaneType::Annealed,
             exit: [0.0; 3],
             dir_out: [0.0; 3],
             take: 0.0,
@@ -34,7 +34,7 @@ impl Default for PaneCrossLike { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct GlassFragmentLike {
     pub pane: f64,
-    pub type_: crate::glassbreak::GlassType,
+    pub type_: crate::glasspen::PaneType,
     pub kind: crate::shards::GlassFragmentLikeKind,
     pub outline: Vec<V3>,
     pub centre: V3,
@@ -48,13 +48,15 @@ pub struct GlassFragmentLike {
     pub cause: crate::shards::GlassFragmentLikeCause,
     pub who: f64,
     pub seed: f64,
+    pub fall: Option<crate::shards::GlassFragmentLikeFall>,
+    pub landed: Option<bool>,
 }
 impl GlassFragmentLike {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         GlassFragmentLike {
             pane: 0.0,
-            type_: crate::glassbreak::GlassType::Annealed,
+            type_: crate::glasspen::PaneType::Annealed,
             kind: crate::shards::GlassFragmentLikeKind::Piece,
             outline: Vec::new(),
             centre: [0.0; 3],
@@ -68,6 +70,8 @@ impl GlassFragmentLike {
             cause: crate::shards::GlassFragmentLikeCause::Blast,
             who: 0.0,
             seed: 0.0,
+            fall: None,
+            landed: None,
         }
     }
 }
@@ -113,7 +117,24 @@ impl GlassFragmentLikeCause {
     }
 }
 
-/// (TypeScript: ShardsTune, src/game/shards.ts:128)
+/// (TypeScript: inline at src/game/shards.ts:63 GlassFragmentLike.fall, src/game/shards.ts:63)
+#[derive(Clone, Copy, Debug)]
+pub struct GlassFragmentLikeFall {
+    pub t: f64,
+    pub pos: V3,
+}
+impl GlassFragmentLikeFall {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        GlassFragmentLikeFall {
+            t: 0.0,
+            pos: [0.0; 3],
+        }
+    }
+}
+impl Default for GlassFragmentLikeFall { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: ShardsTune, src/game/shards.ts:130)
 #[derive(Clone, Copy, Debug)]
 pub struct ShardsTune {
     pub glass_shards: Option<bool>,
@@ -128,13 +149,13 @@ impl ShardsTune {
 }
 impl Default for ShardsTune { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PlateMeta, src/game/shards.ts:146)
+/// (TypeScript: PlateMeta, src/game/shards.ts:148)
 #[derive(Clone, Debug)]
 pub struct PlateMeta {
     pub gen_: f64,
     pub area: f64,
     pub tint: V3,
-    pub type_: crate::glassbreak::GlassType,
+    pub type_: crate::glasspen::PaneType,
     pub seed: f64,
     pub littered: Option<bool>,
     pub poly: Option<Vec<[f64; 2]>>,
@@ -146,7 +167,7 @@ impl PlateMeta {
             gen_: 0.0,
             area: 0.0,
             tint: [0.0; 3],
-            type_: crate::glassbreak::GlassType::Annealed,
+            type_: crate::glasspen::PaneType::Annealed,
             seed: 0.0,
             littered: None,
             poly: None,
@@ -155,7 +176,7 @@ impl PlateMeta {
 }
 impl Default for PlateMeta { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Pending, src/game/shards.ts:150)
+/// (TypeScript: Pending, src/game/shards.ts:152)
 #[derive(Clone, Copy, Debug)]
 pub struct Pending {
     pub t: f64,
@@ -184,7 +205,7 @@ impl Pending {
 }
 impl Default for Pending { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Life, src/game/shards.ts:151)
+/// (TypeScript: Life, src/game/shards.ts:153)
 #[derive(Clone, Copy, Debug)]
 pub struct Life {
     pub t: f64,
@@ -201,7 +222,7 @@ impl Life {
 }
 impl Default for Life { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GlassShards, src/game/shards.ts:156)
+/// (TypeScript: GlassShards, src/game/shards.ts:158)
 #[derive(Clone, Debug)]
 pub struct GlassShards {
     pub lives: Vec<crate::shards::Life>,
@@ -248,7 +269,7 @@ impl GlassShards {
 }
 impl Default for GlassShards { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/shards.ts:163 GlassShards.breaks, src/game/shards.ts:163)
+/// (TypeScript: inline at src/game/shards.ts:165 GlassShards.breaks, src/game/shards.ts:165)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassShardsBreaksItem {
     pub c: DebrisChunkId,
@@ -265,7 +286,7 @@ impl GlassShardsBreaksItem {
 }
 impl Default for GlassShardsBreaksItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:169 GlassShards.deferred, src/game/shards.ts:169)
+/// (TypeScript: inline at src/game/shards.ts:171 GlassShards.deferred, src/game/shards.ts:171)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassShardsDeferredItem {
     pub pos: V3,
@@ -288,7 +309,7 @@ impl GlassShardsDeferredItem {
 }
 impl Default for GlassShardsDeferredItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SprayOpts, src/game/shards.ts:672)
+/// (TypeScript: SprayOpts, src/game/shards.ts:674)
 #[derive(Clone, Copy, Debug)]
 pub struct SprayOpts {
     pub speed: f64,
@@ -327,7 +348,7 @@ impl SprayOpts {
 }
 impl Default for SprayOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:173 GlassShards.paneMem, src/game/shards.ts:173)
+/// (TypeScript: inline at src/game/shards.ts:175 GlassShards.paneMem, src/game/shards.ts:175)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassShardsPaneMemValue {
     pub hits: f64,
@@ -365,7 +386,7 @@ impl GlassShardsPaneMemValueCause {
     }
 }
 
-/// (TypeScript: inline at src/game/shards.ts:335 cutPlates(fr), src/game/shards.ts:691)
+/// (TypeScript: inline at src/game/shards.ts:337 cutPlates(fr), src/game/shards.ts:693)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassShardsCutPlatesFr {
     pub u: V3,
@@ -388,7 +409,7 @@ impl GlassShardsCutPlatesFr {
 }
 impl Default for GlassShardsCutPlatesFr { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:355 plate(cut), src/game/shards.ts:355)
+/// (TypeScript: inline at src/game/shards.ts:357 plate(cut), src/game/shards.ts:357)
 #[derive(Clone, Debug)]
 pub struct GlassShardsPlateCut {
     pub cut: Option<Vec<crate::scene_cut::CutPlane>>,
@@ -405,7 +426,7 @@ impl GlassShardsPlateCut {
 }
 impl Default for GlassShardsPlateCut { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:568 fallOf ->, src/game/shards.ts:568)
+/// (TypeScript: inline at src/game/shards.ts:570 fallOf ->, src/game/shards.ts:570)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassShardsFallOf {
     pub t: f64,
@@ -422,7 +443,7 @@ impl GlassShardsFallOf {
 }
 impl Default for GlassShardsFallOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:569 schedule(fall), src/game/shards.ts:569)
+/// (TypeScript: inline at src/game/shards.ts:571 schedule(fall), src/game/shards.ts:571)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassShardsScheduleFall {
     pub t: f64,
@@ -439,7 +460,7 @@ impl GlassShardsScheduleFall {
 }
 impl Default for GlassShardsScheduleFall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:575 landing(fall), src/game/shards.ts:575)
+/// (TypeScript: inline at src/game/shards.ts:577 landing(fall), src/game/shards.ts:577)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassShardsLandingFall {
     pub t: f64,
@@ -475,7 +496,7 @@ impl GlassShardsTestKind {
     }
 }
 
-/// (TypeScript: inline at src/game/shards.ts:745 cutPlateBox ->, src/game/shards.ts:745)
+/// (TypeScript: inline at src/game/shards.ts:747 cutPlateBox ->, src/game/shards.ts:747)
 #[derive(Clone, Debug)]
 pub struct CutPlateBox {
     pub box_: BoxId,
@@ -521,14 +542,14 @@ pub struct ShardsStats {
     pub peak_plates: i32,
 }
 
-/// (src/game/shards.ts:126 SHARDS_DEFAULTS: a table nothing writes)
+/// (src/game/shards.ts:128 SHARDS_DEFAULTS: a table nothing writes)
 pub fn shards_defaults() -> crate::knobs::ShardsK { crate::knobs::page_shards() }
 
-/// (src/game/shards.ts:129 LS_KEY)
+/// (src/game/shards.ts:131 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.shards";
 
-/// (src/game/shards.ts:131 LIVE_CAP_MAX)
+/// (src/game/shards.ts:133 LIVE_CAP_MAX)
 pub const LIVE_CAP_MAX: f64 = 8000.0;
 
-/// (src/game/shards.ts:675 EDGE_GREEN: a table nothing writes)
+/// (src/game/shards.ts:677 EDGE_GREEN: a table nothing writes)
 pub fn edge_green() -> V3 { [0.74, 0.94, 0.86] }

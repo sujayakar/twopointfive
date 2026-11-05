@@ -1,4 +1,4 @@
-//! src/game/guards.ts lines 2913 to 3305
+//! src/game/guards.ts lines 2914 to 3311
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -52,6 +52,12 @@ fn route_points(g: &Game, gd: GuardId) -> Option<Vec<V3>> {
 /// `g.level.routes[M.routeI]?.points[0] ?? M.char.pos`
 fn post_of(g: &Game, m: GuardId) -> V3 {
     match route_points(g, m).and_then(|p| p.first().copied()) { Some(p) => p, None => g.ch[g.gd[m].ch].pos }
+}
+
+/// His head, or where it would be.   (guards.ts headOf)
+pub fn head_of(g: &mut crate::game::Game, gd: GuardId) -> V3 {
+    let c = g.gd[gd].ch;
+    match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.7, 0.0]) }
 }
 
 /// A man says something: a bubble over his head, and a log row if it went over the radio or is out of sight.   (guards.ts say)

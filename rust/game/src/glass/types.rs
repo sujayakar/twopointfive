@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: GlassState, src/game/glass.ts:56)
+/// (TypeScript: GlassState, src/game/glass.ts:58)
 #[derive(Clone, Debug)]
 pub struct GlassState {
     pub panes: Vec<f64>,
@@ -11,7 +11,6 @@ pub struct GlassState {
     pub hits: f64,
     pub last_hit_t: f64,
     pub log: Vec<String>,
-    pub event_at: JsMap<crate::Num, f64>,
     pub crack_at: f64,
 }
 impl GlassState {
@@ -23,14 +22,13 @@ impl GlassState {
             hits: 0.0,
             last_hit_t: 0.0,
             log: Vec::new(),
-            event_at: JsMap::new(),
             crack_at: 0.0,
         }
     }
 }
 impl Default for GlassState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glass.ts:41 GLASS_DEFAULTS, src/game/glass.ts:41)
+/// (TypeScript: inline at src/game/glass.ts:43 GLASS_DEFAULTS, src/game/glass.ts:43)
 #[derive(Clone, Copy, Debug)]
 pub struct GLASSDEFAULTS {
     pub crack_gap: f64,
@@ -47,7 +45,7 @@ impl GLASSDEFAULTS {
 }
 impl Default for GLASSDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glass.ts:93 nearestOnBox ->, src/game/glass.ts:93)
+/// (TypeScript: inline at src/game/glass.ts:95 nearestOnBox ->, src/game/glass.ts:95)
 #[derive(Clone, Copy, Debug)]
 pub struct NearestOnBox {
     pub q: V3,
@@ -81,7 +79,7 @@ impl GlassImpactCause {
     }
 }
 
-/// (TypeScript: inline at src/game/glass.ts:139 glassImpact(opts), src/game/glass.ts:139)
+/// (TypeScript: inline at src/game/glass.ts:131 glassImpact(opts), src/game/glass.ts:131)
 #[derive(Clone, Copy, Debug)]
 pub struct GlassImpactOpts {
     pub through: Option<bool>,
@@ -116,9 +114,9 @@ impl GlassHitCause {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct GlassMod {
-    /// (src/game/glass.ts:43 fxForced)
+    /// (src/game/glass.ts:45 fxForced)
     pub fx_forced: Option<bool>,
-    /// (src/game/glass.ts:57 states)
+    /// (src/game/glass.ts:59 states)
     pub states: Option<crate::glass::GlassState>,
 }
 impl GlassMod {
@@ -130,14 +128,14 @@ impl GlassMod {
     }
 }
 
-/// (src/game/glass.ts:41 GLASS_DEFAULTS: a table nothing writes)
+/// (src/game/glass.ts:43 GLASS_DEFAULTS: a table nothing writes)
 pub fn glass_defaults() -> crate::glass::GLASSDEFAULTS { crate::glass::GLASSDEFAULTS { crack_gap: 0.045, live_gap: 0.2 } }
 
-/// (src/game/glass.ts:44 FX_OFF)
+/// (src/game/glass.ts:46 FX_OFF)
 pub const FX_OFF: &str = "/^(0|off|false|no)$/i";
 
-/// (src/game/glass.ts:44 FX_KEY)
+/// (src/game/glass.ts:46 FX_KEY)
 pub const FX_KEY: &str = "twopointsix.glassfx";
 
-/// (src/game/glass.ts:72 THICK_GLASS_HALF)
+/// (src/game/glass.ts:74 THICK_GLASS_HALF)
 pub const THICK_GLASS_HALF: f64 = 0.05;

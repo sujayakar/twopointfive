@@ -655,7 +655,7 @@ impl Default for LASER { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/sim/lightshome.ts:180 stand(cones), src/sim/lightshome.ts:180)
 #[derive(Clone, Copy, Debug)]
 pub struct LightHomeStandConesItem {
-    pub light: Option<LightId>,
+    pub light: LightId,
     pub target: FixtureId,
     pub slot: f64,
 }
@@ -663,7 +663,7 @@ impl LightHomeStandConesItem {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         LightHomeStandConesItem {
-            light: None,
+            light: LightId(0),
             target: FixtureId(0),
             slot: 0.0,
         }
@@ -727,5 +727,5 @@ pub fn laser() -> crate::sim_lightshome::LASER { crate::sim_lightshome::LASER { 
 /// (src/sim/lightshome.ts:49 CAMERA_STATES: a table nothing writes)
 pub fn camera_states() -> [String; 3] { [String::from("idle"), String::from("suspect"), String::from("alarm")] }
 
-/// (src/sim/lightshome.ts:273 LIGHTS_BIT)
+/// (src/sim/lightshome.ts:274 LIGHTS_BIT)
 pub const LIGHTS_BIT: f64 = 512.0;

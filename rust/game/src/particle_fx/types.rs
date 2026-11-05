@@ -622,9 +622,9 @@ pub enum TestBurstKind {
     Dust,
     Bang,
     Debris,
+    Sheets,
     Sparks,
     Casings,
-    Sheets,
 }
 impl TestBurstKind {
     pub const fn as_str(self) -> &'static str {
@@ -632,9 +632,9 @@ impl TestBurstKind {
             TestBurstKind::Dust => "dust",
             TestBurstKind::Bang => "bang",
             TestBurstKind::Debris => "debris",
+            TestBurstKind::Sheets => "sheets",
             TestBurstKind::Sparks => "sparks",
             TestBurstKind::Casings => "casings",
-            TestBurstKind::Sheets => "sheets",
         }
     }
 }

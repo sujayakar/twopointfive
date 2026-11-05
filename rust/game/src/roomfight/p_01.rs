@@ -52,7 +52,7 @@ pub fn pair_key(a: f64, b: f64) -> String {
 pub fn pair_smoke(g: &mut crate::game::Game, a: CharId, b: CharId) -> f64 {
     let key = pair_key(g.ch[a].id, g.ch[b].id);
     let t = match g.fight.trans.get(key) { Some(v) => *v, None => 1.0 };
-    if g.weather.fog.is_some() {
+    if crate::weather::weather_fog(g).is_some() {
         let (ca, cb) = (chest_of(g, a), chest_of(g, b));
         t * crate::weather::air_trans(g, ca, cb)
     } else {

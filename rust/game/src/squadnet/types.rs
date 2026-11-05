@@ -3,27 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: NetRow, src/game/squadnet.ts:63)
-#[derive(Clone, Debug)]
-pub struct NetRow {
-    pub text: String,
-    pub at: V3,
-    pub t: f64,
-    pub dur: f64,
-}
-impl NetRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetRow {
-            text: String::new(),
-            at: [0.0; 3],
-            t: 0.0,
-            dur: 0.0,
-        }
-    }
-}
-impl Default for NetRow { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: SquadNet, src/game/squadnet.ts:66)
 #[derive(Clone, Debug)]
 pub struct SquadNet {
@@ -50,6 +29,27 @@ impl SquadNet {
     }
 }
 impl Default for SquadNet { fn default() -> Self { Self::blank() } }
+
+/// (TypeScript: NetRow, src/game/squadnet.ts:63)
+#[derive(Clone, Debug)]
+pub struct NetRow {
+    pub text: String,
+    pub at: V3,
+    pub t: f64,
+    pub dur: f64,
+}
+impl NetRow {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        NetRow {
+            text: String::new(),
+            at: [0.0; 3],
+            t: 0.0,
+            dur: 0.0,
+        }
+    }
+}
+impl Default for NetRow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squadnet.ts:68 SquadNet.stats, src/game/squadnet.ts:64)
 #[derive(Clone, Copy, Debug)]

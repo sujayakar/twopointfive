@@ -1,4 +1,4 @@
-//! src/scene/boxMirror.ts lines 1 to 498
+//! src/scene/boxMirror.ts lines 1 to 515
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -41,7 +41,6 @@ const GW_BITS_: usize = GW_BITS as usize;
 const G_GONE_: u32 = G_GONE as u32;
 const G_DICE_: u32 = G_DICE as u32;
 const G_RUN_: u32 = G_RUN as u32;
-const VD_: usize = VD as usize;
 const FRAGS_PER_SITE_: usize = FRAGS_PER_SITE as usize;
 const THING_SET_: usize = THING_SET as usize;
 const TH_: usize = TH as usize;
@@ -355,6 +354,7 @@ pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<
     g.col.mirror.put_backs = put_backs;
     let s = g.sim;
     if all {
+        g.col.mirror.sheets_in = None;
         for r in g.col.mirror.cut_of.iter_mut() {
             *r = -1;
         }
@@ -398,6 +398,10 @@ pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<
 /// The tick is over.   (boxMirror.ts BoxMirror.shut)
 pub fn box_mirror_shut(g: &mut crate::game::Game) {
     let x = &mut g.col.mirror;
+    x.block = None;
+    if x.live && x.slot >= 0.0 {
+        sim::panes_world(x.slot as usize, -1);
+    }
     x.live = false;
     x.lines = false;
     x.rays = false;
@@ -559,22 +563,6 @@ pub fn box_mirror_debt(g: &mut crate::game::Game, what: f64) {
     }
 }
 
-/// The glass is being worked on: every question owes the panes' rows until `glass_end`, and the first one after.   (boxMirror.ts BoxMirror.glassBegin)
-pub fn box_mirror_glass_begin(g: &mut crate::game::Game) {
-    g.col.mirror.glass_busy += 1.0;
-    if g.col.mirror.live {
-        box_mirror_debt(g, OWE_GLASS);
-    }
-}
-
-/// (boxMirror.ts BoxMirror.glassEnd)
-pub fn box_mirror_glass_end(g: &mut crate::game::Game) {
-    g.col.mirror.glass_busy -= 1.0;
-    if g.col.mirror.live {
-        box_mirror_debt(g, OWE_GLASS);
-    }
-}
-
 /// The glass was written with no question of its own between.   (boxMirror.ts BoxMirror.glassWrote)
 pub fn box_mirror_glass_wrote(g: &mut crate::game::Game) {
     if g.col.mirror.live {
@@ -660,7 +648,7 @@ pub fn box_mirror_wrote_grid(g: &mut crate::game::Game) {
     box_mirror_wrote(g);
 }
 
-/// The panes that are no longer whole, written whole: a row each in the order the game hands them over.   (boxMirror.ts BoxMirror.panes)
+/// The panes' rows for the copy's lines and rays: they stand in the game's block, the rule's own; nothing is copied. With no glass hung, no row stands.   (boxMirror.ts BoxMirror.panes)
 pub fn box_mirror_panes(g: &mut crate::game::Game) {
     let s = g.sim;
     {
@@ -670,40 +658,50 @@ pub fn box_mirror_panes(g: &mut crate::game::Game) {
             o.glass_of[x.glass_bis[r] as usize] = 0;
         }
     }
-    let cap = g.col.mirror.caps.glass;
-    let mut n = 0.0f64;
-    if g.col.mirror.glass.is_some() {
-        crate::glassbreak::glass_break_each(g, &mut |_g, p| {
-            if n < cap {
-                let (o, r) = (world(s), n as usize);
-                pane_row(&mut o.glass[r * GD_..(r + 1) * GD_], &mut o.glass_w[r * GW_..(r + 1) * GW_], &p);
-            }
-            n += 1.0;
-        });
+    // (`G.home`, `G.sheets` and `G.view` are live getters of the game's glass there: the held source says only that it is hung)
+    let home = if g.col.mirror.glass.is_some() { crate::glassbreak::glass_break_home(g) } else { None };
+    if home.is_some() {
+        panes_home(g, home);
+        let sh = crate::glassbreak::glass_break_sheets(g);
+        sheets_written(g, sh);
+        box_mirror_view_in(g);
+        return;
     }
-    if n > cap {
-        box_mirror_outgrown(g, "panes of glass no longer whole", n, cap);
-    }
-    let n = n as usize;
-    let o = world(s);
-    let mut angles = false;
-    for r in 0..n {
-        if o.glass_w[r * GW_ + GW_FLAGS_] & G_GONE_ == 0 {
-            angles = true;
-            break;
-        }
-    }
+    sim::panes_world(s, -1);
     let x = &mut g.col.mirror;
-    x.glass_angles = angles;
+    x.block = None;
+    x.glass_angles = false;
     x.glass_bis.clear();
-    for r in 0..n {
-        let bi = o.glass_w[r * GW_];
-        x.glass_bis.push(bi as f64);
-        o.glass_of[bi as usize] = r as u32 + 1;
-    }
-    x.glass_n = n as f64;
-    sim::world_glass(s, n as u32);
+    x.glass_n = 0.0;
+    sim::world_glass(s, 0);
     box_mirror_view_in(g);
+}
+
+/// the copy's lines and rays read a pane in this game's block: its slot is `g.sim`, for the game's life.
+fn panes_home(g: &mut Game, home: Option<crate::Opaque>) {
+    let s = g.sim;
+    let x = &mut g.col.mirror;
+    x.glass_n = 0.0;
+    x.glass_bis.clear();
+    x.glass_angles = true;
+    sim::world_glass(s, 0);
+    sim::panes_world(s, s as i32);
+    x.block = home;
+}
+
+/// the level's sheets, written unless the copy holds them (`sh !== this.sheetsIn`: by every double's bits here).
+fn sheets_written(g: &mut Game, sh: Vec<f64>) {
+    let held = match g.col.mirror.sheets_in.as_deref() {
+        Some(o) => o.len() == sh.len() && o.iter().zip(sh.iter()).all(|(a, b)| is(*a, *b)),
+        None => false,
+    };
+    if held {
+        return;
+    }
+    let m = unsafe { core::slice::from_raw_parts_mut(sim::sim_scratch(), sim::sim_scratch_len()) };
+    m[..sh.len()].copy_from_slice(&sh);
+    sim::world_sheets(g.sim, sh.len() / 3);
+    g.col.mirror.sheets_in = Some(sh);
 }
 
 /// One pane's row, `m` and `w` being its doubles and its words.
@@ -786,7 +784,7 @@ pub fn box_mirror_viewed(g: &mut crate::game::Game) {
     }
 }
 
-/// The view in hand, written.   (boxMirror.ts BoxMirror.viewIn)
+/// The view in hand, its numbers said to the module: a line or a ray there reads each pane's row where it stands.   (boxMirror.ts BoxMirror.viewIn)
 pub fn box_mirror_view_in(g: &mut crate::game::Game) {
     let v = if g.col.mirror.glass.is_some() { crate::glassbreak::glass_break_view(g) } else { None };
     g.col.mirror.view_lengths = false;
@@ -798,22 +796,8 @@ pub fn box_mirror_view_in(g: &mut crate::game::Game) {
         }
         Some(v) => v,
     };
-    let n = v.bi.len();
-    let cap = g.col.mirror.caps.view;
-    if n as f64 > cap {
-        box_mirror_outgrown(g, "panes of glass a burst's view names", n as f64, cap);
-    }
-    let o = world(s);
-    for k in 0..n {
-        o.view_bi[k] = js::to_u32(v.bi[k]);
-    }
-    for k in 0..n * VD_ {
-        o.view[k] = v.at[k];
-        if k % VD_ == VD_ - 1 && v.at[k] >= 0.0 {
-            g.col.mirror.view_lengths = true;
-        }
-    }
-    sim::world_view(s, js::to_u32(v.kind), n as u32);
+    let a = &v.at;
+    sim::panes_view(s, js::to_u32(v.kind), a[0], a[1], a[2], a[3], a[4], a[5]);
 }
 
 /// May a pane's open question be asked of the module now.   (boxMirror.ts BoxMirror.glassIn)
@@ -826,58 +810,12 @@ pub fn box_mirror_glass_plain(g: &mut crate::game::Game) -> bool {
     !g.col.mirror.glass_angles && !g.col.mirror.view_lengths
 }
 
-/// is this kept row (`keep_w`, `keep_d`: one pane's) the pane as it would be written now, on a row of the check's own: the copy is not touched.
-fn pane_kept(keep_w: &[u32], keep_d: &[f64], p: &PaneRow) -> bool {
-    let (mut tw, mut td) = (vec![0u32; GW_], vec![0.0f64; GD_]);
-    pane_row(&mut td, &mut tw, p);
-    let ns = if p.sites.len() < G_SITES_ { p.sites.len() } else { G_SITES_ };
-    for k in 0..GW_ {
-        if k >= GW_N_ && k < GW_OPEN_ && (k - GW_N_) % G_SITES_ >= ns {
-            continue;
-        }
-        if (k == GW_COLS_ || k == GW_ROWS_ || k == GW_DSEED_) && p.dice.is_none() {
-            continue;
-        }
-        if keep_w[k] != tw[k] {
-            return false;
-        }
-    }
-    for i in 0..ns * G_SITE_ {
-        if !is(keep_d[i], td[i]) {
-            return false;
-        }
-    }
-    if p.dice.is_some() {
-        for i in G_DICE_AT_..G_DICE_AT_ + 6 {
-            if !is(keep_d[i], td[i]) {
-                return false;
-            }
-        }
-    }
-    true
-}
-
-/// THE CHECK'S QUESTION of the panes' copy: how many of its rows are not the game's glass now.   (boxMirror.ts BoxMirror.stalePanes)
+/// THE CHECK'S QUESTION of the panes' copy: how many of its rows are not the game's glass now. With glass hung there is no copy: the row is the state.   (boxMirror.ts BoxMirror.stalePanes)
 pub fn box_mirror_stale_panes(g: &mut crate::game::Game) -> f64 {
     if g.col.mirror.glass.is_none() {
         return g.col.mirror.glass_n;
     }
-    let was_n = g.col.mirror.glass_n as usize;
-    let o = world(g.sim);
-    let (keep_w, keep_d) = (o.glass_w[..was_n * GW_].to_vec(), o.glass[..was_n * GD_].to_vec());
-    let (mut n, mut bad) = (0usize, 0.0f64);
-    crate::glassbreak::glass_break_each(g, &mut |_g, p| {
-        let r = n;
-        n += 1;
-        if r >= was_n {
-            bad += 1.0;
-            return;
-        }
-        if !pane_kept(&keep_w[r * GW_..(r + 1) * GW_], &keep_d[r * GD_..(r + 1) * GD_], &p) {
-            bad += 1.0;
-        }
-    });
-    bad + if n < was_n { (was_n - n) as f64 } else { 0.0 }
+    0.0
 }
 
 /// THE LEAVES A QUESTION IS ASKED WITH: which of the module's lists holds them. −1 no leaves, −2 more than a list holds.   (boxMirror.ts BoxMirror.leaves)
@@ -1240,27 +1178,6 @@ mod tests {
         assert_eq!(flags_from(0x0302 as f64, 0x00020008u32 as f64), 131848.0);
     }
 
-    /// stalePanes' compare: what a pane with fewer sites or no dice leaves unsaid is no difference; a word or a double it says is one.
-    #[test]
-    fn a_kept_pane_row_is_compared_by_what_the_pane_says() {
-        let p = PaneRow { bi: 7.0, gone: false, run: false, sites: vec![PaneSite { u: 0.5, v: 0.25, rot: 1.0, n: 3.0, seed: 9.0, rho: vec![1.0, 2.0, 3.0, 4.0], rz: 0.1, merge: 0.2 }], open: vec![0u8; 84], pending: Vec::new(), dice: None };
-        let (mut w, mut d) = (vec![0u32; GW_], vec![0.0f64; GD_]);
-        pane_row(&mut d, &mut w, &p);
-        assert!(pane_kept(&w, &d, &p));
-        // past the pane's sites, the dice's words and doubles: another pane's leavings
-        w[GW_N_ + 1] = 5;
-        w[GW_SEED_ + 7] = 5;
-        w[GW_COLS_] = 5;
-        d[G_SITE_] = 5.0;
-        d[G_DICE_AT_] = 5.0;
-        assert!(pane_kept(&w, &d, &p));
-        w[GW_N_] = 4;
-        assert!(!pane_kept(&w, &d, &p));
-        w[GW_N_] = 3;
-        d[1] = -0.25;
-        assert!(!pane_kept(&w, &d, &p));
-    }
-
     #[test]
     fn the_grid_is_cells_one_run_after_another() {
         let mut g = game(1);
@@ -1298,13 +1215,16 @@ mod tests {
             x.lines = true;
             x.row_lines = true;
         }
-        box_mirror_glass_begin(&mut g);
+        box_mirror_glass_wrote(&mut g);
         assert!(g.col.mirror.owes && !g.col.mirror.lines);
         assert!(!box_mirror_owes_boxes(&mut g));
         box_mirror_again(&mut g, &[], None);
-        assert!(g.col.mirror.owes, "still being worked on: the next question writes its rows again");
+        assert!(!g.col.mirror.owes);
         assert!(g.col.mirror.lines);
-        box_mirror_glass_end(&mut g);
+        g.col.mirror.glass_busy = 1.0;
+        box_mirror_again(&mut g, &[], None);
+        assert!(g.col.mirror.owes, "still being worked on: the next question writes its rows again");
+        g.col.mirror.glass_busy = 0.0;
         box_mirror_again(&mut g, &[], None);
         assert!(!g.col.mirror.owes);
         // (the debt is not taken with no copy standing, and `shut` forgets what was owed)
@@ -1316,6 +1236,34 @@ mod tests {
         assert!(!g.col.mirror.owes);
         box_mirror_wrote_grid(&mut g);
         assert!(g.col.mirror.cells_wrote && !g.col.mirror.owes);
+    }
+
+    /// the panes' rows stand in the block: no copy's row, the world told whose, and told no more as the tick shuts
+    #[test]
+    fn the_copy_reads_a_pane_in_the_block_until_it_shuts() {
+        let mut g = game(0);
+        box_mirror_take(&mut g);
+        g.col.mirror.live = true;
+        g.col.mirror.glass_n = 3.0;
+        panes_home(&mut g, Some(crate::Opaque));
+        let x = &g.col.mirror;
+        assert!(x.block.is_some() && x.glass_angles && x.glass_n == 0.0 && x.glass_bis.is_empty());
+        assert!(!box_mirror_glass_plain(&mut g), "an angle may be worked out");
+        assert_eq!(world(0).glass_n, 0);
+        assert_eq!(world(0).panes_g, 1);
+        sheets_written(&mut g, vec![7.0, 1.5, 2.0, 9.0, -0.0, 3.0]);
+        assert_eq!(world(0).sheet_n, 2);
+        assert_eq!((world(0).sheets[1].bi, world(0).sheets[1].sky), (9, 3));
+        // the same list is not written again; one that differs by a sky, or by a −0, is
+        world(0).sheet_n = 0;
+        sheets_written(&mut g, vec![7.0, 1.5, 2.0, 9.0, -0.0, 3.0]);
+        assert_eq!(world(0).sheet_n, 0);
+        sheets_written(&mut g, vec![7.0, 1.5, 2.0, 9.0, 0.0, 3.0]);
+        assert_eq!(world(0).sheet_n, 2);
+        box_mirror_shut(&mut g);
+        assert!(g.col.mirror.block.is_none());
+        assert_eq!(world(0).panes_g, 0);
+        assert_eq!(box_mirror_stale_panes(&mut g), 0.0);
     }
 
     #[test]

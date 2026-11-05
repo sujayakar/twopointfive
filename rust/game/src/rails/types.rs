@@ -3,25 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Act, src/game/rails.ts:128)
-#[derive(Clone, Debug)]
-pub struct Act {
-    pub keys: Option<Vec<String>>,
-    pub buttons: Option<f64>,
-    pub wheel: Option<bool>,
-}
-impl Act {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Act {
-            keys: None,
-            buttons: None,
-            wheel: None,
-        }
-    }
-}
-impl Default for Act { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: Rails, src/game/rails.ts:215)
 #[derive(Clone, Debug)]
 pub struct Rails {
@@ -163,6 +144,25 @@ impl RailsStepLook {
     }
 }
 impl Default for RailsStepLook { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: Act, src/game/rails.ts:128)
+#[derive(Clone, Debug)]
+pub struct Act {
+    pub keys: Option<Vec<String>>,
+    pub buttons: Option<f64>,
+    pub wheel: Option<bool>,
+}
+impl Act {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        Act {
+            keys: None,
+            buttons: None,
+            wheel: None,
+        }
+    }
+}
+impl Default for Act { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rails.ts:166 said(A), src/game/rails.ts:166)
 #[derive(Clone, Debug)]

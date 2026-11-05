@@ -3,6 +3,29 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
+/// (TypeScript: FogSnap, src/game/fogofwar.ts:377)
+#[derive(Clone, Debug)]
+pub struct FogSnap {
+    pub doors: Option<Vec<(String, f64)>>,
+    pub lamps: Option<Vec<(String, f64, Option<Vec<Vec<f64>>>)>>,
+    pub things: Option<Vec<(f64, Vec<Vec<f64>>)>>,
+    pub out: Option<Vec<f64>>,
+    pub bodies: Option<Vec<f64>>,
+}
+impl FogSnap {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        FogSnap {
+            doors: None,
+            lamps: None,
+            things: None,
+            out: None,
+            bodies: None,
+        }
+    }
+}
+impl Default for FogSnap { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: FogEye, src/game/fogofwar.ts:392)
 #[derive(Clone, Copy, Debug)]
 pub struct FogEye {
@@ -29,29 +52,6 @@ impl FogEye {
     }
 }
 impl Default for FogEye { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: FogSnap, src/game/fogofwar.ts:377)
-#[derive(Clone, Debug)]
-pub struct FogSnap {
-    pub doors: Option<Vec<(String, f64)>>,
-    pub lamps: Option<Vec<(String, f64, Option<Vec<Vec<f64>>>)>>,
-    pub things: Option<Vec<(f64, Vec<Vec<f64>>)>>,
-    pub out: Option<Vec<f64>>,
-    pub bodies: Option<Vec<f64>>,
-}
-impl FogSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogSnap {
-            doors: None,
-            lamps: None,
-            things: None,
-            out: None,
-            bodies: None,
-        }
-    }
-}
-impl Default for FogSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: FogOfWar, src/game/fogofwar.ts:424)
 #[derive(Clone, Debug)]
@@ -621,7 +621,7 @@ pub fn door_y() -> Vec<f64> { alloc::vec![1.0, 1.8] }
 pub fn near_eyes() -> Vec<crate::fogofwar::FogEye> { Vec::new() }
 
 /// (src/game/fogofwar.ts:420 nearD2: a table nothing writes)
-pub fn near_d2() -> Vec<f64> { alloc::vec![142.06703449236966, 142.91613629056707, 160.0566298593451, 172.7126492955776, 176.2774516719939] }
+pub fn near_d2() -> Vec<f64> { alloc::vec![142.0679035618402, 142.9169212920686, 160.0574919308949, 172.71365506199132, 176.2782920976893] }
 
 /// (src/game/fogofwar.ts:422 IN_ORDER)
 pub const IN_ORDER: f64 = 106181136.0;

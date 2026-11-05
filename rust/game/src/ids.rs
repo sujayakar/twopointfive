@@ -76,8 +76,6 @@ id! {
     FurnblastMemberId,
     /// WindSource: g.tab.wind_wind_source
     WindWindSourceId,
-    /// StickyCam: g.tab.stickycam_sticky_cam
-    StickyCamId,
     /// DoorOp: g.tab.doortools_door_op
     DoorOpId,
     /// Assignment: g.tab.orders_assignment
@@ -102,34 +100,36 @@ id! {
     CoverOpeningId,
     /// Breach: g.tab.wallreact_breach
     WallreactBreachId,
-    /// Lane: g.tab.lanes_lane
-    LanesLaneId,
     /// Role: g.tab.tactics_role
     TacticsRoleId,
     /// Plan: g.tab.tactics_plan
     TacticsPlanId,
     /// DangerRec: g.tab.tactics_danger_rec
     TacticsDangerRecId,
+    /// Lane: g.tab.lanes_lane
+    LanesLaneId,
     /// Man: g.tab.pressure_man
     PressureManId,
-    /// Op: g.tab.roomfight_op
-    RoomfightOpId,
-    /// Squad: g.tab.enemysquads_squad
-    EnemysquadsSquadId,
+    /// StickyCam: g.tab.stickycam_sticky_cam
+    StickyCamId,
     /// Region: g.tab.rescueflow_region
     RescueflowRegionId,
-    /// SetWallCharge: g.tab.wallcharge_set_wall_charge
-    WallChargeId,
-    /// LiveBeat: g.tab.director_live_beat
-    DirectorLiveBeatId,
     /// RoomClear: g.tab.squad_room_clear
     RoomClearId,
     /// Run: g.tab.director_run
     DirectorRunId,
+    /// Op: g.tab.roomfight_op
+    RoomfightOpId,
     /// WallOp: g.tab.wallcharge_wall_op
     WallOpId,
+    /// SetWallCharge: g.tab.wallcharge_set_wall_charge
+    WallChargeId,
     /// PatrolRoute: g.tab.route
     RouteId,
+    /// Squad: g.tab.enemysquads_squad
+    EnemysquadsSquadId,
+    /// LiveBeat: g.tab.director_live_beat
+    DirectorLiveBeatId,
     /// Standoff: g.tab.guards_standoff
     GuardsStandoffId,
     /// Civ: g.cv

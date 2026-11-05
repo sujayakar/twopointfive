@@ -3,6 +3,43 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
+/// (TypeScript: PairOrders, src/game/pairorders.ts:143)
+#[derive(Clone, Debug)]
+pub struct PairOrders {
+    pub jobs: JsMap<GuardId, crate::pairorders::Job>,
+    pub habit: JsMap<GuardId, [f64; 2]>,
+    pub glance: JsMap<GuardId, crate::pairorders::PairOrdersGlanceValue>,
+    pub stood: JsMap<GuardId, f64>,
+    pub swept: JsMap<GuardId, f64>,
+    pub dark: JsMap<GuardId, crate::pairorders::PairOrdersDarkValue>,
+    pub dark_memo: JsMap<String, crate::pairorders::PairOrdersDarkMemoValue>,
+    pub ways: JsMap<GuardId, crate::pairorders::PairOrdersWaysValue>,
+    pub seated: bool,
+    pub go_seated: bool,
+    pub hands_was: bool,
+    pub lit_cells: JsMap<crate::Num, [f64; 2]>,
+}
+impl PairOrders {
+    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    pub fn blank() -> Self {
+        PairOrders {
+            jobs: JsMap::new(),
+            habit: JsMap::new(),
+            glance: JsMap::new(),
+            stood: JsMap::new(),
+            swept: JsMap::new(),
+            dark: JsMap::new(),
+            dark_memo: JsMap::new(),
+            ways: JsMap::new(),
+            seated: false,
+            go_seated: false,
+            hands_was: false,
+            lit_cells: JsMap::new(),
+        }
+    }
+}
+impl Default for PairOrders { fn default() -> Self { Self::blank() } }
+
 /// (TypeScript: Job, src/game/pairorders.ts:129)
 #[derive(Clone, Copy, Debug)]
 pub struct Job {
@@ -76,43 +113,6 @@ impl JobMode {
         }
     }
 }
-
-/// (TypeScript: PairOrders, src/game/pairorders.ts:143)
-#[derive(Clone, Debug)]
-pub struct PairOrders {
-    pub jobs: JsMap<GuardId, crate::pairorders::Job>,
-    pub habit: JsMap<GuardId, [f64; 2]>,
-    pub glance: JsMap<GuardId, crate::pairorders::PairOrdersGlanceValue>,
-    pub stood: JsMap<GuardId, f64>,
-    pub swept: JsMap<GuardId, f64>,
-    pub dark: JsMap<GuardId, crate::pairorders::PairOrdersDarkValue>,
-    pub dark_memo: JsMap<String, crate::pairorders::PairOrdersDarkMemoValue>,
-    pub ways: JsMap<GuardId, crate::pairorders::PairOrdersWaysValue>,
-    pub seated: bool,
-    pub go_seated: bool,
-    pub hands_was: bool,
-    pub lit_cells: JsMap<crate::Num, [f64; 2]>,
-}
-impl PairOrders {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
-    pub fn blank() -> Self {
-        PairOrders {
-            jobs: JsMap::new(),
-            habit: JsMap::new(),
-            glance: JsMap::new(),
-            stood: JsMap::new(),
-            swept: JsMap::new(),
-            dark: JsMap::new(),
-            dark_memo: JsMap::new(),
-            ways: JsMap::new(),
-            seated: false,
-            go_seated: false,
-            hands_was: false,
-            lit_cells: JsMap::new(),
-        }
-    }
-}
-impl Default for PairOrders { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/pairorders.ts:147 PairOrders.glance, src/game/pairorders.ts:147)
 #[derive(Clone, Copy, Debug)]

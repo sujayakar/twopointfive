@@ -398,215 +398,215 @@ pub fn collide_guard(g: &mut crate::game::Game, gd: GuardId, p0x: f64, p0z: f64)
 /// (src/game/guards.ts:2590 sweepStatics)
 pub fn sweep_statics(g: &mut crate::game::Game, c_2: CharId, fx: f64, fz: f64) { todo!() }
 
-/// (src/game/guards.ts:2613 lightEstimateAt)
-pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: Option<bool>, field: Option<&mut crate::sense::LightField>, moon: Option<bool>) -> f64 { todo!() }
+/// (src/game/guards.ts:2614 lightEstimateAt)
+pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: Option<bool>, field: Option<&mut crate::sense::LightField>, moon: Option<bool>, leave: Option<f64>) -> f64 { todo!() }
 
-/// (src/game/guards.ts:2618 lightEstimateIn)
-pub fn light_estimate_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, field: Option<&mut crate::sense::LightField>, moon: bool) -> f64 { todo!() }
+/// (src/game/guards.ts:2619 lightEstimateIn)
+pub fn light_estimate_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, field: Option<&mut crate::sense::LightField>, moon: bool, leave: f64) -> f64 { todo!() }
 
-/// (src/game/guards.ts:2629 lightField)
+/// (src/game/guards.ts:2630 lightField)
 pub fn light_field(g: &mut crate::game::Game) -> Option<crate::sense::LightField> { todo!() }
 
-/// (src/game/guards.ts:2634 lampAsked)
+/// (src/game/guards.ts:2636 lampAsked)
 pub fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool { todo!() }
 
-/// (src/game/guards.ts:2641 writeLamps)
+/// (src/game/guards.ts:2642 rowsOf)
+pub fn rows_of(g: &mut crate::game::Game, steady_only: bool, leave: f64) -> crate::scene_collision::LampRows { todo!() }
+
+/// (src/game/guards.ts:2648 writeLamps)
 pub fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool { todo!() }
 
-/// (src/game/guards.ts:2651 CARRIED)
+/// (src/game/guards.ts:2660 CARRIED)
 pub fn carried() -> bool { todo!() }
 
-/// (src/game/guards.ts:2654 steadyLamps)
-pub fn steady_lamps(g: &mut crate::game::Game) -> bool { todo!() }
+/// (src/game/guards.ts:2664 steadyLamps)
+pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps { todo!() }
 
-/// (src/game/guards.ts:2658 steadyMost)
-pub fn steady_most(g: &mut crate::game::Game) -> f64 { todo!() }
+/// (src/game/guards.ts:2671 lampsOn)
+pub fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, acc: &mut Vec<f64>, field: Option<crate::sense::LightField>, leave: f64) { todo!() }
 
-/// (src/game/guards.ts:2665 lampsOn)
-pub fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, acc: &mut Vec<f64>, field: Option<crate::sense::LightField>) { todo!() }
-
-/// (src/game/guards.ts:2671 meterOf)
+/// (src/game/guards.ts:2677 meterOf)
 pub fn meter_of(g: &mut crate::game::Game, c_2: CharId, prefix: &str) -> f64 { todo!() }
 
-/// (src/game/guards.ts:2681 unitLightMeter)
+/// (src/game/guards.ts:2687 unitLightMeter)
 pub fn unit_light_meter(g: &mut crate::game::Game, gd: GuardId, dt: f64) { todo!() }
 
-/// (src/game/guards.ts:2691 acquireFoe)
+/// (src/game/guards.ts:2697 acquireFoe)
 pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 
-/// (src/game/guards.ts:2735 rigOf)
+/// (src/game/guards.ts:2741 rigOf)
 pub fn rig_of(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::RigOf { todo!() }
 
-/// (src/game/guards.ts:2738 longRigOf)
+/// (src/game/guards.ts:2744 longRigOf)
 pub fn long_rig_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::LongRigOf> { todo!() }
 
-/// (src/game/guards.ts:2745 handCarry)
+/// (src/game/guards.ts:2751 handCarry)
 pub fn hand_carry(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::HandCarry { todo!() }
 
-/// (src/game/guards.ts:2751 gunBack)
+/// (src/game/guards.ts:2757 gunBack)
 pub fn gun_back(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 
-/// (src/game/guards.ts:2755 inHand)
+/// (src/game/guards.ts:2761 inHand)
 pub fn in_hand(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::InHand> { todo!() }
 
-/// (src/game/guards.ts:2764 startReloadBeat)
+/// (src/game/guards.ts:2770 startReloadBeat)
 pub fn start_reload_beat(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 
-/// (src/game/guards.ts:2773 tickReloadBeat)
+/// (src/game/guards.ts:2779 tickReloadBeat)
 pub fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) { todo!() }
 
-/// (src/game/guards.ts:2806 burstTrigger)
+/// (src/game/guards.ts:2812 burstTrigger)
 pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3, start_ok: bool, round_ok: bool, except: Option<GuardId>) { todo!() }
 
-/// (src/game/guards.ts:2845 burstSummary)
+/// (src/game/guards.ts:2851 burstSummary)
 pub fn burst_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/guards.ts:2855 attachFlashlight)
+/// (src/game/guards.ts:2861 attachFlashlight)
 pub fn attach_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) { todo!() }
 
-/// (src/game/guards.ts:2860 poseFlashlight)
+/// (src/game/guards.ts:2866 poseFlashlight)
 pub fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3> { todo!() }
 
-/// (src/game/guards.ts:2896 onScreen)
+/// (src/game/guards.ts:2902 onScreen)
 pub fn on_screen(g: &mut crate::game::Game, p: V3) -> bool { todo!() }
 
-/// (src/game/guards.ts:2900 inView)
+/// (src/game/guards.ts:2906 inView)
 pub fn in_view(vp: Option<&crate::guards::InViewVp>, p: V3) -> bool { todo!() }
 
-/// (src/game/guards.ts:2908 bubbleSecs)
+/// (src/game/guards.ts:2914 bubbleSecs)
 pub fn bubble_secs(text: &str) -> f64 { todo!() }
 
-/// (src/game/guards.ts:2913 headOf)
+/// (src/game/guards.ts:2919 headOf)
 pub fn head_of(g: &mut crate::game::Game, gd: GuardId) -> V3 { todo!() }
 
-/// (src/game/guards.ts:2915 say)
+/// (src/game/guards.ts:2921 say)
 pub fn say(g: &mut crate::game::Game, gd: GuardId, text: &str, radio: Option<bool>, force: Option<bool>, row: Option<bool>) { todo!() }
 
-/// (src/game/guards.ts:2929 resetGuards)
+/// (src/game/guards.ts:2935 resetGuards)
 pub fn reset_guards(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/guards.ts:2959 escalationOf)
+/// (src/game/guards.ts:2965 escalationOf)
 pub fn escalation_of(g: &mut crate::game::Game) -> f64 { todo!() }
 
-/// (src/game/guards.ts:2960 escalationName)
+/// (src/game/guards.ts:2966 escalationName)
 pub fn escalation_name(l: f64) -> String { todo!() }
 
-/// (src/game/guards.ts:2963 escalationSummary)
+/// (src/game/guards.ts:2969 escalationSummary)
 pub fn escalation_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/guards.ts:2975 clearingSummary)
+/// (src/game/guards.ts:2981 clearingSummary)
 pub fn clearing_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/guards.ts:2979 spokesman)
+/// (src/game/guards.ts:2985 spokesman)
 pub fn spokesman(g: &mut crate::game::Game, pos: Option<V3>, except: Option<GuardId>) -> Option<GuardId> { todo!() }
 
-/// (src/game/guards.ts:2993 raiseEscalation)
+/// (src/game/guards.ts:2999 raiseEscalation)
 pub fn raise_escalation(g: &mut crate::game::Game, to: f64, except: Option<GuardId>, cause: Option<crate::guards::RaiseEscalationCause>, another: Option<bool>) { todo!() }
 
-/// (src/game/guards.ts:3008 standDownEscalation)
+/// (src/game/guards.ts:3014 standDownEscalation)
 pub fn stand_down_escalation(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/guards.ts:3033 offNet)
+/// (src/game/guards.ts:3039 offNet)
 pub fn off_net(g: &mut crate::game::Game, x: GuardId) -> bool { todo!() }
 
-/// (src/game/guards.ts:3035 rollcallState)
+/// (src/game/guards.ts:3041 rollcallState)
 pub fn rollcall_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::guards::Rollcall { todo!() }
 
-/// (src/game/guards.ts:3039 rollcallInterval)
+/// (src/game/guards.ts:3045 rollcallInterval)
 pub fn rollcall_interval(g: &mut crate::game::Game) -> f64 { todo!() }
 
-/// (src/game/guards.ts:3042 radioCaller)
+/// (src/game/guards.ts:3048 radioCaller)
 pub fn radio_caller(g: &mut crate::game::Game) -> Option<GuardId> { todo!() }
 
-/// (src/game/guards.ts:3051 checkerFor)
+/// (src/game/guards.ts:3057 checkerFor)
 pub fn checker_for(g: &mut crate::game::Game, m: GuardId) -> Option<GuardId> { todo!() }
 
-/// (src/game/guards.ts:3054 stillLooking)
+/// (src/game/guards.ts:3060 stillLooking)
 pub fn still_looking(g: &mut crate::game::Game) -> bool { todo!() }
 
-/// (src/game/guards.ts:3056 pickChecker)
+/// (src/game/guards.ts:3062 pickChecker)
 pub fn pick_checker(g: &mut crate::game::Game, m: GuardId, prefer: Option<GuardId>) -> Option<GuardId> { todo!() }
 
-/// (src/game/guards.ts:3065 sendCheckOn)
+/// (src/game/guards.ts:3071 sendCheckOn)
 pub fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str) { todo!() }
 
-/// (src/game/guards.ts:3077 checkOnTick)
+/// (src/game/guards.ts:3083 checkOnTick)
 pub fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 
-/// (src/game/guards.ts:3088 advanceCheckOn)
+/// (src/game/guards.ts:3094 advanceCheckOn)
 pub fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 
-/// (src/game/guards.ts:3096 checkOnDone)
+/// (src/game/guards.ts:3102 checkOnDone)
 pub fn check_on_done(g: &mut crate::game::Game, gd: GuardId, m: GuardId, capped: bool) { todo!() }
 
-/// (src/game/guards.ts:3107 updateRollcall)
+/// (src/game/guards.ts:3113 updateRollcall)
 pub fn update_rollcall(g: &mut crate::game::Game, dt: f64) { todo!() }
 
-/// (src/game/guards.ts:3176 partnerWatch)
+/// (src/game/guards.ts:3182 partnerWatch)
 pub fn partner_watch(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 
-/// (src/game/guards.ts:3208 planClears)
+/// (src/game/guards.ts:3214 planClears)
 pub fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<crate::guards::PlanClearsCause>) -> bool { todo!() }
 
-/// (src/game/guards.ts:3234 clearQueueSummary)
+/// (src/game/guards.ts:3240 clearQueueSummary)
 pub fn clear_queue_summary(g: &mut crate::game::Game) -> String { todo!() }
 
-/// (src/game/guards.ts:3242 forceClear)
+/// (src/game/guards.ts:3248 forceClear)
 pub fn force_clear(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/guards.ts:3251 stepDownEscalation)
+/// (src/game/guards.ts:3257 stepDownEscalation)
 pub fn step_down_escalation(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/guards.ts:3262 updateEscalation)
+/// (src/game/guards.ts:3268 updateEscalation)
 pub fn update_escalation(g: &mut crate::game::Game, dt: f64) { todo!() }
 
-/// (src/game/guards.ts:3286 superviseLockdown)
+/// (src/game/guards.ts:3292 superviseLockdown)
 pub fn supervise_lockdown(g: &mut crate::game::Game, dt: f64, living: f64) { todo!() }
 
-/// (src/game/guards.ts:3310 assignLockdown)
+/// (src/game/guards.ts:3316 assignLockdown)
 pub fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: Option<GuardId>) { todo!() }
 
-/// (src/game/guards.ts:3330 clearLockdown)
+/// (src/game/guards.ts:3336 clearLockdown)
 pub fn clear_lockdown(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/guards.ts:3331 routeLength)
+/// (src/game/guards.ts:3337 routeLength)
 pub fn route_length(g: &mut crate::game::Game, gd: GuardId) -> f64 { todo!() }
 
-/// (src/game/guards.ts:3340 followLeader)
+/// (src/game/guards.ts:3346 followLeader)
 pub fn follow_leader(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool { todo!() }
 
-/// (src/game/guards.ts:3368 holdPost)
+/// (src/game/guards.ts:3374 holdPost)
 pub fn hold_post(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool { todo!() }
 
-/// (src/game/guards.ts:3388 lockdownDoors)
+/// (src/game/guards.ts:3394 lockdownDoors)
 pub fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Option<bool>) { todo!() }
 
-/// (src/game/guards.ts:3415 tension)
+/// (src/game/guards.ts:3421 tension)
 pub fn tension(g: &mut crate::game::Game, theirs: Option<bool>) -> f64 { todo!() }
 
-/// (src/game/guards.ts:3470 spawnUnit)
+/// (src/game/guards.ts:3476 spawnUnit)
 pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Result<GuardId, String> { todo!() }
 
-/// (src/game/guards.ts:3495 releaseUnit)
+/// (src/game/guards.ts:3501 releaseUnit)
 pub fn release_unit(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 
-/// (src/game/guards.ts:3499 despawnUnit)
+/// (src/game/guards.ts:3505 despawnUnit)
 pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
-/// (src/game/guards.ts:3519 despawnUnits)
+/// (src/game/guards.ts:3525 despawnUnits)
 pub fn despawn_units(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/guards.ts:3521 units)
+/// (src/game/guards.ts:3527 units)
 pub fn units(g: &mut crate::game::Game) -> Vec<GuardId> { todo!() }
 
-/// (src/game/guards.ts:3531 engagementOf)
+/// (src/game/guards.ts:3537 engagementOf)
 pub fn engagement_of(g: &mut crate::game::Game) -> Option<crate::guards::Engagement> { todo!() }
 
-/// (src/game/guards.ts:3561 nameOfId)
+/// (src/game/guards.ts:3567 nameOfId)
 pub fn name_of_id(g: &mut crate::game::Game, id_2: f64) -> String { todo!() }
 
-/// (src/game/guards.ts:3563 endEngagement)
+/// (src/game/guards.ts:3569 endEngagement)
 pub fn end_engagement(g: &mut crate::game::Game, outcome: crate::guards::EndEngagementOutcome) { todo!() }
 
-/// (src/game/guards.ts:3570 tickEngagement)
+/// (src/game/guards.ts:3576 tickEngagement)
 pub fn tick_engagement(g: &mut crate::game::Game) { todo!() }

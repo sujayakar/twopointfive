@@ -7,16 +7,16 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum OpeningKind {
     Door,
-    Gap,
     Mouth,
+    Gap,
     Rear,
 }
 impl OpeningKind {
     pub const fn as_str(self) -> &'static str {
         match self {
             OpeningKind::Door => "door",
-            OpeningKind::Gap => "gap",
             OpeningKind::Mouth => "mouth",
+            OpeningKind::Gap => "gap",
             OpeningKind::Rear => "rear",
         }
     }

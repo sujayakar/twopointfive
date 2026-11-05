@@ -11,8 +11,8 @@ pub enum DozeWhy {
     Noise,
     Taken,
     Time,
-    Bump,
     Net,
+    Bump,
 }
 impl DozeWhy {
     pub const fn as_str(self) -> &'static str {
@@ -22,8 +22,8 @@ impl DozeWhy {
             DozeWhy::Noise => "noise",
             DozeWhy::Taken => "taken",
             DozeWhy::Time => "time",
-            DozeWhy::Bump => "bump",
             DozeWhy::Net => "net",
+            DozeWhy::Bump => "bump",
         }
     }
 }
@@ -131,7 +131,7 @@ impl Seat {
 }
 impl Default for Seat { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DozeSnap, src/game/doze.ts:355)
+/// (TypeScript: DozeSnap, src/game/doze.ts:352)
 #[derive(Clone, Debug)]
 pub struct DozeSnap {
     pub men: Vec<crate::doze::DozeSnapMenItem>,
@@ -150,7 +150,7 @@ impl DozeSnap {
 }
 impl Default for DozeSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doze.ts:355 DozeSnap.men, src/game/doze.ts:355)
+/// (TypeScript: inline at src/game/doze.ts:352 DozeSnap.men, src/game/doze.ts:352)
 #[derive(Clone, Debug)]
 pub struct DozeSnapMenItem {
     pub i: f64,
@@ -208,8 +208,8 @@ pub enum WakeWhy {
     Alarm,
     Noise,
     Taken,
-    Bump,
     Net,
+    Bump,
 }
 impl WakeWhy {
     pub const fn as_str(self) -> &'static str {
@@ -218,8 +218,8 @@ impl WakeWhy {
             WakeWhy::Alarm => "alarm",
             WakeWhy::Noise => "noise",
             WakeWhy::Taken => "taken",
-            WakeWhy::Bump => "bump",
             WakeWhy::Net => "net",
+            WakeWhy::Bump => "bump",
         }
     }
 }
@@ -239,7 +239,7 @@ impl DozeAt {
     }
 }
 
-/// (TypeScript: inline at src/game/doze.ts:344 dozeOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
+/// (TypeScript: inline at src/game/doze.ts:341 dozeOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
 #[derive(Clone, Copy, Debug)]
 pub struct DozeOf {
     pub phase: crate::doze::Phase,
@@ -306,5 +306,5 @@ pub fn touch() -> Vec<i32> { alloc::vec![0; 96] }
 /// (src/game/doze.ts:129 SCREEN_LINES: a table nothing writes)
 pub fn screen_lines() -> Vec<String> { alloc::vec![String::from("password expired. of course it has."), String::from("reply all. he replied all."), String::from("…and it's frozen. wonderful."), String::from("who formats a duty roster like this."), String::from("no. no, I saved that."), String::from("page two of two. there is no page two."), String::from("the overtime form wants a form."), String::from("mandatory fun. who writes these."), String::from("loading… still loading."), String::from("printer offline. it's right there."), String::from("one more hand. then the rounds."), String::from("unread, unread, unread. all him.")] }
 
-/// (src/game/doze.ts:334 WHOLE: a table nothing writes)
+/// (src/game/doze.ts:331 WHOLE: a table nothing writes)
 pub fn whole() -> [f64; 2] { [1.0, 1.0] }

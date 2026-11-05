@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 pub fn look_keyed(g: &mut crate::game::Game, b: BoxId) -> bool { todo!() }
 
 /// (src/scene/boxes.ts:185 boxOf)
-pub fn box_of(c_2: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner: f64, rot: Option<Quat>, name: Option<&str>) -> BoxId { todo!() }
+pub fn box_of(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner: f64, rot: Option<Quat>, name: Option<&str>) -> BoxId { todo!() }
 
 /// (src/scene/boxes.ts:193 trimDrawn)
 pub fn trim_drawn(g: &mut crate::game::Game, all: &[BoxId], t: BoxId) -> bool { todo!() }

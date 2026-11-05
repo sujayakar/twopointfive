@@ -380,7 +380,10 @@ pub fn stagger_lines() -> Vec<String> {
 
 /// Rings in flight as boxes: under the issue kit (GEAR.on, settled) the sponge round nose first along its flight, rolling about it. The tick's gathering of dynamic boxes calls this. (launcher.ts ringBoxes)
 pub fn ring_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
-    for r in &g.rings {
+    // (skeleton 5.2: sponge_boxes takes g, so the walk reads each ring's numbers out first; making a box cannot change the rings)
+    let rings: Vec<(V3, V3, f64)> = g.rings.iter().map(|r| (r.pos, r.vel, r.spin)).collect();
+    struct R { pos: V3, vel: V3, spin: f64 }
+    for r in rings.into_iter().map(|(pos, vel, spin)| R { pos, vel, spin }) {
         let sp = v3::len(r.vel);
         if sp < 1e-3 { continue; }
         let z = v3::scale(r.vel, 1.0 / sp);
@@ -389,7 +392,7 @@ pub fn ring_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let y0 = v3::cross(z, x0);
         let (ca, sa) = (m::cos(r.spin), m::sin(r.spin));
         let rot = v3::quat::from_basis(v3::mad(v3::scale(x0, ca), y0, sa), v3::mad(v3::scale(x0, -sa), y0, ca), z);
-        crate::throwables::sponge_boxes(out, v3::copy(r.pos), rot, v3::yaw_of(z));
+        crate::throwables::sponge_boxes(g, out, v3::copy(r.pos), rot, v3::yaw_of(z));
     }
 }
 
