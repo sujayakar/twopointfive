@@ -111,8 +111,8 @@ export async function wallstunCheck(): Promise<boolean> {
     { const R = await rig(ON), g = R.g, S = site;
       if (S) { const T = g.guards.find((x: any) => x.state !== 'dead' && !x.civ), at = R.off(S, 1, 0.3, 1.0); R.clear(T, at); R.put(T, R.off(S, -1, 1.0));
         const stand = R.off(S, 1, S.open); g.godMode = true; g.teleportPlayer([stand[0], 0, stand[2]]); R.step(3); R.said.length = 0;   // (the player square on to the wall in front of the burst, kept on his feet to read the line)
-        const rep = R.burst(S, 'he40', 0), eye = g.player.char.bones.head ?? [g.player.char.posX, 1.6, g.player.char.posZ];
-        const seen = !g.player.down && Math.hypot(eye[0] - at[0], eye[1] - at[1], eye[2] - at[2]) < 30 && !g.col.segmentBlocked(eye, at), inView = seen && !g.col.segmentBlocked(eye, T.char.bones.chest ?? [T.char.posX, 1.2, T.char.posZ]);
+        const rep = R.burst(S, 'he40', 0), eye = g.player.char.bones.head ?? [g.player.char.pos[0], 1.6, g.player.char.pos[2]];
+        const seen = !g.player.down && Math.hypot(eye[0] - at[0], eye[1] - at[1], eye[2] - at[2]) < 30 && !g.col.segmentBlocked(eye, at), inView = seen && !g.col.segmentBlocked(eye, T.char.bones.chest ?? [T.char.pos[0], 1.2, T.char.pos[2]]);
         const last = R.said[R.said.length - 1] ?? '';
         line(rep.stunned === 1 && inView && /1 stunned behind what it broke/.test(last) && !/behind the door/.test(last),
           '(9) the log counts the man folded behind what it broke, seen through the hole', `player ${f2(Math.hypot(stand[0] - at[0], stand[2] - at[2]))} m off on the burst's side · ${inView ? 'sees' : 'does not see'} him · "${last}"`); }

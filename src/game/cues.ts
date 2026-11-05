@@ -296,7 +296,7 @@ export class Cues {
     for (const D of F.defs) {
       const gd = D.gd, M = this.man(gd); if (gd.state === 'dead') continue;
       if (gd.state === 'alert' && M.state !== 'alert') M.alertT = t;
-      const sight = t - gd.lastSeenT, still = Math.hypot(gd.char.velX, gd.char.velZ) < 0.3;
+      const sight = t - gd.lastSeenT, still = Math.hypot(gd.char.vel[0], gd.char.vel[2]) < 0.3;
       if (gd.state === 'patrol' && M.state !== 'patrol' && D.mode === 'hold' && t - M.stoodT > 15) { if (this.cue(gd, 'calm')) M.stoodT = t; }
       else if (gd.foe === 'player' && facedMan(g, gd).down && gd.state === 'alert' && !M.covered && still && flat(gd.char.pos, facedMan(g, gd).char.pos) < 3.5) { if (this.cue(gd, 'cover', this.at(facedMan(g, gd).char.pos)) || this.kindBusy('cover')) M.covered = true; }   // (said, or a man beside him has just said it for both)
       else if (gd.state === 'alert' && D.mode === 'hold' && still && sight > K.stillSecs && t - M.alertT > K.stillSecs && t - gd.witness.heard.lastShotT > K.stillQuiet && t - M.againT > K.againSecs && !(gd.foe === 'player' && facedMan(g, gd).down) && !g.rescue?.crewHides(gd)) {   // (rescue.ts, Hard's crew: a man lying in wait does not name his room on the net)

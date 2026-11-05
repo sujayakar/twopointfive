@@ -1541,10 +1541,10 @@ export function squadWaysRound(g: Game): { squad: string; man: string; from: str
       for (const i of T.cells) { const ix = i % nav.W, iz = (i - ix) / nav.W; if (ix % step === 0 && iz % step === 0) h.push({ p: [(ix + 0.5) * nav.cell, 0, (iz + 0.5) * nav.cell], firm: false }); } heardOf.set(T, h); } return h; };
     for (const Q of st.squads) if (Q.def.mayLeave !== false) for (const D of home(g, Q)) {
       // where he asks from: his post, and a stride inside each door of the room he holds (a man who has heard the fight is at his door when the word comes)
-      const man = D.gd.char, post: Vec3 = man.pos, from: { name: string; p: Vec3 }[] = [{ name: 'his post', p: post }];
+      const pos = D.gd.char.pos, post: Vec3 = [pos[0], pos[1], pos[2]], from: { name: string; p: Vec3 }[] = [{ name: 'his post', p: post }];
       for (const en of (D.room as Room | null)?.entries ?? []) { const q: Vec3 = [en.at[0] - en.out[0], 0, en.at[2] - en.out[1]]; if (!g.col.nav.isBlocked(q[0], q[2])) from.push({ name: en.door.def.name, p: q }); }
       try {
-        for (const F of from) { man.posX = F.p[0]; man.posZ = F.p[2];
+        for (const F of from) { pos[0] = F.p[0]; pos[2] = F.p[2];
           for (const X of st.squads) if (X !== Q) for (const room of X.rooms) {
             const at: Vec3 = [(room.bounds.x0 + room.bounds.x1) / 2, 0, (room.bounds.z0 + room.bounds.z1) / 2], T = g.fight.roomAt(at) as Room | null;
             for (const e of T?.entries ?? []) for (const team of K.goRound ? [false, true] : [false]) for (const hold of [false, true]) {
@@ -1556,7 +1556,7 @@ export function squadWaysRound(g: Game): { squad: string; man: string; from: str
             }
           }
         }
-      } finally { man.posX = post[0]; man.posZ = post[2]; }
+      } finally { pos[0] = post[0]; pos[2] = post[2]; }
     }
   } finally { CTX = keep; }
   return out;

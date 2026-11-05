@@ -29,9 +29,9 @@ export async function wallKillCheck(): Promise<boolean> {
       await startFromQuery(g, new URLSearchParams(opt.team ?? 'roomclear&squad4')); raise(rule); g.aiEnabled = false; g.godMode = !!opt.god; for (let i = 0; i < 4; i++) W.step(1 / 60);
       const of = (who: string) => g.guards.find((x: any) => x.callsign === who), pl = g.player;
       // (everybody the line does not name stands off the map: nobody wanders into the blast)
-      g.guards.forEach((gd: any, i: number) => { if (!men.some(m => m.who === gd.callsign)) { gd.char.posX += 300 + i; } });
-      for (const m of men) { const gd = of(m.who); if (!gd) return null; gd.char.posX = m.at[0]; gd.char.posZ = m.at[2]; gd.dazzledUntil = 0; gd.staggerUntil = 0; }
-      pl.char.posX = sam[0]; pl.char.posZ = sam[2]; pl.dazzledUntil = 0; pl.fireCd = 0;
+      g.guards.forEach((gd: any, i: number) => { if (!men.some(m => m.who === gd.callsign)) { gd.char.pos[0] += 300 + i; } });
+      for (const m of men) { const gd = of(m.who); if (!gd) return null; gd.char.pos[0] = m.at[0]; gd.char.pos[2] = m.at[2]; gd.dazzledUntil = 0; gd.staggerUntil = 0; }
+      pl.char.pos[0] = sam[0]; pl.char.pos[2] = sam[2]; pl.dazzledUntil = 0; pl.fireCd = 0;
       const w = wallAt(g, AT, FROM); if (!w || !w.ok) return null;
       const c0w = wallPt(w, 0, 0), d0 = new Map(men.map(m => [m.who, Math.hypot(m.at[0] - c0w[0], m.at[2] - c0w[2])])), dS = Math.hypot(sam[0] - c0w[0], sam[2] - c0w[2]);   // (from the charge's own place on the wall, as the blast measures — and where each stood as it went: a body is thrown)
       const c = { wall: w, t: g.time, by: 'probe', paid: 0 }; g.wallCharge.set.push(c); const hits0 = pl.hitsLeft, warned: string[] = [...g.wallCharge.tooClose(c), ...g.wallCharge.behind(c)];

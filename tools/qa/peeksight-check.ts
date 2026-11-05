@@ -116,7 +116,7 @@ export async function peekSight(): Promise<boolean> {
       verdict(stillOn && Math.abs(lowUp.at[1] - lowDn.at[1]) < 0.03 && lowDn.at[1] < up.e.at[1] - 0.3 && Math.abs(alongOf(lowUp.at) - endAt - PEEKSIGHT.out) < 0.02 && PEEK_STATS.short === short0,
         'crouched on the wall the peek\'s eye is at the crouch\'s own height, by the frame all the same; nothing stopped the lean short at this open door', `eye height standing ${f2(up.e.at[1])} · crouched: up ${f2(lowUp.at[1])}, down ${f2(lowDn.at[1])} · past the end ${f2(alongOf(lowUp.at) - endAt)} m · stopped short ${PEEK_STATS.short - short0}`);
       // let go of the key: the peek eases out and the eye is his own again
-      W.input.keys.clear(); steps(40); const e2 = fog.eyes[0], home = Math.hypot(e2.at[0] - pl.char.posX, e2.at[2] - pl.char.posZ);
+      W.input.keys.clear(); steps(40); const e2 = fog.eyes[0], home = Math.hypot(e2.at[0] - pl.char.pos[0], e2.at[2] - pl.char.pos[2]);
       verdict(!!pl.wall && pl.wall.peek === 0 && home < 1e-6, 'the key let go: the peek eases out and his eye is over his feet again', `peek ${pl.wall?.peek} · eye ${f2(home)} m from his feet`);
       if (gd && was) gd.char.pos = was;
       // the same run by digest down and up, the guards live and one of them down the way: nobody sees him for it

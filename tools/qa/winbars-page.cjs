@@ -40,8 +40,8 @@ const SHOOT = async ({ only }) => {
       window.__runFrames(50, 1 / 60);
       // the cursor walked a pixel at a time until the round's own line meets the bar first, then set in the middle of the pixels that do (the bar is 8 cm
       // across; a round with nothing under the reticle flies from the muzzle at a point 20 m out along the heading from his own axis: player.ts freeAim)
-      const onBar = () => { const c = g.player.char, m = c.muzzle, ap = g.aimPoint, hx = ap[0] - c.posX, hz = ap[2] - c.posZ, hl = Math.hypot(hx, hz); if (hl < 0.3) return false;
-        const R = Math.max(hl, 20), T = [c.posX + hx / hl * R, m[1], c.posZ + hz / hl * R], v = [T[0] - m[0], 0, T[2] - m[2]], l = Math.hypot(v[0], v[2]); const hit = g.col.raycast(m, [v[0] / l, 0, v[2] / l], 4); return !!hit && hit.index === i; };
+      const onBar = () => { const c = g.player.char, m = c.muzzle, ap = g.aimPoint, hx = ap[0] - c.pos[0], hz = ap[2] - c.pos[2], hl = Math.hypot(hx, hz); if (hl < 0.3) return false;
+        const R = Math.max(hl, 20), T = [c.pos[0] + hx / hl * R, m[1], c.pos[2] + hz / hl * R], v = [T[0] - m[0], 0, T[2] - m[2]], l = Math.hypot(v[0], v[2]); const hit = g.col.raycast(m, [v[0] / l, 0, v[2] / l], 4); return !!hit && hit.index === i; };
       const good = [];
       for (let k = -40; k <= 40; k++) { window.__mouse(innerWidth / 2 + k, innerHeight / 2); window.__runFrames(6, 1 / 60); if (onBar()) good.push(k); }
       const px = good.length ? good[good.length >> 1] : 0; window.__mouse(innerWidth / 2 + px, innerHeight / 2); window.__runFrames(60, 1 / 60); const aimed = good.length > 0 && onBar();

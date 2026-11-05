@@ -59,20 +59,20 @@ const solo: Script = (W, k) => {
   const g = W.game, I = W.input, gd = g.guards[0];
   if (k === 20) I.keys.add('KeyW'); if (k === 80) { I.keys.delete('KeyW'); I.keys.add('KeyD'); } if (k === 140) I.keys.delete('KeyD');
   if (k === 150) I.pressed.add('KeyC'); if (k === 170) I.pressed.add('KeyV'); if (k === 200) I.pressed.add('KeyQ'); if (k === 215) I.pressed.add('KeyQ');
-  if (k >= 230) W.cursorAt([gd.char.posX + 0.25, 1.2, gd.char.posZ + 0.2]);   // (a hand's width off his chest: the reticle's snap takes him, in the seat's pixels)
-  else W.cursorAt([g.player.char.posX + 3 * Math.cos(k / 40), 0, g.player.char.posZ + 3 * Math.sin(k / 40)]);
+  if (k >= 230) W.cursorAt([gd.char.pos[0] + 0.25, 1.2, gd.char.pos[2] + 0.2]);   // (a hand's width off his chest: the reticle's snap takes him, in the seat's pixels)
+  else W.cursorAt([g.player.char.pos[0] + 3 * Math.cos(k / 40), 0, g.player.char.pos[2] + 3 * Math.sin(k / 40)]);
   if (k === 250 || k === 275 || k === 300) { I.clicked |= 1; I.buttons |= 1; } if (k === 252 || k === 277 || k === 302) I.buttons &= ~1;
   if (k === 330) I.keys.add('KeyS'); if (k === 400) I.keys.delete('KeyS');
 };
 /** what is NOT his input (done to both games at the same tick): Sam set down unkillable five metres in front of the first man of the shift */
-const soloWorld = (g: any, k: number) => { if (k !== 230) return; const gd = g.guards[0]; g.godMode = true; const yaw = gd.char.bodyYaw; g.teleportPlayer([gd.char.posX + Math.sin(yaw) * 5, 0, gd.char.posZ + Math.cos(yaw) * 5]); };
+const soloWorld = (g: any, k: number) => { if (k !== 230) return; const gd = g.guards[0]; g.godMode = true; const yaw = gd.char.bodyYaw; g.teleportPlayer([gd.char.pos[0] + Math.sin(yaw) * 5, 0, gd.char.pos[2] + Math.cos(yaw) * 5]); };
 // ---- the night breach: orders through the cursor and the keys
 const breachStage = (W: any) => { const r = startFromQuery(W.game, 'nightbreach'); if (r.why) throw new Error(`night breach refused: ${r.why}`); };
 const breach: Script = (W, k) => {
   const g = W.game, I = W.input, d = g.doors.list[0];
-  const door = g.doors.list.reduce((b: any, x: any) => Math.hypot(x.def.hinge[0] - g.player.char.posX, x.def.hinge[2] - g.player.char.posZ) < Math.hypot(b.def.hinge[0] - g.player.char.posX, b.def.hinge[2] - g.player.char.posZ) ? x : b, d);
+  const door = g.doors.list.reduce((b: any, x: any) => Math.hypot(x.def.hinge[0] - g.player.char.pos[0], x.def.hinge[2] - g.player.char.pos[2]) < Math.hypot(b.def.hinge[0] - g.player.char.pos[0], b.def.hinge[2] - g.player.char.pos[2]) ? x : b, d);
   const mid: [number, number, number] = [door.def.hinge[0] + door.def.closedDir[0] * door.def.width * 0.5, 1.0, door.def.hinge[2] + door.def.closedDir[2] * door.def.width * 0.5];
-  if (k < 200) W.cursorAt(mid); else W.cursorAt([g.player.char.posX + 2.5, 0, g.player.char.posZ - 1.5]);
+  if (k < 200) W.cursorAt(mid); else W.cursorAt([g.player.char.pos[0] + 2.5, 0, g.player.char.pos[2] - 1.5]);
   if (k === 60) I.pressed.add('KeyB');                                        // the door's first row at once
   if (k === 240) I.pressed.add('KeyX'); if (k === 250) I.pressed.add('Digit1');   // the menu on a spot of floor, its first row
   if (k === 330) I.keys.add('KeyW'); if (k === 420) I.keys.delete('KeyW');

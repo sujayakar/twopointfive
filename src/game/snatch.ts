@@ -240,7 +240,7 @@ export class Snatch {
    *  work, hands up, or tied) and a man out cold (he comes back standing). */
   restore(s: SnatchSnap | undefined) {
     const N = this.data; if (!s || !N) return;
-    if (!this.man || !this.g.civilians.includes(this.man)) { this.stage(N); const c = this.man!.char; c.posX = s.at[0]; c.posZ = s.at[2]; c.bodyYaw = s.yaw; }
+    if (!this.man || !this.g.civilians.includes(this.man)) { this.stage(N); const c = this.man!.char; c.pos[0] = s.at[0]; c.pos[2] = s.at[2]; c.bodyYaw = s.yaw; }
     this.run = this.g.mission;
     this.handsUp = s.handsUp; this.tied = s.tied; this.nearT = s.nearT; this.aloneT = s.aloneT; this.end = s.end; this.why = s.why; this.seen = s.seen ? v3.copy(s.seen) : null; this.fear = s.fear ? v3.copy(s.fear) : null;
     this.lost = s.lost ?? null; this.killer = s.killer ? { ...s.killer } : null; if (s.times) this.times = { ...s.times }; if (s.stats) this.stats = { ...s.stats }; this.lastExit = s.lastExit ?? null;

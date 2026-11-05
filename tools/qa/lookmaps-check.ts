@@ -214,6 +214,13 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
   check(rows * 16 === cfgSize && block * 4 === cfgSize && first?.[0] === 1 && first?.[1] === 0 && Math.abs((last?.[0] ?? 0) - full.tone) < 1e-6 && Math.abs((last?.[1] ?? -1) - full.hollow) < 1e-6 && LOOK_DEFAULTS.even === 1 && slotsOf(bufs[0]).every(v => v === -1),
     'the block is the shader\'s struct to the byte: its eighth row begins with the cloth layer\'s tone and hollow (1 and 0 until that layer is made, then what the fill found), and after it the table of slots, every one −1 at the making',
     `block ${cfgSize} bytes, ${rows} rows in the shader, ${block} numbers written, ${bufs.length} writes; the eighth row ${first ? [...first].join(' ') : '?'} at the making, ${last ? [...last].map(v => v.toFixed(3)).join(' ') : '?'} after the fill`);
+  // … and the third row's two named slots, by their numbers (c.x how kept the place is, c.y the Pressed panels row: look.wgsl lookKept, lookRoll): a slot
+  // held by the writer's text is broken by whoever takes the slot beside it
+  { const { lookConfig } = await import(`${ROOT}/src/render/frame.ts`); const k0 = lookConfig.kept, p0 = lookAmounts.pressed;
+    lookConfig.kept = 0.37; lookAmounts.pressed = 0.61; G.setLook(); const w = bufs[bufs.length - 1]; lookConfig.kept = k0; lookAmounts.pressed = p0;
+    check(!!w && Math.abs(w[8] - 0.37) < 1e-6 && Math.abs(w[9] - 0.61) < 1e-6 && /c\.x = how kept the place is \(lookKept below\) · c\.y = pressed panels \(lookRoll below\)/.test(src) && /fn lookKept\(\) -> f32 \{ return clamp\(lookCfg\.c\.x, 0\.0, 1\.0\); \}/.test(src) && /clamp\(lookCfg\.c\.y, 0\.0, 1\.0\)/.test(src),
+      'the block\'s third row begins with how kept the place is and then the Pressed panels row, where the shader reads them',
+      `written 0.37 and 0.61: numbers 8 and 9 of the block are ${w ? `${w[8].toFixed(2)} and ${w[9].toFixed(2)}` : '?'}`); }
 }
 // 11. A STUFF SAYS ITS OWN ROW (lookTex.ts STUFFS, as the prelude hands it to look.wgsl): a row a layer; the older stuffs' rows are what the shader's own lists
 //     said (the first six laid by the world, the five kept ones blotched a third as far and never soaked, boards never soaked); a stuff that soaks also fades

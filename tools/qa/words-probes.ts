@@ -103,7 +103,7 @@ export const wordsHostage = guarded(async () => withWords(true, async () => {
     const alone = L.said.filter(s => hs.has(s.who) && D.HOSTAGE_LINES.alone.includes(s.text));
     F.verdict(alone.length >= 1 && up(R.hostages) === 2, 'nobody of theirs left in the room and nobody come yet: they call out', alone.map(s => `'${s.text}'`).join(' · ') || 'nothing');
     for (const h of R.hostiles) if (h.state !== 'dead') killGuard(T.game, h, [1, 0, 0], false, 'shot', 'player');
-    const B = R.bounds, mid = [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2], op = R.ops[0]; op.char.posX = mid[0]; op.char.posZ = mid[2];
+    const B = R.bounds, mid = [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2], op = R.ops[0]; op.char.pos[0] = mid[0]; op.char.pos[2] = mid[2];
     // (how a rescue is won now — rescueend.ts, up on the shipped stand: nobody of theirs left on the floor is the win `clearSecs` 1.5 s later, sooner than the
     //  teammate's beat at 2.4 s. The answer is said all the same, after the result and before the end card (rescue.ts voices() runs on) — so the listening
     //  does not stop at the result, as it once did: it runs the beat out.)
@@ -223,7 +223,7 @@ export const wordsFrag = guarded(async () => {
     const T = await staged(true, 3, {}), g = T.game, h = T.R.hostages.find((x: any) => x.state !== 'dead');
     F.verdict(!!h, 'a rescue staged with a living hostage', T.why ?? '');
     if (!h) return F.done();
-    const at: [number, number, number] = [h.char.posX, 0, h.char.posZ], name = h.civ?.name ?? 'our man';
+    const at: [number, number, number] = [h.char.pos[0], 0, h.char.pos[2]], name = h.civ?.name ?? 'our man';
     const base = { player: { down: true, char: g.player.char }, guards: g.guards.filter((x: any) => x.team !== 'operative') };
     const as = (over: Record<string, unknown>) => Object.assign(Object.create(g), base, over);
     const cases: [string, any, string][] = [

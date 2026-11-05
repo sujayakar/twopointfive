@@ -51,7 +51,7 @@ export async function hoverpickCheck(): Promise<boolean> {
         const a0 = leaf?.angle; R.step(); if (leaf && leaf.angle !== a0) swung++;
         if (f % 6 === 0) {   // (round Sam, on a teammate, on a door, on a wall, in turn — after the step: the read below comes before the simulation has asked of the new point)
           const a = f / 24, leg = Math.floor(f / 30) % 4, m = R.team[Math.floor(f / 120) % R.team.length], d = P.doors[Math.floor(f / 120) % P.doors.length];
-          R.cursor(leg === 1 && m ? [m.char.posX, 1, m.char.posZ] : leg === 2 && d ? d : leg === 3 && P.wall ? P.wall : [s[0] + Math.sin(a) * (1.5 + (f % 80) / 20), 0.04, s[2] + Math.cos(a) * (1.5 + (f % 80) / 20)]);
+          R.cursor(leg === 1 && m ? [m.char.pos[0], 1, m.char.pos[2]] : leg === 2 && d ? d : leg === 3 && P.wall ? P.wall : [s[0] + Math.sin(a) * (1.5 + (f % 80) / 20), 0.04, s[2] + Math.cos(a) * (1.5 + (f % 80) / 20)]);
         }
         if (read) { const ask = () => read(R, kept); if (each) each(R, f, ask); else ask(); }
       }

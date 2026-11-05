@@ -86,7 +86,7 @@ export async function attentionCheck(): Promise<boolean> {
 
     // ---- (c) a glimpse at the edge writes no fix, then breaks it
     { const run = async (on: boolean) => { const s = await stand(5, true), { g, A } = s; const at = ahead(A, 5); toThing(s, at); const H = attentionOf(g, A)!; const eye = A.char.pos, y = H.yaw ?? A.char.bodyYaw; g.playerInvisible = false; let P: [number, number, number] = FAR;
-        spot: for (const m of [4, 5, 3.5, 3, 6]) for (const deg of [35, -35, 40, -40, 30, -30, 45, -45, 50, -50]) { const a = y + deg * Math.PI / 180; P = [eye[0] + Math.sin(a) * m, 0, eye[2] + Math.cos(a) * m]; g.teleportPlayer(P); P = [g.player.char.posX, 0, g.player.char.posZ]; const v = canSee(g, A); if (v.visible && v.dist > 2.6 && (attentionOffDeg(g, A, P) ?? 0) > ATTENTION.focusDeg + 3) break spot; }
+        spot: for (const m of [4, 5, 3.5, 3, 6]) for (const deg of [35, -35, 40, -40, 30, -30, 45, -45, 50, -50]) { const a = y + deg * Math.PI / 180; P = [eye[0] + Math.sin(a) * m, 0, eye[2] + Math.cos(a) * m]; g.teleportPlayer(P); P = [g.player.char.pos[0], 0, g.player.char.pos[2]]; const v = canSee(g, A); if (v.visible && v.dist > 2.6 && (attentionOffDeg(g, A, P) ?? 0) > ATTENTION.focusDeg + 3) break spot; }
         const clear = canSee(g, A).visible, dist = canSee(g, A).dist, deg = attentionOffDeg(g, A, P) ?? 0; ATTENTION.on = on; zero();
         let noFix = 0, grew = false, aw0 = A.awareness, w = '', fixAt = -1, t = 0, broke = -1;
         const contact = until(s, 12, () => A.state === 'alert', 0.45, () => { t += DT; const h = attentionOf(g, A); if (h) { if (A.lastKnown && Math.hypot(A.lastKnown[0] - h.at[0], A.lastKnown[2] - h.at[2]) < 0.6) noFix++; grew ||= A.awareness > aw0 + 0.02; } else if (broke < 0) { broke = t; w = said(g, A); }
@@ -118,7 +118,7 @@ export async function attentionCheck(): Promise<boolean> {
         'the second clack inside the memory holds him wearK as long, its ring starts part-spent, and he says so', `${h2 ? h2.secs.toFixed(1) : '—'} s (at it ${dwell2.toFixed(2)} s), the ring from ${m2 ? m2.left.toFixed(2) : '—'}, '${w2}'`);
       line(st3 === 'search' && !h3 && SPENT.includes(w3) && ATTENTION_STATS.spent === 1, 'the third is no look at all: he searches the place', `state ${st3}, '${w3}'`);
       const f = await stand(8); zero(); const TF = ahead(f.A, 5); clack(f.g, TF); f.step(1); until(f, 40, () => f.A.state === 'patrol' && f.A.awareness < 0.02); f.step(Math.ceil((ATTENTION.memorySecs + 1) * 60));
-      clack(f.g, [f.A.char.posX + 1.5, 0, f.A.char.posZ]); f.step(1); const hf = attentionOf(f.g, f.A);
+      clack(f.g, [f.A.char.pos[0] + 1.5, 0, f.A.char.pos[2]]); f.step(1); const hf = attentionOf(f.g, f.A);
       line(!!hf && hf.nth === 1 && hf.secs === ATTENTION.noiseSecs, 'after memorySecs of nothing the next one is fresh', hf ? `taking ${hf.nth}, ${hf.secs} s` : `no hold (${f.A.state}, awareness ${f.A.awareness.toFixed(2)})`); }
 
     // ---- (f2) one happening is one taking
@@ -129,7 +129,7 @@ export async function attentionCheck(): Promise<boolean> {
 
     // ---- (m) a turned head forgives nothing
     { const run = async (on: boolean) => { const s = await stand(13, on), { g, A } = s; zero(); g.playerInvisible = false; let ok = false;
-        spot: for (const m of [4, 5, 3.5, 3]) for (const deg of [0, 15, -15, 30, -30]) { const a = A.char.bodyYaw + deg * Math.PI / 180; g.teleportPlayer([A.char.posX + Math.sin(a) * m, 0, A.char.posZ + Math.cos(a) * m]); const v = canSee(g, A); if (v.visible && v.dist > 2.6) { ok = true; break spot; } }
+        spot: for (const m of [4, 5, 3.5, 3]) for (const deg of [0, 15, -15, 30, -30]) { const a = A.char.bodyYaw + deg * Math.PI / 180; g.teleportPlayer([A.char.pos[0] + Math.sin(a) * m, 0, A.char.pos[2] + Math.cos(a) * m]); const v = canSee(g, A); if (v.visible && v.dist > 2.6) { ok = true; break spot; } }
         const lamp = ahead(A, 1.5, 1.2); g.events.push({ kind: 'lightOut', cause: 'ocp', pos: lamp, time: g.time, loud: false });
         let looked = false, drop = 0, nothing = false, prev = A.awareness; const contact = until(s, 15, () => A.state === 'alert', 0.46, () => { const h = attentionOf(g, A); looked ||= !!h && h.mode === 'look'; drop = Math.max(drop, prev - A.awareness); prev = A.awareness; nothing ||= said(g, A) === 'must have been nothing'; });
         return { ok, looked, drop, nothing, contact }; };

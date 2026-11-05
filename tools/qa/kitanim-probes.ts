@@ -92,7 +92,7 @@ export async function world(on: boolean, seed = 31) {
   g.guards.forEach((gd: any, i: number) => { gd.hold = true; gd.char.pos = [38.5, 0, 1.5 + i * 1.2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.update(0); });
   const pl = g.player, c = pl.char, an = c.anim;
   g.teleportPlayer([10, 0, 19]); c.bodyYaw = c.aimYaw = 0; const cursor: Vec3 = [10, 1.2, 45];   // (the lobby's open floor, six metres of room in front, the cursor far out so his aim is near level — on the floor close by, every round snaps the gun a hand down onto its line: at a wall the guns-at-walls rule — on in the page — keeps his gun down and nothing here could fire)
-  const rel = (p: ArrayLike<number>): Vec3 => [p[0] - c.posX, p[1] - c.posY, p[2] - c.posZ];
+  const rel = (p: ArrayLike<number>): Vec3 => [p[0] - c.pos[0], p[1] - c.pos[1], p[2] - c.pos[2]];
   /** his own props this frame */
   const props = () => { const out: any[] = []; handProps(g, out); return out.filter((b: any) => (b.owner & 0xff) === (c.id & 0xff)); };
   /** WHERE HIS KIT IS DRAWN this frame, read off the boxes: the pistol's slide(s) and whether it hangs in the holster (within 2 cm of where rigProps hangs a holstered
@@ -155,15 +155,15 @@ export async function kitOff(): Promise<boolean> { return keep(async () => {
   S.tap('Digit2'); S.step(1, seen); eqRifle = pl.equipT; S.step(60, seen); S.tap('Digit3'); S.step(60, seen); S.tap('Digit1'); S.step(60, seen);
   // the walk-up: the close-in mode ON (close.ts), a man parked with his back to Sam four metres down the corridor, Sam walks in on him — the mode takes (anim.creep) and
   // with this switch off no closeness is dealt on any frame of it
-  CLOSE.on = true; const A = S.g.guards[0], c = S.c; A.char.pos = [c.posX + 4, 0, c.posZ]; A.char.vel = [0, 0, 0]; A.char.bodyYaw = A.char.aimYaw = Math.PI / 2; A.char.update(0); A.char.update(DT);
-  S.tap('KeyE'); S.step(30, seen); let crept = 0, walked = 0, nearest = 9; const x0 = c.posX; S.input.keys.add('KeyD');   // (the camera looks down −z here: D is +x, along the corridor)
-  for (let f = 0; f < 420; f++) { pl.visibility = 0.02; S.step(1, seen); pl.visibility = 0.02; if (an.creep) crept++; const d = Math.hypot(A.char.posX - c.posX, A.char.posZ - c.posZ); nearest = Math.min(nearest, d); if (d < 1.25) S.input.keys.delete('KeyD'); if (d < 1.25 && ++walked > 45) break; }
+  CLOSE.on = true; const A = S.g.guards[0], c = S.c; A.char.pos = [c.pos[0] + 4, 0, c.pos[2]]; A.char.vel = [0, 0, 0]; A.char.bodyYaw = A.char.aimYaw = Math.PI / 2; A.char.update(0); A.char.update(DT);
+  S.tap('KeyE'); S.step(30, seen); let crept = 0, walked = 0, nearest = 9; const x0 = c.pos[0]; S.input.keys.add('KeyD');   // (the camera looks down −z here: D is +x, along the corridor)
+  for (let f = 0; f < 420; f++) { pl.visibility = 0.02; S.step(1, seen); pl.visibility = 0.02; if (an.creep) crept++; const d = Math.hypot(A.char.pos[0] - c.pos[0], A.char.pos[2] - c.pos[2]); nearest = Math.min(nearest, d); if (d < 1.25) S.input.keys.delete('KeyD'); if (d < 1.25 && ++walked > 45) break; }
   S.input.keys.delete('KeyD');
-  if (!(crept > 30)) fails.push(`the walk-up never put him in the close-in mode (${crept} frames of anim.creep, nearest ${f2(nearest)} m, walked ${f2(c.posX - x0)} m): nothing was asked of the switch`);
+  if (!(crept > 30)) fails.push(`the walk-up never put him in the close-in mode (${crept} frames of anim.creep, nearest ${f2(nearest)} m, walked ${f2(c.pos[0] - x0)} m): nothing was asked of the switch`);
   if (dealt) fails.push(`${dealt} frames with something dealt (kitHold / closeK / kitBusy / kitWas)`);
   if (eqPistol !== 0) fails.push(`the pistol's draw locked fire for ${f3(eqPistol)} s`); if (Math.abs(eqRifle - (RIFLE_EQUIP_SECS - DT)) > 0.02 && Math.abs(eqRifle - RIFLE_EQUIP_SECS) > 0.02) fails.push(`the rifle's lock-out is ${f3(eqRifle)} s (the build's is ${RIFLE_EQUIP_SECS})`);
   if (JSON.stringify(KITANIM_STATS) !== s0) fails.push('KITANIM_STATS moved'); if (T.nan) fails.push(`${T.nan} non-finite`);
-  verdict(!fails.length, 'OFF: draws, a reload, three swaps and a walk-up on a man\'s back in the close-in mode deal nothing (closeK −1 on every frame); the kit is where the slot says on the key\'s frame', `frames ${T.frames} · the walk-up: ${f2(c.posX - x0)} m to ${f2(nearest)} m of him, ${crept} frames in the mode · pistol lock-out ${f3(eqPistol)} s · rifle ${f3(eqRifle)} s · reload row ${JSON.stringify(row)} · spares ${before[1]} → ${JSON.stringify(p.spare)}${bad(fails)}`);
+  verdict(!fails.length, 'OFF: draws, a reload, three swaps and a walk-up on a man\'s back in the close-in mode deal nothing (closeK −1 on every frame); the kit is where the slot says on the key\'s frame', `frames ${T.frames} · the walk-up: ${f2(c.pos[0] - x0)} m to ${f2(nearest)} m of him, ${crept} frames in the mode · pistol lock-out ${f3(eqPistol)} s · rifle ${f3(eqRifle)} s · reload row ${JSON.stringify(row)} · spares ${before[1]} → ${JSON.stringify(p.spare)}${bad(fails)}`);
   return allPass;
 }); }
 
@@ -345,12 +345,12 @@ export async function kitClose(): Promise<boolean> { return keep(async () => {
     const place = (gd: any, p: Vec3, yaw: number) => { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); };
     const [A, B, C] = g.guards; [B, C].forEach((gd: any, i: number) => { gd.hold = true; place(gd, [37.5, 0, 6 + i * 1.5], EAST); }); A.hold = true; place(A, AT, EAST);
     const pl = g.player, c = pl.char, an = c.anim;
-    const rel = (p: ArrayLike<number>): Vec3 => { const dx = p[0] - c.posX, dz = p[2] - c.posZ, cy = Math.cos(c.bodyYaw), sy = Math.sin(c.bodyYaw); return [dx * cy - dz * sy, p[1], dx * sy + dz * cy]; };
+    const rel = (p: ArrayLike<number>): Vec3 => { const dx = p[0] - c.pos[0], dz = p[2] - c.pos[2], cy = Math.cos(c.bodyYaw), sy = Math.sin(c.bodyYaw); return [dx * cy - dz * sy, p[1], dx * sy + dz * cy]; };
     const offChest = (): Vec3 => v3.sub(rel(c.bones.handR), rel(c.bones.chest));   // (kitTick measures to the man's CHEST, level: closeness is checked against that distance)
     const at = (d: number, frames: number) => { g.teleportPlayer([AT[0] - d, 0, AT[2]]); c.bodyYaw = c.aimYaw = EAST; pl.crouch = false; let trR = 0, trL = 0, pr: Vec3 | null = null, pL: Vec3 | null = null, knife = 0, nan = 0, hand: Vec3 = [0, 0, 0], left: Vec3 = [0, 0, 0];
       for (let f = 0; f < frames; f++) { W.cursorAt([AT[0], 1.2, AT[2]]); W.step(DT); pl.visibility = 0.02; if (an.knifeShown) knife++;
         const r = rel(c.bones.handR), l = rel(c.bones.handL); if (![...r, ...l].every(Number.isFinite)) nan++; if (f >= frames - 45) { hand = v3.mad(hand, offChest(), 1 / 45); left = v3.mad(left, v3.sub(l, rel(c.bones.chest)), 1 / 45); if (pr) { trR += v3.len(v3.sub(r, pr)); trL += v3.len(v3.sub(l, pL!)); } pr = r; pL = l; } }
-      return { d, dNow: Math.hypot(A.char.bones.chest[0] - c.posX, A.char.bones.chest[2] - c.posZ), creep: an.creep, ready: an.ready, k: an.closeK, hips: c.bones.hips[1], hand, left, trR, trL, knife, nan }; };
+      return { d, dNow: Math.hypot(A.char.bones.chest[0] - c.pos[0], A.char.bones.chest[2] - c.pos[2]), creep: an.creep, ready: an.ready, k: an.closeK, hips: c.bones.hips[1], hand, left, trR, trL, knife, nan }; };
     const hiltRow = at(1.0, 90), hilt = hiltRow.hand;   // in reach: the fist is on the handle (the ready pose) — the mark the hand travels to
     const rows = DS.map(d => at(d, 150));
     // the last step into reach, frame by frame: how far the knife hand still is from the hilt, how far the free hand has left where the walk-in had it

@@ -95,7 +95,7 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
       const phases: string[] = []; let early = false, y0 = 0, lowHead = 9;
       const watch = () => { const h = pl.haul; if (!h) return; if (phases[phases.length - 1] !== h.phase) phases.push(h.phase); if (h.phase === 'reach') { if (!y0) y0 = hipMid()[1]; else if (hipMid()[1] > y0 + 0.05) early = true; } };
       tap(watch); step(240, [], watch);
-      const up = hipMid()[1] - c.posY, head = c.bones.head[1] - c.posY, lGap = c.anim.haul ? v3.dist(c.bones.handL, c.anim.haul.l) : 9;
+      const up = hipMid()[1] - c.pos[1], head = c.bones.head[1] - c.pos[1], lGap = c.anim.haul ? v3.dist(c.bones.handL, c.anim.haul.l) : 9;
       verdict(sel && /pick him up/.test(word) && !!pl.dragging && !!pl.haul?.carry && phases.join('>') === 'reach>rise>carry' && !early && Math.abs(up - HANDS.carryUp) < 0.08 && !pl.crouch && head > 1.4 && lGap < 0.1 && B.rag.strain < 0.1,
         `${tag}: the row reads 'pick him up'; reach → rise → carry, nothing lifted before he is at it; then its hips are on his shoulder, he stands upright under it with his hand on its legs`,
         `row '${word}' selected ${sel} · dragging ${!!pl.dragging} · over the shoulder ${!!pl.haul?.carry} · beats ${phases.join('>')} · lifted during the reach ${early} · hips ${f2(up)} m up (want ${HANDS.carryUp}) · crouched ${pl.crouch} · head ${f2(head)} m · hand ↔ legs ${f2(lGap)} · strain ${f2(B.rag.strain)} · msgs ${msgs.join(' / ')}`);
@@ -103,9 +103,9 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
       // level has floor (the way with the most room, then the roomier of the two turns off it) and what is asked is the ground his feet covered: the third
       // pick-up starts wherever the first two left the body, and a walk aimed off the body's own lie met whatever a level stood there
       const p0 = v3.copy(c.pos), key = openKey(c.pos), d1 = dirOf(key), run = Math.min(freeM(c.pos, d1), 2.2);
-      const key2 = openKey([c.posX + d1[0] * run, 0, c.posZ + d1[2] * run], key === 'KeyW' || key === 'KeyS' ? ['KeyD', 'KeyA'] : ['KeyW', 'KeyS']);
+      const key2 = openKey([c.pos[0] + d1[0] * run, 0, c.pos[2] + d1[2] * run], key === 'KeyW' || key === 'KeyS' ? ['KeyD', 'KeyA'] : ['KeyW', 'KeyS']);
       let frames = 0, on = 0, off = 0, strain = 0, path = 0; lowHead = 9; let last = v3.copy(c.pos);
-      const ride = () => { path += v3.distXZ(last, c.pos); last = v3.copy(c.pos); const h = pl.haul; if (!h || h.phase !== 'carry' || !c.anim.haul) return; frames++; lowHead = Math.min(lowHead, c.bones.head[1] - c.posY); if (v3.dist(c.bones.handL, c.anim.haul.l) < 0.12) on++;
+      const ride = () => { path += v3.distXZ(last, c.pos); last = v3.copy(c.pos); const h = pl.haul; if (!h || h.phase !== 'carry' || !c.anim.haul) return; frames++; lowHead = Math.min(lowHead, c.bones.head[1] - c.pos[1]); if (v3.dist(c.bones.handL, c.anim.haul.l) < 0.12) on++;
         off = Math.max(off, v3.distXZ(hipMid(), c.pos)); strain = Math.max(strain, B.rag.strain); };
       step(150, [key], ride); step(90, [key2], ride); step(30, [], ride);
       const walked = v3.distXZ(p0, c.pos), wedged = msgs.some(m => /wedged/.test(m));
@@ -114,9 +114,9 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
       console.log(`    (${tag}: covered ${f2(path)} m in 4 s, ${f2(walked)} m off, head ≥ ${f2(lowHead)} m, hips ≤ ${f2(off)} m off him, strain ≤ ${f2(strain)})`);
       // put it down
       msgs.length = 0; const wordD = label(), selD = g.selectVerb('body', 'drop'); let sawSet = false, relY = 9, setStrain = 0, setFrames = 0;
-      const lay = () => { if (pl.haul?.phase === 'set') { sawSet = true; setFrames++; relY = hipMid()[1] - c.posY; setStrain = Math.max(setStrain, B.rag.strain); } };
+      const lay = () => { if (pl.haul?.phase === 'set') { sawSet = true; setFrames++; relY = hipMid()[1] - c.pos[1]; setStrain = Math.max(setStrain, B.rag.strain); } };
       tap(lay); step(140, [], lay);
-      const laid = v3.copy(hipMid()); step(120); const slid = v3.distXZ(laid, hipMid()); let top = 0; for (let i = 0; i < 16; i++) top = Math.max(top, B.P(i)[1] - c.posY);
+      const laid = v3.copy(hipMid()); step(120); const slid = v3.distXZ(laid, hipMid()); let top = 0; for (let i = 0; i < 16; i++) top = Math.max(top, B.P(i)[1] - c.pos[1]);
       verdict(selD && /put him down/.test(wordD) && sawSet && !pl.dragging && !pl.haul && !c.anim.haul && relY < 0.3 && setStrain < 0.2 && msgs.includes('body set down') && !msgs.some(m => /wedged/.test(m)) && slid < 0.3 && top < 0.5,
         `${tag}: 'put him down' lays it on the floor by him — lowered all the way before his hands come off, never called wedged, and it stays where he laid it`,
         `row '${wordD}' selected ${selD} · a set beat ${sawSet} (${setFrames} frames) · dragging after ${!!pl.dragging} · hips ${f2(relY)} m up when let go · worst strain ${f2(setStrain)} · slid ${f2(slid)} m after · highest point at rest ${f2(top)} m · msgs ${msgs.join(' / ')} · he stood at ${fp(c.pos)} facing ${f2(c.bodyYaw)}`);
@@ -137,7 +137,7 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
     let prev: Vec3 | null = null, prevYaw = 0, worst = 0, at = '', frames = 0;
     const watch = () => { const hd = c.headDir(), by = c.bodyYaw; if (prev && pl.haul) { const turn = Math.abs(wrapAngle(by - prevYaw)), d = Math.max(0, Math.acos(clamp(v3.dot(prev, hd), -1, 1)) - turn) * 180 / Math.PI; frames++; if (d > worst) { worst = d; at = pl.haul.phase; } } prev = hd; prevYaw = by; };
     g.selectVerb('body', 'drag'); tap(watch); step(carry ? 200 : 80, [], watch);
-    const h0 = B.mid(RAG.hipL, RAG.hipR), away = v3.normalize([c.posX - h0[0] + 0.3, 0, c.posZ - h0[2] + 0.2]), key = keyFor(away), key2 = keyFor([-away[2], 0, away[0]]);
+    const h0 = B.mid(RAG.hipL, RAG.hipR), away = v3.normalize([c.pos[0] - h0[0] + 0.3, 0, c.pos[2] - h0[2] + 0.2]), key = keyFor(away), key2 = keyFor([-away[2], 0, away[0]]);
     step(150, [key], watch); step(30, [], watch); step(120, [key2], watch); step(90, [key, key2], watch);
     g.selectVerb('body', 'drop'); tap(watch); step(140, [], watch);
     verdict(frames > 400 && worst < 12 && !pl.haul, `${carry ? 'over the shoulder' : 'along the floor'}: his head never whips — it comes round with his body as he takes hold, walks, turns and lays it down`,
@@ -180,7 +180,7 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
       verdict(sel && took && !pinEarly && Math.abs(carryY - wantY) < 0.06, `${tag}: taken by that end, reach → rise → carry, nothing lifted before the hands are down, then held at carry height`,
         `row selected ${sel} · dragging ${!!pl.dragging} · end ${pl.haul?.end} · beats ${phases.join('>')} · lifted during the reach ${pinEarly} · grip height ${f2(carryY)} (want ${wantY}) · msgs ${msgs.join(' / ')}`);
       // haul it away from itself for 2.5 s: it comes, his hands stay on the two limbs
-      const h0 = v3.copy(B.hips()), away = v3.normalize([c.posX - h0[0], 0, c.posZ - h0[2]]), key = keyFor(away);
+      const h0 = v3.copy(B.hips()), away = v3.normalize([c.pos[0] - h0[0], 0, c.pos[2] - h0[2]]), key = keyFor(away);
       let frames = 0, on = 0, gap = 0;
       step(150, [key], () => { const h = pl.haul; if (!h || h.phase !== 'carry') return; frames++; const a = v3.dist(c.bones.handL, B.P(h.iL)), b = v3.dist(c.bones.handR, B.P(h.iR)); gap = Math.max(gap, a, b); if (a < 0.12 && b < 0.12) on++; });
       const moved = v3.distXZ(h0, B.hips()), wedged = msgs.some(m => /wedged/.test(m));
@@ -199,7 +199,7 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
   // (c) torn out of his hands: a sprint is the old instant drop (from his shoulder too)
   { const R = await rig(true), B = body(R), { g, step, tap, keyFor } = R, pl = g.player, c = pl.char;
     g.teleportPlayer(B.beyond('feet', 0.8)); step(8); g.selectVerb('body', 'drag'); tap(); step(240);
-    const had = !!pl.dragging && pl.haul?.phase === 'carry' && !!pl.haul.carry; const h = B.hips(), key = keyFor(v3.normalize([c.posX - h[0], 0, c.posZ - h[2]]));
+    const had = !!pl.dragging && pl.haul?.phase === 'carry' && !!pl.haul.carry; const h = B.hips(), key = keyFor(v3.normalize([c.pos[0] - h[0], 0, c.pos[2] - h[2]]));
     step(6, [key, 'ShiftLeft']);
     verdict(had && !pl.dragging && !pl.haul, 'a sprint lets go of it at once (no laying down), and nothing of the hold is left behind', `held ${had} · dragging after ${!!pl.dragging} · haul ${JSON.stringify(pl.haul?.phase ?? null)}`);
     // …in any beat: planted in the lift, Shift + a movement key of his own still lets go; Shift alone (no key of his) never turns the step in to it into a sprint
@@ -310,15 +310,15 @@ export async function handsDoor(): Promise<boolean> { return keep(async () => {
     for (const hands of [true, false]) {
       const P = await Run.start('roomclear=10&squad=1', 6, { sneak: true }); P.stopOnNotice = false; squadUp(P); HANDS.on = hands;
       const dd = P.door('breakroom_w'), fc = dd.frameCentre, T1 = P.hostiles[0]; dd.def.closer = false;
-      const th = dd.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th), in0 = Math.sign((T1.char.posX - fc[0]) * nx + (T1.char.posZ - fc[2]) * nz) || 1;
-      const spot = P.free([fc[0] + nx * in0 * 4.3, 0, fc[2] + nz * in0 * 4.3 + 0.3]); T1.char.posX = spot[0]; T1.char.posZ = spot[2];
+      const th = dd.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th), in0 = Math.sign((T1.char.pos[0] - fc[0]) * nx + (T1.char.pos[2] - fc[2]) * nz) || 1;
+      const spot = P.free([fc[0] + nx * in0 * 4.3, 0, fc[2] + nz * in0 * 4.3 + 0.3]); T1.char.pos[0] = spot[0]; T1.char.pos[2] = spot[2];
       // (their eyes held by hand, as sneak-probes.ts stares them: backs to the door for the walk up, turned to it as the row is tapped)
       const gaze = new Map<any, number[]>(), look = (to: (h: any) => number[]) => { for (const h of P.hostiles) { const c = h.char;
-        if (!gaze.has(c)) { const dir = () => { const t = gaze.get(c)!, dx = t[0] - c.posX, dz = t[2] - c.posZ, l = Math.hypot(dx, dz) || 1; return [dx / l, 0, dz / l]; }; Object.defineProperty(c, 'chestDir', { get: dir, set: () => {}, configurable: true }); c.headDir = dir; }
+        if (!gaze.has(c)) { const dir = () => { const t = gaze.get(c)!, dx = t[0] - c.pos[0], dz = t[2] - c.pos[2], l = Math.hypot(dx, dz) || 1; return [dx / l, 0, dz / l]; }; Object.defineProperty(c, 'chestDir', { get: dir, set: () => {}, configurable: true }); c.headDir = dir; }
         const t = to(h); gaze.set(c, [t[0], 0, t[2]]); } };
-      look(h => [h.char.posX + nx * in0 * 8, 0, h.char.posZ + nz * in0 * 8]);
+      look(h => [h.char.pos[0] + nx * in0 * 8, 0, h.char.pos[2] + nz * in0 * 8]);
       P.crouch(true); P.go(P.free([fc[0] - nx * in0 * 5.5, 0, fc[2] - nz * in0 * 5.5]), 60); P.gather(); P.toDoor('breakroom_w'); P.wait(5);
-      const m = P.mate, p0 = [...m.char.pos], e = T1.char.pos, v = Math.hypot(m.char.velX, m.char.velZ);
+      const m = P.mate, p0 = [...m.char.pos], e = T1.char.pos, v = Math.hypot(m.char.vel[0], m.char.vel[2]);
       const A = dd.def.hinge, B = [A[0] + Math.cos(th) * dd.def.width, A[1] + Math.sin(th) * dd.def.width], o = (px: number, pz: number, qx: number, qz: number, rx: number, rz: number) => (qx - px) * (rz - pz) - (qz - pz) * (rx - px);
       const funnel = o(e[0], e[2], p0[0], p0[2], A[0], A[1]) * o(e[0], e[2], p0[0], p0[2], B[0], B[1]) <= 0 && o(A[0], A[1], B[0], B[1], e[0], e[2]) * o(A[0], A[1], B[0], B[1], p0[0], p0[2]) <= 0;
       look(() => [fc[0], 0, fc[2]]); const face = P.g.doors.pullFace?.(dd, P.pos) ? 'pull' : 'push', seen0 = P.mateSeenS, a0 = dd.angle; let began = false, mateGap = 9, samGap = 9;

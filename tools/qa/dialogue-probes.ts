@@ -39,7 +39,7 @@ type Pick = { text: string; id: string; kind: string | null; stage: 1 | 2 | 3 | 
 /** press him n times (a beat between presses so the bubbles are real bubbles), collecting the picks; Sam is put `behind` metres behind him first (his back to Sam, dark) */
 function pressN(W: any, gd: any, n: number, rnd: () => number, behind = 1.0): (Pick | null)[] {
   const { game } = W; const f = gd.char.forward();
-  game.teleportPlayer([gd.char.posX - f[0] * behind, 0, gd.char.posZ - f[2] * behind]); game.player.visibility = 0.02; W.step(DT);
+  game.teleportPlayer([gd.char.pos[0] - f[0] * behind, 0, gd.char.pos[2] - f[2] * behind]); game.player.visibility = 0.02; W.step(DT);
   const out: (Pick | null)[] = [];
   for (let i = 0; i < n; i++) { out.push(game.interrogate(gd, rnd)); for (let f2 = 0; f2 < 20; f2++) W.step(DT); }
   return out;

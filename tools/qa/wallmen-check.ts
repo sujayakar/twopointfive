@@ -94,7 +94,7 @@ export async function wallmenCheck(): Promise<boolean> {
       for (const e of g.events) if (e.kind === 'guardShot' && e.time === g.time && e.to && e.who === S.char.id) shots.push({ from: [...e.from] as Vec3, to: [...e.to] as Vec3 });
     } };
     step(20);
-    if (kind === 'order') order(S, { goal: null, upper: 'aim', aimAt: [T.char.posX, 1.25, T.char.posZ] });
+    if (kind === 'order') order(S, { goal: null, upper: 'aim', aimAt: [T.char.pos[0], 1.25, T.char.pos[2]] });
     else { S.hold = false; S.pinned = true; S.state = 'alert'; S.awareness = 1; S.foe = T; S.reactT = 0.2; S.fireCd = 0.4; S.reloadT = -1; S.lastKnown = v3.copy(T.char.pos); S.aim?.clear?.(); S.witness.alertedBy = 'radio'; S.witness.alertT = g.time; }
     step(30); const before = shots.length; const t0 = g.time;
     for (let i = 0; i < secs * 60; i++) { if (saw && g.time - t0 < 3 && T.state !== 'dead') coverfireSaw(g, S, T); onKind = coverfireOn(g, S)?.kind ?? onKind; step(1); }
@@ -126,7 +126,7 @@ export async function wallmenCheck(): Promise<boolean> {
         parkSam(g, P.tp); const T = spawn('operative', P.tp, P.sp, 'Target'), S = spawn('hostile', P.sp, P.tp, 'Shooter'); order(T, { goal: null });
         for (const o of [S, T]) { o.hold = true; o.pinned = true; o.dazzledUntil = 1e9; }
         for (let i = 0; i < 30; i++) W.step(DT);
-        const chest: Vec3 = [T.char.posX, T.char.posY + 1.25, T.char.posZ]; const TL = thinLine(g, shotOrigin(S.char), chest, roundEnergy(S.weapon.def));
+        const chest: Vec3 = [T.char.pos[0], T.char.pos[1] + 1.25, T.char.pos[2]]; const TL = thinLine(g, shotOrigin(S.char), chest, roundEnergy(S.weapon.def));
         const met: number[] = []; WALLPEN_HOOKS.crossed = (_g: any, x: any) => met.push(x.index); fireWeapon(g, S.char, chest, false, { steady: true, spread: 0 }); WALLPEN_HOOKS.crossed = null;
         line(!!TL && TL !== 'clear' && TL.walls[0].index === P.index && met.includes(P.index) && (T.state === 'dead' || !T.char.alive), `a defender's round fired down a line that said yes goes through partition ${P.index} into the man behind it (line ${TL && TL !== 'clear' ? `through ${TL.walls.length}` : String(TL)}, crossed ${met.join(', ') || 'nothing'}, the man ${T.state})`); }
     }
@@ -166,7 +166,7 @@ export async function wallmenCheck(): Promise<boolean> {
     // ------------------------------------------------------------ cover from a gun: what stops a round before what hides
     {
       const W = await world(), g = W.game; parkSam(g, [0, 0, 0]);
-      const gd = spawnUnit(g, { team: 'hostile', pos: [g.player.char.posX, 0, g.player.char.posZ], yaw: 0, light: false, name: 'Mover' }); gd.hold = true; gd.pinned = true;
+      const gd = spawnUnit(g, { team: 'hostile', pos: [g.player.char.pos[0], 0, g.player.char.pos[2]], yaw: 0, light: false, name: 'Mover' }); gd.hold = true; gd.pinned = true;
       for (let i = 0; i < 5; i++) W.step(DT);
       const nav = g.col.nav; const cells: Vec3[] = [];
       for (let iz = 1; iz < nav.H - 1; iz += 2) for (let ix = 1; ix < nav.W - 1; ix += 2) if (!nav.blocked[nav.idx(ix, iz)]) cells.push([(ix + 0.5) * nav.cell, 0, (iz + 0.5) * nav.cell]);

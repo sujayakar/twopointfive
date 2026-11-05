@@ -62,7 +62,7 @@ function observe(game: any, w: Watch, T: Tally, f: number) {
   }
   if (f % 6 === 0 && T.trace.length < 60 && (pushing || (T.endT >= 0 && game.time - T.endT < 0.6))) {
     const k = w.expect === 'L' ? c.bones.fingerL : c.bones.fingerR; const q = onLeaf(d, k);
-    T.trace.push(`      f${f} t${f2(game.time)} ${pushing ? 'PUSH' : 'after'} door ${f2(d.angle)} wL ${f2(hw.L)} wR ${f2(hw.R)} knuckle${w.expect} off ${f3(q.off)} along ${f2(q.along)} y ${f2(k[1])} pos (${f2(c.posX)}, ${f2(c.posZ)}) aimOff ${f2(c.aimYaw - c.bodyYaw)} upper ${an.upper}${dp ? ` hand ${dp.hand < 0 ? '?' : dp.hand ? 'R' : 'L'}` : ''}`);
+    T.trace.push(`      f${f} t${f2(game.time)} ${pushing ? 'PUSH' : 'after'} door ${f2(d.angle)} wL ${f2(hw.L)} wR ${f2(hw.R)} knuckle${w.expect} off ${f3(q.off)} along ${f2(q.along)} y ${f2(k[1])} pos (${f2(c.pos[0])}, ${f2(c.pos[2])}) aimOff ${f2(c.aimYaw - c.bodyYaw)} upper ${an.upper}${dp ? ` hand ${dp.hand < 0 ? '?' : dp.hand ? 'R' : 'L'}` : ''}`);
   }
 }
 /** the case's PASS / FAIL and what to print for it: the summary always; the failures, the staging `context`, the off-tolerance samples and the trace only when it failed */
@@ -109,7 +109,7 @@ async function walkCase(label: string, opts: { holstered: boolean; aimSide?: num
   game.puppet = { goal: [9.72, 0, 8.4], aim, walk: 1, crouch: !!opts.crouch };
   const w: Watch = { c: pc, door: conf, expect: opts.expect, label, yBand: opts.crouch ? [0.75, 1.05] : undefined }; const T = newTally();
   for (let f = 0; f < 60 * 5; f++) {
-    if (opts.aimSide && game.puppet) game.puppet.aim = [pc.posX + Math.sin(Math.PI + opts.aimSide) * 6, 1.2, pc.posZ + Math.cos(Math.PI + opts.aimSide) * 6];   // the aim point travels with him: a constant bearing off his walk
+    if (opts.aimSide && game.puppet) game.puppet.aim = [pc.pos[0] + Math.sin(Math.PI + opts.aimSide) * 6, 1.2, pc.pos[2] + Math.cos(Math.PI + opts.aimSide) * 6];   // the aim point travels with him: a constant bearing off his walk
     W.step(DT); observe(game, w, T, f);
   }
   game.puppet = null;
@@ -132,7 +132,7 @@ async function crackCase(label: string, opts: { holstered: boolean; aimSide?: nu
   for (; f < Math.round(2.6 / DT); f++) { W.step(DT); observe(game, w, T, f); }   // ~2.6 s: the whole ease and a moment standing open
   for (let i = 0; i < 90; i++, f++) { W.step(DT); observe(game, w, T, f); }
   game.puppet = null;
-  const context = `(door hovered as useDoor at the start: ${hovered}, ease row ${eased}; eased to ${f2(conf.angle)} rad; player at (${f2(pc.posX)}, ${f2(pc.posZ)}) yaw ${f2(pc.bodyYaw)} aim off ${f2(pc.aimYaw - pc.bodyYaw)})`;
+  const context = `(door hovered as useDoor at the start: ${hovered}, ease row ${eased}; eased to ${f2(conf.angle)} rad; player at (${f2(pc.pos[0])}, ${f2(pc.pos[2])}) yaw ${f2(pc.bodyYaw)} aim off ${f2(pc.aimYaw - pc.bodyYaw)})`;
   const v = verdict(w, T, { minEased: 15, context }); console.log(v.lines.join('\n')); return v.pass;
 }
 
@@ -146,7 +146,7 @@ async function guardCase(label: string): Promise<boolean> {
   c.pos = [30.6, 0, 14.2]; c.vel = [0, 0, 0]; c.bodyYaw = c.aimYaw = Math.PI; gd.state = 'patrol'; gd.awareness = 0; gd.wp = 3; gd.wait = 0; gd.path = []; gd.pathGoal = null; gd.hold = false; c.update(0); c.update(DT);
   const w: Watch = { c, door: d, expect: 'L', label }; const T = newTally();
   for (let f = 0; f < 60 * 9; f++) { W.step(DT); observe(game, w, T, f); }
-  const context = `(guard ${gd.callsign} ended at (${f2(c.posX)}, ${f2(c.posZ)}) ${gd.state}, drawn ${gd.drawn}, torch dropped ${!!gd.dropped}; door now ${f2(d.angle)})`;
+  const context = `(guard ${gd.callsign} ended at (${f2(c.pos[0])}, ${f2(c.pos[2])}) ${gd.state}, drawn ${gd.drawn}, torch dropped ${!!gd.dropped}; door now ${f2(d.angle)})`;
   const v = verdict(w, T, { context }); console.log(v.lines.join('\n')); return v.pass;
 }
 

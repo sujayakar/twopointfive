@@ -68,7 +68,7 @@ export function breakerResetNear(g: Game, gd: Guard): boolean {
   const E = breakerErrand(g), p = gd.char.pos;   // (workthings.ts: the reach in front of the panel's own face, and nothing solid between him and it — the fixed offset below reached through the wall a panel hangs on wherever it does not face the way the office's does)
   // (within a stride of the errand's own spot counts too: a walk ends on a nav cell's centre, which can be a step short of it)
   if (E) return (Math.hypot(p[0] - E.mid[0], p[2] - E.mid[2]) < 1.3 || Math.hypot(p[0] - E.goal[0], p[2] - E.goal[2]) < 0.7) && !g.col.solidBlocked([p[0], 1.0, p[2]], E.at);
-  return Math.hypot(gd.char.posX - bp[0], gd.char.posZ - (bp[2] - 0.6)) < 1.3;
+  return Math.hypot(gd.char.pos[0] - bp[0], gd.char.pos[2] - (bp[2] - 0.6)) < 1.3;
 }
 
 export function updateTargets(g: Game, dt: number) {

@@ -37,7 +37,7 @@ async function blast(scn: string, on: boolean, kick = 1, secs = 5) {
   R.gather(P.near, 75, P.p); O.give(WALL_ORDER, O.targetAt(P.p), 'all');
   if (!R.until(() => C.ops[0]?.phase === 'armed', 60)) throw new Error('the charge was never armed');
   const wall = C.set[0].wall, log: any[] = []; W.audioLog = log; recs.length = 0; blown = wall;
-  const ev0 = game.events.length, t0 = game.time, ear = game.player.char.bones.head ?? [game.player.char.posX, 1.6, game.player.char.posZ];
+  const ev0 = game.events.length, t0 = game.time, ear = game.player.char.bones.head ?? [game.player.char.pos[0], 1.6, game.player.char.pos[2]];
   C.blow();
   const bang = game.events.slice(ev0).find((e: any) => e.kind === 'bang');
   const kicks: (Vec3 | null)[] = []; let pic: { moved: boolean; same: boolean } | null = null;

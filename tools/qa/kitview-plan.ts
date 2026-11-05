@@ -675,7 +675,7 @@ async function loader(names: string[]) {
       { const v = q.get('way'); ROOMCLEAR.way = v !== null && /^\d+$/.test(v) ? +v : 0; }   // (host/profile.ts, the page's own line)
       const bad: string[] = checkStructure(g), st = startFromQuery(g, kitViewSetQuery(q));
       row(bad.length === 0, `${w}: the room clear's own check (checkStructure) has nothing to say of the stand-in structure${bad.length ? ' — ' + bad.slice(0, 3).join(' · ') : ''}`);
-      const size: number = specOfQuery(q)?.squad ?? 0, men: Data[] = [g.player, ...g.nightBreach.ops], off = men.map((m, i) => dist([m.char.posX, m.char.posZ], P.slots[i] ?? [1e9, 1e9]));
+      const size: number = specOfQuery(q)?.squad ?? 0, men: Data[] = [g.player, ...g.nightBreach.ops], off = men.map((m, i) => dist([m.char.pos[0], m.char.pos[2]], P.slots[i] ?? [1e9, 1e9]));
       row(!st.why && g.roomClear.active && g.roomClear.way === k && men.length === size + 1 && g.level.scenarios.kitView.ways[g.roomClear.way]?.set !== undefined && !!(P.anchor.door === null || g.doors.byName(P.anchor.door)),
         `${w}: '?${kitViewSetQuery(q).toString()}' (the mission's own '?${C.query}') stages a room clear on it — way ${g.roomClear.way}, Sam and ${men.length - 1}, the block's way there names the set${P.anchor.door ? `, its door '${P.anchor.door}' is a leaf of the game's` : ''}${st.why ? ' — REFUSED: ' + st.why : ''}`);
       row(off.every(d => d < 0.6), `${w}: the team starts on the plan's places (the set's ref side) — ${off.map(f2).join(', ')} m off them`);

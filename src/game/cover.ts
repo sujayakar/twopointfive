@@ -395,8 +395,8 @@ export class Cover {
       return true;
     };
     // (which way each man is going, and whether he is RUNNING: a running man cannot carry a gun on what is behind him — it is not his to take)
-    const spd = new Map(men.map(gd => [gd, Math.hypot(gd.char.velX, gd.char.velZ)]));
-    const ways = new Map(men.map(gd => [gd, spd.get(gd)! > 0.4 ? Math.atan2(gd.char.velX, gd.char.velZ) : null]));
+    const spd = new Map(men.map(gd => [gd, Math.hypot(gd.char.vel[0], gd.char.vel[2])]));
+    const ways = new Map(men.map(gd => [gd, spd.get(gd)! > 0.4 ? Math.atan2(gd.char.vel[0], gd.char.vel[2]) : null]));
     const behindOf = (gd: Guard, at: Vec3) => { const way = ways.get(gd) ?? null; return way !== null && Math.abs(wrapAngle(yawTo(gd.char.pos, at) - way)) > K.twist; };
     // (poseFor's own rule, on his pace: over backIn he does not START walking backwards, over backOut he stops)
     const fast = (gd: Guard) => { const J = this.jobs.get(gd); return Math.max(spd.get(gd)!, J?.pace ?? 0) > (J?.back ? K.backOut : K.backIn); };
@@ -485,7 +485,7 @@ export class Cover {
       // (his line cut for a moment and the pin kept — REARWATCH.grace: the point he had; a step short of a mark the door tool has just moved: the point that
       //  mark sees, so he does not turn to something else for the half second the step takes)
       const o = P.o, J0 = this.jobs.get(gd), post = P.A.post, to = rearSees(g, gd.char.pos, o, P.front) ?? (J0 && !J0.off && J0.o === o ? J0.to : null)
-        ?? (post && Math.hypot(gd.char.posX - post[0], gd.char.posZ - post[2]) < 1 ? rearSees(g, post, o, P.front) : null) ?? P.to ?? null; if (!to) continue;   // (… a taken room's other door kept over 'fall in', REARWATCH.room: the point he had)
+        ?? (post && Math.hypot(gd.char.pos[0] - post[0], gd.char.pos[2] - post[2]) < 1 ? rearSees(g, post, o, P.front) : null) ?? P.to ?? null; if (!to) continue;   // (… a taken room's other door kept over 'fall in', REARWATCH.room: the point he had)
       let L = live.find(x => x.o === o);
       if (!L) live.push(L = { o, w: 1 / (1 + near(o.at) / K.nearM), can: [], edge: [], at: new Map(), by: null, edgeBy: null, sam: samOn(o), held: false });
       if (!L.can.includes(gd)) L.can.push(gd); L.edge = L.edge.filter(m => m !== gd); L.at.set(gd, to); pins.push([gd, L]); }
@@ -523,7 +523,7 @@ export class Cover {
       const P = J ?? this.keptOf(gd); if (!P) this.unkeep(gd); this.kept.delete(gd);   // (a gun still on the opening he was last dealt: it goes from there, as on a swap)
       const c = gd.char, r = Math.max(1.5, flat(c.pos, L.o.at));
       const yaw = P ? P.yaw : c.aimYaw, rr = P ? P.r : r;   // (from where the muzzle is: it travels to the opening)
-      const aim: Vec3 = P ? P.aim : [c.posX + Math.sin(yaw) * rr, CHEST, c.posZ + Math.cos(yaw) * rr];
+      const aim: Vec3 = P ? P.aim : [c.pos[0] + Math.sin(yaw) * rr, CHEST, c.pos[2] + Math.cos(yaw) * rr];
       this.jobs.set(gd, { o: L.o, to: L.at.get(gd) ?? L.o.at, aim, yaw, r: rr, t0: g.time, aimT: g.time, back: P?.back ?? false, laneT: g.time, off: false, pace: 0, A: asgOf.get(gd)! });
       if (J) this.stats.swaps++; else this.stats.takes++; if (L.o.kind === 'rear') this.stats.rear++;
       this.note(gd, L.o.id);
@@ -595,7 +595,7 @@ export class Cover {
     const s = side(p) >= 0 ? 1 : -1, d0 = flat(p, o.at);
     const beyond: Vec3 = [o.at[0] - o.n[0] * s * 0.8, CHEST, o.at[2] - o.n[1] * s * 0.8];
     // (the guns already up: every mate's line to what he was dealt, and Sam's own — nobody steps into one)
-    const guns: [Vec3, Vec3][] = players(g).filter(pl => !pl.down).map(pl => pl.char).map(sam => [sam.pos, [sam.posX + Math.sin(sam.aimYaw) * 8, 0, sam.posZ + Math.cos(sam.aimYaw) * 8]]);
+    const guns: [Vec3, Vec3][] = players(g).filter(pl => !pl.down).map(pl => pl.char).map(sam => [sam.pos, [sam.pos[0] + Math.sin(sam.aimYaw) * 8, 0, sam.pos[2] + Math.cos(sam.aimYaw) * 8]]);
     for (const [m, J] of this.jobs) if (m !== gd && !J.off) guns.push([m.char.pos, J.to]);
     const inLane = (x: Vec3, a: Vec3, b: Vec3) => { const dx = b[0] - a[0], dz = b[2] - a[2], len = Math.hypot(dx, dz) || 1, sx = x[0] - a[0], sz = x[2] - a[2], along = (sx * dx + sz * dz) / len; return along > 0.15 && along < len && Math.abs(sx * dz - sz * dx) / len < K.lane; };
     let best: Vec3 | null = null, bc = Infinity;
@@ -653,7 +653,7 @@ export class Cover {
     const o = this.outs.get(gd); if (!o) return null;
     if (!this.turning(gd, still, pace)) { this.outs.delete(gd); return null; }   // (the order poses him this same frame: its own strafe, face and watch are written over ours)
     const c = gd.char; if (!o.on) { o.on = true; this.stats.turned++; } o.t = this.g.time;
-    o.aim[0] = c.posX + Math.sin(c.bodyYaw) * 3; o.aim[2] = c.posZ + Math.cos(c.bodyYaw) * 3;
+    o.aim[0] = c.pos[0] + Math.sin(c.bodyYaw) * 3; o.aim[2] = c.pos[2] + Math.cos(c.bodyYaw) * 3;
     return { at: o.aim, face: this.wayOf(gd), strafe: true };
   }
   /** …something else has him (an order that does not leave him free, a drill, a daze, the knob going off) and may not re-pose him: what the turn-out wrote into his script goes, as release() does it for a job */

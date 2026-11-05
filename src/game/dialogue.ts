@@ -2022,7 +2022,7 @@ export function updateAmbient(g: Game, dt: number) {
   if (S.run) {
     const r = S.run;
     if (!ambientLive(g) || !stillChatty(g, r.a) || !stillChatty(g, r.b)) { endAmbient(g, S); return; }
-    for (const [me, him] of [[r.a, r.b], [r.b, r.a]] as const) { const c = me.char; c.bodyYaw = approachAngle(c.wantBody, Math.atan2(him.char.posX - c.posX, him.char.posZ - c.posZ), AMBIENT.faceRate * dt); }   // half turned to each other while it lasts (the patrol's hold branch keeps their feet)
+    for (const [me, him] of [[r.a, r.b], [r.b, r.a]] as const) { const c = me.char; c.bodyYaw = approachAngle(c.wantBody, Math.atan2(him.char.pos[0] - c.pos[0], him.char.pos[2] - c.pos[2]), AMBIENT.faceRate * dt); }   // half turned to each other while it lasts (the patrol's hold branch keeps their feet)
     if (g.time < r.at) return;
     if (r.i >= r.talk.lines.length) { endAmbient(g, S); return; }
     const L = r.talk.lines[r.i++]; const who = L.who === 0 ? r.a : r.b;
@@ -2042,7 +2042,7 @@ export function updateAmbient(g: Game, dt: number) {
   for (let i = 0; i < men.length; i++) for (let j = i + 1; j < men.length; j++) {
     const a = men[i], b = men[j];
     if (v3.distXZ(a.char.pos, b.char.pos) > AMBIENT.pairM) continue;
-    if (g.col.solidBlocked([a.char.posX, 1.4, a.char.posZ], [b.char.posX, 1.4, b.char.posZ])) continue;
+    if (g.col.solidBlocked([a.char.pos[0], 1.4, a.char.pos[2]], [b.char.pos[0], 1.4, b.char.pos[2]])) continue;
     const third = g.guards.find(x => x !== a && x !== b && !x.unit && x.state !== 'dead' && !knownDown(g, a).has(x.callsign)) ?? null;
     const K = g.devices?.padNear(a.char.pos) ?? null; const pad = K ? { code: K.def.code, door: doorName(K.door.def.name), lockId: K.def.name } : null;   // the pad they would mean (a level with none: no sticky-note talk)
     const own = WORDS.on && !isOffice(g.level);   // (words.ts, off the office: the building's own chats are out, the tokens are asked of the line that will be SAID, and — three chats left — each is heard once a run: silence after them, not a loop)

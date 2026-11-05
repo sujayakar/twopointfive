@@ -79,7 +79,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
   let mine: any = null;   // the man in the player's own hands (his states are the grab's, not a sighting)
   const say = (s: string) => { lines.push(`${t.toFixed(1).padStart(6)}  ${s}`); if (trace) log(lines[lines.length - 1]); };
   class Stop extends Error { }
-  const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.posX, c.posY + 1.6, c.posZ], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.posX, c.posY + 1.2, c.posZ];
+  const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]];
   const pos = (): number[] => g.player.char.pos;
   const own = (id: number) => id === PLAYER_ID;
   // --moon: the moonlight the headless estimate leaves out (lightEstimateAt skips directional lights; the page's meter counts them), by pair-sneak.ts's rule:
@@ -157,7 +157,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
   /** a calm man standing out a wait on his beat looks the way he stands (his head turns some): a place well behind his shoulders, more than a couple of
    *  strides off, is not in his line — what a player watching him from the gate reads off his back */
   const backTo = (gd: any, p: number[]): boolean => { if (gd.state !== 'patrol' || gd.task || !(gd.wait > 0.5)) return false;
-    const f = gd.char.forward(), dx = p[0] - gd.char.posX, dz = p[2] - gd.char.posZ, L = Math.hypot(dx, dz) || 1; return L > 2.5 && (f[0] * dx + f[2] * dz) / L < -0.35; };
+    const f = gd.char.forward(), dx = p[0] - gd.char.pos[0], dz = p[2] - gd.char.pos[2], L = Math.hypot(dx, dz) || 1; return L > 2.5 && (f[0] * dx + f[2] * dz) / L < -0.35; };
   const watchers = (pts: number[][], skip: any = null): any[] => g.guards.filter((gd: any) => gd.state !== 'dead' && gd !== skip && pts.some(p => {
     const d = flat(gd.char.pos, p); if (d > (litAt(p) > 0.12 ? 22 : 6) || backTo(gd, p)) return false;
     return !g.col.segmentBlocked(eyeOf(gd.char), [p[0], 1.2, p[2]]); }));
@@ -165,7 +165,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
    *  What a player gets by watching a patrol go round once; nothing the men do off their routes is foreseen */
   function ahead(gd: any, T: number): number[][] {
     const calm = gd.state === 'patrol' && !gd.task, R = gd.route, n = R?.points?.length ?? 0, v = calm ? 1.7 : 2.4, spots: number[][] = [];
-    let x = gd.char.posX, z = gd.char.posZ, wp = gd.wp, wait = calm ? Math.max(0, gd.wait) : 0, guard = 0;
+    let x = gd.char.pos[0], z = gd.char.pos[2], wp = gd.wp, wait = calm ? Math.max(0, gd.wait) : 0, guard = 0;
     const legs: number[][] = (gd.path ?? []).slice(gd.pathI ?? 0).map((q: number[]) => [q[0], q[2]]);
     const next = () => legs.push([R.points[wp][0], R.points[wp][2]]);
     if (calm && n > 1 && wait <= 0 && !legs.length) next();
@@ -341,9 +341,9 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
     // close on his back: the last metres on a knee, to a stride behind him
     mine = clerk;
     for (let k = 0; k < 40 && !g.player.holding; k++) {
-      const c = clerk.char, f = c.forward(), bx = c.posX - f[0] * 0.75, bz = c.posZ - f[2] * 0.75;
+      const c = clerk.char, f = c.forward(), bx = c.pos[0] - f[0] * 0.75, bz = c.pos[2] - f[2] * 0.75;
       if (flat(pos(), [bx, 0, bz]) > 0.3) walk(free([bx, 0, bz]), 1.2, { noDoors: true, near: 0.25 });
-      if (flat(pos(), c.pos) < 1.15 && verb('guard', 'grab', [c.posX, 1.35, c.posZ], true)) break;
+      if (flat(pos(), c.pos) < 1.15 && verb('guard', 'grab', [c.pos[0], 1.35, c.pos[2]], true)) break;
       if (clerk.state !== 'patrol' && !g.player.holding) throw new Stop(`the clerk turned (${clerk.state}) before the grab`);
     }
     if (!until(() => g.player.holding?.phase === 'held', 5)) throw new Stop('the grab did not take');

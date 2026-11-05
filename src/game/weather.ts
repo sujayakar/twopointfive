@@ -30,7 +30,7 @@ import { isDaylight } from './lighting';
 import { onScreen } from './guards';
 import { WORLD } from '../scene/world';
 import { hourWeatherChanged } from './hours';   // (called inside setKind only)
-import { WEATHER_BOOT, WX_OWN, WEATHER_PRESETS, isAnyKind, snowLevel, packFog, unpackFog, fogGlowWord, fogTau, packRect, unpackRect, inRect } from './weatherKinds';
+import { WEATHER_BOOT, WX_OWN, WEATHER_PRESETS, MAX_ROOFS, isAnyKind, snowLevel, packFog, unpackFog, fogGlowWord, fogTau, packRect, unpackRect, inRect } from './weatherKinds';
 import type { WeatherKind, Rect, FogSpec } from './weatherKinds';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { levelNameOf } from '../scene/levelLoad';   // (asked inside levelKind only)
@@ -61,7 +61,7 @@ export const WX_SIM = { rainK: 1.2, thunderK: 1.5, thunderSecs: 1.4, thunderLoud
 const LEGACY = { storm: 0.7, rain: 0.55, wind: [1.1, 0.45] as [number, number], cloud: 0.95 };
 const ROOF_PAD = 0.06;   // a roof reaches this far past its slab: two slabs a couple of centimetres apart (the office's stair tower and its main roof) leave no strip of sky between them
 const NO_RECT: Rect = [1e6, 1e6, -1e6, -1e6];   // a footprint nothing is inside (and no ray crosses)
-/** the level's roofs as footprints: its ceiling slabs (render/reach.ts buildInteriorCells's own test), biggest first, at most four (no level has more) */
+/** the level's roofs as footprints: its ceiling slabs (render/reach.ts buildInteriorCells's own test), biggest first, at most MAX_ROOFS (four: no level has more) */
 export function roofsOf(boxes: readonly Box[]): Rect[] {
   const out: Rect[] = [];
   for (const b of boxes) {
@@ -70,7 +70,7 @@ export function roofsOf(boxes: readonly Box[]): Rect[] {
     out.push([b.c[0] - b.h[0] - ROOF_PAD, b.c[2] - b.h[2] - ROOF_PAD, b.c[0] + b.h[0] + ROOF_PAD, b.c[2] + b.h[2] + ROOF_PAD]);
   }
   const area = (r: Rect) => (r[2] - r[0]) * (r[3] - r[1]);
-  return out.sort((a, b) => area(b) - area(a)).slice(0, 4);
+  return out.sort((a, b) => area(b) - area(a)).slice(0, MAX_ROOFS);
 }
 
 /** a ground slab a picked rain wets: its top is the ground everybody stands on (the lot's y = 0, or the base a level's houses stand on a millimetre over it —

@@ -110,7 +110,7 @@ export function chipMark(g: Game, p: Vec3, n: Vec3, s: Surface, size = 0.013) {
  *  leaf, chips about — everything the shader draws, where the camera already is. Returns how many marks it left. */
 export function sprayTestPattern(g: Game): number {
   const before = g.decals.count; const pc = g.player.char; const f = pc.forward();
-  const chest: Vec3 = [pc.posX, 1.25, pc.posZ];
+  const chest: Vec3 = [pc.pos[0], 1.25, pc.pos[2]];
   const pistol = { calibre: '5.7', cls: 'pistol' } as unknown as WeaponDef, rifle = { calibre: '5.56', cls: 'rifle' } as unknown as WeaponDef;
   // a tight five-round group dead ahead at chest height, then a looser spray round it
   for (let i = 0; i < 23; i++) {
@@ -121,7 +121,7 @@ export function sprayTestPattern(g: Game): number {
     if (ph) bulletMark(g, v3.mad(chest, dir, ph.t), ph.n, { box: ph.box, dynamic: true }, tight ? pistol : rifle);
     else if (st) bulletMark(g, v3.mad(chest, dir, st.t), st.n, staticSurface(g, st.index), tight ? pistol : rifle);
   }
-  bangScorch(g, [pc.posX + f[0] * 1.2, fx.bang.height + 0.05, pc.posZ + f[2] * 1.2]);
+  bangScorch(g, [pc.pos[0] + f[0] * 1.2, fx.bang.height + 0.05, pc.pos[2] + f[2] * 1.2]);
   { let best: Door | null = null, bd = 6; for (const d of g.doors.list) { const dd = v3.distXZ(d.pos, pc.pos); if (dd < bd) { bd = dd; best = d; } } if (best) kickScuff(g, best, pc.pos); }
   for (let i = 0; i < 6; i++) {
     const a = i * 1.047 + 0.3; const dir: Vec3 = [Math.cos(a), -0.05 + 0.1 * unit(i * 9.1), Math.sin(a)];

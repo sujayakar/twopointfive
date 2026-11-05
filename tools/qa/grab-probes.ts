@@ -212,7 +212,7 @@ export async function grabWalk() {
       if (!H) { devLog.push(`${f2(game.time)}s hold ENDED (A ${A.state}, held ${!!A.held})`); break; }
       const d = v3.distXZ(p, gp); const dev = Math.abs(d - HOLD.dist);
       if (dev > maxDev) { maxDev = dev; maxDevAt = `${f2(game.time)}s at ${posS(gp)} (door ${f2(door.angle)})`; }
-      const sp = Math.hypot(game.player.char.velX, game.player.char.velZ); maxSpeed = Math.max(maxSpeed, sp, v3.distXZ(p, prevP) / dt);
+      const sp = Math.hypot(game.player.char.vel[0], game.player.char.vel[2]); maxSpeed = Math.max(maxSpeed, sp, v3.distXZ(p, prevP) / dt);
       maxPenP = Math.max(maxPenP, penetration(col, p, playerMod.playerBodyR(game, p), 0.2, 1.7)); maxPenG = Math.max(maxPenG, penetration(col, gp, 0.3, 0.2, 1.5));
       if (v3.distXZ(p, prevP) > 1e-3 && col.segmentBlocked([prevP[0], 0.45, prevP[2]], [p[0], 0.45, p[2]], 0) && !col.segmentBlockedDynamic([prevP[0], 0.45, prevP[2]], [p[0], 0.45, p[2]])) crossedP = true;
       if (v3.distXZ(gp, prevG) > 1e-3 && col.segmentBlocked([prevG[0], 0.45, prevG[2]], [gp[0], 0.45, gp[2]], 0) && !col.segmentBlockedDynamic([prevG[0], 0.45, prevG[2]], [gp[0], 0.45, gp[2]])) crossedG = true;
@@ -251,11 +251,11 @@ export async function grabWalk() {
     game.puppet = { goal: [20, 0, 8.0], aim: [20, 1.0, 4.0] };   // straight into the wall
     let maxDev = 0, maxPenP = 0, maxPenG = 0;
     for (let f = 0; f < 60 * 3; f++) { W.step(DT); const p = game.player.char.pos, gp = A.char.pos; maxDev = Math.max(maxDev, Math.abs(v3.distXZ(p, gp) - HOLD.dist)); maxPenP = Math.max(maxPenP, penetration(game.col, p, playerMod.playerBodyR(game, p), 0.2, 1.7)); maxPenG = Math.max(maxPenG, penetration(game.col, gp, 0.3, 0.2, 1.5)); }
-    const stopZ = A.char.posZ;
+    const stopZ = A.char.pos[2];
     game.puppet = { goal: [26, 0, 10.4], aim: [20, 1.0, 4.0] };   // now sideways along it, still facing it
-    let slid = 0; const x0 = A.char.posX;
+    let slid = 0; const x0 = A.char.pos[0];
     for (let f = 0; f < 60 * 3; f++) { W.step(DT); const p = game.player.char.pos, gp = A.char.pos; maxDev = Math.max(maxDev, Math.abs(v3.distXZ(p, gp) - HOLD.dist)); maxPenP = Math.max(maxPenP, penetration(game.col, p, playerMod.playerBodyR(game, p), 0.2, 1.7)); maxPenG = Math.max(maxPenG, penetration(game.col, gp, 0.3, 0.2, 1.5)); }
-    slid = A.char.posX - x0; game.puppet = null;
+    slid = A.char.pos[0] - x0; game.puppet = null;
     const fails: string[] = [];
     if (stopZ < 10.29 || stopZ > 10.45) fails.push(`the held man stopped at z ${f2(stopZ)} against the z=10 wall (want his 0.3 m circle resting on it: ≈ 10.3–10.4)`);
     if (maxDev > 0.03) fails.push(`offset strayed ${f3(maxDev)} m pressed to the wall`);
@@ -455,7 +455,7 @@ export async function grabChoke() {
     const dSam = v3.distXZ(A.char.pos, game.player.char.pos);
     // somebody finds him: B walked in from the east
     game.teleportPlayer([37.5, 0, 26.5]); game.player.crouch = false;
-    B.hold = false; B.heardUpTo = game.eventSeq; place(B, [A.char.posX + 5, 0, 11.2], -Math.PI / 2); B.state = 'patrol'; B.awareness = 0; B.wp = 3;
+    B.hold = false; B.heardUpTo = game.eventSeq; place(B, [A.char.pos[0] + 5, 0, 11.2], -Math.PI / 2); B.state = 'patrol'; B.awareness = 0; B.wp = 3;
     let foundAt = -1; for (let f = 0; f < 60 * 30; f++) { W.step(DT); if (foundAt < 0 && A.found) foundAt = game.time; }
     const call = lines.find(l => l.radio && l.who === B.callsign && /radioing it in/.test(l.text));
     if (foundAt < 0) fails.push('B never found him'); if (!call || !/out cold but breathing/.test(call.text)) fails.push(`finder's call "${call?.text ?? 'none'}" (want out cold but breathing)`);
@@ -506,7 +506,7 @@ async function grabReleaseRows() {
     if (alertFrame < 0 && A.state === 'alert') alertFrame = i;
     if (i % 10 === 0 || i === freeFrame || i === alertFrame) trace.push(`f${i} ${game.player.holding?.phase ?? 'free'} him ${posS(A.char.pos)} ${A.state} aw ${f2(A.awareness)} reactT ${f2(A.reactT)} spd ${f2(A.speed)}`);
   }
-  const stumble = v3.distXZ(A.char.pos, p0); const fwd: Vec3 = [Math.sin(yaw0), 0, Math.cos(yaw0)]; const along = (A.char.posX - p0[0]) * fwd[0] + (A.char.posZ - p0[2]) * fwd[2];
+  const stumble = v3.distXZ(A.char.pos, p0); const fwd: Vec3 = [Math.sin(yaw0), 0, Math.cos(yaw0)]; const along = (A.char.pos[0] - p0[0]) * fwd[0] + (A.char.pos[2] - p0[2]) * fwd[2];
   const fails: string[] = [];
   if (freeFrame !== 0) fails.push(`freed at frame ${freeFrame} (freeHeld('shot') hands him back at once — want frame 0)`);
   if (alertFrame < 0 || alertFrame - freeFrame > 1) fails.push(`alert at frame ${alertFrame}, freed at ${freeFrame} (want within a frame)`);

@@ -132,7 +132,7 @@ export class DoorPath {
       // (only a man an order of Sam's is posing this frame; never one a drill or a show has weapons-free — `hot` —, and with a man of his own in his
       //  sights — `over` — only if `gunOver`: a gun kept off a man costs lives, and his eye sees round a leaf's edge that the line from his chest crosses)
       if (!s || !gd.unit || gd.team !== 'operative' || gd.state === 'dead' || !c.anim.longGun || s.hot || !g.orders.of(gd) || (s.over ? !K.gunOver : (s.upper ?? 'aim') !== 'aim')) { this.low.delete(gd); continue; }
-      const p = c.pos, sp = Math.hypot(c.velX, c.velZ), lx = c.velX * K.gunLead, lz = c.velZ * K.gunLead;   // (the line is tried where he stands and where he will stand by the time the gun has moved)
+      const p = c.pos, sp = Math.hypot(c.vel[0], c.vel[2]), lx = c.vel[0] * K.gunLead, lz = c.vel[2] * K.gunLead;   // (the line is tried where he stands and where he will stand by the time the gun has moved)
       const L: [Vec3, Vec3][] = []; for (const d of g.doors.list) { const h = d.def.hinge; if (!gone(d) && Math.abs(d.angle) >= K.gunAjar && Math.hypot(h[0] - p[0], h[1] - p[2]) < d.def.width + K.gunM + 0.5 + sp * K.gunLead) L.push(this.leaf(d)); }
       if (!L.length) { this.low.delete(gd); continue; }
       if (!K.gunStill && !(s.goal && !s.arrived && flat(p, s.goal) > 0.5)) { this.low.delete(gd); continue; }
@@ -151,7 +151,7 @@ export class DoorPath {
         if (wish !== null && crosses(wish) || (!K.gunDown && down)) {
           // on his way somewhere: the gun stays UP and goes the way he goes — muzzle through the gap, onto his corner once the leaf is behind it (the first
           // man through a door does not look at the floor). Standing: down
-          const nx = gd.path[gd.pathI], go = sp > 0.3 ? Math.atan2(c.velX, c.velZ) : nx && flat(nx, p) > 0.2 ? Math.atan2(nx[0] - p[0], nx[2] - p[2]) : null;
+          const nx = gd.path[gd.pathI], go = sp > 0.3 ? Math.atan2(c.vel[0], c.vel[2]) : nx && flat(nx, p) > 0.2 ? Math.atan2(nx[0] - p[0], nx[2] - p[2]) : null;
           if (s.goal && !s.arrived && flat(p, s.goal) > 0.5 && go !== null && !crosses(go) && !(K.gunLane && this.friendOn(gd, go))) {
             const mine: Vec3 = [p[0] + Math.sin(go) * 3, 1.2, p[2] + Math.cos(go) * 3]; this.lent.push({ gd, s, mine, aimAt: s.aimAt, face: s.face, strafe: s.strafe });
             s.aimAt = mine; s.strafe = false; s.face = null; this.stats.gunAhead += dt; }

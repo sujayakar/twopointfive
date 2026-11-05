@@ -56,7 +56,7 @@ async function rig(file: string, seed: number, on = true) {
 // of the mess in its men's view on the block as it stands (nothing in the format promises that: the lines that stand Sam here say where he ended up, and
 // 'Alpha is in contact' is red when nobody of it sees him)
 const messSpot = (R: any): number[] => { const r = R.data.scenarios.roomClear.squads.find((q: any) => q.id === 'alpha')?.rally; if (!r) throw new Error('enemysquads probes: block-squads.json gives Alpha no rally point to stand Sam on'); return [r[0], 0, r[2]]; };
-const stood = (g: any) => `Sam at ${g.player.char.posX.toFixed(1)}, ${g.player.char.posZ.toFixed(1)}${inRoom(g, 'mess', g.player.char.pos) ? ', in the mess' : ', NOT in the mess'}`;
+const stood = (g: any) => `Sam at ${g.player.char.pos[0].toFixed(1)}, ${g.player.char.pos[2].toFixed(1)}${inRoom(g, 'mess', g.player.char.pos) ? ', in the mess' : ', NOT in the mess'}`;
 const inRoom = (g: any, id: string, p: number[]) => { const b = g.roomClear.structure.rooms.find((r: any) => r.id === id).bounds; return p[0] >= b.x0 && p[0] <= b.x1 && p[2] >= b.z0 && p[2] <= b.z1; };
 
 export async function enemysquadsStage(): Promise<boolean> {
@@ -88,7 +88,7 @@ export async function enemysquadsNoise(): Promise<boolean> {
     const R = await rig('block-squads.json', seed);
     try {
       const g = R.g; R.step(1);
-      const at = [g.player.char.posX, 0, g.player.char.posZ];
+      const at = [g.player.char.pos[0], 0, g.player.char.pos[2]];
       g.events.push({ kind: 'shot', pos: at, time: g.time, loud: true, level: 1, who: PLAYER_ID });
       R.step(6.5);
       const rep = squadsReport(g), ch = rep.map((q: any) => ({ name: q.name, c: R.choices(q.name) }));
@@ -96,7 +96,7 @@ export async function enemysquadsNoise(): Promise<boolean> {
       F.verdict(ch.every((x: any) => x.c.length === 1), `seed ${seed}: every squad has said one thing`, words);
       F.verdict(ch.every((x: any) => x.c[0]?.what === 'barricade') && rep.every((q: any) => q.out === 0), `seed ${seed}: nobody is sent at a noise nobody can place — every squad is on its doors`, `${ch.filter((x: any) => x.c[0]?.what === 'barricade').length} of ${ch.length} barricade · ${rep.reduce((n: number, q: any) => n + q.out, 0)} men out`);
       const charlie = g.roomClear.rooms.find((r: any) => r.def.id === 'comms').defenders;
-      F.verdict(charlie.every((h: any) => inRoom(g, 'comms', h.char.pos)), `seed ${seed}: Charlie (mayLeave false) stays in comms`, charlie.map((h: any) => `${h.callsign} (${h.char.posX.toFixed(1)}, ${h.char.posZ.toFixed(1)})`).join(' '));
+      F.verdict(charlie.every((h: any) => inRoom(g, 'comms', h.char.pos)), `seed ${seed}: Charlie (mayLeave false) stays in comms`, charlie.map((h: any) => `${h.callsign} (${h.char.pos[0].toFixed(1)}, ${h.char.pos[2].toFixed(1)})`).join(' '));
       F.verdict(ch.every((x: any) => R.said.some(t => t.startsWith(`${x.name}:`))), `seed ${seed}: each word was said on the net under the squad's name`, R.said.join(' | ').slice(0, 300));
       // then the team is on the mess (a loud round inside it, Sam stood there in plain light): the squads that stood to have their answer out after the
       // net's lag and a short beat, not a thinking beat — men sent, or 'stays on its doors' when too few of it are free of their door work to spare a pair
@@ -121,7 +121,7 @@ export async function enemysquadsNoise(): Promise<boolean> {
         const R = await rig('block-squads.json', seed);
         try {
           const g = R.g; R.step(1);
-          g.events.push({ kind: 'shot', pos: [g.player.char.posX, 0, g.player.char.posZ], time: g.time, loud: true, level: 1, who: PLAYER_ID });
+          g.events.push({ kind: 'shot', pos: [g.player.char.pos[0], 0, g.player.char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID });
           let stepsHeard = 0; const seen = new Set<any>();
           for (let i = 0; i < 9 * 4; i++) { R.step(0.25); for (const e of g.events) if (!seen.has(e)) { seen.add(e); if (e.kind === 'step' && e.who !== PLAYER_ID && g.nightBreach.hostiles.some((h: any) => h.char.id === e.who)) stepsHeard++; } }
           const ch = squadsReport(g).map((q: any) => ({ name: q.name, c: R.choices(q.name) }));
@@ -189,7 +189,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
     // ---- 2 · on, dark: nothing at the drop; asked for by name; men walk to his post; the body at a man's feet; contact
     { SQUADS.radioCheck = true; dark(true);
       const R = await rig('block-squads.json', 1);
-      try { const g = R.g; R.step(1); const { m, d } = loneliest(g), t0 = g.time, at = [m.char.posX, 0, m.char.posZ]; killGuard(g, m, [1, 0, 0], true); R.step(0.1);
+      try { const g = R.g; R.step(1); const { m, d } = loneliest(g), t0 = g.time, at = [m.char.pos[0], 0, m.char.pos[2]]; killGuard(g, m, [1, 0, 0], true); R.step(0.1);
         F.verdict(!ev(g, 'Bravo').some(e => e.what === 'contact') && !R.said.some(t => /contact/.test(t)), 'on: the same drop — no contact at the drop, nothing said', `${m.callsign} down @${t0.toFixed(2)}, his nearest mate ${d.toFixed(1)} m off · Bravo ${squadsReport(g).find((q: any) => q.name === 'Bravo').state} · ${R.said.length} radio lines`);
         let walked = 0, n = 0; until(R, 90, () => { for (const x of bravo(g)) if (x.script && x.speed > 0.4) { walked = Math.max(walked, x.speed); n++; } return ev(g, 'Bravo').some(e => e.what === 'contact'); });
         const E = ev(g, 'Bravo'), asks = first(E, 'asks'), looks = first(E, 'looks'), found = first(E, 'found'), c = first(E, 'contact');
@@ -206,7 +206,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
       const R = await rig('block-squads.json', 1);
       try { const g = R.g; R.step(1); const B = bravo(g);
         // the man a mate is looking at: nearest to the line of a mate's chest
-        let m = B[0], best = -2; for (const v of B) for (const x of B) { if (x === v) continue; const to = [v.char.posX - x.char.posX, v.char.posZ - x.char.posZ], l = Math.hypot(to[0], to[1]) || 1, c = (to[0] * x.char.chestDir[0] + to[1] * x.char.chestDir[2]) / l; if (l < 10 && c > best && !g.col.segmentBlocked([x.char.posX, 1.6, x.char.posZ], [v.char.posX, 0.9, v.char.posZ])) { best = c; m = v; } }
+        let m = B[0], best = -2; for (const v of B) for (const x of B) { if (x === v) continue; const to = [v.char.pos[0] - x.char.pos[0], v.char.pos[2] - x.char.pos[2]], l = Math.hypot(to[0], to[1]) || 1, c = (to[0] * x.char.chestDir[0] + to[1] * x.char.chestDir[2]) / l; if (l < 10 && c > best && !g.col.segmentBlocked([x.char.pos[0], 1.6, x.char.pos[2]], [v.char.pos[0], 0.9, v.char.pos[2]])) { best = c; m = v; } }
         const t0 = g.time; killGuard(g, m, [1, 0, 0], true); until(R, 6, () => ev(g, 'Bravo').some(e => e.what === 'contact'));
         const E = ev(g, 'Bravo'), found = first(E, 'found'), c = first(E, 'contact');
         F.verdict(best > 0.5 && c - t0 < 3 && found <= c && !E.some(e => e.what === 'asks' || e.what === 'looks'), 'lit: a man dropped in a mate\'s view — his mate has the body in sight, contact, nobody had to ask', `${m.callsign} (cos ${best.toFixed(2)} off a mate's chest) down @${t0.toFixed(2)} · found @${found} · contact @${c} · ${E.map(e => e.what).join(',')}`);
@@ -215,7 +215,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
     { SQUADS.radioCheck = true; dark(true);
       const R = await rig('block-squads.json', 1);
       try { const g = R.g; R.step(1); const { m } = loneliest(g), t0 = g.time, home = bravo(g).length;
-        const away = () => { m.held = true; m.char.posX = -60; m.char.posZ = -60; }; away();   // (in somebody's arm, carried clean off the floor: nobody's eyes on either of them)
+        const away = () => { m.held = true; m.char.pos[0] = -60; m.char.pos[2] = -60; }; away();   // (in somebody's arm, carried clean off the floor: nobody's eyes on either of them)
         until(R, 120, () => { away(); return ev(g, 'Bravo').some(e => e.what === 'no sign'); });
         const E = ev(g, 'Bravo'), asks = first(E, 'asks'), looks = first(E, 'looks'), none = first(E, 'no sign');
         F.verdict(asks > t0 && looks > asks && none > looks && !E.some(e => e.what === 'contact'), 'a held man is asked for, looked for, and not found: no contact', `asks @${asks} · looks @${looks} · no sign @${none} · ${E.map(e => e.what).join(',')}`);
@@ -230,10 +230,10 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
     // ---- 4b · on: a man let go of while they are on their way — they turn back, and he is asked for again the next time he is taken
     { SQUADS.radioCheck = true; dark(true);
       const R = await rig('block-squads.json', 1);
-      try { const g = R.g; R.step(1); const { m } = loneliest(g), p0 = [m.char.posX, m.char.posY, m.char.posZ];
-        const away = () => { m.held = true; m.char.posX = -60; m.char.posZ = -60; }; away();
+      try { const g = R.g; R.step(1); const { m } = loneliest(g), p0 = [m.char.pos[0], m.char.pos[1], m.char.pos[2]];
+        const away = () => { m.held = true; m.char.pos[0] = -60; m.char.pos[2] = -60; }; away();
         until(R, 120, () => { away(); return ev(g, 'Bravo').some(e => e.what === 'looks'); });
-        m.held = false; m.char.posX = p0[0]; m.char.posZ = p0[2]; until(R, 20, () => false);
+        m.held = false; m.char.pos[0] = p0[0]; m.char.pos[2] = p0[2]; until(R, 20, () => false);
         const E = ev(g, 'Bravo');
         F.verdict(R.said.some(t => new RegExp(`^Bravo: ${mate(m)}'s answering — back on our doors!`).test(t)) && !R.said.some(t => /no sign of/.test(t)), 'let go of while they walk: "he\'s answering", not "no sign"', R.said.filter(t => /^Bravo/.test(t)).join(' | '));
         const n0 = E.filter(e => e.what === 'asks').length; until(R, 80, () => { away(); return ev(g, 'Bravo').filter(e => e.what === 'asks').length > n0; });
@@ -254,7 +254,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
     { SQUADS.radioCheck = true; dark(true);
       const R = await rig('block-squads.json', 1);
       try { const g = R.g; R.step(1); const { m } = loneliest(g), t0 = g.time;
-        g.events.push({ kind: 'shot', pos: [m.char.posX, 0, m.char.posZ], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, m, [1, 0, 0], false); R.step(0.5);
+        g.events.push({ kind: 'shot', pos: [m.char.pos[0], 0, m.char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, m, [1, 0, 0], false); R.step(0.5);
         const c = first(ev(g, 'Bravo'), 'contact');
         F.verdict(c - t0 <= 0.2, 'a man shot down LOUD in its rooms: contact at once, switch on or off', `down @${t0.toFixed(2)} · Bravo contact @${c}`);
       } finally { R.done(); } }
@@ -306,14 +306,14 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
       F.verdict(moved[0] === moved[1] && draws[0] === draws[1] && checks[0] === 0 && checks[1] >= 3, 'dice: 50 s with nobody dropped — the squads\' checks are called, and the game is the one it is with the switch off (same digest but for the bubbles, the same number of draws from the game\'s dice)', `off ${moved[0]} · ${draws[0]} draws · ${checks[0]} checks  |  on ${moved[1]} · ${draws[1]} draws · ${checks[1]} checks`);
     }
     // ================ the review's findings (rebuild/quiet-squad-maps/review/findings.md): each of these fails on the switch as first built
-    const park = (g: any) => { for (const o of g.nightBreach.ops) { o.char.posX = -80; o.char.posZ = -80; } };   // (the team clean off the floor: what is under test is the squad and its own man)
+    const park = (g: any) => { for (const o of g.nightBreach.ops) { o.char.pos[0] = -80; o.char.pos[2] = -80; } };   // (the team clean off the floor: what is under test is the squad and its own man)
     // ---- 10 · A1: a body the round threw a metre from the post is found by the men sent to it (they stop short of the post; it is at their feet all the same)
     // (which men: on the rebuilt block the store's two stand 2 m apart, and the one left has the other's body in his plain eyes the moment he turns from his door —
     //  a true find, by the eyes rule and not this one. The lit case drops a man of the workshop, whose mates come to him round the room's corner)
     for (const c of [{ v: 0, dir: [0, 0, -1], real: true, name: 'the floor\'s own light' }, { v: 2, dir: [1, 0, 0], real: false, name: 'a floor too dark to see a body on' }]) { SQUADS.radioCheck = true; SQUADS.noticedEyes = true; dark(!c.real);
       const R = await rig('block-squads.json', 1);
       try { const g = R.g; park(g); R.g.player.visibility = 0.05; R.W.step(DT); park(g); for (let i = 0; i < 59; i++) { R.W.step(DT); park(g); }
-        const m = bravo(g)[c.v], at = [m.char.posX, 0, m.char.posZ]; killGuard(g, m, c.dir, false);
+        const m = bravo(g)[c.v], at = [m.char.pos[0], 0, m.char.pos[2]]; killGuard(g, m, c.dir, false);
         until(R, 150, () => { park(g); return ev(g, 'Bravo').some(e => e.what === 'no sign' || e.what === 'contact'); });
         const E = ev(g, 'Bravo'), h = m.char.bones.hips ?? m.char.pos, found = E.find(e => e.what === 'found');
         F.verdict(E.some(e => e.what === 'looks') && !!found && /sent to look/.test(found.why) && E.some(e => e.what === 'contact') && !E.some(e => e.what === 'no sign') && !R.said.some(t => /no sign of/.test(t)),
@@ -351,11 +351,11 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
     { SQUADS.radioCheck = true; dark(true);
       const R = await rig('block-squads.json', 1);
       try { const g = R.g; R.step(1); const { m } = loneliest(g);
-        const away = () => { m.held = true; m.char.posX = -60; m.char.posZ = -60; }; away();
+        const away = () => { m.held = true; m.char.pos[0] = -60; m.char.pos[2] = -60; }; away();
         until(R, 120, () => { away(); return ev(g, 'Bravo').some(e => e.what === 'asks'); });
         const tAsk = g.time; until(R, 1, () => { away(); return false; });
         const a = g.roomClear.rooms.find((r: any) => r.def.id === 'mess').defenders.filter((h: any) => h.state !== 'dead')[0];   // Alpha is hit, loud: the whole floor hears of the team
-        g.events.push({ kind: 'shot', pos: [a.char.posX, 0, a.char.posZ], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, a, [1, 0, 0], false);
+        g.events.push({ kind: 'shot', pos: [a.char.pos[0], 0, a.char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, a, [1, 0, 0], false);
         let walkers = 0; until(R, Math.max(SQUADS.checkSend, SQUADS.checkAsk + 1) + 1, () => { away(); return false; });
         const E = ev(g, 'Bravo'), looks = E.filter(e => e.what === 'looks' && e.t >= tAsk - 0.05);
         for (const x of bravo(g)) if (x.script && Math.abs((x.script.speed ?? 0) - g.tune.guardInvestigate) < 1e-6) walkers++;
@@ -367,7 +367,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
       for (const on of [false, true]) { SQUADS.radioCheck = on; dark(true);
         const R = await rig('block-squads.json', 1);
         try { const g = R.g; R.step(1); const { m } = loneliest(g); const die = Math.random; let n = 0; Math.random = () => { n++; return die(); };
-          g.events.push({ kind: 'shot', pos: [m.char.posX, 0, m.char.posZ], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, m, [1, 0, 0], false);
+          g.events.push({ kind: 'shot', pos: [m.char.pos[0], 0, m.char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, m, [1, 0, 0], false);
           let f = 0; while (f < 30 && squadsReport(g).find((q: any) => q.name === 'Bravo').state !== 'contact') { g.player.visibility = 0.05; R.W.step(DT); f++; }
           R.step(5); Math.random = die;
           const d = digestGame(g, true) as any; for (const x of d.guards ?? []) delete x.bubble;
@@ -400,7 +400,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
     for (const c of [{ v: 10, dir: [0, 0, -1], real: true }, { v: 9, dir: [0, 0, -1], real: true }, { v: 10, dir: [-1, 0, 0], real: true }, { v: 9, dir: [1, 0, 0], real: false }, { v: 10, dir: [-1, 0, 0], real: false }]) { SQUADS.radioCheck = true; SQUADS.noticedEyes = true; dark(!c.real);
       const R = await rig('warehouse.json', 1);
       try { const g = R.g; park(g); for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
-        const m = g.fight.defs[c.v].gd, at = [m.char.posX, 0, m.char.posZ];
+        const m = g.fight.defs[c.v].gd, at = [m.char.pos[0], 0, m.char.pos[2]];
         const his = (squadsReport(g) as any[]).find(q => squadMen(g, q.name).includes(m)).name;
         killGuard(g, m, c.dir, false);
         until(R, 90, () => { park(g); return ev(g, his).some(e => e.what === 'no sign' || e.what === 'contact'); });
@@ -414,7 +414,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
     { SQUADS.radioCheck = true; SQUADS.noticedEyes = true; dark(true);
       const R = await rig('block-squads.json', 1);
       try { const g = R.g, p0 = [...g.nightBreach.ops[0].char.pos];
-        const off = () => { park(g); g.player.char.posX = -80; g.player.char.posZ = -78; };
+        const off = () => { park(g); g.player.char.pos[0] = -80; g.player.char.pos[2] = -78; };
         off(); for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; R.W.step(DT); off(); }
         const m = g.fight.defs[9].gd; killGuard(g, m, [0, 0, 1], true);
         let next = g.time + 3; const went = () => ev(g, 'Bravo').some(e => e.what === 'looks' || e.what === 'found');
@@ -431,7 +431,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         const R = await rig('block-squads.json', 1);
         try { const g = R.g; park(g); for (let i = 0; i < 300; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
           const m = g.fight.defs[9].gd; const die = Math.random; let n = 0; Math.random = () => { n++; return die(); };
-          g.events.push({ kind: 'bang', pos: [m.char.posX + 6, 0, m.char.posZ], time: g.time, loud: true }); killGuard(g, m, [1, 0, 0], false);
+          g.events.push({ kind: 'bang', pos: [m.char.pos[0] + 6, 0, m.char.pos[2]], time: g.time, loud: true }); killGuard(g, m, [1, 0, 0], false);
           let f = 0; while (f < 30 && squadsReport(g).find((q: any) => q.name === 'Bravo').state !== 'contact') { g.player.visibility = 0.05; R.W.step(DT); park(g); f++; }
           for (let i = 0; i < 300; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); } Math.random = die;
           const d = digestGame(g, true) as any; for (const x of d.guards ?? []) delete x.bubble;
@@ -464,7 +464,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         const R = await rig('block-squads.json', 1);
         try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
           sees(R, m, 0.6); const k = first(ev(g, 'Bravo'), 'calls'), t1 = g.time;
-          const away = () => { m.held = true; m.char.posX = -60; m.char.posZ = -60; };
+          const away = () => { m.held = true; m.char.pos[0] = -60; m.char.pos[2] = -60; };
           if (how === 'dropped') killGuard(g, m, [1, 0, 0], true); else away();
           until(R, 4, () => { if (how === 'taken') away(); return false; });
           const E = ev(g, 'Bravo'), cut = E.find(e => e.what === 'cut off');
@@ -501,7 +501,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
       // 15c · gunfire heard: calls are instant, as they were — before he keys up, and under a call already on the air
       for (const when of ['before', 'under'] as const) { three(true); dark(false);
         const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m } = loneliest(g); const shot = () => g.events.push({ kind: 'shot', pos: [g.player.char.posX, 0, g.player.char.posZ], time: g.time, loud: true, level: 1, who: PLAYER_ID });
+        try { const g = R.g; R.step(1); const { m } = loneliest(g); const shot = () => g.events.push({ kind: 'shot', pos: [g.player.char.pos[0], 0, g.player.char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID });
           if (when === 'before') { shot(); R.step(0.2); }
           const heard = bravo(g).filter((x: any) => x.witness.heard.shots > 0).length; m.awareness = 1; const t0 = g.time; let alertT = NaN, shotT = NaN;
           sees(R, m, 1.2, () => { if (m.state === 'alert' && !(alertT === alertT)) alertT = g.time; if (when === 'under' && !(shotT === shotT) && g.time - t0 >= 0.5) { shot(); shotT = g.time; } });
@@ -514,7 +514,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         for (const body of [true, false]) { three(true, body); dark(false); BODY_LIGHT.lit = 0; BODY_LIGHT.litNear = 0;
           const R = await rig('block-squads.json', 1);
           try { const g = R.g; R.step(1); const B = bravo(g);
-            let m = B[0], best = -2; for (const v of B) for (const x of B) { if (x === v) continue; const to = [v.char.posX - x.char.posX, v.char.posZ - x.char.posZ], l = Math.hypot(to[0], to[1]) || 1, c = (to[0] * x.char.chestDir[0] + to[1] * x.char.chestDir[2]) / l; if (l < 10 && c > best && !g.col.segmentBlocked([x.char.posX, 1.6, x.char.posZ], [v.char.posX, 0.9, v.char.posZ])) { best = c; m = v; } }
+            let m = B[0], best = -2; for (const v of B) for (const x of B) { if (x === v) continue; const to = [v.char.pos[0] - x.char.pos[0], v.char.pos[2] - x.char.pos[2]], l = Math.hypot(to[0], to[1]) || 1, c = (to[0] * x.char.chestDir[0] + to[1] * x.char.chestDir[2]) / l; if (l < 10 && c > best && !g.col.segmentBlocked([x.char.pos[0], 1.6, x.char.pos[2]], [v.char.pos[0], 0.9, v.char.pos[2]])) { best = c; m = v; } }
             const t0 = g.time; killGuard(g, m, [1, 0, 0], true); until(R, 8, () => ev(g, 'Bravo').some(e => e.what === 'contact'));
             const E = ev(g, 'Bravo'); got[String(body)] = { c: first(E, 'contact') - t0, k: first(E, 'calls') - t0, found: first(E, 'found') - t0 };
           } finally { R.done(); } }
@@ -554,8 +554,8 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
       //        fresh 'sound off' — he is asked for by name as soon as the men who went for the first are home
       { three(true); dark(true);
         const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m: X } = loneliest(g), X0 = [X.char.posX, 0, X.char.posZ];
-          const takeX = () => { X.held = true; X.char.posX = -60; X.char.posZ = -60; };
+        try { const g = R.g; R.step(1); const { m: X } = loneliest(g), X0 = [X.char.pos[0], 0, X.char.pos[2]];
+          const takeX = () => { X.held = true; X.char.pos[0] = -60; X.char.pos[2] = -60; };
           until(R, 70, () => { takeX(); return !!asked(g, X); });
           const m = bravo(g).filter((x: any) => x !== X).sort((a: any, b: any) => flatD(b.char.pos, X0) - flatD(a.char.pos, X0))[0]; m.awareness = 1;
           sees(R, m, 0.5, takeX); const n0 = R.said.length; killGuard(g, m, [1, 0, 0], true);
@@ -572,9 +572,9 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
           a.awareness = 1; b.awareness = 1;
           // (the team clean off the floor, Sam too: the men who go for the first of the two walk the loading hall between the workshop and the store on the
           // rebuilt block, past where the team stands — met there it is contact, a true thing and another line's)
-          const clear = () => { park(g); g.player.char.posX = -80; g.player.char.posZ = -78; };
+          const clear = () => { park(g); g.player.char.pos[0] = -80; g.player.char.pos[2] = -78; };
           sees(R, a, 0.6, () => { b.lastSeenT = g.time; clear(); });
-          const on0 = squadCalls(g).length, n0 = R.said.length, take = () => { for (const x of [a, b]) { x.held = true; x.char.posX = -60; x.char.posZ = -60; } clear(); };
+          const on0 = squadCalls(g).length, n0 = R.said.length, take = () => { for (const x of [a, b]) { x.held = true; x.char.pos[0] = -60; x.char.pos[2] = -60; } clear(); };
           until(R, 150, () => { take(); return (!!asked(g, a) && !!asked(g, b)) || ev(g, 'Bravo').some(e => e.what === 'contact'); });
           const E = ev(g, 'Bravo'), cuts = E.filter(e => e.what === 'cut off'), ta = asked(g, a)?.t ?? NaN, tb = asked(g, b)?.t ?? NaN, t1 = Math.min(ta, tb), so = soundOffs(R, n0);
           F.verdict(on0 === 2 && cuts.length === 2 && Math.abs(cuts[0].t - cuts[1].t) < 0.02 && cuts.filter(c => / asks for him in /.test(c.why)).length === 1 && cuts.filter(c => /once the check under way is done/.test(c.why)).length === 1 && t1 - cuts[0].t <= SQUADS.callCutAsk[1] + 0.11 && ta === ta && tb === tb && so === 0 && !E.some(e => e.what === 'contact'),
@@ -586,7 +586,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         const R = await rig('block-squads.json', 1);
         try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
           sees(R, m, 0.6); const p = g.player.char.pos, at = [p[0] + 1, 0, p[2]];
-          m.char.posX = at[0]; m.char.posZ = at[2]; killGuard(g, m, [1, 0, 0], true);
+          m.char.pos[0] = at[0]; m.char.pos[2] = at[2]; killGuard(g, m, [1, 0, 0], true);
           until(R, 14, () => ev(g, 'Bravo').some(e => e.what === 'looks' || e.what === 'contact'));
           const E = ev(g, 'Bravo'), cut = E.find(e => e.what === 'cut off'), aM = asked(g, m), looksT = first(E, 'looks');
           F.verdict(!inRoom(g, 'shop', at) && !inRoom(g, 'store', at) && !!cut && !!aM && looksT - cut.t < 12 && looksT > aM.t,
@@ -628,8 +628,8 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
       //        home); the caller is let go of — nobody is owed an ask, and the next "sound off" comes when it was due, not five seconds after a poll
       { three(true); dark(true); SQUADS.heardAsks = false;
         const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m: X } = loneliest(g), X0 = [X.char.posX, 0, X.char.posZ];
-          const takeX = () => { X.held = true; X.char.posX = -60; X.char.posZ = -60; };
+        try { const g = R.g; R.step(1); const { m: X } = loneliest(g), X0 = [X.char.pos[0], 0, X.char.pos[2]];
+          const takeX = () => { X.held = true; X.char.pos[0] = -60; X.char.pos[2] = -60; };
           until(R, 70, () => { takeX(); return !!asked(g, X); });
           const m = bravo(g).filter((x: any) => x !== X).sort((a: any, b: any) => flatD(b.char.pos, X0) - flatD(a.char.pos, X0))[0]; m.awareness = 1;
           sees(R, m, 0.5, takeX); m.held = true;
@@ -647,14 +647,14 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
       { three(true); dark(true); SQUADS.heardAsks = false;
         const R = await rig('block-squads.json', 1);
         try { const g = R.g; R.step(1); const P0 = post0(g), { m: X } = loneliest(g);
-          const takeX = () => { X.held = true; X.char.posX = -60; X.char.posZ = -60; };
+          const takeX = () => { X.held = true; X.char.pos[0] = -60; X.char.pos[2] = -60; };
           until(R, 90, () => { takeX(); return ev(g, 'Bravo').some(e => e.what === 'looks'); });
           let L: any = null; until(R, 12, () => { takeX(); L = bravo(g).find((x: any) => x !== X && x.script && x.speed > 0.4 && flatD(x.char.pos, P0.get(x)!) > 4.5) ?? null; return !!L; });
           if (L) { L.awareness = 1; sees(R, L, 0.4, () => { takeX(); L.state = 'alert'; }); }   // (his own bar, as step 15b' stages it: a man walking on the squad's errand)
           const keyed = !!L && ev(g, 'Bravo').some(e => e.what === 'calls' && e.why.startsWith(`${L.callsign} keys up`));
-          const p = L ? [L.char.posX, 0, L.char.posZ] : [0, 0, 0], hold = () => { takeX(); if (L) { L.held = true; L.char.posX = p[0]; L.char.posZ = p[2]; } };
+          const p = L ? [L.char.pos[0], 0, L.char.pos[2]] : [0, 0, 0], hold = () => { takeX(); if (L) { L.held = true; L.char.pos[0] = p[0]; L.char.pos[2] = p[2]; } };
           const went = () => ev(g, 'Bravo').find(e => e.what === 'looks' && L && new RegExp(`to where ${L.callsign} stood`).test(e.why));
-          let goerAt: number[] | null = null; until(R, 150, () => { hold(); const w = went(); if (w && !goerAt) { const go = bravo(g).find((x: any) => w.why.startsWith(x.callsign)); goerAt = go ? [go.char.posX, 0, go.char.posZ] : null; } return !!w || ev(g, 'Bravo').some(e => e.what === 'contact'); });
+          let goerAt: number[] | null = null; until(R, 150, () => { hold(); const w = went(); if (w && !goerAt) { const go = bravo(g).find((x: any) => w.why.startsWith(x.callsign)); goerAt = go ? [go.char.pos[0], 0, go.char.pos[2]] : null; } return !!w || ev(g, 'Bravo').some(e => e.what === 'contact'); });
           const w = went(), N = Number(/, (\d+) m off/.exec(w?.why ?? '')?.[1]), st = L ? P0.get(L)! : [0, 0, 0], dHere = goerAt ? flatD(goerAt, p) : NaN, dPost = goerAt ? flatD(goerAt, st) : NaN;
           F.verdict(!!L && keyed && ev(g, 'Bravo').some(e => e.what === 'cut off' && e.why.startsWith(`${L.callsign}'s call`)) && !!w && flatD(p, st) > 4.5 && Math.abs(N - dHere) <= 0.6 && Math.abs(dHere - dPost) > 1.2,
             'ask-review-2 4.3: a looker who keyed up by his eyes on his way and was taken where he stood — the men who go for him go THERE, not to the post he left',
@@ -666,7 +666,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         const R = await rig('block-squads.json', 1);
         try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
           sees(R, m, 0.6); const p = g.player.char.pos, at = [p[0] + 1, 0, p[2]];
-          m.char.posX = at[0]; m.char.posZ = at[2];
+          m.char.pos[0] = at[0]; m.char.pos[2] = at[2];
           g.events.push({ kind: 'shot', pos: [p[0], 0, p[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, m, [1, 0, 0], false);
           R.step(1.6);
           const E0 = ev(g, 'Bravo'), bad = E0.find(e => e.what === 'found' && /heard the (shot|blast) that dropped/.test(e.why)), here = R.said.find((t: string) => /^Bravo: contact — here!/.test(t)), heard = bravo(g).filter((x: any) => x.witness.heard.shots > 0).length;
@@ -682,7 +682,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         const R = await rig('block-squads.json', 1);
         try { const g = R.g; R.step(1); const B = bravo(g);
           let A = B[0], bd = Infinity; for (const x of B) { const d = Math.min(...B.filter((y: any) => y !== x).map((y: any) => flatD(y.char.pos, x.char.pos))); if (d < bd) { bd = d; A = x; } }
-          const at = [A.char.posX, 0, A.char.posZ]; killGuard(g, A, [1, 0, 0], true); R.step(0.6);
+          const at = [A.char.pos[0], 0, A.char.pos[2]]; killGuard(g, A, [1, 0, 0], true); R.step(0.6);
           g.events.push({ kind: 'prop', pos: at, time: g.time, level: 0.5, who: 0 });
           const heardRow = () => ev(g, 'Bravo').find(e => e.what === 'check' && /heard something/.test(e.why));
           until(R, 3, () => !!heardRow());
@@ -703,7 +703,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
           sees(R, m, 0.6); killGuard(g, m, [1, 0, 0], true); R.step(0.3);
           const cut = ev(g, 'Bravo').find(e => e.what === 'cut off'), o = bravo(g)[0];
-          g.events.push({ kind: 'shot', pos: [o.char.posX, 0, o.char.posZ], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, o, [1, 0, 0], false); R.step(3);
+          g.events.push({ kind: 'shot', pos: [o.char.pos[0], 0, o.char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, o, [1, 0, 0], false); R.step(3);
           const E = ev(g, 'Bravo'), row = noted(g, new RegExp(`nobody asks for ${m.callsign} after all`));
           F.verdict(!!cut && / asks for him in /.test(cut.why) && E.some(e => e.what === 'contact') && !asked(g, m) && !!row,
             'ask-review-2 3.2: a cut-off row that promised an ask, and contact by another road before it was made — the trace says nobody asks after all (before: the promise stood in the log, unkept and unexplained)',
@@ -751,7 +751,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         { net(true); dark(true);
           const R = await rig('block-squads.json', 1);
           try { const g = R.g; park(g); for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
-            const A = alpha(g), away = () => { park(g); for (const x of A) { x.held = true; x.char.posX = -60; x.char.posZ = -60 - 2 * A.indexOf(x); } }; away();
+            const A = alpha(g), away = () => { park(g); for (const x of A) { x.held = true; x.char.pos[0] = -60; x.char.pos[2] = -60 - 2 * A.indexOf(x); } }; away();
             const none = () => all(g).find(e => e.what === 'no sign' && /nobody of Alpha is at its posts|no way to Alpha's posts/.test(e.why));
             until(R, 240, () => { away(); return !!none() || all(g).some(e => e.what === 'contact'); });
             const tNone = g.time, nl = all(g).find(e => e.what === 'net looks'), stops = Number(/posts \((\d+) of them\)/.exec(nl?.why ?? '')?.[1]);
@@ -767,7 +767,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
           const R = await rig('block-squads.json', 1);
           try { const g = R.g; park(g); for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
             const A = alpha(g);
-            g.events.push({ kind: 'shot', pos: [A[0].char.posX, 0, A[0].char.posZ], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, A[0], [1, 0, 0], false);
+            g.events.push({ kind: 'shot', pos: [A[0].char.pos[0], 0, A[0].char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, A[0], [1, 0, 0], false);
             for (let i = 0; i < 90; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
             const called = R.said.some((t: string) => /^Alpha: contact/.test(t)); for (const x of A.slice(1)) killGuard(g, x, [1, 0, 0], true);
             until(R, 150, () => { park(g); return false; });
@@ -816,7 +816,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         { net(true); dark(true);
           const R = await rig('block-squads.json', 1);
           try { const g = R.g; park(g); for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
-            const B = bravo(g), gone: any[] = [B[0]], away = () => { park(g); gone.forEach((x, i) => { x.held = true; x.char.posX = -60; x.char.posZ = -60 - 2 * i; }); }; away();
+            const B = bravo(g), gone: any[] = [B[0]], away = () => { park(g); gone.forEach((x, i) => { x.held = true; x.char.pos[0] = -60; x.char.pos[2] = -60 - 2 * i; }); }; away();
             const evB = () => all(g).filter(e => e.q === 'Bravo');
             until(R, 120, () => { away(); const l = evB().find(e => e.what === 'looks'); if (l) for (const x of bravo(g)) if (x.script && !gone.includes(x)) gone.push(x); return !!l; });
             const sent = gone.length - 1; away();
@@ -839,7 +839,7 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         for (const alarm of [true, false]) { net(true); dark(true); SQUADS.netCutAlarm = alarm;
           const R = await rig('block-squads.json', 1);
           try { const g = R.g; park(g); for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
-            const home0 = new Map<any, number[]>(bravo(g).map((x: any) => [x, [x.char.posX, 0, x.char.posZ]]));
+            const home0 = new Map<any, number[]>(bravo(g).map((x: any) => [x, [x.char.pos[0], 0, x.char.pos[2]]]));
             for (const x of alpha(g)) killGuard(g, x, [1, 0, 0], true);
             until(R, 200, () => { park(g); return all(g).some(e => e.what === 'net looks'); });
             let L: any = null; until(R, 12, () => { park(g); L = bravo(g).find((x: any) => x.script && x.speed > 0.4 && flatD(x.char.pos, home0.get(x)!) > 4.5) ?? null; return !!L; });

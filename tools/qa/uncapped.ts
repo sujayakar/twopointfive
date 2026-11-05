@@ -27,7 +27,7 @@ export function spawnPast(g: any, o: any): any {
   const weapon = o.weapon ?? (o.team === 'operative' ? 'fn2000' : o.team === 'hostile' ? 'aks74u' : 'guard9mm');
   const route = { name, points: [[o.pos[0], 0, o.pos[2]]], wait: [0], weapon, keys: [] };
   const T = g.tune; const fl = g.engine.lights.add(torchLightDef(`unitlight${id}`, id, T.flashIntensity, T.flashInner, T.flashOuter));
-  const gd = new Guard(g.men, g.ch, id, route, -1, fl, o.tint ?? TINT[o.team], { tint2: o.tint2 ?? TINT2[o.team], yaw: o.yaw ?? 0, name, team: o.team });
+  const gd = new Guard(g.ch, id, route, -1, fl, o.tint ?? TINT[o.team], { tint2: o.tint2 ?? TINT2[o.team], yaw: o.yaw ?? 0, name, team: o.team });
   gd.unit = { name, spawnedAt: g.time, light: o.light !== false }; if (o.pair) gd.unit.pair = o.pair; gd.hold = true;
   gd.heardUpTo = g.eventSeq;
   gd.char.update(0);

@@ -85,7 +85,7 @@ export function aimWeighBegin(pl: Player): void { const w = pl.aimw; w.was = w.l
 export function aimWeighTurn(g: Game, dt: number): boolean {
   if (!can(g)) return false;
   const pl = g.player, c = pl.char, w = pl.aimw, ap = g.aimPoint;
-  const dx = ap[0] - c.posX, dz = ap[2] - c.posZ, d = Math.hypot(dx, dz);
+  const dx = ap[0] - c.pos[0], dz = ap[2] - c.pos[2], d = Math.hypot(dx, dz);
   if (!w.was) { w.vel = 0; w.r = d; w.y = ap[1]; }
   w.live = true; AIMWEIGHT_STATS.steps++;
   let err = 0;
@@ -107,7 +107,7 @@ export function aimGunPoint(g: Game): Vec3 | null {
   const pl = g.player, w = pl.aimw; if (!w.live || !AIMWEIGHT.on) return null;
   if (w.landed) return [g.aimPoint[0], g.aimPoint[1], g.aimPoint[2]];
   const c = pl.char;
-  return [c.posX + Math.sin(c.aimYaw) * w.r, w.y, c.posZ + Math.cos(c.aimYaw) * w.r];
+  return [c.pos[0] + Math.sin(c.aimYaw) * w.r, w.y, c.pos[2] + Math.cos(c.aimYaw) * w.r];
 }
 /** Is the circle on the cursor (true when nothing is weighing his aim) */
 export function aimGunOn(g: Game): boolean { const w = g.player.aimw; return !(w.live && AIMWEIGHT.on) || w.on; }
@@ -117,9 +117,9 @@ export function aimGunOn(g: Game): boolean { const w = g.player.aimw; return !(w
  *  him by what the gun still has to swing, range and height kept (so a lead stays a lead, about the gun's heading). */
 export function aimWeighShot(g: Game, tgt: Vec3): Vec3 {
   const pl = g.player, w = pl.aimw; if (!w.live || !AIMWEIGHT.on || w.on) return tgt;
-  const c = pl.char, dx = tgt[0] - c.posX, dz = tgt[2] - c.posZ, cs = Math.cos(w.err), sn = Math.sin(w.err);   // (bearing − err: yaw is atan2(x, z))
+  const c = pl.char, dx = tgt[0] - c.pos[0], dz = tgt[2] - c.pos[2], cs = Math.cos(w.err), sn = Math.sin(w.err);   // (bearing − err: yaw is atan2(x, z))
   AIMWEIGHT_STATS.offShots++;
-  return [c.posX + dx * cs - dz * sn, tgt[1], c.posZ + dz * cs + dx * sn];
+  return [c.pos[0] + dx * cs - dz * sn, tgt[1], c.pos[2] + dz * cs + dx * sn];
 }
 
 /** The launcher's release (player.ts; `up` = the button has come up with a load held and the rifle in his hands). Rounds go where the circle is, but a 40 mm

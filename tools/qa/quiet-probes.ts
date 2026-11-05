@@ -198,7 +198,7 @@ export const quietPair = guarded(async () => {
       `Sam to ${at(to)} · partner at ${at(m.char.pos)}, ${gap.toFixed(1)} m from Sam (furthest behind on the way ${far.toFixed(1)} m) · the shift calm at the start: ${calm0}`); }
   { // a guard with the partner standing lit a few metres in front of him notices the PARTNER (Sam is out of every eye: invisible, as the probes' own flag)
     const gd = g.guards.find((x: any) => !x.unit && x.state === 'patrol')!, yaw = gd.char.bodyYaw;
-    const front = freeNear(g, [gd.char.posX + Math.sin(yaw) * 3.0, 0, gd.char.posZ + Math.cos(yaw) * 3.0], 1.0);
+    const front = freeNear(g, [gd.char.pos[0] + Math.sin(yaw) * 3.0, 0, gd.char.pos[2] + Math.cos(yaw) * 3.0], 1.0);
     const light = g.lightAt; g.lightAt = () => 1.2;   // (a lit floor: the harness has no GPU meter — the CPU stand-in every teammate's meter falls back on)
     g.orders.give('hold', g.orders.targetAt(m.char.pos), 'all');
     if (front) { m.char.pos = [front[0], 0, front[2]]; m.char.update(0); }
@@ -225,7 +225,7 @@ export const quietCheckpoint = guarded(async () => {
   const W = await stand(6), g = W.game;
   await start(W, '?quiet'); steps(W, 4);
   const gate = SAVE.canSave(g, false);
-  const to = freeNear(g, [g.player.char.posX + 1.5, 0, g.player.char.posZ + 0.5], 1.5)!; g.teleportPlayer(to); steps(W, 1);
+  const to = freeNear(g, [g.player.char.pos[0] + 1.5, 0, g.player.char.pos[2] + 0.5], 1.5)!; g.teleportPlayer(to); steps(W, 1);
   const k0 = dealKey(g), S = await hushed(() => W.snapshot('probe', true)), men0 = g.guards.map((x: any) => ({ n: x.callsign, r: x.routeI, p: [...x.char.pos] })), sam0 = [...g.player.char.pos], t0 = g.time;
   F.verdict(gate === null && !!S.quiet && `${S.quiet.deal.start}/${S.quiet.deal.spot}/${S.quiet.deal.patrol}` === k0 && S.guards.length === g.guards.length, 'on a calm quiet run the autosave\'s own gate passes (the manned roster IS the roster), and the file carries the deal',
     `canSave: ${gate ?? 'ok'} · deal ${k0} in the file: ${JSON.stringify(S.quiet)} · ${S.guards.length} men filed of ${g.level.routes.length} routes`);
@@ -277,7 +277,7 @@ export const quietFixes = guarded(async () => {
     const W = await stand(11), g = W.game; await start(W, '?quiet=2&squad=1'); steps(W, 0.2);
     g.godMode = true; g.playerInvisible = true;
     const m = g.quiet.ops[0], gd = g.guards.find((x: any) => !x.unit && x.state === 'patrol')!;
-    gd.state = 'alert'; gd.awareness = 1; gd.foe = m; gd.lastKnown = [m.char.posX, 0, m.char.posZ]; gd.lastSeenT = g.time;
+    gd.state = 'alert'; gd.awareness = 1; gd.foe = m; gd.lastKnown = [m.char.pos[0], 0, m.char.pos[2]]; gd.lastSeenT = g.time;
     await hushed(() => killGuard(g, m, [0, 0, 1], false, 'shot', 'ai')); m.killerId = gd.char.id;
     const said: string[] = []; const states: string[] = [];
     let fired = 0, seenSam = false; g.playerInvisible = false; g.lightAt = () => 0; g.player.visibility = 0;   // (Sam there to be shot at for the first two thirds of a second, in the dark where he started)

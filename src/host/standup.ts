@@ -154,6 +154,7 @@ import { LIGHTSWITCH } from '../game/lightswitch';
 import { CARLAMPS } from '../game/carlamps';
 import { HITSTUFF } from '../game/particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
+import { COATFINISH } from '../scene/stuff';
 import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
@@ -259,6 +260,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   const smoke = opts.smoke ?? nullSmoke();
   if (opts.harness && pinned('TPS_ROUND')) ROUND.on = String((globalThis as any).process?.env?.TPS_ROUND ?? '') === '1';   // round things are round (src/scene/round.ts; read as the level's boxes go to the world, so written before that): off, so a drum is the kit's octagon of four slabs to every ray and every foot, as when every frozen digest and tally was recorded
   if (opts.harness && pinned('TPS_SHAPES')) SHAPES.on = String((globalThis as any).process?.env?.TPS_SHAPES ?? '') === '1';   // a box says its shape (src/scene/shapes.ts; read as the level's boxes go to the world, so written before that): off, so every box of a level is the plain box its file has, as when every frozen digest was recorded
+  if (opts.harness && pinned('TPS_COATFINISH')) COATFINISH.on = String((globalThis as any).process?.env?.TPS_COATFINISH ?? '') === '1';   // a named coat's finish goes wherever its word goes (src/scene/stuff.ts; a picture only, read where a box's finish is handed to the GPU): off, so a vehicle's body has the finish its file gives it, as it was
   if (opts.populate !== false) populateHost(host, level);
   if (opts.harness && pinned('TPS_OPENING')) OPENING.on = String((globalThis as any).process?.env?.TPS_OPENING ?? '') === '1';   // THE NIGHT'S OPENING (src/game/opening.ts): off, so every man of the shift starts on his route's first waypoint as when every frozen digest, tally and session fixture was recorded — set before the Game exists (its constructor places them); `TPS_OPENING=1` runs any harness tool with it on, tools/qa/solo-night.ts raises it for its as-shipped stand (the shipped default is ON)
   if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/game/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
@@ -285,9 +287,9 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
   const seats = opts.seats ?? seatsOfSearch(opts.search ?? (typeof location !== 'undefined' ? location.search : ''));
   const game = new Game(host, level, ch, smoke, { seats }); game.dice = dice;
-  // THE GAME'S STATE IS AT HOME FROM HERE (sim/state.ts settle, the statement every tick's open makes; said once, where every Game is made, and after its
-  // die is hung): a rule that acts before the first tick — a level staged or restarted, a leaf shot apart on a game just loaded, a checkpoint filed, a
-  // roll of the die — finds its numbers in the game's block and is the Rust module's, like any other.
+  // THE GAME'S STATE THAT STILL MOVES IS AT HOME FROM HERE (sim/state.ts settle, the statement every tick's open makes; said once, where every Game is
+  // made, and after its die is hung): the die and the poses go into the game's block now, so a roll of the die before the first tick is the Rust
+  // module's like any other. (The doors, the falls, the furniture, the slabs and the thrown things were made over the block and need no move.)
   game.sim.settle(game);
   if (opts.audio) game.audio = opts.audio;
   if (!opts.harness) game.saves.onPutBack = () => hostAfterPutBack(game);   // (a save kept in memory put back — savestate.ts SAVETIMELINE: the GPU's buffers are told so; host/putback.ts)

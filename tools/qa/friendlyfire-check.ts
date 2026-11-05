@@ -40,8 +40,8 @@ export async function friendlyfireCheck(): Promise<boolean> {
   const msgs: string[] = R.said;
   game.aiEnabled = false;   // (nobody's senses: the floor stays calm and the men stay where they are put)
   const mate = R.ops[0], other = R.ops[1], foes = R.hostiles.filter((h: any) => h.state !== 'dead'), foe = foes[0];
-  const chest = (gd: any): [number, number, number] => gd.char.bones.chest ?? [gd.char.posX, gd.char.posY + 1.2, gd.char.posZ];
-  const put = (gd: any, p: number[], yaw = 0) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.velX = gd.char.velZ = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; };
+  const chest = (gd: any): [number, number, number] => gd.char.bones.chest ?? [gd.char.pos[0], gd.char.pos[1] + 1.2, gd.char.pos[2]];
+  const put = (gd: any, p: number[], yaw = 0) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel[0] = gd.char.vel[2] = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; };
   // the middle aisle of the cubicles, open from x 12 to 22 at z 17.6
   const Z = 17.6, AWAY = [15, 0, 21.5], AWAY2 = [16.5, 0, 21.5];
   const park = new Map<any, number[]>([[mate, [18, 0, Z]], [other, AWAY], [foe, [12, 0, Z]]]);
@@ -97,7 +97,7 @@ export async function friendlyfireCheck(): Promise<boolean> {
         if (!pts.slice(1).every(x => !game.col.segmentBlocked([gx, 0.5, gz], [x[0], 0.5, x[2]]))) continue;   // (floor a man can stand on, a body's breadth of it)
         const n = pts.filter(x => pierced(x, 1.2)).length;
         if (n === pts.length && d < td) { td = d; tq = p; } else if (n === 0 && !pts.some(x => pierced(x, 1.6)) && d < qd) { qd = d; q = p; } }
-      const ask = (p: number[]) => { game.teleportPlayer(p); idle(5); const at = Math.hypot(c.posX - p[0], c.posZ - p[2]) < 0.3; return at ? friendInCone(game, other, m, [c.posX, 1.2, c.posZ], 0.02) : 'not stood there'; };
+      const ask = (p: number[]) => { game.teleportPlayer(p); idle(5); const at = Math.hypot(c.pos[0] - p[0], c.pos[2] - p[2]) < 0.3; return at ? friendInCone(game, other, m, [c.pos[0], 1.2, c.pos[2]], 0.02) : 'not stood there'; };
       const walled: any = q ? ask(q) : 'no walled place found', thinned: any = tq ? ask(tq) : null;
       game.teleportPlayer(onLine(foe, 3)); idle(5); const h = c.bones.hips ?? c.pos; const inside = friendInCone(game, other, [h[0] + 0.1, 1.3, h[2]], chest(foe), 0.02), outside = friendInCone(game, other, other.char.muzzle, chest(foe), 0.02);   // (asked of a muzzle a hand's breadth from his hips — a stack — and of the shooter's own, three metres back)
       line(!!q && walled === null && inside === null && (brk || outside === 'player') && (!tq || brk || thinned === 'player'), 'a friend behind a wall the round does not go through holds nothing; one behind a thin wall it does go through holds it; nor does one whose column the muzzle is already inside',

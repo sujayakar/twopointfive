@@ -232,7 +232,7 @@ export async function castBeam() {
     const mm = (a: number[], b: number[]) => v3.dist(a, b) * 1000, at = v3.mad;
     let asked = 0, blank = 0, lost = 0, copies = 0, beads = 0, nearMax = 0, farMax = 0, beadMax = 0, gapMax = 0, lenMax = 0; const bad: string[] = [];
     for (const gd of ops) {
-      const c = gd.char, s = ST.statureOf(c), ch = c.bones.chest ?? [c.posX, 1.2, c.posZ], keep = { m: c.muzzle, d: c.gunDir };
+      const c = gd.char, s = ST.statureOf(c), ch = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]], keep = { m: c.muzzle, d: c.gunDir };
       try {
         for (let w = 0; w < 24; w++) {
           const yaw = (w % 8) * Math.PI / 4 + 0.2, pitch = [-0.15, 0, 0.1][w >> 3], dir = [Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)];

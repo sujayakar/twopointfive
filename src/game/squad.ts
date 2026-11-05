@@ -47,7 +47,7 @@ function strafeAlongPath(g: Game, gd: Guard, dt: number, speed: number): boolean
   if (handleGate(g, gd, dt, speed, true)) return false;   // the handle side (handleside.ts): a leaf in his way opens toward him — pulled from its latch jamb, his body left to the script
   if (DOORMANNERS.on) { const sp = doorwayGate(g, gd, dt, speed); if (sp === null) return false; speed = sp; }   // (doorway.ts: as followPath asks)
   while (gd.pathI < gd.path.length) {
-    const wp = gd.path[gd.pathI]; const dx = wp[0] - c.posX, dz = wp[2] - c.posZ; const d = Math.hypot(dx, dz);
+    const wp = gd.path[gd.pathI]; const dx = wp[0] - c.pos[0], dz = wp[2] - c.pos[2]; const d = Math.hypot(dx, dz);
     if (d < (gd.pathI === gd.path.length - 1 ? 0.25 : 0.45)) { gd.pathI++; continue; }
     const was = gd.speed; gd.speed = damp(gd.speed, speed * clamp((d + (gd.path.length - 1 - gd.pathI)) / 0.8, 0.35, 1), 4, dt); teamLean(g, gd, was, dt);
     c.vel = [dx / d * gd.speed, 0, dz / d * gd.speed]; c.pos = v3.mad(c.pos, c.vel, dt);
@@ -59,18 +59,18 @@ function strafeAlongPath(g: Game, gd: Guard, dt: number, speed: number): boolean
 
 export function runGuardScript(g: Game, gd: Guard, dt: number) {
   const s = gd.script!; const c = gd.char;
-  const x0 = c.posX, z0 = c.posZ;   // (where this frame's step starts: noshove.ts)
+  const x0 = c.pos[0], z0 = c.pos[2];   // (where this frame's step starts: noshove.ts)
   const speed = teamPace(g, gd, s.speed ?? g.tune.guardWalk);   // (a teammate's legs: guards.ts PACE — never more than a purposeful walk, whatever the order or the drill asks; teampace.ts on: a share of the player's walk, and a run only for a reason)
   const legs = teamLegs(g, gd, speed);   // (… × his card, for the legs walked HERE — the strafe and the settle; followPath weighs its own: kitload.ts)
   let fightFace = s.over && s.over.walk && s.over.face !== null ? s.over.face : null;
   if (fightFace !== null) { const w = walkWatch.get(gd), t = g.time;
-    if (!w || t < w.t || t - w.t > 3 || Math.hypot(c.posX - w.x, c.posZ - w.z) > 0.25) walkWatch.set(gd, { x: c.posX, z: c.posZ, t });
+    if (!w || t < w.t || t - w.t > 3 || Math.hypot(c.pos[0] - w.x, c.pos[2] - w.z) > 0.25) walkWatch.set(gd, { x: c.pos[0], z: c.pos[2], t });
     else if (t - w.t > 1.2) fightFace = null; }   // (the room fight has turned him ON THE MOVE to a man he has seen: he walks on with his chest to him)
   const strafing = fightFace !== null || (!!s.strafe && s.face !== undefined && s.face !== null);
   let moveSpeed = 0; let arrived = true; let settling = true; let farLeg: number | null = null;   // farLeg: heading of a settle with more than FACE_WITHIN still to go (a leg the nav bake found no path under — walked facing the way he goes, squared up over its last metre)
   if (s.goal) {
-    const dx = s.goal[0] - c.posX, dz = s.goal[2] - c.posZ; const planar = Math.hypot(dx, dz);
-    let home = planar <= SETTLE && !g.col.solidBlocked([c.posX, 0.45, c.posZ], [s.goal[0], 0.45, s.goal[2]]);   // near AND nothing standing in between at shin height — wall, sill, partition, a shut leaf (a mark just through the glazing still gets pathed round to; the nav cells are too coarse to ask this close to a wall)
+    const dx = s.goal[0] - c.pos[0], dz = s.goal[2] - c.pos[2]; const planar = Math.hypot(dx, dz);
+    let home = planar <= SETTLE && !g.col.solidBlocked([c.pos[0], 0.45, c.pos[2]], [s.goal[0], 0.45, s.goal[2]]);   // near AND nothing standing in between at shin height — wall, sill, partition, a shut leaf (a mark just through the glazing still gets pathed round to; the nav cells are too coarse to ask this close to a wall)
     if (!home) {
       goTo(g, gd, s.goal);
       if (gd.pathI >= gd.path.length) home = true;   // the path (kept by goTo while the goal stands) has already run out short of the spot — its last point is a cell centre, and a goal in a blocked cell resolves to the nearest free one: finish straight, on foot
@@ -81,7 +81,7 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
       if (planar < w.best - 0.01) { w.best = planar; w.t = 0; } else if ((w.t += dt) > 3.6) { w.best = planar; w.t = 0; }   // (stuck: stand — and give it another short go every few seconds in case whatever was in the way has moved)
       if (planar > 0.04 && w.t < 0.6) {   // the last half metre: ease straight onto the mark without turning to it (a settle / side-step, feet still cycling), slowing into it
         const was = gd.speed; gd.speed = damp(gd.speed, Math.min(legs, Math.max(0.35, planar * 2.2)), 6, dt); teamLean(g, gd, was, dt);
-        const step = Math.min(planar, gd.speed * dt); c.posX += dx / planar * step; c.posZ += dz / planar * step;
+        const step = Math.min(planar, gd.speed * dt); c.pos[0] += dx / planar * step; c.pos[2] += dz / planar * step;
         c.vel = [dx / planar * gd.speed, 0, dz / planar * gd.speed]; moveSpeed = gd.speed;
         if (planar > FACE_WITHIN && !strafing) farLeg = Math.atan2(dx, dz);
       } else { gd.speed = damp(gd.speed, 0, 10, dt); c.vel = [0, 0, 0]; }   // there (or as close as the world lets him get): stand
@@ -92,7 +92,7 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
   if (farLeg !== null) c.bodyYaw = approachAngle(c.bodyYaw, farLeg, 6 * dt);   // metres of straight leg with no path under it (a room's marks between the furniture): he walks them facing the way he goes — the man entering a room has his corner AHEAD of him, not over his shoulder — and squares up to the ordered facing over the last metre, below
   else if (settling && s.over && s.over.face !== null) c.bodyYaw = approachAngle(c.bodyYaw, s.over.face, 5 * dt);   // (his own read has turned him — GuardScript.over, roomfight.ts)
   else if (settling && s.face !== undefined && s.face !== null) c.bodyYaw = approachAngle(c.bodyYaw, s.face, 5 * dt);   // squaring up to the ordered facing starts as he settles in, not after
-  c.anim.reverse = moveSpeed > 0.2 && c.velX * Math.sin(c.bodyYaw) + c.velZ * Math.cos(c.bodyYaw) < -0.3 * moveSpeed;   // moving against his facing (a strafe or a settle backwards): play the cycle backwards, as the player's back-pedal does
+  c.anim.reverse = moveSpeed > 0.2 && c.vel[0] * Math.sin(c.bodyYaw) + c.vel[2] * Math.cos(c.bodyYaw) < -0.3 * moveSpeed;   // moving against his facing (a strafe or a settle backwards): play the cycle backwards, as the player's back-pedal does
   // where the muzzle / torch / head go: an explicit point, else straight ahead
   // (an ORDER's point is travelled to — guards.ts teamTurn; what his own eyes have put him on, the fight's read, eased by the fight itself, is his at once:
   //  the 8 rad/s of an ordered gun is never put on it. The one thing kept off it too is a TELEPORT — PACE.swing, below)
@@ -107,7 +107,7 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
   }
   gd.beamDir = v3.normalize([Math.sin(c.aimYaw) * Math.cos(c.aimPitch), Math.sin(c.aimPitch), Math.cos(c.aimYaw) * Math.cos(c.aimPitch)]);
   // collisions exactly as the AI does them
-  c.pushOut(g.col, 0.2, 1.5);
+  g.col.collideCircle(c.pos, c.radius, 0.2, 1.5);
   for (const o of g.guards) { if (o === gd || o.state === 'dead') continue; const d = v3.sub(c.pos, o.char.pos); d[1] = 0; const l = v3.len(d); if (l < 0.6 && l > 1e-4) c.pos = v3.mad(c.pos, d, (0.6 - l) / l * 0.5); }
   if (noShoveKeep(g, gd, x0, z0, dt)) moveSpeed = 0;   // (noshove.ts: a man falling in goes round the player or stops short of him — held short, he stands — and never moves him; nothing with its switch off)
   // muzzle discipline, as the AI keeps it (guards.ts muzzleCheck): whatever the orders, a pistol that is up in any fashion — the aim, the high ready, the stack's
@@ -365,7 +365,7 @@ export class RoomClear {
         if (b && ts > 3.4) this.say('nothing2', b);
         if (b && ts > 3.7 && this.once('#standup')) {   // back on his feet: onto the room's other door if it has one (squared to it: his to hold while #1 finishes), else up onto his wall
           const nd = this.nextDoor;
-          if (nd) { const fc = nd.frameCentre; order(b, { crouch: false, face: Math.atan2(fc[0] - b.char.posX, fc[2] - b.char.posZ) }); this.swB.start(this.aimB, [[fc[0], 1.0, fc[2]]], t, 1.2); }
+          if (nd) { const fc = nd.frameCentre; order(b, { crouch: false, face: Math.atan2(fc[0] - b.char.pos[0], fc[2] - b.char.pos[2]) }); this.swB.start(this.aimB, [[fc[0], 1.0, fc[2]]], t, 1.2); }
           else { order(b, { crouch: false }); this.swB.start(this.aimB, [P.upAim], t, 1.2); }
         }
         if (ts > 4.1 && (aIn || ts > 4.5)) this.say('corner1', a);

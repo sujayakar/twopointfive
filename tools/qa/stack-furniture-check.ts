@@ -47,7 +47,7 @@ for (const id of IDS) {
   const g = S.g, O = g.orders, K = O.knobs, men: any[] = O.squad().filter((x: any) => x.state !== 'dead'), home: V = [...g.player.char.pos];
   for (const d of g.doors.list) for (const side of [1, -1] as const) { const F = frame(d, side), h = d.def.width / 2; let any = false;
     for (const [where, sam] of [['Sam away', [1e4, 0, 1e4]], ['Sam on a jamb', F.pt(h + K.jambPast, K.jambOut)], ['Sam on the other jamb', F.pt(-h - K.jambPast, K.jambOut)]] as [string, V][]) {
-      g.player.char.posX = sam[0]; g.player.char.posZ = sam[2];
+      g.player.char.pos[0] = sam[0]; g.player.char.pos[2] = sam[2];
       DOORMANNERS.offFurniture = false; const off: any[] | null = await quiet(() => O.stackPosts(d, side, men));
       DOORMANNERS.offFurniture = true; const on: any[] | null = await quiet(() => O.stackPosts(d, side, men));
       const tag = `${id} ${d.def.name}${side > 0 ? '+' : '−'}, ${where}`;
@@ -64,7 +64,7 @@ for (const id of IDS) {
       if (hit.length) { if (shown.length < 6) shown.push(`${tag}: ${at(hit[0].pos)} on ${propAt(g, hit[0].pos).def.name}`); cases.push({ id, door: d.def.name, side, where, sam, wedge: Math.max(...hit.map(P => wedged(g, propAt(g, P.pos)))) }); }
     }
     if (any) faces++; }
-  g.player.char.posX = home[0]; g.player.char.posZ = home[2];
+  g.player.char.pos[0] = home[0]; g.player.char.pos[2] = home[2];
 }
 verdict(onOff > 0, 'the fault is there with the rule off', `${faces} door faces with places, ${sets} sets asked (Sam away and on each jamb), ${marksOff} places: ${onOff} lie on a piece of furniture in ${cases.length} sets — e.g. ${shown.join(' · ')}`);
 const mended = cases.length - kept;   // (sets the rule really changed: with none, an inert rule would pass every line below)
@@ -79,7 +79,7 @@ const SHORT = 0.35, FAR = 1.0;   // (orders.ts's own band: between these a man w
     const spots: V[] = []; for (let back = 2.6; back < 7 && spots.length < men.length; back += 0.9) for (const along of [-0.7, 0.7]) { if (spots.length >= men.length) break; const p = F.pt(along, back);
       if (nav.isBlocked(p[0], p[2]) || g.col.solidBlocked([d.frameCentre[0], 0.45, d.frameCentre[2]], [p[0], 0.45, p[2]]) || propAt(g, p, 0.4) || flat(p, C.sam) < 1.2) continue; spots.push(p); }
     if (spots.length < men.length) return null;   // (no floor to put the men on in front of this face: another case is played)
-    men.forEach((m, i) => { m.char.posX = spots[i][0]; m.char.posZ = spots[i][2]; m.path = []; m.pathGoal = null; });
+    men.forEach((m, i) => { m.char.pos[0] = spots[i][0]; m.char.pos[2] = spots[i][2]; m.path = []; m.pathGoal = null; });
     if (C.where !== 'Sam away') await quiet(() => g.teleportPlayer([C.sam[0], 0, C.sam[2]]));   // ('away' = where the level starts him: a teleport to nowhere would land him on the nearest floor, which may be this door's)
     await quiet(() => S.step(3));
     const why = await quiet(() => O.give('stack', { kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side: C.side }, 'all')); if (why) return null;

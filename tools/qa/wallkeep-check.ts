@@ -49,7 +49,7 @@ export async function wallkeepCheck(scns = ['room-clear-four', 'block-squads']):
         const valid = C.valid.bind(C); C.valid = (...a: any[]) => { asked++; const t0 = performance.now(); try { return valid(...a); } finally { const d = performance.now() - t0; ms += d; if (asked > 2) worst = Math.max(worst, d); } }; }
       const P0 = partition(R), sites = [...(P0 ? [P0] : []), ...outerSites(R, 'inside', 6)].filter((s: any) => chargeIndoors(g, s.W) && !!C.safePosts(s.W, 4, wallPt(s.W, 0, WALLCHARGE.setOff)));
       const P = sites[0]; if (!P) return null;
-      R.gather(P.near); for (const h of R.hostiles) if (h.state !== 'dead' && flat(h.char.pos, wallPt(P.W, 0, 0)) < DOORTOOLS.stunM + 1) R.put(h, [h.char.posX + 400, 0, h.char.posZ]); R.step(2);
+      R.gather(P.near); for (const h of R.hostiles) if (h.state !== 'dead' && flat(h.char.pos, wallPt(P.W, 0, 0)) < DOORTOOLS.stunM + 1) R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]); R.step(2);
       // (the men stand still before the menu goes up: gathered, a follower still shuffles the last decimetres onto his place in the file, and one who crosses
       //  into the next nav cell during the 'quiet' re-reads is a walk rightly asked again — the keep's key is his cell. Still = nobody a millimetre off for twenty frames)
       { let was = R.up.map((m: any) => [...m.char.pos]), calm = 0; for (let i = 0; i < 360 && calm < 20; i++) { R.step(); const now = R.up.map((m: any) => [...m.char.pos]); calm = now.every((q: number[], k: number) => flat(q, was[k]) < 1e-3) ? calm + 1 : 0; was = now; } }
@@ -61,7 +61,7 @@ export async function wallkeepCheck(scns = ['room-clear-four', 'block-squads']):
       const give = (digit: number) => { R.press(`Digit${digit}`); R.step(4); const op = C.ops[0]; return op ? { lead: op.lead.callsign, spot: op.spot, marks: [...op.post].map(([m, q]: [any, Vec3]) => [m.callsign, q]), close: !!op.close } : null; };
       const digit = menuUp(); if (!digit) return { P, noMenu: true } as any;
       const series: string[] = [], digests: string[] = [], events: string[] = []; let stayed = true, quiet = 0;
-      const cs = g.col.nav.cell, cells = () => [g.player, ...R.up].map((m: any) => `${Math.floor(m.char.posX / cs)},${Math.floor(m.char.posZ / cs)}`); let cellWas: string[] = [], crossed = 0;
+      const cs = g.col.nav.cell, cells = () => [g.player, ...R.up].map((m: any) => `${Math.floor(m.char.pos[0] / cs)},${Math.floor(m.char.pos[2] / cs)}`); let cellWas: string[] = [], crossed = 0;
       const mate = R.up.find((m: any) => m !== R.up[0]) ?? R.up[0], near = [...g.doors.list].sort((a: any, b: any) => flat(a.frameCentre, P.p) - flat(b.frameCentre, P.p)), door = near[0], lock = near.find((d: any) => d !== door && !d.locked && d.latched);
       for (let f = 0; f < SECS * 60; f++) {
         if (f === 150) { const p = mate.char.pos, q = [[2.5, 0], [-2.5, 0], [0, 2.5], [0, -2.5]].map(([dx, dz]) => [p[0] + dx, 0, p[2] + dz]).find(q => R.free(q)); if (q) { R.put(mate, q); events.push(`${f2(f / 60)} s ${mate.callsign} moved 2.5 m`); } }
@@ -117,7 +117,7 @@ export async function wallkeepCheck(scns = ['room-clear-four', 'block-squads']):
     for (const scn of scns) {
       const R = await rig(scn, 5), g = R.game, C = R.C, pl = g.player, col = g.col; WALLCHARGE.safe = true; R.kit();
       const P0 = partition(R), sites = [...(P0 ? [P0] : []), ...outerSites(R, 'inside', 6)];
-      const far = (gd: any, i: number) => R.put(gd, [gd.char.posX + 400 + i, 0, gd.char.posZ]);
+      const far = (gd: any, i: number) => R.put(gd, [gd.char.pos[0] + 400 + i, 0, gd.char.pos[2]]);
       let staged = false;
       for (const P of sites) { const W = P.W, T = thickOf(W), c0 = wallPt(W, 0, 0), inn = wallPt(W, 0, -(T + 0.45), 1.1), K = DOORTOOLS;
         const lined = (q: number[]) => !col.solidBlocked(inn, [q[0], 1.1, q[2]]);

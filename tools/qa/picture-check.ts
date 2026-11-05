@@ -69,9 +69,9 @@ export async function pictureCheck(): Promise<boolean> {
     const either = (a: number[], b: number[]) => sees(a, b) || sees(b, a);
     const cells: Vec3[] = []; for (let x = 1; x < nav.W - 1; x += 2) for (let z = 1; z < nav.H - 1; z += 2) { const p: Vec3 = [(x + 0.5) * nav.cell, 0, (z + 0.5) * nav.cell]; if (!nav.isBlocked(p[0], p[2]) && [[0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]].every(([dx, dz]) => !nav.isBlocked(p[0] + dx, p[2] + dz))) cells.push(p); }
     const pins = new Map<any, number[]>();   // (every staged man is put back on his place each frame: the shipped stand's rules walk a planted defender about)
-    const hold = (gd: any, p: number[], to: number[]) => { const c = gd.char; c.posX = p[0]; c.posZ = p[2]; c.bodyYaw = c.aimYaw = yawTo(p, to); gd.path = []; gd.pathGoal = null; pins.set(gd, [p[0], 0, p[2]]);
+    const hold = (gd: any, p: number[], to: number[]) => { const c = gd.char; c.pos[0] = p[0]; c.pos[2] = p[2]; c.bodyYaw = c.aimYaw = yawTo(p, to); gd.path = []; gd.pathGoal = null; pins.set(gd, [p[0], 0, p[2]]);
       if (gd.team === 'operative') g.orders.assign(gd, { order: 'hold', post: [p[0], 0, p[2]], face: yawTo(p, to), going: 'holding', there: 'holding' }); else { gd.script = null; gd.hold = true; gd.pinned = true; } };
-    const pin = () => { for (const [gd, p] of pins) if (gd.state !== 'dead') { gd.char.posX = p[0]; gd.char.posZ = p[2]; } };
+    const pin = () => { for (const [gd, p] of pins) if (gd.state !== 'dead') { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; } };
     return { R, g, col, nav, cells, sees, either, hold, pins, step: (secs: number) => { for (let i = 0; i < Math.round(secs * 60); i++) { pin(); R.step(1); } pin(); } };
   };
   /** the places of the staging: h (the defender), a (sees h from 5-9 m), b (hidden from h, 6 m or more off), h2 (where he walks to: hidden from a and b, 5 m or more
@@ -145,7 +145,7 @@ export async function pictureCheck(): Promise<boolean> {
       line(still && knows && notYet && told, 'down: a man dropped out of sight is still believed up; the man who sees the body knows; his net is told', `believed up by both after he fell: ${still} · the man who sees the body drops him: ${knows} · the other still believes it: ${notYet} · told: ${told}`); }
     line((pictureSummary(g) as string).startsWith(ON ? 'picture ▸ ' : 'picture ▸ off') && (ON ? PICTURE_STATS.seen > 0 && PICTURE_STATS.told > 0 : true), 'the panel line reads', (pictureSummary(g) as string).slice(0, 220));
     // the view: the man under the cursor
-    { PICTURE.show = 'cursor'; g.aimPoint[0] = A.char.posX; g.aimPoint[2] = A.char.posZ; const V = pictureViews(g) as any[]; PICTURE.show = 'off';
+    { PICTURE.show = 'cursor'; g.aimPoint[0] = A.char.pos[0]; g.aimPoint[2] = A.char.pos[2]; const V = pictureViews(g) as any[]; PICTURE.show = 'off';
       line(V.length === 1 && V[0].gd === A, 'the floor view is the picture of the man under the cursor', V.length ? `${V[0].gd.callsign}: ${V[0].ideas.length} ideas, ${V[0].unsafe.length} cells in a believed line, ${V[0].cover.length} cover places` : 'no view'); }
 
     // (k) stand-off at a door: the file no known enemy has a line to
@@ -163,7 +163,7 @@ export async function pictureCheck(): Promise<boolean> {
     // (l) cover from every known enemy
     { let found = false, tried = 0; PICTURE.tellSecs = 1e9;
       search: for (const m of s.cells) for (const t1 of s.cells) { if (flat(m, t1) < 6 || flat(m, t1) > 10 || !s.sees(t1, m)) continue; if (++tried > 300) break search;
-        s.pins.clear(); A.char.posX = m[0]; A.char.posZ = m[2]; pictureReset(g); const c0 = coverFrom(g, A, t1) as Vec3 | null; if (!c0) continue;
+        s.pins.clear(); A.char.pos[0] = m[0]; A.char.pos[2] = m[2]; pictureReset(g); const c0 = coverFrom(g, A, t1) as Vec3 | null; if (!c0) continue;
         const t2 = s.cells.find(q => flat(q, c0) > 3 && flat(q, c0) < 12 && flat(q, t1) > 4 && flat(q, m) > 2 && !s.col.segmentBlocked([q[0], 1.6, q[2]], [c0[0], 0.7, c0[2]])); if (!t2) continue;
         pictureTell(g, A, H2, t1); pictureTell(g, A, H3, t2); const c1 = coverFrom(g, A, t1) as Vec3 | null; if (!c1 || flat(c1, c0) < 0.3) continue;
         const e0 = exposedAt(g, A, c0, true), e1 = exposedAt(g, A, c1, true); PICTURE.cover = false; const cOff = coverFrom(g, A, t1) as Vec3 | null; PICTURE.cover = true;
@@ -173,7 +173,7 @@ export async function pictureCheck(): Promise<boolean> {
     // (n) off a grenade: the spot out of the blast that no known enemy sees
     { let found = false, tried = 0; const blastHid = (gr: Vec3, p: Vec3) => blastOn(g, [gr[0], gr[1] + FRAG.lift, gr[2]], p, [p[0], 1.15, p[2]]) <= 0;
       search: for (const m of s.cells) for (const [dx, dz] of [[1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5]]) { const gr: Vec3 = [m[0] + dx, 0.05, m[2] + dz]; if (s.g.col.nav.isBlocked(gr[0], gr[2]) || blastHid(gr, m as Vec3)) continue; if (++tried > 400) break search;
-        s.pins.clear(); A.char.posX = m[0]; A.char.posZ = m[2]; pictureReset(g); const p0 = fleeSpot(g, A.char, gr, 3, 2.5, Infinity, undefined, A) as Vec3 | null; if (!p0 || !blastHid(gr, p0)) continue;
+        s.pins.clear(); A.char.pos[0] = m[0]; A.char.pos[2] = m[2]; pictureReset(g); const p0 = fleeSpot(g, A.char, gr, 3, 2.5, Infinity, undefined, A) as Vec3 | null; if (!p0 || !blastHid(gr, p0)) continue;
         const t2 = s.cells.find(q => flat(q, p0) > 4 && flat(q, p0) < 14 && !s.col.segmentBlocked([q[0], 1.6, q[2]], [p0[0], 0.7, p0[2]])); if (!t2) continue;
         pictureTell(g, A, H2, t2); const p1 = fleeSpot(g, A.char, gr, 3, 2.5, Infinity, undefined, A) as Vec3 | null; if (!p1 || flat(p1, p0) < 0.3) continue;
         const e0 = exposedAt(g, A, p0, true), e1 = exposedAt(g, A, p1, true); if (!(e0 >= 0.5)) continue; PICTURE.flee = false; const pOff = fleeSpot(g, A.char, gr, 3, 2.5, Infinity, undefined, A) as Vec3 | null; PICTURE.flee = true;
@@ -196,9 +196,9 @@ export async function pictureCheck(): Promise<boolean> {
           PICTURE.stack = false; const pOff = O.stackPosts(d, side, men); PICTURE.stack = true; PICTURE.on = false; const pSw = O.stackPosts(d, side, men); PICTURE.on = ON;
           // (men who stand on the marks they were dealt keep them: the choice is made when the marks are first dealt)
           const pinsWas = new Map(s.pins), placeWas = men.map((m: any) => [...m.char.pos]);
-          men.forEach((m: any, i: number) => { m.char.posX = p0[i].pos[0]; m.char.posZ = p0[i].pos[2]; O.assign(m, { order: 'stack', post: [...p0[i].pos], face: p0[i].face, door: d, going: 'stacking', there: 'stacked' }); });
+          men.forEach((m: any, i: number) => { m.char.pos[0] = p0[i].pos[0]; m.char.pos[2] = p0[i].pos[2]; O.assign(m, { order: 'stack', post: [...p0[i].pos], face: p0[i].face, door: d, going: 'stacking', there: 'stacked' }); });
           const pOwn = O.stackPosts(d, side, men) as any[] | null;
-          men.forEach((m: any, i: number) => { m.char.posX = p1[i].pos[0]; m.char.posZ = p1[i].pos[2]; O.assign(m, { order: 'stack', post: [...p1[i].pos], face: p1[i].face, door: d, going: 'stacking', there: 'stacked' }); });
+          men.forEach((m: any, i: number) => { m.char.pos[0] = p1[i].pos[0]; m.char.pos[2] = p1[i].pos[2]; O.assign(m, { order: 'stack', post: [...p1[i].pos], face: p1[i].face, door: d, going: 'stacking', there: 'stacked' }); });
           const pFile = O.stackPosts(d, side, men) as any[] | null;   // (… and men who stand on the FILE keep the file: the next ask does not walk two of them back across the door)
           pictureReset(g); const pFileGone = O.stackPosts(d, side, men) as any[] | null; pictureTell(g, A, H2, q);   // (with no idea of anybody left, the marks are the walls' own again: the build as it was)
           men.forEach((m: any, i: number) => { const w = pinsWas.get(m) ?? placeWas[i]; s.hold(m, w, [w[0], 0, w[2] + 1]); });
@@ -265,7 +265,7 @@ export async function pictureCheck(): Promise<boolean> {
           t.hold(h, away, M.h); let rStale: any = 1; for (let i = 0; i < 90; i++) { t.step(1 / 60); pictureTell(G, a, h, M.h, 80); rStale = pictureStep(G, a, KEY, p); }   // (the word of him 80 s old: it counts for next to nothing)
           // … and through the file itself: the man given 'fall in' behind Sam where he stands, told of the defender, left to the game
           const file = async (rule: boolean) => { const U = (await stage(seed, ON))!, g2 = U.G; PICTURE.step = rule; U.t.pins.clear(); U.park(p); U.t.hold(U.h, away, p);   // (the defender himself out of sight: a man with a target in his eyes takes no step)
-            const c = U.a.char; c.posX = p[0]; c.posZ = p[2]; U.a.path = []; U.a.pathGoal = null; g2.teleportPlayer(sm); U.t.step(0.1); const why = g2.orders.give('fallIn', g2.orders.targetAt(sm), g2.orders.squad().indexOf(U.a));
+            const c = U.a.char; c.pos[0] = p[0]; c.pos[2] = p[2]; U.a.path = []; U.a.pathGoal = null; g2.teleportPlayer(sm); U.t.step(0.1); const why = g2.orders.give('fallIn', g2.orders.targetAt(sm), g2.orders.squad().indexOf(U.a));
             let on = 0; for (let i = 0; i < 360; i++) { pictureTell(g2, U.a, U.h, M.h); U.t.step(1 / 60); }
             const st = pictureStepOf(g2, U.a), q = U.a.char.pos; return { why, st, at: [q[0], 0, q[2]] as Vec3, e: exposedAt(g2, U.a, q, !!st?.low), stepped: PICTURE_STATS.stepped, on }; };
           const fOn = await file(true), fOff = await file(false); PICTURE.step = true;
@@ -286,9 +286,9 @@ export async function pictureCheck(): Promise<boolean> {
         DESTRUCTION.on = true; WALLCHARGE.on = true; const W: any = await standUp({ level: loadLevel(data), seed: 1 }), G = W.game; G.godMode = true; G.tune.chaos = 0.5;
         Object.assign(WALLCHARGE, { outer: true, safe: true, outOfFire: true, farFurn: true }); Object.assign(PICTURE, JSON.parse(JSON.stringify(was.pic)), { on: ON, step: rule }); for (const k of Object.keys(PICTURE_STATS)) (PICTURE_STATS as any)[k] = 0;   // (farFurn: the bunk room's cots stand at this wall's foot — the page has it on; an earlier stage's rig put the knobs back to the module's)
         const why0 = (await startFromQuery(G, '?levelFile=pass.json&roomclear&squad4')).why; if (why0) return { why: `start refused — ${why0}` };
-        const step = (secs: number) => { for (let i = 0; i < Math.round(secs * 60); i++) W.step(1 / 60); }, put = (gd: any, p: number[]) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.path = []; gd.pathGoal = null; gd.speed = 0; };
+        const step = (secs: number) => { for (let i = 0; i < Math.round(secs * 60); i++) W.step(1 / 60); }, put = (gd: any, p: number[]) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.path = []; gd.pathGoal = null; gd.speed = 0; };
         const O = G.orders, C = G.wallCharge, fog = G.fogOfWar, foes: any[] = G.guards.filter((h: any) => h.team === 'hostile'); if (C.carried !== null) C.setCarried(2);
-        for (const h of foes) put(h, [h.char.posX + 400, 0, h.char.posZ]);
+        for (const h of foes) put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
         const men: any[] = O.men('all'), one = men.find(m => m.callsign === 'Red One'); if (one) killGuard(G, one, [1, 0, 0], true); for (const m of men) { m.god = true; if (MEN[m.callsign]) put(m, MEN[m.callsign]); }
         G.teleportPlayer(SAM); step(0.5); for (const m of men) if (MEN[m.callsign]) put(m, MEN[m.callsign]);
         fog.on = true; for (const h of foes) fog.recs.delete(h); pictureReset(G);
@@ -359,8 +359,8 @@ export async function pictureCheck(): Promise<boolean> {
               const eye = t.cells.find(q => flat(q, G0) >= 5 && flat(q, G0) <= 14 && t.sees(q, G0) && !t.either(q, M.h) && r.nearTo(q) > 4); if (!eye) return null;
               G.teleportPlayer([eye[0], 0, eye[2]]); let arrived = false, secs = 0;
               for (let i = 0; i < 60 * 40 && !arrived; i++) { pictureReset(G); t.step(1 / 60); secs += 1 / 60; const S = runnerOf(h) as any; if (!S || S.phase === 'gone' || !G.guards.includes(h)) return { eye, gone: true, secs, idea: false, moved: 0, on: false }; arrived = S.phase === 'out' && S.isOut && !!S.script.arrived; }
-              if (!arrived) return null; const at0: Vec3 = [h.char.posX, 0, h.char.posZ]; let idea = false, last: Vec3 = at0, on = true;
-              for (let i = 0; i < 60 * 12 && on; i++) { t.step(1 / 60); on = G.guards.includes(h) && (runnerOf(h) as any)?.phase !== 'gone'; if (on) { last = [h.char.posX, 0, h.char.posZ]; const I = ideaOf(G, h, 'player'); idea ||= !!I && flat(I.at, eye) < 1.5; } }
+              if (!arrived) return null; const at0: Vec3 = [h.char.pos[0], 0, h.char.pos[2]]; let idea = false, last: Vec3 = at0, on = true;
+              for (let i = 0; i < 60 * 12 && on; i++) { t.step(1 / 60); on = G.guards.includes(h) && (runnerOf(h) as any)?.phase !== 'gone'; if (on) { last = [h.char.pos[0], 0, h.char.pos[2]]; const I = ideaOf(G, h, 'player'); idea ||= !!I && flat(I.at, eye) < 1.5; } }
               const lineAtEnd = !t.col.segmentBlocked([eye[0], 1.6, eye[2]], [last[0], 1.2, last[2]]);   // (taken off the floor: only from a place the watcher has no line to)
               return { eye, gone: !on && lineAtEnd, secs, idea, moved: flat(last, at0), on }; })();
             found = true; const m1 = (x: number) => x.toFixed(1), says = (r: typeof base) => `${r.phase} to ${r.goal ? at(r.goal) : 'nowhere'}, ${m1(r.len)} m, ${m1(r.nearTo(p))} m from the place at its nearest`;

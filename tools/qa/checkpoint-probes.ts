@@ -194,7 +194,7 @@ export async function checkpointTurn() {
     // every man's place and yaws on each of the first frames, to the bit (a turn that starts from rest parts from the run that went on in its first frame, by a
     // fraction of a degree — the once-a-second digest after it would see it only as the millimetres his feet end up off), then the family's digest
     const FRAMES = 30, SEED = 31337, SECS = 3;
-    const run = (w: any) => { Math.random = seeded(SEED); const f: string[] = []; for (let i = 0; i < FRAMES; i++) { w.step(DT); f.push(JSON.stringify(w.game.guards.map((gd: any) => [gd.callsign, gd.char.posX, gd.char.posZ, gd.char.bodyYaw, gd.char.aimYaw]))); } return { f, d: digestRun(w, SECS, SEED) }; };
+    const run = (w: any) => { Math.random = seeded(SEED); const f: string[] = []; for (let i = 0; i < FRAMES; i++) { w.step(DT); f.push(JSON.stringify(w.game.guards.map((gd: any) => [gd.callsign, gd.char.pos[0], gd.char.pos[2], gd.char.bodyYaw, gd.char.aimYaw]))); } return { f, d: digestRun(w, SECS, SEED) }; };
     const part = (a: string[], b: string[]) => { const i = a.findIndex((x, k) => x !== b[k]); if (i < 0) return ''; const x = JSON.parse(a[i]), y = JSON.parse(b[i]); const m = x.find((r: any, k: number) => JSON.stringify(r) !== JSON.stringify(y[k])); return `frame ${i + 1}${m ? `, ${m[0]}` : ''}`; };
     const one = async (what: string, wish: boolean) => {
       const fails: string[] = [], notes: string[] = []; const { game } = W;
@@ -284,7 +284,7 @@ export async function checkpointAutosave() {
       const nb3 = written.length; steps(W, 6, () => !game.player.picking); steps(W, 1); if (written.length !== nb3 + 1) fails.push(`the mid-pick request did not land when the pick ended (${written.length - nb3}; pending ${S.pending?.why ?? 'none'}; gate ${S.gate(game)})`); else notes.push('mid-pick: held, landed after'); }
     else fails.push('STAGING: the server door is not locked against him at its keyed face — the mid-pick case could not run'); }   // (a documented case that cannot be staged is a red, never a quiet skip)
   steps(W, CKPT.minGapSecs + 1);
-  { game.dropThrowable('flash', [game.player.char.posX + 3, 0, game.player.char.posZ]); for (const gd of game.guards) gd.dazzledUntil = -1;
+  { game.dropThrowable('flash', [game.player.char.pos[0] + 3, 0, game.player.char.pos[2]]); for (const gd of game.guards) gd.dazzledUntil = -1;
     S.request(game, 'probe', 'live can'); const nb = written.length; steps(W, 0.2); if (!/fuse|air/.test(S.gate(game) ?? '')) fails.push(`gate '${S.gate(game)}' with a stun can on its fuse`);
     steps(W, CKPT.debounceSecs + 2.5); for (const gd of game.guards) { gd.awareness = 0; gd.state = 'patrol'; gd.lastKnown = null; gd.dazzledUntil = -1; gd.reactT = 0; } steps(W, 1.5);
     if (written.length !== nb + 1) fails.push(`the live-can request: ${written.length - nb} saves (pending ${S.pending?.why ?? 'none'}, gate ${S.gate(game)})`); else notes.push('stun can on its fuse: held, landed after the bang'); }

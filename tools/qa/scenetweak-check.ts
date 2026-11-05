@@ -124,9 +124,9 @@ export async function sceneTweakCheck(o: { verbose?: boolean } = {}): Promise<bo
       const c = R.g.player.char, e = R.g.engine as any;
       /** ten seconds of the player held at a sprint, the rule where `on` says: every record his breath files, as one string */
       const fly = (on: boolean) => { const recs: string[] = []; const P: any = { emit(_k: string, _p: number[], _d: number[], count: number, o: any) { if (o.owner === c.id) recs.push(`${count}:${o.steam}:${o.size}:${o.speed.toFixed(5)}:${o.vadd.map((v: number) => v.toFixed(4)).join(',')}`); return count; } };
-        const had = { p: e.particles, gp: e.settings.gpuParticles, v: [c.velX, c.velZ] }; seedBreath(R.g, 1);
-        try { for (let i = 0; i < 600; i++) { c.velX = 4.7; c.velZ = 0; e.particles = P; e.settings.gpuParticles = true; SNOW_LOOK.breath = true; HARDBREATH.on = on; updateSnowBreath(R.g, DT); } }
-        finally { e.particles = had.p; e.settings.gpuParticles = had.gp; c.velX = had.v[0]; c.velZ = had.v[1]; }
+        const had = { p: e.particles, gp: e.settings.gpuParticles, v: [c.vel[0], c.vel[2]] }; seedBreath(R.g, 1);
+        try { for (let i = 0; i < 600; i++) { c.vel[0] = 4.7; c.vel[2] = 0; e.particles = P; e.settings.gpuParticles = true; SNOW_LOOK.breath = true; HARDBREATH.on = on; updateSnowBreath(R.g, DT); } }
+        finally { e.particles = had.p; e.settings.gpuParticles = had.gp; c.vel[0] = had.v[0]; c.vel[2] = had.v[1]; }
         return recs.length + '|' + recs.join('|'); };
       const moved = (rows: any[], on: boolean) => { rows.forEach(v => T.moveVar(v, v.def === v.max ? v.min : v.max)); try { return fly(on); } finally { T.resetAll(layers); } };
       let dims = true, a = '', b = '', a1 = '', a2 = '', b1 = '', b2 = '';

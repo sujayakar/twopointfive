@@ -294,7 +294,7 @@ function coverSpot(F: Fight, st: St, D: Def, M: Man, R: RoomSt, deep: boolean): 
     const d = flat(p, I); if (!self && (d < 2.2 || d > (deep || DIGIN.far ? 12 : 10))) return null;
     if (!hope && DIGIN.lanes && laneCovers(g, D.gd, p)) return self ? -5 : null;   // in the line of guns his side knows of: no spot to hold a door from
     if (!hope && !self && DIGIN.lanes) {                                           // (… nor is a spot whose last stride is: a walk counts as arrived a stride short of its mark)
-      const dx = c.posX - p[0], dz = c.posZ - p[2], L = Math.hypot(dx, dz);
+      const dx = c.pos[0] - p[0], dz = c.pos[2] - p[2], L = Math.hypot(dx, dz);
       if (L > 0.3 && laneCovers(g, D.gd, [p[0] + dx / L * 0.3, p[1], p[2] + dz / L * 0.3])) return null;
     }
     let s: number;
@@ -527,7 +527,7 @@ function gatherTo(F: Fight, st: St, D: Def, M: Man): { room: Room; spot: Vec3 } 
   for (const [room, men] of rooms) {
     const X = men[0], far = flat(X.station, M.know);
     if (men.length < 2 && far < mine + 3) continue;                                // (one man to one man: only AWAY from them — two singles never swap rooms)
-    const spot = F.freeNear([X.station[0] + (c.posX > X.station[0] ? 1.2 : -1.2), 0, X.station[2]]) ?? F.freeNear(X.station); if (!spot || !F.inRoom(room, spot)) continue;
+    const spot = F.freeNear([X.station[0] + (c.pos[0] > X.station[0] ? 1.2 : -1.2), 0, X.station[2]]) ?? F.freeNear(X.station); if (!spot || !F.inRoom(room, spot)) continue;
     const path = nav.findPath(c.pos, spot, 6000, shy); if (!path?.length) continue;
     if (pathLen(c.pos, path) > DIGIN.gatherM || path.some(w => flat(w, M.know) < DIGIN.gatherShyM)) continue;
     const s = men.length * 10 + far - pathLen(c.pos, path) * 0.2;
@@ -651,12 +651,12 @@ function bringsHome(F: Fight, st: St, D: Def, M: Man, R: RoomSt, e: Entry | unde
 /** hauling: the prop is kept a pace ahead of him on his way to the door, then set down against it */
 function haul(F: Fight, st: St, D: Def, M: Man, R: RoomSt | null) {
   const g = F.g, c = D.gd.char, p = M.prop; if (!p || !g.props.props.includes(p)) return;
-  if (g.time < M.haulBy) { D.moveT = Math.min(D.moveT, 5); D.stallT = 0; D.stallAt[0] = c.posX; D.stallAt[2] = c.posZ; }   // a haul is slow on purpose: the room fight's ten seconds / 'going nowhere' are for a man running — this leg has its own clock (haulBy), after which those plant him
+  if (g.time < M.haulBy) { D.moveT = Math.min(D.moveT, 5); D.stallT = 0; D.stallAt[0] = c.pos[0]; D.stallAt[2] = c.pos[2]; }   // a haul is slow on purpose: the room fight's ten seconds / 'going nowhere' are for a man running — this leg has its own clock (haulBy), after which those plant him
   const pp: Vec3 = [p.x, 0, p.z];
-  let tx = M.stand[0] - c.posX, tz = M.stand[2] - c.posZ; const tl = Math.hypot(tx, tz);
+  let tx = M.stand[0] - c.pos[0], tz = M.stand[2] - c.pos[2]; const tl = Math.hypot(tx, tz);
   let want: Vec3;
   if (tl < HAUL_NEAR || flat(pp, M.rest) < 0.8) want = M.rest;
-  else { tx /= tl; tz /= tl; want = [c.posX + tx * 0.75, 0, c.posZ + tz * 0.75]; }
+  else { tx /= tl; tz /= tl; want = [c.pos[0] + tx * 0.75, 0, c.pos[2] + tz * 0.75]; }
   let vx = (want[0] - p.x) / 0.2, vz = (want[2] - p.z) / 0.2; const vl = Math.hypot(vx, vz), cap = DIGIN.haulSpeed / Math.max(0.1, DIGIN.pace) * 1.6;
   if (vl > cap) { vx *= cap / vl; vz *= cap / vl; }
   if (flat(pp, c.pos) > 2.2) { vx = 0; vz = 0; }                                  // it has caught on something behind him: left where it is
@@ -886,7 +886,7 @@ export function digInRefuge(g: Game, rf: unknown, def: unknown, threat: Vec3): {
   for (const R of st.rooms.values()) {
     if (R.room === D.room || !isNaN(R.enteredAt) || F.inRoom(R.room, threat) || listeners(F).some(L => F.inRoom(R.room, L.head))) continue;
     const X = F.defs.find(x => x !== D && x.gd.state !== 'dead' && x.mode === 'hold' && x.room === R.room && g.time - x.gd.lastSeenT > 3 && !['idle', 'think', 'toRoom'].includes(st.men.get(x.gd)?.phase ?? 'idle')); if (!X) continue;
-    const xp = X.gd.char.pos, spot = F.freeNear([xp[0] + (c.posX > xp[0] ? 1.2 : -1.2), 0, xp[2]]) ?? F.freeNear(xp); if (!spot || !F.inRoom(R.room, spot)) continue;
+    const xp = X.gd.char.pos, spot = F.freeNear([xp[0] + (c.pos[0] > xp[0] ? 1.2 : -1.2), 0, xp[2]]) ?? F.freeNear(xp); if (!spot || !F.inRoom(R.room, spot)) continue;
     const path = nav.findPath(c.pos, spot, 6000, shy); if (!path?.length) continue;
     const L = pathLen(c.pos, path); if (L > DIGIN.gatherM || (best && L >= best.L)) continue;
     // (findPath hands back the corners of the way, not every cell of it: the threat and the doors are measured against its LEGS)

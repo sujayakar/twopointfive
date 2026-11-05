@@ -65,7 +65,7 @@ export async function checkpointCivilians() {
     const S = await stage(4242); const { W, game, pl, M, O } = S;
     steps(W, 60 * 2);   // (two minutes in: Marta at the filing cabinet facing east, Owen typing)
     for (const gd of game.guards) gd.heardUpTo = 1e12;   // (the shift deaf to the staging: this is about the civilians and the file)
-    game.playerInvisible = false; game.teleportPlayer([M.char.posX - 0.7, 0, M.char.posZ]); pl.char.bodyYaw = Math.PI / 2; pl.holstered = true; steps(W, 2 * DT);
+    game.playerInvisible = false; game.teleportPlayer([M.char.pos[0] - 0.7, 0, M.char.pos[2]]); pl.char.bodyYaw = Math.PI / 2; pl.holstered = true; steps(W, 2 * DT);
     startGrab(game, M); steps(W, 3, () => pl.holding?.phase === 'held');
     const grabbed = pl.holding?.g === M;
     const complied = grabbed && civilianComply(game); steps(W, 0.5);
@@ -127,7 +127,7 @@ export async function checkpointCivilians() {
     loadState(game, JSON.parse(JSON.stringify(s))); W.cam.target = v3.copy(game.player.char.pos);
     for (const gd of game.guards) gd.heardUpTo = 1e12;
     const O2 = game.civilians[1]; const ear0 = O2.heardUpTo, seq0 = game.eventSeq, st0 = O2.civ.state;
-    const at: Vec3 = [O2.char.posX + 1.0, 0.4, O2.char.posZ];
+    const at: Vec3 = [O2.char.pos[0] + 1.0, 0.4, O2.char.pos[2]];
     game.events.push({ kind: 'bang', pos: v3.copy(at), time: game.time, loud: true });
     steps(W, 2 * DT);
     ok = verdict(st0 === 'work' && ear0 <= seq0 && O2.civ.state === 'alarmed' && O2.civ.cause === 'bang', '(3) straight after a load whose future had run the event count on: a stun charge 1 m from the working Owen FRIGHTENS him (his ear marker ≤ the wound-back count — was stamped off the future before the fix: deaf for minutes)', `ear ${ear0} vs eventSeq ${seq0} (future ${fut}); ${st0} → ${civLine(O2)}`) && ok;
@@ -218,7 +218,7 @@ export async function gateCivilians() {
   { for (const cv of game.civilians) cv.heardUpTo = 1e12; killGuard(game, O, [0, 0, 1], true, 'struck'); steps(W, 3); const b = civilianCompromise(game); ok = verdict(b === null || !/Owen/.test(b), 'a civilian out cold on the floor is no objection (an unfound body is none either)', `'${b ?? 'open'}'`) && ok; }
   // the queue term directly: a report just delivered → 'reportRadio' pending → shut for its beat
   { const S2 = await stage(9696); const { W: W2, game: g2, M: M2, N: N2 } = S2; steps(W2, 60); for (const gd of g2.guards) { gd.heardUpTo = 1e12; }
-    N2.hold = false; N2.char.pos = [M2.char.posX + 1.2, 0, M2.char.posZ]; N2.char.update(0); N2.state = 'patrol'; N2.awareness = 0;
+    N2.hold = false; N2.char.pos = [M2.char.pos[0] + 1.2, 0, M2.char.pos[2]]; N2.char.update(0); N2.state = 'patrol'; N2.awareness = 0;
     civPanic(g2, M2, 'panic'); let sawQueue: string | null = null;
     for (let f = 0; f < 60 * 30 && !sawQueue; f++) { W2.step(DT); const w = civilianCompromise(g2); if (w && /about to/.test(w)) sawQueue = w; }
     ok = verdict(!!sawQueue, 'the queue of words due holds the gate for its beat (a guard\'s radio call after her telling / the floor step after that)', `'${sawQueue ?? 'never seen'}' (${civLine(M2)})`) && ok; }
@@ -253,7 +253,7 @@ export async function whistleLoad() {
   const S = await stage(2828); const { W, game, pl, K } = S;
   steps(W, 1);
   // Sam in the corridor six metres west of Kowalski, unseen but audible; he whistles; the same frame is saved (forced harness snapshot: the event is in the queue)
-  game.playerInvisible = false; pl.visibility = 0.02; game.teleportPlayer([K.char.posX - 6, 0, K.char.posZ]); steps(W, 2 * DT); pl.visibility = 0.02;
+  game.playerInvisible = false; pl.visibility = 0.02; game.teleportPlayer([K.char.pos[0] - 6, 0, K.char.pos[2]]); steps(W, 2 * DT); pl.visibility = 0.02;
   const blew = tryWhistle(game);
   const inQueue = game.events.some((e: any) => e.kind === 'whistle');
   const s = saveState(game, { kind: 'harness', force: true });

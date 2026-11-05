@@ -103,7 +103,7 @@ export function ringAimPoint(g: Game, from: Vec3): Vec3 {
     const head = v3.add(gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.6, 0]), [0, 0.04, 0]);
     if (!RING.lead) return head;
     const tof = v3.dist(from, head) / (RING.speed * 0.9);   // (a shade slow of the muzzle speed: drag)
-    return v3.mad(head, [gd.char.velX, 0, gd.char.velZ], tof);
+    return v3.mad(head, [gd.char.vel[0], 0, gd.char.vel[2]], tof);
   }
   if (g.aimTarget) return v3.copy(g.aimTarget.pos);
   const ap = g.aimPoint; return [ap[0], ap[1] + 0.03, ap[2]];
@@ -139,7 +139,7 @@ export function updateRings(g: Game, dt: number) {
       // (t 0) instead of a miss the entering-only test could never see (review B7.3) — the muzzle's crown allowance trimmed to the ring's own radius, so a ring
       // skimming a hand over a kneeling man's head is still the miss it looks
       let best = Infinity; let hitC: Character | null = null; let hitG: Guard | null = null;
-      const inside = (c: Character) => r.pos[1] < (c.bones.headTop?.[1] ?? c.posY + 1.75) + R.radius;
+      const inside = (c: Character) => r.pos[1] < (c.bones.headTop?.[1] ?? c.pos[1] + 1.75) + R.radius;
       const tryChar = (c: Character, gd: Guard | null) => { if (c === r.shooter || !c.alive) return; const t = bodyHit(c, r.pos, dir, reach, inside); if (t >= 0 && t < best) { best = t; hitC = c; hitG = gd; } };
       for (const gd of g.guards) if (gd.state !== 'dead' && gd.team !== 'operative') tryChar(gd.char, gd);   // (his own side: a ring passes a teammate as his rounds do — combat.ts)
       for (const cv of civilianBodies(g)) tryChar(cv.char, cv);
@@ -185,7 +185,7 @@ function ringHitsCharacter(g: Game, r: Ring, c: Character, gd: Guard | null, dir
     c.anim.hit(); g.audio.play('bodyHit', at, 0.5, { rate: 1.1 }); g.msg(gearText(high ? 'a ring airfoil off the side of your head — from a friend, luckily' : 'a ring airfoil in the ribs'));
   } else if (gd.civ && !high) {   // a CIVILIAN low in the body: no stagger drill and no guard's yelp — the thump, the flinch, and she is frightened where she stands (civilians.ts toAlarmed 'noise', placed back up the ring's line: something struck her out of the dark), then runs for a guard or a phone like from any fright
     c.anim.hit(); g.audio.play('bodyHit', v3.add(c.pos, [0, 1.1, 0]), 0.55, { rate: 1.05 });
-    if (!gd.held) toAlarmed(g, gd, 'noise', [c.posX - dir[0] * R.staggerBack, 0, c.posZ - dir[2] * R.staggerBack], false);
+    if (!gd.held) toAlarmed(g, gd, 'noise', [c.pos[0] - dir[0] * R.staggerBack, 0, c.pos[2] - dir[2] * R.staggerBack], false);
     g.events.push({ kind: 'prop', pos: v3.copy(c.pos), time: g.time, loud: false, level: R.hitNoise, who: r.shooter.id });
     if (byPlayer) g.player.noise = Math.max(g.player.noise, R.hitNoise);
   } else if (high) {
@@ -212,7 +212,7 @@ export function staggerGuard(g: Game, gd: Guard, dir: Vec3, shooter: Character) 
   gd.weapon.burst = null;
   gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.speed = 0; c.vel = [0, 0, 0];
   if (gd.state !== 'alert' || !gd.lastKnown) {   // where from: back up the line it flew, on the floor, somewhere a man can stand (else where he is)
-    let back: Vec3 = [c.posX - dir[0] * R.staggerBack, 0, c.posZ - dir[2] * R.staggerBack];
+    let back: Vec3 = [c.pos[0] - dir[0] * R.staggerBack, 0, c.pos[2] - dir[2] * R.staggerBack];
     if (g.col.nav.isBlocked(back[0], back[2])) back = g.col.nav.nearestFreePoint(back[0], back[2]) ?? v3.copy(c.pos);
     gd.lastKnown = back;
   }

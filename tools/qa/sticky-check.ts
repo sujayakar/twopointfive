@@ -79,11 +79,11 @@ async function quietFloor(seed: number, file = 'police-post.json', fog = 'team')
   g.aiEnabled = false; g.godMode = true; steps(W, 30);
   return { W, g };
 }
-const chestOf = (gd: any): Vec3 => gd.char.bones.chest ?? [gd.char.posX, 1.1, gd.char.posZ];
+const chestOf = (gd: any): Vec3 => gd.char.bones.chest ?? [gd.char.pos[0], 1.1, gd.char.pos[2]];
 /** a place on a wall a camera would have a line to `gd` from, and where to send it from: the first of 32 bearings off his head height that meets a static
  *  squarely enough, with clear air a metre off the wall */
 function wallFor(g: any, gd: any): { P: Vec3; n: Vec3; from: Vec3; index: number } | null {
-  const C: Vec3 = [gd.char.posX, STICKY.aimY, gd.char.posZ], chest = chestOf(gd);
+  const C: Vec3 = [gd.char.pos[0], STICKY.aimY, gd.char.pos[2]], chest = chestOf(gd);
   for (let k = 0; k < 32; k++) {
     const a = k * Math.PI / 16, d: Vec3 = [Math.sin(a), 0, Math.cos(a)], h = g.col.raycast(C, d, 12);
     if (!h || h.index >= 1e6 || h.t < 2.2 || Math.abs(h.n[1]) > 0.3 || -(h.n[0] * d[0] + h.n[2] * d[2]) < 0.5) continue;
@@ -163,7 +163,7 @@ export async function stickyFly(): Promise<boolean> {
       const tap = P.eventTap(g); tap.pump();
       const loads: string[] = []; for (let k = 0; k < 2; k++) { W.input.pressed.add('Digit2'); W.step(DT); loads.push(String(rf.attachment)); steps(W, 3); }
       const hud = P.hudText(g);
-      const spot = (): Vec3 => [pl.char.posX + 5, 0, pl.char.posZ];
+      const spot = (): Vec3 => [pl.char.pos[0] + 5, 0, pl.char.pos[2]];
       let held: unknown = null, arc = 0; P.rmbTap(W, spot, () => { held = pl.launchHeld; arc = pl.throwPreview?.points.length ?? 0; });
       tap.pump(); const sent = pl.cams.length, left = rf.cams, cd = rf.ringCd, launch = tap.evs.filter((e: any) => e.kind === 'prop' && e.who === pl.char.id);
       P.rmbTap(W, spot); const again = pl.cams.length;
@@ -199,8 +199,8 @@ export async function stickyFly(): Promise<boolean> {
 
       // a man: staggered, and he knows
       A.hold = true; A.pinned = false; A.state = 'patrol'; A.awareness = 0; A.heardUpTo = 1e12;
-      const at: Vec3 = [pl.char.posX + 6, 0, pl.char.posZ]; P.place(A, at, Math.PI / 2); W.step(DT);
-      const from: Vec3 = [pl.char.posX + 0.6, 1.25, pl.char.posZ], before = g.time;
+      const at: Vec3 = [pl.char.pos[0] + 6, 0, pl.char.pos[2]]; P.place(A, at, Math.PI / 2); W.step(DT);
+      const from: Vec3 = [pl.char.pos[0] + 0.6, 1.25, pl.char.pos[2]], before = g.time;
       const manCam = send(W, from, [at[0], 1.25, at[2]]);
       F.verdict(!manCam.vel && manCam.si === -1 && manCam.pos[1] < 0.3 && Math.hypot(manCam.pos[0] - at[0], manCam.pos[2] - at[2]) < 1 && A.staggerUntil > before && A.state !== 'dead',
         'sent at a man it staggers him like a ring to the body (never a knockout), and drops at his feet', `rest ${J(manCam.pos.map(f2))} (he stands at ${J(at)}) · staggered ${A.staggerUntil > before} · state ${A.state}, awareness ${f2(A.awareness)}`);
@@ -245,7 +245,7 @@ export async function stickyFog(): Promise<boolean> {
       STICKY.live = 1; steps(W, 5); const one = fog.eyes.length, out = pl.cams.filter((c: any) => !c.vel), newest = out[out.length - 1], sends = SC.stickyLive(pl), eyeIs = fog.eyes[fog.eyes.length - 1];
       const dLens = newest ? v3.len(v3.sub(eyeIs.pos, camLens(newest))) : 9, shown = fog.seen(pick);
       // … so a newer camera that looks at nothing gives up what the older ones saw: the newest lies on the floor at the player's own feet (as one dropped)
-      if (newest) { newest.pos = [pl.char.posX, 0.02, pl.char.posZ]; newest.n = [0, 1, 0]; newest.si = -1; } steps(W, 20); const lost = fog.seen(pick);
+      if (newest) { newest.pos = [pl.char.pos[0], 0.02, pl.char.pos[2]]; newest.n = [0, 1, 0]; newest.si = -1; } steps(W, 20); const lost = fog.seen(pick);
       const lensPaint = (() => { const bx: any[] = []; SC.stickyBoxes(g, bx); const reds = bx.filter(b => b.albedo[0] > 0.3 && b.albedo[1] < 0.1).length; return { boxes: bx.length, reds }; })();
       F.verdict(out.length === 3 && one === eyes0 + 1 && sends.length === 1 && sends[0] === newest && dLens < 1e-6 && shown && !lost && lensPaint.reds === 1,
         'three out and ONE feed: the newest stuck camera alone is an eye (its lens the one drawn red) — the older two stay on the wall and show nothing, so a newer camera that sees nothing of him gives up what they saw',
@@ -312,13 +312,13 @@ export async function stickyTake(): Promise<boolean> {
       const far = v3.distXZ(pl.char.pos, cam.pos) as number, m0 = mark(g);
       F.verdict(!cam.vel && pl.cams.length === 1 && pl.rifle.cams === 1 && camEyes(g) === 1 && far >= 3 && !m0, 'one sent and stuck: one left on the launcher, one eye on the fog, and from across the floor nothing is offered', `stuck ${!cam.vel} · on the launcher ${pl.rifle.cams} · camera eyes ${camEyes(g)} · Sam ${far.toFixed(1)} m off, marker ${!!m0}`);
       // through its own wall: within the reach on the plan, no line → nothing
-      const dB = go(at(-0.7)), eye: Vec3 = [pl.char.posX, 1.3, pl.char.posZ], wallBetween = g.col.solidBlocked(eye, camLens(cam)), mB = mark(g);
+      const dB = go(at(-0.7)), eye: Vec3 = [pl.char.pos[0], 1.3, pl.char.pos[2]], wallBetween = g.col.solidBlocked(eye, camLens(cam)), mB = mark(g);
       F.verdict(wallBetween && dB < STICKY.takeReach && !mB && !tap(W) && pl.cams.length === 1, 'from the far side of its wall it is not offered and Space takes nothing', `Sam ${dB.toFixed(2)} m from it on the plan · wall between ${wallBetween} · marker ${!!mB} · out ${pl.cams.length}`);
       // in sight, out of reach: a marker that says step closer, no row
       let d2 = NaN;   // (a spot in front of it, past the reach and inside the marker's range, with a clear line: furniture may stand on the normal itself)
       for (const [d, side] of [[2.2, 0], [1.9, 0], [2.5, 0], [2.0, 0.6], [2.0, -0.6], [1.7, 0.9], [1.7, -0.9]] as const) {
         const q = at(d); go([q[0] - w.n[2] * side, 0, q[2] + w.n[0] * side]); const dd = v3.distXZ(pl.char.pos, cam.pos) as number;
-        if (dd > STICKY.takeReach + 0.15 && dd < 2.9 && !g.col.solidBlocked([pl.char.posX, 1.3, pl.char.posZ], camLens(cam))) { d2 = dd; break; }
+        if (dd > STICKY.takeReach + 0.15 && dd < 2.9 && !g.col.solidBlocked([pl.char.pos[0], 1.3, pl.char.pos[2]], camLens(cam))) { d2 = dd; break; }
       }
       const m2 = mark(g), r2 = rowOf(g), t2 = tap(W);
       F.verdict(!!m2 && !m2.inReach && m2.line2 === 'step closer' && !r2 && !t2 && pl.cams.length === 1, 'in sight but out of reach: a marker that says step closer, no row, Space takes nothing', `Sam ${d2.toFixed(2)} m · marker ${!!m2} "${m2?.line2}" in reach ${m2?.inReach} · row ${!!r2} · tap ${t2} · out ${pl.cams.length}`);
@@ -355,7 +355,7 @@ export async function stickyTake(): Promise<boolean> {
         for (const [dx, dz] of [[0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]]) {
           g.teleportPlayer([d.frameCentre[0] + dx, 0, d.frameCentre[2] + dz]); steps(W, 4);
           const key = (r: any) => `${r.kind}:${r.verb}:${r.line2}`, before = g.nearby.filter((r: any) => r.verb).map(key); if (before.length < 2 || g.nearby.some((r: any) => r.kind !== 'door')) continue;
-          pl.cams.push({ pos: [pl.char.posX + dx * 0.3, 0.02, pl.char.posZ + dz * 0.3], n: [0, 1, 0], vel: null, age: 0, si: -1, id: ++pl.camSeq }); steps(W, 2);
+          pl.cams.push({ pos: [pl.char.pos[0] + dx * 0.3, 0.02, pl.char.pos[2] + dz * 0.3], n: [0, 1, 0], vel: null, age: 0, si: -1, id: ++pl.camSeq }); steps(W, 2);
           const rows = g.nearby.filter((r: any) => r.verb), after = rows.filter((r: any) => r.kind !== 'cam').map(key), last = rows[rows.length - 1], hov = g.hover;
           const same = before.join('|') === after.join('|'), tookIt = tap(W); steps(W, 2);
           F.verdict(same && last?.kind === 'cam' && rows.filter((r: any) => r.kind === 'cam').length === 1 && hov?.kind === 'door' && tookIt && pl.cams.length === 0 && pl.rifle.cams === 2,

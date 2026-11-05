@@ -765,7 +765,7 @@ export class WallCharge {
   private plan(W: WallSpot, men: Guard[], kept?: Kept): { lead: Guard; spot: Vec3; deal: [Guard, Vec3][]; close: boolean } | string {
     const S = this.g.orders, K = WALLCHARGE, cs = this.g.col.nav.cell; if (!men.length) return 'nobody to take it.';
     // (`kept`: the open menu's re-read — a man's walk from the nav cell he stands in to a place is asked of the orders once while nothing it is judged by changes)
-    const reach = (gd: Guard, to: Vec3): string | null => kept ? kept(`r|${gd.char.id}|${Math.floor(gd.char.posX / cs)},${Math.floor(gd.char.posZ / cs)}|${to[0]},${to[2]}`, () => S.reach(gd, to)) : S.reach(gd, to);
+    const reach = (gd: Guard, to: Vec3): string | null => kept ? kept(`r|${gd.char.id}|${Math.floor(gd.char.pos[0] / cs)},${Math.floor(gd.char.pos[2] / cs)}|${to[0]},${to[2]}`, () => S.reach(gd, to)) : S.reach(gd, to);
     const spot = this.setSpot(W); if (!spot) return 'no room at that wall.';
     if (!this.farFloor(W)) return 'no floor behind it.';
     const lead = [...men].sort((a, b) => flat(a.char.pos, spot) - flat(b.char.pos, spot))[0], rest = men.filter(m => m !== lead);
@@ -789,7 +789,7 @@ export class WallCharge {
   private canOf(gd: Guard, t: OrderTarget): true | string {
     if (!this.sync()) return true; const W = this.spot(t); if (!W || !W.ok || this.chargeOn(W) || this.openAt(W)) return true;
     const spot = this.setSpot(W); if (!spot) return true; const S = this.g.orders, cs = this.g.col.nav.cell, kept = this.keptFor(t);
-    const ask = () => S.reach(gd, spot); return (kept ? kept(`r|${gd.char.id}|${Math.floor(gd.char.posX / cs)},${Math.floor(gd.char.posZ / cs)}|${spot[0]},${spot[2]}`, ask) : ask()) ?? true;
+    const ask = () => S.reach(gd, spot); return (kept ? kept(`r|${gd.char.id}|${Math.floor(gd.char.pos[0] / cs)},${Math.floor(gd.char.pos[2] / cs)}|${spot[0]},${spot[2]}`, ask) : ask()) ?? true;
   }
   /** the row's test (orders.ts OrderDef.valid): true, or the refusal in words */
   private valid(t: OrderTarget, men: Guard[]): true | string | false {
@@ -840,7 +840,7 @@ export class WallCharge {
     const c = this.chargeOn(W); if (c) { this.blow(c); return; }
     const P = this.plan(W, men); if (typeof P === 'string') return P;
     for (const o of [...this.ops]) { o.men = o.men.filter(m => !men.includes(m)); if (!o.men.length) this.end(o, 're-ordered'); }   // (the men are this order's now)
-    const op: WallOp = { wall: W, men: [...men], lead: P.lead, phase: 'place', t0: g.time, spot: P.spot, setT: NaN, mine: new Map(), post: new Map(P.deal), from: new Map(men.map(m => [m, [m.char.posX, 0, m.char.posZ] as Vec3])), hole: null, queue: [], stage: new Map(), pod: new Map(), crossed: new Map(), last: new Map(), inT: NaN, beats: [], ...(P.close ? { close: true } : null) };
+    const op: WallOp = { wall: W, men: [...men], lead: P.lead, phase: 'place', t0: g.time, spot: P.spot, setT: NaN, mine: new Map(), post: new Map(P.deal), from: new Map(men.map(m => [m, [m.char.pos[0], 0, m.char.pos[2]] as Vec3])), hole: null, queue: [], stage: new Map(), pod: new Map(), crossed: new Map(), last: new Map(), inT: NaN, beats: [], ...(P.close ? { close: true } : null) };
     this.ops.push(op); this.stats.orders++;
     this.assign(op, P.lead, { post: P.spot, face: yawTo(P.spot, wallPt(W, 0, 0)), watch: null, stance: 'none', upper: 'none', going: 'charge · the wall', there: 'setting the charge' });
     for (const gd of men) if (gd !== P.lead) this.standOff(op, gd);

@@ -334,11 +334,22 @@ let wordOwn = '', wordRust = '';
   //  exit 1. Not under RUST_BREAK, which is another red path of the same tool)
   const order = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '3000', '--levels', 'office.json,compound.json'], { PRICED_BREAK: '1' });
   const orderRed = !order || (order.status === 1 && /the paths differed and nothing else/.test(order.out));
-  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 18 && off.length === 0 && orderRed;
+  // (…and the lamps in parts: the same check with every part beginning its sum again must end with the lamps in parts differing and nothing else)
+  const parts = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '300', '--levels', 'office.json,compound.json'], { LAMPS_BREAK: '1' });
+  const partsRed = !parts || (parts.status === 1 && /the lamps in parts differed and nothing else/.test(parts.out));
+  // (…and the smoke's shadow where the grid cannot answer: the same check with the module handed no blobs must end with those two cases differing and nothing else)
+  const shade = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '300', '--levels', 'office.json,compound.json'], { LAMPS_BREAK: 'shade' });
+  const shadeRed = !shade || (shade.status === 1 && /the smoke's shadow where the grid cannot answer differed and nothing else/.test(shade.out));
+  // (…and the blobs: a game keeps no more than the module's table holds — sense.ts CpuSmoke.emit — so the knob as it ships must fit it: a build's mistake otherwise)
+  const SE: any = await import(`${ROOT}/src/game/sense.ts`), BMF: any = (await import(`${ROOT}/src/scene/boxMirror.ts`)).FACE, blobsFit = SE.SENSE.smoke.cap <= BMF.MAX_BLOBS;
+  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && partsRed && shadeRed && blobsFit;
   { const d = marked(r.out, 'SENSE-IDENT '); for (const k of [...SENSES, 'fog']) red[k] = !!d && d[k] > 0; }
   verdict(ok, 'senses: an eye on a man, the light on a point, the smoke along a line, a sound\'s way, a way across the floor and what a team\'s eyes see get the TypeScript\'s answer from the Rust module', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${pairs.length} numbers shared with the Rust sources (boxMirror.ts FACE, NAV)${off.length ? ` — NOT THE SAME: ${off.map(q => `${q.name} ${q.here} here, ${q.there} there`).join(', ')}` : ', each the same'}`
-    + (order ? `\n    a priced search's prices asked for last first (PRICED_BREAK=1): ${orderRed ? 'the paths differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${order.status}): ${order.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : ''));
+    + (order ? `\n    a priced search's prices asked for last first (PRICED_BREAK=1): ${orderRed ? 'the paths differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${order.status}): ${order.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
+    + (parts ? `\n    the lamps of a question in parts, every part beginning its sum again (LAMPS_BREAK=1): ${partsRed ? 'the lamps in parts differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${parts.status}): ${parts.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
+    + (shade ? `\n    a lamp's shadow with the module handed no blobs (LAMPS_BREAK=shade): ${shadeRed ? 'the two cases where the grid cannot answer differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${shade.status}): ${shade.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
+    + `\n    the smoke's blobs: the game keeps ${SE.SENSE.smoke.cap} at most and the module's table holds ${BMF.MAX_BLOBS}${blobsFit ? '' : ' — THE KNOB IS PAST THE TABLE'}`);
 }
 
 // ---- poses
@@ -412,7 +423,7 @@ let wordOwn = '', wordRust = '';
   for (const [k, t] of [['PROP_CAP', 'CAP'], ['PROP_EV', 'NEV'], ['PROP_PARS', 'NPAR']]) { shared++; const h = Number(new RegExp(`export const ${k} = (\\d+)`).exec(home)?.[1]); if (h !== there(t)) off.push(`${k} ${h} here, ${t} ${there(t)} there`); }
   { const sounds = /PROP_SOUNDS = \[([^\]]*)\]/.exec(home)?.[1].replace(/['\s]/g, '').split(',') ?? []; ['SCRAPE', 'THUD', 'ROLL'].forEach(k => { shared++; if (sounds[there(k)] !== k.toLowerCase()) off.push(`sound ${k}`); }); }
   const here = (name: string): number => Number(new RegExp(`\\b${name} = (-?[\\d.]+)`).exec(ts)?.[1] ?? NaN);
-  for (const k of ['MAX_V', 'MAX_W', 'SLEEP_V', 'SLEEP_W', 'SLEEP_T', 'DOOR_GUIDE', 'Y_MIN', 'NEAR']) { shared++; if (here(k) !== there(k)) off.push(`${k} ${here(k)} in props.ts, ${there(k)} in props.rs`); }
+  for (const k of ['MAX_V', 'MAX_W', 'SLEEP_V', 'SLEEP_W', 'SLEEP_T', 'DOOR_GUIDE', 'Y_MIN', 'NEAR', 'SETTLE_PASSES']) { shared++; if (here(k) !== there(k)) off.push(`${k} ${here(k)} in props.ts, ${there(k)} in props.rs`); }
   const ok = r.status === 0 && rows.length >= 4 && rows.every(l => / PASS /.test(l)) && /=== prop-ident: PASS/.test(r.out) && off.length === 0 && shared > 70;
   verdict(ok, 'props: every thing the Rust module steps ends where the TypeScript\'s step leaves it — its columns, the clock, the men, the noises, its boxes — and the two sides name their numbers alike',
     (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + sum.slice(0, 600) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
@@ -490,7 +501,9 @@ let wordOwn = '', wordRust = '';
     const world = fs.readFileSync(resolve(ROOT, 'rust/sim/src/world.rs'), 'utf8'), bog = fs.readFileSync(resolve(ROOT, 'src/game/snowBog.ts'), 'utf8');
     const kinds = [.../export const SNOW_KIND = \{([^}]*)\}/.exec(bog)?.[1].matchAll(/(\w+):\s*(\d+)/g) ?? []]; if (kinds.length !== 5) off.push('SNOW_KIND not found in snowBog.ts');
     for (const q of kinds) { if (q[1] === 'none') continue; shared++; const t = Number(new RegExp(`pub const SNOW_${q[1].toUpperCase()}: u8 = (\\d+);`).exec(world)?.[1]); if (t !== Number(q[2])) off.push(`SNOW_KIND.${q[1]} ${q[2]} in snowBog.ts, ${t} in world.rs`); }
-    shared++; const roofs = Number(/\bITEM_ROOFS = (\d+)/.exec(home)?.[1]); if (roofs !== there('MAX_ROOFS')) off.push(`ITEM_ROOFS ${roofs} here, MAX_ROOFS ${there('MAX_ROOFS')} there`); }
+    shared++; const roofs = Number(/\bITEM_ROOFS = (\d+)/.exec(home)?.[1]); if (roofs !== there('MAX_ROOFS')) off.push(`ITEM_ROOFS ${roofs} here, MAX_ROOFS ${there('MAX_ROOFS')} there`);
+    // (…and the weather's own: the roofs it keeps in force are the roofs a walk is handed — one number in three places)
+    shared++; const wx = Number(/export const MAX_ROOFS = (\d+)/.exec(fs.readFileSync(resolve(ROOT, 'src/game/weatherKinds.ts'), 'utf8'))?.[1]); if (wx !== roofs) off.push(`MAX_ROOFS ${wx} in weatherKinds.ts, ITEM_ROOFS ${roofs} in itemshome.ts`); }
   { shared += 2; const g = Number(/export const GRAVITY = ([\d.]+)/.exec(ts)?.[1]); if (g !== there('GRAVITY')) off.push(`GRAVITY ${g} in throwables.ts, ${there('GRAVITY')} in items.rs`);
     if (!/const sub = 2;/.test(ts) || there('SUB') !== 2) off.push('the substeps, sub'); }
   { // THE NUMBERS WRITTEN IN THE RULE ITSELF, function by function (as the slabs' are held): the step, the pose's key, and the furniture's ray
@@ -500,7 +513,7 @@ let wordOwn = '', wordRust = '';
     for (const [what, a, b] of [
       ['stepRow | update', body(ts, /^  private stepRow\(/m, '\n  }\n'), body(rs, /^pub fn update\(/m, '\n}\n')],
       ['poseKey | pose_key', body(ts, /^const poseKey = /m, '\n'), body(rs, /^fn pose_key\(/m, '\n}\n')],
-      ['PropSystem.raycast | ray_things', body(props, /^  raycast\(ro: Vec3/m, '\n  }\n'), body(lines, /^pub fn ray_things\(/m, '\n}\n')]] as [string, string | null, string | null][]) {
+      ['PropSystem.raycastHere | ray_things', body(props, /^  raycastHere\(ro: Vec3/m, '\n  }\n'), body(lines, /^pub fn ray_things\(/m, '\n}\n')]] as [string, string | null, string | null][]) {
       if (a === null || b === null) { off.push(`${what}: not found`); continue; }
       const na = nums(a), nb = nums(b); shared += na.length; if (na.join() !== nb.join()) off.push(`the numbers written in ${what}: ${na.join(' ')} here, ${nb.join(' ')} there`);
     } }

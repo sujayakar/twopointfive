@@ -38,7 +38,7 @@ const STAGE = async () => {
   if (!pick) return { err: 'no crate on this floor with a spot behind it' };
   const { w, P, T, near } = pick, gd = D.gd, c = gd.char;
   for (const m of g.orders.squad()) m.dazzledUntil = g.time + 1e6;
-  c.posX = P[0]; c.posZ = P[2]; c.bodyYaw = c.aimYaw = Math.atan2(T[0] - P[0], T[2] - P[2]); gd.path = []; gd.pathGoal = null; if (gd.script) gd.script = null;
+  c.pos[0] = P[0]; c.pos[2] = P[2]; c.bodyYaw = c.aimYaw = Math.atan2(T[0] - P[0], T[2] - P[2]); gd.path = []; gd.pathGoal = null; if (gd.script) gd.script = null;
   gd.hold = true; gd.pinned = true; D.mode = 'hold'; D.station = [P[0], 0, P[2]]; D.room = g.fight.roomAt(P); D.ev = D.room ? D.room.entries.map(() => 0) : []; D.watch = D.want = D.glanceTo = -1; D.glanceUntil = -1; D.glanceNext = g.time + 60;
   D.home = [T[0], 0, T[2]]; D.pt[0] = T[0]; D.pt[2] = T[2]; c.crouch = true; step(18);
   gd.sightPos = [...T]; gd.sightT = g.time;

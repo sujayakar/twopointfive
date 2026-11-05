@@ -69,7 +69,7 @@ async function rig(seed: number, o: { squad?: 2 | 4; sam?: number[] } = {}) {
     door(name: string): any { return game.doors.list.find((d: any) => d.def.name === name); },
     /** the cursor on a world point */
     cursor(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); },
-    on(m: any) { R.cursor([m.char.posX, 1.2, m.char.posZ]); },
+    on(m: any) { R.cursor([m.char.pos[0], 1.2, m.char.pos[2]]); },
     /** one-frame presses, as the page's listeners write them */
     press(code: string) { input.pressed.add(code); R.step(); },
     mmb() { input.clicked |= 2; R.step(); },

@@ -94,16 +94,16 @@ export async function gunrolesDeal(): Promise<boolean> {
   const first = casts.find(c => c.id === 'warehouse-four' && c.seed === 2)!.men.map(m => m.gun), other = casts.find(c => c.id === 'warehouse-four' && c.seed === 3)!.men.map(m => m.gun);
   F.verdict(J(again) === J(first) && J(other) !== J(first), 'the deal is the game\'s own die: the same seed deals the same guns, another seed others', `warehouse seed 2: ${first.join(' ')}\n    again:            ${again.join(' ')}\n    seed 3:           ${other.join(' ')}`);
   // the same floor opens with the same guns (samestart.ts): the mission started again on the same game, its die run on
-  const twice = await withSwitch(true, async () => { const S = await stage('warehouse-four', 2), a = S.men.map(m => m.gun), at = S.men.map(m => `${m.gd.char.posX.toFixed(1)},${m.gd.char.posZ.toFixed(1)}`);
+  const twice = await withSwitch(true, async () => { const S = await stage('warehouse-four', 2), a = S.men.map(m => m.gun), at = S.men.map(m => `${m.gd.char.pos[0].toFixed(1)},${m.gd.char.pos[2].toFixed(1)}`);
     await hushed(async () => { for (let i = 0; i < 90; i++) S.W.step(1 / 60); await startFromQuery(S.g, new URLSearchParams(S.q)); });
-    const hos = S.g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead'); return { a, b: hos.map((h: any) => h.weapon.def.id as string), same: J(at) === J(hos.map((h: any) => `${h.char.posX.toFixed(1)},${h.char.posZ.toFixed(1)}`)) }; });
+    const hos = S.g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead'); return { a, b: hos.map((h: any) => h.weapon.def.id as string), same: J(at) === J(hos.map((h: any) => `${h.char.pos[0].toFixed(1)},${h.char.pos[2].toFixed(1)}`)) }; });
   F.verdict(SAMESTART.on ? twice.same && J(twice.a) === J(twice.b) : true, 'a mission started again stands the same men on the same marks (samestart.ts) with the same guns: a draw comes off a man\'s own mark, not off the die as it has run on', SAMESTART.on ? `first:  ${twice.a.join(' ')}\n    again:  ${twice.b.join(' ')} · the same marks: ${twice.same}` : `this stand holds the same-start rule off (TPS_SAMESTART): a restart is a fresh placement, and one number off the die salts its deal · marks the same ${twice.same} · guns the same ${J(twice.a) === J(twice.b)}`);
   // never more hit points: one round each
   const downs: string[] = [];
   for (const gun of ['pkm', 'guard9mm', 'akms', 'aks74u']) downs.push(await withSwitch(true, async () => {
     const R: any = await hushed(() => rig(17, { stage: false })); const g = R.game, at = g.player.char.pos;
     const gd = spawnUnit(g, { team: 'hostile', pos: [at[0] + 2.5, 0, at[2] - 2.4], name: 'Tango', light: false }); hand(gd, gun);
-    await hushed(() => { fireWeapon(g, g.player.char, [gd.char.posX, 1.2, gd.char.posZ], true, { weapon: WEAPONS.fn2000, spread: 0, steady: true }); R.step(2); });
+    await hushed(() => { fireWeapon(g, g.player.char, [gd.char.pos[0], 1.2, gd.char.pos[2]], true, { weapon: WEAPONS.fn2000, spread: 0, steady: true }); R.step(2); });
     return `${(WEAPONS as any)[gun].short}: ${gd.state === 'dead' ? 'down to one round' : 'STILL UP'}`;
   }));
   F.verdict(downs.length === 4 && downs.every(d => /down to one round/.test(d)), 'nobody is harder to put down for his gun: a belt-fed man, a pistol man, an AKMS man and a man with the short carbine each go down to one round', downs.join(' · '));
@@ -143,7 +143,7 @@ export async function gunrolesFight(): Promise<boolean> {
   const F = family('gunroles-fight: string length by gun, on both sides');
   // a defender's trigger (the fight AI's own burstTrigger), thirty pulls a row
   const strings = await withSwitch(true, async () => { const R: any = await hushed(() => rig(17, { stage: false })); const g = R.game, at = g.player.char.pos, out: Record<string, { min: number; max: number; mean: number }> = {};
-    const gd = spawnUnit(g, { team: 'hostile', pos: [at[0] + 2, 0, at[2] + 1], yaw: 0, name: 'Gunner', light: false }); const aim: [number, number, number] = [gd.char.posX, 1.2, gd.char.posZ + 9];
+    const gd = spawnUnit(g, { team: 'hostile', pos: [at[0] + 2, 0, at[2] + 1], yaw: 0, name: 'Gunner', light: false }); const aim: [number, number, number] = [gd.char.pos[0], 1.2, gd.char.pos[2] + 9];
     await hushed(() => { for (const id of ['aks74u', 'akms', 'pkm']) { hand(gd, id); gd.fireCd = 0; const ns: number[] = []; let cur: unknown = null;
       for (let i = 0; i < 60 * 240 && ns.length < 30; i++) { gd.fireCd = Math.max(0, gd.fireCd - 1 / 60); if (gd.weapon.roundsReady < 12) gd.weapon.rearm(); gd.reloadT = -1; burstTrigger(g, gd, 1 / 60, aim, true, true); const b = gd.weapon.burst; if (b && b !== cur) { cur = b; ns.push(b.n); } }
       out[id] = { min: Math.min(...ns), max: Math.max(...ns), mean: ns.reduce((a, b) => a + b, 0) / Math.max(1, ns.length) }; } });
@@ -160,7 +160,7 @@ export async function gunrolesFight(): Promise<boolean> {
   // … and a staged fight at nine metres, five men in a row with empty guns: the shortest gap between two of his rounds
   const gaps = async (on: boolean, gun: string) => withSwitch(on, async () => { const R: any = await hushed(() => rig(17, { nb: { squad: 4 } })); const g = R.game, op = R.ops[0]; hand(op, gun);
     const at = op.char.pos; let dir = [1, 0], far = 0; for (let k = 0; k < 64; k++) { const a = k * Math.PI / 32, d = [Math.sin(a), Math.cos(a)], h = g.col.raycast([at[0], 1.2, at[2]], [d[0], 0, d[1]], 60), t = h ? h.t : 60; if (t > far) { far = t; dir = d; } }
-    R.hostiles.forEach((h: any, k: number) => { const p = [at[0] + dir[0] * 9 + dir[1] * (k - 2) * 0.7, 0, at[2] + dir[1] * 9 - dir[0] * (k - 2) * 0.7]; h.char.posX = p[0]; h.char.posZ = p[2]; h.route.points[0] = [p[0], 0, p[2]]; h.pinned = true; h.weapon.mag = 0; h.weapon.chamber = 0; h.reloadT = 1e9;
+    R.hostiles.forEach((h: any, k: number) => { const p = [at[0] + dir[0] * 9 + dir[1] * (k - 2) * 0.7, 0, at[2] + dir[1] * 9 - dir[0] * (k - 2) * 0.7]; h.char.pos[0] = p[0]; h.char.pos[2] = p[2]; h.route.points[0] = [p[0], 0, p[2]]; h.pinned = true; h.weapon.mag = 0; h.weapon.chamber = 0; h.reloadT = 1e9;
       h.char.yaw = h.char.aimYaw = h.char.bodyYaw = Math.atan2(-dir[0], -dir[1]); h.state = 'alert'; h.awareness = 1; h.lastSeenT = g.time; h.lastKnown = [...at]; });
     // (what the trigger sets itself after the FIRST round of a beat — the pair's second round, a string's next, the long rifle's next aimed one: read off the room fight's own clock for him, so a man who goes down to that round does not hide it)
     const after: number[] = []; let n = 0; for (let i = 0; i < 60 * 10; i++) { R.step(); const O = g.fight.opOf?.(op); if (O && O.rounds !== n) { n = O.rounds; if (O.n % 2 === 1) after.push(O.next - g.time); } }
@@ -179,8 +179,8 @@ export async function gunrolesLanes(): Promise<boolean> {
     const other = R.hostiles.find((h: any) => h !== belt && h.weapon.def.cls !== 'pistol'), mark = [...belt.char.pos], p0 = GUNROLES_STATS.posts;
     const holds = laneHolds(g, belt), holdsOther = other ? laneHolds(g, other) : true, keeps = gunKeepsPost(belt);
     // a fight next door: rounds on the floor, the squad let go at the door nearest them, twenty seconds
-    await hushed(() => { fireWeapon(g, R.ops[0].char, [R.ops[0].char.posX + 3, 1.2, R.ops[0].char.posZ], false, { weapon: WEAPONS.aks74u }); });
-    let far = 0; for (let i = 0; i < 60 * 20; i++) { R.step(); if (belt.state !== 'dead') far = Math.max(far, Math.hypot(belt.char.posX - mark[0], belt.char.posZ - mark[2])); }
+    await hushed(() => { fireWeapon(g, R.ops[0].char, [R.ops[0].char.pos[0] + 3, 1.2, R.ops[0].char.pos[2]], false, { weapon: WEAPONS.aks74u }); });
+    let far = 0; for (let i = 0; i < 60 * 20; i++) { R.step(); if (belt.state !== 'dead') far = Math.max(far, Math.hypot(belt.char.pos[0] - mark[0], belt.char.pos[2] - mark[2])); }
     return { dealt, holds, holdsOther, keeps, far, asked: GUNROLES_STATS.posts - p0, up: belt.state !== 'dead', name: belt.callsign as string }; }, keys);
   const on = await post(true), off = await post(false), noPost = await post(true, { post: false });
   const digs = noPost.far > 2;   // (the stand digs its defenders in at a fight next door: the control for 'he stays')

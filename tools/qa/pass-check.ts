@@ -131,7 +131,7 @@ export async function passCheck(): Promise<boolean> {
     // 8 — both ways stage
     const B = await stage(2), gb = B.W.game;
     const on = (G: any, T: any) => { const ops = G.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead');
-      const far = Math.max(Math.hypot(G.player.char.posX - T.sam[0], G.player.char.posZ - T.sam[2]), ...ops.map((o: any) => Math.min(...T.ops.map((p: number[]) => Math.hypot(o.char.posX - p[0], o.char.posZ - p[2])))));
+      const far = Math.max(Math.hypot(G.player.char.pos[0] - T.sam[0], G.player.char.pos[2] - T.sam[2]), ...ops.map((o: any) => Math.min(...T.ops.map((p: number[]) => Math.hypot(o.char.pos[0] - p[0], o.char.pos[2] - p[2])))));
       return { ops: ops.length, far, foes: G.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead').length }; };
     const a = on(g, S.team), b = on(gb, S.starts[0]);
     line(!A.why && !B.why && a.ops === 4 && b.ops === 4 && a.far < 1.5 && b.far < 1.5 && a.foes === 8 && b.foes === 8, 'both ways in stage: four teammates on that way\'s marks, eight defenders',

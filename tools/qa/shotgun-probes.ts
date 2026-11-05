@@ -113,12 +113,12 @@ export const shotgunRange = guarded(async () => {
     if (!g.col.nav.isBlocked(x + 0.5, z) && !g.col.nav.isBlocked(x + 26.5, z) && [0.4, 1.0, 1.6].every(y => [-0.45, 0, 0.45].every(dz => !g.col.solidBlocked([x, y, z + dz], [x + 27, y, z + dz])))) { lane = { x, z }; break; } }
   if (!lane) { verdict(false, 'a 27 m clear lane in the level', 'none found'); return done(); }
   const sam: number[] = [lane.x + 0.5, 0, lane.z]; g.teleportPlayer(sam); step(20);
-  const chest = (): number[] => [g.player.char.posX, 1.25, g.player.char.posZ];
+  const chest = (): number[] => [g.player.char.pos[0], 1.25, g.player.char.pos[2]];
   const shooter = g.guards.find((x: any) => x.team === 'guard' && x.state !== 'dead'); const sc = shooter.char;
   const op = FIGHT_SKILL.operative, S = def.aiSpread;
   const rows: { r: number; still: number; hands: number; pel: number; pep: number }[] = [];
   for (const r of RANGES) {
-    sc.posX = sam[0] + r + 0.7; sc.posZ = lane.z; sc.bodyYaw = sc.aimYaw = Math.PI; shooter.hold = true; step(3);
+    sc.pos[0] = sam[0] + r + 0.7; sc.pos[2] = lane.z; sc.bodyYaw = sc.aimYaw = Math.PI; shooter.hold = true; step(3);
     const out = { still: 0, hands: 0, pel: 0, pep: 0 };
     for (const mode of ['still', 'hands'] as const) for (let i = 0; i < SHELLS; i++) {
       sc.muzzle[0] = sam[0] + r; sc.muzzle[1] = 1.35; sc.muzzle[2] = lane.z;   // (the bore's mouth exactly r from his chest line: the pose the harness leaves a parked guard in is not the point)
@@ -139,16 +139,16 @@ export const shotgunRange = guarded(async () => {
   verdict(at(20).pep > 0.2, 'a man the pattern only caught the edge of is PEPPERED — counted, standing (launcher.ts staggerGuard for anybody but you)', `at 20 m ${pct(at(20).pep)} of shells pepper him without dropping him`);
   // on real men, through killGuard: a teammate's shell across a room; and a peppered man stands, doubled over
   { const R = await rig(5, { cards: { 1: { weapon: 'shotgun' } } }); const g2 = R.game; g2.aiEnabled = false; const o1 = R.ops[0], h = R.hostiles.find((x: any) => x.state !== 'dead');
-    const place = (r: number) => { o1.char.posX = sam[0] + r + 0.7; o1.char.posZ = lane!.z; h.char.posX = sam[0]; h.char.posZ = lane!.z; R.step(4); o1.char.muzzle[0] = sam[0] + r; o1.char.muzzle[1] = 1.35; o1.char.muzzle[2] = lane!.z; };
+    const place = (r: number) => { o1.char.pos[0] = sam[0] + r + 0.7; o1.char.pos[2] = lane!.z; h.char.pos[0] = sam[0]; h.char.pos[2] = lane!.z; R.step(4); o1.char.muzzle[0] = sam[0] + r; o1.char.muzzle[1] = 1.35; o1.char.muzzle[2] = lane!.z; };
     g2.teleportPlayer([sam[0] + 3, 0, lane.z > 14 ? lane.z - 3 : lane.z + 3]); o1.hold = true; h.hold = true;
     let pepperedAlive = false, tries = 0;
-    for (; tries < 60 && !pepperedAlive && h.state !== 'dead'; tries++) { place(22); const was = SHOTGUN_STATS.peppered; fireWeapon(g2, o1.char, [h.char.posX, 1.25, h.char.posZ], false, { steady: true, spread: 0 }); pepperedAlive = SHOTGUN_STATS.peppered > was && h.state !== 'dead' && h.staggerUntil > g2.time; R.step(2); }
+    for (; tries < 60 && !pepperedAlive && h.state !== 'dead'; tries++) { place(22); const was = SHOTGUN_STATS.peppered; fireWeapon(g2, o1.char, [h.char.pos[0], 1.25, h.char.pos[2]], false, { steady: true, spread: 0 }); pepperedAlive = SHOTGUN_STATS.peppered > was && h.state !== 'dead' && h.staggerUntil > g2.time; R.step(2); }
     const aliveFar = h.state !== 'dead'; const h2 = aliveFar ? h : R.hostiles.find((x: any) => x.state !== 'dead'); let nearDead = false, behind = { had: false, alive: false, inMen: 0, dropped: 0 };
-    if (h2) { h2.hold = true; o1.char.posX = sam[0] + 4.7; o1.char.posZ = lane.z; h2.char.posX = sam[0]; h2.char.posZ = lane.z; R.step(4); o1.char.muzzle[0] = sam[0] + 4; o1.char.muzzle[1] = 1.35; o1.char.muzzle[2] = lane.z;
+    if (h2) { h2.hold = true; o1.char.pos[0] = sam[0] + 4.7; o1.char.pos[2] = lane.z; h2.char.pos[0] = sam[0]; h2.char.pos[2] = lane.z; R.step(4); o1.char.muzzle[0] = sam[0] + 4; o1.char.muzzle[1] = 1.35; o1.char.muzzle[2] = lane.z;
       // …with a second man standing a stride BEHIND him in the same line: the whole pattern is the front man's, to the last pellet
-      const h3 = R.hostiles.find((x: any) => x.state !== 'dead' && x !== h2); if (h3) { h3.hold = true; h3.char.posX = sam[0] - 1.2; h3.char.posZ = lane.z; R.step(2); o1.char.muzzle[0] = sam[0] + 4; o1.char.muzzle[1] = 1.35; o1.char.muzzle[2] = lane.z; }
+      const h3 = R.hostiles.find((x: any) => x.state !== 'dead' && x !== h2); if (h3) { h3.hold = true; h3.char.pos[0] = sam[0] - 1.2; h3.char.pos[2] = lane.z; R.step(2); o1.char.muzzle[0] = sam[0] + 4; o1.char.muzzle[1] = 1.35; o1.char.muzzle[2] = lane.z; }
       const in0 = SHOTGUN_STATS.inMen, dr0 = SHOTGUN_STATS.dropped;
-      fireWeapon(g2, o1.char, [h2.char.posX, 1.25, h2.char.posZ], false, { steady: true, spread: 0 }); nearDead = h2.state === 'dead';
+      fireWeapon(g2, o1.char, [h2.char.pos[0], 1.25, h2.char.pos[2]], false, { steady: true, spread: 0 }); nearDead = h2.state === 'dead';
       behind = { had: !!h3, alive: !!h3 && h3.state !== 'dead', inMen: SHOTGUN_STATS.inMen - in0, dropped: SHOTGUN_STATS.dropped - dr0 }; }
     verdict(o1.weapon.def.id === 'm870' && nearDead, 'a real defender, a teammate\'s M870 at 4 m: one shell and he is down (combat.ts killGuard, like any round)', `gun ${o1.weapon.def.id} · down ${nearDead}`);
     verdict(!behind.had || (behind.alive && behind.dropped === 1 && behind.inMen === WEAPONS.m870.pellets.n), 'and the man a stride BEHIND him in the same line is untouched: the man it drops stops his whole pattern (he is settled once all nine have flown)', behind.had ? `behind him alive ${behind.alive} · ${behind.inMen} pellets booked on men, ${behind.dropped} dropped` : 'no third defender on this seed to stand behind him');

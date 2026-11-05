@@ -54,12 +54,12 @@ async function arm(o: Arm) {
     if (harnessProfile() === 'frozen') TEAMPACE.on = false;
     for (const k of Object.keys(ST)) (ST as any)[k] = 0; const hit0 = FF.samOnMate;
     const mate = R.ops[0], other = R.ops[1], foes = R.hostiles.filter((h: any) => h.state !== 'dead'), foe = o.foe ? foes[0] : null; if (foe) foe.god = true;   // (he is there to have a line, not to be shot)
-    const put = (gd: any, p: number[]) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.velX = gd.char.velZ = 0; gd.path = []; gd.pathGoal = null; };
-    const home = new Map<any, number[]>(); for (const h of foes) home.set(h, [h.char.posX, 0, h.char.posZ]);
+    const put = (gd: any, p: number[]) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel[0] = gd.char.vel[2] = 0; gd.path = []; gd.pathGoal = null; };
+    const home = new Map<any, number[]>(); for (const h of foes) home.set(h, [h.char.pos[0], 0, h.char.pos[2]]);
     /** the defenders hear nothing and stay where they are; the second teammate is parked out of it */
     const calm = () => { for (const h of game.guards) if (hostileTo(h, 'player') && h.state !== 'dead') { h.state = 'patrol'; h.awareness = 0; if (h === foe) put(h, o.foe!); else if (home.has(h)) put(h, home.get(h)!); } put(other, [10, 0, 22.6]); };
     let aimAt: number[] = [o.sam[0] + 9, 1.3, Z], trigger = false, f = 0;
-    const step = (n = 1) => { for (let i = 0; i < n; i++) { calm(); pl.char.posX = o.sam[0]; pl.char.posZ = o.sam[2]; W.cursorAt(aimAt as any); if (trigger && f % (o.every ?? 24) === 0) { pl.fireCd = 0; input.clicked |= 1; } f++; R.step(); } };
+    const step = (n = 1) => { for (let i = 0; i < n; i++) { calm(); pl.char.pos[0] = o.sam[0]; pl.char.pos[2] = o.sam[2]; W.cursorAt(aimAt as any); if (trigger && f % (o.every ?? 24) === 0) { pl.fireCd = 0; input.clicked |= 1; } f++; R.step(); } };
     game.teleportPlayer(o.sam); put(mate, o.from ?? FROM); step(30);
     if (!pl.rifleUp) { input.pressed.add('Digit2'); step(1); if (!pl.rifleUp) { input.pressed.add('KeyE'); step(1); } step(90); }
     if (pl.rifle.def.auto && pl.rifle.automatic) { input.pressed.add('KeyB'); step(2); }   // (SEMI: a click a round)
@@ -80,10 +80,10 @@ async function arm(o: Arm) {
       if (o.reorder && re < 0 && ST.ways === 1) { re = game.time; reWhy = O.give('move', O.targetAt(o.reorder), undefined, { men: [mate] }); }
       step();
       if (pl.rifle.reloading) reloadF++;
-      const firing = pl.rifle.shotsFired > shots0 && game.time - pl.lastFireT < FIRELINE.fireS, q = off(p), v = Math.hypot(mate.char.velX, mate.char.velZ); fastest = Math.max(fastest, v);
+      const firing = pl.rifle.shotsFired > shots0 && game.time - pl.lastFireT < FIRELINE.fireS, q = off(p), v = Math.hypot(mate.char.vel[0], mate.char.vel[2]); fastest = Math.max(fastest, v);
       if (pl.rifle.shotsFired > shots0 && tStop < 0 && q.along > 0.15 && q.side <= laneHalf(q.along)) inString++;
       if (firing) { if (q.along > 0.15 && q.side <= laneHalf(q.along)) inLane++; if (q.along > 0.15 && q.side <= 0.28) inBody++; nearest = Math.min(nearest, q.side - laneHalf(Math.max(0, q.along)));
-        if (v < 0.1) { still += DT; stillMax = Math.max(stillMax, still); } else still = 0; if ((p[0] - pl.char.posX) * dx + (p[2] - pl.char.posZ) * dz < -0.3) behind++; }
+        if (v < 0.1) { still += DT; stillMax = Math.max(stillMax, still); } else still = 0; if ((p[0] - pl.char.pos[0]) * dx + (p[2] - pl.char.pos[2]) * dz < -0.3) behind++; }
       if (tStop >= 0 && movedAfter < 0 && v > 0.5) movedAfter = game.time - tStop;
       if (tThere < 0 && flat(p, dest) < destR) { tThere = game.time; underFire = firing; }
       if (o.reorder && re >= 0 && tThere2 < 0 && flat(p, o.reorder) < 0.6) tThere2 = game.time;
@@ -91,7 +91,7 @@ async function arm(o: Arm) {
       if ((tThere >= 0 || tThere2 >= 0) && tStop >= 0 && game.time - tStop > 1.5) break;
     }
     fired = pl.rifle.shotsFired - shots0;
-    if (VERBOSE) { console.log = log; console.log(trace.join('\n')); if (foe) console.log('foe', foe.callsign, foe.team, foe.state, foe.char.pos, 'blocked', game.col.segmentBlocked([foe.char.posX, 1.6, foe.char.posZ], [mate.char.posX, 1.2, mate.char.posZ])); console.log(JSON.stringify({ why, ST, fired })); }
+    if (VERBOSE) { console.log = log; console.log(trace.join('\n')); if (foe) console.log('foe', foe.callsign, foe.team, foe.state, foe.char.pos, 'blocked', game.col.segmentBlocked([foe.char.pos[0], 1.6, foe.char.pos[2]], [mate.char.pos[0], 1.2, mate.char.pos[2]])); console.log(JSON.stringify({ why, ST, fired })); }
     return { g: game, why, mate: mate.callsign as string, state: mate.state as string, up: mate.state !== 'dead' && mate.char.alive, fired, inLane, inBody, stillMax, nearest, fastest, hit: FF.samOnMate - hit0,
       there: tThere >= 0, thereUnderFire: underFire, movedAfter, behind, re, reWhy, there2: tThere2 >= 0, reloadF, inString, st: { ...ST } as Record<string, number>, bad: R.bad as string };
   } finally { console.log = log; console.warn = warn; }

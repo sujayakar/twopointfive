@@ -87,10 +87,10 @@ const FACTS = () => {
   t('frame', () => ({ gameTime: +g.time.toFixed(4), drawn: DE.drawn, frameIdx: E.frameIdx, internal: [E.width, E.height], out: [E.outWidth, E.outHeight] }));
   t('camera', () => { const p = window.__cam.pin; return p ? { look: [...p.look], yaw: p.yaw, pitch: p.pitch, dist: p.dist } : null; });
   t('characters', () => { const vp = window.__cam.viewProj, hid = g.fogOfWar && g.fogOfWar.on ? g.fogOfWar.hiddenChars : null;
-    const list = DE.men().map(m => { const x = m.char.posX, y = m.char.posY + 1.0, z = m.char.posZ;
+    const list = DE.men().map(m => { const x = m.char.pos[0], y = m.char.pos[1] + 1.0, z = m.char.pos[2];
       const cx = vp[0] * x + vp[4] * y + vp[8] * z + vp[12], cy = vp[1] * x + vp[5] * y + vp[9] * z + vp[13], cw = vp[3] * x + vp[7] * y + vp[11] * z + vp[15];
       const nx = cx / cw, ny = cy / cw, inFrame = cw > 0 && Math.abs(nx) < 0.96 && Math.abs(ny) < 0.96;
-      return { name: m.name, team: m.team, state: m.gd ? m.gd.state : (g.player.down ? 'down' : 'up'), pos: [r2(m.char.posX), r2(m.char.posZ)], ndc: [r2(nx), r2(ny)], inFrame, torch: m.gd ? !!m.gd.flashlight.enabled : null,
+      return { name: m.name, team: m.team, state: m.gd ? m.gd.state : (g.player.down ? 'down' : 'up'), pos: [r2(m.char.pos[0]), r2(m.char.pos[2])], ndc: [r2(nx), r2(ny)], inFrame, torch: m.gd ? !!m.gd.flashlight.enabled : null,
         fogHidden: !!(hid && hid.has && hid.has(m.char)) }; });
     const inF = list.filter(m => m.inFrame && !m.fogHidden);   // (a man the fog of war hides is not drawn)
     return { total: list.length, inFrame: inF.length, inFrameNames: inF.map(m => m.name), inFrameByTeam: inF.reduce((a, m) => { a[m.team] = (a[m.team] || 0) + 1; return a; }, {}), torchesInFrame: inF.filter(m => m.torch).length, list }; });
@@ -150,8 +150,8 @@ const VIEWS = {
     query: 'levelFile=depot.json&roomclear&squad4&freshstart=0&hour=midday', settle: 6,
     stage: () => { const g = window.__game, DE = window.__de, C = window.__cam, D = Math.PI / 180;
       const foe = g.guards.findIndex(x => x.team === 'hostile');
-      const S = g.player.char, fx = Math.sin(S.bodyYaw), fz = Math.cos(S.bodyYaw), ahead = [S.posX + fx * 3.2, 0, S.posZ + fz * 3.2];
-      const cast = DE.men().filter(m => m.team === 'player' || m.team === 'operative').map(m => ({ name: m.name, p: [m.char.posX, m.char.posY, m.char.posZ] }));
+      const S = g.player.char, fx = Math.sin(S.bodyYaw), fz = Math.cos(S.bodyYaw), ahead = [S.pos[0] + fx * 3.2, 0, S.pos[2] + fz * 3.2];
+      const cast = DE.men().filter(m => m.team === 'player' || m.team === 'operative').map(m => ({ name: m.name, p: [m.char.pos[0], m.char.pos[1], m.char.pos[2]] }));
       if (foe >= 0) cast.push({ name: g.guards[foe].callsign, p: ahead });
       const xs = cast.map(m => m.p[0]), zs = cast.map(m => m.p[2]), look = [(Math.min(...xs) + Math.max(...xs)) / 2, 0.9, (Math.min(...zs) + Math.max(...zs)) / 2];   // (the middle of the ground they cover, at half a man's height)
       // the framing fits itself: from each side in turn (ahead of the line first: their fronts), the nearest distance that holds all six head to foot inside the frame
@@ -165,7 +165,7 @@ const VIEWS = {
       const sides = [12, -12, 168, 192].map(a => frame(S.bodyYaw + a * D)), pick = sides.find(x => x.fits && !x.hid) || sides.slice().sort((x, y) => x.hid - y.hid)[0];
       const st = window.__stage({ look, yaw: pick.yaw, pitch, dist: pick.dist }, { guards: foe >= 0 ? [{ i: foe, pos: ahead, yaw: S.bodyYaw + Math.PI, aimPitch: -0.1 }] : [] });
       DE.notes.defender = foe >= 0 ? g.guards[foe].callsign : null;
-      DE.notes.cast = { sam: [+S.posX.toFixed(2), +S.posZ.toFixed(2)], eye: pick.eye.map(v => +v.toFixed(2)), side: sides.indexOf(pick), fits: pick.fits, sides: sides.map(x => ({ dist: x.dist, fits: x.fits, hid: x.hid })),
+      DE.notes.cast = { sam: [+S.pos[0].toFixed(2), +S.pos[2].toFixed(2)], eye: pick.eye.map(v => +v.toFixed(2)), side: sides.indexOf(pick), fits: pick.fits, sides: sides.map(x => ({ dist: x.dist, fits: x.fits, hid: x.hid })),
         hidden: cast.filter(m => pts(m).some(q => g.col.segmentBlocked(pick.eye, q))).map(m => m.name) };
       return st; },
     expect: (F) => { const u = [], c = F.characters, by = c.inFrameByTeam || {}, N = F.notes && F.notes.cast; if (F.scenario !== 'roomclear') u.push(`scenario ${F.scenario}`); if (!(F.squad && F.squad.length === 4)) u.push(`squad of ${F.squad && F.squad.length}`);

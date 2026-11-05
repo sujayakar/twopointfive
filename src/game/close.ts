@@ -310,11 +310,11 @@ export function closeReady(g: Game): { kind: ReadyKind; at: Vec3 } | null {
   if (pl.down || pl.holding || pl.takedown || pl.dragging || pl.kick || pl.picking || pl.wanding || pl.rifleUp || pl.canisterSel && !pl.holstered) return null;
   if (samWork(g) || pl.coding && handworkOn('work')) return null;   // hands at work on a thing (handwork.ts: a charge, the drive, the lever, a keypad): they stay on it — a click there lets go of the work or does nothing, it throws no blow, so the pose promises none
   if (pl.wall) return null;   // back to the wall: his arms are the wall hold's — the row still offers the move, the pose says nothing (neither close layer runs on the wall)
-  const gd = o.guard; const neck = gd.char.bones.neck ?? gd.char.bones.head; const at: Vec3 = neck ? [neck[0], neck[1], neck[2]] : [gd.char.posX, gd.char.posY + (o.win?.kind === 'seat' ? 1.1 : 1.45), gd.char.posZ];
+  const gd = o.guard; const neck = gd.char.bones.neck ?? gd.char.bones.head; const at: Vec3 = neck ? [neck[0], neck[1], neck[2]] : [gd.char.pos[0], gd.char.pos[1] + (o.win?.kind === 'seat' ? 1.1 : 1.45), gd.char.pos[2]];
   const kind = closeKindOf(o);
   if (pl.pistolUp) return o.grab ? { kind: 'grabGun', at } : null;   // the pistol stays on him; only the free hand says anything
   if (!o.grab) return { kind: 'strike', at };
-  if (CLOSE.handsLow && pl.crouch && kind !== 'seat' && at[1] - gd.char.posY > CLOSE.handsLowNeckM) return { kind: 'strike', at };   // (crouched under a man on his feet: the hand on the knife says it — no open hand held up over his own head; a man low himself keeps the level reach)
+  if (CLOSE.handsLow && pl.crouch && kind !== 'seat' && at[1] - gd.char.pos[1] > CLOSE.handsLowNeckM) return { kind: 'strike', at };   // (crouched under a man on his feet: the hand on the knife says it — no open hand held up over his own head; a man low himself keeps the level reach)
   return { kind: kind === 'seat' ? 'seat' : 'grab', at };
 }
 /** THE MODE: the man Sam is close to (the nearest living one inside `modeM` with nothing solid between; once in, kept out to `modeOutM`), or null. Not with the
@@ -357,7 +357,7 @@ export function closeTick(g: Game) {
   if (r) CLOSE_STATS.readyFrames++;
   const m = pl.takedown ? S.mode : modeNow(g, S); S.mode = m;   // (a blow under way keeps the mode it was thrown in: the stance does not let go mid-swing)
   an.creep = !!m || tapHeld(g); if (!tapHeld(g)) an.tapU = -1;   // (tapstep.ts: the steps stand in the held stride, a man near or not)
-  if (m) { const ch = m.char.bones.chest; an.creepAt = ch ? [ch[0], ch[1], ch[2]] : [m.char.posX, m.char.posY + 1.2, m.char.posZ]; CLOSE_STATS.modeFrames++; } else an.creepAt = null;
+  if (m) { const ch = m.char.bones.chest; an.creepAt = ch ? [ch[0], ch[1], ch[2]] : [m.char.pos[0], m.char.pos[1] + 1.2, m.char.pos[2]]; CLOSE_STATS.modeFrames++; } else an.creepAt = null;
 }
 /** THE DARK (guards.ts sightGain, Sam only): how much of the build's near-sight floor — a shape inside 1.8 m of him is seen whatever the light — this man has
  *  for Sam right now. 1 = all of it = the build (always with the switch off). With the switch on it goes by the light on Sam: nothing under `darkAt` of his
@@ -450,7 +450,7 @@ const calm = (gd: Guard) => gd.state === 'patrol' && gd.awareness < 0.3 && !gd.h
 export function closeSeat(g: Game, gd: Guard, at?: ArrayLike<number>, face?: number): boolean {
   if (gd.civ || gd.unit || gd.state === 'dead' || !calm(gd)) return false;
   const M = seatedOf(g); const prev = M.get(gd); if (prev && !at) return true;   // (already in a chair, or on his way down into it: he stays in that one)
-  M.set(gd, { at: at ? [at[0], 0, at[2]] : [gd.char.posX, 0, gd.char.posZ], face: face ?? gd.char.bodyYaw, hold: prev ? prev.hold : gd.hold, down: false });
+  M.set(gd, { at: at ? [at[0], 0, at[2]] : [gd.char.pos[0], 0, gd.char.pos[2]], face: face ?? gd.char.bodyYaw, hold: prev ? prev.hold : gd.hold, down: false });
   gd.hold = true; CLOSE_STATS.seats++; note(g, gd, 'seat', null);
   return true;
 }
@@ -458,7 +458,7 @@ export function closeSeat(g: Game, gd: Guard, at?: ArrayLike<number>, face?: num
 export function closeUnseat(g: Game, gd: Guard, back = false) {
   const M = seatedOf(g), st = M.get(gd); if (!st) return;
   M.delete(gd); gd.hold = st.hold; if (gd.char.anim.act?.clip === SIT_CLIP.clip) gd.char.anim.act = null;
-  if (back && st.down && gd.state !== 'dead') { gd.char.posX = st.at[0]; gd.char.posZ = st.at[2]; }   // (stood up by hand — the panel: up where he sat down from. The seat walked his root SIT_ADVANCE on, and sitting him again must not walk him on again)
+  if (back && st.down && gd.state !== 'dead') { gd.char.pos[0] = st.at[0]; gd.char.pos[2] = st.at[2]; }   // (stood up by hand — the panel: up where he sat down from. The seat walked his root SIT_ADVANCE on, and sitting him again must not walk him on again)
   CLOSE_STATS.unseats++; note(g, gd, 'unseat', null);
 }
 /** once a frame BEFORE the guards (game.ts): the seated men kept on their marks while calm, stood up when not. Nothing with nobody seated. */
@@ -469,7 +469,7 @@ export function closeSeatTick(g: Game, dt: number) {
     const c = gd.char; c.bodyYaw = approachAngle(c.bodyYaw, st.face, 3 * dt);
     const settled = Math.abs(wrapAngle(c.bodyYaw - st.face)) < 0.35;
     const tx = st.at[0] + Math.sin(st.face) * SIT_ADVANCE, tz = st.at[2] + Math.cos(st.face) * SIT_ADVANCE; const k = 1 - Math.exp(-5 * dt);
-    if (settled) { c.posX += (tx - c.posX) * k; c.posZ += (tz - c.posZ) * k; c.anim.act = { ...SIT_CLIP }; }
+    if (settled) { c.pos[0] += (tx - c.pos[0]) * k; c.pos[2] += (tz - c.pos[2]) * k; c.anim.act = { ...SIT_CLIP }; }
     gd.speed = 0; c.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null;
     st.down = settled && c.anim.actShown > 0.5;
   }

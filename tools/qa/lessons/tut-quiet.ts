@@ -64,7 +64,7 @@ const take = (B: Bot, code: string) => { B.press(code, 5); B.until(() => B.g.pla
 /** a mouse button pressed, held on a world point for `secs` and let go (with the rifle up the right one shows the arc): Input's bits are 1 left · 2 middle · 4 right */
 const holdButton = (B: Bot, bit: number, p: number[], secs = 0.5) => { B.aim(p); B.step(); B.I.clicked |= bit; for (let i = 0; i < secs * 60; i++) { B.aim(p); B.I.buttons |= bit; B.step(); } B.I.buttons &= ~bit; B.aim(p); B.step(3); };
 const leftHold = (B: Bot, p: number[], secs = 0.5) => holdButton(B, 1, p, secs), rightHold = (B: Bot, p: number[], secs = 0.5) => holdButton(B, 4, p, secs);
-const head = (x: any): number[] => x.char.bones?.head ?? [x.char.posX, 1.6, x.char.posZ];
+const head = (x: any): number[] => x.char.bones?.head ?? [x.char.pos[0], 1.6, x.char.pos[2]];
 const loadName = (a: string | null) => a === 'ring' ? 'the sponge round' : a === 'he40' ? 'the grenade' : String(a);
 /** how many times a beam has been broken this run */
 const trips = (B: Bot): number => (B.g.devices?.lasers ?? []).reduce((n: number, l: any) => n + l.trips, 0);
@@ -105,7 +105,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     const A = man(B, 'court'), n0 = seen(B), t0 = (B as any).whistledAt ?? B.t();
     // (what his light does while he looks: the most it puts on the place the whistle came from, and on the player behind the wall)
     let onSpot = 0, onMe = 0, lookedFrom: number[] | null = null, lookT = 0;
-    const watch = () => { const L = A.flashlight, d = A.beamDir; if (L?.enabled && d) { const to = [TQ.whistle[0] - A.char.posX, TQ.whistle[2] - A.char.posZ], n = Math.hypot(to[0], to[1]) || 1, cos = (to[0] * d[0] + to[1] * d[2]) / n;
+    const watch = () => { const L = A.flashlight, d = A.beamDir; if (L?.enabled && d) { const to = [TQ.whistle[0] - A.char.pos[0], TQ.whistle[2] - A.char.pos[2]], n = Math.hypot(to[0], to[1]) || 1, cos = (to[0] * d[0] + to[1] * d[2]) / n;
         if (flat(A.char.pos, TQ.look) < 0.4 && cos > onSpot) { onSpot = cos; lookedFrom = [...A.char.pos]; lookT = B.t(); } }
       onMe = Math.max(onMe, B.g.player.visibility); };
     const there = B.until(() => { watch(); return (!!A.script && flat(A.char.pos, TQ.smoke) < 0.35 && Math.abs(Math.atan2(Math.sin(A.char.bodyYaw - Math.PI / 2), Math.cos(A.char.bodyYaw - Math.PI / 2))) < 0.3) || A.state === 'alert' || !A.script; }, 45);
@@ -129,7 +129,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!closeIn(B, A, [25.5, 0, 17.75])) B.fail(`could not get behind the first man (${flat(B.pos(), A.char.pos).toFixed(2)} m off, he stands at ${at(A.char.pos)}, ${A.state})`);
     unseen(B, n0, A, 'coming up behind him');
     if (!A.script) B.fail(`${A.callsign} turned from his smoke as the player came up crouched (${A.state})`);
-    if (!tap(B, 'guard', 'grab', [A.char.posX, 1.35, A.char.posZ])) B.fail('no grab row behind the first man');
+    if (!tap(B, 'guard', 'grab', [A.char.pos[0], 1.35, A.char.pos[2]])) B.fail('no grab row behind the first man');
     if (!B.until(() => B.g.player.holding?.phase === 'held', 4)) B.fail('the grab did not take');
     B.say(`  held ${(B.t() - t0).toFixed(1)} s after the whistle`);
   },
@@ -175,14 +175,14 @@ export const steps: Record<string, (B: Bot) => void> = {
     // (the break: the man gone for by hand after all, his hands empty, on a knee the whole way. On the page's stand the hand that reaches for him is in the
     //  beam; where no hand comes up by itself and no row takes him, he stands up behind the man)
     if (WRONG === 'hands') { const t0 = trips(B); closeIn(B, H, [25.3, 0, 12.7]); B.step(20);
-      if (trips(B) === t0 && B.verb('guard', 'grab', [H.char.posX, 1.35, H.char.posZ])) { B.until(() => trips(B) > t0, 3); B.say(`  the grab's row taken: ${B.g.player.holding ? 'he is held' : 'nobody held'}`); }
+      if (trips(B) === t0 && B.verb('guard', 'grab', [H.char.pos[0], 1.35, H.char.pos[2]])) { B.until(() => trips(B) > t0, 3); B.say(`  the grab's row taken: ${B.g.player.holding ? 'he is held' : 'nobody held'}`); }
       if (trips(B) === t0) { B.crouch(false); B.step(40); B.say('  no row to grab him by: he stands up behind the man'); }
       B.say(`  by hand: ${trips(B) > t0 ? 'the chest beam broken' : 'the beam not broken'} from ${at(B.pos())}, ${flat(B.pos(), H.char.pos).toFixed(2)} m behind him; he ${H.state}`);
       if (trips(B) > t0) B.fail('the chest beam at his back is broken by a man who comes up behind him'); }
     B.go(TQ.nook, 10, { near: 0.12 }); B.wait(0.4);
     // (the whistle is not his in the store: it would bring the man round to him. Its own code does nothing — the gate takes it, on either stand — and where
     //  his actions are a ring, the interaction key held on open floor puts none up, with no wedge to pick, and a click whistles nobody)
-    { const w0 = WHISTLE_STATS.blown; B.press('KeyV', 6); B.hold(['Space'], 0.6); const ring = !!B.g.player.sel?.open; B.click(1, [H.char.posX, 1.2, H.char.posZ]); B.step(20);
+    { const w0 = WHISTLE_STATS.blown; B.press('KeyV', 6); B.hold(['Space'], 0.6); const ring = !!B.g.player.sel?.open; B.click(1, [H.char.pos[0], 1.2, H.char.pos[2]]); B.step(20);
       if (ring || WHISTLE_STATS.blown > w0) B.fail(`in the store ${WHISTLE_STATS.blown > w0 ? 'he whistled' : 'the interaction key held put the hand\'s ring up'} (a whistle would bring the hall's man round to him)`);
       if (B.g.player.sel?.open) B.press('Escape', 3); }
     B.say(`  in the corner: lit ${lit(B)}; ${H.callsign} ${H.state}, aware ${H.awareness.toFixed(2)}, ${flat(B.pos(), H.char.pos).toFixed(1)} m off`);
@@ -195,7 +195,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (rf.attachment !== 'he40' || rf.shells !== 1 || rf.rings !== (kitTreeOn() ? 5 : rf.rings)) B.fail(`the mission's card is not on him: the launcher is up on ${loadName(rf.attachment)} with ${rf.shells} grenade and ${rf.rings} sponge rounds (one grenade, five sponge rounds, the grenade up)`);
     // (his hands are empty, the interaction key is his and the man is in reach of a held left click: the frame gives that click to the stalk unless a
     //  step denies `stalk`, and `nook` does — the level file's head, WHY NOT HANDS. Held from the doorway's line, where a stalk would have a way to him)
-    { const H = man(B, 'hall'), t0 = trips(B); B.crouch(true); B.go(TQ.shot, 10, { near: 0.15 }); const from = B.pos().slice(); leftHold(B, [H.char.posX, 1.2, H.char.posZ], 1.5);
+    { const H = man(B, 'hall'), t0 = trips(B); B.crouch(true); B.go(TQ.shot, 10, { near: 0.15 }); const from = B.pos().slice(); leftHold(B, [H.char.pos[0], 1.2, H.char.pos[2]], 1.5);
       if (P.holding || trips(B) > t0 || flat(B.pos(), from) > 0.1) B.fail(`a left click held on the hall's man took him or walked the player at him (held ${!!P.holding}, moved ${flat(B.pos(), from).toFixed(2)} m, the beam ${trips(B) > t0 ? 'broken' : 'whole'})`);
       B.say(`  a left click held on him from the doorway's line: nobody stalked, nobody held`); B.go(TQ.nook, 10, { near: 0.15 }); }
     take(B, 'Digit2');
@@ -221,7 +221,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     const line = (from: number[]) => { const to = head(H), p = [from[0], 1.0, from[2]], d = [to[0] - p[0], to[1] - p[1], to[2] - p[2]], len = Math.hypot(d[0], d[1], d[2]), dir = d.map(v => v / len);
       return !B.g.col.raycast(p, dir, len - 0.3) && !B.g.props.raycast(p, dir, len - 0.3); };
     if (line(TQ.nook) || !line(TQ.shot)) B.fail(`the corner ${line(TQ.nook) ? 'has' : 'has no'} line to his head and the mark ${line(TQ.shot) ? 'has one' : 'has none'}: the line that sends him out of the corner rests on the first having none and the second having one`);
-    B.say(`  ${H.callsign} ${H.state} at ${at(H.char.pos)}, facing ${H.char.bodyYaw.toFixed(2)}, the chest beam ${(TQ.beamHigh - H.char.posX).toFixed(2)} m behind him; no line to his head from the corner, a clear one from the mark`);
+    B.say(`  ${H.callsign} ${H.state} at ${at(H.char.pos)}, facing ${H.char.bodyYaw.toFixed(2)}, the chest beam ${(TQ.beamHigh - H.char.pos[0]).toFixed(2)} m behind him; no line to his head from the corner, a clear one from the mark`);
     B.crouch(true); B.go(TQ.shot, 10, { near: 0.15 }); B.step(10);
     B.say(`  on the doorway's line: lit ${lit(B)}, ${flat(B.pos(), H.char.pos).toFixed(1)} m behind him; he ${H.state}, aware ${H.awareness.toFixed(2)}`);
     unseen(B, n0, H, 'stepping out to the doorway\'s line');
@@ -268,7 +268,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   boxman: B => {
     const n0 = seen(B), sent = () => B.g.guards.find((x: any) => x.state !== 'dead' && x.task?.kind === 'breaker');
     const C = sent() ?? man(B, 'table');
-    const came = B.until(() => (C.char.posX > 20.2 && flat(C.char.pos, [TQ.box[0], 0, TQ.box[2] - 0.6]) < 1.3) || C.state === 'alert' || C.state === 'dead' || !B.g.blackout.active, 40);
+    const came = B.until(() => (C.char.pos[0] > 20.2 && flat(C.char.pos, [TQ.box[0], 0, TQ.box[2] - 0.6]) < 1.3) || C.state === 'alert' || C.state === 'dead' || !B.g.blackout.active, 40);
     settled(B, C, 0.25, 4);   // he stops at the box, his back to the room: only then does anything move
     const t0 = B.t();
     B.say(`  ${C.callsign} ${came ? 'came' : 'did not come'}: ${C.state}, at ${at(C.char.pos)}, facing ${C.char.bodyYaw.toFixed(2)}, ${flat(C.char.pos, B.pos()).toFixed(2)} m off, ${(B.t() - B.g.blackout.since).toFixed(1)} s after the mains went; lit ${lit(B)}`);
@@ -276,7 +276,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     unseen(B, n0, C, 'in the niche');
     B.wait(REACT);
     B.go([21.0, 0, 14.15], 8, { near: 0.2 });   // round the end of the niche's wall: he stands a stride on, his back to it
-    for (let i = 0; i < 8 && flat(B.pos(), C.char.pos) >= 0.8; i++) B.nudge([C.char.posX, 0, C.char.posZ], 0.4, () => flat(B.pos(), C.char.pos) < 0.8);   // (he may still be stepping up to the lever)
+    for (let i = 0; i < 8 && flat(B.pos(), C.char.pos) >= 0.8; i++) B.nudge([C.char.pos[0], 0, C.char.pos[2]], 0.4, () => flat(B.pos(), C.char.pos) < 0.8);   // (he may still be stepping up to the lever)
     B.step(4);
     B.say(`  in reach ${flat(B.pos(), C.char.pos).toFixed(2)} m off, ${(B.t() - t0).toFixed(1)} s after he got to the box (the mains ${B.g.blackout.active ? 'still out' : 'BACK'}); he ${C.state}`);
     B.click(2);

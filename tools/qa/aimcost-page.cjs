@@ -31,7 +31,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       for (const k of ['KeyW', 'KeyS', 'KeyA', 'KeyD']) {
         const p0 = [...pl.char.pos];
         for (let i = 0; i < 50; i++) { window.__mouse(760, 300); await window.__runFrames(1, 1 / 60, [k]); }
-        moved = Math.hypot(pl.char.posX - p0[0], pl.char.posZ - p0[2]); walk = ring(); key = k;
+        moved = Math.hypot(pl.char.pos[0] - p0[0], pl.char.pos[2] - p0[2]); walk = ring(); key = k;
         if (moved > 0.8) break;
         await still(150);
       }

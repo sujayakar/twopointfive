@@ -79,7 +79,7 @@ if (process.env.ATTACH_HOOK) {
     const key = `${who} | ${holds} | ${state}`;
     const vr = CA.castVariantOf(g, c)?.name ?? 'mannequin';
     const C = cls(classes, key), V = cls(variants, `${who} | ${vr} | ${holds}${dead ? '' : a.crouch > 0.5 ? ' | crouched' : ' | up'}`); C.n++; V.n++;
-    const at = () => `${run} t=${(g.time - t0).toFixed(2)}s ${rec?.callsign ?? rec?.name ?? who} (id ${c.id}, ${vr}) at (${c.posX.toFixed(1)}, ${c.posZ.toFixed(1)})`;
+    const at = () => `${run} t=${(g.time - t0).toFixed(2)}s ${rec?.callsign ?? rec?.name ?? who} (id ${c.id}, ${vr}) at (${c.pos[0].toFixed(1)}, ${c.pos[2].toFixed(1)})`;
     const inR = holds !== 'nothing' && !holds.startsWith('nothing'), hfR = c.handFrameR(), hfL = c.handFrameL();
     if (inR && dead && held.length) { const hol = hollow(wR, hfR); let d = 0.3; for (const x of held) d = Math.min(d, boxDist(x, hol)); put(C.R, d, DBIN, at); put(V.R, d, DBIN, at); }   // (a body: how far the nearest thing still drawn on it and not worn is from the right hand — 30 = 30 cm or more)
     if (inR && !dead) { const hol = hollow(wR, hfR), d = reach(held, wR, hol); put(C.R, d, DBIN, at); put(V.R, d, DBIN, at);

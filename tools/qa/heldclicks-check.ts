@@ -65,11 +65,11 @@ async function held(seed: number, on: boolean, opts: { drawn?: boolean; civ?: bo
   const step = (n = 1) => { for (let i = 0; i < n; i++) { W.step(DT); pl.visibility = 0.02; } };
   step(5);
   const men = [...g.guards]; let A = men[0];
-  if (opts.civ) { const cv = (g.civilians ?? []).find((x: any) => x.civ && x.state !== 'dead'); if (!cv) return null; A = cv; men.forEach((m: any, i: number) => park(m, i)); place(A, [A.char.posX, 0, A.char.posZ], EAST); }
+  if (opts.civ) { const cv = (g.civilians ?? []).find((x: any) => x.civ && x.state !== 'dead'); if (!cv) return null; A = cv; men.forEach((m: any, i: number) => park(m, i)); place(A, [A.char.pos[0], 0, A.char.pos[2]], EAST); }
   else { men.slice(1).forEach((m: any, i: number) => park(m, i)); place(A, [14, 0, 11.2], EAST); A.wp = 1; }
   const Wn = opts.witness ? men[1] : undefined; if (Wn) place(Wn, [18.5, 0, 11.2], -EAST);   // (parked as the others — rooted, deaf, blind — but stood in the corridor ahead of the pair, looking back down it at them)
   let mate: any; if (opts.squad) { mate = spawnUnit(g, { team: 'operative', pos: [2, 0, 2], yaw: 0, name: 'Probe' }); mate.hold = true; mate.pinned = true; mate.dazzledUntil = 1e9; mate.heardUpTo = 1e12; }
-  g.teleportPlayer([A.char.posX - 0.7, 0, A.char.posZ]); pl.char.bodyYaw = pl.char.aimYaw = EAST; W.cam.yaw = 0; W.cam.rebuild?.(); step(1);
+  g.teleportPlayer([A.char.pos[0] - 0.7, 0, A.char.pos[2]]); pl.char.bodyYaw = pl.char.aimYaw = EAST; W.cam.yaw = 0; W.cam.rebuild?.(); step(1);
   const msgs: string[] = []; const msg0 = g.msg.bind(g); g.msg = (t: string) => { msgs.push(t); return msg0(t); };
   const ocps: number[] = []; const ocp0 = g.ocp.bind(g); g.ocp = (t: any) => { ocps.push(g.time); return ocp0(t); };
   W.audioLog = [];
@@ -77,7 +77,7 @@ async function held(seed: number, on: boolean, opts: { drawn?: boolean; civ?: bo
   for (let i = 0; i < 120 && pl.holding && pl.holding.phase !== 'held'; i++) step(1);
   step(30);   // (well past the reach: the hand is on its tool and no question is in the air)
   if (pl.holding?.phase !== 'held' || pl.holding.g !== A) return null;
-  W.cursorAt([A.char.posX + 6, 1.3, A.char.posZ]);   // (the reticle on open floor ahead of the pair: nothing of anybody's under it)
+  W.cursorAt([A.char.pos[0] + 6, 1.3, A.char.pos[2]]);   // (the reticle on open floor ahead of the pair: nothing of anybody's under it)
   return { W, g, pl, A, msgs, ocps, step, Wn, see: () => { if (Wn) Wn.dazzledUntil = 0; }, mate };
 }
 /** what a run came to, as one line: the hold, the man, Sam, the gun, what was said and heard */

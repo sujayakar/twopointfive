@@ -50,7 +50,7 @@ export function roundClearance(game: any, gd: any): number {
   return Math.hypot(from[0] + dx * t - h[0], from[2] + dz * t - h[2]);
 }
 /** degrees off the pair's rear this man stands (0 = dead astern, 180 = square in front: the held man between) */
-export function rearDeg(game: any, gd: any): number { const P = pairOf(game); if (!P) return NaN; const brg = Math.atan2(gd.char.posX - P.sam[0], gd.char.posZ - P.sam[2]); return Math.abs(wrapAngle(brg - (P.facing + Math.PI))) / DEG; }
+export function rearDeg(game: any, gd: any): number { const P = pairOf(game); if (!P) return NaN; const brg = Math.atan2(gd.char.pos[0] - P.sam[0], gd.char.pos[2] - P.sam[2]); return Math.abs(wrapAngle(brg - (P.facing + Math.PI))) / DEG; }
 
 /** The shared staging: the level up, god mode, Sam dark (0.02 — the standoff never asks the meter), `victimI` planted at `at` facing `yaw` (held on the spot for the
  *  frame before the grab, so he does not turn for his route) and grabbed from 0.8 m behind (startGrab, stepped until the hold proper is on), everybody else parked
@@ -239,7 +239,7 @@ export async function standoffFF() {
     const inStandoff = !!A.standoff; const escBefore = game.escalation; const raisedBefore = game.alarm.raisedAt; const linesBefore = lines.length;
     game.godMode = false; const hitsLeft0 = game.player.hitsLeft;
     const P = pairOf(game)!; const fsBefore = flankShot(game, A, P);
-    A.char.anim.upper = 'aim'; A.char.aimYaw = Math.atan2(P.aim[0] - A.char.posX, P.aim[2] - A.char.posZ); A.char.aimPitch = 0; A.char.update(0); A.char.update(DT);   // gun up and on them (the AI has it at the low ready for exactly this reason)
+    A.char.anim.upper = 'aim'; A.char.aimYaw = Math.atan2(P.aim[0] - A.char.pos[0], P.aim[2] - A.char.pos[2]); A.char.aimPitch = 0; A.char.update(0); A.char.update(DT);   // gun up and on them (the AI has it at the low ready for exactly this reason)
     let exc = ''; const seedSave = Math.random; Math.random = seeded(7);   // (the spread's dice)
     try { fireWeapon(game, A.char, P.aim, false); } catch (e: any) { exc = String(e?.stack ?? e); }
     Math.random = seedSave;

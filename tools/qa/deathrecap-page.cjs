@@ -35,10 +35,10 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       await window.__ready; window.__testVisible = true; const g = window.__game, e = window.__engine; window.__menu.close();
       g.godMode = false; e.render = () => { e.world.upload(); }; window.__cam.rebuild();   // the simulation alone (CLAUDE.md's recipe for a page tool): a drawn frame on the software adapter is seconds, and it stays so for the stills — the card is DOM
       const pl = g.player, gd = (look && g.guards.find(x => x.team === 'hostile' && x.state !== 'dead')) || g.guards[0]; let frames = 0;
-      const stand = () => { const c = gd.char, y = c.aimYaw; g.teleportPlayer([c.posX + Math.sin(y) * 1.5, 0, c.posZ + Math.cos(y) * 1.5]); };
+      const stand = () => { const c = gd.char, y = c.aimYaw; g.teleportPlayer([c.pos[0] + Math.sin(y) * 1.5, 0, c.pos[2] + Math.cos(y) * 1.5]); };
       if (look) {   // two of the squad stood with their backs to two other defenders, so the plan has more than one man on it to lose
         const hs = g.guards.filter(x => x.team === 'hostile' && x.state !== 'dead' && x !== gd), ops = g.guards.filter(x => x.team === 'operative');
-        ops.slice(0, 2).forEach((o, i) => { const h = hs[i]; if (!h) return; const y = h.char.aimYaw, p = [h.char.posX + Math.sin(y) * 2.5, 0, h.char.posZ + Math.cos(y) * 2.5]; o.char.pos = p; o.lastPos = p.slice(); o.char.bodyYaw = y; o.char.aimYaw = y; });
+        ops.slice(0, 2).forEach((o, i) => { const h = hs[i]; if (!h) return; const y = h.char.aimYaw, p = [h.char.pos[0] + Math.sin(y) * 2.5, 0, h.char.pos[2] + Math.cos(y) * 2.5]; o.char.pos = p; o.lastPos = p.slice(); o.char.bodyYaw = y; o.char.aimYaw = y; });
       }
       stand(); pl.visibility = 1;
       while (!pl.down && frames < 60 * 40) { if (frames % 30 === 0 && gd.state === 'patrol') stand(); pl.visibility = 1; await window.__runFrames(1, 1 / 60); frames++; }
@@ -84,7 +84,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       await window.__ready; window.__testVisible = true; const g = window.__game, e = window.__engine; window.__menu.close();
       g.godMode = true; e.render = () => { e.world.upload(); }; window.__cam.rebuild();
       const ops = g.guards.filter(x => x.team === 'operative' && x.unit), hs = g.guards.filter(x => x.team === 'hostile' && x.state !== 'dead'); let frames = 0, A = null;
-      const put = (o, h, d) => { const y = h.char.aimYaw, p = [h.char.posX + Math.sin(y) * d, 0, h.char.posZ + Math.cos(y) * d]; o.char.pos = p; o.lastPos = p.slice(); o.char.bodyYaw = y; o.char.aimYaw = y; o.staggerUntil = g.time + 5; };
+      const put = (o, h, d) => { const y = h.char.aimYaw, p = [h.char.pos[0] + Math.sin(y) * d, 0, h.char.pos[2] + Math.cos(y) * d]; o.char.pos = p; o.lastPos = p.slice(); o.char.bodyYaw = y; o.char.aimYaw = y; o.staggerUntil = g.time + 5; };
       const rowHtml = () => [...document.querySelectorAll('#interact .hint')].map(x => x.outerHTML);
       const before = rowHtml().filter(x => /class="hint lost/.test(x)).length;
       while (frames < 60 * 40 && !(A = ops.find(x => x.state === 'dead'))) {
