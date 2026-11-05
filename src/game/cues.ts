@@ -46,12 +46,13 @@ import { placeName, hashStr } from './dialogue';
 import { fightLive } from './roomfight';
 import { bubbleSecs } from './guards';
 import { pressOwns } from './pressure';
-import { squadOwns, squadMen } from './enemysquads';
+import { squadMen } from './enemysquads';
 import { w, wg } from './words';
 import { isHostile } from './teams';
 import { hearPath } from './weather';
 import { DIGIN } from './digin';   // (call-time only: how far a shout carries)
 import { runnerMute } from './runner';   // (asked inside a tick only: false with its switch off)
+import { hasHim, OWN } from './owner';
 
 export const CUES = {
   /** the switch: off = none of this file runs, the strip and every line as they were */
@@ -306,7 +307,7 @@ export class Cues {
       if (M.ep >= 0) {
         const drawnAgain = !isNaN(M.rallyAt) && !isNaN(D.rallyAt) && D.rallyAt > M.rallyAt + 1;
         if (D.mode !== 'hold' || t - D.noiseT > 6) M.ep = -1;
-        else if (!squadOwns(g, gd) && !pressOwns(g, D) && sight > 3 && t - M.againT > K.againSecs && D.noiseAt && (drawnAgain || isNaN(D.rallyAt) && t - M.ep >= K.staySecs && t - D.noiseT < 1.5)) {
+        else if (!hasHim(gd, OWN.squad) && !pressOwns(g, D) && sight > 3 && t - M.againT > K.againSecs && D.noiseAt && (drawnAgain || isNaN(D.rallyAt) && t - M.ep >= K.staySecs && t - D.noiseT < 1.5)) {
           if (this.cue(gd, drawnAgain ? 'stayOurs' : 'stay', this.at(D.noiseAt))) M.againT = t; M.ep = -1; }
       }
       M.noiseT = D.noiseT; M.rallyAt = D.rallyAt; M.state = gd.state;

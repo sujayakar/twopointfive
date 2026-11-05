@@ -47,13 +47,13 @@ import { dieOf, roll, type Die } from '../math/dice';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
 import { run, boots, pressOwns } from './pressure';
-import { squadDefers, squadStaysIn, squadBusy, squadHolds } from './enemysquads';
 import { CUES } from './cues';
 import { placeIn } from './dialogue';
 import { WORDS, wg } from './words';
 import { digInOrder, digInPhase, digInEntered, digInWedged, digInRelease } from './digin';
 import { NETQUIET, netQuietClosed } from './netquiet';
 import { hasHim, OWN } from './owner';
+import { inSquadRooms } from './enemysquads';
 
 export const LASTSTAND = {
   /** REGROUP AND DIG IN LOUDLY (shipped off): the last defenders gather in one room on a spoken order, wedge it and hold it to the end */
@@ -181,7 +181,7 @@ const fit = (g: Game, D: Def) => fitGd(g, D.gd);
 const calm = (g: Game, D: Def) => fit(g, D) && g.time - D.gd.lastSeenT > LASTSTAND.quiet;
 /** … and free to be sent somewhere: holding a post, and nobody else's man (his squad's word or leg, the press, the rescue's men with the hostages), his hands
  *  not on a door or its furniture this moment (a man SET behind a door he has wedged may leave it for the stand: one room held by all of them, not three by one each) */
-const movable = (g: Game, D: Def) => calm(g, D) && D.mode === 'hold' && D.rallyAt !== Infinity && !squadDefers(g, D.gd) && !squadBusy(g, D.gd) && !pressOwns(g, D) && (digInPhase(g, D.gd) === 'idle' || digInPhase(g, D.gd) === 'set');
+const movable = (g: Game, D: Def) => calm(g, D) && D.mode === 'hold' && D.rallyAt !== Infinity && !hasHim(D.gd, OWN.squadWord) && !hasHim(D.gd, OWN.squadLeg) && !pressOwns(g, D) && (digInPhase(g, D.gd) === 'idle' || digInPhase(g, D.gd) === 'set');
 
 /** where a point is, by the structure's own rooms (dialogue.ts placeName's rule, whatever the cues' switch says) */
 function where(g: Game, p: Vec3): { id: string | null; the: string; at: string } {
@@ -304,7 +304,7 @@ function wayTo(g: Game, D: Def, spot: Vec3, known: Vec3[]): number | null {
 /** may this man walk to that spot: free, a squad that stays in its rooms keeps to them, and there is a way */
 function canCome(g: Game, X: Def, spot: Vec3, known: Vec3[]): number | null {
   if (!movable(g, X)) return null;
-  if (squadStaysIn(g, X.gd) && !squadHolds(g, X.gd, spot)) return null;
+  if (X.gd.staysInRooms && !inSquadRooms(g, X.gd, spot)) return null;
   return wayTo(g, X, spot, known);
 }
 /** a room the stand could be made in, as one of the men holding it stands: his own, a real room of the structure with doors, never entered, the team not known in it */

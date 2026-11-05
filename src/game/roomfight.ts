@@ -57,7 +57,7 @@ import { AIM } from './aim';
 import { BLIND } from './nightbreach';
 import { DIGIN, digInTick, digInStays, digInReset, digInBraced, digInLook } from './digin';
 import { wallReactLook } from './wallreact';
-import { squadsLive, squadOwns, squadStaysIn, squadRally } from './enemysquads';
+import { squadsLive, squadRally } from './enemysquads';
 import { PRESSURE, pressOwns, pressTick, pressStop, run as pressRun, charge as pressCharge } from './pressure';
 import { buddyTick, buddyStop, buddyOwns } from './buddy';
 import { silentHolds, silentGlassHolds } from './silent';
@@ -810,7 +810,7 @@ export class RoomFight {
       return L > 18 || toward || flat(q, spot) > 0.8 ? null : L;
     };
     const here = ask ? ask(c.pos) : 0;
-    (stays || squadStaysIn(g, gd) ? [] : D.room?.entries ?? []).forEach((e, i) => {   // (a squad whose men stay in its rooms gives none up through a door: cover)
+    (stays || gd.staysInRooms ? [] : D.room?.entries ?? []).forEach((e, i) => {   // (a squad whose men stay in its rooms gives none up through a door: cover)
       if (D.ev[i] > 0.3 || flat(e.at, threat) < 3 || e.door.def.steel || g.doors.lockedOut(e.door, c.pos)) return;
       // a spot beyond the door, off its line (to either side of the opening) so the doorway is his to shoot into and not to stand in
       const F = frameOf(e.door); let spot: Vec3 | null = null, safe: Vec3 | null = null;
@@ -906,7 +906,7 @@ export class RoomFight {
   private rally(D: Def) {
     const g = this.g, gd = D.gd, S = FIGHT_SKILL.hostile;
     if (!ROOMFIGHT.rally || !D.noiseAt) return;
-    if (squadOwns(g, gd)) return;  // (enemysquads.ts: a squad's man goes to another squad's fight on his squad's word, not his own)
+    if (hasHim(gd, OWN.squad)) return;  // (enemysquads.ts: a squad's man goes to another squad's fight on his squad's word, not his own)
     if (pressOwns(g, D)) return;   // (pressure.ts, off by default: with it on he forms up outside that room with the others instead of walking over by himself)
     if (DIGIN.on && digInStays(g, gd)) return;             // digin.ts: digging in, he holds his room
     if (laneBars(g, gd, D.noiseAt) || laneKnownAt(g, gd, D.noiseAt)) { if (D.rallyAt !== Infinity) D.rallyAt = NaN; return; }   // (lanes.ts: held short of a lane his side knows is covered — he keeps its mouth; and nobody walks over ALONE to a fight at such a lane's guns)

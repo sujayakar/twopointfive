@@ -55,7 +55,6 @@ import { breakerErrand } from './workthings';
 import { breakerResetNear } from './lighting';
 import { lightEstimateAt } from './guards';
 import { darkFoeCarries } from './darkfoe';
-import { squadDefers, squadStaysIn } from './enemysquads';
 import { digInPhase } from './digin';
 import { lastStandMan } from './laststand';
 import { buddyOwns } from './buddy';
@@ -166,8 +165,8 @@ export function powerOutKept(g: Game, D: Def): string | null {
   if (roused(gd)) return 'in a fight';
   if (g.rescue.crewHides(gd) || g.rescue.captor() === gd || lastStandMan(g, gd)) return 'the captor / lying in wait / last stand';
   if (digInPhase(g, gd) !== 'idle') return 'dug in';
-  if (squadDefers(g, gd)) return 'his squad\'s';
-  if (!POWEROUT.stayers && squadStaysIn(g, gd)) return 'his squad stays in its rooms';
+  if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
+  if (!POWEROUT.stayers && gd.staysInRooms) return 'his squad stays in its rooms';
   if (gunKeepsPost(gd) || hasHim(gd, OWN.lane | OWN.lastMan)) return 'holds a lane / the last man';
   const rally = D.rallyAt, press = pressOwns(g, D); D.rallyAt = rally;   // (pressOwns is roomfight's hook and may stop his rally clock as it answers: asked here it changes nothing)
   if (press || buddyOwns(g, D)) return 'the press\'s';
