@@ -25,8 +25,8 @@
 import { sim, u32 } from './sim';
 
 /** THE PARTS OF A BLOCK, in the order of rust/sim/src/state.rs PARTS (tools/qa/rust-check.ts holds the two lists to each other) */
-export const SIM_PARTS = ['head', 'dice', 'doors', 'falls', 'props', 'slabs', 'items', 'smoke', 'poses'] as const;
-export const P_DICE = 1, P_DOORS = 2, P_FALLS = 3, P_PROPS = 4, P_SLABS = 5, P_ITEMS = 6, P_SMOKE = 7, P_POSES = 8;   // (0 is the head; the pools after the parts of a fixed length, the largest last: a parked block is one run of bytes to its last word in use, `span`)
+export const SIM_PARTS = ['head', 'dice', 'doors', 'falls', 'props', 'slabs', 'items', 'lights', 'smoke', 'poses'] as const;
+export const P_DICE = 1, P_DOORS = 2, P_FALLS = 3, P_PROPS = 4, P_SLABS = 5, P_ITEMS = 6, P_LIGHTS = 7, P_SMOKE = 8, P_POSES = 9;   // (0 is the head; the pools after the parts of a fixed length, the largest last: a parked block is one run of bytes to its last word in use, `span`)
 /** the head's words (state.rs Head): the layout's word, the homes */
 const H_LAYOUT = 0, H_HOMES = 1;
 

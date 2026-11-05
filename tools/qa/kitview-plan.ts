@@ -735,7 +735,7 @@ async function dayLamps(names: string[]) {
       const lit = () => g.targets.filter((t: Data) => t.kind === 'analytic' && t.light?.enabled).length, lit0 = lit(), was = own.map(l => { const t = sw(l.id); return `${l.id}${!t ? ' NO SWITCH' : `${t.light.enabled ? ' lit' : ' dark'}${l.fixture ? (t.boxes.some((bi: number) => fileBoxes[bi]?.id === l.fixture) && glow(t) > 0 ? ', its box glowing' : ' BOX NOT ITS SWITCH\'S') : ''}`}`; });
       const day: string[] | undefined = BREAK ? own.map(l => l.group) : Y.dayLights, boxes: Data = Y.set !== undefined ? KB.sets[Y.set].boxes : fileBoxes, out = kitPlanDayOut(kitPlanOwnLamps(KB, Y), boxes, day, P.indoors, true), night = kitPlanDayOut(kitPlanOwnLamps(KB, Y), boxes, day, P.indoors, false);
       const want = P.indoors ? [] : own.filter(l => l.group !== 'exterior' && !kitPlanCovered(boxes, l.pos[0], l.pos[2], l.pos[1]) && !(Y.dayLights ?? []).some((nm: string) => nm === l.id || nm === l.group)), keep = own.filter(l => !want.includes(l));
-      for (const t of g.targets) if (t.kind === 'analytic' && out.includes(t.name)) t.on = false;   // (the child's own line, host/kitView.ts place())
+      for (const t of g.targets) if (t.kind === 'analytic' && out.includes(t.name)) g.lightHome.stage(t, false, null);   // (the child's own line, host/kitView.ts place())
       for (let i = 0; i < 5; i++) H.step(1 / 60);
       const now = (l: Data) => { const t = sw(l.id); return !t ? 'NO SWITCH' : `${t.light.enabled ? 'lit' : 'out'}${l.fixture ? (glow(t) > 0 ? ', box glowing' : ', box dark') : ''}`; };
       const ok = bad.length === 0 && night.length === 0 && own.every(l => !!sw(l.id) && (!l.fixture || /its box glowing/.test(was[own.indexOf(l)]))) && want.every(l => now(l) === (l.fixture ? 'out, box dark' : 'out')) && keep.every(l => now(l).startsWith(l.enabled ? 'lit' : 'out')) && lit() === lit0 - want.filter(l => l.enabled).length;
@@ -1038,7 +1038,7 @@ async function quietPicture(names: string[]) {
       const light = g.engine.lights.add({ name: 'kitview_porch', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, kind: lamp.kind, pos, dir: [(aim[0] - pos[0]) / dl, (aim[1] - pos[1]) / dl, (aim[2] - pos[2]) / dl], color: [...lamp.color], intensity: lamp.intensity, peakIntensity: lamp.intensity, range: lamp.range, innerDeg: lamp.innerDeg, outerDeg: lamp.outerDeg, radius: lamp.radius, volumetric: lamp.volumetric, broad: lamp.broad, enabled: true });
       const glow: [number, number, number] = [lamp.color[0] * T.glow, lamp.color[1] * T.glow, lamp.color[2] * T.glow];
       const box = F ? makeBox({ c: W(F.at), h: [T.half[0], T.half[1], T.half[2]], yaw: Math.atan2(P.s[1], P.s[0]), albedo: [0.04, 0.04, 0.04], emissive: glow, flags: BoxFlag.Emissive | BoxFlag.AreaLit }) : null; if (box) g.engine.world.addStatic(box);
-      const t = KV.kitViewPoolTarget(light, box ? g.engine.world.statics.indexOf(box) : -1, glow, lamp.intensity); g.targets.push(t);
+      const t = g.lightHome.add(KV.kitViewPoolTarget(light, box ? g.engine.world.statics.indexOf(box) : -1, glow, lamp.intensity)); g.targets.push(t);
       const S0 = at.sam ?? P.slots[0], roused = { men: 0, alarms: 0 }; let first = true;
       const park = () => { const r = KV.kitViewPark(g); if (!first) { roused.men += r.men; roused.alarms += r.alarms; } first = false; };
       const steps = (n: number) => { for (let i = 0; i < n; i++) { park(); H.step(1 / 60); park(); } };

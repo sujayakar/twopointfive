@@ -32,6 +32,7 @@ import { findOctagons } from './round';
 import { BOX_STUFFS, boxStuffOk } from './stuff';
 import { DOOR_CAP } from '../sim/doorshome';
 import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
+import { LIGHT_CAPS } from '../sim/lightshome';
 export type { MarkingDef } from './markings';
 
 export const LEVEL_DATA_VERSION = 1 as const;
@@ -541,6 +542,8 @@ export function validateLevelData(d: LevelData): string[] {
   // breaker / beacons / sky
   if (!isObj(d.breaker) || !isVec(d.breaker.pos)) err('breaker', 'pos Vec3'); else { known('breaker', d.breaker, KEYS.breaker); boxOk('breaker.panel', d.breaker.panel); boxOk('breaker.led', d.breaker.led); if (d.breaker.fumble !== undefined && !(isNum(d.breaker.fumble) && d.breaker.fumble > 0 && d.breaker.fumble <= 7)) err('breaker.fumble', 'seconds, over 0 and 7 at most (a room fight\'s lever party gives the panel up at 8)'); }
   const bcs = recs('beacons', d.beacons); uniq('beacons', bcs.map(b => (b as any)?.id));
+  if (bcs.length > LIGHT_CAPS.beacons) err('beacons', `at most ${LIGHT_CAPS.beacons} (${bcs.length})`);
+  { const n = (k: string) => devs.filter(v => (v as any)?.kind === k).length; if (n('camera') > LIGHT_CAPS.cameras) err('devices', `at most ${LIGHT_CAPS.cameras} cameras (${n('camera')})`); if (n('laser') > LIGHT_CAPS.lasers) err('devices', `at most ${LIGHT_CAPS.lasers} tripwires (${n('laser')})`); if (lights.length + sws.length + n('camera') + n('laser') + 1 > LIGHT_CAPS.targets) err('switchables', `at most ${LIGHT_CAPS.targets} light fixtures, lights and switchables and cameras and tripwires and the breaker together`); }
   bcs.forEach((b, i) => { if (!isObj(b)) return; const w = `beacons[${i}]`; known(w, b, KEYS.beacon); if (!isVec(b.pos)) err(w, 'pos Vec3'); boxOk(`${w}.box`, b.box); if (isStr(b.box) && boxIds.has(b.box) && !swBox.has(b.box)) err(w, `box '${show(b.box)}' is not owned by any switchable (game.ts slaves the beacon's beam to that target)`); });
   const skyOk = (w: string, s: SkyData | undefined) => { if (!isObj(s) || !isVec(s!.zenith) || !isVec(s!.horizon)) err(w, 'zenith / horizon Vec3'); else known(w, s, KEYS.sky); };
   skyOk('sky', d.sky);
