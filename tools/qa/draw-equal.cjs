@@ -284,7 +284,7 @@ async function captureView(name, opt, outDir) {
     page.on('requestfailed', r => R.errors.push(`request failed: ${r.url()} — ${r.failure() ? r.failure().errorText : '?'}`));
     page.on('response', r => { if (r.status() >= 400) { const u = r.url(); if (/favicon/.test(u)) R.notes.push(`${r.status()} ${u}`); else R.errors.push(`http ${r.status()}: ${u}`); } });
     page.on('pageerror', x => R.errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 800)));
-    R.url = `http://localhost:${opt.port}/?paused&quality=${opt.quality}&mute${V.query ? '&' + V.query : ''}${opt.with ? '&' + opt.with : ''}`;
+    R.url = `http://localhost:${opt.port}/?paused&quality=${opt.quality}&mute&planpace=old${V.query ? '&' + V.query : ''}${opt.with ? '&' + opt.with : ''}`;   // (planpace=old: the picture's planners whole on their frame, as they were. Under the page's pace a plan lands when the clock lets it, and a pinned frame must not ask the clock: render/planPace.ts)
     log(name, 'goto', R.url);
     await page.goto(R.url);
     const ready = await page.evaluate(async () => { await window.__ready; return { fatal: (document.getElementById('fatal') || {}).textContent || '', pipelines: window.__boot ? window.__boot.pipelines : null }; });

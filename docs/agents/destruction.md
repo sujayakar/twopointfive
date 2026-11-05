@@ -1072,7 +1072,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The player's grenade and 40 mm checks run on the loud card** (`frag-player`, `he40-*`, `burst-breaks`; no game code). A night alone on the page
   wears your STEALTH card (`kit.ts KITDEAL.stealth`), which issues no frag and no HE round, so on the shipped stand these stood a Sam with nothing
   to throw or fire and were red from the step that brought that card. They ask the grenade and the round, which only the loud card issues: they
-  are on the probe runner's hold for checks written against one card (`probes.ts STEALTH_AS_IT_WAS`; `TPS_KITSTEALTH` set by hand wins). What a
+  are on the probe runner's hold for checks written against one card (`tools/qa/holds.ts STEALTH_AS_IT_WAS`; `TPS_KITSTEALTH` set by hand wins). What a
   stealth run is issued is `kitstealth-check.ts`'s. `he40-keys` (d) also said 'teammates have no such row': a teammate's card has the row where
   his one round can be fired on your order (the card as a tree and `squad40.ts`; `kittree-check.ts` holds it), and the line now asks exactly that.
 - **A burst kills a man who is down and breathing** (`frag.ts FRAG.downKill`, 10-22; from play: two men put out with sponge rounds, a 40 mm burst

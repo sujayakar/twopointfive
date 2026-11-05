@@ -21,6 +21,7 @@
 // runs on import, so they are repeated here): Sam's blows through player.ts startTakedown, the hold through startGrab and the held rows, the partner's through
 // the pair's 'take him now' order. Nothing here looks at a picture.
 import { standUp, ROOT } from './headless.ts';
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 const { TAKEDOWN, TAKEDOWN_STATS } = await import(`${ROOT}/src/game/takedown.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
@@ -600,11 +601,11 @@ export async function takedownHarness(): Promise<boolean> {
   return F.done();
 }
 
-const SUBS: Record<string, () => Promise<boolean>> = { harness: takedownHarness, rules: takedownRules, off: takedownOff, moves: takedownMoves, partner: takedownPartner, breathe: takedownBreathe, lower: takedownLower, kill: takedownKill, beats: takedownBeats };
+/** the file's probes, by the names the runner calls them */
+const SUBS: Record<string, () => Promise<boolean>> = { 'takedown-harness': takedownHarness, 'takedown-rules': takedownRules, 'takedown-off': takedownOff, 'takedown-moves': takedownMoves, 'takedown-partner': takedownPartner, 'takedown-breathe': takedownBreathe, 'takedown-lower': takedownLower, 'takedown-kill': takedownKill, 'takedown-beats': takedownBeats };
 if (import.meta.main) {
-  const want = process.argv.slice(2).filter(a => !a.startsWith('-')), unknown = want.filter(w => !SUBS[w]);
-  if (unknown.length) { console.log(`unknown: ${unknown.join(' ')} (one or more of: ${Object.keys(SUBS).join(' ')})`); process.exit(2); }
   if (BREAK) console.log("TAKEDOWN_BREAK=1: the switch is left OFF in the 'on' arm — the moves / partner / breathe / lower / kill / beats lines must fail");
-  let ok = true; for (const k of want.length ? want : Object.keys(SUBS)) ok = await SUBS[k]() && ok;
-  console.log(ok ? '\n=== takedown: ALL PASS ===' : '\n=== takedown: FAILED ==='); process.exit(ok ? 0 : 1);
+  const ok = await asProbes(SUBS, wanted());   // (a name the file has not: said, nothing run, exit 2)
+  if (ok !== null) console.log(ok ? '\n=== takedown: ALL PASS ===' : '\n=== takedown: FAILED ===');
+  process.exit(exitCode(ok));
 }
