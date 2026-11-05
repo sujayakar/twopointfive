@@ -2565,6 +2565,50 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
   sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
   GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
+- **A LEVEL SAYS HOW KEPT IT IS, ONE WORD** (11-05; the look's page; level data, absent = 0 = every level as it was drawn, so no picture moves
+  until a level says it. `scene/levelData.ts meta.kept`, `scene/level.ts Level.kept`, `scene/look.ts lookKeptOf`, `main.ts hostLevel`,
+  `render/frame.ts lookConfig.kept`, `render/gbuffer.ts setLook` (the look's uniform, c's first number), `shaders/look.wgsl lookKept`,
+  `lookSurface`'s `left` / `wild`, `lookMarkSoft`, `shaders/markings.wgsl markSoft`, `markTone`; the address's `&kept=<0 to 1>` is the word
+  for a visit). Asked by the level pass: an office's half-metre wall numerals drew "blotched and broken, like chipped paint or dirt",
+  because whether a surface looked looked-after was said STUFF BY STUFF (a stuff with no `fades` is "a place somebody keeps") and every
+  painted mark was old paint by one number for the whole game. A place that should read as cleaned last night had to say every wall again
+  as a kept cousin of its stuff, and its signs still drew rubbed. THE RULE: a level says ONE number, from 0 (left to the weather and the
+  years) to 1 (cleaned and painted last night). `lookSurface` reads it once (`left` = 1 − kept), and HOW WILD A SURFACE IS becomes its
+  stuff's word × the place's (`wild` = the stuff's `fades` > 0 × `left`), where it was the stuff's word alone. Three things follow.
+  (1) THE WEATHER'S AMOUNT on a weathered stuff is the panel's Weather row × `left`: the slow blotches and the drift of hue of a stuff that
+  `fades`, the damp foot, the tide mark, the bleached head and the dark runs of one that `soaks`, the rubbish that gathers at a wall's foot
+  where nobody treads. A mud wall's render that has let go (the masonry rule's patches of bare brick) shrinks with it and is gone at 1; the
+  stone plinth is how the wall was built and stays. (2) WHAT THE WEATHER GIVES UP THE KEPT RULES TAKE, by the same share, so a weathered
+  stuff in a kept place is drawn as a kept one and never as neither: the detail layer's dust band at a wall's foot and its shoe marks on a
+  skirting come in by 1 − `wild`, and so does the No repeat row's drift of three in a hundred. (First built with the weather's amount
+  scaled and the choice of rules left on the stuff alone: at 1 a mud wall had no damp foot AND no skirting marks, the review's find.)
+  (3) A MARK'S PAINT: the years' share of its wear and the colour gone a shade into its wall are × `left`; the brushed shape and the
+  painter's hand stay, so a kept place's sign is whole and its own colour and still paint, not square cells. WHAT DOES NOT ASK IT: use. A
+  trodden lane on bare ground, a floor's lane where feet go, a knocked skirting (`worn`), and paint trodden off a floor (a mark's wear is
+  the greater of the years' share and how much its floor is walked) are what people do in a place they keep. WHAT IT CANNOT DO: change a
+  stuff's own picture. The rust and streaks of `metal` are drawn into that stuff's map (the Paint row), so racks that "draw speckled like
+  rust" in a kept office are cured by saying them as `steel`, `enamel` or `brushed`, not by this word. A stuff's own `fades` and `soaks`
+  now say what it does where nobody keeps it, and the kept cousins (stucco and skim of plaster, cast panel and gloss block of block, paver
+  of slab) are no longer the only way to a clean wall; folding each pair into one stuff is not done. WHO SAYS IT: a generator, `export
+  const KEPT = 0.8`; the exporter writes the file's `meta.kept`, and gives a look's second file (`<name>-gwot.ts`, what the look's page
+  loads) the word of the level it dresses unless it says its own; the office says it as `level.kept` in its builder (`levelToData` writes
+  the file's meta from the Level, a marks' texel the same way now). Every way a level enters the page goes through `main.ts hostLevel`,
+  so the bundled office that stands in for an editor level that cannot stand takes its own word too. The page logs the word in force when
+  a level or the address says one. ONE WORD A LEVEL: a room's own (a kept office over a derelict cellar) would ride the place field and is
+  not built. Picture only: nothing in the game reads it, and a level's fingerprint (`game/savestate.ts levelFingerprint`: names, counts
+  and the boxes' geometry) does not take it in, so saying the word refuses no checkpoint or recording. With no word the frame is the frame
+  as it was: every new term is × 1 or + 0 at kept 0, written so that holds to the bit. SEEN ON A CLOUD NVIDIA CARD, BEFORE THE REVIEW'S
+  MENDS (the weather's amount and a mark's wear only), the same build with `&kept=0` and `&kept=1`: on the white roof's block wall the
+  red FIRE stencil and its bar, pink and rubbed through at 0, are whole and red at 1, and the chalk 1 on its orange plate is whole, both
+  still brushed; the knocked foot of the orange plinth under them is there in both; the roof's deck, all kept stuffs, does not move (mean
+  difference 0.07 of 255). On the compound at midday the mud walls lose their blotches and their damp foot and the band of stones along
+  the wall is gone, the trodden paths stay (mean difference 2.7 of 255). No error or warning on six boots. NOT SEEN: Metal; a level that
+  says the word in its file (the office is the first to); a number between 0 and 1. Check: `bun run tools/qa/probes.ts kept` (family
+  `render`; five lines: the word there and back through the file, the page's rule, the rule by its text in the shaders, their uniform's
+  writer, the page and the exporter, a second writing of the places it acts, a look's second file's word; `KEPT_BREAK=1` fails), on both
+  stands; the render family's gate, `shaderrows-check`, `shaderinline-check` (both settings), `look-check`, `stuff-check`,
+  `lookmaps-check`, `ways`, `materials`, `level`, `frame-layout`, all 213 shader texts compile, `tsc` both, every level file's export
+  unchanged.
 - **WHAT DAYLIGHT THROUGH OPENINGS STILL COSTS, SPLIT ON ONE CARD** (11-05; a measurement, no code: read it before trying to cut the openings'
   cost again). After the reach rule and the three pieces (the two bullets below), one cloud NVIDIA box a level, High, 1368 by 770, the render
   size held (`adapt=0`), the clock stopped, every word flipped in the running page (two boxes of one commit differ by 1 to 2 ms, so only a flip
@@ -3513,7 +3557,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   text has no stuff's constant and no class test but against plain, and that for each of the 28 stuffs of that day the row says exactly
   what the named rules said, six words each, the old rules written out in the check (`was`: a row changed on purpose changes it there);
   `wgsl-compile`, all 68 texts. Never seen on a GPU by a person.
-- **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
+- **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()`, whose first number is `lookCfg.g.x` (its second, since 11-05, is how far the place's paint is old: A LEVEL SAYS HOW KEPT IT IS), 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
   (noise by box and marking, so two signs do not share an edge), the shares sharpened so two colours meet in a line and not a blur, and thin rubbed

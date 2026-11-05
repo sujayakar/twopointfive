@@ -274,7 +274,9 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
   const data: LevelData = {
     version: LEVEL_DATA_VERSION,
     name: opts.name,
-    meta: { ...clone(opts.meta ?? {}), ...(level.kept !== undefined ? { kept: level.kept } : {}) },   // (kept: the Level's own word, written iff it has one)
+    // (what the loader hands back ON THE LEVEL from the file's meta is written from the Level, iff it has it: its marks' texel and how kept it is. A caller
+    //  says neither in opts.meta: it sets the Level, so a round trip holds with no line of the caller's)
+    meta: { ...clone(opts.meta ?? {}), ...(level.markTexel !== undefined ? { markTexel: level.markTexel } : {}), ...(level.kept !== undefined ? { kept: level.kept } : {}) },
     floors,
     materials,
     ...(opts.surfaces ? { surfaces: clone(opts.surfaces) } : {}),
