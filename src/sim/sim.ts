@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 22;
+export const SIM_ABI = 23;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -82,6 +82,9 @@ export interface SimExports {
   nav_addr(table: number): number; nav_cap(table: number): number;
   /** collision.ts NavGrid.findPath with no penalty: the waypoints written (x z each) · −1 no way · −2 ask the TypeScript */
   nav_path(w: number, set: number, ask: number, gw: number, gh: number, cell: number, a0: number, a2: number, b0: number, b2: number, maxIter: number): number;
+  /** …with a penalty: as nav_path, or −3 = `nav_need()` cells (nav_addr(2)) want a price (nav_addr(3)) before `nav_resume()`; `nav_drop()` lets a waiting search go */
+  nav_priced(w: number, set: number, ask: number, gw: number, gh: number, cell: number, a0: number, a2: number, b0: number, b2: number, maxIter: number): number;
+  nav_need(): number; nav_resume(): number; nav_drop(): void;
   /** collision.ts SoundPaths.propagate up to its memory of routed answers; the straight distance → scratch 0 */
   hear_direct(w: number, set: number, ask: number, s0: number, s1: number, s2: number, d0: number, d1: number, d2: number): number;
   /** …and the way round: the path's length and the point it comes through → scratch 0‥3 */
@@ -130,7 +133,7 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
   'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'world_things', 'world_glass', 'world_view', 'glass_open', 'lines_blocked', 'lines_leaves', 'lines_ray', 'lines_ray_things', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
   'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'pose_sample', 'clip_begin', 'clip_track', 'clip_end', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life', 'layer_mv_pre', 'layer_stance_body', 'layer_stand_pose', 'layer_crouch_pose', 'layer_soft_knees', 'layer_run_arms', 'layer_run_plant', 'layer_sneak_body', 'layer_steady', 'layer_creep_body', 'layer_kick_body', 'layer_toes_up', 'layer_wall_body', 'layer_watch_slip', 'layer_watch_look', 'layer_mv_post_body', 'layer_turn_weigh', 'layer_lean_body', 'layer_gaze_keep', 'layer_sneak_arms', 'layer_carry_arms', 'layer_wall_arms', 'layer_act_pose', 'layer_wound_body', 'layer_wound_limbs', 'layer_long_arms', 'layer_mv_post_arms', 'layer_watch_arm', 'layer_creep_arms', 'layer_clutch_arm', 'layer_bound_arms', 'layer_reload_arm', 'layer_pistol_reload_arm', 'layer_hands_pass', 'layer_throw_layer', 'layer_big_layer', 'layer_hold_layer', 'layer_held_layer', 'layer_catch_arm', 'layer_door_layer', 'layer_work_layer', 'layer_ready_layer', 'layer_kit_layer', 'layer_taken_layer', 'layer_blow_legs', 'layer_blow_trunk', 'layer_blow_arms', 'layer_knife_pose', 'layer_cable_pose', 'layer_stealth_layer', 'layer_swap_pose', 'layer_lockpick_layer', 'layer_haul_layer', 'layer_torch_up', 'layer_radio_pose', 'layer_smoke_pose', 'layer_nv_pose', 'layer_signal_layer', 'layer_tell_layer',
-  'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
+  'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'nav_priced', 'nav_need', 'nav_resume', 'nav_drop', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
   'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_wind', 'grid_wind_cap', 'grid_trans',
   'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'slabs_addr', 'slabs_cap', 'slabs_step', 'items_addr', 'items_cap', 'items_update',
@@ -244,7 +247,7 @@ let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn 
  *          lamps that may be asked. ?rustlight / TPS_RUSTLIGHT=1.
  *  smoke   the game's own smoke along a line (game/sense.ts CpuSmoke.trans, what SENSE.cpu sees through) as one question a line. ?rustsmoke / TPS_RUSTSMOKE=1.
  *  sound   how a sound reaches a listener (scene/collision.ts SoundPaths.propagate: straight, over the top, or round by the floor). ?rustsound / TPS_RUSTSOUND=1.
- *  paths   a way across the floor (collision.ts NavGrid.findPath with no penalty: the A* and its smoothing). ?rustpaths / TPS_RUSTPATHS=1.
+ *  paths   a way across the floor (collision.ts NavGrid.findPath: the A* and its smoothing; with a penalty the search waits for the caller's prices, nav.rs find_priced). ?rustpaths / TPS_RUSTPATHS=1.
  *
  *  THE THINGS of a level, a row a family (each keeps its state in the game's block while its row is on, and WRITES the box world's rows there: the Box
  *  objects the picture draws follow, scene/boxMirror.ts `follow`):
@@ -323,8 +326,11 @@ export function fell(row: string, why: string): void {
  *  functions, the animator's layers). A count on one of them is a way back in that somebody opened, so the tool that counted says so and ends red (headless.ts; the page's
  *  check reads `fellSealed`). A family adds its row here in the step that closes its last fallback, and its TypeScript can go in the step after.
  *  `rays` joined when a pane's open question moved to the module (rust/sim/src/glass.rs): until then a ray whose nearest thing was a pane the host
- *  said was open there flew on in the TypeScript walk, some five hundred a mission with glass in it. */
-export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'walk'];
+ *  said was open there flew on in the TypeScript walk, some five hundred a mission with glass in it.
+ *  THE SENSES', all five: `sight`, `light` and `smoke` (every caller's sight line passes glass, and a level's lamps and the game's blobs are fewer
+ *  than a question carries), and `sound` and `paths`, whose lines came to a pane and handed the question back, for the ray's reason, until the
+ *  panes were in the module's copy (`collision.ts paneAsk`). Nothing of the five is counted over the missions on either stand. */
+export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'walk', 'sight', 'light', 'smoke', 'sound', 'paths'];
 /** the sealed rows the count has met */
 export const fellSealed = (): string[] => SEALED.filter(r => Object.keys(FELL.n).some(k => k.startsWith(r + ' · ')));
 /** the count's switches from a word (`1`, `throw`, `who`, `who6`): the harness's TPS_FELL, the page's ?fell */

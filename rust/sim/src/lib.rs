@@ -51,7 +51,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 22;
+pub const ABI: u32 = 23;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -806,12 +806,15 @@ pub extern "C" fn smoke_cap() -> usize {
 pub extern "C" fn smoke_trans(w: usize, set: i32, n: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> u32 {
     smoke::trans(w, set, n, [a0, a1, a2], [b0, b1, b2], sigma, spread, widest, rise, rise_rate, &mut scratch()[0])
 }
-/// the nav grid's tables: 0 the shut cells (a byte a cell, written by the host before it asks) · 1 a way's waypoints (x z a point)
+/// the nav grid's tables: 0 the shut cells (a byte a cell, written by the host before it asks) · 1 a way's waypoints (x z a point) · 2 the cells a
+/// priced search asks the price of · 3 the prices (a double a cell)
 #[no_mangle]
 pub extern "C" fn nav_addr(table: u32) -> usize {
     match table {
         0 => nav::shut_addr(),
         1 => nav::way_addr(),
+        2 => nav::need_addr(),
+        3 => nav::price_addr(),
         _ => 0,
     }
 }
@@ -827,6 +830,25 @@ pub extern "C" fn nav_cap(table: u32) -> usize {
 #[no_mangle]
 pub extern "C" fn nav_path(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32) -> i32 {
     nav::find_path(w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter)
+}
+/// collision.ts NavGrid.findPath WITH a penalty: as `nav_path`, or −3 = the search has come to cells it has no price for: `nav_need` of them (a
+/// cell's index each, 32 bits) at `nav_addr(2)`. The host writes each one's price at `nav_addr(3)` (a double a cell, by index) and calls
+/// `nav_resume`, which answers as this does. While a search waits, every other search here answers −2; `nav_drop` lets a waiting one go.
+#[no_mangle]
+pub extern "C" fn nav_priced(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32) -> i32 {
+    nav::find_priced(w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter)
+}
+#[no_mangle]
+pub extern "C" fn nav_need() -> usize {
+    nav::need_len()
+}
+#[no_mangle]
+pub extern "C" fn nav_resume() -> i32 {
+    nav::resume()
+}
+#[no_mangle]
+pub extern "C" fn nav_drop() {
+    nav::drop_run()
 }
 /// collision.ts SoundPaths.propagate, up to its memory of routed answers: hear::DIRECT (+ the grazes) / OVER / FAR / WALLED · 0xffffffff = ask the
 /// TypeScript. The straight distance → scratch 0.

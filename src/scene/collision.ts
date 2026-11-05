@@ -3,7 +3,7 @@ import { Vec3, v3, quat, hyp2, hyp3 } from '../math/vec';
 import { Box, BoxFlag, rayBox, cutMet } from './boxes';
 import { cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
 import { WORLD } from './world';
-import { BoxMirror, MIRRORED, SENSES, FACE, senseRows, type Furniture, type PaneSource } from './boxMirror';
+import { BoxMirror, MIRRORED, SENSES, FACE, NAV, senseRows, type Furniture, type PaneSource } from './boxMirror';
 import { RUST, FELL, fell, f64, u32, u8, simWhyNot } from '../sim/sim';
 import type { SimState } from '../sim/state';
 import { EXACT } from '../math/exact';
@@ -100,6 +100,10 @@ export const ANYTIME = { on: true, proofs: 0, who: null as Record<string, number
 export const SENSED = { sight: 0, light: 0, smoke: 0, sound: 0, paths: 0 };
 /** …and of the rays the module answered (RUST.rays: raycast) */
 export const RAYS = { n: 0, host: 0 };
+/** …and of the searches with a penalty the module answered (RUST.paths: NavGrid.findPath; rust/sim/src/nav.rs find_priced): how many, how many times one
+ *  came back for prices, and how many cells were priced for them. `waits` = one is waiting for prices NOW: the module has one set of tables, so a search
+ *  asked from inside a price is an error, not a question */
+export const PRICED = { n: 0, needs: 0, cells: 0, waits: false };
 /** eyes one question of a sight pass can name (four bits each, and the count above them: rust/sim/src/fog.rs) */
 const SIGHT_EYES = 7;
 const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes the module listed for the question in hand)
@@ -509,19 +513,25 @@ export class StaticCollision {
   /** RUST.sight — game/guards.ts eyeContact as one question: the eye `E` on a man's `chest` and `head`. `unseen` = nothing is seen whatever the lines say (he
    *  is hidden, down or dead; the eye is out), `smoked` = the smoke between them hides him. null = the caller's own statements. */
   eyeContact(E: { pos: Vec3; look: Vec3; range: number; halfDeg: number; nearM: number; nearDeg: number; vHalfDeg?: number }, chest: Vec3, head: Vec3, unseen: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } | null {
-    if (((through | 0) & ~MIRRORED) !== 0 || !(through & BoxFlag.Glass)) return null;   // (a line that stops at glass may have to ask the pane: the caller's)
-    const set = this.senseSet(SENSES.sight); if (set === -2) return null;
+    if (((through | 0) & ~MIRRORED) !== 0 || !(through & BoxFlag.Glass)) { if (FELL.on && RUST.sight) fell('sight', (through & BoxFlag.Glass) ? 'a flag the copy does not keep' : 'a line that stops at glass may have to ask the pane'); return null; }   // (the caller's)
+    if (!this.mirror.live && RUST.sight && this.lone()) { try { return this.eyeContactAsk(E, chest, head, unseen, smoked, through); } finally { this.mirror.shut(); } }   // (an eye asked between ticks: a tool's, a soak's watcher)
+    return this.eyeContactAsk(E, chest, head, unseen, smoked, through);
+  }
+  private eyeContactAsk(E: { pos: Vec3; look: Vec3; range: number; halfDeg: number; nearM: number; nearDeg: number; vHalfDeg?: number }, chest: Vec3, head: Vec3, unseen: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } | null {
+    const set = this.senseSet(SENSES.sight); if (set === -2) return null;   // (senseSet has counted it)
     const M = this.mirror, e = E.pos, l = E.look, v = E.vHalfDeg;
     const r = M.x.sight_contact(M.slot, set, through, (v !== undefined ? FACE.Q_LENS : 0) | (unseen ? FACE.Q_UNSEEN : 0) | (smoked ? FACE.Q_SMOKED : 0), e[0], e[1], e[2], l[0], l[1], l[2], E.range, E.halfDeg, E.nearM, E.nearDeg, v === undefined ? 0 : v,
       chest[0], chest[1], chest[2], head[0], head[1], head[2]);
-    if (r === -1) return null;
+    if (r === -1) { if (FELL.on) fell('sight', 'the module handed the eye back (a line too long to be one)'); return null; }
     SENSED.sight++; return { visible: (r & FACE.A_VISIBLE) !== 0, dist: f64()[M.scratch], inCone: (r & FACE.A_IN_CONE) !== 0 };
   }
   /** RUST.light — guards.ts lightEstimateAt's lamps: `begin` (→ may they go to the module), then a `lamp` each that passed the caller's own gates, then
    *  `lampsOn` the point, which leaves the six faces in `acc` (false = the caller's own loop, from the start). */
   lampsBegin(): boolean { const M = this.mirror; M.lampSet = this.senseSet(SENSES.light); M.lampN = 0; return M.lampSet !== -2; }
+  /** the light estimate's lamps did not fit a question (`lamp` said false) and its caller's own loop runs: counted here, for that caller alone */
+  lampsFell(): void { if (FELL.on) fell('light', 'more lamps in reach of a point than a question carries'); }
   lamp(pos: Vec3, range: number, radius: number, kind: number, dir: Vec3, outerDeg: number, innerDeg: number, color: Vec3, intensity: number): boolean {
-    const M = this.mirror; if (M.lampN >= M.lampCap) return false;
+    const M = this.mirror; if (M.lampN >= M.lampCap) return false;   // (the estimate's caller counts it, lampsFell: the grid's sweep writes lamps here too and has no TypeScript to fall to)
     const m = f64(), o = M.lamps + M.lampN++ * FACE.LAMP;
     m[o] = pos[0]; m[o + 1] = pos[1]; m[o + 2] = pos[2]; m[o + 3] = range; m[o + 4] = radius; m[o + 5] = kind; m[o + 6] = dir[0]; m[o + 7] = dir[1]; m[o + 8] = dir[2]; m[o + 9] = outerDeg; m[o + 10] = innerDeg;
     m[o + 11] = color[0]; m[o + 12] = color[1]; m[o + 13] = color[2]; m[o + 14] = intensity;
@@ -531,16 +541,17 @@ export class StaticCollision {
    *  whose state is in this block (sense.ts SmokeGrid.sim) */
   lampsOn(P: Vec3, acc: number[], shade?: SimState | null, sigma = 0): boolean {
     const M = this.mirror; let g = 0, stamp = 0; if (shade) { g = shade.bind(); stamp = shade.stamp; }
-    if (M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], shade ? sigma : 0, g, stamp) === -1) return false;
+    if (M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], shade ? sigma : 0, g, stamp) === -1) { if (FELL.on) fell('light', shade ? 'the module handed the lamps back (a line too long to be one, or the grid\'s smoke cannot answer)' : 'the module handed the lamps back (a line too long to be one)'); return false; }
     const m = f64(), at = M.scratch; for (let k = 0; k < 6; k++) acc[k] = m[at + k];
     SENSED.light++; return true;
   }
   /** RUST.smoke — game/sense.ts CpuSmoke.trans: `begin` (→ may it go to the module, with this many blobs), a `blob` each, then the transmittance along
    *  a → b under the model's numbers (−1 = the caller's own loop). */
-  blobsBegin(n: number): boolean { const M = this.mirror; M.blobSet = this.senseSet(SENSES.smoke); M.blobN = 0; return M.blobSet !== -2 && n <= M.blobCap; }
+  blobsBegin(n: number): boolean { const M = this.mirror; M.blobSet = this.senseSet(SENSES.smoke); M.blobN = 0; if (M.blobSet === -2) return false;   // (senseSet has counted it)
+    if (n > M.blobCap) { if (FELL.on) fell('smoke', 'more blobs than a question carries'); return false; } return true; }
   blob(x: number, y0: number, z: number, r2: number, age: number, mass: number): void { const M = this.mirror, m = f64(), o = M.blobs + M.blobN++ * FACE.BLOB; m[o] = x; m[o + 1] = y0; m[o + 2] = z; m[o + 3] = r2; m[o + 4] = age; m[o + 5] = mass; }
   blobsAlong(a: Vec3, b: Vec3, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number {
-    const M = this.mirror; if (M.x.smoke_trans(M.slot, M.blobSet, M.blobN, a[0], a[1], a[2], b[0], b[1], b[2], sigma, spread, widest, rise, riseRate) === -1) return -1;
+    const M = this.mirror; if (M.x.smoke_trans(M.slot, M.blobSet, M.blobN, a[0], a[1], a[2], b[0], b[1], b[2], sigma, spread, widest, rise, riseRate) === -1) { if (FELL.on) fell('smoke', 'the module handed the line back (a line too long to be one)'); return -1; }
     SENSED.smoke++; return f64()[M.scratch];
   }
   // ---- THE GAME'S OWN SMOKE ON THE COARSE GRID (game/sense.ts SENSE.grid, SmokeGrid; rust/sim/src/bricks.rs). No row of RUST: the grid has no TypeScript
@@ -788,7 +799,9 @@ export class SoundPaths {
   /** the level changed under the cached routes (a wall holed, cover gone — game/wallbreak.ts): every answer is asked afresh */
   invalidate() { this.cache.clear(); }
   /** `keep` false = the answer is not kept for the next asker (a question that is not the simulation's own — game/cues.ts overheard — leaves the cache as it found it) */
-  propagate(src: Vec3, dst: Vec3, keep = true): Propagation { return RUST.sound && !this.col.mirror.live ? this.col.window(() => this.propagateAsk(src, dst, keep)) : this.propagateAsk(src, dst, keep); }
+  propagate(src: Vec3, dst: Vec3, keep = true): Propagation {
+    if (PRICED.waits) throw new Error('a sound was asked for from inside the price of a search: its way round is a search, and the module has one search\'s tables (rust/sim/src/nav.rs find_priced)');   // (every time, not only when the answer is not remembered)
+    return RUST.sound && !this.col.mirror.live ? this.col.window(() => this.propagateAsk(src, dst, keep)) : this.propagateAsk(src, dst, keep); }
   private propagateAsk(src: Vec3, dst: Vec3, keep: boolean): Propagation {
     const r = this.propagateThere(src, dst, keep, !BOTH.on); if (r === null) return this.propagateHere(src, dst, keep);
     if (!BOTH.on) return r;
@@ -800,9 +813,9 @@ export class SoundPaths {
    *  the straight lines say, and — walled off, near enough, and not remembered — the way round by the floor (rust/sim/src/nav.rs over the grid as it stands
    *  now). null = `propagateHere`'s, from the start (nothing was written). `write` false = the answer is not remembered (the check's second asker). */
   private propagateThere(src: Vec3, dst: Vec3, keep: boolean, write: boolean): Propagation | null {
-    const col = this.col, set = col.senseSet(SENSES.sound); if (set === -2) return null;
+    const col = this.col, set = col.senseSet(SENSES.sound); if (set === -2) return null;   // (senseSet has counted it)
     const M = col.mirror, x = M.x, ask = col.paneAsk; if (ask < 0) { col.paneFell('sound', ask); return null; }
-    const c = x.hear_direct(M.slot, set, ask, src[0], src[1], src[2], dst[0], dst[1], dst[2]); if (c === -1) return null;
+    const c = x.hear_direct(M.slot, set, ask, src[0], src[1], src[2], dst[0], dst[1], dst[2]); if (c === -1) { if (FELL.on) fell('sound', 'the module handed the straight lines back (one too long to be a line)'); return null; }
     const straight = f64()[M.scratch]; if (c !== FACE.WALLED) SENSED.sound++;
     if (c < FACE.OVER) { let graze = 0; if (c & FACE.GRAZE_A) graze += 0.1; if (c & FACE.GRAZE_B) graze += 0.1; return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: graze, carry: 1 }; }
     if (c === FACE.OVER) return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: 0.15, carry: 0.9 };
@@ -811,8 +824,8 @@ export class SoundPaths {
     const nav = col.nav, cs = nav.cell;
     const key = `${Math.floor(src[0] / cs)},${Math.floor(src[2] / cs)}>${Math.floor(dst[0] / cs)},${Math.floor(dst[2] / cs)}`;
     const hit = this.cache.get(key); if (hit && Math.abs(this.now - hit.t) < 0.5) return hit.r;
-    if (!nav.there(M)) return null;
-    const k = x.hear_route(M.slot, set, ask, BoxFlag.SoundSeal, nav.W, nav.H, cs, src[0], src[1], src[2], dst[0], dst[1], dst[2], straight); if (k === -1) return null;
+    if (!nav.there(M)) { if (FELL.on) fell('sound', 'a floor of more cells than the module\'s table'); return null; }
+    const k = x.hear_route(M.slot, set, ask, BoxFlag.SoundSeal, nav.W, nav.H, cs, src[0], src[1], src[2], dst[0], dst[1], dst[2], straight); if (k === -1) { if (FELL.on) fell('sound', 'the module handed the way round back (a line too long to be one, a way of more waypoints than its table)'); return null; }
     let r: Propagation; SENSED.sound++;
     if (k === FACE.SEALED) r = sealed();
     else {
@@ -925,30 +938,69 @@ export class NavGrid {
    *  search walked round (a merge is only taken if it crosses no more penalised cells than the raw cells it replaces). Absent, nothing here differs by one
    *  instruction from the search it always was. */
   findPath(a: Vec3, b: Vec3, maxIter = 6000, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
-    if (penalty) { if (FELL.on && RUST.paths) fell('paths', 'a search with a penalty has no Rust'); return this.findPathHere(a, b, maxIter, penalty); }
-    return RUST.paths && !this.col.mirror.live ? this.col.window(() => this.findPathAsk(a, b, maxIter)) : this.findPathAsk(a, b, maxIter);
+    if (PRICED.waits) throw new Error('a way was asked for from inside the price of another search: the module has one search\'s tables (rust/sim/src/nav.rs find_priced)');
+    return RUST.paths && !this.col.mirror.live ? this.col.window(() => this.findPathAsk(a, b, maxIter, penalty)) : this.findPathAsk(a, b, maxIter, penalty);
   }
-  private findPathAsk(a: Vec3, b: Vec3, maxIter: number): Vec3[] | null {
-    const r = this.findPathThere(a, b, maxIter); if (r === undefined) return this.findPathHere(a, b, maxIter);
-    if (!BOTH.on) return r;
-    const t = this.findPathHere(a, b, maxIter); let ok = (t === null) === (r === null) && (t === null || t.length === r!.length);
+  private findPathAsk(a: Vec3, b: Vec3, maxIter: number, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
+    if (!BOTH.on || !penalty) {
+      const r = this.findPathThere(a, b, maxIter, penalty); if (r === undefined) return this.findPathHere(a, b, maxIter, penalty);
+      if (!BOTH.on) return r;
+      const t = this.findPathHere(a, b, maxIter); let ok = (t === null) === (r === null) && (t === null || t.length === r!.length);
+      for (let i = 0; ok && t && i < t.length; i++) ok = same3(t[i], r![i]);
+      this.col.senseCompared(this.col.senseSet(SENSES.paths), ok, 'path', a, b);
+      return t;
+    }
+    // (the check's, with a penalty. The module asks the caller's function ONCE a cell; this file's search asks it at EVERY visit, as it does with the row
+    //  off. What is compared: the way; the cells each side priced, in the order it first asked for them (the module must come to need exactly the cells
+    //  this file's search reads, when it reads them); and EVERY price this file's search was given against the one the module was given for that cell,
+    //  which is the rule the module's once-a-cell rests on: a penalty gives a cell one price all through a search.)
+    const W = this.W, first = new Map<number, number>(), there: number[] = [], here: number[] = [], met = new Set<number>(); let onePrice = true;
+    const r = this.findPathThere(a, b, maxIter, (ix, iz) => { const i = iz * W + ix, v = penalty(ix, iz); there.push(i); first.set(i, v); return v; });
+    const t = this.findPathHere(a, b, maxIter, (ix, iz) => { const i = iz * W + ix, v = penalty(ix, iz), was = first.get(i);
+      if (!met.has(i)) { met.add(i); here.push(i); }
+      if (was === undefined) first.set(i, v); else if (!Object.is(was, v)) onePrice = false;
+      return v; });
+    if (r === undefined) return t;
+    let ok = onePrice && (t === null) === (r === null) && (t === null || t.length === r!.length) && here.length === there.length;
     for (let i = 0; ok && t && i < t.length; i++) ok = same3(t[i], r![i]);
-    this.col.senseCompared(this.col.senseSet(SENSES.paths), ok, 'path', a, b);
+    for (let i = 0; ok && i < here.length; i++) ok = here[i] === there[i];
+    this.col.senseCompared(this.col.senseSet(SENSES.paths), ok, onePrice ? 'priced path' : 'priced path (the penalty gave one cell two prices in one search)', a, b);
     return t;
   }
   /** THE GRID AS IT STANDS, WRITTEN TO THE MODULE for one question of its search (rust/sim/src/nav.rs). False = it is larger than the module's table. */
   there(M: BoxMirror): boolean { if (this.blocked.length > M.navCap) return false; u8().set(this.blocked, M.navShut); return true; }
-  /** RUST.paths — findPath with no penalty from the module: the same search and smoothing over the grid as it stands now. undefined = `findPathHere`'s. */
-  private findPathThere(a: Vec3, b: Vec3, maxIter: number): Vec3[] | null | undefined {
-    const col = this.col, set = col.senseSet(SENSES.paths); if (set === -2 || (maxIter >>> 0) !== maxIter) return undefined;
-    const M = col.mirror, ask = col.paneAsk; if (ask < 0) { col.paneFell('paths', ask); return undefined; }
-    if (!this.there(M)) return undefined;
-    const n = M.x.nav_path(M.slot, set, ask, this.W, this.H, this.cell, a[0], a[2], b[0], b[2], maxIter);
-    if (n === -2) return undefined; SENSED.paths++; if (n === -1) return null;
+  /** RUST.paths — findPath from the module: the same search and smoothing over the grid as it stands now. undefined = `findPathHere`'s.
+   *  WITH A PENALTY the module's search stops wherever it comes to a cell it has no price for and says which (eight at most at a step of the search; a
+   *  leg's cells in the smoothing); `priceThese` asks the caller's function for exactly those, once each, and the search goes on. So the function is
+   *  called for the cells this file's own search reads, in the order it first reads them (ONCE a cell where this file's reads it at every visit: every
+   *  penalty in the game gives a cell the same price all through one search), and the module calls nothing. A search that waits is scratch of this one
+   *  call: it is resumed to its end here, or dropped if the price throws. */
+  private findPathThere(a: Vec3, b: Vec3, maxIter: number, penalty?: (ix: number, iz: number) => number): Vec3[] | null | undefined {
+    const col = this.col, set = col.senseSet(SENSES.paths); if (set === -2) return undefined;   // (senseSet has counted it)
+    if ((maxIter >>> 0) !== maxIter) { if (FELL.on) fell('paths', 'a cap on the search that is no whole number'); return undefined; }
+    const M = col.mirror; if (!this.there(M)) { if (FELL.on) fell('paths', 'a floor of more cells than the module\'s table'); return undefined; }
+    const x = M.x, ask = col.paneAsk; if (ask < 0) { col.paneFell('paths', ask); return undefined; }
+    let n: number;
+    if (!penalty) n = x.nav_path(M.slot, set, ask, this.W, this.H, this.cell, a[0], a[2], b[0], b[2], maxIter);
+    else {
+      n = x.nav_priced(M.slot, set, ask, this.W, this.H, this.cell, a[0], a[2], b[0], b[2], maxIter);
+      if (n === NAV.NEED) { PRICED.waits = true;
+        try { while (n === NAV.NEED) { PRICED.needs++; this.priceThese(M, x.nav_need(), penalty); n = x.nav_resume(); } }
+        finally { PRICED.waits = false; if (n === NAV.NEED) x.nav_drop(); } }
+      if (n !== NAV.ASK_HOST) PRICED.n++;
+    }
+    if (n === NAV.ASK_HOST) { if (FELL.on) fell('paths', 'the module handed the search back (a line too long to be one, a point that is no number, a way of more waypoints than its table)'); return undefined; }
+    SENSED.paths++; if (n === NAV.NO_WAY) return null;
     const m = f64(), out: Vec3[] = []; for (let i = 0, o = M.way; i < n; i++, o += 2) out.push([m[o], 0, m[o + 1]]);
     return out;
   }
-  /** findPath as this file answers it (and the whole of it wherever the module does not, and always under a penalty) */
+  /** the prices the module's search has asked for (`k` cells, listed at the module's own table), from the caller's function, in the order asked */
+  priceThese(M: BoxMirror, k: number, penalty: (ix: number, iz: number) => number): void {
+    const W = this.W, want = M.navWant, price = M.navPrice;
+    for (let i = 0; i < k; i++) { const c = u32()[want + i]; const v = penalty(c % W, (c / W) | 0); f64()[price + c] = v; }   // (the views are taken anew at every cell: the function may ask the module questions of its own)
+    PRICED.cells += k;
+  }
+  /** findPath as this file answers it (and the whole of it wherever the module does not) */
   findPathHere(a: Vec3, b: Vec3, maxIter = 6000, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
     const W = this.W, H = this.H;
     const sx = clampi(Math.floor(a[0] / this.cell), 0, W - 1), sz = clampi(Math.floor(a[2] / this.cell), 0, H - 1);
@@ -959,7 +1011,8 @@ export class NavGrid {
     // (the search's four per-cell tables are the grid's own, kept between calls in their blank state — every cell a search wrote is listed in `seen` and put
     // back as it ends — and the open list is a typed array with its own count: the same values read and written in the same order as when each call made and
     // filled five fresh arrays the size of the level, so the same pops, the same ties, the same path. A search inside a search (a penalty that asks for a
-    // path) or one after a penalty threw takes fresh tables, as it always did.)
+    // path) or one after a penalty threw takes fresh tables, as it always did: that is this file's search alone. While the MODULE's priced search waits for
+    // prices, a way or a sound asked from inside a price is an error, `findPath` and `propagate` say so, and no penalty in the game asks one.)
     let S = this.scratch; if (!S || S.busy || S.g.length !== W * H) { const fresh = navScratch(W * H); if (!S || !S.busy) this.scratch = fresh; S = fresh; }   // (nothing of the LEVEL is kept: `blocked` is read afresh by every search, and a grid of another size takes new tables)
     S.busy = true;
     const gScore = S.g, came = S.came, closed = S.closed, f = S.f, blocked = this.blocked; let open = S.open, seen = S.seen, nOpen = 0, nSeen = 0;

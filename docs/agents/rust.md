@@ -305,7 +305,8 @@ first system across (the game's own maths). No rule of play has changed and noth
       smoothing and `walkable`) from `nav.rs`. The grid of shut cells stays the host's (it bakes and re-bakes it) and is written to the module for each
       question, as it stands. The scores are KEPT in singles as the TypeScript keeps them in Float32Arrays (`single.rs`), and the search's tables stand
       blank between searches on both sides, so a search the module ran leaves the TypeScript's tables as it found them. A search under a penalty
-      (`tactics.ts`) is TypeScript's. `?rustpaths`, `TPS_RUSTPATHS=1`.
+      (`tactics.ts`) was TypeScript's until the senses' one-way-in car (below: the search waits for the caller's prices). `?rustpaths`,
+      `TPS_RUSTPATHS=1`.
     OFF EVERYWHERE, all five senses. Measured 2026-11-03 on a 4-core cloud box under bun; never seen on a GPU, and in a browser only by the page check below.
     A QUESTION (`sense-ident --bench`, TypeScript → the module, µs): on the office sight 1.87 → 1.51, light 16.9 → 12.9, smoke 4.44 → 3.41, sound 164 →
     188, paths 108 → 121; on the compound sight 2.07 → 1.34, light 13.5 → 11.4, smoke 4.94 → 4.02, sound 82 → 92, paths 46 → 54. So `sound` and `paths`
@@ -1578,7 +1579,7 @@ first system across (the game's own maths). No rule of play has changed and noth
   `rust-page.cjs`'s `systems` job fails on one in the real page. `FELL_BREAK=1` with `TPS_FELL=1` is the red path (questions outside a tick go back to
   the TypeScript; it must end red), and `FELL_BREAK=<row>` counts one question of that row by hand as the tool opens: red for a sealed row, not red
   for another (a family's proof that its row is on the list; a name that is no row of `RUST` is refused, and under `TPS_FELL=throw` the count
-  throws like any other). SEALED TODAY: `lines`, `circles`, `fog`, `poses`, `rays`, `walk`. A family adds its row in the step that closes its last fallback,
+  throws like any other). SEALED TODAY: `lines`, `circles`, `fog`, `poses`, `rays`, `walk`, and the senses' `sight`, `light`, `smoke`, `sound`, `paths`. A family adds its row in the step that closes its last fallback,
   and its TypeScript can go in the step after. `rays` joined with "A pane's open question": until then a ray whose nearest thing was a pane the
   host said was open there flew on in the TypeScript walk (some five hundred a mission with glass in it).
   WHAT WAS CLOSED FOR THE SEALED ROWS:
@@ -1615,6 +1616,58 @@ first system across (the game's own maths). No rule of play has changed and noth
   WHAT WAS RUN: the 42 on both stands with the count, digests equal to the build before; `rust-check` quick on both stands and its red path; `--both` on
   runs that hole walls inside ticks (0 answers differ, 0 stale rows); layer-ident, simstate, rollback static, knobs, dice; the page check with `?fell`
   (headless Chromium, software adapter; never seen on a GPU).
+  THE SENSES' CAR (sight, light, smoke, sound, paths; the same day). No rule of play moves: the 42 on both stands are the build before, whole result
+  files the same.
+  - A SEARCH WITH A PENALTY IS THE MODULE'S (`rust/sim/src/nav.rs find_priced`; `collision.ts findPathThere`, `priceThese`). A penalty is a function
+    of the caller's (a guard's plan, an order's cost, a lane's stepper: 31 call sites, 17 of them reached over the 42) and the module imports
+    nothing, so THE SEARCH WAITS. It is written once over a source of prices (`trait Prices`: `Flat`, every price 1, is the search with no penalty;
+    `Asked` reads a table the host fills). Where it comes to a cell it has no price for, it stops (`NAV.NEED`), lists the cells (the neighbours of
+    the cell it is about to open, eight at most; a leg's cells in the smoothing), and goes on from where it stood once the host has written them
+    (`nav_need`, `nav_resume`; `nav_drop` when the price throws). So the caller's function is called for exactly the cells this file's search
+    reads, in the order it first reads them, ONCE a cell where the TypeScript calls it at every visit. That is the same search only because every
+    penalty gives a cell one price all through a search: A NEW PENALTY OWES THAT, and the both-ways check holds it (below). A search that waits is
+    scratch of the one call (`STATICS` rows; no snapshot can fall inside one) and the module holds one: a way or a sound asked from inside a price
+    is an error while the module's search waits (`PRICED.waits`; `findPath` and `propagate` say so at their top). No penalty in the game asks one.
+    A price the search finds missing where it has asked for it is the host's search (a counted hand-back), never a guess of 1.
+  - BETWEEN TICKS: the light estimate (`guards.ts lightEstimateAt`: an order given between ticks places the calm torch) and the smoke's line
+    (`sense.ts CpuSmoke.along`), each one question in several calls, stand in a `col.window`; an eye on a man (`collision.ts eyeContact`) is one
+    call and proves the copy for itself, as a line does. Inside a tick each is as it was.
+  - EVERY HAND-BACK OF THE FIVE IS COUNTED where its caller's own statements then run: a sight line that stops at glass or names a flag the copy
+    does not keep, an eye handed back; more lamps in reach of a point than a question carries (256; counted at the estimate, `lampsFell`, not at
+    the writer the smoke grid's sweep shares), the lamps handed back; more blobs than a question carries (64; the game keeps 48 at most,
+    `sense.ts`), the smoke's line handed back; the sound's straight lines and its way round handed back, a floor larger than the module's table;
+    a search's cap that is no whole number, the search handed back.
+  WHAT THE COUNT READS NOW, the 42: `paths · a search with a penalty` and `light · outside a tick` are GONE (8,962 and 5,688 on the page's stand).
+  Of the five senses: NOTHING on either stand, in the tour or in the soak, and ALL FIVE ARE SEALED (the soak's watcher asks two eyes between
+  ticks: that was `sight · outside a tick` until the eye proved the copy for itself). `sound` and `paths` were counted for the first time by this
+  car on a tree without the panes in the copy (the straight lines handed back 493, frozen stand 1,989; the way round 102, 178; the search 32, 5):
+  each was a line that came to a pane, and behind "A pane's open question" (`collision.ts paneAsk`) each reads zero. What the module can still
+  hand back of them is a line too long to be one, a point that is no number, a way of more waypoints than its table; none is met. The senses'
+  TypeScript (`eyeContactHere`, `lampsHere`, the smoke's own loop, `propagateHere`, `findPathHere`) can go in the step after.
+  THE CHECKS: `tools/qa/sense-ident.ts` asks half its ways with a price a cell (1, 6, 20, 0.5 or 200 by a hash, in blocks of one cell or four) and
+  compares the way AND the cells each side priced in the order it first asked for them; `PRICED_BREAK=1` prices the module's cells last first and
+  must end with `paths` differing and nothing else (`rust-check` runs it and is red if it is not). `rust-check --both` holds the same in the
+  missions (`collision.ts findPathAsk`): there this file's search asks the caller's function at every visit, as it does with the row off, and a
+  price that is not the one the module was given for that cell is a differ, which is the one-price rule as a standing check (`sense-ident` runs
+  its two paths on every level: an honest price is the same answer, a price that changes at every ask is caught). The numbers a search answers
+  that are no count (`boxMirror.ts NAV`) are held to `nav.rs` with `FACE`. `TPS_FELL=1` prints `PRICED <n> searches … came back for prices <k>
+  times … <c> cells`.
+  WHAT IT COSTS: 8,962 priced searches over the 42 came back for prices 1.42 million times for 2.08 million cells (232 cells a search; the frozen
+  stand 2,746 searches, 608 cells each). A tick: no difference `tickcost` can see (five runs, base then car, measured three times: the mean of all five +5 %, +2 %, −2 %, and on the car as it went 3.77 → 3.78 ms with each
+  run between −2 % and +3 %; the same tree
+  measured twice differs by 3 %).
+  WHAT WAS RUN (headless, a cloud box, no GPU; NEVER SEEN ON A GPU and nobody has played it). ON THE CAR BEFORE THE PANES WERE UNDER IT: the 42 on
+  both stands with the count, each stand's result file the base's to the byte; `sense-ident` on every level, ALL PASS, `RUST_BREAK=1` red for
+  every sense, `PRICED_BREAK=1` red for the paths and nothing else, the two together refused; `FELL_BREAK=1` red; `rust-check` on both stands and
+  `RUST_BREAK=1` red for every section; `rust-check --both`, 8 runs, 28.0 million questions, 0 differ, 0 stale; `rollback-check` whole and
+  `--static`, `simstate-check`, `knobs-check`, `dice-check`, `copyfit-check`, both typechecks, `build.ts --check`; the tour (3 runs) and the soak
+  (seeds 1,2,3, 12 minutes) on both stands with the count: green on the frozen stand, and on the page's stand the reds of the base, the same ones
+  (the tour's fire exit, stun and smoke stops; the soak's 15 violations). The page itself in headless Chromium on the software adapter
+  (`rust-page.cjs`, the jobs loads, plain and systems; its frames are not drawn): the game in TypeScript to the bit with every row up, and with
+  `?fell` the TypeScript answered none. BEHIND THE PANES, AS IT IS CUT: the 42 on both stands with the count, the same result files to the byte and
+  `FELL none` on both; the tour and the soak on both stands, nothing of a sense counted (the soak's one line is a rule's step, 22 on the page's
+  stand and 6 on the frozen one); a run on the stand as it was recorded (`TPS_EXACT=0 TPS_RUST=0`) counts nothing; `FELL_BREAK=sound` and
+  `FELL_BREAK=paths` each end red; `sense-ident` and its two red paths; both typechecks.
 - **The data's layout** (2026-11-03; the maintainer: "we should also start changing our data layout to be more cache and simd friendly"). MEASURED
   FIRST, one blend of two 55-node poses in a module, an x86 cloud box, bun 1.4 | node 24: as it stood (ten singles a node, worked in doubles) 1334 |
   1391 ns · the same arithmetic over columns 1334 | 1390 · columns, two lanes of doubles, THE SAME BITS 1204 | 964 · doubles, the length a plain root

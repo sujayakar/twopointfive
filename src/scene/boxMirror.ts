@@ -89,6 +89,9 @@ export const SENSES = { sight: 1, light: 2, smoke: 4, sound: 8, paths: 16 } as c
 /** THE NUMBERS THE HOST SHARES WITH THE SENSES' RUST, under the names they have there (light.rs LAMP: doubles a lamp · smoke.rs BLOB: doubles a blob ·
  *  hear.rs: what the straight lines said, and the way round · sight.rs: the question's bits and the answer's). tools/qa/rust-check.ts reads the Rust
  *  sources and is red where one of them is another number there. */
+/** …and what a search across the floor answers that is no count of waypoints (rust/sim/src/nav.rs; the same check reads them): no way · the host's own
+ *  search · the search waits for the prices it has listed (find_priced) */
+export const NAV = { NO_WAY: -1, ASK_HOST: -2, NEED: -3 } as const;
 export const FACE = { LAMP: 15, BLOB: 6, GRAZE_A: 1, GRAZE_B: 2, OVER: 4, FAR: 8, WALLED: 16, SEALED: 0, ROUTED: 1, ROUTED_DOOR: 3, Q_LENS: 1, Q_UNSEEN: 2, Q_SMOKED: 4, A_VISIBLE: 1, A_IN_CONE: 2 } as const;
 /** …and which of them are on now */
 export function senseRows(): number { return (RUST.sight ? SENSES.sight : 0) | (RUST.light ? SENSES.light : 0) | (RUST.smoke ? SENSES.smoke : 0) | (RUST.sound ? SENSES.sound : 0) | (RUST.paths ? SENSES.paths : 0); }
@@ -160,7 +163,7 @@ export class BoxMirror extends HostOwned {
   /** the module's scratch (an index into the doubles), and the tables a sense's question is written to: the lamps and the blobs (into the doubles, and how
    *  many each holds), the nav grid's shut cells (into the bytes, and how many) and a way's waypoints (into the doubles). One set a process: each is scratch
    *  of the one question that wrote it. */
-  scratch = 0; scratchLen = 0; lamps = 0; lampCap = 0; blobs = 0; blobCap = 0; wind = 0; windCap = 0; navShut = 0; navCap = 0; way = 0;
+  scratch = 0; scratchLen = 0; lamps = 0; lampCap = 0; blobs = 0; blobCap = 0; wind = 0; windCap = 0; navShut = 0; navCap = 0; way = 0; navWant = 0; navPrice = 0;
   /** one question's lamps and blobs as they are written (collision.ts lampsBegin … lampsOn, blobsBegin … blobsAlong): the leaves' list to ask with, how many so far */
   lampSet = -2; lampN = 0; blobSet = -2; blobN = 0;
   /** WHAT A SMOKE GRID THAT STEPS OVER THIS COPY GOES BY (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): the copy's NUMBER, given anew whenever every
@@ -192,7 +195,7 @@ export class BoxMirror extends HostOwned {
     c.boxes = x.world_cap(T_REC); c.leaves = x.world_cap(T_LEAF); c.cuts = x.world_cap(T_CUT); c.panes = x.world_cap(T_PANE_T); c.cells = x.world_cap(T_START); c.items = x.world_cap(T_ITEMS);
     c.tilted = x.world_cap(T_TILTED); this.listCap = x.world_cap(T_LIST); c.things = x.world_cap(T_THING); c.glass = x.world_cap(T_GLASS); c.view = x.world_cap(T_VIEW);
     this.scratch = x.sim_scratch() / 8; this.scratchLen = x.sim_scratch_len(); this.lamps = x.light_lamps() / 8; this.lampCap = x.light_cap(); this.blobs = x.smoke_blobs() / 8; this.blobCap = x.smoke_cap(); this.wind = x.grid_wind() / 8; this.windCap = x.grid_wind_cap();
-    this.navShut = x.nav_addr(0); this.navCap = x.nav_cap(0); this.way = x.nav_addr(1) / 8;
+    this.navShut = x.nav_addr(0); this.navCap = x.nav_cap(0); this.way = x.nav_addr(1) / 8; this.navWant = x.nav_addr(2) / 4; this.navPrice = x.nav_addr(3) / 8;
     this.cutOf = new Int32Array(c.boxes).fill(-1);
     if (!HELD.length) for (let i = x.world_cap(T_WORLDS); i > 0; i--) HELD.push(null);
   }
