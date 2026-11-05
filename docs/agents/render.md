@@ -4061,3 +4061,36 @@ untimed pass (the sweep that found it), so the reading there may move less than 
   read again after a put-back; a mask asked a third time while part-decided (walls changing faster than it can be decided). LEFT: those; the sight
   lines and rays still run the simulation's exact maths (cos and hypot swapped in for the browser's: 1 to 3 ms of a frame by that profile), which
   the picture need not; the engine's daylight lights keep their own raster and queue (the bullet above).
+- **AN OPENING'S LIGHT COMES UP NO FASTER THAN THE BOUNCE CAN ANSWER IT** (11-05; the look's page only; `engine.ts OPEN_RISE`, `openRise`,
+  `Engine.bounceLag`; the switch is `settings.openRise`, ON, and the address's `&openrise=0` = whole on the frame it is lit, as it was. No registered
+  knob: it is the picture's alone, as `portalWorth` is, and no stand or recording can tell it is on). THE WHITE WASH WHEN A WALL OPENS, found in the
+  pace's stills: a wall charge on a lamplit room at midday showed the whole room pale white for a fifth of a second before its daylit picture.
+  THE CAUSE, read off a real card frame by frame (the pass's store, its outer wall blown at midday, Sam in it; the place field read back each
+  frame; three runs: as the page is, the eye's eases fifteen times faster, the field and the eye settled outright every frame). A place is shown by
+  the light its floor holds, and that is the BOUNCE's (the field's measure counts no light's own beam). The room held −12.3 (log2) lamplit and
+  settles at −3.4 holed. The hole's light is lit whole on the thirteenth frame, when the level is −8.8: the room is shown by a gain FIVE STOPS too
+  high, three stops seven frames later, within a stop only at the twenty-sixth. Of that lag the cache is eight frames (the steady bounce's ring of
+  eight points: a straight ramp) and the field's solve eight to ten more (it closes 0.14 of its distance, in stops, a frame). THE EYE IS NOT IT:
+  fifteen times faster it moved no level, and with Sam in the room it enters a brighter place's gain only through the key (capped at the open
+  air's middle over its low, 2.0) and the glare (1.6 at most): a mild dazzle that is the model's own and is left.
+  THE RULE NAMES NO KIND OF OPENING: a light that was out is lit at `first` (0.05) of its strength, grows by e every `folds` (1) × the bounce's
+  frames (8 at midday; 3 under the cache's own mean; doubled at half rate) and by no more than `step` (a third) of its strength in that many,
+  never under `first` of what is open now (a door on its swing), never past its strength. It falls at once. Whole at once on a first frame, a
+  restart and a still (`lookEye.snap`). By the card's read-back (`openrise-check` line 3 carries the fit: the model is within 0.3 of a stop of
+  all three logged runs) the hole's light is then shown 1.3 stops over where it settles at the most, for half a second, where it was 5.1 over.
+  SEEN ON A REAL CARD only as its first cut (`first` 0.1, no `step`, WITH twelve sweeps of the field a frame): no frame washed, stills 13, 16, 20
+  and 28 frames after the blast beside the old ones. THE FINAL NUMBERS ARE NOT YET DRAWN ON A CARD.
+  TRIED AND TAKEN OUT: THE FIELD FOLLOWING ITS READINGS FASTER (the cache read once a frame into a buffer and twelve sweeps where four were:
+  the level then tracked the cache within two frames). It was right by the numbers and wrong in the picture: the bounce finds the bare hole on
+  the frame the wall goes, a dozen frames before the hole's own light is found, masked and lit, so the level rose five stops on a light the
+  picture hardly draws yet and THE ROOM WENT BLACK for those frames where with the slower field it only dims (it loses 3.5 stops of gain by the
+  thirteenth frame as it always did: that dimming before the daylight is still there). The commit is kept on the work branch for whoever lights
+  a hole sooner. WHAT IT COSTS: every opening's light takes about half a second to come whole (a door's is at 0.09 when it is wide after twenty
+  frames and whole 27 frames later), where before the light was instant and the picture took a third of a second to settle round it. A door
+  swung on a windowless lamplit room at midday is by the same model still 2.3 stops over at its worst (5.5 before): the room has had no bare
+  hole to raise its level first. NOBODY HAS PLAYED IT, and a door's daylight trailing its swing is the thing to look at.
+  Checks: `bun run tools/qa/openrise-check.ts` on both stands (3 lines; `OPENRISE_BREAK=1` fails all three), `openings-check` unchanged (its
+  borrowed engines have no such setting and light whole). LEFT: lighting a new hole sooner (its opening is found after the walls have stood
+  still and its mask is decided before it is lit, twelve frames in all); the level counting an opening's own beam, which would let it move on
+  the frame the light does but moves every windowed room's settled picture; a lamp switched on in a dark room at night, which has the same lag
+  and no rule.
