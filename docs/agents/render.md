@@ -2550,6 +2550,32 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
   sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
   GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
+- **TARMAC AND GRASS ARE STUFFS** (11-05; `render/lookTex.ts` `tarmac`, `grass`: two rows of `STUFFS`, two maps, 28 painted layers where there were
+  26. NO LEVEL NAMES THEM YET: `scene/stuff.ts PAINT_STUFF` still says the car park's paint is 'plain' and a lawn's 'waits', and a level's FILE carries
+  its own word a material (`levels/<name>.json materials`), so the page reads the file's word and a change to the table alone moves nothing until the
+  level is exported again. Naming them is the dressing's step, a level at a time.) The dress goal's ask: the lot under every office-kit level and its
+  verges were the two biggest flat colours left in a picture. TARMAC is rolled asphalt years down: black binder with stone chips of two sizes rolled
+  flat into it; the binder has worn off the tops of some (an eighth to four tenths of them, in drifts a stride across: asked where the CHIP lies, so
+  no chip is half worn, and only of the chip that stands highest at a texel) and each of those shows its own grey, a step over the binder and never
+  a white fleck; pits where a chip was plucked out, with no chip in them; a hairline craze. Finish 0.86, a worn top 0.74: under the
+  highlights' fade it takes next to none. No wheel line and no patch: those are a level's own marks. GRASS is a lawn nobody waters, seen from a
+  roof's height: four layers of blades a finger long, each its own green and its own lean about the way its patch leans (the patches lean every way
+  and swirl where two meet); thick in drifts and thin between them, where the thatch shows darker; a tenth of the blades straw, more in drifts of
+  their own; a bare place here and there with the earth showing, darker than the grass round it. No blade is drawn thinner than a texel and a third
+  (thinner, a point-sampled map draws it as a dotted line and its normals as noise). Both are ground (`ground: true`), fade with weather, break their repeat (`untiles`), and keep their
+  paint's brightness by one number a layer like every map (the grass's first cut did not: its brightest blades ran past what a map can hold and the
+  mean came back 3% under, which `lookmaps-check` caught; its greens were narrowed, and four texels in a thousand still sit at the map's top).
+  KNOWN, LEFT: whether a blade is there, and whether it is straw, is asked of the drifts at the texel and not at the blade, so about a blade in
+  fifty is cut short along a drift's edge; grass is the dearest painted layer to make after the mud wall (about 0.7 s of arithmetic at 512 under
+  bun, tarmac 0.55, a middling layer 0.3), paid once a boot by a level that names it. WHAT A FIRST LOCAL STILL TAUGHT: with the table
+  alone changed the office drew exactly as before, flat, because of the file's own words above. Check: `bun run tools/qa/lookmaps-check.ts` and
+  `stuff-check.ts`, both stands; `look-check`, `lookunits-check`, `shaderrows-check`, `shaderinline-check`, `tsc` both. SEEN ON A CLOUD NVIDIA CARD
+  (11-05, stills in three rounds from still-only commits in which the office's file names the two; no shader or pipeline error): the car park
+  as played and close at midday, the lawn's corner as played and close at midday and at dusk. The first round's tarmac was too pale and speckled
+  like terrazzo and its grass flat with pale blotches; the second read right (a mottled lawn, a worn dark lot; at dusk the blades' relief is strong
+  under the low sun); the third is the maps as they are here, after a review's mends (the chips' wear, four layers of blades, the swirl). NOT SEEN: either in motion, in rain or snow, at night, on any
+  level but the office, by the maintainer. A lawn stood on by a player the page left indoors is exposed for his dark room and reads pastel: stand
+  him in the sun before judging a ground's colour.
 - **TEN KEPT STUFFS, AND A STUFF SAYS ITS OWN ROW** (11-04; `render/lookTex.ts` stucco, skim, gloss block, board concrete, cast panel, paver, brushed,
   louvre, enamel, carpet; the level `white-roof`, `docs/agents/levels.md`). The maintainer, of a game whose pictures he sent: "it has some very
   tastefully done high frequency detail but overall quite flat", "an antidote to our repeating textures that look generated", and, after trying the
