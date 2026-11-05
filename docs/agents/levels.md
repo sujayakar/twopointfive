@@ -1607,33 +1607,3 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT SEEN: nothing here draws, and the 0.0024 the twins' colours moved has not been looked at on any adapter. Nobody has played it.
 
 
-- **One array is one paint** (`scene/stuff.ts keep`; a guard for whoever writes a level, no rule of play; 2026-11-05; the office's
-  pilot hit the trap twice and the dress goal asked for the guard). A paint is known by its ARRAY, so a second saying on an array that already is a
-  paint changed what every box painted from it is made of, in every module that held it: a break room's band took a floor panel's finish, a shared
-  signal yellow became enamel for every level made after it, and the last module to load won. NOW REFUSED OUT LOUD, where it is written: `madeOf`,
-  `drawnAs`, `sayPaint`, `namePaint`, `namePaints`, `doing` and `tonedAs` refuse when the array already is a paint of another stuff, another finish
-  or ANOTHER WORD FOR WHAT IT DOES (no finish is a finish: a paint that has none is not given one in place). SINCE THE RULES READ WHAT A PAINT DOES
-  (`scene/materials.ts`, the same day) the slip would move play and not only a picture: the registry by array carries that word too. One thing is
-  added in place, by its own function: what a colour written as numbers does (`doing`, after `madeOf` or alone), once; a kit's named row does what
-  the table of names says, and `doing` on it is refused. The same thing said again is nothing and THE FIRST SAYING STANDS, its name
-  with it (a module evaluated twice, a helper called once a level, a kit giving its own palette's paint its word: the lived kit's canvas, the
-  fixtures' tray). A second thing in the same colour is its own array: `saidAs`, or the numbers written out again.
-  WHAT TRIPPED: two look files' skins said a road paint over a toned plastic's white with `madeOf` (the floodlit yard's pad lines, the killhouse's
-  tape); they say it with `saidAs` now. Nothing else in the tree trips. NO LEVEL FILE MOVES: every export's `--check` is up to date.
-  HOW IT IS REFUSED (`ONE_PAINT.refuses`): a THROW wherever a level is made or checked, which is everything that runs under bun: the generators, the
-  exporters, every tool and the headless harness. IN THE PAGE it is one line on the console for that paint and the first saying is kept: the page
-  never stops on it (the dress goal's ruling for a release that must not be risked). Every caller under `src/` was read all the same (here and by a
-  review): each says its paint as its module loads, on its own literal arrays (the four palettes, the rig's three, a fixture's tray, the named
-  greys), or on an array it has just made (a look paint's stand-in, a tone); the editor, the loader, `ui/` and `render/` call none of them. One
-  difference from before in the page, which nothing reaches today: where two sayings on one array differ, the FIRST is kept, where the last won.
-  CHECK: `stuff-check` line 18: the refusals themselves (another stuff, another finish, the metal flag alone, a kit's black made steel, a named row
-  by `namePaint`, `sayPaint`, `namePaints` and a tone; what a paint does said once, another word and a kit's row refused), each by the refusal's own words; the same saying twice let through and the first name left
-  standing; `saidAs` apart; and as the page has it (the word put down): nothing thrown, the console told once, the first saying kept. Then EVERY GENERATOR IS BUILT IN THAT ONE PROCESS as the exporter hands it over, after the check's earlier lines have
-  loaded the kits, the editor and the game's props: 58 of 58 built, 14 of 14 look files' skins run over their levels, the office with its lived
-  tier, none refused, none thrown otherwise. With one of the two mends taken back the line is red and names the file. NOT REACHED by the line: a
-  generator's branches its default build does not take, and the exporter's dressing step (each export's `--check` runs that, a process a level).
-  MEASURED, on the tip that holds the table of materials (step 1477): the play-through's 42 runs (21 missions, seeds 1 and 2) on the frozen stand, the
-  page's, and the page's with its lived tier off, the step against the tip: 42 of 42 run digests the same, each; and every one of those runs loads
-  its level under bun, where a refusal throws: none did. `stuff`, `hitstuff`, `marksight`, `lived`, `lookmaps`, `look-check`, `coatfinish`,
-  `glassreal`, `kit-stores`, `does-check`, `does-audit` and `probes.ts materials` green on both stands. NOT SEEN: the refusal's console line in a
-  real page (the check hears it through a stand-in console).
