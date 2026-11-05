@@ -13,7 +13,9 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { HITSTUFF, HIT_STUFFS, saidSurf, solidGlass, surfOf } = await import(`${ROOT}/src/game/particleFx.ts`);
+const { HITSTUFF, HIT_STUFFS, saidSurf, solidGlass } = await import(`${ROOT}/src/game/particleFx.ts`);
+const { doesOf } = await import(`${ROOT}/src/scene/materials.ts`);
+const surfOf = (b: { does?: string }): string => doesOf(b).surf;   // (what a hit goes by where the box's `stuff` is not asked: what the box does)
 const { BOX_STUFFS, stuffOfName } = await import(`${ROOT}/src/scene/stuff.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
@@ -96,7 +98,7 @@ export async function hitstuffCheck(): Promise<boolean> {
     // (1) the body saying nothing (the word its level gives it — the office's cars say 'carpaint' since 11-05 — taken off): read by its paint, rule up or down
     const LOW = 0.5, pB = R.spot(body, LOW), levelSays: string | undefined = B.stuff; B.stuff = undefined;
     up(true); const plainUp = pB ? R.fire(body, 2, LOW) : null; up(false); const plainDown = pB ? R.fire(body, 2, LOW) : null;
-    const paint = surfOf(B.albedo);
+    const paint = surfOf(B);
     line(!!plainUp && !!plainDown && plainUp.met === 2 && plainDown.met === 2 && B.stuff === undefined && saidSurf(B) === undefined && plainUp.spark === plainDown.spark && plainUp.chips === plainDown.chips && plainUp.dust === plainDown.dust && plainUp.chips > 0 && paint !== 'metal',
       '1 a car\'s body that says nothing of what it is made of (the word its level gives it taken off): two rounds into it are read by the colour of its paint, and knock out the same with the rule up as down — chips, as a wall would give',
       `as the level has it the body says ${levelSays ?? 'nothing'} · by its paint: ${paint} · up: ${plainUp ? say(plainUp) : 'no spot'} · down: ${plainDown ? say(plainDown) : 'no spot'}`);
@@ -110,7 +112,7 @@ export async function hitstuffCheck(): Promise<boolean> {
       && saidDown.chips === plainDown!.chips && saidDown.dust === plainDown!.dust && saidDown.spark === plainDown!.spark
       && !!tyreUp && !!tyreDown && tyreUp.met === 1 && tyreUp.chips > 0 && tyreUp.spark < tyreDown.spark && tyreDown.chips <= 3 && count(tyreUp, 'damage 0') === 0 && tyreUp.marks.length === tyreDown.marks.length && count(tyreUp, 'bullet') === 1 && count(tyreUp, 'chip') === tyreUp.marks.length - 1,
       '2 the same body saying \'carpaint\': with the rule up two rounds give sparks, no chips and no dust, and each leaves its hole; with the rule down the word is not heard and they give what the paint gave. And a tyre saying \'rubber\': by its dark paint it was metal, a shower of sparks; with the rule up it gives the chips and the few sparks plastic gives, and where the chaos lane drew the dent of sheet metal it draws a chip — as many marks as with the rule down',
-      `body up: ${saidUp ? say(saidUp) : 'no spot'} · down: ${saidDown ? say(saidDown) : 'no spot'}\n    tyre (by its paint ${T ? surfOf(T.albedo) : '-'}) up: ${tyreUp ? say(tyreUp) : 'no spot'} · down: ${tyreDown ? say(tyreDown) : 'no spot'}`);
+      `body up: ${saidUp ? say(saidUp) : 'no spot'} · down: ${saidDown ? say(saidDown) : 'no spot'}\n    tyre (by what it does ${T ? surfOf(T) : '-'}) up: ${tyreUp ? say(tyreUp) : 'no spot'} · down: ${tyreDown ? say(tyreDown) : 'no spot'}`);
 
     // (3) the car's glass, saying it is glass: a solid thing, not a pane — it cracks, every round, and stands
     G.stuff = 'glass'; const flags0 = G.flags, pG = R.spot(glass);
@@ -126,7 +128,7 @@ export async function hitstuffCheck(): Promise<boolean> {
     // (4) a thing that is metal by its paint, and says it is or says nothing (every box of a level file says what its row is made of since 11-04: a cabinet
     //     says steel): no chips with the rule up, the two flecks a round threw with it down
     const METAL_WORDS: readonly (string | undefined)[] = [undefined, 'steel', 'metal', 'sheet'];
-    const metalOf = (Q: ReturnType<typeof range>) => Q.st.map((b: any, i: number) => i).filter((i: number) => { const b = Q.st[i]; return METAL_WORDS.includes(b.stuff) && !(b.flags & (BoxFlag.Glass | BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Dynamic)) && !b.rot && surfOf(b.albedo) === 'metal' && b.h[1] > 0.5 && b.c[1] - b.h[1] < 0.6 && b.c[1] + b.h[1] > 1.5 && Math.max(b.h[0], b.h[2]) > 0.25 && !Q.game.destr.itemOf(i); });
+    const metalOf = (Q: ReturnType<typeof range>) => Q.st.map((b: any, i: number) => i).filter((i: number) => { const b = Q.st[i]; return METAL_WORDS.includes(b.stuff) && !(b.flags & (BoxFlag.Glass | BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Dynamic)) && !b.rot && surfOf(b) === 'metal' && b.h[1] > 0.5 && b.c[1] - b.h[1] < 0.6 && b.c[1] + b.h[1] > 1.5 && Math.max(b.h[0], b.h[2]) > 0.25 && !Q.game.destr.itemOf(i); });
     const first = (Q: ReturnType<typeof range>, cand: number[]): number => { for (const i of cand.slice(0, 40)) if (Q.spot(i)) return i; return -1; };
     { const cand = metalOf(R), m = first(R, cand);
       up(true); const metalUp = m >= 0 ? R.fire(m, 1) : null; up(false); const metalDown = m >= 0 ? R.fire(m, 1) : null;
@@ -143,7 +145,7 @@ export async function hitstuffCheck(): Promise<boolean> {
         const bd = Q.st.findIndex((b: any) => sized(b, [2.2, 0.34, 0.86])), gl = Q.st.findIndex((b: any, i: number) => i !== bd && sized(b, [1.25, 0.27, 0.8]) && Math.hypot(b.c[0] - Q.st[bd].c[0], b.c[2] - Q.st[bd].c[2]) < 0.6);
         const ty = Q.st.findIndex((b: any) => sized(b, [0.32, 0.3, 0.12]) && Math.hypot(b.c[0] - Q.st[bd].c[0], b.c[2] - Q.st[bd].c[2]) < 2);
         const vis = (b: any) => !(b.flags & (BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Dynamic)) && !b.rot;
-        const pane = Q.st.findIndex((b: any) => (b.flags & BoxFlag.Glass) !== 0 && b.h[1] > 0.4), wall = Q.st.findIndex((b: any) => b.stuff === undefined && surfOf(b.albedo) === 'drywall' && b.h[1] > 1 && vis(b)), metal = first(Q, metalOf(Q));
+        const pane = Q.st.findIndex((b: any) => (b.flags & BoxFlag.Glass) !== 0 && b.h[1] > 0.4), wall = Q.st.findIndex((b: any) => b.stuff === undefined && surfOf(b) === 'drywall' && b.h[1] > 1 && vis(b)), metal = first(Q, metalOf(Q));
         Q.st[bd].stuff = 'carpaint'; Q.st[gl].stuff = 'glass'; if (ty >= 0) Q.st[ty].stuff = 'rubber'; if (pane >= 0) Q.st[pane].stuff = 'glass';
         { const soft = first(Q, Q.st.map((b: any, i: number) => i).filter((i: number) => ![bd, gl, ty, pane, wall, metal].includes(i) && Q.st[i].stuff === 'paint' && vis(Q.st[i]) && !(Q.st[i].flags & BoxFlag.Glass) && Q.st[i].h[1] > 0.3)); if (soft >= 0) Q.st[soft].stuff = 'cloth'; }   // (a soft thing: the word most boxes of the levels say, and one the office says of nothing a round reaches — a thing that said only 'paint' says it here)
         const said: number[] = []; for (const w of HIT_STUFFS as string[]) { const c = Q.st.map((b: any, i: number) => i).filter((i: number) => ![bd, gl, ty, pane].includes(i) && Q.st[i].stuff === w && vis(Q.st[i]) && !(Q.st[i].flags & BoxFlag.Glass) && Q.st[i].h[1] > 0.3); const i = first(Q, c); if (i >= 0) { said.push(i); words.add(w); } }

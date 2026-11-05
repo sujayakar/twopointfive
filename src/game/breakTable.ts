@@ -21,7 +21,8 @@ import { CutPlane, MAX_CUT_PLANES, cutBoxesOn, cutPrism, cutRecord, cutFit, cutT
 import type { Game } from './game';
 import type { Chunk, ChunkKind, Debris } from './debris';
 import { hash01, supportAlong } from './debris';
-import { gpuFx, surfOf, emitDust, PFX, type Surf } from './particleFx';
+import { gpuFx, emitDust, PFX, type Surf } from './particleFx';
+import { doesOf, type DoesWord } from '../scene/materials';
 import { NOBODY_ID } from './consts';
 import { messEvicted } from './floormess';
 import { EVICT, DEBRIS } from './destructionSwitch';   // (the eviction pop's fix: a leaf module, no imports of its own)
@@ -128,19 +129,19 @@ export const BREAKS = {
   steel: { sheet: 0.008, kink: [9, 24] as [number, number], dents: [3, 5] as [number, number], dent: [0.025, 0.06] as [number, number], dentMost: 0.14, rim: 0.035, lip: 0.004, inside: 0.16 },
   /** the uprights a plasterboard partition keeps where fire has opened a run of it above a standing sill (one static stand-in each): half width along the wall
    *  (m), its depth as a share of the wall's, its metal */
-  stud: { half: 0.02, depthK: 0.7, foot: 0.13, albedo: [0.56, 0.57, 0.6] as Vec3, rough: 0.35, metal: true },
+  stud: { half: 0.02, depthK: 0.7, foot: 0.13, albedo: [0.56, 0.57, 0.6] as Vec3, rough: 0.35, metal: true, does: 'unnamed light grey' as DoesWord },   // (`does`, scene/materials.ts: what its grey was to a round until 11-05, a light thing that puffs like plaster. Nobody chose it: a stud is steel)
 };
 export const BREAK_STATS = { shaped: 0, plain: 0, refused: 0, again: 0, mayhem: 0, china: 0, crumbled: 0, heap: 0, ragged: 0, planes: 0, dropped: 0, chips: 0, dressed: 0, kinked: 0, loose: 0, sheets: 0, carcasses: 0, notched: 0 };
 
 const SURF_MAT: Record<Surf, Mat> = { metal: 'metal', plastic: 'plastic', glass: 'screen', wood: 'wood', cardboard: 'cardboard', drywall: 'plasterboard', concrete: 'masonry', carpet: 'carpet', fabric: 'fabric', foliage: 'plant' };
 export const matOfSurf = (s: Surf): Mat => SURF_MAT[s];
-/** the row a pool chunk reads: by what the destruction lane already knows the thing is (a tile, a housing, clutter), else by its paint */
-export function matOf(kind: ChunkKind, albedo: Vec3): Mat {
+/** the row a pool chunk reads: by what the destruction lane already knows the thing is (a tile, a housing, clutter), else by what its box does (scene/materials.ts) */
+export function matOf(kind: ChunkKind, box: { does?: string }): Mat {
   if (kind === 'shard') return 'glass';
   if (kind === 'tile') return 'tile';
   if (kind === 'housing') return 'screen';
   if (kind === 'binder') return 'plastic';
-  const s = surfOf(albedo);
+  const s = doesOf(box).surf;
   if (kind === 'clutter') return s === 'foliage' ? 'plant' : 'plastic';   // (desk clutter is painted 'black', which the paint table reads as metal: it is plastic and china)
   return SURF_MAT[s];
 }
@@ -357,14 +358,14 @@ export class Breaks {
   // ---------------------------------------------------------------- the pool's hooks (game/debris.ts calls them; each is nothing with the switch off)
   /** every chunk the pool takes: its row by what it is, its row's bounce and landing level */
   /** for the simulation's landing of a piece (debris.ts thrown): the level born() below gives such a chunk, and the puff breakAgain raises when a tile lands hard enough to break again */
-  lands(kind: Chunk['kind'], paint: Vec3, speed: number): { level: number; dust: number } {
+  lands(kind: Chunk['kind'], box: Box, speed: number): { level: number; dust: number } {
     if (!cutBoxesOn() || kind === 'shard') return { level: 0, dust: 0 };
-    const mat = matOf(kind, paint), row = BREAK[mat];
+    const mat = matOf(kind, box), row = BREAK[mat];
     return { level: row.level, dust: mat === 'tile' && row.puff > 0 && row.again !== null && speed >= row.again.land ? row.puff : 0 };
   }
   born(c: Chunk) {
     if (!cutBoxesOn() || c.kind === 'shard') return;
-    this.tag(c, matOf(c.kind, c.box.albedo), 0, c.box.albedo, c.kind === 'binder');
+    this.tag(c, matOf(c.kind, c.box), 0, c.box.albedo, c.kind === 'binder');
   }
   private tag(c: Chunk, mat: Mat, gen: 0 | 1, paint: Vec3, fixed = false) {
     const row = BREAK[mat]; c.mat = { mat, gen, paint: v3.copy(paint) }; if (fixed) c.mat.fixed = true;
@@ -402,7 +403,7 @@ export class Breaks {
    *  extent their scatter) — the shape it had, not a ball at its middle — and its row's dust once, by its size (no sparks: nothing struck it) */
   private dissolve(c: Chunk) {
     const P = gpuFx(this.g); BREAK_STATS.crumbled++; if (!P) return;
-    const m = c.mat ?? { mat: matOf(c.kind, c.box.albedo), gen: 0 as const, paint: c.box.albedo }; const row = BREAK[m.mat]; const b = c.box, h = b.h;
+    const m = c.mat ?? { mat: matOf(c.kind, c.box), gen: 0 as const, paint: c.box.albedo }; const row = BREAK[m.mat]; const b = c.box, h = b.h;
     const il = h[0] >= h[1] && h[0] >= h[2] ? 0 : h[1] >= h[2] ? 1 : 2; const r = h[il]; const mid = Math.max(...[0, 1, 2].filter(i => i !== il).map(i => h[i]));
     const [n0, n1] = BREAKS.sizedChips, [s0, s1] = BREAKS.sizedSpan; const n = Math.round(n0 + (n1 - n0) * Math.max(0, Math.min(1, (r - s0) / Math.max(1e-3, s1 - s0))));
     const ax = quat.rotate(b.rot ?? quat.yaw(b.yaw), il === 0 ? [1, 0, 0] : il === 1 ? [0, 1, 0] : [0, 0, 1]);
@@ -443,7 +444,7 @@ export class Breaks {
   }
   /** a piece gone into particles of its own material where it is (an eviction, the mayhem rule, china) */
   private crumble(c: Chunk, count: [number, number], speed: number) {
-    const m = c.mat ?? { mat: matOf(c.kind, c.box.albedo), gen: 0 as const, paint: c.box.albedo }; const row = BREAK[m.mat];
+    const m = c.mat ?? { mat: matOf(c.kind, c.box), gen: 0 as const, paint: c.box.albedo }; const row = BREAK[m.mat];
     const n = count[0] + Math.floor(hash01(this.rel(c) * 577 + 3) * (count[1] - count[0] + 1));
     const r = Math.max(c.box.h[0], c.box.h[1], c.box.h[2]);
     this.chips(row, m.paint, c.box.c, [0, 1, 0], n, speed, r * 0.6, c.who, Math.max(1, Math.min(2.2, r / 0.08)));
@@ -718,16 +719,16 @@ export class Breaks {
   /** THE STUDS of a holed plasterboard partition: one thin metal upright on every column line that has an OPEN upper cell on both sides and a STANDING sill on
    *  both sides — a port more than one column wide keeps its framing, a hole (the sill gone) does not. Read off the cells alone (not off what opened them), so
    *  a checkpoint's reload stands the same studs. Local centres (the breakable's frame) + half extents; [] with the switch off or for any other material. */
-  studs(B: CellGrid): { c: Vec3; h: Vec3; albedo: Vec3; rough: number; metal: boolean }[] {
+  studs(B: CellGrid): { c: Vec3; h: Vec3; albedo: Vec3; rough: number; metal: boolean; does: DoesWord }[] {
     if (!cutBoxesOn() || B.ny < 2 || SURF_MAT[B.surf] !== 'plasterboard' || B.nOpen === 0) return [];
-    const K = BREAKS.stud; const alongX = B.nx > 1 || B.nz === 1 && B.box.h[0] >= B.box.h[2]; const N = alongX ? B.nx : B.nz; const out: { c: Vec3; h: Vec3; albedo: Vec3; rough: number; metal: boolean }[] = [];
+    const K = BREAKS.stud; const alongX = B.nx > 1 || B.nz === 1 && B.box.h[0] >= B.box.h[2]; const N = alongX ? B.nx : B.nz; const out: { c: Vec3; h: Vec3; albedo: Vec3; rough: number; metal: boolean; does: DoesWord }[] = [];
     const open = (k: number, iy: number) => B.open[alongX ? (iy * B.nz) * B.nx + k : (iy * B.nz + k) * B.nx] === 1;
     const L = alongX ? B.box.h[0] : B.box.h[2], T = alongX ? B.box.h[2] : B.box.h[0]; const y0 = B.yb[1], y1 = B.yb[B.ny];
     for (let k = 0; k + 1 < N; k++) {
       if (!open(k, 1) || !open(k + 1, 1) || open(k, 0) || open(k + 1, 0)) continue;
       const u = -L + 2 * L * (k + 1) / N; const yl = y0 - K.foot; const c: Vec3 = alongX ? [u, (yl + y1) / 2, 0] : [0, (yl + y1) / 2, u];   // (its foot runs down into the sill: a ragged sill top never leaves it hanging)
       const h: Vec3 = alongX ? [K.half, (y1 - yl) / 2, T * K.depthK] : [T * K.depthK, (y1 - yl) / 2, K.half];
-      out.push({ c, h, albedo: K.albedo, rough: K.rough, metal: K.metal });
+      out.push({ c, h, albedo: K.albedo, rough: K.rough, metal: K.metal, does: K.does });
     }
     return out;
   }

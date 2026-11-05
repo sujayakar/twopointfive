@@ -1,14 +1,14 @@
-// THE GWOT PALETTE — the default look's colours and finishes by name (scene/gwotKit.ts builds with them; scene/look.ts is the switch), and WHAT EACH ONE IS TO
-// A ROUND AND A BLAST. The simulation knows what a static is made of by its paint (game/particleFx.ts paletteName / surfOf: an exact office-palette albedo
-// names the stuff — which walls a charge cuts, what a desk does in a blast, what a round knocks out — and an unnamed paint is classed by how bright it is), so
-// a paint from this palette says its stuff here: `GWOT_SIM[name]` = the OFFICE material it stands for ('wall' = a plaster partition a charge cuts, 'concrete'
-// = structure, 'wood', 'metal', 'chair' = cloth …) or '~surf' = no office name, that surface. `gwotAs(name, sim)` is the same paint to the eye (≤ 0.0024 off
-// a channel) standing for something else — a mud PARTITION ('wall') beside a mud SHELL ('concrete'), or, in a level that changed its clothes, exactly the
-// office paint the box wore before, so nothing a round or a charge does there differs.
-// No imports but a type and the table of what a paint is made of (scene/stuff.ts, which imports only the look's list of names): game/ reads this without
-// pulling the kit in.
+// THE GWOT PALETTE — the default look's colours and finishes by name (scene/gwotKit.ts builds with them; scene/look.ts is the switch).
+// WHAT EACH ONE IS TO A ROUND AND A BLAST IS SAID, NOT READ OFF IT: a row's name says what a box of it does (scene/stuff.ts PAINT_DOES, a word of the table
+// of materials), the kit puts that word on the box (Box.does), and the rules read the box. `gwotAs(name, does)` is the same paint, to the eye exactly,
+// on a thing that does something else: a mud PARTITION ('plasterboard': a charge cuts it) beside a mud SHELL ('concrete').
+// (Until 2026-11-05 the rules read a box's colour, and a stand-in was the paint a hair off, up to 0.0024 a channel, with the name it stood for in the
+// offset. A file written then still carries those colours until it is exported again; tools/levels/doesWas.ts reads them, and nothing here does.)
+// No imports but a type and the table of what a paint is made of and does (scene/stuff.ts, which imports only the look's list of names): game/ reads this
+// without pulling the kit in.
 import type { Vec3 } from '../math/vec';
-import { namePaints, namePaint } from './stuff';
+import { namePaints, namePaint, sayPaint, doingAs, doesOfName, type BoxStuff } from './stuff';
+import type { DoesWord } from './materials';
 
 /** THE PALETTE (linear albedo), by name — a generator that exports `MATERIALS = GWOT_MATERIALS` has these written into its level file's `materials` */
 export const GWOT_PALETTE = {
@@ -44,7 +44,7 @@ export const GWOT_PALETTE = {
   rugMadder: [0.1, 0.03, 0.035] as Vec3,
 };
 export type GwotMat = keyof typeof GWOT_PALETTE;
-namePaints(GWOT_PALETTE);   // (a box made with a row of this palette is made of what the row's NAME says: scene/stuff.ts. No finish is named here: whoever lays a GWOT paint writes its finish, as ever)
+namePaints(GWOT_PALETTE);   // (a box made with a row of this palette is made of what the row's NAME says, and does what it says: scene/stuff.ts. No finish is named here: whoever lays a GWOT paint writes its finish, as ever)
 /** THE FINISHES (GGX roughness, bare metal), by the palette's names; absent = matte cloth / earth (0.95). Nothing here is polished: this look has no mirror. */
 export const GWOT_FINISH: Readonly<Partial<Record<GwotMat, { rough: number; metal?: boolean }>>> = {
   mud: { rough: 0.97 }, mudDark: { rough: 0.97 }, mudLight: { rough: 0.95 }, render: { rough: 0.9 }, whitewash: { rough: 0.88 }, block: { rough: 0.92 }, tWall: { rough: 0.9 },
@@ -58,14 +58,14 @@ export const GWOT_FINISH: Readonly<Partial<Record<GwotMat, { rough: number; meta
   truckWhite: { rough: 0.35 }, truckTan: { rough: 0.4 }, truckRed: { rough: 0.35 }, glassDark: { rough: 0.1 },
 };
 export const ROUGH_CLOTH = 0.95;
-/** THE SNOW PAINTS — lying snow as paint, for a level built in winter (tools/levels/pass.ts): `snow` fresh, a blue-tinted near-white (never a neutral white:
- *  a plain white or grey box is a steel cabinet to a blast); `snowPacked` trodden / driven snow, darker and greyer; `snowOld` slush and old snow, the dirty
+/** THE SNOW PAINTS — lying snow as paint, for a level built in winter (tools/levels/pass.ts): `snow` fresh, a blue-tinted near-white; `snowPacked` trodden / driven snow, darker and greyer; `snowOld` slush and old snow, the dirty
  *  ring round a cleared patch and the foot of a wall where the sun never comes. Each step down is over a third of the one it lies on (STYLE.md: a patch is
  *  darker than its ground, never under a third of it), and earth (`dust`) on `snowOld` holds the same rule.
  *  A TABLE OF ITS OWN, not rows of GWOT_PALETTE: that table is written whole into the `materials` of every level built on the kit (GWOT_MATERIALS), and a new
  *  row there makes every one of those files stale. A snow level's generator exports `MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS }`.
- *  TO A ROUND AND A BLAST snow is the ground (SNOW_SIM: 'asphalt', as dust, dirt and gravel are): a round knocks a puff of its own colour out of it, a charge
- *  cuts nothing of it, and it is never steel, glass or wood. gwotSimOf() below knows these colours; no stand-ins (gwotAs) are made of them. */
+ *  TO A ROUND AND A BLAST snow is the ground (the rows 'snow', 'packed snow' and 'old snow' of the table of materials: the tarmac's columns, and which
+ *  snow it is): a round knocks a puff of its own colour out of it, a charge cuts nothing of it, and it is never steel, glass or wood. A box is lying
+ *  snow because it SAYS so (Box.does), whatever white it is painted. */
 export const SNOW_PALETTE = {
   snow: [0.66, 0.71, 0.78] as Vec3, snowPacked: [0.43, 0.47, 0.53] as Vec3, snowOld: [0.27, 0.3, 0.34] as Vec3,
 };
@@ -74,68 +74,6 @@ namePaints(SNOW_PALETTE);
 export const SNOW_FINISH: Readonly<Record<SnowMat, { rough: number }>> = { snow: { rough: 1 }, snowPacked: { rough: 0.9 }, snowOld: { rough: 0.95 } };
 export const SNOW_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number }>> = Object.fromEntries(
   (Object.keys(SNOW_PALETTE) as SnowMat[]).map(n => [n, { albedo: SNOW_PALETTE[n], rough: SNOW_FINISH[n].rough }]));
-/** what each snow paint is to a round and a blast (an office paint name, as GWOT_SIM) */
-export const SNOW_SIM: Readonly<Record<SnowMat, GwotSim>> = { snow: 'asphalt', snowPacked: 'asphalt', snowOld: 'asphalt' };
-/** THE COAST PALETTE — A SECOND SKIN'S PAINTS: a neutral, sunlit place by the sea (rendered and painted walls, fair concrete, paving, timber decks,
- *  sand, enamel and canvas), for the levels that leave the 2010s setting. A TABLE OF ITS OWN, as the snow's is and for the same reason. Nothing lays a
- *  row of it by itself: the kit's pieces are written in the kit's own rows, and a level that wears this skin builds them over a host that changes their
- *  clothes as they are laid (tools/levels/coastSkin.ts: which coast row each kit row wears). So a piece is written once and has two skins.
- *  EVERY ROW SAYS A STUFF THE LOOK HAS (scene/stuff.ts COAST_STUFF): the look's table of stuffs is nearly full, and a skin is a choice of rows from it,
- *  never a new one. Two rows wait for a stuff the look does not have yet and say the nearest honest one meanwhile: `sand` (earth) and `roofTile` (sheet).
- *  NO ROW HAS THE NUMBERS OF ANOTHER PALETTE'S ROW or of one of its stand-ins (a round knows a paint by its numbers: tools/qa/coast-check.ts holds it). */
-export const COAST_PALETTE = {
-  // walls: render in three colours, a smooth skim, fair concrete, precast panels, pale block. NO PALE ROW IS OVER 0.53 (on a real card, 11-05, a sunlit plane painted 0.63 still sat at white, where one at 0.35 read as a light stone): the exposure brings a dark place up and
-  // never a bright one down, so a big plane painted near white sits AT white in the sun and loses its joints (seen on a real card, 11-05). The sun takes
-  // a pale plane the rest of the way
-  stuccoWhite: [0.53, 0.52, 0.495] as Vec3, stuccoSand: [0.63, 0.55, 0.43] as Vec3, terracotta: [0.53, 0.27, 0.17] as Vec3, skimWhite: [0.52, 0.505, 0.47] as Vec3,
-  fairConcrete: [0.49, 0.485, 0.47] as Vec3, castPanel: [0.585, 0.58, 0.565] as Vec3, paleBlock: [0.535, 0.52, 0.495] as Vec3,
-  // ground: two pavings, the road, a pale slab, pale gravel, sand, soil, a lawn. As in the first skin the ground sits under every wall's value
-  paverWarm: [0.345, 0.3, 0.245] as Vec3, paverGrey: [0.285, 0.283, 0.275] as Vec3, roadTarmac: [0.072, 0.073, 0.078] as Vec3, paleSlab: [0.405, 0.4, 0.385] as Vec3,
-  paleGravel: [0.31, 0.265, 0.205] as Vec3, sand: [0.585, 0.505, 0.37] as Vec3, soil: [0.098, 0.068, 0.046] as Vec3, lawn: [0.125, 0.215, 0.075] as Vec3,
-  // timber, roof
-  deck: [0.395, 0.285, 0.185] as Vec3, deckGrey: [0.415, 0.385, 0.335] as Vec3, roofTile: [0.445, 0.195, 0.115] as Vec3,
-  // paint and enamel: one sea colour, one warm, a yellow, a navy, a white
-  paintTeal: [0.045, 0.295, 0.315] as Vec3, paintCoral: [0.615, 0.195, 0.135] as Vec3, paintSun: [0.715, 0.545, 0.075] as Vec3, paintNavy: [0.038, 0.078, 0.195] as Vec3, enamelWhite: [0.515, 0.515, 0.502] as Vec3,
-  // metal, plastic, rubber, cloth, leaves
-  brushedSteel: [0.525, 0.545, 0.555] as Vec3, darkSteel: [0.088, 0.093, 0.102] as Vec3, binGreen: [0.058, 0.205, 0.118] as Vec3, plasticPale: [0.505, 0.5, 0.476] as Vec3, plasticDark: [0.052, 0.052, 0.058] as Vec3,
-  tyreRubber: [0.034, 0.034, 0.038] as Vec3, canvasWhite: [0.5, 0.46, 0.39] as Vec3, canvasBlue: [0.095, 0.245, 0.495] as Vec3, towelStripe: [0.655, 0.305, 0.215] as Vec3, foliage: [0.098, 0.235, 0.078] as Vec3,
-  // the quiet way's rows (tools/levels/coastSkin.ts COAST_QUIET_OF, tools/levels/hotel-terrace.ts): FOUR VALUES, pale stone, mid gravel, dark planting and
-  // timber, near-black water. A pale terrace stone, the darker smooth stone of a porch floor and the band a column sets out, dry earth, weathered timber,
-  // dark bronze for frames and drains, a cypress and a sage, deep water, and two colours: clay as one plane in a view, saffron only on things that move
-  stonePale: [0.47, 0.45, 0.405] as Vec3, stoneShade: [0.37, 0.35, 0.315] as Vec3, stoneBand: [0.29, 0.27, 0.24] as Vec3, dryEarth: [0.2, 0.13, 0.078] as Vec3,
-  timber: [0.24, 0.175, 0.12] as Vec3, bronze: [0.07, 0.06, 0.05] as Vec3, cypress: [0.05, 0.075, 0.03] as Vec3, sage: [0.17, 0.2, 0.12] as Vec3,
-  poolDark: [0.02, 0.07, 0.075] as Vec3, clay: [0.36, 0.13, 0.07] as Vec3, saffron: [0.52, 0.31, 0.07] as Vec3,
-  // the hotel corner's second laying (tools/levels/hotel-corner.ts): a smooth stone for a house's blank walls (a cast panel drew bolt holes on them), a cream for its columns, a rough stone for a garden
-  // wall, a smooth warm timber for rafters and shutters, pale shallow water, a paving slab
-  limestone: [0.525, 0.5, 0.445] as Vec3, cream: [0.53, 0.506, 0.436] as Vec3, rubble: [0.33, 0.276, 0.206] as Vec3, cedar: [0.32, 0.2, 0.11] as Vec3, poolPale: [0.17, 0.31, 0.276] as Vec3, stoneSlab: [0.445, 0.42, 0.375] as Vec3,
-};
-export type CoastMat = keyof typeof COAST_PALETTE;
-namePaints(COAST_PALETTE);
-export const COAST_FINISH: Readonly<Record<CoastMat, { rough: number; metal?: boolean }>> = {
-  stuccoWhite: { rough: 0.9 }, stuccoSand: { rough: 0.92 }, terracotta: { rough: 0.9 }, skimWhite: { rough: 0.8 }, fairConcrete: { rough: 0.85 }, castPanel: { rough: 0.8 }, paleBlock: { rough: 0.92 },
-  paverWarm: { rough: 0.9 }, paverGrey: { rough: 0.9 }, roadTarmac: { rough: 0.95 }, paleSlab: { rough: 0.88 }, paleGravel: { rough: 1 }, sand: { rough: 1 }, soil: { rough: 1 }, lawn: { rough: 1 },
-  deck: { rough: 0.8 }, deckGrey: { rough: 0.88 }, roofTile: { rough: 0.85 },
-  paintTeal: { rough: 0.55 }, paintCoral: { rough: 0.55 }, paintSun: { rough: 0.5 }, paintNavy: { rough: 0.55 }, enamelWhite: { rough: 0.4 },
-  brushedSteel: { rough: 0.4, metal: true }, darkSteel: { rough: 0.5, metal: true }, binGreen: { rough: 0.5 }, plasticPale: { rough: 0.45 }, plasticDark: { rough: 0.5 },
-  tyreRubber: { rough: 0.85 }, canvasWhite: { rough: 0.95 }, canvasBlue: { rough: 0.95 }, towelStripe: { rough: 0.95 }, foliage: { rough: 1 },
-  stonePale: { rough: 0.6 }, stoneShade: { rough: 0.5 }, stoneBand: { rough: 0.5 }, dryEarth: { rough: 1 }, timber: { rough: 0.85 }, bronze: { rough: 0.45, metal: true }, cypress: { rough: 1 }, sage: { rough: 1 },
-  poolDark: { rough: 0.06 }, clay: { rough: 0.5 }, saffron: { rough: 0.95 },
-  limestone: { rough: 0.7 }, cream: { rough: 0.6 }, rubble: { rough: 0.95 }, cedar: { rough: 0.5 }, poolPale: { rough: 0.06 }, stoneSlab: { rough: 0.55 },
-};
-export const COAST_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(
-  (Object.keys(COAST_PALETTE) as CoastMat[]).map(n => [n, { albedo: COAST_PALETTE[n], rough: COAST_FINISH[n].rough, ...(COAST_FINISH[n].metal ? { metal: true } : {}) }]));
-/** what each coast paint is to a round and a blast where it is laid as itself (an office paint name or a surface, as GWOT_SIM) */
-export const COAST_SIM: Readonly<Record<CoastMat, GwotSim>> = {
-  stuccoWhite: 'concrete', stuccoSand: 'concrete', terracotta: 'concrete', skimWhite: 'wall', fairConcrete: 'concrete', castPanel: 'concrete', paleBlock: 'concrete',
-  paverWarm: 'stone', paverGrey: 'stone', roadTarmac: 'asphalt', paleSlab: 'concrete', paleGravel: 'asphalt', sand: 'asphalt', soil: 'asphalt', lawn: 'grass',
-  deck: 'wood', deckGrey: 'wood', roofTile: 'concrete',
-  paintTeal: 'metal', paintCoral: 'metal', paintSun: 'metal', paintNavy: 'metal', enamelWhite: 'metal',
-  brushedSteel: 'metal', darkSteel: 'metal', binGreen: '~plastic', plasticPale: '~plastic', plasticDark: '~plastic',
-  tyreRubber: '~plastic', canvasWhite: 'chair', canvasBlue: 'chair', towelStripe: 'chair', foliage: 'plant',
-  stonePale: 'stone', stoneShade: 'stone', stoneBand: 'stone', dryEarth: 'asphalt', timber: 'wood', bronze: 'metal', cypress: 'plant', sage: 'plant',
-  poolDark: 'concrete', clay: 'wall', saffron: 'chair',
-  limestone: 'concrete', cream: 'concrete', rubble: 'concrete', cedar: 'wood', poolPale: 'concrete', stoneSlab: 'stone',
-};
 /** the palette + finishes as the exporter's `materials` rows (tools/levels/export.ts: a generator's `MATERIALS` export) */
 export const GWOT_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(
   (Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => [n, { albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH, ...(GWOT_FINISH[n]?.metal ? { metal: true } : {}) }]));
@@ -144,61 +82,40 @@ export const GWOT_SURFACE: Readonly<Partial<Record<GwotMat, 'carpet' | 'lino' | 
   dust: 'asphalt', dirt: 'asphalt', gravel: 'asphalt', mudFloor: 'stone', slab: 'stone', rugRed: 'carpet', rugNavy: 'carpet', rugCream: 'carpet', rugMadder: 'carpet',
 };
 
-/** what a paint can stand for: an office palette name (levels/office.json materials — game/particleFx.ts MAT_SURF says what each is), or '~surf' = unnamed,
- *  that surface ('~steel' / '~steelPale' = an unnamed grey steel cabinet — a blast takes it apart as a sheet and a carcass —, mid grey / pale). APPEND ONLY: a name's place in this list is in the colour of every level file that used it. */
-export const GWOT_SIM_NAMES = ['carpet', 'carpetBlue', 'carpetRed', 'lino', 'stone', 'asphalt', 'grass', 'wall', 'wallDark', 'concrete', 'ceiling', 'partRed', 'partBlue', 'partTan',
-  'wood', 'woodDark', 'metal', 'black', 'chair', 'cardboard', 'white', 'plant', 'glassFrame', 'screenOff', 'red',
-  '~metal', '~plastic', '~glass', '~wood', '~cardboard', '~drywall', '~concrete', '~carpet', '~fabric', '~foliage', '~steel', '~steelPale'] as const;
-export type GwotSim = typeof GWOT_SIM_NAMES[number];
-/** WHAT EACH PAINT IS, as the kit lays it: shells and yard walls are structure, plaster is a partition, cloth is cloth */
-export const GWOT_SIM: Readonly<Record<GwotMat, GwotSim>> = {
-  mud: 'concrete', mudDark: 'concrete', mudLight: 'wall', render: 'concrete', whitewash: 'wall', block: 'concrete', tWall: 'concrete',
-  paintBlue: 'metal', paintGreen: 'metal', paintRust: 'metal', paintCream: 'wall',
-  dust: 'asphalt', dirt: 'asphalt', gravel: 'asphalt', mudFloor: 'stone', slab: 'concrete', damp: 'asphalt', oil: 'asphalt',
-  rugRed: 'carpetRed', rugNavy: 'carpetBlue', rugCream: 'carpet', rugOchre: 'carpet', rugGreen: 'carpet', canvas: 'chair', blanketGrey: 'chair', blanketBrown: 'chair',
-  tarpBlue: 'chair', sack: 'chair', sandbag: 'concrete', hesco: 'concrete',
-  olive: 'woodDark', coyote: 'chair', stencil: 'metal',
-  rust: 'metal', iron: 'metal', galv: 'metal', tin: 'metal', drumBlue: 'metal', drumRed: 'metal', genYellow: 'metal',
-  plasticWhite: '~plastic', plasticGreen: '~plastic', plasticBlue: '~plastic', plasticBlack: '~plastic', jerryYellow: '~plastic', rubber: '~plastic',
-  poplar: 'wood', woodGrey: 'wood', ply: 'wood',
-  truckWhite: 'metal', truckTan: 'metal', truckRed: 'metal', glassDark: '~glass',
-  prodOrange: 'plant', prodGreen: 'plant', prodRed: 'plant', prodYellow: 'plant', straw: 'plant', scrub: 'plant',
-  rugMadder: 'carpetRed',
-};
 /** A ROW'S DARKER ROW: the same stuff a shade down, where the palette holds one (the three mud walls are one earth in three tones). What a piece that
  *  lays one paint in two tones reaches for (gwotKit.ts rubble: a scatter's darker stones); a row with none here is laid in its one tone. Data, like the
  *  palette: a family joins by a row here, never by a case in a piece. */
 export const GWOT_DARKER: Readonly<Partial<Record<GwotMat, GwotMat>>> = { mudLight: 'mud', mud: 'mudDark' };
-const STEP = 0.0008;
-const shifted = (a: Vec3, code: number): Vec3 => [0, 1, 2].map(c => Math.round((a[c] + ((code >> (2 * c)) & 3) * STEP) * 1e4) / 1e4) as Vec3;
-/** the paint `m` STANDING FOR `sim`: the palette colour itself where that is what it is anyway, else the same colour a hair off (see the head) */
-export function gwotAs(m: GwotMat, sim: GwotSim): Vec3 {
-  if (sim === GWOT_SIM[m]) return GWOT_PALETTE[m];
-  const a = shifted(GWOT_PALETTE[m], 1 + GWOT_SIM_NAMES.indexOf(sim)); namePaint(a, m); return a;   // (the same paint to the eye is the same stuff: the stand-in is known as the row it stands in for)
+/** THE PAINT `m` ON A THING THAT DOES `does` (a row of the table of materials: scene/materials.ts): the palette's own row where that is what the row's
+ *  name says anyway, else the same numbers as a paint of their own, known by the row's name and by what it does. Handed to a kit's add() it makes a box
+ *  drawn exactly as the row and doing the other thing; in a level file the box wears the row and says its own `does`. */
+export function gwotAs(m: GwotMat, does: DoesWord): Vec3 { return doingAs(GWOT_PALETTE[m], does); }
+/** THE PAINTS A KIT IS HANDED: a colour and a finish for every row the kit knows by name. The kit's own are the palette itself (GWOT_PAINTS); a level in
+ *  other clothes hands it another set (paintsOf below), and no piece knows: a piece is written once, in the kit's row names. */
+export interface KitPaints { readonly paints: Readonly<Record<GwotMat, Vec3>>; readonly finish: Readonly<Partial<Record<GwotMat, { rough: number; metal?: boolean }>>> }
+export const GWOT_PAINTS: KitPaints = { paints: GWOT_PALETTE, finish: GWOT_FINISH };
+/** THE KIT'S ROWS IN ANOTHER PALETTE'S PAINT. `of` says which row of `palette` each row of the kit wears (data: one line a row, and the compiler holds it
+ *  to every row of the kit). What comes back is, for each kit row, that palette row's numbers as a paint of its own: KNOWN BY THE PALETTE ROW'S NAME (so a
+ *  box of it is drawn as what that name is made of, or as `words` says the row is), with that row's finish, and DOING WHAT THE KIT'S ROW DOES (scene/stuff.ts
+ *  PAINT_DOES; scene/materials.ts): a drum is steel to a round in coral as it was in red, and a partition a charge cuts is one in any plaster. Many kit
+ *  rows may wear one palette row; each is its own paint, since they do different things. Hand the answer to a kit through its host (gwotKit.ts
+ *  GwotHost.paints) or to a look file's skin (tools/levels/gwotSkin.ts Skin.of). In a level file a box of it wears the palette's row by its numbers. */
+export function paintsOf(palette: Readonly<Record<string, Vec3>>, finish: Readonly<Record<string, { rough: number; metal?: boolean } | undefined>>, of: Readonly<Record<GwotMat, string>>, words: Readonly<Record<string, BoxStuff>> = {}): KitPaints {
+  const paints = {} as Record<GwotMat, Vec3>, fin: Partial<Record<GwotMat, { rough: number; metal?: boolean }>> = {};
+  const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => Object.hasOwn(o, k) ? o[k] : undefined;   // (a row may be named anything: 'constructor' is a name, not a member)
+  for (const m of Object.keys(GWOT_PALETTE) as GwotMat[]) { const name = own(of as Record<string, string>, m), row = name === undefined ? undefined : own(palette, name);
+    if (name === undefined || !row) throw new Error(`paintsOf: the kit's row '${m}' wears ${name === undefined ? 'nothing' : `'${name}', which is no row of the palette`}`);
+    const a: Vec3 = [row[0], row[1], row[2]], f = own(finish, name), w = own(words, name);
+    if (w !== undefined) sayPaint(a, name, { stuff: w, does: doesOfName(m), ...(f ?? {}) }); else namePaint(a, name, f, doesOfName(m));
+    paints[m] = a; if (f) fin[m] = f; }
+  return { paints, finish: fin };
 }
-/** … and a coast paint standing for `sim`, the same way (tools/levels/coastSkin.ts: a kit's box in its coast clothes is to a round what it was) */
-export function coastAs(m: CoastMat, sim: GwotSim): Vec3 {
-  if (sim === COAST_SIM[m]) return COAST_PALETTE[m];
-  const a = shifted(COAST_PALETTE[m], 1 + GWOT_SIM_NAMES.indexOf(sim)); namePaint(a, m); return a;
-}
-/** the lot's slab as the storm wets it (game/weather.ts setWet soak — the same arithmetic, so the same doubles) */
-export const gwotWet = (a: Vec3): Vec3 => [a[0] * 0.5, a[1] * 0.5, a[2] * 0.5 * 1.04];
-let simByAlbedo: Map<string, GwotSim> | null = null;
-/** what a colour of this palette (or one of its stand-ins) is — undefined for any other colour. Built on first ask. */
-export function gwotSimOf(albedo: Vec3, key: string = albedo.join(',')): GwotSim | undefined {
-  if (!simByAlbedo) { simByAlbedo = new Map();
-    for (const m of Object.keys(GWOT_PALETTE) as GwotMat[]) { GWOT_SIM_NAMES.forEach((s, i) => simByAlbedo!.set(shifted(GWOT_PALETTE[m], 1 + i).join(','), s)); }
-    for (const m of Object.keys(GWOT_PALETTE) as GwotMat[]) simByAlbedo.set(GWOT_PALETTE[m].join(','), GWOT_SIM[m]);
-    // THE WET LOT: the storm darkens the lot's slab IN PLACE (game/weather.ts setWet: albedo × 0.5, blue × 1.04), and a paint at half its tone is no palette
-    // colour any more. The office's wet asphalt has no name and reads as metal by its tone (as measured — weather.ts says so and keeps it); a paint of this
-    // palette standing for asphalt, wetted the same way, says the same.
-    for (const m of Object.keys(GWOT_PALETTE) as GwotMat[]) { const a = gwotAs(m, 'asphalt'), k = gwotWet(a).join(','); if (!simByAlbedo.has(k)) simByAlbedo.set(k, '~metal'); }
-    // THE SNOW PAINTS, last and only where the key is free: nothing above reads differently because they are here
-    for (const m of Object.keys(SNOW_PALETTE) as SnowMat[]) { const k = SNOW_PALETTE[m].join(','); if (!simByAlbedo.has(k)) simByAlbedo.set(k, SNOW_SIM[m]); }
-    // … and soaked (the switch off: a snow level stands under the storm any level has, and weather.ts setWet darkens its ground slab in place) they say what every wet lot says
-    for (const m of Object.keys(SNOW_PALETTE) as SnowMat[]) { const k = gwotWet(SNOW_PALETTE[m]).join(','); if (!simByAlbedo.has(k)) simByAlbedo.set(k, '~metal'); }
-    // THE COAST PAINTS and their stand-ins, after everything and only where the key is free, so that nothing above reads differently because they are here
-    // (tools/qa/coast-check.ts holds that every one of their keys WAS free: a row whose numbers another palette has would be that palette's stuff to a round)
-    for (const m of Object.keys(COAST_PALETTE) as CoastMat[]) { GWOT_SIM_NAMES.forEach((s, i) => { const k = shifted(COAST_PALETTE[m], 1 + i).join(','); if (!simByAlbedo!.has(k)) simByAlbedo!.set(k, s); }); const k = COAST_PALETTE[m].join(','); if (!simByAlbedo.has(k)) simByAlbedo.set(k, COAST_SIM[m]); } }
-  return simByAlbedo.get(key);
+/** which paint of the look's a colour is, by its numbers: a row of the palette or of the snow paints, or undefined. `eps` > 0 = to within that much a
+ *  channel (a file written before 2026-11-05 carries stand-ins up to 0.0024 off their rows). THE PICTURE'S AND THE LEVEL TOOLS' QUESTION (does this level
+ *  wear the look, is this box already in the look's paint): no rule of the game asks a colour anything. */
+export function lookPaintOf(albedo: readonly number[], eps = 0): GwotMat | SnowMat | undefined {
+  const is = (r: Vec3) => Math.abs(albedo[0] - r[0]) <= eps && Math.abs(albedo[1] - r[1]) <= eps && Math.abs(albedo[2] - r[2]) <= eps;
+  for (const m in GWOT_PALETTE) if (is(GWOT_PALETTE[m as GwotMat])) return m as GwotMat;
+  for (const m in SNOW_PALETTE) if (is(SNOW_PALETTE[m as SnowMat])) return m as SnowMat;
+  return undefined;
 }

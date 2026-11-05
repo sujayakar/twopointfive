@@ -1854,6 +1854,57 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   static, door or prop was (a held thing, a thrown one) costs no frame: it draws plain for the second or so its map takes. The `even` row is read once, at the
   making of the arrays. They take the `kept` rule BY NAME: a stuff added later says in `look.wgsl` how it is laid and whether the weather touches it. `lookmaps-check.ts` holds the names against the
   shader's, the float, the slots and the block. Drawn as tiles (rebuild pictures); a software boot; never seen on a GPU.
+  - **The maps are made on workers (2026-11-05; `render/lookWorkers.ts`, `lookWorkerMain.ts`, `lookWorkerSource.ts`, `lookWorkerText.ts`; `gbuffer.ts makeLayers`)**.
+    WHY: the boot waits for the level's maps beside the pipelines (`main.ts`, one `Promise.all`), and a level names about twenty: the office's 21 are 5.9 s of
+    one thread's arithmetic under bun on the engine's maths, more on the game's own. Behind half a minute of shader compiles nobody saw it. On a SECOND load in
+    one browser, with the shaders cached, the maps were the last thing the start card waited for: on a rented cloud box (an NVIDIA A10G, 24 cores) every pipeline
+    group was in by 2.5 to 8.5 s and the maps at 10 to 14 s (`__boot.spans.pipelines_materials`).
+    HOW: the layers do not depend on each other. `makeLayers` asks a `LookPool` for the whole batch at once and takes the layers in the batch's own order, so
+    the slots, `lookMade` and the moment a stuff is pointed at its slot are what they were. A worker is started from TEXT: `lookWorkerMain.ts` (the generator,
+    `math/exact.ts`, the few lines that answer) bundled by itself by a bundle-time macro (`lookWorkerSource.ts` runs this bun's `build` as a command, the way
+    bun gives a macro; `lookWorkerText.ts` holds the string and is imported only when a worker is about to start, so a tool under bun that starts none never
+    bundles it). So every build carries the worker (the dev server, `dist`, the one-file page) with no second entry point and no file beside the page. The
+    text is a PLAIN SCRIPT and the worker a classic one: a module worker started from a blob is refused on a page opened from disk, which is how the one-file
+    page is opened. One core is left to the page, eight workers at the most (`LOOK_WORKERS.most`), and they are stopped when the batch is in.
+    THE SAME BYTES, AND THE MATHS: a worker starts on the engine's `Math`; the page computes on the game's own (`EXACT`). Two of the thirty layers come out
+    different in a byte here and there between the two, so each ask carries which maths the asking thread is on and the worker puts itself on it first.
+    WHERE THERE IS NO WORKER (none in this place, one that will not start, a layer a worker failed on) the layer is made on the page's own thread in slices,
+    as above: the workers are only ever a faster way to the same maps. A worker that holds a layer for `LOOK_WORKERS.waitMs` (30 s; a layer is under a second
+    of work) is taken for dead, so a boot never waits on one that will not answer. A place where a worker failed AS A WORKER (would not start, did not
+    answer) says so once on the console ("look maps: made on the page's own thread from here on") and starts no more; THE TAB REMEMBERS it (sessionStorage
+    `twopointsix.lookWorkersGaveUp`), because a mission is a page load and a place whose workers start and never answer would wait the 30 s at every one; a layer the
+    generator itself throws on is refused alone. A macro that cannot bundle hands over an empty text (no workers), never a failed build.
+    `__engine.gbuffer.lookBy` counts the layers made each way.
+    **Switch**: `LOOK_WORKERS.on`: ON in the page (`?lookworkers=0` = every layer on the page's own thread, as it was), OFF in the module, so the headless
+    harness makes its maps as it did on either stand. Not a rule of the game: NO REGISTRY ROW, no journal key, no `FROZEN_HOLDS` row (the maps are the same
+    bytes either way, and nothing of the simulation reads them). So `knobs-check` does not hold it (it reads `src/game`'s tables) and a recording cannot
+    carry it; what holds it is its own check.
+    **Check**: `bun run tools/qa/lookworkers-check.ts` (`probes.ts lookworkers`, family `render`), both stands: the worker's text is whole and a plain
+    script (nothing to fetch, no import); the rule is down in the module and no pool opens where there is no Worker; ALL THIRTY LAYERS made on workers are
+    the layers made here to the byte, on the engine's maths and on the game's own; one layer the generator throws on is refused alone, workers that cannot
+    start are given up on (said once, none started after, and none at the tab's next page load), and one that never answers is given up on after its wait; THE PAGE'S OWN LOOP (`makeLayers`,
+    over a counting device) makes the same layers in the same order into the same slots as the same writes of the same bytes with the workers down, up,
+    and up where there is no Worker. `LOOKWORKERS_BREAK=1` (the workers answer with the next layer) must fail, on the bytes line alone.
+    `node tools/qa/lookworkers-page.cjs` does the bytes in headless Chromium, on both maths, served and with the bundle OPENED FROM DISK: a plain worker
+    does start there from the bundled text.
+    MEASURED (a rented cloud box, an NVIDIA A10G through Vulkan under headless Chrome, 24 cores so 8 workers; the office's look page on High, 21 layers;
+    relative only, never a player's seconds; the page loaded once cold, then again and again in a frame of itself with the shaders cached, the workers off
+    and on in turn, four boxes on the joined build of 11-05 with the lattice tables in): THE MAPS take 2.2 to 2.8 s on the workers in every one of 10
+    warm loads, and 6.5 to 10.7 s on the page's own thread in every one of 10 (`lookFillMs`; `lookBy` 21 / 0 and 0 / 21, the same 21 names in the same
+    order). THE WARM BOOT without workers was 8.3 to 12.7 s in all 10. With them it was 3.3 to 4.2 s in the 4 loads where nothing else was late, and
+    6.8 to 14.0 s in the other 6, where something else was: one pipeline group (`passes` or `particles`) took 7 to 10 s to come back although the shaders
+    were cached, or the page's own script took 3.6 s to arrive. Both happen without the workers too (a slow group in 4 of the 10 loads without them, 5 of
+    the 10 with; the late script on the second warm load of a box whichever way that load made its maps). The script is late before a worker exists, and
+    the slow group comes back 4 to 7 s after the workers have stopped, so neither is the workers'; both were hidden under the maps before. WHY A CACHED PIPELINE GROUP IS SOMETIMES SLOW IS NOT KNOWN and is now the warm boot's longest
+    wait on that box. Before the lattice tables, on the first cut of this, 8 warm loads without workers were 10.9 to 14.8 s and 8 with them 3.5 to 3.7 s
+    (6) and 7.8, 8.2 s (2, a slow `passes`). THE COLD BOOT does not move: 27.5 to 29.4 s either way, the pipelines being the wait (the maps 6.0 to
+    6.3 s on workers while the compiles hold the cores). THE PICTURE: three stills held at 40 s of game time, the workers off twice and on once: the
+    workers' still differs from a base still by less than the two bases differ from each other (mean a channel 1.02 and 1.03 of 255 against 1.13).
+    Under bun on four cores, three workers: 30 layers in 2.4 to 2.6 s against 7.2 to 8.4 s here; in headless Chromium 2.1 to 2.4 s against 7.6 to 14.0 s.
+    NOT SEEN: any Apple chip, Windows, a player's own second visit (a fresh tab, not a frame of a page still open; whether his browser keeps its
+    compiled shaders between loads of the address he plays at decides what he feels of this, and nobody has looked), the one-file page on a GPU (its
+    worker text is in the file and a plain worker starts from a bundle opened from disk in headless Chromium, which has no adapter to draw with). What a
+    machine with four cores gains is three workers' worth; one with two cores gets one worker and little.
 - **CAR PAINT IS A STUFF; ITS SHINE IS THE BOX'S** (11-04; `render/lookTex.ts carpaint`, stuff 16, `look.wgsl LOOK_CARPAINT`; the look's page only). The
   maintainer, of the rounded cars in the dressed showroom: "i think the materials could use some work though. we already have some metal shaders right? maybe
   we want a car paint material too?". A truck's body drew as old `paint` (chips and rust specks all over), a saloon's as nothing. The layer is an enamel
@@ -1864,6 +1915,42 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **THE STATICS ARE DRAWN FROM THE TOP DOWN, AND NO FACE CHANGES HANDS** (11-05; every page; no switch and no second path: it is the order of one
+  draw). The g-buffer drew the static boxes in the list's order with the depth test at "less", so a ground slab laid first under a whole level (the
+  office kit's box 0, 40 by 28 m) was shaded over the whole screen and then drawn over by the floor. Free while that slab was plain; once car parks said
+  tarmac the pass cost a third more under the look, indoors as much as outside (the performance goal's timing). `scene/boxes.ts BoxWorld` now keeps a
+  rank a static (`drawRank`, made by `rankStatics`) and lays the drawn plain statics out by it each upload. No shader text, pipeline or buffer changes.
+  THE ORDER: tops falling, the list's own order between equal tops, EXCEPT that a box waits for every earlier box it shares a face's plane with.
+  Where two faces lie in one plane the depth test keeps the first drawn, and that was always the earlier box: on the white roof an orange plinth,
+  written before the piers, runs across their feet; a look's ground sheets lie a fiftieth of a millimetre apart and show in the order written. Tops
+  falling alone handed thousands of such patches to the taller box (124 of a centimetre or more in different paint over the 59 files). So two faces that
+  look the same way, lie within a quarter of a millimetre along their normal (`TIE_PLANE`: what the depth buffer cannot tell apart at the camera's
+  farthest) and whose bounds lie over one another by more than half a millimetre (`TIE_PATCH`) keep the list's order: the later box takes the turn of
+  the latest box it waits for. ONE RULE FOR EVERY BOX: a face is its plane and its bounds in the world, whatever the turn or tilt; no frames, no bins.
+  A cutaway box is asked as it is drawn. Bounds of a turned face are wider than the face, which only makes a box wait that need not.
+  COUNTED over all 59 level files on the shipped stand by the check's own finder (`DRAWORDER_ALL=1`): 13,036 shared faces among 32,872 drawn statics,
+  none won by the later box, and on every level the ground is drawn after every static that stands above it.
+  WHAT IT KEEPS OF THE SAVING: counting the fragments a depth test lets through on a CPU, through the game's camera (a proxy, not a timing), the order
+  with waits shades 3 to 13 percent more than tops falling alone and still about 60 percent less than the list's order (office 2.70 M, 0.96 M, 1.08 M).
+  WHEN IT IS MADE: when a static's place, size, turn, or whether and how far it is drawn changes, or the list's length does; never for paint, a wet
+  floor's gloss or any other flag. 1.5 to 3 ms for 800 to 1,350 statics under bun; none in fifteen seconds of the office's shift. A wall coming down
+  makes it again on the frames its pieces are added.
+  TIMED on a rented NVIDIA A10 (relative; the office under the look, High) for the PLAIN tops-falling order, an earlier commit, against its parent on
+  like boxes: the g-buffer where the page frames Sam indoors 0.89 ms to 0.34, over the car park 0.91 to 0.64, every other pass and the sum the same;
+  Medium indoors 0.72 to 0.28. The order with waits is to be timed the same way: see the merge's book for its numbers.
+  NOT KNOWN: what an Apple GPU gains (it hides covered fragments by itself, so likely little). Whether a GPU gives two faces in one plane the same depth
+  at every pixel: where it does not the pair fights whatever the order, as before. The dynamics are still drawn after the floor they stand on, and a
+  plain box never waits for a cut one (the cut pass is drawn after). The check is `draworder` (family render; `DRAWORDER_BREAK=1` fails two lines;
+  `DRAWORDER_ALL=1` asks all 59 levels): shared faces found a second way, every face against every other with the patch cut out exactly, any turn or
+  tilt, and every reason to make the order again asked against an order made fresh.
+- **A LOOK MAP'S LATTICES ARE HASHED ONCE A LAYER** (11-05; the look's page only, at its boot and whenever a level names a new stuff; no switch, because
+  no map moves by a byte). `render/lookTex.ts cells2` asked nine cells where their points lie for every texel: three hashes and a square root a cell, most
+  of what a layer cost. A lattice (size, seed, jitter) now fills a table once (`cellTable`, emptied as a layer starts and ends), the nine are told apart by
+  squared distance and only the two nearest are rooted. Compared once, layer by layer: all 30 byte for byte the same at 512, 128 and 64 texels, evened and
+  not. Under bun on one thread the thirty took 8.9 s and take 6.2 (tarmac 609 to 362 ms, grass 695 to 444). The check is `lookcells` (family render;
+  `LOOKCELLS_BREAK=1` fails two of its three lines): cells2 against the plain way written out again, 1.7 million answers to the bit, and a lattice that is
+  not whole cells is refused aloud. NOT DONE: `vn` still hashes four corners a call and is most of the hashing left; the layers still wait on one thread
+  (making them on workers is the performance goal's). Nobody has timed a look page's boot with its shaders already cached, in a browser.
 - **A PRESSED THING'S ARRISES ARE ROLLED, AND A LACQUER MIRRORS MORE THAN PAINT** (11-05; the look's page only; `render/lookTex.ts STUFFS`' two new
   words `rolled` and `mirrors`, `look.wgsl lookRoll` / `lookRollUp`, the reflection texts' `coat`). The maintainer, of the cars: "we don't need to go full
   hyperrealistic but we should sell it more", and "how reflective is the car material, btw? it does feel like it should reflect more of the environment

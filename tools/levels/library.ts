@@ -28,7 +28,8 @@ import { watchPieces } from '../../src/scene/library';
 import { officeKit, buildOfficeProcedural, OFFICE_PALETTE } from '../../src/scene/officeGen';
 import { KIT_PALETTE } from '../../src/scene/levelKit';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, GWOT_SIM_NAMES, GWOT_SURFACE, SNOW_PALETTE, SNOW_SIM, ROUGH_CLOTH, gwotAs, type GwotMat, type SnowMat } from '../../src/scene/gwotPalette';
+import { GWOT_PALETTE, GWOT_FINISH, GWOT_SURFACE, SNOW_PALETTE, ROUGH_CLOTH, type GwotMat, type SnowMat } from '../../src/scene/gwotPalette';
+import { doesOfName } from '../../src/scene/stuff';
 import { findOctagons } from '../../src/scene/round';
 import { ALL_MISSIONS } from '../../src/scene/scenarioList';
 import { encodePng } from '../qa/png';
@@ -96,18 +97,17 @@ const fileOf = (level: string) => level.replace(/^blocksquads/, 'block-squads').
 const key = (a: Vec3) => a.map(v => Number(v).toFixed(4)).join(',');
 interface PaintRow { table: string; name: string; albedo: Vec3; rough?: number; metal?: boolean; sim?: string; surface?: string }
 const PAINT_TABLES: { table: string; file: string; what: string; rows: PaintRow[] }[] = [
-  { table: 'GWOT_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'the look\'s own paints: the only table the look draws as materials', rows: (Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => ({ table: 'GWOT_PALETTE', name: n, albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH, metal: GWOT_FINISH[n]?.metal, sim: GWOT_SIM[n], surface: GWOT_SURFACE[n] })) },
-  { table: 'SNOW_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'lying snow as paint, for a level built in winter', rows: (Object.keys(SNOW_PALETTE) as SnowMat[]).map(n => ({ table: 'SNOW_PALETTE', name: n, albedo: SNOW_PALETTE[n], sim: SNOW_SIM[n] })) },
-  { table: 'OFFICE_PALETTE', file: 'src/scene/officeGen.ts', what: 'the office\'s paints: the names the simulation reads a box\'s stuff by', rows: Object.entries(OFFICE_PALETTE).map(([n, a]) => ({ table: 'OFFICE_PALETTE', name: n, albedo: a })) },
-  { table: 'KIT_PALETTE', file: 'src/scene/levelKit.ts', what: 'the map kit\'s copy of the office\'s paints', rows: Object.entries(KIT_PALETTE as Record<string, Vec3>).map(([n, a]) => ({ table: 'KIT_PALETTE', name: n, albedo: a })) },
+  { table: 'GWOT_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'the look\'s own paints: the only table the look draws as materials', rows: (Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => ({ table: 'GWOT_PALETTE', name: n, albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH, metal: GWOT_FINISH[n]?.metal, sim: doesOfName(n), surface: GWOT_SURFACE[n] })) },
+  { table: 'SNOW_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'lying snow as paint, for a level built in winter', rows: (Object.keys(SNOW_PALETTE) as SnowMat[]).map(n => ({ table: 'SNOW_PALETTE', name: n, albedo: SNOW_PALETTE[n], sim: doesOfName(n) })) },
+  { table: 'OFFICE_PALETTE', file: 'src/scene/officeGen.ts', what: 'the office\'s paints', rows: Object.entries(OFFICE_PALETTE).map(([n, a]) => ({ table: 'OFFICE_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
+  { table: 'KIT_PALETTE', file: 'src/scene/levelKit.ts', what: 'the map kit\'s copy of the office\'s paints', rows: Object.entries(KIT_PALETTE as Record<string, Vec3>).map(([n, a]) => ({ table: 'KIT_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
   { table: 'LIVED_PAINT', file: 'tools/levels/livedKit.ts', what: 'colours of the older levels\' lived things that the office has no name for', rows: Object.entries(LIVED_PAINT).map(([n, a]) => ({ table: 'LIVED_PAINT', name: n, albedo: a })) },
   { table: 'INK', file: 'tools/levels/livedPieces.ts', what: 'accents of the older levels\' furniture', rows: Object.entries(INK).map(([n, a]) => ({ table: 'INK', name: n, albedo: a })) },
 ];
 /** a colour two tables hold is the first table's row (the map kit's copies are the office's) */
 const paintByKey = new Map<string, PaintRow>();
 for (const t of PAINT_TABLES) for (const r of t.rows) if (!paintByKey.has(key(r.albedo))) paintByKey.set(key(r.albedo), r);
-// a palette paint standing for another stuff (gwotPalette.ts gwotAs) is the same paint a hair off: it keeps its row
-for (const m of Object.keys(GWOT_PALETTE) as GwotMat[]) for (const s of GWOT_SIM_NAMES) { const k = key(gwotAs(m, s)); if (!paintByKey.has(k)) paintByKey.set(k, paintByKey.get(key(GWOT_PALETTE[m]))!); }
+// (a palette paint on a thing that does something else, gwotPalette.ts gwotAs, is the row's own numbers: it keeps its row)
 /** a row's name as the page writes it: the bare word where one colour has it, `TABLE.word` where two tables give the word to different colours */
 const wordColours = new Map<string, Set<string>>();
 for (const t of PAINT_TABLES) for (const r of t.rows) (wordColours.get(r.name) ?? wordColours.set(r.name, new Set()).get(r.name)!).add(key(r.albedo));   // (over every table: INK.iron is the office's asphalt by its numbers, and still a second colour called iron)
@@ -378,11 +378,11 @@ function page(): string {
       L.push('');
     }
   }
-  L.push('## Paints', '', 'Every colour with a name, by table. *Stands for* is what the simulation reads the paint as (a round, a charge and a blast go by it); *underfoot* is its footstep surface.',
+  L.push('## Paints', '', 'Every colour with a name, by table. *Does* is what a box of the paint is to a round, a charge and a blast unless the box says its own word: a row of the table of materials (`src/scene/materials.ts`); *underfoot* is its footstep surface.',
     'Pieces counts the catalogue\'s pieces that wear the row, darkened or not, as laid above.', '');
   const wears = new Map<PaintRow, number>(); for (const p of catalogue) for (const r of p.rows) wears.set(r, (wears.get(r) ?? 0) + 1);
   for (const t of PAINT_TABLES) {
-    L.push(`### ${t.table}`, '', `\`${t.file}\`: ${t.what}.`, '', '| Paint | Colour (linear) | Finish | Stands for | Underfoot | Pieces |', '|---|---|---|---|---|---|');
+    L.push(`### ${t.table}`, '', `\`${t.file}\`: ${t.what}.`, '', '| Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |', '|---|---|---|---|---|---|');
     for (const r of t.rows) { const first = paintByKey.get(key(r.albedo))!;
       L.push(`| ${r.name} | ${r.albedo.join(', ')} | ${r.rough === undefined ? '' : `rough ${r.rough}${r.metal ? ', bare metal' : ''}`} | ${r.sim ?? ''} | ${r.surface ?? ''} | ${first === r ? wears.get(r) ?? 0 : `the same colour as ${first.table}.${first.name}`} |`); }
     L.push('');

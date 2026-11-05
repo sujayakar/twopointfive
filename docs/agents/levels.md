@@ -48,9 +48,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tools/levels/lookMarks.ts lookMarks(T)` (seg / path / dashed / outline / fill / hazard / checker / glyph / word / tally — a 3 × 5 font for 0‥9 A B C N S), every
   one a floor decal through the skin's own `T.flat`. `Skin.rooms` names MORE rooms for the dado and rug rules than the scenarios do (they list held rooms only: a
   dressed room would mark a held one), `Skin.noRug` holds the automatic rug off.
-  THE SIMULATION READS PAINT (particleFx.ts `paletteName / surfOf`, furnblast.ts `breakClassOf / steelGrey`, the destruction / wallbreak / furnblast shape indexes, the wet lot), so every GWOT
-  paint on a repainted box STANDS FOR the office paint or surface it replaced: `src/scene/gwotPalette.ts gwotAs(mat, sim)` codes the stand-in as a ≤ 0.0024 shift of the albedo and
-  `gwotSimOf(albedo)` reads it back — a new classifier of paint in the game must ask `gwotSimOf` first, as those two files do. THE KIT for new levels: `src/scene/gwotKit.ts gwotKit(...)`
+  WHAT A BOX IS TO A ROUND, A CHARGE AND A BLAST IS A WORD ON THE BOX (`Box.does`, a row of `src/scene/materials.ts`; the bullet "What a box does is said
+  in a word" at the end of this file), never its paint: the skin gives every box its word before the first repaint and a repaint leaves it, so a level
+  and its look twin are one simulation in any colours. (Until 2026-11-05 the rules read the colour and a repainted box wore its paint a hair off, the
+  office paint it stood for in the offset; `gwotAs(mat, does)` is now the row's own numbers on a thing that does something else.) THE KIT for new levels: `src/scene/gwotKit.ts gwotKit(...)`
   (walls, parapets, gates, HESCO, drums, cots, rugs, lanterns, wash lines … flat colours, boxes only) + `GWOT_MATERIALS`; the showroom `levels/gwot-yard.json` (`tools/levels/gwot-yard.ts`,
   `?levelFile=gwot-yard.json&solo&hour=midday`); the one-page guide is rebuild/play-style-levels/look/read-first.md. QA: `probes.ts look` (tools/qa/look-check.ts, in
   all-quick: the palette has no clashes and no other level carries one of its colours; per pair — both files fresh, boxes equal but paint, repaints classify the same, extras are decals,
@@ -1410,6 +1411,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   exactly as on the step before: `probes.ts glassreal` line 9 (the showroom's row of the table) and `wallfurn-check --levels library-hall.json` (it
   has no count file; 86 places before and after on both stands). No mission's level file moves, so no play-through was run for this step alone.
   NEVER SEEN on any adapter as laid on the showroom; on the white roof the pieces draw as they did.
+
 - **THE OFFICE IS HAND-FINISHED** (11-05, the first hand pass; `src/scene/officeGen.ts` "THE HAND PASS", `levels/office.scenarios.ts` `OFFICE_MARKS` and
   `walked`). The maintainer: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading
   the player for game play"; of the look he is after, "it's all quite intentionally dressed"; of the office itself, "a lot of personality per room": added
@@ -1509,6 +1511,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page's and the page's with its lived tier off: 16 of 16 run digests the same as the step before, each. The page opened on a software adapter with
   the five boxes at their new sizes and nothing in the console. Never seen on a GPU: the check reads the file, and nobody has watched the eight
   places for a flicker before or after.
+
 - **A named coat's finish goes wherever its word goes: a vehicle's body is a clear coat** (`scene/stuff.ts COATFINISH`, `coatRough`, `NAMED_COATS`; read
   by `scene/boxes.ts matWord`; 11-05; the maintainer, playing the preview: "how reflective is the car material, btw? it does feel like it should reflect
   more of the environment and be quite dynamic as we move around it"). WHAT WAS WRONG, read from the code: a vehicle's body took its finish from the
@@ -1543,6 +1546,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE: a plain car's and the office van's GLASS says no finish (matte glass; the kits' dark glass is 0.1); the plough lorry's tipper sides are
   plain orange beside a coated cab; the editor's finish panel shows the file's number, not what is sent. COST: smooth finishes are what the reflection
   pass traces, and the plain cars are new to it: NOT MEASURED ON A GPU.
+- **A LEVEL IN OTHER CLOTHES** (2026-11-05; no switch, no level wears one yet, every level file byte for byte as it was). Three small things let a
+  level wear a palette that is not the kit's own, each written once. (1) THE KIT IS HANDED ITS PAINTS BY ITS HOST: `GwotHost.paints` (a `KitPaints`: a
+  colour and a finish for every row the kit names; absent = the kit's palette). Every row a piece names is looked up there, so a piece is written once,
+  in the kit's row names, and no piece knows which clothes it is laid in. `gwotPalette.ts paintsOf(palette, finish, of, words?)` makes such a set from
+  another palette: `of` says which of its rows each kit row wears (data, one line a row, held by the compiler to every row of the kit), and each answer
+  is that row's numbers as a paint of its own, known by the palette row's name, drawn as that name is (or as `words` says), with its finish, DOING WHAT
+  THE KIT'S ROW DOES (`stuff.ts PAINT_DOES`; a stand-in is made one way, `stuff.ts doingAs`, for the kit's own palette and a host's alike): a drum is steel to a round in any enamel and a partition is cut by a charge in any plaster. Many kit rows
+  may wear one row; each is its own paint because they do different things, and in the file each box wears the row by its numbers and says its own
+  `does` where that differs from the row's. (2) A LOOK FILE'S SKIN TAKES THE SAME SET: `Skin.of` (`tools/levels/gwotSkin.ts`). The skin's rules still
+  answer in the kit's row names; `of` says what a row is in this file, for the boxes repainted, the props' parts and the decals the kit lays. A repaint
+  never touched what a box does, so nothing else is asked. WHAT A SKIN DOES NOT REACH: a box the plain file's own generator laid with the kit (a lived
+  room's things: 972 boxes over the 14 plain levels that have a look file) is left as laid, in the kit's paint, under any skin; a level that is to
+  wear a second palette lays those over a host that hands the kit its paints. (3) A FILE KEEPS ONLY THE ROWS IT WEARS: a generator's `PALETTE` export
+  (rows as `MATERIALS` has them, each free to say its own `stuff` and `does`) is written through `tools/levels/wornRows.ts`, which drops a row no box,
+  shape's piece, prop's part or scenario's own box names. So a row added to such a palette moves no file that does not wear it. `MATERIALS` is still
+  written whole, which is why a new row of the kit's palette makes every look file stale; moving it to the same rule is one step that rewrites those
+  files' materials blocks, not taken here. NOT HERE: any second palette. The check makes a small one of its own.
+  THREE THINGS A SECOND PALETTE'S AUTHOR MEETS. (a) A LAMP'S LENS IS NOT CLOTHES: a vehicle's head lamps are laid in the kit's own white and its tail
+  lamps in its own red whatever the host hands over, because `game/carlamps.ts` finds a lamp by those two paints (the one rule of the game that still
+  knows a thing by a colour; its mend is a word on the box and is the cars'). (b) A TONE THAT LANDS ON ANOTHER ROW'S COLOUR STILL THROWS (`toned`: a
+  file's writer names a row by its numbers), but two kit rows that wear ONE row are not each other's clash; the tones are the pieces' own numbers, so
+  a palette whose rows sit within 0.006 of a tone of another is the palette's to move. (c) THE PAGE'S OWN LOOK STEPS DO NOT KNOW IT YET: whether a
+  level "wears the look" is asked of its boxes' colours against the kit's palette (`scene/lookTidy.ts`, `lookDoors`' accent, and the checks
+  `look-check` and `wetground-check`), so a level wholly in a second palette is tidied as a plain one and a level partly in it takes the kit's accent
+  for its doors. That question wants a word in the level file (which palette it wears) and belongs to the first level that wears one.
+  CHECK: `bun run tools/qa/palette-check.ts` (the same on both stands; no game is stood up), three lines, one a thing: every call the two showrooms
+  make of a piece of the kit (all 79 pieces, so tomorrow's too), laid alone in the kit's palette and again over a host's paints, is box for box and
+  part for part the same, every box and part does what it did, the game finds the same lamps, and but for a lens nothing is left in a row of the kit's; a skin handed the paints repaints the boxes the first skin repaints and no others, on the 14 plain levels that have a look file;
+  the worn rows. `PALETTE_BREAK=1`, `=2`, `=3` each turn their own line red. Never seen on a GPU: nothing is drawn differently until a level wears one.
 - **A LEVEL FILE NAMES ITS MARKS** (the format, no switch, no rule of play; 2026-11-05). A mark is a named place on the floor where a person stands to
   use a thing: the end of a `walked` way and a script's place, read by name (`scene/ways.ts`, `game/director.ts`). Until now only the office had any, and
   only as code joined on at load (`scene/level.ts withMarks`, which is GONE). The file has a slot: top-level `marks: [{ id, pos, yaw? }]`
@@ -1593,3 +1625,82 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   laid where, not what a material looks like): the office opened under `?look` at midday with the lot and the lawn drawn in their stuffs, 120 of 120
   pipelines, no page or GPU error. The look task's settled still of the two was drawn on its own branch. Never on a GPU here, and nobody has seen a
   round on the wet lot.
+
+
+- **What a box does is said in a word, and no rule reads a colour** (the table of materials, 2026-11-05; the game's rules, the level tools and every
+  level file; NO SWITCH: by run digest the game is the game it was. The maintainer, that day: "we should fix the color walls issue. breaking/penetration
+  shouldn't depend on color at all."). UNTIL THEN the rules knew a thing by its paint's COLOUR: an exact match against the office's palette named the
+  paint (`particleFx.ts paletteName`, gone), a paint of the look carried the office name it stood for in a shift of up to 0.0024 a channel
+  (`gwotPalette.ts gwotAs / gwotSimOf`, the append-only `GWOT_SIM_NAMES`, gone), and a colour nobody named was classed by how bright and how grey it
+  was (`surfOf`, `furnblast.ts steelGrey`, the destruction index's tone bars, gone). Moving every colour of the office by 0.004 left it with no
+  breakable wall, no cover and nothing a round went through, and no level could be painted pale or neutral.
+  THE TABLE: `src/scene/materials.ts MATERIALS`, a row a word, two columns kept apart. `looks` = the picture draws it (the look's own numbers stay
+  beside its shader, `render/lookTex.ts STUFFS`, under the same word; `does-check` holds the two lists equal). `does` = EVERY column a rule reads:
+  `surf` (a round's hit, a wall's toughness, what a round goes through, what a charge is told), `breaks` (how furniture breaks), `steel` (a cabinet
+  comes apart as sheets), `wall` ('board' | 'screen': the wall engine's partitions), `board` (plasterboard to a round), `cover`, `struct`, `counter`,
+  `casing` / `paper` / `screen` (what the destruction index finds), `snow` (which lying snow), `wet` (the row the lot's slab takes while soaked:
+  nothing is kept, `particleFx.ts surfAt` asks the weather's own `lot` each time). The rules ask `doesOf(box)` and nothing else of a material.
+  A BOX SAYS TWO WORDS AT MOST AND NEITHER IS WORKED OUT FROM THE OTHER: `stuff` (what it is DRAWN as; dressing; a repaint changes it) and `does`
+  (gameplay; a repaint leaves it). Measured before the choice: what is drawn as 'paint' is steel, timber and concrete to a blast, and a level and its
+  look twin are one simulation under two pictures. The word is written onto the box ONCE by whoever makes it: the loader from the file (the box's own
+  `does`, else its material row's), a kit from its paint (`scene/stuff.ts PAINT_DOES` by the paint's name; `doing(word, colour)` for numbers; `gwotAs(row,
+  word)` for a row on a thing that does something else), the game from the box a piece came off (`boxes.ts wordOf` carries both words). A box that
+  says nothing takes THE DEFAULT ROW, `unnamed`. A file, a recording and a checkpoint carry the word; `doesRows()` hands the columns to a module that
+  reads no strings as numbers at boot, and no row's place is ever written anywhere.
+  EVERY ROW IS AN ANSWER THE COLOUR GAVE, UNDER A PLAIN NAME, so some are accidents kept and each is one edit away from a choice: the `unnamed …` rows
+  are TONES (a colour nobody named: dark is metal to a round, middling concrete, light and pale plaster; a plain grey is a steel cabinet to a blast);
+  two rugs are `dark carpet` and the white plastic `grey plastic` for their tone; `tarmac` and the snow rows go to `unnamed dark` soaked (a wet lot
+  sparks); a bare stud is `unnamed light grey` (`breakTable.ts BREAKS.stud.does`). A TONE OF A PAINT SAYS NOTHING OF WHAT IT DOES (`stuff.ts tonedAs`
+  keeps `stuff` only: to the rules a tone was never its paint).
+  THE LEVEL TOOLS: the exporters give every box whose maker said no word the word its colour had (`tools/levels/doesWas.ts stampDoes`: the old rule,
+  FROZEN, with its own copy of the palettes; nothing in `src/` reads it) before a skin repaints anything; a material row says what its NAME says,
+  else what its colour did. `tools/levels/does-bake.ts <file>` brings a file from before forward (on the old barracks it writes the export's file to
+  the byte). So a NEW paint is free: name it and say its word, and its colour is anyone's; numbers nobody names still get the tone's answer, written
+  in the file where it can be read. The skin's old refusal ("would change what the simulation reads") is gone with its cause.
+  CHECKS: `bun run tools/qa/does-check.ts` (probes.ts `does`, families `destruction`, `look`; both stands; `DOES_BREAK=1` takes the words off and must
+  fail): the table; no old reader under `src/`, no renderer file asking what a box does but the snow field, no rule file importing the look; six
+  levels stood up three times each, as filed, every colour moved by 0.004 and every colour replaced, and everything the rules make of a material the
+  same (the office: 18 walls, 56 cover, 137 things a round goes through, each time); no level file from before. `tools/qa/does-audit.ts`: each box's
+  columns by word against by colour (`--before <ref>`: word against word). `tools/qa/look-check.ts` line 3 now holds every box of a level and its
+  twin to the same word.
+  MEASURED: on the files written that day with their words and the old colours, 37,497 boxes and 4,050 props' parts, none doing another thing by word
+  than by colour; after the stand-ins lost their shift every box and every prop's part says the word it said (40 files moved, colours only, at most 0.0024
+  a channel). The ribs of sixteen oil drums (TRIM, two a drum) moved their word, `unnamed dark` by their tone and `steel` by their kit: trim is drawn
+  and met by no rule (`destruction.ts`, `wallbreak.ts` and `furnblast.ts` pass a piece by), and the one thing asked of a piece's word is whether it is snow.
+  Every level stood up on the build before and on this one, on both stands: the same walls and cover of the same stuff, the same things a round goes
+  through, outer walls, furniture and index, the same snow, and for every box the same answer to a round and to a blast, 59 of 59 files.
+  42 play-throughs (21 missions, seeds 1 and 2) give the digests of the build before on the frozen stand and on the shipped stand.
+  A LEVEL MOVER PINS: both steps that wrote the level files wrote each moved level's base file too (`tools/qa/fixtures/level-base`, the lived check's).
+  STILL ASKED OF A PAINT, AND NOT A MATERIAL: which slabs are one round thing is "do they wear the same paint" (`scene/round.ts`, `geoTry.ts`); a
+  vehicle's lamps are found by a size and a paint together (`game/carlamps.ts`: a lamp repainted is no lamp to a round); the snow SHADER knows the
+  three snow paints by their numbers (`shaders/snow.wgsl`), so a level's snow wears the palette's whites; `scene/lookTidy.ts` asks whether a level
+  wears the look by its paints (`gwotPalette.ts lookPaintOf`); the editor's writer names a box's row by its numbers. The editor keeps what a box does
+  through a repaint and a cut and has no field to set it by hand.
+  NOT SEEN: nothing here draws, and the 0.0024 the twins' colours moved has not been looked at on any adapter. Nobody has played it.
+
+
+- **A thing of solid glass is dark and smooth** (`scene/stuff.ts SOLIDGLASS`; read by `scene/boxes.ts glassDark`, `sentAlbedo` and `matWord`; 11-05,
+  from the renderer's review of the vehicles on a GPU: "near-black panes, finish 0.05": glass is what mirrors most on a car, and the kits' dark glass
+  was a mid grey at 0.1, a plain car's and the office van's a grey with no finish at all). THE RULE: a box that says `glass` and is NO PANE
+  (`solidGlassBox`, the one test, which the hit picture's `solidGlass` asks too: a vehicle's window, a display case's top, a handset's screen; 100
+  boxes in 39 level files; a pane, `BoxFlag.Glass`, is the glass engine's and is not touched) is SENT to the GPU as a NEUTRAL dark of luminance 0.02
+  and no rougher than 0.05. Darker and smoother stay as they are; a wet one is that dark times its wetness; a face that carries MARKINGS keeps its
+  colour (2 boxes: a solar panel's grid, a shop's case), because a mark is laid out in its own colours on the colour under it. Neutral and not the
+  row's hue scaled down: under about 0.03 a hue does not survive the 8-bit albedo target. THE COLOUR IS NOT REPAINTED: a rule of
+  the PICTURE at the pack, keyed on the word a box is DRAWN as (`Box.stuff`). What a box DOES is its other word (`Box.does`, `scene/materials.ts`: a kit
+  vehicle's window does what 'dark glass' does) and is neither asked nor touched; the step was cut again over the materials rewrite, which took the
+  rules off colours the same day. So it goes wherever the word goes, whoever painted the box (the kits' dark glass, a plain car's own grey), and the
+  game still finds the box's own colour where it takes one (what a piece broken off it is painted, a chip's tint, a lamp known by its tone).
+  `Box.albedo` and `Box.rough` stay the file's and the pack sends the colour in the one place it already sends a wet box darker (`sentAlbedo`, beside
+  `Box.wetK`: the packed albedo, the secondary albedo's base and the static slice's compare). NO LEVEL FILE CHANGES. THE SWITCH: ON in the page (`?solidglass=0` = as its file gives it), OFF in the module and on
+  the frozen stand (`TPS_SOLIDGLASS=1`), a `FROZEN_HOLDS` row, `STAND_ENV`, pinned in `standup.ts`, in the registry and the journal; its two numbers
+  ride in the table (`SOLIDGLASS.lum`, `.rough`), so the page's knobs and a recording carry them. A PICTURE ONLY ON THE HARNESS: on a GPU page the
+  light meter's bounce reads the packed colour, so a man beside a vehicle is metered a hair darker, as beside wet ground (`wetK` is the same).
+  THE CHECK: `tools/qa/coatfinish-check.ts` lines 6 and 7 (`probes.ts coatfinish`), both stands: the cases by hand (a window, one with no finish, a
+  pane, a plain paint of the same grey, a darker glass, a wet one, a marked one), every level file, THE WORDS THE WORLD SENDS for the yard's own
+  window (up, down, and up again on the same stood world: the static slice packs again), the same seeded run by digest up as down, a stand given the
+  word, the rows and an old recording; `SOLIDGLASS_BREAK=1` fails both lines. NOT DONE, and known: a window DRAWN AS A MARK on a body (the police
+  post's taxi, the bazaar's workshop set) is a mark and stays its grey beside a boxed window gone dark; a MIRROR that says glass is the same dark
+  glass with a 4 % mirror (it wants a mirror's own word); the workbench does not raise this or any page switch, so the editor shows the file's grey;
+  the renderer has no layer for glass. SEEN ON A CLOUD NVIDIA CARD in the renderer's study build, stills only (the yard at midday, a red pickup at the
+  crossing, the showroom; no fog of war, nobody shot a window): it reads as glass and not as a hole, and no glint showed at 0.05. Nobody has played it.
