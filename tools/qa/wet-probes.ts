@@ -1,5 +1,6 @@
 // The 'wet' family (game/wet.ts — the weather's other half: whoever stands in the rain soaks), run through probes.ts:
 //   bun run tools/qa/probes.ts wet | wet-soak | wet-roof | wet-off | wet-reset | wet-cast | wet-prints | wet-shading   [--verbose]
+//   WET_BREAK=1   every stand-up has a rain that soaks nobody and the wet rows switched off: must FAIL (wet-off alone stays green: it asks for dry men)
 // PASS / FAIL each, all headless (the CPU model is the model; what the renderer makes of the numbers is judged in the browser):
 //   wet-soak      Sam under the open sky at rain rate 1 soaks 0 → 1 in ~6 s (WET.soakPerSec × (0.4 + 0.6 × rate)) with his beads up before him; walked
 //                 back inside the coat dries at WET.dryPerSec (about 25 s to nothing) and the beads are gone in WET.beadRunoffSecs; a lighter rain soaks slower;
@@ -25,6 +26,7 @@ const { makeBox } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { INTERIOR, ANNEX } = await import(`${ROOT}/src/game/weather.ts`);
 
 const DT = 1 / 60;
+const BRK = process.env.WET_BREAK === '1';
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -33,7 +35,8 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 /** park everybody: nobody walks, hears or shoots — the storm and the wet model alone act; storm 0 = rain without strokes (a stroke's light is not the point here) */
-function quiet(W: any, rainRate = 1) { const { game } = W; game.playerInvisible = true; game.godMode = true; for (const gd of game.guards) { gd.hold = true; gd.pinned = true; } game.weather.storm = 0; game.weather.rainRate = rainRate; Object.assign(WET, WET_DEFAULTS); }
+function quiet(W: any, rainRate = 1) { const { game } = W; game.playerInvisible = true; game.godMode = true; for (const gd of game.guards) { gd.hold = true; gd.pinned = true; } game.weather.storm = 0; game.weather.rainRate = rainRate; Object.assign(WET, WET_DEFAULTS);
+  if (BRK) { WET.soakPerSec = 0; (game.engine.settings as any).wetChars = false; } }   // WET_BREAK=1: the rain soaks nobody and the renderer is handed nothing — the family must go red
 const LOT: Vec3 = [16, 0, 26.2];          // open asphalt south of the facade, under nothing
 const LOBBY: Vec3 = [7, 0, 19.5];         // indoors
 async function fresh(seed = 11, rainRate = 1) { Math.random = seeded(seed); const W = await standUp(); quiet(W, rainRate); return W; }
