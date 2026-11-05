@@ -1949,7 +1949,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   squared distance and only the two nearest are rooted. Compared once, layer by layer: all 30 byte for byte the same at 512, 128 and 64 texels, evened and
   not. Under bun on one thread the thirty took 8.9 s and take 6.2 (tarmac 609 to 362 ms, grass 695 to 444). The check is `lookcells` (family render;
   `LOOKCELLS_BREAK=1` fails two of its three lines): cells2 against the plain way written out again, 1.7 million answers to the bit, and a lattice that is
-  not whole cells is refused aloud. NOT DONE: `vn` still hashes four corners a call and is most of the hashing left; the layers still wait on one thread
+  not whole cells is refused aloud. A LAYER MADE IN PLAY (a blast shows a stuff no box had been) also breathes in its last passes now: made in 3 ms
+  slices its longest unbroken stretch was 22 to 41 ms (the evening, the blurs, the normals after the rows) and is 4 to 7; same bytes; the check's
+  fourth line counts the stops. Its mip chain is still built in one go (5 to 12 ms): the workers step's to move. NOT DONE: `vn` still hashes four corners a call and is most of the hashing left; the layers still wait on one thread
   (making them on workers is the performance goal's). Nobody has timed a look page's boot with its shaders already cached, in a browser.
 - **A PRESSED THING'S ARRISES ARE ROLLED, AND A LACQUER MIRRORS MORE THAN PAINT** (11-05; the look's page only; `render/lookTex.ts STUFFS`' two new
   words `rolled` and `mirrors`, `look.wgsl lookRoll` / `lookRollUp`, the reflection texts' `coat`). The maintainer, of the cars: "we don't need to go full
