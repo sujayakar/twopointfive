@@ -128,9 +128,7 @@ import { RESCUECHECK } from './rescuecheck';
 import { RESCUEEND } from './rescueend';
 import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
-import { EXACT } from '../math/exact';
 import { POSEMATH } from '../anim/skeleton';
-import { rustRows, rustRow } from '../sim/sim';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
 import { DOZE } from './doze';
@@ -185,6 +183,7 @@ import { HANDLE } from './handleside';
 import { DOORMANNERS } from './doorway';
 import { GEAR } from './gear';
 import { WORDS } from './words';
+import { LIGHT_IN } from '../sim/lightshome';
 
 export const JOURNAL_VERSION = 1;
 /** …and what a file says when a replay cannot do without what came after v1: a slot's text filed at the frame an update read it (`slots.loads`), a last frame
@@ -260,7 +259,7 @@ export function envSnapshot(g: Game): EnvSnap {
 /** the settings half of an env, onto an engine's settings BEFORE the Game is built on it (the marking lights are registered in the constructor) */
 export function applyEnvSettings(settings: Record<string, unknown>, env: EnvSnap): void { settings.debrisCap = env.debrisCap; settings.emissiveScale = env.emissiveScale; settings.flashlightRadius = env.flashlightRadius; settings.markings = env.markings; }
 /** the game half of an env, AFTER the checkpoint is loaded: the fixtures' restrike stagger */
-export function applyEnvGame(g: Game, env: EnvSnap): void { for (const t of g.targets) { const s = env.stagger[t.name]; if (typeof s === 'number' && Number.isFinite(s)) t.stagger = s; } }
+export function applyEnvGame(g: Game, env: EnvSnap): void { for (const t of g.targets) { const s = env.stagger[t.name]; if (typeof s === 'number' && Number.isFinite(s)) g.lightHome.in(LIGHT_IN.stagger, t, s); } }
 export function knobsSnapshot(g: Game): KnobsSnap {
   const tables: Record<string, unknown> = {}; for (const [k, T] of Object.entries(knobTables())) tables[k] = JSON.parse(JSON.stringify(T));
   return { tune: JSON.parse(JSON.stringify(g.tune)), flags: { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo, playerInvisible: g.playerInvisible, fn2000: g.fn2000, autosave: !!g.saves?.enabled, fog: !!g.fogOfWar?.on, stalkAmbient: SNEAK.stalkAmbient, roundCap: ORDERS.roundCap, behindSam: DOORTOOLS.behindSam, tossMate: DOORTOOLS.tossMate }, tables };   // (autosave: the controller writes chronicle rows — state, even if the digest leaves them out)
@@ -557,9 +556,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.bounce === undefined) SENSE.bounce = false;   // (…and one from before the light model: the estimate was the direct light alone)
   if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.moon === undefined) SENSE.moon = false;   // (…and one from before the estimate had the moon: a night's sky lit nobody)
   if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.drift === undefined) SENSE.drift = false;   // (…and one from before the grid's smoke drifted: still air out of doors)
-  if (!k.tables.EXACT) EXACT.on = false;   // (a file from before the game's own maths: it was recorded on the engine's sin and cos, and replays on them)
   if (!k.tables.POSEMATH) POSEMATH.singles = false;   // (a file from before a pose's arithmetic could be in singles: it was recorded in doubles, and replays in them — anim/skeleton.ts)
-  { const t = k.tables.RUST as Record<string, unknown> | undefined; for (const r of rustRows()) if (t?.[r] === undefined) rustRow(r, false); }   // (a file from before a system could run in the Rust module: it ran in TypeScript — the same game either way, and the file is replayed as it was made)
   if (!k.tables.SNATCHOUT) SNATCHOUT.on = false;   // (a file from before a snatch ended with the man in the van: the house taken with him in hand ended it)
   if (!k.tables.RESCUEEND) RESCUEEND.on = false;   // (a file from before a rescue was won only by the hostages led out or the floor cleared: the room held fifteen seconds ended it)
   if (typeof (k.tables.RESCUEFLUSH as { lanesChoose?: boolean } | undefined)?.lanesChoose !== 'boolean') RESCUEFLUSH.lanesChoose = false;   // (…and one from before the covered lanes only chose a man's door: a man they warned off was kept back)

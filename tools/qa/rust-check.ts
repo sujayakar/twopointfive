@@ -76,14 +76,13 @@
 //             glass breaks and where things break: the `module` and `snapshot` lines of tools/qa/glassfall-check.ts and tools/qa/debrisfall-check.ts (a
 //             scene with the row on against off, and a snapshot put back while things are in the air). `missions` raises the row with the rest, but the
 //             five missions break nothing that falls: there the row is only shown to do no harm.
-//   stand     both stands have the rows of src/sim/sim.ts RUST_ON on, and the game's own maths, as the page (TPS_RUST<ROW>=1 raises a row on either, =0
-//             puts a default one off, TPS_RUST=0 every one unless its own word raises it; TPS_EXACT=0 TPS_RUST=0 is the stand as it was recorded before the
-//             rows); FROZEN_HOLDS holds no row and no maths; and the address's words (profile.ts pageRows: ?rust=0, ?rust<row>, ?rust<row>=0) write what
-//             they say, also over rows a recipe wrote
-//   server    the game server's own stand (tools/mp/stand.ts): a setup that asks for the row makes a recipe that carries it, the game stood from that recipe in
-//             another process ticks with the module's maths in Math's place, and after 600 ticks of a walking, shooting seat its state word is the word of
-//             the same setup without the row. `server as the page`: a setup that says nothing of the rows makes a recipe with the page's own (RUST_ON),
-//             and the game stood from it is that game too
+//   stand     both stands have the rows of src/sim/sim.ts RUST_ON on, and the game's own maths, as the page, and NO WORD moves either: a retired word
+//             in the environment (TPS_RUST, TPS_RUST<ROW>, TPS_EXACT) stops the tool that says it, by name; FROZEN_HOLDS holds no row and no maths; the
+//             address's old words (?rust=0, ?rust<row>, ?noexact) write nothing (profile.ts pageRows), also over rows a recipe wrote; and a check's own
+//             arm (QA_HOLD, tools/qa/headless.ts hold) holds what it names and it alone
+//   server    the game server's own stand (tools/mp/stand.ts): a recipe carries no row (a setup that asks for one is refused: the rows are no knob table),
+//             the game stood from it in another process ticks with the build's rows, and after 600 ticks of a walking, shooting seat its state word is the
+//             word of the same recipe stood with every row held down, and with the maths' row held up
 //   missions  (--missions) each run played twice on the server's stand (shipped, the senses on the CPU), once with every sin, cos, atan2, exp … and every
 //             length the update asks for worked out in Rust, every line through the box world asked of the module, and once in TypeScript: the same ticks,
 //             the same end, and the same chained raw bits of the state after EVERY update (game/digest.ts rawBits)
@@ -145,8 +144,11 @@ if (args[0] === '--run') {
   // (the red path of the die: once, fifty binds in, the lowest bit of the word in the game's block is turned — a wrong die that still rolls)
   if (BREAK) { const P = ST.SimState.prototype, bind = P.bind; let n = 0; P.bind = function (this: any) { const slot = bind.call(this); if (++n === 50) this.w[(ST.simPart(ST.P_DICE) + 8) >>> 2] ^= 1; return slot; }; }
   let posed = 0, sets = 0;   // (the ticks that ended with poses of its men in the game's block, and how many men's)
+  /** is this the arm of a pair with a row up (read as the run plays: the stand-up writes the rows). Both arms run the module's layers and keep their
+   *  poses in its block, so a red path that bends either is handed to this arm ALONE: bent in both, the pair would be the same game still */
+  const raised = (): boolean => S.rustRows().some((r: string) => S.RUST[r]);
   // (the red path of the layers: from the fiftieth tick's opening every knob is handed to the module a hundredth large)
-  if (BREAK) { const RK: any = await import(`${ROOT}/src/game/rustknobs.ts`); RK.RUST_KNOBS.hand = (_i: number, v: number) => RK.RUST_KNOBS.written >= 50 ? v * 1.01 : v; }
+  if (BREAK) { const RK: any = await import(`${ROOT}/src/game/rustknobs.ts`); RK.RUST_KNOBS.hand = (_i: number, v: number) => raised() && RK.RUST_KNOBS.written >= 50 ? v * 1.01 : v; }
   let homed = 0, draws = 0;   // (the ticks that ended with the game's own die at home in the module's block, and the draws taken off it by the end)
   let h: number = RAW_BITS_SEED, ticks = 0, broke = false, inRust = 0, cone = 0;   // (inRust: the ticks whose update found the module's sine in Math's place — the play-through puts every knob table back when it ends, so the row is read while it runs)
   const SLABF = new Float64Array(1), SLABU = new Uint32Array(SLABF.buffer);
@@ -169,12 +171,12 @@ if (args[0] === '--run') {
     { const d = (this as any).dice; if (d) { if (d.home) homed++; draws = d.n; } }
     { const ps = (this as any).poseSets; if (ps.length) posed++; sets = ps.length;
       // (the red path of the poses at home: from the fiftieth such tick a pose's floats are handed to the TypeScript ten singles off from where the module has them)
-      if (BREAK && posed === 50) { const f = ST.SimState.prototype.f32; ST.SimState.prototype.f32 = function (this: unknown, at: number, n: number) { return f.call(this, at + 40, n); }; } }
+      if (BREAK && posed === 50 && raised()) { const f = ST.SimState.prototype.f32; ST.SimState.prototype.f32 = function (this: unknown, at: number, n: number) { return f.call(this, at + 40, n); }; } }
     return r;
   } as typeof update;
   const t0 = performance.now();
   const r = await PT.play(scn, Number(seed), 300, false, how === 'hard' ? { DIFFICULTY: { level: 'hard' } } : {});
-  console.log('RUST-RUN ' + JSON.stringify({ run: args[1], ticks, cone, end: String(r.end), digest: String(r.digest), bits: h.toString(36), rust: inRust, lines: lines.n, circles: lines.circles, fog: lines.fog, sees: lines.sees, sensed: lines.sensed, poses: SK.POSE_BENCH.asked, posesIn: SK.POSE_BENCH.inPlace, posed, sets, layers: SK.LAYERS.ran, dice: homed, draws, doors: DH.DOORS_STEPPED, props: PH.PROPS_STEPPED, slabs: SH.SLABS_STEPPED, items: IH.ITEMS_STEPPED, falls: FH.FALLS, rays: C.RAYS.n, both: C.BOTH, exact: X.EXACT.on, engine, secs: Math.round((performance.now() - t0) / 100) / 10 }));
+  console.log('RUST-RUN ' + JSON.stringify({ run: args[1], ticks, cone, end: String(r.end), digest: String(r.digest), bits: h.toString(36), rust: inRust, lines: lines.n, circles: lines.circles, fog: lines.fog, sees: lines.sees, sensed: lines.sensed, poses: SK.POSE_BENCH.asked, posesIn: SK.POSE_BENCH.inPlace, owed: SK.POSE_BENCH.owed, posed, sets, layers: SK.LAYERS.ran, dice: homed, draws, doors: DH.DOORS_STEPPED, props: PH.PROPS_STEPPED, slabs: SH.SLABS_STEPPED, items: IH.ITEMS_STEPPED, falls: FH.FALLS, rays: C.RAYS.n, both: C.BOTH, exact: X.EXACT.on, engine, secs: Math.round((performance.now() - t0) / 100) / 10 }));
   process.exit(0);
 }
 // ---- `server`, in a child: the game server's stand from a recipe (argv), a seat's hands by the beat, the word after `ticks`
@@ -229,7 +231,11 @@ if (args[0] === '--hash') {   // the child: this engine's word for the Rust func
  *  line here or a line naming a section that did not run. Under RUST_BREAK=1 each row's own answers must have differed; exit 3 names a row that stayed
  *  green. A break word that does not reach a row leaves that row's check proving nothing, and a red neighbour hides it: the circles', the fog's and the
  *  die's did not reach them until 2026-11-03. */
-const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice', doors: 'doors', falls: 'falls', props: 'props', slabs: 'slabs', items: 'items', walk: 'layers', rays: 'lines, circles' };
+const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice', doors: 'doors', falls: 'falls', props: 'props', slabs: 'slabs', items: 'items', rays: 'lines, circles' };
+/** FAMILIES WHOSE TYPESCRIPT IS GONE, and their row of RUST with it: each is still held by a section here and by a red rule of its own (`red[name]`:
+ *  under the break every name of the family must have moved, tools/qa/ident-pin.ts), exactly as a row is. A family joins this list in the commit
+ *  that deletes its twin. */
+const GONE: Record<string, string> = { 'the animator\'s layers': 'layers' };
 /** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
 const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'doors', 'props', 'slabs', 'items', 'falls', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
 const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
@@ -369,9 +375,14 @@ let wordOwn = '', wordRust = '';
 {
   const r = child(['bun', 'run', 'tools/qa/layer-ident.ts']);
   const by: Record<string, { asked: number; differ: number }> = marked(r.out, 'LAYER-IDENT ')?.by ?? {}, names = Object.keys(by), row = r.out.split('\n').find(l => /^    \S+:\d+ ends /.test(l));
-  red.walk = names.length > 0 && names.every(n => by[n].differ > 0);   // (every moved layer's own answers, not one red neighbour's)
-  verdict(r.status === 0 && /=== layer-ident: PASS/.test(r.out), 'layers: every call of an animator\'s layer in a mission leaves the same pose run by the Rust module and by the TypeScript, and the knobs and named nodes the module reads are the game\'s',
+  red['the animator\'s layers'] = names.length > 0 && names.every(n => by[n].differ > 0);   // (every layer's own word moved against the same run played plain, not one red neighbour's)
+  verdict(r.status === 0 && /=== layer-ident: PASS/.test(r.out), 'layers: every layer of the animator is reached by a mission and its drives and run by the module, and the knobs and named nodes the module reads are the game\'s',
     row ? row.trim() + (r.status === 0 ? '' : ` · ${r.out.split('\n').filter(l => /^- FAIL/.test(l)).map(l => l.split(':')[0].replace('- FAIL — ', '')).join(', ')} FAILED`) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+  // (THE PIN: the same tool on the frozen stand, every layer's calls against the recording — tools/qa/ident-pin.ts. The plain run above compares no
+  //  answer; this line is what does. Not asked under the break, whose rule is the one above: every word moved against the run played plain.)
+  if (!BREAK) { const p = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { TPS_PROFILE: 'frozen' }), same = p.out.split('\n').find(l => /^- (PASS|FAIL|RECORDED|NOT HELD) — same:/.test(l));
+    verdict(p.status === 0 && /^- PASS — same: every count and word is that of the recording/.test(same ?? ''), 'layers: on the frozen stand every layer\'s calls fold to the word the recording holds',
+      same ? same.replace(/^- \w+( \w+)? — /, '') + (p.status === 0 ? '' : ` · exit ${p.status}`) : `the pin left nothing (exit ${p.status}): ${(p.err || p.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`); }
 }
 // ---- doors
 {
@@ -463,15 +474,15 @@ let wordOwn = '', wordRust = '';
       shared += na.length; if (na.join() !== nb.join()) off.push(`the numbers written in ${here_}: ${na.join(' ')} here, ${nb.join(' ')} in ${there_}`);
     } }
   // …and the step is what the TypeScript's was before a slab's numbers were columns (tools/qa/slab-asitwas.ts: the words it folded then), on both stands,
-  // by the module (the rows as the stand has them) and by the TypeScript (TPS_RUST=0), and on the frozen stand as it was recorded before the rows
-  const wasOn = (stand: string, env: Record<string, string | undefined> = {}, ...more: string[]) => child(['bun', 'run', 'tools/qa/slab-asitwas.ts', ...more], { TPS_PROFILE: stand, TPS_RUST: undefined, ...env });
-  const wases = [wasOn('shipped'), wasOn('frozen'), wasOn('shipped', { TPS_RUST: '0' }), wasOn('frozen', { TPS_RUST: '0' }), wasOn('frozen', {}, '--recorded')];
+  // by the module (the rows as the build has them) and by the TypeScript (this check's own arm: every row held down)
+  const wasOn = (stand: string, hold?: string) => child(['bun', 'run', 'tools/qa/slab-asitwas.ts'], { TPS_PROFILE: stand, QA_HOLD: hold });
+  const wases = [wasOn('shipped'), wasOn('frozen'), wasOn('shipped', 'rows=0'), wasOn('frozen', 'rows=0')];
   const was = { status: wases.every(w => w.status === 0) ? 0 : 1, out: wases.map(w => w.out).join('\n') }, wasRows = was.out.split('\n').filter(l => / (PASS|FAIL) — \d+ leaves, /.test(l));
-  const ok = r.status === 0 && rows.length >= 4 && rows.every(l => / PASS /.test(l)) && /=== slab-ident: PASS/.test(r.out) && off.length === 0 && shared > 50 && was.status === 0 && wasRows.length >= 20;
+  const ok = r.status === 0 && rows.length >= 4 && rows.every(l => / PASS /.test(l)) && /=== slab-ident: PASS/.test(r.out) && off.length === 0 && shared > 50 && was.status === 0 && wasRows.length >= 16;
   verdict(ok, 'slabs: every loose slab the Rust module steps ends where the TypeScript\'s step leaves it — its row, its box, the slam, the tallies — and the two sides name their numbers alike',
     (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + sum.slice(0, 600) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${shared} numbers shared with the Rust source (slabshome.ts, doorblast.ts)${off.length ? ` — NOT THE SAME: ${off.slice(0, 8).join(', ')}` : ', each the same'}`
-    + `\n    as it was (both stands by the module and by the TypeScript, and the frozen stand as recorded before the rows, against the words folded before the columns): ${was.status === 0 ? `${wasRows.length} runs the same` : (wasRows.filter(l => / FAIL /.test(l)).map(l => l.replace(/\s+/g, ' ').trim()).join(' / ') || `exit ${was.status}`).slice(0, 400)}`);
+    + `\n    as it was (both stands by the module and by the TypeScript, against the words folded before the columns): ${was.status === 0 ? `${wasRows.length} runs the same` : (wasRows.filter(l => / FAIL /.test(l)).map(l => l.replace(/\s+/g, ' ').trim()).join(' / ') || `exit ${was.status}`).slice(0, 400)}`);
 }
 
 // ---- items
@@ -538,15 +549,15 @@ let wordOwn = '', wordRust = '';
 
 // ---- state
 {
-  const run = (profile: string | undefined, exact = false) => child(['bun', 'run', 'tools/qa/simstate-check.ts'], { TPS_PROFILE: profile, TPS_EXACT: exact ? '1' : undefined, SIMSTATE_BREAK: BREAK ? '1' : undefined });
-  // A THIRD RUN ON THE GAME'S OWN MATHS (TPS_EXACT=1): the rows whose step is their own maths (sim.ts OWN_MATHS) step in the module only there, so on
-  // the two stands as they are the tenants' lines hold the columns and never the module's step. `stepped`: of each such family, steps taken in the module.
-  const fr = run(undefined), sh = run('shipped'), ex = run(undefined, true), rows = (o: string) => o.split('\n').filter(l => /^- (PASS|FAIL) — /.test(l)), bad = [...rows(fr.out), ...rows(sh.out), ...rows(ex.out)].filter(l => /^- FAIL/.test(l));
-  const stepped = [...ex.out.matchAll(/ (\d+) of the (\d+) steps taken in the module/g)].map(m => Number(m[1]));
-  const ok = fr.status === 0 && sh.status === 0 && ex.status === 0 && rows(fr.out).length >= 8 && rows(sh.out).length >= 8 && rows(ex.out).length >= 8 && stepped.length >= 3 && stepped.every(n => n > 0);
-  red.dice = [fr, sh, ex].every(c => rows(c.out).some(l => /^- FAIL — dice:/.test(l)));   // (the die's own line, on both stands: the other lines fail for the block)
+  const run = (profile: string | undefined) => child(['bun', 'run', 'tools/qa/simstate-check.ts'], { TPS_PROFILE: profile, QA_HOLD: undefined, SIMSTATE_BREAK: BREAK ? '1' : undefined });
+  // (both stands play on the game's own maths, so on both the rows whose step is their own maths — sim.ts OWN_MATHS — step in the module: `stepped`, of
+  //  each such family, the steps taken in the module, must not be none on either)
+  const fr = run(undefined), sh = run('shipped'), rows = (o: string) => o.split('\n').filter(l => /^- (PASS|FAIL) — /.test(l)), bad = [...rows(fr.out), ...rows(sh.out)].filter(l => /^- FAIL/.test(l));
+  const steppedOf = (o: string) => [...o.matchAll(/ (\d+) of the (\d+) steps taken in the module/g)].map(m => Number(m[1])), stepped = [...steppedOf(fr.out), ...steppedOf(sh.out)];
+  const ok = fr.status === 0 && sh.status === 0 && rows(fr.out).length >= 8 && rows(sh.out).length >= 8 && steppedOf(fr.out).length >= 3 && steppedOf(sh.out).length >= 3 && stepped.every(n => n > 0);
+  red.dice = [fr, sh].every(c => rows(c.out).some(l => /^- FAIL — dice:/.test(l)));   // (the die's own line, on both stands: the other lines fail for the block)
   verdict(ok, 'state, dice: a game\'s block of the module\'s memory is the same state in any slot, the snapshot carries it, and the die at home in it is the game\'s die (both stands)',
-    ok ? `${rows(fr.out).length} lines on the frozen stand, ${rows(sh.out).length} on the shipped one, ${rows(ex.out).length} on the game's own maths (steps of the things taken in the module there: ${stepped.join(', ')}), every one PASS (tools/qa/simstate-check.ts)` : bad.length ? bad.map(l => l.slice(2, 110)).join('\n    ') : stepped.length < 3 || stepped.some(n => n === 0) ? `on the game's own maths a family's step never ran in the module (${stepped.join(', ') || 'no line says'})` : `the check left nothing (exits ${fr.status} ${sh.status} ${ex.status}): ${(fr.err || sh.err || ex.err).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+    ok ? `${rows(fr.out).length} lines on the frozen stand, ${rows(sh.out).length} on the shipped one (steps of the things taken in the module: ${stepped.join(', ')}), every one PASS (tools/qa/simstate-check.ts)` : bad.length ? bad.map(l => l.slice(2, 110)).join('\n    ') : stepped.length < 6 || stepped.some(n => n === 0) ? `a family's step never ran in the module (${stepped.join(', ') || 'no line says'})` : `the check left nothing (exits ${fr.status} ${sh.status}): ${(fr.err || sh.err).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
 // ---- switch
@@ -568,66 +579,67 @@ let wordOwn = '', wordRust = '';
 
 // ---- stand
 {
-  const all: string[] = S.rustRows(), word = (r: string) => 'TPS_RUST' + r.toUpperCase(), none: Record<string, undefined> = { TPS_PROFILE: undefined, TPS_EXACT: undefined, TPS_RUST: undefined }; for (const r of all) none[word(r)] = undefined;
-  const rows = (env: Record<string, string | undefined>) => marked(child(['bun', 'run', 'tools/qa/rust-check.ts', '--rows'], { ...none, ...env }).out, 'RUST-ROWS ');
-  const DEF: string[] = all.filter(r => S.rustOn(r)), plus = (r: string) => all.filter(q => q === r || DEF.includes(q)).join();
-  const BOTH = ['frozen', 'shipped'] as const, on = (st: string, env: Record<string, string | undefined> = {}) => rows({ TPS_PROFILE: st, ...env });
+  const all: string[] = S.rustRows(), none: Record<string, undefined> = { TPS_PROFILE: undefined, QA_HOLD: undefined };
+  const rowsOf = (env: Record<string, string | undefined>) => child(['bun', 'run', 'tools/qa/rust-check.ts', '--rows'], { ...none, ...env }), rows = (env: Record<string, string | undefined>) => marked(rowsOf(env).out, 'RUST-ROWS ');
+  const DEF: string[] = all.filter(r => S.rustOn(r)), BOTH = ['frozen', 'shipped'] as const, on = (st: string, env: Record<string, string | undefined> = {}) => rows({ TPS_PROFILE: st, ...env });
   const fr = on('frozen'), sh = on('shipped'); let ok = !!fr && !!sh && fr.profile === 'frozen' && sh.profile === 'shipped' && fr.on.join() === DEF.join() && sh.on.join() === DEF.join() && fr.exact === true && sh.exact === true && DEF.length === S.RUST_ON.length && DEF.length > 0; const notes: string[] = [];
-  for (const r of all) { const got = BOTH.map(st => on(st, { [word(r)]: '1' })), good = got.every(g => !!g && g.on.join() === plus(r)); if (!good) ok = false; if (!good || !DEF.includes(r)) notes.push(`${word(r)}=1: frozen [${got[0]?.on ?? '?'}] shipped [${got[1]?.on ?? '?'}]`); }
-  { const bad: string[] = []; for (const r of DEF) { const got = BOTH.map(st => on(st, { [word(r)]: '0' })); if (!got.every(g => !!g && g.on.join() === DEF.filter(q => q !== r).join())) bad.push(`${word(r)}=0: frozen [${got[0]?.on ?? '?'}] shipped [${got[1]?.on ?? '?'}]`); }
-    if (bad.length) ok = false; notes.push(bad.length ? bad.join(' · ') : `each of the ${DEF.length} default rows' own word =0 drops it and it alone, on both stands`); }
-  // (every row down by one word, a row's own word over it, and the stand as it was recorded before the rows: the engine's maths and no row)
+  // (NO WORD: each word that was a switch stops the tool that says it, by name, on either stand and whatever it is set to)
+  { const other = all.find(r => !DEF.includes(r))!, d0 = DEF[0], word = (r: string) => 'TPS_RUST' + r.toUpperCase(), bad: string[] = [];
+    for (const [k, v] of [['TPS_RUST', '0'], ['TPS_EXACT', '0'], ['TPS_EXACT', '1'], [word(d0), '0'], [word(d0), '1'], [word(other), '1']]) for (const st of BOTH) { const c = rowsOf({ TPS_PROFILE: st, [k]: v });
+      if (c.status === 0 || marked(c.out, 'RUST-ROWS ') !== null || !c.err.includes(`${k}=${v}: the Rust module's rows and the game's own maths are not switches`)) bad.push(`${k}=${v} on the ${st} stand (exit ${c.status})`); }
+    if (bad.length) ok = false; notes.push(bad.length ? `A RETIRED WORD DID NOT STOP THE TOOL: ${bad.join(' · ')}` : 'six retired words, each on both stands, stop the tool by name'); }
+  // (A CHECK'S OWN ARM, tools/qa/headless.ts hold, said to a child as QA_HOLD: every row down, a row by name over that, a default row down alone, the maths out)
   { const o = all.find(r => !DEF.includes(r))!, d0 = DEF[0];
-    const down = BOTH.map(st => on(st, { TPS_RUST: '0' })), one = BOTH.map(st => on(st, { TPS_RUST: '0', [word(d0)]: '1', [word(o)]: '1' })), old = BOTH.map(st => on(st, { TPS_RUST: '0', TPS_EXACT: '0' }));
-    const good = down.every(g => !!g && g.on.length === 0 && g.exact === true) && one.every(g => !!g && g.on.join() === all.filter(q => q === d0 || q === o).join()) && old.every(g => !!g && g.on.length === 0 && g.exact === false);
-    if (!good) ok = false; notes.push(`TPS_RUST=0: frozen [${down[0]?.on ?? '?'}] shipped [${down[1]?.on ?? '?'}] · with two rows' own words: [${one[0]?.on ?? '?'}] [${one[1]?.on ?? '?'}] · TPS_EXACT=0 TPS_RUST=0, the stand as recorded before the rows: maths ${old.map(g => g?.exact === false ? 'the engine\'s' : 'NOT the engine\'s').join(', ')}, rows [${old[0]?.on ?? '?'}] [${old[1]?.on ?? '?'}]`); }
+    const down = BOTH.map(st => on(st, { QA_HOLD: 'rows=0' })), two = BOTH.map(st => on(st, { QA_HOLD: `rows=0,${d0}=1,${o}=1` })), one = BOTH.map(st => on(st, { QA_HOLD: `${d0}=0` })), eng = BOTH.map(st => on(st, { QA_HOLD: 'exact=0' })), no = BOTH.map(st => rowsOf({ TPS_PROFILE: st, QA_HOLD: 'nosuchrow=0' }));
+    const good = down.every(g => !!g && g.on.length === 0 && g.exact === true) && two.every(g => !!g && g.on.join() === all.filter(q => q === d0 || q === o).join()) && one.every(g => !!g && g.on.join() === DEF.filter(q => q !== d0).join() && g.exact === true)
+      && eng.every(g => !!g && g.on.join() === DEF.join() && g.exact === false) && no.every(c => c.status !== 0 && /no row "nosuchrow"/.test(c.err));
+    if (!good) ok = false; notes.push(`a check's own arm: rows=0 [${down[0]?.on ?? '?'}] [${down[1]?.on ?? '?'}] · with two rows by name [${two[0]?.on ?? '?'}] [${two[1]?.on ?? '?'}] · ${d0}=0 drops ${one.every(g => !!g && g.on.join() === DEF.filter(q => q !== d0).join()) ? 'it alone' : 'NOT it alone'} · exact=0: maths ${eng.map(g => g?.exact === false ? 'the engine\'s' : 'NOT the engine\'s').join(', ')} · a row the module has not: ${no.every(c => c.status !== 0) ? 'an error by name' : 'NOT an error'}`); }
   const P: any = await import(`${ROOT}/src/host/profile.ts`);
   { const more = Object.keys(P.FROZEN_HOLDS).filter(k => k.startsWith('RUST.') || k === 'EXACT.on'); if (more.length) { ok = false; notes.push(`FROZEN_HOLDS still holds [${more}]: the stands do not differ there`); } }
-  // (the ADDRESS's words, profile.ts pageRows, in this process and put back: what a page opens with, and the address read again over rows a recipe wrote)
-  { const was: [string, boolean][] = all.map(r => [r, !!S.RUST[r]]), now = () => all.filter(r => S.RUST[r]).join(), set = (v: boolean) => { for (const r of all) S.rustRow(r, v); };
-    const other = all.find(r => !DEF.includes(r))!, d0 = DEF[0], cases: [string, string, boolean | null, string][] = [   // (address · read over rows all on / all off / not over · the rows wanted)
-      ['', 'opens', null, DEF.join()], ['rust=0', 'opens', null, ''], [`rust=0&rust${other}`, 'opens', null, other], [`rust${d0}=0`, 'opens', null, DEF.filter(r => r !== d0).join()], [`rust${other}`, 'opens', null, plus(other)],
-      ['', 'over a recipe with every row', true, all.join()], ['', 'over a recipe with none', false, ''], ['rust=0', 'over a recipe with every row', true, ''], [`rust${d0}=0`, 'over a recipe with every row', true, all.filter(r => r !== d0).join()],
-      [`rust${other}`, 'over a recipe with none', false, other], [`rust=0&rust${other}`, 'over a recipe with every row', true, other]];
-    const bad: string[] = []; for (const [addr, how, over, want] of cases) { if (over !== null) set(over); P.pageRows(new URLSearchParams(addr), over !== null); if (now() !== want) bad.push(`?${addr} ${how}: [${now()}], not [${want}]`); }
-    for (const [r, v] of was) S.rustRow(r, v);
-    if (bad.length) ok = false; notes.push(bad.length ? `THE ADDRESS: ${bad.join(' · ')}` : `the address's words: ${cases.length} cases as written (a page as it opens, and over a recipe's rows)`); }
-  // (…and the words must still be ON the address when such a page reads it: a replay's or a networked game's page is first sent on to its recipe's address
-  //  (replay/engineplay.ts recipeSearch), which keeps of the visit only the visit's words — the rows' words are among them, ui/replaykey.ts VISIT_FLAGS —
-  //  and drops a recipe's own. Without that a typed ?rust=0 was gone before pageRows ran: found by the multiplayer task on the first cut of this)
-  { const EP: any = await import(`${ROOT}/src/replay/engineplay.ts`), RK: any = await import(`${ROOT}/src/ui/replaykey.ts`), other = all.find(r => !DEF.includes(r))!, d0 = DEF[0];
-    const sent = (visit: string) => new URLSearchParams(String(EP.recipeSearch({ search: `?roomclear&squad4&rust=0&rust${other}`, seed: 7 }, new URLSearchParams(visit), { playtape: '1' })).replace(/^\?/, ''));
-    const a = sent(`playtape=1&mute&rust=0&rust${d0}=0&rust${other}=1`), b = sent('playtape=1&mute'), listed = S.rustWords().every((w: string) => RK.VISIT_FLAGS.includes(w)) && S.rustWords().length === all.length + 1;
-    const good = listed && a.get('rust') === '0' && a.get('rust' + d0) === '0' && a.get('rust' + other) === '1' && a.has('roomclear') && a.has('mute') && !b.has('rust') && !b.has('rust' + other) && b.has('roomclear');
-    if (!good) ok = false; notes.push(`a page sent on to a recipe's address ${good ? 'keeps the visit\'s words about the rows and drops the recipe\'s own' : `LOSES OR TAKES A WORD: the visit's [${a}] · a visit with none [${b}] · every word a visit word ${listed}`}`); }
-  verdict(ok, 'stand: both stands have the rows of RUST_ON on and the game\'s own maths, as the page; a row\'s own word raises it or drops it — and it alone — on either; TPS_RUST=0 drops them all; TPS_EXACT=0 TPS_RUST=0 is the stand as it was recorded', `frozen [${fr?.on ?? '?'}] maths ${fr?.exact} · shipped [${sh?.on ?? '?'}] maths ${sh?.exact} · ${notes.join(' · ')} · rows: ${all.join(' ')}`);
+  { const KN: any = await import(`${ROOT}/src/game/knobs.ts`), reg = KN.knobRegistry(); if ('RUST' in reg || 'EXACT' in reg) { ok = false; notes.push('the knob registry still has RUST or EXACT: a recording or a recipe could carry a row'); } }
+  // (the ADDRESS's old words, profile.ts pageRows, in this process and put back: whatever a page's address says, and whatever rows a recipe wrote before
+  //  it is read, the rows are the build's and the maths the game's own. Each case begins with the maths OUT and every row moved, so a boot that left
+  //  either to the address would show; and the page says of each old word, once, as a note and not a warning, that it does nothing)
+  { const was: [string, boolean][] = all.map(r => [r, !!S.RUST[r]]), wasX = X.EXACT.on, now = () => all.filter(r => S.RUST[r]).join(), set = (v: boolean) => { for (const r of all) S.rustRow(r, v); };
+    const other = all.find(r => !DEF.includes(r))!, d0 = DEF[0], info = console.info, warn = console.warn; let noted = 0, warned = 0, twice = 0;
+    const cases: [string, boolean][] = [['', true], ['', false], ['rust=0', true], ['rust=0', false], [`rust=0&rust${other}`, true], [`rust${d0}=0`, true], [`rust${other}`, false], ['noexact', true], ['noexact', false], ['rust=0&noexact', false], ['rustic=1&rustle', true], ['TPS_EXACT=0', false]];
+    const bad: string[] = []; console.info = (...a: unknown[]) => { if (/are not switches any more/.test(String(a[0]))) noted++; }; console.warn = () => { warned++; };
+    try { for (const [addr, over] of cases) { set(over); X.EXACT.on = false; P.RETIRED_SAID.clear(); const q = new URLSearchParams(addr), before = noted; P.pageRows(q);
+        if (now() !== DEF.join() || X.EXACT.on !== true) bad.push(`?${addr} over ${over ? 'every row up' : 'every row down'} and the maths out: [${now()}] maths ${X.EXACT.on}`);
+        const old = [...q.keys()].filter(k => k === 'rust' || k === 'noexact' || (k.startsWith('rust') && all.includes(k.slice(4)))).length; if (noted - before !== old) bad.push(`?${addr}: ${noted - before} notes for ${old} old word(s)`);
+        P.pageRows(q); if (noted - before !== old) twice++; } } finally { console.info = info; console.warn = warn; }
+    for (const [r, v] of was) S.rustRow(r, v); X.EXACT.on = wasX; P.RETIRED_SAID.clear();
+    if (bad.length || warned || twice) ok = false;
+    notes.push(bad.length ? `THE ADDRESS: ${bad.join(' · ')}` : `the address's old words: ${cases.length} cases, each from the maths out and the rows moved: the build's rows and the game's own maths after each, a note for each old word and none for a word that only begins \`rust\` (${noted} notes, ${warned} warnings${twice ? `, SAID AGAIN on a second reading ${twice} times` : ', none said twice'})`); }
+  verdict(ok, 'stand: both stands have the rows of RUST_ON on and the game\'s own maths, as the page; no word of the environment or of an address moves either (a retired word stops the tool that says it); a check\'s own arm holds what it names and it alone', `frozen [${fr?.on ?? '?'}] maths ${fr?.exact} · shipped [${sh?.on ?? '?'}] maths ${sh?.exact} · ${notes.join(' · ')} · rows: ${all.join(' ')}`);
 }
 
 // ---- server
 {
-  const TICKS = 600, setup = { search: '?roomclear&squad4', seed: 7 }, CLEAN: Record<string, undefined> = {}; for (const r of S.rustRows()) CLEAN['TPS_RUST' + r.toUpperCase()] = undefined;   // (the row comes from the recipe here, never from a word of the caller's shell)
-  const recipeOf = (tables: object | null) => marked(child(['bun', 'run', 'tools/mp/setup.ts', JSON.stringify(tables ? { ...setup, tables } : setup)], CLEAN).out, 'MPSETUP ');
-  const stood = (recipe: unknown) => recipe ? marked(child(['bun', 'run', 'tools/qa/rust-check.ts', '--server', JSON.stringify(recipe), String(TICKS)], CLEAN).out, 'RUST-SERVER ') : null;
-  const every = (v: boolean) => ({ RUST: Object.fromEntries(S.rustRows().map((r: string) => [r, v])) });
-  const rOn = recipeOf(every(true)), rOff = recipeOf(every(false)), rDef = recipeOf(null), on = stood(rOn), off = stood(rOff), def = stood(rDef);
-  const table = (r: any) => r?.tables?.RUST ?? r?.knobs?.tables?.RUST, carried = (r: any) => S.rustRows().every((k: string) => table(r)?.[k] === true), bare = (r: any) => S.rustRows().every((k: string) => table(r)?.[k] === false);
-  const ok = !!on && !!off && carried(rOn) && bare(rOff) && on.ticks === TICKS && off.ticks === TICKS && on.rust === TICKS && off.rust === 0 && on.lines === TICKS && off.lines === 0 && on.circles === TICKS && off.circles === 0 && on.fog === TICKS && off.fog === 0
+  const TICKS = 600, setup = { search: '?roomclear&squad4', seed: 7 };
+  const made = (tables: object | null) => child(['bun', 'run', 'tools/mp/setup.ts', JSON.stringify(tables ? { ...setup, tables } : setup)], { QA_HOLD: undefined });
+  const stood = (recipe: unknown, hold?: string) => recipe ? marked(child(['bun', 'run', 'tools/qa/rust-check.ts', '--server', JSON.stringify(recipe), String(TICKS)], { QA_HOLD: hold }).out, 'RUST-SERVER ') : null;
+  // (the rows are no knob table: a setup cannot ask for one, and a recipe carries none. The game a server stands is the build's; what it is held to is
+  //  that same recipe stood with every row held down, and with the maths' row held up too: this check's own arms, in the child that stands it)
+  const mDef = made(null), rDef = marked(mDef.out, 'MPSETUP '), asked = made({ RUST: Object.fromEntries(S.rustRows().map((r: string) => [r, false])) }), refused = asked.status !== 0 && marked(asked.out, 'MPSETUP ') === null && /RUST is not a knob table of this build/.test(asked.err + asked.out);
+  const def = stood(rDef), off = stood(rDef, 'rows=0'), on = stood(rDef, 'maths=1');
+  const table = (r: any) => r?.tables?.RUST ?? r?.knobs?.tables?.RUST ?? r?.tables?.EXACT ?? r?.knobs?.tables?.EXACT, T = (r: string) => S.rustOn(r) ? TICKS : 0;
+  const ok = !!on && !!off && refused && on.ticks === TICKS && off.ticks === TICKS && on.rust === TICKS && off.rust === 0 && on.lines === TICKS && off.lines === 0 && on.circles === TICKS && off.circles === 0 && on.fog === TICKS && off.fog === 0
     && on.exact && off.exact && on.word === off.word && SENSES.every(k => off.sensed[k] === 0) && on.sensed.sight > 0 && on.sensed.light > 0 && on.sensed.sound > 0 && on.sensed.paths > 0;
-  verdict(ok, 'server: the game server\'s stand takes the rows from its recipe, ticks on the module\'s maths, lines, circles and fog, and is the game it is without', !on || !off ? `a stand left nothing (recipes: ${!!rOn} ${!!rOff} · stands: ${!!on} ${!!off})` :
-    `the recipe carries the rows ${JSON.stringify(table(rOn))} · ${on.rust} of ${on.ticks} ticks on the module's maths, ${on.lines} on its lines, ${on.circles} on its circles and ${on.fog} with its sight pass (every row put off: ${off.rust}, ${off.lines}, ${off.circles} and ${off.fog} of ${off.ticks}) · the senses asked of it: ${SENSES.map(k => `${k} ${on.sensed[k]}`).join(', ')} (without: ${SENSES.map(k => off.sensed[k]).join(', ')}) · word ${on.word}${on.word === off.word ? ', the same' : ` ≠ ${off.word}`}`);
-  // (a recipe made with no word about the rows carries the page's own: the rows of RUST_ON, and no other — the stand a game server plays today. A section of
-  //  its own, so that its red path is its own: the box world's break must move ITS word, with no maths row to do it)
-  const plain = (r: any) => S.rustRows().every((k: string) => table(r)?.[k] === S.rustOn(k)), T = (r: string) => S.rustOn(r) ? TICKS : 0;
-  const okDef = !!def && !!off && plain(rDef) && def.ticks === TICKS && def.rust === T('maths') && def.lines === T('lines') && def.circles === T('circles') && def.fog === T('fog') && def.sees > 100 && def.exact && def.word === off.word;
-  verdict(okDef, 'server as the page: a recipe that says nothing of the rows carries the page\'s own (RUST_ON), and the game stood from it is the game with every row off', !def || !off ? `a stand left nothing (recipe: ${!!rDef} · stands: ${!!def} ${!!off})` :
-    `the recipe's rows [${S.rustRows().filter((k: string) => table(rDef)?.[k]).join(' ')}] · of ${def.ticks} ticks ${def.rust} on the module's maths, ${def.lines} on its lines, ${def.circles} on its circles, ${def.fog} with its sight pass (${def.sees} men asked of it) · word ${def.word}${def.word === off.word ? ', the word with every row off' : ` ≠ ${off.word}`}`);
+  verdict(ok, 'server: the game server\'s stand ticks on the module\'s maths (that row held up), lines, circles and fog, and is the game it is with every row held down; a setup that asks for a row is refused', !on || !off ? `a stand left nothing (recipe: ${!!rDef} · stands: ${!!on} ${!!off})` :
+    `a setup with a RUST table: ${refused ? 'refused by name' : `NOT REFUSED (exit ${asked.status})`} · ${on.rust} of ${on.ticks} ticks on the module's maths, ${on.lines} on its lines, ${on.circles} on its circles and ${on.fog} with its sight pass (every row held down: ${off.rust}, ${off.lines}, ${off.circles} and ${off.fog} of ${off.ticks}) · the senses asked of it: ${SENSES.map(k => `${k} ${on.sensed[k]}`).join(', ')} (without: ${SENSES.map(k => off.sensed[k]).join(', ')}) · word ${on.word}${on.word === off.word ? ', the same' : ` ≠ ${off.word}`}`);
+  // (the recipe as a server plays it today, with no arm held: the build's rows, RUST_ON, and no other. A section of its own, so that its red path is its
+  //  own: the box world's break must move ITS word, with no maths row to do it)
+  const okDef = !!def && !!off && !!rDef && table(rDef) === undefined && def.ticks === TICKS && def.rust === T('maths') && def.lines === T('lines') && def.circles === T('circles') && def.fog === T('fog') && def.sees > 100 && def.exact && def.word === off.word;
+  verdict(okDef, 'server as the page: a recipe carries no row and no maths, and the game stood from it plays on the build\'s rows (RUST_ON) and is the game with every row held down', !def || !off ? `a stand left nothing (recipe: ${!!rDef} · stands: ${!!def} ${!!off})` :
+    `the recipe's tables name ${table(rDef) === undefined ? 'no row and no maths' : 'A ROW OR THE MATHS'} · of ${def.ticks} ticks ${def.rust} on the module's maths, ${def.lines} on its lines, ${def.circles} on its circles, ${def.fog} with its sight pass (${def.sees} men asked of it) · word ${def.word}${def.word === off.word ? ', the word with every row held down' : ` ≠ ${off.word}`}`);
 }
 
 // ---- rows: every row of RUST is held by a section of this half that ran (a row added to src/sim/sim.ts with no line in HELD is red here, before anyone trusts it)
 {
-  const rows: string[] = S.rustRows(), none = rows.filter(r => !(r in HELD) || !(HELD[r] in said)), gone = Object.keys(HELD).filter(r => !rows.includes(r));
+  const rows: string[] = S.rustRows(), none = [...rows.filter(r => !(r in HELD) || !(HELD[r] in said)), ...Object.keys(GONE).filter(f => !(GONE[f] in said))], gone = Object.keys(HELD).filter(r => !rows.includes(r));
   verdict(none.length === 0 && gone.length === 0, 'rows: every row of RUST has a section here that asks its own answers of both sides',
-    none.length || gone.length ? `${none.length ? `NO SECTION RAN FOR ${none.map(r => `${r} (${HELD[r] ?? 'no line in HELD'})`).join(', ')}` : ''}${gone.length ? ` · named here and not a row: ${gone.join(', ')}` : ''}` : rows.map(r => `${r} → ${HELD[r]}`).join(' · '));
+    none.length || gone.length ? `${none.length ? `NO SECTION RAN FOR ${none.map(r => `${r} (${HELD[r] ?? GONE[r] ?? 'no line in HELD'})`).join(', ')}` : ''}${gone.length ? ` · named here and not a row: ${gone.join(', ')}` : ''}` : [...rows.map(r => `${r} → ${HELD[r]}`), ...Object.keys(GONE).map(f => `${f} (no row: written once) → ${GONE[f]}`)].join(' · '));
 }
 
 // ---- views: sim.ts keeps its views over the module's memory and tests their length; a memory that grew must leave every one of them remade (nothing in the
@@ -649,12 +661,12 @@ if (args.includes('--missions') || args.includes('--both')) {
   interface Props { there: number; here: number; noises: number; asked: number; differ: number; first: string; pairs: number; walls: number }
   interface Slabs { there: number; here: number; host: number; asked: number; differ: number; first: string; landed: number }
   interface Items { there: number; here: number; host: number; walks: number; asked: number; differ: number; first: string; rested: number; events: number; thingRays: number }
-  interface Run { falls: Falls; doors: Doors; props: Props; slabs: Slabs; items: Items; rays: number; run: string; ticks: number; cone: number; end: string; digest: string; bits: string; rust: number; lines: number; circles: number; fog: number; sees: number; sensed: Sensed; poses: number; posesIn: number; posed: number; sets: number; layers: number; dice: number; draws: number; both: { asked: number; differ: number; stale: number; first: string }; exact: boolean; engine: string; secs: number }
+  interface Run { falls: Falls; doors: Doors; props: Props; slabs: Slabs; items: Items; rays: number; run: string; ticks: number; cone: number; end: string; digest: string; bits: string; rust: number; lines: number; circles: number; fog: number; sees: number; sensed: Sensed; poses: number; posesIn: number; owed: number; posed: number; sets: number; layers: number; dice: number; draws: number; both: { asked: number; differ: number; stale: number; first: string }; exact: boolean; engine: string; secs: number }
   const one = (run: string, rustOn: boolean, both = false): Promise<Run | string> => new Promise(done => {
     const [name, how] = run.split('@');   // (`@frag`: the run played with 'frag and clear' ordered at a held room's door — tools/qa/playthrough.ts PT_FRAG — so that blasts take leaves off their hinges)
     const cmd = node ? [...NODE, 'tools/qa/rust-check.ts', '--run', name] : ['bun', 'run', 'tools/qa/rust-check.ts', '--run', name];
     const env: Record<string, string | undefined> = { ...process.env, TPS_PROFILE: 'shipped', TPS_CPUSENSE: '1', PT_DIGEST: '1', RUST_BOTH: both ? '1' : '0', ...(node ? { V8_ENTRY: resolve(ROOT, 'tools/qa/rust-check.ts'), FC_NOSTANDIN: '1' } : {}) };
-    for (const r of all) env['TPS_RUST' + r.toUpperCase()] = rustOn && up.includes(r) ? '1' : '0';
+    env.QA_HOLD = all.map(r => `${r}=${rustOn && up.includes(r) ? 1 : 0}`).join(',');   // (this check's own arm, said to the child: the rows of this run's side, each by name — tools/qa/headless.ts hold)
     if (how === 'frag') env.PT_FRAG = '1';
     if (up.includes('dice')) env.TPS_SEED = name.split(':')[1];   // (the die's row moves the game's OWN die: both of a pair are stood up with one, off the run's seed)
     const p = spawn(cmd[0], cmd.slice(1), { cwd: ROOT, env: env as Record<string, string> }); let out = '', err = '';
@@ -668,11 +680,13 @@ if (args.includes('--missions') || args.includes('--both')) {
   const SET_FLOOR: Sensed = { sight: 1000, light: 1000, smoke: 1000, sound: 100, paths: 100 };
   /** the senses raised that the runs TOGETHER did not ask the module enough of (a set of runs with no smoke in it proves nothing of the smoke row) */
   const thin = (rs: (Run | string)[]) => SENSES.filter(k => up.includes(k) && rs.reduce((n, r) => n + (typeof r === 'string' ? 0 : r.sensed[k]), 0) <= SET_FLOOR[k]);
-  /** the fewest layers of the animator a tick that a mission runs in the module with the walk's row up (a squad mission runs about sixty and the office night with three guards
-   *  thirty-six; the rule that has no pose alone is about twelve) */
+  /** the fewest layers of the animator a tick that a mission runs in the module (a squad mission runs about sixty and the office night with three guards
+   *  thirty-six; the rule that has no pose alone is about twelve). BOTH arms of a pair run them there and keep their poses in the block: a layer is
+   *  written once, in Rust, so the arm with no row up is held to the same count of layers, to poses at home at every tick, and to NO POSE QUESTION
+   *  answered by the module (its bench's counts are its layers' own asks, `owed`, and no more) */
   const LAYER_FLOOR = 20;
   /** did the run with the rows up really run on them: every tick on the module's maths and with its lines asked there (each where its row was raised), and none in the other */
-  const fair = (ts: Run, rs: Run) => (/:hard(@|$)/.test(rs.run) ? rs.cone === rs.ticks && ts.cone === ts.ticks : rs.cone === 0 && ts.cone === 0) && (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || rs.lines === rs.ticks) && (!up.includes('rays') || rs.rays > 100) && ts.rays === 0 && (!up.includes('circles') || rs.circles === rs.ticks) && (!up.includes('fog') || (rs.fog === rs.ticks && rs.sees > 100)) && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || (rs.poses > rs.ticks && rs.posed === rs.ticks && rs.sets > 1 && rs.posesIn > rs.poses * 0.9)) && (up.includes('walk') ? rs.layers > LAYER_FLOOR * rs.ticks : rs.layers === 0) && ts.layers === 0 && ts.posed === 0 && ts.posesIn === 0 && (!up.includes('dice') || (rs.dice === rs.ticks && rs.draws > 100 && rs.draws === ts.draws)) && ts.dice === 0 && ts.fog === 0 && ts.sees === 0 && ts.poses === 0 && ts.ticks > 600 && ts.falls.there === 0 && ts.doors.there === 0 && ts.props.there === 0 && (!up.includes('props') || (rs.props.there >= 0.95 * (rs.props.there + rs.props.here) && (rs.props.there + rs.props.here === 0 || rs.props.there > 0.9 * rs.ticks))) && (!up.includes('doors') || (rs.doors.there > 0.95 * (rs.doors.there + rs.doors.here) && rs.doors.there > 0.9 * rs.ticks && rs.doors.turned > 100)) && SENSES.every(k => ts.sensed[k] === 0 && (!up.includes(k) || rs.sensed[k] > SENSE_FLOOR[k])) && (!up.includes('slabs') || rs.slabs.there >= 0.9 * (rs.slabs.there + rs.slabs.here - rs.slabs.host)) && ts.slabs.there === 0 && (!up.includes('items') || rs.items.there >= 0.9 * (rs.items.there + rs.items.here - rs.items.host)) && ts.items.there === 0;
+  const fair = (ts: Run, rs: Run) => (/:hard(@|$)/.test(rs.run) ? rs.cone === rs.ticks && ts.cone === ts.ticks : rs.cone === 0 && ts.cone === 0) && (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || rs.lines === rs.ticks) && (!up.includes('rays') || rs.rays > 100) && ts.rays === 0 && (!up.includes('circles') || rs.circles === rs.ticks) && (!up.includes('fog') || (rs.fog === rs.ticks && rs.sees > 100)) && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || (rs.poses > rs.ticks && rs.posed === rs.ticks && rs.sets > 1 && rs.posesIn > rs.poses * 0.9)) && rs.layers > LAYER_FLOOR * rs.ticks && ts.layers === rs.layers && rs.posed === rs.ticks && ts.posed === ts.ticks && ts.owed > 0 && ts.posesIn === ts.owed && (!up.includes('dice') || (rs.dice === rs.ticks && rs.draws > 100 && rs.draws === ts.draws)) && ts.dice === 0 && ts.fog === 0 && ts.sees === 0 && ts.poses === ts.owed && ts.ticks > 600 && ts.falls.there === 0 && ts.doors.there === 0 && ts.props.there === 0 && (!up.includes('props') || (rs.props.there >= 0.95 * (rs.props.there + rs.props.here) && (rs.props.there + rs.props.here === 0 || rs.props.there > 0.9 * rs.ticks))) && (!up.includes('doors') || (rs.doors.there > 0.95 * (rs.doors.there + rs.doors.here) && rs.doors.there > 0.9 * rs.ticks && rs.doors.turned > 100)) && SENSES.every(k => ts.sensed[k] === 0 && (!up.includes(k) || rs.sensed[k] > SENSE_FLOOR[k])) && (!up.includes('slabs') || rs.slabs.there >= 0.9 * (rs.slabs.there + rs.slabs.here - rs.slabs.host)) && ts.slabs.there === 0 && (!up.includes('items') || rs.items.there >= 0.9 * (rs.items.there + rs.items.here - rs.items.host)) && ts.items.there === 0;
   const sensedSay = (r: Run) => SENSES.map(k => `${k} ${r.sensed[k]}`).join(', ');
   if (args.includes('--missions')) {
     let ok = true; const lines: string[] = []; let ticks = 0; const raised: (Run | string)[] = [];
@@ -709,7 +723,7 @@ if (args.includes('--missions') || args.includes('--both')) {
 console.log(fails ? `\n${fails} FAILED` : '\nall pass');
 // (the red path: every section that asks the module must be red, and every row's own answers must have differed in the section that holds it — one left green
 //  is a check that proves nothing, and exit 3 says which)
-const greenRows = BREAK ? (S.rustRows() as string[]).filter(r => !red[r]) : [], greenSections = BREAK ? RED_SECTIONS.filter(k => said[k] === true) : [];
-if (BREAK) console.log(greenRows.length || greenSections.length ? `THE RED PATH IS NOT RED FOR ${[...greenSections.map(k => `the section \`${k}\``), ...greenRows.map(r => `the row ${r} (in \`${HELD[r] ?? 'no section'}\`)`)].join(', ')}`
-  : `the red path is red for every section that ran (${RED_SECTIONS.filter(k => k in said).join(' · ')}) and for every row's own answers (${(S.rustRows() as string[]).join(', ')})`);
+const greenRows = BREAK ? [...(S.rustRows() as string[]), ...Object.keys(GONE)].filter(r => !red[r]) : [], greenSections = BREAK ? RED_SECTIONS.filter(k => said[k] === true) : [];
+if (BREAK) console.log(greenRows.length || greenSections.length ? `THE RED PATH IS NOT RED FOR ${[...greenSections.map(k => `the section \`${k}\``), ...greenRows.map(r => `${r in GONE ? r : `the row ${r}`} (in \`${HELD[r] ?? GONE[r] ?? 'no section'}\`)`)].join(', ')}`
+  : `the red path is red for every section that ran (${RED_SECTIONS.filter(k => k in said).join(' · ')}) and for every row's own answers (${[...(S.rustRows() as string[]), ...Object.keys(GONE)].join(', ')})`);
 process.exit(greenRows.length || greenSections.length ? 3 : fails ? 1 : 0);

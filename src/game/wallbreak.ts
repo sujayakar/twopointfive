@@ -195,7 +195,7 @@ export class WallBreak {
     this.authored = g.col.boxes.length;
     this.index();
     this.room = breakRoom(g.col, g.col.mirror.tables);
-    this.skins = new WallSkin(g, this.authored, j => this.fixtureBoxes.has(j) || !!this.destr.itemOf(j));
+    this.skins = new WallSkin(g, this.authored, j => this.fixtureBoxes.has(j) || !!this.destr.itemOf(j), k => { const B = this.owner.get(k); return B && B.id === k ? B : undefined; }, () => this.list);
   }
   /** would `need` more pieces of B be more than this level may stand up? Every piece is a static, at most one cut row, and an entry in each cell of the
    *  box it was cut from (StaticCollision.addStatic files it by that box): the three tables of the copy a piece takes room in. */

@@ -42,7 +42,6 @@ import { pageSwitches, pageRows } from './host/profile';
 import { MARKING_TEXEL } from './scene/markings';
 import { LOOK, LOOK_DOORS, lookLevelFile, lookPageOn, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs, lookKeptOf } from './scene/look';
 import { lookTidy, lookDoors } from './scene/lookTidy';
-import { WALLSKIN } from './game/wallskin';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
 import { findMeOutline } from './ui/findme';
@@ -62,7 +61,7 @@ import { LOOK_WORKERS } from './render/lookWorkers';   // (the look's maps on wo
 import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, sunGlintConfig, glintPickConfig, highlightConfig, wallSidesConfig, smokeLabConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
 import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
-import { cutConfig, initCutSwitch, type CutPlane } from './scene/cut';
+import { cutConfig, initCutSwitch, cutBoxesOn, type CutPlane } from './scene/cut';
 import { geoTryLevel } from './scene/geoTry';
 import { skyPlan } from './scene/placePlan';
 import { seatPosts } from './scene/lookMend';
@@ -196,7 +195,8 @@ import * as mothsMod from './game/moths';
 import * as saveMod from './game/savestate';
 import { PICTURE, PICTURE_STATS, pictureSummary, pictureViews, pictureTell, ideasOf } from './game/picture';
 import { RUNNER, RUNNER_STATS, runnerOf, runnerBreak } from './game/runner';
-import { sim, RUST, RUST_ON, simSay, simWhyNot, mathsOfRust, fellLines, fellSealed } from './sim/sim';
+import { EXACT } from './math/exact';
+import { sim, RUST, RUST_ON, simSay, simWhyNot, mathsOfRust, fellLines, fellSealed, noWasm, NoWasmError, NO_WASM_WORDS } from './sim/sim';
 import { ANYTIME } from './scene/collision';
 import { knobRegistry, knobsCopy, knobsBack } from './game/knobs';   // (last on purpose: every game module above is already loaded, so this import changes nobody's load order)
 import type { Gpu } from './gpu/device';
@@ -230,6 +230,9 @@ async function main() {
   const keep = keepPageBoot(q, ownPage(q) || kitViewOn);   // (a run of any kind keeps its own page: host/runpage.ts)
   if (keep.role === 'shell') { boot.stopRafProbe(); readyResolve(); return; }
   if (keep.role === 'leave') return;
+  // NO MODULE, NO GAME (sim/sim.ts): the simulation is the Rust module's and nothing else works it out, so a page that cannot run it stops here, before
+  // anything is built. With no WebAssembly (a browser whose policy turns this site's JIT off) it is the card below; anything else is a fault of the build
+  { const no = simWhyNot(); if (no) { console.info(simSay()); throw noWasm() ? new NoWasmError(no) : new Error(`the Rust simulation did not start: ${no}`); } }
   if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
   keymap.KEYMAP.handWhen = () => HANDRING.on;   // (…and his own actions on the key that leaves spare, the whistle's row with no key: host/keymap.ts HAND, the rule game/handring.ts)
   keymap.KEYMAP.slotWhen = () => HANDSLOT.on;   // (empty hands are a slot on backtick, the debugger on backslash, E spare: host/keymap.ts SLOT, the rule game/handslot.ts)
@@ -261,7 +264,7 @@ async function main() {
   const netPlay = !tape && q.has(NETPLAY) ? await netFromUrl(q) : null; if (netPlay === 'moved') return;
   const net = netPlay && !netPlay.refuse ? netPlay : null, recipe = tape ?? net;
   pageSwitches(q);   // the switches this boot writes from the URL — the destruction goal's (?nodestruction ?nofurnblast ?nowallreact ?nocoverfire ?nowallcharge ?wallmenu=direct) and the room entry's door walk (?nodoorpath ?doorpath=0|gun) — in src/host/profile.ts, which the QA harness's shipped stand calls too with an empty query: one function, so the two cannot drift. Before the level loads (the destruction's dressing)
-  const recipeTables = (): void => { if (!recipe) return; recipe.tables(); pageRows(q, true); };   // a recipe's knob tables over this machine's (below, at each point of the boot that wrote over them) — and then what THIS address says of the Rust module's rows over the recipe's (profile.ts pageRows: ?rust=0 on a replay or a networked game still rules the module out; no word = the recipe's rows)
+  const recipeTables = (): void => { if (!recipe) return; recipe.tables(); pageRows(q); };   // a recipe's knob tables over this machine's (below, at each point of the boot that wrote over them) — and then the Rust module's rows as the build has them, whatever an older recipe wrote (profile.ts pageRows: a row is no switch, and no recipe made now carries one)
   setLookPlace(placeOfQuery(q));   // the men's dress follows the place (scene/look.ts): on the office family the first cast and its tables, dressed for a building — said before the cast is fetched below
   OFFLIST_UI.on = q.get('offlist') !== '0';   // the rows cut from the mission list are drawn on no list (ui/missions.ts listedMissions; ?offlist=0 = every row drawn, as before the cut)
   LOADBRIEF.on = q.get('loadbrief') !== '0';   // a mission's page loads behind that mission's brief and waits for the player's Start (ui/loadbrief.ts; ?loadbrief=0 = the boot card and the straight start, as before)
@@ -791,7 +794,7 @@ async function main() {
     const said = bench.start({ ...benchOpts(benchPage.secs), sceneCapMs: benchPage.cap * 1250, heavyCapMs: Math.min(45, benchPage.cap * 0.6) * 1000, ...benchPage.opts }, benchPage.leg);
     if (!bench.active) { benchPage.leg.over(); perfNote = `benchmark ${said}`; perfNoteT = 6; console.info(perfNote); } }   // (sceneCapMs: the scene's own cap is the hands-off player's, on the game's clock; the benchmark's cut on the wall's clock stands a quarter behind it)
   else if (benchRefused) { perfNote = `benchmark not now: ${benchRefused}`; perfNoteT = 10; }
-  (window as any).__sim = { sim, RUST, RUST_ON, say: simSay, whyNot: simWhyNot, maths: mathsOfRust, fell: fellLines, fellSealed, alone: () => [ANYTIME.proofs, ANYTIME.windows, ANYTIME.who] }; console.info(simSay());   // THE RUST SIMULATION (src/sim/sim.ts): the module, which systems run in it, and one line at boot saying it started (tools/qa/rust-page.cjs reads these)
+  (window as any).__sim = { sim, RUST, RUST_ON, say: simSay, whyNot: simWhyNot, maths: mathsOfRust, exact: () => EXACT.on, fell: fellLines, fellSealed, alone: () => [ANYTIME.proofs, ANYTIME.windows, ANYTIME.who] }; console.info(simSay());   // THE RUST SIMULATION (src/sim/sim.ts): the module, which systems run in it, and one line at boot saying it started (tools/qa/rust-page.cjs reads these)
   (window as any).__knobs = { registry: knobRegistry, copy: knobsCopy, back: knobsBack };   // THE list of knob tables (game/knobs.ts): every switch table by name, a copy, a copy put back
   // F10: the SESSION JOURNAL (game/journal.ts + ui/sessionrec.ts) — a checkpoint of the moment, then every frame's dt / camera / input and every value the game took off the GPU
   // (the sensors), so tools/qa/replay.ts can play the session again headless and hold the deterministic simulation to it; the file goes out by the one door, host/savefile.ts (+ the shot server's /session sink)
@@ -1043,7 +1046,7 @@ async function main() {
     charLabFrame(game, cam);   // (the look prototype's character lab, opened from its panel: the camera on you; a return on its first line otherwise)
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
-    if (!WALLSKIN.on) lookTidy(engine.world);   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed, WHOLE — scene/lookTidy.ts; it stands only for ?wallskin=0: game/wallskin.ts cuts every wall's paint at the hole's edge on every stand)
+    lookTidy(engine.world, game.destr.walls.skins.live && cutBoxesOn());   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed, WHOLE — scene/lookTidy.ts; it hides only where game/wallskin.ts is not in force (?wallskin=0, or the cut switch down), and rests where that rule cuts every wall's paint at the hole's edge)
     if (tape) tape.frame(dt); else { stepFrame(loop, dt); if (net && loop.frozen()) net.rest(input, cam, canvas); }   // (a replay owns the frame: the tape's steps, then the picture — replay/engineplay.ts; a networked game goes on under a card that freezes this page — net/page.ts)
     modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
@@ -1096,7 +1099,7 @@ async function main() {
     }
   }
   // ---- READY: every hook above is on window. The real start card replaces the boot card (or the boot card goes, for a boot that opens no card: ?solo, a scenario, a replay), __ready resolves, the loop starts.
-  tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); if (!WALLSKIN.on) lookTidy(engine.world); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
+  tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world, game.destr.walls.skins.live && cutBoxesOn()); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
   net?.attach({ game, engine: engine as never, smoke: smoke as never, audio, loop, ahead: aheadDraw });
   if (net) coopInvite(net, q);   // (a co-op game's host is shown the code and the link while the server waits for the second player: ui/coop.ts)
   if (tape) soundLanes(tape, audio);   // the replay page's sound lanes: what the mixer was asked for, laid under the timeline (replay/soundlanes.ts)
@@ -1820,4 +1823,4 @@ FATAL.tell = (r, card) => {
   try { setTimeout(once, 1500); void fetch('/qa/commit', { cache: 'no-store' }).then(x => x.ok ? x.text() : '').then(t => once(t.trim()), () => once()); } catch { once(); }
 };
 
-main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); showFatalError(e); readyReject(e); });
+main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else showFatalError(e); readyReject(e); });

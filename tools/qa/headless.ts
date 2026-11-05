@@ -27,8 +27,32 @@ if (harnessProfile() === 'shipped') shippedBoot();
 /** the stand this file was loaded on. A tool that names its stand (`process.env.TPS_PROFILE ??= 'shipped'`) above a STATIC import of this file names it too late: imports load first, so the pins
  *  were lifted at stand-up and shippedBoot never ran, a stand that is neither of the two. standUp refuses that out loud. */
 const STAND_AT_LOAD: string = harnessProfile();
-{ const { EXACT } = await import(`${ROOT}/src/math/exact.ts`); if (pinned('TPS_EXACT')) EXACT.on = (process.env.TPS_EXACT ?? '1') !== '0'; }   // TPS_EXACT=1 = the game's own maths (src/math/exact.ts): same bits on every engine. Here as well as in standGame, so a level a tool builds before it stands a game is built on the same functions
-(await import(`${ROOT}/src/host/standup.ts`)).pinRust();   // …and the rows of the Rust module as this run's stand and words have them (src/sim/sim.ts RUST_ON; TPS_RUST=0, TPS_RUST<ROW>), from here and not only from the first stand-up: a tool that asks the module before it stands a game asks it on its stand
+// The game's own maths and the Rust module's rows, as the page has them, from here and not only from the first stand-up: a level a tool builds before it
+// stands a game is built on the same functions, and a tool that asks the module before it stands a game asks it as the build does. Neither is a switch
+// (TPS_EXACT, TPS_RUST and TPS_RUST<ROW> are retired and stop the tool that says them).
+const STANDUP = await import(`${ROOT}/src/host/standup.ts`), SIM = await import(`${ROOT}/src/sim/sim.ts`);
+/** A CHECK'S OWN ARM (src/host/standup.ts HELD): rows this process keeps down, or up, over the build's, and `exact: false` = the engine's maths for a red
+ *  path. `rows: false` = every row down. Called before a game is stood up; it holds for every stand-up after it. A row the module does not have is an
+ *  error by name (a family whose TypeScript is gone has no row to hold). QA_HOLD is the same arm said to a child process, since a play-through's workers
+ *  are children: `QA_HOLD=rows=0,dice=1,exact=0` (in that order: all down, then a row by name, then the maths). A run that holds anything says so on
+ *  stderr as it starts and `held()` is its own words for it: such a run is no stand's run, and nothing recorded from one is a fixture. */
+export function hold(arm: { rows?: Record<string, boolean> | false; exact?: boolean }): void {
+  const all: string[] = SIM.rustRows(), H = STANDUP.HELD;
+  if (arm.rows === false) for (const r of all) H.rows[r] = false;
+  else for (const [r, on] of Object.entries(arm.rows ?? {})) { if (!all.includes(r)) throw new Error(`hold: the module has no row "${r}" (rows: ${all.join(' ')})`); H.rows[r] = on; }
+  if (arm.exact !== undefined) H.maths = arm.exact;
+  STANDUP.pinMaths(); STANDUP.pinRust();
+  if (!saidHeld) { saidHeld = true; queueMicrotask(() => console.error(`HELD, no stand's run: ${held()}`)); }
+}
+let saidHeld = false;
+export function held(): string { const H = STANDUP.HELD, all: string[] = SIM.rustRows(), down = all.filter(r => H.rows[r] === false), up = all.filter(r => H.rows[r] === true && !SIM.rustOn(r));
+  return [down.length === all.length ? 'every row down' : down.length ? `down ${down.join(' ')}` : '', up.length ? `up ${up.join(' ')}` : '', H.maths === false ? 'the engine\'s maths' : ''].filter(Boolean).join(' · '); }
+{ const w = process.env.QA_HOLD; if (w) { const rows: Record<string, boolean> = {}; let none = false, exact: boolean | undefined;
+    for (const t of w.split(',')) { const m = /^([a-z]+)=([01])$/.exec(t.trim()); if (!m) throw new Error(`QA_HOLD: "${t}" is not row=0, row=1, rows=0 or exact=0`);
+      if (m[1] === 'rows') { if (m[2] !== '0') throw new Error('QA_HOLD: rows=0 puts every row down; there is no rows=1 (the build has them up)'); none = true; }
+      else if (m[1] === 'exact') exact = m[2] === '1'; else rows[m[1]] = m[2] === '1'; }
+    if (none) hold({ rows: false }); hold({ rows, exact }); } }
+STANDUP.pinMaths(); STANDUP.pinRust();
 const { EXACT: EXACT_SWITCH } = await import(`${ROOT}/src/math/exact.ts`);
 // TPS_FELL=1 counts every question the TypeScript answered while its row of the Rust module was up (src/sim/sim.ts FELL) and prints the count as the tool
 // ends, one line `FELL <n> × <row> · <why>` each and `FELL none` when there was none; TPS_FELL=throw stops at the first, TPS_FELL=who adds who asked (the first two callers; who6 = six). A count on a row of sim.ts SEALED ends the tool red (exit 1, `FELL SEALED ROW REACHED`). FELL_BREAK=1 with it = the red path, which must end red. A tool of the build's: no answer changes.
@@ -145,7 +169,21 @@ export interface Headless {
  *  tool's Math.random, as it always has (a tool that re-seeds Math.random afterwards gets the game's dice either way: dice.ts's one rule). */
 /** TPS_SEED: a whole number names the game's own die; anything else stops the tool (a typo must not quietly become seed 0) */
 function envSeed(v: string): number { if (!/^\d+$/.test(v.trim())) throw new Error(`TPS_SEED=${v}: want a whole number`); return Number(v) >>> 0; }
+/** A GAME STOOD UP HAS DONE WITH THE LAST ONE (2026-11-05). A tool that stands games up back to back in one process grew without end: a dropped game is 7 to
+ *  45 MB of heap that is garbage and stays (measured: one worker of bang-tally.ts from 0.4 GB to 6.4 GB in two and a half minutes; the merge's box lost two
+ *  such workers at a 12 GB limit). NOTHING HOLDS THOSE GAMES: after one full collection a process that has played forty-two missions is the size of one that
+ *  has played two. WHY THEY STAY: these tools run a whole batch without once going back to the event loop (every await is on work already done), and that is
+ *  where bun's collector does its full collections from. One turn of the event loop between games gives two to five times less growth; the collection asked
+ *  for here gives nearly all of it back, so the stand-up asks, before it builds, from a process's second stand-up on (the first has nothing to collect).
+ *  WHAT IT COSTS: about 50 ms each, more with a bigger live heap (0.2 s at worst seen). A family that stood up 247 games paid 12 s of 381; a loop of bare
+ *  stand-ups is 6 to 10 % slower; missions of a second or more are not slower for it (32 tally missions: 91 s with it, 93 without).
+ *  `QA_STANDUP_GC=0` = the stand-up as it was, for measuring; any other value but 1 stops the tool (a typo must not quietly measure the wrong arm).
+ *  tools/qa/standupgc-check.ts holds it, both ways. It does nothing for garbage that is not a dropped game (a single long game's own). */
+function envCollects(v: string | undefined): boolean { if (v === undefined || v === '1') return true; if (v === '0') return false; throw new Error(`QA_STANDUP_GC=${v}: want 0 (the stand-up as it was) or 1`); }
+export const STANDUP_COLLECTS = envCollects(process.env.QA_STANDUP_GC);
+let stoodBefore = false;
 export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string } = {}): Promise<Headless> {
+  if (STANDUP_COLLECTS && stoodBefore) Bun.gc(true); stoodBefore = true;
   if (harnessProfile() !== STAND_AT_LOAD) throw new Error(`the stand was '${STAND_AT_LOAD}' when tools/qa/headless.ts loaded and is '${harnessProfile()}' now: TPS_PROFILE was set after the harness was imported (a static import loads before the file's first line). Set it before the import: \`const { standUp } = await import('./headless.ts')\` below the line that sets it`);
   const ch = opts.ch ?? await (opts.cast ? loadCastCharacter() : loadCharacter());
   { const force = process.env.CUTBOXES ?? process.env.CUT_BOXES;   // CUTBOXES=1 | 0 in front of any headless tool forces the cut switch (CUT_BOXES is read too); a replay's env wins

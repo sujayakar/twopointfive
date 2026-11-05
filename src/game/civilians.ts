@@ -35,7 +35,7 @@ import { responseWords } from './qrf';
 import { CIV_LINES, CIV_COUNT, HOSTAGE_LINES, SNATCH_LINES, hashStr, roomName, isOffice } from './dialogue';
 import type { HostageMoment } from './dialogue';
 import { WORDS, w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { civMost } from './levelfit';
+import { civMost, levelTooBig } from './levelfit';
 import { goTo, followPath, notGettingAnywhere, eyeContact, sightGain, sightGainOn, escalationOf, raiseEscalation, say, pointInView, bodyPos, meterOf, glassHeard } from './guards';
 import { torchLightDef } from './rigProps';
 import { isDaylight } from './lighting';
@@ -186,7 +186,7 @@ function log(g: Game, gd: Guard, what: string) { const C = gd.civ!; C.log.push(`
  *  many as one step of the doors can be handed beside every other man it may hold (levelfit.ts civMost), and one more is a level too big for the game,
  *  said by name as he would join: so "more men than a step is handed" stays arithmetic whoever adds a civilian, and when. */
 function join(g: Game, gd: Guard): Guard {
-  const most = civMost(); if (g.civilians.length >= most) throw new Error(`this level is too big to load: more than ${most} civilians at once (its own, a rescue's hostages, the man a snatch is for), and a game holds no more men than one step of its doors can be handed (game/levelfit.ts civMost)`);
+  const most = civMost(); if (g.civilians.length >= most) throw new Error(levelTooBig(g.level, `more than ${most} civilians at once (its own, a rescue's hostages, the man a snatch is for), and a game holds no more men than one step of its doors can be handed (game/levelfit.ts civMost)`));
   g.civilians.push(gd); return gd;
 }
 /** Fresh civilians on their first marks (game.ts: at construction after the shift, and resetCivilians). Nothing with the switch off or none authored. */

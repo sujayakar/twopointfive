@@ -126,7 +126,7 @@ import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { POSEMATH } from '../anim/skeleton';
-import { rustRows, rustRow, rustOn } from '../sim/sim';
+import { rustRows, rustRow, rustOn, retiredEnvWord } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
@@ -230,20 +230,23 @@ export function populateHost(host: HostApi, level: Level): void {
   for (const ld of level.lights) host.lights.add(lightFromDef(ld));
 }
 
-/** THE GAME'S OWN MATHS (src/math/exact.ts) on the harness: ON on both stands, as the page (TPS_EXACT=0 = the engine's own functions, the page's ?noexact:
- *  the stand every frozen digest, tally and fixture was recorded on before the Rust module's rows went on, which answer only under the game's own). Written
- *  BEFORE anything is built — a level's boxes and a Game's constructor keep what they work out — so a tool that builds a level itself calls this first. */
-export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((globalThis as any).process?.env?.TPS_EXACT ?? '1') !== '0'; }
+/** THE GAME'S OWN MATHS (src/math/exact.ts) on the harness: on, as the page, and no word takes them out (TPS_EXACT is retired: the Rust module's rows
+ *  answer under no other maths, and they are how the game is played). Written BEFORE anything is built — a level's boxes and a Game's constructor keep
+ *  what they work out — so a tool that builds a level itself calls this first. */
+export function pinMaths(): void { retiredEnv(); EXACT.on = HELD.maths ?? true; }
+/** A CHECK'S OWN ARM, held in the tool's own process and nowhere else: the rows a check of the two languages keeps down for its TypeScript arm (or the
+ *  maths' row up), and the game's own maths taken out for a red path. No word of a stand, an address, a recipe or a recording reaches this: a tool writes
+ *  it (tools/qa/headless.ts hold), says so out loud, and a run that holds anything is no stand's run. It goes with the last TypeScript twin. */
+export const HELD: { rows: Record<string, boolean>; maths: boolean | null } = { rows: {}, maths: null };
+/** a retired word in a tool's environment stops the tool, by name (sim.ts retiredEnvWord) */
+function retiredEnv(): void { const env = ((globalThis as any).process?.env ?? {}) as Record<string, string | undefined>;
+  for (const k of Object.keys(env)) if (retiredEnvWord(k)) throw new Error(`${k}=${env[k]}: the Rust module's rows and the game's own maths are not switches any more (src/sim/sim.ts rowsUp). Take the word out; a check that holds the two languages against each other writes its own row in its own process`); }
 /** A POSE'S BULK ARITHMETIC IN SINGLES (src/anim/skeleton.ts POSEMATH) on the harness: off on the frozen stand (TPS_POSESINGLES=1 raises it); the shipped stand
  *  keeps the page's (on), and TPS_POSESINGLES=0 there is the page's ?posesingles=0. Written BEFORE the game is built: an animator measures its clips as it is made. */
 export function pinPoseMath(): void { if (pinned('TPS_POSESINGLES')) POSEMATH.singles = String((globalThis as any).process?.env?.TPS_POSESINGLES ?? '') === '1'; }
-/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: the rows of RUST_ON are on on both stands, as the page (every row but the maths).
- *  TPS_RUST<ROW>=0 puts one off and =1 raises one (TPS_RUSTMATHS=1), the page's ?rust<row>; TPS_RUST=0 = every row down unless its own word raises it, the
- *  page's ?rust=0. A row is never a rule of play: the same game to the bit on or off. THE STAND AS IT WAS RECORDED BEFORE THE ROWS: TPS_EXACT=0 TPS_RUST=0. */
-export function pinRust(): void {
-  const env = ((globalThis as any).process?.env ?? {}) as Record<string, string | undefined>, plain = env.TPS_RUST === '0';
-  for (const r of rustRows()) { const w = 'TPS_RUST' + r.toUpperCase(), said = env[w]; if (said !== undefined) rustRow(r, said === '1'); else if (plain) rustRow(r, false); else if (pinned(w)) rustRow(r, rustOn(r)); }
-}
+/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: every row of RUST_ON, on both stands, as the page. No word of the environment moves
+ *  one (TPS_RUST, TPS_RUST<ROW> are retired and stop the tool that says them); a check's own arm is HELD, above. */
+export function pinRust(): void { for (const r of rustRows()) rustRow(r, HELD.rows[r] ?? rustOn(r)); }   // (one write a row: a held row is never raised and dropped again, which would remake every constant kept from the maths twice — pinMaths, called beside this, is what reads the environment)
 /** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
 export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1';
   if (pinned('TPS_SMOKEGRID')) SENSE.grid = String((globalThis as any).process?.env?.TPS_SMOKEGRID ?? '') === '1';   // (…and their smoke on the coarse grid: off on both stands, TPS_SMOKEGRID=1 raises it, the page's ?smokegrid)
