@@ -1,4 +1,4 @@
-// THE SUN'S REACH MASK (render/reach.ts reachMaskForDirectional; game.ts buildDirReach; the direct estimator's candidate domain for the hour's sun and the moon).
+// THE SUN'S REACH MASK (render/reach.ts reachMaskForDirectional; render/reachKeep.ts sun, the picture's keeper, stood up here as a page has it; the direct estimator's candidate domain for the hour's sun and the moon).
 // A cell under a roof reads "the sun reaches" when one of its looks has a clear path toward the sun. A look has to stand in open air: the corner looks sit 9 cm
 // inside the cell, a wall on a cell's line is 12 cm to either side of it, and a look that started inside the wall left through its outer face, so every cell along
 // the inside of an outer wall read "reaches". There the hour's sun, thousands of times a room's bulb, was in the fresh draw of every pixel, and a man standing at
@@ -31,19 +31,19 @@ let levels = 0, hours = 0, lit = 0, dark = 0, hollow = 0, lost = 0, slivers = 0,
 const STRICT = ['pass', 'office', 'compound', 'barracks', 'registry'];   // the levels whose dark cells are asked on the finer grid (a minute; all 58 would be ten)
 for (const name of files) {
   const l = console.log, w = console.warn; console.log = console.warn = () => { };
-  let g: any; try { const Wd: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8'))), seed: 1 }); for (let i = 0; i < 4; i++) Wd.step(1 / 60); g = Wd.game; } catch (e) { g = null; threw.push(`${name}: ${String(e).slice(0, 80)}`); }
+  let g: any; try { const Wd: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8'))), seed: 1, reach: true }); for (let i = 0; i < 4; i++) Wd.step(1 / 60); g = Wd.game; } catch (e) { g = null; threw.push(`${name}: ${String(e).slice(0, 80)}`); }
   console.log = l; console.warn = w;
   if (!g || !g.reachInterior || !(g.reachInterior as Uint8Array).some((v: number) => v)) continue;   // no roof on this level: every cell is open ground
   levels++;
   const inr = g.reachInterior as Uint8Array;
   const casters = (g.engine.world.statics as any[]).filter(b => !(b.flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)));
-  const plain = casters.filter(b => !b.rot && b.round !== true && !(b.cut && b.cut.length));   // (upright boxes, turned or not: what game.ts buildDirReach calls solid)
+  const plain = casters.filter(b => !b.rot && b.round !== true && !(b.cut && b.cut.length));   // (upright boxes, turned or not: what render/reachKeep.ts dirMask calls solid)
   const inSolid = (p: number[]) => plain.some(b => { if (Math.abs(p[1] - b.c[1]) >= b.h[1]) return false; const c = Math.cos(b.yaw ?? 0), s = Math.sin(b.yaw ?? 0), dx = p[0] - b.c[0], dz = p[2] - b.c[2]; return Math.abs(c * dx - s * dz) < b.h[0] && Math.abs(s * dx + c * dz) < b.h[2]; });
   for (const id of HOUR_IDS) {
     if (id === 'night') continue;
-    applyHour(g, id); const sun = hourSun(g); if (!sun || !sun.reachDir) continue; hours++;
-    const m = sun.reachDir as Uint32Array, d = sun.dir, n = Math.hypot(d[0], d[1], d[2]) || 1, to = [-d[0] / n, -d[1] / n, -d[2] / n];
-    // (the mask is the union over the sun's disc: its middle and four points of its rim, hours.ts sunReach. A point that sees any of the five sees the sun.)
+    applyHour(g, id); const sun = hourSun(g), sm = sun ? g.engine.reach.dirOf(sun) : undefined; if (!sun || !sm) continue; hours++;
+    const m = sm as Uint32Array, d = sun.dir, n = Math.hypot(d[0], d[1], d[2]) || 1, to = [-d[0] / n, -d[1] / n, -d[2] / n];
+    // (the mask is the union over the sun's disc: its middle and four points of its rim, render/reachKeep.ts sun. A point that sees any of the five sees the sun.)
     const u0 = Math.abs(to[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0], u = [to[1] * u0[2] - to[2] * u0[1], to[2] * u0[0] - to[0] * u0[2], to[0] * u0[1] - to[1] * u0[0]], ul = Math.hypot(u[0], u[1], u[2]);
     u[0] /= ul; u[1] /= ul; u[2] /= ul; const v = [to[1] * u[2] - to[2] * u[1], to[2] * u[0] - to[0] * u[2], to[0] * u[1] - to[1] * u[0]], k = sun.radius > 0.05 ? Math.tan(sun.radius) : 0;
     const dirs = [to]; if (k > 0) for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2, q = [to[0] + (u[0] * Math.cos(a) + v[0] * Math.sin(a)) * k, to[1] + (u[1] * Math.cos(a) + v[1] * Math.sin(a)) * k, to[2] + (u[2] * Math.cos(a) + v[2] * Math.sin(a)) * k], ql = Math.hypot(q[0], q[1], q[2]); dirs.push([q[0] / ql, q[1] / ql, q[2] / ql]); }

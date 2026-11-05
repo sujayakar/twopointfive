@@ -15,7 +15,7 @@
 //  * only FULL-HEIGHT static occluders count as walls (bottom ≤ WALL_Y0 and top within 10 cm of the ceiling, shadow-casting, unrotated):
 //    furniture, counters, cubicle partitions, sills, headers, door jambs and stops, glazing openings and every door leaf (dynamic) are open ground;
 //  * every light not registered by the level build (torches, muzzle flashes, the rail light, dropped torches…) carries an all-ones mask. The moon
-//    and the hour's sun have a mask of their own under ReSTIR (reachMaskForDirectional below; game.ts buildDirReach, hours.ts sunReach); the street lamps above the roof line get one over the INTERIOR cells only (they enter the building through its openings,
+//    and the hour's sun have a mask of their own under ReSTIR (reachMaskForDirectional below; reachKeep.ts dir and sun); the street lamps above the roof line get one over the INTERIOR cells only (they enter the building through its openings,
 //    but outdoors they overfly walls a 2D raster would say block them);
 //  * the light looks out from several source points (its own position and points pushed out along its facing / around it), the start
 //    and end sub-cells of every sight line are ignored (a fixture mounted on a wall sits inside that wall's sub-cell column), and a sight
@@ -107,6 +107,10 @@ export function wallRasterDiff(prev: Uint8Array, next: Uint8Array): [number, num
   const d = rasterScan(prev, next); if (!d.box) return null;
   const j = JUMPS.get(prev); if (j && !d.closed) JUMPS.set(next, j);
   return d.box;
+}
+/** a box of sub-cells (wallRasterDiff's) as a rect of the level, in metres: [x0, z0, x1, z1] */
+export function rasterRect(b: readonly [number, number, number, number]): [number, number, number, number] {
+  return [WORLD.min[0] + b[0] * FINE, WORLD.min[2] + b[1] * FINE, WORLD.min[0] + (b[2] + 1) * FINE, WORLD.min[2] + (b[3] + 1) * FINE];
 }
 /** one scan for both: the box of sub-cells that differ, and whether any went from open ground to a wall or a doorway's gap (`closed`: only then can a
  *  distance to the nearest of them have shrunk, and an old jump field step over something a sight line must read). IN STEPS (render/steps.ts: a quarter
@@ -201,16 +205,16 @@ export function segNearRect(ax: number, az: number, bx: number, bz: number, r: r
   return true;
 }
 /** A change limited to some rects of the level (a wall opened there): only the cells whose line to the light passes those rects are decided again, every other
- *  cell keeps its level from `prev` (game.ts reachTick — a whole mask is ~10 ms of sight lines, the cells behind one hole a few dozen). */
-/** cells decided by sight lines since the module loaded, and the samples those lines took — the unit of the work (game.ts reachTick paces itself by the steps: a
+ *  cell keeps its level from `prev` (reachKeep.ts tick — a whole mask is ~10 ms of sight lines, the cells behind one hole a few dozen). */
+/** cells decided by sight lines since the module loaded, and the samples those lines took — the unit of the work (reachKeep.ts tick paces itself by the steps: a
  *  count, not a clock; a cell is anything from five short lines to twenty-five long ones) */
 export const REACH_WORK = { cells: 0, steps: 0, fields: 0 };   // fields: jump fields worked out (one a raster, none for a raster whose walls only opened)
-/** How game.ts reachTick paces the masks decided again after a wall changes. `steps` = sight-line steps a frame, a mask too big for one frame's share carried on the
+/** How reachKeep.ts tick paces the masks decided again after a wall changes. `steps` = sight-line steps a frame, a mask too big for one frame's share carried on the
  *  next (60000: over 31 staged blasts on five levels no blast's masks land later than they did a mask at a time; at 40000 five did, by up to ten frames).
  *  `whole` (the page's ?reachpace=old) = the pace before the shares: every mask in one go, one light a frame at least and more until `wholeCells` cells are
  *  decided — fewer, longer ticks. The masks end as the same bits either way; only the frame each lands on differs. A REGISTERED SWITCH (host/profile.ts
- *  pageSwitches reads the word, game/knobs.ts lists the table, a recording carries it): the game's tick reads it, so a server's stand must pace as its
- *  clients do. */
+ *  pageSwitches reads the word, game/knobs.ts lists the table, a recording carries it). Since the masks left the tick (render/reachKeep.ts, 11-05) NOTHING IN
+ *  THE GAME'S UPDATE READS IT: it paces the picture's keeper on drawn frames, and a stand with no picture never reads it. */
 export const REACH_PACE = { steps: 60000, whole: false, wholeCells: 60 };
 export interface ReachOnly { prev: Uint32Array; rects: readonly (readonly [number, number, number, number])[]; /** cells farther than this from the light keep their level too (past its range it lights nothing) */ maxDist?: number;
   /** the wall raster's changed sub-cells, as boxes (wallRasterDiff): given these, a cell is decided again only if one of its OWN sight lines touches one — the same
