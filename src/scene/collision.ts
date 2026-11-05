@@ -3,7 +3,7 @@ import { Vec3, v3, quat, hyp2, hyp3 } from '../math/vec';
 import { Box, BoxFlag, rayBox, cutMet } from './boxes';
 import { cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
 import { WORLD } from './world';
-import { BoxMirror, MIRRORED, SENSES, FACE, NAV, senseRows, type Furniture, type PaneSource } from './boxMirror';
+import { BoxMirror, MIRRORED, FACE, NAV, type Furniture, type PaneSource } from './boxMirror';
 import { RUST, FELL, RULES_ROW, fell, callers, ruleRed, f64, u32, u8, simWhyNot } from '../sim/sim';
 import type { SimState } from '../sim/state';
 import { EXACT } from '../math/exact';
@@ -90,7 +90,8 @@ const footBand = (y0: number) => UNDERFOOT.on && y0 >= FEET_Y && y0 < BAKE_Y ? B
 const shotPanes: { bi: number; t: number }[] = [];   // shotBlocked's scratch (the panes one line of fire crosses)
 /** THE CHECK'S SWITCH OVER THE RUST ROWS OF THIS FILE (tools/qa/rust-check.ts raises it; nothing else does): on = every question a row sends to the module is
  *  ALSO answered here, the two compared, and every row of the module's copy compared with its box (boxMirror.ts stale) — `asked` questions, `differ` of them
- *  answered differently, `stale` rows that were not their box, and the first of either in words. The game plays on the TypeScript's answer while it is on. */
+ *  answered differently, `stale` rows that were not their box, and the first of either in words. The game plays on the TypeScript's answer while it is on.
+ *  (The rows this file can still walk itself: the lines, the rays, the circles. The senses are the module's alone and are not asked twice.) */
 /** A RAY THAT IS NO NUMBER (where it starts, the way it goes, or a length that is not finite): there is no answer to give — the walk of the cells reads a
  *  cell that is no cell — so it is the caller's mistake, said by name wherever the module reports one (a level ray: raycast; a rule's ray: a slab's step,
  *  a thrown thing's walk). Nothing of play asks one. */
@@ -98,25 +99,26 @@ export function noNumber(ro?: Vec3, rd?: Vec3, tmax?: number): Error {
   return new Error(`a ray that is no number${ro && rd ? `: from [${ro.join(', ')}] along [${rd.join(', ')}] for ${tmax}` : ''} — where it starts, the way it goes and how far are numbers, and how far is finite (a way worked out of two points that are one point is none)`);
 }
 export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '', things: 0 };
-/** A QUESTION ASKED OUTSIDE A TICK IS ASKED OF THE MODULE TOO (the window below): `on` = it is (off = outside a tick this file's own walk answers, as it
- *  did while a row could only be asked inside a tick); `proofs` = how many times a question outside every window had the copy proven for itself alone,
- *  which is what a caller that asks many should open a window to save. Never a rule of play: the same answers, by `rust-check --both`. */
+/** A QUESTION ASKED ALONE, OUTSIDE A TICK AND OUTSIDE A WINDOW, IS ASKED OF THE MODULE TOO: `on` = it is (off = this file's own walk answers it, for the
+ *  rows that have one: a sense is the module's wherever it is asked); `proofs` = how many times a question outside every window had the copy proven for
+ *  itself alone, which is what a caller that asks many should open a window to save. Never a rule of play: the same answers, by `rust-check --both`. */
 export const ANYTIME = { on: true, proofs: 0, windows: 0, who: null as Record<string, number> | null };   // (`who`: a tool's table of who asked alone, when it wants one)
-/** the same check's count of the senses' questions the module answered, a row each (RUST.sight … paths; boxMirror.ts SENSES): a row that is on and never asked proves nothing */
+/** a check's count of the senses' questions the module answered, a kind each: a kind that is never asked proves nothing */
 export const SENSED = { sight: 0, light: 0, smoke: 0, sound: 0, paths: 0 };
 /** A WATCHER OF THE SENSES' ANSWERS (`see` is null in play; tools/qa/sense-ident.ts hangs one): shown every answer the module gives one of the senses'
- *  questions, as the numbers it is made of, under its row's name — an eye's verdict and distance · the six faces of the light on a point · the smoke
+ *  questions, as the numbers it is made of, under its kind's name — an eye's verdict and distance · the six faces of the light on a point · the smoke
  *  along a line · what the straight lines of a sound said, and its way round · a way's waypoints, and the cells a priced search asked the price of ·
- *  the eyes of a team that have a line. That is what a check folds into the words it holds the senses to (tools/qa/ident-pin.ts). Never a rule of play. */
-export const SENSE_WATCH: { see: ((row: keyof typeof SENSES | 'fog', v: ArrayLike<number>) => void) | null } = { see: null };
+ *  the eyes of a team that have a line. That is what a check folds into the words it holds the senses to (tools/qa/ident-pin.ts): nothing else in
+ *  TypeScript answers one. Never a rule of play. */
+export const SENSE_WATCH: { see: ((row: keyof typeof SENSED | 'fog', v: ArrayLike<number>) => void) | null } = { see: null };
 /** a blob of the smoke as a question carries it (sense.ts Blob's six; rust/sim/src/smoke.rs BLOB), and the model's numbers that go with them (SENSE.smoke's) */
 export interface BlobRow { x: number; y0: number; z: number; r2: number; age: number; mass: number }
 export interface SmokeNumbers { sigma: number; spread: number; widest: number; rise: number; riseRate: number }
-/** …and of the times a light question's lamps did not fit the module's table and a part was sent on ahead (RUST.light: `lamp`) */
+/** …and of the times a light question's lamps did not fit the module's table and a part was sent on ahead (`lamp`) */
 export const LAMPS = { parts: 0 };
 /** …and of the rays the module answered (RUST.rays: raycast) */
 export const RAYS = { n: 0, host: 0 };
-/** …and of the searches with a penalty the module answered (RUST.paths: NavGrid.findPath; rust/sim/src/nav.rs find_priced): how many, how many times one
+/** …and of the searches with a penalty (NavGrid.findPath; rust/sim/src/nav.rs find_priced): how many, how many times one
  *  came back for prices, and how many cells were priced for them. `waits` = one is waiting for prices NOW: the module has one set of tables, so a search
  *  asked from inside a price is an error, not a question */
 export const PRICED = { n: 0, needs: 0, cells: 0, waits: false };
@@ -126,8 +128,10 @@ const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes 
 /** THE WIND THE COARSE GRID'S SMOKE DRIFTS BY (`gridStep`; game/wind.ts stormDrift): the vector (m/s), its rise with height (`low` of it at the ground,
  *  `gain` more by `fullAt` metres up) and the share of it each square metre of the plan has (0 under a roof … 1 in the open) */
 export interface GridWind { x: number; z: number; low: number; gain: number; fullAt: number; share: (x: number, z: number) => number }
-/** a sense's row by its bit (boxMirror.ts SENSES), for the count of questions the TypeScript took */
-function senseName(bit: number): string { for (const [k, v] of Object.entries(SENSES)) if (v === bit) return k; return 'a sense'; }
+/** A SENSE'S QUESTION THE MODULE HANDED BACK. Nothing else answers a sense and no level makes one (a level is held to the copy's tables as it loads, a
+ *  question's lamps go in parts, the floor is the build's): it is a mistake of the asker's — a line a thousand kilometres long, a point that is no
+ *  number — and is said by name, with the line */
+function handedBack(row: string, why: string, a: ArrayLike<number>, b: ArrayLike<number>): Error { return new Error(`${row}: the Rust module handed the question back (${why}): [${a[0]}, ${a[1]}, ${a[2]}] → [${b[0]}, ${b[1]}, ${b[2]}]`); }
 export class StaticCollision {
   private cells: number[][];        // per 1m cell: static box indices whose footprint overlaps and that matter for movement
   private W = WORLD.gridW; private H = WORLD.gridH; private cs = WORLD.gridCell;
@@ -183,12 +187,12 @@ export class StaticCollision {
 
   /** THE RUST MODULE'S COPY OF THIS WORLD (scene/boxMirror.ts, which says whose the boxes are and how the copy is kept): the host's, in no snapshot. */
   readonly mirror = new BoxMirror();
-  /** A TICK OPENS (Game.stepSeats): with a row of RUST on that asks the box world, the copy is made the boxes as they stand and the questions of this tick go
-   *  to the module; with none, nothing happens here at all. */
+  /** A TICK OPENS (Game.stepSeats): the copy is made the boxes as they stand, and the questions of this tick go to the module. */
   tickOpen(): void { this.stand(); this.mirror.played = true; }   // (…and from its first tick a box world is a level in play: what the copy says of a table outgrown — boxMirror.ts outgrown)
-  /** …the copy made the boxes as they stand, for whoever opens a stretch of questions: a tick, a window, a question alone (below) */
-  private stand(): void { const M = this.mirror, S = EXACT.on ? senseRows() : 0;   // (the senses answer under the game's own maths alone: senseSet)
-     if (RUST.lines || RUST.rays || RUST.circles || RUST.fog || S || ((RUST.doors || RUST.props || RUST.slabs || RUST.items) && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.fog, S, RUST.rays); else if (M.live) M.shut(); }
+  /** …the copy made the boxes as they stand, for whoever opens a stretch of questions: a tick, a window, a question alone (below). Whatever rows are up:
+   *  the senses are the module's alone (below, THE SENSES), and the rows say only which questions THIS FILE can still walk go there too. */
+  private stand(): void { if (simWhyNot()) { if (this.mirror.live) this.mirror.shut(); return; }   // (no module here: nothing stands, and a sense says why by name — `sense`)
+    this.mirror.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.rays); }
   /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts; the furniture's: game/props.ts): the copy, standing, with the game's own leaves `dyn` in it as they
    *  are — or null (no tick, no copy, another list in the leaves' place): the TypeScript steps. */
   rulesWorld(dyn: Box[]): BoxMirror | null { if (ruleRed(RULES_ROW)) return null; const M = this.ready(); if (M.rules(dyn)) return M;
@@ -214,7 +218,7 @@ export class StaticCollision {
    *  question (about 25 ns a static), so code that asks many in a row opens a window (a level's deal, the camera's step of a frame, the sound's
    *  probe, a tool's driver). A window is proven by the first question asked in it: one that asks nothing costs nothing. */
   window<T>(fn: () => T): T {
-    const M = this.mirror; if (M.live || this.windowed || !ANYTIME.on) return fn();
+    const M = this.mirror; if (M.live || this.windowed) return fn();   // (whatever ANYTIME says: a sense asked in a window has no other answer, and the window is what proves the copy for it)
     this.windowed = true;
     try { return fn(); } finally { this.windowed = false; if (M.live) M.shut(); }
   }
@@ -222,10 +226,10 @@ export class StaticCollision {
   private windowed = false;
   /** THE COPY MADE READY FOR A QUESTION OF THE MODULE'S, where every asker passes: inside a window that no question has proven yet it is proven now, and
    *  a debt of the tick (a static written and said, the grid written) is paid */
-  private ready(): BoxMirror { const M = this.mirror; if (!M.live && this.windowed) this.lone(); if (M.owes) M.again(this.boxes, this.glassWalkable); return M; }
+  private ready(): BoxMirror { const M = this.mirror; if (!M.live && this.windowed) this.lone(true); if (M.owes) M.again(this.boxes, this.glassWalkable); return M; }
   /** a question outside a tick: is the copy now standing for it ALONE (true: the caller shuts it behind the answer; false with the copy standing: a
-   *  window's, which shuts it) */
-  private lone(): boolean { if (!ANYTIME.on) return false; this.stand(); if (!this.mirror.live) return false;   // (no row up that asks the box world: a level the copy cannot hold is no case — boxMirror.ts outgrown)
+   *  window's, which shuts it). `must`: it stands whatever ANYTIME says (a window's first question; a sense asked alone) */
+  private lone(must = false): boolean { if (!ANYTIME.on && !must) return false; this.stand(); if (!this.mirror.live) return false;   // (the module does not run here; a level the copy cannot hold is no case — boxMirror.ts outgrown)
     if (this.windowed) { ANYTIME.windows++; return false; }
     ANYTIME.proofs++; if (ANYTIME.who || FELL.who) { const W = ANYTIME.who ?? (ANYTIME.who = {}), st = callers(4, 2, /scene\/(collision|boxMirror)\.ts/, 3); W[st] = (W[st] ?? 0) + 1; }   // (who asked alone, wherever the count asks who: TPS_FELL=who, ?fell=who)
     return true; }
@@ -238,10 +242,10 @@ export class StaticCollision {
    *  every prop substep). The queries never nest (none calls another that stamps), so one counter serves them all; only indices baked into `cells` are ever stamped,
    *  and those are < the length the array was sized with. */
   private stamp: Int32Array; private stampId = 0;
-  /** A QUESTION ASKED BY THE PICTURE (an overlay, a check's own read): `fn` run with the query stamps and the walk grid's search tables swapped for the asker's
-   *  own (`own`: an empty object the asker keeps, one a game), and no sound's route kept (SoundPaths.asking), so the rays and the searches it makes write nothing of the game's — a game that is drawn and
+  /** A QUESTION ASKED BY THE PICTURE (an overlay, a check's own read): `fn` run with the query stamps swapped for the asker's
+   *  own (`own`: an empty object the asker keeps, one a game), and no sound's route kept (SoundPaths.asking), so the rays it makes write nothing of the game's (a search's tables are the module's, scratch of the one question) — a game that is drawn and
    *  the same game not drawn hold the same state. Not to be nested, and `fn` must add no box. */
-  aside<T>(own: { s?: object; q?: object }, fn: () => T): T {
+  aside<T>(own: { q?: object }, fn: () => T): T {
     type Q = { stamp: Int32Array; id: number; cell: Int32Array<ArrayBuffer>; seg: Int32Array<ArrayBuffer>; yaw: Float64Array; cos: Float64Array; sin: Float64Array };
     let q = own.q as Q | undefined;   // (a table shorter than the game's: boxes added since — an empty one is a clean one, for any id above 0 and any yaw)
     if (!q || q.stamp.length < this.stamp.length || q.yaw.length < this.trigYaw.length) { const n = this.trigYaw.length;
@@ -249,7 +253,7 @@ export class StaticCollision {
     const mine: Q = { stamp: this.stamp, id: this.stampId, cell: this.cellStamp, seg: this.segCells, yaw: this.trigYaw, cos: this.trigCos, sin: this.trigSin };
     const put = (t: Q) => { this.stamp = t.stamp; this.stampId = t.id; this.cellStamp = t.cell; this.segCells = t.seg; this.trigYaw = t.yaw; this.trigCos = t.cos; this.trigSin = t.sin; };
     const asked = this.sound.asking; put(q); this.sound.asking = true;
-    try { return this.nav.aside(own, fn); }
+    try { return fn(); }
     finally { this.sound.asking = asked; own.q = { stamp: this.stamp, id: this.stampId, cell: this.cellStamp, seg: this.segCells, yaw: this.trigYaw, cos: this.trigCos, sin: this.trigSin } satisfies Q; put(mine); }
   }
   /** segmentBlocked's own: a grid cell already scanned (or passed as nowhere near) by this query (the stamp's id), and each static's cos / sin beside the exact yaw they were taken at */
@@ -530,13 +534,41 @@ export class StaticCollision {
     return hit;
   }
   /** IS THE LINE TEST THIS CLASS'S OWN: a check that puts its own `segmentBlocked` or `solidBlocked` over one instance is asking for ITS lines, which the
-   *  module does not walk — so a whole question of the game's that the module would answer from its own lines (the fog's pass, a sense) is not asked there */
+   *  module does not walk — and a sense is answered from the module's own lines, so on such a world a sense is a mistake by name (`sense`) */
   private get ownLines(): boolean { return this.segmentBlocked === StaticCollision.prototype.segmentBlocked && this.solidBlocked === StaticCollision.prototype.solidBlocked; }
-  /** RUST.fog — A SIGHT PASS OPENS (game/fogofwar.ts update): may its questions go to the module (rust/sim/src/fog.rs)? Inside a tick with the row on, where
-   *  the game's own maths stand in Math's place (the module works the lengths out itself, and they are those: under an engine's maths the TypeScript's lengths
-   *  are that engine's), with no more eyes than a question names, and the line test this class's own (`ownLines`). True = the caller writes its eyes (`sightEye`) and asks with `eyesSee`. */
-  sightOpen(n: number): boolean { const M = this.ready(); const ok = M.sight && EXACT.on && n <= SIGHT_EYES && this.ownLines;
-    if (!ok && FELL.on && RUST.fog) fell('fog', M.sight ? (!EXACT.on ? 'the engine\'s maths' : n > SIGHT_EYES ? 'more eyes than a question names' : 'a check\'s own line test') : this.fellWhy()); return ok; }
+  // ---- THE SENSES (rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs, fog.rs). Each is a whole question of the game's — an eye on a man, the
+  // lamps on a point, the smoke along a line, a sound's way, a way across the floor, which of a team's eyes have a line — asked once, and each is THE
+  // MODULE'S ALONE: nothing in TypeScript answers one. So nothing here hands a question back. What the module cannot take is never content (a level is
+  // held to the copy's tables as it loads, game/levelfit.ts; a question's lamps go in parts; the floor is the build's) but a mistake of the asker's, and
+  // it is thrown by name.
+  /** THE COPY, STANDING, FOR A SENSE'S QUESTION → which of the module's lists holds the leaves to ask with (−1 = there are none). Inside a tick or a
+   *  window the copy stands (a window's first question proves it, a debt of the tick is paid: `ready`); anywhere else is the caller's mistake. */
+  private sense(row: string): number {
+    const M = this.ready();
+    if (!M.live) throw new Error(`${row}: asked with no copy of the box world standing (${simWhyNot() || this.fellWhy()}): a sense is the Rust module's alone, asked inside a tick or a window (StaticCollision.window)`);
+    if (!this.ownLines) throw new Error(`${row}: this box world's line test has been laid over (segmentBlocked or solidBlocked written on the instance), and a sense is answered from the module's own lines: a check that needs a wall stands one (tools/qa/standwall.ts)`);
+    const set = M.leaves(this.dynamicBoxes);
+    if (set === -2) throw new Error(`${row}: ${this.dynamicBoxes.length} leaves, and a list of the module's holds ${M.tables.leaves} (game/levelfit.ts holds a level to that as it loads)`);
+    return set;
+  }
+  /** …and THE PANE RULE AS A SENSE'S QUESTION TAKES IT (a sound and a way stop at glass and pass a hole in it: glass.rs): 0 = the game has none (every pane
+   *  is shut) · 1 = it has one and the copy holds its rows. Under either maths: the module judges a pane by its own, which are the game's. A rule with no
+   *  rows the copy can hold is no level's (game/levelfit.ts holds a level's sheets to the tables): a rule hung bare, by name. */
+  private sensePanes(row: string): number {
+    if (this.paneRule === null) return 0;
+    if (!this.mirror.glassIn) throw new Error(`${row}: a pane's rule the module cannot judge by (${this.paneRows === null ? 'it was hung with no rows behind it: glassRule hands the rule and its rows together' : 'more broken panes, or a view of more panes, than the copy holds'})`);
+    return 1;
+  }
+  /** an eye's line, and the fog's: it passes glass, and is asked by flags the copy keeps */
+  private eyeLine(row: string, through: number): void {
+    if (((through | 0) & ~MIRRORED) !== 0 || !(through & BoxFlag.Glass)) throw new Error(`${row}: an eye's line passes glass and names only flags the copy keeps (asked through ${through}): one that stops at glass is no eye's, and is asked as a line (segmentBlocked)`);
+  }
+  /** A SIGHT PASS OPENS (game/fogofwar.ts update; rust/sim/src/fog.rs): the caller writes its `n` eyes (`sightEye`) and asks with `eyesSee`. A question
+   *  names seven eyes (four bits each, and the count above them), which is the fog's own most (render/fogofwar.ts FOG_EYES): more is a mistake by name. */
+  sightOpen(n: number): void {
+    this.sense('fog');
+    if (n > SIGHT_EYES) throw new Error(`fog: a sight pass of ${n} eyes, and a question names ${SIGHT_EYES} (rust/sim/src/fog.rs; the fog's own most is render/fogofwar.ts FOG_EYES)`);
+  }
   /** eye `k` of the pass: where it is, where it looks in plan and that look's length (or 1), the cosine of half its field, its near field, and whether it sees all round */
   sightEye(k: number, pos: Vec3, look: Vec3, lookLen: number, cosHalf: number, near: number, full: boolean): void {
     const m = f64(), o = this.mirror.eyes + k * 9;
@@ -544,93 +576,86 @@ export class StaticCollision {
   }
   /** WHICH EYES HAVE A LINE: the `n` eyes named four bits each in `order` are tried in that order until `want` have one. `kind` 0 = to the point `a`; 1 = to a
    *  man down or gone (`a` his chest: only an eye over him has one); 3 = to a living man (`a` his chest, `b` his head, asked behind a blocked chest).
-   *  The answer: how many × 2²⁸ + those eyes, four bits each in the order found; −1 = the module does not answer this one (the caller walks its own lines). */
+   *  The answer: how many × 2²⁸ + those eyes, four bits each in the order found. */
   eyesSee(order: number, n: number, want: number, kind: number, through: number, a: Vec3, b: Vec3): number {
-    const M = this.ready();
-    if (!M.sight || ((through | 0) & ~MIRRORED) !== 0 || !(through & BoxFlag.Glass)) { if (FELL.on && RUST.fog) fell('fog', M.sight ? 'a line that may have to ask a pane, or a flag the copy does not keep' : this.fellWhy()); return -1; }   // (a line that stops at glass may have to ask the pane: this file's)
-    const set = M.leaves(this.dynamicBoxes); if (set === -2) { if (FELL.on) fell('fog', 'the leaves do not fit a list'); return -1; }
+    this.eyeLine('fog', through);
+    const set = this.sense('fog'), M = this.mirror;
     const r = M.x.fog_see(M.slot, set, order, n, want, kind, through, a[0], a[1], a[2], b[0], b[1], b[2]);
-    if (r === -1) { if (FELL.on) fell('fog', 'the module handed the pass back (a length that is no length of this world\'s, or more eyes than a question names)'); return -1; }
+    if (r === -1) throw handedBack('fog', 'a length that is no length of this world\'s, or more eyes than a question names', a, b);
     if (SENSE_WATCH.see) SENSE_WATCH.see('fog', [r >>> 0]);
     return r >>> 0;
   }
-  // ---- THE SENSES IN THE MODULE (RUST.sight / light / smoke / sound / paths: rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs). Each is a whole
-  // question of the game's (an eye on a man, the lamps on a point, the smoke along a line, a sound's way, a way across the floor) asked once where the
-  // TypeScript asked its lines one by one; each answers null / a number below zero where the module does not, and the caller's own statements then do.
-  /** MAY ROW `bit` (boxMirror.ts SENSES) BE ASKED THERE NOW: inside a tick with the row on, the copy standing, and the game's own maths in Math's place (the
-   *  module works its lengths out itself, and they are those), and the line test this class's own (`ownLines`). → which of the module's lists holds the leaves to ask with (−1 = there are none), or −2 = no. */
-  senseSet(bit: number): number { const M = this.ready(); const ok = (M.senses & bit) !== 0 && EXACT.on && this.ownLines, set = ok ? M.leaves(this.dynamicBoxes) : -2;
-    if (set === -2 && FELL.on && (senseRows() & bit) !== 0) fell(senseName(bit), ok ? 'the leaves do not fit a list' : (M.senses & bit) !== 0 ? (!EXACT.on ? 'the engine\'s maths' : 'a check\'s own line test') : this.fellWhy()); return set; }
-  /** the check's line for a sense's question answered both ways (BOTH): were the two answers one, and is the copy its boxes */
-  senseCompared(set: number, ok: boolean, what: string, a: Vec3, b: Vec3): void { this.compared(this.mirror, set, ok, what, a, b, 0, 0); }
-  /** RUST.sight — game/guards.ts eyeContact as one question: the eye `E` on a man's `chest` and `head`. `unseen` = nothing is seen whatever the lines say (he
-   *  is hidden, down or dead; the eye is out), `smoked` = the smoke between them hides him. null = the caller's own statements. */
-  eyeContact(E: { pos: Vec3; look: Vec3; range: number; halfDeg: number; nearM: number; nearDeg: number; vHalfDeg?: number }, chest: Vec3, head: Vec3, unseen: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } | null {
-    if (((through | 0) & ~MIRRORED) !== 0 || !(through & BoxFlag.Glass)) { if (FELL.on && RUST.sight) fell('sight', (through & BoxFlag.Glass) ? 'a flag the copy does not keep' : 'a line that stops at glass may have to ask the pane'); return null; }   // (the caller's)
-    if (!this.mirror.live && RUST.sight && this.lone()) { try { return this.eyeContactAsk(E, chest, head, unseen, smoked, through); } finally { this.mirror.shut(); } }   // (an eye asked between ticks: a tool's, a soak's watcher)
+  /** AN EYE ON A MAN (game/guards.ts eyeContact; rust/sim/src/sight.rs): the eye `E` on his `chest` and `head`. `unseen` = nothing is seen whatever the
+   *  lines say (he is hidden, down or dead; the eye is out), `smoked` = the smoke between them hides him. Asked alone between ticks (a tool's eye, a
+   *  soak's watcher) the copy is proven for the one question. */
+  eyeContact(E: { pos: Vec3; look: Vec3; range: number; halfDeg: number; nearM: number; nearDeg: number; vHalfDeg?: number }, chest: Vec3, head: Vec3, unseen: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } {
+    this.eyeLine('sight', through);
+    if (!this.mirror.live && this.lone(true)) { try { return this.eyeContactAsk(E, chest, head, unseen, smoked, through); } finally { this.mirror.shut(); } }
     return this.eyeContactAsk(E, chest, head, unseen, smoked, through);
   }
-  private eyeContactAsk(E: { pos: Vec3; look: Vec3; range: number; halfDeg: number; nearM: number; nearDeg: number; vHalfDeg?: number }, chest: Vec3, head: Vec3, unseen: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } | null {
-    const set = this.senseSet(SENSES.sight); if (set === -2) return null;   // (senseSet has counted it)
-    const M = this.mirror, e = E.pos, l = E.look, v = E.vHalfDeg;
+  private eyeContactAsk(E: { pos: Vec3; look: Vec3; range: number; halfDeg: number; nearM: number; nearDeg: number; vHalfDeg?: number }, chest: Vec3, head: Vec3, unseen: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } {
+    const set = this.sense('sight'), M = this.mirror, e = E.pos, l = E.look, v = E.vHalfDeg;
     const r = M.x.sight_contact(M.slot, set, through, (v !== undefined ? FACE.Q_LENS : 0) | (unseen ? FACE.Q_UNSEEN : 0) | (smoked ? FACE.Q_SMOKED : 0), e[0], e[1], e[2], l[0], l[1], l[2], E.range, E.halfDeg, E.nearM, E.nearDeg, v === undefined ? 0 : v,
       chest[0], chest[1], chest[2], head[0], head[1], head[2]);
-    if (r === -1) { if (FELL.on) fell('sight', 'the module handed the eye back (a line too long to be one)'); return null; }
+    if (r === -1) throw handedBack('sight', 'a line too long to be one, or of no number', e, chest);
     SENSED.sight++; if (SENSE_WATCH.see) SENSE_WATCH.see('sight', [r, f64()[M.scratch]]);
     return { visible: (r & FACE.A_VISIBLE) !== 0, dist: f64()[M.scratch], inCone: (r & FACE.A_IN_CONE) !== 0 };
   }
-  /** RUST.light — guards.ts lightEstimateAt's lamps: `lampsBegin` the question (→ may it go to the module), then a `lamp` each that passed the caller's
-   *  own gates, then `lampsOn`, which leaves the six faces in `acc` (false anywhere = the caller's own loop, from the start).
+  /** THE LIGHT ON A POINT (guards.ts lightEstimateAt's lamps; rust/sim/src/light.rs): `lampsBegin` the question, then a `lamp` each that passed the
+   *  caller's own gates, then `lampsOn`, which leaves the six faces in `acc`.
    *  IN PARTS: the module's table holds `lampCap` lamps; a lamp past that sends the table as a PART and begins it again, and the module keeps the six
    *  faces from part to part (light.rs SUM), so any number of lamps in reach of a point is one sum in one order.
    *  `shade`: the smoke's shadow (sense.ts SENSE.bounce) — each lamp no wall hides is dimmed along the line to it by the smoke of `shade.grid`, and
    *  where that grid cannot answer (or none `stands`: sense.ts SmokeGrid.along) by `shade.blobs`, written here for the module's own smoke.rs under
    *  the model's numbers `K` (its table holds them all: the game keeps no more, sense.ts CpuSmoke.emit, and more is an error by name) */
   private readonly lampQ: { on: boolean; P: Vec3 | null; sim: SimState | null; stands: number; K: SmokeNumbers | null; nb: number; parts: number } = { on: false, P: null, sim: null, stands: 0, K: null, nb: 0, parts: 0 };
-  lampsBegin(P: Vec3, shade: { grid: { sim: SimState; stands: boolean }; blobs: readonly BlobRow[] } | null = null, K: SmokeNumbers | null = null): boolean {
-    const M = this.mirror, Q = this.lampQ; this.lampsOver(); M.lampSet = this.senseSet(SENSES.light); M.lampN = 0; if (M.lampSet === -2) return false;
+  lampsBegin(P: Vec3, shade: { grid: { sim: SimState; stands: boolean }; blobs: readonly BlobRow[] } | null = null, K: SmokeNumbers | null = null): void {
+    const M = this.mirror, Q = this.lampQ; this.lampsOver(); M.lampSet = this.sense('light'); M.lampN = 0;
     if (shade && K) { this.blobsFit(shade.blobs.length); M.blobN = 0; for (const b of shade.blobs) this.blob(b.x, b.y0, b.z, b.r2, b.age, b.mass);
       Q.sim = shade.grid.sim; Q.stands = shade.grid.stands ? 1 : 0; Q.K = K; Q.nb = M.blobN; }
-    Q.P = P; Q.on = true; return true;
+    Q.P = P; Q.on = true;
   }
   /** no question about the light stands (and nothing of the last one is held) */
   private lampsOver(): void { const Q = this.lampQ; Q.on = false; Q.P = null; Q.sim = null; Q.K = null; Q.stands = 0; Q.nb = 0; Q.parts = 0; }
-  /** the lamps written so far, asked as a part of the question (false = the module handed it back: the caller's own loop, and the question is over) */
-  private lampsPart(): boolean {
+  /** the lamps written so far, asked as a part of the question */
+  private lampsPart(): void {
     const M = this.mirror, Q = this.lampQ, P = Q.P!, st = Q.sim, K = Q.K, more = Q.parts > 0 ? 1 : 0;   // (the grid's block is bound a part: a call that reads state says where it stands NOW, sim/state.ts)
     const r = st && K ? M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], K.sigma, st.bind(), st.stamp, Q.stands, more, Q.nb, K.spread, K.widest, K.rise, K.riseRate)
       : M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], 0, 0, 0, 0, more, 0, 0, 0, 0, 0);
     Q.parts++; M.lampN = 0;
-    if (r === -1) { if (FELL.on) fell('light', 'the module handed the lamps back (a line too long to be one)'); this.lampsOver(); return false; }
-    return true;
+    if (r === -1) { this.lampsOver(); throw handedBack('light', 'a lamp\'s line too long to be one, or of no number', P, P); }
   }
+  /** a lamp of the question in hand, or — no question standing — of the grid's sweep, which takes as many as the table holds and no more (false: the
+   *  table is full; `gridStep`'s caller says what that is) */
   lamp(pos: Vec3, range: number, radius: number, kind: number, dir: Vec3, outerDeg: number, innerDeg: number, color: Vec3, intensity: number): boolean {
     const M = this.mirror;
-    if (M.lampN >= M.lampCap) { if (!this.lampQ.on) return false;   // (no question stands: the grid's sweep writes its lamps here too, and takes no more than the table — a level's limit)
-      LAMPS.parts++; if (!this.lampsPart()) return false; }
+    if (M.lampN >= M.lampCap) { if (!this.lampQ.on) return false;
+      LAMPS.parts++; this.lampsPart(); }
     const m = f64(), o = M.lamps + M.lampN++ * FACE.LAMP;
     m[o] = pos[0]; m[o + 1] = pos[1]; m[o + 2] = pos[2]; m[o + 3] = range; m[o + 4] = radius; m[o + 5] = kind; m[o + 6] = dir[0]; m[o + 7] = dir[1]; m[o + 8] = dir[2]; m[o + 9] = outerDeg; m[o + 10] = innerDeg;
     m[o + 11] = color[0]; m[o + 12] = color[1]; m[o + 13] = color[2]; m[o + 14] = intensity;
     return true;
   }
   /** …the last part asked, and the six faces of the whole question read */
-  lampsOn(acc: number[]): boolean {
-    const M = this.mirror; if (!this.lampQ.on || !this.lampsPart()) return false; this.lampsOver();
+  lampsOn(acc: number[]): void {
+    const M = this.mirror; if (!this.lampQ.on) throw new Error('light: lampsOn with no question begun (lampsBegin)');
+    this.lampsPart(); this.lampsOver();
     const m = f64(), at = M.scratch; for (let k = 0; k < 6; k++) acc[k] = m[at + k];
-    SENSED.light++; if (SENSE_WATCH.see) SENSE_WATCH.see('light', acc.slice(0, 6)); return true;
+    SENSED.light++; if (SENSE_WATCH.see) SENSE_WATCH.see('light', acc.slice(0, 6));
   }
-  /** RUST.smoke — game/sense.ts CpuSmoke.trans: `begin` (→ may it go to the module, with this many blobs), a `blob` each, then the transmittance along
-   *  a → b under the model's numbers (−1 = the caller's own loop). */
-  blobsBegin(n: number): boolean { const M = this.mirror; M.blobSet = this.senseSet(SENSES.smoke); M.blobN = 0; if (M.blobSet === -2) return false;   // (senseSet has counted it)
-    this.blobsFit(n); return true; }
+  /** THE SMOKE ALONG A LINE (game/sense.ts CpuSmoke; rust/sim/src/smoke.rs): `begin` with this many blobs, a `blob` each, then the transmittance along
+   *  a → b under the model's numbers. */
+  blobsBegin(n: number): void { const M = this.mirror; M.blobSet = this.sense('smoke'); M.blobN = 0; this.blobsFit(n); }
   /** a game keeps no more blobs than the module's table holds (sense.ts CpuSmoke.emit holds its knob to the table), so more is no content: a mistake, by name */
   private blobsFit(n: number): void { const cap = this.mirror.blobCap; if (n > cap) throw new Error(`${n} blobs of smoke and the Rust module's table holds ${cap}: a game keeps no more than that (sense.ts CpuSmoke.emit), so somebody else filled the list`); }
   blob(x: number, y0: number, z: number, r2: number, age: number, mass: number): void { const M = this.mirror, m = f64(), o = M.blobs + M.blobN++ * FACE.BLOB; m[o] = x; m[o + 1] = y0; m[o + 2] = z; m[o + 3] = r2; m[o + 4] = age; m[o + 5] = mass; }
   blobsAlong(a: Vec3, b: Vec3, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number {
-    const M = this.mirror; if (M.x.smoke_trans(M.slot, M.blobSet, M.blobN, a[0], a[1], a[2], b[0], b[1], b[2], sigma, spread, widest, rise, riseRate) === -1) { if (FELL.on) fell('smoke', 'the module handed the line back (a line too long to be one)'); return -1; }
+    const M = this.mirror; if (M.x.smoke_trans(M.slot, M.blobSet, M.blobN, a[0], a[1], a[2], b[0], b[1], b[2], sigma, spread, widest, rise, riseRate) === -1) throw handedBack('smoke', 'a line too long to be one, or of no number', a, b);
     SENSED.smoke++; if (SENSE_WATCH.see) SENSE_WATCH.see('smoke', [f64()[M.scratch]]);
     return f64()[M.scratch];
   }
+  /** a sound's or a search's question: the leaves' list and the pane rule to ask with (SoundPaths and NavGrid are this file's, and ask through here) */
+  senseFor(row: 'sound' | 'paths'): { set: number; ask: number } { const set = this.sense(row); return { set, ask: this.sensePanes(row) }; }
   // ---- THE GAME'S OWN SMOKE ON THE COARSE GRID (game/sense.ts SENSE.grid, SmokeGrid; rust/sim/src/bricks.rs). No row of RUST: the grid has no TypeScript
   // twin, so where the module does not run, or the level's plan is larger than a grid stands on, the blobs answer as they did. The state is a part of a
   // block in the module (sim/state.ts: the game's own, or a tool's), so a step copies nothing: it names the block and this world's copy.
@@ -647,7 +672,7 @@ export class StaticCollision {
     wind: GridWind | null = null): boolean {
     const M = this.ready();
     const mine = !M.live;
-    if (mine) { if (simWhyNot()) return false; M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, false, false, false, 0); if (!M.live) return false; }
+    if (mine) { if (simWhyNot()) return false; M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, false, false, false); if (!M.live) return false; }
     try {
       const set = M.leaves(this.dynamicBoxes); if (set === -2) return false;
       // (THE LIGHT THAT COMES ROUND, rust/sim/src/glow.rs: the step sweeps it from the level's steady lamps, which `glow.lamps` writes as for a question
@@ -880,35 +905,30 @@ export class SoundPaths {
   tick(time: number) { this.now = time; if (this.cache.size > 512) this.cache.clear(); }
   /** the level changed under the cached routes (a wall holed, cover gone — game/wallbreak.ts): every answer is asked afresh */
   invalidate() { this.cache.clear(); }
-  /** `keep` false = the answer is not kept for the next asker (a question that is not the simulation's own — game/cues.ts overheard — leaves the cache as it found it) */
+  /** HOW A SOUND REACHES A LISTENER (rust/sim/src/hear.rs), in two questions with this file's own memory of routed answers between them: what the straight
+   *  lines say, and — walled off, near enough, and not remembered — the way round by the floor (rust/sim/src/nav.rs over the grid as it stands now).
+   *  Sound does not pass a glass pane: it goes round through the door like round any wall, or through the opening once the pane is broken (glass.rs).
+   *  `keep` false = the answer is not kept for the next asker (a question that is not the simulation's own — game/cues.ts overheard — leaves the cache as it found it) */
   propagate(src: Vec3, dst: Vec3, keep = true): Propagation {
     if (PRICED.waits) throw new Error('a sound was asked for from inside the price of a search: its way round is a search, and the module has one search\'s tables (rust/sim/src/nav.rs find_priced)');   // (every time, not only when the answer is not remembered)
-    return RUST.sound && !this.col.mirror.live ? this.col.window(() => this.propagateAsk(src, dst, keep)) : this.propagateAsk(src, dst, keep); }
+    return this.col.mirror.live ? this.propagateAsk(src, dst, keep) : this.col.window(() => this.propagateAsk(src, dst, keep)); }
   private propagateAsk(src: Vec3, dst: Vec3, keep: boolean): Propagation {
-    const r = this.propagateThere(src, dst, keep, !BOTH.on); if (r === null) return this.propagateHere(src, dst, keep);
-    if (!BOTH.on) return r;
-    const t = this.propagateHere(src, dst, keep);
-    this.col.senseCompared(this.col.senseSet(SENSES.sound), t === r || (t.direct === r.direct && t.routed === r.routed && Object.is(t.pathLen, r.pathLen) && Object.is(t.muffle, r.muffle) && Object.is(t.carry, r.carry) && same3(t.via, r.via) && same3(t.apparent, r.apparent)), 'sound', src, dst);
-    return t;
-  }
-  /** RUST.sound — the same answer from the module (rust/sim/src/hear.rs), in two questions with this file's own memory of routed answers between them: what
-   *  the straight lines say, and — walled off, near enough, and not remembered — the way round by the floor (rust/sim/src/nav.rs over the grid as it stands
-   *  now). null = `propagateHere`'s, from the start (nothing was written). `write` false = the answer is not remembered (the check's second asker). */
-  private propagateThere(src: Vec3, dst: Vec3, keep: boolean, write: boolean): Propagation | null {
-    const col = this.col, set = col.senseSet(SENSES.sound); if (set === -2) return null;   // (senseSet has counted it)
-    const M = col.mirror, x = M.x, ask = col.paneAsk; if (ask < 0) { col.paneFell('sound', ask); return null; }
-    const c = x.hear_direct(M.slot, set, ask, src[0], src[1], src[2], dst[0], dst[1], dst[2]); if (c === -1) { if (FELL.on) fell('sound', 'the module handed the straight lines back (one too long to be a line)'); return null; }
+    const col = this.col, { set, ask } = col.senseFor('sound'), M = col.mirror, x = M.x;
+    const c = x.hear_direct(M.slot, set, ask, src[0], src[1], src[2], dst[0], dst[1], dst[2]); if (c === -1) throw handedBack('sound', 'a straight line too long to be one, or of no number', src, dst);
     const straight = f64()[M.scratch]; if (c !== FACE.WALLED) SENSED.sound++;
     if (SENSE_WATCH.see) SENSE_WATCH.see('sound', [c, straight]);
+    // clear line (rays offset half a metre sideways catch a jamb / corner partly in the way and soften the transition at doorways)
     if (c < FACE.OVER) { let graze = 0; if (c & FACE.GRAZE_A) graze += 0.1; if (c & FACE.GRAZE_B) graze += 0.1; return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: graze, carry: 1 }; }
+    // blocked at chest height but clear at 2 m: a counter, cubicle partition or cabinet is in the way, not a wall — sound goes straight over the top, barely dulled
     if (c === FACE.OVER) return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: 0.15, carry: 0.9 };
     const sealed = (): Propagation => ({ direct: false, routed: false, pathLen: straight * 1.5, via: v3.copy(src), apparent: v3.copy(src), muffle: 1, carry: 0.25 });
-    if (c === FACE.FAR) return sealed();
+    if (c === FACE.FAR) return sealed();                    // far and walled off: not worth a search
     const nav = col.nav, cs = nav.cell;
     const key = `${Math.floor(src[0] / cs)},${Math.floor(src[2] / cs)}>${Math.floor(dst[0] / cs)},${Math.floor(dst[2] / cs)}`;
     const hit = this.cache.get(key); if (hit && Math.abs(this.now - hit.t) < 0.5) return hit.r;
     nav.there(M);
-    const k = x.hear_route(M.slot, set, ask, BoxFlag.SoundSeal, nav.W, nav.H, cs, src[0], src[1], src[2], dst[0], dst[1], dst[2], straight); if (k === -1) { if (FELL.on) fell('sound', 'the module handed the way round back (a line too long to be one)'); return null; }
+    // (listener → source: the first legs say where it comes from — the farthest waypoint the listener still has a straight run to; a near-closed leaf across any leg muffles it a lot)
+    const k = x.hear_route(M.slot, set, ask, BoxFlag.SoundSeal, nav.W, nav.H, cs, src[0], src[1], src[2], dst[0], dst[1], dst[2], straight); if (k === -1) throw handedBack('sound', 'a line of its way round too long to be one', src, dst);
     let r: Propagation; SENSED.sound++;
     if (SENSE_WATCH.see) { const m = f64(), at = M.scratch; SENSE_WATCH.see('sound', k === FACE.SEALED ? [k] : [k, m[at], m[at + 1], m[at + 2], m[at + 3]]); }
     if (k === FACE.SEALED) r = sealed();
@@ -918,59 +938,14 @@ export class SoundPaths {
       const muffle = k === FACE.ROUTED_DOOR ? 0.85 : 0.35;
       r = { direct: false, routed: true, pathLen: L, via, apparent: [dst[0] + dir[0] * L, src[1], dst[2] + dir[2] * L], muffle, carry: 1 - muffle * 0.8 };
     }
-    if (write && keep && !this.asking) this.cache.set(key, { t: this.now, r }); return r;
-  }
-  /** propagate as this file answers it (and the whole of it wherever the module does not) */
-  propagateHere(src: Vec3, dst: Vec3, keep = true): Propagation {
-    const a: Vec3 = [src[0], Math.max(src[1], 0.9), src[2]], b: Vec3 = [dst[0], Math.max(dst[1], 0.9), dst[2]];
-    const straight = v3.dist(a, b);
-    // (solidBlocked throughout: sound does not pass a glass pane — it goes round through the door like round any wall, or through the opening once the pane is broken)
-    if (!this.col.solidBlocked(a, b)) {
-      // clear line; rays offset half a metre sideways catch a jamb / corner partly in the way and soften the transition at doorways
-      let graze = 0;
-      if (straight > 1) { const d = v3.sub(b, a); const side = v3.normalize([-d[2], 0, d[0]]); if (this.col.solidBlocked(v3.mad(a, side, 0.5), b)) graze += 0.1; if (this.col.solidBlocked(v3.mad(a, side, -0.5), b)) graze += 0.1; }
-      return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: graze, carry: 1 };
-    }
-    // blocked at chest height but clear at 2 m: a counter, cubicle partition or cabinet is in the way, not a wall — sound goes
-    // straight over the top, barely dulled (without this, a step behind the reception desk 'routed' 9 m around and read as silence)
-    const a2: Vec3 = [src[0], 2.0, src[2]], b2: Vec3 = [dst[0], 2.0, dst[2]];
-    if (!this.col.solidBlocked(a2, b2)) return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: 0.15, carry: 0.9 };
-    const sealed = (): Propagation => ({ direct: false, routed: false, pathLen: straight * 1.5, via: v3.copy(src), apparent: v3.copy(src), muffle: 1, carry: 0.25 });
-    if (straight > 28) return sealed();                    // far and walled off: not worth a search
-    const nav = this.col.nav; const cs = nav.cell;
-    const key = `${Math.floor(src[0] / cs)},${Math.floor(src[2] / cs)}>${Math.floor(dst[0] / cs)},${Math.floor(dst[2] / cs)}`;
-    const hit = this.cache.get(key); if (hit && Math.abs(this.now - hit.t) < 0.5) return hit.r;
-    const path = nav.findPath(dst, src, 6000);            // listener → source: the first legs tell us where it comes from
-    let r: Propagation;
-    if (!path || !path.length) r = sealed();
-    else {
-      let L = 0; let prev: Vec3 = [dst[0], 0, dst[2]];
-      let via: Vec3 = [path[0][0], 1.0, path[0][2]];                                  // farthest waypoint the listener can still see: the corner / doorway it spills out of
-      let doorInWay = false; let pa: Vec3 = [dst[0], 1.0, dst[2]]; let sightLost = false;
-      for (const q of path) {
-        L += v3.distXZ(q, prev); prev = q;
-        const pb: Vec3 = [q[0], 1.0, q[2]];
-        if (!sightLost) { if (!this.col.solidBlocked(b, pb)) via = pb; else sightLost = true; }   // ('sight' here is the sound's straight run to the listener: a pane in the way means it has not spilled out yet)
-        if (!doorInWay && this.col.segmentBlockedDynamic(pa, pb, BoxFlag.SoundSeal)) doorInWay = true;
-        pa = pb;
-      }
-      const lastLeg = v3.distXZ(src, prev); L += lastLeg; L = Math.max(L, straight);
-      // the last leg stops short of the source so a sound emitted at a door leaf (creak, slam) is not muffled by its own leaf
-      const s1: Vec3 = [src[0], 1.0, src[2]]; const end: Vec3 = lastLeg > 0.3 ? v3.mad(s1, v3.normalize(v3.sub(pa, s1)), 0.25) : pa;
-      if (!doorInWay && this.col.segmentBlockedDynamic(pa, end, BoxFlag.SoundSeal)) doorInWay = true;   // a (near-)closed leaf across any leg muffles it a lot
-      const dir = v3.normalize([via[0] - dst[0], 0, via[2] - dst[2]]);
-      const muffle = doorInWay ? 0.85 : 0.35;
-      r = { direct: false, routed: true, pathLen: L, via, apparent: [dst[0] + dir[0] * L, src[1], dst[2] + dir[2] * L], muffle, carry: 1 - muffle * 0.8 };
-    }
     if (keep && !this.asking) this.cache.set(key, { t: this.now, r }); return r;
   }
 }
 
-/** 2D navigation grid (0.5 m) over the level for guard path finding. */
+/** Coarse navigation grid (0.5 m cells) baked from the static boxes; the search over it (A*, 8-connected, no corner cutting, then a greedy smoothing) is the
+ *  Rust module's (rust/sim/src/nav.rs). */
 export class NavGrid {
   cell = 0.5; W: number; H: number; blocked: Uint8Array;
-  /** findPath's tables, blank between searches (see there) */
-  private scratch: NavScratch | null = null;
   constructor(private col: StaticCollision) {
     this.W = Math.round(WORLD.gridW * WORLD.gridCell / this.cell); this.H = Math.round(WORLD.gridH * WORLD.gridCell / this.cell);
     this.blocked = new Uint8Array(this.W * this.H);
@@ -1006,50 +981,21 @@ export class NavGrid {
   cellBlockers(wx: number, wz: number, out: Int32Array): number { const x = Math.floor(wx / this.cell), z = Math.floor(wz / this.cell); if (x < 0 || z < 0 || x >= this.W || z >= this.H) return 0; return this.col.circleTouches((Math.floor(wx / this.cell) + 0.5) * this.cell, (Math.floor(wz / this.cell) + 0.5) * this.cell, 0.34, 0.25, 1.5, out); }
   isBlocked(wx: number, wz: number) { const x = Math.floor(wx / this.cell), z = Math.floor(wz / this.cell); if (x < 0 || z < 0 || x >= this.W || z >= this.H) return true; return this.blocked[this.idx(x, z)] === 1; }
 
-  /** findPath for a PICTURE's question (game/attention.ts attentionWay, asked by an overlay): the same search on the ASKER'S tables (`own.s`, made at its first
-   *  search and kept by it), the grid's own left as they were — so a game that is drawn and the same game not drawn hold the same state, word for word. */
-  findPathAside(own: { s?: object }, a: Vec3, b: Vec3, maxIter = 6000): Vec3[] | null { return this.aside(own, () => this.findPath(a, b, maxIter)); }
-  /** `fn` with every search of it on the asker's own tables (`own.s`, kept between asks) and none of the grid's: what a picture asks writes nothing of the game's */
-  aside<T>(own: { s?: object }, fn: () => T): T {
-    const mine = this.scratch; this.scratch = (own.s as NavScratch | undefined) ?? null;
-    try { return fn(); } finally { own.s = this.scratch ?? undefined; this.scratch = mine; }
-  }
-  /** A* from a to b (world coords). Returns world-space waypoints (cell centers), smoothed by greedy line-of-walk.
+  /** A WAY FROM a TO b (world coords): A* over the grid as it stands now, then the greedy smoothing by line-of-walk — world-space waypoints (cell centres),
+   *  or null: no way. The search is the Rust module's (rust/sim/src/nav.rs); its tables are scratch of the one question, so a search asked by a picture
+   *  writes nothing of the game's.
    *  `penalty` (optional): a cost MULTIPLIER for stepping INTO cell (ix, iz) — 1 = plain floor, 6 = six times dearer to walk through, 20 = all but a wall
    *  (values under 1 are read as 1, so the straight-line heuristic stays admissible). It bends the route round places a man has reason to avoid without
    *  forbidding them: a doorway his side has just seen become a kill zone, the corridor a colleague is already pressing up (game/tactics.ts — the k-th
    *  alternative route is simply A* again with the earlier routes' cells made dear). The smoothing then never straightens a leg back ACROSS dear cells the
-   *  search walked round (a merge is only taken if it crosses no more penalised cells than the raw cells it replaces). Absent, nothing here differs by one
-   *  instruction from the search it always was. */
+   *  search walked round (a merge is only taken if it crosses no more penalised cells than the raw cells it replaces).
+   *  WITH A PENALTY the module's search stops wherever it comes to a cell it has no price for and says which (eight at most at a step of the search; a
+   *  leg's cells in the smoothing); `priceThese` asks the caller's function for exactly those, ONCE each, and the search goes on: a penalty gives a cell
+   *  one price all through a search. The module calls nothing, and has one search's tables: a way or a sound asked from inside a price is an error. A
+   *  search that waits is scratch of this one call: it is resumed to its end here, or dropped if the price throws. */
   findPath(a: Vec3, b: Vec3, maxIter = 6000, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
     if (PRICED.waits) throw new Error('a way was asked for from inside the price of another search: the module has one search\'s tables (rust/sim/src/nav.rs find_priced)');
-    return RUST.paths && !this.col.mirror.live ? this.col.window(() => this.findPathAsk(a, b, maxIter, penalty)) : this.findPathAsk(a, b, maxIter, penalty);
-  }
-  private findPathAsk(a: Vec3, b: Vec3, maxIter: number, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
-    if (!BOTH.on || !penalty) {
-      const r = this.findPathThere(a, b, maxIter, penalty); if (r === undefined) return this.findPathHere(a, b, maxIter, penalty);
-      if (!BOTH.on) return r;
-      const t = this.findPathHere(a, b, maxIter); let ok = (t === null) === (r === null) && (t === null || t.length === r!.length);
-      for (let i = 0; ok && t && i < t.length; i++) ok = same3(t[i], r![i]);
-      this.col.senseCompared(this.col.senseSet(SENSES.paths), ok, 'path', a, b);
-      return t;
-    }
-    // (the check's, with a penalty. The module asks the caller's function ONCE a cell; this file's search asks it at EVERY visit, as it does with the row
-    //  off. What is compared: the way; the cells each side priced, in the order it first asked for them (the module must come to need exactly the cells
-    //  this file's search reads, when it reads them); and EVERY price this file's search was given against the one the module was given for that cell,
-    //  which is the rule the module's once-a-cell rests on: a penalty gives a cell one price all through a search.)
-    const W = this.W, first = new Map<number, number>(), there: number[] = [], here: number[] = [], met = new Set<number>(); let onePrice = true;
-    const r = this.findPathThere(a, b, maxIter, (ix, iz) => { const i = iz * W + ix, v = penalty(ix, iz); there.push(i); first.set(i, v); return v; });
-    const t = this.findPathHere(a, b, maxIter, (ix, iz) => { const i = iz * W + ix, v = penalty(ix, iz), was = first.get(i);
-      if (!met.has(i)) { met.add(i); here.push(i); }
-      if (was === undefined) first.set(i, v); else if (!Object.is(was, v)) onePrice = false;
-      return v; });
-    if (r === undefined) return t;
-    let ok = onePrice && (t === null) === (r === null) && (t === null || t.length === r!.length) && here.length === there.length;
-    for (let i = 0; ok && t && i < t.length; i++) ok = same3(t[i], r![i]);
-    for (let i = 0; ok && i < here.length; i++) ok = here[i] === there[i];
-    this.col.senseCompared(this.col.senseSet(SENSES.paths), ok, onePrice ? 'priced path' : 'priced path (the penalty gave one cell two prices in one search)', a, b);
-    return t;
+    return this.col.mirror.live ? this.findPathAsk(a, b, maxIter, penalty) : this.col.window(() => this.findPathAsk(a, b, maxIter, penalty));
   }
   /** THE GRID AS IT STANDS, WRITTEN TO THE MODULE for one question of its search (rust/sim/src/nav.rs). The floor is the BUILD's (scene/world.ts WORLD:
    *  every level has the same grid), so a floor of more cells than a search holds there is a mistake of the build, said by name: no level can make it,
@@ -1058,17 +1004,9 @@ export class NavGrid {
     if (this.blocked.length > M.navCap) throw new Error(`the floor's grid has ${this.blocked.length} cells and a search of the Rust module holds ${M.navCap} (rust/sim/src/nav.rs MAX_FLOOR): the floor is the build's (scene/world.ts WORLD), so the module's tables are to be made larger with it`);
     u8().set(this.blocked, M.navShut);
   }
-  /** RUST.paths — findPath from the module: the same search and smoothing over the grid as it stands now. undefined = `findPathHere`'s.
-   *  WITH A PENALTY the module's search stops wherever it comes to a cell it has no price for and says which (eight at most at a step of the search; a
-   *  leg's cells in the smoothing); `priceThese` asks the caller's function for exactly those, once each, and the search goes on. So the function is
-   *  called for the cells this file's own search reads, in the order it first reads them (ONCE a cell where this file's reads it at every visit: every
-   *  penalty in the game gives a cell the same price all through one search), and the module calls nothing. A search that waits is scratch of this one
-   *  call: it is resumed to its end here, or dropped if the price throws. */
-  private findPathThere(a: Vec3, b: Vec3, maxIter: number, penalty?: (ix: number, iz: number) => number): Vec3[] | null | undefined {
-    const col = this.col, set = col.senseSet(SENSES.paths); if (set === -2) return undefined;   // (senseSet has counted it)
-    if ((maxIter >>> 0) !== maxIter) { if (FELL.on) fell('paths', 'a cap on the search that is no whole number'); return undefined; }
-    const M = col.mirror; this.there(M);
-    const x = M.x, ask = col.paneAsk; if (ask < 0) { col.paneFell('paths', ask); return undefined; }
+  private findPathAsk(a: Vec3, b: Vec3, maxIter: number, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
+    if ((maxIter >>> 0) !== maxIter) throw new Error(`paths: a cap on the search that is no whole number (${maxIter})`);
+    const col = this.col, { set, ask } = col.senseFor('paths'), M = col.mirror, x = M.x; this.there(M);
     let n: number;
     if (!penalty) n = x.nav_path(M.slot, set, ask, this.W, this.H, this.cell, a[0], a[2], b[0], b[2], maxIter);
     else {
@@ -1078,7 +1016,7 @@ export class NavGrid {
         finally { PRICED.waits = false; if (n === NAV.NEED) x.nav_drop(); } }
       if (n !== NAV.ASK_HOST) PRICED.n++;
     }
-    if (n === NAV.ASK_HOST) { if (FELL.on) fell('paths', 'the module handed the search back (a line too long to be one, a point that is no number)'); return undefined; }
+    if (n === NAV.ASK_HOST) throw handedBack('paths', 'a point that is no number, or a line too long to be one', a, b);
     SENSED.paths++;
     if (SENSE_WATCH.see) SENSE_WATCH.see('paths', n === NAV.NO_WAY ? [n] : [n, ...f64().subarray(M.way, M.way + 2 * n)]);
     if (n === NAV.NO_WAY) return null;
@@ -1091,72 +1029,6 @@ export class NavGrid {
     if (SENSE_WATCH.see) SENSE_WATCH.see('paths', u32().slice(want, want + k));   // (the cells the search has come to need, in the order it asks for them)
     for (let i = 0; i < k; i++) { const c = u32()[want + i]; const v = penalty(c % W, (c / W) | 0); f64()[price + c] = v; }   // (the views are taken anew at every cell: the function may ask the module questions of its own)
     PRICED.cells += k;
-  }
-  /** findPath as this file answers it (and the whole of it wherever the module does not) */
-  findPathHere(a: Vec3, b: Vec3, maxIter = 6000, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
-    const W = this.W, H = this.H;
-    const sx = clampi(Math.floor(a[0] / this.cell), 0, W - 1), sz = clampi(Math.floor(a[2] / this.cell), 0, H - 1);
-    let gx = clampi(Math.floor(b[0] / this.cell), 0, W - 1), gz = clampi(Math.floor(b[2] / this.cell), 0, H - 1);
-    if (this.blocked[this.idx(gx, gz)]) { const alt = this.nearestFree(gx, gz, b[0], b[2]); if (!alt) return null; gx = alt[0]; gz = alt[1]; }   // (a goal by a wall resolves to ITS side of the wall — see nearestFree)
-    const start = this.idx(sx, sz), goal = this.idx(gx, gz);
-    if (start === goal) return [[(gx + 0.5) * this.cell, 0, (gz + 0.5) * this.cell]];
-    // (the search's four per-cell tables are the grid's own, kept between calls in their blank state — every cell a search wrote is listed in `seen` and put
-    // back as it ends — and the open list is a typed array with its own count: the same values read and written in the same order as when each call made and
-    // filled five fresh arrays the size of the level, so the same pops, the same ties, the same path. A search inside a search (a penalty that asks for a
-    // path) or one after a penalty threw takes fresh tables, as it always did: that is this file's search alone. While the MODULE's priced search waits for
-    // prices, a way or a sound asked from inside a price is an error, `findPath` and `propagate` say so, and no penalty in the game asks one.)
-    let S = this.scratch; if (!S || S.busy || S.g.length !== W * H) { const fresh = navScratch(W * H); if (!S || !S.busy) this.scratch = fresh; S = fresh; }   // (nothing of the LEVEL is kept: `blocked` is read afresh by every search, and a grid of another size takes new tables)
-    S.busy = true;
-    const gScore = S.g, came = S.came, closed = S.closed, f = S.f, blocked = this.blocked; let open = S.open, seen = S.seen, nOpen = 0, nSeen = 0;
-    { const x = start % W, z = (start / W) | 0; const dx = Math.abs(x - gx), dz = Math.abs(z - gz); gScore[start] = 0; f[start] = (dx + dz) + (Math.SQRT2 - 2) * Math.min(dx, dz); }
-    open[nOpen++] = start; seen[nSeen++] = start;
-    let iter = 0;
-    while (nOpen && iter++ < maxIter) {
-      // pop min f (linear scan; grids are small)
-      let mi = 0, mf = f[open[0]]; for (let i = 1; i < nOpen; i++) { const fi = f[open[i]]; if (fi < mf) { mi = i; mf = fi; } }
-      const cur = open[mi]; open[mi] = open[--nOpen];
-      if (cur === goal) break;
-      if (closed[cur]) continue; closed[cur] = 1;
-      const cx = cur % W, cz = (cur / W) | 0;
-      if (nOpen + 8 > open.length) { const o = new Int32Array(open.length * 2); o.set(open); open = S.open = o; }
-      if (nSeen + 8 > seen.length) { const o = new Int32Array(seen.length * 2); o.set(seen); seen = S.seen = o; }
-      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
-        if (!dx && !dz) continue; const nx = cx + dx, nz = cz + dz;
-        if (nx < 0 || nz < 0 || nx >= W || nz >= H) continue;
-        const ni = nz * W + nx; if (blocked[ni] || closed[ni]) continue;
-        if (dx && dz && (blocked[cz * W + cx + dx] || blocked[(cz + dz) * W + cx])) continue; // no corner cutting
-        const step = dx && dz ? Math.SQRT2 : 1;
-        const ng = gScore[cur] + (penalty ? step * Math.max(1, penalty(nx, nz)) : step);
-        if (ng < gScore[ni]) { const hx = Math.abs(nx - gx), hz = Math.abs(nz - gz); gScore[ni] = ng; came[ni] = cur; f[ni] = ng + ((hx + hz) + (Math.SQRT2 - 2) * Math.min(hx, hz)); open[nOpen++] = ni; seen[nSeen++] = ni; }
-      }
-    }
-    const cells: number[] = []; const found = came[goal] >= 0; if (found) for (let c = goal; c >= 0 && c !== start; c = came[c]) cells.push(c);
-    for (let i = 0; i < nSeen; i++) { const c = seen[i]; gScore[c] = Infinity; f[c] = Infinity; came[c] = -1; closed[c] = 0; }
-    S.busy = false;
-    if (!found) return null;
-    cells.reverse();
-    // greedy smoothing (a raw cell's centre is made when it is asked for: the test point in one array of the call's own, a Vec3 of its own only for a waypoint kept)
-    const n = cells.length, q: Vec3 = [0, 0, 0];
-    const dear = penalty ? cells.map(c => penalty(c % W, (c / W) | 0) > 1) : null;   // (with a penalty: which raw cells the search paid extra for — a merged leg may not cross more dear cells than the ones it stands in for)
-    const out: Vec3[] = []; let anchor: Vec3 = [a[0], 0, a[2]]; let i = 0;
-    while (i < n) {
-      let j = n - 1;
-      for (; j > i; j--) { const c = cells[j]; q[0] = ((c % W) + 0.5) * this.cell; q[2] = (((c / W) | 0) + 0.5) * this.cell; if (this.walkable(anchor, q) && (!dear || this.dearAlong(anchor, q, penalty!) <= countTrue(dear, i, j))) break; }
-      const c = cells[j], p: Vec3 = [((c % W) + 0.5) * this.cell, 0, (((c / W) | 0) + 0.5) * this.cell];
-      out.push(p); anchor = p; i = j + 1;
-    }
-    return out;
-  }
-  /** distinct cells along the straight leg a → b (sampled at half a cell) whose penalty is above plain floor — the smoothing's guard against cutting back across them */
-  private dearAlong(a: Vec3, b: Vec3, penalty: (ix: number, iz: number) => number): number {
-    const dx = b[0] - a[0], dz = b[2] - a[2]; const n = Math.ceil(hyp2(dx, dz) / (this.cell * 0.5)) + 1;
-    let last = -1, count = 0;
-    for (let k = 0; k <= n; k++) {
-      const t = k / n; const ix = Math.floor((a[0] + dx * t) / this.cell), iz = Math.floor((a[2] + dz * t) / this.cell); const i = this.idx(ix, iz);
-      if (i === last) continue; last = i;
-      if (ix >= 0 && iz >= 0 && ix < this.W && iz < this.H && penalty(ix, iz) > 1) count++;
-    }
-    return count;
   }
 
   /** The free cell nearest (by ring) to the blocked cell (gx, gz). With the world point (wx, wz) that asked: among the free cells of the winning ring (and, failing
@@ -1201,9 +1073,3 @@ export class NavGrid {
 }
 
 function clampi(x: number, a: number, b: number) { return x < a ? a : x > b ? b : x; }
-/** two points, the same to the bit */
-function same3(a: Vec3, b: Vec3): boolean { return Object.is(a[0], b[0]) && Object.is(a[1], b[1]) && Object.is(a[2], b[2]); }
-interface NavScratch { busy: boolean; g: Float32Array; f: Float32Array; came: Int32Array; closed: Uint8Array; open: Int32Array; seen: Int32Array }
-function navScratch(n: number): NavScratch { return { busy: false, g: new Float32Array(n).fill(Infinity), f: new Float32Array(n).fill(Infinity), came: new Int32Array(n).fill(-1), closed: new Uint8Array(n), open: new Int32Array(1024), seen: new Int32Array(1024) }; }
-/** how many of flags[i‥j] are set (findPath's smoothing: the dear raw cells a merged leg would replace) */
-function countTrue(flags: boolean[], i: number, j: number): number { let n = 0; for (let k = i; k <= j; k++) if (flags[k]) n++; return n; }

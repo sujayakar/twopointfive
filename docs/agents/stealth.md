@@ -1783,7 +1783,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kept `wayReask` 0.5 s (the first frames, before he has a path). A man who only LOOKS (a turned head, a lent hold, a man standing at the thing) and a place the
   floor has no way to keep the straight thread. PICTURE ONLY, so it is ON in the module and on BOTH stands, no `FROZEN_HOLDS` row: nothing in the update reads
   it, and it WRITES NOTHING OF THE GAME'S: the kept answer and the tables the grid is searched on are the ASKER'S (the overlay's own in ui/attentionviz.ts,
-  handed in as `kept`; `NavGrid.findPathAside` searches on them and leaves the grid's own as they were), so a run that asks for every way each frame digests
+  handed in as `kept`; the search itself is the module's, `NavGrid.findPath`, on scratch of the one question, and writes nothing of the grid's), so a run that asks for every way each frame digests
   AND hashes (`stateHash`, statics too) as the run that never asks. A first cut kept the answer in a named side table of the game and searched on the grid's
   own tables: the digest was equal, the state hash was not (`game.col.nav.scratch.open`), which is how a picture gets into a snapshot. Off: `?straightthread` on the address, Tab ▸ the attention group ▸ 'the thread runs the way he will walk'. CHECK `probes.ts
   attentionway` (tools/qa/attentionway-check.ts; `ATTENTIONWAY_BREAK=1` fails `way`), both stands: on tut-quiet, the office and lights-out a knock 5 m off

@@ -124,7 +124,6 @@ import { isHostile } from './teams';
 import { placeName } from './dialogue';
 import type { Door, Doors } from './doors';
 import { type Box, BoxFlag, MKEY, copyBox } from '../scene/boxes';
-import { BOTH } from '../scene/collision';   // (read inside update() only: the check's count of answers given both ways)
 import { type FogFrame, makeFogFrame, FOG_EYES, FOG_LIGHTS } from '../render/fogofwar';
 import { WAND, WAND_STATS, wandEye } from './wand';
 import { mateWandEye, mateWandEyes } from './wandorder';
@@ -481,7 +480,8 @@ export class FogOfWar {
 
   /** Once a frame from Game.update, after everybody has moved and before the picture's lists are built: the eyes, then seen / not for every man who is not on
    *  the team. A return on its first line while the switch is off. */
-  update(_dt: number) {
+  update(dt: number) { const col = this.g.col; if (col.mirror.live) this.pass(dt); else col.window(() => this.pass(dt)); }   // (asked outside a tick — a check's own call — the pass stands the copy for itself, as every sense does: collision.ts THE SENSES)
+  private pass(_dt: number) {
     const F = this.frame;
     if (!this.active) { if (F.on || this.loaded) { this.loaded = false; this.propsLoaded = false; F.on = false; F.count = 0; this.eyes = []; this.hiddenChars.clear(); this.pending.length = 0; this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.fireClock = 0; this.lampRecs.clear(); this.faceRecs.clear(); F.lit = 0; F.lightCount = 0; F.full = false; this.fullClear(); } return; }
     this.loaded = false;
@@ -516,24 +516,23 @@ export class FogOfWar {
     // (1) lines of sight: per man, the eyes with a clear line to him, nearest first — a living man with one waits on the smoke along it (2); everybody else is decided here
     const men: Guard[] = []; for (const gd of g.guards) if (!this.onTeam(gd)) men.push(gd); for (const cv of g.civilians) if (!this.onTeam(cv) && cv.civ?.state !== 'gone') men.push(cv);   // (a civilian gone through an exit is nobody)
     const lines = new Map<Guard, boolean>(); const jobs: { gd: Guard; chest: Vec3; pairs: { key: string; e: FogEye }[] }[] = [];
-    // (RUST.fog — sim.ts: the eyes of this pass are handed to the module once, and a man is then ONE question to it — rust/sim/src/fog.rs, this file's inField,
-    //  lineToMan and eyeOnBody statement for statement — where he was two lines an eye. The same eyes in the same order, so the same answer: `sees` below)
-    const K = this.handEyes(eyes);
+    // (the eyes of this pass are handed to the Rust module once, and a man is then ONE question to it — rust/sim/src/fog.rs: this file's inField, lineToMan
+    //  and eyeOnBody statement for statement, over the eyes in the order named — where he was two lines an eye: `sees` below)
+    this.handEyes(eyes);
     for (const gd of men) {
       const dead = gd.state === 'dead';
       if (gd === held || (heldToo && gd === heldToo)) { lines.set(gd, true); continue; }   // (the man in Sam's arm)
-      if (dead) { lines.set(gd, K ? this.sees(eyes, IN_ORDER, 1, gd, null) >= ONE_EYE : eyes.some(e => this.eyeOnBody(e, gd))); continue; }
+      if (dead) { lines.set(gd, this.sees(eyes, IN_ORDER, 1, gd, null) >= ONE_EYE); continue; }
       const chest = gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.1, 0]);
-      if (FOG.smoke <= 0) { lines.set(gd, K ? this.sees(eyes, IN_ORDER, 1, gd, chest) >= ONE_EYE : eyes.some(e => this.lineToMan(e, gd, chest))); continue; }
+      if (FOG.smoke <= 0) { lines.set(gd, this.sees(eyes, IN_ORDER, 1, gd, chest) >= ONE_EYE); continue; }
       // the eyes with a clear line, nearest first — only whether there is one and the nearest SMOKE_EYES of them are ever read, so the eyes are tried nearest first
       // (the same stable order by the same distance the clear ones used to be sorted into) and the trying stops at the SMOKE_EYES-th clear line
       const d2 = (e: FogEye) => (e.pos[0] - chest[0]) ** 2 + (e.pos[2] - chest[2]) ** 2;
       const near = nearEyes, nearD = nearD2; let nn = 0;
       for (const e of eyes) { const d = d2(e); let k = nn++; while (k > 0 && nearD[k - 1] > d) { near[k] = near[k - 1]; nearD[k] = nearD[k - 1]; k--; } near[k] = e; nearD[k] = d; }
       const clear: FogEye[] = [];
-      if (K) { let order = 0; for (let k = 0; k < nn; k++) order |= eyes.indexOf(near[k]) << (4 * k);
+      { let order = 0; for (let k = 0; k < nn; k++) order |= eyes.indexOf(near[k]) << (4 * k);
         const r = this.sees(eyes, order, SMOKE_EYES, gd, chest); for (let k = 0, c = r >>> 28; k < c; k++) clear.push(eyes[(r >>> (4 * k)) & 15]); }
-      else for (let k = 0; k < nn && clear.length < SMOKE_EYES; k++) if (this.lineToMan(near[k], gd, chest)) clear.push(near[k]);
       near.length = 0;
       lines.set(gd, clear.length > 0);
       if (clear.length) jobs.push({ gd, chest, pairs: clear.map(e => ({ key: `fow${e.wand ? (e.id === pid ? 'W' : 'W' + e.id) : e.id}_${gd.char.id}`, e })) });
@@ -711,30 +710,20 @@ export class FogOfWar {
     if (!pc.alive) return false;
     return !(this.sightBlocked(e.pos, chest) && this.sightBlocked(e.pos, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0])));
   }
-  /** THE EYES WITH A LINE to a man (`chest` given: lineToMan) or to his body (null: eyeOnBody), the eyes tried in `order` (four bits an eye) until `want` have
-   *  one: how many × 2²⁸ + those eyes, four bits each in the order found. Asked of the module (RUST.fog, a pass update() opened); `seesHere` is this file's
-   *  own answer, the one the module's is held to and the one given wherever the module declines. */
+  /** THE EYES WITH A LINE to a man (`chest` given: lineToMan's rule) or to his body (null: eyeOnBody's), the eyes tried in `order` (four bits an eye) until
+   *  `want` have one: how many × 2²⁸ + those eyes, four bits each in the order found. One question to the Rust module (rust/sim/src/fog.rs), over the
+   *  eyes `handEyes` wrote for the pass. */
   private sees(eyes: FogEye[], order: number, want: number, gd: Guard, chest: Vec3 | null): number {
     const pc = gd.char; let a: Vec3, b: Vec3, kind = 0;
     if (chest) { a = chest; b = pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]); kind = pc.alive ? 3 : 1; }
     else { const hp = pc.bones.hips ?? pc.pos; a = b = [hp[0], Math.max(hp[1], 0) + 0.3, hp[2]]; }
-    const r = this.g.col.eyesSee(order, eyes.length, want, kind, fogThrough(), a, b);
-    if (r < 0) return this.seesHere(eyes, order, want, gd, chest);
-    if (BOTH.on) { const t = this.seesHere(eyes, order, want, gd, chest); BOTH.asked++; if (t !== r) { BOTH.differ++; if (!BOTH.first) BOTH.first = `fog: eyes ${order.toString(16)} want ${want} on ${chest ? 'a man' : 'a body'} at ${a.join(' ')}: the module ${r.toString(16)}, here ${t.toString(16)}`; } return t; }
-    return r;
+    return this.g.col.eyesSee(order, eyes.length, want, kind, fogThrough(), a, b);
   }
-  /** THE EYES OF A PASS HANDED TO THE MODULE (RUST.fog): each eye's point, its look in plan and the field `inField` holds it to (the cosine of half its wedge,
-   *  its all-round near field, or all round). False = the module does not take this pass (the row down, the game's own maths not standing, more eyes than its
-   *  table), and `sees` answers here. update()'s own first step, and what tools/qa/sense-ident.ts hands its made-up eyes over with. */
-  private handEyes(eyes: FogEye[]): boolean {
-    const col = this.g.col; if (!col.sightOpen(eyes.length)) return false;
+  /** THE EYES OF A PASS HANDED TO THE MODULE: each eye's point, its look in plan and the field `inField` holds it to (the cosine of half its wedge, its
+   *  all-round near field, or all round). update()'s own first step, and what tools/qa/sense-ident.ts hands its made-up eyes over with. */
+  private handEyes(eyes: FogEye[]): void {
+    const col = this.g.col; col.sightOpen(eyes.length);
     for (let k = 0; k < eyes.length; k++) { const e = eyes[k], fov = e.fov ?? fieldDeg(); col.sightEye(k, e.pos, e.look, Math.hypot(e.look[0], e.look[2]) || 1, Math.cos(fov * 0.5 * DEG), e.near ?? fieldNear(), fov >= 360); }
-    return true;
-  }
-  private seesHere(eyes: FogEye[], order: number, want: number, gd: Guard, chest: Vec3 | null): number {
-    let out = 0, found = 0;
-    for (let k = 0; k < eyes.length && found < want; k++) { const i = (order >>> (4 * k)) & 15, e = eyes[i]; if (chest ? this.lineToMan(e, gd, chest) : this.eyeOnBody(e, gd)) out |= i << (4 * found++); }
-    return found * ONE_EYE + out;
   }
   /** one eye on a body: a clear line to a hand's height over where it lies (the finders' own point — guards.ts), inside the eye's field */
   private eyeOnBody(e: FogEye, gd: Guard): boolean {

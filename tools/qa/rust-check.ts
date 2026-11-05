@@ -118,16 +118,17 @@ function unsaid(C: any, M: any): void {
   let n = 0; P.eyesSee = function (this: any, order: number, eyes: number, ...a: unknown[]) { const r = see.call(this, order, eyes, ...a); return r >= 0 && eyes > 0 && ++n % 7 === 0 ? (r === 0 ? (1 << 28) | (order & 15) : 0) : r; };
   M.BoxMirror.prototype.followLeaf = function (_i: number, b: { yaw: number }) { return b.yaw; }; M.BoxMirror.prototype.followRow = function (b: { yaw: number }) { return b.yaw; };   // (…and the other way round: a leaf the module's door step turned is not followed by its box)
 }
+/** the senses collision.ts counts the questions of (SENSED). They are no rows: the module's alone, whatever is held down */
 const SENSES = ['sight', 'light', 'smoke', 'sound', 'paths'] as const;
-type Sense = keyof typeof import('../../src/scene/boxMirror.ts').SENSES;
+type Sense = (typeof SENSES)[number];
 type Sensed = Record<Sense, number>;
-{ const every: Exclude<Sense, typeof SENSES[number]> extends never ? true : never = true; void every; }   // (a sense added to boxMirror.ts SENSES and not to the list above does not typecheck)
-/** the ticks that opened with the box world's line tests, and its circles, going to the module (a row can be on and its copy not standing: a level too big for
- *  the tables), and collision.ts's own count of the senses' questions the module answered */
+/** the ticks that opened with the box world's line tests, and its circles, going to the module, the ticks in which the fog's pass asked the module at
+ *  least one man (`fog`) and how many men it asked in all (`sees`), and collision.ts's own count of the senses' questions the module answered */
 function countLines(C: any): { n: number; circles: number; fog: number; sees: number; sensed: Sensed } {
   const k = { n: 0, circles: 0, fog: 0, sees: 0, sensed: C.SENSED as Sensed }, P = C.StaticCollision.prototype, open = P.tickOpen, see = P.eyesSee;
-  P.tickOpen = function (this: any) { open.call(this); if (this.mirror.lines) k.n++; if (this.mirror.circles) k.circles++; if (this.mirror.sight) k.fog++; };
-  P.eyesSee = function (this: any, ...a: unknown[]) { const r = see.apply(this, a); if (r >= 0) k.sees++; return r; };   // (the men and bodies the fog's pass asked of the module)
+  let asked = true;   // (has a man been asked since this tick opened)
+  P.tickOpen = function (this: any) { open.call(this); if (this.mirror.lines) k.n++; if (this.mirror.circles) k.circles++; asked = false; };
+  P.eyesSee = function (this: any, ...a: unknown[]) { const r = see.apply(this, a); k.sees++; if (!asked) { asked = true; k.fog++; } return r; };   // (the men and bodies the fog's pass asked of the module)
   return k;
 }
 // ---- `missions`, one run in THIS process (a child): the update tapped, the raw bits chained after every tick
@@ -231,11 +232,11 @@ if (args[0] === '--hash') {   // the child: this engine's word for the Rust func
  *  line here or a line naming a section that did not run. Under RUST_BREAK=1 each row's own answers must have differed; exit 3 names a row that stayed
  *  green. A break word that does not reach a row leaves that row's check proving nothing, and a red neighbour hides it: the circles', the fog's and the
  *  die's did not reach them until 2026-11-03. */
-const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice', doors: 'doors', falls: 'falls', props: 'props', slabs: 'slabs', items: 'items', rays: 'lines, circles' };
+const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', poses: 'poses', dice: 'state, dice', doors: 'doors', falls: 'falls', props: 'props', slabs: 'slabs', items: 'items', rays: 'lines, circles' };
 /** FAMILIES WHOSE TYPESCRIPT IS GONE, and their row of RUST with it: each is still held by a section here and by a red rule of its own (`red[name]`:
  *  under the break every name of the family must have moved, tools/qa/ident-pin.ts), exactly as a row is. A family joins this list in the commit
  *  that deletes its twin. */
-const GONE: Record<string, string> = { 'the animator\'s layers': 'layers' };
+const GONE: Record<string, string> = { 'the animator\'s layers': 'layers', 'the senses': 'senses' };
 /** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
 const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'doors', 'props', 'slabs', 'items', 'falls', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
 const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
@@ -326,26 +327,31 @@ let wordOwn = '', wordRust = '';
     + `\n    ${shared} numbers shared with the Rust source (boxMirror.ts, glassPattern.ts)${off.length ? ` — NOT THE SAME: ${off.slice(0, 8).join(', ')}` : ', each the same'}`);
 }
 
-// ---- senses
+// ---- senses: no row and no TypeScript (collision.ts THE SENSES). tools/qa/sense-ident.ts holds the module to its own answers (tools/qa/ident-pin.ts): over
+// levels every question must be answered by the module; under each red path a child plays the same run plain and the words that must move, and no other, do
 {
-  const r = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', flag('--questions') ?? '12000', '--levels', flag('--levels') ?? 'office.json,warehouse.json,compound.json,glasshouse.json']);
-  const rows = r.out.split('\n').filter(l => /questions a sense|FAIL/.test(l));
+  const LV = flag('--levels') ?? 'office.json,warehouse.json,compound.json,glasshouse.json';
+  const r = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', flag('--questions') ?? '12000', '--levels', LV]);
+  const rows = r.out.split('\n').filter(l => /questions a kind|FAIL/.test(l));
+  /** did a red path of the tool's end as it must: exit 1, the words it must move moved and no other */
+  const redAsMust = (c: { status: number | null; out: string }, word: string) => c.status === 1 && new RegExp(`${word}=1 moved the words it must and no other`).test(c.out);
+  const levelsRed = redAsMust(r, 'RUST_BREAK');   // (under the break: every kind's word moved on some level against the same run played plain)
   // the numbers the host writes and reads by (boxMirror.ts FACE) against the Rust sources' own, name for name
   const fs = await import('node:fs'), face = /export const FACE = \{([^}]*)\}/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/boxMirror.ts'), 'utf8'))?.[1] ?? '';
   const rust = ['light', 'smoke', 'hear', 'sight'].map(f => fs.readFileSync(resolve(ROOT, `rust/sim/src/${f}.rs`), 'utf8')).join('\n');
   const pairs = [...face.matchAll(/(\w+):\s*(\d+)/g)].map(m => ({ name: m[1], here: Number(m[2]), there: Number(new RegExp(`pub const ${m[1]}: \\w+ = (\\d+);`).exec(rust)?.[1] ?? NaN) }));
   { const nav = /export const NAV = \{([^}]*)\}/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/boxMirror.ts'), 'utf8'))?.[1] ?? '', there = fs.readFileSync(resolve(ROOT, 'rust/sim/src/nav.rs'), 'utf8');   // (boxMirror.ts NAV: what a search answers that is no count)
     for (const m of nav.matchAll(/(\w+):\s*(-?\d+)/g)) pairs.push({ name: `nav ${m[1]}`, here: Number(m[2]), there: Number(new RegExp(`pub const ${m[1]}: \\w+ = (-?\\d+);`).exec(there)?.[1] ?? NaN) }); }
-  // (the order a priced search asks its prices in: the same check with the host pricing last first must end with the paths differing and nothing else,
-  //  exit 1. Not under RUST_BREAK, which is another red path of the same tool)
+  // (the order a priced search asks its prices in: the same run with the host pricing last first must move the paths' words and no other.
+  //  Not under RUST_BREAK, which is another red path of the same tool)
   const order = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '3000', '--levels', 'office.json,compound.json'], { PRICED_BREAK: '1' });
-  const orderRed = !order || (order.status === 1 && /the paths differed and nothing else/.test(order.out));
-  // (…and the lamps in parts: the same check with every part beginning its sum again must end with the lamps in parts differing and nothing else)
+  const orderRed = !order || redAsMust(order, 'PRICED_BREAK');
+  // (…and the lamps in parts: with every part beginning its sum again, the words of the lamps' block and no kind's of the questions)
   const parts = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '300', '--levels', 'office.json,compound.json'], { LAMPS_BREAK: '1' });
-  const partsRed = !parts || (parts.status === 1 && /the lamps in parts differed and nothing else/.test(parts.out));
-  // (…and the smoke's shadow where the grid cannot answer: the same check with the module handed no blobs must end with those two cases differing and nothing else)
-  const shade = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '300', '--levels', 'office.json,compound.json'], { LAMPS_BREAK: 'shade' });
-  const shadeRed = !shade || (shade.status === 1 && /the smoke's shadow where the grid cannot answer differed and nothing else/.test(shade.out));
+  const partsRed = !parts || redAsMust(parts, 'LAMPS_BREAK');
+  // (…and the smoke's shadow where the grid cannot answer: with the module handed no blobs, the words of those two cases and nothing else)
+  const shade = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '300', '--levels', 'office.json,compound.json'], { SHADE_BREAK: '1' });
+  const shadeRed = !shade || redAsMust(shade, 'SHADE_BREAK');
   // (…and the blobs: a game keeps no more than the module's table holds — sense.ts CpuSmoke.emit — so the knob as it ships must fit it: a build's mistake otherwise)
   const SE: any = await import(`${ROOT}/src/game/sense.ts`), BMF: any = (await import(`${ROOT}/src/scene/boxMirror.ts`)).FACE, blobsFit = SE.SENSE.smoke.cap <= BMF.MAX_BLOBS;
   // (…and the floor: it is the build's, scene/world.ts WORLD, so a search of the module's must hold it, and what a search holds is the least of what its
@@ -357,15 +363,15 @@ let wordOwn = '', wordRust = '';
   // (…and THE PIN: the same questions over a box world of the tool's own, on the frozen stand, every word the recording's — tools/qa/fixtures/sense-words.json.
   //  Under RUST_BREAK the child plays its own red path and must end red)
   const made = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--made'], { TPS_PROFILE: 'frozen', TPS_CPUSENSE: undefined });
-  const madeSay = made.out.split('\n').filter(l => /^- (PASS|FAIL) — (reach|both ways|same)/.test(l)).map(l => l.replace(/^- /, '').slice(0, 260)), madeOk = made.status === 0 && madeSay.some(l => /^PASS — same: every count and word is that of the recording/.test(l));
+  const madeSay = made.out.split('\n').filter(l => /^- (PASS|FAIL) — (reach|asked|same)/.test(l)).map(l => l.replace(/^- /, '').slice(0, 260)), madeOk = made.status === 0 && madeSay.some(l => /^PASS — same: every count and word is that of the recording/.test(l));
+  red['the senses'] = levelsRed && made.status === 1 && /every one: the break reaches each/.test(made.out);   // (…and every word of the made-up world's pin: the family's red rule, as a row has one)
   const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && partsRed && shadeRed && blobsFit && floorFits && madeOk;
-  { const d = marked(r.out, 'SENSE-IDENT '); for (const k of [...SENSES, 'fog']) red[k] = !!d && d[k] > 0; }
-  verdict(ok, 'senses: an eye on a man, the light on a point, the smoke along a line, a sound\'s way, a way across the floor and what a team\'s eyes see get the TypeScript\'s answer from the Rust module', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
+  verdict(ok, 'senses: an eye on a man, the light on a point, the smoke along a line, a sound\'s way, a way across the floor and what a team\'s eyes see are answered by the Rust module, and held to its own earlier answers', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the check left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${pairs.length} numbers shared with the Rust sources (boxMirror.ts FACE, NAV)${off.length ? ` — NOT THE SAME: ${off.map(q => `${q.name} ${q.here} here, ${q.there} there`).join(', ')}` : ', each the same'}`
     + `\n    the floor: ${floorCells} cells, and a search of the module's holds ${holds} (a way ${ways} waypoints)${floorFits ? ': no table of a search can be outgrown on it' : ' — NOT AS IT MUST BE (nav.rs MAX_FLOOR is the least of MAX_NAV, MAX_WAY and (MAX_OPEN − 1) / 8, and the build\'s floor is under it)'}`
-    + (order ? `\n    a priced search's prices asked for last first (PRICED_BREAK=1): ${orderRed ? 'the paths differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${order.status}): ${order.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
-    + (parts ? `\n    the lamps of a question in parts, every part beginning its sum again (LAMPS_BREAK=1): ${partsRed ? 'the lamps in parts differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${parts.status}): ${parts.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
-    + (shade ? `\n    a lamp's shadow with the module handed no blobs (LAMPS_BREAK=shade): ${shadeRed ? 'the two cases where the grid cannot answer differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${shade.status}): ${shade.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
+    + (order ? `\n    a priced search's prices asked for last first (PRICED_BREAK=1): ${orderRed ? 'the paths\' words move and no other, as they must' : `NOT RED AS IT MUST BE (exit ${order.status}): ${order.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
+    + (parts ? `\n    the lamps of a question in parts, every part beginning its sum again (LAMPS_BREAK=1): ${partsRed ? 'the words of the lamps\' block move and no kind\'s of the questions, as they must' : `NOT RED AS IT MUST BE (exit ${parts.status}): ${parts.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
+    + (shade ? `\n    a lamp's shadow with the module handed no blobs (SHADE_BREAK=1): ${shadeRed ? 'the words of the two cases where the grid cannot answer move and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${shade.status}): ${shade.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + `\n    the smoke's blobs: the game keeps ${SE.SENSE.smoke.cap} at most and the module's table holds ${BMF.MAX_BLOBS}${blobsFit ? '' : ' — THE KNOB IS PAST THE TABLE'}`
     + `\n    the pin (a made-up box world, the frozen stand): ${madeOk ? '' : `NOT HELD (exit ${made.status}) · `}${madeSay.length ? madeSay.join(' · ') : (made.err || made.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
@@ -636,13 +642,13 @@ let wordOwn = '', wordRust = '';
   const mDef = made(null), rDef = marked(mDef.out, 'MPSETUP '), asked = made({ RUST: Object.fromEntries(S.rustRows().map((r: string) => [r, false])) }), refused = asked.status !== 0 && marked(asked.out, 'MPSETUP ') === null && /RUST is not a knob table of this build/.test(asked.err + asked.out);
   const def = stood(rDef), off = stood(rDef, 'rows=0'), on = stood(rDef, 'maths=1');
   const table = (r: any) => r?.tables?.RUST ?? r?.knobs?.tables?.RUST ?? r?.tables?.EXACT ?? r?.knobs?.tables?.EXACT, T = (r: string) => S.rustOn(r) ? TICKS : 0;
-  const ok = !!on && !!off && refused && on.ticks === TICKS && off.ticks === TICKS && on.rust === TICKS && off.rust === 0 && on.lines === TICKS && off.lines === 0 && on.circles === TICKS && off.circles === 0 && on.fog === TICKS && off.fog === 0
-    && on.exact && off.exact && on.word === off.word && SENSES.every(k => off.sensed[k] === 0) && on.sensed.sight > 0 && on.sensed.light > 0 && on.sensed.sound > 0 && on.sensed.paths > 0;
-  verdict(ok, 'server: the game server\'s stand ticks on the module\'s maths (that row held up), lines, circles and fog, and is the game it is with every row held down; a setup that asks for a row is refused', !on || !off ? `a stand left nothing (recipe: ${!!rDef} · stands: ${!!on} ${!!off})` :
+  const ok = !!on && !!off && refused && on.ticks === TICKS && off.ticks === TICKS && on.rust === TICKS && off.rust === 0 && on.lines === TICKS && off.lines === 0 && on.circles === TICKS && off.circles === 0 && on.fog > 0 && off.fog === on.fog
+    && on.exact && off.exact && on.word === off.word && SENSES.every(k => off.sensed[k] === on.sensed[k]) && on.sensed.sight > 0 && on.sensed.light > 0 && on.sensed.sound > 0 && on.sensed.paths > 0;
+  verdict(ok, 'server: the game server\'s stand ticks on the module\'s maths (that row held up), lines and circles, and is the game it is with every row held down (the senses and the fog\'s pass the module\'s either way); a setup that asks for a row is refused', !on || !off ? `a stand left nothing (recipe: ${!!rDef} · stands: ${!!on} ${!!off})` :
     `a setup with a RUST table: ${refused ? 'refused by name' : `NOT REFUSED (exit ${asked.status})`} · ${on.rust} of ${on.ticks} ticks on the module's maths, ${on.lines} on its lines, ${on.circles} on its circles and ${on.fog} with its sight pass (every row held down: ${off.rust}, ${off.lines}, ${off.circles} and ${off.fog} of ${off.ticks}) · the senses asked of it: ${SENSES.map(k => `${k} ${on.sensed[k]}`).join(', ')} (without: ${SENSES.map(k => off.sensed[k]).join(', ')}) · word ${on.word}${on.word === off.word ? ', the same' : ` ≠ ${off.word}`}`);
   // (the recipe as a server plays it today, with no arm held: the build's rows, RUST_ON, and no other. A section of its own, so that its red path is its
   //  own: the box world's break must move ITS word, with no maths row to do it)
-  const okDef = !!def && !!off && !!rDef && table(rDef) === undefined && def.ticks === TICKS && def.rust === T('maths') && def.lines === T('lines') && def.circles === T('circles') && def.fog === T('fog') && def.sees > 100 && def.exact && def.word === off.word;
+  const okDef = !!def && !!off && !!rDef && table(rDef) === undefined && def.ticks === TICKS && def.rust === T('maths') && def.lines === T('lines') && def.circles === T('circles') && def.fog > 0 && def.sees > 100 && def.exact && def.word === off.word;
   verdict(okDef, 'server as the page: a recipe carries no row and no maths, and the game stood from it plays on the build\'s rows (RUST_ON) and is the game with every row held down', !def || !off ? `a stand left nothing (recipe: ${!!rDef} · stands: ${!!def} ${!!off})` :
     `the recipe's tables name ${table(rDef) === undefined ? 'no row and no maths' : 'A ROW OR THE MATHS'} · of ${def.ticks} ticks ${def.rust} on the module's maths, ${def.lines} on its lines, ${def.circles} on its circles, ${def.fog} with its sight pass (${def.sees} men asked of it) · word ${def.word}${def.word === off.word ? ', the word with every row held down' : ` ≠ ${off.word}`}`);
 }
@@ -686,19 +692,19 @@ if (args.includes('--missions') || args.includes('--both')) {
     p.on('close', code => { const r = marked(out, 'RUST-RUN '); done(r ?? `left nothing (exit ${code}): ${err.trim().split('\n').slice(-3).join(' / ').slice(0, 300)}`); });
     p.on('error', e => done(String(e)));
   });
-  /** the fewest questions of each sense a mission asks the module with its row up (a squad mission asks each thousands of times; the smoke only where a
+  /** the fewest questions of each sense a mission asks the module, which answers them whatever is held down (a squad mission asks each thousands of times; the smoke only where a
    *  canister is thrown, which not every run has: no floor a run, and SET_FLOOR over the runs together) */
   const SENSE_FLOOR: Sensed = { sight: 1000, light: 1000, smoke: -1, sound: 100, paths: 100 };
   const SET_FLOOR: Sensed = { sight: 1000, light: 1000, smoke: 1000, sound: 100, paths: 100 };
-  /** the senses raised that the runs TOGETHER did not ask the module enough of (a set of runs with no smoke in it proves nothing of the smoke row) */
-  const thin = (rs: (Run | string)[]) => SENSES.filter(k => up.includes(k) && rs.reduce((n, r) => n + (typeof r === 'string' ? 0 : r.sensed[k]), 0) <= SET_FLOOR[k]);
+  /** the senses that the runs TOGETHER did not ask the module enough of (a set of runs with no smoke in it says nothing of the smoke) */
+  const thin = (rs: (Run | string)[]) => SENSES.filter(k => rs.reduce((n, r) => n + (typeof r === 'string' ? 0 : r.sensed[k]), 0) <= SET_FLOOR[k]);
   /** the fewest layers of the animator a tick that a mission runs in the module (a squad mission runs about sixty and the office night with three guards
    *  thirty-six; the rule that has no pose alone is about twelve). BOTH arms of a pair run them there and keep their poses in the block: a layer is
    *  written once, in Rust, so the arm with no row up is held to the same count of layers, to poses at home at every tick, and to NO POSE QUESTION
    *  answered by the module (its bench's counts are its layers' own asks, `owed`, and no more) */
   const LAYER_FLOOR = 20;
   /** did the run with the rows up really run on them: every tick on the module's maths and with its lines asked there (each where its row was raised), and none in the other */
-  const fair = (ts: Run, rs: Run) => (/:hard(@|$)/.test(rs.run) ? rs.cone === rs.ticks && ts.cone === ts.ticks : rs.cone === 0 && ts.cone === 0) && (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || rs.lines === rs.ticks) && (!up.includes('rays') || rs.rays > 100) && ts.rays === 0 && (!up.includes('circles') || rs.circles === rs.ticks) && (!up.includes('fog') || (rs.fog === rs.ticks && rs.sees > 100)) && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || (rs.poses > rs.ticks && rs.posed === rs.ticks && rs.sets > 1 && rs.posesIn > rs.poses * 0.9)) && rs.layers > LAYER_FLOOR * rs.ticks && ts.layers === rs.layers && rs.posed === rs.ticks && ts.posed === ts.ticks && ts.owed > 0 && ts.posesIn === ts.owed && (!up.includes('dice') || (rs.dice === rs.ticks && rs.draws > 100 && rs.draws === ts.draws)) && ts.dice === 0 && ts.fog === 0 && ts.sees === 0 && ts.poses === ts.owed && ts.ticks > 600 && ts.falls.there === 0 && ts.doors.there === 0 && ts.props.there === 0 && (!up.includes('props') || (rs.props.there >= 0.95 * (rs.props.there + rs.props.here) && (rs.props.there + rs.props.here === 0 || rs.props.there > 0.9 * rs.ticks))) && (!up.includes('doors') || (rs.doors.there > 0.95 * (rs.doors.there + rs.doors.here) && rs.doors.there > 0.9 * rs.ticks && rs.doors.turned > 100)) && SENSES.every(k => ts.sensed[k] === 0 && (!up.includes(k) || rs.sensed[k] > SENSE_FLOOR[k])) && (!up.includes('slabs') || rs.slabs.there >= 0.9 * (rs.slabs.there + rs.slabs.here - rs.slabs.host)) && ts.slabs.there === 0 && (!up.includes('items') || rs.items.there >= 0.9 * (rs.items.there + rs.items.here - rs.items.host)) && ts.items.there === 0;
+  const fair = (ts: Run, rs: Run) => (/:hard(@|$)/.test(rs.run) ? rs.cone === rs.ticks && ts.cone === ts.ticks : rs.cone === 0 && ts.cone === 0) && (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || rs.lines === rs.ticks) && (!up.includes('rays') || rs.rays > 100) && ts.rays === 0 && (!up.includes('circles') || rs.circles === rs.ticks) && rs.fog > 0 && rs.sees > 100 && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || (rs.poses > rs.ticks && rs.posed === rs.ticks && rs.sets > 1 && rs.posesIn > rs.poses * 0.9)) && rs.layers > LAYER_FLOOR * rs.ticks && ts.layers === rs.layers && rs.posed === rs.ticks && ts.posed === ts.ticks && ts.owed > 0 && ts.posesIn === ts.owed && (!up.includes('dice') || (rs.dice === rs.ticks && rs.draws > 100 && rs.draws === ts.draws)) && ts.dice === 0 && ts.fog === rs.fog && ts.sees === rs.sees && SENSES.every(k => ts.sensed[k] === rs.sensed[k]) && ts.poses === ts.owed && ts.ticks > 600 && ts.falls.there === 0 && ts.doors.there === 0 && ts.props.there === 0 && (!up.includes('props') || (rs.props.there >= 0.95 * (rs.props.there + rs.props.here) && (rs.props.there + rs.props.here === 0 || rs.props.there > 0.9 * rs.ticks))) && (!up.includes('doors') || (rs.doors.there > 0.95 * (rs.doors.there + rs.doors.here) && rs.doors.there > 0.9 * rs.ticks && rs.doors.turned > 100)) && SENSES.every(k => rs.sensed[k] > SENSE_FLOOR[k]) && (!up.includes('slabs') || rs.slabs.there >= 0.9 * (rs.slabs.there + rs.slabs.here - rs.slabs.host)) && ts.slabs.there === 0 && (!up.includes('items') || rs.items.there >= 0.9 * (rs.items.there + rs.items.here - rs.items.host)) && ts.items.there === 0;
   const sensedSay = (r: Run) => SENSES.map(k => `${k} ${r.sensed[k]}`).join(', ');
   if (args.includes('--missions')) {
     let ok = true; const lines: string[] = []; let ticks = 0; const raised: (Run | string)[] = [];
@@ -721,8 +727,8 @@ if (args.includes('--missions') || args.includes('--both')) {
     const got = await Promise.all(runs.map(run => one(run, true, true)));
     runs.forEach((run, i) => { const r = got[i];
       if (typeof r === 'string') { ok = false; lines.push(`${run}: ${r}`); return; }
-      const world = up.some(k => k === 'lines' || k === 'circles' || k === 'fog' || (SENSES as readonly string[]).includes(k));   // (a row that asks the box world asks it some hundred thousand times a run; the doors' step is one question a tick)
-      const b = r.both, good = b.asked > (world ? 1e5 : up.includes('doors') || up.includes('props') ? 1000 : -1) && b.differ === 0 && b.stale === 0 && r.falls.differ === 0 && r.slabs.differ === 0 && r.items.differ === 0 && (!up.includes('props') || (r.props.differ === 0 && r.props.here <= 0.1 * r.ticks && (r.props.asked === 0 || r.props.asked > 0.9 * r.ticks))) && (!up.includes('doors') || (r.doors.both > 0.9 * r.ticks && r.doors.differ === 0 && r.doors.turned > 100)) && (!up.includes('lines') || (r.lines === r.ticks && r.rays > 1000)) && (!up.includes('circles') || r.circles === r.ticks) && (!up.includes('fog') || (r.fog === r.ticks && r.sees > 100)) && SENSES.every(k => !up.includes(k) || r.sensed[k] > SENSE_FLOOR[k]); if (!good) ok = false; asked += b.asked;
+      const world = up.some(k => k === 'lines' || k === 'circles');   // (a row that asks the box world asks it some hundred thousand times a run; the doors' step is one question a tick)
+      const b = r.both, good = b.asked > (world ? 1e5 : up.includes('doors') || up.includes('props') ? 1000 : -1) && b.differ === 0 && b.stale === 0 && r.falls.differ === 0 && r.slabs.differ === 0 && r.items.differ === 0 && (!up.includes('props') || (r.props.differ === 0 && r.props.here <= 0.1 * r.ticks && (r.props.asked === 0 || r.props.asked > 0.9 * r.ticks))) && (!up.includes('doors') || (r.doors.both > 0.9 * r.ticks && r.doors.differ === 0 && r.doors.turned > 100)) && (!up.includes('lines') || (r.lines === r.ticks && r.rays > 1000)) && (!up.includes('circles') || r.circles === r.ticks) && r.fog > 0 && r.sees > 100 && SENSES.every(k => r.sensed[k] > SENSE_FLOOR[k]); if (!good) ok = false; asked += b.asked;
       lines.push(`${run}: ${r.ticks} ticks (${r.lines} with the module asked), ${b.asked} questions answered both ways (${r.sees} of them the fog's; ${r.rays} rays; the senses ${sensedSay(r)}; ${r.doors.both} the doors' step, ${r.doors.turned} leaf turns; ${r.props.asked} the furniture's step; ${r.slabs.asked} a slab's; ${r.items.asked} walks of the thrown things; ${r.falls.asked} rules of the falls${r.falls.first ? ` — ${r.falls.first}` : ''}) · ${b.differ} answers differ · ${b.stale} stale rows${b.first ? ` · first: ${b.first}` : ''} · ${r.secs} s`); });
     { const t = thin(got); if (t.length) { ok = false; lines.push(`NOT A FAIR SET: the runs together asked the module too little of ${t.join(', ')}`); } }
     if (up.includes('props') && !got.some(r => typeof r !== 'string' && r.props.asked > 0)) { ok = false; lines.push('NOT A FAIR SET: no run has furniture for the module to step'); }
