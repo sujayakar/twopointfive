@@ -1333,6 +1333,23 @@ table! { Knob, KNOBS, KNOB_NAMES;
     SNEAK_HAND_IN = "ANIM.SNEAK.handIn",
     // (not a layer's own: the rule a layer's blend and sample are worked by — single.rs, anim/skeleton.ts POSEMATH)
     POSE_SINGLES = "POSEMATH.singles",
+    // the weather (weather.rs, air.rs, snow.rs)
+    WX_RAIN_K = "WX_SIM.rainK",
+    WX_THUNDER_K = "WX_SIM.thunderK",
+    WX_THUNDER_SECS = "WX_SIM.thunderSecs",
+    WX_THUNDER_LOUD = "WX_SIM.thunderLoud",
+    WX_ROOF_BED = "WX_SIM.roofBed",
+    WET_SOAK_PER_SEC = "WET.soakPerSec",
+    WET_DRY_PER_SEC = "WET.dryPerSec",
+    WET_BEAD_RUNOFF = "WET.beadRunoffSecs",
+    AIRDUST_DIFFUSE = "AIRDUST.diffuse",
+    AIRDUST_SETTLE = "AIRDUST.settle",
+    AIRDUST_STEP = "AIRDUST.step",
+    AIRDUST_RECHECK_SECS = "AIRDUST.recheckSecs",
+    SNOWBOG_TOP = "SNOWBOG.top",
+    SNOWBOG_BANK = "SNOWBOG.bankM",
+    SNOWBOG_PACKED = "SNOWBOG.packed",
+    SNOWBOG_OLD = "SNOWBOG.old",
 }
 
 table! { Role, ROLES, ROLE_NAMES;
