@@ -1683,3 +1683,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   its level under bun, where a refusal throws: none did. `stuff`, `hitstuff`, `marksight`, `lived`, `lookmaps`, `look-check`, `coatfinish`,
   `glassreal`, `kit-stores`, `does-check`, `does-audit` and `probes.ts materials` green on both stands. NOT SEEN: the refusal's console line in a
   real page (the check hears it through a stand-in console).
+- **A kept thing is drawn as what it is, not as iron** (DRESSING: the drawn word `stuff` on 232 boxes and parts in 35 level files; what a thing
+  DOES is not touched; no switch; 2026-11-05; the dress goal's ask, from graphics' card: the office's server racks stood speckled with rust). The
+  look's `metal` is bare iron with the rust in its map and its `paint` is a coat gone chalky and chipped: the two stuffs of things nobody keeps.
+  Until 11-04 the look read a dark grey as iron by its COLOUR, and the words written down that day (`scene/stuff.ts drawnAs`: a choice still owed)
+  kept every dark thing a desk has as iron. CHOSEN NOW, each named once: a server rack's body is drawn as STEEL under its powder coat (`RACK_BLACK`,
+  four generators and the kit's `rack`; its sheen 0.3 as it was); a keyboard and a telephone as PLASTIC (`KEY_BLACK`, `PHONE_BLACK`: the office's
+  builder and its handsets, the kit's desk, the dressing's phone, set and handset); and in the office the conference phone, a keypad, the coffee machine, a rubbish bag and
+  the breakroom's stacking chairs' shells as plastic, the cable cover across the server aisle as rubber, the crash cart's spare unit and both vending
+  machines as steel, in the office's two files and the smoke lab (the blue said old paint, the red said nothing; their sheen 0.5 is said with the
+  paint now, `vendingSpec`).
+  WHAT DOES NOT MOVE: since the table of materials (`scene/materials.ts`, the same day) a box says two words kept apart, and the rules read `does`
+  alone. NOT ONE `does` MOVES here: every rack, keyboard and telephone still does `unnamed dark` and the chairs `unnamed grey`, the answer their tone
+  gave, brought forward by the exporter. With the drawn word struck out each of the 35 files is byte for byte the step before (proved box by box).
+  No number, colour, finish or box moves. OWED, and another step: what these things DO (a keyboard that does what plastic does) is a play move
+  with its own play-through compares.
+  WHAT A ROUND'S PICTURE GETS, on the page only (HITSTUFF still reads the drawn word, `particleFx.ts STUFF_SURF`): a thing drawn as plastic or
+  rubber throws plastic where it threw a metal's sparks; steel is metal as before; the office's four chairs throw plastic where a chair's kind made
+  them cloth; the red vending machine sparks. Nobody has seen it.
+  LEFT AS BARE OLD IRON, ON PURPOSE: every thing in the look kit's `iron` and `rust` paints (stoves, drums, gates: the places they stand say nothing
+  of being kept); the lived kit's iron fittings (`livedPieces.ts INK.iron`); the depot's batteries and aerial feet. NOT CHOSEN, still `drawnAs`: the
+  block's manhole lid and the barracks' floor grate (iron by any reading), and the stacking chair's grey itself (`CHAIR_GREY` says old paint: the
+  compound's, the barracks' and the warehouse's chairs keep it; the office's say their own word over it). NOT A LEVEL'S, and still drawn as old iron
+  and old paint in a kept place too: what the game makes itself (a door's handles say `paint`, a keypad's block, the suppressor and the tools say
+  `metal`: `src/game`). THE GENERAL CURE IS THE LOOK'S, and is put to graphics: the rust in the `metal` map and the chipping in `paint` scaled by the
+  level's kept word, as its fading already is; then a kept place is clean whoever made the box, and this bullet's check is a belt beside it.
+  WHERE IT IS DRAWN: on the look's page. The office changes most (46 boxes and parts); a keyboard, a telephone or a rack changes with it in the
+  look files of the compound, the consulate, the depot and Mousehole (on the mission list) and of the barracks, the block and its squads, the
+  records, the registry, the warehouse, the hall, the killhouse and the floodlit yard, and in the plain files of the labs.
+  CHECK: `stuff-check` line 19, new: a level that says it is kept (`meta.kept` of a half or more: the office's two files) has nothing drawn as
+  `metal` or `paint`, by its own word or its row's WORD (never a paint's name), among its boxes, a shape's pieces and its props'
+  parts; in a level written as kept a rack that says metal, a door whose row says paint, a chair's part and a shape's piece are found, and in one
+  that says nothing of keeping none is asked. It found the breakroom's chairs, which nobody had listed. Line 16's finder knows the two new named
+  paints. `hitstuff-check` line 5 borrowed an office box that said old paint for its soft stand-in: it borrows one that says any plain coat now
+  (`PLAIN_COATS`), no bar moved. `does-check` and `does-audit` green: every box does by its word what it did by its colour.
+  MEASURED, on a base made of the merge's tip at step 1505 with this part's mend and the library's second flicker step merged in: the
+  play-through's 42 runs (21 missions, seeds 1 and 2) on the frozen stand, the page's, and the page's with its lived tier off, the step against
+  that base: 42 of 42 run digests the same, each. Box by box over the 35 files: 232 drawn words moved, no `does`, and nothing else. Green on both
+  stands: `stuff`, `rollback-check --static`, `hitstuff` (its break path fails 5), `marksight`, `lived`, `lookmaps`, `walked` (no `--write`),
+  `probes.ts kept` and `materials`, `wallfurn`, `wayround`, `look-check`, `coatfinish`, `glassreal`, `kit-stores`, `does-check`, `does-audit`; the
+  senses' error tool on the office on the page's stand; every export's `--check`. NOT SEEN: a rack, a keyboard or a hit on one, on a GPU.
