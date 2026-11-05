@@ -177,36 +177,6 @@ like that."
   because of one rack. **check** `bun run tools/qa/lived-check.ts <name>`.
 - **Measure a loud level after furnishing it**, and say the seeds: under 144 paired seeds a difference is noise.
 
-### A hand pass (after a level is dressed)
-
-The maintainer: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading
-the player for game play", and of the look he wants: "it's all quite intentionally dressed". A hand pass adds worn paths, paint and fittings to a
-level that already has its rooms, and moves nobody's fight. The office was the first (`docs/agents/levels.md`, "the office is hand-finished").
-
-- **Read the level first, and tie every item to the read.** Three sources, all headless: the level's marks and routes (`map-plan.ts <mission>
-  --png`), where its ways run (`src/scene/ways.ts`), and six seeds of each mission traced on the page's stand with everybody's place twice a
-  second (`TPS_PROFILE=shipped PT_WHERE=0-600 PT_FOES=<their call signs> bun run tools/qa/playthrough.ts --trace <mission>:<seed>`). Count
-  where men fall. **seen** on the office thirteen of thirty-one fell at one side door that nothing in the picture said was there.
-- **Worn paths are data.** `scenarios.walked` rows between names (a door, a route, a room, a named mark), each with a weight beside one lap of a
-  patrol. Use a name that is one thing: **seen** `storage` was a door and a room, so the row took the door; a mark inside the room says which.
-  Draw the ways after and look: **seen** a row to a machine at the end of a walkway ran right round the building, because a parked car and a
-  bollard shut the walkway on the walk grid. **check** `bun run tools/qa/ways-check.ts`, then `bun run tools/qa/walked-check.ts <level>`: a
-  start or a door your rows now reach leaves its count file with `--write`, and the hand-over says which names left.
-- **Paint on a surface that is there is a marking on that box** (`markingDefaults.ts` `stencilMarks`, `hazardMarks`, the painter's tins
-  `TIN`): four a box, 1.6 m a bitmap. The office kit has the tools: `boxOn(face, x, y, z)` finds the box by where its face is, never by its
-  number; `paintOn(box, …)` adds to what it carries; `onS`, `onTop`, `rectTop` turn a place of the world into the face's own metres. Centre on
-  the box: a doorway is not the middle of its slot.
-- **A new thing is a kit piece, drawn only, in the lived tier.** The office kit's `band`, `vent`, `conduit` and `pipe` lie on a wall's face
-  and are drawn only unless told they are solid; a band of paint is the wall's own stuff in another colour (`saidAs`). Groups `lived.<room>`
-  at the generator's tail, so the frozen stand's level is the level it was. Lay conduit in lengths of under two metres: a breach takes what
-  hangs over the hole and leaves the rest. A band from the floor stays across a breach, as every painted dado in the game does today.
-  **check** `lived-check` (it prints "0 solid"), `wallfurn-check`, `marksight-check`, `second-way-check` and `zfight-check <level>` (no more
-  seen than before) on both stands, and the three play-through reads against the step before: none moves.
-- **Put paint where the camera reads.** It looks from the south and down, so a wall hides about two metres of floor to its north. **seen** names
-  painted on a corridor's floor were all but hidden and read well on the wall's foot; a keep-clear bay behind a parked van was never seen; a line
-  to a door under a wall had to run along the far side of the room. What reads: the south faces of north walls, floor with nothing tall to its
-  south, floor seen through an opening. **By eye**, on a real card, at the mission's own hour and once at a brighter one.
-
 ## 5. Light, hour, weather
 
 **How the light should look.** The maintainer, of a yard under a midday sun: "this tutorial level just looks really
@@ -238,6 +208,13 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   over 5.5 m, a room bulb 26 over 7 m). Between two pools there is ground that neither lights. The kit's floodlight
   (210 over 20 m, a 70 degree cone) is the one that washes: aim it at one stretch and let it be the only one there. A
   court that is bright all over is the moon's or the sun's work. Judgement, from the rule above; not tried.
+- **A lit room's lamp is weighed against the room's own paint, and a fixture that is a light gets no lamp on top.**
+  A night shows a lit room at the night's own exposure, which never comes down, so the lamp decides the picture: the
+  kit's bulb (26 at 2.4 m) puts the night's white on a pale floor in a room of mid paints. The kit's tube is a light
+  of its own already (3.7 each): do not hang a lamp between tubes. In a room that is pale on every face the bounce
+  is a few times the lamp, and it wants a fraction of the bulb. **seen** the white roof's two rooms, a lamp of 60
+  over two tubes: burnt white at night on a GPU, a black suit grey in the glare; the tubes alone were a lit room.
+  **By eye**, at night, with the door shut; `probes.ts` has no line for it.
 - **Every outside frame keeps a dark part, and nothing big goes white.** Stand the camera where the player starts and
   where he fights: about a third of the ground in shadow. A pale wall (0.4 and over by luminance: a blast wall near
   0.45, light plaster near 0.47, whitewash; bare block sits just under at 0.39) under a key light goes white first.

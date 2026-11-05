@@ -29,7 +29,7 @@ import { livedKit, LIVED_PAINT } from './livedKit';
 import { livedPieces, INK } from './livedPieces';
 import { livedQuiet } from './lived-quiet';
 import { livedTrain } from './lived-train';
-import { PANEL_GREY, madeOf, saidAs } from '../../src/scene/stuff';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'library-hall';
 export const NOTES = 'The showroom of the older kits: one of every piece of the office kit, livedKit, livedPieces, lived-quiet and lived-train on an open floor. Regenerate: bun run tools/levels/export.ts library-hall';
@@ -124,14 +124,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   switchables.push({ name: 'beacon0', boxes: [dome], group: 'emergency', on: false, baseEmissive: [9, 1.2, 0.35], mains: false });
   const doors: LevelDoorDef[] = [{ name: 'hut', hinge: [6.42, 6.0], closedDir: 0, width: 1.16, exterior: true }];
   for (const d of doors) K.doorFrame(d);
-  // the office kit's four wall fittings (drawn only), on the hut's south face beside its door: a painted band (the wall's own block in another colour), a
-  // louvre over it, conduit under the wall's head with a drop into a box, and a pipe up the corner with a flange at its foot and a collar half way
-  grp('walls.hut.fittings');
-  { const coat = madeOf('enamel', [0.7, 0.71, 0.72], { rough: 0.35 });
-    K.band('x', 6, 4.0, 6.3, 1, 0, 1.0, saidAs('block', C.partBlue));
-    K.vent('x', 6, 4.6, 5.2, 1, 1.5, 1.9, madeOf('louvre', [0.5, 0.51, 0.52], { rough: 0.45 }));
-    K.conduit('x', 6, 4.1, 8.6, 1, 2.6, coat, C.metal, 2.2);
-    K.pipe(3.98, 6.2, 0, H, 0.07, coat, [[0, 0.05, 0.12], [1.5, 1.56, 0.1]]); }
 
   // ================================================================ from here on, LIVED THINGS only (the tail of every list) ====
   // ---- livedKit: the loud levels' rooms ----

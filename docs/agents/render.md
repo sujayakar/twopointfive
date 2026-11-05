@@ -2070,6 +2070,17 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's light is not a night's (`lampCfg`); lamps are still the game's by night and real by day (`photometry.ts`). (The rows the model
   replaced went in the step after this one: the next bullet.) MEASURED on the software adapter and the CPU only: THE ROWS ON
   HAVE NEVER BEEN SEEN ON A GPU.
+  KNOWN, LEFT (11-05; `shaders/place_common.wgsl lookExpoFor`, `lookRoll`, `EXPO_LAMP`; `render/lookexpo.ts LOOK_EXPO.lamp`): THE MODEL BRINGS A
+  DARK PLACE UP AND NO BRIGHT PLACE DOWN. A place's gain is never under 1, and the shoulder acts only on a place the model has brought up, so
+  a room lit well over the night's white is drawn burnt at night whatever the eyes are doing: the white roof's two rooms were, on a cloud
+  NVIDIA card, under a lamp of 60 (the floor under it held 1.75 times the night's white before any bounce). It was mended in the level
+  (`docs/agents/levels.md`, THE WHITE ROOF, ITS ROOMS AT NIGHT) and a lit room's lamps are therefore authored to the night's white. The rule
+  that would mend it here is the dark rule's twin (a place whose floor sends back more than the night's white is shown down by a share of
+  its excess); it wants a measure the place field does not hold, what a floor sends back with the lamps' own beams in it.
+  THE SAME MISSING MEASURE BY DAY, seen on the same card and read from the code, not measured: the field holds what a face that looks up gets
+  from the cache, so a room lit by fixtures that face down (the kit's tubes) has a level far under the light on its floor, and with the eyes
+  in it by day or at dusk its floor is drawn over the place's white (the white roof's service room, doors shut: floor 233 of 255 at midday and
+  217 at dusk, a black suit 34 and 32). A lamp that also lit the ceiling had hidden it there.
 - **A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, NEVER GUESSED** (11-04; the look page only, no row: it is the only path. (LATER THE SAME DAY the
   rule's text, `lookPlaceLevels` with `placeBlend` and `placeSideCell`, moved word for word from the composite's two writings into
   `place_common.wgsl`, the one text they are built with, when the particles' splat came to ask it: A LIT PARTICLE IS SHOWN BY ITS PLACE.) `composite.wgsl` and
@@ -2324,6 +2335,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   VIEW ALONE at midday the sun's glint on the floor by the door has a speckled band at its upper flank and scalloped edges (one sample a texel
   of a sharp lobe): the played picture hides it in the burnt patch; not chased. NOT SEEN: any of it in motion, by anyone; on an Apple or an AMD
   card; Medium and Ultra.
+  (SINCE 11-05 the white roof's rooms are lit by their ceiling tubes alone, `docs/agents/levels.md`: every record above of its service room at
+  NIGHT, the grains under its lamp and the two boots' specular view among them, was drawn with a point lamp of 60 in the room that is no longer
+  there. The overcast and midday records stand.)
 - **AN OPENING'S DAYLIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT** (SINCE 11-05 THE PIECES ARE THREE, the sky one stretch along the wall and
   not two halves: AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, below; this bullet is as written with five. 11-04; the look's page, where the openings' lights are; no switch
   and no second path: `common.wgsl portalFlux`, `portalFaces`, with `portalPiece`, `portalCorners`, `portalQuad`, `portalEdge`, `portalEnds`,
