@@ -50,14 +50,12 @@ import type { RoomFight } from './roomfight';
 import { Vec3, v3 } from '../math/vec';
 import { isHostile } from './teams';
 import { order, endGuardScript } from './squad';
-import { run, boots, pressOwns } from './pressure';
+import { run, boots } from './pressure';
 import { breakerErrand } from './workthings';
 import { breakerResetNear } from './lighting';
 import { lightEstimateAt } from './guards';
 import { darkFoeCarries } from './darkfoe';
 import { digInPhase } from './digin';
-import { lastStandMan } from './laststand';
-import { buddyOwns } from './buddy';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { hasHim, OWN } from './owner';
 import { gunKeepsPost } from './gunroles';
@@ -163,13 +161,12 @@ export function powerOutKept(g: Game, D: Def): string | null {
   if (D.rallyAt === Infinity) return 'the mission\'s man';   // (roomfight's word for a man a mission placed and keeps: rescue's crew, a last stand)
   if (gd.script) return 'on a script';
   if (roused(gd)) return 'in a fight';
-  if (g.rescue.crewHides(gd) || g.rescue.captor() === gd || lastStandMan(g, gd)) return 'the captor / lying in wait / last stand';
+  if (g.rescue.crewHides(gd) || g.rescue.captor() === gd || hasHim(gd, OWN.stand)) return 'the captor / lying in wait / last stand';
   if (digInPhase(g, gd) !== 'idle') return 'dug in';
   if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
   if (!POWEROUT.stayers && gd.staysInRooms) return 'his squad stays in its rooms';
   if (gunKeepsPost(gd) || hasHim(gd, OWN.lane | OWN.lastMan)) return 'holds a lane / the last man';
-  const rally = D.rallyAt, press = pressOwns(g, D); D.rallyAt = rally;   // (pressOwns is roomfight's hook and may stop his rally clock as it answers: asked here it changes nothing)
-  if (press || buddyOwns(g, D)) return 'the press\'s';
+  if (hasHim(D.gd, OWN.press | OWN.buddy)) return 'the press\'s';
   return null;
 }
 /** where the man at the lever stands (workthings.ts: the panel's own face; the fixed spot with that rule off, as lighting.ts has it) */
