@@ -2251,6 +2251,44 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   a foot at a right angle, where the plain blend read 330; a brick's face beside a bevel 25° off takes 3.8 of 10 where it took 5.5;
   `REFLUP_BREAK=1` = the plain blend, fails), `shaderrows-check` (the compact composite re-stamped), all 69 shader texts compile. DRAWN, software adapter, the service door's jamb from
   inside at midday, the specular view: the white bar up the jamb (a neighbour's sunlit texel under the room's gain) went from 88 bright pixels to 2; a shorter bar lower on the same jamb is unchanged at 75, so it is the jamb's own highlight and not a neighbour's texel, and the bricks' hooks beside the door stay as said above. The page booted and drew with no page or GPU error (120 programs; that boot also carried the daylight pieces of the bullet below). NEVER SEEN ON A GPU, and not timed there.
+- **SPARKLES IN A DARK ROOM ARE THE FLOOR'S GLOSS MAP AT THE REFLECTION'S CUT-OFF, AND A TRIAL OF THE CURE** (11-05; the look's page with
+  `&sheen=1`, OFF unless asked: without the word the picture is as it was to the bit; the scene prelude's `const SHEEN_PAST`, `render/frame.ts
+  sheenConfig`, `reflect.wgsl` main and its two other writings, `composite.wgsl` reflK in both writings, `engine.ts` the denoiser's bound). The
+  maintainer on his GPU, 11-04: "overcast dark room has specular sparkles". WHAT THEY ARE, measured on the white roof's service room with its
+  door shut: not noise in time. The floor is a rolled skim, finish 0.45, and its stuff has a grain in its gloss (0.38 to 0.51, one pixel in ten
+  past 0.45). High stops the reflection term at roughness 0.45 and the composite fades the whole term out over the 0.12 under that. So the fade,
+  not the lobe, draws the grain: in the still the highlight follows the roughness map pixel for pixel (r = −0.72), from 33 to 1 over a twentieth
+  of roughness, and the one exposure model shows a dark room a hundred times up. With each part of the term put out in turn (the rig's script,
+  `settings.rtGlints = 0`, then `rtRays = 0`), two thirds of the grains are the lamps' highlights and a third the rays. Any finish from 0.33 to
+  0.45 on High with a grain in its gloss does it, and "a brick's own gloss at a time" beside a door is the same fade. WHAT DID NOT CURE IT, so
+  nobody tries again: (1) widening the lobe by how the stored normal turns across a reflection texel (specular anti-aliasing, as the men's coats
+  have): the floor's normals are flat, nothing moved. (2) Fading the term in the reflection pass, a texel at a time before the denoiser, with
+  the composite taking like texels: in the dark room an even faint sheen, but in a bright highlight (the sun's on the floor by the door) the
+  grains came back as blocks the size of a texel, which the denoiser's edge stop keeps. THE TRIAL, the one that drew clean: the cut-off is what
+  a RAY costs, so it is the rays' alone. The rays fade under it in the reflection pass. The highlights (`rtGlints`: lamps, lit panels, an
+  opening's light, the sun; a beam's image) are sums with no ray of the lobe: they go on a quarter of the roughness scale past the cut-off at
+  full strength and the composite fades the term over that whole reach, where a highlight is broad and faint. WHY IT IS A TRIAL AND NOT THE
+  RULE: both parts still share one texel and one filter, and a review found what that costs. A texel that holds highlights alone is a term to
+  the denoiser: it enters the clamp's statistics and the tile's stand-in of a polished neighbour in the same plane (a painted line on a polished
+  floor), where a texel with no term was filled; the composite's upsample no longer masks a satin pixel beside a polished texel in one plane; a
+  metal's paint is stepped back by the pixel while its rays are faded by the texel; the denoiser's passes run on every finish to 0.70 on High;
+  the snow crust's glaze (0.56, chosen to be past every cut-off) takes highlights. Without `&glintpick=1` the lamps past the four
+  strongest are still credited at half, unshadowed, and on a broad lobe that half is no longer small; the lit panel's analytic image was fitted
+  for finishes of 0.3 to 0.45; on Medium, where the rays' fade overlaps the panels' own hand-over, a twentieth of a lit panel's image is dropped
+  in the band. And the fade's hard end has moved, not gone: a finish near the
+  far end of the reach (0.60 to 0.70 on High) with a grain in its gloss has the same edge there, on a highlight about nine times fainter; and the
+  rays under the cut-off keep their steep fade, a third of the grains by the still's measure. THE RULE IT WANTS, if the maintainer likes the picture: the
+  highlights in a target of their own, added by the composite under the gentle fade, and the mirror's chain left exactly as it is (the
+  composite's binding 9 is free whenever reflections are traced). On his no, all of it goes. WHAT THE TRIAL COSTS: a finish from 0.45 to 0.70
+  on High runs the highlights' sum and its shadow rays (four at most, and the sun's) and the denoiser, where it ran nothing. WHAT IT CHANGES
+  THAT WAS NOT ASKED, with the word: every finish from 0.33 to 0.70 on High holds lamp, panel, doorway and sun highlights it had faded or not at
+  all. Check: `bun run tools/qa/probes.ts sheen` (family `render`; the rule by its text in five shader texts and the page's wiring; the trial
+  ships DOWN; the arithmetic: the brightest highlight a twentieth of roughness can put out is 7.1 lobe heights at High's cut-off and 0.80 with
+  the word, 13.1 and 1.15 on Medium, 4.0 and 0.58 on Ultra; `SHEEN_BREAK=1` = the word refused, fails), `shaderrows-check` (re-stamped), all 69
+  shader texts compile, `tsc` both. DRAWN, software adapter, the white roof's service room on an overcast day with its door shut (two boots of
+  one tree, 120 programs each, no page or GPU error): without the word four frames are the frames of the tree before, pixel for pixel; with
+  it the specular view's grains (0 to 68 about a mean of 8, in a patch of the floor) are an even pool of sheen (42 to 93 about 73, no pixel
+  out). NEVER SEEN ON A GPU, and its cost never timed.
 - **AN OPENING'S DAYLIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT** (11-04; the look's page, where the openings' lights are; no switch
   and no second path: `common.wgsl portalFlux`, `portalFaces`, with `portalPiece`, `portalCorners`, `portalQuad`, `portalEdge`, `portalEnds`,
   `portalMean`, `portalSolid`, `portalAbove`; `direct_common.wgsl shadowSample`). The maintainer on his M4 at dusk: "orange door has horizontal
