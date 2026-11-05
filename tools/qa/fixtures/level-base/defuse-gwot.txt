@@ -1,2 +1,2 @@
-# dressed: the generator's own colours say what they are, and the look file lays the ground's wear
-ce8b39ab01370e946515983c838b30cf236f387c
+# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+8f3b38f0fbedefe4f7fff854d52107f2de671e7c

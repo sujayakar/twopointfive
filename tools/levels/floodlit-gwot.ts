@@ -12,6 +12,7 @@ import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
 import type { Level } from '../../src/scene/level';
 import type { Vec3 } from '../../src/math/vec';
+import { madeOf } from '../../src/scene/stuff';
 
 export const NAME = 'floodlit-gwot';
 export const DRESS_AS = 'floodlit';
@@ -29,7 +30,7 @@ const SKIN: Skin = {
   // drums and the generator set wear their paint, the sandbags under the eaves are sandbags
   own: [[[0.34, 0.3, 0.24], 'gravel'], [[0.2, 0.3, 0.42], 'drumBlue'], [[0.5, 0.45, 0.33], 'sandbag'], [[0.5, 0.42, 0.1], 'genYellow'], [[0.5, 0.47, 0.4], 'truckTan']],
   dress: (G, _level, T) => {
-    const M = lookMarks(T), white = T.tone(P.plasticWhite, 0.9), [cx, cz] = PAD;
+    const M = lookMarks(T), white = madeOf('paint', T.tone(P.plasticWhite, 0.9)), [cx, cz] = PAD;   // (road paint in the plastic's white: a colour borrowed, not the stuff)
     // THE GROUND A FUEL POST WEARS, laid before the pad's paint so the paint lies on it. WHEELS: the track along the outside of the south wall that the team
     // came up, in at the gate, and round to where the pickup stands. FEET: the beat from the front door round the pad to the gate (nobody walks across a
     // pad), the way in from the foot gate, and outside the wall the walk from the track to the shed's door. FUEL: what the drums have dripped. Each is its

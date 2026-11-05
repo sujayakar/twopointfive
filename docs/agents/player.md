@@ -243,7 +243,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   reload the TRIGGER hand and the body played the pistol's clip (MENDED since under `GUNHAND.longReload`: `docs/agents/anim.md`, *A long gun reloads with a move of its own* —
   with that switch off, the frozen stand, it is as it was); a defender threw overhand with the carbine in the throwing fist (MENDED since under its own switch: `GUNHAND.throwFree`,
   enemies.md 'A defender throws with his free hand' — IN HAND's long hold stays on the grip through that throw). THE VIEWER draws by the rule too (`src/viewer/runtime.ts` says the staged man's
-  word as combat.ts does; the workbench raises the switch as the page does, `?inhand=0` there too; the viewer and its page line went with the workbench, 2026-11-04), so a rig number fitted there is judged on
+  word as combat.ts does; the workbench raises the switch as the page does, `?inhand=0` there too; page line: `HALF=bench … inhand-page.cjs`), so a rig number fitted there is judged on
   the picture the game draws. The Team & kit figure (`src/ui/kitFigure.ts`) still draws without it. NEVER SEEN ON A GPU OR IN PLAY: judged on Blender
   Workbench sheets of the skinned cast and by the numbers above.
 - **The rifle family's probes read the page's rules where they are live** (`tools/qa/fn2000-probes.ts`, 10-16; tests only, no game code). `kit-slots`, `rifle-cadence`,

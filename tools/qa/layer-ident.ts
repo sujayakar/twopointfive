@@ -13,9 +13,9 @@
 //             layers of quiet play, which no scripted mission reaches), and no answer of any layer differs
 //   changed   a knob changed between two ticks is the module's by the next tick's opening, and back again; one changed outside a tick is the module's at the
 //             next pose made there (a teleport's)
-//   whole     a layer is asked of the module only for a man whose every pose stands in the module's memory and whose rig's tables fit there: a set with a
-//             pose astray, or a table longer than the module holds, is posed by the TypeScript (no slot), and nothing of that rig is written over the
-//             names of the one the module holds
+//   whole     a layer is asked of the module only for a man whose every pose stands in the module's memory: a set with a pose astray has no slot. A rig
+//             with a table longer than the module holds is a mistake said by name (anim/skeleton.ts layerFits), and nothing of that rig is written over
+//             the names of the one the module holds
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
 import { resolve } from 'node:path';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -23,11 +23,13 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer', 'holdLayer', 'heldLayer', 'catchArm', 'bigLayer', 'throwLayer'], FLOOR = 100;
+const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runArms', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer', 'holdLayer', 'heldLayer', 'catchArm', 'bigLayer', 'throwLayer'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
 let fails = 0;
+/** what `f` threw ('' = nothing) */
+const thrown = (f: () => void): string => { try { f(); return ''; } catch (e) { return String((e as Error).message); } };
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 console.log(`the animator's layers in Rust · profile ${process.env.TPS_PROFILE}${BREAK ? ' · RUST_BREAK=1 (the red path)' : ''}`);
 const no = S.simWhyNot();
@@ -52,11 +54,33 @@ verdict(!listErr && lines.length > 0 && lines.every(l => typeof l.value === 'num
   verdict(names.length === lines.length + RK.rustList(3).length + RK.rustList(5).length + RK.rustList(8).length && unread.length === 0, 'read: every knob, every named node, every list of nodes and every table of the rig\'s numbers of the lists is read by a line of the crate',
     unread.length ? `NOBODY READS ${unread.join(', ')}` : `${names.length} names in rust/sim/src/knobs.rs, the module lists ${lines.length} + ${RK.rustList(3).length} + ${RK.rustList(5).length} + ${RK.rustList(8).length}, each read outside it`); }
 
-// ---- caps: a number the two languages each keep a copy of (what a call may hand over before the TypeScript poses it instead; where the keys ride the bench)
+// (the big tool's layer: the module's own room for the blows it is handed, and what the drills of `both` count of the hand-over — the `blows` line)
+const BIG_ROOM = Number(/const BIG_BLOWS_MAX: usize = (\d+);/.exec(readFileSync(`${ROOT}/rust/sim/src/layers.rs`, 'utf8'))?.[1]), WHOLE = 'bigLayer, the whole record', BLOWS = { asked: 0, differ: 0, long: 0, most: 0 };
+// ---- caps: a number the two languages each keep a copy of (the most a call may hand over; where the keys ride the bench)
 { const ts = readFileSync(`${ROOT}/src/game/character.ts`, 'utf8') + readFileSync(`${ROOT}/src/anim/skeleton.ts`, 'utf8'), rs = readFileSync(`${ROOT}/rust/sim/src/layers.rs`, 'utf8');
-  const pairs = [['KNIFE_KEYS_MAX', 'KNIFE_KEYS'], ['BIG_BLOWS_MAX', 'BIG_BLOWS_MAX'], ['THROW_KEYS_MAX', 'THROW_KEYS'], ['LAYER_KEYS_AT', 'KEYS_AT']].map(([h, t]) => ({ h, t, here: Number(new RegExp(`\\b${h} = (\\d+)`).exec(ts)?.[1]), there: Number(new RegExp(`const ${t}: usize = (\\d+);`).exec(rs)?.[1]) }));
+  const pairs = [['KNIFE_KEYS_MAX', 'KNIFE_KEYS'], ['THROW_KEYS_MAX', 'THROW_KEYS'], ['LAYER_KEYS_AT', 'KEYS_AT'], ['LAYER_KEYS_MAX', 'KEYS_MAX']].map(([h, t]) => ({ h, t, here: Number(new RegExp(`\\b${h} = (\\d+)`).exec(ts)?.[1]), there: Number(new RegExp(`const ${t}: usize = (\\d+);`).exec(rs)?.[1]) }));
   verdict(pairs.every(q => Number.isFinite(q.here) && q.here === q.there), 'caps: a size the TypeScript and the Rust source each write down is the same number in both',
-    pairs.map(q => `${q.h} ${q.here} = ${q.t} ${q.there}`).join(' · ')); }
+    pairs.map(q => `${q.h} ${q.here} = ${q.t} ${q.there}`).join(' · '));
+  // …and the game's own tables and records are within them, said OUT LOUD where one is not (anim/skeleton.ts layerFits: no second way poses a longer one).
+  // The knife's blows and the throw's swings are read as an animator is made (character.ts layerTablesFit): they fit as they stand, and a blow lengthened to one key
+  // past its layer is refused by name. A reload's stations are made by the gun and the shells that go in (gunreload.ts feedPath): every row of the
+  // weapons table with a model of its own, every count of rounds its gun holds and one more, the port first or not, the bolt run or not.
+  const CH: any = await import(`${ROOT}/src/game/character.ts`), GR: any = await import(`${ROOT}/src/game/gunreload.ts`), GL: any = await import(`${ROOT}/src/game/gunlook.ts`), W: any = await import(`${ROOT}/src/game/weapons.ts`);
+  const asIs = thrown(() => CH.layerTablesFit()), jab = CH.animTables().KNIFE_BLOW.jab.keys as unknown[];
+  const cap = (h: string): number => pairs.find(q => q.h === h)!.here, jabN = jab.length, most4 = cap('KNIFE_KEYS_MAX'); while (jab.length <= most4) jab.push(jab[jab.length - 1]);
+  const long = thrown(() => CH.layerTablesFit()); jab.length = jabN;
+  // (the one check's own edges: a length under the least, over the most, or no number at all is refused; the least and the most are not)
+  const edge = (n: number, least: number) => thrown(() => SK.layerFits('a table', n, 16, least)) !== '', edges = !edge(0, 0) && !edge(2, 2) && !edge(16, 2) && edge(1, 2) && edge(17, 2) && edge(NaN, 0) && edge(undefined as unknown as number, 0);
+  const max = cap('LAYER_KEYS_MAX'), rows = Object.values(W.WEAPONS as Record<string, { magCapacity: number; reload?: { dur: number } }>).filter(r => r && r.reload), was = GL.GUNLOOK.on;
+  let most = 0, by = '', paths = 0;
+  GL.GUNLOOK.on = true;
+  try { for (const r of rows) { const model = GL.gunOwn(r)?.model; if (!model) continue;
+    for (const pull of [false, true]) for (const port of [false, true]) for (let n = 0; n <= r.magCapacity + 1; n++) {
+      const own = GR.feedPath(model, GR.beatOf(r.reload, pull), n, port); if (!own || !('keys' in own)) continue;
+      paths++; if (own.keys.length > most) { most = own.keys.length; by = `${model}, ${n} rounds${port ? ', the port first' : ''}${pull ? ', the bolt run' : ''}`; } } } }
+  finally { GL.GUNLOOK.on = was; }
+  verdict(asIs === '' && /the knife's jab blow has \d+ entries/.test(long) && edges && BIG_ROOM >= 2 && paths > 0 && most <= max, 'caps: the game\'s own key tables and a reload\'s stations are within what a layer is handed, and a blow one key past its layer is refused by name',
+    `the knife's blows and the throw's swings as they stand: ${asIs || 'fit'} · a jab of ${most4 + 1} keys: ${long || 'NOT REFUSED'} · the check's edges (under the least, over the most, no number): ${edges ? 'refused' : 'NOT ALL REFUSED'} · a big tool's blows: the two the layer reads, of the module's room for ${BIG_ROOM} · a reload's stations, ${paths} paths: at most ${most} of ${max} (${by})`); }
 
 // ---- the quiet walk: no scripted mission sneaks, crouches behind a man or closes in on one, so the layers of Sam's quiet play would never be asked. Sam, hands
 // empty and in the dark, is put a couple of metres behind a guard who stands where he is, and walks and crouch-walks round him for `secs`, set down on a new
@@ -256,13 +280,23 @@ async function quietWalk(secs: number): Promise<void> {
         // animator and its clock run — the hammer fetched, held ready, three blows of one beat (wound up, swung, landed, the rebound), put back; a blow asked
         // for before it is out; the point near and far, and no point; the shotgun and its shells; each with the rule that keeps things in a hand (snug)
         // and without, standing and walking, his chest turned to an aim and not, with a rifle under it on his back
-        { const big = (o: { kind: string; equip: number; windup: number; stow: number; blows: number[]; end: number; d: number; x?: number; snug?: boolean; secs: number; yaw?: number; walk?: boolean; clear?: number; noAt?: boolean; aim?: boolean }) => {
+        { const big = (o: { kind: string; equip: number; windup: number; stow: number; blows: number[]; end: number; d: number; x?: number; snug?: boolean; secs: number; t0?: number; yaw?: number; walk?: boolean; clear?: number; noAt?: boolean; aim?: boolean }) => {
             const n = Math.round(o.secs * 60), at = o.noAt ? [NaN, 0, 0] : M(o.x ?? 0, 1.05, o.d), rec = { kind: o.kind, t: 0, equip: o.equip, windup: o.windup, stow: o.stow, blows: o.blows, end: o.end, at, snug: o.snug };
             const keys: Record<string, () => unknown> = { bigTool: () => rec, bigClear: () => o.clear ?? 0, aimYawOffset: () => o.yaw ?? 0 }; if (o.aim) keys.aimPitch = () => 0.25;
             // (his chest pitched to an aim with the tool out: the game does not aim then, so the aim's shown weight is held too — every layer reads the same one both ways)
             const un = o.aim ? pin(an.upperW, { aim: () => 0.6 }) : () => {}; g.teleportPlayer(home);
-            try { hold(keys, n, f => { rec.t = f / 60; if (o.walk && f % 90 < 50) W.input.keys.add('KeyW'); else W.input.keys.delete('KeyW'); }); } finally { un(); W.input.keys.delete('KeyW'); } };
-          for (const snug of [false, true]) {
+            try { hold(keys, n, f => { rec.t = (o.t0 ?? 0) + f / 60; if (o.walk && f % 90 < 50) W.input.keys.add('KeyW'); else W.input.keys.delete('KeyW'); }); } finally { un(); W.input.keys.delete('KeyW'); } };
+          // (the layer is handed only the blows it reads: character.ts blowsNear. Held on every call of these drills: the module handed the WHOLE record, as it
+          //  was until 2026-11-04, leaves the pose, the run-forward bones and the state that the two blows leave — layerBoth's own comparison, the whole record in
+          //  the module's place and the two in the TypeScript's; and a record longer than the module has room for, a hammer's over many doors, is one more
+          //  drill of `both`, the two languages on the same two blows)
+          const askBig = an.bigLayerAsk;
+          an.bigLayerAsk = function (this: any, slot: number, B: any, near: number[], twY: number, twP: number) {
+            BLOWS.most = Math.max(BLOWS.most, near.length); if (process.env.BLOWS_BREAK) near = near.slice(0, 1);   // (the red path: the blow coming is not handed over)
+            if (B.blows.length > BIG_ROOM) { BLOWS.long++; askBig.call(this, slot, B, near, twY, twP); return; }
+            SK.layerBoth(WHOLE, this.pA, this.fk, () => askBig.call(this, slot, B, B.blows, twY, twP), () => askBig.call(this, slot, B, near, twY, twP), this.withHands(this.constructor.bigCols), B.kind === 'hammer' ? [this.pB, this.bigBuf] : [this.pB]); };
+          try { for (const snug of [false, true]) {
+            big({ kind: 'hammer', snug, equip: 0.8, windup: 0.55, stow: 0.8, blows: Array.from({ length: BIG_ROOM + 6 }, (_, i) => 1.5 + i * 0.7), end: 2.1 + (BIG_ROOM + 5) * 0.7, d: 0.8, secs: 5.4, t0: 1.5 + (BIG_ROOM + 5) * 0.7 - 4.2 });
             big({ kind: 'hammer', snug, equip: 0.9, windup: 0.55, stow: 0.8, blows: [1.6, 2.3, 3.0], end: 3.6, d: 0.8, secs: 4.6 });
             big({ kind: 'hammer', snug, equip: 0.9, windup: 0.55, stow: 0.8, blows: [1.5, 1.9], end: 2.6, d: 1.3, x: 0.3, secs: 3.6, yaw: 0.45, clear: 0.11 });
             big({ kind: 'hammer', snug, equip: 0.8, windup: 0.5, stow: 0.7, blows: [0.35, 1.4], end: -1, d: 0.5, x: -0.2, secs: 2.4, yaw: -0.3, walk: true });
@@ -271,7 +305,8 @@ async function quietWalk(secs: number): Promise<void> {
             big({ kind: 'shotgun', snug, equip: 0.7, windup: 0, stow: 0.7, blows: [1.2, 1.5, 1.8], end: 2.4, d: 1.0, secs: 3.3 });
             big({ kind: 'shotgun', snug, equip: 0.7, windup: 0, stow: 0.7, blows: [0.9, 1.0], end: 1.6, d: 0.7, x: 0.25, secs: 2.5, yaw: 0.5, walk: true, clear: 0.075 });
             big({ kind: 'shotgun', snug, equip: 0.6, windup: 0, stow: 0.6, blows: [1.0], end: -1, d: 1.2, secs: 1.8, aim: true, yaw: -0.35 });
-            big({ kind: 'shotgun', snug, equip: 0.6, windup: 0, stow: 0.6, blows: [], end: 0.3, d: 1.0, secs: 1.2, noAt: true }); } }
+            big({ kind: 'shotgun', snug, equip: 0.6, windup: 0, stow: 0.6, blows: [], end: 0.3, d: 1.0, secs: 1.2, noAt: true }); }
+          } finally { delete an.bigLayerAsk; const w = SK.LAYERS.by[WHOLE]; if (w) { BLOWS.asked += w.asked; BLOWS.differ += w.differ; delete SK.LAYERS.by[WHOLE]; } } }
         // …and the throw at every size (the mission throws a few cans: here the full overhand, two shorter ones, a hard throw at a wall two steps off, the
         // underhand toss at two sizes), standing, crouched and walking, a swing begun inside the last, the free hand's throw with a long gun kept in the
         // other, a toss with a hand up on a gun, and a blast that folds him mid-swing (and one begun already folded)
@@ -287,7 +322,18 @@ async function quietWalk(secs: number): Promise<void> {
               thr({ long }); thr({ long, dist: 5 }); thr({ long, dist: 3.5, crouch: true }); thr({ long, dist: 8, walk: true }); thr({ long, dist: 2, speed: 8 }); thr({ long, dist: 1.5 }); thr({ long, dist: 0.5, crouch: true }); thr({ long, dist: 2.5, walk: true });
               thr({ long, again: 18 }); thr({ long, dist: 6, again: 30 }); thr({ long, dist: 1.2, again: 14 }); thr({ long, fold: 8 }); thr({ long, dist: 4, fold: 15 }); thr({ long, dist: 1, fold: 10 }); thr({ long, folded: true, fold: 20 }); thr({ long, dist: 12, by: false }); thr({ long, fold: 8, by: false }); thr({ long, dist: 1, folded: true, fold: 14, by: false }); thr({ long, crouch: true, walk: true }); }
             GH.GUNHAND.on = false; thr({ dist: 1.5, aim: true }); thr({ dist: 0.6, aim: true, again: 16 }); thr({ aim: true }); thr({ dist: 5, aim: true }); thr({ long: true, dist: 1.5 }); thr({ long: true, dist: 0.8, again: 12 }); thr({ long: true, dist: 2 }); thr({ long: true });
-          } finally { HM.THROW_BY.on = wasBy; GH.GUNHAND.on = wasGh; GH.GUNHAND.throwFree = wasFree; } } } }
+          } finally { HM.THROW_BY.on = wasBy; GH.GUNHAND.on = wasGh; GH.GUNHAND.throwFree = wasFree; } }
+        // …and a run with its arms carried close (RUNARMS: on in the page, off on the stand this runs on, so it is raised for the drive). The animator's
+        // ground speed is HELD at the drive's (he runs on the spot: the layer reads the pose, not the ground): up from a walk through the jog to a full
+        // sprint and back down, a jog held, a sprint that comes and goes; with nothing drawn, the pistol out, and the rifle coming up into both arms and
+        // put away again mid-run (the layer stands down as the long gun takes the arms)
+        { const wasRa = HM.RUNARMS.on, pl = g.player;
+          const run = (o: { v: (f: number) => number; drawn?: boolean; rifle?: [number, number] }) => { g.teleportPlayer(home); const slot = pl.slot; let at = 0; pl.holstered = !o.drawn;
+            try { hold({ speed: () => o.v(at) }, 220, f => { at = f; if (o.rifle && pl.hasRifle) { if (f === o.rifle[0]) { pl.slot = 'rifle'; pl.holstered = false; } if (f === o.rifle[1]) { pl.slot = slot; pl.holstered = true; } } }); }
+            finally { pl.slot = slot; pl.holstered = true; } };
+          HM.RUNARMS.on = true;
+          try { run({ v: f => 1.2 + f * 0.03 }); run({ v: f => 7.5 - f * 0.03 }); run({ v: () => 3.4 }); run({ v: f => 3.6 + 2.4 * Math.sin(f / 18) }); run({ v: f => 1.5 + f * 0.025, drawn: true }); run({ v: () => 5.5, drawn: true });
+            run({ v: () => 5, rifle: [20, 130] }); run({ v: f => 2.6 + f * 0.02, rifle: [60, 150] }); } finally { HM.RUNARMS.on = wasRa; } } } }
   } finally { CL.CLOSE.on = was; CL.CLOSE.noKnife = wasBare; KA.KITANIM.close = wasClose; }
 }
 
@@ -306,7 +352,9 @@ async function wallHold(): Promise<void> {
   const by: Record<string, { asked: number; differ: number }> = SK.LAYERS.by, thin = LAYERS_MOVED.filter(n => (by[n]?.asked ?? 0) < FLOOR), off = Object.keys(by).filter(n => by[n].differ > 0), stray = Object.keys(by).filter(n => !LAYERS_MOVED.includes(n));
   console.log('LAYER-IDENT ' + JSON.stringify({ by }));   // (what tools/qa/rust-check.ts reads: under RUST_BREAK=1 every layer's own answers must have differed)
   verdict(thin.length === 0 && off.length === 0 && stray.length === 0, 'both: every call of a moved layer in a mission, run by the module and by the TypeScript on the same pose, leaves the same pose single for single',
-    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 80 s, four kicks, the reactions, a lean, the wounds, a man kept down, the magazine changes, a free hand's signals and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
+    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 80 s, four kicks, the reactions, a lean, the wounds, a man kept down, the magazine changes, a free hand's signals and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+  verdict(BLOWS.asked > 0 && BLOWS.differ === 0 && BLOWS.long > 0 && BLOWS.most === 2 && (by.bigLayer?.asked ?? 0) >= BLOWS.asked + BLOWS.long, 'blows: the big tool\'s layer, handed the two blows it reads, leaves the pose the whole record left; a record longer than the module\'s room is posed like any other',
+    `the big tool's drills, the module asked twice on the same pose: ${BLOWS.asked} asked, ${BLOWS.differ} differ · the most blows handed: ${BLOWS.most} · a hammer's record of ${BIG_ROOM + 6} blows (the module's room: ${BIG_ROOM}): ${BLOWS.long} calls, counted under bigLayer in the line above${SK.LAYERS.first?.startsWith(WHOLE) ? ` · first: ${SK.LAYERS.first}` : ''}`); }
 
 // ---- changed
 { const W: any = await standUp({ seed: 7 }), DT = 1 / 60, at = S.sim().knob_addr(0) / 8, i = lines.findIndex(l => l.path === 'MV.gait.lean'), MV = KN.knobRegistry().MV;
@@ -320,13 +368,21 @@ async function wallHold(): Promise<void> {
 // ---- whole
 { const W: any = await standUp({ seed: 7 }); W.step(1 / 60);
   const an: any = W.game.player.char.anim, slot = (cast: any = an.cast): number => SK.layerSlot(an.ch, an.pA, cast);
+  // (this line walks the ways out on purpose, so the count of them, TPS_FELL, is held down while it does: it is not a run reaching the TypeScript)
+  const counting = S.FELL.on; S.FELL.on = false;
   const home = slot() >= 0; an.poses.stray = 1; const astray = slot() === -1; an.poses.stray = 0; const back = slot() >= 0;
-  // (a rig met for the first time, with other nodes under every name and a table too long: no slot, and the module's named nodes are still the first rig's)
+  // (a rig met for the first time, with other nodes under every name and a table too long: refused by name, and the module's named nodes are still the first rig's)
   const x = S.sim(), ra = x.knob_addr(2) / 4, rn = x.knob_len(2), roles = (): string => Array.from(S.u32().subarray(ra, ra + rn)).join(',');
   const was = roles(), other = { ...an.cast, nodes: Object.fromEntries(Object.keys(an.cast.nodes).map(k => [k, 1])), nums: { jogSeam: new Float64Array(1 << 16) } };
-  SK.LAYERS.roles = null; const long = slot(other) === -1, kept = roles() === was && SK.LAYERS.roles === null, again = slot() >= 0 && SK.LAYERS.roles === an.ch && roles() === was;
-  verdict(home && astray && back && long && kept && again, 'whole: a man with a pose outside the module, or a rig whose table is too long for it, is posed by the TypeScript',
-    `every pose at home: a slot ${home} · one astray: none ${astray} · home again: a slot ${back} · another rig with a table of 65536 numbers: none ${long}, the module's named nodes untouched ${kept} · his own tables: a slot ${again}`); }
+  SK.LAYERS.roles = null; const said = thrown(() => slot(other)), long = /the rig's table of numbers "jogSeam" has 65536 entries/.test(said), kept = roles() === was && SK.LAYERS.roles === null, again = slot() >= 0 && SK.LAYERS.roles === an.ch && roles() === was;
+  // (the clips: every clip of the character file is one the module holds for a pose of his, so no act or wound of a mission meets the refusal; a clip
+  //  with no track, and one that writes a node past his pose, are each refused by name)
+  const N = an.pA.numNodes, all = [...an.ch.clips.values()] as any[], clipSay = all.map(c => thrown(() => SK.clipNo(c, N))).filter(s => s), some = all.find(c => c.tracks.length > 0);
+  const empty = thrown(() => SK.clipNo({ name: 'no tracks', duration: 1, tracks: [] }, N)), far = thrown(() => SK.clipNo({ name: 'a node too far', duration: some.duration, tracks: [{ ...some.tracks[0], node: N }] }, N));
+  const clips = all.length > 0 && clipSay.length === 0 && /does not hold it/.test(empty) && new RegExp(`writes node ${N}, over a pose of ${N} nodes`).test(far);
+  S.FELL.on = counting;
+  verdict(home && astray && back && long && kept && again && clips, 'whole: a man with a pose outside the module has no slot; a rig whose table is too long for the module, and a clip the module cannot take, are refused by name',
+    `every pose at home: a slot ${home} · one astray: none ${astray} · home again: a slot ${back} · another rig with a table of 65536 numbers: ${said || 'NOT REFUSED'} · the module's named nodes untouched ${kept} · his own tables: a slot ${again} · the character's ${all.length} clips: ${clipSay.length ? clipSay[0] : 'each held'} · a clip of no tracks: ${empty || 'NOT REFUSED'} · one that writes a node past the pose: ${far || 'NOT REFUSED'}`); }
 
 console.log(fails ? `=== layer-ident: ${fails} FAILED ===` : '=== layer-ident: PASS — every layer the same pose both ways, every knob the table\'s ===');
 process.exit(fails ? 1 : 0);

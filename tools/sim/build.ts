@@ -148,13 +148,16 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/nav.rs CAME': 'SCRATCH · one search\'s way back, left blank after it', 'sim/src/nav.rs CLOSED': 'SCRATCH · one search\'s closed cells, left blank after it',
   'sim/src/nav.rs OPEN': 'SCRATCH · one search\'s open list', 'sim/src/nav.rs SEEN': 'SCRATCH · the cells one search wrote, so it can blank them',
   'sim/src/nav.rs CELLS': 'SCRATCH · one way\'s cells before the smoothing', 'sim/src/nav.rs WAY': 'SCRATCH · one answer\'s waypoints, read back by the host',
+  'sim/src/nav.rs PRICE': 'SCRATCH · one priced search\'s prices, written by the host where the search asked', 'sim/src/nav.rs KNOWN': 'SCRATCH · which cells one priced search has a price for, blank after it',
+  'sim/src/nav.rs PRICED': 'SCRATCH · the cells one priced search has a price for, so it can blank them', 'sim/src/nav.rs WANT': 'SCRATCH · the cells a priced search asks the price of, read by the host', 'sim/src/nav.rs N_WANT': 'SCRATCH · how many cells that list names now',
+  'sim/src/nav.rs RUN': 'SCRATCH · a priced search between its calls: one question of the host\'s, resumed to its end or dropped before any other search is asked',
   'sim/src/nav.rs BLANK': 'SCRATCH · whether the scores have been made infinite once since the module loaded (they load as zeros): a fact of the tables, the same for every game',
   'sim/src/bricks.rs INDEX': 'COPY · which brick stands where on the plan, a table a slot of the blocks, made again from the block\'s smoke part whenever the block that stands there is another or was written wholesale (MADE)',
   'sim/src/bricks.rs FACES': 'COPY · the walls between a brick\'s cells, asked of the box world\'s copy and asked again wherever a static row or a leaf moved (tools/qa/smokegrid-check.ts `faces`: always what a fresh ask gives)',
   'sim/src/bricks.rs LEAF_AT': 'COPY · the leaves FACES was last asked against', 'sim/src/bricks.rs LEAF_N': 'COPY · how many leaves that was',
   'sim/src/bricks.rs MADE': 'COPY · whose a slot\'s tables are: the stamp of the block INDEX was made from, and the box world and the copy of it FACES was asked of (the host\'s numbers; where one differs the tables are made again)',
   'sim/src/glow.rs NEXT': 'SCRATCH · one pass of the bounce, written before any of it is read back',
-  'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
+  'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };
 /** the `static mut`s of the simulation's crate that have no row above, and the rows that name none */
 export function staticBreaks(): string[] {

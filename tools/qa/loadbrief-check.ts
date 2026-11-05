@@ -62,8 +62,8 @@ export async function loadbriefCheck(): Promise<boolean> {
       `words: a row deployed at another size is still that row, with the team as deployed (${two?.mission.id}, ${two?.team}); a visitor's own flags change nothing; one level's two rows are told apart by the team (${yardA?.mission.id} · ${yardB?.mission.id})`);
     line(at('') === null && at('?cards') === null && at('?quality=low&mute') === null && at('?levelFile=no-such-level.json&roomclear') === null && at('?solo')?.mission.id === 'solo-night' && at('?solo&levelFile=depot.json&roomclear')?.mission.id !== 'solo-night',
       'words: a plain address, the old cards\' and a level no row is on have no brief; ?solo alone is the solo night');
-    line(at('?level=relief&roomclear&squad4') === null && at('?level=relief&nightbreach') === null && at('?level=relief&solo') === null && at('?nightbreach')?.mission.id === 'night-breach',
-      'words: a level the address picks by ?level= (the office as it was) has no brief — the list\'s words are not said over another level');
+    line(at('?level=local&roomclear&squad4') === null && at('?level=relief&nightbreach') === null && at('?level=local&solo') === null && at('?nightbreach')?.mission.id === 'night-breach',
+      'words: a level the address picks by ?level= (the editor\'s own, the office as it was) has no brief — the list\'s words are not said over another level, and a level being built plays the moment it loads');
   }
 
   // ---- screen

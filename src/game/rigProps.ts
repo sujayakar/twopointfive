@@ -1,6 +1,8 @@
 // Rig props: every number that places something ON the mannequin — the trifocal goggles on the head, the Five-seveN with its
 // under-barrel rail light in the right hand, the combat knife in the fist for a hands-empty hold, the guards' hand torch / weapon
-// light, their carbine, Sam's SC-20K in his hands or slung across his back — lives in RIG, and rigBoxes() / rigLightPose() / carbineLightPose() / sc20kLightPose() turn it into the prop boxes and the lights' poses.
+// light, their carbine, Sam's SC-20K in his hands or slung across his back — lives in RIG, and rigBoxes() / rigLightPose() / carbineLightPose() / sc20kLightPose() turn it into the prop boxes and the lights' poses. The character viewer (the workbench: src/viewer/) drives the
+// same functions with sliders bound to RIG and its "copy constants" button emits the `export const RIG` statement below verbatim
+// (rigSource()), so tuning is: drag, copy, paste over the block, commit.
 import { SideMap } from '../math/side';
 import { Vec3, Quat, v3, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox, boxOf } from '../scene/boxes';
@@ -10,6 +12,7 @@ import type { InHandWord } from './inhand';
 import { longModel, pistolModel, type LongModel, type PistolModel, type ModelCol } from './gunlook';   // (a leaf — called inside the box builders only: a gun drawn as a model of its own)
 import { reloadShow, reloadHandBoxes } from './gunreload';   // (called inside the box builders only: what a reload under way shows on a model)
 import type { GunModelId, WeaponId } from './weapons';
+import { drawnAs, paintOf } from '../scene/stuff';   // (no game module: the table of what a paint is made of)
 import { GEAR } from './gear';   // (a leaf — read only inside the box builders: which rifle and which goggles are DRAWN)
 import { packOf, sideBind, sideSkinned, sidePitch, sidePitched, chestJoint, type SidePlace } from './packside';   // (a leaf — called inside the box builders only: a long thing at the side of the pack he wears)
 
@@ -129,6 +132,7 @@ export interface Rig {
   m4: { hull: Seg; butt: Seg; mag: Seg; fore: Seg; rail: Seg; optic: Seg; tube: Seg; peq: Seg; gl: Seg };
 }
 
+// ---- paste target: the viewer's "copy constants" button (rigSource()) emits exactly this statement, in this format ----
 export const RIG: Rig = {
   goggles: {
     on: { fwd: 0.105, up: 0.1 },
@@ -174,7 +178,7 @@ export const RIG: Rig = {
     blade: { l0: 0.045, l1: 0.215, thick: 0.002, tall: 0.009, adj: { off: [0, 0.003, 0], rot: [0, 0, 0] } },   // 17 cm × 2.4 cm (with the edge strip below it: the two tile at y −0.006) × 4 mm, from just past the index side of the fist
     edge: { l0: 0.045, l1: 0.215, thick: 0.002, tall: 0.003, adj: { off: [0, -0.009, 0], rot: [0, 0, 0] } },   // the ground edge: the palm-side 6 mm of the blade, lighter
     guard: { l0: 0.04, l1: 0.048, thick: 0.005, tall: 0.019 },                                                // a stub of a cross-guard between fist and blade
-    handle: { l0: -0.065, l1: 0.045, thick: 0.011, tall: 0.013 },                                             // 11 cm, through the fist and out past the little finger (numbers to 3 decimals: the old viewer's paste kept them exactly)
+    handle: { l0: -0.065, l1: 0.045, thick: 0.011, tall: 0.013 },                                             // 11 cm, through the fist and out past the little finger (numbers to 3 decimals: rigSource's paste keeps them exactly)
     grip: { fwd: 0.08, palm: 0.03, side: 0 },
   },
   sheath: {
@@ -248,6 +252,9 @@ const COL = {
   brass: [0.5, 0.36, 0.12] as Vec3, shell: [0.26, 0.04, 0.03] as Vec3, cloth: [0.11, 0.1, 0.065] as Vec3,   // gunlook.ts models: a belt's brass, a shotgun shell's red hull, a belt box's coyote nylon
   polymer: [0.045, 0.05, 0.046] as Vec3, darkMetal: [0.026, 0.026, 0.03] as Vec3,   // the SC-20K: a green-black polymer hull and the darker phosphated steel of its can, box, rail and optic (throwables.ts SC20K_ITEM repeats them for the one on the floor)
 };
+// (what the look made of three of these by their COLOUR until 11-04, kept so the picture did not move; nobody chose them: a suppressor as bare iron, flat dark
+// earth furniture as a mud wall, a shell's hull as cloth. A part made with the table's own array carries the word: segAt. scene/stuff.ts drawnAs)
+drawnAs('metal', COL.can); drawnAs('mud wall', COL.fde); drawnAs('cloth', COL.shell);
 /** the tag on the knife's boxes (Box.name): nothing in the game reads it — the QA probes count them by it (tools/qa/hold-pose-probes.ts) */
 export const KNIFE_TAG = 'knife';
 /** …and on the boxes of its sheath on the chest, the sheathed handle included (the probes: a tell shows these and no KNIFE_TAG box) */
@@ -256,6 +263,41 @@ export const SHEATH_TAG = 'sheath';
 export const SC20K_TAG = 'sc20k';
 const PROP_FLAGS = BoxFlag.Dynamic;                      // real geometry: the gun / torch body / goggle housing shadow and occlude like anything else (owner = the character, and shadow rays skip whatever the LIGHT is mounted on, so a weapon light is never blocked by its own gun)
 const GLOW_FLAGS = BoxFlag.Dynamic | BoxFlag.NoShadow;   // lit lenses stay raster-only: centimetre emitters would only be firefly bait for the gather; their light is the analytic spot / a glow
+
+type Tree = { [k: string]: number | number[] | Tree };
+function assignTree(dst: Tree, src: Tree) {
+  for (const k of Object.keys(src)) {
+    const s = src[k], d = dst[k];
+    if (typeof s === 'number') dst[k] = s;
+    else if (Array.isArray(s)) { if (Array.isArray(d) && d.length === s.length) s.forEach((x, i) => { d[i] = x; }); else dst[k] = [...s]; }
+    else assignTree((typeof d === 'object' && !Array.isArray(d) ? d : (dst[k] = {})) as Tree, s);
+  }
+}
+export function cloneRig(r: Rig): Rig { const o = {} as Rig; assignTree(o as unknown as Tree, r as unknown as Tree); return o; }
+/** Deep in-place copy (keeps the RIG object identity: sliders and rigBoxes() hold on to it). */
+export function assignRig(dst: Rig, src: Rig) { assignTree(dst as unknown as Tree, src as unknown as Tree); }
+/** Drop every free adjustment (viewer reset: RIG_DEFAULTS has none, and assignRig only copies keys that exist in the source). */
+export function clearAdjs(rig: Rig) { const walk = (o: Record<string, unknown>) => { for (const k of Object.keys(o)) { if (/adj$/i.test(k)) delete o[k]; else if (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k])) walk(o[k] as Record<string, unknown>); } }; walk(rig as unknown as Record<string, unknown>); }
+/** The shipped numbers, captured at load — the viewer's "reset". */
+export const RIG_DEFAULTS: Rig = cloneRig(RIG);
+
+/** `export const RIG: Rig = {…};` as TypeScript source in the exact layout used above (group per block, member per line, leaves inline,
+ *  numbers rounded to 3 decimals) so pasting it over the block is a clean, reviewable diff. */
+export function rigSource(rig: Rig = RIG): string {
+  const num = (n: number) => String(+n.toFixed(3));
+  const zeroAdj = (v: unknown) => !!v && typeof v === 'object' && !Array.isArray(v) && 'off' in (v as object) && 'rot' in (v as object) && [...(v as Adj).off, ...(v as Adj).rot].every(x => Math.abs(x) < 5e-4);
+  const keep = ([k, x]: [string, unknown]) => !(/adj$/i.test(k) && zeroAdj(x));   // an all-zero adjustment is the same as none: leave it out of the source
+  const inline = (v: unknown): string => typeof v === 'number' ? num(v) : Array.isArray(v) ? `[${v.map(x => num(x as number)).join(', ')}]`
+    : `{ ${Object.entries(v as object).filter(keep).map(([k, x]) => `${k}: ${inline(x)}`).join(', ')} }`;
+  const lines = ['export const RIG: Rig = {'];
+  for (const [group, members] of Object.entries(rig)) {
+    lines.push(`  ${group}: {`);
+    for (const [k, v] of Object.entries(members as object).filter(keep)) lines.push(`    ${k}: ${inline(v)},`);
+    lines.push('  },');
+  }
+  lines.push('};');
+  return lines.join('\n');
+}
 
 /** A right-handed frame: origin + side (x), up (y), along (z) unit axes. Every group / part is laid out in one, and its Adj acts in its parent's. */
 export interface Frame { o: Vec3; x: Vec3; y: Vec3; z: Vec3; }
@@ -284,7 +326,7 @@ export function applyAdj(f: Frame, adj?: Adj): Frame {
 export interface RigNodeMeta { path: string; label: string; depth: number; parent: Frame; frame: Frame; boxStart: number; boxCount: number; getAdj: () => Adj; }
 type MetaSink = RigNodeMeta[] | undefined;
 const ZERO_ADJ = (): Adj => ({ off: [0, 0, 0], rot: [0, 0, 0] });
-/** Lazily materialize the Adj on its owner. */
+/** Lazily materialize the Adj on its owner (so untouched nodes never appear in rigSource output). */
 function adjOf<T extends object>(owner: T, key: keyof T): () => Adj { return () => ((owner[key] as unknown as Adj | undefined) ?? ((owner[key] as unknown as Adj) = ZERO_ADJ())); }
 
 /** A bound hostage's wrist tie (character.ts MOVES.bound 1: wrists crossed behind the back): one pale strap round both wrists, drawn only while the
@@ -318,7 +360,7 @@ function segAt(out: Box[], g: Frame, s: Seg, adj: Adj | undefined, albedo: Vec3,
   let yaw: number, rot: Quat;
   if (adj) { yaw = Math.atan2(dir[0], dir[2]); rot = quat.fromBasis(f.x, f.y, f.z); }
   else { if (rotOf !== f) { rotYaw = Math.atan2(dir[0], dir[2]); rotQ = quat.fromBasis(f.x, f.y, f.z); rotOf = f; } yaw = rotYaw; rot = [rotQ[0], rotQ[1], rotQ[2], rotQ[3]]; }
-  out.push(boxOf(mid, [s.thick, s.tall, len], yaw, albedo, [emissive[0], emissive[1], emissive[2]], lit ? GLOW_FLAGS : PROP_FLAGS, curOwner, rot, name));   // (makeBox's own object, key for key, without its spread)
+  const made = boxOf(mid, [s.thick, s.tall, len], yaw, albedo, [emissive[0], emissive[1], emissive[2]], lit ? GLOW_FLAGS : PROP_FLAGS, curOwner, rot, name); made.stuff = paintOf(albedo)?.stuff; out.push(made);   // (makeBox's own object, key for key, without its spread; and what the part is made of, if its colour is a paint somebody named — one shape whether it is or not: scene/stuff.ts)
 }
 
 /** Flattened head 'forward' (falls back to the body heading when the head looks nearly straight up/down) — the goggle strap follows the skull's yaw only. */

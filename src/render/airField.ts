@@ -65,6 +65,8 @@ export class AirField {
   /** what the particles read: rgba16float, w × h, texel (i, j) = cell (i, j)'s CENTRE (world x = (i + ½) / AIR_RES): r, g = the air's velocity (m/s, world x and z),
    *  b = LIFT (m/s, upward), a = 1 in open air, 0 in a solid. The same view object for the instance's life. */
   readonly view: GPUTextureView;
+  /** the cell map as the kernels read it (r8uint, w × h: 255 = solid, else the open wind's share × 254), for another reader of the same plan (powderField.ts) */
+  readonly cells: GPUTextureView;
   /** dispatches the last step() encoded (0 before the first) */
   dispatches = 0;
   /** the kernels are compiled (asynchronously, through gpu/device.ts computePipelineAsync like every other module's: counted on the start card, nothing ever
@@ -96,7 +98,7 @@ export class AirField {
     this.ubo = makeBuffer(device, U_WORDS * 4, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'air uniforms');
     this.cellTex = device.createTexture({ label: 'air cells', size: [w, h], format: 'r8uint', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.out = device.createTexture({ label: 'air field', size: [w, h], format: 'rgba16float', usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST });
-    this.view = this.out.createView();
+    this.view = this.out.createView(); this.cells = this.cellTex.createView();
     // ONE layout for every kernel: each declares all eight bindings (a kernel that only reads a buffer still binds it read_write — within one dispatch a buffer is
     // bound once, so there is no clash), which is what lets the whole step run on one pre-made bind group set once.
     const C = GPUShaderStage.COMPUTE; const sb = (binding: number): GPUBindGroupLayoutEntry => ({ binding, visibility: C, buffer: { type: 'storage' } });
@@ -109,7 +111,7 @@ export class AirField {
       this.pipes = pipes; this.ready = true;
     });
     this.bind = device.createBindGroup({ label: 'air', layout: bgl, entries: [
-      { binding: 0, resource: { buffer: this.ubo } }, { binding: 1, resource: this.cellTex.createView() },
+      { binding: 0, resource: { buffer: this.ubo } }, { binding: 1, resource: this.cells },
       { binding: 2, resource: { buffer: velA } }, { binding: 3, resource: { buffer: velB } }, { binding: 4, resource: { buffer: corner } },
       { binding: 5, resource: { buffer: divg } }, { binding: 6, resource: { buffer: pres } }, { binding: 7, resource: this.view }] });
     // (a fresh texture is all zeros, which would read as a roof over everything: until setCells says otherwise the world is open and all of it forced)

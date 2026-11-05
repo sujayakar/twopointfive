@@ -13,9 +13,9 @@
 // words (`savedWords`): there is no file in a downloads folder to notice any more, so a save that went nowhere must not look like one that went.
 // WHO LISTENS IS NOT THIS FILE'S: the listener is set from outside (main.ts, to the backend's file intake where a build has one), and whether a file may go
 // is the listener's to say, by its own rules. With nobody listening nothing is sent: the one-file build and every headless tool set no sink.
-// A PAGE IS ONE BUNDLE: the replay pages carry no door at all.
-// THIS MODULE IMPORTS NOTHING: ui/ saves through it.
-export type SavedKind = 'perf' | 'bench' | 'session' | 'checkpoint' | 'level' | 'modelerr';
+// A PAGE IS ONE BUNDLE: the workbench has a door of its own, and no listener unless that page sets one. The replay pages carry no door at all.
+// THIS MODULE IMPORTS NOTHING: ui/ and editor/ save through it.
+export type SavedKind = 'perf' | 'bench' | 'price' | 'session' | 'checkpoint' | 'level' | 'modelerr' | 'capture';
 /** a file as it went out. `meta`: short facts of it for whoever keeps it (the build's commit, what a take was of), never the file again */
 export interface SavedFile { kind: SavedKind; name: string; blob: Blob; meta?: Record<string, string> }
 /** what became of a saved file: 'sent' = the listener is sending it now (not that it has arrived), 'held' = the listener keeps it, in memory, and sends it

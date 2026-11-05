@@ -1,8 +1,8 @@
 // THE MOUNTAIN of the snow levels (the pass road, the tunnel station): a block of the cut rock with snow lying on its top, and the scree below a road. One
 // piece and one paint for every generator that stands a road under a mountain, so the rock is one stuff in all of them.
 //
-// ITS PAINT is the palette's slab, a step darker (GWOT_PALETTE.slab × ROCK_SHADE). A row darkened in one piece is how a level writes shade, and it is what
-// the look reads a material from (render/gbuffer.ts lookStuff: a palette row × 0.55 to 0.99): slab is drawn in big faces with joints and cracks, which on a
+// ITS PAINT is the palette's slab, a step darker (GWOT_PALETTE.slab × ROCK_SHADE). A row darkened in one piece is how a level writes shade, and a tone is made
+// of what its row is made of (src/scene/stuff.ts tonedAs: it keeps the row's word): slab is drawn in big faces with joints and cracks, which on a
 // face four to eight metres tall is cut rock. Block was tried and is courses of masonry, gravel is a wall of cobbles. The rock was a colour of its own
 // before ([0.2, 0.21, 0.24]) and was drawn flat: a sixth of the pass road's picture and a tenth of the station's.
 // TO A ROUND AND A BLAST it is what it was: a paint with no name, concrete by its tone (game/particleFx.ts surfOf: neither pale nor dark). ROCK_SHADE keeps
@@ -10,6 +10,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import type { Box } from '../../src/scene/boxes';
 import { GWOT_PALETTE, gwotSimOf, type GwotMat } from '../../src/scene/gwotPalette';
+import { tonedAs } from '../../src/scene/stuff';
 import { WORLD } from '../../src/scene/world';
 
 /** a palette row darker in one piece, as the kit's own `toned` writes it (src/scene/gwotKit.ts: the same band, the same rounding, the same refusal of a tone
@@ -19,7 +20,7 @@ function toned(m: GwotMat, k: number): Vec3 {
   const p = GWOT_PALETTE[m], a = p.map(v => Math.round(v * k * 1e4) / 1e4) as Vec3;
   for (const n of Object.keys(GWOT_PALETTE) as GwotMat[]) { const q = GWOT_PALETTE[n]; if (n !== m && a.every((v, c) => Math.abs(v - q[c]) < 0.006)) throw new Error(`snowRock: ${m} × ${k} is the colour of ${n}`); }
   if (gwotSimOf(a) !== undefined) throw new Error(`snowRock: ${m} × ${k} is a paint the simulation knows by name`);
-  return a;
+  return tonedAs(p, a);
 }
 const tone = (a: Vec3) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
 

@@ -5,6 +5,7 @@ import { eachSeat, hostMan, viewOfBody, men } from './seats';
 import { railsSpare } from './rails';   // (asked inside killGuard only)
 import { rollbackVar } from '../math/side';
 import { Vec3, v3, clamp, lerp, quat } from '../math/vec';
+import { lookConfig } from '../render/frame';
 import { wandDrop } from './wand';
 import { DOORBLAST } from './doorblast';
 import { Character, THROW_BY, THROW_RELEASE } from './character';
@@ -230,8 +231,13 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (third) noteRound(g, shooter, muzzle, hitP, hitGuard?.char ?? (playerHit ? hitView.player.char : null));   // suppression: everybody ELSE this segment passed close to, or stopped close to, has felt it go by (suppression.ts — the man it went into is shot, not suppressed)
   if (pen && ph) eK = segAt(pen, ph.t).e / e0; else if (penLive) eK = eMuzzle / e0;
   if (ph && ph.t <= tHit + 1e-3 && third) { const J = def.propImpulse * eK; const pd = pen ? segAt(pen, ph.t).d : dir; g.props.applyImpulse(ph.prop, pen ? pathAt(pen, ph.t) : v3.mad(muzzle, dir, ph.t), [pd[0] * J, 0, pd[2] * J], shooter.id, true); }   // (not a prop standing behind the body the round stopped in) the row's few N·s, exaggerated over the real round so it reads: cartons hop, chairs twitch and roll — and it is heard at the prop
-  // bullet wake through smoke volumes
-  if (third) for (let d = 0.3; d < Math.min(tHit, 25); d += 0.28) { const p = pen ? pathAt(pen, d) : v3.mad(muzzle, dir, d); if (g.smoke.inSmokeDomain(p)) g.smoke.push({ pos: p, dir: pen ? segAt(pen, d).d : dir, speed: 5.5, radius: 0.07 }); }
+  // bullet wake through smoke volumes. On the look page the smoke takes each straight leg of the path as ONE line (smoke.ts `round`: the air along it is dragged with
+  // the round, so smoke follows it out of a plume and clear air in); anywhere else, and with that row at 0, the row of soft dots it always was
+  let lined = false;
+  if (third && lookConfig.on && lookConfig.stir > 0 && g.smoke.round) { const far = Math.min(tHit, 25);
+    if (pen) { for (const k of pen.segs) { const a = Math.max(k.t0, 0.3), b = Math.min(k.t0 + k.len, far); if (b > a) lined = g.smoke.round(v3.mad(k.o, k.d, a - k.t0), k.d, b - a) || lined; } }
+    else if (far > 0.3) lined = g.smoke.round(v3.mad(muzzle, dir, 0.3), dir, far - 0.3); }
+  if (third && !lined) for (let d = 0.3; d < Math.min(tHit, 25); d += 0.28) { const p = pen ? pathAt(pen, d) : v3.mad(muzzle, dir, d); if (g.smoke.inSmokeDomain(p)) g.smoke.push({ pos: p, dir: pen ? segAt(pen, d).d : dir, speed: 5.5, radius: 0.07 }); }
   // impact flash + sound
   const blind = !!hitGuard && g.fogOfWar.hidden(hitGuard); if (blind) g.fogOfWar.hush();   // (FOG.ours: a round that stopped in a man nobody on the team sees — no flash and no spray off him says where he stands)
   if (lead) { const fl = g.engine.lights.flash(v3.mad(hitP, dir, -0.05), [1, 0.8, 0.5], 1.5, 2.5, 0.05, 0); if (!blind) g.fogOfWar.lightBy(fl, shooter.id); }   // (FOG.ours: a teammate's round strikes where the picture shows it)
@@ -240,7 +246,7 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (!hitGuard && !playerHit && !through && !inGlass) bulletMark(g, hitP, ph && ph.t <= tHit + 1e-3 ? ph.n : st ? st.n : [0, 1, 0], ph && ph.t <= tHit + 1e-3 ? { box: ph.box, dynamic: true } : st && st.t <= tHit + 1e-3 ? staticSurface(g, st.index) : null, def);   // decals (E1, marks.ts): the hole where the round stopped — in the furniture it knocked, else the static / the leaf it met; nothing in flesh, in the sky, or through the panel at the muzzle
   // …and what the round knocks out of what it stopped in (GPU particles; nothing with them off): sparks off the racks, chips and a puff of gypsum off a partition, splinters
   // off a leaf, by the material of the very box / prop / leaf the scan found — not for a round in a man, into the night, or into the panel at a muzzle pressed to it
-  if (!hitGuard && !playerHit && !through) { if (ph && ph.t <= tHit + 1e-3) impactFx(g, hitP, dir, { n: ph.n, prop: ph.prop }, def); else if (st) impactFx(g, hitP, dir, { n: st.n, index: st.index }, def); }
+  if (!hitGuard && !playerHit && !through) { if (ph && ph.t <= tHit + 1e-3) impactFx(g, hitP, dir, { n: ph.n, prop: ph.prop, box: ph.box }, def); else if (st) impactFx(g, hitP, dir, { n: st.n, index: st.index }, def); }
   if (!hitGuard && !playerHit && !through && third) g.destr.round(shooter, hitP, dir, ph && ph.t <= tHit + 1e-3 ? { n: ph.n, prop: ph.prop, box: ph.box } : st ? { n: st.n, index: st.index } : { n: [0, 1, 0] }, def);   // DESTRUCTION (destruction.ts, behind tune.chaos — a return at 0): the beaten zone's heat and what this round does on top of the hole and the puff — paper up, dust into the smoke, a dent / shred / crack, things off the desk, a tile off the ceiling
   if (def.tracer && g.tune.tracers) g.tracers.round(firearmOf(g, shooter, isPlayer), def, muzzle, pen ? v3.normalize(v3.sub(hitP, muzzle)) : dir, pen ? v3.dist(muzzle, hitP) : tHit, hitGuard || playerHit ? 'flesh' : st || ph || through ? 'solid' : 'none', shooter.id);   // tracers (R6, tracers.ts): the row lights every third round and the last three of the box, counted off the gun that fired it — a streak travelling this same segment over the next few frames with a small light on its head, an ember where it stopped in geometry. A pistol row never asks (tracer null: not one instruction more than before); the flag off, nobody does
   if (ffOurs && (playerHit || (hitGuard && !hitGuard.civ && !isHostile('player', hitGuard.team)))) ffNote(sg, isPlayer, playerHit);
@@ -435,7 +441,7 @@ export function hitPlayer(g: Game, fromDir: Vec3) {
 }
 
 /** Held / worn props as small oriented boxes (traced; lit lenses raster-only): the Five-seveN (+ can + rail light) in the player's hand and the trifocal goggles on
- *  their head, pistol or torch with a glowing lens for guards. All placement numbers live in rigProps.RIG. */
+ *  their head, pistol or torch with a glowing lens for guards. All placement numbers live in rigProps.RIG (tune them in viewer.html). */
 export function handProps(g: Game, out: Box[]) {
   const n0 = out.length;
   handPropsRaw(g, out);

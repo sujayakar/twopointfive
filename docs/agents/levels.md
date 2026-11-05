@@ -347,7 +347,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   [--quiet] [--md f] [--json f]` asks the nineteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
   kit picture · look · lived · floor · ground · leak · key · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
   The floor itself stays `tools/qa/map-check.ts`'s (structure, size, nav, the scripted runs): `--run` runs that with `--no-runs` and the level's other own
-  checks as they stand (export `--check`, level-lint, door-size, second-way-check, lived-check, kitview-plan, level-names-check, floor-order-check,
+  checks as they stand (export `--check`, level-lint, door-size, second-way-check, marksight-check, walked-check, lived-check, kitview-plan, level-names-check, floor-order-check,
   quiet-check, lesson-check), four at a time: about 13 s for one level, 90 to 120 s for all. Exit 1 on a FAIL; a NOTE never fails. `NEEDS_BREAK=1` plants
   gaps in seventeen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
   (exit 1; a MISSED one exits 0). THREE NEEDS ARE NEW CHECKS: `doorway` (a wall decal across a door's opening: the dado rule had no check), `roof` (a drawn
@@ -852,6 +852,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are the seen ones, "one key light a court" is judgement, and a rule is added in front of them: judge a level's light at the hour its row plays at,
   and read which lights are lit. The `key` need's line now says that a link opens at the row's hour too. Its measure is as it was.
 
+- **FACES THAT FLICKER** (`bun run tools/qa/zfight-check.ts [name …] [--all] [--json f] [--quiet]`; the maintainer, 10-25, of a patch by the pass's gate
+  that flipped between two paints: "can we have a static check script that we run on each level that finds these issues systematically? like we did for
+  light leaks"). Read off the level files alone: two boxes the depth buffer holds (no `NoPrimary`, no `Glass`), standing at ONE angle (a turned room's
+  boxes are asked among themselves), a face each within half a millimetre of one plane with the same outward normal, over a shared patch wider than a
+  finger each way. The depth test cannot choose between them. `seen` (a FAIL, exit 1) = the two are painted differently and part of the patch is open;
+  `same` (a NOTE) = painted alike, so nothing shows until a look paints each box by itself; `covered` = a third drawn box lies on the whole patch (a
+  point asked every 10 cm). Not asked: undersides, tilted boxes (`rot`, counted), the tops of two boxes at different angles, door leaves, loose props, a
+  blast's pieces. Exit 2 = a level named is not there. `ZFIGHT_BREAK=1` plants a pair of each kind in a level made in memory (exit 1 = each was read
+  right). First run, 53 files, 29,914 boxes: 289 seen in 29 levels (30 of them in turned rooms; 74 over 100 cm², 24 over a tenth of a square metre),
+  6225 noted. The biggest come from the level kit's gate (`gwotKit.ts gate`: a post 0.34 m square whose side lies in the end face of the 0.24 m wall it
+  closes, 2.4 m tall: pass, gwot-yard, police-post, tut-sky, tut-pair) and from two cloths hung in one thin plane (bazaar, tut-squad). The mend is the
+  level's own numbers (sink one face a few millimetres, or end one box at the other); none was made here, and the check is in no gate and no
+  level-needs row yet. Nobody has watched any of the 289 on a GPU but the pass's gate.
+- **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
+  mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
+  suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
+  sandbags: the wind takes smoke, and smoke parts round a thing), the TUNNEL (a roofed passage 16 m long up the screen, shut at its far end, its mouth to the
+  camera: smoke rolls down a passage and out), the KITCHEN (a door to the yard, a door to the pantry and a window hole with no glass: smoke leaks through a
+  hole all the time and through a door when it opens), the PANTRY (the room beside it, shut by its two doors) and the SHED (four walls and one door: a shut
+  room fills). TWO LIT FRONTS (11-01, the maintainer: "can we add something like the lit sign (or the vending machine from the office) to smoke bench to
+  test it?"): the office's red and blue vending machines, its own boxes and markings at its own brightness, backs to the house's yard wall between the
+  kitchen's window and the pantry's door, facing down the screen, switchable group `fronts`: a bright sharp thing to look at through smoke and a light
+  that colours it. Never seen on a GPU there. Five doors, three roofs, a bulb a room, two in the tunnel, one floodlight and a moon. Level data only: no switch, no game code. Check:
+  `bun run tools/qa/smokelab-check.ts` (the file is its generator's; by the renderer's own floor plan the shed and the pantry are shut rooms with their doors
+  shut, the kitchen is joined to the yard by its window, the tunnel by its mouth, the two rooms are one with the door between them open; roofs; the page's
+  address; no mission names it; `SMOKELAB_BREAK=1` leaves the shed's door open and fails). `level-needs smoke-lab` passes with two notes (no mission row; 211 m²
+  of the yard is one finish, left bare on purpose: nothing there should stop the wind). Every bulb is lit. The address opens it at a dry dusk (`&hour=dusk&weather=clear`: the plain page's own night came up in rain, which is noise over
+  smoke); an hour or a weather on the address wins. Drawn on the software adapter only (the whole floor at dusk with cans burning in the yard, the tunnel,
+  the kitchen and the shed, no GPU errors): never seen on a GPU, and nobody has thrown smoke on it by hand.
 - **The library: every object and every paint, once (`docs/library.md`, dress every level, 11-03; tools and level data, no switch).** The maintainer: "as we
   dress the levels, I'd love for us to have a library of objects, materials, etc. that we reuse across them". What exists is SIX KITS with their own pieces and
   paints: `src/scene/gwotKit.ts` (the look's), `src/scene/officeGen.ts officeKit`, `tools/levels/livedKit.ts`, `livedPieces.ts`, `lived-quiet.ts`,
@@ -933,14 +962,315 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   PIECE_KEYS`), read by hand in `loadLevel`, `levelToData` and `canonShape`, so a key a box gains for its paint (a `stuff`) is added in those four
   places together. THE PICTURE in this build draws a round and an arc as the flat facets they are cut to and
   a cut face bare; `shapes.ts formBox` is the one place a shaped box is told more (one turning face, its own paint on an `old` cut) once the look's cut
-  pass is in the build. NO LEVEL SAYS A SHAPE YET: the vehicles are the first to (the kits' pickup, van, car and motorbike).
-  CHECK: `bun run tools/qa/shapes-check.ts` (`probes.ts shapes`; `SHAPES_BREAK=1` must fail), both stands, nine lines: the lint (eighteen refusals),
+  pass is in the build. WHO SAYS A SHAPE: the kits' vehicles (the bullet at the foot of this file).
+  CHECK: `bun run tools/qa/shapes-check.ts` (`probes.ts shapes`; `SHAPES_BREAK=1` must fail), both stands, eleven lines: the lint (eighteen refusals),
   the trip to data and back and the canonical bytes; a yard whose pickup is given a shape of each kind stood up, put back and moved, and the number of its shapes; rayBox
   and lineBox against references written in the check, with cut pieces up and down; the same walk grid and the same pushes up as down, on that yard and
   on every level file that says a shape, and every said shape standing; five seconds with the switch down the same run by digest as the same level saying none; the fingerprint, the
   stands' rows and a tape from before the table; a checkpoint refused across the switch both ways and opening in its own game; lines and circles
-  asked of the module inside a tick; and a blast that takes a shaped crate and the plate hung on it. MEASURED: with no level saying a shape, the 42
+  asked of the module inside a tick; a blast that takes a shaped crate and the plate hung on it; and (line 10) an arc beside its box's own planes is cut to fewer facets and is still
+  the round, and no trim hangs in the air in any level file, lived things in. MEASURED: with no level saying a shape, the 42
   play-through runs (21 scenarios, seeds 1 and 2) have the build's digests on the frozen stand and on the shipped one. NOT DONE: nothing here has been
   seen on a GPU or played; on the plain page a level with shapes keeps the cut ray programs live from boot, and what that costs (and whether a shaped
   box shows plain for a moment before they compile) wants a number from a GPU before a level file says a shape; with `?nocutboxes` the page draws a
   shaped box plain while the game's rays meet its shape (the round things' split).
+- **THE WHITE ROOF, A LOOK STUDY** (11-04; `levels/white-roof.json` from `tools/levels/white-roof.ts`; open it as
+  `?look&solo&levelFile=white-roof.json&hour=midday`; no mission names it). The maintainer: "maybe as a prototype, could you try making a small level
+  that recreates the ... look based on all the screenshots i've sent you?", of the texture work in particular. One sentence: a kept roof in full sun
+  where every surface is one colour and shows what it is made of by its relief, its finish and its pieces. Hand placement: the hall's wall the whole
+  north side (cast panels over an orange stucco plinth, the biggest face that looks at the camera); the plant, four cast volumes of four heights with
+  a yellow line round every top, in the middle where the sun throws shadows off them; the yellow wall cast against boards behind it; a block of two
+  rooms in painted block (a skimmed floor and stucco piers; a carpet and one orange wall); one solid orange stair head; a painted pad. Every box says
+  its `stuff` (the ten kept stuffs, `docs/agents/render.md`), and walls stand on a half-metre grid so a paver's and a panel's joints land on walls'
+  ends. Its doors are orange gloss outside and white inside (`LOOK_DOORS`). `level-needs white-roof`: no FAIL, two NOTEs (no mission row; the open deck
+  is one paint over 201 m² as the tool counts it since 11-05, 231 when this was written). `level-lint` passes; `round-check` knows its ten round things. Nothing here is a mission: no
+  scenarios but door names, the stealth mission's three places only because the format wants them. Drawn on the software adapter only; never seen on
+  a GPU, never played.
+  SECOND PASS, the same day, after he looked ("directionally nice but still doesn't have enough "personality / cm^2""): what his pictures carry on
+  every patch beside the stuff. PAINT A PAINTER LEFT, as markings on the box that carries it (`scene/markings.ts`: a stencil face `STENCIL` with
+  `GEN.text`, `GEN.stripes`, `GEN.frame`; recipes `stencilMarks`, `hazardMarks`, `outlineMarks`, `boltMarks`, `ratingPlateMarks` in
+  `markingDefaults.ts`, any level's to call): the hall's bays and the way out, a number on every pier and on every plant volume's top, warning
+  stripes on the piers' plinths, on the low volume's foot and on the deck before each outer door, a hatch's yellow outline, bolt heads on the steel
+  band (now five butted plates) and on the kick plate, a maker's plate. No digit over 5 and no compass word. SMALL FITTINGS: conduit with clips and
+  boxes, vents in the hall's wall, clamps and flanges on the pipes, a hose cabinet, door numbers on plates, a grated drain, an orange railing by
+  the pad, and by the stair a pallet of spare pavers, two tins, a bucket and a plank. 267 boxes, 47 markings (632 of the table's 6144 rows),
+  seventeen round things. A BAND OF COLOUR IS THE WALL'S OWN STUFF in another colour on a skin a finger proud (the hall's plinth in cast panel, a
+  metre of orange on the room block's two outer faces in gloss block), so the joints run on under the colour's hard edge, as on every second wall of
+  his pictures. And use shows on its stuffs (`worn`, `docs/agents/render.md`). Second pass drawn on the software adapter only; never seen on a GPU.
+  HOW IT IS WALKED (11-04, `scenarios.walked`; `docs/agents/render.md`, "HOW A LEVEL IS WALKED SHOWS IN ITS SURFACES"): six ways by name, from the
+  stair's landing to the lounge's door, the service door and the plant, from the service door to the plant, and through the two rooms. A way's
+  ends are names, so the roof now NAMES THREE PLACES (`scenarios.places`: stair landing, plant pad, service room). Those are words the game may say
+  of this level (`game/dialogue.ts placeName`) and middles a response sweep may walk to (`game/qrf.ts`); no mission is staged on the roof, so
+  nothing says them today and nobody has heard them. The level's fingerprint does not move (words and a picture's list).
+  ITS ROOMS AT NIGHT (11-05; level data, no switch; the model's side is `docs/agents/render.md`, ONE EXPOSURE AT EVERY HOUR, KNOWN, LEFT). Each
+  of the two rooms had a point lamp of 60 over 9 m hung between its pair of ceiling tubes, on top of the tubes, which are lights of their own as
+  in every level of the kit (3.72 each, `game/game.ts`). No other level has a lamp indoors over 28. The lamp alone put 7.9 on the floor under it,
+  1.75 times what the night's white is made from (`EXPO_LAMP`: the kit's bulb, 26, at 2.4 m), before any bounce, and a night shows a lit room at
+  the night's own exposure, which never comes down. SEEN ON A CLOUD NVIDIA CARD, night, doors shut, the man inside: the service room (white on
+  every face) burnt white, its floor 245 of 255, a black suit 113, the meter at 99; the lounge (a blue carpet, one orange wall) a washed pale
+  blue, the suit 161. The service room with the lamp set at run time to 30, 18 and 6: floor 235, 225 and about 205, the suit still grey. At 0,
+  the tubes alone: floor 155 to 160, the suit black, a shadow at the man's feet, the meter at 59; and the lounge a deep blue carpet with the
+  suit at 28. How much of the glare was the room's air is not known: the lamps were the only lights there with a share in the haze (0.1), a
+  tube's light has none. THE TWO LAMPS ARE OUT OF THE GENERATOR. The level's fingerprint moves (a checkpoint or a recording of it from before
+  is refused); its file has two lights where it had four; nothing in a check or a fixture named or counted them. WHAT ELSE MOVES, seen on the
+  same card with the doors shut and the man inside: BY DAY AND AT DUSK THE SERVICE ROOM IS DRAWN BRIGHTER AND FLATTER, its floor 200 to 233
+  at midday and 158 to 217 at dusk, the suit 14 to 34 and 8 to 32, the man's shadow fainter. WHY, READ FROM THE CODE AND NOT
+  MEASURED: not the lamp's own light on the floor, which by day is drawn at the hour's exposure and was about a seventh of the room's at midday,
+  but its light on the ceiling, a hand under which it hung. The place field holds what a face that looks up gets from the cache, so a lit ceiling
+  raised the room's level and the model showed the room down by it; a tube faces down and lights the floor, which the field does not hold, and
+  the floor reads over the place's level. If so it is the model's (the same KNOWN, LEFT) and true of every room lit by tubes alone. THE GAME'S OWN READINGS FALL: the CPU's light on a man (direct light only, `guards.ts
+  lightEstimateAt`) reads 19.9 to 1.07 in the middle of each room and 2.7 to 0.17 and 2.9 to 0.21 in a corner, so a man is seen at 1.0 to 0.71
+  and 0.9 to under 0.4, and a corner is now under the lit-place level (`LIGHTS.litAt`, 0.5) though the picture shows it lit; the page's own
+  meter, which has the bounce, read 59 mid-room. Nobody is staged on the roof. `level-needs white-roof --run` on both stands: no FAIL, the two
+  NOTEs. NOT SEEN: the lounge by day, dawn, a grey day, the plain page (where a fixture is at its night strength at every hour, so by day the
+  rooms lose most of their lamp light there), Metal; never played. The renderer's records of the service room at night from before this
+  (`docs/agents/render.md`, THE MIRROR AND THE HIGHLIGHTS) were drawn with the lamp in.
+- **The kits' vehicles say their shapes** (`src/scene/carShapes.ts`, 2026-11-04; the maintainer from the library's showroom: "could we make it so the cars
+  have rounded surfaces? look really blocky right now"; of the trial that drew them, "Yes, build these in" and "geometry looks pretty good"; of the pass's
+  lorry before, "some curved surfaces on the truck would go a long way"). Every pickup, van, car, motorbike and lorry a kit builds (`gwotKit.ts pickup /
+  van / lorry / motorbike`, `levelKit.ts car`, `officeGen.ts car`) is the stack of plain boxes it was, and each box of the stack SAYS A SHAPE (`shapes.ts`,
+  the bullet "A box says its shape" above; the switch is that rule's `SHAPES`, `?shapes=0`, `TPS_SHAPES=1`, and there is no other): corners rounded in
+  plan, a crowned bonnet that falls to the nose, glass that leans between posts under a bowed roof cut back to the glass's top edge, round wheels with
+  hubs under arches, a lorry's tilt bowed over its hoops with its fittings. WHAT A RAY MEETS LESS OF: a body's corners (to 0.24 m at a car's nose), a bonnet's
+  shoulders, the glass above the waist (it leans in by up to 0.42 m at a car's roof), a roof's overhang; A LORRY'S TILT BOWS 0.15 m AND NO MORE, so its
+  eaves stay over a man's head (the pass's yard is laid out on what the lorry hides: `pass-check` is green on both stands with it). WHAT WALKS meets the
+  plain boxes. EVERYTHING ADDED IS TRIM (hubs, arches, posts, mirrors, tanks, a step on its straps): drawn only.
+  THREE THINGS THE RULE GAINED FOR THEM: a piece of trim that says NO PAINT wears its box's paint, finish and word (a post, an arch, a fender follows the
+  body whoever repaints it; one that says a finish or a word and no paint is refused); a `round` takes a box within 15 hundredths of square across its axis; an `arc`'s
+  facets give way to its box's own planes (`arcFacets`: six beside one plane, four beside three, two beside five). EVERY FORM IS `old`.
+  ONE RULE FOR WHAT LIES OR STANDS ON A BOWED TOP (`carShapes.ts layOn / feetOn`; a kit's vehicle hands back its shapes, `tops` among them; the kit's
+  `lay(x, z, yaw, top, …)` is how a level calls it): a flat slab of snow or dust keeps to the crown (flat to half of where the top has dropped 2 cm,
+  gone there, and cut back with the top's own planes) and a sheet of the same paint follows the bow as trim of the top's box; feet stand under a rack's
+  rail or a ladder's stile down to the bow. The pass's lorry, the snowed pickups, van and motorbike of `tut-sky / tut-team / tut-road / tut-quiet`, the
+  compound's roof rack (its front cross bar reaches the roof sign, which stands out over the windscreen) and the records level's ladder go by it. A LEVEL THAT STANDS
+  SOMETHING ON A VEHICLE'S ROOF CALLS THESE; `shapes-check` line 10 is red on trim that touches nothing.
+  A VAN'S TAIL IS SQUARE (its tail lamps stand on its back corners; a corner taken off there cut the lamp through its middle), and its head lamp lies
+  as proud of the corner as it stands of the body's face (6 cm). A LIT LAMP A LEVEL HANGS ON A KIT'S LENS takes the outline of the lens's lit face,
+  carried straight out (`glowShape`, `pickupLens`): the light ends where the lens's face does (a van's head glow keeps three quarters of its width, a
+  pickup's lit lens six tenths, a tail all of it), and is not cut again by the corner it stands in front of.
+  TRIM IS DRAWN WHILE ITS BOX IS, AND TO EVERY ENGINE IT IS NOT THERE (`scene/boxes.ts trimDrawn`, asked where the world lists what it draws; the rule's
+  bullet above said trim "follows its box out", each engine hiding it for itself: that is gone). Nothing hides, files or restores a piece: its own flags
+  never change. And an engine that sweeps the level's things skips `piece`: the destruction lane's items, a blast's furniture and its mouth rule
+  (`game/furnblast.ts`), what hangs on a wall (`game/wallbreak.ts` ghosts). TWO REVIEWS FOUND WHY: a drawn-only wheel arch joined a pickup's wheel to its
+  bed in the furniture's index (one blast took the bed, the tailgate and the tail lamps with the wheel); lying 6 cm off a wall's face it was thrown by a
+  charge on that wall; and hidden, it stood "in the mouth" of the hole, so the bed liner and the crates that rested on it went too. `shapes-check` line
+  11 stands four levels on their shapes and plain with the lived things in, holds every engine's list clear of pieces and the furniture box for box to
+  the plain level's, and sets a burst and (on the page's stand) a wall charge off each side of every box that says trim: the same boxes go, the same
+  walls open. It is red with any one of the three skips taken out (run).
+  THE LORRY IS A PIECE OF THE KIT (`gwotKit.lorry`, box for box what the pass's generator wrote) and so stands in a showroom: on the road of
+  `gwot-yard` (its lamp count file says six head lamps; `docs/library.md` has its row). Its tanks hang from the bed in two bands.
+  THE LOOK PAGE'S LORRY TRIAL STANDS DOWN on a level whose lorry says its own shapes (`scene/lorryTry.ts dressLorry`: the trial was their first drawing;
+  gone over by hand as well the lorry would be shaped twice), and `stuff-check` line 12 holds it to making nothing there (from 11-05 that line asks the kit's wall-face and yard pieces, as the pass's generator lays them, for their words).
+  THE PLAIN BOXES ARE UNCHANGED in every level file (compared box for box against the step before, 39 files), but for a pickup's bonnet, which gave up
+  its two painted panel lines ON EVERY STAND (a box that says a form carries no markings; the run digest does not see a marking). Each of the 39 files
+  has its base file (`tools/qa/fixtures/level-base/`). `levels/office-relief.json` holds vehicles and says no shape (it has no generator).
+  KNOWN AND KEPT: the lorry's fittings are trim that stands up to 0.33 m proud of what stops a man or a round (the jerry cans' rack 0.3 m off the
+  sideboard, the mirrors 0.33 m off the cab at head height, the spare 0.3 m behind the tailboard): a man pressed to the lorry stands in them. Making the
+  big ones boxes of the level changes the plain level and is a step of its own.
+  MEASURED 2026-11-05 on the merge's joined stack over step 1333 (the materials train in), 21 scenarios x seeds 1 and 2: the frozen stand 42 of 42 runs
+  the same digest; the shipped stand with `TPS_SHAPES=0` 42 of 42; the shipped stand 32 of 42. THE TEN THAT MOVE, by the whole digest at the half
+  second each first parts from shapes down (read on step 1321's tree; the stack parts at the same half seconds): compound-four 1 and 2 and snatch-four
+  1 and 2, one man's weapon light is on a half second otherwise at 23 s and the runs agree again after (one to three half seconds differ in all);
+  pass-four 1 and 2, the player's heading differs by 0.01 to 0.04 rad for two or three half seconds from 13.5 s and 18.5 s; depot-four 1 and 2, one man
+  faces another way at 23 s and the runs stay apart (seed 1 taken at 46 s, was 75 s; seed 2 wiped at 127 s both ways); records-pair 1 and 2, a man by the
+  lot's car is 13 cm elsewhere at 2.5 s and the runs stay apart (wiped at 98 s, was 100 s; taken at 26 s, was 27 s). No ending changes. WHY A FIGHT
+  PARTS: sight lines the plain car stopped pass the shaped one, over its nose at waist height (it falls 16 cm over its last half metre) and over the
+  bowed roof's shoulders at a standing eye (1.46 m where the slab's top was 1.52). NOT EASIER, NOT HARDER over paired seeds, shapes up against down
+  (step 1321's tree): depot-four taken 53 and 52 of 100 (15 seeds flip to taken, 14 away); records-pair 228 and 226 of 300 (49 and 47). A LEVEL STOOD
+  ON ITS SHAPES IS ANOTHER LEVEL: a checkpoint or a recording made on the shipped stand on any of the 39 files before this is refused there after it
+  ("made on another level").
+  THE PICTURE'S WORDS (the library's four lines in `shapes.ts formBox`): a round and an arc are shaded as one turning face and an `old` cut takes the
+  box's paint (`Box.cutRound / cutArc / cutOld`, read by the g-buffer's cut pass alone). The same 42 digests on three stands with and without them.
+  THE CUT RAY PROGRAMS are live all session in every level with a vehicle (a standing shape is a traced cut box). On Metal that costs nothing (the
+  maintainer's M4 Max, 2026-11-04: the cut set against the boot set pinned on the tunnel, fog 2.753 / 2.753 ms, frame 1.01 x). On the cloud's NVIDIA card
+  under Linux the set of programs costs the fog pass in proportion to its march (the tunnel, 51 cut boxes traced: 15.36 to 18.99 ms of compute passes;
+  the depot, 14: 11.49 to 12.98; a frame with no march: nothing), and the boxes themselves add about 0.1 ms. NOT MEASURED: NVIDIA under Windows.
+  NOT DONE: nothing here has been seen on a GPU in this form, the round shading among it, and that shading is not timed (a trial on the look page drew
+  the same shapes); the car of `levelKit` / `officeGen`,
+  painted in plain numbers, does not yet say carpaint, glass and rubber, and trim in numbers says nothing (a follow-up, with the hit picture's rule).
+- **The office says what a kept place is made of** (level data, no new switch; 2026-11-05; "we'll want to dress up all the levels and check their budget";
+  of the office, 10-10: "awesome and it has a lot of personality per room"). The office's paints are the kit's, and the kit's NAMES say what a paint is on any
+  floor built with it (`scene/stuff.ts PAINT_STUFF`): a rendered wall, a poured slab, a coarse cloth, the stuffs of a house left to the weather. On the look page
+  that drew the office's partitions peeling at the skirting, its carpet stained wall to wall and its lino cracked. `officeGen.ts buildOfficeProcedural` now says
+  the office's OWN words over those names, once, at its head (`K`, through `saidAs`: the kit's paint, its numbers and finish, another thing here): partitions and
+  the conference sill `skim`, the shell and the stair tower `cast panel`, the landing's floor `board concrete`, the three carpets `carpet`, the lobby's stone and
+  the server room's raised floor `paver` (laid in tiles), the lino `enamel` (one waxed sheet: the look's plain gloss coat), the extinguisher, its box and the
+  agent cylinder `enamel`, the van and both cars `carpaint`. 95 boxes of 783 say a new word; NO box, colour, finish or number moved (the file differs from the
+  one before only by `stuff` words), so the level's fingerprint holds and every checkpoint and tape of the office still loads. NOT SAID, on purpose: the lot (no
+  stuff the look has is tarmac; `gravel` drew it as cobbles and `slab` as cracked paving on the software adapter, so it stays plain) and the lawn (it waits).
+  NOT TOUCHED: the kit's own pieces (mullions, door frames, rugs, the things written with `drawnAs`), which every level built on the kit shares; lamps and
+  hours; nothing was laid (the office passes `level-needs` `ground` and `lived` as built, and one added box would part every recording made on this floor).
+  `levels/office-relief.json` is exported with it and comes back in step (on the step before it lacked the vehicles' 22 shapes). CHECK `stuff-check` line 4
+  holds both halves: what each name is, and what the office's own surfaces say over it. Nothing in the simulation reads a word: the three play-through reads
+  (frozen; shipped with lived rooms off; shipped) are the step before's, 42 of 42 each. SEEN on the software adapter only (stills of the lot, the cubicles, the
+  break room, the server room and the whole floor, the step before against this one); never on a GPU: whether the pavers' joints and the panels' fixing holes
+  read at 60 frames, and the lino's shine as enamel, nobody knows.
+- **A level's starts and its doors are on a way, and what is laid by hand is drawn over the ways** (the worn paths, 2026-11-05; tools and count
+  files only: no level file, no page and no run moves). The maintainer, 11-04: "wear, paths in the ground, different materials can all tell a story for
+  how people walk through the level, its logic, leading the player for game play". The rule that works out where a level is walked is the look task's
+  (`src/scene/ways.ts levelWays`; `docs/agents/render.md`, "HOW A LEVEL IS WALKED SHOWS IN ITS SURFACES"). This is what follows on the levels.
+  THE CHECK: `bun run tools/qa/walked-check.ts [level …] [--write]` (`probes.ts walked`, family `missions`; `level-needs.ts --run` lists it). It asks
+  each level AS THE PAGE LOADS IT, the ways' one reader: the lived rooms and the dressing in, said to the loader by word whatever the caller's stand
+  (their furniture is on the walk grid), the office with its script; a look twin is its plain file. (1) No way is without a path, no name its own
+  `scenarios.walked` asks for is missing, every count file is a level's and names what the level has, and a look twin walks as its plain file (grid, doors, ways). (2) From every START the level stands (anything
+  in its scenarios that says where `sam` stands, read as `marksight-check` reads its men: no kind of mission is named; and its own spawn where it
+  stands none or where the plain night is played) a team's way or the author's own LEAVES and runs two metres or more, on the levels the mission list
+  draws. (3) Every DOOR is on a way: a traced way two metres or longer crosses its frame within the frame's width or ends at it (a team sent to a
+  door, the author's row to one, the yard's ways from outer door to outer door). A way that only passes a door along its wall does not lead to it,
+  and the doorstep every door has in the map is no way. WHAT THE RULE DOES NOT REACH IS OWED BY NAME in a file a level
+  (`tools/qa/fixtures/walked/<level>.txt`): red when a level owes one its file does not name; one that has a way now is said and `--write` drops it
+  (until then the line would excuse it again); a `#` line is a note and is kept.
+  AS FIRST RUN: 45 levels, 856 ways, none lost; 50 starts on 29 listed levels, ONE owed (the office's plain night: the rule walks from a spawn only
+  where no scenario stands a team); 393 doors, 84 OWED in 30 files (inner doors nobody's shortest way uses, the block 10 of 16; and the lone outer door of three showrooms).
+  `WALKED_BREAK=1` asks the ways with no routes and no scenarios: red, every start and 209 doors, 40 levels (the five it cannot bite are named). THE LIST IS THE WORK LEFT: a
+  `scenarios.walked` row to a door gives it a way (`docs/level-format.md`), or the rule learns to walk to every door (the look task's function).
+  THE OVERLAY: `bun run tools/levels/walked-overlay.ts <level …> [--out dir] [--px 24]` (the same level, ways and starts as the check's; a look twin
+  asked by name is drawn with its own flat things over its plain file's ways) writes a picture of the level from above (the walk grid, every flat
+  thing lying on the ground in its group's colour, the ways as lines by kind, doors, starts) and a table a group: boxes, square metres, how much of it
+  lies on a lane, and how much of the lanes lies under it, both by area. No list of what a hand-laid path is: a level's groups say (the pass:
+  `snow.paths` 53 % on a lane and under 13 % of the lanes, `snow.cleared` 45 %, `snow.ruts` 8 %; the block's look: 213 flat things, 26 %). It is for
+  deciding, band by band, what the lanes can replace. NO HAND-LAID PATH IS RETIRED BY THIS STEP: the lanes are the look page's only, and the first
+  pair on a real card read the derived lane too weak beside the bands (the dress goal's rule: retire no band until its lane alone reads as clearly).
+- **The pass's dressing is the kit's: what is done to a wall's face, round things that lie, and a window's two forms** (the library, 2026-11-05; no
+  switch: kit pieces and the level files that lay them, on every stand; the shapes among them are the shape rule's, `SHAPES`). The maintainer, of
+  dressing the levels: "I'd love for us to have a library of objects, materials, etc. that we reuse across them". The pass's house front and its yard's
+  round things were two hand-built trials on the look page (`docs/agents/render.md`, the two "WAS A TRIAL" bullets). They are fourteen pieces of
+  `src/scene/gwotKit.ts` now, laid by `tools/levels/pass.ts`, each stood in the showroom `library-hall`, and the trials' files, address words and
+  buttons are gone.
+  WHAT IS DONE TO A WALL'S FACE is written once for all four ways a wall can face (`onFace`: a frame whose X runs along the wall and whose Z points out
+  of the face; `onStretch` for what is dealt along a stretch a to b, its origin at the end the frame's X runs in from): `boards`, `shutters`,
+  `windowBlanket` (a window's dressing), `wallPatch` (a mend with a rough outline, over a dado or a skirt), `spout` (and the streak its water left),
+  `beamEnds`, `splitWood`, `ladder`. What stands by it: `plankBench`, `pot`, `bricks`. ROUND THINGS THAT LIE are one box that says `round: 1` (`lying`):
+  `pipes`, `log`; `choppingBlock` is the kit's standing round. Snow or dust along a lying round is laid by the one rule for a bowed top
+  (`scene/carShapes.ts layOn`, through the kit's `lay`: a lying round is a bowed top). TRIM IN A PAINT OF ITS OWN says what that paint is made of
+  (`trimIn`: a log's end is wood, a pipe's bore metal), as a box does.
+  A WINDOW'S DRESSING HAS TWO FORMS, `'shut'` and `'open'`, and the level picks. The dress goal's rule, 11-05: "a window a mark watches through, or a
+  covered lane crosses, stays see-through" (the maintainer: "we don't want them to feel dumb"). Shut, the boards, a shut leaf and the blanket are real:
+  a look, a round and the room's lamp stop at them. Open, the boards hang beside the jambs, the leaves are folded back on the wall and the blanket is
+  rolled over the lintel: nothing on the ground, nothing in the opening. THE PASS LAYS ALL THREE OPEN: every window of its front is in some defender's
+  view (measured with them shut: the tea room's two men at the glass kept 9 and 15 of the 18 lines they have to the yard, and the kitchen's man on its
+  yard door 12 of 16).
+  THE CHECK: `bun run tools/qa/marksight-check.ts [level …] [--write]` (`probes.ts marksight`, family `missions`, on the page's stand;
+  `tools/levels/export.ts` asks it of a level the day it is written, `MARKSIGHT=0` skips; `level-needs.ts --run` lists it). It asks EVERY MAN A LEVEL
+  FILE STANDS WITH SOMETHING TO WATCH, whatever says a `pos` and an `aimAt` outside the boxes and props (a room clear's marks, a rescue's captor, door
+  men, guards and roamers, a plan's hostiles: 536 men in 41 level files; 18 files stand none and are named NOT JUDGED), with every door's leaf taken
+  out of the world (a man whose gun rests on a door looks at the doorway): line 1, his eye's line to his aim is open; line 2, of a fan of 21 lines to a man's shin, belt and head across 3 m of the ground he watches, no fewer are open than his level's count
+  file says (`tools/qa/fixtures/marksight/<level>.txt`, a count for each stand). THE COUNT FILES WERE WRITTEN ON THE UNDRESSED HEAD, on both stands,
+  and the dressed levels are held to them. They are PER-LEVEL FIXTURES: whoever moves a level so that a man sees less carries that level's file with the
+  move and says why on a `#` line in it (`--write` keeps such lines and says aloud every count it lowers). `MARKSIGHT_BREAK=1` stands a post in the
+  middle of each level's first line: red on both lines on 41 of 41 levels, both stands (a level it does not bite is named, and the run then exits 0:
+  a break word that passes). AS FIRST RUN, on the head before any level was dressed for it: every one of the 536 lines open, on both stands.
+  A SECOND LEVEL LAYS THEM: the block (`tools/levels/block.ts`, so `block`, `block-gwot`, `block-squads` and `block-squads-gwot`: one floor) has its
+  west flat's long window (x 4, z 16.5 to 19.5) with its shutters folded back and split wood stacked under the sill. No man watches through that pane,
+  no man's line crosses that wall, and the nearest stands 13.7 m from it (8.2 m in the three-squad file, the workshop's third man, his gun on the
+  hall door).
+  A SHUT WINDOW COSTS THE TEAM TOO, MEASURED. That window was first laid with one leaf SHUT, since no defender needs it. On the page's stand the
+  scripted team then took the block 3 times in 24 seeds with 8 of 96 teammates up, against 7 in 24 and 13 up on the head before, and 7 in 24 and 12
+  up with the same shutters folded back (the same boxes but for the leaves' places; the frozen stand never met the shutter: 8 of 8 runs the same to
+  the digest). Why is not traced: a look, a shot and the window's daylight all stop at a shut leaf. So the rule for a shut form is two rules: no man
+  the file stands watches through it, AND its mission's tally is read with it shut before it is laid. Today no level file lays a shut form; the
+  showroom stands each.
+  A PLAY MOVE, DECLARED. New cover stands in the pass's yard (three fuel drums and one on its side in the pocket by the lean-to, pipes in the far
+  corner south of the bunk room, split wood under the first window's sill, a bench, a ladder; the chopping block is round) and on the block's west
+  wall (split wood under a sill), so the missions on those floors may play otherwise.
+  MEASURED 2026-11-05, the joined head `dd81d0de` against this step, by the scripted play-through's digest (`PT_DIGEST=1 tools/qa/playthrough.ts`):
+  21 missions x seeds 1 and 2, the frozen stand 40 of 42 runs the same (the two that move are the pass's); the shipped stand 36 of 42 (the six are
+  the pass's, the block's and the three-squad block's); the shipped stand with lived rooms off 37 of 42 (the same six less one, and the block's four
+  end at the tenth of a second they ended at). No other mission moves on any stand. ON MORE SEEDS, before to after: pass-four, seeds 1 to 8: frozen
+  6 to 5 of 8 taken and 18 to 15 of 32 teammates up; shipped 8 to 8 taken and 25 to 27 up. The block on the frozen stand is the same run to the
+  digest (8 of 8, both files). On the shipped stand: block-four, seeds 1 to 24, 7 to 7 of 24 taken and 13 to 12 of 96 up; block-squads, seeds 1 to 8,
+  1 to 0 of 8 taken and 1 to 0 of 32 up. The scripted player is not a person: these say the floors were not broken, not that they play well.
+  NO DOOR'S STACK MOVED: every door of the pass and the block, both faces, a stack of one to four, deals the marks it dealt before, to the
+  centimetre, on both stands (`tools/qa/lived-stack-check.ts --ask pass-four,block-four,block-squads` on the head and on the cut, compared). The trial
+  had the pipes along the bunk room's wall, on the three places a stack takes south of its yard door, and the wood under the second window, where the
+  third and fourth men of a stack on the tea room's door stand: both moved for that.
+  WALL-CHARGE PLACES on the pass: 598 and 384 (frozen, shipped) are 588 and 374, on purpose (`tools/qa/fixtures/wallcharge/pass.txt` says it): five
+  spots on the lean-to's south wall, both faces, behind the drums. The lean-to is no room of the fight, and every room of the fight keeps every place
+  it had: the bench was moved to the wall's west end for that. The block's places are as they were. `second-way-check` (the five files) and
+  `wayround-check pass-four`: green on both stands.
+  COUNTS CARRIED: `fixtures/round/pass.txt` (13 round things as the file has it, 24 with the lived rooms in; were 8 and 19) and `library-hall.txt` (2
+  and 12), `fixtures/geotry/` for the same two, the level-base files of the six level files. `stuff-check` line 12 asks the kit's wall-face and yard
+  pieces for their words (it asked the trials). `look-check` learnt that a shape's trim wears paint as a box does (two shapes that differ only in what
+  their pieces wear differ in paint), and finds `block-squads.json`'s generator. `tools/qa/round-lib.ts` holds a tilted box to the rectangle round
+  both things the world makes of it, not to a square round its longest reach (a ladder leaned on a wall 3 m off crowded the pass's brazier).
+  THE LIBRARY'S RULE FOR A WALL'S FACE (`tools/levels/library.ts --check`, `skewOf`): a piece whose words are a wall's axis, its line and a side is
+  laid alone on all four facings and must lie the same on each. Red on the kit as first written: split wood and beam ends were dealt from the
+  stretch's low end in a frame that ran the other way on two facings, and lay outside it there.
+  KNOWN. A TILTED BOX IS TWO THINGS: a line and a round meet it as it is turned, a walking body meets the same box only yawed
+  (`collision.ts collideCircle` reads no `rot`). So a body meets the ladder's stiles as two posts 0.4 m out from the wall, not as leaning rails.
+  `woodPile` is still a stack of plain boxes (`drumDown` was until the drums' step below, where it says its round). A wall charge leaves what
+  hangs above a hand's height on a face (`scene/lookTidy.ts` takes a decal with its wall only from the foot). Split wood's billets step through
+  small tables, not a die, so that no two that touch share a face's plane with shapes off.
+  SEEN on the software adapter only (Chromium 141, midday, 960 x 600): the pass on the look page (five views) and as the page opens (two), the block's
+  window on the look page; six boots, every program compiled (119 of 119; the block's 118 of 118), no page, console or GPU error. The front's pieces
+  stand where the trial's stood but for the pipes, the wood and the bench; the windows are open; lying rounds, billets and beam ends draw round;
+  `drumDown` drew as the two boxes it was then (it is a round since the drums' step below). NEVER SEEN ON A GPU, and nobody has played either level since.
+- **Walls and frames that said cloth by a borrowed paint say what they are** (level data and the look's skin, no new switch; 2026-11-05; found by the
+  step that draws a hit by what the thing says it is made of: a round knocked tufts out of them). TWO CASES, ONE CAUSE: a paint taken for its COLOUR brings
+  its row's stuff with it. THE DEPOT's hut walls wear the office's tan partition paint, whose row says cloth: `tools/levels/depot.ts` says `stucco` over it
+  (`saidAs`, the compound's own line), 32 boxes of `walls.huts`, a word each and nothing else. THE CONSULATE's look file framed its doors and windows in a
+  blanket's brown for want of a dark wood: 55 door frame boxes and 10 window jambs were cloth. A SKIN MAY NOW SAY WHAT A PAINT IS ON A THING
+  (`tools/levels/gwotSkin.ts` `Said`: a palette row to the eye and to a round, another stuff and its finish), and `VARNISH` is dark varnished wood, named
+  for what it is: the consulate's `frameOut` and `frameIn` are it, 65 boxes change `stuff` (wood) and `rough` (0.95 to 0.6) and no colour moves. NOT A NEW
+  PALETTE ROW, on purpose: the palette is written whole into every level file built on the kit (a row makes each of them stale), and a row in the
+  blanket's numbers would be the blanket to a round, which knows a paint by its numbers. Both level files differ from the step before only by those
+  words and that finish; `depot-gwot.json` and `consulate.json` do not move; each changed file's base rides (`fixtures/level-base/depot.txt`,
+  `consulate-gwot.txt`). MEANT AND LEFT: walls of sacks are cloth (the kill house's and the road lesson's sandbags, 44 boxes). NOT IN THIS STEP, said to
+  the dress goal: the painted wall bands a skin lays as decals in a cloth's paint (the consulate's madder wainscot, the registry's brown dado: no ray
+  meets a decal, so it is the picture's alone), and a gear screen's backdrop walls in the tan (the compound's set). CHECK `stuff-check` line 15: in every
+  level file no box of a `walls.` or `doorframe.` group is cloth, fabric or carpet but for sacks in their own paint; it finds a made-up hut wall and frame;
+  `STUFF_BREAK=1` fails it; on the step before it is red on exactly these 97 boxes.
+  `hitstuff-check`, `wallfurn-check` (the depot 880 and 752, the consulate 857 and 725, held), `second-way-check`, `lived-check`, `wayround-check` and
+  `level-needs --run` for both levels: green on both stands. PLAY: nothing in the simulation reads a word. The three play-through reads (frozen; shipped with lived rooms off; shipped), seeds 1 and 2,
+  against the step before on the same box: 42 of 42 each on the step this was first written on, and again 4 of 4 each for the depot's and the consulate's
+  missions on the step it is cut on. SEEN: the look page boots on the consulate's rescue with this in, on the software adapter, with no page or GPU error; in its
+  night still no frame is legible, so the varnish itself is seen by nobody, and never on a GPU. The depot shows nothing on the look page (with the look on it
+  opens its look file, which does not move): its change is the picture of a hit with the look off.
+- **A drum is steel whatever it is painted, and the one on its side says its round** (the kit's stores, 2026-11-05; kit pieces and level data on every
+  stand, NO SWITCH: 27 level files re-exported from 23 generators, and what a round, a blast and a wall charge do at 47 drums MOVES). The dress goal
+  ruled both: "the kit's drum (standing and lying) SAYS what it is made of itself, whatever its paint", and "the kit's lying drum says round".
+  STEEL: `gwotKit.ts steelIn` (`drum`, `drums`, `drumDown`). A drum in any row of the palette is metal to everything that reads a paint (the
+  simulation's table `gwotSimOf`, a hit by colour `particleFx.ts surfOf` and by word `saidSurf`, a blast `furnblast.ts breakClassOf`) and wears
+  the row to the eye: a row that is something else to a round stands in a hair off (`gwotPalette.ts gwotAs`, the kit's own `as`). WHAT IT SAYS
+  to the picture: the row's own word where the row is a coat or metal already (`paint` for the drum enamels and olive: a coat, which says nothing
+  of what is under it; rust, galvanised); in ANY OTHER row `paint` with a drum enamel's finish, never the row's stuff (a drum in the colour of mud
+  is not made of mud). ONE WAY TO SAY IT: `scene/stuff.ts saidAs(stuff, paint, finish?)` takes a finish now, as `madeOf` does, so a word and its
+  finish are said together and nobody writes a roughness by hand beside the word (no caller before this step changes; the skin's `Said` moves onto
+  it in its own step). The cars' coat rule is not used: a drum's coat is plain `paint`. UNTIL THIS STEP OLIVE WAS AN AMMUNITION CRATE'S DARK WOOD
+  TO A ROUND, so an olive drum was wood the wall engine chews and a level that wanted a steel one picked another colour (the pass's was
+  `genYellow`; it is olive again). No level lays a drum in a row that is neither a coat nor metal today, so that half moves no file.
+  WHAT MOVED, NAMED: 47 standing olive drums in 20 levels (twins aside) were breakable and are steel: crossing 2, floodlit 1, gwot-yard 2, hall 1,
+  lights-out 1, pass 2, police-post 1, quiet-relay 1, smoke-lab 3, tut-kit 6, tut-pair 7, tut-queue 3, tut-quiet 3, tut-road 2, tut-sky 2, tut-solo 4,
+  tut-squad 1, tut-team 2, vault 1, warehouse 2 (floodlit's, hall's, the pass's, tut-sky's, tut-team's and the warehouse's are lived things: the
+  frozen stand does not stand them). Statics the wall engine can chew, before to after, as the page stands each (one a round): crossing 16 to 14,
+  floodlit 10 to 9, gwot-yard 4 to 2, hall 20 to 19, lights-out 1 to 0, pass 8 to 6, police-post 31 to 30, quiet-relay 11 to 10, smoke-lab 5 to 2,
+  tut-kit 8 to 2, tut-pair 7 to 0, tut-queue 3 to 0, tut-quiet 8 to 5, tut-road 3 to 1, tut-sky 4 to 2, tut-solo 4 to 0, tut-squad 1 to 0,
+  tut-team 4 to 2, vault 1 to 0, warehouse 67 to 65. On the frozen stand (rounds off there: four slabs a drum): crossing 13 to 5, gwot-yard 10 to 2,
+  lights-out 4 to 0, police-post 31 to 27, quiet-relay 12 to 8, smoke-lab 14 to 2, tut-kit 26 to 2, tut-pair 28 to 0, tut-queue 12 to 0,
+  tut-quiet 17 to 5, tut-road 9 to 1, tut-solo 16 to 0, tut-squad 4 to 0, vault 4 to 0. No round thing of these 27 files is breakable now.
+  LYING: `drumDown` is ONE box that says `round: 1` (0.88 long, 0.58 across, on the ground), as `pipes` and `log` are, where it was two plain boxes
+  with a marked top: its two ends and two ribs are trim (drawn only, the paint a shade down by `trimTone`: a trim is met by no round, so its tone
+  may be any colour and the piece never sends its caller back for another; it says what the drum says), bare where the paint is bare, on two chocks
+  that reach in under the flank. It hands back its top, and a level lays snow or dust along it with `lay` (the pass does; its flat cap is gone).
+  14 lying drums in 13 generators (floodlit, glasshouse, gwot-yard, mousehole, pass, quiet-relay 2, train-move, tut-kit, tut-pair, tut-queue,
+  tut-road, tut-solo, tut-squad). To a walker it is the box as yawed, a centimetre shorter than the two were; with shapes on a line and a round
+  meet the cylinder (the box's corners are open above the round's shoulder), with shapes off the box.
+  CHECK: `bun run tools/qa/kit-stores-check.ts` (every row of the palette standing and lying is metal to the four readers, known as its row's paint,
+  and says the row's word or `paint` with the enamel's finish; `drums` deals steel, a row that is not metal by itself among them; the lying drum is one round box with its trim, wedged chocks and a top
+  that `lay` follows, in an enamel, a bare row and a row that is no coat; `KITSTORES_BREAK=1` asks a crate and the wood pile: 5 of 5 red). `tools/qa/kit-stand.ts`
+  is how a check stands a kit up empty (the ground pieces' check uses it too). `round-check` line 4b's breakable round is now a post of poplar the
+  check stands itself on ground it asks free (the levels' olive drums were its specimen). `woodPile` is still a stack of plain boxes.
+  KEPT RUNS: a recording or a checkpoint made before this step on one of these levels is not refused where only a drum's paint moved (the level's
+  fingerprint is counts and geometry), and replays against steel drums from the first round that met an olive one (the maintainer, 11-04:
+  breaking replays is fine).
+  MEASURED on the joined branch's tip 6c6c33df against the step on it, software only. Play-throughs of the six room-clear missions on the 27 files
+  (warehouse, floodlit, mousehole, hall, glasshouse, the pass), seeds 1 to 4, on three stands (frozen, shipped, shipped with lived rooms off): 72 of
+  72 runs the same digest, so every tally as it was (no run of those sent a round or a man at a drum that differs). The nine lessons (`lesson-run`,
+  the page's stand, seed 1): all pass before and after; seven the same digest, TWO MOVE, tut-kit and tut-squad (their yards' drums). `vault-run`
+  and `lights-out-run` (seeds 1 and 2) pass before and after on both stands. No other mission can move: the game never calls the kit, and no other
+  level file changed. NO DOOR'S STACK MOVED (every door of the twenty missions on these files, both faces, one to four men, the same marks to the
+  byte, both stands); wall-charge places, marks' sight, second ways and ways round are as they were on every level; the z-fight audit's 167 rows on
+  the 27 files are the same rows. Sixteen level-base ids were written again (the files whose own part holds a drum that moved); eleven files moved
+  in their lived things only and keep theirs.
+  SEEN on the software adapter only (Chromium 141, midday): the pass's fuel pocket on the look page, before and after, two views. NEVER SEEN ON A
+  GPU, and nobody has played any of these levels since.

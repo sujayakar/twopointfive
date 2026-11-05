@@ -1,2 +1,2 @@
-# the cut rock is the palette's slab darkened (tools/levels/snowRock.ts), and the slope below the road is scree
-de76b236d2cf5c22a43144b89d88703da80aa9aa
+# 11-05, the kit's drums: a drum is steel to a round in any paint (an olive one was dark wood), and a drum on its side is one box that says its round; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+d9341975da1657d72af64c1224007a4bded809e5

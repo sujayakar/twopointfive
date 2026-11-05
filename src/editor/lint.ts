@@ -1,20 +1,20 @@
 // Level LINT: the design checks the schema validator (scene/levelData.ts validateLevelData) deliberately does not make — reachability, sealing,
-// budgets, overlaps, things inside other things. Pure (no GPU, no DOM): tools/qa/level-lint.ts is the CLI over it
-// (`bun run tools/qa/level-lint.ts levels/office.json`, exit 1 on errors), and map-check.ts and the level probes run the same function.
+// budgets, overlaps, things inside other things. Pure (no GPU, no DOM): the editor runs it behind its LINT button / __ed.lint(), and
+// tools/qa/level-lint.ts is the CLI over the same function (`bun run tools/qa/level-lint.ts levels/office.json`, exit 1 on errors).
 //
 // It builds what the game builds from the data — loadLevel → Level, StaticCollision → NavGrid (the guards' own walkability) — and reports
-// findings as { severity, code, message, ids } where ids are the DATA ids (boxes[i] ⇄ data.boxes[i], lights / doors / routes likewise), so a
-// finding names the thing in the file. Severity: 'error' = the game will misbehave (an objective nobody can walk to, a light inside a wall,
+// findings as { severity, code, message, ids } where ids are the DATA ids (boxes[i] ⇄ data.boxes[i], lights / doors / routes likewise), so the
+// editor's problems panel can select them. Severity: 'error' = the game will misbehave (an objective nobody can walk to, a light inside a wall,
 // a route leg through a partition), 'warn' = probably unintended (duplicate slabs, a doorway that does not seal, budgets getting tight),
 // 'info' = worth knowing. `allow` silences a code for listed ids (or '*') with a reason — for legitimately odd authored things.
 import type { Vec3 } from '../math/vec';
-import { LevelData, validateLevelData, DEVICE_DEFAULTS, floorUsers } from './levelData';
-import { loadLevel } from './levelLoad';
-import { StaticCollision } from './collision';
-import { Box, BoxFlag } from './boxes';
-import { WORLD } from './world';
-import type { Level } from './level';
-import { MarkingDef, MARK_TABLE_ROWS, MARK_SLOT_MAX, MAX_MARKS_PER_BOX, markRecordRows } from './markings';
+import { LevelData, validateLevelData, DEVICE_DEFAULTS, floorUsers } from '../scene/levelData';
+import { loadLevel } from '../scene/levelLoad';
+import { StaticCollision } from '../scene/collision';
+import { Box, BoxFlag } from '../scene/boxes';
+import { WORLD } from '../scene/world';
+import type { Level } from '../scene/level';
+import { MarkingDef, MARK_TABLE_ROWS, MARK_SLOT_MAX, MAX_MARKS_PER_BOX, markRecordRows } from '../scene/markings';
 
 export type Severity = 'error' | 'warn' | 'info';
 export interface Finding { severity: Severity; code: string; message: string; ids: string[] }

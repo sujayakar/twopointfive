@@ -20,7 +20,7 @@
 // `?keeppage=1` asks: a page a script drives or steps (navigator.webdriver, `?paused`: the page tools read the page's own window), and a browser where a
 // frame drawing with its parent's device has not been seen (anything but the Chromium family). Always: the benchmark (its loads are what it times), the kit
 // picture's own window and the one-file page. A frame that finds itself under a shell of another build, or that must load whole, sends the tab there; a
-// frame sent to ANOTHER page of the site (the replay viewer, the listening pages) sends the tab there too, so that page has the address bar to itself.
+// frame sent to ANOTHER page of the site (the replay viewer, the workbench) sends the tab there too, so that page has the address bar to itself.
 // A page switch, not a rule of the game: no knob, no row of the frozen stand — the harness has no page. This file imports nothing.
 
 export const KEEP_PAGE = { /** the shell's and the frame's side must agree on this */ v: 1, hook: '__pageKeeper', word: 'keeppage', store: 'twopointsix.keeppage', frameId: 'kept-page',

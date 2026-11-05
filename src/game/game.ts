@@ -2,6 +2,7 @@
 // The systems live beside it as plain-function modules taking the Game first: player.ts (controller, takedown / drag, throws, the cursor's
 // interactables), guards.ts (perception, state machine, barks, escalation), combat.ts (shots, kills, hand props, live throwables), lighting.ts
 // (fixtures, OCP, blackout), mission.ts (the mission thread), squad.ts (scripted guards).
+import { lookConfig } from '../render/frame';
 import { wallClock, HostOwned } from '../math/side';
 import { Vec3, v3, clamp, damp, lerp, DEG, smoothstep } from '../math/vec';
 import type { HostApi } from '../host/api';
@@ -26,9 +27,10 @@ import { statureTick, statureOf, drawnJoints, drawnCapsules, drawnFit, drawnBoxe
 import { Decals } from '../render/decals';
 import { buildWearMap } from '../render/wear';
 import { buildSnowField, snowCfgRows, type SnowField } from '../render/snowField';
+import { groundRayConfig, packGroundField } from '../scene/groundField';
 import { makeSnowTracks, updateSnowTracks, clearSnowTracks, formSnowTracks, TRACK_RES, type SnowTracks } from './snowTracks';
 import { updateSnowMarks, clearSnowMarks } from './snowMarks';
-import { snowBogAt, snowBogMay } from './snowBog';
+import { snowBogAt, snowBogMay, snowBogKinds } from './snowBog';
 import { attachSnowBlast, clearSnowBlast, stepSnowDigs } from './snowBlast';
 import { SNOW_LOOK, snowLevel, WEATHER_PRESETS } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
@@ -206,7 +208,9 @@ import { Wind, loadWind } from './wind';
 import { updateAirSim, attachAir, airResend } from './airSim';
 import { AirDust } from './airDust';
 import { Moths } from './moths';
+import { WetGround } from './wetGround';
 import { GlassBreak, loadGlassBreak } from './glassbreak';
+import { levelOver } from './levelfit';
 import { GlassShards, loadShards } from './shards';
 import { kitFresh } from './kit';
 import type { BigKit } from './kit';
@@ -770,6 +774,10 @@ export class Guard {
 /** the rolling chair's voice (audio.ts `follow`, rollTick below): its level at full speed, the speed (m/s) that counts as full — slower, it is quieter and lower —,
  *  the speed under which a chair is not rolling for anybody's ears, and the seconds without movement after which its voice is let go */
 const ROLL_VOICE = { gain: 0.5, fullV: 2.5, minV: 0.12, grace: 0.5 };
+/** STIRRED SMOKE CURLS (smokeWake below; the look page's Stirred smoke row): a moving man as the smoke solver is told of him. body = his capsule's radius (m), from
+ *  `foot` above the floor to `above` over his hips; a kick behind him at every step of his walk cycle, `back` behind and `low` under his hips, of
+ *  radius kickR, at `kick` × his speed and never over `most` m/s, left out while the sine that picks its side is under `gap`. */
+const SMOKE_STIR = { body: 0.24, foot: 0.12, above: 0.5, back: 0.3, low: 0.2, kickR: 0.17, kick: 0.9, most: 2.2, gap: 0.35 };
 /** A castor chair that has started to roll (rollTick): where it was last step, how hard it goes (0‥1), when it last really moved, and its voice's serial (0 = none). */
 interface Roll { p: Prop; x: number; z: number; k: number; moveT: number; voice: number }
 export class Game {
@@ -790,14 +798,15 @@ export class Game {
     if (on) attachSnowBlast(this);   // (a blast over lying snow marks it: snowBlast.ts hears the destruction engine's feed — once an engine, asked each frame)
     const key = (on ? 1 : 0) | (tracks ? 2 : 0); if (key === this.snowLookWas) return;
     this.snowLookWas = key;
-    this.snowField = on ? (this.snowField ?? buildSnowField(this.level, { wind: WEATHER_PRESETS.snow.wind })) : null;
+    this.snowField = on ? (this.snowField ?? buildSnowField(this.level, { wind: WEATHER_PRESETS.snow.wind, roll: groundRayConfig.on ? groundRayConfig.roll : 0 })) : null;
     this.snowTracks = tracks && this.snowField ? (this.snowTracks ?? makeSnowTracks()) : null;
     this.engine.gbuffer?.setSnowField?.(this.snowField, snowCfgRows(this.snowField, this.snowTracks ? TRACK_RES : 0));
+    if (groundRayConfig.on) this.engine.world.setGroundField(packGroundField(this.snowField));   // (ground that rays can see, a trial: scene/groundField.ts — the look's page only)
     this.engine.gbuffer?.setSnowTracks?.(this.snowTracks);
   }
   /** once a frame, after everybody is posed: this frame's footfalls pressed into the snow, and what changed handed to the g-buffer */
   private stepSnowTracks(dt: number) {
-    const dug = this.snowField ? stepSnowDigs(this, dt) : null; if (dug) this.engine.gbuffer?.setSnowFieldRect?.(this.snowField!, dug);   // (a blast dug a hill out: snowBlast.ts)
+    const dug = this.snowField ? stepSnowDigs(this, dt) : null; if (dug) { this.engine.gbuffer?.setSnowFieldRect?.(this.snowField!, dug); if (groundRayConfig.on) this.engine.world.setGroundField(packGroundField(this.snowField)); }   // (a blast dug a hill out: snowBlast.ts)
     const T = this.snowTracks; if (!T || !this.snowField) return;
     updateSnowTracks(this, T, this.snowField, dt);
     if (SNOW_LOOK.marks) updateSnowMarks(this, T, this.snowField, dt);   // … and every thing that moved over the snow marks it (snowMarks.ts)
@@ -1000,7 +1009,7 @@ export class Game {
     const free = (p: Vec3): Vec3 | null => {
       const b = solidAt(p[0], p[1], p[2]); if (!b) return p;
       const x0 = Math.floor((p[0] - WORLD.min[0]) / cs) * cs + WORLD.min[0], z0 = Math.floor((p[2] - WORLD.min[2]) / cs) * cs + WORLD.min[2], E = 0.02;
-      const yw = b.yaw ?? 0, c = Math.cos(yw), s = Math.sin(yw), dx = p[0] - b.c[0], dz = p[2] - b.c[2], lx = c * dx - s * dz, lz = s * dx + c * dz;   // (the box's own frame, as scene/lint.ts insideBox turns it)
+      const yw = b.yaw ?? 0, c = Math.cos(yw), s = Math.sin(yw), dx = p[0] - b.c[0], dz = p[2] - b.c[2], lx = c * dx - s * dz, lz = s * dx + c * dz;   // (the box's own frame, as editor/lint.ts insideBox turns it)
       let best: Vec3 | null = null, bd = Infinity;
       for (const [q0, q1, n0, n1] of [[-(b.h[0] + E), lz, -1, 0], [b.h[0] + E, lz, 1, 0], [lx, -(b.h[2] + E), 0, -1], [lx, b.h[2] + E, 0, 1]]) {
         const wx = b.c[0] + c * q0 + s * q1, wz = b.c[2] - s * q0 + c * q1, d = Math.abs(q0 - lx) + Math.abs(q1 - lz);
@@ -1083,6 +1092,8 @@ export class Game {
   airDust!: AirDust;
   /** MOTHS (game/moths.ts): a dozen fluttering specks round the lit sodium lamps at night; ticked after the wind, their boxes into the frame's dynamics */
   moths!: Moths;
+  /** WET GROUND (game/wetGround.ts): the open ground a picked rain wets, as the picture draws it — dressing, ticked in the picture's block */
+  wetGround = new WetGround();
   /** GLASS BREAKING (game/glassbreak.ts): the panes' impact lists / Voronoi cells / dropped masks and the shards they become — always constructed (its hooks answer 'whole' for
    *  a pane never hit), inert unless tune.glassBreak (default off) AND chaos > 0 outside the tour; the renderer's half is the boot-time prelude const GLASS_BREAK */
   glassBreak!: GlassBreak;
@@ -1187,6 +1198,7 @@ export class Game {
     ...DEVICE_TUNE_DEFAULTS };
 
   constructor(public engine: HostApi, public level: Level, public ch: GltfCharacter, public smoke: SmokeSystemLike, opts: { seats?: number } = {}) {
+    { const over = levelOver(level); if (over) throw new Error(over); }   // (levelfit.ts: a level the pools cannot hold is not loaded, said before anything of it is built)
     this.seats = seatsStand(this, opts.seats ?? 1); this.localSeat = this.seats[0];   // (seats.ts: before anything is built over a seat's view; one seat = the Game is its own seat's view and nothing below differs)
     const first = this.seats[0].view;   // (the first seat's view: this Game, in a game of one)
     try { const v = parseFloat(localStorage.getItem('twopointsix.playerCrouch') ?? ''); if (isFinite(v) && v >= 0.3 && v <= 3) this.tune.playerCrouch = v; } catch {}   // the panel's crouch-speed slider is remembered per machine
@@ -1204,7 +1216,7 @@ export class Game {
     loadBodyLight(this.tune);   // …and the bodies-by-light switch with its bar (guards.ts)
     // (the FN2000 is always in the kit now — no per-machine loadout memory; Game.fn2000 / setLoadout stay for the harness)
     this.col = new StaticCollision(level.boxes);
-    if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to
+    if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav, lookConfig.on && lookConfig.longFoot > 0, lookConfig.on && lookConfig.walked > 0); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to
     this.syncSnowLook();   // a snow level's lying snow as one surface (render/snowField.ts; picture only — nothing below reads it)
     this.chars = new CharacterRenderer(engine.device, ch);
     engine.skin = this.chars;
@@ -1218,7 +1230,7 @@ export class Game {
     // loose furniture: simulated on the CPU, emitted as dynamic boxes every frame (rendered + traced like everything else), deliberately never registered as
     // collision occluders — a chair must not hide the player, muffle a shot or dent the nav grid; guards path through props and shove them aside
     this.props = new PropSystem(level.props, this.col, (e) => this.onPropEvent(e));
-    this.items = new Throwables(this.col, this.props); this.items.bog = { may: () => snowBogMay(this), at: (x, y, z) => snowBogAt(this, x, y, z) };   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
+    this.items = new Throwables(this.col, this.props); this.items.bog = { may: () => snowBogMay(this), at: (x, y, z) => snowBogAt(this, x, y, z), kinds: () => snowBogKinds(this), roofs: () => this.weather.roofsNow() };   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
       // canisters and dropped magazines bounce off (and nudge) the furniture
     this.tracers = new Tracers(engine.lights, sparkSink(this)); this.tracers.fog = { begin: who => this.fogOfWar.begin(who), done: was => this.fogOfWar.done(was), lightBy: (l, who) => this.fogOfWar.lightBy(l, who) };   // tracer streaks: their head lights live in the engine's LightSet (transient), their embers are sparks — GPU sparks while that path is on, the CPU pool's otherwise (particleFx.ts sparkSink)
     this.decals = new Decals(engine.device); engine.setDecals?.(this.decals);   // (the QA harness's engine stand-in has no renderer to hand it to: the list still fills, nothing draws)
@@ -1811,6 +1823,7 @@ export class Game {
     if (DRESS.moths) this.moths.update(dt);              // the moths' orbits (moths.ts) — after the wind that scatters them
     if (DRESS.snow) this.syncSnowLook();
     if (DRESS.rain) updateRainFx(this, dt, me.cam);        // PARTICLE RAIN (rainFx.ts): the near-field drop recycler + drips + the lattice's stand-back disc (frame.weatherE) — after the wind (its drops ride the same field) — a return that zeroes the disc unless settings.particleRain is on and rain is drawn
+    this.wetGround.follow(this);   // WET GROUND (wetGround.ts, dressing: DRESS.wetGround is read inside, so the row put down DRIES what the step wetted): the yard is as wet as the weather just said — the renderer's words of the statics only
     updateItems(this, dt);
     updateGlass(this);   // glass: a stun charge beside the glazing stars the panes near it (this frame's 'bang' events, each looked at once) — and, with glass breaking on, takes cells out of them
     this.glassBreak.update(dt);   // glass breaking (glassbreak.ts): queued cells fall as shards within the frame's budget, the support pass drops the tongues left hanging, the gusts through shot-out exterior panes — nothing to do unless a pane has been hit with the switch on
@@ -1939,9 +1952,24 @@ export class Game {
   /** men moving through smoke push it */
   private smokeWake(all: Character[]) {
     // characters wading through smoke push it around
+    const stir = lookConfig.on ? Math.max(0, lookConfig.stir) : 0;   // (THE LOOK PROTOTYPE's Stirred smoke row; 0 = the two soft shoves below, as the build has them)
+    this.smoke.setStir?.(stir);
     for (const c of all) {
       const sp = Math.hypot(c.vel[0], c.vel[2]); if (sp < 0.25 || !c.bones.hips) continue;
       const dirv: Vec3 = [c.vel[0] / sp, 0.05, c.vel[2] / sp];
+      if (stir > 0) {
+        // STIRRED SMOKE CURLS (the maintainer, 10-31, of smoke in the yard: "more turbulence or vorticity near the edges, especially when it's driven by player
+        // movement", with the smooth flow the wind makes along a wall kept). HIS BODY is a standing capsule from his shins to his shoulders: the air inside it
+        // goes with him and the solver sends what he displaces round his sides (smoke.wgsl emBody). HIS STRIDE throws the air just behind him out to one side
+        // and then the other, a side a step: the shedding a walking man's legs and arms do, which a lattice this coarse would smooth into two still eddies.
+        // The side is his own walk cycle's (one cycle is two steps), so it changes when his foot does, whichever way he turns.
+        const S = SMOKE_STIR, h = c.bones.hips, hx = dirv[0], hz = dirv[2], top = h[1] + S.above, mid = (top + S.foot) / 2;
+        this.smoke.push({ pos: [h[0], mid, h[2]], dir: [hx, 0, hz], speed: sp, radius: S.body, body: Math.max(0, (top - S.foot) / 2 - S.body) });
+        const side = Math.sin(2 * Math.PI * c.anim.phase);
+        if (Math.abs(side) > S.gap) { const k = Math.sign(side);
+          this.smoke.push({ pos: [h[0] - hx * S.back, h[1] - S.low, h[2] - hz * S.back], dir: [-hz * k, 0, hx * k], speed: Math.min(S.most, sp * S.kick * Math.min(2, stir)), radius: S.kickR }); }
+        continue;
+      }
       this.smoke.push({ pos: c.bones.hips, dir: dirv, speed: sp * 1.15, radius: 0.3 });
       if (c.bones.chest) this.smoke.push({ pos: c.bones.chest, dir: dirv, speed: sp * 1.1, radius: 0.26 });
     }
@@ -2002,7 +2030,7 @@ export class Game {
     const wetOn = (this.engine.settings as { wetChars?: boolean }).wetChars !== false;   // wet characters (wet.ts): the renderer's switch — off (or a dry man) hands the g-buffer zeros, and it shades him exactly as before
     let drawn = bare ? this.fogOfWar.everybody(all) : this.fogOfWar.filter(all);
     if (this.rails.skyOn) { const me = this.player.char; drawn = drawn.filter(c => c !== me); }   // (rails.ts, the sky seat: nobody on the floor is the player — he is parked, and not in the picture)   // (fog of war: the men nobody on the team sees are not drawn and cast nothing — the list itself while it is off)
-    if (drawn.length > 8 && (this.nightBreach.active || this.rescue.active)) {   // more men on screen than cast shadows (the four-man squad, nightbreach.ts: Sam + four + up to five defenders — BoxWorld.addCharacterCapsules stops at eight): the men down give up their proxy places first, so it is a body that goes without a shadow before any man standing does. Eight or fewer = the list as it was
+    if (drawn.length > 8 && (this.nightBreach.active || this.rescue.active)) {   // more men on screen than have a mesh tree (the four-man squad, nightbreach.ts: Sam + four + up to five defenders; render/meshbvh.ts MESH_MAX_CHARS is eight. Every drawn man has his round-cone proxies: BoxWorld.MAX_CAST): the men down give up the trees' places first, so it is a body that is shadowed by his cones before any man standing is. Eight or fewer = the list as it was
       const down = new Set<Character>(); for (const gd of this.guards) if (gd.state === 'dead') down.add(gd.char);
       if (down.size) drawn = [...drawn.filter(c => !down.has(c)), ...drawn.filter(c => down.has(c))];
     }
@@ -2043,7 +2071,8 @@ export class Game {
     // settle. Gone, the blobs answer again. A NEW one with every encounter and whenever the senses come to the game, restartEncounter and above (`renew`):
     // its beat and the light model's sweep then start with the encounter, in a game that has run for an hour and in one a file was just loaded into.
     // With the light model up, the light that comes round is stepped on the same squares: sense.ts SENSE.bounce)
-    this.cpuSmoke.grid?.step(this.col, dt, SENSE.bounce ? col => steadyLamps(this, col) : null);
+    // …and under the open sky its smoke drifts with the weather's wind (SENSE.drift; wind.ts stormDrift)
+    this.cpuSmoke.grid?.step(this.col, dt, SENSE.bounce ? col => steadyLamps(this, col) : null, SENSE.drift ? () => this.wind.stormDrift() : null);
   }
   /** the sensors' asks (Sam's meter, the guards' smoke sight lines) and Sam's visibility off the last answer */
   private lightMeter(dt: number) {

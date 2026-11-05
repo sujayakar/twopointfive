@@ -10,6 +10,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`TPS_PROFILE=shipped` in front of any headless tool) = the page as it opens with no URL flag on a machine that has kept nothing: none of those lines runs, `shippedBoot()` calls
   `pageSwitches('')` — THE function `src/main.ts` calls with the page's own query for the switches its boot writes (destruction, furniture, wall reactions, wall charge, the door
   walk) — reads the kit from an empty store, takes the squads' page-only `?radiocheck=call`, and the cast is loaded. `FROZEN_HOLDS` there lists every row the two stands differ in (73 when this line was last touched; the table is the count, not this line)
+  — since 2026-11-04 NOT the game's own maths or a row of the Rust module: both are on on both stands (`standup.ts pinMaths`, `pinRust`; `docs/agents/rust.md`, "All on"), and the stand every
+  older digest was recorded on is asked for by `TPS_EXACT=0 TPS_RUST=0` until the TypeScript twins are deleted —
   with the word that raises each on a frozen run (`TPS_MOVES=1`, `GLASSFX=on`, `SLOTS=on`, `SQUADS=radiocheck-call`, …); under shipped a pin's own word still holds
   (`TPS_PROFILE=shipped TPS_MOVES=0`), except that a PLAY-THROUGH writes the door rules and chaos itself on either stand (`--set` there). Held by: `probes.ts shipped`
   (shipped-check.ts: the two stands differ in exactly those rows, plain and with a mission staged; every pin's word is in `src/host/standEnv.ts STAND_ENV`) and
@@ -38,7 +40,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 ## Run · build · check
 
 ```bash
-bun run dev            # tools/serve.ts → http://localhost:5173  (loopback only, HOST=… overrides; game at /; /index.html forwards; GET /levels/ = the level files, read-only)
+bun run dev            # tools/serve.ts → http://localhost:5173  (loopback only, HOST=… overrides; game at /, the WORKBENCH at /workbench = level editor + character/prop viewer in one shell; /viewer /editor /gait /index.html forward; GET/POST /levels/ — POST wants X-Level-Editor: 1)
 bun run build          # tools/build.ts → dist/ (Bun HTML bundler; WGSL imported as text)
 bun run typecheck      # node vendor/typescript/bin/tsc --noEmit -p tsconfig.json   ← run before every commit (vendor/typescript is gitignored: in a cloud checkout run a system `tsc --noEmit -p tsconfig.json` — 6.0.2 passes on src/)
 bun run tools/shot-server.ts   # :5174 capture sink (loopback only; CORS granted to loopback pages on any port): __shot() → docs/shots/<name>.jpg, __png() → docs/shots/ab/<name>.png
@@ -118,10 +120,17 @@ temporal, 'lighting' adds lighting_common for gather/rc/probe/volumetrics — `n
 needed).
 URL flags: `?keeppage=0` (every load a whole page, as before the kept page — `docs/agents/render.md`, the kept page; a DRIVEN page and a `?paused` one are whole by themselves, so a tool reads `window.__game` as ever, and `?keeppage=1` asks such a page for the shell: the game's hooks are then on `document.getElementById('kept-page').contentWindow`), `?keepdrain=0` (on the tab's first address: a load on the kept page does not wait for the last mission's GPU queue before it takes the device), `?callclock=0` (a load's buffer, texture and submit calls are not timed, and its record has no `calls`), `?playclock=0` (after the load, a frame's time inside the GPU queue's calls is not totalled; `?callclock=0` puts both off), `?paused` (deterministic boot, nothing runs until stepped), `?quality=verylow|low|medium|high|ultra` (pins a preset,
 auto off), (`?demo` and `?breach` started the night and day showcases; both were removed with `__night` / `__breach` — docs/agents/showcases.md — and the flags now do nothing; the old tour is `__demo.start()` only), `?mute` (or `localStorage twopointsix.testMute=1` once in the automation
-profile — **keep test pages silent**, the user listens to their own audio), `?nodecals` / `?noparticles` / `?noweather` / `?noglass` / `?nocivilians` (each merged experiment off from boot — its untouched path), `?nortreflect` (+ `?detail=0‥1`; `?nortreflect&detail=0` = renderer v3 phase 4 off: main's frame bit for bit), `?nomarkings` / `?level=relief` / `?levelFile=<name>.json` (the markings bullet), `?decalStress=N`, `?nogatherstrata` / `?nomotioncalm` (the two 08-12 defaults off), `?hud` (the debug read-out under the HUD on
+profile — **keep test pages silent**, the user listens to their own audio), `?nodecals` / `?noparticles` / `?noweather` / `?noglass` / `?nocivilians` (each merged experiment off from boot — its untouched path), `?nortreflect` (+ `?detail=0‥1`; `?nortreflect&detail=0` = renderer v3 phase 4 off: main's frame bit for bit), `?nomarkings` / `?level=relief` / `?levelFile=<name>.json` (the markings bullet), `?decalStress=N`, `?level=local` (boot on the level EDITOR's current document: the workbench's ▶ *play from here*
+stashes it under localStorage `twopointsix.editorLevel` and opens this — an unreadable stash falls back to the bundled office with a console error), `?nogatherstrata` / `?nomotioncalm` (the two 08-12 defaults off), `?hud` (the debug read-out under the HUD on
 from boot — otherwise opt-in per machine, Tab ▸ Frame ▸ debug read-out), `?nop5` (renderer v3 phase 5's ultra extras off from boot AND vetoed for the presets — ultra's frame as it was before the
-phase; the Tab rows still flip them), `?reachUniform` (A/B only: force the reach masks' uniform binding instead of the storage buffer).
-The workbench (the level editor and the character / effects viewer, `/workbench`) was removed on 2026-11-04 with its hooks (`__ed`, `__wb`, `__vrt`, `__viewer`) and its checks; the level lint stayed: `probes.ts level-lint`; `bun run tools/qa/level-lint.ts levels/office.json`.
+phase; the Tab rows still flip them), `?reachUniform` (A/B only: force the reach masks' uniform binding instead of the storage buffer). The viewer = the workbench's Characters / Effects modes (`src/viewer/` runtime + chrome housed by `src/workbench/main.ts`, VIEWER.md;
+`/workbench#mode=chars&scene=guard/carbine-shoulder`; `/viewer#guard/carbine-shoulder` and `/gait` forward with the hash translated) has
+`__viewer __char __step __gizmo __rig __rigSource __toss __cans __vtime __shot` (+ `__viewer.scene(name, variant)`, `__tac __hold __long __M`, `__vui` the chrome, `__vrt` the viewer Runtime — NOT `__rt`, which is the game page's RT-reflection knobs).
+The level editor = the workbench's Level / Materials modes (`src/editor/app.ts` housed by `src/workbench/main.ts`, docs/level-format.md 'Editor'; `/workbench#mode=level&file=<name>` (`&autosave` / `&blank`);
+`/editor#file=…` forwards; `__wb` {mode, setMode, scene(id|null, variant), staged} switches modes / stands a staging figure in the level) has `__ed` (every edit as a
+function over the same undo stack: `__ed.box.add/move/resize/…`, `light`, `door` (+ `makeFrame` / `cutOpening`), `route.draw`, `volume`, `mark`, `select`,
+`undo/redo`, `validate()`, `lint()`, `serialize()`, `load(text, {lenient?})`, `camera()/pin()`, `step(n)`, `shot(name)`; every multi-op verb inside `doc.transact` = all-or-nothing), `__edshot(name)` (view + overlay), `__tools __view __scene`;
+its rAF loop also stops on a hidden pane — dispatch mouse events then `__ed.step(n)`. QA: `probes.ts editor` + `probes.ts level-lint`; `bun run tools/qa/level-lint.ts levels/office.json`.
 `__stage(pin | null, { park, guards:[{i,pos,yaw,torch,aimPitch}], player:{pos,yaw,crouch,holstered,invisible} })` pins the camera VERBATIM
 (`FollowCamera.setPin` → `pin`: look-at, yaw, pitch, dist — no damping, no aim lead; the numbers must be finite, dist is clamped ≥ near + 0.05 and |pitch| ≤ 89°, the applied pin comes back
 in the result; null releases it AND puts the free camera's yaw / pitch / zoom back) and stages actors in one call — use it for every capture: the follow
@@ -510,7 +519,30 @@ but synthetic writes still work.
   (`Bench.standing`, as for a tab that was away; every page of a set comes through that wait, and main.ts holds auto quality's measure back with it), `standInMs` (180 s) in all on a page, counted from the first look that found one and never started
   again; past it the lines are timed as they are and the report says so once, however many pages the set has ("some shaders were still building 180 s in …"). bench-check has both cases on its fake page. Not covered: a wall cut before the cut set is in still draws
   its whole box under a timed line, as it always did (that set is not in `standsIn`). NOT DONE either: the engine replay's address (`ui/replaykey.ts
-  VISIT_FLAGS`) drops the same words. Checked by `bench-check` (the fake page and tab) and once on a page on the software adapter: never run on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
+  VISIT_FLAGS`) drops the same words. Checked by `bench-check` (the fake page and tab) and once on a page on the software adapter: never run on a GPU. THE LOOK PROTOTYPE (11-02) rides along too: a run asked for on the look's page keeps the look (`?bench&look`): every
+  `look=key:value` row and the page's other boot words (`scene/look.ts lookPageWord`: hills, geo, front, lorry, dress, seat, the cut boxes' switch and the
+  rest; never the dress's `look=plain|0|off`) ride along, since the page reads them at boot into its shader text and its level. Before, such a run timed
+  the plain build on every scene and said nothing. A TRIAL THE LOOK PANEL'S BUTTON KEEPS OFF on the machine goes on the address as its own word
+  (`lookTrialsKept`, `hills=0`; the kept cut boxes' switch with them), so the run times the look the page it was asked on shows and the report's address says which. A SCENE'S ADDRESS IS
+  NOBODY'S TO TUNE (`main.ts`, on the word `benchrun`, as the load brief and the GPU retry are; so also a scene's address opened with no run under way): the
+  look page's kit and its fog put down stand off (the set's own), and the look panel is not built (no panel over the picture, none of its timers, the take
+  leaves by the recorder's own way). So off against on is two runs, `?bench` and `?bench&look`. WHAT THE PAIR DOES NOT HOLD ALIKE: the look's own geometry
+  (broken wall tops, round stacks, the pass's dressing) is part of the level a look run plays, so its fight is not the plain run's frame for frame and its
+  heavy moment may be another; the first scene's page writes that into the report's notes. The report is still headed with the set's name, `floors-1`: the
+  note and the address row are what tell a look run apart. The look's amounts are the defaults unless a `look=key:value` row is on the address (a slider
+  moved on the panel is kept nowhere). `bench-check` has the three lines and reads the page's gates in `main.ts` by text; the page's half (kit, fog, no panel,
+  the note, a kept-off trial off) was read off the first scene's page on the software adapter, where very low to high also each drew frames under the
+  look with no GPU error (the four presets the last page holds: `AUTO_LADDER`). ULTRA IS NOT ON THAT LADDER, and on the software adapter the look page
+  LOSES THE DEVICE within ten seconds of ultra being applied (the GPU process exits on signal 11 while it draws the first frame; no program is compiled
+  then). NARROWED, a boot a row: of ultra's rows it is the gather's reservoir resampling alone (`giResample 'temporal'`, `fgather.wgsl mainGi`), and it
+  needs the cut rule compiled into the ray programs from boot, which any geometry trial of the look asks for (`cutConfig.swap = false`). With the look's
+  trials off the look page draws ultra clean; hill rays are not it; and THE PLAIN PAGE WITH `?cutprograms=boot` DIES THE SAME WAY, so it is not the
+  look's. IT IS THIS BRANCH'S OLD BASE, NOT THE BROWSER (11-02 late): the build's head, unpacked beside this tree and put through the same script on the
+  same box and the same browser (Chromium 141), draws ultra on the plain page with `?cutprograms=boot` with no device loss and no GPU error, where this
+  tree's plain page loses the device every time; `&round=0` on this tree changes nothing, so the round test in the cut set's walks is not the whole of
+  it. Which of the build's steps since the base mends it was not found (the build's change to how round things are traced in the cut set does not apply
+  to this tree, which has its own), so nothing was ported: it is expected to go at the join, and that is one run to make then. Never tried on a GPU. `window.__look.parts()` says which trials a look page asked for at boot. NOT CARRIED: the dress's off words beside a look row
+  (`?look=plain&look=…`: the scenes are the set's dressed levels). NEVER PLAYED TO ITS CARD, and never on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
   goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
   times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page
   twin of `command-tally.ts`'s hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),
@@ -566,6 +598,57 @@ but synthetic writes still work.
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; 154 minutes at 320x180 on a four-core box on 2026-11-04, so its `DEADLINE` allows 240 by default). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
+- **THE PRICING RUN (`src/ui/pricerun.ts`, `src/host/runpage.ts`, 2026-11-04; `localhost:5173/?look&pricelevels&downloads=1`, hands off)** walks every level of the mission list
+  (`=a,b` for some), a page load a state: the look page (played four seconds of the game's clock, the picture held on one step, timed with the look's
+  switchable layers off and on in turn) and then the same mission WITHOUT the look, held on the same step. One file, `price-levels-<date>.json` (version 6),
+  a row a level, each with the run's own verdict against the bar (`priceOver`, the one place a GPU number of it is judged; the file's `bar.ruled` says
+  which rows of the bar the maintainer has ruled on). A ROW THAT IS NOT ONE PICTURE IS NOT JUDGED (`apart`: the picture moved between its turns, its two
+  pages stood at another size, rung or step, or frames were queued ahead of the GPU in a state, `queuedWords`): its numbers stand and no verdict is read off
+  them. The GPU's lag is no line of the verdict (it reads 2 to 3 wherever the page waits for the GPU, more on a 120 Hz display). TWO NUMBERS a state: the
+  compute passes' busy span (the game's own "GPU ms") and that span with the g-buffer's pass in it (`all`: every stamped pass but the ones that draw to the
+  display, whose stamps span the display's wait; the g-buffer's was read against recorded frames on an M4 Max and follows its own work — one chip, so each
+  state is still checked, `spansWait`, which wants half a frame of g-buffer before it calls it a wait). EVERY PAGE STANDS ON ITS PRESET'S OWN ROWS with the
+  quality ladder off from before its first frame and gives way to no window in focus elsewhere, BY ITS ADDRESS'S OWN WORDS (`quality=<preset>&adapt=0`
+  and `giveway=0`, which `priceSearch` writes: no rule of the page knows a priced page; asked with `quality=auto` the ladder and its pace are left to the
+  page and the row says so). It is not counted as measuring: it still waits for the GPU as a player's page does, and a frame's time is the time between two frames it DREW (`window.__pace`; the frames a
+  turn waits for are counted the same way), so a level the GPU cannot hold sixty on reads as that and queues nothing ahead; a row says its rung, its size
+  and the step it was held at. ONE WAY TO PLAY, on every page: the loop is held from before the boot, the run asks for the page's warm-up (`__prewarm`) and
+  lets the page draw with the clock held until the page says the warm-up's clear is over (`window.__prewarmed`), and then the mission is played by the
+  page's scripted step, a step a display frame, every step drawn, with no more frames with the GPU than the page's own pacer keeps there. So a level's two
+  pages have run the same steps, drawn the same frames and stand on the same render clock at any display rate. (Stepped with no warm-up first, a snow
+  level had no snow in its air: the warm-up clears the particles' ring some frames after the page's first frame of its own, which then came after the
+  play. Played by the page's own loop instead, two pages stood on render clocks a few milliseconds apart and a 120 Hz display ran other frames than a
+  60 Hz one.) A PAGE WHOSE PART THROWS, or whose loop has stopped, is one page not priced, with its cause in the file's notes, and the run goes on.
+  The file names the build its pages were (`commit`, the page's own word), and the table merges rows only of one build. IT IS A RUN'S PAGE
+  (`host/runpage.ts`: `runPage` stands the load brief, the lost-device reload, the sandbox row and the look page's kit down, as on a benchmark's scene;
+  `ownPage` keeps its own page under the kept-page rule, since a run walks by loading its next address). ITS FILE GOES OUT BY THE SAVE DOOR (kind `price`):
+  to whoever listens, and to the browser as a download only with `downloads=1`, a flag the run carries with the benchmark's other carried words
+  (`ui/benchrun.ts carriedWords`); where nobody took it the card holds the file's text under the table for Copy. A word of the asking address that no
+  page carries is named in the file's notes. Words: `quality=` (default high), `pricesecs=`, `pricepage=0` (look pages only); a mission's link sheds them
+  all (`PRICE_ASK_WORDS`). Checked by `bun run tools/qa/pricerun-check.ts` (no page: the verdicts, the wait's rule, frames queued ahead, the report, the
+  addresses, on made-up rows; `PRICERUN_BREAK=1` must fail) and by
+  `node tools/qa/pricerun-page.cjs [level …]` (the real page on the software adapter, as a person's page runs it: the chain, one rung, one step, the file
+  down; no number there is a price, and its frames are seconds long, so it proves nothing of the pacing) and with `--real` on a machine with a GPU (`--look "<words>" --look-only` prices a look page under other words). Run on
+  a rented NVIDIA card through Vulkan only (11-04); NEVER RUN ON METAL OR ON A DISPLAY (a headless card has none, so nothing of a 120 Hz display's frames has been seen), and nobody has read a row of it against the bar. The level tools below read its file.
+  A LONG WALK TIRES (11-05, the rented card, 29 levels in one browser): from about the 15th level the GPU's answer came later and later (to 57 ms for 10 ms
+  of passes) while the pages' boots kept their time, and the last seven rows read the look page CHEAPER than the page without it with every check green;
+  the same seven alone read sane. Why it tires is NOT known. Two mends. The driver walks in even parts on one dev server, a fresh browser every ten levels
+  (`--each N`; files under `<out>/part-<k>`, every part's price file copied to `<out>`). And the run sets a row apart whose answer came late against the
+  run's own least (`PRICE.lateMs`, `lateRows`, asked once when the file is made: a state's `work` over the frames of its own passes the page keeps with
+  the GPU plus the least any state of the run took beyond its passes, by more than 12 ms; the number is set by that one walk, where it sets apart exactly
+  the seven; 0 = not asked, as on the software page). Checked on made-up rows with that walk's numbers by `pricerun-check` (`PRICERUN_BREAK=late` must fail
+  on those cases alone). THE RULE HAS NEVER RUN IN A PAGE ON A GPU, and a walk in parts has not run on one either: the rule was read against that walk's
+  file after the fact. A person's run is one tab and cannot start a browser: its late rows are what this rule is for.
+- **THE LEVEL TOOLS (2026-11-04; files only, no GPU, no page of the game's changed).** `bun run tools/qa/level-audit.ts [level …]` counts every level the mission
+  list draws as the look page draws it (boxes, cut planes, round things, lamps burning at its hour, how much of the picture is each material and how much
+  has none: a box is made of what it says, `Box.stuff`, read as the renderer reads it), about a second a level; `--check <level>` holds the engine's caps and the PROPOSED bars of `level-count.ts` (`LEVELAUDIT_BREAK=1` must fail),
+  `--counts` gives a level's row for its dressing file, `--write-base` the baseline (`fixtures/level-audit-base.json`: the levels before they were
+  dressed). `node tools/qa/level-cost-page.cjs <level>` is one boot of the look page on the software adapter: what it compiled, layers off against on, a
+  still; a relative read, and the GPU's particles are never stepped in it, so a snow or rain level is read without what is in its air.
+  `bun run tools/qa/level-table.ts --dir <folder>` makes one page of every level from those files, a GPU's price file and each dressing row (the folder's `notice.txt` is printed first and marks a level whose price no longer stands; `cloud/before/` holds the run the newest one takes the place of, printed beside it). "Which levels
+  the list draws" is one answer (`scene/scenarioList.ts listedLevels`) and the render passes are one list (`gpu/timer.ts RENDER_PASSES`): both tools ask those.
+- **A picture fault is debugged from a frame capture** (F6 on the page: every render target over 8 frames and the trace of what the renderer changed;
+  `tools/qa/capture-read.ts` reads it; `docs/agents/render.md`, "A CAPTURE IS EVERY TARGET OF A FEW FRAMES").
 - **What a line of the benchmark's card prices** (2026-11-04, `ui/bench.ts benchStats`). `frame ms` is the gap between frames: wherever the
   display's pace is held it reads 16.7 whatever the picture cost, so it answers 'is 60 held' and prices nothing. `GPU ms` is the COMPUTE passes'
   union, the number the quality ladder is fed (`ui/perfrec.ts`); every drawn pass is left out of it, because a drawn pass's stamps are not to be
@@ -704,7 +787,9 @@ but synthetic writes still work.
   both stands: `tools/qa/gpulost-check.ts` (the note, the row, the word, the three reasons and the card as tables; `PLAINAIR_BREAK=1` fails seven lines);
   `tools/qa/plainair-check.ts` (the Engine built on a stand-in device as any load and in plain air: one plain module, no text of the real march, no twin asked for,
   every other program as ever; the plain module AS CUT declares no walking function and is a third of the real one or less; the numbers it copies from the real march
-  are still the real march's; `TPS_COMPACTSHADERS=1` in front for the page's writing; `PLAINAIR_BREAK=1` fails four lines, six with the compact set); and
+  are still the real march's, and on any load the weight of a lamp's glow through smoke (the look's row, `Engine.smokeDraw.ahead`) reaches the frame at 0 with
+  only its two writers naming it, so the real march's cut is the plain one's; `TPS_COMPACTSHADERS=1` in front for the page's writing; `PLAINAIR_BREAK=1` fails five
+  lines, seven with the compact set); and
   `tools/qa/plainair-page.cjs` on the real page (headless Chromium, software adapter, `?plainair=1`: every program made, 117 where the page makes 118; the browser is
   handed `volumetricsPlain` and no text of the real march, no twin is asked for, the warning is printed, a canister's plume shows in the picture and in the volumetric
   pass's own, no GPU error, no card; `PLAINAIR_BREAK=1` runs it under `?plainair=0` and fails four lines; eighteen minutes on this box, most of it the cut set
@@ -741,6 +826,10 @@ but synthetic writes still work.
   boot and the cut-box set over a recording stand-in device, always on the shipped stand; two seconds. Exit 1 when a kernel is over its row of the budget table at
   the head of the file, a row has no kernel left, or the stand-in's boot did not finish or came up short; `SHADERINLINE_BREAK=1` must fail. Run it after a change to a `.wgsl` file or to what a module is
   built from, and move the kernel's row in the same change when the growth is meant.
+  THE CUT TEST IS COUNTED APART (2026-11-05): a kernel is held to its row without the text of `isectCut` and `cutFour`; that text has its own number
+  (`CUT_TEST_KB`, 3.1 of 3.2 KB at one copy of the box test); and every kernel of the cut set is held to its boot twin with the round's own test out and the
+  cut test in, a fiftieth of the twin at most on top (`docs/agents/destruction.md`, THE BOX TEST HAS NO LOOP). The JSON's `cut` and `round` are those texts in
+  a kernel; `SHADERINLINE_BREAK=1` measures the same way.
 - **The night breach's probes on the SHIPPED stand** (2026-10-25; tests only). `nightbreach-stage` and `nightbreach-stop` read 'tune CHANGED' there: the
   rig (`tools/qa/nightbreach-probes.ts rig`) took its `before.tune` and THEN wrote `game.tune.chaos` itself, and the shipped stand stands the game up at
   chaos 0.5 where the frozen one has 0 — the rig's own write read as the staging's. The write is before the snapshot now; both are green on both stands.
@@ -778,3 +867,40 @@ but synthetic writes still work.
   here: the 2.6 cm itself (the squad's finding), any other mission, the frozen stand. Tallies that want a player who really stands put the word in front.
   THE SMELL IT ENDS, by the squad's own tally of the same eight seeds on a later join: 'in the doorway for N s · fallIn (on his mark)' 3 lines without the
   word, 0 with it. Making it the default is open: 84 files of `tools/qa` lean on this commander, and every table before it was made with the walker.
+- **Every shader text compiled in twenty seconds: `node tools/qa/wgsl-compile.cjs`** (11-01; `tools/qa/wgsl-dump.ts` writes the texts). The Engine and the smoke
+  solver are built on a stand-in device that records every module's text, as a plain boot makes them and again as the look page builds them (its prelude consts
+  up), in TWO runs: bare, and with every shader row's word in the environment (`TPS_COMPACTSHADERS=1` and the rest: the rows are read once at import, and a first
+  writing that flipped the row after the import compiled none of the compact writings and said nothing). Each distinct text (68 today) goes to headless
+  Chromium's `createShaderModule` and its errors are printed with the line. Parse and type errors only: it makes no pipeline and draws nothing, so it does not replace a page boot (see the first-frame bullet in `render.md`).
+  `WGSL_BREAK=1` adds a function that names nothing declared and must fail.
+- **One kernel alone on the software adapter, with its stack frame against the adapter's limit: `node tools/qa/kernel-stack.cjs`** (11-01; 40 s a kernel;
+  default `fgatherS/main` on the look page, `--kernel a,b`, `--list`, `--plain` = the game page, `--query '&look=walls:0'`, `--text file.wgsl`). A page that boots
+  clean and loses its device on the first frame after a shader change is this: `docs/agents/render.md`, the software adapter's limit. Exit 0 built and ran, 1 not
+  built (it prints the compiler's own words), 2 no browser or no such kernel. The numbers need gdb and the symbols Playwright's Chromium ships in
+  `libvk_swiftshader.so`; without them it still says built or not. It attaches to its own browser's GPU process (found by a word it puts on that browser's
+  command line), so another page check may run beside it.
+- **A check that needs a wall stands one: `tools/qa/standwall.ts`** (2026-11-05; tests only, no rule of play). A check used to lay a function of its own over a
+  game's line test (`g.col.segmentBlocked = () => true`, `solidBlocked` the same). Only the TypeScript that calls the method met it: a question answered
+  inside the Rust module (an eye on a man, the lamps on a point, the smoke along a line, a sound's way, a way across the floor, the fog's pass) reads the
+  module's copy of the BOXES, so the game kept a guard (`collision.ts ownLines`) that hands every such question back to the TypeScript while a stand-in is
+  laid, and that guard is the last thing in the tools that needs the TypeScript sides. A wall that is a box is met by every reader in either language.
+  `standWall(g, walls)` puts boxes on the end of the box world's list (`collision.ts addStatic`, the road a holed wall's pieces take) and returns the
+  function that cuts the list back (it refuses a list that is not the one it left: nothing else may add a static while a wall stands);
+  `wallBetween(a, b, at, half, top)` is a thin upright wall across a line; `clearLine(g, a, b)` hides the statics one line meets and nothing else
+  (`BoxFlag.NoShadow` raised, as on a box the game itself has hidden), so a game may be played under it; `noWalls(g)` hides every static, the floor
+  too, for a question asked at once. Each returns the function that puts back what it changed and no more (a flag is lowered only where it was
+  raised here). A door's leaf is no static: neither hides one. The floor's grid is not baked again: a man meets a wall and does not plan round it.
+  Take walls down last up first; stand none across a restart.
+  THE FIVE CHECKS THAT LAID A STAND-IN NOW STAND WALLS, and each reads what it read (both stands, the same day, the lines compared with the tree before):
+  `autocam-check` (a wall half way to a man at his side; a wall 0.9 m toward the lens as wide as hid everything within acos 0.9 of that way, stood
+  again where he stops since a wall does not follow a man as the function did; a pillar half way to the locked man): every line of its output the same;
+  `stalk-check` (a wall half way between Sam and his man where 'something solid comes between them'): every line the same, and under `STALK_BREAK=1`;
+  `deathrecap-check` (`RECAP_BREAK=seen` hides what stands between his mate or Sam and the man, where he lies and at his chest: every line the same, and the break fails the lines it failed; its output the same but for a digest one byte longer on the page's stand); `moonlight-check`
+  (`MOONLIGHT_BREAK=1` asks of a level with no static standing): every line the same, the break fails `shadow` as it did, to the digit;
+  `squaddoors-check` (the teammate who must not see the leaf, at a door with no place behind a wall of the level's: a wall is stood between a place in
+  front of the door and the leaf, the first that hides every point of the leaf by the check's own lines; before, every line from within 0.6 m of
+  where he stood was shut by hand): the one staged line reads its new place (0.75 m from the leaf on the frozen stand, 1.50 m on the page's, for 0.46
+  and 1.20) and passes, `SQUADDOORS_BREAK=1` fails the two lines it failed, and with the wall left out the same man does see the leaf (shown by hand).
+  No tool lays a function over the line test any more (a grep of `tools/` for `segmentBlocked = ` and `solidBlocked = ` finds two comments), and once
+  the senses' TypeScript sides are deleted `ownLines` false is an error said by name, so that a sixth tool that tries it is told. NOT TOUCHED:
+  `morale-check` lays a function over `col.raycast`, which is the rays' and no part of that guard.

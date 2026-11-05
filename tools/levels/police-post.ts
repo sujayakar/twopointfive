@@ -94,6 +94,7 @@ import { gwotKit, gwotOfOffice, roundSlabs, GWOT_PALETTE, GWOT_MATERIALS, GW_PAR
 import type { MarkFace, MarkPal } from '../../src/scene/markings';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
 export const NOTES = 'The district police post at night, for one man sneaking: every door that matters is locked on one key and the only ring is on the desk sergeant\'s belt; most men know the armoury pad\'s code, and the armoury has no other door; or a lock is picked in the corridor a man walks, or the breaker brings the ring out to the shed. A perimeter wall with a lit main gate, two side gates and the east gate into the impound (the way out), a main building of seven rooms off one corridor, a generator shed with the breaker, a guard hut, two pickups under a canopy, the radio mast on the back strip. Six beats authored, five manned a deal; two cameras, a keypad door. In the GWOT look kit. Regenerate: bun run tools/levels/export.ts police-post';
 export const MATERIALS = GWOT_MATERIALS;
@@ -261,8 +262,8 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   grp('ceiling');
   const roof = { flags: BoxFlag.NoPrimary };
   slab(12.9, H, 7.9, 31.1, H + 0.2, 18.6, [0.5, 0.47, 0.41], roof);    // the main building
-  slab(3.9, H, 19.4, 9.6, H + 0.2, 24.1, [0.36, 0.35, 0.33], roof);    // the generator shed
-  slab(22.4, H, 20.9, 26.6, H + 0.2, 24.1, [0.36, 0.35, 0.33], roof);  // the guard hut
+  slab(3.9, H, 19.4, 9.6, H + 0.2, 24.1, drawnAs('block', [0.36, 0.35, 0.33]), roof);    // the generator shed
+  slab(22.4, H, 20.9, 26.6, H + 0.2, 24.1, drawnAs('block', [0.36, 0.35, 0.33]), roof);  // the guard hut
   slab(3.9, H, 3.9, 8.9, H + 0.12, 9.2, [0.3, 0.31, 0.3], roof);       // the motor pool's tin canopy
 
   // ---------------- the perimeter wall (mud brick, 0.24, to the roofs' height and coped: nobody sees or shoots over it) ----------------
@@ -421,7 +422,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   grp('shed');
   G.generator(6.2, 23.2, 0);                                                            // against the south wall, its panel to the room
   G.drum(4.52, 20.6, 'drumRed'); G.drum(4.52, 21.25, 'rust'); G.jerryCan(5.3, 20.1, 0.4);
-  const brk = add({ c: [8.3, 1.35, 23.84], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [8.3, 1.35, 23.84], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [8.12, 1.62, 23.79], h: [0.015, 0.015, 0.01], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [8.3, 2.35, 23.85], h: [0.03, 0.64, 0.03], ...M.galv });                     // its conduit to the roof
   ceilingPanel(6.8, 21.3, true, 'shed', true, 0.6, 0.6, [5, 4.6, 3.8]);
@@ -676,7 +677,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
 
     // THE MOTOR POOL — vehicle bay: the fuel point south of the canopy (two drums and the hand pump), painted bays, a spare wheel, a bonnet off and leaning; the gap between the trucks stays empty
     room('motorpool');
-    G.drum(4.62, 9.9, 'drumRed'); G.drum(4.62, 10.62, 'drumRed');                                         // (standing: a drum on its side is a box to the picture until the kit has a lying round)
+    G.drum(4.62, 9.9, 'drumRed'); G.drum(4.62, 10.62, 'drumRed');                                         // (standing, as a fuel point's drums are: the hand pump stands in the first)
     W(4.62, 9.9, 0.88, 1.36, 0.02, 0.02, M.iron); W(4.78, 9.9, 1.32, 1.36, 0.14, 0.015, M.iron);          // the hand pump, standing in the first
     rnd(8.55, 6.7, 0, 0.18, 0.19, 'rubber'); W(8.55, 6.7, 0.18, 0.19, 0.09, 0.09, M.galv);
     W(4.17, 6.65, 0, 1.0, 0.03, 0.45, M.truckWhite);

@@ -15,7 +15,7 @@ out of a solo stealth demo (touchstone: Splinter Cell: Chaos Theory), which is s
 ## Run · build · check
 
 ```bash
-bun run dev            # tools/serve.ts → http://localhost:5173 (game at /, replay viewer at /replay, /sounds, /music)
+bun run dev            # tools/serve.ts → http://localhost:5173 (game at /, workbench at /workbench, replay viewer at /replay, /sounds, /music)
 bun run build          # tools/build.ts → dist/
 bun run build:one      # tools/build-one.ts → dist/one/twopointsix.html, the whole game page as ONE file (docs/agents/workflow.md)
 bun run typecheck      # src/      ← before every commit (no vendor/typescript in a cloud checkout: a system `tsc --noEmit -p tsconfig.json`)
@@ -138,5 +138,5 @@ happened when; the live queue is outside the repo.
 - `workflow.md` — the fast loop, reviews, lanes and their deliverables, commits, the maintainer's taste, where the repo lives, the
   playable Artifact.
 
-Other maps: `STYLE.md` (the look as rules), `docs/level-format.md`, `docs/internal/<topic>.md` (notebooks),
+Other maps: `STYLE.md` (the look as rules), `docs/level-format.md`, `VIEWER.md`, `docs/internal/<topic>.md` (notebooks),
 `STATUS.md`. `handoff.md` and a few old logs are not in this repo: see `docs/agents/workflow.md`.

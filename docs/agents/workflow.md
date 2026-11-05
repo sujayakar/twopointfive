@@ -72,7 +72,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   itself up on a page from disk is NOT SEEN — the software adapter had not booted the second instance from disk in 150 s; never on a
   GPU). The page carries
   `<meta name="tps-one-page">`, as before: no tool pages in Extras, no replay viewer (F7 sends its file to a backend the address names, and with none says the replay was not kept), and
-  `ui/menuStills.ts` asks for pictures there only when the page packs them. OUT of the file: the replay viewer, the
+  `ui/menuStills.ts` asks for pictures there only when the page packs them. OUT of the file: the workbench, the replay viewer, the
   sounds and music pages, `public/assets/replays`. CHECK: `bun run build:one && node tools/qa/onefile-page.cjs` (a server that knows
   one address and 404s the same address with a query; `ONEFILE_BREAK=1` = the boot script taken out, must FAIL) — the pack (the `.bin`
   by digest), the Play page, the picture frame's flags, Team & kit → Deploy into the mission's flags, a reload, Back, Forward, two
@@ -86,8 +86,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 The maintainer, 10-26: "we should just deploy this on vercel and have a convex backend where we accumulate stuff like replays, telemetry,
 preferences, etc." No accounts; nothing multiplayer.
 
-- **The hosted build** = `vercel.json` + `tools/host/build.sh`: the static `bun run build` (`dist/`), `cleanUrls` so `/replay`,
-  `/sounds`, `/music` open as on the dev server, the dev server's two forwards (`/sneaklab`, `/firelab`) as redirects, and
+- **The hosted build** = `vercel.json` + `tools/host/build.sh`: the static `bun run build` (`dist/`), `cleanUrls` so `/workbench`, `/replay`,
+  `/sounds`, `/music` open as on the dev server, the dev server's three forwards (`/sneaklab`, `/firelab`, `/gait`) as redirects, and
   `dist/qa/commit` (the commit, from the host's `VERCEL_GIT_COMMIT_SHA` or a clean checkout's `git rev-parse`: a recording made on the build
   names it, as on the dev server). The project on the host is the maintainer's; its production branch is `twopointsix`, so every step that
   joins the build redeploys the link. NOT in the repo: the project, its address, any key.

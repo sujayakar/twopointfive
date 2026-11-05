@@ -45,7 +45,7 @@ export function keepPageBoot(q: URLSearchParams, own: boolean): { role: KeepRole
     const H = history, mirror = (): void => { try { const up = window.parent; if (up.location.href !== location.href) up.history.replaceState(up.history.state, '', location.href); } catch { /* */ } };
     for (const k of ['replaceState', 'pushState'] as const) { const real = H[k].bind(H); H[k] = (...a: Parameters<History['replaceState']>): void => { real(...a); mirror(); }; }
     addEventListener('popstate', mirror); addEventListener('hashchange', mirror);
-    // ANOTHER PAGE of the site (the replay viewer, the listening pages) is the tab's to load, not the frame's: it writes its own address and
+    // ANOTHER PAGE of the site (the replay viewer, the workbench, the listening pages) is the tab's to load, not the frame's: it writes its own address and
     // title as it goes, and nothing of the kept page is its to use. The load is stopped on its way and made by the tab (the Navigation API; a browser
     // without it loads the page in the frame and the shell then sends the tab there: gpu/keep.ts showKeptFrame)
     try {

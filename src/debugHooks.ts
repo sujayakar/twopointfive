@@ -1,5 +1,5 @@
-// The automation / debugging hooks the game's page hangs on `window` (main.ts; docs/agents/qa.md lists them), declared once so it assigns them
-// typed instead of through `(window as any)`. Types
+// The automation / debugging hooks the two pages hang on `window` (the game's in main.ts, the workbench's — level editor + viewer — in
+// workbench/main.ts; CLAUDE.md and VIEWER.md list them), declared once so both assign them typed instead of through `(window as any)`. Types
 // only: nothing here runs, nothing imports it — tsc picks the file up through tsconfig's include glob and merges the block into the global
 // Window. Every hook is optional because it only exists once its page has installed it (and the automation-set ones only when a script sets
 // them). The many knob-panel hooks (`__wet`, `__glass`, `__froxel` …) share the KnobHook shape: `summary()`, usually `knobs()` / `set({})`, plus
@@ -9,14 +9,24 @@ import type { Game } from './game/game';
 import type { FollowCamera } from './game/camera';
 import type { Demo } from './game/demo';
 import type { Input } from './game/input';
+import type { Character, Stance, SignalKind, LongStance } from './game/character';
+import type { Rig } from './game/rigProps';
 import type { SmokeSystem } from './smoke/smoke';
 import type { Menu } from './ui/menu';
 import type { Quality } from './ui/quality';
 import type { AudioEngine } from './audio/audio';
+import type { RigGizmo } from './viewerGizmo';
 import type { Attract } from './game/attract';
 import type { Director } from './game/director';
 import type { PerfRecorder } from './ui/perfrec';
 import type { BootSummary } from './ui/boot';
+import type { EditorApi } from './editor/api';
+import type { Tools as EditorTools } from './editor/tools';
+import type { View as EditorView } from './editor/view';
+import type { Scene as EditorScene } from './editor/scene';
+import type { Ui as EditorUi } from './editor/ui';
+import type { Runtime as ViewerRuntime } from './viewer/runtime';
+import type { Ui as ViewerUi } from './viewer/ui';
 
 /** One WGSL compiler message as __wgsl reports it (line numbers relative to the submitted source, prelude subtracted). */
 export interface WgslLintMessage { type: GPUCompilationMessageType; line: number; col: number; msg: string; src: string; }
@@ -110,11 +120,53 @@ declare global {
     __rigTrace?: (rays: number[][]) => Promise<unknown>;
     /** knob panels of the renderer's systems and the game's presentation modules — see KnobHook and each system's CLAUDE.md bullet */
     __wet?: KnobHook; __weather?: KnobHook; __glass?: KnobHook; __froxel?: KnobHook; __particles?: KnobHook; __taa?: KnobHook; __sharp?: KnobHook; __sdfrig?: KnobHook; __mark?: KnobHook; __dn?: KnobHook; __gi?: KnobHook;
-    /** the RT-reflection + material knobs (renderer v3 phase 4) on the GAME page */
+    /** the RT-reflection + material knobs (renderer v3 phase 4) on the GAME page — the workbench's viewer Runtime is __vrt, not this */
     __rt?: KnobHook;
     /** shader hot-swap: volumetrics / restir / direct / reflect / gather / froxel / denoise from disk into the live page */
     __hotVol?: HotSwapHook; __hotRestir?: HotSwapHook; __hotDirect?: HotSwapHook; __hotReflect?: HotSwapHook; __hotGather?: HotSwapHook; __hotFroxel?: HotSwapHook; __hotDenoise?: HotSwapHook;
     /** the capture sink's port for this page's __shot / __png (default 5174; a lane's own sink on another) */
     __shotPort?: number;
+
+    // ---- workbench (level editor + viewer in one shell: workbench/main.ts, editor/app.ts)
+    /** the level editor's whole API (editor/api.ts makeApi — docs/level-format.md 'Editor') */
+    __ed?: EditorApi;
+    /** editor captures: the view + overlay / + the inspector column rasterised beside it */
+    __edshot?: (name: string, q?: number, withOverlay?: boolean) => Promise<string>; __uishot?: (name: string, q?: number) => Promise<string>;
+    __tools?: EditorTools; __view?: EditorView; __scene?: EditorScene; __ui?: EditorUi;
+    /** reload the bundled office into the editor (the load menu's 'the bundled office') */
+    __edLoadBundled?: () => unknown;
+    /** the workbench shell: mode / setMode / modes / world / staged / actor / scene(id | null, variant) / hash / frameFigure / fps / collision */
+    __wb?: { readonly mode: string; setMode(m: string): string; readonly modes: string[]; readonly world: string | null; readonly staged: string | null; scene(sceneId: string | null, variantId?: string): unknown; readonly collision: 'level' | 'studio'; [k: string]: unknown };
+    /** the workbench's idle throttle: idle now?, poke(), the constants */
+    __idle?: { readonly idle: boolean; poke(): void; after: number; afterFigure: number; every: number };
+    /** the viewer Runtime itself (viewer/runtime.ts) and its chrome (viewer/ui.ts) inside the workbench */
+    __vrt?: ViewerRuntime; __vui?: ViewerUi;
+    /** the gait meter (`slip cadence stance bob gaze gazeBob`, line()), the viewer state under its lab name, the scenes ▸ variants table */
+    __M?: unknown; __lab?: unknown; __scenes?: { id: string; staging: boolean; variants: string[] }[];
+
+    // ---- viewer
+    /** the viewer's panel state object (drive / kit / stance selections …) */
+    __viewer?: unknown;
+    /** the mannequin (a getter: respawn replaces the Character) */
+    __char?: Character;
+    __rig?: Rig; __gizmo?: RigGizmo; __rigSource?: () => string;
+    /** advance the viewer n frames of 1/60 s */
+    __step?: (n?: number) => void;
+    /** toss a dropped item from the hand onto the stage */
+    __toss?: (kind: 'pistol' | 'torch' | 'smoke' | 'flash' | 'mag', suppressed?: boolean) => void;
+    __cans?: { smokeCan(): void; stunCan(): void };
+    /** the viewer's running clock (what its __shot renders with) */
+    __vtime?: number;
+    /** scripted stills of the procedural tactical layer: __tac.stance('stack', -1); __tac.kick(); __tac.at(0.38, 'kick') … */
+    __tac?: {
+      stance(name: Stance, side?: -1 | 1): void; peek(v: number): void; kick(): void; signal(kind: SignalKind): void; flinch(): void; throw(): void;
+      lockpick(on: boolean): void; loop(on: boolean, shot?: number, every?: number): void;
+      at(t: number, shot?: 'kick' | SignalKind | 'flinch' | 'throw'): string; resume(): void;
+      long(on: boolean, name?: LongStance | null): void;
+    };
+    /** the viewer's grab / hold section (holder or held man alone, arm or gun variant): __hold.set({ on: true, who: 0, variant: 1, phase: 3, auto: false, t: 0.6 }) */
+    __hold?: { set(o: Record<string, unknown>): unknown; HOLD: unknown };
+    /** rifles: the long gun's carriage table (character.ts LONG, edited live by the viewer's L· sliders) and its source text; the carbine itself: __tac.long(true, 'shoulder') */
+    __long?: { LONG: unknown; source(): string };
   }
 }
