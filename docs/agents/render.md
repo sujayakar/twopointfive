@@ -1999,6 +1999,20 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   NEVER SEEN: in motion, on his GPU, in rain, a van or a lorry close up. A first study that turned each side 45 degrees, unmarked, through every
   face of a shaped vehicle read rounder; it would have told the fog of war a tall van's flank was a top, and a review found it measured a cut
   plane's roll to edges the plane is not at.
+- **A BLAST'S OPENING LIGHTS ARE PACED** (11-05; the look's page only; no switch: nothing else is drawn, a hole's light only comes on a few frames
+  later). The performance goal profiled three wall charges on the office under the look (Chrome's own CPU profile on a rented box, relative):
+  `engine.ts lookOpeningLights` took 90, 52 and 47 ms of the 0.7 s after each charge, against under 2 percent of a calm stretch: one to four dropped
+  frames a blast that the plain page does not have. Two causes, both on the frame the blast's walls are read. (1) The look keeps its own wall raster
+  for its reach masks (`ReachJob.own`: a picture's light is nobody's state), and made that raster's JUMP FIELD again whole (`reach.ts jumpsFor`), though
+  a blast only opens walls and the old field is still safe; the game's own raster has always handed its field on (`wallRasterDiff`). Now
+  `wallRasterDiffOwn` hands the look's on the same way. (2) A light with NO mask yet was decided WHOLE AT ONCE, 150 to 260 thousand sight-line steps
+  where a frame's share is 60,000 (`REACH_PACE`). That is right on the masks' first frame (a level's first, the rooms row put on: no room is shown dark)
+  and wrong in play. Now only that first frame decides whole (`openBegun`); a hole blown later is first in line for each frame's share and its light
+  comes on with its mask whole, about four frames after the hole is found (itself `LOOK_OPENINGS.settle` frames after the walls stood still).
+  Under bun the frame a hole is read went from 9 to 11 ms to under 5, and no jump field is made. HELD by `tools/qa/openings-check.ts`' wall-holed line
+  (the most steps in a frame, and the fields made; red on the engine as it was: 326,971 steps and a field). NOT TIMED in a browser by this step: the
+  performance goal runs its three blasts again. LEFT: the plan itself (`planOpenings`, the raster, the diff: about 2 ms under bun) is still one frame's;
+  `wallSides.update → placeSides` (20 to 30 ms on that box at a first blast) and `wallsKey` hashing the statics every frame (0.2 ms) are untouched.
 - **DAYLIGHT COUNTED ONCE: AN OPENING IS A PORTAL** (THE ROW IS GONE SINCE 11-04 AND THIS IS THE ONLY WAY AN OPENING IS LIT: the maintainer played with
   it up on his M4 and chose to keep it on a card at 15:18Z, after saying of it that morning "my preference would be that we use this sampling
   unconditionally and then have no asymmetry between night and day". Deleted in one commit: the `portal` row and `lookConfig.portal`, the disk
