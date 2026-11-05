@@ -144,8 +144,11 @@ if (args[0] === '--run') {
   // (the red path of the die: once, fifty binds in, the lowest bit of the word in the game's block is turned — a wrong die that still rolls)
   if (BREAK) { const P = ST.SimState.prototype, bind = P.bind; let n = 0; P.bind = function (this: any) { const slot = bind.call(this); if (++n === 50) this.w[(ST.simPart(ST.P_DICE) + 8) >>> 2] ^= 1; return slot; }; }
   let posed = 0, sets = 0;   // (the ticks that ended with poses of its men in the game's block, and how many men's)
+  /** is this the arm of a pair with a row up (read as the run plays: the stand-up writes the rows). Both arms run the module's layers and keep their
+   *  poses in its block, so a red path that bends either is handed to this arm ALONE: bent in both, the pair would be the same game still */
+  const raised = (): boolean => S.rustRows().some((r: string) => S.RUST[r]);
   // (the red path of the layers: from the fiftieth tick's opening every knob is handed to the module a hundredth large)
-  if (BREAK) { const RK: any = await import(`${ROOT}/src/game/rustknobs.ts`); RK.RUST_KNOBS.hand = (_i: number, v: number) => RK.RUST_KNOBS.written >= 50 ? v * 1.01 : v; }
+  if (BREAK) { const RK: any = await import(`${ROOT}/src/game/rustknobs.ts`); RK.RUST_KNOBS.hand = (_i: number, v: number) => raised() && RK.RUST_KNOBS.written >= 50 ? v * 1.01 : v; }
   let homed = 0, draws = 0;   // (the ticks that ended with the game's own die at home in the module's block, and the draws taken off it by the end)
   let h: number = RAW_BITS_SEED, ticks = 0, broke = false, inRust = 0, cone = 0;   // (inRust: the ticks whose update found the module's sine in Math's place — the play-through puts every knob table back when it ends, so the row is read while it runs)
   const SLABF = new Float64Array(1), SLABU = new Uint32Array(SLABF.buffer);
@@ -168,12 +171,12 @@ if (args[0] === '--run') {
     { const d = (this as any).dice; if (d) { if (d.home) homed++; draws = d.n; } }
     { const ps = (this as any).poseSets; if (ps.length) posed++; sets = ps.length;
       // (the red path of the poses at home: from the fiftieth such tick a pose's floats are handed to the TypeScript ten singles off from where the module has them)
-      if (BREAK && posed === 50) { const f = ST.SimState.prototype.f32; ST.SimState.prototype.f32 = function (this: unknown, at: number, n: number) { return f.call(this, at + 40, n); }; } }
+      if (BREAK && posed === 50 && raised()) { const f = ST.SimState.prototype.f32; ST.SimState.prototype.f32 = function (this: unknown, at: number, n: number) { return f.call(this, at + 40, n); }; } }
     return r;
   } as typeof update;
   const t0 = performance.now();
   const r = await PT.play(scn, Number(seed), 300, false, how === 'hard' ? { DIFFICULTY: { level: 'hard' } } : {});
-  console.log('RUST-RUN ' + JSON.stringify({ run: args[1], ticks, cone, end: String(r.end), digest: String(r.digest), bits: h.toString(36), rust: inRust, lines: lines.n, circles: lines.circles, fog: lines.fog, sees: lines.sees, sensed: lines.sensed, poses: SK.POSE_BENCH.asked, posesIn: SK.POSE_BENCH.inPlace, posed, sets, layers: SK.LAYERS.ran, dice: homed, draws, doors: DH.DOORS_STEPPED, props: PH.PROPS_STEPPED, slabs: SH.SLABS_STEPPED, items: IH.ITEMS_STEPPED, falls: FH.FALLS, rays: C.RAYS.n, both: C.BOTH, exact: X.EXACT.on, engine, secs: Math.round((performance.now() - t0) / 100) / 10 }));
+  console.log('RUST-RUN ' + JSON.stringify({ run: args[1], ticks, cone, end: String(r.end), digest: String(r.digest), bits: h.toString(36), rust: inRust, lines: lines.n, circles: lines.circles, fog: lines.fog, sees: lines.sees, sensed: lines.sensed, poses: SK.POSE_BENCH.asked, posesIn: SK.POSE_BENCH.inPlace, owed: SK.POSE_BENCH.owed, posed, sets, layers: SK.LAYERS.ran, dice: homed, draws, doors: DH.DOORS_STEPPED, props: PH.PROPS_STEPPED, slabs: SH.SLABS_STEPPED, items: IH.ITEMS_STEPPED, falls: FH.FALLS, rays: C.RAYS.n, both: C.BOTH, exact: X.EXACT.on, engine, secs: Math.round((performance.now() - t0) / 100) / 10 }));
   process.exit(0);
 }
 // ---- `server`, in a child: the game server's stand from a recipe (argv), a seat's hands by the beat, the word after `ticks`
@@ -228,7 +231,11 @@ if (args[0] === '--hash') {   // the child: this engine's word for the Rust func
  *  line here or a line naming a section that did not run. Under RUST_BREAK=1 each row's own answers must have differed; exit 3 names a row that stayed
  *  green. A break word that does not reach a row leaves that row's check proving nothing, and a red neighbour hides it: the circles', the fog's and the
  *  die's did not reach them until 2026-11-03. */
-const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice', doors: 'doors', falls: 'falls', props: 'props', slabs: 'slabs', items: 'items', walk: 'layers', rays: 'lines, circles' };
+const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice', doors: 'doors', falls: 'falls', props: 'props', slabs: 'slabs', items: 'items', rays: 'lines, circles' };
+/** FAMILIES WHOSE TYPESCRIPT IS GONE, and their row of RUST with it: each is still held by a section here and by a red rule of its own (`red[name]`:
+ *  under the break every name of the family must have moved, tools/qa/ident-pin.ts), exactly as a row is. A family joins this list in the commit
+ *  that deletes its twin. */
+const GONE: Record<string, string> = { 'the animator\'s layers': 'layers' };
 /** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
 const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'doors', 'props', 'slabs', 'items', 'falls', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
 const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
@@ -368,9 +375,14 @@ let wordOwn = '', wordRust = '';
 {
   const r = child(['bun', 'run', 'tools/qa/layer-ident.ts']);
   const by: Record<string, { asked: number; differ: number }> = marked(r.out, 'LAYER-IDENT ')?.by ?? {}, names = Object.keys(by), row = r.out.split('\n').find(l => /^    \S+:\d+ ends /.test(l));
-  red.walk = names.length > 0 && names.every(n => by[n].differ > 0);   // (every moved layer's own answers, not one red neighbour's)
-  verdict(r.status === 0 && /=== layer-ident: PASS/.test(r.out), 'layers: every call of an animator\'s layer in a mission leaves the same pose run by the Rust module and by the TypeScript, and the knobs and named nodes the module reads are the game\'s',
+  red['the animator\'s layers'] = names.length > 0 && names.every(n => by[n].differ > 0);   // (every layer's own word moved against the same run played plain, not one red neighbour's)
+  verdict(r.status === 0 && /=== layer-ident: PASS/.test(r.out), 'layers: every layer of the animator is reached by a mission and its drives and run by the module, and the knobs and named nodes the module reads are the game\'s',
     row ? row.trim() + (r.status === 0 ? '' : ` · ${r.out.split('\n').filter(l => /^- FAIL/.test(l)).map(l => l.split(':')[0].replace('- FAIL — ', '')).join(', ')} FAILED`) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+  // (THE PIN: the same tool on the frozen stand, every layer's calls against the recording — tools/qa/ident-pin.ts. The plain run above compares no
+  //  answer; this line is what does. Not asked under the break, whose rule is the one above: every word moved against the run played plain.)
+  if (!BREAK) { const p = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { TPS_PROFILE: 'frozen' }), same = p.out.split('\n').find(l => /^- (PASS|FAIL|RECORDED|NOT HELD) — same:/.test(l));
+    verdict(p.status === 0 && /^- PASS — same: every count and word is that of the recording/.test(same ?? ''), 'layers: on the frozen stand every layer\'s calls fold to the word the recording holds',
+      same ? same.replace(/^- \w+( \w+)? — /, '') + (p.status === 0 ? '' : ` · exit ${p.status}`) : `the pin left nothing (exit ${p.status}): ${(p.err || p.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`); }
 }
 // ---- doors
 {
@@ -625,9 +637,9 @@ let wordOwn = '', wordRust = '';
 
 // ---- rows: every row of RUST is held by a section of this half that ran (a row added to src/sim/sim.ts with no line in HELD is red here, before anyone trusts it)
 {
-  const rows: string[] = S.rustRows(), none = rows.filter(r => !(r in HELD) || !(HELD[r] in said)), gone = Object.keys(HELD).filter(r => !rows.includes(r));
+  const rows: string[] = S.rustRows(), none = [...rows.filter(r => !(r in HELD) || !(HELD[r] in said)), ...Object.keys(GONE).filter(f => !(GONE[f] in said))], gone = Object.keys(HELD).filter(r => !rows.includes(r));
   verdict(none.length === 0 && gone.length === 0, 'rows: every row of RUST has a section here that asks its own answers of both sides',
-    none.length || gone.length ? `${none.length ? `NO SECTION RAN FOR ${none.map(r => `${r} (${HELD[r] ?? 'no line in HELD'})`).join(', ')}` : ''}${gone.length ? ` · named here and not a row: ${gone.join(', ')}` : ''}` : rows.map(r => `${r} → ${HELD[r]}`).join(' · '));
+    none.length || gone.length ? `${none.length ? `NO SECTION RAN FOR ${none.map(r => `${r} (${HELD[r] ?? GONE[r] ?? 'no line in HELD'})`).join(', ')}` : ''}${gone.length ? ` · named here and not a row: ${gone.join(', ')}` : ''}` : [...rows.map(r => `${r} → ${HELD[r]}`), ...Object.keys(GONE).map(f => `${f} (no row: written once) → ${GONE[f]}`)].join(' · '));
 }
 
 // ---- views: sim.ts keeps its views over the module's memory and tests their length; a memory that grew must leave every one of them remade (nothing in the
@@ -649,7 +661,7 @@ if (args.includes('--missions') || args.includes('--both')) {
   interface Props { there: number; here: number; noises: number; asked: number; differ: number; first: string; pairs: number; walls: number }
   interface Slabs { there: number; here: number; host: number; asked: number; differ: number; first: string; landed: number }
   interface Items { there: number; here: number; host: number; walks: number; asked: number; differ: number; first: string; rested: number; events: number; thingRays: number }
-  interface Run { falls: Falls; doors: Doors; props: Props; slabs: Slabs; items: Items; rays: number; run: string; ticks: number; cone: number; end: string; digest: string; bits: string; rust: number; lines: number; circles: number; fog: number; sees: number; sensed: Sensed; poses: number; posesIn: number; posed: number; sets: number; layers: number; dice: number; draws: number; both: { asked: number; differ: number; stale: number; first: string }; exact: boolean; engine: string; secs: number }
+  interface Run { falls: Falls; doors: Doors; props: Props; slabs: Slabs; items: Items; rays: number; run: string; ticks: number; cone: number; end: string; digest: string; bits: string; rust: number; lines: number; circles: number; fog: number; sees: number; sensed: Sensed; poses: number; posesIn: number; owed: number; posed: number; sets: number; layers: number; dice: number; draws: number; both: { asked: number; differ: number; stale: number; first: string }; exact: boolean; engine: string; secs: number }
   const one = (run: string, rustOn: boolean, both = false): Promise<Run | string> => new Promise(done => {
     const [name, how] = run.split('@');   // (`@frag`: the run played with 'frag and clear' ordered at a held room's door — tools/qa/playthrough.ts PT_FRAG — so that blasts take leaves off their hinges)
     const cmd = node ? [...NODE, 'tools/qa/rust-check.ts', '--run', name] : ['bun', 'run', 'tools/qa/rust-check.ts', '--run', name];
@@ -668,11 +680,13 @@ if (args.includes('--missions') || args.includes('--both')) {
   const SET_FLOOR: Sensed = { sight: 1000, light: 1000, smoke: 1000, sound: 100, paths: 100 };
   /** the senses raised that the runs TOGETHER did not ask the module enough of (a set of runs with no smoke in it proves nothing of the smoke row) */
   const thin = (rs: (Run | string)[]) => SENSES.filter(k => up.includes(k) && rs.reduce((n, r) => n + (typeof r === 'string' ? 0 : r.sensed[k]), 0) <= SET_FLOOR[k]);
-  /** the fewest layers of the animator a tick that a mission runs in the module with the walk's row up (a squad mission runs about sixty and the office night with three guards
-   *  thirty-six; the rule that has no pose alone is about twelve) */
+  /** the fewest layers of the animator a tick that a mission runs in the module (a squad mission runs about sixty and the office night with three guards
+   *  thirty-six; the rule that has no pose alone is about twelve). BOTH arms of a pair run them there and keep their poses in the block: a layer is
+   *  written once, in Rust, so the arm with no row up is held to the same count of layers, to poses at home at every tick, and to NO POSE QUESTION
+   *  answered by the module (its bench's counts are its layers' own asks, `owed`, and no more) */
   const LAYER_FLOOR = 20;
   /** did the run with the rows up really run on them: every tick on the module's maths and with its lines asked there (each where its row was raised), and none in the other */
-  const fair = (ts: Run, rs: Run) => (/:hard(@|$)/.test(rs.run) ? rs.cone === rs.ticks && ts.cone === ts.ticks : rs.cone === 0 && ts.cone === 0) && (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || rs.lines === rs.ticks) && (!up.includes('rays') || rs.rays > 100) && ts.rays === 0 && (!up.includes('circles') || rs.circles === rs.ticks) && (!up.includes('fog') || (rs.fog === rs.ticks && rs.sees > 100)) && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || (rs.poses > rs.ticks && rs.posed === rs.ticks && rs.sets > 1 && rs.posesIn > rs.poses * 0.9)) && (up.includes('walk') ? rs.layers > LAYER_FLOOR * rs.ticks : rs.layers === 0) && ts.layers === 0 && ts.posed === 0 && ts.posesIn === 0 && (!up.includes('dice') || (rs.dice === rs.ticks && rs.draws > 100 && rs.draws === ts.draws)) && ts.dice === 0 && ts.fog === 0 && ts.sees === 0 && ts.poses === 0 && ts.ticks > 600 && ts.falls.there === 0 && ts.doors.there === 0 && ts.props.there === 0 && (!up.includes('props') || (rs.props.there >= 0.95 * (rs.props.there + rs.props.here) && (rs.props.there + rs.props.here === 0 || rs.props.there > 0.9 * rs.ticks))) && (!up.includes('doors') || (rs.doors.there > 0.95 * (rs.doors.there + rs.doors.here) && rs.doors.there > 0.9 * rs.ticks && rs.doors.turned > 100)) && SENSES.every(k => ts.sensed[k] === 0 && (!up.includes(k) || rs.sensed[k] > SENSE_FLOOR[k])) && (!up.includes('slabs') || rs.slabs.there >= 0.9 * (rs.slabs.there + rs.slabs.here - rs.slabs.host)) && ts.slabs.there === 0 && (!up.includes('items') || rs.items.there >= 0.9 * (rs.items.there + rs.items.here - rs.items.host)) && ts.items.there === 0;
+  const fair = (ts: Run, rs: Run) => (/:hard(@|$)/.test(rs.run) ? rs.cone === rs.ticks && ts.cone === ts.ticks : rs.cone === 0 && ts.cone === 0) && (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || rs.lines === rs.ticks) && (!up.includes('rays') || rs.rays > 100) && ts.rays === 0 && (!up.includes('circles') || rs.circles === rs.ticks) && (!up.includes('fog') || (rs.fog === rs.ticks && rs.sees > 100)) && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || (rs.poses > rs.ticks && rs.posed === rs.ticks && rs.sets > 1 && rs.posesIn > rs.poses * 0.9)) && rs.layers > LAYER_FLOOR * rs.ticks && ts.layers === rs.layers && rs.posed === rs.ticks && ts.posed === ts.ticks && ts.owed > 0 && ts.posesIn === ts.owed && (!up.includes('dice') || (rs.dice === rs.ticks && rs.draws > 100 && rs.draws === ts.draws)) && ts.dice === 0 && ts.fog === 0 && ts.sees === 0 && ts.poses === ts.owed && ts.ticks > 600 && ts.falls.there === 0 && ts.doors.there === 0 && ts.props.there === 0 && (!up.includes('props') || (rs.props.there >= 0.95 * (rs.props.there + rs.props.here) && (rs.props.there + rs.props.here === 0 || rs.props.there > 0.9 * rs.ticks))) && (!up.includes('doors') || (rs.doors.there > 0.95 * (rs.doors.there + rs.doors.here) && rs.doors.there > 0.9 * rs.ticks && rs.doors.turned > 100)) && SENSES.every(k => ts.sensed[k] === 0 && (!up.includes(k) || rs.sensed[k] > SENSE_FLOOR[k])) && (!up.includes('slabs') || rs.slabs.there >= 0.9 * (rs.slabs.there + rs.slabs.here - rs.slabs.host)) && ts.slabs.there === 0 && (!up.includes('items') || rs.items.there >= 0.9 * (rs.items.there + rs.items.here - rs.items.host)) && ts.items.there === 0;
   const sensedSay = (r: Run) => SENSES.map(k => `${k} ${r.sensed[k]}`).join(', ');
   if (args.includes('--missions')) {
     let ok = true; const lines: string[] = []; let ticks = 0; const raised: (Run | string)[] = [];
@@ -709,7 +723,7 @@ if (args.includes('--missions') || args.includes('--both')) {
 console.log(fails ? `\n${fails} FAILED` : '\nall pass');
 // (the red path: every section that asks the module must be red, and every row's own answers must have differed in the section that holds it — one left green
 //  is a check that proves nothing, and exit 3 says which)
-const greenRows = BREAK ? (S.rustRows() as string[]).filter(r => !red[r]) : [], greenSections = BREAK ? RED_SECTIONS.filter(k => said[k] === true) : [];
-if (BREAK) console.log(greenRows.length || greenSections.length ? `THE RED PATH IS NOT RED FOR ${[...greenSections.map(k => `the section \`${k}\``), ...greenRows.map(r => `the row ${r} (in \`${HELD[r] ?? 'no section'}\`)`)].join(', ')}`
-  : `the red path is red for every section that ran (${RED_SECTIONS.filter(k => k in said).join(' · ')}) and for every row's own answers (${(S.rustRows() as string[]).join(', ')})`);
+const greenRows = BREAK ? [...(S.rustRows() as string[]), ...Object.keys(GONE)].filter(r => !red[r]) : [], greenSections = BREAK ? RED_SECTIONS.filter(k => said[k] === true) : [];
+if (BREAK) console.log(greenRows.length || greenSections.length ? `THE RED PATH IS NOT RED FOR ${[...greenSections.map(k => `the section \`${k}\``), ...greenRows.map(r => `${r in GONE ? r : `the row ${r}`} (in \`${HELD[r] ?? GONE[r] ?? 'no section'}\`)`)].join(', ')}`
+  : `the red path is red for every section that ran (${RED_SECTIONS.filter(k => k in said).join(' · ')}) and for every row's own answers (${[...(S.rustRows() as string[]), ...Object.keys(GONE)].join(', ')})`);
 process.exit(greenRows.length || greenSections.length ? 3 : fails ? 1 : 0);

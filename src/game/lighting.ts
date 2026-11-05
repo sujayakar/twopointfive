@@ -16,6 +16,7 @@ import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switc
 import { breakerErrand, samPanelPoint, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
 import { powerOut, powerOutMan } from './powerout';   // (the room fight's defenders answer a blackout by that module's rule: its switch off, both are a return on their first line)
 import { carLampPaint, deadLamp } from './carlamps';   // a broken vehicle lamp's paint; a dark lens breaking is no light going out (a leaf)
+import { LIGHT_IN, LIGHT_EV, MAINS } from '../sim/lightshome';   // (the state itself: rust/sim/src/lights.rs)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** A WEAPON LIGHT STOPS AT A WALL. A man's light is a light AT ITS LENS — on the carbine's handguard, under the pistol's rail, at the hand torch's glass — and a man
@@ -72,51 +73,33 @@ export function breakerResetNear(g: Game, gd: Guard): boolean {
 }
 
 export function updateTargets(g: Game, dt: number) {
-  const time = g.time;
-  const bo = g.blackout;
-  if (bo.active && !bo.permanent && time >= bo.until) g.endBlackout();   // (the OCP's timed trip running out; a hand-thrown breaker is given a day — below — so in practice only a guard's reset or Sam's own re-arm ends it)
-  // a guard who reaches the (intact) panel resets it after fumbling for a moment
-  if (bo.active && !bo.permanent && time - bo.since > 3) {
-    let near: Guard | null = null;
-    for (const gd of g.guards) if (breakerResetNear(g, gd) && theirMains(gd) && !workNotHis(gd)) near = gd;   // (words.ts: the mains are their side's business; workthings.ts: not a teammate sent to the breaker — both gates at the loop, not inside breakerResetNear, which handwork.ts reads too)
-    g.breakerFixT = near ? g.breakerFixT + dt : 0;
-    const fumble = g.level.breaker.fumble ?? 2.2;   // (the level's own number where it gives one: a panel a man is long at)
-    if (near) leverHands(g, near.char, g.breakerFixT, fumble);   // (handwork.ts: his hand on the lever while he fumbles with it)
-    if (g.breakerFixT > fumble && near) { g.say(near, wg("breaker's back on", "breaker's back in"), true); g.endBlackout(); }
-  }
-  // emergency beacons: spin up ~0.8 s after the trip, keep turning for a second after power returns; each is slaved to its dome fixture
-  const beaconsOn = bo.active ? time - bo.since > 0.8 : time - bo.restoredAt < 1.2;
-  for (const b of g.beacons) {
-    b.target.on = beaconsOn;
-    b.light.enabled = beaconsOn && b.target.factor > 0;              // shot-out / OCP'd dome → no beam either (factor is last frame's)
-    const a = time * 3.3 + b.phase;                                   // ceiling-hung: full rotation about the vertical, tilted down
-    b.light.dir = v3.normalize([Math.cos(a), -0.5, Math.sin(a)]);
-    b.light.intensity = b.light.peakIntensity;
-  }
+  const time = g.time, H = g.lightHome, bo = g.blackout;
+  // who is at the (intact) panel, for the module's timer (a guard who reaches it resets it after fumbling for a moment): that is one of theirs, and the hand and the words are this file's
+  let near: Guard | null = null;
+  if (bo.active && !bo.permanent && time - bo.since > 3) for (const gd of g.guards) if (breakerResetNear(g, gd) && theirMains(gd) && !workNotHis(gd)) near = gd;   // (words.ts: the mains are their side's business; workthings.ts: not a teammate sent to the breaker — both gates at the loop, not inside breakerResetNear, which handwork.ts reads too)
+  const fumble = g.level.breaker.fumble ?? 2.2, handT = bo.fixT + dt;   // (the level's own number where it gives one: a panel a man is long at)
+  const ev = H.step(time, dt, near !== null, fumble, g.engine.settings.emissiveScale);   // (rust/sim/src/lights.rs: the mains' clocks, the beacons, every fixture's factor, every lamp as it burns. The emissive scale is a renderer setting an area light's strength is scaled by, an input: a recording carries it, journal.ts EnvSnap)
+  if (ev & LIGHT_EV.ranOut) mainsBack(g);   // (the OCP's timed trip ran out; a hand-thrown breaker is given a day — below — so in practice only a guard's reset or Sam's own re-arm ends it)
+  if (ev & LIGHT_EV.hand) leverHands(g, near!.char, handT, fumble);   // (handwork.ts: his hand on the lever while he fumbles with it)
+  if (ev & LIGHT_EV.fixed) { g.say(near!, wg("breaker's back on", "breaker's back in"), true); mainsBack(g); }
+  // ---- THE PICTURE, FROM THE STATE
+  H.paint();
   for (const t of g.targets) {
-    let f = t.on && !t.broken ? 1 : 0;
-    if (f > 0 && t.disabledUntil > 0) { f *= supply(time, t.disabledUntil); if (time > t.disabledUntil + 1.2) t.disabledUntil = -1; }   // OCP knock-out + restrike
-    if (f > 0 && t.mains) f *= bo.active ? 0 : supply(time, bo.restoredAt + t.stagger);                                             // building supply
-    if (f > 0 && t.fluorescentFlicker) {
-      const s = Math.sin(time * 3.1) + Math.sin(time * 7.3 + 2) * 0.6; // occasional dropout bursts
-      if (s > 1.15) f *= (Math.sin(time * 90) > 0 ? 0.15 : 1);
-    }
-    t.factor = f;
+    const f = t.factor;
     if (t.lens) carLampPaint(g, t);   // (carlamps.ts: a broken vehicle lamp's box painted dark, a whole one as the level has it)
     if (t.kind === 'breaker') { const e: Vec3 = t.broken ? [0, 0, 0] : bo.active ? [5, 0.3, 0.1] : [0.3, 4, 0.6]; for (const bi of t.boxes) g.engine.world.statics[bi].emissive = e; continue; }
-    if (t.kind === 'analytic' && t.light) { t.light.enabled = f > 0.001; t.light.intensity = t.baseIntensity * f; }
-    if (t.areaLights) { const es = g.engine.settings.emissiveScale; for (const al of t.areaLights) { al.light.enabled = f > 0.001; al.light.intensity = al.light.peakIntensity = al.base * f * es; } }
+    // (a lamp with no row is the question's own, and written from the factor here: hung after the level was stood, as the kit picture's is, host/kitView.ts, or with an owner)
+    if (t.kind === 'analytic' && t.light && t.light.row === undefined) { t.light.enabled = f > 0.001; t.light.intensity = t.baseIntensity * f; }
+    if (t.areaLights) for (const al of t.areaLights) if (al.light.row === undefined) { al.light.enabled = f > 0.001; al.light.intensity = al.light.peakIntensity = al.base * f * g.engine.settings.emissiveScale; }
     for (const bi of t.boxes) { const b = g.engine.world.statics[bi]; b.emissive = [t.baseEmissive[0] * f, t.baseEmissive[1] * f, t.baseEmissive[2] * f]; b.markGain = f; }   // (markGain: the box's emissive MARKINGS follow the same supply — the vending window in a blackout, a monitor's UI bars under the OCP)
   }
 }
 
 /** Trip the mains: everything fed from the breaker goes dark, emergency beacons spin up. Restrike is staggered per contactor group. */
 export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'debug' | 'hand') {
-  const bo = g.blackout; const permanent = !isFinite(seconds);
-  if (bo.active && bo.permanent) return;
-  const fresh = !bo.active;
-  if (!bo.active) bo.since = g.time;
-  bo.active = true; bo.permanent = permanent; bo.until = permanent ? Infinity : Math.max(bo.until, g.time + seconds);
+  const took = g.lightHome.in(LIGHT_IN.trip, null, g.time, seconds);
+  if (took === 0) return;   // (the mains are gone for good already)
+  const fresh = took === 3;
   g.audio.play('powerDown', g.level.breaker.pos, 1.0); g.audio.play('powerDown', null, 0.35);
   g.msg(cause === 'shot' ? 'breaker destroyed — power gone for good' : cause === 'hand' ? 'breaker thrown — emergency lighting until someone resets it' : 'power is out — emergency lighting');
   if (cause !== 'debug' && missionLive(g)) { g.mission.stats.blackout = true; chronBlackout(g, cause); }   // the player's own doing (OCP / round / his hand on it), not the panel button or the tour — and a row + pin for the debrief
@@ -137,8 +120,10 @@ export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'd
 }
 
 export function endBlackout(g: Game) {
-  const bo = g.blackout; if (!bo.active) return;
-  bo.active = false; bo.permanent = false; bo.until = -1; bo.restoredAt = g.time; g.breakerFixT = 0;
+  if (g.lightHome.in(LIGHT_IN.back, null, g.time) !== 0) mainsBack(g);
+}
+/** the mains have come back (the module has said so): what goes with it */
+function mainsBack(g: Game) {
   g.audio.play('powerUp', g.level.breaker.pos, 1.0); g.audio.play('powerUp', null, 0.3); g.msg('power is back on');
   for (const gd of g.guards) if (gd.task?.kind === 'breaker') gd.task = null;
 }
@@ -182,12 +167,12 @@ export function ocp(g: Game, t: LightTarget | null) {
   if (t.factor <= 0) { g.msg(`OCP: ${t.name} already off`); return; }
   o.use();
   g.audio.play('ocp', g.player.char.muzzle, 1);
-  t.disabledUntil = g.time + g.tune.ocpDuration; g.msg(`OCP → ${t.name} disabled`); if (t.kind !== 'device') g.lightEvent(t, 'ocp'); chronOcp(g, fixtureName(t), t.pos);   // (a camera's or a laser's LED winking out is nothing a man across the floor sees: no event for a device)
+  g.lightHome.in(LIGHT_IN.blind, t, g.time + g.tune.ocpDuration); g.msg(`OCP → ${t.name} disabled`); if (t.kind !== 'device') g.lightEvent(t, 'ocp'); chronOcp(g, fixtureName(t), t.pos);   // (a camera's or a laser's LED winking out is nothing a man across the floor sees: no event for a device)
   g.audio.play('lightOff', t.pos, 0.7);
 }
 
 // ------------------------------------------------------------ lights
-export function setGroup(g: Game, group: string, on: boolean) { for (const t of g.targets) if (t.group === group) t.on = on; }
+export function setGroup(g: Game, group: string, on: boolean) { for (const t of g.targets) if (t.group === group) g.lightHome.in(LIGHT_IN.on, t, on ? 1 : 0); }
 
 // ------------------------------------------------------------ daylight (the breach showcase's variant: level.ts DaylightDef)
 /** What setDaylight(true) found and must put back: every target's switch, the level lights it disabled, the sky, the haze, a PERMANENT blackout it lifted for the
@@ -208,48 +193,41 @@ export function setDaylight(g: Game, on: boolean) {
     if (cur || !D) return;
     const hour = hourOf(g), hourSunK = sunStrength(g), hourSunGiven = sunGiven(g); if (hour !== 'night') applyHour(g, 'night');   // a level started at another hour (hours.ts): the show's day is laid over the level's own night, and that hour comes back with it below
     const bo = g.blackout; const blackout = bo.active && bo.permanent ? { active: true, permanent: true, until: bo.until, since: bo.since } : null;   // (recorded BEFORE it is lifted, and only the PERMANENT one — the breaker shot to scrap: nothing the show does can mend that, so Off puts it back; a timed trip lifted here is simply over, as if the man sent to the panel had got there — tools/qa breach-daylight holds that half)
-    if (bo.active) { g.endBlackout(); bo.restoredAt = -100; for (const t of g.targets) t.disabledUntil = -1; }   // (an INSTANT restore for the show: no staggered restrike, no beacons sweeping the 'every fluorescent on' establishing shot — review 08-10 #8)
+    if (bo.active) { g.endBlackout(); g.lightHome.in(LIGHT_IN.mains, null, 0, bo.until, bo.since, -100); for (const t of g.targets) g.lightHome.in(LIGHT_IN.blind, t, -1); }   // (an INSTANT restore for the show: no staggered restrike, no beacons sweeping the 'every fluorescent on' establishing shot — review 08-10 #8)
     const st: DayState = { targets: new Map(), lightsOff: [], sky: { zenith: v3.copy(S.skyZenith), horizon: v3.copy(S.skyHorizon) }, haze: S.hazeDensity, exposure: S.exposure, sun: L.add(lightFromDef(D.sun)), blackout, hour, hourSunK, hourSunGiven };
     g.buildDirReach(st.sun);   // the sun's directional reach mask (which indoor cells see the sky its way): the ReSTIR estimator's candidate domain
     for (const t of g.targets) st.targets.set(t, t.on);
     for (const grp of D.groupsOn) setGroup(g, grp, true);
     for (const grp of D.groupsOff) setGroup(g, grp, false);
-    for (const l of L.lights) if (D.lightsOff.includes(l.name) && l.enabled) { l.enabled = false; st.lightsOff.push(l); }
+    for (const l of L.lights) if (D.lightsOff.includes(l.name) && l.enabled) { l.enabled = false; g.lightHome.feed(l); st.lightsOff.push(l); }
     S.skyZenith = v3.copy(D.sky.zenith); S.skyHorizon = v3.copy(D.sky.horizon); S.hazeDensity = D.haze; S.exposure = D.exposure;
     dayStates.set(g, st);
     g.engine.invalidateWorldCache?.();   // the light rig swapped wholesale: the radiance cache (live AND parked grids) re-primes and snaps to the day instead of blending night → day over seven frames — and a parked grid cannot bring the night back on a later ladder hop (review R10.1; the stub engines of tools/qa have none)
   } else {
     if (!cur) return;
-    for (const [t, was] of cur.targets) t.on = was;
-    for (const l of cur.lightsOff) l.enabled = true;
+    for (const [t, was] of cur.targets) g.lightHome.in(LIGHT_IN.on, t, was ? 1 : 0);
+    for (const l of cur.lightsOff) { l.enabled = true; g.lightHome.feed(l); }
     S.skyZenith = v3.copy(cur.sky.zenith); S.skyHorizon = v3.copy(cur.sky.horizon); S.hazeDensity = cur.haze; S.exposure = cur.exposure;
     L.remove(cur.sun);
     const B = cur.blackout;
-    if (B && !g.blackout.active) { const bo = g.blackout; bo.active = true; bo.permanent = true; bo.until = B.until; bo.since = B.since; g.breakerFixT = 0; }   // a destroyed breaker is still destroyed: the blackout back quietly (no second power-down thump, no man sent again — the round that did that already happened); a restart straight after (the breach's restore, a checkpoint load) mends it as a restart always did
+    if (B && !g.blackout.active) { g.lightHome.in(LIGHT_IN.mains, null, MAINS.active | MAINS.permanent, B.until, B.since, g.blackout.restoredAt); g.lightHome.in(LIGHT_IN.fix, null, 0); }   // a destroyed breaker is still destroyed: the blackout back quietly (no second power-down thump, no man sent again — the round that did that already happened); a restart straight after (the breach's restore, a checkpoint load) mends it as a restart always did
     dayStates.delete(g);
     if (cur.hour !== 'night') { applyHour(g, cur.hour); setSunStrength(g, cur.hourSunK, cur.hourSunGiven); }
     g.engine.invalidateWorldCache?.();   // (as above, the other way: no grid — live or parked — carries the day's field into the night)
   }
 }
 
-export function toggleTarget(g: Game, t: LightTarget) { t.on = !t.on; t.broken = false; }
+export function toggleTarget(g: Game, t: LightTarget) { g.lightHome.in(LIGHT_IN.toggle, t); }
 
 /** All fixtures repaired, OCP timers cleared, mains back (panel 'repair' + encounter restart). */
-export function repairLights(g: Game) { for (const t of g.targets) { t.broken = false; t.disabledUntil = -1; } if (g.blackout.active) g.endBlackout(); }
+export function repairLights(g: Game) { for (const t of g.targets) { g.lightHome.in(LIGHT_IN.mend, t); g.lightHome.in(LIGHT_IN.blind, t, -1); } if (g.blackout.active) g.endBlackout(); }
 
 /** A RESTART'S LIGHTS (cleanrestart.ts): the level's lights as a level just opened has them, from this tick — every fixture whole, no OCP timer running, the mains
  *  in with no restrike left to play and no beacon left turning (`restoredAt` and `since` as a new Game has them), nothing said and nothing sounded. The switches
  *  themselves are resetLevelState's and lightswitch.ts's, as before. Returns whether anything was out. */
 export function freshLights(g: Game): boolean {
   const bo = g.blackout; let was = bo.active || g.time - bo.restoredAt < 4;   // (4 s: past the last contactor group's restrike)
-  for (const t of g.targets) { if (t.broken || t.disabledUntil > 0) was = true; t.broken = false; t.disabledUntil = -1; }
-  bo.active = false; bo.permanent = false; bo.until = -1; bo.since = -1; bo.restoredAt = -100; g.breakerFixT = 0;   // (no man is on his way to the breaker: the restart has just made fresh ones)
+  for (const t of g.targets) { if (t.broken || t.disabledUntil > 0) was = true; g.lightHome.in(LIGHT_IN.mend, t); g.lightHome.in(LIGHT_IN.blind, t, -1); }
+  g.lightHome.in(LIGHT_IN.fresh, null);   // (no man is on his way to the breaker: the restart has just made fresh ones)
   return was;
-}
-
-/** 0 while a fixture has no supply, then the fluorescent restrike flicker for 1.2 s after `since`, then 1. */
-export function supply(time: number, darkUntil: number): number {
-  if (time < darkUntil) return 0;
-  if (time < darkUntil + 1.2) { const x = (time - darkUntil) / 1.2; const s = Math.sin(time * 45) * Math.sin(time * 13.7 + 1.3); return s > 0.65 - x * 0.9 ? 1 : 0.05; }
-  return 1;
 }

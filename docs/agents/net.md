@@ -359,7 +359,7 @@ line).
   longer follow his slider (they follow the mission's hour), and an illuminator's flood is brighter or dimmer in his picture with everything else.
   THE RULE THIS BEGINS: no sum of the simulation reads the engine's settings. CHECK: `bun run tools/qa/settings-check.ts` (`--static` = its first three
   lines, also `probes.ts settings-reads` in the journal family): `base` the table equals the picture's defaults · the scan reads its own thirteen forms ·
-  `reads` a scan of the simulation's files (src/game, scene, anim, math, sim and render/reach.ts: rollback-check's ground; 330 files, 59 reads, all
+  `reads` a scan of the simulation's files (src/game, scene, anim, math, sim and render/reach.ts: rollback-check's ground; 331 files, 60 reads, all
   under src/game) for every READ of a setting, each COUNTED on a named list of 32 rows that says PICTURE, CARRIED (journal.ts EnvSnap, laid over a
   networked page before every tick), TO MOVE or TO JUDGE with a date — one read more than a row counts is red (a second read of a key a file already
   has a row for included), and so is a row that counts more than there are · `hour` a game stood on the

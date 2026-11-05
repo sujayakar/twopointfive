@@ -49,7 +49,7 @@ const KNOWN: Record<string, Record<string, Row>> = {
   'game/lighting.ts': {
     exposure: [1, 'PICTURE: what the show\'s day found, kept and handed back'],
     hazeDensity: [1, 'PICTURE: as exposure'], skyZenith: [1, 'PICTURE: kept and handed back (the read that reaches a sum is hours.ts\'s)'], skyHorizon: [1, 'PICTURE: as skyZenith'],
-    emissiveScale: [1, 'CARRIED, TO MOVE (2026-11-05, after the lights\' port): what a fixture gives a light question'],
+    emissiveScale: [2, 'CARRIED, TO MOVE (2026-11-05): what a fixture gives a light question, read where the lamps are listed and again as an argument of the lights\' step'],
   },
   'game/fogofwar.ts': { emissiveScale: [2, 'CARRIED, TO MOVE (2026-11-05, with lighting.ts\'s): the fog\'s lamps'] },
   'game/guards.ts': { flashlightRadius: [3, 'CARRIED, TO MOVE (2026-11-05): a torch\'s radius, part of the light on a point'] },

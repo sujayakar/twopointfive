@@ -38,6 +38,7 @@ import type { WeatherSnap } from './weather';
 import { isDaylight } from './lighting';
 import { ENV } from './env';
 import { SENSE } from './sense';
+import { LIGHT_IN } from '../sim/lightshome';
 
 export type HourId = 'night' | 'dawn' | 'midday' | 'overcast' | 'dusk';
 /** the order of a day, the authored night last — and the order the sheet's row and the keys walk */
@@ -277,7 +278,7 @@ function putIn(g: Game, def: HourDef, from?: HourState) {
 }
 function takeOut(g: Game, st: HourState) {
   const S = g.engine.settings;
-  for (const [t, was] of st.lamps) if (!t.on) t.on = was;   // (a lamp somebody switched ON under the hour — the perimeter's call for the lot lights — stays as they left it)
+  for (const [t, was] of st.lamps) if (!t.on) g.lightHome.in(LIGHT_IN.on, t, was ? 1 : 0);   // (a lamp somebody switched ON under the hour — the perimeter's call for the lot lights — stays as they left it)
   for (const l of st.moons) l.enabled = true;
   g.engine.lights.remove(st.sun);
   S.skyZenith = v3.copy(st.sky.zenith); S.skyHorizon = v3.copy(st.sky.horizon); S.hazeDensity = st.haze;
@@ -299,7 +300,7 @@ function sunReach(g: Game, sun: RtLight, radius: number) {
 /** the photocell: with the lamps out for the hour, every outside fixture's switch recorded as it stands and opened */
 function lampsOut(g: Game, st: HourState) {
   if (st.def.lamps) return;
-  for (const t of g.targets) if (t.group === 'exterior' && t.kind !== 'breaker') { st.lamps.set(t, t.on); t.on = false; }
+  for (const t of g.targets) if (t.group === 'exterior' && t.kind !== 'breaker') { st.lamps.set(t, t.on); g.lightHome.in(LIGHT_IN.on, t, 0); }
 }
 /** game.ts resetLevelState, last: the level's switches are back as authored — the hour's are made again over them, and what the sky reaches is asked afresh
  *  (the destruction's hidden statics are back) */
