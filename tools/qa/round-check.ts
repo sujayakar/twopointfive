@@ -197,18 +197,18 @@ export async function roundCheck(): Promise<boolean> {
 
     // (4b) the game's own: Sam put inside the barrel is stood outside it, a round thing the wall engine can chew (wood: never a drum) is one cell, and a save
     { const pl = game.player.char, c = drum.c; let lo = Infinity, hi = 0;
-      for (let k = 0; k < 8; k++) { const a = (k + 0.3) / 8 * Math.PI * 2; game.teleportPlayer([c[0] + Math.cos(a) * 0.1, 0, c[2] + Math.sin(a) * 0.1]); for (let i = 0; i < 3; i++) W.step(DT); const d = Math.hypot(pl.posX - c[0], pl.posZ - c[2]); lo = Math.min(lo, d); hi = Math.max(hi, d); }
+      for (let k = 0; k < 8; k++) { const a = (k + 0.3) / 8 * Math.PI * 2; game.teleportPlayer([c[0] + Math.cos(a) * 0.1, 0, c[2] + Math.sin(a) * 0.1]); for (let i = 0; i < 3; i++) W.step(DT); const d = Math.hypot(pl.pos[0] - c[0], pl.pos[2] - c[2]); lo = Math.min(lo, d); hi = Math.max(hi, d); }
       const want = drum.h[0] + pl.radius;
       // (A ROUND THING OF WOOD, STOOD BY THE CHECK: a post of poplar a drum's size, written as the kit writes a round, on clear ground in the pass's yard. No
       // level file has to hold one for this line to ask: until 11-05 twenty levels' olive drums were such things by their colour alone, and a drum is
       // steel in any paint now, gwotKit.ts steelIn; what is left in the files are two lived things, which the frozen stand does not stand)
-      const { roundSlabs } = await import(`${ROOT}/src/scene/gwotKit.ts`), { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
+      const { roundSlabs } = await import(`${ROOT}/src/scene/gwotKit.ts`), { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`), { wordFor } = await import(`${ROOT}/src/scene/stuff.ts`);
       const POST = [22.0, 16.5] as const, atPost = (b: any) => Math.hypot(b.c[0] - POST[0], b.c[2] - POST[1]) < 0.01;
       const withPost = () => { const L = levelOf('pass.json');
         // (the ground it stands on is asked free: nothing a hand high or more within a drum's width of its rim, so what is found there below is the post)
         const crowd = L.boxes.filter((b: any) => { if (b.c[1] + b.h[1] < 0.1) return false; const cs = Math.cos(b.yaw ?? 0), sn = Math.sin(b.yaw ?? 0), dx = POST[0] - b.c[0], dz = POST[1] - b.c[2]; return Math.hypot(Math.max(Math.abs(cs * dx - sn * dz) - b.h[0], 0), Math.max(Math.abs(sn * dx + cs * dz) - b.h[2], 0)) < 0.29 + 0.58; });
         if (crowd.length) throw new Error(`round-check 4b: the post's ground at (${POST.join(', ')}) in the pass is not free any more (${crowd.length} things within a drum's width): stand it elsewhere`);
-        for (const sl of roundSlabs(0.29) as { hx: number; hz: number; yaw: number; drop: number }[]) L.boxes.push(makeBox({ c: [POST[0], (0.88 - sl.drop) / 2, POST[1]], h: [sl.hx, (0.88 - sl.drop) / 2, sl.hz], yaw: sl.yaw, albedo: GWOT_PALETTE.poplar })); return L; };
+        for (const sl of roundSlabs(0.29) as { hx: number; hz: number; yaw: number; drop: number }[]) L.boxes.push(makeBox({ c: [POST[0], (0.88 - sl.drop) / 2, POST[1]], h: [sl.hx, (0.88 - sl.drop) / 2, sl.hz], yaw: sl.yaw, albedo: GWOT_PALETTE.poplar, ...wordFor(GWOT_PALETTE.poplar) })); return L; };   // (… and says what it is, as a kit's box does: scene/stuff.ts wordFor)
       const T: any = await stand('pass.json', true, withPost()), T0: any = await stand('pass.json', false, withPost());
       const walls = T.game.destr.walls, chew: number[] = [], cells: number[] = []; T.game.col.boxes.forEach((b: any, i: number) => { const br = b.round === true && atPost(b) ? walls.breakableAt(i) : null; if (br) { chew.push(i); cells.push(br.cells); } });
       const offChew = T0.game.col.boxes.filter((b: any, i: number) => atPost(b) && T0.game.destr.walls.breakableAt(i)).length;

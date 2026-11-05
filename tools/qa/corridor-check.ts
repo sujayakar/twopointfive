@@ -185,7 +185,7 @@ async function reloadLine(check: (ok: boolean, what: string) => void): Promise<v
     LANES.on = !BREAK; W.game.godMode = true;
     const r = await startFromQuery(W.game, new URLSearchParams((scenarioQuery(E) as string).replace(/(^|[?&])roomclear(=\d+)?(?=&|$)/, '$1roomclear=3'))); if (r.why) throw new Error(`start refused — ${r.why}`);
     const g = W.game; for (let i = 0; i < 20; i++) W.step(DT);
-    const sam = g.player.char.pos, far = (x: any) => Math.hypot(x.char.posX - sam[0], x.char.posZ - sam[2]);
+    const sam = g.player.char.pos, far = (x: any) => Math.hypot(x.char.pos[0] - sam[0], x.char.pos[2] - sam[2]);
     const [A, B] = (g.guards as any[]).filter(x => x.team === 'hostile' && x.state !== 'dead').sort((x, y) => far(y) - far(x)); if (!A || !B) throw new Error('no two defenders');
     want = Math.round(A.weapon.def.reload.dur * 60); if (B.weapon.def.reload.dur !== A.weapon.def.reload.dur) throw new Error('the two carry different guns');
     for (const gd of [A, B]) { gd.lastSeenT = -1e9; laneReload(g, gd); }
@@ -293,7 +293,7 @@ async function mendLines(check: (ok: boolean, what: string) => void): Promise<vo
     const Q = [S[0] + u[0] * 3, 0, S[2] + u[1] * 3], T = [S[0] + u[0] * 5, 0, S[2] + u[1] * 5];
     k.pane = !!col.shotBlocked(h(S), h(P)) && !col.shotBlocked(h(S), h(P), undefined, 1) && !col.shotBlocked(h(S), h(Q));
     const arm = (glass: boolean) => {
-      lanesReset(g); LANES.glass = glass; D.char.posX = Q[0]; D.char.posZ = Q[2]; D.awareness = 0.6; round(S, T); for (let i = 0; i < 6; i++) W.step(DT); D.char.posX = Q[0]; D.char.posZ = Q[2]; D.awareness = 0.6; round(S, T);
+      lanesReset(g); LANES.glass = glass; D.char.pos[0] = Q[0]; D.char.pos[2] = Q[2]; D.awareness = 0.6; round(S, T); for (let i = 0; i < 6; i++) W.step(DT); D.char.pos[0] = Q[0]; D.char.pos[2] = Q[2]; D.awareness = 0.6; round(S, T);
       for (let i = 0; i < 100; i++) W.step(DT);
       const out = { p: !!lanesKnows(g, P), q: !!lanesKnows(g, [S[0] + u[0] * 2, 0, S[2] + u[1] * 2]) }; lanesReset(g); return out;
     };

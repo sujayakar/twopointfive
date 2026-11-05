@@ -18,8 +18,6 @@
 //            his shoot band and closes again on the beat (guards.ts, aimBrake), and Sam's ring blooms while he moves.
 //   Guard round = (row base + range term) × settle + target + shooter + suppression (+ burst growth); Sam's = base(stand / crouch) × settle + target + shooter
 //   + his suppression term (player.ts adds the two). The composition lives here (guardRound / playerAim); the fire sites only ask.
-import { AimCols } from '../sim/men/cols';
-import type { MenStore } from '../sim/men/store';
 import { Vec3, v3, clamp, lerp, wrapAngle, DEG } from '../math/vec';
 import { playerGroundVel } from './guards';
 import type { Game, Guard } from './game';
@@ -101,18 +99,29 @@ const LOS_NOW = 0.05;
 
 /** Per shooter (Guard.aim / Player.aim): the track and what it is on, the bearing bookkeeping behind the target-motion term, and the last round's numbers for the
  *  panel / the QA soak. Dies with the Guard / Player (restart, resetGuards). */
-export class AimState extends AimCols {
+export class AimState {
+  /** 0‥1: how lined-up he is on the target */
+  track = 0;
   /** what the track is on: 'sam' for a guard; `g<id>` (a man under the reticle) or 'free' for the player — a new man is a new track */
   tgtKey = '';
-  /** player: the last man the reticle left — back onto the SAME man inside a third of a second (the snap letting go for a frame at its edge) keeps the track */
-  lastMan = '';
+  /** shooter → target bearing last frame (NaN = none yet: the jump test) and the target's angular rate across the shooter — its OWN velocity square to the line
+   *  over the range, smoothed (rad/s): what the target term reads */
+  lastBearing = NaN; bearingRate = 0;
+  /** his own ground speed remembered over feetTau (m/s): the feet term reads max(now, this − steadyPace), so a skid to a halt out of a run still costs the next round or two */
+  speedSm = 0;
+  /** the fastest his feet have gone, let go over AIMCOST.stopTau (m/s; aimcost.ts — 0 while that rule is off): stopping does not clear the cone on the frame */
+  moveSm = 0;
+  /** player: the last man the reticle left and when — back onto the SAME man inside a third of a second (the snap letting go for a frame at its edge) keeps the track */
+  lastMan = ''; leftT = -100;
+  /** the track he had on `lastMan` as he left it (aimcost.ts: given back if he is straight back on it across a lamp) */
+  leftTrack = 0;
+  /** guard: planted for a shot in the shoot band this frame (aimBrake said so) — the panel / probes read it */
+  braking = false;
   /** guard: his last round(s) went into the frame a hand off the muzzle (noteBore) — how many running, and from where; two and that spot is no line (boreFouled) */
   fouled: { n: number; pos: Vec3 } | null = null;
   /** the last round this shooter let go through the model: when, the track and total cone it went with, his own ground speed, whether the first-shot gate
    *  applied to it (a single round / the first of a burst: yes; the rest of a burst: no), and the terms (panel) */
   lastShot: { t: number; track: number; spread: number; speed: number; gated: boolean; hands: number; settle: number; tgt: number; own: number } | null = null;
-  /** his numbers are columns of his row (sim/men/schema.ts): `of` is the man */
-  constructor(of: { S: MenStore; r: number }) { super(); this.S = of.S; this.r = of.r; this.initAim(); }
   clear() { this.track = 0; this.tgtKey = ''; this.lastBearing = NaN; this.bearingRate = 0; this.speedSm = 0; this.moveSm = 0; this.braking = false; this.fouled = null; this.lastMan = ''; this.leftT = -100; this.leftTrack = 0; }
 }
 /** remember the feet: speedSm eased toward the ground speed over tau */
@@ -165,11 +174,11 @@ export function trackGuard(g: Game, gd: Guard, dt: number) {
   A.braking = false;
   if (!g.tune.aimModel || gd.state === 'dead') { A.clear(); return; }
   if (!pc) { A.clear(); return; }   // (a unit with nobody yet: nothing to line up)
-  const speed = Math.hypot(c.velX, c.velZ); feedFeet(A, speed, dt, P.feetTau, moveCost(g));
+  const speed = Math.hypot(c.vel[0], c.vel[2]); feedFeet(A, speed, dt, P.feetTau, moveCost(g));
   const key = gd.foe === 'player' ? 'sam' : `u${pc.id}`;
   if (A.tgtKey !== key) { if (A.tgtKey) { A.track = 0; A.lastBearing = NaN; A.bearingRate = 0; } A.tgtKey = key; }   // (a NEW man under the gun: acquire him from nothing — the staff's key is 'sam' from the first frame and never anything else)
   const trunk = pc.bones.spine2 ?? pc.bones.hips ?? pc.pos;
-  const brg = Math.atan2(trunk[0] - c.posX, trunk[2] - c.posZ);
+  const brg = Math.atan2(trunk[0] - c.pos[0], trunk[2] - c.pos[2]);
   const tvel = gd.foe === 'player' ? playerGroundVel(g) : pc.vel;   // Sam's motion OVER THE GROUND (guards.ts, sampled once a frame), not the pace his keys command: held against a desk or a shut leaf with W down he is standing still, and reads so (review 08-10 #5: hugging a wall at a 'sprint' made every man miss)
   const jumped = feedTarget(A, c.pos, trunk, tvel, dt, P.jumpDeg, P.rateTau);   // (a man held in his arm walks at the pair's pace, a teleport zeroes it and jumps the bearing)
   if (gd.pinned && !gd.skill) { A.track = 1; return; }   // the beat put him there already on his mark (the tour's posts fire on cue; so does the harness's planted man)
@@ -206,7 +215,7 @@ function guardTerms(g: Game, gd: Guard, extra: number) {
   const hands = (S.base + Math.max(0, range - S.rangeFrom) * S.rangeK) * (gd.skill ? gd.skill.spreadK : gd.trained ? TRAINED.spreadK : 1);   // (steadier hands on a trained man: TRAINED; a man in a room fight carries his side's row — roomfight.ts FIGHT_SKILL)
   const settle = lerp(P.unsettledK, 1, clamp(A.track, 0, 1));
   const tgt = Math.min(P.targetMoveCap, A.bearingRate * P.targetMoveK);
-  const speed = Math.hypot(c.velX, c.velZ); const own = feetOf(A, c.vel, P.steadyPace, moveCost(g)) * P.shooterMoveK;
+  const speed = Math.hypot(c.vel[0], c.vel[2]); const own = feetOf(A, c.vel, P.steadyPace, moveCost(g)) * P.shooterMoveK;
   return { hands, settle, tgt, own, speed, spread: hands * settle + tgt + own + extra };
 }
 /** What to hand fireWeapon for this guard's round: with the model off, `{ spread: extra }` — the call as it always was (his row's hands are added inside); on, the
@@ -221,7 +230,7 @@ export function guardRound(g: Game, gd: Guard, extra: number, gated = true): Fir
 /** The whole cone a guard's round is drawn from, for the burst's look down the bore past a colleague (guards.ts burstTrigger): the row's own line with the model
  *  off (the expression it always was), the model's composition on. `extra` = the burst's growth. */
 export function handsCone(g: Game, gd: Guard, extra: number): number {
-  if (!g.tune.aimModel) { const S = gd.weapon.def.aiSpread, tc = foeChar(g, gd) ?? g.player.char; return S.base + Math.min(S.moveCap, Math.hypot(tc.velX, tc.velZ) * S.moveK) + Math.max(0, v3.dist(gd.char.pos, tc.pos) - S.rangeFrom) * S.rangeK + extra; }   // (teams: off his foe — Sam's numbers for the staff, as fireWeapon's own line reads them)
+  if (!g.tune.aimModel) { const S = gd.weapon.def.aiSpread, tc = foeChar(g, gd) ?? g.player.char; return S.base + Math.min(S.moveCap, Math.hypot(tc.vel[0], tc.vel[2]) * S.moveK) + Math.max(0, v3.dist(gd.char.pos, tc.pos) - S.rangeFrom) * S.rangeK + extra; }   // (teams: off his foe — Sam's numbers for the staff, as fireWeapon's own line reads them)
   return guardTerms(g, gd, extra).spread;
 }
 /** Stop to shoot (the alert branch's closing run): model on, a free man with a line (`blocked` false), Sam inside the shoot band and in his sight this moment, not
@@ -230,7 +239,7 @@ export function handsCone(g: Game, gd: Guard, extra: number): number {
 export function aimBrake(g: Game, gd: Guard, dist: number, blocked: boolean): boolean {
   const P = AIM.guard, A = gd.aim;
   const brake = g.tune.aimModel && !gd.pinned && !blocked && dist <= P.shootBand && g.time - gd.lastSeenT < LOS_NOW && A.track < 1 && gd.reloadT < 0 && (gd.fireCd <= P.brakeLead || !!gd.weapon.burst);
-  if (brake && !A.braking) AIM_DEBUG.log?.(`#${gd.char.id} ${gd.callsign}: brakes to shoot at ${dist.toFixed(1)} m (track ${A.track.toFixed(2)}, fireCd ${gd.fireCd.toFixed(2)}, ${Math.hypot(gd.char.velX, gd.char.velZ).toFixed(2)} m/s)`);
+  if (brake && !A.braking) AIM_DEBUG.log?.(`#${gd.char.id} ${gd.callsign}: brakes to shoot at ${dist.toFixed(1)} m (track ${A.track.toFixed(2)}, fireCd ${gd.fireCd.toFixed(2)}, ${Math.hypot(gd.char.vel[0], gd.char.vel[2]).toFixed(2)} m/s)`);
   A.braking = brake;
   return brake;
 }
@@ -270,7 +279,7 @@ export function boreFouled(g: Game, gd: Guard): boolean {
 export function trackPlayer(g: Game, dt: number) {
   const pl = g.player, A = pl.aim, P = AIM.player, c = pl.char;
   if (!g.tune.aimModel || pl.down) { A.clear(); return; }
-  const gv = playerGroundVel(g); const speed = Math.hypot(gv[0], gv[2]); feedFeet(A, speed, dt, P.feetTau, moveCost(g), Math.min(speed, Math.hypot(c.velX, c.velZ)));   // (his feet by the ground he actually covers — review 08-10 #5)
+  const gv = playerGroundVel(g); const speed = Math.hypot(gv[0], gv[2]); feedFeet(A, speed, dt, P.feetTau, moveCost(g), Math.min(speed, Math.hypot(c.vel[0], c.vel[2])));   // (his feet by the ground he actually covers — review 08-10 #5)
   const tg = g.aimGuard && g.aimGuard.state !== 'dead' ? g.aimGuard : null;
   const lt = !tg && lampCost(g) ? g.aimTarget : null;   // (aimcost.ts: a lamp under the reticle is a thing to settle on, like a man — `l<name>`; the rule off, a lamp is 'free' floor as it was)
   const key = tg ? `g${tg.char.id}` : lt ? `l${lt.name}` : 'free';
@@ -308,7 +317,7 @@ export function playerAim(g: Game): { spread: number; track: number; base: numbe
 /** The one term Sam's fire sites add to their spread (player.ts, beside samSpread): 0 with the model off / under the puppet. Stamps aim.lastShot. */
 export function samAim(g: Game): number {
   const R = playerAim(g); if (!g.tune.aimModel || g.puppet) return 0;
-  const pl = g.player; pl.aim.lastShot = { t: g.time, track: R.track, spread: R.spread, speed: Math.hypot(pl.char.velX, pl.char.velZ), gated: false, hands: R.base, settle: R.settle, tgt: R.tgt, own: R.own };
+  const pl = g.player; pl.aim.lastShot = { t: g.time, track: R.track, spread: R.spread, speed: Math.hypot(pl.char.vel[0], pl.char.vel[2]), gated: false, hands: R.base, settle: R.settle, tgt: R.tgt, own: R.own };
   return R.spread;
 }
 

@@ -100,7 +100,7 @@ export async function glassSight(): Promise<boolean> {
   // feet: Sam walks north→south into the glass and stops at it; a shard-free floor
   const p0 = v3.copy(game.player.char.pos);
   for (let i = 0; i < 90; i++) { W.input.keys.add('KeyS'); W.step(DT); } W.input.keys.delete('KeyS'); for (let i = 0; i < 5; i++) W.step(DT);
-  const pz = game.player.char.posZ;
+  const pz = game.player.char.pos[2];
   verdict(pz < 10 - 0.2 && pz > p0[2] + 0.5, 'Sam walking south into the partition is stopped at the glazing line (his centre stays north of z 9.8 — by the sill under the pane: no pane in this level reaches down into his collision band, so feet never meet glass directly)', `from z ${f2(p0[2])} to z ${f2(pz)} (sill face z 9.94, pane plane z 10.00, body radius ~0.42)`);
   game.teleportPlayer([8.0, 0, 8.3]); for (let i = 0; i < 5; i++) W.step(DT);
   // the take: lit, in his cone, 3 m off through glass → alert inside a couple of seconds
@@ -218,7 +218,7 @@ async function glassShotHeld(): Promise<boolean> {
   GUNWALL.on = false;
   game.teleportPlayer([7.5, 0, 10.62]); game.player.holstered = false; game.player.slot = 'pistol'; game.player.char.bodyYaw = game.player.char.aimYaw = Math.PI;   // facing north, square at the pane
   W.cursorAt([7.5, 1.3, 5.0]); for (let i = 0; i < 30; i++) { game.player.char.bodyYaw = game.player.char.aimYaw = Math.PI; W.step(DT); }
-  const pcz = game.player.char.posZ; const p0 = cracks().length;
+  const pcz = game.player.char.pos[2]; const p0 = cracks().length;
   const wasThrough = armThrough(game, game.player.char);
   fireWeapon(game, game.player.char, [7.5, 1.3, 5.0], true);
   const p1 = cracks().length;
@@ -332,7 +332,7 @@ async function glassLinesHeld(): Promise<boolean> {
     for (const dd of game.doors.list) dd.reset();
     game.teleportPlayer(v3.copy(sam)); game.player.visibility = 0.85; game.puppet = { goal: v3.copy(sam), aim: [at[0], 1.2, at[2]] };
     placeGuard(gd, at, sam, false); gd.char.anim.upper = 'aim'; gd.char.update(0); gd.char.update(DT); armAlert(gd, game, game.player.char.pos, resetChase);
-    const trunkOf = () => { const pc = game.player.char; const tr = pc.bones.spine2 ?? pc.bones.hips; return [tr ? tr[0] : pc.posX, pc.posY + 1.25, tr ? tr[2] : pc.posZ] as Vec3; };
+    const trunkOf = () => { const pc = game.player.char; const tr = pc.bones.spine2 ?? pc.bones.hips; return [tr ? tr[0] : pc.pos[0], pc.pos[1] + 1.25, tr ? tr[2] : pc.pos[2]] as Vec3; };
     let shots = 0, shotsGlassOnly = 0, firstHit = -1, firstClearAt = -1, ground = 0, plant = 0, maxPlant = 0; const t0 = game.time; let last = v3.copy(gd.char.pos); const rows: string[] = [];
     const cracks0 = audioCounts.get('glassCrack') ?? 0, glassEv0 = game.events.filter((e: any) => e.kind === 'glass').length;
     const play = game.audio.play; game.audio.play = (n: string, ...rest: unknown[]) => { if (n === 'pistolLoud') { shots++; if (glassOnly(game, shotOrigin(gd.char), trunkOf())) shotsGlassOnly++; } return play(n, ...rest); };   // (counted the moment the round leaves: fireWeapon plays it from inside the guard's update, so the line read here is the line the fire gate saw)
@@ -357,14 +357,14 @@ async function glassLinesHeld(): Promise<boolean> {
     const cameRound = R.firstClearAt >= 0 && R.firstClearAt <= 6, closing = R.ground >= 1 && R.closingAt6;
     verdict(R.shotsGlassOnly <= 1 && R.cracks <= 1 && R.maxPlant <= 1.5 && (cameRound || closing) && R.firstHit >= 0,   // (the crack COUNT is the audio's: game.events prunes itself, so the 'glass' events still listed at the end are information)
       '(1) Sam lit and still in the conference room, the man alert on the corridor with only the pane between them: at most one round into the glass, never planted on that line with eyes on him past 1.5 s, and inside six seconds he has EITHER stood where the line is clear (round through the door) OR covered a metre and is still closing — and a round of his reaches Sam in the eight',
-      `rounds ${R.shots} (${R.shotsGlassOnly} on a glass-only line) · cracks heard ${R.cracks} ('glass' events still listed ${R.glassEvents}) · longest plant seeing him through the pane ${f2(R.maxPlant)} s · first CLEAR line at ${R.firstClearAt >= 0 ? f2(R.firstClearAt) + ' s' : 'never'} · ground ${f2(R.ground)} m${R.closingAt6 ? ' (still closing at 6 s)' : ''} · first round in Sam ${R.firstHit >= 0 ? f2(R.firstHit) + ' s' : 'never'} · ends ${R.gd.state} at (${f2(R.gd.char.posX)}, ${f2(R.gd.char.posZ)})\n    ${R.rows.join('\n    ')}`);
+      `rounds ${R.shots} (${R.shotsGlassOnly} on a glass-only line) · cracks heard ${R.cracks} ('glass' events still listed ${R.glassEvents}) · longest plant seeing him through the pane ${f2(R.maxPlant)} s · first CLEAR line at ${R.firstClearAt >= 0 ? f2(R.firstClearAt) + ' s' : 'never'} · ground ${f2(R.ground)} m${R.closingAt6 ? ' (still closing at 6 s)' : ''} · first round in Sam ${R.firstHit >= 0 ? f2(R.firstHit) + ' s' : 'never'} · ends ${R.gd.state} at (${f2(R.gd.char.pos[0])}, ${f2(R.gd.char.pos[2])})\n    ${R.rows.join('\n    ')}`);
   }
   // (2) the mirror: on the corridor in front of the DOORWAY (authored ajar into the room), Sam through the opening on a line that touches no glass — he plants where he stands and the rounds arrive, as they always did
   {
     const R = await duel(933, [9.5, 0, 11.3], [10.3, 0, 6.8], 5);
     verdict(R.firstHit >= 0 && R.firstHit < 3 && R.cracks === 0 && R.ground < 1.0 && R.firstClearAt >= 0 && R.firstClearAt < 0.3,
       '(2) the same man beside the pane with the doorway\'s clear line: CLEAR from the first frame, planted where he stood (< 1 m of ground), a round in Sam inside three seconds, not a crack',
-      `first CLEAR line at ${R.firstClearAt >= 0 ? f2(R.firstClearAt) + ' s' : 'never'} · first round in Sam ${R.firstHit >= 0 ? f2(R.firstHit) + ' s' : 'never'} · rounds ${R.shots} · cracks ${R.cracks} · ground ${f2(R.ground)} m · ends at (${f2(R.gd.char.posX)}, ${f2(R.gd.char.posZ)})\n    ${R.rows.join('\n    ')}`);
+      `first CLEAR line at ${R.firstClearAt >= 0 ? f2(R.firstClearAt) + ' s' : 'never'} · first round in Sam ${R.firstHit >= 0 ? f2(R.firstHit) + ' s' : 'never'} · rounds ${R.shots} · cracks ${R.cracks} · ground ${f2(R.ground)} m · ends at (${f2(R.gd.char.pos[0])}, ${f2(R.gd.char.pos[2])})\n    ${R.rows.join('\n    ')}`);
   }
   // (3) the lone man's corner (tactics.ts): alone at the corridor's west end, alert on an ARMED Sam's fix in the conference room's south-east corner nine metres off — the first place on his way
   //     his EYES have the fix is through the west panes, a stride from where he stands; that is no corner to hold a gun on it from: the first LINE on it is at the doorway's west jamb
@@ -384,7 +384,7 @@ async function glassLinesHeld(): Promise<boolean> {
       const L = loneRecord(game, A);
       if (L && !planned && L.holdAt) { planned = v3.copy(L.holdAt); plannedLos = L.los; }   // the corner as loneCorner PLANNED it (holdAt is re-stamped with his feet once he kneels)
       if (L && L.holdT > 0 && !knelt) knelt = v3.copy(A.char.pos);
-      if (f % 60 === 59) trail.push(`${(game.time).toFixed(0)}s ${A.state} (${f2(A.char.posX)}, ${f2(A.char.posZ)}) ${L ? (L.released ? 'released:' + L.releasedWhy : L.holdT > 0 ? 'holding ' + L.holdT.toFixed(1) : 'to corner') : 'no lone record'} spd ${f2(A.speed)}`);
+      if (f % 60 === 59) trail.push(`${(game.time).toFixed(0)}s ${A.state} (${f2(A.char.pos[0])}, ${f2(A.char.pos[2])}) ${L ? (L.released ? 'released:' + L.releasedWhy : L.holdT > 0 ? 'holding ' + L.holdT.toFixed(1) : 'to corner') : 'no lone record'} spd ${f2(A.speed)}`);
       if (game.tune.tactics && L?.released) break;
     }
     game.say = say;

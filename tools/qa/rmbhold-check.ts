@@ -44,7 +44,7 @@ async function world(on: boolean, bearing = 180, gap = 0.8, o: { stalk?: boolean
   const a = EAST + bearing * Math.PI / 180; W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] + Math.sin(a) * gap, 0, AT[2] + Math.cos(a) * gap]);
   const C = { W, g, A, f: 0, loud: 0, blowAt: -1, armAt: -1, chokeAt: -1, downAt: -1,
     /** a frame: the loudest thing the room was given to hear so far, and the frame each beat was first seen on (counted from the press) */
-    step: (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([A.char.posX, 1.2, A.char.posZ]); W.step(DT); g.player.visibility = 0.02; C.f++;
+    step: (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.step(DT); g.player.visibility = 0.02; C.f++;
       for (const e of g.events) if (e.kind === 'prop' && e.time === g.time) C.loud = Math.max(C.loud, e.level);
       if (C.blowAt < 0 && g.player.takedown) C.blowAt = C.f; if (C.armAt < 0 && g.player.holding) C.armAt = C.f; if (C.chokeAt < 0 && g.player.holding?.phase === 'choke') C.chokeAt = C.f; if (C.downAt < 0 && A.state === 'dead') C.downAt = C.f; } },
     press: () => { W.input.buttons |= 4; W.input.clicked |= 4; C.f = 0; C.loud = 0; }, lift: () => { W.input.buttons &= ~4; },

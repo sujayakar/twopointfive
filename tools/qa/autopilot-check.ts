@@ -113,11 +113,11 @@ export async function autopilotCheck(): Promise<boolean> {
       if (foe) {
         const F = g.fogOfWar, seen0 = F.seen, was = [...foe.char.pos], on0 = F.on;
         const c = D.frameCentre, th = D.def.closedDir, k = -tm.side * 1.5;
-        foe.char.posX = c[0] - Math.sin(th) * k; foe.char.posZ = c[2] + Math.cos(th) * k;
+        foe.char.pos[0] = c[0] - Math.sin(th) * k; foe.char.pos[2] = c[2] + Math.cos(th) * k;
         inRoom = g.cleared.roomAt(foe.char.pos) === far; F.on = true; F.seen = (o: any) => o === foe || seen0.call(F, o); fog = F.active;
         const e1 = autoEntries(g, tm), h1 = R.hudB(aimOf(R, D) ?? at).replace(/ · .*/, ''); seen = `${h1} / ${e1.ids[0]} (${e1.why})`;
         T.bangs = 0; dry = `${R.hudB(aimOf(R, D) ?? at).replace(/ · .*/, '')} / ${autoEntries(g, tm).ids[0]}`;
-        F.seen = seen0; F.on = on0; foe.char.posX = was[0]; foe.char.posY = was[1]; foe.char.posZ = was[2];
+        F.seen = seen0; F.on = on0; foe.char.pos[0] = was[0]; foe.char.pos[1] = was[1]; foe.char.pos[2] = was[2];
       }
       T.bangs = b; SIL.SILENT.on = true; SIL.setSilent(g, true); R.step(2);
       const silent = SIL.squadSilent(g), quiet = say();

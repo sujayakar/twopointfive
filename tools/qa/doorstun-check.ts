@@ -58,7 +58,7 @@ export async function doorstunCheck(): Promise<boolean> {
    *  read off the level: the hut's man is the defender staged nearest the door, and the burst goes on the face he is not on. */
   const hut = async (rule: boolean, where: 'tape' | 'near' | 'wall', off?: number, fire = true) => {
     const R = await rig(true, rule), g = R.g, d = R.door('hut_w'), mid = doorPt(d, d.def.width / 2, 0, 1, 0);
-    const T = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead').sort((a: any, b: any) => Math.hypot(a.char.posX - mid[0], a.char.posZ - mid[2]) - Math.hypot(b.char.posX - mid[0], b.char.posZ - mid[2]))[0];
+    const T = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead').sort((a: any, b: any) => Math.hypot(a.char.pos[0] - mid[0], a.char.pos[2] - mid[2]) - Math.hypot(b.char.pos[0] - mid[0], b.char.pos[2] - mid[2]))[0];
     const inside: 1 | -1 = g.doors.side(d, T.char.pos), side = -inside as 1 | -1;
     { const s = doorPt(d, d.def.width / 2, 12, side, 0); g.teleportPlayer([s[0], 0, s[2]]); }   // (the player square on to the door from the yard, as he was)
     let p: number[] | null = where === 'tape' ? doorPt(d, d.def.width / 2, 2.4, inside, 0) : where === 'near' ? doorPt(d, d.def.width / 2, 1.0, inside, 0) : null;   // ('tape' = where the replay had him: 2.5 m straight in from the leaf)
@@ -74,7 +74,7 @@ export async function doorstunCheck(): Promise<boolean> {
     const st0 = T.staggerUntil, n0 = FRAG_STATS.stunned; const rep = fire ? R.shell(d, side, PLAYER_ID, off) : null as any;
     // (does the player have a line to the man through the opening? the log names a man folded behind the door only then)
     const dyn = g.col.dynamicBoxes; g.col.dynamicBoxes = dyn.filter((b: any) => b !== d.box); let inView = false;
-    try { inView = !g.col.segmentBlocked(g.player.char.bones.head ?? [g.player.char.posX, 1.6, g.player.char.posZ], T.char.bones.chest ?? [T.char.posX, 1.2, T.char.posZ]); } finally { g.col.dynamicBoxes = dyn; }
+    try { inView = !g.col.segmentBlocked(g.player.char.bones.head ?? [g.player.char.pos[0], 1.6, g.player.char.pos[2]], T.char.bones.chest ?? [T.char.pos[0], 1.2, T.char.pos[2]]); } finally { g.col.dynamicBoxes = dyn; }
     return { R, g, d, T, side, rep, st0, counted: FRAG_STATS.stunned - n0, inView };
   };
   try {
@@ -98,7 +98,7 @@ export async function doorstunCheck(): Promise<boolean> {
     { const c = await hut(false, 'tape'), h = c.rep && hit(c.rep, c.T);
       line(!!h && c.d.off && h.result === 'shielded' && c.T.staggerUntil === c.st0 && c.rep.stunned === 0 && c.counted === 0 && !c.R.said.some((s: string) => /stunned/.test(s)),
         '(6) FRAG.doorStun off: the same burst, the same man — shielded and not a beat lost, the blast as it was', c.rep ? `door off ${c.d.off} · ${words(c.rep, c.T, c.g)} · the player ${c.inView ? 'sees' : 'does not see'} him through the opening · "${c.R.said[c.R.said.length - 1] ?? ''}"` : 'NO BLAST'); }
-    { const c = await hut(true, 'near', undefined, false), g = c.g, c2 = c.T.char, head = [c2.posX, 1.65, c2.posZ];
+    { const c = await hut(true, 'near', undefined, false), g = c.g, c2 = c.T.char, head = [c2.pos[0], 1.65, c2.pos[2]];
       const at = (o: number) => { const pt = doorPt(c.d, c.d.def.width / 2, o, c.side, 1.0); return [pt[0], pt[1], pt[2]] as V3; };
       const near = at(HE40.standoff + 0.03), far = at(4.5);
       FRAG.doorStun = ON; const plain = exposure(g, near, c2.pos, head), wary = exposedTo(g, near, c2.pos, head), out = exposedTo(g, far, c2.pos, head);

@@ -96,7 +96,7 @@ export const flowPass = staged(['DOORMANNERS.on'], async () => {
     F.verdict(Object.keys(onMark).length === 4, 'on each he stands on its mark with his gun on it', `on mark with the gun on the opening: ${Object.keys(onMark).join(', ') || 'none'}`);
     F.verdict(men.size === 1 && both === 0 && nearMax < 3.5, 'one man works the openings; the other is never more than a few steps from Sam; never both away at once', `men on covers: ${[...men].join(', ')} · the nearer man's worst distance from Sam ${nearMax.toFixed(2)} m · frames with both on a job ${both}`);
     F.verdict(!inRoom && !T.bad, 'nobody goes into a room he was only told to pass', inRoom || 'never inside the conference room, the server room or the cubicles');
-    F.verdict(back < 8, 'he catches up: both men on Sam again at the hostage room\'s door', `${f1(back)} s after Sam stopped at x ${g.player.char.posX.toFixed(1)} (that long a man short)`);
+    F.verdict(back < 8, 'he catches up: both men on Sam again at the hostage room\'s door', `${f1(back)} s after Sam stopped at x ${g.player.char.pos[0].toFixed(1)} (that long a man short)`);
   }
   { const T = await rig(12, { doorMan: 'inside', roamers: 0, clock: false }); const R = T.R, g = T.game, said = ears(T); T.secs(0.3);
     walk(T, [8.2, 0, 11.2], 4.7); walk(T, [24.6, 0, 11.2], 4.7);
@@ -115,7 +115,7 @@ export const flowPass = staged(['DOORMANNERS.on'], async () => {
   { // the flow coming on with Sam already most of the way down the corridor: what he walked past is behind him on the line, and nobody is sent back for it
     const T = await rig(12, { doorMan: 'inside', roamers: 0, clock: false, flow: false }); const R = T.R; T.secs(0.3);
     walk(T, [8.2, 0, 11.2]); walk(T, [21, 0, 11.2]); T.secs(1.5);
-    R.knobs.flow = true; let west = 99; T.secs(3, () => { west = Math.min(west, ...R.ops.map((o: any) => o.char.posX)); return false; });
+    R.knobs.flow = true; let west = 99; T.secs(3, () => { west = Math.min(west, ...R.ops.map((o: any) => o.char.pos[0])); return false; });
     const early = flowLog(T).filter((w: string) => w.startsWith('flow:take'));
     walk(T, [24.6, 0, 11.2]); T.secs(1);
     const late = flowLog(T).filter((w: string) => w.startsWith('flow:take')).map((w: string) => w.split(':')[2]);
@@ -182,7 +182,7 @@ export const flowStates = staged(['DOORMANNERS.on', 'glass'], async () => {
     const man = R.hostiles.find((h: any) => INSIDE(h.char.pos, CONF));
     walk(T, [8.2, 0, 11.2]); walk(T, [9.6, 0, 10.9], 2); T.secs(1);
     const wasHot = R.flow.stateOf('conference') === 'hot';
-    if (man) { man.hold = true; man.char.posX = 33; man.char.posZ = 21.5; if (man.char.bones.chest) { man.char.bones.chest[0] = 33; man.char.bones.chest[2] = 21.5; } }   // (out of the room, out of everybody's sight: the far end of the break room)
+    if (man) { man.hold = true; man.char.pos[0] = 33; man.char.pos[2] = 21.5; if (man.char.bones.chest) { man.char.bones.chest[0] = 33; man.char.bones.chest[2] = 21.5; } }   // (out of the room, out of everybody's sight: the far end of the break room)
     walk(T, [9.6, 0, 8.6], 2); walk(T, [6.0, 0, 6.0], 2.5); walk(T, [12.0, 0, 6.0], 2.5); T.secs(1);
     const st = R.flow.stateOf('conference');
     F.verdict(!!man && wasHot && flowLog(T).includes('flow:cold:conference') && st !== 'hot' && !/conf HOT/.test(R.objective().text), 'a hot room the team then walks through and finds empty goes cold (and can be cleared)', `was hot ${wasHot} · after the walk ${st} · ${flowLog(T).filter((w: string) => /hot|cold|cleared/.test(w)).join(' · ')} · man ${man?.state} at ${man?.char.pos.map((x: number) => x.toFixed(1))} · '${R.objective().text}'`);

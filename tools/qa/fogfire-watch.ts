@@ -21,9 +21,9 @@ export class FogFireWatch {
   private reason(F: any, O: any, h: any): string {
     const g = this.g, c = O.gd.char; const e = (F.eyes as any[]).find(x => x.id === c.id);
     if (!e) return 'not an eye';
-    const chest = h.char.bones.chest ?? [h.char.posX, h.char.posY + 1.1, h.char.posZ];
+    const chest = h.char.bones.chest ?? [h.char.pos[0], h.char.pos[1] + 1.1, h.char.pos[2]];
     if (!F.inField(e, chest)) return 'field';
-    const head = h.char.bones.head ?? [h.char.posX, h.char.posY + 1.6, h.char.posZ];
+    const head = h.char.bones.head ?? [h.char.pos[0], h.char.pos[1] + 1.6, h.char.pos[2]];
     if (g.col.segmentBlocked(e.pos, chest) && g.col.segmentBlocked(e.pos, head)) return 'line';
     if (F.recs.get(h)?.smoked) return 'smoke';
     return 'other';

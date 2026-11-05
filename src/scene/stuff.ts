@@ -2,7 +2,7 @@
 // Three places say it, and each is data somebody wrote:
 //   · a PAINT'S NAME. A kit's palette names its paints ('wood', 'carpet', 'tWall') and this table says what each name is made of: one of the look's materials
 //     (render/lookTex.ts LOOK_NAMES); 'plain', meant to be drawn as a flat colour (laminate, a dark screen); 'waits', a stuff the look has no
-//     material for yet (card, foliage; drawn plain. A lawn's paint still says it, though the look has had 'grass' since 11-05: see asphalt below); or one of the two the look draws plain and a round's hit reads, 'glass' and 'rubber' (BOX_STUFFS below). Where one name is more than one thing, the piece that knows better says its own word;
+//     material for yet (card, foliage; drawn plain); or one of the two the look draws plain and a round's hit reads, 'glass' and 'rubber' (BOX_STUFFS below). Where one name is more than one thing, the piece that knows better says its own word;
 //   · a level file's MATERIAL ROW (levelData.ts MaterialData.stuff), written by the exporter from this table: the file says it, and the loader asks no table;
 //   · a BOX or a prop's part (Box.stuff, a file's `stuff` on a box), where it is another thing than its paint's row says, or wears a paint written as numbers.
 // A box takes its own word, else its row's, when the file is loaded (levelLoad.ts), and a kit's add() does the same for a box it makes with a named paint
@@ -10,9 +10,12 @@
 // ASKS A COLOUR WHAT IT IS MADE OF. (Until 11-04 the look matched a box's colour against the 2010s palette, exactly and darkened in one piece, and the kits
 // found a paint's finish by its numbers: a wall repainted a slightly different grey was silently another material. tools/levels/stuffWas.ts keeps that rule,
 // frozen, for one job: bringing a level file written before forward, each box saying what it was drawn as.)
-// A NAME NEVER CHANGES A COLOUR. The simulation reads colours (a round's dust by its paint, a sheet of paper by how pale it is): this table gives a paint a
-// material and leaves its numbers alone. Nothing in the simulation reads this table.
+// A NAME NEVER CHANGES A COLOUR, and a colour says nothing: this table gives a paint what it is drawn as and leaves its numbers alone.
+// WHAT A PAINT DOES IS SAID THE SAME WAY, IN ANOTHER WORD (PAINT_DOES below; scene/materials.ts has the rows). A paint's name says what a box of it is to
+// a round, a charge and a blast; a kit puts that word on the box beside `stuff` (Box.does), and the two are never worked out from one another: `stuff` is
+// the picture's and a repaint changes it, `does` is the rules' and a repaint leaves it. The rules read the box (materials.ts doesOf), never this table.
 import type { GwotMat } from './gwotPalette';
+import type { DoesWord } from './materials';   // (a type: what a paint DOES is a word of the table of materials)
 import { LOOK_NAMES, lookStuffOf } from '../render/lookTex';   // (a module of arithmetic with no imports of its own: the look's list of materials is the one list)
 
 export type Stuff = typeof LOOK_NAMES[number] | 'plain' | 'waits' | 'glass' | 'rubber';
@@ -36,19 +39,49 @@ export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   carpet: 'cloth', carpetBlue: 'cloth', carpetRed: 'cloth', chair: 'fabric',   // (a carpet is the coarse weave; a seat's cloth the fine one)
   wall: 'plaster', ceiling: 'plaster', wallDark: 'block', concrete: 'block', stone: 'slab', lino: 'slab',
   black: 'plain', white: 'plain', screenOff: 'plain', glass: 'plain', glassExt: 'plain',
-  cardboard: 'waits', plant: 'waits', grass: 'waits',
+  cardboard: 'waits', plant: 'waits',
+  grass: 'grass',       // (a lawn, a verge: the look's grass since 11-05. No round meets one: a lawn is a strip no ray meets, laid on the lot's slab, and a round into it is a round into that)
   metal: 'steel',   // (an office's steel is CLEAN painted steel: shelving, desk legs, lamp posts, bins. The look's 'metal' is bare iron gone to rust and its 'paint' is chipped)
   // ---- ONE NAME, MORE THAN ONE THING. The kits have used these six paints for two things each (a level file's writer names a box by the row that has its
   // numbers: levelLoad.ts levelToData), so the name cannot say what its boxes are and a PIECE that knows better says its own word: a cubicle partition says
-  // fabric. NOBODY CHOSE THE WORDS HERE: each is what the look made of the paint's COLOUR until 11-04, kept so that no box moved the day the colour rule went.
+  // fabric. NOBODY CHOSE THE WORDS HERE (but the car park's, 11-05): each is what the look made of the paint's COLOUR until 11-04, kept so that no box moved the day the colour rule went.
   partRed: 'plain', partBlue: 'plain',   // (cubicle partitions, which say fabric themselves; and a car's body, lived things)
   partTan: 'cloth',     // (a partition; and a hut's stucco walls, drawn as cloth because the tan is a cream rug's, darkened)
   red: 'plain',         // (an extinguisher's enamel; and tape, a ball, a mast's lamps)
-  asphalt: 'plain',     // (the car park. The look has had 'tarmac' and 'grass' since 11-05 (render/lookTex.ts); this row and grass's above still say what they did because a level's FILE carries its own word a material, so they move with the export of the levels that are dressed in them: docs/agents/render.md, TARMAC AND GRASS ARE STUFFS. Until 11-04 its grey was drawn as bare iron, iron's grey darkened; the lived kit's iron fittings, in the same numbers, say metal themselves: livedPieces.ts INK.iron)
+  asphalt: 'tarmac',    // (the car park, the road: the look's tarmac since 11-05, and concrete to the picture of a round's hit wet or dry (game/particleFx.ts STUFF_SURF: dry, its paint always was; wet, its tone read as metal). Until 11-04 its grey was drawn as bare iron, iron's grey darkened; the lived kit's iron fittings, in the same numbers, say metal themselves: livedPieces.ts INK.iron. A thing painted in it that is no lot says its own word: the compound's mud at the pump is earth)
   glassFrame: 'plain',  // (a window's frame; and every outside door's leaf, painted from the same numbers as the game runs)
   // ---- the snow kit's (the look lays its own snow over a thing; the paint under it stays plain)
   snow: 'plain', snowOld: 'plain', snowPacked: 'plain',
 };
+/** WHAT EACH PAINT DOES, by its name: the row of the table of materials (scene/materials.ts) a box of that paint takes its `does` from. Every word here is
+ *  what the rules made of the paint's COLOUR until 2026-11-05, written out so that no rule moved the day they stopped reading colours: so two rugs are
+ *  'dark carpet' because their dye is dark, and the white plastic is 'grey plastic' because a plain light grey was a cabinet to a blast. Each is a choice
+ *  somebody may now make by changing one word. A paint with no row here says nothing, and a box of it takes the default row unless it says its own. */
+const PALETTE_DOES = {
+  mud: 'concrete', mudDark: 'concrete', render: 'concrete', block: 'concrete', tWall: 'concrete', slab: 'concrete', sandbag: 'concrete', hesco: 'concrete',   // (structure: a shell, a yard wall, a T-wall)
+  mudLight: 'plasterboard', whitewash: 'plasterboard', paintCream: 'plasterboard',   // (a partition: a charge cuts it, a round goes through)
+  dust: 'tarmac', dirt: 'tarmac', gravel: 'tarmac', damp: 'tarmac', oil: 'tarmac', mudFloor: 'stone',   // (the ground)
+  rugRed: 'carpet', rugCream: 'carpet', rugOchre: 'carpet', rugGreen: 'carpet', rugNavy: 'dark carpet', rugMadder: 'dark carpet',
+  canvas: 'fabric', blanketGrey: 'fabric', blanketBrown: 'fabric', tarpBlue: 'fabric', sack: 'fabric', coyote: 'fabric',
+  paintBlue: 'steel', paintGreen: 'steel', paintRust: 'steel', stencil: 'steel', rust: 'steel', iron: 'steel', galv: 'steel', tin: 'steel', drumBlue: 'steel', drumRed: 'steel', genYellow: 'steel',
+  truckWhite: 'steel', truckTan: 'steel', truckRed: 'steel',
+  olive: 'wood', poplar: 'wood', woodGrey: 'wood', ply: 'wood',   // (olive is a wooden locker and an ammunition box)
+  plasticWhite: 'grey plastic', plasticGreen: 'plastic', plasticBlue: 'plastic', jerryYellow: 'plastic', plasticBlack: 'dark plastic', rubber: 'dark plastic', glassDark: 'dark glass',
+  prodOrange: 'plant', prodGreen: 'plant', prodRed: 'plant', prodYellow: 'plant', straw: 'plant', scrub: 'plant',
+} as const satisfies Record<GwotMat, DoesWord>;
+export const PAINT_DOES: Readonly<Record<string, DoesWord>> = {
+  ...PALETTE_DOES,
+  // ---- the office's paints, which the kit's palette shares (scene/officeGen.ts OFFICE_PALETTE, levelKit.ts KIT_PALETTE)
+  wall: 'plasterboard', partRed: 'partition', partBlue: 'partition', partTan: 'partition', ceiling: 'ceiling', white: 'laminate', glass: 'pane', glassExt: 'pane',
+  concrete: 'concrete', wallDark: 'concrete', stone: 'stone', lino: 'lino', asphalt: 'tarmac', carpet: 'carpet', carpetBlue: 'carpet', carpetRed: 'carpet', grass: 'grass',
+  wood: 'wood', woodDark: 'wood', cardboard: 'card', metal: 'steel', red: 'enamel', black: 'casing', glassFrame: 'frame', screenOff: 'screen', chair: 'fabric', plant: 'plant',
+  // ---- the snow kit's
+  snow: 'snow', snowPacked: 'packed snow', snowOld: 'old snow',
+};
+/** what a paint name does: undefined for a name the table has no row for */
+export const doesOfName = (name: string): DoesWord | undefined => Object.hasOwn(PAINT_DOES, name) ? PAINT_DOES[name] : undefined;
+/** what a level file's material ROW says its boxes do, by the row's name. Spread into the row the exporter writes (which then asks the paint itself) */
+export const rowDoes = (name: string): { does?: DoesWord } => { const w = doesOfName(name); return w !== undefined ? { does: w } : {}; };
 /** what the table says of a paint name: undefined for a name it has no row for (never a method of every object: a level may name a paint `constructor`) */
 export const stuffOfName = (name: string): Stuff | undefined => Object.hasOwn(PAINT_STUFF, name) ? PAINT_STUFF[name] : undefined;
 /** what a level file's material ROW says of itself (levelData.ts MaterialData.stuff), by the row's name: the table's word, 'plain' and 'waits' written
@@ -69,8 +102,9 @@ export const boxStuffOk = (v: unknown): v is BoxStuff => typeof v === 'string' &
 export const saidFor = <S extends BoxStuff>(stuff: S, paint: readonly number[], ...own: readonly (readonly number[])[]): { stuff?: S } =>
   own.includes(paint) ? { stuff } : {};   // (the row handed over, not its numbers: a copy of the kit's wood is nobody's paint and gets no veneer, as it gets no finish)
 // ---- A PAINT IS KNOWN BY THE ROW HANDED OVER, NOT BY ITS NUMBERS ----
-/** what a kit knows of one of its paints: its name in the palette, its finish, and what it is made of ('plain' is no word: absent) */
-export interface Paint { readonly name: string; readonly rough?: number; readonly metal?: boolean; readonly stuff?: BoxStuff }
+/** what a kit knows of one of its paints: its name in the palette, its finish, what it is made of ('plain' is no word: absent), and what it does
+ *  (scene/materials.ts; absent = the paint says nothing, and a box of it is asked no further here) */
+export interface Paint { readonly name: string; readonly rough?: number; readonly metal?: boolean; readonly stuff?: BoxStuff; readonly does?: DoesWord }
 /** each palette row's own array → what its kit said of it. Keyed by the ARRAY (`albedo: C.wood` hands the row over), never by its numbers: two paints
  *  with one colour are two paints, and a colour written out as numbers is nobody's paint. Rows are added as their palette's module loads; never removed. */
 const PAINTS = new WeakMap<readonly number[], Paint>();
@@ -81,27 +115,31 @@ const wordOfName = (name: string): BoxStuff | undefined => { const s = stuffOfNa
 type Finish = { rough?: number; metal?: boolean };
 /** a paint's record with only the keys it means: its name, its finish where it has one (a metal flag goes with a roughness, never alone), its stuff unless
  *  that is plain */
-const record = (name: string, finish: Finish | undefined, stuff: BoxStuff | undefined): Paint =>
-  ({ name, ...(finish?.rough !== undefined ? { rough: finish.rough, ...(finish.metal ? { metal: true } : {}) } : {}), ...(stuff !== undefined && stuff !== 'plain' ? { stuff } : {}) });
+const record = (name: string, finish: Finish | undefined, stuff: BoxStuff | undefined, does?: DoesWord): Paint =>
+  ({ name, ...(finish?.rough !== undefined ? { rough: finish.rough, ...(finish.metal ? { metal: true } : {}) } : {}), ...(stuff !== undefined && stuff !== 'plain' ? { stuff } : {}), ...(does !== undefined ? { does } : {}) });
 export function namePaints(palette: Readonly<Record<string, readonly number[]>>, finish: Readonly<Record<string, { rough: number; metal?: boolean } | undefined>> = {}): void {
-  for (const [name, row] of Object.entries(palette)) PAINTS.set(row, record(name, finish[name], wordOfName(name)));
+  for (const [name, row] of Object.entries(palette)) PAINTS.set(row, record(name, finish[name], wordOfName(name), doesOfName(name)));
 }
 /** … and one paint that is a named paint to the eye in other numbers (gwotPalette.ts gwotAs: the same paint standing for something else to a round): the
  *  name's stuff, and the finish only if `finish` is given (a stand-in's finish is written by whoever lays it) */
-export function namePaint(row: readonly number[], name: string, finish?: { rough: number; metal?: boolean }): void { PAINTS.set(row, record(name, finish, wordOfName(name))); }
+export function namePaint(row: readonly number[], name: string, finish?: { rough: number; metal?: boolean }, does?: DoesWord): void { PAINTS.set(row, record(name, finish, wordOfName(name), does ?? doesOfName(name))); }   // (`does`: what the stand-in stands for to a round, where that is another thing than the name's)
 /** … and a paint of a kit's OWN that the table of names does not know (its names are its own, or its name there is another kit's paint): what it is
  *  made of and its finish, said outright */
-export function sayPaint(row: readonly number[], name: string, said: { stuff?: BoxStuff } & Finish): void { PAINTS.set(row, record(name, said, said.stuff)); }
+export function sayPaint(row: readonly number[], name: string, said: { stuff?: BoxStuff; does?: DoesWord } & Finish): void { PAINTS.set(row, record(name, said, said.stuff, said.does)); }
 /** ONE PAINT, ANOTHER THING: the same paint to the eye (its numbers, its name, its finish) said to be made of `stuff` where a kit paints two things with
- *  it and the row can say only one: `saidAs('plain', C.asphalt)` is the lot under a level, whose paint's row says metal for the iron fittings.
+ *  it and the row can say only one: `saidAs('earth', C.asphalt)` is the compound's mud at the pump, laid in the car park's paint for its darkness.
  *  `finish` = the thing's own, where its stuff has another than the paint's row (as `madeOf` takes one: the word and its finish are said together, so
  *  nobody writes a roughness by hand beside the word): `saidAs('paint', dust, { rough: 0.5 })` is an enamel in the colour of dust. */
 export function saidAs(stuff: BoxStuff, paint: readonly number[], finish?: { rough: number; metal?: boolean }): [number, number, number] {
-  const was = PAINTS.get(paint), out: [number, number, number] = [paint[0], paint[1], paint[2]]; PAINTS.set(out, record(was?.name ?? '', finish ?? was, stuff)); return out;
+  const was = PAINTS.get(paint), out: [number, number, number] = [paint[0], paint[1], paint[2]]; PAINTS.set(out, record(was?.name ?? '', finish ?? was, stuff, was?.does)); return out;   // (drawn as another thing, it does what the paint does)
 }
 /** A COLOUR WRITTEN AS NUMBERS SAYS ITS WORD BESIDE IT: `madeOf('cloth', [0.3, 0.1, 0.09])` is those numbers, known from here on as a paint made of
  *  that (and of that finish, if one is given), wherever they are handed: a box's albedo, a helper's argument, a constant a generator names once. */
 export function madeOf(stuff: BoxStuff, colour: [number, number, number], finish?: { rough: number; metal?: boolean }): [number, number, number] { sayPaint(colour, '', { stuff, ...finish }); return colour; }
+/** … AND WHAT IT DOES, the same way (scene/materials.ts): `doing('steel', [0.58, 0.58, 0.56])` is those numbers, known from here on as a paint a box of
+ *  which does what steel does, whatever else was said of them (madeOf first, then this, or either alone). A colour nobody says this of is brought forward
+ *  by the exporter with the word its tone had (tools/levels/doesWas.ts). Returns the colour. */
+export function doing<T extends readonly number[]>(does: DoesWord, colour: T): T { const was = PAINTS.get(colour); PAINTS.set(colour, { ...(was ?? { name: '' }), does }); return colour; }
 /** … and the same, where NOBODY CHOSE the word: `drawnAs('metal', [0.08, 0.08, 0.09])` is what the look made of those numbers by their COLOUR until 11-04
  *  (a dark grey is iron's grey, darkened: a monitor's bezel was drawn as bare iron), written beside them so that no box moved the day the colour rule went.
  *  Every call is a place a choice is still owed: when somebody makes it, the call becomes a named paint or madeOf. (`grep drawnAs` is the list.) */
@@ -117,7 +155,8 @@ export const RACK_BLACK = drawnAs('metal', [0.06, 0.06, 0.07], { rough: 0.3 });
 export const paintOf = (albedo: readonly number[] | undefined): Paint | undefined => albedo ? PAINTS.get(albedo) : undefined;
 /** A PAINT TONED IS THE SAME STUFF: `out` is the paint `from` in another tone (worn ground is its ground darker, a faded door its paint paler), so it
  *  keeps the word of the paint it was made from; it has no finish of its own (whoever lays it writes one). A paint nobody named tones to numbers nobody
- *  named. Returns `out`. */
+ *  named. NOT WHAT IT DOES: a tone was never its paint to the rules (they knew a paint by its exact numbers, and a tone was classed by how bright it
+ *  was), so a toned paint says nothing of what it does, as measured; whoever means the toned thing to do what its paint does says so (`doing`). Returns `out`. */
 export function tonedAs<T extends readonly number[]>(from: readonly number[], out: T): T {
   const was = PAINTS.get(from); if (was) PAINTS.set(out, { name: was.name, ...(was.stuff !== undefined ? { stuff: was.stuff } : {}) });
   return out;
@@ -126,14 +165,15 @@ export function tonedAs<T extends readonly number[]>(from: readonly number[], ou
 export function toned(paint: readonly number[], k: number | readonly number[]): [number, number, number] {
   const m = typeof k === 'number' ? [k, k, k] : k; return tonedAs(paint, [paint[0] * m[0], paint[1] * m[1], paint[2] * m[2]]);
 }
-/** the word a box made with `albedo` carries: what the maker said (`said`; 'plain' = nothing, said aloud over a paint that says something), else the
- *  paint's own. Spread the answer into the box being made. */
-export function wordFor(albedo: readonly number[] | undefined, said?: BoxStuff): { stuff?: BoxStuff } {
-  const w = said ?? paintOf(albedo)?.stuff; return w !== undefined && w !== 'plain' ? { stuff: w } : {};
+/** the words a box made with `albedo` carries: what the maker said (`said`; 'plain' = nothing, said aloud over a paint that says something), else the
+ *  paint's own; and what it does (`does`, else the paint's own, else nothing said). Spread the answer into the box being made. */
+export function wordFor(albedo: readonly number[] | undefined, said?: BoxStuff, does?: DoesWord): { stuff?: BoxStuff; does?: DoesWord } {
+  const p = paintOf(albedo), w = said ?? p?.stuff, d = does ?? p?.does; return { ...(w !== undefined && w !== 'plain' ? { stuff: w } : {}), ...(d !== undefined ? { does: d } : {}) };
 }
 /** … and the same for a thing already made (a prop's part as a kit wrote it): its word is put on it, or taken off where it is plain. Returns it. */
-export function worded<T extends { albedo?: readonly number[]; stuff?: BoxStuff }>(o: T): T {
-  const w = wordFor(o.albedo, o.stuff).stuff; if (w !== undefined) o.stuff = w; else delete o.stuff;
+export function worded<T extends { albedo?: readonly number[]; stuff?: BoxStuff; does?: DoesWord }>(o: T): T {
+  const w = wordFor(o.albedo, o.stuff, o.does); if (w.stuff !== undefined) o.stuff = w.stuff; else delete o.stuff;
+  if (w.does !== undefined) o.does = w.does;   // (what it does: its own word, else its paint's; a thing nobody spoke for keeps the key it had, absent or `undefined`)
   return o;
 }
 /** THE PLAIN COATS: the words that are a coat on anything and say nothing of what is under them (a brushed paint, a sprayed enamel). A palette paints a
@@ -166,9 +206,9 @@ export const coatRough = (word: BoxStuff | undefined): number | undefined => COA
 export const repaintWord = (was: BoxStuff | undefined, now: BoxStuff | undefined): BoxStuff | undefined =>
   now !== undefined && namedCoat(was)?.under.includes(now) ? was : now;
 /** A BOX PAINTED AGAIN, the one place it is done (the default look's skin, for boxes and for props' parts: tools/levels/gwotSkin.ts): the new paint, and
- *  the word repaintWord gives. Returns it. */
-export function repainted<T extends { albedo?: readonly number[]; stuff?: BoxStuff }, A extends NonNullable<T['albedo']>>(o: T, albedo: A): T {
-  const was = o.stuff; o.albedo = albedo; delete o.stuff; worded(o);
+ *  the word repaintWord gives. WHAT IT DOES IS NOT TOUCHED (Box.does): a thing in other clothes is the same thing to a round. Returns it. */
+export function repainted<T extends { albedo?: readonly number[]; stuff?: BoxStuff; does?: DoesWord }, A extends NonNullable<T['albedo']>>(o: T, albedo: A): T {
+  const was = o.stuff, did = o.does, had = 'does' in o; o.albedo = albedo; delete o.stuff; worded(o); if (had) o.does = did; else delete o.does;
   const w = repaintWord(was, o.stuff); if (w !== undefined) o.stuff = w; else delete o.stuff;
   return o;
 }

@@ -31,7 +31,7 @@ async function kit() {
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const DT = 1 / 60, R = 0.34;
   const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
-  const park = (g: any) => g.guards.forEach((o: any, i: number) => { o.hold = true; o.pinned = true; o.dazzledUntil = 1e9; o.heardUpTo = 1e12; o.char.pos = [o.char.posX, -50, o.char.posZ]; o.char.vel = [0, 0, 0]; o.path = []; o.pathGoal = null; void i; });
+  const park = (g: any) => g.guards.forEach((o: any, i: number) => { o.hold = true; o.pinned = true; o.dazzledUntil = 1e9; o.heardUpTo = 1e12; o.char.pos = [o.char.pos[0], -50, o.char.pos[2]]; o.char.vel = [0, 0, 0]; o.path = []; o.pathGoal = null; void i; });
   /** the door's own frame: `along` m from the hinge along the shut leaf, `out` m to the side it opens into */
   const frame = (d: any) => { const th = d.def.closedDir, u = [Math.cos(th), Math.sin(th)], S = d.swing, n = [-u[1] * S, u[0] * S], h = d.def.hinge, W = d.def.width as number;
     return { W, S, n, pt: (along: number, out: number): Vec3 => [h[0] + u[0] * along + n[0] * out, 0, h[1] + u[1] * along + n[1] * out] }; };
@@ -57,10 +57,10 @@ async function kit() {
     pl.doorBashAt = -10; pl.doorRipUntil = -1; pl.doorBashLean = 0; g.teleportPlayer([p0[0], 0, p0[2]]); pl.crouch = !!o.crouch; for (let i = 0; i < 5; i++) W.step(DT);
     const yawFor = (dx: number, dz: number) => { let yaw = 0, best = -2; const n = Math.hypot(dx, dz) || 1; for (let i = 0; i < 360; i++) { W.cam.yaw = i * Math.PI / 180; W.cam.rebuild(); const f = W.cam.planarBasis().fwd, dot = (f[0] * dx + f[2] * dz) / n; if (dot > best) { best = dot; yaw = W.cam.yaw; } } return yaw; };
     let yaw = yawFor(dirIn[0], dirIn[1]); const goal = F.pt(F.W * 0.5, -1);
-    const th = d.def.closedDir, ux = Math.cos(th), uz = Math.sin(th), h = d.def.hinge, outOf = () => (c.posX - h[0]) * F.n[0] + (c.posZ - h[1]) * F.n[1], alongOf = () => (c.posX - h[0]) * ux + (c.posZ - h[1]) * uz;
+    const th = d.def.closedDir, ux = Math.cos(th), uz = Math.sin(th), h = d.def.hinge, outOf = () => (c.pos[0] - h[0]) * F.n[0] + (c.pos[2] - h[1]) * F.n[1], alongOf = () => (c.pos[0] - h[0]) * ux + (c.pos[2] - h[1]) * uz;
     W.input.keys.add('KeyW'); if (o.sprint) W.input.keys.add('ShiftLeft');
     let crossed = false, deepest = 0, last = read(d, c.pos), through = -1, aside = 0, wide = 0;
-    for (let i = 0; i < (o.secs ?? 4) * 60; i++) { if (o.steer && i % 6 === 0) yaw = yawFor(goal[0] - c.posX, goal[2] - c.posZ); W.cam.yaw = yaw; W.cam.rebuild(); W.step(DT); const r = read(d, c.pos), out = outOf();
+    for (let i = 0; i < (o.secs ?? 4) * 60; i++) { if (o.steer && i % 6 === 0) yaw = yawFor(goal[0] - c.pos[0], goal[2] - c.pos[2]); W.cam.yaw = yaw; W.cam.rebuild(); W.step(DT); const r = read(d, c.pos), out = outOf();
       if (!d.off) { if (r.inside && last.inside && r.face !== last.face) crossed = true; if (r.along > 0.14) deepest = Math.max(deepest, r.pen); } last = r; wide = Math.max(wide, d.angle * F.S);
       if (out > 0.3) aside = Math.max(aside, Math.abs(alongOf() - a0)); if (through < 0 && out < -0.5) through = (i + 1) * DT;
       if (process.env.DOORSOLID_TRACE === '1' && out < 1.3 && i % 2 === 0) console.log(`    ${i} out ${out.toFixed(2)} along ${alongOf().toFixed(2)} angle ${(d.angle * F.S).toFixed(2)} vel ${(d.vel * F.S).toFixed(1)} face ${r.face * F.S} pen ${(r.pen * 100).toFixed(0)} pullT ${d.pullT.toFixed(2)}`); }
@@ -140,7 +140,7 @@ export async function doorsolidCheck(): Promise<boolean> {
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), o = g.guards[0], at = F.pt(F.W * 0.5, 0.48); o.dazzledUntil = -1; o.char.pos = [at[0], 0, at[2]]; o.char.update(0);
       const side = F.pt(F.W + 0.45, 0.55); g.teleportPlayer([side[0], 0, side[2]]); W.step(DT); const c0 = g.doors.solids.carried; g.doors.use(d, g.player.char.pos, PLAYER_ID);
       for (let i = 0; i < 60; i++) W.step(DT);
-      const dm = Math.hypot(o.char.posX - at[0], o.char.posZ - at[2]);
+      const dm = Math.hypot(o.char.pos[0] - at[0], o.char.pos[2] - at[2]);
       line(d.angle * F.S > 1.2 && dm < 0.02, `a man of the AI standing in the swing of the player's pull: the leaf passes him as ever (${f2(d.angle * F.S)} rad open, he is ${f2(dm * 100)} cm from where he stood; the player, beside the latch, was carried ${g.doors.solids.carried - c0} frames)`); }
 
     { const W = await world(true), g = W.game, d = door(g); d.solidT = 2; const s = JSON.parse(JSON.stringify(saveState(g)));

@@ -67,12 +67,6 @@ export class MenStore {
     for (let c = 0; c < MEN_AT.length; c++) { if (c < NF) d[this.b8 + MEN_AT[c] + r] = 0; else if (MEN_AT[c] !== MEN_GEN) u[this.b4 + MEN_AT[c] + r] = 0; }
     u[g + r] += 1;
   }
-  /** THE MEN BY ROW, as the objects the game knows them by (a Guard, a Player): what a column that names a man reads as */
-  private who: (ManCols | null)[] = new Array(MEN_ROWS).fill(null);
-  /** this object is the man of row `r` */
-  name(r: number, m: ManCols | null): void { this.who[r] = m; }
-  /** the man a handle names (stale: `rowOf` says so) */
-  manAt(h: number): ManCols { const m = this.who[this.rowOf(h)]; if (m === null) throw new Error(`a handle to a row with no man's object: row ${h & 255}`); return m; }
   /** this store holds the men who have left a game (their rows are never freed: the store goes with the last of them) */
   isLeavers = false;
   private kept: MenStore | null = null;
@@ -98,11 +92,11 @@ export class MenStore {
 /** a man's row and store, written into his object as he is made */
 export function standMan(m: ManCols, S: MenStore): void { m.S = S; m.r = S.enter(); }
 /** …and the same row for a second object of the same man (a Guard record and his Character) */
-export function sameMan(m: ManCols, of: ManCols): void { m.S = of.S; m.r = of.r; m.S.name(m.r, m); }
+export function sameMan(m: ManCols, of: ManCols): void { m.S = of.S; m.r = of.r; }
 /** HE HAS LEFT THE GAME: his row is free, and every object of him (`m`, `also`) reads his numbers as they stood, from a store of leavers */
-export function manLeaves(m: ManCols, ...also: { S: MenStore; r: number }[]): void {
+export function manLeaves(m: ManCols, ...also: ManCols[]): void {
   const S = m.S; if (S.isLeavers) return;
-  const K = S.leavers(), r = K.enter(); K.copyRow(S, m.r, r); S.name(m.r, null); S.leave(m.r);
+  const K = S.leavers(), r = K.enter(); K.copyRow(S, m.r, r); S.leave(m.r);
   for (const x of [m, ...also]) { x.S = K; x.r = r; }
 }
 

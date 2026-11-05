@@ -46,7 +46,8 @@ import { cutConfig } from '../scene/cut';
 import { WORLD } from '../scene/world';
 import { isSheet, hitSeed } from './glass';
 import { GLASSPEN, glassPenLive, paneCrossing, type PaneCross, type RoundPath, type RoundSeg } from './glasspen';
-import { paletteName, surfOf, impactFx } from './particleFx';
+import { impactFx } from './particleFx';
+import { doesOf } from '../scene/materials';
 import { bulletMark, staticSurface } from './marks';
 import { pelletEnd, type Shell } from './shotgun';
 import { WALLS } from './wallbreak';
@@ -113,12 +114,12 @@ function stuffOf(g: Game, index: number, b: Box): ThinStuff | null {
   if (b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Dynamic) || b.rot || b.metal || b.emissive[0] + b.emissive[1] + b.emissive[2] > 0) return null;
   if (b.c[0] < WORLD.min[0] || b.c[0] > WORLD.max[0] || b.c[2] < WORLD.min[2] || b.c[2] > WORLD.max[2] || g.destr.itemOf(index)) return null;
   for (const t of g.targets) if (t.boxes.includes(index)) return null;
-  const surf = surfOf(b.albedo);
+  const does = doesOf(b), surf = does.surf;   // (what the box DOES, scene/materials.ts: its word's row, and nothing of its paint)
   if (surf === 'wood' || surf === 'cardboard' || surf === 'fabric' || surf === 'foliage') return surf;
   if (surf !== 'drywall') return null;
-  const name = paletteName(b.albedo); if (!name) return null;   // (a pale paint of no name: nobody's plasterboard — the wall engine indexes none either)
-  const part = name === 'partRed' || name === 'partBlue' || name === 'partTan'; const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], full = y0 <= 0.1 && y1 >= WALLS.wallMinTop;
-  if (full && name !== 'wall' && !part) return null;
+  if (!does.board) return null;   // (a pale thing of no row: nobody's plasterboard — the wall engine indexes none either)
+  const part = does.wall === 'screen'; const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], full = y0 <= 0.1 && y1 >= WALLS.wallMinTop;
+  if (full && does.wall === undefined) return null;
   if (!full && part && Math.min(b.h[0], b.h[2]) * 2 <= WALLPEN.thinMax.fabric) return 'fabric';   // (a low screen in the partition paints is the cubicle's fabric: wallbreak.ts, destruction.ts)
   const n = thinN(b), L = Math.max(b.h[0], b.h[2]); const ax: Vec3 = [-n[2], 0, n[0]]; let in2 = 0;
   for (const u of [-0.6, 0, 0.6]) { const px = b.c[0] + ax[0] * u * L, pz = b.c[2] + ax[2] * u * L; if (roofed(g, px + n[0] * 0.6, pz + n[2] * 0.6) && roofed(g, px - n[0] * 0.6, pz - n[2] * 0.6)) in2++; }

@@ -38,7 +38,7 @@ async function applySet() {
 // ---------------------------------------------------------------- a moment: both men's worn meshes in the taken man's first frame
 interface Shot { label: string; file: string; says: string }
 function recorder(scene: string, g: any, A: any, props = false) {
-  const o = [A.char.posX, 0, A.char.posZ], y = A.char.bodyYaw, f = [Math.sin(y), 0, Math.cos(y)], L = [f[2], 0, -f[0]];
+  const o = [A.char.pos[0], 0, A.char.pos[2]], y = A.char.bodyYaw, f = [Math.sin(y), 0, Math.cos(y)], L = [f[2], 0, -f[0]];
   const rel = (x: number, yy: number, z: number): P3 => { const dx = x - o[0], dz = z - o[2]; return [dx * L[0] + dz * L[2], yy, dx * f[0] + dz * f[2]]; };
   const shots: Shot[] = [], stem = `${scene}${tag ? '-' + tag : ''}`;
   const man = (c: any, side: 'operator' | 'defender', tint: P3, tint2: P3, verts: number[], cols: number[], faces: number[]) => {
@@ -53,7 +53,7 @@ function recorder(scene: string, g: any, A: any, props = false) {
     man(pl, 'operator', [0.07, 0.09, 0.1], [0.05, 0.07, 0.06], verts, cols, faces); man(A.char, 'defender', [0.42, 0.36, 0.28], [0.3, 0.3, 0.26], verts, cols, faces);
     if (props) {   // (what is in their hands and on the floor by them — the game's own boxes, so a gun's way from hand to hand to floor can be followed)
       const out: any[] = []; handProps(g, out); const nHand = out.length; g.items.boxes(out); const hand = A.char.bones.handR ?? A.char.pos;
-      out.forEach((b, k) => { if (Math.hypot(b.c[0] - A.char.posX, b.c[2] - A.char.posZ) > 1.6) return;
+      out.forEach((b, k) => { if (Math.hypot(b.c[0] - A.char.pos[0], b.c[2] - A.char.pos[2]) > 1.6) return;
         const his = k >= nHand || ((b.owner & 0xff) === (A.char.id & 0xff) && Math.hypot(b.c[0] - hand[0], b.c[1] - hand[1], b.c[2] - hand[2]) < (A.carbine ? 0.55 : 0.2)), rgb = his ? [235, 120, 20] : [52, 52, 58];   // (his gun, in his hand or out of it, is the bright one; the rest of both men's kit is dark)
         const [qx, qy, qz, qw]: number[] = b.rot ?? [0, Math.sin(b.yaw / 2), 0, Math.cos(b.yaw / 2)], base = verts.length / 3;
         const rot = (v: P3): P3 => { const tx = 2 * (qy * v[2] - qz * v[1]), ty = 2 * (qz * v[0] - qx * v[2]), tz = 2 * (qx * v[1] - qy * v[0]); return [v[0] + qw * tx + qy * tz - qz * ty, v[1] + qw * ty + qz * tx - qx * tz, v[2] + qw * tz + qx * ty - qy * tx]; };
@@ -67,7 +67,7 @@ function recorder(scene: string, g: any, A: any, props = false) {
     writeFileSync(`${outDir}/${file}`, new Uint8Array(buf));
     const a = pl.anim, n = a.nodes, at = (c: any, node: string) => { const p = c.skel.nodePos(c.anim.nodes[node]), w = c.world, x = w[0] * p[0] + w[4] * p[1] + w[8] * p[2] + w[12], yy = w[1] * p[0] + w[5] * p[1] + w[9] * p[2] + w[13], z = w[2] * p[0] + w[6] * p[1] + w[10] * p[2] + w[14]; return rel(x, yy, z).map(q => +q.toFixed(2)); };
     const raw = (c: any, node: string): number[] => { const p = c.skel.nodePos(c.anim.nodes[node]), w = c.world; return [w[0] * p[0] + w[4] * p[1] + w[8] * p[2] + w[12], w[1] * p[0] + w[5] * p[1] + w[9] * p[2] + w[13], w[2] * p[0] + w[6] * p[1] + w[10] * p[2] + w[14]]; };
-    void n; const d = Math.hypot(pl.posX - A.char.posX, pl.posZ - A.char.posZ);
+    void n; const d = Math.hypot(pl.pos[0] - A.char.pos[0], pl.pos[2] - A.char.pos[2]);
     const says = `gap ${d.toFixed(2)} m · crouch ${(a.crouch ?? 0).toFixed(2)} · creep ${(a.creepShown ?? 0).toFixed(2)} · ready ${a.ready ?? '—'} ${(a.readyShown ?? 0).toFixed(2)} · hands L ${at(pl, 'handL')} R ${at(pl, 'handR')} · knees L ${at(pl, 'shinL')} R ${at(pl, 'shinR')} · feet L ${at(pl, 'footL')} R ${at(pl, 'footR')} · his neck ${at(A.char, 'neck')} · his feet off the floor L ${raw(A.char, 'footL')[1].toFixed(3)} R ${raw(A.char, 'footR')[1].toFixed(3)} · wrist to his neck ${Math.hypot(...raw(pl, 'handL').map((q, i) => q - raw(A.char, 'neck')[i])).toFixed(3)} · his head ${at(A.char, 'head')} · Sam's head ${at(pl, 'head')} neck ${at(pl, 'neck')} · heads his ${raw(A.char, 'head')[1].toFixed(2)} Sam's ${raw(pl, 'head')[1].toFixed(2)}, ${Math.hypot(...raw(pl, 'head').map((q, i) => q - raw(A.char, 'head')[i])).toFixed(3)} apart`;
     shots.push({ label, file, says });
   } };
@@ -82,10 +82,10 @@ async function lobby(seed: number) {
   const [A, ...rest] = g.guards; rest.forEach((gd: any, i: number) => { gd.hold = true; gd.pinned = true; place(gd, [37.5, 0, 6 + i * 1.5], EAST); gd.heardUpTo = 1e12; }); place(A, LOBBY, EAST); A.wp = 1; A.hold = true; A.pinned = true;
   W.cam.yaw = 0; W.cam.rebuild?.();
   const look = { ahead: false, still: false };   // (the cursor on the man — or, with him in the arm, a point ahead of Sam: the hold turns to the cursor)
-  const aim = () => { const c = g.player.char; W.cursorAt(look.ahead && look.still ? [c.posX, 0.45, c.posZ] : look.ahead ? [c.posX + Math.sin(c.bodyYaw) * 6, 1.0, c.posZ + Math.cos(c.bodyYaw) * 6] : [A.char.posX, 1.2, A.char.posZ]); };
+  const aim = () => { const c = g.player.char; W.cursorAt(look.ahead && look.still ? [c.pos[0], 0.45, c.pos[2]] : look.ahead ? [c.pos[0] + Math.sin(c.bodyYaw) * 6, 1.0, c.pos[2] + Math.cos(c.bodyYaw) * 6] : [A.char.pos[0], 1.2, A.char.pos[2]]); };
   const step = (n = 1) => { for (let i = 0; i < n; i++) { aim(); W.step(DT); g.player.visibility = 0.02; } };
-  const samAt = (d: number, crouch: boolean) => { g.teleportPlayer([A.char.posX - d, 0, A.char.posZ]); g.player.crouch = crouch; const pl = g.player.char; pl.bodyYaw = pl.aimYaw = EAST; step(30); };
-  const gap = () => A.char.posX - g.player.char.posX;
+  const samAt = (d: number, crouch: boolean) => { g.teleportPlayer([A.char.pos[0] - d, 0, A.char.pos[2]]); g.player.crouch = crouch; const pl = g.player.char; pl.bodyYaw = pl.aimYaw = EAST; step(30); };
+  const gap = () => A.char.pos[0] - g.player.char.pos[0];
   return { W, g, A, step, samAt, gap, look };
 }
 /** coming up behind him from 3 m at the crouch (or on his feet), and stopping `stopAt` m short: moments on the way, the stop, and the two seconds after it */
@@ -149,7 +149,7 @@ async function stalk(scene: string, who: 'calm' | 'rifle', pause: boolean, hit =
   for (const d of marks) { while (S.gap() > d && !g.player.holding && n++ < 1200) S.step(1); if (!g.player.holding) R.snap(`creeping · ${S.gap().toFixed(2)} m`); }
   if (pause) { lift(); for (const t of [0.15, 0.5, 1.2]) { S.step(Math.round(t * 60) - (t === 0.15 ? 0 : t === 0.5 ? 9 : 30)); R.snap(`let go ${t.toFixed(2)} s · ${S.gap().toFixed(2)} m`); } press(); for (const d of [1.2, 1.0]) { while (S.gap() > d && !g.player.holding && n++ < 2400) S.step(1); if (!g.player.holding) R.snap(`pressed again · ${S.gap().toFixed(2)} m`); } }
   if (STALK.key) {   // (the key finishes it: he eases to a stop in reach and waits; the row's key is the grab)
-    const pc = g.player.char; let still = 0; while (still < 12 && n++ < 2400) { S.step(1); still = Math.hypot(pc.velX, pc.velZ) < 0.02 ? still + 1 : 0; }
+    const pc = g.player.char; let still = 0; while (still < 12 && n++ < 2400) { S.step(1); still = Math.hypot(pc.vel[0], pc.vel[2]) < 0.02 ? still + 1 : 0; }
     if (!hit) R.snap(`in reach, waiting · ${S.gap().toFixed(2)} m`);
     if (g.selectVerb('guard', 'grab')) W.input.pressed.add('Space');
   }
@@ -167,15 +167,15 @@ async function stalkClip(scene: string) {
   let f = 0; const go = (n: number) => { for (let i = 0; i < n; i++) { S.step(1); if (f++ % 2 === 0) R.snap(`${S.gap().toFixed(2)} m`); } };
   const press = () => { W.input.buttons |= 1; W.input.clicked |= 1; }, lift = () => { W.input.buttons &= ~1; };
   go(20); press(); let n = 0; while (S.gap() > 2.2 && n++ < 900) go(1);
-  lift(); go(54); press(); n = 0; const pc = g.player.char; let still = 0; while (still < 80 && n++ < 900) { go(1); still = Math.hypot(pc.velX, pc.velZ) < 0.02 ? still + 1 : 0; }
+  lift(); go(54); press(); n = 0; const pc = g.player.char; let still = 0; while (still < 80 && n++ < 900) { go(1); still = Math.hypot(pc.vel[0], pc.vel[2]) < 0.02 ? still + 1 : 0; }
   return R;
 }
 /** TAP TO STEP (tapstep.ts): the key held for two steps, then taps with stops between, then the step that lands behind him */
 async function stepClip(scene: string) {
   const S = await lobby(7305), { W, g, A } = S; g.tune.carbineGuards = 'none'; TAPSTEP.on = true;
-  S.samAt(5.4, true); W.cursorAt([A.char.posX, 1.2, A.char.posZ]); S.step(30); const R = recorder(scene, g, A), { right } = W.cam.planarBasis();
+  S.samAt(5.4, true); W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); S.step(30); const R = recorder(scene, g, A), { right } = W.cam.planarBasis();
   const key = right[0] > 0 ? 'KeyD' : 'KeyA';
-  let f = 0; const go = (n: number) => { for (let i = 0; i < n; i++) { W.cursorAt([A.char.posX, 1.2, A.char.posZ]); S.step(1); if (f++ % 2 === 0) R.snap(`${S.gap().toFixed(2)} m`); } };
+  let f = 0; const go = (n: number) => { for (let i = 0; i < n; i++) { W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); S.step(1); if (f++ % 2 === 0) R.snap(`${S.gap().toFixed(2)} m`); } };
   go(20); W.input.keys.add(key); go(100); W.input.keys.delete(key); go(50);
   for (let i = 0; i < 3; i++) { W.input.keys.add(key); go(5); W.input.keys.delete(key); go(44); }
   W.input.keys.add(key); go(5); W.input.keys.delete(key); go(70);
@@ -206,8 +206,8 @@ async function cornerWait(scene: string) {
   const run = (sg: number) => g.col.raycast([p[0] + n[0] * 0.75 - t0[0] * back * sg, 0.5, p[2] + n[2] * 0.75 - t0[2] * back * sg], [t0[0] * sg, 0, t0[2] * sg], back + 1.6)?.t ?? 99;
   const sg = run(1) >= run(-1) ? 1 : -1, t = [t0[0] * sg, 0, t0[2] * sg];
   place(A, [p[0] + n[0] * 0.75 - t[0] * back, 0, p[2] + n[2] * 0.75 - t[2] * back], Math.atan2(t[0], t[2]));
-  const along = () => (A.char.posX - p[0]) * t[0] + (A.char.posZ - p[2]) * t[2];
-  const walk = () => { A.char.posX += t[0] * 1.15 * DT; A.char.posZ += t[2] * 1.15 * DT; A.char.vel = [t[0] * 1.15, 0, t[2] * 1.15]; W.input.buttons |= 1; step(1); };
+  const along = () => (A.char.pos[0] - p[0]) * t[0] + (A.char.pos[2] - p[2]) * t[2];
+  const walk = () => { A.char.pos[0] += t[0] * 1.15 * DT; A.char.pos[2] += t[2] * 1.15 * DT; A.char.vel = [t[0] * 1.15, 0, t[2] * 1.15]; W.input.buttons |= 1; step(1); };
   let k = 0; for (const m of [-2.0, -1.2, -0.7, -0.4]) { while (along() < m && !pl.holding && k++ < 600) walk(); if (!pl.holding) R.snap(`waiting, the button held · he is ${(-along()).toFixed(2)} m short of him`); }
   while (!pl.holding && k++ < 600) walk();
   if (!pl.holding) { console.log(`  [${scene}] THE GRAB NEVER CAME`); return R; }
@@ -220,9 +220,9 @@ async function cornerWait(scene: string) {
 async function pass(scene: string, facingDeg: number, side: number) {
   const S = await lobby(7310), { W, g, A } = S; place(A, LOBBY, EAST + facingDeg * Math.PI / 180); const R = recorder(scene, g, A), c = g.player.char;
   g.teleportPlayer([LOBBY[0] - 3.4, 0, LOBBY[2] + side]); g.player.crouch = true; c.bodyYaw = c.aimYaw = EAST;
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([c.posX + 6, 1.0, c.posZ]); W.step(DT); g.player.visibility = 0.02; } };
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([c.pos[0] + 6, 1.0, c.pos[2]]); W.step(DT); g.player.visibility = 0.02; } };
   step(40); R.snap('3.4 m short, at rest'); W.input.keys.add('KeyD'); let n = 0;
-  for (const x of [-2.4, -1.6, -0.9, -0.3, 0.3, 0.9, 1.6, 2.4]) { while (c.posX - LOBBY[0] < x && n++ < 1500) step(1); R.snap(`${x < 0 ? (-x).toFixed(1) + ' m short of him' : x.toFixed(1) + ' m past him'}`); }
+  for (const x of [-2.4, -1.6, -0.9, -0.3, 0.3, 0.9, 1.6, 2.4]) { while (c.pos[0] - LOBBY[0] < x && n++ < 1500) step(1); R.snap(`${x < 0 ? (-x).toFixed(1) + ' m short of him' : x.toFixed(1) + ' m past him'}`); }
   W.input.keys.delete('KeyD');
   return R;
 }
@@ -230,9 +230,9 @@ async function pass(scene: string, facingDeg: number, side: number) {
 async function dash(scene: string) {
   const S = await lobby(7311), { W, g, A } = S; const R = recorder(scene, g, A), c = g.player.char;
   g.teleportPlayer([LOBBY[0] - 4, 0, LOBBY[2] + 2.2]); g.player.crouch = true; c.bodyYaw = c.aimYaw = EAST;
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([c.posX + 6, 1.0, c.posZ]); W.step(DT); g.player.visibility = 0.02; } };
-  step(30); W.input.keys.add('KeyD'); step(50); R.snap(`the crouch walk · ${Math.hypot(c.velX, c.velZ).toFixed(2)} m/s`);
-  W.input.keys.add('ShiftLeft'); step(45); for (let k = 0; k < 6; k++) { R.snap(`Shift held · ${Math.hypot(c.velX, c.velZ).toFixed(2)} m/s · crouched ${g.player.crouch}`); step(7); }
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([c.pos[0] + 6, 1.0, c.pos[2]]); W.step(DT); g.player.visibility = 0.02; } };
+  step(30); W.input.keys.add('KeyD'); step(50); R.snap(`the crouch walk · ${Math.hypot(c.vel[0], c.vel[2]).toFixed(2)} m/s`);
+  W.input.keys.add('ShiftLeft'); step(45); for (let k = 0; k < 6; k++) { R.snap(`Shift held · ${Math.hypot(c.vel[0], c.vel[2]).toFixed(2)} m/s · crouched ${g.player.crouch}`); step(7); }
   W.input.keys.delete('ShiftLeft'); W.input.keys.delete('KeyD');
   return R;
 }

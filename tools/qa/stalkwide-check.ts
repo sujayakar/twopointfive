@@ -35,9 +35,9 @@ async function world(wide: boolean, crouch = true) {
   for (const [i, gd] of rest.entries()) { gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; }
   A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - 3.2, 0, AT[2]]); g.player.crouch = crouch;
-  const step = (n = 1) => { STALK.wide = wide; for (let i = 0; i < n; i++) { A.char.vel = [0, 0, 0]; W.cursorAt([A.char.posX, 1.2, A.char.posZ]); W.step(DT); g.player.visibility = 0.02; } };
+  const step = (n = 1) => { STALK.wide = wide; for (let i = 0; i < n; i++) { A.char.vel = [0, 0, 0]; W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.step(DT); g.player.visibility = 0.02; } };
   step(40);
-  const c = g.player.char, gap = () => Math.hypot(c.posX - A.char.posX, c.posZ - A.char.posZ);
+  const c = g.player.char, gap = () => Math.hypot(c.pos[0] - A.char.pos[0], c.pos[2] - A.char.pos[2]);
   const spread = () => { const b = c.bones; return Math.hypot(b.handL[0] - b.handR[0], b.handL[1] - b.handR[1], b.handL[2] - b.handR[2]); };
   const over = () => { const b = c.bones, n = b.neck ?? b.head; return Math.max(b.handL[1], b.handR[1]) - n[1]; };   // (how far the higher hand is above his own neck)
   /** the arms' shape against his shoulders: the most a hand is outside its own shoulder, the least a hand is under it, and how far the left is ahead of the right (m) */
@@ -63,7 +63,7 @@ async function out() {
     'hands empty, crouched, the click held on a man three metres ahead: before he sinks his hands are where the key down has them; under two metres the footage\'s creep: each hand a little outside its own shoulder and never a wing\'s reach out, well under it, the left leading, and 1.6 m out his hands a good way off the key down\'s',
     `his hands apart before he sinks ${f2(a.far)} m (key down ${f2(b.far)}) · under two metres: ${f2(a.near)} m apart (key down ${f2(b.near)}), the furthest out of its shoulder ${f2(a.out)} m (key down ${f2(b.out)}), the least under it ${f2(a.under)} m, the left ahead by ${f2(a.lead)} m (key down ${f2(b.lead)}), 1.6 m out ${f2(off16)} m off the key down\'s hands · the higher hand against his neck ${f2(a.high)} m`);
   console.log('\n=== waits: they stay out while he waits behind the man, and go when the man is gone ===');
-  a.C.step(120); const wait = a.C.spread(), still = Math.hypot(a.C.g.player.char.velX, a.C.g.player.char.velZ), held = a.C.shape(); b.C.step(120); const wait0 = b.C.spread(), held0 = b.C.shape(), moved = Math.hypot(...held.v.map((x: number, i: number) => x - held0.v[i]));
+  a.C.step(120); const wait = a.C.spread(), still = Math.hypot(a.C.g.player.char.vel[0], a.C.g.player.char.vel[2]), held = a.C.shape(); b.C.step(120); const wait0 = b.C.spread(), held0 = b.C.shape(), moved = Math.hypot(...held.v.map((x: number, i: number) => x - held0.v[i]));
   a.C.A.char.pos = [37.5, 0, 12]; b.C.A.char.pos = [37.5, 0, 12]; a.C.step(30); b.C.step(30); const gone = a.C.spread(), gone0 = b.C.spread();
   verdict(still < 0.02 && held.lead > 0.05 && held.out < 0.25 && moved > 0.15 && Math.abs(gone - gone0) < 0.05,
     'the click let go, he stops behind the man and two seconds on his arms are still out, the left leading, his hands a good way off where the key down has them; the man taken away, half a second on his hands are where the key down has them',
@@ -79,7 +79,7 @@ async function upright() {
 async function grab() {
   console.log('\n=== grab: the key takes the man out of the stance ===');
   const go = async (wide: boolean) => { const { C } = await creep(wide), { W, g, A } = C, c = g.player.char; W.input.buttons |= 1; W.input.clicked |= 1;
-    for (let n = 0; n < 900; n++) { C.step(); if (n > 30 && Math.hypot(c.velX, c.velZ) < 0.02 && C.gap() < 0.95) break; }
+    for (let n = 0; n < 900; n++) { C.step(); if (n > 30 && Math.hypot(c.vel[0], c.vel[2]) < 0.02 && C.gap() < 0.95) break; }
     C.step(30); const sp = C.spread(); g.selectVerb('guard', 'grab'); W.input.pressed.add('Space'); let held = -1;
     for (let f = 1; f <= 90 && held < 0; f++) { C.step(); if (g.player.holding?.phase === 'held') held = f; }
     return { held, sp, who: g.player.holding?.g === A }; };

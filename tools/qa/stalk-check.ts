@@ -63,12 +63,12 @@ async function world(on: boolean, seed: number, gap: number, walk: number, beari
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([at[0] + Math.sin(a) * gap, 0, at[2] + Math.cos(a) * gap]); g.player.crouch = true;
   const pl = g.player.char; let v0 = 0;
   const C: Ctx = { W, g, A, walk, f: 0, top: 0, jerk: 0,
-    step: () => { if (C.walk > 0 && !A.held) { A.char.posX += C.walk * DT; A.char.vel = [C.walk, 0, 0]; } else A.char.vel = [0, 0, 0];
-      W.cursorAt([A.char.posX, 1.2, A.char.posZ]); W.step(DT); g.player.visibility = 0.02; C.f++;
-      const v = Math.hypot(pl.velX, pl.velZ); C.top = Math.max(C.top, v); if (!g.player.holding) C.jerk = Math.max(C.jerk, Math.abs(v - v0)); v0 = v; },   // (the grab's own frame is the grab's: he and the man stop together)
+    step: () => { if (C.walk > 0 && !A.held) { A.char.pos[0] += C.walk * DT; A.char.vel = [C.walk, 0, 0]; } else A.char.vel = [0, 0, 0];
+      W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.step(DT); g.player.visibility = 0.02; C.f++;
+      const v = Math.hypot(pl.vel[0], pl.vel[2]); C.top = Math.max(C.top, v); if (!g.player.holding) C.jerk = Math.max(C.jerk, Math.abs(v - v0)); v0 = v; },   // (the grab's own frame is the grab's: he and the man stop together)
     press: () => { W.input.buttons |= 1; W.input.clicked |= 1; }, lift: () => { W.input.buttons &= ~1; },
-    held: () => g.player.holding?.g === A, gap: () => Math.hypot(pl.posX - A.char.posX, pl.posZ - A.char.posZ),
-    astern: () => { const b = Math.atan2(pl.posX - A.char.posX, pl.posZ - A.char.posZ) - A.char.bodyYaw; return Math.abs(Math.atan2(Math.sin(b - Math.PI), Math.cos(b - Math.PI))) * 180 / Math.PI; } };
+    held: () => g.player.holding?.g === A, gap: () => Math.hypot(pl.pos[0] - A.char.pos[0], pl.pos[2] - A.char.pos[2]),
+    astern: () => { const b = Math.atan2(pl.pos[0] - A.char.pos[0], pl.pos[2] - A.char.pos[2]) - A.char.bodyYaw; return Math.abs(Math.atan2(Math.sin(b - Math.PI), Math.cos(b - Math.PI))) * 180 / Math.PI; } };
   for (let i = 0; i < 20; i++) { const w = C.walk; C.walk = 0; C.step(); C.walk = w; }   // (settle: he is crouched and still before the press)
   C.top = 0; C.jerk = 0; return C;
 }
@@ -100,8 +100,8 @@ async function letGo() {
   console.log('\n=== let: the button let go stops him where he is; pressed again he goes on ===');
   const C = await world(up(), SEEDS[0], 2.8, 0), pl = C.g.player.char;
   C.press(); for (let i = 0; i < 45; i++) C.step(); const moved = 2.8 - C.gap(), on0 = stalkOn(C.g) === C.A;
-  C.lift(); C.step(); const on1 = stalkOn(C.g); for (let i = 0; i < 30; i++) C.step(); const v = Math.hypot(pl.velX, pl.velZ), p0 = [...pl.pos];
-  for (let i = 0; i < 60; i++) C.step(); const drift = Math.hypot(pl.posX - p0[0], pl.posZ - p0[2]), free = !C.held();
+  C.lift(); C.step(); const on1 = stalkOn(C.g); for (let i = 0; i < 30; i++) C.step(); const v = Math.hypot(pl.vel[0], pl.vel[2]), p0 = [...pl.pos];
+  for (let i = 0; i < 60; i++) C.step(); const drift = Math.hypot(pl.pos[0] - p0[0], pl.pos[2] - p0[2]), free = !C.held();
   const t = holdToGrab(C, 8);
   verdict(on0 && moved > 0.2 && on1 === null && v < 0.05 && drift < 0.03 && free && t < 4, 'held for three quarters of a second he has closed on the man; let go, nothing is stalked the next frame, he is at rest inside half a second and stays put; pressed again it ends in the grab',
     `stalking ${on0}, closed ${f2(moved)} m · let go: stalked ${on1 ? 'still' : 'nobody'}, speed half a second on ${f2(v)} m/s, moved ${f2(drift)} m in the next second, nobody in his arm ${free} · pressed again: ${isFinite(t) ? `in his arm in ${f2(t)} s` : 'never grabbed'}`);
@@ -122,7 +122,7 @@ async function out() {
   const rows: string[] = []; let ok = true;
   const cases: [string, (C: Ctx) => void][] = [
     ['he turns to face Sam', C => { C.A.char.bodyYaw = C.A.char.aimYaw = -EAST; }],
-    ['he is suddenly five metres off', C => { C.A.char.posX += 5; }],
+    ['he is suddenly five metres off', C => { C.A.char.pos[0] += 5; }],
     ['something solid comes between them', C => { between(C); }],
     ['he is onto Sam', C => { C.A.state = 'alert'; }],
     ['a move key of the player\'s own', C => { C.W.input.keys.add('KeyA'); }],
@@ -145,7 +145,7 @@ async function out() {
   const mv = MOVES.on, jolt = STALK.jolt, face = STALK.joltFace;
   try {
     const turn = (C: Ctx) => { C.A.char.bodyYaw = C.A.char.aimYaw = -EAST; }, onto = (C: Ctx) => { C.A.state = 'alert'; }, quarter = (C: Ctx) => { C.A.char.bodyYaw = C.A.char.aimYaw = 0; };   // (a quarter turn: Sam at his shoulder — the stalk ends, he is not faced)
-    const T = await duck(1, turn), H = await duck(1, onto), F = await duck(1, C => { C.A.char.posX += 5; }), N = await duck(1, turn, false), D = await duck(0, turn), Q = await duck(1, quarter);
+    const T = await duck(1, turn), H = await duck(1, onto), F = await duck(1, C => { C.A.char.pos[0] += 5; }), N = await duck(1, turn, false), D = await duck(0, turn), Q = await duck(1, quarter);
     const L = await duck(1, quarter, true, [12, turn]), X = await duck(1, quarter, true, [Math.ceil(STALK.joltSecs * 60) + 6, turn]), O = await duck(1, quarter, true, [12, onto]);   // (the quarter turn, then: round to face him a fifth of a second on · the same after joltSecs · onto him a fifth of a second on)
     const W2 = await duck(1, quarter, true, [12, C => { between(C); turn(C); }]);   // (…round to face him with something solid between them)
     STALK.joltFace = 180; STALK.joltAtOnce = up(); const F5 = await duck(1, C => { between(C); quarter(C); }); STALK.joltAtOnce = false; const F6 = await duck(1, C => { between(C); quarter(C); }); STALK.joltFace = face;   // (a recording of the fifth pass replays with joltAtOnce: any turn that ends the stalk, on that frame, whatever stands between them · joltFace 180 alone, the lab's top, keeps the wall's test)
@@ -178,10 +178,10 @@ async function tell() {
 async function stepIn() {
   console.log('\n=== stepin: the grab a stalk ends in closes the gap in one eased step, not a snap ===');
   const C = await world(true, SEEDS[0], 2.4, 0), was = STALK.catchSecs; if (BREAK) STALK.catchSecs = 0;
-  const pl = C.g.player.char, t = holdToGrab(C, 6), H = C.g.player.holding; let p0: P3 = [...pl.pos] as P3, first = -1, peak = 0, n = 0; const from = H?.from ? Math.hypot(H.from[0] - C.A.char.posX, H.from[2] - C.A.char.posZ) : -1;
+  const pl = C.g.player.char, t = holdToGrab(C, 6), H = C.g.player.holding; let p0: P3 = [...pl.pos] as P3, first = -1, peak = 0, n = 0; const from = H?.from ? Math.hypot(H.from[0] - C.A.char.pos[0], H.from[2] - C.A.char.pos[2]) : -1;
   const a0: P3 = [...C.A.char.pos] as P3;
-  for (let i = 0; i < 30 && C.g.player.holding?.phase === 'grab'; i++) { C.step(); const d = Math.hypot(pl.posX - p0[0], pl.posZ - p0[2]); if (first < 0) first = d; peak = Math.max(peak, d / DT); p0 = [...pl.pos] as P3; n++; }
-  const end = C.gap(), back = Math.hypot(C.A.char.posX - a0[0], C.A.char.posZ - a0[2]); STALK.catchSecs = was;
+  for (let i = 0; i < 30 && C.g.player.holding?.phase === 'grab'; i++) { C.step(); const d = Math.hypot(pl.pos[0] - p0[0], pl.pos[2] - p0[2]); if (first < 0) first = d; peak = Math.max(peak, d / DT); p0 = [...pl.pos] as P3; n++; }
+  const end = C.gap(), back = Math.hypot(C.A.char.pos[0] - a0[0], C.A.char.pos[2] - a0[2]); STALK.catchSecs = was;
   verdict(isFinite(t) && from > 0.5 && first >= 0 && first < 0.04 && peak < 7 && end < 0.5 && (BREAK || (back > 0.6 * STALK.yank && back < STALK.yank + 0.02)), 'in the arm from most of a metre out: the first frame of the way in moves him under 4 cm (the old snap: a fifth of the gap), he is never over 7 m/s, he ends at the hold\'s own distance, and the man has been hauled back most of STALK.yank by the time he is held',
     `${isFinite(t) ? `in his arm in ${f2(t)} s` : 'never grabbed'} · grabbed from ${f2(from)} m · the first frame moved him ${first.toFixed(3)} m · top speed ${f2(peak)} m/s over ${n} frames · he ends ${f2(end)} m off the man · the man hauled back ${f2(back)} m (the yank ${f2(STALK.yank)})`);
 }
@@ -208,8 +208,8 @@ async function corner() {
     CLOSE.noKnife = true;   // (the wait's pose is a bare-handed one: the frozen stand has the knife, and every stand-up writes this again)
     let at = { deg: -1, d: -1 }, early = false, from = false, coil = 0, low = 0, r0 = -1, r1 = 0;   // (the wait's pose: how far he is sunk — asked, and shown —, and the lead hand's reach at the start and at its most)
     for (let i = 0; i < 5 * 60 && !C.held(); i++) {
-      A.char.posX += t[0] * 1.15 * DT; A.char.posZ += t[2] * 1.15 * DT; A.char.vel = [t[0] * 1.15, 0, t[2] * 1.15];
-      const b = Math.atan2(pl.char.posX - A.char.posX, pl.char.posZ - A.char.posZ) - A.char.bodyYaw, deg = Math.abs(Math.atan2(Math.sin(b), Math.cos(b))) * 180 / Math.PI, d = C.gap();
+      A.char.pos[0] += t[0] * 1.15 * DT; A.char.pos[2] += t[2] * 1.15 * DT; A.char.vel = [t[0] * 1.15, 0, t[2] * 1.15];
+      const b = Math.atan2(pl.char.pos[0] - A.char.pos[0], pl.char.pos[2] - A.char.pos[2]) - A.char.bodyYaw, deg = Math.abs(Math.atan2(Math.sin(b), Math.cos(b))) * 180 / Math.PI, d = C.gap();
       if (hold) { C.W.input.buttons |= 1; if (i === 0) C.W.input.clicked |= 1; }
       C.W.step(DT); pl.visibility = 0.02;
       if (C.held()) { at = { deg, d }; early = deg < STALK.cornerDeg - 3; from = !!pl.holding?.from; }
@@ -225,7 +225,7 @@ async function corner() {
     `the button held: asked to sink ${f2(A.coil)}, his crouch as shown ${f2(A.low)}, the reach from ${f2(A.r0)} to ${f2(A.r1)} · no press: ${f2(B.coil)}, shown ${f2(B.low)} · the corner off: ${f2(O.coil)}, shown ${f2(O.low)}`);
   verdict(!B.held && B.n === 0 && !O.held && O.n === 0, 'the button never pressed, the same man walks past and nobody is grabbed; nor with STALK.corner off and the button held', `no press: in his arm ${B.held} · the corner off: in his arm ${O.held}`);
   const S = await onWall(SEEDS[0], 1.0);   // a man who stands a pace short of him along the wall, facing him
-  if (S) { const { C } = S, pl = C.g.player.char; S.C.A.char.bodyYaw = S.C.A.char.aimYaw = Math.atan2(pl.posX - C.A.char.posX, pl.posZ - C.A.char.posZ); STALK.corner = true;
+  if (S) { const { C } = S, pl = C.g.player.char; S.C.A.char.bodyYaw = S.C.A.char.aimYaw = Math.atan2(pl.pos[0] - C.A.char.pos[0], pl.pos[2] - C.A.char.pos[2]); STALK.corner = true;
     for (let i = 0; i < 120; i++) { C.W.input.buttons |= 1; C.W.step(DT); C.g.player.visibility = 0.02; }
     verdict(!C.held(), 'a man who stands a pace off FACING him is not taken, the button held two seconds', `in his arm ${C.held()} · ${f2(C.gap())} m off`); }
 }
@@ -304,7 +304,7 @@ async function catchShape() {
       const fwd = (p: number[], o: number[]) => (p[0] - o[0]) * Math.sin(A.bodyYaw) + (p[2] - o[2]) * Math.cos(A.bodyYaw), out = (p: number[], o: number[]) => Math.abs((p[0] - o[0]) * Math.cos(A.bodyYaw) - (p[2] - o[2]) * Math.sin(A.bodyYaw));   // (ahead of / out to the side of the man as he faces NOW: the held pair turns to the cursor)
       let landed = -1, lo = 9, hi = 0, up = -9, past = -9, fling = 0, wide = 0, run = 0, skate = 0, lifted = 0, back = 0; let s0: number[] | null = null; const track: number[][][] = [];
       for (let i = 0; i < 70; i++) { C.step(); const H = C.g.player.holding; if (!H) break; if (landed < 0 && H.hitAt !== undefined) { landed = i; s0 = [...pl.pos]; }
-        if (landed >= 0 && i - landed < 40) { const d = C.gap(); lo = Math.min(lo, d); hi = Math.max(hi, d); back = Math.hypot(pl.posX - s0![0], pl.posZ - s0![2]); track.push([[...pl.bones.footL], [...pl.bones.footR]]); }
+        if (landed >= 0 && i - landed < 40) { const d = C.gap(); lo = Math.min(lo, d); hi = Math.max(hi, d); back = Math.hypot(pl.pos[0] - s0![0], pl.pos[2] - s0![2]); track.push([[...pl.bones.footL], [...pl.bones.footR]]); }
         if (H.phase === 'grab') { up = Math.max(up, pl.bones.handL[1] - A.bones.head[1]); past = Math.max(past, fwd(pl.bones.handL, A.pos)); }
         if (i < 24) { const a = A.bones.handL, b = A.bones.handR, d = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]); wide = Math.max(wide, d); run = d > 0.78 ? run + 1 : 0; fling = Math.max(fling, run); } }
       for (const k of [0, 1]) { const floor = Math.min(...track.map(t => t[k][1])); track.forEach((t, i) => { const f = t[k], g0 = i ? track[i - 1][k] : f; if (f[1] < floor + 0.012 && g0[1] < floor + 0.012) skate = Math.max(skate, Math.hypot(f[0] - g0[0], f[2] - g0[2])); lifted = Math.max(lifted, f[1] - floor); }); }   // (on the floor = within 12 mm of the lowest that foot is in those frames)
@@ -312,7 +312,7 @@ async function catchShape() {
       let jump = 0, shins: number[] | null = null;
       const sat = () => { let heels = 0, sit = 0; const N = 60; for (let i = 0; i < N; i++) { C.step(); const k = [...pl.bones.shinL, ...pl.bones.shinR]; if (shins) jump = Math.max(jump, Math.hypot(k[0] - shins[0], k[1] - shins[1], k[2] - shins[2]), Math.hypot(k[3] - shins[3], k[4] - shins[4], k[5] - shins[5])); shins = k; heels += (fwd(A.bones.footL, A.pos) + fwd(A.bones.footR, A.pos)) / 2 / N; sit += (fwd(A.bones.hips, A.pos) - fwd(A.bones.head, A.pos)) / N; } return { heels, sit }; };
       const first = sat(), still = jump, p0 = [...pl.pos]; C.W.input.keys.add('KeyS'); for (let i = 0; i < 60; i++) C.step(); C.W.input.keys.delete('KeyS'); for (let i = 0; i < 50; i++) C.step();   // (…and walked a second, stopped, and settled again)
-      const walked = Math.hypot(pl.posX - p0[0], pl.posZ - p0[2]), again = sat();
+      const walked = Math.hypot(pl.pos[0] - p0[0], pl.pos[2] - p0[2]), again = sat();
       // …and a swap to the gun from the settled seat: the furthest a hip, a head or a foot of either man moves in one frame (in his own man's frame: the pair may turn)
       const rel = () => [pl, A].flatMap(c => ['hips', 'head', 'footL', 'footR'].map(b => { const q = c.bones[b], dx = q[0] - c.pos[0], dz = q[2] - c.pos[2], sn = Math.sin(c.bodyYaw), cs = Math.cos(c.bodyYaw); return [dx * cs - dz * sn, q[1], dx * sn + dz * cs]; }));
       let pop = 0, r0 = rel(); C.W.input.pressed.add('KeyE'); for (let i = 0; i < 60; i++) { C.step(); const r = rel(); r.forEach((q, k) => { pop = Math.max(pop, Math.hypot(q[0] - r0[k][0], q[1] - r0[k][1], q[2] - r0[k][2])); }); r0 = r; }
@@ -368,7 +368,7 @@ async function lands() {
     try {
       const C = await world(true, SEEDS[0], 2.4, 0), M = C.A.char; CLOSE.noKnife = true; HOLD.hitShape = on;
       if (!isFinite(holdToGrab(C, 6))) return null; C.lift(); let n = 0; while (C.g.player.holding?.phase === 'grab' && n++ < 120) C.step();
-      const rel = () => { const q = M.bones.hips, dx = q[0] - M.posX, dz = q[2] - M.posZ, sn = Math.sin(M.bodyYaw), cs = Math.cos(M.bodyYaw); return [dx * cs - dz * sn, q[1], dx * sn + dz * cs]; };
+      const rel = () => { const q = M.bones.hips, dx = q[0] - M.pos[0], dz = q[2] - M.pos[2], sn = Math.sin(M.bodyYaw), cs = Math.cos(M.bodyYaw); return [dx * cs - dz * sn, q[1], dx * sn + dz * cs]; };
       let r0 = rel(), pop = 0; C.W.input.pressed.add('KeyE');
       for (let i = 0; i < 20; i++) { C.step(); const r = rel(); pop = Math.max(pop, Math.hypot(r[0] - r0[0], r[1] - r0[1], r[2] - r0[2])); r0 = r; }
       return { pop, gun: C.g.player.holding?.variant === 'gun' };
@@ -380,7 +380,7 @@ async function lands() {
     try {
       const C = await world(true, SEEDS[0], 2.4, 0), M = C.A.char; CLOSE.noKnife = true; HOLD.hitShape = on;
       if (!isFinite(holdToGrab(C, 6))) return null; C.lift(); let n = 0; while (C.g.player.holding && C.g.player.holding.hitAt === undefined && n++ < 120) C.step(); for (let i = 0; i < 3; i++) C.step();
-      const rel = () => { const q = M.bones.hips, dx = q[0] - M.posX, dz = q[2] - M.posZ, sn = Math.sin(M.bodyYaw), cs = Math.cos(M.bodyYaw); return [dx * cs - dz * sn, q[1], dx * sn + dz * cs]; };
+      const rel = () => { const q = M.bones.hips, dx = q[0] - M.pos[0], dz = q[2] - M.pos[2], sn = Math.sin(M.bodyYaw), cs = Math.cos(M.bodyYaw); return [dx * cs - dz * sn, q[1], dx * sn + dz * cs]; };
       let r0 = rel(), pop = 0; C.g.freeHeld('cancel');
       for (let i = 0; i < 20; i++) { C.step(); const r = rel(); pop = Math.max(pop, Math.hypot(r[0] - r0[0], r[1] - r0[1], r[2] - r0[2])); r0 = r; }
       return { pop, free: !C.g.player.holding };
@@ -447,7 +447,7 @@ async function keyCard() {
     const C = await world(true, SEEDS[0], gap, walk); CLOSE.noKnife = true; STALK.key = key; const g0 = STALK_STATS.grabs, pl = C.g.player.char;
     C.press(); let alone = false, far = 0, near = 9, slow = 9, drift = 0;
     for (let i = 0; i < secs * 60; i++) { C.step(); if (C.held()) { alone = true; break; }
-      if (i >= secs * 60 - 90) { far = Math.max(far, C.gap()); near = Math.min(near, C.gap()); slow = Math.min(slow, Math.abs(Math.hypot(pl.velX, pl.velZ) - walk)); drift = Math.max(drift, Math.abs(Math.hypot(pl.velX, pl.velZ) - walk)); } }
+      if (i >= secs * 60 - 90) { far = Math.max(far, C.gap()); near = Math.min(near, C.gap()); slow = Math.min(slow, Math.abs(Math.hypot(pl.vel[0], pl.vel[2]) - walk)); drift = Math.max(drift, Math.abs(Math.hypot(pl.vel[0], pl.vel[2]) - walk)); } }
     const row = !alone && grabRow(C), on = !alone && stalkOn(C.g) === C.A, astern = alone ? 0 : C.astern();
     let took = false, from = false, hit = false, grabs = STALK_STATS.grabs - g0;
     if (!alone) { took = take(C) && C.held(); from = !!C.g.player.holding?.from; grabs = STALK_STATS.grabs - g0; for (let i = 0; i < 60 && C.held(); i++) { C.step(); hit ||= C.g.player.holding?.hitAt !== undefined; } }
@@ -477,7 +477,7 @@ async function shippedCard() {
   console.log('\n=== shipped: with the key and the low creep both up — what ends it, the wider way out, the line that says what the click does, and a man walked up on standing ===');
   const mk = async (gap: number) => { const C = await world(true, SEEDS[0], gap, 0); CLOSE.ready = true; CLOSE.noKnife = true; STALK.key = up(); STALK.low = up(); return C; };
   const inReach = async () => { const C = await mk(2.6); C.press(); for (let i = 0; i < 7 * 60; i++) C.step(); return C; };
-  const speed = (C: Ctx) => Math.hypot(C.g.player.char.velX, C.g.player.char.velZ);
+  const speed = (C: Ctx) => Math.hypot(C.g.player.char.vel[0], C.g.player.char.vel[2]);
   // he turns on Sam while Sam keeps station in reach
   { const C = await inReach(), on0 = stalkOn(C.g) === C.A && !C.held(); C.A.char.bodyYaw = C.A.char.aimYaw = -EAST; let grabbed = false, again = false; C.step(); const on1 = stalkOn(C.g); for (let i = 0; i < 120; i++) { C.step(); grabbed ||= C.held(); again ||= !!stalkOn(C.g); }
     verdict(on0 && on1 === null && !grabbed && !again, 'keeping station in reach behind him with the button down, the man turns to face Sam: the stalk is over on that frame, and two seconds on nobody is grabbed and nothing is stalked again',
@@ -487,7 +487,7 @@ async function shippedCard() {
     verdict(on0 && on1 === null && v < 0.02 && !held1 && on2 && !held2, 'the button let go while he waits in reach: nothing is stalked, he stands still and nobody is grabbed. Pressed on him again from there: the stalk is his again, and still nobody is grabbed without the key',
       `waiting ${on0} · let go: ${on1 ? 'still stalking' : 'nothing stalked'}, ${f2(v)} m/s, in his arm ${held1} · pressed again: stalking ${on2}, in his arm ${held2}`); }
   // the wider way out: begun from 3.8 m, the man is put 4.6 m off (inside lowOutM) and then 5.3 m off (outside it)
-  { const C = await mk(3.8); C.press(); for (let i = 0; i < 6; i++) C.step(); const on0 = stalkOn(C.g) === C.A; C.A.char.posX += 4.6 - C.gap(); C.step(); C.step(); const on1 = stalkOn(C.g) === C.A; C.A.char.posX += STALK.lowOutM + 0.3 - C.gap(); C.step(); C.step(); const on2 = stalkOn(C.g);
+  { const C = await mk(3.8); C.press(); for (let i = 0; i < 6; i++) C.step(); const on0 = stalkOn(C.g) === C.A; C.A.char.pos[0] += 4.6 - C.gap(); C.step(); C.step(); const on1 = stalkOn(C.g) === C.A; C.A.char.pos[0] += STALK.lowOutM + 0.3 - C.gap(); C.step(); C.step(); const on2 = stalkOn(C.g);
     verdict(on0 && on1 && on2 === null, `begun from 3.8 m, the man suddenly 4.6 m off is still stalked (the wider way out, ${f1(STALK.lowOutM)} m) and ${f1(STALK.lowOutM + 0.3)} m off he is not`,
       `begun ${on0} · 4.6 m off: stalking ${on1} · ${f1(STALK.lowOutM + 0.3)} m off: ${on2 ? 'still stalking' : 'nothing stalked'}`); }
   // the line that says what the click does, out to where a press begins it
@@ -513,7 +513,7 @@ async function lowCard() {
     for (let i = 0; i < 12 * 60; i++) {
       if (pause && C.gap() < 1.6) { C.lift(); for (let k = 0; k < 30; k++) C.step(); const h0 = pl.bones.hips[1], a0 = hand(); for (let k = 0; k < 40; k++) { C.step(); drift = Math.max(drift, Math.abs(pl.bones.hips[1] - h0), Math.abs(hand() - a0)); } break; }
       C.step(); top = Math.max(top, hand()); reach = Math.max(reach, an.ready ? an.readyAmt : 0); rise = Math.max(rise, an.rise); back = Math.max(back, pl.bones.hips[1] - last); last = pl.bones.hips[1];
-      if (C.gap() < STALK.grabM && Math.hypot(pl.velX, pl.velZ) < 0.02) { t = i / 60; break; }
+      if (C.gap() < STALK.grabM && Math.hypot(pl.vel[0], pl.vel[2]) < 0.02) { t = i / 60; break; }
     }
     for (let k = 0; k < 30 && !pause; k++) C.step();   // (stood in reach: the pose he waits in)
     const near = { hips: pl.bones.hips[1], hand: hand(), head: pl.bones.head[1] };
@@ -539,7 +539,7 @@ async function lowCard() {
 async function off() {
   console.log('\n=== off: the key down ===');
   const C = await world(false, SEEDS[0], 2.6, 0), pl = C.g.player.char, p0 = [...pl.pos], b0 = STALK_STATS.begun; C.press(); for (let i = 0; i < 240; i++) C.step();
-  const moved = Math.hypot(pl.posX - p0[0], pl.posZ - p0[2]);
+  const moved = Math.hypot(pl.pos[0] - p0[0], pl.pos[2] - p0[2]);
   verdict(moved < 0.02 && !C.held() && STALK_STATS.begun === b0, 'with the key down the same press and four seconds of hold move nobody and grab nobody', `moved ${f2(moved)} m · in his arm ${C.held()} · stalks begun ${STALK_STATS.begun - b0}`);
 }
 const polVals = () => ({ jolt: STALK.jolt, turnIn: STALK.turnIn, show: STALK.cornerShow, long: STALK.catchLong, way: HOLD.wayShape, dip: HOLD.lunge.dip, back: HOLD.lunge.back, m: HOLD.sway.m, twist: HOLD.sway.twist, side: HOLD.apart.side, tip: HOLD.apart.tip, arch: HOLD.yank.arch, with: STALK.yankWith, shape: HOLD.catchShape, hit: HOLD.hitShape, lay: HOLD.layAhead });

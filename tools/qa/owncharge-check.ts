@@ -199,7 +199,7 @@ export async function ownchargeSquad(): Promise<boolean> {
       if (hand) { secs = setByHand(R, d, side); g.teleportPlayer([25.0, 0, 18.9]); R.step(5); }
       else { why = R.give('charge', 'breakroom_w'); const t0 = g.time; R.until(() => D.ops[0]?.phase === 'armed', 45); secs = g.time - t0; }
       const spent = n0 - D.charges, by = D.set[0]?.by;
-      const near = room.defenders[0], far = room.defenders[1]; near.char.posX = d.frameCentre[0] + 1.3; near.char.posZ = d.frameCentre[2]; R.step(2);
+      const near = room.defenders[0], far = room.defenders[1]; near.char.pos[0] = d.frameCentre[0] + 1.3; near.char.pos[2] = d.frameCentre[2]; R.step(2);
       const farD = dist(far.char.pos, d.frameCentre); let res: any = null; { const blow = D.blow.bind(D); D.blow = (c: any) => (res = blow(c)); }
       R.press('KeyF');
       const out = { blown: D.stats.blown, set: D.set.length, blasts: R.bangs.length, doorIn: !!d.off || (!d.latched && !!d.lockBroken), near: `${near.state}/${near.downKind}`, knocked: res?.knocked ?? -1,

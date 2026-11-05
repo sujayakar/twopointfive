@@ -157,7 +157,7 @@ export const fallOf = (t: BowedTop, s: number): number => { const { R } = bowOf(
  *  lays no sheet). Returns the slab's own shape, or nothing where it need say none. */
 export function layOn(t: BowedTop, c: Vec3, h: Vec3, paint: CarPaint, o: { nth?: number; gap?: number } = {}): BoxShape | undefined {
   const { x, w, R } = bowOf(t), nth = o.nth ?? 0, gap = o.gap ?? 0.02, lift = 0.02, d: Vec3 = sub(c, t.c);
-  const keep = Math.sqrt(2 * R * gap - gap * gap) / 2 ** nth, flat = keep / 2;
+  const keep = Math.sqrt(2 * R * gap - gap * gap) / Math.pow(2, nth), flat = keep / 2;
   // the slab: from (flat, its top) down to (keep, its underside) each side of the crown, which lies −d[x] from the slab's own middle
   const a = keep - flat, b = 2 * h[1], k = b * flat + a * h[1], side = (sg: number): ShapePlane => x === 2 ? plane(0, a, sg * b, k - sg * b * d[2]) : plane(sg * b, a, 0, k - sg * b * d[0]);
   const own = (t.shape.cut ?? []).map(p => moved(p, d, gap));

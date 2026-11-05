@@ -91,7 +91,7 @@ async function play(quiet: boolean): Promise<any> {
       'men: two men, and the four dealt two a seat', `ids ${a.char.id} and ${b.char.id} · ${at(a.char.pos)} and ${at(b.char.pos)}, ${flat(a.char.pos, b.char.pos).toFixed(2)} m apart · seat 0 has ${b0.map((m: any) => m.callsign).join(' + ') || 'nobody'} · seat 1 has ${b1.map((m: any) => m.callsign).join(' + ') || 'nobody'}`); }
   // ---- walk
   { const p0 = [...v0.player.char.pos], p1 = [...v1.player.char.pos]; h0.goal = [p0[0] + 4, 0, p0[2]]; h1.goal = [p1[0] - 4, 0, p1[2]]; run(2); h0.goal = h1.goal = null; run(0.3);
-    const d0 = v0.player.char.posX - p0[0], d1 = v1.player.char.posX - p1[0];
+    const d0 = v0.player.char.pos[0] - p0[0], d1 = v1.player.char.pos[0] - p1[0];
     say(d0 > 1 && d1 < -1, 'walk: each man walks by his own record', `seat 0's went ${d0.toFixed(2)} m east · seat 1's went ${(-d1).toFixed(2)} m west`); }
   // ---- orders
   { const key: string = CMDRING.on ? CMDRING.key : ORDERS.quickKey;
@@ -115,18 +115,18 @@ async function play(quiet: boolean): Promise<any> {
       `fog on ${g.fogOfWar.active} · eyes ${[...ids].join(', ')} · wanted ${want.join(', ')}`); }
   // ---- rollback
   { const tick = (c: any[]) => { g.stepSeats(DT, c); g.engine.lights.update(DT, g.time); g.engine.world.dynamics = g.dynBoxes; g.engine.world.upload(); };
-    h0.goal = [v0.player.char.posX, 0, v0.player.char.posZ + 3]; h1.goal = [v1.player.char.posX, 0, v1.player.char.posZ - 3]; run(0.5);
+    h0.goal = [v0.player.char.pos[0], 0, v0.player.char.pos[2] + 3]; h1.goal = [v1.player.char.pos[0], 0, v1.player.char.pos[2] - 3]; run(0.5);
     const S = takeSnapshot(g), hash0 = stateHash(g), N = 90, kept: any[][] = [], ref: string[] = [];
     for (let i = 0; i < N; i++) { const c = P.cmds(); kept.push(c.map(x => cmdFromText(cmdText(x)))); tick(c); ref.push(stateHash(g)); }
     restoreSnapshot(S); const back = stateHash(g) === hash0;
     let same = -1; for (let i = 0; i < N; i++) { tick(kept[i]); if (stateHash(g) !== ref[i]) { same = i; break; } }
-    const pl = v1.player.char; pl.posX += 0.01; const moved = stateHash(g) !== ref[N - 1]; pl.posX -= 0.01; const again = stateHash(g) === ref[N - 1];
+    const pl = v1.player.char; pl.pos[0] += 0.01; const moved = stateHash(g) !== ref[N - 1]; pl.pos[0] -= 0.01; const again = stateHash(g) === ref[N - 1];
     h0.goal = h1.goal = null;
     say(back && same < 0 && moved && again, 'rollback: a moment of a game of two is put back to the bit, and the same records play the same ticks',
       `put back to the bit ${back} · ${N} ticks from the kept records ${same < 0 ? 'the same, bit for bit' : `DIFFER at tick ${same}`} · seat 1's man a centimetre over moves the state's word ${moved}, and back ${again}`); }
   // ---- ahead
   { run(0.3); const seat = g.seats[1], man = v1.player.char, N = 46, now = performance.now.bind(performance), cv = P.W.canvas;
-    { const w = v1.player.wall; if (w) { h1.goal = [man.posX + w.n[0] * 1.5, 0, man.posZ + w.n[2] * 1.5]; run(1.2); h1.goal = null; run(0.3); } }   // (the page's stand: the walk before this left him with his back on a wall — a hold is not a walk of his own, so he steps off it first)
+    { const w = v1.player.wall; if (w) { h1.goal = [man.pos[0] + w.n[0] * 1.5, 0, man.pos[2] + w.n[2] * 1.5]; run(1.2); h1.goal = null; run(0.3); } }   // (the page's stand: the walk before this left him with his back on a wall — a hold is not a walk of his own, so he steps off it first)
     // the records a client would have sent and not had answered: a walk, a sprint, C and a crouch walk the other way, Shift in the crouch, a coast — from a seat the
     // game does not trust (`remote`: with the record check on, each view is worked out again from its pose, about where the man then stands)
     const held = (i: number): string[] => i < 12 ? ['KeyD'] : i < 26 ? ['KeyD', 'KeyW', 'ShiftLeft'] : i < 38 ? ['KeyA', 'KeyS'] : i < 42 ? ['KeyA', 'KeyS', 'ShiftLeft'] : [];
@@ -144,10 +144,10 @@ async function play(quiet: boolean): Promise<any> {
     let worst = 0, off = -1, ran = false, low = false, went = 0, B: any = null, pureB = true; const pathB: number[][] = [], MID = 20; t = now();
     for (let i = 0; i < N; i++) {
       if (i === MID) { const h = stateHash(g); B = walkAhead(seat, recs.slice(MID), DT, pathB); pureB = stateHash(g) === h && v1.player.sprinting; }   // (a second look, begun in the middle of the sprint: what the game last did with him is a run)
-      tick([still, recs[i]]); if (i >= MID) { const q = pathB[i - MID], e = Math.hypot(q[0] - man.posX, q[1] - man.posY, q[2] - man.posZ); if (e > 0 && off < 0) off = i; worst = Math.max(worst, e); }
-      const d = Math.hypot(path[i][0] - man.posX, path[i][1] - man.posY, path[i][2] - man.posZ); if (d > 0 && off < 0) off = i; worst = Math.max(worst, d); went = Math.max(went, flat(man.pos, p0)); ran ||= v1.player.sprinting; low ||= v1.player.crouch; }
+      tick([still, recs[i]]); if (i >= MID) { const q = pathB[i - MID], e = Math.hypot(q[0] - man.pos[0], q[1] - man.pos[1], q[2] - man.pos[2]); if (e > 0 && off < 0) off = i; worst = Math.max(worst, e); }
+      const d = Math.hypot(path[i][0] - man.pos[0], path[i][1] - man.pos[1], path[i][2] - man.pos[2]); if (d > 0 && off < 0) off = i; worst = Math.max(worst, d); went = Math.max(went, flat(man.pos, p0)); ran ||= v1.player.sprinting; low ||= v1.player.crouch; }
     const fullMs = (now() - t) / N; seat.remote = was;
-    const yaw = Math.max(Math.abs(A.aimYaw - man.aimYaw), Math.abs(B.aimYaw - man.aimYaw)), hips = Math.max(Math.abs(A.bodyYaw - man.bodyYaw), Math.abs(B.bodyYaw - man.bodyYaw)), same = worst === 0 && yaw === 0 && hips === 0 && A.crouch === v1.player.crouch && B.crouch === A.crouch && A.vel[0] === man.velX && A.vel[2] === man.velZ && B.vel[0] === man.velX && B.vel[2] === man.velZ;
+    const yaw = Math.max(Math.abs(A.aimYaw - man.aimYaw), Math.abs(B.aimYaw - man.aimYaw)), hips = Math.max(Math.abs(A.bodyYaw - man.bodyYaw), Math.abs(B.bodyYaw - man.bodyYaw)), same = worst === 0 && yaw === 0 && hips === 0 && A.crouch === v1.player.crouch && B.crouch === A.crouch && A.vel[0] === man.vel[0] && A.vel[2] === man.vel[2] && B.vel[0] === man.vel[0] && B.vel[2] === man.vel[2];
     say(went > 0.3 && ran && low && A.free && B.free && same && path.length === N && pure && pureB && stays, 'ahead: a look ahead lands where the whole game puts the man, to the bit, and writes nothing',
       `${N} records ahead (a walk, a sprint, a crouch walk back, a coast), and the last ${N - MID} again from the middle of the sprint${v1.player.rifleUp ? ', the rifle in his hands' : ''}: the whole game from the same records took him ${went.toFixed(3)} m out · he ran ${ran}, he crouched ${low} · apart at the worst tick ${worst === 0 ? '0' : `${(worst * 1000).toExponential(2)} mm (first at record ${off})`} · his aim ${yaw === 0 ? '0' : yaw.toExponential(2)} rad off, his hips ${hips === 0 ? '0' : hips.toExponential(2)} · the game's word, the seat and the records as they were ${pure} · no record answers where he stands ${stays}`
       + `\n    cost here: ${N} records ahead ${aheadMs.toFixed(2)} ms · 8 records ${eightMs.toFixed(3)} ms · a whole tick ${fullMs.toFixed(2)} ms`); }

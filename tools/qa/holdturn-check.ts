@@ -30,13 +30,13 @@ export async function holdTurnCheck(): Promise<boolean> {
       for (let i = 0; i < 30; i++) { g.player.visibility = 0.05; W.step(DT); }
       const gd = g.guards.filter((x: any) => x.team === 'hostile')[0], hc = gd.char, pl = g.player, c = pl.char;
       for (const o of g.guards) if (o !== gd) { o.hold = true; o.pinned = true; o.heardUpTo = 1e12; }
-      const y0 = hc.bodyYaw; g.teleportPlayer([hc.posX - Math.sin(y0) * 0.8, 0, hc.posZ - Math.cos(y0) * 0.8]); pl.slot = 'pistol'; pl.holstered = true; c.bodyYaw = c.aimYaw = y0;
-      let ang = y0; const step = () => { W.cursorAt([c.posX + Math.sin(ang) * 3, 0, c.posZ + Math.cos(ang) * 3]); pl.visibility = 0.05; W.step(DT); };
+      const y0 = hc.bodyYaw; g.teleportPlayer([hc.pos[0] - Math.sin(y0) * 0.8, 0, hc.pos[2] - Math.cos(y0) * 0.8]); pl.slot = 'pistol'; pl.holstered = true; c.bodyYaw = c.aimYaw = y0;
+      let ang = y0; const step = () => { W.cursorAt([c.pos[0] + Math.sin(ang) * 3, 0, c.pos[2] + Math.cos(ang) * 3]); pl.visibility = 0.05; W.step(DT); };
       step(); step(); const calm = gd.state === 'patrol' && gd.awareness < 0.3; startGrab(g, gd);
       for (let i = 0; i < 150 && pl.holding; i++) step();
       let dyaw = 0, lat = 0, fwd = 0, turned = 0, held = !!pl.holding; const s0 = c.bodyYaw;
       const run = (secs: number, to: number) => { const a0 = ang, n = Math.round(secs / DT); for (let i = 1; i <= n && pl.holding; i++) { ang = a0 + to * (i / n); step();
-        const dx = hc.posX - c.posX, dz = hc.posZ - c.posZ, s = Math.sin(c.bodyYaw), k = Math.cos(c.bodyYaw);
+        const dx = hc.pos[0] - c.pos[0], dz = hc.pos[2] - c.pos[2], s = Math.sin(c.bodyYaw), k = Math.cos(c.bodyYaw);
         dyaw = Math.max(dyaw, Math.abs(wrap(hc.bodyYaw - c.bodyYaw)) * DEG); lat = Math.max(lat, Math.abs(dx * k - dz * s)); fwd = Math.max(fwd, Math.abs(dx * s + dz * k - HOLD.dist)); turned = Math.max(turned, Math.abs(wrap(c.bodyYaw - s0)) * DEG); } };
       run(3, Math.PI * 0.95); run(1.5, 0); run(3, -Math.PI * 1.9); run(1.5, 0); run(0.2, Math.PI * 0.9); run(2, 0);
       return { g, calm, held: held && !!pl.holding, own: !!g.fight?.on, dyaw, lat, fwd, turned, who: gd.callsign as string };

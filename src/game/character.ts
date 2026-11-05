@@ -1844,9 +1844,7 @@ export class CharacterAnimator {
    *  turned or shifted out from over it — one foot at a time, a quick lifted arc — so turning on the spot is stepped round, not skated. w: the lock's weight. */
   private feet = { w: 0, gate: 0, L: { p: [0, 0, 0] as Vec3, yaw: 0, swing: -1, from: [0, 0, 0] as Vec3, fromYaw: 0 }, R: { p: [0, 0, 0] as Vec3, yaw: 0, swing: -1, from: [0, 0, 0] as Vec3, fromYaw: 0 }, next: 0 as 0 | 1 };   // gate: the lock's own one-shot gate — only the KICK has the legs (update(), review #18)
   /** the controller's world placement this frame (Character.update feeds both): the animator poses in model space but plants feet in the world */
-  bodyYawIn = 0;
-  /** whose columns his place is read from (written as his Character updates), and his place as a rule of the animator asks it: where he stands now, not where he stood when the update opened */
-  man: ManCols | null = null; get posIn(): Vec3 { return this.man !== null ? this.man.pos : [0, 0, 0]; }
+  bodyYawIn = 0; posIn: Vec3 = [0, 0, 0];
   /** throw: where each hand ended up last frame (offset from its shoulder joint, model axes) — a throw re-triggered mid-swing carries on from there instead of
    *  from the pose underneath — and that carried-in start while it applies */
   private thrLast: { r: Vec3; l: Vec3 } | null = null; private thrCarry: { r: Vec3; l: Vec3 } | null = null;
@@ -6885,14 +6883,22 @@ function capSole(foot: Vec3, toe: Vec3): number[] {
   return capRec(heel, tip, 0.033, 0.06);
 }
 export class Character extends ManCols {
-  tint: Vec3; tint2: Vec3;
+  id: number; tint: Vec3; tint2: Vec3;
+  pos: Vec3; vel: Vec3 = [0, 0, 0];
+  bodyYaw: number; aimYaw: number; aimPitch = 0;
   anim: CharacterAnimator; skel: SkeletonInstance;
   world: Mat4 = m4.create();
+  radius = 0.3;
+  alive = true;
   /** cached bone world positions (updated in update()) */
   bones: Record<string, Vec3> = {};
   /** where his feet stood (x, z) when `bones` / `muzzle` were last read: they are a frame old to whoever reads them before his update (game/gunwall.ts moves them on by his step since) */
   bonesAt: [number, number] = [0, 0];
   gunDir: Vec3 = [0, 0, 1]; muzzle: Vec3 = [0, 0, 0]; chestDir: Vec3 = [0, 0, 1];
+  /** metres along gunDir from the wrist to the muzzle: the row's (weapons.ts WeaponDef.muzzleAhead — 0.26 for a pistol; whoever hands him a weapon writes it —
+   *  or, for a man dealt the carbine over his sidearm row (game.ts, tune.carbineGuards), rigProps.carbineMuzzleAhead's 0.5 off the drawn prop).
+   *  The round, the flash, the laser and armThrough all start at `muzzle`. */
+  muzzleAhead = 0.26;
   /** wet from the rain (game/wet.ts drives all three once a frame; game.ts hands them to the renderer per skin instance — gbuffer.wgsl CharInst.wet): the COAT
    *  0 dry ‥ 1 soaked (darker fabric under a glossy film), the BEADS 0‥1 (drops standing on him and running down him — up fast in the rain, run off in
    *  seconds out of it), and the rain rate those drops were fed at (their density and pace). A fresh Character is dry.
@@ -6928,7 +6934,7 @@ export class Character extends ManCols {
   /** HOW THE NEXT QUIET FALL GOES (takedown.ts sets it on the frame before he is put down; ragdollize reads it once and clears it): null = the build's one fall */
   fallAs: FallStyle | null = null;
   /** …where whoever put him down stood (the fall leads him AWAY from there; null = along the shove's own line) · no room that way: the fall keeps to where he stands. Read and cleared with fallAs. */
-  fallFrom: Vec3 | null = null; /** m the 'sink' fall lays his pelvis further along his facing (HOLD.layAhead; takedown.ts setFall) */ 
+  fallFrom: Vec3 | null = null; fallTight = false; /** m the 'sink' fall lays his pelvis further along his facing (HOLD.layAhead; takedown.ts setFall) */ fallAhead = 0;
   /** a body that sleeps BREATHES while this is set (takedown.ts, every frame, for a man out cold): breaths a second · m the chest rises · s it comes in over.
    *  The picture's joints only — the skeleton is posed again, `bones` (what the game reads), the particles and the capsules stand. */
   breathe: { breathHz: number; breathRise: number; breathIn: number } | null = null;
@@ -6939,7 +6945,6 @@ export class Character extends ManCols {
 
   constructor(public ch: GltfCharacter, d: CharacterDesc) {
     super(); standMan(this, d.men ?? loneMen());
-    this.initMan();
     this.id = d.id; this.tint = d.tint; this.tint2 = d.tint2; this.pos = v3.copy(d.pos); this.bodyYaw = d.yaw; this.aimYaw = d.yaw;
     this.anim = new CharacterAnimator(ch); this.anim.desync(d.id ?? 0); this.skel = new SkeletonInstance(ch);
     // rest-pose chest rotation for "facing" extraction
@@ -6954,8 +6959,6 @@ export class Character extends ManCols {
       this.handLBack = quat.rotate(hi, b); this.handLThumb = quat.rotate(hi, v3.cross(f, b)); }
   }
 
-  /** the walls and the furniture have their say on where he stands (scene/collision.ts collideCircle, which writes the point it is handed) */
-  pushOut(col: { collideCircle(p: Vec3, r: number, y0: number, y1: number, iterations?: number): boolean }, y0: number, y1: number, iterations?: number): boolean { const p = this.pos, hit = col.collideCircle(p, this.radius, y0, y1, iterations); this.pos = p; return hit; }
   forward(): Vec3 { return [Math.sin(this.bodyYaw), 0, Math.cos(this.bodyYaw)]; }
   aimDir(): Vec3 { const cp = Math.cos(this.aimPitch); return [Math.sin(this.aimYaw) * cp, Math.sin(this.aimPitch), Math.cos(this.aimYaw) * cp]; }
   /** The right hand's frame in the WORLD as posed this frame: `fingers` wrist → knuckles, `back` out of the back of the hand, `thumb` across the knuckles toward
@@ -6998,13 +7001,13 @@ export class Character extends ManCols {
     if (this.turn.on && TURN.on > 0.5 && dt > 0 && !this.anim.wound) this.turnWeigh(dt);   // (a man down wounded turns to nothing: wounds.ts dropped his turn as he went)
     else {   // not weighed — or a dt-0 bake: a RE-BAKE in place (game.ts updateProps, a frozen clock: his yaws untouched since they were handed back, or put back to the wish by turnBegin and not rewritten) keeps his turn going; a staging (yaws rewritten, or moved) takes them as written and the next frame starts from them
       const T = this.tn;
-      if (T && dt <= 0 && this.turn.on && TURN.on > 0.5 && (this.bodyYaw === T.body || this.bodyYaw === T.ib) && (this.aimYaw === T.aim || this.aimYaw === T.ia) && hyp2(this.posX - T.x, this.posZ - T.z) <= TURN.jump) { this.bodyYaw = T.body; this.aimYaw = T.aim; }
+      if (T && dt <= 0 && this.turn.on && TURN.on > 0.5 && (this.bodyYaw === T.body || this.bodyYaw === T.ib) && (this.aimYaw === T.aim || this.aimYaw === T.ia) && hyp2(this.pos[0] - T.x, this.pos[2] - T.z) <= TURN.jump) { this.bodyYaw = T.body; this.aimYaw = T.aim; }
       else if (T) this.tn = null;
       if (this.anim.turnLead !== 0 && !this.tn) { const l = dt > 0 ? damp(this.anim.turnLead, 0, TURN.leadRate * 2.5, dt) : 0; this.anim.turnLead = Math.abs(l) < 1e-4 ? 0 : l; }   // (the neck's lead eases out, it does not pop — bar a staging)
     }
     this.anim.aimYawOffset = clamp(wrapAngle(this.aimYaw - this.bodyYaw), -1.9, 1.9);
     this.anim.aimPitch = this.aimPitch;
-    this.anim.bodyYawIn = this.bodyYaw; this.anim.man = this;   // (the animator poses in model space but plants standing feet in the world: it needs where the body is and which way it faces)
+    this.anim.bodyYawIn = this.bodyYaw; this.anim.posIn = this.pos;   // (the animator poses in model space but plants standing feet in the world: it needs where the body is and which way it faces)
     this.anim.update(dt);
     m4.fromTRS(this.world, this.pos, quat.yaw(this.bodyYaw), [1, 1, 1]);
     { const hp = this.anim.handPre, n = this.anim.nodes;   // the gun hand under the torch ↔ sidearm swap (handwork.ts), while it shows: what the bore and the muzzle are read off (readBones)
@@ -7120,7 +7123,7 @@ export class Character extends ManCols {
   private turnWeighAsk(dt: number) {
     LAYERS.knobs?.();
     const a = f64(), i = POSE_BENCH.args;
-    a[i] = dt; a[i + 1] = this.posX; a[i + 2] = this.posZ; a[i + 3] = this.turn.h; a[i + 4] = this.turn.k;
+    a[i] = dt; a[i + 1] = this.pos[0]; a[i + 2] = this.pos[2]; a[i + 3] = this.turn.h; a[i + 4] = this.turn.k;
     colsToBench(Character.turnCols, this); this.anim.ruleRan(POSE_BENCH.x!.layer_turn_weigh()); colsFromBench(Character.turnCols, this);
   }
   /** the turn he is in the middle of, the neck's lead and his two yaws, as the module's rule is handed them (rust/sim/src/layers.rs turn_weigh gives the order) */
@@ -7138,8 +7141,8 @@ export class Character extends ManCols {
   };
   private turnWeighOwn(dt: number) {
     const T = this.tn, W = this.turn;
-    if (!T || hyp2(this.posX - T.x, this.posZ - T.z) > TURN.jump || !Number.isFinite(this.bodyYaw + this.aimYaw)) {
-      this.tn = { body: this.bodyYaw, aim: this.aimYaw, wb: 0, wa: 0, ib: this.bodyYaw, ia: this.aimYaw, x: this.posX, z: this.posZ }; return; }
+    if (!T || hyp2(this.pos[0] - T.x, this.pos[2] - T.z) > TURN.jump || !Number.isFinite(this.bodyYaw + this.aimYaw)) {
+      this.tn = { body: this.bodyYaw, aim: this.aimYaw, wb: 0, wa: 0, ib: this.bodyYaw, ia: this.aimYaw, x: this.pos[0], z: this.pos[2] }; return; }
     if (this.bodyYaw !== T.body) T.ib = this.bodyYaw; if (this.aimYaw !== T.aim) T.ia = this.aimYaw;   // (untouched since they were handed back: the wish stands)
     const h = clamp(W.h, 0.2, 1.5), kk = lerp(TURN.green, 1, clamp(W.k, 0, 1)), hb = lerp(1, h, TURN.bodyShare);
     // his feet: the short way round
@@ -7150,7 +7153,7 @@ export class Character extends ManCols {
     // does not flip the gun to the far shoulder and back while he comes round)
     const r0 = clamp(wrapAngle(T.aim - T.body), -1.9, 1.9), r1 = clamp(wrapAngle(T.ia - T.ib) + wrapAngle(T.ib - T.body), -1.9, 1.9);
     const sa = turnStep(T.wa, r1 - r0, TURN.aim * h, TURN.aimAcc * h * kk, dt), rr = clamp(r0 + sa[0], -1.9, 1.9); T.wa = rr === r0 + sa[0] ? sa[1] : 0; T.aim = wrapAngle(T.body + rr);   // (speed it still carried the other way stops at the twist's end)
-    T.x = this.posX; T.z = this.posZ;
+    T.x = this.pos[0]; T.z = this.pos[2];
     this.bodyYaw = T.body; this.aimYaw = T.aim;
     { const ld = clamp(wrapAngle(T.ia - T.aim), -TURN.lead, TURN.lead), was = this.anim.turnLead; this.anim.turnLead = damp(was, ld, Math.abs(ld) < Math.abs(was) ? TURN.leadRate * 2.5 : TURN.leadRate, dt); }   // (it comes off quicker than it goes on: the head does not carry past the point either)
   }
@@ -7206,7 +7209,7 @@ export class Character extends ManCols {
     const n = this.anim.nodes;
     const b = this.bones;
     if (dt > 1e-5 && b.hips) { const pb = this.prevBones; for (const k in b) pb[k] = b[k]; this.prevDt = dt; }   // (a dt-0 re-bake keeps the older sample: it is still one real frame back)
-    this.joints(b); this.bonesAt[0] = this.posX; this.bonesAt[1] = this.posZ;
+    this.joints(b); this.bonesAt[0] = this.pos[0]; this.bonesAt[1] = this.pos[2];
     // chest facing (rest → current delta applied to model +Z), in world
     const qYaw = quat.yaw(this.bodyYaw);
     const chestDelta = quat.mul(this.skel.globalRot[n.spine3], this.restChestInv);
@@ -7452,9 +7455,9 @@ export class Character extends ManCols {
    *  column when the trunk leans off the hips (the same two columns rayHit enters). combat.ts bodyHit's contact shot asks this: a muzzle already in him is a hit where it is. */
   insideBody(p: Vec3, crownPad = 0): boolean {
     if (!this.alive) return false;
-    const top = (this.bones.headTop?.[1] ?? this.posY + 1.75) + crownPad, bot = this.posY + 0.05;
+    const top = (this.bones.headTop?.[1] ?? this.pos[1] + 1.75) + crownPad, bot = this.pos[1] + 0.05;
     const hips = this.bones.hips, chest = this.bones.spine2;
-    const cx = (hips?.[0] ?? this.posX), cz = (hips?.[2] ?? this.posZ);
+    const cx = (hips?.[0] ?? this.pos[0]), cz = (hips?.[2] ?? this.pos[2]);
     if (p[1] > bot && p[1] < top && hyp2(p[0] - cx, p[2] - cz) < 0.28) return true;
     if (chest && hips && hyp2(chest[0] - hips[0], chest[2] - hips[2]) > 0.12) {
       const cb = Math.min(hips[1], chest[1]) - 0.12;
@@ -7464,9 +7467,9 @@ export class Character extends ManCols {
   }
   rayHit(ro: Vec3, rd: Vec3, tmax: number): number {
     if (!this.alive) return -1;
-    const top = (this.bones.headTop?.[1] ?? this.posY + 1.75), bot = this.posY + 0.05;
+    const top = (this.bones.headTop?.[1] ?? this.pos[1] + 1.75), bot = this.pos[1] + 0.05;
     const hips = this.bones.hips, chest = this.bones.spine2;
-    const cx = (hips?.[0] ?? this.posX), cz = (hips?.[2] ?? this.posZ);
+    const cx = (hips?.[0] ?? this.pos[0]), cz = (hips?.[2] ?? this.pos[2]);
     // the body = the column about the hips from soles to crown, entered through the side OR through the crown / the soles (a man stood over a crouched one firing
     // down at him used to put every round through him: the side test alone found no entry from above) — PLUS, when the pose carries the chest away from over the
     // hips (pressed to a wall and leaning, crouched low over the feet, mid-vault), a second column about the CHEST from the hips up: the men aim at the trunk bone

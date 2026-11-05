@@ -14,10 +14,10 @@ const trigger = (B: Bot, at: () => number[], secs: number, stop?: () => boolean)
   B.aim(at()); B.step(); B.I.clicked |= 1;
   try { for (let i = 0; i < secs * 60; i++) { B.aim(at()); B.I.buttons |= 1; B.step(); if (stop && stop()) break; } } finally { B.I.buttons &= ~1; B.step(); }
 };
-const chest = (x: any): number[] => x.char.bones?.chest ?? [x.char.posX, 1.25, x.char.posZ];
+const chest = (x: any): number[] => x.char.bones?.chest ?? [x.char.pos[0], 1.25, x.char.pos[2]];
 const up = (x: any) => x.state !== 'dead';
-const line = (B: Bot, x: any) => { const P = B.g.player.char, a = P.bones?.head ?? [P.posX, 1.5, P.posZ]; return !B.g.col.shotBlocked(a, chest(x)); };
-const near = (B: Bot, x: any) => Math.hypot(x.char.posX - B.pos()[0], x.char.posZ - B.pos()[2]);
+const line = (B: Bot, x: any) => { const P = B.g.player.char, a = P.bones?.head ?? [P.pos[0], 1.5, P.pos[2]]; return !B.g.col.shotBlocked(a, chest(x)); };
+const near = (B: Bot, x: any) => Math.hypot(x.char.pos[0] - B.pos()[0], x.char.pos[2] - B.pos()[2]);
 
 /** the rifle on whoever is up with a line to him, for `secs` at most; `keep` = how many to leave standing */
 function fight(B: Bot, secs: number, keep = 0): number {

@@ -553,7 +553,7 @@ export async function walkTo(seed: number, tool: 'shotgun' | 'hammer', face: 'pu
   const alive = g.guards.filter((m: any) => m.state !== 'dead'), man: any = o.man ? alive[0] : null, second: any = o.second ? alive[1] : null;
   const marks: [any, number[]][] = []; if (man) { const j = g.doors.kickSpotSide(d, doorPt(d, W / 2, 0.75, side)); marks.push([man, [j.pos[0], 0, j.pos[2]]]); } if (second) marks.push([second, doorPt(d, o.second![0], o.second![1], side)]);
   const pin = () => { for (const [m, p] of marks) { m.char.pos = [...p]; m.char.vel = [0, 0, 0]; } }; pin();
-  for (const m of g.guards) if (m !== man && m !== second) m.char.pos = [m.char.posX + 400, 0, m.char.posZ + 400];   // (every other man of the floor off it: nobody walks into the picture)
+  for (const m of g.guards) if (m !== man && m !== second) m.char.pos = [m.char.pos[0] + 400, 0, m.char.pos[2] + 400];   // (every other man of the floor off it: nobody walks into the picture)
   // (a guard of the floor stood by a leaf works on it — a teammate on his mark does not: the leaf is put home again every frame until the row is taken)
   const home = () => { d.angle = 0; d.vel = 0; d.latched = true; pin(); }; if (man) R.post = home;
   const mine = (x: any) => x.kind === 'door' && x.door === d;
@@ -580,7 +580,7 @@ export async function walkTo(seed: number, tool: 'shotgun' | 'hammer', face: 'pu
   // BIGSLOT.weight: the frames his own gun is on its way to its place (the beat's clock below zero) — the kit's hand at work in them, the gun still drawn
   // (never popped away), how far his right hand travels in his body's frame — then when the tool is all in his hands, and how long it takes to go back
   let carry = 0, carryBusy = 0, carryHid = 0, handWent = 0, toolIn = NaN, toolBack = NaN, hid0 = NaN, stepOut = 0, bareTail = 0, pops = 0, drawing = false; let hand0: number[] | null = null, handWas: number[] | null = null; const rec = { equip: NaN, stow: NaN };
-  const inBody = () => { const c = pl.char, h = c.bones.handR ?? c.pos, y = c.bodyYaw, dx = h[0] - c.posX, dz = h[2] - c.posZ; return [dx * Math.cos(y) - dz * Math.sin(y), h[1] - c.posY, dx * Math.sin(y) + dz * Math.cos(y)]; };
+  const inBody = () => { const c = pl.char, h = c.bones.handR ?? c.pos, y = c.bodyYaw, dx = h[0] - c.pos[0], dz = h[2] - c.pos[2]; return [dx * Math.cos(y) - dz * Math.sin(y), h[1] - c.pos[1], dx * Math.sin(y) + dz * Math.cos(y)]; };
   const dist3 = (p: number[], q: number[]) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]), hand = () => [...(pl.char.bones.handR ?? pl.char.pos)] as number[];
   const drawn0 = drawnTool(g, pl.char.id), back0 = drawn0.head ? dist3(drawn0.head, hand()) : NaN; let headAt = NaN, inHand = NaN;
   R.post = () => { pin(); o.each?.(g, g.time - t0); if (via0 && pl.kick && !pl.kick.tool?.moves?.via) turned = true; const p = pl.char.pos, f = fc(p), T = pl.kick?.tool, P = pl.char.anim.bigTool; stride = Math.max(stride, flat(p, last)); last = [...p];
@@ -660,7 +660,7 @@ export async function bigWeight(): Promise<boolean> {
           'CALLED OFF WHILE HIS GUN IS STILL ON ITS WAY (the door opened by another hand a tenth of a second after the row, his rifle going to his back): his legs are his own at once — not at the end of the wait — no pose of the tool is ever shown, and the kit\'s hand brings the rifle straight back up', `the wait he was given ${f2(o.lead)} s · opened at ${f2(opened)} s, his legs his own at ${f2(ended)} s · frames posed after: ${posedAfter} · blows ${o.landed.length} · his rifle up again ${f2(upAt)} s after the row${S}`); }
       // … and a gun the kit's hand does not hold is not waited for: the pistol on a wall hold is the wall's own arms' — taken off the wall for the row, it is let go as before
       { const R = await rig(75, { stage: false, cards: { 0: { big: 'hammer' } } }), g = R.game, pl = g.player, d = R.door('storage'), kit0 = [KITANIM.on, KITANIM.equip]; g.aiEnabled = false;
-        d.angle = 0; d.vel = 0; d.latched = true; d.locked = false; d.lockBroken = false; for (const m of g.guards) m.char.pos = [m.char.posX + 400, 0, m.char.posZ + 400];
+        d.angle = 0; d.vel = 0; d.latched = true; d.locked = false; d.lockBroken = false; for (const m of g.guards) m.char.pos = [m.char.pos[0] + 400, 0, m.char.pos[2] + 400];
         g.teleportPlayer(doorPt(d, (d.def.width as number) + 0.9, 0.45, faceOf(g, d, 'push'))); R.step(12); K.kitSolo(g); R.step(3); KITANIM.on = true; KITANIM.equip = true; R.step(2);
         R.input.pressed.add('Digit1'); R.step(1); if (!pl.pistolUp) { R.input.pressed.add('KeyE'); R.step(1); } R.until(() => pl.pistolUp && !(pl.equipT > 0) && !pl.char.anim.kitBusy, 6); R.step(20);
         let took = false; for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) { pl.char.bodyYaw = pl.char.aimYaw = yaw; R.input.pressed.add('KeyQ'); R.step(1); if (pl.wall) { took = true; break; } }
@@ -733,7 +733,7 @@ export async function bigMoves(): Promise<boolean> {
         F.verdict(r.began && r.gave && r.open && r.pullK < 0.2 && r.inOpening === 0, 'THE FACE IT OPENS TOWARD: the latch is broken from beside the frame, the hammer goes back onto him, and only then do the same hands pull the leaf open', `${r.raised ? 'the frame rule raised BY HAND · ' : ''}${frame(r)} · blows ${r.st.samBlows} · the hammer ${f2(r.pullK)} of the way into his hands as the leaf first moved · open ${r.open}${B}`); }
       // a teleport inside the tail (cancelActions): nothing of the beat is left on him
       { const R = await rig(71, { stage: false }), g = R.game, pl = g.player; K.BIGSLOT.moves = true; K.kitSolo(g);
-        pl.char.anim.bigTool = { kind: 'hammer', t: 1.0, equip: 0.6, windup: 0.45, stow: 0.45, blows: [0.7], end: 0.95, at: [pl.char.posX, 1, pl.char.posZ + 0.5] };
+        pl.char.anim.bigTool = { kind: 'hammer', t: 1.0, equip: 0.6, windup: 0.45, stow: 0.45, blows: [0.7], end: 0.95, at: [pl.char.pos[0], 1, pl.char.pos[2] + 0.5] };
         R.step(2); const kept = BK.samBigTail(g) as boolean, k = pl.char.anim.bigK as number; g.teleportPlayer([...pl.char.pos]); R.step(1);
         F.verdict(kept && k > 0.5 && pl.char.anim.bigTool === null && !BK.samBigTail(g), 'A TELEPORT INSIDE THE TAIL (cancelActions): the pose is dropped — his hands are his own', `the tail ran ${kept}, the tool ${f2(k)} of the way in his hands · after the teleport: ${pl.char.anim.bigTool === null ? 'nothing' : 'STILL POSED'}`); }
       // a man on the latch jamb (the lead's own mark), you behind him
@@ -763,7 +763,7 @@ export async function bigMoves(): Promise<boolean> {
         const r = await mateShut(tool, { watch: (R, gd, d) => { const H = gd.bigOut, op = R.D.ops.find((o: any) => o.kick?.gun?.by === gd);
           if (H) { out++; const t = R.game.time - H.t0; for (const b of H.blows) if (!seenBlows.has(b) && b > t) { seenBlows.add(b); if (Number.isNaN(toldAhead)) toldAhead = b - t; } }
           if (gd.char.anim.bigTool) { hung++; const D = drawnTool(R.game, gd.char.id); drawnN = Math.min(drawnN, D.n); if (gd.char.anim.hideHeldItem) offGun++;
-            if (gd.char.anim.hideHeldItem && H && H.blows.some((b: number) => R.game.time - H.t0 >= b - WU && R.game.time - H.t0 <= b)) { const c = gd.char, y = c.bodyYaw, dx = c.muzzle[0] - c.posX, dz = c.muzzle[2] - c.posZ, L = [dx * Math.cos(y) - dz * Math.sin(y), c.muzzle[1] - c.posY, dx * Math.sin(y) + dz * Math.cos(y)];   // (his gun's muzzle in his body's own frame, through the wind-up to the blow: the swing must not carry it — character.ts reads it off the whole pose under the layer)
+            if (gd.char.anim.hideHeldItem && H && H.blows.some((b: number) => R.game.time - H.t0 >= b - WU && R.game.time - H.t0 <= b)) { const c = gd.char, y = c.bodyYaw, dx = c.muzzle[0] - c.pos[0], dz = c.muzzle[2] - c.pos[2], L = [dx * Math.cos(y) - dz * Math.sin(y), c.muzzle[1] - c.pos[1], dx * Math.sin(y) + dz * Math.cos(y)];   // (his gun's muzzle in his body's own frame, through the wind-up to the blow: the swing must not carry it — character.ts reads it off the whole pose under the layer)
               if (!mz0) mz0 = L; else mzOff = Math.max(mzOff, Math.hypot(L[0] - mz0[0], L[1] - mz0[1], L[2] - mz0[2])); }
             if (D.head && H && H.blows.some((x: number) => Math.abs(x - (R.game.time - H.t0)) < 1.5 * DT)) headAt = Math.min(headAt, Math.hypot(D.head[0] - H.at[0], D.head[1] - H.at[1], D.head[2] - H.at[2])); }
           if (op?.kick) place = [...op.kick.pos];
@@ -777,7 +777,7 @@ export async function bigMoves(): Promise<boolean> {
       // far his right hand has gone from his own gun's grip with the gun still drawn in it (his body's frame: from where the hand was as the beat began, and —
       // putting the tool back — from where it is the frame after the beat). With the switch off both are the build before's, and far out.
       { const fly = async (nosnug: boolean) => { let outOf = 0, n = 0, between = 0, told: boolean | undefined, hid = -1, after: number[] | null = null, was = false; const gunAt: number[][] = [];
-          const inBody = (c: any) => { const h = c.bones.handR ?? c.pos, y = c.bodyYaw, dx = h[0] - c.posX, dz = h[2] - c.posZ; return [dx * Math.cos(y) - dz * Math.sin(y), h[1] - c.posY, dx * Math.sin(y) + dz * Math.cos(y)]; };
+          const inBody = (c: any) => { const h = c.bones.handR ?? c.pos, y = c.bodyYaw, dx = h[0] - c.pos[0], dz = h[2] - c.pos[2]; return [dx * Math.cos(y) - dz * Math.sin(y), h[1] - c.pos[1], dx * Math.sin(y) + dz * Math.cos(y)]; };
           const r = await mateShut('hammer', { nosnug, watch: (_R, gd) => { const c = gd.char, an = c.anim; if (!an.bigTool) { if (was && !after) after = inBody(c); return; } was = true; n++; told = an.bigTool.snug;
             if (an.bigK > 0.02) { const a: any[] = []; bigBoxes(c, 'hammer', an.bigK, a); const hol = hollowR(c); if (a.length) outOf = Math.max(outOf, Math.min(...a.map(x => ptGap(x, hol)))); if (an.bigK < 0.98) between++; }
             if (an.hideHeldItem) { if (hid < 0) hid = gunAt.length; } else gunAt.push(inBody(c)); } });
@@ -793,7 +793,7 @@ export async function bigMoves(): Promise<boolean> {
         // aim, his chest turned `turn` rad off his feet, the hammer out, one blow, back.
         const R = await rig(8, { cards: { 1: { big: 'hammer' } } }), c = R.ops[0].char, an = c.anim; R.game.aiEnabled = false; R.step(2);
         const by = (snug: boolean, turn: number) => { let out = 0, back = 0, n = 0; const yaw = c.bodyYaw, up = an.upper;
-          const T = { kind: 'hammer' as const, equip: K.BIGSLOT.equip as number, windup: BK.bigWind() as number, stow: K.BIGSLOT.stow as number, blows: [1.3], end: 1.55, at: [c.posX + Math.sin(yaw) * 0.8, 1, c.posZ + Math.cos(yaw) * 0.8] };
+          const T = { kind: 'hammer' as const, equip: K.BIGSLOT.equip as number, windup: BK.bigWind() as number, stow: K.BIGSLOT.stow as number, blows: [1.3], end: 1.55, at: [c.pos[0] + Math.sin(yaw) * 0.8, 1, c.pos[2] + Math.cos(yaw) * 0.8] };
           for (let t = 0; t <= T.end + T.stow + 1e-9; t += DT) { c.bodyYaw = yaw; c.aimYaw = yaw + turn; an.upper = 'aim'; an.bigTool = { ...T, t, snug }; c.update(DT);
             if (!(an.bigK > 0.02)) continue; const a: any[] = []; bigBoxes(c, 'hammer', an.bigK, a); if (!a.length) continue; const hol = hollowR(c), gap = Math.min(...a.map(x => ptGap(x, hol)));
             if (t >= T.end) { back = Math.max(back, gap); if (an.bigK < 0.98) n++; } else out = Math.max(out, gap); }

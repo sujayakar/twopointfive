@@ -282,7 +282,7 @@ export async function rifleSpreadProbe() {
   // (b) measured: 100 rounds standing as shipped vs 100 with the brace factor forced off (braceK 1: the free-hand reference), fired through a point 12 m out; RMS of the rounds' unit directions off their mean (≈ radians)
   const line = longLine(game, pl.char.pos, 12);
   if (!line) { F.verdict(false, '(b) staging', 'no wall 12 m off along any bearing from the corridor spot'); return F.done(); }
-  const target: Vec3 = v3.mad([pl.char.posX, 1.3, pl.char.posZ], line.dir, 12);   // a point IN THE AIR 12 m out along the clear bearing, chest high: the round flies through it into the wall beyond, so the impact scatter is the cone × the wall's distance
+  const target: Vec3 = v3.mad([pl.char.pos[0], 1.3, pl.char.pos[2]], line.dir, 12);   // a point IN THE AIR 12 m out along the clear bearing, chest high: the round flies through it into the wall beyond, so the impact scatter is the cone × the wall's distance
   const shootN = (n: number, freeHand: boolean, auto: boolean): Vec3[] => {
     const pts: Vec3[] = []; const tap = eventTap(game); const K = RIFLE_SPREAD.braceK;
     if (auto !== (rf.mode === 'auto')) { input.pressed.add('KeyZ'); W.step(DT); }
@@ -521,7 +521,7 @@ export async function kitSlots() {
     }
     // a calm man 7 m ahead: torch out → nothing; torch lit → fried
     const A = game.guards[0]; A.hold = true; A.pinned = false; A.state = 'patrol'; A.awareness = 0; A.heardUpTo = 1e12;
-    place(A, [pl.char.posX + 7, 0, pl.char.posZ], -Math.PI / 2);
+    place(A, [pl.char.pos[0] + 7, 0, pl.char.pos[2]], -Math.PI / 2);
     pl.slot = 'pistol'; pl.holstered = false; pl.ocp.charge = 1; settle(30);
     const chestA = () => A.char.bones.chest ?? v3.add(A.char.pos, [0, 1.2, 0]);
     A.torchLostAt = game.time - 5; for (let f = 0; f < 3; f++) { W.cursorAt(chestA()); W.step(DT); }   // his torch knocked out earlier and dark on the floor: no light of his burns
@@ -554,20 +554,20 @@ export async function kitSlots() {
     if (rf.rings !== rings0 - 1) fails.push(`rings ${rings0}→${rf.rings} 40 frames on (want one click = one ring)`);
     if (A.state !== 'dead' || A.downKind !== 'struck' || !isBreathing(A)) fails.push(`the ring on his head left him ${A.state}/${A.downKind} (want out cold)`);
     // the left button with the RING up: a round, not a ring
-    const WALLPT: Vec3 = [pl.char.posX + 6, 1.2, pl.char.posZ - 1.5]; game.infiniteAmmo = true;
+    const WALLPT: Vec3 = [pl.char.pos[0] + 6, 1.2, pl.char.pos[2] - 1.5]; game.infiniteAmmo = true;
     for (let f = 0; f < 60; f++) { W.cursorAt(WALLPT); W.step(DT); }   // (the launcher's own 0.9 s to cycle, and the trigger's beat after a ring)
     const rings2 = rf.rings, shots1 = rf.shotsFired; W.cursorAt(WALLPT); input.clicked |= 1; W.step(DT); settle(6);
     tr.push(`rifle+RING+LMB: rounds fired ${shots1}→${rf.shotsFired}, rings ${rings2}→${rf.rings}`);
     if (rf.shotsFired !== shots1 + 1 || rf.rings !== rings2) fails.push(`a LEFT click with the RING up: rounds fired ${shots1}→${rf.shotsFired}, rings ${rings2}→${rf.rings} (want a round, no ring)`);
     game.infiniteAmmo = false;
     // the pace: the rifle up walks at the pistol's walk (no brace cap any more), braced the whole way
-    const walk = (k: 'pistol' | 'rifle') => { pl.slot = k; pl.holstered = false; game.teleportPlayer([18.0, 0, 11.5]); pl.char.bodyYaw = pl.char.aimYaw = Math.PI / 2; settle(40); let v = 0, bracedAll = true; input.keys.add('KeyD'); for (let f = 0; f < 50; f++) { W.cursorAt([30, 1.2, 11.5]); W.step(DT); v = Math.hypot(pl.char.velX, pl.char.velZ); if (k === 'rifle' && !pl.braced) bracedAll = false; } input.keys.delete('KeyD'); settle(20); return { v, bracedAll }; };
+    const walk = (k: 'pistol' | 'rifle') => { pl.slot = k; pl.holstered = false; game.teleportPlayer([18.0, 0, 11.5]); pl.char.bodyYaw = pl.char.aimYaw = Math.PI / 2; settle(40); let v = 0, bracedAll = true; input.keys.add('KeyD'); for (let f = 0; f < 50; f++) { W.cursorAt([30, 1.2, 11.5]); W.step(DT); v = Math.hypot(pl.char.vel[0], pl.char.vel[2]); if (k === 'rifle' && !pl.braced) bracedAll = false; } input.keys.delete('KeyD'); settle(20); return { v, bracedAll }; };
     const wp = walk('pistol'), wr = walk('rifle');
     tr.push(`walk: pistol ${f2(wp.v)} m/s · rifle ${f2(wr.v)} m/s braced throughout ${wr.bracedAll}`);
     if (Math.abs(wr.v - wp.v) > 0.05 || Math.abs(wp.v - game.tune.playerWalk) > 0.1 || !wr.bracedAll) fails.push(`walking east 50 frames: pistol ${f2(wp.v)} m/s, rifle ${f2(wr.v)} m/s (want both the walk's ${game.tune.playerWalk}), braced throughout ${wr.bracedAll}`);
     // the gesture's other shapes, on the wall down the corridor: held = the arc up and nothing gone, letting go sends ONE; a press inside the equip beat ('2, right
     // click' in one breath) begins it and the one ring goes as the beat ends; and at rest with the rifle up no arc is drawn
-    { const WALL2 = (): Vec3 => [pl.char.posX + 6, 1.2, pl.char.posZ - 1.5];
+    { const WALL2 = (): Vec3 => [pl.char.pos[0] + 6, 1.2, pl.char.pos[2] - 1.5];
       pl.slot = 'rifle'; pl.holstered = false; rf.attIdx = 0; rf.ringCd = 0; settle(40);
       const restArc = !!pl.throwPreview || pl.launchHeld !== null; const r0 = rf.rings;
       let heldAll = true, arcAll = true, goneHeld = 0; rmbHold(W, WALL2, 10, () => { heldAll &&= pl.launchHeld === 'ring'; arcAll &&= (pl.throwPreview?.points.length ?? 0) >= 2; goneHeld = Math.max(goneHeld, r0 - rf.rings); });
@@ -689,7 +689,7 @@ export async function airfoilTorso() {
   { const hitEv = tap.evs.length; void hitEv; }
   if (game.items.items.length !== items0 + 1 || game.items.items.at(-1)?.kind !== 'ring') fails.push('no spent ring dropped at his feet');
   F.verdict(!fails.length, `hips at 8 m: staggered ${f2(staggerSecs)} s from f${hitAt} (gun down, ${roundsWhile} rounds), "${yelp ?? '—'}", alert at f${alertAt}, alive — his fix put back up the ring's line toward Sam`,
-    fails.join('; ') || `lines ${JSON.stringify(lines.slice(0, 3))} · lastKnown (${f2(A.lastKnown?.[0] ?? NaN)}, ${f2(A.lastKnown?.[2] ?? NaN)}) · Sam at (${f2(pl.char.posX)}, ${f2(pl.char.posZ)})`);
+    fails.join('; ') || `lines ${JSON.stringify(lines.slice(0, 3))} · lastKnown (${f2(A.lastKnown?.[0] ?? NaN)}, ${f2(A.lastKnown?.[2] ?? NaN)}) · Sam at (${f2(pl.char.pos[0])}, ${f2(pl.char.pos[2])})`);
   game.say = origSay;
   return F.done();
 }
@@ -698,7 +698,7 @@ export async function airfoilMiss() {
   const { W, A } = await stageRing(2103, 9, Math.PI / 2, false); const { game } = W; const pl = game.player;
   game.aiEnabled = true; A.hold = false;
   // a wall point ~4 m from him: the corridor's north wall (z ≈ 10) level with a spot 4 m short of him
-  const wallPt: Vec3 = [A.char.posX - 3.0, 1.0, 10.05];
+  const wallPt: Vec3 = [A.char.pos[0] - 3.0, 1.0, 10.05];
   const tap = eventTap(game); const audio = listen(W);
   const from = v3.add(pl.char.pos, [0.4, 1.3, 0]); fireRing(game, pl.char, from, wallPt);
   let clack: any = null; const aw0 = A.awareness;
@@ -790,7 +790,7 @@ export async function rifleCarry() {
     const drive = (stance: string, speed: number, crouch: number, upper: string, steady: number) => {
       const c = new Character(ch, { id: 1, tint: [0, 0, 0], tint2: [0, 0, 0], pos: [0, 0, 0], yaw: 0 }); const an: any = c.anim;
       an.phase = 0; an.speed = speed; an.crouchTarget = crouch; an.upper = upper; an.longGun = true; an.longStance = stance; an.longSteady = steady; an.longGrip = sc20kGrip(); c.muzzleAhead = sc20kMuzzleAhead();
-      const adv = () => { c.pos = [0, 0, c.posZ + speed * dt]; c.update(dt); };
+      const adv = () => { c.pos = [0, 0, c.pos[2] + speed * dt]; c.update(dt); };
       for (let i = 0; i < Math.round(2.5 / dt); i++) adv();
       let prev = an.phase, wraps = 0, nan = false, gap = 0; const mx: number[] = [], yaw: number[] = [], shy: number[] = []; const shown = new Set<string>();
       for (let i = 0; i * dt < (speed > 0.05 ? 30 : 3) && wraps < 4; i++) {
@@ -958,8 +958,8 @@ export async function rifleCarry() {
       const c = new Character(ch, { id: 1, tint: [0, 0, 0], tint2: [0, 0, 0], pos: [0, 0, 0], yaw: 0 }); const an: any = c.anim;
       an.phase = 0; an.speed = speed; an.crouchTarget = crouch; an.upper = 'none'; an.longGun = true; an.longStance = stance; an.longSteady = 1; an.longGrip = sc20kGrip(); c.muzzleAhead = sc20kMuzzleAhead();
       let nan = false, gap = 0; const shown = new Set<string>();
-      for (let i = 0; i < Math.round(secs / dt); i++) { c.pos = [0, 0, c.posZ + speed * dt]; c.update(dt); if (i > 60) { if (!bonesFinite(c)) nan = true; gap = Math.max(gap, v3.dist(c.bones.handL, sc20kGripPoint(c))); shown.add(String(an.longShown)); } }
-      return { c, an, handX: c.bones.handR[0] - c.posX, nan, gap, shown: [...shown].join('/') };
+      for (let i = 0; i < Math.round(secs / dt); i++) { c.pos = [0, 0, c.pos[2] + speed * dt]; c.update(dt); if (i > 60) { if (!bonesFinite(c)) nan = true; gap = Math.max(gap, v3.dist(c.bones.handL, sc20kGripPoint(c))); shown.add(String(an.longShown)); } }
+      return { c, an, handX: c.bones.handR[0] - c.pos[0], nan, gap, shown: [...shown].join('/') };
     };
     // (a)
     { const stand0 = settle('shoulder', 0, 0), crouch0 = settle('shoulder', 1, 0);
@@ -982,7 +982,7 @@ export async function rifleCarry() {
       let nan = false, worst = 0, worstAt = -1, toggles = 0;
       for (let i = 0; i < 360 + 60; i++) {
         if (i >= 60 && (i - 60) % 25 === 0) { an.crouchTarget = an.crouchTarget ? 0 : 1; toggles++; }
-        c.pos = [0, 0, c.posZ + 1.0 * dt]; c.update(dt);
+        c.pos = [0, 0, c.pos[2] + 1.0 * dt]; c.update(dt);
         if (i >= 60) { if (!bonesFinite(c)) nan = true; const g = v3.dist(c.bones.handL, sc20kGripPoint(c)); if (g > worst) { worst = g; worstAt = i - 60; } }
       }
       if (nan) fails.push('(c) a NaN bone through the crouch toggles'); if (worst > 0.04) fails.push(`(c) support hand ${(worst * 100).toFixed(1)} cm off the foregrip at frame ${worstAt} of the toggling (want ≤ 4)`);

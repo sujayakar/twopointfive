@@ -26,11 +26,11 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&r
     const Z = 18.0, X = 19.5, SAM = [13, 0, Z], FROM = [X, 0, 22.4], TO = [X, 0, 14.6], pl = g.player, O = g.orders, canvas = document.getElementById('view');
     K.FRIENDS.lowReady = false; g.godMode = true;
     const ops = g.guards.filter(x => x.team === 'operative' && x.state !== 'dead'), mate = ops[0], foes = g.guards.filter(x => x.team !== 'operative' && !x.civ && x.state !== 'dead');
-    const home = new Map(foes.map(h => [h, [h.char.posX, 0, h.char.posZ]]));
-    const put = (gd, p) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.velX = gd.char.velZ = 0; gd.path = []; gd.pathGoal = null; };
+    const home = new Map(foes.map(h => [h, [h.char.pos[0], 0, h.char.pos[2]]]));
+    const put = (gd, p) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel[0] = gd.char.vel[2] = 0; gd.path = []; gd.pathGoal = null; };
     const calm = () => { for (const h of foes) if (h.state !== 'dead') { h.state = 'patrol'; h.awareness = 0; put(h, home.get(h)); } ops.slice(1).forEach((o, i) => put(o, [10 + i * 0.9, 0, 22.6])); };
     let trigger = false, f = 0;
-    const step = (n = 1) => { e.render = () => { e.world.upload(); }; try { for (let i = 0; i < n; i++) { calm(); pl.char.posX = SAM[0]; pl.char.posZ = SAM[2];
+    const step = (n = 1) => { e.render = () => { e.world.upload(); }; try { for (let i = 0; i < n; i++) { calm(); pl.char.pos[0] = SAM[0]; pl.char.pos[2] = SAM[2];
       const s = cam.project([SAM[0] + 9, 1.3, Z], canvas.clientWidth, canvas.clientHeight); if (s[2]) { input.mouseX = s[0]; input.mouseY = s[1]; }
       if (trigger && f % 24 === 0) { pl.fireCd = 0; input.clicked |= 1; } f++; window.__runFrames(1, 1 / 60); } } finally { e.render = real; } };
     g.teleportPlayer(SAM); put(mate, FROM); step(30);
@@ -43,7 +43,7 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&r
       if (trigger && g.time - t0 >= 7) trigger = false;
       step();
       const p = mate.char.pos, m = pl.char.muzzle, rx = p[0] - m[0], rz = p[2] - m[2], along = rx * dx + rz * dz, side = Math.abs(rx * dz - rz * dx), firing = pl.rifle.shotsFired > shots0 && g.time - pl.lastFireT < F.fireS;
-      if (firing) { if (along > 0.15 && side <= FF.bodyM + F.clearM + along * FF.coneK * F.spread) inLane++; if (Math.hypot(mate.char.velX, mate.char.velZ) < 0.1) { still += 1 / 60; stillMax = Math.max(stillMax, still); } else still = 0; }
+      if (firing) { if (along > 0.15 && side <= FF.bodyM + F.clearM + along * FF.coneK * F.spread) inLane++; if (Math.hypot(mate.char.vel[0], mate.char.vel[2]) < 0.1) { still += 1 / 60; stillMax = Math.max(stillMax, still); } else still = 0; }
       if (!there && Math.hypot(p[0] - TO[0], p[2] - TO[2]) < 0.5) { there = true; thereFiring = firing; }
       if (there && !trigger && g.time - pl.lastFireT > 2) break;
     }

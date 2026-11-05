@@ -312,13 +312,13 @@ export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoSce
   const R = A.space;
   // ---- the door: the one under his hand, or the way out he is walking at (kept while he stands by it)
   let door: AutoScene['door'] = null;
-  const speed = Math.hypot(c.velX, c.velZ), still = !walkKey(input) && speed < 0.3;
+  const speed = Math.hypot(c.vel[0], c.vel[2]), still = !walkKey(input) && speed < 0.3;
   if (g.useDoor) { door = { at: past(g.useDoor, p, K.beyondM), w: 1 }; A.way = null; }
   else {
     let best = 0;
     if (speed > K.doorMps) for (const w of R.ways) {
       if (w.dist > K.doorM) continue; const dx = w.o.at[0] - p[0], dz = w.o.at[2] - p[2], d = Math.hypot(dx, dz); if (d < 1e-3) continue;
-      const toward = (c.velX * dx + c.velZ * dz) / (d * speed); if (toward < K.doorAim) continue;
+      const toward = (c.vel[0] * dx + c.vel[2] * dz) / (d * speed); if (toward < K.doorAim) continue;
       const s = Math.sqrt(Math.max(0, 1 - d / K.doorM)) * toward; if (s > best) { best = s; A.way = { at: [w.o.at[0], 0, w.o.at[2]], beyond: [w.beyond[0], 0, w.beyond[2]] }; }
     }
     if (A.way) { const d = flat(p, A.way.at); if (best > 0) door = { at: A.way.beyond, w: Math.min(1, best * 1.5) }; else if (d <= K.doorKeepM) door = { at: A.way.beyond, w: 0.8 }; else A.way = null; }
@@ -327,7 +327,7 @@ export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoSce
   const sky = !g.weather?.underRoof(p[0], p[2]);
   const zoomK = (closeMode(g) || K.lock && K.lockIn > 0 && K.zoomAmt > 0 && !!pl.holding && !A.lockFight ? K.closeK : inRoom ? K.roomK : sky ? K.skyK : 1) * (pl.sup.v > K.fireAt ? K.fireK : 1);
   const free = !pl.holding && !pl.dragging && !pl.throwPreview && !pl.launchHeld && !pl.wall && !g.rails?.locks('camera') && g.lesson?.step?.done?.is !== 'view';
-  return A.scene = { sam: [p[0], p[1], p[2]], threats: A.seen, beat, door, room, zoomK, hold: input.buttons !== 0, still, free, vel: [c.velX, c.velZ], fight: A.fight, shown: A.shown, zoomFree: !g.rails?.locks('zoom'), firedAgo: now - pl.lastFireT, lock, onto: A.lockFight };
+  return A.scene = { sam: [p[0], p[1], p[2]], threats: A.seen, beat, door, room, zoomK, hold: input.buttons !== 0, still, free, vel: [c.vel[0], c.vel[2]], fight: A.fight, shown: A.shown, zoomFree: !g.rails?.locks('zoom'), firedAgo: now - pl.lastFireT, lock, onto: A.lockFight };
 }
 
 /** how far the floor shows from the look-at at one metre of distance: to a side, up the screen and down it */

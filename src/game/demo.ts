@@ -95,7 +95,7 @@ export class Demo {
     return [
       { dur: 9, pos: [7.6, 0, 17.6], yaw: -22, dist: 19, title: 'Traced light', caption: 'Everything here is boxes with flat diffuse paint.', sub: 'All lighting is traced live: every light is a sized emitter sampled with per-pixel shadow rays, and bounce comes from rays traced off the exact surfaces you see (a coarse probe volume only feeds the second bounce).',
         enter: () => { g.setGroup('lobby', true); } },
-      { dur: 11, pos: guardPos(0), yaw: -30, yawTo: () => hallYaw, swing: [0.04, 0.5], dist: 12, title: 'Torches', caption: 'Guards carry real spot lights.', enter: () => { const f = g.guards[0]?.char.forward() ?? [1, 0, 0]; hallYaw = Math.atan2(-f[0], -f[2]) / DEG; }, tick: () => { const gd0 = g.guards[0]; if (gd0 && gd0.char.vel && Math.hypot(gd0.char.velX, gd0.char.velZ) > 0.3) { const want = Math.atan2(-gd0.char.velX, -gd0.char.velZ) / DEG; hallYaw += wrapAngle((want - hallYaw) * DEG) / DEG * 0.02; } }, sub: 'Beams are ray-marched through the same box scene, so they shadow and scatter correctly; the torch and pistol in their hands are real geometry too — and the light meter the AI reads (bottom-left) is the same GPU query.' },
+      { dur: 11, pos: guardPos(0), yaw: -30, yawTo: () => hallYaw, swing: [0.04, 0.5], dist: 12, title: 'Torches', caption: 'Guards carry real spot lights.', enter: () => { const f = g.guards[0]?.char.forward() ?? [1, 0, 0]; hallYaw = Math.atan2(-f[0], -f[2]) / DEG; }, tick: () => { const gd0 = g.guards[0]; if (gd0 && gd0.char.vel && Math.hypot(gd0.char.vel[0], gd0.char.vel[2]) > 0.3) { const want = Math.atan2(-gd0.char.vel[0], -gd0.char.vel[2]) / DEG; hallYaw += wrapAngle((want - hallYaw) * DEG) / DEG * 0.02; } }, sub: 'Beams are ray-marched through the same box scene, so they shadow and scatter correctly; the torch and pistol in their hands are real geometry too — and the light meter the AI reads (bottom-left) is the same GPU query.' },
       (() => { const IN: Vec3 = [34.3, 0, 20.6], OUT: Vec3 = [38.4, 0, 20.6], AHEAD: Vec3 = [39.5, 1.15, 20.6], BACK: Vec3 = [36.0, 1.1, 20.6]; let turned = false;   // Sam a stride and a half inside the fire exit, square to the middle of its leaf; a spot on the asphalt almost under the east lamp (his shadow falls at his own feet there, never into the wedge the doorway throws across the room); his eyes out through the doorway at chest height on the way — an aim behind him would walk him backwards into the leaf, and the free hand only reaches for wood in front of the chest — and back on the door once he is out
         // The leaf is walked open, not flung: the puppet sends the real player into it at a walk, Doors.update's contact yields to his stride, and game.ts handsOnDoors
         // puts his free hand flat on the wood from the last stride in (character.ts doorLayer) — the same thing a player pushing through any door on the floor gets.
@@ -119,7 +119,7 @@ export class Demo {
           g.guards.forEach(o => { if (o !== t) o.hold = true; });
           g.teleportPlayer([22.6, 0, 18.6]); g.player.slot = 'pistol'; g.player.holstered = true; g.player.pistol.lightOn = false; g.puppet = { goal: [25.7, 0, 18.6], aim: [27.5, 1.2, 18.6], crouch: true }; },   // holstered: the takedown is a click with the hands EMPTY (drawn, the click would be a round in his back) — release() draws it again at exit
         tick: (t) => { const tg = gd(); if (!tg || !g.puppet) return; const alive = tg.state !== 'dead';
-          if (alive) { g.puppet.aim = v3.add(tg.char.pos, [0, 1.35, 0]); g.puppet.goal = [tg.char.posX - 0.7, 0, tg.char.posZ]; if (!struck && t > 1.5 && g.hover?.kind === 'guard' && g.hover.inReach) { this.click(); struck = true; } }   // the player's own input: a left click, hands empty, his row in reach (game.ts updateDoors → startTakedown)
+          if (alive) { g.puppet.aim = v3.add(tg.char.pos, [0, 1.35, 0]); g.puppet.goal = [tg.char.pos[0] - 0.7, 0, tg.char.pos[2]]; if (!struck && t > 1.5 && g.hover?.kind === 'guard' && g.hover.inReach) { this.click(); struck = true; } }   // the player's own input: a left click, hands empty, his row in reach (game.ts updateDoors → startTakedown)
           else if (!grabbed) { g.puppet.goal = null; const hips = tg.char.bones.hips ?? tg.char.pos; g.puppet.aim = [hips[0], hips[1] + 0.12, hips[2]]; if (t > 5.2 && g.hover?.kind === 'body' && g.hover.inReach) { this.key(INTERACT_KEY); grabbed = true; } else if (t > 7 && !g.player.dragging) { g.toggleDrag(tg); grabbed = true; } }   // (aim = the body marker's own point; direct grab as the fallback)
           else if (!dropped) { g.puppet.aim = null; g.puppet.goal = [22.2, 0, 19.0]; if (t > 13.5 || !g.player.dragging) { if (g.player.dragging) g.toggleDrag(); dropped = true; g.puppet.goal = null; } } },
         exit: () => this.release() }; })(),
@@ -159,12 +159,12 @@ export class Demo {
         tick: (t) => { const pl = g.player, H = pl.holding, v = victim(), k = colleague();
           if (!v || !k || !g.puppet) return;
           if (phase === 0) {   // beat A: creep up behind him and tap Space on his row — 'grab him' (tapped again after half a second if the first fell between two frames of reach)
-            g.puppet.aim = v3.add(v.char.pos, [0, 1.35, 0]); g.puppet.goal = [v.char.posX, 0, v.char.posZ - 0.72];
+            g.puppet.aim = v3.add(v.char.pos, [0, 1.35, 0]); g.puppet.goal = [v.char.pos[0], 0, v.char.pos[2] - 0.72];
             if (t > 0.8 && t >= tapped + 0.5 && g.hover?.kind === 'guard' && g.hover.verb === 'grab' && g.hover.inReach && g.hover.guard === v) { this.key(INTERACT_KEY); tapped = t; }
             if (H) { phase = 1; g.puppet.goal = null; }                              // got him
             else if (t > 5 && v.state !== 'dead' && !v.held) startGrab(g, v);      // net: the row never came under the cursor — take him directly so the beat still plays (the QA tour tells the two apart by the clock)
           } else if (phase === 1) {   // beat B: two questions, each when he will take one (player.ts heldTalk's rule: a gap since the last, and his answer into its last half second) — 'question him', the top row while he is held
-            g.puppet.aim = [pl.char.posX, 1.2, pl.char.posZ + 3];   // the pair stays facing the glass
+            g.puppet.aim = [pl.char.pos[0], 1.2, pl.char.pos[2] + 3];   // the pair stays facing the glass
             if (H?.phase === 'held') {
               if (tHeld < 0) tHeld = t;
               const b = v.bubble, tk = v.talk; const speaking = b && tk.lastT >= 0 && Math.abs(b.t - tk.lastT) < 1e-6 && g.time - b.t < b.dur;
@@ -218,7 +218,7 @@ export class Demo {
         tick: (t) => { if (!g.puppet) return; const pl = g.player, gun = pl.pistol, an = pl.char.anim; const me = pl.char.pos;
           // they see him exactly when his HEAD is over the partition line (standing); crouched he is gone and they cover his last position
           const head: Vec3 = [me[0], pl.crouch ? 1.1 : 1.62, me[2]];
-          for (const o of living()) { const eye: Vec3 = [o.char.posX, 1.62, o.char.posZ]; if (!pl.crouch && !g.col.segmentBlocked(eye, head)) { o.lastSeenT = g.time; o.lastKnown = v3.copy(me); } }
+          for (const o of living()) { const eye: Vec3 = [o.char.pos[0], 1.62, o.char.pos[2]]; if (!pl.crouch && !g.col.segmentBlocked(eye, head)) { o.lastSeenT = g.time; o.lastKnown = v3.copy(me); } }
           const tg = target();
           g.puppet.target = tg ?? null;   // scripted rounds are FOR this man (the cursor still tracks him for the reticle)
           if (phase === 0) {   // stand and trade: two rounds into the far end cap, theirs come back into his
@@ -292,7 +292,7 @@ export class Demo {
           if (phase === 0 && t > 0.7) { this.key('Digit3'); phase = 1; }
           else if (phase === 1 && t > 1.6) { this.click(); phase = 2; }                                             // canister into the doorway
           else if (phase === 2 && t > 7.2) { g.puppet.aim = null; g.puppet.throwAt = null; g.puppet.goal = ACROSS; g.puppet.walk = 1.0; phase = 3; }   // the doorway is full: across the opening, still crouched
-          else if (phase === 3 && Math.hypot(g.player.char.posX - ACROSS[0], g.player.char.posZ - ACROSS[2]) < 0.3) { g.puppet.goal = null; g.puppet.crouch = false; this.key('Digit1'); phase = 4; } },
+          else if (phase === 3 && Math.hypot(g.player.char.pos[0] - ACROSS[0], g.player.char.pos[2] - ACROSS[2]) < 0.3) { g.puppet.goal = null; g.puppet.crouch = false; this.key('Digit1'); phase = 4; } },
         exit: () => { this.release(); g.player.slot = 'pistol'; g.playerInvisible = true; g.clearAftermath(); g.resetGuards(); this.smoke.clearAll?.(); } }; })(),   // hand the beats after it calm patrols with torches again (and a Sam they cannot see), and clear air
       (() => { let tF = -1, tOut = -1, sent = false; let saved: Mission | null = null;
         // the mission's own centrepiece, played rather than staged: Sam creeps along the rack fronts to the marked rack, Space on its row starts the very pull a

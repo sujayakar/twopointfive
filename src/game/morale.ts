@@ -163,8 +163,8 @@ function bark(g: Game, gd: Guard, S: Mind, kind: LineKind, radio: boolean, force
 }
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-const chestOf = (c: Character): Vec3 => c.bones.chest ?? [c.posX, c.posY + 1.2, c.posZ];
-const headOf = (c: Character): Vec3 => c.bones.head ?? [c.posX, c.posY + 1.6, c.posZ];
+const chestOf = (c: Character): Vec3 => c.bones.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]];
+const headOf = (c: Character): Vec3 => c.bones.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]];
 /** a man this file is about at all: a living defender or a man of the night staff — never a civilian, an operative, a body */
 const ours = (gd: Guard) => gd.state !== 'dead' && !gd.civ && (gd.team === 'hostile' || gd.team === 'guard');
 /** a man of the hostage rescue's cast (rescue.ts): whoever of them holds its clock is that file's, gun on the hostage — none of them is this file's at all */
@@ -364,7 +364,7 @@ function clearRun(g: Game, gd: Guard, dx: number, dz: number, max: number): numb
 }
 /** the way off the hole from where he stands, a unit vector on the floor (on it: the way his back is turned) */
 function awayFrom(c: Character, hole: Vec3): [number, number] {
-  const dx = c.posX - hole[0], dz = c.posZ - hole[2], l = Math.hypot(dx, dz);
+  const dx = c.pos[0] - hole[0], dz = c.pos[2] - hole[2], l = Math.hypot(dx, dz);
   return l > 0.05 ? [dx / l, dz / l] : [-Math.sin(c.bodyYaw), -Math.cos(c.bodyYaw)];
 }
 /** where the scrabble ends: straight back off the hole where that gives `straightM`; else the longest clear run of a small fan about it — straight, then to

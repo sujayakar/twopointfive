@@ -57,7 +57,7 @@ import { DOORTOOLS } from './doortools';
 import { wallBreakOn, WALLS } from './wallbreak';
 import { chaosOf } from './destruction';
 import { FURN, chargeSource, type BlastFirst } from './furnblast';
-import { surfOf } from './particleFx';
+import { doesOf } from '../scene/materials';
 import { killGuard, detonateStun, hitPlayer } from './combat';
 import { OWNBLOW, SAM_BY, blowKeyWord, blowTail } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { chronHit } from './chronicle';
@@ -325,7 +325,7 @@ export function skyAside<T>(g: Game, fn: () => T): T {
 export function outerWall(g: Game, index: number): boolean {
   const K = WALLCHARGE, walls = g.destr?.walls; if (!K.outer || !walls) return false;
   const b = g.col.boxes[index], thin = 2 * Math.min(b.h[0], b.h[2]), long = 2 * Math.max(b.h[0], b.h[2]);
-  if (thin > K.outerThick || long < K.outerMinLen || b.metal || surfOf(b.albedo) === 'metal' || !walls.adoptable(index)) return false;
+  if (thin > K.outerThick || long < K.outerMinLen || b.metal || doesOf(b).surf === 'metal' || !walls.adoptable(index)) return false;
   const sky = skyFaces(g, index); return sky === 1 || (sky === 2 && K.outerYard);
 }
 
@@ -365,7 +365,7 @@ export function wallAt(g: Game, at: Vec3, from: Vec3 = g.player.char.pos): WallS
     const part = !!B && !B.hard;   // (a partition is the engine's from the start; a hard wall — an outer wall a charge has opened, wallbreak.ts adopt — is still structure, and takes another only while WALLCHARGE.outer)
     if (!part) {   // structure: full height off the floor, long enough to be a wall, in a wall's stuff — said so in words
       if (b.c[1] - b.h[1] > 0.1 || b.c[1] + b.h[1] < WALLS.wallMinTop || long < 0.8 || thin > 1.2) continue;
-      const s = surfOf(b.albedo); if (s !== 'drywall' && s !== 'concrete' && s !== 'metal') continue;
+      const s = doesOf(b).surf; if (s !== 'drywall' && s !== 'concrete' && s !== 'metal') continue;
       why = s === 'metal' || b.metal ? "steel. a charge won't cut it." : thin > WALLS.wallMaxThick || s === 'concrete' ? "concrete. a charge won't cut it." : "outer wall. a charge won't cut it.";
     }
     const d = Math.hypot(dx, dz) - (B ? 1e-3 : 0); if (d >= bd) continue;
@@ -765,7 +765,7 @@ export class WallCharge {
   private plan(W: WallSpot, men: Guard[], kept?: Kept): { lead: Guard; spot: Vec3; deal: [Guard, Vec3][]; close: boolean } | string {
     const S = this.g.orders, K = WALLCHARGE, cs = this.g.col.nav.cell; if (!men.length) return 'nobody to take it.';
     // (`kept`: the open menu's re-read — a man's walk from the nav cell he stands in to a place is asked of the orders once while nothing it is judged by changes)
-    const reach = (gd: Guard, to: Vec3): string | null => kept ? kept(`r|${gd.char.id}|${Math.floor(gd.char.posX / cs)},${Math.floor(gd.char.posZ / cs)}|${to[0]},${to[2]}`, () => S.reach(gd, to)) : S.reach(gd, to);
+    const reach = (gd: Guard, to: Vec3): string | null => kept ? kept(`r|${gd.char.id}|${Math.floor(gd.char.pos[0] / cs)},${Math.floor(gd.char.pos[2] / cs)}|${to[0]},${to[2]}`, () => S.reach(gd, to)) : S.reach(gd, to);
     const spot = this.setSpot(W); if (!spot) return 'no room at that wall.';
     if (!this.farFloor(W)) return 'no floor behind it.';
     const lead = [...men].sort((a, b) => flat(a.char.pos, spot) - flat(b.char.pos, spot))[0], rest = men.filter(m => m !== lead);
@@ -789,7 +789,7 @@ export class WallCharge {
   private canOf(gd: Guard, t: OrderTarget): true | string {
     if (!this.sync()) return true; const W = this.spot(t); if (!W || !W.ok || this.chargeOn(W) || this.openAt(W)) return true;
     const spot = this.setSpot(W); if (!spot) return true; const S = this.g.orders, cs = this.g.col.nav.cell, kept = this.keptFor(t);
-    const ask = () => S.reach(gd, spot); return (kept ? kept(`r|${gd.char.id}|${Math.floor(gd.char.posX / cs)},${Math.floor(gd.char.posZ / cs)}|${spot[0]},${spot[2]}`, ask) : ask()) ?? true;
+    const ask = () => S.reach(gd, spot); return (kept ? kept(`r|${gd.char.id}|${Math.floor(gd.char.pos[0] / cs)},${Math.floor(gd.char.pos[2] / cs)}|${spot[0]},${spot[2]}`, ask) : ask()) ?? true;
   }
   /** the row's test (orders.ts OrderDef.valid): true, or the refusal in words */
   private valid(t: OrderTarget, men: Guard[]): true | string | false {
@@ -840,7 +840,7 @@ export class WallCharge {
     const c = this.chargeOn(W); if (c) { this.blow(c); return; }
     const P = this.plan(W, men); if (typeof P === 'string') return P;
     for (const o of [...this.ops]) { o.men = o.men.filter(m => !men.includes(m)); if (!o.men.length) this.end(o, 're-ordered'); }   // (the men are this order's now)
-    const op: WallOp = { wall: W, men: [...men], lead: P.lead, phase: 'place', t0: g.time, spot: P.spot, setT: NaN, mine: new Map(), post: new Map(P.deal), from: new Map(men.map(m => [m, [m.char.posX, 0, m.char.posZ] as Vec3])), hole: null, queue: [], stage: new Map(), pod: new Map(), crossed: new Map(), last: new Map(), inT: NaN, beats: [], ...(P.close ? { close: true } : null) };
+    const op: WallOp = { wall: W, men: [...men], lead: P.lead, phase: 'place', t0: g.time, spot: P.spot, setT: NaN, mine: new Map(), post: new Map(P.deal), from: new Map(men.map(m => [m, [m.char.pos[0], 0, m.char.pos[2]] as Vec3])), hole: null, queue: [], stage: new Map(), pod: new Map(), crossed: new Map(), last: new Map(), inT: NaN, beats: [], ...(P.close ? { close: true } : null) };
     this.ops.push(op); this.stats.orders++;
     this.assign(op, P.lead, { post: P.spot, face: yawTo(P.spot, wallPt(W, 0, 0)), watch: null, stance: 'none', upper: 'none', going: 'charge · the wall', there: 'setting the charge' });
     for (const gd of men) if (gd !== P.lead) this.standOff(op, gd);

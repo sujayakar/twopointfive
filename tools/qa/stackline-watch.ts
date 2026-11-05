@@ -73,7 +73,7 @@ export class StackLineWatch {
         if (d && A0) { const p = gd.char.pos, side = w ? w.side : sideOf(d, A0.post), k = g.guards.find((x: any) => x.char.id === gd.killerId), F = frameOf(d), rx = p[0] - F.hx, rz = p[2] - F.hz;
           const X = k ? crossesDoor(k.char.pos, p, d) : null;
           this.out_.deaths.push({ t: r1(t), who: gd.callsign, by: k?.callsign ?? null, door: d.def.name, phase: w ? 'walk' : 'stacked', order: A0.order, leaf: this.leaf(d), leaf0: L0 && L0.A.door === d ? L0.leaf0 : this.leaf(d), beyond: !!k && sideOf(d, k.char.pos) !== side, through: !!X,
-            cells: this.cellsOn(d, side, p)[0], depth: r2(Math.abs(rx * F.nx + rz * F.nz)), along: r2(rx * F.ux + rz * F.uz), toMark: r1(flat(p, A0.post)), at: [r1(p[0]), r1(p[2])], kAt: k ? [r1(k.char.posX), r1(k.char.posZ)] : null });
+            cells: this.cellsOn(d, side, p)[0], depth: r2(Math.abs(rx * F.nx + rz * F.nz)), along: r2(rx * F.ux + rz * F.uz), toMark: r1(flat(p, A0.post)), at: [r1(p[0]), r1(p[2])], kAt: k ? [r1(k.char.pos[0]), r1(k.char.pos[2])] : null });
           const D = this.out_.deaths[this.out_.deaths.length - 1];
           this.say?.(`   ⇢ ${D.who} lost ${D.phase === 'walk' ? 'walking up to' : 'on his mark at'} ${D.door} (${D.order}) · leaf ${D.leaf}, ${D.leaf0} when the order took him · killer ${D.beyond ? 'beyond it' : 'on his own face'}${D.through ? ', through the opening' : ''} · ${D.cells} cells of their floor on him · ${D.depth} m off the frame, ${D.along} m along it, ${D.toMark} m short of his mark`); }
         if (w) this.close(w, 'dead');

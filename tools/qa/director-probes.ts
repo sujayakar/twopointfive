@@ -82,7 +82,7 @@ export async function directorShowcaseScan(): Promise<boolean> {
     Math.random = seeded(8); const W: any = await standUp(); const errBefore = console.error; console.error = () => { /* the disarmed-script + failed-beat lines */ };
     let D2: any; try { D2 = new Dm.Director(W.game, naughty); D2.armed = true; D2.strict = false; const p0 = [...W.game.player.char.pos]; D2.start('main'); for (let i = 0; i < 3; i++) W.step(DT);
       const rows = D2.rowsOf() as any[]; const failed = rows.find(r => r.kind === 'error' && r.beat === 'talky'); if (!failed || !/showcase-only/.test(failed.what)) f.push(`talky did not fail on c.caption at run time (${failed?.what ?? 'no error row'})`);
-      if (D2.frame) f.push('a frame (caption / veil) exists for a play program'); if (Math.hypot(W.game.player.char.posX - p0[0], W.game.player.char.posZ - p0[2]) > 1e-6) f.push('Sam moved');
+      if (D2.frame) f.push('a frame (caption / veil) exists for a play program'); if (Math.hypot(W.game.player.char.pos[0] - p0[0], W.game.player.char.pos[2] - p0[2]) > 1e-6) f.push('Sam moved');
       D2.stop();
     } finally { console.error = errBefore; }
     F.verdict(f.length === 0, "a play program calling caption / camera.pin / stage / puppet / press / click / fade / variant / shift / chapters: all ten found by (program, beat, verb), none in a comment-only beat or in the sibling showcase program; at run time the beat fails on the first with 'showcase-only', no frame, Sam unmoved", f.join('; ') || `${hits.length} hits: ${[...got].join(' ')}`);

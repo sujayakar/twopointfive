@@ -74,7 +74,7 @@ for (const [i, r] of (level.routes as any[]).entries()) {
   const waits = (r.wait as number[]).reduce((a, b) => a + b, 0);
   pass(!bad.length && !broken, `route ${i + 1} '${r.name}': ${r.points.length} waypoints on free floor, every leg walkable`, bad.length ? `in a solid: ${bad.map((p: number[]) => `(${p[0]}, ${p[2]})`).join(' ')}` : broken ? `no path on leg ${broken}` : `${m.toFixed(0)} m a lap, ${waits.toFixed(0)} s of pauses, about ${(m / g.tune.guardWalk + waits).toFixed(0)} s round`);
 }
-{ const S = level.playerSpawn, near = (g.guards as any[]).filter(x => flat(x.char.pos, S) < 8 && !g.col.segmentBlocked([x.char.posX, 1.6, x.char.posZ], [S[0], 1.2, S[2]]));
+{ const S = level.playerSpawn, near = (g.guards as any[]).filter(x => flat(x.char.pos, S) < 8 && !g.col.segmentBlocked([x.char.pos[0], 1.6, x.char.pos[2]], [S[0], 1.2, S[2]]));
   pass(free(S), 'the spawn is free floor', `(${S[0]}, ${S[2]})`);
   pass(!near.length, 'nobody of the shift starts inside 8 m of the spawn with a line to it', near.map((x: any) => `${x.callsign} at ${flat(x.char.pos, S).toFixed(1)} m`).join(', ')); }
 const R = M.serverRoom, entry = g.doors.byName(M.entryDoor), exit = g.doors.byName(M.exfilDoor), S = level.playerSpawn as P3;
@@ -121,7 +121,7 @@ if (flag('--clock')) {
   console.log('   t  ' + (g2.guards as any[]).map((x, i) => `${(level.routes[i]?.name ?? x.name ?? i).toString().padEnd(17)}`).join(''));
   let last = (g2.guards as any[]).map(x => [...x.char.pos]);
   for (let f = 0; f <= N * 60; f++) {
-    if (f % (E * 60) === 0) { console.log(`${String(f / 60).padStart(4)}  ` + (g2.guards as any[]).map((x, i) => { const c = x.char, hd = c.headDir ? c.headDir() : c.chestDir, still = flat(c.pos, last[i]) < 0.3; last[i] = [...c.pos]; return `${`(${c.posX.toFixed(1)}, ${c.posZ.toFixed(1)})`.padEnd(13)}${arrow(hd)}${still ? '·' : ' '}  `; }).join('')); }
+    if (f % (E * 60) === 0) { console.log(`${String(f / 60).padStart(4)}  ` + (g2.guards as any[]).map((x, i) => { const c = x.char, hd = c.headDir ? c.headDir() : c.chestDir, still = flat(c.pos, last[i]) < 0.3; last[i] = [...c.pos]; return `${`(${c.pos[0].toFixed(1)}, ${c.pos[2].toFixed(1)})`.padEnd(13)}${arrow(hd)}${still ? '·' : ' '}  `; }).join('')); }
     W2.step(1 / 60);
   }
 }

@@ -34,7 +34,7 @@ if (process.env.DICE_BREAK === '1') {   // the red path: one roll a frame that i
 /** Sam stood unkillable in front of the first man of the shift: a fight, so the aim / spread / bark dice all roll */
 function provoke(W: any): void {
   const g = W.game, gd = g.guards[0]; g.godMode = true;
-  const yaw = gd.char.bodyYaw, at: [number, number, number] = [gd.char.posX + Math.sin(yaw) * 3.5, 0, gd.char.posZ + Math.cos(yaw) * 3.5];
+  const yaw = gd.char.bodyYaw, at: [number, number, number] = [gd.char.pos[0] + Math.sin(yaw) * 3.5, 0, gd.char.pos[2] + Math.cos(yaw) * 3.5];
   g.teleportPlayer(at);   // (3.5 m off his chest: noticed in any light)
 }
 /** `secs` of play digested twice a second; `at` = the frame Sam is put in front of the man (−1 never); `fire` = Sam draws (E) there and a second on fires for

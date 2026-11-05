@@ -301,7 +301,7 @@ function motionCore(gd: Guard, pp: Vec3, v: Vec3, lit: number, dist: number): nu
  *  and for the scripted men's senses (squad.ts perceive). Above 0.05 it moves his fix; above 0.25 it is a real sighting (the licence to shoot). */
 export function sightGain(g: Game, gd: Guard, dist: number): number {
   const T = g.tune; const light = g.player.visibility; const distF = distTerm(dist);
-  const moving = AI_TUNE.motionAcuity ? motionFactor(g, gd, dist) : (Math.hypot(g.player.char.velX, g.player.char.velZ) > 2 ? 1.5 : 1);   // (the switch is the QA table's before / after; play runs the acuity)
+  const moving = AI_TUNE.motionAcuity ? motionFactor(g, gd, dist) : (Math.hypot(g.player.char.vel[0], g.player.char.vel[2]) > 2 ? 1.5 : 1);   // (the switch is the QA table's before / after; play runs the acuity)
   let rate = T.detectRate * Math.pow(light, 1.5) * distF * (g.player.crouch ? 0.75 : 1) * moving * clamp((gd.smokeTrans - 0.3) / 0.5, 0, 1) * (escalationOf(g) >= 1 ? KEEN : 1);   // (an alarmed floor is actually looking: a quarter quicker on the uptake)
   rate *= attentionSideK(g, gd, g.player.char.pos) * loadSeen(g, 'player');   // (attention.ts: 1 — but for a man whose attention is on a thing, of somebody outside what he is looking at; kitload.ts: what his card makes of his shape — 1 with its switch off or no card on him; the point-blank floor below stands whole)
   if (dist < 1.8) rate = Math.max(rate, 3.5 * closeNearK(g, gd, dist));   // (close.ts: 1 unless its switch is on — then a shape at his elbow in the DARK is not seen for being near)
@@ -345,7 +345,7 @@ export function bodySeen(g: Game, gd: Guard, o: Guard, around: boolean | number 
   const to = v3.sub(body, eye); const dist = v3.len(to); if (dist > 12) return false;
   if (!around && v3.dot([look[0], 0, look[2]], v3.normalize([to[0], 0, to[2]])) < Math.cos(60 * DEG)) return false;
   if (g.col.segmentBlocked(eye, v3.add(body, [0, 0.3, 0]))) return false;
-  const atFeet = typeof around === 'number' && Math.hypot(body[0] - gd.char.posX, body[2] - gd.char.posZ) <= around;
+  const atFeet = typeof around === 'number' && Math.hypot(body[0] - gd.char.pos[0], body[2] - gd.char.pos[2]) <= around;
   if (g.tune.bodyLight && !bodyLit(g, gd, o, eye, atFeet ? Math.min(dist, BODY_LIGHT.nearM) : dist)) return false;   // in his open view but not yet SEEN: a shape on the floor of a dark room six metres off is nothing until a light finds it (review A6.2)
   return true;
 }
@@ -679,8 +679,8 @@ function lineGeom(from: Vec3, to: Vec3, o: Guard): { t: number; e: number; d: nu
   const t = ((ax - from[0]) * dx + (az - from[2]) * dz) / L2;
   const px = from[0] + dx * t, pz = from[2] + dz * t, py = from[1] + dy * t;
   const L = Math.sqrt(L2); const e = ((ax - from[0]) * -dz + (az - from[2]) * dx) / L;
-  const y0 = o.char.posY + 0.05, y1 = o.char.bones.headTop?.[1] ?? o.char.posY + 1.75; const ddy = py < y0 ? y0 - py : py > y1 ? py - y1 : 0;
-  const clear = MUZZLE_CLEAR_M + Math.min(MUZZLE_LEAD_MAX_M, MUZZLE_LEAD_SECS * Math.hypot(o.char.velX, o.char.velZ));
+  const y0 = o.char.pos[1] + 0.05, y1 = o.char.bones.headTop?.[1] ?? o.char.pos[1] + 1.75; const ddy = py < y0 ? y0 - py : py > y1 ? py - y1 : 0;
+  const clear = MUZZLE_CLEAR_M + Math.min(MUZZLE_LEAD_MAX_M, MUZZLE_LEAD_SECS * Math.hypot(o.char.vel[0], o.char.vel[2]));
   return { t, e, d: Math.hypot(px - ax, pz - az, ddy), clear };
 }
 /** A living colleague standing in this man's line of aim: the segment from his gun shoulder to `to` (and MUZZLE_PAST_M beyond it) passing within the man's
@@ -713,8 +713,8 @@ export function roundPastColleague(g: Game, gd: Guard, to: Vec3, except: Guard |
     const h = o.char.bones.hips ?? o.char.pos;
     const t = clamp(((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / L2, 0, tMax);   // (clamped at the muzzle end: a man whose shoulder the gun is practically resting on is too close to it, whichever side of the muzzle his spine falls)
     const px = from[0] + dx * t, py = from[1] + dy * t, pz = from[2] + dz * t;
-    const y0 = o.char.posY + 0.05, y1 = o.char.bones.headTop?.[1] ?? o.char.posY + 1.75; const ddy = py < y0 ? y0 - py : py > y1 ? py - y1 : 0;
-    const clear = Math.max(0.32, MUZZLE_CLEAR_M + Math.min(MUZZLE_LEAD_MAX_M, MUZZLE_LEAD_SECS * Math.hypot(o.char.velX, o.char.velZ))) + conePerM * t * L;
+    const y0 = o.char.pos[1] + 0.05, y1 = o.char.bones.headTop?.[1] ?? o.char.pos[1] + 1.75; const ddy = py < y0 ? y0 - py : py > y1 ? py - y1 : 0;
+    const clear = Math.max(0.32, MUZZLE_CLEAR_M + Math.min(MUZZLE_LEAD_MAX_M, MUZZLE_LEAD_SECS * Math.hypot(o.char.vel[0], o.char.vel[2]))) + conePerM * t * L;
     if (Math.hypot(px - h[0], pz - h[2], ddy) < clear) return true;
   }
   return false;
@@ -749,7 +749,7 @@ function lineStep(g: Game, gd: Guard, aimAt: Vec3, o: Guard | null, dt: number):
   const c = gd.char; const nav = g.col.nav;
   if (o && g.time - gd.lineBarkT > LINE_BARK_SECS && g.time - o.lineBarkT > LINE_BARK_SECS) {
     gd.lineBarkT = o.lineBarkT = g.time;
-    if (Math.hypot(o.char.velX, o.char.velZ) > 0.4) g.say(o, 'crossing!'); else g.say(gd, "move — you're in my line");
+    if (Math.hypot(o.char.vel[0], o.char.vel[2]) > 0.4) g.say(o, 'crossing!'); else g.say(gd, "move — you're in my line");
   }
   const dbg = LINE_DEBUG.log; const f3 = (x: number) => x.toFixed(3);
   const F = gd.lineFail; const failLive = !!F && g.time - F.t < LINE_FAIL_SECS && v3.distXZ(c.pos, F.pos) < LINE_FAIL_M;   // the sides that went nowhere from about here lately still stand
@@ -757,41 +757,41 @@ function lineStep(g: Game, gd: Guard, aimAt: Vec3, o: Guard | null, dt: number):
   // facing kept — unless it is going nowhere: most of last frame's step handed straight back by something standing on the way the bake cannot see
   // (LINE_STUCK_SECS of that), or half a metre not made in 1.2 s
   if (gd.lineSide !== 0 && gd.path.length === 1 && gd.pathI === 0 && gd.pathGoal && v3.distXZ(gd.pathGoal, gd.path[0]) < 1e-3) {
-    const wp = gd.path[0]; const dx = wp[0] - c.posX, dz = wp[2] - c.posZ; const d = Math.hypot(dx, dz);
+    const wp = gd.path[0]; const dx = wp[0] - c.pos[0], dz = wp[2] - c.pos[2]; const d = Math.hypot(dx, dz);
     const back = gd.lineGain >= 0 ? d - gd.lineGain : 0;   // metres of last frame's step the doors / props / colleagues put back (0 = it all told; ≈ the step = he stands where he stood)
     if (gd.lineStepM > 1e-4 && back > 0.5 * gd.lineStepM) gd.lineStuckT += dt; else gd.lineStuckT = Math.max(0, gd.lineStuckT - 2 * dt);
-    if (d < 0.05) { gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.lineSide = 0; gd.lineGain = -1; gd.lineStuckT = 0; dbg?.(gd, `step DONE at ${f3(c.posX)},${f3(c.posZ)} (goal ${f3(wp[0])},${f3(wp[2])})`); }
+    if (d < 0.05) { gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.lineSide = 0; gd.lineGain = -1; gd.lineStuckT = 0; dbg?.(gd, `step DONE at ${f3(c.pos[0])},${f3(c.pos[2])} (goal ${f3(wp[0])},${f3(wp[2])})`); }
     else if (gd.lineStuckT > LINE_STUCK_SECS || notGettingAnywhere(gd, dt, 1.2)) {
       const bit = gd.lineSide < 0 ? 1 : gd.lineSide > 0 ? 2 : 0;   // that side is off the list from about here for a while (both bits can end up set: then it is 'none' from here)
       gd.lineFail = failLive ? { pos: F!.pos, sides: F!.sides | bit, t: g.time } : { pos: v3.copy(c.pos), sides: bit, t: g.time };
       gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.stuckN++; gd.lineSide = 0; gd.lineGain = -1; gd.lineStuckT = 0;
       dbg?.(gd, `step STALLED ${f3(d)} m short of ${f3(wp[0])},${f3(wp[2])} (handed back ${f3(back)} of ${f3(gd.lineStepM)}) → stuckN ${gd.stuckN}, sides off from here: ${gd.lineFail.sides}`);
     }
-    else { gd.speed = damp(gd.speed, g.tune.guardInvestigate * clamp(d / 0.45, 0.35, 1), 6, dt); const step = Math.min(d, gd.speed * dt); c.posX += dx / d * step; c.posZ += dz / d * step; c.vel = [dx / d * gd.speed, 0, dz / d * gd.speed]; gd.lineGain = d - step; gd.lineStepM = step; dbg?.(gd, `stepping ${f3(step)} m toward ${f3(wp[0])},${f3(wp[2])} (${f3(d)} m off, handed back ${f3(back)}, stuckT ${f3(gd.lineStuckT)}, speed ${f3(gd.speed)})`); return 'step'; }
+    else { gd.speed = damp(gd.speed, g.tune.guardInvestigate * clamp(d / 0.45, 0.35, 1), 6, dt); const step = Math.min(d, gd.speed * dt); c.pos[0] += dx / d * step; c.pos[2] += dz / d * step; c.vel = [dx / d * gd.speed, 0, dz / d * gd.speed]; gd.lineGain = d - step; gd.lineStepM = step; dbg?.(gd, `stepping ${f3(step)} m toward ${f3(wp[0])},${f3(wp[2])} (${f3(d)} m off, handed back ${f3(back)}, stuckT ${f3(gd.lineStuckT)}, speed ${f3(gd.speed)})`); return 'step'; }
   }
   if (!o) { dbg?.(gd, 'clear (nobody in the line — hysteresis)'); return 'clear'; }
   const from = c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]); const G = lineGeom(from, aimAt, o); if (!G || G.t > 0.97) { dbg?.(gd, `none: ${g.level.routes[o.routeI]?.name} AT the target (t ${G ? f3(G.t) : '-'})`); return 'none'; }   // (the man is AT the target: no angle opens that)
-  const dx = aimAt[0] - c.posX, dz = aimAt[2] - c.posZ; const L = Math.hypot(dx, dz); if (L < 0.3) { dbg?.(gd, 'none: target on top of him'); return 'none'; }
+  const dx = aimAt[0] - c.pos[0], dz = aimAt[2] - c.pos[2]; const L = Math.hypot(dx, dz); if (L < 0.3) { dbg?.(gd, 'none: target on top of him'); return 'none'; }
   const lx = -dz / L, lz = dx / L;   // unit, square off the line (the side lineGeom's `e` is signed by)
   const need = G.clear + LINE_STEP_MARGIN_M; const k = 1 / Math.max(0.03, 1 - G.t);
   const cands = [(G.e - need) * k, (G.e + need) * k].filter(s => Math.abs(s) <= LINE_STEP_MAX_M && Math.abs(s) > 0.02).sort((a, b) => Math.abs(a) - Math.abs(b));
   if (gd.stuckN & 1) cands.reverse();   // (a step that went nowhere last time: try the other way first)
   const failed = gd.lineFail && g.time - gd.lineFail.t < LINE_FAIL_SECS && v3.distXZ(c.pos, gd.lineFail.pos) < LINE_FAIL_M ? gd.lineFail.sides : 0;   // (re-read: a stall just above may have written it)
-  dbg?.(gd, `plan round ${g.level.routes[o.routeI]?.name} (t ${f3(G.t)} e ${f3(G.e)} d ${f3(G.d)} clear ${f3(G.clear)}; L ${f3(L)}; side (${f3(lx)},${f3(lz)}); stuckN ${gd.stuckN}; failed sides ${failed}) cands [${cands.map(f3).join(', ')}] from ${f3(c.posX)},${f3(c.posZ)}`);
+  dbg?.(gd, `plan round ${g.level.routes[o.routeI]?.name} (t ${f3(G.t)} e ${f3(G.e)} d ${f3(G.d)} clear ${f3(G.clear)}; L ${f3(L)}; side (${f3(lx)},${f3(lz)}); stuckN ${gd.stuckN}; failed sides ${failed}) cands [${cands.map(f3).join(', ')}] from ${f3(c.pos[0])},${f3(c.pos[2])}`);
   for (const s of cands) {
-    let cand: Vec3 = [c.posX + lx * s, 0, c.posZ + lz * s]; let ox = lx * s, oz = lz * s;   // the spot, and the step's offset to it (bent below if a wall's skirt takes the end of it)
+    let cand: Vec3 = [c.pos[0] + lx * s, 0, c.pos[2] + lz * s]; let ox = lx * s, oz = lz * s;   // the spot, and the step's offset to it (bent below if a wall's skirt takes the end of it)
     if (failed & (s < 0 ? 1 : 2)) { dbg?.(gd, `  cand ${f3(s)} → ${f3(cand[0])},${f3(cand[2])} REJECTED: that side went nowhere from here a moment ago`); continue; }
-    if (nav.isBlocked(cand[0], cand[2]) || !nav.walkable(c.pos, cand) || g.col.solidBlocked([c.posX, 0.5, c.posZ], [cand[0], 0.5, cand[2]])) { dbg?.(gd, `  cand ${f3(s)} → ${f3(cand[0])},${f3(cand[2])} REJECTED: ${nav.isBlocked(cand[0], cand[2]) ? 'cell blocked' : !nav.walkable(c.pos, cand) ? 'not walkable' : 'segment blocked'}`); continue; }
+    if (nav.isBlocked(cand[0], cand[2]) || !nav.walkable(c.pos, cand) || g.col.solidBlocked([c.pos[0], 0.5, c.pos[2]], [cand[0], 0.5, cand[2]])) { dbg?.(gd, `  cand ${f3(s)} → ${f3(cand[0])},${f3(cand[2])} REJECTED: ${nav.isBlocked(cand[0], cand[2]) ? 'cell blocked' : !nav.walkable(c.pos, cand) ? 'not walkable' : 'segment blocked'}`); continue; }
     // room for his body AT the spot: a free cell still stands him a hand inside a wall's clearance off its centre (pushed back out every frame: a stall against
     // the corridor wall); stand where the statics let him instead, if the line from there is still open — else that side is no step
     const fit: Vec3 = [cand[0], 0, cand[2]]; g.col.collideCircle(fit, c.radius, 0.2, 1.5);
     if (Math.hypot(fit[0] - cand[0], fit[2] - cand[2]) > 0.02) {
-      ox = fit[0] - c.posX; oz = fit[2] - c.posZ; const GF = lineGeom([from[0] + ox, from[1], from[2] + oz], aimAt, o);
+      ox = fit[0] - c.pos[0]; oz = fit[2] - c.pos[2]; const GF = lineGeom([from[0] + ox, from[1], from[2] + oz], aimAt, o);
       if (!GF || GF.d < GF.clear + 0.04 || nav.isBlocked(fit[0], fit[2]) || Math.hypot(ox, oz) < 0.05) { dbg?.(gd, `  cand ${f3(s)} → ${f3(cand[0])},${f3(cand[2])} REJECTED: no room to stand there clear of the wall and keep the line (fits at ${f3(fit[0])},${f3(fit[2])}, d ${GF ? f3(GF.d) : '-'})`); continue; }
       dbg?.(gd, `  cand ${f3(s)} → ${f3(cand[0])},${f3(cand[2])} bent off the wall to ${f3(fit[0])},${f3(fit[2])} (d ${f3(GF.d)} from there)`); cand = [fit[0], 0, fit[2]];
     }
     let other = false; const o2 = ox * ox + oz * oz;   // the walk there clear of every colleague's body (the man himself too: round one standing hard by, the far-side step goes through him)…
-    for (const p of g.guards) { if (p === gd || p.state === 'dead' || !p.char.alive || isHostile(gd.team, p.team)) continue; const q = p.char.pos; const u = clamp(((q[0] - c.posX) * ox + (q[2] - c.posZ) * oz) / o2, 0, 1); const wd = Math.hypot(c.posX + ox * u - q[0], c.posZ + oz * u - q[2]); if (wd < LINE_WALK_CLEAR_M) { other = true; dbg?.(gd, `  cand ${f3(s)} → ${f3(cand[0])},${f3(cand[2])} REJECTED: the walk passes ${f3(wd)} m from ${g.level.routes[p.routeI]?.name}`); break; } }
+    for (const p of g.guards) { if (p === gd || p.state === 'dead' || !p.char.alive || isHostile(gd.team, p.team)) continue; const q = p.char.pos; const u = clamp(((q[0] - c.pos[0]) * ox + (q[2] - c.pos[2]) * oz) / o2, 0, 1); const wd = Math.hypot(c.pos[0] + ox * u - q[0], c.pos[2] + oz * u - q[2]); if (wd < LINE_WALK_CLEAR_M) { other = true; dbg?.(gd, `  cand ${f3(s)} → ${f3(cand[0])},${f3(cand[2])} REJECTED: the walk passes ${f3(wd)} m from ${g.level.routes[p.routeI]?.name}`); break; } }
     if (other) continue;
     const from2: Vec3 = [from[0] + ox, from[1], from[2] + oz];   // …and the line from THERE clear of everybody else — with two colleagues either side of it, the step round one is a step in front of the other, and he see-sawed between the two spots for as long as the scrum held (the QA soak's man on the lot): then it is 'none', and he waits or pushes past
     for (const p of g.guards) { if (p === gd || p === o || p.state === 'dead' || !p.char.alive || isHostile(gd.team, p.team)) continue; const G2 = lineGeom(from2, aimAt, p); if (G2 && G2.t >= 0 && G2.t <= 1 + MUZZLE_PAST_M / L && G2.d <= G2.clear + LINE_STEP_MARGIN_M) { other = true; dbg?.(gd, `  cand ${f3(s)} → ${f3(cand[0])},${f3(cand[2])} REJECTED: ${g.level.routes[p.routeI]?.name} in the line from there (t ${f3(G2.t)} d ${f3(G2.d)})`); break; } }
@@ -847,7 +847,7 @@ const SHIELD_RELEASE_BEAT_MIN = 0.35, SHIELD_RELEASE_BEAT_JITTER = 0.3;
  *  line; lineOpen: the flank line stood open last frame (the 'I have him' is said on the edge); shots / orbitM: rounds fired and metres walked in this standoff
  *  (the QA soak reads both); way: the way round he is actually going now (0 = not yet; kept between re-plans so a walled arc's edge cannot see-saw him);
  *  cornered: no ring point either way round last time he looked; backing: inside the ring's edge last frame, backing off. */
-export interface Standoff { pair: Guard; since: number; side: -1 | 1; way: -1 | 0 | 1; orbitGoal: Vec3 | null; backedTo?: Vec3 | null; replanT: number; restT: number; seenT: number; lastBarkT: number; lineOpen: boolean; shots: number; orbitM: number; stalls: number; cornered: boolean; backing: boolean; }
+export interface Standoff { pair: Guard; since: number; side: -1 | 1; way: -1 | 0 | 1; orbitGoal: Vec3 | null; replanT: number; restT: number; seenT: number; lastBarkT: number; lineOpen: boolean; shots: number; orbitM: number; stalls: number; cornered: boolean; backing: boolean; }
 /** QA hook: set `log` and orbitGoalFor says what became of every ring point it looked at (the probes print it for a second or two round a re-plan they are chasing) */
 export const STANDOFF_DEBUG: { log: ((s: string) => void) | null } = { log: null };
 /** the pair as the observers reason about it this frame: the held man, Sam's hit axis and his, the point between (the ring's centre), the pair's facing (Sam's:
@@ -864,7 +864,7 @@ export function pairOf(g: Game): Pair | null {
   const held = H.g;
   const pc = g.player.char, hc = held.char; const sh = pc.bones.hips ?? pc.pos, hh = hc.bones.hips ?? hc.pos;
   const sam: Vec3 = [sh[0], 0, sh[2]], heldAxis: Vec3 = [hh[0], 0, hh[2]];
-  return { key: H, held, sam, heldAxis, centre: v3.lerp(sam, heldAxis, 0.5), facing: pc.bodyYaw, aim: [sam[0], pc.posY + STANDOFF_AIM_Y, sam[2]], vel: v3.copy(pc.vel) };
+  return { key: H, held, sam, heldAxis, centre: v3.lerp(sam, heldAxis, 0.5), facing: pc.bodyYaw, aim: [sam[0], pc.pos[1] + STANDOFF_AIM_Y, sam[2]], vel: v3.copy(pc.vel) };
 }
 /** holds already called in on the net (one call per hold, whoever sees it first), keyed by the hold itself; the floor's last standoff line (anybody's); each man's last line */
 const holdsCalled = new SideSet<object>('guards.holdsCalled'); const floorBarkT = new SideMap<Game, number>('guards.floorBarkT'); const lastBark = new SideMap<Guard, string>('guards.lastBark');
@@ -911,7 +911,7 @@ export const HELD_METER = { gapSecs: 0.5, movedM: 1 };
 const heldMeters = new SideMap<object, { vis: number; t: number; at: Vec3 }>('guards.heldMeters');
 function forgetHeldMeter(g: Game, gd: Guard) { const id = gd.char.id; g.lightForget(`heldC${id}`); g.lightForget(`heldH${id}`); }
 function heldVisibility(g: Game, P: Pair): number {
-  const hd = P.held; let m = heldMeters.get(P.key); const now = g.time; if (!m || (now - m.t > HELD_METER.gapSecs && Math.hypot(m.at[0] - hd.char.posX, m.at[2] - hd.char.posZ) > HELD_METER.movedM)) { m = undefined; forgetHeldMeter(g, hd); }
+  const hd = P.held; let m = heldMeters.get(P.key); const now = g.time; if (!m || (now - m.t > HELD_METER.gapSecs && Math.hypot(m.at[0] - hd.char.pos[0], m.at[2] - hd.char.pos[2]) > HELD_METER.movedM)) { m = undefined; forgetHeldMeter(g, hd); }
   if (m && m.t === now) return m.vis;
   const E = meterOf(g, hd.char, 'held');
   const dt = m ? Math.min(0.1, Math.max(0, now - m.t)) : 0.1; const vis = damp(m ? m.vis : g.visibilityOf(E), g.visibilityOf(E), 6, dt);
@@ -967,7 +967,7 @@ function hostageCall(g: Game, gd: Guard, P: Pair) {
 function pickSide(g: Game, gd: Guard, P: Pair): -1 | 1 {
   for (const o of g.guards) if (o !== gd && o.state !== 'dead' && o.standoff && o.standoff.pair === P.held) return (o.standoff.side > 0 ? -1 : 1);
   const nav = g.col.nav, C = P.centre, c = gd.char;
-  const brg = Math.atan2(c.posX - C[0], c.posZ - C[2]); const toRear = wrapAngle(P.facing + Math.PI - brg); const short: -1 | 1 = toRear < 0 ? -1 : 1;
+  const brg = Math.atan2(c.pos[0] - C[0], c.pos[2] - C[2]); const toRear = wrapAngle(P.facing + Math.PI - brg); const short: -1 | 1 = toRear < 0 ? -1 : 1;
   const room = (d: number) => { const span = d === short ? Math.abs(toRear) : 2 * Math.PI - Math.abs(toRear); let n = 0, full = true; for (let a = 20 * DEG; a <= span + 1e-6; a += 20 * DEG) { const b = brg + d * a; const p: Vec3 = [C[0] + Math.sin(b) * STANDOFF_ORBIT_M, 0, C[2] + Math.cos(b) * STANDOFF_ORBIT_M]; if (nav.isBlocked(p[0], p[2]) || g.col.segmentBlocked([p[0], 1.2, p[2]], [C[0], 1.2, C[2]])) { full = false; break; } n++; } return { n, full }; };
   const rs = room(short), rl = room(-short);
   return rs.full || rs.n >= rl.n ? short : (short > 0 ? -1 : 1);
@@ -979,7 +979,7 @@ function axisToSegment(from: Vec3, to: Vec3, o: Guard): number {
   const h = o.char.bones.hips ?? o.char.pos; const ax = h[0], az = h[2];
   const t = L2 > 1e-6 ? clamp(((ax - from[0]) * dx + (az - from[2]) * dz) / L2, 0, 1) : 0;
   const px = from[0] + dx * t, py = from[1] + dy * t, pz = from[2] + dz * t;
-  const y0 = o.char.posY + 0.05, y1 = o.char.bones.headTop?.[1] ?? o.char.posY + 1.75; const ddy = py < y0 ? y0 - py : py > y1 ? py - y1 : 0;
+  const y0 = o.char.pos[1] + 0.05, y1 = o.char.bones.headTop?.[1] ?? o.char.pos[1] + 1.75; const ddy = py < y0 ? y0 - py : py > y1 ? py - y1 : 0;
   return Math.hypot(px - ax, pz - az, ddy);
 }
 /** The fire rule (see the constants): may this man's round go, at Sam, past the colleague in his arm? ok, plus the three measures for whoever prints them: how far
@@ -987,7 +987,7 @@ function axisToSegment(from: Vec3, to: Vec3, o: Guard): number {
 export function flankShot(g: Game, gd: Guard, P: Pair): { ok: boolean; rear: number; clear: number; dist: number } {
   const c = gd.char; const from = c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]);
   const dist = v3.distXZ(c.pos, P.centre);
-  const brg = Math.atan2(c.posX - P.sam[0], c.posZ - P.sam[2]); const rear = Math.abs(wrapAngle(brg - (P.facing + Math.PI)));
+  const brg = Math.atan2(c.pos[0] - P.sam[0], c.pos[2] - P.sam[2]); const rear = Math.abs(wrapAngle(brg - (P.facing + Math.PI)));
   const to = P.aim; const d = v3.sub(to, from); const L = v3.len(d); const impact = L > SAM_R + 0.05 ? v3.mad(from, d, (L - SAM_R) / L) : to;   // where a true round stops: Sam's near side
   const clear = axisToSegment(from, impact, P.held);
   const ok = rear < STANDOFF_REAR_DEG * DEG && clear >= STANDOFF_CLEAR_M && dist <= STANDOFF_FIRE_MAX_M && dist >= STANDOFF_MIN_M - 0.6 && clearShot(g, c, to);
@@ -1036,7 +1036,7 @@ export function stepAlongPath(g: Game, gd: Guard, dt: number, speed: number): bo
   const c = gd.char; speed = teamLegs(g, gd, conditionPace(g, gd, speed));   // (condition.ts: a hurt man's legs, whoever asks for them; kitload.ts: × a teammate's card, inside that cap)
   if (unstickFirst(g, gd, dt)) return false;   // (a side-step off a stranded cell first, as followPath: un-stick)
   while (gd.pathI < gd.path.length) {
-    const wp = gd.path[gd.pathI]; const dx = wp[0] - c.posX, dz = wp[2] - c.posZ; const d = Math.hypot(dx, dz);
+    const wp = gd.path[gd.pathI]; const dx = wp[0] - c.pos[0], dz = wp[2] - c.pos[2]; const d = Math.hypot(dx, dz);
     if (d < (gd.pathI === gd.path.length - 1 ? 0.25 : 0.45)) { gd.pathI++; continue; }
     gd.speed = damp(gd.speed, speed * clamp((d + (gd.path.length - 1 - gd.pathI)) / 0.8, 0.35, 1), 4, dt);
     c.vel = [dx / d * gd.speed, 0, dz / d * gd.speed]; c.pos = v3.mad(c.pos, c.vel, dt);
@@ -1052,7 +1052,7 @@ export function stepAlongPath(g: Game, gd: Guard, dt: number, speed: number): bo
  *  cornered: he holds where he is and keeps talking. */
 function orbitGoalFor(g: Game, gd: Guard, S: Standoff, P: Pair): Vec3 | null {
   const nav = g.col.nav, c = gd.char, C = P.centre; const dbg = STANDOFF_DEBUG.log;
-  const dist = v3.distXZ(c.pos, C); const brg = Math.atan2(c.posX - C[0], c.posZ - C[2]);
+  const dist = v3.distXZ(c.pos, C); const brg = Math.atan2(c.pos[0] - C[0], c.pos[2] - C[2]);
   const toRear = wrapAngle(P.facing + Math.PI - brg); const short = toRear < 0 ? -1 : 1;
   const round = Math.abs(toRear) < STANDOFF_SETTLE_DEG * DEG;
   if (round && Math.abs(dist - STANDOFF_ORBIT_M) < 0.6) { S.cornered = false; dbg?.(`${gd.callsign}: round (toRear ${Math.round(toRear / DEG)}°, ${dist.toFixed(1)} m) — plant`); return null; }   // there: on the ring behind them
@@ -1072,7 +1072,7 @@ function orbitGoalFor(g: Game, gd: Guard, S: Standoff, P: Pair): Vec3 | null {
         const p: Vec3 = [C[0] + Math.sin(b) * r, 0, C[2] + Math.cos(b) * r]; const tag = dbg ? `${gd.callsign}: way ${way > 0 ? '+' : '−'} ${stepDeg}° r${r} → (${p[0].toFixed(1)}, ${p[2].toFixed(1)})` : '';
         if (nav.isBlocked(p[0], p[2]) || v3.distXZ(p, c.pos) < 0.5) { dbg?.(`${tag}: ${nav.isBlocked(p[0], p[2]) ? 'blocked cell' : 'where he stands'}`); continue; }
         if (g.col.segmentBlocked([p[0], 1.2, p[2]], [C[0], 1.2, C[2]])) { dbg?.(`${tag}: no sight of them`); continue; }                      // he must still have them from there
-        if (g.col.segmentBlocked([(p[0] + c.posX) / 2, 1.2, (p[2] + c.posZ) / 2], [C[0], 1.2, C[2]])) { dbg?.(`${tag}: out of their sight on the way`); continue; }   // …and, near enough, on the way there (a ring point seen through a doorway from the next room is not a flank: he would walk out of sight of them to reach it)
+        if (g.col.segmentBlocked([(p[0] + c.pos[0]) / 2, 1.2, (p[2] + c.pos[2]) / 2], [C[0], 1.2, C[2]])) { dbg?.(`${tag}: out of their sight on the way`); continue; }   // …and, near enough, on the way there (a ring point seen through a doorway from the next room is not a flank: he would walk out of sight of them to reach it)
         if (others.some(o => v3.distXZ(o.standoff!.orbitGoal ?? o.char.pos, p) < 1.5)) { dbg?.(`${tag}: a colleague's spot`); continue; }   // not onto (or on the way onto) a colleague's spot
         if (++plans > 12) { S.cornered = false; dbg?.(`${tag}: out of plans`); return dist > STANDOFF_MAX_M ? approachPoint(g, gd, C, false) : null; }   // (A* is the dear part: a dozen, then he stands this second out — or just comes over, from afar)
         const path = nav.findPath(c.pos, p); if (!path || !path.length) { dbg?.(`${tag}: no path`); continue; }
@@ -1112,15 +1112,15 @@ function approachPoint(g: Game, gd: Guard, C: Vec3, needSight = true): Vec3 | nu
  *  square off it (along the corridor when the wall is at his back), straight over open floor from where he stands; failing the ring, any spot a stride or two
  *  off that puts a metre more between them. null = boxed in: he stands his ground there. */
 function retreatGoal(g: Game, gd: Guard, P: Pair): Vec3 | null {
-  const nav = g.col.nav, c = gd.char, C = P.centre; const brg = Math.atan2(c.posX - C[0], c.posZ - C[2]);
-  const open = (p: Vec3) => !nav.isBlocked(p[0], p[2]) && nav.walkable(c.pos, p) && !g.col.solidBlocked([c.posX, 0.5, c.posZ], [p[0], 0.5, p[2]]);
+  const nav = g.col.nav, c = gd.char, C = P.centre; const brg = Math.atan2(c.pos[0] - C[0], c.pos[2] - C[2]);
+  const open = (p: Vec3) => !nav.isBlocked(p[0], p[2]) && nav.walkable(c.pos, p) && !g.col.solidBlocked([c.pos[0], 0.5, c.pos[2]], [p[0], 0.5, p[2]]);
   for (const da of [0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5]) for (const r of [STANDOFF_MIN_M + 0.7, STANDOFF_MIN_M + 0.2, STANDOFF_MIN_M + 1.4]) {
     const a = brg + da; const p: Vec3 = [C[0] + Math.sin(a) * r, 0, C[2] + Math.cos(a) * r];
     if (open(p)) return p;
   }
   const d0 = v3.distXZ(c.pos, C); let best: Vec3 | null = null, bd = d0 + 0.8;   // no way onto the ring from here: whatever gains the most ground off them within a couple of strides
   for (let i = 0; i < 16; i++) for (const s of [2.0, 1.2]) {
-    const a = i * Math.PI / 8; const p: Vec3 = [c.posX + Math.sin(a) * s, 0, c.posZ + Math.cos(a) * s];
+    const a = i * Math.PI / 8; const p: Vec3 = [c.pos[0] + Math.sin(a) * s, 0, c.pos[2] + Math.cos(a) * s];
     const d = v3.distXZ(p, C); if (d > bd && open(p)) { bd = d; best = p; }
   }
   return best;
@@ -1140,7 +1140,7 @@ function standoffAlert(g: Game, gd: Guard, dt: number, P: Pair): { move: number;
   if (fs.ok && !S.lineOpen) standoffBark(g, gd, 'line', g.time - S.lastBarkT > 2.5);   // (the edge is worth saying — not every other second while Sam swings the man to and fro)
   S.lineOpen = fs.ok;
   // --- feet ---
-  let move = 0; const far = dist > STANDOFF_MAX_M; const before0 = c.posX, before2 = c.posZ;
+  let move = 0; const far = dist > STANDOFF_MAX_M; const before0 = c.pos[0], before2 = c.pos[2];
   S.replanT -= dt; S.restT = Math.max(0, S.restT - dt);
   const setGoal = (p: Vec3 | null) => { if (!p) { if (S.orbitGoal) { gd.path = []; gd.pathGoal = null; } S.orbitGoal = null; return; } if (!S.orbitGoal || v3.distXZ(S.orbitGoal, p) > 0.3) gd.stallRef = null; S.orbitGoal = p; };
   // The pistol known in the hold (gunhold.ts): no ring in his line of fire — cover, the way round out of his line, the line at his back. null = the ring below.
@@ -1156,8 +1156,8 @@ function standoffAlert(g: Game, gd: Guard, dt: number, P: Pair): { move: number;
   let jogging = false; let lookAt = aim;   // on the jog over from across the floor: the legs have the body, and where his eyes and gun go (the pair if the run keeps them anywhere ahead of him, else up his path)
   if (GH) { move = GH.move; jogging = GH.run; if (GH.look) lookAt = GH.look; }
   else if (S.orbitGoal) {
-    if (backing) { const was = gd.pathGoal, o = S.orbitGoal; if (S.backedTo !== o || !was || was[0] !== o[0] || was[1] !== o[1] || was[2] !== o[2]) { gd.path = [o]; gd.pathI = 0; gd.pathGoal = o; S.backedTo = o; } }   // (`backedTo`: this branch has already laid this step, and nothing has set a goal since. The back-off is a straight step over floor retreatGoal has checked, not a planned walk)
-    else { S.backedTo = null; goTo(g, gd, S.orbitGoal); }
+    if (backing) { if (gd.pathGoal !== S.orbitGoal) { gd.path = [S.orbitGoal]; gd.pathI = 0; gd.pathGoal = S.orbitGoal; } }   // (the back-off is a straight step over floor retreatGoal has checked, not a planned walk)
+    else goTo(g, gd, S.orbitGoal);
     const done = far ? followPath(g, gd, dt, pace) : stepAlongPath(g, gd, dt, pace); move = gd.speed;   // from across the floor he simply comes over; inside the ring's reach he side-steps with his chest to them
     if (done) { setGoal(null); S.replanT = Math.min(S.replanT, 0.25); }
     else if (notGettingAnywhere(gd, dt, STANDOFF_STALL_SECS)) { setGoal(null); gd.stallRef = null; S.restT = STANDOFF_REST_SECS; if (++S.stalls % 2 === 0) { S.side = S.side > 0 ? -1 : 1; S.way = S.way > 0 ? -1 : S.way < 0 ? 1 : 0; } }   // (twice running: try the other way round)
@@ -1169,18 +1169,18 @@ function standoffAlert(g: Game, gd: Guard, dt: number, P: Pair): { move: number;
       // eyes and gun stay on the pair while the run keeps them anywhere ahead of him; a leg that turns its back on them he runs looking where he is going
       // (four seconds out of his view and it is the plain chase on where they were, as from anywhere — he cannot watch them through the doorway behind him).
       jogging = true;
-      const wp = gd.path[gd.pathI]; const yawPath = Math.atan2(wp[0] - c.posX, wp[2] - c.posZ);
-      if (Math.abs(wrapAngle(Math.atan2(aim[0] - c.posX, aim[2] - c.posZ) - yawPath)) > 75 * DEG) lookAt = [c.posX + Math.sin(yawPath) * 4, aim[1], c.posZ + Math.cos(yawPath) * 4];
+      const wp = gd.path[gd.pathI]; const yawPath = Math.atan2(wp[0] - c.pos[0], wp[2] - c.pos[2]);
+      if (Math.abs(wrapAngle(Math.atan2(aim[0] - c.pos[0], aim[2] - c.pos[2]) - yawPath)) > 75 * DEG) lookAt = [c.pos[0] + Math.sin(yawPath) * 4, aim[1], c.pos[2] + Math.cos(yawPath) * 4];
     }
   } else { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0]; gd.stallRef = null; }
-  S.orbitM += Math.hypot(c.posX - before0, c.posZ - before2);
-  if (!jogging) c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(lookAt[0] - c.posX, lookAt[2] - c.posZ), 4 * dt);   // chest to them, always: the legs side-step and back-pedal under it — bar the jog over from across the floor (above)
+  S.orbitM += Math.hypot(c.pos[0] - before0, c.pos[2] - before2);
+  if (!jogging) c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(lookAt[0] - c.pos[0], lookAt[2] - c.pos[2]), 4 * dt);   // chest to them, always: the legs side-step and back-pedal under it — bar the jog over from across the floor (above)
   // --- the round: with muzzle discipline (the default) there is none while the shield stands — the flank line found, he plants on it with the pistol up on the
   //     back of Sam's neck and it stays silent; and a beat is kept in hand for when the shield goes (fireCd floored every frame of the standoff, so whichever way
   //     the hold ends, and whether or not he happened to be looking that instant, nothing leaves inside BEAT_MIN of his last frame in it). Discipline off = the
   //     rule before: single aimed shots, slow, at Sam only, only down the flank line ---
   gd.fireCd -= dt;
-  const facingErr = Math.abs(wrapAngle(Math.atan2(aim[0] - c.posX, aim[2] - c.posZ) - c.gunYaw));   // (gunYaw: aimYaw — or, turning under weight (character.ts TURN), where the gun has got to)
+  const facingErr = Math.abs(wrapAngle(Math.atan2(aim[0] - c.pos[0], aim[2] - c.pos[2]) - c.gunYaw));   // (gunYaw: aimYaw — or, turning under weight (character.ts TURN), where the gun has got to)
   gd.weapon.burst = null;   // (rifles: a deliberate round past a colleague's head is never a burst — a rifleman here fires single rounds on the standoff's cadence like anybody, and one begun before he walked in on the hold is over)
   const held = T.muzzleDiscipline && !(GH && gunHoldPhase(g, gd) === 'line' && gunHoldFree(g, P));   // (gunhold.ts: Sam has fired from behind the man — the line at his back, found, is used)
   if (gd.reloadT >= 0) tickReloadBeat(g, gd, dt);
@@ -1417,17 +1417,17 @@ function freeCellNear(g: Game, from: Vec3, reach: number, test: 'walk' | 'room')
 }
 /** Put him ON the free cell centre `to` (or the nearest free one in the room / at all, failing that) here and now — the last resort, counted and logged, never spoken. */
 function unstickSnap(g: Game, gd: Guard, to: Vec3 | null, why: string) {
-  const c = gd.char; const p = to ?? freeCellNear(g, c.pos, UNSTICK_SNAP_REACH_M, 'room') ?? g.col.nav.nearestFreePoint(c.posX, c.posZ);
+  const c = gd.char; const p = to ?? freeCellNear(g, c.pos, UNSTICK_SNAP_REACH_M, 'room') ?? g.col.nav.nearestFreePoint(c.pos[0], c.pos[2]);
   if (!p) return;   // (nothing free within rings of him: not a floor this level has)
-  LINE_DEBUG.log?.(gd, `UNSTICK snap ${v3.distXZ(c.pos, p).toFixed(2)} m (${c.posX.toFixed(2)},${c.posZ.toFixed(2)}) → (${p[0].toFixed(2)},${p[2].toFixed(2)}): ${why}`);
-  c.posX = p[0]; c.posZ = p[2]; c.vel = [0, 0, 0]; gd.speed = 0; gd.lastPos = v3.copy(c.pos); gd.stallRef = null; gd.stuckT = 0;
+  LINE_DEBUG.log?.(gd, `UNSTICK snap ${v3.distXZ(c.pos, p).toFixed(2)} m (${c.pos[0].toFixed(2)},${c.pos[2].toFixed(2)}) → (${p[0].toFixed(2)},${p[2].toFixed(2)}): ${why}`);
+  c.pos[0] = p[0]; c.pos[2] = p[2]; c.vel = [0, 0, 0]; gd.speed = 0; gd.lastPos = v3.copy(c.pos); gd.stallRef = null; gd.stuckT = 0;
   UNSTICK.snaps++; UNSTICK.lastSnapT = g.time; UNSTICK.lastSnapWho = gd;
 }
 /** The side-step he has going, if it still means anything: dropped here (null) once he stands on free floor outside its target cell — carried or shoved there,
  *  or walked off by the fight's own footwork — since a plan from where he is will do and there is nothing at the old spot to walk back for. */
 function liveLeg(g: Game, gd: Guard): UnstickLeg | null {
   const U = unstickLegs.get(gd); if (!U) return null;
-  if (v3.distXZ(gd.char.pos, U.to) > 0.36 && !g.col.nav.isBlocked(gd.char.posX, gd.char.posZ)) { unstickLegs.delete(gd); return null; }
+  if (v3.distXZ(gd.char.pos, U.to) > 0.36 && !g.col.nav.isBlocked(gd.char.pos[0], gd.char.pos[2])) { unstickLegs.delete(gd); return null; }
   return U;
 }
 /** If he stands stranded (strandedAt) and has no side-step going, begin one: the leg to the nearest reachable free cell — or, nothing free within reach, the snap.
@@ -1436,15 +1436,15 @@ function liveLeg(g: Game, gd: Guard): UnstickLeg | null {
 function unstickBegin(g: Game, gd: Guard): 'leg' | 'snapped' | 'no' {
   const c = gd.char;
   if (liveLeg(g, gd)) return 'leg';
-  if (gd.state === 'dead' || gd.held || !strandedAt(g, c.posX, c.posZ) || g.time < (unstickRetryAt.get(gd) ?? -1)) return 'no';
+  if (gd.state === 'dead' || gd.held || !strandedAt(g, c.pos[0], c.pos[2]) || g.time < (unstickRetryAt.get(gd) ?? -1)) return 'no';
   const to = freeCellNear(g, c.pos, UNSTICK_REACH_M, 'walk');
   if (!to) {
     unstickSnap(g, gd, null, 'stranded, no free cell within reach he can walk to');
-    if (strandedAt(g, c.posX, c.posZ)) { unstickRetryAt.set(gd, g.time + 2); return 'no'; }   // (nowhere within rings of him to put him either — no floor this level has, but a plan failing every frame must not scan for one every frame)
+    if (strandedAt(g, c.pos[0], c.pos[2])) { unstickRetryAt.set(gd, g.time + 2); return 'no'; }   // (nowhere within rings of him to put him either — no floor this level has, but a plan failing every frame must not scan for one every frame)
     return 'snapped';
   }
   unstickLegs.set(gd, { to, best: v3.distXZ(c.pos, to), stallT: 0 }); UNSTICK.legs++;
-  LINE_DEBUG.log?.(gd, `UNSTICK leg from (${c.posX.toFixed(2)},${c.posZ.toFixed(2)}) to the free cell at (${to[0].toFixed(2)},${to[2].toFixed(2)}), ${v3.distXZ(c.pos, to).toFixed(2)} m`);
+  LINE_DEBUG.log?.(gd, `UNSTICK leg from (${c.pos[0].toFixed(2)},${c.pos[2].toFixed(2)}) to the free cell at (${to[0].toFixed(2)},${to[2].toFixed(2)}), ${v3.distXZ(c.pos, to).toFixed(2)} m`);
   return 'leg';
 }
 /** One frame of the side-step: straight at the free cell's centre at a walk (his facing left to whoever owns it this frame — a shuffle, not a turn), through the
@@ -1452,17 +1452,17 @@ function unstickBegin(g: Game, gd: Guard): 'leg' | 'snapped' | 'no' {
  *  is standing on some OTHER free cell already (the fight's own side-step took him off across free floor once the leg had him over the line: nothing to walk
  *  back for); 'stale' if he has been carried out of reach of it since (a shove, the arm again) — either way the caller drops the leg and plans afresh. */
 function unstickStep(g: Game, gd: Guard, U: UnstickLeg, dt: number): 'walking' | 'done' | 'stale' {
-  const c = gd.char; const dx = U.to[0] - c.posX, dz = U.to[2] - c.posZ; const d = Math.hypot(dx, dz);
+  const c = gd.char; const dx = U.to[0] - c.pos[0], dz = U.to[2] - c.pos[2]; const d = Math.hypot(dx, dz);
   gd.lastPos = v3.copy(c.pos);   // (followPath's wedge watchdog measures from here when the plan proper takes over)
-  if (d < UNSTICK_DONE_M || (d > 0.36 && !g.col.nav.isBlocked(c.posX, c.posZ))) return 'done';   // (0.36: outside the target cell altogether — inside it he finishes onto the centre, where he is sure to fit and to plan from)
+  if (d < UNSTICK_DONE_M || (d > 0.36 && !g.col.nav.isBlocked(c.pos[0], c.pos[2]))) return 'done';   // (0.36: outside the target cell altogether — inside it he finishes onto the centre, where he is sure to fit and to plan from)
   if (d > UNSTICK_REACH_M + 0.6) return 'stale';
   if (d < U.best - 0.02) { U.best = d; U.stallT = 0; }
   else if ((U.stallT += dt) > UNSTICK_STALL_SECS) {   // a second of stepping and no nearer: over the line onto free floor already (a colleague standing on the very spot keeps him off its centre) that will do — plan from here; still on blocked floor, the snap
-    if (g.col.nav.isBlocked(c.posX, c.posZ)) unstickSnap(g, gd, U.to, `no nearer than ${U.best.toFixed(2)} m in ${UNSTICK_STALL_SECS} s of stepping`);
+    if (g.col.nav.isBlocked(c.pos[0], c.pos[2])) unstickSnap(g, gd, U.to, `no nearer than ${U.best.toFixed(2)} m in ${UNSTICK_STALL_SECS} s of stepping`);
     return 'done';
   }
   gd.speed = damp(gd.speed, g.tune.guardWalk * clamp(d / 0.3, 0.4, 1), 6, dt);
-  const step = Math.min(d, gd.speed * dt); c.posX += dx / d * step; c.posZ += dz / d * step; c.vel = [dx / d * gd.speed, 0, dz / d * gd.speed];
+  const step = Math.min(d, gd.speed * dt); c.pos[0] += dx / d * step; c.pos[2] += dz / d * step; c.vel = [dx / d * gd.speed, 0, dz / d * gd.speed];
   return 'walking';
 }
 /** The leg ahead of any path-following this frame (followPath, stepAlongPath): walk it if there is one; when it ends, plan the remembered goal afresh from the free
@@ -1559,11 +1559,11 @@ const litSeen = new SideMap<Guard, { t: number; lit: boolean; A: unknown; tgt: u
 function litPlace(g: Game, gd: Guard, A: ReturnType<Game['orders']['of']>, tgt: Guard | null, pt: Vec3 | null): boolean {
   if (!LIGHTS.litOff) return false;
   const key = tgt ?? (pt ? 'pt' : null), was = litSeen.get(gd); if (was && was.A === A && was.tgt === key && g.time - was.t >= 0 && g.time - was.t < 0.5) return was.lit;
-  const c = gd.char, eye: Vec3 = [c.posX, 1.5, c.posZ];
+  const c = gd.char, eye: Vec3 = [c.pos[0], 1.5, c.pos[2]];
   const carried = () => true;   // (the place's own lights only: nothing anybody carries)
   const dark = (x: number, z: number) => g.visibilityOf(lightEstimateAt(g, [x, 1.2, z], carried)) < LIGHTS.litAt;
-  let lit = !dark(c.posX, c.posZ);
-  if (lit && tgt) lit = !dark(tgt.char.posX, tgt.char.posZ);
+  let lit = !dark(c.pos[0], c.pos[2]);
+  if (lit && tgt) lit = !dark(tgt.char.pos[0], tgt.char.pos[2]);
   if (lit && pt) lit = !dark(pt[0], pt[2]);
   if (lit && A?.post && !A.arrived && v3.distXZ(c.pos, A.post) < LIGHTS.litMarkM) lit = !dark(A.post[0], A.post[2]);
   for (const [off, step] of [[0, 1], [-0.2, 3], [0.2, 3]]) { if (!lit) break; const fx = Math.sin(c.aimYaw + off), fz = Math.cos(c.aimYaw + off);
@@ -1577,7 +1577,7 @@ function looksIntoDark(g: Game, gd: Guard, A: ReturnType<Game['orders']['of']>):
   if (!LIGHTS.lookDark || !A || !A.arrived || !A.post || gd.muzzleDown || A.low || gd.visibility < LIGHTS.lookLit) return false;
   if (!(A.search || A.order === 'hold' || A.order === 'cover') || gd.script?.upper === 'none') return false;   // (men an entry left in a room, men Sam posted: never a stack, never the file)
   const was = darkSeen.get(gd); if (was && g.time - was.t >= 0 && g.time - was.t < 0.5) return was.dark;
-  const c = gd.char, eye: Vec3 = [c.posX, 1.5, c.posZ], fx = Math.sin(c.aimYaw), fz = Math.cos(c.aimYaw); let dark = false;
+  const c = gd.char, eye: Vec3 = [c.pos[0], 1.5, c.pos[2]], fx = Math.sin(c.aimYaw), fz = Math.cos(c.aimYaw); let dark = false;
   const ours = (owner: number) => g.guards.some(x => x.char.id === owner && x.team === 'operative') || owner === g.player.char.id;
   for (let r = 4; r <= LIGHTS.lookM + 1e-6; r += 3) { const P: Vec3 = [eye[0] + fx * r, 1.2, eye[2] + fz * r]; if (g.col.segmentBlocked(eye, P)) break;
     if (g.visibilityOf(lightEstimateAt(g, P, ours)) < LIGHTS.lookBelow) { dark = true; break; } }
@@ -1643,7 +1643,7 @@ function wallDark(g: Game, gd: Guard, held: Vec3 | undefined): boolean {
   const p = gd.flashlight.pos, d = gd.flashlight.dir, t = g.time;
   const o = burnsFrom(g, held, p), fan = beamFan(d);   // (a lens carried through the wall he stands at lights from this side of it — attachFlashlight, lighting.ts: asked from where it will burn)
   const hl = Math.hypot(d[0], d[2]) || 1, manIn = (m: number) => g.guards.some(x => { if (x === gd || x.state === 'dead' || x.team === 'operative') return false;   // (somebody not of his side in the beam, this side of what it ends on: a light with a man in it is not wasted — the walls are asked of the statics only)
-    const vx = x.char.posX - o[0], vz = x.char.posZ - o[2], l = Math.hypot(vx, vz); return l < m + 0.5 && (l < 0.3 || (vx * d[0] + vz * d[2]) / (l * hl) > 0.9); });
+    const vx = x.char.pos[0] - o[0], vz = x.char.pos[2] - o[2], l = Math.hypot(vx, vz); return l < m + 0.5 && (l < 0.3 || (vx * d[0] + vz * d[2]) / (l * hl) > 0.9); });
   const ends = (m: number, kept: boolean) => beamWalled(g, o, fan, m, kept) && !manIn(m);
   const was = wallSeen.get(gd), s = was && t >= was.t && t - was.t <= 0.25 ? was : { t, since: t - LIGHTS.wallSecs, dark: false };   // (no reading a moment ago — a fresh man, a clock put back: this frame's reading stands at once)
   const near = ends(s.dark ? LIGHTS.wallBackM : LIGHTS.wallM, s.dark), since = near ? s.since : t, dark = near && (s.dark || t - since >= LIGHTS.wallSecs - 1e-9);
@@ -1728,20 +1728,20 @@ export function followPath(g: Game, gd: Guard, dt: number, speed: number): boole
   if (DOORMANNERS.on && !runnerFled(gd)) { const sp = doorwayGate(g, gd, dt, speed); if (sp === null) return false; speed = sp; }   // doorway manners (doorway.ts): one of his side in the frame ahead, or just in front of him by a door — he follows at a gap, or waits off a jamb; null = the wait has his feet
   if (DARKDOOR.on && !runnerFled(gd)) { const sp = darkDoorGate(g, gd, dt, speed); if (sp === null) return false; speed = sp; }   // not in there alone (darkdoor.ts): a green man, alarmed and alone, at the doorway of a dark room — he stops beside the frame and waits for a mate; null = the wait has his feet (his pace back at once for everybody else, and with morale off)
   // progress watchdog: if we wanted to move but barely did (wedged on a prop corner / door edge), sidestep, then repath
-  const moved = Math.hypot(c.posX - gd.lastPosX, c.posZ - gd.lastPosZ); gd.lastPos = v3.copy(c.pos);
+  const moved = Math.hypot(c.pos[0] - gd.lastPos[0], c.pos[2] - gd.lastPos[2]); gd.lastPos = v3.copy(c.pos);
   if (gd.speed > 0.3 && moved < gd.speed * dt * 0.25) gd.stuckT += dt; else gd.stuckT = Math.max(0, gd.stuckT - dt * 2);
   if (gd.stuckT > 0.7 && gd.pathI < gd.path.length) {
-    const wp = gd.path[gd.pathI]; const dx = wp[0] - c.posX, dz = wp[2] - c.posZ; const d = Math.hypot(dx, dz) || 1;
+    const wp = gd.path[gd.pathI]; const dx = wp[0] - c.pos[0], dz = wp[2] - c.pos[2]; const d = Math.hypot(dx, dz) || 1;
     const side = (gd.stuckN++ & 1) ? 1 : -1; const px = -dz / d * side, pz = dx / d * side;
-    const cand: Vec3 = [c.posX + px * 0.7 + dx / d * 0.2, 0, c.posZ + pz * 0.7 + dz / d * 0.2];
+    const cand: Vec3 = [c.pos[0] + px * 0.7 + dx / d * 0.2, 0, c.pos[2] + pz * 0.7 + dz / d * 0.2];
     if (!g.col.nav.isBlocked(cand[0], cand[2])) gd.path.splice(gd.pathI, 0, cand);
     else if (gd.pathGoal) { const goal = gd.pathGoal; gd.pathGoal = null; goTo(g, gd, goal, true); }
     gd.stuckT = 0;
   }
   while (gd.pathI < gd.path.length) {
-    const wp = gd.path[gd.pathI]; const d = Math.hypot(wp[0] - c.posX, wp[2] - c.posZ);
+    const wp = gd.path[gd.pathI]; const d = Math.hypot(wp[0] - c.pos[0], wp[2] - c.pos[2]);
     if (d < (gd.pathI === gd.path.length - 1 ? 0.25 : 0.45)) { gd.pathI++; continue; }
-    const dir: Vec3 = [(wp[0] - c.posX) / d, 0, (wp[2] - c.posZ) / d];
+    const dir: Vec3 = [(wp[0] - c.pos[0]) / d, 0, (wp[2] - c.pos[2]) / d];
     // slow down when facing away from the movement direction and near the goal
     const yawTo = Math.atan2(dir[0], dir[2]); const facing = Math.cos(wrapAngle(yawTo - c.bodyYaw));
     const remaining = d + (gd.path.length - 1 - gd.pathI) * 1.0;
@@ -1915,7 +1915,7 @@ function dealSpots(g: Game, gd: Guard, P: SearchPlan) {
 /** The plan for this man's search, built on its first frame round his fix (his own feet if he has none) and rebuilt if the fix has since moved a couple of
  *  metres (a creak placed somewhere else while he searched); plausibility re-flooded every SEARCH_REFLOOD_SECS. */
 export function searchPlanFor(g: Game, gd: Guard): SearchPlan {
-  const fix: Vec3 = gd.lastKnown ? [gd.lastKnown[0], 0, gd.lastKnown[2]] : [gd.char.posX, 0, gd.char.posZ];
+  const fix: Vec3 = gd.lastKnown ? [gd.lastKnown[0], 0, gd.lastKnown[2]] : [gd.char.pos[0], 0, gd.char.pos[2]];
   let P = gd.searchPlan;
   if (P && v3.distXZ(P.fix, fix) > 2.0) P = null;   // a new place to search: deal again round it
   if (!P) {
@@ -2158,7 +2158,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
       const rate = F === 'player' ? sightGain(g, gd, dist) : sightGainOn(g, gd, F as Guard, dist);
       if (rate > 0.05) {   // a faint glimpse updates where to look — and which way he is actually going: displacement over the last sighting, not the pace he is asking of his legs (held by a leaf or a desk he 'sprints' on the spot) — only a real sighting refreshes the licence to shoot
         const pp = fc.pos; const since = g.time - gd.sightT;
-        gd.sightVel = since > 1e-4 && since < 0.1 ? [(pp[0] - gd.sightPosX) / since, 0, (pp[2] - gd.sightPosZ) / since] : [0, 0, 0];
+        gd.sightVel = since > 1e-4 && since < 0.1 ? [(pp[0] - gd.sightPos[0]) / since, 0, (pp[2] - gd.sightPos[2]) / since] : [0, 0, 0];
         const was = gd.awareness; gd.awareness = clamp(gd.awareness + rate * dt, 0, 1); if (!farFaint(gd, dist, was) && !attentionAside(g, gd, pp, gd.awareness - was)) gd.lastKnown = v3.copy(pp); gd.sightPos = v3.copy(pp); gd.sightT = g.time; seen = rate > 0.25; if (seen) gd.lastSeenT = g.time;   // (farFaint: a glimpse from past the old reach is no place to walk to until it is what has him looking)
         gd.alertBest = 1e9; gd.alertStallT = 0; gd.alertRef = null; gd.chaseT = 0;   // (eyes on him: whatever chase follows starts its no-progress clocks from here, not from a stale count)
       }
@@ -2223,7 +2223,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
     // encounter — he draws, walks up to it, looks about, and talks himself out of it like any other unexplained thing (a broken lock cannot be relocked, lockdown or not)
     if (staff && gd.state === 'patrol' && !gd.hold && !g.quietUtility) for (const d of g.doors.list) {   // (not under the tour: its guards stay on their marks; the staff's doors are the staff's business)
       if (!d.lockBroken || d.noticed) continue;
-      const f = d.frameCentre; const dx = f[0] - c.posX, dz = f[2] - c.posZ; const dd = Math.hypot(dx, dz); if (dd > 2.2 || dd < 1e-3) continue;
+      const f = d.frameCentre; const dx = f[0] - c.pos[0], dz = f[2] - c.pos[2]; const dd = Math.hypot(dx, dz); if (dd > 2.2 || dd < 1e-3) continue;
       const look = c.chestDir; if ((look[0] * dx + look[2] * dz) / dd < Math.cos(75 * DEG)) continue;
       const spot: Vec3 = d.off ? [f[0] - dx / dd * 0.45, 0, f[2] - dz / dd * 0.45] : g.doors.workSpot(d, c.pos, 0.45, d.def.width * 0.5).pos;   // just his side of the doorway's middle (short of the leaf, so the leaf itself never hides 'the door')
       const eye = c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]); if (g.col.segmentBlocked(eye, [spot[0], 1.0, spot[2]])) continue;
@@ -2259,7 +2259,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   if (staggered) gd.reactT = Math.max(gd.reactT, gd.staggerUntil - g.time);
   { const st = startleLeft(g, gd); if (st > 0) gd.reactT = Math.max(gd.reactT, st); }   // a start (startle.ts; 0 with nobody startled): rooted the same way for its beat, whatever else caps the clock meanwhile
   trackGuard(g, gd, dt);   // the aim-settle model (aim.ts): his track on Sam this frame — off this frame's sight, state and reaction beat, last frame's aim yaw (the same the fire gate reads) — before any branch below asks aimReady / guardRound
-  const p0x = c.posX, p0z = c.posZ;   // where this frame's feet start: the collision sweep at the bottom walks him from here (collideGuard)
+  const p0x = c.pos[0], p0z = c.pos[2];   // where this frame's feet start: the collision sweep at the bottom walks him from here (collideGuard)
   // (alarm episodes are counted in updateMission: someone going to alert while nobody was)       // mission stats: every time a man goes to alert (from patrol, suspicion or a lapsed search alike)
 
   // --- behaviour ---
@@ -2382,7 +2382,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         // aim at where his trunk IS, not his root column: pressed to a wall (or leaning into a peek) the pose carries hips and chest ~30 cm off the root, and a
         // line down the root met neither a capsule nor bodyHit's hips-centred cylinder — a wall-hugging Sam was bullet-proof at 1.6 m (hold-draw lane's soak find)
         const crouched = foeCrouched(g, gd);   // (Sam's crouch; a hostile AI man's head-down / a drill's knee — teams)
-        { const trunk = pc.bones.spine2 ?? pc.bones.hips; aimAt = [trunk ? trunk[0] : pc.posX, pc.posY + (crouched ? 0.8 : 1.25), trunk ? trunk[2] : pc.posZ]; }
+        { const trunk = pc.bones.spine2 ?? pc.bones.hips; aimAt = [trunk ? trunk[0] : pc.pos[0], pc.pos[1] + (crouched ? 0.8 : 1.25), trunk ? trunk[2] : pc.pos[2]]; }
         let blocked = false;
         if ((!gd.pinned || paneFirst(g, c, aimAt)) && !clearShot(g, c, aimAt)) {   // (paneFirst: the one line a pinned man is asked about — ?glassfoes=0 and standing glass first in it)
           const head = pc.bones.head ?? v3.add(pc.pos, [0, crouched ? 1.05 : 1.6, 0]);
@@ -2390,13 +2390,13 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         }
         if (!blocked && !gd.pinned && boreFouled(g, gd)) blocked = true;   // two of his rounds running went into the frame from this spot — a hand off the muzzle, or anything on his own half of the line (aim.ts noteBore): the shoulder's line clears the jamb, the bore does not — no line from here, he closes / steps for a real one (model off: never)
         if (blocked && coverSeen(g, gd, gd.foe, aimAt)) blocked = false;   // (coverfire.ts: what stands in the line is breakable and he knows the man is behind it — the rounds go into it, by every gate below)
-        const facingErr = Math.abs(wrapAngle(Math.atan2(aimAt[0] - c.posX, aimAt[2] - c.posZ) - c.gunYaw));   // (gunYaw: aimYaw — or, turning under weight (character.ts TURN), where the gun has got to)
+        const facingErr = Math.abs(wrapAngle(Math.atan2(aimAt[0] - c.pos[0], aimAt[2] - c.pos[2]) - c.gunYaw));   // (gunYaw: aimYaw — or, turning under weight (character.ts TURN), where the gun has got to)
         const walled = !gd.pinned && gunWallCheck(g, gd, 'aim', aimAt, dt, true);   // (gunwall.ts: a wall, a jamb or a leaf inside the raised gun's reach on this line — it is at the low ready, and that is no line from here either)
         const poked = !gd.pinned && (armThrough(g, c) || walled);   // his pistol out through the far face of the leaf he is pressed to, or into the jamb (fireWeapon puts that round into the wood): never fired, and once his aim has settled it counts as no line from here — he steps clear
         if (poked && facingErr < 0.3) blocked = true;
         gd.shotBlockedT = blocked ? gd.shotBlockedT + dt : 0;
         const inLine = muzzleCheck(g, gd, aimAt, dt);   // a colleague between his gun and Sam (or just beyond him): the pistol goes to the low ready and stays there while he is in the line — worked out here, before the round, on the line he means to fire
-        const crossingMan = !!inLine && Math.hypot(inLine.char.velX, inLine.char.velZ) > 0.4;
+        const crossingMan = !!inLine && Math.hypot(inLine.char.vel[0], inLine.char.vel[2]) > 0.4;
         gd.lineInT = inLine ? gd.lineInT + dt : 0;
         // keep some distance, otherwise hold position and fire (a pinned guard fires from where he was put) — unless nothing fired from here can reach him: then he
         // closes in along the path (to Sam himself: it threads the doorway square-on and clears the leaf) and plants again the moment a line opens. Blocked with
@@ -2418,10 +2418,10 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
           if (st === 'step') { stepping = true; moveSpeed = gd.speed; }
           else if (st === 'none' && dist > LINE_PUSH_MIN_M) { goTo(g, gd, pc.pos); followPath(g, gd, dt, T.guardInvestigate); moveSpeed = gd.speed; }   // nowhere to step that opens it (the corridor too narrow for the angle): up the path past the man until it does
           else { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0]; }
-          dbg?.(gd, `ALERT line (dist ${dist.toFixed(2)} inLine ${inLine ? g.level.routes[inLine.routeI]?.name : '-'} crossing ${crossingMan} lineInT ${gd.lineInT.toFixed(2)}) → ${st}${st === 'none' ? (dist > LINE_PUSH_MIN_M ? ' → push up the path ' + gd.pathI + '/' + gd.path.length : ' → wait') : ''} pos ${c.posX.toFixed(3)},${c.posZ.toFixed(3)}`);
+          dbg?.(gd, `ALERT line (dist ${dist.toFixed(2)} inLine ${inLine ? g.level.routes[inLine.routeI]?.name : '-'} crossing ${crossingMan} lineInT ${gd.lineInT.toFixed(2)}) → ${st}${st === 'none' ? (dist > LINE_PUSH_MIN_M ? ' → push up the path ' + gd.pathI + '/' + gd.path.length : ' → wait') : ''} pos ${c.pos[0].toFixed(3)},${c.pos[2].toFixed(3)}`);
         }
         else if (DOORMANNERS.on && offThreshold(g, gd, aimAt, dt, true)) moveSpeed = gd.speed;   // planted in an open doorway (doorway.ts): through it and off the opening, to a spot with the shot
-        else { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0]; dbg?.(gd, `ALERT hold+fire (dist ${dist.toFixed(2)} muzzleDown ${gd.muzzleDown} inLine ${inLine ? g.level.routes[inLine.routeI]?.name : '-'} crossing ${crossingMan} lineInT ${gd.lineInT.toFixed(2)} fireCd ${gd.fireCd.toFixed(2)}) pos ${c.posX.toFixed(3)},${c.posZ.toFixed(3)}`); }
+        else { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0]; dbg?.(gd, `ALERT hold+fire (dist ${dist.toFixed(2)} muzzleDown ${gd.muzzleDown} inLine ${inLine ? g.level.routes[inLine.routeI]?.name : '-'} crossing ${crossingMan} lineInT ${gd.lineInT.toFixed(2)} fireCd ${gd.fireCd.toFixed(2)}) pos ${c.pos[0].toFixed(3)},${c.pos[2].toFixed(3)}`); }
         if (!(blocked && !closing)) { if (!stepping) gd.stallRef = null; gd.chaseT = 0; }   // (the side-step keeps its own no-headway watch on stallRef)
         else if (gd.shotBlockedT > 4 && !gd.pinned) { dropToSearch(g, gd, 'no shot — lost him'); gd.awareness = Math.min(gd.awareness, 0.5); break; }
         gd.fireCd -= dt;
@@ -2440,7 +2440,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         }
       } else if (down && pc) {
         // the target is down: close to a couple of metres, cover the body, one of them calls it in — nobody 'searches' for a man lying in front of them
-        const body = pc.pos; const dB = Math.hypot(body[0] - c.posX, body[2] - c.posZ);
+        const body = pc.pos; const dB = Math.hypot(body[0] - c.pos[0], body[2] - c.pos[2]);
         if (dB > 2.2) { goTo(g, gd, body); followPath(g, gd, dt, T.guardInvestigate); moveSpeed = gd.speed; } else { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0]; }
         aimAt = v3.add(body, [0, 0.3, 0]); gd.searchT += dt;
         if (gd.searchT > 4 && !g.calledIn && staff) { g.calledIn = true; g.say(gd, WORDS.on && !isOffice(g.level) ? 'target is down. send someone over.' : 'target is down. send someone up.', true); g.audio.play('radio', c.bones.head ?? c.pos, 0.5, { rate: 0.95 }); }   // (the staff's net: a unit covers his man and says nothing up any chain)
@@ -2518,10 +2518,10 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   if (DARKDOOR.on && !eyesOnFoe) { const dl = darkDoorLook(g, gd); if (dl) aimAt = dl; }   // stopped at a dark doorway (darkdoor.ts): his aim, and his light with it, sweeps the opening from the frame (null for everybody else)
   { const nq = netQuietPose(g, gd, dt, eyesOnFoe); if (nq) { if (nq.aim) aimAt = nq.aim; crouch = Math.max(crouch, nq.crouch); } }   // netquiet.ts (null on its first line with its switch off): the last man low on his spot, a jumpy man's gun and lamp onto the noise he has just heard
   if (aimAt) {
-    const yawTo = Math.atan2(aimAt[0] - c.posX, aimAt[2] - c.posZ);
+    const yawTo = Math.atan2(aimAt[0] - c.pos[0], aimAt[2] - c.pos[2]);
     if (AIM_DEBUG.log && gd.state === 'alert') AIM_DEBUG.log(`g${c.id} aim block: yawTo ${yawTo.toFixed(2)} aimYaw ${c.aimYaw.toFixed(2)} → aimAt (${aimAt[0].toFixed(2)}, ${aimAt[1].toFixed(2)}, ${aimAt[2].toFixed(2)}) bodyYaw ${c.bodyYaw.toFixed(2)} speed ${moveSpeed.toFixed(2)}`);   // (soak --trace: chasing a chest that settles off its man)
     c.aimYaw = approachAngle(c.aimYaw, yawTo, 6 * dt);
-    const gunY = c.posY + 1.4; const hd = Math.hypot(aimAt[0] - c.posX, aimAt[2] - c.posZ);
+    const gunY = c.pos[1] + 1.4; const hd = Math.hypot(aimAt[0] - c.pos[0], aimAt[2] - c.pos[2]);
     c.aimPitch = damp(c.aimPitch, Math.atan2(aimAt[1] - gunY, Math.max(hd, 0.5)), 5, dt);
     // turn body if aim exceeds twist range or when standing
     const off = wrapAngle(c.aimYaw - c.bodyYaw);
@@ -2540,7 +2540,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   const lowered = gd.muzzleDown || duck || staggered;   // the gun down: for a colleague in the line, with his own head down under fire (suppression), or doubled over a ring airfoil — the same low ready ('lowLong' on the carbine, the animator's mapping)
   c.anim.speed = moveSpeed; c.anim.upper = lowered ? 'none' : upper; c.anim.crouchTarget = crouch; c.anim.lean = 0; c.anim.stance = lowered ? 'lowReady' : 'none';   // (the tactical stances the AI holds by itself: muzzle down for a colleague, head down under fire — otherwise none and standing, and a script that just ended must not leave one on him)
   gunWallPose(g, c);
-  c.anim.reverse = moveSpeed > 0.2 && c.velX * Math.sin(c.bodyYaw) + c.velZ * Math.cos(c.bodyYaw) < -0.3 * moveSpeed;   // moving against his facing (the standoff's back-off and side-step round the ring keep his chest to the pair): the cycle plays backwards, as the player's back-pedal does — and worked out afresh every frame, so nothing (a hold that ended mid-haul) leaves it stuck on him
+  c.anim.reverse = moveSpeed > 0.2 && c.vel[0] * Math.sin(c.bodyYaw) + c.vel[2] * Math.cos(c.bodyYaw) < -0.3 * moveSpeed;   // moving against his facing (the standoff's back-off and side-step round the ring keep his chest to the pair): the cycle plays backwards, as the player's back-pedal does — and worked out afresh every frame, so nothing (a hold that ended mid-haul) leaves it stuck on him
   c.update(dt);
   attachFlashlight(g, gd, dt);
   const prevPhase = gd.stepPhase; gd.stepPhase = c.anim.phase;
@@ -2575,34 +2575,34 @@ function collideGuard(g: Game, gd: Guard, p0x: number, p0z: number) {
   const c = gd.char; const dbg = LINE_DEBUG.log;
   // (1) statics, swept from the frame's start (or the snap's spot)
   const snapped = UNSTICK.lastSnapWho === gd && UNSTICK.lastSnapT === g.time;
-  sweepStatics(g, c, snapped ? gd.lastPosX : p0x, snapped ? gd.lastPosZ : p0z, dbg ? (m: string) => dbg(gd, m) : null);
-  const bx = c.posX, bz = c.posZ;
-  c.pushOut(g.col, 0.2, 1.5);   // same height band as the nav grid bake
-  if (dbg && Math.hypot(c.posX - bx, c.posZ - bz) > 1e-4) dbg(gd, `PUSH statics ${(c.posX - bx).toFixed(4)},${(c.posZ - bz).toFixed(4)}`);
+  sweepStatics(g, c, snapped ? gd.lastPos[0] : p0x, snapped ? gd.lastPos[2] : p0z, dbg ? (m: string) => dbg(gd, m) : null);
+  const bx = c.pos[0], bz = c.pos[2];
+  g.col.collideCircle(c.pos, c.radius, 0.2, 1.5);   // same height band as the nav grid bake
+  if (dbg && Math.hypot(c.pos[0] - bx, c.pos[2] - bz) > 1e-4) dbg(gd, `PUSH statics ${(c.pos[0] - bx).toFixed(4)},${(c.pos[2] - bz).toFixed(4)}`);
   // (2) colleagues (each in turn off where the last left him — the arithmetic it always was — then the whole of it capped)
-  const ax = c.posX, az = c.posZ;
+  const ax = c.pos[0], az = c.pos[2];
   for (const o of g.guards) {
     if (o === gd || o.state === 'dead') continue;
     const d = v3.sub(c.pos, o.char.pos); d[1] = 0; const l = v3.len(d);
     if (l < 0.6 && l > 1e-4) { c.pos = v3.mad(c.pos, d, (0.6 - l) / l * 0.5); dbg?.(gd, `PUSH colleague ${g.level.routes[o.routeI]?.name} at ${l.toFixed(3)} m by ${((0.6 - l) * 0.5).toFixed(4)} dir ${(d[0] / l).toFixed(2)},${(d[2] / l).toFixed(2)}`); }
   }
-  const sl = Math.hypot(c.posX - ax, c.posZ - az);
+  const sl = Math.hypot(c.pos[0] - ax, c.pos[2] - az);
   if (sl <= SEP_SETTLE_MIN) return;   // nobody touching him — or the millimetres of two men settling a body apart, left to next frame's pass (1) as they always were: done
-  if (sl > SEP_MAX_M) { c.posX = ax + (c.posX - ax) * (SEP_MAX_M / sl); c.posZ = az + (c.posZ - az) * (SEP_MAX_M / sl); dbg?.(gd, `PUSH colleagues capped ${sl.toFixed(3)} → ${SEP_MAX_M}`); }
+  if (sl > SEP_MAX_M) { c.pos[0] = ax + (c.pos[0] - ax) * (SEP_MAX_M / sl); c.pos[2] = az + (c.pos[2] - az) * (SEP_MAX_M / sl); dbg?.(gd, `PUSH colleagues capped ${sl.toFixed(3)} → ${SEP_MAX_M}`); }
   // (3) the statics again for the shove: swept from where (1) left him, settled where he stops (a no-op along open floor)
   sweepStatics(g, c, ax, az, dbg ? (m: string) => dbg(gd, m) : null);
-  const cx = c.posX, cz = c.posZ;
-  c.pushOut(g.col, 0.2, 1.5);
-  if (dbg && Math.hypot(c.posX - cx, c.posZ - cz) > 1e-4) dbg(gd, `PUSH statics after the shove ${(c.posX - cx).toFixed(4)},${(c.posZ - cz).toFixed(4)}`);
+  const cx = c.pos[0], cz = c.pos[2];
+  g.col.collideCircle(c.pos, c.radius, 0.2, 1.5);
+  if (dbg && Math.hypot(c.pos[0] - cx, c.pos[2] - cz) > 1e-4) dbg(gd, `PUSH statics after the shove ${(c.pos[0] - cx).toFixed(4)},${(c.pos[2] - cz).toFixed(4)}`);
 }
 /** Walk `c` from (fx, fz) to where c.pos now says, in strides of ≤ GUARD_SWEEP_STEP with a two-pass push-out after each — only when that is more than one stride
  *  (else nothing: the caller's own push-out follows). Leaves c.pos at the raw target after the last stride, for the caller to settle. */
 function sweepStatics(g: Game, c: Character, fx: number, fz: number, dbg: ((m: string) => void) | null) {
-  const tx = c.posX, tz = c.posZ; const D = Math.hypot(tx - fx, tz - fz); const n = Math.min(16, Math.ceil(D / GUARD_SWEEP_STEP));
+  const tx = c.pos[0], tz = c.pos[2]; const D = Math.hypot(tx - fx, tz - fz); const n = Math.min(16, Math.ceil(D / GUARD_SWEEP_STEP));
   if (n <= 1) return;
-  c.posX = fx; c.posZ = fz;
-  for (let i = 1; i < n; i++) { c.posX += (tx - fx) / n; c.posZ += (tz - fz) / n; c.pushOut(g.col, 0.2, 1.5, 2); }
-  c.posX += (tx - fx) / n; c.posZ += (tz - fz) / n;
+  c.pos[0] = fx; c.pos[2] = fz;
+  for (let i = 1; i < n; i++) { c.pos[0] += (tx - fx) / n; c.pos[2] += (tz - fz) / n; g.col.collideCircle(c.pos, c.radius, 0.2, 1.5, 2); }
+  c.pos[0] += (tx - fx) / n; c.pos[2] += (tz - fz) / n;
   dbg?.(`SWEEP ${D.toFixed(3)} m in ${n} strides`);
 }
 
@@ -2822,7 +2822,7 @@ export function tickReloadBeat(g: Game, gd: Guard, dt: number) {
   const drop = feedDrop(w.def); feedDeal(gd.char.anim, gd.char.anim.longGun ? w : null, true); feedTick(g, gd.char, w.def, before, R.dur - gd.reloadT, undefined, w);
   if (R.out !== undefined && drop !== null && before < R.out && R.dur - gd.reloadT >= R.out) {
     const c = gd.char; const h = c.bones.handR ?? v3.add(c.pos, [0, 1.1, 0]); const d = c.gunDir;
-    const it = g.items.spawn('mag', [h[0] + d[0] * 0.12, Math.max(0.3, h[1] - 0.1), h[2] + d[2] * 0.12], [c.velX * 0.5 + d[0] * 0.3, -0.4, c.velZ * 0.5 + d[2] * 0.3], { fill: drop ?? 2, who: c.id, heading: c.aimYaw, yaw: c.aimYaw });
+    const it = g.items.spawn('mag', [h[0] + d[0] * 0.12, Math.max(0.3, h[1] - 0.1), h[2] + d[2] * 0.12], [c.vel[0] * 0.5 + d[0] * 0.3, -0.4, c.vel[2] * 0.5 + d[2] * 0.3], { fill: drop ?? 2, who: c.id, heading: c.aimYaw, yaw: c.aimYaw });
     it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: drop === 5 ? 0.6 : 0.8 });
   }
   if (gd.reloadT < 0) w.rearm();
@@ -2858,7 +2858,7 @@ export function burstTrigger(g: Game, gd: Guard, dt: number, aimAt: Vec3, startO
     let off: Vec3 | null = null;
     const opening = w.bursts === 0 || g.time - w.lastBurstT > SUPPRESS_FIRST_LAPSE;
     if (g.tune.suppressFirst && opening && v3.distXZ(c.pos, (foeChar(g, gd) ?? g.player.char).pos) >= SUPPRESS_FIRST_MIN_M) {   // (teams: off the man he is firing at — Sam, for the staff)
-      const dx = aimAt[0] - c.posX, dz = aimAt[2] - c.posZ; const L = Math.hypot(dx, dz) || 1;
+      const dx = aimAt[0] - c.pos[0], dz = aimAt[2] - c.pos[2]; const L = Math.hypot(dx, dz) || 1;
       const px = -dz / L, pz = dx / L;   // unit, square off the line (his left as he looks at Sam)
       const chestP: Vec3 = [aimAt[0], aimAt[1], aimAt[2]];
       const l = g.col.raycast(chestP, [px, 0, pz], SUPPRESS_FIRST_COVER_M), r = g.col.raycast(chestP, [-px, 0, -pz], SUPPRESS_FIRST_COVER_M);
@@ -2975,7 +2975,7 @@ export function resetGuards(g: Game) {
   for (const gd of g.guards) if (gd.unit) releaseUnit(g, gd);
   endEngagement(g, 'reset');
   const old = g.guards, fresh = old.filter(gd => !gd.unit).map(gd => ({ id: gd.char.id, route: gd.route, routeI: gd.routeI, fl: gd.flashlight, tint: gd.char.tint }));
-  for (const gd of old) manLeaves(gd.char, gd, gd.sup, gd.aim);   // (the old shift's rows are free before the new shift takes them)
+  for (const gd of old) manLeaves(gd.char, gd);   // (the old shift's rows are free before the new shift takes them)
   g.guards = fresh.map(o => new Guard(g.men, g.ch, o.id, o.route, o.routeI, o.fl, o.tint));
   for (const gd of g.guards) gd.char.update(0);          // fresh characters get a pose (bones) immediately — reset can happen mid-frame
   openingStart(g);   // the night's opening (opening.ts): nobody of the fresh shift starts on top of the way in — nothing under a show's flag or with OPENING.on off
@@ -3384,7 +3384,7 @@ const PARTNER_TRUST_SECS = 3;
 function followLeader(g: Game, gd: Guard, dt: number, walk: number): boolean {
   const L = gd.leader!, c = gd.char, goal = gd.followGoal, nav = g.col.nav;
   const fresh = gd.leaderSeenT < 0 || g.time - gd.leaderSeenT < PARTNER_TRUST_SECS; const lp = fresh ? L.char.pos : gd.leaderSeenPos;
-  gd.followT -= dt; gd.leaderStillT = !fresh || Math.hypot(L.char.velX, L.char.velZ) < 0.15 ? gd.leaderStillT + dt : 0;   // (a spot does not move: planted by it long enough he turns and looks at it, as at a leader who never moves again)
+  gd.followT -= dt; gd.leaderStillT = !fresh || Math.hypot(L.char.vel[0], L.char.vel[2]) < 0.15 ? gd.leaderStillT + dt : 0;   // (a spot does not move: planted by it long enough he turns and looks at it, as at a leader who never moves again)
   if (gd.followT <= 0) {
     gd.followT = 0.5;
     const f = L.char.forward(), lv: Vec3 = fresh ? L.char.vel : [0, 0, 0];
@@ -3392,15 +3392,15 @@ function followLeader(g: Game, gd: Guard, dt: number, walk: number): boolean {
     if (nav.isBlocked(goal[0], goal[2]) || !nav.walkable(lp, goal)) { goal[0] = lp[0] - f[0] * 1.2; goal[2] = lp[2] - f[2] * 1.2; }   // a partition there: straight behind him
     if (nav.isBlocked(goal[0], goal[2]) || !nav.walkable(lp, goal)) { goal[0] = lp[0]; goal[2] = lp[2]; }                            // his back to a wall: on him (the separation push keeps them a body apart)
     else if (!nav.isBlocked(goal[0] + lv[0] * 0.6, goal[2] + lv[2] * 0.6)) { goal[0] += lv[0] * 0.6; goal[2] += lv[2] * 0.6; }        // led by the leader's stride: aim at where the station will be when this plan is walked, or he settles a metre adrift, forever arriving
-    const off = Math.hypot(goal[0] - c.posX, goal[2] - c.posZ);
-    const stale = !gd.pathGoal || Math.hypot(gd.pathGoalX - goal[0], gd.pathGoalZ - goal[2]) > 0.5 || (gd.pathI >= gd.path.length && off > 0.7);
+    const off = Math.hypot(goal[0] - c.pos[0], goal[2] - c.pos[2]);
+    const stale = !gd.pathGoal || Math.hypot(gd.pathGoal[0] - goal[0], gd.pathGoal[2] - goal[2]) > 0.5 || (gd.pathI >= gd.path.length && off > 0.7);
     if (stale && off > 0.35) goTo(g, gd, goal, true);
   }
-  const gap = Math.hypot(lp[0] - c.posX, lp[2] - c.posZ);
+  const gap = Math.hypot(lp[0] - c.pos[0], lp[2] - c.pos[2]);
   const arrived = followPath(g, gd, dt, gap > 4.5 ? Math.max(walk, g.tune.guardInvestigate * 1.1) : gap > 2.0 ? walk * 1.3 : walk);
   if (arrived) {   // planted at his shoulder facing the way he faces, sweeping the rear-left quarter — unless the man has not moved for a while and is right there: then he turns and looks at him (which is how a leader taken down quietly under his nose gets found: bodyInView wants the body in his cone)
     const lookAt = gd.leaderStillT > 6 && gap < 2.2;
-    c.bodyYaw = approachAngle(c.bodyYaw, lookAt ? Math.atan2(lp[0] - c.posX, lp[2] - c.posZ) : L.char.bodyYaw + 0.45, 3 * dt);
+    c.bodyYaw = approachAngle(c.bodyYaw, lookAt ? Math.atan2(lp[0] - c.pos[0], lp[2] - c.pos[2]) : L.char.bodyYaw + 0.45, 3 * dt);
     gd.sweep = damp(gd.sweep, Math.sin(gd.lookPhase * 0.6) * (lookAt ? 0.25 : 0.6), 2, dt); c.anim.lookYawExtra = Math.sin(gd.lookPhase * 1.1) * (lookAt ? 0.15 : 0.4);
   }
   else gd.sweep = damp(gd.sweep, Math.sin(gd.lookPhase * 0.7) * 0.3, 2, dt);
@@ -3412,7 +3412,7 @@ function followLeader(g: Game, gd: Guard, dt: number, walk: number): boolean {
 function holdPost(g: Game, gd: Guard, dt: number, walk: number): boolean {
   const P = gd.post!, c = gd.char;
   gd.followT -= dt;
-  if (gd.followT <= 0 && Math.hypot(P.pos[0] - c.posX, P.pos[2] - c.posZ) > 0.45 && (!gd.pathGoal || gd.pathI >= gd.path.length || Math.hypot(gd.pathGoalX - P.pos[0], gd.pathGoalZ - P.pos[2]) > 0.5)) {
+  if (gd.followT <= 0 && Math.hypot(P.pos[0] - c.pos[0], P.pos[2] - c.pos[2]) > 0.45 && (!gd.pathGoal || gd.pathI >= gd.path.length || Math.hypot(gd.pathGoal[0] - P.pos[0], gd.pathGoal[2] - P.pos[2]) > 0.5)) {
     gd.followT = 0.5; goTo(g, gd, P.pos, true);
     const last = gd.path[gd.path.length - 1]; if (!last || Math.hypot(last[0] - P.pos[0], last[2] - P.pos[2]) > 0.02) gd.path.push(v3.copy(P.pos));   // the spot itself, not its nav cell's centre
   }
@@ -3435,14 +3435,14 @@ function lockdownDoors(g: Game, gd: Guard, calm = false) {
     if (d.off || (calm ? !(d.def.locked || d.def.exterior) || d.def.closer === false : d.def.exterior && !(g.doors.stay && d.def.closer !== false)) || g.time - d.guardT < 12 || d.quietT < 0.6) continue;   // (quietT: somebody's hands or shoulder are on that leaf right now — his own included, pushing through it)
     const open = !d.latched && (calm || Math.abs(d.angle) > 0.03), relock = !calm && !!d.def.locked && !d.locked && !d.lockBroken;   // (calm: a keyed leaf resting a hair off its latch is a lock that does not bite — to as well)
     if (!open && !relock) continue;
-    const fc = d.frameCentre; const dx = fc[0] - c.posX, dz = fc[2] - c.posZ; const dd = Math.hypot(dx, dz);
+    const fc = d.frameCentre; const dx = fc[0] - c.pos[0], dz = fc[2] - c.pos[2]; const dd = Math.hypot(dx, dz);
     if (dd > 2.0 || dd < 0.9 || (dx * f[0] + dz * f[2]) / dd > 0.55) continue;   // out of reach, standing in the doorway (that is a man passing through, not tidying), or ahead of him
     if (open) {   // the closing leaf sweeps the sector between its angle and the frame (angles about the hinge from the closed direction, CCW +): not from in there
-      const px = c.posX - d.def.hinge[0], pz = c.posZ - d.def.hinge[1]; const cd = d.def.closedDir;
+      const px = c.pos[0] - d.def.hinge[0], pz = c.pos[2] - d.def.hinge[1]; const cd = d.def.closedDir;
       const th = Math.atan2(-Math.sin(cd) * px + Math.cos(cd) * pz, Math.cos(cd) * px + Math.sin(cd) * pz);
       if (th * d.angle > 0 && Math.abs(th) < Math.abs(d.angle) + 0.4 && Math.hypot(px, pz) < d.def.width + 0.45) continue;
     }
-    let busy = false; for (const o of g.guards) if (o !== gd && o.state !== 'dead' && Math.hypot(o.char.posX - fc[0], o.char.posZ - fc[2]) < 2.0) { busy = true; break; }
+    let busy = false; for (const o of g.guards) if (o !== gd && o.state !== 'dead' && Math.hypot(o.char.pos[0] - fc[0], o.char.pos[2] - fc[2]) < 2.0) { busy = true; break; }
     if (busy) continue;
     d.guardT = g.time;
     if (open) g.doors.pullTo(d, c.id);   // a stiff sprung close the latch catches (hold-open doors too, and one left a crack open) — the corridor's light pinches off the room's floor as it goes
@@ -3557,7 +3557,7 @@ export function despawnUnit(g: Game, gd: Guard): boolean {
     if (o.leader === gd) o.leader = null;
     if (o.task?.kind === 'checkOn' && o.task.who === gd) o.task = null;
   }
-  manLeaves(gd.char, gd, gd.sup, gd.aim);
+  manLeaves(gd.char, gd);
   return true;
 }
 export function despawnUnits(g: Game) { for (const gd of [...g.guards]) if (gd.unit) despawnUnit(g, gd); }

@@ -60,7 +60,7 @@ export async function wheelidleCheck(): Promise<boolean> {
       line(took.length === team().length && team().length === 4 && O.who === 'all', '3. the ring put away and the key tapped: the order goes to all four', `the order went to ${took.length} of ${team().length} (${took.join(', ') || 'nobody'}) · who: ${O.who}`); }
     // 4
     home();
-    { const upB = up(), k = 2, man = O.squad()[k]; W.cursorAt([man.char.posX, man.char.posY, man.char.posZ]); step();
+    { const upB = up(), k = 2, man = O.squad()[k]; W.cursorAt([man.char.pos[0], man.char.pos[1], man.char.pos[2]]); step();
       input.clicked |= 1; input.buttons |= 1; step(); input.buttons &= ~1; step(4); const his = O.who, seen = scroll(), after = O.who;
       line(upB && typeof his === 'number' && (BREAK || (after === his && seen.every(w => w === String(his)))), '4. a click on a man with the ring up is still him alone, and the scroll after it leaves it his',
         `a click at ${man.callsign}'s feet: the orders are ${typeof his === 'number' ? O.squad()[his]?.callsign ?? `man ${his}` : his}'s · after the scroll: ${typeof after === 'number' ? O.squad()[after]?.callsign ?? `man ${after}` : after}`); }

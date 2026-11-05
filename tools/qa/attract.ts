@@ -52,8 +52,8 @@ function step(dt = DT) {
   if (live) W.step(dt, pos); else W.input.endFrame();   // (frozen behind the card: nothing advances — through the opening beat too)
   t += dt; frame++;
   if (!fin(cam.yaw, cam.pitch, cam.distance, cam.desiredDistance, cam.target[0], cam.target[2], cam.pos[0], cam.pos[1], cam.pos[2], attract.fade)) fail(`f${frame}: NaN in camera / fade — yaw ${cam.yaw} dist ${cam.distance}/${cam.desiredDistance} target ${cam.target} fade ${attract.fade}`);
-  const pc = game.player.char; if (!fin(pc.posX, pc.posZ)) fail(`f${frame}: player pos ${pc.pos}`);
-  for (const gd of game.guards) if (!fin(gd.char.posX, gd.char.posZ, gd.awareness)) fail(`f${frame}: guard ${gd.callsign} pos ${gd.char.pos} aw ${gd.awareness}`);
+  const pc = game.player.char; if (!fin(pc.pos[0], pc.pos[2])) fail(`f${frame}: player pos ${pc.pos}`);
+  for (const gd of game.guards) if (!fin(gd.char.pos[0], gd.char.pos[2], gd.awareness)) fail(`f${frame}: guard ${gd.callsign} pos ${gd.char.pos} aw ${gd.awareness}`);
 }
 const run = (secs: number, each?: () => void) => { for (const end = t + secs; t < end - 1e-9;) { step(); each?.(); } };
 /** step until the programme starts (at most `secs`): true if it did — the veil is still at 0 on that frame (tick starts it after the idle count; the opening runs from the next) */
@@ -104,10 +104,10 @@ const total = shots.reduce((a: number, s: any) => a + (s.dur ?? HOLD), 0);
 let firstT = -1;   // sim time shot 0 was first seen (it cut in on the go-live frame)
 run(total + HOLD + 1.5, () => {
   const i = attract.shotI; if (i < 0) { fail(`shot index ${i} while live`); return; }
-  if (firstT < 0) { firstT = t; if (v3.distXZ(game.player.char.pos, spawn) < 10) fail(`Sam not parked away at the first cut: at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)})`); else info(`first cut at t=${f2(t)}; Sam parked at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)})`); }
+  if (firstT < 0) { firstT = t; if (v3.distXZ(game.player.char.pos, spawn) < 10) fail(`Sam not parked away at the first cut: at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])})`); else info(`first cut at t=${f2(t)}; Sam parked at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])})`); }
   const s = shots[i], st = attract.shotT, dur = s.dur ?? HOLD;
   if (i !== lastI) { seen.push(i); enterT.push(t); lastI = i; }
-  if (v3.distXZ(game.player.char.pos, spawn) < 10) fail(`shot ${i}: Sam is back near the insertion point mid-programme (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)})`);
+  if (v3.distXZ(game.player.char.pos, spawn) < 10) fail(`shot ${i}: Sam is back near the insertion point mid-programme (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])})`);
   if (st > 0.6 && st < dur - 0.4) { minFadeMid = Math.min(minFadeMid, 1 - attract.fade); if (attract.fade > 0.02) fail(`shot ${i} (${s.title}) +${f2(st)} s: veil at ${f2(attract.fade)} mid-hold`); }
   if (st < 0.05 && st > 0) maxFadeCut = Math.max(maxFadeCut, attract.fade);
   const yaw0 = typeof s.yaw === 'function' ? null : s.yaw;   // (a live yaw is answered at the cut; checked for finiteness above)
@@ -135,17 +135,17 @@ if (attract.active || attract.live || attract.fade !== 0) fail(`poke: still acti
 if (stops !== stopsBefore + 1) fail(`poke while live: onStop called ${stops - stopsBefore}× (want exactly once — main.ts re-seeds the passes' history and uploads the fresh encounter there)`);
 if (!sameFlags(flagsNow(), flags0)) fail(`poke: flags not restored — ${JSON.stringify(flagsNow())} (before ${JSON.stringify(flags0)})`);
 if (!camUntouched()) fail(`poke: camera not restored — yaw ${f2(cam.yaw / DEG)}° (was ${f2(cam0.yaw / DEG)}°) pitch ${f2(cam.pitch / DEG)}° dist ${f2(cam.distance)}/${f2(cam.desiredDistance)} (was ${cam0.dist})`);
-if (v3.distXZ(game.player.char.pos, spawn) > 0.05) fail(`poke: Sam at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)}), not the insertion point (${spawn[0]}, ${spawn[2]})`);
+if (v3.distXZ(game.player.char.pos, spawn) > 0.05) fail(`poke: Sam at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])}), not the insertion point (${spawn[0]}, ${spawn[2]})`);
 if (v3.distXZ(cam.target, game.player.char.pos) > 0.05) fail(`poke: camera target (${f2(cam.target[0])}, ${f2(cam.target[2])}) not on Sam`);
 const badG = game.guards.filter((g: any) => g.state !== 'patrol' || g.hold || g.pinned || g.script || g.awareness > 0.01 || v3.distXZ(g.char.pos, level.routes[g.routeI].points[0]) > 0.05);
-if (badG.length) fail(`poke: guards not fresh on their marks: ${badG.map((g: any) => `${g.callsign}:${g.state}@(${f2(g.char.posX)},${f2(g.char.posZ)})`).join(' ')}`);
+if (badG.length) fail(`poke: guards not fresh on their marks: ${badG.map((g: any) => `${g.callsign}:${g.state}@(${f2(g.char.pos[0])},${f2(g.char.pos[2])})`).join(' ')}`);
 for (const d of game.doors.list) if (Math.abs(d.angle - refDoors.get(d.def.name)!) > 1e-3 || d.lockBroken || d.pick) fail(`poke: door ${d.def.name} at ${f2(d.angle)} (authored ${f2(refDoors.get(d.def.name)!)}) broken ${d.lockBroken}`);
 for (const [tg, on] of refLights) if (tg.on !== on) { fail(`poke: switch ${tg.name} on=${tg.on} (authored ${on})`); break; }
 if (game.mission.stage !== 'infiltrate' || game.mission.stats.elapsed !== 0 || game.mission.stats.sandbox) fail(`poke: mission not fresh — stage ${game.mission.stage} elapsed ${game.mission.stats.elapsed} sandbox ${game.mission.stats.sandbox}`);
 if (game.items.items.length || game.events.length) fail(`poke: ${game.items.items.length} items / ${game.events.length} sound events survive`);
 { const gAt = game.guards.map((g: any) => v3.copy(g.char.pos)); run(1.5);   // and the card is frozen again straight away: nothing steps on behind it
   if (game.guards.some((g: any, k: number) => v3.distXZ(g.char.pos, gAt[k]) > 1e-6)) fail('the world kept running behind the card after the poke'); }
-info(`poked in shot ${shotBefore}: restored (camera yaw ${f2(cam.yaw / DEG)}°, dist ${f2(cam.distance)}, Sam at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)}), guards ${game.guards.map((g: any) => g.state).join('/')}), onStop ×${stops - stopsBefore}`);
+info(`poked in shot ${shotBefore}: restored (camera yaw ${f2(cam.yaw / DEG)}°, dist ${f2(cam.distance)}, Sam at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])}), guards ${game.guards.map((g: any) => g.state).join('/')}), onStop ×${stops - stopsBefore}`);
 
 // ---- 5. it comes back after another IDLE_SECS — and a poke DURING the opening beat only drops the veil: nothing to put back, no refresh hook
 run(IDLE - 1.5 - 0.5); if (attract.active) fail('restarted early after the poke');
@@ -156,7 +156,7 @@ if (!untilActive(0.6)) fail('did not restart after another idle stretch'); else 
   attract.poke();
   if (attract.active || attract.fade !== 0) fail(`poke in the opening beat: still active ${attract.active} / veil ${attract.fade}`);
   if (stops !== stopsMid) fail(`poke in the opening beat called onStop ${stops - stopsMid}× (nothing had gone live: want 0)`);
-  if (!sameFlags(flagsNow(), flags0) || !camUntouched() || v3.distXZ(game.player.char.pos, spawn) > 0.05) fail(`poke in the opening beat left something changed: flags ${JSON.stringify(flagsNow())}, cam yaw ${f2(cam.yaw / DEG)}° dist ${f2(cam.distance)}, Sam at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)})`);
+  if (!sameFlags(flagsNow(), flags0) || !camUntouched() || v3.distXZ(game.player.char.pos, spawn) > 0.05) fail(`poke in the opening beat left something changed: flags ${JSON.stringify(flagsNow())}, cam yaw ${f2(cam.yaw / DEG)}° dist ${f2(cam.distance)}, Sam at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])})`);
   if (game.guards.some((g: any, k: number) => v3.distXZ(g.char.pos, gAt[k]) > 1e-6)) fail('poke in the opening beat: a guard had moved');
   info(`poked in the opening beat at veil ${f2(veilAt)}: veil dropped, nothing else to undo, onStop ×${stops - stopsMid}`); }
 
@@ -170,7 +170,7 @@ if (!attract.live) fail('not live 3 s into the third programme');
   allowed = false; step();
   if (attract.active || attract.live) fail('canRun → false did not stop it');
   if (stops !== stopsLive + 1) fail(`canRun stop while live: onStop called ${stops - stopsLive}× (want exactly once)`);
-  if (v3.distXZ(game.player.char.pos, spawn) > 0.05 || !sameFlags(flagsNow(), flags0)) fail(`canRun stop: Sam at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)}), flags ${JSON.stringify(flagsNow())}`);
+  if (v3.distXZ(game.player.char.pos, spawn) > 0.05 || !sameFlags(flagsNow(), flags0)) fail(`canRun stop: Sam at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])}), flags ${JSON.stringify(flagsNow())}`);
   const gAt = game.guards.map((g: any) => v3.copy(g.char.pos)); run(2);
   if (game.guards.some((g: any, k: number) => v3.distXZ(g.char.pos, gAt[k]) > 1e-6)) fail('the world kept running behind the card after attract stopped');
   allowed = true; attract.poke(); }

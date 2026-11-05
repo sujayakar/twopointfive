@@ -242,7 +242,7 @@ export class SnatchOut {
   objective(): { text: string; pos: Vec3 | null } | null {
     const S = this.S, gd = S.man; if (!this.ruled || !gd || S.end || !S.inHand) return null;
     const moving = !!this.lead || !!gd.held || who(this.g).dragging === gd;
-    return { text: `objective ▸ get ${gd.civ!.name} to ${S.block!.van!.name}`, pos: moving ? v3.copy(this.van!) : [gd.char.posX, 0, gd.char.posZ] };
+    return { text: `objective ▸ get ${gd.civ!.name} to ${S.block!.van!.name}`, pos: moving ? v3.copy(this.van!) : [gd.char.pos[0], 0, gd.char.pos[2]] };
   }
 
   /** the state a save would hold (habit: new state the game depends on has its pair beside it; snatch.ts carries it in its own slice — which nothing loads

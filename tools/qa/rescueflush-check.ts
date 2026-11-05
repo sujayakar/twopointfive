@@ -66,7 +66,7 @@ export async function rescueflushCheck(): Promise<boolean> {
       acts = R.log.filter((l: any) => l.what === 'act').length;
       if (until?.()) return true; } return false; } finally { console.log = log; } };
     step(1);
-    if (o.out) { const O = R.ending.out; R.hostages.forEach((h: any, i: number) => { const p = g.col.nav.nearestFreePoint(O[0] + 0.8 * i, O[2] + 0.6 * (i % 2)) ?? O; h.char.posX = p[0]; h.char.posZ = p[2]; h.civ.cowerAt = [p[0], 0, p[2]]; }); }
+    if (o.out) { const O = R.ending.out; R.hostages.forEach((h: any, i: number) => { const p = g.col.nav.nearestFreePoint(O[0] + 0.8 * i, O[2] + 0.6 * (i % 2)) ?? O; h.char.pos[0] = p[0]; h.char.pos[2] = p[2]; h.civ.cowerAt = [p[0], 0, p[2]]; }); }
     if (o.loud) { const P = R.outsidePoint; g.events.push({ kind: 'shot', pos: [P[0], 0, P[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); step(0.5); }
     for (const c of R.cast()) if (c.inRoom) killGuard(g, c.gd, [1, 0, 0], !o.loud, o.loud ? 'shot' : 'struck', 'player');
     const t0 = g.time; step(2 * DT);
@@ -108,7 +108,7 @@ export async function rescueflushCheck(): Promise<boolean> {
         F.step(45, () => F.lines(/^flush:through:/).length > 0); const thr = F.lines(/^flush:through:/)[0];
         F.step(25, () => F.shotAt.length > 0 || (!!man && F.inB(man.char.pos)));
         line(!!man && !!thr && (F.shotAt.length > 0 || F.inB(man.char.pos)), `(a) ${tag}: the man sent round, alone, walks to the side door and goes in by it for them`,
-          `${sent ? sent.what : 'nobody sent round'} · ${thr ? `${thr.what} at ${f1(thr.t)} s` : 'never at the side door'} · ${man ? `he ended ${F.inB(man.char.pos) ? 'IN the room' : `at (${f1(man.char.posX)}, ${f1(man.char.posZ)})`}, ${man.state}` : ''} · hostages shot ${F.shotAt.length}`);
+          `${sent ? sent.what : 'nobody sent round'} · ${thr ? `${thr.what} at ${f1(thr.t)} s` : 'never at the side door'} · ${man ? `he ended ${F.inB(man.char.pos) ? 'IN the room' : `at (${f1(man.char.pos[0])}, ${f1(man.char.pos[2])})`}, ${man.state}` : ''} · hostages shot ${F.shotAt.length}`);
       }
       { // (d) (e): they're gone; the state's pair
         const F = await floor(id, seed, on, { loud: true, out: true, end: false }), { R } = F;

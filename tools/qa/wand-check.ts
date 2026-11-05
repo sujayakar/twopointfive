@@ -232,7 +232,7 @@ export async function wandLook(): Promise<boolean> {
     if (cos0 !== undefined) F.verdict(Math.abs(cos0 - Math.cos(WAND.fovDeg * 0.5 * DEG)) < 1e-4 && near0 === 0, 'the picture is handed the lens\'s own wedge for that eye', `cos ${cos0} (want ${Math.cos(WAND.fovDeg * 0.5 * DEG).toFixed(4)}) · near ${near0}`);
 
     // turned away: he leaves the picture; turned back: he is in it again
-    const ang = Math.atan2(T.char.posX - L.pos[0], T.char.posZ - L.pos[2]) - L.yaw, a = Math.atan2(Math.sin(ang), Math.cos(ang));
+    const ang = Math.atan2(T.char.pos[0] - L.pos[0], T.char.pos[2] - L.pos[2]) - L.yaw, a = Math.atan2(Math.sin(ang), Math.cos(ang));
     const away = [L.pos[0] + Math.sin(L.yaw - Math.sign(a) * 1.4) * 4, 0, L.pos[2] + Math.cos(L.yaw - Math.sign(a) * 1.4) * 4];
     steps(W, 150, () => { W.cursorAt(away); });
     const panAway = pl.wanding?.pan ?? 0, gone = fog.hidden(T), inWedge = Math.abs(a - panAway) < wandFov() * 0.5 * DEG;
@@ -318,7 +318,7 @@ export async function wandCosts(): Promise<boolean> {
         c = go(); pl.staggerUntil = g.time + 1; W.step(DT); byBlast = !pl.wanding; noRound = pl.equipT > 0; pl.staggerUntil = 0; } finally { SAMSTUN.on = stunWas; }
       steps(W, 90);
       // shoved off his spot with the lens through: it is out, said once (it used to go dark and come back with its line each time)
-      const s1 = go(); pl.char.posX += 0.5; pl.char.posZ += 0.5; W.step(DT); const byShove = !pl.wanding;
+      const s1 = go(); pl.char.pos[0] += 0.5; pl.char.pos[2] += 0.5; W.step(DT); const byShove = !pl.wanding;
       g.teleportPlayer(spot); steps(W, 60);
       // a leaf a hand ajar is no shut door: no row; and one that starts to open ends the look at once
       const e = go(); const locked = d.locked; d.locked = false; d.angle = 0.1 * (d.swing || 1); d.vel = 0; W.step(DT); W.step(DT); const byAjar = !pl.wanding, ajarRows = rowsOf(g);
@@ -344,7 +344,7 @@ export async function wandCosts(): Promise<boolean> {
       const alone = g.nearby.map((x: any) => `${x.kind}:${x.verb}`);
       const H = g.guards.find((x: any) => x.team === 'hostile' && x !== T && x.state !== 'dead'), was = H ? [...H.char.pos] : null, u = d.dir();
       let crowded: string[] = [];
-      if (H) { for (const sgn of [1, -1]) { const yaw = Math.atan2(u[0] * sgn, u[1] * sgn); H.char.pos = [pl.char.posX + u[0] * sgn * 0.75, 0, pl.char.posZ + u[1] * sgn * 0.75] as any; H.char.bodyYaw = yaw; H.char.aimYaw = yaw; steps(W, 3);
+      if (H) { for (const sgn of [1, -1]) { const yaw = Math.atan2(u[0] * sgn, u[1] * sgn); H.char.pos = [pl.char.pos[0] + u[0] * sgn * 0.75, 0, pl.char.pos[2] + u[1] * sgn * 0.75] as any; H.char.bodyYaw = yaw; H.char.aimYaw = yaw; steps(W, 3);
           crowded = g.nearby.map((x: any) => `${x.kind}:${x.verb}`); if (crowded.some(x => x.startsWith('guard:'))) break; }
         H.char.pos = was as any; steps(W, 20); }
       F.verdict(alone.includes('door:wand') && three(alone) && crowded.some(x => x.startsWith('guard:')) && crowded.some(x => x.startsWith('door:')) && !crowded.includes('door:wand') && three(crowded),
@@ -514,7 +514,7 @@ export async function wandMate(): Promise<boolean> {
       let dA: any = null; for (const x of others2) if (S.give(WO.WAND_ORDER, doorTgt(x), 'all') === null) { dA = x; break; }
       const wA = dA ? await until(2400, () => !!jobs()[0]?.live) : 2400;
       let ovEyes = 0, ovLive = 0, ovKnelt = 0;
-      await hushed(() => { for (let i = 0; i < 20; i++) { if (him.script) him.script.over = { aimAt: [him.char.posX + 3, 1.2, him.char.posZ], face: null }; W.step(DT); if (i > 1) { ovEyes += wandEyes().length; ovLive += jobs()[0]?.live ? 1 : 0; ovKnelt += him.char.anim.lockpick ? 1 : 0; } } if (him.script) him.script.over = null; });
+      await hushed(() => { for (let i = 0; i < 20; i++) { if (him.script) him.script.over = { aimAt: [him.char.pos[0] + 3, 1.2, him.char.pos[2]], face: null }; W.step(DT); if (i > 1) { ovEyes += wandEyes().length; ovLive += jobs()[0]?.live ? 1 : 0; ovKnelt += him.char.anim.lockpick ? 1 : 0; } } if (him.script) him.script.over = null; });
       const ovJob = jobs().length, ovBack = await until(900, () => !!jobs()[0]?.live);
       F.verdict(!!dA && wA < 2400 && !ovEyes && !ovLive && !ovKnelt && ovJob === 1 && ovBack < 900 && ovBack * DT > WAND.feedSecs - 0.2,
         'ordered to a second shut door he looks there; while the room fight has his gun on something the lens shows nothing and he is off his knee, the order still his; let go, he feeds it again from the start', `second door ${dA?.def.name ?? 'none took the order'}, live after ${(wA * DT).toFixed(1)} s · under the fight: lens eyes ${ovEyes}, live ${ovLive}, knelt ${ovKnelt} frames of 18 · job kept ${ovJob} · live again after ${(ovBack * DT).toFixed(1)} s (feed ${WAND.feedSecs})`);

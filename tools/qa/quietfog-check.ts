@@ -142,7 +142,7 @@ async function quietfogCheck3(): Promise<boolean> {
         { const gd = men.find(x => g.fogOfWar.hidden(x)); if (gd) { const p = gd.char.pos; let spot: [number, number, number] | null = null;
             for (let a = 0; a < 16 && !spot; a++) { const s: [number, number, number] = [p[0] + Math.cos(a * Math.PI / 8) * 1.6, 0, p[2] + Math.sin(a * Math.PI / 8) * 1.6];
               if (!g.col.nav.isBlocked(s[0], s[2]) && !g.col.segmentBlocked([s[0], 1.5, s[2]], [p[0], 1.5, p[2]], 0.05)) spot = s; }
-            if (spot) { g.godMode = true; g.teleportPlayer(spot); let saw = false; try { steps(W, 2); for (let i = 0; i < 45 && !saw; i++) { W.cursorAt([gd.char.posX, 1.2, gd.char.posZ]); steps(W, 1); saw = g.fogOfWar.seen(gd) && !g.fogOfWar.hidden(gd); } } catch (e) { threw ||= String(e); }
+            if (spot) { g.godMode = true; g.teleportPlayer(spot); let saw = false; try { steps(W, 2); for (let i = 0; i < 45 && !saw; i++) { W.cursorAt([gd.char.pos[0], 1.2, gd.char.pos[2]]); steps(W, 1); saw = g.fogOfWar.seen(gd) && !g.fogOfWar.hidden(gd); } } catch (e) { threw ||= String(e); }
               near = saw ? 'seen' : 'NOT seen'; } } }
         const on = g.fogOfWar.on; await hushed(() => quitScenario(g)); const afterQuit = `${fog()}${QF.quietFogHeld() ? ' HELD' : ''}${g.fogOfWar.on ? ' fog ON' : ''}`;
         const good = !r.why && on && rows === want && held && !threw && hid > 0 && eyes === wantEyes && near === 'seen' && afterQuit === before;
@@ -205,7 +205,7 @@ async function quietfogCheck3(): Promise<boolean> {
       await hushed(() => startFromQuery(g, '?levelFile=bazaar.json&quiet=1&quietfog=cones')); steps(W, 30);
       const gate = SAVE.canSave(g, false), snap = await hushed(() => W.snapshot('probe', true)), sam0 = [...g.player.char.pos];
       steps(W, 60); let threw = ''; try { await hushed(() => W.restore(snap)); steps(W, 60); } catch (e) { threw = String(e); }
-      const men: any[] = g.guards.filter((x: any) => !x.unit && x.char.alive), hid = men.filter(x => g.fogOfWar.hidden(x)).length, d = Math.hypot(g.player.char.posX - sam0[0], g.player.char.posZ - sam0[2]);
+      const men: any[] = g.guards.filter((x: any) => !x.unit && x.char.alive), hid = men.filter(x => g.fogOfWar.hidden(x)).length, d = Math.hypot(g.player.char.pos[0] - sam0[0], g.player.char.pos[2] - sam0[2]);
       const fowOn = g.fogOfWar.on, good = !gate && !threw && fowOn && fog() === 'cone' && QF.quietFogHeld() && hid > 0 && d < 0.5; await hushed(() => quitScenario(g));
       F.verdict(good, 'alone, a checkpoint may be saved under the fog and loads under it: the fog still on at its rung, men out of sight still left out of the picture, a second of play after it', `canSave: ${gate ?? 'ok'} · after the load: fog ${fowOn ? 'on' : 'OFF'} · ${hid} of ${men.length} left out · the player ${d.toFixed(2)} m from where he saved${threw ? ` · THREW ${threw}` : ''}`); }
     // a tripwire under the fog senses the floor as it stands, not the picture (the office's storage beam: its door swung into it out of the player's sight)

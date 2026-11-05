@@ -26,7 +26,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       const pace0 = pl.pace;
       for (let i = 0; i < 10; i++) { view.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true })); await window.__runFrames(2); }
       const paced = pl.pace, ticks = !!document.querySelector('.pace');
-      const speedOver = async keys => { let best = 0; for (let i = 0; i < 150; i++) { await window.__runFrames(1, 1 / 60, keys); best = Math.max(best, Math.hypot(c.velX, c.velZ)); } return best; };
+      const speedOver = async keys => { let best = 0; for (let i = 0; i < 150; i++) { await window.__runFrames(1, 1 / 60, keys); best = Math.max(best, Math.hypot(c.vel[0], c.vel[2])); } return best; };
       pl.pace = 1; const walk = await speedOver(['KeyW']); await window.__runFrames(20);
       window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyC', key: 'c', bubbles: true })); await window.__runFrames(2); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyC', key: 'c', bubbles: true })); await window.__runFrames(20);
       const low = !!pl.crouch, sneak = await speedOver(['KeyS']);

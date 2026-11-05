@@ -5,11 +5,11 @@
 // of what its row is made of (src/scene/stuff.ts tonedAs: it keeps the row's word): slab is drawn in big faces with joints and cracks, which on a
 // face four to eight metres tall is cut rock. Block was tried and is courses of masonry, gravel is a wall of cobbles. The rock was a colour of its own
 // before ([0.2, 0.21, 0.24]) and was drawn flat: a sixth of the pass road's picture and a tenth of the station's.
-// TO A ROUND AND A BLAST it is what it was: a paint with no name, concrete by its tone (game/particleFx.ts surfOf: neither pale nor dark). ROCK_SHADE keeps
-// it there, and a throw below holds that.
+// TO A ROUND AND A BLAST it is what it was: a tone says nothing of what it does (stuff.ts tonedAs), so the exporter gives it the word its tone had, the
+// default row's (neither pale nor dark: concrete to a round). ROCK_SHADE keeps it a tone of no row, and a throw below holds that.
 import type { Vec3 } from '../../src/math/vec';
 import type { Box } from '../../src/scene/boxes';
-import { GWOT_PALETTE, gwotSimOf, type GwotMat } from '../../src/scene/gwotPalette';
+import { GWOT_PALETTE, lookPaintOf, type GwotMat } from '../../src/scene/gwotPalette';
 import { tonedAs } from '../../src/scene/stuff';
 import { WORLD } from '../../src/scene/world';
 
@@ -19,7 +19,7 @@ function toned(m: GwotMat, k: number): Vec3 {
   if (!(k > 0.55 && k < 0.99)) throw new Error(`snowRock: a tone of ${m} at ${k} is outside 0.55‥0.99`);
   const p = GWOT_PALETTE[m], a = p.map(v => Math.round(v * k * 1e4) / 1e4) as Vec3;
   for (const n of Object.keys(GWOT_PALETTE) as GwotMat[]) { const q = GWOT_PALETTE[n]; if (n !== m && a.every((v, c) => Math.abs(v - q[c]) < 0.006)) throw new Error(`snowRock: ${m} × ${k} is the colour of ${n}`); }
-  if (gwotSimOf(a) !== undefined) throw new Error(`snowRock: ${m} × ${k} is a paint the simulation knows by name`);
+  if (lookPaintOf(a) !== undefined) throw new Error(`snowRock: ${m} × ${k} is the colour of a paint of the palette`);
   return tonedAs(p, a);
 }
 const tone = (a: Vec3) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];

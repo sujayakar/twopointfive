@@ -134,7 +134,7 @@ function doorBetween(g: Game, gd: Guard, from: Vec3, at: Vec3): Door | null {
 /** SEEN: the shut door that now stands in his eyes' line to the place he last saw the man — the leaf itself the first thing in that line, so a man who
  *  stepped round a corner or out through an open doorway beside a shut door is not "behind" it */
 function doorHiding(g: Game, gd: Guard, at: Vec3): Door | null {
-  const c = gd.char, from: Vec3 = [c.posX, c.posY + 1.5, c.posZ], dd = v3.sub([at[0], c.posY + DOORFORCE.chestY, at[2]], from), L = v3.len(dd); if (L < 0.3) return null;
+  const c = gd.char, from: Vec3 = [c.pos[0], c.pos[1] + 1.5, c.pos[2]], dd = v3.sub([at[0], c.pos[1] + DOORFORCE.chestY, at[2]], from), L = v3.len(dd); if (L < 0.3) return null;
   const h = g.col.raycast(from, v3.scale(dd, 1 / L), L); if (!h || h.index < 1e6) return null;
   const box = g.col.dynamicBoxes[h.index - 1e6], d = g.doors.list.find(x => x.box === box);
   return d && behind(g, gd, d, c.pos, at) ? d : null;
@@ -197,7 +197,7 @@ export function doorForceTick(g: Game, dt: number): void {
   for (const gd of g.guards) {
     if (!defender(gd)) { if (S.men.has(gd)) drop(S, gd); continue; }
     const now = g.time - gd.lastSeenT < dt * 0.5 + 1e-6, pc = foeChar(g, gd);
-    if (gd.state === 'alert' && pc && now && !foeDown(g, gd)) manOf(S, gd).saw = { at: [pc.posX, 0, pc.posZ], t: g.time, used: false };
+    if (gd.state === 'alert' && pc && now && !foeDown(g, gd)) manOf(S, gd).saw = { at: [pc.pos[0], 0, pc.pos[2]], t: g.time, used: false };
     const M = S.men.get(gd); if (!M) continue;
     if (gd.state !== 'alert') { drop(S, gd); continue; }
     // his eyes: the man he had in sight a moment ago is now at the far face of a shut leaf
@@ -231,7 +231,7 @@ function roundFor(g: Game, gd: Guard, B: Belief): Vec3 | null {
     if (T.walls[0].index !== index || T.walls[0].t < 0.5) return false;   // (the leaf first, and not with his muzzle against it)
     return !(T.panes && shotEnergy(g, gd.char, gd.weapon.def) === 0);   // (glasspen.ts: his side's rounds are not laid through standing glass)
   };
-  const y = gd.char.posY + K.chestY; const at: Vec3 = [B.at[0], y, B.at[2]];
+  const y = gd.char.pos[1] + K.chestY; const at: Vec3 = [B.at[0], y, B.at[2]];
   if (through(at)) return at;
   const L = g.doors.frameCoords(d, B.at); if (L.off > K.nearLeafM || L.along < -K.nearLeafM || L.along > d.def.width + K.nearLeafM) return null;
   const c = d.def.closedDir, ux = Math.cos(c), uz = Math.sin(c), al = clamp(L.along, 0.15, d.def.width - 0.15), s = g.doors.side(d, B.at);
@@ -262,7 +262,7 @@ export function doorForce(g: Game, gd: Guard, dt: number): { aim: Vec3; move: nu
   }
   const St = M.on, free = !gd.pinned && !gd.hold;
   // (what his round would do changes only with a new word, or when he moves: asked again then, not every frame)
-  if (St.toKey[0] !== B.t || St.toKey[1] !== c.posX || St.toKey[2] !== c.posZ) { St.to = roundFor(g, gd, B); St.toKey = [B.t, c.posX, c.posZ]; }
+  if (St.toKey[0] !== B.t || St.toKey[1] !== c.pos[0] || St.toKey[2] !== c.pos[2]) { St.to = roundFor(g, gd, B); St.toKey = [B.t, c.pos[0], c.pos[2]]; }
   const to = St.to; St.noShotT = to ? 0 : St.noShotT + dt;
   // THE BOOT: a free man who has been on it long enough and is still sure
   if (free && K.kick && !S.kickers.has(d) && (g.time - St.t0 >= K.kickSecs || St.noShotT >= K.kickSecsNoShot) && gd.reloadT < 0) {
@@ -278,14 +278,14 @@ export function doorForce(g: Game, gd: Guard, dt: number): { aim: Vec3; move: nu
     return null;
   }
   // THE ROUNDS: stood still, laid on the spot, by the aim law and the cadence every round of his obeys (coverfire.ts coverBlind's own trigger)
-  const aim: Vec3 = to ?? [B.at[0], c.posY + K.chestY, B.at[2]];
+  const aim: Vec3 = to ?? [B.at[0], c.pos[1] + K.chestY, B.at[2]];
   gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0];
   gd.fireCd -= dt;
   if (gd.reloadT >= 0) { tickReloadBeat(g, gd, dt); return { aim, move: 0 }; }
   if (!to) return { aim, move: 0 };
   if (St.n >= K.rounds) { St.n = 0; St.firedT = g.time; St.next = g.time + K.gapSecs; }   // these rounds are through: he listens
   const P = AIM.guard, dist = flat(c.pos, aim);
-  const on = Math.abs(wrapAngle(Math.atan2(aim[0] - c.posX, aim[2] - c.posZ) - c.aimYaw)) < 0.25 && !gd.muzzleDown;
+  const on = Math.abs(wrapAngle(Math.atan2(aim[0] - c.pos[0], aim[2] - c.pos[2]) - c.aimYaw)) < 0.25 && !gd.muzzleDown;
   const settle = Math.max(P.settleSecs, 1e-3) * clamp(dist / Math.max(P.rangeRef, 0.1), P.nearK, 1) * (gd.skill ? gd.skill.settleK : 1);
   St.lay = !g.tune.aimModel ? (on ? 1 : 0) : on ? Math.min(1, St.lay + dt / settle) : Math.max(0, St.lay - P.loseRate * dt);   // (his lay on the spot, kept while he listens too)
   const armed = B.t > St.firedT && g.time >= St.next;

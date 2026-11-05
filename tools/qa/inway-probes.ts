@@ -43,7 +43,7 @@ async function fresh(scn: string, key: boolean) {
   ORDERS.inWay = key;
   const team: any[] = O.squad().filter((x: any) => x.state !== 'dead'), said: string[] = [], say = g.say.bind(g);
   g.say = (gd: any, text: string, ...rest: any[]) => { said.push(`${gd.callsign}: ${text}`); return say(gd, text, ...rest); };
-  const men = (): Man[] => team.map(m => { const A = O.of(m); return { who: m.callsign, order: A?.order ?? '-', door: A?.door?.def.name ?? '-', post: A?.post ? [A.post[0], 0, A.post[2]] : null, pos: [m.char.posX, 0, m.char.posZ] }; });
+  const men = (): Man[] => team.map(m => { const A = O.of(m); return { who: m.callsign, order: A?.order ?? '-', door: A?.door?.def.name ?? '-', post: A?.post ? [A.post[0], 0, A.post[2]] : null, pos: [m.char.pos[0], 0, m.char.pos[2]] }; });
   /** 'stack up' on that face for all four, as the menu gives it: the order's answer, what was said, the greyed word and the door tools' test, then `secs` played */
   const give = async (d: any, side: 1 | -1, secs: number, bare = false): Promise<Case> => { const t = { kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side }, n0 = said.length;
     const menu = bare ? null : O.whyNot(O.defs.find((x: any) => x.id === 'stack'), O.forMen(t, team), team), tool = bare ? null : g.doorTools.canThreshold(O.forMen(t, team), team);   // (`bare`: the order alone — nothing asks the door before it)
@@ -62,7 +62,7 @@ const STATS = (): Record<string, number>[] => [STACK_OWN, DOORMANNERS_STATS, STA
 /** the cold case on one setting of the key: a game that has never asked sg_w for a place. `spots`, `last` and `aside` are the warm staging's own numbers */
 async function cold(key: boolean, spots: number[][], last: number[], aside: number[]) {
   const B = await fresh('barracks-four', key), d = B.g.doors.byName('sg_w'), was = STATS().map(T => ({ ...T }));
-  B.team.forEach((gd, i) => { const p = spots[i]; gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
+  B.team.forEach((gd, i) => { const p = spots[i]; gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
   await B.put(last); const tight = await B.give(d, 1, 2, true);
   await B.put(aside); const off = await B.give(d, 1, 10, true);
   const moved = STATS().map((T, i) => Object.fromEntries(Object.keys(T).map(k => [k, T[k] - (was[i][k] ?? 0)]).filter(([, v]) => v !== 0)));
@@ -75,7 +75,7 @@ async function play(key: boolean) {
   const B = await fresh('barracks-four', key), d = B.g.doors.byName('sg_w'), side = 1 as const;
   const spots = spotsOn(B.g, d, side);
   if (spots.length < B.team.length + 1) throw new Error(`sg_w: no floor to put the four and Sam on that face (${spots.length} spots)`);
-  B.team.forEach((gd, i) => { const p = spots[i]; gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
+  B.team.forEach((gd, i) => { const p = spots[i]; gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
   await B.put([1e4, 0, 1e4]); const places: number[][] = (B.O.stackPostsWait(d, side, B.team) ?? []).map((P: any) => [P.pos[0], 0, P.pos[2]]);   // (the door's places with Sam away)
   const aside = spots.slice(B.team.length).find(p => places.every(q => flat(p, q) >= 1.5)); if (!places.length || !aside) throw new Error(`sg_w: ${places.length} places with Sam away, ${aside ? 'a' : 'no'} spot off them for him`);
   const last = places[places.length - 1]; await B.put(last); const stood = [...B.g.player.char.pos] as number[];

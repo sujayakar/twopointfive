@@ -36,7 +36,7 @@ export async function snatchCheck(): Promise<boolean> {
     const S = g.snatch, hostiles = () => g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead'), ops = () => g.guards.filter((x: any) => x.team === 'operative');
     const shot = (pos: number[]) => g.events.push({ kind: 'shot', pos: [pos[0], 1.2, pos[2]], time: g.time, loud: true, level: 1, who: hostiles()[0]?.char.id ?? 0 });
     /** the pair moved by hand to stand at `spots` and kept there (their orders would walk them back) */
-    const park = (spots: number[][]) => ops().forEach((m: any, i: number) => { const p = spots[i % spots.length]; m.char.posX = p[0]; m.char.posZ = p[2]; m.hold = true; });
+    const park = (spots: number[][]) => ops().forEach((m: any, i: number) => { const p = spots[i % spots.length]; m.char.pos[0] = p[0]; m.char.pos[2] = p[2]; m.hold = true; });
     const clearHouse = () => quiet(() => { for (const h of hostiles()) killGuard(g, h, [0, 0, 1], false, 'shot', 'player'); });
     return { W, g, S, step, light, hostiles, ops, shot, park, clearHouse, N: g.level.scenarios.snatch };
   }

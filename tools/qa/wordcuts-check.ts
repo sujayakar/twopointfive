@@ -60,7 +60,7 @@ async function play(seed: number, on: boolean, o: { again?: number; cap?: number
     const { why } = await quiet(() => startFromQuery(g, new URLSearchParams(`roomclear=${seed}`))); if (why) { R.why = `start refused: ${why}`; return R; }
     const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); } }, D = g.doorTools;
     await quiet(() => step(20));
-    const inK = (x: any) => x.char.posX > KITCHEN.x0 && x.char.posX < KITCHEN.x1 && x.char.posZ > KITCHEN.z0 && x.char.posZ < KITCHEN.z1;
+    const inK = (x: any) => x.char.pos[0] > KITCHEN.x0 && x.char.pos[0] < KITCHEN.x1 && x.char.pos[2] > KITCHEN.z0 && x.char.pos[2] < KITCHEN.z1;
     const op0 = g.doors.list.find((d: any) => d.def.name === DOOR); if (!op0) { R.why = `no door '${DOOR}'`; return R; }
     const foe: any[] = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead' && inK(x)); if (!foe.length) { R.why = 'nobody alive in the kitchen'; return R; }
     for (const h of g.guards) if (h.team === 'hostile' && h.state !== 'dead' && !foe.includes(h)) killGuard(g, h, [0, 0, 1], true, 'struck');   // (the other houses' men off the floor in the frame the order is given: nobody has moved)

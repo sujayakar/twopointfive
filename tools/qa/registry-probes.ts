@@ -185,7 +185,7 @@ function flow(R: Player, o: { pass?: boolean; open?: boolean } = {}) {
   else if (seen) {
     R.say('a man behind the glass — the pair go in after him'); R.order('move', R.floorT(AT.reading)); R.watch = AT.west;
     R.until(() => seen.state === 'dead', 8); R.say(seen.state === 'dead' ? 'he is down — on' : 'they have not got him — on');
-    R.order('fallIn', R.noneT()); R.watch = AT.door; R.until(() => R.ops.some((m: any) => m.char.posZ > 10.1 && flat(m.char.pos, R.pos) < 3), 5);
+    R.order('fallIn', R.noneT()); R.watch = AT.door; R.until(() => R.ops.some((m: any) => m.char.pos[2] > 10.1 && flat(m.char.pos, R.pos) < 3), 5);
   } else {
     R.say('nobody behind the glass — he is behind the blind wall: the copy room first');
     R.watch = AT.door; R.go(AT.copyFront, { sprint: true });

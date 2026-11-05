@@ -37,8 +37,8 @@ async function arm(rule: boolean) {
     SNEAK.on = true; SPOTTED.on = true; WORK.offWalk = true; SNEAK.noiseWalk = rule; SNEAK_STATS.noiseWalks = 0;
     const asked = (h: any) => { const w = SNEAK.noiseWalk, n = SNEAK_STATS.noiseWalks; SNEAK.noiseWalk = true; try { return sneakComing(g, b, h); } finally { SNEAK.noiseWalk = w; SNEAK_STATS.noiseWalks = n; } };   // (the geometry, whichever way the key is; the game's own count of its asking is left as the game made it)
     let at = [...WAY[0]], seg = 0, along = 0;
-    const step = (n = 1) => { for (let i = 0; i < n; i++) { pl.crouch = true; pl.char.posX = at[0]; pl.char.posZ = at[1]; W.step(DT); } };
-    g.teleportPlayer([at[0], 0, at[1]]); b.char.posX = 9.9; b.char.posZ = 17.3; b.path = []; b.pathGoal = null; step(60);
+    const step = (n = 1) => { for (let i = 0; i < n; i++) { pl.crouch = true; pl.char.pos[0] = at[0]; pl.char.pos[2] = at[1]; W.step(DT); } };
+    g.teleportPlayer([at[0], 0, at[1]]); b.char.pos[0] = 9.9; b.char.pos[2] = 17.3; b.path = []; b.pathGoal = null; step(60);
     const th = g.work.things().find((x: any) => x.kind === 'breaker'); if (!th?.stand) return { ok: false as const, why: 'no breaker to work' };
     O.give('work', { kind: 'floor', at: th.stand, thing: th }, 'all'); for (let i = 0; i < 25 * 60 && !g.blackout.active; i++) step();
     const t0 = g.time, man: any = g.guards.find((x: any) => x.task?.kind === 'breaker'); if (!g.blackout.active || !man) return { ok: false as const, why: `mains ${g.blackout.active ? 'out' : 'on'} · sent ${man?.callsign ?? 'nobody'}` };
@@ -52,7 +52,7 @@ async function arm(rule: boolean) {
         for (let L = Math.hypot(WAY[seg + 1][0] - WAY[seg][0], WAY[seg + 1][1] - WAY[seg][1]); seg < WAY.length - 1 && along >= L;) { along -= L; seg++; if (seg < WAY.length - 1) L = Math.hypot(WAY[seg + 1][0] - WAY[seg][0], WAY[seg + 1][1] - WAY[seg][1]); }
         if (seg < WAY.length - 1) { const L = Math.hypot(WAY[seg + 1][0] - WAY[seg][0], WAY[seg + 1][1] - WAY[seg][1]), k = along / L; at = [WAY[seg][0] + (WAY[seg + 1][0] - WAY[seg][0]) * k, WAY[seg][1] + (WAY[seg + 1][1] - WAY[seg][1]) * k]; } else at = [...WAY[seg]]; }
       noErrand(); step();
-      const v = Math.hypot(b.char.velX, b.char.velZ), coming = man.state !== 'dead' && asked(man), gap = flat(b.char.pos, pl.char.pos); fastest = Math.max(fastest, v);
+      const v = Math.hypot(b.char.vel[0], b.char.vel[2]), coming = man.state !== 'dead' && asked(man), gap = flat(b.char.pos, pl.char.pos); fastest = Math.max(fastest, v);
       if (man.state !== 'dead' && workComing(g, b, man)) errand++;
       if (coming) { on++; if (b.char.anim.crouch > 0.5) low++; if (!man.lastKnown || flat(man.lastKnown, spot) > 1) astray++; } else { off++; if (on > 0 && man.state === 'suspicious') past++; }   // (past: still about his business, and no longer walking over the partner — gone by, or stood at the place looking round)
       if (coming && v < 0.1 && gap > 3) { still += DT; stillMax = Math.max(stillMax, still); } else still = 0;

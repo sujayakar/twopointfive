@@ -124,7 +124,7 @@ export async function rig(seed: number, where: Where, o: { quiet?: boolean; empt
     give(id: string, name: string, who: any = 'all', opts?: { onWord?: boolean }): string | null { return R.here(() => O.give(id, R.doorT(name), who, opts)); },
     get fratricide(): string[] { return R.downs.filter(x => x.who.team === 'operative' && (x.by?.team === 'operative' || x.who.killerId === game.player.char.id)).map(x => `${x.who.callsign} by ${x.by?.callsign ?? 'Sam'}`); },
   };
-  if (o.empty) NB.hostiles.forEach((h: any, i: number) => { h.char.posX = 8 + i * 0.9; h.char.posZ = 1.6; h.hold = true; h.pinned = true; });
+  if (o.empty) NB.hostiles.forEach((h: any, i: number) => { h.char.pos[0] = 8 + i * 0.9; h.char.pos[2] = 1.6; h.hold = true; h.pinned = true; });
   if (o.ghost) game.teleportPlayer(PARK);
   R.step(30);
   return R;
@@ -235,7 +235,7 @@ export const depotStage = guarded(async () => {
   const stood = want.map(w => { const rm = RC.rooms.find((q: any) => q.def.id === w.room); return rm ? Math.min(...rm.defenders.map((h: any) => dist(h.char.pos, w.p))) : Infinity; });
   verdict(hs.length === 5 && RC.rooms.map((r: any) => `${r.def.id} ${r.defenders.length}`).join() === 'crew 1,comms 2,store 2' && onFile && stood.every(d => d < 0.3), 'seed 0 is the HAND PLACEMENT — five men: the crew room\'s one in its north-east corner, the hut\'s two at its west and east slits, the store\'s two at the hatch — each room\'s first `garrison` marks in the file', `${RC.summary()} · ${want.map((w, i) => `${w.room} ${at(w.p)}: a man ${f2(stood[i])} m off it`).join(' · ')}${onFile ? '' : ' · THE FILE\'S FIRST MARKS ARE NOT THESE'}`);
   const all = [sam, ...ops.map((x: any) => x.char), ...hs.map((x: any) => x.char)];
-  const onFloor = all.every((c: any) => !g.col.nav.isBlocked(c.pos[0], c.pos[2])), start = dist(sam.pos, S.team.sam) < 0.5 && ops.every((x: any, i: number) => dist(x.char.pos, S.team.ops[i]) < 0.5 && x.char.posX < 4);
+  const onFloor = all.every((c: any) => !g.col.nav.isBlocked(c.pos[0], c.pos[2])), start = dist(sam.pos, S.team.sam) < 0.5 && ops.every((x: any, i: number) => dist(x.char.pos, S.team.ops[i]) < 0.5 && x.char.pos[0] < 4);
   verdict(onFloor && minApart(all.map((c: any) => c.pos)) > 0.6 && start, 'everybody on floor a man can stand on, nobody in anybody; the team starts on the structure\'s marks, outside the main gate', `nearest two ${f2(minApart(all.map((c: any) => c.pos)))} m · on floor ${onFloor} · on the start's marks ${start}`);
   const chars = 1 + g.guards.length, lights = g.engine?.lights?.lights?.length ?? R.W.engine.lights.lights.length;
   verdict(chars === 10 && chars <= SQUAD4_BUDGET && chars <= MAX_CHARS && lights <= MAX_LIGHTS, 'ten characters (the four squad\'s budget), and the steady lights fit', `${chars} characters (budget ${SQUAD4_BUDGET}, skinned ${MAX_CHARS}) · ${lights} of ${MAX_LIGHTS} lights`);
@@ -268,11 +268,11 @@ export const depotStage = guarded(async () => {
     verdict(g.blackout.active && [...outY, ...outD].every(x => x.v < DIM), `mains out (the panel thrown): by the place's own light the yard's ground and the watchers' marks all read under ${DIM}`, `${row(outY)} · ${row(outD)}\n    with whatever the men carry lit (printed, not judged): ${row(read(YARD))}`); }
   // the other way in stages too
   { const Q = await rig(0, 'depot', { clear: { way: 2 } }), T = S.starts?.[0], qs = Q.game.player.char;   // (the knob counts the ways from 1: 2 = starts[0])
-    const fine = !!T && Q.why === null && Q.RC.way === 1 && dist(qs.pos, T.sam) < 0.5 && Q.ops.length === 4 && Q.ops.every((x: any, i: number) => dist(x.char.pos, T.ops[i]) < 0.5 && x.char.posX > 36) && Q.hostiles.length === 5;
+    const fine = !!T && Q.why === null && Q.RC.way === 1 && dist(qs.pos, T.sam) < 0.5 && Q.ops.length === 4 && Q.ops.every((x: any, i: number) => dist(x.char.pos, T.ops[i]) < 0.5 && x.char.pos[0] > 36) && Q.hostiles.length === 5;
     verdict(fine, 'the second way in (ROOMCLEAR.way 2) stages the same five against a team stood outside the back gate', T ? `start → ${Q.why} · way ${Q.RC.way} · Sam ${at(qs.pos)} (the mark ${at(T.sam)}) · ${Q.ops.map((x: any) => at(x.char.pos)).join(' ')}` : 'the structure has no starts'); }
   // every seed deals a sound placement
   const seeds = [1, 2, 3, 4, 5, 6, 7, 8]; let ok = 0; const rows: string[] = [];
-  for (const s of seeds) { const Q = await rig(s, 'depot'); const hh = Q.NB.hostiles; const fine = Q.why === null && hh.length === 5 && Q.ops.length === 4 && minApart(hh) > 0.8 && hh.every((h: any) => !Q.game.col.nav.isBlocked(h.char.posX, h.char.posZ)); if (fine) ok++; rows.push(`${s}: ${hh.map((h: any) => at(h.char.pos)).join(' ')}${fine ? '' : '  ← bad'}`); }
+  for (const s of seeds) { const Q = await rig(s, 'depot'); const hh = Q.NB.hostiles; const fine = Q.why === null && hh.length === 5 && Q.ops.length === 4 && minApart(hh) > 0.8 && hh.every((h: any) => !Q.game.col.nav.isBlocked(h.char.pos[0], h.char.pos[2])); if (fine) ok++; rows.push(`${s}: ${hh.map((h: any) => at(h.char.pos)).join(' ')}${fine ? '' : '  ← bad'}`); }
   verdict(ok === seeds.length, 'eight more seeds: each stages four teammates and five defenders on marks of their rooms, no two defenders within 0.8 m (the hatch\'s two stand 0.9 m apart)', rows.join('\n    '));
   return done();
 });
@@ -442,7 +442,7 @@ async function walk(legs: number[][]) {
   const R = await rig(11, 'depot', { quiet: true, empty: true }); const { game: g, O, NB } = R; const men = NB.ops, sam = g.player.char;
   for (const d of g.doors.list) d.locked = false;   // (a walk, not a break-in)
   O.give('fallIn', O.targetAt(sam.pos)); R.until(() => men.every((m: any) => O.of(m)?.arrived), 14); R.step(60);
-  const path: number[][] = [[sam.posX, 0, sam.posZ]]; let noPath = ''; const halts = new Set<number>();   // (he halts HALT seconds at every waypoint: a file that only ever moves never bunches)
+  const path: number[][] = [[sam.pos[0], 0, sam.pos[2]]]; let noPath = ''; const halts = new Set<number>();   // (he halts HALT seconds at every waypoint: a file that only ever moves never bunches)
   for (const p of legs) { const leg = g.col.nav.findPath(path[path.length - 1], p); if (!leg) { noPath = `no nav path to ${at(p)}`; break; } for (const q of leg) path.push([q[0], 0, q[2]]); path.push(p); halts.add(path.length - 1); }
   let seg = 0, t = 0, halt = 0; const SPEED = 1.55; let walked = 0, frames = 0, stuck = 0, jam = 0, doorway = 0, strung = 0, closest = Infinity; const worst = men.map(() => 0);
   const hist: number[][][] = men.map(() => []); const doors = g.doors.list; type Snag = { i: number; who: string; at: string; sam: string; t: number; t1: number; n: number }; const snags: Snag[] = [], open: (Snag | undefined)[] = [];
@@ -455,7 +455,7 @@ async function walk(legs: number[][]) {
   const t0 = g.time;
   while (seg < path.length - 1 && g.time - t0 < 400) { R.step(); frames++;
     const all = [sam.pos, ...men.map((m: any) => m.char.pos)]; const near = minApart(all); closest = Math.min(closest, near); if (near < 0.5) jam++;
-    men.forEach((m: any, i: number) => { const p = [m.char.posX, 0, m.char.posZ], h = hist[i]; h.push(p); if (h.length > 61) h.shift();
+    men.forEach((m: any, i: number) => { const p = [m.char.pos[0], 0, m.char.pos[2]], h = hist[i]; h.push(p); if (h.length > 61) h.shift();
       const d = dist(p, sam.pos), still = h.length > 60 && dist(h[0], p) < 0.15; worst[i] = Math.max(worst[i], d);
       if (d > 6.5) strung++; if (d > 5.5 && still) { const last = open[i]; if (!last || g.time - last.t1 > 0.5) snags.push(open[i] = { i, who: m.callsign, at: at(p), sam: at(sam.pos), t: g.time - t0, t1: g.time, n: 1 }); else { last.t1 = g.time; last.n++; } }   // (each man's own streak)
       if (still && doors.some((dr: any) => inDoorway(dr, p))) doorway++; }); }

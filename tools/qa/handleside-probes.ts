@@ -94,12 +94,12 @@ async function walks(W: any, teams: readonly ('operative' | 'hostile')[]): Promi
     const gd = spawnUnit(g, { team, pos: S.from as any, yaw: 0 }); if (team === 'hostile') { gd.hold = false; gd.pinned = false; W.step(DT); }   // (off the room fight's roster and onto his own feet, as oneway-men stands him)
     order(gd, { goal: S.to as any }); const watch = new HandleWatch(g);
     let t = 0, through = false, first: HandleRow | undefined;
-    for (; t < WALK_SECS && !through; t += DT) { W.step(DT); watch.tick(t); through = Math.hypot(gd.char.posX - S.to[0], gd.char.posZ - S.to[2]) < 0.5;
+    for (; t < WALK_SECS && !through; t += DT) { W.step(DT); watch.tick(t); through = Math.hypot(gd.char.pos[0] - S.to[0], gd.char.pos[2] - S.to[2]) < 0.5;
       if (!first && !d.latched && d.angle * d.swing > 0.01) first = seen(g, d, gd.char.pos); }   // (a leaf leaned open at a walk starts under the watcher's speed bar and it files no row: the probe reads where he stood itself)
     const row: HandleRow | undefined = watch.rows.find(r => r.door === d.def.name) ?? first, own = watch.passRows.filter(p => p.door === d.def.name && p.opener).length;
     const long = !!row && !row.ok && row.how === 'pull' && row.face === 'pull' && !row.sweep && row.along >= row.W / 2 && row.reach <= LONG_M;
     const stood = row ? `${row.how} from ${row.along} of ${row.W} m, ${row.reach} m to the handle${row.sweep ? ', in the sweep' : ''}` : '';
-    if (!through) out.fails.push(`${at}: not through in ${WALK_SECS} s (at ${gd.char.posX.toFixed(1)}, ${gd.char.posZ.toFixed(1)}, leaf ${d.angle.toFixed(2)})`);
+    if (!through) out.fails.push(`${at}: not through in ${WALK_SECS} s (at ${gd.char.pos[0].toFixed(1)}, ${gd.char.pos[2].toFixed(1)}, leaf ${d.angle.toFixed(2)})`);
     else if (!row) out.fails.push(`${at}: through, and no opening of it was seen`);
     else if (row.how === 'kick') out.fails.push(`${at}: a kick at an unlocked door`);
     else if (!place) out.free++;                                                   // (a face with no place: he opens as he did)

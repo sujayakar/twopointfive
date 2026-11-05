@@ -64,7 +64,7 @@ function laid(g: any, m: number): { n: number; wall: number; wallOpen: number; o
 }
 /** somebody who is not of his side stands in his beam inside `m` (+ `slack`): the rule's exemption, read by the probe at a margin either way */
 const manIn = (g: any, x: any, m: number, cos: number): boolean => { const o = x.flashlight.pos, d = x.flashlight.dir, hl = Math.hypot(d[0], d[2]) || 1;
-  return g.guards.some((y: any) => { if (y === x || y.state === 'dead' || y.team === 'operative') return false; const vx = y.char.posX - o[0], vz = y.char.posZ - o[2], l = Math.hypot(vx, vz); return l < m && (l < 0.3 || (vx * d[0] + vz * d[2]) / (l * hl) > cos); }); };
+  return g.guards.some((y: any) => { if (y === x || y.state === 'dead' || y.team === 'operative') return false; const vx = y.char.pos[0] - o[0], vz = y.char.pos[2] - o[2], l = Math.hypot(vx, vz); return l < m && (l < 0.3 || (vx * d[0] + vz * d[2]) / (l * hl) > cos); }); };
 
 interface Tally { darkOnMan: number; manNear: number; litNear: number; lit: number; dark: number; darkClear: number; foeDark: number; foeNear: number; hash: string; frames: number }
 /** one scripted stretch: fall in, stack on the nearest door, open and clear — the team bare-eyed and the discipline rule off, so the lights burn */

@@ -78,7 +78,7 @@ export async function lightswitchCheck(): Promise<boolean> {
         tap('lightsOff'); step(2);
         // … and put out again by Sam, it is nobody's to put back: a calm defender standing at its switch leaves it dark
         const gd = (g.guards as any[]).find(x => x.state === 'patrol' && !x.civ), p0 = gd ? [...gd.char.pos] : null, on0 = LIGHTSWITCH_STATS.guardOn;
-        if (gd) { gd.char.posX = br.floor[0]; gd.char.posZ = br.floor[2]; g.teleportPlayer([4, 0, 22]); step(60 * 4); gd.char.posX = p0![0]; gd.char.posZ = p0![2]; }
+        if (gd) { gd.char.pos[0] = br.floor[0]; gd.char.pos[2] = br.floor[2]; g.teleportPlayer([4, 0, 22]); step(60 * 4); gd.char.pos[0] = p0![0]; gd.char.pos[2] = p0![2]; }
         own = !!gd && !switchLit(br) && LIGHTSWITCH_STATS.guardOn === on0 && br.targets.every((x: any) => typeof x.handOff === 'number'); ownD = gd ? `${gd.callsign} ${gd.state} at the plate for 4 s · lit ${switchLit(br)} · put back ${LIGHTSWITCH_STATS.guardOn - on0}` : 'no calm man'; }
       line(ok, 'the break room, authored dark: \'lights on\' lights every panel, each striking like a tube and steady inside two seconds', detail);
       line(own, 'put out again by the same hand, a room the level left dark is nobody\'s to put back: a calm defender at its switch leaves it', ownD); }
@@ -90,14 +90,14 @@ export async function lightswitchCheck(): Promise<boolean> {
 
     // (5) a calm defender in the room comes to the switch and puts it back; one with no line does not come
     { const calm = (g.guards as any[]).filter(x => x.state === 'patrol' && !x.civ);
-      const far = calm.filter(x => g.col.solidBlocked([x.char.posX, 1.6, x.char.posZ], lamp.pos) && flat(x.char.pos, sw.pos) > 4);
+      const far = calm.filter(x => g.col.solidBlocked([x.char.pos[0], 1.6, x.char.pos[2]], lamp.pos) && flat(x.char.pos, sw.pos) > 4);
       g.teleportPlayer([sw.stand[0], 0, sw.stand[2]]); step(2);
       const aw0 = far.map(x => x.awareness as number); tap('lightsOff'); step(30);
       const came = far.filter((x, i) => x.awareness > aw0[i] + 0.2 || flat(x.lastKnown ?? [0, 0, 0], sw.floor) < 0.1).length;
       line(far.length > 0 && came === 0 && !switchLit(sw), 'nobody without a line to the light that went out is any the wiser', `${far.length} calm men behind walls · roused ${came}`);
       tap('lightsOn'); step(2);
       const gd = calm[0]; let lit = -1, at = '', once = 0;
-      if (gd) { gd.char.posX = sw.floor[0] + sw.n[0] * 2.5; gd.char.posZ = sw.floor[2] + sw.n[2] * 2.5; step(2); const on0 = LIGHTSWITCH_STATS.guardOn;
+      if (gd) { gd.char.pos[0] = sw.floor[0] + sw.n[0] * 2.5; gd.char.pos[2] = sw.floor[2] + sw.n[2] * 2.5; step(2); const on0 = LIGHTSWITCH_STATS.guardOn;
         tap('lightsOff'); g.teleportPlayer([4, 0, 22]);
         for (let i = 0; i < 60 * 20 && lit < 0; i++) { step(); if (switchLit(sw)) { lit = i * DT; at = `${gd.callsign} ${gd.state}, ${f2(flat(gd.char.pos, sw.pos))} m from the plate`; } }
         step(60 * 3); once = LIGHTSWITCH_STATS.guardOn - on0; at += ` · put back by a defender ${once} time(s) in the 3 s he stood there after`; }

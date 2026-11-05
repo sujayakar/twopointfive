@@ -255,7 +255,7 @@ export class BreachDrill {
           try { detonateStun(g, it, false, { side: 'operative' }); } finally { g.guards = all; }   // (the thrower is off the list: the can is the team's own to the player — samstun.ts)
           this.beat('bang');
           // the men inside reel: muzzles drop to the floor at their feet, the middle one gives half a step (they are dazed for seconds — long after it matters)
-          if (!this.live) this.hostiles.forEach((h, i) => { if (h.state === 'dead') return; const c = h.char, f = c.forward(); order(h, { aimAt: [c.posX + f[0] * 1.2, 0.1, c.posZ + f[2] * 1.2], upper: 'aim', stance: 'none' }); if (i === 0) order(h, { goal: [c.posX + 0.35, 0, c.posZ - 0.3], strafe: true, face: c.bodyYaw, speed: 0.9 }); });
+          if (!this.live) this.hostiles.forEach((h, i) => { if (h.state === 'dead') return; const c = h.char, f = c.forward(); order(h, { aimAt: [c.pos[0] + f[0] * 1.2, 0.1, c.pos[2] + f[2] * 1.2], upper: 'aim', stance: 'none' }); if (i === 0) order(h, { goal: [c.pos[0] + 0.35, 0, c.pos[2] - 0.3], strafe: true, face: c.bodyYaw, speed: 0.9 }); });
           this.muzzlesOnDoor();
           this.phase = 'enter';
         }
