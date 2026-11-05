@@ -193,7 +193,7 @@ frames timed: solver, union, every pass, bricks, refusals; then `life`: one can 
 
 ## 9. Round two (10-10, after "Finish it"): six rules, each a knob, each off = the pool as §5 benched it (3781d45)
 
-`__smoke.sparse` {calmMax 4, farCells 1, directAt 0.5, readSkip false (true until his Mac's take: §9.7), fresh 0.15, fineDecay 3, fineShare 0.25} + Tab ▸ Volumetrics ▸ Sparse smoke; `__spl.asBenched()` = {1, 0, 2, false, 0, 0, 1}. They ship ON inside the prototype (all but the hop): he asked for it finished and
+`__smoke.sparse` {calmMax 4, farCells 1, directAt 0.5, readSkip false (true until his Mac's take: §9.7), fresh 0.15, fineDecay 3, fineShare 0.25} + Tab ▸ Volumetrics ▸ Sparse smoke; `__spl.asBenched()` = {1, 0, 2, false, 0, 0, 1} (and `indirect` on, said since 2026-11-05: the page opens on the whole pool, so the bench's `indirect` lever and its last extra row now read the other way round from the 10-10 files: on = the whole pool, off = the GPU's count at any fill). They ship ON inside the prototype (all but the hop): he asked for it finished and
 will judge it as it stands. GPU time: §9.7, his Mac. The numbers in §9.1–9.6 and 9.8: SwiftShader, solver-only loops, still air, seeded jitter.
 
 ### 9.1 Who steps (`calmMax`, `params.calmCells`, `farCells`, `dtCap`, `directAt`)
