@@ -24,7 +24,7 @@
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1'; process.env.TPS_RUSTITEMS = '1';   // (the game's own maths: the step runs in the module under no other)
 process.env.TPS_RUSTLINES = '0'; process.env.TPS_RUSTRAYS = '0'; process.env.TPS_RUSTCIRCLES = '0'; process.env.TPS_RUSTFOG = '0';   // (the TypeScript's arm is all TypeScript, whatever the stand has on: its rays are collision.ts's own walk)
 import { resolve } from 'path';
-import { standUp } from './headless.ts';
+const { standUp } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
 const ROOT = resolve(import.meta.dir, '../..');
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), X: any = await import(`${ROOT}/src/math/exact.ts`), C: any = await import(`${ROOT}/src/scene/collision.ts`), BM: any = await import(`${ROOT}/src/scene/boxMirror.ts`);

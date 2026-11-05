@@ -121,7 +121,7 @@ import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { POSEMATH } from '../anim/skeleton';
-import { rustRows, rustRow, rustOn, RUST_ON } from '../sim/sim';
+import { rustRows, rustRow, rustOn, RUST_ON, fellWord } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
@@ -201,6 +201,7 @@ export function pinned(env?: string): boolean { return harnessProfile() === 'fro
 export function pageRows(q: URLSearchParams, over = false): void {
   const plain = q.get('rust') === '0';
   for (const r of rustRows()) { const w = q.get('rust' + r); if (over && w === null && !plain) continue; rustRow(r, w !== null ? w !== '0' : rustOn(r) && !plain); }
+  { const f = q.get('fell'); if (f !== null) fellWord(f); }   // (?fell: the count of questions the TypeScript answered while its row was up, from the first box asked as the level is built — sim.ts FELL; `window.__sim.fell()` reads it)
 }
 export function pageSwitches(q: URLSearchParams): void {
   DESTRUCTION.on = !q.has('nodestruction');   // THE ONE SWITCH of the destruction goal (game/destructionSwitch.ts): on in the page unless the URL says ?nodestruction — raised before the level loads (its dressing)
