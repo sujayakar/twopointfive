@@ -195,8 +195,8 @@ export interface StandOpts {
   /** add the level's boxes to host.world and its lights to host.lights before the Game is built (default true; main.ts populates earlier by populateHost — the smoke solver is
    *  constructed between — and passes false) */
   populate?: boolean;
-  /** the QA HARNESS's stand (tools/qa/headless.ts) — FROZEN unless the run says TPS_PROFILE=shipped (src/host/profile.ts: under 'shipped' none of the lines below that
-   *  hold a newer rule off runs, and the game stands as the page's does): chaos 0 (the game byte for byte as it was before the destruction lane — what every frozen digest was recorded against),
+  /** the QA HARNESS's stand (tools/qa/headless.ts) — the page's unless the run says TPS_PROFILE=frozen (src/host/profile.ts: under 'shipped' none of the lines below that
+   *  hold a newer rule off runs, and the game stands as the page's does). On the old stand: chaos 0 (the game byte for byte as it was before the destruction lane — what every frozen digest was recorded against),
    *  the autosave slots in a Map (no localStorage in bun), the level script strict (a throwing beat fails the probe). Off = the page's game */
   harness?: boolean;
   /** THE GAME'S OWN DIE (src/math/dice.ts): a number = the Game owns a die seeded with it, from its construction draws on — the page always passes one (?seed=N, else a
