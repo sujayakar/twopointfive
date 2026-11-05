@@ -45,16 +45,34 @@ export const COAST_OF: Readonly<Record<GwotMat, CoastMat>> = {
   prodOrange: 'paintCoral', prodGreen: 'foliage', prodRed: 'paintCoral', prodYellow: 'paintSun', straw: 'sand', scrub: 'foliage',
 };
 
+/** THE QUIET WAY TO WEAR IT (a proposal beside the first, 11-05; the maintainer: "something that feels mirrors edge like", then "a minimalist hotel"): the
+ *  same skin with FEWER rows, after the white roof study (tools/levels/white-roof.ts): the ground is a white paver, every wall cast panels a step under it,
+ *  their copings and what is plastered a smooth skim, timber and plastic and painted metal white. ONE kit row wears each colour, so a level puts colour only
+ *  where it asks for it by name: `paintRust` is the warm one, `paintBlue` the water's. Only what differs from COAST_OF is written */
+export const COAST_QUIET_OF: Readonly<Record<GwotMat, CoastMat>> = { ...COAST_OF,
+  mud: 'castPanel', mudDark: 'castPanel', render: 'castPanel', block: 'castPanel', tWall: 'castPanel', mudLight: 'skimWhite', whitewash: 'skimWhite', paintCream: 'skimWhite',
+  paintBlue: 'accentBlue', paintGreen: 'enamelWhite', paintRust: 'accentRed',
+  dust: 'paverWhite', mudFloor: 'paverWhite', slab: 'paverWhite', gravel: 'paverWhite', dirt: 'paverWhite', damp: 'paverWhite', oil: 'paverWhite',
+  rugRed: 'canvasWhite', rugNavy: 'canvasWhite', rugOchre: 'canvasWhite', rugGreen: 'canvasWhite', rugMadder: 'canvasWhite', blanketBrown: 'canvasWhite', tarpBlue: 'canvasWhite',
+  olive: 'enamelWhite', stencil: 'plasticDark',
+  rust: 'enamelWhite', drumBlue: 'enamelWhite', drumRed: 'enamelWhite', genYellow: 'enamelWhite',
+  plasticGreen: 'plasticPale', plasticBlue: 'plasticPale', jerryYellow: 'enamelWhite',
+  poplar: 'enamelWhite', woodGrey: 'enamelWhite', ply: 'enamelWhite',
+  truckTan: 'enamelWhite', truckRed: 'enamelWhite',
+  prodOrange: 'enamelWhite', prodRed: 'enamelWhite', prodYellow: 'enamelWhite', straw: 'canvasWhite',
+};
+
 /** tools/qa/coast-check.ts's red path: every coast row laid as itself, standing for nothing */
 const BREAK = process.env.COAST_BREAK === '1';
 const KIT_ROWS = new Map<string, GwotMat>((Object.keys(GWOT_PALETTE) as GwotMat[]).map(m => [GWOT_PALETTE[m].join(','), m]));
 const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
 /** a kit paint in its coast clothes: the paint, the coast row it is, and the kit row it was; nothing for a paint that is no row of the kit's */
-function dressed(a: readonly number[] | undefined): { albedo: Vec3; coast: CoastMat; kit: GwotMat; said?: BoxStuff } | null {
+type CoastTable = Readonly<Record<GwotMat, CoastMat>>;
+function dressed(of: CoastTable, a: readonly number[] | undefined): { albedo: Vec3; coast: CoastMat; kit: GwotMat; said?: BoxStuff } | null {
   if (!a) return null;
   const p = paintOf(a), kit = p && Object.hasOwn(GWOT_PALETTE, p.name) ? p.name as GwotMat : KIT_ROWS.get(a.join(','));   // (the row handed over, a stand-in or a tone of it; or, where a copy was handed, its exact numbers)
   if (!kit) return null;
-  const coast = COAST_OF[kit], base = GWOT_PALETTE[kit], sim = gwotSimOf(a as Vec3);
+  const coast = of[kit], base = GWOT_PALETTE[kit], sim = gwotSimOf(a as Vec3);
   // a row or one of its stand-ins is the coast row standing for the same thing; any other numbers under the row's name are a tone of it
   let albedo: Vec3 = sim !== undefined ? (BREAK ? COAST_PALETTE[coast] : coastAs(coast, sim)) : tonedAs(COAST_PALETTE[coast], COAST_PALETTE[coast].map((v, c) => r4(v * (base[c] > 0 ? a[c] / base[c] : 1))) as Vec3);
   // what the thing said for itself, where that was not its row's word, it says still, with the coast row's finish
@@ -74,25 +92,26 @@ const wordOf = (d: { coast: CoastMat; kit: GwotMat; said?: BoxStuff }, explicit:
   const own = explicit !== undefined && explicit !== stuffOfName(d.kit) ? explicit : d.said, row = stuffOfName(d.coast);
   return own !== undefined ? { stuff: own } : row !== undefined && row !== 'plain' && row !== 'waits' ? { stuff: row as BoxStuff } : {};
 };
-const trim = (t: ShapePiece): ShapePiece => { const d = dressed(t.albedo); if (!d) return t; const { stuff, metal, rough, ...rest } = t; return { ...rest, albedo: d.albedo, ...finish(d, rough, metal), ...wordOf(d, stuff) }; };
-const marks = (ms: MarkingDef[] | undefined): MarkingDef[] | undefined => ms?.map(m => ({ ...m, pal: m.pal.map(e => { const d = dressed(e.albedo); return d ? { ...e, albedo: d.albedo, ...(e.rough !== undefined ? { rough: finish(d, e.rough, false).rough } : {}) } : e; }) }));
+const trim = (of: CoastTable) => (t: ShapePiece): ShapePiece => { const d = dressed(of, t.albedo); if (!d) return t; const { stuff, metal, rough, ...rest } = t; return { ...rest, albedo: d.albedo, ...finish(d, rough, metal), ...wordOf(d, stuff) }; };
+const marks = (of: CoastTable, ms: MarkingDef[] | undefined): MarkingDef[] | undefined => ms?.map(m => ({ ...m, pal: m.pal.map(e => { const d = dressed(of, e.albedo); return d ? { ...e, albedo: d.albedo, ...(e.rough !== undefined ? { rough: finish(d, e.rough, false).rough } : {}) } : e; }) }));
 /** one box as the kit handed it, in its coast clothes (a new object: the kit's own are left as they are) */
-function box<T extends Partial<Box>>(b: T): T {
-  const d = dressed(b.albedo), out: T = { ...b };
+function box<T extends Partial<Box>>(of: CoastTable, b: T): T {
+  const d = dressed(of, b.albedo), out: T = { ...b };
   if (d) { out.albedo = d.albedo; const f = finish(d, b.rough, b.metal); if (f.rough !== undefined) out.rough = f.rough; if (f.metal) out.metal = true; else delete out.metal; delete out.stuff; if (b.stuff !== undefined && b.stuff !== stuffOfName(d.kit)) out.stuff = b.stuff; }   // (a word of its own it keeps; its paint's the host writes from the coast row)
-  if (b.shape?.with) out.shape = { ...b.shape, with: b.shape.with.map(trim) };
-  if (b.marks) out.marks = marks(b.marks);
+  if (b.shape?.with) out.shape = { ...b.shape, with: b.shape.with.map(trim(of)) };
+  if (b.marks) out.marks = marks(of, b.marks);
   return out;
 }
 
-/** A HOST THAT LAYS THE KIT'S PIECES IN THE COAST SKIN: everything the kit hands it goes on to `host` in its coast clothes */
-export function coastHost(host: GwotHost): GwotHost {
+/** A HOST THAT LAYS THE KIT'S PIECES IN THE COAST SKIN: everything the kit hands it goes on to `host` in its coast clothes. `of`: which coast row each row
+ *  of the kit wears (COAST_OF; COAST_QUIET_OF is the same skin with fewer colours and quieter surfaces) */
+export function coastHost(host: GwotHost, of: CoastTable = COAST_OF): GwotHost {
   /** a wall: its paint, and the finish its builder wrote beside it */
-  const wall = (albedo: Vec3, extra: Partial<Box> | undefined): [Vec3, Partial<Box> | undefined] => { const d = dressed(albedo); if (!d) return [albedo, extra ? box(extra) : extra];
-    const ex = extra ? box(extra) : extra, f = extra ? finish(d, extra.rough, extra.metal) : {}; if (ex && f.rough !== undefined) ex.rough = f.rough; if (ex && f.metal) ex.metal = true; return [d.albedo, ex]; };
+  const wall = (albedo: Vec3, extra: Partial<Box> | undefined): [Vec3, Partial<Box> | undefined] => { const d = dressed(of, albedo); if (!d) return [albedo, extra ? box(of, extra) : extra];
+    const ex = extra ? box(of, extra) : extra, f = extra ? finish(d, extra.rough, extra.metal) : {}; if (ex && f.rough !== undefined) ex.rough = f.rough; if (ex && f.metal) ex.metal = true; return [d.albedo, ex]; };
   return {
-    add: b => host.add(box(b)),
-    prop: (kind, x, z, yaw, mass, parts, half) => host.prop(kind, x, z, yaw, mass, parts.map(p => { const d = dressed(p.albedo); return d ? { ...p, albedo: d.albedo } : p; }), half),
+    add: b => host.add(box(of, b)),
+    prop: (kind, x, z, yaw, mass, parts, half) => host.prop(kind, x, z, yaw, mass, parts.map(p => { const d = dressed(of, p.albedo); return d ? { ...p, albedo: d.albedo } : p; }), half),
     wallX: (z, x0, x1, t, albedo, openings, extra, height) => { const [a, ex] = wall(albedo, extra); return host.wallX(z, x0, x1, t, a, openings, ex, height); },
     wallZ: (x, z0, z1, t, albedo, openings, extra, height) => { const [a, ex] = wall(albedo, extra); return host.wallZ(x, z0, z1, t, a, openings, ex, height); },
     lights: host.lights, switchables: host.switchables, marks: host.marks, texel: host.texel,

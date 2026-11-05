@@ -97,6 +97,9 @@ export const COAST_PALETTE = {
   // metal, plastic, rubber, cloth, leaves
   brushedSteel: [0.525, 0.545, 0.555] as Vec3, darkSteel: [0.088, 0.093, 0.102] as Vec3, binGreen: [0.058, 0.205, 0.118] as Vec3, plasticPale: [0.715, 0.71, 0.675] as Vec3, plasticDark: [0.052, 0.052, 0.058] as Vec3,
   tyreRubber: [0.034, 0.034, 0.038] as Vec3, canvasWhite: [0.705, 0.685, 0.625] as Vec3, canvasBlue: [0.095, 0.245, 0.495] as Vec3, towelStripe: [0.655, 0.305, 0.215] as Vec3, foliage: [0.098, 0.235, 0.078] as Vec3,
+  // the quiet way's four (tools/levels/coastSkin.ts COAST_QUIET_OF; the white roof study's vocabulary, tools/levels/white-roof.ts): a white paver the ground is
+  // laid in (walls and things sit a step under it), a smooth wall in the one warm colour, and two clean enamels: that colour on a thing, and the water's blue
+  paverWhite: [0.715, 0.72, 0.725] as Vec3, skimRed: [0.8, 0.2, 0.05] as Vec3, accentRed: [0.78, 0.17, 0.04] as Vec3, accentBlue: [0.02, 0.215, 0.43] as Vec3,
 };
 export type CoastMat = keyof typeof COAST_PALETTE;
 namePaints(COAST_PALETTE);
@@ -107,6 +110,7 @@ export const COAST_FINISH: Readonly<Record<CoastMat, { rough: number; metal?: bo
   paintTeal: { rough: 0.55 }, paintCoral: { rough: 0.55 }, paintSun: { rough: 0.5 }, paintNavy: { rough: 0.55 }, enamelWhite: { rough: 0.4 },
   brushedSteel: { rough: 0.4, metal: true }, darkSteel: { rough: 0.5, metal: true }, binGreen: { rough: 0.5 }, plasticPale: { rough: 0.45 }, plasticDark: { rough: 0.5 },
   tyreRubber: { rough: 0.85 }, canvasWhite: { rough: 0.95 }, canvasBlue: { rough: 0.95 }, towelStripe: { rough: 0.95 }, foliage: { rough: 1 },
+  paverWhite: { rough: 0.5 }, skimRed: { rough: 0.45 }, accentRed: { rough: 0.35 }, accentBlue: { rough: 0.35 },
 };
 export const COAST_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(
   (Object.keys(COAST_PALETTE) as CoastMat[]).map(n => [n, { albedo: COAST_PALETTE[n], rough: COAST_FINISH[n].rough, ...(COAST_FINISH[n].metal ? { metal: true } : {}) }]));
@@ -118,6 +122,7 @@ export const COAST_SIM: Readonly<Record<CoastMat, GwotSim>> = {
   paintTeal: 'metal', paintCoral: 'metal', paintSun: 'metal', paintNavy: 'metal', enamelWhite: 'metal',
   brushedSteel: 'metal', darkSteel: 'metal', binGreen: '~plastic', plasticPale: '~plastic', plasticDark: '~plastic',
   tyreRubber: '~plastic', canvasWhite: 'chair', canvasBlue: 'chair', towelStripe: 'chair', foliage: 'plant',
+  paverWhite: 'stone', skimRed: 'wall', accentRed: 'metal', accentBlue: 'metal',
 };
 /** the palette + finishes as the exporter's `materials` rows (tools/levels/export.ts: a generator's `MATERIALS` export) */
 export const GWOT_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(

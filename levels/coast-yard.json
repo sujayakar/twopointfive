@@ -65,7 +65,11 @@
     "canvasWhite": { "albedo": [0.705, 0.685, 0.625], "rough": 0.95, "stuff": "cloth" },
     "canvasBlue": { "albedo": [0.095, 0.245, 0.495], "rough": 0.95, "stuff": "cloth" },
     "towelStripe": { "albedo": [0.655, 0.305, 0.215], "rough": 0.95, "stuff": "cloth" },
-    "foliage": { "albedo": [0.098, 0.235, 0.078], "rough": 1, "stuff": "waits" }
+    "foliage": { "albedo": [0.098, 0.235, 0.078], "rough": 1, "stuff": "waits" },
+    "paverWhite": { "albedo": [0.715, 0.72, 0.725], "rough": 0.5, "stuff": "paver" },
+    "skimRed": { "albedo": [0.8, 0.2, 0.05], "rough": 0.45, "stuff": "skim" },
+    "accentRed": { "albedo": [0.78, 0.17, 0.04], "rough": 0.35, "stuff": "enamel" },
+    "accentBlue": { "albedo": [0.02, 0.215, 0.43], "rough": 0.35, "stuff": "enamel" }
   },
   "surfaces": {
     "building": { "x0": 26, "x1": 33, "z0": 9, "z1": 15 },
