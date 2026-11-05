@@ -339,13 +339,14 @@ export function fell(row: string, why: string): void {
  *  checkpoint files, a pool that grew, a level too big for a pool stopped as it loads): the doors, what falls, the furniture, a leaf off its hinges, the
  *  thrown things — and RULES_ROW, the copy of the box world refused to any of them. */
 export const RULES_ROW = 'a rule\'s step (doors, furniture, leaves, thrown things)';
-export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'walk', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'props', 'slabs', 'items', RULES_ROW];
+/** A TWIN'S BODY REACHED WITH NO CHOICE MADE: a rule of the things answered by its TypeScript where nothing asks whether the module could (so no `ruleFell`
+ *  says it). Counted under this name, a row of its own, wherever one is known, until the place has a choice like any other; SEALED, so a run that
+ *  reaches one ends red. KNOWN TODAY: none (the two that were — the furniture's settle as a level is stood up, a ray into the furniture — each have a
+ *  choice now, and their way back is the furniture's own row). */
+export const TWIN_ROW = "a twin's body, no choice made";
+export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'walk', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'props', 'slabs', 'items', RULES_ROW, TWIN_ROW];
 /** A RULE OF `row` WAS STEPPED IN TYPESCRIPT WHILE THE ROW IS UP (a family's fallback site says so, with the reason in plain words): counted, except
  *  where the row is idle by its own rule — one that works lengths and angles out answers only under the game's own maths (OWN_MATHS, below) */
-/** A TWIN'S BODY REACHED WITH NO CHOICE MADE: a rule of the things answered by its TypeScript where nothing asks whether the module could (so no `ruleFell`
- *  says it). Counted under this name, a row of its own, wherever one is known, until the place has a choice like any other; no run may reach one by the
- *  time a twin is deleted. KNOWN TODAY: a ray into the furniture (game/props.ts PropSystem.raycast: rounds, beams, debris, marks — always here). */
-export const TWIN_ROW = "a twin's body, no choice made";
 export function ruleFell(row: string, why: string): null { if (FELL.on && (EXACT.on || !OWN_MATHS.includes(row))) fell(row, why); return null; }
 /** THE SEAL'S RED PATH FOR A RULE'S ROW (`FELL.red`, raised by a tool under FELL_BREAK=1 and by nothing else): the first step of each row, and every
  *  hundredth after, is sent to its TypeScript and counted, so a run with the break up reaches every sealed rule's row that stepped in it, by name. The

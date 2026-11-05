@@ -511,7 +511,7 @@ let wordOwn = '', wordRust = '';
     for (const [what, a, b] of [
       ['stepRow | update', body(ts, /^  private stepRow\(/m, '\n  }\n'), body(rs, /^pub fn update\(/m, '\n}\n')],
       ['poseKey | pose_key', body(ts, /^const poseKey = /m, '\n'), body(rs, /^fn pose_key\(/m, '\n}\n')],
-      ['PropSystem.raycast | ray_things', body(props, /^  raycast\(ro: Vec3/m, '\n  }\n'), body(lines, /^pub fn ray_things\(/m, '\n}\n')]] as [string, string | null, string | null][]) {
+      ['PropSystem.raycastHere | ray_things', body(props, /^  raycastHere\(ro: Vec3/m, '\n  }\n'), body(lines, /^pub fn ray_things\(/m, '\n}\n')]] as [string, string | null, string | null][]) {
       if (a === null || b === null) { off.push(`${what}: not found`); continue; }
       const na = nums(a), nb = nums(b); shared += na.length; if (na.join() !== nb.join()) off.push(`the numbers written in ${what}: ${na.join(' ')} here, ${nb.join(' ')} there`);
     } }

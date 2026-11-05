@@ -189,7 +189,7 @@ export class BoxMirror extends HostOwned {
   get cutRows(): number { return this.cutNext - this.cutFree.length; }
   // the furniture's copy: where its two tables are, the count of writes it was copied at (−1 = not in this tick), whether it stood then, and whether
   // every row is owed (the world newly this game's, another maths, a snapshot put back: a row's cos and sin are compared by nobody)
-  private thing = 0; private thingLive = 0; private thingsAt = -1; private thingsOk = false; private thingsAll = true;
+  private thing = 0; private thingLive = 0; private thingsAt = -1; private thingsOf: Furniture | null = null; private thingsOk = false; private thingsAll = true;
   // the level's snow: where its table is (a byte a static), and how many of its bytes this copy has written (−1 = not known: what stands behind them may be another game's)
   private snowAt0 = 0; private snowLen = -1;
   // where the tables are: an index into the doubles (f64) or the words (u32 / i32) of the module's memory
@@ -419,8 +419,8 @@ export class BoxMirror extends HostOwned {
    *  five boxes a tick, not the level's two hundred. → does the copy stand (false: no tick, or more furniture than the tables hold — the TypeScript answers) */
   things(P: Furniture): boolean {
     if (!this.live) return false;
-    if (this.thingsAt === THINGS.n) return this.thingsOk;
-    this.thingsAt = THINGS.n; this.thingsOk = false;
+    if (this.thingsAt === THINGS.n && this.thingsOf === P) return this.thingsOk;   // (…of THIS furniture: a check stands a second set up over one box world)
+    this.thingsAt = THINGS.n; this.thingsOf = P; this.thingsOk = false;
     const all = P.all, L = P.props, c = this.caps; if (all.length > c.things) return false;
     let parts = 0; for (let r = 0; r < L.length; r++) parts += L[r].boxes.length; if (parts > c.leaves) return false;
     const m = f64(), w = u32(), cutOn = cutConfig.on, cut0 = this.cut, base = THING_SET * c.leaves, every = this.thingsAll;

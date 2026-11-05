@@ -422,8 +422,25 @@ export class StaticCollision {
     if (FELL.on && RUST.lines) fell('lines', M.lines ? 'the leaves alone: a flag or a length the copy does not keep' : this.fellWhy());
     return this.dynamicHit(a, d0 * il, d1 * il, d2 * il, len, needFlags);
   }
-  /** THE FURNITURE'S RAY, ANSWERED BOTH WAYS (the check's: BOTH; game/props.ts PropSystem.raycast calls this with what it answered): the module is asked the
-   *  same ray over its copy of the furniture's parts (lines.rs ray_things), the two answers are compared, and the copy with the furniture as it stands. */
+  /** THE FURNITURE'S RAY, ASKED OF THE MODULE (game/props.ts PropSystem.raycast: a round, a beam, a piece of debris, a mark, a thrown thing's plan): the
+   *  nearest part of any thing of `P` the ray meets within tmax, over the copy's own list of the furniture's parts as they stand (lines.rs ray_things;
+   *  the parts are copied where one was written since: boxMirror.ts things). Inside a tick or a window the copy stands; outside both it is proven for
+   *  this one question and shut behind it (`lone`). → the hit (which row of `P.props`, how far along, the face's normal, the part's box), null = nothing
+   *  met, or UNDEFINED = the module cannot answer it now (no copy standing, or more furniture than it holds): the caller answers, and says so. */
+  thingsRay(P: Furniture, ro: Vec3, rd: Vec3, tmax: number): { row: number; t: number; n: Vec3; box: Box } | null | undefined {
+    if (!this.mirror.live && this.lone()) { try { return this.thingsAsk(P, ro, rd, tmax); } finally { this.mirror.shut(); } }
+    return this.thingsAsk(P, ro, rd, tmax);
+  }
+  private thingsAsk(P: Furniture, ro: Vec3, rd: Vec3, tmax: number): { row: number; t: number; n: Vec3; box: Box } | null | undefined {
+    const M = this.ready(); if (!M.live || !M.things(P)) return undefined;
+    const k = M.x.lines_ray_things(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax);
+    if (k < 0) return null;
+    const m = f64(), at = M.scratch, box = M.thingBox(P, m[at + 4]);
+    if (box === null) throw new Error(`the Rust module's ray into the furniture met part ${m[at + 4]} of its list, which is no part of the furniture as it stands (${P.props.length} things)`);
+    return { row: k, t: m[at], n: [m[at + 1], m[at + 2], m[at + 3]], box };
+  }
+  /** …AND ANSWERED BOTH WAYS (the check's: BOTH; PropSystem.raycast calls this with what its own walk answered): the module is asked the same ray over
+   *  its copy of the furniture's parts, the two answers are compared, and the copy with the furniture as it stands. */
   thingsBoth(P: Furniture, ro: Vec3, rd: Vec3, tmax: number, t: { t: number; n: Vec3; prop: unknown; box: Box } | null): void {
     const M = this.mirror; if (!M.live || M.owesBoxes || !M.things(P)) return;   // (a debt is paid by the game's own questions, never by the check's)
     const k = M.x.lines_ray_things(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax), m = f64(), at = M.scratch;
