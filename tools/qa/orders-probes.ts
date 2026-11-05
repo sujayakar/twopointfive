@@ -33,7 +33,7 @@
 //                      owner that refuses keeps its men; a show taking the floor drops every order
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { ORDERS, doorIdWords } = await import(`${ROOT}/src/game/orders.ts`);   // (doorIdWords: a door's name as the squad says it — it follows the dialogue pass, so the expected words do too)
+const { ORDERS, doorWords } = await import(`${ROOT}/src/game/orders.ts`);   // (doorWords: a door's name as the HUD says it — its id's words, or the rooms it joins where the door names rule is on — so the expected words follow the stand)
 const { COVER } = await import(`${ROOT}/src/game/cover.ts`);
 const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
 const { DOORSTAY, DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
@@ -311,7 +311,7 @@ export const ordersCover = guarded(async () => {
   const ackA = cover('cover that way (a floor point behind them, to the west)', WEST, 2, WORDS.on ? /^covering (?!.*\b(north|south|east|west)\b)\S/ : /^covering west$/, tA);   // (the dialogue pass on: the place by its name or 'that way', never a bearing — a row on the HUD has no compass)
   const tB = g.time;
   const W = R.door('breakroom_w');
-  const ackB = cover('cover this door (the break room\'s west door)', W.frameCentre, 2, new RegExp(`^covering ${doorIdWords('breakroom_w')}$`), tB);
+  const ackB = cover('cover this door (the break room\'s west door)', W.frameCentre, 2, new RegExp(`^covering ${doorWords(W)}$`), tB);
   verdict(ackA.length === 1 && ackB.length === 1, 'each cover order is acknowledged once', `${[...ackA, ...ackB].map(s => `${s.who} "${s.text}"`).join(', ')}`);
   verdict(!R.samHit, 'Sam was not hit', `hit ${R.samHit}`);
   return done();
@@ -356,7 +356,7 @@ export const ordersStack = guarded(async () => {
     const leaf0 = DOORSTAY.on ? d.angle : 0;
     const here = men.map((m: any) => [...m.char.pos]); R.step(60 * 6); const drift = men.map((m: any, i: number) => dist(m.char.pos, here[i]));
     const sets = R.lines(/^set\.$/, t0); const words = men.map((m: any) => O.statusOf(m));
-    verdict(drift.every(x => x < 0.1) && sets.length === 1 && words.every((s: string) => s === `stacked · ${doorIdWords(name)}`) && Math.abs(d.angle - leaf0) < 0.05, `${name}: they hold the stack (six seconds, the door untouched), "set." called once, the HUD says "stacked"`,
+    verdict(drift.every(x => x < 0.1) && sets.length === 1 && words.every((s: string) => s === `stacked · ${doorWords(d)}`) && Math.abs(d.angle - leaf0) < 0.05, `${name}: they hold the stack (six seconds, the door untouched), "set." called once, the HUD says "stacked"`,
       `drift ${drift.map(f2).join(' / ')} m · set. ${sets.map(s => `${s.who} @${f2(s.t - t0)} s`).join(', ') || 'never'} · "${words[0]}" · leaf angle ${f2(d.angle)}${leaf0 ? ` (${f2(leaf0)} as the hold began)` : ''}`);
     if (k === 1) {   // the cursor on a stacked man is the man (he stands inside the door's pick radius), on the doorway still the door
       const chest: number[] = [b1.char.pos[0], 1.2, b1.char.pos[2]];

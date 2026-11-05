@@ -9,7 +9,7 @@ import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
 import { Character, HOLD } from './character';
 import type { UpperMode } from './character';
 import { BoxFlag, rayBox } from '../scene/boxes';
-import { BOTH, type StaticCollision } from '../scene/collision';   // (read inside a function only: the check's count of answers given both ways)
+import { BOTH, BAKE_Y, type StaticCollision } from '../scene/collision';   // (read inside a function only: the check's count of answers given both ways)
 import { SENSE, type LightField } from './sense';   // (read inside functions only: the light model's switch and its field)
 import { SENSES } from '../scene/boxMirror';
 import { FOG, fogThrough } from './fogofwar';
@@ -70,7 +70,7 @@ import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
 import { feedBegin, feedDeal, feedDrop, feedStarts, feedTick } from './gunreload';   // (called inside the reload beat only)
 import { sideOutAlert, sideLocked, quietHeard } from './gunslots';   // (called inside startReloadBeat only)
-import { hourLight } from './hours';
+import { hourLight, moonLight } from './hours';
 import { handleGate } from './handleside';
 import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
 import { teamCap, teamRunLegs, teamAccel, teamTread, teamAtWalk } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
@@ -1526,7 +1526,7 @@ export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail:
    *  first wall, under lookDark with the team's own lights left out) burns his light: the dark hides only the other side. Off = dark on every hold, as it was —
    *  four men holding a lit room were shot from a dark doorway eight metres off by a man none of them could see. SHIPS OFF, a row to try: it keeps a man
    *  holding a taken room lit for as long as he holds (the hold is meant to be dark, and a lit man is seen), it reads the floor by the CPU's direct-light
-   *  estimate (no bounce, no moon) where everything else a man does by light goes by the meter, and two lit mates can keep each other's lights on */
+   *  estimate (no bounce, no moon unless sense.ts SENSE.moon) where everything else a man does by light goes by the meter, and two lit mates can keep each other's lights on */
   lookDark: false, lookLit: 0.25, lookBelow: 0.12, lookM: 10,
   /** THE PLACE DECIDES (the footage: lights off in lit halls and rooms whatever the men are doing, on in the dark): a man who stands on lit floor with lit
    *  floor all along his gun — every metre out to `litM` (his light's reach) or the first wall, and every third metre down both edges of its cone — whose man,
@@ -1545,7 +1545,7 @@ export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail:
    *  an order that takes him away from him is walked) instead of carrying him, gun lowered, up into the man's light. The rule above (`litOff`) wants his own floor lit too; this is the other side of it: a man in a dark room with an enemy under a
    *  lamp outside the door shoots from the dark. Asked four times a second per man with a man in his eyes (or, for the light alone, out of them for under a
    *  second and a half: the blink roomfight.ts keeps his aim through — the walk is held only with the man in his eyes); the light is the other
-   *  rules' again the frame he has no such man, the walk within a quarter of a second. The estimate is the CPU's direct light with no bounce and no moon: it errs toward calling HIM dark. No range limit, by measurement: held to the nine metres `litAt` is a sighting at, his light came up from the dark on the far man and the lens gave him away (624 against 653 of 864 teammates up over 432 night breaches). false = as it was: sent on
+   *  rules' again the frame he has no such man, the walk within a quarter of a second. The estimate is the CPU's direct light with no bounce and no moon (unless sense.ts SENSE.moon): it errs toward calling HIM dark. No range limit, by measurement: held to the nine metres `litAt` is a sighting at, his light came up from the dark on the far man and the lens gave him away (624 against 653 of 864 teammates up over 432 night breaches). false = as it was: sent on
    *  past Sam at a man under a lamp, his light came up with the word and he walked at him with his gun down (the night breach's last hunt) */
   litMan: true,
   /** NOT INTO THE WALL AT HIS MUZZLE (wallDark, below, has the rule): `wallOff` the switch — off here, on in the page (host/profile.ts; ?walllight=0 puts it
@@ -1586,17 +1586,53 @@ function looksIntoDark(g: Game, gd: Guard, A: ReturnType<Game['orders']['of']>):
 export function placeLitSeen(g: Game, gd: Guard): boolean { const s = litSeen.get(gd); return LIGHTS.litOff && !!s && g.time - s.t >= 0 && g.time - s.t < 0.5 + 1e-6 && s.lit; }
 const litUntil = new SideMap<Guard, number>('guards.litUntil');
 const WALL_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WALLLIGHT_BREAK === '1';   // (QA: the rule's own check must fail with this set)
-const wallSeen = new SideMap<Guard, { t: number; since: number; dark: boolean }>('guards.wallSeen');
+const wallSeen = new SideMap<Guard, { t: number; since: number; dark: boolean; out?: boolean }>('guards.wallSeen');   // (`out`: the reading put out a light that was otherwise burning — poseFlashlight says so)
 /** seven directions across a beam about `d` (game.ts tune.flashOuter is 19 degrees): its axis, four turned about the vertical, one tipped up and one down */
-function beamFan(d: Vec3): Vec3[] {
+export function beamFan(d: Vec3): Vec3[] {
   const out: Vec3[] = []; for (const a of [0, -0.17, 0.17, -0.33, 0.33]) { const c = Math.cos(a), k = Math.sin(a); out.push([d[0] * c + d[2] * k, d[1], d[2] * c - d[0] * k]); }
   for (const e of [-0.3, 0.3]) out.push(v3.normalize([d[0], d[1] + e, d[2]])); return out;
 }
+const FLOOR_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WALLFLOOR_BREAK === '1';   // (QA: the ground is something solid again, as it was; the checks of the reading below must fail with this set)
+const FLOOR_TOP = BAKE_Y - 1e-3;   // (a hair under the top of the ground's band: a thing that tops out AT the band's top is in the way, as it is to the walk grid's bake)
+/** WHAT ONE RAY OF A BEAM ENDS ON inside `m` of the lens: 3 = something that stands, met above the ground's band · 2 = the foot of such a thing, met inside
+ *  the band · 1 = the ground (it is down in the band inside `m` with nothing standing in the rest of its way) · 0 = nothing. The ground's band is what the walk grid calls floor (scene/collision.ts BAKE_Y: whatever tops out under it, feet
+ *  cross): the ray is followed as it flies while it is above the band, and from there to where it meets the ground along the band's top, where a wall, a
+ *  leaf or a crate is in the way down to its foot and the slab, a kerb or a blast's rubble is not. */
+function rayEnd(g: Game, o: Vec3, r: Vec3, m: number): 0 | 1 | 2 | 3 {
+  const dip = r[1] < 0 ? Math.max(0, (o[1] - FLOOR_TOP) / -r[1]) : Infinity, a = Math.min(m, dip);   // (how far along it the ray is above the band)
+  if (a > 0 && g.col.segmentBlocked(o, [o[0] + r[0] * a, o[1] + r[1] * a, o[2] + r[2] * a])) return 3;
+  if (dip >= m) return 0;
+  const run = Math.min(m, o[1] / -r[1]) - dip, p: Vec3 = [o[0] + r[0] * dip, FLOOR_TOP, o[2] + r[2] * dip];
+  if (run > 0 && g.col.segmentBlocked(p, [p[0] + r[0] * run, FLOOR_TOP, p[2] + r[2] * run])) return 2;
+  return 1;   // (down in the ground's band inside `m`: it has ended on the floor, a few centimetres of lens height either way)
+}
+/** IS A BEAM INTO A WALL — the one reading the two wall rules below both ask, of the beam from `o` across `fan` (its axis first) at distance `m`: the
+ *  MIDDLE of the beam ends on something that stands inside `m`, and no ray of it runs clear to `m`. THE FLOOR IS NOT A WALL: a ray that comes down to the
+ *  ground is neither a wall nor clear, so a lowered gun over open floor (its middle on the ground) burns, and the same gun a step from a wall (its middle
+ *  on the wall, its lower edge on the floor at the wall's foot) is into the wall. `held` = it read as a wall a moment ago (the rules ask their far distance
+ *  then): the middle still counts while it is on the thing's FOOT, inside the ground's band; to start, it must be on it above the band. That is the same
+ *  give for a lowered beam, whose middle moves between wall and floor with no change of distance, as the two distances are for a level one — a man who
+ *  sways at the edge does not blink. (Before: the ground counted as "something solid" and every ray had to end inside `m`. A beam at low ready meets the
+ *  ground 1.50 to 1.55 m from the lens, between a weapon light's two distances, so one brush past a wall kept a teammate dark for the rest of his walk,
+ *  in the open.) */
+function beamWalled(g: Game, o: Vec3, fan: Vec3[], m: number, held: boolean): boolean {
+  if (FLOOR_BREAK) return fan.every(r => g.col.segmentBlocked(o, [o[0] + r[0] * m, o[1] + r[1] * m, o[2] + r[2] * m]));
+  for (let i = 0; i < fan.length; i++) { const e = rayEnd(g, o, fan[i], m); if (e === 0 || (i === 0 && !(e === 3 || (held && e === 2)))) return false; }
+  return true;
+}
+/** …asked of a beam laid by hand, from `o` along `d` — and what one ray of one ends on (QA: the lights' checks read beams ray by ray with the rule's own
+ *  line test, at a margin either side of its distances: tools/qa/beam-reading.ts) */
+export function beamWalledAt(g: Game, o: Vec3, d: Vec3, m: number, held = false): boolean { return beamWalled(g, o, beamFan(d), m, held); }
+export function beamRayEnd(g: Game, o: Vec3, r: Vec3, m: number): 0 | 1 | 2 | 3 { return rayEnd(g, o, r, m); }
+/** where a carried light will burn: at its lens `p`, or this side of the wall the lens is carried through from `held` (attachFlashlight, lighting.ts lensClear) */
+function burnsFrom(g: Game, held: Vec3, p: Vec3): Vec3 { return g.col.segmentBlocked(held, p) ? lensClear(g, held, p, g.engine.settings.flashlightRadius) : p; }
+/** …a living man's weapon light, for the checks (nothing before he has a pose) */
+export function beamLens(g: Game, gd: Guard): Vec3 | null { const held = gd.char.bones.upperArmR; return held ? burnsFrom(g, held, gd.flashlight.pos) : null; }
 /** LIGHTS.wallOff (the maintainer, 10-22, off the first tutorial mission: "weird that they are shining the flashlight on the wall immediately in front of
- *  them"): a teammate's weapon light is dark while its WHOLE beam ends on something solid within `wallM` of the lens — the wall he walks up to a stack along,
- *  the truck he kneels behind, the dirt at his knee. Such a light shows him nothing and is the brightest thing in the picture. Asked of the beam as posed
- *  this frame (the lens — where it will burn: this side of a wall it is pressed through — and where the gun points): the axis and six
- *  rays across the cone must ALL end inside `wallM` — a jamb met edge-on with the room open beyond it to part of the cone is not a wall, and that light
+ *  them"): a teammate's weapon light is dark while its beam is into something that stands within `wallM` of the lens — the wall he walks up to a stack
+ *  along, the truck he kneels behind; never the ground (beamWalled, above: a gun at low ready over open floor lights the floor ahead of him, and burns). Such a light shows him nothing and is the brightest thing in the picture. Asked of the beam as posed
+ *  this frame (the lens — where it will burn: this side of a wall it is pressed through — and where the gun points): the axis must end on it and
+ *  none of the six rays across the cone may run clear of `wallM` — a jamb met edge-on with the room open beyond it to part of the cone is not a wall, and that light
  *  burns. It goes dark once that has held `wallSecs` (a muzzle swept past a corner does not blink) and burns again the frame any ray runs clear to
  *  `wallBackM` (the door opens: the room is lit at once). The other rules still decide whether he wants a light at all; this one only says it would be
  *  wasted — and with anybody who is not of his side standing in the beam this side of the wall it is not: that light burns. Whoever is not one of Sam's
@@ -1604,19 +1640,19 @@ function beamFan(d: Vec3): Vec3[] {
 function wallDark(g: Game, gd: Guard, held: Vec3 | undefined): boolean {
   if (!LIGHTS.wallOff || WALL_BREAK || gd.team !== 'operative' || !gd.unit || gd.state === 'dead' || !held) return false;
   const p = gd.flashlight.pos, d = gd.flashlight.dir, t = g.time;
-  const o = g.col.segmentBlocked(held, p) ? lensClear(g, held, p, g.engine.settings.flashlightRadius) : p, fan = beamFan(d);   // (a lens carried through the wall he stands at lights from this side of it — attachFlashlight, lighting.ts: asked from where it will burn)
+  const o = burnsFrom(g, held, p), fan = beamFan(d);   // (a lens carried through the wall he stands at lights from this side of it — attachFlashlight, lighting.ts: asked from where it will burn)
   const hl = Math.hypot(d[0], d[2]) || 1, manIn = (m: number) => g.guards.some(x => { if (x === gd || x.state === 'dead' || x.team === 'operative') return false;   // (somebody not of his side in the beam, this side of what it ends on: a light with a man in it is not wasted — the walls are asked of the statics only)
     const vx = x.char.pos[0] - o[0], vz = x.char.pos[2] - o[2], l = Math.hypot(vx, vz); return l < m + 0.5 && (l < 0.3 || (vx * d[0] + vz * d[2]) / (l * hl) > 0.9); });
-  const ends = (m: number) => fan.every(r => g.col.segmentBlocked(o, [o[0] + r[0] * m, o[1] + r[1] * m, o[2] + r[2] * m])) && !manIn(m);
+  const ends = (m: number, kept: boolean) => beamWalled(g, o, fan, m, kept) && !manIn(m);
   const was = wallSeen.get(gd), s = was && t >= was.t && t - was.t <= 0.25 ? was : { t, since: t - LIGHTS.wallSecs, dark: false };   // (no reading a moment ago — a fresh man, a clock put back: this frame's reading stands at once)
-  const near = ends(s.dark ? LIGHTS.wallBackM : LIGHTS.wallM), since = near ? s.since : t, dark = near && (s.dark || t - since >= LIGHTS.wallSecs - 1e-9);
+  const near = ends(s.dark ? LIGHTS.wallBackM : LIGHTS.wallM, s.dark), since = near ? s.since : t, dark = near && (s.dark || t - since >= LIGHTS.wallSecs - 1e-9);
   wallSeen.set(gd, { t, since, dark }); return dark;
 }
 const TORCH_WALL_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TORCHWALL_BREAK === '1';   // (QA: the rule's own check must fail with this set)
 const torchLowSeen = new SideMap<Guard, { t: number; low: boolean }>('guards.torchLowSeen');
 /** TORCH.wallLow (calmtorch.ts; the maintainer, 10-22, off the stealth tutorial: "another example of character shining flashlight at a small point in front
  *  of them. feels a bit weird but i'm not sure what the natural thing is here"): a man carrying a HAND torch — a patrol, a man gone to look — whose beam, as
- *  the relaxed carry would point it (his heading and chest, his aim's pitch), would end whole on something solid within `wallM` of his hand has nothing in
+ *  the relaxed carry would point it (his heading and chest, his aim's pitch), would end whole on something that stands within `wallM` of his hand (beamWalled: the ground is not a wall) has nothing in
  *  front of him to light: he lets the torch hang, its beam on the floor at his feet, until the carry runs clear to `wallBackM` again (he has turned, or
  *  walked on). Asked of the carry's own direction, never of the tipped beam (which always ends on the floor), so the answer does not chase itself. A weapon
  *  light is not a hand torch and is never asked: it points where the gun points. Off: the carry as it was. */
@@ -1624,13 +1660,16 @@ function torchLow(g: Game, gd: Guard): boolean {
   if (!(TORCH.wallLow || TORCH.wallDark) || TORCH_WALL_BREAK) return false;
   const c = gd.char, hand = c.bones.handR, t = g.time; if (!hand) return false;
   const d = torchCarryWant(c), was = torchLowSeen.get(gd), low0 = !!was && t >= was.t && t - was.t <= 0.25 && was.low, m = low0 ? TORCH.wallBackM : TORCH.wallM;
-  const low = beamFan(d).every(r => g.col.segmentBlocked(hand, [hand[0] + r[0] * m, hand[1] + r[1] * m, hand[2] + r[2] * m]));
+  const low = beamWalled(g, hand, beamFan(d), m, low0);
   torchLowSeen.set(gd, { t, low }); return low;
 }
 /** what TORCH.wallLow last made of his carry, while that reading is fresh (QA) */
 export function torchLowSeenOf(g: Game, gd: Guard): boolean { const s = torchLowSeen.get(gd); return !!s && g.time - s.t >= 0 && g.time - s.t <= 0.25 && s.low; }
 /** what LIGHTS.wallOff last made of his beam, while that reading is fresh (QA: the probe judges the rule by it) */
 export function wallDarkSeen(g: Game, gd: Guard): boolean { const s = wallSeen.get(gd); return LIGHTS.wallOff && !!s && g.time - s.t >= 0 && g.time - s.t <= 0.25 && s.dark; }
+/** …and did that reading put OUT a light the other rules had burning (QA: a check that excuses a dark man for the wall at his muzzle excuses only him — the
+ *  rule's clock runs on a man whose light is off for any other reason too) */
+export function wallPutOut(g: Game, gd: Guard): boolean { return wallDarkSeen(g, gd) && !!wallSeen.get(gd)?.out; }
 /** is this man's weapon light this rule's to decide */
 export function lightRuled(g: Game, gd: Guard): boolean { return LIGHTS.on && gd.team === 'operative' && !!gd.unit && fightLive(g) && !!orderOf(g, gd); }
 const litManSeen = new SideMap<Guard, { t: number; tgt: Guard; v: boolean }>('guards.litManSeen');
@@ -2577,18 +2616,25 @@ function lightWindow(d: number, range: number): number { const x = d / range; co
  *  irradiance) — every enabled analytic light the engine holds this frame (fixtures' area lights, lamps, torches and weapon lights, the beacons, muzzle flashes)
  *  through the shader's own terms (evalLight: 1/max(d², r²), the range window, the spot cone's smoothstep, the panel's emitter cosine, the receiving cosine),
  *  shadowed by one segment test against the statics and the door leaves (collision.ts — the CPU's stand-in for occluded()). What it has not got, named: no
- *  bounce (the probe adds the radiance cache's; a room lit only round a corner reads darker here than on screen), no moon (kind 2: indoors it only comes through
- *  the glazing, and unshadowed it would light everybody), no bodies' shadows (capsules are GPU-side), no smoke, no fixture flicker. Used for one thing: how lit
+ *  bounce (the probe adds the radiance cache's; a room lit only round a corner reads darker here than on screen), no moon unless sense.ts SENSE.moon says
+ *  (kind 2: unshadowed it would light everybody — hours.ts moonLight gives it the sun's one shadow test), no bodies' shadows (capsules are GPU-side), no smoke, no fixture flicker. Used for one thing: how lit
  *  an AI TARGET is to an AI eye (unitLightMeter) when the renderer has not answered — headless always, the browser's first frame or two. Sam's meter reads it
  *  only with the senses on the CPU (sense.ts SENSE.cpu, game.ts lightMeter). ~one segment test per light in range: a few dozen per target per frame.
  *  `field` = the light model (sense.ts SENSE.bounce), where one stands: each lamp is then dimmed by the grid's smoke on its way, and the bounce of the
- *  square metre the point stands in is added. null = the estimate as above, whatever the switch says (the error tool asks both). */
-export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, field: LightField | null = lightField(g)): number {
+ *  square metre the point stands in is added. null = the estimate as above, whatever the switch says (the error tool asks both). `moon` = the level's
+ *  moon is in it too (the switch's word unless the asker says). */
+export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, field: LightField | null = lightField(g), moon: boolean = SENSE.moon): number {
+  // (the lamps are one question in several calls, and the sun's, the moon's and the stroke's lines follow it: asked outside a tick — an order given
+  //  between ticks prices its walk by the light of the floor — the whole of it stands in one window over the module's copy, scene/collision.ts window)
+  return g.col.mirror.live ? lightEstimateIn(g, P, skipOwner, steadyOnly, field, moon) : g.col.window(() => lightEstimateIn(g, P, skipOwner, steadyOnly, field, moon));
+}
+function lightEstimateIn(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, field: LightField | null, moon: boolean): number {
   const acc = [0, 0, 0, 0, 0, 0];
   // RUST.light (rust/sim/src/light.rs: lampsHere's statements from the distance on, as one question a point)
   if (!lampsThere(g, P, skipOwner, steadyOnly, acc, field)) lampsHere(g, P, skipOwner, steadyOnly, acc, field);
   else if (BOTH.on) { const t = [0, 0, 0, 0, 0, 0]; lampsHere(g, P, skipOwner, steadyOnly, t, field); let ok = true; for (let k = 0; k < 6; k++) { ok = ok && Object.is(t[k], acc[k]); acc[k] = t[k]; } g.col.senseCompared(g.col.senseSet(SENSES.light), ok, 'light', P, P); }
   hourLight(g, P, acc);   // the level started at another hour (hours.ts): its sun and its sky on the same six faces — nothing at night
+  if (moon) moonLight(g, P, acc);   // …and at night the moon where it has a line to P (sense.ts SENSE.moon; the error tool asks both ways)
   if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
   const direct = Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
   return field ? direct + field.grid.glowAt(g.col, P) : direct;   // (the light that comes round reaches every face alike: it is added to the brightest)
@@ -2624,7 +2670,8 @@ export function steadyLamps(g: Game, col: StaticCollision): boolean { return wri
 /** the lamps' part of lightEstimateAt from the module: every lamp that passes the gates below (lampsHere's own, in its order) and whose reach can hold the
  *  point is written, and the module sums them. False = lampsHere's loop, from the start (`acc` is untouched). */
 function lampsThere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): boolean {
-  const col = g.col; if (!col.lampsBegin() || !writeLamps(g, col, P, skipOwner, steadyOnly)) return false;
+  const col = g.col; if (!col.lampsBegin()) return false;
+  if (!writeLamps(g, col, P, skipOwner, steadyOnly)) { col.lampsFell(); return false; }
   return col.lampsOn(P, acc, field && field.grid.fed ? field.grid.sim : null, SENSE.smoke.sigma);   // (the smoke's shadow from the grid's cells; a grid that cannot answer hands the question back, and lampsHere asks the blobs)
 }
 /** the lamps' part of lightEstimateAt as this file answers it: the shadowed direct light of every lamp, onto the six faces in `acc` */
@@ -2882,7 +2929,7 @@ function poseFlashlight(g: Game, gd: Guard, dt: number): Vec3 | undefined {
   else if (gd.lightDeadUntil > 0 && g.time < gd.lightDeadUntil + 1.0) { fl.enabled = Math.sin(g.time * 50) > 0.2; }   // sputters back
   else fl.enabled = (!gd.unit || ((gd.unit.light || darkFoeLit(g, gd) || powerOutLit(g, gd)) && (!lightRuled(g, gd) || teamLit(g, gd)) && !nvgDark(g, gd) && !silentDark(g, gd))) && !(torch && calmTorchDark(g, gd, dt));   // (a unit spawned with its weapon light off — a daylight room — keeps it off: teams, spawnUnit; a teammate under Sam's orders burns his only while it helps: LIGHTS above — and not at all while the team is dark on its goggles: nvg.ts · a calm staff man's hand torch burns only where his place is dark: calmtorch.ts, nothing with its switch off · an enemy unit dealt a dark light burns it once he knows and is blind: darkfoe.ts, false with its switch off)
   if (hangs && TORCH.wallDark && !TORCH.wallLow) fl.enabled = false;   // (the other answer to the same reading, only where asked for: put out instead of tipped)
-  if (wallDark(g, gd, held) && fl.enabled) fl.enabled = false;   // (LIGHTS.wallOff: a teammate's beam that would end on the wall or the truck at his muzzle — asked every frame so its clock runs whether or not the light burns; false for everybody with the switch off)
+  if (wallDark(g, gd, held) && fl.enabled) { fl.enabled = false; const s = wallSeen.get(gd); if (s) s.out = true; }   // (LIGHTS.wallOff: a teammate's beam that would end on the wall or the truck at his muzzle — asked every frame so its clock runs whether or not the light burns; false for everybody with the switch off)
   if (fl.enabled && dozeDark(gd)) fl.enabled = false;   // (doze.ts: a man sat down to doze has put his torch out — false with its switch off)
   fl.peakIntensity = T.flashIntensity; fl.intensity = T.flashIntensity; fl.innerDeg = T.flashInner; fl.outerDeg = T.flashOuter; fl.radius = g.engine.settings.flashlightRadius;
   return held;
@@ -3447,10 +3494,10 @@ export interface UnitOpts { team: Team; pos: Vec3; yaw?: number; weapon?: Weapon
   /** the pair a teammate is dealt into (UnitInfo.pair) */
   pair?: PairId;
   /** a caller that has decided to stand more men than cast shadows (the four-man squad, nightbreach.ts): the character count this spawn may reach, up to the
-   *  skinning's MAX_SKINNED — the men past the eighth DRAWN are skinned, lit and shot at like anybody but have no shadow / reflection / bounce proxies
-   *  (BoxWorld.addCharacterCapsules stops at eight; game.ts draws the living first once there are more). Absent = the eight, as ever. */
+   *  skinning's MAX_SKINNED — every man drawn has his shadow / reflection / bounce proxies (BoxWorld.MAX_CAST); the men past the eighth DRAWN have no mesh tree,
+   *  so to a ray they are their round cones (game.ts draws the living first once there are more). Absent = the eight, as ever. */
   budget?: number; }
-/** the character budget: BoxWorld uploads shadow capsules for at most 8 characters (scene/boxes.ts addCharacterCapsules), Sam included */
+/** the character budget a caller gets without asking for more, Sam included (the mesh trees' count; the shadow proxies hold every drawn man: scene/boxes.ts MAX_CAST) */
 const MAX_CHARACTERS = 8;
 /** … and the skinning holds this many (anim/characters.ts MAX_CHARS): the most a caller's own `budget` can ask for */
 export const MAX_SKINNED = 16;

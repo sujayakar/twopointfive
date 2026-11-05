@@ -1,4 +1,4 @@
-// png.ts — a minimal PNG reader for the QA tools (no npm): 8-bit RGB / RGBA / grey, non-interlaced, all five scanline filters; node:zlib inflate for the IDAT stream.
+// png.ts — a minimal PNG reader and writer for the QA tools (no npm): 8-bit RGB / RGBA / grey, non-interlaced, all five scanline filters; node:zlib inflate for the IDAT stream.
 // Enough for the shot sink's __png captures (tools/shot-server.ts) so a probe can diff two frames pixel by pixel instead of comparing file hashes.
 export interface Png { w: number; h: number; rgba: Uint8Array }
 export async function decodePng(bytes: Uint8Array): Promise<Png> {
@@ -37,4 +37,23 @@ export function diffPng(a: Png, b: Png): { same: boolean; pixels: number; over8:
   let px = 0, o8 = 0, maxD = 0, sum = 0; const n = a.w * a.h;
   for (let i = 0; i < n; i++) { let d = 0; for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(a.rgba[i * 4 + c] - b.rgba[i * 4 + c])); if (d) px++; if (d > 8) o8++; if (d > maxD) maxD = d; sum += d; }
   return { same: px === 0, pixels: px, over8: o8, maxD, meanD: sum / n, sizeMismatch: false };
+}
+
+// ---- the writer (8-bit RGBA, no interlace): the same bytes for the same picture on every machine ----
+import { deflateSync } from 'node:zlib';
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (bytes: Uint8Array) => { let c = 0xffffffff; for (const b of bytes) c = CRC[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+/** rgba → the bytes of a PNG file (8 bit, no interlace; the same bytes for the same picture on every machine) */
+export function encodePng(rgba: Uint8Array, w: number, h: number): Uint8Array {
+  const raw = new Uint8Array(h * (w * 4 + 1));
+  for (let y = 0; y < h; y++) raw.set(rgba.subarray(y * w * 4, (y + 1) * w * 4), y * (w * 4 + 1) + 1);
+  const chunk = (type: string, data: Uint8Array) => {
+    const out = new Uint8Array(12 + data.length), dv = new DataView(out.buffer);
+    dv.setUint32(0, data.length); for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i); out.set(data, 8); dv.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
+    return out;
+  };
+  const head = new Uint8Array(13), hv = new DataView(head.buffer); hv.setUint32(0, w); hv.setUint32(4, h); head[8] = 8; head[9] = 6;
+  const parts = [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', head), chunk('IDAT', new Uint8Array(deflateSync(raw, { level: 9 }))), chunk('IEND', new Uint8Array(0))];
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
 }

@@ -54,6 +54,7 @@ export async function wordsOverheard(): Promise<boolean> {
       const g: any = { time: 10, messages: [] as { text: string; t: number }[], audio: { play: () => { } }, fight: { log: [], defs: [], live: true }, level: {}, guards: [] as any[],
         player: { down: false, char: { pos: [0, 0, 0] } }, fogOfWar: { hidden: (gd: any) => hid.has(gd) },
         col: { sound: { propagate: (a: number[], b: number[]) => { asked++; return { pathLen: Math.hypot(a[0] - b[0], a[2] - b[2]), carry, muffle: 0 }; } } } };
+      g.seats = [{ view: g }];   // a game of one: the ears are its one player's (seats.ts men), which the cue asks for since the game seats two
       g.msg = (text: string) => { g.messages.push({ text, t: g.time }); if (g.messages.length > 5) g.messages.shift(); g.cues.raw(text); };
       g.cues = new Cues(g);
       const rows = () => (stripRows(g) as { text: string }[]).map(r => r.text);

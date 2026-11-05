@@ -43,9 +43,10 @@ import type { Level, LevelDoorDef, DeviceDef, CivilianDef, PatrolRoute } from '.
 import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, roundSlabs, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
 /** one deal for the checks: QUIET_VARIANT=spot,set,start (absent = the committed file: the first of each, every route) */
 const VARIANT = (() => { const s = (typeof process !== 'undefined' && process.env.QUIET_VARIANT) || ''; if (!s) return null; const v = s.split(',').map(Number); if (v.length !== 3 || v.some(n => !Number.isInteger(n) || n < 0 || n > 2)) throw new Error(`QUIET_VARIANT=${s}: want spot,set,start, each 0‥2`); return v as [number, number, number]; })();
@@ -84,7 +85,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   grp('ceiling');   // (three: the west block, the east block, the generator room — the storm reads the largest ceilings as the roofs)
   slab(3.9, H, 7.9, 16.1, H + 0.2, 16.1, [0.5, 0.47, 0.41], roof);
   slab(17.9, H, 7.9, 36.1, H + 0.2, 16.1, [0.5, 0.47, 0.41], roof);
-  slab(32.4, H, 3.9, 36.1, H + 0.2, 7.9, [0.36, 0.35, 0.33], roof);
+  slab(32.4, H, 3.9, 36.1, H + 0.2, 7.9, drawnAs('block', [0.36, 0.35, 0.33]), roof);
 
   // ---------------- the walls round the row: north (behind the alley), south (across the street), east (the street's end). The west is open: two mouths ----------------
   grp('walls.exterior');
@@ -269,7 +270,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
 
   // ---------------- the breaker (the generator room's east wall) and two battery beacons ----------------
   grp('breaker');
-  const brk = add({ c: [35.84, 1.35, 6.9], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [35.84, 1.35, 6.9], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [35.79, 1.62, 7.08], h: [0.01, 0.015, 0.015], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   const beacons: Level['beacons'] = [];
@@ -417,7 +418,8 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     const side = (f: '+x' | '-x' | '+z' | '-z', pals: (Mt | number)[], fn: Cell, max = 1) => G.mk(G.face(f, 'coarse', pals.map(p => typeof p === 'number' ? { mul: p } : pal(p)), fn, 0, max));
     const fill: Cell = (i, j, W, Hc) => edge(i, j, W, Hc) >= 1 ? 1 : 0;
     const disc = (k: number): Cell => (i, j, W, Hc) => Math.hypot(i - (W - 1) / 2, j - (Hc - 1) / 2) < W * k ? 1 : 0;
-    const rnd = (x: number, z: number, y0: number, y1: number, r: number, mat: Mt, extra: Parameters<typeof w>[7] = {}) => { const s = r * 0.93; w(x, z, y0, y1, s, s, M[mat], extra); w(x, z, y0, y1 - 0.004, s, s, M[mat], {}, Math.PI / 4); };
+    /** a round thing standing: the kit's own slabs (gwotKit.ts roundSlabs — from 0.2 m the octagon the round rule makes one round box of; `extra` = its lid's mark) */
+    const rnd = (x: number, z: number, y0: number, y1: number, r: number, mat: Mt, extra: Parameters<typeof w>[7] = {}) => roundSlabs(r).forEach((s, k) => w(x, z, y0, y1 - s.drop, s.hx, s.hz, M[mat], k === 0 ? extra : {}, s.yaw));
     /** a plank top on two board ends (three boxes): hx × hz half extents, `hgt` high */
     const bench = (x: number, z: number, hx: number, hz: number, hgt: number, mat: Mt, alongX = true) => {
       w(x, z, hgt - 0.04, hgt, hx, hz, M[mat]);
@@ -557,7 +559,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     w(11.2, 5.2, 2.1, 2.13, 0.9, 0.02, M.poplar, { flags: D }, 0.12);                            // the oven: a bread peel up on the lean-to…
     w(8.42, 4.44, 0, 0.45, 0.32, 0.22, M.poplar, top('coarse', ['sack'], (i, j, W, Hc) => edge(i, j, W, Hc) >= 1 && (i % 4 !== 0) ? 1 : 0));                         // …the dough trough…
     w(7.5, 4.46, 0, 0.5, 0.5, 0.2, M.poplar, top('coarse', ['straw', 'rugCream', 'rugRed'], (i, j, W, Hc) => i < W * 0.35 ? (i === 0 || j === 0 || j === Hc - 1 ? 3 : 2) : (i - Math.ceil(W * 0.35)) % 3 !== 2 && j >= 1 && j < Hc - 1 ? 1 : 0, 2));   // …three long naan on a board, the cloth pulled half off them…
-    G.patch(8.35, 5.3, 1.7, 0.9, 'sack', 0.1);                                                                                                                     // …and spilt flour
+    G.patch(8.2, 5.2, 0.9, 0.5, 'sack', 0.4); G.patch(8.8, 5.42, 0.55, 0.32, 'sack', -0.5); G.patch(7.85, 5.5, 0.36, 0.26, 'sack', 1.0);                             // …and spilt flour (three drifts: one sheet of it read as a mat)
     w(4.5, 7.5, 0, 0.1, 0.22, 0.18, M.blanketGrey, {}, 0.4); G.patch(4.78, 7.3, 1.2, 0.9, 'blanketGrey', 0.15, 0.02);                                              // the tea house: the samovar's ash…
     const caps: Cell = (i, j, W, Hc) => edge(i, j, W, Hc) >= 1 && i % 2 === 1 && j % 2 === 1 ? 1 + (i + j) % 4 % 3 : 0;
     w(5.6, 4.45, 0, 0.3, 0.3, 0.2, M.drumRed, top('coarse', ['prodGreen', 'prodOrange', 'tin'], caps)); w(6.4, 4.47, 0, 0.3, 0.3, 0.2, M.drumBlue, top('coarse', ['prodGreen', 'prodOrange', 'tin'], caps), 0.08);   // …and its bottle crates
@@ -573,7 +575,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     pan(10.62, 16.72, 0.4, 'rugOchre', 'plasticBlack'); pan(11.42, 16.6, 0.3, 'plasticBlack', 'rugOchre'); pan(11.36, 17.3, 0.25, 'rugOchre', 'rust');
     w(11.0, 18.25, 2.462, 2.56, 0.7, 0.05, M.iron, { flags: D });                                   // stovepipes
     w(10.194, 17.9, 1.2, 1.8, 0.004, 0.4, M.paintGreen, { flags: D, ...side('-x', ['rugOchre'], (i, j, W, Hc) => i % 4 === 1 && j > 2 ? (j < 5 ? (i % 4 <= 2 ? 1 : 0) : 1) : i % 4 === 2 && j > 2 && j < 5 ? 1 : 0) });   // ladles on its west face
-    rnd(12.12, 18.1, 0, 0.1, 0.27, 'rugOchre', top('base', ['rust', 'plasticBlack'], (i, j, W, Hc) => { const d = Math.hypot(i - (W - 1) / 2, j - (Hc - 1) / 2); return d < W * 0.22 ? 2 : d < W * 0.36 ? 1 : 0; }));   // his widest pan on the ground at the kiosk's corner, a smaller one in it
+    rnd(12.12, 18.1, 0, 0.1, 0.27, 'rugOchre', top('base', ['rust'], disc(0.36)));   // his widest pan on the ground at the kiosk's corner, a smaller one in it
     grp('lived.carpets');       // the cream kiosk
     w(22.95, 17.1, 2.462, 2.474, 0.7, 0.85, M.rugRed, { flags: D, ...top('coarse', ['rugNavy', 'rugCream'], (i, j, W, Hc) => { const e = edge(i, j, W, Hc); return e === 0 || e === 2 ? 1 : e === 1 ? 2 : e < 5 ? 0 : (i % 8 < 2 && j % 8 < 2) ? 2 : ((i + 4) % 8 < 2 && (j + 4) % 8 < 2) ? 1 : 0; }, 2) });   // a rug over the lid
     ([['rugRed', 18.16], ['rugOchre', 18.4]] as [Mt, number][]).forEach(([m, z], k) => w(22.95 + (k % 2) * 0.06, z, 2.462, 2.58, 0.6, 0.06, M[m], { flags: D }));   // two rolls
@@ -599,6 +601,27 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     w(4.7, 16.44, 0.012, 0.02, 0.55, 0.3, M.rugCream, { flags: D });                                                                                               // the cloth his pitch is laid out on
     grp('lived.lorry');         // the driver's bedroll on the ground ahead of the cab, his kettle at its end
     w(20.65, 20.9, 0.012, 0.05, 0.3, 0.8, M.rugOchre, { flags: D }, 0.08); w(20.2, 21.5, 0, 0.1, 0.08, 0.08, M.plasticBlack);
+
+    // THE GROUND OUTSIDE THE WALLS: the lane behind the south wall, the dust behind the north wall and past the street gate were one sheet each, and the three
+    // starts stand on them. What a town leaves on such ground: a cart track down the lane, a path worn to each gate (each ends square on its gate's own
+    // threshold), the damp foot of a wall's outer face, field stones turned out of the track's edge. All of it is paint on the ground or a stone low enough to
+    // walk over: no cover is added out here, no sight line and no way round changes, nothing lights it but the moon. Every stone lies two metres and more
+    // off a wall's outer face, and none in the strip a wall hides from the camera on its north side
+    /** a PATH worn through the points, `wid` wide (every other leg 0.86 of it): the kit's stain a leg (the dust's own paint, darker), lapped at the bends, square at its two ends */
+    const beat = (pts: [number, number][], wid: number, k = 0.78) => { for (let i = 0; i + 1 < pts.length; i++) {
+      const [x0, z0] = pts[i], [x1, z1] = pts[i + 1], L = Math.hypot(x1 - x0, z1 - z0), ux = (x1 - x0) / L, uz = (z1 - z0) / L, a = i ? wid * 0.35 : 0, e = i + 2 < pts.length ? wid * 0.35 : 0, m = (L + e - a) / 2;
+      G.stain(x0 + ux * m, z0 + uz * m, L + a + e, wid * (i % 2 ? 0.86 : 1), 'dust', Math.atan2(-uz, ux), k); } };
+    grp('lived.lane');          // behind the south wall: the third start's side
+    G.ruts(0.1, 25.95, 17.6, 25.5); G.ruts(17.4, 25.5, 39.9, 25.8);                                     // the cart track, the length of the lane, to the map's edge at both ends
+    beat([[22.25, 22.15], [22.3, 23.6], [22.6, 24.9]], 0.8);                                            // …and the path worn from it to the lane gate
+    G.skirt('x', 22, 4.3, 12.3, 1); G.skirt('x', 22, 12.9, 21.2, 1); G.skirt('x', 22, 23.6, 29.9, 1); G.skirt('x', 22, 30.5, 35.8, 1);
+    G.rubble(7.2, 27.15, 0.4, 5); G.rubble(16.4, 27.15, 0.4, 6); G.rubble(27.4, 27.15, 0.4, 5); G.rubble(33.8, 27.15, 0.4, 6);   // stones turned out of the track's far edge (mud's colour: grey block out here read as cartons)
+    grp('lived.northside');     // behind the north wall, in its moon shadow (the first two starts' side), and down the east side: the way round the back of the row, from the alley's mouth (it ends where the dust meets the alley's packed earth)
+    beat([[2.45, 3.87], [2.7, 2.7], [4.4, 1.6], [8.0, 1.2], [12.2, 1.75], [16.4, 1.25], [19.9, 1.55], [24.5, 1.2], [29.5, 1.7], [34.0, 1.15], [36.9, 1.9], [37.5, 5.5], [37.2, 10.5], [37.6, 15.5], [37.3, 18.75], [36.16, 18.75]], 0.8);                                             // (its last leg ends on the street gate's threshold)
+    beat([[20.25, 3.85], [20.3, 2.6], [19.9, 1.55]], 0.8);                                             // its spur to the alley gate
+    G.rubble(38.95, 21.4, 0.4, 5); G.rubble(38.95, 9.6, 0.4, 5);
+    grp('lived.streetend');     // the open west end: the tea house's gable, damp at the foot
+    G.skirt('z', 4, 8.2, 15.8, -1);
   }
 
   const [vs, vp, vt] = VARIANT ?? [0, 0, 0];

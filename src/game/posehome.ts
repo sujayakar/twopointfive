@@ -1,7 +1,7 @@
 // THE POSES OF A GAME, AT HOME IN THE RUST MODULE (rust/sim/src/poses.rs; anim/skeleton.ts Pose, PoseSet) — while the row RUST.poses is on, every pose a
 // character's animator keeps from one tick to the next lives in the game's block of the module's memory (sim/state.ts), and the posing functions that are
 // in Rust (the blend, the run forward, a node turned, the two-bone solve) are asked of it THERE, with no copy across. Off, a pose is an array of its own, as
-// it always was. Either way the layers of the animator read and write `pose.data`, and it is the same game to the bit.
+// it always was. Either way the layers of the animator read and write `pose.cols`, and it is the same game to the bit.
 //
 // This moves the DATA and no layer: a layer written in Rust then finds the poses where it runs. Posing is gameplay, whole (docs/agents/rust.md).
 import { simTenant, type SimState } from '../sim/state';

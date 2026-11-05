@@ -33,7 +33,8 @@ export async function sprintdoorCheck(): Promise<boolean> {
   function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   console.log('\n=== sprintdoor: a sprint into a door has weight ===');
-  const was = { door: { ...DOORWAY }, sd: { ...SPRINTDOOR }, blast: DOORBLAST.on, random: Math.random };
+  const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);
+  const was = { door: { ...DOORWAY }, sd: { ...SPRINTDOOR }, blast: DOORBLAST.on, random: Math.random, wallRun: WALLSNAP.pressRun };
   try {
     DOORWAY.oneWay = true; DOORWAY.frameHolds = true; DOORBLAST.on = true;
     DOORWAY.solid = false;   // (the run's own rule, measured alone: with DOORWAY.solid a leaf hauled toward him moves him aside instead of passing him — that pair is doorsolid-check's 'keys' lines)
@@ -49,6 +50,7 @@ export async function sprintdoorCheck(): Promise<boolean> {
     /** one run at door `name` from face `face` (±1 × the face it opens toward) with the switch `on` */
     const run = (name: string, toward: boolean, lock: boolean, on: boolean, flip = false, opt: { from?: number; ajar?: number } = {}): Run => {
       SPRINTDOOR.on = on && !BREAK; SPRINTDOOR_STATS.bashes = SPRINTDOOR_STATS.rips = SPRINTDOOR_STATS.kicks = 0;
+      WALLSNAP.pressRun = false;   // (every run here carries Shift on through the door to the wall past it and is read where it ends, still a sprint: a sprint that ends ON that wall is wallsnap.ts pressRun's, asked in wallrun-check.ts. Set for each run: a game stood up later on has the stand's say again)
       const d = door(name); if (flip) d.setSwing(-d.swing as 1 | -1);   // (hung the other way for this run: its push face is the other one, and so is the side of his run the latch is on)
       const face = pullSide(d) * (toward ? 1 : -1);
       for (const x of g.doors.list) fresh(x, !!x.def.locked); fresh(d, lock); if (lock) d.keySide = face;
@@ -153,7 +155,7 @@ export async function sprintdoorCheck(): Promise<boolean> {
       const B = run('server_manager', false, false, false), C = run('server_manager', true, false, false);
       line(!offRun && bashAt(B, 1) && bashAt(C, 1) && B.cross > 0 && C.cross > 0 && Math.abs(B.pitch + 0.3) < 0.01 && Math.abs(C.pitch + 0.3) < 0.01 && B.look === 0 && B.bashAt === -10 && B.ripU < 0 && C.bashAt === -10 && C.ripU < 0 && B.bashes + B.rips + C.bashes + C.rips + B.kicks + C.kicks === 0 && !C.kick && !C.off, '(8) the switch off: he runs through both faces on the full bash, no contact carries the rule, neither stamp is written, and the sprint has eased his gun down as ever', `carried ${offRun} · through ${B.cross > 0}/${C.cross > 0} · stamps after a run at each face: bash ${B.bashAt}/${C.bashAt}, rip ${f2(B.ripU)}/${f2(C.ripU)} · aim pitch at the end of each run ${f2(B.pitch)}/${f2(C.pitch)}`); }
   } catch (e) { line(false, 'the check threw', e instanceof Error ? e.stack ?? e.message : String(e)); }
-  finally { Object.assign(DOORWAY, was.door); Object.assign(SPRINTDOOR, was.sd); DOORBLAST.on = was.blast; Math.random = was.random; }
+  finally { Object.assign(DOORWAY, was.door); Object.assign(SPRINTDOOR, was.sd); DOORBLAST.on = was.blast; Math.random = was.random; WALLSNAP.pressRun = was.wallRun; }
   console.log(`=== sprintdoor: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

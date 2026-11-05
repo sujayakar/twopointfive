@@ -42,6 +42,7 @@
 // the shutters. ON THEIR OWN FUEL: the brazier in the yard, two stoves, the bread oven, the lanterns, the gun truck's head lamps. ON A BATTERY, and only when
 // the mains are out: five red beacons (the yard wall, the bunkhouse, the gate, the tea room, the tunnel's mouth).
 import type { Vec3 } from '../../src/math/vec';
+import { pickupLens } from '../../src/scene/carShapes';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -49,7 +50,9 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from '../../src/scene/gwotKit';
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
+import { rockOf } from './snowRock';
 import { BoxFlag } from '../../src/scene/boxes';
+import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-sky';
 export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
@@ -225,14 +228,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     const lens = [2.6, 1.4, 3.1, 1.8, 2.2, 1.2]; let u = a + 0.06, k = Math.round(a * 5 + line) % lens.length;
     while (u < b - 0.4) { const l = Math.min(lens[k++ % lens.length], b - 0.06 - u), m = u + l / 2; if (axis === 'x') cap(m, line, l, 0.2, 2.47, 0, 0.05 + (k % 3) * 0.012); else cap(line, m, 0.2, l, 2.47, 0, 0.05 + (k % 3) * 0.012); u += l + 0.16 + (k % 2) * 0.12; }
   };
-  /** THE MOUNTAIN: a block of the cut rock, `h` tall, snow lying on its top (set in from its edges: the rock shows as a dark rim) */
-  const rock = (x0: number, z0: number, w: number, d: number, h: number, yaw = 0) => {
-    // (a turned block is kept whole inside the world: past its edge nothing is traced or lit)
-    const ex = (Math.abs(w * Math.cos(yaw)) + Math.abs(d * Math.sin(yaw))) / 2 + 0.03, ez = (Math.abs(w * Math.sin(yaw)) + Math.abs(d * Math.cos(yaw))) / 2 + 0.03;
-    const x = Math.min(WORLD.max[0] - ex, Math.max(WORLD.min[0] + ex, x0)), z = Math.min(WORLD.max[2] - ez, Math.max(WORLD.min[2] + ez, z0));
-    add({ c: [x, h / 2, z], h: [w / 2, h / 2, d / 2], yaw, ...M.block, albedo: [0.2, 0.21, 0.24] });
-    cap(x - 0.04, z - 0.03, Math.max(0.2, w - 0.3), Math.max(0.2, d - 0.26), h, yaw, 0.07);
-  };
+  /** THE MOUNTAIN: a block of the cut rock, `h` tall, snow lying on its top (tools/levels/snowRock.ts: one piece and one paint for every road under a mountain) */
+  const rock = rockOf(add, cap, M.block.rough);
 
   // ---- ground: snow to the edge of the map; the road ploughed and driven (packed) into the tunnel; earth and slab under the roofs ----
   grp('ground');
@@ -353,9 +350,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- THE ROAD'S TWO PARTIES (kept) ----
   grp('road.squad');
-  G.pickup(TRUCK_A.x, TRUCK_A.z, TRUCK_A.yaw, 'truckWhite', { load: 'crates' });
-  G.pickup(TRUCK_B.x, TRUCK_B.z, TRUCK_B.yaw, 'truckTan', { load: 'sacks' });
-  for (const v of [TRUCK_A, TRUCK_B]) { const c = at(v, 0.36, 0, 0); cap(c[0], c[2], 1.0, 1.3, 1.58, v.yaw, 0.03); }   // a dusting on each cab's roof: they have not stood long
+  const PA = G.pickup(TRUCK_A.x, TRUCK_A.z, TRUCK_A.yaw, 'truckWhite', { load: 'crates' });
+  const PB = G.pickup(TRUCK_B.x, TRUCK_B.z, TRUCK_B.yaw, 'truckTan', { load: 'sacks' });
+  for (const [v, P] of [[TRUCK_A, PA], [TRUCK_B, PB]] as const) G.lay(v.x, v.z, v.yaw, P.tops.roof, 0.36, 0, 1.58, 1.58 + 0.03, 0.5, 0.65, S.snow);   // a dusting on each cab's roof: they have not stood long
   grp('road.block');
   G.sandbags(33.2, 21.5, 1.5, HALF, 4); G.sandbags(33.6, 24.5, 1.5, HALF, 4);                 // the roadblock: a low wall across each lane, and a gap between them a man walks through (1.5 m: the walk grid wants a clear cell and a half)
   cap(33.2, 21.5, 0.3, 1.3, 0.8, 0, 0.04); cap(33.6, 24.5, 0.3, 1.3, 0.8, 0, 0.04);
@@ -364,7 +361,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // its two head lamps, lit: the road between the two parties is theirs (its own battery: the mains box does not reach them; a round puts one out)
   grp('road.lamps');
   for (const [k, lz] of [[0, -0.66], [1, 0.66]] as const) {
-    const lens = add({ c: at(GUN_TRUCK, 2.49, 0.69, lz), h: [0.02, 0.06, 0.13], yaw: GUN_TRUCK.yaw, ...M.plasticWhite, emissive: [26, 24, 20], flags: BoxFlag.NoShadow });
+    const lens = add({ c: at(GUN_TRUCK, 2.49, 0.69, lz), h: [0.02, 0.06, 0.13], yaw: GUN_TRUCK.yaw, ...M.plasticWhite, emissive: [26, 24, 20], flags: BoxFlag.NoShadow, shape: pickupLens([0.02, 0.06, 0.13], [2.49, 0, lz]) });
     const d = at({ x: 0, z: 0, yaw: GUN_TRUCK.yaw }, 1, 0, 0);
     lights.push({ kind: 'spot', pos: at(GUN_TRUCK, 2.6, 0.69, lz), dir: norm([d[0], -0.035, d[2]]), color: [1.0, 0.93, 0.8], intensity: 120, range: 26, innerDeg: 9, outerDeg: 24,
       name: `gun_truck_lamp_${k}`, group: 'exterior', enabled: true, volumetric: 0.35, fixtureBox: lens, radius: 0.07, mains: false });
@@ -503,9 +500,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.wire(30.0, 6.4, 29.0, 6.4, 2.8); G.wire(19.3, 11.66, 19.3, 11.9, 2.75); G.wire(19.3, 11.9, GATE.b + 0.1, GATE.z, 2.62); G.wire(19.3, 11.9, 28.86, 15.0, 2.7);
   // ---- THE MAINS BOX on the kitchen's yard wall, a conduit up to the eaves: the breaker a teammate throws ----
   grp('breaker');
-  const brk = add({ c: [BREAKER[0], 1.35, 11.665], h: [0.28, 0.36, 0.045], albedo: [0.42, 0.44, 0.45], name: 'mains_box' });
+  const brk = add({ c: [BREAKER[0], 1.35, 11.665], h: [0.28, 0.36, 0.045], albedo: PANEL_GREY, name: 'mains_box' });
   const brkLed = add({ c: [BREAKER[0] - 0.18, 1.62, 11.715], h: [0.015, 0.015, 0.01], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
-  add({ c: [BREAKER[0] + 0.16, 2.3, 11.64], h: [0.02, 0.6, 0.02], albedo: [0.3, 0.31, 0.32] });
+  add({ c: [BREAKER[0] + 0.16, 2.3, 11.64], h: [0.02, 0.6, 0.02], albedo: drawnAs('sheet', [0.3, 0.31, 0.32]) });
   // ---- THE EMERGENCY BEACONS: red, on a battery, turning only while the mains are out (game/lighting.ts). Four of the five are out of doors, on brackets a
   // man can see from above: the light a blackout is known by here is red sweeping over snow ----
   grp('beacons');

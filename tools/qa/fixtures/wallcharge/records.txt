@@ -1,0 +1,2 @@
+# places for a wall charge on levels/records.json: on the frozen stand, then on the shipped stand (its lived-in rooms in)
+427 318

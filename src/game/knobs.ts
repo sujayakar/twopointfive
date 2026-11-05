@@ -36,7 +36,7 @@ import { GLASSBREAK, GLASSREAL } from './glassbreak';
 import { GLASSPEN } from './glasspen';
 import { SHARDS } from './shards';
 import { TALK_TUNE } from './dialogue';
-import { HOLD, MOVES, MV, TURN, HARDBREATH, DASH, WATCH, RUNREADY } from './character';
+import { HOLD, MOVES, MV, TURN, HARDBREATH, DASH, WATCH, RUNREADY, RUNARMS } from './character';
 import { SUPPRESSION } from './suppression';
 import { RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN } from './player';
 import { SAMLOOK } from './samlook';
@@ -143,8 +143,12 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'FLINCH',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
   'CARLAMPS',
+  // a round reads what a thing says it is made of (particleFx.ts HITSTUFF): a recording made with it on has its hits on a box that says its stuff read by that word, one from before by the paint's colour
+  'HITSTUFF',
   // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
   'ROUND',
+  // a box says its shape (scene/shapes.ts SHAPES): a recording made with it on has its vehicles' corners, bonnets and glass cut to every ray, one from before has the plain boxes
+  'SHAPES',
   // the debris pool is dressing (debris.ts, destructionSwitch.ts DEBRIS): a recording made with it on replays the simulation's landings of thrown pieces, one from before
   // the pool's own (and so needs the pool's size it was made at)
   'DEBRIS',
@@ -189,6 +193,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   // the sprint with the pistol in both hands (character.ts RUNREADY): a pose, so a recording made with it on replays his arms and one from before the key
   // replays the pumping fist (journal.ts applyKnobs)
   'RUNREADY',
+  // …and a run's arms carried close (character.ts RUNARMS): a pose too, carried the same way
+  'RUNARMS',
   // …and their poses' numbers (character.ts): DASH's stride sets the crouch cycle's cadence and so when a footfall is filed, WATCH's turn and lean move the
   // head and chest joints the eyes that look for him read. The sneak lab moves both, so a recording carries them
   'DASH', 'WATCH',
@@ -196,7 +202,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   // replays its squad loud through a brushed wall, and one from before the table was carried sneaks from the hold's first step
   'UNSEEN',
   // a window's bar breaks from one round (winbars.ts): a recording made with it on replays its bars going and its rounds flying on, one from before has every bar stop a round
-  'WINBARS'];
+  'WINBARS',
+  // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH): the last place of every blended and sampled pose turns on it, so a recording made with
+  // it on replays with it on, and one from before the table replays in doubles
+  'POSEMATH'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -254,6 +263,7 @@ import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
 import { RUST } from '../sim/sim';
+import { POSEMATH } from '../anim/skeleton';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
 import { SEATS } from './seats';
@@ -268,6 +278,7 @@ import { FRIENDS } from './friends';
 import { FRIENDLYFIRE } from './friendlyfire';
 import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
+import { HITSTUFF } from './particleFx';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
@@ -298,6 +309,7 @@ import { MUSIC } from '../audio/pieces';   // (the score's pieces switch: not a 
 import { LIVED } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';   // (a scene table: no cycle)
 import { ROUND } from '../scene/round';   // (a scene table: no cycle)
+import { SHAPES } from '../scene/shapes';   // (a scene table: no cycle)
 import { CASTOR } from './props';
 
 /** A table's keys that are NOT knobs: data it was loaded with, or what it found at load. knobsCopy leaves them out, so putting a copy back never touches them.
@@ -324,7 +336,7 @@ export function knobRegistry(): Record<string, object> {
   const all: Record<string, object | undefined> = {
     // what a recording carries (JOURNAL_KNOBS)
     AIM, TRAINED, AI_TUNE, BODY_LIGHT, GUARD_EYE, NEEDS, WHISTLE, WET, WIND, CIV, CHAOS, RING, LAUNCHER, HE40, LAUNCHER40, FRAG, SHOTGUN, GLASS, GLASSFX, GLASSBREAK, GLASSPEN, SHARDS,
-    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN, RUNREADY, SAMLOOK, DASH, WATCH, STALK, TAPSTEP, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, WINBARS, OPENING,
+    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN, RUNREADY, RUNARMS, SAMLOOK, DASH, WATCH, STALK, TAPSTEP, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, WINBARS, OPENING,
     DOORSTAY, HANDLE, DOORMANNERS,
     // what breaks into what, by material (breakTable.ts), and how a blast treats furniture (furnblast.ts): the sim reads both, so a recording carries them
     BREAKS, FURN,
@@ -350,6 +362,8 @@ export function knobRegistry(): Record<string, object> {
     LIGHTSWITCH,
     // a parked vehicle's lamps can be shot out (carlamps.ts): the switch, the broken lens's paint, how a lamp box is told from the level
     CARLAMPS,
+    // a round reads what a thing says it is made of (particleFx.ts): what it knocks out and the mark it leaves go by the box's own word before its paint's colour
+    HITSTUFF,
     CLEANRESTART,
     // off the line of his fire (fireline.ts): whether a teammate on an order waits short of the lane the player is firing down, how long, and the way round — where every ordered man walks reads them
     FIRELINE,
@@ -462,6 +476,8 @@ export function knobRegistry(): Record<string, object> {
     EXACT,
     // which systems of the update run in the Rust module (src/sim/sim.ts RUST: setters — writing a row moves that system across)
     RUST,
+    // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH.singles: blendPose and sampleClip's step, in both languages)
+    POSEMATH,
     // the senses on the CPU (sense.ts SENSE.cpu, and its smoke model's numbers)
     SENSE,
     // a record from anyone (cmd.ts checkCmd: the switch and its bounds)
@@ -497,6 +513,8 @@ export function knobRegistry(): Record<string, object> {
     UNDERFOOT,
     // round things are round (scene/round.ts): whether a level's octagons are stood up as round boxes; read when a level is stood up
     ROUND,
+    // a box says its shape (scene/shapes.ts): whether a level's boxes that say a shape are stood up as it, with their pieces; read when a level is stood up
+    SHAPES,
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)
     FLASH, PACE, LIGHTS, NVG, IR, IRLIGHT, WALLPEN, LASER, DOORTOOLS, ROOMFIGHT, ORDERS, COVER, ROOMFIT, ENTRY, REAR, SILENT, PAIR,
     // the scenario's and the defenders' tables (a play-through's --set reaches them)

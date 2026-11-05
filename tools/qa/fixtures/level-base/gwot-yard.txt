@@ -1,0 +1,2 @@
+# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines; the kit's lorry stands on the road (every piece of the kit stands in a showroom)
+ddbbce19cea8e042fec9b11fa50930c9fa6b30c1

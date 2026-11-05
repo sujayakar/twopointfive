@@ -14,7 +14,12 @@ fn vnoise(p: vec3f) -> f32 {
   let n001 = hash13(i + vec3f(0.0, 0.0, 1.0)); let n101 = hash13(i + vec3f(1.0, 0.0, 1.0)); let n011 = hash13(i + vec3f(0.0, 1.0, 1.0)); let n111 = hash13(i + vec3f(1.0, 1.0, 1.0));
   return mix(mix(mix(n000, n100, u.x), mix(n010, n110, u.x), u.y), mix(mix(n001, n101, u.x), mix(n011, n111, u.x), u.y), u.z);
 }
-fn hazeAt(X: vec3f) -> f32 { let q = X * 0.9 + vec3f(frame.time * 0.05, -frame.time * 0.02, frame.time * 0.035); let h = 0.55 + 0.9 * vnoise(q) * vnoise(q * 2.7 + 3.1); if (WX_KINDS) { if (frame.cardCfg.w != 0u) { return h * wxHazeK(X); } } return h; }   // (a weather kind's fog thickens it outdoors: common.wgsl wxHazeK; no fog = the value it always was)
+/** THE AIR IS THE LEVEL'S: 1 over the world's rectangle, to nothing a metre past its rim. The maintainer, 10-15: "we should just have black outside the edges of
+ *  the map, not extend". Past the rim there is no ground and nothing is drawn, but the haze went on for the 200 m a ray with nothing to hit is marched, lit by
+ *  the hour's sun: at night that was a little navy, by day the void past a level's edge was a grey sheet (seen 11-03 in stills of the barracks at midday, on
+ *  the build's page and on the look page alike). The dust's density is this × what it was, so no light in the air is counted past the rim. */
+fn airInLot(p: vec2f) -> f32 { let d = max(max(WORLD_MIN.x - p.x, p.x - WORLD_MAX.x), max(WORLD_MIN.z - p.y, p.y - WORLD_MAX.z)); return 1.0 - smoothstep(0.0, 1.0, d); }
+fn hazeAt(X: vec3f) -> f32 { let q = X * 0.9 + vec3f(frame.time * 0.05, -frame.time * 0.02, frame.time * 0.035); let h = (0.55 + 0.9 * vnoise(q) * vnoise(q * 2.7 + 3.1)) * airInLot(X.xz); if (WX_KINDS) { if (frame.cardCfg.w != 0u) { return h * wxHazeK(X); } } return h; }   // (a weather kind's fog thickens it outdoors: common.wgsl wxHazeK; no fog = the value it always was)
 fn max3(v: vec3f) -> f32 { return max(v.x, max(v.y, v.z)); }
 
 // Parametric interval [t0, t1] of the ray O + tV inside the (positive nappe of the) cone with apex A, axis D, cos half-angle cosT.
@@ -60,9 +65,67 @@ fn smokeTransIn(ro: vec3f, rd: vec3f, tmax: f32) -> f32 { return smokeTransmitta
 /** … with 5 samples — the froxels' haze uses it for how much a plume dims a beam beyond it (a per-froxel term, softer than the march's per-step one by construction) */
 fn smokeTransCoarse(ro: vec3f, rd: vec3f, tmax: f32) -> f32 { return smokeTransmittanceN(ro, rd, tmax, 5.0); }
 fn smokeSelfShadowIn(P: vec3f, L: vec3f, mask: u32) -> f32 {
-  var od = 0.0; let ds = 0.18;
+  var od = 0.0; let ds = smokeSelfStep();
   for (var i = 1; i <= 4; i++) { od += smokeDensityIn(P + L * (f32(i) - 0.3) * ds, mask); }
-  return exp(-od * ds * SMOKE_SELF_K);
+  return exp(-od * ds * smokeSelfK());
+}
+/** HOW SMOKE IS DRAWN, AS ROWS (frame.sideCfg.y and .z; the smoke lab's section of that name, host/smokelab.ts; Engine.smokeDraw). Zeros are the picture as it was, and
+ *  nothing but the lab writes anything else.
+ *    .y  bits 0‥7    creases: how much the soft light on a sample is dimmed by the smoke crowding round it, × 100 (smokeCreaseIn below)
+ *        bits 8‥15   the self-shadow's extinction per unit density, × 4 (0 = SMOKE_SELF_K)
+ *        bits 16‥23  the self-shadow's reach toward the light, in 2 cm (0 = 0.72 m: four taps 0.18 m apart)
+ *        bits 24‥31  how much a lamp behind smoke glows through it, × 100 (smokeAheadLobe below)
+ *    .z  bit 0       a tint the smoke carries is a streak in it and not dust: it is drawn as a tint alone (dust_look.wgsl dustDensity) */
+fn smokeSelfK() -> f32 { let v = (frame.sideCfg.y >> 8u) & 255u; return select(SMOKE_SELF_K, f32(v) * 0.25, v != 0u); }
+fn smokeSelfStep() -> f32 { let v = (frame.sideCfg.y >> 16u) & 255u; return select(0.18, f32(v) * 0.005, v != 0u); }
+fn smokeCreaseK() -> f32 { return f32(frame.sideCfg.y & 255u) * 0.01; }
+/** .y bits 24‥31: HOW MUCH A LAMP BEHIND SMOKE GLOWS THROUGH IT, × 100 (the lab's row of that name; 0 = smoke only dims a lamp behind it, as it was). */
+fn smokeAheadW() -> f32 { return f32((frame.sideCfg.y >> 24u) & 255u) * 0.01; }
+const SMOKE_AHEAD_G: f32 = 0.8;   // the narrow lobe (half its peak 18° off the lamp's line)
+/// HOW THICK SMOKE IS TO THAT LOBE'S LIGHT. Light the smoke sends on within a few degrees of its line is still in the beam, so only the share it sends AWAY
+/// from the line is lost to it: a medium whose scattering has mean cosine g carries such light as one (1 − g) as thick (the similarity relation of transport
+/// theory; g is the lobe's own, so there is no number to tune). The glow reaches a sample, and the eye from it, through the smoke's transmittance to that power.
+/// Through HALF the smoke, as the octave goes, a plume of optical depth 4 before a lit sign took a twentieth of the sign's brightness where a slab that
+/// scatters forward passes about half of it on as glow, and the sign's sharp picture (1.5 % of it, by Beer's law) stood clear of smoke that stayed dark.
+const SMOKE_AHEAD_THIN: f32 = 1.0 - SMOKE_AHEAD_G;
+fn smokeAheadT(t: f32) -> f32 { if (smokeAheadW() <= 0.0) { return 0.0; } return pow(max(t, 0.0), SMOKE_AHEAD_THIN); }   // (0 with the row at 0: every use is a factor of the glow, and the plain build pays for no pow)
+/// WHEN A MARCH MAY STOP IN THICK SMOKE: what lies behind adds under `cut` of itself, the glow included. To the glow the smoke is a fifth as thick, so with the row
+/// on a march that stopped at the picture's cut dropped the far part of a plume, where a lamp behind it glows most (and at a depth dithered a pixel). With the row
+/// at 0 this is `T < cut`, as it was.
+fn smokeMarchDone(T: f32, cut: f32) -> bool { return T < cut && smokeAheadW() * smokeAheadT(T) < cut; }
+/** A LAMP BEHIND SMOKE GLOWS THROUGH IT. mu = the eye's ray · the way to the lamp (1 = the lamp stands straight behind the sample), r2d2 = the lamp's radius² over its
+ *  distance² from the sample (0 for the sun). What it stands for: smoke sends most of what it scatters nearly straight on, and light sent on again and again is still
+ *  in the beam. The march's extinction counts every scattering as a loss, and its one wide lobe (g 0.35) gives back the part that goes sideways, so a lit sign behind a
+ *  plume was only ever dimmed: every edge kept through smoke that hid the wall round it, and a thick plume in front of it a grey cut-out with none of its colour. This
+ *  is the part that went on: per lamp a narrow lobe, seen through the smoke a fifth as thick both ways (smokeAheadT above: the self-shadow toward the lamp and T to the
+ *  eye, each to the power 1 − g) because light scattered forward has not left the beam. Looking at a lamp through smoke, the smoke between glows in the lamp's colour
+ *  round the lamp's place, softer and wider the more smoke lies between, where a screen-space blur of what is behind the plume stood in for it. The wide lobe is not
+ *  touched, so a plume lit from the side is as it was.
+ *  A LAMP IS A DISC, NOT A POINT, TO THIS LOBE: it is asked at the disc's nearest edge to the eye's line and straight on anywhere inside the disc (asked at the centre,
+ *  smoke in front of the lower half of a lit sign found the sign's middle 60° off its ray and got nothing), and its mean over the disc cannot pass 1 ∕ the disc's solid
+ *  angle, which keeps the smoke in front of a panel no brighter than the panel. */
+fn smokeAheadLobe(mu: f32, r2d2: f32) -> f32 {
+  if (smokeAheadW() <= 0.0) { return 0.0; }
+  let ca = inverseSqrt(1.0 + r2d2); let sa = sqrt(r2d2) * ca;                     // cos and sin of the disc's angular radius from the sample
+  let near = select(min(mu * ca + sqrt(max(1.0 - mu * mu, 0.0)) * sa, 1.0), 1.0, mu >= ca);
+  return min(phaseHG(near, SMOKE_AHEAD_G), 1.0 / max(PI * r2d2, 1e-6));
+}
+/// one light's share of it at a step: its irradiance there × the lobe (`mu` = the eye's line against the light's, `radius` the lamp's, `dist` to it). Only a
+/// light the step has TRACED gets it: the lobe's peak is sixty times the wide lobe's sideways value, so a lamp credited without a ray would shine through a wall.
+fn smokeAheadE(E: vec3f, mu: f32, radius: f32, dist: f32) -> vec3f {
+  if (smokeAheadW() <= 0.0) { return vec3f(0.0); }
+  return E * smokeAheadLobe(mu, radius * radius / max(dist * dist, 1e-4));
+}
+/** THE SOFT LIGHT ON A SAMPLE OF SMOKE, dimmed by the smoke round it. The froxels hand the march one ambient for a whole plume (the room's light at that place, with no
+ *  smoke in the way), so with little direct light on it a plume is one even tone and the curls the solver made cannot be seen in it. Soft light comes from all round, and
+ *  what stops it is the smoke between the sample and the open air: four taps on a tetrahedron 0.2 m out (one up, three a little below level) say how much smoke crowds
+ *  round the sample, and the light is taken down by that much of an optical depth. A crest of a billow has open air on most sides and keeps its light, the crease between
+ *  two billows has smoke on every side and goes dark. k = 0 is never called. */
+fn smokeCreaseIn(P: vec3f, mask: u32, k: f32) -> f32 {
+  let r = 0.2;
+  let od = smokeDensityIn(P + r * vec3f(0.0, 1.0, 0.0), mask) + smokeDensityIn(P + r * vec3f(0.943, -0.333, 0.0), mask)
+         + smokeDensityIn(P + r * vec3f(-0.471, -0.333, 0.816), mask) + smokeDensityIn(P + r * vec3f(-0.471, -0.333, -0.816), mask);
+  return exp(-od * (0.25 * r * 6.0) * k);
 }
 /** the self-shadow's extinction per unit density over its 0.72 m toward the light: 6 = the march's own σt (as it always was); 9 since 08-12 — the lit side of a billow
  *  keeps its light and the fold behind it goes dark, which is much of what reads as VOLUME in a lit plume (a look constant: only this march reads it) */

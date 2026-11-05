@@ -18,13 +18,16 @@
 // piece with a front faces local −Z unless its line says otherwise; vehicles point +X.
 import type { Vec3 } from '../math/vec';
 import { Box, BoxFlag } from './boxes';
+import { pickupShapes, vanShapes, bikeShapes, lorryShapes, hubPaint, layOn, type BowedTop } from './carShapes';
 import { WORLD } from './world';
 import type { Level, LightDef, PropKind, PropPart, PropDef } from './level';
 import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, RES_K, CellCanvas, marking, mkHash, faceHalf, faceIndex } from './markings';
 
 const H = WORLD.ceilingY;
 
-import { GWOT_PALETTE, GWOT_FINISH, ROUGH_CLOTH, gwotAs, type GwotMat, type GwotSim } from './gwotPalette';
+import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, GWOT_DARKER, ROUGH_CLOTH, gwotAs, type GwotMat, type GwotSim } from './gwotPalette';
+import { pieces } from './library';
+import { tonedAs } from './stuff';
 export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, GWOT_SIM, gwotAs, gwotSimOf, type GwotMat, type GwotSim } from './gwotPalette';
 
 /** one opening in a wall (officeGen.ts / levelKit.ts Opening, field for field) */
@@ -116,13 +119,13 @@ export function gwotKit(host: GwotHost) {
   /** the paint `m` standing for something else to rounds and blasts (gwotPalette.ts gwotAs): `b(…, G.as('mud', 'wall'))` */
   const as = (m: GwotMat, sim: GwotSim): Mat => ({ ...M[m], albedo: gwotAs(m, sim) });
   /** the paint `m` DARKER IN ONE PIECE, k of it (TONE: 0.55‥0.99): how wear, wet and shade are written — the ground's own paint, never a colour laid on it.
-   *  The look draws a row times k in that band as that row's stuff. For DRAWN-ONLY things: to a round a toned row is no palette colour (gwotPalette.ts
+   *  A tone is made of what its row is made of: it keeps the row's word (scene/stuff.ts tonedAs). For DRAWN-ONLY things: to a round a toned row is no palette colour (gwotPalette.ts
    *  gwotSimOf knows a paint by its exact colour). Throws when the tone is ANOTHER row's colour (gravel × 0.7 is `oil`), which would be drawn as that row; a tone still near its own row is that row. */
   const toned = (m: GwotMat, k: number): Vec3 => {
     if (!(k > TONE.lo && k < TONE.hi)) throw new Error(`gwotKit: a tone of ${m} at ${k} is outside ${TONE.lo}‥${TONE.hi}`);
     const p = GWOT_PALETTE[m], a: Vec3 = [Math.round(p[0] * k * 1e4) / 1e4, Math.round(p[1] * k * 1e4) / 1e4, Math.round(p[2] * k * 1e4) / 1e4];
     for (const n of Object.keys(GWOT_PALETTE) as GwotMat[]) { const q = GWOT_PALETTE[n]; if (n !== m && Math.abs(a[0] - q[0]) < TONE.near && Math.abs(a[1] - q[1]) < TONE.near && Math.abs(a[2] - q[2]) < TONE.near) throw new Error(`gwotKit: ${m} × ${k} is the colour of ${n}: pick another k`); }
-    return a;
+    return tonedAs(p, a);
   };
   type CellFn = (i: number, j: number, W: number, Hc: number) => number;
   /** one face's markings, not yet cut to a box: resolved against the box's own half extents when the box is added (so a bitmap can never leave its face) */
@@ -144,6 +147,11 @@ export function gwotKit(host: GwotHost) {
     };
   };
   type Put = ReturnType<typeof piece>;
+  /** DECAL: SNOW OR DUST LAID ON A VEHICLE'S BOWED TOP — `top`: one of the `tops` the vehicle standing at (x, z, yaw) handed back; the slab is said in the
+   *  vehicle's frame as a piece's box is. A flat slab kept to the crown, and a sheet that follows the bow (scene/carShapes.ts layOn: the one rule for it).
+   *  `nth`: it lies on that many earlier falls */
+  const lay = (x: number, z: number, yaw: number, top: BowedTop, lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, m: Mat, nth = 0) =>
+    piece(x, z, yaw)(lx, lz, y0, y1, hx, hz, m, { flags: BoxFlag.NoShadow, shape: layOn(top, [lx, (y0 + y1) / 2, lz], [hx, (y1 - y0) / 2, hz], m, { nth }) });
   /** a round thing of radius r, as the slabs of `roundSlabs` (the first carries `extra`, the others `extra2`) */
   const round = (b: Put, lx: number, lz: number, y0: number, y1: number, r: number, m: Mat, extra: Extra = {}, extra2: Extra = extra) => {
     roundSlabs(r).forEach((s, k) => b(lx, lz, y0, y1 - s.drop, s.hx, s.hz, m, k === 0 ? extra : extra2, s.yaw));
@@ -169,6 +177,7 @@ export function gwotKit(host: GwotHost) {
     wallX(z, x0, x1, kind, openings, height);
     for (const [a, b] of runs(x0, x1, openings, height)) host.add({ c: [(a + b) / 2, height + 0.035, z], h: [(b - a) / 2, 0.035, GW_SHELL / 2 + 0.03], albedo: M.mudLight.albedo, rough: M.mudLight.rough });
   };
+  /** a COMPOUND (yard) wall along Z at fixed x: as yardWallX */
   const yardWallZ = (x: number, z0: number, z1: number, kind: WallKind = 'mud', openings: GwotOpening[] = [], height = 2.4) => {
     wallZ(x, z0, z1, kind, openings, height);
     for (const [a, b] of runs(z0, z1, openings, height)) host.add({ c: [x, height + 0.035, (a + b) / 2], h: [GW_SHELL / 2 + 0.03, 0.035, (b - a) / 2], albedo: M.mudLight.albedo, rough: M.mudLight.rough });
@@ -181,6 +190,7 @@ export function gwotKit(host: GwotHost) {
     const off = line + side * (t / 2 + 0.004), m = M[mat];
     host.add({ c: axis === 'x' ? [(a + b) / 2, top / 2, off] : [off, top / 2, (a + b) / 2], h: axis === 'x' ? [Math.abs(b - a) / 2, top / 2, 0.004] : [0.004, top / 2, Math.abs(b - a) / 2], albedo: m.albedo, rough: m.rough, flags: DECAL });
   };
+  /** DECAL: a painted DADO: the band of `skirt` in a paint, to 1.1 m up the wall's face */
   const dado = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, paint: Paint = 'paintBlue', t = GW_SHELL) => skirt(axis, line, a, b, side, paint, 1.1, t);
   /** DECAL: a small rug / cloth hung flat on a wall face, its middle at `at` along the wall, 1.2‥2.0 m up */
   const wallHanging = (axis: 'x' | 'z', line: number, at: number, side: 1 | -1, style: RugStyle = 'baluch', w = 1.2, hgt = 0.8, t = GW_SHELL) => {
@@ -211,38 +221,64 @@ export function gwotKit(host: GwotHost) {
   };
 
   // --------------------------------------------------------------- ground ----
+  /** WHAT LIES ON WHAT, on the ground: the TOP of each kind of flat thing (m). A finish is the ground; a stain is that ground in a darker tone, so what was
+   *  driven over the ground (ruts) and what lies on it (a patch of another row's stuff, a seep) show over it. One table, read by every piece below and
+   *  handed out as `lie` with `flatAt` (a generator's own flat helper reads them too: `flatAt(lie.patch)` is a patch's centre). Two decals of one kind that overlap are
+   *  parted by the exporter in the order they were laid (tools/levels/flatLayers.ts). Heights are from the lot's top, y = 0: a finish laid thicker than
+   *  `stain` wants the stain's own `y` said. */
+  const lie = { finish: 0.004, stain: 0.012, ruts: 0.014, patch: 0.015 } as const, FLAT = 0.003;
+  /** the centre of a decal whose top is at `top` (to a tenth of a millimetre, so a file holds 0.009 and not its nearest double) */
+  const flatAt = (top: number) => Math.round((top - FLAT) * 1e4) / 1e4;
   /** a GROUND finish over a rectangle (a thin solid slab like the kits' floor finishes: feet, rounds and light land on it): dust | dirt | gravel | mudFloor | slab */
-  const ground = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'dust', y = 0.004) =>
-    host.add({ c: [(x0 + x1) / 2, y / 2, (z0 + z1) / 2], h: [Math.abs(x1 - x0) / 2, y / 2, Math.abs(z1 - z0) / 2], albedo: M[mat].albedo, rough: M[mat].rough });
+  const ground = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'dust', y: number = lie.finish) => {
+    laid.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), y, mat });
+    return host.add({ c: [(x0 + x1) / 2, y / 2, (z0 + z1) / 2], h: [Math.abs(x1 - x0) / 2, y / 2, Math.abs(z1 - z0) / 2], albedo: M[mat].albedo, rough: M[mat].rough });
+  };
+  /** every finish `ground` has laid, in order */
+  const laid: { x0: number; z0: number; x1: number; z1: number; y: number; mat: GwotMat }[] = [];
+  /** THE GROUND AT (x, z): the finish this kit laid there, the highest one over the point and of two as high the later; UNDEFINED where it laid none.
+   *  What a piece that is the ground's own paint in another tone asks, so nobody writes the ground twice: a hearth's trodden ash. It knows only `ground`'s
+   *  rectangles laid BEFORE the ask: a floor a level lays some other way (the host kit's slab, a room's floor) is unknown here, and a piece that needs it
+   *  refuses to guess. */
+  const groundAt = (x: number, z: number): GwotMat | undefined => {
+    let at: (typeof laid)[number] | undefined;
+    for (const g of laid) if (x >= g.x0 && x <= g.x1 && z >= g.z0 && z <= g.z1 && (!at || g.y >= at.y)) at = g;
+    return at?.mat;
+  };
   /** DECAL: a patch on the ground — a damp spot, an oil stain, a drift of dust, a scatter of gravel (w × d, any yaw). ANOTHER row's stuff lying on the
    *  ground; for the same ground darker (wet, worn) use `stain` */
-  const patch = (x: number, z: number, w: number, d: number, mat: GwotMat = 'damp', yaw = 0, y = 0.012) =>
-    host.add({ c: [x, y, z], h: [w / 2, 0.003, d / 2], yaw, albedo: M[mat].albedo, rough: M[mat].rough, flags: DECAL });
+  const patch = (x: number, z: number, w: number, d: number, mat: GwotMat = 'damp', yaw = 0, y: number = flatAt(lie.patch)) =>
+    host.add({ c: [x, y, z], h: [w / 2, FLAT, d / 2], yaw, albedo: M[mat].albedo, rough: M[mat].rough, flags: DECAL });
   /** DECAL: a vehicle's two wheel RUTS from (x0, z0) to (x1, z1), 1.5 m apart */
   const ruts = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'dirt') => {
     const L = Math.hypot(x1 - x0, z1 - z0) || 1, yaw = Math.atan2(-(z1 - z0), x1 - x0), b = piece((x0 + x1) / 2, (z0 + z1) / 2, yaw);
-    for (const s of [-0.75, 0.75]) b(0, s, 0.008, 0.014, L / 2, 0.16, M[mat], { flags: DECAL });
+    for (const s of [-0.75, 0.75]) b(0, s, flatAt(flatAt(lie.ruts)), lie.ruts, L / 2, 0.16, M[mat], { flags: DECAL });
   };
-  /** WALK-OVER: a scatter of rubble / field stones within r of (x, z) — n small blocks under 0.19 m (lit and shadowed; nobody trips on them) */
+  /** WALK-OVER: a scatter of rubble / field stones within r of (x, z) — n small blocks under 0.19 m (lit and shadowed; nobody trips on them). ALL OF IT IS
+   *  `mat`: three stones in ten are its darker row where the palette holds one (gwotPalette.ts GWOT_DARKER: mud's is mudDark), standing for what `mat` is to
+   *  a round, so a scatter is one thing in two tones and never a second paint; a stone has the row's whole finish (bits of tin sheet are metal). (Those
+   *  three were mudDark whatever was asked: pale clods among dark gravel, mud among offcuts of poplar.) */
   const rubble = (x: number, z: number, r = 0.8, n = 7, mat: GwotMat = 'mud') => {
-    const s = seedOf(x, z);
+    const s = seedOf(x, z), darker = GWOT_DARKER[mat], second = darker ? as(darker, GWOT_SIM[mat]) : M[mat];
     for (let k = 0; k < n; k++) {
-      const a = h01(s, k, 1) * Math.PI * 2, d = Math.sqrt(h01(s, k, 2)) * r, w = 0.07 + h01(s, k, 3) * 0.13, hgt = 0.05 + h01(s, k, 4) * 0.12, m = h01(s, k, 5) < 0.3 ? M.mudDark : M[mat];
-      host.add({ c: [x + Math.cos(a) * d, hgt / 2, z + Math.sin(a) * d], h: [w, hgt / 2, w * (0.6 + h01(s, k, 6) * 0.6)], yaw: h01(s, k, 7) * Math.PI, albedo: m.albedo, rough: m.rough });
+      const a = h01(s, k, 1) * Math.PI * 2, d = Math.sqrt(h01(s, k, 2)) * r, w = 0.07 + h01(s, k, 3) * 0.13, hgt = 0.05 + h01(s, k, 4) * 0.12, m = h01(s, k, 5) < 0.3 ? second : M[mat];
+      host.add({ c: [x + Math.cos(a) * d, hgt / 2, z + Math.sin(a) * d], h: [w, hgt / 2, w * (0.6 + h01(s, k, 6) * 0.6)], yaw: h01(s, k, 7) * Math.PI, albedo: m.albedo, rough: m.rough, ...(m.metal ? { metal: true } : {}) });
     }
   };
 
   /** DECAL: a STAIN that is its ground's own paint darker — wet concrete under a tap, a floor walked dark under a bench. `ground` = the finish it lies on,
-   *  `k` of it (STYLE.md: a patch is darker than its ground and never under a third of it; see `toned`). Wet reads smoother than dry */
-  const stain = (x: number, z: number, w: number, d: number, ground: GwotMat, yaw = 0, k = 0.66, y = 0.012) =>
-    host.add({ c: [x, y, z], h: [w / 2, 0.003, d / 2], yaw, albedo: toned(ground, k), rough: Math.max(0.3, M[ground].rough - 0.35), flags: DECAL });
+   *  `k` of it (STYLE.md: a patch is darker than its ground and never under a third of it; see `toned`). Wet reads smoother than dry. IT LIES UNDER A
+   *  VEHICLE'S RUTS AND UNDER A PATCH (`lie`: a stain is the ground, and what was driven or laid over the ground shows over it; at the patch's height it
+   *  painted the ruts out where they crossed). `y` = its centre, for the one that is meant to lie on something: `flatAt(lie.patch)` is soot over a damp spot */
+  const stain = (x: number, z: number, w: number, d: number, ground: GwotMat, yaw = 0, k = 0.66, y: number = flatAt(lie.stain)) =>
+    host.add({ c: [x, y, z], h: [w / 2, FLAT, d / 2], yaw, albedo: toned(ground, k), rough: Math.max(0.3, M[ground].rough - 0.35), flags: DECAL });
   /** DECAL: a SEEP — where water runs out under a wall and stands: darker earth from (x0, z0) to (x1, z1), in lengths that overlap and wander. The line is
    *  the stain's MIDDLE and a length is up to 1.15 m across: lay it 0.6 m out from the wall's face, not on the wall's own line. `mat` is darker than the
    *  ground it lies on (dirt on dust, damp on dirt) */
   const seep = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'dirt') => {
     const L = Math.hypot(x1 - x0, z1 - z0) || 1, n = Math.max(2, Math.round(L / 2.3)), yaw = Math.atan2(-(z1 - z0), x1 - x0), nx = -(z1 - z0) / L, nz = (x1 - x0) / L, s = seedOf(x0 + x1, z0 + z1);
     for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, off = (h01(s, k, 1) - 0.5) * 0.3;
-      patch(x0 + (x1 - x0) * t + nx * off, z0 + (z1 - z0) * t + nz * off, L / n * 1.2, 0.7 + h01(s, k, 2) * 0.45, mat, yaw + (h01(s, k, 3) - 0.5) * 0.18, 0.012 + 0.001 * (k % 2)); }
+      patch(x0 + (x1 - x0) * t + nx * off, z0 + (z1 - z0) * t + nz * off, L / n * 1.2, 0.7 + h01(s, k, 2) * 0.45, mat, yaw + (h01(s, k, 3) - 0.5) * 0.18, flatAt(lie.patch) + 0.001 * (k % 2)); }
   };
   /** WALK-OVER: KERB STONES — painted stones from (x0, z0) to (x1, z1), `pitch` metres from one to the next (a stride by default; 0.3 = stone against
    *  stone): the edge of a government yard, the side of a track (each 0.26 long, under 0.14 m high) */
@@ -260,10 +296,13 @@ export function gwotKit(host: GwotHost) {
     for (let r = 0; r < rows; r++) { const lz = rows > 1 ? (r - (rows - 1) / 2) * (wid - 0.44) / (rows - 1) : 0, a = -hl + 0.22, e = hl - 0.22, gap = a + (e - a) * (0.25 + 0.5 * h01(s, r, 1)), top = 0.14 + h01(s, r, 2) * 0.03;
       b((a + gap - 0.14) / 2, lz, 0.08, top, (gap - 0.14 - a) / 2, 0.035, M.prodGreen); b((gap + 0.14 + e) / 2, lz, 0.08, top - 0.01, (e - gap - 0.14) / 2, 0.035, M.prodGreen); }
   };
-  /** WALK-OVER: a cold HEARTH — a ring of stones, two charred lengths, the ash trodden round it: where a watch sat last night. `ash` is the patch's paint:
-   *  damp reads on earth (dust, dirt, gravel); on a paler floor name one that is not under a third of it */
-  const hearth = (x: number, z: number, yaw = 0, ash: GwotMat = 'damp') => {
-    const b = piece(x, z, yaw); patch(x, z, 1.5, 1.3, ash, yaw + 0.3);
+  /** WALK-OVER: a cold HEARTH — a ring of stones, two charred lengths, the ash trodden round it: where a watch sat last night. The trodden ash is a
+   *  `stain`: the ground's own paint, darker. `ground` = the finish the fire was lit on: what the kit laid there (`groundAt`). Where the kit laid
+   *  none (a level's own slab) the caller names it, and a hearth that is told nothing there THROWS: it does not guess. (It was a patch of `damp` whatever
+   *  it lay on: a black square on moonlit dust.) */
+  const hearth = (x: number, z: number, yaw = 0, ground: GwotMat | undefined = groundAt(x, z)) => {
+    if (!ground) throw new Error(`gwotKit: the hearth at (${x}, ${z}) stands on no ground this kit laid: name the finish it was lit on (hearth(x, z, yaw, ground))`);
+    const b = piece(x, z, yaw); stain(x, z, 1.5, 1.3, ground, yaw + 0.3);
     for (let k = 0; k < 7; k++) { const a = k * Math.PI * 2 / 7; b(Math.cos(a) * 0.4, Math.sin(a) * 0.4, 0, 0.09 + 0.03 * (k % 3), 0.09, 0.065, M.mudDark, {}, Math.PI / 2 - a); }
     b(0.02, 0, 0, 0.05, 0.22, 0.035, M.woodGrey, {}, 0.5); b(-0.03, 0.02, 0, 0.06, 0.2, 0.03, M.woodGrey, {}, -0.7);
   };
@@ -509,44 +548,65 @@ export function gwotKit(host: GwotHost) {
   /** COVER (full height at the cab): a PICKUP, 5.0 × 1.8, nose toward local +X: cab, open bed, tailgate. `load`: what rides in the bed; `mount`: a pedestal
    *  gun in the bed (the "technical") */
   const pickup = (x: number, z: number, yaw = 0, body: GwotMat = 'truckWhite', opts: { load?: 'none' | 'drums' | 'sacks' | 'crates'; mount?: boolean } = {}) => {
-    const b = piece(x, z, yaw), P = M[body];
-    for (const sx of [-1.5, 1.52]) for (const sz of [-1, 1]) b(sx, sz * 0.78, 0, 0.74, 0.37, 0.13, M.rubber);
-    b(0, 0, 0.3, 0.8, 2.45, 0.86, P);                                                       // the body tub, sill to waistline
-    b(2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack); b(-2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack);   // bumpers
-    b(1.75, 0, 0.8, 1.0, 0.7, 0.84, P, mk(face('+y', 'coarse', [{ mul: 0.8 }], (i, j, W, Hc) => (j === 5 || j === Hc - 6) && i > 1 ? 1 : 0, 0, 1)));   // bonnet
-    b(0.38, 0, 0.8, 1.08, 0.7, 0.86, P); b(0.38, 0, 1.08, 1.5, 0.64, 0.8, M.glassDark); b(0.36, 0, 1.5, 1.58, 0.6, 0.78, P);   // the cab: doors, glass, roof
+    const b = piece(x, z, yaw), P = M[body], S = pickupShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
+    for (const sx of [-1.5, 1.52]) for (const sz of [-1, 1]) b(sx, sz * 0.78, 0, 0.74, 0.37, 0.13, M.rubber, { shape: S.wheel(sz) });
+    b(0, 0, 0.3, 0.8, 2.45, 0.86, P, { shape: S.tub });                                     // the body tub, sill to waistline
+    b(2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack, { shape: S.bumperFront }); b(-2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack, { shape: S.bumperRear });   // bumpers
+    b(1.75, 0, 0.8, 1.0, 0.7, 0.84, P, { shape: S.bonnet });                                // bonnet (it had two panel lines marked on it: a box that says a form carries no marks, and a crowned bonnet needs none)
+    b(0.38, 0, 0.8, 1.08, 0.7, 0.86, P, { shape: S.doors }); b(0.38, 0, 1.08, 1.5, 0.64, 0.8, M.glassDark, { shape: S.glass }); b(0.36, 0, 1.5, 1.58, 0.6, 0.78, P, { shape: S.roof });   // the cab: doors (and the glass's posts, in their paint), glass, roof
     b(-1.42, 0, 0.8, 0.83, 1.0, 0.76, M.plasticBlack, mk(face('+y', 'coarse', [{ mul: 1.9 }], (i, j) => j % 3 === 1 ? 1 : 0, 0, 2)));   // the bed liner, ribbed
-    for (const sz of [-1, 1]) b(-1.42, sz * 0.83, 0.8, 1.18, 1.03, 0.03, P);                 // bed sides
-    b(-2.42, 0, 0.8, 1.18, 0.03, 0.86, P); b(-0.36, 0, 0.8, 1.18, 0.03, 0.86, P);           // tailgate, the bed's front wall
-    for (const sz of [-1, 1]) { b(2.43, sz * 0.66, 0.62, 0.76, 0.03, 0.16, M.plasticWhite); b(-2.43, sz * 0.72, 0.62, 0.78, 0.03, 0.1, M.truckRed); }
+    for (const sz of [-1, 1]) b(-1.42, sz * 0.83, 0.8, 1.18, 1.03, 0.03, P, { shape: S.bedSide(sz) });   // bed sides
+    b(-2.42, 0, 0.8, 1.18, 0.03, 0.86, P, { shape: S.tailgate }); b(-0.36, 0, 0.8, 1.18, 0.03, 0.86, P);   // tailgate, the bed's front wall
+    for (const sz of [-1, 1]) { b(2.43, sz * 0.66, 0.62, 0.76, 0.03, 0.16, M.plasticWhite, { shape: S.head(sz) }); b(-2.43, sz * 0.72, 0.62, 0.78, 0.03, 0.1, M.truckRed, { shape: S.tail(sz) }); }
     const at = frameAt(x, z, yaw);
     if (opts.mount) { b(-1.3, 0, 0.83, 1.5, 0.05, 0.05, M.iron); b(-1.05, 0, 1.5, 1.62, 0.7, 0.05, M.iron); b(-1.3, 0.16, 1.44, 1.6, 0.12, 0.09, M.olive); b(-1.75, 0, 1.46, 1.58, 0.05, 0.2, M.iron); }
     else if (opts.load === 'drums') { for (const [lx, lz] of [[-0.85, -0.36], [-0.85, 0.36], [-1.5, 0]] as const) { const p = at(lx, 0, lz); const d = piece(p[0], p[2], yaw); round(d, 0, 0, 0.83, 1.71, 0.29, lx < -1 ? M.rust : M.drumBlue); } }
     else if (opts.load === 'sacks') { for (const [lx, lz, y] of [[-0.9, -0.3, 0], [-0.9, 0.32, 0], [-1.7, 0, 0], [-1.2, 0.02, 0.2]] as const) b(lx, lz, 0.83 + y, 1.03 + y, 0.38, 0.25, M.sack); }
     else if (opts.load === 'crates') { b(-1.0, -0.3, 0.83, 1.13, 0.45, 0.2, M.olive); b(-1.0, 0.3, 0.83, 1.13, 0.45, 0.2, M.olive); b(-1.9, 0, 0.83, 1.13, 0.2, 0.45, M.coyote); }
+    return S;
   };
   /** COVER (head high): a PANEL VAN 4.9 × 1.8 × 1.95, nose toward local +X, its two back doors standing open on the load bay (the spot a stride behind them is
    *  local (−3.2, 0): where a man is put in) */
   const van = (x: number, z: number, yaw = 0, body: GwotMat = 'truckWhite') => {
-    const b = piece(x, z, yaw), P = M[body];
-    for (const sx of [-1.45, 1.5]) for (const sz of [-1, 1]) b(sx, sz * 0.8, 0, 0.74, 0.37, 0.13, M.rubber);
-    b(0, 0, 0.3, 0.86, 2.4, 0.9, P);                                                        // the body, sill to waistline
-    b(2.43, 0, 0.36, 0.58, 0.05, 0.9, M.plasticBlack); b(-2.43, 0, 0.3, 0.44, 0.05, 0.9, M.plasticBlack);   // bumper, the rear step
-    b(2.0, 0, 0.86, 1.06, 0.4, 0.86, P);                                                    // bonnet
-    b(1.3, 0, 0.86, 1.1, 0.4, 0.9, P); b(1.3, 0, 1.1, 1.62, 0.36, 0.84, M.glassDark); b(1.22, 0, 1.62, 1.95, 0.34, 0.86, P);   // the cab: doors, glass, the roof's brow
-    b(-0.5, 0, 0.86, 1.95, 1.4, 0.9, P);                                                    // the load box
-    for (const sz of [-1, 1]) b(-2.15, sz * 0.87, 0.86, 1.95, 0.25, 0.03, P);               // the open bay: its sides, roof, the dark inside
-    b(-2.15, 0, 1.89, 1.95, 0.25, 0.9, P); b(-1.89, 0, 0.86, 1.89, 0.02, 0.84, M.plasticBlack); b(-2.15, 0, 0.86, 0.88, 0.25, 0.84, M.plasticBlack);
+    const b = piece(x, z, yaw), P = M[body], S = vanShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
+    for (const sx of [-1.45, 1.5]) for (const sz of [-1, 1]) b(sx, sz * 0.8, 0, 0.74, 0.37, 0.13, M.rubber, { shape: S.wheel(sz) });
+    b(0, 0, 0.3, 0.86, 2.4, 0.9, P, { shape: S.body });                                     // the body, sill to waistline
+    b(2.43, 0, 0.36, 0.58, 0.05, 0.9, M.plasticBlack, { shape: S.bumper }); b(-2.43, 0, 0.3, 0.44, 0.05, 0.9, M.plasticBlack, { shape: S.step });   // bumper, the rear step
+    b(2.0, 0, 0.86, 1.06, 0.4, 0.86, P, { shape: S.bonnet });                               // bonnet
+    b(1.3, 0, 0.86, 1.1, 0.4, 0.9, P, { shape: S.doors }); b(1.3, 0, 1.1, 1.62, 0.36, 0.84, M.glassDark, { shape: S.glass }); b(1.22, 0, 1.62, 1.95, 0.34, 0.86, P, { shape: S.brow });   // the cab: doors, glass, the roof's brow
+    b(-0.5, 0, 0.86, 1.95, 1.4, 0.9, P, { shape: S.load });                                 // the load box
+    for (const sz of [-1, 1]) b(-2.15, sz * 0.87, 0.86, 1.95, 0.25, 0.03, P, { shape: S.baySide(sz) });   // the open bay: its sides, roof, the dark inside
+    b(-2.15, 0, 1.89, 1.95, 0.25, 0.9, P, { shape: S.bayRoof }); b(-1.89, 0, 0.86, 1.89, 0.02, 0.84, M.plasticBlack); b(-2.15, 0, 0.86, 0.88, 0.25, 0.84, M.plasticBlack);
     for (const sz of [-1, 1]) b(-2.77, sz * 1.1, 0.5, 1.9, 0.42, 0.025, P, {}, sz * 0.5);   // the two back doors, swung out
-    for (const sz of [-1, 1]) { b(2.43, sz * 0.66, 0.62, 0.76, 0.03, 0.16, M.plasticWhite); b(-2.41, sz * 0.86, 0.9, 1.2, 0.02, 0.04, M.truckRed); }
+    for (const sz of [-1, 1]) { b(2.43, sz * 0.66, 0.62, 0.76, 0.03, 0.16, M.plasticWhite, { shape: S.head(sz) }); b(-2.41, sz * 0.86, 0.9, 1.2, 0.02, 0.04, M.truckRed, { shape: S.tail(sz) }); }
+    return S;
+  };
+  /** COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Like every
+   *  vehicle here it hands back the shapes its boxes say (scene/carShapes.ts), `tops` among them: what a level lays on its roof goes by `lay` */
+  const lorry = (x: number, z: number, yaw = 0) => {
+    const L = piece(x, z, yaw), S = lorryShapes({ red: M.truckRed, canvas: M.canvas, iron: M.iron, galv: M.galv, rust: M.rust, rubber: M.rubber, poplar: M.poplar, white: M.plasticWhite, glass: M.glassDark, jerry: M.jerryYellow, olive: M.olive, orange: M.prodOrange });
+    for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber, { shape: S.wheel(s) });
+    L(-0.1, 0, 0.5, 0.74, 3.1, 0.42, M.iron, { shape: S.chassis });                            // the chassis
+    L(3.42, 0, 0.5, 0.78, 0.06, 1.12, M.iron, { shape: S.bumper });                            // bumper
+    L(2.75, 0, 0.74, 1.5, 0.62, 0.98, M.truckRed, { shape: S.bonnet });                        // bonnet
+    L(1.55, 0, 0.74, 1.5, 0.62, 1.12, M.truckRed, { shape: S.cab });                           // the cab: doors
+    L(1.55, 0, 1.5, 2.08, 0.58, 1.06, M.glassDark, { shape: S.glass });                        // … glass
+    L(1.5, 0, 2.08, 2.2, 0.62, 1.1, M.truckRed, { shape: S.roof });                            // … roof
+    for (const s of [-1, 1]) L(3.38, s * 0.7, 0.86, 1.02, 0.02, 0.1, M.plasticWhite, { shape: S.lamp(s) });   // headlamps
+    L(-1.15, 0, 0.74, 0.9, 2.05, 1.16, M.woodGrey);                                            // the bed
+    for (const s of [-1, 1]) L(-1.15, s * 1.14, 0.9, 1.45, 2.05, 0.03, M.poplar, { shape: S.side(s) });   // sideboards
+    L(-3.17, 0, 0.9, 1.45, 0.03, 1.16, M.poplar, { shape: S.tail }); L(0.87, 0, 0.9, 1.7, 0.03, 1.16, M.poplar);   // tailboard, headboard
+    L(-1.15, 0, 0.9, 1.95, 1.95, 1.06, M.canvas, { shape: S.load });                           // the load under its canvas
+    return S;
   };
   /** COVER (waist, thin): a small MOTORBIKE on its stand, nose toward local +X */
   const motorbike = (x: number, z: number, yaw = 0, tank: GwotMat = 'truckRed') => {
-    const b = piece(x, z, yaw);
-    b(0.66, 0, 0, 0.6, 0.3, 0.05, M.rubber); b(-0.62, 0, 0, 0.6, 0.3, 0.05, M.rubber);
-    b(0.02, 0, 0.26, 0.56, 0.2, 0.12, M.iron); b(0.18, 0, 0.56, 0.84, 0.24, 0.12, M[tank]); b(-0.36, 0, 0.62, 0.8, 0.34, 0.11, M.plasticBlack);
-    b(0.6, 0, 0.6, 1.02, 0.03, 0.03, M.galv); b(0.56, 0, 1.0, 1.04, 0.02, 0.32, M.iron); b(0.74, 0, 0.78, 0.94, 0.05, 0.07, M.iron);
-    b(-0.84, 0, 0.66, 0.7, 0.16, 0.13, M.iron); b(-0.4, 0.16, 0.28, 0.36, 0.42, 0.035, M.iron);   // (nothing pale on it: from above a bike is two black wheels in line and one tank of colour)
+    const b = piece(x, z, yaw), S = bikeShapes();   // (S: the shape each box says — scene/carShapes.ts)
+    b(0.66, 0, 0, 0.6, 0.3, 0.05, M.rubber, { shape: S.wheel }); b(-0.62, 0, 0, 0.6, 0.3, 0.05, M.rubber, { shape: S.wheel });
+    b(0.02, 0, 0.26, 0.56, 0.2, 0.12, M.iron); b(0.18, 0, 0.56, 0.84, 0.24, 0.12, M[tank], { shape: S.tank }); b(-0.36, 0, 0.62, 0.8, 0.34, 0.11, M.plasticBlack, { shape: S.seat });
+    b(0.6, 0, 0.6, 1.02, 0.03, 0.03, M.galv); b(0.56, 0, 1.0, 1.04, 0.02, 0.32, M.iron, { shape: S.bars }); b(0.74, 0, 0.78, 0.94, 0.05, 0.07, M.iron, { shape: S.lamp });
+    b(-0.84, 0, 0.66, 0.7, 0.16, 0.13, M.iron); b(-0.4, 0.16, 0.28, 0.36, 0.42, 0.035, M.iron, { shape: S.exhaust });   // (nothing pale on it: from above a bike is two black wheels in line and one tank of colour)
+    return S;
   };
   /** COVER (waist): a flat HANDCART (karachi) 1.7 × 0.95 on two wheels, shafts toward local +X; `load`: sacks, produce crates or nothing */
   const handcart = (x: number, z: number, yaw = 0, load: 'none' | 'sacks' | 'produce' = 'none') => {
@@ -610,10 +670,10 @@ export function gwotKit(host: GwotHost) {
     host.lights.push({ kind: 'spot', pos: [x + dx * 0.2, height, z + dz * 0.2], dir: [dx * 0.8, -0.6, dz * 0.8], color: [0.92, 0.96, 1.0], intensity: 210, range: 20, innerDeg: 38, outerDeg: 70, name, group: 'exterior', enabled: on, volumetric: 0.14, fixtureBox: fb, radius: 0.14, mains, broad: true });
   };
 
-  return {
-    M, mk, face, marksOf, piece,
+  // the kit's TOOLS, then its PIECES by name (scene/library.ts: the catalogue, docs/library.md, is written from this list)
+  return { M, mk, face, marksOf, piece, as, groundAt, lie, flatAt, lay, ...pieces('gwotKit', {
     // walls
-    as, wallX, wallZ, partX, partZ, yardWallX, yardWallZ, pier, skirt, dado, wallHanging, gate,
+    wallX, wallZ, partX, partZ, yardWallX, yardWallZ, pier, skirt, dado, wallHanging, gate,
     // ground
     ground, patch, ruts, rubble, stain, seep, kerbStones, kerb, plantBed, hearth,
     // cloth & beds
@@ -623,10 +683,10 @@ export function gwotKit(host: GwotHost) {
     // stores & cover
     drum, drums, drumDown, jerryCan, gasBottle, crates, sacks, sandbags, hesco, jersey, tWall, tyres, blocks, woodPile,
     // machines & vehicles
-    generator, waterTank, pump, pickup, van, motorbike, handcart, stall, container, satDish, bush,
+    generator, waterTank, pump, pickup, van, lorry, motorbike, handcart, stall, container, satDish, bush,
     // lights
     wire, bulb, lantern, tube, floodLight,
-  };
+  }) };
 }
 export type GwotKit = ReturnType<typeof gwotKit>;
 

@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const ROOT = resolve(import.meta.dir, '..');
 const { buildOfficeProcedural, OFFICE_PALETTE, OFFICE_FINISH } = await import(`${ROOT}/src/scene/officeGen.ts`);
+const { rowWord } = await import(`${ROOT}/src/scene/stuff.ts`);   // (what each paint is made of, by its name: written into the file's material rows)
 const { levelToData, loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
@@ -35,7 +36,7 @@ const materials: Record<string, { albedo: [number, number, number]; rough?: numb
 { const seen = new Map<string, string>();
   for (const [name, alb] of Object.entries(OFFICE_PALETTE as Record<string, [number, number, number]>)) {
     const k = alb.join(','); if (seen.has(k)) console.warn(`palette: '${name}' has the same albedo as '${seen.get(k)}' — boxes of that colour will be written as '${seen.get(k)}'`); else seen.set(k, name);
-    materials[name] = { albedo: [alb[0], alb[1], alb[2]], ...((OFFICE_FINISH as Record<string, { rough: number; metal?: boolean }>)[name] ?? {}) };   // + the finish (rough / metal) the reflection pass reads, where the palette names one
+    materials[name] = { albedo: [alb[0], alb[1], alb[2]], ...((OFFICE_FINISH as Record<string, { rough: number; metal?: boolean }>)[name] ?? {}), ...rowWord(name) };   // + the finish (rough / metal) the reflection pass reads, where the palette names one
   } }
 const zoneIds = ['corridor_lino', 'lobby_stone', 'server_tile', 'breakroom_lino'];
 if (FINISHES.length !== zoneIds.length) throw new Error('floor.ts FINISHES changed: name the zones here');

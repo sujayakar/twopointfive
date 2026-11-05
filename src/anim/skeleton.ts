@@ -2,9 +2,9 @@
 import { Mat4, Quat, Vec3, m4, quat, clamp } from '../math/vec';
 import { Clip, GltfCharacter } from './gltf';
 import { hyp3, hyp4 } from '../math/vec';
-import { RUST, sim, f32, f64, i32, u32, u8, type SimExports } from '../sim/sim';
+import { RUST, sim, f32, f64, i32, u32, u8, type SimExports, FELL, fell } from '../sim/sim';
 import { EXACT } from '../math/exact';
-import { simPart, P_POSES, type SimState } from '../sim/state';
+import { simPart, P_POSES, SimState } from '../sim/state';
 import { SideMap } from '../math/side';
 
 // ---- RUST.poses (src/sim/sim.ts): the functions of this file asked of the module (rust/sim/src/skeleton.rs: each of them statement for statement).
@@ -20,7 +20,7 @@ const BENCH_NODES = 128, BENCH_SLOT = BENCH_NODES * 10;
 export const POSE_BENCH = { x: null as SimExports | null, rot: 0, pos: 0, args: 0, pose: 0, mask: 0, parent: 0, order: 0, rig: null as GltfCharacter | null, asked: 0, inPlace: 0 };
 /** the module, if it answers a question about a pose of `n` nodes now */
 function benchFor(n: number): SimExports | null {
-  if (!RUST.poses || !EXACT.on || n > BENCH_NODES) return null;
+  if (!RUST.poses || !EXACT.on || n > BENCH_NODES) { if (FELL.on && RUST.poses) fell('poses', !EXACT.on ? 'the engine\'s maths' : 'a pose of more nodes than the bench holds'); return null; }
   if (!POSE_BENCH.x) { const x = POSE_BENCH.x = sim(); POSE_BENCH.rot = x.pose_addr(0) / 8; POSE_BENCH.pos = x.pose_addr(1) / 8; POSE_BENCH.args = x.pose_addr(2) / 8; POSE_BENCH.pose = x.pose_addr(3) / 4; POSE_BENCH.mask = x.pose_addr(4) / 4; POSE_BENCH.parent = x.pose_addr(5) / 4; POSE_BENCH.order = x.pose_addr(6) / 4; }
   POSE_BENCH.asked++; return POSE_BENCH.x;
 }
@@ -31,25 +31,35 @@ function benchFor(n: number): SimExports | null {
 export const LAYERS = { knobs: null as (() => void) | null, ran: 0, both: false, by: {} as Record<string, { asked: number; differ: number }>, first: '', roles: null as GltfCharacter | null, names: null as { roles: string[]; lists: string[]; nums: string[] } | null, lists: [] as Int32Array[] };
 /** what the animator says of its rig for the module's two lists of names (rust/sim/src/knobs.rs): which node plays each role, and its lists of nodes to run forward */
 export interface LayerCast { nodes: Readonly<Record<string, number>>; lists: Readonly<Record<string, Int32Array>>; nums: Readonly<Record<string, ArrayLike<number>>>; poses: PoseSet }
+/** A SIZE A LAYER OF THE MODULE IS HANDED AT MOST (a list of the rig's nodes, a table of its numbers, the keys of a blow or a swing, the blows of a beat):
+ *  the module's arrays are of a fixed length, so one thing longer than its array is a mistake in the game's own tables or records, and it is said here, by
+ *  name, the first time it is met. There is no second way to pose it. */
+export function layerFits(what: string, n: number, max: number, min = 0): void {
+  if (!(n >= min && n <= max)) throw new Error(`posing: ${what} has ${n} entries and a layer of the Rust module takes ${min > 0 ? `${min} to ${max}` : `at most ${max}`} (rust/sim/src/layers.rs and knobs.rs hold the lengths)`);
+}
 const benchNames = (x: SimExports, table: number): string[] => { const at = x.knob_addr(table), n = x.knob_len(table), b = u8(); let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(b[at + i]); return s.split('\n').filter(l => l.length > 0); };
 /** THE SLOT TO ASK A LAYER OF `pose` IN, or −1 = the TypeScript runs it: the row is on, the pose lives in a block that stands in the module now AND SO DOES
  *  EVERY OTHER POSE OF ITS ANIMATOR (`cast.poses`: a layer is handed its other poses by their places, so one the pool had no room for is a man the
  *  TypeScript poses), the module answers posing questions (benchFor: the game's own maths), and `ch`'s rig, its named nodes and its lists (`cast`) are on
- *  the bench — a list or a table longer than the module holds is a rig its layers are not asked about. A layer's own numbers then go on the bench's `args`
+ *  the bench — a list or a table longer than the module holds is a mistake, said by name (layerFits). A layer's own numbers then go on the bench's `args`
  *  (POSE_BENCH.args, doubles) in the order its Rust comment gives. */
 export function layerSlot(ch: GltfCharacter, pose: Pose, cast: LayerCast): number {
-  if (!RUST.walk || cast.poses.stray !== 0) return -1;
-  const g = slotOf(pose); if (g < 0) return -1;
-  const x = benchRig(ch); if (!x) return -1;
+  if (!RUST.walk) return -1;
+  // (what is counted is a question the module could have been asked: with the poses' row put down by its own word every layer is the TypeScript's by that
+  //  word, which is no way back in)
+  if (cast.poses.stray !== 0) { if (FELL.on && RUST.poses) fell('walk', 'a man with a pose the pool had no room for'); return -1; }
+  const g = slotOf(pose); if (g < 0) { if (FELL.on && RUST.poses) fell('walk', 'a pose that is not at home in a block (no game\'s tick has opened over it)'); return -1; }
+  const x = benchRig(ch); if (!x) { if (FELL.on && RUST.poses) fell('walk', 'the module does not answer posing questions now, or the rig is not on the bench'); return -1; }
   if (LAYERS.roles !== ch) {   // (the roles and the lists go with the rig: rust/sim/src/knobs.rs names them, the animator says which nodes each is)
     const names = LAYERS.names ?? (LAYERS.names = { roles: benchNames(x, 3), lists: benchNames(x, 5), nums: benchNames(x, 8) });
     const w = u32(), at = x.knob_addr(2) / 4, la = x.knob_addr(4) / 4, ln = x.knob_addr(6) / 4, max = x.knob_len(4) / Math.max(1, x.knob_len(6)), nmax = x.knob_len(7) / Math.max(1, x.knob_len(9));
-    // (a name the animator does not have is a mistake in one of the two lists; a list or a table too long for the module is a rig the TypeScript poses.
-    //  Both are found before a word is written, so the rig that was there stays whole)
+    // (a name the animator does not have is a mistake in one of the two lists, and so is a list or a table longer than the module holds: no second
+    //  way poses that rig. Both are found before a word is written, so the rig that was there stays whole)
     for (const r of names.roles) if (typeof cast.nodes[r] !== 'number') throw new Error(`posing: the Rust module asks for the node "${r}" (rust/sim/src/knobs.rs) and the animator has none of that name`);
     for (const l of names.lists) if (!cast.lists[l]) throw new Error(`posing: the Rust module asks for the list "${l}" (rust/sim/src/knobs.rs) and the animator has none of that name`);
     for (const t of names.nums) if (!cast.nums[t]) throw new Error(`posing: the Rust module asks for the table "${t}" (rust/sim/src/knobs.rs) and the animator has none of that name`);
-    if (names.lists.some(l => cast.lists[l].length > max) || names.nums.some(t => cast.nums[t].length > nmax)) { POSE_BENCH.asked--; return -1; }   // (…and the question benchRig counted is not one the module was asked)
+    for (const l of names.lists) layerFits(`the rig's list of nodes "${l}"`, cast.lists[l].length, max);
+    for (const t of names.nums) layerFits(`the rig's table of numbers "${t}"`, cast.nums[t].length, nmax);
     for (let i = 0; i < names.roles.length; i++) w[at + i] = cast.nodes[names.roles[i]];
     for (let i = 0; i < names.lists.length; i++) {
       const l = cast.lists[names.lists[i]];
@@ -104,15 +114,15 @@ export function layerBoth(name: string, pose: Pose, fk: PoseFK, ask: () => reado
   const flat = (): number[] => { const o: number[] = []; for (const q of fk.rot) o.push(q[0], q[1], q[2], q[3]); for (const v of fk.pos) o.push(v[0], v[1], v[2]); return o; };
   const put = (o: number[]): void => { let k = 0; for (const q of fk.rot) { q[0] = o[k++]; q[1] = o[k++]; q[2] = o[k++]; q[3] = o[k++]; } for (const v of fk.pos) { v[0] = o[k++]; v[1] = o[k++]; v[2] = o[k++]; } };
   const st = (): number[] => { const o: number[] = new Array(cols ? cols.n : 0).fill(0); if (cols) cols.get(o, 0); return o; };
-  const alsoWas = also.map(p => p.data.slice());   // (`also`: the scratch poses the layer leaves for the next one to read — each starts both runs the same and is compared like the pose)
-  const was = pose.data.slice(), fkWas = flat(), stWas = st(); const outGot = ask() ?? []; const got = pose.data.slice(), fkGot = flat(), stGot = st(), alsoGot = also.map(p => p.data.slice()); pose.data.set(was); also.forEach((p, i) => p.data.set(alsoWas[i])); put(fkWas); if (cols) cols.put(stWas, 0); const outNow = own() ?? [];
-  const now = pose.data, fkNow = flat(), stNow = st(), by = LAYERS.by[name] ?? (LAYERS.by[name] = { asked: 0, differ: 0 }); by.asked++;
+  const alsoWas = also.map(p => p.cols.slice());   // (`also`: the scratch poses the layer leaves for the next one to read — each starts both runs the same and is compared like the pose)
+  const was = pose.cols.slice(), fkWas = flat(), stWas = st(); const outGot = ask() ?? []; const got = pose.cols.slice(), fkGot = flat(), stGot = st(), alsoGot = also.map(p => p.cols.slice()); pose.cols.set(was); also.forEach((p, i) => p.cols.set(alsoWas[i])); put(fkWas); if (cols) cols.put(stWas, 0); const outNow = own() ?? [];
+  const now = pose.cols, fkNow = flat(), stNow = st(), by = LAYERS.by[name] ?? (LAYERS.by[name] = { asked: 0, differ: 0 }); by.asked++;
   let bad = '';
-  for (let i = 0; i < now.length && !bad; i++) if (!Object.is(now[i], got[i])) bad = `single ${i} (node ${Math.floor(i / 10)}) the TypeScript ${now[i]}, the module ${got[i]}`;
+  for (let i = 0; i < now.length && !bad; i++) if (!Object.is(now[i], got[i])) bad = `single ${i} (node ${i % pose.rows}, column ${Math.floor(i / pose.rows)}) the TypeScript ${now[i]}, the module ${got[i]}`;
   for (let i = 0; i < fkNow.length && !bad; i++) if (!Object.is(fkNow[i], fkGot[i])) bad = `run-forward double ${i} the TypeScript ${fkNow[i]}, the module ${fkGot[i]}`;
   for (let i = 0; i < stNow.length && !bad; i++) if (!Object.is(stNow[i], stGot[i])) bad = `column ${i} the TypeScript ${stNow[i]}, the module ${stGot[i]}`;
   for (let i = 0; i < Math.max(outNow.length, outGot.length) && !bad; i++) if (!Object.is(outNow[i], outGot[i])) bad = `answer ${i} the TypeScript ${outNow[i]}, the module ${outGot[i]}`;
-  for (let p = 0; p < also.length && !bad; p++) { const a = also[p].data, b = alsoGot[p]; for (let i = 0; i < a.length && !bad; i++) if (!Object.is(a[i], b[i])) bad = `scratch pose ${p}, single ${i} (node ${Math.floor(i / 10)}) the TypeScript ${a[i]}, the module ${b[i]}`; }
+  for (let p = 0; p < also.length && !bad; p++) { const a = also[p].cols, b = alsoGot[p]; for (let i = 0; i < a.length && !bad; i++) if (!Object.is(a[i], b[i])) bad = `scratch pose ${p}, single ${i} (node ${i % also[p].rows}, column ${Math.floor(i / also[p].rows)}) the TypeScript ${a[i]}, the module ${b[i]}`; }
   if (bad) { by.differ++; if (!LAYERS.first) LAYERS.first = `${name}: ${bad}`; }
 }
 /** …and with `ch`'s rig on the bench (written when another was there; a rig the bench cannot hold is nobody's question) */
@@ -126,8 +136,10 @@ function benchRig(ch: GltfCharacter): SimExports | null {
   }
   return x;
 }
-const benchPut = (p: Pose, slot: number): void => { f32().set(p.data, POSE_BENCH.pose + slot * BENCH_SLOT); };
-const benchGet = (p: Pose, slot: number): void => { const o = POSE_BENCH.pose + slot * BENCH_SLOT; p.data.set(f32().subarray(o, o + p.data.length)); };
+const benchPut = (p: Pose, slot: number): void => { f32().set(p.cols, POSE_BENCH.pose + slot * BENCH_SLOT); };
+/** …and read back: each column's rows of the pose's own nodes. The rows past the last node are NOT read: a question writes only the nodes, so what stands
+ *  there on the bench is whatever an earlier question of another size left, and a pose's own stay the zeros they are. */
+const benchGet = (p: Pose, slot: number): void => { const o = POSE_BENCH.pose + slot * BENCH_SLOT, N = p.rows, n = p.numNodes, m = f32(), d = p.cols; for (let c = 0; c < 10; c++) d.set(m.subarray(o + c * N, o + c * N + n), c * N); };
 function benchPutFK(fk: PoseFK): void { const m = f64(), rot = fk.rot, pos = fk.pos; for (let i = 0, r = POSE_BENCH.rot, p = POSE_BENCH.pos; i < rot.length; i++, r += 4, p += 3) { const q = rot[i], v = pos[i]; m[r] = q[0]; m[r + 1] = q[1]; m[r + 2] = q[2]; m[r + 3] = q[3]; m[p] = v[0]; m[p + 1] = v[1]; m[p + 2] = v[2]; } }
 function benchGetFK(fk: PoseFK): void { const m = f64(), rot = fk.rot, pos = fk.pos; for (let i = 0, r = POSE_BENCH.rot, p = POSE_BENCH.pos; i < rot.length; i++, r += 4, p += 3) { const q = rot[i], v = pos[i]; q[0] = m[r]; q[1] = m[r + 1]; q[2] = m[r + 2]; q[3] = m[r + 3]; v[0] = m[p]; v[1] = m[p + 1]; v[2] = m[p + 2]; } }
 const benchArgs = (at: number, v: ArrayLike<number>, n: number): void => { const m = f64(), o = POSE_BENCH.args + at; for (let i = 0; i < n; i++) m[o + i] = v[i]; };
@@ -135,21 +147,28 @@ const benchArgs = (at: number, v: ArrayLike<number>, n: number): void => { const
 /** the identity rotation, shared and never written (the root's parent in the FK loops below) */
 const IDENT: Quat = [0, 0, 0, 1];
 
-/** Local pose: per node 10 floats [tx ty tz | qx qy qz qw | sx sy sz].
+/** rows a column of a pose of `n` nodes holds: `n` rounded up to whole vectors of four (the rows past the last node are zeros, and stay zeros) */
+export const poseRows = (n: number): number => (n + 3) & ~3;
+/** Local pose: ten singles a node [tx ty tz | qx qy qz qw | sx sy sz], kept as TEN COLUMNS, a node a row: channel c of node i is `cols[c * rows + i]`
+ *  (rust/sim/src/skeleton.rs `rows`). A column a channel is what lets a kernel work the same channel of four nodes in one step (docs/agents/rust.md, the
+ *  data's layout); a reader that wants one node's numbers goes through `rot` / `pos` or writes the index out as above.
  *  WHERE THE FLOATS LIVE: in an array of the pose's own — or, for a pose of a character's PoseSet while the row RUST.poses is on, in its game's block of the
- *  Rust module's memory (rust/sim/src/poses.rs: `home`, and `at`, the single of the block's pool part it starts at). `data` is the floats wherever they are. It is asked
+ *  Rust module's memory (rust/sim/src/poses.rs: `home`, and `at`, the single of the block's pool part it starts at). `cols` is the floats wherever they are. It is asked
  *  for at each use and NEVER KEPT in a field: over the block it is an array the game's SimState made, and it is made again whenever the block moves. */
 export class Pose {
   own: Float32Array | null;
   home: SimState | null = null;
   at = 0;
-  constructor(public numNodes: number) { this.own = new Float32Array(numNodes * 10); }
-  get data(): Float32Array { const h = this.home; return h === null ? this.own! : h.f32(simPart(P_POSES) + this.at * 4, this.numNodes * 10); }
-  copy(src: Pose) { this.data.set(src.data); return this; }
-  rot(i: number): Quat { const d = this.data, o = i * 10 + 3; return [d[o], d[o + 1], d[o + 2], d[o + 3]]; }
-  setRot(i: number, q: Quat) { const d = this.data, o = i * 10 + 3; d[o] = q[0]; d[o + 1] = q[1]; d[o + 2] = q[2]; d[o + 3] = q[3]; }
-  pos(i: number): Vec3 { const d = this.data, o = i * 10; return [d[o], d[o + 1], d[o + 2]]; }
-  setPos(i: number, p: Vec3) { const d = this.data, o = i * 10; d[o] = p[0]; d[o + 1] = p[1]; d[o + 2] = p[2]; }
+  /** rows a column (`poseRows(numNodes)`) */
+  readonly rows: number;
+  constructor(public numNodes: number) { this.rows = poseRows(numNodes); this.own = new Float32Array(this.rows * 10); }
+  get cols(): Float32Array { const h = this.home; return h === null ? this.own! : h.f32(simPart(P_POSES) + this.at * 4, this.rows * 10); }
+  /** (between poses of one rig: a pose of another count of nodes has its columns elsewhere, and is refused) */
+  copy(src: Pose) { if (src.rows !== this.rows) throw new RangeError(`Pose.copy: a pose of ${src.numNodes} nodes into one of ${this.numNodes}`); this.cols.set(src.cols); return this; }
+  rot(i: number): Quat { const d = this.cols, N = this.rows, o = 3 * N + i; return [d[o], d[o + N], d[o + 2 * N], d[o + 3 * N]]; }
+  setRot(i: number, q: Quat) { if (!(i >= 0 && i < this.numNodes)) return; const d = this.cols, N = this.rows, o = 3 * N + i; d[o] = q[0]; d[o + N] = q[1]; d[o + 2 * N] = q[2]; d[o + 3 * N] = q[3]; }
+  pos(i: number): Vec3 { const d = this.cols, N = this.rows; return [d[i], d[N + i], d[2 * N + i]]; }
+  setPos(i: number, p: Vec3) { if (!(i >= 0 && i < this.numNodes)) return; const d = this.cols, N = this.rows; d[i] = p[0]; d[N + i] = p[1]; d[2 * N + i] = p[2]; }
 }
 /** THE POSES ONE CHARACTER KEEPS from one tick to the next (its animator's: the blend's stages, the layers' own buffers). They are made through the set so
  *  that they can be moved, all of them, into the game's block and out of it (game/posehome.ts, as a tick opens under RUST.poses); a pose made while the set
@@ -165,15 +184,40 @@ export class PoseSet {
 function poseIn(p: Pose, st: SimState): boolean {
   if (p.home !== null) return true;
   const at = sim().pose_new(st.bind(), p.numNodes); if (at < 0) return false;
-  const own = p.own!; p.home = st; p.at = at; p.own = null; p.data.set(own); return true;
+  const own = p.own!; p.home = st; p.at = at; p.own = null; p.cols.set(own); return true;
 }
-function poseOut(p: Pose): void { if (p.home === null) return; const own = new Float32Array(p.data); p.home = null; p.at = 0; p.own = own; }
+function poseOut(p: Pose): void { if (p.home === null) return; const own = new Float32Array(p.cols); p.home = null; p.at = 0; p.own = own; }
 /** every pose of a set into the block of `st`, and the poses it makes from now on (false: the pool had no room for one of them, see `stray`) */
 export function poseSetIn(s: PoseSet, st: SimState): boolean { s.home = st; let stray = 0; for (const p of s.list) if (!poseIn(p, st)) stray++; s.stray = stray; return stray === 0; }
 /** …and out again, each into an array of its own */
 export function poseSetOut(s: PoseSet): void { s.home = null; s.stray = 0; for (const p of s.list) poseOut(p); }
+/** THE STAGE — an animator's update runs over poses that STAND IN A BLOCK OF THE MODULE (RUST.walk: its layers are handed their poses by their places in
+ *  one pool). A character of a ticking game has his in the game's block (game/posehome.ts moves them as a tick opens). Every other update has none: a man
+ *  posed as he is spawned, before any tick has opened over him; a figure of a menu, who is in no game; a game whose block another game's tick has parked.
+ *  So an update OPENS by seeing to it: a set at home has its block bound (and a pose made while it stood parked is put in); a set with no home is lent the
+ *  stage, a block of this file's that holds one animator's poses for the length of his update, and takes them back into arrays of his own as it shuts.
+ *  The floats are the same floats either way, so it is the same pose to the bit; what it buys is that no update is one the module cannot run.
+ *  `stageOpen` answers whether the stage was lent (the caller then owes `stageShut`); an update inside an update (a character's, then his animator's)
+ *  finds the set standing and lends nothing. A pool with no room is loud: a game's holds some 130 men and the stage one, so it is a mistake, not a case. */
+const STAGE = { st: null as SimState | null, lent: 0 };
+export function stageOpen(s: PoseSet): boolean {
+  if (!RUST.walk) return false;
+  const h = s.home;
+  if (h !== null) {
+    if (h === STAGE.st) return false;
+    if (h.where < 0) h.bind();
+    if (s.stray !== 0 && !poseSetIn(s, h)) throw new Error(`posing: the pose pool of a game has no room for a man's ${s.stray} pose(s) (rust/sim/src/poses.rs: the pool is sized for the largest game)`);
+    return false;
+  }
+  const st = STAGE.st ?? (STAGE.st = new SimState());
+  if (!poseSetIn(s, st)) throw new Error('posing: one animator\'s poses do not fit the stage (rust/sim/src/poses.rs: the pool)');
+  STAGE.lent++; return true;
+}
+export function stageShut(s: PoseSet): void { poseSetOut(s); sim().pose_clear(STAGE.st!.bind()); }
+/** how many updates were lent the stage (a tool's count) */
+export const stageLent = (): number => STAGE.lent;
 /** WHERE THE MODULE FINDS A POSE, for a question: the slot of the block it lives in — or −1, the bench (the pose is an array of its own, or its block
- *  stands parked: a question never moves a block, because the caller may be holding the pose's `data`) */
+ *  stands parked: a question never moves a block, because the caller may be holding the pose's `cols`) */
 const slotOf = (p: Pose): number => p.home === null ? -1 : p.home.where;
 /** a pose made ready for a question, and where it is: at home as it stands (its slot) — or copied to place `place` of the bench (−1) */
 function lend(p: Pose, place: number): number { const g = slotOf(p); if (g < 0) benchPut(p, place); else POSE_BENCH.inPlace++; return g; }
@@ -181,7 +225,8 @@ function lend(p: Pose, place: number): number { const g = slotOf(p); if (g < 0) 
 function known(ok: number): void { if (!ok) throw new Error('posing: the Rust module was asked about a pose it does not hold'); }
 
 export function restPose(ch: GltfCharacter, out: Pose): Pose {
-  ch.nodes.forEach((nd, i) => { const o = i * 10; out.data.set(nd.t, o); out.data.set(nd.r, o + 3); out.data.set(nd.s, o + 7); });
+  if (out.numNodes < ch.nodes.length) throw new RangeError(`restPose: a pose of ${out.numNodes} nodes for a rig of ${ch.nodes.length}`);
+  const d = out.cols, N = out.rows; ch.nodes.forEach((nd, i) => { for (let c = 0; c < 3; c++) { d[c * N + i] = nd.t[c]; d[(7 + c) * N + i] = nd.s[c]; } for (let c = 0; c < 4; c++) d[(3 + c) * N + i] = nd.r[c]; });
   return out;
 }
 
@@ -217,12 +262,33 @@ function clipIn(x: SimExports, clip: Clip): ClipSide {
   return c;
 }
 /** THE NUMBER A LAYER OF THE MODULE SAMPLES `clip` BY (rust/sim/src/layers.rs sample_on_rest: a layer that samples for itself is handed it with its own
- *  numbers), the clip written into the module now if it never was · −1 = the module does not hold it, or a pose of `nodes` nodes cannot take it: the
- *  TypeScript runs that layer. Asked after `layerSlot` (the bench is up). */
-export function clipNo(clip: Clip, nodes: number): number { const x = POSE_BENCH.x; if (!x) return -1; const c = clipIn(x, clip); return c.at >= 0 && c.need <= nodes ? c.at : -1; }
+ *  numbers), the clip written into the module now if it never was. A clip the module does not hold (its store has no room, or a track is of a shape it
+ *  cannot take), or one that writes a node its pose does not have, is a mistake in the character file or the store's size, said by name: no second way
+ *  samples it for a layer. −1 only with the bench down (asked after `layerSlot`, it is up). */
+export function clipNo(clip: Clip, nodes: number): number {
+  const x = POSE_BENCH.x; if (!x) return -1; const c = clipIn(x, clip); if (c.at >= 0 && c.need <= nodes) return c.at;
+  throw new Error(c.at < 0 ? `posing: a layer samples the clip "${clip.name}" and the Rust module does not hold it (rust/sim/src/clips.rs: no room in the store, or a track it cannot take)`
+    : `posing: a layer samples the clip "${clip.name}", which writes node ${c.need - 1}, over a pose of ${nodes} nodes`);
+}
 /** where the module keeps `clip` (−1 = it does not), for the check that reads the copy back; a clip never sampled with the row up is not asked for here */
 export function clipHeld(clip: Clip): number { return Math.max(-1, CLIP_SIDE.get(clip)?.at ?? -1); }
 
+/** A POSE'S BULK ARITHMETIC IN SINGLES (the maintainer, 2026-11-03, of the kernels a pose is blended and sampled by: "Singles, plain root for lengths"):
+ *  with `singles` on, blendPose and the step sampleClip takes between two keys are worked in singles, every operation rounded once (`Math.fround` here; the
+ *  Rust module's are singles to begin with — rust/sim/src/single.rs — and four nodes a step there), and a rotation is made a unit again by the plain root of
+ *  its squares where the doubles used the game's compensated length. A pose's numbers are stored as singles either way; what moves is their LAST PLACE, so it
+ *  is a rule of play: off = the build as it was, to the bit. Why: four singles fit a lane where two doubles do, and the compensated length is eight
+ *  divides and a root a node — in the module a blend is a third to a quarter of the time (docs/agents/rust.md has both languages' numbers). OFF here and on
+ *  the frozen stand; the page raises it (host/profile.ts). */
+export const POSEMATH = { singles: false };
+const fr = Math.fround;
+// WHAT IS MEASURED OFF A CLIP ONCE AND KEPT (an animator's tables of its run's pelvis height, its stances, the middle of its stride: character.ts, as an
+// animator is made) is measured IN DOUBLES whatever the rule — the constructor there puts the rule off while it measures: such a table is authored data
+// read off the file, the same under both rules, so nothing kept from the build stands on the other arithmetic.
+// THE RULE'S ORDER OF OPERATIONS IS WRITTEN OUT TWICE BELOW, in sampleClip and in blendPose, and not asked of one helper: a helper of twelve numbers was
+// tried and a blend in singles went from 871 to 1695 ns under bun (1686 to 2029 under V8). The two must read alike, and as rust/sim/src/single.rs
+// unit_step: the shorter way round, each number a + (b − a)·t, the plain root of ((x² + y²) + z²) + w². pose-ident holds each against the module and
+// against its own plain words.
 /** one sample's place on each line: 0 not found yet · 1 before the first key · 2 at or past the last · 3 between key `lo` and the next, `f` of the way */
 const ON_HOW = new Uint8Array(LINES), ON_LO = new Int32Array(LINES), ON_F = new Float64Array(LINES);
 
@@ -230,15 +296,16 @@ const ON_HOW = new Uint8Array(LINES), ON_LO = new Int32Array(LINES), ON_F = new 
 export function sampleClip(clip: Clip, t: number, loop: boolean, out: Pose) {
   // (RUST.poses: one question to the module, its answer written into the pose where it lives — rust/sim/src/clips.rs `sample`, this function statement for statement)
   { const n = out.numNodes, x = benchFor(n); if (x) { const c = clipIn(x, clip);
-      if (c.at >= 0 && c.need <= n) { const g = lend(out, 0); known(x.pose_sample(g, g < 0 ? 0 : out.at, n, c.at, t, loop ? 1 : 0)); if (g < 0) benchGet(out, 0); return; }
-      POSE_BENCH.asked--; } }
+      if (c.at >= 0 && c.need <= n) { const g = lend(out, 0); known(x.pose_sample(g, g < 0 ? 0 : out.at, n, c.at, t, (loop ? 1 : 0) | (POSEMATH.singles ? 2 : 0))); if (g < 0) benchGet(out, 0); return; }
+      POSE_BENCH.asked--; if (FELL.on) fell('poses', c.at < 0 ? 'a clip the module does not hold' : 'a clip of more nodes than its pose'); } }
   const dur = clip.duration;
   if (loop) { t = t % dur; if (t < 0) t += dur; } else t = Math.min(Math.max(t, 0), dur);
-  const d = out.data, tracks = clip.tracks, lines = sideOf(clip).lines;
+  const d = out.cols, N = out.rows, tracks = clip.tracks, lines = sideOf(clip).lines;
   ON_HOW.fill(0);
   for (let k = 0; k < tracks.length; k++) {
     const tr = tracks[k], times = tr.times, vals = tr.values; const n = times.length;
-    const comps = tr.path === 1 ? 4 : 3; const o = tr.node * 10 + (tr.path === 0 ? 0 : tr.path === 1 ? 3 : 7);
+    if (tr.node >= out.numNodes) continue;   // (a track of a node this pose has not writes nothing: in columns there is no "past the end" for it to fall off)
+    const comps = tr.path === 1 ? 4 : 3; const o = (tr.path === 0 ? 0 : tr.path === 1 ? 3 : 7) * N + tr.node;   // (the track's first channel of its node; the next is N on)
     // where t falls among this track's keys: found once for each set of times of the clip (ClipSide.lines)
     const l = lines[k]; let how = l < LINES ? ON_HOW[l] : 0, lo = 0, f = 0;
     if (how !== 0) { lo = ON_LO[l]; f = ON_F[l]; }
@@ -255,15 +322,25 @@ export function sampleClip(clip: Clip, t: number, loop: boolean, out: Pose) {
     }
     const a = lo * comps, b = a + comps;
     // a key's own values: the first, the last, or (a step track) the one before
-    if (how !== 3 || tr.step) { for (let c = 0; c < comps; c++) d[o + c] = vals[a + c]; continue; }
-    if (comps === 3) { for (let c = 0; c < 3; c++) d[o + c] = vals[a + c] + (vals[b + c] - vals[a + c]) * f; }
+    if (how !== 3 || tr.step) { for (let c = 0; c < comps; c++) d[o + c * N] = vals[a + c]; continue; }
+    if (POSEMATH.singles) {   // (the step between the two keys in singles: rust/sim/src/single.rs step3 / step4, operation for operation)
+      const fs = fr(f);
+      if (comps === 3) { for (let c = 0; c < 3; c++) d[o + c * N] = vals[a + c] + fr(fr(vals[b + c] - vals[a + c]) * fs); continue; }
+      let bx = vals[b], by = vals[b + 1], bz = vals[b + 2], bw = vals[b + 3];
+      const ax = vals[a], ay = vals[a + 1], az = vals[a + 2], aw = vals[a + 3];
+      if (fr(fr(fr(fr(ax * bx) + fr(ay * by)) + fr(az * bz)) + fr(aw * bw)) < 0) { bx = -bx; by = -by; bz = -bz; bw = -bw; }
+      const x = fr(ax + fr(fr(bx - ax) * fs)), y = fr(ay + fr(fr(by - ay) * fs)), z = fr(az + fr(fr(bz - az) * fs)), w = fr(aw + fr(fr(bw - aw) * fs));
+      const l = fr(Math.sqrt(fr(fr(fr(fr(x * x) + fr(y * y)) + fr(z * z)) + fr(w * w)))) || 1; d[o] = x / l; d[o + N] = y / l; d[o + 2 * N] = z / l; d[o + 3 * N] = w / l;
+      continue;
+    }
+    if (comps === 3) { for (let c = 0; c < 3; c++) d[o + c * N] = vals[a + c] + (vals[b + c] - vals[a + c]) * f; }
     else {
       // nlerp shortest arc
       let bx = vals[b], by = vals[b + 1], bz = vals[b + 2], bw = vals[b + 3];
       const ax = vals[a], ay = vals[a + 1], az = vals[a + 2], aw = vals[a + 3];
       if (ax * bx + ay * by + az * bz + aw * bw < 0) { bx = -bx; by = -by; bz = -bz; bw = -bw; }
       let x = ax + (bx - ax) * f, y = ay + (by - ay) * f, z = az + (bz - az) * f, w = aw + (bw - aw) * f;
-      const l = hyp4(x, y, z, w) || 1; d[o] = x / l; d[o + 1] = y / l; d[o + 2] = z / l; d[o + 3] = w / l;
+      const l = hyp4(x, y, z, w) || 1; d[o] = x / l; d[o + N] = y / l; d[o + 2 * N] = z / l; d[o + 3 * N] = w / l;
     }
   }
 }
@@ -273,21 +350,37 @@ export function blendPose(a: Pose, b: Pose, w: number, mask: Float32Array | null
   { const x = b.numNodes === a.numNodes && out.numNodes === a.numNodes && (!mask || mask.length === a.numNodes) ? benchFor(a.numNodes) : null; if (x) { const sb = b === a ? 0 : 1, so = out === a ? 0 : out === b ? sb : 2;
       if (mask) f32().set(mask, POSE_BENCH.mask);
       const g = a.home !== null && b.home === a.home && out.home === a.home ? slotOf(a) : -1;
-      if (g >= 0) { POSE_BENCH.inPlace++; known(x.pose_blend(g, a.at, b.at, w, mask ? 1 : 0, out.at, a.numNodes)); return; }
+      if (g >= 0) { POSE_BENCH.inPlace++; known(x.pose_blend(g, a.at, b.at, w, (mask ? 1 : 0) | (POSEMATH.singles ? 2 : 0), out.at, a.numNodes)); return; }
       benchPut(a, 0); if (sb) benchPut(b, 1);
-      known(x.pose_blend(-1, 0, sb, w, mask ? 1 : 0, so, a.numNodes)); benchGet(out, so); return; } }
-  const n = a.numNodes; const A = a.data, B = b.data, O = out.data;
+      known(x.pose_blend(-1, 0, sb, w, (mask ? 1 : 0) | (POSEMATH.singles ? 2 : 0), so, a.numNodes)); benchGet(out, so); return; } }
+  const n = a.numNodes, N = a.rows; const A = a.cols, B = b.cols, O = out.cols;
+  if (POSEMATH.singles) {   // (rust/sim/src/single.rs blend4, operation for operation: every step one operation on singles, rounded once)
+    const tw = fr(w);
+    for (let i = 0; i < n; i++) {
+      const t = mask ? fr(tw * mask[i]) : tw;
+      if (t <= 0) { if (O !== A) for (let c = 0, o = i; c < 10; c++, o += N) O[o] = A[o]; continue; }
+      if (t >= 1) { for (let c = 0, o = i; c < 10; c++, o += N) O[o] = B[o]; continue; }
+      for (let c = 0, o = i; c < 3; c++, o += N) O[o] = A[o] + fr(fr(B[o] - A[o]) * t);
+      for (let c = 7, o = 7 * N + i; c < 10; c++, o += N) O[o] = A[o] + fr(fr(B[o] - A[o]) * t);
+      let bx = B[3 * N + i], by = B[4 * N + i], bz = B[5 * N + i], bw = B[6 * N + i];
+      const ax = A[3 * N + i], ay = A[4 * N + i], az = A[5 * N + i], aw = A[6 * N + i];
+      if (fr(fr(fr(fr(ax * bx) + fr(ay * by)) + fr(az * bz)) + fr(aw * bw)) < 0) { bx = -bx; by = -by; bz = -bz; bw = -bw; }
+      const x = fr(ax + fr(fr(bx - ax) * t)), y = fr(ay + fr(fr(by - ay) * t)), z = fr(az + fr(fr(bz - az) * t)), ww = fr(aw + fr(fr(bw - aw) * t));
+      const l = fr(Math.sqrt(fr(fr(fr(fr(x * x) + fr(y * y)) + fr(z * z)) + fr(ww * ww)))) || 1; O[3 * N + i] = x / l; O[4 * N + i] = y / l; O[5 * N + i] = z / l; O[6 * N + i] = ww / l;
+    }
+    return;
+  }
   for (let i = 0; i < n; i++) {
-    const t = mask ? w * mask[i] : w; const o = i * 10;
-    if (t <= 0) { if (O !== A) for (let c = 0; c < 10; c++) O[o + c] = A[o + c]; continue; }
-    if (t >= 1) { for (let c = 0; c < 10; c++) O[o + c] = B[o + c]; continue; }
-    for (let c = 0; c < 3; c++) O[o + c] = A[o + c] + (B[o + c] - A[o + c]) * t;
-    for (let c = 7; c < 10; c++) O[o + c] = A[o + c] + (B[o + c] - A[o + c]) * t;
-    let bx = B[o + 3], by = B[o + 4], bz = B[o + 5], bw = B[o + 6];
-    const ax = A[o + 3], ay = A[o + 4], az = A[o + 5], aw = A[o + 6];
+    const t = mask ? w * mask[i] : w;
+    if (t <= 0) { if (O !== A) for (let c = 0, o = i; c < 10; c++, o += N) O[o] = A[o]; continue; }
+    if (t >= 1) { for (let c = 0, o = i; c < 10; c++, o += N) O[o] = B[o]; continue; }
+    for (let c = 0, o = i; c < 3; c++, o += N) O[o] = A[o] + (B[o] - A[o]) * t;
+    for (let c = 7, o = 7 * N + i; c < 10; c++, o += N) O[o] = A[o] + (B[o] - A[o]) * t;
+    let bx = B[3 * N + i], by = B[4 * N + i], bz = B[5 * N + i], bw = B[6 * N + i];
+    const ax = A[3 * N + i], ay = A[4 * N + i], az = A[5 * N + i], aw = A[6 * N + i];
     if (ax * bx + ay * by + az * bz + aw * bw < 0) { bx = -bx; by = -by; bz = -bz; bw = -bw; }
     let x = ax + (bx - ax) * t, y = ay + (by - ay) * t, z = az + (bz - az) * t, ww = aw + (bw - aw) * t;
-    const l = hyp4(x, y, z, ww) || 1; O[o + 3] = x / l; O[o + 4] = y / l; O[o + 5] = z / l; O[o + 6] = ww / l;
+    const l = hyp4(x, y, z, ww) || 1; O[3 * N + i] = x / l; O[4 * N + i] = y / l; O[5 * N + i] = z / l; O[6 * N + i] = ww / l;
   }
 }
 
@@ -318,16 +411,16 @@ export class SkeletonInstance {
   }
 
   update(pose: Pose, world: Mat4, twists: TwistSpec[] | null, overrides: (NodeOverride | undefined)[] | null = null) {
-    const { ch } = this; const d = pose.data;
+    const { ch } = this; const d = pose.cols, N = pose.rows;
     // several layers may push a twist for the same node (aim yaw, look, the gaze stabiliser): they ACCUMULATE — a Map built straight from the list kept only the last
     let twistMap: Map<number, TwistSpec> | null = null;
     if (twists && twists.length) { twistMap = new Map(); for (const t of twists) { const e = twistMap.get(t.node); if (e) twistMap.set(t.node, { node: t.node, yaw: e.yaw + t.yaw, pitch: e.pitch + t.pitch }); else twistMap.set(t.node, t); } }
     // (the CPU-frame lane: the pose's ten floats are read as scalars — the local rotation r, origin t and scale s were fresh arrays per node per frame — and the plain
     //  parent · local product is written straight into the node's global quaternion; every expression is quat.mul's / fromTRS's operand for operand, so the numbers are the same)
     for (const i of ch.order) {
-      const nd = ch.nodes[i]; const o = i * 10;
-      const rx = d[o + 3], ry = d[o + 4], rz = d[o + 5], rw = d[o + 6];
-      const tx = d[o], ty = d[o + 1], tz = d[o + 2], sx = d[o + 7], sy = d[o + 8], sz = d[o + 9];
+      const nd = ch.nodes[i];
+      const rx = d[3 * N + i], ry = d[4 * N + i], rz = d[5 * N + i], rw = d[6 * N + i];
+      const tx = d[i], ty = d[N + i], tz = d[2 * N + i], sx = d[7 * N + i], sy = d[8 * N + i], sz = d[9 * N + i];
       const ov = overrides ? overrides[i] : undefined;
       if (ov) {   // driven from outside: global rotation as given, origin as given or where the parent puts it (parent scales are all ~1 in this rig, so composing T·R·S directly is fine)
         const t: Vec3 = [tx, ty, tz];
@@ -367,10 +460,10 @@ export class SkeletonInstance {
   /** Rewrite the rotations of `pose` so that plain FK (no twists) reproduces the globals of the last update(): parent⁻¹ · global per node. Freezes a
    *  procedurally twisted pose into an ordinary local one (the ragdoll keeps posing the un-driven joints — fingers, feet, face, in-between spine — from it). */
   bakeLocalRotations(pose: Pose) {
-    const { ch } = this; const d = pose.data;
+    const { ch } = this; const d = pose.cols, N = pose.rows;
     for (const i of ch.order) {
       const nd = ch.nodes[i]; const r = nd.parent >= 0 ? quat.mul(quat.conj(this.globalRot[nd.parent]), this.globalRot[i]) : this.globalRot[i];
-      const o = i * 10; d[o + 3] = r[0]; d[o + 4] = r[1]; d[o + 5] = r[2]; d[o + 6] = r[3];
+      d[3 * N + i] = r[0]; d[4 * N + i] = r[1]; d[5 * N + i] = r[2]; d[6 * N + i] = r[3];
     }
     return pose;
   }
@@ -400,13 +493,13 @@ export class PoseFK {
    *  was (audited for the lane; docs/internal/cpu-frame.md). */
   run(pose: Pose) {
     { const x = benchRig(this.ch); if (x) { benchPutFK(this); { const g = lend(pose, 0); known(x.pose_run(g, g < 0 ? 0 : pose.at, -1)); } benchGetFK(this); return this; } }
-    const d = pose.data; const nodes = this.ch.nodes; const rot = this.rot, pos = this.pos;
+    const d = pose.cols, N = pose.rows; const nodes = this.ch.nodes; const rot = this.rot, pos = this.pos;
     for (const i of this.ch.order) {
-      const nd = nodes[i]; const o = i * 10; const q = rot[i], p = pos[i];
-      const rx = d[o + 3], ry = d[o + 4], rz = d[o + 5], rw = d[o + 6];
-      if (nd.parent < 0) { q[0] = rx; q[1] = ry; q[2] = rz; q[3] = rw; p[0] = d[o]; p[1] = d[o + 1]; p[2] = d[o + 2]; continue; }
+      const nd = nodes[i]; const q = rot[i], p = pos[i];
+      const rx = d[3 * N + i], ry = d[4 * N + i], rz = d[5 * N + i], rw = d[6 * N + i];
+      if (nd.parent < 0) { q[0] = rx; q[1] = ry; q[2] = rz; q[3] = rw; p[0] = d[i]; p[1] = d[N + i]; p[2] = d[2 * N + i]; continue; }
       const pr = rot[nd.parent], pp = pos[nd.parent];
-      const qx = pr[0], qy = pr[1], qz = pr[2], qw = pr[3]; const v0 = d[o], v1 = d[o + 1], v2 = d[o + 2];
+      const qx = pr[0], qy = pr[1], qz = pr[2], qw = pr[3]; const v0 = d[i], v1 = d[N + i], v2 = d[2 * N + i];
       const tx = 2 * (qy * v2 - qz * v1), ty = 2 * (qz * v0 - qx * v2), tz = 2 * (qx * v1 - qy * v0);   // t = quat.rotate(pr, t_local)
       const t0 = v0 + qw * tx + (qy * tz - qz * ty), t1 = v1 + qw * ty + (qz * tx - qx * tz), t2 = v2 + qw * tz + (qx * ty - qy * tx);
       q[0] = qw * rx + qx * rw + qy * rz - qz * ry; q[1] = qw * ry - qx * rz + qy * rw + qz * rx; q[2] = qw * rz + qx * ry - qy * rx + qz * rw; q[3] = qw * rw - qx * rx - qy * ry - qz * rz;   // rot = quat.mul(pr, r)
@@ -420,16 +513,16 @@ export class PoseFK {
   private subLists: (Int32Array | undefined)[] = [];   // per root: its subtree in ch.order's order, found on first use (the scan each call used to make, with its marks)
   runFrom(pose: Pose, root: number) {
     { const x = benchRig(this.ch); if (x) { benchPutFK(this); { const g = lend(pose, 0); known(x.pose_run(g, g < 0 ? 0 : pose.at, root)); } benchGetFK(this); return this; } }
-    const d = pose.data; const nodes = this.ch.nodes; const rot = this.rot, pos = this.pos;
+    const d = pose.cols, N = pose.rows; const nodes = this.ch.nodes; const rot = this.rot, pos = this.pos;
     let list = this.subLists[root];
     if (!list) { const inSub = new Uint8Array(nodes.length), l: number[] = []; for (const i of this.ch.order) { const nd = nodes[i]; if (i !== root && !(nd.parent >= 0 && inSub[nd.parent])) continue; inSub[i] = 1; l.push(i); } list = this.subLists[root] = Int32Array.from(l); }
     for (let k = 0; k < list.length; k++) {
       const i = list[k]; const par = nodes[i].parent;
-      const o = i * 10; const q = rot[i], p = pos[i];
-      const rx = d[o + 3], ry = d[o + 4], rz = d[o + 5], rw = d[o + 6];
-      if (par < 0) { q[0] = rx; q[1] = ry; q[2] = rz; q[3] = rw; p[0] = d[o]; p[1] = d[o + 1]; p[2] = d[o + 2]; continue; }
+      const q = rot[i], p = pos[i];
+      const rx = d[3 * N + i], ry = d[4 * N + i], rz = d[5 * N + i], rw = d[6 * N + i];
+      if (par < 0) { q[0] = rx; q[1] = ry; q[2] = rz; q[3] = rw; p[0] = d[i]; p[1] = d[N + i]; p[2] = d[2 * N + i]; continue; }
       const pr = rot[par], pp = pos[par];
-      const qx = pr[0], qy = pr[1], qz = pr[2], qw = pr[3]; const v0 = d[o], v1 = d[o + 1], v2 = d[o + 2];
+      const qx = pr[0], qy = pr[1], qz = pr[2], qw = pr[3]; const v0 = d[i], v1 = d[N + i], v2 = d[2 * N + i];
       const tx = 2 * (qy * v2 - qz * v1), ty = 2 * (qz * v0 - qx * v2), tz = 2 * (qx * v1 - qy * v0);
       const t0 = v0 + qw * tx + (qy * tz - qz * ty), t1 = v1 + qw * ty + (qz * tx - qx * tz), t2 = v2 + qw * tz + (qx * ty - qy * tx);
       q[0] = qw * rx + qx * rw + qy * rz - qz * ry; q[1] = qw * ry - qx * rz + qy * rw + qz * rx; q[2] = qw * rz + qx * ry - qy * rx + qz * rw; q[3] = qw * rw - qx * rx - qy * ry - qz * rz;
@@ -442,9 +535,9 @@ export class PoseFK {
   private prScratch: Quat = [0, 0, 0, 1];
   parentRot(pose: Pose, i: number): Quat {
     { const x = benchRig(this.ch); if (x) { { const g = lend(pose, 0); known(x.pose_parent_rot(g, g < 0 ? 0 : pose.at, i)); } const m = f64(), o = POSE_BENCH.args, q = this.prScratch; q[0] = m[o]; q[1] = m[o + 1]; q[2] = m[o + 2]; q[3] = m[o + 3]; return q; } }
-    let x = 0, y = 0, z = 0, w = 1; const nodes = this.ch.nodes; const d = pose.data;
+    let x = 0, y = 0, z = 0, w = 1; const nodes = this.ch.nodes; const d = pose.cols, N = pose.rows;
     for (let p = nodes[i].parent; p >= 0; p = nodes[p].parent) {   // q = quat.mul(pose.rot(p), q), operand for operand
-      const o = p * 10 + 3; const ax = d[o], ay = d[o + 1], az = d[o + 2], aw = d[o + 3]; const bx = x, by = y, bz = z, bw = w;
+      const ax = d[3 * N + p], ay = d[4 * N + p], az = d[5 * N + p], aw = d[6 * N + p]; const bx = x, by = y, bz = z, bw = w;
       x = aw * bx + ax * bw + ay * bz - az * by; y = aw * by - ax * bz + ay * bw + az * bx; z = aw * bz + ax * by - ay * bx + az * bw; w = aw * bw - ax * bx - ay * by - az * bz;
     }
     const q = this.prScratch; q[0] = x; q[1] = y; q[2] = z; q[3] = w; return q;
@@ -454,18 +547,20 @@ export class PoseFK {
 /** local ← local · q: turn node i in its own frame. On this rig (Rigify DEF bones: +Y along the bone) local +X is the hinge axis — elbow, knee and finger flexion
  *  are all positive X; the thigh is the odd one out (positive X = extension). */
 export function rotateLocal(pose: Pose, i: number, q: Quat) {   // = pose.setRot(i, quat.normalize(quat.mul(pose.rot(i), q))), over scalars
+  if (!(i >= 0 && i < pose.numNodes)) return;   // (no such node: nothing is written — skeleton.rs ask_turn says the same)
   { const x = benchFor(pose.numNodes); if (x) { benchArgs(0, q, 4); const g = lend(pose, 0); known(x.pose_turn(g, g < 0 ? 0 : pose.at, pose.numNodes, i, 0)); if (g < 0) benchGet(pose, 0); return; } }
-  const d = pose.data, o = i * 10 + 3; const ax = d[o], ay = d[o + 1], az = d[o + 2], aw = d[o + 3], bx = q[0], by = q[1], bz = q[2], bw = q[3];
+  const d = pose.cols, N = pose.rows, o = 3 * N + i; const ax = d[o], ay = d[o + N], az = d[o + 2 * N], aw = d[o + 3 * N], bx = q[0], by = q[1], bz = q[2], bw = q[3];
   const x = aw * bx + ax * bw + ay * bz - az * by, y = aw * by - ax * bz + ay * bw + az * bx, z = aw * bz + ax * by - ay * bx + az * bw, w = aw * bw - ax * bx - ay * by - az * bz;
-  const l = hyp4(x, y, z, w) || 1; d[o] = x / l; d[o + 1] = y / l; d[o + 2] = z / l; d[o + 3] = w / l;
+  const l = hyp4(x, y, z, w) || 1; d[o] = x / l; d[o + N] = y / l; d[o + 2 * N] = z / l; d[o + 3 * N] = w / l;
 }
 /** Turn node i (with its subtree) by q given about MODEL axes (pitch forward = +X, yaw to the figure's left = +Y, drop the right shoulder = +Z), pivoting at
  *  the node: local ← P⁻¹ · q · P · local, P = the parent's current model rotation. */
 export function rotateModel(pose: Pose, i: number, q: Quat, parentRot: Quat) {   // (over scalars, quat.mul's expression each step: the same numbers as the nested calls, none of their five arrays)
+  if (!(i >= 0 && i < pose.numNodes)) return;
   { const x = benchFor(pose.numNodes); if (x) { benchArgs(0, q, 4); benchArgs(4, parentRot, 4); const g = lend(pose, 0); known(x.pose_turn(g, g < 0 ? 0 : pose.at, pose.numNodes, i, 1)); if (g < 0) benchGet(pose, 0); return; } }
-  const d = pose.data, o = i * 10 + 3; const px = parentRot[0], py = parentRot[1], pz = parentRot[2], pw = parentRot[3];
+  const d = pose.cols, N = pose.rows, o = 3 * N + i; const px = parentRot[0], py = parentRot[1], pz = parentRot[2], pw = parentRot[3];
   // m1 = quat.mul(parentRot, pose.rot(i))
-  const rx = d[o], ry = d[o + 1], rz = d[o + 2], rw = d[o + 3];
+  const rx = d[o], ry = d[o + N], rz = d[o + 2 * N], rw = d[o + 3 * N];
   const m1x = pw * rx + px * rw + py * rz - pz * ry, m1y = pw * ry - px * rz + py * rw + pz * rx, m1z = pw * rz + px * ry - py * rx + pz * rw, m1w = pw * rw - px * rx - py * ry - pz * rz;
   // m2 = quat.mul(q, m1)
   const qx = q[0], qy = q[1], qz = q[2], qw = q[3];
@@ -473,14 +568,15 @@ export function rotateModel(pose: Pose, i: number, q: Quat, parentRot: Quat) {  
   // m3 = quat.mul(quat.conj(parentRot), m2)   (conj = [−x, −y, −z, w])
   const cx = -px, cy = -py, cz = -pz;
   const x = pw * m2x + cx * m2w + cy * m2z - cz * m2y, y = pw * m2y - cx * m2z + cy * m2w + cz * m2x, z = pw * m2z + cx * m2y - cy * m2x + cz * m2w, w = pw * m2w - cx * m2x - cy * m2y - cz * m2z;
-  const l = hyp4(x, y, z, w) || 1; d[o] = x / l; d[o + 1] = y / l; d[o + 2] = z / l; d[o + 3] = w / l;   // = quat.normalize
+  const l = hyp4(x, y, z, w) || 1; d[o] = x / l; d[o + N] = y / l; d[o + 2 * N] = z / l; d[o + 3 * N] = w / l;   // = quat.normalize
 }
 /** Give node i the model-space rotation `rot` outright (parent's current model rotation supplied). */
 export function setModelRot(pose: Pose, i: number, rot: Quat, parentRot: Quat) {   // = pose.setRot(i, quat.normalize(quat.mul(quat.conj(parentRot), rot))), over scalars
+  if (!(i >= 0 && i < pose.numNodes)) return;
   { const x = benchFor(pose.numNodes); if (x) { benchArgs(0, rot, 4); benchArgs(4, parentRot, 4); const g = lend(pose, 0); known(x.pose_turn(g, g < 0 ? 0 : pose.at, pose.numNodes, i, 2)); if (g < 0) benchGet(pose, 0); return; } }
-  const d = pose.data, o = i * 10 + 3; const ax = -parentRot[0], ay = -parentRot[1], az = -parentRot[2], aw = parentRot[3], bx = rot[0], by = rot[1], bz = rot[2], bw = rot[3];
+  const d = pose.cols, N = pose.rows, o = 3 * N + i; const ax = -parentRot[0], ay = -parentRot[1], az = -parentRot[2], aw = parentRot[3], bx = rot[0], by = rot[1], bz = rot[2], bw = rot[3];
   const x = aw * bx + ax * bw + ay * bz - az * by, y = aw * by - ax * bz + ay * bw + az * bx, z = aw * bz + ax * by - ay * bx + az * bw, w = aw * bw - ax * bx - ay * by - az * bz;
-  const l = hyp4(x, y, z, w) || 1; d[o] = x / l; d[o + 1] = y / l; d[o + 2] = z / l; d[o + 3] = w / l;
+  const l = hyp4(x, y, z, w) || 1; d[o] = x / l; d[o + N] = y / l; d[o + 2 * N] = z / l; d[o + 3 * N] = w / l;
 }
 
 /** Two-bone IK on the local pose: turns `a` (upper: thigh / upper arm) and `b` (lower: shin / forearm, a's child) so that the origin of `c` (foot / hand, b's
