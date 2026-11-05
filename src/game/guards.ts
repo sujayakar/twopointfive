@@ -63,7 +63,7 @@ import { DOORMANNERS, doorwayGate, offThreshold } from './doorway';
 import { needsPatrol } from './needs';
 import { dozePatrol, dozeDeaf, dozeDark, dozeAsleep, dozeEar } from './doze';
 import { coverSeen, coverBlind } from './coverfire';
-import { startleSight, startleHolds, startleTorch, startleLeft, startleScript } from './startle';
+import { startleSight, startleGunDown, startleTorch, startleLeft, startleScript } from './startle';
 import { doorForce, doorForceHear, doorForceOwnBoot } from './doorforce';
 import { GLASS } from './glass';
 import { shotEnergy } from './glasspen';
@@ -72,7 +72,7 @@ import { feedBegin, feedDeal, feedDrop, feedStarts, feedTick } from './gunreload
 import { sideOutAlert, sideLocked, quietHeard } from './gunslots';   // (called inside startReloadBeat only)
 import { hourLight, moonLight } from './hours';
 import { handleGate } from './handleside';
-import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
+import { gunHoldSee, gunHoldFeet, gunHoldFree, standoffFixKept, standoffOnFeet, gunHoldPhase } from './gunhold';
 import { teamCap, teamRunLegs, teamAccel, teamTread, teamAtWalk } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
 import { loadPace, loadPaceOn, loadSprintOn, loadGait, loadSeen, loadHeard } from './kitload';   // what a man's card weighs: his pace, the notice he builds, his footfall (1 each with its switch off)
 import { TAPSTEP, tapHears } from './tapstep';
@@ -1203,7 +1203,7 @@ function standoffAlert(g: Game, gd: Guard, dt: number, P: Pair): { move: number;
 function standoffUpkeep(g: Game, gd: Guard): Pair | null {
   const S = gd.standoff; if (!S) return null;
   const P = pairOf(g);
-  const why = g.quietUtility || gd.hold || gd.pinned || !g.aiEnabled ? 'off' : gd.state !== 'alert' ? 'state' : !P || P.held !== S.pair ? (S.pair.state === 'dead' ? 'dead' : g.player.down ? 'samDown' : 'free') : g.time - S.seenT > STANDOFF_LOSE_SECS && !gunHoldKeeps(g, gd) ? 'lost' : null;   // (samDown: the hold ended because Sam went down with the man in his arm — nothing to shout to a colleague already stumbling clear of a body; the alert branch covers the rest)
+  const why = g.quietUtility || gd.hold || gd.pinned || !g.aiEnabled ? 'off' : gd.state !== 'alert' ? 'state' : !P || P.held !== S.pair ? (S.pair.state === 'dead' ? 'dead' : g.player.down ? 'samDown' : 'free') : g.time - S.seenT > STANDOFF_LOSE_SECS && !standoffFixKept(g, gd) ? 'lost' : null;   // (samDown: the hold ended because Sam went down with the man in his arm — nothing to shout to a colleague already stumbling clear of a body; the alert branch covers the rest)
   if (!why) return P;
   gd.standoff = null; gd.path = []; gd.pathGoal = null; gd.stallRef = null; resetChase(gd);
   const watched = g.time - S.seenT < 0.6;
@@ -1668,7 +1668,7 @@ function darkOnLitMan(g: Game, gd: Guard, tgt: Guard): boolean {
 }
 /** LIGHTS.litMan, asked of a teammate the light rule has: is he, this frame, in the dark on a man who stands lit (the man he is on, or was until a blink ago:
  *  roomfight.ts keeps his aim through that — a jamb passed, a leaf swung — and his light does not come back in it, unless something else has turned him) */
-export function onLitMan(g: Game, gd: Guard): boolean {
+export function gunOnLitMan(g: Game, gd: Guard): boolean {
   if (!LIGHTS.litMan || !lightRuled(g, gd)) return false;
   const O = g.fight.opOf(gd), t = g.time; if (!O) return false;
   const man = O.tgt ?? (!O.turn && gd.script && O.kept && O.kept.h.state !== 'dead' && t - O.kept.t >= 0 && t - O.kept.t < 1.5 ? O.kept.h : null);   // (not while a cue has him turning to somebody else, nor once the fight is the alert AI's: the light is the other rules' then)
@@ -1676,7 +1676,7 @@ export function onLitMan(g: Game, gd: Guard): boolean {
 }
 /** does it burn this frame (asked only of a man the rule has: lightRuled) */
 export function teamLit(g: Game, gd: Guard): boolean {
-  if (onLitMan(g, gd)) return false;
+  if (gunOnLitMan(g, gd)) return false;
   const t = g.time, A = g.orders.of(gd), O = g.fight.opOf(gd);
   const want = (!gd.script && (gd.state === 'alert' || gd.state === 'search')) || !!gd.script?.over || (!!O && (!!O.tgt || !!O.turn || (t - O.hotT < LIGHTS.hotSecs && !(A && A.door && !A.search))))
     || (!!A && !!A.search && !(A.arrived && t - Math.max(A.arrT, A.searchT ?? -Infinity) > LIGHTS.afterSecs))
@@ -2334,7 +2334,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
       const canShoot = !!pc && !down && !dazzled && !staggered && (g.time - gd.lastSeenT < 0.5);   // half a second of grace after a real sighting; a dazzled guard cannot shoot at all, nor a man doubled over a ring
       if (gd.reactT > 0 || !canShoot) { gd.shotBlockedT = 0; gd.lineInT = 0; }   // (the blocked-line clocks belong to one engagement: a fresh sighting at another doorway starts by holding the round again, not on the last one's count)
       if (gd.reactT > 0 || down || gd.pinned) { gd.stallRef = null; gd.chaseT = 0; }   // (seconds spent covering, reacting or holding a post are not seconds of getting nowhere; eyes on him resets the clocks in the perception above — unless his line is blocked and there is nowhere to step, below, when they must run)
-      const supNow = T.suppression && !gunHoldRuns(g, gd) ? headDown(g, gd, dt) : 'none';   // suppression (suppression.ts, docs/internal/sc20k-design.md §4.2): rounds close enough, often enough, and his head is down — or he is shifting to cover — ahead of everything else the fight does (the flinch below that is the plain fight's: wider, later, no sprint into it)
+      const supNow = T.suppression && !standoffOnFeet(g, gd) ? headDown(g, gd, dt) : 'none';   // suppression (suppression.ts, docs/internal/sc20k-design.md §4.2): rounds close enough, often enough, and his head is down — or he is shifting to cover — ahead of everything else the fight does (the flinch below that is the plain fight's: wider, later, no sprint into it)
       if (supNow !== 'none') {
         // Head down: crouched behind whatever he stands at, the gun lowered, feet still, not a round (fireCd floored: the first one after coming up is a beat late,
         // not on the frame) — turned toward where it is coming from (the muzzle the last close round left, else his fix). His eye drops with him (canSee reads the
@@ -2518,7 +2518,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   collideGuard(g, gd, p0x, p0z);
   // muzzle discipline: with the pistol up (every armed state — the heightened patrol's low carry, a fix being covered, the search's sweep), a living colleague in
   // the line he means it along puts it to the low ready until he is out of it (the alert branch has already asked, on the line of the shot itself)
-  if (startleHolds(g, gd)) { upper = 'none'; duck ||= handCarry(gd) !== 'torch'; }   // (startle.ts: in his start the gun is not up — a weapon at the low ready, the torch still the torch; false for every man with no start on him)
+  if (startleGunDown(g, gd)) { upper = 'none'; duck ||= handCarry(gd) !== 'torch'; }   // (startle.ts: in his start the gun is not up — a weapon at the low ready, the torch still the torch; false for every man with no start on him)
   if (gd.muzzleEvalT !== g.time) muzzleCheck(g, gd, upper === 'aim' ? (aimAt ?? aimAhead(c)) : null, dt);
   if (!gd.pinned) gunWallCheck(g, gd, upper === 'aim' ? 'aim' : null, aimAt, dt, gd.state === 'alert');   // …and a wall inside the raised gun's reach does the same (gunwall.ts; nothing with its switch off)
   if (g.time < gd.doorDownUntil) crouch = 1;   // (doorthrow.ts: he stood right at a door that was booted in — on a knee for the fold; the stamp is never written with its switch off)
