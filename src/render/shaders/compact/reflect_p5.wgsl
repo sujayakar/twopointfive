@@ -11,7 +11,7 @@
 //      sky); a glass pane crossed on the way tints what lies beyond and adds the sky / cache it mirrors × its Fresnel. (Secondary hits are diffuse-only by
 //      decision: the specular lobe's transport at a second vertex is one more narrow lobe found by one ray — variance the cache cannot settle — for a term worth
 //      a few per cent of a dielectric's outgoing light; metals bounce their F0 as albedo, which is what the level authors as their paint.)
-//   3. weight it by the VNDF estimator F(v·h) · G2/G1 (Schlick on F0 = 0.04, or the albedo for a metal — mixed by metalness; height-correlated Smith), average;
+//   3. weight it by the VNDF estimator F(v·h) · G2/G1 (Schlick on the coat's F0: 0.04, or what its stuff says a lacquer mirrors, `coat` below; or the albedo for a metal — mixed by metalness; height-correlated Smith), average;
 //   4. add the ANALYTIC image of the emitters (rtGlints) — the primary-hit specular response to the level's lights through the same GGX D · Smith G · Schlick F:
 //      every steady point / spot light's lens (no ray can find those: NoShadow glow cards or no geometry) and, on finishes too rough to trace it cleanly, each
 //      area-lit panel's kind-3 light, all widened by the emitter's angular size, the four strongest shadow-rayed (+ smoke) — noise-free (but under GLINT_PICK, rtGlints' head), so a walking guard's
@@ -356,7 +356,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   let kH = max(roughH * roughH, 0.0009) / alpha; let axh = ax * kH; let ayh = min(ay * kH, 1.0);   // the highlights' lobe: the same shape at the texel's roughness
   let Ve = vec3f(dot(V, T), dot(V, B), dot(V, N));
   let base = textureLoad(gAlbedo, full, 0).xyz;                            // base colour (a metal's F0; brighter on a worn edge — the detail layer)
-  var coat = 0.04; if (LOOK && bidx != 0xFFFFFu) { coat += (LOOK_MIRRORS[boxStuff(bidx)] - 0.04) * beams.k.z; }   // what its coat mirrors head-on is the stuff's word (reflect.wgsl)
+  var coat = LOOK_MIRROR_PLAIN; if (LOOK && bidx != 0xFFFFFu) { coat += (LOOK_MIRRORS[boxStuff(bidx)] - LOOK_MIRROR_PLAIN) * beams.k.z; }   // what its coat mirrors head-on is the stuff's word (reflect.wgsl)
   let F0 = mix(vec3f(coat), base, metalness);
   // … and the highlights': a metal's are a conductor's only as far as its paint is stepped back for its mirror (composite.wgsl metalK: by the mirror's fade
   // and its strength, and only while rays are traced). Where the paint stands in whole for the metal, a highlight on top of it is a coat's: at a conductor's

@@ -1864,6 +1864,39 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **A PRESSED THING'S ARRISES ARE ROLLED, AND A LACQUER MIRRORS MORE THAN PAINT** (11-05; the look's page only; `render/lookTex.ts STUFFS`' two new
+  words `rolled` and `mirrors`, `look.wgsl lookRoll` / `lookRollUp`, the reflection texts' `coat`). The maintainer, of the cars: "we don't need to go full
+  hyperrealistic but we should sell it more", and "how reflective is the car material, btw? it does feel like it should reflect more of the environment
+  and be quite dynamic as we move around it". WHAT WAS FOUND FIRST, on a GPU (four rounds of stills of the white pickup: a yard at midday and dusk, a
+  crossing at night under its lamps): a stronger coat and a smoother one changed NOTHING, and the car drawn as a FULL mirror at finish 0.05 barely
+  changed either. The camera looks down about 50 degrees, so a face whose normal stands e degrees up mirrors at 2e − 50: a flat top mirrors the empty
+  sky, a flat flank the ground at its foot, and what a car is seen to reflect (the horizon: walls, lamps, a man's torch, whose highlight wants a normal
+  25 degrees up) is on normals a stack of boxes does not have. So the gain is in the FORM, and the form is the stuff's to say:
+  `rolled` = metres over which a face's shading normal turns toward the face it meets (car paint 0.16), asked in lookSurface before the tilt is held,
+  under the EDGES row (whole at the row's rest, gone as it goes to 0). A flank turns UP into its top and round an upright arris, never down at its foot;
+  a top turns out at every edge; a rail or a slab thinner than the roll is rolled all across; and a roll is taken back wherever it would turn the
+  face from the eye that sees it (a flank seen along its length: a normal turned away takes no ray and no highlight). It is the look's own tilt (held
+  to LOOK_MAX_TILT, 29 degrees, and marked), so every pass that wants the face itself finds it and the fog of war's test of a top (N.y over 0.5) is as
+  it was. WHICH FACES: one of a box's own six, on a plain box and on a cut one (`rolls`, lookSurface's last word); and under shapes an UPRIGHT cut
+  plane (a body's rounded corner) turns up into the top by the same measure (`lookRollUp`, asked by the plane's own normal, unmarked as every cut
+  plane's relief is, at most 0.48 of up). A round, an arc and a leaning cut plane (a wheel, a wheel arch, the crowned bonnet, a window post) are NOT
+  rolled: the look is asked of them as the box face they lean to, which is not where their own edges are. SHADING ONLY: no box, outline, ray, body or
+  digest moves, no level file and no vehicle says anything, and it is every vehicle at once. The vehicles' maker would have built it as geometry (a
+  half-round strip on each outer arris, a cut plane under it: true outline, but a cut row a shoulder, coarser crowns under them, digests moved) and
+  chose this on the stills; that commit of theirs is kept as a study. `mirrors` = how much of what it faces a stuff's outer coat mirrors head-on (car
+  paint 0.08; anything else the 0.04 every coat was), by the word a box says (the scene prelude's `LOOK_MIRRORS`, 32 words' room, read by reflect.wgsl,
+  reflect_p5.wgsl and the compact twin for the rays and the highlights alike), under the FINISH row (`beams.k.z`; 0 on any other page). KNOWN, LEFT:
+  ONE RULE OVER A CUT SOLID'S OWN PLANES (turn toward each plane it meets by how near that edge is, the box's six among them) would roll a round, an
+  arc and a post too and be one rule where this is two (lookRoll for a box's faces, lookRollUp for upright planes): not built, it wants the cut
+  pass's own distances and a test of which plane is really met; the two rolls meet at the arris 33 degrees apart (the cap: each side turns 29 of the 90), so a highlight steps over the arris itself; a stack's INNER seam
+  rolls too (the pickup's base slab under its cab reads as a belt line: on the stills a styling line, not a fault); the paint under the coat is not
+  stepped back by what the coat mirrors (4 hundredths more light at most); glass on vehicles is still matte (the vehicles' paint rows). **Check**:
+  `bun run tools/qa/probes.ts rolled` (family `render`), 3 lines: the table; the rule written again and asked (never down, a thin rail, whole as the
+  page opens, the summed tilt held, the eye's guard over 5,868 views, an upright plane's share of up); the texts. What it buys at the game's camera
+  is said in line 2's detail and not barred. `ROLLED_BREAK=1` fails 2. `highlights`' pin of the highlights' F0 moved with the text. SEEN ON A GPU (the cloud's, High, 11-05, stills only): at dusk the roof and bonnet edges read rolled with a warm rim and
+  the flank has a belt line; at night the edges catch the lamps softly; the player's weapon light walked along the tub puts a tight highlight on the
+  rail that moves with him. NEVER SEEN: in motion, on his GPU, on a dark car, in rain, under the fog of war close up (one still with it on: no fault).
+  A study that turned each side 45 degrees unmarked read rounder; it would have told the fog of war a tall van's flank was a top.
 - **DAYLIGHT COUNTED ONCE: AN OPENING IS A PORTAL** (THE ROW IS GONE SINCE 11-04 AND THIS IS THE ONLY WAY AN OPENING IS LIT: the maintainer played with
   it up on his M4 and chose to keep it on a card at 15:18Z, after saying of it that morning "my preference would be that we use this sampling
   unconditionally and then have no asymmetry between night and day". Deleted in one commit: the `portal` row and `lookConfig.portal`, the disk

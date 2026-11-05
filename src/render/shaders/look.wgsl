@@ -52,8 +52,11 @@ fn lookRoll(r: f32, p: vec2f, h: vec2f, up: vec2f) -> vec2f {
   }
   return e * LOOK_MAX_TILT * min(2.0 * lookCfg.b.y, 1.0);   // (whole at the Edges row's own rest under Clarity, gone as the row goes to 0)
 }
-/** … and on an upright face that is no face of its box (a cut plane: gbuffer_cut.wgsl, where the look draws no map): the same turn up into the top.
- *  `y`, `hy` = the point's height in the box and the box's half height; `upW` = the box's own up in the world. Not marked as a tilt: no box axis is this face. */
+/** … and on an UPRIGHT face that is none of its box's six (a cut plane: a body's rounded corner, gbuffer_cut.wgsl): the same turn up into the top, by
+ *  the same measure. `y`, `hy` = the point's height in the box and the box's half height; `upW` = the box's own up in the world. Not marked as a tilt
+ *  (no box axis is this face), and it adds at most LOOK_MAX_TILT of up to a normal that had none, so no pass that asks whether a normal is a top's
+ *  (the fog of war's N.y > 0.5) is told it is. A LEANING cut plane, a round and an arc are not asked: they turn already, and what they meet is not
+ *  the box's edge (KNOWN, LEFT: one rule over a cut solid's own planes would roll those too). */
 fn lookRollUp(cls: u32, n: vec3f, y: f32, hy: f32, upW: vec3f) -> vec3f {
   if (cls == 0u) { return n; }
   let s = lookRoll(LOOK_ROLLED[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)], vec2f(y, 0.0), vec2f(hy, 1.0), vec2f(1.0, 1.0)).x;
@@ -176,7 +179,7 @@ fn lookClots(p: vec2f, fp: f32, dens: f32, salt0: u32) -> f32 {
   let ctr = ext + (1.0 - 2.0 * ext) * vec2f(snowHash(cell, salt), snowHash(cell, salt + 1u));
   return 1.0 - smoothstep(rad * 0.45, rad, length((fract(q) - ctr) * vec2f(1.0, 0.75)));
 }
-fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32, wears: bool) -> LookOut {
+fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32, wears: bool, rolls: bool) -> LookOut {
   let cls = select(cls0, 0u, cls0 != 0u && lookSlot(i32(max(cls0, 1u)) - 1) < 0);   // (a stuff whose map is not made yet is drawn plain)
   let keep = lookKeep(i32(max(cls, 1u)) - 1); let wildS = step(0.001, keep.y);   // (the stuff's own row, lookTex.ts: nothing below names a stuff to say whether weather touches it. wildS 0 = a stuff somebody keeps)
   let left = 1.0 - lookKept();   // HOW FAR THE PLACE IS LEFT TO THE WEATHER (the level's word, lookKept): the one read of it in this function
@@ -353,32 +356,38 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     let knock = stretch * (1.0 - smoothstep(high - max(0.008, fp), high, wp.y)) * keep.w * min(k.w, 1.0) * (1.0 - wild);
     alb = mix(alb, mix(alb, vec3f(0.4, 0.39, 0.38), 0.75), knock); rough += 0.22 * knock;
   }
-  // ---- EDGES: a small box's arrises rounded and rubbed (a crate, a table, a sill — not a wall, whose boxes meet their neighbours edge to edge)
-  if (k2.y > 0.0 && max(b.h.x, b.h.z) < LOOK_HANDLED.x && b.h.y < LOOK_HANDLED.y && min(b.h.x, min(b.h.y, b.h.z)) > LOOK_HANDLED.z) {   // (lookTex.ts LOOK_HANDLED: what a hand moves, by its size, as half-extents)
+  // ---- EDGES: a small box's arrises rounded and rubbed (a crate, a table, a sill — not a wall, whose boxes meet their neighbours edge to edge); and the
+  // arrises of a stuff that is PRESSED OR MOULDED rolled over its own measure, a thing of any size (its word `rolled`, lookRoll above; never an underside,
+  // and only where the caller says this face is one of the box's own six: `rolls`)
+  let handled = max(b.h.x, b.h.z) < LOOK_HANDLED.x && b.h.y < LOOK_HANDLED.y && min(b.h.x, min(b.h.y, b.h.z)) > LOOK_HANDLED.z;   // (lookTex.ts LOOK_HANDLED: what a hand moves, by its size, as half-extents)
+  var rolled = 0.0; if (rolls && cls != 0u && n.y > -0.5) { rolled = LOOK_ROLLED[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)]; }
+  if (k2.y > 0.0 && (handled || rolled > 0.0)) {
     let ha = dot(abs(ea), hf.xyz); let hb = dot(abs(eb), hf.xyz);
     let pa = dot(lc, ea); let pb = dot(lc, eb);
-    let da = ha - abs(pa); let db = hb - abs(pb);                              // metres in from the face's two pairs of edges
-    let r = clamp(1.7 * fp, 0.012, 0.045);
-    let wa = 1.0 - smoothstep(0.0, r, da); let wb = 1.0 - smoothstep(0.0, r, db);
-    if (wa + wb > 0.0) {
-      let TA = quatRotate(q, ea); let TB = quatRotate(q, eb);
-      let floorEdge = !lying && stands;                                         // where a face meets the ground there is no arris to round
-      var e = vec2f(wa * wa * sign(pa), wb * wb * sign(pb)) * 0.6 * k2.y;
-      var wear = max(wa, wb);
-      if (floorEdge) { if (abs(TA.y) > 0.5 && pa * TA.y < 0.0) { e.x = 0.0; wear = wb; } if (abs(TB.y) > 0.5 && pb * TB.y < 0.0) { e.y = 0.0; wear = wa; } }
-      if (cls == 0u) { tilt = e; } else { tilt += vec2f(dot(TA * e.x + TB * e.y, T), dot(TA * e.x + TB * e.y, B)); }
-      let chip = smoothstep(0.35, 0.75, detailNoise(vec2f(pa + pb, pa - pb) * 23.0 + vec2f(f32(salt % 13u))));
-      alb *= 1.0 + 0.3 * wear * wear * chip * k2.y; rough = rough + 0.08 * wear * k2.y;
+    let TA = quatRotate(q, ea); let TB = quatRotate(q, eb);
+    var e = vec2f(0.0);
+    if (handled) {
+      let da = ha - abs(pa); let db = hb - abs(pb);                            // metres in from the face's two pairs of edges
+      let r = clamp(1.7 * fp, 0.012, 0.045);
+      let wa = 1.0 - smoothstep(0.0, r, da); let wb = 1.0 - smoothstep(0.0, r, db);
+      if (wa + wb > 0.0) {
+        let floorEdge = !lying && stands;                                       // where a face meets the ground there is no arris to round
+        e = vec2f(wa * wa * sign(pa), wb * wb * sign(pb)) * 0.6 * k2.y;
+        var wear = max(wa, wb);
+        if (floorEdge) { if (abs(TA.y) > 0.5 && pa * TA.y < 0.0) { e.x = 0.0; wear = wb; } if (abs(TB.y) > 0.5 && pb * TB.y < 0.0) { e.y = 0.0; wear = wa; } }
+        let chip = smoothstep(0.35, 0.75, detailNoise(vec2f(pa + pb, pa - pb) * 23.0 + vec2f(f32(salt % 13u))));
+        alb *= 1.0 + 0.3 * wear * wear * chip * k2.y; rough = rough + 0.08 * wear * k2.y;
+      }
     }
-  }
-  // ---- ROLLED ARRISES: a stuff pressed or moulded (its own word, lookRoll above), a thing of any size. Never an underside.
-  if (k2.y > 0.0 && cls != 0u && n.y > -0.5) {
-    let r = LOOK_ROLLED[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)];
-    if (r > 0.0) {
-      let TA = quatRotate(q, ea); let TB = quatRotate(q, eb);
-      let e = lookRoll(r, vec2f(dot(lc, ea), dot(lc, eb)), vec2f(dot(abs(ea), hf.xyz), dot(abs(eb), hf.xyz)), vec2f(TA.y, TB.y));
-      tilt += vec2f(dot(TA * e.x + TB * e.y, T), dot(TA * e.x + TB * e.y, B));
+    if (rolled > 0.0) {
+      var er = lookRoll(rolled, vec2f(pa, pb), vec2f(ha, hb), vec2f(TA.y, TB.y));
+      // … and never so far that the face turns from the eye that sees it (a flank seen along its length, at its far arris): a normal turned away
+      // takes no ray and no highlight (reflect.wgsl), on the very strip that should catch them
+      let V = normalize(frame.camPos - wp); let away = dot(TA * er.x + TB * er.y, V);
+      if (away < 0.0) { er *= clamp((sqrt(1.0 - LOOK_MAX_TILT * LOOK_MAX_TILT) * dot(n, V) - 0.05) / -away, 0.0, 1.0); }
+      e += er;
     }
+    if (cls == 0u) { tilt = e; } else { tilt += vec2f(dot(TA * e.x + TB * e.y, T), dot(TA * e.x + TB * e.y, B)); }
   }
   let tl = length(tilt); if (tl > LOOK_MAX_TILT) { tilt *= LOOK_MAX_TILT / tl; }
   if (tl > LOOK_MIN_TILT) {

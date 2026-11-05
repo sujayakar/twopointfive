@@ -75,9 +75,8 @@ export const LOOK_WORN: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].worn ?
 export const LOOK_ROLLED: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].rolled ?? 0);
 /** what a coat with no word of its own mirrors head-on */
 export const LOOK_MIRROR_PLAIN = 0.04;
-/** how much each of the 32 words a box may say mirrors head-on, by the word's own number (0 = it says nothing; then LOOK_NAMES' order, one on): the whole
- *  word's room, so the reflection pass indexes it with what it read and no test */
-export const LOOK_MIRRORS: readonly number[] = Array.from({ length: 32 }, (_, w) => (w >= 1 && w <= LOOK_NAMES.length ? STUFFS[LOOK_NAMES[w - 1]].mirrors : undefined) ?? LOOK_MIRROR_PLAIN);
+/** how many words a box may say of what it is made of, 0 = nothing (five bits of the look's word: gbuffer.ts LOOK_WORD, common.wgsl boxStuff) */
+export const LOOK_WORDS = 32;
 /** how a stuff is laid over more than a piece: (it untiles, pieces a bay along, pieces a bay up, which way it runs: 0 its box's own, 1 flat, 2 long) */
 export const LOOK_LAY: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const st = STUFFS[n]; return [st.untiles ? 1 : 0, st.bay?.[0] ?? 0, st.bay?.[1] ?? 0, st.runs === 'long' ? 2 : st.runs === 'flat' ? 1 : 0]; });
 const layerOf = (n: LookName | undefined): number => n === undefined ? -1 : LOOK_NAMES.indexOf(n);
@@ -677,6 +676,9 @@ const RELIEF: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].relief);
 export const LOOK_PAINTED = LOOK_NAMES.indexOf('field stone');
 /** A STUFF'S NUMBER BY ITS NAME (look.wgsl's classes; the box's word carries it): 0 for a name that is no stuff (and for the two masonry layers, which no box is) */
 export function lookStuffOf(name: string | undefined): number { const i = (LOOK_NAMES as readonly string[]).indexOf(name ?? ''); return i >= 0 && i < LOOK_PAINTED ? i + 1 : 0; }
+/** how much each word a box may say mirrors head-on, by the word's own number as lookStuffOf gives it (0 = it says nothing): the whole of the word's
+ *  room, so the reflection pass indexes it with what it read and no test */
+export const LOOK_MIRRORS: readonly number[] = Array.from({ length: LOOK_WORDS }, (_, w) => (w >= 1 && w <= LOOK_PAINTED ? STUFFS[LOOK_NAMES[w - 1]].mirrors : undefined) ?? LOOK_MIRROR_PLAIN);
 /** how a colour's value is weighed (linear rgb) */
 const lum = (r: number, g: number, b: number) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
 /** one layer's two maps at full size (N² × 4 bytes each).

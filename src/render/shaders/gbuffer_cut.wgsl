@@ -184,11 +184,11 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   if (LOOK && !cap && (own < 0 || side || oldCut)) {        // THE LOOK PROTOTYPE (look.wgsl; as fsBox, the class found here a pixel): a cut face shows the bare material; a round's side is painted as the face it leans to, an old break as its core's stuff
     let bent = side || oldCut;                              // (…whose relief is added to the face's own normal and never marked as a tilt: common.wgsl lookGeoN would snap such a pixel to a box axis, which this face is not)
     var lcls = boxStuff(bi); if (oldCut) { lcls = (cw >> 12u) & 31u; }   // (the box's own word; an old break's core says its stuff in the cut's record: cut.ts CUT_CORE_STUFF)
-    let lk = lookSurface(lcls, v.wp, select(n, flatN, bent), bi, lcS, hfS, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y, lookW);
+    let lk = lookSurface(lcls, v.wp, select(n, flatN, bent), bi, lcS, hfS, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y, lookW, !bent);   // (!bent: a round, an arc and an old break's faces are asked as the box face they lean to, which is not where their own edges are: no rolled arris is measured there)
     albedo = lk.albedo; rough = lk.rough;
     if (bent) { n = normalize(n + lk.n - flatN); } else { n = lk.n; lookTilt = lk.tilted; }
   }
-  if (LOOK && !cap && own >= 0 && !side && !oldCut && abs(n.y) < 0.5) { n = lookRollUp(boxStuff(bi), n, v.lc.y, v.hf.y, quatRotate(boxRot(bi), vec3f(0.0, 1.0, 0.0))); }   // a cut plane of a stuff whose arrises are rolled (look.wgsl lookRollUp): a body's rounded corner turns into its top as its flanks do
+  if (LOOK && !cap && own >= 0 && !side) { let upW = quatRotate(boxRot(bi), vec3f(0.0, 1.0, 0.0)); if (abs(dot(normalize(v.normal), upW)) < 0.1) { n = lookRollUp(boxStuff(bi), n, v.lc.y, v.hf.y, upW); } }   // an UPRIGHT cut plane of a stuff whose arrises are rolled (look.wgsl lookRollUp): a body's rounded corner turns into its top as its flanks do
   if (v.mark != 0u && !cap && (own < 0 || side)) {
     let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft(), lookTrod());
     albedo = mk.albedo; rough = mk.rough;
