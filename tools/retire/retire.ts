@@ -192,21 +192,22 @@ function pureCall(n: any): boolean { const c = n.expression;
     return d.kind !== SK.MethodDeclaration || !(d.parent.kind === SK.ClassDeclaration || d.parent.kind === SK.ClassExpression) || below(d.parent); }
   return false; }
 /** A QUESTION ASKED OF A RECORDING AND OF NOTHING ELSE (the journal's lines for an old file, in the shapes the journal writes them: `!k.tables.T`,
- *  `typeof (k.tables.T as { row?: boolean } | undefined)?.row !== 'boolean'`, a name a `const` read off it). What is asked is the thing the function was
- *  handed, where that is no class of the game's (a recording is data read off a file; the game itself, handed in beside it, is not), its fields by name,
- *  `typeof`, `!`, `in`, and comparisons with what is written there. Asking a recording does nothing, whatever a getter of the same name does on a thing of
- *  the game's, so `pure` (which has to fear that getter) is not asked. */
+ *  `typeof (k.tables.T as { row?: boolean } | undefined)?.row !== 'boolean'`, a name a `const` read off it). A recording is what is read off `.tables`:
+ *  data from a file. Every operand has to be that, a literal, or `undefined` — a field of anything else the function was handed (the game itself, typed as
+ *  a class, an interface, a union or `any`) may be a getter that does something, and such a question stays where it stood (`pure` judges it). Allowed
+ *  round them: `typeof`, `!`, `in`, `&&`, `||`, `??` and comparisons. */
 function asksRecording(n: any): boolean {
   switch (n.kind) {
     case SK.ParenthesizedExpression: case SK.AsExpression: case SK.NonNullExpression: case SK.TypeOfExpression: return asksRecording(n.expression);
     case SK.PrefixUnaryExpression: return n.operator === SK.ExclamationToken && asksRecording(n.operand);
     case SK.BinaryExpression: return [SK.EqualsEqualsEqualsToken, SK.ExclamationEqualsEqualsToken, SK.EqualsEqualsToken, SK.ExclamationEqualsToken, SK.AmpersandAmpersandToken, SK.BarBarToken, SK.QuestionQuestionToken, SK.InKeyword].includes(n.operatorToken.kind) && asksRecording(n.left) && asksRecording(n.right);
-    case SK.PropertyAccessExpression: return asksRecording(n.expression);
+    case SK.PropertyAccessExpression: return n.name.text === 'tables' || asksRecording(n.expression);   // (`<anything>.tables` is the recording's tables: data read off a file)
     case SK.ElementAccessExpression: return asksRecording(n.expression) && (n.argumentExpression?.kind === SK.StringLiteral || n.argumentExpression?.kind === SK.NoSubstitutionTemplateLiteral);
     case SK.StringLiteral: case SK.NoSubstitutionTemplateLiteral: case SK.NumericLiteral: case SK.TrueKeyword: case SK.FalseKeyword: case SK.NullKeyword: return true;
     case SK.ObjectLiteralExpression: return n.properties.length === 0;
+    // (a bare name is a recording's only as a `const` that holds one: a parameter may be the game itself, whatever its type is written as — a class,
+    // an interface, a union, `any` — and a field of it may be a getter that does something)
     case SK.Identifier: { if (n.text === 'undefined') return true; const d: any = checker.getSymbolAtLocation(n)?.valueDeclaration;
-      if (d?.kind === SK.Parameter) { const t = checker.getTypeAtLocation(n); return !!(t.flags & ts.TypeFlags.Any) || !(t.getSymbol()?.declarations ?? []).some((x: any) => x.kind === SK.ClassDeclaration || x.kind === SK.ClassExpression); }
       return d?.kind === SK.VariableDeclaration && !!(d.parent.flags & ts.NodeFlags.Const) && !!d.initializer && asksRecording(d.initializer); }
   }
   return false; }
@@ -550,6 +551,26 @@ const keyLists: { el: any; row: string }[] = [], named: { node: any; row: string
     if (v !== undefined) return typeof v === typeof r.value && v !== r.value ? 'writes' : 'names';
     return !i || i.kind === SK.NullKeyword || i.kind === SK.ArrayLiteralExpression || i.kind === SK.ObjectLiteralExpression || i.kind === SK.ArrowFunction || i.kind === SK.FunctionExpression ? 'names' : 'writes'; };   // (null, a list, a record, a function say something ABOUT the row; a name or a sum may be a value for it)
   const keyName = (p: any): string | null => (p.kind === SK.PropertyAssignment || p.kind === SK.ShorthandPropertyAssignment) && p.name && (p.name.kind === SK.Identifier || p.name.kind === SK.StringLiteral) ? p.name.text : null;
+  const useTok = new Set<any>(uses.map(u => u.node));
+  /** the table a recording's row is asked of: `<x>.tables.TABLE` under any cast or a `?? {}`, a `const` that holds one, or (`loose`, the journal's own file,
+   *  where a function is handed the tables themselves) `<a parameter>.TABLE` */
+  const recTable = (x: any, loose: boolean): string | null => { x = unparen(x); if (x?.kind === SK.BinaryExpression && x.operatorToken.kind === SK.QuestionQuestionToken) x = unparen(x.left);
+    if (x?.kind === SK.PropertyAccessExpression && byTable.has(x.name.text)) { const b = unparen(x.expression); if (b?.kind === SK.PropertyAccessExpression && b.name.text === 'tables') return x.name.text;
+      return loose && b?.kind === SK.Identifier && (checker.getSymbolAtLocation(b)?.valueDeclaration as any)?.kind === SK.Parameter ? x.name.text : null; }
+    if (x?.kind === SK.Identifier) { const d: any = checker.getSymbolAtLocation(x)?.valueDeclaration; return d?.kind === SK.VariableDeclaration && !!(d.parent.flags & ts.NodeFlags.Const) && d.initializer ? recTable(d.initializer, loose) : null; }
+    return null; };
+  /** is this object literal only ever HANDED ON: an argument of a call that is not `Object.`'s own (freeze, assign and the like give the object back to be
+   *  read), spread into one, or a `const` of this file alone (not exported) every use of which is that — a set of rows for a child or a rig, not a kept
+   *  copy something reads a key back from. Asked once an object. */
+  const handed = new Map<any, boolean>();
+  const handedOn = (o: any, sf: any): boolean => { const had = handed.get(o); if (had !== undefined) return had; let x = o; const up = new Set([SK.ParenthesizedExpression, SK.ConditionalExpression, SK.SpreadAssignment, SK.SpreadElement, SK.PropertyAssignment, SK.ObjectLiteralExpression, SK.ArrayLiteralExpression, SK.AsExpression, SK.BinaryExpression]);
+    while (x.parent && up.has(x.parent.kind)) x = x.parent;
+    const par = x.parent, arg = (c: any, a: any): boolean => c.kind === SK.CallExpression && c.arguments.includes(a) && !/^Object\./.test(c.expression.getText()); let ok: boolean;
+    if (par?.kind === SK.CallExpression) ok = arg(par, x);
+    else if (par?.kind !== SK.VariableDeclaration || par.name.kind !== SK.Identifier || par.initializer !== x || !(par.parent.flags & ts.NodeFlags.Const) || (par.parent.parent?.modifiers ?? []).some((m: any) => m.kind === SK.ExportKeyword)) ok = false;
+    else { ok = true; const nm = par.name.text, walk = (n: any): void => { if (!ok) return; if (n.kind === SK.Identifier && n.text === nm && n !== par.name) { let u = n; while (u.parent && (u.parent.kind === SK.ParenthesizedExpression || u.parent.kind === SK.AsExpression)) u = u.parent;
+          const q = u.parent; if (!(arg(q, u) || q.kind === SK.SpreadAssignment || q.kind === SK.SpreadElement)) ok = false; } n.forEachChild(walk); }; walk(sf); }
+    handed.set(o, ok); return ok; };
   for (const f of files) { const text = textOf(f); if (![...byTable.keys()].some(t => text.includes(t))) continue; const sf = sfOf(f); if (!sf) continue; const tool = isTool(f);
     const say = (n: any, row: string) => { named.push({ node: n, row }); namedAt.push(`${at(sf, n.getStart(sf))} ${row}: ${(n.getText() as string).slice(0, 70).replace(/\s+/g, ' ')}`); };
     const visit = (n: any) => {
@@ -563,6 +584,26 @@ const keyLists: { el: any; row: string }[] = [], named: { node: any; row: string
           else if (!tool) { const kt = checker.getTypeAtLocation(n.argumentExpression), names: string[] = (kt.isUnion?.() ? kt.types : [kt]).filter((x: any) => x.isStringLiteral?.()).map((x: any) => x.value as string);
             for (const nm of names) { const r = rowOf(t, nm); if (r) refuse.set(r.row, `${where}: ${write ? 'written' : 'read'} by a key whose type names it ('${names.slice(0, 5).join("' | '")}'${names.length > 5 ? ' …' : ''}: ${shown}): fold that by hand first`); }
             if (!names.length) note(`${where}: ${t} is ${write ? 'written' : 'read'} by a key worked out as it runs (${shown}): a retired row that can be named there wants a hand`); } } }
+      // A RECORDING'S OWN WORD FOR A ROW, FOUND BY ITS WORDS. Under a type written out there the checker sees another type and the read is no use of the
+      // row's (`(k.tables.T as { row?: boolean } | undefined)?.row`, through a `const dt = k.tables.T as { … }`, `['row']`, `'row' in (k.tables.T ?? {})`, a
+      // row a level down). In the journal it goes to the same test as the typed question below — the line goes whole only where everything under its `if`
+      // retires in this run, the row is refused where anything stays. Anywhere else in the game the row is refused: no recording made after the fold has
+      // the word, and what that read decides is not this tool's to fold.
+      if (!tool) { const inJournal = rel(sf.fileName) === 'src/game/journal.ts'; let key: string | null = null, base: any = null; const str = (x: any) => x?.kind === SK.StringLiteral || x?.kind === SK.NoSubstitutionTemplateLiteral;
+        if (n.kind === SK.PropertyAccessExpression && !useTok.has(n.name)) { key = n.name.text; base = n.expression; }
+        else if (n.kind === SK.ElementAccessExpression && str(n.argumentExpression) && !useTok.has(n.argumentExpression)) { key = n.argumentExpression.text; base = n.expression; }
+        else if (n.kind === SK.BinaryExpression && n.operatorToken.kind === SK.InKeyword && str(unparen(n.left))) { key = unparen(n.left).text; base = n.right; }
+        if (key !== null) { let tb = recTable(base, inJournal), r = tb ? rowOf(tb, key) : null;
+          if (!r) { const b = unparen(base), part = b?.kind === SK.PropertyAccessExpression ? b : null, t2 = part ? recTable(part.expression, inJournal) : null; if (t2) r = rowOf(t2, `${part.name.text}.${key}`); }   // (a row a level down)
+          const out = upParen(n).parent, write = out.kind === SK.BinaryExpression && out.left === upParen(n) && out.operatorToken.kind === SK.EqualsToken;
+          if (r && !write) { const where = at(sf, n.getStart(sf));
+            if (inJournal) recordingReads.push({ row: r.row, access: n, where });
+            else if (!refuse.has(r.row)) refuse.set(r.row, `${where}: a recording's own word for the row is read outside the journal (${((stmtOf(n) ?? n).getText() as string).slice(0, 80).replace(/\s+/g, ' ')}): with the row gone no recording has it. Fold that line by hand first`); } } }
+      // a child's `--set` written as a JSON string: the tool does not edit a string. Said, and the file is among those whose lines are run
+      if (tool && (n.kind === SK.StringLiteral || n.kind === SK.NoSubstitutionTemplateLiteral) && n.text.startsWith('{') && [...byTable.keys()].some(t => n.text.includes(`"${t}"`))) { let j: any = null; try { j = JSON.parse(n.text); } catch { /* not JSON */ }
+        if (j && typeof j === 'object') for (const [t, o] of Object.entries(j)) if (byTable.has(t) && o && typeof o === 'object') for (const k of Object.keys(o as object)) { const r = rowOf(t, k); if (!r) continue;
+              note(`${at(sf, n.getStart(sf))}: ${r.row} is named in a set written as a JSON string (${n.text.slice(0, 70)}): the child it is handed to refuses a key its table no longer has. Take it out by hand`);
+              report.toolWrites.push({ row: r.row, at: at(sf, n.getStart(sf)), kind: 'unedited', text: n.text.slice(0, 100) }); } }
       if (n.kind === SK.CallExpression) {
         // rows('TABLE', [{ k: 'key', … }, …]): a list of the table's rows by name
         // … and the same list handed the table itself: knobRows(sec, TABLE as unknown as KnobTable, …, [{ k: 'key', … }, …]). The key is the entry's `k` (or `key`, `row`): a label that reads like a key is a label.
@@ -579,10 +620,16 @@ const keyLists: { el: any; row: string }[] = [], named: { node: any; row: string
                 else if (real && !tool) { say(q, r.row); pageWrites.push({ row: r.row, node: n, rhs: q.kind === SK.PropertyAssignment ? q.initializer : q.name }); }   // (the page's own write of it, through an object)
                 else if (!real && !tool && mapEntry(q, r) === 'writes') refuse.set(r.row, `${at(sf, q.getStart(sf))}: a map of tables' rows holds another value for it than the page's (${n.getText().slice(0, 70)}): wherever that map is put over the table, the game writes the row`);
                 else { say(q, r.row); if (tool) report.toolWrites.push({ row: r.row, at: at(sf, q.getStart(sf)), kind: 'other', text: n.getText().slice(0, 100) }); } } } } }
-      // TABLE: { key: …, … } in a literal: what is kept, shown or allowed of the table, by name
-      if (!tool && n.kind === SK.PropertyAssignment && n.name && (n.name.kind === SK.Identifier || n.name.kind === SK.StringLiteral) && byTable.has(n.name.text)) { const o = unparen(n.initializer);
+      // TABLE: { key: …, … } in a literal: what is kept, shown or allowed of the table, by name — and, in a tool, a SET of rows handed on (a check's
+      // `--set` for the child it plays a run in, a rig's `knobs`): the child refuses a key its table no longer has, so the key goes from the set and is said
+      if (n.kind === SK.PropertyAssignment && n.name && (n.name.kind === SK.Identifier || n.name.kind === SK.StringLiteral) && byTable.has(n.name.text)) { const o = unparen(n.initializer);
         if (o?.kind === SK.ObjectLiteralExpression) for (const [q, r] of rowsIn(n.name.text, o)) {
-            if (mapEntry(q, r) === 'writes') refuse.set(r.row, `${at(sf, q.getStart(sf))}: a map of tables' rows holds another value for it than the page's (${(n.getText() as string).slice(0, 70).replace(/\s+/g, ' ')}): wherever that map is put over the table, the game writes the row`); else say(q, r.row); } }
+            if (tool) { const init = q.kind === SK.PropertyAssignment ? q.initializer : null, lit = init ? litValue(init) : undefined, where = at(sf, q.getStart(sf)), shown = (n.getText() as string).slice(0, 100).replace(/\s+/g, ' ');
+              // (only a set that is HANDED ON, and only a value whose making does nothing: a kept copy something reads the key back from, or a call in
+              // the value, is left as it is and said — the typecheck or the run says where that stands)
+              if (!handedOn(o, sf) || (init && !pure(init))) { note(`${where}: ${r.row} is named under its table's name in a tool, in an object that is read back or whose value is a call (${shown}): left as it is`); report.toolWrites.push({ row: r.row, at: where, kind: 'unedited', text: shown }); continue; }
+              say(q, r.row); report.toolWrites.push({ row: r.row, at: where, kind: lit === undefined ? 'other' : lit === r.value ? 'same' : 'opposite', text: shown }); }
+            else if (mapEntry(q, r) === 'writes') refuse.set(r.row, `${at(sf, q.getStart(sf))}: a map of tables' rows holds another value for it than the page's (${(n.getText() as string).slice(0, 70).replace(/\s+/g, ' ')}): wherever that map is put over the table, the game writes the row`); else say(q, r.row); } }
       n.forEachChild(visit); }; visit(sf); } }
 // ---- THE VALUE ASKED FOR MUST BE THE PAGE'S, and the page says what that is: `--page dump.json` is every table as a stand-up of the page left it
 // (`TPS_PROFILE=shipped bun run tools/qa/stand-dump.ts --out dump.json`: the shipped stand IS the page with an empty address, held to the real page by
@@ -613,8 +660,11 @@ const keyLists: { el: any; row: string }[] = [], named: { node: any; row: string
 // an `if`'s) refuses the row. Asked again while it refuses anything: a row refused here may be what another line's `if` writes.
 { const useAt = new Map<any, Use>(); for (const u of uses) if (!u.def) useAt.set(u.node, u);
   const stays = (st: any): string | null => { if (!st) return null; if (st.kind === SK.Block) { for (const x of st.statements) { const w = stays(x); if (w) return w; } return null; }
-    if (st.kind === SK.ExpressionStatement) { const e = unparen(st.expression); if (e.kind === SK.BinaryExpression && e.operatorToken.kind === SK.EqualsToken) { const l = unparen(e.left), nm = l.kind === SK.PropertyAccessExpression ? l.name : l.kind === SK.ElementAccessExpression ? l.argumentExpression : null, u = nm ? useAt.get(nm) : undefined;
-        if (u && !u.row.hold && rowDef.has(u.row.row) && !refuse.has(u.row.row)) return null; } }
+    if (st.kind === SK.ExpressionStatement) { let e = unparen(st.expression), all = e.kind === SK.BinaryExpression && e.operatorToken.kind === SK.EqualsToken;
+      // (`A = B = false`: every row written in the chain has to retire, not only the first)
+      while (all && e.kind === SK.BinaryExpression && e.operatorToken.kind === SK.EqualsToken) { const l = unparen(e.left), nm = l.kind === SK.PropertyAccessExpression ? l.name : l.kind === SK.ElementAccessExpression ? l.argumentExpression : null, u = nm ? useAt.get(nm) : undefined;
+        if (!(u && !u.row.hold && rowDef.has(u.row.row) && !refuse.has(u.row.row))) all = false; e = unparen(e.right); }
+      if (all) return null; }
     return (st.getText() as string).slice(0, 70).replace(/\s+/g, ' '); };
   for (let again = true; again;) { again = false; recordingIfs.clear();
     for (const r of recordingReads) { if (refuse.has(r.row)) continue; const iff = ts.findAncestor(r.access, (x: any) => x.kind === SK.IfStatement) as any, asked = !!iff && r.access.getStart() >= iff.expression.getStart() && r.access.end <= iff.expression.end;
@@ -633,7 +683,10 @@ const live = new Set(report.retired);
     if (st) plan(st.getSourceFile().fileName).del.add(st); }
   const byList = new Map<any, Set<any>>(); for (const k of named) if (live.has(k.row)) { plan(k.node.getSourceFile().fileName).del.add(k.node); byList.set(k.node.parent, (byList.get(k.node.parent) ?? new Set()).add(k.node)); }
   // a call left holding an empty list or an empty object (`rows('TABLE', [])`, `Object.assign(KEPT.TABLE, {})`) says nothing any more and goes, where it is a statement
-  for (const [lst, gone] of byList) { if (!emptied(lst.elements ?? lst.properties, gone)) continue; const call = upParen(lst).parent; if (call?.kind === SK.CallExpression && call.parent.kind === SK.ExpressionStatement && call.arguments.some((a: any) => unparen(a) === lst)) plan(call.getSourceFile().fileName).del.add(call.parent); } }
+  // — but an `Object.assign` that has ANOTHER source still gives that one (`Object.assign(TABLE, kept, { row })`, `Object.assign(TABLE, { row }, o.knobs ?? {})`:
+  // the emptied object stays as `{ }` and the call with it; measured 2026-11-05, four checks had lost a put-back of kept rows or a caller's own settings)
+  const allGone = (call: any, lst: any): boolean => call.expression.getText() !== 'Object.assign' || call.arguments.every((a: any, i: number) => { const u = unparen(a); if (i === 0 || u === lst) return true; const g2 = byList.get(u); return !!g2 && emptied(u.elements ?? u.properties, g2); });
+  for (const [lst, gone] of byList) { if (!emptied(lst.elements ?? lst.properties, gone)) continue; const call = upParen(lst).parent; if (call?.kind === SK.CallExpression && call.parent.kind === SK.ExpressionStatement && call.arguments.some((a: any) => unparen(a) === lst) && allGone(call, lst)) plan(call.getSourceFile().fileName).del.add(call.parent); } }
 for (const a of acts) { if (!live.has(a.use.row.row)) continue; const P = plan(a.use.sf.fileName);
   if (a.kind === 'read' || a.kind === 'setInit') P.subs.set(a.node, a.use.row.value); else if (a.kind === 'readLoad') P.subs.set(a.node, moduleVal.get(a.use.row.row)!); else if (a.kind === 'const') P.subs.set(a.node, true); else if (a.kind === 'unassign') P.unassign.add(a.node); else if (a.kind === 'hole') P.hole.add(a.node); else P.del.add(a.node); }
 
@@ -1021,6 +1074,7 @@ for (const r of report.refused) console.log(`  REFUSED ${r.row}: ${r.why}`);
 console.log(`  address words gone: ${report.words.join(' ') || '(none)'}`);
 console.log(`  stand words gone: ${report.standWords.join(' ') || '(none)'}`);
 console.log(`  a tool set the row to the value it now always has (taken out): ${byKind('same').length} · put it back from a kept copy or a parameter (taken out; read the check): ${byKind('other').length} · ASKED FOR THE RETIRED PATH (the arm that follows wants a hand): ${byKind('opposite').length}`);
+{ const live4 = new Set(report.retired), u = byKind('unedited').filter(w => live4.has(w.row)); if (u.length) { console.log(`  NAMED IN A SET THE TOOL DID NOT EDIT (a --set written as a string, a copy that is read back: by hand, each): ${u.length}`); for (const w of u) console.log(`    ${w.at} ${w.row}: ${w.text.slice(0, 90)}`); } }
 if (leftovers.length) console.log(`  a constant left in a condition beside a call (wants a hand): ${leftovers.length}${VERBOSE ? ' · ' + leftovers.join(' ') : ''}`);
 if (droppedLines.length || dropMissed.length) console.log(`  check lines taken out by name: ${droppedLines.length}${dropMissed.length ? ` · NOT FOUND (want a hand): ${dropMissed.length} · ${dropMissed.slice(0, 12).join(' ')}` : ''}`);
 { const live3 = new Set(report.retired), c = report.controls.filter(l => live3.has(l.split(' ')[1].replace(/:$/, ''))); if (c.length) console.log(`  a lab's control for the row, kept as data ({ get, set } in a list: its entry is taken out): ${c.length}${VERBOSE ? '\n    ' + c.join('\n    ') : ''}`); }

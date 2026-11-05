@@ -1,15 +1,20 @@
 // WHAT A FOLD DID TO THE CHECKS' LINES (the second half of retiring a switch: tools/retire/retire.ts, docs/agents/qa.md "Retiring a switch"). A check of a rule
 // that ships as a switch has lines only the switch made possible: the stand's line, the off arm, the on arm measured against the off arm, a newer rule held
 // off for the check's length. Once the switch is gone those lines fail, and they are found by running the checks before the fold and after it:
-//   bun run tools/retire/lines.ts run <out dir> [--stand shipped|frozen] [--jobs 3] [--tree <dir>] <tools/qa/file.ts …>
+//   bun run tools/retire/lines.ts run <out dir> [--stand shipped|frozen] [--jobs 3] [--tree <dir>] [--pin rows.json] [--only names.txt] [--importers] <tools/qa/file.ts …>
 //       every check those files hold, one process each (a `*-check.ts` with a main of its own as a program, any other by the names tools/qa/probes.ts
 //       dispatches to it), output kept as <out dir>/<name>.txt and, beside it, where each PASS / FAIL line was printed from (<name>.trace.jsonl: the tools/
 //       frames of the call, by a preload over console.log). `--tree` = another checkout of the repo (the tree before the fold). A command that already has
 //       its output there is not run again.
+//       `--pin` = the rows that file lists held at its values whatever the check writes (RETIRE_PIN, tools/qa/headless.ts): run on the tree BEFORE the
+//       fold it says which lines need a retired path, and the fold's own run must then say the same lines — a line red after the fold and green under
+//       the pins is the fold's own fault (in the game or in the check), not the check's staging. `--only` = a file of command names, the rest left out. `--importers` = also every check
+//       that imports one of the files given (a changed rig reaches the checks that stand on it; the fold's report names only files it wrote in).
 //   bun run tools/retire/lines.ts diff <before dir> <after dir> [--drop out.json] [--json out.json] [--tree <dir>]
 //       pairs each command's lines before and after by their words (numbers set aside): the lines that went PASS → FAIL with the place each was printed from
-//       (`--drop`: those places as a list for `retire.ts --drop-lines`), the lines that went FAIL → PASS, the commands that died, and the checks that ran and
-//       said nothing (every line gone: such a check goes whole). Exit 1 when there is any of the first, third or fourth.
+//       (`--drop`: those places as a list for `retire.ts --drop-lines`), the red lines never said before (a staging that failed: never in that list), the
+//       lines that went FAIL → PASS, the commands that died, and the checks that ran and
+//       said nothing (every line gone: such a check goes whole). Exit 1 when a line broke, a red line is new, a command died or a check went silent.
 // The files to give `run` are the tools the fold's report names (`retire.ts --report`: toolWrites, constLines, named). Run both on the page's stand
 // (`--stand shipped`, the default): there the game is the same before and after, so a line that changed colour changed because of what the CHECK set.
 // Then: retire.ts --drop-lines out.json --write, both typechecks, `run` again on the files it touched: no FAIL that was a PASS before.
@@ -19,11 +24,12 @@ import { basename, join, resolve } from 'node:path';
 type Trace = { v: string; text: string; frames: string[] };
 async function main(): Promise<void> {
   const argv = process.argv.slice(2), mode = argv[0], opt = (n: string) => { const i = argv.indexOf(n); return i < 0 ? null : argv[i + 1] ?? null; };
-  const flags = new Set(['--stand', '--jobs', '--tree', '--drop', '--json']), rest = argv.slice(1).filter((a, i, all) => !flags.has(a) && !flags.has(all[i - 1] ?? ''));
+  const flags = new Set(['--stand', '--jobs', '--tree', '--drop', '--json', '--pin', '--only']), rest = argv.slice(1).filter((a, i, all) => a !== '--importers' && !flags.has(a) && !flags.has(all[i - 1] ?? ''));
   const TREE = resolve(opt('--tree') ?? join(import.meta.dir, '../..')), SELF = resolve(import.meta.dir, 'lines.ts');
-  if (mode === 'run' && rest.length >= 2) await run(TREE, SELF, rest[0], rest.slice(1), opt('--stand') ?? 'shipped', Math.max(1, Number(opt('--jobs') ?? 3)));
+  for (const f of flags) if (argv.includes(f) && (opt(f) === null || opt(f)!.startsWith('--'))) { console.error(`${f} wants a value after it`); process.exit(2); }
+  if (mode === 'run' && rest.length >= 2) await run(TREE, SELF, rest[0], rest.slice(1), opt('--stand') ?? 'shipped', Math.max(1, Number(opt('--jobs') ?? 3)), opt('--pin'), opt('--only'), argv.includes('--importers'));
   else if (mode === 'diff' && rest.length === 2) process.exit(diff(TREE, rest[0], rest[1], opt('--drop'), opt('--json')));
-  else { console.error('usage: lines.ts run <out dir> [--stand shipped|frozen] [--jobs N] [--tree dir] <tools/qa/file.ts …>   |   lines.ts diff <before dir> <after dir> [--drop out.json] [--json out.json] [--tree dir]'); process.exit(2); }
+  else { console.error('usage: lines.ts run <out dir> [--stand shipped|frozen] [--jobs N] [--tree dir] [--pin rows.json] [--only names.txt] [--importers] <tools/qa/file.ts …>   |   lines.ts diff <before dir> <after dir> [--drop out.json] [--json out.json] [--tree dir]'); process.exit(2); }
 }
 
 /** the commands that run a check file: its probe names in probes.ts's dispatch (`on('name', …)` on a line that imports the file), else the file itself */
@@ -38,21 +44,46 @@ function commandsOf(tree: string, file: string, probes: string[]): string[][] {
   if (uniq.length) return uniq.map(n => ['tools/qa/probes.ts', n]);
   return /-(check|probes)\.ts$/.test(b) && existsSync(join(tree, file)) ? [[file]] : [];
 }
-async function run(tree: string, self: string, outDir: string, files: string[], stand: string, jobs: number): Promise<void> {
-  mkdirSync(outDir, { recursive: true });
+/** `files` and every check under tools/ that imports one of them, however far (a rig's change reaches the checks that stand on the rig: thresholdmenu-probes
+ *  is imported by twenty). The harness, the play-through and the probe runner are imported by everything and are not followed. */
+function withImporters(tree: string, files: string[]): string[] {
+  const all: string[] = []; const walk = (d: string): void => { for (const e of readdirSync(join(tree, d), { withFileTypes: true })) { if (e.isDirectory()) { if (e.name !== 'fixture' && e.name !== 'node_modules') walk(join(d, e.name)); } else if (/\.(ts|cjs|js)$/.test(e.name)) all.push(join(d, e.name)); } }; walk('tools');
+  const known = new Set(all), NOT = new Set(['tools/qa/headless.ts', 'tools/qa/playthrough.ts', 'tools/qa/probes.ts']);
+  /** an import's words as a file of the tree: beside the importer (`./x.ts`, `../y`), or from the tree's root (`${ROOT}/tools/qa/x.ts`); the ending may be left off */
+  const fileOf = (from: string, spec: string): string | null => { const root = /^\$\{[A-Za-z_]+\}\/(.*)$/.exec(spec), p = root ? root[1] : /^\.{1,2}\//.test(spec) ? join(from, '..', spec) : null; if (!p) return null;
+    for (const c of [p, `${p}.ts`, `${p}.js`, `${p}.cjs`]) if (known.has(c)) return c; return null; };
+  const deps = new Map<string, Set<string>>();
+  // (…and a file named in a string any other way is taken as one it runs: `Bun.spawn(['bun', 'run', resolve(import.meta.dir, 'rig.ts')])`, `resolve(ROOT, 'tools/qa/rig.ts')`)
+  for (const f of all) { const s = new Set<string>(), text = readFileSync(join(tree, f), 'utf8'); for (const m of text.matchAll(/(?:from|import|require)\s*\(?\s*['"`]([^'"`\n]+)['"`]/g)) { const d = fileOf(f, m[1]); if (d) s.add(d); }
+    for (const m of text.matchAll(/['"`]((?:tools\/[\w./-]+|[\w-]+)\.(?:ts|cjs|js))['"`]/g)) { const d = known.has(m[1]) ? m[1] : fileOf(f, `./${m[1]}`); if (d && d !== f) s.add(d); } deps.set(f, s); }
+  const seeds = files.map(f => join(f)), lost = seeds.filter(f => !known.has(f)), wide = seeds.filter(f => NOT.has(f)); if (lost.length) console.log(`--importers: not files of the tree's tools, so nothing is followed from them: ${lost.join(' ')}`);
+  if (wide.length) console.log(`--importers: every check imports ${wide.join(', ')}: nothing is followed from there (give the family's own files, or run the gate)`);
+  const got = new Set(seeds.filter(f => !NOT.has(f))); for (let grew = true; grew;) { grew = false; for (const [f, s] of deps) if (!got.has(f) && !NOT.has(f) && [...s].some(d => got.has(d))) { got.add(f); grew = true; } }
+  return [...new Set([...seeds, ...[...got].filter(f => /-(check|probes)\.ts$/.test(f)).sort()])];
+}
+/** the name a command's output is kept under */
+const tagOf = (cmd: string[]): string => cmd[cmd.length - 1].replace('tools/qa/', '').replace(/\//g, '_').replace(/\.ts$/, '');
+async function run(tree: string, self: string, outDir: string, files: string[], stand: string, jobs: number, pin: string | null, only: string | null, importers: boolean): Promise<void> {
+  mkdirSync(outDir, { recursive: true }); if (importers) files = withImporters(tree, files);
   const probes = existsSync(join(tree, 'tools/qa/probes.ts')) ? readFileSync(join(tree, 'tools/qa/probes.ts'), 'utf8').split('\n') : [], seen = new Set<string>(), queue: { file: string; cmd: string[] }[] = [], none: string[] = [];
   for (const f of files) { const cs = commandsOf(tree, f, probes); if (!cs.length) none.push(f); for (const cmd of cs) { const k = cmd.join(' '); if (!seen.has(k)) { seen.add(k); queue.push({ file: f, cmd }); } } }
+  if (only) { const want = new Set(readFileSync(only, 'utf8').split(/\s+/).filter(Boolean)), all = queue.splice(0); queue.push(...all.filter(q => want.has(tagOf(q.cmd)))); const none = [...want].filter(w => !all.some(q => tagOf(q.cmd) === w)); if (none.length) console.log(`--only: no command of these files is named ${none.slice(0, 12).join(', ')}`); }
   console.log(`${queue.length} commands for ${files.length} files on the ${stand} stand${none.length ? ` · ${none.length} files hold no check of their own: ${none.slice(0, 8).join(' ')}` : ''}`);
   let next = 0, done = 0;
   const worker = async (): Promise<void> => { for (;;) { const job = queue[next++]; if (!job) return;
-      const tag = job.cmd[job.cmd.length - 1].replace('tools/qa/', '').replace(/\//g, '_').replace(/\.ts$/, ''), out = join(outDir, `${tag}.txt`), trace = join(outDir, `${tag}.trace.jsonl`);
-      if (existsSync(out) && /\nexit -?\d+\n$/.test(readFileSync(out, 'utf8').slice(-40))) { done++; continue; }
+      const tag = tagOf(job.cmd), out = join(outDir, `${tag}.txt`), trace = join(outDir, `${tag}.trace.jsonl`);
+      // (a command that has its output is not run again — where it was run the same way: a run asked for with a pin does not take lines run without one, nor the other way round)
+      if (existsSync(out) && /\nexit -?\d+\n$/.test(readFileSync(out, 'utf8').slice(-40))) { const marked = existsSync(trace) && readFileSync(trace, 'utf8').includes('"v":"PIN"'), known = existsSync(join(outDir, 'not-pinned.txt')) && readFileSync(join(outDir, 'not-pinned.txt'), 'utf8').split('\n').some(l => l.split(' ')[0] === tag);
+        if (pin ? marked || known : !marked) { done++; continue; } console.log(`  ${tag}: its lines there were run ${marked ? 'with' : 'without'} a pin: run again`); }
       writeFileSync(trace, '');
-      const p = Bun.spawn(['bun', 'run', '--preload', self, ...job.cmd], { cwd: tree, env: { PATH: process.env.PATH ?? '', HOME: process.env.HOME ?? '', TPS_PROFILE: stand, LINES_TRACE_OUT: trace }, stdout: 'pipe', stderr: 'pipe' });
+      const p = Bun.spawn(['bun', 'run', '--preload', self, ...job.cmd], { cwd: tree, env: { PATH: process.env.PATH ?? '', HOME: process.env.HOME ?? '', TPS_PROFILE: stand, LINES_TRACE_OUT: trace, ...(pin ? { RETIRE_PIN: resolve(pin) } : {}) }, stdout: 'pipe', stderr: 'pipe' });
       const timer = setTimeout(() => p.kill(), 1500 * 1000);
       const [o, e, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]); clearTimeout(timer);
       writeFileSync(out, `# ${job.file} :: bun run ${job.cmd.join(' ')}\n${o}${e}\nexit ${code}\n`);
-      console.log(`  ${++done}/${queue.length} ${tag}: exit ${code}`); } };
+      // (the pin is the harness's: a check that never loads it wrote its rows as it liked; and the mark says how many of the list's rows were held)
+      const mark = pin ? /"v":"PIN","text":"(\d+) of (\d+) rows held"/.exec(readFileSync(trace, 'utf8')) : null, part = !!mark && mark[1] !== mark[2], unpinned = !!pin && !mark;
+      if (unpinned || part) appendFileSync(join(outDir, 'not-pinned.txt'), `${tag}${part ? ` ${mark![1]} of ${mark![2]} rows held` : ''}\n`);
+      console.log(`  ${++done}/${queue.length} ${tag}: exit ${code}${unpinned ? ' · NOT PINNED (it never loaded tools/qa/headless.ts): its lines say nothing of the pins' : part ? ` · PINNED IN PART (${mark![1]} of ${mark![2]} rows: the rest are in no table the harness knows)` : ''}`); } };
   await Promise.all(Array.from({ length: jobs }, worker));
 }
 
@@ -87,7 +118,7 @@ function diff(tree: string, before: string, after: string, dropOut: string | nul
       return i + 1 < frames.length ? frames[i + 1] : null; }
     for (let i = 0; i < frames.length; i++) if (holds(i)) return frames[i];
     return null; };
-  const res = { commands: 0, broke: [] as { cmd: string; label: string; at: string | null }[], mended: [] as { cmd: string; label: string }[], died: [] as { cmd: string; exit: number | null; tail: string }[], silent: [] as string[], sameRed: 0, gone: 0 };
+  const res = { commands: 0, broke: [] as { cmd: string; label: string; at: string | null }[], mended: [] as { cmd: string; label: string }[], fresh: [] as { cmd: string; label: string; at: string | null }[], died: [] as { cmd: string; exit: number | null; tail: string }[], silent: [] as string[], sameRed: 0, gone: 0 };
   /** did it stop on an error nothing caught? (an exit that is neither 0 nor 1; or a 1 with the words of one near its end and fewer lines than before: a
    *  check that fails its lines exits 1 too, and says all of them) */
   const threw = (A: ReturnType<typeof read>, B: ReturnType<typeof read>): boolean => (A.code !== 0 && A.code !== 1) || (A.code === 1 && A.lines.length < B.lines.length && /(^|\n)\s*(\w*Error: |error: )|\n\s+at \S[^\n]*:\d+:\d+\)?\n/.test(A.text.slice(-2000)));
@@ -111,17 +142,23 @@ function diff(tree: string, before: string, after: string, dropOut: string | nul
     A.lines.forEach((a, j) => { if (inPair.has(j) || a[0] !== 'FAIL') return; const na = norm(a[1]);
       const alike = (x: string, y: string): boolean => { const n = Math.min(x.length, y.length); let p = 0, q = 0; while (p < n && x[p] === y[p]) p++; while (q < n - p && x[x.length - 1 - q] === y[y.length - 1 - q]) q++; return p + q >= 0.6 * n; };   // (the same line but for a word in the middle of it)
       const was = loose.find(x => !usedB.has(x.i) && x.b[0] === 'FAIL' && alike(norm(x.b[1]), na));
-      if (was) { usedB.add(was.i); res.sameRed++; at(a[1]); } else res.broke.push({ cmd: A.head, label: a[1].slice(0, 200), at: at(a[1]) }); });
+      // (… else it is a red line NEVER SAID BEFORE, in any colour: the check's staging failing — 'a door to stage it on'. Never listed to drop: taking a
+      // staging line out leaves the check silent where it should be red. By hand.)
+      // (… or green before with the same CLAIM — the words before ' — ', where the detail starts — a line that moved, or whose detail changed with its
+      // colour: it broke. A shared opening is not enough: 'boot at the east door: the door gave' and 'boot at the east door: no door to stage it on' are two lines)
+      const claim = (s: string): string => norm(s.split(' — ')[0]).trim(), ca = claim(a[1]), grn = was || !ca ? undefined : loose.find(x => !usedB.has(x.i) && x.b[0] === 'PASS' && claim(x.b[1]) === ca);
+      if (was) { usedB.add(was.i); res.sameRed++; at(a[1]); } else if (grn) { usedB.add(grn.i); res.broke.push({ cmd: A.head, label: a[1].slice(0, 200), at: at(a[1]) }); } else res.fresh.push({ cmd: A.head, label: a[1].slice(0, 200), at: at(a[1]) }); });
     res.gone += loose.filter(x => !usedB.has(x.i) && x.b[0] === 'PASS').length;   // (said before, not said after: taken out with the switch, or never reached)
   }
   const places = [...new Set(res.broke.map(b => b.at).filter((x): x is string => !!x))].sort(), unplaced = res.broke.filter(b => !b.at);
-  console.log(`${res.commands} commands · ${res.broke.length} lines PASS → FAIL (${places.length} places${unplaced.length ? `, ${unplaced.length} NOT PLACED: by hand` : ''}) · ${res.mended.length} FAIL → PASS · ${res.sameRed} red before and after · ${res.gone} said before and not after · ${res.died.length} commands died${res.silent.length ? ` · ${res.silent.length} say nothing any more (drop them whole)` : ''}`);
+  console.log(`${res.commands} commands · ${res.broke.length} lines PASS → FAIL (${places.length} places${unplaced.length ? `, ${unplaced.length} NOT PLACED: by hand` : ''}) · ${res.fresh.length} red lines never said before (a staging that failed: by hand) · ${res.mended.length} FAIL → PASS · ${res.sameRed} red before and after · ${res.gone} said before and not after · ${res.died.length} commands died${res.silent.length ? ` · ${res.silent.length} say nothing any more (drop them whole)` : ''}`);
   for (const c of res.silent) console.log(`  SILENT ${c.slice(0, 140)}`);
   for (const d of res.died) console.log(`  DIED ${d.cmd.slice(0, 110)} exit ${d.exit} | ${d.tail}`);
   for (const b of res.broke) console.log(`  BROKE ${b.at ?? '(not placed)'} | ${b.label.slice(0, 120)}`);
+  for (const b of res.fresh) console.log(`  NEW RED ${b.at ?? '(not placed)'} | ${b.label.slice(0, 120)}`);
   if (jsonOut) writeFileSync(jsonOut, JSON.stringify(res, null, 1));
   if (dropOut) writeFileSync(dropOut, JSON.stringify(places, null, 1));
-  return res.broke.length || res.died.length || res.silent.length ? 1 : 0;
+  return res.broke.length || res.fresh.length || res.died.length || res.silent.length ? 1 : 0;
 }
 
 // ---- the preload (this same file loaded in front of a check, LINES_TRACE_OUT set): every PASS / FAIL line is also written to that file with its call's frames

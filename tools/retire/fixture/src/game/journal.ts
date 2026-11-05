@@ -13,6 +13,9 @@ export function applyOld(k: any): void {
   if ((k.tables.K as Partial<typeof K> | undefined)?.quote === undefined) K.quote = "it's";   // (from before the word)
   if ((k.tables.K as Partial<typeof K> | undefined)?.stay === undefined) K.stay = false;   // (a row that stays: the line stays)
   if ((k.tables.K as Partial<typeof K> | undefined)?.j1 === undefined) { K.j1 = false; K.stay = false; }   // (from before j1: it also puts a row that stays off)
+  if ((k.tables.K as { j3?: boolean } | undefined)?.j3 === undefined) { K.j3 = false; K.stay = false; }   // (the same under a type written out: it also puts a row that stays off)
+  if ((k.tables.K as { j4?: boolean } | undefined)?.j4 === undefined) K.j4 = K.stay = false;   // (two rows in one chain: the second stays)
+  if (!('j5' in (k.tables.K ?? {}))) { K.j5 = false; K.stay = false; }   // (asked with `in`)
   const j2 = (k.tables.K as Partial<typeof K> | undefined)?.j2; if (j2 !== true) K.j2 = false;   // (the word read into a name)
   if (!k.tables.K) { K.on = false; K.extra = false; }   // (from before the table: the whole table is asked for, not a row, and two rows put off in a block)
   if (typeof (k.tables.K as { extra?: boolean } | undefined)?.extra !== 'boolean') K.extra = false;   // (the row's word, asked under a type written out)
@@ -21,6 +24,11 @@ export function applyOld(k: any): void {
 /** the game handed in beside a recording is not a recording: a question asked of it may be a getter's call, and stays where it stood */
 class Live { n = 0; get seen(): boolean { this.n++; return true; } }
 export function applyLive(g: Live): void { if (g.seen) K.panelOnly = false; }
+/** …nor is a thing typed by an interface: the question stays */
+interface Seen { seen: boolean }
+export function applySeen(g: Seen): void { if (g.seen) K.panelOnly = false; }
+/** …nor is a question that asks the game AND the recording a recording's alone */
+export function applyMix(g: Seen, k: { tables: Record<string, unknown> }): void { if (g.seen && !k.tables.K) K.panelOnly = false; }
 export const LIVE = Live;
 /** a list of keys two things read */
 const SHARED = ['shared', 'stay'] as const;

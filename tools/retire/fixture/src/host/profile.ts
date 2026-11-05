@@ -31,6 +31,10 @@ export function pageSwitches(q: URLSearchParams): void {
   M.on = !q.has('nom');
   K.rec = !q.has('norec');
   K.j1 = !q.has('noj1');
+  K.j3 = !q.has('noj3');
+  K.j4 = !q.has('noj4');
+  K.j5 = !q.has('noj5');
+  K.j6 = !q.has('noj6');
   K.j2 = !q.has('noj2');
   K.deepn.on = !q.has('nodeepn');
   K.e4 = !q.has('noe4');

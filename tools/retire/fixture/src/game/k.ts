@@ -71,6 +71,14 @@ export const K = {
   rec: false,
   /** the journal's line for it also writes a row that stays */
   j1: false,
+  /** the journal asks a recording for it under a type written out, beside a write that stays */
+  j3: false,
+  /** the same question over a write of two rows in one chain */
+  j4: false,
+  /** asked with `in`, beside a write that stays */
+  j5: false,
+  /** a recording's word for it read outside the journal */
+  j6: false,
   /** the journal reads a recording's word for it into a name */
   j2: false,
   /** a part whose other key a panel names by its path */
