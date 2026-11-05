@@ -618,8 +618,8 @@ first system across (the game's own maths). No rule of play has changed and noth
   `src/sim/men/cols.ts` (the accessors `Character`, `Guard` and `Player` inherit, so a column reads as a field) and `rust/sim/src/men.rs` (the struct of columns; a rule reads
   `state(g).men.<column>[row]` with no copy), and then `bun run tools/sim/build.ts` builds it. The two sides' hash is held as a store is made. A number a digest reads stays a double:
   a single would round the rules. Rows 256: a man's id is a byte; a level's own men are counted at load (`levelfit.ts`, the `men` row), and a stand past the rows is a mistake that throws by
-  name. A row is his for his life: `manLeaves` frees it, a Guard or Player object that has left throws by name when read, and a `handleOf` word taken before a row changed hands
-  throws by name in `rowOf`. The men move into the block once as a game's first tick opens (the tenant, bit 256) and stay there, whatever the rows of RUST say, so a game's block is
+  name. A row is his for his life: `manLeaves` frees it and moves his numbers to a store of leavers (the game's side tables may read a man who has gone, as they always did), and a
+  `handleOf` word taken before a row changed hands throws by name in `rowOf`. The men move into the block once as a game's first tick opens (the tenant, bit 256) and stay there, whatever the rows of RUST say, so a game's block is
   open from its first tick. A man of no game (a menu's figure, the viewer's, a tool's) has a row of a store of no game (`loneMen`). The part stands with the parts of a fixed length,
   before the pools: smoke and poses stay last because a parked block is one run of bytes to the last word in use (state.rs PARTS). `MEN_BREAK=1` turns every line of the check red.
 - **A family whose RULES move: what the doors add to the recipe below** ("A NEW FAMILY, step by step" is the state's half).

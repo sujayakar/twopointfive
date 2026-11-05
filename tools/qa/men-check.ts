@@ -10,7 +10,7 @@
 //   written    src/sim/men/cols.ts and rust/sim/src/men.rs are what the schema writes
 //   both sides the module says the same hash, the same rows and every column where the store has it (a game holds these as it starts; a built.ts of another schema throws by name)
 //   generator  a table with every kind of column on every kind of record (the animator's kept state among them) writes accessors that read back what was written, bit for bit, and a Rust struct with those columns
-//   rows       the lowest free row, zeros; a freed row is free once; a handle taken before a row changed hands throws by name; a man who left throws by name when read
+//   rows       the lowest free row, zeros; a freed row is free once; a handle taken before a row changed hands throws by name; a man who left reads his numbers as they stood
 //   same bytes a game's men stand in its block once a tick has opened, and the module's fold of each row is the fold of what the accessors read
 //   snapshot   a snapshot put back brings a man's columns back; put into another game they are that game's
 //   levels     every level of levels/ fits the rows, and the fullest is named
@@ -68,10 +68,12 @@ console.log(`a man's columns · profile ${process.env.TPS_PROFILE ?? 'frozen'}${
   const a = new C.ManCols(), b = new C.ManCols(); M.standMan(a, st); M.sameMan(b, a); a.owner = 5; a.since = 1.5; const same = b.owner === 5 && b.since === 1.5;
   st.leave(second); const stale = BREAK ? '' : throwsName(() => st.rowOf(h), 'stale handle'), twice = throwsName(() => st.leave(second), 'left twice');
   const third = st.enter(), again = third === second && st.handleOf(third) !== h && throwsName(() => st.rowOf(h), 'stale handle') !== '';
-  const row = a.r; M.manLeaves(a, b); const gone = BREAK ? '' : throwsName(() => a.owner, 'after he left'), goneB = throwsName(() => { b.since = 1; }, 'after he left');
+  const row = a.r, ah = st.handleOf(a.r); M.manLeaves(a, b);
+  const kept = !BREAK && a.owner === 5 && b.since === 1.5 && a.S !== st && b.S === a.S, handle = throwsName(() => st.rowOf(ah), 'stale handle');
   const fresh = new C.ManCols(); M.standMan(fresh, st); const zero = fresh.r === row && fresh.owner === 0 && fresh.since === 0;
-  verdict(ok1 && same && !!stale && !!twice && again && !!gone && !!goneB && zero, 'rows: the lowest free row, zeros; a stale handle and a man who left throw by name; a row given again is a new generation',
-    `two rows in order ${ok1} · two objects of one man read one row ${same} · stale: ${stale.slice(0, 60)} · a row left twice: ${twice.slice(0, 40)} · given again ${again} · a man who left: ${gone.slice(0, 50)} · his row again, zeros ${zero}`); }
+  fresh.owner = 9; const apart = a.owner === 5; M.manLeaves(a, b); const once = a.owner === 5;
+  verdict(ok1 && same && !!stale && !!twice && again && kept && !!handle && zero && apart && once, 'rows: the lowest free row, zeros; a stale handle throws by name; a man who left keeps his numbers, and his row is the next man\'s, zeros',
+    `two rows in order ${ok1} · two objects of one man read one row ${same} · stale: ${stale.slice(0, 60)} · a row left twice: ${twice.slice(0, 40)} · given again ${again} · he reads what he was: ${kept} · his row again, zeros ${zero} · apart ${apart}`); }
 
 // ---- a stood game: its men in its block, the module reading the bytes the accessors write, a snapshot
 { const W: any = await standUp({ seed: 7 }), g = W.game; for (let f = 0; f < 5; f++) W.step(DT);
