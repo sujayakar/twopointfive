@@ -1214,29 +1214,50 @@ first system across (the game's own maths). No rule of play has changed and noth
     smoke under a standing head out of doors, thinning upward, the drifting grid has the shape and is thicker than it at every height below
     the head (deciding the other way on 0 %, 19 %, 12 % and 4 % of the 26, 26, 26 and 24 lines under the sky), and the grid in still air is far thicker (38 %,
     38 %, 31 %, 38 %). One station, one adapter at Very low, two early ages: a first look and no row. NOT DONE: no GPU has been asked a line at any of the four heights; their rows are to be set from the first such run.
-  - A KEPT REPORT IS ASKED AGAIN BY ITS OWN QUESTIONS (2026-11-05; `ModelErr`'s `again`, `planAgain`, `Report.asked`, `Report.level`, `levelOf`).
+  - A KEPT REPORT IS ASKED AGAIN BY ITS OWN QUESTIONS (2026-11-05; `ModelErr`'s `again`, `planAgain`, `Report.asked`, `Report.look`, `lookOf`).
     A report used to be held to the models as they are now by walking its plan again and finding the walk dealt the very same questions (the
     `world` word), so any change to what a plan deals (a height, a count, the rule for a line) left every kept report judged 'as recorded' and
     still green. A walk handed a report now asks ITS stations, points, lines and ages again, in its order, dealing nothing: all of that is read
-    from the report's own samples, and from the plan's row it carries (`asked`) only how long a station is stood at first. WHERE IT IS ASKED
-    AGAIN: where the stand is the one it was made on, as far as the tool can say — its `level` word is this stand's (`levelOf`: the level as
-    authored, `savestate.ts levelFingerprint`, and every door leaf as it stands, to the millimetre; nothing the picture alone reads — a first
-    version took each static's flags whole and the word moved with the wet ground's shine), its scene names a seed (who carries a lamp where
-    is dealt by the die) and names nothing but the plain page's words (`seed`, `solo`, `paused`, `mute`, `quality`: the tool stands up no
-    other world). The two stands of the office differ by two door leaves (the manager's and the break room's stand otherwise), so the frozen
-    stand asks no page's report again, as it could not ask the full one before; it did ask the one-station software report, whose lines pass
-    neither door, and that is given up for the rule. A REPORT THAT IS NOT ASKED AGAIN IS NOT RED: its verdict line reads AS RECORDED ONLY,
-    the reason is printed, and the tool's last line counts the reports that hold nothing here — so the default (frozen) run is green and says
-    `0 of 2`, and THE MODELS ARE HELD TO THE RECORDED PICTURE ON THE PAGE'S STAND ALONE (`TPS_PROFILE=shipped`: `2 of 2`). When the office is
-    edited the word moves and the kept pictures hold nothing anywhere until a GPU records a new one: that is said on the last line and is
-    nobody's red check, because only a machine with a GPU can mend it. The two reports kept from before had their row and level written into
-    the file by hand (the rows as the plans stood: 6 stations, 40 points, 32 lines at 1.5 m, ages 3, 8, 15 and 25 s, settle 2 s; 1, 24, 16,
-    3 and 6 s, 0.5 s; the level word the page's stand's), nothing else in them touched; asked again by their own questions on the page's
-    stand, every model answers what it answered when the plan was dealt again (the same verdict lines, but for the height in a part's name).
-    A page's own level word is the headless page's stand's (the software adapter's page said `de68dc84.8ttrl8`, the word in the two kept
-    reports; no page on a GPU has said its word yet). `--keep` is gone: it added where each sample stands to a report from
-    before the walk said, and a page's report is now a fixture as it comes. The `world` word is still written (a word for the questions) and
-    decides nothing.
+    from the report's own samples, and from the plan's row it carries (`asked`) only how long a station is stood at first.
+    WHERE IT IS ASKED AGAIN: where its questions look out on the world they did. A report carries a word for that (`look`, `lookOf`), read off
+    the box world by the CPU's own lines, and the tool works the word out again for the report's questions on its own stand: the lamps that
+    are things of the level (an emitting surface or a lamp with its fixture: where each hangs, how far it reaches); for every light point,
+    which of those lamps in reach a wall stands before; for every sight line, whether it is a line still, each way; for every station, how far
+    a level ray runs before a wall, eight ways round at two heights, to a quarter metre and no further than 6 m. So a wall moved, cut or
+    opened near a question moves the word, and a lamp moved, and a door stood otherwise where a question passes; and what no line of these
+    meets does not: a box drawn and nothing else, what a box is made of, a car dressed at the far end of the yard, a door two rooms off, a
+    mark a rule sets on a box for another reader. Nor the hour, the weather, whether a lamp is on or who carries one where: the stand's rules
+    and the seed decide those, so the tool also wants the report's scene to name a seed and nothing but the plain page's words (`seed`,
+    `solo`, `paused`, `mute`, `quality`: it stands up no other world). The word says 'these questions look out on the same walls and lamps',
+    not 'the same picture' (the picture also reads paint), and a report asked again prints how far each model's answers have moved from the
+    ones it recorded. The word is steady while no door moves (the same after 3 updates and after 300, for two seeds, on both stands).
+    THE TWO STANDS: the frozen stand's office has two doors standing otherwise (the manager's, the break room's). The full report's
+    questions meet them and it is asked again on the page's stand alone; the one-station software report's do not, and it is asked again on
+    both, as it was before any of this. A REPORT THAT IS NOT ASKED AGAIN reads AS RECORDED ONLY on its verdict line, the reason is printed,
+    and the tool's last line counts the reports that hold nothing here (frozen: `1 of 2`; the page's stand: `2 of 2`).
+    ON THE PAGE'S STAND A REPORT KEPT UNDER `tools/qa/fixtures/modelerr/` MUST BE ASKED AGAIN, OR THE TOOL IS RED, a report at a time
+    (`MODELERR_BREAK=look` reads every report as looking out on another world, and there each kept report must fail; on the frozen stand
+    nothing is owed and the tool says the word fails nothing): a kept picture holds the models on that stand or nowhere, and a level stood
+    otherwise must not empty the check without a word. What mends that red is a new report from a GPU (`?modelerr&seed=1&solo`), or taking
+    the stale report out of the folder: a diff somebody reads. A report of a scene the tool never stands up is not asked by design and is no
+    fault. A word for `MODELERR_BREAK` that is no red path is refused (exit 2).
+    HOW IT CAME TO THIS (the first day, three words tried): a word of every box of the level with its whole flags moved with the wet ground's
+    shine; one on the checkpoint's fingerprint (`savestate.ts levelFingerprint`) moved when the office's two cars gained 28 boxes of
+    drawn-only trim and their bodies were cut to their lines (811 boxes for 783 on the page's stand), and both kept reports held nothing on
+    either stand with the tool green; one of the whole floor plan, blind to shape, was blind to a cut wall beside a station and to a lamp
+    moved. Each was a guess at what matters over the whole level. The word as it is asks only what the report's own questions meet, of the
+    box world itself. On the tree before the cars changed and on the one after, both reports have the same words, and asked again give every
+    model the very answers they gave before, to the last digit printed (no end of a line and no light point of the full report is within
+    3.7 m of a car). WHAT THE PICTURE WOULD SAY OF THE CURVED CARS NOBODY HAS MEASURED: the kept pictures are of the cars as whole boxes.
+    The two reports kept from before had their row and their word written into the file by hand (the rows as the plans stood: 6 stations,
+    40 points, 32 lines at 1.5 m, ages 3, 8, 15 and 25 s, settle 2 s; 1, 24, 16, 3 and 6 s, 0.5 s; the words worked out on the page's stand),
+    nothing else in them touched; asked again by their own questions, every model answers what it answered when the plan was dealt again
+    (the same verdict lines, but for the height in a part's name). ON THE PAGE (the software adapter only, `modelerr-page.cjs` on
+    the smallest plan: 24 light points and 96 lines answered, no page error): the report the page made says its word at the end of its walk,
+    and the headless tool, handed that file on the page's stand, works out the same word in another engine at the start of its own and asks
+    it again. No page on a GPU has said a word yet. `--keep` is gone: it added where each sample
+    stands to a report from before the walk said, and a page's report is now a fixture as it comes. The `world` word is still written (a
+    word for the questions) and decides nothing.
   - THE PAGE: `localhost:5173/?modelerr&seed=1&solo` (`=quick` two stations, `=tiny` one; `solo` is the solo night straight in — any mission's own
     words do as well). The walk does not begin under a menu (`ModelErrPage.held`: the start page, with the title's reel playing behind it, is one),
     and on an address that opens the start page the tool says so on a note at the foot of the page that takes no click (seen in a headless
@@ -1251,13 +1272,14 @@ first system across (the game's own maths). No rule of play has changed and noth
     room (`waits`: no light point read with smoke out, no line read from a cleared room, no height's lines put to the picture later than
     another's, the models' answers those of a walk with no picture to the bit; `MODELERR_BREAK=move` = the walk does not wait
     and it must fail, `=turns` = it queues its lines a height at a time and it must fail), and judges every report
-    under `tools/qa/fixtures/modelerr/` (and `--report f`): as recorded, and, where the stand here is the one the report was made on, WITH THE
-    MODELS AS THEY ARE NOW against the recorded picture, the report's own questions asked again (the sub-bullet above: on the page's stand,
-    while the office stands as it was recorded). So a picture recorded once on a GPU holds the models to their budget from then on with no GPU.
+    under `tools/qa/fixtures/modelerr/` (and `--report f`): as recorded, and, where its questions look out on the world they did, WITH THE
+    MODELS AS THEY ARE NOW against the recorded picture, the report's own questions asked again (the sub-bullet above), and on the page's
+    stand is red for a kept report that was not (`=look`). So a picture recorded once on a GPU holds the models to their budget from then on
+    with no GPU.
   - MEASURED ON A GPU, 2026-11-04 (the maintainer's run: Apple Metal, the office at night, `?modelerr&seed=1&solo`, plan full, build aa4360cd; kept
-    as `tools/qa/fixtures/modelerr/office-full-metal.json`, a version 1 report with where its samples stand added by a flag since removed; its level is the
-    SHIPPED stand's, where the models answer as the page's did — smoke to the bit, light within 0.004 — and the frozen stand's level is another
-    and reads it as recorded). All 944 answered. UNDER A ROOF the models are close: `estimate` off by 0.076 of the meter at the middle, 0.145 at
+    as `tools/qa/fixtures/modelerr/office-full-metal.json`, a version 1 report with where its samples stand added by a flag since removed; its questions look out on the
+    SHIPPED stand's office, where the models answer as the page's did — smoke to the bit, light within 0.004 — and on the frozen stand's they
+    meet two doors that stand otherwise, and it is read as recorded there). All 944 answered. UNDER A ROOF the models are close: `estimate` off by 0.076 of the meter at the middle, 0.145 at
     the 95th, the other side of the lit bar on 4.5 %; `lit` (the light that comes round) 0.029, 0.136 and 2.3 %; smoke at 3, 8 and 15 s over 165
     lines of the two roofed stations, `blobs` 0.009 of the light at the middle, 0.903 at the 95th, the other side of the hiding bar on 13.9 %;
     `grid` 0.019, 0.526 and 10.3 % (their 25 s lines are not counted, so no picture of a room's smoke at 25 s has been measured and the two smoke
