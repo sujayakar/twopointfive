@@ -329,6 +329,13 @@ export class BoxWorld {
   rig: { r0: Float32Array; r1: Float32Array; kPad: number; byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }> } | null = null;
   static readonly RB_QUANT = 0.001;   // = render/sdfrig.ts RB_QUANT (shaders/sdfrig.wgsl coneRb decodes it)
   visible: Uint32Array; visibleCount = 0; visibleBuf: GPUBuffer;
+  /** THE STATICS ARE DRAWN FROM THE TOP DOWN. The camera looks down, so what stands higher is nearly always nearer: drawn first, it takes the depth and
+   *  what lies under it (the floor under a desk, the ground slab under the floor) fails the depth test before it is shaded, whatever it is made of.
+   *  `drawTop[i]` = static i's top as the GPU has it (single floats, so two tops in one plane there are one number here); `drawRank[i]` = its place in the
+   *  order: tops falling, equal tops in the list's own order, so of two TOPS in one plane the same box wins as ever. Two SIDES in one plane are now won by the
+   *  taller box, not the earlier one (docs/agents/render.md). Ranked again only when a static's top moves or the list's length does (`drawRankN`, -1 = stale).
+   *  `drawSlot` is scratch: the sort's list, then the frame's laying out of the drawn statics by rank. The dynamics and the cut list follow as they did. */
+  private drawTop = new Float32Array(0); private drawRank = new Uint32Array(0); private drawSlot = new Uint32Array(0); private drawRankN = -1;
   staticsDirty = true;
   /** bumped by game/wallbreak.ts whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
    *  itself; a host that mirrors the statics elsewhere (the native engine's acceleration structure) folds this into its static serial */
@@ -608,6 +615,7 @@ export class BoxWorld {
     let matched = 0, fresh = 0, unkeyed = 0;
     // ---- statics: packed only where the shadow says the inputs moved (see statShadow); the visible prefix rebuilt from their flags every frame (a flag test a box)
     const SS = BoxWorld.SS; let staticsChanged = false;
+    if (this.drawTop.length < this.maxBoxes) { this.drawTop = new Float32Array(this.maxBoxes); this.drawRank = new Uint32Array(this.maxBoxes); this.drawSlot = new Uint32Array(this.maxBoxes); this.drawRankN = -1; }
     if (this.statShadow.length < nStat * SS) { this.statShadow = new Float64Array(Math.max(nStat, this.maxBoxes) * SS); this.statMarked = new Uint8Array(Math.max(nStat, this.maxBoxes)); this.statShadowMarks.length = 0; this.statShadowCut.length = 0; this.statShadowN = 0; }
     const forceAll = this.statEpoch !== this.packEpoch || this.statMarksOn !== marksOn || this.statShadowN !== nStat;
     const S = this.statShadow, SM = this.statShadowMarks, SK = this.statMarked;
@@ -625,6 +633,7 @@ export class BoxWorld {
         if (SK[i]) marked++;
       } else {
         staticsChanged = true;
+        { const top = Math.fround(Math.fround(c[1]) + Math.fround(rot ? BoxWorld.heightExtent(b) : h[1])); if (top !== this.drawTop[i]) { this.drawTop[i] = top; this.drawRankN = -1; } }   // (said here, not kept in a local: an upload that throws further on has still said it)
         SK[i] = this.packBox(i, b, marksOn) ? 1 : 0; if (SK[i]) marked++;
         S[so] = c[0]; S[so + 1] = c[1]; S[so + 2] = c[2]; S[so + 3] = b.yaw; S[so + 4] = h[0]; S[so + 5] = h[1]; S[so + 6] = h[2]; S[so + 7] = b.flags; S[so + 8] = b.owner;
         S[so + 9] = al[0] * wk; S[so + 10] = al[1] * wk; S[so + 11] = al[2] * wk; S[so + 12] = em[0]; S[so + 13] = em[1]; S[so + 14] = em[2]; S[so + 15] = b.cutHeight; S[so + 16] = mw; S[so + 17] = mg;
@@ -637,6 +646,15 @@ export class BoxWorld {
         else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i; else cv[nc++] = i; } else this.visible[nv++] = i;   // (CUT BOXES: a cut static goes to the cut list, drawn by the cut pipeline)
       }
     }
+    if (this.drawRankN !== nStat) {   // the order the statics are drawn in: tops falling, the list's own order between equal tops
+      const top = this.drawTop, ord = this.drawSlot.subarray(0, nStat); for (let i = 0; i < nStat; i++) ord[i] = i;
+      ord.sort((a, b) => top[b] - top[a] || a - b);
+      for (let r = 0; r < nStat; r++) this.drawRank[ord[r]] = r;
+      this.drawRankN = nStat;
+    }
+    if (nv > 0) { const rank = this.drawRank, slot = this.drawSlot, vis = this.visible; slot.fill(0xFFFFFFFF, 0, nStat);   // (a static's word is its bare index, and no index is 0xFFFFFFFF)
+      for (let k = 0; k < nv; k++) slot[rank[vis[k]]] = vis[k];
+      for (let r = 0, w = 0; w < nv; r++) if (slot[r] !== 0xFFFFFFFF) vis[w++] = slot[r]; }
     this.statEpoch = this.packEpoch; this.statMarksOn = marksOn; this.statShadowN = nStat;
     if (forceAll || staticsChanged) { this.gridStatN = -1; this.rowsStatN = -1; }   // (the cached static half of the trace grid and the statics' rows go up again from these words below)
     // ---- dynamics: packed every frame, as ever

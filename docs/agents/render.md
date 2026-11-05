@@ -1864,6 +1864,20 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **THE STATICS ARE DRAWN FROM THE TOP DOWN** (11-05; every page; no switch and no second path: it is the order of one draw). The g-buffer drew the
+  static boxes in the list's order with the depth test at "less", so a ground slab laid first under a whole level (the office kit's box 0, 40 by 28 m)
+  was shaded over the whole screen and then drawn over by the floor. Free while that slab was plain; once car parks said tarmac the pass cost a third
+  more under the look, indoors as much as outside (the performance goal's timing). `scene/boxes.ts BoxWorld` now keeps a rank a static (`drawRank`: tops
+  falling as the GPU has them in single floats, a tilted box by its real height; equal tops in the list's own order) and lays the drawn plain statics out
+  by it each upload; ranked again only when a top moves or the list's length does. The dynamics and the cut list follow as they did. No shader text, no
+  pipeline, no buffer changes.
+  TIMED on a rented NVIDIA A10 (relative; the office under the look, High, a study build with the same order): the g-buffer where the page frames Sam
+  indoors 0.90 ms to 0.35, over the car park 0.91 to 0.65; Medium indoors 0.72 to 0.28. That is under what it cost before tarmac (0.67).
+  WHAT MOVES IN THE PICTURE: of two TOPS in one plane the same box wins as ever. Of two SIDES in one plane (a post in a wall's end: the flat pairs the
+  flicker check lists) the TALLER box is now drawn first where the earlier one was; a code review counted 90 such pairs in different paints over the 59
+  level files. Those pairs already fight, and the exporter's rule for them is still to come. The office's car park drawn both ways on the A10 shows no
+  difference but the rain. NOT KNOWN: what an Apple GPU gains (it hides covered fragments by itself, so likely little); nobody has looked at one of the
+  90 pairs both ways. The dynamics are still drawn after the floor they stand on. The check is `draworder` (family render; `DRAWORDER_BREAK=1` fails).
 - **A LOOK MAP'S LATTICES ARE HASHED ONCE A LAYER** (11-05; the look's page only, at its boot and whenever a level names a new stuff; no switch, because
   no map moves by a byte). `render/lookTex.ts cells2` asked nine cells where their points lie for every texel: three hashes and a square root a cell, most
   of what a layer cost. A lattice (size, seed, jitter) now fills a table once (`cellTable`, emptied as a layer starts and ends), the nine are told apart by
