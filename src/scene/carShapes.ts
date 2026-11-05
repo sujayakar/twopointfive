@@ -27,7 +27,16 @@
 import type { Vec3 } from '../math/vec';
 import { cutFit, cutPlane, cutRecord } from './cut';
 import type { BoxShape, ShapePiece, ShapePlane } from './shapes';
+import { saidAs, madeOf } from './stuff';
 
+/** A VEHICLE'S BODY SAYS IT IS A CAR'S COAT, whatever paint it is given: the one place the word is said (the kits' vehicles, the plain car, and a vehicle
+ *  a level builds by hand). A paint's ROW cannot say it: the truck enamels are cots, lockers and floor lines too, a tanker's cream is a wall's. `coated`
+ *  is the same for a kit's Mat. */
+export const carCoat = (paint: readonly number[]): Vec3 => saidAs('carpaint', paint);
+export const coated = <T extends { albedo: readonly number[] }>(m: T): T => ({ ...m, albedo: carCoat(m.albedo) });
+/** WHAT A CAR SAYS IT IS MADE OF, whatever colour it is handed: its coat car paint, its windows glass — SOLID glass, nothing is modelled behind them; a round
+ *  cracks it and it stands (game/particleFx.ts HITSTUFF) — and its tyres rubber. The plain car's three paints (officeGen.ts car, levelKit.ts car). */
+export const carSays = (body: readonly number[], black: readonly number[]) => ({ paint: carCoat(body), glass: madeOf('glass', [0.07, 0.08, 0.1]), tyre: saidAs('rubber', black) });
 /** a paint as a kit hands it (its Mat) */
 export type CarPaint = { albedo: Vec3; rough?: number; metal?: boolean };
 const D = Math.PI / 180, r6 = (x: number) => Math.round(x * 1e6) / 1e6;
@@ -134,7 +143,10 @@ const edgesOff = (h: Vec3, r: number): ShapePlane[] => { const k = Math.SQRT1_2;
  *  on it). Every vehicle here hands out its own (`tops`), so what a level lays or stands on a roof is fitted to the roof by ONE rule, below. */
 export interface BowedTop { c: Vec3; h: Vec3; shape: BoxShape }
 /** the round a bowed top lies on: the index of the axis ACROSS the bow (0 = x, 2 = z), the top's half width there, and the round's radius */
-const bowOf = (t: BowedTop) => { const a = t.shape.arc!, x: 0 | 2 = a.axis === 1 ? 2 : 0, w = t.h[x]; return { x, w, R: (w * w + a.rise * a.rise) / (2 * a.rise) }; };
+const bowOf = (t: BowedTop) => { const axis = bowAxis(t), x: 0 | 2 = axis === 1 ? 2 : 0, w = t.shape.arc ? t.h[x] : Math.min(t.h[1], t.h[x]), rise = t.shape.arc?.rise ?? w; return { x, w, R: (w * w + rise * rise) / (2 * rise) }; };
+/** the axis a bowed top is round about: an arc's, or a ROUND's own — a pipe, a log or a drum lying is a bowed top too (its top half is the half round an arc
+ *  may at most be: its box's top is the crown, and its radius the smaller half across its axis, as scene/shapes.ts cuts it) */
+const bowAxis = (t: BowedTop): 1 | 3 => { const a = t.shape.arc?.axis ?? t.shape.round; if (a === undefined) throw new Error('carShapes: a bowed top says an arc or a round (a flat top takes no sheet that follows a bow)'); return a; };
 /** how far a bowed top has fallen `s` metres to the side of its crown */
 export const fallOf = (t: BowedTop, s: number): number => { const { R } = bowOf(t); return R - Math.sqrt(Math.max(0, R * R - s * s)); };
 /** SNOW OR DUST LAID ON A BOWED TOP, as a level lays it: a thin flat slab (its centre `c` in the vehicle's frame, its half size h, lying along the vehicle).
@@ -152,7 +164,7 @@ export function layOn(t: BowedTop, c: Vec3, h: Vec3, paint: CarPaint, o: { nth?:
   if (nth === 0 && h[x] - Math.abs(d[x]) > keep) {   // the sheet: concentric with the bow, said from the top's own centre
     const wide = Math.min(h[x] - Math.abs(d[x]), 0.75 * w), R2 = R + lift, rise = r6(R2 - Math.sqrt(R2 * R2 - wide * wide)), off: Vec3 = x === 2 ? [d[0], r6(t.h[1] + lift - rise / 2), 0] : [0, r6(t.h[1] + lift - rise / 2), d[2]];
     const sh: Vec3 = x === 2 ? [h[0], r6(rise / 2), r6(wide)] : [r6(wide), r6(rise / 2), h[2]], cut = biting(sh, (t.shape.cut ?? []).map(p => moved(p, off, lift)));
-    (t.shape.with ??= []).push({ off, h: sh, ...paintOf(paint), arc: { axis: t.shape.arc!.axis, rise }, ...(cut.length ? { cut } : {}), old: true });
+    (t.shape.with ??= []).push({ off, h: sh, ...paintOf(paint), arc: { axis: bowAxis(t), rise }, ...(cut.length ? { cut } : {}), old: true });
   }
   return said({ ...cutOf(h, [side(1), side(-1), ...own]) });
 }

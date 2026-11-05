@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-36912a1e16571075f63ee624bcc49faadeaff942
+# the huts' walls say stucco (the tan partition paint's row says cloth): 32 boxes say a word, nothing else moved
+9f72ebc59e558d1ae35d0a0ab0ca15ff9c75b0ab

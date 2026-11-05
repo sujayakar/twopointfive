@@ -249,10 +249,10 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
     check(ok && !up.has('look') && !up.has('hills'), `the dress's own word is not the look prototype's: nothing of it rides along, nor a look word beside it (${tp.went[0]})`);
     store.clear();
     // a trial the look panel's button keeps off on this machine: the run times the look that page shows, and its address says which
-    const kept = new Map<string, string>([['twopointsix.hillrays', '0'], ['twopointsix.geotry', '0'], ['twopointsix.fronttry', '1'], ['twopointsix.cutboxes', '0']]); (globalThis as any).localStorage = { getItem: (k: string) => kept.get(k) ?? null };
+    const kept = new Map<string, string>([['twopointsix.hillrays', '0'], ['twopointsix.geotry', '0'], ['twopointsix.lorrytry', '1'], ['twopointsix.cutboxes', '0']]); (globalThis as any).localStorage = { getItem: (k: string) => kept.get(k) ?? null };
     const tk = tab('?look&geo=1&round=1&bench'), tn = tab('?bench'); benchBegin(false, tk); store.clear(); benchBegin(false, tn); store.clear(); delete (globalThis as any).localStorage;
     const uk = new URLSearchParams(searchOf(tk.went[0] ?? '')), un = new URLSearchParams(searchOf(tn.went[0] ?? ''));
-    check(tk.went.length === 1 && uk.get('hills') === '0' && uk.get('geo') === '1' && uk.get('cutboxes') === '0' && uk.get('round') === '1' && !un.has('cutboxes') && !uk.has('front') && !uk.has('lorry') && !uk.has('dress') && tn.went.length === 1 && !un.has('hills') && !un.has('geo'), `a look trial this machine keeps off rides along as its own word (the cut boxes' switch with them), the address's word wins over the store, and a plain run takes nothing of it (${tk.went[0]})`); }
+    check(tk.went.length === 1 && uk.get('hills') === '0' && uk.get('geo') === '1' && uk.get('cutboxes') === '0' && uk.get('round') === '1' && !un.has('cutboxes') && !uk.has('lorry') && tn.went.length === 1 && !un.has('hills') && !un.has('geo'), `a look trial this machine keeps off rides along as its own word (the cut boxes' switch with them), the address's word wins over the store, and a plain run takes nothing of it (${tk.went[0]})`); }
   // a run through to the end
   const t1 = tab('?quality=low&bench'); check(benchBegin(false, t1) === null && t1.how[0] === 'replace', 'begun from the address: that address is replaced, so Back does not ask for another run');
   let at = searchOf(t1.went[0]), steps = 0; const closedTo: string[] = [];
