@@ -139,9 +139,9 @@ It is no second way of building the name.
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **drum**(x, z, colour = 'drumBlue', yaw = 0) | COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid | solid to 0.88 | 0.56 × 0.56 × 0.88 | 4 solid, 1 round, 16 markings | drumRed | library-hall |
+| **drum**(x, z, colour = 'drumBlue', yaw = 0) | COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid. Steel in any paint (`steelIn`) | solid to 0.88 | 0.56 × 0.56 × 0.88 | 4 solid, 1 round, 16 markings | drumRed | library-hall |
 | **drums**(x, z, n = 3, yaw = 0) | a group of drums: n standing in a tight cluster from (x, z), colours dealt by position | solid to 0.88 | 1.54 × 1.18 × 0.88 | 16 solid, 4 round, 64 markings | rust, drumBlue, olive | gwot-yard |
-| **drumDown**(x, z, yaw = 0, colour = 'rust') | COVER (to the chest lying, the knee standing): a drum on its SIDE, chocked | solid to 0.58 | 0.89 × 0.64 × 0.58 | 4 solid, 1 marking | rust, woodGrey | gwot-yard |
+| **drumDown**(x, z, yaw = 0, colour = 'rust') | COVER (to the chest lying, the knee standing): a drum on its SIDE, chocked, 0.88 long along local X. Steel in any paint (`steelIn`). Hands back its top, so a level lays snow or dust along it with `lay` | solid to 0.58 | 0.88 × 0.64 × 0.58 | 3 solid | woodGrey, rust | gwot-yard |
 | **jerryCan**(x, z, yaw = 0, colour = 'olive') | PROP (bin): a JERRY CAN, 20 l — olive steel, or the yellow / blue plastic ones that carry everything | loose | 0.34 × 0.16 × 0.45 | 1 loose (3 parts), 2 markings | olive, GWOT_PALETTE.iron | gwot-yard |
 | **gasBottle**(x, z, colour = 'drumRed') | PROP (bin): a GAS BOTTLE (LPG), 0.3 across with its collar | loose | 0.4 × 0.4 × 0.62 | 1 loose (3 parts) | drumRed, GWOT_PALETTE.iron | gwot-yard |
 | **crates**(x, z, yaw = 0, n = 2, colour = 'olive') | COVER: wooden AMMUNITION CRATES, 0.9 × 0.4 × 0.3 each, n stacked (1 = shin, 3 = a waist-high rest): olive, battens across the lid, a stencil block | solid to 0.9 | 0.94 × 0.47 × 0.9 | 3 solid, 12 markings | olive | gwot-yard |
