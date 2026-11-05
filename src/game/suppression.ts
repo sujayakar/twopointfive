@@ -6,6 +6,8 @@
 // behind whatever he stands at, a shift to cover when it will not stop — all behind Game.tune.suppression); Sam's own rounds open up with his (player.ts, the
 // one mechanical effect this lane gives him; his picture / mix / reticle are lane R4's, reading the same Player.sup). What the player learns by feel — two close
 // rounds put a man's head down for a second and a half — is literally the guards' rule with these constants.
+import { SupCols } from '../sim/men/cols';
+import type { MenStore } from '../sim/men/store';
 import { men, isManId } from './seats';
 import { SideMap } from '../math/side';
 import { conditionSup } from './condition';
@@ -67,30 +69,11 @@ export const SUPPRESSION = {
 
 /** Per character: the scalar and its pulse envelope, where the last suppressing round came from, and — for a guard — the reaction clocks (unused on Sam).
  *  Lives on Player.sup / Guard.sup; dies with them (restart, resetGuards), so nothing outlives an encounter. */
-export class Sup {
-  /** the scalar, 0‥cap */
-  v = 0;
-  /** envelope of the last increment (jumps to the round's add, decays at kickDecay/s): R4's per-round pulse */
-  kick = 0;
-  /** the muzzle the last suppressing round left, whose it was (Character id), and when */
-  src: Vec3 | null = null; srcId = -1; srcT = -100;
-  /** the largest single add lately and the game time the scalar last crossed each line upward (edges for the anim / barks; the QA probes print them) */
-  lastAdd = 0; flinchAt = -100; pinnedAt = -100;
-  /** last frame's band (0 under flinch, 1 flinch, 2 pinned) — the rising edges are the events */
-  band = 0;
-  // ---- guard reaction clocks (guards.ts, through headDown below)
-  /** seconds of head-down still owed from the last crossing of `pinned` (drawn from SUPPRESSION.headDown) */
-  downT = 0;
-  /** latched above `pinned`, released under `release`: head down while this OR downT */
-  latched = false;
-  /** seconds spent head-down since s was last under `flinch` — displace at displaceAfter */
-  pinnedT = 0;
-  /** the cover spot he is shifting to right now (null = not displacing), when that shift began, how many this life, and until when he holds the spot he reached */
-  cover: Vec3 | null = null; displacedAt = -100; displaces = 0; coverUntil = -1;
-  /** his last suppression line: when, and which moment it was; a line the clocks (or his own radio call) held back, to be said inside the next couple of seconds if it still applies */
-  barkT = -100; barkWas: SupMoment | null = null; pending: SupMoment | null = null; pendingT = -100;
-  /** was over `pinned` at some point and has not been under 0.02 since (the hard man's 'that all you've got?' when it drains without him being hit) */
-  wasPinned = false;
+export class Sup extends SupCols {
+  /** which moment his last line was; a line the clocks (or his own radio call) held back, to be said inside the next couple of seconds if it still applies */
+  barkWas: SupMoment | null = null; pending: SupMoment | null = null;
+  /** his numbers are columns of his row (sim/men/schema.ts): `of` is the man */
+  constructor(of: { S: MenStore; r: number }) { super(); this.S = of.S; this.r = of.r; this.initSup(); }
   /** everything the reactions keep, back to rest (a man no longer alert, the flag off, the AI off) — the scalar itself is physics and stays */
   clearReactions() { this.downT = 0; this.latched = false; this.pinnedT = 0; this.cover = null; this.coverUntil = -1; }
 }
@@ -313,7 +296,7 @@ export function suppressionSummary(g: Game): string {
   if (!shown.length) { const n = g.nearestLivingGuard(); if (n) shown = [n]; }
   for (const gd of shown) {
     const s = gd.sup; const bits = [`${gd.callsign} ${f2(s.v)}`];
-    if (s.cover) bits.push(`→ cover (${f1(s.cover[0])}, ${f1(s.cover[2])})`);
+    if (s.cover) bits.push(`→ cover (${f1(s.coverX)}, ${f1(s.coverZ)})`);
     else if (s.downT > 0 || s.latched) bits.push(`head-down ${f1(Math.max(s.downT, 0))} s (pinned ${f1(s.pinnedT)} s)`);
     else if (g.time < s.coverUntil) bits.push(`holding cover ${f1(s.coverUntil - g.time)} s`);
     else if (s.v >= SUPPRESSION.flinch) bits.push('flinching');

@@ -18,6 +18,8 @@
 //            his shoot band and closes again on the beat (guards.ts, aimBrake), and Sam's ring blooms while he moves.
 //   Guard round = (row base + range term) × settle + target + shooter + suppression (+ burst growth); Sam's = base(stand / crouch) × settle + target + shooter
 //   + his suppression term (player.ts adds the two). The composition lives here (guardRound / playerAim); the fire sites only ask.
+import { AimCols } from '../sim/men/cols';
+import type { MenStore } from '../sim/men/store';
 import { Vec3, v3, clamp, lerp, wrapAngle, DEG } from '../math/vec';
 import { playerGroundVel } from './guards';
 import type { Game, Guard } from './game';
@@ -99,29 +101,18 @@ const LOS_NOW = 0.05;
 
 /** Per shooter (Guard.aim / Player.aim): the track and what it is on, the bearing bookkeeping behind the target-motion term, and the last round's numbers for the
  *  panel / the QA soak. Dies with the Guard / Player (restart, resetGuards). */
-export class AimState {
-  /** 0‥1: how lined-up he is on the target */
-  track = 0;
+export class AimState extends AimCols {
   /** what the track is on: 'sam' for a guard; `g<id>` (a man under the reticle) or 'free' for the player — a new man is a new track */
   tgtKey = '';
-  /** shooter → target bearing last frame (NaN = none yet: the jump test) and the target's angular rate across the shooter — its OWN velocity square to the line
-   *  over the range, smoothed (rad/s): what the target term reads */
-  lastBearing = NaN; bearingRate = 0;
-  /** his own ground speed remembered over feetTau (m/s): the feet term reads max(now, this − steadyPace), so a skid to a halt out of a run still costs the next round or two */
-  speedSm = 0;
-  /** the fastest his feet have gone, let go over AIMCOST.stopTau (m/s; aimcost.ts — 0 while that rule is off): stopping does not clear the cone on the frame */
-  moveSm = 0;
-  /** player: the last man the reticle left and when — back onto the SAME man inside a third of a second (the snap letting go for a frame at its edge) keeps the track */
-  lastMan = ''; leftT = -100;
-  /** the track he had on `lastMan` as he left it (aimcost.ts: given back if he is straight back on it across a lamp) */
-  leftTrack = 0;
-  /** guard: planted for a shot in the shoot band this frame (aimBrake said so) — the panel / probes read it */
-  braking = false;
+  /** player: the last man the reticle left — back onto the SAME man inside a third of a second (the snap letting go for a frame at its edge) keeps the track */
+  lastMan = '';
   /** guard: his last round(s) went into the frame a hand off the muzzle (noteBore) — how many running, and from where; two and that spot is no line (boreFouled) */
   fouled: { n: number; pos: Vec3 } | null = null;
   /** the last round this shooter let go through the model: when, the track and total cone it went with, his own ground speed, whether the first-shot gate
    *  applied to it (a single round / the first of a burst: yes; the rest of a burst: no), and the terms (panel) */
   lastShot: { t: number; track: number; spread: number; speed: number; gated: boolean; hands: number; settle: number; tgt: number; own: number } | null = null;
+  /** his numbers are columns of his row (sim/men/schema.ts): `of` is the man */
+  constructor(of: { S: MenStore; r: number }) { super(); this.S = of.S; this.r = of.r; this.initAim(); }
   clear() { this.track = 0; this.tgtKey = ''; this.lastBearing = NaN; this.bearingRate = 0; this.speedSm = 0; this.moveSm = 0; this.braking = false; this.fouled = null; this.lastMan = ''; this.leftT = -100; this.leftTrack = 0; }
 }
 /** remember the feet: speedSm eased toward the ground speed over tau */
