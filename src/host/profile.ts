@@ -152,7 +152,7 @@ import { LIGHTSWITCH } from '../game/lightswitch';
 import { CARLAMPS } from '../game/carlamps';
 import { HITSTUFF } from '../game/particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
-import { COATFINISH } from '../scene/stuff';
+import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
@@ -255,6 +255,7 @@ export function pageSwitches(q: URLSearchParams): void {
   ROUND.on = q.get('round') !== '0';   // round things are round (scene/round.ts): a level's drums, tyres, stoves and ovens are stood up as one round shape each — to the picture, every ray, sight and what walks against them — in place of the kit's octagon of four slabs: ON in the page; ?round=0 = the octagons, as they were (main.ts puts it down too when the cut switch, whose pipeline draws a round, is off)
   SHAPES.on = q.get('shapes') !== '0';   // a box says its shape (scene/shapes.ts): a level's boxes that say one — a vehicle's rounded corners, crowned bonnet, bowed roof, leaning glass and round wheels — stand as it to the picture and to every ray, and their pieces of trim (hubs, arches, window posts: drawn only) are added; what walks meets the plain level: ON in the page; ?shapes=0 = the plain boxes, as they were (the game's own rays meet a shape whatever the cut-pieces switch says: boxes.ts cutMet)
   COATFINISH.on = q.get('coatfinish') !== '0';   // a named coat's finish goes wherever its word goes (scene/stuff.ts COATFINISH; a picture only): a box that says car paint is as smooth as a clear coat, so a vehicle shows what stands round it — ON in the page; ?coatfinish=0 = the finish its file gives it, as it was
+  SOLIDGLASS.on = q.get('solidglass') !== '0';   // a thing of solid glass is dark and smooth (scene/stuff.ts SOLIDGLASS; a picture only): a box that says glass and is no pane — a vehicle's window, a mirror's face — is sent near black and polished: ON in the page; ?solidglass=0 = the grey its file gives it, as it was
   UNDERFOOT.on = q.get('underfoot') !== '0';   // what the walk grid calls floor, feet cross (scene/collision.ts): a walker is stopped by what the grid's bake calls blocked and by nothing lower — the bottom layer of a pile of sacks a wall charge left in its own hole no longer holds the men ordered through it: ?underfoot=0 = a thing 0.2 m high stops feet the grid routes across
   SNEAK.byEye = q.get('byeye') !== '0'; { const n = Number(q.get('seenrate')); if (q.has('seenrate') && Number.isFinite(n) && n > 0) SNEAK.seenRate = Math.min(1, n); }   // a lit step with a line is SEEN only where that defender's eye would gain on a man there (src/game/sneak.ts; `?seenrate=<n>`: the rate that counts, the guards' own floor 0.05 by default)
   SNEAK.stalkAmbient = q.get('stalkambient') !== '0';   // the partner's way to a man's back is read by the light his OWN meter shows on him over the CPU's estimate (the moon, the bounce), as Sam's crumbs carry Sam's (game/sneak.ts sneakWalk): ON in the page; ?stalkambient=0 = the estimate alone, as it was — a moonlit yard read as dark
@@ -855,6 +856,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ROUND.on': 'TPS_ROUND=1',
   'SHAPES.on': 'TPS_SHAPES=1',
   'COATFINISH.on': 'TPS_COATFINISH=1 (a picture only)',
+  'SOLIDGLASS.on': 'TPS_SOLIDGLASS=1 (a picture only)',
   'SNEAK.stalkAmbient': 'TPS_STALKAMBIENT=1',
   'SNEAK.byEye': 'TPS_BYEYE=1',
   'SNEAK.noiseWalk': 'TPS_NOISEWALK=1',

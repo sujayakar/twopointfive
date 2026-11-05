@@ -1607,3 +1607,58 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT SEEN: nothing here draws, and the 0.0024 the twins' colours moved has not been looked at on any adapter. Nobody has played it.
 
 
+- **A thing of solid glass is dark and smooth** (`scene/stuff.ts SOLIDGLASS`; read by `scene/boxes.ts glassDark`, `sentAlbedo` and `matWord`; 11-05,
+  from the renderer's review of the vehicles on a GPU: "near-black panes, finish 0.05": glass is what mirrors most on a car, and the kits' dark glass
+  was a mid grey at 0.1, a plain car's and the office van's a grey with no finish at all). THE RULE: a box that says `glass` and is NO PANE
+  (`solidGlassBox`, the one test, which the hit picture's `solidGlass` asks too: a vehicle's window, a display case's top, a handset's screen; 100
+  boxes in 39 level files; a pane, `BoxFlag.Glass`, is the glass engine's and is not touched) is SENT to the GPU as a NEUTRAL dark of luminance 0.02
+  and no rougher than 0.05. Darker and smoother stay as they are; a wet one is that dark times its wetness; a face that carries MARKINGS keeps its
+  colour (2 boxes: a solar panel's grid, a shop's case), because a mark is laid out in its own colours on the colour under it. Neutral and not the
+  row's hue scaled down: under about 0.03 a hue does not survive the 8-bit albedo target. THE COLOUR IS NOT REPAINTED: a rule of
+  the PICTURE at the pack, keyed on the word a box is DRAWN as (`Box.stuff`). What a box DOES is its other word (`Box.does`, `scene/materials.ts`: a kit
+  vehicle's window does what 'dark glass' does) and is neither asked nor touched; the step was cut again over the materials rewrite, which took the
+  rules off colours the same day. So it goes wherever the word goes, whoever painted the box (the kits' dark glass, a plain car's own grey), and the
+  game still finds the box's own colour where it takes one (what a piece broken off it is painted, a chip's tint, a lamp known by its tone).
+  `Box.albedo` and `Box.rough` stay the file's and the pack sends the colour in the one place it already sends a wet box darker (`sentAlbedo`, beside
+  `Box.wetK`: the packed albedo, the secondary albedo's base and the static slice's compare). NO LEVEL FILE CHANGES. THE SWITCH: ON in the page (`?solidglass=0` = as its file gives it), OFF in the module and on
+  the frozen stand (`TPS_SOLIDGLASS=1`), a `FROZEN_HOLDS` row, `STAND_ENV`, pinned in `standup.ts`, in the registry and the journal; its two numbers
+  ride in the table (`SOLIDGLASS.lum`, `.rough`), so the page's knobs and a recording carry them. A PICTURE ONLY ON THE HARNESS: on a GPU page the
+  light meter's bounce reads the packed colour, so a man beside a vehicle is metered a hair darker, as beside wet ground (`wetK` is the same).
+  THE CHECK: `tools/qa/coatfinish-check.ts` lines 6 and 7 (`probes.ts coatfinish`), both stands: the cases by hand (a window, one with no finish, a
+  pane, a plain paint of the same grey, a darker glass, a wet one, a marked one), every level file, THE WORDS THE WORLD SENDS for the yard's own
+  window (up, down, and up again on the same stood world: the static slice packs again), the same seeded run by digest up as down, a stand given the
+  word, the rows and an old recording; `SOLIDGLASS_BREAK=1` fails both lines. NOT DONE, and known: a window DRAWN AS A MARK on a body (the police
+  post's taxi, the bazaar's workshop set) is a mark and stays its grey beside a boxed window gone dark; a MIRROR that says glass is the same dark
+  glass with a 4 % mirror (it wants a mirror's own word); the workbench does not raise this or any page switch, so the editor shows the file's grey;
+  the renderer has no layer for glass. SEEN ON A CLOUD NVIDIA CARD in the renderer's study build, stills only (the yard at midday, a red pickup at the
+  crossing, the showroom; no fog of war, nobody shot a window): it reads as glass and not as a hole, and no glint showed at 0.05. Nobody has played it.
+- **One array is one paint** (`scene/stuff.ts keep`; a guard for whoever writes a level, no rule of play; 2026-11-05; the office's
+  pilot hit the trap twice and the dress goal asked for the guard). A paint is known by its ARRAY, so a second saying on an array that already is a
+  paint changed what every box painted from it is made of, in every module that held it: a break room's band took a floor panel's finish, a shared
+  signal yellow became enamel for every level made after it, and the last module to load won. NOW REFUSED OUT LOUD, where it is written: `madeOf`,
+  `drawnAs`, `sayPaint`, `namePaint`, `namePaints`, `doing` and `tonedAs` refuse when the array already is a paint of another stuff, another finish
+  or ANOTHER WORD FOR WHAT IT DOES (no finish is a finish: a paint that has none is not given one in place). SINCE THE RULES READ WHAT A PAINT DOES
+  (`scene/materials.ts`, the same day) the slip would move play and not only a picture: the registry by array carries that word too. One thing is
+  added in place, by its own function: what a colour written as numbers does (`doing`, after `madeOf` or alone), once; a kit's named row does what
+  the table of names says, and `doing` on it is refused. The same thing said again is nothing and THE FIRST SAYING STANDS, its name
+  with it (a module evaluated twice, a helper called once a level, a kit giving its own palette's paint its word: the lived kit's canvas, the
+  fixtures' tray). A second thing in the same colour is its own array: `saidAs`, or the numbers written out again.
+  WHAT TRIPPED: two look files' skins said a road paint over a toned plastic's white with `madeOf` (the floodlit yard's pad lines, the killhouse's
+  tape); they say it with `saidAs` now. Nothing else in the tree trips. NO LEVEL FILE MOVES: every export's `--check` is up to date.
+  HOW IT IS REFUSED (`ONE_PAINT.refuses`): a THROW wherever a level is made or checked, which is everything that runs under bun: the generators, the
+  exporters, every tool and the headless harness. IN THE PAGE it is one line on the console for that paint and the first saying is kept: the page
+  never stops on it (the dress goal's ruling for a release that must not be risked). Every caller under `src/` was read all the same (here and by a
+  review): each says its paint as its module loads, on its own literal arrays (the four palettes, the rig's three, a fixture's tray, the named
+  greys), or on an array it has just made (a look paint's stand-in, a tone); the editor, the loader, `ui/` and `render/` call none of them. One
+  difference from before in the page, which nothing reaches today: where two sayings on one array differ, the FIRST is kept, where the last won.
+  CHECK: `stuff-check` line 18: the refusals themselves (another stuff, another finish, the metal flag alone, a kit's black made steel, a named row
+  by `namePaint`, `sayPaint`, `namePaints` and a tone; what a paint does said once, another word and a kit's row refused), each by the refusal's own words; the same saying twice let through and the first name left
+  standing; `saidAs` apart; and as the page has it (the word put down): nothing thrown, the console told once, the first saying kept. Then EVERY GENERATOR IS BUILT IN THAT ONE PROCESS as the exporter hands it over, after the check's earlier lines have
+  loaded the kits, the editor and the game's props: 58 of 58 built, 14 of 14 look files' skins run over their levels, the office with its lived
+  tier, none refused, none thrown otherwise. With one of the two mends taken back the line is red and names the file. NOT REACHED by the line: a
+  generator's branches its default build does not take, and the exporter's dressing step (each export's `--check` runs that, a process a level).
+  MEASURED, on the tip that holds the table of materials (step 1477): the play-through's 42 runs (21 missions, seeds 1 and 2) on the frozen stand, the
+  page's, and the page's with its lived tier off, the step against the tip: 42 of 42 run digests the same, each; and every one of those runs loads
+  its level under bun, where a refusal throws: none did. `stuff`, `hitstuff`, `marksight`, `lived`, `lookmaps`, `look-check`, `coatfinish`,
+  `glassreal`, `kit-stores`, `does-check`, `does-audit` and `probes.ts materials` green on both stands. NOT SEEN: the refusal's console line in a
+  real page (the check hears it through a stand-in console).
