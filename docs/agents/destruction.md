@@ -338,12 +338,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   · KNOWN: 48 newer marks in one 1 m square drop the oldest there from the drawn list (`DECAL_MAX_PER_CELL`) — a film would lose that square, straight
   edged (as a scorch always could). Not dusted: props not under a patch's middle, walls. A film is one flat tone mix (plaster pale `0.68 0.66 0.61`): it
   lifts a dark floor, on a floor near that tone only its grit, soot and matte read.
-- **A blast's marks sit in the surface** (`render/decals.ts Decals.sit` + `setSit`, `shaders/decals.wgsl dkSit`; the maintainer 10-31 on the break lab, a
+- **A blast's marks sit in the surface** (`render/decals.ts MARKSIT`, `shaders/decals.wgsl dkSit`; the maintainer 10-31 on the break lab, a
   yard at night in rain after a dozen grenades: "the decals are repetitive and look pasted on"). WHAT WAS WRONG, read off his shot and the shader: a film of
   dust (`damageMark` look 6) and a scorch (`scorchMark`) were each ONE ROUND STAMP with a smooth fall to its rim, so a dozen read as a dozen copies; the
   film was one fixed pale whatever it lay on; and both made the ground matte, on wet asphalt a dull disc in the middle of the shine. THE SWITCH: the word is
-  the fourth word of the decal buffer's header, ON in the page (`main.ts`, `?marksit=0` = every mark as it was drawn), OFF in the module, so a headless
-  stand's packed words are the old ones. It is the picture's alone: no game code reads it, no record changes, nothing is added to a mark's cost but two or
+  the fourth word of the decal buffer's header, ON in the page (`?marksit=0` = every mark as it was drawn), OFF in the module and on the frozen stand, so
+  that stand's packed words are the old ones (a registered switch since 11-05: the bullet at the foot of this file). It is the picture's alone: no game code reads it, no record changes, nothing is added to a mark's cost but two or
   three noise reads on a scorch or a film. WITH IT UP: a scorch is off round (a seeded ellipse inside the record's reach, its heart off its middle) and a film keeps its reach but is carved by the shared field below, so no two have one outline;
   its thin parts are broken by ONE FIELD ANCHORED TO THE SURFACE that every mark on that face shares (`dkBanks`, `dkBlotch`, read at `dkWorld2(P, n)`), so
   two films side by side meet in one shore and thin soot lies in patches with an edge; a film takes some of the colour of what it lies on; and on wet ground
@@ -1186,3 +1186,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE: NEVER SEEN ON A GPU in this form. On the preview a cloud NVIDIA card (Vulkan) drew the trial cars shot, 11-04: sparks off the body and
   its holes, no chips, the window's pale cracks. Nobody has looked at the crack in play. NOT HELD BY A CHECK: a prop's part and a door's leaf that
   say a word (the check fires at the level's statics); the burst of a soft thing beyond its being thrown at all.
+- **The word for marks that sit in the surface is a switch the stands know** (`render/decals.ts MARKSIT`, 11-05; the rule itself is the bullet "A blast's
+  marks sit in the surface" above, unchanged). It was a field of one `Decals` (`sit`, `setSit`) that `main.ts` alone set from `?marksit`, so the page had
+  it up and the page's stand run headless packed the old header, the same fault as the cut-face rule's. NOW: the table `MARKSIT`, ON in the page through
+  `pageSwitches` (`?marksit=0`), OFF in the module and on the frozen stand (`FROZEN_HOLDS` row `TPS_MARKSIT=1 (a picture only)`, pinned in `standup.ts`, in
+  `STAND_ENV`), in the registry and `JOURNAL_KNOBS`; `journal.ts applyKnobs` puts it down for a recording from before the table, so a tape made before
+  11-05 plays with its blast marks drawn as they were (the picture only). `Decals.frame` rebuilds once when the table moves (`sat` = the word the buffer
+  last had); `main.ts` no longer sets it. A PICTURE ONLY: one word of the uploaded header, read by `decals.wgsl dkSit` and by no game code. THE CHECK:
+  `bun run tools/qa/probes.ts decals-sit` (in the `decals` family), on both stands: the stand; the header's fourth word follows the table and no other
+  word of the buffer does, one upload a move; the same seeded round and stun charge is the same run by digest with the word up as down; the rows and an
+  old recording. `MARKSIT_BREAK=1` (the word never raised) fails two lines on both stands. `tools/qa/marksit-page.cjs` reads and moves the word through
+  `window.__knobs.registry().MARKSIT` now. MEASURED 11-05: 42 play-throughs (21 missions, seeds 1 and 2) the same by digest on the frozen stand, on the
+  shipped stand, and on the shipped stand with `TPS_MARKSIT=0`; the decals, destruction, checkpoints and journal gates on both stands, green but for
+  what was red on the shipped stand before it (`decals-sites`, three checkpoint probes). THE PAGE CHECK ran once with the table (the yard in rain,
+  software adapter): 118 of 118 pipelines, no error, the word up at boot, and moving the table changes 47 % of the picture (mean 0.457 down, 0.441
+  up), the numbers of 11-01. NOT SEEN: never on a GPU, never in motion; its break run and a dry still were not run.

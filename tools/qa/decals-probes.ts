@@ -1,5 +1,5 @@
 // The 'decals' probe family (experiment E1 — render/decals.ts + game/marks.ts), run through probes.ts:
-//   bun run tools/qa/probes.ts decals | decals-ring | decals-sites | decals-follow | decals-off | decals-identity [--verbose]
+//   bun run tools/qa/probes.ts decals | decals-ring | decals-sites | decals-follow | decals-off | decals-identity | decals-sit [--verbose]
 // Headless = no GPU: nothing here can see a mark. What is asserted is the CPU machinery the picture is made from: the ring and its order, the cell
 // packing the shader walks, that each of the four places things hit things leaves exactly the mark it should (kind, where, which way it faces, what it
 // rides), that a mark on furniture follows the furniture, that 'off' records and writes nothing, and that a seeded fight is byte for byte the same fight
@@ -16,13 +16,17 @@
 //   (off)       decals.enabled false → add() returns null and records nothing, the emit sites leave nothing, frame() uploads nothing and the packed words
 //               are bit for bit what they were;
 //   (identity)  the same seeded 15 s corridor fight with decals on and off: identical rounds, hearing events and audio calls — while 'on' left its holes.
+//   (sit)       MARKS THAT SIT IN THE SURFACE (render/decals.ts MARKSIT, `?marksit=0`) are a switch the stands know and a picture only: down on the frozen stand
+//               and up on the shipped one; the table is the fourth word of the packed header and nothing else of the buffer, and moving it costs one
+//               upload; the same seeded round and stun charge is the same run by digest with the word up as down; the stands' list, the journal and a
+//               recording from before the table. MARKSIT_BREAK=1 (the word never raised) must fail it.
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, dropThrowable } = await import(`${ROOT}/src/game/combat.ts`);
 const { resetChase } = await import(`${ROOT}/src/game/guards.ts`);
 const { startKick } = await import(`${ROOT}/src/game/player.ts`);
 const { fireRing } = await import(`${ROOT}/src/game/launcher.ts`);
-const { Decals, DECAL_CAP, DECAL_MAX_PER_CELL, DECAL_LIST_CAP, DECAL_ANY_BOX, WEAR_MARK } = await import(`${ROOT}/src/render/decals.ts`);
+const { Decals, DECAL_CAP, DECAL_MAX_PER_CELL, DECAL_LIST_CAP, DECAL_ANY_BOX, WEAR_MARK, MARKSIT } = await import(`${ROOT}/src/render/decals.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { wallBreakOn } = await import(`${ROOT}/src/game/wallbreak.ts`);
 
@@ -325,6 +329,52 @@ export async function decalsOff() {
   F.verdict(!fails.length, `off: add() → null, a round + a stun charge left nothing (count ${dc.count - 1} + the one from before), frame() wrote nothing (uploads ${uploads0}), words identical; on again: recording and uploading resume`, fails.join('; ') || 'ok');
   // a Decals never handed to an engine (the viewer's case) is inert but harmless
   { const lone = new Decals(W.engine.device); lone.add('scorch', [1, 0, 1], [0, 1, 0]); lone.frame(W.engine.world); F.verdict(lone.count === 1 && lone.stats.uploads === 1, 'a free-standing Decals builds and uploads on its own device', `count ${lone.count}, uploads ${lone.stats.uploads}, build ${lone.stats.buildMs.toFixed(2)} ms`); }
+  return F.done();
+}
+
+
+// ------------------------------------------------------------------------------------------------ (sit)
+/** marks that sit in the surface (render/decals.ts MARKSIT): a switch the stands know, one word of the packed header, and the picture's alone */
+export async function decalsSit() {
+  const BREAK = process.env.MARKSIT_BREAK === '1';
+  const F = family(`decals-sit: marks that sit in the surface — one word of the buffer's header, a switch the stands know${BREAK ? ' (MARKSIT_BREAK: the word is never raised)' : ''}`);
+  const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
+  const W = await stage(8402); const dc = W.game.decals;
+  const stood = !!MARKSIT.on, was = { ...MARKSIT }, up = (v: boolean) => { MARKSIT.on = v && !BREAK; };   // (the switch as the stand left it, before the check moves it)
+  try {
+    // (1) the stand
+    const shipped = (process.env.TPS_PROFILE ?? '') === 'shipped', said = process.env.TPS_MARKSIT;
+    F.verdict(stood === (said !== undefined ? said === '1' : shipped), 'the stand: the word is down on the frozen stand and up on the shipped one, or as its own word says where the run gives one',
+      `stood up ${stood} · ${shipped ? 'shipped' : 'frozen'}${said !== undefined ? ` with TPS_MARKSIT=${said}` : ''}`);
+    // (2) the table is the header's fourth word and nothing else of the buffer; moving it is one upload, leaving it none
+    dc.clear(); dc.add('scorch', [22, 0, 11.4], [0, 1, 0], 0.7, { param: 1 }); dc.add('bullet', [22, 1, 10.12], [0, 0, 1]);
+    up(false); dc.frame(W.engine.world); const w0: Uint32Array = dc.words(), u0 = dc.stats.uploads;
+    up(true); dc.frame(W.engine.world); const w1: Uint32Array = dc.words(), u1 = dc.stats.uploads;
+    dc.frame(W.engine.world); const u2 = dc.stats.uploads;
+    up(false); dc.frame(W.engine.world); const w3: Uint32Array = dc.words(), u3 = dc.stats.uploads;
+    let other = 0; for (let i = 0; i < w0.length; i++) if (i !== 3 && (w0[i] !== w1[i] || w0[i] !== w3[i])) other++;
+    F.verdict(w0[3] === 0 && w1[3] === 1 && w3[3] === 0 && u1 === u0 + 1 && u2 === u1 && u3 === u2 + 1 && other === 0 && dc.count === 2,
+      'the word: with the table down the packed header\'s fourth word is 0, up it is 1, down again 0; each move of the table is one upload and a frame with nothing moved is none; no other word of the buffer differs',
+      `header word ${w0[3]} → ${w1[3]} → ${w3[3]} · uploads ${u0} → ${u1} → ${u2} → ${u3} · other words that differ ${other} of ${w0.length} · marks ${dc.count}`);
+    // (3) the picture's alone: the same seeded round and stun charge with the word up and down is the same run
+    const run = async (on: boolean) => { const V = await stage(8403), g = V.game; up(on);
+      fireWeapon(g, g.player.char, [24.0, 1.2, 10.0], true); dropThrowable(g, 'flash', [23.0, 0, 11.3]); for (let i = 0; i < 150; i++) V.step(DT);
+      g.decals.frame(V.engine.world); const w: Uint32Array = g.decals.words(); let rest = 0; for (let i = 0; i < w.length; i++) if (i !== 3) rest = (Math.imul(rest, 31) + w[i]) | 0;
+      return { h: hashDigest(digestGame(g, true)) as string, marks: g.decals.list.map((d: any) => `${d.kind} ${p2(d.pos)} r ${f3(d.radius)}`).join(' · ') as string, n: g.decals.list.length as number, scorch: g.decals.list.filter((d: any) => d.kind === 'scorch').length as number, word: w[3], rest }; };
+    const A = await run(true), B = await run(false);
+    F.verdict(A.h === B.h && A.marks === B.marks && A.rest === B.rest && A.word === 1 && B.word === 0 && A.n > 0 && A.scorch > 0,
+      'a picture only: the same seeded round into the wall and stun charge on the floor, 2.5 s, with the word up and with it down — the same run by digest, the same marks at the same places, the same buffer but for the header\'s word',
+      `digest ${A.h} / ${B.h} · ${A.n} / ${B.n} marks (${A.scorch} scorch) · the rest of the buffer ${A.rest === B.rest ? 'the same' : 'DIFFERS'} · header word ${A.word} / ${B.word}`);
+    // (4) the stands' list, the journal, and a recording from before the table
+    { const J: any = await import(`${ROOT}/src/game/journal.ts`), PR: any = await import(`${ROOT}/src/host/profile.ts`), SE: any = await import(`${ROOT}/src/host/standEnv.ts`), KN: any = await import(`${ROOT}/src/game/knobs.ts`);
+      const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(W.game)));
+      MARKSIT.on = true; const old = snap(); delete old.tables.MARKSIT; J.applyKnobs(W.game, old); const before = MARKSIT.on;
+      MARKSIT.on = true; const rec = snap(); MARKSIT.on = false; J.applyKnobs(W.game, rec); const kept = MARKSIT.on;
+      const row = PR.FROZEN_HOLDS['MARKSIT.on'] as string | undefined;
+      F.verdict(before === false && kept === true && !!row && row.startsWith('TPS_MARKSIT=1') && SE.STAND_ENV.includes('TPS_MARKSIT') && KN.JOURNAL_KNOBS.includes('MARKSIT') && KN.knobRegistry().MARKSIT === MARKSIT,
+        'the rows: a recording from before the table plays with the word down and one made with it up keeps it; the stands\' list has the row and the word, the journal the table, and the registry\'s table is the one the buffer reads',
+        `applyKnobs without the table: ${before} · recorded up: ${kept} · FROZEN_HOLDS ${row ?? 'no row'} · STAND_ENV ${SE.STAND_ENV.includes('TPS_MARKSIT')} · journal ${KN.JOURNAL_KNOBS.includes('MARKSIT')}`); }
+  } finally { Object.assign(MARKSIT, was); }
   return F.done();
 }
 
