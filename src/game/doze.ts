@@ -58,6 +58,7 @@ import { CLOSE, closeSeat, closeUnseat, closeSeated, closeHasSeat } from './clos
 import { attentionLend } from './attention';
 import { simRandom } from '../math/dice';
 import { mathsEpoch } from '../math/exact';
+import { LIGHT_IN } from '../sim/lightshome';
 
 /** the switch and its numbers. `minWait` s: the shortest wait he sits one out for · `maxWait` s: the longest (a man stood somewhere longer than this is POSTED
  *  there: a picket, not a man pausing on his round) · `chairM`: how far from his waypoint the chair may stand (straight; the walk to
@@ -109,15 +110,15 @@ function calm(g: Game, gd: Guard): boolean {
 function put(g: Game, gd: Guard, D: Doze) { mapOf(g).set(gd, D); REC.set(gd, D); }
 function drop(g: Game, gd: Guard) { mapOf(g).delete(gd); REC.delete(gd); gd.char.anim.slump = 0; }
 /** the man at a screen is taken off the books (the switch off, the roster changed, a reset): what he switched on goes off with him */
-function dark(D: Doze) { if (D.phase === 'work' && D.mon && !D.monWas) D.mon.on = false; }
+function dark(g: Game, D: Doze) { if (D.phase === 'work' && D.mon && !D.monWas) g.lightHome.in(LIGHT_IN.on, D.mon, 0); }
 /** the screens a man was got up from, or hauled away from, and LEFT LIT (he switched it on; nobody has switched it off), each with the game time it goes
  *  dark by itself (`idleSecs`: a screen nobody touches blanks) — sooner if the next man who sits to it gets up at the end of his wait: he switches it off
  *  as if it were his own. In the checkpoint. */
 const LEFT = new SideMap<Game, Map<LightTarget, number>>('doze.LEFT');
 function leftLit(g: Game, D: Doze) { if (D.phase !== 'work' || !D.mon || D.monWas || !D.mon.on || D.mon.broken) return; let L = LEFT.get(g); if (!L) LEFT.set(g, L = new Map()); L.set(D.mon, g.time + DOZE.idleSecs); }
-function leftOff(g: Game) { const L = LEFT.get(g); if (!L) return; for (const t of L.keys()) t.on = false; LEFT.delete(g); }
+function leftOff(g: Game) { const L = LEFT.get(g); if (!L) return; for (const t of L.keys()) g.lightHome.in(LIGHT_IN.on, t, 0); LEFT.delete(g); }
 function leftTick(g: Game) { const L = LEFT.get(g); if (!L) return; if (!DOZE.on) { leftOff(g); return; }
-  for (const [t, at] of L) if (g.time >= at || !t.on || t.broken) { if (t.on && !t.broken) t.on = false; L.delete(t); } if (!L.size) LEFT.delete(g); }
+  for (const [t, at] of L) if (g.time >= at || !t.on || t.broken) { if (t.on && !t.broken) g.lightHome.in(LIGHT_IN.on, t, 0); L.delete(t); } if (!L.size) LEFT.delete(g); }
 const blank = (phase: Phase, wp: number, t: number): Doze => ({ phase, wp, chair: null, mon: null, monWas: false, say: -1, to: [0, 0, 0], at: [0, 0, 0], face: 0, cx: 0, cz: 0, cyaw: 0, t: 0, seen: t, until: 0, lit: -1, ask: 0, push: 0, why: null, wokeAt: -1 });
 
 interface Seat { chair: Prop; at: Vec3; face: number; mon: LightTarget | null; to: Vec3 }
@@ -253,7 +254,7 @@ export function dozeTick(g: Game, dt: number) {
   for (const [gd, D] of M) {   // (a record dropped under the walk is safe: a Map's iterator takes deletes)
     if (D.phase === 'no' || D.phase === 'spent') { if (!DOZE.on) drop(g, gd); continue; }
     const c = gd.char;
-    if (!DOZE.on || !g.guards.includes(gd) || gd.state === 'dead') { if (gd.state !== 'dead') dark(D); else leftLit(g, D);   /* (killed or put out at his screen: it is left lit like any other he was got away from) */ if (seated(D)) up(g, gd); drop(g, gd); continue; }
+    if (!DOZE.on || !g.guards.includes(gd) || gd.state === 'dead') { if (gd.state !== 'dead') dark(g, D); else leftLit(g, D);   /* (killed or put out at his screen: it is left lit like any other he was got away from) */ if (seated(D)) up(g, gd); drop(g, gd); continue; }
     if (D.phase === 'going') { if (g.time - D.seen > 0.5) drop(g, gd); continue; }   // (something else has his feet: a break, a word with a mate, a noise)
     if (D.phase === 'stir') { if (g.time >= D.until) D.phase = 'spent'; else gd.reactT = Math.max(gd.reactT, D.until - g.time); continue; }
     if (D.phase === 'up') { if (g.time >= D.until && (!D.chair || gd.state !== 'patrol' || flat(c.pos, D.chair.x, D.chair.z) > 0.75 || g.time >= D.until + 30)) drop(g, gd); continue; }   // (… and, calm, until he has stepped clear of the chair — `dozeInChair` keeps him no contact for it: a man getting up does not walk his chair across the room, and a chair one man pulled to the screen is not shoved a hand further by every man who sleeps in it after)
@@ -269,13 +270,13 @@ export function dozeTick(g: Game, dt: number) {
     if (ch.yaw !== D.cyaw) { let dy = D.cyaw - ch.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); ch.yaw = Math.abs(dy) < 0.02 ? D.cyaw : ch.yaw + dy * Math.min(1, 6 * dt); }
     ch.dirty = true; ch.place();
     if (gd.wait - dt <= DOZE.riseSecs) {   // the end of his wait: he stretches, gets up and walks on — and may sit the next one out (this frame of his wait is the patrol branch's to count: he is on his feet for it)
-      if (D.phase === 'work' && D.mon && !D.monWas) D.mon.on = false;   // (he switches off what he switched on)
+      if (D.phase === 'work' && D.mon && !D.monWas) g.lightHome.in(LIGHT_IN.on, D.mon, 0);   // (he switches off what he switched on)
       up(g, gd); c.anim.tell('neck'); D.phase = 'up'; D.until = g.time + 1.2; DOZE_STATS.rose++; DOZE_LOG.push({ t: g.time, who: gd.callsign, why: 'time', secs: D.t }); if (DOZE_LOG.length > 64) DOZE_LOG.shift(); continue;
     }
     gd.wait -= dt; D.t += dt;
     if (D.phase === 'down') { c.anim.slump = D.mon ? 0.15 : 0.35;
       if (!closeSeated(g, gd) || gd.awareness >= 0.15) continue;   // (a man with something half on his mind neither shuts his eyes on it nor puts his headphones on)
-      if (D.mon) { if (D.t >= DOZE.settleSecs) { D.phase = 'work'; D.t = 0; D.monWas = D.mon.on && !LEFT.get(g)?.delete(D.mon); D.mon.on = true; D.say = g.time + span(DOZE.sayFirst); DOZE_STATS.worked++; } }
+      if (D.mon) { if (D.t >= DOZE.settleSecs) { D.phase = 'work'; D.t = 0; D.monWas = D.mon.on && !LEFT.get(g)?.delete(D.mon); g.lightHome.in(LIGHT_IN.on, D.mon, 1); D.say = g.time + span(DOZE.sayFirst); DOZE_STATS.worked++; } }
       else if (D.t >= DOZE.nodSecs) { D.phase = 'asleep'; D.t = 0; D.lit = -1; D.ask = (c.id % 4) / 4 * DOZE.askSecs; DOZE_STATS.slept++; }
       continue; }
     if (D.phase === 'work') {   // AT HIS SCREEN: awake, the screen's light on his face, his mind on it — and now and then a word for it
@@ -348,7 +349,7 @@ export function dozeSummary(g: Game): string {
   return `dozing ▸ ${rows.length ? rows.join(' · ') : 'nobody'}${CLOSE.on ? '' : ' · needs the close-in seat (CLOSE.on)'}`;
 }
 /** everybody up, the records gone (resetGuards / restartEncounter: the men are new objects) */
-export function dozeReset(g: Game, load = false) { SAID.delete(g); if (load) LEFT.delete(g); else leftOff(g); const M = GAMES.get(g); if (!M) return; for (const [gd, D] of [...M]) { if (!load) dark(D); if (seated(D)) up(g, gd); drop(g, gd); } }   // (`load`: a checkpoint is being put back — the screens are the file's to set)
+export function dozeReset(g: Game, load = false) { SAID.delete(g); if (load) LEFT.delete(g); else leftOff(g); const M = GAMES.get(g); if (!M) return; for (const [gd, D] of [...M]) { if (!load) dark(g, D); if (seated(D)) up(g, gd); drop(g, gd); } }   // (`load`: a checkpoint is being put back — the screens are the file's to set)
 
 // ---- a checkpoint carries who sits where, who sleeps, who was woken and whose wait has no chair (no key with the switch off or nobody on a record)
 export interface DozeSnap { men: { i: number; phase: Phase; wp: number; chair: number; mon?: number; monWas?: boolean; say?: number; to?: number[]; at: number[]; face: number; cx: number; cz: number; cyaw: number; t: number; until: number; lit: number; ask?: number; why: DozeWhy | null; wokeAt: number }[]; said?: number[]; left?: number[][] }

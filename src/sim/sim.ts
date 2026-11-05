@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 28;
+export const SIM_ABI = 29;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -132,6 +132,15 @@ export interface SimExports {
   falls_step(g: number, x: number, z: number, level: number, crunchFull: number, grind: number, gain: number, add: number): number;
   falls_heard(g: number, list: number, time: number, gap: number): number;
   falls_clear(g: number, list: number, all: number, events: number): void; falls_cap(what: number): number;
+  // the level's lights (rust/sim/src/lights.rs; sim/lightshome.ts is its face)
+  lights_cap(table: number): number; lights_ids(): number;
+  lights_in(g: number, kind: number, t: number, a: number, b: number, c: number, d: number): number;
+  lights_flip(g: number, on: number, time: number, strike: number, n: number): void;
+  lights_step(g: number, time: number, dt: number, near: number, fumble: number, es: number): number;
+  camera_pan(g: number, i: number, dt: number, live: number, cones: number): number;
+  camera_see(g: number, i: number, time: number, dt: number, visible: number, gain: number, x: number, y: number, z: number, suspicion: number, alarm: number): number;
+  laser_open(g: number, i: number): number;
+  laser_close(g: number, i: number, time: number, live: number, cut: number, sense: number, held: number): number;
 }
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
@@ -142,7 +151,8 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll', 'men_schema', 'men_col', 'men_fold',
   'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_wind', 'grid_wind_cap', 'grid_trans',
   'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'props_settle', 'slabs_addr', 'slabs_cap', 'slabs_step', 'items_addr', 'items_cap', 'items_update',
-  'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap'];
+  'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap',
+  'lights_cap', 'lights_ids', 'lights_in', 'lights_flip', 'lights_step', 'camera_pan', 'camera_see', 'laser_open', 'laser_close'];
 
 /** A RUNTIME WITH NO WEBASSEMBLY (a browser whose policy turns a site's JIT off has none) DOES NOT PLAY: the simulation is the module's and nothing else
  *  works it out. The page shows these words in place of the game, before anything is built (main.ts); they are the maintainer's, as he chose them. */
@@ -215,7 +225,7 @@ export function mathsOfRust(): Maths {
 // (every row but the maths is UP as this module loads: that is how the game is played, on every page and in every tool, whoever stands it up and whether
 //  or not anyone calls rowsUp. A runtime with no WebAssembly does not play: the page shows its card, main.ts)
 let mathsOn = false, linesOn = true, circlesOn = true, fogOn = true, posesOn = true, diceOn = true;
-let sightOn = true, lightOn = true, smokeOn = true, soundOn = true, pathsOn = true, walkOn = true;
+let sightOn = true, lightOn = true, smokeOn = true, soundOn = true, pathsOn = true;
 let doorsOn = true, fallsOn = true, propsOn = true, slabsOn = true, itemsOn = true, raysOn = true;
 /** A row a system: on = that system of the update runs in the Rust module, off = in TypeScript as it always did. THE TWO ARE THE SAME GAME TO THE BIT — that is
  *  what lets a system move at all, and tools/qa/rust-check.ts holds each row to it (whole missions played both ways, every tick's raw bits). So a row is never
@@ -245,9 +255,6 @@ let doorsOn = true, fallsOn = true, propsOn = true, slabsOn = true, itemsOn = tr
  *          the module's memory (src/sim/state.ts) and rolled there. THE FIRST STATE OF THE GAME THAT LIVES IN THE MODULE: it is what the rollback snapshot,
  *          the saves in memory and the state's word were taught to carry a block for. A proof like `maths` (a draw from TypeScript then costs a call), and the
  *          die has to be there before any rule that rolls it is. A game takes the row as its next tick opens.
- *  walk    the animator's layers (game/character.ts CharacterAnimator: what makes a blend of clips a man who leans into his walk, breathes, keeps his soles
- *          where he put them, flinches, holds a wall), a layer at a time (rust/sim/src/layers.rs): each asked once on the pose where it lives, so it needs
- *          `poses` at home and the game's own maths; the TypeScript method stays behind the row as `<name>Own`. Not yet: the two holds, the big tools, the throw, and the update itself.
  *
  *  THE SENSES, a row each (asked through src/scene/collision.ts; every one inside a tick and where the game's own maths stand, since each works its lengths out
  *  in the module):
@@ -305,8 +312,6 @@ export const RUST = {
   set doors(v: boolean) { doorsOn = !!v && !simWhyNot(); },
   get falls(): boolean { return fallsOn; },
   set falls(v: boolean) { fallsOn = !!v && !simWhyNot(); },
-  get walk(): boolean { return walkOn; },
-  set walk(v: boolean) { walkOn = !!v && !simWhyNot(); },
   get props(): boolean { return propsOn; },
   set props(v: boolean) { propsOn = !!v && !simWhyNot(); },
   get slabs(): boolean { return slabsOn; },
@@ -352,7 +357,7 @@ export const RULES_ROW = 'a rule\'s step (doors, furniture, leaves, thrown thing
  *  reaches one ends red. KNOWN TODAY: none (the two that were — the furniture's settle as a level is stood up, a ray into the furniture — each have a
  *  choice now, and their way back is the furniture's own row). */
 export const TWIN_ROW = "a twin's body, no choice made";
-export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'walk', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'props', 'slabs', 'items', RULES_ROW, TWIN_ROW];
+export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'props', 'slabs', 'items', RULES_ROW, TWIN_ROW];
 /** A RULE OF `row` WAS STEPPED IN TYPESCRIPT WHILE THE ROW IS UP (a family's fallback site says so, with the reason in plain words): counted, except
  *  where the row is idle by its own rule — one that works lengths and angles out answers only under the game's own maths (OWN_MATHS, below) */
 export function ruleFell(row: string, why: string): null { if (FELL.on && (EXACT.on || !OWN_MATHS.includes(row))) fell(row, why); return null; }
@@ -372,16 +377,16 @@ export function fellWord(w: string): void { if (w === '0') { FELL.on = false; re
 /** the count so far, the busiest first, as one line a row and reason */
 export const fellLines = (): string[] => Object.entries(FELL.n).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} × ${k}`);
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
-const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'walk', 'props', 'slabs', 'items'];
+const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'props', 'slabs', 'items'];
 /** THE ROWS THAT ARE ON WHERE THE GAME IS PLAYED (the page and both of the harness's stands, and no word of an address or of the environment moves
  *  one: rowsUp below): EVERY row but the maths. Each is the same game to the bit in the module, by its differential and by the missions under both
- *  engines (tools/qa/rust-check.ts). They are not all cheaper there yet: the box world's lines, the furniture and the poses with the walk's layers are; a
+ *  engines (tools/qa/rust-check.ts). They are not all cheaper there yet: the box world's lines, the furniture and the poses with the animator's layers are; a
  *  row whose callers are still TypeScript pays a crossing a question (the die, a door, a sound's path, a route) and is on all the same, because the
  *  TypeScript behind it is going and the game must be played the way it will be kept (docs/agents/rust.md, "Rows that are on", has every number).
  *  The maths stay TypeScript (math/exact.ts): a sine a crossing is the dearest crossing there is, and the module works its own out inside itself.
  *  The rows that work lengths and angles out (OWN_MATHS) answer only under the game's own maths, which is the only maths the game is played on. A
  *  runtime with no WebAssembly does not play: the page says so on a card (main.ts, NO_WASM_WORDS) and builds no game. */
-export const RUST_ON: readonly (keyof typeof RUST)[] = ['lines', 'circles', 'fog', 'poses', 'dice', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'walk', 'props', 'slabs', 'items', 'rays'];
+export const RUST_ON: readonly (keyof typeof RUST)[] = ['lines', 'circles', 'fog', 'poses', 'dice', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'props', 'slabs', 'items', 'rays'];
 /** is `row` one of them */
 export const rustOn = (row: string): boolean => (RUST_ON as readonly string[]).includes(row);
 /** EVERY ROW AS THE GAME IS PLAYED (RUST_ON up, the maths down): what the page's boot and the harness's stand-up write, and nothing else writes a row in
@@ -395,7 +400,9 @@ export function mathsUp(): void { EXACT.on = true; }
  *  nothing is a run that is not what its caller thinks it is). Two lists, since they are two places: a tool's environment, and a page's address (the
  *  rows' names are spelt out so that no later word that merely begins `rust` is taken for one) */
 export function retiredEnvWord(w: string): boolean { return /^(TPS_RUST[A-Z]*|TPS_EXACT)$/.test(w); }
-export function retiredAddressWord(w: string): boolean { return w === 'rust' || w === 'noexact' || (w.startsWith('rust') && rustRows().includes(w.slice(4))); }
+export function retiredAddressWord(w: string): boolean { return w === 'rust' || w === 'noexact' || (w.startsWith('rust') && (rustRows().includes(w.slice(4)) || ROWS_GONE.includes(w.slice(4)))); }
+/** the rows that are no more because their TypeScript is (a family written once, in Rust, has nothing to choose): their words are retired ones still */
+const ROWS_GONE: readonly string[] = ['walk'];
 /** the rows by name, for what treats them all alike (a check's own arm, tools/qa/headless.ts hold; the checks that walk every row) */
 export const rustRows = (): string[] => Object.keys(RUST);
 export function rustRow(row: string, on: boolean): void { if (rustRows().includes(row)) (RUST as Record<string, boolean>)[row] = on; }
