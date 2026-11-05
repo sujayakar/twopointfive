@@ -43,11 +43,11 @@ import { isHostile } from './teams';
 import { coverFrom, SUPPRESSION } from './suppression';
 import { order } from './squad';
 import { doorCells } from './guards';
-import { lastStandMan } from './laststand';
 import { digInSet } from './digin';
 import { coverfireOn } from './coverfire';
 import { WALL_ORDER } from './wallcharge';
 import { WORDS } from './words';
+import { hasHim, OWN } from './owner';
 
 export const WALLREACT = {
   /** the switch (and only ever live under the destruction goal's own) */
@@ -549,7 +549,7 @@ export class WallReact {
       if (D.mode !== 'hold') { const r = D.mode === 'move' ? 'fine' : this.shift(gd, threat, pb, others); return [r, `mode ${D.mode}: ${r}`]; }   // (already on his way somewhere · a free hunter: the fight AI's own shift)
       if (g.time - gd.lastSeenT < 0.6 && gd.lastKnown && flat(gd.lastKnown, c.pos) < 5) return ['later', 'a man at arm\'s length'];   // (a man at arm's length: he fights)
       let p = this.spot(gd, threat, pb, others);
-      if (p && (lastStandMan(g, gd) || gd.staysInRooms || digInSet(g, gd)) && this.fight.roomAt(p) !== D.room) p = null;   // (a man whose room is his to keep — the last stand, a squad that stays, a man dug in and set — moves inside it or not at all)
+      if (p && (hasHim(gd, OWN.stand) || gd.staysInRooms || digInSet(g, gd)) && this.fight.roomAt(p) !== D.room) p = null;   // (a man whose room is his to keep — the last stand, a squad that stays, a man dug in and set — moves inside it or not at all)
       if (!p) { WALLREACT_STATS.noCover++; P.next = g.time + 1.5; return ['later', 'nowhere to go']; }
       D.mode = 'move'; D.moveKind = 'cover'; D.cameBy = null; D.moveT = 0; D.stallAt = v3.copy(c.pos); D.stallT = 0; D.movedAt = g.time; gd.pinned = false; this.watching.delete(gd);
       order(gd, { goal: p, speed: g.tune.guardChase, face: null, strafe: false, aimAt: null, upper: 'aim', stance: 'none', crouch: true });

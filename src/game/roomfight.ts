@@ -58,14 +58,14 @@ import { BLIND } from './nightbreach';
 import { DIGIN, digInTick, digInStays, digInReset, digInBraced, digInLook } from './digin';
 import { wallReactLook } from './wallreact';
 import { squadsLive, squadRally } from './enemysquads';
-import { PRESSURE, pressOwns, pressTick, pressStop, run as pressRun, charge as pressCharge } from './pressure';
-import { buddyTick, buddyStop, buddyOwns } from './buddy';
+import { PRESSURE, pressTick, pressStop, pressSay, pressStopsClock, run as pressRun, charge as pressCharge } from './pressure';
+import { buddyTick, buddyStop, buddySay } from './buddy';
 import { silentHolds, silentGlassHolds } from './silent';
 import { pairHolds, pairPasses } from './pairorders';
 import { workPasses } from './workthings';
 import { spottedHolds, spottedKeen } from './spotted';
 import { coverSeen, coverOp } from './coverfire';
-import { lastStandTick, lastStandStop, lastStandMan, lastStandOwns } from './laststand';
+import { lastStandTick, lastStandStop } from './laststand';
 import { netQuietLook } from './netquiet';
 import { laneBars, laneThrows, laneKnownAt } from './lanes';
 import { shotEnergy } from './glasspen';
@@ -515,6 +515,7 @@ export class RoomFight {
     }
     while (this.reports.length && g.time - this.reports[0].t > 2) this.reports.shift();
     this.smoke();
+    pressSay(g, this); buddySay(g, this);   // (the record of who they have, as this frame opens: src/game/owner.ts)
     this.defs.forEach((D, k) => { if (D.gd.state !== 'dead') this.tickDef(D, dt, k); });
     for (const O of this.ops) this.tickOp(O, dt);
     pressTick(g, this, dt);
@@ -612,7 +613,7 @@ export class RoomFight {
     if (gd.held) { this.blind(D, k); return; }             // in Sam's arm: nothing of his is his own (the burst's clock still runs: its turns are lost, not kept)
     if (hasHim(gd, OWN.morale)) return;                            // morale.ts (false with its switch off): a blast has him ducked or broken — that file's sequence has his body and his rounds until it lets him go
     if (hasHim(gd, OWN.runner)) return;                            // runner.ts (false with its switch off): he has said he is done — dropping it, running, gone: nothing of the fight's is his
-    if ((DIGIN.on || squadsLive(g) || lastStandMan(g, gd)) && g.level.scenarios?.roomClear?.digIn !== false && !laneThrows(g, gd)) digInTick(this, D, dt); // digin.ts (default off): a man who knows they are coming gets ready for them — may put him on the move (enemysquads.ts: a squad that barricades does it through the same file, whatever the switch) — not a man whose grenade is leaving his hand for a covered lane (lanes.ts LANES.fragOwn, false with its switch off): that second is the throw's
+    if ((DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)) && g.level.scenarios?.roomClear?.digIn !== false && !laneThrows(g, gd)) digInTick(this, D, dt); // digin.ts (default off): a man who knows they are coming gets ready for them — may put him on the move (enemysquads.ts: a squad that barricades does it through the same file, whatever the switch) — not a man whose grenade is leaving his hand for a covered lane (lanes.ts LANES.fragOwn, false with its switch off): that second is the throw's
     if (D.mode === 'move') { this.tickMove(D, dt); return; }
     if (D.mode === 'free') { this.tickFree(D); return; }
     if (gd.script && g.director?.lessonRuns) { D.staged = true; return; }   // a staged moment of a tutorial mission's own script has him (director.ts lessonRuns): his body is its, and he stays this roster's man
@@ -645,7 +646,7 @@ export class RoomFight {
         const e = this.entryToward(D, at); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + (loud ? 1 : 0.45));
         if (loud) { D.noiseAt = v3.copy(at); D.noiseT = g.time; D.noiseOut = !this.inRoom(D.room, at); D.glanceUntil = -1; }
         if (H.kick > D.cnt.kick && e >= 0 && flat(E[e].at, at) < 2.5 && g.time >= gd.dazzledUntil) {   // a door of HIS room booted in: the flinch (FIGHT_SKILL startle)
-          const S = FIGHT_SKILL.hostile; if (S.startle[1] > 0 && !((DIGIN.on || squadsLive(g) || lastStandMan(g, gd)) && digInBraced(g, gd, E[e].door))) { gd.reactT = Math.max(gd.reactT, pick(S.startle) * (this.drilled() ? DRILLED.shaken : 1)); this.stats.startled++; this.note(gd, `flinches: ${E[e].door.def.name} booted in`); } }
+          const S = FIGHT_SKILL.hostile; if (S.startle[1] > 0 && !((DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)) && digInBraced(g, gd, E[e].door))) { gd.reactT = Math.max(gd.reactT, pick(S.startle) * (this.drilled() ? DRILLED.shaken : 1)); this.stats.startled++; this.note(gd, `flinches: ${E[e].door.def.name} booted in`); } }
         this.note(gd, `heard ${loud ? 'loud' : 'small'} → ${e >= 0 ? E[e].door.def.name : 'nowhere'}`);
       }
       D.heardT = H.lastT; D.cnt = { shots: H.shots, kick: H.kick, bang: H.bang, small: H.small };
@@ -688,7 +689,7 @@ export class RoomFight {
     const g = this.g, gd = D.gd, c = gd.char, S = FIGHT_SKILL.hostile, E = D.room?.entries ?? [];
     const e = g.time < D.glanceUntil ? D.glanceTo : D.watch; const tgt = e >= 0 && E[e] ? E[e].at : D.home;
     D.pt[0] = tgt[0]; D.pt[1] = 0; D.pt[2] = tgt[2];
-    if (DIGIN.on || squadsLive(g) || lastStandMan(g, gd)) digInLook(g, gd, D.pt);                  // digin.ts: dug in off a door's line, his gun rests on the floor they must cross
+    if (DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)) digInLook(g, gd, D.pt);                  // digin.ts: dug in off a door's line, his gun rests on the floor they must cross
     if (g.rescue?.active) g.rescue.crewLook(gd, D.pt);     // rescue.ts, Hard's crew: a man with a line of fire to the hostage door's outside rests his gun there
     netQuietLook(gd, D.pt);                                // netquiet.ts (a return on its first line with its switch off): the last man low on his spot watches the arc his doors sit in; a jumpy man has the noise he has just heard
     wallReactLook(g, gd, D.pt);                            // wallreact.ts: a port or a hole in a wall that he knows of and has more against than that door takes his gun (a return on its first line with nothing broken)
@@ -789,7 +790,7 @@ export class RoomFight {
   private breakOff(D: Def) {
     const g = this.g, gd = D.gd, c = gd.char, nav = g.col.nav; const threat = this.threatOf(D);
     D.movedAt = g.time;
-    const stays = lastStandOwns(g, D);   // (laststand.ts, default off: a man of the last stand gives his room up through no door — cover inside it)
+    const stays = hasHim(D.gd, OWN.stand);   // (laststand.ts, default off: a man of the last stand gives his room up through no door — cover inside it)
     const rp = stays ? null : squadRally(g, gd, threat);   // enemysquads.ts: his squad's rally point in another of its rooms, when he can get there (no squads: null on its first line)
     if (rp) {
       pressRun(g, D, rp, null, 0.3);   // (pressure.ts's leg on a script: the move this file's own fall-back makes, with no door behind him to hold)
@@ -907,12 +908,12 @@ export class RoomFight {
     const g = this.g, gd = D.gd, S = FIGHT_SKILL.hostile;
     if (!ROOMFIGHT.rally || !D.noiseAt) return;
     if (hasHim(gd, OWN.squad)) return;  // (enemysquads.ts: a squad's man goes to another squad's fight on his squad's word, not his own)
-    if (pressOwns(g, D)) return;   // (pressure.ts, off by default: with it on he forms up outside that room with the others instead of walking over by himself)
+    pressStopsClock(g, D); if (hasHim(gd, OWN.press)) return;   // (pressure.ts, off by default: with it on he forms up outside that room with the others instead of walking over by himself)
     if (DIGIN.on && digInStays(g, gd)) return;             // digin.ts: digging in, he holds his room
     if (laneBars(g, gd, D.noiseAt) || laneKnownAt(g, gd, D.noiseAt)) { if (D.rallyAt !== Infinity) D.rallyAt = NaN; return; }   // (lanes.ts: held short of a lane his side knows is covered — he keeps its mouth; and nobody walks over ALONE to a fight at such a lane's guns)
-    if (lastStandOwns(g, D)) { D.rallyAt = NaN; return; }   // (laststand.ts, default off: the last stand holds its room — no man of it walks off to a noise next door)
+    if (hasHim(D.gd, OWN.stand)) { D.rallyAt = NaN; return; }   // (laststand.ts, default off: the last stand holds its room — no man of it walks off to a noise next door)
     if (hasHim(gd, OWN.lastMan)) { D.rallyAt = NaN; return; }   // (netquiet.ts, false on its first line with its switch off: the last man up, who knows nobody answers him, does not walk off to a fight next door)
-    if (buddyOwns(g, D)) { D.rallyAt = NaN; return; }   // (buddy.ts, off by default: a colleague is on his way to him, or the two have just paired up — he waits, and no rally clock is left running to send him the frame he is let go)
+    if (hasHim(D.gd, OWN.buddy)) { D.rallyAt = NaN; return; }   // (buddy.ts, off by default: a colleague is on his way to him, or the two have just paired up — he waits, and no rally clock is left running to send him the frame he is let go)
     const fresh = g.time - D.noiseT < 1.5 && g.time - gd.lastSeenT > 3;
     if (!fresh) { if (g.time - D.noiseT > 4) D.rallyAt = NaN; return; }
     const at = D.noiseAt;
