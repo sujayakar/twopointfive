@@ -1302,3 +1302,39 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the showroom's row of the table) and `wallfurn-check --levels library-hall.json` (it has no count file; 86 places before and after on both stands).
   No mission's level file moves, so no play-through was run for this step alone. NEVER SEEN on any adapter as laid on the showroom; on the white roof
   they draw as they did.
+- **THE OFFICE IS HAND-FINISHED** (11-05, the first hand pass; `src/scene/officeGen.ts` "THE HAND PASS", `levels/office.scenarios.ts` `OFFICE_MARKS` and
+  `walked`). The maintainer: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading
+  the player for game play"; of the look he is after, "it's all quite intentionally dressed"; of the office itself, "a lot of personality per room": added
+  to, not replaced. HOW IT WAS READ: the ways field, the level's marks, and twelve scripted runs traced on the page's stand (six of the pair's room clear,
+  six of the rescue). The corridor is the level (every route and both missions run its length, and the camera reads its north wall all game); the room
+  clear turns at the side door between the server room and the manager's office (thirteen of thirty-one men fell within two and a half metres of it) and
+  nothing in the picture said that door was there; the defenders come out of the break room by two doors; nobody, either side, enters the conference room;
+  and the day's people (sixteen desks, a printer, a counter) had no way written to anything. THREE KINDS OF THING, each through the system that owns it.
+  WORN PATHS are data: 30 named marks where a person stands to use a thing (`Level.marks`, attached at load beside the scenarios by `withOfficeScript`: the
+  level file has no slot for a mark yet) and 75 `walked` rows between them, each name one thing (a mark, a door's id, or a room's name that no door
+  shares); the look's page wears the floor by the ways field (`?walked=0` = the lanes as they were). Nothing in play reads a mark: `ways.ts` and the
+  Director's lookup by a script's own id are the only readers, and the office has no script. The walked check's two count files for the office are gone:
+  `--write` dropped `door conference` and `start spawn` (office) and `door conference` (office-relief), each on a way now. PAINT on a surface that was
+  there is a marking on that box (both stands): the four north rooms' numbers on the lintels over their doors, CONFERENCE on its sill, `02←→03` on the
+  corridor's wall between the two rooms the side door joins, STAIR on the stair tower, and keep-clear bays on four floors (inside the stair door, inside
+  the break room's two outer doors, before the side door, outside the fire exit). FITTINGS AND PAINTED PANELS are 69 new boxes, every one drawn only by its
+  own flag, in the office's LIVED TIER (its first: groups `lived.corridor`, `lived.breakroom`, `lived.server`, `lived.exterior` at the tail): a grey dado
+  along the corridor's north wall in the conference sill's own paint, carrying SERVER, MANAGER and STORAGE in chalk; navy floor panels naming the south
+  wall's four openings; conduit and a grille on that wall; a navy band and a vent in the break room; a yellow line along the server racks to the side
+  door's bay; outside, a dark plinth on the south face with the five bays' numbers, conduit to the lamp over the south door, a vent and two downpipes (the
+  kit's `band`, `vent`, `conduit`, `pipe`; the paint by the kit's tools). SWITCH: the tier is `LIVED`'s (`?lived=0` on the page; the frozen stand loads
+  without it), so the frozen stand's office has the 783 boxes, the indices and the fingerprint it had, and the page's has 852: A CHECKPOINT OR A RECORDING
+  MADE ON THE PAGE'S OFFICE BEFORE THIS STEP NO LONGER LOADS THERE. `buildOfficeProcedural` takes `lived` (absent = as this stand loads the file), the
+  exporter asks for it, and `probes.ts level` holds the file against the generator with the tier in on either stand. A texel variant of the office
+  (`level-export.ts --texel`) is the office without its hand pass: the paint is cut for the base lattice. WHERE PAINT READS, learnt from the first
+  pictures: the camera looks from the south, so a wall hides about two metres of floor to its north. Names first painted on the corridor's floor moved to
+  the dado, a bay behind the van was taken out, and the server room's line runs along the racks, not under the wall. ON A BREACH (tried headless, a blast
+  on each of four partitions): the lengths of conduit and the vent over the hole go with the wall and the lengths beside it stay; the bands stay across
+  the foot of the hole (the kit bullet above: the game's rule for every painted band, not mended here). Paint on a wall piece goes when that piece
+  is opened, the whole piece's at once (read in the code, not tried).
+  NOT TOUCHED: the hour and every lamp (both rows open at night), every prop, the lot's and the lawn's ground. `ways-check.ts` now opens the office as
+  the game does, with its script, so its rows are checked at all (before, the office was read with no ways of its own).
+  CHECKS, both stands: `probes.ts level`, `lived-check office` (69 boxes, 0 solid), `wallfurn-check` (669 and 669, held), `marksight-check`,
+  `second-way-check`, `stuff-check`, `probes.ts hitstuff`, `floor-order-check`, `ways-check` (and its break path fails), `walked-check`, `round-check`,
+  `level-needs office --run` (the same four notes as the step before), `wayround-check` on its two missions, seed 1 (nothing to ask), `modelerr` (the
+  page's stand: both kept reports still answer), `zfight-check office` (8 places seen, the same 8 as the step before).
