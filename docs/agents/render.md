@@ -45,6 +45,35 @@ docs/internal/p2a-restir.md for per-pass tables (the pre-v3 frame was ~20 ms: di
 maintainer's own tab): a take that overlaps someone else's measurement is worthless — `sh tools/qa/gpu-quiet.sh` waits for `ioreg` Device Utilization to sit under 8 % before a take, rounds are
 interleaved and filtered to their quiet minimum, and a row whose p75 sits far above its median is quoted as contended, never as a result.
 
+**A PASS WITH NO TIMER IS NOBODY'S COST (2026-11-05).** A pass opened with no `timestampWrites` is in no HUD row, no recording, no column of a sweep, no
+price table, and not in the ladder's reading. One hid 2 ms: the look's `place` pass (`render/placeField.ts step`; "Eyes adjust to shade"), 1.7 ms of
+the tunnel's frame on a rented card and 2.0 on an M4 Max, found only because a sweep's row gave back more than every pass it could name (the walk
+inside it and its cut: the look's own notes). THE RULE: every `beginComputePass` and `beginRenderPass` under `src/` carries `timestampWrites` in its
+own descriptor, or its file and label have a row with the reason in `tools/qa/passtimer-exempt.ts` (an encoder of its own, a clear on the one frame a
+setting flips, a tool's readback, a render pass); `bun run tools/qa/passtimer-check.ts` (`probes.ts passtimer`, families `perf` and `render`;
+`PASSTIMER_BREAK=1` must fail) is red on a pass with neither and on a row no pass uses. HOW A PASS IS HANDED ITS TIMER: the engine hands the module its
+`ts` function (`engine.ts`) and the module asks `ts?.('name')` in the descriptor, so the slot is taken only where the pass is really opened (a slot
+asked for and never written reads as a phantom cost) and the name stands beside the label. A PASS THAT RESTS SOME FRAMES SAYS SO
+(`timer.idle('name')`, as the air does): `powder` between two steps of the air's clock, `diceRing` on the light cache's rest frames; unsaid, its row
+would stay at its last step's time and every total would count it whole. Given theirs in this step: `place`, `powder` (the blown snow's field),
+`diceRing` (the steady bounce's mean, the pass labelled `dice ring mean`), `fogSight` (the fog of war's sight table). `place` is NOT stamped on the
+frame its field is solved to rest in one go (a first frame, a restart, a still: 160 sweeps where a frame has 4), because a timer's row starts from
+its first reading and that one would stand forty times high through the ladder's first measure. All four are of fixed size, so the ladder counts them
+with the work that does not shrink with the picture (`ui/quality.ts`, the `fixed` pattern). THE HUD'S PASS ROWS (`main.ts`) are the ordered list as it
+was and then EVERY OTHER pass the timer holds that ran this frame, so a timed pass has a row whoever adds it (`fogofwar`, timed since it was written,
+had none). TWO RENDER PASSES STAY WITHOUT, by a row each: `gdown` and `outline` (a render pass's stamps on Metal can read as a frame and would be in
+every total, the reason `particlesTimeDraw` is off). MEASURED on the rented card (NVIDIA A10G through Vulkan, relative only; the passes timed by their
+labels from a page script, the office mission and the tunnel, High at ×0.77): `place` 1.75 ms before its cut and 0.10 after, `fogSight` 0.08 with the
+fog of war on, `gdown` 0.09, `outline` 0.04. THE BUILD'S OWN ROWS, SEEN ON THAT CARD (three boxes, no GPU error at boot or after, nothing patched): `place`
+0.09 ms on the tunnel and the office under the look, `powder` 0.02 with the world running and 0 with it held (its rest is said), `diceRing` 0.01 on
+the office at midday, `fogSight` 0.06 on the compound. WHAT THIS CHANGES FOR A PLAYER: the ladder's GPU reading now holds these passes, as it should
+have: 0.06 to 0.11 ms more on four addresses (the tunnel, the office with and without the look, the compound), where its first plan answers the same
+preset and scale with the rows and without them. The plan has three lines between 4 and 45 ms from High on a 1000 px page (High to Medium at 13.5 ms),
+so about one first reading in a hundred sits near enough to a line for a tenth of a millisecond to cross it. No
+switch: it is the reading made true, not a rule of the game. Never seen on an Apple chip, where the frame's union already rose and fell with the
+untimed pass (the sweep that found it), so the reading there may move less than the card's. What the check cannot see: a pass whose
+`timestampWrites` is undefined at run time (a caller that hands no `ts`); the headless device has no timer to ask.
+
 <!-- was CLAUDE.md lines 2403–2406 -->
 - **Markings = object legibility** — palette-indexed bitmaps on box faces, packed in the tail of `boxMat` (no texture); `settings.markings` default ON, `?nomarkings` (+ `?level=relief` = main's frame), `__mark`; emissive markings are LIGHTS; the art rules (flat colour per cell, ≤ 3 entries, no gradients, no baked lighting) — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Materials, RT reflections, the detail layer** (renderer v3 phase 4) — every box carries a finish (`Box.rough / metal / aniso`), `reflect.wgsl` traces under `settings.rtReflect` (`?nortreflect`, `frame.rtCfg.w` 0 = off), the detail layer under `settings.detail` (`?detail=0‥1`; art rule: variation from geometry, never a painted texture); `__rt`, `__hotReflect` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
@@ -3923,3 +3952,35 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   look branch's: the maintainer had said of it "&pace looks good, let's make it the default", and its rule (a display frame passed over while two are
   still with the GPU) goes into the build's own pacer as one path (`src/host/pace.ts`, by its owner's change), not as a second pacer beside it. What
   this bullet measured stands; `src/host/gpuPace.ts` and the HUD row described above are not in the build.
+- **THE OPEN AIR IS COUNTED BY EVERY CELL AT ONCE, NOT WALKED BY ONE GPU THREAD** (11-05; `shaders/place_field.wgsl placeSky` and `placeEye`,
+  `render/placeField.ts step` and `SKY_WORDS`). The maintainer's own sweep of the look's rows in the tunnel put 2.03 ms of the look's 2.53 ms in one
+  row, "Eyes adjust to shade". The performance goal found the cause on a rented card by putting a timer on the `place` compute pass (it had none): 1.70
+  to 1.78 ms, of which the frame's eight sweeps of the field are 0.09 ms and THE EYE 1.66 ms. The eye was one invocation (`@workgroup_size(1)` under
+  `dispatchWorkgroups(1)`) that walked all 7,000 cells of the plan twice a frame, a texture read a cell: the histogram of the cells under the sky, then
+  the means of the two bins it chose. A loop in a one-invocation entry is a loop on ONE GPU THREAD, the slowest core in the machine. WHAT IT IS NOW:
+  `placeSky`, a dispatch over the map at 8 × 8 after the sweeps, in which each cell under the sky adds itself to a table of atomics (a count a bin,
+  the sum of the levels in the bin, and the brightest place by `atomicMax`), and the eye reads the 64 bins, takes the two means and leaves the table
+  empty for the next frame. The sums are whole numbers, so the order the cells add themselves in changes nothing: a level is kept as its height over
+  −24 stops in steps of 1 ∕ 8192 of a stop (a `const_assert` holds every cell in one bin inside a word), and a mean comes back within half a step,
+  0.00006 of a stop, OF THE TRUE MEAN. The old walk summed floats one after another and strayed from the true mean itself (a review's simulation of
+  both: up to 0.001 of a stop apart at a night's levels, the new the nearer), so a night's two words need not match an older build's to the last
+  bit. The brightest place is kept as the float's own bits turned so that they order as the float does, so it comes back exact. WHERE IT IS NOT THE
+  OLD WALK, all of it out of a picture's reach: a level outside −24 to +24 stops counts as the end it is past (no reading is under 2^−20; only a
+  cell the over-relaxed sweep has thrown for a frame is out there); a cell that holds no number is left out, where the walk's sum took it; the
+  middle is held at or over the low word. The table's size is in the layout (`minBindingSize`), so a text and a page that disagree about it fail
+  where the pipelines are tried and not at a frame's dispatch; `lookexpo-check` holds the two numbers together. NO SWITCH: it is the same rule and
+  the same two words, with nothing to put off; the old walk is in the history. HELD BY a new line of `node tools/qa/place-field-page.cjs` (20 lines
+  now): the two words against a plain walk of the read-back field, binned in floats as the shader bins, in six scenes (a yard at one level; a yard
+  whose light falls six stops across the map: 16 bins, the low word 1.5 stops under the middle; under one roof, no cell under the sky, both words
+  the brightest place's); then the whole light two stops down with nothing told to the field, and 240 frames on the eased words are the walk's of
+  the field as it then stands; and the table itself read back between two frames, empty. With the emptying taken out, or stopped one word short,
+  the line fails. IN THE GAME (the pass at midday under the look, twelve frames on the software adapter, the first cut and the build before it):
+  122 pipelines where there were 121, none failed, no error; the eye's word and every cell the same, the low word 0.000003 of a stop apart and the
+  middle 0.000001. ON A RENTED CARD (the performance goal; the maintainer's tunnel address, the first cut against its parent, the pass timed by its
+  label, three-second medians, three boxes of a kind and a slower one): THE PASS 0.10 ms where it was 1.74 to 1.77; THE FRAME 19.17 to 19.28 ms where
+  it was 20.49 to 20.80, 1.4 ms back, which is where the parent sits with its eye left out; with the new eye left out the pass reads 0.09, so the eye
+  is a hundredth of a millisecond; no GPU error, and `place sky` is not among the slow compiles. (The mended text differs from the one timed by one
+  comparison in each entry.) NVIDIA through Vulkan only: NEVER RUN ON METAL OR D3D. A review turned the text into MSL and HLSL with a second compiler,
+  which is not a run. THE RULE TO TAKE FROM IT: anything that reads every cell of a map belongs in a dispatch over the cells; a one-invocation entry
+  is for a few dozen reads. LEFT: the performance goal is putting a timer on each per-frame pass that lacks one, which is how the next of these is
+  found; if the sky's atomics ever show (every cell of a yard at one level adds to the same two words), tally a workgroup first and add once a group.

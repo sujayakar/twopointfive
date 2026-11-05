@@ -348,7 +348,7 @@ export class Destruction {
     if (g.falls.waitingIn(FALL_PIECES)) this.debris.landings();   // (DEBRIS.dress: the thrown pieces the simulation has coming down — nothing waits there with the switch off)
     if (this.debris.list.length) this.debris.update(dt);
     this.breaks.tick();
-    this.edgeLook.update(dt);
+    this.edgeLook.update(dt); this.walls.skins.update();
     this.thudsThisFrame = 0;
     if (chaosOf(g) <= 0 && !this.anyHeat) return;
     const k = Math.exp(-dt / CHAOS.heatTau); let any = false;
@@ -368,7 +368,7 @@ export class Destruction {
   }
   private anyHeat = false; private thudsThisFrame = 0;
   private dustQueue: { p: Vec3; n: Vec3; scale: number; surf: Surf; t: number }[] = [];
-  boxes(out: Box[]) { this.debris.boxes(out); this.edgeLook.boxes(out); }
+  boxes(out: Box[]) { this.debris.boxes(out); this.edgeLook.boxes(out); this.walls.skins.boxes(out); }   // (…and what stands of a holed wall's paint: wallskin.ts)
 
   /** Level reset (resetLevelState): every hidden static back as authored, the pools emptied, heat and caps and the counter back to the start. */
   reset() {

@@ -303,7 +303,7 @@ export class FogSight implements CutSwappable {
   useCut(on: boolean) { this.cutSet.use(this, on); }
   /** At the head of the frame, before anything that lights a pixel. `sceneBGPlain` = the scene group whose binding 11 is the stand-in (this pass writes the
    *  table the frame's own group binds there). `F` null / off / not the full picture / no eye = no pass, and the table is marked unwritten. */
-  encode(enc: GPUCommandEncoder, F: FogFrame | null, sceneBGPlain: GPUBindGroup) {
+  encode(enc: GPUCommandEncoder, F: FogFrame | null, sceneBGPlain: GPUBindGroup, ts?: (name: string) => GPUComputePassTimestampWrites | undefined) {
     const want = !!F && F.on && F.full && F.count > 0;
     if (want && !this.pipe) this.build();
     if (!want || !this.pipe) {
@@ -318,7 +318,7 @@ export class FogSight implements CutSwappable {
     this.device.queue.writeBuffer(this.ubuf, 0, U, 0, SIGHT_FLOATS_BYTES / 4); this.device.queue.writeBuffer(this.buf, SIGHT_HEAD, U);   // (this pass's own block is the floats alone: fogsight.wgsl SightU)
     if (this.stand && thin) { const T = F!.thinBits, was = this.standBits; let same = !!was; if (was) for (let i = 0; i < T.length; i++) if (T[i] !== was[i]) { same = false; break; }
       if (!same) { this.device.queue.writeBuffer(this.stand, SIGHT_HEAD + SIGHT_FLOATS_BYTES, T); (this.standBits ??= new Uint32Array(T.length)).set(T); } }
-    const p = enc.beginComputePass({ label: 'fogSight' });
+    const p = enc.beginComputePass({ label: 'fogSight', timestampWrites: ts?.('fogSight') });
     p.setPipeline(this.pipe); p.setBindGroup(0, sceneBGPlain); p.setBindGroup(1, this.bg); p.dispatchWorkgroups(FOG_BINS / 64, count); p.end();   // (the live eyes' rows: a row past the count is no eye, and nothing reads its distances — fogSeenAt skips it)
     this.live = true; this.dispatched++;
   }
