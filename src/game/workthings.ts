@@ -47,7 +47,7 @@ import { drivePulled, rackDist } from './mission';
 import { quietWords, holderStand } from './quiet';
 import { chronObjective } from './chronicle';
 import { sneakLow, SNEAK } from './sneak';
-import { silentHolds } from './silent';
+import { roundHeldBy } from './roundheld';
 
 export const WORK = {
   /** the whole of it (false: the menu, the men and lighting.ts as they were) */
@@ -372,7 +372,7 @@ export function workHand(g: Game, c: Character): DoorPush | null { return firstO
  *  something, and a back turned on him would be the dumber thing. False with the switch or `heldPass` off. */
 export function workPasses(g: Game, gd: Guard, h: Guard): boolean {
   if (!WORK.on || !WORK.heldPass || !g.work) return false;
-  return g.work.atThing(gd) && silentHolds(g, gd, h);
+  return g.work.atThing(gd) && roundHeldBy('silent', g, gd, h);
 }
 /** sneak.ts's follower and spotted.ts's feet for a silent partner who is FOLLOWING, asked of each suspicious man that is his business: THE MAN IS WALKING
  *  TO THE BREAKER AND HE IS STOOD ON THAT WALK. Their own answers to a man who is looking are to wait short of what he looks at for his back, to step back
