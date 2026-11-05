@@ -1206,6 +1206,9 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     // its glass (the other three rooms' names are on the dado that carries that grey on: the lived tier, below)
     stencilS(boxOn('+z', 2.5, 1.5, 12.87), 'STAIR', 2.5, 1.4, INK, 1, 'coarse');
     stencilS(boxOn('+z', 7.5, 0.25, 10.06), 'CONFERENCE', 7.5, 0.075, CHALK, 1, 'coarse');
+    // ---- rooms 02 and 03 are joined by a door of their own, and it stands in the band of floor the corridor's wall hides from the camera: the corridor says
+    // so, in ink between their two doors, where the wall between them meets it
+    stencilS(boxOn('+z', 22.0, 2.4, 10.06), '02←→03', 22.0, 2.2, INK, 1, 'coarse');
 
     if (opts.lived ?? LIVED.on) {
       const film = (x: number, z: number, w: number, d: number, paint: Vec3) => add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], albedo: paint, flags: BoxFlag.NoShadow });   // (floorPaint's box, above: a painted panel of floor)
@@ -1228,9 +1231,10 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
       grp('lived.breakroom');
       { const navy = saidAs('skim', NAVY); for (const [, a, b] of wallRuns(12.2, 0.12, 28.12, 35.88)) band('x', 12.2, a, b, 1, 0, 1.0, navy, 0.12); }
       vent('x', 12.2, 33.4, 34.0, 1, 2.35, 2.75, louvre, 0.12);
-      // ---- the server room: a yellow line on the raised floor from its corridor door to the bay before the side door
+      // ---- the server room: a yellow line on the raised floor from its corridor door, along the racks' fronts (the stretch of this floor the camera sees:
+      // the corridor's wall hides the two metres under it) and down to the bay before the side door
       grp('lived.server');
-      { const line = madeOf('enamel', [0.88, 0.6, 0.04], { rough: 0.4 }); film(19.26, 9.3, 3.38, 0.06, line); film(17.6, 9.6, 0.06, 0.54, line); }
+      { const line = madeOf('enamel', [0.88, 0.6, 0.04], { rough: 0.4 }); film(19.5, 7.95, 3.86, 0.06, line); film(17.6, 8.9, 0.06, 1.84, line); film(21.4, 8.05, 0.06, 0.2, line); }
       // ---- the south face on the car park: a dark plinth to 60 cm in the wall's own cast panel, each bay's number on it in chalk where its car noses in;
       // conduit along the wall's head to the lamp over the break room's door; the kitchen's vent; a downpipe on the pier between the windows and one at the corner
       grp('lived.exterior');

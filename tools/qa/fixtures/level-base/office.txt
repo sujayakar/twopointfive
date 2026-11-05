@@ -1,2 +1,2 @@
-# the hand pass: paint on the office's own walls and floors as markings (door numbers, keep-clear bays, the stair tower's and the conference room's names); its drawn-only fittings and floor names are its lived tier; no box of its own moved
-a1b1043038a711f186e6d80dfaaff2a45cc7e839
+# the hand pass: paint on the office's own walls and floors as markings (door numbers, keep-clear bays, the stair tower's and the conference room's names, the note that two rooms join); its drawn-only fittings and floor names are its lived tier; no box of its own moved
+74ce195ecb7b5e8812c509e16f61801c47b95a17
