@@ -136,13 +136,35 @@ export function worded<T extends { albedo?: readonly number[]; stuff?: BoxStuff 
   const w = wordFor(o.albedo, o.stuff).stuff; if (w !== undefined) o.stuff = w; else delete o.stuff;
   return o;
 }
-/** A NAMED COAT IS A KIND OF A PLAIN ONE: 'carpaint' is paint, on a vehicle. One row a named coat (the look's own material for it, and one thing to a round:
- *  game/particleFx.ts STUFF_SURF), beside the plain coat it is a kind of — which is a coat on anything and says nothing of what is under it. */
-export const COAT_KIND: Partial<Record<BoxStuff, BoxStuff>> = { carpaint: 'paint' };
+/** THE PLAIN COATS: the words that are a coat on anything and say nothing of what is under them (a brushed paint, a sprayed enamel). A palette paints a
+ *  thing in whichever its look has, so a rule about "a plain coat" is about all of them. */
+export const PLAIN_COATS: readonly BoxStuff[] = ['paint', 'enamel'];
+/** A NAMED COAT IS A KIND OF A PLAIN ONE: 'carpaint' is a coat, on a vehicle. One row a named coat (the look's own material for it, and one thing to a round:
+ *  game/particleFx.ts STUFF_SURF): `under` = the plain coats it is a kind of, and stays under when a look repaints the thing; `rough` = HOW SMOOTH THE
+ *  COAT IS, whatever it lies on (coatRough below). A car's clear coat: 0.2, under every preset's cut-off for the traced mirror less its fade
+ *  (ui/quality.ts RtTier.maxRough), the number agreed with the look's car paint map (docs/agents/render.md "CAR PAINT IS A STUFF"). */
+export interface NamedCoat { readonly under: readonly BoxStuff[]; readonly rough: number }
+export const NAMED_COATS: Partial<Record<BoxStuff, NamedCoat>> = { carpaint: { under: PLAIN_COATS, rough: 0.2 } };
+export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => word !== undefined && Object.hasOwn(NAMED_COATS, word) ? NAMED_COATS[word] : undefined;
+/** A NAMED COAT'S FINISH GOES WHEREVER ITS WORD GOES: a box that says a named coat is drawn no rougher than that coat, whatever row painted it and
+ *  whatever number a kit, a skin or a hand wrote beside the word (a vehicle's body took a truck enamel's satin, a cot's and a locker's too, or nothing at
+ *  all: it showed next to nothing of what stands round it). The word decides; a thing that should not shine like a car does not say it is car paint.
+ *  Smoother stays smoother (a body wet with rain). ROUGHNESS ONLY: whether a thing is bare metal stays its paint's (the game reads that flag —
+ *  game/wallpen.ts, wallcharge.ts — and reads no roughness).
+ *  WHERE: read by the one function that hands a box's finish to the GPU (scene/boxes.ts matWord), so it holds for a level's statics, a shape's pieces, a
+ *  piece blown off a car and anything made later that says the word. No box is changed and no level file carries the number: `Box.rough` is what the file
+ *  gave, always.
+ *  THE SWITCH: COATFINISH.on — ON in the page (`?coatfinish=0` = every box the finish its file gives it, as it was), OFF in the module and on the frozen
+ *  stand (FROZEN_HOLDS; TPS_COATFINISH=1 raises it there); in the registry (game/knobs.ts) and the journal. A picture only.
+ *  CHECK: tools/qa/coatfinish-check.ts (COATFINISH_BREAK=1 fails it), on both stands. */
+export const COATFINISH = { on: false };
+/** the roughness a named coat lends the thing that says `word`, or nothing (the rule down, no word, a word that is no named coat) */
+export const coatRough = (word: BoxStuff | undefined): number | undefined => COATFINISH.on && word !== undefined ? namedCoat(word)?.rough : undefined;
 /** the word of a thing that said `was` and is painted again with a paint that says `now`: the new paint's (whoever repaints a thing does not keep the
- *  old paint's word) — but A NAMED COAT STAYS UNDER A PLAIN ONE: a car's body given another enamel is still a car's body. */
+ *  old paint's word) — but A NAMED COAT STAYS UNDER A PLAIN ONE, whichever plain coat the look has: a car's body given another paint or another enamel is
+ *  still a car's body. */
 export const repaintWord = (was: BoxStuff | undefined, now: BoxStuff | undefined): BoxStuff | undefined =>
-  was !== undefined && now !== undefined && Object.hasOwn(COAT_KIND, was) && COAT_KIND[was] === now ? was : now;
+  now !== undefined && namedCoat(was)?.under.includes(now) ? was : now;
 /** A BOX PAINTED AGAIN, the one place it is done (the default look's skin, for boxes and for props' parts: tools/levels/gwotSkin.ts): the new paint, and
  *  the word repaintWord gives. Returns it. */
 export function repainted<T extends { albedo?: readonly number[]; stuff?: BoxStuff }, A extends NonNullable<T['albedo']>>(o: T, albedo: A): T {
