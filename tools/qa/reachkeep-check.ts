@@ -7,9 +7,12 @@
 //   4  the walls as authored again (the wall engine's reset): the masks the level booted with, at once, with nothing left waiting
 //   5  a wide sun's mask is of its disc: asked twice for the same disc it is made once, and where the disc is another (the weather turned, a snapshot put
 //      the old one back) the next step makes the mask again with nobody telling it
+//   6  a step on the clock (`tickTimed`: the frame has the planners' pace) ends in the same masks as a step on the count, with the clock scripted: the
+//      two mixed; a directional mask carried across steps; a second wall while it is in hand; the sun's disc turned while it is in hand; a wide low
+//      sun let in through a gap cut in an outer wall, and a second gap cut while its job is in hand
 //   bun run tools/qa/reachkeep-check.ts          exit 0 = all pass · 1 = a line failed
 //   REACHKEEP_BREAK=1 = line 1 is asked of a stand WITH a keeper, in line 3 the keeper never sees a put-back, and in line 5 it takes no step after the
-//   disc is made small: all three must FAIL
+//   disc is made small, and in line 6 the clock's arm takes one step only: all four must FAIL
 import { standUp, ROOT } from './headless.ts';
 const BREAK = process.env.REACHKEEP_BREAK === '1';
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
@@ -36,7 +39,7 @@ const stray = (W: any): { lamps: number; dirs: number; n: number; raster: boolea
     for (let ci = 0; ci < WORLD.gridW * WORLD.gridH && !off; ci++) { const x = WORLD.min[0] + (ci % WORLD.gridW + 0.5) * WORLD.gridCell, z = WORLD.min[2] + (Math.floor(ci / WORLD.gridW) + 0.5) * WORLD.gridCell;
       if (Math.hypot(x - l.pos[0], z - l.pos[2]) <= l.range + 1 && reachLevel(full, ci) !== reachLevel(has, ci)) off = true; }
     if (off) bad++; }
-  for (const l of W.engine.lights.lights as any[]) if (l.kind === 2 && K.dirOf(l)) { n++; const inc = K.dirOf(l) as Uint32Array; K.dir(l); const whole = K.dirOf(l) as Uint32Array; if (inc.some((v, i) => v !== whole[i])) dbad++; }
+  for (const l of W.engine.lights.lights as any[]) if (l.kind === 2 && K.dirOf(l)) { n++; const inc = K.dirOf(l) as Uint32Array, whole = K.wholeOf(l) as Uint32Array; if (!whole || inc.some((v, i) => v !== whole[i])) dbad++; }   // (… over its disc, if its mask was made for one: the keeper's own whole derivation, nothing kept)
   return { lamps: bad, dirs: dbad, n, raster }; };
 
 // 1 ---- no picture, no mask, no work
@@ -84,6 +87,56 @@ const B = await stand(true), gB = B.game, K = B.engine.reach, boot = masks(B);
       'a wide sun\'s mask is of its disc: asked twice for the same disc it is made once; with the light\'s disc made small (as a snapshot put back would) the next step makes the mask again, a part of the wide one\'s cells and no cell more; with the wide disc back, the wide mask again',
       `cells decided by the second ask: ${again} · the wide disc reaches ${more} cells the small one does not, the small one ${less} the wide does not · the wide mask again to the bit: ${bits(back) === bits(wide)}`);
     moon.radius = r0; K.dir(moon); } }
+
+// 6 ---- a step on the clock gives the same masks as a step on the count
+// (THE CLOCK IS SCRIPTED: every look at it is 0.7 ms on, so a step is three looks whatever the machine: no line here is the real clock's luck)
+{ const C = await stand(true), g = C.game, KC = C.engine.reach, ws = wallsOf(g), bitsOf = (m: Uint32Array | null | undefined) => (m ? Array.from(m).join(',') : '');
+  { let t = 0; KC.timeNow = () => (t += 0.7); }
+  const inHand = (): boolean => (KC.peek().queue as any[]).some(q => q.dirJob);
+  /** steps until nothing waits: all on the clock, or all on the count, or every third on the count (`mix`); `each` is called after every step */
+  const drain = (how: 'clock' | 'count' | 'mix', each?: (i: number) => void): { ticks: number; carried: number } => { let ticks = 0, carried = 0;
+    while (KC.pending && ticks < 20000) { if (how === 'count' || (how === 'mix' && ticks % 3 === 2)) KC.tick(); else KC.tickTimed(); ticks++; if (inHand()) carried++; each?.(ticks); if (BREAK && how === 'clock') break; } return { ticks, carried }; };
+  const moon = (C.engine.lights.lights as any[]).find(l => l.kind === 2 && KC.dirOf(l)), before = masks(C).join('|'); let w: any = null, w2: any = null;
+  for (const x of ws) { if (quiet(() => blast(g, x))) { w = x; break; } }
+  // (a) the same wall blown three times on one stand: decided on the clock, on the count, and with the two mixed
+  const T = drain('clock'), mT = masks(C).join('|'); g.destr.walls.reset(); const again = masks(C).join('|') === before;
+  const okU = !!w && quiet(() => blast(g, w)); const U = drain('count'), mU = masks(C).join('|'); g.destr.walls.reset();
+  const okM = !!w && quiet(() => blast(g, w)); const M = drain('mix'), mM = masks(C).join('|'), stA = stray(C);
+  // (b) a second wall goes while the first's directional mask is in hand: the light is asked again, and the end is a whole derivation's
+  let asked = false; g.destr.walls.reset(); const okB = !!w && quiet(() => blast(g, w));
+  const B2 = drain('clock', () => { if (!asked && inHand()) { for (const x of ws) if (x !== w && quiet(() => blast(g, x))) { w2 = x; asked = true; break; } } }), stB = stray(C);
+  // (c) the disc turns while the sun's mask is in hand (the cloud's work, or a put-back's): the mask at the end is the new disc's, whole
+  g.destr.walls.reset(); let turned = false, discOk = false, wide = 0;
+  if (moon) { const r0 = moon.radius; moon.radius = 0.25; KC.sun(moon, 0.25); wide = bitsOf(KC.dirOf(moon)).length; const okC = !!w && quiet(() => blast(g, w));
+    drain('clock', () => { if (!turned && inHand()) { moon.radius = 0.02; turned = true; } });
+    discOk = okC && turned && bitsOf(KC.dirOf(moon)) === bitsOf(KC.wholeOf(moon)); moon.radius = r0; KC.dir(moon); }
+  // (d) A SUN THAT A HOLE LETS IN. A partition's hole changes no directional mask (the roof still stands between a room and the sky), so the three above
+  // hold the lamps' work and only the SHAPE of a directional job. Here a wide, low sun shines at an outer wall and a gap is cut in that wall by hand (the
+  // boxes edited in place, the keeper told the rect): its mask must change, on the count be the whole derivation's OVER ITS DISC, and with a second gap
+  // cut while the job is in hand on the clock be the whole derivation's again (the job reads the statics as they stood when it began: it must begin again).
+  g.destr.walls.reset(); let sunLine = 'no outer wall found to cut';
+  let dOk = false; { const st = C.engine.world.statics as any[], inr = g.reachInterior as Uint8Array, cellOf = (x: number, z: number) => Math.floor(z - WORLD.min[2]) * WORLD.gridW + Math.floor(x - WORLD.min[0]);
+    const tall = (b: any) => !b.rot && !b.yaw && b.h[0] < 0.2 && b.c[1] + b.h[1] > 2.4 && b.c[1] - b.h[1] < 0.3 && b.h[2] > 1.4;
+    const east = st.filter(b => tall(b) && inr[cellOf(b.c[0] - 0.8, b.c[2])] && !inr[cellOf(b.c[0] + 0.8, b.c[2])]).sort((a, b) => b.h[2] - a.h[2])[0];
+    const west = st.filter(b => tall(b) && inr[cellOf(b.c[0] + 0.8, b.c[2])] && !inr[cellOf(b.c[0] - 0.8, b.c[2])]).sort((a, b) => b.h[2] - a.h[2])[0];
+    const wall = east ?? west, into = east ? -1 : 1;   // (which way the light must travel to shine into the building through this wall)
+    if (wall) { const c0 = wall.c[2], h0 = wall.h[2], z0 = c0 - h0, z1 = c0 + h0, n0 = st.length; let pieces: [number, number][] = [[z0, z1]];
+      const lay = (): void => { st.length = n0; pieces.forEach((pc, i) => { const c = [wall.c[0], wall.c[1], (pc[0] + pc[1]) / 2], h = [wall.h[0], wall.h[1], (pc[1] - pc[0]) / 2]; if (i === 0) { wall.c = c; wall.h = h; } else st.push({ ...wall, c, h }); }); };
+      const G = 0.4, cut = (zc: number): void => { pieces = pieces.flatMap(pc => (zc > pc[0] + G + 0.1 && zc < pc[1] - G - 0.1 ? [[pc[0], zc - G], [zc + G, pc[1]]] as [number, number][] : [pc])); lay(); KC.changed([wall.c[0] - 0.2, zc - G, wall.c[0] + 0.2, zc + G]); };   // (a gap 0.8 m wide, floor to the wall's top)
+      const mend = (): void => { pieces = [[z0, z1]]; lay(); KC.changed(null); };
+      const len = Math.hypot(1, 0.2), sun: any = { name: 'check sun', group: 'check', kind: 2, pos: [0, 0, 0], dir: [into / len, -0.2 / len, 0], color: [1, 1, 1], intensity: 1, range: 1e6, innerDeg: 0, outerDeg: 0, radius: 0.25, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 1 };
+      C.engine.lights.lights.push(sun); KC.sun(sun, 0.25); const m0 = bitsOf(KC.dirOf(sun));
+      cut(c0 - h0 / 2); drain('count'); const m1 = bitsOf(KC.dirOf(sun)), whole1 = bitsOf(KC.wholeOf(sun));
+      mend(); const backTo0 = bitsOf(KC.dirOf(sun)) === m0;
+      let second = false; cut(c0 - h0 / 2); const D = drain('clock', () => { if (!second && (KC.peek().queue as any[]).some(q => q.l === sun && q.dirJob)) { cut(c0 + h0 / 2); second = true; } });
+      const m2 = bitsOf(KC.dirOf(sun)), whole2 = bitsOf(KC.wholeOf(sun)), stD = stray(C);
+      mend(); C.engine.lights.lights.splice(C.engine.lights.lights.indexOf(sun), 1);
+      dOk = m1 !== m0 && m1 === whole1 && backTo0 && second && m2 === whole2 && m2 !== m1 && stD.raster && stD.lamps === 0;
+      sunLine = `a gap in the ${east ? 'east' : 'west'} wall lets the sun in: ${m1 !== m0} · on the count the whole derivation's over its disc: ${m1 === whole1} · the wall mended, the first mask again: ${backTo0} · a second gap with the job in hand (${D.ticks} steps): cut ${second}, the whole derivation's: ${m2 === whole2}, more than one gap's: ${m2 !== m1}`; } }
+  check(!!w && again && okU && okM && mT !== before && mT === mU && mM === mU && T.ticks > 1 && T.carried > 0 && U.carried === 0 && stA.lamps === 0 && stA.dirs === 0
+      && okB && asked && !!w2 && B2.carried > 0 && stB.raster && stB.lamps === 0 && stB.dirs === 0 && !!moon && wide > 0 && discOk && dOk,
+    'a step on the clock ends in the same masks as a step on the count (the clock scripted, three looks a step): the same wall blown and decided on the clock, on the count and with the two mixed, a directional light\'s mask carried across steps on the clock and never on the count; a second wall blown while that mask is in hand, and the end is a whole derivation\'s; the sun\'s disc turned while its mask is in hand, and the mask at the end is the new disc\'s; a wide low sun let in through a gap cut in an outer wall is the whole derivation\'s over its disc on the count, and again with a second gap cut while its job is in hand on the clock',
+    `clock ${T.ticks} steps (${T.carried} with a directional mask in hand) · count ${U.ticks} · mixed ${M.ticks}: masks equal ${mT === mU} and ${mM === mU} · a second wall mid-job: asked ${asked}, ${B2.ticks} steps, ${stB.lamps} lamps and ${stB.dirs} directional differ from a whole derivation · the disc turned mid-job: ${turned}, the new disc's mask whole: ${discOk} · ${sunLine}`); }
 
 console.log(fails ? `=== reachkeep-check: ${fails} FAILED ===` : '=== reachkeep-check: ALL PASS ===');
 process.exit(fails ? 1 : 0);
