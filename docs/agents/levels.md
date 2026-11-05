@@ -1407,3 +1407,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   boxes, and a checkpoint or a recording loads as before. `&kept=0` on the address is the office as it was drawn, for the visit. WHAT IT DOES NOT
   DO: the worn lanes are where feet go and do not ask the word, so they are as faint at night as they were.
   CHECKS, both stands: `probes.ts kept`, `probes.ts level`, `level-export.ts --check` and `--relief --check`, `lived-check office`.
+- **NO TWO DRAWN FACES OF THE OFFICE LIE IN ONE PLANE** (11-05; `src/scene/officeGen.ts` `HAIR`; `tools/qa/zfight-check.ts office` went from 8 seen
+  patches to none, its 186 noted pairs as they were). The eight were the office's own: the lobby's corner planter, whose plant was exactly its pot's
+  footprint and stood 5 cm into it (four sides), and the four desk clusters, where the cross partition met the spine at one height in another cloth
+  (four tops). THE MEND is the check's own, a face sunk a hair (4 mm, one named number): the plant's sides stand inside the pot's and the cross
+  partition's top is under the spine's. Five boxes are a hair smaller; none is added, removed or moved in the list, and none moves at the centimetre
+  the level's fingerprint reads, so a checkpoint or a recording still loads on either stand. BOTH STANDS' OFFICE CHANGES (these are boxes of the base,
+  not of a tier): a ray that grazed the top 4 mm of a cross partition, or the plant's outer 4 mm above its pot, now passes. No switch: it is level
+  data, and off is the file before. WHAT IS LEFT for a later hand: the noted pairs are drawn alike today and flicker only under a look that paints a
+  box by its own size or place. CHECKS, both stands, as the bullet above, with `zfight-check office`. Never seen on a GPU: the check reads the file.
