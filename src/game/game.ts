@@ -313,8 +313,7 @@ export const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, 
 class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
 export class Player extends PlayerCols {
   char: Character;
-  /** Shift held in a crouch this frame (player.ts CROUCHRUN): the fast crouch walk — set where `sprinting` is, false wherever that is not reached */ dash = false;
-  shoved: [number, number] = [0, 0]; shovedT = -1; shovedFrom: [number, number] = [0, 0];   // noshove.ts: what the men he met moved him by in this update (x, z), the clock of that update, and where the update found him — written and read inside one frame
+  shoved: [number, number] = [0, 0]; shovedFrom: [number, number] = [0, 0];   // noshove.ts: what the men he met moved him by in this update (x, z), the clock of that update, and where the update found him — written and read inside one frame
   haul: Haul | null = null; doorMove: DoorMove | null = null;   // hands.ts: the pick-up of the body in `dragging` (which end, which beat) · the door he is working by hand (HANDS, its switch; both null with it off)
   dragging: Guard | null = null;   // the body being dragged (F): crouched, facing it, its ankles in your hands (ragdoll pins), the rest trailing along the floor
   takedown: { g: Guard; t: number; kind?: CloseKind; from?: number; alert?: boolean; yaw?: number; at?: Vec3; lethal?: boolean; /** CLOSE.rmbHold: the quick knockout — heard further */ loud?: boolean } | null = null;             // silent takedown in progress (a LEFT CLICK with the hands empty on the man in reach behind): locked behind the guard until the strike lands
@@ -329,12 +328,12 @@ export class Player extends PlayerCols {
   bubble: { text: string; t: number; dur: number; radio: boolean } | null = null;
   /** suppression (suppression.ts, docs/internal/sc20k-design.md §4): the rounds passing / striking close to him — the same scalar and rule the guards duck under.
    *  This lane reads it for one thing only, the cone his own rounds open up by (player.ts fire sites, samSpread); the picture, the mix and the reticle are R4's. */
-  sup = new Sup();
+  sup: Sup;
   /** the scalar itself, 0‥1 (what R4's presentation reads) */
   get suppression() { return this.sup.v; }
   /** the aim-settle model (aim.ts): his track on the man under the reticle (or on nothing in particular), that man's bearing rate across his view, the last round's
    *  numbers — fed once a frame by game.ts (trackPlayer), read by his fire sites (samAim) and the overlay's ring. Rests at 0 with tune.aimModel off. */
-  aim = new AimState();
+  aim: AimState;
   /** aimweight.ts: his gun's heading trails the cursor — the swing's rate and the circle's range, live only on frames the weighted turn drove his aim */
   aimw = new AimWeight();
   static readonly MAX_HITS = 1;   // one 9 mm hit and you are down, same as the guards; Enter restarts the encounter
@@ -342,12 +341,12 @@ export class Player extends PlayerCols {
   // card's loadout toggle, remembered per machine — 3 smoke canisters, 4 stun canisters); G quick-throws whichever throwable was selected last (`throwKind`) where the quick throw is on (quickthrow.ts: not in the page). "The
   // weapon in his hand" is gunInHand(): the pistol with 'pistol' selected and drawn, the rifle with 'rifle' selected and off the sling, nothing holstered / slung or
   // with a canister up — every site that used to spell out `slot === 1 && !holstered` for the pistol reads pistolUp, which means exactly that.
-  pistol = new Pistol(); ocp = new Ocp(); canisters = 4; flashbangs = 2; /** fragmentation grenades (frag.ts FRAG.issue; digit 5 then a click — G never throws one) */ frags = FRAG.issue; slot: SlotKind = 'pistol'; throwKind: ThrowKind = 'smoke';
+  pistol = new Pistol(); ocp = new Ocp();
   /** Sam's FN2000 (docs/internal/sc20k-design.md §5, weapons.ts Rifle: the fn2000 row + its light switch, its selector, its attachments and the rings left) and
    *  whether this kit has it at all. Selected with 2 (2 again with it in the hands flips the load its launcher has on the right button: ring ⇄ 40 mm); `holstered` with it selected means
    *  SLUNG across his back (rigProps RIG.sc20k.slung) — the same one flag E, the wall hold, the grab and every hands-free rule already read; in the hands it is
    *  the animator's long gun (player.ts arms it: LONG carriages by state). */
-  rifle = new Rifle(); hasRifle: boolean;
+  rifle = new Rifle();
   /** slotsetup.ts: the setup of the gun in his hands is up (its digit pressed again) — which gun, the game time it opened or was last used, and the last
    *  update that saw it; null = not up. Never saved: a load is a fresh Player with nothing up */
   setup: { gun: 'pistol' | 'rifle'; t: number; seen: number } | null = null;
@@ -356,8 +355,6 @@ export class Player extends PlayerCols {
   setupHand: { gun: 'pistol' | 'rifle' | null; t: number; own?: number } | null = null;
   /** slotsetup.ts: the last press of a gun's digit that the setup did not take (the press that draws that gun), and when */
   setupKey: { gun: 'pistol' | 'rifle'; t: number } | null = null;
-  /** the rifle left his hands when he went down (combat.ts hitPlayer dropped it as an item): nothing to draw slung on the body */
-  rifleGone = false;
   /** KIT ANIMATIONS (kitanim.ts): what was in his right hand last frame by the game's rules (undefined = not watched yet: a fresh Player — a restart, a loaded
    *  checkpoint — starts with no errand pending) and the kind of can it last was (the one a put-away shows after the slot has moved on) */
   kitWas: KitItem | null | undefined = undefined; kitCan: ThrowKind | null = null;
@@ -365,12 +362,9 @@ export class Player extends PlayerCols {
    *  the round; null = not down. Lasts only from frame to frame of the rifle up and free — not saved (a load is a fresh Player: nothing held). */
   launchHeld: RifleAttachment | null = null;
   /** kitanim.ts kitClick: a left click made while a gun was still coming up, owed to the frame it is up: the game time it came, -1 = none (never saved: no checkpoint inside a kit change) */
-  kitOwed = -1; kitOwedFor: KitItem | ThrowKind | null = null;   // (…and the thing he was fetching when it came — a can by its kind: it is that thing's click only)
+  kitOwedFor: KitItem | ThrowKind | null = null;   // (…and the thing he was fetching when it came — a can by its kind: it is that thing's click only)
   /** kitanim.ts kitSlingRest: how far the rifle hanging in front is swung onto his thighs (rad) and the game time it was last eased at; picture only, not saved */
   slingRest: { a: number; t: number } | null = null;
-  /** the one-time word that the OCP lives on the pistol: said the first time the right button is pressed over a light with a long gun in the hands that has
-   *  nothing under its barrel (the shotgun in the rifle's slot — player.ts) — after that the button is simply dead there */
-  ocpHinted = false;
   /** the keys in his pocket, by lock name (doors.ts Door.lockId / FLOOR_KEY): taken off a man he questions the moment the man gives the keyed door up (player.ts
    *  takeKey — Guard.keys empties into this). His door contact carries them (updateDoors) and every 'is this lock against you' test reads them (Doors.lockedOut),
    *  so a keyed door on its corridor face opens to him as it does to the staff — no pick, no kick — and springs locked again behind him. The kit column shows a
@@ -382,10 +376,10 @@ export class Player extends PlayerCols {
   codes = new Set<string>();
   /** the keypad door he is entering the code at (the 'code' row — a sustained verb like the pick: devices.ts updateCoding beeps four keys over CODE_SECS and the pad
    *  takes it; a step, Space or Esc breaks off) and how far in he is; null when none */
-  coding: Door | null = null; codeT = 0;
+  coding: Door | null = null;
   /** handwork.ts: the mains breaker's lever under his hand (the 'breaker' rows with HANDWORK on — `on`: re-arming it; t: s since his hand got there; thrown: the
    *  mains have gone over), null when none · s the verb in hand has waited for his hand to reach the thing (a code, the lever) */
-  breakerMove: { on: boolean; t: number; thrown: boolean } | null = null; handWait = 0;
+  breakerMove: { on: boolean; t: number; thrown: boolean } | null = null;
   nearSel = 0; nearKey = '';    // index of the highlighted row of the interaction list (↑ / ↓, the wheel while Space is down) and the identity of the current list
   /** The Space selector (interact.ts): downT = seconds Space has been down this press (−1 = up, or a press not armed); open = held past TAP_SECS (or scrolled while
    *  down) with rows on offer — the list shows its open state, a cancel row sits at its foot, his feet are frozen, and letting go performs the highlighted row;
@@ -401,28 +395,23 @@ export class Player extends PlayerCols {
   /** the selector open with his hand on it — a list, or a ring whose key is still down; not a ring that merely stands (handring.ts) */
   get choosing(): boolean { return this.sel.open && !this.sel.ring?.free; }
   light!: RtLight;   // the rail light: posed from the gun every frame (rigProps.rigLightPose)
-  throwEaten = false;   // (the quick-throw key's press went to the order menu's frag row: the rest of that press — the key still down, on the page — is not a throw; cleared when the key is up. player.ts)
-  throwHeld = false; heldKind: ThrowKind = 'smoke'; throwPreview: ThrowSolution | null = null; pendingThrow: { t: number; sol: ThrowSolution; kind: ThrowKind } | null = null;
+  throwPreview: ThrowSolution | null = null; pendingThrow: { t: number; sol: ThrowSolution; kind: ThrowKind } | null = null;
   /** the leaf he is easing open by hand (the 'ease' row: started by a tap, it goes on round at the crack rate on its own until it stands open, or a step / Space /
    *  Esc stops it where it is — game.ts updateDoors runs it; stallT = seconds it has not moved, a body or a chair against it); null when none */
-  easing: Door | null = null; easeStallT = 0; easeBest = 0;
+  easing: Door | null = null;
   /** locked doors (player.ts updatePicking / updateKick): the lock being worked — planted in a crouch at it, hands on the tools, on its own clock once begun (a step,
    *  Space or Esc breaks off, the progress kept on the door a moment); the kick in progress — rooted square to the leaf until the foot is back down (spot / yaw:
    *  where, fixed when the kick began); fHeld: the Space press now down has been SPENT (it stopped a running verb, a teleport / a kick / a finished pick swallowed
    *  it) and must come up before Space arms again */
   picking: Door | null = null; kick: { door: Door; spot: Vec3; yaw: number; run?: boolean; /** the beat is the big slot's tool on the lock, not the boot (bigkit.ts samBigTick): which, its clock, the blows or shells so far, the next one's time */ tool?: { kind: 'shotgun' | 'hammer'; side: 1 | -1; /** the beat's clock: 0 = his hands leave for the tool; it starts `lead` below that while his own gun is carried away by hand (bigkit.ts BIGSLOT.weight) */ t: number; lead?: number; n: number; /** blows the hammer needs here (one where a boot would do, BIGSLOT.swings where the frame holds one) */ need: number; next: number; done: number; /** the door gave to it: a leaf left standing home (broken from the face it opens toward) is pulled open as the beat ends — BIGSLOT.shut */ gave?: boolean;
-    /** BIGSLOT.moves (bigkit.ts): he WALKS onto his place with the tool coming into his hands — `arrived` once he stands on it; the point struck or shot; when each blow or shell lands, on `t` (the last one may still be to come); when his hands began putting it back (−1: not yet) */ moves?: { arrived: boolean; at: Vec3; blows: number[]; end: number; /** the corner of his walk, round a man of the file (gone once he has turned it) */ via?: Vec3 } } } | null = null; fHeld = false;
+    /** BIGSLOT.moves (bigkit.ts): he WALKS onto his place with the tool coming into his hands — `arrived` once he stands on it; the point struck or shot; when each blow or shell lands, on `t` (the last one may still be to come); when his hands began putting it back (−1: not yet) */ moves?: { arrived: boolean; at: Vec3; blows: number[]; end: number; /** the corner of his walk, round a man of the file (gone once he has turned it) */ via?: Vec3 } } } | null = null;
   /** the optical wand (wand.ts): `wand` = it is in his kit (his card's row — kit.ts kitPlayer); `wanding` = he is on his knee at a shut door with it under the
    *  leaf (player.ts startWand / updateWanding; a step, Space or Esc pulls it out) */
-  wand = false; wanding: Wanding | null = null;
-  /** the breaching shotgun or the hammer in his big slot (kit.ts BIGSLOT, his card's; bigkit.ts: a row of a door locked against him). 'none' as built. */
-  bigKit: BigKit = 'none';
+  wanding: Wanding | null = null;
   /** what his card weighs (kitload.ts: its mobility and concealment beside his reference's, written where his card goes on him — kit.ts kitPlayer; null: nothing weighed on him, nothing of his is touched) */
   kitLoad: KitWorn | null = null;
   /** the sticky cameras he has sent, in flight and stuck (stickycam.ts; how many are left to send rides his rifle: Rifle.cams) */
   cams: StickyCam[] = [];
-  /** the last id a camera of his was given (stickycam.ts fireCam: one up each, never reused in a run) */
-  camSeq = 0;
   /** a door charge going on by his own hands (doortools.ts samTick; owncharge.ts): the door, the face he is on, when it began, where he stood. Not saved:
    *  savestate.ts playerBusy refuses a plain save while it runs */
   charging: { door: Door; side: 1 | -1; t0: number; at: Vec3 } | null = null;
@@ -439,7 +428,7 @@ export class Player extends PlayerCols {
   constructor(men: MenStore, ch: GltfCharacter, pos: Vec3, hasRifle = true, seat = 0) {   // (`men`: his game's rows · `seat`: whose man — seats.ts; the first is PLAYER_ID in the suit he always wore, a second player's wears another trim so the two tell apart)
     super();
     this.char = new Character(ch, { id: seatManId(seat), tint: [0.05, 0.06, 0.07], tint2: seat ? [0.1, 0.2, 0.36] : [0.1, 0.32, 0.18], pos, yaw: Math.PI, men });
-    sameMan(this, this.char); this.initPlayer();
+    sameMan(this, this.char); this.initPlayer(); this.frags = FRAG.issue; this.sup = new Sup(this); this.aim = new AimState(this);
     this.char.muzzleAhead = this.pistol.def.muzzleAhead;   // (the row's: where the round, the flash and the rail light's beam start along the gun)
     this.hasRifle = hasRifle;
   }
@@ -573,7 +562,7 @@ export type PairId = 'red' | 'blue';
 /** Who a man's senses, fix and gun are ON (guards.ts, teams): Sam — every staff guard's for life, and today's whole game — or a hostile AI man, or nobody yet. */
 export type Foe = 'player' | Guard | null;
 export class Guard extends GuardCols {
-  char: Character; 
+  char: Character;
   /** his name on the net (CALLSIGNS by roster index; a spawned unit's given name) */
   callsign: string;
   /** the player an enemy has in mind, by seat, in a game of more than one seat (seats.ts facedSeat; never written in a game of one) */
@@ -589,7 +578,7 @@ export class Guard extends GuardCols {
   /** in a room fight (roomfight.ts sets it every frame he is in one): his side's multipliers on the aim model's settle time and cone — takes TRAINED's place, and a
    *  pinned man with it earns his track like anybody instead of standing on 1 */
   skill: { settleK: number; spreadK: number } | null = null;
-  lastKnown: Vec3 | null = null; 
+  lastKnown: Vec3 | null = null;
   /** Sam has him from behind (player.ts Hold — docs/internal/grab-interrogate-design.md §2.1): NOT a state — his `state` stays what it was so what he knew survives
    *  it — but a side record updateGuard branches on before anything else, the way it does for a scripted man: no senses, no feet of his own (updateHold places and
    *  turns him), no voice but his answers to Sam (guards.ts say drops the rest), off the net (guards.ts offNet: the radio check asks after him and sends somebody
@@ -618,19 +607,19 @@ export class Guard extends GuardCols {
    *  widening out to a search point away from it ('fan'); null = ordinary suspicion. Cleared whenever he leaves 'suspicious'. */
   bodyDuty: { body: Guard; role: 'finder' | 'called'; stage: 'to' | 'cover' | 'fan'; t: number; t0: number; spot: Vec3 | null } | null = null;
   dropped: Item | null = null;   // the torch / pistol that left his hand when he died (the sputtering light rides it)
-  path: Vec3[] = []; 
+  path: Vec3[] = [];
   /** What he carries and its state (weapons.ts: the row from his route — the 9 mm service pistol unless the level says otherwise — with its chamber and magazine;
    *  guards.ts fires it and reads its cadence, fireWeapon its report / flash / spread, killGuard what falls out of the hand). fireCd: seconds until the trigger
    *  will go again (the AI's beat: cadence, the reaction on going alert, the shield's floor). reloadT: his reload BEAT — seconds left standing there changing
    *  magazines (the row's reload.dur), −1 = not; when it runs out the weapon is simply full again (weapon.rearm: a guard's spares are bottomless). */
-  weapon: Firearm; 
+  weapon: Firearm;
   /** suppression (suppression.ts): rounds passing / striking close to him — the scalar every reaction branches on (guards.ts: flinch, worse and later rounds, head
    *  down, the shift to cover) and its clocks. Nothing else writes it; the panel line and the QA probes read it. */
-  sup = new Sup();
+  sup: Sup;
   /** the aim-settle model (aim.ts): his track on Sam (0‥1 — no round under AIM.guard.acquireMin of it, his cone × up to unsettledK short of 1), Sam's bearing
    *  rate across him, whether he is braking for a shot, the last round's numbers. guards.ts trackGuard feeds it once a frame; the three fire sites read it. */
-  aim = new AimState();
-  flashlight: RtLight; 
+  aim: AimState;
+  flashlight: RtLight;
   /** a teammate's breaching shotgun out of his big slot and in his hands for a lock (bigkit.ts gunUp / gunDown): the gun he put down for it, to take up again */
   slung: { own: Firearm; ownId: WeaponId | undefined; ahead: number; gun: Firearm; out: boolean; t: number } | null = null;
   /** a teammate's second gun (gunslots.ts GUNSLOTS: his card's other slot) — `gun` / `id` / `ahead` are the one that is NOT in his hands; `out`: that is his
@@ -650,7 +639,7 @@ export class Guard extends GuardCols {
   /** threshold discipline (guards.ts pieDoorway): the doorway his alert / search path is taking him through right now and where he is in slicing it — null when
    *  none; pieLast / pieLastT: the door he last went through that way (or any way, while hunting) and when, so the one he has just come through is not pied again;
    *  piePrev / piePrevT: where he stood the last frame that was looked at (the crossing itself is his stride cutting the frame line) */
-  pieing: Pieing | null = null; pieLast: Door | null = null; 
+  pieing: Pieing | null = null; pieLast: Door | null = null;
   /** the human shield's standoff (guards.ts standoffPerceive / standoffAlert, docs/internal/grab-interrogate-design.md §2.2): a colleague held in Sam's arm in his
    *  view — he is 'alert' throughout, but instead of the chase and the shot he keeps his distance, works round toward Sam's back for a clean line, and talks; null
    *  when nobody he can see is being held (dropped the moment the hold ends, or four seconds after he last had the pair in view) */
@@ -666,7 +655,7 @@ export class Guard extends GuardCols {
     const lookPhase = simRandom() * 10;   // (the die is asked first: the draws of a game's making are in the order they always were)
     const pos = v3.copy(route.points[0]); const p1 = route.points[1 % route.points.length];
     this.char = new Character(ch, { id, tint, tint2: look?.tint2 ?? [0.02, 0.02, 0.025], pos, yaw: look?.yaw ?? v3.yawTo(pos, p1), men });   // facing down the first leg
-    sameMan(this, this.char); this.initGuard(); this.fireCd = 1; this.beamDir = [0, -0.3, 1]; this.lookPhase = lookPhase;
+    sameMan(this, this.char); this.initGuard(); this.fireCd = 1; this.beamDir = [0, -0.3, 1]; this.lookPhase = lookPhase; this.sup = new Sup(this); this.aim = new AimState(this);
     this.lastPos = v3.copy(pos); this.routeI = routeI; this.route = route; this.flashlight = flashlight; this.callsign = look?.name ?? CALLSIGNS[Math.max(0, id - 10) % CALLSIGNS.length];
     if (look?.team) this.team = look.team;
     if (this.team !== 'guard' && this.team !== 'hostile') this.foe = null;   // a side not hostile to Sam has nobody until a hostile man shows himself (a hostile unit starts on Sam like the staff, and re-targets by salience)
@@ -1529,7 +1518,7 @@ export class Game {
     if (clean) { CLEANRESTART_STATS.restarts++; CLEANRESTART_STATS.lines += this.messages.length; this.messages.length = 0; }   // (the lines of the encounter that ended go before anything below speaks: a staging's own line is this one's)
     this.quiet?.beforeRestart();   // the quiet mission, while it is up, deals this encounter's start / spot / patrol and writes them into the level BEFORE the fresh Player and Guards read it (quiet.ts) — a return on its first line otherwise
     for (const s of this.seats) { const v = s.view, light = v.player.light;   // (every seat's man afresh — seats.ts: the first on the spawn, the next beside him)
-      manLeaves(v.player.char, v.player);   // (his row is free for the fresh man)
+      manLeaves(v.player.char, v.player, v.player.sup, v.player.aim);   // (his row is free for the fresh man)
       v.player = new Player(this.men, this.ch, spotBeside(this, v3.copy(this.level.playerSpawn), s.index), this.fn2000, s.index); v.player.light = light; kitFresh(v); v.player.char.update(0); }   // pose + bones exist before this frame's capsule upload
     this.cues?.reset(); this.squadNet?.reset(); eachSeat(this, v => { holdFireReset(v); resetShowWhy(v); });   // (holdfire.ts: a fresh encounter — nothing has started the fight)
     dialogue.ambientRestart(this);   // (the staff's ambient chat: its first-chat clock runs from this restart, not from the page's first frame)

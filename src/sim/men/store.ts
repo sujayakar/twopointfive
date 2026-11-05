@@ -100,7 +100,7 @@ export function standMan(m: ManCols, S: MenStore): void { m.S = S; m.r = S.enter
 /** …and the same row for a second object of the same man (a Guard record and his Character) */
 export function sameMan(m: ManCols, of: ManCols): void { m.S = of.S; m.r = of.r; m.S.name(m.r, m); }
 /** HE HAS LEFT THE GAME: his row is free, and every object of him (`m`, `also`) reads his numbers as they stood, from a store of leavers */
-export function manLeaves(m: ManCols, ...also: ManCols[]): void {
+export function manLeaves(m: ManCols, ...also: { S: MenStore; r: number }[]): void {
   const S = m.S; if (S.isLeavers) return;
   const K = S.leavers(), r = K.enter(); K.copyRow(S, m.r, r); S.name(m.r, null); S.leave(m.r);
   for (const x of [m, ...also]) { x.S = K; x.r = r; }
