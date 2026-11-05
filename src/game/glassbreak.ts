@@ -286,7 +286,7 @@ export class GlassBreak {
       for (let k = 0; k < np; k++) outline.push(this.world(V, m[at + 2 * k], m[at + 2 * k + 1]));
       list.push({ pane: bi, bi, type: TYPES[m[o + O_TYPE]], kind: KINDS[m[o + O_KIND]], outline, centre: [m[o + O_CX], m[o + O_CX + 1], m[o + O_CX + 2]], normal: [m[o + O_NX], m[o + O_NX + 1], m[o + O_NX + 2]], thickness: m[o + O_THICK], area: m[o + O_AREA],
         velocity: [m[o + O_VX], m[o + O_VX + 1], m[o + O_VX + 2]], spin: [m[o + O_SX], m[o + O_SX + 1], m[o + O_SX + 2]], tint: v3.copy(box.albedo), grain: m[o + O_GRAIN], cause: CAUSES[m[o + O_CAUSE]], who: m[o + O_WHO], seed: m[o + O_SEED],
-        key: m[o + O_KEY], heard: m[o + O_HEARD] !== 0, landed: m[o + O_LANDED] !== 0, fall: { t: m[o + O_FALL_T], pos: [m[o + O_FALL_X], m[o + O_FALL_X + 1], m[o + O_FALL_X + 2]] } });
+        key: m[o + O_KEY], heard: m[o + O_HEARD] !== 0, landed: m[o + O_LANDED] !== 0, fall: m[o + O_FALL_T] < 0 ? undefined : { t: m[o + O_FALL_T], pos: [m[o + O_FALL_X], m[o + O_FALL_X + 1], m[o + O_FALL_X + 2]] } });
     }
     x.panes_out_clear();
     if (keep) keep.push(...list);

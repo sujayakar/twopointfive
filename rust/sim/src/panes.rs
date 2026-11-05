@@ -958,7 +958,7 @@ fn emit(c: &Ctx, ri: usize, f: Fr, pts: &[Pt], rev: bool) {
         }
         (r.w[0], r.ty, r.who, 2.0 * r.ht, heard)
     };
-    let (mut fall_t, mut fall_p, mut landed) = (0.0, [0.0; 3], 0.0);
+    let (mut fall_t, mut fall_p, mut landed) = (-1.0, [0.0; 3], 0.0);   // (no time: not asked, for nothing will read it)
     if c.shards {
         let (t, p) = fall_of(c, f.centre, f.velocity, c.gravity, 0.8);
         fall_t = t;

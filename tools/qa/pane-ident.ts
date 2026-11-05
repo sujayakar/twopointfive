@@ -14,7 +14,7 @@ import { Fold, hold } from './ident-pin.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), BX: any = await import(`${ROOT}/src/scene/boxes.ts`), GB: any = await import(`${ROOT}/src/game/glassbreak.ts`), GLASS: any = await import(`${ROOT}/src/game/glass.ts`);
-const BARS: any = await import(`${ROOT}/src/game/winbars.ts`), FALL: any = await import(`${ROOT}/src/game/falling.ts`), MODEL: any = await import(`${ROOT}/src/game/shardModel.ts`), GP: any = await import(`${ROOT}/src/game/glasspen.ts`), SH: any = await import(`${ROOT}/src/game/shards.ts`);
+const KN: any = await import(`${ROOT}/src/game/rustknobs.ts`), BARS: any = await import(`${ROOT}/src/game/winbars.ts`), FALL: any = await import(`${ROOT}/src/game/falling.ts`), MODEL: any = await import(`${ROOT}/src/game/shardModel.ts`), GP: any = await import(`${ROOT}/src/game/glasspen.ts`), SH: any = await import(`${ROOT}/src/game/shards.ts`);
 type Vec3 = [number, number, number];
 
 const argv = process.argv.slice(2), args0 = (n: string) => argv.includes(n); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
@@ -122,6 +122,7 @@ async function hand(file: string, n: number, done: () => boolean = () => false):
   hush(false);
   const g = W.game, col = g.col, gb = g.glassBreak, boxes: any[] = g.level.boxes;
   GLASS.GLASSFX.on = true; g.tune.glassBreak = true; if (!(g.tune.chaos > 0)) g.tune.chaos = 1; GP.GLASSPEN.on = true; g.tune.glassShards = true; BARS.WINBARS.on = true;
+  { const flip = files.indexOf(file) % 2 === 1, on = process.env.TPS_PROFILE === 'shipped' ? !flip : flip; GB.GLASSREAL.drop = GB.GLASSREAL.place = SH.SHARDS.byFall = on; KN.knobsToRust(); g.shards.update(0); }   // (the three newer rules, every other level the other way from the stand's: the rule as it stands on either, on the one stand)
   GB.PANES.both = hook; watch(g);
   const ask = <T,>(what: string, fn: () => T): T => { const r = fn(); said(g, what, r, []); return r; };
   const sheets: number[] = []; boxes.forEach((b, i) => { if (GLASS.isSheet(b) && !(b.flags & BX.BoxFlag.NoShadow)) sheets.push(i); });
