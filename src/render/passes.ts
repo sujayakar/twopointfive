@@ -362,7 +362,7 @@ export class LightingPasses implements CutSwappable {
   /** …and, `opts.air` given (settings.beamAir), THE SQUAD'S WEAPON LASERS AS LIGHT IN THE AIR: a line `opts.air` knows (thinline.ts thinAirOf → its bead or null) is handed over
    *  with the air's share `opts.A` in e.w and whether it ends on a dot in b.w, composite.wgsl `beamAir` adds it to the picture as a thin additive line + dot, and the line and bead
    *  boxes are RETURNED so the raster leaves them out this frame (BoxWorld.hidePrimary). Lasers go first inside the cap; one past it stays a box. Header: n · flags (1 = mirror
-   *  images on, 2 = the air look on) · k = (rain rate, the wet film's share for the reflection pass (settings.wetMirror; 0 = off), how far a stuff's own `mirrors` stands in for a plain coat's (the look's Finish row, 0‥1; 0 on a page without the look), 0). Nothing here writes a box. */
+   *  images on, 2 = the air look on) · k = (rain rate, the wet film's share for the reflection pass (settings.wetMirror; 0 = off), how far a stuff's own `mirrors` stands in for a plain coat's (the look's Pressed panels row, 0‥1; 0 on a page without the look), 0). Nothing here writes a box. */
   private beamHide = new Set<Box>();
   setBeams(list: Box[] | null, is: (b: Box) => boolean, focus: ArrayLike<number>, opts: { reflect: boolean; air: ((b: Box) => Box | null | undefined) | null; A: number; rain: number; wet: number; coats: number }): Set<Box> | null {
     const F = this.beamData, U = new Uint32Array(F.buffer); let n = 0; const hide = this.beamHide; hide.clear();
