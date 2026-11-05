@@ -61,6 +61,7 @@ import { ORDERS } from './orders';
 import { COVER, REAR } from './cover';
 import { ROOMFIT } from './roomfit';
 import { NVG } from './nvg';
+import { ENV } from './env';
 import { IR } from './irlaser';
 import { IRLIGHT } from './irlight';
 import { WALLPEN } from './wallpen';
@@ -208,7 +209,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'WINBARS',
   // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH): the last place of every blended and sampled pose turns on it, so a recording made with
   // it on replays with it on, and one from before the table replays in doubles
-  'POSEMATH'];
+  'POSEMATH',
+  // the game's own numbers of the picture (env.ts ENV): the night's exposure and the tube's gain its men's goggles are worked out at. A recording made
+  // with the table replays on its numbers; one from before replays on the build's (it was made on the picture's, which no file ever carried)
+  'ENV'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -517,6 +521,8 @@ export function knobRegistry(): Record<string, object> {
     UNDERFOOT,
     // round things are round (scene/round.ts): whether a level's octagons are stood up as round boxes; read when a level is stood up
     ROUND,
+    // the game's own numbers of the picture (env.ts): the night's exposure and the tube's gain, which no player's Brightness moves
+    ENV,
     // a box says its shape (scene/shapes.ts): whether a level's boxes that say a shape are stood up as it, with their pieces; read when a level is stood up
     SHAPES,
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)
