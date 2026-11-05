@@ -364,7 +364,8 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   // Out in the corner they take neither: the stack's marks on every door face are the level's as it was.)
   const PIPES = { x: 31.0, z: 20.0, yaw: 0.2, len: 1.8 }, pipeTops = G.pipes(PIPES.x, PIPES.z, PIPES.yaw, 3, PIPES.len);
   // fuel drums in the pocket of yard between the lean-to and the bay: three standing, one on its side
-  G.drum(7.7, 9.85, 'rust'); G.drum(8.36, 9.72, 'drumBlue'); G.drum(8.02, 10.4, 'genYellow', 0.3); G.drumDown(9.15, 10.75, 0.5, 'drumRed');
+  G.drum(7.7, 9.85, 'rust'); G.drum(8.36, 9.72, 'drumBlue'); G.drum(8.02, 10.4, 'olive', 0.3);
+  const DRUM_DOWN = { x: 9.15, z: 10.75, yaw: 0.5 }, drumTop = G.drumDown(DRUM_DOWN.x, DRUM_DOWN.z, DRUM_DOWN.yaw, 'drumRed');
   grp('road');
   G.jersey(27.5, 24.1, 1, 0.22); G.jersey(31.2, 25.9, 1, -0.18);                              // the halt's chicane on the road
   for (const [x, z, w, d, h, yaw] of [[3.0, 9.4, 0.8, 0.55, 0.6, 0.4], [2.2, 17.2, 0.6, 0.5, 0.45, -0.3], [37.0, 13.6, 0.9, 0.6, 0.7, 0.2], [36.6, 6.2, 0.6, 0.45, 0.4, 0.7], [9.2, 2.0, 0.7, 0.5, 0.5, -0.5], [34.0, 1.8, 0.8, 0.6, 0.55, 0.1], [37.6, 20.6, 0.55, 0.4, 0.35, 0.5]] as const) {
@@ -418,9 +419,9 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   cap(12.7, 21.2, 0.44, 0.44, 0.6, 0.3, 0.05);                                                // the tyres
   cap(15.3, 20.75, 0.44, 0.44, 0.27, 0.2, 0.04);                                              // the loose tyre
   for (const [x, z] of [[7.7, 9.85], [8.36, 9.72], [8.02, 10.4]]) { cap(x, z, 0.36, 0.36, 0.88, 0, 0.05); cap(x, z, 0.36, 0.36, 0.878, Math.PI / 4, 0.05); }   // the fuel drums' lids
-  cap(9.15, 10.75, 0.7, 0.3, 0.58, 0.5, 0.04);                                                // the drum on its side
   // snow ALONG a round that lies, by the kit's one rule for a bowed top (G.lay): a ridge kept to the crown, and a sheet that follows the round under it
   pipeTops.forEach((t, k) => G.lay(PIPES.x, PIPES.z, PIPES.yaw, t, t.c[0], t.c[2], t.c[1] + t.h[1], t.c[1] + t.h[1] + (k === 2 ? 0.05 : 0.03), PIPES.len / 2 - (k === 2 ? 0.03 : 0.05), t.h[2] * (k === 2 ? 0.72 : 0.45), S.snow));
+  G.lay(DRUM_DOWN.x, DRUM_DOWN.z, DRUM_DOWN.yaw, drumTop, 0, 0, drumTop.c[1] + drumTop.h[1], drumTop.c[1] + drumTop.h[1] + 0.04, 0.37, drumTop.h[2] * 0.6, S.snow);   // the drum on its side
   G.lay(23.76, 12.39, 0.05, logOn, 0, 0, logOn.c[1] + logOn.h[1], logOn.c[1] + logOn.h[1] + 0.03, 0.385, logOn.h[2] * 0.55, S.snow);   // the log thrown across the others
   cap(27.5, 24.1, 1.86, 0.2, 0.81, 0.22, 0.05); cap(31.2, 25.9, 1.86, 0.2, 0.81, -0.18, 0.05);   // the barriers
   // ---- BANKS (they stop feet: against a wall, out of every route, none within 1.4 m of a door) ----

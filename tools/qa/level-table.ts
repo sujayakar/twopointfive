@@ -4,7 +4,8 @@
 //                                     counts: { before, after }, library: { used[], added[], wanted[] }, branch, commits[], checks[] }
 //                                     (counts: `level-audit.ts --counts <level>` prints the block)
 //   <dir>/levels/<level>/before.png, after.png     its stills (linked, not read)
-//   <dir>/audit/<level>.json          tools/qa/level-audit.ts --out <dir>/audit: the level as it stands on the tree the audit ran on
+//   <dir>/audit/<level>.json          tools/qa/level-audit.ts --out <dir>/audit: the level as it stands on the tree the audit ran on. It is the "after" of the
+//                                     level's counts wherever the folder has it; a row's own `counts.after` is read only for a level with no audit file
 //   tools/qa/fixtures/level-audit-base.json        every level before it was dressed: the "before" of a level whose row has none
 //   <dir>/cost/<level>/cost.json      tools/qa/level-cost-page.cjs --out <dir>/cost: one boot on the software adapter (a relative read), look.png, and with
 //                                     --plain-page the same mission without the look, plain-page.png
@@ -15,6 +16,9 @@
 //                                     <dir>/cloud/note.txt is the sentence that says what card and what tree it ran on, <dir>/cloud/reading.txt a paragraph printed under the ranking, and <dir>/cloud/trials-off/*.json the
 //                                     same levels' look pages with the look's geometry trials off (a look-only run), where there is one. Shown as its own table, RELATIVE
 //                                     ONLY: no verdict of its rows is printed and nothing of it is set against the budget, which is the Mac's
+//   <dir>/cloud/before/*.json         optional: the run the newest one takes the place of (the same card, an earlier tree), with <dir>/cloud/before/note.txt the
+//                                     sentence on what it stood on. Its look page and what the look added are printed beside the new ones, a level a line, and a
+//                                     level it priced that the new run did not keeps its line with the new columns empty
 //   <dir>/budget.txt                  optional: the budget as it stands, in the folder's own words: its first line is the sentence on who has ruled on what,
 //                                     each further line one row of it. Without the file the page says the rows as they were first proposed
 //   <dir>/parts.json                  optional: { "<task's name>": ["level", …] }, for the levels that have no row yet
@@ -87,6 +91,8 @@ const arrow = (a: number | undefined, b: number | undefined) => a === undefined 
 // … and the newest file from a rented card, with the sentence that says what it ran on
 const cloudDir = `${D}/cloud`, cloudFiles = gpuFiles(cloudDir), cloudSet = newestRows(cloudFiles);
 const cloudOffSet = newestRows(gpuFiles(`${cloudDir}/trials-off`)), cloudOff: any = cloudOffSet.files[0]?.j ?? null;
+/** the run the newest one takes the place of, where the folder keeps it (cloud/before/): read the same way, shown beside, never merged into the new rows */
+const cloudWasSet = newestRows(gpuFiles(`${cloudDir}/before`)), cloudWas: any = cloudWasSet.files[0]?.j ?? null, cloudWasNote = existsSync(`${cloudDir}/before/note.txt`) ? readFileSync(`${cloudDir}/before/note.txt`, 'utf8').trim().replace(/\s*\n\s*/g, ' ') : '';
 const cloud: any = cloudFiles[0]?.j ?? null, cloudNote = existsSync(`${cloudDir}/note.txt`) ? readFileSync(`${cloudDir}/note.txt`, 'utf8').trim() : '',
   /** what the folder reads from the ranking, in its own words (reading.txt: one paragraph, printed under the table; the tool reads nothing into the numbers itself) */ cloudReading = existsSync(`${cloudDir}/reading.txt`) ? readFileSync(`${cloudDir}/reading.txt`, 'utf8').trim().replace(/\s*\n\s*/g, ' ') : '';
 /** a cloud row as this page shows it: the page without the look and the look page as it opens, over the file's second span (version 4: the compute passes and the
@@ -97,17 +103,27 @@ const ms2 = (v: unknown) => typeof v === 'number' ? v.toFixed(2) : '—';
 const roseIn = (a: any, b: any): string => { const A = a?.passes ?? {}, B = b?.passes ?? {}, d = new Map<string, number>();
   for (const k of new Set([...Object.keys(A), ...Object.keys(B)])) { if ((PRESENT_PASSES as string[]).includes(k)) continue; /* (the passes that draw to the display: their stamps hold its wait, gpu/timer.ts) */ const name = k.startsWith('rc ') ? 'the cascades' : k === 'gbuffer' ? 'the g-buffer' : k === 'compS' ? 'the composite' : k === 'sharpU' ? 'the sharp upscale' : k === 'gatherLight' ? 'the gather\'s light' : k === 'fogofwar' ? 'the fog of war' : k; d.set(name, (d.get(name) ?? 0) + ((B[k] ?? 0) - (A[k] ?? 0))); }
   return [...d].filter(([, v]) => v >= 0.1).sort((x, y) => y[1] - x[1]).slice(0, 2).map(([k, v]) => `${k} +${v.toFixed(2)}`).join(', ') || '—'; };
-/** a row the run itself says is not one picture (its clock stood, its two pages on different steps or sizes): shown apart, never ranked */
+/** a row the run itself set apart (its clock stood, its two pages on different steps or sizes, or the GPU did not keep step with it): shown apart, never ranked */
 const notOnePicture = (r: any): boolean => Array.isArray(r?.apart) ? r.apart.length > 0   // (the run's own word, from its version 5; an older file says it only in its notes)
   : asList(r?.notes).some(n => /clock stood at|not the same step|not the same size|moved during the turns/.test(n));
 const cloudBad = (cloudSet.rows as any[]).filter(notOnePicture).map(r => r.level as string);
+type Was = { look: number; adds: number; share: number | null };
+/** a level's line in the run before: its look page and what the look added then (a row that was not one picture then has none) */
+const wasOf = (level: string): Was | null => { const r = (cloudWasSet.rows as any[]).find(x => x.level === level && x.page?.win && x.on && !notOnePicture(x)), a = r?.page.win.all, b = r?.on.all;
+  return typeof a === 'number' && typeof b === 'number' ? { look: b, adds: b - a, share: a ? (b - a) / a : null } : null; };
 const cloudRows = (cloudSet.rows as any[]).filter(r => r.page?.win && r.on && !notOnePicture(r)).map(r => { const a = r.page.win, b = r.on, adds = typeof a.all === 'number' && typeof b.all === 'number' ? b.all - a.all : null;
   const t = (cloudOffSet.rows as any[]).find(x => x.level === r.level && !notOnePicture(x))?.on ?? null, bare = t && typeof t.all === 'number' ? t.all as number : null;
   return { level: r.level as string, plain: a.all as number | null, look: b.all as number | null, bare, adds, share: adds !== null && a.all ? adds / a.all : null, bareShare: bare !== null && a.all ? (bare - a.all) / a.all : null,
-    layers: typeof r.off?.all === 'number' && typeof b.all === 'number' ? b.all - r.off.all : null, where: roseIn(a, b), trials: t ? roseIn(t, b) : '', bySwitch: (r.programs?.bySwitch ?? 0) as number, notes: asList(r.notes) }; }).sort((x, y) => (y.adds ?? -1e9) - (x.adds ?? -1e9));
-const cloudTop = new Set(cloudRows.slice(0, 3).map(r => r.level));
-const cloudLine = cloud ? `${cloud.gpu}, ${String(cloud.at).slice(0, 16).replace('T', ' ')} UTC, at quality ${cloud.quality}, ${cloudRows.length} level${cloudRows.length === 1 ? '' : 's'} with both pages timed` : '';
-const CLOUD_LEGEND = `The levels are in order of what the look adds, and the three dearest are marked. The times are the GPU's busy time over ${cloud?.version >= 4 ? 'the compute passes and the g-buffer' : 'every pass the browser stamps'}, at High with the quality ladder off. "Trials off" is the look page with its geometry trials off (ground that rays can see, round and cut pieces, the pieces placed by hand). "Of which its layers" is what the look's own switchable layers add on the look page. "Where it rises" names the two passes whose time rises most from the page without the look, and "where the trials are" the two that rise most from trials off to on. "Programs made by the switch" should be 0.`;
+    layers: typeof r.off?.all === 'number' && typeof b.all === 'number' ? b.all - r.off.all : null, where: roseIn(a, b), trials: t ? roseIn(t, b) : '', bySwitch: (r.programs?.bySwitch ?? 0) as number | null, notes: asList(r.notes), was: wasOf(r.level as string) }; }).sort((x, y) => (y.adds ?? -1e9) - (x.adds ?? -1e9));
+/** … and the lines the table prints: the newest run's, then each level only the run before priced, by what the look added then */
+const cloudShown: typeof cloudRows = [...cloudRows, ...(cloudWasSet.rows as any[]).map(r => r.level as string).filter(l => !cloudRows.some(r => r.level === l) && wasOf(l)).map(l => ({ level: l, plain: null, look: null, bare: null, adds: null, share: null, bareShare: null,
+  layers: null, where: '—', trials: '', bySwitch: null, notes: [] as string[], was: wasOf(l) })).sort((x, y) => (y.was?.adds ?? 0) - (x.was?.adds ?? 0))];
+/** a row of a GPU's file whose level the mission list no longer draws: shown with that said beside its name, never counted as a level of the list nor marked dearest */
+const offList = (level: string): boolean => !levels.some(L => L.level === level), cloudOn = cloudRows.filter(r => !offList(r.level));
+const markOf = (level: string): string => [MARKS.get(level) ?? '', offList(level) ? 'off the mission list' : ''].filter(Boolean).join('; ');
+const cloudTop = new Set(cloudOn.slice(0, 3).map(r => r.level));
+const cloudLine = cloud ? `${cloud.gpu}, ${String(cloud.at).slice(0, 16).replace('T', ' ')} UTC, at quality ${cloud.quality}, ${cloudRows.length} level${cloudRows.length === 1 ? '' : 's'} with both pages timed${cloudSet.files.length > 1 ? `; ${cloudSet.files.length} files of this kind are read, and a level's row is its newest` : ''}` : '';
+const CLOUD_LEGEND = `The levels are in order of what the look adds, and the three dearest are marked. The times are the GPU's busy time over ${cloud?.version >= 4 ? 'the compute passes and the g-buffer' : 'every pass the browser stamps'}, at High with the quality ladder off.${cloudOff ? ' "Trials off" is the look page with its geometry trials off (ground that rays can see, round and cut pieces, the pieces placed by hand).' : ''} "Of which its layers" is what the look's own switchable layers add on the look page. "Where it rises" names the two passes whose time rises most from the page without the look${cloudOff ? ', and "where the trials are" the two that rise most from trials off to on' : ''}. "Programs made by the switch" should be 0.${cloudWas ? ` "Before" is the run this one takes the place of${cloudWasNote ? `: ${cloudWasNote.replace(/\.$/, '')}` : ''}. A level with only its "before" was not priced again.` : ''}${cloudShown.some(r => offList(r.level)) ? ' A level marked "off the mission list" was priced while the list drew it, and is no longer one of its levels.' : ''}`;
 const CLOUD_WHAT = 'These numbers are from a rented NVIDIA card, not from your Mac. They are relative only: they say which levels the look costs most on and in which pass, and nothing here is set against the budget. Each level is one held picture, with the quality ladder off and both pages at one size.';
 /** a row's library block in words: how many pieces it lays, what it added to the library, what it still wants from it */
 const lib = (row: any): string => { const L = row?.library; if (!L) return '—';
@@ -123,11 +139,11 @@ const allVs = (m: any): string => !m || (m.page ? m.allOverPage : m.allMore) ===
 const surface = (m: any): string => { const a = m?.off?.passes?.gbuffer, b = m?.on?.passes?.gbuffer; return typeof a === 'number' && typeof b === 'number' ? `${a.toFixed(2)} → ${b.toFixed(2)}` : '—'; };
 const cell = (s: string) => s.replace(/\|/g, '/').replace(/\n/g, ' ');
 const passCost = json(`${D}/cost/pass/cost.json`)?.look?.frameMs?.onOverOff as number | undefined;
-const heaviest = (k: keyof Slim) => Object.entries(base).reduce((m, [lv, b]) => (b[k] as number) > m[1] ? [lv, b[k] as number] as [string, number] : m, ['', 0] as [string, number]);
+const heaviest = (k: keyof Slim) => Object.entries(base).filter(([lv]) => levels.some(L => L.level === lv)).reduce((m, [lv, b]) => (b[k] as number) > m[1] ? [lv, b[k] as number] as [string, number] : m, ['', 0] as [string, number]);
 
 const rows = levels.map(L => {
   const row = json(`${D}/levels/${L.level}/row.json`), audit = slimOf(json(`${D}/audit/${L.level}.json`)), cost = json(`${D}/cost/${L.level}/cost.json`), m = macRow(L.level);
-  const before: Slim | undefined = row?.counts?.before ?? base[L.level], after: Slim | undefined = row?.counts?.after ?? audit ?? undefined;
+  const before: Slim | undefined = row?.counts?.before ?? base[L.level], after: Slim | undefined = audit ?? row?.counts?.after ?? undefined;   // (the folder's audit is the level AS IT STANDS on the tree it ran on: a row's own "after" is what its dresser counted on the day, before the vehicles, the materials and the library's pieces moved it)
   const part = row?.part ?? Object.entries(parts).find(([, ls]) => ls.includes(L.level))?.[0] ?? '—';
   const still = (f: string) => existsSync(`${D}/levels/${L.level}/${f}`) ? `levels/${L.level}/${f}` : null;
   // ---- over the proposed budget, and why
@@ -151,7 +167,7 @@ const out: string[] = [];
 out.push('# Every level in the new look: dressed or not, and what it costs', '');
 out.push(`Built ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC by \`tools/qa/level-table.ts\` from the files in this folder. Do not edit it by hand: the next build writes over it.`, '');
 if (NOTICE) out.push(`**${NOTICE}**`, '');
-out.push(`${dressed} of ${rows.length} levels are dressed. ${priced} of ${rows.length} are priced on your Mac.${cloud ? ` ${cloudRows.length} of ${rows.length} are priced on a rented card, as a relative reading.` : ''} ${read} of ${rows.length} have a software read.`, '');
+out.push(`${dressed} of ${rows.length} levels are dressed. ${priced} of ${rows.length} are priced on your Mac.${cloud ? ` ${cloudOn.length} of ${rows.length} are priced on a rented card, as a relative reading.` : ''} ${read} of ${rows.length} have a software read.`, '');
 out.push('## The budget, and who answers it', '');
 out.push(BUDGET[0], '', ...BUDGET.slice(1).map(l => `- ${l}`), '');
 out.push('Nothing on this page was seen on a GPU unless its line says so. Counts are exact. A software read is a relative read: the same page on a CPU renderer, where a frame takes seconds.', '');
@@ -170,7 +186,7 @@ out.push('## Over a bar', '');
 if (!overs.length) out.push('No level is over a bar that can be read here.', '');
 else { out.push(mac ? 'Each line says which number puts the level there.' : 'Each line says which count puts the level there. These are the bars a count can answer; the GPU bars wait for your run.', '');
   for (const r of overs) out.push(`- **${r.L.level}**${isDressed(r.row) ? '' : ' (not dressed yet)'}: ${r.over.join('; ')}.`); out.push(''); }
-const aparts = rows.filter(r => r.apart.length), APART = 'The run says the pages of these levels were not one picture, so it read no verdict off their numbers. They are neither over nor under: run them again.';
+const aparts = rows.filter(r => r.apart.length), APART = 'The run set these levels apart (their pages were not one picture, or the GPU did not keep step with them), so it read no verdict off their numbers. They are neither over nor under: run them again.';
 if (aparts.length) { out.push('### Not judged on your Mac', '', APART, ''); for (const r of aparts) out.push(`- **${r.L.level}**: ${r.apart.join('; ')}.`); out.push(''); }
 const gpus = cloud ? [] : rows.filter(r => r.forGpu.length && !r.m && !r.over.length);   // (a rented card's file has timed every level: the list of levels to time first has done its work)
 if (gpus.length) { out.push('### Not over a bar, but wants a GPU read first', '', 'The look was timed on one level, the pass. These ask more of a frame than the pass does.', '');
@@ -196,10 +212,10 @@ out.push('');
 out.push('- **Software read, layers on** is how much longer a frame takes with the look\'s layers on than off, on the same page in the same boot, on a CPU renderer. It is a direction, not a price.', '- **GPU** columns are from your run. **GPU ms** is the time the GPU is busy with the compute passes, which is how the game times itself everywhere. The look\'s surface layers (paint, relief, finish, weather, marks) are drawn in a render pass that this number leaves out, so **With the g-buffer** adds the g-buffer\'s own pass to it, which is where those layers are shaded, and that is judged against the same 10%. **Surface pass ms** shows that one pass by itself. **A frame every** is the time between two frames: on a display the game holds, it is the display\'s own rate.', '- **Programs made by the switch** should be 0: the look must not compile anything when its layers change.', '- **No material** is the share of the picture from above that the look draws flat.', '');
 if (cloud) { out.push('## On a rented NVIDIA card (relative)', '', CLOUD_WHAT, '', `The file: \`cloud/${cloudFiles[0].f}\`, ${cloudLine}.${cloudNote ? ' ' + cloudNote : ''}`, '');
   const sgn = (v: number | null, pc: number | null) => v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(2)} ms (${more(pc)})`;
-  out.push(`| Level | Without the look, ms |${cloudOff ? ' Look, trials off, ms |' : ''} With the look, ms | The look adds |${cloudOff ? ' With the trials off |' : ''} Of which its layers | Where it rises | ${cloudOff ? 'Where the trials are | ' : ''}Programs made by the switch |`, `|---|---|${cloudOff ? '---|' : ''}---|---|${cloudOff ? '---|' : ''}---|---|${cloudOff ? '---|' : ''}---|`);
-  for (const r of cloudRows) out.push(`| ${cloudTop.has(r.level) ? `**${r.level}**` : r.level}${MARKS.has(r.level) ? ` (${MARKS.get(r.level)})` : ''} | ${ms2(r.plain)} |${cloudOff ? ` ${ms2(r.bare)} |` : ''} ${ms2(r.look)} | ${sgn(r.adds, r.share)} |${cloudOff ? ` ${sgn(r.bare !== null && r.plain !== null ? r.bare - r.plain : null, r.bareShare)} |` : ''} ${r.layers === null ? '—' : `${r.layers.toFixed(2)} ms`} | ${r.where} | ${cloudOff ? `${r.trials || '—'} | ` : ''}${r.bySwitch} |`);
+  out.push(`| Level | Without the look, ms |${cloudOff ? ' Look, trials off, ms |' : ''} With the look, ms | The look adds |${cloudWas ? ' Before: with the look, ms | Before: the look added |' : ''}${cloudOff ? ' With the trials off |' : ''} Of which its layers | Where it rises | ${cloudOff ? 'Where the trials are | ' : ''}Programs made by the switch |`, `|---|---|${cloudOff ? '---|' : ''}---|---|${cloudWas ? '---|---|' : ''}${cloudOff ? '---|' : ''}---|---|${cloudOff ? '---|' : ''}---|`);
+  for (const r of cloudShown) out.push(`| ${cloudTop.has(r.level) ? `**${r.level}**` : r.level}${markOf(r.level) ? ` (${markOf(r.level)})` : ''} | ${ms2(r.plain)} |${cloudOff ? ` ${ms2(r.bare)} |` : ''} ${ms2(r.look)} | ${sgn(r.adds, r.share)} |${cloudWas ? ` ${ms2(r.was?.look)} | ${sgn(r.was?.adds ?? null, r.was?.share ?? null)} |` : ''}${cloudOff ? ` ${sgn(r.bare !== null && r.plain !== null ? r.bare - r.plain : null, r.bareShare)} |` : ''} ${r.layers === null ? '—' : `${r.layers.toFixed(2)} ms`} | ${r.where} | ${cloudOff ? `${r.trials || '—'} | ` : ''}${r.bySwitch ?? '—'} |`);
   if (cloudReading) out.push('', cloudReading);
-  out.push('', CLOUD_LEGEND + (cloudBad.length ? ` Not ranked, because the run says its two pages were not one picture: ${cloudBad.join(', ')}.` : ''), ''); }
+  out.push('', CLOUD_LEGEND + (cloudBad.length ? ` Not ranked, because the run set them apart (their two pages were not one picture, or the GPU did not keep step): ${cloudBad.join(', ')}.` : ''), ''); }
 const plainPage = json(`${D}/cost/pass/cost.json`)?.againstPlainPage;
 if (plainPage) { out.push('## What each page compiles', '');
   out.push(`On the pass, on the software page: the page without the look compiled ${plainPage.textKB[0]} KB of shader text in ${plainPage.pipelines[0]} pipelines and came ready in ${plainPage.readySecs[0]} s. The look page compiled ${plainPage.textKB[1]} KB in ${plainPage.pipelines[1]} and came ready in ${plainPage.readySecs[1]} s.`, 'The page without the look also compiles a second set of ray programs for cut boxes that swap in, which the look page does not need. The text size and the pipeline count carry over to a GPU; the seconds do not.', ''); }
@@ -247,7 +263,7 @@ body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
 .frame thead th { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: nowrap; position: sticky; top: 0; background: var(--panel); }
 .frame tbody th { font: 600 14px var(--body); white-space: nowrap; }
 .frame td.n { font: 13px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
-.frame thead th.n { text-align: right; } .frame td.gpu, .frame th.gpu { background: var(--gpu); } .frame td.soft { color: var(--muted); }
+.frame thead th.n { text-align: right; } .frame td.gpu, .frame th.gpu { background: var(--gpu); } .frame td.soft { color: var(--muted); } .frame td.was, .frame th.was { color: var(--muted); background: none; }
 .frame tr.over th { color: var(--bad); } .frame tr.dear th { color: var(--accent); } .frame td.words, .frame th.words { min-width: 210px; } .frame tr:last-child th, .frame tr:last-child td { border-bottom: 0; }
 .stills { min-width: 190px; } .still { display: inline-block; margin: 0 6px 4px 0; color: var(--muted); font-size: 11px; text-decoration: none; }
 .still img { display: block; width: 168px; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--line); }
@@ -259,7 +275,7 @@ body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
 <div class="sheet">
 <header><h1>Levels in the new look</h1><p class="lede">Every level on the mission list: dressed or not, and what the look costs on it. Built ${esc(new Date().toISOString().slice(0, 16).replace('T', ' '))} UTC from the dressing tasks' rows, the level audit and the page reads.</p>
 ${NOTICE ? `<p class="notice">${esc(NOTICE)}</p>` : ''}
-<div class="counts"><span><b>${dressed}</b>of ${rows.length} dressed</span><span><b>${priced}</b>of ${rows.length} priced on your Mac</span>${cloud ? `<span><b>${cloudRows.length}</b>of ${rows.length} on a rented card</span>` : ''}<span><b>${read}</b>of ${rows.length} with a software read</span><span><b>${overs.length}</b>over a bar</span></div></header>
+<div class="counts"><span><b>${dressed}</b>of ${rows.length} dressed</span><span><b>${priced}</b>of ${rows.length} priced on your Mac</span>${cloud ? `<span><b>${cloudOn.length}</b>of ${rows.length} on a rented card</span>` : ''}<span><b>${read}</b>of ${rows.length} with a software read</span><span><b>${overs.length}</b>over a bar</span></div></header>
 
 <section><h2>Price every level on your Mac</h2>
 <div class="run"><p>This is the one run that answers the budget. It is hands off: ${rows.length * 2} page loads, about half a minute each, with the laptop plugged in.</p>
@@ -297,11 +313,11 @@ ${costs}
 ${plainPage ? `<h3>What each page compiles</h3><p>On the pass, on the software page: the page without the look compiled ${plainPage.textKB[0]} KB of shader text in ${plainPage.pipelines[0]} pipelines and came ready in ${plainPage.readySecs[0]} s. The look page compiled ${plainPage.textKB[1]} KB in ${plainPage.pipelines[1]} and came ready in ${plainPage.readySecs[1]} s. The page without the look also compiles a second set of ray programs for cut boxes that swap in, which the look page does not need. The text size and the pipeline count carry over to a GPU; the seconds do not.</p>` : ''}</section>
 
 ${cloud ? `<section><h2>On a rented NVIDIA card (relative)</h2><p>${esc(CLOUD_WHAT)}</p><p>The file is ${esc(cloudLine)}.${cloudNote ? ' ' + esc(cloudNote) : ''}</p>
-<div class="frame"><table><thead><tr><th>Level</th><th class="n gpu">Without the look, ms</th>${cloudOff ? '<th class="n gpu">Look, trials off, ms</th>' : ''}<th class="n gpu">With the look, ms</th><th class="n gpu">The look adds</th>${cloudOff ? '<th class="n gpu">With the trials off</th>' : ''}<th class="n gpu">Of which its layers</th><th class="words">Where it rises</th>${cloudOff ? '<th class="words">Where the trials are</th>' : ''}<th class="n">Programs made by the switch</th></tr></thead><tbody>
-${cloudRows.map(r => { const sgn = (v: number | null, pc: number | null) => v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(2)} ms (${esc(more(pc))})`;
-  return `<tr${cloudTop.has(r.level) ? ' class="dear"' : ''}><th scope="row">${esc(r.level)}${MARKS.has(r.level) ? `<span class="mark">${esc(MARKS.get(r.level)!)}</span>` : ''}</th><td class="n gpu">${ms2(r.plain)}</td>${cloudOff ? `<td class="n gpu">${ms2(r.bare)}</td>` : ''}<td class="n gpu">${ms2(r.look)}</td><td class="n gpu">${sgn(r.adds, r.share)}</td>${cloudOff ? `<td class="n gpu">${sgn(r.bare !== null && r.plain !== null ? r.bare - r.plain : null, r.bareShare)}</td>` : ''}<td class="n gpu">${r.layers === null ? '—' : `${r.layers.toFixed(2)} ms`}</td><td class="words">${esc(r.where)}</td>${cloudOff ? `<td class="words">${esc(r.trials || '—')}</td>` : ''}<td class="n">${r.bySwitch}</td></tr>`; }).join('\n')}
+<div class="frame"><table><thead><tr><th>Level</th><th class="n gpu">Without the look, ms</th>${cloudOff ? '<th class="n gpu">Look, trials off, ms</th>' : ''}<th class="n gpu">With the look, ms</th><th class="n gpu">The look adds</th>${cloudWas ? '<th class="n gpu was">Before: with the look, ms</th><th class="n gpu was">Before: the look added</th>' : ''}${cloudOff ? '<th class="n gpu">With the trials off</th>' : ''}<th class="n gpu">Of which its layers</th><th class="words">Where it rises</th>${cloudOff ? '<th class="words">Where the trials are</th>' : ''}<th class="n">Programs made by the switch</th></tr></thead><tbody>
+${cloudShown.map(r => { const sgn = (v: number | null, pc: number | null) => v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(2)} ms (${esc(more(pc))})`;
+  return `<tr${cloudTop.has(r.level) ? ' class="dear"' : ''}><th scope="row">${esc(r.level)}${markOf(r.level) ? `<span class="mark">${esc(markOf(r.level))}</span>` : ''}</th><td class="n gpu">${ms2(r.plain)}</td>${cloudOff ? `<td class="n gpu">${ms2(r.bare)}</td>` : ''}<td class="n gpu">${ms2(r.look)}</td><td class="n gpu">${sgn(r.adds, r.share)}</td>${cloudWas ? `<td class="n gpu was">${ms2(r.was?.look)}</td><td class="n gpu was">${sgn(r.was?.adds ?? null, r.was?.share ?? null)}</td>` : ''}${cloudOff ? `<td class="n gpu">${sgn(r.bare !== null && r.plain !== null ? r.bare - r.plain : null, r.bareShare)}</td>` : ''}<td class="n gpu">${r.layers === null ? '—' : `${r.layers.toFixed(2)} ms`}</td><td class="words">${esc(r.where)}</td>${cloudOff ? `<td class="words">${esc(r.trials || '—')}</td>` : ''}<td class="n">${r.bySwitch ?? '—'}</td></tr>`; }).join('\n')}
 </tbody></table></div>
-${cloudReading ? `<p>${esc(cloudReading)}</p>\n` : ''}<p class="legend">${esc(CLOUD_LEGEND + (cloudBad.length ? ` Not ranked, because the run says its two pages were not one picture: ${cloudBad.join(', ')}.` : ''))}</p></section>
+${cloudReading ? `<p>${esc(cloudReading)}</p>\n` : ''}<p class="legend">${esc(CLOUD_LEGEND + (cloudBad.length ? ` Not ranked, because the run set them apart (their two pages were not one picture, or the GPU did not keep step): ${cloudBad.join(', ')}.` : ''))}</p></section>
 
 ` : ''}<section><h2>How this page is made</h2>
 <ul><li>${code('bun run tools/qa/level-audit.ts')} counts every level, headless, in under a minute. ${code('--check <level>')} is the budget check a dressed level must pass.</li><li>${code('node tools/qa/level-cost-page.cjs <level>')} boots the page once on the software renderer: programs compiled, layers off against on, two stills.</li><li>${code('bun run tools/qa/level-table.ts --dir <folder>')} builds this page from those files and from each dressing task's row.</li></ul></section>

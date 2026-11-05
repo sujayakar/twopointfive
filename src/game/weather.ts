@@ -264,6 +264,8 @@ export class Weather {
     { const own = this.levelKind(); if (own && k !== own) return `made in other weather (${k ?? 'the level\'s own'}; this level is in ${own})`; }
     return WEATHER_BOOT.locked && k !== this.kind ? `made in other weather (${k ?? 'the level\'s own'}; this page is in ${this.kind ?? 'the level\'s own'}) — open the mission in that weather to load it` : null;
   }
+  /** the footprints in force now, as underRoof reads them (for a rule that asks many points of them elsewhere: the thrown things' walk in the Rust module) */
+  roofsNow(): readonly Rect[] { this.syncRoofs(); return this.roofs; }
   /** is (x, z) under one of the footprints the rain is cut by */
   underRoof(x: number, z: number): boolean { this.syncRoofs(); for (const r of this.roofs) if (inRect(r, x, z)) return true; return false; }
   /** the rain bed's level at a listener (0‥1): what the mixer plays there, and what hearMask drowns small noises by */

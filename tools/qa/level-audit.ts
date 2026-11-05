@@ -209,7 +209,7 @@ async function all() {
   console.log(`\n=== level-audit --check: the engine's caps, the heaviest level of the list before dressing, and every surface a material${BRK ? ' (every bar at a tenth: must fail)' : ''} ===`);
   for (const r of got) if (r.error) check(false, `${r.level} stands`, r.error);
   if (!base) { check(false, `the baseline is there (${BASE})`, 'bun run tools/qa/level-audit.ts --write-base, on the levels before they are dressed'); process.exit(1); }
-  const k = BRK ? 0.1 : 1, H = AUDIT_BARS.headroom, X = AUDIT_BARS.overHeaviest, all0 = Object.entries(base);
+  const k = BRK ? 0.1 : 1, H = AUDIT_BARS.headroom, X = AUDIT_BARS.overHeaviest, all0 = Object.entries(base).filter(([lv]) => list.some(r => r.level === lv));   // (the baseline's rows of the levels the list draws TODAY: a level that left the list sets no bar)
   const caps = stood.flatMap(r => ([[r.boxes.all, H * r.boxes.cap, 'boxes', r.boxes.cap], [r.lamps.on, H * r.lamps.cap, 'lamps burning', r.lamps.cap], [r.openings.found, r.openings.keep - 0.5, 'openings found (at the cap: the smallest were dropped)', r.openings.keep], [r.boxes.glass, 24, 'panes of glass', 24]] as [number, number, string, number][])
     .filter(([n, bar]) => n > bar * k).map(([n, , w, cap]) => `${r.level}: ${n} ${w}, the cap is ${cap}`));
   check(caps.length === 0, `the engine's own caps: no level is within a tenth of its boxes (${stood[0]?.boxes.cap}) or of the lamps that can burn at once (${stood[0]?.lamps.cap}), and none has as many openings as are kept (${stood[0]?.openings.keep}: at the cap the smallest lose their light) or more panes than a lamp can shine through (24)`, caps.join('; '));

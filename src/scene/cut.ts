@@ -230,7 +230,7 @@ export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, 
 
 /** THE CPU CLIP every ray / segment test shares: the interval [t0, t1] of the local line o + t·d already inside the uncut box, cut down by the record. Result in
  *  CUT_CLIP: { t0, t1, k = the plane the line ENTERS the solid through at t0 (−1 = t0 was not moved: the box's own face, or the origin) }; false = nothing left.
- *  The same statements as common.wgsl isectCut. */
+ *  The same planes in the same order as common.wgsl isectCut, which takes them four at a time with no loop (tools/qa/cut-rule.ts holds the two together). */
 export const CUT_CLIP = { t0: 0, t1: 0, k: -1 };
 export function cutClip(cut: readonly CutPlane[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t0: number, t1: number): boolean {
   let k = -1;

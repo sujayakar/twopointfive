@@ -1149,10 +1149,79 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stretch's low end in a frame that ran the other way on two facings, and lay outside it there.
   KNOWN. A TILTED BOX IS TWO THINGS: a line and a round meet it as it is turned, a walking body meets the same box only yawed
   (`collision.ts collideCircle` reads no `rot`). So a body meets the ladder's stiles as two posts 0.4 m out from the wall, not as leaning rails.
-  `drumDown` and `woodPile` are still stacks of plain boxes: the kit's stores say their shapes in a step of their own. A wall charge leaves what
+  `woodPile` is still a stack of plain boxes (`drumDown` was until the drums' step below, where it says its round). A wall charge leaves what
   hangs above a hand's height on a face (`scene/lookTidy.ts` takes a decal with its wall only from the foot). Split wood's billets step through
   small tables, not a die, so that no two that touch share a face's plane with shapes off.
   SEEN on the software adapter only (Chromium 141, midday, 960 x 600): the pass on the look page (five views) and as the page opens (two), the block's
   window on the look page; six boots, every program compiled (119 of 119; the block's 118 of 118), no page, console or GPU error. The front's pieces
   stand where the trial's stood but for the pipes, the wood and the bench; the windows are open; lying rounds, billets and beam ends draw round;
-  `drumDown` draws as the two boxes it is. NEVER SEEN ON A GPU, and nobody has played either level since.
+  `drumDown` drew as the two boxes it was then (it is a round since the drums' step below). NEVER SEEN ON A GPU, and nobody has played either level since.
+- **Walls and frames that said cloth by a borrowed paint say what they are** (level data and the look's skin, no new switch; 2026-11-05; found by the
+  step that draws a hit by what the thing says it is made of: a round knocked tufts out of them). TWO CASES, ONE CAUSE: a paint taken for its COLOUR brings
+  its row's stuff with it. THE DEPOT's hut walls wear the office's tan partition paint, whose row says cloth: `tools/levels/depot.ts` says `stucco` over it
+  (`saidAs`, the compound's own line), 32 boxes of `walls.huts`, a word each and nothing else. THE CONSULATE's look file framed its doors and windows in a
+  blanket's brown for want of a dark wood: 55 door frame boxes and 10 window jambs were cloth. A SKIN MAY NOW SAY WHAT A PAINT IS ON A THING
+  (`tools/levels/gwotSkin.ts` `Said`: a palette row to the eye and to a round, another stuff and its finish), and `VARNISH` is dark varnished wood, named
+  for what it is: the consulate's `frameOut` and `frameIn` are it, 65 boxes change `stuff` (wood) and `rough` (0.95 to 0.6) and no colour moves. NOT A NEW
+  PALETTE ROW, on purpose: the palette is written whole into every level file built on the kit (a row makes each of them stale), and a row in the
+  blanket's numbers would be the blanket to a round, which knows a paint by its numbers. Both level files differ from the step before only by those
+  words and that finish; `depot-gwot.json` and `consulate.json` do not move; each changed file's base rides (`fixtures/level-base/depot.txt`,
+  `consulate-gwot.txt`). MEANT AND LEFT: walls of sacks are cloth (the kill house's and the road lesson's sandbags, 44 boxes). NOT IN THIS STEP, said to
+  the dress goal: the painted wall bands a skin lays as decals in a cloth's paint (the consulate's madder wainscot, the registry's brown dado: no ray
+  meets a decal, so it is the picture's alone), and a gear screen's backdrop walls in the tan (the compound's set). CHECK `stuff-check` line 15: in every
+  level file no box of a `walls.` or `doorframe.` group is cloth, fabric or carpet but for sacks in their own paint; it finds a made-up hut wall and frame;
+  `STUFF_BREAK=1` fails it; on the step before it is red on exactly these 97 boxes.
+  `hitstuff-check`, `wallfurn-check` (the depot 880 and 752, the consulate 857 and 725, held), `second-way-check`, `lived-check`, `wayround-check` and
+  `level-needs --run` for both levels: green on both stands. PLAY: nothing in the simulation reads a word. The three play-through reads (frozen; shipped with lived rooms off; shipped), seeds 1 and 2,
+  against the step before on the same box: 42 of 42 each on the step this was first written on, and again 4 of 4 each for the depot's and the consulate's
+  missions on the step it is cut on. SEEN: the look page boots on the consulate's rescue with this in, on the software adapter, with no page or GPU error; in its
+  night still no frame is legible, so the varnish itself is seen by nobody, and never on a GPU. The depot shows nothing on the look page (with the look on it
+  opens its look file, which does not move): its change is the picture of a hit with the look off.
+- **A drum is steel whatever it is painted, and the one on its side says its round** (the kit's stores, 2026-11-05; kit pieces and level data on every
+  stand, NO SWITCH: 27 level files re-exported from 23 generators, and what a round, a blast and a wall charge do at 47 drums MOVES). The dress goal
+  ruled both: "the kit's drum (standing and lying) SAYS what it is made of itself, whatever its paint", and "the kit's lying drum says round".
+  STEEL: `gwotKit.ts steelIn` (`drum`, `drums`, `drumDown`). A drum in any row of the palette is metal to everything that reads a paint (the
+  simulation's table `gwotSimOf`, a hit by colour `particleFx.ts surfOf` and by word `saidSurf`, a blast `furnblast.ts breakClassOf`) and wears
+  the row to the eye: a row that is something else to a round stands in a hair off (`gwotPalette.ts gwotAs`, the kit's own `as`). WHAT IT SAYS
+  to the picture: the row's own word where the row is a coat or metal already (`paint` for the drum enamels and olive: a coat, which says nothing
+  of what is under it; rust, galvanised); in ANY OTHER row `paint` with a drum enamel's finish, never the row's stuff (a drum in the colour of mud
+  is not made of mud). ONE WAY TO SAY IT: `scene/stuff.ts saidAs(stuff, paint, finish?)` takes a finish now, as `madeOf` does, so a word and its
+  finish are said together and nobody writes a roughness by hand beside the word (no caller before this step changes; the skin's `Said` moves onto
+  it in its own step). The cars' coat rule is not used: a drum's coat is plain `paint`. UNTIL THIS STEP OLIVE WAS AN AMMUNITION CRATE'S DARK WOOD
+  TO A ROUND, so an olive drum was wood the wall engine chews and a level that wanted a steel one picked another colour (the pass's was
+  `genYellow`; it is olive again). No level lays a drum in a row that is neither a coat nor metal today, so that half moves no file.
+  WHAT MOVED, NAMED: 47 standing olive drums in 20 levels (twins aside) were breakable and are steel: crossing 2, floodlit 1, gwot-yard 2, hall 1,
+  lights-out 1, pass 2, police-post 1, quiet-relay 1, smoke-lab 3, tut-kit 6, tut-pair 7, tut-queue 3, tut-quiet 3, tut-road 2, tut-sky 2, tut-solo 4,
+  tut-squad 1, tut-team 2, vault 1, warehouse 2 (floodlit's, hall's, the pass's, tut-sky's, tut-team's and the warehouse's are lived things: the
+  frozen stand does not stand them). Statics the wall engine can chew, before to after, as the page stands each (one a round): crossing 16 to 14,
+  floodlit 10 to 9, gwot-yard 4 to 2, hall 20 to 19, lights-out 1 to 0, pass 8 to 6, police-post 31 to 30, quiet-relay 11 to 10, smoke-lab 5 to 2,
+  tut-kit 8 to 2, tut-pair 7 to 0, tut-queue 3 to 0, tut-quiet 8 to 5, tut-road 3 to 1, tut-sky 4 to 2, tut-solo 4 to 0, tut-squad 1 to 0,
+  tut-team 4 to 2, vault 1 to 0, warehouse 67 to 65. On the frozen stand (rounds off there: four slabs a drum): crossing 13 to 5, gwot-yard 10 to 2,
+  lights-out 4 to 0, police-post 31 to 27, quiet-relay 12 to 8, smoke-lab 14 to 2, tut-kit 26 to 2, tut-pair 28 to 0, tut-queue 12 to 0,
+  tut-quiet 17 to 5, tut-road 9 to 1, tut-solo 16 to 0, tut-squad 4 to 0, vault 4 to 0. No round thing of these 27 files is breakable now.
+  LYING: `drumDown` is ONE box that says `round: 1` (0.88 long, 0.58 across, on the ground), as `pipes` and `log` are, where it was two plain boxes
+  with a marked top: its two ends and two ribs are trim (drawn only, the paint a shade down by `trimTone`: a trim is met by no round, so its tone
+  may be any colour and the piece never sends its caller back for another; it says what the drum says), bare where the paint is bare, on two chocks
+  that reach in under the flank. It hands back its top, and a level lays snow or dust along it with `lay` (the pass does; its flat cap is gone).
+  14 lying drums in 13 generators (floodlit, glasshouse, gwot-yard, mousehole, pass, quiet-relay 2, train-move, tut-kit, tut-pair, tut-queue,
+  tut-road, tut-solo, tut-squad). To a walker it is the box as yawed, a centimetre shorter than the two were; with shapes on a line and a round
+  meet the cylinder (the box's corners are open above the round's shoulder), with shapes off the box.
+  CHECK: `bun run tools/qa/kit-stores-check.ts` (every row of the palette standing and lying is metal to the four readers, known as its row's paint,
+  and says the row's word or `paint` with the enamel's finish; `drums` deals steel, a row that is not metal by itself among them; the lying drum is one round box with its trim, wedged chocks and a top
+  that `lay` follows, in an enamel, a bare row and a row that is no coat; `KITSTORES_BREAK=1` asks a crate and the wood pile: 5 of 5 red). `tools/qa/kit-stand.ts`
+  is how a check stands a kit up empty (the ground pieces' check uses it too). `round-check` line 4b's breakable round is now a post of poplar the
+  check stands itself on ground it asks free (the levels' olive drums were its specimen). `woodPile` is still a stack of plain boxes.
+  KEPT RUNS: a recording or a checkpoint made before this step on one of these levels is not refused where only a drum's paint moved (the level's
+  fingerprint is counts and geometry), and replays against steel drums from the first round that met an olive one (the maintainer, 11-04:
+  breaking replays is fine).
+  MEASURED on the joined branch's tip 6c6c33df against the step on it, software only. Play-throughs of the six room-clear missions on the 27 files
+  (warehouse, floodlit, mousehole, hall, glasshouse, the pass), seeds 1 to 4, on three stands (frozen, shipped, shipped with lived rooms off): 72 of
+  72 runs the same digest, so every tally as it was (no run of those sent a round or a man at a drum that differs). The nine lessons (`lesson-run`,
+  the page's stand, seed 1): all pass before and after; seven the same digest, TWO MOVE, tut-kit and tut-squad (their yards' drums). `vault-run`
+  and `lights-out-run` (seeds 1 and 2) pass before and after on both stands. No other mission can move: the game never calls the kit, and no other
+  level file changed. NO DOOR'S STACK MOVED (every door of the twenty missions on these files, both faces, one to four men, the same marks to the
+  byte, both stands); wall-charge places, marks' sight, second ways and ways round are as they were on every level; the z-fight audit's 167 rows on
+  the 27 files are the same rows. Sixteen level-base ids were written again (the files whose own part holds a drum that moved); eleven files moved
+  in their lived things only and keep theirs.
+  SEEN on the software adapter only (Chromium 141, midday): the pass's fuel pocket on the look page, before and after, two views. NEVER SEEN ON A
+  GPU, and nobody has played any of these levels since.
