@@ -249,8 +249,8 @@ let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn 
  *  sound   how a sound reaches a listener (scene/collision.ts SoundPaths.propagate: straight, over the top, or round by the floor). ?rustsound / TPS_RUSTSOUND=1.
  *  paths   a way across the floor (collision.ts NavGrid.findPath: the A* and its smoothing; with a penalty the search waits for the caller's prices, nav.rs find_priced). ?rustpaths / TPS_RUSTPATHS=1.
  *
- *  THE THINGS of a level, a row a family (each keeps its state in the game's block while its row is on, and WRITES the box world's rows there: the Box
- *  objects the picture draws follow, scene/boxMirror.ts `follow`):
+ *  THE THINGS of a level, a row a family (each keeps its state in the game's block from the moment the game is made — sim/state.ts — and, while its row
+ *  is on, its step runs there and WRITES the box world's rows: the Box objects the picture draws follow, scene/boxMirror.ts `follow`):
  *  doors   the doors' step (game/doors.ts Doors.update: what was written onto each leaf, the men and bodies in its swing, its swing, stops, closer, latch and
  *          lock's clocks, and where its box stands) from rust/sim/src/doors.rs, the leaves' own numbers at home in the block (sim/doorshome.ts). The state is
  *          at home on either maths; the step runs there inside a tick, where the game's own maths stand and the box world's copy does. ?rustdoors / TPS_RUSTDOORS=1.

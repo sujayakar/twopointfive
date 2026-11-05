@@ -30,6 +30,7 @@ import { RUST, ruleFell, ruleRed } from '../sim/sim';
 import { BOTH } from '../scene/collision';
 import type { BoxMirror } from '../scene/boxMirror';
 import { ItemStore, ITF, IC, ITEM_KINDS, ITEM_CAP, ITEM_ROWS, ITEM_ROOFS, IP, IE, IEK, ITEM_EV, ITEMS_HOST, ITEMS_STEPPED, itemIo, itemMem, itemDiff } from '../sim/itemshome';
+import { SimState } from '../sim/state';
 
 export type ItemKind = (typeof ITEM_KINDS)[number];   // 'smoke' | 'mag' | 'flash' | 'frag' | 'pistol' | 'torch' | 'rifle' | 'ring' | 'shell' (sim/itemshome.ts: a kind is its place in that list)   // pistol / torch / rifle: dropped from a dying hand (combat.ts dropFromHand — the rifle is what the long-gun rows let go of, weapons.ts WeaponDef.drop: a rifleman's whole AKS-74U, or with fill 1 Sam's FN2000) — physical like the rest (tumble, bounce, settle, nudge props), and set dressing once down: nobody picks them up (a guard's magazines would not fit the Five-seveN anyway, and nothing on the floor is ammunition); ring: a spent ring airfoil (launcher.ts hands it over the moment its flight ends — off a wall, off a man — to clatter down and lie there: not retrievable either)
 
@@ -204,14 +205,14 @@ export class Throwables {
   items: Item[] = [];
   /** …and the list as the rows were last laid in it (the pool's own: `sync`) */
   private rows: Item[] = [];
-  /** the pool's columns (in the Rust module's memory while RUST.items is on and the game's block holds them) */
-  readonly store = new ItemStore();
+  /** the pool's columns: a part of the game's block (sim/itemshome.ts) */
+  readonly store: ItemStore;
   /** lying snow (null = floors everywhere, the bounce as it always was) */
   bog: BogGround | null = null;
   /** the next item's serial (Item.serial) */
   private serial = 1;
   /** `props`: loose furniture — items bounce off it and hand over a little momentum */
-  constructor(private col: StaticCollision, private props: PropSystem) {}
+  constructor(private col: StaticCollision, private props: PropSystem, st: SimState = new SimState()) { this.store = new ItemStore(st); }
 
   /** Closest hit among statics + door leaves and props. */
   private ray(ro: Vec3, rd: Vec3, tmax: number): { t: number; n: Vec3; prop: Prop | null } | null {
@@ -306,14 +307,13 @@ export class Throwables {
     }
     this.say(g, ev);
   }
-  /** the box world's copy in the Rust module, if the pool's walk is the module's to take now: the row on, the game's own maths standing, the pool's columns
-   *  at home in the game's block, and the copy standing with the game's own leaves and the furniture in it */
+  /** the box world's copy in the Rust module, if the pool's walk is the module's to take now: the row on, the game's own maths standing, a game behind the
+   *  pool, and the copy standing with the game's own leaves and the furniture in it */
   private world(g: Game | null): BoxMirror | null {
     if (!RUST.items) return null;
     if (!EXACT.on) return null;   // (idle: sim.ts OWN_MATHS)
     if (ruleRed('items')) return null;
     if (g === null) return ruleFell('items', 'a pool with no game (a stage\'s)');
-    if (this.store.home === null) return ruleFell('items', 'the pool is not at home in a block of the module');
     const M = this.col.rulesWorld(this.col.dynamicBoxes); if (M === null) return null;
     if (this.col.rulesPanes() < 0) return null;   // (this file's rays ask the pane's rule; each walk below asks it again)
     return M.things(this.props) ? M : ruleFell('items', 'more furniture, or more parts of it, than the copy holds');
@@ -331,7 +331,7 @@ export class Throwables {
       m[P + IP.snowTop] = K.top; m[P + IP.snowBank] = K.bankM; m[P + IP.snowPacked] = K.packed; m[P + IP.snowOld] = K.old; m[P + IP.snowDead] = K.dead; m[P + IP.snowGrip] = K.grip; m[P + IP.snowStick] = K.stick;
       m[P + IP.roofs] = R.length; for (let i = 0; i < R.length; i++) { const o = P + IP.roof + i * 4, r = R[i]; m[o] = r[0]; m[o + 1] = r[1]; m[o + 2] = r[2]; m[o + 3] = r[3]; }
     }
-    const a = io.x.items_update(this.store.home!.bind(), M.slot), m2 = itemMem(), T = ITEMS_STEPPED;
+    const a = io.x.items_update(this.store.home.bind(), M.slot), m2 = itemMem(), T = ITEMS_STEPPED;
     if (a !== ITEMS_HOST && a !== 0) throw new Error(`the Rust module would not walk the thrown things from row ${from} of ${this.store.n}`);
     const n = m2[P + IP.events];
     T.walks++; T.there += m2[P + IP.walked]; T.rays += m2[P + IP.rays]; T.thingRays += m2[P + IP.thingRays]; T.substeps += m2[P + IP.substeps]; T.rested += m2[P + IP.rested]; T.events += n;

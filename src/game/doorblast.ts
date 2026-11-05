@@ -354,14 +354,13 @@ function stepHere(g: Game, d: Door, r: number, dt: number): SlabMet {
   stepSlab(g, d, S, dt, M); T.save(r, S);
   return M;
 }
-/** CAN THIS SLAB'S STEP RUN IN THE MODULE: the row on and the slabs' columns at home in the game's block; the game's own maths in Math's place; the box
+/** CAN THIS SLAB'S STEP RUN IN THE MODULE: the row on (the slabs' columns are in the game's block always); the game's own maths in Math's place; the box
  *  world's copy standing with the game's own leaves in it as they are now. → the copy to step over and which of its leaves is the slab's own box (−1: none
  *  of them), or null: this file steps, on the same columns. */
 function slabThere(g: Game, d: Door): { M: BoxMirror; but: number; ask: number } | null {
   if (!RUST.slabs) return null;
   if (!EXACT.on) return null;   // (idle: sim.ts OWN_MATHS)
   if (ruleRed('slabs')) return null;
-  if (g.doors.slabs.home === null) return ruleFell('slabs', 'the slabs are not at home in a block of the module');
   const dyn = g.col.dynamicBoxes, M = g.col.rulesWorld(dyn); if (!M) return null;
   const ask = g.col.rulesPanes(); if (ask < 0) return null;   // (this file's rays ask the pane's rule)
   return { M, but: dyn.indexOf(d.box), ask };
@@ -373,7 +372,7 @@ function stepThere(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; b
   m[P + SP.dt] = dt; m[P + SP.row] = r; m[P + SP.height] = d.height; m[P + SP.thick] = d.thick; m[P + SP.hu] = d.leafH[0]; m[P + SP.closed] = d.def.closedDir;
   m[P + SP.fcx] = d.frameCentre[0]; m[P + SP.fcz] = d.frameCentre[2]; m[P + SP.but] = W.but; m[P + SP.ask] = W.ask;
   m[P + SP.scrape] = K.scrape; m[P + SP.slam] = K.slam; m[P + SP.slide] = K.slide; m[P + SP.bounce] = K.bounce; m[P + SP.tip] = K.tip;
-  const a = io.x.slabs_step(g.doors.slabs.home!.bind(), W.M.slot), q = slabMem();
+  const a = io.x.slabs_step(g.doors.slabs.home.bind(), W.M.slot), q = slabMem();
   C.rays += q[P + SP.rays]; C.gathers += q[P + SP.gathers]; C.substeps += q[P + SP.substeps];
   if (a === SLAB_HOST) { C.host++; return null; }
   if (a !== SLAB_STEPPED) throw new Error(`the Rust module was asked to step row ${r} of the slabs, which is no slab in the air`);
