@@ -406,6 +406,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kind 'damage', a wear look, on the mid-plane of a thin partition with the half thickness folded into its radius — `WEAR_MARK`). The probe now reads which
   of the two the round must leave off the wall it meets (the walls' own gate: `wallBreakOn`, `wear.on`, breakable, not hard) and holds each to its own
   shape: one mark either way, the wall's normal, world-fixed. Green on both stands; no game code changed.
+  · AGAIN ON THE SHIPPED STAND (11-05; red there since rounds go through thin walls, `WALLPEN.on`, found by `stand-bisect`): one round left five marks
+  where the probe wanted one, and the game was right (`wallpen.ts`: a thing crossed gets a mark where the round went in and one on its far face, and the
+  round marks what it meets beyond). The probe's question is the emit site, so it now counts the marks ON THE WALL FIRED INTO and asks the round's flight
+  (the rule's own `WALLPEN_HOOKS.crossed`) which that wall is owed: stopped in it, one mark and nothing anywhere else; gone through it, the mark where it
+  went in (held to its shape as before) and one hole on the far face, no more. What a round leaves beyond the wall is `wallpen-check`'s. Breaks:
+  `DECALSITES_BREAK=1` (a mark no round owes) red on both stands; `DECALSITES_BREAK=far` (no hole on the far face) red on the shipped stand and on the
+  frozen one with `TPS_WALLPEN=1`, green on the plain frozen stand where nothing goes through. Green on both stands and on frozen with the rule raised;
+  no game code changed. Headless only.
 - **GPU particles** (E4, `render/particles.ts` + `shaders/particles*.wgsl`, docs/internal/exp-particles.md): one 16 384 × 80 B pool in two FIFO rings
   (SHORT sparks + dust, LONG chips + brass + paper), emits queued on the CPU (`Particles.emit(kind, pos, dir, count, opts)`, ≤ 128 records a frame in one
   uniform block, seeds off the system's own serial), kernel `emit` + `update` in ONE compute pass after the cascades (collision = `traceClosest` through
