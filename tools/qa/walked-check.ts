@@ -76,6 +76,8 @@ export async function walkedCheck(args: string[] = []): Promise<number> {
       const differs = [T.nav.blocked.length !== nav.blocked.length || T.nav.blocked.some((v: number, k: number) => v !== nav.blocked[k]) ? 'walk grid' : '', doorsOf(T.level) !== doorsOf(level) ? 'doors' : '', JSON.stringify(T.ways.paths) !== JSON.stringify(A.paths) ? 'ways' : ''].filter(x => x);
       if (differs.length) sick.push(`${twin} does not walk as ${name} does (${differs.join(', ')}): the page loads the twin, and this asks the plain file`); } }
     if (A.lost) sick.push(`${name}: ${A.lost} with no path`); if (A.unknown.length) sick.push(`${name}: no such ${A.unknown.join(', ')}`);
+    // a NAMED MARK is where a person stands (LevelData.marks): on floor the walk grid calls open, or no way can end at it
+    for (const m of (level.marks ?? []) as { name: string; pos: V3 }[]) if (nav.isBlocked(m.pos[0], m.pos[2])) sick.push(`${name}: the mark '${m.name}' at (${m.pos[0]}, ${m.pos[2]}) stands where nobody can (the walk grid's cell is shut)`);
     const leaves = (s: V3) => paths.some(w => (w.kind === 'team' || w.kind === 'hint') && near(w.points[0], s, 0.3));
     /** is this door on a way: does one cross its frame, face to face within its width, or end at it? */
     const onWay = (d: { hinge: readonly [number, number]; closedDir: number; width: number }) => { const c = doorMid(d) as V3, ax = Math.cos(d.closedDir), az = Math.sin(d.closedDir), side = (p: V3) => -az * (p[0] - c[0]) + ax * (p[2] - c[2]);
