@@ -1524,6 +1524,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE: a plain car's and the office van's GLASS says no finish (matte glass; the kits' dark glass is 0.1); the plough lorry's tipper sides are
   plain orange beside a coated cab; the editor's finish panel shows the file's number, not what is sent. COST: smooth finishes are what the reflection
   pass traces, and the plain cars are new to it: NOT MEASURED ON A GPU.
+- **A LEVEL IN OTHER CLOTHES** (2026-11-05; no switch, no level wears one yet, every level file byte for byte as it was). Three small things let a
+  level wear a palette that is not the kit's own, each written once. (1) THE KIT IS HANDED ITS PAINTS BY ITS HOST: `GwotHost.paints` (a `KitPaints`: a
+  colour and a finish for every row the kit names; absent = the kit's palette). Every row a piece names is looked up there, so a piece is written once,
+  in the kit's row names, and no piece knows which clothes it is laid in. `gwotPalette.ts paintsOf(palette, finish, of, words?)` makes such a set from
+  another palette: `of` says which of its rows each kit row wears (data, one line a row, held by the compiler to every row of the kit), and each answer
+  is that row's numbers as a paint of its own, known by the palette row's name, drawn as that name is (or as `words` says), with its finish, DOING WHAT
+  THE KIT'S ROW DOES (`stuff.ts PAINT_DOES`; a stand-in is made one way, `stuff.ts doingAs`, for the kit's own palette and a host's alike): a drum is steel to a round in any enamel and a partition is cut by a charge in any plaster. Many kit rows
+  may wear one row; each is its own paint because they do different things, and in the file each box wears the row by its numbers and says its own
+  `does` where that differs from the row's. (2) A LOOK FILE'S SKIN TAKES THE SAME SET: `Skin.of` (`tools/levels/gwotSkin.ts`). The skin's rules still
+  answer in the kit's row names; `of` says what a row is in this file, for the boxes repainted, the props' parts and the decals the kit lays. A repaint
+  never touched what a box does, so nothing else is asked. WHAT A SKIN DOES NOT REACH: a box the plain file's own generator laid with the kit (a lived
+  room's things: 972 boxes over the 14 plain levels that have a look file) is left as laid, in the kit's paint, under any skin; a level that is to
+  wear a second palette lays those over a host that hands the kit its paints. (3) A FILE KEEPS ONLY THE ROWS IT WEARS: a generator's `PALETTE` export
+  (rows as `MATERIALS` has them, each free to say its own `stuff` and `does`) is written through `tools/levels/wornRows.ts`, which drops a row no box,
+  shape's piece, prop's part or scenario's own box names. So a row added to such a palette moves no file that does not wear it. `MATERIALS` is still
+  written whole, which is why a new row of the kit's palette makes every look file stale; moving it to the same rule is one step that rewrites those
+  files' materials blocks, not taken here. NOT HERE: any second palette. The check makes a small one of its own.
+  THREE THINGS A SECOND PALETTE'S AUTHOR MEETS. (a) A LAMP'S LENS IS NOT CLOTHES: a vehicle's head lamps are laid in the kit's own white and its tail
+  lamps in its own red whatever the host hands over, because `game/carlamps.ts` finds a lamp by those two paints (the one rule of the game that still
+  knows a thing by a colour; its mend is a word on the box and is the cars'). (b) A TONE THAT LANDS ON ANOTHER ROW'S COLOUR STILL THROWS (`toned`: a
+  file's writer names a row by its numbers), but two kit rows that wear ONE row are not each other's clash; the tones are the pieces' own numbers, so
+  a palette whose rows sit within 0.006 of a tone of another is the palette's to move. (c) THE PAGE'S OWN LOOK STEPS DO NOT KNOW IT YET: whether a
+  level "wears the look" is asked of its boxes' colours against the kit's palette (`scene/lookTidy.ts`, `lookDoors`' accent, and the checks
+  `look-check` and `wetground-check`), so a level wholly in a second palette is tidied as a plain one and a level partly in it takes the kit's accent
+  for its doors. That question wants a word in the level file (which palette it wears) and belongs to the first level that wears one.
+  CHECK: `bun run tools/qa/palette-check.ts` (the same on both stands; no game is stood up), three lines, one a thing: every call the two showrooms
+  make of a piece of the kit (all 79 pieces, so tomorrow's too), laid alone in the kit's palette and again over a host's paints, is box for box and
+  part for part the same, every box and part does what it did, the game finds the same lamps, and but for a lens nothing is left in a row of the kit's; a skin handed the paints repaints the boxes the first skin repaints and no others, on the 14 plain levels that have a look file;
+  the worn rows. `PALETTE_BREAK=1`, `=2`, `=3` each turn their own line red. Never seen on a GPU: nothing is drawn differently until a level wears one.
 - **A LEVEL FILE NAMES ITS MARKS** (the format, no switch, no rule of play; 2026-11-05). A mark is a named place on the floor where a person stands to
   use a thing: the end of a `walked` way and a script's place, read by name (`scene/ways.ts`, `game/director.ts`). Until now only the office had any, and
   only as code joined on at load (`scene/level.ts withMarks`, which is GONE). The file has a slot: top-level `marks: [{ id, pos, yaw? }]`
