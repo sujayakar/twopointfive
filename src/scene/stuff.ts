@@ -2,7 +2,7 @@
 // Three places say it, and each is data somebody wrote:
 //   · a PAINT'S NAME. A kit's palette names its paints ('wood', 'carpet', 'tWall') and this table says what each name is made of: one of the look's materials
 //     (render/lookTex.ts LOOK_NAMES); 'plain', meant to be drawn as a flat colour (laminate, a dark screen); 'waits', a stuff the look has no
-//     material for yet (card, foliage, a lawn; drawn plain); or one of the two the look draws plain and a round's hit reads, 'glass' and 'rubber' (BOX_STUFFS below). Where one name is more than one thing, the piece that knows better says its own word;
+//     material for yet (card, foliage; drawn plain. A lawn's paint still says it, though the look has had 'grass' since 11-05: see asphalt below); or one of the two the look draws plain and a round's hit reads, 'glass' and 'rubber' (BOX_STUFFS below). Where one name is more than one thing, the piece that knows better says its own word;
 //   · a level file's MATERIAL ROW (levelData.ts MaterialData.stuff), written by the exporter from this table: the file says it, and the loader asks no table;
 //   · a BOX or a prop's part (Box.stuff, a file's `stuff` on a box), where it is another thing than its paint's row says, or wears a paint written as numbers.
 // A box takes its own word, else its row's, when the file is loaded (levelLoad.ts), and a kit's add() does the same for a box it makes with a named paint
@@ -44,7 +44,7 @@ export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   partRed: 'plain', partBlue: 'plain',   // (cubicle partitions, which say fabric themselves; and a car's body, lived things)
   partTan: 'cloth',     // (a partition; and a hut's stucco walls, drawn as cloth because the tan is a cream rug's, darkened)
   red: 'plain',         // (an extinguisher's enamel; and tape, a ball, a mast's lamps)
-  asphalt: 'plain',     // (the car park: no stuff the look has is tarmac yet, so it says nothing. Until 11-04 its grey was drawn as bare iron, iron's grey darkened; the lived kit's iron fittings, in the same numbers, say metal themselves: livedPieces.ts INK.iron)
+  asphalt: 'plain',     // (the car park. The look has had 'tarmac' and 'grass' since 11-05 (render/lookTex.ts); this row and grass's above still say what they did because a level's FILE carries its own word a material, so they move with the export of the levels that are dressed in them: docs/agents/render.md, TARMAC AND GRASS ARE STUFFS. Until 11-04 its grey was drawn as bare iron, iron's grey darkened; the lived kit's iron fittings, in the same numbers, say metal themselves: livedPieces.ts INK.iron)
   glassFrame: 'plain',  // (a window's frame; and every outside door's leaf, painted from the same numbers as the game runs)
   // ---- the snow kit's (the look lays its own snow over a thing; the paint under it stays plain)
   snow: 'plain', snowOld: 'plain', snowPacked: 'plain',
@@ -93,9 +93,11 @@ export function namePaint(row: readonly number[], name: string, finish?: { rough
  *  made of and its finish, said outright */
 export function sayPaint(row: readonly number[], name: string, said: { stuff?: BoxStuff } & Finish): void { PAINTS.set(row, record(name, said, said.stuff)); }
 /** ONE PAINT, ANOTHER THING: the same paint to the eye (its numbers, its name, its finish) said to be made of `stuff` where a kit paints two things with
- *  it and the row can say only one: `saidAs('plain', C.asphalt)` is the lot under a level, whose paint's row says metal for the iron fittings. */
-export function saidAs(stuff: BoxStuff, paint: readonly number[]): [number, number, number] {
-  const was = PAINTS.get(paint), out: [number, number, number] = [paint[0], paint[1], paint[2]]; PAINTS.set(out, record(was?.name ?? '', was, stuff)); return out;
+ *  it and the row can say only one: `saidAs('plain', C.asphalt)` is the lot under a level, whose paint's row says metal for the iron fittings.
+ *  `finish` = the thing's own, where its stuff has another than the paint's row (as `madeOf` takes one: the word and its finish are said together, so
+ *  nobody writes a roughness by hand beside the word): `saidAs('paint', dust, { rough: 0.5 })` is an enamel in the colour of dust. */
+export function saidAs(stuff: BoxStuff, paint: readonly number[], finish?: { rough: number; metal?: boolean }): [number, number, number] {
+  const was = PAINTS.get(paint), out: [number, number, number] = [paint[0], paint[1], paint[2]]; PAINTS.set(out, record(was?.name ?? '', finish ?? was, stuff)); return out;
 }
 /** A COLOUR WRITTEN AS NUMBERS SAYS ITS WORD BESIDE IT: `madeOf('cloth', [0.3, 0.1, 0.09])` is those numbers, known from here on as a paint made of
  *  that (and of that finish, if one is given), wherever they are handed: a box's albedo, a helper's argument, a constant a generator names once. */

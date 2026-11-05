@@ -26,14 +26,15 @@
 // recently stepped one giving way.
 import { HostOwned, PUT_BACKS } from '../math/side';
 import { mathsEpoch } from '../math/exact';
-import { sim, f64, u32, i32, RUST, type SimExports } from '../sim/sim';
+import { sim, f64, u32, i32, u8, RUST, type SimExports } from '../sim/sim';
+import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
 import { cutConfig, MAX_CUT_PLANES } from './cut';
 import { shapeCut, type Box } from './boxes';
 
 // rust/sim/src/world.rs: a row's doubles, the kinds, the tables by number
 const REC = 16, R_COS = 6, R_SIN = 7, R_YAW = 8, R_ROT = 9, R_CUT = 13, R_CUTN = 14, R_KIND = 15, K_ROT = 1, K_ROUND = 2, K_CUT = 4, K_WALK = 8, F_GLASS = 1 << 17;
 const T_REC = 0, T_LEAF = 1, T_CUT = 2, T_PANE_T = 3, T_FLAGS = 4, T_LEAF_FLAGS = 5, T_START = 6, T_ITEMS = 7, T_TILTED = 8, T_PANE_BI = 9, T_WORLDS = 10, T_PT = 12, T_LIST = 13, T_THING = 14, T_THING_LIVE = 15,
-  T_GLASS = 16, T_GLASS_W = 17, T_GLASS_OF = 18, T_VIEW = 19, T_VIEW_BI = 20;
+  T_GLASS = 16, T_GLASS_W = 17, T_GLASS_OF = 18, T_VIEW = 19, T_VIEW_BI = 20, T_SNOW = 21;
 // rust/sim/src/glass.rs: a broken pane's row (GD doubles, GW words), where its parts are, its flags; a view's doubles a pane; glassPattern.ts's piece ids
 const GD = 80, GW = 64, G_SITE = 9, G_SITES = 8, G_DICE_AT = 72, GW_FLAGS = 1, GW_COLS = 2, GW_ROWS = 3, GW_DSEED = 4, GW_N = 5, GW_SEED = 13, GW_OPEN = 21, GW_GOING = 42, GW_CRATER = 63, GW_BITS = 21,
   G_GONE = 1, G_DICE = 2, G_RUN = 4, VD = 4, FRAGS_PER_SITE = 84, SECTORS = 12;
@@ -41,6 +42,9 @@ const GD = 80, GW = 64, G_SITE = 9, G_SITES = 8, G_DICE_AT = 72, GW_FLAGS = 1, G
 const THING_SET = 2, TH = 4, TL = 3;
 // what a question may owe before the module answers it (BoxMirror.owes): the statics compared, the panes' rows written, the view's rows written
 const OWE_BOXES = 1, OWE_GLASS = 2, OWE_VIEW = 4;
+/** SHEETS OF GLASS A LEVEL MAY HAVE (rust/sim/src/world.rs MAX_GLASS and MAX_VIEW: a row a pane that is no longer whole, a row a pane a burst's view names
+ *  — so no level that loads can break more than the copy holds; game/levelfit.ts says so as the level loads, and `boot` holds the number to the module's) */
+export const PANE_CAP = 256;
 /** where a broken pane's row keeps what, for a check that must spoil one by name (tools/qa/glass-ident.ts's red path) */
 export const GLASS_AT = { doubles: T_GLASS, words: T_GLASS_W, GD, GW, flags: GW_FLAGS, run: G_RUN, lastKey: G_DICE_AT + 4 } as const;
 const PLANE = 4, CUT_ROW = MAX_CUT_PLANES * PLANE;
@@ -178,9 +182,15 @@ export class BoxMirror extends HostOwned {
   /** did the level fit the copy when a tick last opened it (false = every question of this world is the TypeScript's) */
   get fit(): boolean { return this.fits; }
   private readonly caps = { boxes: 0, leaves: 0, cuts: 0, panes: 0, cells: 0, items: 0, tilted: 0, things: 0, glass: 0, view: 0 };
+  /** how much each table of the copy holds, by name (rows; 0 until the module has been asked once), and the cut rows this copy has spent on its statics
+   *  (a cut box and a shaped one each take one): what a level is read against — game/levelfit.ts fitRows, tools/qa/copyfit-check.ts */
+  get tables(): Readonly<Record<string, number>> { return this.caps; }
+  get cutRows(): number { return this.cutNext - this.cutFree.length; }
   // the furniture's copy: where its two tables are, the count of writes it was copied at (−1 = not in this tick), whether it stood then, and whether
   // every row is owed (the world newly this game's, another maths, a snapshot put back: a row's cos and sin are compared by nobody)
   private thing = 0; private thingLive = 0; private thingsAt = -1; private thingsOk = false; private thingsAll = true;
+  // the level's snow: where its table is (a byte a static), and how many of its bytes this copy has written (−1 = not known: what stands behind them may be another game's)
+  private snowAt0 = 0; private snowLen = -1;
   // where the tables are: an index into the doubles (f64) or the words (u32 / i32) of the module's memory
   private rec = 0; private leaf = 0; private cut = 0; private paneT = 0; private flags = 0; private leafFlags = 0; private start = 0; private items = 0; private tilted = 0; private paneBi = 0;
   private boxes = 0; private nTilted = 0; private epoch = -1; private putBacks = -1;
@@ -194,6 +204,8 @@ export class BoxMirror extends HostOwned {
     const x = this.x = sim(), c = this.caps;
     c.boxes = x.world_cap(T_REC); c.leaves = x.world_cap(T_LEAF); c.cuts = x.world_cap(T_CUT); c.panes = x.world_cap(T_PANE_T); c.cells = x.world_cap(T_START); c.items = x.world_cap(T_ITEMS);
     c.tilted = x.world_cap(T_TILTED); this.listCap = x.world_cap(T_LIST); c.things = x.world_cap(T_THING); c.glass = x.world_cap(T_GLASS); c.view = x.world_cap(T_VIEW);
+    if (c.glass !== PANE_CAP || c.view !== PANE_CAP) throw new Error(`the Rust module holds ${c.glass} broken panes and a view of ${c.view}: src/scene/boxMirror.ts says ${PANE_CAP} of each`);
+    if (c.leaves !== PROP_PARTS || c.things !== PROP_CAP) throw new Error(`the Rust module's copy lists ${c.leaves} leaves and ${c.things} things of furniture: src/sim/propshome.ts says ${PROP_PARTS} boxes and ${PROP_CAP} things`);
     this.scratch = x.sim_scratch() / 8; this.scratchLen = x.sim_scratch_len(); this.lamps = x.light_lamps() / 8; this.lampCap = x.light_cap(); this.blobs = x.smoke_blobs() / 8; this.blobCap = x.smoke_cap(); this.wind = x.grid_wind() / 8; this.windCap = x.grid_wind_cap();
     this.navShut = x.nav_addr(0); this.navCap = x.nav_cap(0); this.way = x.nav_addr(1) / 8; this.navWant = x.nav_addr(2) / 4; this.navPrice = x.nav_addr(3) / 8;
     this.cutOf = new Int32Array(c.boxes).fill(-1);
@@ -212,7 +224,7 @@ export class BoxMirror extends HostOwned {
     const x = this.x, at = (t: number, by: number) => x.world_addr(s, t) / by;
     this.rec = at(T_REC, 8); this.leaf = at(T_LEAF, 8); this.cut = at(T_CUT, 8); this.paneT = at(T_PANE_T, 8); this.flags = at(T_FLAGS, 4); this.leafFlags = at(T_LEAF_FLAGS, 4);
     this.start = at(T_START, 4); this.items = at(T_ITEMS, 4); this.tilted = at(T_TILTED, 4); this.paneBi = at(T_PANE_BI, 4); this.pt = at(T_PT, 8); this.list = at(T_LIST, 4); this.eyes = x.fog_eyes(s) / 8;
-    this.thing = at(T_THING, 8); this.thingLive = at(T_THING_LIVE, 4);
+    this.thing = at(T_THING, 8); this.thingLive = at(T_THING_LIVE, 4); this.snowAt0 = at(T_SNOW, 1);
     this.glassD = at(T_GLASS, 8); this.glassW = at(T_GLASS_W, 4); this.glassOf = at(T_GLASS_OF, 4); this.viewD = at(T_VIEW, 8); this.viewBi = at(T_VIEW_BI, 4);
     return true;
   }
@@ -222,7 +234,7 @@ export class BoxMirror extends HostOwned {
     this.walk = walk; this.glass = glass;
     const fresh = this.take(), all = fresh || this.epoch !== mathsEpoch || this.putBacks !== PUT_BACKS.n;   // (another maths in Math's place: every cos and sin kept here was the other's)
     this.epoch = mathsEpoch; this.putBacks = PUT_BACKS.n;
-    if (all) { this.cutOf.fill(-1); this.cutFree.length = 0; this.cutNext = 0; this.boxes = 0; this.fits = true; this.gridDrop(); this.thingsAll = true;   // (…and it is another copy to a smoke grid: every face is asked again)
+    if (all) { this.cutOf.fill(-1); this.cutFree.length = 0; this.cutNext = 0; this.boxes = 0; this.fits = true; this.gridDrop(); this.thingsAll = true; this.snowLen = -1;   // (…and it is another copy to a smoke grid: every face is asked again)
       u32().fill(0, this.glassOf, this.glassOf + this.caps.boxes); this.glassN = 0; this.glassBis.length = 0; }   // (whose broken panes these rows were is not known: none stands)
     if (all || this.cellsWrote || !this.fits) { this.cellsWrote = false;   // (a level that did not fit is tried again: a tick's blast may have left it smaller)
       this.fits = this.grid(cells, tiltedAt, W, H) && boxes.length <= this.caps.boxes; }
@@ -288,6 +300,15 @@ export class BoxMirror extends HostOwned {
   glassIs(G: PaneSource | null): void { if (!this.live) return; this.glass = G; this.debt(OWE_GLASS); }
   /** a static's write is still owed (the furniture's check stands aside for it, as it did for every debt before the glass had its own) */
   get owesBoxes(): boolean { return (this.owed & OWE_BOXES) !== 0; }
+  /** THE LEVEL'S SNOW (game/snowBog.ts: what snow each box of the level is, a byte a box; rust/sim/src/world.rs `snow`), for the rule that asks where a
+   *  thrown thing bogs down (items.rs bog_at). Compared with the table at each walk that may meet snow and written where it differs, as the statics are
+   *  (a few hundred bytes); a static added since (a wall's pieces) is no snow. Where each box is and how it is turned are the statics' own rows, which
+   *  every tick proves. */
+  snow(kinds: Uint8Array): void {
+    const b = u8(), o = this.snowAt0, n = Math.min(kinds.length, this.caps.boxes);
+    for (let i = 0; i < n; i++) if (b[o + i] !== kinds[i]) b[o + i] = kinds[i];
+    if (this.snowLen !== n) { b.fill(0, o + n, o + this.caps.boxes); this.snowLen = n; }
+  }
   /** …the compare a question owes after `wrote`: the copy stands again, and the rows are back as the tick opened with them */
   again(boxes: Box[], walk: Walk): void {
     const owed = this.owed | (this.glassBusy > 0 ? OWE_GLASS : 0); this.owes = false; this.owed = 0; if (!this.live) return;

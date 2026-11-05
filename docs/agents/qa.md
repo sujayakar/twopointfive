@@ -630,13 +630,22 @@ but synthetic writes still work.
   `node tools/qa/pricerun-page.cjs [level …]` (the real page on the software adapter, as a person's page runs it: the chain, one rung, one step, the file
   down; no number there is a price, and its frames are seconds long, so it proves nothing of the pacing) and with `--real` on a machine with a GPU (`--look "<words>" --look-only` prices a look page under other words). Run on
   a rented NVIDIA card through Vulkan only (11-04); NEVER RUN ON METAL OR ON A DISPLAY (a headless card has none, so nothing of a 120 Hz display's frames has been seen), and nobody has read a row of it against the bar. The level tools below read its file.
+  A LONG WALK TIRES (11-05, the rented card, 29 levels in one browser): from about the 15th level the GPU's answer came later and later (to 57 ms for 10 ms
+  of passes) while the pages' boots kept their time, and the last seven rows read the look page CHEAPER than the page without it with every check green;
+  the same seven alone read sane. Why it tires is NOT known. Two mends. The driver walks in even parts on one dev server, a fresh browser every ten levels
+  (`--each N`; files under `<out>/part-<k>`, every part's price file copied to `<out>`). And the run sets a row apart whose answer came late against the
+  run's own least (`PRICE.lateMs`, `lateRows`, asked once when the file is made: a state's `work` over the frames of its own passes the page keeps with
+  the GPU plus the least any state of the run took beyond its passes, by more than 12 ms; the number is set by that one walk, where it sets apart exactly
+  the seven; 0 = not asked, as on the software page). Checked on made-up rows with that walk's numbers by `pricerun-check` (`PRICERUN_BREAK=late` must fail
+  on those cases alone). THE RULE HAS NEVER RUN IN A PAGE ON A GPU, and a walk in parts has not run on one either: the rule was read against that walk's
+  file after the fact. A person's run is one tab and cannot start a browser: its late rows are what this rule is for.
 - **THE LEVEL TOOLS (2026-11-04; files only, no GPU, no page of the game's changed).** `bun run tools/qa/level-audit.ts [level …]` counts every level the mission
   list draws as the look page draws it (boxes, cut planes, round things, lamps burning at its hour, how much of the picture is each material and how much
   has none: a box is made of what it says, `Box.stuff`, read as the renderer reads it), about a second a level; `--check <level>` holds the engine's caps and the PROPOSED bars of `level-count.ts` (`LEVELAUDIT_BREAK=1` must fail),
   `--counts` gives a level's row for its dressing file, `--write-base` the baseline (`fixtures/level-audit-base.json`: the levels before they were
   dressed). `node tools/qa/level-cost-page.cjs <level>` is one boot of the look page on the software adapter: what it compiled, layers off against on, a
   still; a relative read, and the GPU's particles are never stepped in it, so a snow or rain level is read without what is in its air.
-  `bun run tools/qa/level-table.ts --dir <folder>` makes one page of every level from those files, a GPU's price file and each dressing row (the folder's `notice.txt` is printed first and marks a level whose price no longer stands). "Which levels
+  `bun run tools/qa/level-table.ts --dir <folder>` makes one page of every level from those files, a GPU's price file and each dressing row (the folder's `notice.txt` is printed first and marks a level whose price no longer stands; `cloud/before/` holds the run the newest one takes the place of, printed beside it). "Which levels
   the list draws" is one answer (`scene/scenarioList.ts listedLevels`) and the render passes are one list (`gpu/timer.ts RENDER_PASSES`): both tools ask those.
 - **A picture fault is debugged from a frame capture** (F6 on the page: every render target over 8 frames and the trace of what the renderer changed;
   `tools/qa/capture-read.ts` reads it; `docs/agents/render.md`, "A CAPTURE IS EVERY TARGET OF A FEW FRAMES").
@@ -817,6 +826,10 @@ but synthetic writes still work.
   boot and the cut-box set over a recording stand-in device, always on the shipped stand; two seconds. Exit 1 when a kernel is over its row of the budget table at
   the head of the file, a row has no kernel left, or the stand-in's boot did not finish or came up short; `SHADERINLINE_BREAK=1` must fail. Run it after a change to a `.wgsl` file or to what a module is
   built from, and move the kernel's row in the same change when the growth is meant.
+  THE CUT TEST IS COUNTED APART (2026-11-05): a kernel is held to its row without the text of `isectCut` and `cutFour`; that text has its own number
+  (`CUT_TEST_KB`, 3.1 of 3.2 KB at one copy of the box test); and every kernel of the cut set is held to its boot twin with the round's own test out and the
+  cut test in, a fiftieth of the twin at most on top (`docs/agents/destruction.md`, THE BOX TEST HAS NO LOOP). The JSON's `cut` and `round` are those texts in
+  a kernel; `SHADERINLINE_BREAK=1` measures the same way.
 - **The night breach's probes on the SHIPPED stand** (2026-10-25; tests only). `nightbreach-stage` and `nightbreach-stop` read 'tune CHANGED' there: the
   rig (`tools/qa/nightbreach-probes.ts rig`) took its `before.tune` and THEN wrote `game.tune.chaos` itself, and the shipped stand stands the game up at
   chaos 0.5 where the frozen one has 0 — the rig's own write read as the staging's. The write is before the snapshot now; both are green on both stands.
@@ -866,3 +879,28 @@ but synthetic writes still work.
   built (it prints the compiler's own words), 2 no browser or no such kernel. The numbers need gdb and the symbols Playwright's Chromium ships in
   `libvk_swiftshader.so`; without them it still says built or not. It attaches to its own browser's GPU process (found by a word it puts on that browser's
   command line), so another page check may run beside it.
+- **A check that needs a wall stands one: `tools/qa/standwall.ts`** (2026-11-05; tests only, no rule of play). A check used to lay a function of its own over a
+  game's line test (`g.col.segmentBlocked = () => true`, `solidBlocked` the same). Only the TypeScript that calls the method met it: a question answered
+  inside the Rust module (an eye on a man, the lamps on a point, the smoke along a line, a sound's way, a way across the floor, the fog's pass) reads the
+  module's copy of the BOXES, so the game kept a guard (`collision.ts ownLines`) that hands every such question back to the TypeScript while a stand-in is
+  laid, and that guard is the last thing in the tools that needs the TypeScript sides. A wall that is a box is met by every reader in either language.
+  `standWall(g, walls)` puts boxes on the end of the box world's list (`collision.ts addStatic`, the road a holed wall's pieces take) and returns the
+  function that cuts the list back (it refuses a list that is not the one it left: nothing else may add a static while a wall stands);
+  `wallBetween(a, b, at, half, top)` is a thin upright wall across a line; `clearLine(g, a, b)` hides the statics one line meets and nothing else
+  (`BoxFlag.NoShadow` raised, as on a box the game itself has hidden), so a game may be played under it; `noWalls(g)` hides every static, the floor
+  too, for a question asked at once. Each returns the function that puts back what it changed and no more (a flag is lowered only where it was
+  raised here). A door's leaf is no static: neither hides one. The floor's grid is not baked again: a man meets a wall and does not plan round it.
+  Take walls down last up first; stand none across a restart.
+  THE FIVE CHECKS THAT LAID A STAND-IN NOW STAND WALLS, and each reads what it read (both stands, the same day, the lines compared with the tree before):
+  `autocam-check` (a wall half way to a man at his side; a wall 0.9 m toward the lens as wide as hid everything within acos 0.9 of that way, stood
+  again where he stops since a wall does not follow a man as the function did; a pillar half way to the locked man): every line of its output the same;
+  `stalk-check` (a wall half way between Sam and his man where 'something solid comes between them'): every line the same, and under `STALK_BREAK=1`;
+  `deathrecap-check` (`RECAP_BREAK=seen` hides what stands between his mate or Sam and the man, where he lies and at his chest: every line the same, and the break fails the lines it failed; its output the same but for a digest one byte longer on the page's stand); `moonlight-check`
+  (`MOONLIGHT_BREAK=1` asks of a level with no static standing): every line the same, the break fails `shadow` as it did, to the digit;
+  `squaddoors-check` (the teammate who must not see the leaf, at a door with no place behind a wall of the level's: a wall is stood between a place in
+  front of the door and the leaf, the first that hides every point of the leaf by the check's own lines; before, every line from within 0.6 m of
+  where he stood was shut by hand): the one staged line reads its new place (0.75 m from the leaf on the frozen stand, 1.50 m on the page's, for 0.46
+  and 1.20) and passes, `SQUADDOORS_BREAK=1` fails the two lines it failed, and with the wall left out the same man does see the leaf (shown by hand).
+  No tool lays a function over the line test any more (a grep of `tools/` for `segmentBlocked = ` and `solidBlocked = ` finds two comments), and once
+  the senses' TypeScript sides are deleted `ownLines` false is an error said by name, so that a sixth tool that tries it is told. NOT TOUCHED:
+  `morale-check` lays a function over `col.raycast`, which is the rays' and no part of that guard.

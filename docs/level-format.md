@@ -36,6 +36,13 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
   errors (`boxes[7] 'box_0007': unknown key 'emmisive'`): a typo would otherwise be ignored on load and dropped on the next save. The one
   place extra keys ARE allowed is inside the drill plans (see below). The key registry is `KEYS` in `levelData.ts`.
 
+## How big a level may be
+
+The rules of doors, loose furniture and glass keep their numbers in pools of a fixed size, so a level has at most **64 doors**, **128 loose things
+of furniture** made of at most **256 boxes** between them, and **256 sheets of glass**. A level over one of these is not loaded: the game says which
+as it is made (`game/levelfit.ts`), and `bun run tools/qa/copyfit-check.ts` reads every level of `levels/` against them and against the tables
+the box world is copied into, and says how near each level is.
+
 ## The schema, briefly (the types in `levelData.ts` are the reference; every field has a doc comment there)
 
 | key | what | notes |

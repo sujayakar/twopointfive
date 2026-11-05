@@ -89,7 +89,14 @@ did not.
 - **Every room they can shut has another way in.** The maintainer: "maybe we just need to design levels so there's always
   another route in?" A door hung to open OUT (`swing`), a walk-through window, or issued wall charges. **seen** barricaded
   rooms that could only be opened with a charge or a 40 mm. **check** `bun run tools/qa/second-way-check.ts <name>.json`
-  (export runs it too; a changed swing moves that level's tallies and par times).
+  (export runs it too: red fails the export of a level a squad row plays and is a note on one with no row yet; a changed
+  swing moves that level's tallies and par times).
+- **Its starts and its doors are on a way.** The maintainer: "wear, paths in the ground ... can all tell a story for how
+  people walk through the level, its logic, leading the player". The look's page wears the floor where the level is walked
+  (`src/scene/ways.ts`), so a start no way leaves from, or a door no way crosses or ends at, tells no story. Give it one
+  with a `scenarios.walked` row (from a named thing to a named thing: a door is one). **check** `bun run
+  tools/qa/walked-check.ts <name>` (what is owed is held by name in the level's count file); `bun run
+  tools/levels/walked-overlay.ts <name>` draws the ways over what is laid by hand on the ground.
 - **A defender sees what he watches.** The dress goal's rule: "a window a mark watches through, or a covered lane crosses,
   stays see-through"; the maintainer: "we don't want them to feel dumb". Dress such a window with the kit's OPEN form
   (`gwotKit` `boards`, `shutters`, `windowBlanket` take `'shut'` or `'open'`), and stand no cover in a mark's line. **seen**
@@ -201,6 +208,13 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   over 5.5 m, a room bulb 26 over 7 m). Between two pools there is ground that neither lights. The kit's floodlight
   (210 over 20 m, a 70 degree cone) is the one that washes: aim it at one stretch and let it be the only one there. A
   court that is bright all over is the moon's or the sun's work. Judgement, from the rule above; not tried.
+- **A lit room's lamp is weighed against the room's own paint, and a fixture that is a light gets no lamp on top.**
+  A night shows a lit room at the night's own exposure, which never comes down, so the lamp decides the picture: the
+  kit's bulb (26 at 2.4 m) puts the night's white on a pale floor in a room of mid paints. The kit's tube is a light
+  of its own already (3.7 each): do not hang a lamp between tubes. In a room that is pale on every face the bounce
+  is a few times the lamp, and it wants a fraction of the bulb. **seen** the white roof's two rooms, a lamp of 60
+  over two tubes: burnt white at night on a GPU, a black suit grey in the glare; the tubes alone were a lit room.
+  **By eye**, at night, with the door shut; `probes.ts` has no line for it.
 - **Every outside frame keeps a dark part, and nothing big goes white.** Stand the camera where the player starts and
   where he fights: about a third of the ground in shadow. A pale wall (0.4 and over by luminance: a blast wall near
   0.45, light plaster near 0.47, whitewash; bare block sits just under at 0.39) under a key light goes white first.
