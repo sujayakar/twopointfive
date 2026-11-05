@@ -9,12 +9,34 @@
 //                      cells and their entries, tilted statics, cut rows, leaves, the glass a line can note). tools/qa/copyfit-check.ts reads every
 //                      level of levels/ by it, and is red when the copy has a table that no row here counts: a table added to the copy is a row added
 //                      HERE.
+//   handOverMost()     what ONE STEP of a rule is handed of the game, at most, against what the step's hand-over holds: the men at the doors and at the
+//                      furniture, by the men a game holds at once (`menMost`: the picture's own budget of characters, and the other seats' men). So a
+//                      step handed more than its tables hold is no case of play: it cannot happen, the rows below say why, and where it is met it
+//                      is a mistake said by name (doors.ts there, props.ts there).
 // (The pools themselves refuse more rows than they have: sim/doorshome.ts, sim/slabshome.ts, sim/propshome.ts. This is the same statement, made early.)
 import { BoxFlag, type Box } from '../scene/boxes';
 import { PANE_CAP } from '../scene/boxMirror';
-import { DOOR_CAP } from '../sim/doorshome';
-import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
+import { simWhyNot } from '../sim/sim';
+import { DOOR_CAP, doorIo } from '../sim/doorshome';
+import { PROP_CAP, PROP_PARTS, propIo } from '../sim/propshome';
 import { isSheet } from './glass';
+import { MAX_SKINNED } from './guards';
+import { SEATS } from './seats';
+import { BODY_DOOR_PARTICLES } from './game';
+
+/** MEN A GAME HOLDS AT ONCE, AT MOST: the first seat's man and the guards and units (guards.ts spawnUnit refuses one more than MAX_SKINNED of those, the
+ *  picture's own budget, whoever asks), its `civilians` (the level's own night people, a rescue's hostages, the man a snatch is for: each joins the game
+ *  in one place, which holds them to `civMost`) and every other seat's man */
+export const menMost = (civilians: number): number => MAX_SKINNED + civilians + SEATS.max - 1;
+/** MEN ONE STEP CAN BE HANDED: the doors' hand-over in contacts, by the contacts one man is at most (`handOverMost`), and the furniture's in men. Infinity
+ *  where there is no module: no hand-over to hold to. */
+export const menHeld = (): number => simWhyNot() ? Infinity : Math.min(Math.floor(doorIo().maxContacts / (BODY_DOOR_PARTICLES.length + 1)), propIo().maxContacts);
+/** CIVILIANS A GAME HOLDS AT ONCE, AT MOST: what a step's hand-over leaves after every other man a game may hold. civilians.ts `join`, the one place a
+ *  civilian comes into a game, refuses one more — so the arithmetic holds whoever adds a civilian, and when. */
+export const civMost = (): number => menHeld() - menMost(0);
+/** WHAT ONE STEP IS HANDED OF THEM, AT MOST. At the doors a man is one contact, two while he lies wounded, and — his body near a doorway — a few of his
+ *  ragdoll's particles (game.ts BODY_DOOR_PARTICLES): never more than those and his own. At the furniture a man is one. */
+export const handOverMost = (civilians: number): { doorMen: number; propMen: number } => ({ doorMen: menMost(civilians) * (BODY_DOOR_PARTICLES.length + 1), propMen: menMost(civilians) });
 
 /** what of a level is counted before it is built, and what it has of each: doors · loose things of furniture · the boxes those are made of · sheets of glass */
 export interface LevelFit { doors: number; things: number; parts: number; sheets: number }
@@ -40,13 +62,14 @@ export function levelOver(level: Parameters<typeof levelCounts>[0]): string | nu
 export interface FitRow { row: string; what: string; has: number; cap: number; room: number; table: string | null }
 /** what `fitRows` reads of a stood game (a Game is one) */
 interface Stood {
-  level: Parameters<typeof levelCounts>[0];
+  guards?: readonly unknown[]; civilians?: readonly unknown[];
+  level: Parameters<typeof levelCounts>[0] & { civilians?: readonly unknown[] };
   col: { boxes: readonly Box[]; W: number; H: number; cells: readonly (readonly number[])[]; tiltedAt: readonly number[]; dynamicBoxes: readonly Box[]; mirror: { cutRows: number } };
   props?: { all: readonly { boxes: readonly unknown[] }[] } | null;
 }
 /** EVERY COUNT of a stood game against what holds it. `tables` = the copy's own sizes (BoxMirror.tables, after a tick's open has asked the module). */
 export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): FitRow[] {
-  const col = g.col, L = levelCounts(g.level), cap = levelCaps(), t = (k: string) => tables[k] ?? 0;
+  const col = g.col, L = levelCounts(g.level), cap = levelCaps(), t = (k: string) => tables[k] ?? 0, civs = Math.max(g.civilians?.length ?? 0, g.level.civilians?.length ?? 0), most = handOverMost(civs), held = !simWhyNot(), dio = held ? doorIo() : null, pio = held ? propIo() : null;   // (no module: no hand-over to hold to, and every row of one reads Infinity)
   let entries = 0, glass = 0, parts = 0;
   for (const c of col.cells) entries += c.length;
   for (const b of col.boxes) if (b.flags & BoxFlag.Glass) glass++;
@@ -64,5 +87,12 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'sheets', what: 'sheets of glass (a row a pane that is no longer whole)', has: L.sheets, cap: Math.min(t('glass'), cap.sheets), room: 1, table: 'glass' },
     { row: 'view', what: 'sheets of glass (a row a pane a burst\'s view names)', has: L.sheets, cap: t('view'), room: 1, table: 'view' },
     { row: 'doors', what: 'doors (a row a door, and a row a leaf off its hinges)', has: L.doors, cap: cap.doors, room: 1, table: null },
+    // what a game holds of men, and what one step of a rule is handed of them (the rules' hand-overs: no table of the copy)
+    { row: 'men', what: 'the first seat\'s man and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture\'s budget of characters)', has: 1 + (g.guards?.length ?? 0), cap: MAX_SKINNED, room: 1, table: null },
+    { row: 'civilians', what: 'civilians: the level\'s own, or those in the game as it stands (a rescue\'s hostages and the man a snatch is for join in play; civilians.ts join holds every one to this number as he joins)', has: civs, cap: civMost(), room: 1, table: null },
+    { row: 'doormen', what: 'contacts one step of the doors is handed at most (every man a game holds: himself, and his body\'s particles near a doorway)', has: most.doorMen, cap: dio?.maxContacts ?? Infinity, room: 1, table: null },
+    { row: 'propmen', what: 'men one step of the furniture is handed at most', has: most.propMen, cap: pio?.maxContacts ?? Infinity, room: 1, table: null },
+    { row: 'frames', what: 'door frames one step of the furniture is handed (a frame a door)', has: L.doors, cap: pio?.maxWays ?? Infinity, room: 1, table: null },
+    { row: 'sweeps', what: 'leaves one step of the furniture is handed (a leaf a door)', has: L.doors, cap: pio?.maxLeaves ?? Infinity, room: 1, table: null },
   ];
 }

@@ -342,7 +342,7 @@ export class PropSystem {
     if (this.muted) throw new Error('the furniture was stepped while its level was still being settled');   // (the settle is the module's own now, and nothing steps under it)
     if (this.step !== PropSystem.prototype.step || this.updateHere !== PropSystem.prototype.updateHere) return ruleFell('props', 'a check\'s own step in the rule\'s place');
     const io = propIo(), dyn = this.col.dynamicBoxes;
-    if (contacts.length > io.maxContacts || leaves.length > io.maxLeaves || this.doorways.length > io.maxWays) return ruleFell('props', 'more men, leaves or door frames than a step is handed');
+    if (contacts.length > io.maxContacts || leaves.length > io.maxLeaves || this.doorways.length > io.maxWays) throw new Error(`the furniture's step was handed ${contacts.length} men, ${leaves.length} leaves and ${this.doorways.length} door frames: its hand-over holds ${io.maxContacts}, ${io.maxLeaves} and ${io.maxWays}, and a game holds no more men, and a level no more doors, than those (game/levelfit.ts handOverMost)`);   // (cannot happen: tools/qa/copyfit-check.ts holds the arithmetic)
     let idx: number[] | null = null;
     if (leaves !== dyn) { idx = []; for (const b of leaves) { const i = dyn.indexOf(b); if (i < 0) return ruleFell('props', 'a leaf handed in that is not in the box world'); idx.push(i); } }
     const M = this.col.rulesWorld(dyn); return M ? { M, leaves: idx, n: leaves.length } : null;

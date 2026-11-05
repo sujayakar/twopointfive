@@ -654,7 +654,7 @@ export class Doors {
     if (ruleRed('doors')) return null;
     if (H === null) return ruleFell('doors', 'no game stands behind these doors');
     if (this.standable !== H.standable || this.settle !== H.settle || this.updateHere !== Doors.prototype.updateHere) return ruleFell('doors', 'a check\'s own step in the rule\'s place');
-    if (contacts.length > doorIo().maxContacts) return ruleFell('doors', 'more men at the doors than a step is handed');
+    if (contacts.length > doorIo().maxContacts) throw new Error(`${contacts.length} contacts at the doors in one step: its hand-over holds ${doorIo().maxContacts}, and a game holds no more men than that many are of (game/levelfit.ts handOverMost)`);   // (cannot happen: tools/qa/copyfit-check.ts holds the arithmetic)
     const dyn = H.col.dynamicBoxes, L = this.list, n = L.length; if (dyn.length !== n) return ruleFell('doors', 'the leaves in the box world are not this level\'s doors');
     for (let i = 0; i < n; i++) if (dyn[i] !== L[i].box) return ruleFell('doors', 'the leaves in the box world are not this level\'s doors');
     return H.col.rulesWorld(dyn);
