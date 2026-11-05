@@ -12,12 +12,13 @@ import { BoxFlag, type Box } from './boxes';
 import { cutPlane, cutRecord, fitCutBox } from './cut';
 import { MARKING_TEXEL, MAX_MARKS_PER_BOX, mkHash, texelOf, type MarkingDef, type MarkFace } from './markings';
 import type { Vec3 } from '../math/vec';
+import { onExact } from '../math/exact';
 
 const h01 = (s: number, a: number, b = 0) => mkHash(s, a, b) / 4294967296;
 /** take a box out of the picture and out of every ray's way without moving the list (a level file's box indices are names) */
 function hide(b: Box, at: Vec3) { b.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; b.c = [at[0], at[1], at[2]]; b.h = [0.01, 0.01, 0.01]; delete b.marks; }
 const near = (a: number, b: number, e = 1e-4) => Math.abs(a - b) < e;
-const TAN8 = Math.tan(Math.PI / 8);
+let TAN8 = 0; onExact(() => { TAN8 = Math.tan(Math.PI / 8); });   // (made in onExact, not as the module loads, as scene/round.ts TAN8: a constant worked out at load is the engine's whatever the maths switch says)
 /** the kit's octagon: boxes[i‥i+3] are four slabs through one centre, 45° apart, tan 22.5° as deep as they are long, their tops stepped 2 mm */
 function octagonAt(B: readonly Box[], i: number): boolean {
   const a = B[i];
