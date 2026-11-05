@@ -325,7 +325,7 @@ export class Throwables {
     const bog = B !== null && B.may();
     m[P + IP.dt] = dt; m[P + IP.from] = from; m[P + IP.ask] = ask; m[P + IP.bog] = bog ? 1 : 0; m[P + IP.rifleShare] = RIFLE_ITEM.propShare;
     if (bog) {   // lying snow, as the module asks it: the level's table in its copy of the box world, the rule's numbers and the roofs in force handed over
-      const K = SNOWBOG, R = B.roofs(); if (R.length > ITEM_ROOFS) { ruleFell('items', 'more roofs over the snow than a walk is handed'); return from; }
+      const K = SNOWBOG, R = B.roofs(); if (R.length > ITEM_ROOFS) throw new Error(`${R.length} roofs over the snow: a weather has ${ITEM_ROOFS} in force at most (game/weatherKinds.ts MAX_ROOFS), and a thrown thing's walk is handed as many`);   // (cannot happen: the weather keeps its roofs to that number, and it is one number — tools/qa/rust-check.ts)
       M.snow(B.kinds());
       m[P + IP.snowTop] = K.top; m[P + IP.snowBank] = K.bankM; m[P + IP.snowPacked] = K.packed; m[P + IP.snowOld] = K.old; m[P + IP.snowDead] = K.dead; m[P + IP.snowGrip] = K.grip; m[P + IP.snowStick] = K.stick;
       m[P + IP.roofs] = R.length; for (let i = 0; i < R.length; i++) { const o = P + IP.roof + i * 4, r = R[i]; m[o] = r[0]; m[o + 1] = r[1]; m[o + 2] = r[2]; m[o + 3] = r[3]; }
