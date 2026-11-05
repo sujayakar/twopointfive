@@ -784,8 +784,9 @@ one stops the tool by name, on an address one does nothing and says so in the co
   word against bun's), `rows` (a mission's first 240 frames with `?rustmaths` are the game without it, by digest and by every frame's bits), `plain` (the page as a player
   opens it: the rows of `RUST_ON` on, the same game), `systems`, `words` (`?rust<row>=0`), `nojit`.
   `senses` (`tools/qa/sense-ident.ts`): random questions over whole levels, doors swung, a share of the statics re-shaped half way and said, a dozen lamps
-  of every kind put in, two dozen blobs; each asked of the module and of the TypeScript (the same function with the copy's rows put down for the one
-  call), every number of every answer the same bits, and red if any of a sense's questions did not go to the module, or if a level did not stand up.
+  of every kind put in, two dozen blobs; each asked of the module, which alone answers one (until 2026-11-05 each was asked of the TypeScript too,
+  and every number of every answer was the same bits), and red if the module's own count of a sense's answers is short of the questions, if one
+  throws, or if a level did not stand up.
   A level's questions come off a die of its own (the seed and the level's name), so a level added or taken away moves no other level's.
   THE SENSES' WORDS AND THEIR PIN (2026-11-05, the step before their TypeScript goes; `tools/qa/ident-pin.ts`, the bullet "What holds a family once
   its TypeScript is gone"). A WATCHER (`collision.ts SENSE_WATCH`, null in play) is shown every answer the module gives a sense, as its numbers, where
@@ -799,14 +800,52 @@ one stops the tool by name, on an address one does nothing and says so in the co
   past holes; a pane open piece by piece is `glass-ident`'s), 14 leaves that swing a third of the way in, a share of the statics re-shaped and
   said half way, 460 lamps (so a light question goes in parts), the
   tool's own blobs under the tool's own smoke numbers, eyes each with its own wedge and near field. On the frozen stand its seven words are held
-  to `tools/qa/fixtures/sense-words.json` (3,000 questions a kind, 141,533 answers folded); `--record` writes it, and only from a run in which
-  every question was also asked of the TypeScript and agreed. `rust-check`'s `senses` section runs it. OVER LEVELS the words are held to nothing
+  to `tools/qa/fixtures/sense-words.json` (3,000 questions a kind, 141,533 answers folded); it was RECORDED ON THE COMMIT THAT BROUGHT IT, from a run
+  in which every question was also asked of the TypeScript and agreed. Since that TypeScript went, `--record` writes whatever the module says:
+  a recording taken now is one language's word for itself, so record again only for a change whose every moved word is explained, and say so
+  in `--tree`. `rust-check`'s `senses` section runs it. OVER LEVELS the words are held to nothing
   by themselves; `--against <root>` plays the same run with another checkout's tool, for a change that must move no answer.
+  THE SENSES' TYPESCRIPT IS GONE (2026-11-05, the step after the pin). Deleted: guards.ts's own eye on a man (`eyeContactHere`) and its sum of the
+  lamps (`lampsHere`, with the light's window of normals), sense.ts's own walk of the blobs (`CpuSmoke.trans`, `erf`), collision.ts's own sound
+  (`propagateHere`) and search (`findPathHere`, `findPathAside`, the search's scratch tables), fogofwar.ts's own lines to a man (`seesHere`), and
+  every place that chose between the two. With them go the six rows `fog`, `sight`, `light`, `smoke`, `sound`, `paths` (`sim.ts`: THE SENSES ARE NO
+  ROWS) and `boxMirror.ts SENSES`: nothing puts a sense down, and `?rust=0` or a check's `hold({ rows: 0 })` leaves them the module's.
+  WHAT WAS A HAND-BACK IS A THROW BY NAME (`collision.ts handedBack`), each a mistake of the code and none of them content: a sense asked with the
+  copy not standing; a sense asked while a check has laid its own line test over the box world; more leaves than a list holds; a pane rule with no
+  rows; an eye's line that stops at glass; a line too long to be one, or a point that is no number; a search asked from inside a price; more eyes
+  than the fog's pass holds. (A level the copy cannot hold is refused as it loads, `game/levelfit.ts`; a floor over the search's tables is the
+  build's mistake, `NavGrid.there`.) BETWEEN TICKS a sense stands the copy for itself whatever `ANYTIME` says (`lone(true)`): that switch is now
+  only the lines' and the circles'.
+  The six words stay retired on an address (`sim.ts ROWS_GONE`: `?rustsight=0` is said to do nothing, as `?rustwalk` is), and `rust-check` holds the
+  family in its `GONE` list: its section must run, and under the break `red['the senses']` wants every word of the pin and a word of every kind
+  over levels moved.
+  THE CHECK IS ONE LANGUAGE HELD TO ITS WORDS (the paragraph above). `sense-ident` over levels says that every question was answered by the module
+  and how many; `--against <root>` holds a change to another checkout's words. Its red paths each play the same run plain in a child and are red
+  unless the words that must move, and no other, did: `RUST_BREAK=1` (the re-shaped boxes unsaid and the new grid not handed over) a word of every
+  kind; `PRICED_BREAK=1` the paths' alone; `LAMPS_BREAK=1` the lamps' block and no kind's of the questions; `SHADE_BREAK=1` (it was
+  `LAMPS_BREAK=shade`) the two cases where no grid answers. A red path that moved too little ends 3, and `rust-check --break` ends 3 with it.
+  `rust-check`'s server section now wants the senses and the fog's pass in the module with every row held down, and its pairs of runs want the
+  same count of them on both sides. THE FOG'S PASS stands the copy for itself when it is asked outside a tick (a check's own `update`), as the
+  other five do. WHERE THE MODULE DOES NOT RUN nothing stands (`StaticCollision.stand`): the lines and circles this file can still walk are
+  walked here, and a sense throws with the module's own reason.
+  WHAT HOLDS LESS THAN IT DID, said plainly: (1) a sound's way past a pane open PIECE BY PIECE is held in two halves, not as one — the pane's
+  openness by `glass-ident` (rule against module), a sound and a way past glass that is GONE by the pin's made-up glass; `glass-ident` still asks a
+  sound as a fragment lets go, to see it answered. (2) `fogofwar.ts lineToMan`, `eyeOnBody` and `inField` live on for what the picture frames, the
+  wand's mark, how long a man is known and the contact call: the same rule as `fog.rs`, in TypeScript over the box world's lines, and no check
+  holds the two to each other now. They are not the pass. WHAT CLOSES IT is the part "Move what the team has seen to Rust": one body for an eye's
+  line to a man, these askers calling the module's, the TypeScript rule gone. Where each asks, for whoever takes it: all four run INSIDE the pass
+  (`pass`, and `tellCalls` which it calls), so inside its tick or window, none alone. The frame's (`framed`) asks eyes that are NOT the pass's
+  handed list (`view`, the picture's own) and a body by `eyeOnBody`; the wand's mark asks one eye of the pass's list on a man already seen; `knownT`
+  asks the first eye kept from the pass (`this.eyes[0]`) and the contact call an eye made afresh for each teammate (`eyeOf`), both only every tenth
+  frame. `inField` alone also gates the points and things the fog asks (`eyeOn`, the things' and the lamps' passes), which are lines, not men. (3) A point that is no
+  number, a line too long, a search's cap that is no whole number throw out of the tick where the TypeScript returned no way: nothing of play
+  makes one today. `sense-check`'s "the same smoke behind a wall" is asked over a wall of the check's own (it was a closure that
+  called everything a wall).
   The floor's grid is baked again over the re-shaped boxes. Under `RUST_BREAK=1` the re-shape goes unsaid and the new grid is not handed over: it must
-  fail, and EVERY sense must differ somewhere (exit 3 names one that did not). In `--missions` a run is a fair pair only if each raised sense answered
-  there (`collision.ts SENSED` counts them: some hundred thousand eyes and lights a run, some thousand sounds, some hundred ways; the smoke has no
-  floor a run, since not every run throws a canister, and a floor over the runs together), and `--both` answers every one of them twice. The game
-  server's 600 ticks ask no smoke: the missions hold that row.
+  fail, and EVERY sense must differ somewhere (exit 3 names one that did not). In `--missions` a run is a fair pair only if each sense answered
+  in the module on BOTH sides, the same number of times and over its floor (`collision.ts SENSED` counts them: some hundred thousand eyes and lights a run, some thousand sounds, some hundred ways; the smoke has no
+  floor a run, since not every run throws a canister, and a floor over the runs together), and `--both` no longer answers a sense twice (nothing else answers one). The game
+  server's 600 ticks ask no smoke: the missions hold it.
   A NEW SYSTEM GETS THE SAME THREE: a differential of its own on recorded inputs (`tools/cpu-frame/raycast-diff.ts` is that for the collision world), the
   missions with its row on and off, and the page.
   - **What holds a family once its TypeScript is gone** (`tools/qa/ident-pin.ts`; the animator's layers are its first user, `tools/qa/layer-ident.ts`;
@@ -1958,8 +1997,9 @@ one stops the tool by name, on an address one does nothing and says so in the co
     reads nothing of the module's sum, by the code and by no check. NOT A HAND-BACK AND STILL A LIMIT: THE GRID'S SWEEP OF THE
     LIGHT THAT COMES ROUND writes the level's steady lamps into the same table (`guards.ts steadyLamps`) and takes no more than 256: past that
     the field stands as it was and the bounce light stops, with no word. The most a level has today is 33 (the office; every other level 24 or
-    fewer). It is to be a row of the levels' fit (`src/game/levelfit.ts`) with the deletion of `lampsHere`; until then whoever dresses a level
-    with hundreds of fixtures is told here.
+    fewer; 47 counting those not lit). SINCE THE DELETION OF `lampsHere` it is the row `steady` of the levels' fit (`src/game/levelfit.ts`,
+    `guards.ts steadyMost`: every lamp nobody carries that is no flash and no beacon's, lit or not), so a level over it is refused as it loads,
+    by name. A lamp stood up in play past it still stops the sweep with no word; the sweep reads the lights' own rows next and the limit goes.
   WHAT THE COUNT READS NOW, the 42: `paths · a search with a penalty` and `light · outside a tick` are GONE (8,962 and 5,688 on the page's stand).
   Of the five senses: NOTHING on either stand, in the tour or in the soak, and ALL FIVE ARE SEALED (the soak's watcher asks two eyes between
   ticks: that was `sight · outside a tick` until the eye proved the copy for itself). `sound` and `paths` were counted for the first time by this

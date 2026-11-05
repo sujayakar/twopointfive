@@ -329,7 +329,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   here (the attention thread's check plays it for its copy). THE KEPT LEGS ARE THE ASKER'S (2026-10-23): `floorplan.legs` was a side table of the game and its search ran on the
   grid's own tables, so a game drawn and one not drawn differed in the full state hash. Now `floorPlan(g, kept)` takes the asker's own store
   (`PlanKept`: the overlay's in `ui/planfloor.ts`, a check's own from `planKept()`; with none, nothing is kept past the one ask) and searches with
-  `NavGrid.findPathAside` on that store's tables; the module keeps nothing. `probes.ts plan` line 9 asks every frame, once as he walks and once with
+  `NavGrid.findPath` (the search's tables are the module's, scratch of the one question: nothing of the grid's is written); the module keeps nothing. `probes.ts plan` line 9 asks every frame, once as he walks and once with
   his own path set aside so the grid is asked, and holds the run's digest AND its whole state (`stateHash`) equal to the run never asked: red on the
   code before ("whole state DIFFERS") and with `PLANKEPT_BREAK=1` (the search put back on the grid's own tables), green on both stands. A kept leg is
   used again only when asked from within 2.5 m of where it was asked (the store is outside the rollback snapshot: a restore leaves it an answer from

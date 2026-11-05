@@ -303,9 +303,9 @@ export function attentionMarks(g: Game): AttentionMark[] {
  *  picture). Straight (his feet, the place) for a man who only looks — a turned head, a lent hold, a man standing at the thing — and where the floor has no
  *  way at all. PICTURE ONLY: asked by the overlay, read by nothing in the update, and it WRITES NOTHING OF THE GAME'S — the kept answer lives with whoever
  *  draws (`kept`: the overlay's own table in ui/attentionviz.ts, a check's own Map), never in a side table here, so a game drawn and the same game not drawn
- *  hash alike; the grid is searched on the asker's tables too (`kept.nav`, NavGrid.findPathAside), the game's own left as they were. */
+ *  hash alike; the grid's search writes nothing of the game's (its tables are the Rust module's, scratch of the one question). */
 export interface AttentionWayKept { key: string; t: number; from: Vec3; pts: Vec3[] | null }
-export interface AttentionWayStore { get(gd: Guard): AttentionWayKept | undefined; set(gd: Guard, w: AttentionWayKept): unknown; nav: { s?: object } }
+export interface AttentionWayStore { get(gd: Guard): AttentionWayKept | undefined; set(gd: Guard, w: AttentionWayKept): unknown }
 export function attentionWay(g: Game, M: AttentionMark, kept: AttentionWayStore): Vec3[] {
   const gd = M.gd, p = gd.char.pos, flat = v3.distXZ, out: Vec3[] = [M.from];
   if (!ATTENTION.way || !M.walking) return [M.from, M.at];
@@ -315,7 +315,7 @@ export function attentionWay(g: Game, M: AttentionMark, kept: AttentionWayStore)
   else {
     const key = `${M.at[0].toFixed(1)},${M.at[2].toFixed(1)}`, c = kept.get(gd), dt = c ? g.time - c.t : -1;   // (dt < 0: the clock went back on a load)
     let W = c && c.key === key && dt >= 0 && dt < ATTENTION.wayReask ? c : null;
-    if (!W) kept.set(gd, W = { key, t: g.time, from: [p[0], 0, p[2]], pts: g.col.nav.findPathAside(kept.nav, p, M.at, 6000) });   // (6000: goTo's own budget — a place his walk finds is a place the thread finds)
+    if (!W) kept.set(gd, W = { key, t: g.time, from: [p[0], 0, p[2]], pts: g.col.nav.findPath(p, M.at, 6000) });   // (6000: goTo's own budget — a place his walk finds is a place the thread finds)
     const pts = W.pts; if (!pts) return [M.from, M.at];
     // an answer kept from a stride ago starts behind him: from the end of the leg he is nearest on — looked for over its first two metres only, never 'the
     // corner nearest him' of the whole way (one that doubles back passes near him again further on, and the thread then cut the wall between)

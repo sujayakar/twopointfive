@@ -2774,7 +2774,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `scenarios.walked`, `docs/level-format.md`), each the number of ways over the cell, not summed and not saturated; beside them `paths`, the same
   ways as the lines they were traced along, and `lost`, the ways the search found no path for (a straight line then; no level has one). A name is
   looked for as a door's id first. Pure, no module state; its
-  path searches are on tables of its own (`findPathAside`); nothing in `src/game` imports it. Cost: 2 to 7 ms on `block`, 3 on `compound`, under 1
+  path searches are the module's (`NavGrid.findPath`, on scratch of the one question); nothing in `src/game` imports it. Cost: 2 to 7 ms on `block`, 3 on `compound`, under 1
   on the office. THE READER: on the look's page the traffic map's lanes are those paths, traced as a route's legs always were, by `wear.ts WAY` (a route
   1, a team's way 0.45, door to door 0.3, a hint its own weight); a level with no routes had no lane at all, and a raid's yard now has the trodden line from where the team comes in to the doors it
   goes for. Every other page's map is to the byte what it was. WHAT A SURFACE SHOWS OF IT: wild ground is beaten flat and pale along a lane (as it
