@@ -113,11 +113,11 @@ export const yardSkin = (Y: YardPaints): Skin => ({
     figure('1', 10.1, 15.35, 1); figure('2', 15.9, 15.35, 1);
     for (const x of [30.2, 33.0, 35.75]) M.seg(x, 19.6, x, 23.8, 0.1, INKP);
     figure('3', 30.7, 20.1, 1); figure('4', 33.5, 20.1, 1);
-    // ---- WHAT USE LEFT, each with its cause and most of the ground blank: the polish of tyres where a lorry leaves the lane and swings into the first
-    // bay; a drip where an engine stands in each bay (the lorry's own is under it); a slab that was lifted and relaid, a shade newer, cut to the joints
-    { const fa = T.floorAt(14, 16); if (fa) { const tyre = T.tone(fa, 0.88), drip = T.tone(fa, 0.62), fresh = T.tone(fa, 1.07);
-      for (const o of [-0.95, 0.95]) M.path(beside([[8.4, 14.15], [10.4, 14.9], [12.2, 16.2]], o), 0.28, tyre);
-      for (const [x, z, w, d, yaw] of [[18.0, 16.25, 0.5, 0.36, 0.3], [18.25, 16.5, 0.22, 0.18, 1.1], [31.9, 22.6, 0.55, 0.4, 0.8], [34.7, 22.9, 0.4, 0.3, 0.2]] as const) T.flat(x, z, w, d, drip, yaw, 0.0117);
+    // ---- WHAT USE LEFT, each with its cause and most of the ground blank: a drip where an engine stands in each bay (the lorry's own is under it); a
+    // slab that was lifted and relaid, a shade newer, cut to the joints. (Tyre polish into the first bay was tried as two films and read on the card as a
+    // pale bar lying on the lane: a curve of wear is the look's own to draw along a way, not a box's.)
+    { const fa = T.floorAt(14, 16); if (fa) { const drip = T.tone(fa, 0.66), fresh = T.tone(fa, 1.07);
+      for (const [x, z, w, d, yaw] of [[18.0, 16.25, 0.42, 0.3, 0.3], [31.9, 22.6, 0.45, 0.32, 0.8], [34.7, 22.9, 0.36, 0.26, 0.2]] as const) T.flat(x, z, w, d, drip, yaw, 0.0117);
       T.flat(7.25, 16.0, 1.5, 1.0, fresh, 0, 0.0105); T.flat(27.75, 19.5, 1.0, 2.0, fresh, 0, 0.0105); } }
     // ---- THE DOCK: a field of the firm's colour against the hut's west wall (a field in the sun before a pale wall: what its colour is thrown onto), an
     // edge to its open sides, and its load limit along that edge at the size a load limit is
