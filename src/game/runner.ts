@@ -70,6 +70,7 @@ import { MORALE, moraleOf, rungOf, moraleRelease, sawLeaderFall } from './morale
 import { digInOrder } from './digin';
 import { w } from './words';
 import { PICTURE, PICTURE_STATS, ideasOf, pictureTell, type Who } from './picture';
+import { word } from './belief';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?norunner = a broken man stays and changes his magazine, as
  *  he did) and by the shipped stand; the harness's frozen stand leaves it off (TPS_RUNNER=1 turns it on — and it needs TPS_MORALE=1 beside it). Metres:
@@ -306,7 +307,7 @@ function tell(g: Game, gd: Guard, S: Run) {
     if (!mateOf(g, gd, o) || flat(o.char.pos, gd.char.pos) > K.toldM) continue;
     const D = g.fight?.defs.find(X => X.gd === o);
     if (D && g.fight!.told(o, S.from)) digInOrder(g, D, S.from, K.tellBeat);
-    else { o.lastKnown = v3.copy(S.from); o.awareness = Math.max(o.awareness, K.tellAware); }
+    else { word(g, o, S.from); o.awareness = Math.max(o.awareness, K.tellAware); }
     S.told++; RUNNER_STATS.told++;
   }
 }

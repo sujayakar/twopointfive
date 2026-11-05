@@ -74,6 +74,7 @@ import { moraleBlast } from './morale';
 import { messWall } from './floormess';
 import { gunLast } from './gunroles';   // (called inside enter only)
 import { PICTURE, PICTURE_STATS, knownPlaces } from './picture';   // (called inside knownFoes and repick only)
+import { word } from './belief';
 
 export const WALLCHARGE = {
   /** THE SWITCH (this module's own; it also needs the destruction goal's — see the head) */
@@ -1158,13 +1159,13 @@ export class WallCharge {
   private shock(gd: Guard, secs: number, at: Vec3) {
     const g = this.g;
     gd.staggerUntil = Math.max(gd.staggerUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs); gd.weapon.burst = null;
-    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') gd.lastKnown = v3.copy(at);
+    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') word(g, gd, at);
     gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.char.anim.hit();
   }
   private dazzle(gd: Guard, secs: number, at: Vec3) {
     const g = this.g;
     gd.dazzledUntil = Math.max(gd.dazzledUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs);
-    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') gd.lastKnown = v3.copy(at);
+    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') word(g, gd, at);
     if (g.aiEnabled) gd.witness.dazzled++;
     gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.char.anim.hit();
   }
