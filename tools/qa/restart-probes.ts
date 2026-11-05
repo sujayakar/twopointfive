@@ -24,7 +24,7 @@
 //   - the camera and the cursor: the aim ray hangs on them (the session journal files the camera as an INPUT for the same reason); arm B's camera is put back to
 //     what it was at its own first staging (which is arm A's staging, die for die), the cursor to the harness's (800, 500), every key and button let go
 //   - THE CLOCK: Game.time runs on through a restart by design, and some of the level is a function of the absolute clock (a flickering fixture's `factor`:
-//     lighting.ts supply()). So arm B runs first and arm A's fresh game has its Game.time SET to arm B's restart time before its staging — the one write this file
+//     rust/sim/src/lights.rs supply()). So arm B runs first and arm A's fresh game has its Game.time SET to arm B's restart time before its staging — the one write this file
 //     makes into the game. `--own-clock` leaves arm A at the stand-up's 0 instead: red on `targets` for the flicker alone, which is what that mode is for
 //   - the room clear's `ROOMCLEAR.reroll` is OFF in both arms: with it on (the shipped default) a restart under a room clear deals the NEXT placement of the
 //     seed on purpose, which is not what this checks

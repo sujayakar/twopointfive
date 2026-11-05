@@ -62,7 +62,7 @@ const ERRAND = { awareness: 0.42, reactT: 1.0 };
 export class CameraRt extends CameraMachine {
   /** the probe's smoke transmittance lens → Sam's chest (1 headless / until the renderer answers: a sensor's last answer, an input), and the key it is asked under */
   smokeTrans = 1;
-  constructor(slot: number, st: SimState, readonly def: CameraDef, readonly index: number, readonly target: LightTarget, readonly cone: RtLight | null, readonly smokeKey: string) { super(slot, st); }
+  constructor(slot: number, st: SimState, readonly def: CameraDef, readonly index: number, readonly target: LightTarget, readonly cone: RtLight, readonly smokeKey: string) { super(slot, st); }
 }
 /** A TRIPWIRE OF THE LEVEL: its own machine is in the module (sim/lightshome.ts LaserMachine, rust/sim/src/lights.rs laser_open, laser_close) */
 export class LaserRt extends LaserMachine {
