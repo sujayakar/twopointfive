@@ -35,7 +35,7 @@
 //   (16) his squad (enemysquads.ts, raised for the case) counts him out: the last man of it fled, the squad reads nobody up
 // NOT STAGED: a grenade wind-up cancelled by the shout (frag.ts's wind-up is private to its book; the clause is one line beside the dead / held test).
 // It raises what it needs itself (blasts take doors off, the destruction dial, both switches), so it passes on the frozen stand and under TPS_PROFILE=shipped.
-// RUNNER_BREAK=1 = the FLED MARK never sticks (wiped before every frame: the run itself goes on, and every seam that asks `runnerFled` is told no) — the
+// RUNNER_BREAK=1 = the FLED MARK never sticks (wiped before every frame: the run itself goes on, and every seam that asks `gd.fled` is told no) — the
 // counting, the team's eyes, the empty hand, the scenario's cast test and the squad's count all answer as the build without the rule: must fail.
 // exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
