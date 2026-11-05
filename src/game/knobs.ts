@@ -145,6 +145,12 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'CARLAMPS',
   // a round reads what a thing says it is made of (particleFx.ts HITSTUFF): a recording made with it on has its hits on a box that says its stuff read by that word, one from before by the paint's colour
   'HITSTUFF',
+  // a mark on a cut or a round face lies where the round met it (render/decals.ts MARKCUT): a recording made with it on has such marks where the rounds went in, one from before on the plain box's face
+  'MARKCUT',
+  // a blast's marks sit in the surface (render/decals.ts MARKSIT; a picture only): a recording made with it on draws its scorches and films of dust that way, one with no table for it as they were drawn before the rule
+  'MARKSIT',
+  // a named coat's finish goes wherever its word goes (scene/stuff.ts COATFINISH; a picture only): a recording made with it on draws its vehicles' bodies as a clear coat, one with no table for it with the finish their files give them
+  'COATFINISH',
   // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
   'ROUND',
   // a box says its shape (scene/shapes.ts SHAPES): a recording made with it on has its vehicles' corners, bonnets and glass cut to every ray, one from before has the plain boxes
@@ -279,6 +285,8 @@ import { FRIENDLYFIRE } from './friendlyfire';
 import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
 import { HITSTUFF } from './particleFx';
+import { MARKCUT, MARKSIT } from '../render/decals';
+import { COATFINISH } from '../scene/stuff';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
@@ -364,6 +372,10 @@ export function knobRegistry(): Record<string, object> {
     CARLAMPS,
     // a round reads what a thing says it is made of (particleFx.ts): what it knocks out and the mark it leaves go by the box's own word before its paint's colour
     HITSTUFF,
+    // a mark on a cut or a round face lies where the round met it (render/decals.ts): where a mark is drawn, never whether one is laid
+    MARKCUT,
+    MARKSIT,
+    COATFINISH,
     CLEANRESTART,
     // off the line of his fire (fireline.ts): whether a teammate on an order waits short of the lane the player is firing down, how long, and the way round — where every ordered man walks reads them
     FIRELINE,

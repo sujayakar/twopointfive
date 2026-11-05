@@ -39,7 +39,8 @@ import { Input } from './game/input';
 import type { FollowCamera } from './game/camera';
 import { standGame, populateHost } from './host/standup';
 import { pageSwitches, pageRows } from './host/profile';
-import { LOOK, LOOK_DOORS, lookLevelFile, lookPageOn, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs } from './scene/look';
+import { MARKING_TEXEL } from './scene/markings';
+import { LOOK, LOOK_DOORS, lookLevelFile, lookPageOn, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs, lookKeptOf } from './scene/look';
 import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
@@ -364,7 +365,7 @@ async function main() {
     if (!bootedLocalLevel) throw e;
     console.error('?level=local: the game could not be built on the editor level — falling back to the bundled office —', e);
     level = buildBundledLevel(); engine.world.statics.length = 0; engine.lights.lights.length = 0;
-    populateHost(engine, level); engine.settings.skyZenith = level.sky.zenith; engine.settings.skyHorizon = level.sky.horizon;
+    hostLevel(engine, level, q);
     ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed }));
   }
   boot.span('gameCtor', tGame); boot.mark('game');
@@ -1197,6 +1198,17 @@ function urlFlagsOnEngine(engine: Engine) {
 
 /** ?kitview only: the level that was built is a bespoke set's (bootLevel) */
 let kitSetUp = false;
+/** A LEVEL ENTERS THE HOST: what the frame takes from the level itself (how kept the place is, its marks' texel, its sky) and its boxes and lights. Every way a
+ *  level comes into the page calls this one function (the boot, and the bundled office when an editor's level cannot stand), so a word a level says cannot be
+ *  taken on one way in and left behind on another. */
+function hostLevel(engine: Engine, level: ReturnType<typeof buildLevel>, q: URLSearchParams): void {
+  lookConfig.kept = lookKeptOf(level.kept, q.get('kept'));   // HOW KEPT THE PLACE IS (scene/look.ts lookKeptOf: &kept=<0‥1> for the visit, else the level's own word, else 0 = as every level was drawn before it); the look's uniform takes it here
+  engine.gbuffer.setLook();
+  if (lookConfig.on && (level.kept !== undefined || q.has('kept'))) console.info(`look: this place is kept ${lookConfig.kept} (0 = left to the weather, 1 = cleaned last night; the level's own word: ${level.kept ?? 'none'}; &kept=<0‥1> says another for the visit)`);
+  engine.settings.markingTexel = level.markTexel || MARKING_TEXEL;   // the base texel the level's marking bitmaps were generated for (absent = 2.5 cm, said outright: a level that comes in after another must not keep the other's)
+  populateHost(engine, level);   // the level's boxes into the world, its lights into the set (src/host/standup.ts — the same two loops the harness runs)
+  engine.settings.skyZenith = level.sky.zenith; engine.settings.skyHorizon = level.sky.horizon;
+}
 /** the boot's level: the bundled office or ?levelFile=, its boxes and lights into the host */
 async function bootLevel(q: URLSearchParams, engine: Engine, tick: () => Promise<void>) {
   // ?levelFile=office-t20.json: boot on a level file fetched from the dev server's /levels/ (tools/levels-api.ts) instead of the bundled office — the review page's world-resolution
@@ -1214,9 +1226,7 @@ async function bootLevel(q: URLSearchParams, engine: Engine, tick: () => Promise
   if (lorryTryOn(q)) { const n = dressLorry(level); console.info(n ? `lorry: ${n} pieces placed by hand (?lorry=0 = the lorry as its file has it)` : 'lorry: the level\'s own lorry stands (it says its shapes, or it is not the lorry scene/lorryTry.ts knows): nothing touched');
     if (n && q.get('lorrykit') !== '0') { const kit = kitLorry(level); console.info(`lorry: ${kit} fittings (?lorrykit=0 = the curved lorry without them)`); } }   // A LORRY WITH CURVES, A TRIAL (scene/lorryTry.ts; the look page only, and only the pass's lorry)
   if (lookConfig.on && new URLSearchParams(location.search).get('seat') !== '0') { const n = seatPosts(level); if (n) console.info(`look: ${n} post${n === 1 ? '' : 's'} seated a hair proud of the wall end they stand in (?seat=0 leaves them)`); }   // (scene/lookMend.ts — the look page only)
-  if (level.markTexel) engine.settings.markingTexel = level.markTexel;   // the base texel the level's marking bitmaps were generated for (absent = 2.5 cm)
-  populateHost(engine, level);   // the level's boxes into the world, its lights into the set (src/host/standup.ts — the same two loops the harness runs)
-  engine.settings.skyZenith = level.sky.zenith; engine.settings.skyHorizon = level.sky.horizon;
+  hostLevel(engine, level, q);
   boot.span('level', tLv); boot.mark('level');
   return level;
 }
@@ -1576,8 +1586,6 @@ function characterRigFlagsAndHooks(engine: Engine, game: Game) {
 /** ?meshShadows / ?nodecals / ?noparticles / ?nosparkbounce (written over the applied preset, as they were), __mark, __marks, __particles */
 function marksParticlesFlagsAndHooks(engine: Engine, game: Game) {
   if (new URLSearchParams(location.search).has('meshShadows')) engine.settings.meshShadows = true;   // ?meshShadows: on by hand whatever the preset (ultra carries it anyway; auto's ladder re-applies presets and will clear it — pin ?quality= to keep it)
-  game.decals.onCut = new URLSearchParams(location.search).get('markcut') !== '0';   // A MARK ON A CUT OR A ROUND FACE LIES WHERE THE ROUND MET IT (render/decals.ts onCut): on in the page, ?markcut=0 = pulled to the plain box's face, where the shader drops it, as it was
-  game.decals.setSit(new URLSearchParams(location.search).get('marksit') !== '0');   // MARKS THAT SIT IN THE SURFACE (render/decals.ts sit): on in the page, ?marksit=0 = a blast's marks as they were drawn
   if (new URLSearchParams(location.search).has('nodecals')) { engine.settings.decals = false; game.decals.enabled = false; }   // ?nodecals: the decal experiment (E1, on by default in its branch) off from boot — nothing recorded, nothing uploaded, the g-buffer as it was
   // __mark: the MARKINGS lane (scene/markings.ts) for the console / automation — on/off, the knobs, a box's packed records, the table's stats, the lights registered for emissive markings
   (window as any).__mark = {

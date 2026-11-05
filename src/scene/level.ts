@@ -189,6 +189,8 @@ export interface Level {
   breach?: BreachPlan;
   /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — main.ts hands it to the engine */
   markTexel?: number;
+  /** how kept the place is, 0‥1 (the file's meta.kept; absent = 0): main.ts hands it to the look (scene/look.ts lookKeptOf) */
+  kept?: number;
   /** The one mission thread's geometry (game.ts Mission): the room to reach (floor rectangle) and the door the HUD points at for it, the rack whose drive
    *  gets pulled (its index n names the switchables `rack${n}_leds` / `rack${n}_glow` that go dark; `front` is the marker point on its LED face), the door
    *  to leave by and the x past which you are outside it. */
@@ -221,7 +223,7 @@ export function buildBundledLevel(): Level {
   return withOfficeScript(loadLevel(OFFICE_DATA));
 }
 /** attach what the office keeps OUTSIDE its level file to a Level of the office family (the bundled file, relief, a texel variant off the dev server, the editor's document) —
- *  loadLevel itself stays pure data → Level. Today that is its scenario data alone: the office's level script (the night and day showcases) was removed, so the office has no
+ *  loadLevel itself stays pure data → Level. Today that is its scenario data (its named marks are in its file, like any level's: LevelData.marks): the office's level script (the night and day showcases) was removed, so the office has no
  *  script and the Director no program (the name stays: every tool that loads a level file calls this). */
 export function withOfficeScript(level: Level): Level { return withScenarios(level, OFFICE_SCENARIOS); }
 /** attach a level SCRIPT to a Level. The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data

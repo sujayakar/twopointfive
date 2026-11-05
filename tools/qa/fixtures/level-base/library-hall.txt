@@ -1,2 +1,2 @@
-# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-3c580eecbe9a188922d41fd1d4875d2ec601a68f
+# 11-05, three kit pieces no longer flicker: a handcart's shafts end at its bed, a van's bumper and step begin at its body, a wash line's cloths do not lap; no box added or removed, and no solid thing is anywhere it was not; before it: the hut wears the kit's four wall fittings (a band, a vent, conduit, a pipe), drawn only, in a group of their own
+d5789aa9968e2fab7f49f59883b4222f95ad5ca9

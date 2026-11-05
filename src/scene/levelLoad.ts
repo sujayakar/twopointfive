@@ -8,10 +8,10 @@
 // fitted from its parts (fitPropFootprint, the generator's own rule), and a file may pin that too (PropData.half / height).
 import type { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff } from './boxes';
-import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef } from './level';
+import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef, MarkDef } from './level';
 import { withScript } from './level';
 import { LEVEL_SCRIPTS } from './levelScripts';
-import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
+import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, MarkData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from './markings';
 import { authoredC, authoredH } from './round';   // (leaf helpers: a box's centre and half size as its level authored them)
 import { formOf, type BoxShape, type ShapePiece } from './shapes';
@@ -145,9 +145,11 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     routes, chokepoints, clearPlans,
     ...(civilians ? { civilians } : {}),
     ...(data.volumes.length ? { volumes: data.volumes.map((v): VolumeDef => ({ name: v.id, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) } : {}),   // the level script's trigger volumes (game/director.ts onEnter) — written iff authored, so a level with none loads key for key as before
+    ...(data.marks?.length ? { marks: data.marks.map((m): MarkDef => ({ name: m.id, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),   // the level's named marks (scene/ways.ts, game/director.ts) — written iff the file names any, so a level with none loads key for key as before
     sky: { zenith: V(data.sky.zenith), horizon: V(data.sky.horizon) },
     mission: { serverRoom: { x0: reach.area.x0, x1: reach.area.x1, z0: reach.area.z0, z1: reach.area.z1 }, entryDoor: reach.door, rack: { index: drive.rackIndex, front: V(drive.front), halfW: drive.halfW }, exfilDoor: exfil.door, exfilX: exfil.x, exfilZ: exfil.z, ...(exfil.out ? { exfilOut: [exfil.out[0], exfil.out[1]] as [number, number] } : {}) },
     ...(data.meta.markTexel !== undefined ? { markTexel: data.meta.markTexel } : {}),
+    ...(data.meta.kept !== undefined ? { kept: data.meta.kept } : {}),
     ...(data.scenarios ? { scenarios: clone(data.scenarios) } : {}),   // (the runtime structs verbatim: scene/scenarios.ts)
   };
   // TODO(G2): data.floors / data.connectors → per-floor nav + stair links. data.volumes → Level.volumes above (the Director's onEnter).
@@ -193,7 +195,9 @@ export interface LevelToDataOpts {
   materials?: Record<string, MaterialData>;
   /** per box index: the id to write (absent → a semantic id for referenced boxes, else box_NNNN) and the editor group */
   boxIds?: readonly (string | undefined)[]; boxGroups?: readonly (string | undefined)[];
-  floors?: FloorData[]; surfaces?: SurfacesData; meta?: LevelData['meta'];
+  floors?: FloorData[]; surfaces?: SurfacesData;
+  /** (not `markTexel` or `kept`: those two are the Level's own and are written from it. Either one in an object passed here is dropped) */
+  meta?: Omit<LevelData['meta'], 'markTexel' | 'kept'>;
   /** pass-through for what Level has no slot for yet */
   volumes?: LevelData['volumes']; connectors?: LevelData['connectors'];
 }
@@ -273,7 +277,9 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
   const data: LevelData = {
     version: LEVEL_DATA_VERSION,
     name: opts.name,
-    meta: clone(opts.meta ?? {}),
+    // (what the loader hands back ON THE LEVEL from the file's meta is written from the Level, iff it has it: its marks' texel and how kept it is. The
+    //  Level is the one source: either key in a caller's opts.meta is dropped, so a file cannot say a word its Level does not, and a round trip holds)
+    meta: (() => { const { markTexel: _texel, kept: _kept, ...rest } = clone((opts.meta ?? {}) as LevelData['meta']); return { ...rest, ...(level.markTexel !== undefined ? { markTexel: level.markTexel } : {}), ...(level.kept !== undefined ? { kept: level.kept } : {}) }; })(),
     floors,
     materials,
     ...(opts.surfaces ? { surfaces: clone(opts.surfaces) } : {}),
@@ -285,6 +291,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     chokepoints: uniqIds((level.chokepoints ?? []).map(c => slug(c.name))).map((id, i) => { const c = level.chokepoints![i]; return { id, ...(c.name !== id ? { name: c.name } : {}), pos: V(c.pos), yaw: c.yaw }; }),
     ...(level.civilians ? { civilians: uniqIds(level.civilians.map(c => slug(c.name))).map((id, i): CivilianData => { const c = level.civilians![i]; return { id, ...(c.name !== id ? { name: c.name } : {}), kind: c.kind, tint: V(c.tint), ...(c.tint2 !== undefined ? { tint2: V(c.tint2) } : {}), points: VV(c.points), wait: [...c.wait], ...(c.tasks !== undefined ? { tasks: [...c.tasks] } : {}), ...(c.face !== undefined ? { face: [...c.face] } : {}) }; }) } : {}),
     volumes: level.volumes ? level.volumes.map((v): LevelData['volumes'][number] => ({ id: v.name, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) : clone(opts.volumes ?? []), devices: (level.devices ?? []).map(deviceData),   // (a Level that carried volumes writes them back; one without keeps the pass-through)
+    ...(level.marks?.length ? { marks: level.marks.map((m): MarkData => ({ id: m.name, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),
     ...(level.vents ? { vents: level.vents.map((d): VentData => { const v: VentData = { id: d.name, pos: V(d.pos), dir: V(d.dir), speed: d.speed, spread: d.spread, reach: d.reach }; for (const k of ['size', 'period', 'duty', 'phase', 'mains'] as const) if (d[k] !== undefined) (v as any)[k] = d[k]; return v; }) } : {}),
     connectors: clone(opts.connectors ?? []),
     mission: { playerSpawn: V(level.playerSpawn), objectives: [

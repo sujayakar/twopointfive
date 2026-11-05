@@ -1,2 +1,2 @@
-# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-5f9440f89b44f17460a9b3289c01b01451c56b47
+# 11-05, a level file names its marks: the office's file gains the marks key (31 marks, as its script joined them on at load), no box and no other key moved; before it: the hand pass: paint on what is there, and 62 drawn-only boxes in the lived tier at the tail; no box of the 783 before them moved. The level says it is kept (meta.kept 1). Five boxes a hair smaller, so that no two drawn faces lie in one plane
+f52f2255b9c2f30b450e0d47332e1fec3e390a09

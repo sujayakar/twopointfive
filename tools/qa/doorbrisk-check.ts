@@ -7,8 +7,8 @@
 //      pace, gun low, a run to cover written down. Rule on: he is never at a run and no run is written; he goes at the fight's pace, faster than the walk,
 //      and is on his mark sooner than the same leg takes him with the fight cold.
 //   2. THE FIGHT COLD: rule on, the same leg with nothing heard — he walks it.
-//   3. A SPOT ON THE FLOOR: rule on, the same man sent across the same floor by a move order (the order deals him his own spot by the mark) — he runs
-//      for cover as he did.
+//   3. A SPOT ON THE FLOOR: rule on, a man on such floor sent by a move order (the order deals him his own spot by the mark, out of the enemy's line; the
+//      floor is found for THIS order, three metres or more from the spot it deals him, as line 1's is for a stack) — he runs for cover as he did.
 //   4. the journal: a recording from before the key replays with it off; one that carries it keeps its own word, on or off
 // The team's pace and the squad's picture of the enemy are raised for the staging on either stand (the frozen stand holds them off; the page has them).
 // Headless: nothing here says how it looks.
@@ -43,10 +43,13 @@ async function leg(on: boolean, kind: 'stack' | 'move', hot: boolean): Promise<L
       if (flat(p, to) < 3 || !open(p, to) || g.fight.roomAt(p) !== g.fight.roomAt(to)) continue;
       for (let r = 5; r <= 12 && !found; r += 1) for (let i = 0; i < 24 && !found; i++) { const E = [p[0] + Math.cos(i * Math.PI / 12) * r, 0, p[2] + Math.sin(i * Math.PI / 12) * r];
         if (g.col.nav.isBlocked(E[0], E[2]) || !open(p, E)) continue; R.put(H, E); pictureTell(g, m, H, E);
-        if (exposedAt(g, m, p) >= TEAMPACE.dashSeen && exposedAt(g, m, to) <= 0) found = { m, p, to, E }; } } }
+        if (exposedAt(g, m, p) < TEAMPACE.dashSeen || exposedAt(g, m, to) > 0) continue;
+        if (kind === 'move') {   // THE MOVE LEG IS THE MOVE ORDER'S OWN: it deals each man a spot of his own out of the known enemy's line, which may be a pace from where he stands (the pass's dressed yard, 11-05: wood to stand behind 1.1 m from the first floor found, and nobody runs a metre). The floor is one from which the spot it deals him is as far as a stack mark has to be
+          const why = O.give('move', O.targetAt(to), 'all'); const post = why ? null : O.of(m)?.post;
+          if (!post || flat(p, post) < 3) { O.give('stack', O.targetAt(door.frameCentre), 'all'); continue; } }
+        found = { m, p, to, E }; } } }
   if (!found) return { found: false, leg: 0, top: 0, low: 0, runs: 0, there: -1, walk: teamWalk(g), order: '-' };
   const { m, p, to, E } = found; R.put(H, [E[0] + 400, 0, E[2]]);   // (he is known of, not there: nobody fights)
-  if (kind === 'move') { const why = O.give('move', O.targetAt(to), 'all'); if (why) throw new Error(`doorbrisk: 'move' refused — ${why}`); }
   R.put(m, p); pictureTell(g, m, H, E); const n0 = TEAMPACE_STATS.cover, t0 = g.time, d0 = flat(p, O.of(m)?.post ?? to); let top = 0, low = 0, there = -1;
   for (let f = 0; f < 420; f++) { g.fight.hotT = hot ? g.time : -1e9; R.step(); top = Math.max(top, m.speed); if (teamSprinting(g, m)) low++;
     const A = O.of(m); if (there < 0 && A?.post && flat(m.char.pos, A.post) < 0.4) there = g.time - t0; }
@@ -71,7 +74,7 @@ export const doorbriskCheck = guarded(async () => {
       'rule on, the same leg with nothing heard: he walks it — and with the fight on he is on his mark half a second or more sooner than that', cold.found ? `cold: ${say(cold)} · hot: there after ${on.there < 0 ? '—' : f2(on.there) + ' s'}` : 'no such floor found');
     // ---- 3. a spot on the floor
     { const mv = await leg(true, 'move', true);
-      F.verdict(mv.found && mv.order === 'move' && mv.top >= TEAMPACE.runAt && mv.low > 0 && mv.runs > 0, 'rule on, the same man sent across the same floor by a move order: he runs for cover as he did', mv.found ? say(mv) : 'no such floor found'); }
+      F.verdict(mv.found && mv.order === 'move' && mv.top >= TEAMPACE.runAt && mv.low > 0 && mv.runs > 0, 'rule on, a man on such floor sent three metres or more by a move order: he runs for cover as he did', mv.found ? say(mv) : 'no such floor found'); }
     // ---- 4. the journal
     { const J = await import(`${ROOT}/src/game/journal.ts`), R = await rig('room-clear-four', 5), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(R.game)));
       TEAMPACE.doorBrisk = true; const old = snap(); if (old.tables.TEAMPACE) delete old.tables.TEAMPACE.doorBrisk; J.applyKnobs(R.game, old); const a = TEAMPACE.doorBrisk;

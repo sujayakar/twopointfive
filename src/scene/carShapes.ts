@@ -157,7 +157,7 @@ export const fallOf = (t: BowedTop, s: number): number => { const { R } = bowOf(
  *  lays no sheet). Returns the slab's own shape, or nothing where it need say none. */
 export function layOn(t: BowedTop, c: Vec3, h: Vec3, paint: CarPaint, o: { nth?: number; gap?: number } = {}): BoxShape | undefined {
   const { x, w, R } = bowOf(t), nth = o.nth ?? 0, gap = o.gap ?? 0.02, lift = 0.02, d: Vec3 = sub(c, t.c);
-  const keep = Math.sqrt(2 * R * gap - gap * gap) / 2 ** nth, flat = keep / 2;
+  const keep = Math.sqrt(2 * R * gap - gap * gap) / Math.pow(2, nth), flat = keep / 2;
   // the slab: from (flat, its top) down to (keep, its underside) each side of the crown, which lies −d[x] from the slab's own middle
   const a = keep - flat, b = 2 * h[1], k = b * flat + a * h[1], side = (sg: number): ShapePlane => x === 2 ? plane(0, a, sg * b, k - sg * b * d[2]) : plane(sg * b, a, 0, k - sg * b * d[0]);
   const own = (t.shape.cut ?? []).map(p => moved(p, d, gap));
@@ -229,7 +229,7 @@ export function vanShapes(P: CarPaints) {
     tops: { load: { c: [-0.5, 1.405, 0], h: [1.4, 0.545, 0.9], shape: load } as BowedTop },
     wheel: (s: number) => wheelShape(wheelH, s, P.hub),
     body: { cut: bodyCut, old: true, with: arches } as BoxShape,
-    bumper: onCorners([0.05, 0.11, 0.9], bodyCut, [2.43, 0, 0], 0.09), step: onCorners([0.05, 0.07, 0.9], bodyCut, [-2.43, 0, 0], 0.09),
+    bumper: onCorners([0.04, 0.11, 0.9], bodyCut, [2.44, 0, 0], 0.09), step: onCorners([0.04, 0.07, 0.9], bodyCut, [-2.44, 0, 0], 0.09),
     bonnet: { arc: { axis: 1, rise: 0.2 }, ...cutOf(bonnetH, [fallPlane(bonnetH, 1, 0.18, 0.15), ...withCorners([cornerPlanes(bodyH, 0.22, 1, 1, 3)[1], cornerPlanes(bodyH, 0.22, 1, -1, 3)[1]], [2.0, 0, 0])]), old: true } as BoxShape,
     doors: { with: rehome(G.posts, sub(doorsC, glassC)) } as BoxShape,
     glass: G.glass,

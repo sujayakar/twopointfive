@@ -30,6 +30,7 @@
 import { BoxFlag, type Box } from './boxes';
 import { MARKING_TEXEL, MAX_MARKS_PER_BOX, texelOf, type MarkingDef, type MarkFace } from './markings';
 import type { Vec3 } from '../math/vec';
+import { onExact } from '../math/exact';
 
 export const ROUND = {
   /** the switch */
@@ -45,7 +46,7 @@ export const ROUND_STATS = { made: 0, levels: 0 };
  *  of the radius it was asked for, so a kit drum's round is 0.985 of that. */
 const R_OF_SLAB = 1.026;
 const near = (a: number, b: number, e = 1e-4) => Math.abs(a - b) < e;
-const TAN8 = Math.tan(Math.PI / 8);
+let TAN8 = 0; onExact(() => { TAN8 = Math.tan(Math.PI / 8); });   // (made in onExact, not as the module loads: a constant worked out at load is the engine's whatever the maths switch says — math/exact.ts)
 /** an octagon of slabs, as the kit and the level generators write a round thing: boxes[i‥i+3] are four plain slabs through one centre, 45° apart, tan 22.5° as
  *  deep as they are long, in one paint, on one floor, their tops stepped down by one small step (2 mm from the kit, 3 mm from two older generators) */
 function octagonAt(B: readonly Box[], i: number): boolean {
