@@ -536,6 +536,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   plays, and the frozen stand runs `lines` and `circles` only (the other two need the game's own maths). Probe families with the rows up: destruction,
   furnblast, breaks, winbars, wallbreak and wallcharge were run both ways before the last review's mends (3.3 million questions, none different); the
   door, glass and frag families were not.
+- **What a pane of glass is to play** (`rust/sim/src/panes.rs`, `pattern.rs`, `pen.rs`; the `panes` part, the block's last; 2026-11-05): the rule, a round through glass and the window's bars gone from TypeScript to the module, no row. The whole account, file by file and special case by special case, is `docs/agents/destruction.md`, the bullet of that name. The open question below is still the door lines and rays come by; it reads a row where it stands now, through `World.panes_g`.
 - **A pane's open question** (`rust/sim/src/glass.rs`; the copy's panes, `boxMirror.ts panes` / `PaneSource`; 2026-11-04). Whether a pane of glass
   is open where a line or a ray meets it (`glassbreak.ts openAt(bi, X) || also(bi, X)`, what `col.glassOpen` answers) is answered IN THE MODULE.
   Before it, every rule there that met a pane stopped and handed the question back: the ray was walked again in TypeScript (6,500 rays in twelve
@@ -560,7 +561,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     `glassbreak.ts` sorted once), so "this clump is out" is "(its key, its number) is no later than the last one out": the row holds that one
     pair and the module works a clump's key out again (`gpDiceKey`, the same arithmetic). The row is written from the clumps that ARE out, not
     from the step's counter: a clump's release is heard by the game before the counter moves, and a question asked from inside that hearing (a
-    shard's ray, a sound's line) must find the clump out. A review found the first version one clump late there; `glass-ident` now asks from
+    shard's ray, a sound's line) must find the clump out. A review found the first version one clump late there; `glass-ident` (gone with the TypeScript rule: `pane-ident` holds it now) asked from
     inside every release.
   - A BURST'S VIEW IS DATA. A blast judges its lines by glass as it is to a burst (`frag.ts throughGlass`), which was a closure hung on the glass
     for the length of one judgment. `GlassBreak.seeThrough(view, from, size, fn)` now says it twice: the closure for this side's walks, and rows
@@ -596,7 +597,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   - A RULE'S STEP ASKS ONCE (`col.rulesPanes()`): a slab's and a thrown thing's rays ask the pane's rule, so their step takes the answer
     (0 or 1) from one place, which also counts a −1 as the TypeScript's under the rules' own row. The thrown things ask again before each walk:
     a row this side stepped in between may have broken more glass than the copy holds.
-  - WHAT HOLDS IT: `tools/qa/glass-ident.ts` (`GLASS_BREAK=1` must fail it; the section `glass` of `rust-check`, which runs it ON BOTH STANDS:
+  - WHAT HELD IT, until the rule moved here too: `tools/qa/glass-ident.ts` (now `tools/qa/pane-ident.ts`, `PANES_BREAK=1` must fail it; the section `glass` of `rust-check`, which runs it ON BOTH STANDS:
     toughened glass comes down in a wave on the frozen stand and drops after a beat on the page's, and the two reach different rows). The glass
     of four levels, and one block of solid glass a level, broken by the game's own entry points (rounds hard and soft, pellets, blasts, the
     glass's step, a pane made another glass, every pane made whole); points on and off every pane asked of the rule and of the module with no

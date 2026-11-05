@@ -183,7 +183,8 @@ export class StaticCollision {
   tickOpen(): void { this.stand(); this.mirror.played = true; }   // (…and from its first tick a box world is a level in play: what the copy says of a table outgrown — boxMirror.ts outgrown)
   /** …the copy made the boxes as they stand, for whoever opens a stretch of questions: a tick, a window, a question alone (below) */
   private stand(): void { const M = this.mirror, S = EXACT.on ? senseRows() : 0;   // (the senses answer under the game's own maths alone: senseSet)
-     if (RUST.lines || RUST.rays || RUST.circles || RUST.fog || S || ((RUST.doors || RUST.props || RUST.slabs || RUST.items) && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.fog, S, RUST.rays); else if (M.live) M.shut(); }
+     if (RUST.lines || RUST.rays || RUST.circles || RUST.fog || S || ((RUST.doors || RUST.props || RUST.slabs || RUST.items) && EXACT.on)) this.openCopy(S); else if (M.live) M.shut(); }
+  private openCopy(S: number = EXACT.on ? senseRows() : 0): void { this.mirror.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.fog, S, RUST.rays); }
   /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts; the furniture's: game/props.ts): the copy, standing, with the game's own leaves `dyn` in it as they
    *  are — or null (no tick, no copy, another list in the leaves' place): the TypeScript steps. */
   rulesWorld(dyn: Box[]): BoxMirror | null { if (ruleRed(RULES_ROW)) return null; const M = this.ready(); if (M.rules(dyn)) return M;
@@ -191,6 +192,13 @@ export class StaticCollision {
   /** …and THE WORLD A RULE MAY ASK THE STATICS OF ALONE (the furniture's settle as a level is stood up, game/props.ts: no leaf is asked for, and the game's
    *  own leaves need not be in it yet): the copy, standing with what it owed paid — or null (no window on it: the TypeScript's, and counted by the caller) */
   rulesStatics(): BoxMirror | null { const M = this.ready(); return M.live ? M : null; }
+  /** …and THE WORLD FOR A RULE THAT HAS NO ROW AND NOTHING ELSE TO FALL TO (a pane of glass, game/glassbreak.ts): the copy, standing, whatever a tool's hold has put down. With no row up the copy stands for the rule's length, and it asks nothing of a question that is not the rule's */
+  ruleAlways<T>(fn: (M: BoxMirror) => T): T {
+    return this.window(() => {
+      let M = this.ready(); if (M.live) return fn(M);
+      this.openCopy(); try { M = this.ready(); return fn(M); } finally { this.mirror.shut(); }
+    });
+  }
   /** …and THE PANE RULE AS A RULE'S STEP TAKES IT (a slab's and a thrown thing's rays ask it; `paneAsk` below): 0 or 1 to hand the module, or −1 — the step
    *  is the TypeScript's, and counted as its own here, once for every rule that asks */
   rulesPanes(): number { const ask = this.paneAsk; if (ask < 0) this.paneFell(RULES_ROW, ask); return ask; }
