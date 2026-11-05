@@ -18,8 +18,8 @@
 // thrown things: sim/colstore.ts and the stores beside it) is made OVER the game's SimState and its columns are that family's part of the block from the
 // store's first line to the game's last (`keep`): the store has no array of its own, nothing moves in or out, and which side STEPS the columns — the
 // module's rule or its TypeScript twin, by the family's row of RUST — is no question of where they are. A block nobody has asked the module about yet is
-// parked like any other (a buffer of this object's), so a game is made, read and written with no call into the module; it is bound as its first tick or
-// its first question opens. A system made with no game behind it (a check's lone furniture, a lone door) has a SimState, and so a block, of its own.
+// parked like any other (a buffer of this object's), so a game's columns can be made, read and written with no call into the module; it is bound as its first tick or
+// its first question opens (a level's fixtures are that question: sim/lightshome.ts takes them through the module's one way in). A system made with no game behind it (a check's lone furniture, a lone door) has a SimState, and so a block, of its own.
 //
 // AT HOME, OR NOT — the families that still move. A system with a TypeScript twin that keeps its state in fields of its own objects (the die, the poses,
 // the smoke grid) has it in the block only when its row of RUST is on (a rule that lives only in the module: when its own switch is on; either way the
@@ -36,8 +36,8 @@
 import { sim, u32, simWhyNot } from './sim';
 
 /** THE PARTS OF A BLOCK, in the order of rust/sim/src/state.rs PARTS (tools/qa/rust-check.ts holds the two lists to each other) */
-export const SIM_PARTS = ['head', 'dice', 'doors', 'falls', 'props', 'slabs', 'items', 'men', 'smoke', 'poses'] as const;
-export const P_DICE = 1, P_DOORS = 2, P_FALLS = 3, P_PROPS = 4, P_SLABS = 5, P_ITEMS = 6, P_MEN = 7, P_SMOKE = 8, P_POSES = 9;   // (0 is the head; the pools after the parts of a fixed length, the largest last: a parked block is one run of bytes to its last word in use, `span`)
+export const SIM_PARTS = ['head', 'dice', 'doors', 'falls', 'props', 'slabs', 'items', 'men', 'lights', 'smoke', 'poses'] as const;
+export const P_DICE = 1, P_DOORS = 2, P_FALLS = 3, P_PROPS = 4, P_SLABS = 5, P_ITEMS = 6, P_MEN = 7, P_LIGHTS = 8, P_SMOKE = 9, P_POSES = 10;   // (0 is the head; the pools after the parts of a fixed length, the largest last: a parked block is one run of bytes to its last word in use, `span`)
 /** the head's words (state.rs Head): the layout's word, the homes */
 const H_LAYOUT = 0, H_HOMES = 1;
 

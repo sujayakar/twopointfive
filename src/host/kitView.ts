@@ -64,6 +64,7 @@
 // filed (main.ts step), no autosave, no replay buffer. A throw in the game's own step is `none` (the frame loop's fatal card).
 // Host side: the game is a TYPE here (src/game is one import cycle); orders go through the Game.
 import type { Game, Guard, LightTarget } from '../game/game';
+import { LIGHT_IN, type FixtureDef } from '../sim/lightshome';
 import type { Door } from '../game/doors';
 import type { OrderTarget } from '../game/orders';
 import type { Input } from '../game/input';
@@ -337,9 +338,9 @@ export function kitViewQuietRoofs(boxes: readonly Pick<Box, 'c' | 'h' | 'yaw' | 
 /** THE POOL LAMP AS A LAMP OF THE GAME'S (game/lighting.ts LightTarget, built by hand on the host side: the game makes its own only from a level's
  *  lights): the picture's porch light and its glowing box (its index in the world's statics), so that the player's round meets it as it meets any
  *  fixture (combat.ts shootOut), `repairLights` mends it, and the game writes its light and its box's glow each step. */
-export function kitViewPoolTarget(light: RtLight, box: number, glow: Vec3, intensity: number): LightTarget {
+export function kitViewPoolTarget(light: RtLight, box: number, glow: Vec3, intensity: number): FixtureDef {
   return { name: 'kitview_porch', group: 'kitview', kind: 'analytic', pos: [light.pos[0], light.pos[1], light.pos[2]], light, boxes: box >= 0 ? [box] : [], baseEmissive: [glow[0], glow[1], glow[2]], baseIntensity: intensity,
-    on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: false, interactive: true, stagger: 0 } as LightTarget;
+    on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: false, interactive: true, stagger: 0 };
 }
 const COUNTS = ['bangs', 'frags', 'smoke', 'charges', 'walls', 'cams', 'shells', 'rings'];
 
@@ -682,6 +683,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   // the room burns at · the fill as staged and since when it is lifted · the loop's next rest · a leaf asked shut for a waiting row until · the gun last
   // put away at · why the quiet row of the last tile gave way to the loud one · the half crouch (0 = down)
   const quietKind = (() => { try { return kitViewQuietOf(new URLSearchParams(location.search)); } catch { return null; } })();
+  let poolKept: LightTarget | null = null;   // (the fixture the pool lamp is, once made: lightHome.add)
   let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, qBlade = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9, qMoon: RtLight | null = null, moonAt = 0, moonCol: Vec3 | null = null, qFit: { lamp: Vec3; sam: V2 } | null = null, qLead: boolean | null = null;
   const qRoofs = new Set<Box>();   // (the roof slabs drawn for the quiet picture: KIT_VIEW_QUIET.roofs)
   const lampAs = new WeakMap<LightTarget, { I: number; E: Vec3; on: boolean }>();
@@ -864,10 +866,10 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const poolSync = () => { if (!pool) return; const i = fixture ? engine.world.statics.indexOf(fixture) : -1; pool.boxes = i >= 0 ? [i] : []; if (lamps.porch) pool.light = lamps.porch; };
   /** THE ROOM BEHIND THE DOOR burns at this share of itself (the quiet picture: KIT_VIEW_QUIET.inside at rest; 1 = as the mission lights it — the seam
    *  a loud tool's cost floods it by): each lamp's own base, which the game multiplies each step, and its fixture's glow */
-  const quietInside = (k: number, blade = 1) => { qShare = k; qBlade = blade; for (const t of qIn) { const a = lampAs.get(t); if (!a) continue; t.on = true; t.baseIntensity = a.I * k; t.baseEmissive = [a.E[0] * k, a.E[1] * k, a.E[2] * k]; }
+  const quietInside = (k: number, blade = 1) => { qShare = k; qBlade = blade; for (const t of qIn) { const a = lampAs.get(t); if (!a) continue; game.lightHome.in(LIGHT_IN.on, t, 1); game.lightHome.in(LIGHT_IN.base, t, a.I * k); t.baseEmissive = [a.E[0] * k, a.E[1] * k, a.E[2] * k]; }
     if (qOwn) qOwn.intensity = qOwn.peakIntensity = KIT_VIEW_QUIET.own.intensity * blade; };   // (…and the picture's own lamp behind the leaf at `blade` of itself: the cost's — brighter through the gap, then out under the slab)
   /** …and as the mission had them (before a restart, at the picture's end: a base is the lamp's own, and no restart puts it back) */
-  const quietUndo = () => { for (const t of qIn) { const a = lampAs.get(t); if (a) { t.baseIntensity = a.I; t.baseEmissive = [a.E[0], a.E[1], a.E[2]]; } } qIn = []; if (pool) pool.boxes = [];
+  const quietUndo = () => { for (const t of qIn) { const a = lampAs.get(t); if (a) { game.lightHome.in(LIGHT_IN.base, t, a.I); t.baseEmissive = [a.E[0], a.E[1], a.E[2]]; } } qIn = []; if (pool) pool.boxes = [];
     if (qRoofs.size) { for (const b of qRoofs) b.flags |= BoxFlag.NoPrimary; qRoofs.clear(); engine.world.staticsDirty = true; }
     if (qLead !== null) { FIXLOOK.on = qLead; qLead = null; } };
   const stage = (expect?: number, head?: Guard | null, keep?: Keep | null) => { try { place(expect, head, keep); if (kitViewLoop && staged) live(staged); } catch (err) { console.error('kitview: the team could not be staged —', err); none(); } };
@@ -904,7 +906,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     //  never its group's: an added lamp may share one with the level's lamps —, the switch the photocell itself opens: the lamp and its fixture's glow go
     //  out together. Every restage: the encounter's restart puts the level's switches back as authored. Never seen on a GPU)
     dayOut = kitPlanDayOut(kitPlanOwnLamps(KV, Y), (P.set !== null ? KV?.sets?.[P.set]?.boxes : d.file()?.boxes) ?? [], Y.dayLights, P.indoors, d.lampsOut());   // (the boxes a lamp may stand under: the set's own, or the level's as built — a lamp under a ceiling is a room's and burns)
-    if (dayOut.length) for (const t of game.targets) if (t.kind === 'analytic' && dayOut.includes(t.name)) t.on = false;
+    if (dayOut.length) for (const t of game.targets) if (t.kind === 'analytic' && dayOut.includes(t.name)) game.lightHome.in(LIGHT_IN.on, t, 0);
     // (THE QUIET PICTURE'S OWN LAMPS: one pool and no other light on the team's side — every lamp of the level's that stands on their side of the wall
     //  and reaches the door's foot goes out, by its own switch, the lamp and its fixture's glow together; and the ROOM behind the door burns low: the
     //  lamps behind the wall that reach the doorway, lit as the mission has them, at KIT_VIEW_QUIET.inside of themselves — quietInside(). The
@@ -913,7 +915,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
       const foot: Vec3 = [m[0] + n[0] * (P.wall.face + KIT_PLAN.offFace), 1, m[1] + n[1] * (P.wall.face + KIT_PLAN.offFace)], wedge: Vec3 = [m[0] + n[0] * (P.wall.back - KIT_PLAN.litIn), KIT_PLAN.litY, m[1] + n[1] * (P.wall.back - KIT_PLAN.litIn)];
       for (const t of game.targets) { const L = t.light; if (t === pool || t.kind !== 'analytic' || !L || L.kind === 2) continue;
         const o = outOf(t.pos);
-        if (o >= P.wall.back) { if (t.on && dist(t.pos, foot) <= L.range) { t.on = false; qOut.push(t.name); } }
+        if (o >= P.wall.back) { if (t.on && dist(t.pos, foot) <= L.range) { game.lightHome.in(LIGHT_IN.on, t, 0); qOut.push(t.name); } }
         else if (lit0!.has(t) && dist(t.pos, wedge) <= Math.min(L.range, KIT_PLAN.litReach)) { if (!lampAs.has(t)) lampAs.set(t, { I: t.baseIntensity, E: [t.baseEmissive[0], t.baseEmissive[1], t.baseEmissive[2]], on: t.on }); qIn.push(t); } }
       quietInside(QK.inside);
       // (THE ROOF STAYS ON — KIT_VIEW_QUIET.roofs: the slabs the camera looks through, drawn where they lie wholly behind the wall and the team stands
@@ -967,7 +969,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     };
     torches();
     for (const l of engine.lights.lights) { if (!own(l)) continue; if (!base.has(l)) base.set(l, l.intensity); l.intensity = base.get(l)! * lightK.roomLights; }
-    if (Q) for (const t of qIn) if (t.light) { t.light.enabled = t.on && !t.broken; t.light.intensity = t.baseIntensity; }   // (a still picture is frozen from here: the dim room written once, as the game writes it each step)
+    if (Q) for (const t of qIn) if (t.light) { t.light.enabled = t.on && !t.broken; t.light.intensity = t.baseIntensity; game.lightHome.feed(t.light); }   // (a still picture is frozen from here: the dim room written once, as the game writes it each step)
     { const moon = engine.lights.lights.find(l => l.name === 'moon' && l.kind === 2), S = engine.settings;
       if (moon && !base.has(moon)) base.set(moon, moon.intensity); sky ??= { zenith: [S.skyZenith[0], S.skyZenith[1], S.skyZenith[2]], horizon: [S.skyHorizon[0], S.skyHorizon[1], S.skyHorizon[2]] };
       if (moon) { moonCol ??= [moon.color[0], moon.color[1], moon.color[2]]; const t = Q ? QK.moonTint : [1, 1, 1]; moon.color = [moonCol[0] * t[0], moonCol[1] * t[1], moonCol[2] * t[2]]; }   // (the quiet picture's moon is blue: over its own colour, put back on every other staging)
@@ -986,7 +988,9 @@ export function kitViewStart(d: KitViewDeps): KitView {
     fillBase = lamps.fill ? lamps.fill.intensity : 0;
     { const had = pool, i = had ? game.targets.indexOf(had) : -1;   // (ONE target for the page's life: it stays on the game's list through a restart, so the game's own repairLights is what mends it)
       if (Q && lamps.porch) { const c = lightK.porch.color, g = lightK.porch.fixture?.glow ?? 0, T2 = kitViewPoolTarget(lamps.porch, -1, [c[0] * g, c[1] * g, c[2] * g], lightK.porch.intensity);
-        if (had && i >= 0) { had.pos = T2.pos; had.light = T2.light; had.baseEmissive = T2.baseEmissive; had.baseIntensity = T2.baseIntensity; had.on = true; } else { pool = T2; game.targets.push(T2); }
+        const fresh = !poolKept; poolKept ??= game.lightHome.add(T2); const P2 = poolKept;
+        if (!fresh) { P2.pos = T2.pos; P2.light = T2.light; P2.baseEmissive = T2.baseEmissive; game.lightHome.in(LIGHT_IN.base, P2, T2.baseIntensity); game.lightHome.in(LIGHT_IN.on, P2, 1); if (i < 0) { game.lightHome.in(LIGHT_IN.mend, P2); game.lightHome.in(LIGHT_IN.blind, P2, -1); } }   // (a fixture of the module's stays one for the page's life, on the list or off it; back on the list it is a new lamp)
+        game.lightHome.in(LIGHT_IN.authored, P2, 1); pool = P2; if (i < 0) game.targets.push(P2);
         poolSync(); }
       else { if (i >= 0) game.targets.splice(i, 1); pool = null; }
       const O2 = QK.own, wantOwn = Q && A.kind !== 'wall', hung = qOwn && engine.lights.lights.includes(qOwn) ? qOwn : null;
@@ -1678,7 +1682,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   let costT = NaN, costLamp: RtLight | null = null, costPool: { I: number; E: Vec3 } | null = null, costFeet: V2 = [0, 0]; const costSeen: { n: number; cuts: number; last: KitView['cost']['last'] } = { n: 0, cuts: 0, last: null };
   const costOn = () => !isNaN(costT);
   const costOff = () => { costT = NaN; if (costLamp) { engine.lights.remove(costLamp); costLamp = null; }
-    if (costPool && pool) { pool.baseIntensity = costPool.I; pool.baseEmissive = [costPool.E[0], costPool.E[1], costPool.E[2]]; } costPool = null; };   // (the pool lamp's own base back: the restage finds it as it was)
+    if (costPool && pool) { game.lightHome.in(LIGHT_IN.base, pool, costPool.I); pool.baseEmissive = [costPool.E[0], costPool.E[1], costPool.E[2]]; } costPool = null; };   // (the pool lamp's own base back: the restage finds it as it was)
   const costBegin = (S: Staged, B: Beat) => { const L = KIT_VIEW_QUIET.cost.lamp, D = S.door; lifeOff(true);
     const G = kitViewCostLamp(S.plan, S.width, S.sam, D && !D.off ? D.def.hinge : null, (x, z) => !game.col.nav.isBlocked(x, z));
     costT = game.time; costSeen.n++; costSeen.last = { field: B.field, i: B.i, share: 1, door: !!D && !D.off, leaf: 0, up: false, lamp: true, catches: G.catches, s: 0, how: '', moved: 0, pool: false };
@@ -1694,7 +1698,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
       pl.crouch = false;   // (he starts up as the room flares behind the leaf: standing, turned to it, when it is thrown)
       if (at.open) { if (D && !D.off) { unlock(S); const F = S.at([0, 1, 0]); game.doors.crack(D, F, pl.char.id, stepDt, undefined, C.swing, C.wideDeg * R); }
         if (!last.up) { quietInside(at.share, 0);   // (…and the blade's own lamp is out under the wedge, the room's own back down: ONE lamp throws it, one hard edge, one shadow)
-          if (pool && !pool.broken && at.pool < 1) { costPool = { I: pool.baseIntensity, E: [pool.baseEmissive[0], pool.baseEmissive[1], pool.baseEmissive[2]] }; pool.baseIntensity = costPool.I * at.pool; pool.baseEmissive = [costPool.E[0] * at.pool, costPool.E[1] * at.pool, costPool.E[2] * at.pool]; last.pool = true; } }   // (…and the pool lamp out: its base, which the game multiplies each step — no round, no event, nobody hears a lamp go)
+          if (pool && !pool.broken && at.pool < 1) { costPool = { I: pool.baseIntensity, E: [pool.baseEmissive[0], pool.baseEmissive[1], pool.baseEmissive[2]] }; game.lightHome.in(LIGHT_IN.base, pool, costPool.I * at.pool); pool.baseEmissive = [costPool.E[0] * at.pool, costPool.E[1] * at.pool, costPool.E[2] * at.pool]; last.pool = true; } }   // (…and the pool lamp out: its base, which the game multiplies each step — no round, no event, nobody hears a lamp go)
         last.up = true; }
       if (D && !D.off) last.leaf = Math.max(last.leaf, Math.abs(D.angle - S.shut));
       return true; }

@@ -182,6 +182,7 @@ import { registerShutDoor } from './shutdoor';
 import { spawnCivilians, resetCivilians, updateCivilians, civiliansShown, civilianDoorContacts, civilianAnswer, civiliansSummary, loadCivTune, civilianSeated, civilianPushesProps } from './civilians';
 import type { Civ } from './civilians';
 import { updateTargets } from './lighting';
+import { LightHome, LIGHT_IN, type Fixture } from '../sim/lightshome';
 import { carLampTargets, VEHICLE_GROUP } from './carlamps';   // a parked vehicle's lamps are light targets a round breaks (nothing with CARLAMPS down)
 import { setBlackout, endBlackout, lightEvent, ocp, setGroup, toggleTarget, repairLights, freshLights, lensRecheck } from './lighting';
 import { gunWallFresh } from './gunwall';   // (called inside cleanSlate only)
@@ -231,21 +232,8 @@ import './posehome';   // (…and the poses': registered as it loads, by a state
 import { knobsToRust, RUST_KNOBS } from './rustknobs';
 
 // ---------------------------------------------------------------- light targets
-export interface LightTarget {
-  name: string; group: string; kind: 'analytic' | 'emissive' | 'breaker' | 'device';   // device: a camera or a tripwire's emitter (devices.ts) — no boxes or light of its own here, it draws itself off `factor`; the OCP, a round and the mains treat it as any fixture
-  pos: Vec3;                       // fixture position (for targeting / AI)
-  light?: RtLight; boxes: number[]; baseEmissive: Vec3; baseIntensity: number;
-  on: boolean; broken: boolean; disabledUntil: number; fluorescentFlicker: boolean;
-  factor: number;
-  mains: boolean;                  // fed from the breaker (drops in a blackout); false for street lighting, exit signs, UPS-fed LEDs, beacons
-  interactive: boolean;            // can be aimed at / OCP'd / shot as a fixture (server LEDs are scenery: too many, too small, pure UI noise)
-  stagger: number;                 // restrike delay for this fixture's contactor group when the mains come back
-  /** the game time a hand put it out at its wall switch (lightswitch.ts; meaningful only while `on` is false): 'lights on' puts these back, and a defender at the switch does */
-  handOff?: number;
-  areaLights?: { light: RtLight; base: number }[];   // analytic area lights standing in for a flat emissive fixture's emission (smooth direct light + soft shadows instead of cascade rays finding a small bright box)
-  /** a vehicle lamp's own paint as the level has it (carlamps.ts: a broken one is painted dark, a mended one painted this again) */
-  lens?: Vec3;
-}
+/** a light fixture of the level: what the level says of it, and its state read from the Rust module (sim/lightshome.ts: written only through `Game.lightHome.in`) */
+export type LightTarget = Fixture;
 
 /** kick: a door kicked in — carries through the floor and is answered like a shot (guards.ts hearingCheck); every other door noise is 'door' with a level. A round
  *  ('shot' / 'guardShot' out of combat.ts fireWeapon) also says which weapons.ts row fired it and the segment it actually flew, muzzle → where it stopped (from / to):
@@ -863,6 +851,8 @@ export class Game {
   readonly sim = new SimState();
   /** A MAN'S STATE, AS COLUMNS (sim/men/): his row is his for his life, in this game's block once its first tick has opened. Every Character of this game is made with it */
   readonly men = new MenStore();
+  /** THE LEVEL'S LIGHTS (fixtures, the mains, the lamps they feed, the cameras' and tripwires' machines): the `lights` part of the block (rust/sim/src/lights.rs). The one way to write them: `lightHome.in`. */
+  readonly lightHome = new LightHome(this.sim);
   /** the pose sets of this game's men that are at home in the block (posehome.ts): what goes back into arrays of its own when the row RUST.poses drops */
   poseSets: PoseSet[] = [];
   /** WHAT FALLS AND WHAT IT LEAVES (sim/fallshome.ts): the landings the simulation has scheduled for things that let go and the litter map of broken glass —
@@ -1057,7 +1047,10 @@ export class Game {
   /** room name → game time the pair last called it clear in THIS lockdown (planClears will not send them round the same room again within a minute unless the new
    *  fix is inside it); emptied whenever the lockdown ends (step-down, stand-down, reset) */
   clearedAt = new Map<string, number>();
-  blackout = { active: false, until: -1, since: -1, permanent: false, restoredAt: -100 }; breakerFixT = 0;
+  /** the mains, read */
+  get blackout() { return this.lightHome.mains; }
+  /** how long a man of theirs has been at the panel, read */
+  get breakerFixT() { return this.lightHome.mains.fixT; }
   beacons: { light: RtLight; phase: number; target: LightTarget }[] = [];
   items!: Throwables;
   fx: { box: Box; ttl: number }[] = [];
@@ -1252,13 +1245,13 @@ export class Game {
     for (const l of engine.lights.lights) {
       if (l.ttl >= 0 || l.kind === 2 || l.group === 'player' || l.group === 'flashlights') continue;
       const mains = lightDefs.get(l.name)?.mains !== false;
-      this.targets.push({ name: l.name, group: l.group, kind: 'analytic', pos: v3.copy(l.pos), light: l, boxes: l.fixtureBox >= 0 ? [l.fixtureBox] : [], baseEmissive: l.fixtureBox >= 0 ? v3.copy(level.boxes[l.fixtureBox].emissive) : [0, 0, 0], baseIntensity: l.intensity, on: l.enabled, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains, stagger: staggerOf(l.group), interactive: true });
+      this.targets.push(this.lightHome.add({ name: l.name, group: l.group, kind: 'analytic', pos: v3.copy(l.pos), light: l, boxes: l.fixtureBox >= 0 ? [l.fixtureBox] : [], baseEmissive: l.fixtureBox >= 0 ? v3.copy(level.boxes[l.fixtureBox].emissive) : [0, 0, 0], baseIntensity: l.intensity, on: l.enabled, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains, stagger: staggerOf(l.group), interactive: true }));
     }
     for (const sw of level.switchables) {
       const b = level.boxes[sw.boxes[0]];
-      this.targets.push({ name: sw.name, group: sw.group, kind: 'emissive', pos: v3.copy(b.c), boxes: sw.boxes, baseEmissive: v3.copy(sw.baseEmissive), baseIntensity: 0, on: sw.on, broken: false, disabledUntil: -1, fluorescentFlicker: !!sw.flicker, factor: sw.on ? 1 : 0, mains: sw.mains !== false, stagger: staggerOf(sw.group), interactive: sw.group !== 'server_leds' && sw.group !== 'server_glow' });
+      this.targets.push(this.lightHome.add({ name: sw.name, group: sw.group, kind: 'emissive', pos: v3.copy(b.c), boxes: sw.boxes, baseEmissive: v3.copy(sw.baseEmissive), baseIntensity: 0, on: sw.on, broken: false, disabledUntil: -1, fluorescentFlicker: !!sw.flicker, factor: sw.on ? 1 : 0, mains: sw.mains !== false, stagger: staggerOf(sw.group), interactive: sw.group !== 'server_leds' && sw.group !== 'server_glow' }));
     }
-    for (const t of carLampTargets(level.boxes)) this.targets.push(t);   // (carlamps.ts: the lamps of the level's cars and pickups, one target each — no die drawn, none on the mains)
+    for (const t of carLampTargets(level.boxes)) this.targets.push(this.lightHome.add(t));   // (carlamps.ts: the lamps of the level's cars and pickups, one target each — no die drawn, none on the mains)
     // flat emissive fixtures (ceiling panels, monitors, logo, TV, vending fronts, exit signs) light the scene through analytic one-sided area
     // lights; their boxes keep glowing on screen but rays ignore the emissive term (BoxFlag.AreaLit) — kills small-emitter aliasing in the cascades
     for (const t of this.targets) {
@@ -1308,7 +1301,7 @@ export class Game {
     if (this.markLights.length) engine.world.repackMarkings?.();   // (the area-lit bit reaches records packed before the lights existed — the harness's stand-in world has no table)
     for (const b of level.beacons) level.boxes[b.box].flags |= BoxFlag.AreaLit;   // dome glow is screen-only; the beam is the spot light
     // mains breaker (OCP → temporary blackout, bullet → permanent) and the emergency beacons it brings up (each beacon light is slaved to its dome fixture)
-    this.targets.push({ name: 'breaker', group: 'mains', kind: 'breaker', pos: v3.copy(level.breaker.pos), boxes: [level.breaker.boxes[1]], baseEmissive: [0.3, 4, 0.6], baseIntensity: 0, on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: false, stagger: 0, interactive: true });
+    this.targets.push(this.lightHome.add({ name: 'breaker', group: 'mains', kind: 'breaker', pos: v3.copy(level.breaker.pos), boxes: [level.breaker.boxes[1]], baseEmissive: [0.3, 4, 0.6], baseIntensity: 0, on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: false, stagger: 0, interactive: true }));
     level.beacons.forEach((b, i) => {
       const target = this.targets.find(t => t.kind === 'emissive' && t.boxes.includes(b.box));
       if (!target) throw new Error(`beacon ${i}: no switchable owns box ${b.box}`);
@@ -1346,7 +1339,7 @@ export class Game {
       (this.destr as unknown as { walls?: { note?: (row: object) => unknown } }).walls?.note?.({ kind: 'door', cause, id: this.doors.list.indexOf(d), name: d.def.name,
         pos: [c[0], c[1], c[2]], rect: [c[0] - r, c[2] - r, c[0] + r, c[2] + r], opened: [], walkable: true, sight: true, dead: true, who });
     });
-    this.devices = new Devices(this);   // cameras + emitters join `targets` (before initialOn below captures the authored switch states); a keypad finds its door
+    this.devices = new Devices(this);   // cameras + emitters join `targets` (before the authored switch states are said, below); a keypad finds its door
     // guards
     const tints: Vec3[] = [[0.42, 0.36, 0.25], [0.3, 0.34, 0.4], [0.38, 0.28, 0.28]];
     level.routes.forEach((r, i) => {
@@ -1364,7 +1357,8 @@ export class Game {
     this.wind = new Wind(this);          // the air (wind.ts): the level's vents + the storm + a source per exterior door — after the doors exist
     this.airDust = new AirDust(this);    // the weather's dust in the rooms (airDust.ts): seeded with the doors as they stand — after the weather, the doors and the collision exist
     this.moths = new Moths(this);        // moths at the lamps (moths.ts) — after the targets (the lamps are light targets)
-    this.initialOn = new Map(); for (const t of this.targets) this.initialOn.set(t, t.on);   // the level as authored, for resetLevelState() (captured here, before a tour or the panel touches a switch)
+    for (const t of this.targets) this.lightHome.in(LIGHT_IN.authored, t, t.on ? 1 : 0);   // the level as authored, for resetLevelState() (said here, before a tour or the panel touches a switch)
+    this.lightHome.stand(engine.lights.lights, this.targets, this.beacons, this.devices.cameras.map(c => ({ light: c.cone, target: c.target, slot: c.slot })));   // (the lamps the fixtures feed, as rows in the list's order: rust/sim/src/lights.rs)
     spawnCivilians(this);   // the cleaner and the late worker on their marks (civilians.ts — after the shift, whose construction and dice they must not disturb; nothing with tune.civilians off or none authored)
     this.fogOfWar = new FogOfWar(this);         // fog of war (fogofwar.ts): inert until switched on
     this.quiet = new QuietMission(this);        // the quiet mission (quiet.ts): inert until started
@@ -1576,11 +1570,10 @@ export class Game {
   }
 
   /** Level as authored: every switch / group back to its initial on-off, every door back to its authored angle and lock (picked / kicked locks re-lock). */
-  private initialOn: Map<LightTarget, boolean> | null = null;
   /** was this fixture's switch on in the level as authored (lightswitch.ts: what 'lights on' puts a room back to) */
-  authoredOn(t: LightTarget): boolean { return this.initialOn?.get(t) ?? t.on; }
+  authoredOn(t: LightTarget): boolean { return t.authored; }
   resetLevelState() {
-    if (this.initialOn) for (const [t, on] of this.initialOn) t.on = on;
+    for (const t of this.targets) this.lightHome.in(LIGHT_IN.on, t, t.authored ? 1 : 0);
     for (const d of this.doors.list) d.reset();
     this.decals.clear(); resetGlass(this); resetGlassPen(this);   // the marks go with the encounter that made them (a restart, the tour's hand-over) — and the glass's count / log of the crack stars among them (glass.ts, review U9.10)
     resetBars(this);       // …and every window's bar a round or a blast took stands again (winbars.ts) — before the destruction's own reset, like the panes

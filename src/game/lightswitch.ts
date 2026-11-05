@@ -47,6 +47,7 @@ import { samStaggered } from './samstun';
 import { HANDRING } from './handring';
 import { NEARBY_M } from './player';
 import { dozeAsleep } from './doze';
+import { LIGHT_IN } from '../sim/lightshome';
 
 export const LIGHTSWITCH = {
   on: false,
@@ -204,7 +205,7 @@ function wallStands(g: Game, sw: WallSwitch): boolean {
   return !!h && h.index < 1e6 && Math.abs(h.t - LIGHTSWITCH.standM) < 0.03;
 }
 /** a restart (game.ts restartEncounter): the plates are found again on the level as it was dealt, and no fixture is a hand's */
-export function lightSwitchReset(g: Game) { states.delete(g); for (const t of g.targets) if (t.handOff !== undefined) t.handOff = undefined; }
+export function lightSwitchReset(g: Game) { states.delete(g); for (const t of g.targets) if (t.handOff !== undefined) g.lightHome.in(LIGHT_IN.hand, t, NaN); }
 
 // ---------------------------------------------------------------- the flip
 /** are the room's lights on at the switch (any fixture of it switched on — a shot one, a tripped one and the mains are not the switch's business) */
@@ -235,18 +236,8 @@ export function switchHand(g: Game): { p: Vec3; n: Vec3 } | null {
  *  a hand put it out. On: what the hand put out; in a room no hand put out, the room as authored (all of it, where the level left the whole room dark). */
 export function flipSwitch(g: Game, sw: WallSwitch, on: boolean, by: Character) {
   const K = LIGHTSWITCH;
-  if (on) {
-    const hand = sw.targets.some(t => t.handOff !== undefined && !t.on), authored = sw.targets.some(t => g.authoredOn(t));
-    for (const t of sw.targets) {
-      const mine = hand ? t.handOff !== undefined : !authored || g.authoredOn(t);
-      if (mine && !t.on) { if (K.strike && t.kind === 'emissive' && !t.broken && t.disabledUntil < 0) t.disabledUntil = g.time; t.on = true; }
-      t.handOff = undefined;
-    }
-  } else for (const t of sw.targets) {
-    if (!t.on) continue;   // (one a hand put out before, and something else lit the rest since: still the hand's)
-    if (t.factor > 0) { g.lightEvent(t, 'shot', sw.floor); LIGHTSWITCH_STATS.events++; }   // (cause: as a light put out for good — a man who sees it comes; and it says where the hand was)
-    t.on = false; t.handOff = g.time;
-  }
+  if (!on) for (const t of sw.targets) if (t.on && t.factor > 0) { g.lightEvent(t, 'shot', sw.floor); LIGHTSWITCH_STATS.events++; }   // (one a hand put out before stays the hand's and says nothing. cause: as a light put out for good — a man who sees it comes; and it says where the hand was)
+  g.lightHome.flip(sw.targets, on, g.time, K.strike);   // (rust/sim/src/lights.rs flip: the circuit's own rule)
   g.audio.play('click', sw.pos, 0.8); if (!on) g.audio.play('lightOff', sw.pos, 0.5);
   const st = states.get(g); if (st) { st.hands = st.hands.filter(h => h.c !== by); const plant = plants(g, by); st.hands.push({ c: by, sw, at: g.time, dir: on ? -1 : 1, dur: K.handSecs + (plant ? turnSecs(by, sw) : 0), plant }); }
 }

@@ -24,6 +24,7 @@ import type { Vec3 } from '../math/vec';
 import type { Box } from '../scene/boxes';
 import { GWOT_PALETTE } from '../scene/gwotPalette';
 import type { Game, LightTarget } from './game';
+import type { FixtureDef } from '../sim/lightshome';
 
 export const CARLAMPS = {
   /** the switch */
@@ -73,14 +74,14 @@ export function findCarLamps(boxes: readonly Box[]): FoundLamp[] {
 }
 
 /** the light targets of a level's vehicle lamps (game.ts pushes them after the level's switchables; nothing with the switch down) */
-export function carLampTargets(boxes: readonly Box[]): LightTarget[] {
+export function carLampTargets(boxes: readonly Box[]): FixtureDef[] {
   const T = CARLAMPS_STATS; T.found = T.head = T.tail = T.lit = 0;
   if (!CARLAMPS.on) return [];
   const n = { 'head lamp': 0, 'tail lamp': 0 };
   return findCarLamps(boxes).map(l => {
     const b = boxes[l.box]; T.found++; if (l.what === 'head lamp') T.head++; else T.tail++; if (l.lit) T.lit++;
     return { name: `${l.what} ${++n[l.what]}`, group: VEHICLE_GROUP, kind: 'emissive', pos: [b.c[0], b.c[1], b.c[2]], boxes: [l.box], baseEmissive: [b.emissive[0], b.emissive[1], b.emissive[2]], baseIntensity: 0,
-      on: l.lit, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: l.lit ? 1 : 0, mains: false, interactive: true, stagger: 0, lens: [b.albedo[0], b.albedo[1], b.albedo[2]] } as LightTarget;
+      on: l.lit, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: l.lit ? 1 : 0, mains: false, interactive: true, stagger: 0, lens: [b.albedo[0], b.albedo[1], b.albedo[2]] };
   });
 }
 
