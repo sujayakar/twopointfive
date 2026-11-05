@@ -1552,9 +1552,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   tick on the man, the gun moves 2.5 to 4 degrees following him. The harm was what others read: a door taken for the enemy, a fresh fix stamped when his watch moved, a heard shot kept for one tick.
   A post is left by the rules that always decided (rally on `noiseAt`, fall-back, press, lanes), never by a belief.
   CHECK `bun run tools/qa/belief-check.ts` (`probes.ts belief`, family roomfight; both stands); `BELIEF_BREAK=1` puts the door back into his belief and fails lines 1, 2, 4, 11, 12 and 15 on both.
+  MEASURED 11-05 on step 1515, page's stand, the 42, base / both rules / this rule alone: taken 26 / 24 / 24, wiped 8 / 10 / 10, rescued 4 / 5 / 4, lost 4 / 3 / 4, team lost 70 / 75 / 77, defenders killed
+  241 / 231 / 230, game seconds 3,544 / 3,122 / 3,126. Five endings moved with both: block-squads:2 wiped to taken, defuse-four:2 and hall-four:1 and room-clear-pair:2 taken to wiped, rescue-consulate:2 lost
+  to rescued. Off = the build as it was: 42 of 42 digests on both stands. With `fix` taken out of the digest, three runs equal the base (depot-four:1, night-breach:2, snatch-four:1: they moved by the field
+  alone) and 39 moved by the rules. `fights-check`: no lastKnown pair on the page's stand. The tick, five runs: off the same run to the bit, 1 % less; on 2 % more over runs that now play differently.
+  The soak on the page's stand: the base's four kinds and no new one, but more of them (27 first reports against 15; a selector left open 1,165 against 149 frames, knife-missing 2,267 against 2,093). The
+  tour's three red stops are the base's. NOT MEASURED: no response team runs in the 42, so that reader is by code only.
   NOT SEEN: never on a GPU, never played. What to look for: held men acting on where you actually were, not on their own door.
 - **A man put on a post gives up his walk to a door** (`DOORFORCE.postEnds`, `src/game/doorforce.ts`: on in the page, `?postends=0`; off on the frozen stand, `TPS_POSTENDS=1`; a `FROZEN_HOLDS` row,
   carried by a journal's DOORFORCE table). Before it lanes.ts stopped him every 0.2 s and doorforce.ts walked him on: a visible stop and step for 4.6 s (rescue-consulate:2, Roamer 1, 21 alternations).
   Only the walk ends: what he believes of the door stands, so a posted man can still fire on it.
   CHECK `bun run tools/qa/postends-check.ts` (`probes.ts postends`, family doors; both stands); `POSTENDS_BREAK=1` fails line 1 on both.
+  MEASURED 11-05 on step 1515, page's stand: alone it moves one run of the 42, rescue-consulate:2, lost to rescued (taken 26, wiped 8, rescued 5, lost 3, team lost 68, seconds 3,540).
   NOT SEEN: never on a GPU, never played.
