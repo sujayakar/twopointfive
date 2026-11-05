@@ -1163,6 +1163,16 @@ fn lightKind(li: Light) -> u32 { return li.kind & 255u; }
 // see); one with LIGHT_FOG_UNSEEN lights only what it does not (a lamp put out where nobody looked, still lit in the picture of that room until somebody looks).
 const LIGHT_FOG_SEEN: u32 = 0x2000000u;
 const LIGHT_FOG_UNSEEN: u32 = 0x4000000u;
+// WHERE A HIGHLIGHT IS DRAWN (reflect.wgsl main's tail writes them, composite.wgsl upsampleHi reads them): the lamps', the panels' and the sun's highlights and
+// a beam's image are drawn whole on a finish up to .x of roughness and fade to nothing at .y. One pair for every preset: a highlight is a sum, it costs its
+// shadow rays and no ray of the lobe, so the presets' cut-off for the MIRROR (frame.rtCfg.x, 0.35 to 0.55: what a ray costs) says nothing of it. Where it
+// ends: at .y a lamp's highlight at its peak is under a tenth of the light the paint beside it sends back. How wide the fade is: a quarter of the scale, so
+// that a finish's gloss map is drawn by its lobe and not by the fade (tools/qa/highlights-check.ts has the arithmetic; the mirror's fade, 0.12 wide, made one
+// twentieth of roughness thirty times the highlight).
+const RT_HI_FADE = vec2f(0.5, 0.75);
+/// … as the page has it (the scene prelude's RT_HI_REACH, render/frame.ts highlightConfig: 1; the address's `&hireach=0` = 0, the highlights fading where the
+/// mirror does, `maxR` = frame.rtCfg.x: the reach they had before 11-05, to hold the two pictures side by side on one card)
+fn rtHiFade(maxR: f32) -> vec2f { return mix(vec2f(maxR - 0.12, maxR + 0.001), RT_HI_FADE, RT_HI_REACH); }
 // AN INFRARED LIGHT (lights.ts LIGHT_IR; game/irlight.ts: the illuminators on the goggles): a light only the intensifier tube sees by. It is in the list only on a
 // frame whose picture is the tube's, and every pass of the picture takes it as a steady light like any other (evalLight; the engine restarts the screen
 // histories the frame the tube comes off). The game's own readings never do: evalLightTrue gives nothing for it, and directIrradiance (the cascades the light meter reads its bounce from) skips it.
