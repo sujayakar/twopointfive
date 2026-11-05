@@ -598,6 +598,14 @@ but synthetic writes still work.
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; 154 minutes at 320x180 on a four-core box on 2026-11-04, so its `DEADLINE` allows 240 by default). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
+- **THE LEVEL TOOLS (2026-11-04; files only, no GPU, no page of the game's changed).** `bun run tools/qa/level-audit.ts [level …]` counts every level the mission
+  list draws as the look page draws it (boxes, cut planes, round things, lamps burning at its hour, how much of the picture is each material and how much
+  has none: a box is made of what it says, `Box.stuff`, read as the renderer reads it), about a second a level; `--check <level>` holds the engine's caps and the PROPOSED bars of `level-count.ts` (`LEVELAUDIT_BREAK=1` must fail),
+  `--counts` gives a level's row for its dressing file, `--write-base` the baseline (`fixtures/level-audit-base.json`: the levels before they were
+  dressed). `node tools/qa/level-cost-page.cjs <level>` is one boot of the look page on the software adapter: what it compiled, layers off against on, a
+  still; a relative read, and the GPU's particles are never stepped in it, so a snow or rain level is read without what is in its air.
+  `bun run tools/qa/level-table.ts --dir <folder>` makes one page of every level from those files, a GPU's price file and each dressing row (the folder's `notice.txt` is printed first and marks a level whose price no longer stands). "Which levels
+  the list draws" is one answer (`scene/scenarioList.ts listedLevels`) and the render passes are one list (`gpu/timer.ts RENDER_PASSES`): both tools ask those.
 - **A picture fault is debugged from a frame capture** (F6 on the page: every render target over 8 frames and the trace of what the renderer changed;
   `tools/qa/capture-read.ts` reads it; `docs/agents/render.md`, "A CAPTURE IS EVERY TARGET OF A FEW FRAMES").
 - **What a line of the benchmark's card prices** (2026-11-04, `ui/bench.ts benchStats`). `frame ms` is the gap between frames: wherever the
