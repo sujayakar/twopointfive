@@ -320,11 +320,11 @@ export function fell(row: string, why: string): void {
   if (FELL.hard) throw new Error(`rust: the TypeScript answered for the row "${row}": ${why}`);
 }
 /** THE ROWS THAT ARE ONE WAY IN: no run of the gate reaches their TypeScript (the box world's lines and circles, the fog's pass, the posing
- *  functions). A count on one of them is a way back in that somebody opened, so the tool that counted says so and ends red (headless.ts; the page's
+ *  functions, the animator's layers). A count on one of them is a way back in that somebody opened, so the tool that counted says so and ends red (headless.ts; the page's
  *  check reads `fellSealed`). A family adds its row here in the step that closes its last fallback, and its TypeScript can go in the step after.
  *  `rays` joined when a pane's open question moved to the module (rust/sim/src/glass.rs): until then a ray whose nearest thing was a pane the host
  *  said was open there flew on in the TypeScript walk, some five hundred a mission with glass in it. */
-export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays'];
+export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'walk'];
 /** the sealed rows the count has met */
 export const fellSealed = (): string[] => SEALED.filter(r => Object.keys(FELL.n).some(k => k.startsWith(r + ' · ')));
 /** the count's switches from a word (`1`, `throw`, `who`, `who6`): the harness's TPS_FELL, the page's ?fell */
