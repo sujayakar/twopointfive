@@ -102,7 +102,7 @@ export type RunWhy = 'follow' | 'blast' | 'cover' | 'told';
 export const TEAMPACE_STATS = { follow: 0, blast: 0, cover: 0, told: 0, secs: 0 };
 export const TEAMPACE_DEBUG: { log?: (s: string) => void } = {};
 const PACING_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PACING_BREAK ?? '') === '1'; } catch { return false; } })();   // (QA: TEAMPACE.pacing's own check must fail with the rule's body out)
-const DOORBRISK_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.DOORBRISK_BREAK ?? '') === '1'; } catch { return false; } })();   // (QA: TEAMPACE.doorBrisk's own check must fail with the rule's body out)
+const DOORBRISK_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.DOORBRISK_BREAK ?? ''); } catch { return ''; } })();   // (QA, TEAMPACE.doorBrisk's own check: '1' = the rule's body out, its stack leg must fail; '2' = the rule taken for every order, its move leg must fail)
 const WALKAIM_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WALKAIM_BREAK ?? '') === '1'; } catch { return false; } })();   // (QA: TEAMPACE.walkAim's own check must fail with the rule's body out)
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TEAMPACE_BREAK ?? '') === '1'; } catch { return false; } })();
 
@@ -249,7 +249,7 @@ export function teamDashNow(g: Game, gd: Guard, to: Vec3, d: number, least = TEA
  *  fight's pace, under the fight's leave, and no run at all */
 export function teamDash(g: Game, gd: Guard, to: Vec3, d: number, stack = false): number | null {
   const T = TEAMPACE; if (!T.own || !teamSlow(g, gd)) return null;
-  const brisk = stack && T.doorBrisk && !DOORBRISK_BREAK;
+  const brisk = (stack || DOORBRISK_BREAK === '2') && T.doorBrisk && DOORBRISK_BREAK !== '1';
   const t = g.time, run = brisk ? PACE.max : g.tune.playerSprint, old = dash.get(gd), was = old && t >= old.t && t - old.t < T.dashEvery * 2 ? old : undefined;   // (an answer two asks old is a leg he LEFT — sent elsewhere, fallen in — not one he is on: asked again later of a mark by the old one, he is asked afresh)
   const same = !!was && Math.hypot(was.x - to[0], was.z - to[2]) < 0.5;
   let yes: boolean;

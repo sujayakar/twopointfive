@@ -2,6 +2,7 @@
 //   bun run tools/qa/stuff-check.ts            exit 0 = every line passes
 //   STUFF_BREAK=1 bun run tools/qa/stuff-check.ts     every level file is read with its material rows' words struck out (a file from before 11-04, loaded
 //                                                    as it stood): lines 2, 3, 4, 7, 13, 14, 15 and 17 must FAIL
+//   KITWORDS_BREAK=1 bun run tools/qa/stuff-check.ts  the kits' trim is read with its words struck out (a piece of trim that says nothing): line 12 must FAIL
 //   COAT_BREAK=1 bun run tools/qa/stuff-check.ts      the table of named coats (scene/stuff.ts NAMED_COATS) is emptied: line 8 must FAIL
 // No game is stood up and no picture is looked at: what a box is drawn as is decided on the CPU (the loader puts a word on the box, lookWordOf reads it) and
 // this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's. The same on both stands: nothing here is a rule of play and no
@@ -175,11 +176,12 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 //     says that paint's stuff, and so does every piece of TRIM that wears a named paint of its own (a log's pale end is wood, a pipe's bore metal: a
 //     shape's piece is of its box's stuff unless it says another). Asked of the generator, where a paint is still the row somebody named
 { const { build } = await import(`${ROOT}/tools/levels/pass.ts`), { dressLorry } = await import(`${ROOT}/src/scene/lorryTry.ts`);
+  const KW = process.env.KITWORDS_BREAK === '1', said12 = (p: any) => KW ? undefined : p.stuff;   // (the break word: trim read as if no piece of it said a word)
   const g = build(), B = g.level.boxes as any[], mine = B.filter((_, i) => g.groups[i] === 'front' || g.groups[i] === 'yard'), named = (a: any) => { const w = paintOf(a)?.stuff; return w !== undefined && w !== 'plain'; };
-  const silent = mine.filter(b => named(b.albedo) && b.stuff === undefined), trim = mine.flatMap(b => (b.shape?.with ?? []) as any[]).filter(p => p.albedo), trimSilent = trim.filter(p => named(p.albedo) && p.stuff === undefined);
+  const silent = mine.filter(b => named(b.albedo) && b.stuff === undefined), trim = mine.flatMap(b => (b.shape?.with ?? []) as any[]).filter(p => p.albedo), trimSilent = trim.filter(p => named(p.albedo) && said12(p) === undefined);
   // (THE PIPES ARE ASKED WHERE THEY STAND: the pass laid them until 11-05 and the showroom still does; a pipe's bore is the one piece of trim that says metal)
-  const hall = ((await import(`${ROOT}/tools/levels/library-hall.ts`)).build().level.boxes as any[]).flatMap(b => (b.shape?.with ?? []) as any[]).filter(p => p.albedo), hallSilent = hall.filter(p => named(p.albedo) && p.stuff === undefined);
-  const said = mine.filter(b => b.stuff !== undefined).length, words = new Set(mine.map(b => b.stuff ?? 'plain')), trimWords = new Set(trim.map(p => p.stuff ?? 'plain')), hallWords = new Set(hall.map(p => p.stuff ?? 'plain'));
+  const hall = ((await import(`${ROOT}/tools/levels/library-hall.ts`)).build().level.boxes as any[]).flatMap(b => (b.shape?.with ?? []) as any[]).filter(p => p.albedo), hallSilent = hall.filter(p => named(p.albedo) && said12(p) === undefined);
+  const said = mine.filter(b => b.stuff !== undefined).length, words = new Set(mine.map(b => b.stuff ?? 'plain')), trimWords = new Set(trim.map(p => said12(p) ?? 'plain')), hallWords = new Set(hall.map(p => said12(p) ?? 'plain'));
   const lorry = dressLorry(loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/pass.json`, 'utf8')), { lived: true, dressing: true }) as any);
   // (the lorry's trial makes nothing since the level's lorry says its own shapes, scene/carShapes.ts: lorryTry.ts dressLorry stands down)
   check(mine.length > 120 && silent.length === 0 && trimSilent.length === 0 && said > 0.75 * mine.length && ['wood', 'paint', 'mud wall', 'cloth', 'metal'].every(w => words.has(w)) && ['wood', 'cloth'].every(w => trimWords.has(w)) && hallSilent.length === 0 && ['wood', 'metal'].every(w => hallWords.has(w)) && lorry === 0,
