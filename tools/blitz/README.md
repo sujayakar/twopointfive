@@ -45,8 +45,10 @@ the driver called (`<k> call <rule>`) and the meter (`<k> meter <v>`), in the or
 they stand (game_run `between`) and reads gives.txt, hostwrites.txt (but for the autosave's row and a checkpoint put back) and meter.txt only where
 there is no such file (a game of two seats; a stepper that has not learned the record). `BLITZ_NO_BETWEEN=<kind or rule,…>` leaves lines out, to see
 by a run what one is for. A rule called under BLITZ_CALL is a `call` line too; its tick may be a word (`fight`: the first tick after a round was fired
-with a hostile alert; `qrf`: the response team's cast deployed), and the rule `shift_enter` presses the player's own restart on the host's Input
-(each side then restarts inside its own tick); `restart` calls `Game.restart`. A game of two seats takes BLITZ_CALL by number (seats.ts).
+with a hostile alert; `qrf`: the response team's cast deployed; `down`: the player half a second down, with PT_MORTAL=1), and the rule `shift_enter`
+presses the player's own restart on the host's Input (each side then restarts inside its own tick; `enter`: Enter alone, the down card's);
+`restart` calls `Game.restart`. A restart INSIDE a tick makes the chronicle anew: mission.ts takes a save or a load only from a count that moved on
+the same chronicle. A game of two seats takes BLITZ_CALL by number (seats.ts).
 
 `BLITZ_CALL="<k> restart_encounter|reset_guards [start]"` in front of run.sh calls that rule before tick k on both sides (with `start` the Rust game
 takes the TypeScript's state after the call as a new start instead of calling its own rule).

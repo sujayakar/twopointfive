@@ -64,7 +64,7 @@ function dressStand() { dressAll(false); if (!DRESS_WORD) return;
   if (DRESS_WORD === 'all') { dressAll(true); return; }
   for (const r of DRESS_WORD.split(',')) { if (!(r in DRESS)) { say(`mission.ts: --dress knows ${Object.keys(DRESS).join(', ')}, not '${r}'`); process.exit(64); } (DRESS as any)[r] = true; } }
 class Stop extends Error {}
-const CALL = (process.env.BLITZ_CALL ?? '').split(' '); let callAt = 0, shotLast = false, fragSaid = 0, evSeen = 0;
+const CALL = (process.env.BLITZ_CALL ?? '').split(' '); let callAt = 0, shotLast = false, fragSaid = 0, downFor = 0;
 let selAfter = 0;   // the highlighted row of the nearby list as the last tick left it
 // A SCRIPTED CASE (`--case pie | orbit | boot`): a write BETWEEN TWO TICKS that the missions' seeds never make, so that a place mended by reading is
 // reached by a run. Each is a line of gives.txt (the runner makes the same write through the Rust game's own setter; with BLITZ_CASE_RAW=1 it makes the
@@ -95,7 +95,7 @@ function hashes(w: Uint32Array): number[] {
   LAY ??= simLayout().parts.map(p => ({ off: p.off >>> 2, len: p.len >>> 2 }));
   return LAY.map(({ off, len }) => { let n = Math.min(off + len, w.length); while (n > off && w[n - 1] === 0) n--; let h = 0x811c9dc5; for (let i = off; i < n; i++) h = Math.imul(h ^ w[i], 0x01000193); return h >>> 0; });
 }
-let k = 0, n = 0, uploads = 0, loadsSeen = 0, chargesSet = 0; const gives: string[] = [];
+let k = 0, n = 0, uploads = 0, loadsSeen = 0, chargesSet = 0, chronSeen: any = null; const gives: string[] = [];
 for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt', 'charges.txt', 'meter.txt', 'between.txt']) writeFileSync(`${outDir}/${f}`, '');
 // ONE ORDERED RECORD OF WHAT THE DRIVER DID BETWEEN TWO TICKS (between.txt): every order, every write and every call of a rule the scripted player made
 // before tick k, IN THE ORDER IT MADE THEM, a line each: `<k> give <a gives.txt line's rest>` · `<k> write <a hostwrites.txt line's rest>` (the lines a
@@ -146,13 +146,14 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     if (/^\d+$/.test(w)) { if (k === +w) callAt = k; }
     else if (w === 'fight') { if (k > 60 && shotLast && g.guards.some((x: any) => x.team === 'hostile' && x.state === 'alert')) callAt = k; }
     else if (w === 'qrf') { if (g.qrf?.men?.some((x: any) => x.state !== 'dead' && g.guards.includes(x))) callAt = k; }
-    else throw new Error(`BLITZ_CALL: a tick is a number, fight or qrf, not ${w}`);
+    else if (w === 'down') { downFor = g.player.down ? downFor + 1 : 0; if (downFor >= 30) callAt = k; }   // (the player half a second down: with PT_MORTAL=1, the death the scripted player can die)
+    else throw new Error(`BLITZ_CALL: a tick is a number, fight, qrf or down, not ${w}`);
     if (callAt === k) {
       if (FRAG_ASK) { between(`${k} frag_step_off`, 'call'); fragSaid = k; }   // (the scripted player's ask stood before this call: Player.step asks, then steps)
       if (CALL[1] === 'restart_encounter') g.restartEncounter(); else if (CALL[1] === 'reset_guards') g.resetGuards(); else if (CALL[1] === 'restart') g.restart();
-      else if (CALL[1] === 'shift_enter') { const I = a.find((x: any) => x?.pressed instanceof Set && x?.keys instanceof Set); if (!I) throw new Error('BLITZ_CALL shift_enter: no Input among the frame\'s arguments'); I.keys.add('ShiftLeft'); I.pressed.add('Enter'); }
+      else if (CALL[1] === 'shift_enter' || CALL[1] === 'enter') { const I = a.find((x: any) => x?.pressed instanceof Set && x?.keys instanceof Set); if (!I) throw new Error('BLITZ_CALL shift_enter: no Input among the frame\'s arguments'); if (CALL[1] === 'shift_enter') I.keys.add('ShiftLeft'); I.pressed.add('Enter'); }   // (`enter`: Enter alone, the down card's restart)
       else throw new Error(`BLITZ_CALL: no rule ${CALL[1]}`);
-      if (CALL[1] !== 'shift_enter' && CALL[2] !== 'start') between(`${k} ${CALL[1]}`, 'call');
+      if (CALL[1] !== 'shift_enter' && CALL[1] !== 'enter' && CALL[2] !== 'start') between(`${k} ${CALL[1]}`, 'call');
       appendFileSync(`${outDir}/call.txt`, `${k} ${CALL.slice(1).join(' ')}; ${g.guards.length} guards, ${g.guards.filter((x: any) => x.team === 'hostile' && x.state === 'alert').length} hostile alert, qrf ${g.qrf?.state ?? '-'} with ${g.qrf?.men?.length ?? 0} men, time ${g.time}\n`); } }
   // THE TEST DRIVER'S OWN QUESTIONS THAT WRITE THE GAME: `g.fight.roomAt(p)` asked between ticks floods a room nobody had asked for and keeps it in `g.fight.rooms`.
   // Each such ask that grew the list is a line of hostwrites.txt for the tick that opens next.
@@ -181,6 +182,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     // THE HOST PUT A CHECKPOINT BACK between the last tick and this one (savestate.ts, the host's save controller: a lesson's player went down and the
     // rails asked for it): the whole game is the saved one again. No stepper can follow that from its own state, so the state and the block as THIS tick
     // opens are written (L<k>.bin, Ls<k>.bin) and the runner takes them as a new start before it steps tick k.
+    if (g.chronicle !== chronSeen) { chronSeen = g.chronicle; if (g.chronicle.counts.loads === 0) loadsSeen = 0; }   // (a chronicle made anew by a restart counts from nothing: no checkpoint was put back)
     if (g.chronicle.counts.loads !== loadsSeen || (CALL[2] === 'start' && k === callAt)) { loadsSeen = g.chronicle.counts.loads; if (k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); } }
     // THE SCRIPTED PLAYER PUT THE HIGHLIGHT ON ANOTHER ROW of the nearby list between the last tick and this one (playthrough.ts:865 writes
     // `g.player.nearSel` and calls pickHover for a door's own row; `g.selectVerb` does the same by kind and verb): `<k> near_sel <row>`, unless the
@@ -191,12 +193,13 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds as any[]));
     row('meter.txt', meterL, `${g.player.visibility}`);   // (a mission's scripted player writes the meter before every tick too, playthrough.ts:779: the same number every tick, until a restart makes the player anew)
     row('host.txt', hostL, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}`); uploads = 0;
-    const saves0 = g.chronicle.counts.saves;
+    const chron0 = g.chronicle, saves0 = chron0.counts.saves;
     try { return step.call(this, dt, cmds); } finally {
       // THE HOST'S CHECKPOINT: the autosave controller (savestate.ts, the host's) writes a chronicle row and a count as the tick's last thing
-      if (g.chronicle.counts.saves !== saves0) { const E = g.chronicle.events, e = E[E.length - 1]; appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_save ${JSON.stringify(e?.kind === 'checkpoint' ? (e.label ?? e.data?.label ?? '') : 'NOT-LAST')}\n`); }
+      // (a restart inside the tick makes the chronicle anew: its count is then 0 where the old one's was not, and that is no save)
+      if (g.chronicle === chron0 ? g.chronicle.counts.saves !== saves0 : g.chronicle.counts.saves > 0) { const E = g.chronicle.events, e = E[E.length - 1]; appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_save ${JSON.stringify(e?.kind === 'checkpoint' ? (e.label ?? e.data?.label ?? '') : 'NOT-LAST')}\n`); }
       selAfter = g.player.nearSel;
-      { const E = g.events as any[]; shotLast = false; for (let i = Math.min(evSeen, E.length); i < E.length; i++) if (E[i]?.kind === 'shot') shotLast = true; evSeen = E.length; if (!shotLast) shotLast = E.some((e: any) => e?.kind === 'shot' && e.time >= g.time - 0.05); }
+      shotLast = (g.events as any[]).some((e: any) => (e?.kind === 'shot' || e?.kind === 'guardShot') && e.from && e.time >= g.time - 0.05);   // (a round fired in the tick just run: the events are kept half a second)
       row('post.txt', postL, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}`);
       { const set = (g.seats?.length ? g.seats : [{ view: g }]).reduce((x: number, st: any) => x + (st.view?.wallCharge?.set?.length ?? 0), 0); if (set !== chargesSet) { chargesSet = set; appendFileSync(`${outDir}/charges.txt`, `${k} ${set}\n`); } }
       if (keep(k)) { writeFileSync(`${outDir}/a${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s${k}.bin`, block(g)); } }
