@@ -531,7 +531,7 @@ pub fn weather_thunder_due(g: &mut crate::game::Game, i: f64) -> Option<Vec<f64>
 pub fn weather_update(g: &mut crate::game::Game, dt: f64, cam_yaw: Option<f64>) {
     g.weather.cam_yaw = cam_yaw.unwrap_or(0.0);
     weather_sync_roofs(g, None);
-    // ROUND THREE: THE FRAME'S NUMBERS (weather.ts:350, :351, :356, :373-381). The part left them out as the picture's, but skeleton 5.2's bridge carries `g.engine.weather`
+    // THE FRAME'S NUMBERS (weather.ts:350, :351, :356, :373-381). The part left them out as the picture's, but skeleton 5.2's bridge carries `g.engine.weather`
     // as a thing the tick reads (wet.ts rainNow reads `.rain` to say who is rained on), so the tick writes it as the TypeScript does.
     if g.engine.weather.is_none() { g.engine.weather = Some(crate::render_frame::no_weather()); }
     if !g.weather.on { zero(g.engine.weather.as_mut().unwrap()); weather_set_rain_now(g, 0.0); return; }

@@ -8,5 +8,5 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// BOUNDARY (round three): tags a picture-only decal for the digest's count; the decal comes back as it went.   (lookDecals.ts lookDecal)
+/// BOUNDARY: tags a picture-only decal for the digest's count; the decal comes back as it went.   (lookDecals.ts lookDecal)
 pub fn look_decal(g: &mut crate::game::Game, d: Option<&crate::render_decals::Decal>) -> Option<crate::render_decals::Decal> { d.cloned() }

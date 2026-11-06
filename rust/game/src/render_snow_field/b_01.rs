@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ROUND THREE (depot-four tick 2712: a frag bursts, furniture_blast < break_static_in < snow_paint). render/snowField.ts is the renderer's file, but these three
+// (depot-four tick 2712: a frag bursts, furniture_blast < break_static_in < snow_paint). render/snowField.ts is the renderer's file, but these three
 // "ask what a box DOES … ONE MODEL THE PICTURE AND THE GAME BOTH READ" (snowField.ts:75): furnblast and snowBog call them. Pure readings of a box; translated.
 /// which lying snow a box is, by its word, or none   (snowField.ts:79 snowPaintOf)
 pub fn snow_paint_of(g: &mut crate::game::Game, b: &crate::render_snow_field::SnowPaintOfB) -> Option<crate::scene_materials::SnowKind> {

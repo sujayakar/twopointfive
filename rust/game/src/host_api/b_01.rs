@@ -29,7 +29,7 @@ pub fn host_api_set_decals(g: &mut crate::game::Game) {}
 /// BOUNDARY NO-OP (the picture's / the host's): (src/host/api.ts:97 HostApi.probe)
 pub fn host_api_probe(g: &mut crate::game::Game) {}
 
-// ---- BRING-UP, ROUND TWO: WHAT THE HOST HOLDS THAT A TICK READS AND THE BRIDGE DOES NOT CARRY (`Game.engine` is "the picture's or the host's" to it).
+// ---- BRING-UP: WHAT THE HOST HOLDS THAT A TICK READS AND THE BRIDGE DOES NOT CARRY (`Game.engine` is "the picture's or the host's" to it).
 // BRIDGE-ASK: carry g.engine.lights (lights and ir as lists of LightId in the set's own order, fog_team), g.engine.world's lists and counts (statics, max_boxes,
 // geom_serial, glass_statics, glass_statics_n, glass_list) and g.engine.settings (plain numbers), or have the host fill them through a call like this one.
 /// HARNESS STAND-IN FOR A BRIDGE GAP (tools/blitz/README.md "Host steps"): called by the tick loop's runner after an import, never by the game.

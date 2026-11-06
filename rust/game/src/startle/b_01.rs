@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// ROUND THREE: the script startle.ts lent for the frame (guards.ts:2134), as the run left it, put back on his row: startle.ts:133 reads its `arrived` (conventions 4).
+/// the script startle.ts lent for the frame (guards.ts:2134), as the run left it, put back on his row: startle.ts:133 reads its `arrived` (conventions 4).
 pub fn startle_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {
     if let (Some(ran), Some(s)) = (ran, g.m.startle.state_of.get_mut(gd)) { if s.script.is_some() { s.script = Some(ran); } }
 }

@@ -86,7 +86,7 @@ fn drop_stock_word(s: &str) -> &str {
 fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].owner }
 /// `b.flags`. As seam_box_owner
 fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
-// BRING-UP, ROUND THREE: THE DOOR ROWS' CLOSURES (doortools.ts:808-846 the constructor's rows, :864 thrRows on the page's `outsidePlain`, :908-938 sync's `go` and the big
+// BRING-UP: THE DOOR ROWS' CLOSURES (doortools.ts:808-846 the constructor's rows, :864 thrRows on the page's `outsidePlain`, :908-938 sync's `go` and the big
 // slot's row). The skeleton has their arms and no named function for their bodies, so the first door order given stopped here (room-clear-four tick 1009, 'bangClear').
 // SKELETON-GAP: a public name in doortools for each Door* arm's body (label / valid / issue), as squadthrow has row_label / row_valid / row_issue; then these are calls.
 fn tt_of(t: &OrderTarget) -> crate::doortools::DoorToolsThresholdThenT {

@@ -443,7 +443,7 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
     let frag_key = g.k.frag.order_key.clone();
     register(g, OrderDef { id: String::from("fragClear"), page: Some(String::from(TOOLS_PAGE)), hot_key: Some(frag_key), page_only: Some(true), label: L::DoorFragClear, targets: vec![K::Door], ack: Some(strs(&["frag and clear.", "copy, fragging it."])), on_word: Some(true),
         valid: Some(Valid::DoorFragClear), issue: Issue::DoorFragClear, ..OrderDef::default() }, None);
-    // the row that stands in for the tools' while the jambs are held (doortools.ts:846). Round three: no part registered it (CHANGES-6)
+    // the row that stands in for the tools' while the jambs are held (doortools.ts:846). no part registered it (CHANGES-6)
     register(g, OrderDef { id: String::from(crate::doortools::HELD_PAGE), label: L::Text { text: String::from("threshold held") }, targets: vec![K::Door], opens: Some(String::from(crate::doortools::HELD_PAGE)),
         stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(TOOLS_PAGE), when: crate::orders::OrderWhen::DoorHeld }), issue: Issue::Nothing, ..OrderDef::default() }, None);
     // thrRows writes `this`, and this is not on g yet: it stands there for the call
@@ -578,7 +578,7 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
                 gone: Some(Gone::DoorBigClear), valid: Some(Valid::DoorBigClear), issue: Issue::DoorBigClear, ..OrderDef::default() }, Some("fragClear"));
         }
     }
-    // THE WORD'S ROW ON A HELD THRESHOLD'S PAGE, dealt its key when it is registered and again when the key moves (doortools.ts:932-938). Round three: skeleton 5.2 has
+    // THE WORD'S ROW ON A HELD THRESHOLD'S PAGE, dealt its key when it is registered and again when the key moves (doortools.ts:932-938). skeleton 5.2 has
     // the arms (DoorThrWord); the part set the key every call and registered nothing, so the row the TypeScript deals again at the first sync stood one place off.
     let thr_key = match &go_key { None => g.k.doortools.blow_key.clone(), Some(k) => k.clone() };
     if Some(&thr_key) != g.door_tools.thr_key.as_ref() {

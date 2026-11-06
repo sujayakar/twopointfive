@@ -41,7 +41,7 @@ pub fn light_set_fog_class(g: &mut crate::game::Game, l: LightId) -> f64 {
 }
 
 /// A flash's envelope for the frame, and its retirement once a frame has shown it. THE HOST calls it between ticks (headless.ts:226, the page's frame), and the
-/// tick's light estimate reads what it left: round three, room-clear-four tick 1622, the stun's flash stood at 1600 for good and two men's irradiance was off.
+/// tick's light estimate reads what it left: room-clear-four tick 1622, the stun's flash stood at 1600 for good and two men's irradiance was off.
 /// `time` is not read (lights.ts:187 `void time`).   (render/lights.ts:174 LightSet.update)
 pub fn light_set_update(g: &mut crate::game::Game, dt: f64, time: f64) {
     let f = |x: f64| -m::pow(1.0 - x, 3.2) / 3.2;
