@@ -64,7 +64,10 @@ function holdHost(g: any, reg: any, cmds: readonly any[]): void {
   hostParted = k; const where: string[] = [], bk: any = bookOf(g), P: [string, any, string][] = [['u32', cmds.length, 'seats']]; let at = 0;
   cmds.forEach((c, i) => P.push(['crate::cmd::PlayerCmd', c, `record[${i}]`]));
   for (const [id, ty] of [['CameraId', 'crate::camera::FollowCamera'], ['InputId', 'crate::input::Input']]) { const L: any[] = bk.listOf(id); P.push(['u32', L.length, id]); L.forEach((row, i) => P.push([ty, row, `${ty.split('::').pop()}[${i}]`])); }
-  if (ref.length !== mine.length) where.push(`the lengths differ (${mine.length} here, ${ref.length})`);
+  if (ref.length !== mine.length) { where.push(`the lengths differ (${mine.length} here, ${ref.length})`);
+    // (where the two first differ, by the piece of this side's bytes it falls in: a list of another length, a key more in a set)
+    let d = 0; while (d < mine.length && d < ref.length && mine[d] === ref[d]) d++;
+    for (const [ty, v, name] of P) { const n = exportPart(g, reg, [[ty, v]]).length; if (d < at + n) { const x = ty === 'u32' ? null : locate(mine.subarray(at, at + n), [d - at], null, true, ty, name)[0]; where.push(`the first byte that differs is in ${x?.path ?? `the count of ${name}`}`); break; } at += n; } }
   // (piece by piece: each record, then each camera row, then each Input row; a piece of one length on both sides is named field by field)
   else for (const [ty, v, name] of P) { const n = exportPart(g, reg, [[ty, v]]).length, a = ref.subarray(at, at + n), b = mine.subarray(at, at + n); at += n; if (buf(a).equals(buf(b))) continue; if (ty === 'u32') { where.push(`the count of ${name}`); continue; }
     for (const x of locate(b, diffOffsets(a, b), null, true, ty, name)) { const dv = (u: Uint8Array) => new DataView(u.buffer, u.byteOffset + x.off, Math.min(8, u.length - x.off)); const f = (u: Uint8Array) => { try { return dv(u).getFloat64(0, true); } catch { return NaN; } }; where.push(`${x.path} (${f(b)} here, ${f(a)})`); } }
@@ -93,13 +96,13 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     baseline: arg('--baseline', 'rust') as 'rust' | 'puppet', applyCheck: +arg('--apply-check', '50'), out: OUT || undefined, quiet: QUIET, say,
     beforeHost: (Hh, cmds) => { const t = now(); holdHost(g, Hh.B.reg, cmds); T.hostHold += now() - t; },
     afterStep: Hh => { const t = now(); holdBlock(Hh); T.compare += now() - t; } });
-  const Hh = H, s0 = Hh.T.step + Hh.T.hostHalf + Hh.T.after + Hh.T.exportStep + Hh.T.applyStep + Hh.T.exportWhole + Hh.T.applyWhole + Hh.T.block + Hh.T.out + Hh.T.dress + Hh.T.check + Hh.T.wbExport + Hh.T.wbCompare + Hh.T.wbImport + Hh.T.start, c0 = T.hostHold + T.compare;
+  const Hh = H, s0 = Hh.spent(), c0 = T.hostHold + T.compare;
   let err: unknown = null;
   try { (was as any).apply(this, a); } catch (e) { err = e; }
-  const inHost = Hh.T.step + Hh.T.hostHalf + Hh.T.after + Hh.T.exportStep + Hh.T.applyStep + Hh.T.exportWhole + Hh.T.applyWhole + Hh.T.block + Hh.T.out + Hh.T.dress + Hh.T.check + Hh.T.wbExport + Hh.T.wbCompare + Hh.T.wbImport + Hh.T.start - s0 + (T.hostHold + T.compare - c0);
+  const inHost = Hh.spent() - s0 + (T.hostHold + T.compare - c0);
   T.hostTs += now() - t0 - inHost;
   if (err) { const words = F.panicText(); if (words) { say(`PANIC in tick ${k}: ${words}`); finish(g, 2); } say(`TICK ${k} THREW on the puppet: ${(err as any)?.stack ?? err}`); finish(g, 3); }
-  if (STALE > 0 && !AUDIT && k % STALE === 0) holdStale(Hh, g);
+  if (STALE > 0 && !AUDIT && k % STALE === 0 && k >= +arg('--stale-from', '0')) holdStale(Hh, g);
   if (S.parted === k && OUT) { if (Hh.openState) writeFileSync(`${OUT}/open${k}.bin`, Hh.openState); X.face_export(Hh.h); writeFileSync(`${OUT}/rust${k}.bin`, F.outView()); writeFileSync(`${OUT}/block${k}.bin`, Hh.rustBlock()); }
   if (!QUIET && (k % 500 === 0)) say(`tick ${k}; time ${Hh.time().toFixed(3)}; die n=${Hh.dieN()}; ${S.parted || S.dieParted || hostParted ? `PARTED (block ${S.parted}, die ${S.dieParted}, host ${hostParted})` : 'equal so far'}; ${((now() - wall0) / k).toFixed(2)} ms a tick`);
   tOut = now();
@@ -139,10 +142,12 @@ function finish(g: any, code: number | null = null): never {
     say(`  THE APPLY, held to the Rust bytes it was given (the puppet exported again right after it): ${Hh.applyChecks} ticks checked, ${Hh.applyUnequal} with a field outside the cut ones not as Rust has it`); if (Hh.applyUnequal) say(table(Hh.APPLY_MISS));
     say(`    of the fields cut out of every compare, the puppet's differed from the Rust game's on: ${[...Hh.CUTW].map(([q, n]) => `${q} ${n} of ${Hh.applyChecks}`).join(' · ') || 'none'}`);
     say(`  the box world listed on the Rust side ${Hh.uploads.rust} times (${Hh.uploads.late} asked for on a tick not expected, ${Hh.uploads.missed} expected and not asked for)`); }
-  if (STALE) { say(`  THE PUPPET HELD TO THE RUST GAME'S WHOLE STATE every ${STALE} ticks (${staleChecks} times): the fields in which it had fallen behind (the filtered list does not carry them, or the TypeScript round a step wrote them):`); say(table(STALE_F, 80)); }
+  if (STALE) { say(`  THE PUPPET HELD TO THE RUST GAME'S WHOLE STATE every ${STALE} ticks (${staleChecks} times): the fields in which it had fallen behind (the filtered list does not carry them, or the TypeScript round a step wrote them):`); say(table(STALE_F, +arg('--stale-show', '80'))); }
   say(`  the apply made new rows: ${JSON.stringify(Hh.made)}; no way back: ${[...Hh.noWay].map(([q, n]) => `${q} x${n}`).join(', ') || '-'}; no setter: ${[...Hh.noSetter].map(([q, n]) => `${q} x${n}`).join(', ') || '-'}; no window: ${[...Hh.noWindow].join(', ') || '-'}`);
-  say(`  STAND-INS used: a seat's cut made anew ${Hh.standIns.cut} times; the lesson's run set to the puppet's mission after ${Hh.standIns.run} applies; the squad's posture kept over ${Hh.standIns.posture} applies; ${Hh.standIns.defs} new order rows given their TypeScript twin's closures (${Hh.standIns.defNoTwin} had no twin)`);
+  say(`  STAND-INS used: a seat's cut made anew ${Hh.standIns.cut} times; a box's null markings made undefined ${Hh.standIns.marks} times; the lesson's run set to the puppet's mission after ${Hh.standIns.run} applies; the squad's posture kept over ${Hh.standIns.posture} applies; ${Hh.standIns.defs} new order rows given their TypeScript twin's closures (${Hh.standIns.defNoTwin} had no twin)`);
   const sameEnd = !post.length ? false : (res ? refEnd.includes(`: ${res.end} (`) && refEnd.includes(`t ${res.t};`) && refEnd.includes(`team ${res.team} of ${res.of}`) && refEnd.includes(`PLAYED OUT at tick ${k} `) : les ? refEnd.includes(` at tick ${k}:`) && refEnd.includes(les.steps.map((s: any) => s.id).join(' ')) : false);
+  // (THE CHECK CHECKED: a host's half compared on fewer ticks than were played and held to the reference is a check that died, not a play that passed)
+  const owed = Math.min(k, post.length); if (code === null && post.length && !hostParted && hostCompared < owed) { say(`  THE HOST'S HALF WAS COMPARED ON ${hostCompared} OF ${owed} TICKS: the reference lacks h<k>.bin for the rest (a reference made with --no-host, or its files deleted). NOT A PASS.`); code = 3; }
   if (code === null) code = S.parted || S.dieParted || hostParted ? 1 : !post.length ? 3 : sameEnd ? 0 : (res || les) ? 4 : 0;
   say(`  ${code === 0 ? (res || les ? `EQUAL TO THE END, and it ended the same way${callsOff ? ' (BUT THE DRIVER\'S CALLS DIFFER: above)' : ''}` : `equal for the ${k} ticks played (stopped by --ticks)`) : code === 1 ? 'PARTED' : code === 4 ? 'equal every tick, BUT THE END IS NOT WORDED THE SAME' : `exit ${code}`}`);
   process.exit(code); }
