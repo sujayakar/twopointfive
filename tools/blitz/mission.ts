@@ -64,7 +64,8 @@ function dressStand() { dressAll(false); if (!DRESS_WORD) return;
   if (DRESS_WORD === 'all') { dressAll(true); return; }
   for (const r of DRESS_WORD.split(',')) { if (!(r in DRESS)) { say(`mission.ts: --dress knows ${Object.keys(DRESS).join(', ')}, not '${r}'`); process.exit(64); } (DRESS as any)[r] = true; } }
 class Stop extends Error {}
-const CALL = (process.env.BLITZ_CALL ?? '').split(' '); let callAt = 0, shotLast = false, fragSaid = 0, downFor = 0;
+const CALLS = (process.env.BLITZ_CALL ?? '').split(';').map(x => x.trim()).filter(Boolean).map(x => ({ w: x.split(' '), at: 0, down: 0 })); let shotLast = false, fragSaid = 0;
+const await0 = CALLS.length ? await import('../../src/game/qrf.ts') : (null as any);
 let selAfter = 0;   // the highlighted row of the nearby list as the last tick left it
 // A SCRIPTED CASE (`--case pie | orbit | boot`): a write BETWEEN TWO TICKS that the missions' seeds never make, so that a place mended by reading is
 // reached by a run. Each is a line of gives.txt (the runner makes the same write through the Rust game's own setter; with BLITZ_CASE_RAW=1 it makes the
@@ -142,19 +143,22 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   // MID-FIGHT), `qrf` = the first tick with the response team's cast deployed and a man of it up (qrf.ts `men`). The rule `shift_enter` is no call: the
   // PLAYER'S OWN RESTART (Shift+Enter, player.ts → Game.restart) pressed on the host's Input before the tick, so each side restarts inside its own tick.
   // The call is a line of between.txt (`<k> call <rule>`: the runner makes it there, in the driver's order); the tick it fell on is said at the end.
-  if (CALL[0] && !callAt) { const w = CALL[0];
-    if (/^\d+$/.test(w)) { if (k === +w) callAt = k; }
-    else if (w === 'fight') { if (k > 60 && shotLast && g.guards.some((x: any) => x.team === 'hostile' && x.state === 'alert')) callAt = k; }
-    else if (w === 'qrf') { if (g.qrf?.men?.some((x: any) => x.state !== 'dead' && g.guards.includes(x))) callAt = k; }
-    else if (w === 'down') { downFor = g.player.down ? downFor + 1 : 0; if (downFor >= 30) callAt = k; }   // (the player half a second down: with PT_MORTAL=1, the death the scripted player can die)
+  // Several calls in one run: `BLITZ_CALL="300 qrf_panel; qrf restart_encounter"` (a `;` between them), each on its own tick. `qrf_panel` asks for the
+  // response team as the sandbox's panel does (qrf.ts requestQrf 'panel').
+  for (const C of CALLS) { if (C.at) continue; const w = C.w[0], rule = C.w[1];
+    if (/^\d+$/.test(w)) { if (k === +w) C.at = k; }
+    else if (w === 'fight') { if (k > 60 && shotLast && g.guards.some((x: any) => x.team === 'hostile' && x.state === 'alert')) C.at = k; }
+    else if (w === 'qrf') { if (g.qrf?.men?.some((x: any) => x.state !== 'dead' && g.guards.includes(x))) C.at = k; }
+    else if (w === 'down') { C.down = g.player.down ? C.down + 1 : 0; if (C.down >= 30) C.at = k; }   // (the player half a second down: with PT_MORTAL=1, the death the scripted player can die)
     else throw new Error(`BLITZ_CALL: a tick is a number, fight, qrf or down, not ${w}`);
-    if (callAt === k) {
-      if (FRAG_ASK) { between(`${k} frag_step_off`, 'call'); fragSaid = k; }   // (the scripted player's ask stood before this call: Player.step asks, then steps)
-      if (CALL[1] === 'restart_encounter') g.restartEncounter(); else if (CALL[1] === 'reset_guards') g.resetGuards(); else if (CALL[1] === 'restart') g.restart();
-      else if (CALL[1] === 'shift_enter' || CALL[1] === 'enter') { const I = a.find((x: any) => x?.pressed instanceof Set && x?.keys instanceof Set); if (!I) throw new Error('BLITZ_CALL shift_enter: no Input among the frame\'s arguments'); if (CALL[1] === 'shift_enter') I.keys.add('ShiftLeft'); I.pressed.add('Enter'); }   // (`enter`: Enter alone, the down card's restart)
-      else throw new Error(`BLITZ_CALL: no rule ${CALL[1]}`);
-      if (CALL[1] !== 'shift_enter' && CALL[1] !== 'enter' && CALL[2] !== 'start') between(`${k} ${CALL[1]}`, 'call');
-      appendFileSync(`${outDir}/call.txt`, `${k} ${CALL.slice(1).join(' ')}; ${g.guards.length} guards, ${g.guards.filter((x: any) => x.team === 'hostile' && x.state === 'alert').length} hostile alert, qrf ${g.qrf?.state ?? '-'} with ${g.qrf?.men?.length ?? 0} men, time ${g.time}\n`); } }
+    if (C.at === k) {
+      if (FRAG_ASK && fragSaid !== k) { between(`${k} frag_step_off`, 'call'); fragSaid = k; }   // (the scripted player's ask stood before this call: Player.step asks, then steps)
+      if (rule === 'restart_encounter') g.restartEncounter(); else if (rule === 'reset_guards') g.resetGuards(); else if (rule === 'restart') g.restart();
+      else if (rule === 'qrf_panel') (await0.requestQrf)(g, 'panel');
+      else if (rule === 'shift_enter' || rule === 'enter') { const I = a.find((x: any) => x?.pressed instanceof Set && x?.keys instanceof Set); if (!I) throw new Error('BLITZ_CALL shift_enter: no Input among the frame\'s arguments'); if (rule === 'shift_enter') I.keys.add('ShiftLeft'); I.pressed.add('Enter'); }   // (`enter`: Enter alone, the down card's restart)
+      else throw new Error(`BLITZ_CALL: no rule ${rule}`);
+      if (rule !== 'shift_enter' && rule !== 'enter' && C.w[2] !== 'start') between(`${k} ${rule}`, 'call');
+      appendFileSync(`${outDir}/call.txt`, `${k} ${C.w.slice(1).join(' ')}; ${g.guards.length} guards, ${g.guards.filter((x: any) => x.team === 'hostile' && x.state === 'alert').length} hostile alert, qrf ${g.qrf?.state ?? '-'} with ${g.qrf?.men?.length ?? 0} men, time ${g.time}\n`); } }
   // THE TEST DRIVER'S OWN QUESTIONS THAT WRITE THE GAME: `g.fight.roomAt(p)` asked between ticks floods a room nobody had asked for and keeps it in `g.fight.rooms`.
   // Each such ask that grew the list is a line of hostwrites.txt for the tick that opens next.
   if (k === 1 && g.fight?.roomAt) { const F = g.fight, ask = F.roomAt; F.roomAt = function (this: any, p: any) { const n0 = F.rooms.length; const r = ask.call(this, p); if (!g.ticking && F.rooms.length !== n0) write1(`${k + 1} room_at ${p[0]} ${p[1]} ${p[2]}`); return r; }; }
@@ -183,11 +187,11 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     // rails asked for it): the whole game is the saved one again. No stepper can follow that from its own state, so the state and the block as THIS tick
     // opens are written (L<k>.bin, Ls<k>.bin) and the runner takes them as a new start before it steps tick k.
     if (g.chronicle !== chronSeen) { chronSeen = g.chronicle; if (g.chronicle.counts.loads === 0) loadsSeen = 0; }   // (a chronicle made anew by a restart counts from nothing: no checkpoint was put back)
-    if (g.chronicle.counts.loads !== loadsSeen || (CALL[2] === 'start' && k === callAt)) { loadsSeen = g.chronicle.counts.loads; if (k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); } }
+    if (g.chronicle.counts.loads !== loadsSeen || CALLS.some(C => C.w[2] === 'start' && C.at === k)) { loadsSeen = g.chronicle.counts.loads; if (k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); } }
     // THE SCRIPTED PLAYER PUT THE HIGHLIGHT ON ANOTHER ROW of the nearby list between the last tick and this one (playthrough.ts:865 writes
     // `g.player.nearSel` and calls pickHover for a door's own row; `g.selectVerb` does the same by kind and verb): `<k> near_sel <row>`, unless the
     // pick was written as a lesson's `select_verb` already.
-    if (k > 1 && !LESSON && k !== callAt && g.player.nearSel !== selAfter) write1(`${k} near_sel ${g.player.nearSel}`);
+    if (k > 1 && !LESSON && !CALLS.some(C => C.at === k) && g.player.nearSel !== selAfter) write1(`${k} near_sel ${g.player.nearSel}`);
     if (FRAG_ASK && fragSaid !== k) between(`${k} frag_step_off`, 'call');
     between(`${k} ${g.player.visibility}`, 'meter');
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds as any[]));
@@ -215,7 +219,7 @@ try { if (LESSON) les = await (await import('../qa/lesson-run.ts')).runLesson(sc
 { const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); }
 if (les) { for (const l of les.lines.slice(-8)) say('   ' + l); say(`TypeScript: the lesson ${scn} seed ${seed} at tick ${k}: ${les.code === 0 ? 'every step went by and the run ended' : `STOPPED (${les.why})`}; ${les.steps.length} steps gone by: ${les.steps.map((s: any) => s.id).join(' ')}`); }
 if (res) say(`TypeScript: ${scn} seed ${seed} PLAYED OUT at tick ${k} on the stand ${process.env.TPS_PROFILE}: ${res.end} (${res.why}); t ${res.t}; team ${res.team} of ${res.of}; hostiles ${res.hostiles} of ${res.hostilesOf}`);
-if (CALL[0]) say(`BLITZ_CALL ${CALL.join(' ')}: ${callAt ? `before tick ${callAt}` : 'NEVER REACHED (no such tick in this run)'}`);
+for (const C of CALLS) say(`BLITZ_CALL ${C.w.join(' ')}: ${C.at ? `before tick ${C.at}` : 'NEVER REACHED (no such tick in this run)'}`);
 say(`ticks ${k}; the driver's orders ${gives.length}; the die's count ${k ? 'in post.txt' : '-'}; resident ${(process.memoryUsage().rss / 1e9).toFixed(2)} GB`);
 writeFileSync(`${outDir}/ticks.txt`, `${k}\n`);
 process.exit(0);

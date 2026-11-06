@@ -187,6 +187,7 @@ pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
         // (BLITZ_CALL, mission.ts: a rule of the game called before a tick on both sides, to hold the Rust game's restart to the TypeScript's)
         "restart_encounter" => { game::game::game_restart_encounter(g); format!("  the rule called before tick {}: restart_encounter; {} guards, time {}", k, g.guards.len(), g.time) }
         "reset_guards" => { game::guards::reset_guards(g); format!("  the rule called before tick {}: reset_guards; {} guards, time {}", k, g.guards.len(), g.time) }
+        "qrf_panel" => { let r = game::qrf::request_qrf(g, game::qrf::QrfReason::Panel); format!("  the rule called before tick {}: request_qrf(panel) -> {}", k, r) }
         "restart" => { game::game::game_restart(g, None); format!("  the rule called before tick {}: restart (the player's own); {} guards, time {}", k, g.guards.len(), g.time) }
         _ => format!("  NOTE tick {}: a rule the driver called that this runner does not know: {}", k, rule),
     }
