@@ -185,11 +185,15 @@ have a probe on the Rust game by the table. They are not converted: the census a
 | `bench-seeds.ts --twice snow:10`, `dark:1` (the same run twice) | 45 s, 38 s PASS | 113 s, 84 s PASS | the same digest under both words; "Sam hit" is the tool's own tap (2 | 0) |
 | `seats-run.ts` | 87 s PASS | 170 s PASS | |
 | `seats-check.ts` | 319 s PASS | 477 s, 3 red | `rollback`, `twin`: a word made by walking the JavaScript objects (and `walkAhead` on the puppet); `down`: calls `hitPlayer` |
-| `mpserver-check.ts` | 226 s, 2 red (clocks) | 443 s, 4 red | `same fight`, `late joiner`: the check runs on the wall clock and the games stepped 650 to 917 of 1,200 ticks; `lag`, `ahead` red under `ts` too |
-| `tools/qa/coop-check.ts` | 209 s, 4 red | 520 s, 4 red | its second engine (node) has no preload under either word; under `rust` the tool's own die in `Math.random`'s place is not the Rust game's |
-| `dice-check.ts` | 24 s, 1 red | 51 s, 2 red | `default`: the word gives the game a die (both words); `same seed`: provokes its fight by a rule |
+| `mpserver-check.ts` | 226 s, 2 red (clocks) | 443 s, 4 red | `same fight`, `late joiner`: the check runs on the wall clock and the games stepped 650 to 917 of 1,200 ticks, at 120 to 175 ms a tick: THE RUST GAME NEVER LISTED ITS WORLD there (a networked tick calls `world.relist()`, which had no tap), so its state grew 35 KB a tick and the every-tick export slowed with it. Tapped since ("Numbers", below); `lag`, `ahead` red under `ts` too |
+| `tools/qa/coop-check.ts` | 209 s, 4 red | 520 s, 4 red | its second engine (node) has no preload under either word: by the table it is stood with no word (ALL PASS, 226 s). Its bun half alone (`--one hostage-rescue 1`) under each word: the same row, and the chained raw float bits equal on all 107 half seconds (it was 3,797 frames against 10,528: the tool's counter on `Math.random` made every die put back a new function, so the TypeScript tick left the game's die; under a word it now gives the same function back) |
+| `dice-check.ts` | 24 s, 1 red | 51 s, 2 red | `default`: the word gives the game a die (both words); `same seed`: provokes its fight by a rule (`teleportPlayer`), not the die. The tool checks the TypeScript die's own rule: by the table it is stood with no word (6 of 6) |
+| `tour.ts --runs 1 --seed 1 --quiet` | 22 s PASS | 52 s, 9 FAIL | kind iii: the showcase's own Demo (src/game/demo.ts, host-side) calls rules and writes fields on the puppet between ticks; first: `stop2-hand` (Sam's hand never on the fire exit's leaf), then the takedown, the hold, the firefight, the room clear's drill. By the table (its row `ts`): PASS |
+| `soak.ts --seeds 1 --minutes 3 --quiet` | 34 s ALL PASS | 62 s, dies at 2.5 min | kind iii / iv-a: its stimuli call rules on the puppet: first `f2530 exception (stim:mission-step): Attempted to assign to readonly property` (player.ts:1107 `w.cam.peekOffset = null` under `teleportPlayer`: an object the apply left frozen), then `S.u` and `h.where` undefined (a `PoseSet.home` the apply left undefined, skeleton.ts:203), the last one uncaught. By the table (its row `ts`): ALL PASS |
 | `knobs-check.ts` | PASS | PASS | stands no game |
 | `tools/blitz/coop-check.ts` | 430 s, its 3 lines red as its header expects | | stands no game through the harness and reads no word |
+
+The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minutes) were not run under `rust`: the short forms are not clean.
 
 ## A tool that stands many games, and what it does with them
 
@@ -282,6 +286,30 @@ The fast way, release module, 4 cores. THE MACHINE WAS NEVER QUIET for the longe
 | **all in** | **10.4** | **5.0** | **273** |
 | the check (not the host's): the host's half read and held · the die and the block's hashes | 1.36 · 0.68 | 0.14 · 0.52 | |
 | wall for the mission, the check included | 37 s | 8.0 s | 822 s |
+
+**By the host's own record** (`RH_TIMES`), the bodies and cut joined since, seed 1, the box at a load of 16 to 19 from other work (so every number is
+high; the plain `ts` play beside each under the same load):
+
+| ms a tick | night-breach, 1,464 ticks | room-clear-four, 3,003 | depot-four, 5,355 | the game server's game before the list was tapped (733 ticks) |
+|---|---|---|---|---|
+| the host's half | 0.33 | 0.36 | 0.28 | 1.7 |
+| `face_step` | 2.80 | 3.13 | 2.19 | 16.9 |
+| the filtered export | 2.63 | 2.63 | 2.25 | **123.2** |
+| the filtered apply | 3.61 | 3.66 | 2.99 | 23.0 |
+| whole exports and applies (5, 9, 12 of them; 0) | 0.80 | 0.63 | 0.45 | 0 |
+| the block's copy | 0.66 | 0.49 | 0.43 | 2.2 |
+| out events · the dress step · the driver's calls | 0.03 · 0.38 · 0.02 | 0.02 · 0.19 · 0.01 | 0.01 · 0.08 · 0.01 | 0.07 · 0.82 · 0 |
+| the start, once, spread over the play | 1.45 | 0.48 | 0.21 | 2.9 |
+| **the host, all in** | **12.7** | **11.6** | **8.9** | **170.8** |
+| the clock from the first step to the last, a tick | 14.2 | 12.8 | 9.7 | 174.6 |
+| the tool's wall, `ts` then `rust` | 16.4 s, 24.9 s | 26.1 s, 42.0 s | 29.8 s, 55.8 s | |
+
+A tally's tick is the step, the every-tick export and its apply in about equal thirds; the whole applies, the calls and the out events are small.
+THE GAME SERVER'S TICK was something else: a networked game's tick lists the box world by `world.relist()` (src/net/step.ts), the host tapped only
+`upload()`, and so the Rust game never listed its world: every tick's frame boxes stayed in its tables (the whole state 10.7 MB at tick 100, 28.4 MB at
+tick 600), the every-tick walk met them all (its time 9, 17, 27, 25, 38, 41 ms over the first six hundred ticks; its size a steady 185 KB) and the step
+and the apply slowed with it. `relist` is tapped now (`face_upload`): 4.0, 2.9, 4.4, 7.2, 4.9, 2.3 ms at the same load, and the chained raw-bits word
+of the server's game after 600 ticks is the `ts` game's before and after the mend.
 
 The start (the whole export, the Rust game made, the memo filled, four warm applies) is 300 to 700 ms once. The module stands at 160 to 175 MB for a whole
 mission (pass-four passed 2 GB before the memo's buffers were trimmed). No step grew the memory once 48 MB is reserved before play.
