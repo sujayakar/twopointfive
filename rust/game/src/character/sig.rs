@@ -960,3 +960,10 @@ pub fn anim_sample_jog_on(g: &mut crate::game::Game, a: &crate::character::Anim,
 /// INVENTED: stanceOf, which reads no state, for anim_new (character.ts:3106, :1909, :1921)
 pub fn anim_stance_of_toes(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<crate::character::AnimStanceOf> { todo!() }
 
+/// INVENTED: A NEW ARRAY in `pos`'s place (the TypeScript's `c.pos = <a fresh array>`): the animator keeps the one it was handed (`anim.posIn = this.pos`, character.ts:4419)
+pub fn pos_replace(g: &mut crate::game::Game, c: CharId, to: V3) { todo!() }
+/// INVENTED: `pos` was given a new array by someone holding the character as a whole (the player's stride on its lent legs): the animator keeps what it held
+pub fn pos_replaced(g: &mut crate::game::Game, c: CharId) { todo!() }
+/// INVENTED: `anim.posIn`: the array handed in at the last update, not the body's place now
+pub fn anim_pos_in(g: &crate::game::Game, c: CharId) -> V3 { todo!() }
+

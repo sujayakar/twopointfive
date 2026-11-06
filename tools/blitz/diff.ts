@@ -144,6 +144,7 @@ function cmp(n: Node, A: Side, B: Side, mod: string): void {
       A.p = a.end; B.p = b.end; return; }
     case 'type': { const t = T(n.path);
       if (t.k === 'struct') { const F = fieldsOf(t); for (let i = 0; i < F.length; i++) { const q = `${t.mod}::${t.name}.${t.fields[i].rust}`;
+          if (t.fields[i].echo && t.fields[i].ty === 'Vec<u8>') { skip(F[i], A, null); skip(F[i], B, null); continue; }   // (a blank field: Rust's own bytes, which the TypeScript's walk has none of)
           if (SCHEMA.scratch?.[q]) { const a0 = A.p, b0 = B.p; skip(F[i], A, null); skip(F[i], B, null); if (A.p - a0 !== B.p - b0 || !same(A, a0, B, b0, A.p - a0)) scratchN++; continue; }
           const s0 = SER, k0 = KEYSER; if (SCHEMA.serial?.[q]) SER = true; KEYSER = !!SCHEMA.serial?.[`${q}{}`];
           P.push(`.${t.fields[i].rust}`); cmp(F[i], A, B, t.mod); P.pop(); SER = s0; KEYSER = k0; } return; }
