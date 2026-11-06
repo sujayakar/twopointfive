@@ -1,5 +1,6 @@
 // A DOOR ORDER'S LEAD NEVER STANDS IN THE OPENING TO WORK THE HANDLE (src/game/handleside.ts HANDLE.toolNear, nearStand), headless:
-//   bun run tools/qa/toolnear-check.ts        (probes.ts handleside-tools, in family handleside; TOOLNEAR_BREAK=1 = the rule left off and the same lines asked: must FAIL)
+//   bun run tools/qa/toolnear-check.ts        (probes.ts handleside-tools, in family handleside; TOOLNEAR_BREAK=1 = the rule left off and the same lines asked: must FAIL;
+//   HANDLEPIE_BREAK=1 = the threshold's pie judged as the handle's work: fails where the men pie, the page's stand)
 // The fault it holds off, read off the maintainer's play tapes (the floodlit yard 044521 at 0:53.8 and 4:42.0, lesson 5 051816 twice, the barracks 053220 at
 // 1:35.1): on a door order at the face a leaf opens AWAY from, the man who works the handle walked a metre from his stack mark to the handle's place — which
 // stands in the middle of the opening — shoved the leaf, and was shot there or on his first step away by a defender with his gun on that door.
@@ -7,6 +8,7 @@
 // from outside): the scenario stood up, every defender taken off the floor (the question is where the lead stands, not who wins), the team put outside the door
 // on its latch side and given the row. From the order until the men go in (the hold: until it has held three seconds on the word):
 //   · the lead's body is never in the opening's corridor: judged by his body's EDGE (his middle less HANDLE.body, his radius) past the latch jamb, within 2 m of the door's face
+//     (11-06: but while 'clear from outside' PIES the threshold, DOORTOOLS.thrPie: there his edge may be in the corridor and his middle may not)
 //   · the leaf comes open
 //   · no walk to the handle's old place is dealt (HANDLE_STATS.toolWalks 0), and a step past the jamb or a shove from the mark is (toolNears + toolPosts)
 //   · the entry happens: the men cross and the order ends 'in' (the hold: the same door's entry row is then given, and they cross)
@@ -36,12 +38,12 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 
-interface Run { why: string | null; note: string; lead: string; mark: string; step: number; old: number; past: number; where: string; opened: boolean; crossed: number; ended: string; walks: number; nears: number; posts: number; drill: string }
+interface Run { why: string | null; note: string; lead: string; mark: string; step: number; old: number; past: number; where: string; /** his nearest while he pies the threshold (DOORTOOLS.thrPie): the pie's own stance, printed and not judged */ pie: number; opened: boolean; crossed: number; ended: string; walks: number; nears: number; posts: number; drill: string }
 /** one order on one door with the rule `on`: the team outside on the latch side, the lead watched from the order until the men go in */
 async function play(scn: string, door: string, row: { id: string; hold?: boolean }, on: boolean): Promise<Run> {
   const S: any = await quiet(() => stage(scn, 1)); const g = S.g, O = g.orders, D = g.doorTools, nav = g.col.nav;
   HANDLE.on = true; HANDLE.tools = true; HANDLE.toolNear = on;
-  const R: Run = { why: null, note: '', lead: '', mark: '', step: 0, old: 0, past: Infinity, where: '', opened: false, crossed: 0, ended: '', walks: 0, nears: 0, posts: 0, drill: '' };
+  const R: Run = { why: null, note: '', lead: '', mark: '', step: 0, old: 0, past: Infinity, where: '', pie: Infinity, opened: false, crossed: 0, ended: '', walks: 0, nears: 0, posts: 0, drill: '' };
   for (const x of g.guards) if (x.state !== 'dead' && x.team === 'hostile') await quiet(() => CBM.killGuard(g, x, [0, 0, 1], true));
   const d = g.doors.list.find((x: any) => x.def.name === door); if (!d) { R.note = `no door '${door}'`; return R; }
   const F = frameOf(d), W: number = F.W, pt = (along: number, off: number, side: number): number[] => [F.hx + F.ux * along + F.nx * side * off, 0, F.hz + F.uz * along + F.nz * side * off];
@@ -62,7 +64,14 @@ async function play(scn: string, door: string, row: { id: string; hold?: boolean
       R.mark = `${f2(m.a - W)} m past the latch jamb, ${f2(flat(P.pos, handleAt(d)))} m from the handle`;
       const dr = toolSpot(g, d, side, P.pos, true); R.drill = !H ? 'no place' : dr && flat(dr.pos, H.pos) < 0.01 ? 'same' : dr ? `(${f2(dr.pos[0])}, ${f2(dr.pos[2])}) for (${f2(H.pos[0])}, ${f2(H.pos[2])})` : 'none dealt'; } }
     if (op.kick?.hand && !R.step) R.step = flat(lead.char.pos, op.kick.pos);
-    const r = rel(lead.char.pos); if (r.o > 0 && r.o < 2 && r.a > -HANDLE.nearBody) { const past = r.a - W - HANDLE.body; if (past < R.past) { R.past = past; R.where = `${op.phase} · ${O.of(lead)?.there ?? '-'}`; } }
+    // (THE THRESHOLD'S PIE IS NOT THE HANDLE'S WORK. 'Clear from outside' opens the leaf and then holds the threshold; where the men PIE it (DOORTOOLS.thrPie,
+    // the page's stand) the lead slices across the opening on purpose: the arc's deepest cut is 0.08 m in, less the lean's 0.15, so his hips stop short of
+    // his jamb's edge and his body's edge is 0.25 m into the corridor (0.40 without the lean). This line read that as the handle worked from the opening.
+    // While the order is in its threshold stage with the pie on, his nearest is kept apart and held to the pie's own reach, PIE_REACH below: his body's
+    // edge may be in the corridor, his middle may not (the tape's fault was -0.59 m). With the pie off he holds the jamb and is judged through the hold,
+    // as he was. HANDLEPIE_BREAK=1 = the pie given no reach of its own: judged as the handle's.)
+    const pied = op.phase === 'thr' && DOORTOOLS.thrPie && process.env.HANDLEPIE_BREAK !== '1';
+    const r = rel(lead.char.pos); if (r.o > 0 && r.o < 2 && r.a > -HANDLE.nearBody) { const past = r.a - W - HANDLE.body; if (pied) R.pie = Math.min(R.pie, past); else if (past < R.past) { R.past = past; R.where = `${op.phase} · ${O.of(lead)?.there ?? '-'}`; } }
     if (!d.latched && Math.abs(d.angle) >= 0.6) R.opened = true; };
   await quiet(() => { let held = 0;
     for (let i = 0; i < 60 * 60 && D.ops[0] === op && op.phase !== 'enter' && op.crossed.size === 0; i++) { S.step(); watch();
@@ -98,9 +107,10 @@ export async function toolnearCheck(): Promise<boolean> {
     let drill = '';
     for (const X of DOORS) for (const row of ROWS) {
       const R = await play(X.scn, X.door, row, !BREAK); drill ||= R.drill;
-      const ok = R.why === null && !R.note && R.walks === 0 && R.nears + R.posts >= 1 && R.past >= 0 && R.opened && R.crossed >= 1 && R.ended === 'in';
+      const PIE_REACH = HANDLE.body + 0.05;   // (how far into the corridor a man's EDGE may come while he pies the threshold: his middle stays out of it)
+      const ok = R.why === null && !R.note && R.walks === 0 && R.nears + R.posts >= 1 && R.past >= 0 && R.pie >= -PIE_REACH && R.opened && R.crossed >= 1 && R.ended === 'in';
       F.verdict(ok, `${X.level}, ${X.door} door · ${row.word}: the lead works the handle from past the latch jamb, the leaf opens, the men go in`,
-        R.note && R.why !== null ? R.note : `${R.lead}'s mark ${R.mark} · he steps ${R.nears ? `${f2(R.step)} m (the walk to the handle's place was ${f2(R.old)} m)` : R.posts ? 'nowhere: shoved from his mark' : R.walks ? `${f2(R.step)} m to the handle's place, in the opening` : 'nowhere'} · his body's nearest to the opening: ${R.past === Infinity ? 'never by the door' : `${f2(R.past)} m ${R.past >= 0 ? 'clear of' : 'INSIDE'} its corridor (${R.where})`} · leaf ${R.opened ? 'open' : 'SHUT'} · over the frame line ${R.crossed} · ended '${R.ended}' · walks to the old place ${R.walks}, steps past the jamb ${R.nears}, from the mark ${R.posts}${R.note ? ` · ${R.note}` : ''}`);
+        R.note && R.why !== null ? R.note : `${R.lead}'s mark ${R.mark} · he steps ${R.nears ? `${f2(R.step)} m (the walk to the handle's place was ${f2(R.old)} m)` : R.posts ? 'nowhere: shoved from his mark' : R.walks ? `${f2(R.step)} m to the handle's place, in the opening` : 'nowhere'} · his body's nearest to the opening: ${R.past === Infinity ? 'never by the door' : `${f2(R.past)} m ${R.past >= 0 ? 'clear of' : 'INSIDE'} its corridor (${R.where})`}${R.pie === Infinity ? '' : ` · pieing the threshold after it: ${f2(R.pie)} m (the pie's reach is ${f2(-PIE_REACH)})${R.pie >= -PIE_REACH ? '' : ' HIS MIDDLE IN THE OPENING'}`} · leaf ${R.opened ? 'open' : 'SHUT'} · over the frame line ${R.crossed} · ended '${R.ended}' · walks to the old place ${R.walks}, steps past the jamb ${R.nears}, from the mark ${R.posts}${R.note ? ` · ${R.note}` : ''}`);
     }
     { const R = await play(DOORS[0].scn, DOORS[0].door, ROWS[0], false);
       F.verdict(R.why === null && R.walks === 1 && R.nears + R.posts === 0 && R.past < -0.3 && R.opened && R.crossed >= 1, 'the rule off: the lead walks to the handle\'s place in the opening, as he did (so the lines above can go red)',

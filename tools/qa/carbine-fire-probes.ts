@@ -17,6 +17,7 @@
 //       shot on his round (no torch to drop: his light was on the gun) and for one taken down quietly (laid down, not flung);
 //   (7) 'none' (the default) deals nobody anything: every man's row is the 9 mm, no burst state ever appears in 20 s of the same fight, and flipping the knob
 //       re-deals live both ways (Reyes ↔ aks74u with a fresh box, muzzle 0.50 ↔ 0.26) — the pistols' identity probe (weapons-identity) is the rest of that promise.
+// CARBINECUT_BREAK=1 = (1)'s watch runs on until a round opens a new burst and judges that cut group as short: must fail on both stands.
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, killGuard, handProps } = await import(`${ROOT}/src/game/combat.ts`);
@@ -91,17 +92,26 @@ export async function carbineFire(verbose = process.argv.includes('--verbose')) 
     const rounds: Round[] = []; let multi = 0; const reloads: { start: number; span: number; t0: number; roundsInside: number; magItemAt: number; magFill: number; roundsBefore: number }[] = [];
     let rel: typeof reloads[0] | null = null; let wasRel = false; let itemsSeen = new Set<any>(game.items.items); let sinceReload = 0;
     let awarenessAfterFirst: number[] | null = null, shotsHeardAfterFirstBurst: number[] | null = null;
-    for (let f = 0; f < 60 * 90; f++) {
-      const rs = S.step(); if (rs.length > 1) multi++; rounds.push(...rs); sinceReload += rs.length;
+    // (THE WATCH'S END CAN CUT A BURST: ninety seconds are up three frames after a burst's first round on the page's stand (f5397 of 5400), and that round
+    // read as a short group with no box run dry under it. The gun's own burst record says whether rounds of the last group are still owed as the watch
+    // ends; such a group is not judged short. CARBINECUT_BREAK=1 = after the ninety seconds the watch runs on until a round opens a new burst, stops
+    // there, and that group IS judged.)
+    const CUT = process.env.CARBINECUT_BREAK === '1'; let wf = -1;
+    const watch = () => { wf++;
+      const rs = S.step(); if (rs.length > 1) multi++; const opens = rs.length > 0 && rounds.length > 0 && rs[0].f - rounds[rounds.length - 1].f > 12; rounds.push(...rs); sinceReload += rs.length;
       if (rounds.length >= 1 && S.frame >= rounds[0].f + 2 && !awarenessAfterFirst) awarenessAfterFirst = others.map((o: any) => o.awareness);   // (a round raised late in the update order reaches the others' ears the frame after)
       const isRel = reyes.reloadT >= 0;
       if (isRel && !wasRel) { rel = { start: S.frame, span: 0, t0: reyes.reloadT, roundsInside: 0, magItemAt: -1, magFill: -1, roundsBefore: sinceReload }; sinceReload = 0; }
       if (isRel && rel) { rel.roundsInside += rs.filter(r => r.f > rel!.start).length; for (const it of game.items.items) if (!itemsSeen.has(it)) { itemsSeen.add(it); if (it.kind === 'mag' && rel.magItemAt < 0) { rel.magItemAt = S.frame - rel.start; rel.magFill = it.fill; } } }
       if (!isRel && wasRel && rel) { rel.span = S.frame - rel.start; reloads.push(rel); rel = null; }
       wasRel = isRel;
-      if (f === 60 * 5 && !shotsHeardAfterFirstBurst) shotsHeardAfterFirstBurst = others.map((o: any) => o.witness.heard.shots);
-    }
-    const gs = groups(rounds);
+      if (wf === 60 * 5 && !shotsHeardAfterFirstBurst) shotsHeardAfterFirstBurst = others.map((o: any) => o.witness.heard.shots);
+      return opens;
+    };
+    for (let f = 0; f < 60 * 90; f++) watch();
+    const owed = (reyes.weapon.burst?.left ?? 0) > 0;   // (rounds of the burst under way that the watch's end kept from being fired)
+    if (CUT) for (let f = 0; f < 60 * 10 && !watch(); f++) { /* on to the first round of the next burst */ }
+    const gs = groups(rounds), cutBy = (g: Round[]) => !CUT && owed && g === gs[gs.length - 1];
     // (1) structure
     {
       const fails: string[] = [];
@@ -114,7 +124,7 @@ export async function carbineFire(verbose = process.argv.includes('--verbose')) 
         sizes.push(g.length); for (let k = 1; k < g.length; k++) intra.push(g[k].f - g[k - 1].f);
         if (i > 0) gaps.push(g[0].f - gs[i - 1][gs[i - 1].length - 1].f);
         const before = cum; cum += g.length;
-        if (g.length < B.min && Math.floor(before / 30) === Math.floor((cum) / 30) && cum % 30 !== 0) shortNotAtBoxEnd.push(`group ${i} of ${g.length} at f${g[0].f} (rounds ${before}→${cum})`);   // a group under the minimum is only right where the box ran dry under it
+        if (g.length < B.min && !cutBy(g) && Math.floor(before / 30) === Math.floor((cum) / 30) && cum % 30 !== 0) shortNotAtBoxEnd.push(`group ${i} of ${g.length} at f${g[0].f} (rounds ${before}→${cum})`);   // a group under the minimum is only right where the box ran dry under it
         if (g.length > B.max) fails.push(`group ${i} of ${g.length} rounds (max ${B.max})`);
       });
       if (shortNotAtBoxEnd.length) fails.push(`short groups not at a box end: ${shortNotAtBoxEnd.join(', ')}`);

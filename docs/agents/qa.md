@@ -278,6 +278,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   off): he shoots as the old stand's man always did, the same hot floor on both stands, PASS on both. A NEW line, 'held', plays it with the fight
   NOT begun and asks only that the handle is still tried: FAIL on the page's stand, its row (could be real: the door tools' owner's, with the
   squad's). A plain 'move' does not wait so: three other cases here end 'set.' with a round still held; it is a walk's try at an untried door.
+  THE THIRTEENTH (11-06; the break word's notice above was a hand-over of its own), five old reds the merge found with no row (red at step 1577
+  too). `carbine-fire` (1): ninety seconds are up three frames after a burst's first round on the page's stand, and that round read as a short group
+  with no box run dry under it; a last group the gun's own burst record still owes rounds to as the watch ends is not judged short
+  (`CARBINECUT_BREAK=1`: the watch runs on to the next burst's first round and judges it, FAIL on both). `cues-run`, Sam down: the page's squad
+  opens following Sam, walked after him onto the squad's room, dropped the three men with a line to his spot and lost two of its own, and nobody
+  was left to shoot him: 38 s lit on the mark, never down, the line never said. The team is told to hold where it stands before he goes, the same
+  on both stands (it still fights from there), the line fails as STAGING when he never falls, and with his fall known it wants each floor's own
+  words (TIGHTENED: an empty string on one side passed). `CUESRUN_BREAK=1`: god mode left on, FAIL on both; `=follow`: no hold, FAIL on the
+  page's stand. `entrypoints-off`: its seeded entry is on the manager's door, which is locked; where the men try a door before they work it
+  (`DOORTOOLS.testDoor`) the order ended 'found shut', nobody went in, no point was dealt. The row is given again where the first ended at the
+  handle (the page's own way through: they kick it), the old stand's run is as it was, and the line asks that the entry went in
+  (`ENTRYOFF_BREAK=1`: the run without the tracker plays with the switch on, FAIL on both). `handleside-tools`, 'clear from outside': where the
+  men pie the threshold (`DOORTOOLS.thrPie`) the lead slices across the opening after the leaf is open, his body's edge 0.25 m into its corridor
+  (0.40 without the lean), and the line read that as the handle worked from the opening. His nearest while the order is in its threshold stage
+  with the pie on is kept apart and held to the pie's own reach: his edge may be in the corridor, his middle may not. With the pie off he is
+  judged through the hold as before (`HANDLEPIE_BREAK=1`: the pie judged as the handle's, FAIL on the page's stand alone; the family's
+  `TOOLNEAR_BREAK` fails all six rows). `entrypoints-count`: NOT mended, red on both stands, a row: one moved point in the killhouse's bunks
+  cannot see the point his gun is held on, the frame's middle; the mover's own rule, a line to any third of the opening, passes (could be real:
+  the door tools' owner's to say which line is promised).
   tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
