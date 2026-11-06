@@ -2,9 +2,11 @@
 // are these: each asks the Rust game by the row's ID and what it asked holds the target as bytes by the schema. No TypeScript registration runs on the puppet, and the menu has one source of truth.
 //   const asks = installAsks(g, knobs, ask, reapply);   ask = (kind, row, seat, bytes) => bytes (the face's face_ask, io::ask); reapply = what the host does after a question that writes
 //   asks.after();                                       after every apply: a row or a posture the apply made gets its closures
+//   asks.give(S, id, target?, who?, opts?);             an order from outside a tick, the target as bytes. asks.routeGive() makes it every seat's `S.give`
+//   A question that writes (issue, given, give) calls `handFirst` before it and `reapply` after it. handFirst hands over what the host has changed since the last step (its cameras above all): an apply outside a step otherwise writes back the cameras as Rust last had them, and the view jumps a frame
 import { bookOf, exportPart } from './export';
 
-export const ASK = { label: 0, can: 1, only: 2, valid: 3, when: 4, gone: 5, word: 6, mark: 7, given: 8, issue: 9 } as const;
+export const ASK = { label: 0, can: 1, only: 2, valid: 3, when: 4, gone: 5, word: 6, mark: 7, given: 8, issue: 9, give: 10 } as const;
 const TARGET = 'crate::orders::OrderTarget', MEN = 'Vec<GuardId>', OPTS = 'Option<crate::orders::GiveOpts>';
 const DEC = new TextDecoder();
 
@@ -14,7 +16,7 @@ class Answer { p = 0; dv: DataView; constructor(readonly b: Uint8Array) { this.d
   str() { const L = this.u32(); const s = DEC.decode(this.b.subarray(this.p, this.p + L)); this.p += L; return s; }
   optStr() { return this.u8() ? this.str() : null; } }
 
-export function installAsks(g: any, knobs: Record<string, unknown>, ask: AskFn, reapply: () => void) {
+export function installAsks(g: any, knobs: Record<string, unknown>, ask: AskFn, reapply: () => void, handFirst: () => void = () => {}) {
   const bk = bookOf(g); if (!bk) throw new Error('ask: this game has never been exported, so no row has an ID: export it once first');
   const rowId = (d: object) => bk.idOf('OrdersOrderDefId', d), seatId = (s: object) => bk.idOf('SeatId', s), rows = () => bk.listOf('OrdersOrderDefId') as any[], guards = () => bk.listOf('GuardId') as any[];
   const bytes = (...p: [string, unknown][]) => exportPart(g, knobs, p);
@@ -27,11 +29,15 @@ export function installAsks(g: any, knobs: Record<string, unknown>, ask: AskFn, 
     d.only = (S: any, men: any[], t: any) => { const a = new Answer(ask(ASK.only, r(), seatOfS(S), bytes([MEN, men], [TARGET, t]))); const n = a.u32(), L = guards(), out: any[] = []; for (let i = 0; i < n; i++) out.push(L[a.u32()]); return out; };
     d.valid = (S: any, t: any, men: any[]) => { const a = new Answer(ask(ASK.valid, r(), seatOfS(S), bytes([TARGET, t], [MEN, men]))); const k = a.u8(); return k === 0 ? true : k === 1 ? false : a.str(); };
     d.gone = (S: any, t: any, men: any[]) => new Answer(ask(ASK.gone, r(), seatOfS(S), bytes([TARGET, t], [MEN, men]))).u8() !== 0;
-    d.issue = (S: any, men: any[], t: any, o?: any) => { const a = new Answer(ask(ASK.issue, r(), seatOfS(S), bytes([MEN, men], [TARGET, t], [OPTS, o]))); reapply(); return a.optStr() ?? undefined; }; };
+    d.issue = (S: any, men: any[], t: any, o?: any) => { handFirst(); const a = new Answer(ask(ASK.issue, r(), seatOfS(S), bytes([MEN, men], [TARGET, t], [OPTS, o]))); reapply(); return a.optStr() ?? undefined; }; };
   const when = (d: any) => (S: any, t: any, men: any[]) => new Answer(ask(ASK.when, rowId(d), seatOfS(S), bytes([TARGET, t], [MEN, men]))).u8() !== 0;
-  const postureOf = (seat: any) => { const s = seatId(seat); return { word: () => new Answer(ask(ASK.word, 0, s, new Uint8Array(0))).optStr(), mark: (def: any) => new Answer(ask(ASK.mark, rowId(def), s, new Uint8Array(0))).str(), given: (def: any) => { ask(ASK.given, rowId(def), s, new Uint8Array(0)); reapply(); } }; };
+  const postureOf = (seat: any) => { const s = seatId(seat); return { word: () => new Answer(ask(ASK.word, 0, s, new Uint8Array(0))).optStr(), mark: (def: any) => new Answer(ask(ASK.mark, rowId(def), s, new Uint8Array(0))).str(), given: (def: any) => { handFirst(); ask(ASK.given, rowId(def), s, new Uint8Array(0)); reapply(); } }; };
   const done = new WeakSet<object>(), whens = new WeakMap<object, unknown>(), postures = new WeakSet<object>(); let seen = 0;
   const after = () => { const L = rows(); for (; seen < L.length; seen++) if (!done.has(L[seen])) { done.add(L[seen]); closures(L[seen]); }
-    for (const d of L) if (d.standsIn && d.standsIn.when !== whens.get(d)) { const w = when(d); whens.set(d, w); d.standsIn.when = w; }   // (`standsIn` is a value: an apply can make it anew)
+    for (const d of L) if (d.standsIn && (!d.standsIn.when || d.standsIn.when !== whens.get(d))) { const w = when(d); whens.set(d, w); d.standsIn.when = w; }   // (`standsIn` is a value: an apply can make it anew)
     for (const s of g.seats) { const S = s.view.orders; if (S.posture && !postures.has(S.posture)) { const P = postureOf(s); postures.add(P); S.posture = P; } } };
-  after(); return { after }; }
+  /** an order that did not come from a row's `issue`: S.give, by the row's id, the target as bytes by the schema. Answers the refusal, or null */
+  const give = (S: any, id: string, t?: any, who?: any, o?: any): string | null => { handFirst(); const a = new Answer(ask(ASK.give, 0, seatOfS(S), bytes(['String', id], ['Option<' + TARGET + '>', t], ['Option<crate::orders::Who>', who], [OPTS, o]))); reapply(); return a.optStr(); };
+  /** every seat's `S.give` goes to the Rust game from here on, so what prices an order (orders.ts: the floor the team has seen) is Rust's and need not be on the puppet */
+  const routeGive = () => { for (const s of g.seats) { const S = s.view.orders; S.give = (id: string, t?: any, who?: any, o?: any) => give(S, id, t ?? S.targetAt(g.aimPoint), who, o); } };
+  after(); return { after, give, routeGive }; }
