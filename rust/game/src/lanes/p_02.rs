@@ -28,7 +28,7 @@ fn cell_key(i: f64) -> crate::Num { crate::Num(i + 0.0) }
 /// the middle of cell `i`
 fn cell_mid(cell: f64, w: f64, i: f64) -> V3 { [(js::rem(i, w) + 0.5) * cell, 0.0, (js::to_i32(i / w) as f64 + 0.5) * cell] }
 /// `gd.path = []; gd.pathGoal = null`
-fn clear_path(g: &mut Game, gd: GuardId) { g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None; }
+fn clear_path(g: &mut Game, gd: GuardId) { crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); }
 /// `g.say(gd, text, true)`
 fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }

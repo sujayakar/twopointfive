@@ -48,9 +48,15 @@ pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>,
     }
     // (the one way to say which of rust/sim's slots a game stands in: the game's own word and the box mirror's)
     game::io::set_slot(&mut g, slot);
-    // BRIDGE STAND-IN: THE AIM RAY'S WAY THROUGH A HOLED PANE. `BoxWorld.glassOpen` is a hook glassbreak.ts hangs on the engine's box world as the game
-    // is made (glassbreak.ts:230); the bridge does not carry it, so an imported game's cursor ray landed ON a pane whose cell had fallen where the
-    // TypeScript's passes through the hole (the player's aim point, his arm, his reticle). Hung here as the constructor hangs it.
+    // BRIDGE STAND-IN: THE ANIMATOR'S PLACE. `anim.posIn` is the body's own position array from a Character.update on (character.ts:4419), which the
+    // bridge does not carry: an imported animator would read (0, 0, 0). A start is taken as a tick opens, after the last tick's update handed every
+    // animator its body's array again, so each is told it holds that array (game::character::POS_IN_IS_POS).
+    for c in g.ch.ids().collect::<Vec<_>>() { g.ch[c].anim.pos_in = game::character::POS_IN_IS_POS; }
+    // BRIDGE STAND-IN: A SET'S HOME. `PoseSet.home` (the block its poses stand in) is not carried, so every imported set read "not at home" and the
+    // pool's tend took the whole pool out and in again at the first tick: the same poses, but in the lists' order, where a game that has played
+    // holds them in the order they were made (tut-squad after its checkpoint is put back, tick 5739: `poses` parted there). A set on the game's
+    // list of sets at home IS at home.
+    for s in g.pose_sets.clone() { g.tab.pose_set[s].home = Some(game::Opaque); }
     // (the level's script and its define pass are the import's own now: io::deal_scripts)
     if let Some(sc) = g.level.script { said.push(format!("the level's script, as the import dealt it: {:?}", sc)); }
     (g, said)

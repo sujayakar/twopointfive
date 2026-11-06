@@ -64,7 +64,7 @@ pub fn collide_guard(g: &mut crate::game::Game, gd: GuardId, p0x: f64, p0z: f64)
         let mut d = v3::sub(g.ch[c].pos, g.ch[oc].pos);
         d[1] = 0.0;
         let l = v3::len(d);
-        if l < 0.6 && l > 1e-4 { g.ch[c].pos = v3::mad(g.ch[c].pos, d, (0.6 - l) / l * 0.5); }
+        if l < 0.6 && l > 1e-4 { { let to = v3::mad(g.ch[c].pos, d, (0.6 - l) / l * 0.5); crate::character::pos_replace(g, c, to); } }
     }
     let sl = m::hyp2(g.ch[c].pos[0] - ax, g.ch[c].pos[2] - az);
     if sl <= SEP_SETTLE_MIN { return; }
@@ -344,7 +344,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         g.gd[gd].react_t = 1.2;
         g.gd[gd].search_t = 0.0;
         crate::game::guard_set_path(g, gd, Vec::new());
-        g.gd[gd].path_goal = None;
+        crate::guards::guard_set_path_goal(g, gd, None);
         g.gd[gd].search_plan = None;
         g.gd[gd].pieing = None;
         let left = enemy_up_on_floor(g, team);

@@ -138,7 +138,7 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
             Some(at) => at,
             None => continue,
         };
-        g.ch[c].pos = v3::copy(at.pos);
+        { let to = v3::copy(at.pos); crate::character::pos_replace(g, c, to); }
         g.ch[c].vel = [0.0, 0.0, 0.0];
         g.ch[c].aim_yaw = at.yaw;
         g.ch[c].body_yaw = at.yaw;
@@ -147,7 +147,7 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
         g.gd[gd].wait = 0.0;
         crate::game::guard_set_path(g, gd, Vec::new());
         g.gd[gd].path_i = 0;
-        g.gd[gd].path_goal = None;
+        crate::guards::guard_set_path_goal(g, gd, None);
         crate::character::character_update(g, c, 0.0); // bones where he now stands, before anything reads them this frame
         moved += 1.0;
     }

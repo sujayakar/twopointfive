@@ -817,7 +817,7 @@ fn to_model_d_of(yaw: f64, wd: V3) -> V3 {
 
 /// The controller's world placement to the model space the layers pose in: a point. (character.ts CharacterAnimator.toModelP)
 pub fn anim_to_model_p(g: &mut crate::game::Game, c: CharId, wp: V3) -> V3 {
-    let p0 = g.ch[c].pos;
+    let p0 = crate::character::anim_pos_in(g, c);   // (`this.posIn`: the array handed in at the last update, not the body's place now)
     to_model_p_of(g.ch[c].anim.body_yaw_in, p0, wp)
 }
 

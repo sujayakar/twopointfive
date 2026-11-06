@@ -469,7 +469,7 @@ pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) 
         let walked = g.gd[gd].speed;
         let vel: V3 = [m::sin(yaw) * walked, 0.0, m::cos(yaw) * walked];
         g.ch[c].vel = vel;
-        g.ch[c].pos = v3::mad(g.ch[c].pos, vel, dt);
+        { let to = v3::mad(g.ch[c].pos, vel, dt); crate::character::pos_replace(g, c, to); }
         return false;
     }
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 10.0, dt);

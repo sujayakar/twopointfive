@@ -310,7 +310,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
         b.search_t = 0.0;
         b.path = Vec::new();
         b.path_serial = b.path_serial.wrapping_add(1);
-        b.path_goal = None;
+        b.path_goal = None; b.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
     }
     if let Some(w) = &w {
         crate::game::game_say(g, best, &format!("something's tripped in {} — going to take a look", w.place), Some(true), None, None);

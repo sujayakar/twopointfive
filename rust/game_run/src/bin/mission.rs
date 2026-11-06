@@ -108,6 +108,14 @@ fn main() {
                 restarts.push(k);
                 for l in said { println!("{}", l); }
             }
+            if std::env::var("BLITZ_TEND").is_ok() && (k == 1 || restarts.last() == Some(&k)) {
+                let mut sets = Vec::new(); game::posehome::each_posed(&mut g, &mut |_, s| sets.push(s));
+                let home = sets.iter().filter(|s| g.tab.pose_set[**s].home.is_some()).count();
+                let stray: f64 = sets.iter().map(|s| g.tab.pose_set[*s].stray).sum();
+                let loose = sets.iter().map(|s| g.tab.pose_set[*s].list.iter().filter(|p| p.at >= game::anim_skeleton::Pose::LOOSE).count()).sum::<usize>();
+                let held_not_posed = g.pose_sets.iter().filter(|s| !sets.contains(s)).count();
+                println!("TEND as tick {} opens: {} sets posed, {} of them at home, {} held (of them {} on no list), strays {}, poses of posed sets outside the pool {}, loose rows {}", k, sets.len(), home, g.pose_sets.len(), held_not_posed, stray, loose, g.loose_poses.len());
+            }
             let cmd = match host_half(&mut g, &dir, k) { Some(c) => c, None => { println!("no h{}.bin: the TypeScript's run ended at tick {}", k, k - 1); break; } };
             // HOST STEP: where the headless host listed the box world again between two ticks. BEFORE the driver's orders and writes: the host lists as its
             // step ends, and what the driver then does to the box world (a wall charge blown by the module's own call) is not listed until the next step

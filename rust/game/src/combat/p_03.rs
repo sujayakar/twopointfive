@@ -127,7 +127,7 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
             if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
             if g.ai_enabled { g.gd[gd].witness.dazzled += 1.0; }
             crate::game::guard_set_path(g, gd, Vec::new());
-            g.gd[gd].path_goal = None;
+            crate::guards::guard_set_path_goal(g, gd, None);
             g.gd[gd].speed = 0.0;
             g.gd[gd].dazzled_at = Some(at);
             let along = v3::sub(g.ch[c].pos, at);

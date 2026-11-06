@@ -367,7 +367,7 @@ pub fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runne
     o.path = path;
     o.path_serial = serial;
     o.path_i = 0;
-    o.path_goal = Some(v3::copy(goal));
+    o.path_goal = Some(v3::copy(goal)); o.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
     o.repath_t = 0.0;
     o.line_side = 0.0;
     p.map_or(false, |p| !p.is_empty())
@@ -558,7 +558,7 @@ pub fn plan_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]
     o.path = path;
     o.path_serial = path_serial;   // (the same array back: its old serial, none dealt)
     o.path_i = path_i;
-    o.path_goal = path_goal;
+    o.path_goal = path_goal; o.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
     o.repath_t = repath_t;
     o.line_side = line_side;
     false

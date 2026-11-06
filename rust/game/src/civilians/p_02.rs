@@ -397,7 +397,7 @@ pub fn update_one(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         if g.cv[cv].state != CivState::Held {
             set_state(g, gd, CivState::Held);
             g.ch[c].anim.act = None; g.ch[c].anim.crouch_target = 0.0;
-            g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None; g.cv[cv].target = None;
+            crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.cv[cv].target = None;
         }
         crate::character::character_update(g, c, dt);
         let sp = g.gd[gd].speed;
@@ -762,7 +762,7 @@ pub fn work(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::civilians
         } else if crate::guards::not_getting_anywhere(g, gd, dt, 8.0) {
             let line = format!("no way to mark {} — skipping it", g.gd[gd].wp);
             log(g, gd, &line);
-            g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None; g.gd[gd].stall_ref = None;
+            crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.gd[gd].stall_ref = None;
             g.gd[gd].wp = (g.gd[gd].wp + 1) % n;
         }
     }
@@ -801,7 +801,7 @@ pub fn to_work(g: &mut crate::game::Game, gd: GuardId, line: bool) {
         let d = v3::dist_xz(*p, at);
         if d < bd { bd = d; best = i; }
     }
-    g.gd[gd].wp = best; g.gd[gd].wait = 0.0; g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None;
+    g.gd[gd].wp = best; g.gd[gd].wait = 0.0; crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None);
     g.ch[c].anim.act = None;
     let x = &mut g.cv[cv];
     x.look_at = None; x.target = None; x.report_to = None; x.settle_t = -1.0; x.rise_t = 0.0; x.seated = false;
@@ -823,7 +823,7 @@ pub fn to_startled(g: &mut crate::game::Game, gd: GuardId, at: V3, sound: bool) 
     end_task(g, gd);
     g.cv[cv].rise_t = 0.0;
     g.ch[c].anim.act = None;
-    g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None;
+    crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None);
     g.cv[cv].look_at = Some(at);
     g.cv[cv].look_until = g.time + g.k.civ.startle_secs;
     g.stats.civilians.startled += 1;
@@ -907,7 +907,7 @@ pub fn to_alarmed(g: &mut crate::game::Game, gd: GuardId, cause: crate::civilian
     end_task(g, gd);
     g.cv[cv].rise_t = 0.0;
     g.ch[c].anim.act = None;
-    g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None;
+    crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None);
     {
         let x = &mut g.cv[cv];
         x.look_at = None;
@@ -1060,7 +1060,7 @@ pub fn to_flee(g: &mut crate::game::Game, gd: GuardId, t: &crate::civilians::Civ
     let c = g.gd[gd].ch;
     g.cv[cv].target = Some(t.clone());
     g.cv[cv].retarget_at = g.time + 1.0;
-    g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None; g.gd[gd].stall_ref = None;
+    crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.gd[gd].stall_ref = None;
     g.ch[c].anim.act = None;
     g.ch[c].anim.crouch_target = 0.0;
     crate::guards::go_to(g, gd, t.pos, Some(true));
@@ -1177,7 +1177,7 @@ pub fn to_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId) {
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
     g.cv[cv].report_to = Some(o); g.cv[cv].talk_t = 0.0; g.cv[cv].acked = false;
-    g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None;
+    crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None);
     g.cv[cv].target = None;
     let cause = g.cv[cv].cause;
     let pool = report_pool(g, cause.map(|k| k.as_str()));

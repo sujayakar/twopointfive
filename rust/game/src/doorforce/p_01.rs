@@ -721,7 +721,7 @@ mod tests {
         row.on = Some(Stand { door: d, ..Stand::zeroed() });
         state_of(g).kickers.set(d, gd);
         g.gd[gd].path = vec![[1.0, 0.0, 1.0]];
-        g.gd[gd].path_goal = Some([1.0, 0.0, 1.0]);
+        crate::guards::guard_set_path_goal(g, gd, Some([1.0, 0.0, 1.0]));
         g.gd[gd].stall_ref = Some([1.0, 0.0, 1.0]);
         (gd, b)
     }

@@ -190,7 +190,7 @@ pub fn breach_drill_start(g: &mut crate::game::Game) {
         let c = g.gd[gd].ch;
         let stack = dr!(g).plan.stack[i];
         let from = match dr!(g).plan.from { Some(f) => f[i], None => stack };
-        g.ch[c].pos = v3::copy(from);
+        { let to = v3::copy(from); crate::character::pos_replace(g, c, to); }
         g.ch[c].vel = [0.0, 0.0, 0.0];
         let yaw = v3::yaw_to(from, stack);
         g.ch[c].aim_yaw = yaw;
@@ -216,7 +216,7 @@ pub fn breach_drill_start(g: &mut crate::game::Game) {
         for (i, h) in hs.iter().enumerate() {
             let gd = match dr!(g).hostiles.get(i).copied() { Some(x) => x, None => continue };
             let c = g.gd[gd].ch;
-            g.ch[c].pos = v3::copy(h.pos);
+            { let to = v3::copy(h.pos); crate::character::pos_replace(g, c, to); }
             g.ch[c].vel = [0.0, 0.0, 0.0];
             g.ch[c].aim_yaw = h.yaw;
             g.ch[c].body_yaw = h.yaw;
@@ -455,7 +455,8 @@ fn tick_kick(g: &mut Game, t: f64, d: DoorId) {
         if live_of(g).map_or(false, |l| l.loud_boot) && !crate::doors::door_off(g, d) {
             let p = crate::doors::door_pos(g, d);
             let time = g.time;
-            g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Kick, pos: [p[0], 0.0, p[2]], time, loud: true, level: Some(1.0), who: Some(id), ..Default::default() });
+            let serial = g.serial();   // (an event is an object: every heard-once set keys on its serial, and one born with none is "the first again")
+            g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Kick, pos: [p[0], 0.0, p[2]], time, loud: true, level: Some(1.0), who: Some(id), serial, ..Default::default() });
         }
         say!(g, a, "in1", lines.in1);
         breach_drill_beat(g, if on_it { "door-flung" } else { "door-pushed" });
