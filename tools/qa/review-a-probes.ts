@@ -402,12 +402,18 @@ export async function reviewActDown() {
   d.reset(); const spot = game.doors.workSpot(d, [d.frameCentre[0], 0, d.frameCentre[2] + (d.keySide > 0 ? 1 : -1)], 0.6).pos as Vec3;
   game.teleportPlayer(spot); W.step(DT); W.step(DT);
   // downed this frame, the act already chosen: call the doors step by hand with both standing
-  pl.down = true; game.act = { kind: 'door', verb: 'push', door: d, line1: 'push it open', line2: '', pos: d.pos, inReach: true, off: false };
+  // (REVIEWACT_BREAK=1, the red path: the 'downed' Sam is on his feet when the act is read — the first line must fail, on either stand)
+  pl.down = process.env.REVIEWACT_BREAK !== '1'; game.act = { kind: 'door', verb: 'push', door: d, line1: 'push it open', line2: '', pos: d.pos, inReach: true, off: false };
   (game as any).updateDoors(DT, W.input);
-  ok = verdict(d.latched && Math.abs(d.angle) < 1e-6 && d.lastWho !== PLAYER_ID, 'down: the push is not performed — latched, untouched', `latched ${d.latched}, angle ${f3(d.angle)}, lastWho ${d.lastWho}`) && ok;
-  pl.down = false; game.act = { kind: 'door', verb: 'push', door: d, line1: 'push it open', line2: '', pos: d.pos, inReach: true, off: false };
+  // (where his hands work the leaf — hands.ts, on in the page — a push that is taken through the hand does not unlatch on its frame: it begins a move,
+  //  `doorMove`. hands.ts refuses a downed man itself, so the A6.9 fault would still show as the leaf unlatched on the frame; the clause is here so that a
+  //  push taken for a man the check only CALLS down is seen on this stand too — which is what the break word does)
+  ok = verdict(d.latched && Math.abs(d.angle) < 1e-6 && d.lastWho !== PLAYER_ID && !pl.doorMove, 'down: the push is not performed — latched, untouched, no hand begun on it', `latched ${d.latched}, angle ${f3(d.angle)}, lastWho ${d.lastWho}, a hand's move ${pl.doorMove ? 'BEGUN' : 'none'}`) && ok;
+  pl.down = false; pl.doorMove = null; d.reset(); game.act = { kind: 'door', verb: 'push', door: d, line1: 'push it open', line2: '', pos: d.pos, inReach: true, off: false };
   (game as any).updateDoors(DT, W.input);
-  ok = verdict(!d.latched && d.lastWho === PLAYER_ID, 'control — on his feet the same act pushes it open', `latched ${d.latched}, angle ${f3(d.angle)}, lastWho ${d.lastWho}`) && ok;
+  // (…and the control is the leaf open by his hand: at once where the push is the old one-frame use, within two seconds of frames where the hand brings it round)
+  const byHand = !!pl.doorMove; let frames = 0; while (d.latched && frames < 120) { W.step(DT); frames++; }
+  ok = verdict(!d.latched && d.lastWho === PLAYER_ID && (byHand || frames === 0), 'control — on his feet the same act pushes it open: on the frame, or by his hand\'s move begun on it', `latched ${d.latched}, angle ${f3(d.angle)}, lastWho ${d.lastWho} · ${byHand ? `his hand's move, the latch gone ${frames} frames on` : frames ? `NO HAND BEGUN, and unlatched only ${frames} frames on` : 'on the frame'}`) && ok;
   return done('review-act-down', ok);
 }
 
