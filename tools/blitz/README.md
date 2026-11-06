@@ -95,7 +95,7 @@ bun run tools/blitz/diff.ts <out>/aK.bin <out>/nK.bin --show 40       # which pa
 
 The part `poses` is watched apart: if it parts while every other part is the same the runner says so once and goes on comparing the rest (`BLITZ_POSES=1`
 stops there instead). It no longer parts by design: a ragdoll's pose and a function's scratch pose are poses of their own outside the pool on both sides,
-and the pool is tended as a tick opens (`posehome::pose_home_tend`). A `poses` parting is a difference to chase like any other.
+and the pool is tended as a tick opens (`posehome::pose_home_tend`); a man made inside a tick is lent the pool's end for his update (`posehome::stage_open`). A `poses` parting is a difference to chase like any other.
 
 **The die's count differs**: the two games have drawn a different number of times. Something upstream decided differently; the kept tick before it usually
 shows a path.
@@ -159,7 +159,7 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | stand-in | name | why |
 |---|---|---|
 | a record a seat, every camera and Input row that is no seat's (`io::take_host_half`) | (always) | the host samples input and moves its camera between ticks |
-| `BoxWorld.glass_open` hung after the import | (always) | bridge: the aim ray's hook through a holed pane is not carried |
+| every imported pose set told it is at home, every imported animator told it holds its body's position array | (always) | bridge: `PoseSet.home` and `anim.posIn` (a reference to `Character.pos`) are not carried |
 | the test driver's orders (`gives.txt`) | (always) | the scripted player calls `orders.give` between ticks |
 | the driver's `roomAt` that floods a room (`hostwrites.txt room_at`) | (always) | a question of the driver's that writes the game |
 | the commander's blow of a set wall charge (`hostwrites.txt wall_blow`, with `--wall`) | (always) | the scripted commander calls the module's `blow` between ticks |

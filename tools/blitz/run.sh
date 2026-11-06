@@ -52,7 +52,7 @@ intended() { case "$1" in
 esac; }
 I=$(intended "$M"); IT=${I%% *}
 if [ -n "$I" ] && [ "$R" != 2 ] && [ "$R" != 3 ]; then
-  FIRST=$(for f in "$OUT"/diff-*.tsv; do [ -f "$f" ] || continue; k=${f##*diff-}; k=${k%.tsv}; grep -qv 'known$' "$f" && echo "$k"; done | sort -n | head -1)
+  FIRST=$(for f in "$OUT"/diff-*.tsv; do [ -f "$f" ] || continue; k=${f##*diff-}; k=${k%.tsv}; grep -q . "$f" && echo "$k"; done | sort -n | head -1)
   PB=$(sed -n 's/^THE BLOCK FIRST PARTED AT TICK \([0-9]*\).*/\1/p' "$OUT/rust.log" | head -1)
   if { [ -n "$PB" ] || [ -n "$FIRST" ]; } && [ "${FIRST:-$IT}" -ge "$IT" ] && [ "${PB:-$IT}" -ge "$IT" ]; then
     echo "INTENDED DIFFERENCE, $M from tick $IT (first unknown path at a kept tick: ${FIRST:-none kept}; the block first parts: ${PB:-not in the ticks run}): ${I#* }. The Rust game is kept as it is (README)."
