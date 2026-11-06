@@ -424,9 +424,15 @@ pub fn hands(g: &mut crate::game::Game, gd: GuardId) {
     let (dx, dz) = (p[0] - hp[0], p[2] - hp[2]);
     let d = js::or(m::hyp2(dx, dz), 1.0);
     let mut t0 = tk.t0;
-    if let Some(row) = man(g, gd).take.as_mut() {
-        row.spot[0] = hp[0] + dx / d * 0.6;
-        row.spot[2] = hp[2] + dz / d * 0.6;
+    // (`T.spot[0] = …; T.spot[2] = …` IN PLACE. orders.ts hands that very object on as his goal (spottedFeet → order), so in the TypeScript his script's
+    //  goal and his settle watch's goal ARE the spot and creep with it: no new leg, the path and the watch kept. By value every creep read as a new goal.
+    //  So a goal and a watch that hold the spot's numbers as they were are written through, as qrf's write_station does for a station.)
+    let old_spot = tk.spot;
+    let new_spot = [hp[0] + dx / d * 0.6, old_spot[1], hp[2] + dz / d * 0.6];
+    if let Some(row) = man(g, gd).take.as_mut() { row.spot = new_spot; }
+    if g.gd[gd].script.as_ref().map_or(false, |s| s.goal == Some(old_spot)) {
+        if let Some(s) = g.gd[gd].script.as_mut() { s.goal = Some(new_spot); }
+        if let Some(mut w) = g.m.squad.settle_watch.get(gd).copied() { if w.goal == old_spot { w.goal = new_spot; g.m.squad.settle_watch.set(gd, w); } }
     }
     if d < k.take_reach + (if t0 >= 0.0 { 0.4 } else { 0.0 }) && open_to(g, p, h) {
         if t0 < 0.0 {

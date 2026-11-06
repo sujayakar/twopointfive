@@ -612,12 +612,15 @@ pub fn door_path_move(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk, 
         if let Some(post) = g.tab.orders_assignment[a].post {
             if flat(&post, &old) < 0.1 {
                 let goal: V3 = [q[0], post[1], q[2]];
-                g.tab.orders_assignment[a].post = Some(goal);
+                g.tab.orders_assignment[a].post = Some(goal); g.tab.orders_assignment[a].had = None;   // (a NEW ARRAY in `post`'s place: `A.had === A.post`, orders.ts:1472, is an identity, so the mark he had is no longer this one)
                 g.tab.orders_assignment[a].goal = goal;
                 if let Some(s) = g.gd[gd].script.as_mut() {
                     if let Some(sg) = s.goal {
                         if flat(&sg, &old) < 0.1 {
                             s.goal = Some(goal);
+                            // (`gd.script.goal = A.goal`: his goal IS the order's goal object now, so the order's next hand-over is no new leg,
+                            //  whatever was pending on the assignment)
+                            g.tab.orders_assignment[a].new_leg = false;
                         }
                     }
                 }
@@ -842,6 +845,8 @@ fn hold_clocks(g: &mut Game, gd: GuardId, t: f64, p: V3) {
 
 /// `gd.path === W.arr`: W.arr holds the man's path_serial as this walk laid it. (doorpath.ts:336, 337)
 fn path_is_arr(g: &Game, gd: GuardId, w: &crate::doorpath::Walk) -> bool {
+    crate::game::b_tap::tap(crate::game::b_tap::DOORPATH_ARR_ASKED);
+    if w.arr != Some(g.gd[gd].path_serial) { crate::game::b_tap::tap(crate::game::b_tap::DOORPATH_ARR_NEW); }
     w.arr == Some(g.gd[gd].path_serial)
 }
 
@@ -868,6 +873,7 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
         // (back from the fight, the order laid its own way round again)
         let a = crate::orders::squad_orders_of(g, gd).unwrap();
         let goal = g.tab.orders_assignment[a].goal;
+        g.tab.orders_assignment[a].new_leg = false;   // (`s.goal = A.goal`: the same object, as in `move` above)
         let s = g.gd[gd].script.as_mut().unwrap();
         s.goal = Some(goal);
         s.arrived = Some(false);

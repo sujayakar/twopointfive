@@ -345,7 +345,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                     }
                     let np = [p[0], 0.0, p[2]];
                     let aa = &mut g.tab.orders_assignment[a];
-                    aa.post = Some(np); aa.goal = v3::copy(np); aa.via.clear(); aa.new_leg = true;
+                    aa.post = Some(np); aa.had = None; aa.goal = v3::copy(np); aa.via.clear(); aa.new_leg = true;
                     d = 0.0;
                 }
             }
@@ -718,7 +718,7 @@ pub fn squad_orders_rest_short(g: &mut crate::game::Game, gd: GuardId, a: Orders
     crate::game::game_say(g, gd, "can't get through.", None, None, None);
     let now = g.time;
     let aa = &mut g.tab.orders_assignment[a];
-    aa.post = Some(q); aa.goal = v3::copy(q); aa.via.clear(); aa.mark_t = now; aa.moved_t = now; aa.new_leg = true;
+    aa.post = Some(q); aa.had = None; aa.goal = v3::copy(q); aa.via.clear(); aa.mark_t = now; aa.moved_t = now; aa.new_leg = true;
     g.stats.doorway.rest += 1;
     true
 }

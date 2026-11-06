@@ -1265,7 +1265,7 @@ pub fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
     let now = g.time;
     let at = pos_of(g, gd);
     let row = &mut g.tab.orders_assignment[a];
-    row.post = Some(to);
+    row.post = Some(to); row.had = None;   // (a NEW ARRAY in `post`'s place: `A.had === A.post`, orders.ts:1472, is an identity, so the mark he had is no longer this one)
     row.goal = v3::copy(to);
     row.new_leg = true;   // (a new array: an unguarded write, on Assignment.new_leg's list)
     row.via.clear();

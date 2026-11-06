@@ -372,7 +372,7 @@ pub fn team_known(g: &mut crate::game::Game, near: V3) -> crate::laststand::Team
         if !alive(g, d) { continue; }
         let gd = g.tab.roomfight_def[d].gd;
         let pt = g.tab.roomfight_def[d].pt;
-        if let Some(kn) = crate::belief::eyes_fix(g, gd, pt) {
+        if let Some(kn) = crate::belief::eyes_fix_def(g, gd, d) {
             if g.gd[gd].last_seen_t > -50.0 {
                 let seen = g.gd[gd].last_seen_t;
                 if g.time - seen < known_secs { pts.push(kn); }

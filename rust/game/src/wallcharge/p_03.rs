@@ -937,13 +937,14 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Flash, flash_at, [0.0, 0.0, 0.0],
         Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(99.0), who: Some(who), ..Default::default() }));
     crate::throwables::item_set_fired(g, it, true);
-    let last = g.messages.last().map(|m| (m.text.clone(), m.t));
-    let last_n = g.messages.len();
+    // (`m !== last`, wallcharge.ts:1078, asks whether the burst pushed a message: an identity. A message is its serial, dealt as it is pushed; the
+    //  list at its cap with the same words in the same tick would read "nothing new" by length, text and time)
+    let last = g.messages.last().map(|m| m.serial);
     let all = core::mem::take(&mut g.guards);
     crate::combat::detonate_stun(g, it, Some(true), None);
     g.guards = all;
     let fresh = match g.messages.last() {   // ('flashbang went off': this was not one)
-        Some(m) => (g.messages.len() != last_n || last.as_ref().map_or(true, |l| l.0 != m.text || l.1 != m.t)) && m.text.contains("flashbang"),
+        Some(m) => last != Some(m.serial) && m.text.contains("flashbang"),
         None => false,
     };
     if fresh { g.messages.pop(); }

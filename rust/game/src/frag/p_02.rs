@@ -640,7 +640,11 @@ fn flee_shade(g: &mut Game, from: V3, p: V3) -> bool {
 }
 
 /// Where a man in a grenade's line goes with `left` seconds on it; None: he drops where he is. (frag.ts fleeSpot)
-pub fn flee_spot(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at: V3, speed: f64, left: f64, accel: Option<f64>, wise: Option<&crate::frag::FleeSpotWise>, who: Option<GuardId>) -> Option<V3> {
+pub fn flee_spot(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at: V3, speed: f64, left: f64, accel: Option<f64>, wise: Option<&crate::frag::FleeSpotWise>, who: Option<GuardId>) -> Option<V3> { flee_spot_kept(g, c_2, at, speed, left, accel, wise, who).0 }
+
+/// `fleeSpot`, and whether its answer is THE LEG HE HAS (`wise.keep` itself, the object: frag.ts:765 asks `spot === keep.goal`, an identity; a spot
+/// weighed afresh with the kept goal's very numbers is another spot there). The body is fleeSpot's, whole.
+pub fn flee_spot_kept(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at: V3, speed: f64, left: f64, accel: Option<f64>, wise: Option<&crate::frag::FleeSpotWise>, who: Option<GuardId>) -> (Option<V3>, bool) {
     let accel = accel.unwrap_or(f64::INFINITY);
     let cpos = c_2.pos;
     let mut ask = match who { Some(w) => crate::picture::exposure_asker(g, w, Some(true)), None => None };
@@ -767,10 +771,10 @@ pub fn flee_spot(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at: V3,
             }
         }
     }
-    if (best.is_none() || best_open) && flee_shade(g, from, cpos) { return None; }
-    if best.is_none() && bar.is_some() && d0 < lethal_m { return bar; }
+    if (best.is_none() || best_open) && flee_shade(g, from, cpos) { return (None, false); }
+    if best.is_none() && bar.is_some() && d0 < lethal_m { return (bar, false); }
     if mind && best.is_some() && best_id != plain_id && best_id != 1 { g.stats.picture.moved += 1; }
-    best
+    (best, best.is_some() && best_id == 1)
 }
 
 /// A doorway a man can leave by as it stands. (frag.ts openWay)

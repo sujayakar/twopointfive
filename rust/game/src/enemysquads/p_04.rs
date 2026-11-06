@@ -764,7 +764,7 @@ fn tick_contact(g: &mut Game, q: EnemysquadsSquadId) {
         let (d, mine) = match (d, mine) { (Some(d), Some(r)) => (d, r), _ => continue };
         if g.time - g.gd[m].last_seen_t < 1.0 && (noticed(g, m) || glimpse(g, q, m)) {
             let pt = g.tab.roomfight_def[d].pt;
-            let p = match crate::belief::eyes_fix(g, m, pt) { Some(k) => k, None => pos_of(g, m) };
+            let p = match crate::belief::eyes_fix_def(g, m, d) { Some(k) => k, None => pos_of(g, m) };
             let r = match room_of(g, q, p, Some(0.75)) { Some(r) => r, None => mine };
             if !(noticed(g, m) && key_up(g, q, m, p, Some(&r), None)) { at = Some(p); room = Some(r); break; }
         }
