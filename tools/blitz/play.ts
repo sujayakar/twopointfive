@@ -2,7 +2,7 @@
 // PUPPET of a game that steps in the wasm face, the scripted player of tools/qa reads the puppet to decide its keys, and what it presses goes to the Rust
 // game as the tick's record. The TypeScript tick (`stepSeats`' body) never runs. This file stands the mission, holds every tick to the reference and reports.
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/play.ts <mission>:<seed> --ref DIR [--out DIR] [--ticks N] [--wasm FILE] [--audit] [--whole-every N]
-//                                             [--stale N] [--no-warm] [--no-asks] [--handback N] [--baseline puppet|rust] [--apply-check N] [--upload-every N] [--no-dress] [--go-on] [--quiet]
+//                                             [--stale N] [--no-warm] [--no-asks] [--menu-give] [--handback N] [--baseline puppet|rust] [--apply-check N] [--upload-every N] [--no-dress] [--go-on] [--quiet]
 // --ref DIR is the same mission and seed played by the plain TypeScript game (mission.ts wrote it: post.txt, the die's count and a hash of each part of
 // rust/sim's block after every tick; h<k>.bin, the host's half before every tick). Held to it, every tick:
 //   the host's half   what the scripted player pressed and where its camera stood as the tick opens: the first tick it differs is the first tick the puppet
@@ -19,7 +19,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { RustHost, DEFAULT_WASM } from './rust-host.ts';
 const argv = process.argv.slice(2), has = (n: string) => argv.includes(n), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
-if (!argv[0] || argv[0].startsWith('--')) { say('play.ts <mission>:<seed> --ref DIR [--out DIR] [--ticks N] [--wasm FILE] [--audit] [--whole-every N] [--stale N] [--no-warm] [--no-asks] [--handback N] [--baseline puppet|rust] [--apply-check N] [--upload-every N] [--no-dress] [--go-on] [--quiet]'); process.exit(64); }
+if (!argv[0] || argv[0].startsWith('--')) { say('play.ts <mission>:<seed> --ref DIR [--out DIR] [--ticks N] [--wasm FILE] [--audit] [--whole-every N] [--stale N] [--no-warm] [--no-asks] [--menu-give] [--handback N] [--baseline puppet|rust] [--apply-check N] [--upload-every N] [--no-dress] [--go-on] [--quiet]'); process.exit(64); }
 const [scn, seedS] = argv[0].split(':'), seed = +(seedS ?? 1);
 const REF = arg('--ref', ''), OUT = arg('--out', REF ? `${REF}/play` : ''), TICKS = +arg('--ticks', '1000000'), DIE = +arg('--die', '20942');
 const AUDIT = has('--audit'), STALE = +arg('--stale', '0'), GO_ON = has('--go-on'), QUIET = has('--quiet');
@@ -105,7 +105,7 @@ const was = Game.prototype.update; let tOut = 0, wall0 = 0, G0: any = null, stop
 Game.prototype.update = function (this: any, ...a: any[]) {
   const g = this; G0 = g; k++; const t0 = now(); if (k > 1) T.driver += t0 - tOut; else wall0 = t0;
   if (!H) H = RustHost.attach(g, { wasm: WASM, audit: AUDIT, wholeEvery: +arg('--whole-every', '0'), uploadEvery: +arg('--upload-every', '4'), dress: !has('--no-dress'), die: DIE, warm: has('--no-warm') ? 0 : undefined,
-    asks: !has('--no-asks'), handback: +arg('--handback', '0'), baseline: arg('--baseline', 'rust') as 'rust' | 'puppet', applyCheck: +arg('--apply-check', '50'), out: OUT || undefined, quiet: QUIET, say,
+    asks: !has('--no-asks'), menuGive: has('--menu-give'), handback: +arg('--handback', '0'), baseline: arg('--baseline', 'rust') as 'rust' | 'puppet', applyCheck: +arg('--apply-check', '50'), out: OUT || undefined, quiet: QUIET, say,
     beforeHost: (Hh, cmds) => { const t = now(); holdCalls(Hh); holdHost(g, Hh.B.reg, cmds); T.hostHold += now() - t; },
     afterStep: Hh => { const t = now(); holdBlock(Hh); T.compare += now() - t; } });
   const Hh = H, s0 = Hh.spent(), c0 = T.hostHold + T.compare;
@@ -155,7 +155,7 @@ function finish(g: any, code: number | null = null): never {
     say(`  the box world listed on the Rust side ${Hh.uploads.rust} times (${Hh.uploads.late} asked for on a tick not expected, ${Hh.uploads.missed} expected and not asked for)`); }
   if (STALE) { say(`  THE PUPPET HELD TO THE RUST GAME'S WHOLE STATE every ${STALE} ticks (${staleChecks} times): the fields in which it had fallen behind (the filtered list does not carry them, or the TypeScript round a step wrote them):`); say(table(STALE_F, +arg('--stale-show', '80'))); }
   say(`  the apply made new rows: ${JSON.stringify(Hh.made)}; no way back: ${[...Hh.noWay].map(([q, n]) => `${q} x${n}`).join(', ') || '-'}; no setter: ${[...Hh.noSetter].map(([q, n]) => `${q} x${n}`).join(', ') || '-'}; no window: ${[...Hh.noWindow].join(', ') || '-'}`);
-  say(`  STAND-INS used: a box's null markings made undefined ${Hh.standIns.marks} times; ${Hh.standIns.lists} missing empty lists made after whole applies; the menu's questions asked of the Rust game ${Hh.asked} times${Hh.o.asks === false ? ' (not installed: --no-asks)' : ''}`);
+  say(`  STAND-INS used: a box's null markings made undefined ${Hh.standIns.marks} times; the menu's questions asked of the Rust game ${Hh.asked} times${Hh.o.asks === false ? ' (not installed: --no-asks)' : ''}`);
   if (Hh.handbacks) say(`  HANDED BACK WHOLE: ${Hh.handbacks} times, ${Hh.handbacksInBeat} with a beat of the level's script running`);
   const sameEnd = !post.length ? false : (res ? refEnd.includes(`: ${res.end} (`) && refEnd.includes(`t ${res.t};`) && refEnd.includes(`team ${res.team} of ${res.of}`) && refEnd.includes(`PLAYED OUT at tick ${k} `) : les ? refEnd.includes(` at tick ${k}:`) && refEnd.includes(les.steps.map((s: any) => s.id).join(' ')) : false);
   // (THE CHECK CHECKED: a host's half compared on fewer ticks than were played and held to the reference is a check that died, not a play that passed)
