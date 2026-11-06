@@ -40,7 +40,7 @@ function run(name: string, extra: string[]): Run | null {
   const r = spawnSync('bash', a, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 }); built = true;
   if (!existsSync(`${dir}/rust.log`) || !existsSync(`${dir}/coop.json`)) { broke++; say(`- FAIL — ${name}: the game could not be run (run.sh exit ${r.status})\n    ${(r.stdout + r.stderr).trim().split('\n').slice(-3).join(' | ').slice(0, 400)}`); red++; return null; }
   const rust = readFileSync(`${dir}/rust.log`, 'utf8'), coop = JSON.parse(readFileSync(`${dir}/coop.json`, 'utf8'));
-  const parts = [...rust.matchAll(/FIRST PARTED AT TICK (\d+)/g)].map(m => +m[1]), parted = parts.length ? Math.min(...parts) : 0, panic = rust.match(/PANIC in tick \d+.*/)?.[0] ?? '';
+  const parts = [...rust.matchAll(/FIRST PARTED AT TICK (\d+)/g), ...rust.matchAll(/^TICK (\d+);[^\n]*block PARTS in/gm)].map(m => +m[1]), parted = parts.length ? Math.min(...parts) : 0, panic = rust.match(/PANIC in tick \d+.*/)?.[0] ?? '';
   return { dir, code: r.status ?? 3, rust, coop, inStep: !parted && !panic && /^DONE: /m.test(rust), parted, panic, ticks: coop.ticks };
 }
 /** the whole states a game kept are large (about 8 MB each) and read once: gone unless --keep-blobs */
