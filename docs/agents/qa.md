@@ -297,6 +297,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `TOOLNEAR_BREAK` fails all six rows). `entrypoints-count`: NOT mended, red on both stands, a row: one moved point in the killhouse's bunks
   cannot see the point his gun is held on, the frame's middle; the mover's own rule, a line to any third of the opening, passes (could be real:
   the door tools' owner's to say which line is promised).
+  `orderui-door` (11-06): read, NOT mended, its row put right. One blue man's fall-in mark is dealt 0.31 m from Sam on the page's stand; he stands
+  0.68 m short of it, called arrived, for as long as he is watched (not a settle). Could be real: the squad's owner's.
   tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
