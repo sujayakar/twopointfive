@@ -621,7 +621,7 @@ pub fn door_y() -> Vec<f64> { alloc::vec![1.0, 1.8] }
 pub fn near_eyes() -> Vec<crate::fogofwar::FogEye> { Vec::new() }
 
 /// (src/game/fogofwar.ts:420 nearD2: a table nothing writes)
-pub fn near_d2() -> Vec<f64> { alloc::vec![142.0679035618402, 142.9169212920686, 160.0574919308949, 172.71365506199132, 176.2782920976893] }
+pub fn near_d2() -> Vec<f64> { alloc::vec![142.04637383110583, 142.89716734425895, 160.0359172375455, 172.68892497020053, 176.25702823037307] }
 
 /// (src/game/fogofwar.ts:422 IN_ORDER)
 pub const IN_ORDER: f64 = 106181136.0;

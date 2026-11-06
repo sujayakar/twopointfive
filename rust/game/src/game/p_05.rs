@@ -536,7 +536,8 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     for &s in &seats {
         let old = crate::cmd::seat_man(g, s);
         let light = g.pl[old].light;
-        // (manLeaves(v.player.char, v.player): not in the game, notInTheGame.txt)
+        let c = g.pl[old].ch;
+        crate::sim_men_store::man_leaves(g, c);   // (his row is free for the fresh man)
         let spawn = g.level.player_spawn;
         let index = g.tab.cmd_seat[s].index;
         let at = crate::seats::spot_beside(g, spawn, index);

@@ -40,3 +40,7 @@ pub fn squad_smoke_key(g: &mut crate::game::Game, input: InputId) -> bool { todo
 
 /// (src/game/squadsmoke.ts:157 squadSmokeSummary)
 pub fn squad_smoke_summary(g: &mut crate::game::Game) -> String { todo!() }
+
+/// INVENTED: the body of the row's issue closure (squadsmoke.ts:135-143)
+pub fn row_smoke_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+

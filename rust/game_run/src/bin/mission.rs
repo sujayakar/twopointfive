@@ -3,7 +3,7 @@
 //!   mission <dir> [ticks] [--keep "1,21,300-310"] [--every N] [--after N]
 //!
 //! Reads from <dir>, as tools/blitz/mission.ts wrote them: c1.bin (the state as the first tick opens), s0.bin (rust/sim's block then), host.txt, post.txt,
-//! gives.txt, hostwrites.txt, menrows.txt, level.txt, knobs.bin, and h<k>.bin (the host's half) before each tick.
+//! gives.txt, hostwrites.txt, knobs.bin, and h<k>.bin (the host's half) before each tick.
 //!
 //! THE GAME IS IMPORTED ONCE. From then on the Rust game is its own: its die, its knobs, its poses, its lights. Before each tick it takes only the host's half
 //! (see `host_half`), because the host's code between two ticks is not run on this side. AFTER EVERY TICK the block of rust/sim is hashed part by part and
@@ -11,7 +11,7 @@
 //! the block are written (n<k>.bin, ns<k>.bin), `--after` more ticks run, and the exit code is 1. A panic prints `PANIC in tick <k>`, its message and
 //! place and the game's frames of the backtrace; the exit code is then 2. A kept tick (--keep / --every) writes n<k>.bin and ns<k>.bin for tools/blitz/diff.ts.
 //!
-//! BLITZ_SKIP=<names> leaves a host stand-in out (debris, level, men, lights, upload, rects), to learn by a run whether it is still needed.
+//! BLITZ_SKIP=<names> leaves one of the host's calls round a step out (lights, upload), to see by a run what it is for.
 use game::ids::Id;
 use game::io::Io;
 use std::io::Write;
@@ -24,7 +24,6 @@ const NAMES: [&str; 13] = ["head", "dice", "doors", "falls", "props", "slabs", "
 /// POSES: a dead man's ragdoll drive holds a pose the TypeScript keeps OUTSIDE the pool for good, and a Rust pose lives in the pool, so from the first death
 /// the pool's bytes differ by that pose and say nothing more. That part is reported when it first parts and is not the alarm.
 const POSES: usize = 11;
-const MEN: usize = 7;
 
 /// one part's hash: its words up to the last that is not zero (a parked block of the TypeScript's may be shorter than the Rust slot; the zeros say nothing)
 fn part_hash(w: &[u32]) -> u32 {
@@ -40,9 +39,9 @@ fn ranges(s: &str) -> Vec<(usize, usize)> {
 }
 
 /// HARNESS STAND-IN: THE HOST'S HALF BETWEEN TWO TICKS (h<k>.bin). `Game.update` round the step and the headless host's own asks are not run on this side, so
-/// what they wrote is taken as tick k opens: the record the host sampled (`cmd_buf`), the host's own camera and Input (every row that is no seat's), and the
-/// dialogue's room memo once the HUD's asks have filled it. Nothing else of the TypeScript's state is taken.
-fn host_half(g: &mut game::game::Game, dir: &str, k: usize, skip: &dyn Fn(&str) -> bool) -> Option<game::cmd::PlayerCmd> {
+/// what they wrote is taken as tick k opens: the record the host sampled (`cmd_buf`) and the host's own camera and Input (every row that is no seat's).
+/// Nothing else of the TypeScript's state is taken.
+fn host_half(g: &mut game::game::Game, dir: &str, k: usize) -> Option<game::cmd::PlayerCmd> {
     let hb = std::fs::read(format!("{}/h{}.bin", dir, k)).ok()?;
     let mut r = game::io::R::new(&hb);
     let cmd_in = <Option<game::cmd::PlayerCmd> as Io>::r(&mut r);
@@ -50,14 +49,12 @@ fn host_half(g: &mut game::game::Game, dir: &str, k: usize, skip: &dyn Fn(&str) 
     let cams: Vec<game::camera::FollowCamera> = (0..nc).map(|_| <game::camera::FollowCamera as Io>::r(&mut r)).collect();
     let ni = <u32 as Io>::r(&mut r) as usize;
     let inputs: Vec<game::input::Input> = (0..ni).map(|_| <game::input::Input as Io>::r(&mut r)).collect();
-    let rects = <Option<game::dialogue::DialogueModRoomRectsValue> as Io>::r(&mut r);
     assert!(r.p == hb.len(), "h{}.bin: {} bytes left over", k, hb.len() - r.p);
     if k == 1 { return Some(g.cmd_buf.clone().expect("the start holds no record of the tick's input")); }
     let seat_cams: Vec<game::ids::CameraId> = g.seats.iter().map(|s| g.tab.cmd_seat[*s].cam).collect();
     for c in g.tab.camera.ids().collect::<Vec<_>>() { if !seat_cams.contains(&c) && c.ix() < cams.len() { g.tab.camera[c] = cams[c.ix()].clone(); } }
     let seat_ins: Vec<game::ids::InputId> = g.seats.iter().map(|s| g.tab.cmd_seat[*s].input).collect();
     for i in g.tab.input.ids().collect::<Vec<_>>() { if !seat_ins.contains(&i) && i.ix() < inputs.len() { g.tab.input[i] = inputs[i.ix()].clone(); } }
-    if !skip("rects") && g.m.dialogue.room_rects.is_none() { g.m.dialogue.room_rects = rects; }
     g.cmd_buf = cmd_in.clone();
     Some(cmd_in.expect("the TypeScript state holds no record of the tick's input"))
 }
@@ -78,30 +75,6 @@ fn give(g: &mut game::game::Game, k: usize, l: &str) {
     };
     let why = game::orders::squad_orders_give(g, w[1], Some(&t), who, None);
     println!("  the driver's order before tick {}: {} -> {:?}", k, l, why);
-}
-
-/// HARNESS STAND-IN: THE MEN'S COLUMNS WRITTEN BACK. In the TypeScript a man's owner / rank / reason / since ARE the block's `men` columns (src/sim/men);
-/// the Rust skeleton has them as plain fields of Guard and the bridge does not say which row a man has (menrows.txt does), so the Rust tick never writes that
-/// part. A row whose `gen` is even is free: its man has left and the row stands at zeros (hostwrites.txt `men_gen`, from the TypeScript's column).
-fn men_back(g: &game::game::Game, menrows: &[(usize, usize)], men_gen: &[u32]) {
-    unsafe {
-        let men = (sim::state::addr(0) as *mut u8).add(sim::state::PARTS[MEN].off);
-        for (r, ge) in men_gen.iter().enumerate() { (men.add(sim::men::COLS[1] + 4 * r) as *mut u32).write_unaligned(*ge); }
-        for (id, row) in menrows.iter() {
-            let gd = game::ids::GuardId::from_ix(*id);
-            if gd.ix() >= g.gd.len() { continue; }
-            let m = &g.gd[gd];
-            if !men_gen.is_empty() && men_gen[*row] & 1 == 0 {
-                (men.add(sim::men::COLS[0] + 8 * row) as *mut f64).write_unaligned(0.0);
-                for c in 2..5 { (men.add(sim::men::COLS[c] + 4 * row) as *mut u32).write_unaligned(0); }
-                continue;
-            }
-            (men.add(sim::men::COLS[0] + 8 * row) as *mut f64).write_unaligned(m.since);
-            (men.add(sim::men::COLS[2] + 4 * row) as *mut u32).write_unaligned(m.owner);
-            (men.add(sim::men::COLS[3] + 4 * row) as *mut u32).write_unaligned(m.rank);
-            (men.add(sim::men::COLS[4] + 4 * row) as *mut u32).write_unaligned(m.reason);
-        }
-    }
 }
 
 fn main() {
@@ -126,7 +99,6 @@ fn main() {
     let s0 = rd("s0.bin");
     let host: Vec<Vec<f64>> = text("host.txt").lines().map(|l| l.split(' ').map(|x| x.parse().unwrap()).collect()).collect();
     let gives: Vec<String> = text("gives.txt").lines().map(String::from).collect();
-    let menrows: Vec<(usize, usize)> = text("menrows.txt").lines().filter_map(|l| { let mut w = l.split(' '); Some((w.next()?.parse().ok()?, w.next()?.parse().ok()?)) }).collect();
     let hostwrites: Vec<String> = text("hostwrites.txt").lines().map(String::from).collect();
     let len = core::mem::size_of::<sim::state::State>();
     println!("runner: rust/sim's block is {} bytes here, {} in s0.bin; layout word {}", len, s0.len(), sim::state::LAYOUT);
@@ -153,17 +125,10 @@ fn main() {
             core::ptr::copy_nonoverlapping(s0.as_ptr(), at, s0.len().min(len));
         }
         g.sim = 0;
-        // HOST STEP: the TypeScript side runs with every DRESS row down (mission.ts dressAll(false)); the bridge does not carry the DRESS table, and the one row a
-        // Rust body reads is `debris` (debris.ts: under DEBRIS.dress a host that draws nothing holds no pool).
-        if !skip("debris") { g.m.dress.dress.debris = false; }
-        // HOST STEP: the level's name (level.txt). The TypeScript keeps it in a table keyed by the Level object, which the bridge cannot walk, so an imported game
-        // has none; a tick asks it for the level's lying snow (snowBog.ts snowBogMay), and a game has one level: the table's one row.
-        if !skip("level") { let name = std::fs::read_to_string(format!("{}/level.txt", dir)).unwrap_or_default(); let name = name.trim(); if !name.is_empty() && g.m.scene_level_load.level_names.len() == 0 { g.m.scene_level_load.level_names.set(0, name.to_string()); println!("the level's name, handed over: {}", name); } }
         let (mut parted, mut spent, mut worst) = (0usize, std::time::Duration::ZERO, std::time::Duration::ZERO);
         let (mut n_parted, mut was_same, mut pool_parted, mut die_parted, mut done) = (0usize, true, false, 0usize, 0usize);
-        let mut men_gen: Vec<u32> = Vec::new();
         for k in 1..=ticks {
-            let cmd = match host_half(&mut g, &dir, k, &skip) { Some(c) => c, None => { println!("no h{}.bin: the TypeScript's run ended at tick {}", k, k - 1); break; } };
+            let cmd = match host_half(&mut g, &dir, k) { Some(c) => c, None => { println!("no h{}.bin: the TypeScript's run ended at tick {}", k, k - 1); break; } };
             for l in gives.iter().filter(|l| l.split(' ').next().and_then(|x| x.parse::<usize>().ok()) == Some(k)) { give(&mut g, k, l); }
             // HARNESS STAND-IN: the test driver's own question that writes the game (`g.fight.roomAt(p)` between ticks floods a room and keeps it)
             for l in hostwrites.iter().filter(|l| l.split(' ').next().and_then(|x| x.parse::<usize>().ok()) == Some(k)) {
@@ -184,11 +149,9 @@ fn main() {
             done = k;
             for l in hostwrites.iter().filter(|l| l.split(' ').next().and_then(|x| x.parse::<usize>().ok()) == Some(k)) {
                 let mut w = l.splitn(3, ' '); let (_, what, rest) = (w.next(), w.next().unwrap_or(""), w.next().unwrap_or(""));
-                if what == "men_gen" { men_gen = rest.split(',').map(|x| x.parse::<u32>().unwrap()).collect(); println!("  the men's rows after tick {}: a man left or entered", k); }
                 // HOST STEP: the autosave controller is the host's, and its one write into the game is the chronicle's row, the tick's last thing
                 if what == "chron_save" { let label = rest.trim_matches('"'); let _ = game::chronicle::chron_checkpoint(&mut g, game::chronicle::ChronCheckpointWhat::Save, Some(label)); println!("  the host's checkpoint after tick {}: {}", k, rest); }
             }
-            if !skip("men") { men_back(&g, &menrows, &men_gen); }
             if k == 1 {
                 if let Ok(want) = std::fs::read(format!("{}/knobs.bin", dir)) {
                     let n = sim::knobs::len(0);

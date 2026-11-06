@@ -197,7 +197,7 @@ pub struct WindStats {
 }
 
 /// (src/game/wind.ts:37 WIND_FIELD: a table nothing writes)
-pub fn wind_field() -> crate::wind::WINDFIELD { todo!() }
+pub fn wind_field() -> crate::wind::WINDFIELD { crate::wind::WINDFIELD {  } }
 
 /// (src/game/wind.ts:53 WIND_DEFAULTS: a table nothing writes)
 pub fn wind_defaults() -> crate::knobs::WindK { crate::knobs::page_wind() }

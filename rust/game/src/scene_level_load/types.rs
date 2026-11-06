@@ -7,12 +7,12 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub struct SceneLevelLoadMod {
     /// (src/scene/levelLoad.ts:47 levelNames)
-    pub level_names: JsMap<u32, String>,
+    pub level_names: Option<String>,
 }
 impl SceneLevelLoadMod {
     pub fn blank() -> Self {
         SceneLevelLoadMod {
-            level_names: JsMap::new(),
+            level_names: None,
         }
     }
 }

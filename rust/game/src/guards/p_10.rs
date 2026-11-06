@@ -364,7 +364,7 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
         keys: Some(Vec::new()),
     });
     let (fi, f0, f1) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
-    let def = crate::rig_props::p_03::torch_light_def_in(g, &format!("unitlight{}", id), id, fi, f0, f1);
+    let def = crate::rig_props::torch_light_def(g, &format!("unitlight{}", id), id, fi, f0, f1);
     let fl = crate::render_lights::light_set_add(g, def);
     let look = crate::game::GuardNewLook {
         tint2: Some(match o.tint2 { Some(t) => t, None => *crate::guards::team_tint2().get(String::from(o.team.as_str())).unwrap() }),
@@ -420,6 +420,8 @@ pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
         if g.gd[o].leader == Some(gd) { g.gd[o].leader = None; }
         if matches!(&g.gd[o].task, Some(crate::game::GuardTask::CheckOn(t)) if t.who == gd) { g.gd[o].task = None; }
     }
+    let c = g.gd[gd].ch;
+    crate::sim_men_store::man_leaves(g, c);
     true
 }
 

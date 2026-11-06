@@ -3,6 +3,16 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
+/// KitRow.get and .set: a row that is not one field of the card reads and writes it itself. The arm says which
+#[derive(Clone, Debug)]
+pub enum KitRowGet {
+    Mix,
+    Big,
+    Primary,
+    Secondary,
+    SlotCan { slot: crate::gunslots::GunSlot },
+}
+
 /// (TypeScript: SlotTable, src/game/kit.ts:248)
 #[derive(Clone, Debug)]
 pub struct SlotTable {
@@ -342,6 +352,8 @@ pub struct KitRow {
     pub label: String,
     pub values: Vec<crate::kit::KitValue>,
     pub item: Option<String>,
+    /// kit.ts:767: a row that reads the card itself
+    pub get: Option<crate::kit::KitRowGet>,
 }
 impl KitRow {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -351,6 +363,7 @@ impl KitRow {
             label: String::new(),
             values: Vec::new(),
             item: None,
+            get: None,
         }
     }
 }
@@ -1338,10 +1351,10 @@ pub fn gun_note() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(S
 pub fn gun_short() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("fn2000"), String::from("FN2000")); t.set(String::from("aks74u"), String::from("AKS-74U")); t.set(String::from("fiveseven"), String::from("Five-seveN")); t.set(String::from("guard9mm"), String::from("9 mm pistol")); t.set(String::from("m870"), String::from("M870 shotgun")); t.set(String::from("ak74m"), String::from("")); t.set(String::from("akms"), String::from("")); t.set(String::from("mk12"), String::from("Mk 12")); t.set(String::from("mp7"), String::from("MP7")); t.set(String::from("mk46"), String::from("Mk 46")); t.set(String::from("m1014"), String::from("M1014")); t.set(String::from("hk45"), String::from("HK45")); t.set(String::from("g18"), String::from("Glock 18")); t.set(String::from("pkm"), String::from("")); t.set(String::from("mk18bare"), String::from("FN2000")); t.set(String::from("g19bare"), String::from("Five-seveN")); t } }
 
 /// (src/game/kit.ts:791 suitRow: a table nothing writes)
-pub fn suit_row() -> crate::kit::KitRow { crate::kit::KitRow { field: crate::kit::KitField::Suit, label: String::from("Suit"), values: alloc::vec![crate::kit::KitValue::Text(String::from("issued")), crate::kit::KitValue::Text(String::from("black")), crate::kit::KitValue::Text(String::from("grey")), crate::kit::KitValue::Text(String::from("navy")), crate::kit::KitValue::Text(String::from("olive")), crate::kit::KitValue::Text(String::from("jungle")), crate::kit::KitValue::Text(String::from("khaki")), crate::kit::KitValue::Text(String::from("desert"))], item: None } }
+pub fn suit_row() -> crate::kit::KitRow { crate::kit::KitRow { get: None, field: crate::kit::KitField::Suit, label: String::from("Suit"), values: alloc::vec![crate::kit::KitValue::Text(String::from("issued")), crate::kit::KitValue::Text(String::from("black")), crate::kit::KitValue::Text(String::from("grey")), crate::kit::KitValue::Text(String::from("navy")), crate::kit::KitValue::Text(String::from("olive")), crate::kit::KitValue::Text(String::from("jungle")), crate::kit::KitValue::Text(String::from("khaki")), crate::kit::KitValue::Text(String::from("desert"))], item: None } }
 
 /// (src/game/kit.ts:792 trimRow: a table nothing writes)
-pub fn trim_row() -> crate::kit::KitRow { crate::kit::KitRow { field: crate::kit::KitField::Trim, label: String::from("Trim"), values: alloc::vec![crate::kit::KitValue::Text(String::from("issued")), crate::kit::KitValue::Text(String::from("black")), crate::kit::KitValue::Text(String::from("red")), crate::kit::KitValue::Text(String::from("blue")), crate::kit::KitValue::Text(String::from("green")), crate::kit::KitValue::Text(String::from("amber")), crate::kit::KitValue::Text(String::from("white"))], item: None } }
+pub fn trim_row() -> crate::kit::KitRow { crate::kit::KitRow { get: None, field: crate::kit::KitField::Trim, label: String::from("Trim"), values: alloc::vec![crate::kit::KitValue::Text(String::from("issued")), crate::kit::KitValue::Text(String::from("black")), crate::kit::KitValue::Text(String::from("red")), crate::kit::KitValue::Text(String::from("blue")), crate::kit::KitValue::Text(String::from("green")), crate::kit::KitValue::Text(String::from("amber")), crate::kit::KitValue::Text(String::from("white"))], item: None } }
 
 /// (src/game/kit.ts:794 YOU_GUNS: a table nothing writes)
 pub fn you_guns() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("rifle"), String::from("FN2000 + Five-seveN")); t.set(String::from("pistol"), String::from("Five-seveN only")); t.set(String::from("shotgun"), String::from("M870 shotgun + Five-seveN")); t } }
@@ -1353,7 +1366,7 @@ pub fn you_guns_can_table() -> crate::kit::YOUGUNSCAN { crate::kit::YOUGUNSCAN {
 pub const SHOTGUN_NOTE: &str = "drops a man across a room, poor down a corridor; shoots a lock off its door";
 
 /// (src/game/kit.ts:807 cansRow: a table nothing writes)
-pub fn cans_row() -> crate::kit::KitRow { crate::kit::KitRow { field: crate::kit::KitField::Cans, label: String::from("Cans"), values: alloc::vec![crate::kit::KitValue::Text(String::from("issued")), crate::kit::KitValue::Text(String::from("smoke")), crate::kit::KitValue::Text(String::from("even")), crate::kit::KitValue::Text(String::from("stun"))], item: None } }
+pub fn cans_row() -> crate::kit::KitRow { crate::kit::KitRow { get: None, field: crate::kit::KitField::Cans, label: String::from("Cans"), values: alloc::vec![crate::kit::KitValue::Text(String::from("issued")), crate::kit::KitValue::Text(String::from("smoke")), crate::kit::KitValue::Text(String::from("even")), crate::kit::KitValue::Text(String::from("stun"))], item: None } }
 
 /// (src/game/kit.ts:826 BIG_WORD: a table nothing writes)
 pub fn big_word() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("none"), String::from("empty")); t.set(String::from("shotgun"), String::from("breaching shotgun")); t.set(String::from("hammer"), String::from("dynamic hammer")); t.set(String::from("wall"), String::from("wall charge")); t } }

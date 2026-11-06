@@ -134,7 +134,7 @@ pub fn wx() -> crate::sim_weatherhome::WX { crate::sim_weatherhome::WX { live: 0
 pub const WX_BIT: f64 = 1024.0;
 
 /// (src/sim/weatherhome.ts:29 WX_KNOBS: a table nothing writes)
-pub fn wx_knobs() -> crate::sim_weatherhome::WXKNOBS { todo!() }
+pub fn wx_knobs() -> crate::sim_weatherhome::WXKNOBS { crate::sim_weatherhome::WXKNOBS { here: crate::FnField } }
 
 /// (src/sim/weatherhome.ts:33 WX_WATCH: a table nothing writes)
-pub fn wx_watch() -> crate::sim_weatherhome::WXWATCH { todo!() }
+pub fn wx_watch() -> crate::sim_weatherhome::WXWATCH { crate::sim_weatherhome::WXWATCH { on: false } }

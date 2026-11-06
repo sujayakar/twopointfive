@@ -45,6 +45,8 @@ const compiled = (expr: string) => { let f = fieldFn.get(expr); if (!f) { f = ne
 // ---- what a game's walk keeps between exports
 class Book { ids = new Map<string, Map<object, number>>(); lists = new Map<string, object[]>(); serial = new WeakMap<object, number>(); nextSerial = 1;
   first = new Map<object, string>();
+  /** poses that have no place in the pool, in the order first met: their floats go at the end of the bytes */
+  loose = new Map<object, number>();
   idOf(id: string, o: object): number { let M = this.ids.get(id); if (!M) { M = new Map(); this.ids.set(id, M); this.lists.set(id, []); } let i = M.get(o); if (i === undefined) { i = M.size; M.set(o, i); this.lists.get(id)!.push(o); this.first.set(o, AT); } return i; }
   listOf(id: string): object[] { return this.lists.get(id) ?? []; }
   serialOf(o: object): number { let s = this.serial.get(o); if (s === undefined) { s = this.nextSerial++; this.serial.set(o, s); } return s; } }
@@ -70,6 +72,10 @@ export const ROWS = new Map<string, { n: number; first: string }>();
 
 function zero(n: Node, o: Out): void { switch (n.k) { case 'f64': o.f64(0); return; case 'f32': o.f32(0); return; case 'bool': case 'u8': case 'i8': o.u8(0); return; case 'u16': case 'i16': o.u16(0); return; case 'u32': case 'i32': case 'usize': case 'id': o.u32(0); return; case 'u64': case 'i64': o.f64(0); return; case 'str': case 'vec': case 'map': case 'set': o.u32(0); return; case 'opt': o.u8(0); return; case 'unit': return; case 'arr': for (let i = 0; i < n.n; i++) zero(n.of, o); return; case 'tup': for (const x of n.of) zero(x, o); return; case 'type': { const T = SCHEMA.types[n.path]; if (T.k === 'struct') for (const f of T.fields) zero(parse(f.ty), o); else if (T.k === 'enum') o.u16(0); else if (T.k === 'data' || T.k === 'handEnum') { o.u16(0); const a = T.k === 'data' ? T.vars[0]?.ty : (T.arms[0].match(/\((.*)\)/)?.[1]); if (a) zero(parse(a), o); } return; } } }
 
+/** a pose outside the pool has this place and its number in `loose` (rust: Pose::LOOSE) */
+const LOOSE = 0xffff0000;
+/** every field and map key that held an object's identity serial on this export: serial-fields.json, schema.serial */
+export const SERIALS = new Set<string>();
 let G: any; let BK: Book; let B: any;
 const isTyped = (v: any) => ArrayBuffer.isView(v) && !(v instanceof DataView);
 function keysOf(v: any): { keys: unknown[]; get: (k: any) => unknown } | null {
@@ -80,6 +86,7 @@ function keysOf(v: any): { keys: unknown[]; get: (k: any) => unknown } | null {
   return null;
 }
 function wKey(K: Node, k: unknown, o: Out): void {
+  if (K.k === 'u32' && k && typeof k === 'object') { SERIALS.add(`${AT}{}`); o.u32(BK.serialOf(k)); return; }
   if (K.k === 'id' && K.id === 'PlayerId' && k && typeof k === 'object' && 'player' in (k as object) && (k as any).player && 'seats' in (k as object)) { wr(K, (k as any).player, o); return; }   // a table of a player's, keyed by his seat's view
   if (K.k === 'f64' && typeof k === 'string') { wr(K, Number(k), o); return; }
   wr(K, k, o);
@@ -96,7 +103,7 @@ function wr(n: Node, v: any, o: Out): void {
     case 'bool': if (v && typeof v.liveKeys === 'function') { o.u8(v.has(G) ? 1 : 0); return; } o.u8(v ? 1 : 0); return;
     case 'u8': o.u8(v | 0); return; case 'i8': o.u8(v & 255); return; case 'u16': o.u16(v | 0); return; case 'i16': o.u16(v & 65535); return;
     case 'i32': if (typeof v !== 'number') miss('not a number', v); o.i32(v | 0); return;
-    case 'u32': if (v && typeof v === 'object') { o.u32(BK.serialOf(v)); return; } if (typeof v !== 'number') { miss('not a number', v); o.u32(0); return; } o.u32(v); return;
+    case 'u32': if (v && typeof v === 'object') { SERIALS.add(AT); o.u32(BK.serialOf(v)); return; } if (typeof v !== 'number') { miss('not a number', v); o.u32(0); return; } o.u32(v); return;
     case 'usize': if (typeof v !== 'number' || !Number.isInteger(v)) { miss('not a whole number', v); o.u32(0); return; } o.u32(v); return;
     case 'u64': case 'i64': o.room(8); o.dv.setBigInt64(o.n, BigInt(typeof v === 'bigint' ? v : Math.trunc(v ?? 0)), true); o.n += 8; return;
     case 'str': { if (typeof v !== 'string') { miss('not a string', v); o.u32(0); return; } const b = UTF8.encode(v); o.u32(b.length); o.bytes(b); return; }
@@ -140,9 +147,17 @@ function helpers(g: any, knobs: Record<string, unknown>) {
   const reg = sideRegistry(); const side = new Map<string, unknown>();
   for (const t of reg.tables as any[]) side.set(t.sideName, t); for (const r of reg.roots) side.set(r.name, r.obj);
   const vars = new Map(reg.vars.map(v => [v.name, v]));
-  const seen = new Set<string>(); return { knob: (n: string) => knobs[n], side: (n: string) => { const V = vars.get(n); if (V) return V.get(); if (side.has(n)) { const t: any = side.get(n); return t; } if (!seen.has(n)) { seen.add(n); miss(`not registered: ${n}`); } return undefined; }, top: (file: string, name: string, sideName: string) => { const T = (globalThis as any).__tpsTop?.[file]; if (T && name in T) return T[name]; const V = vars.get(sideName); if (V) return V.get(); if (side.has(sideName)) return side.get(sideName); if (!seen.has(sideName)) { seen.add(sideName); miss(`no window on ${sideName}: run with --preload tools/blitz/expose.ts`); } return undefined; }, whoOf: (c: any) => { for (const gd of [...(g.guards ?? []), ...BK.listOf('GuardId')] as any[]) if (gd.char === c) return { arm: 0, ty: 'GuardId', v: gd }; for (const s of g.seats ?? []) { const p = s.own?.player; if (p?.char === c) return { arm: 1, ty: 'PlayerId', v: p }; } if (g.player?.char === c) return { arm: 1, ty: 'PlayerId', v: g.player }; for (const p of BK.listOf('PlayerId') as any[]) if (p.char === c) return { arm: 1, ty: 'PlayerId', v: p }; return null; }, coversOf: (gd: any) => { const v = gd.covers; if (!v) return null; const D = g.fight?.defs?.find?.((d: any) => d.gd === gd); return D && D.pt === v ? { arm: 0 } : { arm: 1, ty: 'V3', v }; }, boxIx: (b: object) => { let M = BOXIX.get(g.col); if (!M) { M = new Map(g.col.boxes.map((x: object, i: number) => [x, i])); BOXIX.set(g.col, M!); } return M!.get(b); }, mapVals: (m: any, f: (r: unknown) => unknown) => { const out = new Map(); for (const k of m.liveKeys ? m.liveKeys() : m.keys()) out.set(k, f(m.get(k))); return out; }, ownPose: (p: any) => { miss('a pose not in the pool: its columns are not carried', p.numNodes); return 0xffffffff; }, serialOf: (o: object) => BK.serialOf(o), idOf: (id: string, o: object) => BK.idOf(id, o), raw: rawKey, g };
+  const seen = new Set<string>(); return { knob: (n: string) => knobs[n], side: (n: string) => { const V = vars.get(n); if (V) return V.get(); if (side.has(n)) { const t: any = side.get(n); return t; } if (!seen.has(n)) { seen.add(n); miss(`not registered: ${n}`); } return undefined; }, top: (file: string, name: string, sideName: string) => { const T = (globalThis as any).__tpsTop?.[file]; if (T && name in T) return T[name]; const V = vars.get(sideName); if (V) return V.get(); if (side.has(sideName)) return side.get(sideName); if (!seen.has(sideName)) { seen.add(sideName); miss(`no window on ${sideName}: run with --preload tools/blitz/expose.ts`); } return undefined; }, whoOf: (c: any) => { for (const gd of [...(g.guards ?? []), ...BK.listOf('GuardId')] as any[]) if (gd.char === c) return { arm: 0, ty: 'GuardId', v: gd }; for (const s of g.seats ?? []) { const p = s.own?.player; if (p?.char === c) return { arm: 1, ty: 'PlayerId', v: p }; } if (g.player?.char === c) return { arm: 1, ty: 'PlayerId', v: g.player }; for (const p of BK.listOf('PlayerId') as any[]) if (p.char === c) return { arm: 1, ty: 'PlayerId', v: p }; return null; }, coversOf: (gd: any) => { const v = gd.covers; if (!v) return null; const D = g.fight?.defs?.find?.((d: any) => d.gd === gd); return D && D.pt === v ? { arm: 0 } : { arm: 1, ty: 'V3', v }; }, boxIx: (b: object) => { let M = BOXIX.get(g.col); if (!M) { M = new Map(g.col.boxes.map((x: object, i: number) => [x, i])); BOXIX.set(g.col, M!); } return M!.get(b); }, mapVals: (m: any, f: (r: unknown) => unknown) => { const out = new Map(); for (const k of m.liveKeys ? m.liveKeys() : m.keys()) out.set(k, f(m.get(k))); return out; }, ownPose: (p: any) => { let i = BK.loose.get(p); if (i === undefined) { i = BK.loose.size; BK.loose.set(p, i); } return LOOSE + i; }, serialOf: (o: object) => { SERIALS.add(AT); return BK.serialOf(o); }, idOf: (id: string, o: object) => BK.idOf(id, o), raw: rawKey, g };
 }
 
+export const bookOf = (g: object) => BOOKS.get(g);
+/** the bytes of values of the given schema types, written by the walk's own writers against the game's book (the book must exist: one exportGame first) */
+export function exportPart(g: any, knobs: Record<string, unknown>, parts: [string, any][]): Uint8Array { G = g; BK = BOOKS.get(g)!; B = helpers(g, knobs); const o = new Out(); for (const [ty, v] of parts) wr(parse(ty), v, o); return o.view().slice(); }
+/** a field of the game by its Rust path (['m', 'dialogue', 'room_rects']): its schema type and its value now */
+export function fieldAt(g: any, knobs: Record<string, unknown>, path: string[]): { ty: string; v: any } { G = g; BK = BOOKS.get(g)!; B = helpers(g, knobs); let ty: string = SCHEMA.root, v: any = g;
+  for (const p of path) { const T = SCHEMA.types[ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')]; if (!T || T.k !== 'struct') throw new Error('fieldAt: ' + ty + ' is no struct'); const f = T.fields.find((x: any) => x.rust === p); if (!f) throw new Error('fieldAt: no ' + p + ' in ' + ty);
+    v = f.expr !== undefined ? compiled(f.expr)(v, G, B) : (f.ts !== undefined ? v[f.ts] : undefined); ty = f.ty; }
+  return { ty, v }; }
 export function exportGame(g: any, knobs: Record<string, unknown>): Uint8Array {
   G = g; let bk = BOOKS.get(g); if (!bk) { bk = new Book(); BOOKS.set(g, bk); } BK = bk; REP = new Map(); AT = ''; B = helpers(g, knobs);
   for (const [id, e] of Object.entries(SCHEMA.seeds as Record<string, string>)) { let L: any; try { L = compiled(e)(g, g, B); } catch { L = null; } if (L && Symbol.iterator in Object(L)) for (const x of L) if (x && typeof x === 'object') BK.idOf(id, x); else miss(`a seed of ${id} not a list`); }
@@ -154,8 +169,12 @@ export function exportGame(g: any, knobs: Record<string, unknown>): Uint8Array {
   ROWS.clear(); for (const t of SCHEMA.tables) for (const r of BK.listOf(t.id)) { const k = `${t.id} ${(r as object).constructor?.name}`; const e = ROWS.get(k); if (e) e.n++; else ROWS.set(k, { n: 1, first: BK.first.get(r) ?? '' }); }
   // an order row the import has no closures for (rust's io::deal_closures): it would stand at its blank there
   for (const r of BK.listOf('OrdersOrderDefId') as any[]) if (!SCHEMA.dealtRows.includes(r.id)) { AT = 'orders::OrderDef'; miss(`no closures by id for the row ${r.id}: add it to hand2.cjs ROWS`, r.id); }
+  // a beat under way: rust's import refuses this state by name (io::refuse_mid_script), because a generator's place cannot be read
+  for (const r of BK.listOf('DirectorLiveBeatId') as any[]) if (r.state === 'running') { AT = 'director::LiveBeat'; miss(`the beat ${r.name} is running: this state cannot be imported`, r.name); }
   const out = new Out(); out.bytes(main.view());
   for (const t of SCHEMA.tables) { const b = buf.get(t.id)!; out.u32(done.get(t.id)!); out.bytes(b.view()); }
   out.u32(BK.nextSerial);
+  // the poses no pool holds, last, because walking anything can meet one: nodes, then the floats (rust: Game.loose_poses, read by no comparison)
+  out.u32(BK.loose.size); for (const p of BK.loose.keys() as Iterable<any>) { out.u32(p.numNodes); const c: Float32Array = p.cols; out.u32(c.length); for (let i = 0; i < c.length; i++) out.f32(c[i]); }
   return out.view().slice();
 }

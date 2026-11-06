@@ -14,9 +14,91 @@ pub enum EventFilter {
     Heard { by: crate::director::UnitRef, run_level: f64, run_within: f64, walk_level: f64, walk_within: f64 },
 }
 /// a beat's generator as plain data, so a clone of Game holds where it stands (LiveBeat.it): one arm a beat, its resume point and locals, added by hand with the nine scripts (CHANGES-2 Open 1). Spent: not begun, or closed: it.return() is writing Spent, no script has a finally
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum BeatFrame {
     Spent,
+    TutKitHold(crate::script_tut_kit::TutKitHoldFrame),
+    TutKitGun(crate::script_tut_kit::TutKitGunFrame),
+    TutKitBags(crate::script_tut_kit::TutKitBagsFrame),
+    TutKitGap(crate::script_tut_kit::TutKitGapFrame),
+    TutKitBlind(crate::script_tut_kit::TutKitBlindFrame),
+    TutKitShop(crate::script_tut_kit::TutKitShopFrame),
+    TutKitRoom(crate::script_tut_kit::TutKitRoomFrame),
+    TutKitLoose(crate::script_tut_kit::TutKitLooseFrame),
+    TutKitTrucks(crate::script_tut_kit::TutKitTrucksFrame),
+    TutKitCall(crate::script_tut_kit::TutKitCallFrame),
+    TutKitBox(crate::script_tut_kit::TutKitBoxFrame),
+    TutKitDark(crate::script_tut_kit::TutKitDarkFrame),
+    TutKitBunk(crate::script_tut_kit::TutKitBunkFrame),
+    TutKitWall(crate::script_tut_kit::TutKitWallFrame),
+    TutKitBunkroom(crate::script_tut_kit::TutKitBunkroomFrame),
+    TutKitFuelroom(crate::script_tut_kit::TutKitFuelroomFrame),
+    TutKitFree(crate::script_tut_kit::TutKitFreeFrame),
+    TutKitSeen(crate::script_tut_kit::TutKitSeenFrame),
+    TutKitYard(crate::script_tut_kit::TutKitYardFrame),
+    TutPairGate(crate::script_tut_pair::TutPairGateFrame),
+    TutPairPark(crate::script_tut_pair::TutPairParkFrame),
+    TutPairYard(crate::script_tut_pair::TutPairYardFrame),
+    TutQueueGun(crate::script_tut_queue::TutQueueGunFrame),
+    TutQueueGates(crate::script_tut_queue::TutQueueGatesFrame),
+    TutQuietLane(crate::script_tut_quiet::TutQuietLaneFrame),
+    TutQuietNight(crate::script_tut_quiet::TutQuietNightFrame),
+    TutQuietStore(crate::script_tut_quiet::TutQuietStoreFrame),
+    TutRoadHold(crate::script_tut_road::TutRoadHoldFrame),
+    TutRoadCease(crate::script_tut_road::TutRoadCeaseFrame),
+    TutRoadRoad(crate::script_tut_road::TutRoadRoadFrame),
+    TutRoadWay(crate::script_tut_road::TutRoadWayFrame),
+    TutRoadHut(crate::script_tut_road::TutRoadHutFrame),
+    TutRoadGun(crate::script_tut_road::TutRoadGunFrame),
+    TutRoadBags(crate::script_tut_road::TutRoadBagsFrame),
+    TutRoadEase(crate::script_tut_road::TutRoadEaseFrame),
+    TutRoadGate(crate::script_tut_road::TutRoadGateFrame),
+    TutRoadOpen(crate::script_tut_road::TutRoadOpenFrame),
+    TutSkyHold(crate::script_tut_sky::TutSkyHoldFrame),
+    TutSkyAmbush(crate::script_tut_sky::TutSkyAmbushFrame),
+    TutSkyPinned(crate::script_tut_sky::TutSkyPinnedFrame),
+    TutSkySmoke(crate::script_tut_sky::TutSkySmokeFrame),
+    TutSkyBreak(crate::script_tut_sky::TutSkyBreakFrame),
+    TutSkyOrdered(crate::script_tut_sky::TutSkyOrderedFrame),
+    TutSkyBlind(crate::script_tut_sky::TutSkyBlindFrame),
+    TutSkyPush(crate::script_tut_sky::TutSkyPushFrame),
+    TutSkyIndoors(crate::script_tut_sky::TutSkyIndoorsFrame),
+    TutSkyWall(crate::script_tut_sky::TutSkyWallFrame),
+    TutSkyDark(crate::script_tut_sky::TutSkyDarkFrame),
+    TutSkyNv(crate::script_tut_sky::TutSkyNvFrame),
+    TutSkyTorches(crate::script_tut_sky::TutSkyTorchesFrame),
+    TutSkyInside(crate::script_tut_sky::TutSkyInsideFrame),
+    TutSkyOut(crate::script_tut_sky::TutSkyOutFrame),
+    TutSoloHold(crate::script_tut_solo::TutSoloHoldFrame),
+    TutSoloCease(crate::script_tut_solo::TutSoloCeaseFrame),
+    TutSoloRoad(crate::script_tut_solo::TutSoloRoadFrame),
+    TutSoloWay(crate::script_tut_solo::TutSoloWayFrame),
+    TutSoloGun(crate::script_tut_solo::TutSoloGunFrame),
+    TutSoloBags(crate::script_tut_solo::TutSoloBagsFrame),
+    TutSoloGap(crate::script_tut_solo::TutSoloGapFrame),
+    TutSoloBlind(crate::script_tut_solo::TutSoloBlindFrame),
+    TutSoloShop(crate::script_tut_solo::TutSoloShopFrame),
+    TutSoloRoom(crate::script_tut_solo::TutSoloRoomFrame),
+    TutSoloLoose(crate::script_tut_solo::TutSoloLooseFrame),
+    TutSoloTrucks(crate::script_tut_solo::TutSoloTrucksFrame),
+    TutSquadPicket(crate::script_tut_squad::TutSquadPicketFrame),
+    TutSquadStore(crate::script_tut_squad::TutSquadStoreFrame),
+    TutSquadShop(crate::script_tut_squad::TutSquadShopFrame),
+    TutSquadHall(crate::script_tut_squad::TutSquadHallFrame),
+    TutSquadGun(crate::script_tut_squad::TutSquadGunFrame),
+    TutTeamHold(crate::script_tut_team::TutTeamHoldFrame),
+    TutTeamCook(crate::script_tut_team::TutTeamCookFrame),
+    TutTeamAmbush(crate::script_tut_team::TutTeamAmbushFrame),
+    TutTeamPinned(crate::script_tut_team::TutTeamPinnedFrame),
+    TutTeamSmoke(crate::script_tut_team::TutTeamSmokeFrame),
+    TutTeamBreak(crate::script_tut_team::TutTeamBreakFrame),
+    TutTeamOrdered(crate::script_tut_team::TutTeamOrderedFrame),
+    TutTeamBlind(crate::script_tut_team::TutTeamBlindFrame),
+    TutTeamLinger(crate::script_tut_team::TutTeamLingerFrame),
+    TutTeamPush(crate::script_tut_team::TutTeamPushFrame),
+    TutTeamIndoors(crate::script_tut_team::TutTeamIndoorsFrame),
+    TutTeamHouse(crate::script_tut_team::TutTeamHouseFrame),
+    TutTeamOut(crate::script_tut_team::TutTeamOutFrame),
 }
 /// what a c.until asks (CondArm2.test): Script, a test of the beat's own script, answered by beat_test with the beat's frame; Burst, the stimulus.burst's cond at director.ts:1012: no row of r.bursts with this serial and left > 0
 #[derive(Clone, Debug)]
@@ -29,6 +111,20 @@ pub enum CondTest {
 pub enum NearWhat {
     Door { d: crate::director::DoorRef },
     Place { p: crate::director::Place },
+}
+/// what a level script's define pass names and its beats read: one arm a script (scriptgen.cjs)
+#[derive(Clone, Debug)]
+pub enum ScriptVars {
+    None,
+    TutKit(crate::script_tut_kit::TutKitVars),
+    TutPair(crate::script_tut_pair::TutPairVars),
+    TutQueue(crate::script_tut_queue::TutQueueVars),
+    TutQuiet(crate::script_tut_quiet::TutQuietVars),
+    TutRoad(crate::script_tut_road::TutRoadVars),
+    TutSky(crate::script_tut_sky::TutSkyVars),
+    TutSolo(crate::script_tut_solo::TutSoloVars),
+    TutSquad(crate::script_tut_squad::TutSquadVars),
+    TutTeam(crate::script_tut_team::TutTeamVars),
 }
 
 /// (TypeScript: words)
@@ -122,6 +218,8 @@ pub struct Manifest {
     pub programs: JsMap<String, crate::director::ProgramDef>,
     pub expects: Vec<crate::director::ManifestExpectsItem>,
     pub systems: JsMap<&'static str, bool>,
+    /// INVENTED: the locals of the script's define pass
+    pub vars: crate::director::ScriptVars,
 }
 impl Manifest {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -139,6 +237,7 @@ impl Manifest {
             programs: JsMap::new(),
             expects: Vec::new(),
             systems: JsMap::new(),
+            vars: crate::director::ScriptVars::None,
         }
     }
 }
@@ -827,7 +926,7 @@ pub struct OrderPatch2 {
     pub speed: Option<Option<f64>>,
     pub face: Option<Option<f64>>,
     pub strafe: Option<Option<bool>>,
-    pub aim_at: Option<crate::director::Place>,
+    pub aim_at: Option<Option<crate::director::Place>>,
     pub stance: Option<Option<crate::character::Stance>>,
     pub stack_side: Option<Option<f64>>,
     pub crouch: Option<Option<bool>>,
@@ -1851,6 +1950,8 @@ pub struct Run {
     pub ended: bool,
     pub finishing: bool,
     pub failed_show: bool,
+    /// INVENTED: the manifest's, for a beat's step to read
+    pub vars: crate::director::ScriptVars,
 }
 impl Run {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -1878,6 +1979,7 @@ impl Run {
             ended: false,
             finishing: false,
             failed_show: false,
+            vars: crate::director::ScriptVars::None,
         }
     }
 }

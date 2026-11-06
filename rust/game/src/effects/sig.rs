@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 pub fn muzzle_frame(o: V3, d: V3) -> crate::effects::MuzzleFrame { todo!() }
 
 /// (src/game/effects.ts:201 spawnShot)
-pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::effects::SpawnShotO) -> Vec<crate::effects::FxLight> { todo!() }
+pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::effects::SpawnShotO, sparks: bool) -> Vec<crate::effects::FxLight> { todo!() }
 
 /// (src/game/effects.ts:230 spawnBurst)
 pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64, o: Option<crate::effects::SpawnBurstO>) -> crate::effects::FxLight { todo!() }

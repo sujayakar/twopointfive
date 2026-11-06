@@ -331,6 +331,7 @@ pub fn director_start(g: &mut crate::game::Game, name: &str, opts: Option<crate:
     g.director.serial += 1.0;
     let showcase = def.opts.showcase.unwrap_or(false);
     let triggers = def.triggers.clone();
+    let vars = g.director.manifest.as_ref().unwrap().vars.clone();
     let r = g.tab.director_run.push(Run {
         serial: g.director.serial,
         name: String::from(name),
@@ -354,6 +355,7 @@ pub fn director_start(g: &mut crate::game::Game, name: &str, opts: Option<crate:
         ended: false,
         finishing: false,
         failed_show: false,
+        vars,
     });
     g.director.run = Some(r);
     g.director.frame = None;

@@ -23,10 +23,9 @@ fn can_mix(mix: CanMix) -> (f64, f64) { let x = can_mixes().get(String::from(mix
 fn big_kit_of(tool: &str) -> BigKit {
     match tool { "shotgun" => BigKit::Shotgun, "hammer" => BigKit::Hammer, _ => unreachable!("a tool the deal lends") }
 }
-// Seams: KitRow's functions are gone from the skeleton and these three stubs still have no `g`.
+// Seams: KitRow's functions are gone from the skeleton and these two stubs still have no `g`.
 fn seam_row_has(r: &KitRow, m: &MemberKit) -> bool { todo!("needs: g in row_has (kit.ts:759, 904, 910: whether the card is a tree, and `tubed`)") }
 fn seam_row_under(r: &KitRow, m: &MemberKit) -> Option<crate::gunslots::GunSlot> { todo!("needs: g in row_under (kit.ts:757, 904, 908, 910: whether the card is a tree)") }
-fn seam_row_get(r: &KitRow, m: &mut MemberKit) -> KitValue { todo!("needs: g in row_get (kit.ts:889, 892, 907: gunsHome, kitSlotCan, whether the card is a tree)") }
 /// `SLOT_AMOUNT[k](c)` of a row that reads the switches
 fn seam_squad_amount(k: &str, c: &MemberKit) -> f64 { todo!("needs: g in squad_has (kit.ts:546; SLOT_AMOUNT's shotgun, hammer, cams, rings, wand read the switches); inside this file the body is squad_has_g") }
 
@@ -899,28 +898,41 @@ pub fn row_under(r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> Option<cr
     }
 }
 
-/// A row's value on a card (kit.ts rowGet). The field stands for the row: 'cans' and 'big' read through their own get (kit.ts:808, 837), the gun rows through theirs (the seam)
-pub fn row_get(r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit) -> crate::kit::KitValue {
+/// A row's value on a card (kit.ts rowGet): the row's own get if it has one (kit.ts:808, 837, 889, 892, 907), else the card's field of that name
+pub fn row_get(g: &mut crate::game::Game, r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit) -> crate::kit::KitValue {
     let t = |s: &str| KitValue::Text(String::from(s));
-    match r.field {
-        KitField::Smoke => KitValue::Num(m.smoke),
-        KitField::Light => KitValue::Bool(m.light),
-        KitField::Wand => KitValue::Bool(m.wand),
-        KitField::Bangs => KitValue::Num(m.bangs),
-        KitField::Frags => KitValue::Num(m.frags),
-        KitField::Shells => KitValue::Num(m.shells),
-        KitField::Charges => KitValue::Num(m.charges),
-        KitField::Cams => KitValue::Num(m.cams),
-        KitField::Walls => KitValue::Num(m.walls),
-        KitField::Suit => t(m.suit.as_str()),
-        KitField::Bare => KitValue::Bool(m.bare == Some(true)),
-        KitField::Big => t(big_of(m).as_str()),
-        KitField::Rings => KitValue::Num(m.rings),
-        KitField::Weapon => t(m.weapon.as_str()),
-        KitField::Nvg => KitValue::Bool(m.nvg),
-        KitField::Trim => t(m.trim.as_str()),
-        KitField::Cans => t(mix_of(m).map_or("own", |x| x.as_str())),
-        KitField::Primary | KitField::Secondary | KitField::Suppressed | KitField::SideCan => seam_row_get(r, m),
+    match &r.get {
+        Some(KitRowGet::Mix) => t(mix_of(m).map_or("own", |x| x.as_str())),
+        Some(KitRowGet::Big) => t(big_of(m).as_str()),
+        Some(KitRowGet::Primary) => {
+            if m.weapon == KitWeapon::Pistol { t(crate::gunslots::NO_PRIMARY) } else { KitValue::Text(guns_home(g, m).primary) }
+        }
+        Some(KitRowGet::Secondary) => KitValue::Text(guns_home(g, m).secondary),
+        Some(KitRowGet::SlotCan { slot }) => KitValue::Bool(kit_slot_can(g, m, *slot)),
+        None => match r.field {
+            KitField::Smoke => KitValue::Num(m.smoke),
+            KitField::Light => KitValue::Bool(m.light),
+            KitField::Wand => KitValue::Bool(m.wand),
+            KitField::Bangs => KitValue::Num(m.bangs),
+            KitField::Frags => KitValue::Num(m.frags),
+            KitField::Shells => KitValue::Num(m.shells),
+            KitField::Charges => KitValue::Num(m.charges),
+            KitField::Cams => KitValue::Num(m.cams),
+            KitField::Walls => KitValue::Num(m.walls),
+            KitField::Suit => t(m.suit.as_str()),
+            KitField::Bare => KitValue::Bool(m.bare == Some(true)),
+            KitField::Big => t(m.big.as_str()),
+            KitField::Primary => t(&m.primary),
+            KitField::Secondary => t(&m.secondary),
+            KitField::SideCan => KitValue::Bool(m.side_can),
+            KitField::Rings => KitValue::Num(m.rings),
+            KitField::Weapon => t(m.weapon.as_str()),
+            KitField::Suppressed => KitValue::Bool(m.suppressed),
+            KitField::Nvg => KitValue::Bool(m.nvg),
+            KitField::Trim => t(m.trim.as_str()),
+            // (the card has no field `cans`: the skeleton's cans_row has get None where kit.ts:808 has mixOf, so the field stands for its get)
+            KitField::Cans => t(mix_of(m).map_or("own", |x| x.as_str())),
+        },
     }
 }
 

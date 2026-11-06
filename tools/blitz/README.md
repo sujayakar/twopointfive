@@ -104,21 +104,20 @@ the runner or a change to the loop, say so separately: that is not part of a men
 
 ## What the runner stands in for
 
-The Rust game is the tick alone. What the TypeScript's host does round a tick is not translated, and what the bridge does not carry is blank after the import.
-Each of these is a few lines of `rust/game_run/src/bin/mission.rs`, and `BLITZ_SKIP=<name>,…` leaves one out to learn whether it is still needed.
+The Rust game is the tick alone. What the TypeScript's host does round a tick is not translated (`BRIDGE.md`, "What a Rust host calls round a step").
+Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=lights` or `upload` leaves that call out, to see by a run what it is for.
 
 | stand-in | name | why |
 |---|---|---|
 | the record `cmd_buf`, every camera and Input row that is no seat's | (always) | the host samples input and moves its camera between ticks |
-| the dialogue's room memo, once | `rects` | the HUD's asks fill it between ticks |
 | the test driver's orders (`gives.txt`) | (always) | the scripted player calls `orders.give` between ticks |
 | the driver's `roomAt` that floods a room (`hostwrites.txt room_at`) | (always) | a question of the driver's that writes the game |
 | the box world listed again | `upload` | where the headless host uploaded between two ticks |
 | the autosave's chronicle row (`hostwrites.txt chron_save`) | (always) | the save controller is the host's and writes one row into the game |
 | `light_set_update(dt)` after each tick | `lights` | the host retires flashes between ticks, and the next tick's light reads it |
-| the men's columns written back into the block | `men` | a man's owner / rank / reason / since are the block's columns in the TypeScript and plain fields in the Rust types |
-| `g.m.dress.dress.debris = false` | `debris` | the TypeScript side runs with every dress row down, and the bridge does not carry that table |
-| the level's name (`level.txt`) as the one row of the names' table | `level` | the TypeScript keys that table by the Level object and the bridge cannot walk it; a tick asks the name for the level's lying snow |
+
+The Rust game writes a man's row of the block itself (`sim_men_store`), and the bridge carries the level's name, the dress table and the floats of a pose
+outside the pool: the runner hands none of those over.
 
 ## Files
 
@@ -133,11 +132,9 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`, and `BLITZ_S
 
 - **No GPU, no picture.** The headless game has no renderer, no GPU light meter, no smoke solver and no audio; the compare is of the simulation's state only.
 - The scripted player cannot be hurt and plays one way a seed. A mission in step is that play-through in step, not the mission's every branch.
-- A man who ENTERS after the start (a snatch's target, a response team) has no row of the block's `men` part on the Rust side: the block parts in `men` the
-  tick he is made. The men's columns are a stand-in of the runner's until the Rust types have them.
 - The scripted player plays the room clears, the rescues and the raids (`tools/qa/playthrough.ts`); it has no quiet mission.
 - The runner cannot yet give an order aimed at a wall or a thing, or with options: it says `NOTE … cannot give` and the sides will part there.
 - Not translated, and so not compared: what stands of a holed wall's paint (`wallskin`) and a broken edge's look (`edge_look`). See `--leave-out` above.
 - A pose's floats are compared only through what the pose drives (bones, boxes); the pool itself is out of the alarm after the first death.
-- Three functions stay `todo!()` by decision: the director's `beat_frame_new`, `beat_next`, `beat_test` (level scripts). A mission that runs a script beat
-  stops there.
+- A level script's beat holds its place in a generator, which no export can read: a state taken while a beat runs is refused by the import. A tutorial is
+  compared from a start taken before its program starts, by what its beats do.

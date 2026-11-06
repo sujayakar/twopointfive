@@ -366,7 +366,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
             track: Some(crate::effects::Track::Muzzle { by: shooter }),
             eject: Some(crate::effects::Track::EjectPort { by: shooter }),
             gas: Some(gas),
-        });
+        }, !gpu);
         for l in lights {
             crate::render_lights::light_set_flash(g, l.pos, l.color, l.intensity, l.range, l.ttl, who);
         }

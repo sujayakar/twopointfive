@@ -28,11 +28,9 @@ pub fn tally(i: Option<f64>) -> f64 {
 }
 
 /// nothing of a pane's stands in this game's block: the panes part's first word, `used` (glassbreak.ts panesUntouched)
-pub fn panes_untouched(b: crate::Opaque) -> bool {
-    ::sim::state::state(seam_slot(b)).panes.used == 0
+pub fn panes_untouched(g: &mut crate::game::Game) -> bool {
+    ::sim::state::state(g.sim).panes.used == 0
 }
-/// `b` is the game's block, and the skeleton's `Opaque` carries none of it: the slot is `g.sim`, and this signature has no `g`
-fn seam_slot(b: crate::Opaque) -> usize { todo!("needs: panes_untouched to take g (or the slot g.sim)") }
 
 /// a row's fields (panes_field), found once and kept (glassbreak.ts fields)
 pub fn fields(g: &mut crate::game::Game) -> Vec<f64> {

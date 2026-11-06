@@ -112,6 +112,10 @@ pub fn reset_guards(g: &mut crate::game::Game) {
         let c = g.gd[gd].ch;
         fresh.push((g.ch[c].id, g.gd[gd].route, g.gd[gd].route_i, g.gd[gd].flashlight, g.ch[c].tint));
     }
+    for &gd in &old {
+        let c = g.gd[gd].ch;
+        crate::sim_men_store::man_leaves(g, c);
+    }
     let mut shift: Vec<GuardId> = Vec::with_capacity(fresh.len());
     let (men, rig) = (g.men, g.rig);
     for (id, route, route_i, fl, tint) in fresh { shift.push(crate::game::guard_new(g, men, rig, id, route, route_i, fl, tint, None)); }

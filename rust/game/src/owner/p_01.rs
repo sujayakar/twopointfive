@@ -19,24 +19,26 @@ pub fn rank_of(word: f64) -> f64 {
 
 /// The word changed: if the rule on top changed, it has him from now, for its first reason. (owner.ts settle)
 pub fn settle(g: &mut crate::game::Game, gd: GuardId, word: f64, t: f64, why: f64) {
-    g.gd[gd].owner = js::to_u32(word);
+    let c = g.gd[gd].ch;
+    crate::sim_men_store::man_set_owner(g, c, js::to_u32(word));
     let rank = rank_of(word);
-    if rank == g.gd[gd].rank as f64 {
-        if why >= 0.0 && rank > 0.0 { g.gd[gd].reason = js::to_u32(why); }
+    if rank == crate::sim_men_store::man_rank(g, c) as f64 {
+        if why >= 0.0 && rank > 0.0 { crate::sim_men_store::man_set_reason(g, c, js::to_u32(why)); }
         return;
     }
-    g.gd[gd].rank = js::to_u32(rank);
-    g.gd[gd].reason = if why >= 0.0 { js::to_u32(why) } else { 0 };
-    g.gd[gd].since = t;
+    crate::sim_men_store::man_set_rank(g, c, js::to_u32(rank));
+    crate::sim_men_store::man_set_reason(g, c, if why >= 0.0 { js::to_u32(why) } else { 0 });
+    crate::sim_men_store::man_set_since(g, c, t);
 }
 
 /// Rule `rule` takes him; nothing changes if it has him already, but for the reason it gives. `t` the game's clock; `why` an index into its row's `why`. (owner.ts claimMan)
 pub fn claim_man(g: &mut crate::game::Game, gd: GuardId, rule: f64, t: f64, why: Option<f64>) {
     let why = why.unwrap_or(0.0);
-    let was = g.gd[gd].owner;
+    let c = g.gd[gd].ch;
+    let was = crate::sim_men_store::man_owner(g, c);
     let word = was | js::to_u32(rule);
     if was == word {
-        if rank_of(word as f64) == rank_of(rule) { g.gd[gd].reason = js::to_u32(why); }
+        if rank_of(word as f64) == rank_of(rule) { crate::sim_men_store::man_set_reason(g, c, js::to_u32(why)); }
         return;
     }
     settle(g, gd, word as f64, t, if rank_of(rule) == rank_of(word as f64) { why } else { -1.0 });
@@ -44,7 +46,8 @@ pub fn claim_man(g: &mut crate::game::Game, gd: GuardId, rule: f64, t: f64, why:
 
 /// Rule `rule` lets go. The rule below it, if any, has him again from now. (owner.ts releaseMan)
 pub fn release_man(g: &mut crate::game::Game, gd: GuardId, rule: f64, t: f64) {
-    let was = g.gd[gd].owner;
+    let c = g.gd[gd].ch;
+    let was = crate::sim_men_store::man_owner(g, c);
     let rule = js::to_u32(rule);
     if was & rule == 0 { return; }
     settle(g, gd, (was & !rule) as f64, t, -1.0);
@@ -52,7 +55,8 @@ pub fn release_man(g: &mut crate::game::Game, gd: GuardId, rule: f64, t: f64) {
 
 /// Does any of these rules have a hand on him? (owner.ts hasHim)
 pub fn has_him(g: &mut crate::game::Game, gd: GuardId, rules: f64) -> bool {
-    g.gd[gd].owner & js::to_u32(rules) != 0
+    let c = g.gd[gd].ch;
+    crate::sim_men_store::man_owner(g, c) & js::to_u32(rules) != 0
 }
 
 /// Does nothing: the TypeScript check's registration (tools/qa/owner-check.ts), which nothing in the game reads and no Rust part calls (blitz/enemies.md). (owner.ts ownerWitness)
@@ -87,9 +91,14 @@ mod tests {
     fn claims_and_releases_as_the_typescript_leaves_them() {
         let mut game = Game::blank();
         let g = &mut game;
-        let m = g.gd.push(crate::game::Guard::blank());
+        // a man with no row on the block keeps his numbers on his Character, so this needs no block
+        let c = g.ch.push(crate::character::Character::blank());
+        g.ch[c].man_kept = Some([0.0; 4]);
+        let mut man = crate::game::Guard::blank();
+        man.ch = c;
+        let m = g.gd.push(man);
         let o = own();
-        let row = |g: &Game| (g.gd[m].owner, g.gd[m].rank, g.gd[m].reason, g.gd[m].since);
+        let row = |g: &Game| (crate::sim_men_store::man_owner(g, c), crate::sim_men_store::man_rank(g, c), crate::sim_men_store::man_reason(g, c), crate::sim_men_store::man_since(g, c));
 
         claim_man(g, m, o.squad, 1.0, None);
         assert_eq!(row(g), (1, 1, 0, 1.0));

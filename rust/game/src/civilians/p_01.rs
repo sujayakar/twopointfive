@@ -135,6 +135,8 @@ pub fn reset_civilians(g: &mut crate::game::Game) {
     }
     for cv in g.civilians.clone() {
         forget_meter(g, cv);
+        let c = g.gd[cv].ch;
+        crate::sim_men_store::man_leaves(g, c);
     }
     let floor = floor_of(g);
     floor.evac_told = false;
@@ -188,7 +190,7 @@ pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::Civili
         weapon: None,
         keys: Some(Vec::new()),
     };
-    let fl = crate::rig_props::p_03::torch_light_def_in(g, &format!("civlight{}", id), id, 0.0, 10.0, 20.0);
+    let fl = crate::rig_props::torch_light_def(g, &format!("civlight{}", id), id, 0.0, 10.0, 20.0);
     g.tab.light[fl].enabled = false;
     g.tab.light[fl].intensity = 0.0;
     let yaw = match def.face.as_ref().and_then(|f| f.first().copied()) {

@@ -21,7 +21,7 @@ pub fn glass_break_live(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn tally(i: Option<f64>) -> f64 { todo!() }
 
 /// (src/game/glassbreak.ts:203 panesUntouched)
-pub fn panes_untouched(b: crate::Opaque) -> bool { todo!() }
+pub fn panes_untouched(g: &mut crate::game::Game) -> bool { todo!() }
 
 /// (src/game/glassbreak.ts:214 fields)
 pub fn fields(g: &mut crate::game::Game) -> Vec<f64> { todo!() }

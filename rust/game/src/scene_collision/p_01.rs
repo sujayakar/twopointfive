@@ -53,10 +53,6 @@ fn relend<'a>(p: &'a mut Option<&mut dyn FnMut(&mut Game, f64, f64) -> f64>) -> 
         None => None,
     }
 }
-/// the block's stamp (SimState.stamp): the tables made from the game's state are kept by it. The skeleton has no SimState: `st`, `Q.sim` are Opaque.
-fn seam_sim_stamp(g: &mut Game) -> f64 {
-    todo!("needs: SimState.stamp of the game's block (collision.ts:647, :717; skeleton has st: Opaque)")
-}
 
 // ---- the line through a box
 
@@ -1011,7 +1007,7 @@ fn lamps_part_into(g: &mut Game, last: bool, out: &mut [f64; 6]) {
     let rows = rows_for(g, q.rows);
     let r = match (q.sim, q.k) {
         (Some(_), Some(k)) => {
-            let stamp = seam_sim_stamp(g);
+            let stamp = g.sim_stamp;
             let shade = sim::light::Shade { sigma: k.sigma, g: g.sim, stamp, stands: q.stands != 0.0, nb: q.nb as usize, k: [k.spread, k.widest, k.rise, k.rise_rate] };
             sim::light::asked(w, set, n, p, &shade, more, rows, last, out)
         }
@@ -1167,7 +1163,7 @@ pub fn grid_step(g: &mut crate::game::Game, st: &mut crate::Opaque, pending: &[f
     let windy = real(wx) && real(wz) && real(low) && real(gain) && real(full_at) && real(k.in_wind) && low >= 0.0 && gain >= 0.0 && full_at > 0.0;
     let (wx, wz) = if windy { (wx, wz) } else { (0.0, 0.0) };
     let bk = sim::bricks::K { decay: k.decay, spread: k.spread, rise: k.rise, rise_rate: k.rise_rate, gone: k.gone, wind_x: wx, wind_z: wz, wind_low: low, wind_gain: gain, wind_full_at: full_at, wind_keep: k.in_wind };
-    let stamp = seam_sim_stamp(g);
+    let stamp = g.sim_stamp;
     let copy = crate::scene_box_mirror::box_mirror_grid_copy(g);
     let (w, block) = (slot(g), g.sim);
     let rows = rows_for(g, said_rows);

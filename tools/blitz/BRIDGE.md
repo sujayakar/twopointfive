@@ -16,7 +16,7 @@ A whole game as bytes, the same from the TypeScript and from Rust, so the two ca
 Copy the TypeScript files and `schema.json` to `tools/blitz/`, then:
 
 ```
-TPS_PROFILE=shipped bun run --preload ./tools/blitz/expose.ts tools/blitz/bridge-check.ts --play room-clear-four:1:2400 --out x.bin
+bun run --preload ./tools/blitz/expose.ts tools/blitz/bridge-check.ts --play room-clear-four:1:2400 --out x.bin
 BRIDGE_BLOB=x.bin cargo test --lib bridge_round_trip      # in the crate
 ```
 
@@ -38,7 +38,24 @@ Rust's own numbering is the bridge's: an ID has no meaning across a fresh export
 
 ## Taking a start
 
-Take a start after `g.sim.settle(g)`, as a tick's own opening does: a pose that has not moved into the pool is written as place `0xffffffff`, and its floats are not carried. `report()` counts every such pose. Later in a game the only ones left are poses nothing draws from: a figure on the kit page and a dead man's `rd.pose`.
+Take a start after `g.sim.settle(g)`, as a tick's own opening does, so that the men's poses are at home.
+
+A pose the TypeScript keeps outside the pool (a dead man's `rd.pose`, a kit figure) has the place `Pose::LOOSE` plus its row of `g.loose_poses`, which holds its node count and floats. They stand after the serial counter in the bytes, because walking anything can meet one. A Rust pose lives in the pool, so a body calls `anim_skeleton::pose_take_home(g, &mut pose)` when it first needs one. **So a pose pool can't match from the first death on:** compare the block without its last part. `paths.ts` reads no row of `loose_poses`, because the Rust list stands as it was imported; compare a ragdoll's floats by reading them from the pool at its place.
+
+## What a Rust host calls round a step
+
+Nothing inside the tick does these, and the next tick reads what they leave:
+
+- **Before a step:** `io::take_host_rows` in a compare, or in a real host its own record, camera and Input. `scene_boxes::box_world_list` (`host_world_upload`) when it lists the boxes, as `engine.world.upload()` does between ticks.
+- **After a step:** `render_lights::light_set_update(g, dt, time)`: a flash's envelope and its retirement. `chronicle::chron_checkpoint` when it autosaves: `saves.tick` is the tick's last line in the TypeScript and writes that row into the game.
+- **The smoke solver's answers are input:** `budget`, `inSmokeDomain`, `round`, `drawing`. With no solver they are the host's null object's.
+- **A question between ticks can write the game:** `g.fight.roomAt(p)` floods a room and keeps it, and a driver's `orders.give` is an order. A compare replays those at the same tick.
+
+## Comparing two states
+
+A table's numbers mean nothing between two sparse exports: the walk numbers a thing when an export first meets it, and Rust when it is made. So compare whole states tick by tick from one start, or renumber by reach, as `diff.ts` does.
+
+Identity serials differ by design. `schema.serial` lists the fields that hold one: every invented field named a serial (a counter of the TypeScript's own stays compared), and each field the walk met holding an object where a number belongs (`serial-fields.json`, made by `bridge-check.ts` writing `<out>.serials.json`). `<field>{}` means the keys of a map or set. `paths.ts` reads such a value as `serial` and such a key by its place, so `diff` does not see them; a list's length still counts. The walk only knows what it has met, so add a new mission's file to the list.
 
 ## What the host owns
 
@@ -55,6 +72,12 @@ Closures made mid-flight stand at their blank after an import: a thrown can's `o
 ## Serials
 
 The walk deals a serial by object identity, from 1, in the order it meets a record: `GameEvent.serial`, `script.serial`, `g.messages[..].serial`, `g.orders.log[..].serial`, and any `u32` field holding an object. A Rust body deals from `g.serial()`. So the two numberings agree only by accident: compare whether two serials are equal within one game, never a serial's value across the games.
+
+## A state in the middle of a level script
+
+A JavaScript generator's place and locals can't be read from outside, so `LiveBeat.it` is not carried. **A state exported while any beat is running can't be imported:** `io::import` and `io::import_into` panic and name the beat, and `report()` says so on the TypeScript's side. A frame at `Spent` would otherwise end the beat at once and say nothing.
+
+So a tutorial is compared from before its program starts, by what its beats do: the die, the block and the path diff all see that. Once Rust has started the program it holds its own frames, which clone with the game.
 
 ## What it does not carry
 

@@ -18,7 +18,7 @@ const NOREACH = new Set(opt('--noreach', 'things_of,lamp_pick,WorkThings.cache,D
 const DEC = new TextDecoder();
 // --dump <regex>: every leaf whose path matches, both sides' values, the same or not (to read a piece of state)
 const DUMP = opt('--dump', '') ? new RegExp(opt('--dump', '')) : null; let dumped = 0; const DUMP_MAX = +opt('--dump-max', '400');
-class Side { dv: DataView; p = 0; left = new Map<number, boolean>(); leftN = 0; rows = new Map<string, number[]>(); canon = new Map<string, Map<number, number>>(); order = new Map<string, number[]>(); tableAt = new Map<string, number>(); tableLen = new Map<string, number>();
+class Side { dv: DataView; p = 0; serialAt = 0; left = new Map<number, boolean>(); leftN = 0; rows = new Map<string, number[]>(); canon = new Map<string, Map<number, number>>(); order = new Map<string, number[]>(); tableAt = new Map<string, number>(); tableLen = new Map<string, number>();
   constructor(public b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); }
   u8() { return this.b[this.p++]; } u16() { const x = this.dv.getUint16(this.p, true); this.p += 2; return x; } u32() { const x = this.dv.getUint32(this.p, true); this.p += 4; return x; }
   hex(n: number) { let s = ''; for (let i = 0; i < n; i++) s += this.b[this.p + i].toString(16).padStart(2, '0'); this.p += n; return s; }
@@ -62,7 +62,10 @@ function index(s: Side): void {
   // where every table's rows start, first: the reach walk asks a box's own key
   s.p = 0; skip(ROOT, s, null);
   for (const t of SCHEMA.tables) { const L = s.u32(), N = parse(t.ty), at: number[] = new Array(L); s.tableLen.set(t.id, L); for (let k = 0; k < L; k++) { at[k] = s.p; skip(N, s, null); } s.rows.set(t.id, at); }
-  s.p += 4; if (s.p !== s.b.length) throw new Error(`diff: ${s.b.length - s.p} bytes left over`);
+  s.serialAt = s.p; s.p += 4;
+  // (then the floats of the poses no pool holds, each `row, n, n floats`: carried for an import and compared by nothing, as paths.ts)
+  for (let n = s.u32(); n > 0; n--) { s.p += 4; const L = s.u32(); s.p += L * 4; }
+  if (s.p !== s.b.length) throw new Error(`diff: ${s.b.length - s.p} bytes left over`);
   const onId = (id: string, v: number) => { if (v === 0xffffffff) return; const M = s.canon.get(id)!; if (M.has(v) || leftOut(s, id, v)) return; M.set(v, M.size); s.order.get(id)!.push(v); queue.push([id, v]); };
   s.p = 0; skip(ROOT, s, onId);
   for (const t of SCHEMA.tables) { if (CANON.has(t.id)) continue; const N = parse(t.ty); for (const at of s.rows.get(t.id)!) { s.p = at; skip(N, s, onId); } }
@@ -83,6 +86,10 @@ function leftOut(s: Side, id: string, v: number): boolean {
   s.left.set(v, out); if (out) s.leftN++; return out;
 }
 // ---- the comparison
+// BY RULE (schema.json, as paths.ts): a field in `schema.scratch` is a memo no rule reads back and is not compared; a field in `schema.serial` holds an object's
+// identity serial, which the two sides deal apart by design: its value is not compared (whether it is there still is), and a map or set marked `<field>{}`
+// is keyed by one and is compared by place. How many leaves each rule passed over is said at the end.
+let SER = false, KEYSER = false, serialN = 0, scratchN = 0;
 let n = 0, unknown = 0; const by = new Map<string, number>(), shown: string[] = [], all: string[] = [];
 const P: string[] = [];
 function rep(mod: string, a: string, b: string, tail = '') { n++; const path = P.join('') + tail; const k = KNOWN.find(k => k.re.test(path)); if (k) { k.n++; return; } unknown++; by.set(mod, (by.get(mod) ?? 0) + 1); const l = `${mod}\t${path}\t${a}\t${b}`; if (shown.length < SHOW) shown.push(l); if (OUT && all.length < 200000) all.push(l); }
@@ -97,12 +104,13 @@ function word(n: Node, s: Side): string { switch (n.k) { case 'f64': case 'f32':
     case 'type': { const t = T(n.path); if (t.k === 'enum') return `${t.name}::${t.words[s.u16()]}`; break; } case 'tup': return n.of.map((x: Node) => word(x, s)).join(','); case 'arr': { const o: string[] = []; for (let k = 0; k < n.n; k++) o.push(word(n.of, s)); return o.join(','); } }
   skip(n, s, null); return '(…)'; }
 const nan = (x: string) => x.startsWith('NaN ');
+const same = (A: Side, a: number, B: Side, b: number, L: number) => { for (let i = 0; i < L; i++) if (A.b[a + i] !== B.b[b + i]) return false; return true; };
 function cmp(n: Node, A: Side, B: Side, mod: string): void {
   switch (n.k) {
     case 'f64': case 'f32': case 'bool': case 'u8': case 'i8': case 'u16': case 'i16': case 'u32': case 'i32': case 'usize': case 'u64': case 'i64': case 'str': case 'id': {
       if (DUMP) { const path = P.join(''); if (DUMP.test(path) && dumped++ < DUMP_MAX) { const a0 = A.p, b0 = B.p; const a = leaf(n, A), b = leaf(n, B); console.log(`  ${a === b ? ' ' : '≠'} ${path}\t${a.split(' ')[0]}\t${b.split(' ')[0]}`); A.p = a0; B.p = b0; } }
       if (n.k === 'f64') { const lo = A.dv.getUint32(A.p, true) === B.dv.getUint32(B.p, true), hi = A.dv.getUint32(A.p + 4, true) === B.dv.getUint32(B.p + 4, true); if (lo && hi) { A.p += 8; B.p += 8; return; } }
-      const a = leaf(n, A), b = leaf(n, B); if (a !== b && !(nan(a) && nan(b))) rep(mod, a, b); return; }
+      const a = leaf(n, A), b = leaf(n, B); if (a !== b && !(nan(a) && nan(b))) { if (SER) serialN++; else rep(mod, a, b); } return; }
     case 'unit': return;
     case 'opt': { const a = A.u8(), b = B.u8(); if (!a && !b) return; if (a && b) { cmp(n.of, A, B, mod); return; } if (a) rep(mod, word(n.of, A), 'None'); else rep(mod, 'None', word(n.of, B)); return; }
     case 'vec': if (n.of.k === 'id' && n.of.id === 'BoxId' && CANON.has('BoxId') && LEAVE.size) { const rd = (s: Side) => { const L = s.u32(), o: number[] = []; for (let k = 0; k < L; k++) { const v = s.u32(); if (!leftOut(s, 'BoxId', v)) o.push(v); } return o; };
@@ -113,14 +121,17 @@ function cmp(n: Node, A: Side, B: Side, mod: string): void {
       if (a > c) { for (let k = c; k < a; k++) skip(n.of, A, null); rep(mod, `${a - c} more`, '(absent)', `[${c}..]`); } if (b > c) { for (let k = c; k < b; k++) skip(n.of, B, null); rep(mod, '(absent)', `${b - c} more`, `[${c}..]`); } return;  }
     case 'arr': for (let k = 0; k < n.n; k++) { P.push(`[${k}]`); cmp(n.of, A, B, mod); P.pop(); } return;
     case 'tup': n.of.forEach((x: Node, k: number) => { P.push(`.${k}`); cmp(x, A, B, mod); P.pop(); }); return;
-    case 'map': case 'set': { const isMap = n.k === 'map';
-      const read = (s: Side) => { const L = s.u32(), M = new Map<string, number>(); for (let k = 0; k < L; k++) { const key = word(n.K, s); M.set(key, s.p); if (isMap) skip(n.V, s, null); } return { L, M, end: s.p }; };
+    case 'map': case 'set': { const isMap = n.k === 'map', ks = KEYSER; KEYSER = false;
+      const read = (s: Side) => { const L = s.u32(), M = new Map<string, number>(); for (let k = 0; k < L; k++) { let key = word(n.K, s); if (ks) key = `#${k}`; M.set(key, s.p); if (isMap) skip(n.V, s, null); } return { L, M, end: s.p }; };
       const a = read(A), b = read(B); if (a.L !== b.L) rep(mod, String(a.L), String(b.L), '.len');
       for (const [key, at] of a.M) { const bt = b.M.get(key); P.push(`{${key}}`); if (bt === undefined) rep(mod, isMap ? '(a row)' : 'in', '(absent)'); else if (isMap) { A.p = at; B.p = bt; cmp(n.V, A, B, mod); } P.pop(); }
       for (const key of b.M.keys()) if (!a.M.has(key)) { P.push(`{${key}}`); rep(mod, '(absent)', isMap ? '(a row)' : 'in'); P.pop(); }
       A.p = a.end; B.p = b.end; return; }
     case 'type': { const t = T(n.path);
-      if (t.k === 'struct') { const F = fieldsOf(t); for (let i = 0; i < F.length; i++) { P.push(`.${t.fields[i].rust}`); cmp(F[i], A, B, t.mod); P.pop(); } return; }
+      if (t.k === 'struct') { const F = fieldsOf(t); for (let i = 0; i < F.length; i++) { const q = `${t.mod}::${t.name}.${t.fields[i].rust}`;
+          if (SCHEMA.scratch?.[q]) { const a0 = A.p, b0 = B.p; skip(F[i], A, null); skip(F[i], B, null); if (A.p - a0 !== B.p - b0 || !same(A, a0, B, b0, A.p - a0)) scratchN++; continue; }
+          const s0 = SER, k0 = KEYSER; if (SCHEMA.serial?.[q]) SER = true; KEYSER = !!SCHEMA.serial?.[`${q}{}`];
+          P.push(`.${t.fields[i].rust}`); cmp(F[i], A, B, t.mod); P.pop(); SER = s0; KEYSER = k0; } return; }
       if (t.k === 'enum') { const a = A.u16(), b = B.u16(); if (DUMP) { const path = P.join(''); if (DUMP.test(path) && dumped++ < DUMP_MAX) console.log(`  ${a === b ? ' ' : '≠'} ${path}\t${t.words[a]}\t${t.words[b]}`); } if (a !== b) rep(mod, `${t.name}::${t.words[a]}`, `${t.name}::${t.words[b]}`); return; }
       if (t.k === 'data') { const a = t.vars[A.u16()], b = t.vars[B.u16()]; if (a !== b) { rep(mod, a.tag, b.tag, '#'); if (a.ty) skip(parse(a.ty), A, null); if (b.ty) skip(parse(b.ty), B, null); return; } if (a.ty) { P.push(`.${a.tag}`); cmp(parse(a.ty), A, B, mod); P.pop(); } return; }
       if (t.k === 'handEnum') { const a = t.arms[A.u16()], b = t.arms[B.u16()]; const ta = a.match(/\((.*)\)/)?.[1], tb = b.match(/\((.*)\)/)?.[1]; if (a !== b) { rep(mod, a, b, '#'); if (ta) skip(parse(ta), A, null); if (tb) skip(parse(tb), B, null); return; } if (ta) { P.push(`.${a.split('(')[0]}`); cmp(parse(ta), A, B, mod); P.pop(); } return; } } }
@@ -136,7 +147,7 @@ for (const t of SCHEMA.tables) { const N = parse(t.ty), mod = t.mod ?? 'game', r
   P.push(`g.${t.table}`); if (ra.length !== rb.length) rep(mod, String(ra.length), String(rb.length), '.len'); P.pop();
   const c = Math.min(ra.length, rb.length); for (let k = 0; k < c; k++) { A.p = ra[k]; B.p = rb[k]; P.push(`g.${t.table}[${k}]`); cmp(N, A, B, mod); P.pop(); }
   if (ra.length !== rb.length) { P.push(`g.${t.table}`); rep(mod, ra.length > c ? `${ra.length - c} more` : '(absent)', rb.length > c ? `${rb.length - c} more` : '(absent)', `[${c}..]`); P.pop(); } }
-{ const a = A.dv.getUint32(A.b.length - 4, true), b = B.dv.getUint32(B.b.length - 4, true); if (a !== b) { P.push('g.serial_next'); rep('game', String(a), String(b)); P.pop(); } }
+{ const a = A.dv.getUint32(A.serialAt, true), b = B.dv.getUint32(B.serialAt, true); if (a !== b) { P.push('g.serial_next'); rep('game', String(a), String(b)); P.pop(); } }
 // --dynboxes: the frame's boxes (g.dyn_boxes) of each side counted by owner / flags / the key's family, and the kinds one side has more of
 if (argv.includes('--dynboxes')) {
   const BT = SCHEMA.tables.find((t: any) => t.id === 'BoxId'), BN = T(parse(BT.ty).path), GT = T(SCHEMA.root);
@@ -146,7 +157,7 @@ if (argv.includes('--dynboxes')) {
   const a = count(A), b = count(B); for (const k of new Set([...a.keys(), ...b.keys()])) if ((a.get(k) ?? 0) !== (b.get(k) ?? 0)) console.log(`  dyn boxes ${a.get(k) ?? 0} / ${b.get(k) ?? 0}: ${k}`);
 }
 let bytes = -1; { const i = argv.indexOf('--blocks'); if (i >= 0) { const s = readFileSync(argv[i + 1]), t = readFileSync(argv[i + 2]); bytes = 0; for (let k = 0; k < Math.max(s.length, t.length); k++) if ((s[k] ?? 0) !== (t[k] ?? 0)) bytes++; } }
-console.log(`${n} paths differ, ${n - unknown} known, ${unknown} NOT KNOWN${unknown ? ': ' + [...by].sort((x, y) => y[1] - x[1]).map(([m, c]) => `${m} ${c}`).join(' · ') : ''}${bytes >= 0 ? `; block ${bytes} bytes` : ''}${A.leftN || B.leftN ? `; boxes left out as the picture's ${A.leftN} / ${B.leftN}` : ''}; boxes reached ${A.order.get('BoxId')?.length ?? '-'} / ${B.order.get('BoxId')?.length ?? '-'} of ${A.tableLen.get('BoxId')} / ${B.tableLen.get('BoxId')}; ${(process.memoryUsage().rss / 1e9).toFixed(2)} GB`);
+console.log(`${n} paths differ, ${n - unknown} known, ${unknown} NOT KNOWN${unknown ? ': ' + [...by].sort((x, y) => y[1] - x[1]).map(([m, c]) => `${m} ${c}`).join(' · ') : ''}${bytes >= 0 ? `; block ${bytes} bytes` : ''}${A.leftN || B.leftN ? `; boxes left out as the picture's ${A.leftN} / ${B.leftN}` : ''}${serialN || scratchN ? `; by rule not compared: ${serialN} identity serials that differ, ${scratchN} scratch fields that differ` : ''}; boxes reached ${A.order.get('BoxId')?.length ?? '-'} / ${B.order.get('BoxId')?.length ?? '-'} of ${A.tableLen.get('BoxId')} / ${B.tableLen.get('BoxId')}; ${(process.memoryUsage().rss / 1e9).toFixed(2)} GB`);
 if (argv.includes('--why')) for (const k of KNOWN) if (k.n) console.log(`   known ${k.n}: ${k.why.slice(0, 150)}`);
 for (const x of shown) console.log('     ' + x.slice(0, 230));
 if (OUT) writeFileSync(OUT, all.join('\n') + '\n');

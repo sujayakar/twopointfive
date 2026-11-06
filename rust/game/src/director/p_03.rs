@@ -38,8 +38,12 @@ pub fn director_beat_order(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
         Some(None) => patch.goal = Some(None),
         Some(Some(goal)) => patch.goal = Some(Some(v3::copy(director_place_of(g, goal)?))),
     }
-    // (ts 873 `aimAt: null` has no form in OrderPatch2.aim_at: see the notes, Skeleton. Run.tracks and the Unit arm left the skeleton)
-    if let Some(aim) = &o.aim_at { patch.aim_at = Some(Some(v3::copy(director_place_of(g, aim)?))); }
+    // (ts 871's R.tracks filter has nothing to drop: no script aims at a unit, so R.tracks stays empty and Run has no such field. The Unit arm of ts 873 went with it)
+    match &o.aim_at {
+        None => {}
+        Some(None) => patch.aim_at = Some(None),
+        Some(Some(aim)) => patch.aim_at = Some(Some(v3::copy(director_place_of(g, aim)?))),
+    }
     if o.speed.is_some() { patch.speed = o.speed; }
     if o.face.is_some() { patch.face = o.face; }
     if o.strafe.is_some() { patch.strafe = o.strafe; }

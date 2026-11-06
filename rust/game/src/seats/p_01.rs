@@ -303,7 +303,7 @@ pub fn stand_men(g: &mut crate::game::Game) {
         let p = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
         crate::seats::with_seat(g, s, &mut |g: &mut Game| g.player = p);
         let (owner, intensity) = (man_char_id(g, p), g.tune.player_light);
-        let def = crate::rig_props::p_03::rail_light_def_in(g, owner, intensity);
+        let def = crate::rig_props::rail_light_def(g, owner, intensity);
         g.pl[p].light = crate::render_lights::light_set_add(g, def);
     }
 }

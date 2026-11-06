@@ -821,6 +821,10 @@ pub struct Game {
     pub box_frame_rows: Vec<BoxId>,
     /// INVENTED: rows box_frame may deal again
     pub box_frame_free: Vec<BoxId>,
+    /// INVENTED: what the bridge carries of poses that have no place in the pool: Pose.at is Pose::LOOSE + the row
+    pub loose_poses: Vec<crate::anim_skeleton::LoosePose>,
+    /// state.ts:136 SimState.stamp, for what is made from the block (the fog's grid, the air): a native game has one block, and whatever writes it wholesale raises this
+    pub sim_stamp: f64,
     /// the table of these things: never shrinks
     pub ch: Tab<CharId, crate::character::Character>,
     /// the table of these things: never shrinks
@@ -992,6 +996,8 @@ impl Game {
             in_cast: false,
             box_frame_rows: Vec::new(),
             box_frame_free: Vec::new(),
+            loose_poses: Vec::new(),
+            sim_stamp: 1.0,
             ch: Tab::new(),
             dr: Tab::new(),
             gd: Tab::new(),
@@ -2383,14 +2389,6 @@ pub struct Guard {
     /// followLeader fills it in place through a local
     pub follow_goal: V3,
     pub post: Option<crate::scene_level::Chokepoint>,
-    /// a bit for each rule with a hand on him (owner.ts)
-    pub owner: u32,
-    /// the place of that top bit in the ranks
-    pub rank: u32,
-    /// which of the top rule's reasons it gave
-    pub reason: u32,
-    /// the game time the claim now on top came to the top
-    pub since: f64,
     /// INVENTED: bumped by every whole write of last_known, for the identity question at doze.ts:244
     pub fix_stamp: u32,
     /// INVENTED: bumped by every whole replacement of path
@@ -2529,10 +2527,6 @@ impl Guard {
             follow_t: 0.0,
             follow_goal: [0.0, 0.0, 0.0],
             post: None,
-            owner: 0,
-            rank: 0,
-            reason: 0,
-            since: 0.0,
             fix_stamp: 0,
             path_serial: 0,
             path_goal_orbit: false,

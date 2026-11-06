@@ -139,6 +139,8 @@ pub fn pose_fk_run(g: &mut crate::game::Game, this: &mut crate::anim_skeleton::P
 
 /// INVENTED: how many columns a kept table has (LayerCols.n)
 pub fn cols_n(t: crate::anim_skeleton::ColsTable) -> usize { todo!() }
+/// INVENTED: a pose carried with no place in the pool (Pose::LOOSE + its row of g.loose_poses) takes a place and its floats; any other stands as it is
+pub fn pose_take_home(g: &mut crate::game::Game, p: &mut crate::anim_skeleton::Pose) { todo!() }
 
 /// INVENTED, for LayerCols.get (skeleton.ts:95; character.ts's 27 tables, one ColsTable arm each): writes that table's columns of this man to out[o..], in the table's own order, which is the contract with rust/sim/src/layers.rs. A table's `this` is ch.anim, or ch for Turn.
 pub fn cols_table_get(t: &crate::anim_skeleton::ColsTable, ch: &crate::character::Character, out: &mut [f64], o: usize) { todo!() }

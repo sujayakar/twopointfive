@@ -71,7 +71,7 @@ pub struct WallSkin {
     pub cut: JsMap<crate::Num, Vec<BoxId>>,
     pub out: JsSet<crate::Num>,
     pub laid: JsMap<crate::Num, Vec<crate::wallskin::WallSkinLaidValueItem>>,
-    pub seats: JsMap<crate::Num, Vec<SeatId>>,
+    pub seats: JsMap<crate::Num, Vec<crate::wallskin::Seat>>,
     pub on: JsMap<crate::Num, Vec<f64>>,
     pub dirty: JsSet<crate::Num>,
     pub cand: Vec<f64>,
@@ -82,9 +82,6 @@ pub struct WallSkin {
     pub failed: bool,
     pub marked: JsSet<crate::Num>,
     pub stats: crate::wallskin::WallSkinStats,
-    pub own: crate::FnField,
-    pub brk: crate::FnField,
-    pub all: crate::FnField,
 }
 impl WallSkin {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -104,9 +101,6 @@ impl WallSkin {
             failed: false,
             marked: JsSet::new(),
             stats: crate::wallskin::WallSkinStats { cut: 0.0, whole: 0.0, pieces: 0.0, capped: 0.0, coarse: 0.0, uncut: 0.0 },
-            own: crate::FnField,
-            brk: crate::FnField,
-            all: crate::FnField,
         }
     }
 }

@@ -9,13 +9,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 const AIR_CELL: f64 = crate::scene_air_grid::AIR_CELL;
 
-/// The block's stamp, what the slot's Plan goes by (SimState.stamp; airDust.ts:74, 103, 104, 105, 111, 129, 163). Neither the skeleton nor rust/sim's state.rs holds one (notes, ## Skeleton).
-/// A Rust game's block stands in its slot for the game's life: it is never parked, moved or written wholesale under a running game, which are the only things that
-/// deal the TypeScript's block a new stamp (src/sim/state.ts). So its stamp is one number for good, and not 0, which is what a slot's Plan holds before it is made.
-fn seam_sim_stamp(_g: &mut Game) -> f64 {
-    1.0
-}
-
 /// The dust's table in the game's block.
 fn air(g: &Game) -> &'static mut ::sim::air::Air {
     &mut ::sim::weather::of(g.sim).air
@@ -23,7 +16,7 @@ fn air(g: &Game) -> &'static mut ::sim::air::Air {
 
 /// The slot's tables, made if they are owed. (rust/sim/src/lib.rs air_of)
 fn plan(g: &mut Game) -> &'static mut ::sim::air::Plan {
-    let stamp = seam_sim_stamp(g);
+    let stamp = g.sim_stamp;
     let wx = ::sim::weather::of(g.sim);
     ::sim::air::plan(g.sim, stamp, &wx.air, &wx.roofs, wx.roofs_n as usize)
 }
@@ -98,7 +91,7 @@ pub fn air_dust_edges(g: &mut crate::game::Game) -> Vec<u32> {
 
 /// Where a table of the slot's stands: 0 the roofed cells · 1 the edges · 2 which cells are roofed · 3 the leaves across each edge. (airDust.ts AirDust.table)
 pub fn air_dust_table(g: &mut crate::game::Game, which: f64) -> f64 {
-    let stamp = seam_sim_stamp(g);
+    let stamp = g.sim_stamp;
     ::sim::air_table(g.sim, stamp, js::to_u32(which)) as f64
 }
 
@@ -177,7 +170,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
     let fog = crate::weather::weather_fog(g);
     let has = crate::weather::weather_kind(g).is_some() && fog.is_some();
     let on = has; // (AIRDUST.on is settled true on the page)
-    let stamp = seam_sim_stamp(g);
+    let stamp = g.sim_stamp;
     ::sim::air_begin(g.sim, stamp, if on { 1 } else { 0 });
     g.air_dust.drift = 0.0;
     let leak = match (has, fog) {
@@ -185,7 +178,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
         _ => {
             if g.air_dust.seeded {
                 g.air_dust.seeded = false;
-                let stamp = seam_sim_stamp(g);
+                let stamp = g.sim_stamp;
                 ::sim::air_clear(g.sim, stamp);
             }
             return;
@@ -193,7 +186,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
     };
     g.air_dust.seeded = true;
     crate::weather::weather_roofs_now(g);
-    let stamp = seam_sim_stamp(g);
+    let stamp = g.sim_stamp;
     ::sim::air_seed(g.sim, stamp, leak);
     g.air_dust.stats.roofed = air(g).n_cells;
     g.air_dust.stats.edges = air(g).n_edges;
@@ -202,7 +195,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
         crate::scene_collision::rule(g, &mut |g: &mut Game| {
             crate::scene_collision::rule_open(g);
             let (w, set, ask) = rule_args(g);
-            let stamp = seam_sim_stamp(g);
+            let stamp = g.sim_stamp;
             ::sim::air_settle(g.sim, stamp, w, set, ask);
             let t = said();
             air_dust_tally(g, &t);
@@ -234,7 +227,7 @@ pub fn air_dust_update(g: &mut crate::game::Game, dt: f64) {
     crate::scene_collision::rule(g, &mut |g: &mut Game| {
         crate::scene_collision::rule_open(g);
         let (w, set, ask) = rule_args(g);
-        let stamp = seam_sim_stamp(g);
+        let stamp = g.sim_stamp;
         ::sim::air_update(g.sim, stamp, w, set, ask, dt);
         let t = said();
         g.air_dust.drift += t[0];

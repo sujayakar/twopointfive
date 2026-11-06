@@ -281,9 +281,6 @@ pub fn pose_rows(n: f64) -> f64 {
     (js::to_i32(n + 3.0) & !3) as f64
 }
 
-/// The place of a pose that has none: the pool had no room as it was made, or (the bridge) it was an array of its own in the TypeScript.
-const NO_PLACE: u32 = u32::MAX;
-
 /// Rows a column of this pose holds.
 fn rows_of(p: Pose) -> usize {
     ::sim::skeleton::rows(p.nodes as usize)
@@ -294,8 +291,8 @@ fn span_of(p: Pose) -> (usize, usize) {
     if p.nodes == 0 {
         return (0, 0);
     }
-    if p.at == NO_PLACE {
-        panic!("posing: a pose of {} nodes has no place in the block: the pose pool had no room as it was made, or the state bridge carried a pose that was an array of its own (game/levelfit.ts holds the pool's size)", p.nodes);
+    if p.at >= Pose::LOOSE {
+        panic!("posing: a pose of {} nodes has no place in the block: the pose pool had no room as it was made, or the state bridge carried a pose that was an array of its own and no body took it home with pose_take_home (game/levelfit.ts holds the pool's size)", p.nodes);
     }
     (p.at as usize - ::sim::poses::HEAD / 4, ::sim::skeleton::singles(p.nodes as usize))
 }
@@ -313,9 +310,28 @@ fn cols_at(slot: usize, p: Pose) -> &'static mut [f32] {
     &mut pool_at(slot)[s..s + n]
 }
 
-/// A pose of `num_nodes` nodes, all zeros, in its game's pool. No room (or no nodes) makes a pose with no place, as the TypeScript's stayed its own array: see PoseSet.stray and span_of.   (skeleton.ts Pose.constructor)
+/// A pose of `num_nodes` nodes, all zeros, in its game's pool. No room (or no nodes) makes a pose with no place, as the TypeScript's stayed its own array: new_of's u32::MAX, past Pose::LOOSE and naming no row of g.loose_poses. See PoseSet.stray and span_of.   (skeleton.ts Pose.constructor)
 pub fn pose_new(g: &mut crate::game::Game, num_nodes: usize) -> crate::anim_skeleton::Pose {
     Pose { at: ::sim::poses::new_of(g.sim, num_nodes), nodes: num_nodes as u32 }
+}
+
+/// A pose the bridge carried with no place (Pose::LOOSE + its row of g.loose_poses) takes one and its floats. Any other stands as it is: one in the pool, and one made with no place, which has no row. A pool with no room leaves it loose, and span_of says so at its first read.
+pub fn pose_take_home(g: &mut crate::game::Game, p: &mut crate::anim_skeleton::Pose) {
+    if p.at < Pose::LOOSE {
+        return;
+    }
+    let row = (p.at - Pose::LOOSE) as usize;
+    if row >= g.loose_poses.len() {
+        return;
+    }
+    let nodes = g.loose_poses[row].nodes;
+    let at = ::sim::poses::new_of(g.sim, nodes as usize);
+    if at >= Pose::LOOSE {
+        return;
+    }
+    let home = Pose { at, nodes };
+    cols_at(g.sim, home).copy_from_slice(&g.loose_poses[row].floats);
+    *p = home;
 }
 
 /// The floats, wherever they are: the row itself, to write through and let go before the next call that takes g.   (skeleton.ts Pose.cols)
@@ -402,7 +418,7 @@ pub fn pose_set_most(g: &mut crate::game::Game, s: PoseSetId) -> f64 {
 
 /// Is this pose's floats in the block. A handle gets its place as it is made and a copy of it could not take a later one, so a pose with none stays so: false.   (skeleton.ts poseIn)
 pub fn pose_in(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose) -> bool {
-    p.at != NO_PLACE
+    p.at < Pose::LOOSE
 }
 
 /// A pose out of the block: it keeps its place and its floats, as there is nowhere else for them.   (skeleton.ts poseOut)
@@ -434,7 +450,7 @@ pub fn pose_set_out(g: &mut crate::game::Game, s: PoseSetId) {
 
 /// Is the pose in a block (not −1, the bench). No g here, so only the sign says anything: the slot it is in is g.sim, which is what lend answers.   (skeleton.ts slotOf)
 pub fn slot_of(p: crate::anim_skeleton::Pose) -> f64 {
-    if p.at == NO_PLACE {
+    if p.at >= Pose::LOOSE {
         -1.0
     } else {
         0.0
@@ -738,7 +754,7 @@ pub fn blend_pose(g: &mut crate::game::Game, a: Option<crate::anim_skeleton::Pos
                 ::sim::single::put(&mut bn.mask, i, k[i] as f64);
             }
         }
-        if a.at != NO_PLACE && b.at != NO_PLACE && out.at != NO_PLACE {
+        if a.at < Pose::LOOSE && b.at < Pose::LOOSE && out.at < Pose::LOOSE {
             g.m.anim_skeleton.pose_bench.in_place += 1.0;
             known(answer(::sim::skeleton::ask_blend(g.sim, a.at as usize, b.at as usize, w, mask.is_some(), out.at as usize, n, singles)));
             return;
@@ -1329,7 +1345,7 @@ mod tests {
         assert_eq!(pose_rot(&mut g, q, 2.0), [0.5, 0.25, -0.5, 1.0]);
         // the empty pose and the blank handle ask for no floats
         let none = pose_new(&mut g, 0);
-        assert_eq!(none.at, NO_PLACE);
+        assert!(none.at >= Pose::LOOSE);
         assert_eq!(pose_cols(&mut g, none).len(), 0);
         assert_eq!(pose_cols(&mut g, Pose::blank()).len(), 0);
     }
@@ -1338,7 +1354,35 @@ mod tests {
     #[should_panic(expected = "no place")]
     fn a_pose_with_no_place_is_said_by_name() {
         let (_h, mut g) = hold();
-        pose_cols(&mut g, Pose { at: NO_PLACE, nodes: 5 });
+        pose_cols(&mut g, Pose { at: Pose::LOOSE, nodes: 5 });
+    }
+
+    #[test]
+    fn a_carried_pose_takes_a_place_and_its_floats() {
+        let (_h, mut g) = hold();
+        g.loose_poses.push(LoosePose { nodes: 5, floats: Vec::new() });
+        g.loose_poses.push(LoosePose { nodes: 5, floats: cols(37) });
+        let mut p = Pose { at: Pose::LOOSE + 1, nodes: 5 };
+        assert!(!pose_in(&mut g, p));
+        pose_take_home(&mut g, &mut p);
+        assert!(pose_in(&mut g, p));
+        assert_eq!(p.nodes, 5);
+        assert_eq!(folded(pose_cols(&mut g, p)), folded(&cols(37)));
+        // one at home stands
+        let was = p;
+        pose_take_home(&mut g, &mut p);
+        assert_eq!(p, was);
+        // one made with no place has no row, and stands
+        let mut none = pose_new(&mut g, 0);
+        let was = none;
+        pose_take_home(&mut g, &mut none);
+        assert_eq!(none, was);
+        // a pool with no room leaves it loose
+        let mut full = Pose { at: Pose::LOOSE + 1, nodes: 5 };
+        ::sim::state::state(g.sim).poses.live = (::sim::poses::HEAD + ::sim::poses::POOL * 4) as u32;
+        pose_take_home(&mut g, &mut full);
+        ::sim::state::state(g.sim).poses.live = 0;
+        assert_eq!(full.at, Pose::LOOSE + 1);
     }
 
     #[test]
@@ -1370,7 +1414,7 @@ mod tests {
         ::sim::state::state(g.sim).poses.live = (::sim::poses::HEAD + ::sim::poses::POOL * 4) as u32;
         let b = pose_set_make(&mut g, s, 5.0);
         ::sim::state::state(g.sim).poses.live = 0;
-        assert_eq!(b.at, NO_PLACE);
+        assert!(b.at >= Pose::LOOSE);
         assert_eq!(g.tab.pose_set[s].stray, 1.0);
         assert!(!pose_set_in(&mut g, s));
         pose_set_out(&mut g, s);

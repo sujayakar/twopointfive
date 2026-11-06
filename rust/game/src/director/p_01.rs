@@ -20,7 +20,7 @@ pub fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<crate::d
 }
 
 /// (levels/<name>.script.ts, `script(D)`: the define pass of the level this names; its verbs are the manifest_* and program_* below)
-fn seam_script_define(script: crate::scene_level::LevelScriptFn, manifest: &mut Manifest) -> Result<(), String> { todo!("needs: the by-hand scripts' define pass for each LevelScriptFn (no module of the skeleton holds it)") }
+fn seam_script_define(script: crate::scene_level::LevelScriptFn, manifest: &mut Manifest) -> Result<(), String> { crate::director::script_define(script, manifest) }
 
 /// D.mark: a named place; a mark named again keeps its pos unless given one.   (director.ts:295)
 pub fn manifest_mark(m: &mut crate::director::Manifest, id: &str, pos: Option<V3>, yaw: Option<f64>) -> crate::director::MarkRef {

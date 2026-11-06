@@ -148,3 +148,11 @@ pub fn pair_gripped(g: &mut crate::game::Game, h: GuardId) -> bool { todo!() }
 
 /// (src/game/pairorders.ts:631 pairHoldsRound)
 pub fn pair_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool { todo!() }
+
+/// INVENTED: the body of a take row's issue closure (pairorders.ts:203-218)
+pub fn take_issue(g: &mut crate::game::Game, mode: crate::pairorders::JobMode, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> { todo!() }
+/// INVENTED: the body of the watch row's issue closure (pairorders.ts:227)
+pub fn watch_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> { todo!() }
+/// INVENTED: the body of the dark row's issue closure (pairorders.ts:242)
+pub fn dark_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> { todo!() }
+

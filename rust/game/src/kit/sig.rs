@@ -252,7 +252,7 @@ pub fn row_has(r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> bool { todo
 pub fn row_under(r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> Option<crate::gunslots::GunSlot> { todo!() }
 
 /// (src/game/kit.ts:767 rowGet)
-pub fn row_get(r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit) -> crate::kit::KitValue { todo!() }
+pub fn row_get(g: &mut crate::game::Game, r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit) -> crate::kit::KitValue { todo!() }
 
 /// (src/game/kit.ts:768 rowSet)
 pub fn row_set(g: &mut crate::game::Game, r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit, v: &crate::kit::KitValue) { todo!() }

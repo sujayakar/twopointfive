@@ -64,3 +64,7 @@ pub fn squad40_plans(g: &mut crate::game::Game) -> Vec<crate::squad40::Squad40Pl
 
 /// (src/game/squad40.ts:255 squad40Summary)
 pub fn squad40_summary(g: &mut crate::game::Game) -> String { todo!() }
+
+/// INVENTED: the body of the row's issue closure (squad40.ts:208-217)
+pub fn row_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> { todo!() }
+

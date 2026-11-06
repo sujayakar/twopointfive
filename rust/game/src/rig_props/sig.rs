@@ -186,10 +186,10 @@ pub fn rig_light_pose(g: &mut crate::game::Game, c_2: CharId, rig: Option<crate:
 pub fn rig_torch_pos(g: &mut crate::game::Game, c_2: CharId, dir: V3, torch: bool, rig: Option<crate::rig_props::Rig>, weapon: Option<crate::rig_props::RigTorchPosWeapon>) -> V3 { todo!() }
 
 /// (src/game/rigProps.ts:980 railLightDef)
-pub fn rail_light_def(owner: f64, intensity: f64) -> LightId { todo!() }
+pub fn rail_light_def(g: &mut crate::game::Game, owner: f64, intensity: f64) -> LightId { todo!() }
 
 /// (src/game/rigProps.ts:984 torchLightDef)
-pub fn torch_light_def(name: &str, owner: f64, intensity: f64, inner_deg: f64, outer_deg: f64) -> LightId { todo!() }
+pub fn torch_light_def(g: &mut crate::game::Game, name: &str, owner: f64, intensity: f64, inner_deg: f64, outer_deg: f64) -> LightId { todo!() }
 
 /// (src/game/rigProps.ts:992 torchCarryDir)
 pub fn torch_carry_dir(g: &mut crate::game::Game, c_2: CharId, prev: V3, dt: Option<f64>, low: Option<crate::rig_props::TorchCarryDirLow>) -> V3 { todo!() }

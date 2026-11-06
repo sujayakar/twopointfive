@@ -746,6 +746,70 @@ pub fn door_tools_word_note(g: &mut crate::game::Game) -> Vec<crate::orders::Ord
 /// (src/game/doortools.ts:3850 DoorTools.summary)
 pub fn door_tools_summary(g: &mut crate::game::Game) -> String { todo!() }
 
+/// INVENTED: the body of the row's label closure
+pub fn door_row_open_clear_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String { todo!() }
+/// INVENTED: the body of the row's valid closure (doortools.ts:808-846, :864, :903-938)
+pub fn door_row_open_clear_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+/// INVENTED: the body of the row's issue closure
+pub fn door_row_open_clear_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+/// INVENTED: the body of the row's only closure
+pub fn door_row_open_clear_only(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> { todo!() }
+/// INVENTED: the body of the row's label closure
+pub fn door_row_bang_clear_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String { todo!() }
+/// INVENTED: the body of the row's valid closure (doortools.ts:808-846, :864, :903-938)
+pub fn door_row_bang_clear_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+/// INVENTED: the body of the row's issue closure
+pub fn door_row_bang_clear_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+/// INVENTED: the body of the row's only closure
+pub fn door_row_bang_clear_only(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> { todo!() }
+/// INVENTED: the body of the row's label closure
+pub fn door_row_charge_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String { todo!() }
+/// INVENTED: the body of the row's valid closure (doortools.ts:808-846, :864, :903-938)
+pub fn door_row_charge_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+/// INVENTED: the body of the row's issue closure
+pub fn door_row_charge_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+/// INVENTED: the body of the row's label closure
+pub fn door_row_frag_clear_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String { todo!() }
+/// INVENTED: the body of the row's valid closure (doortools.ts:808-846, :864, :903-938)
+pub fn door_row_frag_clear_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+/// INVENTED: the body of the row's issue closure
+pub fn door_row_frag_clear_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+/// INVENTED: the body of the row's label closure
+pub fn door_row_threshold_hold_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String { todo!() }
+/// INVENTED: the body of the row's valid closure (doortools.ts:808-846, :864, :903-938)
+pub fn door_row_threshold_hold_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+/// INVENTED: the body of the row's issue closure
+pub fn door_row_threshold_hold_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+/// INVENTED: the body of the row's label closure
+pub fn door_row_go_small_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String { todo!() }
+/// INVENTED: the body of the row's valid closure (doortools.ts:808-846, :864, :903-938)
+pub fn door_row_go_small_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+/// INVENTED: the body of the row's issue closure
+pub fn door_row_go_small_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+/// INVENTED: the body of the row's only closure
+pub fn door_row_go_small_only(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> { todo!() }
+/// INVENTED: the body of the row's label closure
+pub fn door_row_go_big_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String { todo!() }
+/// INVENTED: the body of the row's valid closure (doortools.ts:808-846, :864, :903-938)
+pub fn door_row_go_big_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+/// INVENTED: the body of the row's issue closure
+pub fn door_row_go_big_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+/// INVENTED: the body of the row's only closure
+pub fn door_row_go_big_only(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> { todo!() }
+/// INVENTED: the body of the row's label closure
+pub fn door_row_big_clear_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String { todo!() }
+/// INVENTED: the body of the row's valid closure (doortools.ts:808-846, :864, :903-938)
+pub fn door_row_big_clear_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+/// INVENTED: the body of the row's issue closure
+pub fn door_row_big_clear_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+/// INVENTED: the body of the row's label closure
+pub fn door_row_thr_word_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String { todo!() }
+/// INVENTED: the body of the row's valid closure (doortools.ts:808-846, :864, :903-938)
+pub fn door_row_thr_word_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+/// INVENTED: the body of the row's issue closure
+pub fn door_row_thr_word_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+/// INVENTED: the body of the row's only closure
+pub fn door_row_thr_word_only(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> { todo!() }
 
 /// INVENTED: the call of what DoorTools.walks returned, a memo held in a local of the deal: the key is `${a[0].toFixed(2)},${a[2].toFixed(2)}>${b[0].toFixed(2)},${b[2].toFixed(2)}`, a miss is door_tools_walk_len(g, a, b, lim) (doortools.ts:3001 to 3004). A caller of away passes `&mut |g, a, b| door_tools_walks_len(g, &mut walks, a, b)`.
 pub fn door_tools_walks_len(g: &mut crate::game::Game, w: &mut crate::doortools::Walks, a: V3, b: V3) -> f64 { todo!() }

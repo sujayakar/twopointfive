@@ -59,7 +59,7 @@ fn at3(muzzle: V3, f: &MuzzleFrame, off: V3) -> V3 {
 }
 
 /// A shot from `muzzle` down `dir`: bore jet, side ports, the wisp; returns the light to fire. (effects.ts spawnShot)
-pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::effects::SpawnShotO) -> Vec<crate::effects::FxLight> {
+pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::effects::SpawnShotO, sparks: bool) -> Vec<crate::effects::FxLight> {
     let gas = o.gas != Some(false); // `smoke = NO_GAS`: its emit does nothing, so no call is made
     let s = shot();
     let d = v3::normalize(dir);
@@ -108,10 +108,8 @@ pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::eff
             }
         }
     }
-    // unburnt powder: a narrow fast cone about the bore (effects.ts:220). ROUND THREE: the part had dropped it as the picture's, but the sparks' pool is the game's and the
-    // frame's box list takes a box a spark (room-clear-four tick 1794: 20 boxes short). The TypeScript's `sp` is `gpu ? null : g.sparks` (combat.ts:152, the one caller):
-    // the skeleton's signature has no `sp`, so the caller's test is made here.
-    if !crate::particle_fx::gpu_fx(g) && flags().shot_sparks && s.spark_count > 0.0 {
+    // unburnt powder: a narrow fast cone about the bore (effects.ts:220). `sparks` is the TypeScript's `sp`, the caller's `gpu ? null : g.sparks` (combat.ts:152).
+    if sparks && flags().shot_sparks && s.spark_count > 0.0 {
         crate::sparks::sparks_emit_cone(g, v3::mad(muzzle, d, 0.04), [d[0], d[1] + 0.08, d[2]], crate::sparks::SparksEmitConeO { count: s.spark_count, speed: s.spark_speed, cone: s.spark_cone, life: s.spark_life }, o.seed);
     }
     vec![FxLight {
@@ -281,7 +279,7 @@ mod tests {
     fn a_shot_with_no_gas_files_none_and_still_flashes() {
         let mut g = Game::blank();
         let o = SpawnShotO { gas: Some(false), light_gain: Some(0.5), ..Default::default() };
-        let l = spawn_shot(&mut g, [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], &o);
+        let l = spawn_shot(&mut g, [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], &o, false);
         assert_eq!(l.len(), 1);
         assert_eq!(l[0].intensity, 45.0);
         assert_eq!(l[0].range, 8.0);

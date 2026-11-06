@@ -3318,6 +3318,10 @@ pub struct Character {
     pub rig: RigId,
     /// whose body this is
     pub who: crate::character::Who,
+    /// INVENTED: his row of the block's men (ManCols.r). None (0xffffffff) once he has left, or for a man of no game
+    pub man_row: u32,
+    /// INVENTED: owner, rank, reason, since of a man with no row: the numbers he took with him (manLeaves)
+    pub man_kept: Option<[f64; 4]>,
 }
 impl Character {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -3379,6 +3383,8 @@ impl Character {
             tn: None,
             rig: RigId(0),
             who: crate::character::Who::Guard(GuardId(0)),
+            man_row: 0xffffffff,
+            man_kept: None,
         }
     }
 }

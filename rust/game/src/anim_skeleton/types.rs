@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// A POSE IS A HANDLE (the goal's second ruling): its place in the pool of rust/sim's block (poses.rs new_of, holds) and how many nodes it has. Its columns are reached by functions that take g. rust/sim's layers reach it by its place
+/// A POSE IS A HANDLE: its place in the pool of rust/sim's block (poses.rs new_of, holds) and how many nodes it has. Its columns are reached by functions that take g. rust/sim's layers reach it by its place
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Pose { pub at: u32, pub nodes: u32 }
 impl Pose {
@@ -22,6 +22,11 @@ pub struct LayerCast { pub nodes: JsMap<&'static str, usize>, pub lists: JsMap<&
 impl LayerCast {
     pub fn blank() -> Self { LayerCast { nodes: JsMap::new(), lists: JsMap::new(), nums: JsMap::new() } }
 }
+/// A POSE THE TYPESCRIPT KEEPS OUTSIDE THE POOL, as the bridge carries it (Game.loose_poses). In Rust every pose lives in the pool: `pose_take_home` gives it a place when a body first needs one.
+#[derive(Clone, Debug, Default)]
+pub struct LoosePose { pub nodes: u32, pub floats: Vec<f32> }
+impl Pose { /** a place at or past this names a row of Game.loose_poses, no place in the pool */ pub const LOOSE: u32 = 0xffff0000; }
+
 /// WHICH TABLE OF A LAYER'S KEPT COLUMNS (anim/skeleton.ts LayerCols): a static table of character.ts, 26 of CharacterAnimator and Character's turnCols. It captures nothing; whose columns they are is said at the call. get and put of each arm are generated from the TypeScript's tables, as their order is the contract with rust/sim/src/layers.rs
 #[derive(Clone, Copy, Debug)]
 pub enum ColsTable {

@@ -22,7 +22,7 @@ impl ReachDoor {
 }
 impl Default for ReachDoor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ReachJob, src/render/reach.ts:230)
+/// (TypeScript: ReachJob, src/render/reach.ts:234)
 #[derive(Clone, Debug)]
 pub struct ReachJob {
     pub budget: f64,
@@ -41,7 +41,7 @@ impl ReachJob {
 }
 impl Default for ReachJob { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/reach.ts:233 ReachJob.own, src/render/reach.ts:233)
+/// (TypeScript: inline at src/render/reach.ts:237 ReachJob.own, src/render/reach.ts:237)
 #[derive(Clone, Debug)]
 pub struct ReachJobOwn {
     pub jumps: Option<Vec<u8>>,
@@ -56,7 +56,7 @@ impl ReachJobOwn {
 }
 impl Default for ReachJobOwn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/reach.ts:234 ReachJob.st, src/render/reach.ts:234)
+/// (TypeScript: inline at src/render/reach.ts:238 ReachJob.st, src/render/reach.ts:238)
 #[derive(Clone, Debug)]
 pub struct ReachJobSt {
     pub ci: f64,
@@ -83,7 +83,7 @@ impl ReachJobSt {
 }
 impl Default for ReachJobSt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ReachOnly, src/render/reach.ts:219)
+/// (TypeScript: ReachOnly, src/render/reach.ts:223)
 #[derive(Clone, Debug)]
 pub struct ReachOnly {
     pub prev: Vec<u32>,
@@ -104,7 +104,7 @@ impl ReachOnly {
 }
 impl Default for ReachOnly { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/reach.ts:194 REACH_OPTS, src/render/reach.ts:194)
+/// (TypeScript: inline at src/render/reach.ts:196 REACH_OPTS, src/render/reach.ts:196)
 #[derive(Clone, Copy, Debug)]
 pub struct RenderReachModREACHOPTS {
     pub ring: bool,
@@ -121,7 +121,7 @@ impl RenderReachModREACHOPTS {
 }
 impl Default for RenderReachModREACHOPTS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/reach.ts:211 REACH_WORK, src/render/reach.ts:211)
+/// (TypeScript: inline at src/render/reach.ts:213 REACH_WORK, src/render/reach.ts:213)
 #[derive(Clone, Copy, Debug)]
 pub struct RenderReachModREACHWORK {
     pub cells: f64,
@@ -145,11 +145,11 @@ impl Default for RenderReachModREACHWORK { fn default() -> Self { Self::zeroed()
 pub struct RenderReachMod {
     /// (src/render/reach.ts:80 JUMPS)
     pub jumps: JsMap<crate::ObjKey, Vec<u8>>,
-    /// (src/render/reach.ts:194 REACH_OPTS)
+    /// (src/render/reach.ts:196 REACH_OPTS)
     pub reach_opts: crate::render_reach::RenderReachModREACHOPTS,
-    /// (src/render/reach.ts:211 REACH_WORK)
+    /// (src/render/reach.ts:213 REACH_WORK)
     pub reach_work: crate::render_reach::RenderReachModREACHWORK,
-    /// (src/render/reach.ts:224 SOURCES)
+    /// (src/render/reach.ts:228 SOURCES)
     pub sources: JsMap<crate::ObjKey, String>,
 }
 impl RenderReachMod {
@@ -187,8 +187,8 @@ pub const WALL_Y1: f64 = 2.9;
 /// (src/render/reach.ts:44 SUBS: a table nothing writes)
 pub fn subs() -> Vec<[f64; 2]> { alloc::vec![[8.0, 8.0], [1.0, 1.0], [14.0, 1.0], [1.0, 14.0], [14.0, 14.0]] }
 
-/// (src/render/reach.ts:191 DIR_SUBS: a table nothing writes)
+/// (src/render/reach.ts:193 DIR_SUBS: a table nothing writes)
 pub fn dir_subs() -> Vec<[f64; 2]> { todo!() }
 
-/// (src/render/reach.ts:192 DIR_HEIGHTS: a table nothing writes)
+/// (src/render/reach.ts:194 DIR_HEIGHTS: a table nothing writes)
 pub fn dir_heights() -> Vec<f64> { alloc::vec![0.05, 0.45, 0.9, 1.3, 1.7] }

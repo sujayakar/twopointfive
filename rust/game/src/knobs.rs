@@ -6155,7 +6155,7 @@ impl PlanPaceK {
 }
 impl Default for PlanPaceK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/reach.ts:218 REACH_PACE, src/render/reach.ts:218)
+/// (TypeScript: inline at src/render/reach.ts:222 REACH_PACE, src/render/reach.ts:222)
 #[derive(Clone, Copy, Debug)]
 pub struct ReachPaceK {
     pub steps: f64,

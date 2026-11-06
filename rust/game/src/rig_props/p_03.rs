@@ -325,28 +325,19 @@ pub fn rig_torch_pos(g: &mut crate::game::Game, c_2: CharId, dir: V3, torch: boo
 }
 
 /// The player's rail light, parked and off until posed. (rigProps.ts railLightDef)
-pub fn rail_light_def(owner: f64, intensity: f64) -> LightId {
-    seam_light_row(rail_light(owner, intensity))
+pub fn rail_light_def(g: &mut crate::game::Game, owner: f64, intensity: f64) -> LightId {
+    g.tab.light.push(rail_light(owner, intensity))
 }
 fn rail_light(owner: f64, intensity: f64) -> crate::render_lights::RtLight {
     (crate::render_lights::RtLight { name: String::from("pistol_light"), group: String::from("player"), kind: 1.0, pos: [0.0, -10.0, 0.0], dir: [0.0, 0.0, 1.0], color: [0.9, 0.96, 1.0], intensity, range: 18.0, inner_deg: 5.0, outer_deg: 15.0, radius: 0.035, volumetric: 1.0, owner, enabled: false, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: intensity, card: true, ..crate::render_lights::RtLight::zeroed() })
 }
 
 /// A guard's torch / weapon light, warm and wider. (rigProps.ts torchLightDef)
-pub fn torch_light_def(name: &str, owner: f64, intensity: f64, inner_deg: f64, outer_deg: f64) -> LightId {
-    seam_light_row(torch_light(name, owner, intensity, inner_deg, outer_deg))
+pub fn torch_light_def(g: &mut crate::game::Game, name: &str, owner: f64, intensity: f64, inner_deg: f64, outer_deg: f64) -> LightId {
+    g.tab.light.push(torch_light(name, owner, intensity, inner_deg, outer_deg))
 }
 fn torch_light(name: &str, owner: f64, intensity: f64, inner_deg: f64, outer_deg: f64) -> crate::render_lights::RtLight {
     (crate::render_lights::RtLight { name: String::from(name), group: String::from("flashlights"), kind: 1.0, pos: [0.0, -10.0, 0.0], dir: [0.0, 0.0, 1.0], color: [1.0, 0.92, 0.78], intensity, range: 16.0, inner_deg, outer_deg, radius: 0.05, volumetric: 1.0, owner, enabled: true, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: intensity, card: true, ..crate::render_lights::RtLight::zeroed() })
-}
-
-/// The new light as a row of `g.tab.light`: the literal's fields the TypeScript leaves out are absent, which is what `zeroed` holds for them. The two callers above have no `g` to push it with.
-/// THE TWO DEFS WITH THE GAME IN HAND. The TypeScript's defs answer a light record and the caller hands it on; here a light is a row of `g.tab.light`, and the
-/// skeleton's two signatures above have no `g` to make the row with. Every caller has one, and calls these.
-pub fn rail_light_def_in(g: &mut Game, owner: f64, intensity: f64) -> LightId { g.tab.light.push(rail_light(owner, intensity)) }
-pub fn torch_light_def_in(g: &mut Game, name: &str, owner: f64, intensity: f64, inner_deg: f64, outer_deg: f64) -> LightId { g.tab.light.push(torch_light(name, owner, intensity, inner_deg, outer_deg)) }
-fn seam_light_row(l: crate::render_lights::RtLight) -> LightId {
-    todo!("needs: rail_light_def and torch_light_def to take g, to push the literal in g.tab.light")
 }
 
 /// The relaxed torch carry's beam, eased from last frame's. (rigProps.ts torchCarryDir)
