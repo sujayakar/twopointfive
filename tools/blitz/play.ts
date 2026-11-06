@@ -195,7 +195,7 @@ function withCutsOf(b: Uint8Array, a: Uint8Array): Uint8Array { const A = spansO
 const HOST_Q = (x: { q: string; path: string }) => x.path.startsWith('g.cmd_buf') || /^g\.tab\.(camera|input)\b/.test(x.path) || x.q === 'orders::SquadOrdersView.input' || x.q === 'orders::SquadOrdersView.cam' || x.q === 'game::Game.view_proj';
 // NOT A WRITE: an identity serial (the two sides number objects apart by design: schema.serial), a clip's place in the Rust game's own table (the export
 // writes a constant for it), `Player.kit_was` (the apply leaves the puppet's at nothing where the Rust game holds one: seen on tut-solo every tick), and the counts of collision and sense asks (collision.ts ANYTIME, SENSED: counters of the module that was asked, read by no rule)
-const OWN_Q = (x: { q: string; path: string }) => !!SCHEMA.serial?.[x.q] || !!SCHEMA.scratch?.[x.q] || x.q === 'anim_skeleton::ClipSide.at' || x.q === 'game::Player.kit_was' || x.q === 'tail' || /^scene_collision::SceneCollisionMod(ANYTIME|SENSED)\./.test(x.q);
+const OWN_Q = (x: { q: string; path: string }) => !!SCHEMA.serial?.[x.q] || !!SCHEMA.scratch?.[x.q] || x.q === 'anim_skeleton::ClipSide.at' || x.q === 'game::Player.kit_was' || x.q === 'lesson::Lesson.run' || x.q === 'tail' || /^scene_collision::SceneCollisionMod(ANYTIME|SENSED)\./.test(x.q);
 
 // ---- the run's books
 let k = 0, h = 0, slot = 0, lastState: Uint8Array | null = null, lastBlock: Uint8Array | null = null, lastRust: Uint8Array | null = null;
@@ -241,6 +241,12 @@ function applyRust(g: any): Uint8Array {
   // own `mark`, and a `desired` whose numbers the apply changed is given a new array: every write of a lens's `desired` in src/game is a whole write, a cut.
   // Belongs in the face (a call that takes the seat's cut on the Rust side) or in the bridge (`desired_serial` carried).
   for (const x of lenses) { const c = x.s.cam, d = c.desired; x.s.mark = x.mark; if (d[0] !== x.d[0] || d[1] !== x.d[1] || d[2] !== x.d[2]) { c.desired = [d[0], d[1], d[2]]; standIns.cut++; } }
+  // STAND-IN: THE LESSON'S RUN IS THE MISSION BY IDENTITY (lesson.ts:348 `settling`: `this.run === this.g.mission`). The bridge carries `Lesson.run` as an
+  // identity serial; the Rust game deals its own serials, so the apply puts whatever TypeScript object has that number (or a placeholder) there,
+  // `settling` answers false, and the lesson's player stops (tut-solo tick 652, tools/qa/lesson-run.ts:323: "step 3 'sprint' did not go by", while the Rust
+  // lesson held the step done and settling). Here a run that the Rust game holds at all is taken to be the mission the puppet holds: wrong for the ticks
+  // between a restart's new Mission and the lesson filing it. Belongs in the bridge (the run carried as "is the mission's", not as a number).
+  if (g.lesson && g.lesson.run && g.lesson.run !== g.mission) { g.lesson.run = g.mission; standIns.run++; }
   // STAND-IN: THE SQUAD'S POSTURE is three closures in TypeScript (silent.ts:246) and a struct of no fields in the bridge; the apply puts a bare object
   // where the Rust game holds one, and orders.ts:885 (`this.posture?.given(def)`) then throws. The puppet keeps the object it had. Belongs in import.ts.
   if (posture && g.orders.posture && g.orders.posture !== posture) { g.orders.posture = posture; standIns.posture++; }
@@ -288,7 +294,7 @@ function taps(g: any) {
     // (not on the ticks expected: made now on the Rust side, and the puppet takes the state again so the player reads the listed world)
     uploadsLate++; X.face_upload(h); uploadsRust++; applyRust(g); lastState = exportGame(g, reg); }; }
 let uploadDone = false;
-const DEFS = { orig: new Set<any>(), byId: new Map<string, any>() }, standIns = { posture: 0, defs: 0, defNoTwin: 0, cut: 0 };
+const DEFS = { orig: new Set<any>(), byId: new Map<string, any>() }, standIns = { posture: 0, defs: 0, defNoTwin: 0, cut: 0, run: 0 };
 
 /** THE WRITE-BACK: what TypeScript wrote into the puppet since the last apply goes to the Rust game. `at`: the tick that opens next. */
 function writeBack(g: any, at: number): void {
@@ -388,6 +394,8 @@ function table(T0: Tally, n = 30): string { return [...T0].sort((a, b) => b[1].t
 let res: any = null, les: any = null, ended = false, stopped = false;
 function finish(g: any, code: number | null = null): never {
   if (ended) process.exit(code ?? 3); ended = true; console.log = LOG; console.error = ERR; console.warn = WARN;
+  // (where the play stopped short of its end, the last state of both sides is kept: what the player read against what the Rust game held)
+  if (OUT && lastRust && g && (les?.code || res?.end === 'error')) { try { writeFileSync(`${OUT}/last-rust.bin`, lastRust); writeFileSync(`${OUT}/last-puppet.bin`, exportGame(g, reg)); } catch { /* the puppet may not export where it threw */ } }
   const wall = (now() - wall0) / 1000, per = (x: number) => (x / Math.max(1, k)).toFixed(3);
   const mineEnd = res ? `${res.end} (${String(res.why).split('\n')[0]}); t ${res.t}; team ${res.team} of ${res.of}; hostiles ${res.hostiles} of ${res.hostilesOf}` : les ? `${les.code === 0 ? 'every step went by and the run ended' : `STOPPED (${les.why})`}; ${les.steps.length} steps gone by: ${les.steps.map((s: any) => s.id).join(' ')}` : '(the play was stopped before its end)';
   say(''); say(`THE RUST GAME PLAYED BY THE SCRIPTED PLAYER THROUGH THE PUPPET: ${scn}:${seed}, ${k} ticks`);
@@ -407,7 +415,7 @@ function finish(g: any, code: number | null = null): never {
   say(`  THE APPLY, held to the Rust bytes it was given (the puppet exported again right after it): ${applyChecks} ticks checked (the first 3, then every ${APPLY_CHECK}th), ${applyUnequal} with a field outside the cut ones not as Rust has it`); if (applyUnequal) say(table(APPLY_MISS));
   say(`    of the fields cut out of every compare, the puppet's differed from the Rust game's on: ${[...CUTW].map(([q, n]) => `${q} ${n} of ${applyChecks}`).join(' · ') || 'none'}`);
   say(`  the apply made new rows: ${JSON.stringify(made)}; no way back: ${[...noWay].map(([q, n]) => `${q} x${n}`).join(', ') || '-'}; no setter: ${[...noSetter].map(([q, n]) => `${q} x${n}`).join(', ') || '-'}; no window: ${[...noWindow].join(', ') || '-'}`);
-  say(`  STAND-INS used: a seat's cut made anew ${standIns.cut} times (and its mark kept over every apply); the squad's posture kept over ${standIns.posture} applies; ${standIns.defs} new order rows given their TypeScript twin's closures (${standIns.defNoTwin} had no twin)`);
+  say(`  STAND-INS used: a seat's cut made anew ${standIns.cut} times (and its mark kept over every apply); the lesson's run set to the puppet's mission after ${standIns.run} applies; the squad's posture kept over ${standIns.posture} applies; ${standIns.defs} new order rows given their TypeScript twin's closures (${standIns.defNoTwin} had no twin)`);
   say(`  the box world listed on the Rust side ${uploadsRust} times (${uploadsLate} asked for on a tick not expected, ${uploadsMissed} expected and not asked for); out events: ${X.face_out_n ? `${outEvents} over ${outTicks} ticks, cleared and not dispatched (the whole export does not carry them)` : 'this module cannot say'}`);
   const sameEnd = !post.length ? false : (res ? refEnd.includes(`: ${res.end} (`) && refEnd.includes(`t ${res.t};`) && refEnd.includes(`team ${res.team} of ${res.of}`) && refEnd.includes(`PLAYED OUT at tick ${k} `) : les ? refEnd.includes(` at tick ${k}:`) && refEnd.includes(les.steps.map((s: any) => s.id).join(' ')) : false);
   if (code === null) code = S.parted || S.dieParted ? 1 : !post.length ? 3 : sameEnd ? 0 : (res || les) ? 4 : 0;

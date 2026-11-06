@@ -61,6 +61,8 @@ which `hostAfter` writes after every step and the tick writes again as it opens.
   `desired` in place and writes `mark` from a Rust field that counts something else, so `takeCut` answered a cut every tick and `hostAfter` snapped the
   host's camera every tick. The seat keeps its own `mark`; a `desired` whose numbers changed gets a new array.
 - **The squad's posture** (`SquadOrders.posture`, three closures; a struct of no fields in the bridge): the puppet keeps the object it had.
+- **The lesson's run** (`Lesson.run`, the Mission by identity in lesson.ts:348; a serial in the bridge): after an apply a run the Rust game holds is the
+  puppet's mission. Without it the lesson's player stopped at tick 652 of tut-solo.
 - **A new order row** takes the functions of a TypeScript row of the same id, where there is one. Most have none: see below.
 
 ## What does not work on a puppet
@@ -91,3 +93,20 @@ which `hostAfter` writes after every step and the tick writes again as it opens.
 
 Wall: 822 s for the mission, 273 ms a tick, against 15 s for the plain TypeScript play with the loop's files written. Two whole-state walks in TypeScript
 (the export for the write-back, the apply) are 90% of it; the Rust game's own step and export are 4%.
+
+## What has been played
+
+Every tick: the die's count and 12 parts of the block after it, the host's half before it, all against the plain TypeScript play of the same seed.
+
+| mission | ticks played | equal | the end | wall, this play / the plain play |
+|---|---|---|---|---|
+| room-clear-four:1 | 3,006 of 3,006 | every tick | the same: taken, t 50.1, 4 of 4 up | 822 s / 15 s |
+| night-breach:1 | 1,413 of 1,413 | every tick | the same: taken, t 23.5, 2 of 2 up | 313 s / 7 s |
+| hostage-rescue:1 | 3,119 of 3,119 | every tick | the same: rescued, clean, 2 of 2 hostages, t 52 | 1,122 s / 13 s |
+| depot-four:1 | 3,000 of 5,118 (stopped by `--ticks`) | every tick played | not reached | 900 s for the 3,000 |
+| tut-solo:1 | 2,186 of 8,052 | 2,185 ticks; at 2186 THE DIE PARTS (122 draws here, 119), the host's half equal on every tick | not reached | 429 s |
+
+The plain play's wall is `mission.ts`'s, which also writes the loop's files every tick. room-clear-four was played before the bridge's own hand-over
+(`face_host_half`) was merged, and 80 ticks of it after; the other rows are on the merged tree.
+
+Not played: a second seat, a quiet mission, a restart or a load in the middle of a play, an order aimed at a wall or a thing, any page.
