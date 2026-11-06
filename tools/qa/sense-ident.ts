@@ -463,7 +463,8 @@ if (!MADE) {
   // THE WORDS of this run over levels: held to nothing by themselves on the page's stand (a run's course there moves with every level's edit), to the
   // same run played plain by a child under a red path, and to another checkout's run of the same tool with `--against <root>`.
   const held = PIN.hold({ root: ROOT, tool: 'tools/qa/sense-ident.ts', fixture: 'sense-words.json', run: `levels ${files.join(',')} · seed ${SEED} · ${N} questions a level`, runArgs: ['--n', String(N), '--seed', String(SEED), '--levels', files.join(',')],
-    end: `${files.length} levels`, words: FOLD.words(), breakWord: BREAK_WORD, unfit: 'a recording is the made-up world\'s (--made): a level\'s edit moves a level\'s words', verdict, say: log });
+    end: `${files.length} levels`, words: FOLD.words(), breakWord: BREAK_WORD, unfit: 'a recording is the made-up world\'s (--made): a level\'s edit moves a level\'s words',
+    unpinned: 'no recording is kept of a run over levels, whose words move with a level\'s edit (the pin is the made-up world\'s, --made)', verdict, say: log });
   // WHAT A RED PATH MUST MOVE, AND MUST NOT: by the names of the words that moved against the plain run
   const off = held.off, kindOf = (n: string) => n.split(' · ')[0], is = (n: string, k: string) => kindOf(n) === k, lamp = (n: string) => kindOf(n).startsWith('lamps');
   if (UNSAID) blind.push(...KINDS.filter(k => !off.some(n => is(n, k))));   // (every kind of question, on some level)

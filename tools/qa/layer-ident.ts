@@ -418,6 +418,8 @@ async function wallHold(): Promise<void> {
     `${ran} ends ${String(r.end)}, then a quiet walk of 80 s, four kicks, the reactions, a lean, the wounds, a man kept down, the magazine changes, a free hand's signals and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${words[n]?.asked ?? 0}`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${PIN ? ` · NOT REACHED ON THIS STAND, held by the red path and --against only: ${out.join(', ') || 'none'}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`);
   // (what the words are held to: a child's plain run under the red path, another checkout's run, or the frozen stand's recording)
   const h = hold({ root: ROOT, tool: 'tools/qa/layer-ident.ts', fixture: 'layer-words.json', run: ran, runArgs: ['--run', ran], end: String(r.end), words, breakWord: 'RUST_BREAK',
+    // (what is unpinned by design, tools/qa/ident-pin.ts: this family's recording is still the old stand's, and of one mission)
+    unpinned: !PIN ? 'the layers\' recording is the old stand\'s (TPS_PROFILE=frozen) until it is taken again on the page\'s' : flag('--run') && ran !== 'warehouse-four:1' ? 'a run of another mission than the one recorded' : undefined,
     unfit: stray.length ? `a call was watched under a name that is not in LAYERS_MOVED (${stray.join(', ')})` : '', verdict, say: (l: string) => console.log(l) });
   if (!whole) process.exit(0);
   RECORD = h.record; HELD_TO = h.to;

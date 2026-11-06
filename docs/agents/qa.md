@@ -17,8 +17,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   THE WORD: giving a child no word asks for the page's (`rerun.ts` for a tape made on the old stand, `rust-check.ts`'s old-stand arms, `lesson-gate.ts`'s
   frozen runs, `ships.ts` / `kit-cells.ts` / `solo-night.ts` `--base`, `blast-frame.ts --arm round1` all say it). NO NEW FIXTURE IS RECORDED ON IT. What
   that leaves: (1) the recordings that were made on it stand until each one's owner records it again on the page's stand: `layer-words.json` and
-  `sense-words.json` are still asked, by `rust-check.ts`, of a child it stands on the old stand by name, and `ident-pin.ts` still refuses `--record` on any
-  other stand (the owners lift that as they record); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
+  `sense-words.json` are still asked, by `rust-check.ts`, of a child it stands on the old stand by name, and `ident-pin.ts` records on the stand a family names (`hold({ stand })`: the page's for the glass's `pane-words.json`
+  from the commit after step 1572; the old one until a family says). A RUN OF AN IDENT THAT IS HELD TO NOTHING FAILS, said as NOT HELD, unless
+  the tool or its caller says the word (`unpinned`, `--unpinned`: `docs/agents/rust.md`, "What holds a family once its TypeScript is gone"); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
   hold nothing on a run with no word, and say so; (2) a check that was green on the old stand and red on the page's is red in a plain run now:
   `tools/qa/expected-red.ts` is where each is named with its cause and whose it is (its page-stand rows are a plain run's rows now); (3) headers that say
   "frozen by default" or "run it on BOTH stands" are older than this: once, with no word. Proof of the flip itself: `stand-dump.ts` with no word after =
