@@ -219,6 +219,21 @@ pub extern "C" fn face_debug(h: u32) {
 }
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
+/// A tap (tools/blitz/taps.json): where set, the function reports its call as an out event
+#[no_mangle]
+pub extern "C" fn face_tap(h: u32, id: u32, on: u32) {
+    with(h, |x| { if on != 0 { x.g.taps |= 1u64 << id; } else { x.g.taps &= !(1u64 << id); } });
+}
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_call(h: u32, f: u32, p: *const u8, n: usize) {
+    let b = bytes(p, n);
+    let a = with(h, |x| game::call_gen::call(&mut x.g, f, b));
+    out(a);
+}
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
 pub unsafe extern "C" fn face_write(h: u32, p: *const u8, n: usize) {
     let b = bytes(p, n);

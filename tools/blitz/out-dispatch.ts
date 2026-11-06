@@ -12,7 +12,7 @@ import { clearSnowTracks } from '../../src/game/snowTracks';
 function playOpts(g: any, e: any): any { const o = e.opts; if (!o) return undefined; if (o.tok === undefined) { const x: any = {}; for (const k of Object.keys(o)) if (o[k] !== undefined) x[k] = o[k]; return x; } const tok = o.tok, r = g.rolls.find((x: any) => x.voice === tok), at = e.pos; return { follow: () => { if (!r || r.voice !== tok) return null; at[0] = r.p.x; at[2] = r.p.z; return { pos: at, k: r.k, t: g.time }; } }; }
 
 /** a checkpoint is the Rust game's, not the puppet's (OUT-EVENTS.md): set this and the two Checkpoints arms call it */
-export const OUT_HOST: { checkpoint?: (g: any, what: string, e: any) => void } = {};
+export const OUT_HOST: { checkpoint?: (g: any, what: string, e: any) => void; tap?: (g: any, row: number, args: number[], answer: number[]) => void } = {};
 
 export const OUT: Record<string, (g: any, e: any) => void> = {
   CheckpointsKeep: (g, e) => { OUT_HOST.checkpoint ? OUT_HOST.checkpoint(g, "keep", e) : g.saves?.keep?.(e.label); },
@@ -48,6 +48,7 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   ClearSnowBlast: (g, e) => { clearSnowBlast(g); },
   ClearSnowMarks: (g, e) => { clearSnowMarks(); },
   ClearSnowTracks: (g, e) => { if (g.snowTracks) clearSnowTracks(g.snowTracks); },
+  Tap: (g, e) => { OUT_HOST.tap?.(g, e.row, e.args, e.answer); },
 };
 /** after an apply: every event of the step, in the order the rules made them */
 export function dispatchOut(g: any, events: { arm: string; e: any }[]): void { for (const { arm, e } of events) OUT[arm](g, e); }

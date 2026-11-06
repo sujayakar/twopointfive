@@ -9,7 +9,11 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A door's sound, heard and played: what the Game hands the doors as `emit`, called by name (game.ts:1196).
 fn emit(g: &mut Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f64, level: f64) {
-    crate::game::game_on_door_event(g, crate::doors::DoorEvent { door: d, sound, pos, who, level });
+    door_event(g, crate::doors::DoorEvent { door: d, sound, pos, who, level });
+}
+/// (the `emit` the Game hands the doors, game.ts:1195; a tool's replacement of `doors.emit` fires by its tap)
+#[doc(hidden)] pub fn door_event__body(g: &mut Game, e: crate::doors::DoorEvent) {
+    crate::game::game_on_door_event(g, e);
 }
 
 /// How far a leaf stands open the way a shove would send it; one-way, simply how far open.   (doors.ts Doors.openFor)
@@ -205,7 +209,7 @@ pub fn doors_kick_in(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, l
 }
 
 /// The doors' side of a blast: the leaves it took off. The Game's `blaster`, called by name (game.ts:1206).   (doors.ts Doors.blast)
-pub fn doors_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
+#[doc(hidden)] pub fn doors_blast__body(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
     crate::doorblast::door_blast(g, at, tear_m, who)
 }
 
@@ -320,6 +324,26 @@ pub fn doors_leaf_boxes(g: &mut crate::game::Game) -> Vec<BoxId> {
 pub fn doors_pos_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let mut list = g.doors.list.clone();
     door_pos_aside(g, &mut list, fn_)
+}
+
+
+#[doc(hidden)] pub fn doors_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
+    use crate::io::Io;
+    if g.taps & (1u64 << 7) == 0 { return doors_blast__body(g, at, tear_m, who); }
+    let mut o = crate::io::W::new(); at.w(&mut o); tear_m.w(&mut o); who.w(&mut o);
+    let r = doors_blast__body(g, at, tear_m, who);
+    let mut a = crate::io::W::new(); r.w(&mut a);
+    crate::out_events::push_tap(g, 7, &o.b, &a.b);
+    r
+}
+
+
+#[doc(hidden)] pub fn door_event(g: &mut Game, e: crate::doors::DoorEvent) {
+    use crate::io::Io;
+    if g.taps & (1u64 << 8) == 0 { return door_event__body(g, e); }
+    let mut o = crate::io::W::new(); e.w(&mut o);
+    door_event__body(g, e);
+    crate::out_events::push_tap(g, 8, &o.b, &[]);
 }
 
 #[cfg(test)]

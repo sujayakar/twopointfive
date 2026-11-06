@@ -26,7 +26,7 @@ pub fn probe_like_query(g: &mut crate::game::Game, key: &str, pos: V3, skip_owne
 }
 
 /// Queue a smoke line for the picture; the default is the probe's own. (sensors.ts ProbeLike.querySegment, render/probe.ts 75)
-pub fn probe_like_query_segment(g: &mut crate::game::Game, key: &str, a: V3, b: V3, rank: Option<f64>) {
+#[doc(hidden)] pub fn probe_like_query_segment__body(g: &mut crate::game::Game, key: &str, a: V3, b: V3, rank: Option<f64>) {
     let rank = rank.unwrap_or(1.0);
     probe_put(g, ProbeAsk { key: String::from(key), pos: a, skip_owner: 0.0, b: Some(b), rank });
 }
@@ -599,6 +599,15 @@ fn summary(s: &SensorStream) -> String {
 /// (sensors.ts first)
 pub fn first(r: Option<&[f64]>) -> Option<f64> {
     r.and_then(|r| r.first().copied())
+}
+
+
+#[doc(hidden)] pub fn probe_like_query_segment(g: &mut crate::game::Game, key: &str, a: V3, b: V3, rank: Option<f64>) {
+    use crate::io::Io;
+    if g.taps & (1u64 << 18) == 0 { return probe_like_query_segment__body(g, key, a, b, rank); }
+    let mut o = crate::io::W::new(); alloc::string::String::from(key).w(&mut o); a.w(&mut o); b.w(&mut o); rank.w(&mut o);
+    probe_like_query_segment__body(g, key, a, b, rank);
+    crate::out_events::push_tap(g, 18, &o.b, &[]);
 }
 
 #[cfg(test)]

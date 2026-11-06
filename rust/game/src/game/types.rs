@@ -827,6 +827,8 @@ pub struct Game {
     pub out: Vec<crate::out_events::OutEvent>,
     /// INVENTED: how many with_seat calls stand open: seats.ts tells a seat's view from the bare Game by identity (`rawGame(g) !== g`). Zero between ticks, so the bridge does not carry it
     pub view_depth: u32,
+    /// a bit for each function of tools/blitz/taps.json a tool has replaced on the puppet: where set, the function reports its call as an out event. The host sets them (face_tap); nothing in the game reads them but the function itself
+    pub taps: u64,
     /// state.ts:136 SimState.stamp, for what is made from the block (the fog's grid, the air): a native game has one block, and whatever writes it wholesale raises this
     pub sim_stamp: f64,
     /// the table of these things: never shrinks
@@ -1003,6 +1005,7 @@ impl Game {
             loose_poses: Vec::new(),
             out: Vec::new(),
             view_depth: 0,
+            taps: 0,
             sim_stamp: 1.0,
             ch: Tab::new(),
             dr: Tab::new(),

@@ -427,7 +427,7 @@ pub fn wind_blows(g: &mut crate::game::Game, session: bool) -> bool {
 }
 
 /// The storm's wind vector when it should be felt, none otherwise. (wind.ts Wind.stormWind)
-pub fn wind_storm_wind(g: &mut crate::game::Game) -> Option<V3> {
+#[doc(hidden)] pub fn wind_storm_wind__body(g: &mut crate::game::Game) -> Option<V3> {
     if !wind_blows(g, true) {
         return None;
     }
@@ -656,6 +656,17 @@ pub fn wind_summary(g: &mut crate::game::Game) -> String {
         None => String::from("off"),
     };
     alloc::format!("wind {}{} · {}/{} sources blowing ({} vents{}{}) · particles {} · solver {}", js::to_fixed(master, 2), still, w.active.len(), w.all.len(), vents, storm, gusts, parts, solver)
+}
+
+
+#[doc(hidden)] pub fn wind_storm_wind(g: &mut crate::game::Game) -> Option<V3> {
+    use crate::io::Io;
+    if g.taps & (1u64 << 12) == 0 { return wind_storm_wind__body(g); }
+    let mut o = crate::io::W::new(); 
+    let r = wind_storm_wind__body(g);
+    let mut a = crate::io::W::new(); r.w(&mut a);
+    crate::out_events::push_tap(g, 12, &o.b, &a.b);
+    r
 }
 
 #[cfg(test)]

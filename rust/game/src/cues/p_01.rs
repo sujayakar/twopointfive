@@ -452,7 +452,7 @@ pub fn cues_heard(g: &mut crate::game::Game, gd: GuardId, text: &str) {
 }
 
 /// A defender's line that is telling only: the strip's row, and this file's own bubble (never Guard.bubble).   (cues.ts Cues.net)
-pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
+#[doc(hidden)] pub fn cues_net__body(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
     let t = g.time;
     g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: true });
     if !crate::roomfight::fight_live(g) { return; }
@@ -849,6 +849,15 @@ pub fn strip_rows(g: &mut crate::game::Game) -> Vec<crate::cues::StripRowsItem> 
 
 /// Host work: the debugger's panel keeps three rows in the browser's storage. No game state moves.   (cues.ts saveCues)
 pub fn save_cues(g: &mut crate::game::Game) { todo!("host work: the panel's localStorage, kept in the TypeScript host") }
+
+
+#[doc(hidden)] pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
+    use crate::io::Io;
+    if g.taps & (1u64 << 15) == 0 { return cues_net__body(g, gd, text, cls); }
+    let mut o = crate::io::W::new(); gd.w(&mut o); alloc::string::String::from(text).w(&mut o); cls.w(&mut o);
+    cues_net__body(g, gd, text, cls);
+    crate::out_events::push_tap(g, 15, &o.b, &[]);
+}
 
 #[cfg(test)]
 mod tests {

@@ -19,6 +19,8 @@
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'node:fs';
 
 export interface HostOpts {
+  /** 'page': the short list; else the harness's, every field the tick moves (PuppetMemo.wide) */
+  list?: 'page' | 'harness';
   /** the module (default: rust/game_face's release build) */
   wasm?: string;
   audit?: boolean;
@@ -82,10 +84,10 @@ export function loadFace(wasm = DEFAULT_WASM, fresh = false): Face {
 let BR: any = null;
 async function bridge(): Promise<any> {
   if (BR) return BR;
-  const E = await import('./export.ts'), I = await import('./import.ts'), AK = await import('./ask.ts'), C = await import('./classes.ts'), P = await import('./puppet-apply.ts'), O = await import('./out-dispatch.ts'), A = await import('./audit.ts');
+  const SU = await import('./surface.ts'), SC = await import('./scan.ts'); SU.installSurface(); const E = await import('./export.ts'), I = await import('./import.ts'), AK = await import('./ask.ts'), C = await import('./classes.ts'), P = await import('./puppet-apply.ts'), O = await import('./out-dispatch.ts'), A = await import('./audit.ts');
   const K = await import('../../src/game/knobs.ts'), D = await import('../../src/math/dice.ts'), DR = await import('../../src/game/dress.ts');
   const LJ = JSON.parse(readFileSync(new URL('./puppet-lists.json', import.meta.url).pathname, 'utf8'));
-  BR = { ...E, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable() }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll,
+  O.OUT_HOST.tap = SU.fireTap; BR = { ...E, surfaceHost: SU.surfaceHost, makeTaps: SU.makeTaps, makeScan: SC.makeScan, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable() }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll,
     lists: { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) } };
   // (every walk of a game by the bridge is made with that game as the one whose rows a weak table lists: `ownKeys` below)
   for (const f of ['exportGame', 'applyGame', 'hostHalf', 'exportPart', 'hostHalfParts']) { const was = BR[f]; BR[f] = (g: any, ...a: any[]) => { const c = CUR, m = MODE; CUR = g; MODE = OFF.has('own') ? null : MODE_OF.get(g) ?? null; try { return was(g, ...a); } finally { CUR = c; MODE = m; } }; }
@@ -145,7 +147,7 @@ export class RustHost {
   h = 0; slot = 0;
   readonly audit: boolean;
   /** the ms spent, by what */
-  T = { wbExport: 0, wbCompare: 0, wbImport: 0, hostHalf: 0, step: 0, after: 0, exportStep: 0, applyStep: 0, exportWhole: 0, applyWhole: 0,  block: 0, out: 0, dress: 0, check: 0, calls: 0, start: 0 };
+  T = { wbExport: 0, wbCompare: 0, wbImport: 0, hostHalf: 0, step: 0, after: 0, exportStep: 0, applyStep: 0, exportWhole: 0, applyWhole: 0,  block: 0, out: 0, dress: 0, check: 0, calls: 0, start: 0, scan: 0 };
   worstStep = 0; worstStepAt = 0; worstApply = 0; hostBytes = 0; stepBytes = 0; wholeBytes = 0;
   /** how many whole applies, by why */
   wholes = new Map<string, number>(); steps = 0; starts = 0;
@@ -174,6 +176,21 @@ export class RustHost {
   /** ms spent in applies and exports so far (what a clock round a call or the dress step takes out of its own count) */
   private nest = 0;
 
+  // ---- THE CALL SURFACE (surface.ts) AND THE SCAN (scan.ts): a tool's call of a rule goes to the Rust game by its row; a tool's write by name is found by a walk and goes by `io::poke`
+  private busy = 0; private dispatching = false; private scan: any = null;
+  get knobs() { return this.B.reg; }
+  /** the fields only the harness reads go too (PuppetMemo.wide). `list: 'page'` leaves them out */
+  private giveList(): void { this.F.X.face_puppet_wide?.(this.h, (this.o.list ?? process.env.TPS_GAME_LIST) === 'page' ? 0 : 1); }
+  private tapsOn: any = null;
+  surfaceOpen(): boolean { return !!this.h && this.busy === 0 && !this.audit && !this.startDue; }
+  surfaceDispatching(): boolean { return false; }
+  inHook(): boolean { return this.dispatching; }
+  surfaceCall(row: number, bytes: Uint8Array): Uint8Array { const X = this.F.X; this.scanFlush(); this.busy++; try { { const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds ?? []); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); }   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, p, n)); const out = this.F.outView().slice(); this.applyStep(); this.dispatch(); return out; } finally { this.busy--; this.scanRebase(); } }
+  /** what the tool wrote since the walk last looked goes to the Rust game */
+  private scanFlush(): void { if (this.audit || !this.h) return; this.tapsOn?.sweep(); if (process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => this.count(`scan: ${q}`)); this.scan.rebase(); } else this.scan.flush(); this.T.scan += now() - t; }
+  /** an apply moved the puppet: that is what the next walk is held to */
+  scanRebase(): void { if (!this.scan) return; const t = now(); this.scan.rebase(); this.T.scan += now() - t; }
+
   private constructor(readonly g: any, readonly F: Face, readonly B: any, readonly o: HostOpts) {
     this.audit = !!o.audit; this.say = o.say ?? ((s: string) => { process.stdout.write(s + '\n'); });
     const ctx: any = { p: 0 }; this.pup = { lists: B.lists, rows: B.puppetRows(ctx), ctx, slowTable: B.SLOW, vals: B.VALS };
@@ -191,17 +208,19 @@ export class RustHost {
     if (o.die !== null && !g.dice) g.dice = B.newDice(o.die ?? 20942);
     // (hung as fields no walk of the game's own keys meets: rollback.ts `stateHash` walks them, and a stand's word must not change for being a puppet)
     hang(g, 'stepSeats', function (dt: number, cmds: readonly any[]) { H.step(dt, cmds); });
-    hang(g, 'rustHost', H); H.taps(g);
+    hang(g, 'rustHost', H); hang(g, 'rustSurface', H); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; try { return up.apply(this, a); } finally { H.busy--; H.scanRebase(); } }); } H.taps(g);
+    if (process.env.TPS_GAME_SAY) process.on('exit', () => { const L = [...H.calls].sort((a, b) => b[1] - a[1]).slice(0, 60); process.stderr.write(`rust-host: ${H.k} ticks; scan ${(H.T.scan / Math.max(1, H.k)).toFixed(2)} ms a tick; ${JSON.stringify(H.scan?.stats?.() ?? null)}\n` + L.map(([n, c]) => `  ${c} ${n}\n`).join('')); });
     if (o.out) for (const f of ['writeback.txt', 'gives.txt']) writeFileSync(`${o.out}/${f}`, '');
     return H; }
+  private startDue = false;
   /** the Rust game is let go (its slot is free for another) and the game steps in TypeScript again */
-  detach(): void { const X = this.F.X; if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; } RustHost.live.delete(this); delete this.g.stepSeats; delete this.g.rustHost; }
+  detach(): void { const X = this.F.X; if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; } RustHost.live.delete(this); delete this.g.stepSeats; delete this.g.rustHost; delete this.g.rustSurface; delete this.g.update; this.B.surfaceHost(null, this); }
   /** the hosts whose Rust game stands in a slot, and when each last stepped */
   private static live = new Set<RustHost>(); private static dirty = new Set<RustHost>(); private static clock = 0; private static last: RustHost | null = null; private stamp = 0; evicted = 0;
   /** this game's slot goes to another: the puppet takes the whole state, the Rust game is let go; a later step starts a new one from the puppet */
   private giveUp(): void { const X = this.F.X; if (!this.h) return;
     try { this.applyWhole('its slot went to another game'); } catch (e) { this.count(`THE WHOLE APPLY THREW as the slot was given up: ${String((e as any)?.message ?? e).slice(0, 100)}`); }
-    X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; if (RustHost.last === this) RustHost.last = null; this.evicted++; if (this.rec) this.rec.evicted = this.evicted; RustHost.live.delete(this); }
+    X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; this.scan = null; if (RustHost.last === this) RustHost.last = null; this.evicted++; if (this.rec) this.rec.evicted = this.evicted; RustHost.live.delete(this); }
   /** RH_TRACE=<file>: a line a game as the process ends (who stood it, how far it stepped, what it took), for a table of what a tool does with its games */
   rec: any = null;
 
@@ -215,7 +234,7 @@ export class RustHost {
   // ---- a start: the puppet as it stands is the game. The first tick's; and again wherever the TypeScript round a step has put another game in the
   // puppet's place (a checkpoint put back, a restart): no stepper can follow that from its own state.
   private start(): void {
-    const g = this.g, X = this.F.X, B = this.B, t = now();
+    const g = this.g, X = this.F.X, B = this.B, t = now(); this.startDue = false;
     this.taps(g);   // (the tool may have started another mission since the game was stood: its menu, its fight and its saves are new objects)
     // (ANOTHER GAME OF THIS PROCESS STEPPED LAST: the modules' own tables and variables, which every game of a process shares and a start reads, hold what
     // the filtered apply left of it. Its puppet takes the whole state first, so that this start reads what the TypeScript tick would have left there.)
@@ -231,7 +250,7 @@ export class RustHost {
     // it again it starts anew from a puppet that holds all of it (the same path as a checkpoint put back).
     while (!this.h && RustHost.live.size) { let old: RustHost | null = null; for (const o of RustHost.live) if (o !== this && (!old || o.stamp < old.stamp)) old = o; if (!old) break; old.giveUp(); this.h = make(); }
     if (!this.h) throw new Error('face_new: no free slot');
-    RustHost.live.add(this); this.stamp = ++RustHost.clock;
+    RustHost.live.add(this); this.stamp = ++RustHost.clock; this.giveList(); if (!this.audit) { this.tapsOn ??= B.makeTaps(g, B.hooks.classes, (id: number, on: boolean) => { X.face_tap(this.h, id, on ? 1 : 0); }); this.tapsOn.reset(); }
     this.slot = X.face_slot(this.h); { const said = this.F.outText(); if (said && !this.o.quiet) this.say(said); }
     if (X.state_len() !== block.length) this.say(`rust-host: rust/sim's block is ${X.state_len()} bytes in the module and ${block.length} in the TypeScript game`);
     this.lastState = start; this.lastBlock = block; this.lastRust = start; this.starts++; if (this.rec) this.rec.starts = this.starts; this.warmDue = this.starts === 1;
@@ -306,7 +325,7 @@ export class RustHost {
     this.wholes.set(why, (this.wholes.get(why) ?? 0) + 1); this.wholeNow = true; if (this.audit) this.lastRust = blob; this.nest += now() - t0;
     return blob; }
   /** after a call that changed the Rust game between two ticks: the puppet takes the state again */
-  private reapply(why: string): void { if (this.audit) { this.applyStep(); this.lastState = this.applyWhole(why); } else this.applyStep(); }
+  private reapply(why: string): void { if (this.audit) { this.applyStep(); this.lastState = this.applyWhole(why); } else this.applyStep(); this.scanRebase(); }
 
   // ---- the taps: what the TypeScript round a step calls that WRITES the game and is no input
   private taps(g: any): void {
@@ -423,7 +442,9 @@ export class RustHost {
   }
 
   // ---- the out events of a step, on the puppet's host objects, in the order the rules made them
-  private dispatch(): void {
+  private dispatch(): void { this.dispatching = true; try { this.dispatchQ(); } finally { this.dispatching = false; } }
+  private scanStart = -1;
+  private dispatchQ(): void {
     const Q = this.outQ; if (!Q.length) return; const t = now(), g = this.g, OUT = this.B.OUT; this.outTicks++;
     for (const { arm, e } of Q) { this.outN.set(arm, (this.outN.get(arm) ?? 0) + 1);
       // (the harness's stand-ins have not every method a page's host has: `audio.rain`, `smoke.obstaclesChanged`. The generated dispatcher calls them
@@ -442,7 +463,8 @@ export class RustHost {
     // the Rust game has in its place)
     if (FOLDED && this.rec) folded(this.rec);
     if (this.h && g.dice && g.dice.n !== this.dieRef) { this.dieMoved++; if (this.rec) this.rec.dieMoved = this.dieMoved; }
-    if (!this.h || g.mission !== this.missionRef || (g.chronicle?.counts?.loads ?? 0) !== this.loadsRef) this.start(); else this.handWrites(k);
+    if (!this.h || this.startDue || g.mission !== this.missionRef || (g.chronicle?.counts?.loads ?? 0) !== this.loadsRef) this.start(); else this.handWrites(k);
+    if (this.starts > 0 && this.scanStart !== this.starts) { this.scanStart = this.starts; this.scan = null; } if (!this.quietOn) this.scanFlush();
     this.o.beforeHost?.(this, cmds);
     // THE HOST'S HALF: each seat's record, every camera and Input row, in the bridge's own small buffer (export.ts hostHalf, io::take_host_half)
     t = now(); const hb: Uint8Array = B.hostHalf(g, B.reg, cmds); this.hostBytes = hb.length; this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.T.hostHalf += now() - t;
@@ -454,7 +476,7 @@ export class RustHost {
       if (h2) { for (let i = 0; i < n; i++) { this.F.hand(hb, (p, m) => X.face_host_half(h2, p, m)); X.face_step(h2, dt, 0); X.face_lights(h2, dt); X.face_puppet(h2, i === 0 ? 1 : 0); } X.face_puppet_drop?.(h2); X.face_drop(h2); }
       this.T.start += now() - t1; }
     this.memPages = this.F.mem.buffer.byteLength;
-    t = now(); X.face_step(this.h, dt, 0); const el = now() - t; this.T.step += el; if (el > this.worstStep) { this.worstStep = el; this.worstStepAt = k; }
+    t = now(); try { X.face_step(this.h, dt, 0); } catch (e) { throw new Error(`the Rust game's tick ${k} panicked: ${this.F.panicText() || String(e)}`); } const el = now() - t; this.T.step += el; if (el > this.worstStep) { this.worstStep = el; this.worstStepAt = k; }
     if (this.F.mem.buffer.byteLength !== this.memPages) this.grew++;
     if (!this.o.quiet) { const said = this.F.outText(); if (said) this.say(said.trimEnd()); }
     this.o.afterStep?.(this);
@@ -472,7 +494,7 @@ export class RustHost {
     if (this.quietOn) { const at = (X.face_look(this.h) >>> 0) >>> 3, L = new Float64Array(this.F.mem.buffer).subarray(at, at + 6); this.lookNow = { follow: [L[0], L[1], L[2]], aim: [L[3], L[4], L[5]] };
       this.quietOwed++; this.quietSteps++; this.inStep = false; return; }
     const rust = this.tail(dt, k);
-    this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.missionRef = g.mission; this.inStep = false; this.dieRef = g.dice?.n;
+    this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.missionRef = g.mission; this.inStep = false; this.dieRef = g.dice?.n; if (this.busy === 0) this.scanRebase();
     this.auditAfter(rust, k);
   }
   /** after a step, or a quiet run of them: the apply, the out events, the dress step. Returns the whole Rust state where the audit took one */
@@ -529,7 +551,7 @@ export class RustHost {
   quietBegin(): boolean { if (this.audit || !this.F.X.face_look || OFF.has('quiet') || process.env.RH_QUIET !== '1') return false; this.quietOn = true; this.quietOwed = 0; return true; }
   quietEnd(): void { if (!this.quietOn) return; this.quietOn = false; this.lookNow = null; if (!this.quietOwed || !this.h) return; this.quietRuns++;
     const g = this.g; this.inStep = true; this.tail(this.lastDt, this.k);
-    this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.missionRef = g.mission; this.inStep = false; this.dieRef = g.dice?.n; this.quietOwed = 0;
+    this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.missionRef = g.mission; this.inStep = false; this.dieRef = g.dice?.n; this.quietOwed = 0; this.scanRebase();
     g.engine.world.dynamics = g.dynBoxes; this.tsUpload?.(); }
   /** in a quiet run: where the host's camera is to follow and the seat's aim point, as the Rust game has them */
   look(): { follow: number[]; aim: number[] } | null { return this.quietOn ? this.lookNow : null; }

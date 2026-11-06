@@ -145,7 +145,7 @@ pub fn breaks_tag(g: &mut crate::game::Game, c_2: DebrisChunkId, mat: crate::bre
 }
 
 /// A piece's first hard touch: over its row's speed it breaks once more, queued. (breakTable.ts Breaks.landed)
-pub fn breaks_landed(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
+#[doc(hidden)] pub fn breaks_landed__body(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
     let Some(me) = g.tab.debris_chunk[c_2].mat else { return };
     if me.gen_ > 0.0 || me.fixed.unwrap_or(false) { return; }
     let a = break_row(me.mat).again;
@@ -162,7 +162,7 @@ pub fn breaks_landed(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) 
 }
 
 /// An impulse's kick on a piece: over its row's kick it breaks once more. (breakTable.ts Breaks.kicked)
-pub fn breaks_kicked(g: &mut crate::game::Game, c_2: DebrisChunkId, kick: f64) {
+#[doc(hidden)] pub fn breaks_kicked__body(g: &mut crate::game::Game, c_2: DebrisChunkId, kick: f64) {
     let Some(me) = g.tab.debris_chunk[c_2].mat else { return };
     if me.gen_ > 0.0 || me.fixed.unwrap_or(false) { return; }
     let Some(a) = break_row(me.mat).again else { return };
@@ -898,6 +898,24 @@ pub fn breaks_summary(g: &mut crate::game::Game) -> String {
     let load = breaks_load(g);
     let s = &g.stats.break_table;
     alloc::format!("breaks: shaped {} ({} planes, {} dropped) \u{b7} plain {} \u{b7} heap {} \u{b7} again {} \u{b7} crumbled {} \u{b7} refused {} \u{b7} mayhem {} \u{b7} ragged ends {} \u{b7} load {}", s.shaped, s.planes, s.dropped, s.plain, s.heap, s.again, s.crumbled, s.refused, s.mayhem, s.ragged, load)
+}
+
+
+#[doc(hidden)] pub fn breaks_landed(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
+    use crate::io::Io;
+    if g.taps & (1u64 << 9) == 0 { return breaks_landed__body(g, c_2, speed); }
+    let mut o = crate::io::W::new(); c_2.w(&mut o); speed.w(&mut o);
+    breaks_landed__body(g, c_2, speed);
+    crate::out_events::push_tap(g, 9, &o.b, &[]);
+}
+
+
+#[doc(hidden)] pub fn breaks_kicked(g: &mut crate::game::Game, c_2: DebrisChunkId, kick: f64) {
+    use crate::io::Io;
+    if g.taps & (1u64 << 10) == 0 { return breaks_kicked__body(g, c_2, kick); }
+    let mut o = crate::io::W::new(); c_2.w(&mut o); kick.w(&mut o);
+    breaks_kicked__body(g, c_2, kick);
+    crate::out_events::push_tap(g, 10, &o.b, &[]);
 }
 
 #[cfg(test)]

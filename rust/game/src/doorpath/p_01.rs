@@ -1024,7 +1024,7 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
 }
 
 /// Once a frame, after the orders have posed their men and before anybody moves. (doorpath.ts DoorPath.tick)
-pub fn door_path_tick(g: &mut crate::game::Game, dt: f64) {
+#[doc(hidden)] pub fn door_path_tick__body(g: &mut crate::game::Game, dt: f64) {
     let t = g.time;
     door_path_guns(g, dt);
     // (a copy of the list, as there; a walk's frame removes only its own row, and writes the row back when it stays: set keeps the Map's order)
@@ -1044,6 +1044,15 @@ pub fn door_path_summary(g: &mut crate::game::Game) -> String {
         "door paths on · sent {} · walked {} · round a leaf {} (no way {}) · points moved off a leaf {} · held {} s · gave up {} · taken {}",
         s.sent, s.walked, s.round, s.no_round, s.moved, js::to_fixed(s.held_s, 1), s.gave_up, s.taken
     )
+}
+
+
+#[doc(hidden)] pub fn door_path_tick(g: &mut crate::game::Game, dt: f64) {
+    use crate::io::Io;
+    if g.taps & (1u64 << 19) == 0 { return door_path_tick__body(g, dt); }
+    let mut o = crate::io::W::new(); dt.w(&mut o);
+    door_path_tick__body(g, dt);
+    crate::out_events::push_tap(g, 19, &o.b, &[]);
 }
 
 #[cfg(test)]

@@ -26,12 +26,18 @@ pub fn forget(h: u32) {
 /// one export against a game's memo
 fn export(h: u32, start: bool, spoil: bool) -> Vec<u8> {
     let mut memo = MEMO.with(|m| m.borrow_mut().remove(&h)).unwrap_or_default();
-    if start { memo = Default::default(); }
+    if start { let wide = memo.wide; memo = Default::default(); memo.wide = wide; }
     // (a row or a field with no bytes on the every-tick list is never sent, and stays so)
     if spoil { memo.all = true; }
     let b = super::with(h, |x| game::puppet::export_puppet(&x.g, &mut memo, start));
     MEMO.with(|m| m.borrow_mut().insert(h, memo));
     b
+}
+
+/// THE LIST IS A WORD: 1, every field the tick moves goes on the filtered export (the harness); 0, the fields the page reads
+#[no_mangle]
+pub extern "C" fn face_puppet_wide(h: u32, on: u32) {
+    MEMO.with(|m| m.borrow_mut().entry(h).or_default().wide = on != 0);
 }
 
 #[no_mangle]

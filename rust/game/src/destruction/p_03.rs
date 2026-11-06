@@ -240,7 +240,7 @@ pub fn destruction_fixture_live(g: &mut crate::game::Game, t: FixtureId) -> bool
 }
 
 /// Put `t` out: its broken bit, the glass down, counted against the encounter's cap (`force`: a blast ignores the gap, not the cap). Whether a light went.   (destruction.ts killFixture)
-pub fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, from: V3, why: &str, force: Option<bool>) -> bool {
+#[doc(hidden)] pub fn destruction_kill_fixture__body(g: &mut crate::game::Game, t: FixtureId, from: V3, why: &str, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     if g.destr.fixture_count >= g.k.chaos.loud.fixtures_per_encounter || (!force && g.time - g.destr.last_fixture_t < g.k.chaos.loud.fixture_gap_secs) {
         g.stats.destruction.destr_fixtures_refused += 1;
@@ -365,6 +365,17 @@ fn lens_shatter(g: &mut Game, t: FixtureId, from: V3) {
 
 /// `b.…` for any box: a box's row, statics and made boxes alike. Skeleton 5 keeps `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once there is a table the body is the row, and no other line changes.
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
+
+
+#[doc(hidden)] pub fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, from: V3, why: &str, force: Option<bool>) -> bool {
+    use crate::io::Io;
+    if g.taps & (1u64 << 6) == 0 { return destruction_kill_fixture__body(g, t, from, why, force); }
+    let mut o = crate::io::W::new(); t.w(&mut o); from.w(&mut o); alloc::string::String::from(why).w(&mut o); force.w(&mut o);
+    let r = destruction_kill_fixture__body(g, t, from, why, force);
+    let mut a = crate::io::W::new(); r.w(&mut a);
+    crate::out_events::push_tap(g, 6, &o.b, &a.b);
+    r
+}
 
 #[cfg(test)]
 mod tests {

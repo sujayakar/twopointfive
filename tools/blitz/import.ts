@@ -11,6 +11,7 @@
 //
 // AN ECHO (schema `echo`, hand2.cjs H.bridge.echo): a field Rust owns that the TypeScript cannot hold (a place in a level script, a memo a module keeps where the walk cannot write it, the copy of the box world in the module that
 // holds it). A whole apply keeps a copy of its bytes beside the object and writes nothing; the puppet's export writes those bytes back (export.ts). So a re-export after an apply is Rust's bytes everywhere, and such a field needs no class of its own in a host's compare.
+import GAME_REF_LIST from './game-ref.json';
 import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS } from './export';
 import { rawKey, PUT_BACKS } from '../../src/math/side';
 
@@ -79,6 +80,8 @@ const INVERSE: Record<string, Inverse> = {
   'character::RagDrive.limb_ov': (o, v, c) => { c.fix.push(() => { o.limbOv = (v as number[]).map(i => o.ov[i]); }); },
   'doorpath::DoorPathLastOfValue.w': (o, v, c) => { if (!v) { o.W = null; return; } const w = o.W ?? (o.W = {}); w.gd = v[0]; serialIs(c, w, v[1]); },
 };
+/** the classes that hold their game: a row of one that the apply makes has run no constructor, and its methods read `this.g` (gameref.py) */
+const GAME_REF = new Set<string>(GAME_REF_LIST as string[]);
 const CLASSES = new Map<string, object>();
 /** a row whose numbers are the block's columns reads them through these: what its constructor would have set, the row itself coming with the fields */
 const BLOCK_ROW: Record<string, (o: any, g: any) => void> = { Item: (o, g) => { o.S = g.items.store; o.things = g.props.all; o.kept = null; } };
@@ -131,6 +134,7 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
   const t1 = performance.now(); const heads: { t: any; n: number; at: number; N: N; whole: number; entries: number }[] = []; let serialNext = 0, tail = 0;
   if (pup) { const mainLen = dv.getUint32(0, true); I.p = 4 + mainLen; for (const t of SCHEMA.tables) { const n = dv.getUint32(I.p, true), whole = dv.getUint32(I.p + 4, true), entries = dv.getUint32(I.p + 8, true), len = dv.getUint32(I.p + 12, true); I.p += 16; heads.push({ t, n, at: I.p, N: parse(t.ty), whole, entries }); I.p += len; } }
   else { sk({ k: 'type', path: SCHEMA.root }); for (const t of SCHEMA.tables) { const n = dv.getUint32(I.p, true); I.p += 4; const N = parse(t.ty); const at = I.p; for (let k = 0; k < n; k++) sk(N); heads.push({ t, n, at, N, whole: n, entries: n }); } }
+  { const K: Map<string, number> = (BK as any).known ??= new Map(); for (const h of heads) K.set(h.t.id, h.n); }   // (how many rows of each table the Rust game has: a row past that was made in TypeScript since, and neither the scan nor a crossing may name it)
   serialNext = dv.getUint32(I.p, true); I.p += 4; tail = I.p;
   const t2 = performance.now(); R.phases.skim = t2 - t1; for (const { t, n } of heads) { const L = BK.listOf(t.id); if (L.length >= n) continue; const T0 = SCHEMA.types[t.ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')]; const proto = CLASSES.get(`${T0?.mod}::${T0?.name}`) ?? (L.length ? Object.getPrototypeOf(L[0]) : Object.prototype); const made: any[] = []; while (BK.listOf(t.id).length < n) { const o = Object.create(proto); BK.idOf(t.id, o); madeRows.add(o); made.push(o); } R.made[t.ts] = made.length; (c as any)[`made:${t.id}`] = made; }
 
@@ -197,7 +201,7 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
     if (isSide(cur)) { const want = new Set(keys); for (const k of cur.liveKeys()) if (!want.has(k)) cur.delete(k); for (const k of keys) if (k && typeof k === 'object') cur.add(k); orderSide(cur, keys); return cur; }
     if (typeof cur === 'object') { for (const k of Object.keys(cur)) delete cur[k]; for (const k of keys) cur[k] = true; return cur; }
     return cur; }
-  function newOf(T: any): any { const P = CLASSES.get(`${T.mod}::${T.name}`); const o = P ? Object.create(P) : {}; fresh.add(o); return o; }
+  function newOf(T: any): any { const P = CLASSES.get(`${T.mod}::${T.name}`); const o = P ? Object.create(P) : {}; if (P && GAME_REF.has(T.name)) o.g = g; fresh.add(o); return o; }
   const fresh = new WeakSet<object>();
   function readType(n: N, cur: any): any { const T = SCHEMA.types[n.path];
     if (T.k === 'struct') { const o = cur && typeof cur === 'object' ? cur : newOf(T); const K = keep; if (K && !K.desc(n)) { keep = null; I.K = null; readStruct(T, o); keep = K; I.K = pup ? K : null; return o; } readStruct(T, o); return o; }
@@ -244,10 +248,14 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
   else { I.p = 0; readStruct(SCHEMA.types[SCHEMA.root], g); }
   const t4 = performance.now(); R.phases.main = t4 - t3;
   if (pup) { 
-    (R as any).lastT = performance.now(); for (const { t, at, N, whole, entries } of heads) { if (!entries) continue; I.p = at; const L = BK.listOf(t.id); const fast = !pup.start && pup.rows?.[t.id]; if (DEBUG) process.stderr.write(`table ${t.id} at ${at}, ${entries} entries\n`); for (let e = 0; e < entries; e++) { const row = dv.getUint32(I.p, true); I.p += 4; if (row >= whole) { const K = keep; keep = null; I.K = null; read(N, L[row]); keep = K; I.K = K; continue; } if (fast) fast(L[row]); else read(N, L[row]); } if (PROF) { const nw = performance.now(); (R.phases as any)['t:' + t.ts] = nw - (R as any).lastT; (R as any).lastT = nw; } } }
+    (R as any).lastT = performance.now(); for (const { t, at, N, whole, entries } of heads) { if (!entries) continue; I.p = at; const L = BK.listOf(t.id); const fast = !pup.start && pup.rows?.[t.id]; if (DEBUG) process.stderr.write(`table ${t.id} at ${at}, ${entries} entries\n`); for (let e = 0; e < entries; e++) { const row = dv.getUint32(I.p, true); I.p += 4; if (row >= whole) { const K = keep; keep = null; I.K = null; try { read(N, L[row]); } catch (e) { throw new Error(`in a new row of ${t.id}, row ${row}, at ${curQ}, byte ${I.p} of ${blob.length}: ${(e as any)?.message ?? e}`); } keep = K; I.K = K; continue; } try { if (fast) fast(L[row]); else read(N, L[row]); } catch (e) { throw new Error(`in table ${t.id}, row ${row} of ${L.length}, ${entries} entries, byte ${I.p} of ${blob.length}: ${(e as any)?.message ?? e}`); } } if (PROF) { const nw = performance.now(); (R.phases as any)['t:' + t.ts] = nw - (R as any).lastT; (R as any).lastT = nw; } } }
   else for (const { t, n, at, N } of heads) { if (keep && !keep.desc(t.ty) && !(c as any)[`made:${t.id}`]) continue; I.p = at; const L = BK.listOf(t.id); const made = new Set((c as any)[`made:${t.id}`] ?? []); for (let i = 0; i < n; i++) { if (keep && !made.has(L[i]) && !keep.desc(t.ty)) { sk(N); continue; } read(N, L[i]); } }
   const t5 = performance.now(); R.phases.tables = t5 - t4; for (const f of c.fix) f();
+  // A MAN MADE BY THE RUST GAME: his Guard or Player reads the same store row as his Character (game.ts sameMan), which the tables above have just given it
+  for (const { t } of heads) if (t.ts === 'Guard' || t.ts === 'Player') for (const o of (c as any)[`made:${t.id}`] ?? []) if (o.char) { o.S = o.char.S; o.r = o.char.r; }
   for (const f of AFTER_APPLY) f(g);
+  // THE ONE CLOSURE A MADE RECORD HOLDS: the second cast's `mine` (qrf.ts squadCast's call). Rust answers it by the team's rows and carries no closure
+  { const Q = g.qrf, O = Q?.cast?.orders?.cast; if (O && !O.mine) { O.mine = (gd: any) => Q.men.includes(gd); if (O.ring?.has('*')) O.ring.has = () => true; } }   // (orders.ts EVERY_KEY: a set that holds every key, carried as its one word)
   // ---- what the export keeps at the end
   I.K = null; BK.nextSerial = serialNext; I.p = tail; const nl = dv.getUint32(I.p, true); I.p += 4; if (!pup) BK.loose.clear();
   for (let i = 0; i < nl; i++) { const nodes = dv.getUint32(I.p, true); I.p += 4; const len = dv.getUint32(I.p, true); I.p += 4; const p: any = looseOrder[i]; if (p) { if (!p.own || p.own.length !== len) p.own = new Float32Array(len); p.home = null; for (let k = 0; k < len; k++) p.own[k] = dv.getFloat32(I.p + 4 * k, true); p.numNodes = nodes; BK.loose.set(p, i); } I.p += 4 * len; }

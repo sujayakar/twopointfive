@@ -377,3 +377,4 @@ pub mod render_steps;
 pub mod teamtally;
 pub mod stealthfeed;
 pub mod autoreload;
+pub mod call_gen;

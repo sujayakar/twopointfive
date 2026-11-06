@@ -138,7 +138,7 @@ pub fn ragdoll_ride_by(g: &mut crate::game::Game, id: RagdollId, k: f64) { rd_ri
 /// (Ragdoll.settleAt)
 pub fn ragdoll_settle_at(g: &mut crate::game::Game, id: RagdollId, xs: &[f64], rot: Option<&[f64]>, own: Option<bool>) { rd_settle_at(&mut g.tab.ragdoll[id], xs, rot, own) }
 /// (Ragdoll.takeImpact)
-pub fn ragdoll_take_impact(g: &mut crate::game::Game, id: RagdollId, min: Option<f64>, gap: Option<f64>) -> f64 { rd_take_impact(&mut g.tab.ragdoll[id], min, gap) }
+#[doc(hidden)] pub fn ragdoll_take_impact__body(g: &mut crate::game::Game, id: RagdollId, min: Option<f64>, gap: Option<f64>) -> f64 { rd_take_impact(&mut g.tab.ragdoll[id], min, gap) }
 /// (Ragdoll.distance)
 pub fn ragdoll_distance(g: &mut crate::game::Game, id: RagdollId, i: f64, j: f64, lo: f64, hi: f64) { rd_distance(&mut g.tab.ragdoll[id], i, j, lo, hi) }
 /// (Ragdoll.apart)
@@ -786,6 +786,17 @@ fn quat_mat(q: Quat, out: &mut [f64]) {
     out[0] = 1.0 - yy - zz; out[1] = xy - wz; out[2] = xz + wy;
     out[3] = xy + wz; out[4] = 1.0 - xx - zz; out[5] = yz - wx;
     out[6] = xz - wy; out[7] = yz + wx; out[8] = 1.0 - xx - yy;
+}
+
+
+#[doc(hidden)] pub fn ragdoll_take_impact(g: &mut crate::game::Game, id: RagdollId, min: Option<f64>, gap: Option<f64>) -> f64 {
+    use crate::io::Io;
+    if g.taps & (1u64 << 11) == 0 { return ragdoll_take_impact__body(g, id, min, gap); }
+    let mut o = crate::io::W::new(); id.w(&mut o); min.w(&mut o); gap.w(&mut o);
+    let r = ragdoll_take_impact__body(g, id, min, gap);
+    let mut a = crate::io::W::new(); r.w(&mut a);
+    crate::out_events::push_tap(g, 11, &o.b, &a.b);
+    r
 }
 
 #[cfg(test)]

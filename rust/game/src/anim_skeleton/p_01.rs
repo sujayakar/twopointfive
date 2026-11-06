@@ -136,7 +136,7 @@ pub fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
 /// What a layer's export answered: 0 is a mistake and loud; else the run-forward bones it ran are brought back from the bench into the man's `fk`, and no others.   (skeleton.ts layerRan)
 pub fn layer_ran(g: &mut crate::game::Game, code: f64, c: CharId) {
     if code == 0.0 {
-        panic!("posing: a layer of the Rust module could not run: it was handed a pose, a node of the rig, a clip or a table of keys the module does not hold");
+        panic!("posing: a layer of the Rust module could not run: it was handed a pose, a node of the rig, a clip or a table of keys the module does not hold: char row {:?}, unit {}, guard {:?}", c, g.guards.iter().any(|x| g.gd[*x].ch == c && g.gd[*x].unit.is_some()), g.guards.iter().find(|x| g.gd[**x].ch == c).map(|x| g.gd[*x].callsign.clone()));
     }
     g.m.anim_skeleton.layers.ran += 1.0;
     if js::to_i32(code) & 2 != 0 {

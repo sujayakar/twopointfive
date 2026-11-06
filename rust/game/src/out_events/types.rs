@@ -39,6 +39,7 @@ pub enum OutEvent {
     ClearSnowBlast,
     ClearSnowMarks,
     ClearSnowTracks,
+    Tap(crate::out_events::OutTap),
 }
 
 #[derive(Clone, Debug)]
@@ -208,6 +209,13 @@ pub struct OutChipMark {
 pub struct OutKickScuff {
     pub d: DoorId,
     pub from: V3,
+}
+
+#[derive(Clone, Debug)]
+pub struct OutTap {
+    pub row: u32,
+    pub args: Vec<u8>,
+    pub answer: Vec<u8>,
 }
 
 /// (audio_iface.ts PlayOpts: an object with some of these)

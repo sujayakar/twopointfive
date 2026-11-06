@@ -74,115 +74,115 @@ pub fn save_state(g: &mut crate::game::Game, opts: Option<&crate::savestate::Sav
 /// (src/game/savestate.ts:644 canLoad)
 pub fn can_load(g: &mut crate::game::Game, s: Option<&crate::savestate::SaveState>) -> Option<String> { todo!() }
 
-/// (src/game/savestate.ts:669 loadState)
+/// (src/game/savestate.ts:670 loadState)
 pub fn load_state(g: &mut crate::game::Game, s: &crate::savestate::SaveState, opts: Option<&crate::savestate::LoadStateOpts>) { todo!() }
 
-/// (src/game/savestate.ts:688 applyState)
+/// (src/game/savestate.ts:689 applyState)
 pub fn apply_state(g: &mut crate::game::Game, s: &crate::savestate::SaveState, prev_loads: f64, prev_saves: f64, opts: &crate::savestate::ApplyStateOpts) { todo!() }
 
-/// (src/game/savestate.ts:852 localToWorld)
+/// (src/game/savestate.ts:853 localToWorld)
 pub fn local_to_world(g: &mut crate::game::Game, b: BoxId, p: [f64; 3], point: bool) -> V3 { todo!() }
 
-/// (src/game/savestate.ts:860 SaveStore.get)
+/// (src/game/savestate.ts:861 SaveStore.get)
 pub fn save_store_get(g: &mut crate::game::Game, key: &str) -> Option<String> { todo!() }
 
-/// (src/game/savestate.ts:860 SaveStore.set)
+/// (src/game/savestate.ts:861 SaveStore.set)
 pub fn save_store_set(g: &mut crate::game::Game, key: &str, val: &str) -> bool { todo!() }
 
-/// (src/game/savestate.ts:860 SaveStore.remove)
+/// (src/game/savestate.ts:861 SaveStore.remove)
 pub fn save_store_remove(g: &mut crate::game::Game, key: &str) { todo!() }
 
-/// (src/game/savestate.ts:868 memoryStore)
+/// (src/game/savestate.ts:869 memoryStore)
 pub fn memory_store() -> crate::savestate::MemoryStore { todo!() }
 
-/// (src/game/savestate.ts:884 MemShelf.get)
+/// (src/game/savestate.ts:885 MemShelf.get)
 pub fn mem_shelf_get(g: &mut crate::game::Game, key: &str) -> Option<crate::savestate::MemSave> { todo!() }
 
-/// (src/game/savestate.ts:885 MemShelf.set)
+/// (src/game/savestate.ts:886 MemShelf.set)
 pub fn mem_shelf_set(g: &mut crate::game::Game, key: &str, e: &crate::savestate::MemSave) { todo!() }
 
-/// (src/game/savestate.ts:887 MemShelf.all)
+/// (src/game/savestate.ts:888 MemShelf.all)
 pub fn mem_shelf_all(g: &mut crate::game::Game) -> Vec<crate::savestate::MemSave> { todo!() }
 
-/// (src/game/savestate.ts:888 MemShelf.clear)
+/// (src/game/savestate.ts:889 MemShelf.clear)
 pub fn mem_shelf_clear(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/savestate.ts:898 roomHere)
+/// (src/game/savestate.ts:905 roomHere)
 pub fn room_here(g: &mut crate::game::Game, p: V3) -> String { todo!() }
 
-/// (src/game/savestate.ts:927 Checkpoints.constructor)
+/// (src/game/savestate.ts:934 Checkpoints.constructor)
 pub fn checkpoints_new(g: &mut crate::game::Game) -> crate::savestate::Checkpoints { todo!() }
 
-/// (src/game/savestate.ts:933 Checkpoints.put)
+/// (src/game/savestate.ts:940 Checkpoints.put)
 pub fn checkpoints_put(g: &mut crate::game::Game, key: &str, val: &str) -> bool { todo!() }
 
-/// (src/game/savestate.ts:934 Checkpoints.note)
+/// (src/game/savestate.ts:941 Checkpoints.note)
 pub fn checkpoints_note(g: &mut crate::game::Game, what: &str) { todo!() }
 
-/// (src/game/savestate.ts:936 Checkpoints.adopt)
+/// (src/game/savestate.ts:943 Checkpoints.adopt)
 pub fn checkpoints_adopt(g: &mut crate::game::Game, a: Option<&crate::savestate::AutosaveSnap>) { todo!() }
 
-/// (src/game/savestate.ts:946 Checkpoints.basedNow)
+/// (src/game/savestate.ts:953 Checkpoints.basedNow)
 pub fn checkpoints_based_now(g: &mut crate::game::Game) -> bool { todo!() }
 
-/// (src/game/savestate.ts:951 Checkpoints.prime)
+/// (src/game/savestate.ts:958 Checkpoints.prime)
 pub fn checkpoints_prime(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/savestate.ts:964 Checkpoints.request)
+/// (src/game/savestate.ts:971 Checkpoints.request)
 pub fn checkpoints_request(g: &mut crate::game::Game, why: &str, label: &str) { g.out.push(crate::out_events::OutEvent::CheckpointsRequest(crate::out_events::OutCheckpointsRequest { why: String::from(why), label: String::from(label) })); }
 
-/// (src/game/savestate.ts:971 Checkpoints.gate)
+/// (src/game/savestate.ts:978 Checkpoints.gate)
 pub fn checkpoints_gate(g: &mut crate::game::Game) -> Option<String> { todo!() }
 
-/// (src/game/savestate.ts:979 Checkpoints.tick)
+/// (src/game/savestate.ts:986 Checkpoints.tick)
 pub fn checkpoints_tick(g: &mut crate::game::Game, dt: f64) { todo!() }
 
-/// (src/game/savestate.ts:1025 Checkpoints.write)
+/// (src/game/savestate.ts:1032 Checkpoints.write)
 pub fn checkpoints_write(g: &mut crate::game::Game, slot: crate::savestate::CheckpointsWriteSlot, label: Option<&str>, force: Option<bool>) -> crate::savestate::SaveResult { todo!() }
 
-/// (src/game/savestate.ts:1051 Checkpoints.markRegret)
+/// (src/game/savestate.ts:1058 Checkpoints.markRegret)
 pub fn checkpoints_mark_regret(g: &mut crate::game::Game, key: &str, why: &str) { todo!() }
 
-/// (src/game/savestate.ts:1055 Checkpoints.index)
+/// (src/game/savestate.ts:1062 Checkpoints.index)
 pub fn checkpoints_index(g: &mut crate::game::Game) -> crate::savestate::SlotIndex { todo!() }
 
-/// (src/game/savestate.ts:1063 Checkpoints.slots)
+/// (src/game/savestate.ts:1070 Checkpoints.slots)
 pub fn checkpoints_slots(g: &mut crate::game::Game) -> Vec<crate::savestate::SlotInfo> { todo!() }
 
-/// (src/game/savestate.ts:1067 Checkpoints.handSlot)
+/// (src/game/savestate.ts:1074 Checkpoints.handSlot)
 pub fn checkpoints_hand_slot(g: &mut crate::game::Game, idx: &crate::savestate::SlotIndex) -> f64 { todo!() }
 
-/// (src/game/savestate.ts:1086 Checkpoints.keep)
+/// (src/game/savestate.ts:1093 Checkpoints.keep)
 pub fn checkpoints_keep(g: &mut crate::game::Game, label: &str) { g.out.push(crate::out_events::OutEvent::CheckpointsKeep(crate::out_events::OutCheckpointsKeep { label: String::from(label) })); }
 
-/// (src/game/savestate.ts:1089 Checkpoints.loadInStep)
+/// (src/game/savestate.ts:1096 Checkpoints.loadInStep)
 pub fn checkpoints_load_in_step(g: &mut crate::game::Game, key: &str) -> Option<String> { todo!() }
 
-/// (src/game/savestate.ts:1090 Checkpoints.memNo)
+/// (src/game/savestate.ts:1097 Checkpoints.memNo)
 pub fn checkpoints_mem_no(g: &mut crate::game::Game, e: &crate::savestate::MemSave) -> Option<String> { todo!() }
 
-/// (src/game/savestate.ts:1092 Checkpoints.writeMem)
+/// (src/game/savestate.ts:1099 Checkpoints.writeMem)
 pub fn checkpoints_write_mem(g: &mut crate::game::Game, slot: crate::savestate::CheckpointsWriteMemSlot, label: &str, authored: Option<bool>) -> crate::savestate::SaveResult { todo!() }
 
-/// (src/game/savestate.ts:1111 Checkpoints.loadMem)
+/// (src/game/savestate.ts:1127 Checkpoints.loadMem)
 pub fn checkpoints_load_mem(g: &mut crate::game::Game, key: &str) -> Option<String> { todo!() }
 
-/// (src/game/savestate.ts:1140 Checkpoints.newest)
+/// (src/game/savestate.ts:1156 Checkpoints.newest)
 pub fn checkpoints_newest(g: &mut crate::game::Game, prefer_run: Option<bool>, before_t: Option<f64>) -> Option<crate::savestate::SlotInfo> { todo!() }
 
-/// (src/game/savestate.ts:1154 Checkpoints.isThisRun)
+/// (src/game/savestate.ts:1170 Checkpoints.isThisRun)
 pub fn checkpoints_is_this_run(g: &mut crate::game::Game, info: &crate::savestate::SlotInfo) -> bool { todo!() }
 
-/// (src/game/savestate.ts:1158 Checkpoints.tapeBegin)
+/// (src/game/savestate.ts:1174 Checkpoints.tapeBegin)
 pub fn checkpoints_tape_begin(g: &mut crate::game::Game) -> crate::savestate::TapeSlots { todo!() }
 
-/// (src/game/savestate.ts:1169 Checkpoints.read)
+/// (src/game/savestate.ts:1185 Checkpoints.read)
 pub fn checkpoints_read(g: &mut crate::game::Game, key: &str) -> Option<crate::savestate::SaveState> { todo!() }
 
-/// (src/game/savestate.ts:1171 Checkpoints.load)
+/// (src/game/savestate.ts:1187 Checkpoints.load)
 pub fn checkpoints_load(g: &mut crate::game::Game, from: &crate::savestate::CheckpointsLoadFrom) -> Option<String> { todo!() }
 
-/// (src/game/savestate.ts:1206 newRunId)
+/// (src/game/savestate.ts:1222 newRunId)
 pub fn new_run_id(g: &mut crate::game::Game) -> String { todo!() }
 
 pub mod local_store {
@@ -190,13 +190,13 @@ pub mod local_store {
     use crate::{ids::*, js::*, Quat, V3};
     #[allow(unused_imports)]
     use alloc::{string::String, vec::Vec};
-    /// (src/game/savestate.ts:863 localStore.get)
+    /// (src/game/savestate.ts:864 localStore.get)
     pub fn get(k: &str) -> Option<String> { todo!() }
 
-    /// (src/game/savestate.ts:864 localStore.set)
+    /// (src/game/savestate.ts:865 localStore.set)
     pub fn set(k: &str, v: &str) -> bool { todo!() }
 
-    /// (src/game/savestate.ts:865 localStore.remove)
+    /// (src/game/savestate.ts:866 localStore.remove)
     pub fn remove(k: &str) { todo!() }
 
 }

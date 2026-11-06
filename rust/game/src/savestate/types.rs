@@ -1371,7 +1371,7 @@ impl SaveOptsKind {
     }
 }
 
-/// (TypeScript: SaveStore, src/game/savestate.ts:860)
+/// (TypeScript: SaveStore, src/game/savestate.ts:861)
 #[derive(Clone, Copy, Debug)]
 pub struct SaveStore {
 }
@@ -1384,7 +1384,7 @@ impl SaveStore {
 }
 impl Default for SaveStore { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SlotInfo, src/game/savestate.ts:869)
+/// (TypeScript: SlotInfo, src/game/savestate.ts:870)
 #[derive(Clone, Debug)]
 pub struct SlotInfo {
     pub key: String,
@@ -1453,7 +1453,7 @@ impl SlotInfoKind {
     }
 }
 
-/// (TypeScript: MemSave, src/game/savestate.ts:871)
+/// (TypeScript: MemSave, src/game/savestate.ts:872)
 #[derive(Clone, Debug)]
 pub struct MemSave {
     pub info: crate::savestate::SlotInfo,
@@ -1472,7 +1472,7 @@ impl MemSave {
 }
 impl Default for MemSave { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: TapeSlots, src/game/savestate.ts:873)
+/// (TypeScript: TapeSlots, src/game/savestate.ts:874)
 #[derive(Clone, Debug)]
 pub struct TapeSlots {
     pub index: Option<String>,
@@ -1489,7 +1489,7 @@ impl TapeSlots {
 }
 impl Default for TapeSlots { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:873 TapeSlots.lastAuto, src/game/savestate.ts:873)
+/// (TypeScript: inline at src/game/savestate.ts:874 TapeSlots.lastAuto, src/game/savestate.ts:874)
 #[derive(Clone, Debug)]
 pub struct TapeSlotsLastAuto {
     pub key: String,
@@ -1506,7 +1506,7 @@ impl TapeSlotsLastAuto {
 }
 impl Default for TapeSlotsLastAuto { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: MemShelf, src/game/savestate.ts:877)
+/// (TypeScript: MemShelf, src/game/savestate.ts:878)
 #[derive(Clone, Debug)]
 pub struct MemShelf {
     pub m: JsMap<String, crate::savestate::MemSave>,
@@ -1523,7 +1523,7 @@ impl MemShelf {
 }
 impl Default for MemShelf { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: SlotIndex, src/game/savestate.ts:890)
+/// (TypeScript: SlotIndex, src/game/savestate.ts:891)
 #[derive(Clone, Debug)]
 pub struct SlotIndex {
     pub v: f64,
@@ -1542,7 +1542,7 @@ impl SlotIndex {
 }
 impl Default for SlotIndex { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SaveResult, src/game/savestate.ts:891)
+/// (TypeScript: SaveResult, src/game/savestate.ts:892)
 #[derive(Clone, Debug)]
 pub struct SaveResult {
     pub ok: bool,
@@ -1565,7 +1565,7 @@ impl SaveResult {
 }
 impl Default for SaveResult { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Checkpoints, src/game/savestate.ts:900)
+/// (TypeScript: Checkpoints, src/game/savestate.ts:907)
 #[derive(Clone, Debug)]
 pub struct Checkpoints {
     pub enabled: bool,
@@ -1622,7 +1622,7 @@ impl Checkpoints {
 }
 impl Default for Checkpoints { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:909 Checkpoints.pending, src/game/savestate.ts:909)
+/// (TypeScript: inline at src/game/savestate.ts:916 Checkpoints.pending, src/game/savestate.ts:916)
 #[derive(Clone, Debug)]
 pub struct CheckpointsPending {
     pub why: String,
@@ -1641,7 +1641,7 @@ impl CheckpointsPending {
 }
 impl Default for CheckpointsPending { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:911 Checkpoints.flash, src/game/savestate.ts:911)
+/// (TypeScript: inline at src/game/savestate.ts:918 Checkpoints.flash, src/game/savestate.ts:918)
 #[derive(Clone, Debug)]
 pub struct CheckpointsFlash {
     pub text: String,
@@ -1658,7 +1658,7 @@ impl CheckpointsFlash {
 }
 impl Default for CheckpointsFlash { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:913 Checkpoints.log, src/game/savestate.ts:913)
+/// (TypeScript: inline at src/game/savestate.ts:920 Checkpoints.log, src/game/savestate.ts:920)
 #[derive(Clone, Debug)]
 pub struct CheckpointsLogItem {
     pub t: f64,
@@ -1675,7 +1675,7 @@ impl CheckpointsLogItem {
 }
 impl Default for CheckpointsLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:914 Checkpoints.stats, src/game/savestate.ts:914)
+/// (TypeScript: inline at src/game/savestate.ts:921 Checkpoints.stats, src/game/savestate.ts:921)
 #[derive(Clone, Copy, Debug)]
 pub struct CheckpointsStats {
     pub requests: f64,
@@ -1732,7 +1732,7 @@ impl CheckpointsDragRef {
 }
 impl Default for CheckpointsDragRef { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:919 Checkpoints.lastAuto, src/game/savestate.ts:919)
+/// (TypeScript: inline at src/game/savestate.ts:926 Checkpoints.lastAuto, src/game/savestate.ts:926)
 #[derive(Clone, Debug)]
 pub struct CheckpointsLastAuto {
     pub key: String,
@@ -1766,6 +1766,25 @@ impl SavestateModFpCacheValue {
 }
 impl Default for SavestateModFpCacheValue { fn default() -> Self { Self::zeroed() } }
 
+/// (TypeScript: inline at src/game/savestate.ts:900 SNAPS, src/game/savestate.ts:900)
+#[derive(Clone, Copy, Debug)]
+pub struct SavestateModSNAPS {
+    pub own: bool,
+    pub take: crate::FnField,
+    pub put: crate::FnField,
+}
+impl SavestateModSNAPS {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        SavestateModSNAPS {
+            own: false,
+            take: crate::FnField,
+            put: crate::FnField,
+        }
+    }
+}
+impl Default for SavestateModSNAPS { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum KeyMemSlot {
@@ -1796,7 +1815,7 @@ impl OwnCharges2 {
 }
 impl Default for OwnCharges2 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:669 loadState(opts), src/game/savestate.ts:669)
+/// (TypeScript: inline at src/game/savestate.ts:670 loadState(opts), src/game/savestate.ts:670)
 #[derive(Clone, Debug)]
 pub struct LoadStateOpts {
     pub label: Option<String>,
@@ -1811,7 +1830,7 @@ impl LoadStateOpts {
 }
 impl Default for LoadStateOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:688 applyState(opts), src/game/savestate.ts:688)
+/// (TypeScript: inline at src/game/savestate.ts:689 applyState(opts), src/game/savestate.ts:689)
 #[derive(Clone, Debug)]
 pub struct ApplyStateOpts {
     pub label: Option<String>,
@@ -1826,7 +1845,7 @@ impl ApplyStateOpts {
 }
 impl Default for ApplyStateOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:868 memoryStore ->, src/game/savestate.ts:868 memoryStore ->)
+/// (TypeScript: inline at src/game/savestate.ts:869 memoryStore ->, src/game/savestate.ts:869 memoryStore ->)
 #[derive(Clone, Debug)]
 pub struct MemoryStore {
     pub map: JsMap<String, String>,
@@ -1885,13 +1904,16 @@ pub enum CheckpointsLoadFrom {
 pub struct SavestateMod {
     /// (src/game/savestate.ts:405 fpCache)
     pub fp_cache: JsMap<crate::ObjKey, crate::savestate::SavestateModFpCacheValue>,
-    /// (src/game/savestate.ts:894 runSerial)
+    /// (src/game/savestate.ts:900 SNAPS)
+    pub snaps: crate::savestate::SavestateModSNAPS,
+    /// (src/game/savestate.ts:901 runSerial)
     pub run_serial: f64,
 }
 impl SavestateMod {
     pub fn blank() -> Self {
         SavestateMod {
             fp_cache: JsMap::new(),
+            snaps: crate::savestate::SavestateModSNAPS::zeroed(),
             run_serial: 0.0,
         }
     }
@@ -1912,8 +1934,8 @@ pub fn key_manual() -> String { String::from("twopointsix.save.manual") }
 /// (src/game/savestate.ts:377 KEY_AUTOSAVE_ON)
 pub const KEY_AUTOSAVE_ON: &str = "twopointsix.autosave";
 
-/// (src/game/savestate.ts:862 localStore: a table nothing writes)
+/// (src/game/savestate.ts:863 localStore: a table nothing writes)
 pub fn local_store() -> crate::savestate::SaveStore { crate::savestate::SaveStore::zeroed() }
 
-/// (src/game/savestate.ts:1205 STAGE_RANK: a table nothing writes)
+/// (src/game/savestate.ts:1221 STAGE_RANK: a table nothing writes)
 pub fn stage_rank() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("infiltrate"), 0.0); t.set(String::from("drive"), 1.0); t.set(String::from("exfil"), 2.0); t.set(String::from("done"), 3.0); t.set(String::from("failed"), 3.0); t } }

@@ -302,7 +302,7 @@ pub fn fog_of_war_lit_block(g: &mut crate::game::Game) {
 }
 
 /// Is the floor at (x, z) in the lit part of the picture: some eye has it.   (fogofwar.ts FogOfWar.spotSeen)
-pub fn fog_of_war_spot_seen(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
+#[doc(hidden)] pub fn fog_of_war_spot_seen__body(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     g.fog_of_war.thing_stats.tests += 1.0;
     fog_of_war_ground_look(g, x, z) == 2.0
 }
@@ -715,7 +715,7 @@ pub fn fog_of_war_last_seen(g: &mut crate::game::Game) -> Vec<crate::fogofwar::F
 }
 
 /// Left out of the picture this frame; false for everybody while the fog is off.   (fogofwar.ts FogOfWar.hidden)
-pub fn fog_of_war_hidden(g: &mut crate::game::Game, gd: GuardId) -> bool {
+#[doc(hidden)] pub fn fog_of_war_hidden__body(g: &mut crate::game::Game, gd: GuardId) -> bool {
     !g.fog_of_war.bared && g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(g.gd[gd].ch)
 }
 
@@ -799,6 +799,28 @@ pub fn fog_of_war_summary(g: &mut crate::game::Game) -> String {
     if deg < 360.0 { line.push_str(&alloc::format!(" · {}° {}", js::num_str(deg), if g.k.fog.cone { "cone" } else { "field" })); }
     if g.k.fog.own { line.push_str(" · your eyes only"); }
     line
+}
+
+
+#[doc(hidden)] pub fn fog_of_war_hidden(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    use crate::io::Io;
+    if g.taps & (1u64 << 13) == 0 { return fog_of_war_hidden__body(g, gd); }
+    let mut o = crate::io::W::new(); gd.w(&mut o);
+    let r = fog_of_war_hidden__body(g, gd);
+    let mut a = crate::io::W::new(); r.w(&mut a);
+    crate::out_events::push_tap(g, 13, &o.b, &a.b);
+    r
+}
+
+
+#[doc(hidden)] pub fn fog_of_war_spot_seen(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
+    use crate::io::Io;
+    if g.taps & (1u64 << 14) == 0 { return fog_of_war_spot_seen__body(g, x, z); }
+    let mut o = crate::io::W::new(); x.w(&mut o); z.w(&mut o);
+    let r = fog_of_war_spot_seen__body(g, x, z);
+    let mut a = crate::io::W::new(); r.w(&mut a);
+    crate::out_events::push_tap(g, 14, &o.b, &a.b);
+    r
 }
 
 #[cfg(test)]

@@ -24,7 +24,7 @@ export function parse(t0: string): Node {
   else if (t === 'V3') n = { k: 'arr', of: parse('f64'), n: 3 };
   else if (t === 'Quat') n = { k: 'arr', of: parse('f64'), n: 4 };
   else if (t === 'crate::v3::m4::Mat4') n = { k: 'arr', of: parse('f32'), n: 16 };
-  else if (t === '()') n = { k: 'unit' };
+  else if (t === '()' || t === 'crate::Opaque' || t === 'crate::FnField') n = { k: 'unit' };
   else if (t === 'crate::Num') n = { k: 'f64' };
   else if ((m = t.match(/^Option<(.*)>$/))) n = { k: 'opt', of: parse(m[1]) };
   else if ((m = t.match(/^Vec<(.*)>$/))) n = { k: 'vec', of: parse(m[1]) };
@@ -171,6 +171,8 @@ export function helpersOf(g: any, knobs: Record<string, unknown>) { G = g; BK = 
 /** a book's seeds, as an export would take them (a row its list has since gained has an ID before anything else asks) */
 export function seedBook(g: any, knobs: Record<string, unknown>) { helpersOf(g, knobs); B = helpers(g, knobs); }
 /** the bytes of values of the given schema types, written by the walk's own writers against the game's book (the book must exist: one exportGame first) */
+/** one value's bytes at a time, for a walk that writes many: the game's book and helpers stand for the walk (scan.ts). The answer holds only until the next call */
+export function leafBytes(g: any, knobs: Record<string, unknown>): (n: Node, v: unknown) => Uint8Array { G = g; BK = BOOKS.get(g)!; B = helpers(g, knobs); const o = new Out(); return (n, v) => { o.n = 0; wr(n, v, o); return o.view().slice(); }; }
 export function exportPart(g: any, knobs: Record<string, unknown>, parts: [string | Node, any][]): Uint8Array { G = g; BK = BOOKS.get(g)!; B = helpers(g, knobs); const o = new Out(); for (const [ty, v] of parts) wr(typeof ty === 'string' ? parse(ty) : ty, v, o); return o.view().slice(); }
 /** WHAT THE HOST HANDS THE RUST GAME BEFORE EACH STEP, in about 2 KB (rust: io::take_host_half): each seat's record in seat order (`cmds`, as `Game.update` makes them), then every camera and Input row, then each seat's mark (the cut the host last took). The book must exist. */
 export function hostHalfParts(g: any, cmds: readonly any[]): [string, any][] { const bk = BOOKS.get(g)!, P: [string, any][] = [['u32', cmds.length]]; for (const c of cmds) P.push(['crate::cmd::PlayerCmd', c]);
