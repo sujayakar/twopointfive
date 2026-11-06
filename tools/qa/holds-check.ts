@@ -1,14 +1,14 @@
 // THE STAND A PROBE IS OWED BY ITS NAME (tools/qa/holds.ts): the table and the one call, held to their word. It stands no game.
 //   bun run tools/qa/holds-check.ts        exit 0 = all hold · 1 = one does not      (probes.ts holds; the same on both stands: it reads no stand)
 //   HOLDS_BREAK=1 in front = a probe is run with nothing held and no fence round it, a check file's main is read as if it called its parts bare, and the runner
-//   is asked with a word set by hand: lines (2), (4), (5), (7) and (8) must FAIL (the lines about the table itself stay green; for (8) a row of no probe and a row whose bisect names its
+//   is asked with a word set by hand: lines (2), (4), (5), (7), (8) and (9) must FAIL (the lines about the table itself stay green; for (8) a row of no probe and a row whose bisect names its
 //   probe's own held word are put into the list).
 // What it is for: a check was red run as a file and green in its family, twice in one day, because the runner held rows off for it and its own main did not.
 // So (1) the table names rows the game has, under the words the frozen stand's own list gives them; (2) every probe the runner dispatches by a name in the table
 // runs with its words at '0' and its rows off, and both are back after; (3) a word whoever runs the tool set is left as he set it; (4) the fence puts back what a
 // probe wrote; (5) every check file with a main of its own that the runner dispatches such a name to runs it through the same call, by that name; (6) no name in
 // the table is one the runner no longer has; (7) the runner's own run() holds a probe's words; (8) the rows of the expected reds (tools/qa/expected-red.ts) are under
-// names the runner has and name words the stand can raise.
+// names the runner has and name words the stand can raise. (9) a run started with a break word says so, and whether it bit.
 // WHAT (5) CANNOT SEE: that every arm of a main goes through the call (it reads the file's text for the call and the names; a main with one arm wrapped and one
 // bare passes); a check file none of whose probes is in the table (it is not read at all: run alone its parts have no fence between them); and a probe the
 // runner dispatches in a shape it does not read is said, not guessed.
@@ -30,7 +30,7 @@ const under = <T>(name: string, fn: () => T | Promise<T>): Promise<T> => BREAK ?
 const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`), { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 const R = knobRegistry() as Record<string, Record<string, unknown>>, rows: Hold[] = []; for (const r of HOLDS) for (const h of r.holds) if (!rows.some(o => o.word === h.word)) rows.push(h);
 const at = (h: Hold): string => `${h.table}.${h.key}`, read = (h: Hold): unknown => R[h.table]?.[h.key];
-if (BREAK) console.log('HOLDS_BREAK=1: probes run bare, mains read as bare, the runner asked with a word set by hand — lines (2), (4), (5), (7) and (8) must FAIL');
+if (BREAK) console.log('HOLDS_BREAK=1: probes run bare, mains read as bare, the runner asked with a word set by hand — lines (2), (4), (5), (7), (8) and (9) must FAIL');
 
 // (1) the table against the game and the frozen stand's list
 { const bad: string[] = [];
@@ -146,6 +146,16 @@ const probeNames = [...known].filter(n => ran.has(n)).sort(), heldNames = probeN
       else if (holdsOf(n).some(x => x.word === k)) bad.push(`${n}: '${w}' is a word its own holds put off`); }
   }
   line(!bad.length && Object.keys(list).length > 0, '(8) every row of the expected reds is under a name the runner has, and what it says of the stand\'s words can be so', bad.length ? few(bad, 8) : `${Object.keys(list).length} rows, ${Object.values(list).filter(r => r.bisect).length} with a bisect`); }
+
+// (9) A BREAK WORD IS SAID, AND WHETHER IT BIT (stand.ts BREAK_WORDS, the close of probes.ts): the runner's own green and red self tests in children started
+// with a word no check reads. Green: DID NOT BITE. Red, no row: named as the word's to explain. WHAT (9) CANNOT SEE: the third reading, BITE NOT SHOWN, which
+// wants a probe that is red by a row (a game stood up, and a list that changes). HOLDS_BREAK: the children are started without the word.
+{ const env: Record<string, string> = { PATH: process.env.PATH ?? '', HOME: process.env.HOME ?? '', ...(process.env.TPS_PROFILE ? { TPS_PROFILE: process.env.TPS_PROFILE } : {}), ...(BREAK ? {} : { HOLDSNINE_BREAK: '1' }) };
+  const tail = (name: string) => { const p = Bun.spawnSync(['bun', 'run', resolve(HERE, 'probes.ts'), name], { env, stdout: 'pipe', stderr: 'pipe' }); return { out: p.stdout.toString(), err: p.stderr.toString(), code: p.exitCode }; };
+  const green = tail('selftest-pass'), red = tail('selftest-fail');
+  const g = /^  BREAK WORD HOLDSNINE_BREAK=1: DID NOT BITE/m.test(green.out), r = /^  BREAK WORD HOLDSNINE_BREAK=1: 1 red with no row on this stand \(selftest-fail\)/m.test(red.out), said = /^BREAK WORD SET: HOLDSNINE_BREAK=1/m.test(green.err);
+  line(g && r && said && green.code === 0 && red.code === 1, '(9) a run started with a break word says so as it starts, and closes on whether the word bit',
+    `selftest-pass: exit ${green.code}, 'DID NOT BITE' ${g}, said on stderr ${said} · selftest-fail: exit ${red.code}, named as the word's ${r}`); }
 
 console.log(fails ? `=== holds-check: ${fails} FAIL ===` : '=== holds-check: ALL PASS ===');
 process.exit(fails ? 1 : 0);
