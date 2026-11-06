@@ -35,20 +35,22 @@ by design from the first death: README.md). The lines round a step are the nativ
 
 Exit: 0 in step · 1 the block or the die parted · 2 the Rust tick panicked (the panic's words and place are printed) · 3 a file is missing.
 
-What was run (dev build unless said; every tick, the die's count and 12 parts by the module's hashes, every 100th tick also hashed in the host over the
-module's memory in place):
+What was run, with frame boxes on (the release build; every tick, the die's count and 12 parts by the module's hashes, every 100th tick also hashed in
+the host over the module's memory in place):
 
 | mission | ticks | through wasm | `poses` first parts | the native runner on the same folder |
 |---|---|---|---|---|
-| room-clear-four:1 | 3,006 | in step (dev, release, small) | tick 1794 | in step, tick 1794 |
-| hostage-rescue:1 | 3,119 | in step | tick 740 | in step, tick 740 |
-| glasshouse-four:1 | 4,276 | in step | tick 690 | in step, tick 690 |
-| mousehole-four:1 | 7,087 | in step | tick 1764 | not run here |
-| tut-solo:1 (a tutorial, its level script) | 8,052 | in step | tick 404 | in step, tick 404 |
+| room-clear-four:1 | 3,006 | in step (dev, release, small) | tick 1794 | `run.sh --every 500` exit 0, tick 1794, 0 paths not known |
+| tut-solo:1 (a tutorial, its level script) | 8,052 | in step (dev, release) | tick 404 | `run.sh` exit 0, tick 404, 12 beats |
+| mousehole-four:1 | 7,087 | in step | tick 1764 | in step, tick 1764 |
+
+Before frame boxes, on the dev build: hostage-rescue:1 (3,119 ticks, `poses` at 740) and glasshouse-four:1 (4,276, at 690) in step through wasm and
+natively; not run again since.
 
 Also run on room-clear-four:1: `--two` (two games from the one start in slots 0 and 1, stepped one after the other every tick: both in step for 3,006
-ticks); `--one-call` (the upload and the lights' update inside `face_step`: in step, and the `lights` part does not differ, the update writes none of the
-block); the red paths (the driver's orders left out: parts at tick 628 in `props`; one hash of `post.txt` altered: parts at that tick; exit 1 both).
+ticks); `--one-call` (the upload, the lights' update and the host's view inside `face_step`: in step, and the `lights` part does not differ, the update
+writes none of the block). Before frame boxes, the red paths (the driver's orders left out: parts at tick 628 in `props`; one hash of `post.txt` altered:
+parts at that tick; exit 1 both).
 
 Not checked: the game's own state by path (`diff.ts` over `face_export`), a second seat, a start taken anywhere but a mission's first tick, any browser.
 
@@ -62,11 +64,11 @@ All C ABI; a pointer and a length are `usize`, a handle a `u32`. The head of `ru
 | a panic | `face_panic_ptr()` `face_panic_len()` `face_panic_clear()`: the last panic's words with file and line. The module aborts on a panic, so the host catches a trap and reads the words; the game of that call is gone, the others stand |
 | a game | `face_new(state, n, block, bn) -> h` (`io::import` + the block copied into the first free slot; 0 = no slot) · `face_lesson(h, p, n)` · `face_blank() -> h` · `face_drop(h)` · `face_slot(h)` · `face_import_into(h, p, n)` |
 | the host's half | `face_host(h, p, n, first)` (one `h<k>.bin`) · `face_give(h, k, line)` · `face_hostwrite(h, k, line)` · `face_meter(h, v)` |
-| the step | `face_step(h, dt, flags)`: flag 1 the box world listed again first, `game_step`, the autosave's rows kept by `face_hostwrite`, flag 2 the lights' update. One call a tick for a host that plays · by name: `face_upload(h)` `face_lights(h, dt)` `face_checkpoint(h, label, n)` |
+| the step | `face_step(h, dt, flags)`: flag 1 the box world listed again first (the listing is also what frees the rows of the frames gone by: a host that never lists keeps every frame box as a row for good), `game_step`, the autosave's rows kept by `face_hostwrite`, flag 2 the lights' update, flag 4 the host's view of a level on rails. One call a tick for a host that plays · by name: `face_upload(h)` `face_lights(h, dt)` `face_view(h)` `face_checkpoint(h, label, n)` |
 | reading back | `face_export(h)` (`io::export` at `face_out`) · `face_die_n(h)` · `face_time(h)` · `face_rows(h)` · `face_parts()` `face_part_name(i)` `face_part(name, n) -> i` `face_part_addr(slot, i)` `face_part_len(i)` `face_part_hashes(slot) -> p` |
 | `rust/sim`'s own | all 272 of the shipped module's exports, same names, kinds and parameter counts (`sim_abi` 34, `state_layout`, `state_len` 3,248,912, 4 slots, 13 parts all equal) |
 
-`--exports` on this tree: same 272 · missing 0 · extra 31 (the `face_*` above).
+`--exports` on this tree: same 272 · missing 0 · extra 32 (the `face_*` above).
 
 **Why `rust/sim`'s exports appear with no line that re-exports them** (tried on a three-crate model, dev and release with LTO): a crate's `#[no_mangle]`
 functions, public or private, in any of its modules, are exports of the final `cdylib` whenever that crate is in the link; and a crate is in the link when
@@ -76,41 +78,45 @@ name `sim`.
 
 ## The numbers
 
-Measured on a shared 4-core machine with another build running (load 2 to 3), room-clear-four:1, 3,006 ticks, bun 1.4.4. Times are `performance.now()`
-round the call, two runs each, the quieter kept.
+Measured with frame boxes on, on a 4-core machine with little else running, room-clear-four:1, 3,006 ticks, bun 1.4.4. Times are `performance.now()`
+round the call, two runs each (they agree to the second digit).
 
 | | size | gzip | without the name section | compile in bun |
 |---|---|---|---|---|
-| dev (opt 1, `debug = false`) | 23,134,291 | 5.1 MB | 20,385,385 | 140 ms |
-| release (opt 3, LTO) | 19,263,645 | 5.6 MB | 18,535,851 | 105 ms |
-| small (opt "s", LTO) | 11,884,770 | 3.8 MB | 10,840,759 | 65 ms |
+| dev (opt 1, `debug = false`) | 23,137,076 | 5.1 MB | 20,387,474 | 125 ms |
+| release (opt 3, LTO) | 19,265,585 | 5.6 MB | 18,537,679 | 120 ms |
+| small (opt "s", LTO) | 11,887,897 | 3.8 MB | 10,843,590 | 65 ms |
 | the shipped simulation alone, for scale | 889,195 | | | |
 
 | the tick, ms | mean | worst | how |
 |---|---|---|---|
-| wasm dev | 1.65 | 234 (tick 2782) | `face_step` alone (the tick; the upload and the lights' update are called by name outside the clock, as the native runner does) |
-| wasm release | 1.45 | 230 | the same |
-| wasm small | 1.49 | 226 | the same |
-| wasm dev / release / small, `--reserve 1500` | 1.46 / 1.35 / 1.41 | 25 / 45 / 33 (tick 1) | the same, the memory grown once before the start |
-| native runner, debug (opt 0) | 5.4 | 17 to 23 | `game_step` alone, `std::time::Instant` (the runner's own line) |
-| native runner, optimised (opt 3, no LTO: `cargo build --release` in `rust/game_run`) | 1.06 to 1.11 | 7 to 9 | the same; in step for the 3,006 ticks |
-| TypeScript, the same play | 2.73 | 138 to 144 (tick 1) | `stepSeats` alone, `wasm-run.ts --ts-time` (the stand and the preparation of mission.ts, nothing written) |
-| TypeScript, `tools/qa/tickcost.ts` | 3.00 | 47.7 | `Game.update` on the game server's stand (senses on the CPU), first 120 ticks left out: another play (2,771 ticks), not the same work |
+| wasm dev | 1.37 | 23 (tick 1) | `face_step` alone (the tick; the upload, the lights' update and the host's view are called by name outside the clock, as the native runner does) |
+| wasm release | 1.23 | 31 to 34 (tick 1) | the same |
+| wasm small | 1.25 | 21 to 22 (tick 1) | the same |
+| wasm release, one call a tick | 1.21 | 31 (tick 1) | `face_step` with the upload, the lights and the view inside |
+| native runner, debug (opt 0) | 5.3 | 17 | `game_step` alone, `std::time::Instant` (the runner's own line) |
+| TypeScript, the same play | 2.68 | 125 to 150 (tick 1) | `stepSeats` alone, `wasm-run.ts --ts-time` (the stand and the preparation of mission.ts, nothing written) |
+| TypeScript, `tools/qa/tickcost.ts` (before frame boxes; it does not run the Rust game) | 3.00 | 47.7 | `Game.update` on the game server's stand (senses on the CPU), first 120 ticks left out: another play (2,771 ticks), not the same work |
 
-Other missions through the dev build, mean / worst: hostage-rescue:1 1.25 / 158 · glasshouse-four:1 1.27 / 227 · mousehole-four:1 1.61 / 763 ·
-tut-solo:1 0.67 / 184. The lights' update is about 0.001 ms a tick.
+Other missions through the release build, mean / worst: tut-solo:1 0.49 / 17 · mousehole-four:1 1.14 / 27, the worst the first tick in both. The lights'
+update and the host's view together are about 0.001 ms a tick (0.01 on the tutorial).
 
-Through wasm the optimisation level moves the mean by a tenth; the optimised native tick is about three quarters of the wasm one. The worst wasm tick
-is not the game: see memory.
+Before frame boxes, on a loaded machine, the same mission: dev 1.65, release 1.45, small 1.49 mean, and a worst tick of 230 ms (763 ms in mousehole-four)
+where the memory grew; an optimised native runner (`cargo build --release` in `rust/game_run`) 1.06 to 1.11 mean, 7 to 9 worst. The optimised native tick
+was not timed again with frame boxes.
 
-**Memory.** The module starts at 111.8 MB (the shipped simulation: 47.9 MB; the difference is the 64 MB stack `rust/game_face/build.rs` asks for). After
-the import 130 MB. At the end of room-clear-four:1 **1,416 MB** of linear memory (1,485,307,904 bytes) with 571,962 rows in the box table: every made box
-is a row for good. hostage-rescue:1 768 MB (442,247 rows), glasshouse-four:1 1,415 MB (699,219), tut-solo:1 768 MB (478,085), mousehole-four:1 **2,711 MB**
-(1,192,565 rows): wasm32 ends at 4 GB, and a table that doubles needs the old and the new at once, so a mission half as long again does not fit.
+**Memory.** The module starts at 111.5 MB (the shipped simulation: 47.9 MB; the difference is the 64 MB stack `rust/game_face/build.rs` asks for) and
+stands at 130 MB after the import.
 
-**The memory grows inside a tick**: in 7 of room-clear-four:1's 3,006 steps (first in tick 39), and those are the worst ticks (230 ms at tick 2782, 763 ms
-in mousehole-four). Room asked for and given back before the start (`face_free(face_alloc(n), n)`, `--reserve`) is kept by the allocator: with 1,500 MB
-no step grew the memory and the worst tick was the first (25 to 45 ms).
+| at the mission's end | linear memory | rows of the box table | steps that grew the memory | before frame boxes |
+|---|---|---|---|---|
+| room-clear-four:1 | 134.9 MB (141,492,224 bytes) | 4,232 | 1 of 3,006 (tick 2956) | 1,416 MB, 571,962 rows, 7 steps |
+| mousehole-four:1 | 136.4 MB (142,999,552 bytes) | 4,987 | 2 of 7,087 (first tick 1791) | 2,711 MB, 1,192,565 rows, 8 steps |
+| tut-solo:1 | 131.5 MB (137,887,744 bytes) | 2,359 | 1 of 8,052 (tick 4557) | 768 MB, 478,085 rows, 6 steps |
+
+The rows still grow slowly (a few makers still make a row for good), so **the memory still grows inside a tick now and then**; such a step is no longer
+the worst tick (the worst is the first, 21 to 34 ms). Room asked for and given back before the start (`face_free(face_alloc(n), n)`, `--reserve`) is
+kept by the allocator: with `--reserve 32` no step of room-clear-four:1 or mousehole-four:1 grew the memory (143.6 MB at the end of both).
 
 ## What `src/sim/sim.ts` needs to bind to this module
 
@@ -130,11 +136,12 @@ no step grew the memory and the worst tick was the first (25 to 45 ms).
   `f32()`, which make `w` / `d` and the kept sub-views again when their length is 0. Where it does not: anything that reads `SimState.w` /
   `.d` or a kept typed array without passing through `bind()` after a step, which then reads `undefined` without a word (the accessor fields over the
   block, a tool's `g.sim.w`). So after every `face_step` the host must check `memory.buffer` and make every bound `SimState`'s views again (as `view()` does when a
-  block moves), or reserve the room before play so that no step grows it. The reserve is cheap only once frame boxes stop being rows for good.
+  block moves), or reserve the room before play so that no step grows it. With frame boxes 32 MB was enough for the two missions tried.
 - **The page's rows of `RUST`** then call `rust/sim` on the block the Rust game also writes. That is the point of one module; nothing was tried in a page.
 
 ## Worked round, and asked
 
+- **The host's view** (`rails_host_view` after each tick, a level on rails) is a stand-in of the runner's too: `game_run::view`, `face_view`, flag 4.
 - **The box mirror's world is the TypeScript game's slot.** `g.col.mirror.slot` is carried by the bridge as a number, so a game imported into slot 1
   wrote its box world into world 0 and read world 1: the second of two games parted at tick 1832 in `doors` (stepped second) or 626 in `props` (stepped
   first). `game_run::start` sets it to the game's own slot; both games are then in step. Asked: `io::import` should not carry it, or should take the slot.

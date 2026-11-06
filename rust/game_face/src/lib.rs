@@ -34,15 +34,16 @@
 //!
 //! the step
 //!   face_step(h, dt, flags)                   ONE TICK, and what tools/blitz/BRIDGE.md says a host calls round it, in its order:
-//!                                             flag 1 `UPLOAD`: the box world listed again first (where the host uploaded since the last tick) ·
+//!                                             flag 1 `UPLOAD`: the box world listed again first (where the host uploaded since the last tick; the
+//!                                             listing is also what frees the rows of the frames gone by) ·
 //!                                             `game_step` with the record face_host took (or the game's own `cmd_buf` where none was taken) ·
 //!                                             the autosave's rows face_hostwrite kept · flag 2 `LIGHTS`: the lights' update (a flash's envelope and
-//!                                             its retirement, which the next tick reads).
-//!                                             A host that plays calls this one thing a tick with LIGHTS up. A host that compares the block with the
-//!                                             TypeScript's leaves LIGHTS down, compares, and calls face_lights: the TypeScript's hashes are taken
-//!                                             before its host's update.
-//!   face_upload(h) · face_lights(h, dt) · face_checkpoint(h, label, n)
-//!                                             the same three by name, for a host that calls them itself (face_checkpoint when it has saved)
+//!                                             its retirement, which the next tick reads) · flag 4 `VIEW`: the host's view of a level on rails.
+//!                                             A host that plays calls this one thing a tick with LIGHTS and VIEW up. A host that compares the block
+//!                                             with the TypeScript's leaves them down, compares, and calls face_lights and face_view: the
+//!                                             TypeScript's hashes are taken before its host's half.
+//!   face_upload(h) · face_lights(h, dt) · face_view(h) · face_checkpoint(h, label, n)
+//!                                             the same by name, for a host that calls them itself (face_checkpoint when it has saved)
 //!
 //! reading back
 //!   face_export(h)                            the whole state (`io::export`) at face_out
@@ -228,6 +229,7 @@ pub extern "C" fn face_meter(h: u32, v: f64) {
 // ---- the step
 pub const UPLOAD: u32 = 1;
 pub const LIGHTS: u32 = 2;
+pub const VIEW: u32 = 4;
 #[no_mangle]
 pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
     let said = with(h, |x| {
@@ -237,6 +239,7 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
         let mut said = String::new();
         for (k, l) in core::mem::take(&mut x.after) { if let Some(t) = game_run::write_after(&mut x.g, k, &l) { said.push_str(&t); said.push('\n'); } }
         if flags & LIGHTS != 0 { game_run::lights(&mut x.g, dt); }
+        if flags & VIEW != 0 { game_run::view(&mut x.g); }
         said
     });
     out(said.into_bytes());
@@ -244,6 +247,10 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
 #[no_mangle]
 pub extern "C" fn face_upload(h: u32) {
     with(h, |x| game_run::upload(&mut x.g));
+}
+#[no_mangle]
+pub extern "C" fn face_view(h: u32) {
+    with(h, |x| game_run::view(&mut x.g));
 }
 #[no_mangle]
 pub extern "C" fn face_lights(h: u32, dt: f64) {

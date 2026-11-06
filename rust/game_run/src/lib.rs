@@ -7,7 +7,7 @@
 //!   before   `host_half` (h<k>.bin) · `give` (each line of gives.txt for this tick) · `write_before` (each line of hostwrites.txt for this tick) · `meter`
 //!            (a line of meter.txt, a tutorial mission's) · `upload`
 //!   the tick `step`
-//!   after    `write_after` (each line of hostwrites.txt for this tick) · the compare (`part_hashes`) · `lights`
+//!   after    `write_after` (each line of hostwrites.txt for this tick) · the compare (`part_hashes`) · `lights` · `view`
 use game::ids::Id;
 use game::io::Io;
 
@@ -225,11 +225,20 @@ pub fn checkpoint(g: &mut game::game::Game, label: &str) -> bool {
     stopped
 }
 
-/// HOST STEP: where the headless host listed the box world again between two ticks (`engine.world.upload()`)
+/// HOST STEP: where the headless host listed the box world again between two ticks (`engine.world.upload()`). The listing is also where the rows of the
+/// frames gone by are freed (`boxes_frame_reset`, inside `host_world_upload`): a host that never lists keeps every frame box as a row for good.
 pub fn upload(g: &mut game::game::Game) { game::host_api::b_01::host_world_upload(g); }
 
 /// HOST STEP AFTER THE TICK (the headless host's `engine.lights.update(dt, game.time)`): every flash's envelope and retirement, which the next tick's light reads
 pub fn lights(g: &mut game::game::Game, dt: f64) { let now = g.time; game::render_lights::light_set_update(g, dt, now); }
+
+/// HOST STEP AFTER THE TICK (game.ts hostAfter): a tutorial mission staged again opens on its first view, set with the host's camera; a return on its
+/// first line off a rails level. The host's camera is the row the director was handed, else the first that is no seat's.
+pub fn view(g: &mut game::game::Game) {
+    let seat_cams: Vec<game::ids::CameraId> = g.seats.iter().map(|s| g.tab.cmd_seat[*s].cam).collect();
+    let cam = g.director.cam.or_else(|| g.tab.camera.ids().find(|c| !seat_cams.contains(c)));
+    if let Some(cam) = cam { game::rails::rails_host_view(g, cam); }
+}
 
 /// the tick
 pub fn step(g: &mut game::game::Game, dt: f64, cmd: &game::cmd::PlayerCmd) { game::game::game_step(g, dt, cmd); }

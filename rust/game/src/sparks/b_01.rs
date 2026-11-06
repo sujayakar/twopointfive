@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ROUND THREE: SPARKS ARE NOT THE PICTURE'S ALONE (room-clear-four tick 1621: the stun grenade's burst, detonate_stun_raw < spawn_burst < sparks_emit_burst, a stub).
+// SPARKS ARE NOT THE PICTURE'S ALONE (room-clear-four tick 1621: the stun grenade's burst, detonate_stun_raw < spawn_burst < sparks_emit_burst, a stub).
 // triage.json had sparks.ts as dress, "unsure": effects.ts:262-266 hangs a smoke trail on each spark of a burst by `tracker(i)`, and the CPU smoke is what the senses
 // read; the frame's box list takes a box a live spark (game.ts:1820, no DRESS row). So the whole class is translated: round one's three no-ops (clear, update, boxes)
 // would have left every trail standing at the burst point. `tracker` itself is effects' Track::Spark { slot, gen_ } (p_effects_01 track_at): its stub stays.
@@ -133,13 +133,13 @@ pub fn sparks_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let l = v3::len(d);
         let mid = v3::lerp3(s.pos, tail, 0.5);
         let dir: V3 = if l > 1e-5 { [d[0] / l, d[1] / l, d[2] / l] } else { [0.0, 1.0, 0.0] };
-        let b = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c: mid, h: [t, t, m::max(p.min_streak * 0.5, l * 0.5)], yaw: Some(v3::yaw_of(d)), rot: Some(v3::quat::from_to([0.0, 0.0, 1.0], dir)),
+        let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: mid, h: [t, t, m::max(p.min_streak * 0.5, l * 0.5)], yaw: Some(v3::yaw_of(d)), rot: Some(v3::quat::from_to([0.0, 0.0, 1.0], dir)),
             albedo: Some([0.04, 0.03, 0.02]), emissive: Some(emissive), flags: Some((js::to_i32(bf.dynamic) | js::to_i32(bf.no_shadow)) as f64), ..Default::default() });
         out.push(b);
     }
 }
 
-/// A HOST STEP AFTER AN IMPORT (round three): the bridge does not carry `Game.sparks` (not-carried.json: "its type holds what the bridge cannot read"), so an imported
+/// A HOST STEP AFTER AN IMPORT: the bridge does not carry `Game.sparks` (not-carried.json: "its type holds what the bridge cannot read"), so an imported
 /// game has an empty pool and params at zero. This is game.ts:938 `new Sparks(fx.sparks)` again.  BRIDGE-ASK: carry Game.sparks (a pool of plain numbers and its params).
 pub fn sparks_after_import(g: &mut crate::game::Game) {
     if !g.sparks.pool.is_empty() { return; }

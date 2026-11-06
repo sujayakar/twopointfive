@@ -648,7 +648,7 @@ pub fn device_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 }
 /// A camera's bracket, body, lens and LED; a pad's plate, keys and LED; a beam's housings, LED and line.   (devices.ts deviceBoxesRaw)
 pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
-    use crate::scene_boxes::{make_box, MakeBoxP};
+    use crate::scene_boxes::{make_box_frame as make_box, MakeBoxP};   // (every box here is pushed straight onto the frame's list)
     let fl = crate::scene_boxes::box_flag();
     let dyn_ = fl.dynamic;
     let deco = bits_or(fl.dynamic, fl.no_shadow);

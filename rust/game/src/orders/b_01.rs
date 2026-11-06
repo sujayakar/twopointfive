@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// BRING-UP, ROUND TWO: AN ORDER'S CLOSURES AFTER AN IMPORT. The bridge cannot carry OrderDef.label / can / only / valid / issue / tick / gone (closures made enums:
+// BRING-UP: AN ORDER'S CLOSURES AFTER AN IMPORT. The bridge cannot carry OrderDef.label / can / only / valid / issue / tick / gone (closures made enums:
 // not-carried.json), so a row the import brought has `issue: Nothing` and an order given does nothing (the two sides first parted there, at tick 21).
 // BRIDGE-ASK: on import, deal each row its enums by `def.id` (the tables are static), as this does by hand from the parts' own registrations.
 /// HARNESS STAND-IN FOR A BRIDGE GAP (tools/blitz/README.md "Host steps"): called by the tick loop's runner after an import, never by the game.

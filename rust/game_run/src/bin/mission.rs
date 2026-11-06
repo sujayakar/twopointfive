@@ -11,7 +11,7 @@
 //! the block are written (n<k>.bin, ns<k>.bin), `--after` more ticks run, and the exit code is 1. A panic prints `PANIC in tick <k>`, its message and
 //! place and the game's frames of the backtrace; the exit code is then 2. A kept tick (--keep / --every) writes n<k>.bin and ns<k>.bin for tools/blitz/diff.ts.
 //!
-//! BLITZ_SKIP=<names> leaves one of the host's calls round a step out (lights, upload), to see by a run what it is for.
+//! BLITZ_SKIP=<names> leaves one of the host's calls round a step out (lights, upload, view), to see by a run what it is for.
 use game::ids::Id;
 use std::io::Write;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -38,7 +38,8 @@ fn beats_line(g: &game::game::Game) {
         let st = format!("{:?}", lb.state).to_lowercase();
         match seen.iter_mut().find(|x| x.0 == lb.name) { Some(x) => { x.1 += 1; x.2 += lb.step; x.3 = st; } None => seen.push((lb.name.clone(), 1, lb.step, st)) }
     }
-    if !seen.is_empty() { println!("BEATS the Rust game ran ({}): {}", seen.len(), seen.iter().map(|x| format!("{} x{} ({} resumes, {})", x.0, x.1, x.2, x.3)).collect::<Vec<_>>().join(" · ")); }
+    // (a few to a line: run.sh shows a line's first 330 characters)
+    for (i, c) in seen.chunks(6).enumerate() { println!("BEATS the Rust game ran ({} of {}): {}", i * 6 + c.len(), seen.len(), c.iter().map(|x| format!("{} x{} ({} resumes, {})", x.0, x.1, x.2, x.3)).collect::<Vec<_>>().join(" · ")); }
 }
 
 fn main() {
@@ -104,7 +105,6 @@ fn main() {
             done = k;
             // (a level script's beats as they stand: every beat this game started, how many resumes it has had, where it is)
             if std::env::var("BLITZ_BEATS").is_ok() { for b in g.tab.director_live_beat.ids().collect::<Vec<_>>() { let lb = &g.tab.director_live_beat[b]; println!("  beat after tick {}: {} {:?} step {} waiting {:?} it {:?}", k, lb.name, lb.state, lb.step, lb.waiting, lb.it); } }
-            if parted > 0 && k >= parted + after { beats_line(&g); }
             for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_after(&mut g, k, l) { println!("{}", t); } }
             if k == 1 {
                 if let Ok(want) = std::fs::read(format!("{}/knobs.bin", dir)) {
@@ -138,7 +138,9 @@ fn main() {
             }
             // HOST STEP AFTER THE TICK (the headless host's `engine.lights.update(dt, game.time)`): every flash's envelope and retirement, which the next tick's light reads
             if !skip("lights") { game_run::lights(&mut g, dt); }
+            if !skip("view") { game_run::view(&mut g); }
             if parted > 0 && k >= parted + after {
+                beats_line(&g);
                 println!("THE BLOCK FIRST PARTED AT TICK {}; stopped after tick {}", parted, k);
                 let _ = std::io::stdout().flush();
                 std::process::exit(1);

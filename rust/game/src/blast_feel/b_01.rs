@@ -35,6 +35,6 @@ pub fn ring_stage(g: &mut crate::game::Game, pl: PlayerId, k: f64, faces: &[crat
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/blastFeel.ts:213 ceiling)
 pub fn ceiling(g: &mut crate::game::Game, pl: PlayerId, faces: &[crate::blast_feel::Face]) {}
 
-/// BOUNDARY (round three; combat.ts:692 detonateStun asks before it plays the can's own report): true only for a WALL CHARGE's burst the feel has seen set
+/// BOUNDARY (combat.ts:692 detonateStun asks before it plays the can's own report): true only for a WALL CHARGE's burst the feel has seen set
 /// (blastFeel.ts:109-114, `S.seen`, filled by the feel's own tick: dress, a no-op here). Its answer chooses a sound and nothing else (triage: dress).
 pub fn wall_report(g: &mut crate::game::Game, at: V3) -> bool { false }

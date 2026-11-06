@@ -499,7 +499,7 @@ pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
                 let hw = match own { Some(o) => o.1, None => if box30 { 0.014 } else { 0.018 } };
                 let th = match own { Some(o) => o.2, None => 0.012 };
                 if settled {
-                    let b = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c: [p[0], p[1] + th, p[2]], h: [hw, th, hl], yaw: Some(yaw), albedo: Some(col), flags: Some(dn), ..Default::default() });
+                    let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: [p[0], p[1] + th, p[2]], h: [hw, th, hl], yaw: Some(yaw), albedo: Some(col), flags: Some(dn), ..Default::default() });
                     out.push(b);
                 } else {
                     let deep = match own { Some(o) => m::max(0.03, o.2), None => 0.03 };

@@ -388,7 +388,7 @@ pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<Box
     let z = v3::normalize(v3::cross(x, y));
     y = v3::cross(z, x);
     let owner = owner_of(g, c_2);
-    let made = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    let made = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c: v3::scale(v3::add(a, b), 0.5),
         h: [l / 2.0 + 0.048, 0.026, 0.045],
         yaw: Some(m::atan2(z[0], z[2])),
@@ -422,7 +422,7 @@ pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_p
     let rot = v3::quat::from_basis(f.x, f.y, f.z);
     let stuff = crate::scene_stuff::paint_of(g, Some(&albedo[..])).and_then(|p| p.stuff);
     let owner = g.m.rig_props.cur_owner;
-    let made = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    let made = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c: mid,
         h: [s.thick, s.tall, len],
         yaw: Some(yaw),
@@ -452,7 +452,7 @@ pub fn head_flat_forward(g: &mut crate::game::Game, c_2: CharId) -> V3 {
 
 /// A part's box in a group's own axes, with nothing lit. (rigProps.ts gogglesBoxes `boxOf(at(…), …, [0, 0, 0], …)`)
 fn goggle_part(g: &mut Game, c: V3, h: V3, yaw: f64, albedo: V3, flags: f64, owner: f64, rot: Quat) -> BoxId {
-    crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c,
         h,
         yaw: Some(yaw),

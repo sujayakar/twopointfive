@@ -29,7 +29,7 @@ pub fn host_api_set_decals(g: &mut crate::game::Game) {}
 /// BOUNDARY NO-OP (the picture's / the host's): (src/host/api.ts:97 HostApi.probe)
 pub fn host_api_probe(g: &mut crate::game::Game) {}
 
-// ---- BRING-UP, ROUND TWO: WHAT THE HOST HOLDS THAT A TICK READS AND THE BRIDGE DOES NOT CARRY (`Game.engine` is "the picture's or the host's" to it).
+// ---- BRING-UP: WHAT THE HOST HOLDS THAT A TICK READS AND THE BRIDGE DOES NOT CARRY (`Game.engine` is "the picture's or the host's" to it).
 // BRIDGE-ASK: carry g.engine.lights (lights and ir as lists of LightId in the set's own order, fog_team), g.engine.world's lists and counts (statics, max_boxes,
 // geom_serial, glass_statics, glass_statics_n, glass_list) and g.engine.settings (plain numbers), or have the host fill them through a call like this one.
 /// HARNESS STAND-IN FOR A BRIDGE GAP (tools/blitz/README.md "Host steps"): called by the tick loop's runner after an import, never by the game.
@@ -84,4 +84,8 @@ pub fn host_engine_fill(g: &mut crate::game::Game, text: &str) -> Vec<String> {
 
 /// HARNESS STAND-IN FOR A BRIDGE GAP (tools/blitz/README.md "Host steps"): called by the tick loop's runner between two ticks, never by the game.
 /// The headless host's `engine.world.upload()` between two ticks, as much of it as the game reads: the boxes listed again (boxes.ts relist; the pack is the picture's).
-pub fn host_world_upload(g: &mut crate::game::Game) { crate::scene_boxes::box_world_list(g); }
+pub fn host_world_upload(g: &mut crate::game::Game) {
+    crate::scene_boxes::box_world_list(g);
+    // (the engine's list now names this frame's boxes and no older frame's: the rows of the frames before are free again)
+    crate::scene_boxes::boxes_frame_reset(g);
+}

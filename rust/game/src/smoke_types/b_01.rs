@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ROUND THREE: THE SOLVER'S OBJECT IS ALSO WHERE THE GAME'S OWN SMOKE IS FED. Under SENSE.cpu game.ts senseStep puts the game's CpuSmoke in front of the solver
+// THE SOLVER'S OBJECT IS ALSO WHERE THE GAME'S OWN SMOKE IS FED. Under SENSE.cpu game.ts senseStep puts the game's CpuSmoke in front of the solver
 // (sense.ts:251 ownSmoke: emit feeds both, clearAll clears both, budget is the game's own count); p_game_07 game_sense_step keeps that as the bit `g.smoke_owned`
 // "tested where the smoke's calls are made", which is here. Round one's plain no-ops would have fed nothing to the smoke the senses read on a host that owns it.
 // What the HOST'S solver answers (budget with SENSE.cpu off, inSmokeDomain, round, drawing) is input a tick reads: with no solver they are the harness's null
@@ -32,7 +32,7 @@ pub fn smoke_system_like_push(g: &mut crate::game::Game, p: crate::smoke_types::
 pub fn smoke_system_like_keep_hot(g: &mut crate::game::Game, heat: f64) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:80 SmokeSystemLike.clearAll)
-pub fn smoke_system_like_clear_all(g: &mut crate::game::Game) { if g.smoke_owned { crate::sense::cpu_smoke_clear(g); } }   // (round three: sense.ts:255, the tee)
+pub fn smoke_system_like_clear_all(g: &mut crate::game::Game) { if g.smoke_owned { crate::sense::cpu_smoke_clear(g); } }   // (sense.ts:255, the tee)
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:82 SmokeSystemLike.obstaclesChanged)
 pub fn smoke_system_like_obstacles_changed(g: &mut crate::game::Game, c_2: V3, r: f64) {}

@@ -330,7 +330,7 @@ pub fn work_props(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>) 
     let done = l.t > l.dur;
     let bf = crate::scene_boxes::box_flag();
     let owner = owner_of(g, c_2);
-    let b = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c: if done { [h[0], h[1] - 0.07, h[2]] } else { [h[0] + f[0] * 0.09 - r[0] * s, h[1], h[2] + f[2] * 0.09 - r[2] * s] },
         h: [0.05, 0.013, 0.07],
         yaw: Some(m::atan2(f[0], f[2])),
@@ -407,7 +407,7 @@ pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>) 
     let at: V3 = [hp[0] + r[0] * o + f[0] * a, hp[1] - 0.045, hp[2] + r[2] * o + f[2] * a];
     let bf = crate::scene_boxes::box_flag();
     let owner = owner_of(g, c_2);
-    let b = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c: at,
         h: [0.017, 0.062, 0.017],
         yaw: Some(m::atan2(f[0], f[2])),
@@ -417,7 +417,7 @@ pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>) 
         ..Default::default()
     });
     out.push(b);
-    let b = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c: [at[0], at[1] - 0.07, at[2]],
         h: [0.021, 0.012, 0.021],
         yaw: Some(m::atan2(f[0], f[2])),

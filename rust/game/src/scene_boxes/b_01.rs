@@ -18,5 +18,20 @@ pub fn box_frame(g: &mut Game, b: crate::scene_boxes::Box) -> BoxId {
     g.box_frame_rows.push(id);
     id
 }
-/// the frame's boxes may be reused: called as the dyn boxes are rebuilt
-pub fn boxes_frame_reset(g: &mut Game) { let mut rows = core::mem::take(&mut g.box_frame_rows); g.box_frame_free.append(&mut rows); }
+/// THE ROWS OF FRAMES GONE BY ARE FREE AGAIN. Two lists hold a frame box's ID: the frame's own (`g.dyn_boxes`, made again every tick) and the engine's
+/// (`g.engine.world`, made again when the host lists the box world, which a headless host does every few frames). So this is called by the host's listing,
+/// straight after it: a row is freed when it is not one of the frame that was just listed. A host that never lists keeps every row.
+pub fn boxes_frame_reset(g: &mut Game) {
+    let rows = core::mem::take(&mut g.box_frame_rows);
+    let mut live = vec![false; g.tab.boxes.len()];
+    for b in g.dyn_boxes.iter() { live[b.ix()] = true; }
+    for id in rows { if live[id.ix()] { g.box_frame_rows.push(id); } else { g.box_frame_free.push(id); } }
+}
+
+/// makeBox for a box pushed straight onto the frame's list: a row for this frame (boxes.ts makeBox, where its caller keeps nothing of it)
+pub fn make_box_frame(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { let b = crate::scene_boxes::make_box_value(p); box_frame(g, b) }
+/// boxOf for a box pushed straight onto the frame's list: a row for this frame (boxes.ts boxOf)
+pub fn box_of_frame(g: &mut Game, c: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner: f64, rot: Option<Quat>, name: Option<&str>) -> BoxId {
+    let b = crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP { c, h, yaw: Some(yaw), albedo: Some(albedo), emissive: Some(emissive), flags: Some(flags), owner: Some(owner), rot, name: name.map(String::from), ..Default::default() });
+    box_frame(g, b)
+}

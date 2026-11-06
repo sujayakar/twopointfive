@@ -682,7 +682,7 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
     let y = v3::cross(dir, x);
     let flags = crate::scene_boxes::box_flag();
     let box_flags = flags_or(flags.no_shadow, flags.dynamic);
-    let line = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    let line = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c: v3::mad(from, dir, l / 2.0),
         h: [hw, hw, l / 2.0],
         yaw: Some(v3::yaw_of(dir)),
@@ -697,7 +697,7 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
     out.push(shown);
     if dot {
         let end = v3::mad(from, dir, l - 0.006);
-        let bead = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+        let bead = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
             c: end,
             h: [0.011, 0.011, 0.011],
             yaw: Some(0.0),

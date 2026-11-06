@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The scattering tint of a surface's dust (round three: reached by the stun grenade's tile drop, tick 1621). A pure table; the solver never reads the field.   (dustLook.ts dustTint)
+/// The scattering tint of a surface's dust (reached by the stun grenade's tile drop, tick 1621). A pure table; the solver never reads the field.   (dustLook.ts dustTint)
 pub fn dust_tint(surf: crate::scene_materials::Surf) -> V3 {
     use crate::scene_materials::Surf as S;
     match surf {

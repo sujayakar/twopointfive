@@ -6,7 +6,7 @@
 #    at the first tick that parts;   3. the path diff of every tick both sides kept, minus known.txt.
 # Exit: 0 in step and no unknown path · 1 the block or the die parted, or a kept tick has an unknown path · 2 the Rust tick panicked · 3 a side could not run.
 # Needs bun and cargo on the PATH, and nothing outside the repository but the folder it names on its first line (--out, or one under $TMPDIR).
-# A kept tick's Rust state (n<k>.bin, over 100 MB late in a mission: every box ever made is a row of it) is deleted once it is diffed, unless --blobs.
+# A kept tick's Rust state (n<k>.bin) is deleted once it is diffed, unless --blobs.
 # --no-ts takes the TypeScript side as --out already holds it (the same mission, ticks and kept ticks); --no-build takes the runner as it is built.
 cd "$(dirname "$0")/../.." || exit 64
 unset BUN_OPTIONS

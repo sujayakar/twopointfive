@@ -8,5 +8,5 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// BOUNDARY NO-OP (round three, written ahead of need; the picture's: the wall band's paint, "told by one line of wallbreak's openCells; the host keeps it")   (wallskin.ts:155 WallSkin.clear)
+/// BOUNDARY NO-OP (written ahead of need; the picture's: the wall band's paint, "told by one line of wallbreak's openCells; the host keeps it")   (wallskin.ts:155 WallSkin.clear)
 pub fn wall_skin_clear(g: &mut crate::game::Game) {}
