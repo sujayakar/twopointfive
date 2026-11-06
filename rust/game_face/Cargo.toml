@@ -1,5 +1,9 @@
-# THE RUST GAME'S FACE: the wasm module the host loads. The game's logic (the crate `game`) names no host and no `std`; this crate is the
-# only place that does: the C exports, the panic's message, the bytes in and out.
+# THE RUST GAME'S FACE: the wasm module the host loads (tools/blitz/FACE.md). The game's logic (the crate `game`) names no host and no `std`; this crate is
+# the only place of the module that does: the C exports, the panic's message, the bytes in and out. rust/sim is linked into the same module, so its own C
+# exports are this module's too and there is ONE block of rust/sim's a game: the one the Rust game steps.
+#   cargo build --target wasm32-unknown-unknown                    dev: the game at opt-level 1 with no debug info (a panic still names its file and line)
+#   cargo build --target wasm32-unknown-unknown --release          opt-level 3
+#   cargo build --target wasm32-unknown-unknown --profile small    opt-level "s"
 [workspace]
 
 [package]
@@ -14,6 +18,8 @@ crate-type = ["cdylib"]
 [dependencies]
 game = { path = "../game" }
 sim = { path = "../sim" }
+# (its library alone: what a host does round a step, the same lines the native runner calls)
+game_run = { path = "../game_run" }
 
 [profile.dev]
 opt-level = 1
@@ -28,6 +34,8 @@ opt-level = 3
 lto = true
 codegen-units = 1
 panic = "abort"
+debug = false
 
-[features]
-bridge = []
+[profile.small]
+inherits = "release"
+opt-level = "s"

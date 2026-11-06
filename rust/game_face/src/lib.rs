@@ -1,45 +1,106 @@
-//! THE FACE OF THE RUST GAME (the bring-up's first cut). A host (bun, the page) loads this module, hands a game's state in as bytes, asks
-//! for a tick, and reads the state back. One game a handle; nothing here decides anything.
-//!   face_alloc / face_free        memory for the host to write bytes into
-//!   face_blank                    a game as its field initialisers leave it (no level): proves the module stands
-//!   face_import / face_export     the state bridge (game::io, generated): bytes ↔ Game
-//!   face_update                   one tick as the page drives it
-//!   face_sim_addr / _len          where rust/sim's block of a slot is in THIS module's memory: the host copies the TypeScript game's block
-//!                                 over it (same layout: both are the same Rust built to wasm)
-//!   face_panic_ptr / _len         what the last panic said (a `todo!("needs: …")` names what is missing), before the trap
-use std::cell::RefCell;
+//! THE FACE OF THE RUST GAME: one wasm module a host (bun, the page) loads, hands a start to, steps a tick at a time and reads back (tools/blitz/FACE.md).
+//! Nothing here decides anything: the game is the crate `game`, what a host does round a step is the crate `game_run`'s library (the same lines the
+//! native runner calls), and rust/sim is linked in, so ITS exports (`sim_abi`, `state_addr`, `pose_addr` … rust/sim/src/lib.rs) are this module's too, over
+//! the same memory: there is one block of rust/sim's a game, the one the Rust game steps.
+//!
+//! EVERY EXPORT, C ABI (a pointer and a length are `usize`, a handle `u32`, a flag `u32`):
+//!
+//! memory
+//!   face_alloc(n) -> p · face_free(p, n)      bytes for the host to write into (a start, a tick's host half, a line)
+//!   face_panic_ptr() · _len() · _clear()      what the last panic said, with its file and line (a `todo!()`, an index out of range): the module is built
+//!                                             to abort on a panic, so the host sees a trap; it reads the words here. The game of that call is gone.
+//!   face_out_ptr() · face_out_len()           the bytes or text the last call answered with (`face_export`, a log line): read before the next call
+//!
+//! a game (a handle; as many at once as rust/sim has slots, `state_games()`)
+//!   face_new(state, n, block, bn) -> h        a game from a start: the bridge's bytes (`io::import`) and rust/sim's block as the start was taken, copied
+//!                                             into the first free slot. 0 where every slot is taken.
+//!   face_blank() -> h                         a game as its field initialisers leave it (no level): proves the module stands
+//!   face_drop(h)                              the game and its slot are free again
+//!   face_slot(h) -> slot                      which of rust/sim's slots the game stands in (`state_addr(slot)` is its block)
+//!   face_import_into(h, p, n)                 the bridge's bytes over a game that stands: what the walk does not carry stays as that game has it
+//!
+//! the host's half, before a step
+//!   face_host(h, p, n, first)                 one tick's host half (tools/blitz h<k>.bin: the seats' record, the host's cameras and Input rows).
+//!                                             `first` = 1 for the tick the start was taken at, whose record the start itself carries.
+//!   face_give(h, k, p, n)                     a line of gives.txt (an order the test driver gave between ticks); the log's line is at face_out
+//!   face_hostwrite(h, k, p, n) -> 1 | 2 | 0   a line of hostwrites.txt: 1 done now (the driver's question that writes the game), 2 kept for the end of
+//!                                             the next step (the autosave's row), 0 not known
+//!
+//! the step
+//!   face_step(h, dt, flags)                   ONE TICK, and what tools/blitz/BRIDGE.md says a host calls round it, in its order:
+//!                                             flag 1 `UPLOAD`: the box world listed again first (where the host uploaded since the last tick) ·
+//!                                             `game_step` with the record face_host took (or the game's own `cmd_buf` where none was taken) ·
+//!                                             the autosave's rows face_hostwrite kept · flag 2 `LIGHTS`: the lights' update (a flash's envelope and
+//!                                             its retirement, which the next tick reads).
+//!                                             A host that plays calls this one thing a tick with LIGHTS up. A host that compares the block with the
+//!                                             TypeScript's leaves LIGHTS down, compares, and calls face_lights: the TypeScript's hashes are taken
+//!                                             before its host's update.
+//!   face_upload(h) · face_lights(h, dt) · face_checkpoint(h, label, n)
+//!                                             the same three by name, for a host that calls them itself (face_checkpoint when it has saved)
+//!
+//! reading back
+//!   face_export(h)                            the whole state (`io::export`) at face_out
+//!   face_die_n(h) -> f64 · face_time(h) -> f64 · face_rows(h) -> usize
+//!                                             the die's count of draws (in the game's block), the game's clock, the rows of the box table
+//!   face_parts() -> 13 · face_part_name(i)    the parts of rust/sim's block in their order; a part's name at face_out
+//!   face_part(name, n) -> i                   a part by name (`poses`), or -1
+//!   face_part_addr(slot, i) · face_part_len(i)   where part `i` of the block in `slot` is in this memory and how long: the host hashes or reads it in
+//!                                             place (rust/sim's own `state_addr` / `state_len` / `state_part` say the same of the whole block)
+//!   face_part_hashes(slot) -> p               13 words: each part's hash as tools/blitz/mission.ts takes it (its words up to the last not zero)
+use std::cell::{Cell, RefCell};
+
+type Game = game::game::Game;
+/// a game and what the host has handed over for its next step
+struct Held {
+    g: Box<Game>,
+    /// the record face_host took for the next step
+    cmd: Option<game::cmd::PlayerCmd>,
+    /// the lines of hostwrites.txt that are written as a tick's last thing
+    after: Vec<(usize, String)>,
+}
 
 thread_local! {
-    static GAMES: RefCell<Vec<Option<Box<game::game::Game>>>> = const { RefCell::new(Vec::new()) };
+    static GAMES: RefCell<Vec<Option<Held>>> = const { RefCell::new(Vec::new()) };
     static PANIC: RefCell<String> = const { RefCell::new(String::new()) };
     static OUT: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
+    static HASHES: Cell<[u32; 13]> = const { Cell::new([0; 13]) };
+    static HOOKED: Cell<bool> = const { Cell::new(false) };
 }
 
+/// the panic's words are kept before the abort: a trap alone says nothing of which `todo!()` or which index
 fn hook() {
-    use std::sync::Once;
-    static ONCE: Once = Once::new();
-    ONCE.call_once(|| {
-        std::panic::set_hook(Box::new(|info| {
-            let s = info.to_string();
-            PANIC.with(|p| *p.borrow_mut() = s);
-        }));
-    });
+    if HOOKED.with(|h| h.replace(true)) { return; }
+    std::panic::set_hook(Box::new(|info| {
+        let s = info.to_string();
+        PANIC.with(|p| *p.borrow_mut() = s);
+    }));
 }
-fn put(g: game::game::Game) -> u32 {
+fn put(h: Held) -> u32 {
     GAMES.with(|v| {
         let mut v = v.borrow_mut();
-        v.push(Some(Box::new(g)));
-        v.len() as u32
+        match v.iter().position(|x| x.is_none()) { Some(i) => { v[i] = Some(h); i as u32 + 1 } None => { v.push(Some(h)); v.len() as u32 } }
     })
 }
-fn with<R>(h: u32, f: impl FnOnce(&mut game::game::Game) -> R) -> R {
-    // the game is taken out for the call, so a panic inside leaves no borrow behind
-    let mut g = GAMES.with(|v| v.borrow_mut()[h as usize - 1].take()).expect("no such game");
+fn with<R>(h: u32, f: impl FnOnce(&mut Held) -> R) -> R {
+    // the game is taken out for the call, so a panic inside leaves no borrow behind (and no game: its state is whatever the panic left)
+    let mut g = GAMES.with(|v| v.borrow_mut().get_mut((h as usize).wrapping_sub(1)).and_then(|x| x.take())).expect("no such game (dropped, or lost to a panic)");
     let r = f(&mut g);
     GAMES.with(|v| v.borrow_mut()[h as usize - 1] = Some(g));
     r
 }
+fn out(b: Vec<u8>) { OUT.with(|o| *o.borrow_mut() = b); }
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+unsafe fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] { if n == 0 { &[] } else { std::slice::from_raw_parts(p, n) } }
+/// # Safety
+/// as `bytes`
+unsafe fn text<'a>(p: *const u8, n: usize) -> std::borrow::Cow<'a, str> { String::from_utf8_lossy(bytes(p, n)) }
+/// the slots of rust/sim's that no live game stands in
+fn free_slot() -> Option<usize> {
+    GAMES.with(|v| { let v = v.borrow(); (0..sim::state::GAMES).find(|s| !v.iter().flatten().any(|h| h.g.sim == *s)) })
+}
 
+// ---- memory
 #[no_mangle]
 pub extern "C" fn face_alloc(n: usize) -> *mut u8 {
     hook();
@@ -54,42 +115,6 @@ pub extern "C" fn face_alloc(n: usize) -> *mut u8 {
 pub unsafe extern "C" fn face_free(p: *mut u8, n: usize) {
     drop(Vec::from_raw_parts(p, 0, n.max(1)));
 }
-#[no_mangle]
-pub extern "C" fn face_blank() -> u32 {
-    hook();
-    put(game::game::Game::blank())
-}
-#[no_mangle]
-pub extern "C" fn face_drop(h: u32) {
-    GAMES.with(|v| v.borrow_mut()[h as usize - 1] = None);
-}
-#[no_mangle]
-pub extern "C" fn face_time(h: u32) -> f64 {
-    with(h, |g| g.time)
-}
-#[no_mangle]
-pub extern "C" fn face_sim_addr(slot: usize) -> usize {
-    sim::state::addr(slot)
-}
-#[no_mangle]
-pub extern "C" fn face_sim_len() -> usize {
-    core::mem::size_of::<sim::state::State>()
-}
-/// the word of the block's layout (rust/sim state.rs LAYOUT): the host holds it to the TypeScript module's before it copies a block over
-#[no_mangle]
-pub extern "C" fn face_sim_layout() -> u32 {
-    sim::state::LAYOUT
-}
-/// which of rust/sim's slots a game stands in (`Game.sim`: the bridge does not write it)
-#[no_mangle]
-pub extern "C" fn face_sim_slot(h: u32) -> usize {
-    with(h, |g| g.sim)
-}
-#[no_mangle]
-pub extern "C" fn face_set_sim_slot(h: u32, slot: usize) {
-    with(h, |g| g.sim = slot)
-}
-/// forget the last panic's message (the host asks before a call it wants the message of)
 #[no_mangle]
 pub extern "C" fn face_panic_clear() {
     PANIC.with(|p| p.borrow_mut().clear());
@@ -111,62 +136,145 @@ pub extern "C" fn face_out_len() -> usize {
     OUT.with(|o| o.borrow().len())
 }
 
-// THE BRIDGE AND THE TICK: on when `game::io` exists (the skeleton's program writes it) — `--features bridge`.
-#[cfg(feature = "bridge")]
-mod bridge {
-    use super::*;
-    /// # Safety
-    /// `p`, `n` name bytes the host wrote into memory from face_alloc.
-    #[no_mangle]
-    pub unsafe extern "C" fn face_import(p: *const u8, n: usize) -> u32 {
-        hook();
-        put(game::io::import(std::slice::from_raw_parts(p, n)))
-    }
-    /// the state as bytes: read them at face_out_ptr / face_out_len before the next call
-    #[no_mangle]
-    pub extern "C" fn face_export(h: u32) {
-        let b = with(h, |g| game::io::export(g));
-        OUT.with(|o| *o.borrow_mut() = b);
-    }
-    /// the bridge's bytes over a game that already stands: what the walk does not carry stays as that game has it
-    /// # Safety
-    /// `p`, `n` name bytes the host wrote into memory from face_alloc.
-    #[no_mangle]
-    pub unsafe extern "C" fn face_import_into(h: u32, p: *const u8, n: usize) {
-        let b = std::slice::from_raw_parts(p, n);
-        with(h, |g| game::io::import_into(g, b));
-    }
-    /// ONE TICK OFF THE RECORD THE STATE CARRIES (`Game.cmd_buf`: what the TypeScript's `update` sampled before it called `step`): game.ts `update`'s own lines
-    /// before the step that are the game's and not the host's (bit 0 of `pre`: the die taken for the frame; bit 1: the quiet mission's switches), then
-    /// `game_step`. The host's half (`hostBefore` / `hostAfter`, the director's input, the journal) is not run: the TypeScript side is exported round its own
-    /// `stepSeats`, not round `update`. A panic leaves its message at face_panic_ptr and traps; the game of this handle is gone after one.
-    /// THE HOST'S STEP AFTER AN IMPORT INTO A FRESH MODULE (bringup2-log.md): rust/sim's tables outside a game's block that the state remembers writing (the furniture's
-    /// facts, the clips' marks), and what `Game.engine` holds that a tick reads and the bridge does not carry (the lights' list, the box world's list, the settings),
-    /// as the text tools/blitz/tc2.ts `engineText` writes. Nothing of the die or the knobs: the game rolls its own die in its block and writes its own knobs.
-    /// Answers how many lines of the text it did not know.
-    /// # Safety
-    /// the pointer names bytes the host wrote into memory from face_alloc.
-    #[no_mangle]
-    pub unsafe extern "C" fn face_bringup(h: u32, engine: *const u8, en: usize) -> usize {
-        let text = String::from_utf8_lossy(std::slice::from_raw_parts(engine, en)).into_owned();
-        with(h, |g| { game::anim_skeleton::b_01::bringup_module_state(g, None); game::orders::b_01::orders_closures_again(g); game::host_api::b_01::host_engine_fill(g, &text).len() })
-    }
-    /// the die's count of draws in the game's block (slot 0)
-    #[no_mangle]
-    pub extern "C" fn face_draws_taken() -> f64 {
-        sim::state::state(0).dice.n
-    }
-    #[no_mangle]
-    pub extern "C" fn face_step(h: u32, dt: f64, pre: u32) {
-        with(h, |g| {
-            if pre & 1 != 0 {
-                game::math_dice::use_dice(g);   // (skeleton 5: the die is the game's own field)
-            }
-            if pre & 2 != 0 {
-                game::quiet::quiet_mission_current(g);
-            }
-            let cmd = g.cmd_buf.clone().expect("face_step: the state carries no record (Game.cmd_buf is None): export the TypeScript game after `update` has sampled one");
-            game::game::game_step(g, dt, &cmd);
-        });
-    }
+// ---- a game
+/// # Safety
+/// the two pointers name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_new(state: *const u8, n: usize, block: *const u8, bn: usize) -> u32 {
+    hook();
+    let Some(slot) = free_slot() else { return 0 };
+    put(Held { g: game_run::start(bytes(state, n), bytes(block, bn), slot), cmd: None, after: Vec::new() })
+}
+#[no_mangle]
+pub extern "C" fn face_blank() -> u32 {
+    hook();
+    let Some(slot) = free_slot() else { return 0 };
+    let mut g = Box::new(Game::blank());
+    g.sim = slot;
+    put(Held { g, cmd: None, after: Vec::new() })
+}
+#[no_mangle]
+pub extern "C" fn face_drop(h: u32) {
+    GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
+}
+#[no_mangle]
+pub extern "C" fn face_slot(h: u32) -> usize {
+    with(h, |x| x.g.sim)
+}
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_import_into(h: u32, p: *const u8, n: usize) {
+    let b = bytes(p, n);
+    with(h, |x| game::io::import_into(&mut x.g, b));
+}
+
+// ---- the host's half
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_host(h: u32, p: *const u8, n: usize, first: u32) {
+    let b = bytes(p, n);
+    with(h, |x| x.cmd = Some(game_run::host_half(&mut x.g, b, first != 0)));
+}
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_give(h: u32, k: usize, p: *const u8, n: usize) {
+    let l = text(p, n);
+    let said = with(h, |x| game_run::give(&mut x.g, k, &l));
+    out(said.into_bytes());
+}
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_hostwrite(h: u32, k: usize, p: *const u8, n: usize) -> u32 {
+    let l = text(p, n);
+    let (r, said) = with(h, |x| match game_run::write_before(&mut x.g, k, &l) {
+        Some(t) => (1, t),
+        // (the only write made after a tick is the autosave's; a line that is neither is the host's to report)
+        None if l.split(' ').nth(1) == Some("chron_save") => { x.after.push((k, l.to_string())); (2, String::new()) }
+        None => (0, String::new()),
+    });
+    out(said.into_bytes());
+    r
+}
+
+// ---- the step
+pub const UPLOAD: u32 = 1;
+pub const LIGHTS: u32 = 2;
+#[no_mangle]
+pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
+    let said = with(h, |x| {
+        if flags & UPLOAD != 0 { game_run::upload(&mut x.g); }
+        let cmd = x.cmd.take().or_else(|| x.g.cmd_buf.clone()).expect("face_step: no record of the tick's input (face_host hands one over, or the state carries one in Game.cmd_buf)");
+        game_run::step(&mut x.g, dt, &cmd);
+        let mut said = String::new();
+        for (k, l) in core::mem::take(&mut x.after) { if let Some(t) = game_run::write_after(&mut x.g, k, &l) { said.push_str(&t); said.push('\n'); } }
+        if flags & LIGHTS != 0 { game_run::lights(&mut x.g, dt); }
+        said
+    });
+    out(said.into_bytes());
+}
+#[no_mangle]
+pub extern "C" fn face_upload(h: u32) {
+    with(h, |x| game_run::upload(&mut x.g));
+}
+#[no_mangle]
+pub extern "C" fn face_lights(h: u32, dt: f64) {
+    with(h, |x| game_run::lights(&mut x.g, dt));
+}
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_checkpoint(h: u32, p: *const u8, n: usize) {
+    let l = text(p, n);
+    with(h, |x| game_run::checkpoint(&mut x.g, &l));
+}
+
+// ---- reading back
+#[no_mangle]
+pub extern "C" fn face_export(h: u32) {
+    let b = with(h, |x| game::io::export(&x.g));
+    out(b);
+}
+#[no_mangle]
+pub extern "C" fn face_die_n(h: u32) -> f64 {
+    with(h, |x| sim::state::state(x.g.sim).dice.n)
+}
+#[no_mangle]
+pub extern "C" fn face_time(h: u32) -> f64 {
+    with(h, |x| x.g.time)
+}
+#[no_mangle]
+pub extern "C" fn face_rows(h: u32) -> usize {
+    with(h, |x| x.g.tab.boxes.len())
+}
+#[no_mangle]
+pub extern "C" fn face_parts() -> usize {
+    game_run::NAMES.len()
+}
+#[no_mangle]
+pub extern "C" fn face_part_name(i: usize) {
+    out(game_run::NAMES.get(i).copied().unwrap_or("").as_bytes().to_vec());
+}
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_part(p: *const u8, n: usize) -> i32 {
+    let name = text(p, n);
+    game_run::NAMES.iter().position(|x| *x == name).map(|i| i as i32).unwrap_or(-1)
+}
+#[no_mangle]
+pub extern "C" fn face_part_addr(slot: usize, i: usize) -> usize {
+    if slot >= sim::state::GAMES || i >= sim::state::PARTS.len() { return 0; }
+    sim::state::addr(slot) + sim::state::PARTS[i].off
+}
+#[no_mangle]
+pub extern "C" fn face_part_len(i: usize) -> usize {
+    sim::state::PARTS.get(i).map(|p| p.len).unwrap_or(0)
+}
+#[no_mangle]
+pub extern "C" fn face_part_hashes(slot: usize) -> *const u32 {
+    HASHES.with(|c| { c.set(game_run::part_hashes(slot)); c.as_ptr() as *const u32 })
 }

@@ -12,69 +12,21 @@
 //! place and the game's frames of the backtrace; the exit code is then 2. A kept tick (--keep / --every) writes n<k>.bin and ns<k>.bin for tools/blitz/diff.ts.
 //!
 //! BLITZ_SKIP=<names> leaves one of the host's calls round a step out (lights, upload), to see by a run what it is for.
-use game::ids::Id;
-use game::io::Io;
 use std::io::Write;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 static TICK: AtomicUsize = AtomicUsize::new(0);
 
-/// The block's parts by name, in src/sim/state.ts SIM_PARTS' order. post.txt's first line carries the TypeScript's list and the two must agree.
-const NAMES: [&str; 13] = ["head", "dice", "doors", "falls", "props", "slabs", "items", "men", "lights", "weather", "smoke", "poses", "panes"];
-/// POSES: a dead man's ragdoll drive holds a pose the TypeScript keeps OUTSIDE the pool for good, and a Rust pose lives in the pool, so from the first death
-/// the pool's bytes differ by that pose and say nothing more. That part is reported when it first parts and is not the alarm.
-const POSES: usize = 11;
-
-/// one part's hash: its words up to the last that is not zero (a parked block of the TypeScript's may be shorter than the Rust slot; the zeros say nothing)
-fn part_hash(w: &[u32]) -> u32 {
-    let mut n = w.len();
-    while n > 0 && w[n - 1] == 0 { n -= 1; }
-    let mut h = 0x811c9dc5u32;
-    for x in &w[..n] { h = (h ^ *x).wrapping_mul(0x01000193); }
-    h
-}
+use game_run::{part_hash, NAMES, POSES};
 
 fn ranges(s: &str) -> Vec<(usize, usize)> {
     s.split(',').filter(|x| !x.is_empty()).map(|x| { let mut p = x.split('-').map(|y| y.trim().parse::<usize>().expect("a tick number")); let lo = p.next().unwrap(); (lo, p.next().unwrap_or(lo)) }).collect()
 }
 
-/// HARNESS STAND-IN: THE HOST'S HALF BETWEEN TWO TICKS (h<k>.bin). `Game.update` round the step and the headless host's own asks are not run on this side, so
-/// what they wrote is taken as tick k opens: the record the host sampled (`cmd_buf`) and the host's own camera and Input (every row that is no seat's).
-/// Nothing else of the TypeScript's state is taken.
+/// the host's half of tick k from its file (game_run::host_half says what is taken); None where the TypeScript's run wrote none
 fn host_half(g: &mut game::game::Game, dir: &str, k: usize) -> Option<game::cmd::PlayerCmd> {
     let hb = std::fs::read(format!("{}/h{}.bin", dir, k)).ok()?;
-    let mut r = game::io::R::new(&hb);
-    let cmd_in = <Option<game::cmd::PlayerCmd> as Io>::r(&mut r);
-    let nc = <u32 as Io>::r(&mut r) as usize;
-    let cams: Vec<game::camera::FollowCamera> = (0..nc).map(|_| <game::camera::FollowCamera as Io>::r(&mut r)).collect();
-    let ni = <u32 as Io>::r(&mut r) as usize;
-    let inputs: Vec<game::input::Input> = (0..ni).map(|_| <game::input::Input as Io>::r(&mut r)).collect();
-    assert!(r.p == hb.len(), "h{}.bin: {} bytes left over", k, hb.len() - r.p);
-    if k == 1 { return Some(g.cmd_buf.clone().expect("the start holds no record of the tick's input")); }
-    let seat_cams: Vec<game::ids::CameraId> = g.seats.iter().map(|s| g.tab.cmd_seat[*s].cam).collect();
-    for c in g.tab.camera.ids().collect::<Vec<_>>() { if !seat_cams.contains(&c) && c.ix() < cams.len() { g.tab.camera[c] = cams[c.ix()].clone(); } }
-    let seat_ins: Vec<game::ids::InputId> = g.seats.iter().map(|s| g.tab.cmd_seat[*s].input).collect();
-    for i in g.tab.input.ids().collect::<Vec<_>>() { if !seat_ins.contains(&i) && i.ix() < inputs.len() { g.tab.input[i] = inputs[i.ix()].clone(); } }
-    g.cmd_buf = cmd_in.clone();
-    Some(cmd_in.expect("the TypeScript state holds no record of the tick's input"))
-}
-
-/// HARNESS STAND-IN: THE TEST DRIVER'S ORDERS. The scripted player gives its orders through the menu's own call between ticks; mission.ts writes each as a line
-/// of gives.txt, `<tick> <id> <who> <kind> <x> <y> <z> [door <place> <side> book<id> | man <place>]`, and the same call is made here before that tick.
-fn give(g: &mut game::game::Game, k: usize, l: &str) {
-    use game::orders::{OrderTarget as T, Who};
-    let w: Vec<&str> = l.split(' ').collect();
-    if l.contains("UNSUPPORTED") || w.len() < 7 { println!("  NOTE tick {}: an order of the driver's this runner cannot give: {}", k, l); return; }
-    let at = [w[4].parse::<f64>().unwrap(), w[5].parse::<f64>().unwrap(), w[6].parse::<f64>().unwrap()];
-    let who = match w[2] { "-" => None, "all" => Some(Who::All), "red" => Some(Who::Red), "blue" => Some(Who::Blue), x => match x.parse::<f64>() { Ok(n) => Some(Who::Num(n)), Err(_) => { println!("  NOTE tick {}: a `who` this runner cannot give: {}", k, l); return; } } };
-    let t = match w[3] {
-        "floor" => { let serial = g.serial(); T::Floor(game::orders::OrderTargetFloor { at, wall: None, thing: None, serial }) }
-        "door" => T::Door(game::orders::OrderTargetDoor { at, door: game::ids::DoorId::from_ix(w[8].parse().unwrap()), side: w[9].parse().unwrap() }),
-        "none" => T::None(game::orders::OrderTargetNone { at, man: if w.len() > 8 { Some(g.guards[w[8].parse::<usize>().unwrap()]) } else { None } }),
-        _ => T::Foe(game::orders::OrderTargetFoe { at, foe: g.guards[w[8].parse::<usize>().unwrap()] }),
-    };
-    let why = game::orders::squad_orders_give(g, w[1], Some(&t), who, None);
-    println!("  the driver's order before tick {}: {} -> {:?}", k, l, why);
+    Some(game_run::host_half(g, &hb, k == 1))
 }
 
 fn main() {
@@ -118,40 +70,23 @@ fn main() {
     // (the tick's frames are deep in a build with no optimisation: a thread with room)
     let h = std::thread::Builder::new().stack_size(2 << 30).spawn(move || {
         let skip = |n: &str| skips.iter().any(|s| s == n);
-        let mut g = Box::new(game::io::import(&a0));
-        unsafe {
-            let at = sim::state::addr(0) as *mut u8;
-            core::ptr::write_bytes(at, 0, len);
-            core::ptr::copy_nonoverlapping(s0.as_ptr(), at, s0.len().min(len));
-        }
-        g.sim = 0;
+        let mut g = game_run::start(&a0, &s0, 0);
         let (mut parted, mut spent, mut worst) = (0usize, std::time::Duration::ZERO, std::time::Duration::ZERO);
         let (mut n_parted, mut was_same, mut pool_parted, mut die_parted, mut done) = (0usize, true, false, 0usize, 0usize);
         for k in 1..=ticks {
             let cmd = match host_half(&mut g, &dir, k) { Some(c) => c, None => { println!("no h{}.bin: the TypeScript's run ended at tick {}", k, k - 1); break; } };
-            for l in gives.iter().filter(|l| l.split(' ').next().and_then(|x| x.parse::<usize>().ok()) == Some(k)) { give(&mut g, k, l); }
+            for l in gives.iter().filter(|l| game_run::line_of(l, k)) { println!("{}", game_run::give(&mut g, k, l)); }
             // HARNESS STAND-IN: the test driver's own question that writes the game (`g.fight.roomAt(p)` between ticks floods a room and keeps it)
-            for l in hostwrites.iter().filter(|l| l.split(' ').next().and_then(|x| x.parse::<usize>().ok()) == Some(k)) {
-                let w: Vec<&str> = l.split(' ').collect();
-                if w.get(1) == Some(&"room_at") {
-                    let p = [w[2].parse::<f64>().unwrap(), w[3].parse::<f64>().unwrap(), w[4].parse::<f64>().unwrap()];
-                    let r = game::roomfight::room_fight_room_at(&mut g, p);
-                    println!("  the driver's question before tick {}: roomAt({:?}) -> {:?} ({} rooms)", k, p, r, g.fight.rooms.len());
-                }
-            }
+            for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_before(&mut g, k, l) { println!("{}", t); } }
             let dt = host[k - 1][0];
             // HOST STEP: where the headless host listed the box world again between two ticks
-            if !skip("upload") && host[k - 1].get(4).copied().unwrap_or(0.0) > 0.0 { game::host_api::b_01::host_world_upload(&mut g); }
+            if !skip("upload") && host[k - 1].get(4).copied().unwrap_or(0.0) > 0.0 { game_run::upload(&mut g); }
             TICK.store(k, Ordering::Relaxed);
             let t0 = std::time::Instant::now();
-            game::game::game_step(&mut g, dt, &cmd);
+            game_run::step(&mut g, dt, &cmd);
             let el = t0.elapsed(); spent += el; if el > worst { worst = el; }
             done = k;
-            for l in hostwrites.iter().filter(|l| l.split(' ').next().and_then(|x| x.parse::<usize>().ok()) == Some(k)) {
-                let mut w = l.splitn(3, ' '); let (_, what, rest) = (w.next(), w.next().unwrap_or(""), w.next().unwrap_or(""));
-                // HOST STEP: the autosave controller is the host's, and its one write into the game is the chronicle's row, the tick's last thing
-                if what == "chron_save" { let label = rest.trim_matches('"'); let _ = game::chronicle::chron_checkpoint(&mut g, game::chronicle::ChronCheckpointWhat::Save, Some(label)); println!("  the host's checkpoint after tick {}: {}", k, rest); }
-            }
+            for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_after(&mut g, k, l) { println!("{}", t); } }
             if k == 1 {
                 if let Ok(want) = std::fs::read(format!("{}/knobs.bin", dir)) {
                     let n = sim::knobs::len(0);
@@ -183,7 +118,7 @@ fn main() {
                 std::fs::write(format!("{}/ns{}.bin", dir, k), b).unwrap();
             }
             // HOST STEP AFTER THE TICK (the headless host's `engine.lights.update(dt, game.time)`): every flash's envelope and retirement, which the next tick's light reads
-            if !skip("lights") { let now = g.time; game::render_lights::light_set_update(&mut g, dt, now); }
+            if !skip("lights") { game_run::lights(&mut g, dt); }
             if parted > 0 && k >= parted + after {
                 println!("THE BLOCK FIRST PARTED AT TICK {}; stopped after tick {}", parted, k);
                 let _ = std::io::stdout().flush();
