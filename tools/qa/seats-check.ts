@@ -207,7 +207,7 @@ const KNOWN_ASKS: { at: string; wanted: string }[] = [
   { at: 'game/morale.ts seenBy', wanted: "sightGain is handed the Game: the bar for 'plainly in his eyes' is priced off the first player's light, crouch, motion and kit. The view of the man he has in mind (facedView)" },
   { at: 'game/runner.ts closeFoe', wanted: 'the same call, for the nearest enemy plainly in a runner\'s eyes. facedView' },
   { at: 'game/runner.ts foes', wanted: "a runner's enemies hold the first player only (g.player.down, g.player.char). facedMan, or every man up" },
-  { at: 'game/doorpath.ts own', wanted: "this.g.orders.of(his man): the first seat's order book for any walker. His own seat's (seats.ts orderOf). No answer differed in 1,070 asks: an entry from a stack has no corners left on its order" },
+  { at: 'game/doorpath.ts own', wanted: "this.g.orders.of(his man): the first seat's order book for any walker. His own seat's (seats.ts orderOf). On the page's floor no answer differed in 1,070 asks (an entry from a stack has no corners left on its order); on the barracks one does: a man of seat 1 sent through a door with two corners left does not take them (die 3, tick 5499), and the Rust door walk, stepped as his seat, does" },
   { at: 'game/doorpath.ts drop', wanted: 'the same book, as a door walk is given up. orderOf' },
   { at: 'game/wallreact.ts beyond', wanted: "his own side's ground beyond a wall is the first seat's squad and man (g.orders.squad(), g.player). teamSquad and men" },
   { at: 'game/coverfire.ts charOf', wanted: "'player' is the first seat's man. The man meant (facedMan / manOf)" },
