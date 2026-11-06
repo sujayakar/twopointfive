@@ -150,6 +150,7 @@ pub fn fog_of_war_lamp_known(g: &mut crate::game::Game, t: FixtureId, lit: bool)
 
 /// The lights' classes for this frame: who the team is, and the level's lamps the team has in another state than they are in.   (fogofwar.ts FogOfWar.fullBlock)
 pub fn fog_of_war_full_block(g: &mut crate::game::Game) -> bool {
+    if !g.k.fog.full { fog_of_war_full_clear(g); return false; }
     g.fog_of_war.full_stats.hidden = 0.0;
     g.fog_of_war.full_stats.ghosts = 0.0;
     g.fog_of_war.full_stats.held = 0.0;
@@ -192,11 +193,11 @@ pub fn fog_of_war_full_block(g: &mut crate::game::Game) -> bool {
         let lit = fog_of_war_lamp_lit(g, t);
         let known = fog_of_war_lamp_known(g, t, lit);
         if known == lit {
-            if lit { fog_of_war_face_seen(g, t); }
+            if lit && g.k.fog.kept { fog_of_war_face_seen(g, t); }
             continue;
         }
         g.fog_of_war.full_stats.held += 1.0;
-        if lit || !(mains && down) { fog_of_war_lamp_face(g, t, Some(!lit)); }
+        if g.k.fog.kept && (lit || !(mains && down)) { fog_of_war_lamp_face(g, t, Some(!lit)); }
         if lit {
             if let Some(l) = light { g.tab.light[l].fog = Some(1.0); }
             for al in &areas { g.tab.light[al.light].fog = Some(1.0); }
@@ -241,6 +242,13 @@ pub fn fog_of_war_lit_block(g: &mut crate::game::Game) {
     g.fog_of_war.lit_stats.lights = 0.0;
     g.fog_of_war.lit_stats.held = 0.0;
     let fog = (g.k.fog.lit, g.k.fog.flat, g.k.fog.lit_fill, g.k.fog.lit_cut, g.k.fog.lit_ao, g.k.fog.lit_ao_m);
+    if !(fog.0 > 0.0) || !(fog.1 > 0.0) {
+        g.fog_of_war.frame.lit = 0.0;
+        g.fog_of_war.frame.light_count = 0.0;
+        // (the full picture goes by the same memory)
+        if g.fog_of_war.lamp_recs.len() > 0 && !g.k.fog.full { g.fog_of_war.lamp_recs.clear(); }
+        return;
+    }
     g.fog_of_war.frame.lit = fog.0;
     g.fog_of_war.frame.lit_fill = m::max(0.0, fog.1 * fog.2);
     g.fog_of_war.frame.lit_cut = m::max(0.0, fog.3);

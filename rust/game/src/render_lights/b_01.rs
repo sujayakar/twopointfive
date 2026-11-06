@@ -8,8 +8,28 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/render/lights.ts:113 packLight)
-pub fn pack_light(g: &mut crate::game::Game, f: &mut Vec<f32>, u: &mut Vec<u32>, o: f64, l: LightId, inten: f64, kind_word: f64, volumetric: f64, owner_word: f64) {}
+/// One light's GPU record (common.wgsl struct Light, 16 words) at word `o`. In the TypeScript `f` and `u` are two views of one buffer; here they are two
+/// lists, so every word is written to both, the same bits, and a host may hand either on. `inten` scales the colour; `kind_word` is the kind with whatever
+/// flag bits the caller sets above its low byte, `owner_word` the owner byte with the glass mask above it.   (src/render/lights.ts:113 packLight)
+pub fn pack_light(g: &mut crate::game::Game, f: &mut Vec<f32>, u: &mut Vec<u32>, o: f64, l: LightId, inten: f64, kind_word: f64, volumetric: f64, owner_word: f64) {
+    const DEG: f64 = core::f64::consts::PI / 180.0;
+    let o = o as usize;
+    if f.len() < o + 16 { f.resize(o + 16, 0.0); }
+    if u.len() < o + 16 { u.resize(o + 16, 0); }
+    let row = &g.tab.light[l];
+    // (a portal has no cone: the two cone words are its own)
+    let (w11, w12) = match row.portal.as_ref() {
+        Some(p) => (p.half_wide, p.share),
+        None => (m::cos(row.outer_deg * DEG), m::cos(m::min(row.inner_deg, row.outer_deg - 0.5) * DEG)),
+    };
+    let mut fw = |k: usize, v: f64| { let x = v as f32; f[o + k] = x; u[o + k] = x.to_bits(); };
+    fw(0, row.pos[0]); fw(1, row.pos[1]); fw(2, row.pos[2]);
+    fw(4, row.dir[0]); fw(5, row.dir[1]); fw(6, row.dir[2]); fw(7, row.range);
+    fw(8, row.color[0] * inten); fw(9, row.color[1] * inten); fw(10, row.color[2] * inten); fw(11, w11);
+    fw(12, w12); fw(13, volumetric); fw(15, row.radius);
+    let mut uw = |k: usize, v: f64| { let x = js::to_u32(v); u[o + k] = x; f[o + k] = f32::from_bits(x); };
+    uw(3, kind_word); uw(14, owner_word);
+}
 
 
 // ---- THE LIGHTS' LIST IS THE GAME'S (render/lights.ts LightSet: "this set is the game's and goes into every checkpoint"): its add / remove / flash and the fog's class

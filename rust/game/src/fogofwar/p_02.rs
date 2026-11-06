@@ -116,8 +116,8 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     if !fog_of_war_active(g) {
         if g.fog_of_war.frame.on || g.fog_of_war.loaded {
             let f = &mut g.fog_of_war;
-            f.loaded = false; f.props_loaded = false; f.frame.on = false; f.eyes = Vec::new(); f.hidden_chars.clear(); f.pending.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear();
-            f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.fire_clock = 0.0; f.lamp_recs.clear(); f.face_recs.clear(); f.frame.full = false;
+            f.loaded = false; f.props_loaded = false; f.frame.on = false; f.frame.count = 0.0; f.eyes = Vec::new(); f.hidden_chars.clear(); f.pending.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear();
+            f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.fire_clock = 0.0; f.lamp_recs.clear(); f.face_recs.clear(); f.frame.lit = 0.0; f.frame.light_count = 0.0; f.frame.full = false;
             fog_of_war_full_clear(g);
         }
         return;
@@ -365,15 +365,56 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
             g.fog_of_war.doors_held += 1.0;
         }
     }
-    // ---- the renderer's block is the picture's (notes, Dropped), but for the page's look a replay asks for, that the block is up, and the full picture's team, which FOG.ours reads
+    // ---- the renderer's block: what the fog's pass and the sight table draw from (render/fogofwar.ts FogFrame). The picture's alone, and filled here because
+    //      it is computed from the game's state: the page hands it to the renderer as it comes
     if g.fog_of_war.look_frames > 0.0 {
         g.fog_of_war.look_frames -= 1.0;
         let page = g.m.fogofwar.fog_page;
         g.k.fog.desat = page.desat; g.k.fog.edge = page.edge; g.k.fog.air = page.air; g.k.fog.kept = page.kept;
     }
-    g.fog_of_war.frame.on = true;
+    let k = g.k.fog;
+    {
+        let n = g.fog_of_war.eyes.len() as f64;
+        let f = &mut g.fog_of_war.frame;
+        f.on = true; f.count = n; f.dim = k.dim; f.desat = k.desat; f.top_pad = k.top_pad; f.edge = m::max(0.0, k.edge);
+    }
+    let fov = crate::fogofwar::field_deg(g);
+    let near = crate::fogofwar::field_near(g);
+    let all_round = fov >= 360.0;
+    let cos_half = if all_round { -2.0 } else { m::cos(m::max(1.0, fov) * 0.5 * DEG) };
+    // (the picture's soft edges are the cone's alone: a plain wedge keeps its hard line)
+    let soft = if k.cone && !all_round { m::max(0.0, m::min(m::min(k.cone_soft_deg, fov), 360.0 - fov)) } else { 0.0 };
     let full = fog_of_war_full_block(g);
     g.fog_of_war.frame.full = full;
+    g.fog_of_war.frame.flat = m::max(0.0, k.flat);
+    crate::fogofwar::fog_of_war_lit_block(g);
+    g.fog_of_war.frame.air = k.air;
+    g.fog_of_war.frame.kept = k.kept;
+    fog_of_war_thin_block(g);
+    let n_eyes = crate::render_fogofwar::FOG_EYES as usize;
+    let pic = core::mem::take(&mut g.fog_of_war.eyes);
+    {
+        let f = &mut g.fog_of_war.frame;
+        f.soft_in = if soft > 0.0 { m::cos(m::max(0.0, fov * 0.5 - soft * 0.5) * DEG) } else { 0.0 };
+        f.soft_out = if soft > 0.0 { m::cos(m::min(180.0, fov * 0.5 + soft * 0.5) * DEG) } else { 0.0 };
+        f.near_soft = if k.cone && !all_round { m::max(0.0, k.cone_near_soft_m) } else { 0.0 };
+        if f.eyes.len() < n_eyes * 4 { f.eyes.resize(n_eyes * 4, 0.0); }
+        if f.looks.len() < n_eyes * 4 { f.looks.resize(n_eyes * 4, 0.0); }
+        for i in 0..n_eyes {
+            let o = i * 4;
+            let Some(e) = pic.get(i) else {
+                for w in 0..4 { f.eyes[o + w] = 0.0; f.looks[o + w] = 0.0; }
+                continue;
+            };
+            f.eyes[o] = e.at[0] as f32; f.eyes[o + 1] = e.at[1] as f32; f.eyes[o + 2] = e.at[2] as f32; f.eyes[o + 3] = e.id as f32;
+            let l = js::or(m::hyp2(e.look[0], e.look[2]), 1.0);
+            f.looks[o] = (e.look[0] / l) as f32; f.looks[o + 1] = (e.look[2] / l) as f32;
+            // (an eye with its own field: the wand's lens)
+            f.looks[o + 2] = (match e.fov { None => cos_half, Some(v) if v >= 360.0 => -2.0, Some(v) => m::cos(m::max(1.0, v) * 0.5 * DEG) }) as f32;
+            f.looks[o + 3] = e.near.unwrap_or(near) as f32;
+        }
+    }
+    g.fog_of_war.eyes = pic;
 }
 
 /// pass()'s verdict on one man.
@@ -603,9 +644,10 @@ pub fn fog_of_war_sight_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(through), None)
 }
 
-/// The picture's half of FOG.thin: which statics are marked, as bits by box index. Picture-only, and pass() does not call it (notes, Dropped). (FogOfWar.thinBlock)
+/// The picture's half of FOG.thin: the row, and which statics are marked, as bits by box index. Filled every frame: a breached wall's studs come and go. (FogOfWar.thinBlock)
 pub fn fog_of_war_thin_block(g: &mut crate::game::Game) {
-    g.fog_of_war.frame.thin = true;
+    g.fog_of_war.frame.thin = g.k.fog.thin;
+    if !g.fog_of_war.frame.thin { return; }
     for w in g.fog_of_war.frame.thin_bits.iter_mut() { *w = 0; }
     g.fog_of_war.frame.thin_serial = g.engine.world.geom_serial;
     let st = g.engine.world.statics.clone();

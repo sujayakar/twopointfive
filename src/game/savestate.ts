@@ -1067,7 +1067,7 @@ export class Checkpoints {
     return idx;
   }
   /** every stored checkpoint, newest first */
-  slots(): SlotInfo[] { return Object.values(this.index().slots).concat(this.shelf.all().map(e => e.info)).sort((a, b) => b.savedAt - a.savedAt); }
+  slots(): SlotInfo[] { return (SNAPS.own ? [] : Object.values(this.index().slots)).concat(this.shelf.all().map(e => e.info)).sort((a, b) => b.savedAt - a.savedAt); }   // (SNAPS.own: the game is stepped elsewhere and keeps its own saves; a file of this page's fields in the store is another page's, and `canLoad` refuses it: not listed)
   /** SAVETIMELINE — THIS RUN's saves in the mission clock's order, oldest first: the strip the pause and down cards lay out (files and saves in memory alike) */
   timeline(): SlotInfo[] { return this.slots().filter(x => x.runId === this.runId).sort((a, b) => a.missionT - b.missionT || a.savedAt - b.savedAt); }
   /** which of the ring by hand the next save takes: the first that stands empty, else the oldest */

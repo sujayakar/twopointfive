@@ -107,14 +107,20 @@ const later = (g: Game, S: State, secs: number, run: () => void) => { if (secs <
 /** combat.ts detonateStun, where it plays the stun can's report: true = this burst is a wall charge's and its own report is on its way (the can's is not played) —
  *  false = not this module's (the switch off, a thrown can, a door charge): the caller plays 'stunBang' as it always did. The rest of the feel starts here too. */
 export function wallReport(g: Game, at: Vec3): boolean { return !!firstOf(g, v => wallReportOf(v, at) || null); }   // (whichever seat's charge it is: seats.ts)
-function wallReportOf(g: Game, at: Vec3): boolean {
+/** THE PICTURE'S HALF ALONE, for a host whose tick is not this file's (host/rustdress.ts; nothing of the game's own calls these two): a wall charge's
+ *  blast at `at`, whose report and kick another tick has already made: the fireball, the dust ring, the pushes and the ceiling's dust start here; and
+ *  the once-a-frame lines that remember the charges that stand and let the queued stages go, the camera left alone. */
+export function wallFeelPicture(g: Game, at: Vec3): boolean { return !!firstOf(g, v => { const was = v.fogOfWar.begin(v.player.char.id); try { return wallReportOf(v, at, true) || null; } finally { v.fogOfWar.done(was); } }); }   // (the team's doing, as the blast that calls `wallReport` is: fogofwar.ts FOG.ours)
+// (…with no camera the list's identity is not asked: a host that writes the game from elsewhere may hand a new array every time the list changes, and its restart puts the clock back)
+export function blastFeelStages(g: Game) { const was = g.fogOfWar.begin(g.player.char.id); try { blastFeelTickRaw(g, null); } finally { g.fogOfWar.done(was); } }
+function wallReportOf(g: Game, at: Vec3, picture = false): boolean {
   if (!live(g)) return false;
   const S = STATE.get(g), set = g.wallCharge?.set; if (!S || !set) return false;
   const i = S.seen.findIndex(c => !set.includes(c) && near(burstAt(c.wall), at, 0.06)); if (i < 0) return false;
   const W = S.seen[i].wall; S.seen.splice(i, 1);
   const open = holed(g, W), n: Vec3 = W.alongX ? [0, 0, W.side] : [W.side, 0, 0];
-  report(g, S, at);
-  S.kicks.push({ t0: g.time, at: v3.copy(at) });
+  if (picture) { dice(S); dice(S); }   // (the report's two draws of this module's own counter, so the particles' seeds after them are the ones they would be)
+  else { report(g, S, at); S.kicks.push({ t0: g.time, at: v3.copy(at) }); }
   // the ways out of the wall: back off the face it was set on, and — only through a wall that gave — into the room
   const faces: Face[] = [{ o: wallPt(W, 0, 0.35, 0), d: n, mask: 0 }];
   if (open) faces.unshift({ o: wallPt(W, 0, -(thick(W) + 0.35), 0), d: v3.scale(n, -1), mask: 0 });
@@ -127,17 +133,17 @@ function wallReportOf(g: Game, at: Vec3): boolean {
 
 /** game.ts update, once a frame: the charges that stand set remembered for next frame's blast, the queued stages let go, the kick written to the camera */
 export function blastFeelTick(g: Game, cam: FollowCamera) { const was = g.fogOfWar.begin(g.player.char.id); try { blastFeelTickRaw(g, cam); } finally { g.fogOfWar.done(was); } }   // (a wall charge and every later stage of its blast — the dust ring, the roll, the soot, the crumbs — are the team's doing: fogofwar.ts FOG.ours)
-function blastFeelTickRaw(g: Game, cam: FollowCamera) {
+function blastFeelTickRaw(g: Game, cam: FollowCamera | null) {
   const S0 = STATE.get(g), WC = g.wallCharge;
-  if (!WC || !live(g)) { if (S0) { S0.seen.length = 0; S0.queue.length = 0; S0.kicks.length = 0; } if (cam.kick) cam.kick = null; return; }
-  if (!S0 && !WC.set.length) { if (cam.kick) cam.kick = null; return; }   // (a kick left on the camera by another Game: not this one's to keep)
+  if (!WC || !live(g)) { if (S0) { S0.seen.length = 0; S0.queue.length = 0; S0.kicks.length = 0; } if (cam?.kick) cam.kick = null; return; }
+  if (!S0 && !WC.set.length) { if (cam?.kick) cam.kick = null; return; }   // (a kick left on the camera by another Game: not this one's to keep)
   const S = S0 ?? stateOf(g);
   if (!loaded) loadFeel();
-  if (g.time < S.last || (S.list && S.list !== WC.set)) { S.queue.length = 0; S.kicks.length = 0; S.seen.length = 0; }   // (the clock went back — a load — or the charges' list is a new one — a restart, whose clock runs on: nothing of the old encounter's blast plays into this one)
+  if (g.time < S.last || (cam && S.list && S.list !== WC.set)) { S.queue.length = 0; S.kicks.length = 0; S.seen.length = 0; }   // (the clock went back — a load — or the charges' list is a new one — a restart, whose clock runs on: nothing of the old encounter's blast plays into this one)
   S.last = g.time; S.list = WC.set;
   S.seen.length = 0; for (const c of WC.set) S.seen.push(c);
   for (let i = 0; i < S.queue.length;) { const q = S.queue[i]; if (q.at <= g.time) { S.queue.splice(i, 1); q.run(); } else i++; }
-  cam.kick = kickOf(g, S, cam);
+  if (cam) cam.kick = kickOf(g, S, cam);
 }
 
 /** THE KICK this frame: every live blast's snap away from it, ringing down — metres to add to the look-at for the render (null: none) */
