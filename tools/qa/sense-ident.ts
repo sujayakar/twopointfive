@@ -279,7 +279,7 @@ async function made(): Promise<void> {
   verdict(!thin.length, 'reach: the module counts an answer for every question of every kind', `${Object.keys(want).map(k => `${k} ${by(k)}`).join(' · ')}${thin.length ? ` — TOO FEW of ${thin.join(', ')}` : ''}`);
   { const T = twoSay(two0, rowed.length); if (T.say) verdict(T.ok && T.lit > 0, 'the rows: the lamps read where they stand are the lamps written one by one, and some point is lit by one', T.say); }
   if (BACKWARD || AGAIN || UNSHADED || UNROWED) return;   // (red paths of the levels' run: nothing more is held here under one)
-  const held = PIN.hold({ root: ROOT, tool: 'tools/qa/sense-ident.ts', fixture: 'sense-words.json', stand: 'shipped', run, runArgs: ['--made', '--n', String(N), '--seed', String(SEED)], end, words, breakWord: 'RUST_BREAK',
+  const held = PIN.hold({ root: ROOT, tool: 'tools/qa/sense-ident.ts', fixture: 'sense-words.json', run, runArgs: ['--made', '--n', String(N), '--seed', String(SEED)], end, words, breakWord: 'RUST_BREAK',
     unfit: threw ? 'the run threw' : thin.length ? 'a kind of question did not reach the module' : '', verdict, say: log });
   if (UNSAID) blind.push(...held.stayed);   // (every word of the made-up world must move with the re-shape unsaid)
   if (held.record && !bad) held.record();
