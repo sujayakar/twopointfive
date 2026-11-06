@@ -245,9 +245,13 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
   // TPS_GAME in front of any headless tool (tools/blitz/PLAY.md): the game stood here is a PUPPET of the Rust game, which steps in its place from the first
   // `game.update` (`rust`; `audit`), or it is stood the same way and stepped by the TypeScript tick (`ts`: the other side of a tally). Unset: nothing is loaded.
   // WHICH is tools/blitz/word.ts's to say, the one switch (the word asked for, its table, a frozen run forced to the TypeScript tick).
-  { const S = (await import('../blitz/word.ts')).stand(STAND_AT_LOAD === 'frozen'); if (S.word) await (await import('../blitz/rust-host.ts')).standRust(game, S.word); }
+  { const S = (await import('../blitz/word.ts')).stand(STAND_AT_LOAD === 'frozen'); if (S.word) await (await import(RUST_HOST)).standRust(game, S.word); }
   return W;
 }
+
+// (the host is named by a value, not a literal: the tools' type check (tools/qa/tsconfig.json) then stops at this file and does not walk into the state bridge's
+// generated files behind the host, which it does not own)
+const RUST_HOST: string = '../blitz/rust-host.ts';
 
 // A TOOL SEEDS THE GAME'S STREAM AFTER THE GAME IS STOOD. With no word a game the harness stood has no die of its own and draws `Math.random` (src/math/dice.ts), so
 // a tool names the stream by putting a seeded die in `Math.random`'s place: `Math.random = seeded(7)`. Under any word (tools/blitz/PLAY.md) THE GAME OWNS ITS DIE,
