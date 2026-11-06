@@ -10,6 +10,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
+import { childEnv } from './stand.ts';
 
 const ROOT = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
 const SHELL = (() => { const base = process.env.PLAYWRIGHT_BROWSERS_PATH ?? '/opt/pw-browsers'; if (!existsSync(base)) return null; for (const d of readdirSync(base)) { const f = `${base}/${d}/chrome-linux/headless_shell`; if (existsSync(f)) return f; } return null; })();
@@ -18,8 +19,7 @@ const spec = process.argv[2];
 if (!spec || spec.startsWith('--') && spec !== '--from') { console.log('entry-strip.ts <scn:seed> [--entry n] [--panels 6] [--every 0.5] [--lead 0.2] [--out dir] [--name file] | --from before.json after.json'); process.exit(2); }
 
 function run(on: boolean): any {
-  const f = `${tmpdir()}/entry-strip-${process.pid}-${on ? 'on' : 'off'}.json`, env: Record<string, string> = { ...process.env as any, PT_PATHS: 'rec' };
-  if (on) env.TPS_DOORPATH = process.env.TPS_DOORPATH ?? '1'; else delete env.TPS_DOORPATH;
+  const f = `${tmpdir()}/entry-strip-${process.pid}-${on ? 'on' : 'off'}.json`, env = childEnv({ PT_PATHS: 'rec', TPS_DOORPATH: on ? process.env.TPS_DOORPATH ?? '1' : false });   // (off is the word '0': stand.ts childEnv)
   const r = spawnSync('bun', ['run', `${ROOT}/tools/qa/playthrough.ts`, '--one', spec, '--out', f], { env, encoding: 'utf8' });
   if (r.status !== 0 || !existsSync(f)) { console.error(r.stdout, r.stderr); throw new Error(`the ${on ? 'after' : 'before'} run did not finish`); }
   return JSON.parse(readFileSync(f, 'utf8'));

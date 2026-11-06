@@ -159,14 +159,13 @@ export const foursquadStage = guarded(async () => {
   verdict(why === null && l?.who.join() === 'Blue One,Blue Two' && redStays && O.men('blue').every((m: any) => dist(m.char.pos, AISLE) < 2.55),
     fell ? 'give(\'move\', spot, \'blue\'): the blue pair goes; red keeps the fall-in it held and stays with Sam (it closes the file blue left, no nearer the spot)' : 'give(\'move\', spot, \'blue\'): the blue pair goes; red has no order and stays (shouldered aside a step as blue files past from behind it)',
     `give → ${why} · log: ${l?.order} → ${l?.who.join(' + ')} · moved ${moved.map(f2).join(' / ')} m · said "${R.said[R.said.length - 1]}"${fell ? ` · red: ${[0, 1].map(i => `${ops[i].callsign} ${O.of(ops[i]) === had[i] ? 'the same' : 'ANOTHER'} ${O.of(ops[i])?.order ?? 'no order'}, ${O.statusOf(ops[i])}, ${f2(toSpot[i])} → ${f2(dist(ops[i].char.pos, AISLE))} m from the spot, ${f2(dist(ops[i].char.pos, sam.pos))} m from Sam`).join(' · ')}` : ''}`);
-  // T steps the element: everyone (gold) → red → blue → everyone; T with the cursor on a man is that man, and T again goes back to everyone
-  R.W.cursorAt([...g.player.char.pos]);
-  const cyc: any[] = []; for (let i = 0; i < 4; i++) { R.input.pressed.add(ORDERS.whoKey); R.step(); cyc.push(O.who); }
-  R.W.cursorAt([ops[3].char.pos[0], 1.2, ops[3].char.pos[2]]); R.input.pressed.add(ORDERS.whoKey); R.step(); const onMan = O.who; R.input.pressed.add(ORDERS.whoKey); R.step(); const back = O.who;
-  verdict(cyc.join() === 'red,blue,all,red' && onMan === 3 && back === 'all', 'T steps all → red → blue → all; T with the cursor on a man is that man alone, T again is everyone', `who after each tap: ${cyc.join(' ')} · on ${ops[3].callsign}: ${onMan} · again: ${back}`);
-  // down and a pair selection
-  O.who = 'red'; R.step(2); const kept = O.who; killGuard(g, ops[0], [1, 0, 0], false, 'shot', 'player'); killGuard(g, ops[1], [1, 0, 0], false, 'shot', 'player'); R.step(2);
-  verdict(kept === 'red' && O.who === 'all' && O.men('red').length === 0 && O.men('red', { down: true }).length === 2 && O.men().length === 2, 'a pair chosen as "who" stands while a man of it lives, and falls back to all when the pair is down; men() lists the living unless asked', `who 'red' kept: ${kept} · after both red down: ${O.who} · red living ${O.men('red').length}, with the down ${O.men('red', { down: true }).length}`);
+  // (TWO LINES OF THE WHO KEY WENT FROM HERE, 2026-11-06: 'T steps all → red → blue → all' and 'a pair chosen as "who" stands while a man of it lives'. T
+  //  has had no key on the page's board since the ring became the squad's only keys, and an order of the squad's key is everyone's — CMDRING.only and
+  //  .wholeSquad, both settled; wholesquad-check holds the rule as the page has it, and orderui-probes still asks the fall back to all with the rule pinned
+  //  off. A pair is still ordered by code above, give(…, 'blue').)
+  // a pair down
+  killGuard(g, ops[0], [1, 0, 0], false, 'shot', 'player'); killGuard(g, ops[1], [1, 0, 0], false, 'shot', 'player'); R.step(2);
+  verdict(O.men('red').length === 0 && O.men('red', { down: true }).length === 2 && O.men().length === 2, 'with the red pair down, men() lists the living unless asked', `red living ${O.men('red').length}, with the down ${O.men('red', { down: true }).length} · living ${O.men().length}`);
   // a restart stages the four again
   g.restartEncounter(); R.step(30);
   verdict(NB.ops.length === 4 && names(NB.ops) === 'Red One, Red Two, Blue One, Blue Two' && NB.ops.every((x: any) => x.state !== 'dead') && 1 + g.guards.length === 10 && NB.staged === 2, 'a restart stages the four again', `${names(NB.ops)} · staged ×${NB.staged} · ${1 + g.guards.length} characters`);

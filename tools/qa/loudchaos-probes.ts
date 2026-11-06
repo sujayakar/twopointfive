@@ -14,7 +14,8 @@
 //                0.3 / scales to 0.8 — planted answers move it exactly so with the switch on and off; the harness's CPU dust stand-in (dust-standin.ts) feeds that
 //                same query (a cloud between two points dims the line, a cloud behind a wall does not, no puff = no answer);
 //   (off)        the switch off = destruction.ts as it was: the office rectangle decides 'indoors', the player-only fixture rule stands alone, bang ignores `power`,
-//                glass does not come apart under a scenario, the module's new counters never move;
+//                glass is its own rule's (the same floor reads it the same with the switch on or off: LOUDGLASS_BREAK=1 must fail that), the module's new
+//                counters never move;
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -303,8 +304,14 @@ export async function loudSight() {
 // ================================================================ off
 export async function loudOff() {
   const F = family('loudchaos-off: the switch off = destruction as it was — the office rectangle, the player-only fixture rule, no power, glass as it was, no new counter moving');
+  // GLASS IS ITS OWN RULE'S (glassbreak.ts glassBreakLive: on in the page, off on the old stand), so what these lines hold of it is that the destruction
+  // switch moves it NEITHER way: a floor staged with the switch on reads its glass as the same floor staged with it off. (They asked 'glass does not come
+  // apart', which was the same thing while glass was off everywhere.) LOUDGLASS_BREAK=1, the red path: the two switch-on arms read their glass the other
+  // way about (as a switch that owned glass would leave it) — both comparisons must fail, on either stand.
+  const BREAK = process.env.LOUDGLASS_BREAK === '1', glassOf = (game: any, on: boolean): boolean => glassBreakLive(game) !== (BREAK && on);
+  let glassOff = false;
   { const S = await stage('warehouse.json', false, 4401, 0.5, true); const { W, game, smokeLog } = S; const fails: string[] = [];
-    if (glassBreakLive(game)) fails.push('glass comes apart under a scenario');
+    glassOff = glassOf(game, false);
     const t = game.targets.find((x: any) => !x.broken && x.interactive && x.kind === 'emissive' && (x.on || x.factor > 0));
     if (t) { game.destr.fixtureRound([t.pos[0], 1.2, t.pos[2]], [0, 1, 0], t.pos[1] - 1.2, t.boxes[0]); if (t.broken) fails.push('fixtureRound put a light out'); }
     const lit0 = game.targets.filter((x: any) => x.broken).length;
@@ -312,18 +319,20 @@ export async function loudOff() {
     if (game.targets.filter((x: any) => x.broken).length !== lit0) fails.push('a blast put a light out');
     if (smokeLog.some(e => e.kind === 'puff' && e.pos[1] < 0.5)) fails.push('a blast raised floor dust');
     if (D.DESTR_STATS.fixtures || D.DESTR_STATS.fixturesRefused) fails.push('the fixture counters moved');
-    F.verdict(!fails.length, 'warehouse, switch off, a scenario up: glass does not come apart, fixtureRound and a power-4 blast under a lit panel leave every light on, no floor dust', fails.join('; ') || `glassBreakLive ${glassBreakLive(game)}; fixtures ${D.DESTR_STATS.fixtures}`); }
+    F.verdict(!fails.length, 'warehouse, switch off, a scenario up: fixtureRound and a power-4 blast under a lit panel leave every light on, no floor dust (its glass is the next line\'s)', fails.join('; ') || `glassBreakLive ${glassOff}; fixtures ${D.DESTR_STATS.fixtures}`); }
   { const S = await stage('warehouse.json', true); const { game } = S;
-    const live = glassBreakLive(game);
-    F.verdict(!live, 'switch on, a scenario up: glass is left exactly as the base has it (its own goal owns it) — the destruction switch does not make a pane come apart', `glassBreakLive ${live} with tune.glassBreak ${!!game.tune.glassBreak}`); }
+    const live = glassOf(game, true);
+    F.verdict(live === glassOff, 'switch on, a scenario up: glass is left exactly as the switch off has it (its own goal owns it) — the destruction switch does not make a pane come apart, nor keep one whole', `glassBreakLive ${live} with the switch on, ${glassOff} with it off · tune.glassBreak ${!!game.tune.glassBreak}`); }
   { // the switch on but NO scenario up (the plain night floor): the loud rules stay down — heat as tuned, the player-only fixture rule, no power
+    const base = glassBreakLive((await stage('warehouse.json', false, 4401, 0.5, false)).game);   // (the same floor with the switch off, stood first: a stage sets the switch)
     const S = await stage('warehouse.json', true, 4401, 0.5, false); const { W, game, smokeLog } = S; const fails: string[] = [];
-    if (D.loudNow(game)) fails.push('loudNow without a scenario'); if (glassBreakLive(game)) fails.push('glass comes apart');
+    if (D.loudNow(game)) fails.push('loudNow without a scenario');
+    { const live = glassOf(game, true); if (live !== base) fails.push(`glass reads ${live} where the same floor with the switch off reads ${base}`); }
     const t = game.targets.find((x: any) => !x.broken && x.interactive && x.kind === 'emissive' && (x.on || x.factor > 0));
     if (t) { game.destr.fixtureRound([t.pos[0], 1.2, t.pos[2]], [0, 1, 0], t.pos[1] - 1.2, t.boxes[0]); game.destr.bang([t.pos[0], 0.06, t.pos[2]], NOBODY_ID, 4); for (let f = 0; f < 30; f++) W.step(DT); if (t.broken) fails.push('a light went out'); }
     if (smokeLog.some(e => e.kind === 'puff' && e.pos[1] < 0.5)) fails.push('a blast raised floor dust');
     const p: Vec3 = [20, 1.2, 14]; const e0 = game.destr.escalationAt(p); game.destr.round(game.player.char, p, [1, 0, 0], { kind: 'static', index: 0, n: [-1, 0, 0] } as any, WEAPONS.fn2000); const e1 = game.destr.escalationAt(p);
     if (Math.abs((e1 - e0) - 2 * 0.5) > 0.05) fails.push(`one round raised the escalation by ${f2(e1 - e0)}, the office's own is 1.00 at chaos 0.5`);
-    F.verdict(!fails.length, 'warehouse, switch on, NO scenario: loudNow false — a round stokes the office\'s heat (E +1.00 at chaos 0.5), fixtureRound and a power-4 blast leave the lights, no floor dust, glass whole', fails.join('; ') || `E ${f2(e0)} → ${f2(e1)}`); }
+    F.verdict(!fails.length, 'warehouse, switch on, NO scenario: loudNow false — a round stokes the office\'s heat (E +1.00 at chaos 0.5), fixtureRound and a power-4 blast leave the lights, no floor dust, glass as the switch off has it', fails.join('; ') || `E ${f2(e0)} → ${f2(e1)}`); }
   DESTRUCTION.on = false; return F.done();
 }

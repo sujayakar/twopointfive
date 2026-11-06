@@ -108,7 +108,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   squads block into squads. It now runs the pair's floor as one pool for its two lines, on either stand (`stand.ts underWord`: a run under one word of the stand, the word
   and the row put back after), and a third line says what the dealt floor does (one squad, nobody goes on his own). `CALLSRALLY_BREAK=1`: 2 FAIL on both. FOR THE ENEMIES' OWNER, not a check's to settle: `ROOMFIGHT.rally` and `rallyK` are Team
   feel rows a player can move, and on the page they move nothing for a squad's man, which on a dealt floor is every defender (the rule as read; measured on the
-  pair's floor, one seed). `doorpath-paths` and `doorpath-gun` are the old stand's alone now
+  pair's floor, one seed). THE FOURTH BATCH (2026-11-06), lines of paths the page no longer plays.
+  THE `pressorders` FAMILY IS DELETED (seven probes, `tools/qa/pressorders-probes.ts`): it walked the orders menu on X, the who key T, the middle button and
+  the wheel, with `CMDRING.only` and `.wholeSquad` pinned off in its rig, and searched the source for a held key on the order path. That route has had no
+  key on the page's board since 1af35108 (10-22: "squad is now just q and f. everything is through the radial menu"), the ring is a key kept down on
+  purpose since 3b77c986, and the opening line it quoted went with a488a796. Its five scenario sweeps and its search were red on both stands since
+  (on the old stand by that one quoted line; on the page's by nine more). `pressorders-held` was GREEN on both and went with the route it asked of. What
+  the page plays is the `squadorders` family's (`cmdring`, `qring`, `qonly`, `wholesquad`); the menu's rows and digits are still `orderkeys`' and
+  `orders-menu`'s. NO LONGER HELD BY ANY CHECK, on the old stand, under `?qonly=0` or for a kept binding of X: a held X is one press and letting go
+  closes nothing; a key down with no press opens nothing; the middle button twice, the wheel or the arrows and Space give a row. They come back from
+  history with the file if that route is ever a key again. `foursquad-stage` loses its two
+  lines of the who key for the same reason, and keeps what they said of a pair that is down. `loudchaos-off` holds glass to its own rule on either side
+  of the destruction switch (the same floor stood with the switch off reads the same) where it asked that glass be off (`LOUDGLASS_BREAK=1` reads the
+  switch-on arms' glass the other way about: both comparisons FAIL on both stands). `noshove` is NOT mended and its row was wrong: on the page's stand the arm the page plays fails too (the player moved 0.032 m with the
+  rule on, the line's bar 0.01 m), which is the squad's owner's to read. `aim-first` adds what the startle holds a first round by to its floors, from the
+  rule's own table (`STARTLE.beat + STARTLE.draw` where the rule is on: 1.533 s against a floor of 1.515; `AIMFIRST_BREAK=1`: 2 FAIL on both).
+  `gunhold-variant` takes the key that draws on a held man from the row's own rule (`HANDSLOT.on`: 1, else E; `GUNHOLDKEY_BREAK=1`: 1 FAIL on both).
+  OFF IS A WORD, NOT THE LACK OF ONE, SINCE THE STAND'S FLIP: `snap-bites`' control runs asked for the turn weight off by leaving `TPS_TURN` out of the
+  child's environment, which since a tool with no word stands the page's game is the weight ON, and its line 'in the arm asked for' read the word and
+  passed. The arm is asked by `TPS_TURN=0`, each run reports the rule its game had while it played (`SnapRun.turnOn`) and the line holds it to the rule
+  its caller names; `SNAPBITES_BREAK=1` asks the off arm by the word that puts the weight on, so only that reading can fail it. `tools/qa/entry-strip.ts`
+  had the same slip for `TPS_DOORPATH`, and so did the `doorpath` family's own red path (`DOORPATH_OLD=1` left the word out: on the page's stand 'the entry
+  as it was' played the walk). `tools/qa/stand.ts childEnv` builds a child's stand words with every one said. The three were found by reading and by a
+  review; no check holds the class, and `doorpath-probes.ts runOne` still drops four words a job does not name. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
   (green on the page's). NOT DONE: `flashweight`'s two older rows are the old stand's measurements, kept as rows of both stands and not read again on the page's (the family
   did not finish inside half an hour on a loaded box). tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
