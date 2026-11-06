@@ -53,6 +53,7 @@ import { OUT, OUT_HOST } from 'tps-bridge/out-dispatch';
 import { makePoke } from 'tps-bridge/poke';
 import { installAsks } from 'tps-bridge/ask';
 import LISTS from 'tps-bridge/puppet-lists.json';
+import SWITCHES from 'tps-bridge/switches.json';
 
 /** the address word: `?rust=1` (any other value, or no word: the TypeScript game) */
 export const rustAsked = (q: URLSearchParams): boolean => q.get('rust') === '1';
@@ -96,13 +97,57 @@ export const RUST_GAME = {
   notCarried: [] as string[],
 };
 
+/** THE SETTLED ROWS, HELD (tools/qa/switches.json, kind "settled": 866 switch rows of the knob tables that are constants of the game now; the Rust game has
+ *  no such row, only the branch the page takes). The TypeScript page still has them as switches, and three things can move one on a player's machine: a
+ *  row of the debugger's panel KEPT in the browser's store and read back at every visit (teamfeel.ts, pressure.ts, digin.ts and the rest of game.ts's
+ *  loaders), a word on the address (`?noautopilot`), a click in the panel. On a puppet such a row would turn only the half of the game the page still
+ *  runs (the HUD's rows, the menu, the picture's dressing) and not the tick. So under the word each settled row is held at its value on the page, as
+ *  tools/qa/fold.ts holds it for a headless run: a read answers that value, a write of another is refused, and what was refused or stood off its value
+ *  is named ONCE in the console and stays on the debugger panel's first line. Rows that are still switches (an open decision, a player's own, the
+ *  difficulty's) are not touched: they cross to the Rust game with the knob tables as a game starts.
+ *  Laid by main.ts after the address's own switches are written and before the game is stood (the kept rows are read as the Game is made).
+ *  What it cannot hold (as the fold): a table replaced whole, a row that is already an accessor, a value a module copied before this ran. */
+export const RUST_SETTLED = { held: 0, absent: 0, skipped: 0, off: [] as string[], refused: new Map<string, { value: unknown; n: number }>(), said: 0 };
+const sameRow = (a: unknown, b: unknown): boolean => Object.is(a, b) || (typeof a === 'object' && typeof b === 'object' && JSON.stringify(a) === JSON.stringify(b));
+const rowWord = (v: unknown): string => typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string' ? String(v) : JSON.stringify(v);
+export function rustSettledHold(): void {
+  const R = RUST_SETTLED, tables = knobRegistry() as Record<string, any>;
+  for (const r of (SWITCHES as { rows: { row: string; page: unknown; kind: string }[] }).rows) { if (r.kind !== 'settled') continue;
+    const path = r.row.split('.'), key = path.pop()!; let o: any = tables[path[0]]; for (let i = 1; i < path.length && o; i++) o = o[path[i]];
+    if (!o || typeof o !== 'object' || !(key in o)) { R.absent++; continue; }
+    const d = Object.getOwnPropertyDescriptor(o, key); if (!d || d.get || d.set || !d.configurable) { R.skipped++; continue; }
+    const page = r.page; if (!sameRow(d.value, page)) R.off.push(`${r.row} (${rowWord(d.value)}; held at ${rowWord(page)})`);
+    Object.defineProperty(o, key, { enumerable: true, configurable: true, get: () => page, set: (v: unknown) => { if (sameRow(v, page)) return; const e = R.refused.get(r.row) ?? { value: v, n: 0 }; e.value = v; e.n++; R.refused.set(r.row, e); } });
+    R.held++; }
+}
+/** what the hold has turned away so far, in a line (the debugger panel's first; '' with nothing), said in the console once each time it grows */
+export function rustSettledLine(): string {
+  const R = RUST_SETTLED, n = R.off.length + R.refused.size; if (!n) return '';
+  const names = [...R.off, ...[...R.refused].map(([row, e]) => `${row} (${rowWord(e.value)})`)];
+  const line = `${n} kept row${n === 1 ? '' : 's'} or address word${n === 1 ? '' : 's'} ${n === 1 ? 'is' : 'are'} settled in this build and ${n === 1 ? 'is' : 'are'} not applied: ${names.slice(0, 12).join(', ')}${names.length > 12 ? `, and ${names.length - 12} more (window.__rust.settled)` : ''}`;
+  if (R.said !== n) { R.said = n; console.info(`rust=1: ${line}`); }
+  return line;
+}
 /** THE MODULE, fetched and compiled off the page's thread (Chrome compiles nothing over 8 MB on it), started, and handed to src/sim as the simulation's
  *  one instance. Before anything has asked src/sim for its module. Throws in plain words where there is no module to fetch. */
+/** a failure of the Rust game's own that the page says in its plain words (main.ts shows `message` alone, no stack) */
+export class RustGameError extends Error { constructor(m: string) { super(m); this.name = 'RustGameError'; } }
 export async function rustBoot(): Promise<void> {
   const t0 = performance.now();
+  const say = (line: string) => { const el = typeof document !== 'undefined' ? document.getElementById('loading') : null; if (el) el.textContent = line; };
+  const NOT = 'Without the word the page plays the TypeScript game.';
   let res: Response;
-  try { res = await fetch(new URL('game_face.wasm', location.href), { cache: 'no-store' }); } catch (e) { throw new Error(`?rust=1: the Rust game's module could not be fetched (${String((e as Error)?.message ?? e)}). Without the word the page plays the TypeScript game.`); }
-  if (!res.ok) { const why = (await res.text().catch(() => '')).slice(0, 400); throw new Error(`?rust=1: there is no Rust game to play here. ${res.status === 404 ? 'This build was made without game_face.wasm (cargo and the wasm32-unknown-unknown target build it: tools/blitz/face-build.ts).' : why} Without the word the page plays the TypeScript game.`); }
+  // (the dev server builds the module where it is stale and does not hold the request while it does: 202 and a line to show, asked again every two
+  //  seconds, for as long as the build takes. A static host answers the file or 404.)
+  for (let asked = 0; ; asked++) {
+    try { res = await fetch(new URL('game_face.wasm', location.href), { cache: 'no-store' }); } catch (e) { throw new RustGameError(`?rust=1: the Rust game's module could not be fetched (${String((e as Error)?.message ?? e)}). Is the dev server still running? ${NOT}`); }
+    if (res.status !== 202) break;
+    const line = (await res.text().catch(() => '')).slice(0, 400) || 'Building the Rust game \u2026';
+    say(line); if (asked === 0) console.info(`rust=1: ${line}`);
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  if (!res.ok) { const why = (await res.text().catch(() => '')).slice(0, 900); throw new RustGameError(`?rust=1: there is no Rust game to play here. ${res.status === 404 ? 'This build was made without game_face.wasm (cargo and the wasm32-unknown-unknown target build it: tools/blitz/face-build.ts).' : why} ${NOT}`); }
+  say('loading the Rust game \u2026');
   let mod: WebAssembly.Module;
   const t1 = performance.now();
   if (typeof WebAssembly.compileStreaming === 'function' && (res.headers.get('content-type') ?? '').startsWith('application/wasm')) { RUST_GAME.bytes = Number(res.headers.get('content-length') ?? 0); mod = await WebAssembly.compileStreaming(res); }
@@ -110,7 +155,7 @@ export async function rustBoot(): Promise<void> {
   const inst = await WebAssembly.instantiate(mod, {});
   RUST_GAME.fetchMs = t1 - t0; RUST_GAME.compileMs = performance.now() - t1;
   X = inst.exports as unknown as Face; MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_puppet', 'face_host_half', 'face_host_has', 'face_step', 'face_ask', 'face_probe_asks', 'face_lights_out', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new Error(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  for (const n of ['face_new_at', 'face_puppet', 'face_host_half', 'face_host_has', 'face_step', 'face_ask', 'face_probe_asks', 'face_lights_out', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
   simAdopt(X, RUST_GAME.compileMs);
   PLACE = new BoxMirror(); (PLACE as unknown as { take(): boolean }).take();
   RUST_GAME.on = true; RUST_GAME.memory = MEM.buffer.byteLength;
