@@ -2,7 +2,7 @@
 // what happened, so a finding comes with a deterministic repro instead of a seed + frame.
 //   bun run tools/qa/probes.ts <probe | family | all | all-quick | repros | selftest | list> [n] [--verbose] [--print] [--write]
 //   ('all' = every asserting probe, hours; 'all-quick' = the union of the gate lists a lane runs before handing back — perf · player (incl. selector) · doors · qrf · checkpoints ·
-//    journal · ui + every identity card + the rebuild's families (room clear, threshold, silent, lines of fire, door walk, kit, missions, depot, registry, the two stands), `sh tools/qa/gate.sh all-quick`; 'repros' = the informational who-does-what tables with no expectation to assert (leaf-wedge,
+//    journal · ui + every identity card + the rebuild's families (room clear, threshold, silent, lines of fire, door walk, kit, missions, depot, registry, the two stands, the fold of the settled switch rows), `sh tools/qa/gate.sh all-quick`; 'repros' = the informational who-does-what tables with no expectation to assert (leaf-wedge,
 //    silent-repair, dead-script, motion) — NO VERDICT by design, kept out of 'all'; 'selftest' = the runner's own red / green paths; 'list' prints the index below, exit 0.
 //    'player' = the player-side PASS/FAIL set: the wall-clip family minus its 4-minute doors sweep, wall-snap minus its 2-minute grid sweep, selector, world-edge, teleport-cancel,
 //    crush, controls-behind, no-mag-pickup, kit-slots, whistle-keys, aim-snap — ≈ 5 min; 'wall-clip' = all five wall-clip probes ≈ 8 min: every way the player's 0.42 m circle could end up
@@ -64,7 +64,7 @@
 //     sdfrig: sdfrig-fit sdfrig-pack sdfrig-presets
 //     cast: cast-loader cast-file cast-fit cast-game cast-look cast-beam   (the look switch: both files, OFF = today's masks, one digest under either look;  a statured man's laser leaves his drawn muzzle;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
 //     selector: selector-input selector-noise selector-rows selector-sustained
-//     selftest: selftest-fail selftest-holds selftest-knobs selftest-pass selftest-quiet selftest-throw
+//     selftest: selftest-fail selftest-fold selftest-holds selftest-knobs selftest-pass selftest-quiet selftest-throw   (selftest-fold by its own name only)
 //     snap: snap-bites snap-page   (+ snap-open, by its own name only: red today)
 //     standoff: standoff-discipline standoff-door standoff-end standoff-ff standoff-flank standoff-lost standoff-see standoff-tour
 //     tactics: tactics-decay tactics-door tactics-flank tactics-lone tactics-rounds tactics-single
@@ -88,6 +88,7 @@
 //   1 = at least one probe failed (the banner names them), 2 = an unknown probe / family name (the known ones are listed; nothing ran).
 import { standUp, ROOT } from './headless.ts';
 import { asProbe, holdsOf } from './holds.ts';
+import * as FOLDM from './fold.ts';
 const IK = 'Space';   // the game's interact key (src/game/consts.ts INTERACT_KEY)
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard, dropFromHand, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
@@ -107,7 +108,7 @@ const DT = 1 / 60;
 const KNOWN = new Set<string>(['all', 'all-quick']);
 /** 'all-quick' = the union of the gate lists a lane is told to run before handing back (CLAUDE.md: perf · player (incl. selector) · doors · qrf · checkpoints · journal · ui + every identity
  *  card) — some twenty minutes where 'all' is hours; a dispatch line rides it when any of its names is one of these families / probes. `sh tools/qa/gate.sh all-quick` is the one-word gate. */
-const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'weapons-identity', 'civilians-identity', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'glasspen-off', 'pellets-identity', 'director-scheduler',
+const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'fold', 'weapons-identity', 'civilians-identity', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'glasspen-off', 'pellets-identity', 'director-scheduler',
   'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'workstow', 'squadnet', 'gunslots', 'gunroles', 'gunlook', 'kittree', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky', 'holds']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice and its switch off)
 // (first line: + glass-break's switch-off identity and the Director's idle identity, landed after the list froze — wave-4 review)
 /** The probes that failed this invocation (by name), the count run, and how many of those produced anything checkable (a boolean, a PASS / FAIL line, a banner). */
@@ -130,10 +131,12 @@ console.error = (...args: unknown[]) => { if (tapDepth) scan(args); rawErr(...ar
  *  and the loud card first in the table. */
 async function run(name: string, fn: () => unknown, standOf = name): Promise<boolean> {   // (standOf: the probe whose stand it runs on — its own, but for selftest-holds)
   RAN++; RAN_NAMES.push(name); const f0 = tapFails, p0 = tapPasses; tapDepth++;
-  let ok = true, ret: unknown;
+  let ok = true, ret: unknown; const plainSays = process.env.QA_VERDICTS === '1' && !FOLDM.FOLD.on && (process.env.QA_VERDICTS_BY ??= String(process.pid)) === String(process.pid), speaks = FOLDM.foldSpeaker('runner'); if (speaks) { const o = FOLDM.foldOutside(`before ${name}`); if (o) console.log(o); }   // (tools/qa/fold.ts: what was refused before this probe began is not its own, and is said)
   try { ret = await asProbe(standOf, fn); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
   finally { tapDepth--; }
+  if (speaks) console.log(FOLDM.foldLine(name, tapFails > f0 || !ok));   // (tools/qa/fold.ts: what this probe, and its children, tried to write over a settled row)
+  else if (plainSays) console.log(`  ${JSON.stringify({ plain: { probe: name, red: tapFails > f0 || !ok } })}`);   // (the outermost runner's alone, as the fold's line is)
   if (tapFails > f0) ok = false;
   if (typeof ret === 'boolean' || tapFails > f0 || tapPasses > p0) { CHECKED++; RAN_CHECKED.add(name); }
   if (!ok && !FAILED.includes(name)) FAILED.push(name);
@@ -3443,6 +3446,7 @@ if (on('sweep-fog', 'fog', 'perf', 'all')) await run('sweep-fog', () => runScrip
 if (on('sweep-snow', 'snow', 'perf', 'all')) await run('sweep-snow', () => runScript('sweep-snow-check.ts'));   // the F8 sweep's two snow flips: when each refuses, what it writes, that it puts it back
 if (on('held-meter', 'standoff', 'all')) await run('held-meter', () => runScript('held-meter-check.ts'));   // a held man's light meter is this hold's: a new hold, the same man again, a pair moved a room on, a pair where it stood (HELDMETER_BREAK=1 fails three of its four)
 if (on('standupgc', 'perf', 'all')) await run('standupgc', () => runScript('standupgc-check.ts'));   // a game stood up has done with the last one: twenty-five games stood up back to back in a process of their own must not grow the heap (a dropped game stayed as garbage; headless.ts standUp asks for the collection)
+if (on('fold', 'all')) await run('fold', () => runScript('fold-check.ts'));   // the settled switch rows held at their page value (tools/qa/fold.ts) and their list (tools/qa/switches.json): the list is the game's, a write is refused and counted, the runner says it by probe
 if (on('holds', 'all')) await run('holds', () => runScript('holds-check.ts'));   // the stand a probe is owed by its name (holds.ts): the table's rows are the game's, a held probe runs with them off and they are back after, and a check file with a main of its own runs through the same call (HOLDS_BREAK=1 must fail)
 if (on('passtimer', 'perf', 'render', 'all')) await run('passtimer', () => runScript('passtimer-check.ts'));   // every GPU pass the page opens has a timer, or a row in passtimer-exempt.ts that says why not: a pass with none is in no HUD row, no recording and not in the ladder's reading (the look's place pass was 2 ms nobody could see)
 if (on('quality-plan', 'perf', 'all')) await run('quality-plan', () => runScript('quality-plan.ts'));   // auto quality on paper (quality-plan.ts): plan()'s picks for the synthetic machines + the 39 state checks of the Quality controller (calibration, the ladder, the climb) — two-space '  PASS — …' lines
@@ -3695,6 +3699,12 @@ if (on('walked', 'missions', 'all')) await run('walked', async () => (await Bun.
 if (on('selftest-fail', 'selftest')) await run('selftest-fail', () => { console.log('- FAIL — deliberately: the runner\'s red path'); return false; });
 if (on('selftest-throw', 'selftest')) await run('selftest-throw', () => { throw new Error('deliberately thrown: the runner logs it and carries on'); });
 if (on('selftest-pass', 'selftest')) await run('selftest-pass', () => { console.log('- PASS — the runner\'s green path (after a fail and a throw when run as the selftest family)'); return true; });
+// `selftest-fold` (by its own name only): one settled switch row written off its page value here and once more in a child. Under the fold (tools/qa/fold.ts)
+// both are refused and the probe's fold line names both writers (fold-check (7)); with no fold the write takes and the fence round the probe puts it back.
+if (on('selftest-fold')) await run('selftest-fold', async () => { const F = await import('./fold.ts'), { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`), A = F.settledYesNo(F.switchRows(), 2)!;
+  const [t, k] = A.row.split('.'), T = (knobRegistry() as Record<string, Record<string, unknown>>)[t]; T[k] = !A.page;
+  const code = await Bun.spawn(['bun', 'run', `${import.meta.dir}/fold-check.ts`, '--write'], { stdout: 'inherit', stderr: 'inherit', env: process.env }).exited;
+  console.log(`- ${code === 0 ? 'PASS' : 'FAIL'} — ${A.row} written off its page value here and in a child (exit ${code}); it reads ${String(T[k])} now`); return code === 0; });
 if (on('selftest-quiet')) await run('selftest-quiet', () => { console.log('  (a probe that prints no check and returns nothing)'); });
 if (on('selftest-knobs', 'selftest')) {   // run() puts the knob singletons back: one probe scribbles on three tables and 'forgets', the next finds them as they were
   const T = knobTables() as any; const before = JSON.stringify([T.WHISTLE?.twiceWindow, T.CIV?.greet, T.NEEDS?.dwell]);
@@ -3737,7 +3747,7 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
     // line says DID NOT BITE where nothing failed, names the reds with no row as the word's to explain, and says BITE NOT SHOWN where every red has a row.
     // With more words than one it cannot say which of them bit.
     const { EXPECTED_RED: LIST, rowSays } = await import('./expected-red.ts'), { STAND, BY_HAND, BREAK_WORDS } = await import('./stand.ts');
-    const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
+    const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : FOLDM.FOLD.on ? 'the settled switch rows were folded (tools/qa/fold.ts: QA_FOLD or the Rust game\'s word), and the list is of a stand as it opens' : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
     const reads = (n: string): boolean => !other && n in LIST && (STAND === 'shipped' ? LIST[n].on !== 'old' : !!LIST[n].on);
     const reds = FAILED.filter(n => RAN_NAMES.includes(n)), banners = FAILED.filter(n => !RAN_NAMES.includes(n));
     const old = reds.filter(reads), fresh = [...reds.filter(n => !reads(n)), ...(reds.length ? [] : banners)];
