@@ -75,7 +75,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   reads the pistol row's own magazine (`TOPUP_BREAK=1`); `rifle-slot`'s grab expects the knife only where the close-in rule has one (`RIFLESLOT_BREAK=1`);
   `orderkeys-table` asks the menu whether 5 is free for the row that asks for 9, and asks a second one on a page of its own (`ORDERKEYS_BREAK`); `picker-start` and
   `picker-level` hold a boot to the level's own boxes, not the trim pieces a stood shape adds (`PICKERBOXES_BREAK=1`); `pellets-identity`'s three words of an old commit
-  are asked on the old stand only, and one line that needs no word is asked on both. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
+  are asked on the old stand only, and one line that needs no word is asked on both. THE SCRIPTED SESSION DID NOT DO WHAT ITS TITLE SAYS (2026-11-06, `journal-probes.ts recordScripted`,
+  the recording the journal family and `wxkinds-journal` are built on). A SCRIPT IS INPUT, and input a stand does not take leaves a recording that replays perfectly and holds
+  nothing: its canister went by the quick-throw key, which the page does not take, so on the page's stand nothing was thrown (`wxkinds-journal` read that as "the downpour
+  changed nothing"); and its pistol was put away by an E pressed after the digit that draws it, so the round at the lobby panel was never fired on ANY stand. It now throws
+  by the slot and the trigger and fires with the gun drawn, and returns `deeds` (whistled, thrown, fired): `journal-roundtrip`, `journal-pagelike` and `wxkinds-journal`
+  fail a recording that lacks one, and `--write` files no such recording. `JOURNALSCRIPT_BREAK=1` (no trigger pulled) is red in all three on both stands. The committed
+  `selftest.json.gz` is the old script's and is the one recording left that presses the quick-throw key (`src/game/quickthrow.ts` still counts the family's self-test among
+  its users: only that file is). `review-routed-shot`: one more staging pair at the manager's door, walled and routed whichever way its leaf stands open
+  (`ROUTEDSHOT_BREAK=1` puts his fix and his memory at the shooter's feet: 2 FAIL on both). `doorpath-paths` and `doorpath-gun` are the old stand's alone now
   (green on the page's). NOT DONE: `flashweight`'s two older rows are the old stand's measurements, kept as rows of both stands and not read again on the page's (the family
   did not finish inside half an hour on a loaded box). tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
