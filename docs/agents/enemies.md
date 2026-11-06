@@ -1335,7 +1335,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `hearingCheck` and the alert branch), `coverfire.ts` (`lane` exported as `coverLane`), `digin.ts` (`digInSetOn`, the question `digInBraced` asks with
   nothing counted), `game.ts` (tick and reset). KNOWN: the trigger in `doorForce` is `coverBlind`'s, copied — one helper for both is that file's to make.
   A locked door of theirs booted by one of them reads as 'forced' to `doorTamper`.
-  CHECK `tools/qa/doorforce-check.ts` (`probes.ts doorforce`, family `doors`; 15 lines green on both stands, `DOORFORCE_BREAK=1` fails 8 on both): on the
+  CHECK `tools/qa/doorforce-check.ts` (`probes.ts doorforce`, family `doors`; 15 lines green on both stands, `DOORFORCE_BREAK=1` fails 8 on both; since 2026-11-06
+  every world of it is on the game's own die, seed 2 or `TPS_SEED=n`: with none one tree said 6 rounds or 7 in its first line; one die is one sample): on the
   office, a posted man hears walked footfalls behind a shut wooden door, becomes sure at 1.83 s, fires at 2.17 s, 7 rounds in 8 s all across the leaf,
   0.00 m off his post, no boot; the same sounds to a calm man, an alert man with nothing known, and a crouched tread: nothing; a free man stands, puts 4
   through, walks 1.9 m up and boots it 5.95 s after he began (the keep torn, the leaf flung; his fix 0.12 m from the player; the boot heard as an
