@@ -201,6 +201,8 @@ let stoodBefore = false;
 export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string; /** stand the picture's keeper of the lights' reach masks up too (render/reachKeep.ts), as a page's engine has one, and step it once a frame: for the tools that read masks. Absent = none, and no mask is ever made */ reach?: boolean } = {}): Promise<Headless> {
   if (STANDUP_COLLECTS && stoodBefore) Bun.gc(true); stoodBefore = true;
   if (harnessProfile() !== STAND_AT_LOAD) throw new Error(`the stand was '${STAND_AT_LOAD}' when tools/qa/headless.ts loaded and is '${harnessProfile()}' now: TPS_PROFILE was set after the harness was imported (a static import loads before the file's first line). Set it before the import: \`const { standUp } = await import('./headless.ts')\` below the line that sets it`);
+  // (a game with no word stood after one under the word in the same process finds the process's dress rows as they were, BEFORE it is built: tools/blitz/rust-host.ts `dressDown`)
+  if ((globalThis as any).__tpsDressBack && !(await import('../blitz/word.ts')).resolve(STAND_AT_LOAD === 'frozen').word) (globalThis as any).__tpsDressBack();
   const ch = opts.ch ?? await (opts.cast ? loadCastCharacter() : loadCharacter());
   { const force = process.env.CUTBOXES ?? process.env.CUT_BOXES;   // CUTBOXES=1 | 0 in front of any headless tool forces the cut switch (CUT_BOXES is read too); a replay's env wins
     if (opts.env || force !== undefined) { const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`); cutConfig.on = opts.env ? !!opts.env.cutBoxes : /^(1|on|true)$/i.test(force!); }
@@ -255,6 +257,26 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
   };
   // TPS_GAME in front of any headless tool (tools/blitz/PLAY.md): the game stood here is a PUPPET of the Rust game, which steps in its place from the first
   // `game.update` (`rust`; `audit`), or it is stood the same way and stepped by the TypeScript tick (`ts`: the other side of a tally). Unset: nothing is loaded.
-  if (process.env.TPS_GAME) await (await import('../blitz/rust-host.ts')).standRust(game, process.env.TPS_GAME);
+  // WHICH is tools/blitz/word.ts's to say, the one switch (the word asked for, its table, a frozen run forced to the TypeScript tick).
+  { const S = (await import('../blitz/word.ts')).stand(STAND_AT_LOAD === 'frozen'); if (S.word) await (await import(RUST_HOST)).standRust(game, S.word); }
   return W;
 }
+
+// (the host is named by a value, not a literal: the tools' type check (tools/qa/tsconfig.json) then stops at this file and does not walk into the state bridge's
+// generated files behind the host, which it does not own)
+const RUST_HOST: string = '../blitz/rust-host.ts';
+
+// A TOOL SEEDS THE GAME'S STREAM AFTER THE GAME IS STOOD. With no word a game the harness stood has no die of its own and draws `Math.random` (src/math/dice.ts), so
+// a tool names the stream by putting a seeded die in `Math.random`'s place: `Math.random = seeded(7)`. Under any word (tools/blitz/PLAY.md) THE GAME OWNS ITS DIE,
+// as the page's game does, and the Rust tick cannot draw a function of the tool's: such a site says what it means through these two instead.
+/** `Math.random = die`, and under a word the game's own die put at the start of `seed`'s stream (`die` should be the seeded die of the same seed: the game then
+ *  rolls the numbers it rolled with no word, where the tool draws none itself). With no word this is the assignment and nothing else. Returns the put-back. */
+export function seedGame(game: any, die: () => number, seed: number): () => void {
+  const was = Math.random; Math.random = die;
+  if (game?.gameWord) { const d = game.dice;
+    if (d) { d.s = seed | 0; d.n = 0; d.seed = seed >>> 0; d.sys = die; }   // (in place: the die's word and count may live in the game's block; `sys`: the game draws its own die only while Math.random is the function its die knows, dice.ts)
+    game.rustHost?.seedDie(seed); }
+  return () => dieBack(game, was); }
+/** `Math.random = was` (a die put back after a stretch under the tool's own), and under a word the game goes on with its OWN die, where with no word it goes back
+ *  to drawing `was` */
+export function dieBack(game: any, was: () => number): void { Math.random = was; if (game?.gameWord && game.dice) game.dice.sys = was; }

@@ -20,7 +20,11 @@ tools/blitz/rust.sh rust bun run tools/qa/playthrough.ts --scn depot-four --seed
 | `rust.sh` | the harness's word and the bridge's preload in front of any command |
 | `tally-diff.ts` | two `playthrough.ts --json` files side by side, a run a row |
 | `thrice.ts` | one fight stood N times in one process, every game held to the first (the digest a second; `--ticks`, `--dump` to find where two part) |
+| `word.ts` | THE ONE SWITCH: the word asked for (`TPS_GAME`, else `DEFAULT_WORD`), the table, a frozen run, the closing line. No import of src |
+| `preload.ts` | bunfig.toml's preload: nothing unless the word asks; then the bridge's window (`expose.ts`) and the top process's closing line |
 | `qa-kinds.json` | the table `TPS_GAME=table` reads |
+| `table-check.ts` | the table held to `probes.ts list` (by hand): red on a name the table lacks or a row probes.ts lost |
+| `die-check.ts` | the game's die seeded after the stand, the helper and the plain site, a line a word |
 | `rust/game_face/src/harness.rs` | the face's exports a host that plays needs: the filtered export with its memo, the camera's ask, a flooded room, the program stopped before a take |
 
 ## Two ways
@@ -99,7 +103,9 @@ an object).
 
 ## The harness's word
 
-`TPS_GAME` in front of any headless tool, with the bridge's preload for the tool and its children (`tools/blitz/rust.sh` sets both):
+`TPS_GAME` in front of any headless tool run from the repository's root (`tools/blitz/rust.sh <word> <command>` is the same thing from anywhere). The
+bridge's preload is listed in bunfig.toml and does nothing unless the word asks (below), so the word alone is enough, for the tool and every child `bun`
+it starts in the root. ONE FILE decides which game a `standUp` stands: tools/blitz/word.ts.
 
 | | |
 |---|---|
@@ -107,23 +113,123 @@ an object).
 | `TPS_GAME=audit` | the same, audited |
 | `TPS_GAME=ts` | the SAME STAND stepped by the TypeScript tick: the other side of a tally |
 | `TPS_GAME=table` | the Rust game, but for the checks `qa-kinds.json` keeps on the TypeScript tick (below) |
-| unset | nothing of this is loaded |
+| `TPS_GAME=none` | nothing of this is loaded: the harness as it always was |
+| unset | `DEFAULT_WORD` of word.ts: `'none'` today. THE FLIP is that one line, to `'table'` |
 
-The stand under any of the three words is mission.ts's: the game rolls a die of its own where the tool gave it none (seeded off the tool's `Math.random`
+The stand under `rust`, `audit` and `ts` is mission.ts's: the game rolls a die of its own where the tool gave it none (seeded off the tool's `Math.random`
 as the game is stood, so `playthrough.ts`'s seeds roll different dice and both words roll the same), and the dress rows are down. So a
 tally under `ts` is not the tally the tool makes with no word (which rolls `Math.random` and dresses); it is the one to hold the Rust game's beside.
 (`TPS_RUST` cannot be the word: src/sim/sim.ts refuses it as a retired one.) `TPS_GAME_WHOLE=N`: a whole apply every N ticks.
 
+**The preload.** The bridge reads the simulation's own module variables through a window `expose.ts` opens as each source file loads, so it must be
+registered before any source file is read. bunfig.toml lists `tools/blitz/preload.ts` for every `bun` started in the root; it imports word.ts (one small
+file, no source file) and, only where a word asks, `expose.ts`. With no word, measured: `probes.ts sticky` the same output line for line (25.0 s without
+the list, 26.9 s with, one run each on a loaded box); `PT_DIGEST=1 playthrough night-breach:1` the same digest and the same whole record; `bun run
+tools/build.ts` the same 137 files to the byte without the list, with it, and with it ACTIVE (`TPS_GAME=table`); the dev server's `/` and its script
+the same bytes the same three ways (the bundler does not run a runtime plugin). A child started outside the root, or under node, has no preload: under a
+word its `standUp` throws and says so. (A bunfig given by `--config` from another folder resolves the server's own plugin against that folder.)
+
+**A frozen run** (`TPS_PROFILE=frozen`) is the TypeScript tick's whatever the word: the frozen stand holds settled switches off their page values, and a
+settled switch is a constant in the Rust game. word.ts forces it and the closing line says so (`ALL n games of this run were FORCED TO THE TYPESCRIPT TICK`).
+
+**The closing line is the top process's.** A tally plays its games in children whose output goes nowhere. The preload of the first process of a run names
+a file in the environment (`TPS_GAME_TALLY`); every process below adds its counts as it ends; the top one sums them into the one line.
+
 **The word by a table (`TPS_GAME=table`).** `tools/blitz/qa-kinds.json` has a row a probe of `tools/qa/probes.ts` (its kind: what it does to the game
 between two ticks, written by `qa-census.py --kinds`) and a row by hand for a stand-alone tool that cannot run on the Rust game yet, with its reason.
-As a game is stood, the probe running then (the runner names it) or the tool's own file decides: kinds iii and iv (a check that CALLS the tick's rules,
-hangs its own function on a game object, checks a TypeScript function with no game, or holds the game to a walk of the JavaScript objects) and a probe
-the census did not read are stood on the TypeScript tick; everything else on the Rust game. Each check kept on the TypeScript tick says so as its first
-game is stood (`[the game: <name> is stood on the TYPESCRIPT TICK by the table (kind iii); its verdict is not the Rust game's]`) and the process ends on
-one line that counts both sides and names them (`=== the game, by the table: … ===`), so a green of the old tick is not read as the Rust game's.
+As a game is stood, the probe running then (the runner names it) or the tool's own file decides, in this order:
 
-The table also lists (`pins`) the checks that RAN WITH A SETTLED SWITCH OFF ITS PAGE VALUE (a row the Rust game folded to a constant: the check asks
-for a game the Rust game does not have), from a run of the gate's families with `RH_FOLDED`: 185 probes; they stay on the TypeScript tick too.
+1. a probe with NO ROW (added since the census, or one the census found no line for: the table's `unread`): the TypeScript tick, and the closing line
+   counts and names it (`N checks with no row: …`);
+2. kinds iii and iv (a check that CALLS the tick's rules, hangs its own function on a game object, checks a TypeScript function with no game, or holds
+   the game to a walk of the JavaScript objects): the TypeScript tick;
+3. `pins`: a check that RAN WITH A SETTLED SWITCH OFF ITS PAGE VALUE (a row the Rust game folded to a constant), from a run of the gate's families with
+   `RH_FOLDED`: 185 probes; the TypeScript tick;
+4. `waits`: a check SEEN RED ON THE RUST GAME and green on the TypeScript tick, by hand, with what it waits on; the TypeScript tick until its row is taken out;
+5. everything else (kinds i and ii that are in none of the lists): the Rust game;
+6. a stand-alone tool by its row: `ts`, or `none` (stood with no word at all: `tools/qa/coop-check.ts`, whose second engine is node), else the Rust game.
+
+Each check kept off the Rust game says so as its first game is stood (`[the game: <name> is stood on the TYPESCRIPT TICK by the table (kind iii); its
+verdict is not the Rust game's]`) and the run ends on one line that counts both sides and names them (`=== the game, by the table: … ===`), so a green
+of the old tick is not read as the Rust game's. HOW a kept check is stood is one constant of word.ts, `KEPT_STAND` (`TPS_KEPT=ts|none` for one run):
+`'none'` (the default) exactly as with no word, to the byte, so nothing a kept check recorded moves when the default word becomes `table`; `'ts'` the
+word's own stand (the game owns its die, the dress rows down), under which every exact number recorded with no word moves once (seen on the first
+families tried: `weapons-identity` 2 of 2 red, `workstow` 2 of 5, green both with no word and under `'none'`). A FROZEN run is always stood as with no word.
+
+A stand-alone tool: by its row, `rust` (seen to play the same on the Rust game: `playthrough.ts`, `seats-run.ts`, `bench-seeds.ts`, `thrice.ts`,
+`die-check.ts`), `ts` (`tour.ts`, `soak.ts`, `seats-check.ts`, `lesson-run.ts`) or `none` (`coop-check.ts`, `exact-check.ts`, `dice-check.ts`). A TOOL
+WITH NO ROW is kept on the TypeScript tick and counted like a probe with none (485 files of tools/qa stand a game; run as its own main a check file has
+no probe name). One of this folder's own tools with no row stands its games itself and gets no word. A process that is not bun (a child under node)
+has no bridge: its game is stood with no word, said and counted.
+
+`tools/blitz/table-check.ts` (by hand, after a probe is added, renamed or deleted) holds the table to `probes.ts list`: red when the runner lists a name
+the table has no row for (as a probe, a family that only runs its members, or an unread name) or the table has a row, a pin or a wait of a name the
+runner lost. The census on this tree: 1,512 names known; 1,258 probes read (iii 766, iv-a 186, ii 114, 0 83, iv-b 61, iv-c 39, i 9), 150 families,
+105 unread. BY THE TABLE: 61 probes on the Rust game, about 1,115 kept on the TypeScript tick, 82 that stand no game.
+
+The `waits` are from a run of each of the 101 probes of kinds i and ii that no pin holds, one at a time under the table word, a red one again with
+no word: 61 GREEN ON THE RUST GAME; 35 of kind ii red on the Rust game and green with no word (they write the game's fields by name between ticks);
+2 of kind i the same (`charmats-cast`: a cast man's cloth tint; `standupgc`: 25 games stood back to back grow the heap 125 MB where 60 is allowed);
+2 over a 240 s cap under both; 1 red under both (`entrypoints-count`: its own red on this tree).
+
+`tools/qa/missions-gate.ts --seeds 1 --quiet-seeds 1-2 --jobs 1` by the table: every line PASS (1,210 s on a loaded box): the 21 squad missions on
+the Rust game, the 16 quiet runs on the TypeScript tick (`solo-night.ts` has no row: a quiet mission has never been played on the Rust game).
+
+## The flip
+
+`DEFAULT_WORD` in tools/blitz/word.ts, `'none'` to `'table'`: one line. From then a headless tool run from the root with no word is `TPS_GAME=table`
+(`TPS_GAME=none` is the harness as it was). What changes at that moment, and what does not:
+
+- **On the Rust game**: the 61 probes above; `playthrough.ts` (so the squad half of `missions-gate.ts`, and every tally), `seats-run.ts`,
+  `bench-seeds.ts`. A tally's record on the Rust game differs from the TypeScript's in the places listed under the gate's tools (the tool's own
+  watchers and wrappers) and its digest in two fields (`decals`, `civilians[i].dice`), and its stand is the word's (the game's own die, the dress rows
+  down): a number pinned from a tally with no word is recorded again.
+- **Kept on the TypeScript tick, stood exactly as with no word** (`KEPT_STAND = 'none'`): about 1,115 probes with a row (kinds iii and iv, the 185
+  pins, the 40 waits), the 105 names with no row, every stand-alone tool with no `rust` row (`tour.ts`, `soak.ts`, `seats-check.ts`, `lesson-run.ts`,
+  the game server and its bots, `solo-night.ts` and every check file run as its own main), a child under node, and any run with
+  `TPS_PROFILE=frozen`. Their verdicts do not move. Each says so as it stands its first game.
+- **What a run prints**: a line a kept check, and one closing line from the top process (`=== the game, by the table: … ===`). A tool that reads
+  another tool's whole output to the byte would see them; the gate's reader (tools/qa/gate.sh) matches verdict lines and does not.
+- **The preload is active in every `bun` started in the root** (it reads schema.json and adds a line of getters to each simulation source file as it
+  loads). Measured the same to the byte with it active: the production build, the dev server's page and script, and a frozen tally's whole record.
+- **Cost**: a probe on the Rust game pays a start (three exports) for every game it stands and about twice a tick; the 61 took 5 to 40 s each alone.
+
+- **One process, both games.** The dress rows are one table a process and a game under the word is stood with them down: a kept check stood after a
+  game on the Rust game found them down (the `breaks` family: 6 of 11 red behind one Rust-side check, each green alone). The harness now puts them
+  back before it builds a game with no word; `breaks` by the table is ALL PASS on that tree.
+
+**SINCE THE SETTLED ROWS ARE FOLDED** (tools/qa/fold.ts, joined after everything above was measured): the fold is laid for the whole process whenever
+the word is `rust`, `audit` or `table`, so a check KEPT on the TypeScript tick is no longer stood "as with no word": it runs on the FOLDED TypeScript
+tick, and a check that writes a settled row is refused there. On the joined tree, with no word `sticky` and `breaks` are ALL PASS; by the table
+`sticky` is 10 of 10 red (all ten kept, all with writes refused) and `breaks` 6 of 11 (every red one has a refused write: `CUT.on`, `EVICT.on`,
+`FURNBLAST.on`, `BREAKS.look*`; no green one has). Those are reds of the folded TypeScript tick, not of the Rust game, and they are the flip's
+cost until those checks are staged again. The fold asks the one switch for the default word (`DEFAULT_WORD`), so the flip is still one line. The
+table's `pins` (from the collector that came before the fold) are now what the fold's own line a probe says (`refused` not empty) and should be made
+again from it: not done. Every "TypeScript tick" beside a number above is the UNFOLDED one (the word's stand, or no word).
+
+The 62 probes the table stands on the Rust game, each alone UNDER THE FOLD (by the table; a red one again with `QA_FOLD=1` on the TypeScript tick,
+the reference): 42 GREEN ON THE RUST GAME; 20 red there and RED ON THE FOLDED TYPESCRIPT TICK TOO; none red on the Rust game alone. The 20 are the
+table's `both`: such a check says so as it stands a game and the closing line counts it (`N checks seen RED ON THE FOLDED TYPESCRIPT TICK TOO`).
+
+Not shown: the gate's whole list (`probes.ts all-quick`) in one process by the table; the tour's and the soak's gate forms; the kept checks under the
+fold beyond two families; the 40 `waits` and the 185 `pins` again under the fold.
+
+## The die
+
+The game owns its die under every word, as the page's game does: no seam lets the Rust tick draw a function a tool put in `Math.random`'s place. (The
+TypeScript rule "a die of the game's own is used only while `Math.random` is the function it was when the die was made", src/math/dice.ts, is the
+TypeScript tick's and goes with it.) A tool that wants a given stream AFTER the game is stood says so through tools/qa/headless.ts:
+
+- `seedGame(game, die, seed)`: with no word, `Math.random = die` and nothing else (what the site did); under a word, also the game's own die put at the
+  start of `seed`'s stream, on the puppet (in place: the die's word and count may live in the game's block) and in the Rust game (`RustHost.seedDie`: the
+  `dice` part of the block written in place; no new call of the face's). Returns the put-back.
+- `dieBack(game, was)`: `Math.random = was`; under a word the game goes on with its own die.
+
+`tools/blitz/die-check.ts` (two seconds of play, the stream named, two seconds of Sam's fire): with no word the helper's line is the plain site's; under
+`ts` and `rust` the helper leaves the game's die at the same word after the same 18 rolls (ad0e9341); the plain site leaves 1 roll under `ts` (the tool's
+function took 18) and 19 under `rust`. A seed put in BEFORE the stand needs no helper: the stand seeds the game's die off one draw of it.
+The sites, by reading: 782 assignments in 349 files; 137 seed or function sites after a stand (and 137 put-backs); 28 of them in the 11 families that
+have a probe on the Rust game by the table. They are not converted: the census and the codemod's plan are with the swap's notes.
 
 ## The gate's playing tools under each word (the changed-only export, the joined bodies; one at a time, the box at a load of 9 to 15)
 
@@ -134,11 +240,15 @@ for a game the Rust game does not have), from a run of the gate's families with 
 | `bench-seeds.ts --twice snow:10`, `dark:1` (the same run twice) | 45 s, 38 s PASS | 113 s, 84 s PASS | the same digest under both words; "Sam hit" is the tool's own tap (2 | 0) |
 | `seats-run.ts` | 87 s PASS | 170 s PASS | |
 | `seats-check.ts` | 319 s PASS | 477 s, 3 red | `rollback`, `twin`: a word made by walking the JavaScript objects (and `walkAhead` on the puppet); `down`: calls `hitPlayer` |
-| `mpserver-check.ts` | 226 s, 2 red (clocks) | 443 s, 4 red | `same fight`, `late joiner`: the check runs on the wall clock and the games stepped 650 to 917 of 1,200 ticks; `lag`, `ahead` red under `ts` too |
-| `tools/qa/coop-check.ts` | 209 s, 4 red | 520 s, 4 red | its second engine (node) has no preload under either word; under `rust` the tool's own die in `Math.random`'s place is not the Rust game's |
-| `dice-check.ts` | 24 s, 1 red | 51 s, 2 red | `default`: the word gives the game a die (both words); `same seed`: provokes its fight by a rule |
+| `mpserver-check.ts` | 226 s, 2 red (clocks) | 443 s, 4 red | `same fight`, `late joiner`: the check runs on the wall clock and the games stepped 650 to 917 of 1,200 ticks, at 120 to 175 ms a tick: THE RUST GAME NEVER LISTED ITS WORLD there (a networked tick calls `world.relist()`, which had no tap), so its state grew 35 KB a tick and the every-tick export slowed with it. Tapped since ("Numbers", below); `lag`, `ahead` red under `ts` too |
+| `tools/qa/coop-check.ts` | 209 s, 4 red | 520 s, 4 red | its second engine (node) has no preload under either word: by the table it is stood with no word (ALL PASS, 226 s). Its bun half alone (`--one hostage-rescue 1`) under each word: the same row, and the chained raw float bits equal on all 107 half seconds (it was 3,797 frames against 10,528: the tool's counter on `Math.random` made every die put back a new function, so the TypeScript tick left the game's die; under a word it now gives the same function back) |
+| `dice-check.ts` | 24 s, 1 red | 51 s, 2 red | `default`: the word gives the game a die (both words); `same seed`: provokes its fight by a rule (`teleportPlayer`), not the die. The tool checks the TypeScript die's own rule: by the table it is stood with no word (6 of 6) |
+| `tour.ts --runs 1 --seed 1 --quiet` | 22 s PASS | 52 s, 9 FAIL | kind iii: the showcase's own Demo (src/game/demo.ts, host-side) calls rules and writes fields on the puppet between ticks; first: `stop2-hand` (Sam's hand never on the fire exit's leaf), then the takedown, the hold, the firefight, the room clear's drill. By the table (its row `ts`): PASS |
+| `soak.ts --seeds 1 --minutes 3 --quiet` | 34 s ALL PASS | 62 s, dies at 2.5 min | kind iii / iv-a: its stimuli call rules on the puppet: first `f2530 exception (stim:mission-step): Attempted to assign to readonly property` (player.ts:1107 `w.cam.peekOffset = null` under `teleportPlayer`: an object the apply left frozen), then `S.u` and `h.where` undefined (a `PoseSet.home` the apply left undefined, skeleton.ts:203), the last one uncaught. By the table (its row `ts`): ALL PASS |
 | `knobs-check.ts` | PASS | PASS | stands no game |
 | `tools/blitz/coop-check.ts` | 430 s, its 3 lines red as its header expects | | stands no game through the harness and reads no word |
+
+The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minutes) were not run under `rust`: the short forms are not clean.
 
 ## A tool that stands many games, and what it does with them
 
@@ -177,6 +287,8 @@ for a game the Rust game does not have), from a run of the gate's families with 
 - **What a check does to the game between two ticks**: `tools/blitz/qa-census.py` (a probe a row, by kind). `--folded <the switch list>` adds the checks
   that put a SETTLED switch (a constant in the Rust game) on its other side, by reading (FOLDED.md); `RH_FOLDED=<the switch list>` with `RH_TRACE` counts,
   as a check runs, the ticks each settled row stood off its page value (`folded` in the game's line): what the check really pins.
+- **`RH_TIMES=<file>`**: as a tool ends, a line a game stood on the Rust game: its ticks, the clock from its first step to its last (the tool's own code
+  between two steps included) and every ms the host spent, by what it did.
 - **`RH_OUT_SAY=1`**: the first throw of each out event's arm with the event and where it threw. **`RH_OFF=own`**: the weak tables listed for every game again.
 
 ## Stand-ins (each marked `STAND-IN:` in the code with its reason and where it belongs)
@@ -188,6 +300,10 @@ for a game the Rust game does not have), from a run of the gate's families with 
   left it out or it is in another hosted game's book. An apply deletes and orders only this game's keys. NOT COVERED: a game with no host that makes
   new things while a hosted game plays beside it. Belongs in the generated export.ts (`keysOf`, the once-keyed and game-keyed reads) and import.ts
   (`orderSide`, every `liveKeys()`).
+- **The game's die seeded on the Rust side by a write into the block** (rust-host.ts `seedDie`: the `dice` part found by its name, the count and the word
+  by their offsets). Belongs in the face: one call that seeds the die of the game in a slot.
+- **The list-alone call tapped by hand** (rust-host.ts: `world.relist` → `face_upload`, beside the tap on `upload`). Belongs with the generated taps.
+- **The bridge's own tools known by their path** (word.ts: a tool of tools/blitz with no row gets no word). Belongs in the table, a row a tool.
 - **A box whose markings went is `marks: null`** after an apply; scene/boxes.ts:841 tests `!== undefined`. Made undefined before the puppet's own listing
   (rust-host.ts). Belongs in import.ts.
 - **The whole applies owed** (the list above): each stands for fields the filtered list lacks. Belongs on the generated list.
@@ -229,6 +345,32 @@ The fast way, release module, 4 cores. THE MACHINE WAS NEVER QUIET for the longe
 | **all in** | **10.4** | **5.0** | **273** |
 | the check (not the host's): the host's half read and held · the die and the block's hashes | 1.36 · 0.68 | 0.14 · 0.52 | |
 | wall for the mission, the check included | 37 s | 8.0 s | 822 s |
+
+**By the host's own record** (`RH_TIMES`), the bodies and cut joined since, seed 1, the box at a load of 16 to 19 from other work (so every number is
+high; the plain `ts` play beside each under the same load):
+
+| ms a tick | night-breach, 1,464 ticks | room-clear-four, 3,003 | depot-four, 5,355 | the game server's game before the list was tapped (733 ticks) |
+|---|---|---|---|---|
+| the host's half | 0.33 | 0.36 | 0.28 | 1.7 |
+| `face_step` | 2.80 | 3.13 | 2.19 | 16.9 |
+| the filtered export | 2.63 | 2.63 | 2.25 | **123.2** |
+| the filtered apply | 3.61 | 3.66 | 2.99 | 23.0 |
+| whole exports and applies (5, 9, 12 of them; 0) | 0.80 | 0.63 | 0.45 | 0 |
+| the block's copy | 0.66 | 0.49 | 0.43 | 2.2 |
+| out events · the dress step · the driver's calls | 0.03 · 0.38 · 0.02 | 0.02 · 0.19 · 0.01 | 0.01 · 0.08 · 0.01 | 0.07 · 0.82 · 0 |
+| the start, once, spread over the play | 1.45 | 0.48 | 0.21 | 2.9 |
+| **the host, all in** | **12.7** | **11.6** | **8.9** | **170.8** |
+| the clock from the first step to the last, a tick | 14.2 | 12.8 | 9.7 | 174.6 |
+| the tool's wall, `ts` then `rust` | 16.4 s, 24.9 s | 26.1 s, 42.0 s | 29.8 s, 55.8 s | |
+
+A tally's tick is the step, the every-tick export and its apply in about equal thirds; the whole applies, the calls and the out events are small.
+THE GAME SERVER'S TICK was something else: a networked game's tick lists the box world by `world.relist()` (src/net/step.ts), the host tapped only
+`upload()`, and so the Rust game never listed its world: every tick's frame boxes stayed in its tables (the whole state 10.7 MB at tick 100, 28.4 MB at
+tick 600), the every-tick walk met them all (its time 9, 17, 27, 25, 38, 41 ms over the first six hundred ticks; its size a steady 185 KB) and the step
+and the apply slowed with it. `relist` is tapped now (`face_upload`): 4.0, 2.9, 4.4, 7.2, 4.9, 2.3 ms at the same load, and the chained raw-bits word
+of the server's game after 600 ticks is the `ts` game's before and after the mend. `mpserver-check.ts` under `rust` after it: 199 s where 473, a tick
+27 to 45 ms in each of its three processes where 120 to 175, 13 lines PASS and 2 red, `lag` and `ahead`, the two that are red under `ts` too
+(`same fight` and `late joiner` are green: every game stepped its 1,200 ticks).
 
 The start (the whole export, the Rust game made, the memo filled, four warm applies) is 300 to 700 ms once. The module stands at 160 to 175 MB for a whole
 mission (pass-four passed 2 GB before the memo's buffers were trimmed). No step grew the memory once 48 MB is reserved before play.

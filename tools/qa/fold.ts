@@ -35,6 +35,7 @@
 import { readFileSync, writeFileSync, readdirSync, mkdtempSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, basename } from 'node:path';
+import { DEFAULT_WORD } from '../blitz/word.ts';
 
 export const SWITCH_KINDS = ['settled', 'open decision', "player's or run-time"] as const;
 export type SwitchKind = typeof SWITCH_KINDS[number];
@@ -55,7 +56,8 @@ export function settledYesNo(rows: readonly SwitchRow[], depth: number): SwitchR
  *  word is the Rust host's own: nothing else in this tree reads it yet, and what else it may be spelt is that host's to say and to refuse) */
 export function foldWanted(env: Record<string, string | undefined> = process.env): boolean {
   if (!['1', '0', '', undefined].includes(env.QA_FOLD)) throw new Error(`QA_FOLD=${env.QA_FOLD}: 1 lays the fold of the settled switch rows (tools/qa/fold.ts), 0 or nothing does not`);
-  return env.QA_FOLD === '1' || ['rust', 'audit', 'table'].includes(env.TPS_GAME ?? '');
+  // (the word with nothing in front is the Rust host's to say too: tools/blitz/word.ts DEFAULT_WORD, the one line that makes `table` the default)
+  return env.QA_FOLD === '1' || ['rust', 'audit', 'table'].includes(env.TPS_GAME ?? DEFAULT_WORD);
 }
 
 export const FOLD = { on: false, rows: 0, skipped: [] as string[], missing: [] as string[], offAtLay: [] as { row: string; value: unknown }[] };
