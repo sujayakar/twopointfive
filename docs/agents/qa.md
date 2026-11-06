@@ -211,6 +211,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   frame the word and the 'armed' beat are both in, ten seconds at most, and nobody of ours in the blast (`SQUADTRY_BREAK=1`: half a second, FAIL on
   both; LOOSENED from two seconds flat). Read and left: `move-walktries` (a man shifts 5 cm in the two seconds a line wants nobody moving),
   `orderui-door`, `missing`, `nightbreach-contested`, `standoff-end`.
+  A RIDER (11-06): `doormenu-rows` was red on the page's stand in the records office alone, with no row ('no bangs left: the tools page changed
+  shape'). The probe's `find` took a door's angle, stood Sam by it (which steps the game) and handed it back as shut; there a man of the floor swings
+  `records_west` wide in those frames, and its page, rightly 'shut that door' on the charge's digit, was held to the shut door's shape. `find` asks
+  the leaf again after the stand, by the door tools' own word for open too, and leaves a door that moved for the next (both readings of a shut door go
+  through it); the no-bangs case also holds its menu to the door it found. `DOORMENUFIND_BREAK=1` leaves the second asking out and stands the found
+  door open (21 levels FAIL on both stands).
   tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
