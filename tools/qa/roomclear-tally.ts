@@ -439,7 +439,7 @@ if (import.meta.main) {
   await Promise.all(Array.from({ length: jobs }, async () => {
     while (next < todo.length) {
       const job = todo[next++];   // (one process a run: nothing of one game is left in the next one's module state)
-      const proc = Bun.spawn(['bun', 'run', import.meta.path, '--worker', '--policies', job.policy, '--seeds', String(job.seed), '--cap', String(cap), ...(opt.set ? ['--set', opt.set] : [])], { stdout: 'pipe', stderr: 'pipe' });
+      const proc = Bun.spawn(['bun', 'run', import.meta.path, '--worker', '--policies', job.policy, '--seeds', String(job.seed), '--cap', String(cap), ...(opt.set ? ['--set', opt.set] : [])], { stdout: 'pipe', stderr: 'pipe', env: process.env });
       const [text, errText] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]); await proc.exited;
       const line = text.split('\n').find(l => l.startsWith('RESULT '));
       const r: RunOut = line ? JSON.parse(line.slice(7)) : { policy: job.policy, seed: job.seed, end: 'error', t: 0, opsUp: 0, rooms: {}, falls: [], rounds: {}, orders: 0, refused: [], note: `worker died (${proc.exitCode}): ${errText.slice(-300)}` };

@@ -530,7 +530,7 @@ export async function levelLintProbe() {
   { const dir = mkdtempSync(join(tmpdir(), 'tps-lint-')); try {
       const good = join(dir, 'good.json'); writeFileSync(good, serializeLevelData(OFFICE_DATA)); writeFileSync(join(dir, 'good.lint.json'), JSON.stringify({ allow: officeAllow }));
       const bad = join(dir, 'bad.json'); const bd = JSON.parse(base); bd.lights[0].range = 0; writeFileSync(bad, serializeLevelData(bd));
-      const run = (f: string) => Bun.spawnSync({ cmd: [process.execPath, 'run', join(ROOT, 'tools/qa/level-lint.ts'), f, '--quiet'], cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+      const run = (f: string) => Bun.spawnSync({ cmd: [process.execPath, 'run', join(ROOT, 'tools/qa/level-lint.ts'), f, '--quiet'], cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });
       const a = run(good), b2 = run(bad); const ao = new TextDecoder().decode(a.stdout), bo = new TextDecoder().decode(b2.stdout);
       verdict(a.exitCode === 0 && /PASS \(0 warnings\)/.test(ao), 'CLI on the office (with sidecar) → exit 0, "PASS (0 warnings)"', ao.trim().split('\n').pop());
       verdict(b2.exitCode === 1 && /light-range/.test(bo) && /FAIL \(1 error\)/.test(bo), 'CLI on a level with a range-0 light → exit 1, the finding printed', bo.trim().split('\n').slice(-2).join(' | ').slice(0, 160));

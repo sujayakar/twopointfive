@@ -70,7 +70,7 @@ const PAINT = new Set(['albedo', 'material', 'rough', 'metal', 'stuff', 'does'])
 for (const [plain, look] of Object.entries(LOOK_LEVELS as Record<string, string>)) {
   console.log(`\n${plain} ↔ ${look}`);
   { const gen = genOf(plain) ?? plain.replace(/\.json$/, '');
-    const p = Bun.spawnSync(['bun', 'run', resolve(ROOT, 'tools/levels/export.ts'), gen, '--check'], { cwd: ROOT });   // (the exporter checks a level's file in the look with it)
+    const p = Bun.spawnSync(['bun', 'run', resolve(ROOT, 'tools/levels/export.ts'), gen, '--check'], { cwd: ROOT, env: process.env });   // (the exporter checks a level's file in the look with it)
     check(p.exitCode === 0 && p.stdout.toString().includes(look), `levels/${plain} and levels/${look} are what their generators give now (export ${gen} --check: exit ${p.exitCode})`); }
   const A = J(plain), B = J(look); const nA = A.boxes.length;
   let moved = 0, repainted = 0, reclassed: string[] = [];

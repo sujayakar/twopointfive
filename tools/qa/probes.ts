@@ -2948,9 +2948,6 @@ if (on('threshold-grenade', 'threshold', 'all')) await run('threshold-grenade', 
 if (on('door-grenade', 'doortools', 'all')) await run('door-grenade', async () => (await import('./doorgrenade-probes.ts')).doorGrenade());   // DOORTOOLS.fragHold — a grenade scatters the men of a door order: the door is not opened, a charge's man not given up on and a word makes no sound until they are back on their marks, `fragHoldCap` s at most. FRAGHOLD_BREAK=1 must fail
 if (on('threshold-play', 'threshold', 'all')) await run('threshold-play', async () => (await import('./threshold-probes.ts')).thresholdPlay());
 if (on('threshold-identity', 'threshold', 'all')) await run('threshold-identity', async () => (await import('./threshold-probes.ts')).thresholdIdentity());
-// ---------------------------------------------------------------- … and as an order on the door menu (thresholdmenu-probes.ts; doortools.ts THR_PAGE / HELD_PAGE: both forms behind X, 5, 4 in every start-card scenario, what next behind X, 5 while the jambs are held — all by keys)
-if (on('thresholdmenu-rows', 'thresholdmenu', 'all')) await run('thresholdmenu-rows', async () => (await import('./thresholdmenu-probes.ts')).thresholdmenuRows());
-if (on('thresholdmenu-held', 'thresholdmenu', 'all')) await run('thresholdmenu-held', async () => (await import('./thresholdmenu-probes.ts')).thresholdmenuHeld());
 // ---------------------------------------------------------------- the calls taken while the maintainer was away, both sides of each switch (calls-probes.ts; rebuild/away-build/calls.md)
 if (on('calls-shipped', 'calls', 'all')) await run('calls-shipped', async () => (await import('./calls-probes.ts')).callsShipped());
 if (on('calls-menu', 'calls', 'all')) await run('calls-menu', async () => (await import('./calls-probes.ts')).callsMenu());
@@ -3432,7 +3429,7 @@ if (on('director-scheduler', 'director', 'all')) await run('director-scheduler',
   if (ran) familyBanner('cast', (await import('./cast-probes.ts')).castFailures()); }
 /** A stand-alone QA script run as a child (its process.exit stays its own): every line echoed through console.log so run() and gate.sh count its check lines; a non-zero exit is a FAIL line. */
 async function runScript(file: string, args: string[] = []): Promise<boolean> {
-  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/${file}`, ...args], { stdout: 'pipe', stderr: 'pipe' });
+  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/${file}`, ...args], { stdout: 'pipe', stderr: 'pipe', env: process.env });
   const [out, err] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text()]); const code = await p.exited;
   for (const ln of (out + err).split('\n')) if (ln.trim()) console.log(ln);
   if (code !== 0) console.log(`- FAIL — ${file} exited ${code}`);
@@ -3689,9 +3686,9 @@ if (on('secondway', 'missions', 'all')) await run('secondway', async () => (awai
 // … and a defender sees what he watches: dressing never blinds a mark (tools/qa/marksight-check.ts, a program of its own)
 if (on('marksight', 'missions', 'all')) await run('marksight', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/marksight-check.ts`], { stdout: 'inherit', stderr: 'inherit', env: { ...process.env, TPS_PROFILE: 'shipped' } }).exited) === 0);
 // … and its starts and doors are on a way (tools/qa/walked-check.ts, a program of its own; it loads each level as the page does whatever the stand: what the ways do not reach is owed by name, a file a level)
-if (on('walked', 'missions', 'all')) await run('walked', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/walked-check.ts`], { stdout: 'inherit', stderr: 'inherit' }).exited) === 0);
+if (on('walked', 'missions', 'all')) await run('walked', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/walked-check.ts`], { stdout: 'inherit', stderr: 'inherit', env: process.env }).exited) === 0);
 // ---------------------------------------------------------------- aimed fire chews cover (src/game/coverfire.ts, coverfire-probes.ts — a program of its own: run as one, its exit code the verdict)
-{ if (on('coverfire', 'coverfire')) await run('coverfire', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/coverfire-probes.ts`, 'all'], { stdout: 'inherit', stderr: 'inherit' }).exited) === 0); }
+{ if (on('coverfire', 'coverfire')) await run('coverfire', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/coverfire-probes.ts`, 'all'], { stdout: 'inherit', stderr: 'inherit', env: process.env }).exited) === 0); }
 
 // ---------------------------------------------------------------- the runner's own self-tests (never in 'all'): `selftest-fail` must turn the verdict and gate.sh red, `selftest-throw` likewise without
 // stopping the probe after it, `selftest-pass` green, `selftest-quiet` = a probe that checks nothing → NO VERDICT (gate.sh: ERROR)

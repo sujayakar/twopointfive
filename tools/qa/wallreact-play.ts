@@ -110,7 +110,7 @@ if (import.meta.main) {
   const jobs = Math.max(1, Number(flag('--jobs') ?? 4)), todo = ids.flatMap(scn => seeds.map(seed => ({ scn, seed }))), runs: (RunOut & { wallplay?: WallPlay })[] = []; let next = 0; const t0 = Date.now();
   const worker = async () => { for (;;) { const j = todo[next++]; if (!j) return;
     const file = resolve(tmpdir(), `wallreact-play-${process.pid}-${j.scn}-${j.seed}.json`);
-    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.scn}:${j.seed}`, '--out', file, '--cap', String(cap), '--blasts', String(max), '--gap', String(gap)], { stdout: 'ignore', stderr: 'pipe' });
+    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.scn}:${j.seed}`, '--out', file, '--cap', String(cap), '--blasts', String(max), '--gap', String(gap)], { stdout: 'ignore', stderr: 'pipe', env: process.env });
     const errText = await new Response(pr.stderr).text(); await pr.exited;
     let r: any; try { r = JSON.parse(readFileSync(file, 'utf8')); rmSync(file); } catch { r = { scn: j.scn, seed: j.seed, end: 'error', why: `the run left no result — ${errText.trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`, t: 0, team: 0, of: 0, hostiles: 0, hostilesOf: 0, orders: 0, refused: [], smells: [], rooms: 0, note: '' }; }
     runs.push(r); console.error(`  ${j.scn}:${j.seed} ${r.end} ${r.t} s · team ${r.team}/${r.of} · ${r.smells.length} smells · ${r.wallplay?.blasts.length ?? 0} blasts${r.end === 'error' ? ` — ${String(r.why).split('\n')[0]}` : ''}`); } };

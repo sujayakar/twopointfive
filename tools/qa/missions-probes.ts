@@ -215,7 +215,7 @@ export async function missionsScreen(): Promise<boolean> {
 // ───────────────────────────────────────────────────────────── start ─────────────────────────────────────────────────────────────
 const TAG = 'PICKER-BOOT ';
 async function bootChild(query: string): Promise<any> {
-  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/scenario-picker-probes.ts`, '--boot', query], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/scenario-picker-probes.ts`, '--boot', query], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });
   const out = await new Response(p.stdout).text(), errText = await new Response(p.stderr).text(); await p.exited;
   const line = out.split('\n').find(l => l.startsWith(TAG));
   return line ? JSON.parse(line.slice(TAG.length)) : { query, threw: `the boot printed no report (exit ${p.exitCode}): ${(errText || out).trim().split('\n').slice(-3).join(' | ')}` };

@@ -180,7 +180,7 @@ const CHECKS: Record<string, (tag: string, q: string, lv?: string) => Promise<vo
 const wanted = (c: string, tag: string, lv?: string) => ((c !== 'hold' && c !== 'entry') || !lv) && (c !== 'idle' || tag === 'pair · office' || tag === 'four · records');   // (the break room is the office's; two arms of the identity are enough)
 if (want === 'all') {   // every check in a process of its own: a game stood up after another in one process is not the game stood up first (module state the harness does not reset)
   const jobs = Object.keys(CHECKS).flatMap(c => ARMS.filter(([tag, , lv]) => (!only || tag.includes(only)) && wanted(c, tag, lv)).map(([tag]) => [c, tag]));
-  const outs = await Promise.all(jobs.map(async ([c, tag], i) => { await new Promise(r => setTimeout(r, (i % 3) * 50)); const p = Bun.spawn(['bun', 'run', import.meta.path, c, tag], { stdout: 'pipe', stderr: 'pipe' }); const out = await new Response(p.stdout).text(); return { out, code: await p.exited }; }));
+  const outs = await Promise.all(jobs.map(async ([c, tag], i) => { await new Promise(r => setTimeout(r, (i % 3) * 50)); const p = Bun.spawn(['bun', 'run', import.meta.path, c, tag], { stdout: 'pipe', stderr: 'pipe', env: process.env }); const out = await new Response(p.stdout).text(); return { out, code: await p.exited }; }));
   for (const o of outs) { process.stdout.write(o.out.split('\n').filter(l => /^(==|- (PASS|FAIL)|   )/.test(l)).join('\n') + '\n'); fails += (o.out.match(/^- FAIL/gm) ?? []).length + (o.code !== 0 && !/^- FAIL/m.test(o.out) ? 1 : 0); }
 } else {
   const run = CHECKS[want]; if (!run) { console.log(`unknown check '${want}' — one of: ${Object.keys(CHECKS).join(', ')}, all`); process.exit(2); }

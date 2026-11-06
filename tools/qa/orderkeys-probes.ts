@@ -63,7 +63,8 @@ const leftKey = (k: string) => leftKeyOf(k, ORDER_DIGITS);
 /** ORDERKEYS_BREAK, the family's red paths, one a value so that each shows its own lines can fail: `1` = one tool put on a digit out of reach (rig: the walk,
  *  the table, the digits pressed); `free` = every free row's deed refuses (orderkeys-give: each such row must read WRONG; the old stand has none on a digit, so
  *  it bites on the page's stand alone); `four` = the door tools' fourth row
- *  put on 6 (orderkeys-high: its page under the tools page, or the plain row on 4, is not there to hold) */
+ *  put on 6 (orderkeys-high: its page under the tools page, or the plain row on 4, is not there to hold); `man` = the walk asks its teammate's menu of
+ *  another man than the one the cursor is on (orderkeys-walk: every level's teammate line must read WRONG) */
 const BREAK = process.env.ORDERKEYS_BREAK ?? '';
 const nameOf = (code: string) => code.replace(/^Key|^Digit/, '');
 
@@ -109,7 +110,15 @@ async function rig(scn: Scn, seed = 21) {
       return null;
     },
     onSam() { R.aim = () => { const p = game.player.char.pos; return [p[0], 0.05, p[2]]; }; R.step(2); },
-    onMan(k = 0) { R.aim = () => { const m = R.ops[k].char.pos; return [m[0], 1.2, m[2]]; }; R.step(2); },
+    /** the cursor put on the first teammate's chest; returns THE MAN IT IS ON THERE, by this file's own reckoning and not the orders': the nearest of
+     *  the men's bodies along the cursor's ray (null: the ray meets none). A man stood between the camera and the first man covers his chest on the
+     *  screen, and the cursor is on him. */
+    onMan(): any | null {
+      R.aim = () => { const m = R.ops[0].char.pos; return [m[0], 1.2, m[2]]; }; R.step(2);
+      const ray = W.cam.ray(input.mouseX / Math.max(1, W.canvas.clientWidth), input.mouseY / Math.max(1, W.canvas.clientHeight));
+      let man: any = null, best = Infinity; for (const o of R.ops) { if (o.state === 'dead') continue; const t = o.char.rayHit(ray.ro, ray.rd, 200); if (t >= 0 && t < best) { best = t; man = o; } }
+      return man;
+    },
     /** X pressed on what the cursor is on, then a few frames with every key up: the menu (or null) */
     openX(wait = 6): any { R.press(ORDERS.key); R.step(wait); return O.menu; },
   };
@@ -196,7 +205,12 @@ export const orderkeysWalk = guarded(async () => {
     // from where the scenario puts Sam: the floor, himself, a teammate — each by X on the cursor
     const spot = R.onFloor(); if (!spot) bad.push('no spot of floor found near Sam'); else { const M = R.openX(); if (M && M.target.kind !== 'floor') bad.push(`floor: the menu opened on ${M.target.kind}`); take('floor', M); }
     R.onSam(); { const M = R.openX(); if (M && !(M.target.kind === 'none' && !M.target.man)) bad.push(`Sam: the menu opened on ${M.target.kind}`); take('Sam', M); }
-    R.onMan(0); { const M = R.openX(); if (M && !(M.target.kind === 'none' && M.target.man === R.ops[0])) bad.push(`teammate: the menu opened on ${M.target.kind}`); take('teammate', M); }
+    // (the teammate is the man the cursor is ON with its point on the first man's chest: the nearest body along its ray. The line asked for the first man
+    // whoever stood in front of him, and on three levels of the page's stand another stands 0.6 m off and nearer the camera, over that chest on the screen:
+    // the menu opened on him, rightly. ORDERKEYS_BREAK=man: another man than the cursor's is asked for)
+    { const a = R.onMan(), want = BREAK === 'man' ? R.ops.find((o: any) => o !== a) : a;
+      if (!a) bad.push(`teammate: the cursor's ray through the first man's chest meets none of the ${R.ops.length}`);
+      else { const M = R.openX(); if (M && !(M.target.kind === 'none' && M.target.man === want)) bad.push(`teammate: the menu opened on ${M.target.kind}${M.target.kind === 'none' ? ` (${M.target.man?.callsign ?? 'no man'}, where the cursor is on ${want?.callsign})` : ''}`); take('teammate', M); } }
     // every door of the level: X on the cursor where Sam can be stood by it and the cursor finds it; else the menu opened on it directly (its keys pressed all the same)
     let byX = 0;
     for (const d of g.doors.list) {
@@ -230,7 +244,7 @@ export const orderkeysGive = guarded(async () => {
       R.fresh();
       if (kind === 'door') { R.onSam(); R.openX(); R.press('Digit3'); R.aim = null;   // fall in, by presses: the men come to the door with Sam
         if (!door || !R.atDoor(door)) return false; const sam = g.player.char.pos; R.until(() => R.ops.every((m: any) => m.state === 'dead' || dist(m.char.pos, sam) < 3 + 1.2 * R.ops.length), 14); R.step(20); return true; }
-      if (kind === 'floor') return !!R.onFloor(); if (kind === 'Sam') { R.onSam(); return true; } R.onMan(0); return true;
+      if (kind === 'floor') return !!R.onFloor(); if (kind === 'Sam') { R.onSam(); return true; } return !!R.onMan();
     };
     for (const kind of ['floor', 'door', 'Sam', 'teammate']) {
       if (!stage(kind)) { out.push(`${kind}: could not be staged`); wrong++; continue; }

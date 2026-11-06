@@ -121,7 +121,7 @@ if (import.meta.main && process.argv.includes('--boot')) {
 }
 /** the parent's side: run the child, read its one line */
 async function bootChild(query: string): Promise<BootReport> {
-  const p = Bun.spawn(['bun', 'run', import.meta.path, '--boot', query], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+  const p = Bun.spawn(['bun', 'run', import.meta.path, '--boot', query], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });
   const out = await new Response(p.stdout).text(), errText = await new Response(p.stderr).text(); await p.exited;
   const line = out.split('\n').find(l => l.startsWith(TAG));
   if (!line) return { query, spec: null, errors: [], threw: `the boot printed no report (exit ${p.exitCode}): ${(errText || out).trim().split('\n').slice(-3).join(' | ')}` } as unknown as BootReport;
