@@ -216,7 +216,7 @@ pub fn sam_big_walk(g: &mut crate::game::Game, dt: f64) -> f64 {
         return yaw;
     }
     let step = m::min(l, MOVE_WALK * dt);
-    g.ch[c].pos = [pos[0] + dx / l * step, pos[1], pos[2] + dz / l * step];
+    { let to = [pos[0] + dx / l * step, pos[1], pos[2] + dz / l * step]; crate::character::pos_replace(g, c, to); }
     if via.is_some() || l > 0.45 { m::atan2(dx, dz) } else { yaw }
 }
 

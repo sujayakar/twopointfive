@@ -26,7 +26,7 @@ fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn mode_of(g: &Game, d: RoomfightDefId) -> crate::roomfight::DefMode { g.tab.roomfight_def[d].mode }
 fn is_dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 /// `gd.path = []; gd.pathGoal = null`
-fn clear_path(g: &mut Game, gd: GuardId) { g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None; }
+fn clear_path(g: &mut Game, gd: GuardId) { crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); }
 /// `g.say(gd, text, true)`
 fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
 /// `g.col.segmentBlocked(a, b)`
@@ -360,8 +360,8 @@ pub fn plant_short(g: &mut crate::game::Game, gd: GuardId, lane: f64, look: V3) 
     }
     if !named { return; }
     if !crate::roomfight::room_fight_lane_stop(g, gd, look) { return; }
-    g.gd[gd].path = Vec::new();
-    g.gd[gd].path_goal = None;
+    crate::game::guard_set_path(g, gd, Vec::new());
+    crate::guards::guard_set_path_goal(g, gd, None);
     let (p, now) = (pos_of(g, gd), g.time);
     held_on(g, gd, StateHeldValue { lane, t: now, look, aimed: true, at: p });
     s(g).stats.held += 1.0;

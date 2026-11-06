@@ -4,7 +4,8 @@
 # 1. the same mission and seed played by the plain TypeScript game (mission.ts, as run.sh runs it): the die's count and the block's part hashes after every
 #    tick, and how it ended. --no-ts keeps the one --out already holds;
 # 2. the face (rust/game_face) built to wasm, release;
-# 3. play.ts: the Rust game stepped, its state applied onto the TypeScript game as a puppet, the scripted player reading the puppet; every tick held to 1;
+# 3. play.ts: the Rust game stepped, its state applied onto the TypeScript game as a puppet, the scripted player reading the puppet; every tick held to 1
+#    (the fast way; `-- --audit` for the whole state every tick);
 # 4. where they part: the TypeScript's state as that tick opened is taken (the mission played again to that tick) and diffed against the puppet's.
 # Exit: play.ts's (0 equal to the end and ended the same · 1 parted · 2 the Rust tick panicked · 3 a side could not run · 4 equal every tick, another end).
 cd "$(dirname "$0")/../.." || exit 64
@@ -31,11 +32,13 @@ bun run --preload ./tools/blitz/expose.ts tools/blitz/play.ts "$M" --ref "$OUT" 
 CODE=$?
 # (the reference's host's half of every tick was read by play.ts, which holds its own to it: megabytes that nothing reads again)
 find "$OUT" -maxdepth 1 -name 'h*.bin' -delete
-K=$(ls "$OUT/play" 2>/dev/null | sed -n 's/^open\([0-9]*\)\.bin$/\1/p' | sort -n | head -1)
+# (where it parted: the audit keeps the puppet as that tick opened, open<k>.bin; the fast way keeps the Rust game's own state as the tick opened whose
+# host's half parted, rustopen<k>.bin)
+F=$(ls "$OUT/play" 2>/dev/null | grep -E '^(rust)?open[0-9]+\.bin$' | sort -t n -k 2 -n | head -1); K=$(echo "$F" | tr -dc '0-9')
 if [ "$CODE" = 1 ] && [ -n "$K" ]; then
-  echo "play.sh: parted at tick $K: the TypeScript's state as that tick opened, beside the puppet's (diff.ts; the first is the TypeScript's)"
+  echo "play.sh: parted at tick $K: the TypeScript's state as that tick opened, beside this play's ($F; diff.ts; the first is the TypeScript's)"
   mkdir -p "$OUT/at" && bun run --preload ./tools/blitz/expose.ts tools/blitz/mission.ts "$M" --out "$OUT/at" --ticks "$K" --keep "" --every 0 --open "$K" > /dev/null 2>&1
   find "$OUT/at" -maxdepth 1 -name 'h*.bin' -delete
-  [ -f "$OUT/at/c$K.bin" ] && bun run tools/blitz/diff.ts "$OUT/at/c$K.bin" "$OUT/play/open$K.bin" --show 40 2>&1 | cut -c1-300 | head -70
+  [ -f "$OUT/at/c$K.bin" ] && bun run tools/blitz/diff.ts "$OUT/at/c$K.bin" "$OUT/play/$F" --show 40 2>&1 | cut -c1-300 | head -70
 fi
 exit $CODE

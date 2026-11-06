@@ -31,8 +31,9 @@ export interface Two { W: any; g: any; /** tick i's two records, off the scripte
 const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const KEYS = ['KeyG', 'KeyF', 'KeyE', 'KeyQ', 'KeyB', 'KeyC', 'KeyR', 'KeyV', 'KeyT', 'KeyH', 'KeyN', 'KeyX', 'KeyZ', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Space', 'Tab'];
 
-/** a game of two on `query` (the room clear with four by default), its die `seed`, its floor `level` (a name under levels/, or the page's own) */
-export async function standTwo(query = 'roomclear&squad4', seed = 9, level: string | null = null): Promise<Two> {
+/** a game of two on `query` (the room clear with four by default), its die `seed`, its floor `level` (a name under levels/, or the page's own). `idle`: the
+ *  hands do nothing (no key, no button, the cursor where it lies): for a driver that gives its orders between ticks and wants the players out of the way */
+export async function standTwo(query = 'roomclear&squad4', seed = 9, level: string | null = null, idle = false): Promise<Two> {
   for (const k of Object.keys(WALL_STATS)) if (typeof WALL_STATS[k] === 'number') WALL_STATS[k] = 0;   // (a tally of the process's that coverfire.ts keeps a copy of in the game's state: two games of one process start level only from a level tally)
   Math.random = mulberry32(0xc0de);
   const W: any = await standUp({ seed, seats: 2, ...(level ? { level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${level}.json`, 'utf8'))) } : {}) }), g = W.game;
@@ -40,14 +41,14 @@ export async function standTwo(query = 'roomclear&squad4', seed = 9, level: stri
   const v0 = g.seats[0].view, v1 = g.seats[1].view, I1: any = Input.detached(), cam1: any = new FollowCamera(); cam1.aspect = W.cam.aspect; cam1.target = [...v1.player.char.pos]; cam1.rebuild();
   const hands: any[] = [{ v: v0, I: W.input, cam: W.cam, held: null }, { v: v1, I: I1, cam: cam1, held: null }];
   /** the hands for tick i: walk at the nearest enemy, the cursor on him, a burst every four seconds, a key of the game's every second and a half */
-  const drive = (i: number) => hands.forEach((h, hi) => { const I = h.I; for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) I.keys.delete(k);
+  const drive = (i: number) => { if (!idle) hands.forEach((h, hi) => { const I = h.I; for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) I.keys.delete(k);
     const p = h.v.player.char.pos, foe = g.guards.filter((x: any) => x.state !== 'dead' && x.team !== 'operative').sort((a: any, b: any) => flat(a.char.pos, p) - flat(b.char.pos, p))[0];
     const t = foe ? foe.char.pos : [p[0] + Math.sin(i / 200 + hi) * 8, 0, p[2] + Math.cos(i / 200 + hi) * 8], dx = t[0] - p[0], dz = t[2] - p[2], d = Math.hypot(dx, dz) || 1;
     const { fwd, right } = h.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827;
     if (d > 3) { if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); }
     const [sx, sy, front] = h.cam.project([t[0], 1.2, t[2]], W.canvas.clientWidth, W.canvas.clientHeight); if (front) { I.mouseX = sx; I.mouseY = sy; }
     const ph = (i + hi * 37) % 240; if (ph > 120 && ph < 200) { I.buttons |= 1; if (ph === 121) I.clicked |= 1; } else I.buttons &= ~1;
-    if ((i + hi * 53) % 90 === 0) { const k = KEYS[Math.floor((i + hi * 53) / 90) % KEYS.length]; I.keys.add(k); I.pressed.add(k); h.held = k; } else if ((i + hi * 53) % 90 === 6 && h.held) { I.keys.delete(h.held); h.held = null; } });
+    if ((i + hi * 53) % 90 === 0) { const k = KEYS[Math.floor((i + hi * 53) / 90) % KEYS.length]; I.keys.add(k); I.pressed.add(k); h.held = k; } else if ((i + hi * 53) % 90 === 6 && h.held) { I.keys.delete(h.held); h.held = null; } }); };
   return { W, g,
     sample(i: number) { drive(i); return hands.map(h => cmdFromText(cmdText(sampleCmd(h.v, h.I, h.cam, W.canvas)))); },
     /** the tick and what a headless host does round it (headless.ts step, less the sampling): the lamps, the boxes, each seat's lens and the end of its input's frame */

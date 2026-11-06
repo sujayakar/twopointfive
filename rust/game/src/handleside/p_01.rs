@@ -356,7 +356,7 @@ pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe:
                     let vel = [f.nx * side * v, 0.0, f.nz * side * v];
                     let np = [pos[0] + vel[0] * dt, pos[1], pos[2] + vel[2] * dt];
                     g.ch[c].vel = vel;
-                    g.ch[c].pos = np;
+                    { let to = np; crate::character::pos_replace(g, c, to); }
                     g.gd[gd].speed = v;
                     g.gd[gd].last_pos = [np[0], np[1], np[2]];
                     g.gd[gd].stuck_t = 0.0;
@@ -603,7 +603,7 @@ pub fn step_to(g: &mut crate::game::Game, gd: GuardId, to: V3, dt: f64, speed: f
     let uz = if vl > 1e-4 { vel[2] / vl } else { dz / dist };
     let p = g.ch[c].pos;
     let np = [p[0] + ux * step, p[1], p[2] + uz * step];
-    g.ch[c].pos = np;
+    { let to = np; crate::character::pos_replace(g, c, to); }
     g.gd[gd].last_pos = [np[0], np[1], np[2]];
     g.gd[gd].stuck_t = 0.0;
     false

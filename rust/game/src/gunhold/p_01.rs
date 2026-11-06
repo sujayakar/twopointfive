@@ -905,7 +905,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
                 let step = m::min(1.0, 1.2 * dt / off);
                 let at = pos!();
                 g.ch[c].vel = [(spot[0] - at[0]) * step / dt, 0.0, (spot[2] - at[2]) * step / dt];
-                g.ch[c].pos = [at[0] + (spot[0] - at[0]) * step, at[1], at[2] + (spot[2] - at[2]) * step];
+                { let to = [at[0] + (spot[0] - at[0]) * step, at[1], at[2] + (spot[2] - at[2]) * step]; crate::character::pos_replace(g, c, to); }
                 g.gd[gd].speed = 1.2;
                 g.gd[gd].stall_ref = None;
             }

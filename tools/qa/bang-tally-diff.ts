@@ -23,7 +23,9 @@
 // TWO BLOCKS OF SEEDS. On the first, an arm whose chance is SUSPECT_P or less is SUSPECT (and one with under FEW common entries is too thin to say); then,
 // and only then, the second block is played in both trees and every arm is read over all the seeds. A DOOR IS NAMED when an arm's chance over the whole
 // reading is NAMED_P or less, or when an entry that was made before cannot be made now (no floor outside the door for the team, or the game refuses the
-// order where it took it: the thing is where the team would stand or stack). A suspect door that could not be read further is said so, and is not cleared.
+// order where it took it: the thing is where the team would stand or stack). A refusal names a door only with the team whole at the order in both trees
+// (the tally's `lostBefore`): once a man is down before the order the fight has begun, and what the game answers then (`no squad`, when it is all of
+// them) is that fight's doing, so the entry is a fight like any other. A suspect door that could not be read further is said so, and is not cleared.
 // THE SAME ENTRY IN BOTH TREES. The tally stands the team on free floor 2.4 to 6.2 m out from the door and Sam beside them, and takes anybody with a line
 // to them off the floor: a thing laid there changes the STAGING, and two trees staged differently did not fight the same entry (the pass's bunk room door
 // was named at 1 in 230 for a log moved, and all that had changed there was where an unseen Sam was stood, 0.8 m). So the AFTER tree is stood AS the before
@@ -36,26 +38,33 @@
 // EXIT 0 no door named · 1 a door named · 2 bad usage · 3 no reading (a suspect door not read further, nothing that could be compared, a door in one tree
 // only, a tally that did not run whole, a checkout that changed while it was played).
 // THE TALLY'S WORDS: an entry's `outcome` is read where the tally writes it; a tally from before it did is read by its notes, and cannot say an order was
-// refused (such an entry is a fight to it, as it always was to the tally's own table), so no door is named for a refusal one of the two tallies could not say. TALLYDIFF_BREAK=1 = the tool's own red path: the AFTER tree is played
+// refused (such an entry is a fight to it, as it always was to the tally's own table), so no door is named for a refusal one of the two tallies could not
+// say. `lostBefore` and `refused` likewise: a tally from before them (the first cut of this tool wrote both into the note) is read by its note.
+// TALLYDIFF_BREAK=1 = the tool's own red path: the AFTER tree is played
 // with a crate on the way in to the door each entry is played on (bang-tally.ts stage), and a door must be named: exit 1, nothing else.
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, relative, resolve } from 'node:path';
-import type { Result } from './bang-tally.ts';
+import { counted, refuse, type Result } from './bang-tally-row.ts';
 
 const HERE = resolve(import.meta.dir, '../..');
 export const SUSPECT_P = 0.05, NAMED_P = 0.005, FEW = 12, ARMS = ['open', 'bang'];
 
-/** a line of bang-tally's JSON; `at` and `outcome` are unsaid by a tally from before they were written */
-export type Entry = Omit<Result, 'at' | 'outcome'> & { at?: string; outcome?: Result['outcome'] };
-export interface DoorRow { door: string; room: string; arm: string; inB: number; inA: number; n: number; same: number; alike: number; restaged: number; unsaid: number; gone: number; goneMoved: number; come: number;
+/** a line of bang-tally's JSON; `at`, `outcome`, `refused` and `lostBefore` are unsaid by a tally from before they were written */
+export type Entry = Omit<Result, 'at' | 'outcome' | 'refused' | 'lostBefore'> & { at?: string; outcome?: Result['outcome']; refused?: string; lostBefore?: number };
+export interface DoorRow { door: string; room: string; arm: string; inB: number; inA: number; n: number; same: number; alike: number; restaged: number; unsaid: number; goneAt: { seed: number; why: string; moved: boolean }[]; come: number;
   heldB: number; heldA: number; lostB: number; lostA: number; team: number; worse: number[]; better: number[]; chance: number; few: boolean }
 
 /** what became of an entry: the tally's own word, or, of a tally from before it wrote one, its note read as its table reads it (which has no word for a refusal) */
 const outcome = (r: Entry): Result['outcome'] => r.outcome ?? (/threw/.test(r.note ?? '') ? 'threw' : /no floor/.test(r.note ?? '') ? 'no-floor' : r.note && !r.of ? 'nobody' : 'played');
 const threw = (r: Entry) => outcome(r) === 'threw';                                              // the run itself failed: not an outcome at a door
 const fought = (r: Entry) => outcome(r) === 'played' || outcome(r) === 'refused';                // (a refused order leaves the team outside a hot room: it is counted as it falls out)
-/** an entry made before that cannot be made now: no floor to stand the team, or an order taken before and refused now (said only where both tallies can say it) */
-const lost = (b: Entry, a: Entry) => (fought(b) && outcome(a) === 'no-floor') || (!!b.outcome && !!a.outcome && outcome(b) === 'played' && outcome(a) === 'refused');
+/** men down before the order was asked, and the game's reason for a refusal: the tally's fields, or its note where it was written before they were */
+const lostBefore = (r: Entry) => r.lostBefore ?? Number(/(\d+) lost before the order/.exec(r.note ?? '')?.[1] ?? 0);
+const refusal = (r: Entry) => r.refused || /order refused: (.*)$/.exec(r.note ?? '')?.[1] || '';
+/** an entry made before that cannot be made now: no floor to stand the team, or an order taken before and refused now with the team whole at the order in
+ *  both trees (said only where both tallies can say it). With a man down before the order the fight has begun, and the entry is read as a fight */
+const lost = (b: Entry, a: Entry) => (fought(b) && outcome(a) === 'no-floor')
+  || (!!b.outcome && !!a.outcome && outcome(b) === 'played' && outcome(a) === 'refused' && !lostBefore(b) && !lostBefore(a));
 const held = (r: Entry) => !!(r.taken || r.held);
 const same = (a: Entry, b: Entry) => a.lost === b.lost && a.down === b.down && a.taken === b.taken && held(a) === held(b) && (a.secs ?? -1) === (b.secs ?? -1);
 /** +1 the entry went worse for the team after the change, -1 better, 0 neither: the ending first, then the men lost */
@@ -75,11 +84,13 @@ export function compare(before: Entry[], after: Entry[], scn: string): DoorRow[]
   const rows = new Map<string, DoorRow>();
   // every door and arm either tree asked about has a row, so a door one tree lacks is said and not silently gone
   const row = (r: Entry) => { const k = `${r.door}|${r.room}|${r.arm}`; let R = rows.get(k);
-    if (!R) rows.set(k, R = { door: r.door, room: r.room, arm: r.arm, inB: 0, inA: 0, n: 0, same: 0, alike: 0, restaged: 0, unsaid: 0, gone: 0, goneMoved: 0, come: 0, heldB: 0, heldA: 0, lostB: 0, lostA: 0, team: 0, worse: [], better: [], chance: 1, few: false });
+    if (!R) rows.set(k, R = { door: r.door, room: r.room, arm: r.arm, inB: 0, inA: 0, n: 0, same: 0, alike: 0, restaged: 0, unsaid: 0, goneAt: [], come: 0, heldB: 0, heldA: 0, lostB: 0, lostA: 0, team: 0, worse: [], better: [], chance: 1, few: false });
     return R; };
   for (const b of B.values()) row(b).inB++; for (const a of A.values()) row(a).inA++;
-  for (const [k, b] of B) { const a = A.get(k); if (!a) continue; const R = row(b);
-    if (lost(b, a)) { R.gone++; if (b.at !== a.at) R.goneMoved++; continue; } if (lost(a, b)) { R.come++; continue; }
+  // (in seed order whatever order the tally's workers gave them back in: the lists below, and the entry a verdict offers to read, are the same every run)
+  for (const [k, b] of [...B].sort((x, y) => x[1].seed - y[1].seed)) { const a = A.get(k); if (!a) continue; const R = row(b);
+    if (lost(b, a)) { const noFloor = outcome(a) === 'no-floor';   // (`moved`: stood on other floor than before, said of an entry that WAS stood)
+      R.goneAt.push({ seed: b.seed, why: noFloor ? 'no floor outside the door for the team' : `the order refused ("${refusal(a)}")`, moved: !noFloor && b.at !== a.at }); continue; } if (lost(a, b)) { R.come++; continue; }
     if (!fought(b) || !fought(a)) continue;
     const t = turn(b, a); R.n++; if (same(a, b)) R.same++; if (!b.at || !a.at) R.unsaid++; else if (b.at === a.at) R.alike++; else R.restaged++;
     R.heldB += +held(b); R.heldA += +held(a); R.lostB += b.lost; R.lostA += a.lost; R.team += b.team; if (t > 0) R.worse.push(b.seed); if (t < 0) R.better.push(b.seed); }
@@ -89,18 +100,36 @@ export function compare(before: Entry[], after: Entry[], scn: string): DoorRow[]
 
 /** --self: the arithmetic above on entries written by hand */
 function self(): boolean {
-  const E = (seed: number, lost: number, o: Partial<Entry> = {}): Entry => ({ scn: 's', door: 'd', room: 'r', arm: 'open', seed, lost, team: 4, down: 2, of: 2, taken: true, held: true, still: 0, after: 0, secs: 5, bangs: 0, pre: 0, outside: 0, note: '', at: 'x', outcome: 'played', ...o });
+  const E = (seed: number, lost: number, o: Partial<Entry> = {}): Entry => ({ scn: 's', door: 'd', room: 'r', arm: 'open', seed, lost, team: 4, down: 2, of: 2, taken: true, held: true, still: 0, after: 0, secs: 5, bangs: 0, pre: 0, outside: 0, note: '', at: 'x', outcome: 'played', refused: '', lostBefore: 0, ...o });
   const near = (a: number, b: number) => Math.abs(a - b) < 1e-12, seeds = Array.from({ length: 24 }, (_, i) => i + 1);
   const one = (after: (s: number) => Entry) => compare(seeds.map(s => E(s, 1)), seeds.map(after), 's')[0];
-  const worse = one(s => E(s, s <= 9 ? 2 : s === 10 ? 0 : 1)), lostRoom = one(s => E(s, 0, s <= 3 ? { taken: false, held: false } : {})), gone = one(s => E(s, 0, s === 1 ? { outcome: 'no-floor', at: '' } : s === 2 ? { outcome: 'refused', lost: 4 } : {}));
-  const old = (e: Entry): Entry => { const { outcome: _o, at: _a, ...rest } = e; return rest; }, blind = compare(seeds.map(s => old(E(s, 1))), seeds.map(s => E(s, s === 2 ? 4 : 1, s === 2 ? { outcome: 'refused' } : {})), 's')[0];
+  const worse = one(s => E(s, s <= 9 ? 2 : s === 10 ? 0 : 1)), lostRoom = one(s => E(s, 0, s <= 3 ? { taken: false, held: false } : {})), gone = one(s => E(s, 0, s === 1 ? { outcome: 'no-floor', at: '' } : s === 2 ? { outcome: 'refused', refused: 'in the way', lost: 4, at: 'y' } : s === 3 ? { outcome: 'refused', refused: 'in the way' } : {}));
+  // a team shot before its order: by the tally's count, by the note of the first cut (which wrote neither field), and with the men lost in the BEFORE tree
+  const dead = { outcome: 'refused' as const, lost: 4, taken: false, held: false }, cut1 = (e: Entry): Entry => { const { refused: _r, lostBefore: _l, ...rest } = e; return rest; };
+  const wiped = one(s => E(s, 1, s === 2 ? { ...dead, refused: 'no squad', lostBefore: 4, note: '4 lost before the order' } : {}));
+  const wiped1 = compare(seeds.map(s => cut1(E(s, 1))), seeds.map(s => cut1(E(s, 1, s === 2 ? { ...dead, note: '4 lost before the order · order refused: no squad' } : {}))), 's')[0];
+  const wipedB = compare(seeds.map(s => E(s, s === 2 ? 4 : 1, s === 2 ? { lostBefore: 1, note: '1 lost before the order', taken: false, held: false } : {})), seeds.map(s => E(s, 1, s === 2 ? { outcome: 'refused', refused: 'in the way' } : {})), 's')[0];
+  const fight = (r: DoorRow, worse: number, better: number) => !r.goneAt.length && r.come === 0 && r.n === 24 && r.worse.length === worse && r.better.length === better;
+  // the first cut's own row for a refusal with the team whole: the reason is read out of its note
+  const cut1Gone = compare(seeds.map(s => cut1(E(s, 1))), seeds.map(s => cut1(E(s, 1, s === 5 ? { outcome: 'refused', note: "order refused: you're in the way." } : {}))), 's')[0];
+  const row = E(1, 1, { note: 'kept' }) as Result; refuse(row, 'in the way');
+  // the rows the tally's table counts, by the fields, against the rule it used to read off the note: one row of every kind the tally writes
+  const kinds = [E(1, 1), E(2, 1, { lostBefore: 2, note: '2 lost before the order' }), E(3, 4, { outcome: 'refused', refused: 'in the way' }), E(4, 4, { outcome: 'refused', refused: 'no squad', lostBefore: 4, note: '4 lost before the order' }),
+    E(5, 0, { outcome: 'no-floor', of: 3, note: 'no floor outside for the team (2 spots)' }), E(6, 0, { outcome: 'nobody', of: 0, note: 'no defender dealt to this room on this seed' }), E(7, 0, { outcome: 'threw', of: 0, note: 'no floor: threw x' })] as Result[];
+  const byNote = (r: Result) => !(r.note && !r.of || /no floor|before the order/.test(r.note));
+  const old = (e: Entry): Entry => { const { outcome: _o, at: _a, refused: _r, lostBefore: _l, ...rest } = e; return rest; }, blind = compare(seeds.map(s => old(E(s, 1))), seeds.map(s => E(s, s === 2 ? 4 : 1, s === 2 ? { outcome: 'refused' } : {})), 's')[0];
   const restaged = one(s => E(s, 1, { at: s <= 5 ? 'y' : 'x' })), thin = compare(seeds.slice(0, 11).map(s => E(s, 1)), seeds.slice(0, 11).map(s => E(s, 2)), 's')[0];
   const lines: [string, boolean][] = [
     ['the sign test: 9 against 1 is 22 in 1024, 16 against 1 is 36 in 131072, nothing moved is 1, and it reads the same either way round', near(signChance(9, 1), 22 / 1024) && near(signChance(16, 1), 36 / 131072) && signChance(0, 0) === 1 && signChance(3, 11) === signChance(11, 3)],
     ['more men lost with the same ending is worse, fewer is better, and the seeds are kept', worse.worse.length === 9 && worse.better.length === 1 && worse.better[0] === 10 && worse.same === 14 && near(worse.chance, 22 / 1024)],
     ['a room no longer held is worse though fewer men were lost', lostRoom.worse.length === 3 && lostRoom.better.length === 21],
-    ['an entry that can no longer be made (no floor, or an order taken before and refused now) is counted as gone and not as a fight, and whether it was staged on other floor is kept', gone.gone === 2 && gone.goneMoved === 1 && gone.n === 22],
-    ['against a tally from before the outcome was written, a refused order is a fight like any other and names nothing', blind.gone === 0 && blind.n === 24 && blind.worse.length === 1 && blind.unsaid === 24],
+    ['an entry that can no longer be made (no floor, or an order taken before and refused now) is counted as gone and not as a fight, with its seed, the reason (read out of the note of a first cut) and whether it was stood on other floor',
+      gone.goneAt.length === 3 && gone.n === 21 && gone.goneAt.map(g => `${g.seed}${g.moved ? 'm' : ''}`).join() === '1,2m,3' && /no floor/.test(gone.goneAt[0].why) && /in the way/.test(gone.goneAt[1].why)
+      && cut1Gone.goneAt.length === 1 && cut1Gone.goneAt[0].seed === 5 && /you're in the way\./.test(cut1Gone.goneAt[0].why)],
+    ['a refusal with men down before the order, in either tree, is a fight and not an entry that cannot be made: by the tally\'s count and by the first cut\'s note alike', fight(wiped, 1, 0) && fight(wiped1, 1, 0) && fight(wipedB, 0, 1)],
+    ['the tally says a refusal in `outcome` and `refused` and leaves the note as it was, and its table counts the rows it counted when it read the note', row.outcome === 'refused' && row.refused === 'in the way' && row.note === 'kept'
+      && kinds.every(r => counted(r) === byNote(r)) && kinds.filter(counted).map(r => r.seed).join() === '1,3'],
+    ['against a tally from before the outcome was written, a refused order is a fight like any other and names nothing', !blind.goneAt.length && blind.n === 24 && blind.worse.length === 1 && blind.unsaid === 24],
     ['entries staged on other floor are counted', restaged.restaged === 5 && restaged.alike === 19 && restaged.unsaid === 0],
     [`under ${FEW} common entries an arm is too few and has no chance`, thin.few && thin.chance === 1 && thin.worse.length === 11],
   ];
@@ -185,7 +214,7 @@ if (import.meta.main) {
     for (const l of table(['door (room)', 'arm', 'common', 'the same', 'staged alike', 'rooms held', 'team lost', 'worse, better', 'chance', ''],
       rows.map(r => [doorOf(r), r.arm === 'open' ? 'plain' : r.arm, String(r.n), String(r.same), r.unsaid ? (r.unsaid === r.n ? 'not written' : `${r.alike} (${r.unsaid} not written)`) : String(r.alike),
         `${r.heldB} → ${r.heldA}`, `${r.lostB} → ${r.lostA} of ${r.team}`, `${r.worse.length}, ${r.better.length}`, r.few || !(r.worse.length + r.better.length) ? '' : oneIn(r.chance),
-        r.gone ? `NAMED (${r.gone} cannot be made now)` : !r.inB || !r.inA ? `in the ${r.inB ? 'before' : 'after'} tree only` : r.few ? `too few (under ${FEW} common entries)` : final && r.chance <= NAMED_P ? 'NAMED' : r.chance <= SUSPECT_P ? 'suspect' : '']))) console.log(`    ${l}`); };
+        r.goneAt.length ? `NAMED (${r.goneAt.length} cannot be made now)` : !r.inB || !r.inA ? `in the ${r.inB ? 'before' : 'after'} tree only` : r.few ? `too few (under ${FEW} common entries)` : final && r.chance <= NAMED_P ? 'NAMED' : r.chance <= SUSPECT_P ? 'suspect' : '']))) console.log(`    ${l}`); };
   const B = await Bf.read(seeds, []), A = await Af.read(seeds, B);
   let rows = compare(B, A, SCN), over = seeds, final = !S2.length;
   if (!rows.length) stop(2, `no entry of '${SCN}' in either tally`);
@@ -200,15 +229,19 @@ if (import.meta.main) {
     if (Bf.holds(S2) && Af.holds(S2)) { const B2 = await Bf.read(more, []); B.push(...B2); A.push(...await Af.read(more, B2)); rows = compare(B, A, SCN); over = `${seeds} and ${more}`; final = true; show(rows, over, final); }
     else console.log(`  (the tally given for ${Bf.holds(S2) ? '--after' : '--before'} holds no seed of ${more}: not read further)`);
   } else final = true;
-  const named = rows.filter(r => r.gone || (final && r.chance <= NAMED_P)), open = final ? [] : rows.filter(r => r.chance <= SUSPECT_P && !r.gone);
+  const named = rows.filter(r => r.goneAt.length || (final && r.chance <= NAMED_P)), open = final ? [] : rows.filter(r => r.chance <= SUSPECT_P && !r.goneAt.length);
   const lone = rows.filter(r => !r.inB !== !r.inA), few = rows.filter(r => r.few && !lone.includes(r)), read = rows.filter(r => !r.few);
   const doors = (rs: DoorRow[]) => [...new Set(rs.map(doorOf))];
-  /** one entry to read in both trees: the first seed that went the way the door did */
-  /** one entry to read in both trees: the first seed that went the way the door did, replayed as it was counted */
-  const trace = (r: DoorRow) => { const s = (r.worse.length >= r.better.length ? r.worse : r.better)[0]; if (s === undefined) return '';
+  /** one entry to read in both trees, replayed as it was counted: the first that cannot be made now, else the first seed that went the way the door did */
+  const trace = (r: DoorRow) => { const s = r.goneAt[0]?.seed ?? (r.worse.length >= r.better.length ? r.worse : r.better)[0]; if (s === undefined) return '';
     const cmd = `bun run tools/qa/bang-tally.ts trace ${SCN}:${r.door}:${r.arm}:${s}:${r.room}`, as = stoodAs.length ? (keep ? ` --stand-as ${stoodAs.map(f => relative(process.cwd(), f)).join(',')}` : ' --stand-as <the before tally\'s JSON: --keep keeps it>') : '';
     return `\n    read one entry in both trees (TPS_PROFILE=shipped in front in a tree from before one stand) — before: ${cmd} · after: ${BREAK ? 'TALLYDIFF_BREAK=1 ' : ''}${cmd}${as}`; };
-  for (const r of named) console.log(`- NAMED — ${doorOf(r)}, ${armOf(r)}, over seeds ${over}: ${r.gone ? `${r.gone} entries that were made before cannot be now (no floor outside the door for the team, or the order refused)${r.goneMoved ? `, ${r.goneMoved} of them staged on other floor than before: this may be where the tally stands the team or Sam` : ''}${r.few ? '' : '; the rest '}` : ''}${r.few ? '' : split(r) + staging(r) + trace(r)}`);
+  /** seeds as a short list: seeds 1-3, 7, 9-12 */
+  const runs = (xs: number[]) => `seed${xs.length > 1 ? 's' : ''} ${xs.reduce<number[][]>((a, x) => { const l = a[a.length - 1]; if (l && x === l[1] + 1) l[1] = x; else a.push([x, x]); return a; }, []).map(([x, y]) => x === y ? `${x}` : `${x}-${y}`).join(', ')}`;
+  /** the entries that cannot be made now, reason by reason, and how many of them were stood on other floor than before */
+  const gone = (r: DoorRow) => { const moved = r.goneAt.filter(g => g.moved).map(g => g.seed);
+    return `${r.goneAt.length} entries that were made before cannot be now (${[...new Set(r.goneAt.map(g => g.why))].map(w => `${w}: ${runs(r.goneAt.filter(g => g.why === w).map(g => g.seed))}`).join(' · ')})${moved.length ? `, ${runs(moved)} stood on other floor than before: this may be where the tally stands the team or Sam` : ''}`; };
+  for (const r of named) console.log(`- NAMED — ${doorOf(r)}, ${armOf(r)}, over seeds ${over}: ${r.goneAt.length ? gone(r) + (r.few ? '' : '; the rest ') : ''}${r.few ? '' : split(r) + staging(r)}${trace(r)}`);
   for (const r of open) console.log(`- SUSPECT, NOT READ FURTHER — ${doorOf(r)}, ${armOf(r)}, over seeds ${over}: ${split(r)}${staging(r)}`);
   if (over !== seeds) for (const r of first) { const now = rows.find(x => x.door === r.door && x.room === r.room && x.arm === r.arm)!; if (!named.includes(now)) console.log(`  not borne out over seeds ${over} — ${doorOf(now)}, ${armOf(now)}: ${split(now)}`); }
   for (const r of rows) if (r.come) console.log(`  ${doorOf(r)}, ${armOf(r)}: ${r.come} entries that could not be made before can be now`);

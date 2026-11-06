@@ -22,9 +22,6 @@
 //!                                      (an Option that is None is NaN). Belongs in the filtered export (RtLight and LightSet.lights on its lists).
 //!   face_poke(h, what, v) -> 1 | 0     a host's switch written between ticks, by number: 0 god mode · 1 the AI on · 2 infinite ammunition · 3 the
 //!                                      player unseen · 4 the launcher's held button let go unsent (the pause card: host/loop.ts). `v` != 0 = on.
-//!   face_puppet_warm(h)                the every-tick export with everything sent as changed: applied to a puppet that holds that state already, it
-//!                                      runs the host's every-tick apply once over every row before play
-//!   face_reserve(bytes)                room asked for and given back, so that the allocator holds it and a step need not grow the memory
 //!   face_mem() -> bytes                the module's memory now (a host holds its typed arrays to this: a memory that grew has detached them)
 //!
 //! A GAME KEPT (a checkpoint, the start a restart goes back to). The host's save controller (src/game/savestate.ts) decides when and under which label; what
@@ -37,7 +34,7 @@
 //!   face_kept_drop(k) · face_kept_n()  let go · how many are held
 //!   face_back(h, k) -> 1 | 0           game `h` IS kept `k` again, in the slot `h` stands in (the kept one stays kept). A clone is cloned back; bytes go
 //!                                      through the start's own lines (`game_run::start`: `io::import`, so what the bridge does not carry starts blank).
-//!                                      What `face_puppet` last sent is forgotten: the host applies the whole state next.
+//!                                      What `face_puppet` last sent is forgotten (memo.rs `forget`): the host applies the whole state next.
 //!   face_loaded(h, label, n, loads, saves)   STAND-IN: WHAT THE SAVE CONTROLLER DOES TO THE GAME ONCE A SAVE IN MEMORY IS PUT BACK (savestate.ts loadMem,
 //!                                      the lines after the snapshot is restored: :1124 to :1134). A ring of the hand's that merely stood at the save is
 //!                                      put away, a gun's setup is not up, the squad's ring is put away, the run's counts of loads and saves are the
@@ -56,8 +53,6 @@ use std::cell::RefCell;
 enum Kept { Own(Box<game::game::Game>, Vec<u8>), Bytes(Vec<u8>, Vec<u8>) }
 
 thread_local! {
-    /// what `face_puppet` last sent, a game: by handle
-    static MEMOS: RefCell<Vec<game::puppet::PuppetMemo>> = const { RefCell::new(Vec::new()) };
     /// the games kept, by number less one
     static KEPT: RefCell<Vec<Option<Kept>>> = const { RefCell::new(Vec::new()) };
 }
@@ -66,7 +61,6 @@ fn block_of(slot: usize) -> Vec<u8> { unsafe { std::slice::from_raw_parts(sim::s
 fn keep(k: Kept) -> u32 {
     KEPT.with(|v| { let mut v = v.borrow_mut(); match v.iter().position(|x| x.is_none()) { Some(i) => { v[i] = Some(k); i as u32 + 1 } None => { v.push(Some(k)); v.len() as u32 } } })
 }
-fn forget_sent(h: u32) { MEMOS.with(|m| { let mut m = m.borrow_mut(); while m.len() <= h as usize { m.push(Default::default()); } m[h as usize] = Default::default(); }); }
 
 /// # Safety
 /// `state`, `n` name bytes the host wrote into memory from face_alloc.
@@ -80,41 +74,8 @@ pub unsafe extern "C" fn face_new_at(state: *const u8, n: usize, slot: usize) ->
     let (g, said) = game_run::start(super::bytes(state, n), &block, slot);
     super::out(said.join("\n").into_bytes());
     let h = super::put(super::Held { g, cmd: None, cmds: None, after: Vec::new() });
-    MEMOS.with(|m| { let mut m = m.borrow_mut(); while m.len() <= h as usize { m.push(Default::default()); } m[h as usize] = Default::default(); });
+    crate::memo::forget(h);
     h
-}
-
-#[no_mangle]
-pub extern "C" fn face_puppet(h: u32, start: u32) {
-    let mut memo = MEMOS.with(|m| { let mut m = m.borrow_mut(); while m.len() <= h as usize { m.push(Default::default()); } core::mem::take(&mut m[h as usize]) });
-    let b = super::with(h, |x| { let b = game::puppet::export_puppet(&x.g, &mut memo, start != 0); x.g.out.clear(); b });
-    trim(&mut memo);
-    MEMOS.with(|m| m.borrow_mut()[h as usize] = memo);
-    super::out(b);
-}
-/// STAND-IN: THE MEMO KEEPS THE EXPORT'S SCRATCH BUFFERS. `export_puppet` hands a row's bytes to the memo by `mem::take` / `mem::swap` of its scratch
-/// vector, whose capacity is whatever the largest thing written before it took, so every new or changed row kept a buffer that size and the module's
-/// memory grew through the first hundreds of ticks of play. Every kept vector is cut to what it holds. Belongs in the generated export (a row's bytes
-/// copied into the memo).
-fn trim(memo: &mut game::puppet::PuppetMemo) {
-    for v in memo.top.iter_mut().chain(memo.rows.iter_mut().flatten()) { if v.capacity() > v.len() + (v.len() >> 2) + 64 { v.shrink_to_fit(); } }
-}
-/// the every-tick export with every row and field sent as if it had changed (what the memo holds is spoiled first): a host applies it to a puppet that
-/// already holds that state, to run the every-tick path once over everything before play (the apply's first runs are many times its later ones)
-#[no_mangle]
-pub extern "C" fn face_puppet_warm(h: u32) {
-    let mut memo = MEMOS.with(|m| { let mut m = m.borrow_mut(); while m.len() <= h as usize { m.push(Default::default()); } core::mem::take(&mut m[h as usize]) });
-    // (a row or a field with no bytes on the every-tick list is never sent, and stays so)
-    for v in memo.top.iter_mut().chain(memo.rows.iter_mut().flatten()) { if !v.is_empty() { v.push(0xff); } }
-    let b = super::with(h, |x| game::puppet::export_puppet(&x.g, &mut memo, false));
-    trim(&mut memo);
-    MEMOS.with(|m| m.borrow_mut()[h as usize] = memo);
-    super::out(b);
-}
-
-#[no_mangle]
-pub extern "C" fn face_reserve(bytes: usize) {
-    drop(Vec::<u8>::with_capacity(bytes.max(1)));
 }
 
 #[no_mangle]
@@ -252,7 +213,7 @@ pub extern "C" fn face_back(h: u32, k: u32) -> u32 {
     });
     let Some(g) = made else { return 0 };
     super::with(h, |x| { x.g = g; x.cmd = None; x.cmds = None; x.after.clear(); });
-    forget_sent(h);
+    crate::memo::forget(h);
     1
 }
 

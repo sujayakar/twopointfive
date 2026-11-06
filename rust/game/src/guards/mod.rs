@@ -10,7 +10,7 @@ pub use p_02::{point_in_view, light_out_seen, witness_kill, alert_cause, witness
 pub mod p_03;
 pub use p_03::{shield_up, pair_of, forget_guard_clocks, pair_in_view, pair_sight_rate, forget_held_meter, held_visibility, standoff_perceive, hostage_call, pick_side, axis_to_segment, flank_shot, standoff_bark, step_along_path, orbit_goal_for, approach_point, retreat_goal};
 pub mod p_04;
-pub use p_04::{standoff_alert, standoff_upkeep, hostage_hit_bark, standoff_summary, can_see, can_see_char, eye_reach, reach_for, far_faint, dist_term, team_through, eye_through, eye_blocked, eye_contact, stranded_at, leg_clear, free_cell_near, unstick_snap, live_leg, unstick_begin, unstick_step, unstick_first, go_to};
+pub use p_04::{guard_set_path_goal, standoff_alert, standoff_upkeep, hostage_hit_bark, standoff_summary, can_see, can_see_char, eye_reach, reach_for, far_faint, dist_term, team_through, eye_through, eye_blocked, eye_contact, stranded_at, leg_clear, free_cell_near, unstick_snap, live_leg, unstick_begin, unstick_step, unstick_first, go_to};
 pub mod p_05;
 pub use p_05::{lit_place, looks_into_dark, place_lit_seen, beam_fan, ray_end, beam_walled, beam_walled_at, beam_ray_end, burns_from, beam_lens, wall_dark, torch_low, torch_low_seen_of, wall_dark_seen, wall_put_out, light_ruled, dark_on_lit_man, gun_on_lit_man, team_lit, team_paced, team_pace, team_legs, team_turn, team_lean, follow_path, door_cells, flood_from, deal_spots, search_plan_for};
 pub mod p_06;

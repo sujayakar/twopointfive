@@ -21,6 +21,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { counted, refuse, type Arm, type Result, type Spec } from './bang-tally-row.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -47,16 +48,7 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 
 const DT = 1 / 60;
-type Arm = 'open' | 'bang' | 'hand';
-/** `at` on a spec = a staging to stand the entry AS (another tree's `Result.at` for it: bang-tally-diff.ts), taken where every spot of it is free floor here */
-export interface Spec { scn: string; door: string; room: string; arm: Arm; seed: number; at?: string }
-/** `still`: the room's own men alive and STILL IN IT at the end with the team alive — walked past, not gone off to another room */
-/** `at` = the staging as one word: where the team and Sam were stood (Sam last), and how many others were taken off the floor before a sound. Two runs of an
- *  entry with another `at` are not the same entry: bang-tally-diff.ts says so of a door before anyone blames the walk to it. */
-export interface Result extends Spec { lost: number; team: number; down: number; of: number; taken: boolean; held: boolean; still: number; after: number; secs: number; bangs: number; pre: number; outside: number; note: string; at: string;
-  /** what became of the entry, as a word a reader can hold a tally to (the note is for people): played · refused (the game refused the order: the team is left
-   *  outside a hot room, and that is counted as it falls out) · no-floor (nowhere to stand the team) · nobody (no defender dealt to the room, or no such entry) · threw */
-  outcome: 'played' | 'refused' | 'no-floor' | 'nobody' | 'threw' }
+export type { Arm, Result, Spec } from './bang-tally-row.ts';   // (the row, and the rules that read it, stand no game: bang-tally-row.ts)
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const clone = (o: any) => JSON.parse(JSON.stringify(o));
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -114,7 +106,7 @@ export async function discover(scnId: string): Promise<{ door: string; room: str
 
 export async function run(X: Spec, verbose = false): Promise<Result> {
   const S = await quiet(!verbose, () => stage(X.scn, X.seed, WAY_BREAK ? X.door : undefined)); const { W, g, step } = S; const O = g.orders, D = g.doorTools, nav = g.col.nav;
-  const out: Result = { ...X, lost: 0, team: 0, down: 0, of: 0, taken: false, held: false, still: 0, after: 0, secs: NaN, bangs: 0, pre: 0, outside: 0, note: '', at: '', outcome: 'played' };
+  const out: Result = { ...X, lost: 0, team: 0, down: 0, of: 0, taken: false, held: false, still: 0, after: 0, secs: NaN, bangs: 0, pre: 0, outside: 0, note: '', at: '', outcome: 'played', refused: '', lostBefore: 0 };
   const mine = S.defs.filter((d: any) => S.roomKey(d.room) === X.room); if (!mine.length) { out.note = 'no defender dealt to this room on this seed'; out.outcome = 'nobody'; return out; }
   const room = mine[0].room, ent = room.entries.find((e: any) => e.door.def.name === X.door); if (!ent) { out.note = 'door is not an entry of the room'; out.outcome = 'nobody'; return out; }
   const d = ent.door, ox = ent.out[0], oz = ent.out[1], lx = -oz, lz = ox;
@@ -142,7 +134,7 @@ export async function run(X: Spec, verbose = false): Promise<Result> {
   // HOT: a loud noise at this door (the hearing model's own event: the room's men put it at this entry and come round to it)
   const t0h = g.time; g.events.push({ kind: 'bang', pos: [gate[0], 0.3, gate[2]], time: g.time, loud: true });
   step(240);
-  const lostBefore = team.filter(x => x.state === 'dead').length; if (lostBefore) out.note = `${lostBefore} lost before the order`;
+  const lostBefore = out.lostBefore = team.filter(x => x.state === 'dead').length; if (lostBefore) out.note = `${lostBefore} lost before the order`;
   const log: string[] = []; const t0 = g.time; const T = (s: string) => { if (verbose) log.push(`${(g.time - t0).toFixed(2).padStart(6)}  ${s}`); };
   const seen = new Set<any>(); for (const e of g.events) seen.add(e);
   let bangT = NaN, lastDown = NaN; const was = new Map<any, string>(g.guards.map((x: any) => [x, x.state]));
@@ -155,6 +147,7 @@ export async function run(X: Spec, verbose = false): Promise<Result> {
   const tick = (n = 1) => { for (let i = 0; i < n; i++) { step(); watch(); } };
   const target = () => O.targetAt(d.frameCentre);
   const give = (id: string) => { const why = O.give(id, target(), 'all'); T(`order ${id}${why ? ` REFUSED: ${why}` : ''}`); return why; };
+  const enter = (id: string) => { const why = give(id); if (why) refuse(out, why); };   // (the order that IS the entry; the hand arm's stack before it is not)
   if (X.arm === 'hand') {
     give('stack');
     for (let i = 0; i < 60 * 20; i++) { tick(); if (team.every(x => x.state === 'dead' || O.of(x)?.arrived)) break; }
@@ -165,8 +158,8 @@ export async function run(X: Spec, verbose = false): Promise<Result> {
     land ??= free(outPt(-1.5, 0)) ?? outPt(-1.2, 0);
     CBM.dropThrowable(g, 'flash', land as any); T('Sam\'s can lands inside');
     for (let i = 0; i < 60 * 4 && isNaN(bangT); i++) tick();
-    tick(6); give('openClear');
-  } else { const why = give(X.arm === 'bang' ? 'bangClear' : 'openClear'); if (why) { out.note = [out.note, `order refused: ${why}`].filter(Boolean).join(' · '); out.outcome = 'refused'; } }   // (said, and counted as it falls out: the team is left outside a hot room)
+    tick(6); enter('openClear');
+  } else enter(X.arm === 'bang' ? 'bangClear' : 'openClear');   // (a refusal is said, and the entry counted as it falls out: the team is left outside a hot room)
   const alive = () => team.some(x => x.state !== 'dead'), roomUp = () => men.some(x => x.state !== 'dead');
   let idle = 0;
   for (let i = 0; i < 60 * 50 && alive() && roomUp(); i++) { tick(); if (!D.ops.length) { if (++idle > 60 * 8) break; } else idle = 0; }
@@ -186,7 +179,7 @@ interface Row { scn: string; door: string; room: string; arm: Arm; n: number; lo
 function tabulate(rs: Result[]): Row[] {
   const rows = new Map<string, Row>();
   for (const r of rs) { const k = `${r.scn}|${r.door}|${r.room}|${r.arm}`; let R = rows.get(k); if (!R) rows.set(k, R = { scn: r.scn, door: r.door, room: r.room, arm: r.arm, n: 0, lost: 0, team: 0, down: 0, of: 0, taken: 0, held: 0, after: 0, pre: 0, outside: 0, secs: [], skipped: 0 });
-    if (r.note && !r.of || /no floor|before the order/.test(r.note)) { R.skipped++; continue; }
+    if (!counted(r)) { R.skipped++; continue; }
     R.n++; R.lost += r.lost; R.team += r.team; R.down += r.down; R.of += r.of; if (r.taken) { R.taken++; R.secs.push(r.secs); } if (r.held ?? r.taken) R.held++; R.after += r.after; R.pre += r.pre ?? 0; R.outside += r.outside ?? 0; }
   return [...rows.values()];
 }
@@ -216,7 +209,7 @@ if (import.meta.main) {
   const bool = (k: string) => { const i = argv.indexOf(`--${k}`); if (i < 0) return false; argv.splice(i, 1); return true; };
   try {
     const set = flag('set'); if (set) SET = JSON.parse(set); resetKnobs();
-    if (mode === 'worker') { const specs: Spec[] = JSON.parse(readFileSync(argv[0], 'utf8')); for (const X of specs) { let r: Result; try { r = await run(X); } catch (e) { r = { ...X, lost: 0, team: 0, down: 0, of: 0, taken: false, after: 0, secs: NaN, bangs: 0, note: `no floor: threw ${e instanceof Error ? e.message : e}`, outcome: 'threw' } as Result; } process.stdout.write(`@@${JSON.stringify(r)}\n`); } process.exit(0); }
+    if (mode === 'worker') { const specs: Spec[] = JSON.parse(readFileSync(argv[0], 'utf8')); for (const X of specs) { let r: Result; try { r = await run(X); } catch (e) { r = { ...X, lost: 0, team: 0, down: 0, of: 0, taken: false, after: 0, secs: NaN, bangs: 0, note: `no floor: threw ${e instanceof Error ? e.message : e}`, outcome: 'threw', refused: '', lostBefore: 0 } as Result; } process.stdout.write(`@@${JSON.stringify(r)}\n`); } process.exit(0); }
     // --stand-as a.json[,b.json]: stand each entry as those tallies stood it (their `at`, the same for an entry's every arm)
     const standAs = new Map<string, string>(); for (const f of flag('stand-as')?.split(',') ?? []) for (const r of JSON.parse(readFileSync(f, 'utf8')).results as Result[]) if (r.at) standAs.set(`${r.scn}|${r.door}|${r.room}|${r.seed}`, r.at);
     if (mode === 'trace') { const [scn, door, arm, seed, room] = argv[0].split(':'); const ds = (await discover(scn)).filter(x => x.door === door && (!room || x.room === room));   // (a door between two held rooms: name the room's key — its doors joined by + — as a fifth field)

@@ -48,9 +48,15 @@ pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>,
     }
     // (the one way to say which of rust/sim's slots a game stands in: the game's own word and the box mirror's)
     game::io::set_slot(&mut g, slot);
-    // BRIDGE STAND-IN: THE AIM RAY'S WAY THROUGH A HOLED PANE. `BoxWorld.glassOpen` is a hook glassbreak.ts hangs on the engine's box world as the game
-    // is made (glassbreak.ts:230); the bridge does not carry it, so an imported game's cursor ray landed ON a pane whose cell had fallen where the
-    // TypeScript's passes through the hole (the player's aim point, his arm, his reticle). Hung here as the constructor hangs it.
+    // BRIDGE STAND-IN: THE ANIMATOR'S PLACE. `anim.posIn` is the body's own position array from a Character.update on (character.ts:4419), which the
+    // bridge does not carry: an imported animator would read (0, 0, 0). A start is taken as a tick opens, after the last tick's update handed every
+    // animator its body's array again, so each is told it holds that array (game::character::POS_IN_IS_POS).
+    for c in g.ch.ids().collect::<Vec<_>>() { g.ch[c].anim.pos_in = game::character::POS_IN_IS_POS; }
+    // BRIDGE STAND-IN: A SET'S HOME. `PoseSet.home` (the block its poses stand in) is not carried, so every imported set read "not at home" and the
+    // pool's tend took the whole pool out and in again at the first tick: the same poses, but in the lists' order, where a game that has played
+    // holds them in the order they were made (tut-squad after its checkpoint is put back, tick 5739: `poses` parted there). A set on the game's
+    // list of sets at home IS at home.
+    for s in g.pose_sets.clone() { g.tab.pose_set[s].home = Some(game::Opaque); }
     // (the level's script and its define pass are the import's own now: io::deal_scripts)
     if let Some(sc) = g.level.script { said.push(format!("the level's script, as the import dealt it: {:?}", sc)); }
     (g, said)
@@ -71,21 +77,36 @@ pub fn host_half(g: &mut game::game::Game, hb: &[u8], _first: bool) -> game::cmd
 pub fn lesson(_g: &mut game::game::Game, _txt: &[u8]) -> Option<String> { None }
 
 /// HARNESS STAND-IN: THE TEST DRIVER'S ORDERS. The scripted player gives its orders through the menu's own call between ticks; mission.ts writes each as a line
-/// of gives.txt, `<tick> <id> <who> <kind> <x> <y> <z> [door <place> <side> book<id> | man <place>]`, and the same call is made here before that tick.
-/// Answers the line for the log.
+/// of gives.txt, `<tick> <id> <who> <kind> <x> <y> <z> [door <place> <side> book<id> | man <place>] [seat<N>]`, and the same call is made here before that tick.
+/// A line that ends `seat<N>` (seats.ts, a game of two: the co-op check's orders) is given as THAT seat, through its own order book (`seats::with_seat`);
+/// a line without one is the Game's as it stands between ticks. Answers the line for the log.
 pub fn give(g: &mut game::game::Game, k: usize, l: &str) -> String {
     use game::orders::{OrderTarget as T, Who};
-    let w: Vec<&str> = l.split(' ').collect();
+    let mut w: Vec<&str> = l.split(' ').collect();
+    let seat: Option<usize> = match w.last().and_then(|x| x.strip_prefix("seat")) { Some(n) => { let n = n.parse::<usize>().ok(); w.pop(); n } None => None };
     if l.contains("UNSUPPORTED") || w.len() < 7 { return format!("  NOTE tick {}: an order of the driver's this runner cannot give: {}", k, l); }
+    if let Some(n) = seat { if n >= g.seats.len() { return format!("  NOTE tick {}: an order for seat {} in a game of {}: {}", k, n, g.seats.len(), l); } }
     let at = [w[4].parse::<f64>().unwrap(), w[5].parse::<f64>().unwrap(), w[6].parse::<f64>().unwrap()];
     let who = match w[2] { "-" => None, "all" => Some(Who::All), "red" => Some(Who::Red), "blue" => Some(Who::Blue), x => match x.parse::<f64>() { Ok(n) => Some(Who::Num(n)), Err(_) => { return format!("  NOTE tick {}: a `who` this runner cannot give: {}", k, l); } } };
     let t = match w[3] {
-        "floor" => { let serial = g.serial(); T::Floor(game::orders::OrderTargetFloor { at, wall: None, thing: None, serial }) }
+        "floor" => {
+            // (a floor target that carries a wall: ` wall <index> <box> <alongX> <u> <side> <ok> <outer> x<why as hex>`, mission.ts wallTail)
+            let wall = if w.get(7) == Some(&"wall") && w.len() >= 16 {
+                let n = |i: usize| w[i].parse::<f64>().unwrap();
+                let hex = &w[15][1..];
+                let why = String::from_utf8((0..hex.len() / 2).map(|i| u8::from_str_radix(&hex[2 * i..2 * i + 2], 16).unwrap()).collect()).unwrap();
+                Some(game::wallcharge::WallSpot { index: n(8), box_: game::ids::BoxId::from_ix(w[9].parse().unwrap()), along_x: w[10] == "1", u: n(11), side: n(12), ok: w[13] == "1", why, outer: match w[14] { "-1" => None, x => Some(x == "1") } })
+            } else { None };
+            let serial = g.serial(); T::Floor(game::orders::OrderTargetFloor { at, wall, thing: None, serial })
+        }
         "door" => T::Door(game::orders::OrderTargetDoor { at, door: game::ids::DoorId::from_ix(w[8].parse().unwrap()), side: w[9].parse().unwrap() }),
         "none" => T::None(game::orders::OrderTargetNone { at, man: if w.len() > 8 { Some(g.guards[w[8].parse::<usize>().unwrap()]) } else { None } }),
         _ => T::Foe(game::orders::OrderTargetFoe { at, foe: g.guards[w[8].parse::<usize>().unwrap()] }),
     };
-    let why = game::orders::squad_orders_give(g, w[1], Some(&t), who, None);
+    let why = match seat {
+        Some(n) => { let sid = g.seats[n]; game::seats::with_seat(g, sid, &mut |v: &mut game::game::Game| game::orders::squad_orders_give(v, w[1], Some(&t), who, None)) }
+        None => game::orders::squad_orders_give(g, w[1], Some(&t), who, None),
+    };
     format!("  the driver's order before tick {}: {} -> {:?}", k, l, why)
 }
 
@@ -103,6 +124,13 @@ pub fn write_before(g: &mut game::game::Game, k: usize, l: &str) -> Option<Strin
         let verb = word(w[3]).map(|b| <game::game::Verb as Io>::r(&mut game::io::R::new(&b)));
         let ok = game::game::game_select_verb(g, kind, verb);
         return Some(format!("  the lesson's player before tick {}: selectVerb({} {}) -> {}", k, w[4], w[5], ok));
+    }
+    // HARNESS STAND-IN: the scripted commander blows a set wall charge by the module's own call between ticks (wallcharge-commander.ts `C.blow(c)`)
+    if w.get(1) == Some(&"wall_blow") {
+        let ix = w[2].parse::<f64>().unwrap();
+        let c = g.wall_charge.set.iter().copied().find(|c| g.tab.wallcharge_set_wall_charge[*c].wall.index == ix);
+        let r = game::wallcharge::wall_charge_blow(g, c, None);
+        return Some(format!("  the driver before tick {}: blows the wall charge on wall {} ({}) -> {:?}", k, ix, if c.is_some() { "set" } else { "NOT SET HERE" }, r));
     }
     if w.get(1) == Some(&"room_at") {
         let p = [w[2].parse::<f64>().unwrap(), w[3].parse::<f64>().unwrap(), w[4].parse::<f64>().unwrap()];

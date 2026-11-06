@@ -4,6 +4,14 @@
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/seats.ts <two-roomclear|two-nightbreach|two-compound>:<seed> --out DIR [--ticks N] [--keep "…"] [--every N] [--open "…"] [--asks]
 // Run by run.sh for a name `two-*`. The games (seats-run.ts's own): two-roomclear = `roomclear&squad4` on the page's floor (40 s), two-nightbreach =
 // `nightbreach` (30 s), two-compound = `roomclear&squad4` on levels/compound.json (30 s).
+// THE CO-OP CHECK'S GAMES (coop-check.ts reads what they leave; blitz/coop-needs.md, needs 12 and 13):
+//   two-lock0 | two-lock1   the page's floor, the hands idle: that seat's pair is given `stack` on the locked server door before tick 2 and `openClear` before
+//                           tick 961, through the seat's own order book (a line of gives.txt ending `seat<N>`, which the runner gives as that seat)
+//   two-full                the room clear on the barracks, 17 men as stood up, the scripted fight for 120 s. THE TYPESCRIPT'S PICTURE IS GIVEN ROOM here, a
+//                           tool's stand-in and nothing of the game's: the skinned buffer holds 16 (anim/characters.ts MAX_CHARS) and the 17th man handed
+//                           to it throws, so the hand-over past it is dropped and counted, and the fight plays on for the Rust side to be stepped beside
+// and each writes coop.json: the orders it gave and what each answered, the tick each man of the ordered pair crossed the door's frame line, the most men
+// handed to the picture in one frame and how many hand-overs were dropped.
 // It writes what mission.ts writes: h<k>.bin, THE HOST'S HALF as tick k opens, is a record a seat (here two), then every camera and Input row
 // (the bridge's own writer, export.ts hostHalf).
 // What the host does round a step here (seats-run.ts `tick`): the lamps' update after the tick, the box world listed again after EVERY tick (host.txt's
@@ -12,11 +20,15 @@
 import '../qa/stand.ts';
 import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 const { exportGame } = await import('./host.ts');
-const { hostHalf } = await import('./export.ts');
+const { hostHalf, bookOf } = await import('./export.ts');
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
-const GAMES: Record<string, { query: string; level: string | null; secs: number }> = {
-  'two-roomclear': { query: 'roomclear&squad4', level: null, secs: 40 }, 'two-nightbreach': { query: 'nightbreach', level: null, secs: 30 }, 'two-compound': { query: 'roomclear&squad4', level: 'compound', secs: 30 } };
+type Give = { tick: number; seat: number; id: string; door: string };
+const lock = (seat: number): Give[] => [{ tick: 2, seat, id: 'stack', door: 'server' }, { tick: 961, seat, id: 'openClear', door: 'server' }];
+const GAMES: Record<string, { query: string; level: string | null; secs: number; idle?: boolean; gives?: Give[]; room?: boolean }> = {
+  'two-roomclear': { query: 'roomclear&squad4', level: null, secs: 40 }, 'two-nightbreach': { query: 'nightbreach', level: null, secs: 30 }, 'two-compound': { query: 'roomclear&squad4', level: 'compound', secs: 30 },
+  'two-lock0': { query: 'roomclear&squad4', level: null, secs: 30, idle: true, gives: lock(0) }, 'two-lock1': { query: 'roomclear&squad4', level: null, secs: 30, idle: true, gives: lock(1) },
+  'two-full': { query: 'roomclear&squad4', level: 'barracks', secs: 120, room: true } };
 const outDir = arg('--out', ''), EVERY = +arg('--every', '0');
 const [name, seedS] = (argv[0] ?? '').split(':'), G = GAMES[name], seed = +(seedS ?? 9);
 if (!G || !outDir) { say(`seats.ts <${Object.keys(GAMES).join('|')}>:<seed> --out DIR [--ticks N] [--keep "100,200-210"] [--every N] [--open "559"]`); process.exit(64); }
@@ -41,9 +53,33 @@ function hashes(w: Uint32Array): number[] {
 for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt']) writeFileSync(`${outDir}/${f}`, '');
 writeFileSync(`${outDir}/post.txt`, `parts ${SIM_PARTS.join(' ')}\n`);
 const log = console.log; console.log = () => {};
-const P = await standTwo(G.query, seed, G.level), g = P.g;
+const P = await standTwo(G.query, seed, G.level, !!G.idle), g = P.g;
 console.log = log;
+// ---- what the co-op check reads (coop.json)
+const COOP = { name, seed, seats: g.seats.length as number, men: g.seats.length + g.guards.length + (g.civilians?.length ?? 0), gave: [] as { tick: number; line: string; why: string | null }[],
+  crossed: {} as Record<string, number>, door: null as null | { name: string; hinge: number[]; closedDir: number; width: number }, picture: { holds: 0, most: 0, mostTick: 0, dropped: 0, firstDropped: 0 } };
+{ const { MAX_CHARS } = await import('../../src/anim/characters.ts'); COOP.picture.holds = MAX_CHARS;
+  const C = g.chars, note = (i: number) => { if (i + 1 > COOP.picture.most) { COOP.picture.most = i + 1; COOP.picture.mostTick = k; } };
+  if (G.room && C) { const si = C.setInstance.bind(C), sm = C.setMaterials.bind(C), fin = C.finish.bind(C);   // (THE PICTURE IS GIVEN ROOM: above)
+    C.setInstance = (i: number, ...a: unknown[]) => { note(i); if (i < MAX_CHARS) return si(i, ...a); COOP.picture.dropped++; COOP.picture.firstDropped ||= k; };
+    C.setMaterials = (i: number, ...a: unknown[]) => { if (i < MAX_CHARS) return sm(i, ...a); };
+    C.finish = (n: number, ...a: unknown[]) => fin(Math.min(n, MAX_CHARS), ...a); }
+  else if (C) { const si = C.setInstance.bind(C); C.setInstance = (i: number, ...a: unknown[]) => { note(i); return si(i, ...a); }; } }
+/** the orders of this tick, given through the seat's own book between ticks, each a line of gives.txt as mission.ts writes the scripted commander's, with the seat */
+function giveNow(tick: number) {
+  for (const x of G.gives ?? []) if (x.tick === tick) { const v = g.seats[x.seat].view, d = g.doors.list.find((q: any) => q.def.name === x.door); if (!d) throw new Error(`seats.ts: no door '${x.door}' on this floor`);
+    const T = v.orders.targetAt(d.frameCentre); if (T.kind !== 'door') throw new Error(`seats.ts: the ${x.door} door's frame is not a door target (${T.kind})`);
+    const line = `${tick} ${x.id} - ${T.kind} ${T.at.join(' ')} door ${g.doors.list.indexOf(T.door)} ${T.side} book${bookOf(g).ids.get('DoorId')?.get(T.door)} seat${x.seat}`;
+    const why = v.orders.give(x.id, T) ?? null; appendFileSync(`${outDir}/gives.txt`, line + '\n'); COOP.gave.push({ tick, line, why });
+    COOP.door = { name: x.door, hinge: [...d.def.hinge], closedDir: d.def.closedDir, width: d.def.width }; } }
+/** the tick each man of an ordered pair first stands on the far side of the door's frame line from where he stood when the order was given */
+const sideOfDoor = (p: ArrayLike<number>) => { const D = COOP.door!; return Math.sign((p[0] - D.hinge[0]) * Math.sin(D.closedDir) - (p[2] - D.hinge[1]) * Math.cos(D.closedDir)); };
+let pair: { gd: any; side: number }[] = [];
+function watchPair() { if (!COOP.door || !G.gives) return; const s = G.gives[0].seat;
+  if (!pair.length) pair = g.seats[s].view.orders.squad().map((gd: any) => ({ gd, side: sideOfDoor(gd.char.pos) }));
+  for (const m of pair) { const now = sideOfDoor(m.gd.char.pos); if (now !== 0 && now !== m.side && COOP.crossed[m.gd.callsign] === undefined) COOP.crossed[m.gd.callsign] = k; } }
 dressAll(false);
+if (G.room && argv.includes('--men')) { const { DRESS } = await import('../../src/game/dress.ts'); DRESS.men = true; }   // (`--men`: the men ARE handed to the TypeScript's picture, for its count; the Rust game hands nobody anything, and the picture's own state (g.rig_fits) then differs by design)
 if (!g.dice) throw new Error('seats.ts: the game of two has no die of its own');
 // (`--asks`: every ask of the Game's own seat field made inside a tick, by where it came from, and the first tick with one: seats.ts SEAT_ASKS)
 const { SEAT_ASKS } = await import('../../src/game/seats.ts');
@@ -61,7 +97,9 @@ for (let i = 0; i < TICKS && !threw; i++) {
       appendFileSync(`${outDir}/post.txt`, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}\n`);
       if (keep(k)) { writeFileSync(`${outDir}/a${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s${k}.bin`, block(g)); } }
   };
+  giveNow(k);
   try { P.tick(cmds); } catch (e) { threw = e; } finally { delete g.stepSeats; }
+  watchPair();
   if (!firstAsk && SEAT_ASKS.misses) firstAsk = k;
 }
 if (threw) say(`THE TYPESCRIPT TICK ${k} THREW: ${(threw as any)?.stack ?? threw}`);
@@ -69,5 +107,8 @@ if (threw) say(`THE TYPESCRIPT TICK ${k} THREW: ${(threw as any)?.stack ?? threw
 if (ASKS) for (const [site, n] of [...SEAT_ASKS.sites!].sort((a, b) => b[1] - a[1])) say(`   ${n} × ${site}`);
 say(`TypeScript: ${name} (${G.query}${G.level ? ` on ${G.level}` : ''}) seed ${seed}, two seats, ${k} ticks; time ${g.time.toFixed(4)}; die n=${g.dice?.n}; ${g.guards.length} guards; the Game's own seat fields asked inside a tick ${SEAT_ASKS.misses} times (${[...SEAT_ASKS.missed].join(' ')})${firstAsk ? `, first in tick ${firstAsk}` : ''}`);
 say(`ticks ${threw ? k - 1 : k}; resident ${(process.memoryUsage().rss / 1e9).toFixed(2)} GB`);
+writeFileSync(`${outDir}/coop.json`, JSON.stringify({ ...COOP, ticks: threw ? k - 1 : k, threw: threw ? String((threw as any)?.message ?? threw) : null, asks: SEAT_ASKS.misses, firstAsk }));
+for (const x of COOP.gave) say(`   the order before tick ${x.tick}: ${x.line} -> ${x.why ?? 'given'}`);
+if (G.room || COOP.picture.most > COOP.picture.holds) say(`   the picture holds ${COOP.picture.holds}; the most men handed to it in a frame ${COOP.picture.most} (tick ${COOP.picture.mostTick}); hand-overs dropped ${COOP.picture.dropped}${COOP.picture.firstDropped ? `, the first in tick ${COOP.picture.firstDropped}` : ''}`);
 writeFileSync(`${outDir}/ticks.txt`, `${threw ? k - 1 : k}\n`);
 process.exit(0);

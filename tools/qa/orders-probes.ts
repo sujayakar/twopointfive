@@ -32,6 +32,7 @@
 //   orders-seams       what the later parts build on: a man the fight AI has (script ended, alert, eyes on) is left to it on his post and taken back once cold; an
 //                      owner that refuses keeps its men; a show taking the floor drops every order
 import { standUp, ROOT } from './headless.ts';
+import { toolsRow4 } from './order-keys.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS, doorWords } = await import(`${ROOT}/src/game/orders.ts`);   // (doorWords: a door's name as the HUD says it — its id's words, or the rooms it joins where the door names rule is on — so the expected words follow the stand)
 const { COVER } = await import(`${ROOT}/src/game/cover.ts`);
@@ -223,7 +224,7 @@ export const ordersMenu = guarded(async () => {
   R.openX(sam.pos, 0.4); const rN = ids(O.menu.rows); R.esc();
   R.pick(W.frameCentre, 5, 5);
   const regLog = lastOrder(O); O.unregister('testCharge'); O.log.length = 0;
-  verdict(rD === `stack cover fallIn hold tools ▸ openClear bangClear charge ${DOORTOOLS.outsidePlain ? 'thresholdHold' : 'thr'} fragClear testCharge` && kD === '12345' && backD && rF === floor && rN === none && ran === 1 && regLog?.order === 'testCharge' && O.menu === null, 'a door order registered by a later part on the door tools\' page shows on doors only, at the foot of that page on the next digit (5, after the tools\' 1 to 4 — never one above 5) — the built-in rows keep theirs — Esc on the page steps back to the first, and X, 5, 5 runs it', `door: ${rD} (page digits ${kD}, Esc back ${backD}) · floor: ${rF} · nothing: ${rN} · ran ${ran} · ${logLine(regLog)}`);
+  verdict(rD === `stack cover fallIn hold tools ▸ openClear bangClear charge ${toolsRow4(DOORTOOLS)} fragClear testCharge` && kD === '12345' && backD && rF === floor && rN === none && ran === 1 && regLog?.order === 'testCharge' && O.menu === null, 'a door order registered by a later part on the door tools\' page shows on doors only, at the foot of that page on the next digit (5, after the tools\' 1 to 4 — never one above 5) — the built-in rows keep theirs — Esc on the page steps back to the first, and X, 5, 5 runs it', `door: ${rD} (page digits ${kD}, Esc back ${backD}) · floor: ${rF} · nothing: ${rN} · ran ${ran} · ${logLine(regLog)}`);
   const moved0 = Math.max(...[b1, b2].map((m: any, i: number) => dist(m.char.pos, start[i])));
   verdict(moved0 < 0.05 && O.log.length === 0, 'through all of that no order was given and nobody moved', `orders logged ${O.log.length} · most a man moved ${f2(moved0)} m`);
   // a digit picks at once and is not Sam's weapon slot

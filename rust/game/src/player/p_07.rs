@@ -945,7 +945,7 @@ pub fn teleport_player(g: &mut crate::game::Game, p: V3) {
     }
     crate::scene_collision::clamp_to_world(g, &mut q, BODY_R);
     let c = g.pl[pl].ch;
-    g.ch[c].pos = q;
+    { let to = q; crate::character::pos_replace(g, c, to); }
     g.pl[pl].safe = Some([q[0], 0.0, q[2]]);
     crate::character::character_update(g, c, 0.0);
     crate::game::game_note(g, "teleported");

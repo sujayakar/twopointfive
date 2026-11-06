@@ -19,6 +19,7 @@
 //                    a breach plan, the pause card's words say the size, ten seconds of play throw nothing, a restart puts the same N back, a quit leaves the
 //                    knobs at the pair; with every defender dropped by the player's hand the scenario ends won at every size, alone too (the room clear: taken; the rescue: Sam holds the hostage room himself; the night breach with fewer than two: 'room clear' — with two or more that end is the F drill's, as ever); and at its OWN size the boot by `squad=N` stands the same men on the same marks as the row's own URL
 import { standUp, ROOT } from './headless.ts';
+import { pool, jobsOf } from './pool.ts';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { El, withDom } from './scenario-picker-probes.ts';
@@ -102,12 +103,6 @@ async function bootChild(query: string): Promise<BootReport> {
   const line = out.split('\n').find(l => l.startsWith(TAG));
   if (!line) return { query, spec: null, errors: [], threw: `the boot printed no report (exit ${p.exitCode}): ${(errText || out).trim().split('\n').slice(-3).join(' | ')}` } as unknown as BootReport;
   return JSON.parse(line.slice(TAG.length));
-}
-/** `jobs` at a time */
-async function pool<T, R>(items: T[], jobs: number, fn: (x: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length); let k = 0;
-  await Promise.all(Array.from({ length: Math.min(jobs, items.length) }, async () => { for (;;) { const i = k++; if (i >= items.length) return; out[i] = await fn(items[i]); } }));
-  return out;
 }
 
 // ───────────────────────────────────────────────────────────── loadout-pure ─────────────────────────────────────────────────────────────
@@ -265,7 +260,7 @@ interface Cell { e: any; n: number; own: boolean; ok: boolean; note: string; r: 
 async function stageAll(only?: string[]): Promise<Cell[]> {
   const cells: Cell[] = [];
   for (const e of SCENARIOS) if (!only || only.includes(e.id)) for (const c of L.squadChoices(e)) cells.push({ e, n: c.n, own: c.own, ok: c.ok, note: c.note, r: null, bad: [] });
-  const jobs = Math.max(1, Math.min(4, Number(process.env.LOADOUT_JOBS ?? 4)));
+  const jobs = jobsOf(process.env.LOADOUT_JOBS, 4, 4);
   await pool(cells, jobs, async c => {
     const own = scenarioQuery(c.e) as string, q = c.own ? own.replace(/&squad4\b/, '') + `&squad=${c.n}` : L.squadSearch(own, c.n, c.e.squad);   // (its own size too is booted BY squad=N: the row's own URL is the reference below)
     c.r = await bootChild(q); if (c.own) c.ref = await bootChild(own);

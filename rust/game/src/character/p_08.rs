@@ -850,6 +850,7 @@ pub fn anim_hands_build(g: &mut crate::game::Game, c: CharId) {
     }
     g.ch[c].anim.hn.quiet = false;
     g.ch[c].anim.hn.built = seed;
+    crate::anim_skeleton::pose_done(g, p);   // (the scratch is dropped)
 }
 
 /// The hand pass: digit joints of pA only. (character.ts handsPass)

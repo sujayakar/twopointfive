@@ -218,7 +218,7 @@ pub fn bench_rig(g: &mut crate::game::Game, ch: RigId, owed: Option<bool>) -> Op
 /// A pose written to place `slot` of the bench.   (skeleton.ts benchPut)
 pub fn bench_put(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, slot: f64) {
     let o = (slot * BENCH_SLOT) as usize;
-    let d = cols_at(g.sim, p);
+    let d = cols_of(g, p);
     let b = ::sim::skeleton::bench();
     for k in 0..d.len() {
         ::sim::single::put(&mut b.pose, o + k, d[k] as f64);
@@ -229,7 +229,7 @@ pub fn bench_put(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, slot:
 pub fn bench_get(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, slot: f64) {
     let o = (slot * BENCH_SLOT) as usize;
     let (n_, n) = (rows_of(p), p.nodes as usize);
-    let d = cols_at(g.sim, p);
+    let d = cols_of(g, p);
     let b = ::sim::skeleton::bench();
     for c in 0..10 {
         for i in 0..n {
@@ -310,12 +310,46 @@ fn cols_at(slot: usize, p: Pose) -> &'static mut [f32] {
     &mut pool_at(slot)[s..s + n]
 }
 
-/// A pose of `num_nodes` nodes, all zeros, in its game's pool. No room (or no nodes) makes a pose with no place, as the TypeScript's stayed its own array: new_of's u32::MAX, past Pose::LOOSE and naming no row of g.loose_poses. See PoseSet.stray and span_of.   (skeleton.ts Pose.constructor)
-pub fn pose_new(g: &mut crate::game::Game, num_nodes: usize) -> crate::anim_skeleton::Pose {
-    Pose { at: ::sim::poses::new_of(g.sim, num_nodes), nodes: num_nodes as u32 }
+/// A pose's singles WHEREVER THEY ARE, as the TypeScript's `cols`: in the pool, or, for a pose of its own (a function's scratch, a ragdoll's: a plain
+/// `new Pose`, which never moves into the pool), in its row of `g.loose_poses`. The row's floats are its own heap, which stands while the row does
+/// wherever the list of rows moves; like a pool slice, the answer is for use now and is never kept.
+fn cols_of(g: &mut crate::game::Game, p: Pose) -> &'static mut [f32] {
+    if p.nodes != 0 && p.at >= Pose::LOOSE {
+        let n = ::sim::skeleton::singles(p.nodes as usize);
+        if let Some(r) = g.loose_poses.get_mut((p.at - Pose::LOOSE) as usize) {
+            if r.nodes == p.nodes && r.floats.len() == n { return unsafe { core::slice::from_raw_parts_mut(r.floats.as_mut_ptr(), n) }; }
+        }
+    }
+    cols_at(g.sim, p)
 }
 
-/// A pose the bridge carried with no place (Pose::LOOSE + its row of g.loose_poses) takes one and its floats. Any other stands as it is: one in the pool, and one made with no place, which has no row. A pool with no room leaves it loose, and span_of says so at its first read.
+/// A pose of `num_nodes` nodes, all zeros, OF ITS OWN: a row of `g.loose_poses`, as the TypeScript's `new Pose` is an array of its own. Only a pose
+/// made through a character's set lives in the game's pool (pose_set_make): so the pool holds what the TypeScript's holds, and no more. No nodes
+/// makes a pose with no place and no floats.   (skeleton.ts Pose.constructor)
+pub fn pose_new(g: &mut crate::game::Game, num_nodes: usize) -> crate::anim_skeleton::Pose {
+    if num_nodes == 0 { return Pose { at: u32::MAX, nodes: 0 }; }
+    let row = g.loose_poses.len() as u32;
+    if row >= 0xfffe { panic!("posing: {} poses of their own stand outside the pool: somebody makes one a tick and never lets it go (pose_done)", row); }
+    g.loose_poses.push(LoosePose { nodes: num_nodes as u32, floats: alloc::vec![0.0; ::sim::skeleton::singles(num_nodes)] });
+    Pose { at: Pose::LOOSE + row, nodes: num_nodes as u32 }
+}
+
+/// A function's scratch pose let go (the TypeScript drops the object): its row is freed when it is the last, which a scratch made and dropped inside
+/// one function is. A pose in the pool, or a row with later rows after it, stands.
+pub fn pose_done(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose) {
+    if p.nodes != 0 && p.at >= Pose::LOOSE && (p.at - Pose::LOOSE) as usize + 1 == g.loose_poses.len() { g.loose_poses.pop(); }
+}
+
+/// A pose of a set, in its game's pool, zeros. A pool with no room leaves it a pose of its own, as the TypeScript's stays its own array (the set
+/// counts it a stray).
+fn pose_pool_new(g: &mut crate::game::Game, num_nodes: usize) -> crate::anim_skeleton::Pose {
+    let at = ::sim::poses::new_of(g.sim, num_nodes);
+    if at >= Pose::LOOSE && num_nodes != 0 { return pose_new(g, num_nodes); }
+    Pose { at, nodes: num_nodes as u32 }
+}
+
+/// A pose of its own takes a place in the pool and its floats (a man's set coming home; a pose the bridge carried from an array of its own). One in
+/// the pool stands as it is, and so does one with no row. A pool with no room leaves it where it is.
 pub fn pose_take_home(g: &mut crate::game::Game, p: &mut crate::anim_skeleton::Pose) {
     if p.at < Pose::LOOSE {
         return;
@@ -331,12 +365,15 @@ pub fn pose_take_home(g: &mut crate::game::Game, p: &mut crate::anim_skeleton::P
     }
     let home = Pose { at, nodes };
     cols_at(g.sim, home).copy_from_slice(&g.loose_poses[row].floats);
+    // (the row is let go: emptied, and the list's empty tail dropped)
+    g.loose_poses[row] = LoosePose { nodes: 0, floats: Vec::new() };
+    while g.loose_poses.last().map_or(false, |r| r.nodes == 0) { g.loose_poses.pop(); }
     *p = home;
 }
 
 /// The floats, wherever they are: the row itself, to write through and let go before the next call that takes g.   (skeleton.ts Pose.cols)
 pub fn pose_cols<'g>(g: &'g mut crate::game::Game, this: crate::anim_skeleton::Pose) -> &'g mut [f32] {
-    cols_at(g.sim, this)
+    cols_of(g, this)
 }
 
 /// Between poses of one rig; another count of nodes is refused.   (skeleton.ts Pose.copy)
@@ -347,15 +384,15 @@ pub fn pose_copy(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, sr
     if src == this {
         return;
     }
-    let from = cols_at(g.sim, src);
-    cols_at(g.sim, this).copy_from_slice(from);
+    let from = cols_of(g, src);
+    cols_of(g, this).copy_from_slice(from);
 }
 
 /// Node i's rotation.   (skeleton.ts Pose.rot)
 pub fn pose_rot(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, i: f64) -> Quat {
     let n_ = rows_of(this);
     let o = ((3 * n_) as isize + i as isize) as usize;
-    let d = cols_at(g.sim, this);
+    let d = cols_of(g, this);
     [d[o] as f64, d[o + n_] as f64, d[o + 2 * n_] as f64, d[o + 3 * n_] as f64]
 }
 
@@ -366,7 +403,7 @@ pub fn pose_set_rot(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose,
     }
     let n_ = rows_of(this);
     let o = 3 * n_ + i as usize;
-    let d = cols_at(g.sim, this);
+    let d = cols_of(g, this);
     d[o] = q[0] as f32;
     d[o + n_] = q[1] as f32;
     d[o + 2 * n_] = q[2] as f32;
@@ -377,7 +414,7 @@ pub fn pose_set_rot(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose,
 pub fn pose_pos(g: &mut crate::game::Game, this: crate::anim_skeleton::Pose, i: f64) -> V3 {
     let n_ = rows_of(this);
     let i = i as isize;
-    let d = cols_at(g.sim, this);
+    let d = cols_of(g, this);
     [d[i as usize] as f64, d[(n_ as isize + i) as usize] as f64, d[((2 * n_) as isize + i) as usize] as f64]
 }
 
@@ -394,7 +431,8 @@ pub fn pose_set_make(g: &mut crate::game::Game, id: PoseSetId, n: f64) -> crate:
     if g.tab.pose_set[id].list.len() as f64 >= most {
         panic!("posing: a set of {} poses at most is asked for one more (the owner says how many it keeps as it makes the set, and a level is held to the pose pool by that number: game/levelfit.ts fitRows)", most);
     }
-    let p = pose_new(g, n as usize);
+    // (a pose made while the set is at home is made in the pool; one made before is an array of its own until the set goes home, as the TypeScript's)
+    let p = if g.tab.pose_set[id].home.is_some() { pose_pool_new(g, n as usize) } else { pose_new(g, n as usize) };
     g.tab.pose_set[id].list.push(p);
     if g.tab.pose_set[id].home.is_some() && !pose_in(g, p) {
         g.tab.pose_set[id].stray += 1.0;
@@ -429,9 +467,13 @@ pub fn pose_set_in(g: &mut crate::game::Game, s: PoseSetId) -> bool {
     g.tab.pose_set[s].home = Some(crate::Opaque);
     let mut stray = 0.0;
     for k in 0..g.tab.pose_set[s].list.len() {
-        let p = g.tab.pose_set[s].list[k];
-        if !pose_in(g, p) {
-            stray += 1.0;
+        let mut p = g.tab.pose_set[s].list[k];
+        if p.nodes != 0 && !pose_in(g, p) {
+            // (its floats into the pool. The list is the set's; whoever else holds a handle on the pose, a man's animator, is given the new
+            //  place by the one who moves him: posehome's come_home, which takes his poses home before it calls this)
+            pose_take_home(g, &mut p);
+            g.tab.pose_set[s].list[k] = p;
+            if !pose_in(g, p) { stray += 1.0; }
         }
     }
     g.tab.pose_set[s].stray = stray;
@@ -495,12 +537,12 @@ fn answer(ok: bool) -> f64 {
 
 /// `out` set to the rig's rest pose.   (skeleton.ts restPose)
 pub fn rest_pose(g: &mut crate::game::Game, ch: RigId, out: crate::anim_skeleton::Pose) {
+    let d = cols_of(g, out);
     let rig = &g.tab.rig[ch];
     if (out.nodes as usize) < rig.nodes.len() {
         panic!("restPose: a pose of {} nodes for a rig of {}", out.nodes, rig.nodes.len());
     }
     let n_ = rows_of(out);
-    let d = cols_at(g.sim, out);
     for (i, nd) in rig.nodes.iter().enumerate() {
         for c in 0..3 {
             d[c * n_ + i] = nd.t[c] as f32;
@@ -635,7 +677,8 @@ pub fn sample_clip(g: &mut crate::game::Game, clip: ClipId, t: f64, loop_: bool,
             return;
         }
     }
-    sample_own(&g.tab.clip[clip], t, loop_, cols_at(g.sim, out), rows_of(out), n, singles);
+    let d = cols_of(g, out);
+    sample_own(&g.tab.clip[clip], t, loop_, d, rows_of(out), n, singles);
 }
 
 /// sampleClip's own arithmetic over a pose's singles (`n_` rows a column). Every track searches by itself: the same place as ClipSide.lines finds, so the same pose.
@@ -929,8 +972,8 @@ pub fn skeleton_instance_new(g: &mut crate::game::Game, ch: RigId) -> crate::ani
 
 /// Model-space matrices of all nodes from a local pose, with model-space twists and per-node overrides, then the skinning matrices.   (skeleton.ts SkeletonInstance.update)
 pub fn skeleton_instance_update(g: &mut crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose, world: &crate::v3::m4::Mat4, twists: Option<&[crate::anim_skeleton::TwistSpec]>, overrides: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
+    let d = cols_of(g, pose);
     let rig = &g.tab.rig[this.rig];
-    let d = cols_at(g.sim, pose);
     let n_ = rows_of(pose);
     // several layers may push a twist for the same node: they accumulate
     let mut twist_map: Option<JsMap<usize, TwistSpec>> = None;
@@ -1017,9 +1060,9 @@ pub fn skeleton_instance_node_pos(this: &mut crate::anim_skeleton::SkeletonInsta
 
 /// Rewrite the rotations of `pose` so that plain FK reproduces the globals of the last update: parent⁻¹ · global per node.   (skeleton.ts SkeletonInstance.bakeLocalRotations)
 pub fn skeleton_instance_bake_local_rotations(g: &mut crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose) {
+    let d = cols_of(g, pose);
     let rig = &g.tab.rig[this.rig];
     let n_ = rows_of(pose);
-    let d = cols_at(g.sim, pose);
     for &oi in &rig.order {
         let i = oi as usize;
         let parent = rig.nodes[i].parent;
@@ -1078,7 +1121,8 @@ pub fn pose_fk_run(g: &mut crate::game::Game, this: &mut crate::anim_skeleton::P
         bench_get_fk(this);
         return;
     }
-    fk_own(this, cols_at(g.sim, pose), rows_of(pose), &g.tab.rig[this.rig]);
+    let d = cols_of(g, pose);
+    fk_own(this, d, rows_of(pose), &g.tab.rig[this.rig]);
 }
 
 /// PoseFK.run's own arithmetic over a pose's singles (`n_` rows a column).
@@ -1160,7 +1204,7 @@ mod tests {
         (0..80).map(|i| if i % 8 < 5 { val(i, s) as f32 } else { 0.0 }).collect()
     }
     fn pose_of(g: &mut crate::game::Game, s: usize) -> Pose {
-        let p = pose_new(g, 5);
+        let p = pose_pool_new(g, 5);
         pose_cols(g, p).copy_from_slice(&cols(s));
         p
     }
@@ -1193,7 +1237,7 @@ mod tests {
     fn the_module_finds_a_pose_by_its_place_and_blends_the_same_bits() {
         let (_h, mut g) = hold();
         for (singles, plain, _) in WORDS {
-            let (a, b, o) = (pose_of(&mut g, 37), pose_of(&mut g, 53), pose_new(&mut g, 5));
+            let (a, b, o) = (pose_of(&mut g, 37), pose_of(&mut g, 53), pose_pool_new(&mut g, 5));
             assert!(::sim::skeleton::ask_blend(g.sim, a.at as usize, b.at as usize, 0.37, false, o.at as usize, 5, singles));
             assert_eq!(folded(pose_cols(&mut g, o)), plain);
             // the poses either side are as they were
@@ -1250,7 +1294,7 @@ mod tests {
         };
         let at = clip_write(&clip).unwrap() as usize;
         assert_eq!(clip_write(&clip).unwrap() as usize, at);
-        let p = pose_new(&mut g, 5);
+        let p = pose_pool_new(&mut g, 5);
         let times = [(0.7, true), (-0.2, true), (5.1, false), (-1.0, false), (0.5, true), (1.1, false)];
         let doubles = [0xe915e2dfu32, 0xdf585637, 0xdf585637, 0x6d0a0095, 0xe990b27b, 0xdf585637];
         let in_singles = [0xc428c977u32, 0xdf585637, 0xdf585637, 0x6d0a0095, 0xe990b27b, 0xdf585637];
@@ -1316,7 +1360,7 @@ mod tests {
         let (_h, mut g) = hold();
         let p = pose_of(&mut g, 37);
         bench_put(&mut g, p, 1.0);
-        let back = pose_new(&mut g, 5);
+        let back = pose_pool_new(&mut g, 5);
         bench_get(&mut g, back, 1.0);
         let (from, to) = (cols(37), pose_cols(&mut g, back).to_vec());
         for c in 0..10 {
@@ -1330,7 +1374,7 @@ mod tests {
     #[test]
     fn a_pose_is_ten_columns_at_its_place() {
         let (_h, mut g) = hold();
-        let (p, q) = (pose_new(&mut g, 5), pose_new(&mut g, 5));
+        let (p, q) = (pose_pool_new(&mut g, 5), pose_pool_new(&mut g, 5));
         assert_eq!(q.at - p.at, 80);
         assert_eq!(pose_cols(&mut g, p).len(), 80);
         pose_set_rot(&mut g, p, 2.0, [0.5, 0.25, -0.5, 1.0]);
@@ -1385,6 +1429,75 @@ mod tests {
         assert_eq!(full.at, Pose::LOOSE + 1);
     }
 
+    /// a man of the shift with a set of two poses, each filled with its own numbers, his animator's two stages on them
+    fn posed_man(g: &mut crate::game::Game, s: usize) -> (GuardId, CharId) {
+        let set = pose_set_new(g, 2.0);
+        let (a, b) = (pose_set_make(g, set, 5.0), pose_set_make(g, set, 5.0));
+        pose_cols(g, a).copy_from_slice(&cols(s));
+        pose_cols(g, b).copy_from_slice(&cols(s + 1));
+        let mut ch = crate::character::Character::blank();
+        ch.anim.poses = set;
+        ch.anim.p_a = a;
+        ch.anim.p_b = b;
+        let c = g.ch.push(ch);
+        let mut gd = crate::game::Guard::blank();
+        gd.ch = c;
+        let id = g.gd.push(gd);
+        g.guards.push(id);
+        (id, c)
+    }
+
+    #[test]
+    fn the_pool_holds_the_men_on_the_lists_and_one_who_left_keeps_his_floats() {
+        let (_h, mut g) = hold();
+        let (a, ca) = posed_man(&mut g, 10);
+        let (b, cb) = posed_man(&mut g, 20);
+        let (c, cc) = posed_man(&mut g, 30);
+        let used = |g: &crate::game::Game| ::sim::poses::used(&::sim::state::state(g.sim).poses);
+        // the first tick: everybody goes home (their poses are in the pool as made), and nothing moves
+        crate::posehome::pose_home_tend(&mut g);
+        assert_eq!(g.pose_sets.len(), 3);
+        assert_eq!(used(&g), 6 * 80);
+        let was = g.ch[cc].anim.p_a;
+        // a ragdoll's pose is his own, outside the pool
+        let rag = pose_new(&mut g, 5);
+        pose_cols(&mut g, rag).copy_from_slice(&cols(77));
+        assert!(rag.at >= Pose::LOOSE);
+        assert_eq!(used(&g), 6 * 80);
+        // the second man leaves the list: everybody out, the pool emptied, the two who are there back in, in the list's order
+        g.guards.retain(|x| *x != b);
+        crate::posehome::pose_home_tend(&mut g);
+        assert_eq!(g.pose_sets.len(), 2);
+        assert_eq!(used(&g), 4 * 80);
+        let (pa, pc, pb) = (g.ch[ca].anim.p_a, g.ch[cc].anim.p_a, g.ch[cb].anim.p_a);
+        assert!(pc.at < was.at, "the third man's poses moved down into the room the second left");
+        assert_eq!(g.tab.pose_set[g.ch[cc].anim.poses].list[0], pc, "a set's list and the animator's handle name one pose");
+        assert_eq!(folded(pose_cols(&mut g, pa)), folded(&cols(10)));
+        assert_eq!(folded(pose_cols(&mut g, pc)), folded(&cols(30)));
+        let pcb = g.ch[cc].anim.p_b;
+        assert_eq!(folded(pose_cols(&mut g, pcb)), folded(&cols(31)));
+        // the one who left: out of the pool, his floats kept
+        assert!(pb.at >= Pose::LOOSE);
+        assert!(g.tab.pose_set[g.ch[cb].anim.poses].home.is_none());
+        assert_eq!(folded(pose_cols(&mut g, pb)), folded(&cols(20)));
+        assert_eq!(folded(pose_cols(&mut g, rag)), folded(&cols(77)), "a pose of its own is not the pool's to move");
+        // nothing more to do the tick after
+        let before = used(&g);
+        crate::posehome::pose_home_tend(&mut g);
+        assert_eq!(used(&g), before);
+        // he comes back: in again at the end, as one who arrived
+        g.guards.push(b);
+        crate::posehome::pose_home_tend(&mut g);
+        assert_eq!(g.pose_sets.len(), 3);
+        assert_eq!(used(&g), 6 * 80);
+        let pb = g.ch[cb].anim.p_a;
+        assert!(pb.at < Pose::LOOSE && pb.at > g.ch[cc].anim.p_b.at);
+        assert_eq!(folded(pose_cols(&mut g, pb)), folded(&cols(20)));
+        let pbb = g.ch[cb].anim.p_b;
+        assert_eq!(folded(pose_cols(&mut g, pbb)), folded(&cols(21)));
+        let _ = (a, c);
+    }
+
     #[test]
     fn rest_pose_fills_the_rigs_nodes() {
         let (_h, mut g) = hold();
@@ -1393,7 +1506,7 @@ mod tests {
         ch.nodes[1].r = [0.5, 0.5, 0.5, 0.5];
         ch.nodes[1].s = [4.0, 5.0, 6.0];
         let id = g.tab.rig.push(ch);
-        let p = pose_new(&mut g, 5);
+        let p = pose_pool_new(&mut g, 5);
         rest_pose(&mut g, id, p);
         assert_eq!(pose_pos(&mut g, p, 1.0), [1.0, 2.0, 3.0]);
         assert_eq!(pose_rot(&mut g, p, 1.0), [0.5, 0.5, 0.5, 0.5]);
@@ -1416,7 +1529,9 @@ mod tests {
         ::sim::state::state(g.sim).poses.live = 0;
         assert!(b.at >= Pose::LOOSE);
         assert_eq!(g.tab.pose_set[s].stray, 1.0);
-        assert!(!pose_set_in(&mut g, s));
+        // the pool has room again: the set going home takes the stray in (the TypeScript's poseSetIn tries each pose again)
+        assert!(pose_set_in(&mut g, s));
+        assert!(g.tab.pose_set[s].list[1].at < Pose::LOOSE);
         pose_set_out(&mut g, s);
         assert!(g.tab.pose_set[s].home.is_none());
         assert_eq!(g.tab.pose_set[s].stray, 0.0);

@@ -104,8 +104,8 @@ fn tick_book(g: &mut Game, i: usize) {
     // (the list first: the accessors read a row that a thing off the list no longer has)
     if !g.items.items.contains(&it) || crate::throwables::item_fired(g, it) || crate::throwables::item_life(g, it) <= 0.0 {
         for gd in live!(g, i).flee.keys() {
-            g.gd[gd].path = Vec::new();
-            g.gd[gd].path_goal = None;
+            crate::game::guard_set_path(g, gd, Vec::new());
+            crate::guards::guard_set_path_goal(g, gd, None);
             if g.gd[gd].state != crate::game::GuardState::Dead { let c = g.gd[gd].ch; g.ch[c].anim.crouch_target = 0.0; }
         }
         g.m.frag.books.as_mut().unwrap().remove(i);
@@ -237,8 +237,8 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
             l.flee.set(gd, Some(crate::game::GuardScript { goal: None, upper: Some(crate::character::UpperMode::None), crouch: Some(true), ..Default::default() }));
             l.flee_at.set(gd, dz);
             l.deal_t.set(gd, time);
-            g.gd[gd].path = Vec::new();
-            g.gd[gd].path_goal = None;
+            crate::game::guard_set_path(g, gd, Vec::new());
+            crate::guards::guard_set_path_goal(g, gd, None);
         }
         return;
     }
@@ -279,8 +279,8 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
         None => crate::game::GuardScript { goal: None, upper: Some(crate::character::UpperMode::None), crouch: Some(true), ..Default::default() },
     };
     live!(g, i).flee.set(gd, Some(script));
-    g.gd[gd].path = Vec::new();
-    g.gd[gd].path_goal = None;
+    crate::game::guard_set_path(g, gd, Vec::new());
+    crate::guards::guard_set_path_goal(g, gd, None);
     if !live!(g, i).counted.has(gd) { live!(g, i).counted.add(gd); g.stats.frag.fled += 1; }
 }
 

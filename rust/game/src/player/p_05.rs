@@ -122,12 +122,12 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
                     let d = y - yanked;
                     if d > 0.0 {
                         let hp = g.ch[hc].pos;
-                        g.ch[hc].pos = [hp[0] - sy * d, hp[1], hp[2] - cy * d];
+                        { let to = [hp[0] - sy * d, hp[1], hp[2] - cy * d]; crate::character::pos_replace(g, hc, to); }
                         hold!(g, p).yanked = Some(y);
                         to = [want[0] - sy * d, 0.0, want[2] - cy * d];
                         // STALK.yankWith: he goes back WITH the man
                         let cp = g.ch[c].pos;
-                        g.ch[c].pos = [cp[0] - sy * d, cp[1], cp[2] - cy * d];
+                        { let to = [cp[0] - sy * d, cp[1], cp[2] - cy * d]; crate::character::pos_replace(g, c, to); }
                     }
                 } else if u >= 1.0 && hold!(g, p).hit_at.is_none() {
                     let time = g.time;
@@ -139,7 +139,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
                 let d0 = v3::sub(v3::lerp3(from, to, e), v3::lerp3(from, to, e0));
                 hold!(g, p).step_e = Some(e);
                 let cp = g.ch[c].pos;
-                g.ch[c].pos = if u >= 1.0 { v3::lerp3(cp, to, 1.0 - m::exp(-14.0 * dt)) } else { [cp[0] + d0[0], cp[1], cp[2] + d0[2]] };
+                { let to = if u >= 1.0 { v3::lerp3(cp, to, 1.0 - m::exp(-14.0 * dt)) } else { [cp[0] + d0[0], cp[1], cp[2] + d0[2]] }; crate::character::pos_replace(g, c, to); }
                 let now = g.ch[c].pos;
                 own = if u >= 1.0 { 0.0 } else { m::min(g.k.stalk.catch_stride, m::hyp2(now[0] - was[0], now[2] - was[2]) / m::max(dt, 1e-4)) };
                 g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -148,7 +148,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
             _ => {
                 g.ch[c].vel = [0.0, 0.0, 0.0];
                 let cp = g.ch[c].pos;
-                g.ch[c].pos = v3::lerp3(cp, want, 1.0 - m::exp(-14.0 * dt));
+                { let to = v3::lerp3(cp, want, 1.0 - m::exp(-14.0 * dt)); crate::character::pos_replace(g, c, to); }
                 collide_player(g, 1.7);
             }
         }
@@ -486,7 +486,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
             g.ch[c].vel = v3::scale(g.ch[c].vel, m::exp(-14.0 * dt));
         }
         let (bx, bz) = (g.ch[c].pos[0], g.ch[c].pos[2]);
-        g.ch[c].pos = v3::mad(g.ch[c].pos, g.ch[c].vel, dt);
+        { let to = v3::mad(g.ch[c].pos, g.ch[c].vel, dt); crate::character::pos_replace(g, c, to); }
         collide_player(g, 1.7);
         keep_off_guards(g, dt, 1.7, None);
         keep_held_off_guards(g, dt);
