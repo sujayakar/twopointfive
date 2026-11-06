@@ -54,8 +54,16 @@ pub fn fix_is_sight(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// Where his own eyes have the man, for the rules that ask only that of a man on a post. (belief.ts eyesFix)
 pub fn eyes_fix(g: &mut crate::game::Game, gd: GuardId, pt: V3) -> Option<V3> {
     let lk = g.gd[gd].last_known?;
-    // Rule off, `lk !== pt` asks identity: equal bits stand for the same object (see notes, Traps).
+    // Rule off, `lk !== pt` asks identity; here by value, for a caller with no Def in hand (none today: the callers ask `eyes_fix_def`).
     let his = if g.k.belief.on { fix_is_sight(g, gd) } else { lk != pt };
+    if his { Some(lk) } else { None }
+}
+
+/// `eyesFix(gd, D.pt)` asked of a defender's own Def, as every caller asks it. Rule off, `lk !== pt` is an IDENTITY (roomfight.ts:880 can make a fix
+/// with D.pt's very numbers that is not D.pt): the Def knows whether his fix is its watched point (`def_fix_is_pt`, the stamp), and the numbers do not.
+pub fn eyes_fix_def(g: &mut crate::game::Game, gd: GuardId, d: RoomfightDefId) -> Option<V3> {
+    let lk = g.gd[gd].last_known?;
+    let his = if g.k.belief.on { fix_is_sight(g, gd) } else { !crate::roomfight::def_fix_is_pt(g, d) };
     if his { Some(lk) } else { None }
 }
 

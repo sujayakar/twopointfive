@@ -423,7 +423,7 @@ pub fn room_fight_evidence(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
     }
     if g.time - g.gd[gd].last_seen_t < 0.3 {
         let pt = g.tab.roomfight_def[d].pt;
-        if let Some(seen) = crate::belief::eyes_fix(g, gd, pt) {
+        if let Some(seen) = crate::belief::eyes_fix_def(g, gd, d) {
             let e = room_fight_entry_toward(g, d, seen);
             if e >= 0.0 { let i = e as usize; let v = m::min(3.0, ev_at(g, d, i) + 1.2 * dt); ev_set(g, d, i, v); }
         }
@@ -502,7 +502,7 @@ pub fn room_fight_apply_watch(g: &mut crate::game::Game, d: RoomfightDefId, dt: 
         return;
     }
     if g.time - g.gd[gd].last_seen_t < 0.6 { crate::belief::uncover(g, gd); return; }
-    if let Some(seen) = crate::belief::eyes_fix(g, gd, pt) {
+    if let Some(seen) = crate::belief::eyes_fix_def(g, gd, d) {
         if g.time - g.gd[gd].sight_t < 1.0 && room_fight_in_room(g, room, seen) { g.tab.roomfight_def[d].fix_keep = g.time + 3.0; }
     }
     if g.time >= g.tab.roomfight_def[d].fix_keep { cover_pt(g, d); } else { crate::belief::uncover(g, gd); }

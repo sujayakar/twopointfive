@@ -90,7 +90,7 @@ pub fn team_known(g: &mut crate::game::Game) -> Vec<V3> {
         }
         let seen = if g.time - g.gd[gd].last_seen_t < 4.0 {
             let pt = g.tab.roomfight_def[d].pt;
-            crate::belief::eyes_fix(g, gd, pt)
+            crate::belief::eyes_fix_def(g, gd, d)
         } else {
             None
         };
