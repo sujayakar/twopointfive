@@ -45,6 +45,29 @@ The host lists the box world after every tick and updates the lamps, as `seats-r
 bare Game for a seat's field (seats.ts SEAT_ASKS) and the first tick it did: from that tick a path under `g.m.guards.ground_track` is the TypeScript's
 third row (the bare Game's own memo of "the player's" ground speed), which the Rust game does not keep.
 
+### The co-op check
+
+```sh
+bun run tools/blitz/coop-check.ts [--only asks,lock,full] [--no-build]      # about six minutes; EXPECTED RED until the seats' parts are mended
+```
+
+Three lines, one for each kind of two-seat fault the TypeScript has and the translation copied (needs 11 to 13 of the Library's blitz/coop-needs.md). Each
+runs a game of two through `run.sh` and reads the RUST side: its log and the states it kept. They are the target of the seats' mends, not a gate.
+
+- `asks` (`two-roomclear:9`): the TypeScript's count of asks of the bare Game for a seat's field, and whether the Rust game stayed in step.
+- `lock` (`two-lock0:9`, `two-lock1:9`): the hands idle; that seat's pair is given `stack` on the locked server door before tick 2 and `openClear` before
+  tick 961 through the seat's OWN order book. A line of gives.txt that ends `seat<N>` is given as that seat on both sides (`game_run::give` →
+  `seats::with_seat`). Both men are across the frame line within 5 s of the order, read off the Rust states every half second. Today seat 0's pair takes
+  9.5 s and 10.5 s: seat 1's door tools sling seat 0's breaching shotgun every tick.
+- `full` (`two-full:3`, the barracks, 120 s of the scripted fight): the men the Rust game holds against what the picture holds (17 against 16). It cannot
+  see the hand-over to the picture: the loop stands with the dress down and the Rust renderer is an empty boundary (`--men` on seats.ts hands the
+  TypeScript's men to its picture with room made for the 17th, for its count; `g.rig_fits` then differs by design).
+
+**The barracks game parts on purpose, and it is the first place a seat need shows.** At tick 5499 a man of seat 1 is sent through a door with two corners
+left on his order. The TypeScript's door walk asks the bare Game's order book (the first seat's, which has no order of his) and does not take the way
+round; the Rust door walk is stepped as his seat and finds his own order (`g.door_path.walks{…}.via.len` 0 against 2). The game's own state differs from
+there, the block from tick 5781, the die from 6349.
+
 ## Reading the stop
 
 **`PANIC in tick K`** with a `todo!()` or "not yet implemented": a function nobody wrote. The frames under it name it and who called it. Read the TypeScript it
