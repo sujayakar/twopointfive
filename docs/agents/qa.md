@@ -138,7 +138,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   statement, and a line that says `word left out on purpose:` with its reason (three do: `rescueflush-check`'s floors that do not ask for lanes,
   `doorpath-probes runOne`, `lesson-gate`'s levels with no script). It does NOT close the class: an environment built over several lines, a word a
   helper or a named list drops, a computed key, and `delete process.env.X` before a stand-up in the tool's own process (fifteen lines, read and meant)
-  are not seen. What closes it is a run held to the rule its game had, as `snap-probes` now does for the turn weight. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
+  are not seen. What closes it is a run held to the rule its game had, as `snap-probes` now does for the turn weight. THE FIFTH BATCH (2026-11-06), two stagings and two that were not: `review-act-down`
+  holds a push to no hand begun on the leaf as well as the leaf untouched, and its control is the leaf open on the frame or by the hand's move begun on
+  it (hands at work bring a leaf round over frames: `pl.doorMove`; `REVIEWACT_BREAK=1`, the 'downed' Sam on his feet: 1 FAIL on both stands).
+  `loudchaos-blast` asks whether THE stack 3.2 m from the charge is taken, by where its box stands and the module's own log line of it, where it read the
+  floor's count of stacks taken (a lived-in room has others nearer), and holds each arm to its charge having gone off (`LOUDSTACK_BREAK=1`: 1 FAIL on
+  both; the power-4 arms have no red path of their own). NOT MENDED, AND WHY: `shutdoor-refuse`'s contact case is not a staging fault. The man whose arc
+  the door is has the defender in sight at once and has lost him half a second later, as the row is read, on the page's stand alone (the line's detail
+  says both times now); an order to cover the door first makes it pass by two more men and hides that, so it was taken back and the row is the owner's.
+  `kitload`'s cards do take once written to the card a night alone wears (the stealth card), but four of its lines take the loud issue for the reference,
+  which is the kit's owner's to settle (the row says what was measured). `doorpath-paths` and `doorpath-gun` are the old stand's alone now
   (green on the page's). NOT DONE: `flashweight`'s two older rows are the old stand's measurements, kept as rows of both stands and not read again on the page's (the family
   did not finish inside half an hour on a loaded box). tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.

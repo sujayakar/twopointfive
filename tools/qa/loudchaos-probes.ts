@@ -208,9 +208,20 @@ export async function loudBlast() {
     F.verdict(!fails.length, `dustBurst of 60 puffs: ${n} let out over ${f2(last - first)} s inside the per-frame and per-second caps, ${D.DESTR_STATS.puffsRefused} refused, all within the 1.5 m spread; nothing at chaos 0`, fails.join('; ') || `queue ≤ ${D.CHAOS.loud.burstQueue}, patience ${D.CHAOS.loud.burstSecs} s`); }
   // `power` reaches further (switch on) and is ignored with it off
   { const S = await stage('warehouse.json', true); const { game, items } = S; const papers = items.filter(o => o.kind === 'paper');
-    const reachOf = async (on: boolean, power: number) => { const T = await stage('warehouse.json', on, 4401, 0.5, true); const c = papers[0].box.c; const at = standNear(T.game, c, 3.2, 3.6); if (!at) return -1; T.game.destr.bang([at[0], 0.06, at[2]], NOBODY_ID, power); return D.DESTR_STATS.papers; };
+    // (THE stack is asked, by its own box: the floor's count of stacks taken was the same thing while this one stood alone, and a lived-in room — lived.ts,
+    //  on in the page — puts others nearer the charge. LOUDSTACK_BREAK=1, the red path: the power-1 charge is set at the stack itself — the line must fail.
+    //  The power-4 arms have no red path of their own here: 'takes it' and 'leaves it with the switch off' are read off the same log line)
+    const NEAR = process.env.LOUDSTACK_BREAK === '1';
+    // (the stack is found again on each floor by where its box stands, not by its number; 'taken' is the module's own line of it in its log; and each arm
+    //  must show its charge went off at all — an arm that 'left the stack' because nothing was set is no answer)
+    const c0 = papers[0].box.c, same = (o: Stage['items'][number]) => o.kind === 'paper' && Math.hypot(o.box.c[0] - c0[0], o.box.c[1] - c0[1], o.box.c[2] - c0[2]) < 1e-6;
+    const reachOf = async (on: boolean, power: number) => { const T = await stage('warehouse.json', on, 4401, 0.5, true); const it = T.items.find(same); if (!it) return null;
+      const at = NEAR && power === 1 ? standNear(T.game, it.box.c, 0.4, 0.9, 0.02) : standNear(T.game, it.box.c, 3.2, 3.6); if (!at) return null;
+      const bangs0: number = D.DESTR_STATS.bangs, log0: number = D.DESTR_LOG.length; T.game.destr.bang([at[0], 0.06, at[2]], NOBODY_ID, power);
+      return { took: D.DESTR_LOG.slice(log0).some((l: string) => l.includes(`paper ${it.i} scattered`)), all: D.DESTR_STATS.papers as number, went: D.DESTR_STATS.bangs - bangs0 === 1, far: Math.hypot(at[0] - it.box.c[0], at[2] - it.box.c[2]) }; };
     void game; const a = await reachOf(true, 1), b = await reachOf(true, 4), c = await reachOf(false, 4);
-    F.verdict(a === 0 && b >= 1 && c === 0, 'a charge 3.4 m from a stack leaves it (power 1), takes it at power 4 with the switch on, and leaves it at power 4 with the switch off (the argument is not read)', `stacks up: ${a} / ${b} / ${c}`); }
+    F.verdict(!!a && !!b && !!c && a.went && b.went && c.went && !a.took && b.took && !c.took, `a charge ${a ? f2(a.far) : '3.2'} m from a stack leaves it (power 1), takes it at power 4 with the switch on, and leaves it at power 4 with the switch off (the argument is not read)`,
+      a && b && c ? `that stack taken: ${a.took} / ${b.took} / ${c.took} · each charge went off: ${a.went} / ${b.went} / ${c.went} · stacks taken on the whole floor: ${a.all} / ${b.all} / ${c.all} (${D.CHAOS.papersPerSec ?? '?'} a second is the cap)` : 'NO PLACE FOR THE CHARGE, or the stack is not on the floor staged again'); }
   DESTRUCTION.on = false; return F.done();
 }
 
