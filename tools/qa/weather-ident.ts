@@ -10,6 +10,7 @@
 import { STAND } from './stand.ts';   // (the stand's word: with none, the page as it opens)
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
+import { pool, jobsOf } from './pool.ts';
 const ROOT = resolve(import.meta.dir ?? '.', '../..'), args = process.argv.slice(2), BREAK = process.env.WEATHER_BREAK === '1';
 const flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 const RUNS = ['compound-four:1::', 'compound-four:1:clear:', 'compound-four:1:overcast:', 'compound-four:1:rain:', 'compound-four:1:downpour:', 'compound-four:1:fog:', 'compound-four:1:dust:',
@@ -69,9 +70,8 @@ const one = (run: string): Promise<Run | string> => new Promise(done => {
   p.stdout.on('data', (d: unknown) => { out += d; }); p.stderr.on('data', (d: unknown) => { err += d; });
   p.on('close', code => { const l = out.split('\n').find(x => x.startsWith('WEATHER-RUN ')); done(l ? JSON.parse(l.slice(12)) as Run : `${run} left nothing (exit ${code}): ${err.trim().split('\n').slice(-3).join(' / ').slice(0, 300)}`); });
 });
-async function pool<T>(jobs: (() => Promise<T>)[], n: number): Promise<T[]> { const out: T[] = new Array(jobs.length); let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < jobs.length) { const k = i++; out[k] = await jobs[k](); } })); return out; }
 
-const runs = flag('--runs')?.split(',') ?? RUNS, got = await pool(runs.map(r => () => one(r)), Number(flag('--jobs') ?? 4));
+const runs = flag('--runs')?.split(',') ?? RUNS, got = await pool(runs, jobsOf(flag('--jobs'), 4), r => one(r));
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? ': ' + detail : ''}`); if (!ok) fails++; };
 const broken = got.filter(r => typeof r === 'string') as string[], done = got.filter(r => typeof r !== 'string') as Run[];

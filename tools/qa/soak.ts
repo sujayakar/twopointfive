@@ -22,12 +22,14 @@
 // release — and the held man's rows, holstered or drawn: grab the nearest calm man from behind, question him (his top row, tapped), walk him about, now and then
 // draw / holster on him with E (player.ts swapHold, either way, sometimes back again), then choke him out (arm: the choke's row chosen and tapped, sometimes
 // stopped by a second tap) or fire past him / pistol-whip him / check the whip (gun); the takedown likewise through its click with the hands empty; the Space
-// selector's own shape asserted throughout — open only under a held key, a running verb alone in the list with its bar, no second verb over a running one):
+// selector's own shape asserted throughout — open only under a held key but for the ring that stays, which stands by itself once let go in its middle; the cancel
+// row the list's alone; a running verb alone in the list with its bar, no second verb over a running one):
 // Player.holding and
 // the one Guard.held always agree both ways (phase and variant), the held man alive, unscripted, pathless, within a hand of his station HOLD.dist ahead of Sam
 // once held, never perceiving Sam and never barking, no hold while Sam is down / mid-takedown / on a wall, the choke only in the arm variant and the whip only
 // in the gun one, the variant always what the hands say (drawn in slot 1 ⇔ gun), the pistol in the hand exactly when it is the gun variant and the knife's
-// boxes in the fist exactly when it is the arm one (both once a hand-over has had its beat; no knife with nobody held), rounds past him never his and never
+// boxes in the fist exactly when it is the arm one and the close-in rule has a knife (close.ts closeBare: none where it is bare-handed; both once a hand-over
+// has had its beat; no knife with nobody held), rounds past him never his and never
 // closer than the cadence, nothing of a hold left on the animators once it is over, and — muzzle discipline (tune.muzzleDiscipline, on) — not one guard
 // round of anybody's while a living man is up in Sam's arm ('shield-fired-on'); the carbine's tracers (tracers.ts, lane R6): streaks alive ≤ the pool, lit
 // heads ≤ their light budget and = the LightSet's 'tracer' lights, every head between its muzzle and its impact, born only on a frame a tracer-row round flew,
@@ -36,6 +38,12 @@
 // deterministic single-situation repros for what this found.
 import { standUp, ROOT, Headless } from './headless.ts';
 const IK = 'Space';   // the game's interact key (src/game/consts.ts INTERACT_KEY)
+// SOAK_BREAK=1: the selector's lines are read three times over a selector that is not there (a list standing open; a ring up that does not stand by itself;
+// a ring kept over a shut selector, standing by itself with a press in hand: the first seed's first three idle frames with rows), and the arm hold's knife is
+// wanted where the close-in rule has none (and not where it has one): the run must then report selector-open-keyup and selector-open-unarmed of the first
+// two, selector-cancel-row of the list, selector-ring-shut and selector-ring-armed of the third, and knife-missing, on either stand
+const BREAK = process.env.SOAK_BREAK === '1'; let broke = 0;
+const FAKES = [{ open: true, ring: null }, { open: true, ring: { free: false } }, { open: false, ring: { free: true }, downT: 0 }];
 
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
@@ -58,6 +66,7 @@ const { Clearing } = await import(`${ROOT}/src/game/squad.ts`);
 const { Doors } = await import(`${ROOT}/src/game/doors.ts`);
 const { PLAYER_ID, DRIVE_SECS } = await import(`${ROOT}/src/game/consts.ts`);
 const { KNIFE_TAG, SC20K_TAG, M4_BOXES } = await import(`${ROOT}/src/game/rigProps.ts`);
+const { closeBare } = await import(`${ROOT}/src/game/close.ts`);
 const { GEAR } = await import(`${ROOT}/src/game/gear.ts`);   // (which rifle is drawn: the 2010s carbine is three boxes more)
 const { fireRing, staggerLines, RING } = await import(`${ROOT}/src/game/launcher.ts`);   // (lane R5: the ring airfoil — a stimulus fires one at a man's hips through the API, the stagger lines are their own smell)
 const { LAUNCHER, LAUNCHER40 } = await import(`${ROOT}/src/game/weapons.ts`);
@@ -1400,14 +1409,23 @@ async function runSeed(seed: number): Promise<SeedReport> {
     const pl = game.player;
     if (pl.down !== !pl.char.alive) violate('alive-mismatch', 'player', `down ${pl.down} alive ${pl.char.alive}`);
     if (pl.picking && pl.kick) violate('player-pick-and-kick', 'player', 'picking and kicking at once');
-    // the Space selector (interact.ts) and its rows (player.ts buildInteractables): the list is OPEN only under a Space that is down; the cancel row exists exactly
-    // while it is open; a running sustained verb (ease / pick / the choke or whip chosen or on / the drive) is ALONE in the list, worded as running with its bar,
+    // the Space selector (interact.ts) and its rows (player.ts buildInteractables): it is OPEN only under a Space that is down, but for the ring that stays
+    // (handring.ts), which stands by itself once the key is let go in its middle (interact.ts sets `ring.free` and puts the press away); the cancel row exists
+    // exactly while the LIST is open (game.ts listOpen: a ring has none); a running sustained verb (ease / pick / the choke or whip chosen or on / the drive) is ALONE in the list, worded as running with its bar,
     // from the frame after it began; and no sustained verb ever replaces another inside one frame (nothing starts over a running one — a frame of none between,
     // always) unless the harness itself made the call this frame (a stimulus's startPicking / teleport)
-    { const S = pl.sel; const run = runningVerb(game); const rows = game.nearby.filter((r: any) => r.kind !== 'cancel');
-      if (S.open && !input.keys.has(IK)) violate('selector-open-keyup', 'player', `the list is open with Space up (downT ${S.downT.toFixed(2)}, fHeld ${pl.fHeld})`);
-      if (S.open && S.downT < 0) violate('selector-open-unarmed', 'player', `open with no press armed (downT ${S.downT})`);
-      if (game.nearby.filter((r: any) => r.kind === 'cancel').length !== (S.open && rows.length ? 1 : 0)) violate('selector-cancel-row', 'player', `open ${S.open}, ${rows.length} rows, ${game.nearby.filter((r: any) => r.kind === 'cancel').length} cancel row(s)`);
+    { const run = runningVerb(game); const rows = game.nearby.filter((r: any) => r.kind !== 'cancel');
+      // (SOAK_BREAK=1: on three frames with rows and nothing open or pressed the lines below are read over a selector that is not there: a LIST standing open;
+      //  a RING up that does not stand by itself — open with the key up and no press in hand, as only a ring that does may be; and a ring kept over a SHUT
+      //  selector, standing by itself with a press in hand)
+      const idle = BREAK && broke < FAKES.length && !pl.sel.open && pl.sel.downT < 0 && !input.keys.has(IK) && rows.length > 0;
+      const S = idle ? { ...pl.sel, ...FAKES[broke++] } : pl.sel, alone = !!S.ring?.free, list = S.open && !S.ring;
+      // (what a ring is held to in the place of the two lines it is let off: it is never kept over a shut selector, and one that stands by itself has no press in hand)
+      if (S.ring && !S.open) violate('selector-ring-shut', 'player', `a ring is kept with the selector shut (downT ${S.downT.toFixed(2)})`);
+      if (alone && S.downT >= 0) violate('selector-ring-armed', 'player', `a ring standing by itself with a press in hand (downT ${S.downT.toFixed(2)})`);
+      if (S.open && !alone && !input.keys.has(IK)) violate('selector-open-keyup', 'player', `${S.ring ? 'a ring not standing by itself' : 'the list'} is open with Space up (downT ${S.downT.toFixed(2)}, fHeld ${pl.fHeld})`);
+      if (S.open && !alone && S.downT < 0) violate('selector-open-unarmed', 'player', `open with no press armed (downT ${S.downT}${S.ring ? ', a ring' : ''})`);
+      if (game.nearby.filter((r: any) => r.kind === 'cancel').length !== (list && rows.length ? 1 : 0)) violate('selector-cancel-row', 'player', `open ${S.open}${S.ring ? ' as a ring' : ''}, ${rows.length} rows, ${game.nearby.filter((r: any) => r.kind === 'cancel').length} cancel row(s)`);
       if (!Number.isFinite(pl.nearSel) || (game.nearby.length && (pl.nearSel < 0 || pl.nearSel >= game.nearby.length)) || (game.hover && !game.nearby.includes(game.hover))) violate('selector-highlight', 'player', `nearSel ${pl.nearSel} over ${game.nearby.length} rows, hover ${game.hover ? (game.hover.verb ?? game.hover.kind) : 'null'} ${game.hover && !game.nearby.includes(game.hover) ? 'NOT in the list' : ''}`);
       if (run && run === runPrev && !pl.down && (rows.length !== 1 || !rows[0].running || rows[0].progress === undefined)) violate('running-row', run, `${run} is running but the rows are [${game.nearby.map((r: any) => `${r.verb ?? r.kind}${r.running ? '*' : ''}${r.progress !== undefined ? ' ' + Math.round(r.progress * 100) + '%' : ''}`).join(', ')}]`);
       if (run && runPrev && run !== runPrev && !stimFrame) violate('verb-overlap', run, `${runPrev} → ${run} inside one frame (a sustained verb started over a running one)`);
@@ -1464,7 +1482,8 @@ async function runSeed(seed: number): Promise<SeedReport> {
           if ((H.variant === 'gun') !== pl.pistolUp) { if (++variantHandsFrames > 1) violate('hold-variant-hands', name, `'${H.variant}' hold with slot ${pl.slot} holstered ${pl.holstered} for ${variantHandsFrames} frames`); } else variantHandsFrames = 0;
           { const kn = game.dynBoxes.filter((b: any) => b.name === KNIFE_TAG).length;
             if (H.variant === 'gun' && kn) violate('knife-in-gunhold', name, `${kn} knife boxes drawn with the gun at his head (${f2(H.swapT)} s since a swap)`);
-            if (H.variant === 'arm' && H.t > 0 && !pl.down && swapped && kn !== 4) violate('knife-missing', name, `${kn} knife boxes in the arm hold (want 4), phase ${H.phase} t ${f2(H.t)}, ${f2(H.swapT)} s since a swap, holdGunSide ${pl.char.anim.holdGunSide}`);
+            { const want = closeBare(game) !== BREAK ? 0 : 4;   // (no knife where the close-in rule has none: the arm hold is bare-handed there — close.ts closeBare)
+              if (H.variant === 'arm' && H.t > 0 && !pl.down && swapped && kn !== want) violate('knife-missing', name, `${kn} knife boxes in the arm hold (want ${want}), phase ${H.phase} t ${f2(H.t)}, ${f2(H.swapT)} s since a swap, holdGunSide ${pl.char.anim.holdGunSide}`); }
             if (kn && kn !== 4) violate('knife-partial', name, `${kn} knife boxes (want 0 or 4)`); }
           if (!(H.swapT >= 0)) violate('hold-swapt', name, `swapT ${H.swapT}`);
           if (!(H.gunOut >= 0 && H.gunOut <= 1 + 1e-6) || (H.variant === 'arm' && swapped && H.gunOut > 0.02)) violate('hold-gunout', name, `gunOut ${H.gunOut} in the ${H.variant} variant`);

@@ -29,3 +29,13 @@ export function heldWords(holds: Record<string, string>): string[] {
 }
 /** the word a row's note opens with, or none */
 export const wordOf = (note: string): string | undefined => /^([A-Z][A-Z0-9_]*=[A-Za-z0-9-]+)/.exec(note)?.[1];
+
+/** A RUN UNDER ONE WORD OF THE STAND: `fn` runs with `word` set to '1' or '0' (src/host/standup.ts reads it as each game is stood up and writes the row), then
+ *  the word is put back as it was, and so is the row where the caller hands its table. The row matters on the page's stand: no later stand-up raises a row a
+ *  word put off (the page's switches are raised once, as the tool loads), so a caller with no fence of its own (holds.ts asProbe puts every table back) would
+ *  leave the next game standing on it. Several checks still carry this by hand for TPS_SQUADDEAL, word only (squaddeal-check, threshold-probes,
+ *  doortools-probes, darkfoe-check, enemysquads-probes). */
+export async function underWord<T>(word: string, on: boolean, fn: () => Promise<T>, row?: { table: Record<string, unknown>; key: string }): Promise<T> {
+  const w0 = process.env[word], v0 = row?.table[row.key]; process.env[word] = on ? '1' : '0';
+  try { return await fn(); } finally { if (w0 === undefined) delete process.env[word]; else process.env[word] = w0; if (row) row.table[row.key] = v0; }
+}
