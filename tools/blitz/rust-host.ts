@@ -213,7 +213,9 @@ export class RustHost {
   dieN(): number { return this.F.X.face_die_n(this.h); }
   /** THE GAME'S OWN DIE PUT AT THE START OF `seed`'S STREAM, ON THE RUST SIDE (tools/qa/headless.ts `seedGame`, which has put the puppet's: a tool that wants a
    *  given stream after the game is stood seeds the game's die; nothing lets the Rust tick draw a tool's `Math.random`). The die is the `dice` part of the
-   *  game's block (rust/sim/src/dice.rs: the count of draws as a double, then the mulberry32 word), written in place: no call of the face's is needed.
+   *  game's block (rust/sim/src/dice.rs: the count of draws as a double, then the mulberry32 word), written in place.
+   *  STAND-IN: the host writes the block by its layout (the part found by its name, the two fields by their offsets). Belongs in the face: one call
+   *  that seeds the die of the game in a slot.
    *  Before the first tick there is no Rust game yet, and its start takes the puppet's die as it stands. */
   seedDie(seed: number): void { this.dieSeeds++; if (this.rec) this.rec.dieSeeds = this.dieSeeds; if (!this.h) return;
     const X = this.F.X, i = this.F.NAMES.indexOf('dice'); if (i < 0) throw new Error('rust-host: the block has no part named dice');
@@ -398,7 +400,7 @@ export class RustHost {
         return upload.apply(this, a); }
       if (H.uploadDone) { H.uploadDone = false; return; }
       H.uploads.late++; X.face_upload(H.h); H.uploads.rust++; H.applyStep(); H.applyWhole('a listing off its tick'); H.lastState = B.exportGame(g, B.reg); }); }
-    // THE LIST ALONE (`relist`: a tick that is not a draw; src/net/step.ts makes one after every tick of a networked game, where the headless world's own
+    // STAND-IN (a driver's call tapped by hand; belongs with the generated taps): THE LIST ALONE (`relist`: a tick that is not a draw; src/net/step.ts makes one after every tick of a networked game, where the headless world's own
     // step calls `upload`). The Rust game lists its world at the same moment here too. Without it the Rust game never listed: its state grew by the
     // frame's boxes every tick (35 KB a tick on the game server's room clear) and the every-tick export, which walks them, slowed tick by tick (9 ms a
     // tick over the first hundred ticks, 41 over the sixth).

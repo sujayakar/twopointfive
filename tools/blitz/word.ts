@@ -69,7 +69,8 @@ function decide(frozen: boolean): Stood {
   if (row?.word === 'none') return { word: '', who, why: row.why, kind: 'a tool\'s row: no word' };
   if (row?.word === 'ts') return { word: 'ts', who, why: row.why, kind: 'a tool\'s row' };
   if (row?.word === 'rust') return { word: 'rust', who, why: row.why, kind: 'a tool\'s row' };
-  // (THE BRIDGE'S OWN TOOLS, this folder's: each stands its games its own way (a reference play, a host it attaches itself, a walk of the state), with
+  // (STAND-IN: THE BRIDGE'S OWN TOOLS, this folder's, known by their path where every other tool is known by a row. Belongs in the table: a row a tool.
+  // Each stands its games its own way (a reference play, a host it attaches itself, a walk of the state), with
   // its own preload where it needs one. With no row such a tool is stood with no word, as it always was.)
   if (!row && /\/tools\/blitz\/[^/]+$/.test(tool)) return { word: '', who, why: 'one of the bridge\'s own tools, which stands its games itself', kind: 'a bridge tool' };
   // (A TOOL WITH NO ROW, like a probe with none: the TypeScript tick, counted and named. Several hundred check files stand a game when run as their own

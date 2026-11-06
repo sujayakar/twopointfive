@@ -282,6 +282,10 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
   left it out or it is in another hosted game's book. An apply deletes and orders only this game's keys. NOT COVERED: a game with no host that makes
   new things while a hosted game plays beside it. Belongs in the generated export.ts (`keysOf`, the once-keyed and game-keyed reads) and import.ts
   (`orderSide`, every `liveKeys()`).
+- **The game's die seeded on the Rust side by a write into the block** (rust-host.ts `seedDie`: the `dice` part found by its name, the count and the word
+  by their offsets). Belongs in the face: one call that seeds the die of the game in a slot.
+- **The list-alone call tapped by hand** (rust-host.ts: `world.relist` → `face_upload`, beside the tap on `upload`). Belongs with the generated taps.
+- **The bridge's own tools known by their path** (word.ts: a tool of tools/blitz with no row gets no word). Belongs in the table, a row a tool.
 - **A box whose markings went is `marks: null`** after an apply; scene/boxes.ts:841 tests `!== undefined`. Made undefined before the puppet's own listing
   (rust-host.ts). Belongs in import.ts.
 - **The whole applies owed** (the list above): each stands for fields the filtered list lacks. Belongs on the generated list.
