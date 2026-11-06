@@ -71,9 +71,10 @@ console.log(`a pose's arithmetic in singles · the ${STAND} stand${BREAK ? ' · 
     `on: ${a ? `${a.asked} questions, ${a.differ} differ (sample ${a.by.sample}, lines ${a.by.lines}, blend ${a.by.blend})` : last(on.out)} · off: ${b ? `${b.asked} questions, ${b.differ} differ` : last(off.out)}`);
 }
 // ---- layers (asked on the page's stand: the layers' check plays one scripted mission, and under the frozen stand's rules that mission asks too few of
-//      the layers for the check to call itself fair — its own verdict there is "asked too little", with or without this rule and whatever answers)
+//      the layers for the check to call itself fair — its own verdict there is "asked too little", with or without this rule and whatever answers.
+//      --unpinned: the layers' recording is of the page as it opens, and this child raises the rule, so its words are no run of the recording's)
 if (STAND === 'shipped') {
-  const r = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { [WORD]: '1', RUST_BREAK: undefined, TPS_PROFILE: 'shipped' });
+  const r = child(['bun', 'run', 'tools/qa/layer-ident.ts', '--unpinned'], { [WORD]: '1', RUST_BREAK: undefined, TPS_PROFILE: 'shipped' });
   line(r.status === 0 && /layer-ident: PASS/.test(r.out), 'layers: with the rule on the module\'s layers pass their own check', last(r.out));
 } else console.log('- (layers: not asked on the frozen stand, where the layers\' check calls its own mission unfair: too few layers asked)');
 // ---- game, rule
