@@ -28,7 +28,7 @@ fn export(h: u32, start: bool, spoil: bool) -> Vec<u8> {
     let mut memo = MEMO.with(|m| m.borrow_mut().remove(&h)).unwrap_or_default();
     if start { memo = Default::default(); }
     // (a row or a field with no bytes on the every-tick list is never sent, and stays so)
-    if spoil { for v in memo.top.iter_mut().chain(memo.rows.iter_mut().flatten()) { if !v.is_empty() { v.push(0xff); } } }
+    if spoil { memo.all = true; }
     let b = super::with(h, |x| game::puppet::export_puppet(&x.g, &mut memo, start));
     MEMO.with(|m| m.borrow_mut().insert(h, memo));
     b
