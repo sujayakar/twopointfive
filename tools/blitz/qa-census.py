@@ -18,6 +18,21 @@
 import re, os, sys, glob, json, collections
 A = sys.argv; arg = lambda n, d=None: A[A.index(n) + 1] if n in A else d
 OUT = arg('--out', '.'); os.makedirs(OUT, exist_ok=True)
+# --folded <port-list.json>: the switch rows with each one's value on the page and its kind. A `settled` row is a constant in the Rust game (the branch
+# the page takes was translated and the other dropped), so a check that puts such a row on its other side checks, on the Rust game, nothing: FOLDED.md
+SETTLED = {r['row']: r['page'] for r in json.load(open(arg('--folded')))['rows'] if r.get('kind') == 'settled'} if arg('--folded') else {}
+LIT = lambda v: True if v == 'true' else False if v == 'false' else float(v) if re.match(r'^-?\d+(\.\d+)?$', v) else None
+def switch_writes(T):
+    """every write of a settled row by its registry name in a text: (row, the value written as text, 'off' | 'page' | 'var')"""
+    out = set()
+    if not SETTLED: return out
+    for m in re.finditer(r'(?<![\w.])([A-Z][A-Z0-9_]{2,})((?:\.\w+){1,3})\s*=(?!=)\s*([^;,)\n]{1,60})', T):
+        row = m.group(1) + m.group(2)
+        if row not in SETTLED: continue
+        v = m.group(3).strip(); lit = LIT(v); page = SETTLED[row]
+        same = lit is not None and (lit == page or (isinstance(page, bool) and lit in (0.0, 1.0) and bool(lit) == page))
+        out.add((row, v[:40], 'var' if lit is None else 'page' if same else 'off'))
+    return out
 CALLS = json.load(open(arg('--calls')))['functions'] if arg('--calls') else []
 BYNAME = json.load(open(arg('--names'))) if arg('--names') else {}
 QA = 'tools/qa/'
@@ -105,7 +120,7 @@ def read(path, fn):
     names = set();
     for p in heads: names.update(BYNAME.get(p, {}).get('writes', []))
     r = {'stand': bool(re.search(r'\b(standUp|standTwo|runLesson|standGame|runScript)\(|(?<![\w.])play\(|\bnew Game\(', T)), 'steps': len(re.findall(r'\.step\(|\bstep\(\s*W\b|\.update\(\s*(?:dt|DT|1\s*/)|stepSeats\(', T)),
-         'rules': set(), 'asks': set(), 'unjudged': set(), 'starts': set(), 'writes': set(), 'wraps': set(), 'word': set(), 'hud': set()}
+         'rules': set(), 'asks': set(), 'unjudged': set(), 'starts': set(), 'writes': set(), 'wraps': set(), 'word': set(), 'hud': set(), 'switch': switch_writes(T)}
     called = set(n for n in frozen if re.search(r'(?<![\w.])' + re.escape(n) + r'\s*\(', T))
     for m in re.finditer(r'\.([a-z][A-Za-z0-9]+)\s*\(', T):
         n = m.group(1)
@@ -166,9 +181,9 @@ for at, fam, path in LOOPS:
         if n not in TARGET: TARGET[n] = [(path, None)]
 def merge(rs):
     order = ['0', 'i', 'ii', 'iii', 'iv-b', 'iv-a', 'iv-c']; out = {'kind': '0', 'stand': False, 'steps': 0}
-    for k in ('rules', 'asks', 'unjudged', 'starts', 'writes', 'wraps', 'word', 'hud'): out[k] = set()
+    for k in ('rules', 'asks', 'unjudged', 'starts', 'writes', 'wraps', 'word', 'hud', 'switch'): out[k] = set()
     for r in rs:
-        for k in ('rules', 'asks', 'unjudged', 'starts', 'writes', 'wraps', 'word', 'hud'): out[k] |= r[k]
+        for k in ('rules', 'asks', 'unjudged', 'starts', 'writes', 'wraps', 'word', 'hud', 'switch'): out[k] |= r[k]
         out['stand'] = out['stand'] or r['stand']; out['steps'] += r['steps']
         if order.index(r['kind']) > order.index(out['kind']): out['kind'] = r['kind']
     return out
@@ -176,6 +191,49 @@ PROBE = {n: merge([read(p, f) for p, f in t]) for n, t in TARGET.items()}
 # ---- the stand-alone gate tools, each read whole
 TOOLS = ['playthrough.ts', 'tour.ts', 'soak.ts', 'seats-run.ts', 'seats-check.ts', 'coop-check.ts', 'mpserver-check.ts', 'mp-control-check.ts', 'replay.ts', 'samestart-check.ts', 'lesson-run.ts', 'mission-table.ts']
 TOOL = {t: read(QA + t, None) for t in TOOLS if os.path.exists(QA + t)}
+# ---- the settled switches a check puts on their other side (--folded): by a write of the row (read above), or by the table of holds (tools/qa/holds.ts:
+# a probe owed the build before a rule runs with that rule's row off on every stand)
+HELD = collections.defaultdict(set)   # probe -> {(row, list)}
+if SETTLED and os.path.exists(QA + 'holds.ts'):
+    for m in re.finditer(r"\{ list: '(\w+)', names: \[([^\]]*)\], holds: \[([^\n]*)\] \}", open(QA + 'holds.ts').read()):
+        rows = [f"{t}.{k or 'on'}" for _, t, k in re.findall(r"(row|atStandUp)\('\w+', '(\w+)'(?:, '(\w+)')?\)", m.group(3))]
+        pats = re.findall(r"'([^']+)'", m.group(2))
+        for n in PROBE:
+            for p in pats:
+                hit = (n == p[:-4] or n.startswith(p[:-4] + '-')) if p.endswith('(-*)') else n.startswith(p[:-1]) if p.endswith('*') else n == p
+                if hit:
+                    for r in rows: HELD[n].add((r, m.group(1)))
+OFFNAME = re.compile(r'(^|-)(off|identity|base|frozen|old|asitwas|switch(es)?|hold(s)?)($|-)')
+FAM_OF = {}
+for fam, mem in LIST.items():
+    for n in mem: FAM_OF.setdefault(n, fam)
+FOLD = {}
+for n, r in PROBE.items():
+    off = sorted(x for x in r['switch'] if x[2] == 'off'); var = sorted(x for x in r['switch'] if x[2] == 'var'); held = sorted(x for x in HELD.get(n, ()) if x[0] in SETTLED)
+    if not off and not held and not var: continue
+    # THE SUBJECT, by reading: a probe owed the build before a rule (the table of holds), or named for the off side, checks the game with the rule off:
+    # that game is not in the Rust game. One that puts a row off beside its own subject (to stage it, to keep another rule out of the way) is to be aimed again.
+    subj = 'the off side (a game the Rust game does not have)' if held or (OFFNAME.search(n) and (off or var)) else 'a rule, with a settled row pinned off beside it (aim it again)' if off else 'both sides by a variable (an off-against-on line: its off half is the off side)'
+    FOLD[n] = {'family': FAM_OF.get(n, '?'), 'kind': r['kind'], 'off': [f'{a} = {b}' for a, b, _ in off], 'var': [f'{a} = {b}' for a, b, _ in var], 'held': [f'{a} ({b})' for a, b in held], 'subject': subj}
+if SETTLED:
+    byfam = collections.defaultdict(list)
+    for n, e in FOLD.items(): byfam[e['family']].append(n)
+    cnt = collections.Counter(e['subject'] for e in FOLD.values())
+    with open(f'{OUT}/FOLDED.md', 'w') as o:
+        o.write('# Checks that put a SETTLED switch on its other side (tools/blitz/qa-census.py --folded, by reading)\n\n')
+        o.write(f'A settled row is a constant in the Rust game: the branch the page takes was translated, the other dropped. {len(SETTLED)} rows are settled. Of {len(PROBE)} probes read, {len(FOLD)} write one, by a literal that is not the page\'s value (`off`), by the table of holds (tools/qa/holds.ts: the probe is owed the build before a rule), or by a variable (`var`: both sides in turn, or the old value put back).\n\n')
+        o.write('Read by name: a row written through an alias (`const R = RESPONSE`), by `Object.assign`, by a stand word in the environment (`TPS_X=0`) or by the old stand as a whole (`TPS_PROFILE=frozen`) is not seen. The subject is judged by the probe\'s name and the way the row is put off, not by reading what the probe asserts.\n\n')
+        o.write('| the subject | probes |\n|---|---:|\n' + ''.join(f'| {k} | {v} |\n' for k, v in cnt.most_common()) + '\n')
+        o.write('| family | probes | the off side itself | a rule with a row pinned off | by a variable only | rows |\n|---|---:|---:|---:|---:|---|\n')
+        for fam in sorted(byfam, key=lambda f: -len(byfam[f])):
+            E = [FOLD[n] for n in byfam[fam]]; rows = collections.Counter(x.split(' ')[0] for e in E for x in e['off'] + e['held'] + e['var'])
+            o.write(f"| {fam} | {len(E)} | {sum(1 for e in E if e['subject'].startswith('the off'))} | {sum(1 for e in E if e['subject'].startswith('a rule'))} | {sum(1 for e in E if e['subject'].startswith('both'))} | {', '.join(f'{k} x{v}' for k, v in rows.most_common(6))}{' …' if len(rows) > 6 else ''} |\n")
+        for title, pre in (('The off side itself: for the deletion list (not deleted)', 'the off'), ('A rule, with a settled row pinned off beside it: aim again', 'a rule'), ('Both sides by a variable', 'both')):
+            o.write(f'\n## {title}\n\n| probe | family | kind | put off by a literal | held (holds.ts) | by a variable |\n|---|---|---|---|---|---|\n')
+            for n in sorted(FOLD, key=lambda n: (FOLD[n]['family'], n)):
+                e = FOLD[n]
+                if e['subject'].startswith(pre): o.write(f"| {n} | {e['family']} | {e['kind']} | {'; '.join(e['off'][:6])} | {'; '.join(e['held'][:6])} | {'; '.join(e['var'][:4])}{' …' if len(e['var']) > 4 else ''} |\n")
+    print(f"settled rows put on their other side: {len(FOLD)} probes ({dict(cnt)}) -> {OUT}/FOLDED.md")
 # ---- out
 ser = lambda r: {k: (sorted(v) if isinstance(v, set) else v) for k, v in r.items()}
 fam_rows = {}
@@ -199,8 +257,12 @@ fn_row = lambda f, c: {'fn': f, 'probes': c, 'files': file_count[f], 'writes': I
 J = {'kinds': dict(collections.Counter(r['kind'] for r in PROBE.values())), 'probes_mapped': len(PROBE), 'names_known': len(ALLN), 'unmapped': sorted(n for n in ALLN if n not in PROBE and n not in LIST or (n in LIST and LIST[n] == [n] and n not in PROBE)),
      'tools': {t: ser(r) for t, r in TOOL.items()}, 'families': fam_rows, 'probes': {n: ser(r) for n, r in sorted(PROBE.items())},
      'rules': [fn_row(f, c) for f, c in rule_probes.most_common()], 'unjudged': [fn_row(f, c) for f, c in unj_probes.most_common()], 'asks': [fn_row(f, c) for f, c in ask_probes.most_common()],
-     'writes_by_name': write_probes.most_common(), 'wraps': wrap_probes.most_common(), 'hud_taps': sum(1 for r in PROBE.values() if r['hud']), 'hud_taps_by_kind': dict(collections.Counter(r['kind'] for r in PROBE.values() if r['hud']))}
+     'folded': FOLD, 'writes_by_name': write_probes.most_common(), 'wraps': wrap_probes.most_common(), 'hud_taps': sum(1 for r in PROBE.values() if r['hud']), 'hud_taps_by_kind': dict(collections.Counter(r['kind'] for r in PROBE.values() if r['hud']))}
 json.dump(J, open(f'{OUT}/qa-census.json', 'w'), indent=1)
+# --kinds <file>: the table TPS_GAME=table reads (tools/blitz/rust-host.ts `byTable`): a probe's kind; the rows of the stand-alone tools are kept as they are
+if arg('--kinds'):
+    old = json.load(open(arg('--kinds'))) if os.path.exists(arg('--kinds')) else {}
+    json.dump({'what': 'a probe of tools/qa/probes.ts by what it does to the game between two ticks (tools/blitz/qa-census.py --kinds, by reading); `tools`: the stand-alone tools, by hand', 'tools': old.get('tools', {}), 'probes': {n: r['kind'] for n, r in sorted(PROBE.items())}}, open(arg('--kinds'), 'w'), indent=0)
 print(f"{len(PROBE)} probes read of {len(ALLN)} names known ({len(J['unmapped'])} names with no line found); kinds: {J['kinds']}")
 print(f"rules called between ticks: {len(rule_probes)} distinct (+ {len(unj_probes)} the inventory never judged, + {len(ask_probes)} asks); {sum(1 for r in J['rules'] + J['unjudged'] if r['cannot_cross'])} take an argument that cannot cross")
 for t, r in TOOL.items(): print(f"  {t}: kind {r['kind']} · rules {sorted(r['rules'])[:8]} · unjudged {sorted(r['unjudged'])[:6]} · writes {len(r['writes'])} · wraps {sorted(r['wraps'])[:4]} · {sorted(r['word'])}")
