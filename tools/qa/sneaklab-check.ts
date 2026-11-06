@@ -28,7 +28,7 @@ const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 export async function sneaklabCheck(): Promise<boolean> {
   allPass = true;
   console.log('\n=== file: the level file is its generator\'s ===');
-  { const r = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/levels/export.ts`, 'sneak-lab', '--check'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+  { const r = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/levels/export.ts`, 'sneak-lab', '--check'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });
     verdict(r.exitCode === 0, 'levels/sneak-lab.json is what tools/levels/sneak-lab.ts gives now', `export --check exit ${r.exitCode}`); }
 
   console.log('\n=== men: eleven men on eleven beats, ten of them walking ===');

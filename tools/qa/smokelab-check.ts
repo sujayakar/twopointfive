@@ -18,7 +18,7 @@ const BRK = process.env.SMOKELAB_BREAK === '1'; let red = false;
 const check = (ok: boolean, what: string, detail = '') => { red ||= !ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
 console.log(`\n=== smokelab: the smoke lab's floor${BRK ? ' (the shed\'s door left open: must fail)' : ''} ===`);
 
-{ const r = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/levels/export.ts`, 'smoke-lab', '--check'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+{ const r = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/levels/export.ts`, 'smoke-lab', '--check'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });
   check(r.exitCode === 0, 'levels/smoke-lab.json is what tools/levels/smoke-lab.ts gives now', `export --check exit ${r.exitCode}`); }
 
 const l = console.log, w = console.warn; console.log = console.warn = () => { };

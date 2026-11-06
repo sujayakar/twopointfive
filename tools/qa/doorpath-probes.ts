@@ -50,7 +50,7 @@ const memo = new Map<string, Promise<any>>();
 function runOne(spec: string, env: Record<string, string>, pre = ''): Promise<any> {
   const key = spec + '|' + JSON.stringify(env) + (pre && '|' + pre); let p = memo.get(key);
   if (!p) { p = (async () => { const f = `${tmpdir()}/doorpath-${process.pid}-${memo.size}.json`, E: Record<string, string> = { ...(process.env as any), PT_DIGEST: '1', ...env };
-      for (const k of ['TPS_DOORPATH', 'TPS_CAST', 'TPS_MOVES', 'TPS_TURN', 'PT_PATHS', 'DOORPATH_INERT']) if (!(k in env)) delete E[k];
+      for (const k of ['TPS_DOORPATH', 'TPS_CAST', 'TPS_MOVES', 'TPS_TURN', 'PT_PATHS', 'DOORPATH_INERT']) if (!(k in env)) delete E[k];   // (word left out on purpose: a word a job does not name is not the shell's either — the run plays that rule as the stand has it, a shell's TPS_MOVES=0 included; a job that wants one OFF says '0')
       if (!('PT_PATHS' in env)) delete E.PT_NOCLOSER;   // (the digests are the runs as they were: doors shut themselves)
       const pr = Bun.spawn(['bun', 'run', ...(pre ? ['--preload', pre] : []), `${ROOT}/tools/qa/playthrough.ts`, '--one', spec, '--out', f], { env: E, stdout: 'ignore', stderr: 'pipe' });
       if (await pr.exited !== 0 || !existsSync(f)) throw new Error(`${spec}: the run did not finish — ${await new Response(pr.stderr).text()}`);
@@ -65,7 +65,8 @@ async function runJobs(jobs: Job[], soft = false): Promise<any[]> {
   return out;
 }
 const OLD = () => !!process.env.DOORPATH_OLD;
-const watched = (knobs = '', pre = '') => runJobs(DOORPATH_RUNS.map((s): Job => [s, { PT_PATHS: '1', ...(OLD() ? {} : { TPS_DOORPATH: '1' + knobs }) }, pre]));
+// (the entry as it was is the WORD '0': left out, a child stands the game as the page opens it, the walk on — and the red path played the rule it is the red path of)
+const watched = (knobs = '', pre = '') => runJobs(DOORPATH_RUNS.map((s): Job => [s, { PT_PATHS: '1', TPS_DOORPATH: OLD() ? '0' : '1' + knobs }, pre]));
 
 export async function doorpathPaths(): Promise<boolean> {
   const C = check(`doorpath-paths: nobody of a room entry in a leaf, through a friend or in a jamb — ${OLD() ? 'THE ENTRY AS IT WAS (DOORPATH_OLD: this must fail)' : 'the switch on'}`);

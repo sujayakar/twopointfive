@@ -37,6 +37,7 @@
 // It raises what it needs itself (blasts take doors off, the destruction dial, both switches), so it passes on the frozen stand and under TPS_PROFILE=shipped.
 // RUNNER_BREAK=1 = the FLED MARK never sticks (wiped before every frame: the run itself goes on, and every seam that asks `gd.fled` is told no) — the
 // counting, the team's eyes, the empty hand, the scenario's cast test and the squad's count all answer as the build without the rule: must fail.
+// RUNNER12_BREAK=1 = case (12) with `cornerM` 0: no corner is in his reach and he stays low where he broke: its first line must fail.
 // exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -243,13 +244,29 @@ export async function runnerCheck(): Promise<boolean> {
     // (12) no way out: the corner, the wall — the runs at a way that come to nothing — and the way come free
     { const R = await stage(28, true, 'none'), T = R.T, g = R.g, hut = [...T.char.pos];
       RUNNER.clearM = 1000; const him = R.front(2.5); let lowAt = NaN, phases = '';
-      const said = listen(R, [T], 30, t => { const S = runnerOf(T) as any; if (S && !phases.endsWith(S.phase)) phases += (phases ? ' → ' : '') + S.phase;
-        if (S?.phase === 'low' && S.script?.arrived && Number.isNaN(lowAt)) lowAt = t; return !Number.isNaN(lowAt) && t >= lowAt + 1.5; });
+      // (WHAT 'THERE' IS: arrived in a corner and still in it, the same one, a look later (`retrySecs` and half a second). The rule looks again every
+      // `retrySecs`, and where it finds a corner three metres further from the enemies it sends him on (runner.ts): a man read 1.5 s after his FIRST arrival,
+      // as this line read him, may be walking again. He is given sixty seconds for it, where it was thirty: the line never bounded the time.
+      // WHAT THE PAGE'S STAND SHOWS, and the second line below holds: his corner is the farthest from the enemies inside `cornerM` of him BY THE FLOOR,
+      // picked again from wherever he has got to, so each pick reaches 25 m on. On the old stand the team is parked in the west, he reckons from every
+      // enemy, and his first corner (18 m off) stays the best: there at 9.3 s. On the page's he reckons from the men he KNOWS of (PICTURE.run: Sam alone),
+      // or from a team fallen in on Sam, either of which opens the west: six corners in turn the length of the compound, 37 m from where he broke.
+      // RUNNER12_BREAK=1 = `cornerM` 0, the rule's own red path: no corner is in reach and he stays low where he broke, at the man's feet.)
+      if (process.env.RUNNER12_BREAK === '1') RUNNER.cornerM = 0;
+      const corners: string[] = []; let arrGoal = '';
+      const said = listen(R, [T], 60, t => { const S = runnerOf(T) as any; if (S && !phases.endsWith(S.phase)) phases += (phases ? ' → ' : '') + S.phase;
+        const gk = S?.phase === 'low' && S.goal ? `(${f2(S.goal[0])}, ${f2(S.goal[2])})` : '', here = !!gk && !!S.script?.arrived;
+        if (gk && corners[corners.length - 1] !== gk && (!corners.length || flat(S.goal, T.char.pos) > 0.5)) corners.push(gk);   // (a goal that is the spot he stands on is 'stay where you have got to', not a pick)
+        if (!here || gk !== arrGoal) { lowAt = here ? t : NaN; arrGoal = here ? gk : ''; }
+        return !Number.isNaN(lowAt) && t >= lowAt + RUNNER.retrySecs + 0.5; });
       const S = runnerOf(T) as any, away = Math.atan2(T.char.pos[0] - g.player.char.pos[0], T.char.pos[2] - g.player.char.pos[2]), off = Math.abs(wrap(T.char.bodyYaw - away));
       const words = said.filter(s => !runnerLines('done').includes(s.text));
       line(R.dry && !Number.isNaN(lowAt) && !phases.includes('out') && S?.phase === 'low' && !!S.script.crouch && off < 0.6 && !words.length && T.fled && g.guards.includes(T) && T.state !== 'dead' && flat(T.char.pos, him) > 2.5,
         '(12) nothing is outside: he goes to the corner farthest from the enemy and stays low there, his face to the wall, without a word — still fled, still on the floor',
-        `${phases || 'never taken'} · there at ${f2(lowAt)} s · crouched ${!!S?.script?.crouch} · ${f2(off)} rad off facing straight away from the player · ${f2(flat(T.char.pos, him))} m from him, at ${[...T.char.pos].map(f2).join(',')} going to ${S?.goal?.map(f2).join(',')} (stall ${f2(S?.stall)}) · said after the shout: ${words.map(s => `"${s.text}"`).join(' ') || 'nothing'}`);
+        `${phases || 'never taken'} · there, to stay, at ${f2(lowAt)} s · crouched ${!!S?.script?.crouch} · ${f2(off)} rad off facing straight away from the player · ${f2(flat(T.char.pos, him))} m from him, at ${[...T.char.pos].map(f2).join(',')} going to ${S?.goal?.map(f2).join(',')} (stall ${f2(S?.stall)}) · said after the shout: ${words.map(s => `"${s.text}"`).join(' ') || 'nothing'}`);
+      line(!Number.isNaN(lowAt) && flat(T.char.pos, hut) <= was.runner.cornerM,
+        '(12) the corner he settles in is no farther than `cornerM` from where he broke (the rule: "how far the corner may be")',
+        `${f2(flat(T.char.pos, hut))} m from where he broke (cornerM ${was.runner.cornerM}) · ${corners.length} corner(s) picked in turn: ${corners.join(' ')}`);
       // the runs at a way that will not let him through: the way is there again, and he is held where he stands every time he sets off on it
       RUNNER.clearM = was.runner.clearM; R.away(); const spot = hut; let outs = 0, wasOut = false, lastTries = 0, capAt = -1;   // (held in the hut he broke in: under its roof, never 'outside')
       for (let i = 0; i < 60 * 45; i++) { R.step(); const X = runnerOf(T) as any; if (!X) break; const isOut = X.phase === 'out'; if (isOut && !wasOut) outs++; wasOut = isOut; lastTries = X.tries;

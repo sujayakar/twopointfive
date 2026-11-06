@@ -7,7 +7,9 @@
 // before a module's own lines, so the read cannot come first. `shipped-check.ts` is red on a tool that reads the word with neither, unless it names its
 // stand itself first. It imports nothing of the game: a tool that only starts children can load it.
 // A RUN ON THE OLD STAND SAYS SO, once, on stderr: the process the word was given to says it and its children do not (QA_STAND_SAID rides the
-// environment), so a tool that asks the old stand of a child by name keeps that child's stderr for the child's own words.
+// environment), so a tool that asks the old stand of a child by name keeps that child's stderr for the child's own words. It rides only to a child
+// GIVEN the environment: Bun.spawn with no `env` hands on the one this process started with, and every word written since (this one, the stand
+// below, a probe's holds) is lost on the way. shipped-check.ts bareChildren holds every bun child of a tool to an environment given by name.
 import { standOf, STAND_ENV, type Stand } from '../../src/host/standEnv.ts';
 export const STAND: Stand = standOf(process.env.TPS_PROFILE);
 process.env.TPS_PROFILE = STAND;
@@ -20,6 +22,13 @@ process.env.QA_STAND_SAID = '1';
 export const BY_HAND: readonly string[] = handWords();
 /** …and the same question asked now (tools/qa/ident-pin.ts asks it after its tool has set its own words): `WORD=value` for every such word in the environment */
 export function handWords(): string[] { return [...STAND_ENV, 'QA_HOLD'].filter(k => k !== 'TPS_PROFILE' && process.env[k] !== undefined).sort().map(k => `${k}=${process.env[k]}`); }
+/** THE BREAK WORDS THIS PROCESS WAS STARTED WITH: `WORD=value` for every `<NAME>_BREAK` of the environment that is neither empty nor 0, the spelling of a
+ *  check's red path (one older word is spelt another way and named here: DOORPATH_OLD). Read once, as BY_HAND is. A run with one is some check's red path:
+ *  it is said on stderr as the process starts (once down a tree of children, as the old stand is), and probes.ts closes its run with a line on whether the
+ *  word bit. About forty checks read any value as set, a 0 too: to them `X_BREAK=0` is the red path, and nothing here names it. */
+export const BREAK_WORDS: readonly string[] = Object.keys(process.env).filter(k => (/_BREAK$/.test(k) || k === 'DOORPATH_OLD') && !['', '0'].includes(process.env[k] ?? '')).sort().map(k => `${k}=${process.env[k]}`);
+if (BREAK_WORDS.length && process.env.QA_BREAK_SAID !== BREAK_WORDS.join(' ')) console.error(`BREAK WORD${BREAK_WORDS.length > 1 ? 'S' : ''} SET: ${BREAK_WORDS.join(' ')}. A check that reads ${BREAK_WORDS.length > 1 ? 'one' : 'it'} plays its red path and must fail.`);
+if (BREAK_WORDS.length) process.env.QA_BREAK_SAID = BREAK_WORDS.join(' ');
 /** THE WORDS A HELD ROW IS RAISED BY: the first WORD=value of each row's note in src/host/profile.ts FROZEN_HOLDS, once each (a row whose note names no word
  *  of its own has none). What tools/qa/stand-bisect.ts searches over, and what a row of tools/qa/expected-red.ts may name. */
 export function heldWords(holds: Record<string, string>): string[] {
@@ -38,4 +47,14 @@ export const wordOf = (note: string): string | undefined => /^([A-Z][A-Z0-9_]*=[
 export async function underWord<T>(word: string, on: boolean, fn: () => Promise<T>, row?: { table: Record<string, unknown>; key: string }): Promise<T> {
   const w0 = process.env[word], v0 = row?.table[row.key]; process.env[word] = on ? '1' : '0';
   try { return await fn(); } finally { if (w0 === undefined) delete process.env[word]; else process.env[word] = w0; if (row) row.table[row.key] = v0; }
+}
+
+/** A CHILD'S STAND WORDS, EVERY ONE OF THEM SAID. An arm of a check that plays a rule OFF says so with the word '0': a word left out of a child's
+ *  environment is the game as the page opens it, the rule ON (it was the other way about before a tool with no word stood the page's game, and three
+ *  tools' 'off', 'old' and 'before' arms played the rule they were the control of: snap-probes, entry-strip, doorpath-probes). `words`: true = '1',
+ *  false = '0', a string = that value; nothing is ever deleted, and the rest of `base` goes through as it is. */
+export function childEnv(words: Record<string, boolean | string>, base: Record<string, string | undefined> = process.env): Record<string, string> {
+  const E: Record<string, string> = {}; for (const [k, v] of Object.entries(base)) if (v !== undefined) E[k] = v;
+  for (const [k, v] of Object.entries(words)) E[k] = v === true ? '1' : v === false ? '0' : v;
+  return E;
 }

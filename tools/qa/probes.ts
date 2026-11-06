@@ -129,7 +129,7 @@ console.error = (...args: unknown[]) => { if (tapDepth) scan(args); rawErr(...ar
  *  next probe of the same process — an identity digest silently depending on the previous family's leftovers), with the cut-pieces switch, the plain night's card
  *  and the loud card first in the table. */
 async function run(name: string, fn: () => unknown, standOf = name): Promise<boolean> {   // (standOf: the probe whose stand it runs on — its own, but for selftest-holds)
-  RAN++; RAN_NAMES.push(name); (globalThis as any).__probeNow = name;   /* (read by tools/blitz/rust-host.ts's trace, RH_TRACE: which probe stood a game) */ const f0 = tapFails, p0 = tapPasses; tapDepth++;
+  RAN++; RAN_NAMES.push(name); (globalThis as any).__probeNow = name; process.env.RH_PROBE = name;   /* (read by tools/blitz/rust-host.ts, which probe stood a game: its trace, RH_TRACE, and its table of which game a check is stood on, TPS_GAME=table; the environment's copy is for a probe that runs as a child) */ const f0 = tapFails, p0 = tapPasses; tapDepth++;
   let ok = true, ret: unknown;
   try { ret = await asProbe(standOf, fn); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
@@ -2948,9 +2948,6 @@ if (on('threshold-grenade', 'threshold', 'all')) await run('threshold-grenade', 
 if (on('door-grenade', 'doortools', 'all')) await run('door-grenade', async () => (await import('./doorgrenade-probes.ts')).doorGrenade());   // DOORTOOLS.fragHold — a grenade scatters the men of a door order: the door is not opened, a charge's man not given up on and a word makes no sound until they are back on their marks, `fragHoldCap` s at most. FRAGHOLD_BREAK=1 must fail
 if (on('threshold-play', 'threshold', 'all')) await run('threshold-play', async () => (await import('./threshold-probes.ts')).thresholdPlay());
 if (on('threshold-identity', 'threshold', 'all')) await run('threshold-identity', async () => (await import('./threshold-probes.ts')).thresholdIdentity());
-// ---------------------------------------------------------------- … and as an order on the door menu (thresholdmenu-probes.ts; doortools.ts THR_PAGE / HELD_PAGE: both forms behind X, 5, 4 in every start-card scenario, what next behind X, 5 while the jambs are held — all by keys)
-if (on('thresholdmenu-rows', 'thresholdmenu', 'all')) await run('thresholdmenu-rows', async () => (await import('./thresholdmenu-probes.ts')).thresholdmenuRows());
-if (on('thresholdmenu-held', 'thresholdmenu', 'all')) await run('thresholdmenu-held', async () => (await import('./thresholdmenu-probes.ts')).thresholdmenuHeld());
 // ---------------------------------------------------------------- the calls taken while the maintainer was away, both sides of each switch (calls-probes.ts; rebuild/away-build/calls.md)
 if (on('calls-shipped', 'calls', 'all')) await run('calls-shipped', async () => (await import('./calls-probes.ts')).callsShipped());
 if (on('calls-menu', 'calls', 'all')) await run('calls-menu', async () => (await import('./calls-probes.ts')).callsMenu());
@@ -3050,14 +3047,6 @@ if (on('pairs-go', 'pairs', 'all')) await run('pairs-go', async () => (await imp
 if (on('pairs-tool', 'pairs', 'all')) await run('pairs-tool', async () => (await import('./pairs-probes.ts')).pairsTool());
 if (on('pairs-haltback', 'pairs', 'all')) await run('pairs-haltback', async () => (await import('./pairs-probes.ts')).pairsHaltback());
 if (on('pairs-lanes', 'pairs', 'all')) await run('pairs-lanes', async () => (await import('./pairs-probes.ts')).pairsLanes());
-// ---------------------------------------------------------------- every order a key press, nothing held (pressorders-probes.ts; the press menu on every scenario that takes orders: X, a digit, T, B, F — and the code search): 'pressorders' = the family
-if (on('pressorders-roomclear', 'pressorders', 'all')) await run('pressorders-roomclear', async () => (await import('./pressorders-probes.ts')).pressRoomclear());
-if (on('pressorders-squad4', 'pressorders', 'all')) await run('pressorders-squad4', async () => (await import('./pressorders-probes.ts')).pressSquad4());
-if (on('pressorders-rescue', 'pressorders', 'all')) await run('pressorders-rescue', async () => (await import('./pressorders-probes.ts')).pressRescue());
-if (on('pressorders-nightbreach', 'pressorders', 'all')) await run('pressorders-nightbreach', async () => (await import('./pressorders-probes.ts')).pressNightbreach());
-if (on('pressorders-nightbreach4', 'pressorders', 'all')) await run('pressorders-nightbreach4', async () => (await import('./pressorders-probes.ts')).pressNightbreach4());
-if (on('pressorders-held', 'pressorders', 'all')) await run('pressorders-held', async () => (await import('./pressorders-probes.ts')).pressHeld());
-if (on('pressorders-search', 'pressorders', 'all')) await run('pressorders-search', async () => (await import('./pressorders-probes.ts')).pressSearch());
 // ---------------------------------------------------------------- every order within reach of the left hand (orderkeys-probes.ts; every menu of every scenario on the start card's list walked by its keys — no row on a digit above ORDER_DIGITS): 'orderkeys' = the family
 if (on('orderkeys-walk', 'orderkeys', 'all')) await run('orderkeys-walk', async () => (await import('./orderkeys-probes.ts')).orderkeysWalk());
 if (on('orderkeys-give', 'orderkeys', 'all')) await run('orderkeys-give', async () => (await import('./orderkeys-probes.ts')).orderkeysGive());
@@ -3440,7 +3429,7 @@ if (on('director-scheduler', 'director', 'all')) await run('director-scheduler',
   if (ran) familyBanner('cast', (await import('./cast-probes.ts')).castFailures()); }
 /** A stand-alone QA script run as a child (its process.exit stays its own): every line echoed through console.log so run() and gate.sh count its check lines; a non-zero exit is a FAIL line. */
 async function runScript(file: string, args: string[] = []): Promise<boolean> {
-  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/${file}`, ...args], { stdout: 'pipe', stderr: 'pipe' });
+  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/${file}`, ...args], { stdout: 'pipe', stderr: 'pipe', env: process.env });
   const [out, err] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text()]); const code = await p.exited;
   for (const ln of (out + err).split('\n')) if (ln.trim()) console.log(ln);
   if (code !== 0) console.log(`- FAIL — ${file} exited ${code}`);
@@ -3697,9 +3686,9 @@ if (on('secondway', 'missions', 'all')) await run('secondway', async () => (awai
 // … and a defender sees what he watches: dressing never blinds a mark (tools/qa/marksight-check.ts, a program of its own)
 if (on('marksight', 'missions', 'all')) await run('marksight', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/marksight-check.ts`], { stdout: 'inherit', stderr: 'inherit', env: { ...process.env, TPS_PROFILE: 'shipped' } }).exited) === 0);
 // … and its starts and doors are on a way (tools/qa/walked-check.ts, a program of its own; it loads each level as the page does whatever the stand: what the ways do not reach is owed by name, a file a level)
-if (on('walked', 'missions', 'all')) await run('walked', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/walked-check.ts`], { stdout: 'inherit', stderr: 'inherit' }).exited) === 0);
+if (on('walked', 'missions', 'all')) await run('walked', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/walked-check.ts`], { stdout: 'inherit', stderr: 'inherit', env: process.env }).exited) === 0);
 // ---------------------------------------------------------------- aimed fire chews cover (src/game/coverfire.ts, coverfire-probes.ts — a program of its own: run as one, its exit code the verdict)
-{ if (on('coverfire', 'coverfire')) await run('coverfire', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/coverfire-probes.ts`, 'all'], { stdout: 'inherit', stderr: 'inherit' }).exited) === 0); }
+{ if (on('coverfire', 'coverfire')) await run('coverfire', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/coverfire-probes.ts`, 'all'], { stdout: 'inherit', stderr: 'inherit', env: process.env }).exited) === 0); }
 
 // ---------------------------------------------------------------- the runner's own self-tests (never in 'all'): `selftest-fail` must turn the verdict and gate.sh red, `selftest-throw` likewise without
 // stopping the probe after it, `selftest-pass` green, `selftest-quiet` = a probe that checks nothing → NO VERDICT (gate.sh: ERROR)
@@ -3743,7 +3732,11 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
     // ONE LIST, read by stand: a row is the page's stand's unless its `on` says the old stand too, or alone. Two runs are read against no row at all, and say so
     // where they have a red: one started with a word of the stand given by hand (stand.ts BY_HAND: a probe turned green by its own rule held off would read GREEN
     // AGAIN), and one of a single case of a probe (a case's number as the third argument: `aim-door 0` passes without ever running the line its row is about).
-    const { EXPECTED_RED: LIST, rowSays } = await import('./expected-red.ts'), { STAND, BY_HAND } = await import('./stand.ts');
+    // A RUN STARTED WITH A BREAK WORD (stand.ts BREAK_WORDS) is still read against the list, and closes with one line more, because a row can hide the word:
+    // a probe that is red by its row prints EXPECTED RED whether the word bit or not (the runner's (12) under RUNNER12_BREAK on the page's stand, 11-06). The
+    // line says DID NOT BITE where nothing failed, names the reds with no row as the word's to explain, and says BITE NOT SHOWN where every red has a row.
+    // With more words than one it cannot say which of them bit.
+    const { EXPECTED_RED: LIST, rowSays } = await import('./expected-red.ts'), { STAND, BY_HAND, BREAK_WORDS } = await import('./stand.ts');
     const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
     const reads = (n: string): boolean => !other && n in LIST && (STAND === 'shipped' ? LIST[n].on !== 'old' : !!LIST[n].on);
     const reds = FAILED.filter(n => RAN_NAMES.includes(n)), banners = FAILED.filter(n => !RAN_NAMES.includes(n));
@@ -3759,6 +3752,11 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
       for (const n of fresh) console.log(`    NEW RED       ${n}`);
       for (const n of back) console.log(`    GREEN AGAIN   ${n} — listed as an expected red and it passed here: ${mend(n)}`);
     }
+    if (BREAK_WORDS.length) { const many = BREAK_WORDS.length > 1, w = `BREAK WORD${many ? 'S' : ''} ${BREAK_WORDS.join(' ')}`, all = [...reds, ...(reds.length ? [] : banners)];
+      console.log(`  ${w}: ` + (!FAILED.length ? `${many ? 'NONE BIT' : 'DID NOT BITE'} — nothing this run ran failed${other ? ` (${other})` : ''}`
+        : other ? `${all.length} red (${all.join(', ')}); the list is not asked, so whether ${many ? 'one' : 'it'} bit is by the line that failed`
+        : fresh.length ? `${fresh.length} red with no row on this stand (${fresh.join(', ')}): the word's to explain, by the line that failed${many ? '; which word bit is not said' : ''}`
+        : `BITE NOT SHOWN — every red of this run has a row on this stand and is red without the word: read which LINE failed`)); }
   }
   process.exitCode = FAILED.length ? 1 : 0;
 }

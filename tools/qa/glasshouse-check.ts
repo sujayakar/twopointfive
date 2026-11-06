@@ -33,7 +33,7 @@ export async function glasshouseCheck(): Promise<boolean> {
   const BREAK = process.env.GLASSHOUSE_BREAK === '1';
 
   // 1 — the file is fresh
-  const fresh = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/levels/export.ts`, 'glasshouse', '--check'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+  const fresh = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/levels/export.ts`, 'glasshouse', '--check'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });
   line(fresh.exitCode === 0, 'levels/glasshouse.json is what tools/levels/glasshouse.ts writes', fresh.exitCode === 0 ? '' : `export --check exit ${fresh.exitCode}`);
 
   const data = parseLevelData(readFileSync(`${ROOT}/levels/glasshouse.json`, 'utf8'));

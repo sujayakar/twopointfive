@@ -4,7 +4,10 @@
 //   (queue)        the emit queue → uniform block: records packed at the documented offsets, births counted, kinds dealt from the right ring in ring order, the
 //                  record cap and the birth cap drop-and-count (no silent loss), a lapped ring advances its tail (oldest-die, the window never exceeds the ring),
 //                  windows shrink again once every particle of an emit has outlived its longest life, clear() empties both, prepare(off) drops everything;
-//   (sites)        with a Particles attached and the setting on, each scripted event queues what its site says and nothing else: a Five-seveN round into the
+//   (sites)        with a Particles attached and the setting on, AT CHAOS 0 (the family's own hold, stage() below: the page's 0.5 adds destruction's burst,
+//                  wall wear's flakes and a dropped tile's dust at the same points, which are their own families'), each scripted event queues what its
+//                  site says and nothing else — but that a round which goes on through a thin wall is counted where it struck (its far face and what it
+//                  meets beyond are the thin walls'). PARTSITES_BREAK=1 = each round's site read a metre off; =chaos = the hold dropped (0.5): a Five-seveN round into the
 //                  corridor's plaster (chips + dust by the drywall recipe, one brass case, the muzzle's powder sparks — and the CPU spark pool stays EMPTY), an
 //                  FN2000 round (rifle scaling, its own case out of the front), a round into a server rack (sparks: metal), the stun charge (PFX.bangSparks fragments
 //                  + the dust ring + the puff on the GPU, exactly the trail-carrying dozen in the CPU pool), a kicked door (dust + splinters at the jamb), the ring's
@@ -15,6 +18,7 @@
 // The WGSL itself is compile-checked through the page (__wgsl with the scene prelude — CLAUDE.md), not here.
 import { standUp, ROOT, fake } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
+const { WALLPEN_HOOKS } = await import(`${ROOT}/src/game/wallpen.ts`);   // (did a round go on through the wall it struck: the thin walls' own hook)
 const { Particles, RINGS, MAX_EMITS, MAX_NEW_PER_FRAME, KIND_RING, MAX_QUEUE, BLOCK_HDR_BYTES, REC_BYTES } = await import(`${ROOT}/src/render/particles.ts`);
 const H = BLOCK_HDR_BYTES / 4, RW = REC_BYTES / 4;   // the uniform block's header words / an emit record's words (records at BLOCK_HDR_BYTES + REC_BYTES·r)
 const { fireWeapon, detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
@@ -29,9 +33,14 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
 const mkVerdict = () => { const st = { all: true }; return { st, verdict: (ok: boolean, label: string, detail: string) => { st.all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); } }; };
 
 /** the harness Game with a Particles attached to its engine stand-in (what game.ts does on a real Engine) and the setting as asked */
+/** THE FAMILY'S OWN HOLD: chaos 0. Every line here is what particleFx queues at a site, by its own recipe. The harness stood every game at chaos 0 until a
+ *  tool with no word stood the page's (src/host/standup.ts: 'the destruction probes raise it themselves'); at the page's 0.5 a round's strike also carries
+ *  destruction.ts's burst (by the heat of the rounds before it) and wallwear.ts's flakes, and a stun drops a ceiling tile's dust — same points, other
+ *  modules, their own families (loudchaos, wallwear). PARTSITES_BREAK=chaos, the red path of the hold: 0.5 on either stand. */
+const BREAK = process.env.PARTSITES_BREAK ?? '', CHAOS_HELD = BREAK === 'chaos' ? 0.5 : 0;
 async function stage(seed: number, on = true) {
   Math.random = seeded(seed);
-  const W = await standUp(); const { game, engine } = W;
+  const W = await standUp(); const { game, engine } = W; game.tune.chaos = CHAOS_HELD;
   engine.particles = new Particles(fake('device'), fake('sceneLayout'));
   engine.settings.gpuParticles = on;
   game.godMode = true; game.player.visibility = 0.02;
@@ -46,6 +55,22 @@ async function stage(seed: number, on = true) {
 }
 const WALL: Vec3 = [21.5, 1.2, 10.0];       // the corridor's north wall in front of him: plaster ('wall' in the palette → drywall recipe)
 const countKinds = (q: any[]) => { const c: Record<string, number> = { spark: 0, debris: 0, dust: 0, casing: 0 }; for (const e of q) c[e.kind] += e.count; return c; };
+/** A ROUND'S CHIPS AND DUST WHERE IT STRUCK, and whether it went on: the emits within 0.3 m of the point his round first strikes, on his side of that face
+ *  (the recipe's sit 0.015 and 0.07 m off it), and the things the round crossed by the thin walls' own hook. A round that stops in the wall owes the whole
+ *  queue to that site — 'and nothing else', as these lines always read it; one that goes on through also chips the far face and what it meets beyond, which
+ *  wallpen-check and decals-sites hold, and is counted at its strike alone. PARTSITES_BREAK=1, the red path: the site is read a metre along the wall. */
+function shotAt(game: any, to: Vec3, fire: () => void, flush: () => any[]): { q: any[]; all: Record<string, number>; site: Record<string, number> | null; through: boolean } {
+  const from = [...game.player.char.muzzle] as Vec3, d = v3.normalize(v3.sub(to, from)), h = game.col.raycast(from, d, 40);
+  let crossed = 0; const was = WALLPEN_HOOKS.crossed; WALLPEN_HOOKS.crossed = (g2: any, x: any, who: number) => { crossed++; was?.(g2, x, who); };
+  try { fire(); } finally { WALLPEN_HOOKS.crossed = was; }
+  const q = flush(), all = countKinds(q); if (!h) return { q, all, site: null, through: crossed > 0 };
+  const p = v3.mad(from, d, h.t), c: Vec3 = [p[0] + (BREAK === '1' ? 1 : 0), p[1], p[2]], n = h.n;
+  const near = q.filter((e: any) => (e.kind === 'debris' || e.kind === 'dust') && Math.hypot(e.pos[0] - c[0], e.pos[1] - c[1], e.pos[2] - c[2]) <= 0.3 && (e.pos[0] - c[0]) * n[0] + (e.pos[1] - c[1]) * n[1] + (e.pos[2] - c[2]) * n[2] > -1e-3);
+  return { q, all, site: countKinds(near), through: crossed > 0 };
+}
+/** the line's own clause: the recipe at the strike, and the whole queue no more than that where the round stopped there */
+const recipeAt = (s: ReturnType<typeof shotAt>, chips: number, dust: number): string | null => !s.site ? 'THE ROUND STRUCK NOTHING' : s.site.debris !== chips || s.site.dust !== dust ? `where the round struck: debris ${s.site.debris} dust ${s.site.dust} (want ${chips} / ${dust}; the whole queue ${s.all.debris} / ${s.all.dust})`
+  : !s.through && (s.all.debris !== chips || s.all.dust !== dust) ? `the round stopped in the wall and the queue holds more than its strike: debris ${s.all.debris} dust ${s.all.dust} (want ${chips} / ${dust} and nothing else)` : null;
 
 // ================================================================ queue
 export async function particlesQueue() {
@@ -147,11 +172,11 @@ export async function particlesSites(verbose = process.argv.includes('--verbose'
   const seenEv = new Set<any>(); const evKinds = () => { const out: string[] = []; for (const e of game.events) { if (seenEv.has(e)) continue; seenEv.add(e); out.push(e.kind); } return out; };
   { // (a) a Five-seveN round into the plaster wall
     flush(); evKinds(); audio.length = 0;
-    fireWeapon(game, pl.char, WALL, true, { weapon: WEAPONS.fiveseven });
-    const q = flush(); const c = countKinds(q); const cpuLive0 = game.sparks.live; W.step(DT); const cpuLive1 = game.sparks.live;
+    const shot = shotAt(game, WALL, () => fireWeapon(game, pl.char, WALL, true, { weapon: WEAPONS.fiveseven }), flush);
+    const q = shot.q, c = shot.all; const cpuLive0 = game.sparks.live; W.step(DT); const cpuLive1 = game.sparks.live;
     const cas = q.find((e: any) => e.kind === 'casing'); const tinks = pendingTinks(game).length;
     const fails: string[] = [];
-    if (c.debris !== 10 || c.dust !== 6) fails.push(`impact: debris ${c.debris} dust ${c.dust} (drywall recipe: 10 / 6)`);
+    { const bad = recipeAt(shot, 10, 6); if (bad) fails.push(`impact, the drywall recipe — ${bad}`); }
     if (c.spark !== fxm.shot.sparkCount) fails.push(`muzzle powder: ${c.spark} GPU sparks (want shot.sparkCount ${fxm.shot.sparkCount}, no impact sparks off plaster)`);
     if (c.casing !== 1 || !cas || cas.owner !== PLAYER_ID) fails.push(`casing: ${c.casing} (owner ${cas?.owner}) — want 1 owned by the player`);
     if (cpuLive0 !== 0 || cpuLive1 !== 0) fails.push(`CPU spark pool live ${cpuLive0}/${cpuLive1} (want 0: the powder went to the GPU)`);
@@ -162,19 +187,19 @@ export async function particlesSites(verbose = process.argv.includes('--verbose'
     if (tinkN !== 1 || !(tinkAt > 0.4 && tinkAt < 0.62)) fails.push(`casingTink played ${tinkN}× at ${tinkAt.toFixed(2)} s (want once, ≈ 0.5 s)`);
     if (ev.some(k => k !== 'shot')) fails.push(`hearing events after the shot: ${ev.join(',')} (want none but the shot's own)`);
     verdict(fails.length === 0, 'Five-seveN into the corridor plaster: 10 pale chips + 6 puffs (drywall), the 20 powder sparks on the GPU and none in the CPU pool, one brass case owned by Sam, its tink heard once ≈ 0.5 s later and never as a hearing event',
-      fails.length ? fails.join('; ') : `emits ${JSON.stringify(c)}; tink at ${tinkAt.toFixed(2)} s; case colour ${JSON.stringify(cas?.color)}`);
+      fails.length ? fails.join('; ') : `at the strike ${JSON.stringify(shot.site)}${shot.through ? ' (it went on through the wall)' : ''} · the whole queue ${JSON.stringify(c)}; tink at ${tinkAt.toFixed(2)} s; case colour ${JSON.stringify(cas?.color)}`);
     if (verbose) console.log(q);
   }
   { // (b) an FN2000 round: rifle scaling + its own case
     flush();
-    fireWeapon(game, pl.char, WALL, true, { weapon: WEAPONS.fn2000 });
-    const q = flush(); const c = countKinds(q); const cas = q.find((e: any) => e.kind === 'casing');
+    const shot = shotAt(game, WALL, () => fireWeapon(game, pl.char, WALL, true, { weapon: WEAPONS.fn2000 }), flush);
+    const q = shot.q, c = shot.all; const cas = q.find((e: any) => e.kind === 'casing');
     const fails: string[] = [];
-    if (c.debris !== Math.round(10 * PFX.impactScaleRifle) || c.dust !== Math.round(6 * PFX.impactScaleRifle)) fails.push(`debris ${c.debris} dust ${c.dust} (want ${Math.round(10 * PFX.impactScaleRifle)} / ${Math.round(6 * PFX.impactScaleRifle)})`);
+    { const bad = recipeAt(shot, Math.round(10 * PFX.impactScaleRifle), Math.round(6 * PFX.impactScaleRifle)); if (bad) fails.push(bad); }
     if (!cas || c.casing !== 1) fails.push('no case');
     else { const port = cas.pos, mz = pl.char.muzzle; const d = Math.hypot(port[0] - mz[0], port[1] - mz[1], port[2] - mz[2]); if (!(d < 0.3)) fails.push(`FN2000 case born ${d.toFixed(2)} m from the muzzle (forward ejection: want < 0.3)`); }
     for (let f = 0; f < 40; f++) { W.step(DT); flush(); }
-    verdict(fails.length === 0, 'FN2000 into the same wall: the drywall counts × impactScaleRifle, and its case leaves by the muzzle (forward ejection), not the wrist', fails.length ? fails.join('; ') : `emits ${JSON.stringify(c)}, case ${JSON.stringify(cas?.pos)} vs muzzle ${JSON.stringify(pl.char.muzzle.map((x: number) => +x.toFixed(2)))}`);
+    verdict(fails.length === 0, 'FN2000 into the same wall: the drywall counts × impactScaleRifle, and its case leaves by the muzzle (forward ejection), not the wrist', fails.length ? fails.join('; ') : `at the strike ${JSON.stringify(shot.site)}${shot.through ? ' (it went on through the wall)' : ''} · the whole queue ${JSON.stringify(c)}, case ${JSON.stringify(cas?.pos)} vs muzzle ${JSON.stringify(pl.char.muzzle.map((x: number) => +x.toFixed(2)))}`);
   }
   { // (c) a round into a server rack (black → metal → sparks)
     game.teleportPlayer([18.6, 0, 9.2]); pl.char.bodyYaw = pl.char.aimYaw = Math.PI; W.step(DT); W.step(DT); flush();

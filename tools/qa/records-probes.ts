@@ -41,7 +41,7 @@ const offDoor = (d: any, side: 1 | -1, out: number): V3 => { const th = d.def.cl
 
 async function data() {
   console.log('=== records data ===');
-  const ex = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/levels/export.ts`, 'records', '--check'], { cwd: ROOT });   // the one exporter's own stale test
+  const ex = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/levels/export.ts`, 'records', '--check'], { cwd: ROOT, env: process.env });   // the one exporter's own stale test
   check(ex.exitCode === 0, `levels/records.json is what the generator gives now (tools/levels/export.ts records --check: exit ${ex.exitCode})`);
   const d = parseLevelData(text); const errs = validateLevelData(d);
   check(errs.length === 0, `the level validator: ${errs.length} error(s)${errs.length ? ' — ' + errs.slice(0, 3).join('; ') : ''}`);
