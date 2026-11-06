@@ -23,7 +23,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT HELD, unless the tool or its caller says the word (`unpinned`, `--unpinned`: `docs/agents/rust.md`, "What holds a family once its TypeScript is
   gone"); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
   hold nothing on a run with no word, and say so; (2) a check that was green on the old stand and red on the page's is red in a plain run now:
-  `tools/qa/expected-red.ts` is where each is named with its cause and whose it is (its page-stand rows are a plain run's rows now); (3) headers that say
+  `tools/qa/expected-red.ts` is where each is named with its cause and whose it is (ONE list since 2026-11-06, the page's stand's: THE EXPECTED REDS ARE ONE LIST, below); (3) headers that say
   "frozen by default" or "run it on BOTH stands" are older than this: once, with no word. Proof of the flip itself: `stand-dump.ts` with no word after =
   with `TPS_PROFILE=shipped` before, and with `TPS_PROFILE=frozen` after = with no word before, byte for byte. The rest of this file, and the area files,
   still say "the frozen stand" and "the shipped stand" of what was measured where: read "shipped" as "a plain run".
@@ -54,8 +54,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The gates.** `bun run tools/qa/missions-gate.ts` (`probes.ts missions-shipped`) plays every squad mission of the Missions list × 2 seeds to its end AS SHIPPED and is red on a run
   that throws or stalls (≈ 4 min at four jobs; not judged: who won); the QUIET rows (`QUIET_MISSIONS`) are played by `solo-night.ts`'s ghost on that tool's own stand, × 2 seeds — for
   them the gate holds 'starts and runs to the debrief', not 'as shipped'. `tools/qa/expected-red.ts` = the reds somebody has explained, by probe name; probes.ts prints its reds against it
-  after the verdict (EXPECTED RED · NEW RED · GREEN AGAIN) and gate.sh carries the lines — the exit code is unchanged, red is red. `EXPECTED_RED_SHIPPED` in the same file =
-  the rows that hold under `TPS_PROFILE=shipped` only (read on that stand alone, so a probe green on the frozen stand never reads GREEN AGAIN there). tools/qa is typechecked by its own
+  after the verdict (EXPECTED RED · NEW RED · GREEN AGAIN) and gate.sh carries the lines — the exit code is unchanged, red is red. THE EXPECTED REDS ARE ONE LIST, THE PAGE'S STAND'S
+  (2026-11-06; before, a table for either stand and a second, `EXPECTED_RED_SHIPPED`, for the page's alone). A row is typed (`RedRow`): what it is (`stale`: the tools' to mend
+  or delete · `real`: a traced fault of the page · `maybe`: could be real, its owner's read is owed · `open`: not sorted, with `leans` where the reading points somewhere),
+  which stand it is red on (`on`: absent = the page's alone, `'both'`, or `'old'` = the old stand alone), for a page-only row the rules that turn it (`bisect`: `enough` = the
+  stand's words `stand-bisect.ts` found, with its `runs`; `needed` = the same words held off on the page's stand, the probe green or not), the failing line, and whose it is.
+  WHAT THE BISECT'S ANSWER IS NOT, each learnt from a wrong row: it stops at the first set of words that does it, so another rule may turn the same line as well (`aim-unit`:
+  the turn weight was the answer and the aim cost of moving turns four of its five lines; of the 37 names whose answer was tried the other way round, 10 stayed red); it raises a word by hand
+  OVER a probe's own hold (`orderkeys-walk`: the answer named a rule the probe holds off, so the plain run never has it); a word read only as a game is stood up cannot be
+  raised (`firearm-topup`: the gear rule). WHICH ROWS A RUN IS READ AGAINST: the rows of its own stand. Two runs are read against none, and say so in one line where they have
+  a red: one started with a word of the stand given by hand (`stand.ts BY_HAND`, read as the process starts: a probe turned green by its own rule held off would otherwise read
+  GREEN AGAIN), and one of a single case of a probe (a case's number as the third word: `probes.ts aim-door 0`). A GREEN AGAIN on a row of both stands says which stand comes out of its `on`, not "take it off", and says so where other names share the row.
+  WHAT HOLDS THE ROWS: `holds-check.ts` line (8) (probe `holds`, quick gate; `HOLDS_BREAK=1` puts two bad rows in and must fail it): a name the runner has, no bisect on a row
+  red on the old stand, every bisect word one the stand can raise with its value (`heldWords`, the list `stand-bisect.ts` searches) and none a word
+  the probe's own holds put off. It cannot tell a family's word from a probe's name (a row under a family's word passes and is never read), nor see a row's prose. HOW THE LIST WAS FILLED: every probe name run on
+  the page's stand in one week, by the build's gate or by a sweep of the 458 names the gate does not hold (412 green, 46 red, 57 probes), the 46 again on the old stand, page-only
+  reds bisected as time allowed (a row says where one was not), and each answer found that week tried the other way round; three older rows carry their writers' answers,
+  untried. 78 names. It is what was read, not a promise that nothing else is red. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
+  (green on the page's). NOT DONE: `flashweight`'s two older rows are the old stand's measurements, kept as rows of both stands and not read again on the page's (the family
+  did not finish inside half an hour on a loaded box). tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
 <!-- was CLAUDE.md lines 398–468 -->
@@ -1058,7 +1075,7 @@ but synthetic writes still work.
   set himself wins: `=1` is his to ask, anything else is the hold itself (a stand-up raises a row for `1` alone), so a child of a held probe stands where
   its parent stands.
   A NEW ROW OF THE TABLE, OR A NEW MAIN IN A FILE THAT HOLDS A PROBE OF THE TABLE, is red in `bun run tools/qa/holds-check.ts` (`probes.ts holds`, in the
-  quick gate; seven lines, the same on both stands; `HOLDS_BREAK=1` = 4 FAIL) until that main runs the probe through `asProbe` by its name: the table's
+  quick gate; eight lines, the same on both stands; `HOLDS_BREAK=1` = 5 FAIL: the eighth holds the rows of `expected-red.ts`, see THE EXPECTED REDS ARE ONE LIST) until that main runs the probe through `asProbe` by its name: the table's
   rows are switches the registry has under the words `FROZEN_HOLDS` gives them, every held probe of the runner runs with its words at 0 and its rows off and
   both are back after, the fence puts back what a probe wrote, a file's table of its probes has each name beside the function the runner calls for it, no
   name in the table is one the runner no longer has, and `probes.ts selftest-holds` asks the runner's own `run()`. WHAT IT CANNOT SEE: that every arm of
@@ -1102,7 +1119,18 @@ but synthetic writes still work.
   THE SAME ENTRY IN BOTH TREES. The tally stands the team on free floor 2.4 to 6.2 m out from the door and Sam beside them, and takes anybody with a
   line to them off the floor, so a thing laid there changes the STAGING, and two trees staged differently did not fight the same entry. `bang-tally.ts`
   writes into every result its staging (`at`: the spots, Sam's last, and how many were taken off the floor) and what became of the entry as a word
-  (`outcome`: played, refused, no-floor, nobody, threw), and takes another tree's staging (`--stand-as`) wherever every spot of it is free floor. The
+  (`outcome`: played, refused, no-floor, nobody, threw), the game's reason for the first order it refused (`refused`) and the men down before the order
+  was asked (`lostBefore`), and takes another tree's staging (`--stand-as`) wherever every spot of it is free floor. THE NOTE IS FOR PEOPLE and reads as
+  it did before this tool: other tools count rows by whether they have one (`flashweight-probes.ts` counts `of > 0 && !note`), and a refusal was always
+  a row with none. The tally's own table skips rows by the fields now, not by the note's words. A REFUSAL NAMES A DOOR ONLY WITH THE TEAM WHOLE AT THE
+  ORDER IN BOTH TREES: once a man is down before the order the fight has begun, what the game answers then (`no squad`, when it is all of them) is that
+  fight's doing, and the entry is read as a fight like any other. A named door's line gives the seed and the reason of each entry that cannot be made.
+  MEASURED FOR THAT FOLLOW-UP (6f1d40c2 with its three tool files, the page's stand): the flashbang family's whole log is the clean dad3c1a1's line
+  for line (flashweight-corners counts 398 entries again, where the first cut's note had made it 392; the family's four reds are the base's); on
+  depot-four and pass-four, seeds 1-3, every counted field, every note and the tally's printed table are the tally's from before this tool (90 rows, six
+  of them refused, none with a note); mousehole-four, whose exam door the first cut named for a team shot before its order on seed 8, reads no door
+  named over seeds 1-24 (exam plain 8 worse and 8 better, bang 7 and 8), from the first cut's kept tallies and with seeds 7-12 replayed in both trees
+  alike; the break word names the same door with the same counts; pass-four against its own tally, 480 of 480 the same. The
   reader stands the AFTER tree as the BEFORE tree stood each entry, prints door by door how many entries were `staged alike`, and a verdict on a door
   that could not be stood alike says so. A tally handed over as JSON was staged as it was. A tally from before `outcome` is read by its notes and cannot
   say a refusal (such an entry is a fight to it, as to the tally's own table), so no door is named for a refusal one of the two could not say.

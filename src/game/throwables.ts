@@ -369,6 +369,7 @@ export class Throwables {
   /** ONE ROW'S STEP, HERE (rust/sim/src/items.rs update is this, statement for statement, for the rows it takes): row `r` aged, flown, bounced and
    *  brought to rest over the pool's columns; what it does to anything else listed onto `ev` (IE) */
   private stepRow(r: number, dt: number, ev: number[]): void {
+    this.store.home.bind();   // (the block stands in its slot before its views are taken: the snow's question binds it, and a view over a parked block would be left behind)
     const S = this.store, O = S.O, d = S.d, u = S.u, B = S.b8 + r, W = S.b4 + r;
     d[B + O.age] += dt; const life = d[B + O.life] -= dt;
     if (life <= 0) { listed(ev, r, IEK.gone, 0, 0, 0, 0, 0, 0, 0); return; }

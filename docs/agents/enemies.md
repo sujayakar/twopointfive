@@ -1479,7 +1479,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   call (five seconds of his run past a teammate with his back turned put no footfall of his in that teammate's ear in the staging, key on or off: the call
   may not be reachable for a runner at all).
   THE OLDER CHECK'S TWO RED LINES ON THE PAGE'S STAND (`runner-check` case (2), "living mates in another room" and "the mates are told, and it MOVES
-  them"; red from the day the gun deal came in, 10-18, not on any expected-red list because that list is the frozen stand's): found by holding each of the
+  them"; red from the day the gun deal came in, 10-18, not on any expected-red list because that list was the frozen stand's then; it is the page's stand's since 2026-11-06): found by holding each of the
   page's rules off in turn — `TPS_GUNROLES=0` alone turns them green. Under the deal the two mates left on their posts are on the move by the time he
   runs and he is still 14 m short of them when `mateSecs` is up: the rule as written, not the case the lines stage. The check now holds the deal off for
   that one staging (`gunDeal`) and puts it back for the next; runner-check is 34 lines green on both stands. What a runner should do about mates who walk

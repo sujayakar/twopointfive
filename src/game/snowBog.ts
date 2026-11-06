@@ -14,6 +14,8 @@ import { BoxFlag } from '../scene/boxes';
 import { snowLevel } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
 import { snowLayBare, snowPaintOf, snowThinLay } from '../render/snowField';
+import { sim } from '../sim/sim';
+import { WX_KNOBS, WX_WATCH } from '../sim/weatherhome';
 
 export const SNOWBOG = {
   on: false,
@@ -33,41 +35,38 @@ export const bogRun = (bog: number) => bog > 0 ? Math.pow(Math.max(0, 1 - bog), 
 
 /** WHAT SNOW A BOX OF THE LEVEL IS, a byte a box (rust/sim/src/world.rs SNOW_*). THE ONE STATEMENT OF WHERE SNOW LIES: the rule below reads it, and the
  *  Rust module is handed the same bytes and reads where each box is and how it is turned off its own copy of that box (sim/items.rs bog_at is
- *  snowBogAt over the same boxes, by the same index). `lays` and `banks` are the indices that are one or the other, in the level's order. */
+ *  snowBogAt over the same boxes, by the same index). */
 export const SNOW_KIND = { none: 0, bare: 1, packed: 2, old: 3, bank: 4 } as const;
-interface Ground { kinds: Uint8Array; lays: number[]; banks: number[]; }
+interface Ground { kinds: Uint8Array; }
 const groundOf = new SideMap<object, Ground>('snowBog.groundOf');
 function ground(g: Game): Ground {
   const lvl = g.level as unknown as { boxes: Box[] }; let G = groundOf.get(lvl);
   if (!G) {
-    G = { kinds: new Uint8Array(lvl.boxes.length), lays: [], banks: [] };
+    G = { kinds: new Uint8Array(lvl.boxes.length) };
     for (let bi = 0; bi < lvl.boxes.length; bi++) {
       const b = lvl.boxes[bi], p = snowPaintOf(b);
       // (the thin lays: the picture's own rule, render/snowField.ts snowThinLay — trodden, old, or ground somebody cleared; a lit thing lying on the snow is neither)
-      if (snowThinLay(b)) { if (p === 'snowPacked' || p === 'snowOld' || snowLayBare(b)) { G.lays.push(bi); G.kinds[bi] = p === 'snowPacked' ? SNOW_KIND.packed : p === 'snowOld' ? SNOW_KIND.old : SNOW_KIND.bare; } }
+      if (snowThinLay(b)) { if (p === 'snowPacked' || p === 'snowOld' || snowLayBare(b)) { G.kinds[bi] = p === 'snowPacked' ? SNOW_KIND.packed : p === 'snowOld' ? SNOW_KIND.old : SNOW_KIND.bare; } }
       // (the banks: snow that STANDS — a drift, a ploughed heap, a tier of the deep snow — is snow to land in at its own top)
       // — and so is the cap of snow the level lays on a roof, a crate, a truck's bed (a thin box nothing collides with: the thing lands on what is under it)
-      else if (p === 'snow' && !(b.flags & BoxFlag.Glass) && b.c[1] + b.h[1] > 0.03) { G.banks.push(bi); G.kinds[bi] = SNOW_KIND.bank; }
+      else if (p === 'snow' && !(b.flags & BoxFlag.Glass) && b.c[1] + b.h[1] > 0.03) G.kinds[bi] = SNOW_KIND.bank;
     }
     groundOf.set(lvl, G);
   }
   return G;
 }
-const over = (b: Box, x: number, z: number) => { const cs = Math.cos(b.yaw ?? 0), sn = Math.sin(b.yaw ?? 0), px = x - b.c[0], pz = z - b.c[2]; return Math.abs(cs * px - sn * pz) <= b.h[0] && Math.abs(sn * px + cs * pz) <= b.h[2]; };
 /** may the ground bog anything in this game now (false: snowBogAt answers 0 for every point — the switch off, or a level with no lying snow) */
 export function snowBogMay(g: Game): boolean { return SNOWBOG.on && snowLevel(levelNameOf(g.level)); }
 /** the level's snow as a byte a box (SNOW_KIND): what the Rust module's copy of the box world is told */
 export function snowBogKinds(g: Game): Uint8Array { return ground(g).kinds; }
-/** how boggy the ground is where a thing touched down at (x, y, z), 0‥1 (0 = a floor: the bounce as it was). 0 with the switch off. */
+/** how boggy the ground is where a thing touched down at (x, y, z), 0‥1 (0 = a floor: the bounce as it was). 0 with the switch off. The rule is the module's
+ *  (rust/sim/src/items.rs bog_of, by snow.rs), over the one table of the snow in its copy of the box world and the weather's roofs. */
 export function snowBogAt(g: Game, x: number, y: number, z: number): number {
-  const K = SNOWBOG; if (!K.on || !snowLevel(levelNameOf(g.level))) return 0;
-  const G = ground(g), B = (g.level as unknown as { boxes: Box[] }).boxes, n = B.length;
-  if (!(y < K.top)) { for (const bi of G.banks) { if (bi >= n) break; const b = B[bi]; if (Math.abs(b.c[1] + b.h[1] - y) <= K.bankM && over(b, x, z)) return 1; } return 0; }   // (up on something: only standing or capping snow bogs)
-  if (g.weather.underRoof(x, z)) return 0;
-  let k = 1;
-  for (const bi of G.lays) {
-    if (bi >= n) break; if (!over(B[bi], x, z)) continue;
-    const kind = G.kinds[bi], v = kind === SNOW_KIND.packed ? K.packed : kind === SNOW_KIND.old ? K.old : 0; if (v < k) k = v;
-  }
-  return Math.max(0, Math.min(1, k));
+  if (!SNOWBOG.on || !snowLevel(levelNameOf(g.level))) return 0;
+  g.weather.roofsNow(); WX_KNOBS.here();
+  return g.col.rule(() => {
+    const M = g.col.ruleOpen(); M.snow(ground(g).kinds);
+    const r = sim().snow_bog_at(g.sim.bind(), M.slot, x, y, z);
+    return WX_WATCH.on ? WX_WATCH.said('snow.bog', r, [x, y, z]) : r;
+  });
 }
