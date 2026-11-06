@@ -14,7 +14,10 @@ const TICKS = arg('--ticks', ''), DUMP = arg('--dump', ''), AT = new Set(arg('--
 const { standTwo, DT } = await import('../qa/seats-run.ts');
 const { standUp, ROOT } = await import('../qa/headless.ts');
 const { cmdText, cmdFromText } = await import(`${ROOT}/src/game/cmd.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
+const { digestGame, hashDigest, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
+// (the first game's digests whole, so that where a later game's first parts the fields are named)
+const FIRST: unknown[] = []; const told = new Set<number>();
+const dig = (n: number, g: any, k: number): string => { const d = digestGame(g); if (n === 1) FIRST[k] = d; const h = hashDigest(d); if (n > 1 && !told.has(n) && FIRST[k] !== undefined && h !== hashDigest(FIRST[k])) { told.add(n); console.log(`  game ${n} first parts from the first at second ${k}: ${diffDigest(FIRST[k], d, 8).join(' · ')}`); } return h; };
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 for (const d of [TICKS, DUMP]) if (d) mkdirSync(d, { recursive: true });
@@ -39,13 +42,13 @@ for (let n = 1; n <= (WEAVE ? 1 : GAMES); n++) {
   if (ONE) { Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed: SEED }); g = W.game; const r = startFromQuery(g, QUERY); if (r.why) throw new Error(`thrice: ${QUERY} refused: ${r.why}`); tick = () => W.step(DT); }
   else { const P = await standTwo(QUERY, SEED, null); g = P.g; const mine: string[][] = [];
     tick = (i: number) => { const cmds = records ? records[i].map(cmdFromText) : P.sample(i); if (!records) mine.push(cmds.map(cmdText)); P.tick(cmds); if (!records && i === N - 1) records = mine; }; }
-  my.push(hashDigest(digestGame(g)));
-  for (let i = 0; i < N; i++) { tick(i); tickOut(n, i + 1, g); if (i % 60 === 59) my.push(hashDigest(digestGame(g))); }
+  my.push(dig(n, g, 0));
+  for (let i = 0; i < N; i++) { tick(i); tickOut(n, i + 1, g); if (i % 60 === 59) my.push(dig(n, g, (i + 1) / 60)); }
   words.push(my); said(n, my, g);
 }
 if (WEAVE) { const P: any[] = [], W: string[][] = [];
-  for (let n = 2; n <= GAMES; n++) { if (TICKS) writeFileSync(`${TICKS}/${WORD}-g${n}.txt`, ''); const p = await standTwo(QUERY, SEED, null); P.push(p); W.push([hashDigest(digestGame(p.g))]); }
-  for (let i = 0; i < N; i++) P.forEach((p, j) => { p.tick(records![i].map(cmdFromText)); tickOut(j + 2, i + 1, p.g); if (i % 60 === 59) W[j].push(hashDigest(digestGame(p.g))); });
+  for (let n = 2; n <= GAMES; n++) { if (TICKS) writeFileSync(`${TICKS}/${WORD}-g${n}.txt`, ''); const p = await standTwo(QUERY, SEED, null); P.push(p); W.push([dig(n, p.g, 0)]); }
+  for (let i = 0; i < N; i++) P.forEach((p, j) => { p.tick(records![i].map(cmdFromText)); tickOut(j + 2, i + 1, p.g); if (i % 60 === 59) W[j].push(dig(j + 2, p.g, (i + 1) / 60)); });
   P.forEach((p, j) => { words.push(W[j]); said(j + 2, W[j], p.g); }); }
 const bad = words.filter(w => w.join() !== words[0].join()).length;
 console.log(bad ? `=== thrice (${WORD}): ${bad} of ${GAMES - 1} later games PLAYED ANOTHER GAME than the first ===` : `=== thrice (${WORD}): ${GAMES} games of one process, one digest at the start and at each of ${SECS} seconds: ${words[0][words[0].length - 1]} ===`);
