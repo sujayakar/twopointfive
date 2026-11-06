@@ -16,7 +16,7 @@ export type Span = { q: string; s: number; e: number };
 // FIELDS THAT ARE EACH SIDE'S OWN, cut out of every compare and never handed across (PLAY.md says why for each): the box mirror is a module's own copy of the
 // box world with its own counters; the other three the export works out or reads from a module variable that the apply does not write back, so the puppet's
 // are not the Rust game's. All four stand in the game's own fields (none in a table's row), so one walk of the root finds them.
-export const CUT = new Set(['scene_collision::StaticCollision.mirror', 'game::Mods.scene_box_mirror', 'game::Game.door_owns', 'anim_gltf::AnimGltfMod.nvg_bits', 'anim_gltf::AnimGltfMod.suit_bits', 'wallbreak::WallBreak.listeners']);
+export const CUT = new Set<string>();   // (none since the bridge's echo: a field the Rust game owns and TypeScript cannot hold is kept beside the object by a whole apply and written back by the export, tools/blitz/IMPORT.md)
 /** the field each of `offs` (ascending) lies in: its path in the state and the struct field that declares it. `spans`: where each CUT field stands; with
  *  `rootOnly` the walk ends with the game's own fields (the tables are not entered) */
 export function locate(b: Uint8Array, offs: number[], spans: Span[] | null = null, rootOnly = false, rootTy: string = SCHEMA.root, rootPath = 'g'): Place[] {
@@ -121,7 +121,7 @@ export function withCutsOf(b: Uint8Array, a: Uint8Array): Uint8Array { const A =
 // THE HOST'S HALF, as paths of a state: what `face_host` hands over every tick, so no write-back is owed for it
 // (… and what `Game.update`'s hostAfter sets after every step and the tick sets again as it opens: the seat's live matrix, the menu's view of the host's own
 // Input and camera)
-export const HOST_Q = (x: { q: string; path: string }) => x.path.startsWith('g.cmd_buf') || /^g\.tab\.(camera|input)\b/.test(x.path) || x.q === 'orders::SquadOrdersView.input' || x.q === 'orders::SquadOrdersView.cam' || x.q === 'game::Game.view_proj';
+export const HOST_Q = (x: { q: string; path: string }) => x.path.startsWith('g.cmd_buf') || /^g\.tab\.(camera|input)\b/.test(x.path) || x.q === 'orders::SquadOrdersView.input' || x.q === 'orders::SquadOrdersView.cam' || x.q === 'game::Game.view_proj' || x.q === 'cmd::Seat.mark';
 // NOT A WRITE: an identity serial (the two sides number objects apart by design: schema.serial), a clip's place in the Rust game's own table (the export
 // writes a constant for it), `Player.kit_was` (the apply leaves the puppet's at nothing where the Rust game holds one: seen on tut-solo every tick), and the counts of collision and sense asks (collision.ts ANYTIME, SENSED: counters of the module that was asked, read by no rule)
-export const OWN_Q = (x: { q: string; path: string }) => !!SCHEMA.serial?.[x.q] || !!SCHEMA.scratch?.[x.q] || x.q === 'anim_skeleton::ClipSide.at' || x.q === 'game::Player.kit_was' || x.q === 'lesson::Lesson.run' || x.q === 'tail' || /^scene_collision::SceneCollisionMod(ANYTIME|SENSED)\./.test(x.q);
+export const OWN_Q = (x: { q: string; path: string }) => !!SCHEMA.serial?.[x.q] || !!SCHEMA.scratch?.[x.q] || x.q === 'tail' || /^scene_collision::SceneCollisionMod(ANYTIME|SENSED)\./.test(x.q);

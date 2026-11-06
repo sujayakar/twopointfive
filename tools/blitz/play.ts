@@ -2,7 +2,7 @@
 // PUPPET of a game that steps in the wasm face, the scripted player of tools/qa reads the puppet to decide its keys, and what it presses goes to the Rust
 // game as the tick's record. The TypeScript tick (`stepSeats`' body) never runs. This file stands the mission, holds every tick to the reference and reports.
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/play.ts <mission>:<seed> --ref DIR [--out DIR] [--ticks N] [--wasm FILE] [--audit] [--whole-every N]
-//                                             [--stale N] [--no-warm] [--baseline puppet|rust] [--apply-check N] [--upload-every N] [--no-dress] [--go-on] [--quiet]
+//                                             [--stale N] [--no-warm] [--no-asks] [--handback N] [--baseline puppet|rust] [--apply-check N] [--upload-every N] [--no-dress] [--go-on] [--quiet]
 // --ref DIR is the same mission and seed played by the plain TypeScript game (mission.ts wrote it: post.txt, the die's count and a hash of each part of
 // rust/sim's block after every tick; h<k>.bin, the host's half before every tick). Held to it, every tick:
 //   the host's half   what the scripted player pressed and where its camera stood as the tick opens: the first tick it differs is the first tick the puppet
@@ -19,7 +19,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { RustHost, DEFAULT_WASM } from './rust-host.ts';
 const argv = process.argv.slice(2), has = (n: string) => argv.includes(n), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
-if (!argv[0] || argv[0].startsWith('--')) { say('play.ts <mission>:<seed> --ref DIR [--out DIR] [--ticks N] [--wasm FILE] [--audit] [--whole-every N] [--stale N] [--no-warm] [--baseline puppet|rust] [--apply-check N] [--upload-every N] [--no-dress] [--go-on] [--quiet]'); process.exit(64); }
+if (!argv[0] || argv[0].startsWith('--')) { say('play.ts <mission>:<seed> --ref DIR [--out DIR] [--ticks N] [--wasm FILE] [--audit] [--whole-every N] [--stale N] [--no-warm] [--no-asks] [--handback N] [--baseline puppet|rust] [--apply-check N] [--upload-every N] [--no-dress] [--go-on] [--quiet]'); process.exit(64); }
 const [scn, seedS] = argv[0].split(':'), seed = +(seedS ?? 1);
 const REF = arg('--ref', ''), OUT = arg('--out', REF ? `${REF}/play` : ''), TICKS = +arg('--ticks', '1000000'), DIE = +arg('--die', '20942');
 const AUDIT = has('--audit'), STALE = +arg('--stale', '0'), GO_ON = has('--go-on'), QUIET = has('--quiet');
@@ -40,7 +40,7 @@ const F = await RustHost.ready(WASM), X = F.X, NAMES = F.NAMES;
 if (post.length && (head[0] !== 'parts' || head.slice(1).join(' ') !== NAMES.join(' '))) { say(`play: the reference names the block's parts [${head.slice(1)}] and this module [${NAMES}]: one side is of another tree`); process.exit(3); }
 const { Game } = await import('../../src/game/game.ts');
 const { play, entryOf } = await import('../qa/playthrough.ts');
-const { exportGame, exportPart, hostHalf, bookOf } = await import('./export.ts');
+const { exportGame, exportPart, hostHalf, hostHalfParts, bookOf } = await import('./export.ts');
 const { locate, diffOffsets, buf, fieldsDiffering, tallyAdd } = await import('./audit.ts');
 type Tally = Map<string, { n: number; eg: string; ticks: number; last: number }>;
 if (!LESSON && !entryOf(scn)) { say(`play: the scripted player has no mission '${scn}'`); process.exit(64); }
@@ -61,9 +61,9 @@ function holdHost(g: any, reg: any, cmds: readonly any[]): void {
   if (!REF || hostParted || !existsSync(`${REF}/h${k}.bin`)) return;
   const mine = hostHalf(g, reg, cmds), ref = new Uint8Array(readFileSync(`${REF}/h${k}.bin`)); hostCompared++;
   if (ref.length === mine.length && buf(ref).equals(buf(mine))) return;
-  hostParted = k; const where: string[] = [], bk: any = bookOf(g), P: [string, any, string][] = [['u32', cmds.length, 'seats']]; let at = 0;
-  cmds.forEach((c, i) => P.push(['crate::cmd::PlayerCmd', c, `record[${i}]`]));
-  for (const [id, ty] of [['CameraId', 'crate::camera::FollowCamera'], ['InputId', 'crate::input::Input']]) { const L: any[] = bk.listOf(id); P.push(['u32', L.length, id]); L.forEach((row, i) => P.push([ty, row, `${ty.split('::').pop()}[${i}]`])); }
+  hostParted = k; const where: string[] = [], bk: any = bookOf(g); let at = 0, rec = 0;
+  // (the pieces as the hand-over itself lists them: export.ts hostHalfParts)
+  const P: [string, any, string][] = hostHalfParts(g, cmds).map(([ty, v]: [string, any]) => [ty, v, ty === 'u32' ? 'a count' : ty.endsWith('PlayerCmd') ? `record[${rec++}]` : ty.endsWith('FollowCamera') ? `FollowCamera[${bk.listOf('CameraId').indexOf(v)}]` : ty.endsWith('Input') ? `Input[${bk.listOf('InputId').indexOf(v)}]` : ty.split('::').pop()!]);
   if (ref.length !== mine.length) { where.push(`the lengths differ (${mine.length} here, ${ref.length})`);
     // (where the two first differ, by the piece of this side's bytes it falls in: a list of another length, a key more in a set)
     let d = 0; while (d < mine.length && d < ref.length && mine[d] === ref[d]) d++;
@@ -105,7 +105,7 @@ const was = Game.prototype.update; let tOut = 0, wall0 = 0, G0: any = null, stop
 Game.prototype.update = function (this: any, ...a: any[]) {
   const g = this; G0 = g; k++; const t0 = now(); if (k > 1) T.driver += t0 - tOut; else wall0 = t0;
   if (!H) H = RustHost.attach(g, { wasm: WASM, audit: AUDIT, wholeEvery: +arg('--whole-every', '0'), uploadEvery: +arg('--upload-every', '4'), dress: !has('--no-dress'), die: DIE, warm: has('--no-warm') ? 0 : undefined,
-    baseline: arg('--baseline', 'rust') as 'rust' | 'puppet', applyCheck: +arg('--apply-check', '50'), out: OUT || undefined, quiet: QUIET, say,
+    asks: !has('--no-asks'), handback: +arg('--handback', '0'), baseline: arg('--baseline', 'rust') as 'rust' | 'puppet', applyCheck: +arg('--apply-check', '50'), out: OUT || undefined, quiet: QUIET, say,
     beforeHost: (Hh, cmds) => { const t = now(); holdCalls(Hh); holdHost(g, Hh.B.reg, cmds); T.hostHold += now() - t; },
     afterStep: Hh => { const t = now(); holdBlock(Hh); T.compare += now() - t; } });
   const Hh = H, s0 = Hh.spent(), c0 = T.hostHold + T.compare;
@@ -148,7 +148,6 @@ function finish(g: any, code: number | null = null): never {
   if (AUDIT) {
     say(`  THE WRITE-BACK (held to ${(Hh.o.baseline ?? 'rust') === 'rust' ? 'the Rust bytes last applied' : 'the puppet exported as the apply left it'}): ${Hh.wb.hostOnly} compares found nothing but the host's half, ${Hh.wb.meter} only the player's light meter (handed by face_meter), ${Hh.wb.fired} something else (the whole puppet handed by face_import_into); the block differed ${Hh.wb.block} times (${[...Hh.BLOCKW].map(([n, c]) => `${n} ${c}`).join(', ') || '-'})`);
     say(`  what TypeScript wrote into the game between ticks, by field (not the host's half):`); say(table(Hh.WB));
-    if (Hh.wb.refused) { say(`  NOT HANDED OVER, ${Hh.wb.refused} times: a beat of the level's script was running, and the Rust import refuses such a state. By field:`); say(table(Hh.WB_REFUSED)); }
     say(`  the host's half as the compare saw it:`); say(table(Hh.HOSTW, 8));
     say(`  seen by the compare and not a write (identity serials, a clip's place in the Rust game's own table):`); say(table(Hh.OWNW, 8));
     say(`  THE APPLY, held to the Rust bytes it was given (the puppet exported again right after it): ${Hh.applyChecks} ticks checked, ${Hh.applyUnequal} with a field outside the cut ones not as Rust has it`); if (Hh.applyUnequal) say(table(Hh.APPLY_MISS));
@@ -156,7 +155,8 @@ function finish(g: any, code: number | null = null): never {
     say(`  the box world listed on the Rust side ${Hh.uploads.rust} times (${Hh.uploads.late} asked for on a tick not expected, ${Hh.uploads.missed} expected and not asked for)`); }
   if (STALE) { say(`  THE PUPPET HELD TO THE RUST GAME'S WHOLE STATE every ${STALE} ticks (${staleChecks} times): the fields in which it had fallen behind (the filtered list does not carry them, or the TypeScript round a step wrote them):`); say(table(STALE_F, +arg('--stale-show', '80'))); }
   say(`  the apply made new rows: ${JSON.stringify(Hh.made)}; no way back: ${[...Hh.noWay].map(([q, n]) => `${q} x${n}`).join(', ') || '-'}; no setter: ${[...Hh.noSetter].map(([q, n]) => `${q} x${n}`).join(', ') || '-'}; no window: ${[...Hh.noWindow].join(', ') || '-'}`);
-  say(`  STAND-INS used: a seat's cut made anew ${Hh.standIns.cut} times; a box's null markings made undefined ${Hh.standIns.marks} times; the lesson's run set to the puppet's mission after ${Hh.standIns.run} applies; the squad's posture kept over ${Hh.standIns.posture} applies; ${Hh.standIns.defs} new order rows given their TypeScript twin's closures (${Hh.standIns.defNoTwin} had no twin)`);
+  say(`  STAND-INS used: a box's null markings made undefined ${Hh.standIns.marks} times; ${Hh.standIns.lists} missing empty lists made after whole applies; the menu's questions asked of the Rust game ${Hh.asked} times${Hh.o.asks === false ? ' (not installed: --no-asks)' : ''}`);
+  if (Hh.handbacks) say(`  HANDED BACK WHOLE: ${Hh.handbacks} times, ${Hh.handbacksInBeat} with a beat of the level's script running`);
   const sameEnd = !post.length ? false : (res ? refEnd.includes(`: ${res.end} (`) && refEnd.includes(`t ${res.t};`) && refEnd.includes(`team ${res.team} of ${res.of}`) && refEnd.includes(`PLAYED OUT at tick ${k} `) : les ? refEnd.includes(` at tick ${k}:`) && refEnd.includes(les.steps.map((s: any) => s.id).join(' ')) : false);
   // (THE CHECK CHECKED: a host's half compared on fewer ticks than were played and held to the reference is a check that died, not a play that passed)
   const owed = Math.min(k, post.length); if (code === null && post.length && !hostParted && hostCompared < owed) { say(`  THE HOST'S HALF WAS COMPARED ON ${hostCompared} OF ${owed} TICKS: the reference lacks h<k>.bin for the rest (a reference made with --no-host, or its files deleted). NOT A PASS.`); code = 3; }

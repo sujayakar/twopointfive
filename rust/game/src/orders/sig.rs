@@ -584,3 +584,6 @@ pub fn squad_orders_people_ray(g: &mut crate::game::Game, ro: V3, rd: V3, max: f
 
 /// INVENTED: what a PropPenalty answers for a cell, the closure at orders.ts:2660, so goTo can hand one to nav_grid_find_path: |g, ix, iz| prop_penalty_at(g, &round, ix, iz). (dear.has(nav.idx) ? cost : 1) * (pen's price, or 1), in that order; pen's price is lanes::lane_penalty_at
 pub fn prop_penalty_at(g: &mut crate::game::Game, p: &crate::orders::PropPenalty, ix: f64, iz: f64) -> f64 { todo!() }
+/// INVENTED: `d.label(t)`, the match over OrderLabel (orders.ts:854)
+pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String { todo!() }
+

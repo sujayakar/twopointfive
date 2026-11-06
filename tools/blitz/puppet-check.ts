@@ -1,5 +1,6 @@
 // THE FILTERED EXPORT'S CHECK. Role a exports a game at frames F..F+K (whole states). `cargo test --lib puppet_round` turns them into filtered ones, the first at start, the rest as steps. Role b stands a game at F, applies them in turn with the compiled rows, and compares every value on the lists with the last whole state; it prints what each apply cost.
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/puppet-check.ts <scn>:<seed>:<F>:<K> --role a|b --dir d [--frames 600,2400]
+import { tmpdir } from 'node:os';
 import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { exportGame } from './export';
 import { applyGame } from './import';
@@ -7,7 +8,7 @@ import { classTable, valueTable } from './classes';
 import { puppetRows, SLOW, VALS } from './puppet-apply';
 import { decode } from './paths';
 const argv = process.argv.slice(2); const [scn, seed, F, K] = argv[0].split(':'); const arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
-const dir = arg('--dir', '/tmp/pup'), role = arg('--role', 'a'); mkdirSync(dir, { recursive: true }); const say = (x: string) => { process.stdout.write(x + '\n'); };
+const dir = arg('--dir', `${tmpdir()}/pup`), role = arg('--role', 'a'); mkdirSync(dir, { recursive: true }); const say = (x: string) => { process.stdout.write(x + '\n'); };
 const { knobRegistry } = await import('../../src/game/knobs.ts'); const reg = knobRegistry();
 const { Game } = await import('../../src/game/game.ts'); const { play } = await import('../qa/playthrough.ts'); class Stop extends Error {}
 const frames: number[] = arg('--frames', '') ? arg('--frames', '').split(',').map(Number) : Array.from({ length: +K + 1 }, (_, i) => +F + i);

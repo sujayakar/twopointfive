@@ -8,7 +8,10 @@
 //
 //   applyGame(g, blob, knobs, { only?: Set of 'mod::Type.field', hooks? }) → report
 //   `only`: fields not named are read past; a struct is entered only if it holds a named one. The bytes are still walked: what bounds the cost of a tick is what Rust chooses to export.
-import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE } from './export';
+//
+// AN ECHO (schema `echo`, hand2.cjs H.bridge.echo): a field Rust owns that the TypeScript cannot hold (a place in a level script, a memo a module keeps where the walk cannot write it, the copy of the box world in the module that
+// holds it). A whole apply keeps its bytes beside the object and writes nothing; the puppet's export writes those bytes back (export.ts). So a re-export after an apply is Rust's bytes everywhere, and such a field needs no class of its own in a host's compare.
+import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS } from './export';
 import { rawKey, PUT_BACKS } from '../../src/math/side';
 
 export type Hooks = { made?: Record<string, (row: any, g: any) => void>; gone?: Record<string, (row: any, g: any) => void>; classes?: Record<string, { prototype: object }>; values?: Record<string, any> };
@@ -17,6 +20,7 @@ export type ApplyOpts = { only?: Set<string>; hooks?: Hooks; puppet?: Puppet };
 export type Report = { out?: { arm: string; e: any }[]; phases: Record<string, number>; counts: Record<string, number>; made: Record<string, number>; noWay: Map<string, number>; noSetter: Map<string, number>; noWindow: Set<string>; deadSerials: number; bytes: number; ms: number };
 
 const DEC = new TextDecoder();
+const PROF = !!process.env.PUP_PROF, DEBUG = !!process.env.PUP_DEBUG;
 type N = any;
 const isTyped = (v: any) => ArrayBuffer.isView(v) && !(v instanceof DataView);
 const isSide = (v: any) => v && typeof v.liveKeys === 'function';
@@ -38,28 +42,33 @@ function skipper(b: Uint8Array, I: { p: number; K?: Keep | null }) { const dv = 
     case 'type': { const T = SCHEMA.types[n.path]; if (T.k === 'struct') { const K = I.K; if (K && !K.desc(n)) { I.K = null; sk(n); I.K = K; return; } if (!K) { for (const f of T.fields) sk(parse(f.ty)); return; } for (const P of planOf(T)) { if (!K.field(P.q, P.f.ty)) continue; if (!K.desc(P.N)) { I.K = null; sk(P.N); I.K = K; continue; } sk(P.N); } return; } if (T.k === 'enum') { I.p += 2; return; } const a = dv.getUint16(I.p, true); I.p += 2; if (T.k === 'wordEnum') { for (const f of T.arms[a].fields) sk(parse(f.ty)); return; } const t = armType(T, a); if (t) sk(parse(t)); return; } }
     throw new Error(`import: no way past ${n.k}`); };
   return { I, sk, dv }; }
-type Plan = { f: any; q: string; N: N };
+type Plan = { f: any; q: string; N: N; way?: Way };
 const planOf = (T: any): Plan[] => T.plan ??= T.fields.map((f: any) => ({ f, q: `${T.mod}::${T.name}.${f.rust}`, N: parse(f.ty) }));
 const W = new Map<N, number>();
 function fixedWidth(n: N): number { let w = W.get(n); if (w !== undefined) return w; switch (n.k) { case 'f64': case 'u64': case 'i64': w = 8; break; case 'f32': case 'u32': case 'i32': case 'usize': case 'id': w = 4; break; case 'bool': case 'u8': case 'i8': w = 1; break; case 'u16': case 'i16': w = 2; break; case 'unit': w = 0; break; case 'arr': { const e = fixedWidth(n.of); w = e < 0 ? -1 : e * n.n; break; } case 'tup': { w = 0; for (const x of n.of) { const e = fixedWidth(x); if (e < 0) { w = -1; break; } w += e; } break; } case 'type': { const T = SCHEMA.types[n.path]; if (T.k === 'enum') w = 2; else if (T.k === 'struct') { w = 0; W.set(n, -1); for (const f of T.fields) { const e = fixedWidth(parse(f.ty)); if (e < 0) { w = -1; break; } w += e; } } else w = -1; break; } default: w = -1; } W.set(n, w!); return w!; }
 const armType = (T: any, a: number): string | null => T.k === 'data' ? T.vars[a].ty ?? null : (T.arms[a].match(/\((.*)\)/)?.[1] ?? null);
 
 // ---- a field's way back, decided once
-type Way = { kind: 'assign' | 'self' | 'path' | 'default' | 'top' | 'knob' | 'serial' | 'inverse' | 'skip' | 'none'; path?: string[]; dflt?: unknown; file?: string; name?: string; side?: string; fn?: Inverse };
+type Way = { kind: 'ref' | 'assign' | 'self' | 'path' | 'default' | 'top' | 'knob' | 'serial' | 'inverse' | 'skip' | 'none'; path?: string[]; dflt?: unknown; file?: string; name?: string; side?: string; fn?: Inverse };
 type Ctx = { g: any; B: any; BK: any; fix: (() => void)[]; R: Report; read: (n: N, cur: any) => any; sk: (n: N) => void; I: { p: number }; dv: DataView };
 type Inverse = (o: any, v: any, c: Ctx) => void;
 const skipField: Inverse = () => {};
 /** the fields whose expression is no assignment. Each says how the value gets back, or why it need not: read `skipField` as "the export works this out from what is carried, or it is set up once and never changes" */
 const INVERSE: Record<string, Inverse> = {
   'game::Game.view_proj': (o, v) => { o.viewProj = v; }, 'seats::SeatSet.view_proj': (o, v) => { o.viewProj = v; },
-  'game::Game.door_owns': skipField,   // (worked out from which leaf holds a hand: the leaves are rows)
   'character::Character.who': skipField,   // (whoever holds this man as his `char`: rows)
   'character::Character.man_row': (o, v, c) => { if (v !== 0xffffffff) { o.S = c.g.men; o.r = v; } },
   'character::Character.man_kept': (o, v) => { if (v) { o.owner = v[0]; o.rank = v[1]; o.reason = v[2]; o.since = v[3]; } },
   'weapons::Firearm.def': (o, v, c) => { if (o.def?.id !== v) o.def = (c.R as any).values?.WEAPONS?.[v] ?? o.def; },
   'weapons::Firearm.kind': (o, v, c) => { const P = CLASSES.get(({ pistol: 'weapons::Pistol', rifle: 'weapons::Rifle', plain: 'weapons::Firearm' } as any)[v]); if (P && Object.getPrototypeOf(o) !== P) Object.setPrototypeOf(o, P); },
   'scene_collision::StaticCollision.pane_rule': skipField, 'scene_collision::StaticCollision.pane_rows': skipField, 'scene_collision::StaticCollision.glass_walkable': skipField, 'scene_collision::StaticCollision.fire_pass': skipField,   // (set up with the level)
-  'destruction::Destruction.blast_listeners': skipField, 'wallbreak::WallBreak.listeners': skipField, 'destruction::RateCap.n': skipField, 'anim_skeleton::ClipSide.at': skipField, 'anim_skeleton::SkeletonInstance.rig': skipField, 'scene_level_load::SceneLevelLoadMod.level_names': skipField,
+  'destruction::Destruction.blast_listeners': skipField, 'destruction::RateCap.n': skipField, 'anim_skeleton::SkeletonInstance.rig': skipField, 'scene_level_load::SceneLevelLoadMod.level_names': skipField,
+  'scene_boxes::BoxWorld.glass_open': skipField,   // (set up with the level)
+  'glassbreak::GlassBreak.on_release': (o, v, c) => { o.onRelease = v ? c.g.shards.onRelease : null; },
+  'nightbreach::NightBreach.bang_by': (o, v) => { o.bangBy = v ? v.view.doorTools : null; },
+  // a cut is a new array. A count that moved says so; the array's numbers came in place just before, in this row. The seat's mark is the host's own unless Rust has taken the cut itself (a restart on its side)
+  'camera::FollowCamera.desired_serial': (o, v) => { const r = LENS.get(o); if (!r) { LENS.set(o, { arr: o.desired, n: v }); return; } if (r.n !== v) { o.desired = [o.desired[0], o.desired[1], o.desired[2]]; r.n = v; } r.arr = o.desired; },
+  'cmd::Seat.mark': (o, v, c) => { c.fix.push(() => { const r = o.cam && LENS.get(o.cam); if (r && r.n === v) o.mark = o.cam.desired; }); },
   'chronicle::Chronicle.heard_of': (o, v, c) => { c.fix.push(() => { const T = o.heardOf; const put = (k: object, r: unknown) => T.set(k, r); if (T.clear) T.clear(); else for (const k of T.liveKeys()) T.delete(k); for (const [s, i] of v as Map<number, number>) put(objOfSerial(c, s), o.events[i]); }); },
   'fogofwar::FogOfWar.fired_n': (o, v, c) => { const T = o.firedN; const L = c.BK.listOf('RoomfightOpId'); const want = new Map<object, number>(); for (const [i, n] of v as Map<number, number>) want.set(L[i], n); for (const k of T.liveKeys()) if (!want.has(k)) T.delete(k); for (const [k, n] of want) T.set(k, n); },
   'anim_skeleton::Pose.at': (o, v, c) => { if (v >= LOOSE) { looseAt(c, o, v - LOOSE); return; } o.at = v; if (!o.home) { o.home = c.g.sim; o.own = null; } },
@@ -80,6 +89,7 @@ function objOfSerial(c: Ctx, s: number): object { const M = serialMap(c.BK); let
 const wayCache = new Map<string, Way>();
 function wayOf(q: string, f: any): Way { let w = wayCache.get(q); if (w) return w; const e: string | undefined = f.expr; let m: RegExpMatchArray | null;
   if (INVERSE[q]) w = { kind: 'inverse', fn: INVERSE[q] };
+  else if (e === undefined && f.ts !== undefined && SCHEMA.serial[q] && (f.ty === 'u32' || f.ty === 'Option<u32>')) w = { kind: 'ref', path: [f.ts] };
   else if (e === undefined) w = f.ts !== undefined ? { kind: 'assign', path: [f.ts] } : { kind: 'skip' };
   else if (e === 'o') w = { kind: 'self' };
   else if ((m = e.match(/^o((?:\.[A-Za-z_$][\w$]*|\["[^"]+"\])+)$/))) w = { kind: 'path', path: [...m[1].matchAll(/\.([A-Za-z_$][\w$]*)|\["([^"]+)"\]/g)].map(x => x[1] ?? x[2]) };
@@ -97,8 +107,10 @@ function keepOf(only: Set<string>): Keep { let K = keepMemo.get(only); if (K) re
   const walk = (n: N): boolean => { switch (n.k) { case 'opt': case 'vec': case 'arr': return walk(n.of); case 'tup': return n.of.some(walk); case 'map': return walk(n.V); case 'type': return hold.get(n.path)!; default: return false; } };
   for (let grew = true; grew;) { grew = false; for (const [k, T] of Object.entries<any>(SCHEMA.types)) { if (hold.get(k)) continue; let r = false; if (T.k === 'struct') r = T.fields.some((f: any) => only.has(`${T.mod}::${T.name}.${f.rust}`) || walk(parse(f.ty))); else if (T.k === 'data') r = T.vars.some((a: any) => a.ty && walk(parse(a.ty))); if (r) { hold.set(k, true); grew = true; } } }
   const memoF = new Map<string, boolean>(), memoD = new Map<N, boolean>();
-  const desc = (t: string | N): boolean => { const n = typeof t === 'string' ? parse(t) : t; let d = memoD.get(n); if (d === undefined) memoD.set(n, d = walk(n)); return d; };
-  K = { field: (q, ty) => { let v = memoF.get(q); if (v === undefined) memoF.set(q, v = only.has(q) || desc(ty)); return v; }, desc }; keepMemo.set(only, K); return K; }
+  const deep = (t: string | N): boolean => { const n = typeof t === 'string' ? parse(t) : t; let d = memoD.get(n); if (d === undefined) memoD.set(n, d = walk(n)); return d; };
+  /** is this value walked filtered? Only a struct or a tuple: a value inside a list, an Option or a map goes whole (puppetgen.cjs) */
+  const desc = (t: string | N): boolean => { const n = typeof t === 'string' ? parse(t) : t; return n.k !== 'type' && n.k !== 'tup' ? false : deep(n); };
+  K = { field: (q, ty) => { let v = memoF.get(q); if (v === undefined) memoF.set(q, v = only.has(q) || deep(ty)); return v; }, desc }; keepMemo.set(only, K); return K; }
 
 // ---- the walk
 export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknown>, opts: ApplyOpts = {}): Report {
@@ -123,7 +135,7 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
   const rKey = (K: N, cur: any): any => { if (K.k === 'u32' && cur === 'object-key') { const s = dv.getUint32(I.p, true); I.p += 4; return { serial: s }; } return read(K, undefined); };
   /** an object reached a second time in this apply stands in two places: the same bytes keep the one object, other bytes give this holder its own (the TypeScript shares by reference what Rust holds as values) */
   const seen = new Map<object, [number, number]>();
-  function read(n: N, cur: any): any { R.counts.read++; if (process.env.PUP_PROF) { const T = ((globalThis as any).__byQ ??= new Map()); T.set(curQ, (T.get(curQ) ?? 0) + 1); }
+  function read(n: N, cur: any): any { R.counts.read++; if (typeof cur === 'number' && n.k === 'f64') { const v = dv.getFloat64(I.p, true); I.p += 8; return v; } if (PROF) { const T = ((globalThis as any).__byQ ??= new Map()); T.set(curQ, (T.get(curQ) ?? 0) + 1); }
     if (cur === FRESH) cur = n.k === 'vec' ? (dv.getUint32(I.p, true) === 0 ? [] : undefined) : n.k === 'map' ? new Map() : n.k === 'set' ? new Set() : n.k === 'bool' ? false : n.k === 'str' ? '' : n.k === 'arr' || n.k === 'tup' || n.k === 'type' || n.k === 'opt' || n.k === 'id' ? undefined : 0;
     else if (cur && typeof cur === 'object' && (n.k === 'arr' || n.k === 'tup' || n.k === 'vec' || (n.k === 'type' && SCHEMA.types[n.path].k === 'struct'))) { const at = seen.get(cur); const p0 = I.p; if (at) { sk(n); const L = I.p - p0; let eq = L === at[1] - at[0]; if (eq) for (let i = 0; i < L; i++) if (blob[p0 + i] !== blob[at[0] + i]) { eq = false; break; } if (eq) return cur; I.p = p0; return read(n, FRESH); } const v = readInner(n, cur); seen.set(cur, [p0, I.p]); return v; }
     return readInner(n, cur); }
@@ -145,11 +157,11 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
       case 'u64': case 'i64': { const v = dv.getBigInt64(I.p, true); I.p += 8; return typeof cur === 'bigint' ? v : Number(v); }
       case 'str': { const L = dv.getUint32(I.p, true); I.p += 4; const s = DEC.decode(blob.subarray(I.p, I.p + L)); I.p += L; return cur === undefined && s === '' ? undefined : s; }
       case 'unit': return undefined;
-      case 'opt': { const t = blob[I.p++]; if (isSide(cur)) { const K = cur.liveKeys(); if (!(n.of.k === 'map' && n.of.K.k === 'id') && n.of.k !== 'set') { const at = K.includes(G) ? G : K[0] ?? G; if (!t) { cur.delete(at); return cur; } const v = read(n.of, cur.get ? cur.get(at) ?? FRESH : true); if (cur.set) cur.set(at, v); else if (cur.add) cur.add(at); return cur; } if (!t) { for (const k of K) cur.delete(k); return cur; } if (!K.length && n.of.k === 'map' && dv.getUint32(I.p, true) === 0) { I.p += 4; cur.set(G, new Map()); return cur; } return read(n.of, cur); } if (!t) return n.of.k === 'opt' || cur === undefined ? undefined : null; return read(n.of, cur === null || cur === undefined ? FRESH : cur); }
+      case 'opt': { const t = blob[I.p++]; if (isSide(cur)) { const K = cur.liveKeys(); if (!(n.of.k === 'map' && n.of.K.k === 'id') && n.of.k !== 'set') { const at = K.includes(G) ? G : K[0] ?? G; if (!t) { cur.delete(at); return cur; } const v = read(n.of, cur.get ? cur.get(at) ?? FRESH : true); if (cur.set) cur.set(at, v); else if (cur.add) cur.add(at); return cur; } if (!t) { for (const k of K) cur.delete(k); return cur; } if (!K.length && n.of.k === 'map' && dv.getUint32(I.p, true) === 0) { I.p += 4; cur.set(G, new Map()); return cur; } return read(n.of, cur); } if (!t) return n.of.k === 'opt' || cur === undefined ? undefined : null; if (n.of.k === 'opt') { if (!blob[I.p++]) return null; return read(n.of.of, cur === null || cur === undefined ? FRESH : cur); }   /* Option<Option<T>>: None is undefined, Some(None) is null (kitanim.ts, doortools.ts) */ return read(n.of, cur === null || cur === undefined ? FRESH : cur); }
       case 'vec': { const L = dv.getUint32(I.p, true); I.p += 4; if (isTyped(cur)) { const a = cur.length === L ? cur : new cur.constructor(L); for (let i = 0; i < L; i++) a[i] = readN(n.of); return a; } if (cur === null || cur === undefined) { if (!L) return cur; cur = n.of.k === 'f32' ? new Float32Array(L) : n.of.k === 'u8' ? new Uint8Array(L) : n.of.k === 'i32' ? new Int32Array(L) : n.of.k === 'u32' ? new Uint32Array(L) : []; if (isTyped(cur)) { for (let i = 0; i < L; i++) cur[i] = readN(n.of); return cur; } }
         const ser = serialField(n.of); const a = cur as any[]; const was = ser ? a.slice() : null; for (let i = 0; i < L; i++) { let x = a[i] === undefined ? FRESH : a[i]; if (ser) { const s = peekSerial(n.of, ser); const hit = serialMap(BK).get(s); x = hit ?? (x === FRESH || (was!.includes(x) && BK.serial.get(x) !== s) ? FRESH : x); } a[i] = read(n.of, x); } a.length = L; return a; }
-      case 'arr': { if (pup && !pup.start && Array.isArray(cur) && fixedWidth(n.of) >= 0 && n.of.k !== 'type') { const a: any[] = new Array(n.n); let same = cur.length === n.n; for (let i = 0; i < n.n; i++) { a[i] = read(n.of, FRESH); if (same && !Object.is(a[i], cur[i])) same = false; } return same ? cur : a; }   // (a step does not visit every holder of a shared array: a changed one is a new one, as in the compiled rows)
-        if (cur && typeof cur.length === 'number') { for (let i = 0; i < n.n; i++) { const v = read(n.of, cur[i] ?? FRESH); if (!Object.is(v, cur[i])) cur[i] = v; } return cur; } const a: any[] = []; for (let i = 0; i < n.n; i++) a[i] = read(n.of, FRESH); return a; }
+      case 'arr': { if (pup && !pup.start && !SCHEMA.inPlace?.[curQ] && Array.isArray(cur) && fixedWidth(n.of) >= 0 && n.of.k !== 'type') { const a: any[] = new Array(n.n); let same = cur.length === n.n; for (let i = 0; i < n.n; i++) { a[i] = read(n.of, FRESH); if (same && !Object.is(a[i], cur[i])) same = false; } return same ? cur : a; }   // (a step does not visit every holder of a shared array: a changed one is a new one, as in the compiled rows)
+        if (cur && typeof cur.length === 'number') { if (n.of.k === 'f64') { for (let i = 0; i < n.n; i++) { const v = dv.getFloat64(I.p, true); I.p += 8; if (!Object.is(v, cur[i])) cur[i] = v; } return cur; } for (let i = 0; i < n.n; i++) { const v = read(n.of, cur[i] ?? FRESH); if (!Object.is(v, cur[i])) cur[i] = v; } return cur; } const a: any[] = []; for (let i = 0; i < n.n; i++) a[i] = read(n.of, FRESH); return a; }
       case 'tup': { const a: any[] = Array.isArray(cur) ? cur : []; n.of.forEach((x: N, i: number) => { a[i] = read(x, a[i] ?? FRESH); }); return a; }
       case 'map': return readMap(n, cur);
       case 'set': return readSet(n, cur);
@@ -160,9 +172,10 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
   }
   const readN = (n: N): number => { switch (n.k) { case 'f32': { const v = dv.getFloat32(I.p, true); I.p += 4; return v; } case 'f64': { const v = dv.getFloat64(I.p, true); I.p += 8; return v; } default: return read(n, 0); } };
   function readId(n: N, cur: any): any { const v = dv.getUint32(I.p, true); I.p += 4; if (v === 0xffffffff) return cur && typeof cur === 'object' ? null : cur; if (typeof cur === 'number') return v; const e = SCHEMA.idExpr[n.id]; const viaExpr = e && cur && typeof cur === 'object' ? compiledExpr(e)(cur, g, B) : undefined; if (typeof viaExpr === 'number') { if (viaExpr === v) return cur; const k = `id ${n.id} at ${curQ}`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } const L = BK.listOf(n.id); if (v >= L.length) { const k = `id ${n.id} past its table`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } return L[v]; }
-  function keyOf(K: N, curMap: any): any { if (K.k === 'u32') { const v = dv.getUint32(I.p, true); I.p += 4; const first = keysIn(curMap)[0]; if (first && typeof first === 'object') return objOfSerial(c, v); if (isSide(curMap)) return objOfSerial(c, v); return v; }
+  const firstKey = (m: any): unknown => { if (m instanceof Map || m instanceof Set) { for (const k of m instanceof Map ? m.keys() : m) return k; return undefined; } return keysIn(m)[0]; };
+  function keyOf(K: N, curMap: any): any { if (K.k === 'u32') { const v = dv.getUint32(I.p, true); I.p += 4; const first = firstKey(curMap); if (first && typeof first === 'object') return objOfSerial(c, v); if (isSide(curMap)) return objOfSerial(c, v); return v; }
     if (K.k === 'id' && K.id === 'PlayerId') { const row = readId(K, undefined); for (const k of keysIn(curMap)) if (k && typeof k === 'object' && (k as any).player === row) return k; return row; }
-    if (K.k === 'f64') { const v = dv.getFloat64(I.p, true); I.p += 8; if (curMap && !(curMap instanceof Map) && !isSide(curMap) && !(curMap instanceof Set)) return String(v); const first = keysIn(curMap)[0]; return typeof first === 'string' ? String(v) : v; }
+    if (K.k === 'f64') { const v = dv.getFloat64(I.p, true); I.p += 8; if (curMap && !(curMap instanceof Map) && !isSide(curMap) && !(curMap instanceof Set)) return String(v); const first = firstKey(curMap); return typeof first === 'string' ? String(v) : v; }
     return read(K, undefined); }
   const keysIn = (m: any): unknown[] => m instanceof Map ? [...m.keys()] : m instanceof Set ? [...m] : isSide(m) ? m.liveKeys() : m && typeof m === 'object' ? Object.keys(m) : [];
   function readMap(n: N, cur: any): any { const L = dv.getUint32(I.p, true); I.p += 4; if (cur === null || cur === undefined) { if (!L) return cur; cur = new Map(); } const keys: any[] = [], vals: any[] = [];
@@ -191,9 +204,12 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
   let curQ = '';
   /** one field of a struct, its bytes next */
   function readField(T: any, P: Plan, o: any) { const { f, q, N } = P; curQ = q;
-      const w = wayOf(q, f);
+      if (f.echo) { const p0 = I.p; sk(N); if (!pup) { let E = ECHO.get(o); if (!E) ECHO.set(o, E = new Map()); E.set(q, { b: blob, p0, p1: I.p }); } return; }
+      const w = P.way ??= wayOf(q, f);
       switch (w.kind) {
-        case 'assign': { const key = w.path![0]; const cur = o[key]; const v = read(N, cur === undefined && fresh.has(o) ? FRESH : cur); if (differs(v, cur)) { R.counts.assign++; try { o[key] = v; } catch { R.noSetter.set(q, (R.noSetter.get(q) ?? 0) + 1); } } break; }
+        case 'ref': { const key = w.path![0]; const has = N.k === 'opt' ? blob[I.p++] : 1; let v = 0; if (has) { v = dv.getUint32(I.p, true); I.p += 4; } const cur = o[key];   // (the object of that serial, once every serial of this apply stands: a row later in the walk may be the one that names it)
+          if (typeof cur === 'number') { if (cur !== v) o[key] = v; break; } c.fix.push(() => { o[key] = v ? objOfSerial(c, v) : (o[key] === undefined ? undefined : null); }); break; }
+        case 'assign': { const key = w.path![0]; const cur = o[key]; const v = read(N, cur === undefined && fresh.has(o) ? FRESH : cur); if (N.k === 'opt' && N.of.k === 'opt' ? !Object.is(v, cur) : differs(v, cur)) { R.counts.assign++; try { o[key] = v; } catch { R.noSetter.set(q, (R.noSetter.get(q) ?? 0) + 1); } } break; }
         case 'self': readStruct(SCHEMA.types[N.path], o); break;
         case 'path': { let h = o; const P = w.path!; for (let i = 0; i < P.length - 1; i++) { h = h?.[P[i]]; } if (h === null || h === undefined) { sk(N); break; } const key = P[P.length - 1]; const cur = h[key]; const v = read(N, cur); if (differs(v, cur)) { try { h[key] = v; } catch { R.noSetter.set(q, (R.noSetter.get(q) ?? 0) + 1); } } break; }
         case 'default': { const key = w.path![0]; const cur = o[key]; const v = read(N, cur === undefined ? w.dflt : cur); if (cur !== undefined || JSON.stringify(v) !== JSON.stringify(w.dflt)) o[key] = v; break; }
@@ -204,7 +220,7 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
         case 'inverse': { const v = read(N, N.k === 'map' ? new Map() : undefined); w.fn!(o, v, c); break; }
         default: R.noWay.set(q, (R.noWay.get(q) ?? 0) + 1); sk(N); }
   }
-  function readStruct(T: any, o: any) { for (const P of planOf(T)) { const K = keep; if (process.env.PUP_DEBUG && I.p > blob.length) throw new Error('past the end at ' + curQ); if (K && (pup || !fresh.has(o))) { if (!K.field(P.q, P.f.ty)) { if (!pup) sk(P.N); continue; } if (!K.desc(P.N)) { keep = null; I.K = null; readField(T, P, o); keep = K; I.K = pup ? K : null; continue; } } readField(T, P, o); } }
+  function readStruct(T: any, o: any) { for (const P of planOf(T)) { const K = keep; if (DEBUG && I.p > blob.length) throw new Error('past the end at ' + curQ); if (K && (pup || !fresh.has(o))) { if (!K.field(P.q, P.f.ty)) { if (!pup) sk(P.N); continue; } if (!K.desc(P.N)) { keep = null; I.K = null; readField(T, P, o); keep = K; I.K = pup ? K : null; continue; } } readField(T, P, o); } }
   /** a struct that carries `B.serialOf(o)`: found by its serial wherever it now stands in a list */
   const serMemo = new Map<string, any>();
   function serialField(n: N): { before: N[] } | null { if (n.k !== 'type') return null; let s = serMemo.get(n.path); if (s !== undefined) return s; s = null; const T = SCHEMA.types[n.path]; if (T.k === 'struct') { const before: N[] = []; for (const f of T.fields) { if (f.expr === 'B.serialOf(o)') { s = { before }; break; } before.push(parse(f.ty)); } } serMemo.set(n.path, s); return s; }
@@ -217,7 +233,7 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
   else { I.p = 0; readStruct(SCHEMA.types[SCHEMA.root], g); }
   const t4 = performance.now(); R.phases.main = t4 - t3;
   if (pup) { if (pup.rows && pup.ctx) { pup.rows.__set(dv, blob); const ST = pup.slowTable!; pup.ctx.slow = (i: number, o: any) => { const E = ST[i]; const T = SCHEMA.types[E.type]; const P = planOf(T).find(x => x.f.rust === E.field)!; const K = keep; if (K && !K.desc(P.N)) { keep = null; I.K = null; readField(T, P, o); keep = K; I.K = K; return; } readField(T, P, o); }; pup.ctx.list = (id: string) => BK.listOf(id); pup.ctx.val = (k: number, cur: any) => read(parse(pup.vals![k]), cur === undefined || cur === null ? FRESH : cur); }
-    (R as any).lastT = performance.now(); for (const { t, at, N, whole, entries } of heads) { if (!entries) continue; I.p = at; const L = BK.listOf(t.id); const fast = !pup.start && pup.rows?.[t.id]; if (process.env.PUP_DEBUG) process.stderr.write(`table ${t.id} at ${at}, ${entries} entries\n`); for (let e = 0; e < entries; e++) { const row = dv.getUint32(I.p, true); I.p += 4; if (row >= whole) { const K = keep; keep = null; I.K = null; read(N, L[row]); keep = K; I.K = K; continue; } if (fast) fast(L[row]); else read(N, L[row]); } if (process.env.PUP_PROF) { const nw = performance.now(); (R.phases as any)['t:' + t.ts] = nw - (R as any).lastT; (R as any).lastT = nw; } } }
+    (R as any).lastT = performance.now(); for (const { t, at, N, whole, entries } of heads) { if (!entries) continue; I.p = at; const L = BK.listOf(t.id); const fast = !pup.start && pup.rows?.[t.id]; if (DEBUG) process.stderr.write(`table ${t.id} at ${at}, ${entries} entries\n`); for (let e = 0; e < entries; e++) { const row = dv.getUint32(I.p, true); I.p += 4; if (row >= whole) { const K = keep; keep = null; I.K = null; read(N, L[row]); keep = K; I.K = K; continue; } if (fast) fast(L[row]); else read(N, L[row]); } if (PROF) { const nw = performance.now(); (R.phases as any)['t:' + t.ts] = nw - (R as any).lastT; (R as any).lastT = nw; } } }
   else for (const { t, n, at, N } of heads) { if (keep && !keep.desc(t.ty) && !(c as any)[`made:${t.id}`]) continue; I.p = at; const L = BK.listOf(t.id); const made = new Set((c as any)[`made:${t.id}`] ?? []); for (let i = 0; i < n; i++) { if (keep && !made.has(L[i]) && !keep.desc(t.ty)) { sk(N); continue; } read(N, L[i]); } }
   const t5 = performance.now(); R.phases.tables = t5 - t4; for (const f of c.fix) f();
   // ---- what the export keeps at the end

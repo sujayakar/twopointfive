@@ -8,8 +8,6 @@
 //!   face_puppet_warm(h)          the every-tick export with every row and field sent as if it had changed (what the memo holds is spoiled first): a
 //!                                host applies it to a puppet that already holds that state, to run the every-tick path once over everything
 //!   face_follow(h)               the host's camera asked the game where to look (`game_run::follow`): after a tick, for every seat
-//!   face_cuts(h)                 for each seat four f64 at face_out: its lens's `desired` and the count of whole writes of it (`desired_serial`), which is
-//!                                how a host knows a cut was made (cmd.ts `takeCut` knows it by the array's identity, which no export carries)
 //!   face_room_at(h, x, y, z) -> 1 | 0   the driver's question that floods a room and keeps it (`roomfight.roomAt` between two ticks): 1 where it
 //!                                flooded one (the list of rooms grew)
 //!   face_stop_program(h) -> 1 | 0   a level on rails whose program runs: the program is stopped and the rails told to start it again on the next tick
@@ -62,20 +60,6 @@ pub extern "C" fn face_puppet_drop(h: u32) {
 #[no_mangle]
 pub extern "C" fn face_follow(h: u32) {
     super::with(h, |x| game_run::follow(&mut x.g));
-}
-#[no_mangle]
-pub extern "C" fn face_cuts(h: u32) {
-    let b = super::with(h, |x| {
-        let g = &x.g;
-        let mut b = Vec::with_capacity(g.seats.len() * 32);
-        for s in &g.seats {
-            let c = &g.tab.camera[g.tab.cmd_seat[*s].cam];
-            for v in c.desired { b.extend_from_slice(&v.to_le_bytes()); }
-            b.extend_from_slice(&(c.desired_serial as f64).to_le_bytes());
-        }
-        b
-    });
-    super::out(b);
 }
 #[no_mangle]
 pub extern "C" fn face_room_at(h: u32, x: f64, y: f64, z: f64) -> u32 {

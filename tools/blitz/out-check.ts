@@ -1,6 +1,7 @@
 // THE OUT EVENTS' CHECK. `cargo test --lib out_round` (OUT_BLOB=<a whole state> OUT_FILE=<out>) imports a state, calls every generated function once and writes a filtered start with the 33 events on its tail. This stands a game at
 // the same frame, applies that file, and runs each event through the dispatcher with stand-ins on the receivers: each must make the right call with the right number of arguments, none of them a raw ID where an object is meant.
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/out-check.ts <scn>:<seed>:<F> --file /tmp/out0.bin
+import { tmpdir } from 'node:os';
 import { readFileSync } from 'node:fs';
 import { exportGame } from './export';
 import { applyGame } from './import';
@@ -8,7 +9,7 @@ import { classTable, valueTable } from './classes';
 import { puppetRows, SLOW, VALS } from './puppet-apply';
 import { OUT, dispatchOut } from './out-dispatch';
 const argv = process.argv.slice(2); const [scn, seed, F] = argv[0].split(':'); const arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
-const file = arg('--file', '/tmp/out0.bin'); const say = (x: string) => { process.stdout.write(x + '\n'); };
+const file = arg('--file', `${tmpdir()}/out0.bin`); const say = (x: string) => { process.stdout.write(x + '\n'); };
 const { knobRegistry } = await import('../../src/game/knobs.ts'); const reg = knobRegistry();
 const { Game } = await import('../../src/game/game.ts'); const { play } = await import('../qa/playthrough.ts'); class Stop extends Error {}
 const LJ = JSON.parse(readFileSync(`${import.meta.dir}/puppet-lists.json`, 'utf8')); const lists = { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) }; const hooks = { classes: classTable(), values: valueTable() };
