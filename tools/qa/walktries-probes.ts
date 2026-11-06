@@ -16,6 +16,7 @@
 //   free     the door unlocked, or opened from inside, two seconds into the walk: the move goes on to its places (one try and "it's not locked." once; an
 //            open leaf is not tried)
 //   second   two locks on the way, the first turning at the handle: the second gets its own try and its own 'found shut'; nobody is walked through it
+//   held     the same walk with the fight not begun and a defender in the storage room who has not noticed the pair: the handle is still tried
 //   other    another order mid-walk leaves nothing of the walk · the jamb's man down: his mate tries · the four, the other pair ordered meanwhile: each
 //            pair its own 'set.' · no room to stack on the door (FORCED): 'no room on that door.' · DOORTOOLS.testDoor off: the key does nothing
 //   open     a spot behind a door standing open: key on against key off, every man the same
@@ -24,6 +25,9 @@
 //   twice    two key-on runs end with every man on the same spot
 //   journal  a recording from before the key replays with it off (journal.ts applyKnobs); one that carries it keeps its own word
 // WALKTRIES_BREAK=1 = the key is left off in this probe's key-on runs: every KEY ON line but 'twice' (and with them the verdict) must fail on both stands.
+// WEDGESETTLE_BREAK=1 = the wedge's case reads its men the frame the halt line is said (must fail on both stands); =flat = after three seconds flat, as it
+// was until 11-06 (fails where the squad walks at its own pace, the page's stand: the file's last man is 5 cm short of his mark then).
+// 'held' (11-06) is RED ON THE PAGE'S STAND, a row of tools/qa/expected-red.ts: the two locks' walk with the fight not begun, a round held on a man.
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
@@ -53,6 +57,13 @@ interface Run { row0: Row | null; why: string | null; said: string[]; menAt0: Ma
 
 /** one game: the room clear staged quiet (its defenders dazzled every frame: this is about feet), Sam down the corridor, the two keys set AFTER the stand-up
  *  (the frozen stand pins both off, the page's raises both — here each run is told) */
+/** STEPPED UNTIL THE MEN HAVE SETTLED: `min` frames at the least (three seconds, the flat wait these stagings had), then on until nobody has moved for a
+ *  whole second, `cap` frames at the most. Frames stepped: at `cap` they never settled. `how`: WEDGESETTLE_BREAK's two red paths. */
+function settle(step: () => void, pos: () => number[][], how = '', min = 180, cap = 600): number {
+  if (how === '1') return 0;
+  let n = 0; for (let p = pos(), still = 0; n < cap && (n < min || (how !== 'flat' && still < 60)); n++) { step(); const q = pos(); still = Math.max(...p.map((x, i) => dist(x, q[i]))) < 1e-4 ? still + 1 : 0; p = q; }
+  return n;
+}
 async function rig(key: boolean, squad: 2 | 4, testDoor = true) {
   back(); Object.assign(NIGHTBREACH, { squad }); Math.random = seeded(5);
   const W: any = await quiet(() => standUp()); const g = W.game, O = g.orders, D = g.doorTools, NB = g.nightBreach;
@@ -90,7 +101,7 @@ async function play(mode: 'locked' | 'known' | 'ring' | 'open', key: boolean, o:
   await quiet(() => { for (let i = 0, still = 0; i < 60 * 30 && still < 30; i++) { while (mids.length && secs >= mids[0][0]) mids.shift()![1](R, d, sent); R.step(); secs += DT; still = going() ? 0 : still + 1;
     for (const m of team) if (O.of(m)?.tries && O.statusOf(m) !== 'moving') lied++;
     team.forEach((m: any, k: number) => { const s = dist(m.char.pos, last[k]); walked[k] += s; if (sent.includes(m)) top = Math.max(top, s / DT); last[k] = [...m.char.pos]; }); } });
-  const halt = men(); await quiet(() => R.step(180)); const later = men(), heard = said.slice(n0);
+  const halt = men(); await quiet(() => { settle(() => R.step(), () => team.map((m: any) => [...m.char.pos])); }); const later = men(), heard = said.slice(n0);   // (settled, as the wedge's case reads its four: three seconds at the least)
   const knew1 = D.knownShut(d, samSide), row1 = row(), why2 = await quiet(() => O.give('move', O.targetAt(spot), who)); await quiet(() => R.step(120));
   return { row0, why: why ?? null, said: heard, menAt0, halt, later, row1, why2: why2 ?? null, end: men(), secs, top, walked, log: D.log.slice(log0).map((l: any) => String(l.what)), halted: D.stats.halted - halted0, tested: D.stats.tested - tested0,
     knew0, knew1, lied, shutStill: !!d.locked && !!d.latched, frame: [d.frameCentre[0], 0, d.frameCentre[2]], samSide, name: doorWords(d), who: sent.map((m: any) => m.callsign) };
@@ -99,15 +110,23 @@ async function play(mode: 'locked' | 'known' | 'ring' | 'open', key: boolean, o:
 /** TWO LOCKS ON THE WAY: the pair walked into the storage room (its door unlocked for that), the door then shut and locked by hand against the room's
  *  face with a lock of its own; 'move there' to the manager's room; a quarter of a second into the walk (the jamb is a stride off) that lock's key is put on Sam's ring. The storage door then
  *  reads free at the handle — and the manager's door, still locked and never tried, is the next one on the way. */
-async function second(key: boolean) {
+async function second(key: boolean, begun: boolean) {
   const R = await rig(key, 2), { g, O, D, said } = R, st = R.door('storage'), mg = R.door('manager'), team: any[] = O.men('all'), corridor = sideOf(mg, g.player.char.pos);
+  // (`begun`: THE FIGHT IS BEGUN, by the rule's own stamp for Sam's 'go' (holdfire.ts holdFireDrill, which does nothing where the rule is off), kept
+  // standing through both walks. A defender stands in the storage room the pair is walked into, blind for good by the rig. Where a squad nobody has found
+  // holds its round on a man who has not noticed it (HOLDFIRE.on, the page's stand) the man with eyes on him says 'eyes on. holding.' every eight seconds,
+  // both men come onto the door's marks and neither is ever counted there: orders.ts counts a man arrived with his gun on the door's point, and the
+  // stamp that counts a man holding his round as there is the STACK order's alone. So the walk's try is never made, forty seconds and counting. With the
+  // fight begun he shoots, as the old stand's man always did, and the case plays the same hot floor on both stands. Not begun is the 'held' line's.)
+  const { holdFireDrill } = await import(`${ROOT}/src/game/holdfire.ts`); const hot = () => { if (begun) holdFireDrill(g); };
+  hot();
   st.locked = false;
-  await quiet(() => { O.give('move', O.targetAt(STORE), 'all'); for (let i = 0; i < 60 * 30 && !team.every((m: any) => O.of(m)?.arrived); i++) R.step(); R.step(60);
+  await quiet(() => { O.give('move', O.targetAt(STORE), 'all'); for (let i = 0; i < 60 * 30 && !team.every((m: any) => O.of(m)?.arrived); i++) { if (i % 60 === 0) hot(); R.step(); } R.step(60);
     st.angle = 0; st.vel = 0; st.closing = false; st.latched = true; st.locked = true; st.keySide = g.doors.side(st, team[0].char.pos); st.lockId = 'probe'; R.step(30); });
   const inStore = team.every((m: any) => sideOf(st, m.char.pos) === sideOf(st, STORE)), n0 = said.length, log0 = D.log.length, tested0 = D.stats.tested;
-  const why = await quiet(() => O.give('move', O.targetAt(INSIDE), 'all')); let keyed = false, inMgr = 0;
+  hot(); const why = await quiet(() => O.give('move', O.targetAt(INSIDE), 'all')); let keyed = false, inMgr = 0;
   const going = () => !keyed || team.some((m: any) => { const A = O.of(m); return A?.order === 'move' && !A.arrived; });
-  await quiet(() => { for (let i = 0, still = 0; i < 60 * 40 && still < 30; i++) { if (!keyed && i >= 15) { g.player.keys.add('probe'); keyed = true; } R.step(); still = going() ? 0 : still + 1;
+  await quiet(() => { for (let i = 0, still = 0; i < 60 * 40 && still < 30; i++) { if (i % 60 === 0) hot(); if (!keyed && i >= 15) { g.player.keys.add('probe'); keyed = true; } R.step(); still = going() ? 0 : still + 1;
     for (const m of team) if (m.char.pos[2] < mg.frameCentre[2] - 0.3 && Math.abs(m.char.pos[0] - mg.frameCentre[0]) < 3.2) inMgr++; } R.step(180); });
   const men = team.map((m: any) => { const A = O.of(m); return { c: m.callsign, order: String(A?.order ?? '-'), door: String(A?.door?.def.name ?? '-'), there: String(A?.there ?? '-'), on: !!A?.post && dist(m.char.pos, A.post) < 0.6, side: sideOf(mg, m.char.pos), pos: [...m.char.pos] }; });
   return { inStore, why: why ?? null, said: said.slice(n0), log: D.log.slice(log0).map((l: any) => String(l.what)), tested: D.stats.tested - tested0, men, corridor, inMgr, mgShut: !!mg.locked && !!mg.latched, name: doorWords(mg) };
@@ -124,11 +143,14 @@ async function wedge(key: boolean) {
   const said: string[] = [], say = g.say.bind(g); g.say = (gd: any, text: string, ...rest: any[]) => { said.push(`${gd.callsign}: ${text}`); return say(gd, text, ...rest); };
   const team: any[] = O.men('all'), def = O.defs.find((x: any) => x.id === 'move'), pos = () => team.map((m: any) => [m.char.pos[0], 0, m.char.pos[2]]);
   const row0 = O.whyNot(def, O.targetAt(spot), team), at0 = pos(), why = await quiet(() => O.give('move', O.targetAt(spot), 'all'));
-  // (played until the line is said — 30 s at most — and three seconds more: the file's last man is still coming onto his mark as the first tries the handle)
-  await quiet(() => { for (let i = 0; i < 60 * 30 && !said.some(x => SHUT_LINE.test(x)); i++) S.step(1); S.step(180); });
+  // (played until the line is said — 30 s at most — and then until the four have SETTLED, `settle` above. The file's last man is still coming onto his
+  // mark as the first tries the handle: at the squad's own pace, which the page's stand has, he is 9 cm from where he will stand three seconds on, and the
+  // 'nobody moving after' below read his last step, 5 cm of it.)
+  let frames = 0;
+  await quiet(() => { for (let i = 0; i < 60 * 30 && !said.some(x => SHUT_LINE.test(x)); i++) S.step(1); frames = settle(() => S.step(1), pos, process.env.WEDGESETTLE_BREAK ?? ''); });
   const men = team.map((m: any) => { const A = O.of(m); return { c: m.callsign, order: String(A?.order ?? '-'), door: String(A?.door?.def.name ?? '-'), there: String(A?.there ?? '-'), on: !!A?.post && dist(m.char.pos, A.post) < 0.6, side: sideOf(d, m.char.pos) }; }), at1 = pos();
   await quiet(() => S.step(120)); const at2 = pos(), row1 = O.whyNot(def, O.targetAt(spot), team);
-  return { row0, why: why ?? null, said, men, row1, name: doorWords(d), moved: Math.max(...at0.map((p, i) => dist(p, at1[i]))), after: Math.max(...at1.map((p, i) => dist(p, at2[i]))), knows: D.knownShut(d, 1) };
+  return { row0, why: why ?? null, said, men, row1, settle: frames / 60, name: doorWords(d), moved: Math.max(...at0.map((p, i) => dist(p, at1[i]))), after: Math.max(...at1.map((p, i) => dist(p, at2[i]))), knows: D.knownShut(d, 1) };
 }
 
 const gap = (a: Man[], b: Man[]) => a.length === b.length && a.length > 0 ? Math.max(...a.map((m, i) => dist(m.pos, b[i].pos))) : Infinity;
@@ -177,10 +199,10 @@ export async function moveWalkTries(): Promise<boolean> {
         `key on: give → ${JSON.stringify(a.why)}, row ${rowWords(a.row0)}, said: ${a.said.join(' / ') || 'nothing'} · ${line(red(a.later))} · red moved ${f2(gap(red(a.later), red(a.end)))} m after · blue moved ${f2(gap(rest(a.menAt0), rest(a.end)))} m · again → ${JSON.stringify(a.why2)} · key off: give → ${JSON.stringify(b.why)}, row ${rowWords(b.row0)}`); }
     // ---- a wedge, the four, another level
     { const a = await wedge(!BREAK), b = await wedge(false), no = `${a.name} is locked.`, lines = a.said.filter(x => SHUT_LINE.test(x));
-      verdict(a.row0 === null && a.why === null && lines.length === 1 && /: wedged from inside\. holding on it — your call\.$/.test(lines[0]) && a.men.length === 4 && a.men.every(m => m.order === 'stack' && m.door === 'store' && m.there === `stacked · ${a.name} · wedged from inside` && m.on && m.side === 1) && a.after < 0.05 && a.knows && a.row1 === no
+      verdict(a.row0 === null && a.why === null && lines.length === 1 && /: wedged from inside\. holding on it — your call\.$/.test(lines[0]) && a.men.length === 4 && a.men.every(m => m.order === 'stack' && m.door === 'store' && m.there === `stacked · ${a.name} · wedged from inside` && m.on && m.side === 1) && a.settle < 10 && a.after < 0.05 && a.knows && a.row1 === no
         && b.row0 === no && b.why === no && b.moved < 0.05 && !b.knows,
-        `${K} — the Mousehole, the four, the store door wedged from inside and never tried: the move is taken, one man says the wedge's own halt line, all four are left stacked on the door, three seconds on each on his mark on the corridor's side and nobody moving in the two seconds after, and the order again is refused. Key off: refused at once, nobody moves`,
-        `key on: row ${JSON.stringify(a.row0)}, give → ${JSON.stringify(a.why)}, said: ${a.said.join(' / ') || 'nothing'} · ${a.men.map(m => `${m.c} [${m.order} · ${m.there}]${m.on ? '' : ' OFF HIS MARK'}${m.side === 1 ? '' : ' INSIDE'}`).join(', ')} · moved after ${f2(a.after)} m · again → ${JSON.stringify(a.row1)} · key off: row ${JSON.stringify(b.row0)}, give → ${JSON.stringify(b.why)}, moved ${f2(b.moved)} m`); }
+        `${K} — the Mousehole, the four, the store door wedged from inside and never tried: the move is taken, one man says the wedge's own halt line, all four are left stacked on the door and settle inside ten seconds (three at the least), each on his mark on the corridor's side and nobody moving in the two seconds after, and the order again is refused. Key off: refused at once, nobody moves`,
+        `key on: row ${JSON.stringify(a.row0)}, give → ${JSON.stringify(a.why)}, said: ${a.said.join(' / ') || 'nothing'} · ${a.men.map(m => `${m.c} [${m.order} · ${m.there}]${m.on ? '' : ' OFF HIS MARK'}${m.side === 1 ? '' : ' INSIDE'}`).join(', ')} · settled ${f2(a.settle)} s after the line (10.00 = never) · moved after ${f2(a.after)} m · again → ${JSON.stringify(a.row1)} · key off: row ${JSON.stringify(b.row0)}, give → ${JSON.stringify(b.why)}, moved ${f2(b.moved)} m`); }
     // ---- the door turns out free, or is opened, while they walk: the move goes on and ends as a move
     { const a = await play('locked', !BREAK, { mids: [[2, (_R, d) => { d.locked = false; }]] }), inside = (m: Man) => m.order === 'move' && m.arrived && !m.tries && m.side === -a.samSide;
       verdict(a.why === null && a.said.filter(x => NOT_LOCKED.test(x)).length === 1 && !a.said.some(x => SHUT_LINE.test(x)) && a.said.filter(x => /: set\.$/.test(x)).length === 1 && a.tested === 1 && a.halted === 0 && a.later.every(inside),
@@ -191,10 +213,15 @@ export async function moveWalkTries(): Promise<boolean> {
         `${K} — the door opened from inside two seconds into the walk: nobody tries a leaf that stands open, nothing is said of a lock, and both go on to their places in the room ('set.' once)`,
         `give → ${JSON.stringify(a.why)} · said: ${a.said.join(' / ') || 'nothing'} · handles tried ${a.tested} · ${line(a.later)}`); }
     // ---- two locks on the way: the first turns, the second gets its own try
-    { const a = await second(!BREAK), shut = a.said.filter(x => SHUT_LINE.test(x)), stacked = a.men.every(m => m.order === 'stack' && m.door === 'manager' && m.there === `stacked · ${a.name} · locked` && m.on && m.side === a.corridor);
+    { const a = await second(!BREAK, true), shut = a.said.filter(x => SHUT_LINE.test(x)), stacked = a.men.every(m => m.order === 'stack' && m.door === 'manager' && m.there === `stacked · ${a.name} · locked` && m.on && m.side === a.corridor);
       verdict(a.inStore && a.why === null && a.said.filter(x => NOT_LOCKED.test(x)).length === 1 && shut.length === 1 && a.tested === 2 && a.log.filter((l: string) => l === 'move manager: end: found shut').length === 1 && !a.log.some((l: string) => /^move storage: /.test(l)) && stacked && a.inMgr === 0 && a.mgShut,
-        `${K} — two locks on the way (the pair in the storage room, its door locked against them; the key to it on Sam's ring a quarter of a second into the walk; the manager's door beyond, locked, never tried): the first handle turns ("it's not locked." once), the walk is asked again and the manager's door gets its own try — 'found shut' once, both stacked on it in the corridor, the leaf still locked, nobody in the manager's room at any frame`,
+        `${K} — two locks on the way, the fight begun (the pair in the storage room, its door locked against them; the key to it on Sam's ring a quarter of a second into the walk; the manager's door beyond, locked, never tried): the first handle turns ("it's not locked." once), the walk is asked again and the manager's door gets its own try — 'found shut' once, both stacked on it in the corridor, the leaf still locked, nobody in the manager's room at any frame`,
         `started in the store: ${a.inStore} · give → ${JSON.stringify(a.why)} · said: ${a.said.join(' / ') || 'nothing'} · handles tried ${a.tested} · log: ${a.log.join(' | ') || 'nothing'} · ${a.men.map(m => `${m.c} ${at(m.pos)} [${m.order} · ${m.there}]${m.on ? '' : ' OFF HIS MARK'}`).join(', ')} · frames a man stood in the manager's room: ${a.inMgr} · its door locked and shut: ${a.mgShut}`); }
+    // ---- the same walk with the fight NOT begun: a round held on a man who has not noticed (red on the page's stand, its row: expected-red.ts)
+    { const b = await second(!BREAK, false);
+      verdict(b.inStore && b.why === null && b.tested >= 1,
+        `${K} — the same walk with the fight NOT begun (a defender in the storage room who has not noticed the pair; where a squad nobody has found holds its round on such a man, the gun stays on him): the storage door's handle is still tried`,
+        `started in the store: ${b.inStore} · give → ${JSON.stringify(b.why)} · said: ${b.said.join(' / ') || 'nothing'} · handles tried ${b.tested} · log: ${b.log.join(' | ') || 'nothing'} · ${b.men.map(m => `${m.c} ${at(m.pos)} [${m.order} · ${m.there}]${m.on ? ' on his mark' : ' OFF HIS MARK'}`).join(', ')}`); }
     // ---- another order while they walk: the walk is over, nothing of it is left on anybody
     { const a = await play('locked', !BREAK, { mids: [[2, (R) => { R.O.give('hold', R.O.targetAt(R.g.player.char.pos), 'all'); }]] });
       verdict(a.why === null && a.later.every(m => m.order === 'hold' && !m.tries) && a.tested === 0 && a.halted === 0 && !a.knew1 && !a.said.some(x => SHUT_LINE.test(x) || NOT_LOCKED.test(x)) && a.row1 !== null && !a.row1.off,

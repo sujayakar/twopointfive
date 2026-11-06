@@ -226,7 +226,7 @@ if (import.meta.main) {
     const chunks: Spec[][] = Array.from({ length: jobs }, () => []); specs.forEach((s, i) => chunks[i % jobs].push(s));
     const tmp = process.env.TMPDIR ?? '/tmp'; const results: Result[] = [];
     await Promise.all(chunks.map(async (chunk, i) => { if (!chunk.length) return; const file = `${tmp}/bang-tally-${process.pid}-${i}.json`; writeFileSync(file, JSON.stringify(chunk));
-      const p = Bun.spawn(['bun', 'run', import.meta.path, 'worker', file, ...(set ? ['--set', set] : [])], { stdout: 'pipe', stderr: 'ignore' });
+      const p = Bun.spawn(['bun', 'run', import.meta.path, 'worker', file, ...(set ? ['--set', set] : [])], { stdout: 'pipe', stderr: 'ignore', env: process.env });
       const text = await new Response(p.stdout).text(); await p.exited;
       for (const line of text.split('\n')) if (line.startsWith('@@')) results.push(JSON.parse(line.slice(2))); }));
     if (results.length !== specs.length) console.error(`bang-tally: ${specs.length - results.length} runs gave no result (a worker died)`);

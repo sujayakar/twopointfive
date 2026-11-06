@@ -49,7 +49,7 @@ export async function missionsGate(opts: { seeds?: string; quietSeeds?: string; 
     for (const e of QUIET) {
       const f = resolve(dir ?? tmpdir(), `quiet-${e.id}.json`);
       const pr = Bun.spawn(['bun', 'run', resolve(import.meta.dir, 'solo-night.ts'), ...(e.level ? ['--level', e.level] : []), '--quiet', ...(e.squad ? ['--squad', '1'] : []), '--plan', 'sneak', '--ghost',
-        '--seeds', quietSeeds, '--jobs', String(jobs), '--cap', String(quietCap), '--json', f], { stdout: 'pipe', stderr: 'pipe' });
+        '--seeds', quietSeeds, '--jobs', String(jobs), '--cap', String(quietCap), '--json', f], { stdout: 'pipe', stderr: 'pipe', env: process.env });
       const [, err] = await Promise.all([new Response(pr.stdout).text(), new Response(pr.stderr).text()]); await pr.exited;
       let runs: { seed: number; end: string; why: string; t: number; rating: string | null; quiet?: string }[] = [];
       try { runs = JSON.parse(readFileSync(f, 'utf8')).runs; } catch { /* no file: it died before its report */ }

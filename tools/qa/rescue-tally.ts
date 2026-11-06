@@ -523,7 +523,7 @@ if (import.meta.main) {
   await Promise.all(Array.from({ length: jobs }, async () => {
     while (next < todo.length) {
       const job = todo[next++];   // (one process a run: nothing of one game is left in the next one's module state)
-      const proc = Bun.spawn(['bun', 'run', import.meta.path, '--worker', '--styles', job.style, '--seeds', String(job.seed), '--cap', String(cap), '--sam', samMeter, '--react', String(BOT.react), '--set', JSON.stringify(eff)], { stdout: 'pipe', stderr: 'pipe' });
+      const proc = Bun.spawn(['bun', 'run', import.meta.path, '--worker', '--styles', job.style, '--seeds', String(job.seed), '--cap', String(cap), '--sam', samMeter, '--react', String(BOT.react), '--set', JSON.stringify(eff)], { stdout: 'pipe', stderr: 'pipe', env: process.env });
       const kill = setTimeout(() => proc.kill(), 300_000);   // (a run is seconds of wall; a worker that hangs is an error row, not a hung tally)
       const [text, errText] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]); await proc.exited; clearTimeout(kill);
       const line = text.split('\n').find(l => l.startsWith('RESULT '));

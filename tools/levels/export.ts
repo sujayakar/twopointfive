@@ -121,7 +121,7 @@ if (CHECK) {
 } else { writeFileSync(OUT, text); console.log(`wrote ${OUT}`); }
 // IN STEP: a level that has a file in the default look (tools/levels/<name>-gwot.ts — the same boxes in other paint, src/scene/look.ts) is exported / checked
 // with it, so the two never drift apart (tools/qa/look-check.ts compares them box for box).
-if (existsSync(resolve(import.meta.dir, `${name}-gwot.ts`))) { const p = Bun.spawnSync(['bun', 'run', import.meta.path, `${name}-gwot`, ...argv.filter(a => a.startsWith('--'))], { stdout: 'inherit', stderr: 'inherit' }); if (p.exitCode !== 0) process.exit(p.exitCode ?? 1); }
+if (existsSync(resolve(import.meta.dir, `${name}-gwot.ts`))) { const p = Bun.spawnSync(['bun', 'run', import.meta.path, `${name}-gwot`, ...argv.filter(a => a.startsWith('--'))], { stdout: 'inherit', stderr: 'inherit', env: process.env }); if (p.exitCode !== 0) process.exit(p.exitCode ?? 1); }
 // ANOTHER WAY IN: a level that stands a room clear or a rescue is asked the second-way rule the day it is written: whatever its defenders wedge, every
 // room with men in it is still reached without a charge (tools/qa/second-way-check.ts, on the shipped stand). The file is written either way. THE RULE
 // IS ABOUT A LEVEL A SQUAD MISSION PLAYS (any row of scenarioList.ts ALL_MISSIONS that is not a quiet one: the missions, the lessons, the rows off the

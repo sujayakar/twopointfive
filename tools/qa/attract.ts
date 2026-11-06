@@ -27,6 +27,13 @@ const W = await standUp();
 const { game, cam, level } = W;
 game.restartEncounter();   // the page at boot: a fresh encounter, Sam at the insertion point
 const spawn: Vec3 = v3.copy(level.playerSpawn);
+// A GUARD'S MARK IS WHERE A FRESH ENCOUNTER STANDS HIM, read here from the game's own (the encounter the line above just dealt), not worked out again from
+// the level: the night's opening (src/game/opening.ts, on in the page) starts nobody of the shift on top of the way in, so a man whose route begins there
+// is stood further along it, and 'his first waypoint' is not his mark any more. With the opening off the two are one place, and the staging line under
+// the marks says so here, at the start, where it is nobody's poke. ATTRACT_BREAK=1 = the red path: the marks are written down a metre off.
+const mark0: Vec3[] = game.guards.map((g: any) => v3.add(g.char.pos, [process.env.ATTRACT_BREAK === '1' ? 1 : 0, 0, 0]) as Vec3);
+const { OPENING } = await import(`${ROOT}/src/game/opening.ts`);
+if (!OPENING.on && process.env.ATTRACT_BREAK !== '1') { const off = game.guards.filter((g: any, i: number) => v3.distXZ(mark0[i], level.routes[g.routeI].points[0]) > 0.05); if (off.length) fail(`staging: with the night's opening off a fresh encounter stands ${off.map((g: any) => g.callsign).join(', ')} off his first waypoint`); }
 let allowed = true;        // main.ts's canRun (start card up, no tour, not calibrating, not automated, tab visible)
 let stops = 0;             // main.ts's onStop (the frozen picture's refresh): once per stop that had gone live, never otherwise
 const attract = new Attract(game, cam, () => allowed, undefined, () => { stops++; });
@@ -137,7 +144,8 @@ if (!sameFlags(flagsNow(), flags0)) fail(`poke: flags not restored — ${JSON.st
 if (!camUntouched()) fail(`poke: camera not restored — yaw ${f2(cam.yaw / DEG)}° (was ${f2(cam0.yaw / DEG)}°) pitch ${f2(cam.pitch / DEG)}° dist ${f2(cam.distance)}/${f2(cam.desiredDistance)} (was ${cam0.dist})`);
 if (v3.distXZ(game.player.char.pos, spawn) > 0.05) fail(`poke: Sam at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])}), not the insertion point (${spawn[0]}, ${spawn[2]})`);
 if (v3.distXZ(cam.target, game.player.char.pos) > 0.05) fail(`poke: camera target (${f2(cam.target[0])}, ${f2(cam.target[2])}) not on Sam`);
-const badG = game.guards.filter((g: any) => g.state !== 'patrol' || g.hold || g.pinned || g.script || g.awareness > 0.01 || v3.distXZ(g.char.pos, level.routes[g.routeI].points[0]) > 0.05);
+if (game.guards.length !== mark0.length) fail(`poke: ${game.guards.length} guards on the floor, ${mark0.length} at the start`);
+const badG = game.guards.filter((g: any, i: number) => g.state !== 'patrol' || g.hold || g.pinned || g.script || g.awareness > 0.01 || !mark0[i] || v3.distXZ(g.char.pos, mark0[i]) > 0.05);
 if (badG.length) fail(`poke: guards not fresh on their marks: ${badG.map((g: any) => `${g.callsign}:${g.state}@(${f2(g.char.pos[0])},${f2(g.char.pos[2])})`).join(' ')}`);
 for (const d of game.doors.list) if (Math.abs(d.angle - refDoors.get(d.def.name)!) > 1e-3 || d.lockBroken || d.pick) fail(`poke: door ${d.def.name} at ${f2(d.angle)} (authored ${f2(refDoors.get(d.def.name)!)}) broken ${d.lockBroken}`);
 for (const [tg, on] of refLights) if (tg.on !== on) { fail(`poke: switch ${tg.name} on=${tg.on} (authored ${on})`); break; }

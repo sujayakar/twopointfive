@@ -65,6 +65,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   raised (`firearm-topup`, mended since: the gear rule). WHICH ROWS A RUN IS READ AGAINST: the rows of its own stand. Two runs are read against none, and say so in one line where they have
   a red: one started with a word of the stand given by hand (`stand.ts BY_HAND`, read as the process starts: a probe turned green by its own rule held off would otherwise read
   GREEN AGAIN), and one of a single case of a probe (a case's number as the third word: `probes.ts aim-door 0`). A GREEN AGAIN on a row of both stands says which stand comes out of its `on`, not "take it off", and says so where other names share the row.
+  A RUN STARTED WITH A BREAK WORD (`stand.ts BREAK_WORDS`: any `<NAME>_BREAK` neither empty nor 0, and `DOORPATH_OLD`; said on stderr as the run starts) is
+  read against the list all the same and closes with one line more, which gate.sh carries: DID NOT BITE where nothing failed, the reds with no row as
+  the word's to explain, or BITE NOT SHOWN where every red has a row (a row hides a break word: `RUNNER12_BREAK` on the page's stand read as
+  EXPECTED RED, 11-06). `holds-check` (9) holds the three by the runner's self tests. `checkpoint-autosave`'s red path is `CKPTCIVIN_BREAK=1` now.
   WHAT HOLDS THE ROWS: `holds-check.ts` line (8) (probe `holds`, quick gate; `HOLDS_BREAK=1` puts two bad rows in and must fail it): a name the runner has, no bisect on a row
   red on the old stand, every bisect word one the stand can raise with its value (`heldWords`, the list `stand-bisect.ts` searches) and none a word
   the probe's own holds put off. It cannot tell a family's word from a probe's name (a row under a family's word passes and is never read), nor see a row's prose. HOW THE LIST WAS FILLED: every probe name run on
@@ -108,9 +112,194 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   squads block into squads. It now runs the pair's floor as one pool for its two lines, on either stand (`stand.ts underWord`: a run under one word of the stand, the word
   and the row put back after), and a third line says what the dealt floor does (one squad, nobody goes on his own). `CALLSRALLY_BREAK=1`: 2 FAIL on both. FOR THE ENEMIES' OWNER, not a check's to settle: `ROOMFIGHT.rally` and `rallyK` are Team
   feel rows a player can move, and on the page they move nothing for a squad's man, which on a dealt floor is every defender (the rule as read; measured on the
-  pair's floor, one seed). `doorpath-paths` and `doorpath-gun` are the old stand's alone now
+  pair's floor, one seed). THE FOURTH BATCH (2026-11-06), lines of paths the page no longer plays.
+  THE `pressorders` FAMILY IS DELETED (seven probes, `tools/qa/pressorders-probes.ts`): it walked the orders menu on X, the who key T, the middle button and
+  the wheel, with `CMDRING.only` and `.wholeSquad` pinned off in its rig, and searched the source for a held key on the order path. That route has had no
+  key on the page's board since 1af35108 (10-22: "squad is now just q and f. everything is through the radial menu"), the ring is a key kept down on
+  purpose since 3b77c986, and the opening line it quoted went with a488a796. Its five scenario sweeps and its search were red on both stands since
+  (on the old stand by that one quoted line; on the page's by nine more). `pressorders-held` was GREEN on both and went with the route it asked of. What
+  the page plays is the `squadorders` family's (`cmdring`, `qring`, `qonly`, `wholesquad`); the menu's rows and digits are still `orderkeys`' and
+  `orders-menu`'s. NO LONGER HELD BY ANY CHECK, on the old stand, under `?qonly=0` or for a kept binding of X: a held X is one press and letting go
+  closes nothing; a key down with no press opens nothing; the middle button twice, the wheel or the arrows and Space give a row. They come back from
+  history with the file if that route is ever a key again. `foursquad-stage` loses its two
+  lines of the who key for the same reason, and keeps what they said of a pair that is down. `loudchaos-off` holds glass to its own rule on either side
+  of the destruction switch (the same floor stood with the switch off reads the same) where it asked that glass be off (`LOUDGLASS_BREAK=1` reads the
+  switch-on arms' glass the other way about: both comparisons FAIL on both stands). `noshove` is NOT mended and its row was wrong: on the page's stand the arm the page plays fails too (the player moved 0.032 m with the
+  rule on, the line's bar 0.01 m), which is the squad's owner's to read. `aim-first` adds what the startle holds a first round by to its floors, from the
+  rule's own table (`STARTLE.beat + STARTLE.draw` where the rule is on: 1.533 s against a floor of 1.515; `AIMFIRST_BREAK=1`: 2 FAIL on both).
+  `gunhold-variant` takes the key that draws on a held man from the row's own rule (`HANDSLOT.on`: 1, else E; `GUNHOLDKEY_BREAK=1`: 1 FAIL on both).
+  OFF IS A WORD, NOT THE LACK OF ONE, SINCE THE STAND'S FLIP: `snap-bites`' control runs asked for the turn weight off by leaving `TPS_TURN` out of the
+  child's environment, which since a tool with no word stands the page's game is the weight ON, and its line 'in the arm asked for' read the word and
+  passed. The arm is asked by `TPS_TURN=0`, each run reports the rule its game had while it played (`SnapRun.turnOn`) and the line holds it to the rule
+  its caller names; `SNAPBITES_BREAK=1` asks the off arm by the word that puts the weight on, so only that reading can fail it. `tools/qa/entry-strip.ts`
+  had the same slip for `TPS_DOORPATH`, and so did the `doorpath` family's own red path (`DOORPATH_OLD=1` left the word out: on the page's stand 'the entry
+  as it was' played the walk). `tools/qa/stand.ts childEnv` builds a child's stand words with every one said. The three were found by reading and by a
+  review. A FOURTH went with them: the picks family's `PICKS_PLAIN=1` ('the harness's plain stand-up instead') asked by leaving four words out, and
+  since the flip played the same game as its default; the mode is deleted. A NET WITH HOLES NOW CATCHES FOUR SPELLINGS OF IT, `shipped-check.ts
+  wordsLeftOut` (the check's last line; its own samples, nine slips it must name and seven lines it must not, are the line before; `STAND_BREAK=1` reads
+  the slips as tools' lines): a tool's line that gives a stand word a value with `undefined` in it, puts one in on a condition and nothing otherwise,
+  deletes one from an environment not written `process.env`, or deletes over a list naming one. Let through: a line that SETS `TPS_PROFILE`, a put-back
+  statement, and a line that says `word left out on purpose:` with its reason (three do: `rescueflush-check`'s floors that do not ask for lanes,
+  `doorpath-probes runOne`, `lesson-gate`'s levels with no script). It does NOT close the class: an environment built over several lines, a word a
+  helper or a named list drops, a computed key, and `delete process.env.X` before a stand-up in the tool's own process (fifteen lines, read and meant)
+  are not seen. What closes it is a run held to the rule its game had, as `snap-probes` now does for the turn weight. THE FIFTH BATCH (2026-11-06), two stagings and two that were not: `review-act-down`
+  holds a push to no hand begun on the leaf as well as the leaf untouched, and its control is the leaf open on the frame or by the hand's move begun on
+  it (hands at work bring a leaf round over frames: `pl.doorMove`; `REVIEWACT_BREAK=1`, the 'downed' Sam on his feet: 1 FAIL on both stands).
+  `loudchaos-blast` asks whether THE stack 3.2 m from the charge is taken, by where its box stands and the module's own log line of it, where it read the
+  floor's count of stacks taken (a lived-in room has others nearer), and holds each arm to its charge having gone off (`LOUDSTACK_BREAK=1`: 1 FAIL on
+  both; the power-4 arms have no red path of their own). NOT MENDED, AND WHY: `shutdoor-refuse`'s contact case is not a staging fault. The man whose arc
+  the door is has the defender in sight at once and has lost him half a second later, as the row is read, on the page's stand alone (the line's detail
+  says both times now); an order to cover the door first makes it pass by two more men and hides that, so it was taken back and the row is the owner's.
+  `kitload`'s cards do take once written to the card a night alone wears (the stealth card), but four of its lines take the loud issue for the reference,
+  which is the kit's owner's to settle (the row says what was measured). THE SIXTH (2026-11-06): `particles-sites` was red on the page's stand by `tune.chaos`, which the
+  harness held at 0 for every game until a tool with no word stood the page's (0.5): at chaos a round's strike also carries destruction's burst (by the
+  heat of the rounds before it) and wall wear's flakes, and a stun drops a ceiling tile's dust, each at the same point as the recipe this family counts.
+  The family holds chaos at 0 itself now (`stage()`; those emits are `loudchaos`' and `wallwear`'s to hold), and a round that goes on through a thin wall
+  is counted where it struck (`shotAt`: the thin walls' own hook says whether it went on; one that stops in the wall still owes the whole queue to its
+  strike). `PARTSITES_BREAK=1` reads each round's site a metre off (the pistol's and the rifle's lines FAIL on both stands), `=chaos` drops the hold (the
+  rifle's and the stun's FAIL on both). The first attempt counted sites alone and named the wrong rule; a review's runs found chaos. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
   (green on the page's). NOT DONE: `flashweight`'s two older rows are the old stand's measurements, kept as rows of both stands and not read again on the page's (the family
-  did not finish inside half an hour on a loaded box). tools/qa is typechecked by its own
+  did not finish inside half an hour on a loaded box). THE EIGHTH (2026-11-06), a class and seven reds.
+  A BUN CHILD GIVEN NO ENVIRONMENT GETS THE ONE THE TOOL STARTED WITH: `Bun.spawn` and `Bun.spawnSync` with no `env` do not hand on `process.env` as it
+  stands (bun 1.4.4; node's `child_process` and `Bun.$` do). Every word written after start was lost on the way to such a child: the stand `stand.ts`
+  writes down, `QA_STAND_SAID` (so a child on the old stand said the banner again: `picks-boot` there read it as seven console errors), a probe's holds
+  (`holds.ts`), a word a check sets for its arm. Fifty-one calls of the tools stood so and all name `env: process.env` now; `shipped-check.ts`
+  `bareChildren` (the check's seventh rule; `STAND_BREAK=1` reads its ten sample calls as a tool's) names a call that does not, a net with the holes its
+  note lists (a command or options kept in a name, a helper, a regex literal inside the call), read by one scanner with holds-check
+  (`tools/qa/call-text.ts`). No reading moved by it on the page's stand: no held probe plays its game in such a child (looked for by name; the runner's
+  script children hold their own words by `asProbe`), so only the banner on the old stand changed. `sup-sam`: THREE things read as a cone of 45°. A
+  round that goes through a partition (`wallpen.ts`) sounds a second impact on what stands behind (ten "impacts" of five rounds): a round's impact is
+  its FIRST strike. Where rounds are sent level along the cursor's heading (`aim.ts AIM.player.level`, a stand row with no word, on in the page) the
+  strike moves with the muzzle and the line does not turn: there the scatter is of the rounds' lines, and where a round is sent at the point (the old
+  stand, a puppet's aim) of the strikes about their mean, as it was; each read by the other's measure is the muzzle's own centimetres. And the puppet's
+  aim was 6 cm inside the wall: it is the point the cursor's rounds were clicked at. 0.019 rad at 0.8 on both stands against the formula's 0.023, 0.000
+  to 0.001 at rest; `SUPSCATTER_BREAK=1` holds every arm at 0.8 (the arm at rest FAILS on both). `orderkeys-walk`: the cursor on the first teammate's
+  chest was on ANOTHER man on three levels, who stands 0.6 m off and nearer the camera there; the menu opened on him, rightly. The line now asks for the
+  man the cursor is on by its own reckoning (the nearest body along the cursor's ray), so a pick that took the farther man is still red;
+  `ORDERKEYS_BREAK=man` asks for another (22 levels FAIL on both). `review-kick-leaf`: its boot at the keyed face landed on the frame (`bootHolds`): it
+  kicks from a face the leaf gives at, the leaf's width is held as its label says, and it is HELD at the build before the throw (`holds.ts`
+  `LEAF_STOPS_AS_IT_WAS`: `DOORTHROW`, on in the page by the maintainer's word, throws that man; `doorthrow` 'booted' is the page's line). Its red
+  paths: `TPS_DOORTHROW=1` by hand (67 frames crossed, 0.47 m, both stands) and `REVIEWKICK_BREAK=1`, the staging as it was (the page's stand only: the
+  old one has no frame rule). `sidedoor-feet`: asked `whyNot` of an 'outside' row the page's board has not, threw, and the throw failed its second line
+  too; its last line wanted a boot where the page's men try a locked door and hold. Rows are the board's and the locked door is the rule's
+  (`DOORTOOLS.outsidePlain`, `.testDoor`, read off each game as it is stood up, so a word given by hand is read right); `SIDEFEET_BREAK=1` reads both
+  the other way round (two lines FAIL on both). `aim-unit`: the aim model's unit numbers are asked without the two rules that move what it stages, on
+  either stand (the turn weight keeps a weighted gun on the man through the six frames its drain line takes it off him; the aim cost of moving opens
+  every cone the feet touch): the probe holds `TPS_TURN` and `TPS_MOVECOST` off for its own stand-ups (`stand.ts underWord`; `TURN.on` is a number, so
+  the holds table cannot carry it), `snap` and `aimcost` hold the two rules themselves, and `AIMUNIT_BREAK=1` holds both ON (five lines FAIL on both).
+  DELETED: `thresholdmenu-rows` and `thresholdmenu-held`, which walked the threshold's page behind X, 5, 4
+  and the held page of what next, with `outsidePlain` and `testDoor` pinned off to have them. The page has had neither page since the squad game build
+  (10-16): 'clear from outside' is one plain order on row 4. Both were green on the old stand and red on the page's on the floodlit yard alone. WHAT NO
+  CHECK HOLDS ANY MORE, on the old stand or under `?outsideplain=0`: the held page's rows pressed by their keys in the seven scenarios, the four's
+  on-the-word path to a hold (X, F, 4, 1, then F), a stale held page greying with F refused, Esc back a page at a time. `calls` still asks its calls on
+  those pages (`pagesAsTheyWere`); `thresholdmenu-probes.ts` stays as the rig twenty checks stand on. `flashweight-fog`'s row said one line and
+  the two stands fail DIFFERENT lines (the row says both now). CHAOS IS NOT THE OTHER REDS' CAUSE: thirty-two unexplained rows were run on the page's
+  stand with `tune.chaos` held at 0 from each game's first update (a preload; a stand-up still builds at 0.5): none went green, twenty-nine failed their
+  rows' own lines and three ran past 25 minutes four at a time (`corridor`, `flashweight-entry`, `wall-snap-sweep`).
+  THE NINTH (2026-11-06), five stagings and one fault in three places. `registry-level`, `consulate-level` and `depot-level` were red on BOTH stands
+  with no row: each built its generator's level itself and walked the exporter's steps after it one by one, and the word every box says it does,
+  stamped at the export, was a step none of them had (175, 75 and 84 'diffs' on files the exporter calls up to date). All three ask the exporter's own
+  answer now (`tools/qa/level-file.ts exporterCheck`: `export.ts <name> --check`, the look twin with it; `LEVELFILE_BREAK=1` asks without the
+  dressing, STALE on both). `checkpoint-civilians` (and its other name `rb-checkpoint-civilians`): on the page's stand Kowalski's round brings him
+  inside three metres of the cleaner while the worker's body settles, he finds her and she answers, and the save is written with her report a second
+  from delivered, so the load 'lost' a promise already spent. From the grab to the save the shift stands at points of its own rounds with no line to
+  either civilian (`standOff`, the game's own line test), feet held, sighted and free again in the file; for the half minute after the load it is
+  pinned, deaf and blind too. The minute thrown away still finds the body and has her tell a man (score 56 and 64 against 90 at the save), so the load
+  winds back something. `CKPTCIV_BREAK=1` stands a man by her after the load (FAIL on both); `=save` leaves the first staging out (the page's stand
+  only). `checkpoint-autosave`: the cleaner SEES the hauled body on the page's stand and is on the phone to security for 17 s, which rightly holds the
+  gate: the body's request waits, the stage's and the room's JOIN it with no line of their own in the log, and the probe read no stage request. The
+  civilians are out of that script, as the staff's senses are (they were only deaf); `CKPTCIVIN_BREAK=1` leaves them in (the page's stand only). `attract`:
+  a guard's mark is where a fresh encounter stands him, read from the game's own at the start: under the night's opening a man whose round begins by
+  the way in is stood further along it (`ATTRACT_BREAK=1`: the marks a metre off, FAIL on both). `squadplay-try`: F is pressed with blue still walking
+  to its stand-off, and the two seconds the line waited were the rest of that walk (1.90 s old, 2.08 s at the squad's pace). The blow is held to the
+  frame the word and the 'armed' beat are both in, ten seconds at most, and nobody of ours in the blast (`SQUADTRY_BREAK=1`: half a second, FAIL on
+  both; LOOSENED from two seconds flat). Read and left: `move-walktries` (a man shifts 5 cm in the two seconds a line wants nobody moving),
+  `orderui-door`, `missing`, `nightbreach-contested`, `standoff-end`.
+  A RIDER (11-06): `doormenu-rows` was red on the page's stand in the records office alone, with no row ('no bangs left: the tools page changed
+  shape'). The probe's `find` took a door's angle, stood Sam by it (which steps the game) and handed it back as shut; there a man of the floor swings
+  `records_west` wide in those frames, and its page, rightly 'shut that door' on the charge's digit, was held to the shut door's shape. `find` asks
+  the leaf again after the stand, by the door tools' own word for open too, and leaves a door that moved for the next (both readings of a shut door go
+  through it); the no-bangs case also holds its menu to the door it found. `DOORMENUFIND_BREAK=1` leaves the second asking out and stands the found
+  door open (21 levels FAIL on both stands).
+  THE TENTH (11-06), four stagings and one row put right. `rb-laser-civilian`: the men of the floor are stood off the corridor beam and blinded (the
+  probe's `standOff`) before the whole beam is read, and a `staged:` line holds that it IS whole; where the night's opening starts the shift a guard
+  stood in it (the 'whole' reading was 0.82 m of a 2.05 m beam). 'Gone again' is held to the beam's length, not to that first reading.
+  `RBLASER_BREAK=1` stands a man in the beam. `standoff-end` and `standoff-ff` (a): the colleague is brought in with a three-second pause
+  (`bringIn(…, pause)`: the patrol's waypoint clock `wait`, so he stands and looks before his round turns him away). On the page's stand his eye is
+  slower (the pair seen by frame 36 as staged, up to 106 over the phases of his look, against 19) and he had walked off before any standoff formed.
+  `hold` and `pinned` are no use: the standoff's own perception refuses such a man. The friendly-fire case steps until the standoff is there (the
+  pause's three seconds at most) and then his contact beat, where it counted 45 frames; the lit cases of standoff-end fail with `staging:` when none
+  formed before the hold ended. `STANDOFFIN_BREAK=1` brings him in facing away with no pause.
+  `missing` (C), the lockdown follower: THE PREMISE IS THAT THE LEADER DIES UNSEEN, and the game sees a fall by a colleague's eyes on the frame of it
+  (`combat.ts killGuard`: `netQuietFall` and `moraleManDown` by `canSeeChar`, the mate then KNOWS him gone without asking; `tacticsManDown` by
+  `pointInView`, within 2.2 m of a doorway a kill zone called on the net). At the fifteen-second mark the follower walks at his shoulder with him
+  full in view on either stand, so the premise was never staged; on the page's stand the pair is at the storage doorway besides, the kill was called
+  0.8 s on and the stack found the body, put in that very room, 4.8 s on. The kill now waits for the first frame no living man of his side has him
+  in his eyes by either test (19.6 s after the mark on the page's stand, 28.8 s on the old, ninety at most); the body goes to the storage corner
+  where that is ten metres from the fall, inside the follower's sixteen and walled off from every living head (guards and civilians, `segmentBlocked`
+  as `bodySeen` and `partnerWatch` ask it, at three heights), else to the spot those tests pass that lies furthest from every round (both stands
+  take a looked-for spot now); and the line fails with THE PREMISE DID NOT HOLD when, before the follower's own call, the body is found, a mate
+  knows him gone (`netQuietOf`), a kill zone names him, a civilian has seen the body or the floor's level moves. `MISSING_BREAK=seen` kills at the
+  mark, in their eyes; `=insight` puts the body ten metres off in a living man's line (each FAIL on both stands). THE OLD STAND'S RUN MOVED with
+  the wait (the kill at 44.3 s, not 15.5). SEEN ON THE WAY, the enemies' owner's: with the kill at the mark on the page's stand the follower
+  himself calls 'Kowalski's down in the storage doorway' 0.8 s on, knows him gone by `netquiet.ts`, and says 'I've lost Kowalski — he was just
+  ahead of me' twenty seconds later (`partnerWatch` asks neither). It takes a body out of his sight for those twenty seconds, so no play has shown it.
+  `foursquad-stack`: NOT mended, its row put right. The line orders the stack over the marks the three still hold from the block before, the fourth
+  man dead on his, and on the page's stand two marks are dealt 0.21 m apart; a new line gives the same order after a fall-in and passes on both
+  stands (0.90 m). Two readings side by side, not a cause traced (the old stand passes both). On both stands one mark is dealt where the body lies.
+  The detail prints each man's mark, the nearest two marks and the body. The door tools' owner's.
+  THE ELEVENTH (11-06), one mend, one red made true, one row put right. `loudchaos-levels` (red on both stands): it built each generator's level on
+  the game's own maths, which every stand of the harness has on (`src/math/exact.ts`), where the exporter writes the file on the engine's: four boxes
+  of the records office sharing one yaw (an arctangent's last place) and one box centre of the compound differed in the sixteenth digit. The two
+  loads, the generator and the steps after it run through `headless.ts asExporter`, the whole comparison on one maths as `level-probes` has it
+  (`LOUDLEVELS_BREAK=1`: on the stand's maths, 2 levels FAIL on both). GREEN ON THIS LINUX BOX: the engine's maths is the system's, and nobody has
+  run it on a Mac (true of `export.ts --check` and `level-identity` too). It still walks the exporter's steps by hand.
+  `runner` (12), nothing is outside: NOT GREEN, its red made true, the enemies' owner's. The cornered man picks the corner farthest from the enemies
+  inside `cornerM` (25 m) of him by the floor, and picks again every `retrySecs` from wherever he has got to. On the page's stand he takes six in
+  turn the length of the compound, about 80 m of floor, and settles 36.7 m from where he broke at 30.6 s; on the old stand his first (18.2 m) stays
+  the best. Either of two page rules alone opens the west: he reckons from the men he knows of (`PICTURE.run`: Sam alone), or the team has fallen in
+  on Sam. The first line had been red by half a second of a thirty-second watch, and read him 1.5 s after his first arrival, when a second look can
+  have sent him on: it watches sixty, reads him `retrySecs` and half a second after an arrival he stays at (LOOSENED in time: it never bounded it),
+  and passes on both stands. A NEW line holds the corner he settles in to `cornerM` from where he broke: FAIL on the page's stand, its row.
+  `RUNNER12_BREAK=1` is `cornerM` 0, he stays at the man's feet (the first line FAILS on both). `nightbreach-contested`: read, NOT mended, its row
+  put right: Sam's covering fire down the door's line from behind the stack downs both his own men on the page (friendly fire is live: the
+  staging's), and with that held off by hand the pin peaks 0.43 of the 0.6 it needs, 0.99 on the old stand (could be real: the suppression's
+  owner's). Its other two lines are not read.
+  THE TWELFTH (11-06), `move-walktries`: two stagings mended and one red made true. THE WEDGE'S CASE read 'nobody moving' two seconds on from a flat
+  three after the halt line; at the squad's own pace the file's last man takes his last step at 3.1 s. It waits until the four have SETTLED
+  (`settle`: three seconds at the least, on until nobody has moved for a whole second, ten at the most, and the line fails at ten): 4.1 s on the
+  page's stand, 3.3 on the old. LOOSENED in time. `play()`'s read after a halt uses the same wait. `WEDGESETTLE_BREAK=1` reads the men the frame
+  the line is said (FAIL on both); `=flat` is the three seconds as they were (FAIL on the page's stand alone). THE TWO LOCKS' CASE walks its pair
+  into the storage room, where a defender stands, kept blind for good by the rig. Where a squad nobody has found holds its round on a man who has
+  not noticed it (`holdfire.ts`, `HOLDFIRE.on`: the page's stand; NOT `unseen.ts`, Sam is not sneaking) one man says 'eyes on. holding.' every
+  eight seconds, both stand on the door's marks reading 'moving' and neither is counted arrived, so the walk's try is never made: `orders.ts`
+  counts a man arrived with his gun on the door's point, and the stamp that counts a man holding his round as there (`HOLDFIRE.stackSet`) is the
+  stack order's alone. The case now plays with THE FIGHT BEGUN, by the rule's own stamp for Sam's 'go' (`holdFireDrill`, nothing where the rule is
+  off): he shoots as the old stand's man always did, the same hot floor on both stands, PASS on both. A NEW line, 'held', plays it with the fight
+  NOT begun and asks only that the handle is still tried: FAIL on the page's stand, its row (could be real: the door tools' owner's, with the
+  squad's). A plain 'move' does not wait so: three other cases here end 'set.' with a round still held; it is a walk's try at an untried door.
+  THE THIRTEENTH (11-06; the break word's notice above was a hand-over of its own), five old reds the merge found with no row (red at step 1577
+  too). `carbine-fire` (1): ninety seconds are up three frames after a burst's first round on the page's stand, and that round read as a short group
+  with no box run dry under it; a last group the gun's own burst record still owes rounds to as the watch ends is not judged short
+  (`CARBINECUT_BREAK=1`: the watch runs on to the next burst's first round and judges it, FAIL on both). `cues-run`, Sam down: the page's squad
+  opens following Sam, walked after him onto the squad's room, dropped the three men with a line to his spot and lost two of its own, and nobody
+  was left to shoot him: 38 s lit on the mark, never down, the line never said. The team is told to hold where it stands before he goes, the same
+  on both stands (it still fights from there), the line fails as STAGING when he never falls, and with his fall known it wants each floor's own
+  words (TIGHTENED: an empty string on one side passed). `CUESRUN_BREAK=1`: god mode left on, FAIL on both; `=follow`: no hold, FAIL on the
+  page's stand. `entrypoints-off`: its seeded entry is on the manager's door, which is locked; where the men try a door before they work it
+  (`DOORTOOLS.testDoor`) the order ended 'found shut', nobody went in, no point was dealt. The row is given again where the first ended at the
+  handle (the page's own way through: they kick it), the old stand's run is as it was, and the line asks that the entry went in
+  (`ENTRYOFF_BREAK=1`: the run without the tracker plays with the switch on, FAIL on both). `handleside-tools`, 'clear from outside': where the
+  men pie the threshold (`DOORTOOLS.thrPie`) the lead slices across the opening after the leaf is open, his body's edge 0.25 m into its corridor
+  (0.40 without the lean), and the line read that as the handle worked from the opening. His nearest while the order is in its threshold stage
+  with the pie on is kept apart and held to the pie's own reach: his edge may be in the corridor, his middle may not. With the pie off he is
+  judged through the hold as before (`HANDLEPIE_BREAK=1`: the pie judged as the handle's, FAIL on the page's stand alone; the family's
+  `TOOLNEAR_BREAK` fails all six rows). `entrypoints-count`: NOT mended, red on both stands, a row: one moved point in the killhouse's bunks
+  cannot see the point his gun is held on, the frame's middle; the mover's own rule, a line to any third of the opening, passes (could be real:
+  the door tools' owner's to say which line is promised).
+  `orderui-door` (11-06): read, NOT mended, its row put right. One blue man's fall-in mark is dealt 0.31 m from Sam on the page's stand; he stands
+  0.68 m short of it, called arrived, for as long as he is watched (not a settle). Could be real: the squad's owner's.
+  tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
 <!-- was CLAUDE.md lines 398–468 -->

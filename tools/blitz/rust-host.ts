@@ -87,14 +87,53 @@ async function bridge(): Promise<any> {
   const LJ = JSON.parse(readFileSync(new URL('./puppet-lists.json', import.meta.url).pathname, 'utf8'));
   BR = { ...E, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable() }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll,
     lists: { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) } };
+  // (every walk of a game by the bridge is made with that game as the one whose rows a weak table lists: `ownKeys` below)
+  for (const f of ['exportGame', 'applyGame', 'hostHalf', 'exportPart', 'hostHalfParts']) { const was = BR[f]; BR[f] = (g: any, ...a: any[]) => { const c = CUR, m = MODE; CUR = g; MODE = OFF.has('own') ? null : MODE_OF.get(g) ?? null; try { return was(g, ...a); } finally { CUR = c; MODE = m; } }; }
+  ownKeys(await import('../../src/math/side.ts'));
   return BR; }
+
+// ---- STAND-IN: A WEAK TABLE LISTS THE ROWS OF EVERY GAME OF THE PROCESS. The simulation keeps much of its state in tables beside its objects (src/math/side.ts:
+// `doorway.states` keyed by a man, `opening.born`, `kitload.manLoad` …), ONE table a process, each row found only by its key, so two games never meet each
+// other's rows. The bridge's export lists a table by `liveKeys()`: every key still alive, whichever game it is of. A game stood after another was so
+// exported with the other game's men, routes and players as rows of its own (seats-run's second game rolled its die one time fewer at tick 787), the
+// table of one thing's own row gave the first game's row (`K[0]`), and an apply that put a table's keys in the Rust game's order (import.ts `orderSide`)
+// struck every other game's keys off the list for good. The other game need not have stepped, or have a host: the game server's first game, stood only
+// to write its recipe, was in its second game's start (tools/qa/mpserver-check.ts: the server's words parted from its clients').
+// Here: while the bridge walks a game, a table lists only THAT GAME'S keys: the keys a walk from the game reaches. A start finds them (`reach`): the
+// game is exported with every table listing only the keys the walk has numbered so far (and the game itself and its views), again until an export
+// numbers no key it had left out; what the book then holds is the game's. The book is put back as it was and the start's own export lists exactly those
+// keys, so its rows are numbered as a process with no other game would number them. After a start: those keys, and a key first seen since (a thing made
+// in play) unless a start left it out or it is in another game's book. Outside the bridge's walks `liveKeys()` is as it was.
+// Belongs in the generated export.ts and import.ts: `keysOf`, the once-keyed and game-keyed reads, `orderSide` and every `liveKeys()` there should see
+// the keys of the game being walked and no other.
+type KeyMode = { kind: 'reach' } | { kind: 'exact' | 'own'; mine: WeakSet<object>; not?: WeakSet<object> };
+let CUR: any = null, MODE: KeyMode | null = null, DROPPED: Set<object> | null = null, RAWKEY: (k: any) => any = k => k;
+const MODE_OF = new WeakMap<object, KeyMode>(), OWNER = new WeakMap<object, object>();
+const inBook = (bk: any, k: object): boolean => { if (!bk) return false; for (const M of bk.ids.values() as Iterable<Map<object, number>>) if (M.has(k)) return true; return bk.serial.has(k); };
+const foreign = (k: any): boolean => {
+  const M = MODE; if (!M || k === CUR || RAWKEY(k) === CUR) return false;
+  if (M.kind === 'reach') { if (inBook(BR.bookOf(CUR), k)) return false; DROPPED?.add(k); return true; }
+  if (M.mine.has(k)) return false; if (M.kind === 'exact') return true;
+  if (M.not!.has(k)) return true; const o = OWNER.get(k); return o !== undefined && o !== CUR; };
+const KEYED = new WeakSet<object>();
+function ownKeys(SD: any): void {
+  RAWKEY = SD.rawKey;
+  for (const P of [SD.SideMap.prototype, SD.SideSet.prototype]) { const was = P.liveKeys; P.liveKeys = function (this: any, out: object[] = []) { const n0 = out.length, K: object[] = was.call(this, out); if (!MODE) return K; let n = n0; for (let i = n0; i < K.length; i++) if (!foreign(K[i])) K[n++] = K[i]; K.length = n; return K; }; }
+  // (a list of keys written over while a game is walked keeps the other games' keys in front of it)
+  const guard = () => { for (const t of SD.sideRegistry().tables as any[]) { const K = t.sideKeys; if (!K || KEYED.has(K)) continue; KEYED.add(K); let refs: WeakRef<object>[] = K.refs;
+    Object.defineProperty(K, 'refs', { configurable: true, enumerable: true, get: () => refs, set: (v: WeakRef<object>[]) => { if (!MODE) { refs = v; return; } const keep = refs.filter(r => { const k = r.deref(); return k !== undefined && foreign(k); }); refs = keep.length ? keep.concat(v) : v; } }); } };
+  guard(); GUARD = guard; }
+let GUARD: () => void = () => {};
+/** every object in a game's book is that game's, for the other games of the process (the first game to number it) */
+function owned(g: any, bk: any): void { const put = (k: object) => { if (!OWNER.has(k)) OWNER.set(k, g); };
+  put(g); if (!bk) return; for (const M of bk.ids.values() as Iterable<Map<object, number>>) for (const k of M.keys()) put(k); for (const k of (bk.serials as Map<object, number>).keys()) put(k); }
 
 const now = () => performance.now();
 /** a field hung on a game's object that a walk of its own keys does not meet */
 const hang = (o: any, k: string, v: unknown) => { Object.defineProperty(o, k, { value: v, writable: true, configurable: true, enumerable: false }); };
 /** the objects whose calls the host has already taken (a start may meet new ones: a mission started by the tool makes its own menu, fight and saves) */
 const TAPPED = new WeakSet<object>();
-/** RH_OFF=<names, comma>: a stand-in left out, to see whether a run still needs it: ends · doors · marks */
+/** RH_OFF=<names, comma>: a stand-in left out, to see whether a run still needs it: ends · doors · marks · last · own (a weak table lists every game's keys) */
 const OFF = new Set((process.env.RH_OFF ?? '').split(','));
 const enc = new TextEncoder();
 type Tally = Map<string, { n: number; eg: string; ticks: number; last: number }>;
@@ -158,7 +197,7 @@ export class RustHost {
   /** the Rust game is let go (its slot is free for another) and the game steps in TypeScript again */
   detach(): void { const X = this.F.X; if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; } RustHost.live.delete(this); delete this.g.stepSeats; delete this.g.rustHost; }
   /** the hosts whose Rust game stands in a slot, and when each last stepped */
-  private static live = new Set<RustHost>(); private static clock = 0; private static last: RustHost | null = null; private stamp = 0; evicted = 0;
+  private static live = new Set<RustHost>(); private static dirty = new Set<RustHost>(); private static clock = 0; private static last: RustHost | null = null; private stamp = 0; evicted = 0;
   /** this game's slot goes to another: the puppet takes the whole state, the Rust game is let go; a later step starts a new one from the puppet */
   private giveUp(): void { const X = this.F.X; if (!this.h) return;
     try { this.applyWhole('its slot went to another game'); } catch (e) { this.count(`THE WHOLE APPLY THREW as the slot was given up: ${String((e as any)?.message ?? e).slice(0, 100)}`); }
@@ -182,7 +221,8 @@ export class RustHost {
     // the filtered apply left of it. Its puppet takes the whole state first, so that this start reads what the TypeScript tick would have left there.)
     { const L = RustHost.last; if (L && L !== this && L.h && !L.audit && !OFF.has('last')) try { L.applyWhole('another game of the process starts'); } catch (e) { L.count(`THE WHOLE APPLY THREW as another game started: ${String((e as any)?.message ?? e).slice(0, 100)}`); } }
     g.sim.settle(g);
-    const start: Uint8Array = B.exportGame(g, B.reg), block = this.tsBlock().slice();
+    const start = this.reach();
+    const block = this.tsBlock().slice();
     if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); }
     const make = () => this.F.hand(start, (p, n) => this.F.hand(block, (bp, bn) => X.face_new(p, n, bp, bn)));
     this.h = make();
@@ -207,6 +247,28 @@ export class RustHost {
     this.memPages = this.F.mem.buffer.byteLength; this.T.start += now() - t;
     if (!this.o.quiet) this.say(`rust-host: ${this.starts === 1 ? 'the start' : `A NEW START as tick ${this.k} opens (the TypeScript round the last step put another game in the puppet's place)`}: ${start.length} bytes, the block ${block.length}; slot ${this.slot}; memory ${(this.F.mem.buffer.byteLength / 1048576).toFixed(0)} MB`);
   }
+  /** A START'S EXPORT, with every weak table listing this game's keys and no other game's (the stand-in `ownKeys`): the keys a walk from the game
+   *  reaches are found on a book of their own, the game's book is put back as it was, and the export is made listing exactly those */
+  private reach(): Uint8Array {
+    const g = this.g, B = this.B; GUARD();
+    for (const o of RustHost.dirty) if (o !== this) owned(o.g, B.bookOf(o.g)); RustHost.dirty.clear();
+    if (OFF.has('own')) return B.exportGame(g, B.reg);
+    const FIELDS = ['ids', 'lists', 'first', 'loose', 'serials', 'serial', 'nextSerial'] as const;
+    const fresh = (bk: any) => { bk.ids = new Map(); bk.lists = new Map(); bk.first = new Map(); bk.loose = new Map(); bk.serials = new Map(); bk.serial = new WeakMap(); bk.nextSerial = 1; };
+    const bk0 = B.bookOf(g), saved: any = bk0 ? Object.fromEntries(FIELDS.map(f => [f, bk0[f]])) : null; if (bk0) fresh(bk0);
+    MODE_OF.set(g, { kind: 'reach' });
+    let out: Uint8Array, left = new Set<object>(), passes = 0, found = 0;
+    for (;;) { DROPPED = new Set(); out = B.exportGame(g, B.reg); left = DROPPED; DROPPED = null; passes++; const bk = B.bookOf(g); let again = 0; for (const k of left) if (inBook(bk, k)) again++; found += again; if (!again) break;
+      if (passes >= 8) { this.count(`A START'S REACH DID NOT SETTLE in 8 exports (${again} keys still found late)`); break; } }
+    const bk = B.bookOf(g), mine = new WeakSet<object>(), not = new WeakSet<object>(); let nNot = 0;
+    for (const M of bk.ids.values() as Iterable<Map<object, number>>) for (const k of M.keys()) mine.add(k); for (const k of (bk.serials as Map<object, number>).keys()) mine.add(k);
+    for (const k of left) if (!mine.has(k)) { not.add(k); nNot++; }
+    // (the book as it was: a start after the first keeps every number it has given; the first start whose one export left out no key it then met IS the export)
+    if (saved) Object.assign(bk, saved); else if (passes > 1) fresh(bk);
+    if (saved || passes > 1) { MODE_OF.set(g, { kind: 'exact', mine }); out = B.exportGame(g, B.reg); }
+    MODE_OF.set(g, { kind: 'own', mine, not }); owned(g, B.bookOf(g));
+    if (nNot || passes > 1) this.count(`a start's export: ${nNot} keys of other games' rows left out of the weak tables; ${passes} exports to find this game's own (${found} keys met late)`);
+    return out; }
   /** what the scripted player's `ended()` reads (playthrough.ts:733), the mission's stage, and how many door orders are under way: when one ends the
    *  scripted commander asks the door tools what the team knows of that door (playthrough.ts:998 `knownShut` → doortools.ts:1019 `knows`, the tools'
    *  `tried`, which is not on the filtered list: warehouse-four's and barracks-four's second `bangClear` was not given without it) */
@@ -367,15 +429,18 @@ export class RustHost {
       // (the harness's stand-ins have not every method a page's host has: `audio.rain`, `smoke.obstaclesChanged`. The generated dispatcher calls them
       // unguarded; such an arm is counted and not called again)
       const no = this.outNoHand.get(arm); if (no !== undefined) { this.outNoHand.set(arm, no + 1); continue; }
-      try { OUT[arm](g, e); } catch (x) { const w = String((x as any)?.message ?? x); if (/is not a function/.test(w)) this.outNoHand.set(arm, 1); else if (!this.outThrew.has(arm)) this.outThrew.set(arm, `tick ${this.k}: ${w.slice(0, 160)}`); } }
+      try { OUT[arm](g, e); } catch (x) { const w = String((x as any)?.message ?? x); if (/is not a function/.test(w)) this.outNoHand.set(arm, 1); else if (!this.outThrew.has(arm)) { this.outThrew.set(arm, `tick ${this.k}: ${w.slice(0, 160)}`);
+        // (RH_OUT_SAY=1: the first throw of an arm with its event and where it threw)
+        if (process.env.RH_OUT_SAY) { const flat = (v: any): any => v && typeof v === 'object' ? (ArrayBuffer.isView(v) || Array.isArray(v) ? Array.from(v as any).slice(0, 4) : `${v.constructor?.name}{${Object.keys(v).slice(0, 12).join(',')}}`) : v; process.stderr.write(`out event ${arm} threw at tick ${this.k}: ${w}\n  ${JSON.stringify(Object.fromEntries(Object.entries(e ?? {}).map(([k, v]) => [k, flat(v)])))}\n  ${String((x as any)?.stack ?? '').split('\n').slice(0, 5).join('\n  ')}\n`); } } } }
     Q.length = 0; this.T.out += now() - t; }
 
   // ---- THE STEP, in place of `stepSeats`
   step(dt: number, cmds: readonly any[]): void {
     const g = this.g, X = this.F.X, B = this.B, k = ++this.k; let t = now();
-    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; RustHost.last = this; if (this.rec) { this.rec.k = k; this.rec.quiet = this.quietSteps; if (SITES) site(this.rec); } if (CAP_AT && (k & 31) === 0 && Date.now() > CAP_AT) process.exit(143);
+    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; RustHost.last = this; RustHost.dirty.add(this); if (this.rec) { this.rec.k = k; this.rec.quiet = this.quietSteps; if (SITES) site(this.rec); } if (CAP_AT && (k & 31) === 0 && Date.now() > CAP_AT) process.exit(143);
     // (THE GAME'S DIE ROLLED BETWEEN TWO TICKS: a rule of the tick ran in TypeScript on the puppet, called by the tool. Counted: such a tool leans on code
     // the Rust game has in its place)
+    if (FOLDED && this.rec) folded(this.rec);
     if (this.h && g.dice && g.dice.n !== this.dieRef) { this.dieMoved++; if (this.rec) this.rec.dieMoved = this.dieMoved; }
     if (!this.h || g.mission !== this.missionRef || (g.chronicle?.counts?.loads ?? 0) !== this.loadsRef) this.start(); else this.handWrites(k);
     this.o.beforeHost?.(this, cmds);
@@ -492,6 +557,7 @@ export class RustHost {
 // same with the audit; TPS_GAME=ts the SAME STAND (the game's own die, the dress rows down) stepped by the TypeScript tick, for a tally to hold the Rust
 // game's beside. Unset: nothing here is loaded. (Not TPS_RUST: src/sim/sim.ts refuses that word as a retired one.)
 export async function standRust(g: any, word: string): Promise<RustHost | null> {
+  if (word === 'table') word = byTable();
   if (!(globalThis as any).__tpsTop) throw new Error(`TPS_GAME=${word} needs the bridge's preload in this process and its children: BUN_OPTIONS=--preload=./tools/blitz/expose.ts (tools/blitz/rust.sh sets both)`);
   // (THE DIE: the game's own, seeded off the tool's `Math.random` as it stands when the game is stood, so a tool that seeds a run by its seed number
   // (playthrough.ts:1646) rolls another die a seed, and the same die under `ts` and `rust`)
@@ -500,13 +566,37 @@ export async function standRust(g: any, word: string): Promise<RustHost | null> 
   if (word === 'ts') { const B = await bridge(); B.dressAll(false); if (die !== null) g.dice = B.newDice(die);
     // (the trace under `ts`: the same line a game, its ticks counted round the TypeScript tick itself)
     if (TICKS_DIR) { const F = loadFace(), file = ticksFile(word), was = g.stepSeats, gave: string[] = []; let k = 0; writeFileSync(file, ''); const B = await bridge(); g.stepSeats = function (this: any, ...a: any[]) { let half: Uint8Array | null = null; try { if (!k) { g.sim.settle(g); B.exportGame(g, B.reg); const O = g.orders, was2 = O?.give; if (was2) hang(O, 'give', function (this: any, id: string, ...r: any[]) { gave.push(`${k + 1}:${id}`); return was2.call(this, id, ...r); }); }   /* (the bridge's book, as the host's start makes it) */ half = B.hostHalf(g, B.reg, a[1]); } catch { /* a game the bridge has no book for yet */ } const r = was.apply(this, a); const w: Uint32Array = g.sim.w; tickLine(F, file, ++k, g.dice?.n, new Uint8Array(w.buffer, w.byteOffset, w.byteLength), half, gave.join(',')); return r; }; }
-    if (process.env.RH_TRACE) { const rec = traceRec(word), was = g.stepSeats; g.stepSeats = function (this: any, ...a: any[]) { rec.k++; if (SITES) site(rec); if (CAP_AT && (rec.k & 31) === 0 && Date.now() > CAP_AT) process.exit(143); return was.apply(this, a); }; }
+    if (process.env.RH_TRACE) { const rec = traceRec(word), was = g.stepSeats; g.stepSeats = function (this: any, ...a: any[]) { rec.k++; if (SITES) site(rec); if (FOLDED) folded(rec); if (CAP_AT && (rec.k & 31) === 0 && Date.now() > CAP_AT) process.exit(143); return was.apply(this, a); }; }
     return null; }
   if (word !== 'rust' && word !== 'audit') throw new Error(`TPS_GAME=${word}: rust (the Rust game steps), audit, or ts (the same stand, the TypeScript tick)`);
   await RustHost.ready(); const H = RustHost.attach(g, { audit: word === 'audit', quiet: true, die, wholeEvery: +(process.env.TPS_GAME_WHOLE ?? 0) });
   if (process.env.RH_TRACE) trace(H, word);
   return H;
 }
+// ---- TPS_GAME=table: THE RUST GAME WHEREVER A CHECK CAN RUN ON IT, the TypeScript tick where the table says it cannot yet. The table is
+// tools/blitz/qa-kinds.json (written by tools/blitz/qa-census.py --kinds: a probe a row, by what it does to the game between two ticks; and the stand-alone
+// tools by hand, each with its reason). A game is stood for the probe running then (tools/qa/probes.ts names it as it runs each one), so one process
+// stands some of its games on each side and no probe is named anywhere but in the table. A probe that CALLS the tick's rules between ticks (kind iii) or
+// hangs its own function on a game object, checks a TypeScript function with no game, or holds the game to a walk of the JavaScript objects (iv-a, iv-b,
+// iv-c) stays on the TypeScript tick until the generated call surface and taps land; a probe the census did not read stays there too. Every such probe is
+// said as its first game is stood and counted in one line as the process ends, so that its green is not read as the Rust game's.
+let KINDS: { probes: Record<string, string>; tools: Record<string, { word: string; why: string }>; pins?: Record<string, string[]> } | null = null;
+const TABLE_SAID = { rust: new Map<string, number>(), ts: new Map<string, number>(), kinds: new Map<string, number>(), hooked: false };
+const ON_TS = new Set(['iii', 'iv-a', 'iv-b', 'iv-c', '?']);
+function byTable(): 'rust' | 'ts' {
+  KINDS ??= JSON.parse(readFileSync(new URL('./qa-kinds.json', import.meta.url).pathname, 'utf8'));
+  const probe: string | null = (globalThis as any).__probeNow ?? process.env.RH_PROBE ?? null, tool = (process.argv[1] ?? '').split('/').pop() ?? '';
+  let word: 'rust' | 'ts', who: string, why: string;
+  if (probe) { const k = KINDS!.probes[probe] ?? '?'; word = ON_TS.has(k) ? 'ts' : 'rust'; who = probe; why = k === '?' ? 'not read by the census' : `kind ${k}`;
+    // (a check that runs with a SETTLED switch off its page value asks for a game the Rust game does not have: `pins`, from a run with RH_FOLDED)
+    const pin = KINDS!.pins?.[probe]; if (word === 'rust' && pin?.length) { word = 'ts'; why = `it runs with a settled switch off its page value: ${pin.slice(0, 3).join(', ')}`; TABLE_SAID.kinds.set('pins a settled switch', (TABLE_SAID.kinds.get('pins a settled switch') ?? 0) + (TABLE_SAID.ts.has(who) ? 0 : 1)); }
+    else if (word === 'ts') TABLE_SAID.kinds.set(k, (TABLE_SAID.kinds.get(k) ?? 0) + (TABLE_SAID.ts.has(who) ? 0 : 1)); }
+  else { const t = KINDS!.tools[tool]; word = t?.word === 'ts' ? 'ts' : 'rust'; who = tool; why = t?.why ?? 'no row: the default'; }
+  const M = TABLE_SAID[word]; if (!M.has(who) && word === 'ts') process.stdout.write(`  [the game: ${who} is stood on the TYPESCRIPT TICK by the table (${why}); its verdict is not the Rust game's]\n`);   // (not console.log: a check may hold that while it stands its game)
+  M.set(who, (M.get(who) ?? 0) + 1);
+  if (!TABLE_SAID.hooked) { TABLE_SAID.hooked = true; process.on('exit', () => { const n = (M: Map<string, number>) => [...M.values()].reduce((a, b) => a + b, 0), T = TABLE_SAID;
+    process.stdout.write(`=== the game, by the table: ${T.rust.size} checks stood ${n(T.rust)} games on the RUST game · ${T.ts.size} checks stood ${n(T.ts)} games on the TYPESCRIPT TICK${T.ts.size ? ` (${[...T.kinds].map(([k, c]) => `${k === '?' ? 'not read' : k} ${c}`).join(', ') || 'by a tool\'s row'}: NOT GREENS OF THE RUST GAME): ${[...T.ts.keys()].slice(0, 40).join(' ')}${T.ts.size > 40 ? ' …' : ''}` : ''} ===\n`); }); }
+  return word; }
 // ---- RH_TRACE=<file>: as the process ends, a line a game stood under the word: the tool's file that stood it (the first frame of the stack under tools/
 // that is not the harness's own), the probe running then (probes.ts names it), the ticks it stepped, its whole applies, its calls, what threw
 // ---- RH_TICKS=<folder>: a line a tick under either word (the tick, the die's count, a hash of each part of rust/sim's block but `poses`), in a file
@@ -524,11 +614,20 @@ const SITES = process.env.RH_SITES === '1';
 function site(rec: any): void { const st = String(new Error().stack ?? '').split('\n'), F: string[] = [];
   for (const l of st) { const m = l.match(/tools\/[\w./-]+\.ts:\d+:\d+/); if (m && !/rust-host\.ts|headless\.ts/.test(m[0])) { F.push(m[0]); if (F.length === 4) break; } }
   const at = F.join(' < ') || '?'; (rec.sites ??= {})[at] = (rec.sites[at] ?? 0) + 1; }
+/** RH_FOLDED=<port-list.json> (with RH_TRACE): as every tick opens, each SETTLED switch row (a constant in the Rust game: the page's branch was
+ *  translated and the other dropped) is held to its value on the page; a row that stands on its other side while the game ticks is counted in the game's
+ *  line, `folded: { "TABLE.key=value": ticks }`. What a check pins off, as it runs: such a check asks the Rust game for a game it does not have. */
+const FOLDED = process.env.RH_FOLDED ?? ''; let FROWS: { row: string; page: unknown; get: () => unknown }[] | null = null;
+function folded(rec: any): void {
+  if (!FROWS) { FROWS = []; const reg: any = BR?.reg; if (!reg) return; for (const r of JSON.parse(readFileSync(FOLDED, 'utf8')).rows as any[]) { if (r.kind !== 'settled' || (typeof r.page !== 'boolean' && typeof r.page !== 'number')) continue; const [t, ...path] = String(r.row).split('.'); const T = reg[t]; if (!T) continue;
+    const get = () => { let v: any = T; for (const k of path) v = v?.[k]; return v; }; const v = get(); if (typeof v !== 'boolean' && typeof v !== 'number') continue; FROWS.push({ row: r.row, page: r.page, get }); } }
+  // (a yes/no row kept as 0 / 1 in one place and false / true in the other is the same side)
+  for (const R of FROWS) { const v = R.get(); if (v === R.page || (typeof R.page === 'boolean' && typeof v === 'number' && !!v === R.page) || (typeof R.page === 'number' && typeof v === 'boolean' && v === !!R.page && (R.page === 0 || R.page === 1))) continue; const k = `${R.row}=${v}`; (rec.folded ??= {})[k] = (rec.folded[k] ?? 0) + 1; } }
 /** RH_CAP_AT=<ms since 1970>: a traced tool ends itself at its next tick after that moment (its trace is written as it ends) */
 const CAP_AT = +(process.env.RH_CAP_AT ?? 0);
 function traceRec(word: string): any {
   const st = String(new Error().stack ?? '').split('\n').map(l => l.match(/tools\/[\w./-]+\.ts:\d+/)?.[0]).filter((x): x is string => !!x && !/rust-host\.ts|headless\.ts/.test(x));
-  const rec = { word, probe: (globalThis as any).__probeNow ?? null, by: st[0] ?? '?', k: 0, evicted: 0, starts: 0, wholes: new Map<string, number>(), calls: new Map<string, number>() };
+  const rec = { word, probe: (globalThis as any).__probeNow ?? process.env.RH_PROBE ?? null, by: st[0] ?? '?', k: 0, evicted: 0, starts: 0, wholes: new Map<string, number>(), calls: new Map<string, number>() };
   // (a tool stopped by a time cap still leaves its lines: the cap's signal becomes an ordinary exit)
   if (!TRACED.length) process.on('SIGTERM', () => process.exit(143));
   if (!TRACED.length) process.on('exit', () => { try { appendFileSync(process.env.RH_TRACE!, TRACED.map(r => JSON.stringify({ pid: process.pid, ...r, wholes: Object.fromEntries(r.wholes), calls: Object.fromEntries(r.calls), outThrew: r.outThrew ? [...r.outThrew.keys()] : undefined, WB: r.WB ? { fields: r.WB.size, top: [...r.WB].sort((a: any, b: any) => b[1].ticks - a[1].ticks).slice(0, 10).map(([q, e]: any) => `${q} x${e.ticks} (${e.eg})`) } : undefined })).join('\n') + '\n'); } catch { /* the trace is not the tool's */ } });
