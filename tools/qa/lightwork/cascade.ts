@@ -49,7 +49,7 @@ afterFrame((W, n) => {
       const P = [ro[0] + dir[0] * hit.t, ro[1] + dir[1] * hit.t, ro[2] + dir[2] * hit.t], cx = Math.floor((P[0] - WORLD.min[0]) / WORLD.gridCell), cz = Math.floor((P[2] - WORLD.min[2]) / WORLD.gridCell);
       const inGrid = cx >= 0 && cz >= 0 && cx < WORLD.gridW && cz < WORLD.gridH, ci = cz * WORLD.gridW + cx;
       for (const l of live) {
-        const mask = l.kind === 2 ? l.reachDir : l.reach;
+        const mask = l.kind === 2 ? engine.reach?.dirOf(l) : engine.reach?.of(l);
         if (reachOn && inGrid && mask && reachLevel(mask, ci) === 0) continue;
         scored.n++;
         const E = evalMax(f, u, l.slot * 16, P, hit.n);

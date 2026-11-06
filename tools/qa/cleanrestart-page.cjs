@@ -40,13 +40,13 @@ const SET = () => { const g = window.__game, C = window.__cleanrestart; if (!C) 
 // in the page: how far the camera's look-at is from the man (it leads his aim: never zero)
 const CAM = () => { const p = window.__game.player.char.pos; return +Math.hypot(window.__cam.target[0] - p[0], window.__cam.target[2] - p[2]).toFixed(3); };
 // in the page: the mains pulled by hand, one fixture on them broken, the man walked off so that the camera has somewhere to come back from
-const WRECK = () => { const g = window.__game, t = g.targets.find(x => x.kind !== 'breaker' && x.mains && !x.broken); if (t) t.broken = true; g.setBlackout(86400, 'hand');
+const WRECK = () => { const g = window.__game, t = g.targets.find(x => x.kind !== 'breaker' && x.mains && !x.broken); if (t) g.lightHome.stage(t, null, true); g.setBlackout(86400, 'hand');
   const p = g.player.char.pos; for (let k = 1; k < 40; k++) { const q = [p[0] + k, 0, p[2]]; if (!g.col.nav.isBlocked(q[0], q[2]) && k >= 8) { g.teleportPlayer(q); break; } }
   return { broke: !!t, out: g.blackout.active }; };
 const DARK = () => { const g = window.__game; return { dark: g.targets.filter(t => t.mains && t.factor < 0.01).length, fed: g.targets.filter(t => t.mains).length, camOff: +Math.hypot(window.__cam.target[0] - g.level.playerSpawn[0], window.__cam.target[2] - g.level.playerSpawn[2]).toFixed(2) }; };
 const RESTART = () => { const i = window.__input; i.keys.add('ShiftLeft'); i.pressed.add('Enter'); };
 const AFTER = () => { const g = window.__game, C = window.__cleanrestart, p = g.player.char.pos; window.__input.keys.delete('ShiftLeft');
-  return { stats: { ...C.stats }, mains: { ...g.blackout }, beacons: g.beacons.filter(b => b.target.on).length, broken: g.targets.filter(t => t.broken).length,
+  return { stats: { ...C.stats }, mains: g.blackout.toJSON(), beacons: g.beacons.filter(b => b.target.on).length, broken: g.targets.filter(t => t.broken).length,
     said: g.messages.map(m => m.text).filter(t => /mains|guards reset|encounter restarted|power/i.test(t)), cam: +Math.hypot(window.__cam.target[0] - p[0], window.__cam.target[2] - p[2]).toFixed(3),
     fatal: (document.getElementById('fatal') || {}).textContent || '' }; };
 

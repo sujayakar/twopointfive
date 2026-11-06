@@ -15,7 +15,9 @@
 // is the listener's to say, by its own rules. With nobody listening nothing is sent: the one-file build and every headless tool set no sink.
 // A PAGE IS ONE BUNDLE: the workbench has a door of its own, and no listener unless that page sets one. The replay pages carry no door at all.
 // THIS MODULE IMPORTS NOTHING: ui/ and editor/ save through it.
-export type SavedKind = 'perf' | 'bench' | 'price' | 'session' | 'checkpoint' | 'level' | 'modelerr' | 'capture';
+/** every kind of file the door knows, as a list (the type below is made of it; tools/qa/savefile-check.ts walks it, so a kind added here is watched at once) */
+export const SAVED_KINDS = ['perf', 'bench', 'price', 'session', 'checkpoint', 'level', 'modelerr', 'capture'] as const;
+export type SavedKind = typeof SAVED_KINDS[number];
 /** a file as it went out. `meta`: short facts of it for whoever keeps it (the build's commit, what a take was of), never the file again */
 export interface SavedFile { kind: SavedKind; name: string; blob: Blob; meta?: Record<string, string> }
 /** what became of a saved file: 'sent' = the listener is sending it now (not that it has arrived), 'held' = the listener keeps it, in memory, and sends it

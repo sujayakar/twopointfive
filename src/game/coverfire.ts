@@ -40,9 +40,6 @@ import { feedBegin } from './gunreload';   // (called inside the fire gate only:
 import { fireWeapon } from './combat';
 import { AIM } from './aim';
 import { guardFireMods, SUPPRESSION } from './suppression';
-import { silentHolds, silentGlassHolds } from './silent';
-import { pairHolds } from './pairorders';
-import { spottedHolds } from './spotted';
 import { FIGHT_SKILL } from './roomfight';
 import { civilianBodies } from './civilians';
 import { wallMenLive, thinLine, flightLen, WALLPEN } from './wallpen';
@@ -50,6 +47,7 @@ import { roundEnergy, shotEnergy } from './glasspen';
 import { sideLocked } from './gunslots';   // (called inside the trigger only)
 import { gunString, gunStringGap } from './gunroles';   // (called inside the trigger only)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { silentHoldsGlass, roundHeld } from './silent';
 
 export const COVERFIRE = {
   on: true,
@@ -292,13 +290,13 @@ export function coverOp(g: Game, O: OpLike, dt: number, speed: number, point: (t
   if (!live(g)) return false;
   const gd = O.gd, c = gd.char, S = stateOf(g); let Cw: Chew | null = null, who: Who | null = null;
   for (const o of known(g, S, gd, null)) {
-    if (o.K.who !== 'player' && (silentHolds(g, gd, o.K.who) || pairHolds(g, gd, o.K.who) || spottedHolds(g, gd, o.K.who))) { bump(S, 'heldSilent'); continue; }   // (the room fight's own three holds — silent.ts, the pair's 'watch him', spotted.ts: a round held at a man in sight is held at the wall he stepped behind)
+    if (o.K.who !== 'player' && roundHeld(g, gd, o.K.who)) { bump(S, 'heldSilent'); continue; }   // (the room fight's own three holds — silent.ts, the pair's 'watch him', spotted.ts: a round held at a man in sight is held at the wall he stepped behind)
     Cw = choose(g, S, gd, o.K, o.call, false); if (Cw) { who = o.K.who; if (o.call) heard(S, gd, o.K); break; }
   }
   if (!Cw || !who) return false;
   const to = Cw.to, P = AIM.guard, Sk = FIGHT_SKILL.operative; const dist = flat(c.pos, to);
   if (!coverLane(g, gd, c.muzzle, to)) { bump(S, 'heldFriend'); return false; }   // (not his round: his order's own watch goes on)
-  if (who !== 'player' && silentGlassHolds(g, gd, who, c, to)) { bump(S, 'heldSilent'); return false; }   // (silent.ts: standing glass on the way to that cover and the man has raised no alarm — a silent squad breaks no pane for it)
+  if (who !== 'player' && silentHoldsGlass(g, gd, who, c, to)) { bump(S, 'heldSilent'); return false; }   // (silent.ts: standing glass on the way to that cover and the man has raised no alarm — a silent squad breaks no pane for it)
   const brg = point(to);
   const on = Math.abs(wrapAngle(brg - c.aimYaw)) < P.onDeg * DEG + Math.atan2(0.35, Math.max(dist, 0.3)) && v3.dist(O.aim, to) < 0.3 && !gd.muzzleDown;
   const settle = Math.max(P.settleSecs, 1e-3) * clamp(dist / Math.max(P.rangeRef, 0.1), P.nearK, 1) * Sk.settleK;

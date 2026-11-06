@@ -34,7 +34,7 @@ const g = W.game, level = W.level, nav = g.col.nav, M = level.mission;
 for (let i = 0; i < 30; i++) W.step(1 / 60);
 // the lights put out for this map: the breaker's (everything on the mains), and the named ones
 const out: string[] = [];
-for (const t of g.targets as any[]) { const kill = OFF.has(t.name) || (has('--blackout') && t.mains !== false && t.kind !== 'device'); if (kill) { t.broken = true; out.push(t.name); } }
+for (const t of g.targets as any[]) { const kill = OFF.has(t.name) || (has('--blackout') && t.mains !== false && t.kind !== 'device'); if (kill) { g.lightHome.stage(t, null, true); out.push(t.name); } }
 if (has('--blackout') && g.blackout) { try { const { setBlackout } = await import(`${ROOT}/src/game/lighting.ts`); setBlackout(g, true); } catch { /* an older build: the targets broken above stand in */ } }
 for (let i = 0; i < 240; i++) W.step(1 / 60);
 

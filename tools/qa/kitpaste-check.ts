@@ -16,6 +16,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT } from './headless.ts';
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { WAND } = await import(`${ROOT}/src/game/wand.ts`);
@@ -157,12 +158,12 @@ export async function pasteCases(): Promise<boolean> {
   return F.done();
 }
 
-export async function kitpasteCheck(only?: string): Promise<boolean> {
+/** the file's probes, by the names the runner calls them (the holds each is owed — the card's one gun row, the table's layout — are tools/qa/holds.ts's) */
+const PROBES = { 'kitpaste-fit': pasteFit, 'kitpaste-cases': pasteCases };
+async function kitpasteCheck(want: readonly string[]): Promise<boolean | null> {
   console.log(`kitpaste-check on the ${STAND.toUpperCase()} stand (it sets the card's rules itself, each way)${BROKEN ? ' — KITPASTE_BREAK=1: a paste writes the copied card unfitted, the lines below must FAIL' : ''}`);
-  let ok = true;
-  const parts: [string, () => Promise<boolean>][] = [['fit', pasteFit], ['cases', pasteCases]];
-  for (const [name, fn] of parts) if (!only || only === name) ok = (await fn()) && ok;
-  console.log(`\nkitpaste-check (${STAND} stand): ${ok ? 'ALL PASS' : 'FAILED'}`);
+  const ok = await asProbes(PROBES, want);
+  console.log(`\nkitpaste-check (${STAND} stand): ${ok === null ? 'NOTHING RAN' : ok ? 'ALL PASS' : 'FAILED'}`);
   return ok;
 }
-if (import.meta.main) { const ok = await kitpasteCheck(process.argv[2]); process.exit(ok ? 0 : 1); }
+if (import.meta.main) process.exit(exitCode(await kitpasteCheck(wanted())));

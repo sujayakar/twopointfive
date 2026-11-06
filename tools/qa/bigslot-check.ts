@@ -44,6 +44,7 @@
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { standUp, loadCharacter, ROOT } from './headless.ts';
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const BK = await import(`${ROOT}/src/game/bigkit.ts`);
@@ -811,20 +812,12 @@ export async function bigMoves(): Promise<boolean> {
   return F.done();
 }
 
-export async function bigslotCheck(only?: string): Promise<boolean> {
+/** the file's probes, by the names the runner calls them (the holds each is owed — the card's one gun row, the table's layout — are tools/qa/holds.ts's) */
+const PROBES = { 'bigslot-card': bigCard, 'bigslot-off': bigOff, 'bigslot-you': bigYou, 'bigslot-mate': bigMate, 'bigslot-shut': bigShut, 'bigslot-moves': bigMoves, 'bigslot-weight': bigWeight, 'bigslot-wiring': bigWiring };
+async function bigslotCheck(want: readonly string[]): Promise<boolean | null> {
   console.log(`bigslot-check on the ${STAND.toUpperCase()} stand${STAND === 'frozen' ? ' (the switch is held off there: the check raises it itself)' : ' (TPS_PROFILE=shipped: the page as it opens)'}${BROKEN ? ' — BIGKIT_BREAK=1: the tools do nothing to a lock, the lock lines below must FAIL' : ''}`);
-  let ok = true;
-  const parts: [string, () => Promise<boolean>][] = [['card', bigCard], ['off', bigOff], ['you', bigYou], ['mate', bigMate], ['shut', bigShut], ['moves', bigMoves], ['weight', bigWeight], ['wiring', bigWiring]];
-  // THE HOLDS THE RUNNER GIVES THESE PARTS (probes.ts GUN_ROW_AS_IT_WAS, DEAL_AS_IT_WAS), taken by the file itself so that it reads the same run alone as inside the
-  // gate: every part reads the card's one gun row (the two gun rows are gunslots-check.ts's), and the card part reads a teammate's card in the table's layout (the
-  // deal over the men who come is kitdeal-check.ts's). Held on EVERY stand, word and table both (a game stood up inside a part reads the word) — unless whoever runs
-  // the file set the word himself.
-  const holds: [string, { on: boolean }, (part: string) => boolean][] = [['TPS_GUNSLOTS', (await import(`${ROOT}/src/game/gunslots.ts`)).GUNSLOTS, () => true], ['TPS_KITDEAL', K.KITDEAL, part => part === 'card']];
-  for (const [name, fn] of parts) if (!only || only === name) {
-    const mine = holds.filter(([word, , of]) => process.env[word] === undefined && of(name)).map(([word, table]) => { const was = table.on; process.env[word] = '0'; table.on = false; return { word, table, was }; });
-    try { ok = (await fn()) && ok; } finally { for (const h of mine) { delete process.env[h.word]; h.table.on = h.was; } }
-  }
-  console.log(`\nbigslot-check (${STAND} stand): ${ok ? 'ALL PASS' : 'FAILED'}`);
+  const ok = await asProbes(PROBES, want);
+  console.log(`\nbigslot-check (${STAND} stand): ${ok === null ? 'NOTHING RAN' : ok ? 'ALL PASS' : 'FAILED'}`);
   return ok;
 }
-if (import.meta.main) { const ok = await bigslotCheck(process.argv[2]); process.exit(ok ? 0 : 1); }
+if (import.meta.main) process.exit(exitCode(await bigslotCheck(wanted())));

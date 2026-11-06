@@ -221,8 +221,9 @@ const VIEWS = {
       const near = d.walls.all().filter(w => w.kind === 'wall').map(w => ({ w, r: Math.hypot(w.box.c[0] - 9.7, w.box.c[2] - 10.0) })).sort((a, b) => a.r - b.r).slice(0, 2);
       const n0 = g.col.boxes.length, res = [];
       for (const { w } of near) { const b = w.box, thinX = b.h[0] < b.h[2]; res.push({ id: w.id, r: d.blast([b.c[0] + (thinX ? 0.3 : 0), 0.3, b.c[2] + (thinX ? 0 : 0.3)], { power: 1.5 }) }); }
-      let ticks = 0; while (g.reachPending && ticks < 20000) { g.reachTick(); ticks++; }   // the lights' reach masks all re-decided NOW, before the next frame is drawn: both builds then draw from the same masks whatever pace each lands them at
-      return (DE.notes.wall = { engine: true, on: d.on, res, statics: [n0, g.col.boxes.length], inventory: d.walls.inventory(), serial: d.walls.serial, reachTicks: ticks, reachLeft: g.reachPending }); },
+      let ticks = 0; const K = g.engine.reach, left = () => (K ? K.pending : g.reachPending); while (left() && ticks < 20000) { if (K) K.tick(); else g.reachTick(); ticks++; }   // (a build from before 11-05 keeps them in the Game: this rig draws both)
+      //   // the lights' reach masks all re-decided NOW, before the next frame is drawn: both builds then draw from the same masks whatever pace each lands them at
+      return (DE.notes.wall = { engine: true, on: d.on, res, statics: [n0, g.col.boxes.length], inventory: d.walls.inventory(), serial: d.walls.serial, reachTicks: ticks, reachLeft: left() }); },
     expect: (F) => { const u = [], W = F.notes && F.notes.wall; if (!W || !W.engine) u.push('no wall-breaking engine on this build'); else { if (!(W.serial > 0)) u.push('no wall changed'); if (!(W.statics[1] > W.statics[0])) u.push('no static appended'); } return u; },
   },
   'weather': {
@@ -284,7 +285,7 @@ async function captureView(name, opt, outDir) {
     page.on('requestfailed', r => R.errors.push(`request failed: ${r.url()} — ${r.failure() ? r.failure().errorText : '?'}`));
     page.on('response', r => { if (r.status() >= 400) { const u = r.url(); if (/favicon/.test(u)) R.notes.push(`${r.status()} ${u}`); else R.errors.push(`http ${r.status()}: ${u}`); } });
     page.on('pageerror', x => R.errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 800)));
-    R.url = `http://localhost:${opt.port}/?paused&quality=${opt.quality}&mute${V.query ? '&' + V.query : ''}${opt.with ? '&' + opt.with : ''}`;
+    R.url = `http://localhost:${opt.port}/?paused&quality=${opt.quality}&mute&planpace=old${V.query ? '&' + V.query : ''}${opt.with ? '&' + opt.with : ''}`;   // (planpace=old: the picture's planners whole on their frame, as they were. Under the page's pace a plan lands when the clock lets it, and a pinned frame must not ask the clock: render/planPace.ts)
     log(name, 'goto', R.url);
     await page.goto(R.url);
     const ready = await page.evaluate(async () => { await window.__ready; return { fatal: (document.getElementById('fatal') || {}).textContent || '', pipelines: window.__boot ? window.__boot.pipelines : null }; });

@@ -19,7 +19,9 @@
 // defenders make of a lane nobody is on any more (a look round the corner: lanes.ts LANES.peek).
 // Exit 0 always (a measuring tool; tools/qa/corridor-check.ts is the verdict), 2 on bad flags.
 import { writeFileSync } from 'node:fs';
-import { lanesStats, laneHolds } from '../../src/game/lanes';
+import { lanesStats } from '../../src/game/lanes';
+import { gunKeepsPost } from '../../src/game/gunroles';
+import { hasHim, OWN } from '../../src/game/owner';
 import { FRAG_LOG, FRAG_STATS, fragStatsReset } from '../../src/game/frag';
 import { doorwayInWay } from '../../src/game/doorway';
 if (import.meta.main) process.env.TPS_PROFILE ??= 'shipped';   // (run by name: the stand the page ships. Imported — corridor-check, probes.ts — it plays on the importer's stand: headless.ts reads the word as it loads)
@@ -134,7 +136,7 @@ export async function holdRun(scn: string, seed: number, secs = SECS, set = SET,
           say(`  ${t.toFixed(1).padStart(6)}  ✖ ${h.callsign} down ${at(w.p)} · ${k.doing} · ${k.inLine ? 'IN the holders\' line' : 'out of their line'} · ${k.off} m from his start`);
         }
         if (up) { (h as any).__doing = doing(h);
-          if (w && flat(p, w.p) < 0.02 && laneHolds(g, h)) { out.stops.held += 0.1; if (doorwayInWay(g, p as any)) out.stops.door += 0.1;
+          if (w && flat(p, w.p) < 0.02 && (gunKeepsPost(h) || hasHim(h, OWN.lane))) { out.stops.held += 0.1; if (doorwayInWay(g, p as any)) out.stops.door += 0.1;
             if ([g.player.char, ...team().filter(o => o.state !== 'dead').map(o => o.char)].some(c => !col.shotBlocked(eye(c), chest(h.char), undefined, 1))) out.stops.shot += 0.1; }
           const moved = w ? flat(p, w.p) / 0.1 : 0, offPost = flat(p, home.get(h) ?? p) > 2.5;
           if (line && !(w?.line) && offPost && moved > 0.4) {

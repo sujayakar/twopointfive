@@ -38,6 +38,7 @@
 // how many) and the game's own books. Every switch and table a probe writes (KITANIM, KIT, MOVES.on, CLOSE.on, Math.random) is put back by keep(); KITANIM_STATS /
 // KITANIM_LOG are the process's: no probe reads their totals — only whether the counters moved over its own run, and the log's newest row by identity.
 import { standUp, ROOT } from './headless.ts';
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { KITANIM, KITANIM_STATS, KITANIM_LOG, kitInHand, kitLockMax, kitCloseness, kitSlingFront, kitSlingRest } = await import(`${ROOT}/src/game/kitanim.ts`);
@@ -707,10 +708,8 @@ export async function kitNvProbe(): Promise<boolean> { return keep(async () => {
   return allPass;
 }); }
 export const KITANIM_PROBES = [['kitanim-off', kitOff], ['kitanim-equip', kitEquip], ['kitanim-midswap', kitMidswap], ['kitanim-reload', kitReloadProbe], ['kitanim-close', kitClose], ['kitanim-edges', kitEdges], ['kitanim-harness', kitHarness], ['kitanim-joints', kitJoints], ['kitanim-sling', kitSling], ['kitanim-nv', kitNvProbe]] as const;
-export async function kitanimAll(only?: string[]): Promise<boolean> {
-  let ok = true; const t0 = performance.now();
-  for (const [name, fn] of KITANIM_PROBES) { if (only?.length && !only.includes(name)) continue;
-    let r = false; try { r = await fn(); } catch (e: any) { console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); } ok &&= r; }
-  console.log(`\n=== kitanim: ${ok ? 'ALL PASS' : 'FAILURES above'} === (${((performance.now() - t0) / 1000).toFixed(1)} s)`); return ok;
+async function kitanimAll(want: readonly string[]): Promise<boolean | null> {
+  const t0 = performance.now(), ok = await asProbes(Object.fromEntries(KITANIM_PROBES), want);
+  console.log(`\n=== kitanim: ${ok === null ? 'NOTHING RAN' : ok ? 'ALL PASS' : 'FAILURES above'} === (${((performance.now() - t0) / 1000).toFixed(1)} s)`); return ok;
 }
-if (import.meta.main) process.exit((await kitanimAll(process.argv.slice(2).filter(a => a.startsWith('kitanim-')))) ? 0 : 1);
+if (import.meta.main) process.exit(exitCode(await kitanimAll(wanted())));

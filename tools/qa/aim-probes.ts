@@ -511,7 +511,7 @@ export async function aimSnap() {
     { // ---- kept while the camera settles: the cursor flicked onto a panel's dot and LEFT there — the aim point going up to the panel pans the picture under it
       const { W, game, input, pl, px } = await stage(943, [8.6, 0, 23.3], L0); const fails: string[] = [];
       const panel = game.targets.filter((t: any) => t.interactive && /^panel_/.test(t.name)).sort((a: any, b: any) => v3.distXZ(a.pos, pl.char.pos) - v3.distXZ(b.pos, pl.char.pos))[0];
-      panel.on = true; W.step(DT);   // (the lobby's panels are switched off at night: lit, so the OCP below has something to put out)
+      game.lightHome.stage(panel, true, null); W.step(DT);   // (the lobby's panels are switched off at night: lit, so the OCP below has something to put out)
       const q0 = px(panel.pos); input.mouseX = q0[0]; input.mouseY = q0[1]; let had = 0, drift = 0; const N = 90;
       const off = () => { const q = px(panel.pos); return Math.hypot(q[0] - input.mouseX, q[1] - input.mouseY); };
       for (let i = 0; i < N; i++) { W.step(DT); if (game.aimTarget === panel) had++; drift = Math.max(drift, off()); }

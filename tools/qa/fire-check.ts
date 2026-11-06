@@ -111,9 +111,9 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           `${beds.length} bed voices asked for in twenty seconds (one at the start and one every ${K.bedSecs} s makes ${wantBeds}), ${heldNow} held now, ${cracks.length} cracks in twenty seconds (the table's rate makes ${want.toFixed(0)}; the fire counted ${T.cracks})${cracks.length ? `, level ${Math.min(...cracks.map(c => c.gain)).toFixed(2)} to ${Math.max(...cracks.map(c => c.gain)).toFixed(2)}` : ''}`);
         // ---- out
         const none0 = mine(A).length;
-        t.on = false; t.broken = true; A.step(3); const n0 = (A.W.audioLog as any[]).length;
+        A.g.lightHome.stage(t, false, true); A.step(3); const n0 = (A.W.audioLog as any[]).length;
         A.step(6 * 60); const gone = (A.g.engine.fires ?? []).length, back = Math.hypot(l.pos[0] - t.pos[0], l.pos[1] - t.pos[1], l.pos[2] - t.pos[2]), quietN = (A.W.audioLog as any[]).slice(n0).filter(c => c.name === 'fireCrack').length, bedLet = beds[0]?.opts?.follow?.() ?? null;
-        const n1 = (A.W.audioLog as any[]).length; t.on = true; t.broken = false; A.step(90); const again = (A.g.engine.fires ?? []).length;
+        const n1 = (A.W.audioLog as any[]).length; A.g.lightHome.stage(t, true, false); A.step(90); const again = (A.g.engine.fires ?? []).length;
         const bed2 = (A.W.audioLog as any[]).slice(n1).filter(c => c.name === 'fireBed'), held2 = bed2.some(c => !!c.opts?.follow?.());
         verdict(A.sw && t.factor > 0.5 && gone === 0 && back < 1e-9 && quietN === 0 && bedLet === null && again === 1 && none0 === 0 && bed2.length >= 1 && held2,
           'out — the lamp put out: nothing handed to the renderer, no crack, the bed let go, the lamp back where the level hung it; lit again, it burns again and its bed is asked for again',
@@ -237,11 +237,11 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           // the fog itself raised, the squad where the mission starts it: nobody sees the yard
           FW.on = true; FOG.full = true; A.step(2); const known = rec();
           const c0 = [...(l.steady?.color ?? l.color)], r0 = (l.steady?.range ?? l.range) as number, W = [1, 0.72, 0.51]; FIRE.bright = 2; FIRE.reach = 1.4; FIRE.warm = [...W]; A.step(2);   // (a fire's lamp, to see what the fog remembers of it once it is out)
-          t.on = false; t.broken = true; A.step(1); const ghost = rec(), lamp = l.fogGhost ?? 0, far = Math.hypot(l.pos[0] - t.pos[0], l.pos[1] - t.pos[1], l.pos[2] - t.pos[2]), told = l.steady !== undefined;
+          A.g.lightHome.stage(t, false, true); A.step(1); const ghost = rec(), lamp = l.fogGhost ?? 0, far = Math.hypot(l.pos[0] - t.pos[0], l.pos[1] - t.pos[1], l.pos[2] - t.pos[2]), told = l.steady !== undefined;
           A.step(60); const ghost2 = rec();
           const heldAs = { I: l.fogGhost ?? 0, tint: l.color.every((v: number, i: number) => Math.abs(v - c0[i] * W[i]) < 1e-9), reach: Math.abs(l.range - r0 * 1.4) < 1e-9, at: Math.hypot(l.pos[0] - t.pos[0], l.pos[1] - t.pos[1], l.pos[2] - t.pos[2]) };
           FIRE.fog = false; fireDraws(A.g); const offGhost = rec(); FIRE.fog = true;
-          FW.on = fw0; FOG.full = full0; A.step(2); const out = rec(), let0 = l.color.every((v: number, i: number) => v === c0[i]) && l.range === r0 && l.steady === undefined; t.on = true; t.broken = false; levels();
+          FW.on = fw0; FOG.full = full0; A.step(2); const out = rec(), let0 = l.color.every((v: number, i: number) => v === c0[i]) && l.range === r0 && l.steady === undefined; A.g.lightHome.stage(t, true, false); levels();
           const k = (J as any).knobsSnapshot(A.g); FIRE.fog = false; (J as any).applyKnobs(A.g, k); const own = FIRE.fog;
           const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.fog; FIRE.fog = true; (J as any).applyKnobs(A.g, k2); const old = FIRE.fog;
           verdict(/^0@/.test(plainly) && /^1@/.test(relit) && /^1@/.test(offLit) && /^0@/.test(known) && ghost === '2@1.00' && ghost2 === '2@1.00' && Math.abs(lamp - t.baseIntensity * 2) < 1e-9 && Math.abs(far - FIRE.lift) < 1e-9 && told && Math.abs(heldAs.I - t.baseIntensity * 2) < 1e-9 && heldAs.tint && heldAs.reach && Math.abs(heldAs.at - FIRE.lift) < 1e-9 && let0 && offGhost === 'none' && out === 'none' && own === true && old === false,
@@ -343,8 +343,8 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         FIRE.bright = 2; FIRE.reach = 1.4; FIRE.warm = [...W]; FIRE.lift = table0.lift; FIRE.wander = table0.wander; FIRE.wanderUp = table0.wanderUp;
         let sum = 0, n = 0, told = true, tint = true, far = true;
         A.step(20 * 60, () => { m1 += lightEstimateAt(A.g, spot as any) / 1200; sum += l.intensity / base; n++; told &&= Math.abs((l.steady?.intensity ?? 0) - base * t.factor * 2) < 1e-9; tint &&= l.color.every((v: number, i: number) => Math.abs(v - c0[i] * W[i]) < 1e-9); far &&= Math.abs(l.range - r0 * 1.4) < 1e-9; });
-        t.on = false; t.broken = true; A.step(30); const back = l.color.every((v: number, i: number) => v === c0[i]) && l.range === r0 && l.steady === undefined;
-        t.on = true; t.broken = false; A.step(3);
+        A.g.lightHome.stage(t, false, true); A.step(30); const back = l.color.every((v: number, i: number) => v === c0[i]) && l.range === r0 && l.steady === undefined;
+        A.g.lightHome.stage(t, true, false); A.step(3);
         const k = (J as any).knobsSnapshot(A.g); FIRE.bright = 1; (J as any).applyKnobs(A.g, k); const own = FIRE.bright;
         const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.bright; delete k2.tables.FIRE.reach; delete k2.tables.FIRE.hardy; FIRE.hardy = true; (J as any).applyKnobs(A.g, k2); const old = [FIRE.bright, FIRE.reach, ...FIRE.warm, FIRE.hardy ? 1 : 0];
         verdict(A.sw && Math.abs(sum / n - 2) < 0.2 && m1 > m0 * 1.5 && told && tint && far && back && own === 2 && old.join() === '1,1,1,1,1,0',
@@ -362,7 +362,7 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         const log = A.W.audioLog as any[], n0 = log.length, fx0 = D.fixtureCount, by = [t.pos[0] + 1, 0.4, t.pos[2]];
         const fixture = D.fixtureLive(t), holds = fireHolds(t); D.bang(by, undefined, 1, false);
         fireStir(A.g, t); fireStir(A.g, t); fireStir(A.g, t); const queued = fireShown(A.g)?.stir?.length ?? 0, lit = !t.broken;
-        const twin = { ...t, pos: [t.pos[0] + 3, t.pos[1], t.pos[2]] }; A.g.targets.push(twin); fireStir(A.g, twin); const both = fireShown(A.g)?.stir?.join() ?? ''; A.g.targets.pop(); { const st = fireShown(A.g)?.stir; if (st) st.length = queued; }   // (a second fire, stood in for the one call: each fire has its own gap)
+        const twin = Object.create(t, { pos: { value: [t.pos[0] + 3, t.pos[1], t.pos[2]] } }); A.g.targets.push(twin); fireStir(A.g, twin); const both = fireShown(A.g)?.stir?.join() ?? ''; A.g.targets.pop(); { const st = fireShown(A.g)?.stir; if (st) st.length = queued; }   // (a second fire, stood in for the one call: each fire has its own gap)
         A.step(60);
         const burning = (A.g.engine.fires ?? []).length, stirred = log.slice(n0).filter(c => c.name === 'fireCrack' && c.opts?.rate === 0.7).length, counted = D.fixtureCount - fx0, left = fireShown(A.g)?.stir?.length ?? 0;
         // (a real round into the drum, by the newer lamp search and by the older one: each stirs it and neither puts it out)

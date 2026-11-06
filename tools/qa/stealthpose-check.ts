@@ -16,6 +16,7 @@
 // `bones.chest` are from the switch-off run (2 cm; outside the look itself, where his head really is lower). Run it on both stands (plain, and TPS_PROFILE=shipped): it writes the switch
 // itself for each arm. The stagings are tools/qa/stealth-strip.ts's own.
 import { standUp, ROOT } from './headless.ts';
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { STEALTHPOSE } = await import(`${ROOT}/src/game/stealthpose.ts`);
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { KITANIM, KITANIM_STATS } = await import(`${ROOT}/src/game/kitanim.ts`);
@@ -257,11 +258,11 @@ export async function stealthposeHarness(): Promise<boolean> {
   return F.done();
 }
 
-const SUBS: Record<string, () => Promise<boolean>> = { harness: stealthposeHarness, off: stealthposeOff, idle: stealthposeIdle, walk: stealthposeWalk, rise: stealthposeRise, creep: stealthposeCreep, cable: stealthposeCable, standdown: stealthposeStanddown };
+/** the file's probes, by the names the runner calls them */
+const SUBS: Record<string, () => Promise<boolean>> = { 'stealthpose-harness': stealthposeHarness, 'stealthpose-off': stealthposeOff, 'stealthpose-idle': stealthposeIdle, 'stealthpose-walk': stealthposeWalk, 'stealthpose-rise': stealthposeRise, 'stealthpose-creep': stealthposeCreep, 'stealthpose-cable': stealthposeCable, 'stealthpose-standdown': stealthposeStanddown };
 if (import.meta.main) {
-  const want = process.argv.slice(2).filter(a => !a.startsWith('-')), unknown = want.filter(w => !SUBS[w]);
-  if (unknown.length) { console.log(`unknown: ${unknown.join(' ')} (one or more of: ${Object.keys(SUBS).join(' ')})`); process.exit(2); }
   if (BREAK) console.log("STEALTHPOSE_BREAK=1: the switch is left OFF in the 'on' arm — the idle / walk / rise / creep / cable / standdown lines must fail");
-  let ok = true; for (const k of want.length ? want : Object.keys(SUBS)) ok = await SUBS[k]() && ok;
-  console.log(ok ? '\n=== stealthpose: ALL PASS ===' : '\n=== stealthpose: FAILED ==='); process.exit(ok ? 0 : 1);
+  const ok = await asProbes(SUBS, wanted());   // (a name the file has not: said, nothing run, exit 2)
+  if (ok !== null) console.log(ok ? '\n=== stealthpose: ALL PASS ===' : '\n=== stealthpose: FAILED ===');
+  process.exit(exitCode(ok));
 }

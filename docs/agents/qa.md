@@ -5,7 +5,29 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 244–260 -->
-- **THE HARNESS HAS TWO STANDS, AND ONE LIST OF WHAT SEPARATES THEM** (`src/host/profile.ts`). FROZEN (the default) = the stand every frozen digest, tally, probe bound and session
+- **THE HARNESS STANDS THE GAME AS THE PAGE OPENS IT (2026-11-05; the maintainer ruled that the frozen stand may be retired).** With no word in front a
+  headless tool is on what the bullet below calls the SHIPPED stand. THE RULE IS ONE FUNCTION, `standOf` in the import-free `src/host/standEnv.ts`: no
+  word or `TPS_PROFILE=shipped` = the page's stand, `TPS_PROFILE=frozen` = the old one, any other word stops the tool. `harnessProfile()`
+  (`src/host/profile.ts`) is that function over the environment, and `tools/qa/stand.ts` writes the word down as it loads, for the tools that read it
+  themselves and for a child. A TOOL THAT READS `process.env.TPS_PROFILE` IMPORTS `stand.ts` STATICALLY (or `headless.ts`, which does): a static import
+  loads before the file's own lines, so no tool reads "no word" and calls the page's stand frozen; `shipped-check.ts` is red on one that does not
+  (`STAND_BREAK=1` is its red path; it reads text, so a tool that CLEARS the word for a child is not seen by it). A check is run ONCE.
+  THE OLD STAND is one word, `TPS_PROFILE=frozen`: every newer rule held off as below, kept reachable for the switch cleanup until the off paths are gone
+  (the retire tool's proofs, `stand-bisect.ts`); the process the word is given to says so once on stderr. A TOOL THAT WANTS THE OLD STAND OF A CHILD SAYS
+  THE WORD: giving a child no word asks for the page's (`rerun.ts` for a tape made on the old stand, `rust-check.ts`'s old-stand arms, `lesson-gate.ts`'s
+  frozen runs, `ships.ts` / `kit-cells.ts` / `solo-night.ts` `--base`, `blast-frame.ts --arm round1` all say it). NO NEW FIXTURE IS RECORDED ON IT. What
+  that leaves: (1) the recordings that were made on it are taken again on the page's stand, each by its owner in a commit of its own: `ident-pin.ts`
+  records on the stand a family names (`hold({ stand })`: the page's for a tool that says `stand: 'shipped'`, which is the glass's `pane-words.json` from
+  the commit after step 1572, then the layers' `layer-words.json` and the senses' `sense-words.json` as each owner's commit lands; the old one until a
+  family says), and `rust-check.ts` asks a family's child on the stand its recording is of. A RUN OF AN IDENT THAT IS HELD TO NOTHING FAILS, said as
+  NOT HELD, unless the tool or its caller says the word (`unpinned`, `--unpinned`: `docs/agents/rust.md`, "What holds a family once its TypeScript is
+  gone"); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
+  hold nothing on a run with no word, and say so; (2) a check that was green on the old stand and red on the page's is red in a plain run now:
+  `tools/qa/expected-red.ts` is where each is named with its cause and whose it is (its page-stand rows are a plain run's rows now); (3) headers that say
+  "frozen by default" or "run it on BOTH stands" are older than this: once, with no word. Proof of the flip itself: `stand-dump.ts` with no word after =
+  with `TPS_PROFILE=shipped` before, and with `TPS_PROFILE=frozen` after = with no word before, byte for byte. The rest of this file, and the area files,
+  still say "the frozen stand" and "the shipped stand" of what was measured where: read "shipped" as "a plain run".
+- **THE HARNESS HAS TWO STANDS, AND ONE LIST OF WHAT SEPARATES THEM** (`src/host/profile.ts`; since 2026-11-05 the default is the SHIPPED one: the bullet above). FROZEN (the default until then) = the stand every frozen digest, tally, probe bound and session
   fixture was recorded on: `src/host/standup.ts standGame({harness})` and `tools/qa/headless.ts` hold the newer rules off, each line behind `pinned('<its env word>')`. SHIPPED
   (`TPS_PROFILE=shipped` in front of any headless tool) = the page as it opens with no URL flag on a machine that has kept nothing: none of those lines runs, `shippedBoot()` calls
   `pageSwitches('')` — THE function `src/main.ts` calls with the page's own query for the switches its boot writes (destruction, furniture, wall reactions, wall charge, the door
@@ -447,6 +469,24 @@ but synthetic writes still work.
   draws the same dice and makes the same calls after the fold as before it, that the folded tree compiles, and that what names a retired row is gone while
   what only looks like it is not; `RETIRE_BREAK=1` folds one row at the wrong value and must fail. A shape the tool folds wrongly goes into the fixture as a
   case first. Memory: a hundred rows at once is about a minute and 4 GB; all of a family's rows go in one run, not all families in one.
+- **A switch that only moves WHEN something lands is still a switch** (11-05; the planners' pace, after the multiplayer goal's read). `PLAN_PACE`
+  (`src/render/planPace.ts`, the page's `?planpace=old`) was first read by `main.ts` alone and kept out of the registry as a picture's pace. That is a
+  special case with a cost: a word `main.ts` reads by itself is in no recipe and no recording, and a server's stand (`tools/mp/stand.ts`:
+  `shippedBoot` and `pageSwitches`) never reads it, so a host's page and its server can stand differently. So it is registered like any other: read in
+  `pageSwitches`, a `FROZEN_HOLDS` row (`TPS_PLANPACE=1 (a picture only)`), `STAND_ENV`, the knob registry, `JOURNAL_KNOBS`, and `applyKnobs` puts it
+  down for a file with no table for it; `openings-check` holds all of that on both stands. THE RULE FOR THE NEXT ONE: any word that moves when
+  something runs or lands, in the tick or in the picture, goes through `pageSwitches` and the registry; `main.ts` reads no such word by itself.
+  `REACH_PACE` (`src/render/reach.ts`, `?reachpace=old`) was the same case and is registered the same way, in a commit of its own: the game's tick
+  reads it (to pace the lamps' reach masks, which are the picture's: no sense, rule or run digest reads them, and the 42 play-through digests are the
+  same with it forced either way on both stands), so a host's page and its server paced that bookkeeping differently. It is the same on both stands
+  with no word (the shares), so it has no `FROZEN_HOLDS` row. SINCE THE MASKS LEFT THE TICK (11-05, `render/reachKeep.ts`; `docs/agents/render.md`)
+  NEITHER `?reachpace` NOR `?planpace` DECIDES ANYTHING INSIDE THE TICK: the picture's keeper paces the masks on drawn frames, and a stand with no
+  picture (the harness, a server) makes no mask and never reads `REACH_PACE`. Both stay registered: a recording still says which pace its page drew at.
+  `?planpace=old` is also the masks' step on the count of sight-line steps (`ReachKeep.tick`, `REACH_PACE.steps`) and not on the clock (`tickTimed`, `KEEP_MS`): a
+  page rig that must land masks on fixed frames asks for it, as it does for the planners. A PAGE RIG RUNS THE PAGE, where the planners' pace is on and its allowance is the
+  clock's: after the first six drawn frames a plan lands when the clock lets it. A rig that reads a frame a fixed number of frames after a door or a
+  wall changes puts `planpace=old` on its address (`tools/qa/draw-equal.cjs` does). Neither word is a visit's flag: a joiner's page takes the
+  recipe's. `docs/agents/render.md` has both rules.
 - **Not every `FROZEN_HOLDS` word is a `TPS_` word** (10-13, read off `src/host/profile.ts`; the knob registry's owner's note). Raised by a word of their own: the door rules
   (`ONEWAY=1`, `QA_FRAMEHOLDS=1`, `QA_DOORMANNERS=1`, `QA_DOORBLAST=1`, `QA_DOORSTAY=1`), `SLOTS=on`, `CUTBOXES=1`, `GLASSFX=on` (three rows), `SQUADS=radiocheck-call` (three
   rows). No word under probes.ts at all: `DESTRUCTION.on`, `RUBBLE.on`, `EVICT.on` (`PT_DESTR` / `PT_KICK` / `PT_POP`, playthrough.ts alone), `FRAG.defenders` (`--set`),
@@ -955,3 +995,129 @@ but synthetic writes still work.
   the browser, short stays or full. Why those three, nobody knows; it is the driver's and nothing of the game's. So: A WARM BOOT TIMED ON A CLOUD BOX
   IS NOT TO BE TRUSTED BEFORE ITS FOURTH VISIT, and it says how the driver's cache behaves there, NOT whether a player's browser keeps its shaders. On
   Windows Chrome's own store is what has to hold them and is too small for this game (the shader rows above); on an Apple chip nobody has looked.
+- **A game stood up has done with the last one: `standUp` asks for a full collection first** (2026-11-05; `tools/qa/headless.ts STANDUP_COLLECTS`; the
+  harness only, nothing of the game). FOUND by the merge: the workers of `bang-tally.ts` (the `flashweight` family's tally, missions back to back in one
+  process) grew about 1.6 GB a minute on the page's stand and two died at a 12 GB limit; old, on every build looked at. Reproduced here: one worker from
+  0.4 GB to 6.4 GB in two and a half minutes. WHAT IT IS NOT: a mission's world being held, or the tally. After ONE forced full collection a process that
+  has played forty-two missions over twenty-one scenarios is 350 to 450 MB, the size of one that has played two. WHY THE GAMES STAY: these tools run a
+  whole batch without once going back to the event loop (every `await` is on work already done), and that is where bun's collector does its full
+  collections from; so a dropped game (30 to 45 MB of heap a mission on the page's stand, about 7 on the frozen one) stays as garbage, and the heap
+  itself grows, not only what lies outside it. Shown both ways: with no collection asked, ONE turn of the event loop between bare stand-ups holds the
+  heap as well as the collection does (growth 29 to 38 MB over 25 games against 141 to 184); between missions it gives two to five times less growth,
+  the collection ten times less.
+  THE CURE is in the one place every tool stands a game up: `Bun.gc(true)` at the head of `standUp`, from a process's second stand-up on. The same
+  worker then stays under 0.8 GB (nine minutes, four workers at once). WHAT IT COSTS: about 50 ms a stand-up, more with a bigger live heap (0.2 s at
+  worst seen): the doors family, 247 stand-ups, paid 12 s of 381; a loop of bare stand-ups is 6 to 10 % slower; missions of a second or more are not
+  slower for it (32 tally missions: 91 s with it, 93 without). `QA_STANDUP_GC=0` = the stand-up as it was, for measuring; any other value but `1`
+  stops the tool. It does nothing for garbage that is not a dropped game (a single long game's own: one game restarted in place thirty times grows
+  77 MB uncollected on the frozen stand and is 112 MB after one collection).
+  **Check**: `bun run tools/qa/standupgc-check.ts` (`probes.ts standupgc`, family `perf`, run as a process of its own), both stands, about 8 s:
+  twenty-five games stood up back to back, twenty steps each, nothing collected by the script, the word unset as every tool runs; the heap may grow
+  60 MB from the second game to the last. Measured: 28 MB (frozen) and 32 (the page's stand) with the collection, 141 and 184 without. A second line:
+  a spelling of the word the harness does not know stops the tool by name. `STANDUPGC_BREAK=1` (the script under `QA_STANDUP_GC=0`) must fail.
+  WITH IT IN, green on this machine: the `checkpoints` (13 probes), `replay` and `journal` families on the frozen stand and `rollback-check` whole on
+  both. Nothing a game can observe depends on when a collection runs (the one `WeakRef` user in the simulation's folders, `math/side.ts`, is read
+  through reachability by the rollback).
+  THE PAGE: not this. In a browser a mission is a page load and its world goes with the page; the page's own way to play again without a load, the
+  restart in place, keeps nothing (one game restarted thirty times with four seconds of play between: 116 MB to 121 after a full collection, the
+  page's stand). Nobody has watched a browser's heap through a long session; nothing here says it grows. A TOOL THAT KEEPS GAMES ALIVE ON PURPOSE
+  (two stood side by side, a list of them) is not helped by this and is as big as its games.
+- **`tools/qa/settings-check.ts`: THE PICTURE'S SETTINGS ARE NOT THE GAME'S** (2026-11-05; the rule and its first two numbers: `docs/agents/net.md`, "A
+  player's Brightness is his picture's alone"). A read of a setting of the engine's by a file under `src/game` is red unless it has a row saying why
+  (the picture's own, carried by a recording, or to move, with a date). Its static lines run as `probes.ts settings-reads` (family journal, so every gate
+  that runs journal runs them); run the whole check after adding a setting a player can move. `QA_PICTURE='{"key":value}'` in front of any headless
+  tool plays it with a player's settings laid over the stand-in engine's (a key the engine has no setting for is refused by name).
+- **A check run as a file and run by the runner stand on one stand: `tools/qa/holds.ts`** (2026-11-05; tools only, no rule of play). Some probes were written
+  against a rule's build before it (a card's one gun row, the grab on its key, the knife) and run with the newer rule held off on EVERY stand. The runner
+  (`probes.ts run`) held those rows by the probe's NAME, in fifteen lists of its own; a check file's own main held nothing. So on the page's stand a check was
+  red run as a file and green in its family: `sticky-check.ts` and `reachup-check.ts` were found so on one day, and of the 22 check files with a main of
+  their own that hold such a probe, 18 said other lines alone than by their family names (frozen: the same both ways, since the rows are off there anyway).
+  NOW: the lists are ONE table in `holds.ts` (`HOLDS`; a row keeps its list's old name, `GRAB_ROW_AS_IT_WAS` …, which is what the area files call it by;
+  its probes are written as names, not a pattern: `'reachup'` that probe, `'close-*'` every probe that begins so, `'sticky(-*)'` both),
+  `holdsOf(name)` says what a probe is owed, and `asProbe(name, fn)` is the one way a probe is run under it: the holds, and round them the runner's fence
+  (every knob table copied and put back, the cut-pieces switch, the plain night's card, the loud card first). `probes.ts run` calls it for every probe; a
+  check file's main calls it too — `asProbe('reachup', reachUpCheck)` for one probe, `asProbes({ 'sticky-kit': stickyKit, … }, wanted())` for a file of
+  several (parts by name, whole or without the family: `sticky-check.ts kit`; a name the file has not is said and exits 2, where seven of these mains ran
+  nothing and exited 0). `holdOff(heldList('<ROW>'))` holds one row round a block of a check's own lines (`lesson-check.ts`). A word whoever runs the tool
+  set himself wins: `=1` is his to ask, anything else is the hold itself (a stand-up raises a row for `1` alone), so a child of a held probe stands where
+  its parent stands.
+  A NEW ROW OF THE TABLE, OR A NEW MAIN IN A FILE THAT HOLDS A PROBE OF THE TABLE, is red in `bun run tools/qa/holds-check.ts` (`probes.ts holds`, in the
+  quick gate; seven lines, the same on both stands; `HOLDS_BREAK=1` = 4 FAIL) until that main runs the probe through `asProbe` by its name: the table's
+  rows are switches the registry has under the words `FROZEN_HOLDS` gives them, every held probe of the runner runs with its words at 0 and its rows off and
+  both are back after, the fence puts back what a probe wrote, a file's table of its probes has each name beside the function the runner calls for it, no
+  name in the table is one the runner no longer has, and `probes.ts selftest-holds` asks the runner's own `run()`. WHAT IT CANNOT SEE: that every arm of
+  a main goes through the call (it reads the file's text); a check file none of whose probes is in the table (some three hundred have a main of their own:
+  run alone their parts have no fence between them, as before); and a dispatch line in a shape it does not read is said, not guessed (write the name and
+  the import on one line). ONE THING THE RUNNER STILL DOES MORE: it fails a probe that prints a FAIL or an error line and returns true; a file's own exit
+  code is what its probes return. WHEN A HELD ROW RETIRES its line of the table goes with it (`holdOff` stops by name
+  on a row the registry has not) and the probes it held are restaged or lose their old-card lines.
+  MEASURED on the batch-two cut with the stand-up's collection on it, 24 files (the 22, and `doortools-probes.ts` and `shotgun-probes.ts`, which can now be
+  run alone), each alone and by its probes' names, PASS and FAIL lines compared: the same both ways on the page's stand, 24 of 24, and on the frozen stand,
+  24 of 24; the runner's lines before against after, 22 of 22 on each stand; `lesson-check.ts` 112 lines the same before and after on both; the new table
+  against the old lists, every one of the runner's 1515 names owed the same words; the files' 24 break words (`STICKY_BREAK`, `REACHUP_BREAK`,
+  `BIGKIT_BREAK` …) each still red, alone, on both stands. Still red both
+  ways on the page's stand, old and not this change's: `gunhold-cover` (its round line) and `noshove` (the room keeper). Also mended on the way:
+  `shotgun-probes.ts --identity` printed its word without the staging the probe reads it under (`COVER.backKeep` held off on the frozen stand), and
+  `doortools-probes.ts tally` printed "room's men down N/0" (the count's statement had been swallowed by a comment on its line).
+- **Every GPU pass has a timer, or a row that says why not (2026-11-05).** `bun run tools/qa/passtimer-check.ts` (`probes.ts passtimer`, families `perf`
+  and `render`, a process of its own, under a second; the same on both stands: it reads text). It reads every `beginComputePass(` and
+  `beginRenderPass(` under `src/` (notes blanked as a compiler meets them, strings stepped over), and each must carry `timestampWrites` in its own descriptor or have its file
+  and label in `tools/qa/passtimer-exempt.ts` with a reason of some length; a row no pass uses is red too. Both the reader and the judge are tried on
+  lines of the check's own first. `PASSTIMER_BREAK=1` (the table read as empty) must fail. ADDING A PASS: hand its descriptor
+  `timestampWrites: ts?.('name')`, the engine's `ts` handed in (`docs/agents/render.md`, GPU timing), and say `timer.idle('name')` on a frame it rests; or add the row. Why it exists, and what was measured:
+  that same section.
+- **DOOR TALLIES BEFORE AGAINST AFTER: `tools/qa/bang-tally-diff.ts <scenario> --before <a worktree of the commit before>`** (2026-11-05; tools only; it
+  DECLARES and gates nothing: it is in no family and no gate's list; `--self` checks its arithmetic in a second). For a step that adds or moves a solid
+  thing that stops feet (over 0.19 m) near a door. WHY: a log laid across two others by the pass's chopping block shut a square metre of the walk grid
+  in front of two doors, no check of a dressing saw it (`lived-stack-check` reads where a stack STANDS, `wallfurn-check` where a charge goes), and
+  `bang-tally.ts`'s rows read by eye on 24 seeds then blamed one door and a direction that 48 seeds did not bear out. THE RULE: it plays the tally on
+  the scenario in both trees, the plain door and the bang at every door of every held room, and reads door by door over the entries both trees played
+  (it puts `TPS_PROFILE=shipped` in front of every tally it plays, so a BEFORE tree from before one stand is read on the page's stand too). An entry went
+  WORSE (the room no longer held, or the same ending and more men lost) or BETTER; an arm's `chance` is the exact two-sided sign test on that split.
+  TWO BLOCKS: an arm at 1 in 20 or less on seeds 1-24 is SUSPECT; then (or when an arm has some but under `FEW` = 12 common entries), and only then,
+  seeds 25-48 are played in both trees and a door is NAMED when an arm is at 1 in 200 or less over all 48 (`SUSPECT_P`, `NAMED_P`; `--more none` makes
+  one block the whole reading). An entry that was made before and cannot be made now (no floor outside the door for the team, or an order taken before
+  and refused now) names its door outright, and its line says how many of those were staged on other floor. A tally already played is taken as its JSON
+  (`--before a.json,b.json`) and held to what it says of itself: every run it was asked given back, none thrown, the page's stand, no knob set, not
+  crated, each seed once, a block whole or not at all. `--keep dir` keeps what it plays. Five minutes a tree a block at four jobs on an idle machine; a
+  tree from before the stand-up's collection (`standUp`, above) loses workers past about six seeds a process, so play it in pieces and hand over the
+  JSON (a short one is refused, not read). Exit 0 no door named · 1 a door named · 2 usage · 3 NO READING (a suspect door not read further, nothing
+  both trees played, a door in one tree only, a tally not whole, a checkout that changed while it was played).
+  THE SAME ENTRY IN BOTH TREES. The tally stands the team on free floor 2.4 to 6.2 m out from the door and Sam beside them, and takes anybody with a
+  line to them off the floor, so a thing laid there changes the STAGING, and two trees staged differently did not fight the same entry. `bang-tally.ts`
+  writes into every result its staging (`at`: the spots, Sam's last, and how many were taken off the floor) and what became of the entry as a word
+  (`outcome`: played, refused, no-floor, nobody, threw), and takes another tree's staging (`--stand-as`) wherever every spot of it is free floor. The
+  reader stands the AFTER tree as the BEFORE tree stood each entry, prints door by door how many entries were `staged alike`, and a verdict on a door
+  that could not be stood alike says so. A tally handed over as JSON was staged as it was. A tally from before `outcome` is read by its notes and cannot
+  say a refusal (such an entry is a fight to it, as to the tally's own table), so no door is named for a refusal one of the two could not say.
+  WHAT A NAMED DOOR SAYS, AND DOES NOT. It says the entry at that door comes out differently after the change, more often one way than chance allows,
+  on that tree; staged alike, the difference is in the walk and the fight. It does not say why: the verdict's line gives the commands that print one
+  moved entry as it was counted (`bang-tally.ts trace <scenario>:<door>:<arm>:<seed>:<room>`, with `--stand-as` in the after tree), to read in both
+  trees before a cause is written. THE WORKED CASE, the pass's bunk room door, the log across the pile against the log on the block. Each tree on its
+  own staging (19707a2b): NAMED over 48 seeds, the bang 4 worse and 18 better (the team's loss 50 to 34 of 192; 1 in 230), the plain door 6 and 17. The
+  four men stood on the same spots in both trees and never crossed the log's cell; Sam's spot (23.80, 12.65) lay IN it, and with the log there he was
+  stood at (23.25, 13.25). Stood alike (62006070, 48 seeds, Sam on that spot in both trees, 48 of 48 staged alike): 14 worse and 12 better, 12 and 13:
+  nothing. What had been named was where an unseen Sam stood, 0.8 m. The other way round (the log laid by the step, so that Sam's spot is shut after
+  it) the door cannot be stood alike, 0 of 24, and its line says so.
+  WHY NOT A MARGIN: the tool's first form named a door when losses rose in six more entries of 24 than they fell. Measured on one tree's own tallies with
+  its 48 seeds split at random 24 against 24 (3000 splits each of three trees: no change at all, only other dice), that rule named a door in 84 to 88 %
+  of splits. A door's entries, once re-rolled, scatter that much. On the same splits the sign test has a suspect arm in 31 to 35 % and an arm at 1 in 200
+  on one block in 3 %. HOW OFTEN THE TWO BLOCKS CRY WOLF, by the binomial (each moved entry a fair coin): a step that re-rolls nine door arms (the pass's
+  case) plays the second block 1 time in 5 and names a door 1 time in 70; one that re-rolled all twenty, 4 in 10 and 1 in 24. WHAT IT MISSES: a true
+  nine-to-one effect at a door where four entries in ten move is named 7 times in 10, a four-to-one effect 3 in 10. A door NOT named is not a door
+  proved untouched.
+  MEASURED on the pass (`pass-four`), each reading on the commit it names. A crate far from every door (19707a2b), the posts and van bay sides' step
+  (ea36b58b against the same with the step that joined as b8ff78b3) and the lying drum's (19e99a2b), each tree on its own staging: 480 of 480 entries
+  identical each, no arm suspect: a harmless step does not move a staged entry at all (a whole mission's digest moves far sooner). The pass's dressing
+  (2d9e7315 against its parent, 48 seeds, every entry, own staging): the kitchen's plain door 9 worse and 1 better on seeds 1-24 (1 in 47, suspect), 12
+  and 6 over 48 (1 in 4): NOT named, nor is any door of that step. The dressed tree against the same with the log on the block, stood alike, 48 seeds
+  (62006070): no door named; the kitchen's plain door 4 worse and 12 better (the team's loss 53 to 41 of 192; 1 in 13), its bang 4 and 6, the bunk's as
+  above, and ten of the other sixteen arms the same entry for entry. ON dad3c1a1 (one stand, no word in front): a tree against its own tally, stood as
+  it, 480 of 480 identical; unasked, the tally plays as the tip's own does, 60 of 60 results of seeds 1-3 the same field for field; `bangway-check`
+  (which imports it) green; `--self` 7 of 7.
+  `TALLYDIFF_BREAK=1` (the AFTER tree is played with a crate half a metre across a stride and a half outside each face of the door an entry is played
+  on, `bang-tally.ts stage`; a row with no level file of its own, or a tally from before the crate, is refused): red on dad3c1a1, exit 1, as on
+  62006070. The inner door between the bunk room and the store is NAMED on both arms over 48 seeds, the plain door 16 worse and 1 better (the team's
+  loss 3 to 36 of 192; 1 in 3641), the bang 18 and 4 (6 to 34; 1 in 230), staged alike in all 48: a thing on the walk, with the same staging, is what
+  the tool is for. (Nine other doors were crated the same way and not named: see WHAT IT MISSES.) On `room-clear-pair`, a row with no level file, it
+  exits 3 with the crate refused by name (62006070).

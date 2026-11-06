@@ -17,6 +17,7 @@ import { TWOGEARS, CROUCHRUN } from '../game/player';
 import { SAMLOOK } from '../game/samlook';
 import { WATCH, DASH, HOLD } from '../game/character';
 import { STALKVIZ } from '../ui/stalkviz';
+import { LIGHT_IN } from '../sim/lightshome';
 
 export const SNEAKLAB = { on: false, unseen: true, safe: true, clear: true, scene: 0 };
 /** THE FIVE THINGS TO TUNE, as he named them. A button puts every man back and Sam where the scenario starts, hands empty and low, and says nothing else: no steps, no
@@ -213,7 +214,7 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   panel.buttons(now, 'try', SCENES.map((c, i) => ({ text: c.name, run: () => { SNEAKLAB.scene = i; dark.clear(); game.restart(); }, title: c.tip })));
   panel.toggleBox(now, 'they can\'t notice you', () => SNEAKLAB.unseen, v => { SNEAKLAB.unseen = v; }, 'on: nobody sees or hears you, so you can work on the motion. Off: the real guards, and the creep ends when one is onto you');
   panel.toggleBox(now, 'nothing hurts you', () => SNEAKLAB.safe, v => { SNEAKLAB.safe = v; }, 'god mode while the lab is open');
-  panel.toggleBox(now, 'lights out', () => dark.size > 0, v => { if (v) { for (const t of game.targets) if (t.on && !t.broken) { t.on = false; dark.add(t); } } else { for (const t of dark) if (!t.broken) t.on = true; dark.clear(); } }, 'every lamp that is lit goes off, to try all of this in the dark (the moon stays). Off = those lamps come back on');
+  panel.toggleBox(now, 'lights out', () => dark.size > 0, v => { if (v) { for (const t of game.targets) if (t.on && !t.broken) { game.lightHome.in(LIGHT_IN.on, t, 0); dark.add(t); } } else { for (const t of dark) if (!t.broken) game.lightHome.in(LIGHT_IN.on, t, 1); dark.clear(); } }, 'every lamp that is lit goes off, to try all of this in the dark (the moon stays). Off = those lamps come back on');
   panel.toggleBox(now, 'keep Sam clear of this panel', () => SNEAKLAB.clear, v => { SNEAKLAB.clear = v; }, 'the view slides over so Sam stands in the middle of what this panel leaves; off = the middle of the page, as the game has him');
   panel.toggleBox(now, 'draw the geometry on the floor', () => STALKVIZ.on, v => { STALKVIZ.on = v; }, 'round the nearest man: the ring it can begin inside and the one it lets go past, the edges of his rear arc, the point Sam is walked to, the ring the grab fires inside');
   // (the knobs in named groups that fold, each with its own '↺' and a count of what has been moved; every row has a dot that puts its own number back)

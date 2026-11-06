@@ -41,7 +41,6 @@ import type { Game, Guard, Temperament, Talk } from './game';
 import type { HoldVariant } from './character';
 import { TEMPERAMENT, isBreathing } from './game';
 import { rollcallState, escalationOf, bubbleSecs } from './guards';
-import { needsBusy } from './needs';
 import { CUES } from './cues';
 import { CLOSE } from './close';   // (read inside a function only: src/game is one import cycle)
 import { simRandom, hashStr } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -49,6 +48,7 @@ import { defenderWords } from './teams';
 import { takeTold } from './takecheck';   // (a leaf: was anybody told the thing is gone)
 import { WORDS, w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { shakenOf } from './morale';   // (read inside agitationTerms only)
+import { hasHim, OWN } from './owner';
 
 // ---------------------------------------------------------------- axes
 export type Knowledge = 'none' | 'heard' | 'glimpsed' | 'saw' | 'sawHurt';
@@ -2002,7 +2002,7 @@ const ambientByGame = new SideMap<object, AmbientState>('dialogue.ambientByGame'
 export function ambientState(g: Game): AmbientState { let S = ambientByGame.get(g); if (!S) { S = { next: -1, run: null, played: new Map(), count: 0 }; ambientByGame.set(g, S); } return S; }
 function ambientLive(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g.puppet && !g.touring && escalationOf(g) === 0 && !g.alarm.episode && !g.blackout.active && !men(g).some(pl => pl.holding || pl.down); }
 /** a calm patrolling staff man with nothing on his hands or his mind, not already talking, not held still by anybody's script */
-function chatty(g: Game, x: Guard): boolean { return x.team === 'guard' && !x.unit && x.state === 'patrol' && !x.held && !x.script && !x.task && !x.bodyDuty && !x.pinned && !x.hold && !x.leader && !x.post && x.awareness < 0.15 && !(x.bubble && g.time - x.bubble.t < x.bubble.dur + 1) && !needsBusy(x) && g.guards.includes(x); }   // (needsBusy: a man telling the floor he is off for a coffee, or away on one — game/needs.ts — is not stopping to chat)
+function chatty(g: Game, x: Guard): boolean { return x.team === 'guard' && !x.unit && x.state === 'patrol' && !x.held && !x.script && !x.task && !x.bodyDuty && !x.pinned && !x.hold && !x.leader && !x.post && x.awareness < 0.15 && !(x.bubble && g.time - x.bubble.t < x.bubble.dur + 1) && !hasHim(x, OWN.needs) && g.guards.includes(x); }   // (needsBusy: a man telling the floor he is off for a coffee, or away on one — game/needs.ts — is not stopping to chat)
 /** still fit to keep talking (the hold flag is ours by now) */
 function stillChatty(g: Game, x: Guard): boolean { return x.state === 'patrol' && !x.held && !x.script && !x.task && !x.bodyDuty && x.awareness < 0.3 && g.guards.includes(x); }
 function endAmbient(g: Game, S: AmbientState) { const r = S.run; if (!r) return; if (!r.held[0]) r.a.hold = false; if (!r.held[1]) r.b.hold = false; S.run = null; S.next = g.time + AMBIENT.cooldown; }

@@ -20,6 +20,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { El, withDom } from './scenario-picker-probes.ts';
 
 const K: any = await import(`${ROOT}/src/game/kit.ts`);
@@ -282,7 +283,5 @@ export const smokeRestart = guarded(async () => {
 
 if (import.meta.main) {
   const all: Record<string, () => Promise<boolean>> = { 'squadsmoke-table': smokeTable, 'squadsmoke-issued': smokeIssued, 'squadsmoke-order': smokeOrder, 'squadsmoke-restart': smokeRestart };
-  const want = process.argv.slice(2); let ok = true;
-  for (const [name, fn] of Object.entries(all)) if (!want.length || want.includes(name)) ok = (await fn()) && ok;
-  process.exit(ok ? 0 : 1);
+  process.exit(exitCode(await asProbes(all, wanted())));
 }

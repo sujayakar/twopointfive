@@ -15,6 +15,7 @@
 // finishes, the even pace untouched where the work fits it. What it cannot say: how late a real browser's queue answers, which is what the rule's cost on a
 // real machine hangs on (the maintainer's own try of the look page's trial on a 120 Hz laptop is the only word on that).
 // exit 0 = all pass · 1 = one failed
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless';
 import { EVENPACE, FLIGHT_PAGE, pacer, pageRoom, paceEvery, periodOf, rateMeter } from '../../src/host/pace';

@@ -16,6 +16,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { standUp, ROOT } from './headless.ts';
 const { SENSE, CpuSmoke } = await import(`${ROOT}/src/game/sense.ts`);
+import { standWall } from './standwall.ts';
 const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const BREAK = process.env.SENSE_BREAK === '1', DT = 1 / 60;
@@ -98,7 +99,10 @@ const watch = (g: any) => { const P = g.probe, C = { asks: 0 }, q = P.query, s =
     const hold = () => { pc.pos[0] = a[0]; pc.pos[2] = a[2]; };
     for (let k = 0; k < 12 * 60; k++) { hold(); W.step(DT); }
     const shut = g.sensors.segment('chkLine', a, b) ?? 1, side = g.sensors.segment('chkAway', a, away) ?? 1, blobs = g.cpuSmoke.blobs.length;
-    const walled = BREAK ? 1 : (() => { const S = new CpuSmoke(); S.blobs.push(...g.cpuSmoke.blobs.map((x: object) => ({ ...x }))); return S.trans(a, b, () => true); })();
+    // the same smoke asked along a line a metre beside the canister's: with nothing between them, and with a wall stood between them (tools/qa/standwall.ts)
+    const ux = (b[0] - a[0]) / len, uz = (b[2] - a[2]) / len, a2: [number, number, number] = [a[0] - uz, 1.3, a[2] + ux], b2: [number, number, number] = [b[0] - uz, 1.3, b[2] + ux];
+    const beside = (): number => g.cpuSmoke.blobsAlong(g.col, a2, b2);
+    const open = beside(), down = standWall(g, [{ c: [mid[0] - uz * 0.5, 1.2, mid[2] + ux * 0.5], h: [0.04, 1.2, len / 2 + 1], yaw: Math.atan2(ux, uz) }]), walled = BREAK ? 1 : beside(); down();
     for (let k = 0; k < 75 * 60; k++) { hold(); W.step(DT); }
     const after = g.sensors.segment('chkLine', a, b) ?? 1;
     // full of puffs, a canister still gets its place (the one worth least goes, and a puff is worth less than a canister that has yet to burn)
@@ -106,8 +110,8 @@ const watch = (g: any) => { const P = g.probe, C = { asks: 0 }, q = P.query, s =
     S2.emit({ pos: [-9, 0, 0], dir: [0, 1, 0], speed: 0, radius: P.canisterRadius, density: P.canisterDensity, temperature: 1, ttl: P.canisterDuration, age: 0 } as never);
     S2.emit({ pos: [-8, 0, 0], dir: [0, 1, 0], speed: 0, radius: 0.3, density: 6, temperature: 1, ttl: 1, age: 0 } as never);
     const kept = BREAK || (S2.blobs.length === SENSE.smoke.cap && S2.blobs.some((x: { x: number }) => x.x === -9));
-    verdict(before === 1 && shut < 0.3 && side > 0.8 && walled === 1 && after > 0.8 && blobs >= 1 && kept, 'smoke: a canister on a sight line shuts it while it burns, and only it',
-      `a ${len} m line, the canister at its middle: clear ${before.toFixed(2)} → after 12 s ${shut.toFixed(3)} (blind under 0.30) · a line the other way ${side.toFixed(2)} · the same smoke behind a wall ${walled.toFixed(2)} · 75 s later ${after.toFixed(2)} · ${blobs} blob(s) held · a canister let out among ${SENSE.smoke.cap + 20} puffs kept its place ${kept}`);
+    verdict(before === 1 && shut < 0.3 && side > 0.8 && open < 0.9 && walled === 1 && after > 0.8 && blobs >= 1 && kept, 'smoke: a canister on a sight line shuts it while it burns, and only it',
+      `a ${len} m line, the canister at its middle: clear ${before.toFixed(2)} → after 12 s ${shut.toFixed(3)} (blind under 0.30) · a line the other way ${side.toFixed(2)} · the same smoke along a line a metre beside it ${open.toFixed(3)}, and with a wall between ${walled.toFixed(2)} · 75 s later ${after.toFixed(2)} · ${blobs} blob(s) held · a canister let out among ${SENSE.smoke.cap + 20} puffs kept its place ${kept}`);
   }
 }
 

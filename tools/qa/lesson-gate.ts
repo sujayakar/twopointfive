@@ -27,12 +27,14 @@ const last = (s: string, re: RegExp) => s.split('\n').filter(l => re.test(l)).po
 const scripted = (name: string) => existsSync(resolve(ROOT, 'levels', `${name}.script.ts`));
 // (…and its row's own hour and weather — game/rowset.ts, held off there as well: without the word the frozen run of a mission laid by day was played at night)
 const frame = (name: string): Record<string, string> | undefined => scripted(name) ? { TPS_RAILS: '1', TPS_ROWSET: '1' } : undefined;
+// (the frozen runs say their stand by name since 2026-11-05: with no word a tool stands the game as the page opens it)
+const OLD = { TPS_PROFILE: 'frozen' };
 async function one(name: string) {
   const [fresh, lint] = await Promise.all([run(['tools/levels/export.ts', name, '--check']), run(['tools/qa/level-lint.ts', `levels/${name}.json`])]);
   verdict(fresh.code === 0, `${name}: the level file is its generator's`, fresh.code === 0 ? '' : last(fresh.out, /\S/).trim());
   verdict(lint.code === 0, `${name}: level-lint`, last(lint.out, /=== level-lint .*(PASS|FAIL)/).replace(/=/g, '').trim());
   // (a level with a script is not run with its lesson off: that is another mission by design, see below)
-  const [chk, on, off] = await Promise.all([run(['tools/qa/lesson-check.ts', name]), run(['tools/qa/lesson-run.ts', name, '--digest'], frame(name)), scripted(name) ? Promise.resolve({ code: 0, out: '' }) : run(['tools/qa/lesson-run.ts', name, '--digest', '--nolesson'])]);
+  const [chk, on, off] = await Promise.all([run(['tools/qa/lesson-check.ts', name]), run(['tools/qa/lesson-run.ts', name, '--digest'], { ...OLD, ...frame(name) }), scripted(name) ? Promise.resolve({ code: 0, out: '' }) : run(['tools/qa/lesson-run.ts', name, '--digest', '--nolesson'], OLD)]);
   verdict(chk.code === 0, `${name}: lesson-check`, last(chk.out, /===/).replace(/=/g, '').trim());
   verdict(on.code === 0, `${name}: the scripted player does every step and the run ends`, last(on.out, /steps ·|FAIL/).trim());
   const ship = await Promise.all(SHIPPED.map(([seed, pace]) => run(['tools/qa/lesson-run.ts', name, '--seed', String(seed), ...(pace ? ['--pace', String(pace)] : [])], { TPS_PROFILE: 'shipped' })));

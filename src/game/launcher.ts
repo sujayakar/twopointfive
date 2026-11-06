@@ -22,6 +22,7 @@ import { clackFx } from './particleFx';
 import { w } from './words';   // (a leaf: the dialogue pass's one switch)
 import { loadKeys } from './slotsetup';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { word } from './belief';
 
 /** Every number of the ring's flight and of what it does (panel-tunable; the QA probes read them rather than copy them). */
 export const RING = {
@@ -214,7 +215,7 @@ export function staggerGuard(g: Game, gd: Guard, dir: Vec3, shooter: Character) 
   if (gd.state !== 'alert' || !gd.lastKnown) {   // where from: back up the line it flew, on the floor, somewhere a man can stand (else where he is)
     let back: Vec3 = [c.pos[0] - dir[0] * R.staggerBack, 0, c.pos[2] - dir[2] * R.staggerBack];
     if (g.col.nav.isBlocked(back[0], back[2])) back = g.col.nav.nearestFreePoint(back[0], back[2]) ?? v3.copy(c.pos);
-    gd.lastKnown = back;
+    word(g, gd, back);
   }
   gd.awareness = Math.max(gd.awareness, R.staggerAware);
   if (g.aiEnabled) gd.witness.heard.small++;   // (his record: something got him — counted with the small things; the alert it tips him into books itself next frame)

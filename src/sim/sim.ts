@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 28;
+export const SIM_ABI = 33;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -44,6 +44,15 @@ export interface SimExports {
   /** collision.ts raycast: −1 nothing met · −2 the host answers (a ray that is no number) · else the static's index, or 1e6 + the leaf's; t and the normal → the scratch. `ask` 1 = a pane met where it is open is passed (glass.rs) */
   lines_ray(w: number, a0: number, a1: number, a2: number, r0: number, r1: number, r2: number, tmax: number, set: number, ask: number): number;
   world_glass(w: number, n: number): void; world_view(w: number, kind: number, n: number): void; glass_open(w: number, bi: number, x: number, y: number, z: number): number;
+  panes_ctx(g: number, w: number, set: number, now: number, shards: number, gravity: number): void; panes_world(w: number, g: number): void; panes_view(w: number, kind: number, x: number, y: number, z: number, radius: number, power: number, sure: number): void;
+  panes_impact(bi: number, x: number, y: number, z: number, hasDir: number, dx: number, dy: number, dz: number, energy: number, who: number, through: number): number; panes_widen(bi: number, x: number, y: number, z: number): number; panes_blast_begin(x: number, y: number, z: number): void; panes_blast_sheet(s: number, x: number, y: number, z: number, radius: number, power: number, who: number): number;
+  panes_sheets(): number; world_sheets(w: number, n: number): void; panes_frame_begin(g: number): void; panes_men_addr(): number; panes_men(n: number): void; panes_step(r: number): void; panes_reset(g: number): void; panes_set_type(g: number, bi: number, ty: number): void; panes_type(bi: number): number; panes_cap(i: number): number; bars_take(bi: number, flags: number): number; bars_blast(x: number, y: number, z: number, reach: number, statics: number): number; bars_gone(g: number): number; bar_gone(g: number, i: number): number; bar_flags(g: number, i: number): number; bars_clear(g: number): void; panes_type_place(bi: number): number; panes_type_box(h0: number, h1: number, h2: number, cy: number, gap: number): number; panes_sky(bi: number): number;
+  panes_open_at(g: number, bi: number, x: number, y: number, z: number): number; panes_walkable(g: number, bi: number): number; panes_fraction(g: number, bi: number): number; panes_sig(g: number): number; panes_out_addr(): number; panes_out_pts_addr(): number; panes_out_n(): number; panes_out_clear(): void; panes_take_wrote(): number; panes_take_gust(g: number): number;
+  panes_field(i: number): number; panes_row_addr(g: number, r: number): number; panes_q_addr(g: number): number; panes_row_n(g: number): number; panes_row_index(g: number, bi: number): number; panes_held(g: number, bi: number, without: number): number; panes_tally(): number; panes_heard(g: number, pane: number, who: number, now: number, gap: number): number; panes_forget_heard(g: number): void; panes_dice_threshold(g: number, bi: number): number;
+  panes_box_seed(cx: number, cy: number, cz: number, hx: number, hy: number, hz: number): number; panes_point_seed(word: number, x: number, y: number, z: number): number; panes_jet(x: number, y: number, z: number, dx: number, dy: number, dz: number, speed: number, amount: number, who: number): void;
+  pen_toll(bi: number, x: number, y: number, z: number, dx: number, dy: number, dz: number, e: number, nth: number): number; pen_cross(bi: number, ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t: number, e: number, nth: number): number; pen_path(x: number, y: number, z: number, dx: number, dy: number, dz: number, range: number, energy: number, nth0: number, ft: number, fi: number, fnx: number, fny: number, fnz: number): number; pen_path_head(): number;
+  pen_arm(fx: number, fy: number, fz: number, mx: number, my: number, mz: number, dx: number, dy: number, dz: number, energy: number): number; pen_passes(ax: number, ay: number, az: number, rx: number, ry: number, rz: number, n: number, energy: number): number;
+  pen_add_hole(g: number, bi: number, x: number, y: number, z: number): void; pen_hole_rows(g: number): number; pen_hole_bi(g: number, r: number): number; pen_hole_n(g: number, r: number): number; pen_hole_pt(g: number, r: number, i: number): number; pen_clear_holes(g: number): void;
   // a circle against it (rust/sim/src/collide.rs — src/scene/collision.ts collideCircle / circleTouches / gather)
   collide_circle(w: number, px: number, pz: number, r: number, y0: number, y1: number, iterations: number): number;
   collide_touches(w: number, x: number, z: number, r: number, y0: number, y1: number, cap: number): number;
@@ -70,17 +79,18 @@ export interface SimExports {
   pose_new(g: number, nodes: number): number;
   /** game g's pool empty again */
   pose_clear(g: number): void;
-  // the senses (rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs — asked through src/scene/collision.ts, THE SENSES IN THE MODULE). 0xffffffff (−1 here) = ask the TypeScript.
+  // the senses (rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs — asked through src/scene/collision.ts, THE SENSES: the module's alone). 0xffffffff (−1 here) = a question that is a mistake (a line too long to be one, a point that is no number): the host throws it by name.
   /** guards.ts eyeContact: 1 visible + 2 in the cone; the distance → scratch 0 */
   sight_contact(w: number, set: number, through: number, q: number, e0: number, e1: number, e2: number, l0: number, l1: number, l2: number, range: number, halfDeg: number, nearM: number, nearDeg: number, vHalfDeg: number, c0: number, c1: number, c2: number, h0: number, h1: number, h2: number): number;
   light_lamps(): number; light_cap(): number;
-  /** guards.ts lightEstimateAt's loop over the lamps written: the six faces → scratch 0‥5 */
-  light_estimate(w: number, set: number, n: number, p0: number, p1: number, p2: number, sigma: number, g: number, stamp: number, stands: number, more: number, nb: number, spread: number, widest: number, rise: number, riseRate: number): number;
+  /** guards.ts lightEstimateAt's lamps, a part of them: the six faces → scratch 0‥5. `lg`, `leave`, `how`: the level's rows the question reads where
+   *  they stand (the slot of the block that holds them, the rows' bits it leaves out, and 1 they are read · 2 as their steady selves · 4 the last part) */
+  light_estimate(w: number, set: number, n: number, p0: number, p1: number, p2: number, sigma: number, g: number, stamp: number, stands: number, more: number, nb: number, spread: number, widest: number, rise: number, riseRate: number, lg: number, leave: number, how: number): number;
   smoke_blobs(): number; smoke_cap(): number;
-  /** sense.ts CpuSmoke.trans over the blobs written: the transmittance → scratch 0 */
+  /** sense.ts CpuSmoke.blobsAlong over the blobs written: the transmittance → scratch 0 */
   smoke_trans(w: number, set: number, n: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number;
   nav_addr(table: number): number; nav_cap(table: number): number;
-  /** collision.ts NavGrid.findPath with no penalty: the waypoints written (x z each) · −1 no way · −2 ask the TypeScript */
+  /** collision.ts NavGrid.findPath with no penalty: the waypoints written (x z each) · −1 no way · −2 a mistake of the asker's (the host throws it) */
   nav_path(w: number, set: number, ask: number, gw: number, gh: number, cell: number, a0: number, a2: number, b0: number, b2: number, maxIter: number): number;
   /** …with a penalty: as nav_path, or −3 = `nav_need()` cells (nav_addr(2)) want a price (nav_addr(3)) before `nav_resume()`; `nav_drop()` lets a waiting search go */
   nav_priced(w: number, set: number, ask: number, gw: number, gh: number, cell: number, a0: number, a2: number, b0: number, b2: number, maxIter: number): number;
@@ -100,7 +110,7 @@ export interface SimExports {
   // the game's own smoke on the coarse grid (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): its state is a part of the game's block (state.ts), so a call
   // names the block's slot `g` (`st.bind()`), with the block's `stamp` where it reads the tables made from the state, and a step the box world and its copy
   grid_reset(g: number, home: number): void; grid_clear(g: number): void; grid_dirty(w: number, x0: number, z0: number, x1: number, z1: number): void;
-  grid_step(g: number, stamp: number, w: number, copy: number, set: number, n: number, emits: number, decay: number, spread: number, rise: number, riseRate: number, gone: number, lamps: number, albedo: number, share: number, passes: number, sweep: number, windX: number, windZ: number, windLow: number, windGain: number, windFullAt: number, windKeep: number): number;
+  grid_step(g: number, stamp: number, w: number, copy: number, set: number, n: number, emits: number, decay: number, spread: number, rise: number, riseRate: number, gone: number, lamps: number, albedo: number, share: number, passes: number, sweep: number, windX: number, windZ: number, windLow: number, windGain: number, windFullAt: number, windKeep: number, lg: number, leave: number, how: number): number;
   /** where the wind's share of each square metre of the plan is written before a step that has wind, and how many doubles it holds (bricks.rs WIND) */
   grid_wind(): number; grid_wind_cap(): number;
   grid_trans(g: number, stamp: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number): number;
@@ -132,6 +142,15 @@ export interface SimExports {
   falls_step(g: number, x: number, z: number, level: number, crunchFull: number, grind: number, gain: number, add: number): number;
   falls_heard(g: number, list: number, time: number, gap: number): number;
   falls_clear(g: number, list: number, all: number, events: number): void; falls_cap(what: number): number;
+  // the level's lights (rust/sim/src/lights.rs; sim/lightshome.ts is its face)
+  lights_cap(table: number): number; lights_ids(): number;
+  lights_in(g: number, kind: number, t: number, a: number, b: number, c: number, d: number): number;
+  lights_flip(g: number, on: number, time: number, strike: number, n: number): void;
+  lights_step(g: number, time: number, dt: number, near: number, fumble: number, es: number): number;
+  camera_pan(g: number, i: number, dt: number, live: number, cones: number): number;
+  camera_see(g: number, i: number, time: number, dt: number, visible: number, gain: number, x: number, y: number, z: number, suspicion: number, alarm: number): number;
+  laser_open(g: number, i: number): number;
+  laser_close(g: number, i: number, time: number, live: number, cut: number, sense: number, held: number): number;
 }
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
@@ -142,7 +161,10 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll', 'men_schema', 'men_col', 'men_fold',
   'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_wind', 'grid_wind_cap', 'grid_trans',
   'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'props_settle', 'slabs_addr', 'slabs_cap', 'slabs_step', 'items_addr', 'items_cap', 'items_update',
-  'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap'];
+  'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap',
+  'lights_cap', 'lights_ids', 'lights_in', 'lights_flip', 'lights_step', 'camera_pan', 'camera_see', 'laser_open', 'laser_close',
+  'panes_ctx', 'panes_world', 'panes_view', 'panes_impact', 'panes_widen', 'panes_blast_begin', 'panes_blast_sheet', 'panes_sheets', 'world_sheets', 'panes_frame_begin', 'panes_men_addr', 'panes_men', 'panes_step', 'panes_reset', 'panes_set_type', 'panes_type', 'panes_cap', 'bars_take', 'bars_blast', 'bars_gone', 'bar_gone', 'bar_flags', 'bars_clear', 'panes_type_place', 'panes_type_box', 'panes_sky', 'panes_open_at', 'panes_walkable', 'panes_fraction', 'panes_sig', 'panes_out_addr', 'panes_out_pts_addr', 'panes_out_n', 'panes_out_clear', 'panes_take_wrote', 'panes_take_gust', 'panes_field', 'panes_row_addr', 'panes_q_addr', 'panes_row_n', 'panes_row_index', 'panes_held', 'panes_tally', 'panes_heard', 'panes_forget_heard', 'panes_dice_threshold', 'panes_box_seed', 'panes_point_seed', 'panes_jet',
+  'pen_toll', 'pen_cross', 'pen_path', 'pen_path_head', 'pen_arm', 'pen_passes', 'pen_add_hole', 'pen_hole_rows', 'pen_hole_bi', 'pen_hole_n', 'pen_hole_pt', 'pen_clear_holes'];
 
 /** A RUNTIME WITH NO WEBASSEMBLY (a browser whose policy turns a site's JIT off has none) DOES NOT PLAY: the simulation is the module's and nothing else
  *  works it out. The page shows these words in place of the game, before anything is built (main.ts); they are the maintainer's, as he chose them. */
@@ -214,8 +236,7 @@ export function mathsOfRust(): Maths {
 // ---- WHICH SYSTEMS RUN IN RUST
 // (every row but the maths is UP as this module loads: that is how the game is played, on every page and in every tool, whoever stands it up and whether
 //  or not anyone calls rowsUp. A runtime with no WebAssembly does not play: the page shows its card, main.ts)
-let mathsOn = false, linesOn = true, circlesOn = true, fogOn = true, posesOn = true, diceOn = true;
-let sightOn = true, lightOn = true, smokeOn = true, soundOn = true, pathsOn = true;
+let mathsOn = false, linesOn = true, circlesOn = true, posesOn = true, diceOn = true;
 let doorsOn = true, fallsOn = true, propsOn = true, slabsOn = true, itemsOn = true, raysOn = true;
 /** A row a system: on = that system of the update runs in the Rust module, off = in TypeScript as it always did. THE TWO ARE THE SAME GAME TO THE BIT — that is
  *  what lets a system move at all, and tools/qa/rust-check.ts holds each row to it (whole missions played both ways, every tick's raw bits). So a row is never
@@ -235,8 +256,6 @@ let doorsOn = true, fallsOn = true, propsOn = true, slabsOn = true, itemsOn = tr
  *          page while this one waits its turn. A rule stepped in the module (the slabs', the thrown things') asks its rays there whatever this row says.
  *  circles a circle against the box world (collision.ts collideCircle, circleTouches, gather: a body's footprint pushed out of the statics, what a prop or a
  *          rag doll rests against) from the same copy, inside a tick.
- *  fog     the fog of war's sight pass (game/fogofwar.ts update: which of the team's eyes has a line to each man and each body): the loop over the eyes and
- *          its lines in the module, a man a question, inside a tick and where the game's own maths stand (EXACT.on: the lengths are worked out there).
  *  poses   the poses a character keeps (src/anim/skeleton.ts Pose, PoseSet) live in its game's block of the module's memory (rust/sim/src/poses.rs, a tenant:
  *          game/posehome.ts), and the posing functions (a clip sampled, a pose blended, run forward, a node turned, the two-bone solve) are asked of the module, of a kept
  *          pose where it lives and of a function's scratch pose by a copy onto the bench: A PROOF, not a speed-up (a call a question costs more than the
@@ -246,14 +265,9 @@ let doorsOn = true, fallsOn = true, propsOn = true, slabsOn = true, itemsOn = tr
  *          the saves in memory and the state's word were taught to carry a block for. A proof like `maths` (a draw from TypeScript then costs a call), and the
  *          die has to be there before any rule that rolls it is. A game takes the row as its next tick opens.
  *
- *  THE SENSES, a row each (asked through src/scene/collision.ts; every one inside a tick and where the game's own maths stand, since each works its lengths out
- *  in the module):
- *  sight   an eye on a man (game/guards.ts eyeContact: the cone, then the lines to his chest and his head) as one question.
- *  light   the light on a point (guards.ts lightEstimateAt: every lamp in reach, each shadowed by a line) as one question a point, the host writing the
- *          lamps that may be asked.
- *  smoke   the game's own smoke along a line (game/sense.ts CpuSmoke.trans, what SENSE.cpu sees through) as one question a line.
- *  sound   how a sound reaches a listener (scene/collision.ts SoundPaths.propagate: straight, over the top, or round by the floor).
- *  paths   a way across the floor (collision.ts NavGrid.findPath: the A* and its smoothing; with a penalty the search waits for the caller's prices, nav.rs find_priced).
+ *  THE SENSES ARE NO ROWS: an eye on a man, the light on a point, the smoke along a line, a sound's way, a way across the floor and the fog of war's
+ *  sight pass are the module's alone (rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs, fog.rs, asked through src/scene/collision.ts, THE
+ *  SENSES). Their TypeScript is gone, so there is nothing to put one down to: a check holds them to their own earlier answers (tools/qa/sense-ident.ts).
  *
  *  THE THINGS of a level, a row a family (each keeps its state in the game's block from the moment the game is made — sim/state.ts — and, while its row
  *  is on, its step runs there and WRITES the box world's rows: the Box objects the picture draws follow, scene/boxMirror.ts `follow`):
@@ -282,22 +296,10 @@ export const RUST = {
   set lines(v: boolean) { linesOn = !!v && !simWhyNot(); },
   get circles(): boolean { return circlesOn; },
   set circles(v: boolean) { circlesOn = !!v && !simWhyNot(); },
-  get fog(): boolean { return fogOn; },
-  set fog(v: boolean) { fogOn = !!v && !simWhyNot(); },
   get poses(): boolean { return posesOn; },
   set poses(v: boolean) { posesOn = !!v && !simWhyNot(); },
   get dice(): boolean { return diceOn; },
   set dice(v: boolean) { diceOn = !!v && !simWhyNot(); },
-  get sight(): boolean { return sightOn; },
-  set sight(v: boolean) { sightOn = !!v && !simWhyNot(); },
-  get light(): boolean { return lightOn; },
-  set light(v: boolean) { lightOn = !!v && !simWhyNot(); },
-  get smoke(): boolean { return smokeOn; },
-  set smoke(v: boolean) { smokeOn = !!v && !simWhyNot(); },
-  get sound(): boolean { return soundOn; },
-  set sound(v: boolean) { soundOn = !!v && !simWhyNot(); },
-  get paths(): boolean { return pathsOn; },
-  set paths(v: boolean) { pathsOn = !!v && !simWhyNot(); },
   get doors(): boolean { return doorsOn; },
   set doors(v: boolean) { doorsOn = !!v && !simWhyNot(); },
   get falls(): boolean { return fallsOn; },
@@ -330,14 +332,12 @@ export function fell(row: string, why: string): void {
   FELL.n[k] = (FELL.n[k] ?? 0) + 1;
   if (FELL.hard) throw new Error(`rust: the TypeScript answered for the row "${row}": ${why}`);
 }
-/** THE ROWS THAT ARE ONE WAY IN: no run of the gate reaches their TypeScript (the box world's lines and circles, the fog's pass, the posing
+/** THE ROWS THAT ARE ONE WAY IN: no run of the gate reaches their TypeScript (the box world's lines and circles, the posing
  *  functions, the animator's layers). A count on one of them is a way back in that somebody opened, so the tool that counted says so and ends red (headless.ts; the page's
  *  check reads `fellSealed`). A family adds its row here in the step that closes its last fallback, and its TypeScript can go in the step after.
  *  `rays` joined when a pane's open question moved to the module (rust/sim/src/glass.rs): until then a ray whose nearest thing was a pane the host
  *  said was open there flew on in the TypeScript walk, some five hundred a mission with glass in it.
- *  THE SENSES', all five: `sight`, `light` and `smoke` (every caller's sight line passes glass, and a level's lamps and the game's blobs are fewer
- *  than a question carries), and `sound` and `paths`, whose lines came to a pane and handed the question back, for the ray's reason, until the
- *  panes were in the module's copy (`collision.ts paneAsk`). Nothing of the five is counted over the missions on either stand.
+ *  (THE SENSES AND THE FOG'S PASS were on this list until their TypeScript went: they are no rows now, and what was a way back in is a throw by name.)
  *  THE RULES OF THE THINGS joined when their last ways back were closed (a pane and lying snow asked in the module, a ray of no length, the landing a
  *  checkpoint files, a pool that grew, a level too big for a pool stopped as it loads): the doors, what falls, the furniture, a leaf off its hinges, the
  *  thrown things — and RULES_ROW, the copy of the box world refused to any of them. */
@@ -347,7 +347,7 @@ export const RULES_ROW = 'a rule\'s step (doors, furniture, leaves, thrown thing
  *  reaches one ends red. KNOWN TODAY: none (the two that were — the furniture's settle as a level is stood up, a ray into the furniture — each have a
  *  choice now, and their way back is the furniture's own row). */
 export const TWIN_ROW = "a twin's body, no choice made";
-export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'props', 'slabs', 'items', RULES_ROW, TWIN_ROW];
+export const SEALED: readonly string[] = ['lines', 'circles', 'poses', 'rays', 'doors', 'falls', 'props', 'slabs', 'items', RULES_ROW, TWIN_ROW];
 /** A RULE OF `row` WAS STEPPED IN TYPESCRIPT WHILE THE ROW IS UP (a family's fallback site says so, with the reason in plain words): counted, except
  *  where the row is idle by its own rule — one that works lengths and angles out answers only under the game's own maths (OWN_MATHS, below) */
 export function ruleFell(row: string, why: string): null { if (FELL.on && (EXACT.on || !OWN_MATHS.includes(row))) fell(row, why); return null; }
@@ -367,7 +367,7 @@ export function fellWord(w: string): void { if (w === '0') { FELL.on = false; re
 /** the count so far, the busiest first, as one line a row and reason */
 export const fellLines = (): string[] => Object.entries(FELL.n).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} × ${k}`);
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
-const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'props', 'slabs', 'items'];
+const OWN_MATHS: readonly string[] = ['maths', 'poses', 'doors', 'props', 'slabs', 'items'];
 /** THE ROWS THAT ARE ON WHERE THE GAME IS PLAYED (the page and both of the harness's stands, and no word of an address or of the environment moves
  *  one: rowsUp below): EVERY row but the maths. Each is the same game to the bit in the module, by its differential and by the missions under both
  *  engines (tools/qa/rust-check.ts). They are not all cheaper there yet: the box world's lines, the furniture and the poses with the animator's layers are; a
@@ -376,7 +376,7 @@ const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light',
  *  The maths stay TypeScript (math/exact.ts): a sine a crossing is the dearest crossing there is, and the module works its own out inside itself.
  *  The rows that work lengths and angles out (OWN_MATHS) answer only under the game's own maths, which is the only maths the game is played on. A
  *  runtime with no WebAssembly does not play: the page says so on a card (main.ts, NO_WASM_WORDS) and builds no game. */
-export const RUST_ON: readonly (keyof typeof RUST)[] = ['lines', 'circles', 'fog', 'poses', 'dice', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'props', 'slabs', 'items', 'rays'];
+export const RUST_ON: readonly (keyof typeof RUST)[] = ['lines', 'circles', 'poses', 'dice', 'doors', 'falls', 'props', 'slabs', 'items', 'rays'];
 /** is `row` one of them */
 export const rustOn = (row: string): boolean => (RUST_ON as readonly string[]).includes(row);
 /** EVERY ROW AS THE GAME IS PLAYED (RUST_ON up, the maths down): what the page's boot and the harness's stand-up write, and nothing else writes a row in
@@ -392,7 +392,7 @@ export function mathsUp(): void { EXACT.on = true; }
 export function retiredEnvWord(w: string): boolean { return /^(TPS_RUST[A-Z]*|TPS_EXACT)$/.test(w); }
 export function retiredAddressWord(w: string): boolean { return w === 'rust' || w === 'noexact' || (w.startsWith('rust') && (rustRows().includes(w.slice(4)) || ROWS_GONE.includes(w.slice(4)))); }
 /** the rows that are no more because their TypeScript is (a family written once, in Rust, has nothing to choose): their words are retired ones still */
-const ROWS_GONE: readonly string[] = ['walk'];
+const ROWS_GONE: readonly string[] = ['walk', 'fog', 'sight', 'light', 'smoke', 'sound', 'paths'];
 /** the rows by name, for what treats them all alike (a check's own arm, tools/qa/headless.ts hold; the checks that walk every row) */
 export const rustRows = (): string[] => Object.keys(RUST);
 export function rustRow(row: string, on: boolean): void { if (rustRows().includes(row)) (RUST as Record<string, boolean>)[row] = on; }

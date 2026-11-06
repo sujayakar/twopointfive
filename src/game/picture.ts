@@ -23,8 +23,8 @@ import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { isHostile } from './teams';
 import { canSee, canSeeChar, sightGain, sightGainOn, pointInView, bodyPos, lightEstimateAt, teamThrough } from './guards';
-import { runnerFled, runnerOwns } from './runner';
 import { squadOf } from './enemysquads';
+import { hasHim, OWN } from './owner';
 
 /** the switch and every number of it (UNTUNED by play) */
 export const PICTURE = {
@@ -127,7 +127,7 @@ const nameOf = (w: Who) => w === 'player' ? 'Player' : w.callsign;
 const up = (g: Game, w: Who) => w === 'player' ? !g.player.down : w.state !== 'dead' && w.char.alive;
 const posOf = (g: Game, w: Who): Vec3 => w === 'player' ? g.player.char.pos : w.char.pos;
 /** no longer anybody's enemy to place: a unit taken off the floor, a man who dropped his gun and ran (runner.ts — guards.ts acquireFoe lets go of him the same) */
-const gone = (g: Game, w: Who) => w !== 'player' && (!g.guards.includes(w) || runnerFled(w));
+const gone = (g: Game, w: Who) => w !== 'player' && (!g.guards.includes(w) || w.fled);
 /** can his eye make anything out AT a place it has a line to: near enough, or lit (the light meter's CPU stand-in of the place, any lamp counted) */
 const madeOut = (g: Game, gd: Guard, p: Vec3) => flat(gd.char.pos, p) <= PICTURE.madeOutM || g.visibilityOf(lightEstimateAt(g, [p[0], 1.1, p[2]])) >= PICTURE.madeOut;
 /** a man who keeps a picture: a living armed man of an AI side (never a civilian, never a man in somebody's arm) */
@@ -187,7 +187,7 @@ function lookSam(g: Game, P: Pic) {
   for (const o of g.guards) {
     if (o.civ || !isHostile('player', o.team) || !isHostile(o.team, 'operative')) continue;   // (the squad's enemies: a quiet floor's staff are Sam's own business)
     if (!up(g, o)) { if (P.ideas.has(o) && !g.col.segmentBlocked(eye, [o.char.pos[0], 0.3, o.char.pos[2]])) { P.ideas.delete(o); P.downs.set(o, now); } continue; }
-    if (runnerFled(o)) continue;
+    if (o.fled) continue;
     const p = o.char.pos, d = flat(p, c.pos); if (d > PICTURE.reachM) continue;
     const shown = fog?.active ? !fog.hidden(o) : d < PICTURE.madeOutM || ((p[0] - c.pos[0]) * fwd[0] + (p[2] - c.pos[2]) * fwd[2] > 0 && o.visibility >= PICTURE.madeOut);
     if (shown && (!g.col.segmentBlocked(eye, [p[0], 1.1, p[2]], 0.02, thr) || !g.col.segmentBlocked(eye, [p[0], 1.6, p[2]], 0.02, thr))) learn(g, P, o, p, now, 'seen', null);
@@ -224,7 +224,7 @@ function hear(g: Game, S: State) {
 function onNet(g: Game, a: Pic, b: Pic): boolean {
   if (a === b || !b.owner) return false;   // (nobody tells Sam: the player's picture is the screen)
   const B = b.owner; if (!fighter(B) || B.held) return false;
-  if (PICTURE.run && (runnerOwns(B) || (!!a.owner && runnerOwns(a.owner)))) return false;   // (runner.ts: a man who has dropped his gun and run is off the net, as netquiet.ts and enemysquads.ts have him — what he tells his mates he shouts, that file's own tell)
+  if (PICTURE.run && (hasHim(B, OWN.runner) || (!!a.owner && hasHim(a.owner, OWN.runner)))) return false;   // (runner.ts: a man who has dropped his gun and run is off the net, as netquiet.ts and enemysquads.ts have him — what he tells his mates he shouts, that file's own tell)
   if (!a.owner) return B.team === 'operative';   // Sam's eyes are on the squad's radio
   const A = a.owner; if (!fighter(A) || A.held || A.team !== B.team) return false;
   if (A.team !== 'hostile') return true;   // the squad's radio, the staff's

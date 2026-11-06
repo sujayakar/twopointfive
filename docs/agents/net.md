@@ -343,6 +343,65 @@ line).
   lines the second client is a watcher; two seats and the look ahead have lines of their own (the look ahead's bullet above). BY HAND, once: a recipe with `CMDCHECK.on` off is refused; a
   setup naming `constructor`, a knob the build lacks or a null for a number is refused; with the player put down the stood game's `ended()` answers
   `{won: false, end: 'DOWN'}` one tick later. No check plays a mission to its end over the wire.
+- **A player's Brightness is his picture's alone: THE GAME'S OWN NUMBERS** (2026-11-05; `src/game/env.ts`: the knob table `ENV` and `tubeGain()`;
+  `hours.ts exposureOf(g)`; read by `nvg.ts tubeVis` / `tubeSig` and `irlight.ts`). What a goggled man's tube makes of a dark floor, and how strong his
+  illuminator is, were worked out at `engine.settings.exposure` and `settings.nvGain`: the PICTURE's numbers, which a player moves (Options > Display >
+  Brightness, the bracket keys, the debugger's two sliders), which no recipe, recording or save ever carried, and of which two players have two and a
+  server its own. Found by the review of 11-05, then seen through a real server on step 1334: one scripted client of a two seat night game at exposure
+  0.5 (the slider's end) had its first different state word at tick 239 and lost its seat. Now the game has its own. `ENV` (registered in knobs.ts and
+  on JOURNAL_KNOBS: a recipe, a recording and a server's setup carry it; a file from before the table gets the build's back, `envAsBuilt`) is the
+  night's exposure and the tube's gain, equal to the picture's defaults. `exposureOf(g)` is the exposure the game's scene is taken at now: the show's
+  day's while that is in, else the hour's own, else the night's — WORKED OUT from what the game already keeps (which hour is in, whether the day is),
+  so there is no second copy to fall out of step and nothing new for a snapshot or a save to carry; hours.ts and lighting.ts tell the picture as they
+  always did and are otherwise untouched. Both rows are the WORLD's (`hours.states`, `lighting.dayStates`: math/side.ts `GameSideMap`), so a seat's view
+  of a game of two asks the Game's: the day's was a plain table until the evening of 11-05, and under a seat's view the show's day answered the night's
+  (seats-check's `tables` line was red on it from this bullet's own step; settings-check's `hour` line now asks both seats' views).
+  NO SWITCH, a call for the merge to weigh: with nobody touching Brightness every number is the one it was (the
+  42 play-through digests on seed 1, both stands, equal to step 1515's); with it turned, the build before is the bug (a run that turns on the slider),
+  and there is no word that brings that back. What a player sees change: nothing at default; with Brightness turned, his men's goggles and lights no
+  longer follow his slider (they follow the mission's hour), and an illuminator's flood is brighter or dimmer in his picture with everything else.
+  THE RULE THIS BEGINS: no sum of the simulation reads the engine's settings. CHECK: `bun run tools/qa/settings-check.ts` (`--static` = its first three
+  lines, also `probes.ts settings-reads` in the journal family): `base` the table equals the picture's defaults · the scan reads its own thirteen forms ·
+  `reads` a scan of the simulation's files (src/game, scene, anim, math, sim and render/reach.ts: rollback-check's ground; 331 files, 60 reads, all
+  under src/game) for every READ of a setting, each COUNTED on a named list of 32 rows that says PICTURE, CARRIED (journal.ts EnvSnap, laid over a
+  networked page before every tick), TO MOVE or TO JUDGE with a date — one read more than a row counts is red (a second read of a key a file already
+  has a row for included), and so is a row that counts more than there are · `hour` a game stood on the
+  stand asked: the night's with the picture at a quarter, the hour's own at midday with the picture told the same, the show's day's, the night's again
+  each way back · `one run` barracks-four:1 played plain and with the picture turned three ways (`QA_PICTURE='{"exposure":0.5}'` in front of any
+  headless tool lays a player's settings over the stand-in's; a key the engine lacks is refused) is one digest, and with the game's own exposure turned
+  (`--set '{"ENV":{"exposure":0.5}}'`) another, so the line can go red; its runs are the shipped stand's whichever stand the check is run on (the frozen
+  one has no goggles on anybody). `SETTINGS_BREAK=1`: `reads` and `one run` fail. Two older probes now ask the game's own numbers where they asked the
+  picture's (nvg-probes `nvg-sight`, irlight-probes). STILL TO MOVE, named on that list: the sky's colours for the hour (hours.ts skyLum),
+  `emissiveScale` and `flashlightRadius` (carried, so a co-op page cannot part by them), `debrisCap`, irlight.ts's `indirectScale` (the senses' owner's).
+  WHO EMPTIES THE LIST: the multiplayer goal, a mend each on this one's pattern, for every TO MOVE and TO JUDGE row no other owner is named on. NOT ON
+  IT, the same fault by another door: game code reads the picture's CAMERA (`engine.viewFocus`: wind.ts, airSim.ts, fire.ts, snowBreath.ts), and two
+  players have two cameras. NOT a line of
+  mpserver-check: its scripted hands are timed by the wall clock, and only one run in several comes near a tube's threshold (a dimmed client parted 1
+  run of 1 on step 1334 and 0 of 4 on 1515; with the game's own number turned on purpose, 1 of 8), so a red path there would not be red. Nobody has
+  looked at a picture: no GPU, no page was opened for this.
+- **A game of two that is still read as a game of one: THE KNOWN SEAT FAULTS** (2026-11-05; found when `seats-check`'s `fight` threw on the page's
+  stand at step 1557, the belief rule; NONE MENDED: `src/game` is frozen until the Rust swap, and each is a line of the port's notes,
+  rebuild/rust-sim/port/blitz/after-swap.md). Three classes, all old (10-16 to 11-02).
+  (1) BARE ASKS: world code asks the Game for a seat's own field (`g.player`, `g.orders`, `g.act`). Inside a tick the page answers the FIRST seat's
+  and counts a miss (`seats.ts SEAT_ASKS`; only a check's `strict` throws), so the second player is read as the first. The places, by the function
+  that is handed the bare Game, with what each wants: `tools/qa/seats-check.ts KNOWN_ASKS` (seventeen rows: morale.ts seenBy and drive, runner.ts
+  closeFoe and foes, roomfight.ts tickMove, doorpath.ts own and drop, wallreact.ts beyond, coverfire.ts charOf, lanes.ts closeFight, doorblast.ts
+  splinter, frag.ts samCue, qrf.ts clearOfFoes, dialogue.ts radioLive, snowBreath.ts and snowTracks.ts, snatch.ts tick). Found by twenty fights of
+  150 s over ten floors on the page's stand: a floor of what there is. Measured for one: doorpath's wrong order book changed no answer in 1,070
+  asks (an entry from a stack has no corners left on its order), and seat 1's pair stacked and entered as seat 0's did.
+  (2) A SEAT'S OWN MODULE SWEEPING ALL THE WORLD'S MEN: each seat has its own `DoorTools`, and `doortools.ts slingTick` walks every man of the floor
+  and puts away a breaching shotgun that is not on one of ITS doors, so seat 1's net slings seat 0's gun every tick. The first player's pair
+  spends 8.40 s on a locked door (2.03 s for the same men in a game of one; seat 1's pair 1.67 s), then boots it. By reading, the hammer's net
+  (`hammerOutTick`'s call) has the same shape. `strict` cannot see this class.
+  (3) A BUDGET COUNTED WITH ONE PLAYER: the skinned buffer is 16 (`anim/characters.ts MAX_CHARS`) and `guards.ts spawnUnit`, `qrf.ts roomFor` and
+  `levelfit.ts`'s `men` row count one player. A full floor in a game of two is 17, and `game.ts drawMen` throws a RangeError the moment the fog
+  has let all 17 be drawn: barracks, dice 3 and 5, at 112 s and 123 s (on die 5 with every enemy down). 17 as stood up on barracks, block-squads, compound,
+  warehouse and tut-squad. NOT RUN in a page or a server process (by reading both draw through the same function).
+  THE CHECK IS LOOSER FOR IT, ON PURPOSE: `seats-check`'s fights ran under `strict` and claimed "a firefight asks the Game for no 'the player'",
+  which 40 s and 30 s on one die never tested. They now run with strict off and every ask counted by place; a place no row of KNOWN_ASKS names
+  FAILS (`fight`, and two `long` lines of 150 s), the fights run to their end so `twin` holds a whole fight, and `SEATS_ASK_BREAK=1` (one more
+  bare ask in every tick of a fight) must fail them. Classes (2) and (3) have no line yet: a line for each (a locked door in under 4 s for
+  each seat's pair; the barracks fight to its end) is red today and waits on the mend or on the Rust co-op check.
 - **What nobody has seen or measured**: a page a person plays as a client (the page check is a script's); two machines; a real network; a Mac; a client through a sandbox's tunnel; two PEOPLE in two seats; the look ahead by eye (its bullet says what); a game longer than
   twenty seconds over the wire; a mission ENDING on a server (the verdict's answer was read by hand, never over the wire); the run's memory on a long
   game (its text is kept for joiners: about 20 KB a second with two seats sending every tick, 80 MB over the longest life); a real socket backing up (the

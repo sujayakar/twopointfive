@@ -17,6 +17,7 @@
 // bare corridor has room to go round it, and at the old pace the leaf's own count runs out.
 // Headless: nothing here says how it looks.
 import { ROOT } from './headless.ts';
+import { asProbe } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { guarded, family } from './thresholdmenu-probes.ts';
 const { rig } = (await import('./outerwall-probes.ts')) as any;
 const { DOORMANNERS, DOORMANNERS_STATS, leafStalled } = await import(`${ROOT}/src/game/doorway.ts`);
@@ -90,4 +91,4 @@ export const leafstallCheck = guarded(async () => {
   return F.done();
 });
 
-if (import.meta.main) process.exit((await leafstallCheck()) ? 0 : 1);
+if (import.meta.main) process.exit((await asProbe('leafstall', leafstallCheck)) ? 0 : 1);

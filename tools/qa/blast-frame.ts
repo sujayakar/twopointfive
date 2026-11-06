@@ -6,7 +6,7 @@
 //   --warm N    the run is played N times first and thrown away (default 1: the numbers are then the WORK's, not the JIT's first sight of the blast's code;
 //               --warm 0 lists the cold run, as a fresh page pays its first charge)
 //   --split     every method of the classes a blast runs through (WallCharge, Destruction, WallBreak, Furniture, Debris, GlassBreak, WallReact, NavGrid,
-//               SoundPaths, StaticCollision, FogOfWar, Game.reachChanged …) wrapped: the blast frame's time by method, self and inclusive (the wrappers
+//               SoundPaths, StaticCollision, FogOfWar …) wrapped: the blast frame's time by method, self and inclusive (the wrappers
 //               cost a little: quote the frame from a run WITHOUT --split)
 //   --gc        a full collection forced before each wall charge's trigger, outside the timing: without it a collection the blast's own garbage sets off can
 //               land in the frame (`each pass` lists every pass's blast frame: a pass well over the others is one)
@@ -23,9 +23,9 @@ for (const a of argv) if (a.startsWith('--') && !KNOWN.includes(a)) { console.er
 const ROOT = resolve(import.meta.dir, '../..');
 // THE ARM (set before the harness is imported; a value already in the environment wins):
 //   --arm shipped (default)  TPS_PROFILE=shipped: the game as the PAGE opens it (src/host/profile.ts — destruction, cut pieces, kicked rubble, the cast …) + PT_WALL=1
-//   --arm round1             the frozen stand with round one's words (rebuild/performance/build.md): GLASSFX=on TPS_MOVES=1 TPS_TURN=1 TPS_CAST=1 PT_DESTR=1 PT_WALL=1
+//   --arm round1             the old frozen stand (TPS_PROFILE=frozen, said here since 2026-11-05: no word is the page's) with round one's words (rebuild/performance/build.md): GLASSFX=on TPS_MOVES=1 TPS_TURN=1 TPS_CAST=1 PT_DESTR=1 PT_WALL=1
 const ARM = flag('--arm') ?? 'shipped'; if (ARM !== 'shipped' && ARM !== 'round1') { console.error(`--arm ${ARM}: shipped or round1`); process.exit(2); }
-for (const [k, v] of Object.entries(ARM === 'shipped' ? { TPS_PROFILE: 'shipped', PT_WALL: '1', PT_DIGEST: '1' } : { TPS_CAST: '1', TPS_MOVES: '1', TPS_TURN: '1', GLASSFX: 'on', PT_DESTR: '1', PT_WALL: '1', PT_DIGEST: '1' })) process.env[k] ??= v;
+for (const [k, v] of Object.entries(ARM === 'shipped' ? { TPS_PROFILE: 'shipped', PT_WALL: '1', PT_DIGEST: '1' } : { TPS_PROFILE: 'frozen', TPS_CAST: '1', TPS_MOVES: '1', TPS_TURN: '1', GLASSFX: 'on', PT_DESTR: '1', PT_WALL: '1', PT_DIGEST: '1' })) process.env[k] ??= v;
 // (playthrough.ts raises THE ONE SWITCH only when it is the program: a tool that imports play() raises it itself — no game import in that file)
 if (ARM === 'round1') (await import(`${resolve(import.meta.dir, '../..')}/src/game/destructionSwitch.ts`)).DESTRUCTION.on = process.env.PT_DESTR === '1';
 const WALL_SCNS = ['compound-four', 'room-clear-four', 'depot-four', 'warehouse-four', 'block-four', 'barracks-four'];

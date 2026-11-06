@@ -1,4 +1,4 @@
-# 11-05, the kit's drums: a drum is steel to a round in any paint (an olive one was dark wood), and a drum on its side is one box that says its round; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+# 11-05, a yard lamp's arm ends at its pole's face and at its head's: the arm's box is shorter, nothing added or removed, every light where it was and as bright; before it: 11-05, the kit's drums: a drum is steel to a round in any paint (an olive one was dark wood), and a drum on its side is one box that says its round; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
 # every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
 # the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
-6c90bf1e313cd281b06b4f56305774a83416cee9
+1d3d733c78d802001fcb7cc164bd031f6ca12afa

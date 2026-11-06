@@ -70,7 +70,8 @@ import { fireWeapon } from './combat';
 import { learnCode as devicesLearnCode } from './devices';
 import { chronicle, chronRadio, chronObjective, roomOf } from './chronicle';
 import { radioHand } from './handwork';
-import { runnerBreak, runnerFled, runnerOwns } from './runner';   // (asked inside the drill's ending check and a beat's `rout` / `routed` only: false with its switch off)
+import { runnerBreak } from './runner';   // (asked inside the drill's ending check and a beat's `rout` / `routed` only: false with its switch off)
+import { hasHim, OWN } from './owner';
 
 // ================================================================================================================================ types a script sees
 export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
@@ -749,7 +750,7 @@ export class Director {
     if (I.kind === 'breach') {   // (ticked past its own 'done' too, as the show always ticked it: its clock runs on for since('done'), its men keep settling on the stack)
       I.d.tick(dt); D.t = I.d.t; D.phase = I.d.phase;
       for (; I.forwarded < I.d.beats.length; I.forwarded++) { const b = I.d.beats[I.forwarded]; if (!D.times.has(b.what)) D.times.set(b.what, b.t); this.push({ t: b.t, beat: D.owner, kind: 'drill', what: b.what }); if (b.what === 'abort') D.aborted = true; }
-      if (I.d.phase === 'done' && !D.done) { D.done = true; D.cleared = !D.aborted && I.d.hostiles.every(h => h.state === 'dead' || runnerFled(h)); }
+      if (I.d.phase === 'done' && !D.done) { D.done = true; D.cleared = !D.aborted && I.d.hostiles.every(h => h.state === 'dead' || h.fled); }
       return;
     }
     if (D.done) return;
@@ -852,7 +853,7 @@ export class Director {
       plan: ((p: PlanRef) => self.planOf(p)) as Query['plan'],
       flag: n => R.flags[n],
       signalled: n => R.signals.some(s => s.name === n),
-      routed: u => { try { return runnerOwns(self.guardOf(R, u)); } catch { return false; } },
+      routed: u => { try { return hasHim(self.guardOf(R, u), OWN.runner); } catch { return false; } },
     };
   }
 
@@ -921,7 +922,7 @@ export class Director {
       rout: u => {
         if (R.units.has(u.id)) return false;
         const gd = this.guardOf(R, u); if (gd.state === 'dead') return false;
-        if (runnerOwns(gd)) return true;
+        if (hasHim(gd, OWN.runner)) return true;
         if (!runnerBreak(g, gd)) return false;   // (asked while he is still in this beat's hand: refused, he is exactly as he was)
         if (gd.script) endGuardScript(gd, 'alert'); gd.hold = false; this.showMan(gd, false); b.touched.delete(u.id);
         this.push({ beat: b.name, kind: 'note', what: `rout ${u.callsign}` }); return true;

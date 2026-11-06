@@ -12,6 +12,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { asProbe } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { withDom, El } from './scenario-picker-probes.ts';
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
@@ -129,4 +130,4 @@ export async function kitlentCheck(): Promise<boolean> {
   console.log(`\nkitlent-check (${STAND} stand): ${ok ? 'ALL PASS' : 'FAILED'}`);
   return ok;
 }
-if (import.meta.main) { const ok = await kitlentCheck(); process.exit(ok ? 0 : 1); }
+if (import.meta.main) { const ok = await asProbe('kitlent-tiles', kitlentCheck); process.exit(ok ? 0 : 1); }

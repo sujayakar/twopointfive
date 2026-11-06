@@ -13,16 +13,19 @@
 //     plays tens of thousands of footsteps.
 // Usage:  const W = await standUp();  W.step(1/60);  // = game.update + camera + lights + box upload + input.endFrame, as main.ts's step() does
 import { resolve } from 'node:path';
+import './stand.ts';   // (the stand's word, written before anything below reads it)
 
 export const ROOT = resolve(import.meta.dir, '../..');
-// ONE-WAY DOORS (src/game/doors.ts DOORWAY — the shipped default is ON): the harness stands the game up with the leaves double-acting, as every older probe, frozen
-// digest, tally and session fixture met them. `probes.ts oneway` turns it on for itself, playthrough.ts plays the shipped doors (--set '{"DOORWAY":{"oneWay":false}}'
-// = the old ones), and ONEWAY=1 (env) runs any tool here — the tour, the soak, a probe family — on the shipped doors.
-// (OUTSIDE DOORS OPENING OUTWARD — DOORWAY.exitsOut, shipped OFF — is off here too, whatever ONEWAY says; QA_EXITSOUT=1 turns it on for any tool.)
-// THE TWO STANDS (src/host/profile.ts): every pin in this file and in standGame's harness block holds on the FROZEN stand — the default — and, under TPS_PROFILE=shipped,
-// only where the run's environment names that pin's own word; otherwise the table keeps its module's default, which is what the page plays. shippedBoot() = the few rows
+// ONE-WAY DOORS (src/game/doors.ts DOORWAY — the shipped default is ON): ON THE OLD FROZEN STAND (TPS_PROFILE=frozen; a run with no word is the page's, below) the
+// harness stands the game up with the leaves double-acting, as every older probe, frozen digest, tally and session fixture met them. `probes.ts oneway` turns it on for itself, playthrough.ts plays the shipped doors (--set '{"DOORWAY":{"oneWay":false}}'
+// = the old ones), and ONEWAY=1 (env) runs any tool there — the tour, the soak, a probe family — on the shipped doors.
+// (OUTSIDE DOORS OPENING OUTWARD — DOORWAY.exitsOut, shipped OFF — is off there too, whatever ONEWAY says; QA_EXITSOUT=1 turns it on for any tool.)
+// THE TWO STANDS (src/host/profile.ts): every pin in this file and in standGame's harness block holds on the old FROZEN stand (TPS_PROFILE=frozen) and, on the
+// stand a tool has with no word (the page's: 'shipped'), only where the run's environment names that pin's own word; otherwise the table keeps its module's default, which is what the page plays. shippedBoot() = the few rows
 // the page's boot writes over those defaults. First, before any level is built.
 const { pinned, harnessProfile, shippedBoot } = await import(`${ROOT}/src/host/profile.ts`);
+// THE STAND IS THE PAGE'S (2026-11-05): with no word a tool stands the game as the page opens it (stand.ts, imported above, has written the word down for the
+// tools that read it themselves and for a child, which inherits it). The old stand is one word, TPS_PROFILE=frozen, and a run on it says so (stand.ts).
 if (harnessProfile() === 'shipped') shippedBoot();
 /** the stand this file was loaded on. A tool that names its stand (`process.env.TPS_PROFILE ??= 'shipped'`) above a STATIC import of this file names it too late: imports load first, so the pins
  *  were lifted at stand-up and shippedBoot never ran, a stand that is neither of the two. standUp refuses that out loud. */
@@ -169,7 +172,21 @@ export interface Headless {
  *  tool's Math.random, as it always has (a tool that re-seeds Math.random afterwards gets the game's dice either way: dice.ts's one rule). */
 /** TPS_SEED: a whole number names the game's own die; anything else stops the tool (a typo must not quietly become seed 0) */
 function envSeed(v: string): number { if (!/^\d+$/.test(v.trim())) throw new Error(`TPS_SEED=${v}: want a whole number`); return Number(v) >>> 0; }
-export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string } = {}): Promise<Headless> {
+/** A GAME STOOD UP HAS DONE WITH THE LAST ONE (2026-11-05). A tool that stands games up back to back in one process grew without end: a dropped game is 7 to
+ *  45 MB of heap that is garbage and stays (measured: one worker of bang-tally.ts from 0.4 GB to 6.4 GB in two and a half minutes; the merge's box lost two
+ *  such workers at a 12 GB limit). NOTHING HOLDS THOSE GAMES: after one full collection a process that has played forty-two missions is the size of one that
+ *  has played two. WHY THEY STAY: these tools run a whole batch without once going back to the event loop (every await is on work already done), and that is
+ *  where bun's collector does its full collections from. One turn of the event loop between games gives two to five times less growth; the collection asked
+ *  for here gives nearly all of it back, so the stand-up asks, before it builds, from a process's second stand-up on (the first has nothing to collect).
+ *  WHAT IT COSTS: about 50 ms each, more with a bigger live heap (0.2 s at worst seen). A family that stood up 247 games paid 12 s of 381; a loop of bare
+ *  stand-ups is 6 to 10 % slower; missions of a second or more are not slower for it (32 tally missions: 91 s with it, 93 without).
+ *  `QA_STANDUP_GC=0` = the stand-up as it was, for measuring; any other value but 1 stops the tool (a typo must not quietly measure the wrong arm).
+ *  tools/qa/standupgc-check.ts holds it, both ways. It does nothing for garbage that is not a dropped game (a single long game's own). */
+function envCollects(v: string | undefined): boolean { if (v === undefined || v === '1') return true; if (v === '0') return false; throw new Error(`QA_STANDUP_GC=${v}: want 0 (the stand-up as it was) or 1`); }
+export const STANDUP_COLLECTS = envCollects(process.env.QA_STANDUP_GC);
+let stoodBefore = false;
+export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string; /** stand the picture's keeper of the lights' reach masks up too (render/reachKeep.ts), as a page's engine has one, and step it once a frame: for the tools that read masks. Absent = none, and no mask is ever made */ reach?: boolean } = {}): Promise<Headless> {
+  if (STANDUP_COLLECTS && stoodBefore) Bun.gc(true); stoodBefore = true;
   if (harnessProfile() !== STAND_AT_LOAD) throw new Error(`the stand was '${STAND_AT_LOAD}' when tools/qa/headless.ts loaded and is '${harnessProfile()}' now: TPS_PROFILE was set after the harness was imported (a static import loads before the file's first line). Set it before the import: \`const { standUp } = await import('./headless.ts')\` below the line that sets it`);
   const ch = opts.ch ?? await (opts.cast ? loadCastCharacter() : loadCharacter());
   { const force = process.env.CUTBOXES ?? process.env.CUT_BOXES;   // CUTBOXES=1 | 0 in front of any headless tool forces the cut switch (CUT_BOXES is read too); a replay's env wins
@@ -177,8 +194,13 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     else if (!pinned('CUTBOXES')) (await import(`${ROOT}/src/scene/cut.ts`)).cutConfig.on = true; }   // (the shipped stand, no word given: on, as the page opens — main.ts initCutSwitch)   // (a recording made with cut boxes on replays with them on: rayBox / lineBox answer the cut solids — read before the BoxWorld below latches it)
   if (process.env.TPS_BLASTPACE === 'old') (await import(`${ROOT}/src/game/destructionSwitch.ts`)).BLAST_PACE.on = false;   // TPS_BLASTPACE=old in front of any headless tool = the page's ?blastpace=old: a wall's reach masks, drip lines and furniture index all on the frame it goes, as before
   const engine: any = stubMod.stubHost();   // device fake, sceneLayout fake, skin null, an empty LightSet + BoxWorld on the fake, default settings, effectiveScale 1 — and nothing more (src/host/stub.ts)
+  { const w = process.env.QA_PICTURE;   // QA_PICTURE='{"exposure":0.5}' in front of any headless tool: the PICTURE's settings as a player has turned them (his Brightness, a panel's slider), laid over the stand-in's before the game is built. No sum of the simulation may read them (src/game/env.ts): tools/qa/settings-check.ts plays one run under several and holds them one run
+    if (w) { let turn: Record<string, unknown>; try { turn = JSON.parse(w); } catch (e) { throw new Error(`QA_PICTURE is not JSON (${(e as Error).message}): QA_PICTURE='{"exposure":0.5}'`); }
+      const bad = Object.keys(turn).filter(k => !(k in engine.settings)); if (bad.length) throw new Error(`QA_PICTURE: the engine has no setting ${bad.join(', ')} (src/settings.ts): a turn of nothing would read as a run that did not move`);
+      Object.assign(engine.settings, turn); } }
   if (opts.env) { const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`); DESTRUCTION.on = !!opts.env.destruction?.on; const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`); LIVED.on = !!opts.env.lived; }   // (a recording made with the destruction switch on replays with it on: the roof rule, the dressing, the loud rules)
   if (opts.env) { const { applyEnvSettings } = await import(`${ROOT}/src/game/journal.ts`); applyEnvSettings(engine.settings, opts.env); if (typeof opts.env.glassFracture === 'boolean') engine.glassFracture = opts.env.glassFracture;   /* (the recording's renderer drew the glass fracture's cracks, or said it could not: glass.ts's star decal and glassBreakLive read it) */ if (opts.env.particlesOn) { engine.settings.gpuParticles = true; engine.setParticles = () => { engine.particles = fake('particles'); }; } }
+  if (opts.reach) { const { ReachKeep } = await import(`${ROOT}/src/render/reachKeep.ts`); engine.reach = new ReachKeep(engine.world, engine.lights); }
   const smoke: any = standMod.nullSmoke();
   if (opts.env?.canister) smoke.params = { ...opts.env.canister };
   // the ONE stand-up (src/host/standup.ts): the level's boxes + lights into the stand-in, then `new Game`, then the harness trio — chaos 0 (the game byte for byte as it was before the
@@ -202,6 +224,7 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     get audioLog() { return audioLog; }, set audioLog(v: AudioCall[] | null) { audioLog = v; },
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
+      if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view; cam.update(dt, follow ?? me.followPos(), follow || game.spectate >= 0 ? null : me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
       engine.lights.update(dt, game.time);
       engine.world.dynamics = game.dynBoxes;

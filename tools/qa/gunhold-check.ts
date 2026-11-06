@@ -1,4 +1,4 @@
-// `bun run tools/qa/gunhold-check.ts [front|line|knife|all] [--verbose]` (also `probes.ts gunhold`): a pistol from behind a held man — the men who see it run for
+// `bun run tools/qa/gunhold-check.ts [front|round|line|knife|all] [--verbose]` (also `probes.ts gunhold`): a pistol from behind a held man — the men who see it run for
 // cover, work round, and use the line at Sam's back once he has fired (src/game/gunhold.ts). The maintainer, 10-12: "when you're holding a hostage, enemies
 // pretty much ignore that you're shooting at them and you can just take them down. they should probably run for cover when you take out a gun and actively work
 // on flanking you". Every staging is the standoff probes' own (Novak held in the break room, Kowalski and Reyes brought in), run with the rule OFF then ON:
@@ -155,13 +155,12 @@ export async function gunholdKnife(): Promise<boolean> {
   say(ok, `gunhold-knife: the arm hold (no pistol) — the old ring with the rule on\n    OFF  ${brief(off)}\n    ON   ${brief(on)}`, [off, on], fails);
   return ok;
 }
+/** the probe's parts, by the word that asks for one alone */
+const PARTS: Record<string, () => Promise<boolean>> = { front: gunholdFront, round: gunholdRound, line: gunholdLine, knife: gunholdKnife };
 export async function gunholdCheck(which = 'all'): Promise<boolean> {
   console.log('\n=== gunhold: a pistol from behind a held man — cover, the way round, the line at his back ===');
   let ok = true;
-  if (which === 'all' || which === 'front') ok = (await gunholdFront()) && ok;
-  if (which === 'all' || which === 'round') ok = (await gunholdRound()) && ok;
-  if (which === 'all' || which === 'line') ok = (await gunholdLine()) && ok;
-  if (which === 'all' || which === 'knife') ok = (await gunholdKnife()) && ok;
+  for (const [part, fn] of Object.entries(PARTS)) if (which === 'all' || which === part) ok = (await fn()) && ok;
   return ok;
 }
 /** `tally <front|round> [--seeds a-b]`: the staging over a spread of seeds (the dice of the rounds' cones and the men's beats), rule off against on — no verdict */
@@ -177,9 +176,11 @@ async function tally(scn: string, a: number, b: number) {
 }
 if (import.meta.main) {
   const argv: string[] = ((globalThis as any).process?.argv ?? []).slice(2);
-  if (argv[0] === 'tally') { const m = /^(\d+)-(\d+)$/.exec(argv[argv.indexOf('--seeds') + 1] ?? ''); await tally(argv[1] ?? 'round', m ? +m[1] : 1, m ? +m[2] : 8); (globalThis as any).process?.exit(0); }
+  const { asProbe } = await import('./holds.ts');   // (run alone, the check and its tally run as the probe the runner calls it by: one stand both ways)
+  if (argv[0] === 'tally') { const m = /^(\d+)-(\d+)$/.exec(argv[argv.indexOf('--seeds') + 1] ?? ''); await asProbe('gunhold-cover', () => tally(argv[1] ?? 'round', m ? +m[1] : 1, m ? +m[2] : 8)); (globalThis as any).process?.exit(0); }
   const arg = ((globalThis as any).process?.argv ?? []).slice(2).find((a: string) => !a.startsWith('--')) ?? 'all';
-  const ok = await gunholdCheck(arg);
+  if (arg !== 'all' && !PARTS[arg]) { console.log(`unknown: ${arg} (one of: all ${Object.keys(PARTS).join(' ')})`); (globalThis as any).process?.exit(2); }   // (a mistyped part ran nothing and said ALL PASS)
+  const ok = await asProbe('gunhold-cover', () => gunholdCheck(arg));
   console.log(ok ? '\n=== gunhold-check: ALL PASS ===' : '\n=== gunhold-check: FAILED ===');
   (globalThis as any).process?.exit(ok ? 0 : 1);
 }

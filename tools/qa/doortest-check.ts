@@ -8,6 +8,7 @@
 // Headless, everything given by KEYS (X on the door, one-frame digits) on thresholdmenu-probes.ts's rig: the office room clear with the four and with the
 // pair, the defenders taken off the floor so that a door's own story is all that plays. Each line stages afresh. Nothing here says how any of it LOOKS.
 import { ROOT } from './headless.ts';
+import { asProbe } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { stage, spotOf, quiet, guarded, family, rowsOf, textOf } from './thresholdmenu-probes.ts';
 const { DOORTOOLS, TOOLS_PAGE } = await import(`${ROOT}/src/game/doortools.ts`);
 const { DOORWAY, SIDE_KICK } = await import(`${ROOT}/src/game/doors.ts`);
@@ -179,4 +180,4 @@ export const doortestCheck = guarded(async () => {
   return F.done();
 });
 
-if (import.meta.main) process.exit((await doortestCheck()) ? 0 : 1);
+if (import.meta.main) process.exit((await asProbe('doortest', doortestCheck)) ? 0 : 1);

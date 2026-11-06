@@ -42,7 +42,7 @@ const KNOWN = ['--scn', '--seeds', '--hard', '--top', '--jobs', '--warm', '--jso
 for (const a of argv) if (a.startsWith('--') && !KNOWN.includes(a)) { console.error(`unknown flag ${a} — ${KNOWN.join(' ')}`); process.exit(2); }
 const TOP = Number(flag('--top') ?? 8), WARM = Number(flag('--warm') ?? 0), PASSES = Math.max(1, Number(flag('--passes') ?? 3)), CALLERS = !argv.includes('--nocallers'), CAP = Number(flag('--cap') ?? 300), HARD = argv.includes('--hard');
 // --ship = THE SHIPPED STAND (TPS_PROFILE=shipped: what the page plays), --ship5 = round one's five-word arm over the frozen stand (the head comment); neither =
-// the environment as this tool was started in (the frozen stand unless it says otherwise). The environment is set here, before the harness is imported and for
+// the environment as this tool was started in (the page's stand unless it says TPS_PROFILE=frozen). The environment is set here, before the harness is imported and for
 // every child run — with either flag the stand is NAMED, so a TPS_PROFILE the tool was itself started under cannot turn one arm into the other
 const SHIP = argv.includes('--ship'), SHIP5 = argv.includes('--ship5'); if (SHIP && SHIP5) { console.error('--ship and --ship5 are two arms: one of them'); process.exit(2); }
 Object.assign(process.env, SHIP ? { TPS_PROFILE: 'shipped' } : SHIP5 ? { TPS_PROFILE: 'frozen', TPS_CAST: '1', TPS_MOVES: '1', TPS_TURN: '1', GLASSFX: 'on' } : {});

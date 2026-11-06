@@ -9,6 +9,7 @@
 //           recording from before it
 // Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the switch itself. Nothing here looks at a picture (the page: kittree-page.cjs).
 import { ROOT } from './headless.ts';
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { rig } from './doortools-probes.ts';
 
 const { KITTREE } = await import(`${ROOT}/src/game/kittree.ts`);
@@ -225,6 +226,5 @@ export async function kittreeMate40(): Promise<boolean> {
 }
 
 if (import.meta.main) {
-  const all = [await kittreeRows(), await kittreeGuns(), await kittreeSponge(), await kittreeOff(), await kittreeMate40()];
-  process.exit(all.every(Boolean) ? 0 : 1);
+  process.exit(exitCode(await asProbes({ 'kittree-rows': kittreeRows, 'kittree-guns': kittreeGuns, 'kittree-sponge': kittreeSponge, 'kittree-off': kittreeOff, 'kittree-mate40': kittreeMate40 }, wanted())));
 }
