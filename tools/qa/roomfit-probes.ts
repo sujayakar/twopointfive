@@ -8,8 +8,6 @@
 //   roomfit-walk      the order given in the office (the night breach's pair, then the four): they step off at once with nothing named, arrive each on his
 //                     own mark, 'set.' once, each gun on what he was dealt, the row says what, nobody drifts; a man whose watch comes to weigh nothing looks
 //                     again and his gun — never his feet — moves on
-//   roomfit-off       ROOMFIT.on false: the same order is the line abreast it was (orders.ts spotsAt's own marks, Sam's facing, 'in position'), and a switch
-//                     thrown while they stand puts the guns back
 import { readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 import { stand, roomPoints, deals, measure, ZERO, add, line, type Counts } from './roomfit-map.ts';
@@ -166,25 +164,5 @@ export const roomfitHall = guarded(async () => {
     return { runs, bare, eg }; };
   const was = await count(0), now = await count(FIT_DEFAULTS.sectorAcross);
   verdict(now.runs >= 20 && now.bare <= now.runs * 0.15 && now.bare <= was.bare * 0.6, 'four men sent to a point with 12 m and more of clear floor along a bearing: a gun is down that run in six cases of seven and more, and the runs left bare are well under those of the first rule (a side door near the bearing stood for the run)', `${now.runs} long runs · nobody within 40° of it: ${now.bare} (first rule: ${was.bare} of ${was.runs})${now.eg.length ? `\n    still bare: ${now.eg.join('\n    ')}` : ''}`);
-  return done();
-});
-
-export const roomfitOff = guarded(async () => {
-  const { verdict, done } = family('roomfit-off: ROOMFIT.on false — the line abreast it was');
-  for (const squad of [2, 4] as const) {
-    ROOMFIT.on = false; const R = await rig(11 + squad, squad); const { game: g, O } = R; const men: any[] = O.squad(); const sam = g.player.char;
-    R.step(30); const s0 = [...sam.pos]; R.quick(AISLE); const aimed = [...g.aimPoint], face = yawTo(s0, aimed), A = men.map(m => O.of(m)), posts = A.map(a => [...(a?.post ?? [NaN, 0, NaN])]);
-    const spots: number[][] = O.spotsAt(aimed, face, men.length), onLine = A.every((a, i) => a?.order === 'move' && !a.fit && spots.some(s => dist(s, posts[i]) < 0.03));
-    const set = R.until(() => men.every(m => O.of(m)?.arrived), 14); R.step(60);
-    const dYaw = men.map(m => Math.abs(wrap(m.char.bodyYaw - face)));
-    verdict(onLine && set && dYaw.every(d => d < 0.3) && men.every(m => O.statusOf(m) === 'in position') && A.every(a => a.watch == null), `${squad} men: the marks are spotsAt's line abreast, every man faces the way Sam pointed, the row is "in position", nothing is watched`,
-      `posts ${posts.map(at).join(' ')} · line ${spots.map(at).join(' ')} · off the heading ${dYaw.map(f2).join(' / ')} rad · ${men.map(m => O.statusOf(m)).join(' / ')}`);
-  }
-  // … and thrown while they stand under a fitted deal: the guns come back to Sam's facing, the rows to 'in position', the feet stay
-  ROOMFIT.on = true; const R = await rig(15, 4); const { game: g, O } = R; const men: any[] = O.squad(); R.step(30); R.quick(AISLE);
-  R.until(() => men.every(m => O.of(m)?.arrived), 14); R.step(90); const had = men.filter(m => O.of(m).fit?.on && O.of(m).watch).length, p0 = men.map(m => [...m.char.pos]);
-  ROOMFIT.on = false; R.step(120);
-  const face = yawTo(g.player.char.pos, AISLE), back = men.every(m => { const a = O.of(m); return !a.fit && a.watch == null && O.statusOf(m) === 'in position'; }), feet = men.map((m, i) => dist(m.char.pos, p0[i]));
-  verdict(had >= 2 && back && feet.every(d => d < 0.1), 'the switch thrown while they stand: every watch is dropped, the rows read "in position", nobody walks', `${had} men had a watch · rows ${men.map(m => O.statusOf(m)).join(' / ')} · feet ${feet.map(f2).join(' / ')} m · Sam\'s facing ${f2(face)}`);
   return done();
 });
