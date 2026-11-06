@@ -1,5 +1,5 @@
 // THE STATE BRIDGE, READING IT BACK: a blob of export.ts or of rust/game's io.rs as a flat list of (path, bits), with real names, and the difference of two blobs: every
-// path that differs, grouped by the module that declares the field. That list is the worklist the fix agents get.
+// path that differs, grouped by the module that declares the field. That list is the work left to mend.
 //   bun run tools/blitz/paths.ts a.bin b.bin [--json]
 import { SCHEMA, parse, type Node } from './export';
 
