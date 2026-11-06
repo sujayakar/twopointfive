@@ -70,7 +70,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the probe's own holds put off. It cannot tell a family's word from a probe's name (a row under a family's word passes and is never read), nor see a row's prose. HOW THE LIST WAS FILLED: every probe name run on
   the page's stand in one week, by the build's gate or by a sweep of the 458 names the gate does not hold (412 green, 46 red, 57 probes), the 46 again on the old stand, page-only
   reds bisected as time allowed (a row says where one was not), and each answer found that week tried the other way round; three older rows carry their writers' answers,
-  untried. 78 names. It is what was read, not a promise that nothing else is red. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
+  untried. 80 names (two came from the build's gate the same day: `doortools-lights`, `flashweight-pace`). It is what was read, not a promise that nothing else is red. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
   (green on the page's). NOT DONE: `flashweight`'s two older rows are the old stand's measurements, kept as rows of both stands and not read again on the page's (the family
   did not finish inside half an hour on a loaded box). tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
