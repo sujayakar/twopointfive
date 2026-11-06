@@ -101,7 +101,7 @@ let selAfter = 0;   // the highlighted row of the nearby list as the last tick l
 //          (stickycam.ts:195; at the page's numbers the cone, 120, is wider than the camera's 110: `--set '{"FOG":{"coneDeg":40}}'` beside the
 //          difficulty's hard makes the read count).                                                     `<k> call sticky_fire <from x y z> <target x y z>`
 const CASE = arg('--case', ''); let caseN = 0, caseSaw = '', caseAt = -1000, caseMan: any = null;
-const caseMods: any = CASE === 'keeper' ? { P: await import('../../src/game/pressure.ts') } : CASE === 'sticky' ? { S: await import('../../src/game/stickycam.ts') } : {};
+const caseMods: any = CASE.startsWith('keeper') ? { P: await import('../../src/game/pressure.ts') } : CASE === 'sticky' ? { S: await import('../../src/game/stickycam.ts') } : {};
 function caseStep(g: any) {
   if (!CASE) return;
   const w = (l: string) => { appendFileSync(`${outDir}/gives.txt`, l + '\n'); between(l, 'give'); appendFileSync(`${outDir}/case.txt`, l + '\n'); caseN++; };
