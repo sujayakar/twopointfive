@@ -62,7 +62,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   WHAT THE BISECT'S ANSWER IS NOT, each learnt from a wrong row: it stops at the first set of words that does it, so another rule may turn the same line as well (`aim-unit`:
   the turn weight was the answer and the aim cost of moving turns four of its five lines; of the 37 names whose answer was tried the other way round, 10 stayed red); it raises a word by hand
   OVER a probe's own hold (`orderkeys-walk`: the answer named a rule the probe holds off, so the plain run never has it); a word read only as a game is stood up cannot be
-  raised (`firearm-topup`: the gear rule). WHICH ROWS A RUN IS READ AGAINST: the rows of its own stand. Two runs are read against none, and say so in one line where they have
+  raised (`firearm-topup`, mended since: the gear rule). WHICH ROWS A RUN IS READ AGAINST: the rows of its own stand. Two runs are read against none, and say so in one line where they have
   a red: one started with a word of the stand given by hand (`stand.ts BY_HAND`, read as the process starts: a probe turned green by its own rule held off would otherwise read
   GREEN AGAIN), and one of a single case of a probe (a case's number as the third word: `probes.ts aim-door 0`). A GREEN AGAIN on a row of both stands says which stand comes out of its `on`, not "take it off", and says so where other names share the row.
   WHAT HOLDS THE ROWS: `holds-check.ts` line (8) (probe `holds`, quick gate; `HOLDS_BREAK=1` puts two bad rows in and must fail it): a name the runner has, no bisect on a row
@@ -70,7 +70,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the probe's own holds put off. It cannot tell a family's word from a probe's name (a row under a family's word passes and is never read), nor see a row's prose. HOW THE LIST WAS FILLED: every probe name run on
   the page's stand in one week, by the build's gate or by a sweep of the 458 names the gate does not hold (412 green, 46 red, 57 probes), the 46 again on the old stand, page-only
   reds bisected as time allowed (a row says where one was not), and each answer found that week tried the other way round; three older rows carry their writers' answers,
-  untried. 80 names (two came from the build's gate the same day: `doortools-lights`, `flashweight-pace`). It is what was read, not a promise that nothing else is red. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
+  untried. 80 names when it was written (two came from the build's gate the same day); a row leaves as its check is mended (`GREEN AGAIN`), so the count only falls.
+  It is what was read, not a promise that nothing else is red. THE FIRST MENDS (2026-11-06, each green on both stands, its break word red on both): `firearm-topup`
+  reads the pistol row's own magazine (`TOPUP_BREAK=1`); `rifle-slot`'s grab expects the knife only where the close-in rule has one (`RIFLESLOT_BREAK=1`);
+  `orderkeys-table` asks the menu whether 5 is free for the row that asks for 9, and asks a second one on a page of its own (`ORDERKEYS_BREAK`); `picker-start` and
+  `picker-level` hold a boot to the level's own boxes, not the trim pieces a stood shape adds (`PICKERBOXES_BREAK=1`); `pellets-identity`'s three words of an old commit
+  are asked on the old stand only, and one line that needs no word is asked on both. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
   (green on the page's). NOT DONE: `flashweight`'s two older rows are the old stand's measurements, kept as rows of both stands and not read again on the page's (the family
   did not finish inside half an hour on a loaded box). tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
