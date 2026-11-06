@@ -31,6 +31,8 @@ pub fn particles_clear_rain(g: &mut crate::game::Game) {}
 ///    STAND-IN: the event has no such field, so the mark of each record of this step is kept, in the events' order, on this side's copy of the pool's
 ///    queue (`Particles.queue`, which holds nothing else here), for a host to read with the step's events and empty (`face_emits_ours`). Belongs in
 ///    the event (`OutParticlesEmit.ours`, asked of the generator).
+///  · `o.shape` (the record's shape: a cone, a burst, a ring, a puff, the rain's disc). STAND-IN: the event's schema of the options has every field
+///    but this one, and the pool reads a record with none as a cone. It is kept with the mark and handed over the same way. Belongs in the schema.
 /// (src/render/particles.ts:363 Particles.emit)
 pub fn particles_emit(g: &mut crate::game::Game, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 {
     use crate::render_particles::{EmitRec, PKind, MAX_NEW_PER_FRAME, RAIN_MAX_BIRTHS};
@@ -41,7 +43,7 @@ pub fn particles_emit(g: &mut crate::game::Game, kind: crate::render_particles::
     if let Some(p) = g.engine.particles.as_mut() {
         if p.queue.len() >= 8192 { p.queue.clear(); }   // (no host has read the marks for a long while: they are dropped, not kept for ever)
         let ours = !rain && p.ours;
-        p.queue.push(EmitRec { kind, pos, dir, count: n, o: crate::render_particles::EmitOpts::default(), seed: 0.0, ours, waited: 0.0 });
+        p.queue.push(EmitRec { kind, pos, dir, count: n, o: crate::render_particles::EmitOpts { shape: o.shape, ..crate::render_particles::EmitOpts::default() }, seed: 0.0, ours, waited: 0.0 });
     }
     g.out.push(crate::out_events::OutEvent::ParticlesEmit(crate::out_events::OutParticlesEmit { kind, pos, dir, count, o }));
     n

@@ -66,8 +66,10 @@
 //!                                      Belongs in the filtered export.
 //!   face_emits_ours(h)                 STAND-IN: THE FOG'S MARK OF EACH PARTICLE RECORD OF THE STEP (fogofwar.ts FOG.ours: a record filed between the
 //!                                      fog's `begin` and `done` is the team's own doing, and the pool then draws it over floor the team does not see).
-//!                                      `OutParticlesEmit` has no such field. At face_out: a byte a record (1 = ours), in the order the step's
+//!                                      `OutParticlesEmit` has no such field. At face_out: a byte a record (bit 0 = ours), in the order the step's
 //!                                      `ParticlesEmit` events were pushed; the kept marks are emptied here. Belongs in the event.
+//!                                      AND THE RECORD'S SHAPE, in the same byte's bits 1 to 3 (0 none, 1 cone, 2 burst, 3 ring, 4 puff, 5 the
+//!                                      rain's disc): the event's options have no `shape` in the schema, and the pool reads none as a cone.
 //!   face_mem() -> bytes                the module's memory now (a host holds its typed arrays to this: a memory that grew has detached them)
 //!
 //! A GAME KEPT (a checkpoint, the start a restart goes back to). The host's save controller (src/game/savestate.ts) decides when and under which label; what
@@ -214,7 +216,11 @@ pub extern "C" fn face_poke(h: u32, what: u32, v: f64) -> u32 {
 #[no_mangle]
 pub extern "C" fn face_emits_ours(h: u32) {
     let b = super::with(h, |x| match x.g.engine.particles.as_mut() {
-        Some(p) => { let o: Vec<u8> = p.queue.iter().map(|r| r.ours as u8).collect(); p.queue.clear(); o }
+        Some(p) => {
+            use game::render_particles::EmitShape as Sh;
+            let o: Vec<u8> = p.queue.iter().map(|r| (r.ours as u8) | (match r.o.shape { None => 0u8, Some(Sh::Cone) => 1, Some(Sh::Burst) => 2, Some(Sh::Ring) => 3, Some(Sh::Puff) => 4, Some(Sh::RainDisc) => 5 } << 1)).collect();
+            p.queue.clear(); o
+        }
         None => Vec::new(),
     });
     super::out(b);

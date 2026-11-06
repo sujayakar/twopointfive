@@ -110,7 +110,7 @@ export function wallReport(g: Game, at: Vec3): boolean { return !!firstOf(g, v =
 /** THE PICTURE'S HALF ALONE, for a host whose tick is not this file's (host/rustdress.ts; nothing of the game's own calls these two): a wall charge's
  *  blast at `at`, whose report and kick another tick has already made: the fireball, the dust ring, the pushes and the ceiling's dust start here; and
  *  the once-a-frame lines that remember the charges that stand and let the queued stages go, the camera left alone. */
-export function wallFeelPicture(g: Game, at: Vec3): boolean { return !!firstOf(g, v => wallReportOf(v, at, true) || null); }
+export function wallFeelPicture(g: Game, at: Vec3): boolean { return !!firstOf(g, v => { const was = v.fogOfWar.begin(v.player.char.id); try { return wallReportOf(v, at, true) || null; } finally { v.fogOfWar.done(was); } }); }   // (the team's doing, as the blast that calls `wallReport` is: fogofwar.ts FOG.ours)
 // (…with no camera the list's identity is not asked: a host that writes the game from elsewhere may hand a new array every time the list changes, and its restart puts the clock back)
 export function blastFeelStages(g: Game) { const was = g.fogOfWar.begin(g.player.char.id); try { blastFeelTickRaw(g, null); } finally { g.fogOfWar.done(was); } }
 function wallReportOf(g: Game, at: Vec3, picture = false): boolean {

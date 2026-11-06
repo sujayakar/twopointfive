@@ -448,6 +448,7 @@ function smokeTrack(g: any, kind: number, a: number, _gen: number): (() => { pos
     return () => { if (gone || !s.alive || s.age < last) { gone = true; return null; } last = s.age; return { pos: s.pos, dir: [0, 1, 0] }; }; }
   return undefined;
 }
+const EMIT_SHAPES = ['cone', 'burst', 'ring', 'puff', 'rainDisc'];
 const OUT_OWN: Record<string, (g: any, e: any) => void> = {
   SmokeSystemLikeEmit: (g, e) => { const b = SMOKE.side, i = SMOKE.at++, at = 4 + i * 16;
     if (b && at + 16 <= b.length && e.e) { const d = new DataView(b.buffer, b.byteOffset, b.byteLength);
@@ -457,8 +458,10 @@ const OUT_OWN: Record<string, (g: any, e: any) => void> = {
     OUT.SmokeSystemLikeEmit(g, e); },
   // (a particle record is filed as the team's own doing or not, as the fog's `begin` / `done` stood round it inside the tick: the pool reads its own
   //  `ours` as the record is queued, so the mark is put up round the event's call)
+  //  AND ITS SHAPE (STAND-IN, the same byte's bits 1 to 3: the event's options have no `shape`, and the pool reads none as a cone)
   ParticlesEmit: (g, e) => { const P = g.engine?.particles, m = OURS.marks; if (!P || !m) { OUT.ParticlesEmit(g, e); OURS.at++; return; }
-    const was = P.ours; P.ours = m[OURS.at++] === 1; try { OUT.ParticlesEmit(g, e); } finally { P.ours = was; } },
+    const b = m[OURS.at++], sh = b >> 1; if (sh && e.o) e.o.shape = EMIT_SHAPES[sh - 1];
+    const was = P.ours; P.ours = (b & 1) === 1; try { OUT.ParticlesEmit(g, e); } finally { P.ours = was; } },
   // STAND-IN: A WALL CHARGE'S BLAST IS TOLD BY ITS OWN REPORT. The Rust tick makes the blast's report and the camera's kick (blast_feel `wall_report`) and
   // leaves the particles of its feel to the picture's side, with no event that says "a wall charge blew here": the crack of its report, which nothing
   // else plays, is that word, and the picture's half starts on it (blastFeel.ts `wallFeelPicture`: the fireball, the dust ring, the pushes, the
