@@ -42,7 +42,9 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     let me_cam = g.tab.cmd_seat[me].cam;
     g.ticking = true;
     crate::scene_collision::tick_open(g);
-    // (game.ts:1591 `this.sim.settle(this)`: the die's move is use_dice below; a pose is a handle on the pool from the day it is made, so the poses have nothing to move)
+    // (game.ts:1591 `this.sim.settle(this)`: the die's move is use_dice below; the pool's tenant tends it: a man who left the lists is out of it, one who
+    //  arrived is in)
+    crate::posehome::pose_home_tend(g);
     crate::rustknobs::knobs_to_rust(g);
     g.m.rustknobs.rust_knobs.tick = true;
     // a record from anyone made one an honest seat could have sent, before anything reads it

@@ -581,6 +581,7 @@ pub fn anim_sheath_rest_inv(g: &mut crate::game::Game, c: CharId) -> Quat {
     let fresh = crate::anim_skeleton::pose_new(g, n);
     crate::anim_skeleton::rest_pose(g, rig, fresh);
     crate::anim_skeleton::pose_fk_run(g, &mut f, fresh);
+    crate::anim_skeleton::pose_done(g, fresh);   // (the scratch is dropped)
     let an = &mut g.ch[c].anim;
     let q = v3::quat::conj(f.rot[an.nodes.spine3]);
     an.rc_inv = Some(q);

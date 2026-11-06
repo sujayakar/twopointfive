@@ -83,6 +83,7 @@ pub fn character_new(g: &mut crate::game::Game, ch: RigId, d: crate::character::
     crate::anim_skeleton::rest_pose(g, ch, rp);
     let origin = v3::m4::create();
     skel_update(g, id, rp, &origin, false, None);
+    crate::anim_skeleton::pose_done(g, rp);   // (the scratch is dropped)
     let n = g.ch[id].anim.nodes;
     g.ch[id].rest_chest_inv = v3::quat::conj(g.ch[id].skel.global_rot[n.spine3]);
     g.ch[id].rest_head_inv = v3::quat::conj(g.ch[id].skel.global_rot[n.head]);
