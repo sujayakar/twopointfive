@@ -45,8 +45,10 @@ export function faceWasm(say: (line: string) => void = () => {}): Promise<{ path
     const [err, code] = await Promise.all([new Response(p.stderr).text(), p.exited]);
     if (code !== 0) {
       const first = err.split('\n').filter(l => /^error/.test(l)).slice(0, 3).join(' · ') || err.trim().split('\n').slice(-2).join(' · ');
-      say(`game_face.wasm: the build failed: ${first}`);
-      return { why: `The Rust game did not build: ${first.slice(0, 300)}` };
+      // (the commonest way a machine that HAS a cargo cannot build this: a compiler with no wasm target or no linker for it, where rustup's own would have both)
+      const hint = /linker `lld` not found|target may not be installed|can't find crate for `(core|std)`/.test(err) ? ` (this cargo, ${c}, cannot build for wasm32-unknown-unknown: rustup's toolchain, pinned in rust/rust-toolchain.toml, brings the target and its linker)` : '';
+      say(`game_face.wasm: the build failed: ${first}${hint}`);
+      return { why: `The Rust game did not build: ${first.slice(0, 300)}${hint}` };
     }
     say(`game_face.wasm: built in ${((performance.now() - t0) / 1000).toFixed(0)} s, ${statSync(FACE_WASM).size} bytes`);
     return { path: FACE_WASM };
