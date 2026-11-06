@@ -101,7 +101,8 @@ function wr(n: Node, v: any, o: Out): void {
     case 'u64': case 'i64': o.room(8); o.dv.setBigInt64(o.n, BigInt(typeof v === 'bigint' ? v : Math.trunc(v ?? 0)), true); o.n += 8; return;
     case 'str': { if (typeof v !== 'string') { miss('not a string', v); o.u32(0); return; } const b = UTF8.encode(v); o.u32(b.length); o.bytes(b); return; }
     case 'unit': return;
-    case 'opt': if (v && typeof v.liveKeys === 'function' && !(n.of.k === 'map' && n.of.K.k === 'id') && !(n.of.k === 'set')) { const K = v.liveKeys(); v = K.length ? (v.get ? v.get(K.includes(G) ? G : K[0]) : true) : undefined; } if (v === null || v === undefined) { o.u8(0); return; } o.u8(1); wr(n.of, v, o); return;
+    case 'opt': if (v && typeof v.liveKeys === 'function' && v.liveKeys().length === 0) v = undefined;   // (a table with no row, a per-game table this game has none in: nothing, not an empty one)
+      if (v && typeof v.liveKeys === 'function' && !(n.of.k === 'map' && n.of.K.k === 'id') && !(n.of.k === 'set')) { const K = v.liveKeys(); v = K.length ? (v.get ? v.get(K.includes(G) ? G : K[0]) : true) : undefined; } if (v === null || v === undefined) { o.u8(0); return; } o.u8(1); wr(n.of, v, o); return;
     case 'vec': { if (v === null || v === undefined) { miss('nothing for a list', v); o.u32(0); return; } if (!Array.isArray(v) && !isTyped(v)) { miss('not a list', v); o.u32(0); return; } const len = v.length; o.u32(len); for (let i = 0; i < len; i++) { const x = v[i]; if (x === undefined && !(i in v)) { zero(n.of, o); continue; } wr(n.of, x, o); } return; }
     case 'arr': { if (!v || typeof v.length !== 'number') { miss('not a fixed list', v); zero(n, o); return; } if (v.length !== n.n) miss(`a list of ${v.length} for ${n.n}`, v.length); for (let i = 0; i < n.n; i++) wr(n.of, v[i], o); return; }
     case 'tup': { if (!Array.isArray(v)) { miss('not a tuple', v); zero(n, o); return; } n.of.forEach((x: Node, i: number) => wr(x, v[i], o)); return; }
@@ -127,6 +128,7 @@ function wType(n: Node, v: any, o: Out): void {
   if (typeof v === 'string') { arm = vars.findIndex(a => a.str === v); if (arm < 0) arm = vars.findIndex(a => a.ty && (a.ty === 'String' || (SCHEMA.types[a.ty]?.k === 'enum' && SCHEMA.types[a.ty].words.includes(v)))); }
   else if (typeof v === 'number') arm = vars.findIndex(a => a.ty === 'f64');
   else if (typeof v === 'boolean') arm = vars.findIndex(a => a.ty === 'bool');
+  else if (isTyped(v) && vars.some(a => a.ty && /^Vec<f32>/.test(a.ty))) arm = vars.findIndex(a => a.ty && /^Vec<f32>/.test(a.ty));   // (a Float32Array is the singles' arm where there is one)
   else if (Array.isArray(v) || isTyped(v)) arm = vars.findIndex(a => a.ty && /^(Vec<|\[|\(|V3|Quat)/.test(a.ty));
   else if (v && typeof v === 'object') { const kw = v.kind ?? v.type; if (typeof kw === 'string') arm = vars.findIndex(a => a.kw === kw); if (arm < 0) arm = vars.findIndex(a => a.sn && a.sn === v.constructor?.name); if (arm < 0) { let best = -1; vars.forEach((a, i) => { const t = a.ty && SCHEMA.types[a.ty]; if (t?.k !== 'struct') return; const has = t.fields.filter((f: any) => f.ts && f.ts in v).length; const all = t.fields.filter((f: any) => f.ts).length; if (has === all && has > best) { best = has; arm = i; } }); } if (arm < 0) arm = vars.findIndex(a => a.ty && IDS.has(a.ty)); }
   if (arm < 0) { miss(`no arm of ${T.name}`, v); zero(n, o); return; }
@@ -150,6 +152,8 @@ export function exportGame(g: any, knobs: Record<string, unknown>): Uint8Array {
   for (let grew = true; grew;) { grew = false; for (const t of SCHEMA.tables) { const L = BK.listOf(t.id); let i = done.get(t.id)!; const o = buf.get(t.id)!; const N = parse(t.ty); while (i < L.length) { AT = `${t.id}[row]`; ROWAT = BK.first.get(L[i]) ?? ''; wr(N, L[i], o); i++; grew = true; } ROWAT = ''; done.set(t.id, i); } }
   for (const t of SCHEMA.tables) { const b = buf.get(t.id)!; if (b.n > 4096) SIZES.set(`table ${t.table}`, b.n); }
   ROWS.clear(); for (const t of SCHEMA.tables) for (const r of BK.listOf(t.id)) { const k = `${t.id} ${(r as object).constructor?.name}`; const e = ROWS.get(k); if (e) e.n++; else ROWS.set(k, { n: 1, first: BK.first.get(r) ?? '' }); }
+  // an order row the import has no closures for (rust's io::deal_closures): it would stand at its blank there
+  for (const r of BK.listOf('OrdersOrderDefId') as any[]) if (!SCHEMA.dealtRows.includes(r.id)) { AT = 'orders::OrderDef'; miss(`no closures by id for the row ${r.id}: add it to hand2.cjs ROWS`, r.id); }
   const out = new Out(); out.bytes(main.view());
   for (const t of SCHEMA.tables) { const b = buf.get(t.id)!; out.u32(done.get(t.id)!); out.bytes(b.view()); }
   out.u32(BK.nextSerial);

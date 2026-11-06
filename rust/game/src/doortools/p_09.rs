@@ -11,8 +11,14 @@ macro_rules! o { ($g:expr, $op:expr) => { $g.tab.doortools_door_op[$op] } }
 macro_rules! thr { ($g:expr, $op:expr) => { $g.tab.doortools_door_op[$op].thr.as_mut().unwrap() } }
 
 // ---- seams: each waits on the skeleton (notes.md, ## Skeleton)
-/// detonateStun(g, it, true) with nobody on its list (doors-kit.md: combat::detonate_stun's `nobody` argument).
-fn seam_detonate_stun_nobody(g: &mut Game, it: ItemId) { todo!("needs: detonate_stun with a nobody argument") }
+/// detonateStun(g, it, true) with nobody on its list: the guards' list is emptied round the call and put back as it was, so the stun's blast finds no man
+/// to judge (who it hurts is decided by the caller, by which side of the door he is on). A man added to the emptied list during the call would be lost with it,
+/// as in the TypeScript's `finally { g.guards = all }`. (doortools.ts:3331)
+fn seam_detonate_stun_nobody(g: &mut Game, it: ItemId) {
+    let all = core::mem::take(&mut g.guards);
+    crate::combat::detonate_stun(g, it, Some(true), None);
+    g.guards = all;
+}
 
 // ---- small reads
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }

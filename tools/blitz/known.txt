@@ -1,25 +1,33 @@
 # THE KNOWN DIFFERENCES between the TypeScript game's state and the Rust game's after a tick: a line each, `<regex of paths><TAB><why it is no fault of a rule>`.
-# Read by tick-diff.ts: a differing path that matches a line is counted and left out. Add a line only with its reason, and take a line out when its cause is mended.
-# The kinds: bridge (the export walks the two sides differently) · host (the host's doings between ticks, not run on the Rust side) · harness (this loop's own doing) ·
-# picture (state only the renderer reads, which the Rust tick does not fill) · skeleton (a type the Rust skeleton cannot yet say).
-\.things_of\.	bridge: BoxMirror.thingsOf is a REFERENCE to the furniture (boxMirror.ts:186); the walk writes it as a value, Rust keeps a marker
+# Read by diff.ts: a differing path that matches a line is counted and left out. Add a line only with its reason, and take a line out when its cause is mended.
+# Paths are diff.ts's: a row of a table numbered by reach reads [c12]. The kinds: bridge (the export walks the two sides differently) · host (the host's doings
+# between ticks, not run on the Rust side) · harness (this loop's own doing) · picture (state only the renderer reads, which the Rust tick does not fill) ·
+# skeleton (a type the Rust skeleton cannot yet say).
 \.mirror\.(copy|epoch)$|scene_box_mirror\.copies\.n$|scene_box_mirror\.held\[\d+\]\.	harness: the module's copy of the box world is made afresh in a fresh module (its number, its marks); `held` is a second copy of the same mirror
-clip_side\{.*\}\.at$	bridge: the clip store is written again on first use after an import; a clip's number may come out in another order
-^g\.fog_of_war\.frame\.|^g\.fog_of_war\.(lamp_pick|lamp_n|lit_stats)	picture: the fog's GPU block and its lamps' list only feed the renderer
-^g\.view_proj	bridge: one value, two arms (a Float32Array on one side, an Array on the other); the numbers are the same singles
+^g\.fog_of_war\.frame\.|^g\.fog_of_war\.(lamp_pick|lamp_n|lit_stats)	picture: the fog's GPU block and its lamps' list (triage: fogofwar "lamps … only feed the renderer")
 script\.serial$|^g\.serial_next$	bridge: a serial dealt by the walk to a record no Rust body numbers (GuardScript.serial is read by nothing)
 ^g\.props\.stats\.ms$	the wall clock (a stat)
-^g\.destr\.edge_look\.	picture: dress (edgeLook.ts)
-^g\.m\.anim_gltf\.nvg_bits	bridge: a memo of a pure function of the cast (gltf.ts), kept where the TypeScript's walk cannot see it
+^g\.destr\.edge_look\.	dress (edgeLook.ts)
+^g\.m\.anim_gltf\.nvg_bits	a memo of a pure function of the cast (gltf.ts), kept where the TypeScript's walk cannot see it
 ^g\.fog_of_war\.fired_n(\{|\.len$)	bridge: FogOfWar.firedN is keyed by the Op OBJECT (fogofwar.ts:439); the walk deals a serial as its key, Rust keys by the op's ID
 ^g\.m\.doze\.left	bridge: a table keyed by the game that has no row (doze.ts LEFT) is written as an empty one; Rust's None is the TypeScript's truth
 ^g\.chars\.	picture: the character renderer's own marks (anim/characters.ts)
-^g\.orders\.defs\[|^g\.tab\.orders_order_def	skeleton: the 'thrWord' row is not dealt again (the order enums have no DoorThrWord variant), so the rows after it sit one place off
-\.mirror\.(used|things_at)$|scene_box_mirror\.clock\.n$|scene_collision\.anytime\.windows$	host: the asks the headless host makes of the box world BETWEEN ticks (a window opened, a clock ticked)
+\.mirror\.(used|things_at)$|scene_box_mirror\.clock\.n$|scene_collision\.anytime\.windows$	host: the asks the headless host makes of the box world BETWEEN ticks (a window opened, a clock ticked); not run on the Rust side
 cmd_seat\[c?\d+\]\.mark$|^g\.orders\.view\.(input|cam)$	host: hostAfter's takeCut mark (an identity serial of the bridge's) and the menu's host view
 ^g\.messages\[\d+\]\.serial$|^g\.orders\.log\[\d+\]\.serial$	bridge: serials. The walk deals them by identity as it meets a record; Rust deals them from g.serial() as it makes one: the same records, other numbers
 ^g\.work\.cache	harness: a memo (key, time) the test driver's `orders.targetAt` fills between ticks; the Rust runner builds the driver's target itself
 scene_collision\.anytime\.proofs$	host: the asks made of the box world between ticks
 scene_collision\.sensed\.paths$	host: the test driver's own path questions between ticks (a count)
 ^g\.events\[\d+\]\.serial$	bridge: serials, as g.messages' (the walk deals by identity as it meets a record, Rust from g.serial() as it makes one)
-^g\.m\.lanes\.states\.(seen|banged)\{\d+\}$|^g\.fight\.heard_ev\{\d+\}$	bridge: a set keyed by a GameEvent's IDENTITY (lanes.ts:200 WeakSet<GameEvent>; roomfight heardEv): the key written is that event's serial, dealt differently on the two sides; the set's `.len` is still compared
+^g\.m\.lanes\.states\.(seen|banged)\{\d+\}$|^g\.fight\.heard_ev\{\d+\}$|^g\.chronicle\.heard_of\{\d+\}$|^g\.m\.glass\.states\.seen\{\d+\}$	bridge: a set keyed by a GameEvent's IDENTITY (lanes.ts:200 WeakSet<GameEvent>; roomfight heardEv): the key written is that event's serial, dealt differently on the two sides; the set's `.len` is still compared
+^g\.m\.doortools\.sky(\.len$|\{)	harness: a memo of a pure function of a room (doortools.ts:761 SKY, underSky), first filled BETWEEN ticks 1009 and 1010 by the test driver's own question with a room `roomAt` flooded for it (the state as the next tick opens shows the host wrote it); the Rust game fills its own when its tick asks
+clip_side\{.*\}\.at$	bridge 5.2: ClipSide.at is written -2 (not yet asked) by the walk so that the Rust store is asked again on first use; Rust then holds its own slot numbers
+^g\.door_path\.walks\{GuardId\(c?\d+\)\}\.(arr|serial)$|^g\.door_path\.last_of\{.*\}\.w\.1$|^g\.gd\[c?\d+\]\.pieing\.path_ref$	bridge: serials of identity (doorpath.ts:88 Walk.arr is the path ARRAY he was handed, asked `gd.path === W.arr`; a walk's own serial; pieing's path_ref): the walk deals them as it meets the object, Rust as it makes it
+^g\.qrf\.heard_events\{\d+\}$|^g\.m\.picture\.states\.done\{\d+\}$|^g\.m\.tactics\.states\.seen_ev\{\d+\}$	bridge: sets keyed by a GameEvent's identity, as lanes' `seen` (the key written is the event's serial); `.len` is still compared
+\.rd\.pose\.at$	bridge / skeleton: a dead man's ragdoll drive (Character.rd) holds a pose the TypeScript keeps OUTSIDE the pool (written 0xffffffff, no floats carried); a Rust pose lives in the pool. What it drives (his bones, his boxes) is compared
+scene_collision\.sensed\.light$	host: a count of light asks; the headless host / the test driver asks between ticks too (+2 with no tick run)
+scene_collision\.rays\.n$	picture: a count of rays cast. The TypeScript's includes the decals' placement rays (marks.ts:55-70 bangScorch: one down and sixteen round, at a stun grenade's burst); marks are a boundary no-op in Rust (Game.decals is not carried)
+^g\.m\.dialogue\.own_rects$	a memo of a pure function of the level (dialogue.ts:387 ownRects, a SideMap keyed by the Level): the walk cannot key it and writes None; Rust holds its own
+^g\.m\.gunwall\.st\{.*\}\.hold\.serial$|^g\.m\.doorway\.states\{.*\}\.path$	bridge: serials of identity (a hold's own number; the path array a doorway state was handed), as doorpath's
+^g\.rescue\.heard\{\d+\}$|^g\.rescue\.flow\.heard\{\d+\}$	bridge: sets keyed by a GameEvent's identity (hostage-rescue), as lanes' `seen`; `.len` is still compared
+^g\.rescue\.last_order$|^g\.pl\[c?\d+\]\.wall\.serial$	bridge: serials of identity (the rescue's last order RECORD, compared `!==`; a wall hold's own number)

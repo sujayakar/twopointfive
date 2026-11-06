@@ -179,6 +179,8 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::weather::weather_update(g, dt, Some(yaw));
     crate::takedown::takedown_tick(g);
     for &s in &seats { in_seat(g, s, |g| crate::disarm::disarm_tick(g, dt)); }
+    // (wet characters: the coats are the picture's, but the soak's ask stands the rule's copy of the box world and may cast the sky's rays: game.ts updateWetness)
+    crate::wet::update_wetness(g, dt);
     crate::combat::update_items(g, dt);
     crate::glass::update_glass(g);
     crate::glassbreak::glass_break_update(g, dt);

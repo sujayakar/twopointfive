@@ -10,8 +10,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 const AIR_CELL: f64 = crate::scene_air_grid::AIR_CELL;
 
 /// The block's stamp, what the slot's Plan goes by (SimState.stamp; airDust.ts:74, 103, 104, 105, 111, 129, 163). Neither the skeleton nor rust/sim's state.rs holds one (notes, ## Skeleton).
-fn seam_sim_stamp(g: &mut Game) -> f64 {
-    todo!("needs: SimState.stamp of the game's block (airDust.ts:74, 103; g.sim is the slot and no stamp exists)")
+/// A Rust game's block stands in its slot for the game's life: it is never parked, moved or written wholesale under a running game, which are the only things that
+/// deal the TypeScript's block a new stamp (src/sim/state.ts). So its stamp is one number for good, and not 0, which is what a slot's Plan holds before it is made.
+fn seam_sim_stamp(_g: &mut Game) -> f64 {
+    1.0
 }
 
 /// The dust's table in the game's block.

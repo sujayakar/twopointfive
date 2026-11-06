@@ -1,191 +1,133 @@
-# tools/blitz — the tick loop
+# tools/blitz — the mission loop
 
 The game's simulation exists twice: the TypeScript under `src/` (the game as it ships) and a Rust translation of it in `rust/game`. This folder holds the state
-bridge between the two and the loop that brings the Rust side up against the TypeScript side, one tick at a time.
+bridge between the two and the loop that plays a whole mission on both and stops where they part.
 
-**The TypeScript is the truth.** The loop never edits it and neither do you. Every difference is mended on the Rust side, or named in `known.txt` with its reason.
-
-## What the loop is
-
-1. A real mission is stood up headless in the TypeScript game (`tools/qa/playthrough.ts` and its scripted player), on the page's stand (`TPS_PROFILE=shipped`).
-2. As tick K opens, its whole state is exported through the bridge (`export.ts`). That blob, and the simulation block of `rust/sim` at that moment, are the one
-   start both sides step from.
-3. The TypeScript game steps N ticks; the state after each tick is exported.
-4. A native test binary (`rust/game_run`) imports the start **once**, copies the block in, and calls the translated tick N times. After each tick it exports its state.
-5. After each tick the two states are compared, bytes first and then path by path. Paths named in `known.txt` are left out. The loop stops at the first tick that
-   has anything else, and says what.
-
-From its first tick on the Rust game is its own: its die, its knobs, its poses, its lights. Nothing is re-imported, so a small difference at tick 12 is still there
-to be seen at tick 13.
+**The TypeScript is the truth.** The loop never edits it and neither do you. Every difference is mended in `rust/game/src`, or named in `known.txt` with its
+reason. Never mend the TypeScript, the bridge, or the loop to make a difference go away.
 
 ## The one command
 
 ```sh
-tools/blitz/run.sh <mission>:<seed> [--ticks N] [--from K] [--keep] [--verbose] [--show N] [--out DIR]
-tools/blitz/run.sh room-clear-four:1 --ticks 40
+tools/blitz/run.sh <mission>:<seed> [--ticks N] [--keep "1,2,100-110"] [--every N]
+tools/blitz/run.sh room-clear-four:1 --every 100
 ```
 
 It needs `bun` and `cargo` on the PATH (the toolchain is pinned in `rust/rust-toolchain.toml`) and nothing outside the repository. It builds the runner into
-`rust/game_run/target` (ignored) and puts its blobs in a temp folder that it names on its first line (`$TMPDIR`, or `--out DIR`). Nothing is written into the tree.
+`rust/game_run/target` (ignored) and puts its blobs in a folder it names on its first line (`--out DIR`, or one under `$TMPDIR`). Nothing is written into the tree.
 
-| flag | |
-|---|---|
-| `<mission>:<seed>` | a scenario of `tools/qa/playthrough.ts` and its seed. A wrong name prints the list. |
-| `--ticks N` | step N ticks side by side (default 40). Tick numbers in all output count from 1 at the start. |
-| `--from K` | take the start as the mission's tick K opens (default 1). The TypeScript game alone plays the ticks before it, so a later stretch of a mission can be reached without the Rust side having to be right up to there. A start in mid-mission is less trodden than a start at tick 1: the dress rows are put down at tick K after K−1 ticks with them up, so look for a harness artefact first in what its first tick shows. |
-| `--keep` | keep every tick's blobs. By default only the last tick compared is kept, with the start. About 30 MB a tick. |
-| `--verbose` | a line for every tick (default: ticks 1, 10, 20, … and the last), and the runner's notes. |
-| `--show N` | how many paths of each module to print at the tick that differs (default 6). |
-| `--no-build` | use the runner as it was last built. |
+What it does:
 
-Exit code: `0` every tick the same but for what is known · `1` an unknown difference · `2` the Rust tick panicked or the runner died · `3` the build or the
-TypeScript side failed · `4` a process went over the memory ceiling · `64` bad arguments.
+1. **The TypeScript side, once** (`mission.ts`, about 20 s a mission). The mission is stood up headless on the page's stand (no `TPS_PROFILE` word) and played by
+   `tools/qa/playthrough.ts`'s scripted player. Every tick it writes the host's half (below) and, after the tick, a hash of each part of `rust/sim`'s block and
+   the die's count. A whole state is written only at the ticks you ask for (`--keep`, `--every`): a state grows by about 35 KB a tick.
+2. **The Rust side** (`rust/game_run`, bin `mission`). It imports the state as tick 1 opens **once**, copies the block in, and steps the translated tick through
+   the mission. From then on the Rust game is its own: its die, its knobs, its poses, its lights. Before each tick it takes only the host's half. **After every
+   tick** it compares its block's hashes, part by part, and its die's count with the TypeScript's, and stops at the first tick that parts.
+3. **The path diff** (`diff.ts`) of every tick both sides kept, minus `known.txt`. The tick the block first parted is kept by the Rust side on its own.
 
-One turn of the loop is a build and a run. On a 4-core machine: the first build is about a minute and a build after an edit of one part about 20 s; the
-TypeScript side is about 12 s for 40 ticks; the Rust side and the diffs are about 2.5 s a tick. So 40 ticks are about two minutes a turn, and a mend near
-tick 1 is quicker to try with `--ticks 3`. The compiler is the largest process (about 3.4 GB on a first build); a tick's diff is about 2 GB.
+Exit: 0 in step and no unknown path · 1 the block or the die parted, or a kept tick has a path that is not known · 2 the Rust tick panicked · 3 a side did not run.
 
-## Reading the output
+`--no-ts` runs the Rust side again over the TypeScript side `--out` already holds (the same ticks kept): the loop while you mend is a build and a few seconds.
+`--open "K"` also writes the state as tick K opens. `--after N` runs N more ticks after the block parts. `--blobs` keeps each kept Rust state (over 100 MB late
+in a mission) after it is diffed.
 
-A clean run:
+## Reading the stop
 
-```
-blitz: room-clear-four:1, 40 ticks from the mission's tick 1, stand shipped; blobs in /tmp/blitz-Ab3dEf
-build: ok (57 s)
-typescript: room-clear-four seed 1, mission ticks 1..40, stand shipped; game time 0.6667; die n=11; 9 guards; 1 orders of the driver's; 0.52 GB resident
-typescript: ok (12 s)
-tick 1: 3477 paths differ, 3477 known, 0 unknown; block the same bytes; 1.72 GB
-…
-ticks 1..40: nothing unknown, and rust/sim's block the same bytes at every tick
-```
+**`PANIC in tick K`** with a `todo!()` or "not yet implemented": a function nobody wrote. The frames under it name it and who called it. Read the TypeScript it
+names and write its body (below). `python3 tools/blitz/stubcalls.py` lists every such call in the crate, so you can see the ones ahead of you.
 
-`paths differ` counts every leaf of the two states that is not the same; `known` are those a line of `known.txt` names; `unknown` is the work. `block` is the
-simulation block of `rust/sim` (doors, men, items, poses, lights, the die), compared as bytes. `die n=` is how many draws the game's die has made: both sides
-draw from the die in the block, so a draw too many or too few shows as a difference in the block's dice part.
-
-A tick that differs prints the unknown paths by the module that declares the field, the count and the first few with both values, and stops:
-
-```
-tick 39: 3512 paths differ, 3481 known, 31 unknown (scene_boxes 19 · fogofwar 12); block the same bytes; 1.90 GB
-  scene_boxes: 19
-      g.tab.boxes[412].emissive[0]   ts 1.65 666666666666fa3f | rust 11 0000000000002640
-      …
-  fogofwar: 12
-      …
-STOPPED AT TICK 39: the first tick with a difference that known.txt does not name (ticks 1..38 were the same but for what is known)
-```
-
-A number is printed with its eight bytes as they are stored, since the two sides must agree to the bit. `(absent)` on one side means the path is not in that state at all (a list of
-another length, another arm of a union). A row of a table that was made in the tick may carry another ID on each side; look at what it holds, not at its number.
-The module is where the FIELD is declared, which is often not where the mistake is: find who writes it (below).
-
-A panic prints the tick, the message with its place, and the game's own frames of the backtrace, innermost first:
-
-```
-THE RUST TICK 1 PANICKED (no tick before it was compared):
-  panicked at rust/game/src/packside/sig.rs:12:122:
-  not yet implemented
-     game::packside::sig::pack_of
-     game::rig_props::p_03::pack_side
-     …
-```
-
-`sig.rs: not yet implemented` is a function nobody has translated yet (a stub). `p_NN.rs: needs: …` is a seam: a translated body that waits on something
-its part could not reach when it was written. A runner that dies with a signal and no panic is most often a stack overflow: a function calling itself.
-
-## Looking closer
+**`THE BLOCK FIRST PARTED AT TICK K`**, with the parts that differ by name. The Rust side has kept its state of that tick; the TypeScript side keeps only
+what it was asked, so run the whole command once more with `--keep "K" --blobs` added (not `--no-ts`). Then
 
 ```sh
-# this path on both sides at tick k: as the tick opened (TypeScript), and as it returned (TypeScript, Rust)
-bun run tools/blitz/peek.ts <run dir> <tick> '<regex of paths>' [--differ] [--most N]
-
-# who writes it, in the TypeScript: every write of one property during tick T, with its stack
-TPS_PROFILE=shipped bun run --preload ./tools/blitz/expose.ts tools/blitz/watch.ts <mission>:<seed> [--from K] --tick T '<expression of g>' <property>
-
-# who writes it, in the Rust: a hardware watchpoint on one double under gdb
-tools/blitz/watch-rust.sh <run dir> <ticks> <what>:<row>:<index>
-
-# one tick's diff alone, with every differing path (known ones too) in a file
-bun run tools/blitz/tick-diff.ts <run dir> <tick> --all /tmp/d.tsv        # BLITZ_KNOWN=1 also prints the count of each known line
+rust/game_run/target/debug/where_parts <out>/sK.bin <out>/nsK.bin     # which words of which part, both values
+bun run tools/blitz/diff.ts <out>/aK.bin <out>/nK.bin --show 40       # which paths of the game's own state (run.sh prints the first few; use --blobs to keep nK.bin)
 ```
 
-`<run dir>` is the folder `run.sh` named. It holds the last tick compared; run with `--keep` to hold them all. Paths are the bridge's (Rust names: `g.ch[4].pos[0]`,
-`g.tab.boxes[412].emissive[0]`, `g.m.<module>.…` for a module's own state). `watch.ts` takes a JavaScript expression instead, since it runs inside the TypeScript
-game: `'g.guards[2]' irradiance`. The stack it prints names the TypeScript functions (`at unitLightMeter src/game/guards.ts:2683`); every Rust function's doc line
-in `sig.rs` names its source the same way (`/// (src/game/guards.ts:2681 unitLightMeter)`), so `grep -rn unitLightMeter rust/game/src/*/sig.rs` gives the Rust
-name, and `grep -rn 'fn unit_light_meter' rust/game/src/guards/` the part that holds its body. `watch-rust.sh` knows a few fields by
-name (`time`, `ch.pos`, `box.c`, …); add an arm to `watch_addr` in `rust/game_run/src/main.rs` for another.
+The part `poses` is not the alarm: a dead man's ragdoll holds a pose the TypeScript keeps outside the pool and Rust keeps inside it, so from the first death
+that part differs by design. The runner says when that happens and goes on comparing every other part.
 
-## How to mend
+**The die's count differs**: the two games have drawn a different number of times. Something upstream decided differently; the kept tick before it usually
+shows a path.
 
-The Rust game is `rust/game/src/<module>/`, a folder for each TypeScript file:
+**Paths that are NOT KNOWN at a kept tick**, the block still in step: state of the game's own that differs and has not yet moved a draw or the block. Chase
+these too: they are tomorrow's parting. `diff.ts --dump '<path regex>'` prints every leaf under a path on both sides; `--why` counts the known lines that
+matched; `--dynboxes` says which kinds of frame box one side has more of.
 
-- `types.rs`, `sig.rs` — GENERATED. Never edit them. `sig.rs` holds every function's signature with a `todo!()` body (the stub); `types.rs` the state's types.
-- `p_NN.rs` — the translated parts. `b_01.rs` — bodies added during bring-up: stubs that a tick reached, and the host steps below.
-- `mod.rs` — names which functions each part supplies (`pub use p_02::{…}`): a named function of a part wins over its stub in `sig.rs`.
+**Is it the host?** Before you read Rust, check whether the TypeScript's own host wrote the difference between two ticks: run with `--open "K+1" --keep "K"` and
 
-Rules:
+```sh
+bun run tools/blitz/diff.ts <out>/aK.bin <out>/c(K+1).bin --known /dev/null --canon ""
+```
 
-1. Edit `p_NN.rs` or `b_01.rs`. Keep each function's signature exactly as `sig.rs` has it; other parts call it by that signature.
-2. To fill a stub, write the function in the module's `b_01.rs` (make the file with the same header as any other `b_01.rs` if the module has none) and add its
-   name to the `pub use b_01::{…}` line of `mod.rs`. Without that line the stub still wins and still panics.
-3. Translate what the TypeScript does, statement for statement, in its order: the order of draws from the die and of rows made in a tick is part of the answer.
-   Each function's doc line in `sig.rs` gives its source (`/// (src/game/lighting.ts:75 updateTargets)`).
-4. Calls into the picture, the sound and the host are no-ops, and live in `b_01.rs` parts marked `BOUNDARY NO-OP`. Before you make something a no-op, check that
-   no rule reads what it writes (see "a branch dropped as picture" below).
-5. Where the generated types cannot say what the TypeScript says, do not bend `types.rs`: work round it in the part and leave a `// SKELETON-GAP: …` line saying
-   what the type should be. Where the bridge does not carry something, leave a `// BRIDGE-ASK: …` line. These are the lists the generators' owners work from.
-6. Run the loop again. A mend is done when the tick that stopped passes and no earlier tick has begun to differ.
-7. A line goes into `known.txt` only with its reason, and only when the difference is not a rule of play going wrong.
+shows what changed with no tick run. If your path is there, it is the host's half or the harness (below), not a rule.
 
-`rustknobs/b_01.rs` and `root_settings/b_01.rs` are written by `tools/blitz/gen-knobs.py` and `gen-settings.py` (python3) from the generated types; run them
-again when the list of knobs in `rust/sim/src/knobs.rs` or the settings' fields change, rather than editing those two files.
+`bun run --preload ./tools/blitz/expose.ts tools/blitz/timeline.ts <mission>:<seed>` prints what happens at which tick (orders, shots, men down), to know what
+tick K was.
 
-## The kinds of cause seen so far
+## The kinds of cause, and what to do for each
 
-- **A translation mistake.** A body that does not do what its TypeScript does: a helper that calls itself where it should cast, a tuple filled in the order of a
-  comment where the callers read another order, a call left out (`handProps` is `handPropsRaw` and then `rigKeys`; only the first was called).
-- **A branch dropped as "picture" that a rule reads.** The most expensive kind, because it shows late. `Lighting.updateTargets` ends by painting every fixture's
-  boxes with their emissive; that was left out as the renderer's, but the fog of war reads a lamp's face from those boxes and the light estimate reads the lamps'
-  intensity. It showed 39 ticks in, the first time a tube flickered. A file that is "dress" can still hold a pure function that a rule calls (what a man wears
-  decides where his kit hangs).
-- **A skeleton gap.** The generated types or stubs cannot say it: a table that did not exist yet, a field that lost its identity, an enum with no variant for a
-  closure. Work round it in the part, mark it `SKELETON-GAP`, and if a difference remains that no rule depends on, name it in `known.txt`.
-- **A bridge gap.** The export does not carry something a tick reads (the engine's lights and settings, an order's closures), or walks the two sides differently
-  (a reference written as a value, a serial dealt by identity). Either a host step hands it over (below) or `known.txt` names it.
-- **A harness artefact.** The two sides were not run alike: dressing rows up on one side only, the host's work between ticks missing on the Rust side, the test
-  driver giving an order through the menu between two ticks. Mended in this folder or in `rust/game_run`, never in the game.
-
-## Host steps: stand-ins for what the bridge does not carry
-
-Each of these exists because the bridge or the Rust skeleton lacks something today. They are the harness's, are marked as such where they stand, and go when the
-gap is closed.
-
-| step | where | stands in for |
+| kind | what it looks like | what to do |
 |---|---|---|
-| `host_engine_fill`, `host_world_upload` | `rust/game/src/host_api/b_01.rs`, fed by `engineText` in `host.ts` | `Game.engine` (the lights' list in its order, the box world's lists and counts, the settings) is not carried, and a tick reads it. The headless host lists the box world again between some ticks. |
-| `orders_closures_again` | `rust/game/src/orders/b_01.rs` | an imported order row has no closures; each is dealt its enums again by its id. |
-| `bringup_module_state` | `rust/game/src/anim_skeleton/b_01.rs` | `rust/sim` keeps tables outside a game's block (the furniture's facts by row) that a fresh module does not have. |
-| `host_half`, `give` | `rust/game_run/src/main.rs` | the host's code between two ticks is not run on the Rust side: the input record it sampled, its own camera and Input, the HUD's room memo, and the test driver's orders are taken from the TypeScript run. |
-| the settle, the die, the dress rows | `stand.ts` | the start is taken after `sim.settle` (a pose outside the pool is not carried); the game is given its own die (so nothing of `Math.random` is handed over); every dress row is put down (the Rust tick is the tick with them down). |
+| **a stub nobody owned** | a panic on `todo!()` in a `sig.rs` function | Write the body from the TypeScript the stub's doc line names, in a `b_NN.rs` of that module, and name it in `mod.rs`. |
+| **a seam left in a part** | a panic on `todo!("needs: …")` inside a `p_NN.rs` | The translator could not say something with the types it had. Read what it needs; often the answer is a line (a constant for a native game, a call into `::sim`). If it truly needs a new type or field, that is an ask (below). |
+| **dropped as picture** | no panic; a path differs, or boxes are short, where the TypeScript has a branch the Rust has not | A branch was left out as "the picture's" but the tick reads what it wrote (a spark's box in the frame list, a light, the copy of the box world a rule stood). Translate the branch. |
+| **a wrong boundary no-op** | a `BOUNDARY NO-OP` body returns nothing where the game needed an answer | Read the TypeScript: if game state or a later decision depends on it, translate it; if it is truly the renderer's, leave it and say why in `known.txt` if a path shows. |
+| **translation** | values differ in a rule both sides run | Read both, line by line. Usual suspects: an early return, the order of two writes, a copy where the TypeScript shares one object, `Math.fround`, a default argument. |
+| **the host's half** | the TypeScript changes between two ticks with no tick run | The host's code is not translated. The runner stands in for it (list below). A new one is a stand-in in the runner, marked `HOST STEP`, and an ask. |
+| **bridge** | a path differs at tick 1, or a field is blank after the import | The export or import does not carry it. `not-carried.json` says what is left out and why. A stand-in in the runner, and an ask. |
+| **skeleton** | the Rust types cannot say what the TypeScript holds | Never edit `types.rs`, `sig.rs`, `io.rs`, `knobs.rs`, `ids.rs`: a program writes them. Work round it in your part if you can, and log the ask. |
+| **harness** | serials, memo tables, counters, row numbers | The two sides number things differently by design, or the test driver's own question wrote the game. A `known.txt` line with its reason. |
 
-## The memory rule
+## Mending
 
-A decoded state is over a million paths. So: one build or one run at a time; `run.ts` decodes nothing itself; each tick's diff is a process of its own that
-holds the two states of that one tick and exits; two blobs that are the same bytes are never decoded; nothing is collected across ticks. Every bun process of the
-loop checks itself against a ceiling of 4 GB resident (`BLITZ_CEIL_GB`) and stops with exit 4 above it. If you write a tool that walks many ticks, start a
-process a tick: a first form of this loop that walked them in one process grew to 7.7 GB.
+- The Rust bodies live in `rust/game/src/<module>/p_NN.rs` (a translated part) and `b_NN.rs` (bodies added during bring-up). Mend them in place.
+- **A new `pub fn` that fills a skeleton stub must be named in that module's `mod.rs`**: `pub use b_01::{…, your_fn};`. A named re-export wins over the glob of
+  `sig.rs`'s `todo!()` stubs; a body that is not named is never called and the stub still panics. `stubcalls.py` prints such bodies by name.
+- Read the TypeScript before every mend, and say in a comment why the Rust is as it is where it is not a plain copy.
+- `cargo build` warnings are many and not yours; errors are. One cargo build at a time on a shared machine.
+- A difference you leave standing goes in `known.txt`: a regex of the paths, a tab, the kind and the reason. Take a line out when its cause is mended. A line
+  with no reason is a bug hidden.
+
+## Handing a mend back
+
+A commit on your own branch that touches only `rust/game/src` and `tools/blitz/known.txt`, with a plain message that says which mission and tick it mends and
+how far the mission then runs in step ("over N ticks, every part but `poses` hashed after each"). Say what you did not check. If you needed a new stand-in in
+the runner or a change to the loop, say so separately: that is not part of a mend.
+
+## What the runner stands in for
+
+The Rust game is the tick alone. What the TypeScript's host does round a tick is not translated, and what the bridge does not carry is blank after the import.
+Each of these is a few lines of `rust/game_run/src/bin/mission.rs`, and `BLITZ_SKIP=<name>,…` leaves one out to learn whether it is still needed.
+
+| stand-in | name | why |
+|---|---|---|
+| the record `cmd_buf`, every camera and Input row that is no seat's | (always) | the host samples input and moves its camera between ticks |
+| the dialogue's room memo, once | `rects` | the HUD's asks fill it between ticks |
+| the test driver's orders (`gives.txt`) | (always) | the scripted player calls `orders.give` between ticks |
+| the driver's `roomAt` that floods a room (`hostwrites.txt room_at`) | (always) | a question of the driver's that writes the game |
+| the box world listed again | `upload` | where the headless host uploaded between two ticks |
+| the autosave's chronicle row (`hostwrites.txt chron_save`) | (always) | the save controller is the host's and writes one row into the game |
+| `light_set_update(dt)` after each tick | `lights` | the host retires flashes between ticks, and the next tick's light reads it |
+| the men's columns written back into the block | `men` | a man's owner / rank / reason / since are the block's columns in the TypeScript and plain fields in the Rust types |
+| `g.m.dress.dress.debris = false` | `debris` | the TypeScript side runs with every dress row down, and the bridge does not carry that table |
+| the sparks' pool made again after the import | `sparks` | the bridge does not carry `Game.sparks` |
 
 ## Files
 
-| | |
-|---|---|
-| `run.sh`, `run.ts` | the one command: build, TypeScript side, Rust side and diff in lock step |
-| `stand.ts` | the mission stood up headless and held at its ticks; shared by every tool so they all see the same run |
-| `ts-ticks.ts` | the TypeScript side: the blobs of N ticks |
-| `host.ts` | the host's side: the engine as text for the Rust game |
-| `tick-diff.ts`, `known.txt` | one tick's difference, and the differences that are known, each with its reason |
-| `peek.ts`, `watch.ts`, `watch-rust.sh` | a path on both sides; who writes it |
-| `gen-knobs.py`, `gen-settings.py` | write the two generated `b_01.rs` |
-| `export.ts`, `paths.ts`, `expose.ts`, `schema.json`, `not-carried.json`, `bridge-check.ts`, `dump-tables.ts` | the state bridge itself |
-| `rust/game_run/` | the native runner |
+- `run.sh` the one command · `mission.ts` the TypeScript side · `host.ts` the bridge's writers for one part of a game (the host's half)
+- `diff.ts` two whole states by path, in the file's memory, tables numbered by reach (`canon.txt` names the tables) · `known.txt` the known differences
+- `timeline.ts` a mission's events by tick · `stubcalls.py` calls that land on a stub
+- the bridge, written by the skeleton's program (`BRIDGE.md`): `export.ts`, `expose.ts`, `paths.ts`, `schema.json`, `not-carried.json`, `bridge-check.ts`,
+  `dump-tables.ts`
+- `rust/game_run/src/bin/mission.rs` the runner · `where_parts.rs` where two blocks differ
+
+## Limits
+
+- **No GPU, no picture.** The headless game has no renderer, no GPU light meter, no smoke solver and no audio; the compare is of the simulation's state only.
+- The scripted player cannot be hurt and plays one way a seed. A mission in step is that play-through in step, not the mission's every branch.
+- The runner cannot yet give an order aimed at a wall or a thing, or with options: it says `NOTE … cannot give` and the sides will part there.
+- A pose's floats are compared only through what the pose drives (bones, boxes); the pool itself is out of the alarm after the first death.
+- Three functions stay `todo!()` by decision: the director's `beat_frame_new`, `beat_next`, `beat_test` (level scripts). A mission that runs a script beat
+  stops there.
