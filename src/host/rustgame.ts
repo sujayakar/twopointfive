@@ -273,9 +273,15 @@ function after(S: Held): void {
 }
 /** every optional field of a Box (scene/boxes.ts `boxOf`, which names them all) */
 const BOX_OPTIONAL = ['rot', 'name', 'mkey', 'dc', 'dh', 'rough', 'metal', 'aniso', 'marks', 'markGain', 'fogEmit', 'fogMark', 'wetK', 'cut', 'cutCore', 'cutGlass', 'cutRound', 'cutArc', 'cutOld', 'round', 'was', 'shape', 'shaped', 'piece', 'of', 'dress', 'stuff', 'does', 'cutCoreStuff'];
+/** THE HOST'S ROWS ARE THE HOST'S, AS THEY STAND NOW (its camera, its Input: the bridge's hand-over). An apply made BETWEEN two ticks would write the Rust
+ *  game's copy of them over the page's own: a frame old after an order, the saved moment's after a load (seen on tut-squad: the page's camera put back
+ *  to where it stood at the save, and the man came to rest 2.5 cm aside with the die and every part of the block equal; on tut-solo: the camera's cut
+ *  to the man undone by the long list). So before any apply that is not a tick's own the host's half is handed over first. */
+function handHost(S: Held): void { if (S.inStep || !S.lastCmds || !S.h) return; const hb = hostHalf(S.g, reg(), S.lastCmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n)); }
 /** THE FILTERED EXPORT ONTO THE PUPPET, its out events dispatched. Answers the ms of the export, the apply and the dispatch. */
 function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; bytes: number } {
   const g = S.g, G = g as unknown as Record<string, any>;
+  handHost(S);
   let t = performance.now();
   call('face_puppet', () => X!.face_puppet(S.h, first ? 1 : 0)); grown(g);
   const blob = outBytes(), ex = performance.now() - t;
@@ -330,10 +336,6 @@ function stoodAgain(S: Held, k: number, own?: unknown[]): void {
   let t = performance.now();
   if (!S.kept.has(k) || !call('face_back', () => X!.face_back(S.h, k))) throw new Error('rust=1: that kept game is gone (it was of a game that has been stood again since)');
   grown(g);
-  // THE HOST'S ROWS ARE THE HOST'S, AS THEY STAND NOW (its camera, its Input: the bridge's hand-over). A kept game holds them as they stood at the save, and
-  // the whole apply would put the page's own camera back to that moment, where the page without the word leaves its camera as it is and cuts it to the
-  // man (seen on tut-squad: after a load the man came to rest 2.5 cm aside, with the die and every part of the block equal). Handed over first.
-  if (S.lastCmds) { const hb = hostHalf(g, reg(), S.lastCmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n)); }
   RUST_GAME.backMs.back = performance.now() - t; t = performance.now();
   S.uploaded = true; S.shelfSig = '';   // (the kept game's own `g.saves` is the shelf as it was handed over before that save: the shelf as it stands is handed over again)
   whole(S);
@@ -366,6 +368,8 @@ function settle(S: Held): void {
   pokes(S);
   call('face_loaded', () => hand(enc.encode(b.label), (p, n) => X!.face_loaded(S.h, p, n, b.loads, b.saves))); grown(g);
   apply(S, true);
+  // (the HUD's lines are the saved moment's again, by the long list; the controller's own line of the load, savestate.ts:1132, said after them)
+  { const M = (g as unknown as Record<string, any>).messages as { text: string; t: number }[]; M.push({ text: `checkpoint loaded${b.label ? ` \u2014 ${b.label}` : ''}`, t: g.time }); if (M.length > 5) M.shift(); }
   RUST_GAME.backMs.hand = performance.now() - t;
 }
 /** THE HOST'S SWITCHES written between ticks (the options' and the pause card's god mode / AI / ammunition rows; the pause card letting go of the launcher's
@@ -385,10 +389,9 @@ function pokes(S: Held): void {
 function toStart(S: Held, said?: string): void {
   const g = S.g, G = g as unknown as Record<string, any>;
   stoodAgain(S, S.startKept, S.startOwn);
-  if (CLEANRESTART.on) G.messages.length = 0;
-  if (said) g.msg(said);
   if (G.saves) G.saves.missionRef = null;   // (the controller's word for 'a fresh run': a new name, an empty shelf, its triggers from nothing. savestate.ts:983)
-  apply(S, true); sweep(S);   // (what the filtered export last sent was forgotten with the game that stood: the long list again)
+  apply(S, true); sweep(S);   // (what the filtered export last sent was forgotten with the game that stood: the long list again, the HUD's lines as the start had them)
+  if (said) g.msg(said);
   try { G.saves?.onPutBack?.({ key: '', slot: 'auto', n: 0, label: 'the start', kind: 'auto', savedAt: 0, missionT: 0, stage: String(G.mission?.stage ?? ''), runId: '', bytes: 0, mem: true }); } catch (e) { RUST_GAME.outThrew['restart.host'] ??= String((e as Error)?.stack ?? e).slice(0, 600); }
   if (CLEANRESTART.on && CLEANRESTART.picture) G.engine?.restartPicture?.('level restarted');
   RUST_GAME.restarts++;
@@ -411,6 +414,7 @@ function shelfIn(S: Held): void {
  *  puppet for something the page does not show (`window.__rust.whole()`). A third of a second, outside any tick. */
 function whole(S: Held): void {
   const g = S.g, G = g as unknown as Record<string, any>, t = performance.now();
+  handHost(S);
   call('face_export', () => X!.face_export(S.h)); grown(g);
   // STAND-IN: A MAN'S ROW OF THE BLOCK (sim/men/cols.ts ManCols `S`, `r`) is written by the whole apply from the bridge's `Character.man_row`, and for
   // the player's own character that came back as nothing after play (seen: `r` undefined). Rows change hands only in a start or inside a tick, so a
