@@ -22,6 +22,13 @@ process.env.QA_STAND_SAID = '1';
 export const BY_HAND: readonly string[] = handWords();
 /** …and the same question asked now (tools/qa/ident-pin.ts asks it after its tool has set its own words): `WORD=value` for every such word in the environment */
 export function handWords(): string[] { return [...STAND_ENV, 'QA_HOLD'].filter(k => k !== 'TPS_PROFILE' && process.env[k] !== undefined).sort().map(k => `${k}=${process.env[k]}`); }
+/** THE BREAK WORDS THIS PROCESS WAS STARTED WITH: `WORD=value` for every `<NAME>_BREAK` of the environment that is neither empty nor 0, the spelling of a
+ *  check's red path (one older word is spelt another way and named here: DOORPATH_OLD). Read once, as BY_HAND is. A run with one is some check's red path:
+ *  it is said on stderr as the process starts (once down a tree of children, as the old stand is), and probes.ts closes its run with a line on whether the
+ *  word bit. About forty checks read any value as set, a 0 too: to them `X_BREAK=0` is the red path, and nothing here names it. */
+export const BREAK_WORDS: readonly string[] = Object.keys(process.env).filter(k => (/_BREAK$/.test(k) || k === 'DOORPATH_OLD') && !['', '0'].includes(process.env[k] ?? '')).sort().map(k => `${k}=${process.env[k]}`);
+if (BREAK_WORDS.length && process.env.QA_BREAK_SAID !== BREAK_WORDS.join(' ')) console.error(`BREAK WORD${BREAK_WORDS.length > 1 ? 'S' : ''} SET: ${BREAK_WORDS.join(' ')}. A check that reads ${BREAK_WORDS.length > 1 ? 'one' : 'it'} plays its red path and must fail.`);
+if (BREAK_WORDS.length) process.env.QA_BREAK_SAID = BREAK_WORDS.join(' ');
 /** THE WORDS A HELD ROW IS RAISED BY: the first WORD=value of each row's note in src/host/profile.ts FROZEN_HOLDS, once each (a row whose note names no word
  *  of its own has none). What tools/qa/stand-bisect.ts searches over, and what a row of tools/qa/expected-red.ts may name. */
 export function heldWords(holds: Record<string, string>): string[] {

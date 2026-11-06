@@ -65,6 +65,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   raised (`firearm-topup`, mended since: the gear rule). WHICH ROWS A RUN IS READ AGAINST: the rows of its own stand. Two runs are read against none, and say so in one line where they have
   a red: one started with a word of the stand given by hand (`stand.ts BY_HAND`, read as the process starts: a probe turned green by its own rule held off would otherwise read
   GREEN AGAIN), and one of a single case of a probe (a case's number as the third word: `probes.ts aim-door 0`). A GREEN AGAIN on a row of both stands says which stand comes out of its `on`, not "take it off", and says so where other names share the row.
+  A RUN STARTED WITH A BREAK WORD (`stand.ts BREAK_WORDS`: any `<NAME>_BREAK` neither empty nor 0, and `DOORPATH_OLD`; said on stderr as the run starts) is
+  read against the list all the same and closes with one line more, which gate.sh carries: DID NOT BITE where nothing failed, the reds with no row as
+  the word's to explain, or BITE NOT SHOWN where every red has a row (a row hides a break word: `RUNNER12_BREAK` on the page's stand read as
+  EXPECTED RED, 11-06). `holds-check` (9) holds the three by the runner's self tests. `checkpoint-autosave`'s red path is `CKPTCIVIN_BREAK=1` now.
   WHAT HOLDS THE ROWS: `holds-check.ts` line (8) (probe `holds`, quick gate; `HOLDS_BREAK=1` puts two bad rows in and must fail it): a name the runner has, no bisect on a row
   red on the old stand, every bisect word one the stand can raise with its value (`heldWords`, the list `stand-bisect.ts` searches) and none a word
   the probe's own holds put off. It cannot tell a family's word from a probe's name (a row under a family's word passes and is never read), nor see a row's prose. HOW THE LIST WAS FILLED: every probe name run on
@@ -204,7 +208,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   winds back something. `CKPTCIV_BREAK=1` stands a man by her after the load (FAIL on both); `=save` leaves the first staging out (the page's stand
   only). `checkpoint-autosave`: the cleaner SEES the hauled body on the page's stand and is on the phone to security for 17 s, which rightly holds the
   gate: the body's request waits, the stage's and the room's JOIN it with no line of their own in the log, and the probe read no stage request. The
-  civilians are out of that script, as the staff's senses are (they were only deaf); `CKPTCIV_IN=1` leaves them in (the page's stand only). `attract`:
+  civilians are out of that script, as the staff's senses are (they were only deaf); `CKPTCIVIN_BREAK=1` leaves them in (the page's stand only). `attract`:
   a guard's mark is where a fresh encounter stands him, read from the game's own at the start: under the night's opening a man whose round begins by
   the way in is stood further along it (`ATTRACT_BREAK=1`: the marks a metre off, FAIL on both). `squadplay-try`: F is pressed with blue still walking
   to its stand-off, and the two seconds the line waited were the rest of that walk (1.90 s old, 2.08 s at the squad's pace). The blow is held to the
