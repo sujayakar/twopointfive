@@ -21,7 +21,7 @@ pub fn owing(g: &mut crate::game::Game) -> Option<crate::snow_blast::Owing> { to
 pub fn attach_snow_blast(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/snowBlast.ts:122 clearSnowBlast)
-pub fn clear_snow_blast(g: &mut crate::game::Game) { todo!() }
+pub fn clear_snow_blast(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::ClearSnowBlast); }
 
 /// (src/game/snowBlast.ts:127 stepSnowDigs)
 pub fn step_snow_digs(g: &mut crate::game::Game, dt: f64) -> Option<[f64; 4]> { todo!() }

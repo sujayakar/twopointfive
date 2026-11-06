@@ -14,8 +14,6 @@ pub fn owed_of(b: &mut crate::snow_blast::SnowBlastShown, live: &[crate::snow_bl
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowBlast.ts:114 attachSnowBlast)
 pub fn attach_snow_blast(g: &mut crate::game::Game) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowBlast.ts:122 clearSnowBlast)
-pub fn clear_snow_blast(g: &mut crate::game::Game) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowBlast.ts:168 stepSnowBlast)
 pub fn step_snow_blast(g: &mut crate::game::Game, dt: f64) {}

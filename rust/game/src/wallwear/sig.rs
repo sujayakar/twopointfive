@@ -9,10 +9,10 @@ use alloc::{string::String, vec::Vec};
 pub fn mat_of(surf: crate::scene_materials::Surf) -> f64 { todo!() }
 
 /// (src/game/wallwear.ts:58 WallWear.round)
-pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, key: f64, counted: f64, frac: f64, hit_p: V3, dir: V3) { todo!() }
+pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, key: f64, counted: f64, frac: f64, hit_p: V3, dir: V3) { g.out.push(crate::out_events::OutEvent::WallWearRound(crate::out_events::OutWallWearRound { box_: box_, surf: surf, key: key, counted: counted, frac: frac, hit_p: hit_p, dir: dir })); }
 
 /// (src/game/wallwear.ts:88 WallWear.reset)
-pub fn wall_wear_reset(g: &mut crate::game::Game) { todo!() }
+pub fn wall_wear_reset(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::WallWearReset); }
 
 /// (src/game/wallwear.ts:92 WallWear.own)
 pub fn wall_wear_own<'g>(g: &'g mut crate::game::Game, hit_p: V3) -> Option<&'g mut crate::render_decals::Decal> { todo!() }

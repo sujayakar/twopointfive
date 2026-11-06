@@ -27,13 +27,13 @@ pub fn patch(g: &mut crate::game::Game, x: f64, z: f64, want: f64, strength: f64
 pub fn spread(g: &mut crate::game::Game, x: f64, z: f64, s: crate::floormess::Spread, size: f64, face: Option<[f64; 2]>) { todo!() }
 
 /// (src/game/floormess.ts:108 messBurst)
-pub fn mess_burst(g: &mut crate::game::Game, at: V3, size: Option<f64>) { todo!() }
+pub fn mess_burst(g: &mut crate::game::Game, at: V3, size: Option<f64>) { g.out.push(crate::out_events::OutEvent::MessBurst(crate::out_events::OutMessBurst { at: at, size: size })); }
 
 /// (src/game/floormess.ts:115 messWall)
-pub fn mess_wall(g: &mut crate::game::Game, p: V3, n: V3, thick: f64, through: bool) { todo!() }
+pub fn mess_wall(g: &mut crate::game::Game, p: V3, n: V3, thick: f64, through: bool) { g.out.push(crate::out_events::OutEvent::MessWall(crate::out_events::OutMessWall { p: p, n: n, thick: thick, through: through })); }
 
 /// (src/game/floormess.ts:123 messOpened)
-pub fn mess_opened(g: &mut crate::game::Game, rect: [f64; 4]) { todo!() }
+pub fn mess_opened(g: &mut crate::game::Game, rect: [f64; 4]) { g.out.push(crate::out_events::OutEvent::MessOpened(crate::out_events::OutMessOpened { rect: rect })); }
 
 /// (src/game/floormess.ts:130 messEvicted)
 pub fn mess_evicted(g: &mut crate::game::Game, c_2: DebrisChunkId) { todo!() }

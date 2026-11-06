@@ -24,7 +24,7 @@ pub fn dirtied(t: &mut crate::snow_tracks::Stamp, x0: f64, z0: f64, x1: f64, z1:
 pub fn make_snow_tracks() -> crate::snow_tracks::SnowTracks { todo!() }
 
 /// (src/game/snowTracks.ts:175 clearSnowTracks)
-pub fn clear_snow_tracks(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks) { todo!() }
+pub fn clear_snow_tracks(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks) { g.out.push(crate::out_events::OutEvent::ClearSnowTracks); }
 
 /// (src/game/snowTracks.ts:179 sheetsOf)
 pub fn sheets_of(g: &mut crate::game::Game, t: &crate::snow_tracks::SnowTracks) -> [crate::snow_tracks::Stamp; 2] { todo!() }

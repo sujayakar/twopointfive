@@ -12,16 +12,16 @@ pub fn decals_new(g: &mut crate::game::Game, device: crate::Opaque) -> crate::re
 pub fn decals_count(g: &mut crate::game::Game) -> f64 { todo!() }
 
 /// (src/render/decals.ts:153 Decals.add)
-pub fn decals_add(g: &mut crate::game::Game, kind: crate::render_decals::DecalKind, pos: V3, normal: V3, size: Option<f64>, opts: Option<crate::render_decals::DecalOpts>) -> Option<crate::render_decals::Decal> { todo!() }
+pub fn decals_add(g: &mut crate::game::Game, kind: crate::render_decals::DecalKind, pos: V3, normal: V3, size: Option<f64>, opts: Option<crate::render_decals::DecalOpts>) -> Option<crate::render_decals::Decal> { g.out.push(crate::out_events::OutEvent::DecalsAdd(crate::out_events::OutDecalsAdd { kind: kind, pos: pos, normal: normal, size: size, opts: opts })); None }
 
 /// (src/render/decals.ts:178 Decals.clear)
-pub fn decals_clear(g: &mut crate::game::Game) { todo!() }
+pub fn decals_clear(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::DecalsClear); }
 
 /// (src/render/decals.ts:180 Decals.remove)
 pub fn decals_remove(g: &mut crate::game::Game, d: crate::render_decals::Decal) -> bool { todo!() }
 
 /// (src/render/decals.ts:182 Decals.touch)
-pub fn decals_touch(g: &mut crate::game::Game) { todo!() }
+pub fn decals_touch(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::DecalsTouch); }
 
 /// (src/render/decals.ts:261 toLocal)
 pub fn to_local(g: &mut crate::game::Game, b: BoxId, v: V3, point: bool) -> V3 { todo!() }

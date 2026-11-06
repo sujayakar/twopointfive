@@ -8,11 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wallwear.ts:58 WallWear.round)
-pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, key: f64, counted: f64, frac: f64, hit_p: V3, dir: V3) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wallwear.ts:88 WallWear.reset)
-pub fn wall_wear_reset(g: &mut crate::game::Game) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/wallwear.ts:101 WallWear.shape)
 pub fn wall_wear_shape(g: &mut crate::game::Game, s: f64, serial: f64, half: f64, mat: f64) {}

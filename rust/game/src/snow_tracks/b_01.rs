@@ -14,8 +14,6 @@ pub fn tell_mess(t: &mut crate::snow_tracks::SnowTracks) {}
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowTracks.ts:159 dirtied)
 pub fn dirtied(t: &mut crate::snow_tracks::Stamp, x0: f64, z0: f64, x1: f64, z1: f64) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowTracks.ts:175 clearSnowTracks)
-pub fn clear_snow_tracks(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowTracks.ts:188 stampMark)
 pub fn stamp_mark(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks, force: f64, fn_: &mut dyn FnMut(&mut crate::game::Game, crate::snow_tracks::Stamp, crate::snow_tracks::Stamp), kick: Option<crate::snow_tracks::StampMarkKick>, quick: Option<f64>) {}

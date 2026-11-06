@@ -43,13 +43,14 @@ const fieldFn = new Map<string, (o: any, g: any, B: any) => any>();
 const compiled = (expr: string) => { let f = fieldFn.get(expr); if (!f) { f = new Function('o', 'g', 'B', `return ${expr}`) as any; fieldFn.set(expr, f!); } return f!; };
 
 // ---- what a game's walk keeps between exports
-class Book { ids = new Map<string, Map<object, number>>(); lists = new Map<string, object[]>(); serial = new WeakMap<object, number>(); nextSerial = 1;
+class Book { ids = new Map<string, Map<object, number>>(); lists = new Map<string, object[]>(); serial = new WeakMap<object, number>(); nextSerial = 1; serials = new Map<object, number>();
+  /** (for the importer: every object that has a serial) */ serialOfObjects() { return this.serials; }
   first = new Map<object, string>();
   /** poses that have no place in the pool, in the order first met: their floats go at the end of the bytes */
   loose = new Map<object, number>();
   idOf(id: string, o: object): number { let M = this.ids.get(id); if (!M) { M = new Map(); this.ids.set(id, M); this.lists.set(id, []); } let i = M.get(o); if (i === undefined) { i = M.size; M.set(o, i); this.lists.get(id)!.push(o); this.first.set(o, AT); } return i; }
   listOf(id: string): object[] { return this.lists.get(id) ?? []; }
-  serialOf(o: object): number { let s = this.serial.get(o); if (s === undefined) { s = this.nextSerial++; this.serial.set(o, s); } return s; } }
+  serialOf(o: object): number { let s = this.serial.get(o); if (s === undefined) { s = this.nextSerial++; this.serial.set(o, s); this.serials.set(o, s); } return s; } }
 const BOOKS = new WeakMap<object, Book>();
 
 class Out { buf = new Uint8Array(1 << 16); dv = new DataView(this.buf.buffer); n = 0;
@@ -73,7 +74,7 @@ export const ROWS = new Map<string, { n: number; first: string }>();
 function zero(n: Node, o: Out): void { switch (n.k) { case 'f64': o.f64(0); return; case 'f32': o.f32(0); return; case 'bool': case 'u8': case 'i8': o.u8(0); return; case 'u16': case 'i16': o.u16(0); return; case 'u32': case 'i32': case 'usize': case 'id': o.u32(0); return; case 'u64': case 'i64': o.f64(0); return; case 'str': case 'vec': case 'map': case 'set': o.u32(0); return; case 'opt': o.u8(0); return; case 'unit': return; case 'arr': for (let i = 0; i < n.n; i++) zero(n.of, o); return; case 'tup': for (const x of n.of) zero(x, o); return; case 'type': { const T = SCHEMA.types[n.path]; if (T.k === 'struct') for (const f of T.fields) zero(parse(f.ty), o); else if (T.k === 'enum') o.u16(0); else if (T.k === 'data' || T.k === 'handEnum') { o.u16(0); const a = T.k === 'data' ? T.vars[0]?.ty : (T.arms[0].match(/\((.*)\)/)?.[1]); if (a) zero(parse(a), o); } return; } } }
 
 /** a pose outside the pool has this place and its number in `loose` (rust: Pose::LOOSE) */
-const LOOSE = 0xffff0000;
+export const LOOSE = 0xffff0000;
 /** every field and map key that held an object's identity serial on this export: serial-fields.json, schema.serial */
 export const SERIALS = new Set<string>();
 let G: any; let BK: Book; let B: any;
@@ -151,6 +152,11 @@ function helpers(g: any, knobs: Record<string, unknown>) {
 }
 
 export const bookOf = (g: object) => BOOKS.get(g);
+export const compiledExpr = (e: string) => compiled(e);
+/** the walk's helpers for a game, and a module variable or root by its registered name */
+export function helpersOf(g: any, knobs: Record<string, unknown>) { G = g; BK = BOOKS.get(g)!; const b = helpers(g, knobs); const reg = sideRegistry(); const vars = new Map(reg.vars.map(v => [v.name, v])); const roots = new Map<string, unknown>(); for (const t of reg.tables as any[]) roots.set(t.sideName, t); for (const r of reg.roots) roots.set(r.name, r.obj); return { ...b, varOf: (n: string) => vars.get(n), rootOf: (n: string) => roots.get(n) }; }
+/** a book's seeds, as an export would take them (a row its list has since gained has an ID before anything else asks) */
+export function seedBook(g: any, knobs: Record<string, unknown>) { helpersOf(g, knobs); B = helpers(g, knobs); }
 /** the bytes of values of the given schema types, written by the walk's own writers against the game's book (the book must exist: one exportGame first) */
 export function exportPart(g: any, knobs: Record<string, unknown>, parts: [string, any][]): Uint8Array { G = g; BK = BOOKS.get(g)!; B = helpers(g, knobs); const o = new Out(); for (const [ty, v] of parts) wr(parse(ty), v, o); return o.view().slice(); }
 /** a field of the game by its Rust path (['m', 'dialogue', 'room_rects']): its schema type and its value now */

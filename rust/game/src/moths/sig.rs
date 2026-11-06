@@ -15,7 +15,7 @@ pub fn smooth(a: f64, b: f64, x: f64) -> f64 { todo!() }
 pub fn moths_new(g: &mut crate::game::Game) -> crate::moths::Moths { todo!() }
 
 /// (src/game/moths.ts:48 Moths.clear)
-pub fn moths_clear(g: &mut crate::game::Game) { todo!() }
+pub fn moths_clear(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::MothsClear); }
 
 /// (src/game/moths.ts:51 Moths.update)
 pub fn moths_update(g: &mut crate::game::Game, dt: f64) { todo!() }

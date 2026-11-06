@@ -21,7 +21,7 @@ pub fn session_recorder_recording(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn session_recorder_request(g: &mut crate::game::Game, opts: Option<&crate::journal::RecordOpts>) -> bool { todo!() }
 
 /// (src/game/journal.ts:759 SessionRecorder.cut)
-pub fn session_recorder_cut(g: &mut crate::game::Game, why: &str, lost: Option<bool>) { todo!() }
+pub fn session_recorder_cut(g: &mut crate::game::Game, why: &str, lost: Option<bool>) { g.out.push(crate::out_events::OutEvent::SessionRecorderCut(crate::out_events::OutSessionRecorderCut { why: String::from(why), lost: lost })); }
 
 /// (src/game/journal.ts:768 SessionRecorder.slotWrote)
 pub fn session_recorder_slot_wrote(g: &mut crate::game::Game, key: &str) { todo!() }

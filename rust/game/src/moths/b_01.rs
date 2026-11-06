@@ -8,8 +8,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/moths.ts:48 Moths.clear)
-pub fn moths_clear(g: &mut crate::game::Game) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/moths.ts:51 Moths.update)
 pub fn moths_update(g: &mut crate::game::Game, dt: f64) {}

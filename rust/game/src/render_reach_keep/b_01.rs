@@ -8,8 +8,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// BOUNDARY NO-OP (written ahead of need; the renderer's keeper of its reach masks is told a wall changed: the host's)   (render/reachKeep.ts:80 ReachKeep.changed)
-pub fn reach_keep_changed(g: &mut crate::game::Game, rect: Option<[f64; 4]>, hold: Option<f64>) {}
 
 /// BOUNDARY: the host's reach keeper takes the level's doors and roofed cells and builds its masks; a run with no picture has no keeper (`engine.reach?.boot`), so nothing happens   (render/reachKeep.ts:64 ReachKeep.boot)
 pub fn reach_keep_boot(g: &mut crate::game::Game, doors: &[crate::render_reach::ReachDoor], interior: &[u8]) {}

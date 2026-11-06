@@ -53,7 +53,7 @@ Nothing inside the tick does these, and the next tick reads what they leave:
 
 ## Comparing two states
 
-A table's numbers mean nothing between two sparse exports: the walk numbers a thing when an export first meets it, and Rust when it is made. So compare whole states tick by tick from one start, or renumber by reach, as `diff.ts` does.
+A table's numbers mean nothing between two sparse exports: the walk numbers a thing when an export first meets it, and Rust when it is made. So compare whole states tick by tick from one start, or renumber by reach, as your `diff3.ts` does.
 
 Identity serials differ by design. `schema.serial` lists the fields that hold one: every invented field named a serial (a counter of the TypeScript's own stays compared), and each field the walk met holding an object where a number belongs (`serial-fields.json`, made by `bridge-check.ts` writing `<out>.serials.json`). `<field>{}` means the keys of a map or set. `paths.ts` reads such a value as `serial` and such a key by its place, so `diff` does not see them; a list's length still counts. The walk only knows what it has met, so add a new mission's file to the list.
 
@@ -91,4 +91,4 @@ So a tutorial is compared from before its program starts, by what its beats do: 
 
 ## A value is walked where it is held
 
-A struct two holders share in the TypeScript is written twice and arrives as two copies, with the same values. A later write in Rust reaches only one.
+A struct two holders share in the TypeScript is written twice and arrives as two copies, with the same values. A later write in Rust reaches only one. That is what the ID, serial and path decisions of the reviews are for, and review 4's "fine as a copy" answers say where it does not matter.

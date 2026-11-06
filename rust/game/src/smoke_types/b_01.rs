@@ -25,17 +25,11 @@ pub fn smoke_system_like_round(g: &mut crate::game::Game, from: V3, dir: V3, len
 /// the host's solver's answer; absent = no   (types.ts:77 drawing)
 pub fn smoke_system_like_drawing(g: &mut crate::game::Game) -> bool { false }
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:65 SmokeSystemLike.push)
-pub fn smoke_system_like_push(g: &mut crate::game::Game, p: crate::smoke_types::SmokePush) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:73 SmokeSystemLike.keepHot)
-pub fn smoke_system_like_keep_hot(g: &mut crate::game::Game, heat: f64) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:80 SmokeSystemLike.clearAll)
 pub fn smoke_system_like_clear_all(g: &mut crate::game::Game) { if g.smoke_owned { crate::sense::cpu_smoke_clear(g); } }   // (sense.ts:255, the tee)
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:82 SmokeSystemLike.obstaclesChanged)
-pub fn smoke_system_like_obstacles_changed(g: &mut crate::game::Game, c_2: V3, r: f64) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:86 SmokeSystemLike.setWind)
 pub fn smoke_system_like_set_wind(g: &mut crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource], relax: f64) {}

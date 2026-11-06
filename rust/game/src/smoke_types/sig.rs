@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 pub fn smoke_system_like_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) { todo!() }
 
 /// (src/smoke/types.ts:65 SmokeSystemLike.push)
-pub fn smoke_system_like_push(g: &mut crate::game::Game, p: crate::smoke_types::SmokePush) { todo!() }
+pub fn smoke_system_like_push(g: &mut crate::game::Game, p: crate::smoke_types::SmokePush) { g.out.push(crate::out_events::OutEvent::SmokeSystemLikePush(crate::out_events::OutSmokeSystemLikePush { p: p })); }
 
 /// (src/smoke/types.ts:67 SmokeSystemLike.inSmokeDomain)
 pub fn smoke_system_like_in_smoke_domain(g: &mut crate::game::Game, p: V3) -> bool { todo!() }
@@ -18,7 +18,7 @@ pub fn smoke_system_like_in_smoke_domain(g: &mut crate::game::Game, p: V3) -> bo
 pub fn smoke_system_like_round(g: &mut crate::game::Game, from: V3, dir: V3, len: f64) -> bool { todo!() }
 
 /// (src/smoke/types.ts:73 SmokeSystemLike.keepHot)
-pub fn smoke_system_like_keep_hot(g: &mut crate::game::Game, heat: f64) { todo!() }
+pub fn smoke_system_like_keep_hot(g: &mut crate::game::Game, heat: f64) { g.out.push(crate::out_events::OutEvent::SmokeSystemLikeKeepHot(crate::out_events::OutSmokeSystemLikeKeepHot { heat: heat })); }
 
 /// (src/smoke/types.ts:75 SmokeSystemLike.budget)
 pub fn smoke_system_like_budget(g: &mut crate::game::Game) -> Option<f64> { todo!() }
@@ -30,7 +30,7 @@ pub fn smoke_system_like_drawing(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn smoke_system_like_clear_all(g: &mut crate::game::Game) { todo!() }
 
 /// (src/smoke/types.ts:82 SmokeSystemLike.obstaclesChanged)
-pub fn smoke_system_like_obstacles_changed(g: &mut crate::game::Game, c_2: V3, r: f64) { todo!() }
+pub fn smoke_system_like_obstacles_changed(g: &mut crate::game::Game, c_2: V3, r: f64) { g.out.push(crate::out_events::OutEvent::SmokeSystemLikeObstaclesChanged(crate::out_events::OutSmokeSystemLikeObstaclesChanged { c_2: c_2, r: r })); }
 
 /// (src/smoke/types.ts:86 SmokeSystemLike.setWind)
 pub fn smoke_system_like_set_wind(g: &mut crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource], relax: f64) { todo!() }

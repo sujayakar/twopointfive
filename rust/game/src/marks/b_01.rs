@@ -8,17 +8,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/marks.ts:39 bulletMark)
-pub fn bullet_mark(g: &mut crate::game::Game, hit_p: V3, n: V3, s: Option<crate::marks::Surface2>, def: &crate::weapons::WeaponDef) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/marks.ts:51 bangScorch)
-pub fn bang_scorch(g: &mut crate::game::Game, at: V3) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/marks.ts:90 kickScuff)
-pub fn kick_scuff(g: &mut crate::game::Game, d: DoorId, from: V3) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/marks.ts:104 chipMark)
-pub fn chip_mark(g: &mut crate::game::Game, p: V3, n: V3, s: Option<crate::marks::Surface2>, size: Option<f64>) {}
 
 /// col.raycast's index → the box it names: a static by its place in the level's list, a door leaf from 1e6 up.   (marks.ts staticSurface)
 pub fn static_surface(g: &mut crate::game::Game, index: f64) -> Option<crate::marks::Surface2> {

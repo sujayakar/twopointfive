@@ -129,7 +129,7 @@ pub fn checkpoints_based_now(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn checkpoints_prime(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/savestate.ts:964 Checkpoints.request)
-pub fn checkpoints_request(g: &mut crate::game::Game, why: &str, label: &str) { todo!() }
+pub fn checkpoints_request(g: &mut crate::game::Game, why: &str, label: &str) { g.out.push(crate::out_events::OutEvent::CheckpointsRequest(crate::out_events::OutCheckpointsRequest { why: String::from(why), label: String::from(label) })); }
 
 /// (src/game/savestate.ts:971 Checkpoints.gate)
 pub fn checkpoints_gate(g: &mut crate::game::Game) -> Option<String> { todo!() }
@@ -153,7 +153,7 @@ pub fn checkpoints_slots(g: &mut crate::game::Game) -> Vec<crate::savestate::Slo
 pub fn checkpoints_hand_slot(g: &mut crate::game::Game, idx: &crate::savestate::SlotIndex) -> f64 { todo!() }
 
 /// (src/game/savestate.ts:1086 Checkpoints.keep)
-pub fn checkpoints_keep(g: &mut crate::game::Game, label: &str) { todo!() }
+pub fn checkpoints_keep(g: &mut crate::game::Game, label: &str) { g.out.push(crate::out_events::OutEvent::CheckpointsKeep(crate::out_events::OutCheckpointsKeep { label: String::from(label) })); }
 
 /// (src/game/savestate.ts:1089 Checkpoints.loadInStep)
 pub fn checkpoints_load_in_step(g: &mut crate::game::Game, key: &str) -> Option<String> { todo!() }

@@ -8,11 +8,5 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/audio_iface.ts:6 GameAudioLike.play)
-pub fn game_audio_like_play(g: &mut crate::game::Game, name: &str, pos: Option<V3>, gain: Option<f64>, opts: Option<&crate::audio_iface::PlayOpts>) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/audio_iface.ts:9 GameAudioLike.footstep)
-pub fn game_audio_like_footstep(g: &mut crate::game::Game, pos: V3, loudness: f64, is_player: bool, mat: Option<crate::floor::FloorMat>) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/audio_iface.ts:11 GameAudioLike.rain)
-pub fn game_audio_like_rain(g: &mut crate::game::Game, level: f64) {}

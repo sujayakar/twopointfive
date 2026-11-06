@@ -11,8 +11,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/deathrecap.ts:109 eachMan)
 pub fn each_man(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game, CharId, bool, Option<GuardId>)) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/deathrecap.ts:125 recapRound)
-pub fn recap_round(g: &mut crate::game::Game, victim: Option<CharId>, was_down: bool, shooter: CharId, muzzle: V3, hit: V3, def: &crate::weapons::WeaponDef, blind: Option<bool>) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/deathrecap.ts:169 sample)
 pub fn sample(g: &mut crate::game::Game) {}

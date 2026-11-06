@@ -11,8 +11,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// BOUNDARY NO-OP (the picture's / the host's): (src/host/api.ts:75 HostApi.invalidateWorldCache)
 pub fn host_api_invalidate_world_cache(g: &mut crate::game::Game) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/host/api.ts:78 HostApi.restartPicture)
-pub fn host_api_restart_picture(g: &mut crate::game::Game, why: &str) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/host/api.ts:83 HostApi.setMeshShadows)
 pub fn host_api_set_mesh_shadows(g: &mut crate::game::Game, m: Option<&crate::render_mesh_shadows::MeshShadows>) {}

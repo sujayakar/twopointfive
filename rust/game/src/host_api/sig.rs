@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 pub fn host_api_invalidate_world_cache(g: &mut crate::game::Game) { todo!() }
 
 /// (src/host/api.ts:79 HostApi.restartPicture)
-pub fn host_api_restart_picture(g: &mut crate::game::Game, why: &str) { todo!() }
+pub fn host_api_restart_picture(g: &mut crate::game::Game, why: &str) { g.out.push(crate::out_events::OutEvent::HostApiRestartPicture(crate::out_events::OutHostApiRestartPicture { why: String::from(why) })); }
 
 /// (src/host/api.ts:81 HostApi.startPlansOver)
 pub fn host_api_start_plans_over(g: &mut crate::game::Game) { todo!() }

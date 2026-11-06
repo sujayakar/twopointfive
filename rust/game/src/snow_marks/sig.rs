@@ -12,7 +12,7 @@ pub fn clamp(v: f64, a: f64, b: f64) -> f64 { todo!() }
 pub fn lies(field: &crate::render_snow_field::SnowField, x: f64, z: f64) -> bool { todo!() }
 
 /// (src/game/snowMarks.ts:73 clearSnowMarks)
-pub fn clear_snow_marks(g: &mut crate::game::Game) { todo!() }
+pub fn clear_snow_marks(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::ClearSnowMarks); }
 
 /// (src/game/snowMarks.ts:76 updateSnowMarks)
 pub fn update_snow_marks(g: &mut crate::game::Game, t: &mut crate::snow_tracks::SnowTracks, field: &crate::render_snow_field::SnowField, dt: f64) { todo!() }

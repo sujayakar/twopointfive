@@ -823,6 +823,8 @@ pub struct Game {
     pub box_frame_free: Vec<BoxId>,
     /// INVENTED: what the bridge carries of poses that have no place in the pool: Pose.at is Pose::LOOSE + the row
     pub loose_poses: Vec<crate::anim_skeleton::LoosePose>,
+    /// what this step did that the host shows: out-events.json. The host drains it (the face clears it before a step)
+    pub out: Vec<crate::out_events::OutEvent>,
     /// state.ts:136 SimState.stamp, for what is made from the block (the fog's grid, the air): a native game has one block, and whatever writes it wholesale raises this
     pub sim_stamp: f64,
     /// the table of these things: never shrinks
@@ -997,6 +999,7 @@ impl Game {
             box_frame_rows: Vec::new(),
             box_frame_free: Vec::new(),
             loose_poses: Vec::new(),
+            out: Vec::new(),
             sim_stamp: 1.0,
             ch: Tab::new(),
             dr: Tab::new(),

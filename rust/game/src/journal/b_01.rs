@@ -11,8 +11,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/journal.ts:202 knobTables)
 pub fn knob_tables(g: &mut crate::game::Game) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/journal.ts:748 SessionRecorder.cut)
-pub fn session_recorder_cut(g: &mut crate::game::Game, why: &str, lost: Option<bool>) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/journal.ts:757 SessionRecorder.slotWrote)
 pub fn session_recorder_slot_wrote(g: &mut crate::game::Game, key: &str) {}

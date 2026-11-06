@@ -38,8 +38,6 @@ pub fn checkpoints_adopt(g: &mut crate::game::Game, a: Option<&crate::savestate:
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/savestate.ts:951 Checkpoints.prime)
 pub fn checkpoints_prime(g: &mut crate::game::Game) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/savestate.ts:964 Checkpoints.request)
-pub fn checkpoints_request(g: &mut crate::game::Game, why: &str, label: &str) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/savestate.ts:979 Checkpoints.tick)
 pub fn checkpoints_tick(g: &mut crate::game::Game, dt: f64) {}
@@ -47,8 +45,6 @@ pub fn checkpoints_tick(g: &mut crate::game::Game, dt: f64) {}
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/savestate.ts:1051 Checkpoints.markRegret)
 pub fn checkpoints_mark_regret(g: &mut crate::game::Game, key: &str, why: &str) {}
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/savestate.ts:1086 Checkpoints.keep)
-pub fn checkpoints_keep(g: &mut crate::game::Game, label: &str) {}
 
 /// BOUNDARY: the host reads the machine's storage (localStorage) here. No store on this side: None, what `localStorage?.getItem` / a failed read gives. (src/game/savestate.ts:860 SaveStore.get)
 pub fn save_store_get(g: &mut crate::game::Game, key: &str) -> Option<String> { None }

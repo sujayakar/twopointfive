@@ -9,6 +9,7 @@ pub mod dice;
 pub mod v3;
 pub mod knobs;
 pub mod io;
+pub mod puppet;
 pub use v3::{Quat, V3};
 pub const M4_IDENTITY: v3::m4::Mat4 = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0];
 /// a type a hand decision has yet to name (see the STOP list)
@@ -362,6 +363,7 @@ pub mod wind;
 pub mod workstow;
 pub mod workthings;
 pub mod wounds;
+pub mod out_events;
 pub mod words;
 pub mod backkey;
 pub mod belief;

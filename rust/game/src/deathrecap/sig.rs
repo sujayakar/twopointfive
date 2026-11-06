@@ -30,7 +30,7 @@ pub fn man_of(g: &mut crate::game::Game, c_2: CharId, gd: Option<GuardId>) -> cr
 pub fn live(g: &mut crate::game::Game) -> bool { todo!() }
 
 /// (src/game/deathrecap.ts:125 recapRound)
-pub fn recap_round(g: &mut crate::game::Game, victim: Option<CharId>, was_down: bool, shooter: CharId, muzzle: V3, hit: V3, def: &crate::weapons::WeaponDef, blind: Option<bool>) { todo!() }
+pub fn recap_round(g: &mut crate::game::Game, victim: Option<CharId>, was_down: bool, shooter: CharId, muzzle: V3, hit: V3, def: &crate::weapons::WeaponDef, blind: Option<bool>) { g.out.push(crate::out_events::OutEvent::RecapRound(crate::out_events::OutRecapRound { victim: victim, was_down: was_down, shooter: shooter, muzzle: muzzle, hit: hit, def: def.id, blind: blind })); }
 
 /// (src/game/deathrecap.ts:138 offLine)
 pub fn off_line(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 { todo!() }

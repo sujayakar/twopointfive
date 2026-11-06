@@ -12,7 +12,7 @@ pub fn reach_keep_new(g: &mut crate::game::Game, world: &crate::render_reach_kee
 pub fn reach_keep_boot(g: &mut crate::game::Game, doors: &[crate::render_reach::ReachDoor], interior: &[u8]) { todo!() }
 
 /// (src/render/reachKeep.ts:115 ReachKeep.changed)
-pub fn reach_keep_changed(g: &mut crate::game::Game, rect: Option<[f64; 4]>, hold: Option<f64>) { todo!() }
+pub fn reach_keep_changed(g: &mut crate::game::Game, rect: Option<[f64; 4]>, hold: Option<f64>) { g.out.push(crate::out_events::OutEvent::ReachKeepChanged(crate::out_events::OutReachKeepChanged { rect: rect, hold: hold })); }
 
 /// (src/render/reachKeep.ts:124 ReachKeep.asBooted)
 pub fn reach_keep_as_booted(g: &mut crate::game::Game) { todo!() }
