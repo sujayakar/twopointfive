@@ -175,6 +175,9 @@ export async function reviewRoutedShot() {
   const cands: [Vec3, Vec3][] = [
     [[33.2, 0, 8.6], [30.6, 0, 11.2]], [[32.4, 0, 8.8], [30.2, 0, 11.0]], [[16.3, 0, 8.9], [14.3, 0, 11.2]], [[20.8, 0, 8.9], [23.2, 0, 11.2]],
     [[27.4, 0, 8.8], [24.6, 0, 11.1]], [[25.0, 0, 8.8], [22.6, 0, 11.2]], [[10.6, 0, 8.8], [14.6, 0, 11.2]], [[33.6, 0, 13.4], [31.0, 0, 11.3]],
+    // (…and one at the manager's door that is walled and routed whichever way its leaf stands open: where doors open one way the leaf is on the other
+    //  side of the frame and the pair before this one has a straight line past it. Last in the list, so a stand that staged an earlier pair stages it still.)
+    [[25.4, 0, 9.2], [24.6, 0, 11.2]],
   ];
   let pick: { sam: Vec3; gd: Vec3; prop: any } | null = null; const tried: string[] = [];
   for (const [s, gp] of cands) {
@@ -193,6 +196,7 @@ export async function reviewRoutedShot() {
   const wall: Vec3 = [pick.sam[0], 1.0, pick.sam[2] - 3];   // into the room's wall, away from the door
   fireWeapon(game, pl.char, wall, true);
   for (let i = 0; i < 2; i++) { pl.visibility = 0.02; W.step(DT); }
+  if (process.env.ROUTEDSHOT_BREAK === '1' && K.lastKnown) { K.lastKnown = [pick.sam[0], 0, pick.sam[2]]; if (K.witness.heard.smallWhere) K.witness.heard.smallWhere = [pick.sam[0], 0, pick.sam[2]]; }   // (the red path: the fault the probe is for, his fix and his memory at the shooter's feet through the wall — the fix's line and the memory's must fail)
   const lk = K.lastKnown as Vec3 | null;
   ok = verdict(K.awareness >= 0.48 && !!lk, 'the pop reaches him round the jamb: awareness to 0.5 and a fix', `aw ${f2(K.awareness)}, fix ${posS(lk)}`) && ok;
   ok = verdict(!!lk && v3.distXZ(lk, via) < 0.3 && v3.distXZ(lk, pick.sam) > 1.0, 'the fix is the doorway / corner it came round (the path\'s via), not the shooter\'s feet through the wall', `fix ${posS(lk)} · via ${posS(via)} (${lk ? f2(v3.distXZ(lk, via)) : '?'} m off) · Sam ${posS(pick.sam)} (${lk ? f2(v3.distXZ(lk, pick.sam)) : '?'} m off)`) && ok;
