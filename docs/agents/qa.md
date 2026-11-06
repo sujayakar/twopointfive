@@ -217,6 +217,33 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the leaf again after the stand, by the door tools' own word for open too, and leaves a door that moved for the next (both readings of a shut door go
   through it); the no-bangs case also holds its menu to the door it found. `DOORMENUFIND_BREAK=1` leaves the second asking out and stands the found
   door open (21 levels FAIL on both stands).
+  THE TENTH (11-06), four stagings and one row put right. `rb-laser-civilian`: the men of the floor are stood off the corridor beam and blinded (the
+  probe's `standOff`) before the whole beam is read, and a `staged:` line holds that it IS whole; where the night's opening starts the shift a guard
+  stood in it (the 'whole' reading was 0.82 m of a 2.05 m beam). 'Gone again' is held to the beam's length, not to that first reading.
+  `RBLASER_BREAK=1` stands a man in the beam. `standoff-end` and `standoff-ff` (a): the colleague is brought in with a three-second pause
+  (`bringIn(…, pause)`: the patrol's waypoint clock `wait`, so he stands and looks before his round turns him away). On the page's stand his eye is
+  slower (the pair seen by frame 36 as staged, up to 106 over the phases of his look, against 19) and he had walked off before any standoff formed.
+  `hold` and `pinned` are no use: the standoff's own perception refuses such a man. The friendly-fire case steps until the standoff is there (the
+  pause's three seconds at most) and then his contact beat, where it counted 45 frames; the lit cases of standoff-end fail with `staging:` when none
+  formed before the hold ended. `STANDOFFIN_BREAK=1` brings him in facing away with no pause.
+  `missing` (C), the lockdown follower: THE PREMISE IS THAT THE LEADER DIES UNSEEN, and the game sees a fall by a colleague's eyes on the frame of it
+  (`combat.ts killGuard`: `netQuietFall` and `moraleManDown` by `canSeeChar`, the mate then KNOWS him gone without asking; `tacticsManDown` by
+  `pointInView`, within 2.2 m of a doorway a kill zone called on the net). At the fifteen-second mark the follower walks at his shoulder with him
+  full in view on either stand, so the premise was never staged; on the page's stand the pair is at the storage doorway besides, the kill was called
+  0.8 s on and the stack found the body, put in that very room, 4.8 s on. The kill now waits for the first frame no living man of his side has him
+  in his eyes by either test (19.6 s after the mark on the page's stand, 28.8 s on the old, ninety at most); the body goes to the storage corner
+  where that is ten metres from the fall, inside the follower's sixteen and walled off from every living head (guards and civilians, `segmentBlocked`
+  as `bodySeen` and `partnerWatch` ask it, at three heights), else to the spot those tests pass that lies furthest from every round (both stands
+  take a looked-for spot now); and the line fails with THE PREMISE DID NOT HOLD when, before the follower's own call, the body is found, a mate
+  knows him gone (`netQuietOf`), a kill zone names him, a civilian has seen the body or the floor's level moves. `MISSING_BREAK=seen` kills at the
+  mark, in their eyes; `=insight` puts the body ten metres off in a living man's line (each FAIL on both stands). THE OLD STAND'S RUN MOVED with
+  the wait (the kill at 44.3 s, not 15.5). SEEN ON THE WAY, the enemies' owner's: with the kill at the mark on the page's stand the follower
+  himself calls 'Kowalski's down in the storage doorway' 0.8 s on, knows him gone by `netquiet.ts`, and says 'I've lost Kowalski — he was just
+  ahead of me' twenty seconds later (`partnerWatch` asks neither). It takes a body out of his sight for those twenty seconds, so no play has shown it.
+  `foursquad-stack`: NOT mended, its row put right. The line orders the stack over the marks the three still hold from the block before, the fourth
+  man dead on his, and on the page's stand two marks are dealt 0.21 m apart; a new line gives the same order after a fall-in and passes on both
+  stands (0.90 m). Two readings side by side, not a cause traced (the old stand passes both). On both stands one mark is dealt where the body lies.
+  The detail prints each man's mark, the nearest two marks and the body. The door tools' owner's.
   tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 

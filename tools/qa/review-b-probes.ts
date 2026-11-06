@@ -256,14 +256,21 @@ export async function laserCivilian() {
   const S = await stage(1717); const { W, game, M } = S;
   const L = game.devices?.lasers?.[0];
   if (!L) { ok = verdict(false, 'a tripwire on the level', 'none'); console.log('=== rb-laser-civilian: FAILURES above ==='); failures++; return false; }
-  steps(W, 0.5); const full = L.cut, len = L.len, trips0 = L.trips;
   const mid: Vec3 = [(L.def.from[0] + L.def.to[0]) / 2, 0, (L.def.from[2] + L.def.to[2]) / 2];
+  // (THE SHIFT IS STOOD OUT OF THE BEAM, pinned and blind, at points of its rounds with no line to the beam's middle. Nobody was: under the night's opening
+  // (the page's stand) Kowalski starts his round half a metre from the emitter and walks through the beam in the probe's first half second, so the 'whole'
+  // beam it measured was already cut at his legs, and cut again where he had got to at each later reading. On the old stand he starts eight metres off.
+  // RBLASER_BREAK=1 = the red path: a man is stood in the beam, between the emitter and where she will stand.)
+  const stood = standOff(game, [{ char: { pos: mid } }], true);
+  if (process.env.RBLASER_BREAK === '1') { const g0 = game.guards[0], f = L.def.from; g0.char.pos = [(f[0] + mid[0]) / 2, 0, (f[2] + mid[2]) / 2]; g0.char.update(0); }
+  steps(W, 0.5); const full = L.cut, len = L.len, trips0 = L.trips;
+  ok = verdict(Math.abs(full - len) < 0.02, 'staged: the beam is whole before she stands in it', `cut ${f2(full)} of ${f2(len)} m; the men: ${stood}`) && ok;
   const park = (p: Vec3) => { M.char.pos = v3.copy(p); M.char.vel = [0, 0, 0]; M.speed = 0; M.path = []; M.pathGoal = null; M.wait = 100; M.civ.state = 'work'; M.civ.settleT = -1; M.char.update(0); };
   park(mid); steps(W, 3 * DT); park(mid); steps(W, 2 * DT);
   const cutIn = L.cut, trips1 = L.trips; const expect = v3.dist(L.def.from, [mid[0], L.def.from[1], mid[2]]);
   ok = verdict(cutIn < len - 0.3 && Math.abs(cutIn - expect) < 0.45 && trips1 === trips0, 'Marta stood mid-beam: the beam ends at her (cut ≈ emitter → her legs) and no trip is filed (staff, to the system)', `len ${f2(len)} m, cut ${f2(full)} → ${f2(cutIn)} m (she stands ${f2(expect)} m from the emitter), trips ${trips0} → ${trips1}`) && ok;
   park([mid[0] + 3, 0, mid[2] + 6]); steps(W, 3 * DT);
-  ok = verdict(Math.abs(L.cut - full) < 0.02, 'gone again: the beam is whole', `cut ${f2(L.cut)} (whole ${f2(full)})`) && ok;
+  ok = verdict(Math.abs(L.cut - len) < 0.02, 'gone again: the beam is whole', `cut ${f2(L.cut)} (whole ${f2(len)})`) && ok;
   console.log(`=== rb-laser-civilian: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) failures++;
   return ok;
 }
