@@ -75,11 +75,12 @@ function index(s: Side): void {
   const ty = new Map<string, Node>(SCHEMA.tables.map((t: any) => [t.id, parse(t.ty)]));
   for (let i = 0; i < queue.length; i++) { const [id, v] = queue[i]; const at = s.rows.get(id)!; if (v >= at.length) continue; s.p = at[v]; skip(ty.get(id)!, s, onId); }
 }
-// LEFT OUT (--leave-out skin,look, the default): boxes of two picture-only lanes the Rust game does not run. A box keyed MKEY.skin is what stands of a holed
+// LEFT OUT (--leave-out skin,look; nothing by default): boxes of a lane one side does not run, to see the rest. A box keyed MKEY.skin is what stands of a holed
 // wall's paint (src/game/wallskin.ts); one keyed MKEY.look is a LOOK piece, drawn and in no collision list (a broken edge's rubble and bars: src/game/edgeLook.ts).
-// Such a box is in no reach numbering and is dropped from every list of boxes before the lists are compared; how many on each side is said at the end.
+// Both lanes run on both sides and are compared. A box left out is in no reach numbering and is dropped from every list of boxes before the lists are
+// compared; how many on each side is said at the end.
 const MKEY_FAMILY: Record<string, number> = { look: 9, skin: 10 };
-const LEAVE = new Set(opt('--leave-out', 'skin,look').split(',').filter(Boolean).map(w => { if (!(w in MKEY_FAMILY)) throw new Error(`diff: --leave-out knows ${Object.keys(MKEY_FAMILY).join(', ')}, not ${w}`); return MKEY_FAMILY[w]; }));
+const LEAVE = new Set(opt('--leave-out', '').split(',').filter(Boolean).map(w => { if (!(w in MKEY_FAMILY)) throw new Error(`diff: --leave-out knows ${Object.keys(MKEY_FAMILY).join(', ')}, not ${w}`); return MKEY_FAMILY[w]; }));
 const BOX_T: any = SCHEMA.tables.find((t: any) => t.id === 'BoxId'), BOX_N: any = BOX_T ? T(parse(BOX_T.ty).path) : null, MKEY_AT = BOX_N ? BOX_N.fields.findIndex((f: any) => f.rust === 'mkey') : -1;
 function leftOut(s: Side, id: string, v: number): boolean {
   if (id !== 'BoxId' || !LEAVE.size || MKEY_AT < 0) return false;
