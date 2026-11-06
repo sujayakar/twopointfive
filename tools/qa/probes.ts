@@ -3739,18 +3739,25 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
   console.log(`\n=== probes.ts ${which}: ${FAILED.length ? `${FAILED.length} FAIL — ${FAILED.join(', ')}` : CHECKED ? 'ALL PASS' : 'NO VERDICT (nothing it ran printed a check)'} · ${RAN} probe${RAN === 1 ? '' : 's'} run ===`);
   { // THE REDS AGAINST THE LIST (tools/qa/expected-red.ts): which of this run's red PROBES are old and explained, which are NEW, and which listed red came back green.
     // A table for the reader — the exit code is the verdict's, unchanged: red is red. By probe name: a family's own banner name in the verdict line (it counts its
-    // members) is not a row here unless no probe of the run is red to account for it; GREEN AGAIN wants a probe that checked something (a NO VERDICT is not green)
-    // (EXPECTED_RED_SHIPPED: the rows that hold on the shipped stand alone — TPS_PROFILE=shipped; on the frozen stand they are no rows, so none reads GREEN AGAIN there)
-    const { EXPECTED_RED: ANY_STAND, EXPECTED_RED_SHIPPED } = await import('./expected-red.ts') as { EXPECTED_RED: Record<string, string>; EXPECTED_RED_SHIPPED: Record<string, string> };
-    const EXPECTED_RED = (await import('../../src/host/profile.ts')).harnessProfile() === 'shipped' ? { ...ANY_STAND, ...EXPECTED_RED_SHIPPED } : ANY_STAND;
+    // members) is not a row here unless no probe of the run is red to account for it; GREEN AGAIN wants a probe that checked something (a NO VERDICT is not green).
+    // ONE LIST, read by stand: a row is the page's stand's unless its `on` says the old stand too, or alone. Two runs are read against no row at all, and say so
+    // where they have a red: one started with a word of the stand given by hand (stand.ts BY_HAND: a probe turned green by its own rule held off would read GREEN
+    // AGAIN), and one of a single case of a probe (a case's number as the third argument: `aim-door 0` passes without ever running the line its row is about).
+    const { EXPECTED_RED: LIST, rowSays } = await import('./expected-red.ts'), { STAND, BY_HAND } = await import('./stand.ts');
+    const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
+    const reads = (n: string): boolean => !other && n in LIST && (STAND === 'shipped' ? LIST[n].on !== 'old' : !!LIST[n].on);
     const reds = FAILED.filter(n => RAN_NAMES.includes(n)), banners = FAILED.filter(n => !RAN_NAMES.includes(n));
-    const old = reds.filter(n => n in EXPECTED_RED), fresh = [...reds.filter(n => !(n in EXPECTED_RED)), ...(reds.length ? [] : banners)];
-    const back = RAN_NAMES.filter(n => n in EXPECTED_RED && !FAILED.includes(n) && RAN_CHECKED.has(n));
-    if (old.length || fresh.length || back.length) {
-      console.log(`  the reds against the list (tools/qa/expected-red.ts): ${old.length} expected · ${fresh.length} NEW · ${back.length} listed and green again`);
-      for (const n of old) console.log(`    EXPECTED RED  ${n} — ${EXPECTED_RED[n]}`);
+    const old = reds.filter(reads), fresh = [...reds.filter(n => !reads(n)), ...(reds.length ? [] : banners)];
+    const back = RAN_NAMES.filter(n => reads(n) && !FAILED.includes(n) && RAN_CHECKED.has(n));
+    /** what to do with a listed red that passed: the row goes, unless it is red on the other stand as well, where only this stand comes out of it */
+    const mend = (n: string): string => { const shares = Object.keys(LIST).filter(m => LIST[m] === LIST[n]).length - 1, own = shares ? ` (${shares} other name${shares > 1 ? 's' : ''} share${shares > 1 ? '' : 's'} its row: this one goes, or gets a row of its own, and theirs stays)` : '';
+      return (LIST[n].on !== 'both' ? 'take it off the list' : STAND === 'shipped' ? "it is the old stand's alone now: its `on` is 'old'" : "it is the page's stand's alone now: take its `on` out") + own; };
+    if (other) { if (FAILED.length) console.log(`  the reds are not read against the list (tools/qa/expected-red.ts): ${other}`); }
+    else if (old.length || fresh.length || back.length) {
+      console.log(`  the reds against the list (tools/qa/expected-red.ts${STAND === 'shipped' ? '' : ", the rows that are red on the old stand"}): ${old.length} expected · ${fresh.length} NEW · ${back.length} listed and green again`);
+      for (const n of old) console.log(`    EXPECTED RED  ${n} — ${rowSays(LIST[n])}`);
       for (const n of fresh) console.log(`    NEW RED       ${n}`);
-      for (const n of back) console.log(`    GREEN AGAIN   ${n} — listed as an expected red and it passed here: take it off the list`);
+      for (const n of back) console.log(`    GREEN AGAIN   ${n} — listed as an expected red and it passed here: ${mend(n)}`);
     }
   }
   process.exitCode = FAILED.length ? 1 : 0;

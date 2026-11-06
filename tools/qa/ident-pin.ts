@@ -28,11 +28,11 @@
 // IT IS A LOWER BAR than two languages a call: a mistake both recordings share is held as firmly as the truth.
 // A tool that uses it: makes a `Fold`, folds each watched call, and after its run hands `hold` its words (tools/qa/layer-ident.ts is the first; how a
 // family takes it up, step by step: docs/agents/rust.md, the same bullet). Not game code.
-import { STAND } from './stand.ts';   // (the stand this process runs on: the page's with no word)
+import { STAND, handWords } from './stand.ts';   // (the stand this process runs on: the page's with no word)
 import { resolve } from 'node:path';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { STAND_ENV, type Stand } from '../../src/host/standEnv.ts';
+import type { Stand } from '../../src/host/standEnv.ts';
 
 /** the one stand a recording is taken on: the page's */
 const RECORDED_ON: Stand = 'shipped';
@@ -58,7 +58,7 @@ const MARK = 'IDENT-WORDS ';
  *  dropped by name, the caller's own among them, and a word the tool sets itself before it stands a game) and a check's own arm (QA_HOLD). A RECORDING IS
  *  OF A STAND AS IT WAS STOOD and says how (`stood`): a run stood otherwise is no run of the recording's, and is not held (which fails, see THE PIN;
  *  `--to-recording` holds it to the recording all the same). */
-const stoodAs = (): string => [...STAND_ENV, 'QA_HOLD'].filter(k => k !== 'TPS_PROFILE' && process.env[k] !== undefined).sort().map(k => `${k}=${process.env[k]}`).join(' ');
+const stoodAs = (): string => handWords().join(' ');
 export interface Held {
   /** the names whose count or word is not the one they were held to (under the break word: the names that DID move are not in it — see `stayed`) */
   off: string[];

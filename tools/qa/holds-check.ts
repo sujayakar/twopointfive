@@ -1,12 +1,14 @@
 // THE STAND A PROBE IS OWED BY ITS NAME (tools/qa/holds.ts): the table and the one call, held to their word. It stands no game.
 //   bun run tools/qa/holds-check.ts        exit 0 = all hold · 1 = one does not      (probes.ts holds; the same on both stands: it reads no stand)
 //   HOLDS_BREAK=1 in front = a probe is run with nothing held and no fence round it, a check file's main is read as if it called its parts bare, and the runner
-//   is asked with a word set by hand: lines (2), (4), (5) and (7) must FAIL (the lines about the table itself stay green).
+//   is asked with a word set by hand: lines (2), (4), (5), (7) and (8) must FAIL (the lines about the table itself stay green; for (8) a row of no probe and a row whose bisect names its
+//   probe's own held word are put into the list).
 // What it is for: a check was red run as a file and green in its family, twice in one day, because the runner held rows off for it and its own main did not.
 // So (1) the table names rows the game has, under the words the frozen stand's own list gives them; (2) every probe the runner dispatches by a name in the table
 // runs with its words at '0' and its rows off, and both are back after; (3) a word whoever runs the tool set is left as he set it; (4) the fence puts back what a
 // probe wrote; (5) every check file with a main of its own that the runner dispatches such a name to runs it through the same call, by that name; (6) no name in
-// the table is one the runner no longer has; (7) the runner's own run() holds a probe's words.
+// the table is one the runner no longer has; (7) the runner's own run() holds a probe's words; (8) the rows of the expected reds (tools/qa/expected-red.ts) are under
+// names the runner has and name words the stand can raise.
 // WHAT (5) CANNOT SEE: that every arm of a main goes through the call (it reads the file's text for the call and the names; a main with one arm wrapped and one
 // bare passes); a check file none of whose probes is in the table (it is not read at all: run alone its parts have no fence between them); and a probe the
 // runner dispatches in a shape it does not read is said, not guessed.
@@ -14,6 +16,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT } from './headless.ts';
 import { HOLDS, holdsOf, named, holdOff, asProbe, asProbes, exitCode, type Hold } from './holds.ts';
+import type { RedRow } from './expected-red.ts';
 
 const HERE = import.meta.dir, tools = readdirSync(HERE).filter(x => x.endsWith('.ts') && !/^(holds|holds-check|probes)\.ts$/.test(x)).map(f => ({ f, src: readFileSync(resolve(HERE, f), 'utf8') }));
 
@@ -26,7 +29,7 @@ const under = <T>(name: string, fn: () => T | Promise<T>): Promise<T> => BREAK ?
 const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`), { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 const R = knobRegistry() as Record<string, Record<string, unknown>>, rows: Hold[] = []; for (const r of HOLDS) for (const h of r.holds) if (!rows.some(o => o.word === h.word)) rows.push(h);
 const at = (h: Hold): string => `${h.table}.${h.key}`, read = (h: Hold): unknown => R[h.table]?.[h.key];
-if (BREAK) console.log('HOLDS_BREAK=1: probes run bare, mains read as bare, the runner asked with a word set by hand — lines (2), (4), (5) and (7) must FAIL');
+if (BREAK) console.log('HOLDS_BREAK=1: probes run bare, mains read as bare, the runner asked with a word set by hand — lines (2), (4), (5), (7) and (8) must FAIL');
 
 // (1) the table against the game and the frozen stand's list
 { const bad: string[] = [];
@@ -120,6 +123,28 @@ const probeNames = [...known].filter(n => ran.has(n)).sort(), heldNames = probeN
   let ran = 0; const log = console.log; console.log = () => {}; let none: boolean | null; try { none = await asProbes({ 'holds-check-part': () => { ran++; return true; } }, ['no-such-part']); } finally { console.log = log; }
   line(p.exitCode === 0 && said?.[1] === 'PASS' && none === null && ran === 0 && exitCode(none) === 2, '(7) the runner\'s run() holds a probe\'s words by its name, and a part a file has not is said (exit 2), not passed over',
     `probes.ts selftest-holds: exit ${p.exitCode}${said ? ` · ${said[2].slice(0, 150)}` : ` · ${(p.stderr.toString() || out).trim().split('\n').slice(-1)[0]?.slice(0, 150)}`}`); }
+
+// (8) THE EXPECTED REDS' ROWS (tools/qa/expected-red.ts), as far as a row is typed: its name is one the runner has (a name it no longer has can never read
+// EXPECTED or GREEN AGAIN); a row that is red on the old stand carries no bisect (the bisect raises words on the old stand, where it says
+// the probe is red already); every word of a bisect is one the stand can raise, value and all (a word written alone is raised to 1), and none is a word the
+// probe's own holds put off (the bisect raised it by hand over the hold, and the plain run never has it); `leans` is an unsettled row's.
+// WHAT (8) CANNOT SEE: a family's word from a probe's name (the runner knows its names, not which of them it runs a probe under: a row keyed by a family's
+// word passes here and never reads EXPECTED or GREEN AGAIN), and anything a row says in prose.
+{ const { EXPECTED_RED } = await import('./expected-red.ts'), { heldWords } = await import('./stand.ts'), can = new Set(heldWords(FROZEN_HOLDS as Record<string, string>));
+  const list: Record<string, RedRow> = BREAK ? { ...EXPECTED_RED, 'no-such-probe': { is: 'open', line: 'the break', whose: 'nobody' },
+    ...(heldNames[0] ? { [heldNames[0]]: { is: 'open', bisect: { enough: [holdsOf(heldNames[0])[0].word] }, line: 'the break', whose: 'nobody' } } : {}) } : EXPECTED_RED;
+  const bad: string[] = [];
+  for (const [n, r] of Object.entries(list)) {
+    if (!known.has(n)) bad.push(`${n}: no name the runner has`);
+    if (r.leans && (r.is === 'stale' || r.is === 'real')) bad.push(`${n}: \`leans\` on a settled row`);
+    if (!r.bisect) continue;
+    if (r.on) bad.push(`${n}: a bisect on a row that is red on the old stand`);
+    if (!r.bisect.enough.length) bad.push(`${n}: a bisect of no word`);
+    for (const w of r.bisect.enough) { const full = w.includes('=') ? w : `${w}=1`, k = full.split('=')[0];
+      if (!can.has(full)) bad.push(`${n}: '${w}' is no word the stand can raise${[...can].some(c => c.startsWith(`${k}=`)) ? ` (the stand's is ${[...can].find(c => c.startsWith(`${k}=`))})` : ''}`);
+      else if (holdsOf(n).some(x => x.word === k)) bad.push(`${n}: '${w}' is a word its own holds put off`); }
+  }
+  line(!bad.length && Object.keys(list).length > 0, '(8) every row of the expected reds is under a name the runner has, and what it says of the stand\'s words can be so', bad.length ? few(bad, 8) : `${Object.keys(list).length} rows, ${Object.values(list).filter(r => r.bisect).length} with a bisect`); }
 
 console.log(fails ? `=== holds-check: ${fails} FAIL ===` : '=== holds-check: ALL PASS ===');
 process.exit(fails ? 1 : 0);
