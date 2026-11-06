@@ -161,6 +161,8 @@ function finish(g: any, code: number | null = null): never {
   // (THE CHECK CHECKED: a host's half compared on fewer ticks than were played and held to the reference is a check that died, not a play that passed)
   const owed = Math.min(k, post.length); if (code === null && post.length && !hostParted && hostCompared < owed) { say(`  THE HOST'S HALF WAS COMPARED ON ${hostCompared} OF ${owed} TICKS: the reference lacks h<k>.bin for the rest (a reference made with --no-host, or its files deleted). NOT A PASS.`); code = 3; }
   if (callsParted) say(`  THE DRIVER'S CALLS PARTED AT TICK ${callsParted} (an order, a checkpoint, a flood or a pick made on one side only)`);
+  // (the whole lists of the driver's calls, held once more at the end: a call the per-tick check let by is a parting all the same)
+  if (code === null && callsOff && !callsParted) { say(`  THE DRIVER'S CALLS DIFFER over the whole play though no tick's check said so (above)`); code = 1; }
   if (code === null) code = S.parted || S.dieParted || hostParted || callsParted ? 1 : !post.length ? 3 : sameEnd ? 0 : (res || les) ? 4 : 0;
   say(`  ${code === 0 ? (res || les ? `EQUAL TO THE END, and it ended the same way${callsOff ? ' (BUT THE DRIVER\'S CALLS DIFFER: above)' : ''}` : `equal for the ${k} ticks played (stopped by --ticks)`) : code === 1 ? 'PARTED' : code === 4 ? 'equal every tick, BUT THE END IS NOT WORDED THE SAME' : `exit ${code}`}`);
   process.exit(code); }

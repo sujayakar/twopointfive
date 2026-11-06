@@ -41,6 +41,8 @@ export interface HostOpts {
   handback?: number;
   /** fast: the scripted player's orders go through the menu's own `give` on the puppet (its rows ask the Rust game) even where the face could give them */
   menuGive?: boolean;
+  /** how many steps a second game made from the start is stepped before the first tick (default 0: measured to buy nothing) */
+  warmSteps?: number;
   /** megabytes asked of the module and given back before play, so that no step has to grow the memory */
   reserveMb?: number;
   /** audit: `rust` holds the write-back to the Rust bytes last applied, `puppet` to the puppet exported as the apply left it */
@@ -123,7 +125,7 @@ export class RustHost {
   private visApplied = NaN; private wholeNow = false; private uploadDone = false;
   private missionRef: any = null; private loadsRef = 0; private stageRef: any = null; private downRef = -1; private outQ: { arm: string; e: any }[] = [];
   private asks: { after(): void } | null = null; asked = 0;
-  private threw: Record<string, number> = {};
+  private threw: Record<string, number> = {}; private warmDue = false;
   private memPages = 0; grew = 0; private inStep = false; private lastCmds: readonly any[] | null = null;
   /** ms spent in applies and exports so far (what a clock round a call or the dress step takes out of its own count) */
   private nest = 0;
@@ -165,7 +167,7 @@ export class RustHost {
     this.h = this.F.hand(start, (p, n) => this.F.hand(block, (bp, bn) => X.face_new(p, n, bp, bn))); if (!this.h) throw new Error('face_new: no free slot');
     this.slot = X.face_slot(this.h); { const said = this.F.outText(); if (said && !this.o.quiet) this.say(said); }
     if (X.state_len() !== block.length) this.say(`rust-host: rust/sim's block is ${X.state_len()} bytes in the module and ${block.length} in the TypeScript game`);
-    this.lastState = start; this.lastBlock = block; this.lastRust = start; this.starts++;
+    this.lastState = start; this.lastBlock = block; this.lastRust = start; this.starts++; this.warmDue = this.starts === 1;
     // THE MENU'S QUESTIONS: every order row and the squad's posture ask the Rust game by the row's id (ask.ts, `face_ask`); a row's `issue` gives the order
     // on the Rust side and the puppet takes the state again
     if (this.starts === 1 && this.o.asks !== false && X.face_ask) this.asks = B.installAsks(g, B.reg, (kind: number, row: number, seat: number, b: Uint8Array) => { this.asked++; this.F.hand(b, (p, n) => X.face_ask(this.h, kind, row, seat, p, n)); return this.F.outView().slice(); }, () => { this.reapply('an order row issued'); });
@@ -332,7 +334,14 @@ export class RustHost {
     if (!this.h || g.mission !== this.missionRef || (g.chronicle?.counts?.loads ?? 0) !== this.loadsRef) this.start(); else this.handWrites(k);
     this.o.beforeHost?.(this, cmds);
     // THE HOST'S HALF: each seat's record, every camera and Input row, in the bridge's own small buffer (export.ts hostHalf, io::take_host_half)
-    t = now(); { const hb: Uint8Array = B.hostHalf(g, B.reg, cmds); this.hostBytes = hb.length; this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); } this.T.hostHalf += now() - t;
+    t = now(); const hb: Uint8Array = B.hostHalf(g, B.reg, cmds); this.hostBytes = hb.length; this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.T.hostHalf += now() - t;
+    // THE STEP'S OWN WARM-UP (`warmSteps`, off by default): a second game made from the same start, stepped with this tick's record and let go before
+    // the game's own first step. MEASURED TO BUY NOTHING: the first tick is the worst of a play (about 20 ms on a quiet machine) with three such steps
+    // before it as without (19.8 against 19.5 ms, night-breach:1), and no step grows the memory once room is reserved. So the first tick's cost is the
+    // game's own (what a game builds the first time it is asked), not the module's compiling.
+    if (this.warmDue) { this.warmDue = false; const t1 = now(), n = this.o.warmSteps ?? 0, h2 = n > 0 && this.lastState && this.lastBlock ? this.F.hand(this.lastState, (p, m) => this.F.hand(this.lastBlock!, (bp, bn) => X.face_new(p, m, bp, bn))) : 0;
+      if (h2) { for (let i = 0; i < n; i++) { this.F.hand(hb, (p, m) => X.face_host_half(h2, p, m)); X.face_step(h2, dt, 0); X.face_lights(h2, dt); X.face_puppet(h2, i === 0 ? 1 : 0); } X.face_puppet_drop?.(h2); X.face_drop(h2); }
+      this.T.start += now() - t1; }
     this.memPages = this.F.mem.buffer.byteLength;
     t = now(); X.face_step(this.h, dt, 0); const el = now() - t; this.T.step += el; if (el > this.worstStep) { this.worstStep = el; this.worstStepAt = k; }
     if (this.F.mem.buffer.byteLength !== this.memPages) this.grew++;
@@ -403,7 +412,10 @@ export class RustHost {
 // game's beside. Unset: nothing here is loaded. (Not TPS_RUST: src/sim/sim.ts refuses that word as a retired one.)
 export async function standRust(g: any, word: string): Promise<RustHost | null> {
   if (!(globalThis as any).__tpsTop) throw new Error(`TPS_GAME=${word} needs the bridge's preload in this process and its children: BUN_OPTIONS=--preload=./tools/blitz/expose.ts (tools/blitz/rust.sh sets both)`);
-  if (word === 'ts') { const B = await bridge(); B.dressAll(false); if (!g.dice) g.dice = B.newDice(20942); return null; }
+  // (THE DIE: the game's own, seeded off the tool's `Math.random` as it stands when the game is stood, so a tool that seeds a run by its seed number
+  // (playthrough.ts:1646) rolls another die a seed, and the same die under `ts` and `rust`)
+  const die = g.dice ? null : (Math.random() * 4294967296) >>> 0;
+  if (word === 'ts') { const B = await bridge(); B.dressAll(false); if (die !== null) g.dice = B.newDice(die); return null; }
   if (word !== 'rust' && word !== 'audit') throw new Error(`TPS_GAME=${word}: rust (the Rust game steps), audit, or ts (the same stand, the TypeScript tick)`);
-  await RustHost.ready(); return RustHost.attach(g, { audit: word === 'audit', quiet: true, wholeEvery: +(process.env.TPS_GAME_WHOLE ?? 0) });
+  await RustHost.ready(); return RustHost.attach(g, { audit: word === 'audit', quiet: true, die, wholeEvery: +(process.env.TPS_GAME_WHOLE ?? 0) });
 }
