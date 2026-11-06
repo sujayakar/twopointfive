@@ -1155,7 +1155,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   every stand by the runner (`tools/qa/holds.ts MORE_AS_IT_WAS`: the word and the table, unless whoever runs the tool set the word himself), as the deal's
   own older probes are: `frameholds-tools`, `doortest`, `silent-pick`, `silent-boot` (a locked or wedged door such a four boots is one the tool
   takes), the ones that read a door's tools page row for row against the pair's or count its rows by their digits (`doormenu-rows`,
-  `thresholdmenu-rows`, `shutdoor-menu`, `silent-tools`, `pressorders-squad4`, `pressorders-nightbreach4`), and `kitpaste` (its squads' big slots
+  `thresholdmenu-rows`, `shutdoor-menu`, `silent-tools`), and `kitpaste` (its squads' big slots
   are the table's; a paste over a lent tool is a `kitdeal-more` line); the page as it opens is walked, in every scenario, by `orderkeys-walk`. THE PASTE'S TWO PAGE CHECKS READ THE RULE (10-19): `tools/qa/kitpaste-page.cjs` and the slow `kitpaste-deploy-page.cjs` paste a hammer card onto Blue Two of four, the one man the deal lends that hammer, so the store holds his counts and big 'none', his Big slot tile and his card's line read the hammer before and after, and three tiles flash; the first runs its opening part again under `?nokitmore`, where the hammer is written and four tiles flash (both were written to the store's hammer and went red on the page as it opens; headless Chromium, never seen on a GPU). ONE THING THE PLAYER NOW MEETS ON EVERY DOOR, OF FOUR: the big slot's row is on H, a key of its own beside G, since the
   page's five digits are taken; `orderkeys` knows the key now (it never met the row: nobody was issued a tool). The maintainer's call whether H
   is near enough to the left hand.
