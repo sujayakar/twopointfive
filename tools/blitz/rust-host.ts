@@ -148,7 +148,15 @@ export class RustHost {
     if (o.out) for (const f of ['writeback.txt', 'gives.txt']) writeFileSync(`${o.out}/${f}`, '');
     return H; }
   /** the Rust game is let go (its slot is free for another) and the game steps in TypeScript again */
-  detach(): void { const X = this.F.X; if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; } delete this.g.stepSeats; delete this.g.rustHost; }
+  detach(): void { const X = this.F.X; if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; } RustHost.live.delete(this); delete this.g.stepSeats; delete this.g.rustHost; }
+  /** the hosts whose Rust game stands in a slot, and when each last stepped */
+  private static live = new Set<RustHost>(); private static clock = 0; private stamp = 0; evicted = 0;
+  /** this game's slot goes to another: the puppet takes the whole state, the Rust game is let go; a later step starts a new one from the puppet */
+  private giveUp(): void { const X = this.F.X; if (!this.h) return;
+    try { this.applyWhole('its slot went to another game'); } catch (e) { this.count(`THE WHOLE APPLY THREW as the slot was given up: ${String((e as any)?.message ?? e).slice(0, 100)}`); }
+    X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; this.evicted++; if (this.rec) this.rec.evicted = this.evicted; RustHost.live.delete(this); }
+  /** RH_TRACE=<file>: a line a game as the process ends (who stood it, how far it stepped, what it took), for a table of what a tool does with its games */
+  rec: any = null;
 
   private count(name: string) { this.calls.set(name, (this.calls.get(name) ?? 0) + 1); }
   private tsBlock(): Uint8Array { const w: Uint32Array = this.g.sim.w; return new Uint8Array(w.buffer, w.byteOffset, w.byteLength); }
@@ -164,10 +172,17 @@ export class RustHost {
     g.sim.settle(g);
     const start: Uint8Array = B.exportGame(g, B.reg), block = this.tsBlock().slice();
     if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); }
-    this.h = this.F.hand(start, (p, n) => this.F.hand(block, (bp, bn) => X.face_new(p, n, bp, bn))); if (!this.h) throw new Error('face_new: no free slot');
+    const make = () => this.F.hand(start, (p, n) => this.F.hand(block, (bp, bn) => X.face_new(p, n, bp, bn)));
+    this.h = make();
+    // THE SLOTS (rust/sim has four): a tool that stands games back to back in one process (the probe runner: hundreds) never says it has done with one.
+    // Where every slot is taken, the game stepped longest ago gives its slot up: its puppet takes the whole state first, so that if the tool does step
+    // it again it starts anew from a puppet that holds all of it (the same path as a checkpoint put back).
+    while (!this.h && RustHost.live.size) { let old: RustHost | null = null; for (const o of RustHost.live) if (o !== this && (!old || o.stamp < old.stamp)) old = o; if (!old) break; old.giveUp(); this.h = make(); }
+    if (!this.h) throw new Error('face_new: no free slot');
+    RustHost.live.add(this); this.stamp = ++RustHost.clock;
     this.slot = X.face_slot(this.h); { const said = this.F.outText(); if (said && !this.o.quiet) this.say(said); }
     if (X.state_len() !== block.length) this.say(`rust-host: rust/sim's block is ${X.state_len()} bytes in the module and ${block.length} in the TypeScript game`);
-    this.lastState = start; this.lastBlock = block; this.lastRust = start; this.starts++; this.warmDue = this.starts === 1;
+    this.lastState = start; this.lastBlock = block; this.lastRust = start; this.starts++; if (this.rec) this.rec.starts = this.starts; this.warmDue = this.starts === 1;
     // THE MENU'S QUESTIONS: every order row and the squad's posture ask the Rust game by the row's id (ask.ts, `face_ask`); a row's `issue` gives the order
     // on the Rust side and the puppet takes the state again
     if (this.starts === 1 && this.o.asks !== false && X.face_ask) this.asks = B.installAsks(g, B.reg, (kind: number, row: number, seat: number, b: Uint8Array) => { this.asked++; this.F.hand(b, (p, n) => X.face_ask(this.h, kind, row, seat, p, n)); return this.F.outView().slice(); }, () => { this.reapply('an order row issued'); });
@@ -330,7 +345,7 @@ export class RustHost {
   // ---- THE STEP, in place of `stepSeats`
   step(dt: number, cmds: readonly any[]): void {
     const g = this.g, X = this.F.X, B = this.B, k = ++this.k; let t = now();
-    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds;
+    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; if (this.rec) this.rec.k = k;
     if (!this.h || g.mission !== this.missionRef || (g.chronicle?.counts?.loads ?? 0) !== this.loadsRef) this.start(); else this.handWrites(k);
     this.o.beforeHost?.(this, cmds);
     // THE HOST'S HALF: each seat's record, every camera and Input row, in the bridge's own small buffer (export.ts hostHalf, io::take_host_half)
@@ -417,5 +432,15 @@ export async function standRust(g: any, word: string): Promise<RustHost | null> 
   const die = g.dice ? null : (Math.random() * 4294967296) >>> 0;
   if (word === 'ts') { const B = await bridge(); B.dressAll(false); if (die !== null) g.dice = B.newDice(die); return null; }
   if (word !== 'rust' && word !== 'audit') throw new Error(`TPS_GAME=${word}: rust (the Rust game steps), audit, or ts (the same stand, the TypeScript tick)`);
-  await RustHost.ready(); return RustHost.attach(g, { audit: word === 'audit', quiet: true, die, wholeEvery: +(process.env.TPS_GAME_WHOLE ?? 0) });
+  await RustHost.ready(); const H = RustHost.attach(g, { audit: word === 'audit', quiet: true, die, wholeEvery: +(process.env.TPS_GAME_WHOLE ?? 0) });
+  if (process.env.RH_TRACE) trace(H, word);
+  return H;
 }
+// ---- RH_TRACE=<file>: as the process ends, a line a game stood under the word: the tool's file that stood it (the first frame of the stack under tools/
+// that is not the harness's own), the probe running then (probes.ts names it), the ticks it stepped, its whole applies, its calls, what threw
+const TRACED: any[] = [];
+function trace(H: RustHost, word: string): void {
+  const st = String(new Error().stack ?? '').split('\n').map(l => l.match(/tools\/[\w./-]+\.ts:\d+/)?.[0]).filter((x): x is string => !!x && !/rust-host\.ts|headless\.ts/.test(x));
+  const rec = H.rec = { word, probe: (globalThis as any).__probeNow ?? null, by: st[0] ?? '?', k: 0, evicted: 0, starts: 0, wholes: H.wholes, calls: H.calls };
+  if (!TRACED.length) process.on('exit', () => { try { appendFileSync(process.env.RH_TRACE!, TRACED.map(r => JSON.stringify({ pid: process.pid, ...r, wholes: Object.fromEntries(r.wholes), calls: Object.fromEntries(r.calls) })).join('\n') + '\n'); } catch { /* the trace is not the tool's */ } });
+  TRACED.push(rec); }

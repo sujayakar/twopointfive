@@ -129,7 +129,7 @@ console.error = (...args: unknown[]) => { if (tapDepth) scan(args); rawErr(...ar
  *  next probe of the same process — an identity digest silently depending on the previous family's leftovers), with the cut-pieces switch, the plain night's card
  *  and the loud card first in the table. */
 async function run(name: string, fn: () => unknown, standOf = name): Promise<boolean> {   // (standOf: the probe whose stand it runs on — its own, but for selftest-holds)
-  RAN++; RAN_NAMES.push(name); const f0 = tapFails, p0 = tapPasses; tapDepth++;
+  RAN++; RAN_NAMES.push(name); (globalThis as any).__probeNow = name;   /* (read by tools/blitz/rust-host.ts's trace, RH_TRACE: which probe stood a game) */ const f0 = tapFails, p0 = tapPasses; tapDepth++;
   let ok = true, ret: unknown;
   try { ret = await asProbe(standOf, fn); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
