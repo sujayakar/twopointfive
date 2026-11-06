@@ -57,6 +57,8 @@
 use std::cell::{Cell, RefCell};
 mod page;
 
+mod harness;
+
 type Game = game::game::Game;
 /// a game and what the host has handed over for its next step
 struct Held {
