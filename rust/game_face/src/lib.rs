@@ -270,6 +270,16 @@ pub extern "C" fn face_export(h: u32) {
     let b = with(h, |x| game::io::export(&x.g));
     out(b);
 }
+/// how many out events the game holds (`g.out`: what the rules of the steps since the last clear told the host)
+#[no_mangle]
+pub extern "C" fn face_out_n(h: u32) -> usize {
+    with(h, |x| x.g.out.len())
+}
+/// the host has taken (or does not want) the out events: the list is a step's output and no part of the state, so nothing else empties it
+#[no_mangle]
+pub extern "C" fn face_out_clear(h: u32) {
+    with(h, |x| x.g.out.clear());
+}
 #[no_mangle]
 pub extern "C" fn face_die_n(h: u32) -> f64 {
     with(h, |x| sim::state::state(x.g.sim).dice.n)
