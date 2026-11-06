@@ -1086,7 +1086,18 @@ but synthetic writes still work.
   THE SAME ENTRY IN BOTH TREES. The tally stands the team on free floor 2.4 to 6.2 m out from the door and Sam beside them, and takes anybody with a
   line to them off the floor, so a thing laid there changes the STAGING, and two trees staged differently did not fight the same entry. `bang-tally.ts`
   writes into every result its staging (`at`: the spots, Sam's last, and how many were taken off the floor) and what became of the entry as a word
-  (`outcome`: played, refused, no-floor, nobody, threw), and takes another tree's staging (`--stand-as`) wherever every spot of it is free floor. The
+  (`outcome`: played, refused, no-floor, nobody, threw), the game's reason for the first order it refused (`refused`) and the men down before the order
+  was asked (`lostBefore`), and takes another tree's staging (`--stand-as`) wherever every spot of it is free floor. THE NOTE IS FOR PEOPLE and reads as
+  it did before this tool: other tools count rows by whether they have one (`flashweight-probes.ts` counts `of > 0 && !note`), and a refusal was always
+  a row with none. The tally's own table skips rows by the fields now, not by the note's words. A REFUSAL NAMES A DOOR ONLY WITH THE TEAM WHOLE AT THE
+  ORDER IN BOTH TREES: once a man is down before the order the fight has begun, what the game answers then (`no squad`, when it is all of them) is that
+  fight's doing, and the entry is read as a fight like any other. A named door's line gives the seed and the reason of each entry that cannot be made.
+  MEASURED FOR THAT FOLLOW-UP (6f1d40c2 with its three tool files, the page's stand): the flashbang family's whole log is the clean dad3c1a1's line
+  for line (flashweight-corners counts 398 entries again, where the first cut's note had made it 392; the family's four reds are the base's); on
+  depot-four and pass-four, seeds 1-3, every counted field, every note and the tally's printed table are the tally's from before this tool (90 rows, six
+  of them refused, none with a note); mousehole-four, whose exam door the first cut named for a team shot before its order on seed 8, reads no door
+  named over seeds 1-24 (exam plain 8 worse and 8 better, bang 7 and 8), from the first cut's kept tallies and with seeds 7-12 replayed in both trees
+  alike; the break word names the same door with the same counts; pass-four against its own tally, 480 of 480 the same. The
   reader stands the AFTER tree as the BEFORE tree stood each entry, prints door by door how many entries were `staged alike`, and a verdict on a door
   that could not be stood alike says so. A tally handed over as JSON was staged as it was. A tally from before `outcome` is read by its notes and cannot
   say a refusal (such an entry is a fight to it, as to the tally's own table), so no door is named for a refusal one of the two could not say.
