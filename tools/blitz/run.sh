@@ -7,7 +7,8 @@
 # Exit: 0 in step and no unknown path · 1 the block or the die parted, or a kept tick has an unknown path · 2 the Rust tick panicked · 3 a side could not run.
 # Needs bun and cargo on the PATH, and nothing outside the repository but the folder it names on its first line (--out, or one under $TMPDIR).
 # A kept tick's Rust state (n<k>.bin) is deleted once it is diffed, unless --blobs.
-# BLITZ_RUNNER=<path> steps with that runner (a copy kept apart while the tree is built again).
+# A name two-roomclear | two-nightbreach | two-compound is a game of TWO SEATS (seats.ts for the TypeScript side); --asks then prints where the
+# TypeScript's tick asked the bare Game for a seat's field. BLITZ_RUNNER=<path> steps with that runner (a copy kept apart while the tree is built again).
 # --no-ts takes the TypeScript side as --out already holds it (the same mission, ticks and kept ticks); --no-build takes the runner as it is built.
 cd "$(dirname "$0")/../.." || exit 64
 unset BUN_OPTIONS
