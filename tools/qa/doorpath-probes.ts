@@ -65,7 +65,8 @@ async function runJobs(jobs: Job[], soft = false): Promise<any[]> {
   return out;
 }
 const OLD = () => !!process.env.DOORPATH_OLD;
-const watched = (knobs = '', pre = '') => runJobs(DOORPATH_RUNS.map((s): Job => [s, { PT_PATHS: '1', ...(OLD() ? {} : { TPS_DOORPATH: '1' + knobs }) }, pre]));
+// (the entry as it was is the WORD '0': left out, a child stands the game as the page opens it, the walk on — and the red path played the rule it is the red path of)
+const watched = (knobs = '', pre = '') => runJobs(DOORPATH_RUNS.map((s): Job => [s, { PT_PATHS: '1', TPS_DOORPATH: OLD() ? '0' : '1' + knobs }, pre]));
 
 export async function doorpathPaths(): Promise<boolean> {
   const C = check(`doorpath-paths: nobody of a room entry in a leaf, through a friend or in a jamb — ${OLD() ? 'THE ENTRY AS IT WAS (DOORPATH_OLD: this must fail)' : 'the switch on'}`);

@@ -5,8 +5,8 @@
 //               fouled bore (two short rounds from one spot = no line from there); the cone × at track 0 / 0.5 / 1 against the formula; the feet term (now vs
 //               remembered); the target term off a synthetic bearing rate; Sam's track: caps at a sprint / walking, a new man resets it, off him and straight
 //               back keeps it, crouched climbs quicker; his cone's terms; the ring's pixels follow the cone.
-//   aim-first   a FREE alert man 8.5 m up the corridor from a lit standing god-mode Sam, from first sight: no round before reactT + acquireMin·settleSecs (± a
-//               frame), the first round's cone ≥ 1.8× a settled one's and — over eight seeds — the first rounds miss by more than the settled ones; then the
+//   aim-first   a FREE alert man 8.5 m up the corridor from a lit standing god-mode Sam, from first sight: no round before the beat + acquireMin·settleSecs (± a
+//               frame; the beat is reactT, or the startle's beat and draw where that rule is on and longer: AIMFIRST_BREAK=1 must fail both lines), the first round's cone ≥ 1.8× a settled one's and — over eight seeds — the first rounds miss by more than the settled ones; then the
 //               weapons-identity staging (6.5 m, gun round in 0.3 s) with the man FREE, model off vs on over 45 s: rounds, how many found Sam, first round.
 //   aim-motion  a pinned (settled, planted) man and a god-mode Sam 8 m off: standing / sprinting ACROSS his front / running straight AT him — hit fractions:
 //               across ≤ 0.4 × standing, at him ≥ 0.8 × standing; the cones and bearing rates printed; the three canonical cones before → after.
@@ -26,6 +26,10 @@ const { updateAim } = await import(`${ROOT}/src/game/player.ts`);
 const { resetChase, playerGroundVel } = await import(`${ROOT}/src/game/guards.ts`);
 const Aim = await import(`${ROOT}/src/game/aim.ts`);
 const { AIM, trackGuard, trackPlayer, aimReady, guardRound, handsCone, aimBrake, playerAim, samAim, guardAcquired, noteBore, boreFouled, AIM_DEBUG } = Aim;
+const { STARTLE, STARTLE_STATS } = await import(`${ROOT}/src/game/startle.ts`);
+/** what the startle holds a man's first round by, from first sight, where its rule is on (startle.ts: the beat, then the draw — no round leaves him in either).
+ *  Read after a game is stood up. AIMFIRST_BREAK=1, the red path: a second more than the rule says — aim-first's two lines must fail on either stand. */
+const startleLead = (): number => (STARTLE.on ? STARTLE.beat + STARTLE.draw : 0) + (process.env.AIMFIRST_BREAK === '1' ? 1 : 0);
 const { aimRingPx } = await import(`${ROOT}/src/ui/overlay.ts`);
 
 type Vec3 = [number, number, number];
@@ -165,11 +169,11 @@ export async function aimUnit() {
 const f4 = (x: number) => x.toFixed(4);
 
 // ================================================================ (b) first sight → first round; the identity staging free, off vs on
-interface FightRun { rounds: { t: number; miss: number; cone: number; track: number; speed: number; hit: boolean; dist: number }[]; firstT: number; hits: number; exc: string; trace: string[]; }
+interface FightRun { rounds: { t: number; miss: number; cone: number; track: number; speed: number; hit: boolean; dist: number }[]; firstT: number; hits: number; exc: string; trace: string[]; /** startled men who ran for it in this fight (startle.ts STARTLE_STATS.ran, this fight's share) */ ran: number; }
 /** A free (or pinned) alert man at `gPos` facing Sam at `sPos` (lit, god mode, standing still), for `secs`: every round's time from t0, miss angle off Sam's trunk,
  *  the cone / track / speed it left with (aim.lastShot under the model; the row's line otherwise), whether it found him. */
 async function fight(seed: number, o: { model: boolean; gPos: Vec3; sPos: Vec3; secs: number; fireCd: number; reactT: number; pinned?: boolean; carbine?: boolean }): Promise<FightRun> {
-  Math.random = seeded(seed);
+  Math.random = seeded(seed); const ran0: number = STARTLE_STATS.ran;   // (the module's counter runs on from game to game: this fight's share is the difference)
   const W = await standUp(); const { game } = W; const pl = game.player;
   game.godMode = true; game.aiEnabled = true; game.tune.aimModel = o.model; if (o.carbine) game.tune.carbineGuards = 'all';
   for (let i = 0; i < 5; i++) W.step(DT);
@@ -177,7 +181,7 @@ async function fight(seed: number, o: { model: boolean; gPos: Vec3; sPos: Vec3; 
   game.teleportPlayer(v3.copy(o.sPos)); pl.slot = 'pistol'; pl.holstered = false; pl.crouch = false; pl.pistol.lightOn = false;
   place(A, o.gPos, Math.atan2(o.sPos[0] - o.gPos[0], o.sPos[2] - o.gPos[2])); W.step(DT); pl.visibility = 0.9;
   armAlert(A, game, o.fireCd, o.reactT, !!o.pinned);
-  const R: FightRun = { rounds: [], firstT: -1, hits: 0, exc: '', trace: [] }; const t0 = game.time;
+  const R: FightRun = { rounds: [], firstT: -1, hits: 0, exc: '', trace: [], ran: 0 }; const t0 = game.time;
   const dbg: string[] = []; AIM_DEBUG.log = VERBOSE ? (s: string) => dbg.push(`${f2(game.time - t0)} ${s}`) : null;
   try {
     for (let f = 0; f < Math.round(o.secs / DT); f++) {
@@ -194,27 +198,28 @@ async function fight(seed: number, o: { model: boolean; gPos: Vec3; sPos: Vec3; 
   } catch (e: any) { R.exc = String(e?.stack ?? e); }
   AIM_DEBUG.log = null;
   if (VERBOSE) { console.log('    ' + R.trace.join('\n    ')); if (dbg.length) console.log('    debug: ' + dbg.slice(0, 60).join('\n    debug: ')); }
-  return R;
+  R.ran = STARTLE_STATS.ran - ran0; return R;
 }
 const mean = (a: number[]) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
 
 export async function aimFirst() {
-  console.log('\n=== aim-first: a FREE alert man 8.5 m up the corridor from a lit standing Sam, from first sight — no round before reactT + acquireMin·settleSecs, the first round\'s cone ≥ 1.8× a settled one\'s, first rounds miss by more (8 seeds); then the weapons-identity staging FREE, model off vs on over 45 s ===');
+  console.log('\n=== aim-first: a FREE alert man 8.5 m up the corridor from a lit standing Sam, from first sight — no round before the beat (reactT, or the startle\'s) + acquireMin·settleSecs, the first round\'s cone ≥ 1.8× a settled one\'s, first rounds miss by more (8 seeds); then the weapons-identity staging FREE, model off vs on over 45 s ===');
   let allPass = true; const G = AIM.guard;
   const SAM: Vec3 = [24.0, 0, 11.4], GRD: Vec3 = [15.5, 0, 11.3];   // 8.5 m: inside the 9 m he holds and fires from — planted, so only the beat and the gate decide
   const REACT = 0.35;   // the alert transition's own beat
   {
     const runs: FightRun[] = []; for (let s = 0; s < 8; s++) runs.push(await fight(911 + s, { model: true, gPos: GRD, sPos: SAM, secs: 6, fireCd: 0, reactT: REACT }));
-    const fails: string[] = []; const want = REACT + G.acquireMin * G.settleSecs;
+    const fails: string[] = []; const lead = Math.max(REACT, startleLead()), want = lead + G.acquireMin * G.settleSecs;   // (the alert transition's own beat runs inside the startle's, where there is one)
     const firsts = runs.map(r => r.firstT); const firstCones = runs.map(r => r.rounds[0]?.cone ?? NaN), settledCones = runs.flatMap(r => r.rounds.filter(x => x.track >= 0.999).map(x => x.cone));
     const firstMiss = mean(runs.map(r => r.rounds[0]?.miss ?? 0)), settledMiss = mean(runs.flatMap(r => r.rounds.filter(x => x.track >= 0.999).map(x => x.miss)));
-    for (const [i, r] of runs.entries()) { if (r.exc) fails.push(`seed ${911 + i}: exception ${r.exc.split('\n')[0]}`); if (r.firstT < 0) fails.push(`seed ${911 + i}: no round in 6 s`); else if (r.firstT < want - 1.5 * DT) fails.push(`seed ${911 + i}: first round at ${f3(r.firstT)} s — before reactT + acquireMin·settleSecs = ${f3(want)}`); else if (r.firstT > want + 0.35) fails.push(`seed ${911 + i}: first round only at ${f3(r.firstT)} s (want ≈ ${f3(want)}: the beat, the gate, a frame or two for the gun to come round)`); }
+    // (the startle's lead is a man who DRAWS after his beat: one who runs for cover has no draw clock, and the bounds would be the staging's, not the aim's)
+    for (const [i, r] of runs.entries()) { if (r.ran) fails.push(`seed ${911 + i}: THE STAGING — the startled man ran (${r.ran}), where these bounds count on one who draws`); if (r.exc) fails.push(`seed ${911 + i}: exception ${r.exc.split('\n')[0]}`); if (r.firstT < 0) fails.push(`seed ${911 + i}: no round in 6 s`); else if (r.firstT < want - 1.5 * DT) fails.push(`seed ${911 + i}: first round at ${f3(r.firstT)} s — before the beat + acquireMin·settleSecs = ${f3(want)}`); else if (r.firstT > want + 0.35) fails.push(`seed ${911 + i}: first round only at ${f3(r.firstT)} s (want ≈ ${f3(want)}: the beat, the gate, a frame or two for the gun to come round)`); }
     const coneRatio = mean(firstCones) / Math.max(1e-9, mean(settledCones));
     if (!(coneRatio >= 1.8)) fails.push(`first-round cone ${f4(mean(firstCones))} is only ${f2(coneRatio)}× the settled ${f4(mean(settledCones))} (want ≥ 1.8)`);
     if (settledCones.length < 8) fails.push(`only ${settledCones.length} settled rounds across the runs`);
     if (!(firstMiss > 1.3 * settledMiss)) fails.push(`first rounds missed by ${f4(firstMiss)} rad, settled ones by ${f4(settledMiss)} — want the first plainly wider (> 1.3×)`);
     const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — from first sight (reactT ${REACT}, fireCd 0, free, 8.5 m): first round at ${firsts.map(f3).join(' / ')} s (floor ${f3(want)} = ${REACT} + ${G.acquireMin}×${G.settleSecs}); first-round cone ${f4(mean(firstCones))} vs settled ${f4(mean(settledCones))} (×${f2(coneRatio)}); mean miss angle first ${f4(firstMiss)} vs settled ${f4(settledMiss)} rad (${settledCones.length} settled rounds); tracks at the first round ${runs.map(r => f2(r.rounds[0]?.track ?? NaN)).join(' ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — from first sight (reactT ${REACT}, fireCd 0, free, 8.5 m): first round at ${firsts.map(f3).join(' / ')} s (floor ${f3(want)} = ${f2(lead)} + ${G.acquireMin}×${G.settleSecs}; the beat is ${lead > REACT ? 'the startle\'s and its draw' : 'reactT'}); first-round cone ${f4(mean(firstCones))} vs settled ${f4(mean(settledCones))} (×${f2(coneRatio)}); mean miss angle first ${f4(firstMiss)} vs settled ${f4(settledMiss)} rad (${settledCones.length} settled rounds); tracks at the first round ${runs.map(r => f2(r.rounds[0]?.track ?? NaN)).join(' ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
     if (!ok && !VERBOSE) console.log('    ' + runs[0].trace.slice(0, 12).join('\n    '));
   }
   // ---- the identity staging (weapons-probes section 3: 6.5 m up the corridor, fireCd 0.3, reactT 0, 45 s) with the man FREE: off = today, on = the model
@@ -222,11 +227,12 @@ export async function aimFirst() {
     const off = await fight(502, { model: false, gPos: [17.5, 0, 11.3], sPos: SAM, secs: 45, fireCd: 0.3, reactT: 0 });
     const on = await fight(502, { model: true, gPos: [17.5, 0, 11.3], sPos: SAM, secs: 45, fireCd: 0.3, reactT: 0 });
     const pin = await fight(502, { model: true, gPos: [17.5, 0, 11.3], sPos: SAM, secs: 45, fireCd: 0.3, reactT: 0, pinned: true });
-    const fails: string[] = []; const settleAt65 = G.settleSecs * Math.min(1, Math.max(G.nearK, 6.5 / G.rangeRef));   // (6.5 m is inside rangeRef: the man fills more of the sights, the settle is that much quicker — aim.ts settleTime)
+    const fails: string[] = [], lead = startleLead(); const settleAt65 = G.settleSecs * Math.min(1, Math.max(G.nearK, 6.5 / G.rangeRef));   // (6.5 m is inside rangeRef: the man fills more of the sights, the settle is that much quicker — aim.ts settleTime)
     if (off.exc || on.exc || pin.exc) fails.push('exception: ' + (off.exc || on.exc || pin.exc).split('\n')[0]);
-    if (!(on.firstT >= G.acquireMin * settleAt65 - 1.5 * DT)) fails.push(`model on, free: first round at ${f3(on.firstT)} s — under acquireMin·settle(6.5 m) ${f3(G.acquireMin * settleAt65)}`);
-    if (on.firstT > G.acquireMin * settleAt65 + 0.2) fails.push(`model on, free: first round only at ${f3(on.firstT)} s (the gate opens at ${f3(G.acquireMin * settleAt65)})`);
-    if (!(off.firstT < 0.4)) fails.push(`model off: first round at ${f3(off.firstT)} s (today's is 0.30: fireCd 0.3 and nothing else)`);
+    if (off.ran || on.ran || pin.ran) fails.push(`THE STAGING — a startled man ran (off ${off.ran}, on ${on.ran}, pinned ${pin.ran}), where these bounds count on one who draws: 6.5 m is inside the startle's run band, and the man here is the steady one`);
+    if (!(on.firstT >= lead + G.acquireMin * settleAt65 - 1.5 * DT)) fails.push(`model on, free: first round at ${f3(on.firstT)} s — under ${lead ? `the startle's ${f2(lead)} s + ` : ''}acquireMin·settle(6.5 m) ${f3(G.acquireMin * settleAt65)}`);
+    if (on.firstT > lead + G.acquireMin * settleAt65 + 0.2) fails.push(`model on, free: first round only at ${f3(on.firstT)} s (the gate opens at ${f3(lead + G.acquireMin * settleAt65)})`);
+    if (!(off.firstT < lead + 0.4) || off.firstT < lead + 0.3 - 1.5 * DT) fails.push(`model off: first round at ${f3(off.firstT)} s (today's is ${f2(lead + 0.3)}: fireCd 0.3${lead ? ` after the startle's ${f2(lead)} s` : ' and nothing else'})`);
     if (Math.abs(pin.firstT - off.firstT) > DT + 1e-9 || pin.rounds.length !== off.rounds.length || pin.hits !== off.hits) fails.push(`pinned under the model (${f3(pin.firstT)} s, ${pin.rounds.length} rounds, ${pin.hits} hits) is not today's man (${f3(off.firstT)} s, ${off.rounds.length}, ${off.hits}) — the tour's posts would drift`);
     const ok = fails.length === 0; allPass &&= ok;
     const line = (r: FightRun, tag: string) => `${tag}: ${r.rounds.length} rounds in 45 s, ${r.hits} found a standing Sam (${r.rounds.length ? Math.round(100 * r.hits / r.rounds.length) : 0} %), first round +${f3(r.firstT)} s, cones ${f4(r.rounds[0]?.cone ?? NaN)} first / ${f4(mean(r.rounds.slice(2).map(x => x.cone)))} after`;
