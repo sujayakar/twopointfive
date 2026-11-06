@@ -112,7 +112,16 @@ const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal
   'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'workstow', 'squadnet', 'gunslots', 'gunroles', 'gunlook', 'kittree', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky', 'holds']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice and its switch off)
 // (first line: + glass-break's switch-off identity and the Director's idle identity, landed after the list froze — wave-4 review)
 /** The probes that failed this invocation (by name), the count run, and how many of those produced anything checkable (a boolean, a PASS / FAIL line, a banner). */
-const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[] = [], RAN_CHECKED = new Set<string>();
+/** QA_FOLD_ONLY=<probe,probe…> beside the word that lays the fold (tools/qa/fold.ts, FOR ONE CHECK AT A TIME): the named probes alone run folded */
+const FOLD_ONLY = process.env.QA_FOLD_ONLY ? new Set(process.env.QA_FOLD_ONLY.split(',').map(x => x.trim()).filter(Boolean)) : null, FOLD_MET = new Set<string>();
+/** what QA_FOLD_ONLY asked that this run did not do: judged by the outermost runner alone (a runner that is a child of one decides nothing) */
+function foldOnlyErrors(): string[] {
+  if (!FOLD_ONLY || process.env.QA_FOLD_LOG_OWNER && process.env.QA_FOLD_LOG_OWNER !== String(process.pid)) return [];
+  if (!FOLDM.FOLD.on) return ["QA_FOLD_ONLY names probes to fold and no fold is laid: it wants QA_FOLD=1 beside it, on the page's stand"];
+  if (!FOLD_ONLY.size) return ['QA_FOLD_ONLY names no probe: nothing of this run was folded'];
+  return [...FOLD_ONLY].filter(n => !FOLD_MET.has(n)).map(n => `QA_FOLD_ONLY names ${n}, and no probe of this run has that name (a probe's own name, not a family's): nothing was folded for it`);
+}
+const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[] = [], RAN_CHECKED = new Set<string>(), RAN_FOLDED = new Set<string>();   // (RAN_FOLDED: the probes that ran with the settled rows folded, tools/qa/fold.ts)
 /** The dispatch condition: registers `names` as known and says whether this invocation (`which`) is one of them. List 'all' explicitly where 'all' should run it; 'all-quick' follows QUICK. */
 function on(...names: string[]): boolean { for (const n of names) KNOWN.add(n); return names.includes(which) || (which === 'all-quick' && names.some(n => QUICK.has(n))); }
 /** The FAIL / PASS line shapes the probe files print (and gate.sh counts): a family banner with FAIL in it, a '- FAIL —' case line, a two-space '  FAIL …' check
@@ -131,11 +140,16 @@ console.error = (...args: unknown[]) => { if (tapDepth) scan(args); rawErr(...ar
  *  and the loud card first in the table. */
 async function run(name: string, fn: () => unknown, standOf = name): Promise<boolean> {   // (standOf: the probe whose stand it runs on — its own, but for selftest-holds)
   RAN++; RAN_NAMES.push(name); const f0 = tapFails, p0 = tapPasses; tapDepth++;
-  let ok = true, ret: unknown; const plainSays = process.env.QA_VERDICTS === '1' && !FOLDM.FOLD.on && (process.env.QA_VERDICTS_BY ??= String(process.pid)) === String(process.pid), speaks = FOLDM.foldSpeaker('runner'); if (speaks) { const o = FOLDM.foldOutside(`before ${name}`); if (o) console.log(o); }   // (tools/qa/fold.ts: what was refused before this probe began is not its own, and is said)
+  let ok = true, ret: unknown; const plainSays = process.env.QA_VERDICTS === '1' && !FOLDM.FOLD.on && (process.env.QA_VERDICTS_BY ??= String(process.pid)) === String(process.pid), speaks = FOLDM.foldSpeaker('runner');
+  if (speaks) { const o = FOLDM.foldOutside(`before ${name}`); if (o) console.log(o); }   // (tools/qa/fold.ts: what was refused before this probe began is not its own, and is said)
+  // (QA_FOLD_ONLY, the outermost runner's alone: the laid fold on for a named probe, off for any other, and back to what stood between probes after it)
+  const between = FOLDM.foldMode(), only = speaks && FOLD_ONLY && between !== null; if (only) { if (FOLD_ONLY!.has(name)) FOLD_MET.add(name); FOLDM.foldFor(FOLD_ONLY!.has(name)); }
+  const folded = FOLDM.foldActive(); if (folded) RAN_FOLDED.add(name);   // (as the probe begins, before its fence opens: QA_FOLD_ONLY's choice, or a host's foldFor)
   try { ret = await asProbe(standOf, fn); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
   finally { tapDepth--; }
-  if (speaks) console.log(FOLDM.foldLine(name, tapFails > f0 || !ok));   // (tools/qa/fold.ts: what this probe, and its children, tried to write over a settled row)
+  if (speaks) console.log(FOLDM.foldLine(name, tapFails > f0 || !ok));
+  if (only) FOLDM.foldFor(between);   // (tools/qa/fold.ts: what this probe, and its children, tried to write over a settled row)
   else if (plainSays) console.log(`  ${JSON.stringify({ plain: { probe: name, red: tapFails > f0 || !ok } })}`);   // (the outermost runner's alone, as the fold's line is)
   if (tapFails > f0) ok = false;
   if (typeof ret === 'boolean' || tapFails > f0 || tapPasses > p0) { CHECKED++; RAN_CHECKED.add(name); }
@@ -3747,10 +3761,11 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
     // line says DID NOT BITE where nothing failed, names the reds with no row as the word's to explain, and says BITE NOT SHOWN where every red has a row.
     // With more words than one it cannot say which of them bit.
     const { EXPECTED_RED: LIST, rowSays } = await import('./expected-red.ts'), { STAND, BY_HAND, BREAK_WORDS } = await import('./stand.ts');
-    const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : FOLDM.FOLD.on ? 'the settled switch rows were folded (tools/qa/fold.ts: QA_FOLD or the Rust game\'s word), and the list is of a stand as it opens' : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
-    const reads = (n: string): boolean => !other && n in LIST && (STAND === 'shipped' ? LIST[n].on !== 'old' : !!LIST[n].on);
+    const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : RAN_NAMES.length && RAN_NAMES.every(n => RAN_FOLDED.has(n)) ? 'the settled switch rows were folded (tools/qa/fold.ts: QA_FOLD or the Rust game\'s word), and the list is of a stand as it opens' : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
+    // (a run folded for SOME of its checks, fold.ts foldFor: those are read against no row, the rest as ever)
+    const reads = (n: string): boolean => !other && !RAN_FOLDED.has(n) && n in LIST && (STAND === 'shipped' ? LIST[n].on !== 'old' : !!LIST[n].on);
     const reds = FAILED.filter(n => RAN_NAMES.includes(n)), banners = FAILED.filter(n => !RAN_NAMES.includes(n));
-    const old = reds.filter(reads), fresh = [...reds.filter(n => !reads(n)), ...(reds.length ? [] : banners)];
+    const foldedReds = other ? [] : reds.filter(n => RAN_FOLDED.has(n)), old = reds.filter(reads), fresh = [...reds.filter(n => !reads(n) && !foldedReds.includes(n)), ...(reds.length ? [] : banners)];
     const back = RAN_NAMES.filter(n => reads(n) && !FAILED.includes(n) && RAN_CHECKED.has(n));
     /** what to do with a listed red that passed: the row goes, unless it is red on the other stand as well, where only this stand comes out of it */
     const mend = (n: string): string => { const shares = Object.keys(LIST).filter(m => LIST[m] === LIST[n]).length - 1, own = shares ? ` (${shares} other name${shares > 1 ? 's' : ''} share${shares > 1 ? '' : 's'} its row: this one goes, or gets a row of its own, and theirs stays)` : '';
@@ -3762,11 +3777,13 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
       for (const n of fresh) console.log(`    NEW RED       ${n}`);
       for (const n of back) console.log(`    GREEN AGAIN   ${n} — listed as an expected red and it passed here: ${mend(n)}`);
     }
+    if (foldedReds.length) console.log(`  the reds of folded probes (tools/qa/fold.ts) are read against no row: ${foldedReds.length} — ${foldedReds.join(', ')}`);
+    for (const e of foldOnlyErrors()) console.log(`error: ${e}`);   // (QA_FOLD_ONLY that could not do what it was asked: an error, so that a check that had to be folded is never a green run unfolded)
     if (BREAK_WORDS.length) { const many = BREAK_WORDS.length > 1, w = `BREAK WORD${many ? 'S' : ''} ${BREAK_WORDS.join(' ')}`, all = [...reds, ...(reds.length ? [] : banners)];
       console.log(`  ${w}: ` + (!FAILED.length ? `${many ? 'NONE BIT' : 'DID NOT BITE'} — nothing this run ran failed${other ? ` (${other})` : ''}`
         : other ? `${all.length} red (${all.join(', ')}); the list is not asked, so whether ${many ? 'one' : 'it'} bit is by the line that failed`
-        : fresh.length ? `${fresh.length} red with no row on this stand (${fresh.join(', ')}): the word's to explain, by the line that failed${many ? '; which word bit is not said' : ''}`
+        : fresh.length || foldedReds.length ? `${fresh.length + foldedReds.length} red with no row on this stand (${[...fresh, ...foldedReds].join(', ')}${foldedReds.length ? `; ${foldedReds.length} of them ran folded, where no row is read` : ''}): the word's to explain, by the line that failed${many ? '; which word bit is not said' : ''}`
         : `BITE NOT SHOWN — every red of this run has a row on this stand and is red without the word: read which LINE failed`)); }
   }
-  process.exitCode = FAILED.length ? 1 : 0;
+  process.exitCode = FAILED.length || foldOnlyErrors().length ? 1 : 0;
 }
