@@ -345,7 +345,7 @@ export async function picksCard(): Promise<boolean> {
 
 // ───────────────────────────────────────────────────────────── boot ─────────────────────────────────────────────────────────────
 async function bootChild(query: string, secs: number, kept: string): Promise<any> {
-  const p = Bun.spawn(['bun', 'run', import.meta.path, '--boot', query, '--secs', String(secs), '--kept', kept], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+  const p = Bun.spawn(['bun', 'run', import.meta.path, '--boot', query, '--secs', String(secs), '--kept', kept], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });
   const [out, errText] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text()]); await p.exited;   // (both pipes drained together: a child loud on one never waits on the other)
   const line = out.split('\n').find(l => l.startsWith(TAG));
   return line ? JSON.parse(line.slice(TAG.length)) : { query, threw: `the boot printed no report (exit ${p.exitCode}): ${(errText || out).trim().split('\n').slice(-3).join(' | ')}` };

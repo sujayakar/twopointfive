@@ -1768,7 +1768,7 @@ if (import.meta.main) {
   const todo = ids.flatMap(scn => seeds.map(seed => ({ scn, seed }))), runs: RunOut[] = []; let next = 0; const t0 = Date.now();
   const worker = async () => { for (;;) { const j = todo[next++]; if (!j) return;
     const file = resolve(tmpdir(), `playthrough-${process.pid}-${j.scn}-${j.seed}.json`);
-    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.scn}:${j.seed}`, '--out', file, '--cap', String(cap), '--set', JSON.stringify(set)], { stdout: 'ignore', stderr: 'pipe' });
+    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.scn}:${j.seed}`, '--out', file, '--cap', String(cap), '--set', JSON.stringify(set)], { stdout: 'ignore', stderr: 'pipe', env: process.env });
     const errText = await new Response(pr.stderr).text(); await pr.exited;
     let r: RunOut; try { r = JSON.parse(readFileSync(file, 'utf8')); rmSync(file); } catch { r = { scn: j.scn, seed: j.seed, end: 'error', why: `the run left no result — ${errText.trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`, t: 0, team: 0, of: 0, hostiles: 0, hostilesOf: 0, orders: 0, refused: [], smells: [], rooms: 0, note: '' }; }
     { const c = r as RunOut & { fell?: Record<string, number>; alone?: [number, Record<string, number>, number?]; priced?: [number, number, number] };   // (TPS_FELL: a run is a process of its own, so its count comes home in its file and is added to this one's, which headless.ts prints as the tool ends)

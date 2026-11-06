@@ -7,7 +7,9 @@
 // before a module's own lines, so the read cannot come first. `shipped-check.ts` is red on a tool that reads the word with neither, unless it names its
 // stand itself first. It imports nothing of the game: a tool that only starts children can load it.
 // A RUN ON THE OLD STAND SAYS SO, once, on stderr: the process the word was given to says it and its children do not (QA_STAND_SAID rides the
-// environment), so a tool that asks the old stand of a child by name keeps that child's stderr for the child's own words.
+// environment), so a tool that asks the old stand of a child by name keeps that child's stderr for the child's own words. It rides only to a child
+// GIVEN the environment: Bun.spawn with no `env` hands on the one this process started with, and every word written since (this one, the stand
+// below, a probe's holds) is lost on the way. shipped-check.ts bareChildren holds every bun child of a tool to an environment given by name.
 import { standOf, STAND_ENV, type Stand } from '../../src/host/standEnv.ts';
 export const STAND: Stand = standOf(process.env.TPS_PROFILE);
 process.env.TPS_PROFILE = STAND;

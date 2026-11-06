@@ -255,7 +255,7 @@ async function playAll(styles: string[], seeds: number[], jobs: number, cap: num
   await Promise.all(Array.from({ length: Math.max(1, jobs) }, async () => {
     while (next < todo.length) {
       const job = todo[next++];
-      const proc = Bun.spawn(['bun', 'run', import.meta.path, 'worker', job.style, String(job.seed), String(cap), String(BOT.react)], { stdout: 'pipe', stderr: 'pipe' });
+      const proc = Bun.spawn(['bun', 'run', import.meta.path, 'worker', job.style, String(job.seed), String(cap), String(BOT.react)], { stdout: 'pipe', stderr: 'pipe', env: process.env });
       const kill = setTimeout(() => proc.kill(), 300_000);
       const [text, errText] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]); await proc.exited; clearTimeout(kill);
       const line = text.split('\n').find(l => l.startsWith('RESULT '));

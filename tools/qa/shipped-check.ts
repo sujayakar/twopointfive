@@ -8,9 +8,10 @@
 //   4. the stand's NAME: no word and 'shipped' are the page's stand, 'frozen' the old one, any other word is refused (src/host/standEnv.ts standOf, the
 //      one rule), and the harness's own reading of the environment (profile.ts harnessProfile) says the same;
 //   5. every tool that reads a `.TPS_PROFILE` loads tools/qa/stand.ts before its own lines, or names its stand itself first (earlyReaders below);
-//   6. no tool asks for a rule OFF by leaving its word out of an environment (wordsLeftOut below): with no word a game stands as the page opens it.
-// STAND_BREAK=1 = the red path of 4, 5 and 6: no word is expected to be the old stand, stand.ts is forgotten (every reader is early), and three sample
-// lines of the slip are read with the tools' own.
+//   6. no tool asks for a rule OFF by leaving its word out of an environment (wordsLeftOut below): with no word a game stands as the page opens it;
+//   7. every bun child a tool starts with Bun.spawn is given an environment by name (bareChildren below): with none it gets the one the tool STARTED with.
+// STAND_BREAK=1 = the red path of 4, 5, 6 and 7: no word is expected to be the old stand, stand.ts is forgotten (every reader is early), and the sample
+// lines of each slip are read with the tools' own.
 // Each stand is its own bun (the pins run as headless.ts loads), with every word either stand reads cleared from its environment first.
 // That the SHIPPED stand is the page's is the other half, and needs the page: `node tools/qa/shipped-page.cjs` (software adapter, ~3 minutes a boot).
 // Exit 0 = all pass, 1 = a check failed.
@@ -19,6 +20,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } 
 import { tmpdir } from 'node:os';
 import { dumpDiff, type StandDump } from './stand-dump.ts';
 import './stand.ts';   // (the stand's word, written down before this file reads it)
+import { callEnd } from './call-text.ts';
 import { standOf } from '../../src/host/standEnv.ts';
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.STAND_BREAK === '1';
 const MISSION = 'levelFile=compound.json&roomclear&squad4';
@@ -42,7 +44,7 @@ export function earlyReaders(root = ROOT): string[] {
 
 async function stand(profile: 'frozen' | 'shipped', query: string, dir: string): Promise<StandDump> {
   const out = resolve(dir, `${profile}-${query ? 'mission' : 'plain'}.json`);
-  const pr = Bun.spawn(['bun', 'run', resolve(import.meta.dir, 'stand-dump.ts'), '--profile', profile, '--query', query, '--out', out], { stdout: 'ignore', stderr: 'pipe' });   // (--profile clears the invoking shell's stand words in the child)
+  const pr = Bun.spawn(['bun', 'run', resolve(import.meta.dir, 'stand-dump.ts'), '--profile', profile, '--query', query, '--out', out], { stdout: 'ignore', stderr: 'pipe', env: process.env });   // (--profile clears the invoking shell's stand words in the child)
   const [err, code] = await Promise.all([new Response(pr.stderr).text(), pr.exited]);
   if (code !== 0) throw new Error(`stand-dump (${profile}${query ? `, ${query}` : ''}) failed: ${err.slice(-600)}`);
   return JSON.parse(readFileSync(out, 'utf8')) as StandDump;
@@ -95,6 +97,40 @@ const MEANT = ["const env = { ...process.env, TPS_PROFILE: 'shipped' }; delete e
   "for (const k of ['TPS_DOORPATH', 'TPS_TURN']) if (!(k in env)) delete E[k];   // (word left out on purpose: a job that wants one off says '0')", "const old = snap(); delete old.tables.SNEAK; J.applyKnobs(g, old);",
   "const w = had ? process.env.TPS_TURN : undefined;", "const env = childEnv({ PT_PATHS: 'rec', TPS_DOORPATH: on ? '1' : false });", "// was: { ...PAGE, TPS_TURN: undefined }"];
 
+/** A BUN CHILD GIVEN NO ENVIRONMENT. `Bun.spawn` and `Bun.spawnSync` with no `env` (or `env: undefined`) hand a child the environment the process STARTED
+ *  with, not `process.env` as it stands (bun 1.4; node's child_process and `Bun.$` hand on the live one). Every word a tool writes after it starts is then
+ *  lost on the way: a hold the runner gave a probe (holds.ts: the word '0'), a word a check sets for its arm, the stand written down by stand.ts, and
+ *  `QA_STAND_SAID`, without which a child on the old stand says the stand's banner again on its own stderr (picks-boot read that banner as seven console
+ *  errors, 2026-11-06; fifty-one calls stood so). The mend is `env: process.env` in the call, or the environment the child is owed.
+ *  NAMED: a call with a command written in it that begins 'bun', `process.execPath` or `process.argv[0]` (the first key of an options object or not), and
+ *  no `env` key of its own with a value: `env: undefined`, an `env` that is `undefined` on one side of a condition, and a `.env` read off another name do
+ *  not count. The call is read whole, bracket by bracket, over as many lines as it takes (call-text.ts).
+ *  THIS IS A NET WITH HOLES: it reads the tools' text. WHAT IT CANNOT SEE: a command or its options kept in a name (`Bun.spawn(cmd, opts)`), a child
+ *  started by a helper or through another program (`timeout 60 bun …`, a shell line), a call that runs across a regex literal with a quote or a bracket
+ *  in it. Other programs (git, a browser) read no word of ours and are not named, and nothing outside tools/ is read (src/ starts a `bun build` of its
+ *  own, which reads none either). One helper that every tool starts its children through would close the class at one depth; that is 126 calls in a
+ *  hundred files, left for when the tools are thinned.
+ *  `files`: [where, text] pairs. Returns where each named call begins. */
+export function bareChildren(files: readonly (readonly [string, string])[]): string[] {
+  const named: string[] = [], START = /\bBun\.spawn(?:Sync)?\(/g, BUN = /\[\s*(?:['"`]bun['"`]|process\.execPath|process\.argv\[0\])/;
+  const given = (call: string): boolean => {
+    if (/[{,]\s*env\s*[,}]/.test(call)) return true;   // (shorthand: `{ stdout: 'pipe', env }`)
+    for (const m of call.matchAll(/(?<![.\w$])env\s*:/g)) { const rest = call.slice(m.index! + m[0].length), end = rest.search(/,\s*[\w$'"]+\s*:|\}\s*\)\s*$/), value = end < 0 ? rest : rest.slice(0, end); if (!/\bundefined\b/.test(value)) return true; }
+    return false; };
+  for (const [at, src] of files) for (const m of src.matchAll(START)) { const call = src.slice(m.index!, callEnd(src, m.index! + m[0].length));
+    if (BUN.test(call) && !given(call)) named.push(`${at}:${src.slice(0, m.index!).split('\n').length}`); }
+  return named;
+}
+/** that lint's samples, as the calls stood (each must be named) and as a child is given its environment (none may be) */
+const BARE = ["const p = Bun.spawn(['bun', 'run', import.meta.path, '--boot', query], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });", "const run = Bun.spawnSync(['bun', 'run', join(import.meta.dir, 'capture-read.ts'), file]), outDir = join(dir, 'cap-check');",
+  "const run = (f: string) => Bun.spawnSync({ cmd: [process.execPath, 'run', join(ROOT, 'tools/qa/level-lint.ts'), f, '--quiet'], cwd: ROOT, stdout: 'pipe' });", "const p = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/qa/playthrough.ts'), '--one', `${E.id}:${seed}`, '--out', out],\n  { stdout: 'ignore', stderr: 'pipe' });",
+  "const p = Bun.spawn(['bun', '-e', `console.log(process.env.TPS_TURN)`], { stdout: 'pipe' });", "const p = Bun.spawn(['bun', 'run', f], { stdout: 'pipe', env: undefined });", "const p = Bun.spawn(['bun', 'run', f], { env: on ? E : undefined, stdout: 'pipe' });",
+  "const p = Bun.spawn(['bun', 'run', f, '--tag', `${job.env}`], { stdout: 'pipe' });", "const p = Bun.spawnSync({ cwd: ROOT, cmd: [`bun`, 'run', f] });", "const p = Bun.spawn([process.argv[0], 'run', f],   // the child's own run\n  { stdout: 'pipe' }); const q = Bun.spawn(['git', 'status'], { env: E });"];
+const GIVEN = ["const p = Bun.spawn(['bun', 'run', import.meta.path, '--boot', query], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });", "const run = Bun.spawnSync(['bun', 'run', join(import.meta.dir, 'capture-read.ts'), file], { env: process.env });",
+  "const p = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/qa/playthrough.ts'), '--one', `${E.id}:${seed}`],\n  { stdout: 'ignore', env: { ...process.env, TPS_SNOW: '1' } });", "const p = Bun.spawn(['bun', 'run', file], { stdout: 'pipe', env });",
+  "const p = Bun.spawn(['bun', 'run', file], { env: { ...process.env, X: '1' }, stdout: 'pipe' });",
+  "const git = (...a: string[]) => new TextDecoder().decode(Bun.spawnSync(['git', '-C', dir, ...a]).stdout).trim();", "const c = D.spawn('chunk', makeBox({ c: p, h: [0.2, 0.015, 0.14] }), [0, -4, 0], [0, 0, 0], PLAYER_ID);"];
+
 export async function shippedCheck(): Promise<boolean> {
   const { FROZEN_HOLDS, STAND_ENV, harnessProfile } = await import(`${ROOT}/src/host/profile.ts`) as { FROZEN_HOLDS: Record<string, string>; STAND_ENV: readonly string[]; harnessProfile: () => string };
   let ok = true; const check = (pass: boolean, what: string) => { console.log(`- ${pass ? 'PASS' : 'FAIL'} — ${what}`); if (!pass) ok = false; };
@@ -134,7 +170,14 @@ export async function shippedCheck(): Promise<boolean> {
       check(missed.length === 0 && wrong.length === 0, `the lint of words left out names each of its ${SLIPS.length} sample slips and none of the ${MEANT.length} lines it lets through${missed.length ? ` — NOT NAMED: ${missed.join(' ⏎ ')}` : ''}${wrong.length ? ` — WRONGLY NAMED: ${wrong.join(' ⏎ ')}` : ''}`);
       const self = resolve(import.meta.dir, 'shipped-check.ts'), files = toolFiles(ROOT).filter(f => f !== self).map(f => [f.slice(ROOT.length + 1), readFileSync(f, 'utf8')] as const);   // (this file holds the samples)
       const out = wordsLeftOut(STAND_ENV, BREAK ? [...files, ['(STAND_BREAK: the sample slips)', SLIPS.join('\n')] as const] : files);
-      check(out.length === 0, `no tool asks for a rule off by leaving its word out of an environment, in the four spellings read for: off is the word '0' (${files.length} files, ${STAND_ENV.length - 1} words)${out.length ? ` — not so (${out.length}): ${out.join(' · ')}` : ''}`); }
+      check(out.length === 0, `no tool asks for a rule off by leaving its word out of an environment, in the four spellings read for: off is the word '0' (${files.length} files, ${STAND_ENV.length - 1} words)${out.length ? ` — not so (${out.length}): ${out.join(' · ')}` : ''}`);
+      // (the same of a bun child given no environment: the samples, then the tools; STAND_BREAK reads the sample calls as a tool's)
+      const got = (calls: string[]) => calls.map((c, i) => bareChildren([[String(i), c]]).length > 0), bare = got(BARE), given = got(GIVEN);
+      const missedB = BARE.filter((_, i) => !bare[i]), wrongB = GIVEN.filter((_, i) => given[i]);
+      check(missedB.length === 0 && wrongB.length === 0, `the lint of bun children given no environment names each of its ${BARE.length} sample calls and none of the ${GIVEN.length} it lets through${missedB.length ? ` — NOT NAMED: ${missedB.join(' ⏎ ')}` : ''}${wrongB.length ? ` — WRONGLY NAMED: ${wrongB.join(' ⏎ ')}` : ''}`);
+      const own = [self.slice(ROOT.length + 1), readFileSync(self, 'utf8').replace(/^const (?:BARE|GIVEN|SLIPS|MEANT) = \[[\s\S]*?\];$/gm, '')] as const;   // (this file's own children are read too, its samples cut out)
+      const outB = bareChildren(BREAK ? [...files, own, ['(STAND_BREAK: the sample calls)', BARE.join('\n')] as const] : [...files, own]);
+      check(outB.length === 0, `every bun child a tool starts with Bun.spawn is given an environment by name, in the spellings read for: with none it gets the one the tool started with, and every word written since is lost (${files.length + 1} files)${outB.length ? ` — not so (${outB.length}): ${outB.join(' · ')}` : ''}`); }
     console.log(`  (the rows, and the word that turns each on for a frozen run:\n${listed.map(k => `     ${k.padEnd(24)} ${FROZEN_HOLDS[k]}`).join('\n')})`);
   } finally { rmSync(dir, { recursive: true, force: true }); }
   return ok;

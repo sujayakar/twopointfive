@@ -13,6 +13,7 @@
 //   sidedoor-fight   the fight, over seeds: the server room taken by its corridor door, then the manager's office through the side door (a can while there is
 //                    one) — the order is taken and ends 'in' every time; what it costs is printed beside the same seeds taking the office by its corridor door
 import { standUp, ROOT } from './headless.ts';
+import { toolsRow4 } from './order-keys.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR, propGap } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -113,12 +114,23 @@ export const sidedoorMarks = guarded(async () => {
 export const sidedoorFeet = guarded(async () => {
   const { verdict, done } = family('sidedoor-feet: every door order on the side door from the server room, by four and by the pair');
   const rows: string[] = []; let ok = true, threw = '';
+  // THE ROWS ARE THE BOARD'S, AND WHAT A LOCKED DOOR DOES TO AN ENTRY IS THE RULE'S. Where 'clear from outside' is the one plain order (DOORTOOLS.outsidePlain,
+  // on in the page) the board has no 'outside' row: that order is thresholdHold's, asked above it in the list. (The case asked whyNot of a row that is not
+  // there and threw; the throw failed the second line too.) Where an entry order halts at a door found locked (DOORTOOLS.testDoor, on in the page) open and
+  // clear from the keypad's side tries it, says the lock and holds: the boot is the player's next word, and doortest-check.ts's to hold.
+  // Both rules are read off the game each case has just stood up (a stand-up writes the table by the stand and by a word given by hand).
+  // SIDEFEET_BREAK=1 = the red path of both: each rule is read the other way round.
+  const BREAK = process.env.SIDEFEET_BREAK === '1'; let ran = 0;
   const CASES: [string, 2 | 4][] = [['stack', 4], ['openClear', 4], ['bangClear', 4], ['charge', 4], ['thresholdHold', 4], ['outside', 4], ['stack', 2], ['openClear', 2], ['bangClear', 2], ['charge', 2], ['thresholdHold', 2], ['outside', 2]];
   for (const [id, squad] of CASES) {
     try {
       const R = await rig(3, { squad, blind: ['manager'] }); const { O, D } = R; const d = R.door(DOOR), room = R.room('manager'), n = squad;
       R.empty('server'); R.place(AISLE);
-      const def = O.defs.find((x: any) => x.id === id), t = O.targetAt(d.frameCentre), grey = O.whyNot(def, O.forMen(t, R.up), R.up);
+      const def = O.defs.find((x: any) => x.id === id);
+      if (id === 'outside' && !!DOORTOOLS.outsidePlain !== BREAK) { const there = !!def; ok &&= !there; rows.push(`outside by ${n}: ${there ? 'THE BOARD HAS THE ROW and it was passed over  ← FAIL' : `no such row on this board: 'clear from outside' is ${toolsRow4(DOORTOOLS)}'s, row 4 of the tools`}`); continue; }
+      if (!def) { ok = false; rows.push(`${id} by ${n}: THE BOARD HAS NO SUCH ROW  ← FAIL`); continue; }
+      ran++;
+      const t = O.targetAt(d.frameCentre), grey = O.whyNot(def, O.forMen(t, R.up), R.up);
       const why = R.give(id, DOOR); R.step(2); const op = D.ops.find((o: any) => o.door === d) ?? null, took = op ? op.men.length : 0, marks0 = op ? op.men.map((m: any) => at(op.post.get(m)?.pos ?? m.char.pos)).join(' ') : '';
       let good = why === null && grey === null, tail = '';
       if (id === 'stack') { const set = R.until(() => R.up.every((m: any) => O.of(m)?.arrived), 25); R.step(60);
@@ -138,14 +150,17 @@ export const sidedoorFeet = guarded(async () => {
       ok &&= good; rows.push(`${id} by ${n}: greyed ${grey === null ? 'no' : `"${grey}"`} · give → ${why}${op ? ` · ${took} on it, lead ${op.lead.callsign} · marks ${marks0}` : ''} · ${tail}${good ? '' : '  ← FAIL'}`);
     } catch (e) { threw = `${id} by ${squad}: ${e instanceof Error ? e.stack : e}`; ok = false; }
   }
-  verdict(!threw, 'nothing threw', threw || `${CASES.length} runs`);
+  verdict(!threw, 'nothing threw', threw || `${ran} runs of ${CASES.length} cases`);
   verdict(ok, 'from the server room every row is offered and taken; the entries end \'in\' with every man they sent across the frame line and nobody left in the opening; the charge is blown with nobody in its backblast; the threshold is held with nobody in until told; clear from outside stays outside', rows.join('\n    '));
   // from the manager's office: jamb floor on that face, and the keypad's lock is on it — the boot
   { const R = await rig(3, { blind: ['server'] }); const { O, D } = R; const d = R.door(DOOR); R.empty('manager'); R.place(OFFICE);
     const lines: string[] = []; { const say = R.game.say.bind(R.game); R.game.say = (gd: any, text: string, ...r: any[]) => { lines.push(text); return say(gd, text, ...r); }; }
     const why = R.give('openClear', DOOR); R.step(2); const op = D.ops.find((o: any) => o.door === d); R.until(() => !D.ops.includes(op), 70); R.step(60);
     const sent = op ? [...op.pod.keys()] : [], kicked = !!op?.beats.some((b: any) => /kick/.test(b.what)) || d.lockBroken;
-    verdict(why === null && !!op && op.ended === 'in' && kicked && sent.every((m: any) => op.crossed.has(m) || m.state === 'dead'), 'from the manager\'s office (the keypad\'s side: locked against the team) open and clear boots it and goes in', `give → ${why} · lock broken ${d.lockBroken} · "${lines.filter(l => /lock|kick/.test(l)).join('" "')}" · ended '${op?.ended}' · sent in ${sent.length}, crossed ${op?.crossed.size}`); }
+    const tries = !!DOORTOOLS.testDoor !== BREAK, said = lines.some(l => /lock/.test(l));
+    if (tries) verdict(why === null && !!op && op.ended === 'found shut' && said && !d.lockBroken && d.locked && (op.crossed.size ?? 0) === 0, 'from the manager\'s office (the keypad\'s side: locked against the team) open and clear is taken, the door is tried, the lock is said and the men hold on it: nobody in, the lock whole (the boot is the next word\'s)', `give → ${why} · locked ${d.locked}`
+      + ` · lock broken ${d.lockBroken} · "${lines.filter(l => /lock|kick/.test(l)).join('" "')}" · ended '${op?.ended}' · sent in ${sent.length}, crossed ${op?.crossed.size}`);
+    else verdict(why === null && !!op && op.ended === 'in' && kicked && sent.every((m: any) => op.crossed.has(m) || m.state === 'dead'), 'from the manager\'s office (the keypad\'s side: locked against the team) open and clear boots it and goes in', `give → ${why} · lock broken ${d.lockBroken} · "${lines.filter(l => /lock|kick/.test(l)).join('" "')}" · ended '${op?.ended}' · sent in ${sent.length}, crossed ${op?.crossed.size}`); }
   return done();
 });
 

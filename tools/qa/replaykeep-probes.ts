@@ -246,7 +246,7 @@ console.log('\n=== every run kept, and read back out ===');
   const sm = f7.samples[Math.floor(f7.samples.length / 2)]; f7.notes = [{ id: 'n1', r: sm.r, t: sm.t, n: sm.n, pos: [10, 12], text: 'look here', at: '2026-10-11T12:00:00.000Z' }];
   writeFileSync(join(inn, 'a-dump.ndjson.gz'), Buffer.from(await d1.blob.arrayBuffer())); writeFileSync(join(inn, 'b-dump.ndjson.gz'), Buffer.from(await d2!.blob.arrayBuffer()));
   writeFileSync(join(inn, 'c-f7.json'), JSON.stringify(f7)); writeFileSync(join(inn, 'd-f7-again.json'), JSON.stringify(f7));
-  const tool = (...a: string[]) => { const r = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/replay-dump.ts`, ...a, '--out', out]); return { code: r.exitCode, text: r.stdout.toString() + r.stderr.toString() }; };
+  const tool = (...a: string[]) => { const r = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/replay-dump.ts`, ...a, '--out', out], { env: process.env }); return { code: r.exitCode, text: r.stdout.toString() + r.stderr.toString() }; };
   const t1 = tool(inn), IX = existsSync(join(out, 'index.json')) ? JSON.parse(readFileSync(join(out, 'index.json'), 'utf8')) : { entries: {} }, E = IX.entries['visit-r'];
   check(t1.code === 0 && Object.keys(IX.entries).length === 1 && !!E && E.pieces === 6, `reader: two dumps and two saved files of one visit unpack to ONE tape (${Object.keys(IX.entries).length} entr${Object.keys(IX.entries).length === 1 ? 'y' : 'ies'}, ${E?.pieces} pieces)`);
   if (E) {
@@ -255,7 +255,7 @@ console.log('\n=== every run kept, and read back out ===');
     const note = T.notes[0], at = T.samples.find((x: any) => x.n === sm.n);
     check(T.notes.length === 1 && note.text === 'look here' && !!at && Math.abs(note.r - at.r) < 1e-6, `reader: a note put on the saved file sits on the visit's tape at the same step (${T.notes.length} note)`);
     check(E.f7.length === 1 && /F7 pressed/.test(readFileSync(join(out, `${E.name}.moments.md`), 'utf8')), `reader: where the key was pressed is a moment on the tape, once for the file sent twice (${E.f7.length})`);
-    const at2 = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/replay-at.ts`, join(out, `${E.name}.json.gz`), '--note', '1']);
+    const at2 = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/replay-at.ts`, join(out, `${E.name}.json.gz`), '--note', '1'], { env: process.env });
     check(at2.exitCode === 0 && /look here/.test(at2.stdout.toString()), 'reader: replay-at reads the unpacked tape at its note');
   }
   const t2 = tool(join(inn, 'b-dump.ndjson.gz'), join(inn, 'c-f7.json')), IX2 = JSON.parse(readFileSync(join(out, 'index.json'), 'utf8'));
@@ -269,14 +269,14 @@ console.log('\n=== every run kept, and read back out ===');
   writeFileSync(join(dir, 'viewer.json'), parts.join(''));
   const t4 = tool(join(dir, 'viewer.json')), IX4 = JSON.parse(readFileSync(join(out, 'index.json'), 'utf8')), E4 = IX4.entries['visit-r'];
   check(t4.code === 0 && Object.keys(IX4.entries).length === 1 && E4.f7.length === 1 && E4.notes === 2 && (readFileSync(join(out, `${E4.name}.moments.md`), 'utf8').match(/F7 pressed/g) ?? []).length === 1, `reader: the viewer's download of a visit whose tape is here adds its note and no press of the key (${E4?.notes} notes, ${E4?.f7.length} press)`);
-  const out4 = join(dir, 'out4'), r4 = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/replay-dump.ts`, join(dir, 'viewer.json'), '--out', out4]), IX5 = existsSync(join(out4, 'index.json')) ? JSON.parse(readFileSync(join(out4, 'index.json'), 'utf8')) : { entries: {} }, e5 = Object.values(IX5.entries)[0] as any;
+  const out4 = join(dir, 'out4'), r4 = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/replay-dump.ts`, join(dir, 'viewer.json'), '--out', out4], { env: process.env }), IX5 = existsSync(join(out4, 'index.json')) ? JSON.parse(readFileSync(join(out4, 'index.json'), 'utf8')) : { entries: {} }, e5 = Object.values(IX5.entries)[0] as any;
   check(r4.exitCode === 0 && !!e5 && e5.f7.length === 0 && /-visit$/.test(e5.name) && /^\d+ steps$/.test(e5.tape) && /A whole visit/.test(readFileSync(join(out4, `${e5.name}.moments.md`), 'utf8')) && !/F7 pressed/.test(readFileSync(join(out4, `${e5.name}.moments.md`), 'utf8')), `reader: fed alone, that download is a whole visit with its run tape and no press of the key (${e5?.name}, ${e5?.tape})`);
   // single files with no kept tape: the shorter window of the same play is dropped, its note moves over
   const out2 = join(dir, 'out2'), long = R.buf.file(R.W.game, 'key', R.meta()); delete long.session; const short = { ...f7 }; delete short.session;
   writeFileSync(join(dir, 'long.json'), JSON.stringify(long)); writeFileSync(join(dir, 'short.json'), JSON.stringify(short));
-  const r3 = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/replay-dump.ts`, join(dir, 'short.json'), join(dir, 'long.json'), '--out', out2]), IX3 = existsSync(join(out2, 'index.json')) ? JSON.parse(readFileSync(join(out2, 'index.json'), 'utf8')) : { entries: {} }, es = Object.values(IX3.entries) as any[];
+  const r3 = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/replay-dump.ts`, join(dir, 'short.json'), join(dir, 'long.json'), '--out', out2], { env: process.env }), IX3 = existsSync(join(out2, 'index.json')) ? JSON.parse(readFileSync(join(out2, 'index.json'), 'utf8')) : { entries: {} }, es = Object.values(IX3.entries) as any[];
   check(r3.exitCode === 0 && es.length === 1 && es[0].notes === 1 && es[0].n1 === long.samples[long.samples.length - 1].n, `reader: of two saved files of one play with no kept tape the longer stands and has the other's note (${es.length} kept, ${es[0]?.notes} note)`);
-  const bad = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/replay-dump.ts`, join(out, 'index.md'), '--out', join(dir, 'out3')]);
+  const bad = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/replay-dump.ts`, join(out, 'index.md'), '--out', join(dir, 'out3')], { env: process.env });
   check(bad.exitCode === 1, `reader: a file that is no replay is said so and nothing is unpacked (exit ${bad.exitCode})`);
   rmSync(dir, { recursive: true, force: true }); }
 
