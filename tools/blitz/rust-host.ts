@@ -87,7 +87,35 @@ async function bridge(): Promise<any> {
   const LJ = JSON.parse(readFileSync(new URL('./puppet-lists.json', import.meta.url).pathname, 'utf8'));
   BR = { ...E, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable() }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll,
     lists: { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) } };
+  // (every walk of a game by the bridge is made with that game as the one whose rows a weak table lists: `ownKeys` below)
+  for (const f of ['exportGame', 'applyGame', 'hostHalf', 'exportPart', 'hostHalfParts']) { const was = BR[f]; BR[f] = (g: any, ...a: any[]) => { const c = CUR; CUR = g; try { return was(g, ...a); } finally { CUR = c; } }; }
+  ownKeys(await import('../../src/math/side.ts'));
   return BR; }
+
+// ---- STAND-IN: A WEAK TABLE LISTS THE ROWS OF EVERY GAME OF THE PROCESS. The simulation keeps much of its state in tables beside its objects (src/math/side.ts:
+// `doorway.states` keyed by a man, `opening.born`, `kitload.manLoad` …), ONE table a process, each row found only by its key, so two games never meet each
+// other's rows. The bridge's export lists a table by `liveKeys()`: every key still alive, whichever game it is of. The second game of a process was so
+// exported with the first game's men, routes and players as rows of its own (the Rust game held them as rows of its tables and its rules walked them:
+// seats-run's second game rolled its die one time fewer at tick 787), the table of one thing's own row gave the first game's row (`K[0]`), and an apply
+// that put a table's keys in the Rust game's order (import.ts `orderSide`) struck every other game's keys off the list for good.
+// Here: while the bridge walks a game, a table lists only the keys that are not in ANOTHER game's book (the bridge's own record of every object it has
+// given a number); a key that is in two books is shared and is everybody's. A key dropped from a start's export that the same export then reached by
+// another way was wrongly dropped: the book is emptied and the export made again. Belongs in the generated export.ts and import.ts: `keysOf`, the
+// once-keyed and game-keyed reads, `orderSide` and every `liveKeys()` there should see the keys of the game being walked and no other.
+let CUR: any = null; const OWNER = new WeakMap<object, object>(), SHARED = {}; let DROPPED: Set<object> | null = null;
+const foreign = (k: any): boolean => { const o = OWNER.get(k); if (o === undefined || o === SHARED || o === CUR) return false; DROPPED?.add(k); return true; };
+const KEYED = new WeakSet<object>();
+function ownKeys(SD: any): void {
+  for (const P of [SD.SideMap.prototype, SD.SideSet.prototype]) { const was = P.liveKeys; P.liveKeys = function (this: any, out: object[] = []) { const n0 = out.length, K: object[] = was.call(this, out); if (!CUR) return K; let n = n0; for (let i = n0; i < K.length; i++) if (!foreign(K[i])) K[n++] = K[i]; K.length = n; return K; }; }
+  // (a list of keys written over while a game is walked keeps the other games' keys in front of it)
+  const guard = () => { for (const t of SD.sideRegistry().tables as any[]) { const K = t.sideKeys; if (!K || KEYED.has(K)) continue; KEYED.add(K); let refs: WeakRef<object>[] = K.refs;
+    Object.defineProperty(K, 'refs', { configurable: true, enumerable: true, get: () => refs, set: (v: WeakRef<object>[]) => { if (!CUR) { refs = v; return; } const rec = DROPPED; DROPPED = null; const keep = refs.filter(r => { const k = r.deref(); return k !== undefined && foreign(k); }); DROPPED = rec; refs = keep.length ? keep.concat(v) : v; } }); } };
+  guard(); GUARD = guard; }
+let GUARD: () => void = () => {};
+/** every object in a game's book is that game's; one found in two books is shared */
+function owned(g: any, bk: any): void { const put = (k: object) => { const o = OWNER.get(k); if (o === undefined) OWNER.set(k, g); else if (o !== g && o !== SHARED) OWNER.set(k, SHARED); };
+  OWNER.set(g, g); for (const s of (g.seats ?? []) as any[]) if (s?.view && typeof s.view === 'object') OWNER.set(s.view, g);
+  if (!bk) return; for (const M of bk.ids.values() as Iterable<Map<object, number>>) for (const k of M.keys()) put(k); for (const k of (bk.serials as Map<object, number>).keys()) put(k); }
 
 const now = () => performance.now();
 /** a field hung on a game's object that a walk of its own keys does not meet */
@@ -158,7 +186,7 @@ export class RustHost {
   /** the Rust game is let go (its slot is free for another) and the game steps in TypeScript again */
   detach(): void { const X = this.F.X; if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; } RustHost.live.delete(this); delete this.g.stepSeats; delete this.g.rustHost; }
   /** the hosts whose Rust game stands in a slot, and when each last stepped */
-  private static live = new Set<RustHost>(); private static clock = 0; private static last: RustHost | null = null; private stamp = 0; evicted = 0;
+  private static live = new Set<RustHost>(); private static dirty = new Set<RustHost>(); private static clock = 0; private static last: RustHost | null = null; private stamp = 0; evicted = 0;
   /** this game's slot goes to another: the puppet takes the whole state, the Rust game is let go; a later step starts a new one from the puppet */
   private giveUp(): void { const X = this.F.X; if (!this.h) return;
     try { this.applyWhole('its slot went to another game'); } catch (e) { this.count(`THE WHOLE APPLY THREW as the slot was given up: ${String((e as any)?.message ?? e).slice(0, 100)}`); }
@@ -182,7 +210,14 @@ export class RustHost {
     // the filtered apply left of it. Its puppet takes the whole state first, so that this start reads what the TypeScript tick would have left there.)
     { const L = RustHost.last; if (L && L !== this && L.h && !L.audit && !OFF.has('last')) try { L.applyWhole('another game of the process starts'); } catch (e) { L.count(`THE WHOLE APPLY THREW as another game started: ${String((e as any)?.message ?? e).slice(0, 100)}`); } }
     g.sim.settle(g);
-    const start: Uint8Array = B.exportGame(g, B.reg), block = this.tsBlock().slice();
+    // (the stand-in above: the games that stepped since the last start have their books read, and this game's start lists no row of theirs)
+    GUARD(); for (const o of RustHost.dirty) if (o !== this) owned(o.g, B.bookOf(o.g)); RustHost.dirty.clear();
+    let start: Uint8Array;
+    for (let pass = 0; ; pass++) { DROPPED = new Set(); start = B.exportGame(g, B.reg); const D = DROPPED; DROPPED = null; const bk = B.bookOf(g); owned(g, bk);
+      let again = 0; for (const k of D) if (OWNER.get(k) === SHARED) again++; if (D.size) this.count(`a start's export left out ${D.size} keys of other games' rows in the weak tables`);
+      if (!again) break; if (this.starts > 0 || pass >= 3) { this.count(`${again} KEYS LEFT OUT OF A START'S EXPORT ARE THIS GAME'S TOO and the export was not made again`); break; }
+      this.count(`a start's export made again: ${again} keys it left out are shared`); bk.ids.clear(); bk.lists.clear(); bk.first.clear(); bk.loose.clear(); bk.serials.clear(); bk.serial = new WeakMap(); bk.nextSerial = 1; }
+    const block = this.tsBlock().slice();
     if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); }
     const make = () => this.F.hand(start, (p, n) => this.F.hand(block, (bp, bn) => X.face_new(p, n, bp, bn)));
     this.h = make();
@@ -357,7 +392,7 @@ export class RustHost {
   // ---- THE STEP, in place of `stepSeats`
   step(dt: number, cmds: readonly any[]): void {
     const g = this.g, X = this.F.X, B = this.B, k = ++this.k; let t = now();
-    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; RustHost.last = this; if (this.rec) { this.rec.k = k; this.rec.quiet = this.quietSteps; if (SITES) site(this.rec); } if (CAP_AT && (k & 31) === 0 && Date.now() > CAP_AT) process.exit(143);
+    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; RustHost.last = this; RustHost.dirty.add(this); if (this.rec) { this.rec.k = k; this.rec.quiet = this.quietSteps; if (SITES) site(this.rec); } if (CAP_AT && (k & 31) === 0 && Date.now() > CAP_AT) process.exit(143);
     // (THE GAME'S DIE ROLLED BETWEEN TWO TICKS: a rule of the tick ran in TypeScript on the puppet, called by the tool. Counted: such a tool leans on code
     // the Rust game has in its place)
     if (this.h && g.dice && g.dice.n !== this.dieRef) { this.dieMoved++; if (this.rec) this.rec.dieMoved = this.dieMoved; }
