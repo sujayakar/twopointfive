@@ -205,7 +205,8 @@ of the same seed; then how it ended. On the generated cut 7.6, the fast way, see
 
 **The tallies** (`tools/blitz/rust.sh rust|ts bun run tools/qa/playthrough.ts --seeds 1-2 --json …`, then `tally-diff.ts`, `tools/qa/mission-table.ts`): 21 missions x 2
 seeds on each side. ALL 42 RUNS END THE SAME on both sides: the same end, the same second to the tenth, the same men up, the same of theirs left; the
-mission table's columns (ended by kind, seconds, up, none lost, theirs left) are the same row for row. No run's whole record is the same: 215 distinct
+mission table (`tools/qa/mission-table.ts`) is the same in EVERY one of its 20 columns for all 21 missions (ended by kind, seconds, up, none lost, theirs
+left, the stragglers' clock, alone %, the smells per run, the frag bursts and kills, hostages). No run's whole record is the same: 215 distinct
 places differ, of two kinds. (1) Counters a TypeScript module keeps and its tick bumped, which stand at zero or are absent on the puppet: `destr.*`
 (DESTR_STATS: rounds, bangs, tiles, puffs …), `picture.*`, `digin.*`, `rear.*`, `handle.stats.*`, `doors.manners.*`, `holdfire.lifts`,
 `coverfire.wall_rounds`, `def.tactics`, `frag`, `doorforce`, `noshove`, `teampace`. (2) Watchers of tools/qa that read the game every tick and meet a
@@ -214,5 +215,7 @@ field the filtered list lacks: `entries.#.cross` and `def.doors.#.t` (a crossing
 `deaths.#.readyIn` / `.track`, `cleared.summary` ("2 of 8 known" there, "0 of 8" here: cleared::ClearedRooms).
 
 Not played: a second seat (the apply nulls `Seat.own` of the seat whose set stands in the game: src/game/seats.ts:93 throws on the first apply), seeds
-other than 1 with the per-tick check, a quiet mission, a restart from a card, any page. The audit (`--audit`) was not run to a mission's end after the
-merge of 7.6 (the host of the three audited missions before it is the same code path).
+other than 1 with the per-tick check, a quiet mission, a restart from a card, any page. The audit (`--audit`) after the merge of 7.6: night-breach:1 to its end, equal
+(302 s, 214 ms a tick under the load), the scripted player's orders through the menu's own `give` (its rows asking the Rust game), 7 write-backs, all of
+memos (`WorkThings.cache`, `Cover.openings`, `DialogueMod.room_rects`, `HoldfireMod.states` and its log, `DoortoolsMod.sky`) and one flooded room; the
+apply held to the Rust bytes on 31 ticks, 0 fields differ. No other mission was audited after the merge.
