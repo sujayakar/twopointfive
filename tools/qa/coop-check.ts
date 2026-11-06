@@ -30,7 +30,12 @@ const platformName = (): string => `${process.platform} ${process.arch}`;
 async function one(scn: string, seed: number): Promise<Row> {
   process.env.TPS_PROFILE ??= 'shipped'; process.env.PT_DIGEST ??= '1';
   let draws = 0;   // how much of the seeded stream the run drew (whatever die the harness installs is wrapped as it is installed)
-  { let cur = Math.random; Object.defineProperty(Math, 'random', { configurable: true, get() { return cur; }, set(f: () => number) { const w = () => { draws++; return f(); }; Object.assign(w, f); cur = w; } }); }
+  // (UNDER THE HARNESS'S WORD, tools/blitz/word.ts, the game owns its die, and draws it only while Math.random is the very function it was when the die was made
+  // (src/math/dice.ts). A die somebody puts BACK (civilians.ts withDice puts back the function it read) must then come back as the same function, not as a new
+  // counter round it: with a new one the TypeScript tick drew this tool's stream for the rest of the run and the Rust game its own die. With no word every
+  // assignment is wrapped as it always was, and `draws` counts what it always counted.)
+  const owned = !!(await import('../blitz/word.ts')).resolve(process.env.TPS_PROFILE === 'frozen').word, mine = new WeakSet<() => number>();
+  { let cur = Math.random; Object.defineProperty(Math, 'random', { configurable: true, get() { return cur; }, set(f: () => number) { if (owned && mine.has(f)) { cur = f; return; } const w = () => { draws++; return f(); }; Object.assign(w, f); mine.add(w); cur = w; } }); }
   const { Game } = await import('../../src/game/game.ts');
   const PT = await import('./playthrough.ts');
   const { rawBits, RAW_BITS_SEED } = await import('../../src/game/digest.ts');

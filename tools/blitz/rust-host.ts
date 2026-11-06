@@ -210,6 +210,17 @@ export class RustHost {
   rustBlock(): Uint8Array { const X = this.F.X, at = X.state_addr(this.slot) >>> 0; return this.F.u8().subarray(at, at + X.state_len()); }
   time(): number { return this.F.X.face_time(this.h); }
   dieN(): number { return this.F.X.face_die_n(this.h); }
+  /** THE GAME'S OWN DIE PUT AT THE START OF `seed`'S STREAM, ON THE RUST SIDE (tools/qa/headless.ts `seedGame`, which has put the puppet's: a tool that wants a
+   *  given stream after the game is stood seeds the game's die; nothing lets the Rust tick draw a tool's `Math.random`). The die is the `dice` part of the
+   *  game's block (rust/sim/src/dice.rs: the count of draws as a double, then the mulberry32 word), written in place: no call of the face's is needed.
+   *  Before the first tick there is no Rust game yet, and its start takes the puppet's die as it stands. */
+  seedDie(seed: number): void { this.dieSeeds++; if (this.rec) this.rec.dieSeeds = this.dieSeeds; if (!this.h) return;
+    const X = this.F.X, i = this.F.NAMES.indexOf('dice'); if (i < 0) throw new Error('rust-host: the block has no part named dice');
+    const put = (buf: ArrayBufferLike, at: number) => { const v = new DataView(buf); v.setFloat64(at, 0, true); v.setUint32(at + 8, seed >>> 0, true); };
+    put(this.F.mem.buffer, X.face_part_addr(this.slot, i) >>> 0);
+    const w: Uint32Array = this.g.sim.w; put(w.buffer, w.byteOffset + (X.face_part_addr(0, i) >>> 0) - (X.state_addr(0) >>> 0));   // (the puppet's copy of the block, as the next apply would leave it)
+    this.dieRef = this.g.dice?.n; }
+  dieSeeds = 0;
   hashes(): number[] { return this.F.partHashes(this.slot); }
 
   // ---- a start: the puppet as it stands is the game. The first tick's; and again wherever the TypeScript round a step has put another game in the
@@ -557,11 +568,11 @@ export class RustHost {
 // same with the audit; TPS_GAME=ts the SAME STAND (the game's own die, the dress rows down) stepped by the TypeScript tick, for a tally to hold the Rust
 // game's beside. Unset: nothing here is loaded. (Not TPS_RUST: src/sim/sim.ts refuses that word as a retired one.)
 export async function standRust(g: any, word: string): Promise<RustHost | null> {
-  if (word === 'table') word = byTable();
   if (!(globalThis as any).__tpsTop) throw new Error(`TPS_GAME=${word} needs the bridge's preload in this process and its children: BUN_OPTIONS=--preload=./tools/blitz/expose.ts (tools/blitz/rust.sh sets both)`);
   // (THE DIE: the game's own, seeded off the tool's `Math.random` as it stands when the game is stood, so a tool that seeds a run by its seed number
   // (playthrough.ts:1646) rolls another die a seed, and the same die under `ts` and `rust`)
   const die = g.dice ? null : (Math.random() * 4294967296) >>> 0;
+  hang(g, 'gameWord', word);   // (the word this game was stood under: tools/qa/headless.ts `seedGame` reads it)
   if (process.env.RH_DIE_SAY) appendFileSync(process.env.RH_DIE_SAY, `${process.argv.slice(2).join(' ')} die ${die}\n`);   // (to play the same game again by hand: mission.ts --die, play.ts --die)
   if (word === 'ts') { const B = await bridge(); B.dressAll(false); if (die !== null) g.dice = B.newDice(die);
     // (the trace under `ts`: the same line a game, its ticks counted round the TypeScript tick itself)
@@ -573,30 +584,7 @@ export async function standRust(g: any, word: string): Promise<RustHost | null> 
   if (process.env.RH_TRACE) trace(H, word);
   return H;
 }
-// ---- TPS_GAME=table: THE RUST GAME WHEREVER A CHECK CAN RUN ON IT, the TypeScript tick where the table says it cannot yet. The table is
-// tools/blitz/qa-kinds.json (written by tools/blitz/qa-census.py --kinds: a probe a row, by what it does to the game between two ticks; and the stand-alone
-// tools by hand, each with its reason). A game is stood for the probe running then (tools/qa/probes.ts names it as it runs each one), so one process
-// stands some of its games on each side and no probe is named anywhere but in the table. A probe that CALLS the tick's rules between ticks (kind iii) or
-// hangs its own function on a game object, checks a TypeScript function with no game, or holds the game to a walk of the JavaScript objects (iv-a, iv-b,
-// iv-c) stays on the TypeScript tick until the generated call surface and taps land; a probe the census did not read stays there too. Every such probe is
-// said as its first game is stood and counted in one line as the process ends, so that its green is not read as the Rust game's.
-let KINDS: { probes: Record<string, string>; tools: Record<string, { word: string; why: string }>; pins?: Record<string, string[]> } | null = null;
-const TABLE_SAID = { rust: new Map<string, number>(), ts: new Map<string, number>(), kinds: new Map<string, number>(), hooked: false };
-const ON_TS = new Set(['iii', 'iv-a', 'iv-b', 'iv-c', '?']);
-function byTable(): 'rust' | 'ts' {
-  KINDS ??= JSON.parse(readFileSync(new URL('./qa-kinds.json', import.meta.url).pathname, 'utf8'));
-  const probe: string | null = (globalThis as any).__probeNow ?? process.env.RH_PROBE ?? null, tool = (process.argv[1] ?? '').split('/').pop() ?? '';
-  let word: 'rust' | 'ts', who: string, why: string;
-  if (probe) { const k = KINDS!.probes[probe] ?? '?'; word = ON_TS.has(k) ? 'ts' : 'rust'; who = probe; why = k === '?' ? 'not read by the census' : `kind ${k}`;
-    // (a check that runs with a SETTLED switch off its page value asks for a game the Rust game does not have: `pins`, from a run with RH_FOLDED)
-    const pin = KINDS!.pins?.[probe]; if (word === 'rust' && pin?.length) { word = 'ts'; why = `it runs with a settled switch off its page value: ${pin.slice(0, 3).join(', ')}`; TABLE_SAID.kinds.set('pins a settled switch', (TABLE_SAID.kinds.get('pins a settled switch') ?? 0) + (TABLE_SAID.ts.has(who) ? 0 : 1)); }
-    else if (word === 'ts') TABLE_SAID.kinds.set(k, (TABLE_SAID.kinds.get(k) ?? 0) + (TABLE_SAID.ts.has(who) ? 0 : 1)); }
-  else { const t = KINDS!.tools[tool]; word = t?.word === 'ts' ? 'ts' : 'rust'; who = tool; why = t?.why ?? 'no row: the default'; }
-  const M = TABLE_SAID[word]; if (!M.has(who) && word === 'ts') process.stdout.write(`  [the game: ${who} is stood on the TYPESCRIPT TICK by the table (${why}); its verdict is not the Rust game's]\n`);   // (not console.log: a check may hold that while it stands its game)
-  M.set(who, (M.get(who) ?? 0) + 1);
-  if (!TABLE_SAID.hooked) { TABLE_SAID.hooked = true; process.on('exit', () => { const n = (M: Map<string, number>) => [...M.values()].reduce((a, b) => a + b, 0), T = TABLE_SAID;
-    process.stdout.write(`=== the game, by the table: ${T.rust.size} checks stood ${n(T.rust)} games on the RUST game · ${T.ts.size} checks stood ${n(T.ts)} games on the TYPESCRIPT TICK${T.ts.size ? ` (${[...T.kinds].map(([k, c]) => `${k === '?' ? 'not read' : k} ${c}`).join(', ') || 'by a tool\'s row'}: NOT GREENS OF THE RUST GAME): ${[...T.ts.keys()].slice(0, 40).join(' ')}${T.ts.size > 40 ? ' …' : ''}` : ''} ===\n`); }); }
-  return word; }
+// (TPS_GAME=table, and a run forced off its word: tools/blitz/word.ts, the one switch; `standRust` is handed the word that came out of it)
 // ---- RH_TRACE=<file>: as the process ends, a line a game stood under the word: the tool's file that stood it (the first frame of the stack under tools/
 // that is not the harness's own), the probe running then (probes.ts names it), the ticks it stepped, its whole applies, its calls, what threw
 // ---- RH_TICKS=<folder>: a line a tick under either word (the tick, the die's count, a hash of each part of rust/sim's block but `poses`), in a file
