@@ -22,7 +22,7 @@ mkdir -p "$OUT" || exit 3
 echo "run.sh: $M; blobs in $OUT"
 if [ -n "$TS" ]; then
   SIDE=mission.ts; case "$M" in two-*) SIDE=seats.ts;; esac
-  rm -f "$OUT"/[hacn]*.bin "$OUT"/s[0-9]*.bin "$OUT"/ns*.bin "$OUT"/*.txt "$OUT"/*.tsv "$OUT"/*.json
+  rm -f "$OUT"/[hacnL]*.bin "$OUT"/s[0-9]*.bin "$OUT"/ns*.bin "$OUT"/*.txt "$OUT"/*.tsv "$OUT"/*.json
   bun run --preload ./tools/blitz/expose.ts tools/blitz/$SIDE "$M" --out "$OUT" ${TICKS:+--ticks $TICKS} ${ASKS:+--asks} --keep "$KEEP" --every "$EVERY" --open "$OPEN" 2>&1 | tail -${ASKS:+4}4 | cut -c1-400
   [ -s "$OUT/ticks.txt" ] || { echo "run.sh: the TypeScript side did not finish"; exit 3; }
 fi

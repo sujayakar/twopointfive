@@ -4,14 +4,15 @@
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/seats.ts <two-roomclear|two-nightbreach|two-compound>:<seed> --out DIR [--ticks N] [--keep "…"] [--every N] [--open "…"] [--asks]
 // Run by run.sh for a name `two-*`. The games (seats-run.ts's own): two-roomclear = `roomclear&squad4` on the page's floor (40 s), two-nightbreach =
 // `nightbreach` (30 s), two-compound = `roomclear&squad4` on levels/compound.json (30 s).
-// It writes what mission.ts writes, with one difference: h<k>.bin, THE HOST'S HALF as tick k opens, begins with the count of seats and a record a seat
-// (the Game's `cmd_buf` holds one player's record and is not what a game of two is stepped from), then every camera and Input row as before.
+// It writes what mission.ts writes: h<k>.bin, THE HOST'S HALF as tick k opens, is a record a seat (here two), then every camera and Input row
+// (the bridge's own writer, export.ts hostHalf).
 // What the host does round a step here (seats-run.ts `tick`): the lamps' update after the tick, the box world listed again after EVERY tick (host.txt's
 // last column is therefore 1 from the second tick), each hand's camera moved and its Input's frame ended. The cameras and Inputs of the hands are the
 // host's own: they feed the next tick's records and nothing else.
 import '../qa/stand.ts';
 import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
-const { exportGame, exportPart, fieldAt, bookOf } = await import('./host.ts');
+const { exportGame } = await import('./host.ts');
+const { hostHalf } = await import('./export.ts');
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
 const GAMES: Record<string, { query: string; level: string | null; secs: number }> = {
@@ -44,10 +45,6 @@ const P = await standTwo(G.query, seed, G.level), g = P.g;
 console.log = log;
 dressAll(false);
 if (!g.dice) throw new Error('seats.ts: the game of two has no die of its own');
-function hostHalf(cmds: any[]): Uint8Array { const bk: any = bookOf(g), L: [string, any][] = [];
-  const cb = fieldAt(g, reg, ['cmd_buf']); L.push(['u32', cmds.length]); for (const c of cmds) L.push([cb.ty, c]);
-  for (const [id, ty] of [['CameraId', 'crate::camera::FollowCamera'], ['InputId', 'crate::input::Input']]) { const R: any[] = bk.listOf(id); L.push(['u32', R.length]); for (const row of R) L.push([ty, row]); }
-  return exportPart(g, reg, L); }
 // (`--asks`: every ask of the Game's own seat field made inside a tick, by where it came from, and the first tick with one: seats.ts SEAT_ASKS)
 const { SEAT_ASKS } = await import('../../src/game/seats.ts');
 const ASKS = argv.includes('--asks'); if (ASKS) SEAT_ASKS.sites = new Map(); let firstAsk = 0;
@@ -58,7 +55,7 @@ for (let i = 0; i < TICKS && !threw; i++) {
   g.stepSeats = function (this: any, dt: number, c: unknown) {
     if (k === 1) { g.sim.settle(g); writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g)); }
     else if (inR(OPEN, k)) writeFileSync(`${outDir}/c${k}.bin`, exportGame(g, reg));
-    writeFileSync(`${outDir}/h${k}.bin`, hostHalf(cmds));
+    writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds));
     appendFileSync(`${outDir}/host.txt`, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : 1}\n`);
     try { return step.call(this, dt, c); } finally {
       appendFileSync(`${outDir}/post.txt`, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}\n`);
@@ -72,6 +69,5 @@ if (threw) say(`THE TYPESCRIPT TICK ${k} THREW: ${(threw as any)?.stack ?? threw
 if (ASKS) for (const [site, n] of [...SEAT_ASKS.sites!].sort((a, b) => b[1] - a[1])) say(`   ${n} × ${site}`);
 say(`TypeScript: ${name} (${G.query}${G.level ? ` on ${G.level}` : ''}) seed ${seed}, two seats, ${k} ticks; time ${g.time.toFixed(4)}; die n=${g.dice?.n}; ${g.guards.length} guards; the Game's own seat fields asked inside a tick ${SEAT_ASKS.misses} times (${[...SEAT_ASKS.missed].join(' ')})${firstAsk ? `, first in tick ${firstAsk}` : ''}`);
 say(`ticks ${threw ? k - 1 : k}; resident ${(process.memoryUsage().rss / 1e9).toFixed(2)} GB`);
-writeFileSync(`${outDir}/seats.txt`, '2\n');
 writeFileSync(`${outDir}/ticks.txt`, `${threw ? k - 1 : k}\n`);
 process.exit(0);

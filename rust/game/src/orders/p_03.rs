@@ -1076,6 +1076,11 @@ pub fn squad_orders_open(g: &mut crate::game::Game, target: Option<&crate::order
     if !squad_orders_active(g) || g.pl[g.player].down { return false; }
     let rows = if flat { squad_orders_flat_rows(g, &target, part) } else { squad_orders_rows_for(g, &target, None, part) };
     let word_row = squad_orders_word_row_of(g, &target, &rows);
+    // (THE MENU'S OWN TARGET IS KNOWN BY IDENTITY: wallcharge.ts keptFor asks `M.target === t` before it keeps a walk for the open menu. A floor target
+    //  carries a serial for that, and this is where the one a menu keeps is dealt; the rows above were asked before there was this menu, as in the
+    //  TypeScript, so they are not kept. Without it no walk of an open menu was ever kept: the same answers, worked again at every re-read.)
+    let mut target = target;
+    if let OrderTarget::Floor(f) = &mut target { if f.serial == 0 { f.serial = g.serial(); } }
     g.orders.menu = Some(Menu {
         target,
         men: Vec::new(),

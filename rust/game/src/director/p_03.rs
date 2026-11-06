@@ -443,13 +443,8 @@ fn near_test(g: &mut Game, pos: V3, what: &NearWhat, within: f64) -> bool {
     };
     match p { Some(p) => m::hyp2(p[0] - pos[0], p[2] - pos[2]) <= within, None => false }
 }
-/// sig.rs gives near_of no return: the answer has nowhere to go
-fn seam_near_answer(near: bool) { todo!("needs: near_of(g, pos, what, within) -> bool (hand2.cjs reject of the drop row director::nearOf '->', review 5)") }
 /// The event view's `near`: is what within metres of the event. (director.ts nearOf)
-pub fn near_of(g: &mut crate::game::Game, pos: V3, what: &crate::director::NearWhat, within: f64) {
-    let near = near_test(g, pos, what, within);
-    seam_near_answer(near);
-}
+pub fn near_of(g: &mut crate::game::Game, pos: V3, what: &crate::director::NearWhat, within: f64) -> bool { near_test(g, pos, what, within) }
 
 fn who_of(g: &Game, r: Option<&crate::game::Interactable>) -> Option<String> {
     let r = r?;

@@ -399,8 +399,8 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     //  keeps no list of them and no row's time is stepped)
     if g.m.dress.dress.fx {
         let mut i = g.fx.len();
-        while i > 0 { i -= 1; out.push(g.fx[i].box_); g.fx[i].ttl -= dt; if g.fx[i].ttl <= 0.0 { let gone = g.fx.remove(i); g.box_frame_rows.push(gone.box_); } }
-    } else { for gone in core::mem::take(&mut g.fx) { g.box_frame_rows.push(gone.box_); } }
+        while i > 0 { i -= 1; out.push(g.fx[i].box_); g.fx[i].ttl -= dt; if g.fx[i].ttl <= 0.0 { let gone = g.fx.remove(i); crate::scene_boxes::box_let_go(g, gone.box_); } }
+    } else { for gone in core::mem::take(&mut g.fx) { crate::scene_boxes::box_let_go(g, gone.box_); } }
     // (A ROW OF `g.fx` IS THE ONLY HOLDER OF ITS BOX: the TypeScript drops the object with the row. Here the box is a row of the table, so as the fx row
     //  goes its box joins the frame's rows, and the host's next listing frees it once it is on no list: boxes_frame_reset. Most fx rows live one frame
     //  (a charge's slab being placed, a stack's marker), so without this every such frame left a row for good.)

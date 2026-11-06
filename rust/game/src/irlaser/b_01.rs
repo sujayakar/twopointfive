@@ -8,8 +8,28 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/irlaser.ts:92 samLaserBoxes)
-pub fn sam_laser_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {}
+/// Sam's laser is on: a scenario's team on the floor, his goggles down, a gun in his hands and up at the aim, hands not on a lock or round a man, not
+/// down.   (irlaser.ts samLaserOn)
+pub fn sam_laser_on(g: &mut crate::game::Game) -> bool {
+    let pl = g.player;
+    if !(g.k.ir.on && g.k.ir.sam) { return false; }
+    if !crate::roomfight::fight_live(g) || !g.pl[pl].nv { return false; }
+    if !(crate::game::player_pistol_up(g, pl) || crate::game::player_rifle_up(g, pl)) { return false; }
+    let c = g.pl[pl].ch;
+    let p = &g.pl[pl];
+    let a = &g.ch[c].anim;
+    // (kitHold: the gun is still on its way to his hands; `undefined` alone is "in his hands", null is bare hands and holds the laser off too)
+    a.upper == crate::character::UpperMode::Aim && !p.down && !p.sprinting && p.holding.is_none() && !a.hide_held_item && a.kit_hold.is_none()
+}
+
+/// Sam's own infrared laser, muzzle to whatever it meets, in the tube's picture only (combat.ts handProps asks, right after his rig).
+/// NOT a boundary no-op, though it draws: its line and its dot are two boxes of the FRAME'S LIST, which the fog of war, the listing of the box world and
+/// every table numbered by reach count. Left empty, a goggled player's frame was two boxes short from the moment his gun came up.   (irlaser.ts samLaserBoxes)
+pub fn sam_laser_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+    if !sam_laser_on(g) || !ir_viewer(g) { return; }
+    let c = g.pl[g.player].ch;
+    if let Some(r) = crate::combat::laser_reach(g, c, None, Some(true)) { crate::combat::beam_boxes(g, r.from, r.dir, r.l, out, r.dot, Some(true), Some(true)); }
+}
 
 /// BOUNDARY NO-OP (irlaser.ts:78): the mark "this box is drawn in IR" is the picture's set (read by irMade as a view is drawn); the box is handed back
 pub fn ir_note(g: &mut crate::game::Game, b: BoxId) -> BoxId { b }

@@ -40,7 +40,10 @@ function skip(n: Node, s: Side, onId: ((id: string, v: number) => void) | null):
       if (t.k === 'struct') { const F = fieldsOf(t); for (let i = 0; i < F.length; i++) skip(F[i], s, onId && (NOREACH.has(t.fields[i].rust) || NOREACH.has(`${t.name}.${t.fields[i].rust}`)) ? null : onId); return; }
       if (t.k === 'enum') { s.p += 2; return; }
       if (t.k === 'data') { const a = t.vars[s.u16()]; if (a.ty) skip(parse(a.ty), s, onId); return; }
-      if (t.k === 'handEnum') { const a = t.arms[s.u16()]; const ty = a.match(/\((.*)\)/)?.[1]; if (ty) skip(parse(ty), s, onId); return; } } }
+      if (t.k === 'handEnum') { const a = t.arms[s.u16()]; const ty = a.match(/\((.*)\)/)?.[1]; if (ty) skip(parse(ty), s, onId); return; }
+      // (an arm chosen by the object's own word, each arm with fields of its own: a lesson step's test)
+      if (t.k === 'wordEnum') { const a = t.arms[s.u16()]; for (const f of a.fields) skip(parse(f.ty), s, onId); return; }
+      throw new Error(`diff: no skip for the kind ${t.k} (${n.path})`); } }
   throw new Error(`diff: no skip for ${n.k}`);
 }
 const FIELDS = new Map<any, Node[]>(); const fieldsOf = (t: any): Node[] => { let F = FIELDS.get(t); if (!F) { F = t.fields.map((f: any) => parse(f.ty)); FIELDS.set(t, F!); } return F!; };
@@ -52,7 +55,7 @@ const FIX = new Map<Node, number>(); function fixed(n: Node): number { let w = F
   FIX.set(n, w!); return w!; }
 const HAS = new Map<Node, boolean>(); function hasId(n: Node): boolean { let h = HAS.get(n); if (h !== undefined) return h; HAS.set(n, false);
   switch (n.k) { case 'id': h = CANON.has(n.id); break; case 'opt': case 'vec': case 'arr': h = hasId(n.of); break; case 'tup': h = n.of.some(hasId); break; case 'map': h = hasId(n.K) || hasId(n.V); break; case 'set': h = hasId(n.K); break;
-    case 'type': { const t = T(n.path); h = t.k === 'struct' ? fieldsOf(t).some(hasId) : t.k === 'data' ? t.vars.some((a: any) => a.ty && hasId(parse(a.ty))) : t.k === 'handEnum' ? t.arms.some((a: string) => { const ty = a.match(/\((.*)\)/)?.[1]; return ty ? hasId(parse(ty)) : false; }) : false; break; }
+    case 'type': { const t = T(n.path); h = t.k === 'struct' ? fieldsOf(t).some(hasId) : t.k === 'data' ? t.vars.some((a: any) => a.ty && hasId(parse(a.ty))) : t.k === 'handEnum' ? t.arms.some((a: string) => { const ty = a.match(/\((.*)\)/)?.[1]; return ty ? hasId(parse(ty)) : false; }) : t.k === 'wordEnum' ? t.arms.some((a: any) => a.fields.some((f: any) => hasId(parse(f.ty)))) : false; break; }
     default: h = false; }
   HAS.set(n, h!); return h!; }
 const ROOT: Node = { k: 'type', path: SCHEMA.root };
@@ -113,8 +116,6 @@ function cmp(n: Node, A: Side, B: Side, mod: string): void {
       const a = leaf(n, A), b = leaf(n, B); if (a !== b && !(nan(a) && nan(b))) { if (SER) serialN++; else rep(mod, a, b); } return; }
     case 'unit': return;
     case 'opt': { const a = A.u8(), b = B.u8(); if (!a && !b) return; if (a && b) { cmp(n.of, A, B, mod); return; }
-      // (`T | null | undefined` is Option<Option<T>>, and the TypeScript's walk writes null and undefined alike as None: None beside Some(None) is that, counted)
-      if (n.of.k === 'opt') { const s = a ? A : B; if (!s.b[s.p]) { s.p++; nullN++; return; } }
       if (a) rep(mod, word(n.of, A), 'None'); else rep(mod, 'None', word(n.of, B)); return; }
     case 'vec': if (n.of.k === 'id' && n.of.id === 'BoxId' && CANON.has('BoxId') && LEAVE.size) { const rd = (s: Side) => { const L = s.u32(), o: number[] = []; for (let k = 0; k < L; k++) { const v = s.u32(); if (!leftOut(s, 'BoxId', v)) o.push(v); } return o; };
         const a = rd(A), b = rd(B); if (a.length !== b.length) rep(mod, String(a.length), String(b.length), '.len'); const c = Math.min(a.length, b.length);
@@ -137,7 +138,10 @@ function cmp(n: Node, A: Side, B: Side, mod: string): void {
           P.push(`.${t.fields[i].rust}`); cmp(F[i], A, B, t.mod); P.pop(); SER = s0; KEYSER = k0; } return; }
       if (t.k === 'enum') { const a = A.u16(), b = B.u16(); if (DUMP) { const path = P.join(''); if (DUMP.test(path) && dumped++ < DUMP_MAX) console.log(`  ${a === b ? ' ' : '≠'} ${path}\t${t.words[a]}\t${t.words[b]}`); } if (a !== b) rep(mod, `${t.name}::${t.words[a]}`, `${t.name}::${t.words[b]}`); return; }
       if (t.k === 'data') { const a = t.vars[A.u16()], b = t.vars[B.u16()]; if (a !== b) { rep(mod, a.tag, b.tag, '#'); if (a.ty) skip(parse(a.ty), A, null); if (b.ty) skip(parse(b.ty), B, null); return; } if (a.ty) { P.push(`.${a.tag}`); cmp(parse(a.ty), A, B, mod); P.pop(); } return; }
-      if (t.k === 'handEnum') { const a = t.arms[A.u16()], b = t.arms[B.u16()]; const ta = a.match(/\((.*)\)/)?.[1], tb = b.match(/\((.*)\)/)?.[1]; if (a !== b) { rep(mod, a, b, '#'); if (ta) skip(parse(ta), A, null); if (tb) skip(parse(tb), B, null); return; } if (ta) { P.push(`.${a.split('(')[0]}`); cmp(parse(ta), A, B, mod); P.pop(); } return; } } }
+      if (t.k === 'handEnum') { const a = t.arms[A.u16()], b = t.arms[B.u16()]; const ta = a.match(/\((.*)\)/)?.[1], tb = b.match(/\((.*)\)/)?.[1]; if (a !== b) { rep(mod, a, b, '#'); if (ta) skip(parse(ta), A, null); if (tb) skip(parse(tb), B, null); return; } if (ta) { P.push(`.${a.split('(')[0]}`); cmp(parse(ta), A, B, mod); P.pop(); } return; }
+      if (t.k === 'wordEnum') { const a = t.arms[A.u16()], b = t.arms[B.u16()]; if (a !== b) { rep(mod, a.tag, b.tag, '#'); for (const f of a.fields) skip(parse(f.ty), A, null); for (const f of b.fields) skip(parse(f.ty), B, null); return; }
+        for (const f of a.fields) { P.push(`.${f.rust}`); cmp(parse(f.ty), A, B, mod); P.pop(); } return; }
+      throw new Error(`diff: no compare for the kind ${t.k} (${n.path})`); } }
   throw new Error(`diff: no compare for ${n.k}`);
 }
 const A = new Side(new Uint8Array(readFileSync(argv[0]))), B = new Side(new Uint8Array(readFileSync(argv[1])));

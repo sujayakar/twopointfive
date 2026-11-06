@@ -28,6 +28,15 @@ pub fn boxes_frame_reset(g: &mut Game) {
     for id in rows { if live[id.ix()] { g.box_frame_rows.push(id); } else { g.box_frame_free.push(id); } }
 }
 
+/// A BOX ITS MAKER KEEPS FOR A WHILE AND THEN LETS GO (a remembered thing's copy in the fog of war, an fx row's box): a freed row used again, else a new
+/// row. Not one of the frame's rows: it stands until its holder hands it to `box_let_go`.
+pub fn box_kept(g: &mut Game, b: crate::scene_boxes::Box) -> BoxId {
+    match g.box_frame_free.pop() { Some(id) => { g.tab.boxes[id] = b; id } None => g.tab.boxes.push(b) }
+}
+/// The holder of a kept box has dropped it (the TypeScript drops the object). The frame's list or the engine's may still name it, so it is not free at
+/// once: it joins the frame's rows, and the host's next listing frees it once it is on no list (`boxes_frame_reset`).
+pub fn box_let_go(g: &mut Game, id: BoxId) { g.box_frame_rows.push(id); }
+
 /// makeBox for a box pushed straight onto the frame's list: a row for this frame (boxes.ts makeBox, where its caller keeps nothing of it)
 pub fn make_box_frame(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { let b = crate::scene_boxes::make_box_value(p); box_frame(g, b) }
 /// boxOf for a box pushed straight onto the frame's list: a row for this frame (boxes.ts boxOf)

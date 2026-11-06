@@ -398,6 +398,10 @@ fn thing_take(g: &mut Game, tk: f64, list: &[BoxId], i: usize, j: usize, (x, z, 
         ghost.push(ghost_box(g, list[k]));
         k += 1;
     }
+    // (fogofwar.ts:1036 writes fresh copies over the record's list and the copies before them are dropped: here each was a row of the box table, and a
+    //  thing in sight is taken every frame, so the rows are let go as they are replaced. Before this a chair in view left five rows a frame for good.)
+    let before = core::mem::take(&mut g.fog_of_war.thing_recs.get_mut(crate::Num(tk)).unwrap().ghost);
+    for old in before { crate::scene_boxes::box_let_go(g, old); }
     let r = g.fog_of_war.thing_recs.get_mut(crate::Num(tk)).unwrap();
     r.ghost = ghost;
     r.x = x;

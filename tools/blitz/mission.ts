@@ -2,21 +2,23 @@
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/mission.ts <mission>:<seed> --out DIR [--ticks N] [--keep "100,200-210"] [--every N] [--open "559"]
 // Run by run.sh. It stands the mission up headless on THE PAGE'S STAND (no TPS_PROFILE word: tools/qa/stand.ts), plays it with tools/qa/playthrough.ts's scripted
 // player, and writes into DIR:
-//   every tick   h<k>.bin    THE HOST'S HALF as tick k opens: the record `cmd_buf`, every camera and Input row (the bridge's own writers)
+//   every tick   h<k>.bin    THE HOST'S HALF as tick k opens: a record a seat, every camera and Input row (the bridge's own writer, export.ts hostHalf)
 //                host.txt    a line: dt, the probe's pending, time, the die's count, how often the host listed the box world since the last tick
 //                post.txt    after the tick, a line: `k die_n die_s time <a hash of each part of rust/sim's block, in SIM_PARTS' order>` (line 1 names the parts)
 //   tick 1       c1.bin, s0.bin (the state and the block both sides start from)
 //   --keep / --every   a<k>.bin, s<k>.bin: the whole state and the block as tick k returns, for diff.ts
 //   --open       c<k>.bin: the whole state as tick k opens (`diff.ts a<k-1>.bin c<k>.bin` then shows what the HOST wrote between two ticks)
 //   gives.txt        the test driver's orders, given between ticks through the menu's own call: a line for the tick that opens next
-//   hostwrites.txt   what else the host writes into the game: `<k> chron_save "<label>"` (the autosave's chronicle row, the tick's last thing), `<k> room_at x y z`
+//   hostwrites.txt   what else the host writes into the game: `<k> chron_save "<label>"` (the autosave's chronicle row, the tick's last thing), `<k> chron_load`
+//                    (a checkpoint put back before tick k opened: the state as it opens in L<k>.bin, the block in Ls<k>.bin), `<k> room_at x y z`
 //                    (the driver's own question that floods a room and keeps it)
 // What is done to the game so that two sides can be stepped from one start (each a harness matter): every DRESS row is put down before the start (dress.ts says
 // that is the same game to the bit); the game has ITS OWN DIE from the first tick, so its word and count are in the block; `sim.settle` is called before the
 // start is taken, so every pose is in the pool (the bridge carries no floats of a pose that is not at home).
 import '../qa/stand.ts';
 import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
-const { exportGame, exportPart, fieldAt, bookOf } = await import('./host.ts');
+const { exportGame, bookOf } = await import('./host.ts');
+const { hostHalf } = await import('./export.ts');
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
 const outDir = arg('--out', ''), TICKS = +arg('--ticks', '1000000'), DIE = +arg('--die', '20942'), EVERY = +arg('--every', '0');
@@ -52,7 +54,7 @@ function hashes(w: Uint32Array): number[] {
   LAY ??= simLayout().parts.map(p => ({ off: p.off >>> 2, len: p.len >>> 2 }));
   return LAY.map(({ off, len }) => { let n = Math.min(off + len, w.length); while (n > off && w[n - 1] === 0) n--; let h = 0x811c9dc5; for (let i = off; i < n; i++) h = Math.imul(h ^ w[i], 0x01000193); return h >>> 0; });
 }
-let k = 0, n = 0, uploads = 0; const gives: string[] = []; 
+let k = 0, n = 0, uploads = 0, loadsSeen = 0; const gives: string[] = [];
 for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt', ...(LESSON ? ['meter.txt'] : [])]) writeFileSync(`${outDir}/${f}`, '');
 const { SCHEMA } = await import('./export.ts'); const wordAt = (ty: string, w: unknown) => w === undefined ? -1 : SCHEMA.types[ty].words.indexOf(w);
 writeFileSync(`${outDir}/post.txt`, `parts ${SIM_PARTS.join(' ')}\n`);
@@ -61,10 +63,6 @@ function tapGives(g: any) { const O = g.orders, was = O.give; O.give = function 
     const tail = T.kind === 'door' ? ` door ${g.doors.list.indexOf(T.door)} ${T.side} book${bookOf(g).ids.get('DoorId')?.get(T.door)}` : T.kind === 'none' && T.man ? ` man ${g.guards.indexOf(T.man)}` : T.kind === 'foe' ? ` man ${g.guards.indexOf(T.foe)}` : (T.wall || T.thing) ? ' UNSUPPORTED-wall-or-thing' : '';
     const l = `${k + 1} ${id} ${w} ${T.kind} ${T.at.join(' ')}${tail}${opts ? ' UNSUPPORTED-opts' : ''}`; gives.push(l); appendFileSync(`${outDir}/gives.txt`, l + '\n'); }
   return was.call(this, id, t, who, opts); }; }
-function hostHalf(g: any): Uint8Array { const bk: any = bookOf(g), P: [string, any][] = [];
-  const cb = fieldAt(g, reg, ['cmd_buf']); P.push([cb.ty, cb.v]);
-  for (const [id, ty] of [['CameraId', 'crate::camera::FollowCamera'], ['InputId', 'crate::input::Input']]) { const L: any[] = bk.listOf(id); P.push(['u32', L.length]); for (const row of L) P.push([ty, row]); }
-  return exportPart(g, reg, P); }
 const was = Game.prototype.update;
 Game.prototype.update = function (this: any, ...a: any[]) {
   if (++n < frame) return (was as any).apply(this, a);
@@ -81,11 +79,13 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   g.stepSeats = function (this: any, dt: number, cmds: unknown) {
     if (k === 1) g.sim.settle(g);
     if (k === 1) { writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g));
-      // (A LESSON'S TESTS: the bridge does not carry a step's `done`, a record by its `is` word; the runner reads them from this file)
-      if (LESSON) writeFileSync(`${outDir}/lesson.json`, JSON.stringify((g.level.scenarios?.lesson?.steps ?? []).map((s: any) => s.done)));
     }
     else if (inR(OPEN, k)) writeFileSync(`${outDir}/c${k}.bin`, exportGame(g, reg));
-    writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g));
+    // THE HOST PUT A CHECKPOINT BACK between the last tick and this one (savestate.ts, the host's save controller: a lesson's player went down and the
+    // rails asked for it): the whole game is the saved one again. No stepper can follow that from its own state, so the state and the block as THIS tick
+    // opens are written (L<k>.bin, Ls<k>.bin) and the runner takes them as a new start before it steps tick k.
+    if (g.chronicle.counts.loads !== loadsSeen) { loadsSeen = g.chronicle.counts.loads; if (k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); } }
+    writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds as any[]));
     if (LESSON) appendFileSync(`${outDir}/meter.txt`, `${g.player.visibility}\n`);
     appendFileSync(`${outDir}/host.txt`, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}\n`); uploads = 0;
     const saves0 = g.chronicle.counts.saves;

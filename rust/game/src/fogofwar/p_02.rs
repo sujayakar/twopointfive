@@ -41,8 +41,10 @@ pub fn is_prop(thing_key: f64) -> bool {
 }
 
 /// A box copied for the picture's memory; its vectors are values in Rust, so nothing follows the live one. (fogofwar.ts ghostBox)
+/// (A copy the record keeps until it takes the thing afresh: `box_kept`, and `box_let_go` for the copies before it: thing_take.)
 pub fn ghost_box(g: &mut crate::game::Game, s: BoxId) -> BoxId {
-    crate::scene_boxes::copy_box(g, s)
+    let copy = g.tab.boxes[s].clone();
+    crate::scene_boxes::box_kept(g, copy)
 }
 
 /// What the team's sight lines pass: glass and the statics marked thin. (fogofwar.ts fogThrough)
