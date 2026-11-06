@@ -27,3 +27,6 @@ declare module 'tps-bridge/puppet-lists.json' {
   const lists: { step: string[]; start: string[] };
   export default lists;
 }
+declare module 'tps-bridge/ask' {
+  export function installAsks(g: any, knobs: Record<string, unknown>, ask: (kind: number, row: number, seat: number, bytes: Uint8Array) => Uint8Array, reapply: () => void): { after(): void };
+}

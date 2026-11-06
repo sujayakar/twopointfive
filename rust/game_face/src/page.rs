@@ -14,10 +14,6 @@
 //!   face_probe_took(h)                 the host's frame has sent the table to the GPU: it is empty again here, and whose turn it is on a full frame is
 //!                                      kept (`probe_like_take_asks`)
 //!   face_probe_results(h, p, n)        the answers the host holds now, before a step: u32 count, each a key and its three numbers
-//!   face_seat_cut(h, seat)             STAND-IN: a seat's camera cut. The host's camera snaps to a cut the tick made on the seat's lens (cmd.ts takeCut,
-//!                                      which knows one by the identity of the lens's `desired` array); the filtered export carries neither `desired`
-//!                                      nor the count of its writes. At face_out: the lens's `desired` (3 f64) and `desired_serial` (f64). Belongs in the
-//!                                      filtered export (FollowCamera.desired on the every-tick list, and the count beside it).
 //!   face_lights_out(h)                 STAND-IN: THE PICTURE'S LIGHTS. The renderer's lights (render/lights.ts RtLight: a fixture, a torch, a muzzle
 //!                                      flash) are written by the tick and are on neither list of the filtered export, so the puppet's never move, go
 //!                                      out or flash. At face_out: u32 count, then for each light of the engine's list in its order its row's number
@@ -107,21 +103,6 @@ pub unsafe extern "C" fn face_probe_results(h: u32, p: *const u8, n: usize) {
             x.g.probe.results.set(key, [f64_at(at), f64_at(at + 8), f64_at(at + 16)]); at += 24;
         }
     });
-}
-
-#[no_mangle]
-pub extern "C" fn face_seat_cut(h: u32, seat: usize) {
-    let b = super::with(h, |x| {
-        let mut o: Vec<u8> = Vec::new();
-        if let Some(s) = x.g.seats.get(seat).copied() {
-            let cam = x.g.tab.cmd_seat[s].cam;
-            let c = &x.g.tab.camera[cam];
-            for v in c.desired.iter() { o.extend_from_slice(&v.to_le_bytes()); }
-            o.extend_from_slice(&(c.desired_serial as f64).to_le_bytes());
-        }
-        o
-    });
-    super::out(b);
 }
 
 #[no_mangle]

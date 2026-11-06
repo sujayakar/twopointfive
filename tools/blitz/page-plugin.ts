@@ -1,4 +1,4 @@
-// THE PAGE'S WAY TO THE STATE BRIDGE (tools/blitz: export.ts, import.ts, classes.ts, puppet-apply.ts, out-dispatch.ts, schema.json, puppet-lists.json), for the
+// THE PAGE'S WAY TO THE STATE BRIDGE (tools/blitz: export.ts, import.ts, classes.ts, puppet-apply.ts, out-dispatch.ts, ask.ts, schema.json, puppet-lists.json), for the
 // one bundle that needs it: the game's page under `?rust=1` (src/host/rustgame.ts). The bridge's files are generated and stay where they are; nothing is copied
 // and nothing of them is edited on disk. This bundler plugin (bunfig.toml [serve.static] for the dev server, tools/build.ts for the static build)
 //   · resolves `tps-bridge/<name>` to tools/blitz/<name> (src/host/rustbridge.d.ts says what each holds, so the type check never walks into tools/);
@@ -13,7 +13,7 @@ import { resolve, join } from 'node:path';
 
 const HERE = resolve(import.meta.dir), ROOT = resolve(HERE, '../..');
 const SCHEMA = JSON.parse(readFileSync(join(HERE, 'schema.json'), 'utf8'));
-const FILES: Record<string, string> = { export: 'export.ts', import: 'import.ts', classes: 'classes.ts', 'puppet-apply': 'puppet-apply.ts', 'out-dispatch': 'out-dispatch.ts', 'schema.json': 'schema.json', 'puppet-lists.json': 'puppet-lists.json' };
+const FILES: Record<string, string> = { export: 'export.ts', import: 'import.ts', classes: 'classes.ts', 'puppet-apply': 'puppet-apply.ts', 'out-dispatch': 'out-dispatch.ts', ask: 'ask.ts', 'schema.json': 'schema.json', 'puppet-lists.json': 'puppet-lists.json' };
 /** a swap that must find its line: a generated file that changed shape is said at build time, not found out in the page */
 function swap(text: string, file: string, from: string | RegExp, to: string): string {
   const out = text.replace(from, to); if (out === text) throw new Error(`page-plugin: tools/blitz/${file} no longer holds ${String(from)}: the page's bridge needs that line swapped`);
