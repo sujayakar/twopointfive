@@ -52,13 +52,14 @@ type Answer = { path: string } | { why: string };
 const NOW = { building: false, since: 0, line: '', profile: 'play' as FaceProfile, failed: '', failedAt: 0 };
 export function faceNow(): { building: boolean; secs: number; line: string; profile: FaceProfile; failed: string } { return { building: NOW.building, secs: NOW.building ? Math.round((performance.now() - NOW.since) / 1000) : 0, line: NOW.line, profile: NOW.profile, failed: NOW.failed }; }
 let building: Promise<Answer> | null = null;
+let saidNoCargo = false;
 /** THE MODULE'S FILE, built first where it is stale: `{ path }`, or `{ why }` in words a player can be shown. One build at a time; a second ask waits on the first. */
 export function faceWasm(say: (line: string) => void = () => {}, profile: FaceProfile = (process.env.FACE_PROFILE === 'play' ? 'play' : 'release')): Promise<Answer> {
   const have = fresh(profile); if (have) return Promise.resolve({ path: have });
   return building ??= (async (): Promise<Answer> => {
     const stale = faceStale(profile), file = faceFile(profile), c = cargo();
     // (no compiler: an older module of either profile is better than none, and the server says that it is old)
-    if (!c) { const old = [file, faceFile(profile === 'play' ? 'release' : 'play')].find(f => existsSync(f)); if (old) { say(`game_face.wasm: ${stale}, and there is no cargo on this machine to build it: the file as it stands is served (${old.slice(ROOT.length + 1)})`); return { path: old }; } say(`game_face.wasm: ${NO_CARGO}`); return { why: NO_CARGO }; }
+    if (!c) { const old = [file, faceFile(profile === 'play' ? 'release' : 'play')].find(f => existsSync(f)); if (old) { say(`game_face.wasm: ${stale}, and there is no cargo on this machine to build it: the file as it stands is served (${old.slice(ROOT.length + 1)})`); return { path: old }; } if (!saidNoCargo) { saidNoCargo = true; say(`game_face.wasm: ${NO_CARGO}`); } return { why: NO_CARGO }; }
     say(`game_face.wasm: ${stale}; building it (cargo build --profile ${profile} in rust/game_face: ${profile === 'play' ? 'a few minutes the first time, and about 7 GB of memory' : 'the fat link: many minutes and over 10 GB of memory'}) …`);
     const t0 = performance.now(); NOW.building = true; NOW.since = t0; NOW.line = 'starting cargo'; NOW.profile = profile; NOW.failed = '';
     const p = Bun.spawn([c, 'build', '--target', 'wasm32-unknown-unknown', '--profile', profile], { cwd: CRATE, stdout: 'ignore', stderr: 'pipe', env: { ...process.env, PATH: `${join(homedir(), '.cargo/bin')}:${process.env.PATH ?? ''}` } });
@@ -88,7 +89,7 @@ export function faceWasm(say: (line: string) => void = () => {}, profile: FacePr
  *  is going on now: `{ wait }` = a line for the page to show while it asks again, `{ why }` = it cannot be built and why. A build that failed is not
  *  started again by every ask: its reason stands for ten seconds, and a reload after that tries once more. */
 export function faceAsk(say: (line: string) => void = () => {}, profile: FaceProfile = 'play'): Answer | { wait: string } {
-  const have = fresh(profile); if (have) return { path: have };
+  const have = building ? null : fresh(profile); if (have) return { path: have };   // (while a build runs its file may be half written: nothing is served until it has ended)
   if (!building && NOW.failed && performance.now() - NOW.failedAt < 10_000) return { why: NOW.failed };
   let settled: Answer | null = null;
   void faceWasm(say, profile).then(r => { settled = r; });
