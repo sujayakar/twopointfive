@@ -194,7 +194,21 @@ the Rust game, the 16 quiet runs on the TypeScript tick (`solo-night.ts` has no 
   loads). Measured the same to the byte with it active: the production build, the dev server's page and script, and a frozen tally's whole record.
 - **Cost**: a probe on the Rust game pays a start (three exports) for every game it stands and about twice a tick; the 61 took 5 to 40 s each alone.
 
-Not shown: the gate's whole list (`probes.ts all-quick`) in one process by the table; the tour's and the soak's gate forms.
+- **One process, both games.** The dress rows are one table a process and a game under the word is stood with them down: a kept check stood after a
+  game on the Rust game found them down (the `breaks` family: 6 of 11 red behind one Rust-side check, each green alone). The harness now puts them
+  back before it builds a game with no word; `breaks` by the table is ALL PASS on that tree.
+
+**SINCE THE SETTLED ROWS ARE FOLDED** (tools/qa/fold.ts, joined after everything above was measured): the fold is laid for the whole process whenever
+the word is `rust`, `audit` or `table`, so a check KEPT on the TypeScript tick is no longer stood "as with no word": it runs on the FOLDED TypeScript
+tick, and a check that writes a settled row is refused there. On the joined tree, with no word `sticky` and `breaks` are ALL PASS; by the table
+`sticky` is 10 of 10 red (all ten kept, all with writes refused) and `breaks` 6 of 11 (every red one has a refused write: `CUT.on`, `EVICT.on`,
+`FURNBLAST.on`, `BREAKS.look*`; no green one has). Those are reds of the folded TypeScript tick, not of the Rust game, and they are the flip's
+cost until those checks are staged again. The fold asks the one switch for the default word (`DEFAULT_WORD`), so the flip is still one line. The
+table's `pins` (from the collector that came before the fold) are now what the fold's own line a probe says (`refused` not empty) and should be made
+again from it: not done. Every "TypeScript tick" beside a number above is the UNFOLDED one (the word's stand, or no word).
+
+Not shown: the gate's whole list (`probes.ts all-quick`) in one process by the table; the tour's and the soak's gate forms; anything but two families
+under the fold.
 
 ## The die
 
