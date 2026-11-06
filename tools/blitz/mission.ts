@@ -32,6 +32,10 @@ const [scn, seedS, frameS] = argv[0].split(':'); const seed = +(seedS ?? 1), fra
 mkdirSync(outDir, { recursive: true });
 const { knobRegistry } = await import('../../src/game/knobs.ts');
 const { Game } = await import('../../src/game/game.ts');
+// `--die tool`: the die a tally rolls for this mission and seed (tools/qa/playthrough.ts under the harness's word, PLAY.md): the stand is the word's own
+// (`TPS_GAME=ts`: one draw of the scripted player's seeded Math.random as the game is stood, the dress rows down), so the scripted player's own draws
+// after it are the tally's too and the game played here is the very game the tally played. The die is written to die.txt.
+if (arg('--die', '') === 'tool') { process.env.TPS_GAME = 'ts'; process.env.RH_DIE_SAY = `${outDir}/die.txt`; }
 if (argv.includes('--wall')) process.env.PT_WALL = '1';   // (`--wall`, below; playthrough.ts reads the word as it loads)
 const { play, entryOf } = await import('../qa/playthrough.ts');
 // A TUTORIAL MISSION (levels/tut-<name>.json with its level script) is played by its own scripted player, tools/qa/lesson-run.ts, through the input.
@@ -59,6 +63,8 @@ function dressStand() { dressAll(false); if (!DRESS_WORD) return;
   if (DRESS_WORD === 'all') { dressAll(true); return; }
   for (const r of DRESS_WORD.split(',')) { if (!(r in DRESS)) { say(`mission.ts: --dress knows ${Object.keys(DRESS).join(', ')}, not '${r}'`); process.exit(64); } (DRESS as any)[r] = true; } }
 class Stop extends Error {}
+const CALL = (process.env.BLITZ_CALL ?? '').split(' ');
+let selAfter = 0;   // the highlighted row of the nearby list as the last tick left it
 // A SCRIPTED CASE (`--case pie | orbit | boot`): a write BETWEEN TWO TICKS that the missions' seeds never make, so that a place mended by reading is
 // reached by a run. Each is a line of gives.txt (the runner makes the same write through the Rust game's own setter; with BLITZ_CASE_RAW=1 it makes the
 // write as the Rust made it BEFORE the mend, to show the run parting without it):
@@ -89,7 +95,7 @@ function hashes(w: Uint32Array): number[] {
   return LAY.map(({ off, len }) => { let n = Math.min(off + len, w.length); while (n > off && w[n - 1] === 0) n--; let h = 0x811c9dc5; for (let i = off; i < n; i++) h = Math.imul(h ^ w[i], 0x01000193); return h >>> 0; });
 }
 let k = 0, n = 0, uploads = 0, loadsSeen = 0, chargesSet = 0; const gives: string[] = [];
-for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt', 'charges.txt', ...(LESSON ? ['meter.txt'] : [])]) writeFileSync(`${outDir}/${f}`, '');
+for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt', 'charges.txt', 'meter.txt']) writeFileSync(`${outDir}/${f}`, '');
 const { SCHEMA } = await import('./export.ts'); const wordAt = (ty: string, w: unknown) => w === undefined ? -1 : SCHEMA.types[ty].words.indexOf(w);
 writeFileSync(`${outDir}/post.txt`, `parts ${SIM_PARTS.join(' ')}\n`);
 // A LINE A TICK of host.txt and post.txt, by the tick's number. The host can step the game TWICE in one frame (a checkpoint put back: the save controller
@@ -110,6 +116,11 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   const g = this, step = g.stepSeats; k++;
   if (k === 1) { const W = g.engine.world, up = W.upload; W.upload = function (this: any, ...x: any[]) { uploads++; return up.apply(this, x); }; }
   if (k === 1) tapGives(g);
+  // BLITZ_CALL="<k> restart_encounter|reset_guards [start]": the rule called before tick k on BOTH sides (the runner reads the same word), to hold the
+  // Rust game's restart to the TypeScript's. With `start` the Rust game does not call its own rule: it takes the TypeScript's state after the call as a
+  // NEW START (the way a host that plays the Rust game follows a rule a tool called on its puppet). The scripted player knows nothing of it and plays
+  // on with the men it knew: a run for the ticks after the call.
+  if (CALL[0] && k === +CALL[0]) { if (CALL[1] === 'restart_encounter') g.restartEncounter(); else if (CALL[1] === 'reset_guards') g.resetGuards(); else throw new Error(`BLITZ_CALL: no rule ${CALL[1]}`); }
   // THE TEST DRIVER'S OWN QUESTIONS THAT WRITE THE GAME: `g.fight.roomAt(p)` asked between ticks floods a room nobody had asked for and keeps it in `g.fight.rooms`.
   // Each such ask that grew the list is a line of hostwrites.txt for the tick that opens next.
   if (k === 1 && g.fight?.roomAt) { const F = g.fight, ask = F.roomAt; F.roomAt = function (this: any, p: any) { const n0 = F.rooms.length; const r = ask.call(this, p); if (!g.ticking && F.rooms.length !== n0) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} room_at ${p[0]} ${p[1]} ${p[2]}\n`); return r; }; }
@@ -119,6 +130,9 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   if (k === 1 && g.wallCharge?.setCarried) { const C = g.wallCharge; for (const f of ['setCarried', 'raiseCarried'] as const) { const was = C[f]; C[f] = function (this: any, n: any) { if (!g.ticking) { const l = `${k + 1} !wall_${f === 'setCarried' ? 'carried' : 'raised'} ${n}`; gives.push(l); appendFileSync(`${outDir}/gives.txt`, l + '\n'); } return was.call(this, n); }; } }
   if (k === 1 && g.wallCharge?.blow) { const C = g.wallCharge, blow = C.blow; C.blow = function (this: any, c?: any, ...r: any[]) { if (!g.ticking && c) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} wall_blow ${c.wall.index}\n`); return arguments.length ? blow.call(this, c, ...r) : blow.call(this); }; }
   if (k === 1 && LESSON) { const pick = g.selectVerb; g.selectVerb = function (this: any, kind: string, verb?: string) { if (!g.ticking) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} select_verb ${wordAt('crate::game::InteractableKind', kind)} ${wordAt('crate::game::Verb', verb)} ${kind} ${verb}\n`); return pick.call(this, kind, verb); }; }
+  // THE SCRIPTED PLAYER'S WORD TO THE HOSTAGES / THE MAN IN HAND, given by the module's own call between ticks (playthrough.ts: `R.ending.word(g.player.char)`
+  // once the room is held and men of theirs are still up, `X.word(...)` on a snatch that ends in the van): `<k> rescue_word|snatch_word player|none`.
+  if (k === 1) for (const [name, E] of [['rescue_word', g.rescue?.ending], ['snatch_word', g.snatch?.out]] as [string, any][]) if (E?.word) { const word = E.word; E.word = function (this: any, by: any) { if (!g.ticking) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} ${name} ${by === g.player.char ? 'player' : by ? 'UNSUPPORTED-man' : 'none'}\n`); return word.call(this, by); }; }
   if (k === 1) dressStand();
   caseStep(g);
   if (k === 1 && !g.dice) g.dice = newDice(DIE);
@@ -130,14 +144,19 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     // THE HOST PUT A CHECKPOINT BACK between the last tick and this one (savestate.ts, the host's save controller: a lesson's player went down and the
     // rails asked for it): the whole game is the saved one again. No stepper can follow that from its own state, so the state and the block as THIS tick
     // opens are written (L<k>.bin, Ls<k>.bin) and the runner takes them as a new start before it steps tick k.
-    if (g.chronicle.counts.loads !== loadsSeen) { loadsSeen = g.chronicle.counts.loads; if (k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); } }
+    if (g.chronicle.counts.loads !== loadsSeen || (CALL[2] === 'start' && k === +CALL[0])) { loadsSeen = g.chronicle.counts.loads; if (k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); } }
+    // THE SCRIPTED PLAYER PUT THE HIGHLIGHT ON ANOTHER ROW of the nearby list between the last tick and this one (playthrough.ts:865 writes
+    // `g.player.nearSel` and calls pickHover for a door's own row; `g.selectVerb` does the same by kind and verb): `<k> near_sel <row>`, unless the
+    // pick was written as a lesson's `select_verb` already.
+    if (k > 1 && !LESSON && g.player.nearSel !== selAfter) appendFileSync(`${outDir}/hostwrites.txt`, `${k} near_sel ${g.player.nearSel}\n`);
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds as any[]));
-    if (LESSON) row('meter.txt', meterL, `${g.player.visibility}`);
+    row('meter.txt', meterL, `${g.player.visibility}`);   // (a mission's scripted player writes the meter before every tick too, playthrough.ts:779: the same number every tick, until a restart makes the player anew)
     row('host.txt', hostL, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}`); uploads = 0;
     const saves0 = g.chronicle.counts.saves;
     try { return step.call(this, dt, cmds); } finally {
       // THE HOST'S CHECKPOINT: the autosave controller (savestate.ts, the host's) writes a chronicle row and a count as the tick's last thing
       if (g.chronicle.counts.saves !== saves0) { const E = g.chronicle.events, e = E[E.length - 1]; appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_save ${JSON.stringify(e?.kind === 'checkpoint' ? (e.label ?? e.data?.label ?? '') : 'NOT-LAST')}\n`); }
+      selAfter = g.player.nearSel;
       row('post.txt', postL, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}`);
       { const set = (g.seats?.length ? g.seats : [{ view: g }]).reduce((x: number, st: any) => x + (st.view?.wallCharge?.set?.length ?? 0), 0); if (set !== chargesSet) { chargesSet = set; appendFileSync(`${outDir}/charges.txt`, `${k} ${set}\n`); } }
       if (keep(k)) { writeFileSync(`${outDir}/a${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s${k}.bin`, block(g)); } }

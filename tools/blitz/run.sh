@@ -1,6 +1,6 @@
 #!/bin/bash
 # THE MISSION LOOP's one command (tools/blitz/README.md):
-#   tools/blitz/run.sh <mission>:<seed> [--ticks N] [--keep "1,2,100-110"] [--every N] [--open "559"] [--after N] [--out DIR] [--show N] [--blobs] [--no-ts] [--no-build] [--wall] [--dress | --dress-rows "a,b"] [--case pie|orbit|boot]
+#   tools/blitz/run.sh <mission>:<seed> [--ticks N] [--keep "1,2,100-110"] [--every N] [--open "559"] [--after N] [--out DIR] [--show N] [--blobs] [--no-ts] [--no-build] [--wall] [--dress | --dress-rows "a,b"] [--case pie|orbit|boot] [--die N|tool]
 # 1. the TypeScript side once (mission.ts): the host's half every tick, a hash of each part of rust/sim's block and the die's count after every tick, whole
 #    states only at the kept ticks;   2. the native runner (rust/game_run) builds and steps the Rust game from tick 1, comparing after EVERY tick and stopping
 #    at the first tick that parts;   3. the path diff of every tick both sides kept, minus known.txt.
@@ -11,23 +11,25 @@
 # A name two-roomclear | two-nightbreach | two-compound is a game of TWO SEATS (seats.ts for the TypeScript side); --asks then prints where the
 # TypeScript's tick asked the bare Game for a seat's field. BLITZ_RUNNER=<path> steps with that runner (a copy kept apart while the tree is built again).
 # --wall: the scripted commander takes a held room by a wall charge where a partition allows (mission.ts; the order on a wall and its blow are replayed).
+# --die N: the game's die is seeded with N (mission.ts's own is 20942); the start the Rust side imports carries the die, so one option serves both sides.
+# --die tool: the die and the stand of a tally's run of this mission and seed (mission.ts; the die is written to die.txt in --out).
 # --dress: both sides stand with the DRESSING ROWS UP, as the page has them (dress.ts; README "The dressing rows up"); --dress-rows "moths,fx" raises only those.
 # --no-ts takes the TypeScript side as --out already holds it (the same mission, ticks and kept ticks); --no-build takes the runner as it is built.
 cd "$(dirname "$0")/../.." || exit 64
 unset BUN_OPTIONS
 M=$1; shift
 case "$M" in ''|--*) sed -n '2,3p' "$0"; exit 64;; esac
-TICKS=; KEEP=; ASKS=; WALL=; DRESSW=; CASEW=; EVERY=0; OPEN=; AFTER=0; OUT=; SHOW=12; TS=1; BUILD=1; BLOBS=
+TICKS=; KEEP=; ASKS=; WALL=; DRESSW=; CASEW=; DIE=; EVERY=0; OPEN=; AFTER=0; OUT=; SHOW=12; TS=1; BUILD=1; BLOBS=
 while [ $# -gt 0 ]; do case "$1" in
   --ticks) TICKS=$2; shift 2;; --keep) KEEP=$2; shift 2;; --every) EVERY=$2; shift 2;; --open) OPEN=$2; shift 2;; --after) AFTER=$2; shift 2;;
-  --out) OUT=$2; shift 2;; --show) SHOW=$2; shift 2;; --blobs) BLOBS=1; shift;; --no-ts) TS=; shift;; --no-build) BUILD=; shift;; --asks) ASKS=1; shift;; --wall) WALL=1; shift;; --dress) DRESSW=all; shift;; --dress-rows) DRESSW=$2; shift 2;; --case) CASEW=$2; shift 2;; *) echo "run.sh: no option $1"; exit 64;; esac; done
+  --out) OUT=$2; shift 2;; --show) SHOW=$2; shift 2;; --blobs) BLOBS=1; shift;; --no-ts) TS=; shift;; --no-build) BUILD=; shift;; --asks) ASKS=1; shift;; --wall) WALL=1; shift;; --dress) DRESSW=all; shift;; --dress-rows) DRESSW=$2; shift 2;; --case) CASEW=$2; shift 2;; --die) DIE=$2; shift 2;; *) echo "run.sh: no option $1"; exit 64;; esac; done
 [ -n "$OUT" ] || OUT="${TMPDIR:-/tmp}/blitz-$(echo "$M" | tr ':/' '--')"
 mkdir -p "$OUT" || exit 3
 echo "run.sh: $M; blobs in $OUT"
 if [ -n "$TS" ]; then
   SIDE=mission.ts; case "$M" in two-*) SIDE=seats.ts;; esac
   rm -f "$OUT"/[hacnL]*.bin "$OUT"/s[0-9]*.bin "$OUT"/ns*.bin "$OUT"/*.txt "$OUT"/*.tsv "$OUT"/*.json
-  bun run --preload ./tools/blitz/expose.ts tools/blitz/$SIDE "$M" --out "$OUT" ${TICKS:+--ticks $TICKS} ${ASKS:+--asks} ${WALL:+--wall} ${DRESSW:+--dress $DRESSW} ${CASEW:+--case $CASEW} --keep "$KEEP" --every "$EVERY" --open "$OPEN" 2>&1 | tail -${ASKS:+4}4 | cut -c1-400
+  bun run --preload ./tools/blitz/expose.ts tools/blitz/$SIDE "$M" --out "$OUT" ${TICKS:+--ticks $TICKS} ${ASKS:+--asks} ${WALL:+--wall} ${DRESSW:+--dress $DRESSW} ${CASEW:+--case $CASEW} ${DIE:+--die $DIE} --keep "$KEEP" --every "$EVERY" --open "$OPEN" 2>&1 | tail -${ASKS:+4}4 | cut -c1-400
   [ -s "$OUT/ticks.txt" ] || { echo "run.sh: the TypeScript side did not finish"; exit 3; }
 fi
 N=$(cat "$OUT/ticks.txt"); [ -n "$TICKS" ] && [ "$TICKS" -lt "$N" ] && N=$TICKS
