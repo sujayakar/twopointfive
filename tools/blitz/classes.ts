@@ -58,22 +58,23 @@ import * as m54 from '../../src/game/throwables';
 import * as m55 from '../../src/game/tracers';
 import * as m56 from '../../src/game/wallbreak';
 import * as m57 from '../../src/game/wallcharge';
-import * as m58 from '../../src/game/weapons';
-import * as m59 from '../../src/game/weather';
-import * as m60 from '../../src/game/wind';
-import * as m61 from '../../src/game/workthings';
-import * as m62 from '../../src/math/dice';
-import * as m63 from '../../src/render/lights';
-import * as m64 from '../../src/render/meshShadows';
-import * as m65 from '../../src/scene/boxMirror';
-import * as m66 from '../../src/scene/boxes';
-import * as m67 from '../../src/scene/collision';
-import * as m68 from '../../src/sim/doorshome';
-import * as m69 from '../../src/sim/fallshome';
-import * as m70 from '../../src/sim/itemshome';
-import * as m71 from '../../src/sim/lightshome';
-import * as m72 from '../../src/sim/propshome';
-import * as m73 from '../../src/sim/slabshome';
+import * as m58 from '../../src/game/wallreact';
+import * as m59 from '../../src/game/weapons';
+import * as m60 from '../../src/game/weather';
+import * as m61 from '../../src/game/wind';
+import * as m62 from '../../src/game/workthings';
+import * as m63 from '../../src/math/dice';
+import * as m64 from '../../src/render/lights';
+import * as m65 from '../../src/render/meshShadows';
+import * as m66 from '../../src/scene/boxMirror';
+import * as m67 from '../../src/scene/boxes';
+import * as m68 from '../../src/scene/collision';
+import * as m69 from '../../src/sim/doorshome';
+import * as m70 from '../../src/sim/fallshome';
+import * as m71 from '../../src/sim/itemshome';
+import * as m72 from '../../src/sim/lightshome';
+import * as m73 from '../../src/sim/propshome';
+import * as m74 from '../../src/sim/slabshome';
 
 export const classTable = (): Record<string, { prototype: object }> => ({
   "aim::AimState": (m2 as any).AimState,
@@ -115,7 +116,7 @@ export const classTable = (): Record<string, { prototype: object }> => ({
   "glassbreak::GlassBreak": (m28 as any).GlassBreak,
   "input::Input": (m29 as any).Input,
   "lesson::Lesson": (m30 as any).Lesson,
-  "math_dice::SimDice": (m62 as any).SimDice,
+  "math_dice::SimDice": (m63 as any).SimDice,
   "moths::Moths": (m31 as any).Moths,
   "nightbreach::NightBreach": (m32 as any).NightBreach,
   "orders::SquadOrders": (m33 as any).SquadOrders,
@@ -126,31 +127,31 @@ export const classTable = (): Record<string, { prototype: object }> => ({
   "quiet::QuietMission": (m37 as any).QuietMission,
   "ragdoll::Ragdoll": (m38 as any).Ragdoll,
   "rails::Rails": (m39 as any).Rails,
-  "render_lights::LightSet": (m63 as any).LightSet,
-  "render_mesh_shadows::MeshShadows": (m64 as any).MeshShadows,
+  "render_lights::LightSet": (m64 as any).LightSet,
+  "render_mesh_shadows::MeshShadows": (m65 as any).MeshShadows,
   "rescue::Rescue": (m40 as any).Rescue,
   "rescueend::RescueEnd": (m41 as any).RescueEnd,
   "rescueflow::RescueFlow": (m42 as any).RescueFlow,
   "rescueflush::RescueFlush": (m43 as any).RescueFlush,
   "roomclear::RoomClearScenario": (m44 as any).RoomClearScenario,
   "roomfight::RoomFight": (m45 as any).RoomFight,
-  "scene_box_mirror::BoxMirror": (m65 as any).BoxMirror,
-  "scene_boxes::BoxWorld": (m66 as any).BoxWorld,
-  "scene_collision::NavGrid": (m67 as any).NavGrid,
-  "scene_collision::SoundPaths": (m67 as any).SoundPaths,
-  "scene_collision::StaticCollision": (m67 as any).StaticCollision,
+  "scene_box_mirror::BoxMirror": (m66 as any).BoxMirror,
+  "scene_boxes::BoxWorld": (m67 as any).BoxWorld,
+  "scene_collision::NavGrid": (m68 as any).NavGrid,
+  "scene_collision::SoundPaths": (m68 as any).SoundPaths,
+  "scene_collision::StaticCollision": (m68 as any).StaticCollision,
   "sense::CpuSmoke": (m46 as any).CpuSmoke,
   "sense::SmokeGrid": (m46 as any).SmokeGrid,
   "sensors::Sensors": (m47 as any).Sensors,
   "shards::GlassShards": (m48 as any).GlassShards,
-  "sim_doorshome::DoorStore": (m68 as any).DoorStore,
-  "sim_fallshome::FallStore": (m69 as any).FallStore,
-  "sim_itemshome::ItemStore": (m70 as any).ItemStore,
-  "sim_lightshome::Fixture": (m71 as any).Fixture,
-  "sim_lightshome::LightHome": (m71 as any).LightHome,
-  "sim_lightshome::Mains": (m71 as any).Mains,
-  "sim_propshome::PropStore": (m72 as any).PropStore,
-  "sim_slabshome::SlabStore": (m73 as any).SlabStore,
+  "sim_doorshome::DoorStore": (m69 as any).DoorStore,
+  "sim_fallshome::FallStore": (m70 as any).FallStore,
+  "sim_itemshome::ItemStore": (m71 as any).ItemStore,
+  "sim_lightshome::Fixture": (m72 as any).Fixture,
+  "sim_lightshome::LightHome": (m72 as any).LightHome,
+  "sim_lightshome::Mains": (m72 as any).Mains,
+  "sim_propshome::PropStore": (m73 as any).PropStore,
+  "sim_slabshome::SlabStore": (m74 as any).SlabStore,
   "snatch::Snatch": (m49 as any).Snatch,
   "snatchout::SnatchOut": (m50 as any).SnatchOut,
   "sparks::Sparks": (m51 as any).Sparks,
@@ -163,12 +164,13 @@ export const classTable = (): Record<string, { prototype: object }> => ({
   "tracers::Tracers": (m55 as any).Tracers,
   "wallbreak::WallBreak": (m56 as any).WallBreak,
   "wallcharge::WallCharge": (m57 as any).WallCharge,
-  "weapons::Firearm": (m58 as any).Firearm,
-  "weapons::Ocp": (m58 as any).Ocp,
-  "weapons::Pistol": (m58 as any).Pistol,
-  "weapons::Rifle": (m58 as any).Rifle,
-  "weather::Weather": (m59 as any).Weather,
-  "wind::Wind": (m60 as any).Wind,
-  "workthings::WorkThings": (m61 as any).WorkThings,
+  "wallreact::WallReact": (m58 as any).WallReact,
+  "weapons::Firearm": (m59 as any).Firearm,
+  "weapons::Ocp": (m59 as any).Ocp,
+  "weapons::Pistol": (m59 as any).Pistol,
+  "weapons::Rifle": (m59 as any).Rifle,
+  "weather::Weather": (m60 as any).Weather,
+  "wind::Wind": (m61 as any).Wind,
+  "workthings::WorkThings": (m62 as any).WorkThings,
 });
-export const valueTable = (): Record<string, any> => ({ WEAPONS: (m58 as any).WEAPONS });
+export const valueTable = (): Record<string, any> => ({ WEAPONS: (m59 as any).WEAPONS });

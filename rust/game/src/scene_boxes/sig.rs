@@ -109,3 +109,8 @@ pub fn box_of_frame(g: &mut crate::game::Game, c: V3, h: V3, yaw: f64, albedo: V
 
 /// INVENTED: makeBox's object as a value, in no table: boxOf's defaults, then every field given. For a box made only to be read and dropped; make_box is this and a push. (boxes.ts:182)
 pub fn make_box_value(p: &crate::scene_boxes::MakeBoxP) -> crate::scene_boxes::Box { todo!() }
+/// INVENTED: a box its maker keeps for a while and then lets go (a remembered thing's copy in the fog of war, an fx row's box): a freed row used again, else a new row. Not one of the frame's rows: it stands until its holder hands it to box_let_go
+pub fn box_kept(g: &mut crate::game::Game, b: crate::scene_boxes::Box) -> BoxId { todo!() }
+/// INVENTED: the holder of a kept box has dropped it. The frame's list or the engine's may still name it, so it joins the frame's rows, and the host's next listing frees it
+pub fn box_let_go(g: &mut crate::game::Game, id: BoxId) { todo!() }
+

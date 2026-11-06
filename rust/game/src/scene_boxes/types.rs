@@ -276,7 +276,7 @@ pub struct BoxWorld {
     pub pack_behind: bool,
     pub stuff_of: Option<crate::FnField>,
     pub core_stuff_of: Option<crate::FnField>,
-    pub glass_open: Option<crate::FnField>,
+    pub glass_open: Option<crate::scene_collision::PaneRule>,
 }
 impl BoxWorld {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor

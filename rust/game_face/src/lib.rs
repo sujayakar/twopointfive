@@ -210,6 +210,19 @@ pub unsafe extern "C" fn face_host_half(h: u32, p: *const u8, n: usize) {
     let b = bytes(p, n);
     with(h, |x| x.cmds = Some(game::io::take_host_half(&mut x.g, b)));
 }
+#[no_mangle]
+pub extern "C" fn face_debug(h: u32) {
+    let t = with(h, |x| format!("{:#?}", x.g));
+    out(t.into_bytes());
+}
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_ask(h: u32, kind: u32, row: u32, seat: u32, p: *const u8, n: usize) {
+    let b = bytes(p, n);
+    let a = with(h, |x| game::io::ask(&mut x.g, kind, row, seat, b));
+    out(a);
+}
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]

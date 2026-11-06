@@ -1,13 +1,14 @@
 // THE IMPORTER'S CHECK. Game A plays to frame M and is exported, then to frame N and is exported. Game B, in a process of its own (the game keeps state in its modules, so two games in one process share it),
 // plays the same way to frame M only and is exported: that must equal A's blob at M, or the two were not stood the same. A's blob at N is then applied onto B, and B's export must equal A's bytes.
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/import-check.ts <scn>:<seed>:<M>:<N> [--out dir]
+import { tmpdir } from 'node:os';
 import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { exportGame, parse, SCHEMA } from './export';
 import { applyGame } from './import';
 import { classTable, valueTable } from './classes';
 import { decode } from './paths';
 const argv = process.argv.slice(2); const [scn, seed, M, N] = argv[0].split(':'); const arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
-const dir = arg('--out', `/tmp/imp-${scn}-${seed}-${M}-${N}`), role = arg('--role', 'both'); mkdirSync(dir, { recursive: true });
+const dir = arg('--out', `${tmpdir()}/imp-${scn}-${seed}-${M}-${N}`), role = arg('--role', 'both'); mkdirSync(dir, { recursive: true });
 const { knobRegistry } = await import('../../src/game/knobs.ts'); const reg = knobRegistry();
 const { Game } = await import('../../src/game/game.ts'); const { play } = await import('../qa/playthrough.ts'); class Stop extends Error {}
 const same = (a: Uint8Array, b: Uint8Array) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };

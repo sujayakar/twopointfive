@@ -30,6 +30,17 @@ Those times are for whole states with several processes running. `only` with the
 - A new man. No mission here made a Character after M, so his hook (rig, parts, block row) doesn't exist; `Item` is the only block row with one. `hooks.made` is where it goes.
 - `hooks.gone`: nothing calls it, because lists are values and rows never leave a table.
 - A second seat.
-- A mid-script state: the export refuses a running beat, and I didn't test the importer against one.
 - Bytes from Rust itself. All of these are TypeScript exports, though Rust's are byte-identical on the missions the bridge check has run.
 - It has only run headless, never on a page.
+
+## An echo
+
+A field Rust owns and TypeScript can't hold (`schema` marks it `echo`; hand2.cjs `H.bridge.echo` is the list) isn't written onto the puppet. A whole apply keeps its bytes beside the object and the puppet's export writes them back, so a re-export after an apply is Rust's bytes everywhere and such a field needs no class in a host's compare.
+
+Today: `Game.door_owns`, `AnimGltfMod.nvg_bits` and `suit_bits`, `WallBreak.listeners`, `ClipSide.at`, `StaticCollision.mirror`, `Mods.scene_box_mirror`, `WallreactMod.wall_react`, `LiveBeat.it`, `LiveBeat.waiting`.
+
+A filtered apply doesn't keep echoes, so a filtered host hands nothing back whole. If TypeScript does write such a field on the puppet, the write is lost silently: that is what makes it Rust's.
+
+## A reference by serial
+
+A field holding an object's identity (`schema.serial`, a `u32` or `Option<u32>` with a TypeScript name) now takes its object after the whole walk, so a row later in the walk can be the one that names it, and it works where the puppet's field was null. `Lesson.run === g.mission` holds on a puppet by this.
