@@ -70,6 +70,12 @@ fn main() {
     let gives: Vec<String> = text("gives.txt").lines().map(String::from).collect();
     let meter: Vec<f64> = text("meter.txt").lines().filter_map(|l| l.trim().parse().ok()).collect();
     let hostwrites: Vec<String> = text("hostwrites.txt").lines().map(String::from).collect();
+    // ONE ORDERED RECORD of what the driver did before each tick (between.txt, where mission.ts wrote one): its lines by tick, in the file's order
+    let mut between: std::collections::HashMap<usize, Vec<String>> = std::collections::HashMap::new();
+    for l in text("between.txt").lines() { if let Some(k) = l.split(' ').next().and_then(|x| x.parse::<usize>().ok()) { between.entry(k).or_default().push(l.to_string()); } }
+    let ordered = !between.is_empty();
+    let no_between: Vec<String> = std::env::var("BLITZ_NO_BETWEEN").unwrap_or_default().split(',').filter(|s| !s.is_empty()).map(String::from).collect();
+    println!("runner: the driver's orders, writes and calls before a tick are replayed {}", if ordered { "from ONE ORDERED RECORD (between.txt), as the driver made them" } else { "from gives.txt, then hostwrites.txt, then meter.txt (no between.txt here)" });
     let len = core::mem::size_of::<sim::state::State>();
     println!("runner: rust/sim's block is {} bytes here, {} in s0.bin; layout word {}", len, s0.len(), sim::state::LAYOUT);
     std::panic::set_hook(Box::new(|info| {
@@ -120,16 +126,25 @@ fn main() {
             // HOST STEP: where the headless host listed the box world again between two ticks. BEFORE the driver's orders and writes: the host lists as its
             // step ends, and what the driver then does to the box world (a wall charge blown by the module's own call) is not listed until the next step
             // ends. Listed after it, the aim ray of the tick met a piece of wall the TypeScript's list did not yet hold (mousehole-four with wall charges, tick 6326).
+            // HOST STEP: between two ticks the view's matrix is the host camera's live one (game_run::view_live), as the host's half has just brought it
+            if !skip("viewlive") { game_run::view_live(&mut g); }
             if !skip("upload") && host[k - 1].get(4).copied().unwrap_or(0.0) > 0.0 { game_run::upload(&mut g); }
+            // HARNESS STAND-IN: the test driver's orders, its writes and the rules it called before this tick, in its own order (game_run::between)
+            if ordered { for l in between.get(&k).map(|v| v.as_slice()).unwrap_or(&[]) { let t = game_run::between(&mut g, k, l, &no_between); if !t.is_empty() { println!("{}", t); } } }
+            else {
             for l in gives.iter().filter(|l| game_run::line_of(l, k)) { println!("{}", game_run::give(&mut g, k, l)); }
             // HARNESS STAND-IN: the test driver's own question that writes the game (`g.fight.roomAt(p)` between ticks floods a room and keeps it)
             for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_before(&mut g, k, l) { println!("{}", t); } }
+            }
             // BLITZ_CALL="<k> <rule> [start]": a rule of the game (restart_encounter | reset_guards) called before tick k, as mission.ts calls it on the
+            // (where the TypeScript side wrote ONE ORDERED RECORD the call is a line of it, made above in the driver's order; this is for a game of two seats)
             // TypeScript side under the same word. With `start` it is not called here: mission.ts wrote the state after the call as a new start.
-            if let Ok(c) = std::env::var("BLITZ_CALL") { let w: Vec<&str> = c.split(' ').collect(); if w[0].parse::<usize>().ok() == Some(k) && w.get(2) != Some(&"start") {
-                match w[1] { "restart_encounter" => game::game::game_restart_encounter(&mut g), "reset_guards" => game::guards::reset_guards(&mut g), x => panic!("BLITZ_CALL: no rule {}", x) }
+            if let (false, Ok(c)) = (ordered, std::env::var("BLITZ_CALL")) { let w: Vec<&str> = c.split(' ').collect(); if w[0].parse::<usize>().ok() == Some(k) && w.get(2) != Some(&"start") {
+                match w[1] { "restart_encounter" => game::game::game_restart_encounter(&mut g), "reset_guards" => game::game::game_reset_guards(&mut g), x => panic!("BLITZ_CALL: no rule {}", x) }
                 println!("BLITZ_CALL before tick {}: {} called; {} guards, time {}", k, w[1], g.guards.len(), g.time); } }
-            if let Some(v) = meter.get(k - 1) { game_run::meter(&mut g, *v); }
+            if !ordered { if let Some(v) = meter.get(k - 1) { game_run::meter(&mut g, *v); } }
+            // HOST STEP: the flag the player's own restart leaves for the host's next frame is put down (game_run::restart_cut)
+            if !skip("restartcut") { game_run::restart_cut(&mut g); }
             let dt = host[k - 1][0];
             TICK.store(k, Ordering::Relaxed);
             let t0 = std::time::Instant::now();
