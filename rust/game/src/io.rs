@@ -4581,7 +4581,7 @@ pub fn deal_scripts(g: &mut crate::game::Game) {
     g.director.manifest = Some(m);
 }
 
-fn stats_as_counted(g: &crate::game::Game) -> crate::game::Stats { let mut s = g.stats.clone(); let h = &g.m.glassbreak.gb_host; let t = unsafe { core::ptr::addr_of!(::sim::panes::TALLY).read() }; let q = &mut s.glassbreak; q.panes = (h.panes + t.panes) as i32; q.impacts = (h.impacts + t.impacts) as i32; q.sites = (h.sites + t.sites) as i32; q.runs = (h.runs + t.runs) as i32; q.dropped = (h.dropped + t.dropped) as i32; q.shards = h.shards as i32; q.chips = h.chips as i32; q.refused = h.refused as i32; q.diced = (h.diced + t.diced) as i32; q.clumps = (h.clumps + t.clumps) as i32; q.sheets = (h.sheets + t.sheets) as i32; q.blasts = (h.blasts + t.blasts) as i32; q.thinks = (h.thinks + t.thinks) as i32; q.hooked = h.hooked as i32; q.raked = (h.raked + t.raked) as i32; s }
+pub fn stats_as_counted(g: &crate::game::Game) -> crate::game::Stats { let mut s = g.stats.clone(); let h = &g.m.glassbreak.gb_host; let t = unsafe { core::ptr::addr_of!(::sim::panes::TALLY).read() }; let q = &mut s.glassbreak; q.panes = (h.panes + t.panes) as i32; q.impacts = (h.impacts + t.impacts) as i32; q.sites = (h.sites + t.sites) as i32; q.runs = (h.runs + t.runs) as i32; q.dropped = (h.dropped + t.dropped) as i32; q.shards = h.shards as i32; q.chips = h.chips as i32; q.refused = h.refused as i32; q.diced = (h.diced + t.diced) as i32; q.clumps = (h.clumps + t.clumps) as i32; q.sheets = (h.sheets + t.sheets) as i32; q.blasts = (h.blasts + t.blasts) as i32; q.thinks = (h.thinks + t.thinks) as i32; q.hooked = h.hooked as i32; q.raked = (h.raked + t.raked) as i32; s }
 
 
 impl Io for crate::Opaque { fn w(&self, _: &mut W) {} fn r(_: &mut R) -> Self { crate::Opaque } }
