@@ -53,8 +53,8 @@ export async function hitseedCheck(): Promise<boolean> {
     for (let i = 0; i < 3; i++) W.step(DT);
     // every fragment the game's glass lets go, as it goes (a bystander on the fracture model's one way out): the frame, the pane by where it stands on the
     // floor plan, and the piece from the pane's own middle
-    { const out: string[] = W.pieces = [], gb = g.glassBreak, emit = gb.emit.bind(gb);
-      gb.emit = (st: any, f: any, key: number) => { out.push(said([Math.round(g.time * 60), st.box.c[0], st.box.c[2], f.kind, f.cause, from(st.box, f.centre), f.velocity, f.spin, f.seed, key])); return emit(st, f, key); }; }
+    { const out: string[] = W.pieces = [], gb = g.glassBreak, letGo = gb.letGo.bind(gb);
+      gb.letGo = (f: any, x: any) => { const box = g.level.boxes[f.pane]; out.push(said([Math.round(g.time * 60), box.c[0], box.c[2], f.kind, f.cause, from(box, f.centre), f.velocity, f.spin, f.seed, f.key])); return letGo(f, x); }; }
     return W;
   };
   /** B's box that is A's box `b`: the same middle and sizes (a millimetre up under the break word) and the same flags */

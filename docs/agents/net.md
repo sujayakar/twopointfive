@@ -401,7 +401,13 @@ line).
   which 40 s and 30 s on one die never tested. They now run with strict off and every ask counted by place; a place no row of KNOWN_ASKS names
   FAILS (`fight`, and two `long` lines of 150 s), the fights run to their end so `twin` holds a whole fight, and `SEATS_ASK_BREAK=1` (one more
   bare ask in every tick of a fight) must fail them. Classes (2) and (3) have no line yet: a line for each (a locked door in under 4 s for
-  each seat's pair; the barracks fight to its end) is red today and waits on the mend or on the Rust co-op check.
+  each seat's pair; the barracks fight to its end) is red today and waits on the Rust co-op check: the maintainer will not play co-op before the swap
+  (2026-11-05), so none of the three is mended in TypeScript.
+  A TWO-SEAT FIGHT AS RECORDS, for the port's two-seat bring-up (2026-11-06; `tools/qa/seats-run.ts`): no playthrough mission stands two seats, so
+  this stands one (`standTwo`), drives both seats with seats-check's scripted hands and steps every tick by `stepSeats(dt, [record, record])`
+  alone; `--record f` / `--replay f` write and play a recording (the stand's word at the start, both records a tick as text, the state's word
+  a second: about 5 MB for 40 s, not kept in the tree). Its own check: a recording played again in a fresh game is the same game, and the same
+  call makes the same file to the byte; `SEATSRUN_BREAK=1` (each seat handed the other's records) must fail `replay`.
 - **What nobody has seen or measured**: a page a person plays as a client (the page check is a script's); two machines; a real network; a Mac; a client through a sandbox's tunnel; two PEOPLE in two seats; the look ahead by eye (its bullet says what); a game longer than
   twenty seconds over the wire; a mission ENDING on a server (the verdict's answer was read by hand, never over the wire); the run's memory on a long
   game (its text is kept for joiners: about 20 KB a second with two seats sending every tick, 80 MB over the longest life); a real socket backing up (the

@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 32;
+export const SIM_ABI = 34;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -44,6 +44,15 @@ export interface SimExports {
   /** collision.ts raycast: −1 nothing met · −2 the host answers (a ray that is no number) · else the static's index, or 1e6 + the leaf's; t and the normal → the scratch. `ask` 1 = a pane met where it is open is passed (glass.rs) */
   lines_ray(w: number, a0: number, a1: number, a2: number, r0: number, r1: number, r2: number, tmax: number, set: number, ask: number): number;
   world_glass(w: number, n: number): void; world_view(w: number, kind: number, n: number): void; glass_open(w: number, bi: number, x: number, y: number, z: number): number;
+  panes_ctx(g: number, w: number, set: number, now: number, shards: number, gravity: number): void; panes_world(w: number, g: number): void; panes_view(w: number, kind: number, x: number, y: number, z: number, radius: number, power: number, sure: number): void;
+  panes_impact(bi: number, x: number, y: number, z: number, hasDir: number, dx: number, dy: number, dz: number, energy: number, who: number, through: number): number; panes_widen(bi: number, x: number, y: number, z: number): number; panes_blast_begin(x: number, y: number, z: number): void; panes_blast_sheet(s: number, x: number, y: number, z: number, radius: number, power: number, who: number): number;
+  panes_sheets(): number; world_sheets(w: number, n: number): void; panes_frame_begin(g: number): void; panes_men_addr(): number; panes_men(n: number): void; panes_step(r: number): void; panes_reset(g: number): void; panes_set_type(g: number, bi: number, ty: number): void; panes_type(bi: number): number; panes_cap(i: number): number; bars_take(bi: number, flags: number): number; bars_blast(x: number, y: number, z: number, reach: number, statics: number): number; bars_gone(g: number): number; bar_gone(g: number, i: number): number; bar_flags(g: number, i: number): number; bars_clear(g: number): void; panes_type_place(bi: number): number; panes_type_box(h0: number, h1: number, h2: number, cy: number, gap: number): number; panes_sky(bi: number): number;
+  panes_open_at(g: number, bi: number, x: number, y: number, z: number): number; panes_walkable(g: number, bi: number): number; panes_fraction(g: number, bi: number): number; panes_sig(g: number): number; panes_out_addr(): number; panes_out_pts_addr(): number; panes_out_n(): number; panes_out_clear(): void; panes_take_wrote(): number; panes_take_gust(g: number): number;
+  panes_field(i: number): number; panes_row_addr(g: number, r: number): number; panes_q_addr(g: number): number; panes_row_n(g: number): number; panes_row_index(g: number, bi: number): number; panes_held(g: number, bi: number, without: number): number; panes_tally(): number; panes_heard(g: number, pane: number, who: number, now: number, gap: number): number; panes_forget_heard(g: number): void; panes_dice_threshold(g: number, bi: number): number;
+  panes_box_seed(cx: number, cy: number, cz: number, hx: number, hy: number, hz: number): number; panes_point_seed(word: number, x: number, y: number, z: number): number; panes_jet(x: number, y: number, z: number, dx: number, dy: number, dz: number, speed: number, amount: number, who: number): void;
+  pen_toll(bi: number, x: number, y: number, z: number, dx: number, dy: number, dz: number, e: number, nth: number): number; pen_cross(bi: number, ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t: number, e: number, nth: number): number; pen_path(x: number, y: number, z: number, dx: number, dy: number, dz: number, range: number, energy: number, nth0: number, ft: number, fi: number, fnx: number, fny: number, fnz: number): number; pen_path_head(): number;
+  pen_arm(fx: number, fy: number, fz: number, mx: number, my: number, mz: number, dx: number, dy: number, dz: number, energy: number): number; pen_passes(ax: number, ay: number, az: number, rx: number, ry: number, rz: number, n: number, energy: number): number;
+  pen_add_hole(g: number, bi: number, x: number, y: number, z: number): void; pen_hole_rows(g: number): number; pen_hole_bi(g: number, r: number): number; pen_hole_n(g: number, r: number): number; pen_hole_pt(g: number, r: number, i: number): number; pen_clear_holes(g: number): void;
   // a circle against it (rust/sim/src/collide.rs — src/scene/collision.ts collideCircle / circleTouches / gather)
   collide_circle(w: number, px: number, pz: number, r: number, y0: number, y1: number, iterations: number): number;
   collide_touches(w: number, x: number, z: number, r: number, y0: number, y1: number, cap: number): number;
@@ -142,6 +151,24 @@ export interface SimExports {
   camera_see(g: number, i: number, time: number, dt: number, visible: number, gain: number, x: number, y: number, z: number, suspicion: number, alarm: number): number;
   laser_open(g: number, i: number): number;
   laser_close(g: number, i: number, time: number, live: number, cut: number, sense: number, held: number): number;
+  // the weather that play reads (rust/sim/src/wind.rs, weather.rs, air.rs, snow.rs — src/sim/weatherhome.ts is the host's half)
+  wind_shape(i: number): number; wind_noise(seed: number, x: number): number;
+  /** wind.ts jetVel, stormVel, stormVelRoofs (the roofs at scratch 0): the air → scratch 0‥2 */
+  wind_jet(o0: number, o1: number, o2: number, d0: number, d1: number, d2: number, speed: number, reach: number, tanSpread: number, r0: number, dMax: number, floorY: number, p0: number, p1: number, p2: number): void;
+  wind_storm(w0: number, w1: number, w2: number, i0: number, i1: number, i2: number, i3: number, a0: number, a1: number, a2: number, a3: number, p0: number, p1: number, p2: number): void;
+  wind_storm_roofs(w0: number, w1: number, w2: number, n: number, p0: number, p1: number, p2: number): void;
+  weather_col(i: number): number; weather_cap(i: number): number;
+  weather_under_roof(g: number, x: number, z: number): number; weather_rain_bed(g: number, x: number, z: number): number; weather_hear_mask(g: number, time: number, x: number, z: number): number;
+  weather_fog_tau(sigma: number, h: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number): number;
+  weather_air_trans(g: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number): number;
+  weather_roofs_begin(): void; weather_roofs_box(cx: number, cy: number, cz: number, hx: number, hy: number, hz: number, ceiling: number): void; weather_roofs_end(): number; weather_roofs_seen(): number;
+  weather_gap(g: number, first: number): number; weather_stroke_due(g: number, time: number): number; weather_strike(g: number, time: number, bearing: number, elevDeg: number, distKm: number, peak: number): void;
+  weather_thunder_add(g: number, at: number, dist: number, bearing: number, loud: number): void; weather_thunder_due(g: number, i: number, time: number): number;
+  weather_stroke_mean(n: number, a: number, b: number): number; weather_lot_step(g: number, dt: number): number;
+  wet_open_sky(g: number, w: number, set: number, ask: number, time: number, x: number, z: number, head: number): number;
+  wet_step(g: number, w: number, set: number, ask: number, time: number, dt: number, x: number, z: number, head: number): void;
+  snow_bog_at(g: number, w: number, x: number, y: number, z: number): number;
+  air_clear(g: number, stamp: number): void; air_begin(g: number, stamp: number, on: number): void; air_seed(g: number, stamp: number, leak: number): void; air_settle(g: number, stamp: number, w: number, set: number, ask: number): void; air_update(g: number, stamp: number, w: number, set: number, ask: number, dt: number): void; air_reread(g: number, stamp: number, w: number, set: number): void; air_table(g: number, stamp: number, which: number): number; weather_read(i: number): number;
 }
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
@@ -153,7 +180,10 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_wind', 'grid_wind_cap', 'grid_trans',
   'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'props_settle', 'slabs_addr', 'slabs_cap', 'slabs_step', 'items_addr', 'items_cap', 'items_update',
   'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap',
-  'lights_cap', 'lights_ids', 'lights_in', 'lights_flip', 'lights_step', 'camera_pan', 'camera_see', 'laser_open', 'laser_close'];
+  'lights_cap', 'lights_ids', 'lights_in', 'lights_flip', 'lights_step', 'camera_pan', 'camera_see', 'laser_open', 'laser_close',
+  'panes_ctx', 'panes_world', 'panes_view', 'panes_impact', 'panes_widen', 'panes_blast_begin', 'panes_blast_sheet', 'panes_sheets', 'world_sheets', 'panes_frame_begin', 'panes_men_addr', 'panes_men', 'panes_step', 'panes_reset', 'panes_set_type', 'panes_type', 'panes_cap', 'bars_take', 'bars_blast', 'bars_gone', 'bar_gone', 'bar_flags', 'bars_clear', 'panes_type_place', 'panes_type_box', 'panes_sky', 'panes_open_at', 'panes_walkable', 'panes_fraction', 'panes_sig', 'panes_out_addr', 'panes_out_pts_addr', 'panes_out_n', 'panes_out_clear', 'panes_take_wrote', 'panes_take_gust', 'panes_field', 'panes_row_addr', 'panes_q_addr', 'panes_row_n', 'panes_row_index', 'panes_held', 'panes_tally', 'panes_heard', 'panes_forget_heard', 'panes_dice_threshold', 'panes_box_seed', 'panes_point_seed', 'panes_jet',
+  'pen_toll', 'pen_cross', 'pen_path', 'pen_path_head', 'pen_arm', 'pen_passes', 'pen_add_hole', 'pen_hole_rows', 'pen_hole_bi', 'pen_hole_n', 'pen_hole_pt', 'pen_clear_holes',
+  'wind_shape', 'wind_noise', 'wind_jet', 'wind_storm', 'wind_storm_roofs', 'weather_col', 'weather_cap', 'weather_under_roof', 'weather_rain_bed', 'weather_hear_mask', 'weather_fog_tau', 'weather_air_trans', 'weather_roofs_begin', 'weather_roofs_box', 'weather_roofs_end', 'weather_roofs_seen', 'weather_gap', 'weather_stroke_due', 'weather_strike', 'weather_thunder_add', 'weather_thunder_due', 'weather_stroke_mean', 'weather_lot_step', 'wet_open_sky', 'wet_step', 'snow_bog_at', 'air_clear', 'air_begin', 'air_seed', 'air_settle', 'air_update', 'air_reread', 'air_table', 'weather_read'];
 
 /** A RUNTIME WITH NO WEBASSEMBLY (a browser whose policy turns a site's JIT off has none) DOES NOT PLAY: the simulation is the module's and nothing else
  *  works it out. The page shows these words in place of the game, before anything is built (main.ts); they are the maintainer's, as he chose them. */

@@ -16,9 +16,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the retire tool's proofs, `stand-bisect.ts`); the process the word is given to says so once on stderr. A TOOL THAT WANTS THE OLD STAND OF A CHILD SAYS
   THE WORD: giving a child no word asks for the page's (`rerun.ts` for a tape made on the old stand, `rust-check.ts`'s old-stand arms, `lesson-gate.ts`'s
   frozen runs, `ships.ts` / `kit-cells.ts` / `solo-night.ts` `--base`, `blast-frame.ts --arm round1` all say it). NO NEW FIXTURE IS RECORDED ON IT. What
-  that leaves: (1) the recordings that were made on it stand until each one's owner records it again on the page's stand: `layer-words.json` and
-  `sense-words.json` are still asked, by `rust-check.ts`, of a child it stands on the old stand by name, and `ident-pin.ts` still refuses `--record` on any
-  other stand (the owners lift that as they record); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
+  that leaves: (1) the recordings that were made on it are taken again on the page's stand, each by its owner in a commit of its own: `ident-pin.ts`
+  records on the stand a family names (`hold({ stand })`: the page's for a tool that says `stand: 'shipped'`, which is the glass's `pane-words.json` from
+  the commit after step 1572, then the layers' `layer-words.json` and the senses' `sense-words.json` as each owner's commit lands; the old one until a
+  family says), and `rust-check.ts` asks a family's child on the stand its recording is of. A RUN OF AN IDENT THAT IS HELD TO NOTHING FAILS, said as
+  NOT HELD, unless the tool or its caller says the word (`unpinned`, `--unpinned`: `docs/agents/rust.md`, "What holds a family once its TypeScript is
+  gone"); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
   hold nothing on a run with no word, and say so; (2) a check that was green on the old stand and red on the page's is red in a plain run now:
   `tools/qa/expected-red.ts` is where each is named with its cause and whose it is (its page-stand rows are a plain run's rows now); (3) headers that say
   "frozen by default" or "run it on BOTH stands" are older than this: once, with no word. Proof of the flip itself: `stand-dump.ts` with no word after =
@@ -1083,7 +1086,18 @@ but synthetic writes still work.
   THE SAME ENTRY IN BOTH TREES. The tally stands the team on free floor 2.4 to 6.2 m out from the door and Sam beside them, and takes anybody with a
   line to them off the floor, so a thing laid there changes the STAGING, and two trees staged differently did not fight the same entry. `bang-tally.ts`
   writes into every result its staging (`at`: the spots, Sam's last, and how many were taken off the floor) and what became of the entry as a word
-  (`outcome`: played, refused, no-floor, nobody, threw), and takes another tree's staging (`--stand-as`) wherever every spot of it is free floor. The
+  (`outcome`: played, refused, no-floor, nobody, threw), the game's reason for the first order it refused (`refused`) and the men down before the order
+  was asked (`lostBefore`), and takes another tree's staging (`--stand-as`) wherever every spot of it is free floor. THE NOTE IS FOR PEOPLE and reads as
+  it did before this tool: other tools count rows by whether they have one (`flashweight-probes.ts` counts `of > 0 && !note`), and a refusal was always
+  a row with none. The tally's own table skips rows by the fields now, not by the note's words. A REFUSAL NAMES A DOOR ONLY WITH THE TEAM WHOLE AT THE
+  ORDER IN BOTH TREES: once a man is down before the order the fight has begun, what the game answers then (`no squad`, when it is all of them) is that
+  fight's doing, and the entry is read as a fight like any other. A named door's line gives the seed and the reason of each entry that cannot be made.
+  MEASURED FOR THAT FOLLOW-UP (6f1d40c2 with its three tool files, the page's stand): the flashbang family's whole log is the clean dad3c1a1's line
+  for line (flashweight-corners counts 398 entries again, where the first cut's note had made it 392; the family's four reds are the base's); on
+  depot-four and pass-four, seeds 1-3, every counted field, every note and the tally's printed table are the tally's from before this tool (90 rows, six
+  of them refused, none with a note); mousehole-four, whose exam door the first cut named for a team shot before its order on seed 8, reads no door
+  named over seeds 1-24 (exam plain 8 worse and 8 better, bang 7 and 8), from the first cut's kept tallies and with seeds 7-12 replayed in both trees
+  alike; the break word names the same door with the same counts; pass-four against its own tally, 480 of 480 the same. The
   reader stands the AFTER tree as the BEFORE tree stood each entry, prints door by door how many entries were `staged alike`, and a verdict on a door
   that could not be stood alike says so. A tally handed over as JSON was staged as it was. A tally from before `outcome` is read by its notes and cannot
   say a refusal (such an entry is a fight to it, as to the tally's own table), so no door is named for a refusal one of the two could not say.
