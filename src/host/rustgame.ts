@@ -160,11 +160,14 @@ export function rustAttach(g: Game): void {
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // A START FROM OUTSIDE A TICK: the TypeScript stands or restores the game on the puppet as it always did; the Rust game is started again from it as the
   // next step opens. (Inside a step these are the Rust game's own and never run here.)
-  // (`restartEncounter` from outside a tick is a mission's own staging or a show's: the TypeScript's lines run on the puppet, which is first made the game
-  //  as the first step opened, the one state of the Rust game the puppet's objects were all made for. See `toStart` for why it is not the player's restart.)
+  // (`restartEncounter` from outside a tick, while a Rust game stands, is the restart below and the TypeScript's lines do not run: they make the player's
+  //  man anew and give the squad its 'fall in' through the menu's rows, and under the word those rows ask the Rust game (tools/blitz/ask.ts), which has
+  //  never seen that man. Measured: the ask panics in the Rust row's `issue` on a man's ID past its table, and the game is lost with it.)
   for (const name of ['restartEncounter', 'loadState']) {
     const was = G[name]; if (typeof was !== 'function') continue;
-    G[name] = function (this: unknown, ...a: unknown[]) { if (name === 'restartEncounter' && !held.inStep && held.h && !held.stale && held.startKept) stoodAgain(held, held.startKept); const r = was.apply(this, a); if (!held.inStep) held.stale = name; return r; };
+    G[name] = function (this: unknown, ...a: unknown[]) {
+      if (name === 'restartEncounter' && !held.inStep && held.h && !held.stale && held.startKept) { toStart(held); return; }
+      const r = was.apply(this, a); if (!held.inStep) held.stale = name; return r; };
   }
   // THE PLAYER'S RESTART (a card's button, the panel's: `Game.restart`): the game kept as the first step opened stands again
   { const was = G.restart; G.restart = function (this: unknown, said?: string) { if (held.inStep || !held.h || held.stale || !held.startKept) return was.call(this, said); toStart(held, said); }; }
@@ -242,7 +245,9 @@ function after(S: Held): void {
   // it is passed over and orders.ts rowsFor throws (`d.standsIn?.when is not a function`: seen on the row `loud`). A `when` that is missing is made
   // null first, which is not what the memo holds. Belongs in ask.ts (`typeof d.standsIn.when !== 'function' ||`).
   const PF = RUST_GAME.prof; let tp = PF.on ? performance.now() : 0;
-  for (const d of (G.orders?.defs ?? []) as Record<string, any>[]) if (d.standsIn && d.standsIn.when === undefined) d.standsIn.when = null;
+  // (every row of the book, not the menu's own list alone: a wall's menu lists a copy of the floor's fifth row, wallcharge.ts `undigit`, which the Rust
+  //  game keeps as a row of its own and an apply makes with its own `standsIn`. Seen: compound, the cursor on a wall after a load.)
+  for (const d of (bookOf(g)?.listOf('OrdersOrderDefId') ?? []) as Record<string, any>[]) if (d && d.standsIn && Object.prototype.hasOwnProperty.call(d, 'standsIn') && d.standsIn.when === undefined) d.standsIn.when = null;
   S.asks?.after();
   if (PF.on) { const n = performance.now(); PF.asks += n - tp; tp = n; }
   // STAND-IN: A DOOR'S KEPT CENTRE is a memo in two halves: the angle it was made for and its x and z are columns of the block (sim/doorshome.ts

@@ -45,11 +45,41 @@ what the bridge does not carry (BRIDGE.md) starts blank, and the page's own reco
 Left: saves do not outlive the page (the store is the browser's, a few megabytes, and a kept game is about eight); the panel's 'save (force)' and
 `__save.snapshot` still walk the puppet; the file has no picture.
 
-## What stands in the way of the frame's cost
+## What a step costs, and what stands in the way
 
-See the log of the measurement in the commit that added this file; in short, a step of the Rust page is the tick, the filtered export, the apply and the
-dress step, where the TypeScript page has the tick with its dressing inside. The export and the apply are the surplus, and they exist only while there is
-a puppet.
+Measured on the built page, software adapter, undrawn frames, 1,800 frames with no input after 600 to settle. The box was never quiet (the load average
+is beside each row), so read the proportions, not the milliseconds.
+
+| room clear, four men (load 4.4 to 4.8) | TypeScript page | Rust page |
+|---|---|---|
+| a frame | 3.52 ms | 6.64 ms |
+| `Game.update` | 2.80 ms | 5.39 ms |
+| the tick itself | (all of the above) | 1.57 ms |
+| the filtered export (211 KB a step) | | 0.81 ms |
+| the apply onto the puppet | | 2.27 ms (the main walk 1.03, the tables 1.08) |
+| the host's half in, the knobs | | 0.27 ms |
+| the dress step | (inside the tick) | 0.27 ms |
+| lights, probe, doors, saves | | 0.09 ms |
+| the first frame of play | 349 to 476 ms | 1,383 ms; 489 ms after the warm-up behind the start card |
+
+| depot, four men (load 10.7 to 11.2) | TypeScript page | Rust page |
+|---|---|---|
+| a frame | 6.45 ms | 12.62 ms |
+| `Game.update` | 4.84 ms | 10.05 ms |
+| the tick itself | | 2.86 ms |
+| the filtered export (153 KB a step) | | 1.17 ms |
+| the apply | | 4.24 ms (main 1.56, tables 2.37) |
+| the host's half in, the knobs | | 0.72 ms |
+| the dress step | | 0.59 ms |
+
+The Rust tick alone is quicker than the TypeScript's. The surplus is the puppet: the export and the apply are three fifths of a step, and they exist only
+while there is a puppet. What they spend it on (reads that take the importer's slow path, a step, room clear): a man's bones 1,110; the box world's
+statics 874; the fog frame's lights 769; the frame's boxes, the fog's things and the world's dynamics 430 each; a thing's ghost 281; a box's optional
+fields (`marks`, `cut`, `cut_glass`, `was`, `shape`) about 179 each. All of it is in generated files. Asked of the generator: a memo per field inside
+the big parts (a list that did not change is sent whole when one neighbour did), and compiled readers for bones and for a box's optional fields.
+
+Memory does not grow over 1,800 steps (153 MB; the module reserves once at the start). A save is 4 to 24 ms where the TypeScript's snapshot is 79 to
+103 ms; a load is 280 to 550 ms (one whole apply) where the TypeScript's is 27 to 51 ms.
 
 ## Checking it
 
