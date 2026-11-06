@@ -94,7 +94,7 @@ side BEFORE the take (`face_stop_program`), so that the controller finds no prog
 own (director.ts:525 threw on `R.drills`). tut-solo's four authored checkpoints are taken on the reference's ticks with its labels.
 `HostApiRestartPicture` and `SessionRecorderCut` go to the host's picture and journal and write no game state.
 The harness's stand-ins lack some receivers (`audio.rain`, `smoke.obstaclesChanged`), which the generated dispatcher calls unguarded: such an arm is
-counted and not called again. `WallWearRound` throws on every mission that makes one (`box.h[0]` of undefined: the event's `box_` does not come back as
+counted and not called again. `WallWearRound` threw (`box.h` undefined: the event's box came back as a row the every-tick apply had made on the puppet and not filled); with the changed-only export the row is whole, the same play (night-breach, die 20942, tick 1293) dispatches it, and no arm threw in 84 + 42 missions (`RH_OUT_SAY=1` says the first throw of any arm with its event).
 an object).
 
 ## The harness's word
@@ -126,10 +126,11 @@ one line that counts both sides and names them (`=== the game, by the table: …
 
 - **The second game of a process.** The simulation keeps much of its state in weak tables beside its objects, one table a process (src/math/side.ts), and
   the bridge listed such a table by every key still alive: a game stood after another was exported with the other game's men, routes and players as
-  rows of its own, and played another game (seats-run's second game rolled its die one time fewer at tick 787). While the bridge walks a game a table
-  now lists that game's keys only (the stand-in `ownKeys`, below). `tools/blitz/thrice.ts` stands one two-seat fight three times in a process and holds
+  rows of its own, and played another game (seats-run's second game rolled its die one time fewer at tick 787). The other game need not have stepped
+  (the game server stands one only to write its recipe). While the bridge walks a game a table now lists that game's keys only (the stand-in
+  `ownKeys`, below). `tools/blitz/thrice.ts` stands one two-seat fight three times in a process and holds
   the digest of every second, and with `--ticks` every tick, to the first game's: three games, one digest, each equal to the `ts` game on all 2,400
-  ticks. The modules' own logs and tallies (`destr_log`, `holdfire_log`, `scene_collision.sensed` …) are still a process's, on both sides: they grow from
+  ticks; `--weave` stands the later games together and steps them in turn. The modules' own logs and tallies (`destr_log`, `holdfire_log`, `scene_collision.sensed` …) are still a process's, on both sides: they grow from
   game to game and no rule reads them.
 
 - **The slots.** rust/sim has four. A tool that stands a fifth game in one process (the probe runner stands hundreds) gets the slot of the game stepped
@@ -162,9 +163,13 @@ one line that counts both sides and names them (`=== the game, by the table: …
 
 ## Stand-ins (each marked `STAND-IN:` in the code with its reason and where it belongs)
 
-- **A weak table lists the keys of the game being walked** (rust-host.ts `ownKeys`): a key that is in another game's book and not in this one's is left
-  out of an export, an apply deletes and orders only this game's keys, and a start's export that left out a key it then reached another way is made again
-  from an empty book. Belongs in the generated export.ts (`keysOf`, the once-keyed and game-keyed reads) and import.ts (`orderSide`, every `liveKeys()`).
+- **A weak table lists the keys of the game being walked** (rust-host.ts `ownKeys`, `reach`). A start finds the game's own keys by reach: the game is
+  exported on a book of its own with every weak table listing only the keys the walk has numbered so far (and the game and its views), again until an
+  export numbers no key it had left out; the game's book is put back as it was and the start's export lists exactly those keys (three exports a start
+  where it was one: 46 keys of a room clear are met late, through other rows). After a start: those keys, and a key first seen since unless a start
+  left it out or it is in another hosted game's book. An apply deletes and orders only this game's keys. NOT COVERED: a game with no host that makes
+  new things while a hosted game plays beside it. Belongs in the generated export.ts (`keysOf`, the once-keyed and game-keyed reads) and import.ts
+  (`orderSide`, every `liveKeys()`).
 - **A box whose markings went is `marks: null`** after an apply; scene/boxes.ts:841 tests `!== undefined`. Made undefined before the puppet's own listing
   (rust-host.ts). Belongs in import.ts.
 - **The whole applies owed** (the list above): each stands for fields the filtered list lacks. Belongs on the generated list.
