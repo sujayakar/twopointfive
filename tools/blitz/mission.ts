@@ -8,6 +8,8 @@
 //   tick 1       c1.bin, s0.bin (the state and the block both sides start from)
 //   --keep / --every   a<k>.bin, s<k>.bin: the whole state and the block as tick k returns, for diff.ts
 //   --open       c<k>.bin: the whole state as tick k opens (`diff.ts a<k-1>.bin c<k>.bin` then shows what the HOST wrote between two ticks)
+//   charges.txt      a line whenever the number of SET wall charges changed in a tick: `<k> <how many are set>` (where to keep every tick: a set
+//                    charge's boxes are on the frame's list and a blown one's flash is warmed, blastLook.ts)
 //   gives.txt        the test driver's orders, given between ticks through the menu's own call: a line for the tick that opens next
 //   hostwrites.txt   what else the host writes into the game: `<k> chron_save "<label>"` (the autosave's chronicle row, the tick's last thing), `<k> chron_load`
 //                    (a checkpoint put back before tick k opened: the state as it opens in L<k>.bin, the block in Ls<k>.bin), `<k> room_at x y z`
@@ -54,8 +56,8 @@ function hashes(w: Uint32Array): number[] {
   LAY ??= simLayout().parts.map(p => ({ off: p.off >>> 2, len: p.len >>> 2 }));
   return LAY.map(({ off, len }) => { let n = Math.min(off + len, w.length); while (n > off && w[n - 1] === 0) n--; let h = 0x811c9dc5; for (let i = off; i < n; i++) h = Math.imul(h ^ w[i], 0x01000193); return h >>> 0; });
 }
-let k = 0, n = 0, uploads = 0, loadsSeen = 0; const gives: string[] = [];
-for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt', ...(LESSON ? ['meter.txt'] : [])]) writeFileSync(`${outDir}/${f}`, '');
+let k = 0, n = 0, uploads = 0, loadsSeen = 0, chargesSet = 0; const gives: string[] = [];
+for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt', 'charges.txt', ...(LESSON ? ['meter.txt'] : [])]) writeFileSync(`${outDir}/${f}`, '');
 const { SCHEMA } = await import('./export.ts'); const wordAt = (ty: string, w: unknown) => w === undefined ? -1 : SCHEMA.types[ty].words.indexOf(w);
 writeFileSync(`${outDir}/post.txt`, `parts ${SIM_PARTS.join(' ')}\n`);
 // A LINE A TICK of host.txt and post.txt, by the tick's number. The host can step the game TWICE in one frame (a checkpoint put back: the save controller
@@ -98,6 +100,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
       // THE HOST'S CHECKPOINT: the autosave controller (savestate.ts, the host's) writes a chronicle row and a count as the tick's last thing
       if (g.chronicle.counts.saves !== saves0) { const E = g.chronicle.events, e = E[E.length - 1]; appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_save ${JSON.stringify(e?.kind === 'checkpoint' ? (e.label ?? e.data?.label ?? '') : 'NOT-LAST')}\n`); }
       row('post.txt', postL, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}`);
+      { const set = (g.seats?.length ? g.seats : [{ view: g }]).reduce((x: number, st: any) => x + (st.view?.wallCharge?.set?.length ?? 0), 0); if (set !== chargesSet) { chargesSet = set; appendFileSync(`${outDir}/charges.txt`, `${k} ${set}\n`); } }
       if (keep(k)) { writeFileSync(`${outDir}/a${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s${k}.bin`, block(g)); } }
   };
   try { (was as any).apply(this, a); } catch (e) { err = e; } finally { delete g.stepSeats; }
