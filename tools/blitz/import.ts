@@ -12,7 +12,7 @@
 // AN ECHO (schema `echo`, hand2.cjs H.bridge.echo): a field Rust owns that the TypeScript cannot hold (a place in a level script, a memo a module keeps where the walk cannot write it, the copy of the box world in the module that
 // holds it). A whole apply keeps a copy of its bytes beside the object and writes nothing; the puppet's export writes those bytes back (export.ts). So a re-export after an apply is Rust's bytes everywhere, and such a field needs no class of its own in a host's compare.
 import GAME_REF_LIST from './game-ref.json';
-import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS } from './export';
+import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS , forGame } from './export';
 import { rawKey, PUT_BACKS } from '../../src/math/side';
 
 export type Hooks = { made?: Record<string, (row: any, g: any) => void>; gone?: Record<string, (row: any, g: any) => void>; classes?: Record<string, { prototype: object }>; values?: Record<string, any> };
@@ -123,7 +123,8 @@ function keepOf(only: Set<string>): Keep { let K = keepMemo.get(only); if (K) re
   K = { field: (q, ty) => { let v = memoF.get(q); if (v === undefined) memoF.set(q, v = only.has(q) || deep(ty)); return v; }, desc }; keepMemo.set(only, K); return K; }
 
 // ---- the walk
-export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknown>, opts: ApplyOpts = {}): Report {
+export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknown>, opts: ApplyOpts = {}): Report { return forGame(g, () => applyGameNow(g, blob, knobs, opts)); }
+function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, opts: ApplyOpts = {}): Report {
   const t0 = performance.now(); const hooks = opts.hooks ?? {}; const BK = bookOf(g); if (!BK) throw new Error('import: this game has never been exported, so no row has an ID: export it once first');
   seedBook(g, knobs); for (const [k, v] of Object.entries(hooks.classes ?? {})) if (v?.prototype) CLASSES.set(k, v.prototype);
   const R: Report & { values?: any } = { phases: {}, counts: { read: 0, assign: 0, seen: 0 }, values: hooks.values, made: {}, noWay: new Map(), noSetter: new Map(), noWindow: new Set(), deadSerials: 0, bytes: blob.length, ms: 0 };
@@ -253,6 +254,7 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
   const t5 = performance.now(); R.phases.tables = t5 - t4; for (const f of c.fix) f();
   // A MAN MADE BY THE RUST GAME: his Guard or Player reads the same store row as his Character (game.ts sameMan), which the tables above have just given it
   for (const { t } of heads) if (t.ts === 'Guard' || t.ts === 'Player') for (const o of (c as any)[`made:${t.id}`] ?? []) if (o.char) { o.S = o.char.S; o.r = o.char.r; }
+  for (const { t } of heads) if (t.ts === 'PoseSet') for (const o of (c as any)[`made:${t.id}`] ?? []) if (o.home === undefined) o.home = null;   // (skeleton.ts holds null for a set with no block; a made row has run no field's initial)
   for (const f of AFTER_APPLY) f(g);
   // THE ONE CLOSURE A MADE RECORD HOLDS: the second cast's `mine` (qrf.ts squadCast's call). Rust answers it by the team's rows and carries no closure
   { const Q = g.qrf, O = Q?.cast?.orders?.cast; if (O && !O.mine) { O.mine = (gd: any) => Q.men.includes(gd); if (O.ring?.has('*')) O.ring.has = () => true; } }   // (orders.ts EVERY_KEY: a set that holds every key, carried as its one word)
