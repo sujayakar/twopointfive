@@ -9,7 +9,7 @@ reason. Never mend the TypeScript, the bridge, or the loop to make a difference 
 ## The one command
 
 ```sh
-tools/blitz/run.sh <mission>:<seed> [--ticks N] [--keep "1,2,100-110"] [--every N]
+tools/blitz/run.sh <mission>:<seed> [--ticks N] [--keep "1,2,100-110"] [--every N] [--wall] [--dress | --dress-rows "a,b"] [--case pie|orbit|boot]
 tools/blitz/run.sh room-clear-four:1 --every 100
 ```
 
@@ -93,9 +93,11 @@ rust/game_run/target/debug/where_parts <out>/sK.bin <out>/nsK.bin     # which wo
 bun run tools/blitz/diff.ts <out>/aK.bin <out>/nK.bin --show 40       # which paths of the game's own state (run.sh prints the first few; use --blobs to keep nK.bin)
 ```
 
-The part `poses` is watched apart: if it parts while every other part is the same the runner says so once and goes on comparing the rest (`BLITZ_POSES=1`
-stops there instead). It no longer parts by design: a ragdoll's pose and a function's scratch pose are poses of their own outside the pool on both sides,
-and the pool is tended as a tick opens (`posehome::pose_home_tend`); a man made inside a tick is lent the pool's end for his update (`posehome::stage_open`). A `poses` parting is a difference to chase like any other.
+The part `poses` is in the alarm like every other part: the pool is tended as a tick opens (`posehome::pose_home_tend`), a ragdoll's pose and a function's
+scratch pose are poses of their own outside the pool on both sides, and a man made inside a tick is lent the pool's end for his update
+(`posehome::stage_open`). A `poses` parting is a difference to chase like any other; it usually means an animator was fed something else a tick earlier
+(the kept tick before it shows `anim.*` paths). Which pose sets are at home and what each animator holds for its body's
+place come over the bridge (`PoseSet.home`, `Anim.pos_in`).
 
 **The die's count differs**: the two games have drawn a different number of times. Something upstream decided differently; the kept tick before it usually
 shows a path.
@@ -106,9 +108,8 @@ matched; `--dynboxes` says which kinds of frame box one side has more of.
 
 **Thousands of paths at once, most of them `scene_boxes`**: almost always ONE thing and its echo. The frame's boxes and several other tables are compared by
 reach (the order one walk first meets a row), so a single box more on one side shifts every number after it. `diff.ts … --dynboxes` names the kinds of
-frame box one side has more of; mend that and the rest goes. Two picture-only lanes the Rust game does not run put boxes in the frame's list (a holed
-wall's paint, keyed `skin`; a broken edge's rubble, keyed `look`): the diff leaves those out of every list before comparing and says how many each side
-had (`boxes left out as the picture's 36 / 0`). `--leave-out ""` compares them too.
+frame box one side has more of; mend that and the rest goes. A holed wall's paint (keyed `skin`) and a broken edge's look (keyed `look`) are made
+by the Rust tick too and compared box by box; `diff.ts --leave-out skin,look` leaves a family out of every list before comparing, to look past it.
 
 **Is it the host?** Before you read Rust, check whether the TypeScript's own host wrote the difference between two ticks: run with `--open "K+1" --keep "K"` and
 
@@ -148,7 +149,7 @@ tick K was.
 ## Handing a mend back
 
 A commit on your own branch that touches only `rust/game/src` and `tools/blitz/known.txt`, with a plain message that says which mission and tick it mends and
-how far the mission then runs in step ("over N ticks, every part but `poses` hashed after each"). Say what you did not check. If you needed a new stand-in in
+how far the mission then runs in step ("over N ticks, every part hashed after each"). Say what you did not check. If you needed a new stand-in in
 the runner or a change to the loop, say so separately: that is not part of a mend.
 
 ## What the runner stands in for
@@ -159,7 +160,8 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | stand-in | name | why |
 |---|---|---|
 | a record a seat, every camera and Input row that is no seat's (`io::take_host_half`) | (always) | the host samples input and moves its camera between ticks |
-| every imported pose set told it is at home, every imported animator told it holds its body's position array | (always) | bridge: `PoseSet.home` and `anim.posIn` (a reference to `Character.pos`) are not carried |
+| the commander's own wall charge (`gives.txt !wall_carried`, `!wall_raised`, with `--wall`) | (always) | the scripted commander gives itself a charge where the kit issued none, between ticks and before the order on the wall |
+| a scripted case's write (`gives.txt !path_new`, `!path_goal_same`, `!f`, with `--case`) | (always) | a write the seeds never make, made on both sides (below) |
 | the test driver's orders (`gives.txt`) | (always) | the scripted player calls `orders.give` between ticks |
 | the driver's `roomAt` that floods a room (`hostwrites.txt room_at`) | (always) | a question of the driver's that writes the game |
 | the commander's blow of a set wall charge (`hostwrites.txt wall_blow`, with `--wall`) | (always) | the scripted commander calls the module's `blow` between ticks |
@@ -175,10 +177,31 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 The Rust game writes a man's row of the block itself (`sim_men_store`), and the bridge carries the level's name, the dress table and the floats of a pose
 outside the pool: the runner hands none of those over.
 
+## The dressing rows up (`--dress`)
+
+Without a word both sides stand with every row of `DRESS` (src/game/dress.ts) down: the stand of a host that draws nothing. `--dress` raises all 18 rows
+on both sides from the first tick, as the page has them (`--dress-rows "moths,wind"` raises only those); the bridge carries the table, so the Rust tick
+reads the same rows. Every row CAN be raised on this stand. What its step then does with no GPU is less than in the page: there is no particle pool
+(`engine.particles` is made only for a recording that had one, tools/qa/headless.ts), no smoke solver and no renderer, so a step's particles, its
+pushes on the solver and its draws go nowhere and only what it writes into the game's own state is compared.
+
+The rule the split follows: a dressing body that writes something the tick later reads runs IN THE RUST TICK under its row (the moths' and a broken
+fixture's keyed boxes, which the fog of war remembers; a man's drawn scale on his own boxes; the wind the moths read; the cues' and the net's books,
+which the rules' own entries write; the spent cases' list). One that writes only what the picture reads stays in the TypeScript dress step
+(src/host/rustdress.ts) and the Rust game does not write it: those are the lines of `known-dress.txt`, read with `known.txt` when the word is given.
+A known line may carry a third column that narrows it by the two values (`bits:128`, `ts:<regex>`, `rs:<regex>`: diff.ts).
+
+## Scripted cases (`--case`) and the counters (`TAPS`)
+
+The runner's last lines include `TAPS name count · …`: counters of the Rust process (`rust/game/src/game/b_tap.rs`; no rule reads them, nothing carries
+them) at places that were mended by reading, to say whether a run reaches them. `--case pie | orbit | boot` makes one write between two ticks that no
+seed makes, on both sides (mission.ts `caseStep`; a line of gives.txt and of case.txt); `BLITZ_CASE_RAW=1` in front of a `--no-ts` run makes the Rust
+side's write as it was before the mend.
+
 ## Files
 
 - `run.sh` the one command · `mission.ts` the TypeScript side (`seats.ts` for a game of two seats) · `host.ts` the bridge's writers for one part of a game (the host's half)
-- `diff.ts` two whole states by path, in the file's memory, tables numbered by reach (`canon.txt` names the tables) · `known.txt` the known differences
+- `diff.ts` two whole states by path, in the file's memory, tables numbered by reach (`canon.txt` names the tables) · `known.txt` the known differences (`known-dress.txt` with the dressing rows up)
 - `timeline.ts` a mission's events by tick · `stubcalls.py` calls that land on a stub
 - the bridge, written by the skeleton's program (`BRIDGE.md`): `export.ts`, `expose.ts`, `paths.ts`, `schema.json`, `not-carried.json`, `bridge-check.ts`,
   `dump-tables.ts`
@@ -191,7 +214,8 @@ outside the pool: the runner hands none of those over.
 - The scripted player plays the room clears, the rescues and the raids (`tools/qa/playthrough.ts`); it has no quiet mission.
 - The runner gives an order on a wall (`--wall`: the scripted commander takes a held room by a wall charge, and its blow between ticks is replayed) but not one
   on a thing, or with options: it says `NOTE … cannot give` and the sides will part there.
-- Not translated, and so not compared: what stands of a holed wall's paint (`wallskin`) and a broken edge's look (`edge_look`). See `--leave-out` above.
+- A holed wall's paint and a broken edge's look are compared by their BOXES, not by their books: the bridge does not carry `WallBreak.skins` or the
+  look's module state, so the Rust game makes its paint's books on first use from the boxes as authored (`wallskin::ensure`, a stand-in).
 - A pose of its own outside the pool (a ragdoll's) is compared by its floats and by what it drives; its row number is a known difference.
 - A tutorial (`tut-<name>:<seed>`) is played by `tools/qa/lesson-run.ts` WITHOUT its model of the sky's light on every man's meter (a hook over the game's
   light asks, which the Rust game has no word for): it is the tutorial as the headless estimate lights it.

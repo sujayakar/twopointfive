@@ -616,7 +616,7 @@ fn take_rejoin(g: &mut Game, gd: GuardId, was_following: bool) -> bool {
 /// parked where he stands, square to the man, with these words on the row (the watched branches of takeTick)
 fn park_on(g: &mut Game, a: OrdersAssignmentId, here: V3, p: V3, c: V3) {
     let r = &mut asg!(g, a);
-    r.post = Some(here);
+    r.post = Some(here); if r.had == Some(here) { r.had = None; }   // (a NEW ARRAY in `post`'s place: `A.had === A.post`, orders.ts:1472, is an identity: a mark he had that holds THESE numbers is not this one, and `had` is asked by value, so that one goes; any other stays, as the TypeScript's stale one stays. STAND-IN by value)
     r.goal = [here[0], 0.0, here[2]]; r.new_leg = true;   // (a new array in the TypeScript: squad.ts order takes a new goal OBJECT for a new leg, even at the same spot: Assignment.new_leg)
     r.via.clear();
     r.face = Some(v3::yaw_to(p, c));
@@ -775,7 +775,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
         let go_pace = g.k.pair.go_pace;
         let c = g.ch[fc].pos;
         let r = &mut asg!(g, a);
-        r.post = Some(to);
+        r.post = Some(to); if r.had == Some(to) { r.had = None; }
         r.goal = [to[0], 0.0, to[2]]; r.new_leg = true;   // (a new array in the TypeScript: squad.ts order takes a new goal OBJECT for a new leg, even at the same spot: Assignment.new_leg)
         r.via.clear();
         r.arrived = false;
@@ -827,7 +827,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
         let force = job!(g, gd).force;
         let face = if t - wait_t < g.k.pair.steady_face_secs { None } else { Some(v3::yaw_to(p, g.ch[fc].pos)) };
         let r = &mut asg!(g, a);
-        r.post = Some(here);
+        r.post = Some(here); if r.had == Some(here) { r.had = None; }   // (a NEW ARRAY in `post`'s place: `A.had === A.post`, orders.ts:1472, is an identity: a mark he had that holds THESE numbers is not this one, and `had` is asked by value, so that one goes; any other stays, as the TypeScript's stale one stays. STAND-IN by value)
         r.goal = [here[0], 0.0, here[2]]; r.new_leg = true;   // (a new array in the TypeScript: squad.ts order takes a new goal OBJECT for a new leg, even at the same spot: Assignment.new_leg)
         r.via.clear();
         r.face = face;
@@ -887,7 +887,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     r.pace = Some(pace);
     r.crouch = Some(true);
     r.face = None;
-    r.post = Some(spot);
+    r.post = Some(spot); if r.had == Some(spot) { r.had = None; }
     r.arrived = false;
     r.via.clear();
     let n = way.path.len();

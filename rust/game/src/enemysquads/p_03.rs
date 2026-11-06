@@ -229,8 +229,8 @@ pub fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: Roo
         for e in def!(g, xd).ev.iter_mut() {
             *e = 0.0;
         }
-        def!(g, xd).pt[0] = at[0];
-        def!(g, xd).pt[2] = at[2];
+        // (`X.pt[0] = at[0]; X.pt[2] = at[2]` in place, enemysquads.ts:778: a fix or a cover that IS the point moves with it)
+        { let was = def!(g, xd).pt; crate::roomfight::def_move_pt(g, xd, [at[0], was[1], at[2]]); }
         crate::pressure::run(g, xd, from, None, Some(0.3));
         names.push(x);
     }
@@ -1367,16 +1367,16 @@ pub fn settle(g: &mut crate::game::Game, l: &crate::enemysquads::Looker, d: Room
     row.ev = c.ev.clone();
     row.watch = c.watch;
     row.want = c.want;
-    row.pt[0] = c.pt[0];
-    row.pt[1] = c.pt[1];
-    row.pt[2] = c.pt[2];
     row.glance_until = -1.0;
     row.fix_keep = -1.0;
     row.rally_at = f64::NAN;
     row.last_state = state_now;
     row.last_seen = seen_t;
-    let pt = row.pt;
-    crate::belief::cover(g, gd, pt);
+    // (`D.pt[0..2] = c.pt[0..2]` in place, enemysquads.ts:1054: a fix that IS the point moves with it. Then `cover(gd, D.pt)`, whose other branch,
+    //  the rule off, makes his fix that object: the Def has the stamp for it, belief's cover has no Def. As powerout's own put-back does.)
+    let pt = c.pt;
+    crate::roomfight::def_move_pt(g, d, pt);
+    if g.k.belief.on { crate::belief::cover(g, gd, pt); } else { crate::roomfight::def_fix_to_pt(g, d); }
 }
 /// what he finds: the mate he was sent for, or any man lying at another squad's posts   (looks' `lying`)
 fn lying(g: &mut Game, q: EnemysquadsSquadId, gd: GuardId, x: Option<EnemysquadsSquadId>, who: GuardId, around: bool) -> Option<GuardId> {
