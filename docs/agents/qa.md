@@ -299,6 +299,47 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the door tools' owner's to say which line is promised).
   `orderui-door` (11-06): read, NOT mended, its row put right. One blue man's fall-in mark is dealt 0.31 m from Sam on the page's stand; he stands
   0.68 m short of it, called arrived, for as long as he is watched (not a settle). Could be real: the squad's owner's.
+  THE SETTLED ROWS, FOLDED (11-06; `tools/qa/fold.ts`, the list `tools/qa/switches.json`, its maker `tools/qa/switch-list.ts`, the check
+  `tools/qa/fold-check.ts` = `probes.ts fold`, in all-quick). WHY: the Rust game has every settled switch row as a constant (the page's branch
+  translated, the other dropped), and of 255 probes that step a game in the gate's families 186 did so with a settled row pinned off its page
+  value (the Rust goal's count), so they could not run on it as written. THE FOLD holds each settled row of the knob tables at its value on the
+  page: a read answers that value, a write of any other is REFUSED and counted with who wrote it (`<file>:<line>`: `tools/…` a check, `src/…`
+  the game's or the page's own code, with the check that called it after it). A row that is NOT settled is still a switch: a pin or a hold
+  over one takes. It is laid by `headless.ts` as it loads, on the page's stand only (the old stand IS the other side: a tool started there
+  says so on stderr and its whole run is unfolded), when `QA_FOLD=1` is in front or the game asked for is the Rust one (`TPS_GAME` = rust,
+  audit or table: the Rust host's word, which nothing else in this tree reads yet). The words ride the environment: a child given one by name
+  is folded only if handed the word. NOT THE DEFAULT YET: with no word a tool stands the game as before. WHAT A FOLDED RUN SAYS: one line a probe on stdout, two spaces then
+  `{"fold":{"probe":…,"red":…,"refused":[{"row","value","writer","n"}],"lost":[…]}}`, from ONE speaker down a tree of processes (the runner's
+  `run()`, or the fence `holds.ts asProbe` in a check file run alone); a child hands its count to that speaker, a process nobody reads for says
+  its own on STDERR as it ends; what the harness refused as it loaded (a word given by hand) has a line of its own, `"outside"`. A folded
+  run's reds are NOT read against the list of expected reds (the runner says why: it is not the stand as it opens). `gate.sh` carries
+  the notice and how many lines had a refusal. `QA_VERDICTS=1` on a run without the fold prints `{"plain":{"probe":…,"red":…}}` a probe, to
+  lay the two side by side. WHAT A REFUSED WRITE MEANS: the check's staging may not have formed. A check that pinned a neighbour off to get a
+  fight, and counts what happened in that fight, can pass with nothing to count: green under the fold with a refused write is not a re-aimed
+  check until its lines are read against the same run without the fold. WHAT IT CANNOT HOLD: a branch of a table replaced whole (the rows under
+  it are plain until the next look, which lays them again and names them `lost`; the fence looks before and after it puts the tables back); a
+  row a module copied into a local before the fold was laid; a child killed before it ends hands over nothing. UNDER IT `holds` IS RED: every
+  hold of `holds.ts` over a settled row is refused, which is the point; those holds go as their checks are re-aimed or deleted.
+  THE LIST: 992 rows, each `row`, `page` (its value on the page) and `kind`: 866 settled, 93 open decision (stays a switch), 33 player's or
+  run-time (stays a variable). It is WRITTEN from the port's switch list (project files, `rebuild/rust-sim/port/blitz/port-list.json`: the
+  source; a row changes kind there): `bun run tools/qa/switch-list.ts make <that list>`, and `… same <that list>` says whether the two agree.
+  A NEW RULE'S SWITCH joins by `bun run tools/qa/switch-list.ts new` (an open decision at its page value; needs no list from outside; `make`
+  keeps such a row until the port's list has it): without it `fold` line (2) is red, since every true/false row of the tables must be on the
+  list. (A switch kept as 0 / 1 is a number to that walk: only those the two stands differ in are listed, MOVES.on and not MOVES.recoil.)
+  WHAT MAKING IT FOUND: 21 rows the list called settled that the page's own code writes, so a game with them as constants was wrong: ten the
+  player's DIFFICULTY lays (`difficulty.ts write()` assigns the whole PRESSURE and DIGIN tables and the fog's two rows: PRESSURE.warned,
+  second, byWay, rescueCrew, wayOut, drilled, sweep; DIGIN.keeper; FOG.cone; FOG.own, also a quiet mission's fog rung), eight the camera's
+  tune in Options > Game (`autocam.ts` AUTO_KEYS), three inside the slots table (data, `NOT_KNOBS`). The retire tool had not seen them: a
+  whole-table assign is no write site to it. A second review then walked all 38 missions on Hard with every lever under the fold: nothing
+  refused. NOT COVERED: a write through a road nothing here walks (a menu's own row through an alias); the fold names it when a check does.
+  THE CHECK (`fold-check.ts`, the same on both stands, every game in a child on the page's stand): (1) the settled rows are in the tables,
+  plain, at `page` on a stood game; (2) every yes/no row of the tables (959) is on the list; (3) a refused write reads the page value and is
+  counted once by row, value and writer; (4) the fence leaves the fold standing, says the probe's line, names a branch replaced inside it;
+  (5) a branch replaced whole is found and laid again; (6) a game stood and stepped, Hard and back, each camera mode: refused nothing; (7)
+  the runner's line carries a child's write, a by-hand word is said before the first probe; (8) who speaks. `FOLD_BREAK=1` (the fold counts
+  and lets through; (6) with a row Hard writes called settled): (3), (5) and (6) FAIL. NOT HELD by it: `switch-list.ts make` and `same`,
+  gate.sh's two lines, the `plain` line. Four reviews at the highest effort, 57 points, worked in or said here; the last rework run again and
+  not reviewed. Nothing here looks at a picture.
   tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 

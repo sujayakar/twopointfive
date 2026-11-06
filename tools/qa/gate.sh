@@ -26,6 +26,8 @@ for fam in "$@"; do
     [ $rc -eq 0 ] && rc=2; continue
   fi
   printf '%s\n' "$out" | grep -E "^  the reds (against the list|are not read against the list)|^    (EXPECTED RED|NEW RED|GREEN AGAIN) |^  BREAK WORDS? " | cut -c1-240 | sed "s/^/  $fam ·/"   # (probes.ts's table of this run's reds against tools/qa/expected-red.ts: old and explained / NEW / green again — for the reader; red stays red)
+  printf '%s\n' "$out" | grep -E "^THE SETTLED ROWS ARE " | sort -u | sed "s/^/  $fam · /"   # (tools/qa/fold.ts: the run was folded, or asked to be on the old stand; whole, it names rows)
+  nfold=$(printf '%s\n' "$out" | grep -cE '^  \{"fold":.*"(refused":\[\{|lost":\[)'); [ "$nfold" -gt 0 ] && echo "  $fam · $nfold fold line(s) with a refused write or a lost hold: read them in the run's own output (probes.ts $fam)"
   if [ $st -eq 124 ] || [ $st -eq 142 ]; then echo "  $fam · *** ERROR: the family hit the ${cap} s time cap (exit $st) ***"; fi
   [ $st -ne 0 ] && nf=$((nf+1))
   if [ -z "$ver" ] && [ "$np" -eq 0 ]; then nf=$((nf+1)); echo "  $fam · *** ERROR: no verdict line and no counted check — nothing here says PASS ***"; fi
