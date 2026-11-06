@@ -245,6 +245,22 @@ pub fn view(g: &mut game::game::Game) {
     if let Some(cam) = cam { game::rails::rails_host_view(g, cam); }
 }
 
+/// HOST STEP AS A TICK OPENS, after the host's half is taken (game.ts hostAfter: `me.view.viewProj = cam.viewProj`): between two ticks the view's matrix
+/// IS the host camera's live matrix (the TypeScript holds the camera's own array, which the host's `cam.update` goes on writing after the tick), so whoever
+/// asks on-screen-or-not from outside a tick (an order the driver gives: the man's line is a row of the log only when he is off the screen) reads the
+/// camera as the host left it. The Rust view holds a copy, taken here from the host's camera row once the host's half has brought it. For a host of ONE
+/// seat that goes through `Game.update`; a game of several seats stepped by `stepSeats` alone (seats-run.ts) never hands the host's matrix back.
+pub fn view_live(g: &mut game::game::Game) {
+    if g.seats.len() != 1 { return; }
+    let seat_cams: Vec<game::ids::CameraId> = g.seats.iter().map(|s| g.tab.cmd_seat[*s].cam).collect();
+    let cam = g.director.cam.or_else(|| g.tab.camera.ids().find(|c| !seat_cams.contains(c)));
+    if let Some(cam) = cam {
+        let vp = g.tab.camera[cam].view_proj;
+        let me = g.seats[0];
+        game::seats::with_seat(g, me, &mut |g| g.view_proj = Some(game::game::GameViewProj::Float32Array(vp.to_vec())));
+    }
+}
+
 /// HOST STEP AFTER THE TICK (the headless host's `cam.update(dt, view.followPos(), …)`, for each seat a host shows): the host's camera asks the game where
 /// to look. On a tutorial's sky seat that ask is not idle: `rails.look()` eases the view's centre toward the men still up by the time since it was last
 /// asked and stamps it, so a game nobody asks between ticks holds another centre (the ninth digit while the tick asks too, a stale stamp where it does not).

@@ -126,6 +126,8 @@ fn main() {
             // HOST STEP: where the headless host listed the box world again between two ticks. BEFORE the driver's orders and writes: the host lists as its
             // step ends, and what the driver then does to the box world (a wall charge blown by the module's own call) is not listed until the next step
             // ends. Listed after it, the aim ray of the tick met a piece of wall the TypeScript's list did not yet hold (mousehole-four with wall charges, tick 6326).
+            // HOST STEP: between two ticks the view's matrix is the host camera's live one (game_run::view_live), as the host's half has just brought it
+            if !skip("viewlive") { game_run::view_live(&mut g); }
             if !skip("upload") && host[k - 1].get(4).copied().unwrap_or(0.0) > 0.0 { game_run::upload(&mut g); }
             // HARNESS STAND-IN: the test driver's orders, its writes and the rules it called before this tick, in its own order (game_run::between)
             if ordered { for l in between.get(&k).map(|v| v.as_slice()).unwrap_or(&[]) { let t = game_run::between(&mut g, k, l, &no_between); if !t.is_empty() { println!("{}", t); } } }

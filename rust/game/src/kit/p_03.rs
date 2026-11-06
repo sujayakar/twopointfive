@@ -375,8 +375,10 @@ pub fn build_rows_tree(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::Kit
 
 /// The rows of member i's card, top to bottom; built once per member and per way the rules stand.   (kit.ts kitRows)
 pub fn kit_rows(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
-    let shells = mate_shells(g);
-    let key = alloc::format!("{}:{}:{}:{}:{}", i, g.k.slots.on, wall_here(), g.k.bigslot.on, shells);
+    // (THE KEY AS THE TYPESCRIPT SPELLS IT, every part in its place (kit.ts:923): the map is carried over a start with the TypeScript's keys, and a key
+    //  spelled shorter never met those rows, so the first ask after a start built each member's rows a second time under a second key)
+    let (guns, tree, shells) = (guns_on(g), tree_up(g), mate_shells(g));
+    let key = alloc::format!("{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}", i, g.k.slots.on, wall_here(), g.k.wand.on, g.k.wand.mate, g.k.owncharge.on, g.k.sticky.on, g.k.bigslot.on, guns, tree, shells);
     if let Some(r) = g.m.kit.row_cache.get(key.clone()) { return r.clone(); }
     let r = build_rows(g, i);
     g.m.kit.row_cache.set(key, r.clone());
