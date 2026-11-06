@@ -16,7 +16,7 @@
 //   (off)        the switch off = destruction.ts as it was: the office rectangle decides 'indoors', the player-only fixture rule stands alone, bang ignores `power`,
 //                glass is its own rule's (the same floor reads it the same with the switch on or off: LOUDGLASS_BREAK=1 must fail that), the module's new
 //                counters never move;
-import { standUp, ROOT } from './headless.ts';
+import { standUp, ROOT, asExporter } from './headless.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
@@ -111,11 +111,18 @@ export async function loudLevels() {
     if (data.boxes.slice(first).some((b: any) => b.emissive || (b.flags ?? []).some((f: string) => f !== 'NoShadow'))) fails.push('a dressing box is emissive or carries a flag besides NoShadow');
     const refd = new Set<string>(); for (const s of data.switchables) for (const id of s.boxes) refd.add(id); for (const l of data.lights) if ((l as any).fixture) refd.add((l as any).fixture);
     if (data.boxes.slice(first).some((b: any) => refd.has(b.id))) fails.push('a switchable / light refers to a dressing box');
-    DESTRUCTION.on = false; const off = loadLevel(data, { lived: true }); DESTRUCTION.on = true; const on = loadLevel(data, { lived: true });   // (lived: the generator builds the lived-in rooms' furniture, src/scene/lived.ts — it sits before the dressing)
+    // (the two loads and the generator below run AS THE EXPORTER RUNS, headless.ts asExporter: on the engine's own maths, as level-probes holds a file
+    // against its generator. Under the game's maths, which every stand of the harness has on (src/math/exact.ts), the generator rounds a last bit
+    // another way than the file was written with: four boxes of the records office sharing one yaw, an arctangent's last place, and one box centre of
+    // the compound. The loader fits a prop's footprint from the cos and sin of its parts, so both sides of the comparison are on the one maths.
+    // LOUDLEVELS_BREAK=1 = all of it on the stand's maths, as it was. NOT RUN ON A MAC: the engine's maths is the system's, and a file written under
+    // one C library may differ in a last place under another, as for export.ts --check and level-identity.)
+    const exp = <T>(fn: () => T): T => process.env.LOUDLEVELS_BREAK === '1' ? fn() : asExporter(fn);
+    DESTRUCTION.on = false; const off = exp(() => loadLevel(data, { lived: true })); DESTRUCTION.on = true; const on = exp(() => loadLevel(data, { lived: true }));   // (lived: the generator builds the lived-in rooms' furniture, src/scene/lived.ts — it sits before the dressing)
     if (off.boxes.length !== data.boxes.length - nDress || on.boxes.length !== data.boxes.length) fails.push(`loadLevel: ${off.boxes.length} boxes off / ${on.boxes.length} on, the file has ${data.boxes.length} with ${nDress} dressing`);
     // off = the generator's own level (the one build's): box for box, and everything else
-    const gen = (await import(`${ROOT}/tools/levels/${L.gen}.ts`)).build(); if (gen.scenarios) gen.level.scenarios = gen.scenarios; { const DS = await import(`${ROOT}/src/scene/doorSize.ts`); DS.fitDoors(gen.level.doors); DS.fitWaysOut(gen.level, gen.scenarios?.quiet); }   // (as tools/levels/export.ts writes it)
-    { const FL = await import('../levels/flatLayers.ts'), LV = await import('../../src/scene/lived.ts'), BX = await import('../../src/scene/boxes.ts'); FL.layGeneratedFloor(gen.level.boxes, gen.groups, LV.isLived, BX.BoxFlag); (await import('../levels/doesWas.ts')).stampDoes(gen.level); }   // (… and its floor swept into order, as the export sweeps it before it writes: flatLayers.ts; and each box nobody spoke for given the word its colour had: doesWas.ts)
+    const genMod = await import(`${ROOT}/tools/levels/${L.gen}.ts`); const gen = exp(() => genMod.build()); if (gen.scenarios) gen.level.scenarios = gen.scenarios; { const DS = await import(`${ROOT}/src/scene/doorSize.ts`); exp(() => { DS.fitDoors(gen.level.doors); DS.fitWaysOut(gen.level, gen.scenarios?.quiet); }); }   // (as tools/levels/export.ts writes it)
+    { const FL = await import('../levels/flatLayers.ts'), LV = await import('../../src/scene/lived.ts'), BX = await import('../../src/scene/boxes.ts'); const DW = await import('../levels/doesWas.ts'); exp(() => { FL.layGeneratedFloor(gen.level.boxes, gen.groups, LV.isLived, BX.BoxFlag); DW.stampDoes(gen.level); }); }   // (… and its floor swept into order, as the export sweeps it before it writes: flatLayers.ts; and each box nobody spoke for given the word its colour had: doesWas.ts)
     const diffs: string[] = []; const nd = structuralDiff(gen.level, off, diffs); if (nd) fails.push(`switch off: ${nd} diff(s) from the generator's level — ${diffs.slice(0, 2).join('; ')}`);
     const S = await stage(L.file, true); const inv = S.game.destr.inventory();
     const small = (inv.clutter ?? 0) + (inv.binder ?? 0);
