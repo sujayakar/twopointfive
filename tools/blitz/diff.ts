@@ -92,7 +92,7 @@ function leftOut(s: Side, id: string, v: number): boolean {
 // BY RULE (schema.json, as paths.ts): a field in `schema.scratch` is a memo no rule reads back and is not compared; a field in `schema.serial` holds an object's
 // identity serial, which the two sides deal apart by design: its value is not compared (whether it is there still is), and a map or set marked `<field>{}`
 // is keyed by one and is compared by place. How many leaves each rule passed over is said at the end.
-let SER = false, KEYSER = false, serialN = 0, scratchN = 0, nullN = 0;
+let SER = false, KEYSER = false, serialN = 0, scratchN = 0, nullN = 0, rowN = 0;
 let n = 0, unknown = 0; const by = new Map<string, number>(), shown: string[] = [], all: string[] = [];
 const P: string[] = [];
 function rep(mod: string, a: string, b: string, tail = '') { n++; const path = P.join('') + tail; const k = KNOWN.find(k => k.re.test(path)); if (k) { k.n++; return; } unknown++; by.set(mod, (by.get(mod) ?? 0) + 1); const l = `${mod}\t${path}\t${a}\t${b}`; if (shown.length < SHOW) shown.push(l); if (OUT && all.length < 200000) all.push(l); }
@@ -107,13 +107,17 @@ function word(n: Node, s: Side): string { switch (n.k) { case 'f64': case 'f32':
     case 'type': { const t = T(n.path); if (t.k === 'enum') return `${t.name}::${t.words[s.u16()]}`; break; } case 'tup': return n.of.map((x: Node) => word(x, s)).join(','); case 'arr': { const o: string[] = []; for (let k = 0; k < n.n; k++) o.push(word(n.of, s)); return o.join(','); } }
   skip(n, s, null); return '(…)'; }
 const nan = (x: string) => x.startsWith('NaN ');
+// A POSE OF ITS OWN, outside the pool (a ragdoll's; a man's not yet at home): its place reads Pose::LOOSE + its ROW of g.loose_poses, and the two sides number
+// the rows differently (the TypeScript's export deals a row as its walk first meets the pose, the Rust game as the pose is made). Both sides a row: not
+// compared, counted. One side a row and the other a place in the pool IS a difference. The floats and what they drive are compared.
+const ownRow = (x: string) => { const v = +x.split(' ')[0]; return v >= 0xffff0000 && v < 0xffffffff; };
 const same = (A: Side, a: number, B: Side, b: number, L: number) => { for (let i = 0; i < L; i++) if (A.b[a + i] !== B.b[b + i]) return false; return true; };
 function cmp(n: Node, A: Side, B: Side, mod: string): void {
   switch (n.k) {
     case 'f64': case 'f32': case 'bool': case 'u8': case 'i8': case 'u16': case 'i16': case 'u32': case 'i32': case 'usize': case 'u64': case 'i64': case 'str': case 'id': {
       if (DUMP) { const path = P.join(''); if (DUMP.test(path) && dumped++ < DUMP_MAX) { const a0 = A.p, b0 = B.p; const a = leaf(n, A), b = leaf(n, B); console.log(`  ${a === b ? ' ' : '≠'} ${path}\t${a.split(' ')[0]}\t${b.split(' ')[0]}`); A.p = a0; B.p = b0; } }
       if (n.k === 'f64') { const lo = A.dv.getUint32(A.p, true) === B.dv.getUint32(B.p, true), hi = A.dv.getUint32(A.p + 4, true) === B.dv.getUint32(B.p + 4, true); if (lo && hi) { A.p += 8; B.p += 8; return; } }
-      const a = leaf(n, A), b = leaf(n, B); if (a !== b && !(nan(a) && nan(b))) { if (SER) serialN++; else rep(mod, a, b); } return; }
+      const a = leaf(n, A), b = leaf(n, B); if (a !== b && !(nan(a) && nan(b))) { if (SER) serialN++; else if (n.k === 'u32' && ownRow(a) && ownRow(b) && P[P.length - 1] === '.at') rowN++; else rep(mod, a, b); } return; }
     case 'unit': return;
     case 'opt': { const a = A.u8(), b = B.u8(); if (!a && !b) return; if (a && b) { cmp(n.of, A, B, mod); return; }
       if (a) rep(mod, word(n.of, A), 'None'); else rep(mod, 'None', word(n.of, B)); return; }
@@ -164,7 +168,7 @@ if (argv.includes('--dynboxes')) {
   const a = count(A), b = count(B); for (const k of new Set([...a.keys(), ...b.keys()])) if ((a.get(k) ?? 0) !== (b.get(k) ?? 0)) console.log(`  dyn boxes ${a.get(k) ?? 0} / ${b.get(k) ?? 0}: ${k}`);
 }
 let bytes = -1; { const i = argv.indexOf('--blocks'); if (i >= 0) { const s = readFileSync(argv[i + 1]), t = readFileSync(argv[i + 2]); bytes = 0; for (let k = 0; k < Math.max(s.length, t.length); k++) if ((s[k] ?? 0) !== (t[k] ?? 0)) bytes++; } }
-console.log(`${n} paths differ, ${n - unknown} known, ${unknown} NOT KNOWN${unknown ? ': ' + [...by].sort((x, y) => y[1] - x[1]).map(([m, c]) => `${m} ${c}`).join(' · ') : ''}${bytes >= 0 ? `; block ${bytes} bytes` : ''}${A.leftN || B.leftN ? `; boxes left out as the picture's ${A.leftN} / ${B.leftN}` : ''}${serialN || scratchN || nullN ? `; by rule not compared: ${serialN} identity serials that differ, ${scratchN} scratch fields that differ${nullN ? `, ${nullN} null beside undefined` : ''}` : ''}; boxes reached ${A.order.get('BoxId')?.length ?? '-'} / ${B.order.get('BoxId')?.length ?? '-'} of ${A.tableLen.get('BoxId')} / ${B.tableLen.get('BoxId')}; ${(process.memoryUsage().rss / 1e9).toFixed(2)} GB`);
+console.log(`${n} paths differ, ${n - unknown} known, ${unknown} NOT KNOWN${unknown ? ': ' + [...by].sort((x, y) => y[1] - x[1]).map(([m, c]) => `${m} ${c}`).join(' · ') : ''}${bytes >= 0 ? `; block ${bytes} bytes` : ''}${A.leftN || B.leftN ? `; boxes left out as the picture's ${A.leftN} / ${B.leftN}` : ''}${serialN || scratchN || nullN || rowN ? `; by rule not compared: ${serialN} identity serials that differ, ${scratchN} scratch fields that differ${nullN ? `, ${nullN} null beside undefined` : ''}${rowN ? `, ${rowN} rows of poses of their own` : ''}` : ''}; boxes reached ${A.order.get('BoxId')?.length ?? '-'} / ${B.order.get('BoxId')?.length ?? '-'} of ${A.tableLen.get('BoxId')} / ${B.tableLen.get('BoxId')}; ${(process.memoryUsage().rss / 1e9).toFixed(2)} GB`);
 if (argv.includes('--why')) for (const k of KNOWN) if (k.n) console.log(`   known ${k.n}: ${k.why.slice(0, 150)}`);
 for (const x of shown) console.log('     ' + x.slice(0, 230));
 if (OUT) writeFileSync(OUT, all.join('\n') + '\n');

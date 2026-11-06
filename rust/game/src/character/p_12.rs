@@ -158,9 +158,11 @@ pub fn character_chest_frame(g: &mut crate::game::Game, id: CharId) -> Option<cr
 
 // ---- the frame ----
 
-/// His frame; the stage is gone: an update always stands in its game's block. (Character.update)
+/// His frame. A man whose poses are not yet at home (made inside this tick) is lent the stage for it. (Character.update)
 pub fn character_update(g: &mut crate::game::Game, id: CharId, dt: f64) {
+    let lent = crate::posehome::stage_open(g, id);
     character_update_standing(g, id, dt);
+    if let Some(st) = lent { crate::posehome::stage_shut(g, id, st); }
 }
 /// The turn, the animator, the skeleton and what is read off it. (Character.updateStanding)
 pub fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {

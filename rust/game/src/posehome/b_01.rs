@@ -141,3 +141,64 @@ pub fn pose_home_tend(g: &mut crate::game::Game) {
         if !home || g.tab.pose_set[s].stray != 0.0 { come_home(g, c); crate::anim_skeleton::pose_set_in(g, s); }
     }
 }
+
+
+// ---- THE STAGE (anim/skeleton.ts stageOpen / stageShut)
+//
+// An animator's update runs over poses that stand in a pool (its layers are handed their poses by their places). A man of a ticking game has his in
+// the game's pool. A man made INSIDE a tick is not at home until the next tick opens: the TypeScript lends his update "the stage", a block of its
+// own, and takes his poses back into arrays of his own as the update shuts. Here the stage is the END OF THE GAME'S OWN POOL for the length of the
+// update: his poses go in past what is in use, and as it shuts they come out into the rows they came from and the pool is as it was, to the byte.
+
+/// what `stage_open` lent, for `stage_shut`
+pub struct Stage { set: PoseSetId, live: u32, back: Vec<(Pose, Pose)> }
+
+/// The update of a man whose set is not at home opens: his poses into the pool's end, his handles on them, and the set told it stands (a pose it
+/// makes during the update is made there). None: the set is at home and nothing is lent.   (skeleton.ts stageOpen)
+pub fn stage_open(g: &mut Game, c: CharId) -> Option<Stage> {
+    let set = g.ch[c].anim.poses;
+    if g.tab.pose_set[set].home.is_some() || g.tab.pose_set[set].list.is_empty() { return None; }
+    let live = ::sim::state::state(g.sim).poses.live;
+    let mut map: BTreeMap<u32, Pose> = BTreeMap::new();
+    let mut back = Vec::new();
+    for p in g.tab.pose_set[set].list.clone() {
+        if p.nodes == 0 || p.at < Pose::LOOSE || map.contains_key(&p.at) { continue; }
+        let at = ::sim::poses::new_of(g.sim, p.nodes as usize);
+        if at >= Pose::LOOSE { panic!("posing: one animator's poses do not fit the stage (the pool's end: rust/sim/src/poses.rs)"); }
+        let home = Pose { at, nodes: p.nodes };
+        let floats = crate::anim_skeleton::pose_cols(g, p).to_vec();
+        crate::anim_skeleton::pose_cols(g, home).copy_from_slice(&floats);
+        map.insert(p.at, home);
+        back.push((home, p));
+    }
+    replace(g, c, &map);
+    g.tab.pose_set[set].home = Some(crate::Opaque);
+    Some(Stage { set, live, back })
+}
+
+/// …and shuts: every pose of his out again (those lent, into the rows they came from; one made during the update, into a row of its own), and the
+/// pool's end zeros again.   (skeleton.ts stageShut)
+pub fn stage_shut(g: &mut Game, c: CharId, st: Stage) {
+    let mut map: BTreeMap<u32, Pose> = BTreeMap::new();
+    for (home, own) in st.back.iter().copied() {
+        let floats = crate::anim_skeleton::pose_cols(g, home).to_vec();
+        crate::anim_skeleton::pose_cols(g, own).copy_from_slice(&floats);
+        map.insert(home.at, own);
+    }
+    g.tab.pose_set[st.set].home = None;
+    g.tab.pose_set[st.set].stray = 0.0;
+    for p in g.tab.pose_set[st.set].list.clone() {
+        if p.nodes == 0 || p.at >= Pose::LOOSE || map.contains_key(&p.at) { continue; }
+        let floats = crate::anim_skeleton::pose_cols(g, p).to_vec();
+        let own = crate::anim_skeleton::pose_new(g, p.nodes as usize);
+        crate::anim_skeleton::pose_cols(g, own).copy_from_slice(&floats);
+        map.insert(p.at, own);
+    }
+    replace(g, c, &map);
+    // the pool as it was: what the stage used is zeros again, and not in use
+    let ps = &mut ::sim::state::state(g.sim).poses;
+    let from = ::sim::poses::used(ps);
+    ps.live = st.live;
+    let keep = ::sim::poses::used(ps);
+    for i in keep..from { ps.data[i] = ::sim::single::S::ZERO; }
+}

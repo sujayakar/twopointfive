@@ -365,7 +365,9 @@ pub fn pose_take_home(g: &mut crate::game::Game, p: &mut crate::anim_skeleton::P
     }
     let home = Pose { at, nodes };
     cols_at(g.sim, home).copy_from_slice(&g.loose_poses[row].floats);
-    if row + 1 == g.loose_poses.len() { g.loose_poses.pop(); }
+    // (the row is let go: emptied, and the list's empty tail dropped)
+    g.loose_poses[row] = LoosePose { nodes: 0, floats: Vec::new() };
+    while g.loose_poses.last().map_or(false, |r| r.nodes == 0) { g.loose_poses.pop(); }
     *p = home;
 }
 
@@ -429,7 +431,8 @@ pub fn pose_set_make(g: &mut crate::game::Game, id: PoseSetId, n: f64) -> crate:
     if g.tab.pose_set[id].list.len() as f64 >= most {
         panic!("posing: a set of {} poses at most is asked for one more (the owner says how many it keeps as it makes the set, and a level is held to the pose pool by that number: game/levelfit.ts fitRows)", most);
     }
-    let p = pose_pool_new(g, n as usize);
+    // (a pose made while the set is at home is made in the pool; one made before is an array of its own until the set goes home, as the TypeScript's)
+    let p = if g.tab.pose_set[id].home.is_some() { pose_pool_new(g, n as usize) } else { pose_new(g, n as usize) };
     g.tab.pose_set[id].list.push(p);
     if g.tab.pose_set[id].home.is_some() && !pose_in(g, p) {
         g.tab.pose_set[id].stray += 1.0;
@@ -464,9 +467,13 @@ pub fn pose_set_in(g: &mut crate::game::Game, s: PoseSetId) -> bool {
     g.tab.pose_set[s].home = Some(crate::Opaque);
     let mut stray = 0.0;
     for k in 0..g.tab.pose_set[s].list.len() {
-        let p = g.tab.pose_set[s].list[k];
-        if !pose_in(g, p) {
-            stray += 1.0;
+        let mut p = g.tab.pose_set[s].list[k];
+        if p.nodes != 0 && !pose_in(g, p) {
+            // (its floats into the pool. The list is the set's; whoever else holds a handle on the pose, a man's animator, is given the new
+            //  place by the one who moves him: posehome's come_home, which takes his poses home before it calls this)
+            pose_take_home(g, &mut p);
+            g.tab.pose_set[s].list[k] = p;
+            if !pose_in(g, p) { stray += 1.0; }
         }
     }
     g.tab.pose_set[s].stray = stray;
@@ -1522,7 +1529,9 @@ mod tests {
         ::sim::state::state(g.sim).poses.live = 0;
         assert!(b.at >= Pose::LOOSE);
         assert_eq!(g.tab.pose_set[s].stray, 1.0);
-        assert!(!pose_set_in(&mut g, s));
+        // the pool has room again: the set going home takes the stray in (the TypeScript's poseSetIn tries each pose again)
+        assert!(pose_set_in(&mut g, s));
+        assert!(g.tab.pose_set[s].list[1].at < Pose::LOOSE);
         pose_set_out(&mut g, s);
         assert!(g.tab.pose_set[s].home.is_none());
         assert_eq!(g.tab.pose_set[s].stray, 0.0);

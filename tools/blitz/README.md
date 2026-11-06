@@ -26,7 +26,8 @@ What it does:
    tick** it compares its block's hashes, part by part, and its die's count with the TypeScript's, and stops at the first tick that parts.
 3. **The path diff** (`diff.ts`) of every tick both sides kept, minus `known.txt`. The tick the block first parted is kept by the Rust side on its own.
 
-Exit: 0 in step and no unknown path · 1 the block or the die parted, or a kept tick has a path that is not known · 2 the Rust tick panicked · 3 a side did not run.
+Exit: 0 in step and no unknown path · 1 the block or the die parted, or a kept tick has a path that is not known · 2 the Rust tick panicked · 3 a side did not run ·
+4 the game parted at one of the loop's intended differences and nowhere before it (below).
 
 `--no-ts` runs the Rust side again over the TypeScript side `--out` already holds (the same ticks kept): the loop while you mend is a build and a few seconds.
 `--open "K"` also writes the state as tick K opens. `--after N` runs N more ticks after the block parts. `--blobs` keeps each kept Rust state after
@@ -67,6 +68,17 @@ runs a game of two through `run.sh` and reads the RUST side: its log and the sta
 left on his order. The TypeScript's door walk asks the bare Game's order book (the first seat's, which has no order of his) and does not take the way
 round; the Rust door walk is stepped as his seat and finds his own order (`g.door_path.walks{…}.via.len` 0 against 2). The game's own state differs from
 there, the block from tick 5781, the die from 6349.
+
+## Intended differences
+
+The TypeScript is frozen and has faults a game of two seats shows. Where the Rust game copies such a fault it stays in step, and that is right for
+now (the nets of `slingTick` and `hammerOutTick`, the budgets that count one player: `coop-check.ts` holds them red). Where the Rust game is RIGHT BY
+CONSTRUCTION and the TypeScript is not, the Rust stays right and the loop parts there on purpose. `run.sh` names such a game (exit 4) when it first parts
+at the tick written in its `intended` list and nowhere before. One so far:
+
+| game | from tick | what |
+|---|---|---|
+| `two-full:3` | 5499 | `doorpath.ts own()` asks `this.g.orders.of(gd)` on the bare Game, which in a game of two is the FIRST seat's order book. For a man of seat 1 sent through a door with corners left on his order it finds no order, leaves the way round on the order, and the walk stands "off this order". The Rust door walk is started from that seat's door tools, inside the seat's view, and finds his own order: it takes the way round (`walks{…}.via` 2 against 0). Seventeen paths at 5499; the block (`doors`) parts at 5781. A game of one seat is not touched. |
 
 ## Reading the stop
 
