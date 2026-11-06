@@ -801,9 +801,12 @@ one stops the tool by name, on an address one does nothing and says so in the co
   sheets of glass), half of the glass GONE a quarter of the way in (the rule and its rows hung as the game's are, so a sound and a way are asked
   past holes; a pane open piece by piece is `glass-ident`'s), 14 leaves that swing a third of the way in, a share of the statics re-shaped and
   said half way, 460 lamps (so a light question goes in parts), the
-  tool's own blobs under the tool's own smoke numbers, eyes each with its own wedge and near field. On the frozen stand its seven words are held
+  tool's own blobs under the tool's own smoke numbers, eyes each with its own wedge and near field. Its seven words are held
   to `tools/qa/fixtures/sense-words.json` (3,000 questions a kind, 141,533 answers folded); it was RECORDED ON THE COMMIT THAT BROUGHT IT, from a run
-  in which every question was also asked of the TypeScript and agreed. Since that TypeScript went, `--record` writes whatever the module says:
+  in which every question was also asked of the TypeScript and agreed, on the old stand. THE RECORDING A RUN WITH NO WORD IS HELD TO is the
+  page's stand's, taken when the old stand was retired (2026-11-05): six of the seven words are the first recording's to the bit, and the fog's
+  is the word the old stand gives with `FOG.thin` raised and nothing else (`TPS_FOGTHIN=1 TPS_PROFILE=frozen`), so every moved word is that one
+  knob's. The old stand's entry stays beside it while that stand can be stood by name; `--record` writes on the page's stand only. Since that TypeScript went, `--record` writes whatever the module says:
   a recording taken now is one language's word for itself, so record again only for a change whose every moved word is explained, and say so
   in `--tree`. `rust-check`'s `senses` section runs it. OVER LEVELS the words are held to nothing
   by themselves; `--against <root>` plays the same run with another checkout's tool, for a change that must move no answer.
@@ -2234,5 +2237,3 @@ one stops the tool by name, on an address one does nothing and says so in the co
   the logarithm of a number that small.
 - **Not seen.** Nothing here draws, so nothing here was seen on a GPU; the page check runs the bundle on the software adapter with the frames undrawn. Nobody
   has built the crate on a Mac or on Windows.
-
-- **The weather** (`rust/sim/src/wind.rs`, `weather.rs`, `air.rs`, `snow.rs`; a part `weather` of a block, an always-home tenant; asked through `src/sim/weatherhome.ts`, `collision.ts ruleOpen`): what it is, what is gameplay and dressing file by file, and what holds it: `docs/agents/weather.md`, the bullet "The weather that play reads". The hour is not in it yet. A man's place, head and coat are a call's numbers until the men's columns land.

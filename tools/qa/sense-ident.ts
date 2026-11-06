@@ -2,7 +2,7 @@
 // team's eyes see (rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs, fog.rs, asked through src/scene/collision.ts). Every answer the module gives
 // is shown to a watcher (collision.ts SENSE_WATCH) and folded into a word under the name of its kind of question (tools/qa/ident-pin.ts).
 //   bun run tools/qa/sense-ident.ts [--n 20000] [--levels office.json,warehouse.json] [--seed 1]       random questions over whole levels (the page's stand)
-//   bun run tools/qa/sense-ident.ts --made [--n 21000] [--seed 1] [--record]                             …over a box world of the tool's own (the frozen stand)
+//   bun run tools/qa/sense-ident.ts --made [--n 21000] [--seed 1] [--record]                             …over a box world of the tool's own (the page's stand too)
 //   … --against <root>                                                                                  the same run by another checkout's tool: every word the same
 // NOTHING IN TYPESCRIPT ANSWERS A SENSE (collision.ts THE SENSES), so there is nothing to compare an answer to: the module is held to ITS OWN EARLIER
 // ANSWERS, the four ways of tools/qa/ident-pin.ts — the words, the red paths by a child that plays the same run plain, the pin, and `--against`. A
@@ -14,8 +14,10 @@
 // THE MADE-UP WORLD (`--made`) is what the PIN is taken over: some two hundred statics of every kind a line can meet (walls turned any way, furniture,
 // panes of glass, thin things, tilted and round and cut boxes, decals), leaves, lamps of every kind (more in reach of a point than one part of a light
 // question carries), blobs of smoke and a team's eyes, all dealt from the seed and from nothing else: no level's edit moves a word of it, and the smoke's
-// numbers are the tool's own for the run (a tuning of the game's moves none). Its words on the frozen stand are held to tools/qa/fixtures/sense-words.json;
-// `--record` writes that file. ITS FIRST RECORDING was taken on the last tree where the TypeScript stood, from a run in which every one of the 21,000
+// numbers are the tool's own for the run (a tuning of the game's moves none). Its words are held to tools/qa/fixtures/sense-words.json;
+// `--record` writes that file, on the page's stand and no other. THE RECORDING is the page's stand's, taken when the old stand was retired: six of its
+// seven words are the first recording's to the bit, and the fog's is the word the old stand gives with FOG.thin raised and nothing else. The old stand's
+// entry stays beside it while that stand can be stood by name: a run there is held to it, and it is never written again. ITS FIRST RECORDING was taken on the last tree where the TypeScript stood, from a run in which every one of the 21,000
 // questions was also asked of it and the two agreed to the bit: that is all the pin ever knew of the TypeScript.
 // What a question is: an eye anywhere with any cone on a chest and a head anywhere (guards.ts eyeContact; some lenses, some hidden or smoked, some eyes that
 // pass the thin statics too) · the light on a point, lamps of every kind (lightEstimateAt, steady or not, some with an owner skipped) · the smoke of two
@@ -47,7 +49,7 @@
 // written, and its words have not moved.
 // Exit 0 = every verdict passed · 1 = a verdict failed (under a red path: as it must) · 3 = a red path that moved the wrong words, or none (named).
 const ARGV = process.argv.slice(2), MADE = ARGV.includes('--made');
-process.env.TPS_PROFILE ??= MADE ? 'frozen' : 'shipped'; if (!MADE) process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
+process.env.TPS_PROFILE ??= 'shipped'; if (!MADE) process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
 import { readdirSync } from 'fs';
 import { resolve } from 'path';
 const { standUp } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
@@ -277,7 +279,7 @@ async function made(): Promise<void> {
   verdict(!thin.length, 'reach: the module counts an answer for every question of every kind', `${Object.keys(want).map(k => `${k} ${by(k)}`).join(' · ')}${thin.length ? ` — TOO FEW of ${thin.join(', ')}` : ''}`);
   { const T = twoSay(two0, rowed.length); if (T.say) verdict(T.ok && T.lit > 0, 'the rows: the lamps read where they stand are the lamps written one by one, and some point is lit by one', T.say); }
   if (BACKWARD || AGAIN || UNSHADED || UNROWED) return;   // (red paths of the levels' run: nothing more is held here under one)
-  const held = PIN.hold({ root: ROOT, tool: 'tools/qa/sense-ident.ts', fixture: 'sense-words.json', run, runArgs: ['--made', '--n', String(N), '--seed', String(SEED)], end, words, breakWord: 'RUST_BREAK',
+  const held = PIN.hold({ root: ROOT, tool: 'tools/qa/sense-ident.ts', fixture: 'sense-words.json', stand: 'shipped', run, runArgs: ['--made', '--n', String(N), '--seed', String(SEED)], end, words, breakWord: 'RUST_BREAK',
     unfit: threw ? 'the run threw' : thin.length ? 'a kind of question did not reach the module' : '', verdict, say: log });
   if (UNSAID) blind.push(...held.stayed);   // (every word of the made-up world must move with the re-shape unsaid)
   if (held.record && !bad) held.record();

@@ -30,14 +30,9 @@ import { WX_OWN } from './weatherKinds';
 import { isDaylight } from './lighting';
 import { gpuFx } from './particleFx';
 import type { GridWind } from '../scene/collision';
-import { sim, f64 } from '../sim/sim';
-import { WX_WATCH, wxScratch } from '../sim/weatherhome';
 
-/** the field's shape constants — their one home is rust/sim/src/wind.rs SHAPE (this is its order); render/shaders/wind_field.wgsl carries the same five under WIND_* (tools/qa wind-probes compares), + how a vent record becomes a jet */
-export const WIND_FIELD = { get deflectH() { return shape(0); }, get deflectLoss() { return shape(1); }, get supportSigma() { return shape(2); }, get stormTop() { return shape(3); }, get stormLee() { return shape(4); }, /** the storm's share of its own speed at the ground, what it gains by `stormFullAt` metres up, and that height (wind_field.wgsl windStorm has the same three) */ get stormLow() { return shape(5); }, get stormGain() { return shape(6); }, get stormFullAt() { return shape(7); }, /** dMax = cutK × reach */ get cutK() { return shape(8); }, /** r0 = coreK × the face's size */ get coreK() { return shape(9); } };
-let SHAPE: number[] | null = null;
-/** a number of the field's shape, read off the module once */
-function shape(i: number): number { if (SHAPE === null) { const x = sim(); SHAPE = []; for (let k = 0; k < 10; k++) SHAPE.push(x.wind_shape(k)); } return SHAPE[i]; }
+/** the field's shape constants — render/shaders/wind_field.wgsl carries the same five under WIND_* (tools/qa wind-probes compares), + how a vent record becomes a jet */
+export const WIND_FIELD = { deflectH: 0.55, deflectLoss: 0.35, supportSigma: 2.6, stormTop: 8.0, stormLee: 1.5, /** the storm's share of its own speed at the ground, what it gains by `stormFullAt` metres up, and that height (wind_field.wgsl windStorm has the same three) */ stormLow: 0.55, stormGain: 0.45, stormFullAt: 2.5, /** dMax = cutK × reach */ cutK: 2.5, /** r0 = coreK × the face's size */ coreK: 0.4 };
 /** The lane's knobs (Tab ▸ Weather ▸ wind rows; persisted with tune.wind). */
 export const WIND = {
   def: 1,                                        // tune.wind's default: the master 0‥1 (× every source's speed; 0 = still air, nothing packed anywhere)
@@ -67,34 +62,63 @@ export function resetWindKnobs(g: Game) { Object.assign(WIND, JSON.parse(JSON.st
 /** the master as the systems read it: tune.wind clamped 0‥1 (nothing suspends wind wholesale — the tour keeps its draughts, they change no beat) */
 export function windOf(g: Game): number { const w = (g.tune as WindTune).wind; return Math.max(0, Math.min(1, w ?? 0)); }
 
-// ------------------------------------------------------------------ the field: rust/sim/src/wind.rs (render/shaders/wind_field.wgsl, statement for statement), asked by whoever wants the air at a point
-/** the answer in the scratch → `out` */
-function airOut(out: Vec3): Vec3 { const m = f64(), a = wxScratch(); out[0] = m[a]; out[1] = m[a + 1]; out[2] = m[a + 2]; return out; }
+// ------------------------------------------------------------------ the field (render/shaders/wind_field.wgsl, statement for statement)
+const smoothstep = (a: number, b: number, x: number) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 /** The JET's air at p (m/s, into `out`): a diffuser at `pos` blowing along unit `dir` at `speed` at its face — see wind_field.wgsl windJet. */
 export function jetVel(pos: Vec3, dir: Vec3, speed: number, reach: number, tanSpread: number, r0: number, dMax: number, floorY: number, p: Vec3, out: Vec3 = [0, 0, 0]): Vec3 {
-  sim().wind_jet(pos[0], pos[1], pos[2], dir[0], dir[1], dir[2], speed, reach, tanSpread, r0, dMax, floorY, p[0], p[1], p[2]);
-  airOut(out); if (WX_WATCH.on) WX_WATCH.saidMany('wind.jet', out, [...pos, ...dir, speed, reach, tanSpread, r0, dMax, floorY, ...p]);
-  return out;
+  out[0] = 0; out[1] = 0; out[2] = 0;
+  if (!(speed > 0)) return out;
+  const qx = p[0] - pos[0], qy = p[1] - pos[1], qz = p[2] - pos[2];
+  const d = qx * dir[0] + qy * dir[1] + qz * dir[2];
+  if (d <= 0 || d >= dMax) return out;
+  const rx = qx - dir[0] * d, ry = qy - dir[1] * d, rz = qz - dir[2] * d; const r = Math.hypot(rx, ry, rz);
+  const sigma = r0 + d * tanSpread;
+  if (r > WIND_FIELD.supportSigma * sigma) return out;
+  const x = d / Math.max(reach, 1e-3), rs = r / sigma;
+  let s = speed * Math.exp(-rs * rs) / (1 + x * x) * (1 - smoothstep(0.7 * dMax, dMax, d));
+  const ap = d + r0 / Math.max(tanSpread, 0.02);
+  let ux = dir[0] * ap + rx, uy = dir[1] * ap + ry, uz = dir[2] * ap + rz; { const l = Math.hypot(ux, uy, uz) || 1; ux /= l; uy /= l; uz /= l; }
+  if (floorY > -100 && dir[1] < -0.5) {
+    const h = p[1] - floorY;
+    if (h < 0) return out;
+    if (h < WIND_FIELD.deflectH) {
+      const t = 1 - h / WIND_FIELD.deflectH;
+      let hx = rx, hz = rz; const hl = Math.hypot(hx, hz);
+      if (hl > 1e-3) { hx /= hl; hz /= hl; } else { hx = dir[2] + 0.37; hz = 0.29 - dir[0]; const l = Math.hypot(hx, hz); hx /= l; hz /= l; }
+      const k = t * t; let mx = ux + (hx - ux) * k, my = uy + (0 - uy) * k, mz = uz + (hz - uz) * k; const ml = Math.hypot(mx, my, mz) || 1; ux = mx / ml; uy = my / ml; uz = mz / ml;
+      s *= 1 - WIND_FIELD.deflectLoss * t;
+    }
+  }
+  out[0] = ux * s; out[1] = uy * s; out[2] = uz * s; return out;
 }
 const inRect = (x: number, z: number, R: readonly number[]) => x > R[0] && z > R[1] && x < R[2] && z < R[3];
 /** The STORM's air at p: `wind` outdoors, nothing inside the interior / annex footprints or over stormTop — see wind_field.wgsl windStorm. */
 export function stormVel(wind: Vec3, interior: readonly number[], annex: readonly number[], p: Vec3, out: Vec3 = [0, 0, 0]): Vec3 {
-  sim().wind_storm(wind[0], wind[1], wind[2], interior[0], interior[1], interior[2], interior[3], annex[0], annex[1], annex[2], annex[3], p[0], p[1], p[2]);
-  airOut(out); if (WX_WATCH.on) WX_WATCH.saidMany('wind.storm', out, [...wind, ...interior, ...annex, ...p]);
-  return out;
+  out[0] = 0; out[1] = 0; out[2] = 0;
+  if (p[1] > WIND_FIELD.stormTop || p[1] < 0 || inRect(p[0], p[2], interior) || inRect(p[0], p[2], annex)) return out;
+  const dOut = Math.max(Math.max(interior[0] - p[0], p[0] - interior[2]), Math.max(interior[1] - p[2], p[2] - interior[3]));
+  const k = smoothstep(0, WIND_FIELD.stormLee, dOut) * (WIND_FIELD.stormLow + WIND_FIELD.stormGain * Math.max(0, Math.min(1, p[1] / WIND_FIELD.stormFullAt)));
+  out[0] = wind[0] * k; out[1] = wind[1] * k; out[2] = wind[2] * k; return out;
 }
+/** metres (x, z) stands outside roof R along its nearer axis (> 0 in the open) — a footprint with no width is no roof: far away (wind_field.wgsl windRoofOut) */
+const roofOut = (x: number, z: number, R: readonly number[]) => !(R[2] > R[0]) || !(R[3] > R[1]) ? 1e6 : Math.max(Math.max(R[0] - x, x - R[2]), Math.max(R[1] - z, z - R[3]));
 /** … ROOF BY ROOF (WX_OWN.wind, a level of three or four roofs): `wind` wherever none of `roofs` (≤ 4) is overhead, easing in off the NEAREST — see wind_field.wgsl windStormRoofs. */
 export function stormVelRoofs(wind: Vec3, roofs: readonly (readonly number[])[], p: Vec3, out: Vec3 = [0, 0, 0]): Vec3 {
-  const x = sim(), m = f64(), a = wxScratch(), n = Math.min(roofs.length, 4);
-  for (let i = 0; i < n; i++) { const r = roofs[i], q = a + i * 4; m[q] = r[0]; m[q + 1] = r[1]; m[q + 2] = r[2]; m[q + 3] = r[3]; }
-  x.wind_storm_roofs(wind[0], wind[1], wind[2], n, p[0], p[1], p[2]);
-  airOut(out); if (WX_WATCH.on) WX_WATCH.saidMany('wind.stormRoofs', out, [...wind, ...roofs.flat(), ...p]);
-  return out;
+  out[0] = 0; out[1] = 0; out[2] = 0;
+  if (p[1] > WIND_FIELD.stormTop || p[1] < 0) return out;
+  let dOut = 1e6; for (let i = 0; i < roofs.length && i < 4; i++) dOut = Math.min(dOut, roofOut(p[0], p[2], roofs[i]));
+  if (dOut <= 0) return out;
+  const k = smoothstep(0, WIND_FIELD.stormLee, dOut) * (WIND_FIELD.stormLow + WIND_FIELD.stormGain * Math.max(0, Math.min(1, p[1] / WIND_FIELD.stormFullAt)));
+  out[0] = wind[0] * k; out[1] = wind[1] * k; out[2] = wind[2] * k; return out;
 }
-/** smooth value noise in [−1, 1] at x, one lattice value per integer, per seed (no dice: a pure function of game time and a seed) */
+
+// ------------------------------------------------------------------ noise off the clock (no dice: a pure function of game time and a seed)
+function hashU(x: number): number { x = Math.imul((x ^ 0x9E3779B9) >>> 0, 0x85EBCA6B) >>> 0; x ^= x >>> 13; x = Math.imul(x, 0xC2B2AE35) >>> 0; x ^= x >>> 16; return x >>> 0; }
+const hash01 = (x: number) => (hashU(x) >>> 8) / 16777216;
+/** smooth value noise in [−1, 1] at x, one lattice value per integer, per seed */
 export function vnoise(seed: number, x: number): number {
-  const r = sim().wind_noise(seed, x);
-  return WX_WATCH.on ? WX_WATCH.said('wind.noise', r, [seed, x]) : r;
+  const i = Math.floor(x), f = x - i; const a = hash01(seed ^ Math.imul(i, 2654435761)) * 2 - 1, b = hash01(seed ^ Math.imul(i + 1, 2654435761)) * 2 - 1;
+  const t = f * f * (3 - 2 * f); return a + (b - a) * t;
 }
 
 // ------------------------------------------------------------------ sources
