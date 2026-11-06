@@ -72,12 +72,15 @@ pub fn host_half(g: &mut game::game::Game, hb: &[u8], _first: bool) -> game::cmd
 pub fn lesson(_g: &mut game::game::Game, _txt: &[u8]) -> Option<String> { None }
 
 /// HARNESS STAND-IN: THE TEST DRIVER'S ORDERS. The scripted player gives its orders through the menu's own call between ticks; mission.ts writes each as a line
-/// of gives.txt, `<tick> <id> <who> <kind> <x> <y> <z> [door <place> <side> book<id> | man <place>]`, and the same call is made here before that tick.
-/// Answers the line for the log.
+/// of gives.txt, `<tick> <id> <who> <kind> <x> <y> <z> [door <place> <side> book<id> | man <place>] [seat<N>]`, and the same call is made here before that tick.
+/// A line that ends `seat<N>` (seats.ts, a game of two: the co-op check's orders) is given as THAT seat, through its own order book (`seats::with_seat`);
+/// a line without one is the Game's as it stands between ticks. Answers the line for the log.
 pub fn give(g: &mut game::game::Game, k: usize, l: &str) -> String {
     use game::orders::{OrderTarget as T, Who};
-    let w: Vec<&str> = l.split(' ').collect();
+    let mut w: Vec<&str> = l.split(' ').collect();
+    let seat: Option<usize> = match w.last().and_then(|x| x.strip_prefix("seat")) { Some(n) => { let n = n.parse::<usize>().ok(); w.pop(); n } None => None };
     if l.contains("UNSUPPORTED") || w.len() < 7 { return format!("  NOTE tick {}: an order of the driver's this runner cannot give: {}", k, l); }
+    if let Some(n) = seat { if n >= g.seats.len() { return format!("  NOTE tick {}: an order for seat {} in a game of {}: {}", k, n, g.seats.len(), l); } }
     let at = [w[4].parse::<f64>().unwrap(), w[5].parse::<f64>().unwrap(), w[6].parse::<f64>().unwrap()];
     let who = match w[2] { "-" => None, "all" => Some(Who::All), "red" => Some(Who::Red), "blue" => Some(Who::Blue), x => match x.parse::<f64>() { Ok(n) => Some(Who::Num(n)), Err(_) => { return format!("  NOTE tick {}: a `who` this runner cannot give: {}", k, l); } } };
     let t = match w[3] {
@@ -86,7 +89,10 @@ pub fn give(g: &mut game::game::Game, k: usize, l: &str) -> String {
         "none" => T::None(game::orders::OrderTargetNone { at, man: if w.len() > 8 { Some(g.guards[w[8].parse::<usize>().unwrap()]) } else { None } }),
         _ => T::Foe(game::orders::OrderTargetFoe { at, foe: g.guards[w[8].parse::<usize>().unwrap()] }),
     };
-    let why = game::orders::squad_orders_give(g, w[1], Some(&t), who, None);
+    let why = match seat {
+        Some(n) => { let sid = g.seats[n]; game::seats::with_seat(g, sid, &mut |v: &mut game::game::Game| game::orders::squad_orders_give(v, w[1], Some(&t), who, None)) }
+        None => game::orders::squad_orders_give(g, w[1], Some(&t), who, None),
+    };
     format!("  the driver's order before tick {}: {} -> {:?}", k, l, why)
 }
 
