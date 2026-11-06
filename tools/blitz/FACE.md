@@ -93,13 +93,15 @@ round the call, two runs each, the quieter kept.
 | wasm small | 1.49 | 226 | the same |
 | wasm dev / release / small, `--reserve 1500` | 1.46 / 1.35 / 1.41 | 25 / 45 / 33 (tick 1) | the same, the memory grown once before the start |
 | native runner, debug (opt 0) | 5.4 | 17 to 23 | `game_step` alone, `std::time::Instant` (the runner's own line) |
+| native runner, optimised (opt 3, no LTO: `cargo build --release` in `rust/game_run`) | 1.06 to 1.11 | 7 to 9 | the same; in step for the 3,006 ticks |
 | TypeScript, the same play | 2.73 | 138 to 144 (tick 1) | `stepSeats` alone, `wasm-run.ts --ts-time` (the stand and the preparation of mission.ts, nothing written) |
 | TypeScript, `tools/qa/tickcost.ts` | 3.00 | 47.7 | `Game.update` on the game server's stand (senses on the CPU), first 120 ticks left out: another play (2,771 ticks), not the same work |
 
 Other missions through the dev build, mean / worst: hostage-rescue:1 1.25 / 158 · glasshouse-four:1 1.27 / 227 · mousehole-four:1 1.61 / 763 ·
 tut-solo:1 0.67 / 184. The lights' update is about 0.001 ms a tick.
 
-The optimisation level moves the mean by a tenth, and the worst tick is not the game: see memory.
+Through wasm the optimisation level moves the mean by a tenth; the optimised native tick is about three quarters of the wasm one. The worst wasm tick
+is not the game: see memory.
 
 **Memory.** The module starts at 111.8 MB (the shipped simulation: 47.9 MB; the difference is the 64 MB stack `rust/game_face/build.rs` asks for). After
 the import 130 MB. At the end of room-clear-four:1 **1,416 MB** of linear memory (1,485,307,904 bytes) with 571,962 rows in the box table: every made box
