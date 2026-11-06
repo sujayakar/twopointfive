@@ -42,6 +42,9 @@ parts: a JSON head (the level's fingerprint, this build's word for the schema, t
 game (`io::export`), and its block. Read back, it is put in the ring of saves by hand and loaded like any save. A file holds less than a save in memory:
 what the bridge does not carry (BRIDGE.md) starts blank, and the page's own records are the moment's it was read in, not the file's.
 
+Under the word the saves list holds only the games kept in the module: a file of the TypeScript's fields in the browser's store is the other page's
+(one origin, one store), a load of it is refused, and it is not listed (`savestate.ts slots()`).
+
 Left: saves do not outlive the page (the store is the browser's, a few megabytes, and a kept game is about eight); the panel's 'save (force)' and
 `__save.snapshot` still walk the puppet; the file has no picture.
 
@@ -54,6 +57,7 @@ Left: saves do not outlive the page (the store is the browser's, a few megabytes
   apply left through the generated write by path (`tools/blitz/poke.ts` → `face_write` → `io::poke`): no call of the face a field. A tool writes with
   `window.__rust.poke(obj, path, value)`, which answers null or the reason. `window.__rust.poked` counts them by path; `pokeRefused` names a write that
   has no way there.
+- **The options' particle row** (`engine.settings.gpuParticles`) is among the watched writes: the tick reads it (`gpuFx`).
 - **Not covered:** a panel's row that calls a method (it runs a rule on the puppet only), and a write to a field outside the list in
   `src/host/rustgame.ts` `watched` (the next apply may put the Rust game's value back over it).
 
@@ -103,17 +107,36 @@ game's and is made current again every frame (0.30 ms); the target under the cur
 Memory does not grow over 1,800 steps (153 MB; the module reserves once at the start). A save is 4 to 24 ms where the TypeScript's snapshot is 79 to
 103 ms; a load is 280 to 550 ms (one whole apply) where the TypeScript's is 27 to 51 ms.
 
-## What the picture lacks (drawn frames of both pages, software adapter, never a GPU)
+## The picture: what the tick computes for it, and how it reaches the page
 
-Seven drawn frames of a room clear on each page, read back from the frame's own texture, and three frames of the live loop: no page error and no GPU
-validation error on either; the die, the clock, the lights' and the boxes' counts equal at each. Looked at pair by pair, the Rust page differs in:
+The rule: what the simulation's own code computes from the game's state for the picture is computed in the Rust tick and carried; the dress step
+(`src/host/rustdress.ts`) only hands things to the engine's objects. Nothing is worked out a second time in TypeScript.
 
-- **the fog of war's picture block** (`fogOfWar.frame`: the team's eyes, the lit fog's lamps, the thin walls' bits) is blank on the puppet for the whole
-  game: the Rust pass writes `on` and `full` and leaves the rest to the picture, and nothing on the page fills it. The first frame ever drawn shows no
-  men at all on the Rust page;
-- **a red point at a man's muzzle** that the page without the word does not show;
-- **a blast's flash and its fragments**: the page without the word shows them, the Rust page neither (no `ParticlesEmit` arm arrived in that run);
-- **sparks** are drawn as the fallback's streak boxes, where the page without the word sends embers to the GPU's particles and keeps its pool empty.
+| what | where the Rust tick makes it | how it reaches the page |
+|---|---|---|
+| the fog of war's block (`fogOfWar.frame`: the team's eyes and their fields, the fog's levels, the lit fog's lamps, the thin walls' bits) | `fogofwar/p_02.rs fog_of_war_pass`, `p_03.rs` (`full_block`, `lit_block`), `render_lights pack_light` | the filtered export (the block is on both lists) |
+| the lights' fog classes (the team's ids and lights) | `fogofwar/p_03.rs fog_of_war_full_block` | the filtered export (`LightSet.fog_team`) |
+| particle records, impulses, the fires' heat | every site of `particle_fx`, `blast_look`, `destruction`, `break_table`, … through `render_particles::particles_emit` | out events (`ParticlesEmit`, `ParticlesImpulse`, `ParticlesSetHeat`) |
+| a burst's fragments: a wall charge's, a door charge's, a thrown can's | `blast_look/b_01.rs blast_sparks` | out events |
+| which boxes are a laser's beam, a tracer's streak, an infrared line | `thinline thin_note / thin_air`, `irlaser ir_note` | STAND-IN `face_notes_out` → `notesIn` (the page's own side tables) |
+| the wind's two lists (the sources that blow; the ones for the particles) | `wind/p_01.rs wind_update` | STAND-IN `face_wind_out` → `windIn`; `windOut` hands them to the solver and the pool |
+| the weather frame, the sky's two colours, the haze, the exposure, the gloss, the box world's geometry serial | `weather`, `lighting`, `hours`, `wallbreak` | STAND-IN `face_picture_out` → `pictureIn` |
+
+What the tick has to be TOLD of the host, because a rule asks it: whether there is a particle pool (`particleFx.ts gpuFx`: with one, embers and
+fragments go to it and the sparks' own pool of streak boxes stays empty), the pool's two switches a door charge's fragments go by, and whether there is
+a reach keeper (a breached wall tells it). The bridge's engine list carries none of these: STAND-IN `face_host_has`, called beside the host's half
+before every step.
+
+A wall charge's feel is in two halves. The report and the camera's kick are the Rust tick's (`blast_feel`). Its particles (the fireball, the dust
+ring, the three pushes, the ceiling's dust) are queued closures in the TypeScript and stay the page's: the host starts them on the report's own out
+event (the crack, which nothing else plays: STAND-IN, `OUT_OWN.GameAudioLikePlay`) through `blastFeel.ts wallFeelPicture`, and the dress step lets
+their later stages go (`blastFeelStages`).
+
+MEASURED SO FAR (two tapes of the office room clear played back on both pages, software adapter, nothing drawn): the fog's block equal field by
+field at 52 of 52 and 28 of 28 points; particle records arrive and are equal by kind at every point; the die and every part equal. NOT YET equal,
+and mended in the tree but not yet run: the wind's records (the sources stood at speed 0 on the puppet, and the rain fell plumb), the smoke
+sources of a shot and a stun (never sent; and no kind, lattice or track on the ones that were). Open: a frag's scorch decals (3 against 1), the
+hash of some particle records. No drawn pair has been taken on this tree yet.
 
 ## Checking it
 

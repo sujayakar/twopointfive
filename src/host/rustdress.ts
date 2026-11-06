@@ -11,8 +11,9 @@
 //
 // AND NOT HERE ANY MORE, because the Rust tick runs these bodies under their dressing rows and a second run on the puppet would do each twice: the
 // moths (their step and their boxes), the drawn places of a man's rig (`drawnBoxes`), the spent cases' sounds, the squad's net, the cues, a broken
-// fixture's pieces, the feel of a wall charge (the camera's kick is the Rust tick's; its dust and crumbs are queued by `wallReport`, which nothing tells
-// the puppet: they want an out event), and the wind's own step: only its hand-over to the particles and the smoke is made here (`windOut`).
+// fixture's pieces, a set charge's look and its blast's (its boxes, its flash's colour and the fragments of the burst are all the Rust tick's:
+// blast_look), the report and the camera's kick of a wall charge (its particles are started by the host on the report's out event and their
+// later stages let go here: `blastFeelStages`), and the wind's own step and its two lists: only the hand-over of those lists to the particles and the smoke is made here (`windOut`).
 // STILL HERE though the Rust tick has a body of the same name: `statureTick`, because the TypeScript's eased scale of each man lives in a table of
 // stature.ts that the bridge does not carry and `drawMen` reads it.
 //
@@ -28,9 +29,8 @@ import { updateRainFx } from '../game/rainFx';
 import { fireDraws } from '../game/fire';
 import { statureTick } from '../game/stature';
 import { gpuFx } from '../game/particleFx';
-import { WIND, windOf } from '../game/wind';
-import { WIND_GPU_MAX } from '../smoke/types';
-import { blastLookTick } from '../game/blastLook';
+import { WIND } from '../game/wind';
+import { blastFeelStages } from '../game/blastFeel';
 import { updateSnowBreath } from '../game/snowBreath';
 import { recapTick } from '../game/deathrecap';
 import { civiliansShown } from '../game/civilians';
@@ -39,23 +39,12 @@ import { civiliansShown } from '../game/civilians';
 export const DRESS_MS = { last: {} as Record<string, number>, sum: {} as Record<string, number>, n: 0, threw: {} as Record<string, string> };
 export interface SideList { list: unknown[]; of: unknown; base: number }
 
-/** THE WIND'S HAND-OVER (wind.ts `update`, its last lines): the sources that blow, as the Rust tick left their speeds, to the smoke's solver, and the
- *  jets near the view with the storm to the particles. The lists are made again here: the bridge sends the sources every tick and neither list. */
+/** THE WIND'S HAND-OVER (wind.ts `update`, its last lines): the sources that blow go to the smoke's solver, and the ones the tick picked for the
+ *  particles (the jets near the view, then the storm) to the particle pool. Both lists are the Rust tick's, as the host put them on the puppet
+ *  (rustgame.ts `windIn`); nothing is chosen here. */
 function windOut(g: Game): void {
-  const W = g.wind as unknown as Record<string, any>, P = gpuFx(g), Sm = g.smoke as unknown as { setWind?: (a: unknown[], relax: number) => void };
-  const knobs: [number, number, number] = [WIND.sheetWake, WIND.sheetKick, WIND.debrisK];
-  W.active.length = 0; W.forParticles.length = 0;
-  if (windOf(g) <= 0) { P?.setWind(W.forParticles, knobs); Sm.setWind?.(W.active, WIND.smokeRelax); return; }
-  for (const s of W.all) if (s.speed > 0.005) W.active.push(s);
-  if (P) {
-    const f = (g.engine as unknown as { viewFocus?: number[] }).viewFocus ?? g.player.char.pos, sw = W.stormWind() as unknown;
-    const far = (s: any): number => Math.hypot(s.bound.c[0] - f[0], s.bound.c[1] - f[1], s.bound.c[2] - f[2]);
-    for (const s of W.active) if (s.kind === 'jet' && far(s) < WIND.nearM + s.bound.r) W.forParticles.push(s);
-    const cap = WIND_GPU_MAX - (sw ? 1 : 0);
-    if (W.forParticles.length > cap) { W.forParticles.sort((a: any, b: any) => far(a) - far(b)); W.forParticles.length = cap; }
-    if (sw && W.storm.speed > 0) W.forParticles.push(W.storm);
-    P.setWind(W.forParticles, knobs);
-  }
+  const W = g.wind as unknown as { active: unknown[]; forParticles: unknown[] }, P = gpuFx(g), Sm = g.smoke as unknown as { setWind?: (a: unknown[], relax: number) => void };
+  P?.setWind(W.forParticles as never, [WIND.sheetWake, WIND.sheetKick, WIND.debrisK]);
   Sm.setWind?.(W.active, WIND.smokeRelax);
 }
 
@@ -75,9 +64,9 @@ export function dressStep(g: Game, dt: number, side: SideList): void {
   const out: Box[] = [];
   let statured = false;
   if (DRESS.stature) run('stature', () => { statured = statureTick(g, all, dt); });
-  // (the wall charge's look: its boxes are on the Rust tick's list now, so the ones made here go on a list nobody reads; what the call does beside them,
-  //  a blown charge's flash and its fragments let go, is the picture's and stays)
-  run('blastLook', () => { const none: Box[] = []; for (const s of S) blastLookTick(s.view as unknown as Game, none); });
+  // (the wall charge's feel: the Rust tick made the report and the kick; the charges that stand are remembered here for the next blast and the queued
+  //  stages of the last one, its ring, soot and ceiling dust, are let go: the particles' half, started by the host on the blast's report)
+  if (DRESS.blastFeel) run('blastFeel', () => { for (const s of S) blastFeelStages(s.view as unknown as Game); });
   // ---- back in stepSeats
   if (DRESS.wake) run('wake', () => G.smokeWake(all));
   // (drawCharacters: the men handed to the renderer. The Rust tick deals what each wears and stops there, as the tick does with the `men` row down)

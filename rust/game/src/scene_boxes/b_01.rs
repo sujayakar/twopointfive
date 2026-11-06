@@ -25,7 +25,13 @@ pub fn boxes_frame_reset(g: &mut Game) {
     let rows = core::mem::take(&mut g.box_frame_rows);
     let mut live = vec![false; g.tab.boxes.len()];
     for b in g.dyn_boxes.iter() { live[b.ix()] = true; }
-    for id in rows { if live[id.ix()] { g.box_frame_rows.push(id); } else { g.box_frame_free.push(id); } }
+    for id in rows {
+        if live[id.ix()] { g.box_frame_rows.push(id); continue; }
+        // (what a maker noted beside the box that stood in this row, a thin line's width or an infrared mark, goes with the box)
+        crate::thinline::thin_forget(g, id);
+        crate::irlaser::ir_forget(g, id);
+        g.box_frame_free.push(id);
+    }
 }
 
 /// A BOX ITS MAKER KEEPS FOR A WHILE AND THEN LETS GO (a remembered thing's copy in the fog of war, an fx row's box): a freed row used again, else a new

@@ -31,8 +31,11 @@ pub fn sam_laser_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     if let Some(r) = crate::combat::laser_reach(g, c, None, Some(true)) { crate::combat::beam_boxes(g, r.from, r.dir, r.l, out, r.dot, Some(true), Some(true)); }
 }
 
-/// BOUNDARY NO-OP (irlaser.ts:78): the mark "this box is drawn in IR" is the picture's set (read by irMade as a view is drawn); the box is handed back
-pub fn ir_note(g: &mut crate::game::Game, b: BoxId) -> BoxId { b }
+/// The mark "this box is an infrared line the step drew for its own tube": the set beside the boxes that a picture with the tube off leaves out by
+/// (`ir_made`). It goes when the box's row is freed (`ir_forget`).   (irlaser.ts:78 irNote)
+pub fn ir_note(g: &mut crate::game::Game, b: BoxId) -> BoxId { g.m.irlaser.ir_made.add(b); b }
+/// A box's row is free again: the mark of the box that stood in it goes with it.
+pub fn ir_forget(g: &mut crate::game::Game, b: BoxId) { if !g.m.irlaser.ir_made.is_empty() { g.m.irlaser.ir_made.delete(b); } }
 
 /// The picture is the tube's: an infrared laser shows in it; a replay viewer's own tube, while one is set, answers instead.   (irlaser.ts irViewer)
 pub fn ir_viewer(g: &mut crate::game::Game) -> bool {
@@ -50,7 +53,7 @@ pub fn ir_view_as<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, tube: 
     r
 }
 
-/// BOUNDARY: the host's draw of a viewer's picture asks whether this box is an infrared one, and at the swap `ir_note` above fills the set; until then the set is empty and this is false.   (irlaser.ts irMade)
+/// Is this box an infrared line the step drew for its own tube (`ir_note`)?   (irlaser.ts irMade)
 pub fn ir_made(g: &mut crate::game::Game, b: BoxId) -> bool {
     g.m.irlaser.ir_made.has(b)
 }
