@@ -191,7 +191,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   those pages (`pagesAsTheyWere`); `thresholdmenu-probes.ts` stays as the rig twenty checks stand on. `flashweight-fog`'s row said one line and
   the two stands fail DIFFERENT lines (the row says both now). CHAOS IS NOT THE OTHER REDS' CAUSE: thirty-two unexplained rows were run on the page's
   stand with `tune.chaos` held at 0 from each game's first update (a preload; a stand-up still builds at 0.5): none went green, twenty-nine failed their
-  rows' own lines and three ran past 25 minutes four at a time (`corridor`, `flashweight-entry`, `wall-snap-sweep`). tools/qa is typechecked by its own
+  rows' own lines and three ran past 25 minutes four at a time (`corridor`, `flashweight-entry`, `wall-snap-sweep`).
+  THE NINTH (2026-11-06), five stagings and one fault in three places. `registry-level`, `consulate-level` and `depot-level` were red on BOTH stands
+  with no row: each built its generator's level itself and walked the exporter's steps after it one by one, and the word every box says it does,
+  stamped at the export, was a step none of them had (175, 75 and 84 'diffs' on files the exporter calls up to date). All three ask the exporter's own
+  answer now (`tools/qa/level-file.ts exporterCheck`: `export.ts <name> --check`, the look twin with it; `LEVELFILE_BREAK=1` asks without the
+  dressing, STALE on both). `checkpoint-civilians` (and its other name `rb-checkpoint-civilians`): on the page's stand Kowalski's round brings him
+  inside three metres of the cleaner while the worker's body settles, he finds her and she answers, and the save is written with her report a second
+  from delivered, so the load 'lost' a promise already spent. From the grab to the save the shift stands at points of its own rounds with no line to
+  either civilian (`standOff`, the game's own line test), feet held, sighted and free again in the file; for the half minute after the load it is
+  pinned, deaf and blind too. The minute thrown away still finds the body and has her tell a man (score 56 and 64 against 90 at the save), so the load
+  winds back something. `CKPTCIV_BREAK=1` stands a man by her after the load (FAIL on both); `=save` leaves the first staging out (the page's stand
+  only). `checkpoint-autosave`: the cleaner SEES the hauled body on the page's stand and is on the phone to security for 17 s, which rightly holds the
+  gate: the body's request waits, the stage's and the room's JOIN it with no line of their own in the log, and the probe read no stage request. The
+  civilians are out of that script, as the staff's senses are (they were only deaf); `CKPTCIV_IN=1` leaves them in (the page's stand only). `attract`:
+  a guard's mark is where a fresh encounter stands him, read from the game's own at the start: under the night's opening a man whose round begins by
+  the way in is stood further along it (`ATTRACT_BREAK=1`: the marks a metre off, FAIL on both). `squadplay-try`: F is pressed with blue still walking
+  to its stand-off, and the two seconds the line waited were the rest of that walk (1.90 s old, 2.08 s at the squad's pace). The blow is held to the
+  frame the word and the 'armed' beat are both in, ten seconds at most, and nobody of ours in the blast (`SQUADTRY_BREAK=1`: half a second, FAIL on
+  both; LOOSENED from two seconds flat). Read and left: `move-walktries` (a man shifts 5 cm in the two seconds a line wants nobody moving),
+  `orderui-door`, `missing`, `nightbreach-contested`, `standoff-end`.
+  tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
 <!-- was CLAUDE.md lines 398–468 -->
