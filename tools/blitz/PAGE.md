@@ -78,6 +78,11 @@ statics 874; the fog frame's lights 769; the frame's boxes, the fog's things and
 fields (`marks`, `cut`, `cut_glass`, `was`, `shape`) about 179 each. All of it is in generated files. Asked of the generator: a memo per field inside
 the big parts (a list that did not change is sent whole when one neighbour did), and compiled readers for bones and for a box's optional fields.
 
+Outside `Game.update` the Rust page's frame is 0.8 ms dearer too (a CPU profile of both pages, 1,200 frames, the dev server's bundle for its names): the
+HUD's lines, which run on the puppet between ticks. The cursor's ray goes through the puppet's own copy of the box world, which stands aside from the Rust
+game's and is made current again every frame (0.30 ms); the target under the cursor is worked out again where the TypeScript page has the tick's
+(0.27 ms); and the menu's default row asks the Rust game its questions every frame (0.30 ms of bytes written for them).
+
 Memory does not grow over 1,800 steps (153 MB; the module reserves once at the start). A save is 4 to 24 ms where the TypeScript's snapshot is 79 to
 103 ms; a load is 280 to 550 ms (one whole apply) where the TypeScript's is 27 to 51 ms.
 
