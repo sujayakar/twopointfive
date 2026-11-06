@@ -124,6 +124,11 @@ fn main() {
             for l in gives.iter().filter(|l| game_run::line_of(l, k)) { println!("{}", game_run::give(&mut g, k, l)); }
             // HARNESS STAND-IN: the test driver's own question that writes the game (`g.fight.roomAt(p)` between ticks floods a room and keeps it)
             for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_before(&mut g, k, l) { println!("{}", t); } }
+            // BLITZ_CALL="<k> <rule> [start]": a rule of the game (restart_encounter | reset_guards) called before tick k, as mission.ts calls it on the
+            // TypeScript side under the same word. With `start` it is not called here: mission.ts wrote the state after the call as a new start.
+            if let Ok(c) = std::env::var("BLITZ_CALL") { let w: Vec<&str> = c.split(' ').collect(); if w[0].parse::<usize>().ok() == Some(k) && w.get(2) != Some(&"start") {
+                match w[1] { "restart_encounter" => game::game::game_restart_encounter(&mut g), "reset_guards" => game::guards::reset_guards(&mut g), x => panic!("BLITZ_CALL: no rule {}", x) }
+                println!("BLITZ_CALL before tick {}: {} called; {} guards, time {}", k, w[1], g.guards.len(), g.time); } }
             if let Some(v) = meter.get(k - 1) { game_run::meter(&mut g, *v); }
             let dt = host[k - 1][0];
             TICK.store(k, Ordering::Relaxed);

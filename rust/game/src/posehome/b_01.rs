@@ -81,7 +81,12 @@ fn everybody_out_and_in(g: &mut Game, chars: &[CharId]) {
     for rag in [false, true] {
         for &c in chars {
             for p in kept(g, c, rag) {
-                if p.nodes == 0 || p.at >= Pose::LOOSE || back.iter().any(|b| b.0.at == p.at) { continue; }
+                // (a pose of a set's list that stands OUTSIDE the pool goes in with the rest, in the list's place: a man made since the last tick,
+                //  whose set was never at home (a restart made the players and the guards anew while the old sets still held the pool), is on the
+                //  lists like any other, and the TypeScript's second pass puts every pose of every listed set in, in order (posehome.ts moveIn →
+                //  poseSetIn). Left out here, his set was told it was at home while his animator's handles still named rows outside the pool, and
+                //  the next layer was handed a pose the module does not hold. A ragdoll's own pose outside the pool stays outside.)
+                if p.nodes == 0 || (rag && p.at >= Pose::LOOSE) || back.iter().any(|b| b.0.at == p.at) { continue; }
                 let f = crate::anim_skeleton::pose_cols(g, p).to_vec();
                 back.push((p, f));
             }

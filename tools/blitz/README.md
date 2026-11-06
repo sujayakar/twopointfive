@@ -33,6 +33,16 @@ Exit: 0 in step and no unknown path · 1 the block or the die parted, or a kept 
 `--open "K"` also writes the state as tick K opens. `--after N` runs N more ticks after the block parts. `--blobs` keeps each kept Rust state after
 it is diffed.
 
+### Another die
+
+`--die N` seeds the game's die with N on both sides (mission.ts's own is 20942; the start the Rust side imports carries the die). `--die tool` stands the
+game as a tally's run of that mission and seed stands it (tools/qa/playthrough.ts under the harness's word: one draw of the scripted player's seeded
+`Math.random` for the die, PLAY.md), so the game played is the tally's own; the die is written to `die.txt`. A mission in step on one die is one
+play-through in step: a sweep takes each mission on several dice.
+
+`BLITZ_CALL="<k> restart_encounter|reset_guards [start]"` in front of run.sh calls that rule before tick k on both sides (with `start` the Rust game
+takes the TypeScript's state after the call as a new start instead of calling its own rule).
+
 ## A game of two seats
 
 ```sh
@@ -169,6 +179,9 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | `rails_host_view` after each tick | `view` | on a tutorial mission the host sets the first view again with its own camera (game.ts hostAfter) |
 | a tutorial's authored checkpoint (`chron_save` on rails) | (always) | the save controller stops the level's program for the take; the frame starts it again |
 | a lesson player's meter (`meter.txt`) and `selectVerb` (`hostwrites.txt select_verb`) | (always) | the scripted player of a tutorial feeds the player's light meter and picks a row between ticks |
+| the scripted player's word to the hostages or the man in hand (`hostwrites.txt rescue_word`, `snatch_word`) | (always) | the driver calls the module's own `word` between ticks |
+| the scripted player's pick of a row of the nearby list (`hostwrites.txt near_sel`) | (always) | the driver writes `player.nearSel` and calls `pickHover` between ticks |
+| a mission player's meter (`meter.txt`, every mission) | (always) | the scripted player writes `player.visibility` before every tick |
 | the autosave's chronicle row (`hostwrites.txt chron_save`) | (always) | the save controller is the host's and writes one row into the game |
 | `game_follow_pos` for each seat after each tick | `follow` | the host's camera asks the game where to look; on a tutorial's sky seat the ask eases and stamps the view's centre (rails.ts look) |
 | a checkpoint PUT BACK (`hostwrites.txt chron_load`, the state in `L<k>.bin`) | (always) | the host's save controller replaces the whole game between two ticks; the runner takes the TypeScript's state as the next tick opens as a new start, and says so |

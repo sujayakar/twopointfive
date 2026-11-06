@@ -3,7 +3,7 @@
 // and nothing of them is edited on disk. This bundler plugin (bunfig.toml [serve.static] for the dev server, tools/build.ts for the static build)
 //   · resolves `tps-bridge/<name>` to tools/blitz/<name> (src/host/rustbridge.d.ts says what each holds, so the type check never walks into tools/);
 //   · loads export.ts and import.ts with the lines a browser cannot run swapped: the schema read from disk becomes an import of the same JSON, and the
-//     tool-only words on `process.env` become `false`;
+//     tool-only words on `process.env` become `false` (the importer's profile: a global a check may set);
 //   · gives the bridge its window on a module's own variables, as tools/blitz/expose.ts gives a tool: one line at the end of each source file of the
 //     simulation's folders, a getter (and for a `let`, a setter) for each top-level name the schema's walk asks for, on globalThis.__tpsTop[<file>]. Nothing
 //     reads them unless the Rust game is asked for.
@@ -13,7 +13,7 @@ import { resolve, join } from 'node:path';
 
 const HERE = resolve(import.meta.dir), ROOT = resolve(HERE, '../..');
 const SCHEMA = JSON.parse(readFileSync(join(HERE, 'schema.json'), 'utf8'));
-const FILES: Record<string, string> = { export: 'export.ts', import: 'import.ts', classes: 'classes.ts', 'puppet-apply': 'puppet-apply.ts', 'out-dispatch': 'out-dispatch.ts', ask: 'ask.ts', 'schema.json': 'schema.json', 'puppet-lists.json': 'puppet-lists.json' };
+const FILES: Record<string, string> = { export: 'export.ts', import: 'import.ts', classes: 'classes.ts', 'puppet-apply': 'puppet-apply.ts', 'out-dispatch': 'out-dispatch.ts', ask: 'ask.ts', poke: 'poke.ts', 'schema.json': 'schema.json', 'puppet-lists.json': 'puppet-lists.json' };
 /** a swap that must find its line: a generated file that changed shape is said at build time, not found out in the page */
 function swap(text: string, file: string, from: string | RegExp, to: string): string {
   const out = text.replace(from, to); if (out === text) throw new Error(`page-plugin: tools/blitz/${file} no longer holds ${String(from)}: the page's bridge needs that line swapped`);
@@ -29,7 +29,12 @@ const plugin: BunPlugin = {
         text = swap(text, 'export.ts', "import { readFileSync } from 'node:fs';", "import SCHEMA_JSON from './schema.json';");
         text = swap(text, 'export.ts', 'const here = import.meta.dir;', '');
         text = swap(text, 'export.ts', /export const SCHEMA: any = JSON\.parse\(readFileSync\([^\n]*?\)\);/, 'export const SCHEMA: any = SCHEMA_JSON;');
-      } else text = swap(text, 'import.ts', /process\.env\.PUP_(PROF|DEBUG)/g, 'false');
+      } else {
+        // (the importer's own profile, its count of slow reads a field and its ms a table, is a tool's word on the disk; in the page it is a global a check
+        //  sets before the page loads, `__pupProf`, and nothing otherwise)
+        text = swap(text, 'import.ts', /process\.env\.PUP_PROF/g, '(globalThis as any).__pupProf');
+        text = swap(text, 'import.ts', /process\.env\.PUP_DEBUG/g, 'false');
+      }
       // (what is left of `process` in import.ts stands behind the words just made `false`: never run)
       if (/readFileSync|import\.meta\.dir|process\.env/.test(text)) throw new Error(`page-plugin: ${path.slice(ROOT.length + 1)} still names the disk or the process's words after its swaps`);
       return { contents: text, loader: 'ts' };
