@@ -351,6 +351,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   settled): (3), (6) and (9) FAIL. NOT HELD by it: `switch-list.ts make` and `same`,
   gate.sh's two lines, the `plain` line. Four reviews at the highest effort, 57 points, worked in or said here; the last rework run again and
   not reviewed. (The switch for one check at a time: two more reviews, 28 points; its last rework run again and not reviewed.) Nothing here looks at a picture.
+  THE OFF SIDE'S OWN PROBES, DELETED (11-06, under the maintainer's word of 11-04 on old checks: "feel free to delete them if they're no
+  longer relevant or fix them"). WHAT THE FOLD SHOWED FIRST: of the gate's names, 39 families were run under it (not `qrf` and `response`,
+  another lane's; not `perf` and the families the port's count had no pin in; `kit`, `missions` and `threshold` hit the 25 minute cap and
+  were read as far as they got). AT LEAST 207 probes go red once their pin is refused, and about two thirds of their lines still pass. Most
+  are NOT tests of an off side: they test a live rule staged on an older neighbour (the six `bigslot` probes hold the gun slots off and
+  stage the shotgun on the old kit model; with the pin refused the staging never forms). Those are TO BE RESTAGED, by cluster, not yet
+  begun: the kit model first (the tables most pinned: KITDEAL, OWNBLOW, GUNSLOTS, SLOTSETUP, KITTREE), then door tools, words, close-in
+  before the stalk, quiet fog, silent (the Rust goal's order). Until then the reference for the Rust game is the TypeScript tick UNDER THE
+  FOLD, line for line. DELETED are nineteen whose whole subject was a settled switch's off side, each read line by line under the fold and
+  again in a review: `close-off`, `doorpath-off`, `glasspen-off` (a gate family of its own: gone from all-quick), `gunlook-off`,
+  `gunroles-off`, `gunslots-off`, `hands-off`, `handwork-off`, `holdglass-off`, `kitanim-off`, `off-hinges-off`, `owncharge-off`,
+  `roomfit-off`, `squadnet-off`, `stealthpose-off`, `sticky-off`, `words-off`, `work-off`, `workstow-off`. Most of their lines were of four
+  kinds: 'off = the build before' (the old behaviour played, or a run that digests the same with the rule off), 'a recording from before
+  the key replays with it off', 'the switch is one of the two stands' rows and the page writes it on unless ?no…', and an on-arm that was
+  the off-arm's control (each such on-arm is held by a sibling: `gunroles-deal`, `gunlook-hands`, `owncharge-door`, `sticky-kit`). ONE
+  LIVE LINE WAS CARRIED OVER: 'src/game/doorpath.ts brings in no other game module but for its types' is `doorpath-file`'s now (its red
+  path's preload rests on it). With the nineteen went `tools/qa/doorpath-inert.ts` (the preload that took the door walk out of a
+  process), ten helpers and the imports nothing else used.
+  WHAT IS LOST WITH THEM, said plainly. (a) The on-against-off identities ('the switch on with no charge carried is the same run as the
+  switch off', 'the radio hand and the swap move nothing of the game') and a few run-against-run lines that lived in them
+  (`stealthpose-off`: the same run twice writes the same poses). (b) The only checks of some switches' OWN WIRING: the `?no…` address word
+  and the recording reader's from-before-the-key branch of GUNLOOK, GUNROLES, GUNSLOTS, OWNCHARGE, STICKY, WORKSTOW and SQUADNET. (c) THE
+  OFF BRANCHES THEMSELVES ARE STILL IN `src/`: the page's address words, the old stand and its words, and `journal.ts applyKnobs` still
+  play them, and from this cut an edit that breaks one lands green. They are shipped and unheld until the rows are retired from the source
+  (`tools/retire`), which the freeze of the gameplay TypeScript holds back until the port is done.
+  KEPT, though named `-off`: `wand-off` (its first line is a live identity: a wand carried and never used digests the same as none
+  carried), `kittree-off` (one line is the kept cards of an older build coming through whole) and `stay-open-off` (three lines are the
+  rule ON: no leaf has a closer, but a showcase keeps its own), each for its cluster; `bigslot-off` (green under the fold: its row is a
+  player's); `lineoffire-off` and `silent-off` (green under the fold WITH a refused write, so not cleared: to be read against the unfolded
+  run); `roomclear-off` (green, nothing refused: its subject is a scenario not started); `takedown-off` (red under the fold with nothing
+  refused: not read yet). SEEN BY READING AND NOT TAKEN: `cutboxes-off` (in `perf`, never run under the fold) is of the deleted kind.
+  A CLASS FOUND, COUNTED BY ITS WORDS ONLY: a break word whose red path IS a switch's off side (`DOORPATH_OLD=1`: "the entry as it was";
+  `OWNCHARGE_BREAK=1`, `STICKY_BREAK=1`, `WORKSTOW_BREAK=1` and their like: "the switch left off: must fail") cannot bite under the fold
+  where that switch is settled. About 111 of the tools' 604 break words describe themselves so (a grep of their own usage lines; which of
+  those switches are settled, and which words do bite another way, is not sorted). A check on a game with no off needs its red path at the
+  check (a wrong expectation), not in the game.
   tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
