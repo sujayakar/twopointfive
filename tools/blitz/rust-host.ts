@@ -61,13 +61,14 @@ export function loadFace(wasm = DEFAULT_WASM): Face {
   if (!existsSync(wasm)) throw new Error(`rust-host: no module at ${wasm} (cd rust/game_face && cargo build --target wasm32-unknown-unknown --release)`);
   const X: any = new WebAssembly.Instance(new WebAssembly.Module(readFileSync(wasm)), {}).exports, mem: WebAssembly.Memory = X.memory, dec = new TextDecoder();
   const u8 = () => new Uint8Array(mem.buffer), u32 = () => new Uint32Array(mem.buffer);
-  const outView = () => u8().subarray(X.face_out_ptr(), X.face_out_ptr() + X.face_out_len());
+  // (an address past 2 GB comes back from the module as a negative number: `>>> 0`)
+  const outView = () => { const p = X.face_out_ptr() >>> 0; return u8().subarray(p, p + (X.face_out_len() >>> 0)); };
   const outText = () => dec.decode(outView());
   const NAMES: string[] = []; for (let i = 0; i < X.face_parts(); i++) { X.face_part_name(i); NAMES.push(outText()); }
   F = { X, mem, NAMES, u8, u32, outText, outView,
-    panicText: () => { try { return dec.decode(u8().subarray(X.face_panic_ptr(), X.face_panic_ptr() + X.face_panic_len())); } catch { return ''; } },
-    hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = X.face_alloc(b.length); u8().set(b, p); try { return f(p, b.length); } finally { X.face_free(p, b.length); } },
-    partHashes: (slot: number) => { const at = X.face_part_hashes(slot) >>> 2; return Array.from(u32().subarray(at, at + NAMES.length)); } };
+    panicText: () => { try { const p = X.face_panic_ptr() >>> 0; return dec.decode(u8().subarray(p, p + X.face_panic_len())); } catch { return ''; } },
+    hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = X.face_alloc(b.length) >>> 0; u8().set(b, p); try { return f(p, b.length); } finally { X.face_free(p, b.length); } },
+    partHashes: (slot: number) => { const at = (X.face_part_hashes(slot) >>> 0) >>> 2; return Array.from(u32().subarray(at, at + NAMES.length)); } };
   FACES.set(wasm, F); return F; }
 
 // ---- the bridge, loaded once and after the game's own modules (classes.ts enters src/game by game.ts, the one door)
@@ -75,7 +76,7 @@ let BR: any = null;
 async function bridge(): Promise<any> {
   if (BR) return BR;
   const E = await import('./export.ts'), I = await import('./import.ts'), C = await import('./classes.ts'), P = await import('./puppet-apply.ts'), O = await import('./out-dispatch.ts'), A = await import('./audit.ts');
-  const K = await import('../../src/game/knobs.ts'), D = await import('../../src/math/dice.ts'), DR = await import('../../src/game/dress.ts');
+  const K = await import('../../src/game/knobs.ts'), D = await import('../../src/math/dice.ts'), DR = await import('../../src/game/dress.ts'), SD = await import('../../src/math/side.ts');
   const LJ = JSON.parse(readFileSync(new URL('./puppet-lists.json', import.meta.url).pathname, 'utf8'));
   // THE WHOLE APPLY LEAVES THE BOX MIRROR ALONE: its fields describe the copy of the box world in the module that holds it (the TypeScript game's is another
   // module than the Rust game's), so the puppet keeps its own and rebuilds it when the apply says the boxes were written (PUT_BACKS)
@@ -83,17 +84,46 @@ async function bridge(): Promise<any> {
   // (the lamps: every field of render/lights.ts's records. No lamp is on the filtered list)
   // A LEVEL ON RAILS: what its scripted player (tools/qa/lesson-run.ts) reads that the filtered list lacks, by module or record, found by playing (the
   // host's half held to the plain play's): the lamps (lesson-run.ts:228 → guards.ts lightEstimateAt), the player's own records (his wall hold), the
-  // lesson's, the rails', the director's, the nearby list's rows, a man's bones in the world (: tut-solo's cursor parted at tick 7542 without). RH_RAILS=<modules and mod::Type, comma> names another list; RH_RAILS=most takes every
+  // lesson's, the rails', the director's, the nearby list's rows, a man's own record. RH_RAILS=<modules and mod::Type, comma> names another list; RH_RAILS=most takes every
   // module but the heavy tables (the boxes, the poses and clips, the ragdolls).
   const RW = process.env.RH_RAILS ?? 'render_lights,lesson,rails,director,cleared,player,game::Player,game::Interactable,character::Character', NOT = new Set(['scene_box_mirror', 'scene_boxes', 'anim_skeleton', 'anim_gltf', 'ragdoll']), INC = new Set(RW.split(','));
   const lamps = new Set<string>(); for (const T0 of Object.values<any>(E.SCHEMA.types)) if (T0.k === 'struct' && (RW === 'most' ? !NOT.has(T0.mod) : INC.has(T0.mod) || INC.has(`${T0.mod}::${T0.name}`))) for (const f of T0.fields) lamps.add(`${T0.mod}::${T0.name}.${f.rust}`);
   BR = { ...E, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable() }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll,
-    lists: { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) }, only, lamps };
+    lists: { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) }, only, lamps, rawKey: SD.rawKey };
   return BR; }
 
 const now = () => performance.now();
-/** each named field that is undefined is an empty one of its kind */
-function fill(o: any, kinds: Record<string, MapConstructor | SetConstructor | ArrayConstructor>): void { for (const [k, C] of Object.entries(kinds)) if (o[k] === undefined) o[k] = C === Array ? [] : new (C as any)(); }
+// STAND-IN: AN EMPTY LIST THE APPLY NEVER MAKES. A value the FILTERED apply makes (a record inside a row or a module's state, new in a step) has only the
+// listed fields; and the importer, reading an empty list, map or set into a field that is undefined on an object it did not itself make in that apply,
+// leaves it undefined (import.ts `if (!L) return cur`), so a WHOLE apply afterwards does not complete it either. Readers then throw on
+// `undefined.values()` (laststand.ts:611 `st.named`, from tools/qa/playthrough.ts:1712) or `for (… of undefined)` (tools/qa/hole-watch.ts:49 `r.opened`).
+// After a whole apply this walks the puppet by the schema and gives every list, map and set that the state holds (not an Option of one) and the object
+// lacks an empty one. Belongs in import.ts (a whole apply completes an object another apply made) or in the filtered export (a value new in a step goes whole).
+function completer(B: any): (g: any) => number {
+  const S = B.SCHEMA, parse = B.parse, TOP = /^B\.top\("([^"]+)", "([^"]+)", "([^"]*)"\)$/, holdMemo = new Map<any, boolean>(), plans = new Map<any, any[]>();
+  const typed = (n: any) => n.k === 'vec' && ['f32', 'u8', 'i32', 'u32'].includes(n.of.k);
+  /** does a value of this type hold, at any depth short of a table's row, a list that could be missing */
+  const holds = (n: any): boolean => { let h = holdMemo.get(n); if (h !== undefined) return h; holdMemo.set(n, false);
+    switch (n.k) { case 'vec': case 'map': case 'set': h = true; break; case 'opt': case 'arr': h = holds(n.of); break; case 'tup': h = n.of.some(holds); break;
+      case 'type': { const T = S.types[n.path]; h = T.k === 'struct' && T.fields.some((f: any) => holds(parse(f.ty))); break; } default: h = false; }
+    holdMemo.set(n, h); return h; };
+  const plan = (T: any): any[] => { let P = plans.get(T); if (!P) plans.set(T, P = T.fields.map((f: any) => ({ f, N: parse(f.ty), top: f.expr?.match(TOP) ?? null })).filter((x: any) => holds(x.N) && (x.top || x.f.expr === 'o' || (x.f.expr === undefined && x.f.ts !== undefined)))); return P; };
+  let n = 0, G: any = null, seen = new Set<any>();
+  const val = (N: any, v: any): void => { if (v === null || v === undefined || typeof v !== 'object') return;
+    switch (N.k) { case 'opt': val(N.of, v); return;
+      case 'vec': case 'arr': if (Array.isArray(v) && holds(N.of)) for (const x of v) val(N.of, x); return;
+      case 'map': if (v instanceof Map && holds(N.V)) for (const x of v.values()) val(N.V, x); return;
+      case 'type': { const T = S.types[N.path]; if (T.k === 'struct') struct(T, v); return; } } };
+  const struct = (T: any, o: any, same = false): void => { if (!same) { if (seen.has(o)) return; seen.add(o); }
+    for (const { f, N, top } of plan(T)) {
+      if (f.expr === 'o') { struct(S.types[N.path], o, true); continue; }   // (a record whose fields stand on the object that holds it: the game's `m`)
+      if (top) { const cur = (globalThis as any).__tpsTop?.[top[1]]?.[top[2]]; if (cur && typeof cur.liveKeys === 'function') { if (N.k === 'opt' && N.of.k === 'type' && typeof cur.get === 'function') val(N.of, cur.get(G)); } else val(N, cur); continue; }
+      const v = o[f.ts];
+      if (v === undefined || v === null) { if (v === undefined && !typed(N)) { if (N.k === 'vec') { o[f.ts] = []; n++; } else if (N.k === 'map') { o[f.ts] = new Map(); n++; } else if (N.k === 'set') { o[f.ts] = new Set(); n++; } } continue; }
+      val(N, v); } };
+  return (g: any) => { n = 0; G = B.rawKey(g); seen = new Set(); struct(S.types[S.root], g); const BK = B.bookOf(g);
+    for (const t of S.tables) { const N = parse(t.ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')); if (holds(N)) for (const row of BK.listOf(t.id) as any[]) val(N, row); }
+    return n; }; }
 const enc = new TextEncoder();
 type Tally = Map<string, { n: number; eg: string; ticks: number; last: number }>;
 
@@ -104,7 +134,7 @@ export class RustHost {
   h = 0; slot = 0;
   readonly audit: boolean;
   /** the ms spent, by what */
-  T = { wbExport: 0, wbCompare: 0, wbImport: 0, hostHalf: 0, step: 0, after: 0, exportStep: 0, applyStep: 0, exportWhole: 0, applyWhole: 0, exportMost: 0, applyMost: 0, block: 0, out: 0, dress: 0, check: 0, calls: 0, start: 0 };
+  T = { wbExport: 0, wbCompare: 0, wbImport: 0, hostHalf: 0, step: 0, after: 0, exportStep: 0, applyStep: 0, exportWhole: 0, applyWhole: 0, exportMost: 0, applyMost: 0, complete: 0, block: 0, out: 0, dress: 0, check: 0, calls: 0, start: 0 };
   worstStep = 0; worstStepAt = 0; worstApply = 0; hostBytes = 0; stepBytes = 0; wholeBytes = 0;
   /** how many whole applies, by why */
   wholes = new Map<string, number>(); steps = 0; starts = 0;
@@ -115,7 +145,7 @@ export class RustHost {
   /** out events dispatched, by arm, and those whose dispatch threw on the puppet */
   outN = new Map<string, number>(); outThrew = new Map<string, string>(); outNoHand = new Map<string, number>(); outTicks = 0;
   made: Record<string, number> = {}; noWay = new Map<string, number>(); noSetter = new Map<string, number>(); noWindow = new Set<string>();
-  standIns = { posture: 0, defs: 0, defNoTwin: 0, cut: 0, run: 0, marks: 0 };
+  standIns = { posture: 0, defs: 0, defNoTwin: 0, cut: 0, run: 0, marks: 0, lists: 0 };
   uploads = { rust: 0, late: 0, missed: 0 };
   /** the whole Rust state last applied (audit), and the puppet as the last tick opened */
   lastRust: Uint8Array | null = null; openState: Uint8Array | null = null;
@@ -127,7 +157,8 @@ export class RustHost {
   private visApplied = NaN; private cutSerial: number[] = []; private wholeNow = false; private uploadDone = false;
   private missionRef: any = null; private loadsRef = 0; private stageRef: any = null; private downRef = -1; private outQ: { arm: string; e: any }[] = [];
   private DEFS = { orig: new Set<any>(), byId: new Map<string, any>() };
-  private memPages = 0; grew = 0; lampsN = 0; private lampsNow = false;
+  private threw: Record<string, number> = {};
+  private memPages = 0; grew = 0; lampsN = 0; private lampsNow = false; private complete: ((g: any) => number) | null = null; private inStep = false; private lastCmds: readonly any[] | null = null;
   /** ms spent in applies and exports so far (what a clock round a call or the dress step takes out of its own count) */
   private nest = 0;
 
@@ -153,7 +184,7 @@ export class RustHost {
 
   private count(name: string) { this.calls.set(name, (this.calls.get(name) ?? 0) + 1); }
   private tsBlock(): Uint8Array { const w: Uint32Array = this.g.sim.w; return new Uint8Array(w.buffer, w.byteOffset, w.byteLength); }
-  rustBlock(): Uint8Array { const X = this.F.X; return this.F.u8().subarray(X.state_addr(this.slot), X.state_addr(this.slot) + X.state_len()); }
+  rustBlock(): Uint8Array { const X = this.F.X, at = X.state_addr(this.slot) >>> 0; return this.F.u8().subarray(at, at + X.state_len()); }
   time(): number { return this.F.X.face_time(this.h); }
   dieN(): number { return this.F.X.face_die_n(this.h); }
   hashes(): number[] { return this.F.partHashes(this.slot); }
@@ -179,8 +210,9 @@ export class RustHost {
     this.memPages = this.F.mem.buffer.byteLength; this.T.start += now() - t;
     if (!this.o.quiet) this.say(`rust-host: ${this.starts === 1 ? 'the start' : `A NEW START as tick ${this.k} opens (the TypeScript round the last step put another game in the puppet's place)`}: ${start.length} bytes, the block ${block.length}; slot ${this.slot}; memory ${(this.F.mem.buffer.byteLength / 1048576).toFixed(0)} MB`);
   }
-  /** what the scripted player's `ended()` reads (playthrough.ts:733), and the mission's stage */
-  private endMark(): string { const g = this.g; return `${g.mission?.stage}|${g.mission?.debrief}|${g.roomClear?.end}|${g.rescue?.result?.state}|${g.snatch?.end}`; }
+  /** what the scripted player's `ended()` reads (playthrough.ts:733), the mission's stage, and the count of the walls' changes (tools/qa/hole-watch.ts:42
+   *  reads each new row of the walls' log whole, the tick it is made) */
+  private endMark(): string { const g = this.g; return `${g.mission?.stage}|${g.mission?.debrief}|${g.roomClear?.end}|${g.rescue?.result?.state}|${g.snatch?.end}|${g.destr?.walls?.serial}`; }
   private downCount(): number { const g = this.g; let n = g.player?.down ? 1 : 0; for (const x of g.guards as any[]) if (x.state === 'dead' || x.down) n++; return n; }
 
   // ---- the applies
@@ -223,6 +255,10 @@ export class RustHost {
   /** THE WHOLE APPLY: every field the bridge carries but the box mirror's */
   applyWhole(why: string, most = false): Uint8Array {
     const g = this.g, X = this.F.X, B = this.B, t0 = now(); let t = t0;
+    // (BETWEEN TWO TICKS the host has moved its own camera and Input on since the Rust game was last handed them (headless.ts `cam.update` after
+    // `game.update`); the whole state would put them back a frame. depot-four parted so at tick 1578, a frame after a room was flooded. The host's rows
+    // are handed over first, as a tick's opening hands them.)
+    if (!this.inStep && this.lastCmds) { const hb: Uint8Array = B.hostHalf(g, B.reg, this.lastCmds); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); }
     X.face_export(this.h); const blob = this.audit ? this.F.outView().slice() : this.F.outView(); this.wholeBytes = blob.length; this.T[most ? 'exportMost' : 'exportWhole'] += now() - t;
     // STAND-IN: A SEAT'S CUT IS AN IDENTITY (cmd.ts:191 `takeCut`: a cut is pending while the lens's `desired` is not the array the seat last took, `mark`).
     // The whole apply writes `desired` in place and puts into `mark` whatever object has the serial the Rust seat holds there (a count of writes), so
@@ -233,13 +269,8 @@ export class RustHost {
     (g.seats as any[]).forEach((s, i) => { s.mark = marks[i]; });
     this.readCuts(true); this.after(R, posture); this.copyBlock();
     if (most) { this.lampsN++; this.lampsNow = true; this.nest += now() - t0; return blob; }
-    // STAND-IN: A VALUE THE FILTERED APPLY MADE HAS ONLY THE LISTED FIELDS, AND A WHOLE APPLY DOES NOT MAKE ITS EMPTY LISTS: the importer leaves a field
-    // that is undefined on an object it did not make in this apply where the state holds an empty map, set or list (it writes only what differs, and an
-    // empty one reads as no difference from none). The readers below then throw on `undefined.values()`. By hand, for the readers found:
-    //   laststand.ts:611 `lastStandReport` (tools/qa/playthrough.ts:1712): the last stand's state and its stand
-    // Belongs in import.ts (a whole apply completes an object another apply made) or in the filtered export (a value made in a step goes whole).
-    if (!this.audit) { const st = (globalThis as any).__tpsTop?.['src/game/laststand.ts']?.STATES?.get?.(g);
-      if (st) { fill(st, { known: Set, named: Map, spots: Map, at: Map, told: Set, said: Array, post: Map, rot: Map, clsAt: Array, later: Array }); if (st.stand) fill(st.stand, { in: Set, out: Set, movers: Array, orders: Map, homed: Set }); } }
+    // (the empty lists no apply makes: `completer`, above)
+    if (!this.audit) { const t1 = now(); this.standIns.lists += (this.complete ??= completer(B))(g); this.T.complete += now() - t1; }
     this.wholes.set(why, (this.wholes.get(why) ?? 0) + 1); this.wholeNow = true; if (this.audit) this.lastRust = blob; this.nest += now() - t0;
     return blob; }
   /** A LEVEL ON RAILS, every tick: out of the whole state, the records its scripted player reads and the filtered list lacks (the importer's `only`: the
@@ -350,7 +381,7 @@ export class RustHost {
   // ---- THE STEP, in place of `stepSeats`
   step(dt: number, cmds: readonly any[]): void {
     const g = this.g, X = this.F.X, B = this.B, k = ++this.k; let t = now();
-    this.wholeNow = false; this.lampsNow = false;
+    this.wholeNow = false; this.lampsNow = false; this.inStep = true; this.lastCmds = cmds;
     if (!this.h || g.mission !== this.missionRef || (g.chronicle?.counts?.loads ?? 0) !== this.loadsRef) this.start(); else this.handWrites(k);
     this.o.beforeHost?.(this, cmds);
     // THE HOST'S HALF: each seat's record, every camera and Input row, in the bridge's own small buffer (export.ts hostHalf, io::take_host_half)
@@ -375,7 +406,9 @@ export class RustHost {
     // chronicle's row, and on a level on rails it stops the level's program for the take: both are made on the Rust side by `face_checkpoint`, as the
     // replay loop makes them, and the puppet takes the state again.)
     t = now(); const nest0 = this.nest;
-    if (this.o.dress !== false) { g.par?.tick(); g.verdict?.tick();
+    if (this.o.dress !== false) {
+      // (the par clock and the verdict are the debrief's: a throw of theirs on the puppet is counted and is not the play's end)
+      for (const n of ['par', 'verdict'] as const) try { g[n]?.tick(); } catch (e) { this.count(`${n}.tick THREW on the puppet (first at tick ${this.threw[n] ??= k}): ${String((e as any)?.message ?? e).slice(0, 100)}`); }
       const S = g.saves;
       // (a take is due this tick: an authored checkpoint a rule asked for, a save by hand, a load. The puppet takes the whole state first. An autosave
       // the controller decides on inside its tick takes the whole state as the take starts: `taps`. Its gate and its triggers read the puppet as the
@@ -389,7 +422,7 @@ export class RustHost {
       if (g.chronicle.counts.saves !== s0) { const Ev = g.chronicle.events, e = Ev[Ev.length - 1], label = e?.kind === 'checkpoint' ? String(e.label ?? e.data?.label ?? '') : ''; this.count('saves.tick took a checkpoint (made on the Rust side by face_checkpoint)'); this.wrote.push(`${k} chron_save ${JSON.stringify(e?.kind === 'checkpoint' ? (e.label ?? e.data?.label ?? '') : 'NOT-LAST')}`);
         this.F.hand(enc.encode(label), (p, n) => X.face_checkpoint(this.h, p, n)); this.applyStep(); if (this.audit) rust = this.applyWhole('audit'); this.dispatch(); } }
     this.T.dress += now() - t - (this.nest - nest0);
-    this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.missionRef = g.mission;
+    this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.missionRef = g.mission; this.inStep = false;
     // ---- audit: the puppet as the apply left it is what the next write-back is held to
     if (this.audit && rust) { t = now(); const N = this.o.applyCheck ?? 50, chk = N > 0 && (k <= 3 || k % N === 0), A = B.A;
       if ((this.o.baseline ?? 'rust') === 'rust' && !chk) this.lastState = rust;
@@ -410,15 +443,15 @@ export class RustHost {
     // STAND-IN: THE END'S READS. The scripted player's report reads the game as its last tick left it, and much of what it reads is not on the filtered
     // list. A man down, the mission's stage moved or one of the ends the scripted player asks for set is where an end, or a tally's note of a death, is read. Belongs on the generated list.
     const st = this.endMark(), dn = this.downCount();
-    if (st !== this.stageRef || dn !== this.downRef) { this.stageRef = st; this.downRef = dn; return 'a man went down, the mission moved on or ended'; }
+    if (st !== this.stageRef || dn !== this.downRef) { this.stageRef = st; this.downRef = dn; return 'a man went down, a wall changed, the mission moved on or ended'; }
     return null; }
 
   /** every ms this host has spent, the driver's calls apart (they are made outside `Game.update`) */
-  spent(): number { const T = this.T; return T.wbExport + T.wbCompare + T.wbImport + T.hostHalf + T.step + T.after + T.exportStep + T.applyStep + T.exportWhole + T.applyWhole + T.exportMost + T.applyMost + T.block + T.out + T.dress + T.check + T.start; }
+  spent(): number { const T = this.T; return T.wbExport + T.wbCompare + T.wbImport + T.hostHalf + T.step + T.after + T.exportStep + T.applyStep + T.exportWhole + T.applyWhole + T.exportMost + T.applyMost + T.complete + T.block + T.out + T.dress + T.check + T.start; }
   /** the table of where a tick's time went, per tick, as PLAY.md has it */
   times(): string { const k = Math.max(1, this.k), per = (x: number) => (x / k).toFixed(3), T = this.T, W = [...this.wholes.values()].reduce((a, b) => a + b, 0);
     return (this.audit ? `write-back: the puppet's export ${per(T.wbExport)}, the compare ${per(T.wbCompare)}, the hand-over ${per(T.wbImport)} · ` : '') +
-      `the host's half ${per(T.hostHalf)} (${this.hostBytes} bytes) · face_step ${per(T.step)} (worst ${this.worstStep.toFixed(1)} at tick ${this.worstStepAt}; the memory grew inside ${this.grew} steps) · lights, view, follow${this.audit ? ', listing' : ''} ${per(T.after)} · the filtered export ${per(T.exportStep)} (${(this.stepBytes / Math.max(1, this.steps) / 1024).toFixed(0)} KB a time) · the filtered apply ${per(T.applyStep)} · the whole export ${per(T.exportWhole)} and apply ${per(T.applyWhole)} (${W} whole applies), a level on rails' whole export ${per(T.exportMost)} and the apply of its player's records out of it ${per(T.applyMost)} (${this.lampsN} of them; ${(this.wholeBytes / 1048576).toFixed(1)} MB the last; worst apply of either kind ${this.worstApply.toFixed(0)}) · the block's copy ${per(T.block)} · out events ${per(T.out)} · the dress step ${per(T.dress)} · the driver's calls ${per(T.calls)}` +
+      `the host's half ${per(T.hostHalf)} (${this.hostBytes} bytes) · face_step ${per(T.step)} (worst ${this.worstStep.toFixed(1)} at tick ${this.worstStepAt}; the memory grew inside ${this.grew} steps) · lights, view, follow${this.audit ? ', listing' : ''} ${per(T.after)} · the filtered export ${per(T.exportStep)} (${(this.stepBytes / Math.max(1, this.steps) / 1024).toFixed(0)} KB a time) · the filtered apply ${per(T.applyStep)} · the whole export ${per(T.exportWhole)} and apply ${per(T.applyWhole)} (${W} whole applies; the walk that gives them their empty lists ${per(T.complete)}), a level on rails' whole export ${per(T.exportMost)} and the apply of its player's records out of it ${per(T.applyMost)} (${this.lampsN} of them; ${(this.wholeBytes / 1048576).toFixed(1)} MB the last; worst apply of either kind ${this.worstApply.toFixed(0)}) · the block's copy ${per(T.block)} · out events ${per(T.out)} · the dress step ${per(T.dress)} · the driver's calls ${per(T.calls)}` +
       (this.audit ? ` · the puppet exported again and held to the Rust bytes ${per(T.check)}` : '') + ` · the start, with the warm-up, once: ${T.start.toFixed(0)} ms`; }
 }
 

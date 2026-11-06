@@ -71,8 +71,20 @@ function holdHost(g: any, reg: any, cmds: readonly any[]): void {
   // (piece by piece: each record, then each camera row, then each Input row; a piece of one length on both sides is named field by field)
   else for (const [ty, v, name] of P) { const n = exportPart(g, reg, [[ty, v]]).length, a = ref.subarray(at, at + n), b = mine.subarray(at, at + n); at += n; if (buf(a).equals(buf(b))) continue; if (ty === 'u32') { where.push(`the count of ${name}`); continue; }
     for (const x of locate(b, diffOffsets(a, b), null, true, ty, name)) { const dv = (u: Uint8Array) => new DataView(u.buffer, u.byteOffset + x.off, Math.min(8, u.length - x.off)); const f = (u: Uint8Array) => { try { return dv(u).getFloat64(0, true); } catch { return NaN; } }; where.push(`${x.path} (${f(b)} here, ${f(a)})`); } }
-  if (OUT) writeFileSync(`${OUT}/host${k}.bin`, mine);
+  // (kept: this side's half, and the Rust game's whole state as this tick opens, for diff.ts beside the TypeScript's of the same tick: mission.ts --open)
+  if (OUT) { writeFileSync(`${OUT}/host${k}.bin`, mine); if (H) { X.face_export(H.h); writeFileSync(`${OUT}/rustopen${k}.bin`, F.outView()); } }
   say(`TICK ${k}: THE HOST'S HALF PARTS from the plain TypeScript play's (what the player pressed, where its camera stood): ${where.slice(0, 40).join(' · ')}`); }
+/** THE DRIVER'S CALLS BETWEEN TWO TICKS (an order, a checkpoint, a flooded room, a pick of a verb), in the replay loop's words, held to the plain play's
+ *  own files as each tick opens: an order the scripted player gave there and not here (or the other way) is the puppet having shown it another game, and
+ *  the keys may stay the same for many ticks after */
+const refCalls = new Map<number, string[]>(); for (const f of ['gives.txt', 'hostwrites.txt']) for (const l of refLines(f)) { if (/ chron_load$/.test(l)) continue; const t = +l.split(' ')[0]; refCalls.set(t, [...(refCalls.get(t) ?? []), l]); }
+let callsParted = 0; const myCalls = new Map<number, string[]>(), seenN = [0, 0];
+function holdCalls(Hh: RustHost): void {
+  if (!post.length || callsParted || k < 2) return;
+  [Hh.gave, Hh.wrote].forEach((L, i) => { for (; seenN[i] < L.length; seenN[i]++) { const l = L[seenN[i]], t = +l.split(' ')[0]; myCalls.set(t, [...(myCalls.get(t) ?? []), l]); } });
+  // (as tick k opens, every line of tick k - 1 is written on both sides: a checkpoint's is written as its tick ends)
+  const mine = myCalls.get(k - 1) ?? [], theirs = refCalls.get(k - 1) ?? [];
+  if ([...mine].sort().join('\n') !== [...theirs].sort().join('\n')) { callsParted = k - 1; say(`TICK ${k - 1}: THE DRIVER'S CALLS PART from the plain TypeScript play's: here [${mine.join(' | ') || 'none'}], there [${theirs.join(' | ') || 'none'}]`); } }
 /** held to the plain TypeScript play, where its hashes were taken: as the tick returns, before the host's steps */
 function holdBlock(Hh: RustHost): void {
   const p = post[k - 1];
@@ -94,7 +106,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   const g = this; G0 = g; k++; const t0 = now(); if (k > 1) T.driver += t0 - tOut; else wall0 = t0;
   if (!H) H = RustHost.attach(g, { wasm: WASM, audit: AUDIT, wholeEvery: +arg('--whole-every', '0'), uploadEvery: +arg('--upload-every', '4'), dress: !has('--no-dress'), die: DIE, warm: has('--no-warm') ? 0 : undefined,
     baseline: arg('--baseline', 'rust') as 'rust' | 'puppet', applyCheck: +arg('--apply-check', '50'), out: OUT || undefined, quiet: QUIET, say,
-    beforeHost: (Hh, cmds) => { const t = now(); holdHost(g, Hh.B.reg, cmds); T.hostHold += now() - t; },
+    beforeHost: (Hh, cmds) => { const t = now(); holdCalls(Hh); holdHost(g, Hh.B.reg, cmds); T.hostHold += now() - t; },
     afterStep: Hh => { const t = now(); holdBlock(Hh); T.compare += now() - t; } });
   const Hh = H, s0 = Hh.spent(), c0 = T.hostHold + T.compare;
   let err: unknown = null;
@@ -104,9 +116,9 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   if (err) { const words = F.panicText(); if (words) { say(`PANIC in tick ${k}: ${words}`); finish(g, 2); } say(`TICK ${k} THREW on the puppet: ${(err as any)?.stack ?? err}`); finish(g, 3); }
   if (STALE > 0 && !AUDIT && k % STALE === 0 && k >= +arg('--stale-from', '0')) holdStale(Hh, g);
   if (S.parted === k && OUT) { if (Hh.openState) writeFileSync(`${OUT}/open${k}.bin`, Hh.openState); X.face_export(Hh.h); writeFileSync(`${OUT}/rust${k}.bin`, F.outView()); writeFileSync(`${OUT}/block${k}.bin`, Hh.rustBlock()); }
-  if (!QUIET && (k % 500 === 0)) say(`tick ${k}; time ${Hh.time().toFixed(3)}; die n=${Hh.dieN()}; ${S.parted || S.dieParted || hostParted ? `PARTED (block ${S.parted}, die ${S.dieParted}, host ${hostParted})` : 'equal so far'}; ${((now() - wall0) / k).toFixed(2)} ms a tick`);
+  if ((!QUIET || has('--progress')) && (k % 500 === 0)) say(`tick ${k}; time ${Hh.time().toFixed(3)}; die n=${Hh.dieN()}; ${S.parted || S.dieParted || hostParted ? `PARTED (block ${S.parted}, die ${S.dieParted}, host ${hostParted}, calls ${callsParted})` : 'equal so far'}; ${((now() - wall0) / k).toFixed(2)} ms a tick; memory ${(F.mem.buffer.byteLength / 1048576).toFixed(0)} MB, ${X.face_rows(Hh.h)} box rows`);
   tOut = now();
-  if (((S.parted || S.dieParted || hostParted) && !GO_ON) || k >= TICKS) { stopped = true; throw new Stop(); }
+  if (((S.parted || S.dieParted || hostParted || callsParted) && !GO_ON) || k >= TICKS) { stopped = true; throw new Stop(); }
 } as any;
 
 function table(T0: Tally, n = 30): string { return [...T0].sort((a, b) => b[1].ticks - a[1].ticks).slice(0, n).map(([q, e]) => `    ${q}: ${e.n} places over ${e.ticks} ticks, e.g. ${e.eg.slice(0, 160)}`).join('\n') || '    (none)'; }
@@ -148,7 +160,8 @@ function finish(g: any, code: number | null = null): never {
   const sameEnd = !post.length ? false : (res ? refEnd.includes(`: ${res.end} (`) && refEnd.includes(`t ${res.t};`) && refEnd.includes(`team ${res.team} of ${res.of}`) && refEnd.includes(`PLAYED OUT at tick ${k} `) : les ? refEnd.includes(` at tick ${k}:`) && refEnd.includes(les.steps.map((s: any) => s.id).join(' ')) : false);
   // (THE CHECK CHECKED: a host's half compared on fewer ticks than were played and held to the reference is a check that died, not a play that passed)
   const owed = Math.min(k, post.length); if (code === null && post.length && !hostParted && hostCompared < owed) { say(`  THE HOST'S HALF WAS COMPARED ON ${hostCompared} OF ${owed} TICKS: the reference lacks h<k>.bin for the rest (a reference made with --no-host, or its files deleted). NOT A PASS.`); code = 3; }
-  if (code === null) code = S.parted || S.dieParted || hostParted ? 1 : !post.length ? 3 : sameEnd ? 0 : (res || les) ? 4 : 0;
+  if (callsParted) say(`  THE DRIVER'S CALLS PARTED AT TICK ${callsParted} (an order, a checkpoint, a flood or a pick made on one side only)`);
+  if (code === null) code = S.parted || S.dieParted || hostParted || callsParted ? 1 : !post.length ? 3 : sameEnd ? 0 : (res || les) ? 4 : 0;
   say(`  ${code === 0 ? (res || les ? `EQUAL TO THE END, and it ended the same way${callsOff ? ' (BUT THE DRIVER\'S CALLS DIFFER: above)' : ''}` : `equal for the ${k} ticks played (stopped by --ticks)`) : code === 1 ? 'PARTED' : code === 4 ? 'equal every tick, BUT THE END IS NOT WORDED THE SAME' : `exit ${code}`}`);
   process.exit(code); }
 const LOG = console.log, ERR = console.error, WARN = console.warn;
