@@ -56,6 +56,7 @@ const { simLayout, SIM_PARTS } = await import('../../src/sim/state.ts');
 const { sim } = await import('../../src/sim/sim.ts');
 const reg = knobRegistry();
 class Stop extends Error {}
+const CALL = (process.env.BLITZ_CALL ?? '').split(' ');
 let selAfter = 0;   // the highlighted row of the nearby list as the last tick left it
 const words = (g: any): Uint32Array => g.sim.w;
 const block = (g: any): Uint8Array => { const w = words(g); return new Uint8Array(w.buffer, w.byteOffset, w.byteLength).slice(); };
@@ -88,6 +89,11 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   const g = this, step = g.stepSeats; k++;
   if (k === 1) { const W = g.engine.world, up = W.upload; W.upload = function (this: any, ...x: any[]) { uploads++; return up.apply(this, x); }; }
   if (k === 1) tapGives(g);
+  // BLITZ_CALL="<k> restart_encounter|reset_guards [start]": the rule called before tick k on BOTH sides (the runner reads the same word), to hold the
+  // Rust game's restart to the TypeScript's. With `start` the Rust game does not call its own rule: it takes the TypeScript's state after the call as a
+  // NEW START (the way a host that plays the Rust game follows a rule a tool called on its puppet). The scripted player knows nothing of it and plays
+  // on with the men it knew: a run for the ticks after the call.
+  if (CALL[0] && k === +CALL[0]) { if (CALL[1] === 'restart_encounter') g.restartEncounter(); else if (CALL[1] === 'reset_guards') g.resetGuards(); else throw new Error(`BLITZ_CALL: no rule ${CALL[1]}`); }
   // THE TEST DRIVER'S OWN QUESTIONS THAT WRITE THE GAME: `g.fight.roomAt(p)` asked between ticks floods a room nobody had asked for and keeps it in `g.fight.rooms`.
   // Each such ask that grew the list is a line of hostwrites.txt for the tick that opens next.
   if (k === 1 && g.fight?.roomAt) { const F = g.fight, ask = F.roomAt; F.roomAt = function (this: any, p: any) { const n0 = F.rooms.length; const r = ask.call(this, p); if (!g.ticking && F.rooms.length !== n0) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} room_at ${p[0]} ${p[1]} ${p[2]}\n`); return r; }; }
@@ -107,7 +113,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     // THE HOST PUT A CHECKPOINT BACK between the last tick and this one (savestate.ts, the host's save controller: a lesson's player went down and the
     // rails asked for it): the whole game is the saved one again. No stepper can follow that from its own state, so the state and the block as THIS tick
     // opens are written (L<k>.bin, Ls<k>.bin) and the runner takes them as a new start before it steps tick k.
-    if (g.chronicle.counts.loads !== loadsSeen) { loadsSeen = g.chronicle.counts.loads; if (k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); } }
+    if (g.chronicle.counts.loads !== loadsSeen || (CALL[2] === 'start' && k === +CALL[0])) { loadsSeen = g.chronicle.counts.loads; if (k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); } }
     // THE SCRIPTED PLAYER PUT THE HIGHLIGHT ON ANOTHER ROW of the nearby list between the last tick and this one (playthrough.ts:865 writes
     // `g.player.nearSel` and calls pickHover for a door's own row; `g.selectVerb` does the same by kind and verb): `<k> near_sel <row>`, unless the
     // pick was written as a lesson's `select_verb` already.
