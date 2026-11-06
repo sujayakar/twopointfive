@@ -12,6 +12,42 @@
 "tools/qa/coop-check.ts": {
 "word": "none",
 "why": "it holds two TypeScript engines (bun and node) to each other bit for bit, and node has no bridge preload: a check of the TypeScript tick's arithmetic"
+},
+"tools/qa/exact-check.ts": {
+"word": "none",
+"why": "it holds the game's own maths under bun to the same under node, and node has no bridge preload: a check of the TypeScript tick's arithmetic"
+},
+"tools/qa/dice-check.ts": {
+"word": "none",
+"why": "it checks the TypeScript die's own rules (src/math/dice.ts: a game with no die draws Math.random, a die put in Math.random's place is followed), which are the TypeScript tick's and go with it"
+},
+"tools/qa/playthrough.ts": {
+"word": "rust",
+"why": "84 of 84 missions end the same under both words"
+},
+"tools/qa/seats-run.ts": {
+"word": "rust",
+"why": "its record, replay and twice lines pass under both words"
+},
+"tools/qa/bench-seeds.ts": {
+"word": "rust",
+"why": "the same run twice passes under both words on one digest"
+},
+"tools/blitz/thrice.ts": {
+"word": "rust",
+"why": "three games of one process are one game, each equal to the TypeScript game on every tick"
+},
+"tools/blitz/die-check.ts": {
+"word": "rust",
+"why": "the game's die seeded after the stand lands on the same word under both"
+},
+"tools/qa/seats-check.ts": {
+"word": "ts",
+"why": "`rollback` and `twin` hold the game to a word made by walking the JavaScript objects and `down` calls hitPlayer (kinds iv-c, iii): 3 red on the Rust game"
+},
+"tools/qa/lesson-run.ts": {
+"word": "ts",
+"why": "a lesson's own checks read records the every-tick list lacks and it hangs its own light meter on the game (kind iv-a)"
 }
 },
 "pins": {

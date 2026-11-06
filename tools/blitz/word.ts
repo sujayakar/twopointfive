@@ -42,6 +42,9 @@ function decide(frozen: boolean): Stood {
   const a = asked(), who = probeNow() ?? toolNow().split('/').pop() ?? '';
   if (a === '') return { word: '', who, why: 'no word', kind: 'none' };
   if (a !== 'rust' && a !== 'audit' && a !== 'ts' && a !== 'table') throw new Error(`TPS_GAME=${a}: rust (the Rust game steps), audit, ts (the same stand, the TypeScript tick), table, or none`);
+  // (AN ENGINE THAT IS NOT BUN HAS NO BRIDGE: the preload is bun's. A tool that starts a child under node (a check of two engines, a cost under V8) gets the
+  // TypeScript tick there, stood as with no word, said and counted.)
+  if (!(globalThis as any).Bun) return { word: '', who, why: 'this engine is not bun and has no bridge preload', kind: 'not bun' };
   // THE FROZEN STAND IS THE TYPESCRIPT TICK'S. Its rows are the settled switches held off their page values, and a settled switch is a constant in the Rust
   // game (the page's branch was translated, the other dropped): the Rust game cannot be stood there. Said on the closing line.
   if (frozen && a !== 'ts') return { word: 'ts', who, why: 'TPS_PROFILE=frozen: the frozen stand holds settled switches off their page values, which the Rust game has as constants', kind: 'frozen' };
@@ -62,7 +65,10 @@ function decide(frozen: boolean): Stood {
   const tool = toolNow(), row = Object.entries(K.tools).find(([n]) => n.includes('/') && tool.endsWith('/' + n))?.[1] ?? K.tools[who];
   if (row?.word === 'none') return { word: '', who, why: row.why, kind: 'a tool\'s row: no word' };
   if (row?.word === 'ts') return { word: 'ts', who, why: row.why, kind: 'a tool\'s row' };
-  return { word: 'rust', who, why: row?.why ?? 'no row: the default', kind: 'asked' }; }
+  if (row?.word === 'rust') return { word: 'rust', who, why: row.why, kind: 'a tool\'s row' };
+  // (A TOOL WITH NO ROW, like a probe with none: the TypeScript tick, counted and named. Several hundred check files stand a game when run as their own
+  // main; only a tool SEEN to play the same on the Rust game has a `rust` row.)
+  return { word: 'ts', who, why: 'no row in the table', kind: 'no row' }; }
 
 // ---- every game stood under `table`, or forced off the word asked for, is counted, said as its check's first game is stood, and summed in ONE LINE as the
 // process ends, so that a green of the old tick is not read as the Rust game's
@@ -71,7 +77,7 @@ const n = (M: Map<string, number>) => [...M.values()].reduce((a, b) => a + b, 0)
 function closing(): string { const T = SAID, parts: string[] = [];
   parts.push(`${T.rust.size} checks stood ${n(T.rust)} games on the RUST game`);
   parts.push(`${T.ts.size} checks stood ${n(T.ts)} games on the TYPESCRIPT TICK${T.ts.size ? ` (${[...T.kinds].map(([k, c]) => `${k} ${c}`).join(', ')}: NOT GREENS OF THE RUST GAME): ${[...T.ts.keys()].slice(0, 40).join(' ')}${T.ts.size > 40 ? ' …' : ''}` : ''}`);
-  if (T.none.size) parts.push(`${T.none.size} stood ${n(T.none)} games with no word by a tool's row (NOT GREENS OF THE RUST GAME): ${[...T.none.keys()].join(' ')}`);
+  if (T.none.size) parts.push(`${T.none.size} stood ${n(T.none)} games with no word, by a tool's row or under an engine that has no bridge (NOT GREENS OF THE RUST GAME): ${[...T.none.keys()].join(' ')}`);
   parts.push(`${T.norow.size} checks with no row${T.norow.size ? `: ${[...T.norow].slice(0, 40).join(' ')}${T.norow.size > 40 ? ' …' : ''} (tools/blitz/table-check.ts)` : ''}`);
   if (T.frozen) parts.push(`TPS_PROFILE=frozen: ALL ${T.frozen} games of this run were FORCED TO THE TYPESCRIPT TICK (the Rust game has no frozen stand)`);
   return `=== the game, by ${asked() === 'table' ? 'the table' : `TPS_GAME=${asked()}`}: ${parts.join(' · ')} ===\n`; }
@@ -97,7 +103,7 @@ export function stand(frozen = false): Stood {
   const T = SAID, M = S.kept || S.word === 'ts' ? T.ts : S.word === '' ? T.none : T.rust, first = !M.has(S.who);
   if (first && S.word !== 'rust' && S.word !== 'audit') { if (M === T.ts) T.kinds.set(S.kind, (T.kinds.get(S.kind) ?? 0) + 1);
     // (not console.log: a check may hold that while it stands its game)
-    if (S.kind !== 'frozen' || !T.frozen) process.stdout.write(`  [the game: ${S.kind === 'frozen' ? 'this run' : S.who} is stood ${M === T.ts ? `on the TYPESCRIPT TICK${S.word === '' ? ' (as with no word)' : ''}` : 'WITH NO WORD'} ${S.kind === 'frozen' ? 'whatever the word' : 'by the table'} (${S.why}); its verdict is not the Rust game's]\n`); }
+    if (S.kind !== 'frozen' || !T.frozen) process.stdout.write(`  [the game: ${S.kind === 'frozen' ? 'this run' : S.who} is stood ${M === T.ts ? `on the TYPESCRIPT TICK${S.word === '' ? ' (as with no word)' : ''}` : 'WITH NO WORD'} ${S.kind === 'frozen' ? 'whatever the word' : S.kind === 'not bun' ? 'whatever the word' : 'by the table'} (${S.why}); its verdict is not the Rust game's]\n`); }
   if (S.kind === 'no row') T.norow.add(S.who); if (S.kind === 'frozen') T.frozen++;
   M.set(S.who, (M.get(S.who) ?? 0) + 1);
   hook();
