@@ -118,8 +118,13 @@ function hook(): void { if (SAID.hooked) return; SAID.hooked = true; process.on(
 // therefore starts off and is laid or lifted between checks: as the runner names the next probe (the first statement of probes.ts `run`, before the probe's
 // own code and before the runner asks the fold anything about it) the table's verdict for that name says which. A stand-alone tool's verdict is its row's,
 // said once as its process starts. The fold carries the answer to a child itself (QA_FOLD_FOR).
-let FOLD_FOR: ((on: boolean) => void) | null = null, foldNow: boolean | null = null;
-function foldBy(): void { if (!FOLD_FOR) return; const S = decide(false), on = S.word === 'rust' || S.word === 'audit'; if (on !== foldNow) { foldNow = on; FOLD_FOR(on); } }
+let FOLD_FOR: ((on: boolean) => void) | null = null;
+const foldWant = (): boolean => { const S = decide(false); return S.word === 'rust' || S.word === 'audit'; };
+function foldBy(): void { FOLD_FOR?.(foldWant()); }
+/** before the fold's file is read (its mode as a process starts is read once, there): by the table the fold starts as the check or the tool this process
+ *  is for wants it, unless a parent has already said (QA_FOLD_FOR rides to a child). The window's spelling (`spellForWindow`) would otherwise read to the
+ *  fold as the plain Rust word, under which it starts on. */
+export function foldStart(): void { if (asked() === 'table' && !process.env.QA_FOLD_FOR && process.env.QA_FOLD !== '1') process.env.QA_FOLD_FOR = foldWant() ? '1' : '0'; }
 /** the preload hands the fold's switch over (only under `table`, and only where the fold has one) */
 export function foldHook(f: (on: boolean) => void): void { if (asked() !== 'table' || FOLD_FOR) return; FOLD_FOR = f;
   let now: string | null = (globalThis as any).__probeNow ?? null;
