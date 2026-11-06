@@ -18,6 +18,7 @@
 //                      checker flags a doctored record; with the m870 entry taken out the energy check goes red
 //   bun run tools/qa/pellets-probes.ts --words     prints the two identity words (run on the base commit to freeze them)
 import { standUp, ROOT, fake } from './headless.ts';
+import { STAND } from './stand.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { glassPanes, isSheet, GLASSFX, GLASS, resetGlass } = await import(`${ROOT}/src/game/glass.ts`);
 const PEN = await import(`${ROOT}/src/game/glasspen.ts`);
@@ -309,9 +310,15 @@ const WORDS_0EE0094 = { off: '852e4b4f', look: '852e4b4f', on: 'e44887a2', shotg
 export const pelletsIdentity = guarded(async () => {
   const { verdict, done } = family('pellets-identity: glass parts off, and glass on with no shotgun, are the runs they were on 0ee0094');
   const w = await identityWords();
-  verdict(w.off === WORDS_0EE0094.off, 'EVERY GLASS PART OFF, the shotgun fired at every kind of pane from 1 m, from 4 m and pressed through: the word frozen on 0ee0094 (a pane is the starred wall it was, every third pellet stars it)', `now ${w.off} · 0ee0094 ${WORDS_0EE0094.off}`);
-  verdict(w.look === WORDS_0EE0094.look, 'the same with only the glass look\'s switch up (rounds through glass and the fracture model off): the word frozen on 0ee0094', `now ${w.look} · 0ee0094 ${WORDS_0EE0094.look}`);
-  verdict(w.on === WORDS_0EE0094.on, 'GLASS ON, no shotgun anywhere, a rifle round pressed through each pane and rifle and pistol rounds at it from across the room: the word frozen on 0ee0094', `now ${w.on} · 0ee0094 ${WORDS_0EE0094.on}`);
+  // (the three words were taken on the old stand and are that stand's: a run on the page's stand has no word of 0ee0094 to be held to and says so. They go
+  //  with the old stand. What needs no word is asked on either stand: the glass look's switch alone moves nothing of the run, and the glass rules do.)
+  verdict(w.look === w.off && w.on !== w.off, 'with only the glass look\'s switch up the run is the run with every glass part off, word for word; with the glass rules on it is another', `off ${w.off} · look ${w.look} · on ${w.on}`);
+  if (STAND !== 'frozen') console.log(`    (the page's stand: no word was frozen on it; the three words of 0ee0094 are asked on the old stand, TPS_PROFILE=frozen)`);
+  else {
+    verdict(w.off === WORDS_0EE0094.off, 'EVERY GLASS PART OFF, the shotgun fired at every kind of pane from 1 m, from 4 m and pressed through: the word frozen on 0ee0094 (a pane is the starred wall it was, every third pellet stars it)', `now ${w.off} · 0ee0094 ${WORDS_0EE0094.off}`);
+    verdict(w.look === WORDS_0EE0094.look, 'the same with only the glass look\'s switch up (rounds through glass and the fracture model off): the word frozen on 0ee0094', `now ${w.look} · 0ee0094 ${WORDS_0EE0094.look}`);
+    verdict(w.on === WORDS_0EE0094.on, 'GLASS ON, no shotgun anywhere, a rifle round pressed through each pane and rifle and pistol rounds at it from across the room: the word frozen on 0ee0094', `now ${w.on} · 0ee0094 ${WORDS_0EE0094.on}`);
+  }
   // the red path: the same word taken of the one thing this build DID change — the shotgun at glass with the glass parts on — is not 0ee0094's (frozen there too)
   const sg = await shotgunWord(71, {});
   verdict(sg !== WORDS_0EE0094.shotgunOn && sg !== w.off && w.on !== w.off, 'the word is a real one: the shotgun at glass with the glass parts ON — the one thing this build changed — does NOT read as 0ee0094 did', `now ${sg} · 0ee0094 ${WORDS_0EE0094.shotgunOn}`);
