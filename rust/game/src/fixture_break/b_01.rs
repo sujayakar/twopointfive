@@ -322,12 +322,5 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>, dt: 
 /// the tube's glass
 const GLASS: V3 = [0.88, 0.92, 0.92];
 use crate::render_particles::{EmitOpts, PKind};
-/// a seed of the fixture's own for one emit   (fixtureBreak.ts:194 seedOf)
-fn seed_of(r: &mut Rec) -> f64 {
-    let n = r.emits; r.emits += 1.0;
-    let v = m::imul(js::to_i32((js::to_i32(r.seed) ^ 0x51ED270B) as f64 + n * 7919.0), 0x9E3779B1u32 as i32) as u32;
-    if v == 0 { 1.0 } else { v as f64 }
-}
-
 /// a record dropped (the fixture repaired, the clock jumped): its boxes are let go, as the TypeScript drops the objects
 fn let_go(g: &mut Game, r: &Rec) { for &b in r.hang.iter() { crate::scene_boxes::box_let_go(g, b); } for p in r.pieces.iter() { crate::scene_boxes::box_let_go(g, p.box_); } }

@@ -380,7 +380,8 @@ function settle(S: Held): void {
 function pokes(S: Held): void {
   const G = S.g as unknown as Record<string, any>; if (!S.poke) return;
   const now = watched(S.g), was = S.watch;
-  if (was.length === now.length) for (let i = 0; i < now.length; i++) if (!Object.is(now[i][2], was[i][2])) send(S, now[i]);
+  const same = (a: unknown, b: unknown) => Object.is(a, b) || (Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, k) => Object.is(v, b[k])));
+  if (was.length === now.length) for (let i = 0; i < now.length; i++) if (!same(now[i][2], was[i][2])) send(S, now[i]);
   S.watch = now;
   // (the pause card letting go of the launcher's held button, host/loop.ts; `face_poke` 4 where the write by path has no way)
   if (S.launch !== null && (G.player?.launchHeld ?? null) === null) { if (!send(S, [G.player, ['launchHeld'], null])) { X!.face_poke(S.h, 4, 0); RUST_GAME.pokes++; } S.launch = null; }
@@ -483,7 +484,9 @@ function watched(g: Game): Watched[] {
   const T = G.tune as Record<string, unknown> | undefined; if (T) for (const k of Object.keys(T)) { const v = T[k]; if (v === null || typeof v !== 'object') L.push([g, ['tune', k], v]); }
   if (G.props) L.push([g, ['props', 'frictionScale'], G.props.frictionScale], [g, ['props', 'enabled'], G.props.enabled]);
   if (G.fogOfWar) L.push([g, ['fogOfWar', 'on'], G.fogOfWar.on]);
-  if (G.engine?.settings) L.push([g, ['engine', 'settings', 'gpuParticles'], G.engine.settings.gpuParticles]);   // (the options' particle row: particleFx.ts `gpuFx` reads it in the tick)
+  if (G.engine?.settings) L.push([g, ['engine', 'settings', 'gpuParticles'], G.engine.settings.gpuParticles]);
+  // (where the picture looks, set by the engine once a render: host/loop.ts. The wind picks the jets for the particles round it, wind.ts `update`)
+  { const vf = G.engine?.viewFocus; if (vf && vf.length === 3) L.push([g, ['engine', 'viewFocus'], [vf[0], vf[1], vf[2]]]); }   // (the options' particle row: particleFx.ts `gpuFx` reads it in the tick)
   const P = G.player; if (P) L.push([P, ['wand'], P.wand], [P, ['bigKit'], P.bigKit]);
   return L;
 }
