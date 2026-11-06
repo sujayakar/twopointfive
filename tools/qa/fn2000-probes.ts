@@ -45,7 +45,7 @@ const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
 const { ocpable } = await import(`${ROOT}/src/game/lighting.ts`);
 const fxm = await import(`${ROOT}/src/game/effects.ts`);
 const { Overlay } = await import(`${ROOT}/src/ui/overlay.ts`);
-const { closeLethal } = await import(`${ROOT}/src/game/close.ts`);   // (kit-slots (e): where the blow is the player's choice the knockout is the RIGHT click and the row says so)
+const { closeLethal, closeBare } = await import(`${ROOT}/src/game/close.ts`);   // (kit-slots (e): where the blow is the player's choice the knockout is the RIGHT click and the row says so)
 const { TORCH } = await import(`${ROOT}/src/game/calmtorch.ts`);   // (kit-slots (d): a calm man in a lit corridor has his torch out under the calm torch rule — held off while the line stages a man with it lit)
 const { KIT: CARDS, KIT_SOLO } = await import(`${ROOT}/src/game/kit.ts`);
 const { KITANIM, KITANIM_LOG, kitReload } = await import(`${ROOT}/src/game/kitanim.ts`);
@@ -366,7 +366,8 @@ export async function rifleSlot() {
   game.teleportPlayer([24.0, 0, 11.3]); pl.char.bodyYaw = pl.char.aimYaw = Math.PI / 2; place(A, [24.75, 0, 11.3], Math.PI / 2); run(20, 'hand', 'pre-grab', () => W.cursorAt(v3.add(A.char.pos, [0, 1.4, 0])));
   { const row = game.hover?.kind === 'guard' ? game.hover.line2 : ''; if (!/rifle goes on your back/.test(row)) bad.push(`guard row with the rifle up: "${row}"`); else trace.push(`guard row: "${row}"`); }
   input.pressed.add('Space'); run(60, 'either', 'grab', () => W.cursorAt(v3.add(A.char.pos, [0, 1.4, 0])));
-  expect('Space (grabbed: the rifle to the sling, the arm variant, the knife out)', !!pl.holding && pl.holding.variant === 'arm' && pl.holstered && !an.longGun && rifleBoxes(game).where === 'back' && rifleBoxes(game).knife === 4);
+  { const bare: boolean = closeBare(game) !== (process.env.RIFLESLOT_BREAK === '1');   // (no knife where the close-in rule has none: the arm hold is bare-handed there. RIFLESLOT_BREAK=1 = the red path: the line expects the other of the two, and must fail on either stand)
+    expect(`Space (grabbed: the rifle to the sling, the arm variant, ${bare ? 'no knife: the rule has none' : 'the knife out'})`, !!pl.holding && pl.holding.variant === 'arm' && pl.holstered && !an.longGun && rifleBoxes(game).where === 'back' && rifleBoxes(game).knife === (bare ? 0 : 4)); }
   input.pressed.add('KeyE'); run(40, 'back', 'E-hold', () => W.cursorAt(v3.add(A.char.pos, [0, 1.4, 0])));
   expect('E in the hold (the PISTOL to his head — the rifle stays slung)', !!pl.holding && pl.holding.variant === 'gun' && pl.slot === 'pistol' && !pl.holstered && !an.longGun && rifleBoxes(game).where === 'back');
   const ok = bad.length === 0;

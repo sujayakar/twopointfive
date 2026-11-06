@@ -1,5 +1,6 @@
 // The 'picker' family (the start card's SCENARIO PICKER — scene/scenarioList.ts SCENARIOS, ui/missions.ts — the rows moved off the card onto the mission list, game/scenarioRun.ts), run through probes.ts:
 //   bun run tools/qa/probes.ts picker | picker-list | picker-card | picker-start | picker-level | picker-rescue
+//   PICKERBOXES_BREAK=1 in front = a boot's count of its level's boxes is one too many: every 'booted on a level of' line of picker-start and picker-level must FAIL
 // PASS / FAIL each, all headless. Nothing here looks at a picture: the card is the real Menu class rendered on a fake DOM (what it would put on the page, not how
 // it looks), and main.ts's own glue — location / history, the camera cut on quit — is not run at all (it is the page's).
 //
@@ -73,8 +74,12 @@ function shotOf(W: any, why: string | null, levelFile: string | null): Shot {
   return { why, active: activeScenario(g), title: run?.title ?? null, team: run?.team ?? null, entry: run?.entry?.id ?? null, staged: g.rescue.active ? g.rescue.staged : g.nightBreach.staged, ops: men,
     operatives: g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead').length, hostiles: g.guards.filter((x: any) => x.unit && x.team === 'hostile').length,
     hostages: g.rescue.active ? g.rescue.hostages.length : 0, sam, samDown: !!g.player.down, hudMen, fog: !!g.fogOfWar.on, squadKnob: NIGHTBREACH.squad,
-    staff: g.guards.filter((x: any) => !x.unit).length, units: g.guards.filter((x: any) => !!x.unit).length, civilians: g.civilians?.length ?? 0, level: `${g.level.boxes.length} boxes` };
+    staff: g.guards.filter((x: any) => !x.unit).length, units: g.guards.filter((x: any) => !!x.unit).length, civilians: g.civilians?.length ?? 0, level: `${fileBoxes(g.level.boxes)} boxes` };
 }
+/** A STOOD LEVEL'S OWN BOXES: the ones its file has. Standing a level on its shapes adds trim pieces after them (scene/shapes.ts: Box.piece, there only
+ *  where that rule is on), and a piece is no box of the file, so the count a boot is held to leaves them out, on any stand and whatever word raised or held
+ *  the rule. PICKERBOXES_BREAK=1 (the red path) = every box is counted, and one more: every boot's line must fail. */
+const fileBoxes = (boxes: readonly { piece?: boolean }[]): number => process.env.PICKERBOXES_BREAK === '1' ? boxes.length + 1 : boxes.filter(b => !b.piece).length;
 /** THE CHILD: one page load of `query`, as main.ts takes it — the level, the Game, startFromQuery — then a restart and a quit */
 async function boot(query: string): Promise<BootReport> {
   const errors: string[] = []; let threw: string | null = null;

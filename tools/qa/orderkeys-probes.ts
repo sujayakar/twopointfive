@@ -343,14 +343,18 @@ export const orderkeysTable = guarded(async () => {
     for (let i = 0; i < 4; i++) { const id = `t-first-${i}`; ids.push(id); O.register({ id, label: id, targets: ['floor'], issue: () => { } }); }
     for (let i = 0; i < 12; i++) { const id = `t-page-${i}`; ids.push(id); O.register({ id, page: 'tools', label: id, targets: ['door'], issue: () => { } }); }
     O.register({ id: 't-nine', key: 9, label: 't-nine', targets: ['none'], issue: () => { } }); ids.push('t-nine');
+    O.register({ id: 't-nine-own', key: 9, page: 't-own', label: 't-nine-own', targets: ['none'], issue: () => { } }); ids.push('t-nine-own');   // (…and one that asks for 9 on a page of its own, where every digit is free)
     const defs: any[] = O.defs, over = defs.filter(d => d.key !== undefined && !(d.key >= 1 && d.key <= ORDER_DIGITS));
     const dup = (rows: any[]) => { const k = rows.filter(d => d.key !== undefined).map(d => d.key); return new Set(k).size !== k.length; };
     const floor = O.rowsFor({ kind: 'floor', at: [0, 0, 0] }), tools = O.rowsFor({ kind: 'door', at: [0, 0, 0], door: R.game.doors.list[0], side: 1 }, 'tools'), nine = defs.find(d => d.id === 't-nine');
     const keysOf = (rows: any[]) => rows.map(d => `${d.id}=${d.key ?? '·'}`).join(' ');
+    // (a row that asks for 9 is dealt a digit in reach where one is free: 5 on the first page, or none where the menu of its target has a row of the game's on 5
+    //  already (asked of the menu itself); 1 on a page of its own — orders.ts register)
+    const fiveTaken = O.rowsFor({ kind: 'none', at: [0, 0, 0] }).some((d: any) => d.id !== 't-nine' && d.key === 5), nineOwn = defs.find(d => d.id === 't-nine-own');
     for (const id of ids) O.unregister(id);
-    verdict(over.length === 0 && !dup(floor) && !dup(tools) && tools.filter((d: any) => d.key !== undefined).length === ORDER_DIGITS && floor.filter((d: any) => d.key !== undefined).length === ORDER_DIGITS && nine?.key === 5,
-      'register() with more rows than digits (four more on the floor\'s page, twelve more on the tools page, one that asks for 9): no digit above 5 is dealt, no two rows of a page share one, the rest are left to the wheel',
-      `floor: ${keysOf(floor)}\n    tools: ${keysOf(tools)}\n    asked for 9 on Sam's menu: got ${nine?.key ?? 'none'}`);
+    verdict(over.length === 0 && !dup(floor) && !dup(tools) && tools.filter((d: any) => d.key !== undefined).length === ORDER_DIGITS && floor.filter((d: any) => d.key !== undefined).length === ORDER_DIGITS && !!nine && nine.key === (fiveTaken ? undefined : 5) && nineOwn?.key === 1,
+      'register() with more rows than digits (four more on the floor\'s page, twelve more on the tools page, two that ask for 9): no digit above 5 is dealt, no two rows of a page share one, a row that asks for 9 gets a digit in reach where one is free, the rest are left to the wheel',
+      `floor: ${keysOf(floor)}\n    tools: ${keysOf(tools)}\n    asked for 9 on Sam's menu: got ${nine ? nine.key ?? 'none' : 'NO ROW'} (5 is ${fiveTaken ? 'a row of the game\'s there: none is right' : 'free there'}) · asked for 9 on a page of its own: got ${nineOwn?.key ?? 'none'} (want 1)`);
   }
   { // the code: the order path names no digit key above the reach (a literal, or a loop bound it would have to read)
     const PATH = ['src/game/orders.ts', 'src/game/doortools.ts', 'src/game/nightbreach.ts', 'src/game/roomclear.ts', 'src/game/rescue.ts', 'src/game/rescueflow.ts'];
