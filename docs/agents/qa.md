@@ -265,6 +265,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   put right: Sam's covering fire down the door's line from behind the stack downs both his own men on the page (friendly fire is live: the
   staging's), and with that held off by hand the pin peaks 0.43 of the 0.6 it needs, 0.99 on the old stand (could be real: the suppression's
   owner's). Its other two lines are not read.
+  THE TWELFTH (11-06), `move-walktries`: two stagings mended and one red made true. THE WEDGE'S CASE read 'nobody moving' two seconds on from a flat
+  three after the halt line; at the squad's own pace the file's last man takes his last step at 3.1 s. It waits until the four have SETTLED
+  (`settle`: three seconds at the least, on until nobody has moved for a whole second, ten at the most, and the line fails at ten): 4.1 s on the
+  page's stand, 3.3 on the old. LOOSENED in time. `play()`'s read after a halt uses the same wait. `WEDGESETTLE_BREAK=1` reads the men the frame
+  the line is said (FAIL on both); `=flat` is the three seconds as they were (FAIL on the page's stand alone). THE TWO LOCKS' CASE walks its pair
+  into the storage room, where a defender stands, kept blind for good by the rig. Where a squad nobody has found holds its round on a man who has
+  not noticed it (`holdfire.ts`, `HOLDFIRE.on`: the page's stand; NOT `unseen.ts`, Sam is not sneaking) one man says 'eyes on. holding.' every
+  eight seconds, both stand on the door's marks reading 'moving' and neither is counted arrived, so the walk's try is never made: `orders.ts`
+  counts a man arrived with his gun on the door's point, and the stamp that counts a man holding his round as there (`HOLDFIRE.stackSet`) is the
+  stack order's alone. The case now plays with THE FIGHT BEGUN, by the rule's own stamp for Sam's 'go' (`holdFireDrill`, nothing where the rule is
+  off): he shoots as the old stand's man always did, the same hot floor on both stands, PASS on both. A NEW line, 'held', plays it with the fight
+  NOT begun and asks only that the handle is still tried: FAIL on the page's stand, its row (could be real: the door tools' owner's, with the
+  squad's). A plain 'move' does not wait so: three other cases here end 'set.' with a round still held; it is a walk's try at an untried door.
   tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
