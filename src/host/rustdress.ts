@@ -29,12 +29,13 @@ import { recapTick } from '../game/deathrecap';
 import { civiliansShown } from '../game/civilians';
 
 /** ms of the last dress step by line, and the lines that threw (each named once: a picture-only line that throws must not stop the game) */
-export const DRESS_MS = { last: {} as Record<string, number>, threw: {} as Record<string, string> };
+export const DRESS_MS = { last: {} as Record<string, number>, sum: {} as Record<string, number>, n: 0, threw: {} as Record<string, string> };
 export interface SideList { list: unknown[]; of: unknown; base: number }
 
 export function dressStep(g: Game, dt: number, side: SideList): void {
   const G = g as unknown as Record<string, any>, S = g.seats, me = g.hostSeat(), T = DRESS_MS.last;
-  const run = (name: string, f: () => void) => { const t = performance.now(); try { f(); } catch (e) { DRESS_MS.threw[name] ??= String((e as Error)?.stack ?? e).slice(0, 700); } T[name] = performance.now() - t; };
+  const M = DRESS_MS.sum; DRESS_MS.n++;
+  const run = (name: string, f: () => void) => { const t = performance.now(); try { f(); } catch (e) { DRESS_MS.threw[name] ??= String((e as Error)?.stack ?? e).slice(0, 700); } const ms = performance.now() - t; T[name] = ms; M[name] = (M[name] ?? 0) + ms; };
   // ---- stepSeats, after the rules (game.ts: the lines from `if (DRESS.wind)` down)
   if (DRESS.wind) run('wind', () => g.wind.update(dt));
   if (DRESS.air) run('air', () => updateAirSim(g, dt));
