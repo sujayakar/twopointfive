@@ -499,7 +499,7 @@ pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let y = v3::mad(v3::scale(x0, -sa), y0, ca);
         let rot = v3::quat::from_basis(x, y, z);
         let yaw = v3::yaw_of(z);
-        let body = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+        let body = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
             c: v3::copy(r.pos),
             h: v3::copy(item.half),
             yaw: Some(yaw),
@@ -509,7 +509,7 @@ pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
             ..Default::default()
         });
         out.push(body);
-        let nose = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+        let nose = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
             c: v3::mad(r.pos, z, 0.031),
             h: [0.021, 0.021, 0.02],
             yaw: Some(yaw),

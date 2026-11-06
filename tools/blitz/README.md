@@ -29,8 +29,8 @@ What it does:
 Exit: 0 in step and no unknown path · 1 the block or the die parted, or a kept tick has a path that is not known · 2 the Rust tick panicked · 3 a side did not run.
 
 `--no-ts` runs the Rust side again over the TypeScript side `--out` already holds (the same ticks kept): the loop while you mend is a build and a few seconds.
-`--open "K"` also writes the state as tick K opens. `--after N` runs N more ticks after the block parts. `--blobs` keeps each kept Rust state (over 100 MB late
-in a mission) after it is diffed.
+`--open "K"` also writes the state as tick K opens. `--after N` runs N more ticks after the block parts. `--blobs` keeps each kept Rust state after
+it is diffed.
 
 ## Reading the stop
 
@@ -112,7 +112,11 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | the record `cmd_buf`, every camera and Input row that is no seat's | (always) | the host samples input and moves its camera between ticks |
 | the test driver's orders (`gives.txt`) | (always) | the scripted player calls `orders.give` between ticks |
 | the driver's `roomAt` that floods a room (`hostwrites.txt room_at`) | (always) | a question of the driver's that writes the game |
-| the box world listed again | `upload` | where the headless host uploaded between two ticks |
+| the box world listed again | `upload` | where the headless host uploaded between two ticks; the listing also frees the rows of frame boxes of the frames before it |
+| `rails_host_view` after each tick | `view` | on a tutorial mission the host sets the first view again with its own camera (game.ts hostAfter) |
+| a tutorial's authored checkpoint (`chron_save` on rails) | (always) | the save controller stops the level's program for the take; the frame starts it again |
+| a tutorial's script defined again, its lesson's tests (`lesson.json`) | (always) | the bridge carries neither which script a beat is nor a lesson step's test |
+| a lesson player's meter (`meter.txt`) and `selectVerb` (`hostwrites.txt select_verb`) | (always) | the scripted player of a tutorial feeds the player's light meter and picks a row between ticks |
 | the autosave's chronicle row (`hostwrites.txt chron_save`) | (always) | the save controller is the host's and writes one row into the game |
 | `light_set_update(dt)` after each tick | `lights` | the host retires flashes between ticks, and the next tick's light reads it |
 
@@ -136,5 +140,9 @@ outside the pool: the runner hands none of those over.
 - The runner cannot yet give an order aimed at a wall or a thing, or with options: it says `NOTE … cannot give` and the sides will part there.
 - Not translated, and so not compared: what stands of a holed wall's paint (`wallskin`) and a broken edge's look (`edge_look`). See `--leave-out` above.
 - A pose's floats are compared only through what the pose drives (bones, boxes); the pool itself is out of the alarm after the first death.
+- A tutorial (`tut-<name>:<seed>`) is played by `tools/qa/lesson-run.ts` WITHOUT its model of the sky's light on every man's meter (a hook over the game's
+  light asks, which the Rust game has no word for): it is the tutorial as the headless estimate lights it.
+- A kept Rust state is small again (about 8 MB): a box pushed straight onto the frame's list is a row for that frame, freed when the host lists the box world.
+  Makers still on a row for good: the launcher's rings, the wall charge's look, a thrown piece of furniture, a wall's falling piece.
 - A level script's beat holds its place in a generator, which no export can read: a state taken while a beat runs is refused by the import. A tutorial is
   compared from a start taken before its program starts, by what its beats do.

@@ -505,11 +505,11 @@ pub fn switch_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let yaw = v3::yaw_of(sw.n);
         let lit = switch_lit(g, &sw);
         let key = crate::scene_boxes::mkey().device + SW_KEY + sw.id * 4.0;
-        let a = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c: v3::mad(sw.pos, sw.n, 0.006), h: [0.042, 0.06, 0.006], yaw: Some(yaw), albedo: Some(plate()), flags: Some(deco), mkey: Some(key), ..Default::default() });
+        let a = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::mad(sw.pos, sw.n, 0.006), h: [0.042, 0.06, 0.006], yaw: Some(yaw), albedo: Some(plate()), flags: Some(deco), mkey: Some(key), ..Default::default() });
         out.push(a);
-        let b = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.015), [0.0, if lit { 0.012 } else { -0.012 }, 0.0]), h: [0.016, 0.018, 0.005], yaw: Some(yaw), albedo: Some(rocker()), flags: Some(deco), mkey: Some(key + 1.0), ..Default::default() });
+        let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.015), [0.0, if lit { 0.012 } else { -0.012 }, 0.0]), h: [0.016, 0.018, 0.005], yaw: Some(yaw), albedo: Some(rocker()), flags: Some(deco), mkey: Some(key + 1.0), ..Default::default() });
         out.push(b);
-        let c = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.013), [0.0, -0.045, 0.0]), h: [0.007, 0.004, 0.002], yaw: Some(yaw), albedo: Some([0.05, 0.03, 0.01]), emissive: Some(if lit { [0.0, 0.0, 0.0] } else { glow() }), flags: Some(deco), mkey: Some(key + 2.0), ..Default::default() });
+        let c = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.013), [0.0, -0.045, 0.0]), h: [0.007, 0.004, 0.002], yaw: Some(yaw), albedo: Some([0.05, 0.03, 0.01]), emissive: Some(if lit { [0.0, 0.0, 0.0] } else { glow() }), flags: Some(deco), mkey: Some(key + 2.0), ..Default::default() });
         out.push(c);
     }
 }

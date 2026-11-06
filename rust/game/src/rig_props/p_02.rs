@@ -285,7 +285,7 @@ pub fn mag_box_l(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, k
         let hf = crate::character::character_hand_frame_l(g, c_2);
         let f = gripfit().mag;
         let x = v3::cross(hf.thumb, hf.fingers);
-        let made = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+        let made = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
             c: v3::mad(v3::mad(v3::mad(a, hf.fingers, f.fwd), hf.back, -f.palm), hf.thumb, f.side),
             h,
             yaw: Some(m::atan2(hf.fingers[0], hf.fingers[2])),
@@ -307,7 +307,7 @@ pub fn mag_box_l(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, k
     let mut y: V3 = v3::mad([0.0, 1.0, 0.0], z, -z[1]);
     y = if v3::len(y) > 1e-3 { v3::normalize(y) } else { [1.0, 0.0, 0.0] };
     let x = v3::cross(y, z);
-    let made = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+    let made = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c: v3::mad(v3::mad(a, z, 0.085), y, h[1] * 0.35),
         h,
         yaw: Some(m::atan2(z[0], z[2])),
