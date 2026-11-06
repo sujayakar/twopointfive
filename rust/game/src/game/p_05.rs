@@ -525,6 +525,7 @@ pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
 
 /// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.   (game.ts restartEncounter)
 pub fn game_restart_encounter(g: &mut crate::game::Game) {
+    crate::journal::session_recorder_cut(g, "the encounter was staged again", None);   // (game.ts:1490, first of all; `lost` left to its default)
     crate::math_dice::use_dice(g);
     crate::sensors::sensors_own_reset(g);
     crate::quiet::quiet_mission_current(g);
@@ -572,6 +573,7 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     // anything still in the air or venting belongs to the encounter that just ended
     game_clear_aftermath(g);
     crate::smoke_types::smoke_system_like_clear_all(g);
+    crate::out_events::push_smoke_system_like_clear_all(g);   // (game.ts:1505: the host's solver hears it too)
     if g.cpu_smoke.grid.is_some() { crate::sense::smoke_grid_renew(g); }
     g.engine.host_books = None;
     for &s in &seats {
