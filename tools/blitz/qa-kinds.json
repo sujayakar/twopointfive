@@ -1,5 +1,5 @@
 {
-"what": "a probe of tools/qa/probes.ts by what it does to the game between two ticks (tools/blitz/qa-census.py --kinds, by reading); `tools`: the stand-alone tools, by hand",
+"what": "a probe of tools/qa/probes.ts by what it does to the game between two ticks (tools/blitz/qa-census.py --kinds, by reading); `tools`: the stand-alone tools, by hand; `pins`: the settled switch rows a probe ran with off their page value (a run of the gate's families with RH_FOLDED)",
 "tools": {
 "tour.ts": {
 "word": "ts",
@@ -1278,5 +1278,849 @@
 "wxkinds-sight": "iii",
 "wxkinds-url": "iii",
 "wxwind": "ii"
+},
+"pins": {
+"bigslot-mate": [
+"GUNSLOTS.on=false",
+"PACKSIDE.on=false"
+],
+"bigslot-moves": [
+"GUNSLOTS.on=false",
+"PACKSIDE.on=false",
+"BIGSLOT.snug=false",
+"BIGSLOT.weight=false",
+"BIGSLOT.moves=false"
+],
+"bigslot-off": [
+"GUNSLOTS.on=false",
+"PACKSIDE.on=false"
+],
+"bigslot-shut": [
+"GUNSLOTS.on=false",
+"PACKSIDE.on=false",
+"BIGSLOT.shut=false",
+"BIGSLOT.beside=false",
+"BIGSLOT.moves=false",
+"BIGSLOT.snug=false",
+"BIGSLOT.weight=false"
+],
+"bigslot-weight": [
+"GUNSLOTS.on=false",
+"PACKSIDE.on=false",
+"BIGSLOT.weight=false"
+],
+"bigslot-you": [
+"GUNSLOTS.on=false",
+"PACKSIDE.on=false"
+],
+"checkpoint-turn": [
+"SAVETIMELINE.turn=false"
+],
+"civilians-identity": [
+"CIV.greet=false"
+],
+"close-dark": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.dark=false"
+],
+"close-duo": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"NETQUIET.on=false",
+"CLOSE.dark=false",
+"CLOSE.on=false"
+],
+"close-grab": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.on=false"
+],
+"close-held": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.mode=false"
+],
+"close-marks": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.marks=true"
+],
+"close-melee": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.alertStrike=false",
+"CLOSE.lethal=false"
+],
+"close-mode": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false"
+],
+"close-off": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.on=false"
+],
+"close-offer": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false"
+],
+"close-rows": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.lethal=false",
+"CLOSE.on=false"
+],
+"close-seat": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false"
+],
+"close-tell": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.ready=false"
+],
+"close-windows": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false"
+],
+"deathrecap": [
+"RECAP.on=false",
+"RECAP.live=false"
+],
+"depot-run": [
+"ROOMCLEAR.pairOnly=true"
+],
+"disarm": [
+"HOLD.stripFirst=false",
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"HOLD.disarm=false"
+],
+"farcalm": [
+"GUARD_EYE.farCalm=false",
+"GUARD_EYE.far=false"
+],
+"farsight": [
+"GUARD_EYE.far=false"
+],
+"findme": [
+"FINDTUNED.on=false",
+"AUTOCAM.on=false"
+],
+"fog-filed": [
+"FOG.things=false"
+],
+"fresh-start": [
+"SAMESTART.on=false",
+"ROOMCLEAR.fresh=false"
+],
+"glasspen-off": [
+"GLASSPEN.on=false"
+],
+"guidewords": [
+"WORDS.guide=false",
+"WORDS.on=false"
+],
+"gunlook-bare": [
+"OWNBLOW.on=false",
+"KITDEAL.on=false",
+"GUNLOOK.on=false"
+],
+"gunlook-hands": [
+"OWNBLOW.on=false",
+"KITDEAL.on=false",
+"GUNLOOK.on=false"
+],
+"gunlook-off": [
+"OWNBLOW.on=false",
+"KITDEAL.on=false",
+"GUNLOOK.on=false"
+],
+"gunreload": [
+"GUNLOOK.shells=false",
+"KITDEAL.on=false",
+"GUNLOOK.on=false",
+"OWNBLOW.on=false"
+],
+"gunroles-deal": [
+"OWNBLOW.on=false"
+],
+"gunroles-entry": [
+"OWNBLOW.on=false",
+"GUNROLES.on=false"
+],
+"gunroles-fight": [
+"OWNBLOW.on=false",
+"GUNROLES.on=false"
+],
+"gunroles-lanes": [
+"OWNBLOW.on=false",
+"GUNROLES.on=false",
+"GUNROLES.post=false"
+],
+"gunroles-off": [
+"OWNBLOW.on=false",
+"GUNROLES.on=false",
+"GUNROLES.deal=false"
+],
+"gunshells": [
+"KITDEAL.on=false",
+"OWNBLOW.on=false",
+"GUNLOOK.shells=false"
+],
+"gunslots-fight": [
+"OWNBLOW.on=false",
+"KITTREE.on=false",
+"KITDEAL.on=false",
+"GUNSLOTS.on=false"
+],
+"gunslots-guns": [
+"OWNBLOW.on=false",
+"KITTREE.on=false",
+"KITDEAL.on=false",
+"GUNSLOTS.heard=false"
+],
+"gunslots-mate": [
+"OWNBLOW.on=false",
+"KITTREE.on=false",
+"KITDEAL.on=false",
+"GUNLOOK.on=false"
+],
+"gunslots-off": [
+"OWNBLOW.on=false",
+"KITTREE.on=false",
+"KITDEAL.on=false",
+"GUNSLOTS.on=false"
+],
+"hands-body": [
+"HANDS.carry=false",
+"HANDS.on=false"
+],
+"hands-door": [
+"HANDS.on=false",
+"DOORWAY.oneWay=false"
+],
+"hands-off": [
+"HANDS.on=false"
+],
+"hands-team": [
+"OWNBLOW.on=false",
+"HANDS.team=false"
+],
+"handslow": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.handsLow=false"
+],
+"handwork-off": [
+"HANDWORK.on=false"
+],
+"handwork-swap": [
+"HANDWORK.on=false",
+"HANDWORK.radio=false"
+],
+"handwork-work": [
+"OWNBLOW.on=false",
+"HANDWORK.on=false"
+],
+"haul": [
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"TAKEDOWN.haul=false"
+],
+"headmark": [
+"OWNBLOW.on=false"
+],
+"heldclicks": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.heldClicks=false"
+],
+"holdglass-loud": [
+"HOLDFIRE.on=false"
+],
+"inhand": [
+"FOG.cone=true",
+"INHAND.on=false"
+],
+"issuewhole": [
+"OWNBLOW.on=false",
+"KITDEAL.on=false",
+"ISSUE.whole=false"
+],
+"journal-fixtures": [
+"AIM.player.lightSnapPx=60",
+"AIM.player.level=0",
+"AIM.player.low=0",
+"GUARD_EYE.far=false",
+"GUARD_EYE.farCalm=false",
+"CHAOS.pall.on=false",
+"CHAOS.mess.on=false",
+"FRAG.samStun=false"
+],
+"kitanim-close": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"KITANIM.on=false"
+],
+"kitanim-edges": [
+"RELOAD.auto=false",
+"QUICKTHROW.on=true"
+],
+"kitanim-equip": [
+"RELOAD.auto=false",
+"QUICKTHROW.on=true"
+],
+"kitanim-harness": [
+"RELOAD.auto=false",
+"QUICKTHROW.on=true"
+],
+"kitanim-midswap": [
+"RELOAD.auto=false",
+"QUICKTHROW.on=true",
+"KITDEAL.stealth=false"
+],
+"kitanim-nv": [
+"RELOAD.auto=false",
+"QUICKTHROW.on=true",
+"KITANIM.nv=false",
+"KITANIM.on=false"
+],
+"kitanim-off": [
+"RELOAD.auto=false",
+"QUICKTHROW.on=true",
+"KITANIM.on=false"
+],
+"kitanim-reload": [
+"RELOAD.auto=false",
+"QUICKTHROW.on=true",
+"KITANIM.reload=false"
+],
+"kitanim-sling": [
+"RELOAD.auto=false",
+"QUICKTHROW.on=true"
+],
+"kitdeal-run": [
+"KITDEAL.on=false",
+"KITDEAL.more=false"
+],
+"kitlent-tiles": [
+"GUNSLOTS.on=false"
+],
+"kitstealth": [
+"OWNBLOW.on=false",
+"KITDEAL.on=false"
+],
+"kittree-guns": [
+"OWNBLOW.on=false",
+"KITDEAL.stealth=false"
+],
+"kittree-mate40": [
+"OWNBLOW.on=false",
+"KITDEAL.on=false",
+"KITDEAL.stealth=false"
+],
+"kittree-off": [
+"OWNBLOW.on=false",
+"KITDEAL.on=false",
+"KITDEAL.stealth=false",
+"KITTREE.on=false"
+],
+"kittree-sponge": [
+"OWNBLOW.on=false",
+"KITDEAL.stealth=false"
+],
+"lineoffire-behind": [
+"CLEARLINE.holdStep=false"
+],
+"lineoffire-corridor": [
+"CLEARLINE.holdStep=false",
+"CLEARLINE.cover=false"
+],
+"lineoffire-edge": [
+"CLEARLINE.holdStep=false"
+],
+"lineoffire-entry": [
+"CLEARLINE.holdStep=false",
+"FRAG.defenders=false",
+"CLEARLINE.inEntry=false"
+],
+"lineoffire-far": [
+"CLEARLINE.holdStep=false"
+],
+"lineoffire-holdstep": [
+"CLEARLINE.holdStep=false"
+],
+"lineoffire-mate": [
+"CLEARLINE.holdStep=false"
+],
+"lineoffire-off": [
+"CLEARLINE.holdStep=false"
+],
+"lineoffire-planted": [
+"CLEARLINE.holdStep=false"
+],
+"lineoffire-still": [
+"CLEARLINE.holdStep=false"
+],
+"lineoffire-walk": [
+"CLEARLINE.holdStep=false"
+],
+"noknife": [
+"STALK.on=false",
+"CLOSE.noKnife=false"
+],
+"noshield-staged": [
+"ISSUE.on=false"
+],
+"owncharge-door": [
+"OWNBLOW.on=false",
+"OWNCHARGE.on=false"
+],
+"owncharge-off": [
+"OWNBLOW.on=false",
+"OWNCHARGE.on=false",
+"KITLOAD.on=false"
+],
+"owncharge-save": [
+"OWNBLOW.on=false"
+],
+"owncharge-squad": [
+"OWNBLOW.on=false"
+],
+"packside": [
+"PACKSIDE.on=false"
+],
+"pellets-identity": [
+"GLASSPEN.on=false",
+"GLASSFX.on=false"
+],
+"qrf-element": [
+"RESPONSE.on=false"
+],
+"qrf-gating": [
+"RESPONSE.on=false"
+],
+"qrf-limits": [
+"RESPONSE.on=false"
+],
+"qrf-perimeter": [
+"RESPONSE.on=false"
+],
+"qrf-reset": [
+"RESPONSE.on=false"
+],
+"qrf-timeline": [
+"RESPONSE.on=false"
+],
+"qrf-trigger": [
+"RESPONSE.on=false"
+],
+"qrf-wave": [
+"RESPONSE.on=false"
+],
+"radiohome": [
+"WORDS.radioHome=false"
+],
+"rails": [
+"AUTOPILOT.plain=false",
+"AUTOPILOT.restack=false",
+"CMDRING.goals=false",
+"STALK.key=false",
+"FOG.eyes=5"
+],
+"reachup": [
+"STALK.on=false",
+"CLOSE.handsLow=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.reachUp=false"
+],
+"rmbhold": [
+"STALK.key=false",
+"STALK.on=false",
+"STALK.low=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false"
+],
+"roomclear-ends": [
+"ROOMCLEAR.pairOnly=true",
+"WORDS.on=false"
+],
+"roomclear-restart": [
+"SAMESTART.on=false",
+"ROOMCLEAR.reroll=false"
+],
+"roomclear-rooms": [
+"NIGHTBREACH.blindFire=false"
+],
+"roomfit-off": [
+"NIGHTBREACH.blindFire=false",
+"ROOMFIT.on=false"
+],
+"roomfit-walk": [
+"NIGHTBREACH.blindFire=false"
+],
+"savetimeline": [
+"MOVES.on=0",
+"SAVETIMELINE.since=false",
+"SAVETIMELINE.on=false"
+],
+"silent-boot": [
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false",
+"KITDEAL.more=false",
+"SILENT.bootWedged=false"
+],
+"silent-cans": [
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false"
+],
+"silent-doors": [
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false",
+"SILENT.picks=false"
+],
+"silent-fire": [
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false",
+"SILENT.holdFire=false"
+],
+"silent-hud": [
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false"
+],
+"silent-hush": [
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false"
+],
+"silent-off": [
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false",
+"SILENT.kicks=false"
+],
+"silent-order": [
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false",
+"DOORTOOLS.wordOnKey=false"
+],
+"silent-pick": [
+"KITDEAL.more=false",
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false"
+],
+"silent-set": [
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false",
+"SILENT.stackSet=false"
+],
+"silent-start": [
+"NVG.on=false",
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false"
+],
+"silent-tools": [
+"KITDEAL.more=false",
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false",
+"SILENT.toolsLoud=false"
+],
+"silent-walk": [
+"DOORTOOLS.testDoor=false",
+"DOORTOOLS.outsidePlain=false",
+"NVG.on=false"
+],
+"smokebreak": [
+"SMOKEBREAK.on=false"
+],
+"snatch": [
+"SNATCHOUT.on=false",
+"SNATCH.on=false"
+],
+"snatchout": [
+"SNATCHOUT.hold=false",
+"RESPONSE.on=false",
+"SNATCHOUT.on=false"
+],
+"squadnet-clear": [
+"AUTOPILOT.plain=false",
+"AUTOPILOT.restack=false"
+],
+"squadnet-end": [
+"AUTOPILOT.plain=false",
+"AUTOPILOT.restack=false",
+"SQUADNET.endCall=false"
+],
+"squadnet-net": [
+"AUTOPILOT.plain=false",
+"AUTOPILOT.restack=false",
+"SQUADNET.why=false",
+"SQUADNET.clear=false",
+"SQUADNET.on=false"
+],
+"squadnet-off": [
+"AUTOPILOT.plain=false",
+"AUTOPILOT.restack=false",
+"SQUADNET.on=false",
+"SQUADNET.why=false",
+"SQUADNET.clear=false",
+"SQUADNET.endCall=false",
+"SQUADNET.edge=false"
+],
+"squadnet-why": [
+"AUTOPILOT.plain=false",
+"AUTOPILOT.restack=false",
+"SQUADNET.endCall=false"
+],
+"stay-open-after": [
+"DOORSTAY.on=false"
+],
+"stay-open-floor": [
+"DOORSTAY.on=false"
+],
+"stay-open-off": [
+"DOORSTAY.on=false"
+],
+"stay-open-pass": [
+"DOORSTAY.on=false"
+],
+"stealthpose-cable": [
+"STEALTHPOSE.nod=false",
+"STEALTHPOSE.on=false"
+],
+"stealthpose-creep": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"STEALTHPOSE.on=false"
+],
+"stealthpose-off": [
+"STEALTHPOSE.on=false",
+"STEALTHPOSE.idle=false",
+"STEALTHPOSE.walk=false",
+"STEALTHPOSE.rise=false",
+"STEALTHPOSE.creep=false",
+"STEALTHPOSE.cable=false"
+],
+"stealthpose-standdown": [
+"STEALTHPOSE.on=false"
+],
+"sticky-default": [
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false",
+"GUNSLOTS.on=false",
+"FOG.cone=true",
+"FOG.own=true"
+],
+"sticky-fly": [
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false",
+"GUNSLOTS.on=false"
+],
+"sticky-fog": [
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false",
+"GUNSLOTS.on=false"
+],
+"sticky-kit": [
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false",
+"GUNSLOTS.on=false"
+],
+"sticky-mark": [
+"FOG.cone=true",
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false",
+"GUNSLOTS.on=false",
+"STICKY.mark=false"
+],
+"sticky-off": [
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false",
+"GUNSLOTS.on=false",
+"STICKY.on=false"
+],
+"sticky-save": [
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false",
+"GUNSLOTS.on=false"
+],
+"sticky-take": [
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false",
+"GUNSLOTS.on=false",
+"STICKY.take=false"
+],
+"sticky-wand": [
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false",
+"GUNSLOTS.on=false",
+"QUIETFOG.wand=false",
+"WAND.on=false"
+],
+"sticky-ways": [
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false",
+"TOLD.on=false",
+"TOLD.fogOff=false",
+"GUNSLOTS.on=false"
+],
+"takedown-beats": [
+"HOLD.disarm=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"TAKEDOWN.haul=false",
+"TAKEDOWN.chokeBeats=false"
+],
+"takedown-kill": [
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"TAKEDOWN.kill=false"
+],
+"takedown-lower": [
+"TAKEDOWN.haul=false",
+"TAKEDOWN.lower=false",
+"TAKEDOWN.on=false",
+"TAKEDOWN.chokeBeats=false"
+],
+"takedown-rules": [
+"TAKEDOWN.on=false"
+],
+"threshold-doors": [
+"DOORTOOLS.wordNoCan=false"
+],
+"threshold-first": [
+"DOORTOOLS.wordNoCan=false",
+"DOORTOOLS.outsidePlain=false",
+"DOORTOOLS.thrFirstOnly=false"
+],
+"threshold-four": [
+"DOORTOOLS.wordNoCan=false"
+],
+"threshold-grenade": [
+"DOORTOOLS.wordNoCan=false",
+"DOORTOOLS.thrHand=false",
+"DOORTOOLS.thrFragHold=false"
+],
+"threshold-hand": [
+"DOORTOOLS.wordNoCan=false",
+"DOORTOOLS.thrNoCan=false",
+"DOORTOOLS.thrFragHold=false",
+"DOORTOOLS.thrHand=false"
+],
+"threshold-hold": [
+"SQUADDEAL.on=false",
+"DOORTOOLS.wordNoCan=false",
+"DOORTOOLS.thrPie=false",
+"DOORTOOLS.behindSam=false"
+],
+"threshold-last": [
+"DOORTOOLS.thrLast=false",
+"DOORTOOLS.wordNoCan=false"
+],
+"threshold-leaf": [
+"DOORTOOLS.wordNoCan=false",
+"DOORTOOLS.thrDoorsLeaf=false"
+],
+"threshold-pair": [
+"DOORTOOLS.wordNoCan=false"
+],
+"trail-doors": [
+"ORDERS.trailDoors=false"
+],
+"wand-kit": [
+"WAND.mate=false",
+"KITTREE.on=false"
+],
+"wand-look": [
+"WAND.nv=false",
+"WAND.on=false",
+"FOG.cone=true"
+],
+"wand-mate": [
+"KITDEAL.on=false",
+"WAND.mate=false",
+"FOG.own=true"
+],
+"wand-off": [
+"WAND.on=false"
+],
+"wand-quick": [
+"WAND.quick=false"
+],
+"weapons-identity": [
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false"
+],
+"words-hostage": [
+"RESCUE.seedRoamers=false"
+],
+"words-log": [
+"RESCUE.seedRoamers=false",
+"WORDS.on=false"
+],
+"words-off": [
+"WORDS.on=false",
+"RESCUE.seedRoamers=false"
+],
+"words-overheard": [
+"CUES.overheard=false"
+],
+"work-face": [
+"WORK.ownFace=false"
+],
+"work-held": [
+"WORK.heldPass=false"
+],
+"work-off": [
+"WORK.on=false"
+],
+"work-posted": [
+"POWEROUT.on=false",
+"WORK.posted=false"
+],
+"work-walk": [
+"WORK.offWalk=false"
+],
+"workstow-mate": [
+"OWNBLOW.on=false"
+],
+"workstow-off": [
+"OWNBLOW.on=false",
+"KITANIM.on=false",
+"WORKSTOW.on=false",
+"HANDWORK.on=false"
+],
+"workstow-sam": [
+"OWNBLOW.on=false",
+"KITANIM.on=false"
+],
+"workstow-wall": [
+"WALLCHARGE.outer=false",
+"WALLCHARGE.farFurn=false",
+"WALLCHARGE.safe=false",
+"WALLCHARGE.hung=false",
+"WALLCHARGE.outOfFire=false",
+"WALLCHARGE.menClear=false",
+"OWNBLOW.on=false",
+"KITANIM.on=false"
+]
 }
 }
