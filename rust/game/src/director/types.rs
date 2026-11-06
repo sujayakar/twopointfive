@@ -356,7 +356,7 @@ impl ProgramDefBeatsValue {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         ProgramDefBeatsValue {
-            fn_: crate::scene_level::LevelScriptFn::TutSky,
+            fn_: crate::scene_level::LevelScriptFn::Unset,
             atomic: false,
         }
     }

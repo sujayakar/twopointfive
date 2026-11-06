@@ -46,9 +46,10 @@ A pose the TypeScript keeps outside the pool (a dead man's `rd.pose`, a kit figu
 
 Nothing inside the tick does these, and the next tick reads what they leave:
 
-- **Before a step:** `io::take_host_rows` in a compare, or in a real host its own record, camera and Input. `scene_boxes::box_world_list` (`host_world_upload`) when it lists the boxes, as `engine.world.upload()` does between ticks.
-- **After a step:** `render_lights::light_set_update(g, dt, time)`: a flash's envelope and its retirement. `chronicle::chron_checkpoint` when it autosaves: `saves.tick` is the tick's last line in the TypeScript and writes that row into the game.
+- **Before a step:** `io::take_host_half` with the buffer `hostHalf` wrote: the seats' records, the host's cameras and Input. `scene_boxes::box_world_list` (`host_world_upload`) when it lists the boxes, as `engine.world.upload()` does between ticks.
+- **After a step:** `render_lights::light_set_update(g, dt, time)`: a flash's envelope and its retirement. `chronicle::chron_checkpoint` when it autosaves: `saves.tick` is the tick's last line in the TypeScript and writes that row into the game. On rails, `rails_host_view(g, cam)` with the host's camera (game.ts hostAfter: a tutorial staged again opens on its first view), and at an authored checkpoint `director_stop(false)` then `rails_resume`.
 - **The smoke solver's answers are input:** `budget`, `inSmokeDomain`, `round`, `drawing`. With no solver they are the host's null object's.
+- **The listing frees frame boxes:** `scene_boxes::boxes_frame_reset` straight after `box_world_list`, not in the tick. The engine's list names a frame's IDs until the next listing, so a host that lists every fourth frame keeps them that long.
 - **A question between ticks can write the game:** `g.fight.roomAt(p)` floods a room and keeps it, and a driver's `orders.give` is an order. A compare replays those at the same tick.
 
 ## Comparing two states
@@ -61,7 +62,11 @@ Identity serials differ by design. `schema.serial` lists the fields that hold on
 
 `g.engine` is carried as far as the tick reads it: the lights' list in its own order with `ir` and `fog_team`, the box world's lists and its ray grid (`statics`, `dynamics`, `all`, `rg_*`, the glass lists), every plain setting, the weather frame, `view_focus`, `sharp_on`, `glass_fracture`, `effective_scale`. `LightId` is seeded from the lights' list, so a light nothing else reaches, the moon, has its row.
 
-Between two ticks the TypeScript's host writes the sampled record, its own camera and Input and a memo the HUD fills. A game stepped on its own from one start takes those with `io::take_host_rows(&mut g, &h)`, where `h` is the state imported as the next tick opens. It takes nothing else of `h`. `cmd_seat.mark` is a serial the host deals: a compare should expect it to differ.
+Between two ticks the TypeScript's host writes the sampled records, its own camera and Input. `hostHalf(g, knobs, cmds)` (export.ts) writes them as their own small buffer and `io::take_host_half(&mut g, &buf)` takes them and answers the records for `game_step_seats`. Nothing else of the game moves. `cmd_seat.mark` is a serial the host deals: a compare should expect it to differ.
+
+A game's slot: `io::set_slot(&mut g, slot)` is the one way to change it. `import` sets the box mirror's slot from `g.sim`; the bridge carries neither.
+
+A level script: `io::deal_scripts`, at the end of each import, finds the script from the level's name and runs the define pass again, which is the only way to its locals. A crate with `manifest_of` still a stub panics there on a scripted level.
 
 ## Closures
 

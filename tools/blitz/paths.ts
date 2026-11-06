@@ -18,7 +18,7 @@ function rd(n: Node, i: In, path: string, mod: string, out: Row[]): string {
     case 'id': return leaf(`${n.id}(${i.u32()})`);
     case 'str': { const L = i.u32(); const s = DEC.decode(i.b.subarray(i.p, i.p + L)); i.p += L; return leaf(JSON.stringify(s)); }
     case 'unit': return '';
-    case 'opt': { if (!i.u8()) return leaf('None'); return rd(n.of, i, path, mod, out); }
+    case 'opt': { if (!i.u8()) return leaf('None'); if (n.of.k === 'opt') { if (!i.u8()) return leaf('Some(None)'); return rd(n.of.of, i, path, mod, out); } return rd(n.of, i, path, mod, out); }
     case 'vec': { const L = i.u32(); out.push({ path: `${path}.len`, bits: String(L), mod }); for (let k = 0; k < L; k++) rd(n.of, i, `${path}[${k}]`, mod, out); return ''; }
     case 'arr': for (let k = 0; k < n.n; k++) rd(n.of, i, `${path}[${k}]`, mod, out); return '';
     case 'tup': n.of.forEach((x: Node, k: number) => rd(x, i, `${path}.${k}`, mod, out)); return '';
@@ -28,6 +28,7 @@ function rd(n: Node, i: In, path: string, mod: string, out: Row[]): string {
       if (T.k === 'struct') { for (const f of T.fields) { const q = `${T.mod}::${T.name}.${f.rust}`, s0 = SER, k0 = KEYSER; if (SCHEMA.serial?.[q]) SER = q; KEYSER = !!SCHEMA.serial?.[`${q}{}`]; const c0 = CUR; CUR = q; rd(parse(f.ty), i, `${path}.${f.rust}`, T.mod, SCHEMA.scratch?.[q] ? [] : out); CUR = c0; SER = s0; KEYSER = k0; } return ''; }   // (schema.scratch: a memo no rule reads back: carried, not compared)
       if (T.k === 'enum') { const w = i.u16(); return leaf(`${T.name}::${T.words[w]}`); }
       if (T.k === 'data') { const a = T.vars[i.u16()]; out.push({ path: `${path}#`, bits: a.tag, mod }); if (a.ty) rd(parse(a.ty), i, `${path}.${a.tag}`, mod, out); return ''; }
+      if (T.k === 'wordEnum') { const A = T.arms[i.u16()]; out.push({ path: `${path}#`, bits: A.tag, mod }); for (const f of A.fields) rd(parse(f.ty), i, `${path}.${f.rust}`, mod, out); return ''; }
       if (T.k === 'handEnum') { const a = T.arms[i.u16()]; out.push({ path: `${path}#`, bits: a, mod }); const t = a.match(/\((.*)\)/)?.[1]; if (t) rd(parse(t), i, `${path}.${a.split('(')[0]}`, mod, out); return ''; }
     }
   }

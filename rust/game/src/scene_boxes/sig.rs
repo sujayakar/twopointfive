@@ -102,6 +102,10 @@ pub fn box_new(g: &mut crate::game::Game, b: crate::scene_boxes::Box) -> BoxId {
 pub fn box_frame(g: &mut crate::game::Game, b: crate::scene_boxes::Box) -> BoxId { todo!() }
 /// INVENTED: the frame's boxes may be reused: called as the dyn boxes are rebuilt
 pub fn boxes_frame_reset(g: &mut crate::game::Game) { todo!() }
+/// INVENTED: make_box, onto a row of this frame's list
+pub fn make_box_frame(g: &mut crate::game::Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { todo!() }
+/// INVENTED: box_of, onto a row of this frame's list
+pub fn box_of_frame(g: &mut crate::game::Game, c: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner: f64, rot: Option<Quat>, name: Option<&str>) -> BoxId { todo!() }
 
 /// INVENTED: makeBox's object as a value, in no table: boxOf's defaults, then every field given. For a box made only to be read and dropped; make_box is this and a push. (boxes.ts:182)
 pub fn make_box_value(p: &crate::scene_boxes::MakeBoxP) -> crate::scene_boxes::Box { todo!() }
