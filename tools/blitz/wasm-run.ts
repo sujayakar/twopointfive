@@ -84,6 +84,8 @@ const panicText = () => dec.decode(u8().subarray(X.face_panic_ptr(), X.face_pani
 function hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = X.face_alloc(b.length); u8().set(b, p); try { return f(p, b.length); } finally { X.face_free(p, b.length); } }
 const NAMES: string[] = []; for (let i = 0; i < X.face_parts(); i++) { X.face_part_name(i); NAMES.push(outText()); }
 if (head[0] !== 'parts' || head.slice(1).join(' ') !== NAMES.join(' ')) { say(`post.txt names the block's parts [${head.slice(1)}] and this module [${NAMES}]: one side is of another tree`); process.exit(3); }
+// (rust/sim's own exports and the face's say the same of the block: one block, reached by either name)
+for (let slot = 0; slot < X.state_games(); slot++) for (let i = 0; i < NAMES.length; i++) if (X.state_addr(slot) + X.state_part(i, 0) !== X.face_part_addr(slot, i) || X.state_part(i, 1) !== X.face_part_len(i)) { say(`wasm-run: part ${NAMES[i]} of slot ${slot}: rust/sim's state_addr / state_part and the face's face_part_addr / face_part_len disagree`); process.exit(3); }
 const POSES = hand(enc.encode('poses'), (p, n) => X.face_part(p, n));
 /** the hashes of the block's parts as the module takes them */
 const inside = (slot: number): number[] => { const at = X.face_part_hashes(slot) >>> 2; return Array.from(u32().subarray(at, at + NAMES.length)); };
