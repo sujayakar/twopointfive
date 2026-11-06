@@ -4,12 +4,12 @@
   "shipped": {
    "run": "compound-four:1:: compound-four:1:clear: compound-four:1:overcast: compound-four:1:rain: compound-four:1:downpour: compound-four:1:fog: compound-four:1:dust: pass-four:1:: warehouse-four:1:rain: block-squads:1:downpour: hostage-rescue:1:: compound-four:1:rain:midday compound-four:1::midday",
    "end": "compound-four:1::=stalled compound-four:1:clear:=stalled compound-four:1:overcast:=stalled compound-four:1:rain:=stalled compound-four:1:downpour:=stalled compound-four:1:fog:=stalled compound-four:1:dust:=stalled pass-four:1::=stalled warehouse-four:1:rain:=stalled block-squads:1:downpour:=wiped hostage-rescue:1::=rescued compound-four:1:rain:midday=stalled compound-four:1::midday=stalled",
-   "tree": "db1a58bb The senses' TypeScript is gone: an eye, the light, the smoke, a sound, a way and the fog are the module's alone, with changes not committed",
+   "tree": "the weather's own commit on b0e1ca88",
    "stood": "",
    "words": {
     "compound-four:1::|weather.airTrans": {
      "asked": 52124,
-     "word": "a6d79fe762651319"
+     "word": "1b93e84cf57e70e0"
     },
     "compound-four:1::|weather.gap": {
      "asked": 6,
@@ -17,7 +17,7 @@
     },
     "compound-four:1::|weather.hearMask": {
      "asked": 1430,
-     "word": "5a6e1cab9453cffd"
+     "word": "dc7b19367a631633"
     },
     "compound-four:1::|weather.lot": {
      "asked": 4801,
@@ -25,7 +25,7 @@
     },
     "compound-four:1::|weather.rainBed": {
      "asked": 161,
-     "word": "46e5a70f117a91a8"
+     "word": "e4643da7f5e130b4"
     },
     "compound-four:1::|weather.roofsOf": {
      "asked": 2,
@@ -49,19 +49,19 @@
     },
     "compound-four:1::|weather.underRoof": {
      "asked": 3504,
-     "word": "38a3fcdad1766625"
+     "word": "446b153a3def367d"
     },
     "compound-four:1::|wet.openSky": {
      "asked": 4992,
-     "word": "ae4ae8270353ca74"
+     "word": "241e2bff028575ad"
     },
     "compound-four:1::|wet.step": {
      "asked": 76816,
-     "word": "68ca1f752c7d3bd3"
+     "word": "11b2e257cc3e5e73"
     },
     "compound-four:1::|wind.jet": {
      "asked": 5042,
-     "word": "57fb5572eb90f65c"
+     "word": "4003bbd744941289"
     },
     "compound-four:1::|wind.noise": {
      "asked": 9529,
@@ -69,19 +69,19 @@
     },
     "compound-four:1::|wind.storm": {
      "asked": 161,
-     "word": "ef96c7cba1081038"
+     "word": "68a5f8ab43ffaf41"
     },
     "compound-four:1::|wind.stormRoofs": {
      "asked": 5123,
-     "word": "6407e6b04c37ff0d"
+     "word": "c6aa0e7cc031b4c2"
     },
     "compound-four:1:clear:|weather.airTrans": {
      "asked": 52124,
-     "word": "c1c184205f828163"
+     "word": "86ccb213eead8a6c"
     },
     "compound-four:1:clear:|weather.hearMask": {
      "asked": 1430,
-     "word": "dc14a50dbbc6d43a"
+     "word": "28cc6f15080f7928"
     },
     "compound-four:1:clear:|weather.lot": {
      "asked": 4801,
@@ -89,7 +89,7 @@
     },
     "compound-four:1:clear:|weather.rainBed": {
      "asked": 161,
-     "word": "30e1a2d23562c5e6"
+     "word": "c5f929aafc9ee5d6"
     },
     "compound-four:1:clear:|weather.roofsOf": {
      "asked": 162,
@@ -113,19 +113,19 @@
     },
     "compound-four:1:clear:|weather.underRoof": {
      "asked": 3504,
-     "word": "08a0bd70e64547ea"
+     "word": "207a4c506865f9ce"
     },
     "compound-four:1:clear:|wet.openSky": {
      "asked": 161,
-     "word": "26daca9490108fcf"
+     "word": "e172cb13abee6d8a"
     },
     "compound-four:1:clear:|wet.step": {
      "asked": 76816,
-     "word": "2d5771efe6d5be51"
+     "word": "5c75494dbc7f780b"
     },
     "compound-four:1:clear:|wind.jet": {
      "asked": 5042,
-     "word": "61fc37e6dfa07f30"
+     "word": "a209806c7c52a840"
     },
     "compound-four:1:clear:|wind.noise": {
      "asked": 9529,
@@ -133,19 +133,19 @@
     },
     "compound-four:1:clear:|wind.storm": {
      "asked": 161,
-     "word": "cbf84a12bec88d7f"
+     "word": "0cb8da3e210c52e2"
     },
     "compound-four:1:clear:|wind.stormRoofs": {
      "asked": 5123,
-     "word": "65a25cad248b5883"
+     "word": "cf68bf761978bc36"
     },
     "compound-four:1:overcast:|weather.airTrans": {
      "asked": 52124,
-     "word": "c1c184205f828163"
+     "word": "86ccb213eead8a6c"
     },
     "compound-four:1:overcast:|weather.hearMask": {
      "asked": 1430,
-     "word": "dc14a50dbbc6d43a"
+     "word": "28cc6f15080f7928"
     },
     "compound-four:1:overcast:|weather.lot": {
      "asked": 4801,
@@ -153,7 +153,7 @@
     },
     "compound-four:1:overcast:|weather.rainBed": {
      "asked": 161,
-     "word": "30e1a2d23562c5e6"
+     "word": "c5f929aafc9ee5d6"
     },
     "compound-four:1:overcast:|weather.roofsOf": {
      "asked": 162,
@@ -177,19 +177,19 @@
     },
     "compound-four:1:overcast:|weather.underRoof": {
      "asked": 3504,
-     "word": "08a0bd70e64547ea"
+     "word": "207a4c506865f9ce"
     },
     "compound-four:1:overcast:|wet.openSky": {
      "asked": 161,
-     "word": "26daca9490108fcf"
+     "word": "e172cb13abee6d8a"
     },
     "compound-four:1:overcast:|wet.step": {
      "asked": 76816,
-     "word": "2d5771efe6d5be51"
+     "word": "5c75494dbc7f780b"
     },
     "compound-four:1:overcast:|wind.jet": {
      "asked": 5042,
-     "word": "d023034af578a2a4"
+     "word": "64df8724d4a53bca"
     },
     "compound-four:1:overcast:|wind.noise": {
      "asked": 9529,
@@ -197,15 +197,15 @@
     },
     "compound-four:1:overcast:|wind.storm": {
      "asked": 161,
-     "word": "136c067871d8019a"
+     "word": "4158f21098090c24"
     },
     "compound-four:1:overcast:|wind.stormRoofs": {
      "asked": 5123,
-     "word": "b6b9623dc7959cea"
+     "word": "1c41101075fd94c2"
     },
     "compound-four:1:rain:|weather.airTrans": {
      "asked": 52124,
-     "word": "c277645f4a678c01"
+     "word": "7fd0d51d6b5563be"
     },
     "compound-four:1:rain:|weather.gap": {
      "asked": 3,
@@ -213,7 +213,7 @@
     },
     "compound-four:1:rain:|weather.hearMask": {
      "asked": 1430,
-     "word": "7f99b7865a11932c"
+     "word": "c469fa8f1a4e283a"
     },
     "compound-four:1:rain:|weather.lot": {
      "asked": 4801,
@@ -221,7 +221,7 @@
     },
     "compound-four:1:rain:|weather.rainBed": {
      "asked": 161,
-     "word": "364b51b257655b92"
+     "word": "9c9e82722babd11e"
     },
     "compound-four:1:rain:|weather.roofsOf": {
      "asked": 162,
@@ -245,19 +245,19 @@
     },
     "compound-four:1:rain:|weather.underRoof": {
      "asked": 3504,
-     "word": "8905fd8bc3a134f2"
+     "word": "b1224d1bb63e3c78"
     },
     "compound-four:1:rain:|wet.openSky": {
      "asked": 4992,
-     "word": "2948088a5030f1b0"
+     "word": "0d798ae66cca8ec0"
     },
     "compound-four:1:rain:|wet.step": {
      "asked": 76816,
-     "word": "cce9de10ca91a2b0"
+     "word": "62317f5726a1650c"
     },
     "compound-four:1:rain:|wind.jet": {
      "asked": 5042,
-     "word": "c905da14a2311b77"
+     "word": "e18b388dcf53d7f3"
     },
     "compound-four:1:rain:|wind.noise": {
      "asked": 9529,
@@ -265,11 +265,11 @@
     },
     "compound-four:1:rain:|wind.storm": {
      "asked": 161,
-     "word": "1bcf4c8ac54d5a3e"
+     "word": "536f7192d51a84d5"
     },
     "compound-four:1:rain:|wind.stormRoofs": {
      "asked": 5123,
-     "word": "794874043b150a1a"
+     "word": "be649aa0ce634e50"
     },
     "compound-four:1:downpour:|air.settle": {
      "asked": 2,
@@ -281,11 +281,11 @@
     },
     "compound-four:1:downpour:|fog.tau": {
      "asked": 161,
-     "word": "06838c99b394b1ad"
+     "word": "25fabdf0289d3c71"
     },
     "compound-four:1:downpour:|weather.airTrans": {
-     "asked": 56133,
-     "word": "4f5af07dd6ca87f7"
+     "asked": 56131,
+     "word": "bd81cbb40a5dd8ef"
     },
     "compound-four:1:downpour:|weather.gap": {
      "asked": 7,
@@ -293,7 +293,7 @@
     },
     "compound-four:1:downpour:|weather.hearMask": {
      "asked": 1430,
-     "word": "cc7441b6c51d6a0b"
+     "word": "615e5a67f066fff5"
     },
     "compound-four:1:downpour:|weather.lot": {
      "asked": 4801,
@@ -301,7 +301,7 @@
     },
     "compound-four:1:downpour:|weather.rainBed": {
      "asked": 161,
-     "word": "1e770995b8ba8762"
+     "word": "f2708c358465aa90"
     },
     "compound-four:1:downpour:|weather.roofsOf": {
      "asked": 162,
@@ -325,19 +325,19 @@
     },
     "compound-four:1:downpour:|weather.underRoof": {
      "asked": 3504,
-     "word": "8905fd8bc3a134f2"
+     "word": "b1224d1bb63e3c78"
     },
     "compound-four:1:downpour:|wet.openSky": {
      "asked": 4994,
-     "word": "1d249202ae56badf"
+     "word": "b4f304ca9dc7d062"
     },
     "compound-four:1:downpour:|wet.step": {
      "asked": 76816,
-     "word": "a9f86c80363bb7bc"
+     "word": "bfd84490a1b7ce4d"
     },
     "compound-four:1:downpour:|wind.jet": {
      "asked": 5042,
-     "word": "3bc63e9d3f8f3798"
+     "word": "f6cd3554adb9877b"
     },
     "compound-four:1:downpour:|wind.noise": {
      "asked": 9529,
@@ -345,11 +345,11 @@
     },
     "compound-four:1:downpour:|wind.storm": {
      "asked": 161,
-     "word": "589422cbe15598fb"
+     "word": "92adf98fc1c31527"
     },
     "compound-four:1:downpour:|wind.stormRoofs": {
      "asked": 5123,
-     "word": "a34330fe195f6bed"
+     "word": "c10bd37609f9c078"
     },
     "compound-four:1:fog:|air.settle": {
      "asked": 2,
@@ -357,19 +357,19 @@
     },
     "compound-four:1:fog:|air.update": {
      "asked": 4801,
-     "word": "44cce1c62910bb49"
+     "word": "97cffa2937cfe3df"
     },
     "compound-four:1:fog:|fog.tau": {
      "asked": 161,
-     "word": "de677e48b4ee093f"
+     "word": "aba73f1946def50b"
     },
     "compound-four:1:fog:|weather.airTrans": {
-     "asked": 60958,
-     "word": "960c74c5ed2b3c39"
+     "asked": 58068,
+     "word": "3e637ed02fdcdba5"
     },
     "compound-four:1:fog:|weather.hearMask": {
-     "asked": 1738,
-     "word": "9bbed5da1cc9911b"
+     "asked": 1762,
+     "word": "026199b9e8a7d96a"
     },
     "compound-four:1:fog:|weather.lot": {
      "asked": 4801,
@@ -377,7 +377,7 @@
     },
     "compound-four:1:fog:|weather.rainBed": {
      "asked": 161,
-     "word": "97d87eefc702e304"
+     "word": "f232b190db6f4895"
     },
     "compound-four:1:fog:|weather.roofsOf": {
      "asked": 162,
@@ -401,19 +401,19 @@
     },
     "compound-four:1:fog:|weather.underRoof": {
      "asked": 3504,
-     "word": "1127f3414388a7c9"
+     "word": "21f34fb60f2a76ab"
     },
     "compound-four:1:fog:|wet.openSky": {
      "asked": 161,
-     "word": "f12cf8e723eb26b1"
+     "word": "b2d0c076aab0b3cc"
     },
     "compound-four:1:fog:|wet.step": {
      "asked": 76816,
-     "word": "c6c2b73c5aa5624f"
+     "word": "72fd15aac01876ec"
     },
     "compound-four:1:fog:|wind.jet": {
      "asked": 5042,
-     "word": "fd47a6a0927d5e2e"
+     "word": "f907c3c0a6046a60"
     },
     "compound-four:1:fog:|wind.noise": {
      "asked": 9529,
@@ -421,11 +421,11 @@
     },
     "compound-four:1:fog:|wind.storm": {
      "asked": 161,
-     "word": "f305418b10984615"
+     "word": "a4ca913cb26d9700"
     },
     "compound-four:1:fog:|wind.stormRoofs": {
      "asked": 5123,
-     "word": "75a483c1b22090a2"
+     "word": "69365e79ace9818a"
     },
     "compound-four:1:dust:|air.settle": {
      "asked": 2,
@@ -437,15 +437,15 @@
     },
     "compound-four:1:dust:|fog.tau": {
      "asked": 161,
-     "word": "7299cd28aa081e4f"
+     "word": "c7ff30b844ec4f69"
     },
     "compound-four:1:dust:|weather.airTrans": {
-     "asked": 56136,
-     "word": "161b915912141da3"
+     "asked": 56122,
+     "word": "6b9a20ee42a77f8e"
     },
     "compound-four:1:dust:|weather.hearMask": {
      "asked": 1430,
-     "word": "dc14a50dbbc6d43a"
+     "word": "28cc6f15080f7928"
     },
     "compound-four:1:dust:|weather.lot": {
      "asked": 4801,
@@ -453,7 +453,7 @@
     },
     "compound-four:1:dust:|weather.rainBed": {
      "asked": 161,
-     "word": "30e1a2d23562c5e6"
+     "word": "c5f929aafc9ee5d6"
     },
     "compound-four:1:dust:|weather.roofsOf": {
      "asked": 162,
@@ -477,19 +477,19 @@
     },
     "compound-four:1:dust:|weather.underRoof": {
      "asked": 3504,
-     "word": "08a0bd70e64547ea"
+     "word": "207a4c506865f9ce"
     },
     "compound-four:1:dust:|wet.openSky": {
      "asked": 161,
-     "word": "26daca9490108fcf"
+     "word": "e172cb13abee6d8a"
     },
     "compound-four:1:dust:|wet.step": {
      "asked": 76816,
-     "word": "2d5771efe6d5be51"
+     "word": "cb5b82b68690a271"
     },
     "compound-four:1:dust:|wind.jet": {
      "asked": 5042,
-     "word": "91a3034a6e7b5ae1"
+     "word": "e1df8724afad6c48"
     },
     "compound-four:1:dust:|wind.noise": {
      "asked": 9529,
@@ -497,23 +497,23 @@
     },
     "compound-four:1:dust:|wind.storm": {
      "asked": 161,
-     "word": "99ec06782267a5fc"
+     "word": "5558f210097245b2"
     },
     "compound-four:1:dust:|wind.stormRoofs": {
      "asked": 5123,
-     "word": "8bb9623d63bf3889"
+     "word": "5441101067424605"
     },
     "pass-four:1::|snow.bog": {
      "asked": 322,
-     "word": "973c623110da75d2"
+     "word": "8b6bfce946feb24d"
     },
     "pass-four:1::|weather.airTrans": {
      "asked": 37469,
-     "word": "d997c164e546c78f"
+     "word": "4b6a9473363c7e3f"
     },
     "pass-four:1::|weather.hearMask": {
      "asked": 1497,
-     "word": "03e3f8998ad1619a"
+     "word": "18906514edccee2f"
     },
     "pass-four:1::|weather.lot": {
      "asked": 4801,
@@ -521,7 +521,7 @@
     },
     "pass-four:1::|weather.rainBed": {
      "asked": 161,
-     "word": "49a2680790bce2ae"
+     "word": "550cc58280239c87"
     },
     "pass-four:1::|weather.roofsOf": {
      "asked": 162,
@@ -544,20 +544,20 @@
      "word": "3f42421c949ece4f"
     },
     "pass-four:1::|weather.underRoof": {
-     "asked": 24409,
-     "word": "d61191b0934a3d0d"
+     "asked": 24411,
+     "word": "d3a50078a49d319b"
     },
     "pass-four:1::|wet.openSky": {
      "asked": 161,
-     "word": "f88673d6f46e31f7"
+     "word": "a36da48b54ad6c0e"
     },
     "pass-four:1::|wet.step": {
      "asked": 62413,
-     "word": "c4bb67b1140a0dc6"
+     "word": "5f7002af3af271aa"
     },
     "pass-four:1::|wind.jet": {
      "asked": 34212,
-     "word": "cb5bfc5a6bc506a0"
+     "word": "6630cda111d73cdd"
     },
     "pass-four:1::|wind.noise": {
      "asked": 16136,
@@ -565,15 +565,15 @@
     },
     "pass-four:1::|wind.storm": {
      "asked": 161,
-     "word": "62049761b8c01853"
+     "word": "c3266f4c7021f275"
     },
     "pass-four:1::|wind.stormRoofs": {
      "asked": 14723,
-     "word": "f7a558ff9cc69863"
+     "word": "e2ffe4773baf9a96"
     },
     "warehouse-four:1:rain:|weather.airTrans": {
-     "asked": 51014,
-     "word": "563b53ffd70b97b3"
+     "asked": 51013,
+     "word": "7d072dc42cbfbec0"
     },
     "warehouse-four:1:rain:|weather.gap": {
      "asked": 3,
@@ -581,7 +581,7 @@
     },
     "warehouse-four:1:rain:|weather.hearMask": {
      "asked": 2067,
-     "word": "8a10ddece79cd14d"
+     "word": "b5a78fc897b201b1"
     },
     "warehouse-four:1:rain:|weather.lot": {
      "asked": 4801,
@@ -589,7 +589,7 @@
     },
     "warehouse-four:1:rain:|weather.rainBed": {
      "asked": 161,
-     "word": "c924571162d3fc45"
+     "word": "f4312a572a6284a4"
     },
     "warehouse-four:1:rain:|weather.roofsOf": {
      "asked": 162,
@@ -613,19 +613,19 @@
     },
     "warehouse-four:1:rain:|weather.underRoof": {
      "asked": 4112,
-     "word": "3df06700327b15a6"
+     "word": "2561ba46f197698d"
     },
     "warehouse-four:1:rain:|wet.openSky": {
      "asked": 4970,
-     "word": "3008fa29fffe4adc"
+     "word": "a339e72ab085301f"
     },
     "warehouse-four:1:rain:|wet.step": {
      "asked": 76816,
-     "word": "1ad091495903a907"
+     "word": "ef550de6a56c1797"
     },
     "warehouse-four:1:rain:|wind.jet": {
      "asked": 23535,
-     "word": "ba74b9e01e14a175"
+     "word": "8aef26fd072e5162"
     },
     "warehouse-four:1:rain:|wind.noise": {
      "asked": 16377,
@@ -633,95 +633,95 @@
     },
     "warehouse-four:1:rain:|wind.storm": {
      "asked": 9924,
-     "word": "2d7c0c7e06181910"
+     "word": "86428f2edeb14eea"
     },
     "warehouse-four:1:rain:|wind.stormRoofs": {
      "asked": 161,
-     "word": "b5f71dc8b4adfcbd"
+     "word": "4268956e91967400"
     },
     "block-squads:1:downpour:|air.settle": {
      "asked": 2,
      "word": "ab637b85554d0c91"
     },
     "block-squads:1:downpour:|air.update": {
-     "asked": 3150,
-     "word": "8ccd68131029c147"
+     "asked": 2700,
+     "word": "37cfd8ec9b38157d"
     },
     "block-squads:1:downpour:|fog.tau": {
-     "asked": 105,
-     "word": "a2577cad445c483d"
+     "asked": 90,
+     "word": "ff062445e6dd69b3"
     },
     "block-squads:1:downpour:|weather.airTrans": {
-     "asked": 38764,
-     "word": "a70ee8b327337ded"
+     "asked": 35037,
+     "word": "3a235f6c68a5822c"
     },
     "block-squads:1:downpour:|weather.gap": {
-     "asked": 5,
-     "word": "2c37cab508b97976"
+     "asked": 4,
+     "word": "0ab4c60b24c1e6ac"
     },
     "block-squads:1:downpour:|weather.hearMask": {
-     "asked": 1579,
-     "word": "91bee2d00832716b"
+     "asked": 1404,
+     "word": "c934e0e4d6ba38fc"
     },
     "block-squads:1:downpour:|weather.lot": {
-     "asked": 3150,
-     "word": "a90a38d1e41081fe"
+     "asked": 2700,
+     "word": "ef31c73def565dcb"
     },
     "block-squads:1:downpour:|weather.rainBed": {
-     "asked": 105,
-     "word": "adf1b5e05b144464"
+     "asked": 90,
+     "word": "ff297b8d229eaaea"
     },
     "block-squads:1:downpour:|weather.roofsOf": {
-     "asked": 106,
-     "word": "f3c6be2183c300ee"
+     "asked": 91,
+     "word": "6d26baa2e31b598b"
     },
     "block-squads:1:downpour:|weather.strike": {
-     "asked": 56,
-     "word": "4ee29c28d0464a7c"
+     "asked": 47,
+     "word": "6a25d0c1923a7dcd"
     },
     "block-squads:1:downpour:|weather.strokeDue": {
-     "asked": 3150,
-     "word": "9470accc2f12fce3"
+     "asked": 2700,
+     "word": "29d7a8d297d0c7cb"
     },
     "block-squads:1:downpour:|weather.strokeMean": {
-     "asked": 1747,
-     "word": "15d8c132080ee884"
+     "asked": 1468,
+     "word": "09c9cf5975c97bb4"
     },
     "block-squads:1:downpour:|weather.thunder": {
-     "asked": 53,
-     "word": "9ad29b593f7a43f1"
+     "asked": 43,
+     "word": "be27a3e1aad062fe"
     },
     "block-squads:1:downpour:|weather.underRoof": {
-     "asked": 3789,
-     "word": "baa183f34ac07344"
+     "asked": 7432,
+     "word": "23f7b9d79c063b6c"
     },
     "block-squads:1:downpour:|wet.openSky": {
-     "asked": 3255,
-     "word": "650da291f67894a8"
+     "asked": 2790,
+     "word": "ad2e380517c98ff6"
     },
     "block-squads:1:downpour:|wet.step": {
-     "asked": 50400,
-     "word": "b882cf25844b60cf"
+     "asked": 43200,
+     "word": "4eeeb00604123af9"
     },
     "block-squads:1:downpour:|wind.jet": {
-     "asked": 210,
-     "word": "74eff15c972ecf8d"
+     "asked": 180,
+     "word": "e7b75d9c2d0320c3"
     },
     "block-squads:1:downpour:|wind.noise": {
-     "asked": 3255,
-     "word": "a5ef482ea2b5a2b0"
+     "asked": 2790,
+     "word": "33814ddd5a28d574"
     },
     "block-squads:1:downpour:|wind.storm": {
-     "asked": 3360,
-     "word": "04bff4faddcc2f75"
+     "asked": 2880,
+     "word": "36c7a8ff5a9c60c4"
     },
     "block-squads:1:downpour:|wind.stormRoofs": {
-     "asked": 105,
-     "word": "a70c05203c8d0029"
+     "asked": 90,
+     "word": "88760375257a207b"
     },
     "hostage-rescue:1::|weather.airTrans": {
      "asked": 16731,
-     "word": "c46af3f83def7435"
+     "word": "790a336c6cb9e2c0"
     },
     "hostage-rescue:1::|weather.gap": {
      "asked": 5,
@@ -729,7 +729,7 @@
     },
     "hostage-rescue:1::|weather.hearMask": {
      "asked": 383,
-     "word": "00c0345fe897130f"
+     "word": "7c9c5f269bff3a39"
     },
     "hostage-rescue:1::|weather.lot": {
      "asked": 3296,
@@ -737,7 +737,7 @@
     },
     "hostage-rescue:1::|weather.rainBed": {
      "asked": 110,
-     "word": "b84fdf498732a936"
+     "word": "01ddeda063fa566f"
     },
     "hostage-rescue:1::|weather.roofsOf": {
      "asked": 1,
@@ -761,19 +761,19 @@
     },
     "hostage-rescue:1::|weather.underRoof": {
      "asked": 110,
-     "word": "c9c3724d4d10fddf"
+     "word": "8fd37cbcd8c9473f"
     },
     "hostage-rescue:1::|wet.openSky": {
      "asked": 3406,
-     "word": "39a3d04aef1bcbc7"
+     "word": "60b803ff2daaf5cc"
     },
     "hostage-rescue:1::|wet.step": {
      "asked": 19776,
-     "word": "a78c0fbea59d3b02"
+     "word": "8e638a043a80c567"
     },
     "hostage-rescue:1::|wind.jet": {
      "asked": 37592,
-     "word": "dd113b7e672f0707"
+     "word": "bee132e53840a1ac"
     },
     "hostage-rescue:1::|wind.noise": {
      "asked": 23182,
@@ -781,15 +781,15 @@
     },
     "hostage-rescue:1::|wind.storm": {
      "asked": 6812,
-     "word": "751459efea42e404"
+     "word": "e49ae9e7f8676cee"
     },
     "hostage-rescue:1::|wind.stormRoofs": {
      "asked": 110,
-     "word": "07373cd905338131"
+     "word": "0d89b6605a4fecbc"
     },
     "compound-four:1:rain:midday|weather.airTrans": {
      "asked": 51325,
-     "word": "5481955da93354cc"
+     "word": "4cd8e3adddd3c4d2"
     },
     "compound-four:1:rain:midday|weather.gap": {
      "asked": 3,
@@ -797,7 +797,7 @@
     },
     "compound-four:1:rain:midday|weather.hearMask": {
      "asked": 1311,
-     "word": "1d552594bf21d6d2"
+     "word": "89500e368b1efa39"
     },
     "compound-four:1:rain:midday|weather.lot": {
      "asked": 4801,
@@ -805,7 +805,7 @@
     },
     "compound-four:1:rain:midday|weather.rainBed": {
      "asked": 161,
-     "word": "4f466f3fdd6d3066"
+     "word": "4181b007f226cf26"
     },
     "compound-four:1:rain:midday|weather.roofsOf": {
      "asked": 162,
@@ -829,19 +829,19 @@
     },
     "compound-four:1:rain:midday|weather.underRoof": {
      "asked": 3504,
-     "word": "7fbac84ecf56bcba"
+     "word": "479035d68cfd8f5b"
     },
     "compound-four:1:rain:midday|wet.openSky": {
      "asked": 4994,
-     "word": "f20c34b065078247"
+     "word": "d308e93a67ec7bdc"
     },
     "compound-four:1:rain:midday|wet.step": {
      "asked": 76816,
-     "word": "01c57f1bf0fa4255"
+     "word": "cf017547610c52f1"
     },
     "compound-four:1:rain:midday|wind.jet": {
      "asked": 475,
-     "word": "e8abde5056160f12"
+     "word": "7007a669195543b6"
     },
     "compound-four:1:rain:midday|wind.noise": {
      "asked": 9529,
@@ -849,23 +849,23 @@
     },
     "compound-four:1:rain:midday|wind.storm": {
      "asked": 161,
-     "word": "4c2dfbf7889d4971"
+     "word": "30ce52277f3203a1"
     },
     "compound-four:1:rain:midday|wind.stormRoofs": {
      "asked": 322,
-     "word": "bbc7159f9d6d4adb"
+     "word": "4f4027335b41042a"
     },
     "compound-four:1::midday|weather.airTrans": {
      "asked": 51325,
-     "word": "5481955da93354cc"
+     "word": "4cd8e3adddd3c4d2"
     },
     "compound-four:1::midday|weather.hearMask": {
      "asked": 1311,
-     "word": "ec2f1b084629b471"
+     "word": "25921006acfa90e2"
     },
     "compound-four:1::midday|weather.rainBed": {
      "asked": 161,
-     "word": "4f466f3fdd6d3066"
+     "word": "4181b007f226cf26"
     },
     "compound-four:1::midday|weather.roofsOf": {
      "asked": 2,
@@ -873,19 +873,19 @@
     },
     "compound-four:1::midday|weather.underRoof": {
      "asked": 3504,
-     "word": "7fbac84ecf56bcba"
+     "word": "479035d68cfd8f5b"
     },
     "compound-four:1::midday|wet.openSky": {
      "asked": 161,
-     "word": "33b4f0822d13c93a"
+     "word": "91fc8e3ebe321a3e"
     },
     "compound-four:1::midday|wet.step": {
      "asked": 76816,
-     "word": "b239c3275595b8d1"
+     "word": "2cff6c1f77462560"
     },
     "compound-four:1::midday|wind.jet": {
      "asked": 322,
-     "word": "cfd0bed2fbafb6f2"
+     "word": "0e4edaa39524a18c"
     },
     "compound-four:1::midday|wind.noise": {
      "asked": 161,
@@ -893,11 +893,11 @@
     },
     "compound-four:1::midday|wind.storm": {
      "asked": 161,
-     "word": "4c2dfbf7889d4971"
+     "word": "30ce52277f3203a1"
     },
     "compound-four:1::midday|wind.stormRoofs": {
      "asked": 161,
-     "word": "7618d904a90eedab"
+     "word": "81c292343614d891"
     }
    }
   }

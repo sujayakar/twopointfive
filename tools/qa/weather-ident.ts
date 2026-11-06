@@ -7,7 +7,7 @@
 // The runs reach every name: each weather kind on a level with a yard, a kind under the level's own roofs, a snow level, the night storm with men going in and out of it, the hour, and
 // wind through a broken pane; `asks` puts what no headless host asks of its own (the air at a point, a sky over each man, lying snow underfoot) to the module on the way.
 // Exit 0 = every verdict passed · 1 = one did not (with WEATHER_BREAK=1: 1 = the red path is red).
-import './stand.ts';   // (the stand's word: with none, the page as it opens)
+import { STAND } from './stand.ts';   // (the stand's word: with none, the page as it opens)
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 const ROOT = resolve(import.meta.dir ?? '.', '../..'), args = process.argv.slice(2), BREAK = process.env.WEATHER_BREAK === '1';
@@ -59,7 +59,7 @@ if (args[0] === '--run') {
   }
   const hashOf = (t: number) => (Math.floor(t * 7) * 2654435761) >>> 0;
   const r = await PT.play(scn, Number(seed), CAP, false, kind ? { WEATHER: { kind } } : {});
-  console.log('WEATHER-RUN ' + JSON.stringify({ run: args[1], ticks: n, end: String(r.end), words: F.words(), wetted: fair.wetted, hour: fair.hour, profile: process.env.TPS_PROFILE ?? 'frozen' }));
+  console.log('WEATHER-RUN ' + JSON.stringify({ run: args[1], ticks: n, end: String(r.end), words: F.words(), wetted: fair.wetted, hour: fair.hour, profile: STAND }));
   process.exit(0);
 }
 
@@ -91,7 +91,7 @@ if (!args.includes('--words')) {   // (a knob a rule reads and a question outsid
 }
 const { hold } = await import(`${ROOT}/tools/qa/ident-pin.ts`);
 const end = done.map(r => `${r.run}=${r.end}`).join(' ');
-const H = hold({ root: ROOT, tool: 'tools/qa/weather-ident.ts', fixture: 'weather-words.json', run: runs.join(' '), runArgs: flag('--runs') ? ['--runs', runs.join(',')] : [], end, words, breakWord: 'WEATHER_BREAK', unfit: broken.length ? 'a run left nothing' : '', verdict, say: (l: string) => console.log(l) });
+const H = hold({ root: ROOT, tool: 'tools/qa/weather-ident.ts', fixture: 'weather-words.json', stand: 'shipped', run: runs.join(' '), runArgs: flag('--runs') ? ['--runs', runs.join(',')] : [], end, words, breakWord: 'WEATHER_BREAK', unfit: broken.length ? 'a run left nothing' : '', verdict, say: (l: string) => console.log(l) });
 if (args.includes('--words')) process.exit(0);
 if (H.record && fails === 0) H.record();
 if (BREAK) { const moved = new Set(H.off.map((k: string) => k.split('|')[1])), stayed = NAMES.filter(n => !moved.has(n)); console.log(`- ${stayed.length ? 'NOT RED' : 'RED'} — the seam's answers bent: ${moved.size} names moved from the same runs played plain${stayed.length ? ` · THE BREAK DID NOT REACH ${stayed.join(', ')}` : ', every one of them'}`); process.exit(stayed.length || broken.length ? 0 : 1); }

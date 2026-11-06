@@ -227,15 +227,17 @@ one stops the tool by name, on an address one does nothing and says so in the co
       mid-run) and the wall-pose probe's two drives. TWO JOBS, ONE TOOL. THE PLAIN RUN (the page's stand): `reach`, every layer asked at
       least 100 times and no call under a name off the list; `same` only where there is something to hold the words to, which is the same run
       played plain by a child under `RUST_BREAK=1` (EVERY layer's word must differ: the red path, and it needs no recording) or the same run by
-      another checkout's tool (`--against <root>`: a change that must move no answer). THE PIN (`TPS_PROFILE=frozen`): the words are held to
-      the recording, `tools/qa/fixtures/layer-words.json` (`--record` writes it and the tree it was taken on). The plain frozen stand holds off
-      the rules twenty-one layers are posed under (they were hardly asked there: 41 of 62 reached 100 calls), so on that stand the tool raises
-      THE ANIMATOR'S OWN RULES BY NAME (`PIN_RULES` in the tool, each word with the layers it is there for; a word goes when its rule is
-      retired, and a rule that lands later is not added). A layer that stand does not reach even so is named in the `reach` line and is held by
-      the red path and `--against` only; the recording holds which layers ARE reached, so one that leaves the set or joins it is red until the
-      recording is taken again, and `--record` will not let go of a held layer without `--forget`. NOT PINNED ON THE PAGE'S STAND: a run's course
-      there moves with every rule that lands. THE LAST RUN IN BOTH LANGUAGES of which the counts were written down (2026-11-04, every row on,
-      one seed), 0 differ of:
+      another checkout's tool (`--against <root>`: a change that must move no answer). THE PIN: the same plain run's words are held to the
+      recording, `tools/qa/fixtures/layer-words.json` (`--record` writes it and the tree it was taken on; it will not let go of a held layer
+      without `--forget`). THE RECORDING IS THE PAGE'S STAND'S (2026-11-05: `warehouse-four:1` and the drives, 62 names, 3,748,936 calls,
+      belief's rules on as the page opens). It was first taken on the old frozen stand, with the animator's own rules raised by name so that
+      the stand reached sixty of the sixty-two layers; when a tool with no word came to stand the game as the page opens it, it was taken
+      again there, where the run reaches all sixty-two, and the old stand's mode of the tool went (on that stand the rules twenty-one layers
+      are posed under are held off, so its `reach` line is red there by name). WHAT THAT COSTS: the run is a whole mission, so a rule that
+      moves play moves the run under the layers and every word with it. The commit that records again says which rule, and shows the words
+      were the old recording's with that rule held off (`--to-recording` with the rule's word: a run stood otherwise is not the recording's
+      run, and without that word it fails as NOT HELD). THE LAST RUN IN BOTH LANGUAGES of which the counts were written down (2026-11-04,
+      every row on, one seed), 0 differ of:
       standPose 495,915 · lifeLayer 495,915 · mvPre 495,915 · handsPass 495,915 · gazeKeep 495,915 · turnWeigh 273,404 ·
       mvPostBody 109,340 · stealthLayer 79,577 · longBody 73,198 · longArms 73,044 · mvTrunk 72,665 · crouchPose 69,724 ·
       toesUp 69,377 · clutchArm 63,227 · actPose 62,301 · watchSlip 35,967 · watchLook 35,967 · stanceBody 24,791 · wallBody
@@ -801,9 +803,12 @@ one stops the tool by name, on an address one does nothing and says so in the co
   sheets of glass), half of the glass GONE a quarter of the way in (the rule and its rows hung as the game's are, so a sound and a way are asked
   past holes; a pane open piece by piece is `glass-ident`'s), 14 leaves that swing a third of the way in, a share of the statics re-shaped and
   said half way, 460 lamps (so a light question goes in parts), the
-  tool's own blobs under the tool's own smoke numbers, eyes each with its own wedge and near field. On the frozen stand its seven words are held
+  tool's own blobs under the tool's own smoke numbers, eyes each with its own wedge and near field. Its seven words are held
   to `tools/qa/fixtures/sense-words.json` (3,000 questions a kind, 141,533 answers folded); it was RECORDED ON THE COMMIT THAT BROUGHT IT, from a run
-  in which every question was also asked of the TypeScript and agreed. Since that TypeScript went, `--record` writes whatever the module says:
+  in which every question was also asked of the TypeScript and agreed, on the old stand. THE RECORDING A RUN WITH NO WORD IS HELD TO is the
+  page's stand's, taken when the old stand was retired (2026-11-05): six of the seven words are the first recording's to the bit, and the fog's
+  is the word the old stand gives with `FOG.thin` raised and nothing else (`TPS_FOGTHIN=1 TPS_PROFILE=frozen`), so every moved word is that one
+  knob's. The old stand's entry stays beside it while that stand can be stood by name; `--record` writes on the page's stand only. Since that TypeScript went, `--record` writes whatever the module says:
   a recording taken now is one language's word for itself, so record again only for a change whose every moved word is explained, and say so
   in `--tree`. `rust-check`'s `senses` section runs it. OVER LEVELS the words are held to nothing
   by themselves; `--against <root>` plays the same run with another checkout's tool, for a change that must move no answer.
@@ -860,9 +865,18 @@ one stops the tool by name, on an address one does nothing and says so in the co
     the run under that name moved, which a break upstream of it does too: only a word that STAYED is certain. Two languages on one input
     said which name's own arithmetic was bent; one language cannot. WHAT KEEPS ONE NAME HONEST is `--against`: a change to one layer shows, against the
     tree before it, that its word moved and no other did.) THE PIN: a fixture
-    under `tools/qa/fixtures`, recorded ON THE FROZEN STAND ONLY (`--record`, which writes the tree it was taken on beside the words), because a
-    run's course moves there only by the frozen digests' ceremony; on the page's stand it moves with every rule that lands, and a recording
-    there would be written again by reflex and hold nothing. A family's FIRST recording is taken on the last tree where both languages stood and
+    under `tools/qa/fixtures`, recorded on ONE stand, the family's (`hold({ stand })`; `--record` writes the tree it was taken on and how the
+    stand was stood beside the words, and is refused on any other stand). From 2026-11-05 that is the page's stand for a family that has recorded
+    there (the glass's `pane-words.json` first, then the layers' `layer-words.json`); a family whose owner has not taken its recording again is
+    still the old stand's, no new recording is taken there, and a file may keep the old stand's recording beside the page's while the old stand
+    can be stood. A recording of whole runs on the page's stand
+    moves with every rule that moves play under it: the commit that records again says which rule. A RUN IS HELD OR IT FAILS (the same day; the
+    glass check had printed PASS on both stands with nothing compared, its recording carrying no word of how its stand was stood): no recording
+    for the stand, a recording of another run, or a stand stood with other words than the recording's is a FAIL that says NOT HELD. The one way
+    out is a word: the tool's own `hold({ unpinned: '<why>' })` for a run it keeps no recording of by design (the senses over levels, a run of
+    another length, the layers over another mission than the one recorded), or `--unpinned` from a caller that plays a tool otherwise
+    than it was recorded; the output then says UNPINNED and why, in a line that is no verdict. `--to-recording` holds a run stood with other
+    words to the recording all the same (how a commit that records again shows which rule moved the run: the words unmoved with that rule held off). A family's FIRST recording is taken on the last tree where both languages stood and
     agreed on every call of that same run: that is all the pin ever knew of the TypeScript. `--against <root>`: the same run played by the tool
     of another checkout, every count and word the same; for a change that must move no answer, on any stand, with no file. IT IS A LOWER BAR: a
     mistake both recordings share is held as firmly as the truth, and a branch no run reached while there were two languages was never compared
@@ -877,22 +891,26 @@ one stops the tool by name, on an address one does nothing and says so in the co
        flag. What the call LEFT, never what it was handed. Every not-a-number folds as one word.
     3. THE RUN is one run by name (`--run <scenario>:<seed>`, with a default) that plays the same on a stand every time, and that the tool can
        play again in a child from `runArgs`.
-    4. AFTER THE RUN: `const h = hold({ root, tool, fixture, run, runArgs, end, words: fold.words(), breakWord, unfit, verdict, say })`. `end` is how
-       the run ended (the recording keeps it). `unfit` is why this run may not be recorded, or '' (the layers': a call under a name the tool
+    4. AFTER THE RUN: `const h = hold({ root, tool, fixture, stand: 'shipped', run, runArgs, end, words: fold.words(), breakWord, unfit, verdict,
+       say })`. `stand` is the one stand the family's recording is of: the page's (a family that does not say is taken for the old frozen stand,
+       where no new recording is made). `end` is how the run ended (the recording keeps it). `unfit` is why this run may not be recorded, or '' (the layers': a call under a name the tool
        does not list). With `--words` among its arguments the tool is the child: it exits 0 right after `hold`. `h.record`, when there is one,
        is called LAST and only if no verdict of the run failed: a recording is the answers of a run that was right.
     5. THE BREAK WORD is the family's own, the one its Rust code already reads (`RUST_BREAK=1`). Under it `same` is red when words moved and
        names the ones that STAYED; the gate wants none to have stayed. No break word a name: `--against` the tree before is what keeps one name
        honest.
-    6. THE FROZEN LIST. The frozen stand holds newer rules off, so a plain frozen run does not reach every name (of the 62 layers, 17 never). For
-       the pin's run the tool raises the family's OWN rules by name (`PIN_RULES`: each word with the names it is there for, found by leaving
-       one out and seeing who goes quiet), with `??=` so a caller's word wins. The reached set is the recording's names: one leaving or joining
-       is red. A name that stand never reaches is said in the reach line, and is held by the red path and `--against` alone.
-    7. `--record` works on the frozen stand only; `--tree "<what the tree is>"` says where it was taken, `--forget` lets go of a name. The FIRST
-       recording: put the watcher inside the function that runs a call both ways, on the last tree that has one, and have the tool refuse to
-       record unless that same run read 0 differ; say so in `--tree`.
-    8. TWO JOBS, TWO LINES in the gate: the plain run on the page's stand (reach, with a floor of calls a name; the red path) and the same tool
-       under `TPS_PROFILE=frozen` (the pin). The plain run alone compares no answer and says so in its last line.
+    6. THE RUN IS THE PAGE'S: no word, the game as the page opens it, so every name's rule is on and a floor of calls a name can be asked of the
+       same run that is recorded. (The first pins were of the old frozen stand, which holds newer rules off: the layers' tool had to raise its
+       own rules by name to reach sixty of sixty-two there. That mode went when the recording was taken again on the page's stand.)
+    7. `--record` works on the family's stand only; `--tree "<what the tree is>"` says where it was taken (say so when the tools the run plays
+       are not yet committed: the tool looks for uncommitted changes under `src` and `rust` alone), `--forget` lets go of a name. A family
+       that no longer asks the old stand's recording takes that entry out of its fixture by hand (the layers' did). The FIRST recording: put the
+       watcher inside the function that runs a call both ways, on the last tree that has one, and have the tool refuse to record unless that
+       same run read 0 differ; say so in `--tree`. A RECORDING OF WHOLE RUNS MOVES WHEN PLAY MOVES UNDER IT. Before recording again, show
+       which rule it was: the same run with that rule held off by its word and `--to-recording` (without it a run stood otherwise fails,
+       as NOT HELD) must read every count and word the old recording's.
+    8. ONE RUN, TWO LINES in the gate (`rust-check.ts`, the `layers` section): what the run reached and was handed (reach, with a floor of
+       calls a name; under the break word, the red path), and its words against the recording.
   - **Every row has a section, and a red path that reaches it** (`rust-check.ts HELD`, `RED_SECTIONS`; 2026-11-03). `HELD` names, for each row of
     `RUST`, the section of the quick half that asks that system's own answers of both sides; `rows` is red on a row with no line there, or whose
     section did not run. Each differential ends on a line of its counts BY ROW (`SEGMENT-IDENT`, `SENSE-IDENT`, `POSE-IDENT`; the die's own line of
@@ -1056,7 +1074,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
        check does not hold it.
     6. Its name in `LAYERS_MOVED` of `tools/qa/layer-ident.ts`, and a drive there that asks it at least 100 times. The break (`RUST_BREAK=1`
        hands every knob a hundredth large and bends the first of the layer's own numbers: its word must move, `same` and `changed` red, and
-       `rust-check`'s `layers` section red). A NEW LAYER HAS NOTHING TO BE COMPARED TO: its first recording (`TPS_PROFILE=frozen … --record`) is
+       `rust-check`'s `layers` section red). A NEW LAYER HAS NOTHING TO BE COMPARED TO: its first recording (`bun run tools/qa/layer-ident.ts --record`) is
        its own first answer, so look at the pose on a real page before it is recorded. A LAYER CHANGED ON PURPOSE moves its word: `--against`
        the tree before says that its word moved and no other, then record again and say which and why in the commit. Then `rollback-check`,
        the page, and what a tick costs.

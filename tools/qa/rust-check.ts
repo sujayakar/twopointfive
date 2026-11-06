@@ -366,9 +366,9 @@ let wordOwn = '', wordRust = '';
   const WD: any = (await import(`${ROOT}/src/scene/world.ts`)).WORLD, navCell = Number(/class NavGrid \{\s*cell = ([\d.]+);/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/collision.ts'), 'utf8'))?.[1] ?? NaN);
   const floorCells = Math.round(WD.gridW * WD.gridCell / navCell) * Math.round(WD.gridH * WD.gridCell / navCell), holds: number = S.sim().nav_cap(0), ways: number = S.sim().nav_cap(1);
   const floorFits = holds === Math.min(table('MAX_NAV'), table('MAX_WAY'), Math.floor((table('MAX_OPEN') - 1) / 8)) && ways === table('MAX_WAY') && floorCells <= holds;
-  // (…and THE PIN: the same questions over a box world of the tool's own, on the frozen stand, every word the recording's — tools/qa/fixtures/sense-words.json.
+  // (…and THE PIN: the same questions over a box world of the tool's own, on the page's stand, every word the recording's — tools/qa/fixtures/sense-words.json.
   //  Under RUST_BREAK the child plays its own red path and must end red)
-  const made = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--made'], { TPS_PROFILE: 'frozen', TPS_CPUSENSE: undefined });
+  const made = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--made'], { TPS_PROFILE: 'shipped', TPS_CPUSENSE: undefined });
   const madeSay = made.out.split('\n').filter(l => /^- (PASS|FAIL) — (reach|asked|same)/.test(l)).map(l => l.replace(/^- /, '').slice(0, 260)), madeOk = made.status === 0 && madeSay.some(l => /^PASS — same: every count and word is that of the recording/.test(l));
   red['the senses'] = levelsRed && made.status === 1 && /every one: the break reaches each/.test(made.out);   // (…and every word of the made-up world's pin: the family's red rule, as a row has one)
   const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && partsRed && shadeRed && rowedRed && blobsFit && floorFits && madeOk;
@@ -380,7 +380,7 @@ let wordOwn = '', wordRust = '';
     + (shade ? `\n    a lamp's shadow with the module handed no blobs (SHADE_BREAK=1): ${shadeRed ? 'the words of the two cases where the grid cannot answer move and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${shade.status}): ${shade.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + (rowed ? `\n    the level's rows with their order dropped from the lamps the host writes (ROWS_BREAK=1): ${rowedRed ? 'a light word moves and none that is not the light\'s, as it must' : `NOT RED AS IT MUST BE (exit ${rowed.status}): ${rowed.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + `\n    the smoke's blobs: the game keeps ${SE.SENSE.smoke.cap} at most and the module's table holds ${BMF.MAX_BLOBS}${blobsFit ? '' : ' — THE KNOB IS PAST THE TABLE'}`
-    + `\n    the pin (a made-up box world, the frozen stand): ${madeOk ? '' : `NOT HELD (exit ${made.status}) · `}${madeSay.length ? madeSay.join(' · ') : (made.err || made.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+    + `\n    the pin (a made-up box world, the page's stand): ${madeOk ? '' : `NOT HELD (exit ${made.status}) · `}${madeSay.length ? madeSay.join(' · ') : (made.err || made.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
 // ---- poses
@@ -398,16 +398,22 @@ let wordOwn = '', wordRust = '';
 
 // ---- layers
 {
-  const r = child(['bun', 'run', 'tools/qa/layer-ident.ts']);
+  const r = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { TPS_PROFILE: 'shipped' });   // (the family's stand: its recording is the page's)
   const by: Record<string, { asked: number; differ: number }> = marked(r.out, 'LAYER-IDENT ')?.by ?? {}, names = Object.keys(by), row = r.out.split('\n').find(l => /^    \S+:\d+ ends /.test(l));
   red['the animator\'s layers'] = names.length > 0 && names.every(n => by[n].differ > 0);   // (every layer's own word moved against the same run played plain, not one red neighbour's)
-  verdict(r.status === 0 && /=== layer-ident: PASS/.test(r.out), 'layers: every layer of the animator is reached by a mission and its drives and run by the module, and the knobs and named nodes the module reads are the game\'s',
-    row ? row.trim() + (r.status === 0 ? '' : ` · ${r.out.split('\n').filter(l => /^- FAIL/.test(l)).map(l => l.split(':')[0].replace('- FAIL — ', '')).join(', ')} FAILED`) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
-  // (THE PIN: the same tool on the frozen stand, every layer's calls against the recording — tools/qa/ident-pin.ts. The plain run above compares no
-  //  answer; this line is what does. Not asked under the break, whose rule is the one above: every word moved against the run played plain.)
-  if (!BREAK) { const p = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { TPS_PROFILE: 'frozen' }), same = p.out.split('\n').find(l => /^- (PASS|FAIL|RECORDED|NOT HELD) — same:/.test(l));
-    verdict(p.status === 0 && /^- PASS — same: every count and word is that of the recording/.test(same ?? ''), 'layers: on the frozen stand every layer\'s calls fold to the word the recording holds',
-      same ? same.replace(/^- \w+( \w+)? — /, '') + (p.status === 0 ? '' : ` · exit ${p.status}`) : `the pin left nothing (exit ${p.status}): ${(p.err || p.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`); }
+  // (two verdicts of the one run: what the run reached and was handed, and — below — its words against the recording. A recording that moved is the
+  //  second's alone to say, so the first is every line of the tool but `same`; under the break there is no second, and `same` is the first's too.
+  //  A run that died says how, since it left no line of its own)
+  const lines = r.out.split('\n'), failed = lines.filter(l => /^- FAIL — /.test(l)).map(l => l.split(':')[0].replace('- FAIL — ', '')), tail = (r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300);
+  const ended = /^=== layer-ident: /.test(lines.filter(l => l).pop() ?? ''), si = lines.findIndex(l => /^- (PASS|FAIL) — same:/.test(l));
+  const own = BREAK ? failed : failed.filter(f => f !== 'same');
+  verdict(ended && names.length > 0 && own.length === 0, 'layers: every layer of the animator is reached by a mission and its drives and run by the module, and the knobs and named nodes the module reads are the game\'s',
+    row && ended ? row.trim() + (own.length ? ` · ${own.join(', ')} FAILED` : '') : `the run did not end (exit ${r.status}): ${tail}`);
+  // (THE PIN: every layer's calls against the recording, which is of the page's stand and so of the run above — tools/qa/ident-pin.ts. Not asked
+  //  under the break, whose rule is the one above: every word moved against the run played plain.)
+  if (!BREAK) { const same = si >= 0 ? lines[si] : '', what = /^    /.test(lines[si + 1] ?? '') ? lines[si + 1].trim().slice(0, 600) : '';
+    verdict(/^- PASS — same: every count and word is that of the recording/.test(same), 'layers: every layer\'s calls fold to the word the recording holds',
+      same ? `${same.replace(/^- \w+( \w+)? — /, '')}${what ? ` · ${what}` : ''}` : `the run left no line of what its words were held to (exit ${r.status}): ${tail}`); }
 }
 // ---- lights
 {

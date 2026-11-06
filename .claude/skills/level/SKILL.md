@@ -110,6 +110,13 @@ did not.
 - **Every door face has floor for a stack**: a man on each jamb, 2 m of wall clear, nothing on the marks. **seen** a carton on
   a stack place; a table on the wall refused the order "no room on that door". **check**
   `bun run tools/qa/stack-marks-check.ts <row>`; `lived-stack-check.ts <row>` after moving furniture.
+- **A solid thing by a door is read at that door.** A thing that stops feet (over 0.19 m) laid within a few metres of a door can shut the
+  walk grid's cells on a team's way to its stack, and the entry is then another fight. **seen** a log laid across two others by the
+  pass's chopping block shut a square metre in front of two doors; the stacks' marks and the charges' places were untouched. **check**
+  after adding or moving such a thing, `bun run tools/qa/bang-tally-diff.ts <row> --before <a worktree of the commit before>` (ten
+  minutes a row, twenty when a door is suspect), and say in the step's notes what it printed. A door it NAMES is yours to explain or
+  to mend; its line says whether both trees were staged alike and gives the command that prints one moved entry. Never read a tally's
+  rows by eye on a few seeds: that blamed the wrong door here, twice.
 - **A corridor players walk runs up the screen, or is wide.** The camera looks from the south, so a wall hides about two metres of floor behind it: a corridor 2.4 m wide running along the
   screen hides whoever is in it. **seen** the sneak lab's first dark corridor, Sam under the top of its south wall. **By eye.**
 - **No door close under a tall wall to its south** (the camera looks from the south: the door is never drawn, never under
