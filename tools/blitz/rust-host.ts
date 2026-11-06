@@ -133,6 +133,7 @@ const now = () => performance.now();
 const hang = (o: any, k: string, v: unknown) => { Object.defineProperty(o, k, { value: v, writable: true, configurable: true, enumerable: false }); };
 /** the objects whose calls the host has already taken (a start may meet new ones: a mission started by the tool makes its own menu, fight and saves) */
 const TAPPED = new WeakSet<object>();
+const TAPPED_LIST = new WeakSet<object>();
 /** RH_OFF=<names, comma>: a stand-in left out, to see whether a run still needs it: ends · doors · marks · last · own (a weak table lists every game's keys) */
 const OFF = new Set((process.env.RH_OFF ?? '').split(','));
 const enc = new TextEncoder();
@@ -394,6 +395,14 @@ export class RustHost {
         return upload.apply(this, a); }
       if (H.uploadDone) { H.uploadDone = false; return; }
       H.uploads.late++; X.face_upload(H.h); H.uploads.rust++; H.applyStep(); H.applyWhole('a listing off its tick'); H.lastState = B.exportGame(g, B.reg); }); }
+    // THE LIST ALONE (`relist`: a tick that is not a draw; src/net/step.ts makes one after every tick of a networked game, where the headless world's own
+    // step calls `upload`). The Rust game lists its world at the same moment here too. Without it the Rust game never listed: its state grew by the
+    // frame's boxes every tick (35 KB a tick on the game server's room clear) and the every-tick export, which walks them, slowed tick by tick (9 ms a
+    // tick over the first hundred ticks, 41 over the sixth).
+    const relist = W.relist;
+    if (typeof relist === 'function' && !TAPPED_LIST.has(W)) { TAPPED_LIST.add(W); hang(W, 'relist', function (this: any, ...a: any[]) {
+      if (H.h && !H.audit && !H.tsOnly && !OFF.has('relist')) { X.face_upload(H.h); H.uploads.rust++; }
+      return relist.apply(this, a); }); }
     // THE SAVE CONTROLLER KEEPS THE PUPPET (a save in memory is the TypeScript objects as they stand; a file is their serialisation), so a save taken off
     // a puppet that holds only the filtered state would keep fields that stopped moving ticks ago. Before a take the puppet takes the whole state.
     const S = g.saves; if (S && !TAPPED.has(S)) { TAPPED.add(S); for (const name of ['write', 'writeMem'] as const) { const was = S[name]; if (typeof was !== 'function') continue;
