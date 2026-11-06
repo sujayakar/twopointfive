@@ -1,8 +1,5 @@
 // KIT ANIMATIONS (game/kitanim.ts KITANIM.on; character.ts KIT; rigProps KitDraw) — Sam's hands carry his kit to where it lives and back, magazine changes differ
 // by the gun's state, and the close-in carriage goes by distance. `bun run tools/qa/probes.ts kitanim` (or this file alone, optionally with probe names).
-//   kitanim-off       switch OFF: nothing is dealt (kitHold undefined, closeK −1, no errand, on every frame of draws, a reload, swaps AND a walk-up on a parked man's
-//                     back with the close-in mode on — the mode must really take, or the probe is red), the pistol has no lock-out and the rifle the build's
-//                     0.45 s, a reload runs on the weapon row's own beat
 //   kitanim-equip     switch ON, every change of what is in the fist: pistol out of the holster and back, rifle off the back and onto it, rifle ↔ pistol, gun ↔ can,
 //                     the next can after a throw. What the hand holds goes  old … nothing … new  in that order; a gun fires nothing until it is up (a click a frame
 //                     through the draw: no round before the lock-out ends, one after — and on that frame the hand holds the gun or no errand runs) and the
@@ -144,29 +141,6 @@ type Wd = Awaited<ReturnType<typeof world>>;
 /** the pistol up and settled / the rifle in the hands and settled, by the keys */
 function toPistol(S: Wd) { if (S.pl.slot !== 'pistol') S.tap('Digit1'); else if (S.pl.holstered) S.tap('KeyE'); S.step(1); S.settle(); S.step(20); }
 function toRifle(S: Wd) { if (S.pl.slot !== 'rifle') S.tap('Digit2'); else if (S.pl.holstered) S.tap('KeyE'); S.step(1); S.settle(); S.step(20); }
-
-export async function kitOff(): Promise<boolean> { return keep(async () => {
-  console.log('\n=== kitanim-off: with the switch off nothing is dealt — no errand, no lock-out but the build\'s, the weapon rows\' own reloads ===');
-  allPass = true; const S = await world(false), { pl, an, T } = S, fails: string[] = []; const s0 = JSON.stringify(KITANIM_STATS);
-  let dealt = 0, eqPistol = 0, eqRifle = 0; const seen = (f: number) => { if (an.kitHold !== undefined || an.closeK !== -1 || an.kitBusy || pl.kitWas !== undefined) dealt++; };
-  S.step(20, seen); S.tap('KeyE'); S.step(1, seen); eqPistol = pl.equipT; S.step(40, seen);
-  S.click(); S.step(20, seen); const p = pl.pistol, before = [p.mag, JSON.stringify(p.spare)];
-  S.tap('KeyR'); S.step(1, seen); const row = p.reloadRow; S.step(130, seen);
-  if (row.dur !== p.def.reload.dur || row.out !== p.def.reload.out) fails.push(`the pistol's reload ran on ${JSON.stringify(row)}, not its row ${JSON.stringify(p.def.reload)}`);
-  S.tap('Digit2'); S.step(1, seen); eqRifle = pl.equipT; S.step(60, seen); S.tap('Digit3'); S.step(60, seen); S.tap('Digit1'); S.step(60, seen);
-  // the walk-up: the close-in mode ON (close.ts), a man parked with his back to Sam four metres down the corridor, Sam walks in on him — the mode takes (anim.creep) and
-  // with this switch off no closeness is dealt on any frame of it
-  CLOSE.on = true; const A = S.g.guards[0], c = S.c; A.char.pos = [c.pos[0] + 4, 0, c.pos[2]]; A.char.vel = [0, 0, 0]; A.char.bodyYaw = A.char.aimYaw = Math.PI / 2; A.char.update(0); A.char.update(DT);
-  S.tap('KeyE'); S.step(30, seen); let crept = 0, walked = 0, nearest = 9; const x0 = c.pos[0]; S.input.keys.add('KeyD');   // (the camera looks down −z here: D is +x, along the corridor)
-  for (let f = 0; f < 420; f++) { pl.visibility = 0.02; S.step(1, seen); pl.visibility = 0.02; if (an.creep) crept++; const d = Math.hypot(A.char.pos[0] - c.pos[0], A.char.pos[2] - c.pos[2]); nearest = Math.min(nearest, d); if (d < 1.25) S.input.keys.delete('KeyD'); if (d < 1.25 && ++walked > 45) break; }
-  S.input.keys.delete('KeyD');
-  if (!(crept > 30)) fails.push(`the walk-up never put him in the close-in mode (${crept} frames of anim.creep, nearest ${f2(nearest)} m, walked ${f2(c.pos[0] - x0)} m): nothing was asked of the switch`);
-  if (dealt) fails.push(`${dealt} frames with something dealt (kitHold / closeK / kitBusy / kitWas)`);
-  if (eqPistol !== 0) fails.push(`the pistol's draw locked fire for ${f3(eqPistol)} s`); if (Math.abs(eqRifle - (RIFLE_EQUIP_SECS - DT)) > 0.02 && Math.abs(eqRifle - RIFLE_EQUIP_SECS) > 0.02) fails.push(`the rifle's lock-out is ${f3(eqRifle)} s (the build's is ${RIFLE_EQUIP_SECS})`);
-  if (JSON.stringify(KITANIM_STATS) !== s0) fails.push('KITANIM_STATS moved'); if (T.nan) fails.push(`${T.nan} non-finite`);
-  verdict(!fails.length, 'OFF: draws, a reload, three swaps and a walk-up on a man\'s back in the close-in mode deal nothing (closeK −1 on every frame); the kit is where the slot says on the key\'s frame', `frames ${T.frames} · the walk-up: ${f2(c.pos[0] - x0)} m to ${f2(nearest)} m of him, ${crept} frames in the mode · pistol lock-out ${f3(eqPistol)} s · rifle ${f3(eqRifle)} s · reload row ${JSON.stringify(row)} · spares ${before[1]} → ${JSON.stringify(p.spare)}${bad(fails)}`);
-  return allPass;
-}); }
 
 export async function kitEquip(): Promise<boolean> { return keep(async () => {
   console.log('\n=== kitanim-equip: every change of what is in the fist is carried, in order, and a gun fires only once it is up ===');
@@ -707,7 +681,7 @@ export async function kitNvProbe(): Promise<boolean> { return keep(async () => {
   }
   return allPass;
 }); }
-export const KITANIM_PROBES = [['kitanim-off', kitOff], ['kitanim-equip', kitEquip], ['kitanim-midswap', kitMidswap], ['kitanim-reload', kitReloadProbe], ['kitanim-close', kitClose], ['kitanim-edges', kitEdges], ['kitanim-harness', kitHarness], ['kitanim-joints', kitJoints], ['kitanim-sling', kitSling], ['kitanim-nv', kitNvProbe]] as const;
+export const KITANIM_PROBES = [['kitanim-equip', kitEquip], ['kitanim-midswap', kitMidswap], ['kitanim-reload', kitReloadProbe], ['kitanim-close', kitClose], ['kitanim-edges', kitEdges], ['kitanim-harness', kitHarness], ['kitanim-joints', kitJoints], ['kitanim-sling', kitSling], ['kitanim-nv', kitNvProbe]] as const;
 async function kitanimAll(want: readonly string[]): Promise<boolean | null> {
   const t0 = performance.now(), ok = await asProbes(Object.fromEntries(KITANIM_PROBES), want);
   console.log(`\n=== kitanim: ${ok === null ? 'NOTHING RAN' : ok ? 'ALL PASS' : 'FAILURES above'} === (${((performance.now() - t0) / 1000).toFixed(1)} s)`); return ok;

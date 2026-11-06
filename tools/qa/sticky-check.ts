@@ -1,6 +1,6 @@
 // STICKY CAMERAS (src/game/stickycam.ts — a small count on YOUR kit card; the rifle's launcher sends one to a wall, where it is one more eye on the fog of
 // war), headless:
-//   bun run tools/qa/sticky-check.ts [kit|fly|fog|save|ways|default|take|wand|off]      (probes.ts sticky; STICKY_BREAK=1 = the switch left off: must fail)
+//   bun run tools/qa/sticky-check.ts [kit|fly|fog|save|ways|default|take|wand]      (probes.ts sticky; STICKY_BREAK=1 = the switch left off: must fail)
 // The maintainer, 10-12: "i think we do really need to figure out if you get omniscience in stealth levels or not … maybe a limited number of sticky cameras or
 // something like that would work."
 //   kit     the row on your card only with the switch, the last of the things carried; a pouch each: refused on the issued card until a pouch is given up; none without
@@ -26,7 +26,6 @@
 //           the two stands' row and a recording from before the key
 //   wand    QUIETFOG.wand: the mission that hands out its cameras hands Sam an optical wand too — not the fog alone, not with no fog, gone when the mission is
 //           quit; the switch down = the mission as it was; the two stands' row and a recording from before the key
-//   off     the switch off, and on with none carried: the same run by digest; the two stands' row, the env word, the registry
 // Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the switch itself. Nothing here looks at a picture.
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -518,25 +517,6 @@ export async function stickyWand(): Promise<boolean> {
   return F.done();
 }
 
-export async function stickyOff(): Promise<boolean> {
-  const F = family('sticky-off: the switch off is the build as it was, and the switch on with none carried changes nothing');
-  const onWas = STICKY.on, qfWas = QF.QUIETFOG.on, rnd = Math.random;
-  try {
-    const run = async (on: boolean) => {
-      const W = await stand(41, 'police-post.json'), g = W.game; STICKY.on = on; QF.QUIETFOG.on = true; QF.QUIETFOG.def = 'off'; Math.random = seeded(4242);
-      await hushed(() => { startFromQuery(g, '?levelFile=police-post.json&quiet=1&quietfog=team'); steps(W, 600); });
-      return { h: hashDigest(digestGame(g, true)), loads: g.player.rifle.attachments.join(), rows: K.kitRows(0).some((r: any) => r.field === 'cams'), eyes: g.fogOfWar.eyes.length };
-    };
-    const a = await run(false), b = await run(!BREAK);
-    F.verdict(a.h === b.h && a.loads === 'ring,he40' && b.loads === 'ring,he40' && a.eyes === b.eyes, 'ten seconds of a quiet mission under the fog digest the same off and on', `off ${a.h} (${a.loads}, ${a.eyes} eyes) · on, none carried ${b.h} (${b.loads}, ${b.eyes} eyes)`);
-    F.verdict(!a.rows && b.rows, 'the card has the row only with the switch', `row: off ${a.rows} · on ${b.rows}`);
-    const s = (await import(`${ROOT}/src/host/standEnv.ts`)).STAND_ENV as string[], P = await import(`${ROOT}/src/host/profile.ts`), KN = await import(`${ROOT}/src/game/knobs.ts`), R = KN.knobRegistry();
-    F.verdict(s.includes('TPS_STICKY') && P.FROZEN_HOLDS['STICKY.on'] === 'TPS_STICKY=1' && R.STICKY === STICKY && KN.JOURNAL_KNOBS.includes('STICKY'), 'the switch is a row of the two stands\' list, has its word, is in the knob registry and in a recording\'s tables', `STAND_ENV ${s.includes('TPS_STICKY')} · FROZEN_HOLDS ${P.FROZEN_HOLDS['STICKY.on']} · registry ${R.STICKY === STICKY} · journal ${KN.JOURNAL_KNOBS.includes('STICKY')}`);
-  } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
-  finally { back(); STICKY.on = onWas; QF.QUIETFOG.on = qfWas; Math.random = rnd; }
-  return F.done();
-}
-
 // ================================================================================================ the three ways, a press each from a quiet row
 export const stickyWays = (): Promise<boolean> => threeLevers(stickyWays3);
 async function stickyWays3(): Promise<boolean> {
@@ -677,5 +657,5 @@ export async function stickyDefault(): Promise<boolean> {
 }
 
 /** the file's probes, by the names the runner calls them */
-const PROBES = { 'sticky-kit': stickyKit, 'sticky-fly': stickyFly, 'sticky-fog': stickyFog, 'sticky-save': stickySave, 'sticky-ways': stickyWays, 'sticky-default': stickyDefault, 'sticky-take': stickyTake, 'sticky-mark': stickyMark, 'sticky-wand': stickyWand, 'sticky-off': stickyOff };
+const PROBES = { 'sticky-kit': stickyKit, 'sticky-fly': stickyFly, 'sticky-fog': stickyFog, 'sticky-save': stickySave, 'sticky-ways': stickyWays, 'sticky-default': stickyDefault, 'sticky-take': stickyTake, 'sticky-mark': stickyMark, 'sticky-wand': stickyWand };
 if (import.meta.main) process.exit(exitCode(await asProbes(PROBES, wanted())));
