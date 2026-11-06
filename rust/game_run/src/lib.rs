@@ -245,6 +245,12 @@ pub fn view(g: &mut game::game::Game) {
     if let Some(cam) = cam { game::rails::rails_host_view(g, cam); }
 }
 
+/// HOST STEP BEFORE THE TICK (game.ts update, its first lines: `if (this.restartCut) { this.restartCut = false; … }`): the player's own restart
+/// (`Game.restart`: Shift+Enter, Enter when down, a card's button) leaves a flag for the host's next frame, which takes the seat's cut and puts it on the
+/// host's camera before that tick's record reads the view. The camera and the seat's mark come with the host's half; the flag is the game's and is put
+/// down here, as the host's frame puts it down.
+pub fn restart_cut(g: &mut game::game::Game) { if g.restart_cut { g.restart_cut = false; } }
+
 /// HOST STEP AS A TICK OPENS, after the host's half is taken (game.ts hostAfter: `me.view.viewProj = cam.viewProj`): between two ticks the view's matrix
 /// IS the host camera's live matrix (the TypeScript holds the camera's own array, which the host's `cam.update` goes on writing after the tick), so whoever
 /// asks on-screen-or-not from outside a tick (an order the driver gives: the man's line is a row of the log only when he is off the screen) reads the

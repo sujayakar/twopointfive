@@ -143,6 +143,8 @@ fn main() {
                 match w[1] { "restart_encounter" => game::game::game_restart_encounter(&mut g), "reset_guards" => game::guards::reset_guards(&mut g), x => panic!("BLITZ_CALL: no rule {}", x) }
                 println!("BLITZ_CALL before tick {}: {} called; {} guards, time {}", k, w[1], g.guards.len(), g.time); } }
             if !ordered { if let Some(v) = meter.get(k - 1) { game_run::meter(&mut g, *v); } }
+            // HOST STEP: the flag the player's own restart leaves for the host's next frame is put down (game_run::restart_cut)
+            if !skip("restartcut") { game_run::restart_cut(&mut g); }
             let dt = host[k - 1][0];
             TICK.store(k, Ordering::Relaxed);
             let t0 = std::time::Instant::now();
