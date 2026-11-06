@@ -111,6 +111,25 @@ as the game is stood, so `playthrough.ts`'s seeds roll different dice and both w
 tally under `ts` is not the tally the tool makes with no word (which rolls `Math.random` and dresses); it is the one to hold the Rust game's beside.
 (`TPS_RUST` cannot be the word: src/sim/sim.ts refuses it as a retired one.) `TPS_GAME_WHOLE=N`: a whole apply every N ticks.
 
+## A tool that stands many games, and what it does with them
+
+- **The slots.** rust/sim has four. A tool that stands a fifth game in one process (the probe runner stands hundreds) gets the slot of the game stepped
+  longest ago: that game's puppet takes the whole state first, and if the tool steps it again it starts anew from its puppet.
+- **The host's hooks are hidden fields** (`stepSeats`, `rustHost`, the wrappers on the menu's `give`, `fight.roomAt`, `selectVerb`, the lamps' update, the
+  listing, the saves): a walk of the game's own keys (rollback.ts `stateHash`) does not meet them. A start takes the hooks again: a mission the tool
+  started after the stand has its own menu, fight and saves.
+- **The trace.** `RH_TRACE=<file>`: a line a game as the process ends (the tool's file that stood it, the probe running then, ticks stepped, whole
+  applies, calls, starts, slots given up, how often the game's die had rolled between two ticks: a rule of the tick run in TypeScript on the puppet).
+  `RH_SITES=1` with it: every tick counted by the place in the tool that asked for it. `RH_CAP_AT=<ms>`: the tool ends itself at its next tick after that
+  moment (a signal's handler waits for the tool's own synchronous code).
+- **A quiet run of steps** (`W.steps(n, dt)` in tools/qa/headless.ts: the same as `W.step` n times, said by a tool that runs none of its own code
+  between them). The host hands its half over, steps the Rust game and asks it the camera's two inputs (`face_look`: where to follow, the aim point);
+  nothing is exported or applied until the run ends, when the puppet takes what changed over the whole run in one filtered apply, the run's out events
+  are dispatched in order and the dress step runs once. What differs from the same steps one by one: an autosave due inside the run is taken as it
+  ends, the par clock and the verdict tick once, an out event reaches the host's objects late. `tools/blitz/quiet-loops.py` rewrites a loop that only
+  steps into that call (the exact shape only).
+- **What a check does to the game between two ticks**: `tools/blitz/qa-census.py` (a probe a row, by kind).
+
 ## Stand-ins (each marked `STAND-IN:` in the code with its reason and where it belongs)
 
 - **A box whose markings went is `marks: null`** after an apply; scene/boxes.ts:841 tests `!== undefined`. Made undefined before the puppet's own listing
