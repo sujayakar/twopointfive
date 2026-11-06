@@ -14,10 +14,11 @@ import { tmpdir } from 'node:os';
 
 export const DEFAULT_WORD: string = 'none';
 
-/** HOW A CHECK KEPT ON THE TYPESCRIPT TICK IS STOOD (by the table, or by a frozen run): `'ts'` = the word's own stand, the game owning its die and the dress
- *  rows down (the stand the Rust game's tallies are held beside; an exact number recorded with no word moves once); `'none'` = exactly as with no word, to the
- *  byte. `TPS_KEPT=ts|none` says it for one run. */
-export const KEPT_STAND: 'ts' | 'none' = 'ts';
+/** HOW A CHECK KEPT ON THE TYPESCRIPT TICK IS STOOD (by the table): `'none'` = exactly as with no word, to the byte, so nothing recorded moves when the
+ *  default word becomes `table`; `'ts'` = the word's own stand, the game owning its die and the dress rows down (the stand the Rust game's tallies are held
+ *  beside): every exact number a kept check recorded with no word moves once and is recorded again (seen: `weapons-identity` 2 of 2 red, `workstow` 2 of
+ *  5). `TPS_KEPT=ts|none` says it for one run. */
+export const KEPT_STAND: 'ts' | 'none' = 'none';
 const kept = (): 'ts' | 'none' => process.env.TPS_KEPT === 'none' ? 'none' : process.env.TPS_KEPT === 'ts' ? 'ts' : KEPT_STAND;
 
 export type Word = '' | 'rust' | 'audit' | 'ts';

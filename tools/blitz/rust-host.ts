@@ -248,7 +248,10 @@ export class RustHost {
     RustHost.live.add(this); this.stamp = ++RustHost.clock;
     this.slot = X.face_slot(this.h); { const said = this.F.outText(); if (said && !this.o.quiet) this.say(said); }
     if (X.state_len() !== block.length) this.say(`rust-host: rust/sim's block is ${X.state_len()} bytes in the module and ${block.length} in the TypeScript game`);
-    this.lastState = start; this.lastBlock = block; this.lastRust = start; this.starts++; if (this.rec) this.rec.starts = this.starts; this.warmDue = this.starts === 1;
+    // (the start's own bytes, 10 MB and more, are read again only by the audit and by the step's warm-up: the fast way lets them go, or each of the four
+    // games that stand in a slot would hold its start for as long as it stands there)
+    { const keep = this.audit || (this.o.warmSteps ?? 0) > 0; this.lastState = keep ? start : null; this.lastBlock = keep ? block : null; this.lastRust = keep ? start : null; }
+    this.starts++; if (this.rec) this.rec.starts = this.starts; this.warmDue = this.starts === 1;
     // THE MENU'S QUESTIONS: every order row and the squad's posture ask the Rust game by the row's id (ask.ts, `face_ask`); a row's `issue` gives the order
     // on the Rust side and the puppet takes the state again
     if (this.starts === 1 && this.o.asks !== false && X.face_ask) this.asks = B.installAsks(g, B.reg, (kind: number, row: number, seat: number, b: Uint8Array) => { this.asked++; this.F.hand(b, (p, n) => X.face_ask(this.h, kind, row, seat, p, n)); return this.F.outView().slice(); }, () => { this.reapply('an order row issued'); });
