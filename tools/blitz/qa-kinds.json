@@ -48,6 +48,14 @@
 "tools/qa/lesson-run.ts": {
 "word": "ts",
 "why": "a lesson's own checks read records the every-tick list lacks and it hangs its own light meter on the game (kind iv-a)"
+},
+"tools/mp/server.ts": {
+"word": "ts",
+"why": "the game server's check runs on the wall clock (a tick every 16.7 ms): with its export and apply a tick of the Rust game is 27 to 45 ms in each of the check's three processes on a loaded box, and its `lag` line counts the records that came late"
+},
+"tools/mp/bot.ts": {
+"word": "ts",
+"why": "the game server's check runs on the wall clock (a tick every 16.7 ms): with its export and apply a tick of the Rust game is 27 to 45 ms in each of the check's three processes on a loaded box, and its `lag` line counts the records that came late"
 }
 },
 "pins": {

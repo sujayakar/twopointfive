@@ -175,6 +175,27 @@ no word: 61 GREEN ON THE RUST GAME; 35 of kind ii red on the Rust game and green
 `tools/qa/missions-gate.ts --seeds 1 --quiet-seeds 1-2 --jobs 1` by the table: every line PASS (1,210 s on a loaded box): the 21 squad missions on
 the Rust game, the 16 quiet runs on the TypeScript tick (`solo-night.ts` has no row: a quiet mission has never been played on the Rust game).
 
+## The flip
+
+`DEFAULT_WORD` in tools/blitz/word.ts, `'none'` to `'table'`: one line. From then a headless tool run from the root with no word is `TPS_GAME=table`
+(`TPS_GAME=none` is the harness as it was). What changes at that moment, and what does not:
+
+- **On the Rust game**: the 61 probes above; `playthrough.ts` (so the squad half of `missions-gate.ts`, and every tally), `seats-run.ts`,
+  `bench-seeds.ts`. A tally's record on the Rust game differs from the TypeScript's in the places listed under the gate's tools (the tool's own
+  watchers and wrappers) and its digest in two fields (`decals`, `civilians[i].dice`), and its stand is the word's (the game's own die, the dress rows
+  down): a number pinned from a tally with no word is recorded again.
+- **Kept on the TypeScript tick, stood exactly as with no word** (`KEPT_STAND = 'none'`): about 1,115 probes with a row (kinds iii and iv, the 185
+  pins, the 40 waits), the 105 names with no row, every stand-alone tool with no `rust` row (`tour.ts`, `soak.ts`, `seats-check.ts`, `lesson-run.ts`,
+  the game server and its bots, `solo-night.ts` and every check file run as its own main), a child under node, and any run with
+  `TPS_PROFILE=frozen`. Their verdicts do not move. Each says so as it stands its first game.
+- **What a run prints**: a line a kept check, and one closing line from the top process (`=== the game, by the table: … ===`). A tool that reads
+  another tool's whole output to the byte would see them; the gate's reader (tools/qa/gate.sh) matches verdict lines and does not.
+- **The preload is active in every `bun` started in the root** (it reads schema.json and adds a line of getters to each simulation source file as it
+  loads). Measured the same to the byte with it active: the production build, the dev server's page and script, and a frozen tally's whole record.
+- **Cost**: a probe on the Rust game pays a start (three exports) for every game it stands and about twice a tick; the 61 took 5 to 40 s each alone.
+
+Not shown: the gate's whole list (`probes.ts all-quick`) in one process by the table; the tour's and the soak's gate forms.
+
 ## The die
 
 The game owns its die under every word, as the page's game does: no seam lets the Rust tick draw a function a tool put in `Math.random`'s place. (The
