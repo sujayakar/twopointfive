@@ -148,6 +148,14 @@ hole, cut paint and burst; single sparks stand in other places. A pair taken as 
 either page: the pool gives birth and the solver steps only when a frame is drawn, so everything filed since the last drawn frame starts at once and
 the pool's cap picks by the queue's order; two shots of ONE page at one frame taken that way in two runs differ by 4.9 of 255.
 
+The office room clear, seven single shots off one tape: the squad going in, a frag going off and a sixth of a second on, a stun the same: 0.04 to
+0.06 of 255, no pixel over 32. The first frame a page ever draws: 2.5 (thin outlines of every edge and noise in the lit room: the two pages stand
+in another phase of the frame's jitter; the men are in both pictures).
+
+THE COST on this tree (the built page, room clear with four, 1,800 undrawn frames with no input after 600 to settle, box load 4.5): 5.43 ms a frame
+without the word (`Game.update` 4.11), 7.08 with it (5.54: the Rust tick 1.78, the export 1.12, the apply 1.76, the dress step 0.32, the rest the
+host's half, the knobs and the hand-overs); 192 K bytes a tick. One run; depot and the profile's method were not run on this tree.
+
 WHAT STILL DIFFERS, each with its cause:
 - a frag's scorches and floor films: `BangScorch` and `MessBurst` run marks.ts and floormess.ts on the puppet AFTER the tick, and both read what
   stands round the burst, which the blast has by then thrown or broken (2 scorches missing, 2 films larger, a later film refused as crowded).
