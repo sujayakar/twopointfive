@@ -162,8 +162,21 @@ pub fn room_name(g: &mut crate::game::Game, p: V3) -> String {
             let s = &level.mission.server_room;
             rooms.push(Rect { name: String::from("the server room"), x0: s.x0, x1: s.x1, z0: s.z0, z1: s.z1 });
         }
-        if office { rooms.extend(office_areas()); }
-        g.m.dialogue.room_rects = Some(DialogueModRoomRectsValue { rooms, building: office_walls(), office });
+        // (on another level the walls are the box round every route's points, three metres out; a level with no route keeps the empty box. Nothing reads it
+        // there while the cues are on, but it is the memo's value and it is kept as the TypeScript keeps it)
+        let mut building = office_walls();
+        if office { rooms.extend(office_areas()); } else {
+            building = Rect { name: String::from("inside"), x0: f64::INFINITY, x1: f64::NEG_INFINITY, z0: f64::INFINITY, z1: f64::NEG_INFINITY };
+            for r in g.level.routes.iter() {
+                for q in g.tab.route[*r].points.iter() {
+                    building.x0 = m::min(building.x0, q[0] - 3.0);
+                    building.x1 = m::max(building.x1, q[0] + 3.0);
+                    building.z0 = m::min(building.z0, q[2] - 3.0);
+                    building.z1 = m::max(building.z1, q[2] + 3.0);
+                }
+            }
+        }
+        g.m.dialogue.room_rects = Some(DialogueModRoomRectsValue { rooms, building, office });
     }
     if !g.m.dialogue.room_rects.as_ref().unwrap().office {
         return match own_place(g, p) { Some(w) => w.rect.name, None => String::from(NAMELESS) };
