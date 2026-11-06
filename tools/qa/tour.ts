@@ -23,6 +23,12 @@
 //
 //   bun run tools/qa/tour.ts [--hz 60] [--runs 1] [--seed N] [--laps 1] [--jitter 0.5] [--dirty] [--abort-at S[:frac]] [--vis 0.05] [--quiet] [--selftest]
 //   exit code 1 if any run FAILs (so it can gate a merge); ≈ 3 s wall per lap at 60 Hz
+//   TOUR_BREAK=1 = the red path of the three stops that read a deed of the script's: the fire exit's leaf held short of half a radian in stop 2, the
+//   script's 4 (the stun) and its click in the smoke stop eaten before the game reads them. Every run must then say stop2-wide, stop5-stun and
+//   stop7-thrown: exit 1 when each did, exit 3 when one did not (the break did not reach that read: it is blind). How the three are read: the leaf's
+//   swing on the side it has to go (its own side where doors open one way, doors.ts DOORWAY.oneWay; away from his push where they swing both); a throw
+//   by the count on the stop's last frame, since the count at the cut is after the next stop's rearm (demo.ts rearm tops him up to two and one, which is
+//   all the card of the page's stand deals him: there the count at the cut says nothing of a throw).
 //
 // The tour has its own dice (guard reactT / spread / search wander, ragdoll twist): every run seeds Math.random (seed printed; --seed S replays run 1
 // with S, run k with S+k-1), so a failure is reproducible from its seed with the same flags. --laps N presses P again after each finish on the same
@@ -37,6 +43,7 @@ const { Demo } = await import(`${ROOT}/src/game/demo.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, killGuard, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
+const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
 // TOUR_DIGEST=1 (env): every run prints `digest <word> · <n> half seconds` — game/digest.ts's digest of the whole game every 30 frames of the laps, folded into one word
 // (two builds, or the two sides of a switch, that play the tour the same agree on it) — and how many pieces the debris pool was ever handed. A bystander.
 const DIG = process.env.TOUR_DIGEST === '1' ? { ...(await import(`${ROOT}/src/game/digest.ts`)), hashStr: (await import(`${ROOT}/src/game/dialogue.ts`)).hashStr, word: '', n: 0, f: 0, pool: 0 } : null;
@@ -51,6 +58,7 @@ const SEED0 = Number(arg('seed', String((Date.now() % 1000000) + 1)));
 const VIS = Number(arg('vis', '0.05'));
 const QUIET = argv.includes('--quiet');
 const SELFTEST = argv.includes('--selftest');
+const BREAK = process.env.TOUR_BREAK === '1', BREAK_SAYS = ['stop2-wide', 'stop5-stun', 'stop7-thrown'];   // (the red path of the three stops that read a deed of the script's; see the header)
 const DIRTY = argv.includes('--dirty');   // press P on a floor that has been played on: a lock kicked in, a man dead, the mains tripped, the alarm up, Sam elsewhere, a lamp group off — the tour must still run clean and hand back the level as authored
 const DOWN = argv.includes('--down');     // press P lying dead (Demo.start() then goes through restartEncounter instead of resetGuards)
 const JITTER = Number(arg('jitter', '0'));  // 0 = fixed step; e.g. 0.5 = every frame's dt uniform in (1/hz)×[0.5, 1.5], plus a 50 ms hitch (main.ts's dt clamp) about every 3 s — the browser's clock, roughly
@@ -145,7 +153,9 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
     if (i === S.doors) {   // the fire exit walked open: Sam's hand on the leaf (game.ts handsOnDoors → anim.doorPush, w 1 while he pushes, hand ≥ 0 once settled on one), how far the leaf went, where he got to
       const dp = game.player.char.anim.doorPush; const t = demo.shotT;
       if (dp && dp.w > 0.5) { acc.dPushT = (acc.dPushT ?? 0) + dt; acc.dPushFrom ??= t; acc.dPushTo = t; if (dp.hand >= 0) acc.dHandT = (acc.dHandT ?? 0) + dt; }
-      if (fireExit) { if (fireExit.angle < (acc.dMinAngle ?? 0)) { acc.dMinAngle = fireExit.angle; acc.dWideAt = t; } if (!fireExit.latched && acc.dOpenAt === undefined) acc.dOpenAt = t; if (acc.dOpenAt !== undefined && fireExit.latched && acc.dShutAt === undefined && t > acc.dOpenAt) acc.dShutAt = t; }
+      if (fireExit) { const side = DOORWAY.oneWay ? fireExit.swing : -1;   // (the side this leaf has to go: its own where doors open one way, away from his push out of the break room where they swing both)
+        if (fireExit.angle * side > (acc.dWide ?? 0)) { acc.dWide = fireExit.angle * side; acc.dWideAngle = fireExit.angle; acc.dWideAt = t; }
+        if (!fireExit.latched && acc.dOpenAt === undefined) acc.dOpenAt = t; if (acc.dOpenAt !== undefined && fireExit.latched && acc.dShutAt === undefined && t > acc.dOpenAt) acc.dShutAt = t; }
       acc.dEnd = v3.copy(game.player.char.pos); acc.dLatchedLast = fireExit?.latched; acc.dAngleLast = fireExit?.angle;
     }
     if (i === S.takedown) {   // the beat's milestones on the shot clock (timeline notes; and where an --abort-at 3:frac lands), plus what must NOT happen: a round out of the click, a grab out of a Space
@@ -156,6 +166,7 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
       if (game.player.dragging && !acc.grabbedEver) { acc.grabbedEver = true; acc.grabAt = demo.shotT; }
       if (acc.grabbedEver && !game.player.dragging && acc.dropAt === undefined) acc.dropAt = demo.shotT;
     }
+    acc.cansLast = game.player.canisters; acc.bangsLast = game.player.flashbangs;   // (kept per frame, as the dead are: a stop's exit checks run after the next stop's enter, whose rearm has topped him up)
     if (i === S.hold) {   // the hold: when he was grabbed / held / let go on the shot clock, who, what he said (his bubbles: the answers come forced through guards.ts say, not Game.say), the standoff and the alarm, rounds
       const H = game.player.holding; const t = demo.shotT;
       if (H && acc.hGrabAt === undefined) { acc.hGrabAt = t; acc.hMan = H.g; acc.hVariant = H.variant; }
@@ -280,14 +291,14 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
       if (rec && Number.isFinite(rec.dur) && (rec.simDur < rec.dur - 1e-6 || rec.simDur > rec.dur + Math.max(DT, MAX_DT) + 1e-6)) fail(`stop${i}-dur`, `stop ${i} ran ${rec.simDur.toFixed(3)} s, authored ${rec.dur} s`);
       const at = (x: number | undefined) => x === undefined ? '—' : `+${f2(x)}s`;
       if (i === S.doors) {
-        const pushT = acc.dPushT ?? 0, handT = acc.dHandT ?? 0, wide = acc.dMinAngle ?? 0, end: Vec3 | undefined = acc.dEnd;
+        const pushT = acc.dPushT ?? 0, handT = acc.dHandT ?? 0, wide = acc.dWide ?? 0, wideAngle = acc.dWideAngle ?? 0, end: Vec3 | undefined = acc.dEnd;
         if (pushT < 0.5) fail(`stop${i}-hand`, `doors: Sam's hand was on the leaf (anim.doorPush.w > 0.5) for ${f2(pushT)} s (want ≥ 0.5 s) — the puppet never walked him into the fire exit?`);
         else if (handT < 0.3) warn(`stop ${i}: the push settled on a hand for only ${f2(handT)} s of the ${f2(pushT)} s it was fed (doorPush.hand stayed −1: he never squared up to the leaf?)`);
         if (acc.dOpenAt === undefined) fail(`stop${i}-open`, 'doors: the fire exit never came unlatched during the stop');
-        else if (wide > -1.0) fail(`stop${i}-wide`, `doors: the fire exit only swung to ${f2(wide)} rad (want past −1.0: walked wide open onto the lot)`);
+        else if (wide < 1.0) fail(`stop${i}-wide`, `doors: the fire exit only swung to ${f2(wideAngle)} rad on the side it has to go (want past a radian there: walked wide open onto the lot)`);
         if (!end || end[0] < 36.4) fail(`stop${i}-through`, `doors: Sam ended the stop at (${end ? `${f2(end[0])}, ${f2(end[2])}` : '?'}) — still inside, he never got through the fire exit`);
         if (Math.abs(acc.dAngleLast ?? 1) > 0.1 || !(acc.dLatchedLast || fireExit?.closing)) fail(`stop${i}-reshut`, `doors: the fire exit is not back to a sliver and swinging shut by the cut (angle ${f2(acc.dAngleLast ?? NaN)}, latched ${acc.dLatchedLast}, closing ${fireExit?.closing}) — the pull-to at 6.2 s did not happen?`);   // (a sliver, not the latch: a sprung close from wide open takes ~5 s to the last centimetre; the old flung-open beat latched at 9.6 s, this one about a second into the next stop's black)
-        rec?.notes.push(`fire exit: creaks ${at(acc.dOpenAt)} → widest ${f2(wide)} rad ${at(acc.dWideAt)} → ${acc.dShutAt !== undefined ? `latched again ${at(acc.dShutAt)}` : `${f2(Math.abs(acc.dAngleLast ?? NaN) * 116)} cm off the jamb at the cut, ${fireExit?.closing ? 'closing' : 'NOT closing'}`} · hand on the leaf ${at(acc.dPushFrom)}‥${at(acc.dPushTo)} (${f2(pushT)} s fed, ${f2(handT)} s settled on a hand) · Sam ended at (${end ? `${f2(end[0])}, ${f2(end[2])}` : '?'})`);
+        rec?.notes.push(`fire exit: creaks ${at(acc.dOpenAt)} → widest ${f2(wideAngle)} rad ${at(acc.dWideAt)} → ${acc.dShutAt !== undefined ? `latched again ${at(acc.dShutAt)}` : `${f2(Math.abs(acc.dAngleLast ?? NaN) * 116)} cm off the jamb at the cut, ${fireExit?.closing ? 'closing' : 'NOT closing'}`} · hand on the leaf ${at(acc.dPushFrom)}‥${at(acc.dPushTo)} (${f2(pushT)} s fed, ${f2(handT)} s settled on a hand) · Sam ended at (${end ? `${f2(end[0])}, ${f2(end[2])}` : '?'})`);
       }
       if (i === S.takedown) {
         const dead: any[] = acc.deadMen ?? [];
@@ -334,8 +345,8 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
         rec?.notes.push(`grab ${at(acc.hGrabAt)}${acc.hGrabAt > 4.5 ? ' (NET: startGrab)' : ' (Space on his row)'} ${acc.hVariant ?? ''} → held ${at(acc.hHeldAt)} → ${answers.length} answers ${answers.map(a => `"${a.slice(0, 46)}${a.length > 46 ? '…' : ''}"`).join(' / ')} → live ${at(acc.hLiveAt)} → ${so ? routeName(so) : 'nobody'} in the standoff ${at(acc.hSoAt)}, alarm 2 ${at(acc.hEsc2At)} → he walked ${f2(acc.hOrbitM ?? 0)} m round them, the pair came round ${turnedDeg}° keeping the shield on him → ${acc.hReleaseHow ?? 'still held'} ${at(acc.hReleaseAt)} · rounds ${acc.hRoundsBefore ?? 0} before / ${acc.hRoundsAfter ?? 0} after · ${says[i]} barks+radio`);
         if (so && (acc.hOrbitM ?? 0) < 3) warn(`stop ${i}: the standoff man walked only ${f2(acc.hOrbitM ?? 0)} m round the pair (cornered where he stood? the orbit is the point of the framing)`);
       }
-      if (i === S.smoke && game.player.canisters !== (acc.cans0 ?? 4) - 1) fail(`stop${i}-thrown`, `smoke stop: ${acc.cans0} canisters at enter, ${game.player.canisters} at exit — the beat's key (3, the smoke slot since the 08-08 re-slot) never put one in his hand / the click never threw it`);
-      if (i === S.firefight && game.player.flashbangs !== (acc.bangs0 ?? 2) - 1) fail(`stop${i}-stun`, `firefight: ${acc.bangs0} stun canisters at enter, ${game.player.flashbangs} at exit — the beat's key (4, the stun slot) never selected one / it was never lobbed`);
+      if (i === S.smoke && acc.cansLast !== (acc.cans0 ?? 4) - 1) fail(`stop${i}-thrown`, `smoke stop: ${acc.cans0} canisters at enter, ${acc.cansLast} on its last frame (want one fewer) — the beat's key (3, the smoke slot since the 08-08 re-slot) never put one in his hand / the click never threw it`);
+      if (i === S.firefight && acc.bangsLast !== (acc.bangs0 ?? 2) - 1) fail(`stop${i}-stun`, `firefight: ${acc.bangs0} stun canisters at enter, ${acc.bangsLast} on its last frame (want one fewer) — the beat's key (4, the stun slot) never selected one / it was never lobbed`);
       if (i === S.firefight) {
         const posted: any[] = acc.posted ?? []; const alive = posted.filter((g: any) => g.state !== 'dead');
         if (alive.length) fail(`stop${i}-firefight`, `firefight: ${alive.length} of the ${posted.length} posted men still alive at the end (${alive.map((g: any) => `${routeName(g)}:${g.state} dazzled=${game.time < g.dazzledUntil}`).join(' ')}); player at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])}) mag ${game.player.pistol.mag} chamber ${game.player.pistol.chamber}`);
@@ -446,6 +457,7 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
       let demoPos: Vec3 | null = null;
       try { demoPos = demo.update(dt); }
       catch (e: any) { exceptions++; fail(`exception-demo-${String(e?.message ?? e).slice(0, 60)}`, `demo.update threw: ${e?.stack ?? e}`); if (exceptions > 30) { fail('abort-run', 'too many exceptions'); break; } }
+      if (BREAK) { input.pressed.delete('Digit4'); if (demo.shotI === S.smoke) input.clicked = 0; if (fireExit && demo.shotI === S.doors && Math.abs(fireExit.angle) > 0.5) { fireExit.angle = Math.sign(fireExit.angle) * 0.5; fireExit.vel = 0; } }
       simT += dt;
       if (abortedIn < 0 && (demo.shotI !== prevShot || !demo.active)) {
         exit(prevShot);
@@ -479,7 +491,7 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
 
 // ---------------------------------------------------------------- runs + report
 const reports: RunReport[] = [];
-const flags = `${HZ} Hz${JITTER > 0 ? ` ±${JITTER} jitter` : ''} · vis ${VIS}${LAPS > 1 ? ` · ${LAPS} laps` : ''}${DIRTY ? ' · dirty floor' : ''}${ABORT ? ` · abort in stop ${ABORT.stop} @${Math.round(ABORT.frac * 100)}%` : ''}${SELFTEST ? ' · SELFTEST (planted faults)' : ''}`;
+const flags = `${BREAK ? 'TOUR_BREAK=1 (the red path) · ' : ''}${HZ} Hz${JITTER > 0 ? ` ±${JITTER} jitter` : ''} · vis ${VIS}${LAPS > 1 ? ` · ${LAPS} laps` : ''}${DIRTY ? ' · dirty floor' : ''}${ABORT ? ` · abort in stop ${ABORT.stop} @${Math.round(ABORT.frac * 100)}%` : ''}${SELFTEST ? ' · SELFTEST (planted faults)' : ''}`;
 for (let r = 0; r < RUNS; r++) {
   const seed = SEED0 + r;
   console.log(`\n=== run ${r + 1}/${RUNS} · seed ${seed} · ${flags} ===`);
@@ -502,6 +514,11 @@ if (SELFTEST) {   // the verdict that matters here: were the two planted faults 
   const ok = reports.every(r => r.failures.some(f => /\[hit@\d+\]/.test(f)) && r.failures.some(f => f.startsWith('[stop1-hit]')) && r.failures.some(f => f.startsWith('[nan-guard-')));
   console.log(`=== selftest: ${ok ? 'OK — the planted hit (per-frame + per-stop) and the planted NaN were both reported' : 'BROKEN — a planted fault went unreported: the tripwires are not live'} ===`);
   process.exit(ok ? 0 : 1);
+}
+if (BREAK) {   // the verdict that matters here: did every run say the three reads the break bends?
+  const blind = BREAK_SAYS.filter(k => !reports.every(r => r.failures.some(f => f.includes(`${k}]`))));
+  console.log(`=== TOUR_BREAK=1: ${blind.length ? `THE BREAK DID NOT REACH ${blind.join(', ')}: not said in every run` : `${BREAK_SAYS.join(', ')} said in every run, as they must be`} ===`);
+  process.exit(blind.length ? 3 : 1);
 }
 const replay = [`--hz ${HZ}`, JITTER > 0 ? `--jitter ${JITTER}` : '', LAPS > 1 ? `--laps ${LAPS}` : '', VIS !== 0.05 ? `--vis ${VIS}` : '', DIRTY ? '--dirty' : '', ABORT ? `--abort-at ${ABORT.stop}:${ABORT.frac}` : ''].filter(Boolean).join(' ');
 console.log(`replay a run: bun run tools/qa/tour.ts --seed <seed> ${replay}`);

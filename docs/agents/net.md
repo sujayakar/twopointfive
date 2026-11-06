@@ -388,7 +388,10 @@ line).
   closeFoe and foes, roomfight.ts tickMove, doorpath.ts own and drop, wallreact.ts beyond, coverfire.ts charOf, lanes.ts closeFight, doorblast.ts
   splinter, frag.ts samCue, qrf.ts clearOfFoes, dialogue.ts radioLive, snowBreath.ts and snowTracks.ts, snatch.ts tick). Found by twenty fights of
   150 s over ten floors on the page's stand: a floor of what there is. Measured for one: doorpath's wrong order book changed no answer in 1,070
-  asks (an entry from a stack has no corners left on its order), and seat 1's pair stacked and entered as seat 0's did.
+  asks on the page's floor (an entry from a stack has no corners left on its order), and seat 1's pair stacked and entered as seat 0's did. ON THE
+  BARRACKS IT DOES (2026-11-06, the two-seat fight on die 3): at tick 5499 a man of seat 1 is sent through a door with two corners left on his
+  order, the first seat's book has no order of his, and he does not take the way round. The Rust game parts from the TypeScript at that tick: its
+  door walk is stepped as his seat and finds his own order. The first place the port is right where the TypeScript is not.
   (2) A SEAT'S OWN MODULE SWEEPING ALL THE WORLD'S MEN: each seat has its own `DoorTools`, and `doortools.ts slingTick` walks every man of the floor
   and puts away a breaching shotgun that is not on one of ITS doors, so seat 1's net slings seat 0's gun every tick. The first player's pair
   spends 8.40 s on a locked door (2.03 s for the same men in a game of one; seat 1's pair 1.67 s), then boots it. By reading, the hammer's net

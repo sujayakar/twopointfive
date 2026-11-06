@@ -11,6 +11,7 @@
 // says so, with what the shipped stand itself makes of it (a row both stands write only as headless.ts loads, the kit, the cast).
 // Exit 0 = found · 1 = nothing to find, or not a held row · 2 = usage.
 import { resolve } from 'node:path';
+import { heldWords, wordOf } from './stand.ts';   // (the words a held row is raised by; it also writes this process's own stand down, which no child reads: each is given its stand)
 
 const ROOT = resolve(import.meta.dir, '../..');
 const argv = process.argv.slice(2), dash = argv.indexOf('--');
@@ -20,8 +21,7 @@ const lineRe = opts.includes('--line') ? new RegExp(opts[opts.indexOf('--line') 
 
 // the words: the first WORD=value of each row's note in FROZEN_HOLDS (a row whose note names no word of its own has none to raise)
 const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
-const words: string[] = [];
-for (const note of Object.values(FROZEN_HOLDS as Record<string, string>)) { const m = /^([A-Z][A-Z0-9_]*=[A-Za-z0-9-]+)/.exec(note); if (m && !words.includes(m[1])) words.push(m[1]); }
+const words: string[] = heldWords(FROZEN_HOLDS as Record<string, string>);
 
 type Verdict = 'red' | 'green' | 'missing';
 const memo = new Map<string, Verdict>(); let runs = 0;
@@ -41,7 +41,7 @@ const plain = verdict([]), all = verdict(words);
 console.log(`the plain frozen stand: ${plain} · with all ${words.length} words raised: ${all}`);
 if (plain === 'missing') { console.log('the line is not printed on the frozen stand: nothing to bisect'); process.exit(1); }
 if (plain === (green ? 'green' : 'red')) { console.log(`already ${plain} on the plain frozen stand: ${green ? 'nothing to find' : 'no held row explains it (--green finds a rule that mends it)'}`); process.exit(1); }
-const wordless = Object.entries(FROZEN_HOLDS as Record<string, string>).filter(([, note]) => !/^[A-Z][A-Z0-9_]*=[A-Za-z0-9-]+/.test(note)).map(([row]) => row);
+const wordless = Object.entries(FROZEN_HOLDS as Record<string, string>).filter(([, note]) => !wordOf(note)).map(([row]) => row);
 if (!flips(words)) { console.log(`raising every word does not flip it (the shipped stand itself: ${verdict([], 'shipped')}). Not tried: the ${wordless.length} held rows that no word raises (${wordless.slice(0, 8).join(', ')}${wordless.length > 8 ? ', …' : ''}), and what the shipped stand does besides its rows (the kit, the cast)`); process.exit(1); }
 
 /** delta debugging: the smallest list every word of which is needed */

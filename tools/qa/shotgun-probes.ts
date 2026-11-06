@@ -22,6 +22,7 @@
 //                     so it is another run) — and nothing of shotgun.ts ran (its counters all nought). The words are the FROZEN stand's: on the page's
 //                     stand (TPS_PROFILE=shipped) none is asked; on every stand the same run with SHOTGUN.on false must digest to the same word
 import { standUp, ROOT } from './headless.ts';
+import { toolsRow4 } from './order-keys.ts';
 import { asProbe, asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { SHOTGUN, SHOTGUN_STATS, SHOTGUN_LAST, breachSpot, lockPoint, pelletDrops } = await import(`${ROOT}/src/game/shotgun.ts`);
@@ -303,7 +304,7 @@ export const shotgunCard = guarded(async () => {
     const keys = [...keys1, ...(R.O.menu?.rows ?? []).map((r: any) => Number(r.key))].filter(Number.isFinite);
     R.input.pressed.add('Escape'); R.step(); R.input.pressed.add('Escape'); R.step();
     // (row 4 of the tools page is the stand's: the threshold's own page, or — DOORTOOLS.outsidePlain, on in the page, read as the menu is registered — the one order 'clear from outside')
-    const row4 = DOORTOOLS.outsidePlain ? 'thresholdHold' : 'thr';
+    const row4 = toolsRow4(DOORTOOLS);
     verdict(ids === 'stack cover fallIn hold tools' && tools === `openClear bangClear charge ${row4} fragClear` && keys.every(k => k <= 5), 'the door\'s order menu and its tools page are the same rows with a shotgun in the stack (the tools page ends in the frag part\'s own row, on G) — no row of the shotgun\'s, no digit above 5', `rows: ${ids} ▸ ${tools} · highest digit ${Math.max(0, ...keys)}`); }
   { const R = await rig(4, { stage: false, cards: { 0: { weapon: 'shotgun' } } }); const g = R.game, pl = g.player, was = pl.rifle, worn = was.def.id === 'm870'; kitPlayer(g);   // (`worn`: the page's stand stands a plain game up as the solo night, your card already on you — kit.ts kitSoloStand; the frozen stand leaves it to the kitPlayer here)
     const got = pl.rifle.def.id, att = pl.rifle.attachments.length, slot2 = pl.hasRifle, shells = pl.rifle.roundsReady;

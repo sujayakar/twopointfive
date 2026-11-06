@@ -14,14 +14,18 @@
 //                   tools' under thrHeldAll (addressed to the pair that holds: held either way); the pair's F with ANOTHER menu up is the word as built and
 //                   is not under thrMenuWord off (F with the held door's own menu up, or with no menu, is the word either way)
 //   calls-rally     ROOMFIGHT.rallyK: 0 = no defender leaves his room for the fight next door in a run where, shipped, some do (the run itself repeats; that rallyK 1 is the
-//                   game as it was is threshold-identity's digest against af55d89 to hold, not this probe's)
+//                   game as it was is threshold-identity's digest against af55d89 to hold, not this probe's). Asked on the floor stood as ONE POOL, where the
+//                   rule runs; on a floor dealt into squads (the page's deal) nobody goes on his own. CALLSRALLY_BREAK=1 in front = both lines must FAIL
 //   calls-lastseen  FOG.lastSeen: 0 (shipped) = no mark ever; 4 = an enemy seen and then lost keeps a mark where he was last seen, ageing, gone after 4 s, never
 //                   while he is in sight — and the game itself runs the same with it on (the fight's own state compared)
 import { readFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
+import { underWord } from './stand.ts';
 import { stage, at, spotOf, opOn, beatsOf, rowsOf, textOf, quiet, guarded, family, FIRST, pagesAsTheyWere } from './thresholdmenu-probes.ts';
 const { DOORTOOLS, TOOLS_PAGE, THR_PAGE, HELD_PAGE } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ROOMFIGHT } = await import(`${ROOT}/src/game/roomfight.ts`);
+const { squadsReport } = await import(`${ROOT}/src/game/enemysquads.ts`);
+const { SQUADDEAL } = await import(`${ROOT}/src/game/squaddeal.ts`);
 const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { feelRange, feelDefaults } = await import(`${ROOT}/src/game/teamfeel.ts`);
@@ -160,21 +164,28 @@ export const callsHeld = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- the rally's strength
+// THE RALLY IS A RULE OF A FLOOR THAT IS ONE POOL (roomfight.ts rally: a squad's man goes to another squad's fight on his squad's word, not his own), and the
+// page deals the rooms' men of a level with no squads block into squads (squaddeal.ts). So the knob is asked where its rule runs — the pair's floor stood as
+// one pool, on either stand — and one more line says what a dealt floor does with it: nobody goes on his own, whatever the knob.
+// CALLSRALLY_BREAK=1 (the red path): the knob is left at 1 in the run that asks 0, and the 'dealt' floor is stood as one pool — both lines must FAIL.
 export const callsRally = guarded(async () => {
-  const { verdict, done } = family('calls-rally: ROOMFIGHT.rallyK — at 0 no defender leaves his room for the fight next door, in a run where shipped (1) some do');
+  const { verdict, done } = family('calls-rally: ROOMFIGHT.rallyK — at 0 no defender leaves his room for the fight next door, in a run where shipped (1) some do; on a floor dealt into squads nobody goes on his own');
   pagesAsTheyWere();   // these calls live on the threshold's page (X, 5, 4): the door tools as they were before the one outside order took row 4 (guarded restores them)
+  const BREAK = process.env.CALLSRALLY_BREAK === '1';
   const E = scn('room-clear-pair'), spot = await spotOf(E);
   if (typeof spot === 'string') { verdict(false, `${E.title}: a door to give it on`, spot); return done(); }
-  const run = async (k: number | null, seed: number) => { const { R } = await at(E, seed, spot); if (k !== null) ROOMFIGHT.rallyK = k;
+  // (the whole run under the stand's own word for the deal — squaddeal.ts SQUADDEAL.on by TPS_SQUADDEAL — the word and the row put back after it: stand.ts)
+  const run = (k: number | null, seed: number, deal = false) => underWord('TPS_SQUADDEAL', deal, async () => { const { R } = await at(E, seed, spot); if (k !== null) ROOMFIGHT.rallyK = k; const squads: number = squadsReport(R.g).length;
     const d = R.g.doors.byName(spot.door), side = R.O.targetUnder(R.input, R.W.cam, R.W.canvas).side ?? 1; R.D.order('bangClear', R.team, d, side);
-    await quiet(() => R.step(45 * 60)); ROOMFIGHT.rallyK = 1;
-    return { rallied: R.g.fight.stats.rallied as number, state: R.g.guards.map((x: any) => `${x.callsign}:${x.state}@${x.char.pos[0].toFixed(2)},${x.char.pos[2].toFixed(2)}`).join(' ') }; };
-  let seed = 0, base: { rallied: number; state: string } | null = null;
+    try { await quiet(() => R.step(45 * 60)); } finally { ROOMFIGHT.rallyK = 1; }
+    return { rallied: R.g.fight.stats.rallied as number, squads, state: R.g.guards.map((x: any) => `${x.callsign}:${x.state}@${x.char.pos[0].toFixed(2)},${x.char.pos[2].toFixed(2)}`).join(' ') }; }, { table: SQUADDEAL, key: 'on' });
+  let seed = 0, base: Awaited<ReturnType<typeof run>> | null = null;
   for (const s of [1, 2, 3, 4, 5, 6]) { const r = await run(null, s); if (r.rallied > 0) { seed = s; base = r; break; } }
-  if (!base) { verdict(false, 'a run in which, shipped, a defender goes to the fight next door', 'none of seeds 1 to 6 had one in 45 s behind a bang and clear'); return done(); }
-  const one = await run(1, seed), zero = await run(0, seed);
-  verdict(one.state === base.state && one.rallied === base.rallied, `the run repeats (seed ${seed}, 45 s behind a bang and clear on ${spot.door}, rallyK 1 both times: every man in the same state on the same spot) — so what rallyK 0 changes below is the knob's`, `rallied ${base.rallied} and ${one.rallied} · ${one.state === base.state ? 'states and places equal' : `DIFFER:\n    ${base.state}\n    ${one.state}`}`);
+  if (!base) { verdict(false, 'a run in which, shipped, a defender goes to the fight next door (the floor one pool)', 'none of seeds 1 to 6 had one in 45 s behind a bang and clear'); return done(); }
+  const one = await run(1, seed), zero = await run(BREAK ? 1 : 0, seed), squads = await run(1, seed, !BREAK);
+  verdict(base.squads === 0 && one.state === base.state && one.rallied === base.rallied, `the run repeats (seed ${seed}, the floor one pool, 45 s behind a bang and clear on ${spot.door}, rallyK 1 both times: every man in the same state on the same spot) — so what rallyK 0 changes below is the knob's`, `rallied ${base.rallied} and ${one.rallied} · squads on the floor ${base.squads} · ${one.state === base.state ? 'states and places equal' : `DIFFER:\n    ${base.state}\n    ${one.state}`}`);
   verdict(zero.rallied === 0, 'rallyK 0: nobody goes to the fight next door in that same run', `rallied ${zero.rallied} (shipped ${base.rallied})`);
+  verdict(squads.squads > 0 && squads.rallied === 0, 'the same seed with the rooms\' men dealt into squads (as the page deals a level with no squads block), rallyK 1: nobody goes on his own — a squad\'s man goes on his squad\'s word', `squads on the floor ${squads.squads} · rallied ${squads.rallied} (one pool: ${base.rallied})`);
   return done();
 });
 

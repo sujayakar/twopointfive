@@ -339,7 +339,9 @@ export async function weaponsIdentity() {
 export async function firearmTopUp() {
   console.log('\n=== firearm-topup: a staged reload ends where rearm() would — topUp rows at capacity+1, non-topUp rows at capacity all told, with or without a round chambered ===');
   const { Firearm, WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
-  const run = (gun: any) => { const ok = gun.startReload(); for (let i = 0; i < 400 && gun.reloading; i++) gun.update(1 / 60); return ok; };   // 6.7 s of sixtieths: past every row's reload
+  const BREAK = process.env.TOPUP_BREAK === '1';   // (the red path: a round too many is left in the box after every reload, which every line must say)
+  const run = (gun: any) => { const ok = gun.startReload(); for (let i = 0; i < 400 && gun.reloading; i++) gun.update(1 / 60); if (BREAK) gun.mag++; return ok; };   // 6.7 s of sixtieths: past every row's reload
+  const N: number = WEAPONS.fiveseven.magCapacity, P: string = WEAPONS.fiveseven.short;
   const st = (gun: any) => `chamber ${gun.chamber} mag ${gun.mag} ready ${gun.roundsReady} spent ${gun.spent}${gun.spare.length ? ` spare [${gun.spare.join(',')}]` : ''}`;
   type Case = { note: string; row: string; setup: (g: any) => void; want: { started: boolean; ready: number; spent: number; chamber: number; spare?: string } };
   const cases: Case[] = [
@@ -348,10 +350,12 @@ export async function firearmTopUp() {
     { note: 'guard 9 mm, fresh (chambered, 11 in the box = full by its rule): reload refused — nothing to gain (was accepted, → 13)', row: 'guard9mm', setup: () => {}, want: { started: false, ready: 12, spent: 0, chamber: 1 } },
     { note: 'guard 9 mm, shot dry (chamber 0, box 0): reload → 12 seated, one racked → 11 + 1 = 12', row: 'guard9mm', setup: g => { g.chamber = 0; g.mag = 0; }, want: { started: true, ready: 12, spent: 0, chamber: 1 } },
     { note: 'AKS-74U (non-topUp, staged 0.7 / 1.7 / 2.2), a round chambered + 9 in the box: reload → 29 + 1 = 30, spent 0 (was 31 / −1)', row: 'aks74u', setup: g => { g.chamber = 1; g.mag = 9; }, want: { started: true, ready: 30, spent: 0, chamber: 1 } },
-    // topUp, finite spares (Sam's Five-seveN: 10 + 1) — must be exactly what it was
-    { note: 'Five-seveN, chambered + 6 in the mag: reload → 10 + 1 = 11, the six back to storage', row: 'fiveseven', setup: g => { g.chamber = 1; g.mag = 6; }, want: { started: true, ready: 11, spent: 0, chamber: 1, spare: '10,10,6' } },
-    { note: 'Five-seveN, dry (0 / 0): reload → 10 seated, one racked → 9 + 1 = 10, spent 1, the empty dropped', row: 'fiveseven', setup: g => { g.chamber = 0; g.mag = 0; }, want: { started: true, ready: 10, spent: 1, chamber: 1, spare: '10,10' } },
-    { note: 'Five-seveN, fresh (10 + 1): reload refused', row: 'fiveseven', setup: () => {}, want: { started: false, ready: 11, spent: 0, chamber: 1, spare: '10,10,10' } },
+    // topUp, finite spares (Sam's pistol row): a full box under a chambered round, the part box back to storage. HOW MANY a box holds is the row's own and is
+    // not held here (gear-check.ts holds ten without the issue kit and fifteen with it)
+    // (N = the row's own magazine, read here: ten for the Five-seveN, fifteen for the pistol the issue kit makes of the same row — weapons.ts, GEAR.on)
+    { note: `${P}, chambered + 6 in the mag: reload → ${N} + 1 = ${N + 1}, the six back to storage`, row: 'fiveseven', setup: g => { g.chamber = 1; g.mag = 6; }, want: { started: true, ready: N + 1, spent: 0, chamber: 1, spare: `${N},${N},6` } },
+    { note: `${P}, dry (0 / 0): reload → ${N} seated, one racked → ${N - 1} + 1 = ${N}, spent 1, the empty dropped`, row: 'fiveseven', setup: g => { g.chamber = 0; g.mag = 0; }, want: { started: true, ready: N, spent: 1, chamber: 1, spare: `${N},${N}` } },
+    { note: `${P}, fresh (${N} + 1): reload refused`, row: 'fiveseven', setup: () => {}, want: { started: false, ready: N + 1, spent: 0, chamber: 1, spare: `${N},${N},${N}` } },
   ];
   let allPass = true;
   for (const c of cases) {

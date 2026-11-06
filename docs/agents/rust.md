@@ -865,10 +865,10 @@ one stops the tool by name, on an address one does nothing and says so in the co
     the run under that name moved, which a break upstream of it does too: only a word that STAYED is certain. Two languages on one input
     said which name's own arithmetic was bent; one language cannot. WHAT KEEPS ONE NAME HONEST is `--against`: a change to one layer shows, against the
     tree before it, that its word moved and no other did.) THE PIN: a fixture
-    under `tools/qa/fixtures`, recorded on ONE stand, the family's (`hold({ stand })`; `--record` writes the tree it was taken on and how the
-    stand was stood beside the words, and is refused on any other stand). From 2026-11-05 that is the page's stand for a family that has recorded
-    there (the glass's `pane-words.json` first, then the layers' `layer-words.json`); a family whose owner has not taken its recording again is
-    still the old stand's, no new recording is taken there, and a file may keep the old stand's recording beside the page's while the old stand
+    under `tools/qa/fixtures`, recorded on ONE stand, the page's (`ident-pin.ts RECORDED_ON`; `--record` writes the tree it was taken on and how the
+    stand was stood beside the words, and is refused on any other stand). From 2026-11-05 every family's recording is of that stand (the glass's
+    `pane-words.json`, the senses' `sense-words.json`, the layers' `layer-words.json`), a family names no stand, and a file may keep the old
+    stand's recording beside the page's while the old stand
     can be stood. A recording of whole runs on the page's stand
     moves with every rule that moves play under it: the commit that records again says which rule. A RUN IS HELD OR IT FAILS (the same day; the
     glass check had printed PASS on both stands with nothing compared, its recording carrying no word of how its stand was stood): no recording
@@ -891,9 +891,8 @@ one stops the tool by name, on an address one does nothing and says so in the co
        flag. What the call LEFT, never what it was handed. Every not-a-number folds as one word.
     3. THE RUN is one run by name (`--run <scenario>:<seed>`, with a default) that plays the same on a stand every time, and that the tool can
        play again in a child from `runArgs`.
-    4. AFTER THE RUN: `const h = hold({ root, tool, fixture, stand: 'shipped', run, runArgs, end, words: fold.words(), breakWord, unfit, verdict,
-       say })`. `stand` is the one stand the family's recording is of: the page's (a family that does not say is taken for the old frozen stand,
-       where no new recording is made). `end` is how the run ended (the recording keeps it). `unfit` is why this run may not be recorded, or '' (the layers': a call under a name the tool
+    4. AFTER THE RUN: `const h = hold({ root, tool, fixture, run, runArgs, end, words: fold.words(), breakWord, unfit, verdict,
+       say })`. The recording is of the page's stand (no family says which). `end` is how the run ended (the recording keeps it). `unfit` is why this run may not be recorded, or '' (the layers': a call under a name the tool
        does not list). With `--words` among its arguments the tool is the child: it exits 0 right after `hold`. `h.record`, when there is one,
        is called LAST and only if no verdict of the run failed: a recording is the answers of a run that was right.
     5. THE BREAK WORD is the family's own, the one its Rust code already reads (`RUST_BREAK=1`). Under it `same` is red when words moved and
@@ -902,7 +901,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     6. THE RUN IS THE PAGE'S: no word, the game as the page opens it, so every name's rule is on and a floor of calls a name can be asked of the
        same run that is recorded. (The first pins were of the old frozen stand, which holds newer rules off: the layers' tool had to raise its
        own rules by name to reach sixty of sixty-two there. That mode went when the recording was taken again on the page's stand.)
-    7. `--record` works on the family's stand only; `--tree "<what the tree is>"` says where it was taken (say so when the tools the run plays
+    7. `--record` works on the page's stand only; `--tree "<what the tree is>"` says where it was taken (say so when the tools the run plays
        are not yet committed: the tool looks for uncommitted changes under `src` and `rust` alone), `--forget` lets go of a name. A family
        that no longer asks the old stand's recording takes that entry out of its fixture by hand (the layers' did). The FIRST recording: put the
        watcher inside the function that runs a call both ways, on the last tree that has one, and have the tool refuse to record unless that

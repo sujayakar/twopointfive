@@ -1,5 +1,7 @@
 // The 'picker' family (the start card's SCENARIO PICKER — scene/scenarioList.ts SCENARIOS, ui/missions.ts — the rows moved off the card onto the mission list, game/scenarioRun.ts), run through probes.ts:
 //   bun run tools/qa/probes.ts picker | picker-list | picker-card | picker-start | picker-level | picker-rescue
+//   PICKERBOXES_BREAK=1 in front = a boot's count of its level's boxes is one too many: every 'booted on a level of' line of picker-start and picker-level must FAIL
+//   PICKER_JOBS=n in front = n page boots side by side (3 with no word; tools/qa/pool.ts)
 // PASS / FAIL each, all headless. Nothing here looks at a picture: the card is the real Menu class rendered on a fake DOM (what it would put on the page, not how
 // it looks), and main.ts's own glue — location / history, the camera cut on quit — is not run at all (it is the page's).
 //
@@ -23,6 +25,7 @@
 //                  furniture), where those men really are once staged and two seconds on, whether that is the same at every restart; and ?rescue&squad4 = the
 //                  pair (four in the rescue is not built — why it is not on the list)
 import { resolve } from 'node:path';
+import { pool, jobsOf } from './pool.ts';
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 
@@ -73,8 +76,14 @@ function shotOf(W: any, why: string | null, levelFile: string | null): Shot {
   return { why, active: activeScenario(g), title: run?.title ?? null, team: run?.team ?? null, entry: run?.entry?.id ?? null, staged: g.rescue.active ? g.rescue.staged : g.nightBreach.staged, ops: men,
     operatives: g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead').length, hostiles: g.guards.filter((x: any) => x.unit && x.team === 'hostile').length,
     hostages: g.rescue.active ? g.rescue.hostages.length : 0, sam, samDown: !!g.player.down, hudMen, fog: !!g.fogOfWar.on, squadKnob: NIGHTBREACH.squad,
-    staff: g.guards.filter((x: any) => !x.unit).length, units: g.guards.filter((x: any) => !!x.unit).length, civilians: g.civilians?.length ?? 0, level: `${g.level.boxes.length} boxes` };
+    staff: g.guards.filter((x: any) => !x.unit).length, units: g.guards.filter((x: any) => !!x.unit).length, civilians: g.civilians?.length ?? 0, level: `${fileBoxes(g.level.boxes)} boxes` };
 }
+/** how many page boots run side by side (PICKER_JOBS=n; each is a whole game in a process of its own, and started all at once they were some forty) */
+const BOOTS = jobsOf(process.env.PICKER_JOBS, 3);
+/** A STOOD LEVEL'S OWN BOXES: the ones its file has. Standing a level on its shapes adds trim pieces after them (scene/shapes.ts: Box.piece, there only
+ *  where that rule is on), and a piece is no box of the file, so the count a boot is held to leaves them out, on any stand and whatever word raised or held
+ *  the rule. PICKERBOXES_BREAK=1 (the red path) = every box is counted, and one more: every boot's line must fail. */
+const fileBoxes = (boxes: readonly { piece?: boolean }[]): number => process.env.PICKERBOXES_BREAK === '1' ? boxes.length + 1 : boxes.filter(b => !b.piece).length;
 /** THE CHILD: one page load of `query`, as main.ts takes it — the level, the Game, startFromQuery — then a restart and a quit */
 async function boot(query: string): Promise<BootReport> {
   const errors: string[] = []; let threw: string | null = null;
@@ -331,7 +340,7 @@ export async function pickerStart(): Promise<boolean> {
   const files: string[] = [...new Set(L.filter(e => e.level).map(e => e.level as string))];
   const ownLevel: Record<string, { level: any; plain: Shot | null }> = {};
   for (const f of files) { let level: any = null; try { level = levelOfFile(f); } catch { /* judged below: the boot throws too */ } const p = await bootChild(`?levelFile=${f}`); ownLevel[f] = { level, plain: p.threw ? null : p.start }; }
-  const reports = await Promise.all(jobs.map(j => bootChild(j.query)));
+  const reports = await pool(jobs, BOOTS, j => bootChild(j.query));
   jobs.forEach((j, i) => { const r = reports[i], own = j.e.level ? ownLevel[j.e.level] : null;
     const S = own?.level?.scenarios, T = S ? (j.e.kind === 'rescue' ? S.rescue?.team : j.e.kind === 'roomclear' ? S.roomClear?.team : null) : null;
     const marks: number[][] | null = T?.ops && T.ops.length >= j.e.squad ? T.ops.slice(0, j.e.squad) : null;
@@ -365,7 +374,7 @@ export async function pickerLevel(): Promise<boolean> {
     const mine = lv.filter(r => rows.some(e => e.id === r.id));
     F.verdict(lv.length === SCENARIOS.length + rows.length && mine.length === rows.length && mine.every(r => r.tags.includes('test-rooms') && r.href.includes(`levelFile=${TEST_LEVEL}`)), "added to the list they are missions like any other, their sheet naming the level", mine.map(r => `${r.title} [${r.team} · ${r.tags.join(' · ')}] → ${r.href}`).join(' · ')); }
   catch (e: any) { F.verdict(false, 'the rows render', String(e?.message ?? e)); }
-  const reports = await Promise.all(rows.map(e => bootChild(scenarioQuery(e))));
+  const reports = await pool(rows, BOOTS, e => bootChild(scenarioQuery(e)));
   rows.forEach((e, i) => { const r = reports[i];
     const T = e.kind === 'rescue' ? S.rescue.team : S.roomClear.team, marks: number[][] | null = T?.ops ? T.ops.slice(0, e.squad) : null;
     const bad = judge(r, { kind: e.kind, squad: e.squad }, null, marks && marks.length === e.squad ? marks : null);   // (these rows are not on the child's list: it reads the kind's plain name)
