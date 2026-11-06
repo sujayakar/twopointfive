@@ -91,9 +91,9 @@ async function recordVolley(seed: number, on: boolean, cut = false, dice = false
       panes: new Map(), log: [], onRelease: null, gustDirty: false,
       typeOf: (b: any, bi?: number) => real.typeOf(b, bi), typeOfPane: kind, setType() {}, paneInfo: () => null,
       impact: (bi: number) => ({ pane: true, live: false, type: kind(bi) ?? 'laminated', thickness: 0.012, wasOpen: false, punched: false, diced: false, released: 0, cracked: false }),
-      hit() {}, widen: () => 0, blast: () => 0, bang: () => 0, breakTest: () => -1, goingAt: () => false, wouldGive: () => false, seeThrough: (_view: unknown, _from: unknown, _size: unknown, fn: () => unknown) => fn(), view: null, each() {},
+      hit() {}, widen: () => 0, blast: () => 0, bang: () => 0, breakTest: () => -1, goingAt: () => false, wouldGive: () => false, seeThrough: (_view: unknown, _from: unknown, _size: unknown, fn: () => unknown) => fn(), view: null,
       openAt: () => false, walkable: () => false, openSig: () => 0, openFraction: () => 0, fill: () => false, update() {}, reset() {}, summary: () => 'cut',
-      toUV: noPane, toWorld: noPane, normalOf: noPane, heldSet: noPane,
+      toUV: noPane, toWorld: noPane, normalOf: noPane, heldSet: noPane, untouched: true, asking: (fn: any) => real.asking(fn), letGo() {}, home: real.home, stood() {}, sheets: real.sheets,
     } satisfies SeamsOut<GlassBreak> as any;
   }
   const frags: any[] = []; if (!cut) game.glassBreak.onRelease = null;
@@ -240,7 +240,7 @@ export async function glassbreakSupport() {
   F.verdict(bigHang.length === 0, 'no big piece is left hanging: anything still in with no footing under it is within the hanging limit for its grip on the frame and its neighbours', `hanging limit ${K.hangArea} m² per metre of grip; ${intact.filter((f: any) => !f.foot && !f.nb.some((nb: any) => nb.ny < -K.standNy && by.has(nb.fid))).length} pieces hang, ${bigHang.length} over the limit${bigHang.length ? ': ' + bigHang.map((f: any) => `${f.i}:${f.b}:${f.s} ${f.area.toFixed(3)} m² on ${maxGrip(f).toFixed(2)} m`).join(', ') : ''}`);
   // a piece others stand on: find a held piece Q whose loss leaves ≥ 1 other piece unheld, knock it out, and see them follow
   let pick: any = null, deps: number[] = [];
-  for (const f of intact) { st.open[f.fid] = 1; const h2 = gb.heldSet(st); st.open[f.fid] = 0; const lost = intact.filter((o: any) => o.fid !== f.fid && !h2.has(o.fid)).map((o: any) => o.fid); if (lost.length > deps.length) { deps = lost; pick = f; } }
+  for (const f of intact) { const h2 = gb.heldSet(st, f.fid); const lost = intact.filter((o: any) => o.fid !== f.fid && !h2.has(o.fid)).map((o: any) => o.fid); if (lost.length > deps.length) { deps = lost; pick = f; } }
   if (!pick) { F.verdict(false, 'staging: some piece holds another up', 'none found'); return F.done(); }
   const f0 = gb.openFraction(PANE); const n0 = frags.length; const tHit = game.time;
   const rk = glassImpact(game, PANE, W_(pick.cen[0], pick.cen[1]), IN, 1, 1); const atOnce = gb.openAt(PANE, W_(pick.cen[0], pick.cen[1])); const depsAtOnce = deps.filter(fid => st.open[fid]).length;

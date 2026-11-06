@@ -25,6 +25,7 @@ use crate::props::Props;
 use crate::items::Items;
 use crate::men::Men;
 use crate::lights::Lights;
+use crate::panes::Panes;
 use crate::slabs::Slabs;
 use core::mem::{offset_of, size_of};
 
@@ -57,6 +58,7 @@ pub struct State {
     pub lights: Lights,
     pub smoke: Smoke,
     pub poses: Poses,
+    pub panes: Panes,
 }
 
 /// A part of the block: where it is, how long, and the version of what is in it (moved on by whoever changes a part's fields without changing its length).
@@ -69,8 +71,8 @@ pub struct Part {
 }
 /// THE PARTS, in the order of the fields (src/sim/state.ts SIM_PARTS names them in the same order). THE ORDER IS THE PARKED BLOCK'S COST: a block that
 /// gives its slot up is kept by the host as ONE run of bytes from its start to the end of the last word in use, so the room a pool does not use is
-/// paid for by every part that stands after it. Parts of a fixed length first, then the pools, the one sized largest LAST.
-pub const PARTS: [Part; 11] = [
+/// paid for by every part that stands after it. Parts of a fixed length first, then the pools: every game's by size, the one sized largest last of those; then the panes, which a game with no pane touched does not use at all (a last pool with nothing in it takes no room, src/sim/state.ts `span`).
+pub const PARTS: [Part; 12] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
     Part { off: offset_of!(State, dice), len: size_of::<Dice>(), ver: 1, pool: false },
     Part { off: offset_of!(State, doors), len: size_of::<Doors>(), ver: 1, pool: false },
@@ -82,6 +84,7 @@ pub const PARTS: [Part; 11] = [
     Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
     Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (2: a pose is ten columns of whole vectors, where it was ten singles a node)
+    Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },   // (last: a game with no pane touched parks no room of it, and no part before it moved)
 ];
 /// a block's length in bytes
 pub const LEN: usize = size_of::<State>();

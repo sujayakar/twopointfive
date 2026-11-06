@@ -1,7 +1,7 @@
 // WHAT A FLASHBANG BUYS ON A DOOR, IN EVERY SCENARIO ON THE START CARD — counted headless, one door at a time:
-//   bun run tools/qa/bang-tally.ts [--seeds 1-8] [--jobs 4] [--scn night-breach,records-pair] [--arms open,bang,hand] [--set '{…}'] [--json out.json] [--md]
+//   bun run tools/qa/bang-tally.ts [--seeds 1-8] [--jobs 4] [--scn night-breach,records-pair] [--arms open,bang,hand] [--set '{…}'] [--json out.json] [--stand-as other.json] [--md]
 //   bun run tools/qa/bang-tally.ts list                                      the doors it would work, per scenario
-//   bun run tools/qa/bang-tally.ts trace <scenario id>:<door>:<arm>:<seed>   one run with its timeline
+//   bun run tools/qa/bang-tally.ts trace <scenario id>:<door>:<arm>:<seed>   one run with its timeline (`--stand-as other.json`: stood as that tally stood it)
 // For every scenario of scene/scenarioList.ts SCENARIOS (its own level, started by game/scenarioRun.ts startFromQuery as its row starts it) and every door of
 // every room a defender holds there (the room fight's own rooms: roomfight.ts), the SAME staged situation is played per seed under each ARM:
 //   open   the order menu's 'open and clear' on that door
@@ -25,6 +25,8 @@ const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const DTM: any = await import(`${ROOT}/src/game/doortools.ts`);
+const BXM: any = await import(`${ROOT}/src/scene/boxes.ts`);
+const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
 const RFM: any = await import(`${ROOT}/src/game/roomfight.ts`);
 const NBM: any = await import(`${ROOT}/src/game/nightbreach.ts`);
 const ORM: any = await import(`${ROOT}/src/game/orders.ts`);
@@ -46,9 +48,15 @@ const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/lev
 
 const DT = 1 / 60;
 type Arm = 'open' | 'bang' | 'hand';
-export interface Spec { scn: string; door: string; room: string; arm: Arm; seed: number }
+/** `at` on a spec = a staging to stand the entry AS (another tree's `Result.at` for it: bang-tally-diff.ts), taken where every spot of it is free floor here */
+export interface Spec { scn: string; door: string; room: string; arm: Arm; seed: number; at?: string }
 /** `still`: the room's own men alive and STILL IN IT at the end with the team alive — walked past, not gone off to another room */
-interface Result extends Spec { lost: number; team: number; down: number; of: number; taken: boolean; held: boolean; still: number; after: number; secs: number; bangs: number; pre: number; outside: number; note: string }
+/** `at` = the staging as one word: where the team and Sam were stood (Sam last), and how many others were taken off the floor before a sound. Two runs of an
+ *  entry with another `at` are not the same entry: bang-tally-diff.ts says so of a door before anyone blames the walk to it. */
+export interface Result extends Spec { lost: number; team: number; down: number; of: number; taken: boolean; held: boolean; still: number; after: number; secs: number; bangs: number; pre: number; outside: number; note: string; at: string;
+  /** what became of the entry, as a word a reader can hold a tally to (the note is for people): played · refused (the game refused the order: the team is left
+   *  outside a hot room, and that is counted as it falls out) · no-floor (nowhere to stand the team) · nobody (no defender dealt to the room, or no such entry) · threw */
+  outcome: 'played' | 'refused' | 'no-floor' | 'nobody' | 'threw' }
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const clone = (o: any) => JSON.parse(JSON.stringify(o));
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -71,12 +79,22 @@ function resetKnobs() {
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
 const quiet = async <T>(on: boolean, fn: () => T | Promise<T>): Promise<T> => { if (!on) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 
+/** TALLYDIFF_BREAK=1 (tools/qa/bang-tally-diff.ts's own red path): the door an entry is played on has a crate half a metre across laid a stride and a half
+ *  outside each of its faces, a little to its hinge's side: on the way a team takes to it, with room left to go round */
+const WAY_BREAK = process.env.TALLYDIFF_BREAK === '1';
+function crateTheWay(level: any, door: string) {
+  const d = level.doors.find((x: any) => x.name === door); if (!d) throw new Error(`TALLYDIFF_BREAK=1: no door '${door}' in the level's file to lay a crate by`);
+  const ax = Math.cos(d.closedDir), az = Math.sin(d.closedDir), cx = d.hinge[0] + ax * d.width * 0.15, cz = d.hinge[1] + az * d.width * 0.15;
+  for (const s of [1, -1]) level.boxes.push(BXM.makeBox({ c: [cx - az * s * 1.5, 0.3, cz + ax * s * 1.5], h: [0.25, 0.3, 0.25] }));
+}
 /** a scenario stood up as its row starts it, stepped until the room fight has its defenders in their rooms */
-export async function stage(scnId: string, seed: number) {
+export async function stage(scnId: string, seed: number, crated?: string) {
   const E = SCENARIOS.find((e: any) => e.id === scnId); if (!E) throw new Error(`no scenario '${scnId}' — ${SCENARIOS.map((e: any) => e.id).join(', ')}`);
   resetKnobs(); RFM.ROOMFIGHT.rally = false;
   Math.random = seeded(0xba46 + seed * 7919);
-  const W: any = await standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) }); const g = W.game;
+  const level = E.level ? levelOfFile(E.level) : null;
+  if (crated) { if (!level) throw new Error(`TALLYDIFF_BREAK=1: '${scnId}' has no level file of its own to lay a crate in (try a row that has one)`); crateTheWay(level, crated); }
+  const W: any = await standUp({ uploadEvery: 4, ...(level ? { level } : {}) }); const g = W.game;
   g.godMode = true; g.playerInvisible = true;
   let q = scenarioQuery(E) as string; if (E.kind === 'roomclear') q = q.replace(/roomclear(=\d+)?/, `roomclear=${seed}`);
   const { why } = startFromQuery(g, new URLSearchParams(q)); if (why) throw new Error(`${scnId}: start refused — ${why}`);
@@ -95,10 +113,10 @@ export async function discover(scnId: string): Promise<{ door: string; room: str
 }
 
 export async function run(X: Spec, verbose = false): Promise<Result> {
-  const S = await quiet(!verbose, () => stage(X.scn, X.seed)); const { W, g, step } = S; const O = g.orders, D = g.doorTools, nav = g.col.nav;
-  const out: Result = { ...X, lost: 0, team: 0, down: 0, of: 0, taken: false, held: false, still: 0, after: 0, secs: NaN, bangs: 0, pre: 0, outside: 0, note: '' };
-  const mine = S.defs.filter((d: any) => S.roomKey(d.room) === X.room); if (!mine.length) { out.note = 'no defender dealt to this room on this seed'; return out; }
-  const room = mine[0].room, ent = room.entries.find((e: any) => e.door.def.name === X.door); if (!ent) { out.note = 'door is not an entry of the room'; return out; }
+  const S = await quiet(!verbose, () => stage(X.scn, X.seed, WAY_BREAK ? X.door : undefined)); const { W, g, step } = S; const O = g.orders, D = g.doorTools, nav = g.col.nav;
+  const out: Result = { ...X, lost: 0, team: 0, down: 0, of: 0, taken: false, held: false, still: 0, after: 0, secs: NaN, bangs: 0, pre: 0, outside: 0, note: '', at: '', outcome: 'played' };
+  const mine = S.defs.filter((d: any) => S.roomKey(d.room) === X.room); if (!mine.length) { out.note = 'no defender dealt to this room on this seed'; out.outcome = 'nobody'; return out; }
+  const room = mine[0].room, ent = room.entries.find((e: any) => e.door.def.name === X.door); if (!ent) { out.note = 'door is not an entry of the room'; out.outcome = 'nobody'; return out; }
   const d = ent.door, ox = ent.out[0], oz = ent.out[1], lx = -oz, lz = ox;
   const men: any[] = mine.map((m: any) => m.gd); out.of = men.length;
   const free = (p: number[]): number[] | null => { const q = nav.isBlocked(p[0], p[2]) ? nav.nearestFreePoint(p[0], p[2]) : p; return q ? [q[0], 0, q[2]] : null; };
@@ -109,12 +127,17 @@ export async function run(X: Spec, verbose = false): Promise<Result> {
   const team: any[] = O.squad().filter((x: any) => x.state !== 'dead'); out.team = team.length;
   const spots: number[][] = [];
   for (const back of [3.2, 4.2, 2.4, 5.2, 6.2]) for (const lat of [1.1, -1.1, 0.4, -0.4, 1.9, -1.9]) { const p = free(outPt(back, lat)); if (p && clearTo(p) && flat(p, ent.at) > 1.8 && !spots.some(s => flat(s, p) < 0.8)) spots.push(p); }
-  if (spots.length < team.length + 1) { out.note = `no floor outside for the team (${spots.length} spots)`; return out; }
+  // stood AS another tree stood this entry (X.at), where all of that is free floor here: then the two trees fight the same entry and what differs is not the staging
+  const as = (X.at ?? '').split(' · ')[0].split(' ').filter(Boolean).map(s => { const [x, z] = s.split(',').map(Number); return [x, 0, z]; });
+  if (as.length === team.length + 1 && as.every(p => isFinite(p[0]) && isFinite(p[2]) && !nav.isBlocked(p[0], p[2]))) spots.splice(0, as.length, ...as);
+  if (spots.length < team.length + 1) { out.note = `no floor outside for the team (${spots.length} spots)`; out.outcome = 'no-floor'; return out; }
   team.forEach((gd, i) => { const p = spots[i]; gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(-ox, -oz); });
   await quiet(!verbose, () => g.teleportPlayer(spots[team.length] as any));
   // anybody else with a line to where they gather is off the floor before a sound is made (a room this door is INSIDE counts as taken)
+  let off = 0;
   for (const x of g.guards) { if (x.state === 'dead' || x.team !== 'hostile' || men.includes(x)) continue;
-    const c = [x.char.pos[0], 1.5, x.char.pos[2]]; if ([...spots.slice(0, team.length + 1), gate].some(p => !g.col.solidBlocked(c as any, [p[0], 1.3, p[2]]))) await quiet(!verbose, () => CBM.killGuard(g, x, [0, 0, 1], true)); }
+    const c = [x.char.pos[0], 1.5, x.char.pos[2]]; if ([...spots.slice(0, team.length + 1), gate].some(p => !g.col.solidBlocked(c as any, [p[0], 1.3, p[2]]))) { off++; await quiet(!verbose, () => CBM.killGuard(g, x, [0, 0, 1], true)); } }
+  out.at = `${spots.slice(0, team.length + 1).map(p => `${p[0].toFixed(2)},${p[2].toFixed(2)}`).join(' ')} · ${off} off the floor`;
   step(10);
   // HOT: a loud noise at this door (the hearing model's own event: the room's men put it at this entry and come round to it)
   const t0h = g.time; g.events.push({ kind: 'bang', pos: [gate[0], 0.3, gate[2]], time: g.time, loud: true });
@@ -143,7 +166,7 @@ export async function run(X: Spec, verbose = false): Promise<Result> {
     CBM.dropThrowable(g, 'flash', land as any); T('Sam\'s can lands inside');
     for (let i = 0; i < 60 * 4 && isNaN(bangT); i++) tick();
     tick(6); give('openClear');
-  } else give(X.arm === 'bang' ? 'bangClear' : 'openClear');
+  } else { const why = give(X.arm === 'bang' ? 'bangClear' : 'openClear'); if (why) { out.note = [out.note, `order refused: ${why}`].filter(Boolean).join(' · '); out.outcome = 'refused'; } }   // (said, and counted as it falls out: the team is left outside a hot room)
   const alive = () => team.some(x => x.state !== 'dead'), roomUp = () => men.some(x => x.state !== 'dead');
   let idle = 0;
   for (let i = 0; i < 60 * 50 && alive() && roomUp(); i++) { tick(); if (!D.ops.length) { if (++idle > 60 * 8) break; } else idle = 0; }
@@ -193,16 +216,18 @@ if (import.meta.main) {
   const bool = (k: string) => { const i = argv.indexOf(`--${k}`); if (i < 0) return false; argv.splice(i, 1); return true; };
   try {
     const set = flag('set'); if (set) SET = JSON.parse(set); resetKnobs();
-    if (mode === 'worker') { const specs: Spec[] = JSON.parse(readFileSync(argv[0], 'utf8')); for (const X of specs) { let r: Result; try { r = await run(X); } catch (e) { r = { ...X, lost: 0, team: 0, down: 0, of: 0, taken: false, after: 0, secs: NaN, bangs: 0, note: `no floor: threw ${e instanceof Error ? e.message : e}` } as Result; } process.stdout.write(`@@${JSON.stringify(r)}\n`); } process.exit(0); }
+    if (mode === 'worker') { const specs: Spec[] = JSON.parse(readFileSync(argv[0], 'utf8')); for (const X of specs) { let r: Result; try { r = await run(X); } catch (e) { r = { ...X, lost: 0, team: 0, down: 0, of: 0, taken: false, after: 0, secs: NaN, bangs: 0, note: `no floor: threw ${e instanceof Error ? e.message : e}`, outcome: 'threw' } as Result; } process.stdout.write(`@@${JSON.stringify(r)}\n`); } process.exit(0); }
+    // --stand-as a.json[,b.json]: stand each entry as those tallies stood it (their `at`, the same for an entry's every arm)
+    const standAs = new Map<string, string>(); for (const f of flag('stand-as')?.split(',') ?? []) for (const r of JSON.parse(readFileSync(f, 'utf8')).results as Result[]) if (r.at) standAs.set(`${r.scn}|${r.door}|${r.room}|${r.seed}`, r.at);
     if (mode === 'trace') { const [scn, door, arm, seed, room] = argv[0].split(':'); const ds = (await discover(scn)).filter(x => x.door === door && (!room || x.room === room));   // (a door between two held rooms: name the room's key — its doors joined by + — as a fifth field)
-      if (!ds.length) throw new Error(`no such door in ${scn}: ${(await discover(scn)).map(x => x.door).join(', ')}`); const r = await run({ scn, door, room: ds[0].room, arm: arm as Arm, seed: +seed }, true); console.log(JSON.stringify(r)); process.exit(0); }
+      if (!ds.length) throw new Error(`no such door in ${scn}: ${(await discover(scn)).map(x => x.door).join(', ')}`); const at = standAs.get(`${scn}|${door}|${ds[0].room}|${+seed}`); const r = await run({ scn, door, room: ds[0].room, arm: arm as Arm, seed: +seed, ...(at ? { at } : {}) }, true); console.log(JSON.stringify(r)); process.exit(0); }
     const seeds = parseSeeds(flag('seeds') ?? '1-8'), jobs = +(flag('jobs') ?? 4), md = bool('md'), verdict = bool('verdict'), json = flag('json');
     const only = flag('scn')?.split(','), arms = (flag('arms') ?? 'open,bang,hand').split(',') as Arm[];
-    if (argv.length && mode !== 'list') throw new Error(`unknown flag ${argv.join(' ')} (have --seeds --jobs --scn --arms --set --json --md --verdict)`);
+    if (argv.length && mode !== 'list') throw new Error(`unknown flag ${argv.join(' ')} (have --seeds --jobs --scn --arms --set --json --stand-as --md --verdict)`);
     const specs: Spec[] = [];
     for (const E of SCENARIOS as any[]) { if (only && !only.includes(E.id)) continue;
       const ds = await discover(E.id); if (mode === 'list') { console.log(`${E.id} (${E.title}): ${ds.map(x => `${x.door} [${x.men}]`).join(' · ') || 'no held room with a door'}`); continue; }
-      for (const x of ds) for (const arm of arms) for (const seed of seeds) specs.push({ scn: E.id, door: x.door, room: x.room, arm, seed }); }
+      for (const x of ds) for (const arm of arms) for (const seed of seeds) { const at = standAs.get(`${E.id}|${x.door}|${x.room}|${seed}`); specs.push({ scn: E.id, door: x.door, room: x.room, arm, seed, ...(at ? { at } : {}) }); } }
     if (mode === 'list') process.exit(0);
     console.error(`bang-tally: ${specs.length} runs over ${jobs} jobs…`);
     const chunks: Spec[][] = Array.from({ length: jobs }, () => []); specs.forEach((s, i) => chunks[i % jobs].push(s));
@@ -212,7 +237,7 @@ if (import.meta.main) {
       const text = await new Response(p.stdout).text(); await p.exited;
       for (const line of text.split('\n')) if (line.startsWith('@@')) results.push(JSON.parse(line.slice(2))); }));
     if (results.length !== specs.length) console.error(`bang-tally: ${specs.length - results.length} runs gave no result (a worker died)`);
-    if (json) writeFileSync(json, JSON.stringify({ seeds, set: SET, results }, null, 1));
+    if (json) writeFileSync(json, JSON.stringify({ seeds, set: SET, stand: harnessProfile(), crated: WAY_BREAK, asked: specs.length, results }, null, 1));
     const R = report(results, md); for (const l of R.lines) console.log(l);
     process.exit(verdict && (!R.ok || results.length !== specs.length) ? 1 : 0);
   } catch (e) { console.error(e instanceof Error ? e.message : String(e)); process.exit(2); }

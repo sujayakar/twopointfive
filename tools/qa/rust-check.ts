@@ -29,7 +29,7 @@
 //             over whole levels (door leaves swung, walls broken into pieces and re-shaped, tilted and cut boxes, panes with holes) answered by the module,
 //             by the TypeScript walk as it is and by the walk as it first was: every answer and every pane's place the same bits
 //   glass     where a pane of glass is open (rust/sim/src/glass.rs over the copy of every pane that is no longer whole; src/game/glassbreak.ts openAt, goingAt
-//             and a burst's reckoning of glass it has not broken; glassPattern.ts's pieces and clumps): tools/qa/glass-ident.ts — the glass of four levels broken
+//             and a burst's reckoning of glass it has not broken; glassPattern.ts's pieces and clumps): tools/qa/pane-ident.ts — the glass of four levels broken
 //             by the game's own rule (rounds, pellets, blasts, the glass's step, panes made another glass and made whole), and points on and off every pane
 //             asked of the rule and of the module under each view a burst judges by, with a solid line and a ray through each asked of both walks. It is no row of
 //             RUST: the lines' and the ray's rows answer by it wherever they meet a pane. The shared numbers are read out of both sources.
@@ -309,10 +309,10 @@ let wordOwn = '', wordRust = '';
 // ---- glass
 {
   // (on both stands: toughened glass comes down in a wave on the frozen one and drops after a beat on the page's)
-  const on = (stand: string) => child(['bun', 'run', 'tools/qa/glass-ident.ts', '--n', flag('--glassrounds') ?? '1000'], { TPS_PROFILE: stand, GLASS_BREAK: BREAK ? '1' : undefined }), both = [on('shipped'), on('frozen')];
+  const on = (stand: string) => child(['bun', 'run', 'tools/qa/pane-ident.ts'], { TPS_PROFILE: stand, PANES_BREAK: BREAK ? '1' : undefined }), both = [on('shipped'), on('frozen')];
   const r = { status: both.every(x => x.status === 0) ? 0 : 1, out: both.map(x => x.out).join('\n'), err: both.map(x => x.err).join('\n') };
-  const rows = r.out.split('\n').filter(l => / (PASS|FAIL) — \d+ sheets/.test(l)), sum = r.out.split('\n').filter(l => /^glass-ident: /.test(l)).join('\n    ');
-  const fs = await import('node:fs'), rd = (f: string) => fs.readFileSync(resolve(ROOT, f), 'utf8'), rs = rd('rust/sim/src/glass.rs') + rd('rust/sim/src/world.rs'), mirror = rd('src/scene/boxMirror.ts'), pattern = rd('src/game/glassPattern.ts');
+  const rows = r.out.split('\n').filter(l => /\d+ sheets, /.test(l)), sum = r.out.split('\n').filter(l => /^pane-ident: /.test(l)).join('\n    ');
+  const fs = await import('node:fs'), rd = (f: string) => fs.readFileSync(resolve(ROOT, f), 'utf8'), rs = rd('rust/sim/src/glass.rs') + rd('rust/sim/src/world.rs') + rd('rust/sim/src/pattern.rs'), mirror = rd('src/scene/boxMirror.ts'), pattern = rd('src/game/glassPattern.ts');
   const there = (name: string): number => { const m = new RegExp(`(?:pub )?const ${name}: \\w+ = ([^;]+);`).exec(rs); return m ? Number(eval(m[1].replace(/_/g, ''))) : NaN; };
   const inTs = (src: string, name: string): number => Number(new RegExp(`\\b${name} = (-?[\\d.]+)`).exec(src)?.[1] ?? NaN), off: string[] = []; let shared = 0;
   // the row's places and the tables' numbers as boxMirror.ts writes them, and the pattern's own numbers, each against the Rust source
@@ -323,8 +323,8 @@ let wordOwn = '', wordRust = '';
   { shared++; const sites = inTs(pattern, 'GP_MAX_SITES'), bands = inTs(pattern, 'GP_BANDS'), gs = inTs(mirror, 'G_SITES'), bits = inTs(mirror, 'GW_BITS');   // (a row holds every site a pane can have, and a bit a piece of each)
     if (gs !== sites || bands * there('MAX_SECTORS') !== there('FRAGS_PER_SITE') || bits * 32 !== sites * there('FRAGS_PER_SITE') || there('G_DICE_AT') !== sites * there('G_SITE') || there('GW_OPEN') - there('GW_SEED') !== sites) off.push(`a row's room: ${sites} sites of ${bands} bands, ${gs} in a row, ${bits} words of bits`); }
   for (const k of ['VIEW_NONE', 'VIEW_BLOWN', 'VIEW_GIVES']) { shared++; if (!(there(k) >= 0) || there(k) !== inTs(mirror, k)) off.push(`${k} ${inTs(mirror, k)} in boxMirror.ts, ${there(k)} there`); }
-  const ok = r.status === 0 && rows.length >= 8 && rows.every(l => / PASS /.test(l)) && (r.out.match(/=== glass-ident \(the (page's|frozen) stand\): PASS/g) ?? []).length === 2 && off.length === 0 && shared > 30;
-  verdict(ok, 'glass: every point of every pane is open or shut in the Rust module as the game\'s rule says, under every view a burst judges by, and a line and a ray through it end the same — and the two sides name their numbers alike',
+  const ok = r.status === 0 && rows.length >= 8 && (r.out.match(/=== pane-ident \(the (page's|frozen) stand\): PASS/g) ?? []).length === 2 && off.length === 0 && shared > 30;
+  verdict(ok, 'glass: what a pane is to play answers as it was recorded, every name reached — and the two sides name their numbers alike',
     (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + sum.slice(0, 1800) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${shared} numbers shared with the Rust source (boxMirror.ts, glassPattern.ts)${off.length ? ` — NOT THE SAME: ${off.slice(0, 8).join(', ')}` : ', each the same'}`);
 }
@@ -365,9 +365,9 @@ let wordOwn = '', wordRust = '';
   const WD: any = (await import(`${ROOT}/src/scene/world.ts`)).WORLD, navCell = Number(/class NavGrid \{\s*cell = ([\d.]+);/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/collision.ts'), 'utf8'))?.[1] ?? NaN);
   const floorCells = Math.round(WD.gridW * WD.gridCell / navCell) * Math.round(WD.gridH * WD.gridCell / navCell), holds: number = S.sim().nav_cap(0), ways: number = S.sim().nav_cap(1);
   const floorFits = holds === Math.min(table('MAX_NAV'), table('MAX_WAY'), Math.floor((table('MAX_OPEN') - 1) / 8)) && ways === table('MAX_WAY') && floorCells <= holds;
-  // (…and THE PIN: the same questions over a box world of the tool's own, on the frozen stand, every word the recording's — tools/qa/fixtures/sense-words.json.
+  // (…and THE PIN: the same questions over a box world of the tool's own, on the page's stand, every word the recording's — tools/qa/fixtures/sense-words.json.
   //  Under RUST_BREAK the child plays its own red path and must end red)
-  const made = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--made'], { TPS_PROFILE: 'frozen', TPS_CPUSENSE: undefined });
+  const made = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--made'], { TPS_PROFILE: 'shipped', TPS_CPUSENSE: undefined });
   const madeSay = made.out.split('\n').filter(l => /^- (PASS|FAIL) — (reach|asked|same)/.test(l)).map(l => l.replace(/^- /, '').slice(0, 260)), madeOk = made.status === 0 && madeSay.some(l => /^PASS — same: every count and word is that of the recording/.test(l));
   red['the senses'] = levelsRed && made.status === 1 && /every one: the break reaches each/.test(made.out);   // (…and every word of the made-up world's pin: the family's red rule, as a row has one)
   const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && partsRed && shadeRed && rowedRed && blobsFit && floorFits && madeOk;
@@ -379,7 +379,7 @@ let wordOwn = '', wordRust = '';
     + (shade ? `\n    a lamp's shadow with the module handed no blobs (SHADE_BREAK=1): ${shadeRed ? 'the words of the two cases where the grid cannot answer move and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${shade.status}): ${shade.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + (rowed ? `\n    the level's rows with their order dropped from the lamps the host writes (ROWS_BREAK=1): ${rowedRed ? 'a light word moves and none that is not the light\'s, as it must' : `NOT RED AS IT MUST BE (exit ${rowed.status}): ${rowed.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + `\n    the smoke's blobs: the game keeps ${SE.SENSE.smoke.cap} at most and the module's table holds ${BMF.MAX_BLOBS}${blobsFit ? '' : ' — THE KNOB IS PAST THE TABLE'}`
-    + `\n    the pin (a made-up box world, the frozen stand): ${madeOk ? '' : `NOT HELD (exit ${made.status}) · `}${madeSay.length ? madeSay.join(' · ') : (made.err || made.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+    + `\n    the pin (a made-up box world, the page's stand): ${madeOk ? '' : `NOT HELD (exit ${made.status}) · `}${madeSay.length ? madeSay.join(' · ') : (made.err || made.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
 // ---- poses
@@ -397,16 +397,22 @@ let wordOwn = '', wordRust = '';
 
 // ---- layers
 {
-  const r = child(['bun', 'run', 'tools/qa/layer-ident.ts']);
+  const r = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { TPS_PROFILE: 'shipped' });   // (the family's stand: its recording is the page's)
   const by: Record<string, { asked: number; differ: number }> = marked(r.out, 'LAYER-IDENT ')?.by ?? {}, names = Object.keys(by), row = r.out.split('\n').find(l => /^    \S+:\d+ ends /.test(l));
   red['the animator\'s layers'] = names.length > 0 && names.every(n => by[n].differ > 0);   // (every layer's own word moved against the same run played plain, not one red neighbour's)
-  verdict(r.status === 0 && /=== layer-ident: PASS/.test(r.out), 'layers: every layer of the animator is reached by a mission and its drives and run by the module, and the knobs and named nodes the module reads are the game\'s',
-    row ? row.trim() + (r.status === 0 ? '' : ` · ${r.out.split('\n').filter(l => /^- FAIL/.test(l)).map(l => l.split(':')[0].replace('- FAIL — ', '')).join(', ')} FAILED`) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
-  // (THE PIN: the same tool on the frozen stand, every layer's calls against the recording — tools/qa/ident-pin.ts. The plain run above compares no
-  //  answer; this line is what does. Not asked under the break, whose rule is the one above: every word moved against the run played plain.)
-  if (!BREAK) { const p = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { TPS_PROFILE: 'frozen' }), same = p.out.split('\n').find(l => /^- (PASS|FAIL|RECORDED|NOT HELD) — same:/.test(l));
-    verdict(p.status === 0 && /^- PASS — same: every count and word is that of the recording/.test(same ?? ''), 'layers: on the frozen stand every layer\'s calls fold to the word the recording holds',
-      same ? same.replace(/^- \w+( \w+)? — /, '') + (p.status === 0 ? '' : ` · exit ${p.status}`) : `the pin left nothing (exit ${p.status}): ${(p.err || p.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`); }
+  // (two verdicts of the one run: what the run reached and was handed, and — below — its words against the recording. A recording that moved is the
+  //  second's alone to say, so the first is every line of the tool but `same`; under the break there is no second, and `same` is the first's too.
+  //  A run that died says how, since it left no line of its own)
+  const lines = r.out.split('\n'), failed = lines.filter(l => /^- FAIL — /.test(l)).map(l => l.split(':')[0].replace('- FAIL — ', '')), tail = (r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300);
+  const ended = /^=== layer-ident: /.test(lines.filter(l => l).pop() ?? ''), si = lines.findIndex(l => /^- (PASS|FAIL) — same:/.test(l));
+  const own = BREAK ? failed : failed.filter(f => f !== 'same');
+  verdict(ended && names.length > 0 && own.length === 0, 'layers: every layer of the animator is reached by a mission and its drives and run by the module, and the knobs and named nodes the module reads are the game\'s',
+    row && ended ? row.trim() + (own.length ? ` · ${own.join(', ')} FAILED` : '') : `the run did not end (exit ${r.status}): ${tail}`);
+  // (THE PIN: every layer's calls against the recording, which is of the page's stand and so of the run above — tools/qa/ident-pin.ts. Not asked
+  //  under the break, whose rule is the one above: every word moved against the run played plain.)
+  if (!BREAK) { const same = si >= 0 ? lines[si] : '', what = /^    /.test(lines[si + 1] ?? '') ? lines[si + 1].trim().slice(0, 600) : '';
+    verdict(/^- PASS — same: every count and word is that of the recording/.test(same), 'layers: every layer\'s calls fold to the word the recording holds',
+      same ? `${same.replace(/^- \w+( \w+)? — /, '')}${what ? ` · ${what}` : ''}` : `the run left no line of what its words were held to (exit ${r.status}): ${tail}`); }
 }
 // ---- lights
 {
