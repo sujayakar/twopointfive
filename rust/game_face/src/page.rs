@@ -38,6 +38,12 @@
 //!   face_back(h, k) -> 1 | 0           game `h` IS kept `k` again, in the slot `h` stands in (the kept one stays kept). A clone is cloned back; bytes go
 //!                                      through the start's own lines (`game_run::start`: `io::import`, so what the bridge does not carry starts blank).
 //!                                      What `face_puppet` last sent is forgotten: the host applies the whole state next.
+//!   face_loaded(h, label, n, loads, saves)   STAND-IN: WHAT THE SAVE CONTROLLER DOES TO THE GAME ONCE A SAVE IN MEMORY IS PUT BACK (savestate.ts loadMem,
+//!                                      the lines after the snapshot is restored: :1124 to :1134). A ring of the hand's that merely stood at the save is
+//!                                      put away, a gun's setup is not up, the squad's ring is put away, the run's counts of loads and saves are the
+//!                                      abandoned moment's (handed in: the kept game holds the saved moment's), the chronicle takes its row, and a
+//!                                      tutorial's program is to be started again. After `face_back`, before the next step. Belongs in rust/game's
+//!                                      savestate (`checkpoints_load_mem`, an empty body today: the controller is the host's).
 //!   face_saves_in(h, p, n)             THE CONTROLLER'S SHELF AS THE TICK READS IT (`g.saves`: Enter once down asks for this run's newest checkpoint,
 //!                                      player.ts:493): the run's name and each slot's row. u32 count-prefixed utf-8 for a text; the run, u32 rows, then
 //!                                      each: key, slot (u8: 0 auto, 1 manual), n (f64), label, saved_at, mission_t (f64), stage, its run, a byte and
@@ -293,4 +299,27 @@ pub extern "C" fn face_saves_asked(h: u32) -> u32 {
     });
     super::out(key.into_bytes());
     bits
+}
+
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_loaded(h: u32, p: *const u8, n: usize, loads: f64, saves: f64) {
+    let label = super::text(p, n);
+    super::with(h, |x| {
+        let g = &mut x.g;
+        let pl = g.player;
+        // (handring.ts: a ring that merely stood at the save is nothing of the saved moment)
+        if g.pl[pl].sel.ring.as_ref().is_some_and(|r| r.free == Some(true)) {
+            let s = &mut g.pl[pl].sel;
+            s.open = false; s.ring = None; s.down_t = -1.0; s.moved = false;
+            g.pl[pl].near_sel = 0;
+        }
+        g.pl[pl].setup = None;   // (slotsetup.ts: a gun's setup that was up at the save is not up after the load)
+        game::orders::squad_orders_loaded(g);
+        g.chronicle.counts.loads = loads;
+        g.chronicle.counts.saves = saves;
+        let _ = game::chronicle::chron_checkpoint(g, game::chronicle::ChronCheckpointWhat::Load, Some(&label));
+        game::rails::rails_put_back(g);
+    });
 }

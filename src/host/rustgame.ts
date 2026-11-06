@@ -27,7 +27,7 @@
 // rhythm as ever) takes and puts back through `SNAPS`, and what it holds in a slot is a number of a game kept inside the module (`face_keep`: a clone of
 // the whole Rust `Game` and its block; nothing of the puppet is walked, so a save costs no apply). A load, a retry from a checkpoint and a restart are
 // `face_back` (the kept game stands again) and ONE whole apply onto the puppet; the lines the controller then runs on the puppet (the run's counts, the
-// chronicle's row, a tutorial's program started again) go across by the bridge's hand-over (`handBack`). A RESTART is the game kept as the first step
+// chronicle's row, a tutorial's program to be started again) are made on the Rust side too (`face_loaded`). A RESTART is the game kept as the first step
 // opened. A FILE is the bridge's bytes of a kept game and its block under a version word (`rustFile` / `rustFileIn`).
 //
 // Every special case here is marked STAND-IN with its reason and where it belongs.
@@ -106,7 +106,7 @@ export async function rustBoot(): Promise<void> {
   const inst = await WebAssembly.instantiate(mod, {});
   RUST_GAME.fetchMs = t1 - t0; RUST_GAME.compileMs = performance.now() - t1;
   X = inst.exports as unknown as Face; MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_probe_asks', 'face_lights_out', 'face_poke', 'face_keep', 'face_back', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new Error(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  for (const n of ['face_new_at', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_probe_asks', 'face_lights_out', 'face_poke', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new Error(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
   simAdopt(X, RUST_GAME.compileMs);
   PLACE = new BoxMirror(); (PLACE as unknown as { take(): boolean }).take();
   RUST_GAME.on = true; RUST_GAME.memory = MEM.buffer.byteLength;
@@ -133,7 +133,7 @@ function ownCopy(v: any, depth = 0): any {
 }
 function ownKeep(g: Game): unknown[] { const G = g as unknown as Record<string, any>; return OWN.map(name => { const o = G[name]; if (!o) return null; const c: Record<string, unknown> = {}; for (const k of Object.keys(o)) if (k !== 'g') c[k] = ownCopy(o[k]); return c; }); }
 function ownPut(g: Game, K: unknown[] | undefined): void { const G = g as unknown as Record<string, any>; OWN.forEach((name, i) => { const o = G[name], c = K?.[i] as Record<string, unknown> | null | undefined; if (!o || !c) return; for (const k of Object.keys(c)) o[k] = ownCopy(c[k]); }); }
-interface Held { g: Game; lightsWas: Uint8Array | null; nullsAll: boolean; kept: Set<number>; startKept: number; startOwn: unknown[]; back: boolean; took: boolean; saves: number; shelfSig: string; doorKept: number[]; lightOf: Map<number, Record<string, any>>; flags: boolean[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void } | null }
+interface Held { g: Game; lightsWas: Uint8Array | null; nullsAll: boolean; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; lightOf: Map<number, Record<string, any>>; flags: boolean[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void } | null }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
@@ -154,7 +154,7 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { g, lightsWas: null, nullsAll: false, kept: new Set(), startKept: 0, startOwn: [], back: false, took: false, saves: 0, shelfSig: '', doorKept: [], lightOf: new Map(), flags: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null };
+  H = { g, lightsWas: null, nullsAll: false, kept: new Set(), startKept: 0, startOwn: [], back: null, took: false, saves: 0, shelfSig: '', doorKept: [], lightOf: new Map(), flags: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // A START FROM OUTSIDE A TICK: the TypeScript stands or restores the game on the puppet as it always did; the Rust game is started again from it as the
@@ -163,7 +163,7 @@ export function rustAttach(g: Game): void {
   //  as the first step opened, the one state of the Rust game the puppet's objects were all made for. See `toStart` for why it is not the player's restart.)
   for (const name of ['restartEncounter', 'loadState']) {
     const was = G[name]; if (typeof was !== 'function') continue;
-    G[name] = function (this: unknown, ...a: unknown[]) { if (name === 'restartEncounter' && !held.inStep && held.h && !held.stale && held.startKept) { stoodAgain(held, held.startKept); held.back = false; } const r = was.apply(this, a); if (!held.inStep) held.stale = name; return r; };
+    G[name] = function (this: unknown, ...a: unknown[]) { if (name === 'restartEncounter' && !held.inStep && held.h && !held.stale && held.startKept) stoodAgain(held, held.startKept); const r = was.apply(this, a); if (!held.inStep) held.stale = name; return r; };
   }
   // THE PLAYER'S RESTART (a card's button, the panel's: `Game.restart`): the game kept as the first step opened stands again
   { const was = G.restart; G.restart = function (this: unknown, said?: string) { if (held.inStep || !held.h || held.stale || !held.startKept) return was.call(this, said); toStart(held, said); }; }
@@ -216,7 +216,7 @@ function start(S: Held): void {
   const h = call('face_new_at', () => hand(state, (p, n) => X!.face_new_at(p, n, slot)));
   if (!h) throw new Error('rust=1: the face made no game (no such slot)');
   S.lightOf = new Map((bookOf(g).listOf('LightId') as Record<string, any>[]).map((l, i) => [i, l])); S.lightsWas = null;
-  S.h = h; S.slot = slot; S.stale = ''; S.uploaded = true; S.ctx = { p: 0 }; S.rows = puppetRows(S.ctx); S.back = false; S.took = false; S.shelfSig = '';
+  S.h = h; S.slot = slot; S.stale = ''; S.uploaded = true; S.ctx = { p: 0 }; S.rows = puppetRows(S.ctx); S.back = null; S.took = false; S.shelfSig = '';
   grown(g);
   S.asks = null;
   apply(S, true);
@@ -333,26 +333,42 @@ function stoodAgain(S: Held, k: number, own?: unknown[]): void {
   whole(S);
   ownPut(g, own);
   RUST_GAME.backMs.whole = performance.now() - t; RUST_GAME.backs++;
-  S.back = true;
 }
 /** A LOAD (savestate.ts loadMem, through SNAPS.put). The controller goes on to write the puppet (this run's counts of saves and loads, the chronicle's
- *  row, the rings put away, a tutorial's program started again: savestate.ts:1124 to 1134): `handBack` takes those across before anything else is asked
- *  of the Rust game. */
-function put(S: Held, k: KeptGame): void { if (S.stale || !S.h) start(S); stoodAgain(S, k.rust, k.own); }
-/** WHAT THE TYPESCRIPT WROTE ON THE PUPPET SINCE A KEPT GAME STOOD AGAIN goes to the Rust game: the puppet, whole since that apply, exported by the bridge
- *  and taken over the game that stands (`face_import_into`: what the bridge does not carry stays as the kept game has it). The Rust game's tables also
- *  take the rows the abandoned moment made after the save, as the bridge's book still names them, so that a row made from here on is a new row on both
- *  sides. Then the filtered export starts over (the long list, which fills what was last sent). */
-function handBack(S: Held): void {
-  S.back = false;
+ *  row, the rings put away, a tutorial's program to be started again: savestate.ts:1124 to 1134): those lines are made on the Rust side too
+ *  (`face_loaded`, in `settle`) before anything else is asked of the Rust game. */
+function put(S: Held, k: KeptGame): void {
+  if (S.stale || !S.h) start(S);
+  const G = S.g as unknown as Record<string, any>, C = G.chronicle?.counts, e = shelfOf(S)?.all().find(x => x.snap === (k as unknown));
+  // (the counts of the moment that is being abandoned: the run's, not the saved moment's. Read before the kept game's are on the puppet.)
+  const back = { label: String(e?.info.label ?? ''), loads: C?.loads | 0, saves: C?.saves | 0 };
+  stoodAgain(S, k.rust, k.own);
+  S.back = back;
+}
+/** WHAT FOLLOWS A LOAD ON THE RUST SIDE, as the controller's own lines have by now run on the puppet: the host's switches as they stand now (the
+ *  controller put them back over the saved moment's), `face_loaded`, and the filtered export started over (the long list, which fills what was last sent
+ *  and brings the chronicle's row to the puppet).
+ *  NOT TAKEN ACROSS: the tune's rows as they stand now (savestate.ts:1129 `Object.assign(g.tune, tune)`): a row of the debugger's changed between the save
+ *  and the load is the saved moment's on the Rust side. One of the writes by path the bridge has no call for yet.
+ *  WHY NOT THE BRIDGE'S OWN EXPORT OF THE PUPPET (`face_import_into`), which would carry every such line: the bridge's book still lists the rows the
+ *  abandoned moment made after the save, and one of them is a beat of a tutorial's program that 'runs' with no place the Rust game ever gave it; the
+ *  import refuses the state (seen on tut-squad: "the beat 'picket' is running"). */
+function settle(S: Held): void {
+  const b = S.back; if (!b || !S.h || S.stale) return;
+  S.back = null;
   const g = S.g, t = performance.now();
-  const mine = exportGame(g, reg());
-  call('face_import_into', () => hand(mine, (p, n) => X!.face_import_into(S.h, p, n))); grown(g);
+  pokes(S);
+  call('face_loaded', () => hand(enc.encode(b.label), (p, n) => X!.face_loaded(S.h, p, n, b.loads, b.saves))); grown(g);
   apply(S, true);
   RUST_GAME.backMs.hand = performance.now() - t;
 }
-/** before anything is asked of the Rust game from outside a step */
-function settle(S: Held): void { if (S.back && S.h && !S.stale) handBack(S); }
+/** THE HOST'S SWITCHES written between ticks (the options' and the pause card's god mode / AI / ammunition rows; the pause card letting go of the launcher's
+ *  held button: host/loop.ts): what differs from what the last apply left goes over by `face_poke` */
+function pokes(S: Held): void {
+  const G = S.g as unknown as Record<string, any>;
+  FLAGS.forEach((k, i) => { if (!!G[k] !== S.flags[i]) { X!.face_poke(S.h, i, G[k] ? 1 : 0); S.flags[i] = !!G[k]; RUST_GAME.pokes++; } });
+  if (S.launch !== null && (G.player?.launchHeld ?? null) === null) { X!.face_poke(S.h, 4, 0); S.launch = null; RUST_GAME.pokes++; }
+}
 /** THE PLAYER'S RESTART: the game kept as the first step opened stands again (`face_back`, one whole apply), the controller begins a new run, the host
  *  forgets what it drew and played of the try that ended (the hook a save put back calls: host/putback.ts, main.ts), and the picture starts over.
  *  WHY NOT THE TYPESCRIPT'S `restartEncounter` ON THE PUPPET, OR THE RUST GAME'S OWN `game_restart`: both make the player's man anew (game.ts:1496
@@ -366,7 +382,7 @@ function toStart(S: Held, said?: string): void {
   if (CLEANRESTART.on) G.messages.length = 0;
   if (said) g.msg(said);
   if (G.saves) G.saves.missionRef = null;   // (the controller's word for 'a fresh run': a new name, an empty shelf, its triggers from nothing. savestate.ts:983)
-  handBack(S); sweep(S);
+  apply(S, true); sweep(S);   // (what the filtered export last sent was forgotten with the game that stood: the long list again)
   try { G.saves?.onPutBack?.({ key: '', slot: 'auto', n: 0, label: 'the start', kind: 'auto', savedAt: 0, missionT: 0, stage: String(G.mission?.stage ?? ''), runId: '', bytes: 0, mem: true }); } catch (e) { RUST_GAME.outThrew['restart.host'] ??= String((e as Error)?.stack ?? e).slice(0, 600); }
   if (CLEANRESTART.on && CLEANRESTART.picture) G.engine?.restartPicture?.('level restarted');
   RUST_GAME.restarts++;
@@ -455,10 +471,7 @@ function step(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
     knobsToRust();
     if (PF.on) { const n = performance.now(); PF.knobs += n - tp; tp = n; }
     { const L = (G.doors?.list ?? []) as Record<string, any>[]; for (let i = 0; i < L.length && i < S.doorKept.length; i++) if (!Object.is(L[i].g(DC.posAngle), S.doorKept[i])) L[i].p(DC.posAngle, NaN); }
-    // THE HOST'S SWITCHES written between ticks (the options' and the pause card's god mode / AI / ammunition rows; the pause card letting go of the launcher's
-    // held button: host/loop.ts): what differs from what the last apply left goes over by `face_poke`
-    FLAGS.forEach((k, i) => { if (!!G[k] !== S.flags[i]) { X!.face_poke(S.h, i, G[k] ? 1 : 0); RUST_GAME.pokes++; } });
-    if (S.launch !== null && (G.player?.launchHeld ?? null) === null) { X!.face_poke(S.h, 4, 0); RUST_GAME.pokes++; }
+    pokes(S);
     // the light probe's answers, as the GPU has handed them back by now
     { const P = G.sensors?.probeOf?.(), Rm: Map<string, number[]> | undefined = P?.results;
       if (Rm && Rm.size) { let n = 4; const keys: Uint8Array[] = []; for (const k of Rm.keys()) { const b = enc.encode(k); keys.push(b); n += 4 + b.length + 24; }
