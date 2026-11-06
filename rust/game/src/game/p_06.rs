@@ -210,6 +210,10 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
         g.pl[pl].hit_flash = m::max(0.0, g.pl[pl].hit_flash - dt * 3.0);
         in_seat(g, s, |g| g.act = None);   // (this frame's Space verb has been read by everyone who reads it)
     }
+    // (game.ts:1720, :1721: the squad's net and the defenders' cues, read off the settled frame. Their books are the same books the rules' own entries
+    //  write (a line said, a cue called), so the step that settles them runs where those do, under its row.)
+    if g.m.dress.dress.net { crate::squadnet::squad_net_tick(g); }
+    if g.m.dress.dress.cues { crate::cues::cues_tick(g); }
     crate::teamtally::team_tally_tick(g);
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
@@ -421,6 +425,8 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     crate::tracers::tracers_update(g, dt, &mut out, Some(px));
     crate::sparks::sparks_update(g, dt);
     crate::sparks::sparks_boxes(g, &mut out);
+    // (game.ts:1822: spent cases heard landing when they are due: the list is the tick's own (a shot adds to it), so the step that empties it is here too)
+    if g.m.dress.dress.cases { crate::particle_fx::update_particle_fx(g); }
     for &s in seats.iter() { in_seat(g, s, |g| crate::blast_look::blast_look_tick(g, &mut out)); }
     // (game.ts:1824: the feel of a wall charge going off; what of it is the tick's is blast_feel's own head)
     if g.m.dress.dress.blast_feel { for &s in seats.iter() { let cam = g.tab.cmd_seat[s].cam; in_seat(g, s, |g| crate::blast_feel::blast_feel_tick(g, cam)); } }
