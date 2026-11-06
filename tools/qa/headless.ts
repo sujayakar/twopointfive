@@ -27,6 +27,17 @@ const { pinned, harnessProfile, shippedBoot } = await import(`${ROOT}/src/host/p
 // THE STAND IS THE PAGE'S (2026-11-05): with no word a tool stands the game as the page opens it (stand.ts, imported above, has written the word down for the
 // tools that read it themselves and for a child, which inherits it). The old stand is one word, TPS_PROFILE=frozen, and a run on it says so (stand.ts).
 if (harnessProfile() === 'shipped') shippedBoot();
+// THE SETTLED ROWS FOLDED (tools/qa/fold.ts): asked for by QA_FOLD=1 or by the word that stands the Rust game, each settled switch row is held at its page value
+// from here on, in this process and (the words are inherited) its children. Said on stderr by the first process of a tree. On the OLD stand nothing is
+// folded: a tool started there says so and takes QA_FOLD out of what its children inherit (the whole run is unfolded, its page-stand arms too); an arm on the
+// old stand under a folded runner is not folded and says nothing (the runner's notice says it once).
+{ const { foldWanted, foldSettled, foldBefore, offAtLayText, settledOf, switchRows, FOLD } = await import('./fold.ts');
+  if (foldWanted()) {
+    if (harnessProfile() !== 'shipped') { if (!process.env.QA_FOLD_SAID) console.error('THE SETTLED ROWS ARE NOT FOLDED: this is the old stand, which is the other side of those rows (QA_FOLD and TPS_GAME ask for the fold on the page\'s stand only)'); process.env.QA_FOLD_SAID ??= 'not folded'; if (process.env.QA_FOLD_SAID === 'not folded') delete process.env.QA_FOLD; }
+    else { const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`), say = !process.env.QA_FOLD_SAID; process.env.QA_FOLD_SAID = 'folded'; foldSettled(knobRegistry(), settledOf(switchRows()), process.env.FOLD_BREAK === '1');
+      const parents = process.env.QA_FOLD_OFF, off = offAtLayText(), more = parents === undefined ? [] : foldBefore(parents); process.env.QA_FOLD_OFF = off;
+      if (say) console.error(`THE SETTLED ROWS ARE FOLDED: ${FOLD.rows} switch rows are held at their value on the page; a write of any other is refused and counted (tools/qa/fold.ts; an arm on the old stand is not folded)${FOLD.skipped.length ? ` · ${FOLD.skipped.length} with a setter of their own left alone` : ''}${FOLD.missing.length ? ` · ${FOLD.missing.length} of the list are not in the tables: ${FOLD.missing.slice(0, 6).join(', ')}` : ''}${off ? ` · stood off its page value as the fold was laid, and reads it from now on: ${off}` : ''}`);
+      else if (more.length) console.error(`THE SETTLED ROWS ARE FOLDED, and this child was given a word its parent was not: ${more.join(', ')} stood off its page value as the fold was laid, and reads it from now on (counted as refused)`); } } }
 /** the stand this file was loaded on. A tool that names its stand (`process.env.TPS_PROFILE ??= 'shipped'`) above a STATIC import of this file names it too late: imports load first, so the pins
  *  were lifted at stand-up and shippedBoot never ran, a stand that is neither of the two. standUp refuses that out loud. */
 const STAND_AT_LOAD: string = harnessProfile();
