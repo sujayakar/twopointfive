@@ -20,7 +20,6 @@
 import '../qa/stand.ts';
 import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 const { exportGame } = await import('./host.ts');
-const { startFacts } = await import('./startfacts.ts');
 const { hostHalf, bookOf } = await import('./export.ts');
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
@@ -91,7 +90,7 @@ for (let i = 0; i < TICKS && !threw; i++) {
   const cmds = P.sample(i); k = i + 1;
   const step = g.stepSeats;
   g.stepSeats = function (this: any, dt: number, c: unknown) {
-    if (k === 1) { g.sim.settle(g); writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g)); writeFileSync(`${outDir}/starts.txt`, startFacts(g, 1) + '\n'); }
+    if (k === 1) { g.sim.settle(g); writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g)); }
     else if (inR(OPEN, k)) writeFileSync(`${outDir}/c${k}.bin`, exportGame(g, reg));
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds));
     appendFileSync(`${outDir}/host.txt`, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : 1}\n`);

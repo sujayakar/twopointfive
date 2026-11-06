@@ -6,8 +6,6 @@
 //                host.txt    a line: dt, the probe's pending, time, the die's count, how often the host listed the box world since the last tick
 //                post.txt    after the tick, a line: `k die_n die_s time <a hash of each part of rust/sim's block, in SIM_PARTS' order>` (line 1 names the parts)
 //   tick 1       c1.bin, s0.bin (the state and the block both sides start from)
-//   starts.txt       a line a START (tick 1, and each checkpoint put back): which pose sets are at home and what each animator holds for its body's
-//                    place, two facts the bridge does not carry (startfacts.ts)
 //   --keep / --every   a<k>.bin, s<k>.bin: the whole state and the block as tick k returns, for diff.ts
 //   --open       c<k>.bin: the whole state as tick k opens (`diff.ts a<k-1>.bin c<k>.bin` then shows what the HOST wrote between two ticks)
 //   charges.txt      a line whenever the number of SET wall charges changed in a tick: `<k> <how many are set>` (where to keep every tick: a set
@@ -23,7 +21,6 @@ import '../qa/stand.ts';
 import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 const { exportGame, bookOf } = await import('./host.ts');
 const { hostHalf } = await import('./export.ts');
-const { startFacts } = await import('./startfacts.ts');
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
 const outDir = arg('--out', ''), TICKS = +arg('--ticks', '1000000'), DIE = +arg('--die', '20942'), EVERY = +arg('--every', '0');
@@ -128,12 +125,12 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   let err: unknown = null;
   g.stepSeats = function (this: any, dt: number, cmds: unknown) {
     if (k === 1) g.sim.settle(g);
-    if (k === 1) { writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g)); writeFileSync(`${outDir}/starts.txt`, startFacts(g, 1) + '\n'); }
+    if (k === 1) { writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g)); }
     else if (inR(OPEN, k)) writeFileSync(`${outDir}/c${k}.bin`, exportGame(g, reg));
     // THE HOST PUT A CHECKPOINT BACK between the last tick and this one (savestate.ts, the host's save controller: a lesson's player went down and the
     // rails asked for it): the whole game is the saved one again. No stepper can follow that from its own state, so the state and the block as THIS tick
     // opens are written (L<k>.bin, Ls<k>.bin) and the runner takes them as a new start before it steps tick k.
-    if (g.chronicle.counts.loads !== loadsSeen) { loadsSeen = g.chronicle.counts.loads; if (k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); appendFileSync(`${outDir}/starts.txt`, startFacts(g, k) + '\n'); } }
+    if (g.chronicle.counts.loads !== loadsSeen) { loadsSeen = g.chronicle.counts.loads; if (k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); } }
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds as any[]));
     if (LESSON) row('meter.txt', meterL, `${g.player.visibility}`);
     row('host.txt', hostL, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}`); uploads = 0;

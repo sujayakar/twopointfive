@@ -89,10 +89,6 @@ fn main() {
     let h = std::thread::Builder::new().stack_size(2 << 30).spawn(move || {
         let skip = |n: &str| skips.iter().any(|s| s == n);
         let (mut g, said) = game_run::start(&a0, &s0, 0);
-        // (the two facts of a start the bridge does not carry, stated by the TypeScript's side: starts.txt; an out folder from before it has none, and
-        //  the start's own assumption stands)
-        let starts: Vec<String> = std::fs::read_to_string(format!("{}/starts.txt", dir)).unwrap_or_default().lines().map(String::from).collect();
-        match starts.iter().find(|l| game_run::line_of(l, 1)) { Some(l) => println!("{}", game_run::start_facts(&mut g, l)), None => println!("START FACTS: none written for tick 1: the start's assumption stands") }
         if g.seats.len() > 1 { println!("a game of {} seats: each tick stepped from a record a seat", g.seats.len()); }
         for l in said { println!("{}", l); }
         let (mut parted, mut spent, mut worst) = (0usize, std::time::Duration::ZERO, std::time::Duration::ZERO);
@@ -108,7 +104,6 @@ fn main() {
                 let (a, s) = (rd(format!("L{}.bin", k)), rd(format!("Ls{}.bin", k)));
                 let (g2, said) = game_run::start(&a, &s, 0);
                 g = g2;
-                match starts.iter().find(|l| game_run::line_of(l, k)) { Some(l) => println!("{}", game_run::start_facts(&mut g, l)), None => println!("START FACTS: none written for tick {}: the start's assumption stands", k) }
                 println!("TICK {}: THE HOST PUT A CHECKPOINT BACK before this tick: the Rust game takes the TypeScript's state as the tick opens as a new start ({} ticks compared since the last start)", k, k - 1 - restarts.last().copied().unwrap_or(1) + 1);
                 restarts.push(k);
                 for l in said { println!("{}", l); }
@@ -152,7 +147,7 @@ fn main() {
             let p = post.get(k - 1);
             let mut off: Vec<&str> = Vec::new();
             if let Some(p) = p { for (i, P) in sim::state::PARTS.iter().enumerate() { if p.get(4 + i).map(|s| s.as_str()) != Some(part_hash(&w[P.off / 4..(P.off + P.len) / 4]).to_string().as_str()) { off.push(NAMES[i]); } } } else { off.push("no line of post.txt"); }
-            // (the pose pool is IN the alarm, like every other part: a start states which sets are at home and what each animator holds, `start_facts`)
+            // (the pose pool is IN the alarm, like every other part: the bridge carries which sets are at home and what each animator holds)
             let same = off.is_empty();
             let die_same = p.map(|p| p[1] == d.n.to_string()).unwrap_or(false);
             if !die_same && die_parted == 0 { die_parted = k; }

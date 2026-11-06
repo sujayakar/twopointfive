@@ -96,9 +96,8 @@ bun run tools/blitz/diff.ts <out>/aK.bin <out>/nK.bin --show 40       # which pa
 The part `poses` is in the alarm like every other part: the pool is tended as a tick opens (`posehome::pose_home_tend`), a ragdoll's pose and a function's
 scratch pose are poses of their own outside the pool on both sides, and a man made inside a tick is lent the pool's end for his update
 (`posehome::stage_open`). A `poses` parting is a difference to chase like any other; it usually means an animator was fed something else a tick earlier
-(the kept tick before it shows `anim.*` paths). Two facts of a start the bridge does not carry are written beside it and STATED by the runner, not
-assumed: which pose sets are at home and what each animator holds for its body's place (`starts.txt`, `startfacts.ts`; the runner's `START FACTS` line
-says how many, and of how many the old assumption would have been wrong).
+(the kept tick before it shows `anim.*` paths). Which pose sets are at home and what each animator holds for its body's
+place come over the bridge (`PoseSet.home`, `Anim.pos_in`).
 
 **The die's count differs**: the two games have drawn a different number of times. Something upstream decided differently; the kept tick before it usually
 shows a path.
@@ -161,7 +160,6 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | stand-in | name | why |
 |---|---|---|
 | a record a seat, every camera and Input row that is no seat's (`io::take_host_half`) | (always) | the host samples input and moves its camera between ticks |
-| which pose sets are at home and what each animator holds for its body's place, at every start (`starts.txt`) | (always) | bridge: `PoseSet.home` and `anim.posIn` (a reference to `Character.pos`) are not carried; the TypeScript side writes the two facts beside each start |
 | the commander's own wall charge (`gives.txt !wall_carried`, `!wall_raised`, with `--wall`) | (always) | the scripted commander gives itself a charge where the kit issued none, between ticks and before the order on the wall |
 | a scripted case's write (`gives.txt !path_new`, `!path_goal_same`, `!f`, with `--case`) | (always) | a write the seeds never make, made on both sides (below) |
 | the test driver's orders (`gives.txt`) | (always) | the scripted player calls `orders.give` between ticks |
