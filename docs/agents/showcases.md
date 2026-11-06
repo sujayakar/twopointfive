@@ -21,7 +21,17 @@ its scene, plays three real floors instead (docs/agents/qa.md 'THE BENCHMARK'). 
   synthetic keys; cuts happen under `fade`; `Guard.hold`/`pinned` are scripted-only flags; `rearm()` must rack a
   round (`chamber=1`); anything that resets guards calls `game.clearAftermath()` first; the hand-over stop calls
   `restartEncounter()` which also restores authored light/door state (`resetLevelState`). Soak the whole tour
-  headlessly after edits (13 stops now, no errors, count `player.hitFlash` spikes — Sam must never be hit). Guards can be
+  headlessly after edits (13 stops now, no errors, count `player.hitFlash` spikes — Sam must never be hit).
+  THE TOUR ON THE PAGE'S STAND (2026-11-06; `tools/qa/tour.ts`, the stand a tool has with no word). It had only ever been read on the old stand, and
+  read on the page's it was 0 of 3 at `stop2-wide`, `stop5-stun` and `stop7-thrown`. All three were the tool's own readings, none the game's: the fire
+  exit does swing wide and both canisters are thrown. (1) The swing was read as the most negative angle, and where doors open one way
+  (`DOORWAY.oneWay`) this leaf goes the positive way: it is now read on the side the leaf has to go (its own where doors open one way, away from his
+  push where they swing both). (2) A throw was read as the count at the cut, which is after the next stop's `rearm()` has topped him up to two and
+  one, and two and one is all the card of the page's stand deals him: it is now the count on the stop's last frame. MEASURED: 3 of 3 on the page's
+  stand and on the old one, two laps on one game 1 of 1, `--selftest` OK. `TOUR_BREAK=1` (the leaf held short of half a radian in stop 2, the
+  script's 4 and its click in the smoke stop eaten) says the three in every run on both stands and exits 1; it exits 3 where one of them is not said
+  (seen with `--abort-at 2`, which never reaches them). NOT REACHED by the break: every other stop's reads. Nobody plays the tour: no key, card or
+  address starts it. Guards can be
   choreographed through `Guard.script` + `src/game/squad.ts` (runner, `order()`, `Sweep`, the `RoomClear` drill) instead of hold/pinned.
 - **The breach drill and the daylight variant** (`src/game/breach.ts BreachDrill`; it was the choreography of the removed DAY showcase and is now run live by the night breach scenario, `game/nightbreach.ts`, and offered to a level script as `drill.breach`). `lighting.ts
   setDaylight(g, on)` swaps `level.daylight` in (a kind-2 sun added to the LightSet, sky / haze / exposure swapped, `groupsOn/Off`, moon out) and

@@ -70,6 +70,7 @@
 //             panes of glass, their doors hung again, stepped both ways from the same rows: every column, the rows' tables, every box, noise, tally and
 //             log line the same bits, and a run fair only if it met everything the step does (a ray through a pane that is gone among them). The
 //             shared numbers are read out of both sources. `missions` and `both` hold it in play where a mission takes a leaf off.
+//   weather   the weather that play reads (rust/sim/src/wind.rs, weather.rs, air.rs, snow.rs): tools/qa/weather-ident.ts — thirteen runs with every answer of the module folded, held to a recording
 //   falls     what falls and what it leaves (rust/sim/src/falls.rs against src/sim/fallshome.ts: the landings the simulation has scheduled and the litter
 //             map of broken glass, a part of the game's block): tools/qa/falls-ident.ts — two hundred thousand rules (schedule past the list's cap, deposit,
 //             the landings due, a footfall's step, the floor told, clear, the row dropped and raised) each taken both ways and against a twin store that
@@ -239,7 +240,7 @@ const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', 
  *  that deletes its twin. */
 const GONE: Record<string, string> = { 'the animator\'s layers': 'layers', 'the senses': 'senses' };
 /** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
-const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'lights', 'doors', 'props', 'slabs', 'items', 'falls', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
+const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'lights', 'doors', 'props', 'slabs', 'items', 'falls', 'weather', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
 GONE['the level\'s lights'] = 'lights';
 const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
 let fails = 0;
@@ -397,16 +398,22 @@ let wordOwn = '', wordRust = '';
 
 // ---- layers
 {
-  const r = child(['bun', 'run', 'tools/qa/layer-ident.ts']);
+  const r = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { TPS_PROFILE: 'shipped' });   // (the family's stand: its recording is the page's)
   const by: Record<string, { asked: number; differ: number }> = marked(r.out, 'LAYER-IDENT ')?.by ?? {}, names = Object.keys(by), row = r.out.split('\n').find(l => /^    \S+:\d+ ends /.test(l));
   red['the animator\'s layers'] = names.length > 0 && names.every(n => by[n].differ > 0);   // (every layer's own word moved against the same run played plain, not one red neighbour's)
-  verdict(r.status === 0 && /=== layer-ident: PASS/.test(r.out), 'layers: every layer of the animator is reached by a mission and its drives and run by the module, and the knobs and named nodes the module reads are the game\'s',
-    row ? row.trim() + (r.status === 0 ? '' : ` · ${r.out.split('\n').filter(l => /^- FAIL/.test(l)).map(l => l.split(':')[0].replace('- FAIL — ', '')).join(', ')} FAILED`) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
-  // (THE PIN: the same tool on the frozen stand, every layer's calls against the recording — tools/qa/ident-pin.ts. The plain run above compares no
-  //  answer; this line is what does. Not asked under the break, whose rule is the one above: every word moved against the run played plain.)
-  if (!BREAK) { const p = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { TPS_PROFILE: 'frozen' }), same = p.out.split('\n').find(l => /^- (PASS|FAIL|RECORDED|NOT HELD) — same:/.test(l));
-    verdict(p.status === 0 && /^- PASS — same: every count and word is that of the recording/.test(same ?? ''), 'layers: on the frozen stand every layer\'s calls fold to the word the recording holds',
-      same ? same.replace(/^- \w+( \w+)? — /, '') + (p.status === 0 ? '' : ` · exit ${p.status}`) : `the pin left nothing (exit ${p.status}): ${(p.err || p.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`); }
+  // (two verdicts of the one run: what the run reached and was handed, and — below — its words against the recording. A recording that moved is the
+  //  second's alone to say, so the first is every line of the tool but `same`; under the break there is no second, and `same` is the first's too.
+  //  A run that died says how, since it left no line of its own)
+  const lines = r.out.split('\n'), failed = lines.filter(l => /^- FAIL — /.test(l)).map(l => l.split(':')[0].replace('- FAIL — ', '')), tail = (r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300);
+  const ended = /^=== layer-ident: /.test(lines.filter(l => l).pop() ?? ''), si = lines.findIndex(l => /^- (PASS|FAIL) — same:/.test(l));
+  const own = BREAK ? failed : failed.filter(f => f !== 'same');
+  verdict(ended && names.length > 0 && own.length === 0, 'layers: every layer of the animator is reached by a mission and its drives and run by the module, and the knobs and named nodes the module reads are the game\'s',
+    row && ended ? row.trim() + (own.length ? ` · ${own.join(', ')} FAILED` : '') : `the run did not end (exit ${r.status}): ${tail}`);
+  // (THE PIN: every layer's calls against the recording, which is of the page's stand and so of the run above — tools/qa/ident-pin.ts. Not asked
+  //  under the break, whose rule is the one above: every word moved against the run played plain.)
+  if (!BREAK) { const same = si >= 0 ? lines[si] : '', what = /^    /.test(lines[si + 1] ?? '') ? lines[si + 1].trim().slice(0, 600) : '';
+    verdict(/^- PASS — same: every count and word is that of the recording/.test(same), 'layers: every layer\'s calls fold to the word the recording holds',
+      same ? `${same.replace(/^- \w+( \w+)? — /, '')}${what ? ` · ${what}` : ''}` : `the run left no line of what its words were held to (exit ${r.status}): ${tail}`); }
 }
 // ---- lights
 {
@@ -576,6 +583,13 @@ let wordOwn = '', wordRust = '';
   { shared++; const max = /max: \[(\d+), \d+, (\d+)\]/.exec(world), min = /min: \[(-?[\d.]+), -?[\d.]+, (-?[\d.]+)\]/.exec(world); if (!max || !min || Number(min[1]) !== 0 || Number(min[2]) !== 0 || Number(max[1]) !== there('CELLS_X') * there('CELL') || Number(max[2]) !== there('CELLS_Z') * there('CELL')) off.push('the cells are not the world\'s floor (scene/world.ts WORLD)'); }
   verdict(r.status === 0 && /=== falls-ident: PASS/.test(r.out) && off.length === 0 && shared >= 22, 'falls: every landing scheduled, every bit of glass laid and every footfall on it is the TypeScript\'s in the Rust module, and the two sides name their numbers alike',
     (row ? row.replace(/^falls-ident: /, '') + '\n' + met : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`) + `\n    ${shared} numbers shared with the Rust source${off.length ? ` — NOT THE SAME: ${off.join(', ')}` : ', each the same'}`);
+}
+
+// ---- weather
+{
+  const r = child(['bun', 'run', 'tools/qa/weather-ident.ts'], { WEATHER_BREAK: BREAK ? '1' : undefined }), last = r.out.trim().split('\n').slice(-1)[0] ?? '';
+  red.weather = r.status === 1;
+  verdict(r.status === 0 && /^PASS — the weather is the module's/.test(last), 'weather: the weather that play reads is the module\'s, every answer of a run held to its recording', (r.out.trim().split('\n').filter(l => /^- (PASS|FAIL)/.test(l)).map(l => l.slice(0, 150)).join('\n    ') || `the check left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`));
 }
 
 // ---- state

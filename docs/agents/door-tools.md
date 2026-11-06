@@ -501,7 +501,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `DOORTOOLS.outsidePlain` is one can a door, on the word too (`thrCans`), not for want of a door: they are now asked with that rule held off after each
   stand-up (`NO_PLAIN` in threshold-probes.ts — a stand that names `TPS_OUTSIDEPLAIN` writes the rule again every stand-up), and a stand that has the rule
   gets a line more, ONE CAN A DOOR at the same dark-pocket door (hall-four seed 1, `front`). Green on frozen, shipped and frozen + `TPS_OUTSIDEPLAIN=1`.
-  TWO STAYED RED on shipped at that step (ONE now: the next bullet's rule turned `threshold-four` green and took its row off), with rows in `EXPECTED_RED_SHIPPED` (tools/qa/expected-red.ts — the list's shipped-only table, new with this step):
+  TWO STAYED RED on shipped at that step (ONE now: the next bullet's rule turned `threshold-four` green and took its row off), with rows in `EXPECTED_RED_SHIPPED` (tools/qa/expected-red.ts — the list's shipped-only table, new with this step; one list, `EXPECTED_RED`, since 2026-11-06):
   `threshold-four`, one run of six (depot-four seed 2 at a_s): a defender's frag lands by the stack mid-hold, all four run from it, the stage's clocks run on
   with its men 6 to 7 m from the frame, thrThrower's last case makes the lead the thrower with no reach asked and `handAt` puts the hand in the doorway — the
   can leaves the door with the thrower 6.6 m away, and he is then first man in. A REAL FAULT, not staging (no staged order reads `fragFlee`): the thrower's
@@ -543,7 +543,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the lead). On: it waits 1.9 / 3.3 s (frozen) and 2.6 / 3.8 s (shipped) and is thrown from 3.0 to 3.9 m by a man who is not the lead. Kept off for
   9 s: 'can waited' at 6.1 s, thrown by the same man as with the rule off. Nobody run off: beat for beat the same with and without. And the journal
   line. The natural run: `threshold-four` on shipped is green again (depot-four seed 2, a_s: the can waits at 16.1 s, goes to Red Two at 18.2, thrown
-  at 18.8; that one seed; its row is off `EXPECTED_RED_SHIPPED`). 10-17: that seed is lost on shipped again since an ordered walk keeps off
+  at 18.8; that one seed; its row is off `EXPECTED_RED_SHIPPED`, which is `EXPECTED_RED` since 2026-11-06). 10-17: that seed is lost on shipped again since an ordered walk keeps off
   lit floor (the stack is called 0.8 s later, and all four are shot on their marks from across the yard by men of other rooms; no grenade; traced by
   that rule's owner, whose 16 seeds of the run lose the whole four 3 times with the walk rule on and 4 with it off). `judge` passes such a run over in
   its four lines about the room and says so in a line of its own, 'A RUN SHOT OFF THE DOOR FROM OUTSIDE THE ROOM': every man of the order lost before

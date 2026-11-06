@@ -6,10 +6,10 @@
 //   bun run tools/qa/layer-ident.ts [--run warehouse-four:1]   exit 0 = every line passes · 1 = one failed (named)
 //   … --against <root>                                         the same run played by another checkout's tool: every layer's count and word the same
 //                                                              (for a change that must not move a pose: the tree before, the tree after; any stand)
-//   TPS_PROFILE=frozen … [--record [--forget]]                 THE PIN: the frozen stand with the animator's own rules raised by name (PIN_RULES below),
-//                                                              where a run's course moves only by the frozen digests' ceremony or with one of those
-//                                                              rules. The words are held to tools/qa/fixtures/layer-words.json; --record writes them
-//                                                              there with the tree they were taken on (tools/qa/ident-pin.ts)
+//   … --record [--forget]                                      THE PIN: the words of this run on the page's stand are held to
+//                                                              tools/qa/fixtures/layer-words.json; --record writes them there with the tree they
+//                                                              were taken on (tools/qa/ident-pin.ts). A rule that moves play moves the run under
+//                                                              the layers and the recording with it: the commit that records again says which
 //   RUST_BREAK=1 bun run tools/qa/layer-ident.ts               the red path: every knob is handed to the module a hundredth large, and so is the first of every
 //                                                              layer's own numbers (a layer that reads no knob has a break of its own). The same run is played
 //                                                              plain by a child, and EVERY layer's word must differ from its own: `same` and `changed` must FAIL
@@ -20,9 +20,9 @@
 //   caps      a size the two languages each write down is one number, and the game's own tables fit what a layer is handed
 //   reach     every layer in LAYERS_MOVED was asked at least FLOOR times in the run and the drives after it (Sam, hands empty, round a standing guard: the
 //             layers of quiet play, which no scripted mission reaches), and nothing was asked under a name that is not in the list
-//             ON THE PIN'S STAND the floor is not asked: a layer that stand does not reach is named, and is held by the red path and --against only
-//   same      every layer's count and word are those of the run it is held to: the recording on the frozen stand, the other checkout's with --against,
-//             the plain child's under RUST_BREAK (where each must DIFFER). With nothing to hold them to (the page's stand, plain) the words are printed
+//   same      every layer's count and word are those of the run it is held to: the recording, the other checkout's with --against, the plain child's
+//             under RUST_BREAK (where each must DIFFER). A run stood otherwise than the recording's (a rule raised or held off by name) FAILS, as NOT HELD,
+//             unless its caller says --unpinned; --to-recording holds it to the recording all the same
 //   blows     the big tool's layer handed the two blows it reads leaves the pose the whole record leaves
 //   changed   a knob changed between two ticks is the module's by the next tick's opening, and back again; one changed outside a tick is the module's at the
 //             next pose made there (a teleport's)
@@ -30,28 +30,15 @@
 //             with a table longer than the module holds (anim/skeleton.ts layerFits), and nothing of that rig is written over the names of the one the
 //             module holds; so is a clip the module cannot take
 // THE BAR IS LOWER THAN IT WAS. Until the TypeScript layers were deleted every call was run in both languages on the same pose and compared; now a layer is
-// held to its own earlier answers. The recording was taken on the last tree where both stood and agreed on every call of this same run.
+// held to its own earlier answers. The first recording was taken on the last tree where both stood and agreed on every call of this same run, on the
+// old (frozen) stand with the animator's rules raised by name. This one is the page's stand's, taken on a tree whose module still gave that first
+// recording's every word on the old stand: it was never compared with the TypeScript call by call.
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
 import { resolve } from 'node:path';
 import { readFileSync, readdirSync } from 'node:fs';
 import { Fold, hold } from './ident-pin';
 const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
-// THE PIN'S STAND (TPS_PROFILE=frozen): the frozen stand with THE ANIMATOR'S OWN RULES RAISED BY NAME. The plain frozen stand holds off the rules that
-// seventeen of the layers are posed under (they are never asked there, and four more hardly), so a recording of it would hold two thirds of them. A word
-// is in this list for the layers written beside it (found by leaving each out in turn, 2026-11-05) and for nothing else: when the rule it raises is
-// retired (its row leaves the frozen stand's holds) the word goes with it. A rule that lands default-on later is NOT added, so the run's course is the
-// frozen stand's but for these, and moves when the frozen digests do or one of these rules changes. NOT REACHED EVEN SO: nvPose and swapPose (both are
-// reached with TPS_MOVES left out, and swapPose with TPS_HANDWORK raised, which loses tellLayer: no one list reaches all sixty-two).
-const PIN_RULES: Record<string, string> = {
-  TPS_MOVES: 'mvPre, mvTrunk, mvPostBody, mvPostArms, toesUp, steadyLayer, handsPass, clutchArm, boundArms, reloadArm, pistolReloadArm',
-  TPS_TURN: 'turnWeigh',
-  TPS_KITANIM: 'kitLayer (a sixth of its calls without), pistolReloadArm, radioPose, smokePose',
-  TPS_GUNHAND: 'torchUpLayer',
-  TPS_SAMLOOK: 'watchLook and watchSlip with a man to look at (without it they are asked for the slip alone, a fiftieth of the calls)',
-  TPS_SAMSLIP: 'watchArm',
-};
-const PIN = process.env.TPS_PROFILE === 'frozen'; if (PIN) for (const w of Object.keys(PIN_RULES)) process.env[w] ??= '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the animator's layers (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts shows a watcher each under */
 const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runArms', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer', 'holdLayer', 'heldLayer', 'catchArm', 'bigLayer', 'throwLayer'], FLOOR = 100;
@@ -61,7 +48,7 @@ const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await impor
 let fails = 0;
 /** under --record: what writes the recording (tools/qa/ident-pin.ts hold), called last and only when nothing failed */
 let RECORD: (() => void) | undefined;
-/** what this run's words were held to ('' = nothing: the page's stand, plain) */
+/** what this run's words were held to ('' = nothing) */
 let HELD_TO = '';
 /** what `f` threw ('' = nothing) */
 const thrown = (f: () => void): string => { try { f(); return ''; } catch (e) { return String((e as Error).message); } };
@@ -410,16 +397,15 @@ async function wallHold(): Promise<void> {
 { const [scn, seed] = (flag('--run') ?? 'warehouse-four:1').split(':');
   SK.LAYERS.watch = watcher;
   const t0 = performance.now(), r = await PT.play(scn, Number(seed), 300, false, {}); await quietWalk(80); await wallHold(); SK.LAYERS.watch = null;
-  const words = FOLD.words(), ran = `${scn}:${seed}`, asked = (n: string) => words[n]?.asked ?? 0, out = LAYERS_MOVED.filter(n => asked(n) === 0);
-  // (the floor of calls a layer is the plain run's: the pin's stand reaches what it reaches, and its recording says which)
-  const thin = PIN ? [] : LAYERS_MOVED.filter(n => asked(n) < FLOOR), stray = Object.keys(words).filter(n => !LAYERS_MOVED.includes(n));
+  const words = FOLD.words(), ran = `${scn}:${seed}`, asked = (n: string) => words[n]?.asked ?? 0, stray = Object.keys(words).filter(n => !LAYERS_MOVED.includes(n));
+  const thin = LAYERS_MOVED.filter(n => asked(n) < FLOOR);
   const whole = !args.includes('--words');
-  if (whole) verdict(thin.length === 0 && stray.length === 0, PIN ? 'reach: no call under a name the tool does not list; a layer the pin\'s stand does not reach is named (the recording holds which are reached)' : 'reach: every layer is reached by the mission and the drives after it, and the module ran each call',
-    `${ran} ends ${String(r.end)}, then a quiet walk of 80 s, four kicks, the reactions, a lean, the wounds, a man kept down, the magazine changes, a free hand's signals and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${words[n]?.asked ?? 0}`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${PIN ? ` · NOT REACHED ON THIS STAND, held by the red path and --against only: ${out.join(', ') || 'none'}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`);
-  // (what the words are held to: a child's plain run under the red path, another checkout's run, or the frozen stand's recording)
+  if (whole) verdict(thin.length === 0 && stray.length === 0, 'reach: every layer is reached by the mission and the drives after it, and the module ran each call',
+    `${ran} ends ${String(r.end)}, then a quiet walk of 80 s, four kicks, the reactions, a lean, the wounds, a man kept down, the magazine changes, a free hand's signals and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${words[n]?.asked ?? 0}`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+  // (what the words are held to: a child's plain run under the red path, another checkout's run, or the recording, which is the page's stand's)
   const h = hold({ root: ROOT, tool: 'tools/qa/layer-ident.ts', fixture: 'layer-words.json', run: ran, runArgs: ['--run', ran], end: String(r.end), words, breakWord: 'RUST_BREAK',
-    // (what is unpinned by design, tools/qa/ident-pin.ts: this family's recording is still the old stand's, and of one mission)
-    unpinned: !PIN ? 'the layers\' recording is the old stand\'s (TPS_PROFILE=frozen) until it is taken again on the page\'s' : flag('--run') && ran !== 'warehouse-four:1' ? 'a run of another mission than the one recorded' : undefined,
+    // (what is unpinned by design, tools/qa/ident-pin.ts: the recording is of one mission)
+    unpinned: flag('--run') && ran !== 'warehouse-four:1' ? 'a run of another mission than the one recorded' : undefined,
     unfit: stray.length ? `a call was watched under a name that is not in LAYERS_MOVED (${stray.join(', ')})` : '', verdict, say: (l: string) => console.log(l) });
   if (!whole) process.exit(0);
   RECORD = h.record; HELD_TO = h.to;
@@ -454,5 +440,5 @@ async function wallHold(): Promise<void> {
     `every pose at home: a slot ${home} · one astray: ${lost || 'NOT REFUSED'} · home again: a slot ${back} · another rig with a table of 65536 numbers: ${said || 'NOT REFUSED'} · the module's named nodes untouched ${kept} · his own tables: a slot ${again} · the character's ${all.length} clips: ${clipSay.length ? clipSay[0] : 'each held'} · a clip of no tracks: ${empty || 'NOT REFUSED'} · one that writes a node past the pose: ${far || 'NOT REFUSED'}`); }
 
 if (RECORD) { if (fails) verdict(false, 'same: the run is recorded', 'NOTHING WRITTEN: a verdict of this run failed, and a recording is the answers of a run that was right'); else RECORD(); }
-console.log(fails ? `=== layer-ident: ${fails} FAILED ===` : `=== layer-ident: PASS — ${PIN ? 'every layer this stand reaches' : 'every layer reached'}${HELD_TO ? ' and its words as held' : RECORD ? ' and its words recorded' : ', its words held to nothing on this stand (the pin is the frozen run)'}, every knob the table's ===`);
+console.log(fails ? `=== layer-ident: ${fails} FAILED ===` : `=== layer-ident: PASS — every layer reached${HELD_TO ? ' and its words as held' : RECORD ? ' and its words recorded' : ', ITS WORDS UNPINNED (by a word: no recording was asked of this run)'}, every knob the table's ===`);
 process.exit(fails ? 1 : 0);
