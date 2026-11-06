@@ -29,9 +29,11 @@ What a rule does that the host has to show or play, as a list the host drains af
 
 ## An arm that changes the game
 
-`CheckpointsRequest` is the one that does, and it is not the picture's: an authored checkpoint of a rails level stops the level's program for the take, so a host that counts and clears it plays on with the program running and parts from the TypeScript 33 ticks later (bringup/host1-log.md 22 and 23). Dispatch it, or take the checkpoint on the Rust side.
+`CheckpointsKeep` and `CheckpointsRequest` do, and they are not the picture's. **They are the Rust game's to carry out, never the puppet's.** The save controller's `tick` on the puppet calls `D.stop(false); g.rails.resume()` on a program it doesn't run, and an authored checkpoint really does stop the level's program for the take, so a host that only counts and clears them parts 33 ticks later (bringup/host1-log.md 22 and 23), and one that runs them on the puppet throws at director.ts:525.
 
-The checker can't show this one (`Checkpoints` is a host object, so `request` writes no game field). What it says of the rest, in `inventory/out-arms.json`: `SessionRecorder.cut` writes the recorder's own counters; `messBurst`, `messOpened`, `messWall` and `bangScorch` write only `StaticCollision`'s query scratch (stamps, trig memo). The other 27 write no game field. Read off the static list, not run.
+**The shape:** set `OUT_HOST.checkpoint = (g, what, e) => ...` in `out-dispatch.ts` and both arms call it. There the host stops the program on the Rust side, takes the state from Rust, and checkpoints on the Rust side, in that order, as your harness now does. The save is Rust's bytes. With no hook set they call `g.saves` as before, which is right only for a game that isn't a puppet. The arm itself carries no more than the words.
+
+The checker can't show this (`Checkpoints` is a host object, so `request` writes no game field). What it says of the rest, in `inventory/out-arms.json`: `SessionRecorder.cut` writes the recorder's own counters; `messBurst`, `messOpened`, `messWall` and `bangScorch` write only `StaticCollision`'s query scratch. The other 26 write no game field. Read off the static list, not run.
 
 ## How it was checked
 - `cargo test --lib out_round` (`OUT_BLOB`, `OUT_FILE`): imports a whole state, calls each generated function once with zero bytes, plays four sounds with each kind of options, and writes a filtered start: 37 events.

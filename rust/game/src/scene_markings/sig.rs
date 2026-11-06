@@ -52,3 +52,8 @@ pub fn secondary_albedo(base: V3, h: V3, marks: &[crate::scene_markings::Marking
 
 /// (src/scene/markings.ts:383 markWorldRect)
 pub fn mark_world_rect(m: &crate::scene_markings::MarkingDef, c_2: V3, h: V3, yaw: f64, texel_base: Option<f64>) -> crate::scene_markings::MarkWorldRect { todo!() }
+
+
+/// INVENTED: AREA_LIT_MARKS asks by the object (markings.ts:369), and in Rust a mark is a value that boxes and lists copy, so its content says which. Picture only
+pub fn mark_key(m: &crate::scene_markings::MarkingDef) -> u32 { let mut k = 0x811c9dc5u32; let mut eat = |b: &[u8]| { for x in b { k = (k ^ *x as u32).wrapping_mul(0x01000193); } }; eat(m.face.as_str().as_bytes()); for v in m.at.iter().chain(m.size.iter()) { eat(&v.to_bits().to_le_bytes()); } for c in &m.cells { eat(c.as_bytes()); } k }
+

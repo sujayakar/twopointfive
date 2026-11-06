@@ -41,7 +41,7 @@ The blobs are real Rust output: TypeScript state imported into Rust, then filter
 
 A row and a struct field inside it are filtered: only what the list names. **A value inside a list, an Option or a map goes whole**, every carried field. Lists are read by place, so if `[A, B]` loses `A`, `A`'s object takes `B`'s values. With only the listed fields, it would keep `A`'s others and read wrong with no error. Rows made in a step were whole already.
 
-**The list is the page's and the harness's.** `puppet-fields.json` holds what the page reads, and also what the scripted player's files read (`harness-fields.json`: 19 files of tools/qa, 12 fields by type and 62 by name, written by inventory.cjs). A field neither reads never moves on the puppet.
+**The list is the page's and the harness's.** `puppet-fields.json` holds what the page reads and what the scripted player's files read. inventory.cjs writes `harness-fields.json` (by name) and `harness-typed.json` (by type): the harness's files are written against `any`, so the inventory reads them with the common names typed (an arrow's `any` dropped, the game's, a man's and a door order's named), which found 212 fields a watcher reads that it had missed. `harness-digest.json` is what digest.ts reads directly. The counters (`g.stats`) are not on it: they come on the whole apply.
 
 | room-clear-four, frames 1200 to 1206 | bytes a step | Rust export | TypeScript apply, warm |
 |---|---:|---:|---:|

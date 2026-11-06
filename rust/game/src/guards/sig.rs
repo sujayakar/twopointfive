@@ -610,3 +610,8 @@ pub fn end_engagement(g: &mut crate::game::Game, outcome: crate::guards::EndEnga
 
 /// (src/game/guards.ts:3576 tickEngagement)
 pub fn tick_engagement(g: &mut crate::game::Game) { todo!() }
+
+
+/// INVENTED, beside game::guard_set_path: `gd.pathGoal = goal` and what says it is a new object (guards.ts:1163 `gd.pathGoal !== S.orbitGoal`)
+pub fn guard_set_path_goal(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>) { todo!() }
+

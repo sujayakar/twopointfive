@@ -10,7 +10,7 @@
 //   `only`: fields not named are read past; a struct is entered only if it holds a named one. The bytes are still walked: what bounds the cost of a tick is what Rust chooses to export.
 //
 // AN ECHO (schema `echo`, hand2.cjs H.bridge.echo): a field Rust owns that the TypeScript cannot hold (a place in a level script, a memo a module keeps where the walk cannot write it, the copy of the box world in the module that
-// holds it). A whole apply keeps its bytes beside the object and writes nothing; the puppet's export writes those bytes back (export.ts). So a re-export after an apply is Rust's bytes everywhere, and such a field needs no class of its own in a host's compare.
+// holds it). A whole apply keeps a copy of its bytes beside the object and writes nothing; the puppet's export writes those bytes back (export.ts). So a re-export after an apply is Rust's bytes everywhere, and such a field needs no class of its own in a host's compare.
 import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS } from './export';
 import { rawKey, PUT_BACKS } from '../../src/math/side';
 
@@ -25,6 +25,7 @@ type N = any;
 const isTyped = (v: any) => ArrayBuffer.isView(v) && !(v instanceof DataView);
 const isSide = (v: any) => v && typeof v.liveKeys === 'function';
 const FRESH = Symbol('fresh');
+const NUMERIC = new Set(['f64', 'f32', 'u8', 'i8', 'u16', 'i16', 'u32', 'i32', 'usize', 'u64', 'i64']);
 const differs = (a: unknown, b: unknown) => !Object.is(a, b) && !(a == null && b == null);
 
 // ---- reading past a value
@@ -49,7 +50,7 @@ function fixedWidth(n: N): number { let w = W.get(n); if (w !== undefined) retur
 const armType = (T: any, a: number): string | null => T.k === 'data' ? T.vars[a].ty ?? null : (T.arms[a].match(/\((.*)\)/)?.[1] ?? null);
 
 // ---- a field's way back, decided once
-type Way = { kind: 'ref' | 'assign' | 'self' | 'path' | 'default' | 'top' | 'knob' | 'serial' | 'inverse' | 'skip' | 'none'; path?: string[]; dflt?: unknown; file?: string; name?: string; side?: string; fn?: Inverse };
+type Way = { kind: 'ref' | 'assign' | 'self' | 'path' | 'default' | 'top' | 'topField' | 'knob' | 'serial' | 'inverse' | 'skip' | 'none'; path?: string[]; dflt?: unknown; file?: string; name?: string; side?: string; fn?: Inverse; words?: string[]; zeroed?: boolean };
 type Ctx = { g: any; B: any; BK: any; fix: (() => void)[]; R: Report; read: (n: N, cur: any) => any; sk: (n: N) => void; I: { p: number }; dv: DataView };
 type Inverse = (o: any, v: any, c: Ctx) => void;
 const skipField: Inverse = () => {};
@@ -68,6 +69,7 @@ const INVERSE: Record<string, Inverse> = {
   'nightbreach::NightBreach.bang_by': (o, v) => { o.bangBy = v ? v.view.doorTools : null; },
   // a cut is a new array. A count that moved says so; the array's numbers came in place just before, in this row. The seat's mark is the host's own unless Rust has taken the cut itself (a restart on its side)
   'camera::FollowCamera.desired_serial': (o, v) => { const r = LENS.get(o); if (!r) { LENS.set(o, { arr: o.desired, n: v }); return; } if (r.n !== v) { o.desired = [o.desired[0], o.desired[1], o.desired[2]]; r.n = v; } r.arr = o.desired; },
+  'kitanim::KitanimStats.nv': (_o, v) => { const Q = (globalThis as any).__tpsTop?.['src/game/kitanim.ts']?.KITANIM_STATS?.nv; if (Q) { Q.hand = v.get(true) ?? 0; Q.nod = v.get(false) ?? 0; } },
   'cmd::Seat.mark': (o, v, c) => { c.fix.push(() => { const r = o.cam && LENS.get(o.cam); if (r && r.n === v) o.mark = o.cam.desired; }); },
   'chronicle::Chronicle.heard_of': (o, v, c) => { c.fix.push(() => { const T = o.heardOf; const put = (k: object, r: unknown) => T.set(k, r); if (T.clear) T.clear(); else for (const k of T.liveKeys()) T.delete(k); for (const [s, i] of v as Map<number, number>) put(objOfSerial(c, s), o.events[i]); }); },
   'fogofwar::FogOfWar.fired_n': (o, v, c) => { const T = o.firedN; const L = c.BK.listOf('RoomfightOpId'); const want = new Map<object, number>(); for (const [i, n] of v as Map<number, number>) want.set(L[i], n); for (const k of T.liveKeys()) if (!want.has(k)) T.delete(k); for (const [k, n] of want) T.set(k, n); },
@@ -86,6 +88,8 @@ const bySerial = new WeakMap<object, Map<number, object>>();
 function serialIs(c: Ctx, o: object, s: number) { const BK = c.BK; const old = BK.serial.get(o); if (old === s) return; BK.serial.set(o, s); serialMap(BK).set(s, o); if (s >= BK.nextSerial) BK.nextSerial = s + 1; }
 function serialMap(BK: any): Map<number, object> { let M = bySerial.get(BK); if (!M) { bySerial.set(BK, M = new Map()); const O = BK.serialOfObjects?.(); if (O) for (const [k, v] of O) M.set(v, k); } return M; }
 function objOfSerial(c: Ctx, s: number): object { const M = serialMap(c.BK); let o = M.get(s); if (!o) { o = { deadSerial: s }; c.R.deadSerials++; M.set(s, o); c.BK.serial.set(o, s); } return o; }
+const AFTER_APPLY: ((g: any) => void)[] = (SCHEMA.afterApply as string[] ?? []).map(e => new Function('g', e) as (g: any) => void);
+const ROW_BYTES = new WeakMap<object, Uint8Array>(); const sameBytes = (a: Uint8Array | undefined, b: Uint8Array) => { if (!a || a.length !== b.length) return false; for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return false; return true; };
 const wayCache = new Map<string, Way>();
 function wayOf(q: string, f: any): Way { let w = wayCache.get(q); if (w) return w; const e: string | undefined = f.expr; let m: RegExpMatchArray | null;
   if (INVERSE[q]) w = { kind: 'inverse', fn: INVERSE[q] };
@@ -95,6 +99,9 @@ function wayOf(q: string, f: any): Way { let w = wayCache.get(q); if (w) return 
   else if ((m = e.match(/^o((?:\.[A-Za-z_$][\w$]*|\["[^"]+"\])+)$/))) w = { kind: 'path', path: [...m[1].matchAll(/\.([A-Za-z_$][\w$]*)|\["([^"]+)"\]/g)].map(x => x[1] ?? x[2]) };
   else if ((m = e.match(/^o\.([A-Za-z_$][\w$]*) \?\? (.+)$/))) w = { kind: 'default', path: [m[1]], dflt: JSON.parse(m[2]) };
   else if ((m = e.match(/^B\.top\("([^"]+)", "([^"]+)", "([^"]*)"\)$/))) w = { kind: 'top', file: m[1], name: m[2], side: m[3] };
+  else if ((m = e.match(/^B\.top\("([^"]+)", "([^"]+)", "([^"]*)"\)\.([\w$]+)$/))) w = { kind: 'topField', file: m[1], name: m[2], side: m[3], path: [m[4]] };
+  else if ((m = e.match(/^B\.keysOf\(B\.top\("([^"]+)", "([^"]+)", "([^"]*)"\)\.([\w$]+), (\[.*\])\)$/))) w = { kind: 'topField', file: m[1], name: m[2], side: m[3], path: [m[4]], words: JSON.parse(m[5]) };
+  else if ((m = e.match(/^B\.nonZero\(B\.top\("([^"]+)", "([^"]+)", "([^"]*)"\)\.([\w$]+)\)$/))) w = { kind: 'topField', file: m[1], name: m[2], side: m[3], path: [m[4]], zeroed: true };
   else if (/^B\.knob\(/.test(e)) w = { kind: 'knob' };
   else if (e === 'B.serialOf(o)') w = { kind: 'serial' };
   else w = { kind: 'none' };
@@ -158,7 +165,8 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
       case 'str': { const L = dv.getUint32(I.p, true); I.p += 4; const s = DEC.decode(blob.subarray(I.p, I.p + L)); I.p += L; return cur === undefined && s === '' ? undefined : s; }
       case 'unit': return undefined;
       case 'opt': { const t = blob[I.p++]; if (isSide(cur)) { const K = cur.liveKeys(); if (!(n.of.k === 'map' && n.of.K.k === 'id') && n.of.k !== 'set') { const at = K.includes(G) ? G : K[0] ?? G; if (!t) { cur.delete(at); return cur; } const v = read(n.of, cur.get ? cur.get(at) ?? FRESH : true); if (cur.set) cur.set(at, v); else if (cur.add) cur.add(at); return cur; } if (!t) { for (const k of K) cur.delete(k); return cur; } if (!K.length && n.of.k === 'map' && dv.getUint32(I.p, true) === 0) { I.p += 4; cur.set(G, new Map()); return cur; } return read(n.of, cur); } if (!t) return n.of.k === 'opt' || cur === undefined ? undefined : null; if (n.of.k === 'opt') { if (!blob[I.p++]) return null; return read(n.of.of, cur === null || cur === undefined ? FRESH : cur); }   /* Option<Option<T>>: None is undefined, Some(None) is null (kitanim.ts, doortools.ts) */ return read(n.of, cur === null || cur === undefined ? FRESH : cur); }
-      case 'vec': { const L = dv.getUint32(I.p, true); I.p += 4; if (isTyped(cur)) { const a = cur.length === L ? cur : new cur.constructor(L); for (let i = 0; i < L; i++) a[i] = readN(n.of); return a; } if (cur === null || cur === undefined) { if (!L) return cur; cur = n.of.k === 'f32' ? new Float32Array(L) : n.of.k === 'u8' ? new Uint8Array(L) : n.of.k === 'i32' ? new Int32Array(L) : n.of.k === 'u32' ? new Uint32Array(L) : []; if (isTyped(cur)) { for (let i = 0; i < L; i++) cur[i] = readN(n.of); return cur; } }
+      case 'vec': { const L = dv.getUint32(I.p, true); I.p += 4; if (isTyped(cur)) { const a = cur.length === L ? cur : new cur.constructor(L); for (let i = 0; i < L; i++) a[i] = readN(n.of); return a; } if (cur === null || cur === undefined) { if (!L && cur === null) return cur; cur = n.of.k === 'f32' ? new Float32Array(L) : n.of.k === 'u8' ? new Uint8Array(L) : n.of.k === 'i32' ? new Int32Array(L) : n.of.k === 'u32' ? new Uint32Array(L) : []; if (isTyped(cur)) { for (let i = 0; i < L; i++) cur[i] = readN(n.of); return cur; } }
+        if (n.of.k === 'type' && SCHEMA.keyedRows?.[n.of.path]) { const a = cur as any[], was = a.slice(), used = new Set<any>(); for (let i = 0; i < L; i++) { const p0 = I.p; sk(n.of); const B0 = blob.subarray(p0, I.p); let x = was.find(o => !used.has(o) && sameBytes(ROW_BYTES.get(o), B0)); if (x) { used.add(x); a[i] = x; continue; } I.p = p0; x = read(n.of, FRESH); ROW_BYTES.set(x, blob.slice(p0, I.p)); used.add(x); a[i] = x; } a.length = L; return a; }
         const ser = serialField(n.of); const a = cur as any[]; const was = ser ? a.slice() : null; for (let i = 0; i < L; i++) { let x = a[i] === undefined ? FRESH : a[i]; if (ser) { const s = peekSerial(n.of, ser); const hit = serialMap(BK).get(s); x = hit ?? (x === FRESH || (was!.includes(x) && BK.serial.get(x) !== s) ? FRESH : x); } a[i] = read(n.of, x); } a.length = L; return a; }
       case 'arr': { if (pup && !pup.start && !SCHEMA.inPlace?.[curQ] && Array.isArray(cur) && fixedWidth(n.of) >= 0 && n.of.k !== 'type') { const a: any[] = new Array(n.n); let same = cur.length === n.n; for (let i = 0; i < n.n; i++) { a[i] = read(n.of, FRESH); if (same && !Object.is(a[i], cur[i])) same = false; } return same ? cur : a; }   // (a step does not visit every holder of a shared array: a changed one is a new one, as in the compiled rows)
         if (cur && typeof cur.length === 'number') { if (n.of.k === 'f64') { for (let i = 0; i < n.n; i++) { const v = dv.getFloat64(I.p, true); I.p += 8; if (!Object.is(v, cur[i])) cur[i] = v; } return cur; } for (let i = 0; i < n.n; i++) { const v = read(n.of, cur[i] ?? FRESH); if (!Object.is(v, cur[i])) cur[i] = v; } return cur; } const a: any[] = []; for (let i = 0; i < n.n; i++) a[i] = read(n.of, FRESH); return a; }
@@ -178,13 +186,13 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
     if (K.k === 'f64') { const v = dv.getFloat64(I.p, true); I.p += 8; if (curMap && !(curMap instanceof Map) && !isSide(curMap) && !(curMap instanceof Set)) return String(v); const first = firstKey(curMap); return typeof first === 'string' ? String(v) : v; }
     return read(K, undefined); }
   const keysIn = (m: any): unknown[] => m instanceof Map ? [...m.keys()] : m instanceof Set ? [...m] : isSide(m) ? m.liveKeys() : m && typeof m === 'object' ? Object.keys(m) : [];
-  function readMap(n: N, cur: any): any { const L = dv.getUint32(I.p, true); I.p += 4; if (cur === null || cur === undefined) { if (!L) return cur; cur = new Map(); } const keys: any[] = [], vals: any[] = [];
+  function readMap(n: N, cur: any): any { const L = dv.getUint32(I.p, true); I.p += 4; if (cur === null || cur === undefined) { if (!L && cur === null) return cur; cur = new Map(); } const keys: any[] = [], vals: any[] = [];
     for (let i = 0; i < L; i++) { const k = keyOf(n.K, cur); keys.push(k); vals.push(read(n.V, mapGet(cur, k))); }
     if (cur instanceof Map) { const now = [...cur.keys()]; if (now.length === L && now.every((k, i) => k === keys[i])) { for (let i = 0; i < L; i++) if (cur.get(keys[i]) !== vals[i]) cur.set(keys[i], vals[i]); } else { cur.clear(); for (let i = 0; i < L; i++) cur.set(keys[i], vals[i]); } return cur; }
     if (isSide(cur)) { const want = new Set(keys); for (const k of cur.liveKeys()) if (!want.has(k)) cur.delete(k); for (let i = 0; i < L; i++) if (keys[i] && typeof keys[i] === 'object') cur.set(keys[i], vals[i]); orderSide(cur, keys); return cur; }
     if (typeof cur === 'object') { const want = new Set(keys.map(String)); for (const k of Object.keys(cur)) if (!want.has(k)) delete cur[k]; for (let i = 0; i < L; i++) cur[keys[i]] = vals[i]; return cur; }
     return cur; }
-  function readSet(n: N, cur: any): any { const L = dv.getUint32(I.p, true); I.p += 4; if (cur === null || cur === undefined) { if (!L) return cur; cur = new Set(); } const keys: any[] = []; for (let i = 0; i < L; i++) keys.push(keyOf(n.K, cur));
+  function readSet(n: N, cur: any): any { const L = dv.getUint32(I.p, true); I.p += 4; if (cur === null || cur === undefined) { if (!L && cur === null) return cur; cur = new Set(); } const keys: any[] = []; for (let i = 0; i < L; i++) keys.push(keyOf(n.K, cur));
     if (cur instanceof Set) { const now = [...cur]; if (!(now.length === L && now.every((k, i) => k === keys[i]))) { cur.clear(); for (const k of keys) cur.add(k); } return cur; }
     if (isSide(cur)) { const want = new Set(keys); for (const k of cur.liveKeys()) if (!want.has(k)) cur.delete(k); for (const k of keys) if (k && typeof k === 'object') cur.add(k); orderSide(cur, keys); return cur; }
     if (typeof cur === 'object') { for (const k of Object.keys(cur)) delete cur[k]; for (const k of keys) cur[k] = true; return cur; }
@@ -204,20 +212,22 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
   let curQ = '';
   /** one field of a struct, its bytes next */
   function readField(T: any, P: Plan, o: any) { const { f, q, N } = P; curQ = q;
-      if (f.echo) { const p0 = I.p; sk(N); if (!pup) { let E = ECHO.get(o); if (!E) ECHO.set(o, E = new Map()); E.set(q, { b: blob, p0, p1: I.p }); } return; }
+      if (f.echo) { const p0 = I.p; sk(N); if (pup && N.k === 'type') return;   /* (a struct on a filtered apply came filtered: only whole bytes are an echo. A list, an Option or a map goes whole) */ let E = ECHO.get(o); if (!E) ECHO.set(o, E = new Map()); const e0 = E.get(q), L0 = I.p - p0; if (!e0 || e0.length !== L0 || !sameBytes(e0, blob.subarray(p0, I.p))) E.set(q, blob.slice(p0, I.p)); return; }
       const w = P.way ??= wayOf(q, f);
       switch (w.kind) {
         case 'ref': { const key = w.path![0]; const has = N.k === 'opt' ? blob[I.p++] : 1; let v = 0; if (has) { v = dv.getUint32(I.p, true); I.p += 4; } const cur = o[key];   // (the object of that serial, once every serial of this apply stands: a row later in the walk may be the one that names it)
           if (typeof cur === 'number') { if (cur !== v) o[key] = v; break; } c.fix.push(() => { o[key] = v ? objOfSerial(c, v) : (o[key] === undefined ? undefined : null); }); break; }
-        case 'assign': { const key = w.path![0]; const cur = o[key]; const v = read(N, cur === undefined && fresh.has(o) ? FRESH : cur); if (N.k === 'opt' && N.of.k === 'opt' ? !Object.is(v, cur) : differs(v, cur)) { R.counts.assign++; try { o[key] = v; } catch { R.noSetter.set(q, (R.noSetter.get(q) ?? 0) + 1); } } break; }
+        case 'assign': { const key = w.path![0]; const cur = o[key]; if (f.none && N.k === 'opt' && !blob[I.p]) { I.p++; if (f.keepNone && cur) break; const v = f.none === 'null' ? null : undefined; if (!Object.is(cur, v)) o[key] = v; break; }   // (None, as this field's type says it: a reader tests the one it admits, boxes.ts:841 `b.marks !== undefined`)
+  const v = read(N, f.rec && (cur === undefined || cur === null) ? {} : cur === undefined && fresh.has(o) ? FRESH : cur); if (N.k === 'opt' && N.of.k === 'opt' ? !Object.is(v, cur) : differs(v, cur)) { R.counts.assign++; try { o[key] = v; } catch { R.noSetter.set(q, (R.noSetter.get(q) ?? 0) + 1); } } break; }
         case 'self': readStruct(SCHEMA.types[N.path], o); break;
         case 'path': { let h = o; const P = w.path!; for (let i = 0; i < P.length - 1; i++) { h = h?.[P[i]]; } if (h === null || h === undefined) { sk(N); break; } const key = P[P.length - 1]; const cur = h[key]; const v = read(N, cur); if (differs(v, cur)) { try { h[key] = v; } catch { R.noSetter.set(q, (R.noSetter.get(q) ?? 0) + 1); } } break; }
         case 'default': { const key = w.path![0]; const cur = o[key]; const v = read(N, cur === undefined ? w.dflt : cur); if (cur !== undefined || JSON.stringify(v) !== JSON.stringify(w.dflt)) o[key] = v; break; }
         case 'top': { const T0 = (globalThis as any).__tpsTop?.[w.file!]; const V = B.varOf(w.side!); const cur = T0 && w.name! in T0 ? T0[w.name!] : V ? V.get() : B.rootOf(w.side!); if (cur === undefined && !V && !(T0 && w.name! in T0)) { R.noWindow.add(w.side!); sk(N); break; } const v = read(N, cur); if (differs(v, cur)) { if (V) V.set(v as never); else if (T0 && Object.getOwnPropertyDescriptor(T0, w.name!)?.set) T0[w.name!] = v; else { const k = `module ${w.side}: no setter`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); } } break; }
+        case 'topField': { const T = (globalThis as any).__tpsTop?.[w.file!]?.[w.name!]; if (!T || typeof T !== 'object') { R.noWindow.add(w.side!); sk(N); break; } const key = w.path![0]; if (w.zeroed) { const Q = T[key], v: Map<any, number> = read(N, new Map()); for (const k of Object.keys(Q)) Q[k] = 0; for (const [k, x] of v) Q[k] = x; break; } if (w.words) { const Q = T[key], v = read(N, w.words.map((k: string) => Q[k])); w.words.forEach((k: string, j: number) => { Q[k] = v[j]; }); break; } const cur = T[key]; const v = read(N, cur); if (differs(v, cur)) T[key] = v; break; }
         case 'knob': sk(N); break;
         case 'skip': sk(N); break;
         case 'serial': { const s = dv.getUint32(I.p, true); I.p += 4; serialIs(c, o, s); break; }
-        case 'inverse': { const v = read(N, N.k === 'map' ? new Map() : undefined); w.fn!(o, v, c); break; }
+        case 'inverse': { const v = read(N, N.k === 'map' ? new Map() : NUMERIC.has(N.k) ? 0 : undefined); w.fn!(o, v, c); break; }   // (a number stands whatever it is: read over nothing a 0 reads as nothing, and the first man's row is 0)
         default: R.noWay.set(q, (R.noWay.get(q) ?? 0) + 1); sk(N); }
   }
   function readStruct(T: any, o: any) { for (const P of planOf(T)) { const K = keep; if (DEBUG && I.p > blob.length) throw new Error('past the end at ' + curQ); if (K && (pup || !fresh.has(o))) { if (!K.field(P.q, P.f.ty)) { if (!pup) sk(P.N); continue; } if (!K.desc(P.N)) { keep = null; I.K = null; readField(T, P, o); keep = K; I.K = pup ? K : null; continue; } } readField(T, P, o); } }
@@ -236,6 +246,7 @@ export function applyGame(g: any, blob: Uint8Array, knobs: Record<string, unknow
     (R as any).lastT = performance.now(); for (const { t, at, N, whole, entries } of heads) { if (!entries) continue; I.p = at; const L = BK.listOf(t.id); const fast = !pup.start && pup.rows?.[t.id]; if (DEBUG) process.stderr.write(`table ${t.id} at ${at}, ${entries} entries\n`); for (let e = 0; e < entries; e++) { const row = dv.getUint32(I.p, true); I.p += 4; if (row >= whole) { const K = keep; keep = null; I.K = null; read(N, L[row]); keep = K; I.K = K; continue; } if (fast) fast(L[row]); else read(N, L[row]); } if (PROF) { const nw = performance.now(); (R.phases as any)['t:' + t.ts] = nw - (R as any).lastT; (R as any).lastT = nw; } } }
   else for (const { t, n, at, N } of heads) { if (keep && !keep.desc(t.ty) && !(c as any)[`made:${t.id}`]) continue; I.p = at; const L = BK.listOf(t.id); const made = new Set((c as any)[`made:${t.id}`] ?? []); for (let i = 0; i < n; i++) { if (keep && !made.has(L[i]) && !keep.desc(t.ty)) { sk(N); continue; } read(N, L[i]); } }
   const t5 = performance.now(); R.phases.tables = t5 - t4; for (const f of c.fix) f();
+  for (const f of AFTER_APPLY) f(g);
   // ---- what the export keeps at the end
   I.K = null; BK.nextSerial = serialNext; I.p = tail; const nl = dv.getUint32(I.p, true); I.p += 4; if (!pup) BK.loose.clear();
   for (let i = 0; i < nl; i++) { const nodes = dv.getUint32(I.p, true); I.p += 4; const len = dv.getUint32(I.p, true); I.p += 4; const p: any = looseOrder[i]; if (p) { if (!p.own || p.own.length !== len) p.own = new Float32Array(len); p.home = null; for (let k = 0; k < len; k++) p.own[k] = dv.getFloat32(I.p + 4 * k, true); p.numNodes = nodes; BK.loose.set(p, i); } I.p += 4 * len; }

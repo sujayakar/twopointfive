@@ -30,17 +30,8 @@ fn export(h: u32, start: bool, spoil: bool) -> Vec<u8> {
     // (a row or a field with no bytes on the every-tick list is never sent, and stays so)
     if spoil { for v in memo.top.iter_mut().chain(memo.rows.iter_mut().flatten()) { if !v.is_empty() { v.push(0xff); } } }
     let b = super::with(h, |x| game::puppet::export_puppet(&x.g, &mut memo, start));
-    trim(&mut memo);
     MEMO.with(|m| m.borrow_mut().insert(h, memo));
     b
-}
-
-/// STAND-IN: THE MEMO KEEPS THE EXPORT'S SCRATCH BUFFERS. `export_puppet` hands a row's bytes to the memo by `mem::take` / `mem::swap` of its scratch
-/// vector, whose capacity is whatever the largest thing written before it took (megabytes on a level with a snow field), so every new or changed row
-/// kept a buffer that size: pass-four's module stood at 1.6 GB after 1,000 ticks (139 MB when the same ticks are replayed without the export) and
-/// passed 2 GB at tick 1,600. Here every kept vector is cut to what it holds. Belongs in the generated export (a row's bytes copied into the memo).
-fn trim(memo: &mut PuppetMemo) {
-    for v in memo.top.iter_mut().chain(memo.rows.iter_mut().flatten()) { if v.capacity() > v.len() + (v.len() >> 2) + 64 { v.shrink_to_fit(); } }
 }
 
 #[no_mangle]

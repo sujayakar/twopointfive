@@ -175,6 +175,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
                         m::max(0.1, m::min(m::sqrt(st.area / m::PI), m::min(r.hu, r.hv) + 0.02)), 0.0, on, i0, true,
                         if bi < 4096.0 && k < 4 { Some(((js::to_i32(bi) << 2) | k as i32) as f64) } else { None });
                     g.tab.sim_lightshome_fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::sim_lightshome::FixtureAreaLightsItem { light, base: i0 });
+                    g.m.scene_markings.area_lit_marks.add(crate::scene_markings::mark_key(mk));
                     g.mark_lights.push(crate::game::GameMarkLightsItem { target: name.clone(), box_: bi, face: String::from(mk.face.as_str()), pos: v3::mad(r.centre, n, 0.07), i0, area: st.area, mean_l: st.mean_l });
                 }
             }

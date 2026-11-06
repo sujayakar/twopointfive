@@ -150,9 +150,6 @@ pub fn pose_home_tend(g: &mut crate::game::Game) {
 // own, and takes his poses back into arrays of his own as the update shuts. Here the stage is the END OF THE GAME'S OWN POOL for the length of the
 // update: his poses go in past what is in use, and as it shuts they come out into the rows they came from and the pool is as it was, to the byte.
 
-/// what `stage_open` lent, for `stage_shut`
-pub struct Stage { set: PoseSetId, live: u32, back: Vec<(Pose, Pose)> }
-
 /// The update of a man whose set is not at home opens: his poses into the pool's end, his handles on them, and the set told it stands (a pose it
 /// makes during the update is made there). None: the set is at home and nothing is lent.   (skeleton.ts stageOpen)
 pub fn stage_open(g: &mut Game, c: CharId) -> Option<Stage> {
