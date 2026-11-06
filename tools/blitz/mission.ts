@@ -68,7 +68,7 @@ function hashes(w: Uint32Array): number[] {
   return LAY.map(({ off, len }) => { let n = Math.min(off + len, w.length); while (n > off && w[n - 1] === 0) n--; let h = 0x811c9dc5; for (let i = off; i < n; i++) h = Math.imul(h ^ w[i], 0x01000193); return h >>> 0; });
 }
 let k = 0, n = 0, uploads = 0, loadsSeen = 0, chargesSet = 0; const gives: string[] = [];
-for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt', 'charges.txt', ...(LESSON ? ['meter.txt'] : [])]) writeFileSync(`${outDir}/${f}`, '');
+for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt', 'charges.txt', 'meter.txt']) writeFileSync(`${outDir}/${f}`, '');
 const { SCHEMA } = await import('./export.ts'); const wordAt = (ty: string, w: unknown) => w === undefined ? -1 : SCHEMA.types[ty].words.indexOf(w);
 writeFileSync(`${outDir}/post.txt`, `parts ${SIM_PARTS.join(' ')}\n`);
 // A LINE A TICK of host.txt and post.txt, by the tick's number. The host can step the game TWICE in one frame (a checkpoint put back: the save controller
@@ -119,7 +119,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     // pick was written as a lesson's `select_verb` already.
     if (k > 1 && !LESSON && g.player.nearSel !== selAfter) appendFileSync(`${outDir}/hostwrites.txt`, `${k} near_sel ${g.player.nearSel}\n`);
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds as any[]));
-    if (LESSON) row('meter.txt', meterL, `${g.player.visibility}`);
+    row('meter.txt', meterL, `${g.player.visibility}`);   // (a mission's scripted player writes the meter before every tick too, playthrough.ts:779: the same number every tick, until a restart makes the player anew)
     row('host.txt', hostL, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}`); uploads = 0;
     const saves0 = g.chronicle.counts.saves;
     try { return step.call(this, dt, cmds); } finally {

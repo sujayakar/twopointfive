@@ -14,6 +14,29 @@ pub fn view_key(g: &mut crate::game::Game) -> PlayerId {
     if g.in_cast { CAST_KEY } else { g.player }
 }
 
+/// A SEAT'S MAN IS MADE ANEW (a restart): every table kept per view moves its row from the man who left to the man who stands in his place.
+/// The TypeScript keys these tables by the VIEW (seats.ts SEAT_TABLES, the eighteen named there), which a restart does not replace, so what a module
+/// kept for the seat is kept across it (the rear watch's book and its log, the squad's throws). Here a view's key is its seat's man (`view_key`), and a
+/// new man is a new key: without this every such module began again at a restart. The rows keep their order in each table; a row already under the
+/// new man (none is made before this is called) gives way to the seat's own.
+pub fn view_rekey(g: &mut crate::game::Game, old: PlayerId, new: PlayerId) {
+    fn rekey<V>(m: &mut crate::js::JsMap<PlayerId, V>, old: PlayerId, new: PlayerId) {
+        if old == new || !m.has(old) { return; }
+        m.delete(new);
+        let mut rows: Vec<(PlayerId, V)> = Vec::new();
+        for k in m.keys() { if let Some(v) = m.delete(k) { rows.push((if k == old { new } else { k }, v)); } }
+        m.clear();
+        for (k, v) in rows { m.set(k, v); }
+    }
+    let m = &mut g.m;
+    rekey(&mut m.blast_feel.state, old, new); rekey(&mut m.blast_look.state, old, new); rekey(&mut m.close.state, old, new);
+    rekey(&mut m.guards.ground_track, old, new); rekey(&mut m.holdfire.states, old, new); rekey(&mut m.player.light_at, old, new);
+    rekey(&mut m.rearwatch.books, old, new); rekey(&mut m.samlook.state, old, new); rekey(&mut m.showwhy.states, old, new);
+    rekey(&mut m.silent.seats, old, new); rekey(&mut m.silent.states, old, new); rekey(&mut m.squad40.states, old, new);
+    rekey(&mut m.squadsmoke.states, old, new); rekey(&mut m.squadthrow.states, old, new); rekey(&mut m.stalk.state, old, new);
+    rekey(&mut m.tapstep.state, old, new); rekey(&mut m.unseen.states, old, new); rekey(&mut m.wandorder.states, old, new);
+}
+
 /// one seat's SEAT_KEYS fields and Game's, changed over
 fn swap_set(g: &mut Game, o: &mut SeatSet) {
     use core::mem::swap;
