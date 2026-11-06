@@ -142,7 +142,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   true = the `fallIn` order) · `thrHandsOff` false (true: the step-in-by-itself form gets no held page — `heldOn`) · `thrHeldAll` false (true: with the four the held page only
   when every addressed man holds) · `thrMenuWord` true (false: the pair's F with a menu up that is NOT the held door's own is not the word and falls through to whatever else F is
   — in the room clear that is the drill, which takes the men off the door). `ROOMFIGHT.rallyK` 1 (× `FIGHT_SKILL.*.rallyChance` in `rally()`; the dice are drawn either way, so 1
-  is the game as it was and 0 = nobody leaves his room). `FOG.lastSeen` 0 s (fogofwar.ts `lastSeen()` → a thin fading '(?)' where an enemy now out of the picture was last
+  is the game as it was and 0 = nobody leaves his room. READ 2026-11-06, for this row's owner: `rally()` returns before the knob for a squad's man, and the
+  page deals the rooms' men of a level with no squads block into squads (`squaddeal.ts`), so on the page `rally` and `rallyK` move nothing there; `calls-rally`
+  asks the knob on the floor run as one pool, and holds the dealt floor to nobody going on his own — measured on the pair's floor, one seed). `FOG.lastSeen` 0 s (fogofwar.ts `lastSeen()` → a thin fading '(?)' where an enemy now out of the picture was last
   seen, `.marker.lastseen` in overlay.ts + the native overlay; HUD only, nobody's AI reads it; 0 = off = as shipped — the ready answer if the game reads too hard without enemy
   lasers). Changing a shipped value here moves the scripted tallies and `threshold-identity`: pin the old value in tools/qa/threshold-probes.ts as the rescue part did.
 - **Rescue with goggles on (10-06;** record rebuild/away-build/rescue-goggles.md): the scripted office rescue fell from 22 to 4 of 24 once the team had
