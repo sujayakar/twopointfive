@@ -22,15 +22,7 @@
 //!                                      (an Option that is None is NaN). Belongs in the filtered export (RtLight and LightSet.lights on its lists).
 //!   face_poke(h, what, v) -> 1 | 0     a host's switch written between ticks, by number: 0 god mode · 1 the AI on · 2 infinite ammunition · 3 the
 //!                                      player unseen · 4 the launcher's held button let go unsent (the pause card: host/loop.ts). `v` != 0 = on.
-//!   face_reserve(bytes)                room asked for and given back, so that the allocator holds it and a step need not grow the memory
 //!   face_mem() -> bytes                the module's memory now (a host holds its typed arrays to this: a memory that grew has detached them)
-use std::cell::RefCell;
-
-thread_local! {
-    /// what `face_puppet` last sent, a game: by handle
-    static MEMOS: RefCell<Vec<game::puppet::PuppetMemo>> = const { RefCell::new(Vec::new()) };
-}
-
 /// # Safety
 /// `state`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
@@ -43,21 +35,8 @@ pub unsafe extern "C" fn face_new_at(state: *const u8, n: usize, slot: usize) ->
     let (g, said) = game_run::start(super::bytes(state, n), &block, slot);
     super::out(said.join("\n").into_bytes());
     let h = super::put(super::Held { g, cmd: None, cmds: None, after: Vec::new() });
-    MEMOS.with(|m| { let mut m = m.borrow_mut(); while m.len() <= h as usize { m.push(Default::default()); } m[h as usize] = Default::default(); });
+    crate::memo::forget(h);
     h
-}
-
-#[no_mangle]
-pub extern "C" fn face_puppet(h: u32, start: u32) {
-    let mut memo = MEMOS.with(|m| { let mut m = m.borrow_mut(); while m.len() <= h as usize { m.push(Default::default()); } core::mem::take(&mut m[h as usize]) });
-    let b = super::with(h, |x| { let b = game::puppet::export_puppet(&x.g, &mut memo, start != 0); x.g.out.clear(); b });
-    MEMOS.with(|m| m.borrow_mut()[h as usize] = memo);
-    super::out(b);
-}
-
-#[no_mangle]
-pub extern "C" fn face_reserve(bytes: usize) {
-    drop(Vec::<u8>::with_capacity(bytes.max(1)));
 }
 
 #[no_mangle]
