@@ -1,7 +1,8 @@
 // THE MISSION LOOP THROUGH WASM (tools/blitz/FACE.md): the Rust game's face (rust/game_face, one wasm module) stepped through a whole mission in bun, beside
 // what the TypeScript side of the loop wrote (mission.ts: the start, the host's half every tick, a hash of each part of rust/sim's block and the die's count
 // after every tick). The same checks the native runner makes (rust/game_run bin `mission`), by the same lines round a step (rust/game_run/src/lib.rs).
-//   bun run tools/blitz/wasm-run.ts <dir> [ticks] [--wasm FILE] [--two] [--one-call] [--js-every N] [--quiet]
+//   bun run tools/blitz/wasm-run.ts <dir> [ticks] [--wasm FILE] [--two] [--one-call] [--reserve MB] [--max-mb N] [--js-every N] [--quiet]
+//   bun run tools/blitz/wasm-run.ts --ts-time <mission>:<seed>   the TypeScript tick's own time for the same play (nothing written, no module loaded)
 //   bun run tools/blitz/wasm-run.ts --exports [--wasm FILE]      the module's exports beside the shipped simulation's (src/sim/built.ts): missing, extra, same
 // <dir> is a folder run.sh / mission.ts filled (c1.bin, s0.bin, h<k>.bin, host.txt, post.txt, gives.txt, hostwrites.txt, knobs.bin). The mission is not played again.
 // AFTER EVERY TICK the die's count and each part's hash are held to post.txt's line; the first tick a part other than `poses` parts is the stop (`poses` parts
@@ -9,12 +10,33 @@
 // also taken HERE over the module's memory in place, through face_part_addr / face_part_len, and the two must agree.
 //   --two        a second game from the same start in the module's next slot, stepped after the first every tick and held to the same lines
 //                (--second-first: the second game is stepped before the first every tick, to tell a slot's fault from a fault of whoever steps second)
+//   --reserve MB a run of memory asked of the module and freed before the start: does the memory then still grow inside a tick (FACE.md, memory)
+//   --max-mb N   stop, still in step, once the module's linear memory is over N MB (every made box is a row for good: a long mission nears wasm32's 4 GB)
 //   --one-call   face_step with UPLOAD and LIGHTS as its flags: the one call a tick of a host that plays. The lights' update then runs before the hashes are
 //                taken (the TypeScript's are taken before its host's), so a part that update writes may differ: such a part is named once and left out
 // Exit: 0 in step · 1 the block or the die parted · 2 the Rust tick panicked (its words are printed) · 3 a file is missing or the module does not stand.
 import { readFileSync, existsSync } from 'node:fs';
 const argv = process.argv.slice(2), has = (n: string) => argv.includes(n), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
+if (has('--ts-time')) {
+  // THE TYPESCRIPT TICK'S OWN TIME FOR THE SAME PLAY: the mission stood up and played as mission.ts does (the page's stand, every DRESS row down, the game's
+  // own die, the poses settled before the first tick) with nothing written, and the clock read round `stepSeats` alone: the call `game_step` is the translation of.
+  await import('../qa/stand.ts');
+  const { Game } = await import('../../src/game/game.ts'), { play } = await import('../qa/playthrough.ts'), { newDice } = await import('../../src/math/dice.ts'), { dressAll } = await import('../../src/game/dress.ts');
+  const [scn, seed] = arg('--ts-time', '').split(':'); let k = 0, spent = 0, worst = 0, worstAt = 0, die = -1;
+  const was = Game.prototype.update;
+  Game.prototype.update = function (this: any, ...a: any[]) {
+    const g = this, step = g.stepSeats; k++;
+    if (k === 1) dressAll(false);
+    if (k === 1 && !g.dice) g.dice = newDice(20942);
+    g.stepSeats = function (this: any, dt: number, cmds: unknown) { if (k === 1) g.sim.settle(g); const t = performance.now(); try { return step.call(this, dt, cmds); } finally { const el = performance.now() - t; spent += el; if (el > worst) { worst = el; worstAt = k; } die = g.dice?.n ?? -1; } };
+    try { return (was as any).apply(this, a); } finally { delete g.stepSeats; }
+  } as any;
+  const log = console.log, er = console.error, wn = console.warn; let res: any = null;
+  try { res = await play(scn, +(seed ?? 1), 300, false, {}); } finally { console.log = log; console.error = er; console.warn = wn; }
+  say(`TypeScript: ${scn}:${seed ?? 1} played out at tick ${k} (${res?.end}); the die's count at the end ${die}; the tick (stepSeats alone): mean ${(spent / Math.max(1, k)).toFixed(3)} ms, worst ${worst.toFixed(1)} ms at tick ${worstAt}`);
+  process.exit(0);
+}
 const WASM = arg('--wasm', new URL('../../rust/game_face/target/wasm32-unknown-unknown/debug/game_face.wasm', import.meta.url).pathname);
 if (!existsSync(WASM)) { say(`wasm-run: no module at ${WASM} (cd rust/game_face && cargo build --target wasm32-unknown-unknown)`); process.exit(3); }
 const bytes = readFileSync(WASM);
@@ -45,6 +67,7 @@ if (has('--exports')) {
 
 const dir = argv[0];
 if (!dir || dir.startsWith('--') || !existsSync(`${dir}/c1.bin`)) { say('wasm-run.ts <dir of a mission.ts run> [ticks] [--wasm FILE] [--two] [--one-call] [--js-every N] [--quiet]   |   wasm-run.ts --exports'); process.exit(3); }
+const MAX_MB = +arg('--max-mb', '0');
 const QUIET = has('--quiet'), TWO = has('--two'), ONE = has('--one-call'), JS_EVERY = +arg('--js-every', '100');
 const text = (n: string) => existsSync(`${dir}/${n}`) ? readFileSync(`${dir}/${n}`, 'utf8') : '', lines = (n: string) => text(n).split('\n').filter(Boolean);
 const post = lines('post.txt').map(l => l.split(' ')), head = post.shift() ?? [];
@@ -69,6 +92,8 @@ function outside(slot: number): number[] {
   return NAMES.map((_, i) => { const off = X.face_part_addr(slot, i) >>> 2; let n = off + (X.face_part_len(i) >>> 2); while (n > off && w[n - 1] === 0) n--; let h = 0x811c9dc5; for (let j = off; j < n; j++) h = Math.imul(h ^ w[j], 0x01000193); return h >>> 0; });
 }
 
+// --reserve MB: room asked for and given back before the game is made, so the allocator holds it and a tick need not grow the memory to find it
+{ const mb = +arg('--reserve', '0'); if (mb > 0) { const n = mb * 1048576, p = X.face_alloc(n); X.face_free(p, n); say(`wasm-run: ${mb} MB asked for and given back; memory ${(mem.buffer.byteLength / 1048576).toFixed(1)} MB`); } }
 const start = readFileSync(`${dir}/c1.bin`), block = readFileSync(`${dir}/s0.bin`);
 say(`wasm-run: rust/sim's block is ${X.state_len()} bytes here, ${block.length} in s0.bin; layout word ${X.state_layout() >>> 0}; the start ${start.length} bytes`);
 const UPLOAD = 1, LIGHTS = 2;
@@ -125,6 +150,7 @@ try {
           say(`  \`${n}\` of the other game and of this game differ in ${nd} words (byte in the part: the other / this): ${d.join(', ')}`); } }
     }
     done = k;
+    if (MAX_MB > 0 && mem.buffer.byteLength > MAX_MB * 1048576) { say(`TICK ${k}: the module's memory is ${(mem.buffer.byteLength / 1048576).toFixed(0)} MB, over --max-mb ${MAX_MB}: stopped here, in step so far (${X.face_rows(games[0])} rows of the box table)`); break; }
   }
   const S = st[0], bad = st.some(s => s.parted || s.dieParted);
   say(`${bad ? 'STOPPED' : 'DONE'}: ${done} ticks through wasm${TWO ? ', two games' : ''}${ONE ? ', one call a tick' : ''}; the die's count ${st.every(s => !s.dieParted) ? 'the same after every tick' : `FIRST PARTED AT TICK ${st.map(s => s.dieParted)}`}; the block without \`poses\`${S.left.size ? ' and `lights`' : ''} ${st.every(s => !s.parted) ? 'the same after every tick' : `PARTED AT TICK ${st.map(s => s.parted)}`}; \`poses\` ${S.poolParted ? `parted at tick ${st.map(s => s.poolParted)}` : 'the same after every tick'}`);

@@ -3,6 +3,10 @@
 //! native runner calls), and rust/sim is linked in, so ITS exports (`sim_abi`, `state_addr`, `pose_addr` … rust/sim/src/lib.rs) are this module's too, over
 //! the same memory: there is one block of rust/sim's a game, the one the Rust game steps.
 //!
+//! WHY rust/sim's EXPORTS ARE HERE WITH NO LINE THAT RE-EXPORTS THEM: a crate's `#[no_mangle]` functions are exports of the final cdylib whenever that
+//! crate is in the link at all, and a crate is in the link when some line of some linked crate names it (this file names `sim::state`, and so does the
+//! crate `game`). A dependency that stands in Cargo.toml and is named by no line is not loaded, and its exports are silently absent.
+//!
 //! EVERY EXPORT, C ABI (a pointer and a length are `usize`, a handle `u32`, a flag `u32`):
 //!
 //! memory
@@ -151,6 +155,9 @@ pub extern "C" fn face_blank() -> u32 {
     let Some(slot) = free_slot() else { return 0 };
     let mut g = Box::new(Game::blank());
     g.sim = slot;
+    // (a block with nothing in it is zeros under the layout's word: whatever game stood in the slot before is gone)
+    unsafe { core::ptr::write_bytes(sim::state::addr(slot) as *mut u8, 0, core::mem::size_of::<sim::state::State>()); }
+    sim::state::state(slot).head.layout = sim::state::LAYOUT;
     put(Held { g, cmd: None, after: Vec::new() })
 }
 #[no_mangle]
