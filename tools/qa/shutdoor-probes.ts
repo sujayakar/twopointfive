@@ -199,10 +199,10 @@ export const shutdoorRefuse = guarded(async () => {
     const h = R3.hostiles.find((x: any) => x.state !== 'dead'); for (const o of R3.hostiles) if (o !== h) { o.char.pos[0] = 6; o.char.pos[2] = 30; o.dazzledUntil = 1e9; }
     const F = frame(d3), far = pt(d3, F.W / 2, -faceOf(d3, R3.ops[0].char.pos) * 2.6);   // inside the room, on the far face from the corridor men
     h.char.pos[0] = far[0]; h.char.pos[2] = far[2]; h.dazzledUntil = 1e9; h.god = true;
-    const sees = R3.until(() => g3.fight.seenBy(h).length > 0, 6);
+    const t0 = g3.time, sees = R3.until(() => g3.fight.seenBy(h).length > 0, 6), first = g3.fight.seenBy(h).map((x: any) => x.callsign).join(' + '), seenAt = g3.time - t0;
     const r = row3(R3, d3), w = R3.O.give(SHUT_ID, R3.O.targetAt(d3.frameCentre));
     verdict(sees && r.id === SHUT_ID && !!r.row?.off && /contact through that door/.test(r.why ?? '') && /contact through that door/.test(w ?? ''), 'a defender the team has in sight through the doorway: contact through that door',
-      `${h.callsign} at ${at(h.char.pos)} seen by ${g3.fight.seenBy(h).map((x: any) => x.callsign)} · row 3: ${r.id}${r.row?.off ? ' (greyed)' : ''} "${r.why}" · give: "${w}"`); }
+      `${h.callsign} at ${at(h.char.pos)} · ${sees ? `first in sight ${seenAt.toFixed(2)} s on (${first})` : 'NEVER IN SIGHT in 6 s (the staging)'} · in sight as the row was read, ${(g3.time - t0 - seenAt).toFixed(2)} s later: ${g3.fight.seenBy(h).map((x: any) => x.callsign).join(' + ') || 'NOBODY'} · row 3: ${r.id}${r.row?.off ? ' (greyed)' : ''} "${r.why}" · give: "${w}"`); }
   // a body in its swing
   { const R4 = await rig(5, { keep: true }); const g4 = R4.game, d4 = R4.door('breakroom_w'); g4.teleportPlayer(SAM_W); R4.stand(WEST); prop(d4); R4.step(5);
     const F = frame(d4), c = d4.def.closedDir + d4.angle / 2, p = [F.hx + Math.cos(c) * F.W * 0.6, 0, F.hz + Math.sin(c) * F.W * 0.6];
