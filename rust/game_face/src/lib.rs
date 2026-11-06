@@ -220,6 +220,13 @@ pub extern "C" fn face_debug(h: u32) {
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
+pub unsafe extern "C" fn face_write(h: u32, p: *const u8, n: usize) {
+    let b = bytes(p, n);
+    with(h, |x| game::io::poke(&mut x.g, b));
+}
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
 pub unsafe extern "C" fn face_ask(h: u32, kind: u32, row: u32, seat: u32, p: *const u8, n: usize) {
     let b = bytes(p, n);
     let a = with(h, |x| game::io::ask(&mut x.g, kind, row, seat, b));

@@ -40,7 +40,7 @@ fn seam_write_mat_buf(g: &mut Game, offset: f64, data: &[f32], bytes: f64) {
 }
 /// `AREA_LIT_MARKS.has(m)`, a set of MarkingDef objects by identity (boxes.ts:534). Reached only from repackMarkings, which no Rust part calls.
 fn seam_area_lit(g: &mut Game, m: &crate::scene_markings::MarkingDef) -> bool {
-    todo!("needs: a serial on MarkingDef (AREA_LIT_MARKS is a JsSet<u32> and a MarkingDef has no number to ask it with)")
+    g.m.scene_markings.area_lit_marks.has(crate::scene_markings::mark_key(m))
 }
 
 /// A piece of the picture, which no game ray meets. (boxes.ts lookKeyed)

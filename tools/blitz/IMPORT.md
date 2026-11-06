@@ -35,12 +35,30 @@ Those times are for whole states with several processes running. `only` with the
 
 ## An echo
 
-A field Rust owns and TypeScript can't hold (`schema` marks it `echo`; hand2.cjs `H.bridge.echo` is the list) isn't written onto the puppet. A whole apply keeps its bytes beside the object and the puppet's export writes them back, so a re-export after an apply is Rust's bytes everywhere and such a field needs no class in a host's compare.
+A field Rust owns and TypeScript can't hold (`schema` marks it `echo`; hand2.cjs `H.bridge.echo` is the list) isn't written onto the puppet. A whole apply keeps a copy of its bytes beside the object (so a blob that is a view of the module's memory is safe) and the puppet's export writes them back, so a re-export after an apply is Rust's bytes everywhere and such a field needs no class in a host's compare.
 
-Today: `Game.door_owns`, `AnimGltfMod.nvg_bits` and `suit_bits`, `WallBreak.listeners`, `ClipSide.at`, `StaticCollision.mirror`, `Mods.scene_box_mirror`, `WallreactMod.wall_react`, `LiveBeat.it`, `LiveBeat.waiting`.
+Today: `Game.door_owns`, `AnimGltfMod.nvg_bits` and `suit_bits`, `WallBreak.listeners`, `ClipSide.at`, `StaticCollision.mirror`, `Mods.scene_box_mirror`, `WallreactMod.wall_react`, `LiveBeat.it`, `LiveBeat.waiting`, and every `blank` field (`H.bridge.blank`: fields only Rust has, carried as a counted blob; the TypeScript's walk writes none, and an import keeps what stands).
 
 A filtered apply doesn't keep echoes, so a filtered host hands nothing back whole. If TypeScript does write such a field on the puppet, the write is lost silently: that is what makes it Rust's.
 
 ## A reference by serial
 
 A field holding an object's identity (`schema.serial`, a `u32` or `Option<u32>` with a TypeScript name) now takes its object after the whole walk, so a row later in the walk can be the one that names it, and it works where the puppet's field was null. `Lesson.run === g.mission` holds on a puppet by this.
+
+## What a None is
+
+The walk writes `Option<T>`, and in the TypeScript a None is `null` or `undefined` by the field's type: `none` in the schema says which, read off the checker where only one is admitted. A field that admits both goes by what stands there: `undefined` stays, anything else becomes `null`. `Option<Option<T>>` is exact: None is `undefined`, Some(None) is `null`.
+
+An empty list, map or set read over `undefined` makes an empty container: the field's type says it holds one. Read over `null` it stays `null`.
+
+A map that is a plain object in the TypeScript (`rec` in the schema: `ChronEvent.data`, `Character.bones`) is made as a plain object, not a `Map`, so `e.data?.method` reads what it should.
+
+A seat's record (`Seat.own`, `keepNone`): Rust holds no record for the seat that stands in the game, whose fields are the game's own. The TypeScript keeps one for every seat and its `Game` reads through it (seats.ts), so None leaves the record standing and the game's fields are written through it.
+
+## The counters
+
+`g.stats.<module>` is on the WHOLE walk, written into the module's table (`*_STATS`, by `B.top`), each row by name: a table's rows by a word where Rust holds a fixed array go by `B.keysOf`, and a `JsMap` by `B.nonZero` (a word Rust never counted stays in the table at 0). They are not on the every-tick list. The glass's counters are the host's rows plus the wasm's tally (`stats_as_counted`), as `GB_STATS` is on the TypeScript's side.
+
+## After an apply
+
+`schema.afterApply` lines run after every apply. Today one: `cleared.builtFor` follows `roomOfCell`. A memo's key the bridge doesn't carry makes a question on the puppet rebuild the memo, and that build writes the game's own count (cleared.ts: `this.known = 0`).

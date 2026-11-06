@@ -148,3 +148,6 @@ pub fn cols_table_get(t: &crate::anim_skeleton::ColsTable, ch: &crate::character
 /// INVENTED, for LayerCols.put (skeleton.ts:95): reads that table's columns of this man back from from[o..]; see cols_table_get.
 pub fn cols_table_put(t: &crate::anim_skeleton::ColsTable, ch: &mut crate::character::Character, from: &[f64], o: usize) { todo!() }
 
+/// INVENTED: a pose of its own, finished with (a function's scratch: the TypeScript's array, left to the collector): the row goes if it is the last of g.loose_poses
+pub fn pose_done(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose) { todo!() }
+
