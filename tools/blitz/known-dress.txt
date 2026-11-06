@@ -12,3 +12,5 @@
 ^g\.destr\.blast_listeners(\.len$|\[)	picture (row `snow`): the snow's own listener on a blast (snowBlast.ts:119 `onBlast`: a blast digs the drawn snow). The Rust tick calls `snow_blast_at` by name where a blast is told, and it is a boundary no-op
 ^g\.cues\.bubbles\.len$	picture (row `recap`): see the next line
 ^g\.cues\.bubbles\{GuardId\(c\d+\)\}$	picture (row `recap`): a teammate's word over his head for which side a shot came from (deathrecap.ts:312 `cues.aside`, from recapTick). The bubbles are read by the HUD (ui/bubbles.ts) and by the recap itself; known only where the TypeScript has a row and the Rust none	ts:^\(a rs:^\(absent\)$
+^g\.stats\.deathrecap\.(deaths|takes|known|calls)$	picture (row `recap`): the death recap's own counts, made in recapTick (deathrecap.ts:197, :235, :309, :312), a step that stays in the dress step
+^g\.stats\.wind\.to_smoke$	picture (row `wind`): counted where the smoke system takes the wind (wind.ts:282 `if (S.setWind)`: the solver has it, the headless smoke has not). The Rust tick hands the wind over a boundary and cannot ask who is behind it, so it counts every hand-over

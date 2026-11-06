@@ -195,6 +195,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::glassbreak::glass_break_update(g, dt);
     crate::shards::glass_shards_update(g, dt);
     crate::fogofwar::fog_of_war_update(g, dt);
+    if g.m.dress.dress.fires { crate::fire::fire_draws(g); }   // (game.ts:1709: the fires' draws again behind the fog's turn; the Rust body makes only its asks of the wind)
     // characters: the seats' men, the guards, civilians last
     let mut all: Vec<CharId> = Vec::new();
     for &s in &seats { let c = man_char(g, s); all.push(c); }
