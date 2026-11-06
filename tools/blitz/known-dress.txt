@@ -1,0 +1,14 @@
+# THE KNOWN DIFFERENCES WITH THE DRESSING ROWS UP (run.sh --dress; read with known.txt): what a dressing step of the TypeScript writes that only the
+# picture reads, and that the Rust tick therefore does not write (the step stays in the page's dress step, src/host/rustdress.ts). The same form as
+# known.txt; a third column narrows a line by the two values (diff.ts). Each line names the step and who reads what it writes.
+^g\.rig_fits(\.len$|\{)|^g\.rig_fit_of(\.len$|\{)	picture (row `men`): the round-cone fit of each drawn man by what he wears, solved for the renderer's SDF rig (game.ts drawMen, `draw` true). Read by the engine alone (`engine.setRigFit`); the Rust tick deals what each wears and stops there
+^g\.engine\.weather\.phase$	picture (row `rain`): the particle rain's phase words on the engine's weather block (rainFx.ts updateRainFx, frame.weatherE). Read by the renderer alone
+^g\.tab\.boxes\[c\d+\]\.wet_k$	picture (wetGround.ts follow, read inside under the row `wetGround`): how dark a wet static draws. Read by the box world's pack for the GPU (scene/boxes.ts sentAlbedo); no rule reads it	rs:^None$
+^g\.tab\.boxes\[c\d+\]\.flags$	picture (wetGround.ts follow): the Gloss bit of a wet static with a film on it, the renderer's own bit (BoxFlag.Gloss, the reflection ray); known only where the two words differ in that bit and no other	bits:128
+^g\.tab\.boxes\[c\d+\]\.rough$	picture (wetGround.ts follow): a wet static's finish (WET_ROUGH, aniso true). Read by the pack for the GPU, and copied into a piece cut from that box (wallbreak.ts:366), a picture field there too; known only where the TypeScript holds the wet finish	ts:^0\.22(\s|$)
+^g\.tab\.boxes\[c\d+\]\.aniso$	picture (wetGround.ts follow): as `rough` above	ts:^true
+^g\.snow_tracks\.|^g\.snow_field\.	picture (row `snow`): the lying snow as one surface and what boots, bodies and blasts press into it (game.ts syncSnowLook, stepSnowTracks; snowTracks.ts, render/snowField.ts). The renderer's height field; no rule reads it (by reading: the fog is ASKED by it, fogofwar.ts spotSeen, and is told nothing)
+^g\.fog_of_war\.thing_stats\.tests$	picture (row `snow`): a count of how often the fog was asked whether the team sees a spot (fogofwar.ts spotSeen); the snow's tracks ask it for every square a hidden man crosses
+^g\.destr\.blast_listeners(\.len$|\[)	picture (row `snow`): the snow's own listener on a blast (snowBlast.ts:119 `onBlast`: a blast digs the drawn snow). The Rust tick calls `snow_blast_at` by name where a blast is told, and it is a boundary no-op
+^g\.cues\.bubbles\.len$	picture (row `recap`): see the next line
+^g\.cues\.bubbles\{GuardId\(c\d+\)\}$	picture (row `recap`): a teammate's word over his head for which side a shot came from (deathrecap.ts:312 `cues.aside`, from recapTick). The bubbles are read by the HUD (ui/bubbles.ts) and by the recap itself; known only where the TypeScript has a row and the Rust none	ts:^\(a rs:^\(absent\)$

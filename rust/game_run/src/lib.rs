@@ -109,6 +109,18 @@ pub fn give(g: &mut game::game::Game, k: usize, l: &str) -> String {
         match w[1] {
             "!wall_carried" => game::wallcharge::wall_charge_set_carried(g, n),
             "!wall_raised" => game::wallcharge::wall_charge_raise_carried(g, n.unwrap_or(0.0)),
+            // A SCRIPTED CASE'S WRITE (mission.ts `--case`): the write a rule of the TypeScript makes, made here through the Rust game's own setter; with
+            // BLITZ_CASE_RAW set, made as the Rust made it BEFORE the mend (no setter: the array's serial not bumped, the orbit's flag left up)
+            "!path_new" => {
+                let gd = g.guards[n.unwrap_or(0.0) as usize];
+                if std::env::var_os("BLITZ_CASE_RAW").is_some() { g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None; }
+                else { game::game::guard_set_path(g, gd, Vec::new()); game::guards::guard_set_path_goal(g, gd, None); }
+            }
+            "!path_goal_same" => {
+                let gd = g.guards[n.unwrap_or(0.0) as usize];
+                if std::env::var_os("BLITZ_CASE_RAW").is_none() { let p = g.gd[gd].path_goal; game::guards::guard_set_path_goal(g, gd, p); }
+            }
+            "!f" => { game::nightbreach::night_breach_order(g); }
             _ => return format!("  NOTE tick {}: a write of the driver's this runner does not know: {}", k, l),
         }
         return format!("  the driver's write before tick {}: {}", k, l);

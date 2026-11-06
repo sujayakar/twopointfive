@@ -62,6 +62,26 @@ function dressStand() { dressAll(false); if (!DRESS_WORD) return;
   if (DRESS_WORD === 'all') { dressAll(true); return; }
   for (const r of DRESS_WORD.split(',')) { if (!(r in DRESS)) { say(`mission.ts: --dress knows ${Object.keys(DRESS).join(', ')}, not '${r}'`); process.exit(64); } (DRESS as any)[r] = true; } }
 class Stop extends Error {}
+// A SCRIPTED CASE (`--case pie | orbit | boot`): a write BETWEEN TWO TICKS that the missions' seeds never make, so that a place mended by reading is
+// reached by a run. Each is a line of gives.txt (the runner makes the same write through the Rust game's own setter; with BLITZ_CASE_RAW=1 it makes the
+// write as the Rust made it BEFORE the mend, to show the run parting without it):
+//   pie    a man slicing a doorway on the path he began on has his path replaced by a NEW EMPTY ARRAY and his goal dropped, as frag.ts does when the
+//          grenade he fled is gone (`gd.path = []; gd.pathGoal = null`): guards.ts:2025 `gd.path !== P.pathRef`            `<k> !path_new <guard>`
+//   orbit  a man backing off in a standoff has his goal written again as ANOTHER ARRAY of the same numbers, as goTo does (`v3.copy`):
+//          guards.ts:1163 `gd.pathGoal !== S.orbitGoal`                                                                      `<k> !path_goal_same <guard>`
+//   boot   Sam's word (F) twice at once on a level with a breach plan ('go on set'): the pair stacks, then goes in by the boot (breach.ts:220, the loud boot) `<k> !f`
+const CASE = arg('--case', ''); let caseN = 0, caseSaw = '';
+function caseStep(g: any) {
+  if (!CASE) return;
+  const w = (l: string) => { appendFileSync(`${outDir}/gives.txt`, l + '\n'); appendFileSync(`${outDir}/case.txt`, l + '\n'); caseN++; };
+  const alive = (gd: any) => gd.state !== 'dead';
+  if (CASE === 'pie' && caseN < 1) { const i = g.guards.findIndex((gd: any) => alive(gd) && gd.pieing && gd.pieing.phase !== 'cross' && gd.pieing.pathRef === gd.path && gd.path.length > 0);
+    if (i >= 0) { const gd = g.guards[i]; gd.path = []; gd.pathGoal = null; w(`${k} !path_new ${i}`); } }
+  else if (CASE === 'orbit' && caseN < 1) { const i = g.guards.findIndex((gd: any) => alive(gd) && gd.standoff?.orbitGoal && gd.pathGoal === gd.standoff.orbitGoal);
+    if (i >= 0) { const gd = g.guards[i]; gd.pathGoal = [gd.pathGoal[0], gd.pathGoal[1], gd.pathGoal[2]]; w(`${k} !path_goal_same ${i}`); } }
+  else if (CASE === 'boot') { const N = g.nightBreach; if (N && N.state !== caseSaw) { caseSaw = N.state; appendFileSync(`${outDir}/case.txt`, `# tick ${k}: the drill is '${caseSaw}'\n`); } if (caseN >= 2) return;
+    if (N?.active && N.drill && k > 30) { if (N.order()) w(`${k} !f`); } }   // (the second word at once: 'go on set', before the scripted player's first order of its own calls the pair off)
+}
 const words = (g: any): Uint32Array => g.sim.w;
 const block = (g: any): Uint8Array => { const w = words(g); return new Uint8Array(w.buffer, w.byteOffset, w.byteLength).slice(); };
 // A HASH OF EACH PART OF THE BLOCK, over its words up to the last that is not zero (a parked block may be shorter than the Rust slot; the zeros say nothing).
@@ -103,6 +123,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   if (k === 1 && g.wallCharge?.blow) { const C = g.wallCharge, blow = C.blow; C.blow = function (this: any, c?: any, ...r: any[]) { if (!g.ticking && c) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} wall_blow ${c.wall.index}\n`); return arguments.length ? blow.call(this, c, ...r) : blow.call(this); }; }
   if (k === 1 && LESSON) { const pick = g.selectVerb; g.selectVerb = function (this: any, kind: string, verb?: string) { if (!g.ticking) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} select_verb ${wordAt('crate::game::InteractableKind', kind)} ${wordAt('crate::game::Verb', verb)} ${kind} ${verb}\n`); return pick.call(this, kind, verb); }; }
   if (k === 1) dressStand();
+  caseStep(g);
   if (k === 1 && !g.dice) g.dice = newDice(DIE);
   let err: unknown = null;
   g.stepSeats = function (this: any, dt: number, cmds: unknown) {
