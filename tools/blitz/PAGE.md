@@ -45,6 +45,18 @@ what the bridge does not carry (BRIDGE.md) starts blank, and the page's own reco
 Left: saves do not outlive the page (the store is the browser's, a few megabytes, and a kept game is about eight); the panel's 'save (force)' and
 `__save.snapshot` still walk the puppet; the file has no picture.
 
+## What the page writes between ticks
+
+- **A checkpoint the tick asks for** (`CheckpointsKeep`, `CheckpointsRequest`): both arms of the dispatcher call `OUT_HOST.checkpoint`, which the host sets
+  to the save controller; its take is the one above, so the state is the Rust game's.
+- **The options', the pause card's and the debugger's rows** (god mode, the AI, ammunition, the fog, every number and switch of `game.tune`, the
+  furniture's friction, the wand, the big kit) are written on the puppet by the page as ever. A step opens by sending what differs from what the last
+  apply left through the generated write by path (`tools/blitz/poke.ts` → `face_write` → `io::poke`): no call of the face a field. A tool writes with
+  `window.__rust.poke(obj, path, value)`, which answers null or the reason. `window.__rust.poked` counts them by path; `pokeRefused` names a write that
+  has no way there.
+- **Not covered:** a panel's row that calls a method (it runs a rule on the puppet only), and a write to a field outside the list in
+  `src/host/rustgame.ts` `watched` (the next apply may put the Rust game's value back over it).
+
 ## What a step costs, and what stands in the way
 
 Measured on the built page, software adapter, undrawn frames, 1,800 frames with no input after 600 to settle. The box was never quiet (the load average

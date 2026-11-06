@@ -47,7 +47,8 @@ import { exportGame, hostHalf, bookOf, report, SCHEMA } from 'tps-bridge/export'
 import { applyGame } from 'tps-bridge/import';
 import { classTable, valueTable } from 'tps-bridge/classes';
 import { puppetRows, SLOW, VALS } from 'tps-bridge/puppet-apply';
-import { OUT } from 'tps-bridge/out-dispatch';
+import { OUT, OUT_HOST } from 'tps-bridge/out-dispatch';
+import { makePoke } from 'tps-bridge/poke';
 import { installAsks } from 'tps-bridge/ask';
 import LISTS from 'tps-bridge/puppet-lists.json';
 
@@ -76,7 +77,7 @@ export const RUST_GAME = {
   on: false, bytes: 0, fetchMs: 0, compileMs: 0, startMs: 0, startBytes: 0, handle: 0, slot: -1, ticks: 0, starts: 0, grew: 0, memory: 0,
   /** ms of the last step and summed over every step: the host's half, the tick, the filtered export, the apply, the out events, the dress step */
   last: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, sum: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, worst: { step: 0, apply: 0, at: 0 },
-  pokes: 0, lightsMade: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0, lightsWritten: 0,
+  pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, lightsMade: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0, lightsWritten: 0,
   /** games kept (a save, the start) and their cost: how many were taken, ms of the last take and the worst, how many the module holds now; games put back,
    *  ms of the last (the kept game stood again, the whole apply, the hand-over of the controller's lines) */
   /** the warm-up behind a start card (`rustWarm`): ms of the Rust game's start, of the applies and of the ticks stepped and thrown away, and how many */
@@ -107,7 +108,7 @@ export async function rustBoot(): Promise<void> {
   const inst = await WebAssembly.instantiate(mod, {});
   RUST_GAME.fetchMs = t1 - t0; RUST_GAME.compileMs = performance.now() - t1;
   X = inst.exports as unknown as Face; MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_probe_asks', 'face_lights_out', 'face_poke', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new Error(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  for (const n of ['face_new_at', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_probe_asks', 'face_lights_out', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new Error(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
   simAdopt(X, RUST_GAME.compileMs);
   PLACE = new BoxMirror(); (PLACE as unknown as { take(): boolean }).take();
   RUST_GAME.on = true; RUST_GAME.memory = MEM.buffer.byteLength;
@@ -134,7 +135,7 @@ function ownCopy(v: any, depth = 0): any {
 }
 function ownKeep(g: Game): unknown[] { const G = g as unknown as Record<string, any>; return OWN.map(name => { const o = G[name]; if (!o) return null; const c: Record<string, unknown> = {}; for (const k of Object.keys(o)) if (k !== 'g') c[k] = ownCopy(o[k]); return c; }); }
 function ownPut(g: Game, K: unknown[] | undefined): void { const G = g as unknown as Record<string, any>; OWN.forEach((name, i) => { const o = G[name], c = K?.[i] as Record<string, unknown> | null | undefined; if (!o || !c) return; for (const k of Object.keys(c)) o[k] = ownCopy(c[k]); }); }
-interface Held { g: Game; lastCmds: readonly PlayerCmd[] | null; lightsWas: Uint8Array | null; nullsAll: boolean; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; lightOf: Map<number, Record<string, any>>; flags: boolean[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void } | null }
+interface Held { g: Game; lastCmds: readonly PlayerCmd[] | null; lightsWas: Uint8Array | null; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; lightOf: Map<number, Record<string, any>>; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void } | null }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
@@ -155,7 +156,7 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { g, lastCmds: null, lightsWas: null, nullsAll: false, kept: new Set(), startKept: 0, startOwn: [], back: null, took: false, saves: 0, shelfSig: '', doorKept: [], lightOf: new Map(), flags: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null };
+  H = { g, lastCmds: null, lightsWas: null, kept: new Set(), startKept: 0, startOwn: [], back: null, took: false, saves: 0, shelfSig: '', doorKept: [], lightOf: new Map(), poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // A START FROM OUTSIDE A TICK: the TypeScript stands or restores the game on the puppet as it always did; the Rust game is started again from it as the
@@ -229,6 +230,8 @@ function start(S: Held): void {
   S.startKept = keep(S); S.startOwn = ownKeep(g);
   // (the menu's questions: asked of this Rust game by its rows' IDs in this book, so installed anew at every start)
   S.asks = installAsks(g, reg(), (kind, row, seat, b) => { call('face_ask', () => hand(b, (p, n) => X!.face_ask(S.h, kind, row, seat, p, n))); return outBytes().slice(); }, () => { grown(g); if (!S.inStep) apply(S, false); });
+  // (the write by path: by the rows' IDs in this book too)
+  S.poke = makePoke(g, reg(), b => { call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); });
   // (room asked for and given back once the game stands: the allocator keeps it, so a step seldom has to grow the memory, which detaches every view over it)
   X!.face_reserve(64 * 1048576); grown(g);
   RUST_GAME.handle = h; RUST_GAME.slot = slot; RUST_GAME.starts++; RUST_GAME.startMs = performance.now() - t0; RUST_GAME.startBytes = state.length;
@@ -241,13 +244,7 @@ function after(S: Held): void {
   const g = S.g, G = g as unknown as Record<string, any>;
   // THE MENU'S QUESTIONS (tools/blitz/ask.ts): every order row and the squad's posture have closures that ask the Rust game by the row's ID; a row or a
   // posture this apply made gets its own here
-  // STAND-IN: ask.ts `after` gives a row's `standsIn` its `when` where `when !== whens.get(d)`; for a row an apply has just made both are undefined, so
-  // it is passed over and orders.ts rowsFor throws (`d.standsIn?.when is not a function`: seen on the row `loud`). A `when` that is missing is made
-  // null first, which is not what the memo holds. Belongs in ask.ts (`typeof d.standsIn.when !== 'function' ||`).
   const PF = RUST_GAME.prof; let tp = PF.on ? performance.now() : 0;
-  // (every row of the book, not the menu's own list alone: a wall's menu lists a copy of the floor's fifth row, wallcharge.ts `undigit`, which the Rust
-  //  game keeps as a row of its own and an apply makes with its own `standsIn`. Seen: compound, the cursor on a wall after a load.)
-  for (const d of (bookOf(g)?.listOf('OrdersOrderDefId') ?? []) as Record<string, any>[]) if (d && d.standsIn && Object.prototype.hasOwnProperty.call(d, 'standsIn') && d.standsIn.when === undefined) d.standsIn.when = null;
   S.asks?.after();
   if (PF.on) { const n = performance.now(); PF.asks += n - tp; tp = n; }
   // STAND-IN: A DOOR'S KEPT CENTRE is a memo in two halves: the angle it was made for and its x and z are columns of the block (sim/doorshome.ts
@@ -264,20 +261,12 @@ function after(S: Held): void {
   if (PF.on) { const n = performance.now(); PF.doors += n - tp; tp = n; }
   lightsIn(S);
   if (PF.on) PF.lightsIn += performance.now() - tp;
-  S.flags = FLAGS.map(k => !!G[k]); S.launch = G.player?.launchHeld ?? null;   // (the host's switches as the Rust game has them now: what differs by the next step, the host wrote)
+  S.watch = watched(g); S.launch = G.player?.launchHeld ?? null;   // (what the page's panels write, as the Rust game has it now: what differs by the next step, the page wrote)
   S.putBacks = PUT_BACKS.n;   // (the apply counts itself as a put-back, for the box world's copy: any other count by the next step is a snapshot somebody put back)
   S.loads = G.chronicle?.counts?.loads | 0;   // (…and a checkpoint read from a file counts itself here: savestate.ts loadState)
   S.saves = G.chronicle?.counts?.saves | 0;   // (the chronicle's count of saves as the Rust game has it: one more on the puppet is the controller's row, not yet made there)
-  // STAND-IN: A BOX'S FIELD THAT WENT (its markings worn off, its cut gone with a restart) comes back from an apply as `null`: the importer writes a None
-  // as null, and every optional field of a Box is absent-or-there (scene/boxes.ts tests `b.marks !== undefined`, `b.cut !== undefined` and then reads
-  // the length: seen as `cutMet` throwing on the cursor's ray after a restart). The two the listing and the rays read that way are put right after
-  // every apply, every optional field after a whole one. Belongs in import.ts (a None of an optional field is `undefined`).
-  { const W = G.engine?.world, lists: Record<string, any>[][] = [W?.statics ?? [], W?.dynamics ?? []];
-    for (const L of lists) for (let i = 0; i < L.length; i++) { const b = L[i]; if (b.marks === null) { b.marks = undefined; RUST_GAME.nulls++; } if (b.cut === null) { b.cut = undefined; RUST_GAME.nulls++; } }
-    if (S.nullsAll) { S.nullsAll = false; for (const L of [...lists, (G.dynBoxes ?? []) as Record<string, any>[]]) for (const b of L) for (const k of BOX_OPTIONAL) if (b[k] === null) { b[k] = undefined; RUST_GAME.nulls++; } } }
 }
 /** every optional field of a Box (scene/boxes.ts `boxOf`, which names them all) */
-const BOX_OPTIONAL = ['rot', 'name', 'mkey', 'dc', 'dh', 'rough', 'metal', 'aniso', 'marks', 'markGain', 'fogEmit', 'fogMark', 'wetK', 'cut', 'cutCore', 'cutGlass', 'cutRound', 'cutArc', 'cutOld', 'round', 'was', 'shape', 'shaped', 'piece', 'of', 'dress', 'stuff', 'does', 'cutCoreStuff'];
 /** THE HOST'S ROWS ARE THE HOST'S, AS THEY STAND NOW (its camera, its Input: the bridge's hand-over). An apply made BETWEEN two ticks would write the Rust
  *  game's copy of them over the page's own: a frame old after an order, the saved moment's after a load (seen on tut-squad: the page's camera put back
  *  to where it stood at the save, and the man came to rest 2.5 cm aside with the die and every part of the block equal; on tut-solo: the camera's cut
@@ -378,11 +367,14 @@ function settle(S: Held): void {
   RUST_GAME.backMs.hand = performance.now() - t;
 }
 /** THE HOST'S SWITCHES written between ticks (the options' and the pause card's god mode / AI / ammunition rows; the pause card letting go of the launcher's
- *  held button: host/loop.ts): what differs from what the last apply left goes over by `face_poke` */
+ *  held button: host/loop.ts; the debugger's panel): what differs from what the last apply left goes over by the write by path */
 function pokes(S: Held): void {
-  const G = S.g as unknown as Record<string, any>;
-  FLAGS.forEach((k, i) => { if (!!G[k] !== S.flags[i]) { X!.face_poke(S.h, i, G[k] ? 1 : 0); S.flags[i] = !!G[k]; RUST_GAME.pokes++; } });
-  if (S.launch !== null && (G.player?.launchHeld ?? null) === null) { X!.face_poke(S.h, 4, 0); S.launch = null; RUST_GAME.pokes++; }
+  const G = S.g as unknown as Record<string, any>; if (!S.poke) return;
+  const now = watched(S.g), was = S.watch;
+  if (was.length === now.length) for (let i = 0; i < now.length; i++) if (!Object.is(now[i][2], was[i][2])) send(S, now[i]);
+  S.watch = now;
+  // (the pause card letting go of the launcher's held button, host/loop.ts; `face_poke` 4 where the write by path has no way)
+  if (S.launch !== null && (G.player?.launchHeld ?? null) === null) { if (!send(S, [G.player, ['launchHeld'], null])) { X!.face_poke(S.h, 4, 0); RUST_GAME.pokes++; } S.launch = null; }
 }
 /** THE PLAYER'S RESTART: the game kept as the first step opened stands again (`face_back`, one whole apply), the controller begins a new run, the host
  *  forgets what it drew and played of the try that ended (the hook a save put back calls: host/putback.ts, main.ts), and the picture starts over.
@@ -421,26 +413,36 @@ function whole(S: Held): void {
   const g = S.g, G = g as unknown as Record<string, any>, t = performance.now();
   handHost(S);
   call('face_export', () => X!.face_export(S.h)); grown(g);
-  // STAND-IN: A MAN'S ROW OF THE BLOCK (sim/men/cols.ts ManCols `S`, `r`) is written by the whole apply from the bridge's `Character.man_row`, and for
-  // the player's own character that came back as nothing after play (seen: `r` undefined). Rows change hands only in a start or inside a tick, so a
-  // man keeps the row he had where the apply leaves him none. Belongs in the bridge.
-  const men: Record<string, any>[] = []; for (const s of g.seats) men.push(s.view.player, s.view.player.char); for (const m of [...g.guards, ...(G.civilians ?? [])]) men.push(m, m.char);
-  const rows = men.map(m => [m.S, m.r]);
-  // (a copy: the whole apply keeps the bytes of what only the Rust game can hold beside their objects, as places in the blob it was given, and the
-  //  module's own answer is written over by the next call)
-  applyGame(g, outBytes().slice(), reg(), { hooks: HOOKS });
-  S.nullsAll = true; S.lightsWas = null;
-  men.forEach((m, i) => { if (m.r === undefined || m.S === undefined) { m.S = rows[i][0]; m.r = rows[i][1]; RUST_GAME.rowsKept++; } });
+  applyGame(g, outBytes(), reg(), { hooks: HOOKS });
+  S.lightsWas = null;
   after(S);
   RUST_GAME.wholes++; RUST_GAME.wholeMs = performance.now() - t;
 }
-/** STAND-IN: the generated dispatcher calls `g.saves.request(why, label)`; the method is `request(g, why, label)` (savestate.ts). Belongs in out-dispatch.ts. */
-const OUT_OWN: Record<string, (g: any, e: any) => void> = {
-  CheckpointsRequest: (g, e) => { g.saves?.request(g, e.why, e.label); },
-};
+/** an arm the host carries out itself where the generated dispatcher's call does not fit a page (none today) */
+const OUT_OWN: Record<string, (g: any, e: any) => void> = {};
+/** A CHECKPOINT THE TICK ASKED FOR (tools/blitz/OUT-EVENTS.md: both arms carry only the words and call this): the save controller, whose take under the
+ *  word is the Rust game's own (`SNAPS.take`: the level's program stopped on the Rust side, the chronicle's row made there, the game kept in the module) */
+OUT_HOST.checkpoint = (g, what, e) => { if (what === 'keep') g.saves?.keep?.(e.label); else g.saves?.request?.(g, e.why, e.label); };
 
-/** the host's switches `face_poke` knows, in its order (page.rs) */
-const FLAGS = ['godMode', 'aiEnabled', 'infiniteAmmo', 'playerInvisible'] as const;
+/** WHAT THE PAGE'S PANELS WRITE ON THE GAME BETWEEN TICKS (the options' and the pause card's rows, the debugger's panel: ui/bindings.ts), each as the
+ *  object `poke` takes, its path and its value now. A step opens by sending what differs from what the last apply left, by the generated write by path
+ *  (tools/blitz/poke.ts → `io::poke`): no call of the face a field. A write that has no way there is named once in `RUST_GAME.pokeRefused`. */
+type Watched = [unknown, (string | number)[], unknown];
+const GAME_FIELDS = ['godMode', 'aiEnabled', 'infiniteAmmo', 'playerInvisible', 'clearRooms', 'spectate', 'showDebug'];
+function watched(g: Game): Watched[] {
+  const G = g as unknown as Record<string, any>, L: Watched[] = [];
+  for (const k of GAME_FIELDS) L.push([g, [k], G[k]]);
+  const T = G.tune as Record<string, unknown> | undefined; if (T) for (const k of Object.keys(T)) { const v = T[k]; if (v === null || typeof v !== 'object') L.push([g, ['tune', k], v]); }
+  if (G.props) L.push([g, ['props', 'frictionScale'], G.props.frictionScale], [g, ['props', 'enabled'], G.props.enabled]);
+  if (G.fogOfWar) L.push([g, ['fogOfWar', 'on'], G.fogOfWar.on]);
+  const P = G.player; if (P) L.push([P, ['wand'], P.wand], [P, ['bigKit'], P.bigKit]);
+  return L;
+}
+function send(S: Held, w: Watched): boolean {
+  const name = w[1].join('.');
+  try { S.poke!(w[0], w[1], w[2]); RUST_GAME.pokes++; RUST_GAME.poked[name] = (RUST_GAME.poked[name] ?? 0) + 1; return true; }
+  catch (e) { RUST_GAME.pokeRefused[name] ??= String((e as Error)?.message ?? e).slice(0, 300); return false; }
+}
 /** STAND-IN: THE PICTURE'S LIGHTS (page.rs face_lights_out says why): the engine's list made again in the Rust game's order, each light's numbers written
  *  onto the object the puppet has for that row, a new object for a row made inside a tick (a muzzle flash). `steady`, `portal` and the GPU's `slot` stay
  *  the puppet's own; the infrared list and the fog of war's team list are not carried. Belongs in the filtered export. */
@@ -628,6 +630,12 @@ export function rustWarm(host: { input: unknown; cam: unknown; canvas: unknown }
 }
 
 /** for a check: how the host stands */
+/** A WRITE BY PATH FROM A TOOL OR A PANEL (`window.__rust.poke(obj, path, value)`): the puppet and the Rust game at once; a reason where it cannot be */
+export function rustPoke(obj: unknown, path: string | (string | number)[], value: unknown): string | null {
+  const S = H; if (!X || !S || !S.h || S.stale || !S.poke) return 'no Rust game stands';
+  if (S.inStep) return 'inside a tick';
+  try { settle(S); S.poke(obj, path, value); RUST_GAME.pokes++; S.watch = watched(S.g); return null; } catch (e) { return String((e as Error)?.message ?? e); }
+}
 export function rustState(): Record<string, unknown> | null {
   const S = H; if (!S) return null; const sh = shelfOf(S);
   return { h: S.h, slot: S.slot, stale: S.stale, back: S.back, took: S.took, startKept: S.startKept, kept: [...S.kept], inModule: X ? X.face_kept_n() : 0, shelf: sh ? sh.all().map(e => `${e.info.key.replace('twopointsix.save.', '')}=${(e.snap as KeptGame)?.rust}`) : [], last: (sh?.last as KeptGame | null)?.rust ?? 0, sig: S.shelfSig };

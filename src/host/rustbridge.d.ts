@@ -21,11 +21,15 @@ declare module 'tps-bridge/puppet-apply' {
 }
 declare module 'tps-bridge/out-dispatch' {
   export const OUT: Record<string, (g: any, e: any) => void>;
+  export const OUT_HOST: { checkpoint?: (g: any, what: string, e: any) => void };
   export function dispatchOut(g: any, events: { arm: string; e: any }[]): void;
 }
 declare module 'tps-bridge/puppet-lists.json' {
   const lists: { step: string[]; start: string[] };
   export default lists;
+}
+declare module 'tps-bridge/poke' {
+  export function makePoke(g: any, knobs: Record<string, unknown>, send: (b: Uint8Array) => void): (obj: unknown, path: string | (string | number)[], value: unknown) => void;
 }
 declare module 'tps-bridge/ask' {
   export function installAsks(g: any, knobs: Record<string, unknown>, ask: (kind: number, row: number, seat: number, bytes: Uint8Array) => Uint8Array, reapply: () => void): { after(): void };
