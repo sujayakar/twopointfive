@@ -47,6 +47,10 @@ pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>,
         core::ptr::copy_nonoverlapping(block.as_ptr(), at, block.len().min(len));
     }
     g.sim = slot;
+    // BRIDGE STAND-IN: THE AIM RAY'S WAY THROUGH A HOLED PANE. `BoxWorld.glassOpen` is a hook glassbreak.ts hangs on the engine's box world as the game
+    // is made (glassbreak.ts:230); the bridge does not carry it, so an imported game's cursor ray landed ON a pane whose cell had fallen where the
+    // TypeScript's passes through the hole (the player's aim point, his arm, his reticle). Hung here as the constructor hangs it.
+    g.engine.world.glass_open = Some(game::FnField);
     // (the box mirror's world of rust/sim's is a number the bytes carry, and it is the TypeScript game's: this game's world is its own slot's)
     if g.col.mirror.slot >= 0.0 { g.col.mirror.slot = slot as f64; }
     // BRIDGE STAND-IN: THE LEVEL'S SCRIPT. A script is code, hung on the Level by the level's name as it is loaded (scene/levelScripts.ts), and the bridge

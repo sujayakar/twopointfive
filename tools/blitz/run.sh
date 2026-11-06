@@ -7,6 +7,7 @@
 # Exit: 0 in step and no unknown path · 1 the block or the die parted, or a kept tick has an unknown path · 2 the Rust tick panicked · 3 a side could not run.
 # Needs bun and cargo on the PATH, and nothing outside the repository but the folder it names on its first line (--out, or one under $TMPDIR).
 # A kept tick's Rust state (n<k>.bin) is deleted once it is diffed, unless --blobs.
+# BLITZ_RUNNER=<path> steps with that runner (a copy kept apart while the tree is built again).
 # --no-ts takes the TypeScript side as --out already holds it (the same mission, ticks and kept ticks); --no-build takes the runner as it is built.
 cd "$(dirname "$0")/../.." || exit 64
 unset BUN_OPTIONS
@@ -29,7 +30,7 @@ N=$(cat "$OUT/ticks.txt"); [ -n "$TICKS" ] && [ "$TICKS" -lt "$N" ] && N=$TICKS
 if [ -n "$BUILD" ]; then
   ( cd rust/game_run && cargo build --bins > "$OUT/build.log" 2>&1 ) || { grep -E '^error' -A 14 "$OUT/build.log" | cut -c1-300 | head -80; echo "run.sh: the runner does not build ($OUT/build.log)"; exit 3; }
 fi
-rust/game_run/target/debug/mission "$OUT" "$N" --keep "$KEEP" --every "$EVERY" --after "$AFTER" > "$OUT/rust.log" 2>&1; R=$?
+"${BLITZ_RUNNER:-rust/game_run/target/debug/mission}" "$OUT" "$N" --keep "$KEEP" --every "$EVERY" --after "$AFTER" > "$OUT/rust.log" 2>&1; R=$?
 grep -v '^runner:' "$OUT/rust.log" | cut -c1-330 | { if [ "$R" = 0 ]; then grep -v '^TICK [0-9]*; time' | tail -25; grep '^TICK [0-9]*; time' "$OUT/rust.log" | tail -1 | cut -c1-330; else tail -45; fi; }
 # the path diff of every tick both sides kept (the first parting tick too, where the TypeScript side kept it)
 U=0

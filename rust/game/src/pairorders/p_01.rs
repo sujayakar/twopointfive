@@ -617,7 +617,7 @@ fn take_rejoin(g: &mut Game, gd: GuardId, was_following: bool) -> bool {
 fn park_on(g: &mut Game, a: OrdersAssignmentId, here: V3, p: V3, c: V3) {
     let r = &mut asg!(g, a);
     r.post = Some(here);
-    r.goal = [here[0], 0.0, here[2]];
+    r.goal = [here[0], 0.0, here[2]]; r.new_leg = true;   // (a new array in the TypeScript: squad.ts order takes a new goal OBJECT for a new leg, even at the same spot: Assignment.new_leg)
     r.via.clear();
     r.face = Some(v3::yaw_to(p, c));
 }
@@ -776,7 +776,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
         let c = g.ch[fc].pos;
         let r = &mut asg!(g, a);
         r.post = Some(to);
-        r.goal = [to[0], 0.0, to[2]];
+        r.goal = [to[0], 0.0, to[2]]; r.new_leg = true;   // (a new array in the TypeScript: squad.ts order takes a new goal OBJECT for a new leg, even at the same spot: Assignment.new_leg)
         r.via.clear();
         r.arrived = false;
         r.pace = Some(go_pace);
@@ -828,7 +828,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
         let face = if t - wait_t < g.k.pair.steady_face_secs { None } else { Some(v3::yaw_to(p, g.ch[fc].pos)) };
         let r = &mut asg!(g, a);
         r.post = Some(here);
-        r.goal = [here[0], 0.0, here[2]];
+        r.goal = [here[0], 0.0, here[2]]; r.new_leg = true;   // (a new array in the TypeScript: squad.ts order takes a new goal OBJECT for a new leg, even at the same spot: Assignment.new_leg)
         r.via.clear();
         r.face = face;
         let words = if !way.exposed || force { format!("waiting · no room at {}'s back", name) }
@@ -893,6 +893,10 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     let n = way.path.len();
     if n > 0 { for q in way.path[..n - 1].iter() { r.via.push(*q); } }
     r.goal = v3::copy(r.via.first().copied().unwrap_or(spot));
+    // (pairorders.ts:486 fills `A.via` with the fresh way's own points and copies the first: every one a new object. orders.ts:1457 then hands
+    //  `A.via[0]` on as the goal, and squad.ts order takes a new goal OBJECT for a new leg even at the same spot, so the man's path is dropped and
+    //  found again from where he stands. Without this word a way searched afresh to the same corner left him on the path of the old one.)
+    r.new_leg = true;
 }
 
 /// nothing solid between two points a pace apart, at knee height   (PairOrders.clearOf)
