@@ -11,7 +11,7 @@
 // game up, the table's row put off as well. A word whoever runs the tool set himself wins: `TPS_STALK=1 bun run tools/qa/reachup-check.ts` asks the check with
 // the stalk on (and `TPS_STALK=0` in front is the hold itself, said by hand: a stand-up raises a row for '1' alone).
 import { resolve } from 'node:path';
-import { FOLD, foldLost, foldSpeaker, foldOutside, foldLine } from './fold.ts';
+import { FOLD, foldLost, foldSpeaker, foldOutside, foldLine, foldFor, foldMode } from './fold.ts';
 const ROOT = resolve(import.meta.dir, '../..');   // (not the harness's own: a tool that names its stand before it loads the harness can still import this file first)
 
 /** One held row: the stand word, the knob table and the row's key (src/game/knobs.ts's registry), and whether the row is put off at once as well as the word
@@ -149,11 +149,13 @@ export async function asProbe<T>(name: string, fn: () => T | Promise<T>): Promis
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), kit = await import(`${ROOT}/src/game/kit.ts`);
   // (tools/qa/fold.ts: one line a probe from whoever runs the probes, the outermost. Under the runner, whose run() says it, this says nothing.)
   const says = fenceDepth === 0 && foldSpeaker('probe'); if (says) { const o = foldOutside(`before ${name}`); if (o) console.log(o); }   // (a probe run inside another's fence is the outer one's)
+  const foldWas = fenceDepth === 0 ? foldMode() : null;   // (fold.ts foldFor: the fold on or off as this fence opens, put back FIRST as it closes, so the tables go back in the mode they were copied in)
   const soloOn = kit.KIT_SOLO.on, knobs = knobsCopy(), release = await holdOff(holdsOf(name));
   let threw: unknown, failed = false, red = false; fenceDepth++;
   try { const r = await fn(); red = (r as unknown) === false; return r; }
   catch (e) { failed = true; red = true; threw = e; throw e; }
   finally {
+    foldFor(foldWas);
     try { kit.kitMission(null); } catch { /* (as the runner always ran it: a throw here is not the probe's verdict) */ }
     release(); kit.KIT_SOLO.on = soloOn;
     fenceDepth--; if (FOLD.on) { try { foldLost(); } catch { /* the put-back below still runs */ } }   // (tools/qa/fold.ts: a settled row's hold lost to a branch replaced whole is found BEFORE the tables go back, so it is named with the value the probe left it at)
