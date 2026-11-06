@@ -134,7 +134,7 @@ function ownCopy(v: any, depth = 0): any {
 }
 function ownKeep(g: Game): unknown[] { const G = g as unknown as Record<string, any>; return OWN.map(name => { const o = G[name]; if (!o) return null; const c: Record<string, unknown> = {}; for (const k of Object.keys(o)) if (k !== 'g') c[k] = ownCopy(o[k]); return c; }); }
 function ownPut(g: Game, K: unknown[] | undefined): void { const G = g as unknown as Record<string, any>; OWN.forEach((name, i) => { const o = G[name], c = K?.[i] as Record<string, unknown> | null | undefined; if (!o || !c) return; for (const k of Object.keys(c)) o[k] = ownCopy(c[k]); }); }
-interface Held { g: Game; lightsWas: Uint8Array | null; nullsAll: boolean; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; lightOf: Map<number, Record<string, any>>; flags: boolean[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void } | null }
+interface Held { g: Game; lastCmds: readonly PlayerCmd[] | null; lightsWas: Uint8Array | null; nullsAll: boolean; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; lightOf: Map<number, Record<string, any>>; flags: boolean[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void } | null }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
@@ -155,7 +155,7 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { g, lightsWas: null, nullsAll: false, kept: new Set(), startKept: 0, startOwn: [], back: null, took: false, saves: 0, shelfSig: '', doorKept: [], lightOf: new Map(), flags: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null };
+  H = { g, lastCmds: null, lightsWas: null, nullsAll: false, kept: new Set(), startKept: 0, startOwn: [], back: null, took: false, saves: 0, shelfSig: '', doorKept: [], lightOf: new Map(), flags: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // A START FROM OUTSIDE A TICK: the TypeScript stands or restores the game on the puppet as it always did; the Rust game is started again from it as the
@@ -329,7 +329,12 @@ function stoodAgain(S: Held, k: number, own?: unknown[]): void {
   const g = S.g, G = g as unknown as Record<string, any>;
   let t = performance.now();
   if (!S.kept.has(k) || !call('face_back', () => X!.face_back(S.h, k))) throw new Error('rust=1: that kept game is gone (it was of a game that has been stood again since)');
-  grown(g); RUST_GAME.backMs.back = performance.now() - t; t = performance.now();
+  grown(g);
+  // THE HOST'S ROWS ARE THE HOST'S, AS THEY STAND NOW (its camera, its Input: the bridge's hand-over). A kept game holds them as they stood at the save, and
+  // the whole apply would put the page's own camera back to that moment, where the page without the word leaves its camera as it is and cuts it to the
+  // man (seen on tut-squad: after a load the man came to rest 2.5 cm aside, with the die and every part of the block equal). Handed over first.
+  if (S.lastCmds) { const hb = hostHalf(g, reg(), S.lastCmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n)); }
+  RUST_GAME.backMs.back = performance.now() - t; t = performance.now();
   S.uploaded = true; S.shelfSig = '';   // (the kept game's own `g.saves` is the shelf as it was handed over before that save: the shelf as it stands is handed over again)
   whole(S);
   ownPut(g, own);
@@ -462,7 +467,7 @@ function step(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
   if (!S.stale && S.h && PUT_BACKS.n !== S.putBacks) S.stale = 'a snapshot was put back';
   if (!S.stale && S.h && ((G.chronicle?.counts?.loads | 0) !== S.loads)) S.stale = 'a checkpoint was loaded';
   if (S.stale || !S.h) start(S);
-  S.inStep = true;
+  S.inStep = true; S.lastCmds = cmds;
   try {
     let t = performance.now();
     shelfIn(S);
