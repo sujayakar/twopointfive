@@ -253,10 +253,12 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     row('meter.txt', meterL, `${g.player.visibility}`);   // (a mission's scripted player writes the meter before every tick too, playthrough.ts:779: the same number every tick, until a restart makes the player anew)
     row('host.txt', hostL, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}`); uploads = 0;
     const chron0 = g.chronicle, saves0 = chron0.counts.saves;
+    // (the save controller's CAPTURE asks the whistle for the player's breath, which makes its row: `<k> save_breath` where the row came with this tick's save)
+    const breathOf = (globalThis as any).__tpsTop?.['src/game/whistle.ts']?.blowerOf, breath0 = !!breathOf?.has?.(g.player);
     try { return step.call(this, dt, cmds); } finally {
       // THE HOST'S CHECKPOINT: the autosave controller (savestate.ts, the host's) writes a chronicle row and a count as the tick's last thing
       // (a restart inside the tick makes the chronicle anew: its count is then 0 where the old one's was not, and that is no save)
-      if (g.chronicle === chron0 ? g.chronicle.counts.saves !== saves0 : g.chronicle.counts.saves > 0) { const E = g.chronicle.events, e = E[E.length - 1]; appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_save ${JSON.stringify(e?.kind === 'checkpoint' ? (e.label ?? e.data?.label ?? '') : 'NOT-LAST')}\n`); }
+      if (g.chronicle === chron0 ? g.chronicle.counts.saves !== saves0 : g.chronicle.counts.saves > 0) { const E = g.chronicle.events, e = E[E.length - 1]; appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_save ${JSON.stringify(e?.kind === 'checkpoint' ? (e.label ?? e.data?.label ?? '') : 'NOT-LAST')}\n`); if (!breath0 && breathOf?.has?.(g.player)) appendFileSync(`${outDir}/hostwrites.txt`, `${k} save_breath\n`); }
       selAfter = g.player.nearSel;
       shotLast = (g.events as any[]).some((e: any) => (e?.kind === 'shot' || e?.kind === 'guardShot') && e.from && e.time >= g.time - 0.05);   // (a round fired in the tick just run: the events are kept half a second)
       row('post.txt', postL, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}`);
@@ -270,6 +272,11 @@ Game.prototype.update = function (this: any, ...a: any[]) {
 const log = console.log, er = console.error, wn = console.warn; let res: any = null;
 let les: any = null;
 let solo = '';
+// HARNESS STAND-IN: A QUIET MISSION'S RUNG OF THE FOG (BLITZ_QUIETFOG=off|team|cones|own). On the page the rung rides the mission's link
+// (`quietfog=<rung>`, quietfog.ts quietFogOfQuery) and a bare link plays the default's (QUIETFOG.def, 'team' in the page). solo-night.ts writes its own
+// bare link, so the rung is given as THE DEFAULT, held at that value through the stand (which writes the page's default over it): the start then
+// lays the same two rows of the fog and hands out the same cameras as the link's word would. What differs from the page: the row QUIETFOG.def itself.
+if (SOLO && process.env.BLITZ_QUIETFOG) { const Q = (await import('../../src/game/quietfog.ts')).QUIETFOG, rung = process.env.BLITZ_QUIETFOG; Object.defineProperty(Q, 'def', { get: () => rung, set() { /* held */ }, enumerable: true, configurable: true }); }
 try { if (SOLO) { const [kind, plan] = scn.split('-'), was = process.argv, exit = process.exit, lines: string[] = [];
     process.argv = [was[0], 'solo-night.ts', '--trace', String(seed), '--plan', plan, ...(kind === 'quiet' ? ['--quiet'] : []), ...(HARD ? ['--hard'] : []), ...(process.env.BLITZ_SOLO ?? '').split(' ').filter(Boolean)];
     (process as any).exit = () => { throw new Stop(); }; console.log = (...x: unknown[]) => { lines.push(x.join(' ')); };

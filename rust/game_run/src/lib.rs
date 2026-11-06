@@ -255,6 +255,11 @@ pub fn between(g: &mut game::game::Game, k: usize, l: &str, off: &[String]) -> S
 /// after a tick.
 pub fn write_after(g: &mut game::game::Game, k: usize, l: &str) -> Option<String> {
     let mut w = l.splitn(3, ' '); let (_, what, rest) = (w.next(), w.next().unwrap_or(""), w.next().unwrap_or(""));
+    // HOST STEP: a save taken by the save controller's CAPTURE (savestate.ts captureState, the way a game with no team on the floor is saved: the solo
+    // night, a quiet mission alone) asks every module for its part, and the whistle's part asks the player's breath (whistle.ts whistleSnapshot →
+    // `blower(g)`), which MAKES the breath's row where nobody had asked yet. A save kept in memory (a team on the floor) asks nothing. mission.ts
+    // writes `<k> save_breath` where the row appeared with that tick's save; the capture is the host's and is not made here, its one write is.
+    if what == "save_breath" { let _ = game::whistle::blower(g); return Some(format!("  the host's capture after tick {}: the player's breath asked (its row made)", k)); }
     if what != "chron_save" { return None; }
     let mut said = String::new();
     if checkpoint(g, rest.trim_matches('"')) { said = format!("  the host's authored checkpoint after tick {}: the level's program stopped for the take\n", k); }
