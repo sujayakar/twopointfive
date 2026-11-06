@@ -130,7 +130,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   its caller names; `SNAPBITES_BREAK=1` asks the off arm by the word that puts the weight on, so only that reading can fail it. `tools/qa/entry-strip.ts`
   had the same slip for `TPS_DOORPATH`, and so did the `doorpath` family's own red path (`DOORPATH_OLD=1` left the word out: on the page's stand 'the entry
   as it was' played the walk). `tools/qa/stand.ts childEnv` builds a child's stand words with every one said. The three were found by reading and by a
-  review; no check holds the class, and `doorpath-probes.ts runOne` still drops four words a job does not name. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
+  review. A FOURTH went with them: the picks family's `PICKS_PLAIN=1` ('the harness's plain stand-up instead') asked by leaving four words out, and
+  since the flip played the same game as its default; the mode is deleted. A NET WITH HOLES NOW CATCHES FOUR SPELLINGS OF IT, `shipped-check.ts
+  wordsLeftOut` (the check's last line; its own samples, nine slips it must name and seven lines it must not, are the line before; `STAND_BREAK=1` reads
+  the slips as tools' lines): a tool's line that gives a stand word a value with `undefined` in it, puts one in on a condition and nothing otherwise,
+  deletes one from an environment not written `process.env`, or deletes over a list naming one. Let through: a line that SETS `TPS_PROFILE`, a put-back
+  statement, and a line that says `word left out on purpose:` with its reason (three do: `rescueflush-check`'s floors that do not ask for lanes,
+  `doorpath-probes runOne`, `lesson-gate`'s levels with no script). It does NOT close the class: an environment built over several lines, a word a
+  helper or a named list drops, a computed key, and `delete process.env.X` before a stand-up in the tool's own process (fifteen lines, read and meant)
+  are not seen. What closes it is a run held to the rule its game had, as `snap-probes` now does for the turn weight. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
   (green on the page's). NOT DONE: `flashweight`'s two older rows are the old stand's measurements, kept as rows of both stands and not read again on the page's (the family
   did not finish inside half an hour on a loaded box). tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
