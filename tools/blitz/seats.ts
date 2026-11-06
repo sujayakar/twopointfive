@@ -85,19 +85,26 @@ if (!g.dice) throw new Error('seats.ts: the game of two has no die of its own');
 // (`--asks`: every ask of the Game's own seat field made inside a tick, by where it came from, and the first tick with one: seats.ts SEAT_ASKS)
 const { SEAT_ASKS } = await import('../../src/game/seats.ts');
 const ASKS = argv.includes('--asks'); if (ASKS) SEAT_ASKS.sites = new Map(); let firstAsk = 0;
+const DIE_N = argv.includes('--die') && /^\d+$/.test(argv[argv.indexOf('--die') + 1] ?? '') ? +argv[argv.indexOf('--die') + 1] : null; const { newDice } = await import('../../src/math/dice.ts');
+// BLITZ_CALL="<k> restart_encounter|reset_guards [start]" (mission.ts, the runner): the rule called before tick k of a game of two seats as well. With
+// `start` the state after the call is written as a NEW START (L<k>.bin, Ls<k>.bin, a `chron_load` line), which the runner takes in place of calling.
+const CALL = (process.env.BLITZ_CALL ?? '').split(' ');
 let k = 0, threw: unknown = null;
 for (let i = 0; i < TICKS && !threw; i++) {
   const cmds = P.sample(i); k = i + 1;
   const step = g.stepSeats;
   g.stepSeats = function (this: any, dt: number, c: unknown) {
+    if (k === 1 && DIE_N !== null) g.dice = newDice(DIE_N);   // (`--die N`, as mission.ts: the start the Rust side imports carries the die)
     if (k === 1) { g.sim.settle(g); writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g)); }
     else if (inR(OPEN, k)) writeFileSync(`${outDir}/c${k}.bin`, exportGame(g, reg));
+    if (CALL[2] === 'start' && k === +CALL[0] && k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); }
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds));
     appendFileSync(`${outDir}/host.txt`, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : 1}\n`);
     try { return step.call(this, dt, c); } finally {
       appendFileSync(`${outDir}/post.txt`, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}\n`);
       if (keep(k)) { writeFileSync(`${outDir}/a${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s${k}.bin`, block(g)); } }
   };
+  if (CALL[0] && k === +CALL[0]) { if (CALL[1] === 'restart_encounter') g.restartEncounter(); else if (CALL[1] === 'reset_guards') g.resetGuards(); else throw new Error(`BLITZ_CALL: no rule ${CALL[1]}`); }
   giveNow(k);
   try { P.tick(cmds); } catch (e) { threw = e; } finally { delete g.stepSeats; }
   watchPair();

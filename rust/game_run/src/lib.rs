@@ -6,6 +6,8 @@
 //!   a start  `start` (c1.bin, s0.bin)
 //!   before   `host_half` (h<k>.bin) · `give` (each line of gives.txt for this tick) · `write_before` (each line of hostwrites.txt for this tick) · `meter`
 //!            (a line of meter.txt, a tutorial mission's) · `upload`
+//!            … or, where the TypeScript side wrote ONE ORDERED RECORD (between.txt), `between` for each of the tick's lines as they stand: the orders,
+//!            the writes, the rules the driver called and the meter in the driver's own order, in place of `give`, `write_before` and `meter`
 //!   the tick `step`
 //!   after    `write_after` (each line of hostwrites.txt for this tick) · the compare (`part_hashes`) · `lights` · `view` · `follow`
 use game::ids::Id;
@@ -166,6 +168,46 @@ pub fn write_before(g: &mut game::game::Game, k: usize, l: &str) -> Option<Strin
         return Some(format!("  the driver's question before tick {}: roomAt({:?}) -> {:?} ({} rooms)", k, p, r, g.fight.rooms.len()));
     }
     None
+}
+
+/// HARNESS STAND-IN: A RULE OF THE GAME THE TEST DRIVER CALLS BETWEEN TWO TICKS, by its name (a `call` line of between.txt). The scripted player asks
+/// where a player who read a grenade's cue would go before every step (tools/qa/playthrough.ts `fragStepOff(g)`); the ask makes the flee's guess of the
+/// grenade's rest and fills the memo of the walls its burst would open, which the tick's own flee then reads, so it is made here too. A rule this
+/// does not know is a NOTE in the log, never silence. It belongs on the generated call surface, by the rule's own name.
+pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
+    let mut w = rule.split(' ');
+    let (rule, arg) = (w.next().unwrap_or(""), w.next());
+    match rule {
+        // (a lesson's player asks the words of a set door charge: the answer is kept a quarter second and the tick's own ask reads it, doortools.ts closeAt)
+        "door_close_words" => match arg.and_then(|x| x.parse::<usize>().ok()).and_then(|i| g.door_tools.set.get(i).copied()) {
+            Some(c) => { let said = game::doortools::door_tools_close_words(g, c); format!("  the driver's ask before tick {}: door_close_words -> {:?}", k, said) }
+            None => format!("  NOTE tick {}: the driver asked the words of a set charge this game does not hold: {:?}", k, arg),
+        },
+        "frag_step_off" => { let r = game::frag::frag_step_off(g, None); if r.is_some() { format!("  the driver's ask before tick {}: frag_step_off -> {:?}", k, r) } else { String::new() } }
+        // (BLITZ_CALL, mission.ts: a rule of the game called before a tick on both sides, to hold the Rust game's restart to the TypeScript's)
+        "restart_encounter" => { game::game::game_restart_encounter(g); format!("  the rule called before tick {}: restart_encounter; {} guards, time {}", k, g.guards.len(), g.time) }
+        "reset_guards" => { game::guards::reset_guards(g); format!("  the rule called before tick {}: reset_guards; {} guards, time {}", k, g.guards.len(), g.time) }
+        "restart" => { game::game::game_restart(g, None); format!("  the rule called before tick {}: restart (the player's own); {} guards, time {}", k, g.guards.len(), g.time) }
+        _ => format!("  NOTE tick {}: a rule the driver called that this runner does not know: {}", k, rule),
+    }
+}
+
+/// HARNESS STAND-IN: ONE LINE OF THE DRIVER'S ORDERED RECORD (between.txt, mission.ts `between`): `<k> give …` an order, `<k> write …` a write made
+/// before the tick, `<k> call <rule>` a rule called, `<k> meter <v>` the player's light meter. A host replays a tick's lines as they stand, so an order
+/// given after a write is given after it here. `off` names the kinds or rules left out (BLITZ_NO_BETWEEN, to see by a run what one is for).
+/// Answers the line for the log (empty: nothing worth a line).
+pub fn between(g: &mut game::game::Game, k: usize, l: &str, off: &[String]) -> String {
+    let mut w = l.splitn(3, ' ');
+    let (tick, kind, rest) = (w.next().unwrap_or(""), w.next().unwrap_or(""), w.next().unwrap_or(""));
+    if off.iter().any(|o| o == kind || (kind == "call" && rest.split(' ').next() == Some(o.as_str())) || (kind == "write" && rest.split(' ').next() == Some(o.as_str()))) { return String::new(); }
+    let line = format!("{} {}", tick, rest);
+    match kind {
+        "give" => give(g, k, &line),
+        "write" => write_before(g, k, &line).unwrap_or_else(|| format!("  NOTE tick {}: a write of the driver's this runner does not make before a tick: {}", k, line)),
+        "call" => call(g, k, rest),
+        "meter" => { if let Ok(v) = rest.parse::<f64>() { meter(g, v); } String::new() }
+        _ => format!("  NOTE tick {}: a line of the driver's record this runner does not know: {}", k, l),
+    }
 }
 
 /// HOST STEP, AFTER THE TICK: a line of hostwrites.txt that is the autosave's. Answers the lines for the log, or None where the line is not a write made

@@ -40,6 +40,14 @@ game as a tally's run of that mission and seed stands it (tools/qa/playthrough.t
 `Math.random` for the die, PLAY.md), so the game played is the tally's own; the die is written to `die.txt`. A mission in step on one die is one
 play-through in step: a sweep takes each mission on several dice.
 
+THE DRIVER'S ORDERED RECORD. mission.ts writes `between.txt`: every order (`<k> give …`), every write made before a tick (`<k> write …`), every rule
+the driver called (`<k> call <rule>`) and the meter (`<k> meter <v>`), in the order the driver made them. The native runner replays a tick's lines as
+they stand (game_run `between`) and reads gives.txt, hostwrites.txt (but for the autosave's row and a checkpoint put back) and meter.txt only where
+there is no such file (a game of two seats; a stepper that has not learned the record). `BLITZ_NO_BETWEEN=<kind or rule,…>` leaves lines out, to see
+by a run what one is for. A rule called under BLITZ_CALL is a `call` line too; its tick may be a word (`fight`: the first tick after a round was fired
+with a hostile alert; `qrf`: the response team's cast deployed), and the rule `shift_enter` presses the player's own restart on the host's Input
+(each side then restarts inside its own tick); `restart` calls `Game.restart`. A game of two seats takes BLITZ_CALL by number (seats.ts).
+
 `BLITZ_CALL="<k> restart_encounter|reset_guards [start]"` in front of run.sh calls that rule before tick k on both sides (with `start` the Rust game
 takes the TypeScript's state after the call as a new start instead of calling its own rule).
 
@@ -181,6 +189,8 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | a lesson player's meter (`meter.txt`) and `selectVerb` (`hostwrites.txt select_verb`) | (always) | the scripted player of a tutorial feeds the player's light meter and picks a row between ticks |
 | the scripted player's word to the hostages or the man in hand (`hostwrites.txt rescue_word`, `snatch_word`) | (always) | the driver calls the module's own `word` between ticks |
 | the scripted player's pick of a row of the nearby list (`hostwrites.txt near_sel`) | (always) | the driver writes `player.nearSel` and calls `pickHover` between ticks |
+| the scripted player's ask before every step (`between.txt`: `call frag_step_off`) | `BLITZ_NO_BETWEEN=frag_step_off` leaves it out | the driver asks where a player who read a grenade's cue would go (`fragStepOff`); the ask makes the flee's guess of the grenade's rest and fills the memo of walls its burst opens, which the next tick's flee reads |
+| a lesson player's ask of a set door charge's words (`between.txt`: `call door_close_words <i>`) | `BLITZ_NO_BETWEEN=door_close_words` | the answer is kept a quarter second and answers the tick's own ask |
 | a mission player's meter (`meter.txt`, every mission) | (always) | the scripted player writes `player.visibility` before every tick |
 | the autosave's chronicle row (`hostwrites.txt chron_save`) | (always) | the save controller is the host's and writes one row into the game |
 | `game_follow_pos` for each seat after each tick | `follow` | the host's camera asks the game where to look; on a tutorial's sky seat the ask eases and stamps the view's centre (rails.ts look) |
