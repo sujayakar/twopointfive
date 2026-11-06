@@ -36,7 +36,9 @@ const toolNow = (): string => (process.argv[1] ?? '').replace(/\\/g, '/');
 export interface Stood { word: Word; who: string; why: string; kind: string; /** kept on the TypeScript tick off the word asked for */ kept?: boolean }
 /** which game is stood for the check running now; `frozen`: the run is on the old frozen stand (TPS_PROFILE=frozen). Counts nothing and says nothing. */
 export function resolve(frozen = false): Stood { const S = decide(frozen);
-  if (S.word === 'ts' && S.kind !== 'asked') { S.kept = true; if (kept() === 'none') S.word = ''; }
+  // (a FROZEN run is stood exactly as with no word whatever KEPT_STAND says: the frozen stand is there for what was recorded on it, and that was recorded
+  // on a game with no die of its own)
+  if (S.word === 'ts' && S.kind !== 'asked') { S.kept = true; if (kept() === 'none' || S.kind === 'frozen') S.word = ''; }
   return S; }
 function decide(frozen: boolean): Stood {
   const a = asked(), who = probeNow() ?? toolNow().split('/').pop() ?? '';
