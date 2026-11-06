@@ -186,8 +186,16 @@ pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
         "frag_step_off" => { let r = game::frag::frag_step_off(g, None); if r.is_some() { format!("  the driver's ask before tick {}: frag_step_off -> {:?}", k, r) } else { String::new() } }
         // (BLITZ_CALL, mission.ts: a rule of the game called before a tick on both sides, to hold the Rust game's restart to the TypeScript's)
         "restart_encounter" => { game::game::game_restart_encounter(g); format!("  the rule called before tick {}: restart_encounter; {} guards, time {}", k, g.guards.len(), g.time) }
-        "reset_guards" => { game::guards::reset_guards(g); format!("  the rule called before tick {}: reset_guards; {} guards, time {}", k, g.guards.len(), g.time) }
+        "reset_guards" => { game::game::game_reset_guards(g); format!("  the rule called before tick {}: reset_guards (Game.resetGuards); {} guards, time {}", k, g.guards.len(), g.time) }
         "qrf_panel" => { let r = game::qrf::request_qrf(g, game::qrf::QrfReason::Panel); format!("  the rule called before tick {}: request_qrf(panel) -> {}", k, r) }
+        // (the response team staged as tools/qa/qrf-squad-check.ts stages it: mission.ts `qrf_stage` writes the same rows)
+        "qrf_stage" => {
+            let p = g.ch[g.pl[g.player].ch].pos;
+            g.tune.qrf = true; g.tune.qrf_eta = 14.0; g.tune.qrf_size = 4.0; g.tune.perimeter = false; g.tune.qrf_squad = true;
+            g.alarm.placed = true; g.alarm.pos = [p[0], p[1], p[2]]; g.alarm.raised_at = g.time;
+            let r = game::qrf::request_qrf(g, game::qrf::QrfReason::Panel);
+            format!("  the rule called before tick {}: the response team staged, request_qrf(panel) -> {}", k, r)
+        }
         "restart" => { game::game::game_restart(g, None); format!("  the rule called before tick {}: restart (the player's own); {} guards, time {}", k, g.guards.len(), g.time) }
         _ => format!("  NOTE tick {}: a rule the driver called that this runner does not know: {}", k, rule),
     }

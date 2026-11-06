@@ -63,6 +63,10 @@ const DRESS_WORD = arg('--dress', '');
 function dressStand() { dressAll(false); if (!DRESS_WORD) return;
   if (DRESS_WORD === 'all') { dressAll(true); return; }
   for (const r of DRESS_WORD.split(',')) { if (!(r in DRESS)) { say(`mission.ts: --dress knows ${Object.keys(DRESS).join(', ')}, not '${r}'`); process.exit(64); } (DRESS as any)[r] = true; } }
+// `--hard`: THE PLAYER'S DIFFICULTY AT HARD, as a tally stands it (playthrough.ts `--set '{"DIFFICULTY":{"level":"hard"}}'` → setDifficulty('hard') before the
+// game is stood, which lays the PRESSURE and DIGIN tables and the fog's rows; a lesson's player takes `hard`). `--set '<json>'`: any rows the scripted
+// player's `--set` takes (a lever alone: '{"DIFFICULTY":{"fog":"<rung>"}}'). The start and knobs.bin carry the tables, so one option serves both sides.
+const HARD = argv.includes('--hard'), SET: Record<string, Record<string, unknown>> = HARD ? { DIFFICULTY: { level: 'hard' } } : JSON.parse(arg('--set', '{}'));
 class Stop extends Error {}
 const CALLS = (process.env.BLITZ_CALL ?? '').split(';').map(x => x.trim()).filter(Boolean).map(x => ({ w: x.split(' '), at: 0, down: 0 })); let shotLast = false, fragSaid = 0;
 const await0 = CALLS.length ? await import('../../src/game/qrf.ts') : (null as any);
@@ -149,12 +153,16 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     if (/^\d+$/.test(w)) { if (k === +w) C.at = k; }
     else if (w === 'fight') { if (k > 60 && shotLast && g.guards.some((x: any) => x.team === 'hostile' && x.state === 'alert')) C.at = k; }
     else if (w === 'qrf') { if (g.qrf?.men?.some((x: any) => x.state !== 'dead' && g.guards.includes(x))) C.at = k; }
+    else if (w === 'qrfcast') { if (g.qrf?.cast && g.qrf.men?.some((x: any) => x.state !== 'dead')) C.at = k; }
     else if (w === 'down') { C.down = g.player.down ? C.down + 1 : 0; if (C.down >= 30) C.at = k; }   // (the player half a second down: with PT_MORTAL=1, the death the scripted player can die)
-    else throw new Error(`BLITZ_CALL: a tick is a number, fight, qrf or down, not ${w}`);
+    else throw new Error(`BLITZ_CALL: a tick is a number, fight, qrf, qrfcast or down, not ${w}`);
     if (C.at === k) {
       if (FRAG_ASK && fragSaid !== k) { between(`${k} frag_step_off`, 'call'); fragSaid = k; }   // (the scripted player's ask stood before this call: Player.step asks, then steps)
       if (rule === 'restart_encounter') g.restartEncounter(); else if (rule === 'reset_guards') g.resetGuards(); else if (rule === 'restart') g.restart();
       else if (rule === 'qrf_panel') (await0.requestQrf)(g, 'panel');
+      // (`qrf_stage`: the response team staged as tools/qa/qrf-squad-check.ts stages it: the sandbox's rows written (the team on, 14 s out, four men, no
+      //  perimeter, the squad's own code for its rooms), the alarm placed where the player stands, the team asked for. `qrfcast` is then the tick its cast stands.)
+      else if (rule === 'qrf_stage') { const T = g.tune, p = g.player.char.pos; T.qrf = true; T.qrfEta = 14; T.qrfSize = 4; T.perimeter = false; T.qrfSquad = true; g.alarm.placed = true; g.alarm.pos = [p[0], p[1], p[2]]; g.alarm.raisedAt = g.time; (await0.requestQrf)(g, 'panel'); }
       else if (rule === 'shift_enter' || rule === 'enter') { const I = a.find((x: any) => x?.pressed instanceof Set && x?.keys instanceof Set); if (!I) throw new Error('BLITZ_CALL shift_enter: no Input among the frame\'s arguments'); if (rule === 'shift_enter') I.keys.add('ShiftLeft'); I.pressed.add('Enter'); }   // (`enter`: Enter alone, the down card's restart)
       else throw new Error(`BLITZ_CALL: no rule ${rule}`);
       if (rule !== 'shift_enter' && rule !== 'enter' && C.w[2] !== 'start') between(`${k} ${rule}`, 'call');
@@ -214,7 +222,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
 } as any;
 const log = console.log, er = console.error, wn = console.warn; let res: any = null;
 let les: any = null;
-try { if (LESSON) les = await (await import('../qa/lesson-run.ts')).runLesson(scn, { seed, sky: false, glow: false, floor: 0 }); else res = await play(scn, seed, 300, false, {}); } catch (e) { if (!(e instanceof Stop)) { console.log = log; throw e; } } finally { console.log = log; console.error = er; console.warn = wn; }
+try { if (LESSON) les = await (await import('../qa/lesson-run.ts')).runLesson(scn, { seed, sky: false, glow: false, floor: 0, ...(HARD ? { hard: true } : {}) }); else res = await play(scn, seed, 300, false, SET); } catch (e) { if (!(e instanceof Stop)) { console.log = log; throw e; } } finally { console.log = log; console.error = er; console.warn = wn; }
 // (the module's knob table as the TypeScript game wrote it: the runner's check of the generated `knobs_to_rust`)
 { const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); }
 if (les) { for (const l of les.lines.slice(-8)) say('   ' + l); say(`TypeScript: the lesson ${scn} seed ${seed} at tick ${k}: ${les.code === 0 ? 'every step went by and the run ended' : `STOPPED (${les.why})`}; ${les.steps.length} steps gone by: ${les.steps.map((s: any) => s.id).join(' ')}`); }

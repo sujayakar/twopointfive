@@ -140,7 +140,7 @@ fn main() {
             // (where the TypeScript side wrote ONE ORDERED RECORD the call is a line of it, made above in the driver's order; this is for a game of two seats)
             // TypeScript side under the same word. With `start` it is not called here: mission.ts wrote the state after the call as a new start.
             if let (false, Ok(c)) = (ordered, std::env::var("BLITZ_CALL")) { let w: Vec<&str> = c.split(' ').collect(); if w[0].parse::<usize>().ok() == Some(k) && w.get(2) != Some(&"start") {
-                match w[1] { "restart_encounter" => game::game::game_restart_encounter(&mut g), "reset_guards" => game::guards::reset_guards(&mut g), x => panic!("BLITZ_CALL: no rule {}", x) }
+                match w[1] { "restart_encounter" => game::game::game_restart_encounter(&mut g), "reset_guards" => game::game::game_reset_guards(&mut g), x => panic!("BLITZ_CALL: no rule {}", x) }
                 println!("BLITZ_CALL before tick {}: {} called; {} guards, time {}", k, w[1], g.guards.len(), g.time); } }
             if !ordered { if let Some(v) = meter.get(k - 1) { game_run::meter(&mut g, *v); } }
             // HOST STEP: the flag the player's own restart leaves for the host's next frame is put down (game_run::restart_cut)

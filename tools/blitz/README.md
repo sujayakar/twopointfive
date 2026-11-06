@@ -47,7 +47,9 @@ there is no such file (a game of two seats; a stepper that has not learned the r
 by a run what one is for. A rule called under BLITZ_CALL is a `call` line too; its tick may be a word (`fight`: the first tick after a round was fired
 with a hostile alert; `qrf`: the response team's cast deployed; `down`: the player half a second down, with PT_MORTAL=1), and the rule `shift_enter`
 presses the player's own restart on the host's Input (each side then restarts inside its own tick; `enter`: Enter alone, the down card's);
-`restart` calls `Game.restart`. A restart INSIDE a tick makes the chronicle anew: mission.ts takes a save or a load only from a count that moved on
+`restart` calls `Game.restart`. `reset_guards` is `Game.resetGuards` on both sides (the Game's own, with every module's reset; the runner
+called the guards module's inner function until this was found). Several calls in one run: a `;` between them. `qrf_stage` stages the response team
+as tools/qa/qrf-squad-check.ts does (the sandbox's rows, the alarm, the request); `qrfcast` is the tick its cast stands. A restart INSIDE a tick makes the chronicle anew: mission.ts takes a save or a load only from a count that moved on
 the same chronicle. A game of two seats takes BLITZ_CALL by number (seats.ts).
 
 `BLITZ_CALL="<k> restart_encounter|reset_guards [start]"` in front of run.sh calls that rule before tick k on both sides (with `start` the Rust game
