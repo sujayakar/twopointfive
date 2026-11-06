@@ -302,7 +302,7 @@ fn plain_valid(w: Option<String>) -> Result<(), Option<String>> {
     match w { Some(w) => Err(Some(w)), None => Ok(()) }
 }
 /// `d.label(t)`
-fn def_label(g: &mut Game, d: OrdersOrderDefId, t: &OrderTarget) -> String {
+pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String {
     let arm = g.tab.orders_order_def[d].label.clone();
     match arm {
         OrderLabel::Text { text } => text,
@@ -792,7 +792,7 @@ pub fn squad_orders_why_not(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &
 
 /// A row's words (orders.ts SquadOrders.labelOf)
 pub fn squad_orders_label_of(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String {
-    def_label(g, d, t)
+    order_label(g, d, t)
 }
 
 /// Issue an order by id; None when given, else why not (orders.ts SquadOrders.give)

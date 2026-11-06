@@ -1,11 +1,12 @@
 // THE HOST'S HAND-OVER'S CHECK. Role a stands a game at frame F and writes the whole state; at F+1 it writes the whole state and the host's half. `cargo test --lib host_round` (HOST_BLOB=f0.bin HOST_HALF=h1.bin HOST_OUT=x.bin)
 // imports F, takes the half and exports. Role b compares: the record and every camera and Input row that is no seat's must read as F+1 has them, and everything else as F has it.
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/host-check.ts <scn>:<seed>:<F> --role a|b --dir d
+import { tmpdir } from 'node:os';
 import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { exportGame, hostHalf, bookOf } from './export';
 import { decode } from './paths';
 const argv = process.argv.slice(2); const [scn, seed, F] = argv[0].split(':'); const arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
-const dir = arg('--dir', '/tmp/hostc'), role = arg('--role', 'a'); mkdirSync(dir, { recursive: true }); const say = (x: string) => { process.stdout.write(x + '\n'); };
+const dir = arg('--dir', `${tmpdir()}/hostc`), role = arg('--role', 'a'); mkdirSync(dir, { recursive: true }); const say = (x: string) => { process.stdout.write(x + '\n'); };
 const { knobRegistry } = await import('../../src/game/knobs.ts'); const reg = knobRegistry();
 const { Game } = await import('../../src/game/game.ts'); const { play } = await import('../qa/playthrough.ts');
 if (role === 'b') {

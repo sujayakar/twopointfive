@@ -280,7 +280,7 @@ pub fn seat(g: &mut crate::game::Game) {
 }
 
 /// `posture.word`   (silent.ts:247): what the posture's seam should call
-fn posture_word(g: &mut Game) -> Option<String> {
+pub fn posture_word(g: &mut crate::game::Game) -> Option<String> {
     if !crate::orders::squad_orders_active(g) { return None; }
     if squad_silent(g) {
         return Some(String::from(if silent_compromised(g) { "SILENT · compromised" } else { "SILENT" }));
@@ -289,11 +289,11 @@ fn posture_word(g: &mut Game) -> Option<String> {
     Some(loud_word(w.as_deref()))
 }
 /// `posture.mark`   (silent.ts:248): what the posture's seam should call
-fn posture_mark(g: &mut Game, def: OrdersOrderDefId) -> &'static str {
+pub fn posture_mark(g: &mut crate::game::Game, def: OrdersOrderDefId) -> &'static str {
     if squad_silent(g) && is_loud_row(&g.tab.orders_order_def[def].id) { " · LOUD" } else { "" }
 }
 /// `posture.given`   (silent.ts:249): what the posture's seam should call
-fn posture_given(g: &mut Game, def: OrdersOrderDefId) {
+pub fn posture_given(g: &mut crate::game::Game, def: OrdersOrderDefId) {
     let loud = is_loud_row(&g.tab.orders_order_def[def].id);
     silent_tool(g, loud);
 }

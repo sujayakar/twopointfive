@@ -50,6 +50,9 @@ Nothing inside the tick does these, and the next tick reads what they leave:
 - **After a step:** `render_lights::light_set_update(g, dt, time)`: a flash's envelope and its retirement. `chronicle::chron_checkpoint` when it autosaves: `saves.tick` is the tick's last line in the TypeScript and writes that row into the game. On rails, `rails_host_view(g, cam)` with the host's camera (game.ts hostAfter: a tutorial staged again opens on its first view), and at an authored checkpoint `director_stop(false)` then `rails_resume`.
 - **The smoke solver's answers are input:** `budget`, `inSmokeDomain`, `round`, `drawing`. With no solver they are the host's null object's.
 - **The listing frees frame boxes:** `scene_boxes::boxes_frame_reset` straight after `box_world_list`, not in the tick. The engine's list names a frame's IDs until the next listing, so a host that lists every fourth frame keeps them that long.
+- **The host's camera asks after a step:** `followPos()` eases and stamps, so a host that shows a camera calls `game_follow_pos` for each seat after the tick, and a compare that leaves it out parts on the camera, not on a rule.
+- **A checkpoint put back between ticks is a new start.** The save controller replaces the whole game, and in that frame the host steps twice. Take it as a fresh import from the state and block as that tick returned; what the load itself does differently is then not compared.
+- **`io::take_host_half` writes `g.cmd_buf` from the local seat's record.** It's right with two seats (the records go back in seat order for `game_step_seats`), but a host that steps seats directly and never goes through `Game.update` has no `cmdBuf` of its own, so clear it there or the kept states read None against Some. It also takes each seat's mark: **`Seat.mark` is the host's half.** A cut is taken by whoever hosts the picture, so after one the puppet's export differs from the last apply in that field until the next hand-over.
 - **A question between ticks can write the game:** `g.fight.roomAt(p)` floods a room and keeps it, and a driver's `orders.give` is an order. A compare replays those at the same tick.
 
 ## Comparing two states
@@ -70,6 +73,9 @@ A level script: `io::deal_scripts`, at the end of each import, finds the script 
 
 ## Closures
 
+An order row's closures on a puppet: see `ask.ts`. They ask the Rust game by the row's ID, so no registration runs twice.
+
+
 The walk carries a closure set up once, where it can name the arm: `pane_rule`, `pane_rows`, `glass_walkable`, `fire_pass`, the blast listeners, the wall-change listeners, each rate cap's `n`. `io::deal_closures` runs at the end of an import and deals every order row its closures by `def.id`, from a table in `hand2.cjs` (`ROWS`) written from the parts' own registrations. `report()` names any row that table lacks. `go` takes the arm of `door_tools.go_key`.
 
 Closures made mid-flight stand at their blank after an import: a thrown can's `on_bounce`, a blow's `live`, a fall's `release`, `Threshold.out`, `Later.then`. `SquadOrders.notes` does too: it is the HUD's. So compare from the start of a mission and step both games; do not import into the middle of a fight and expect those to resume.
@@ -80,9 +86,9 @@ The walk deals a serial by object identity, from 1, in the order it meets a reco
 
 ## A state in the middle of a level script
 
-A JavaScript generator's place and locals can't be read from outside, so `LiveBeat.it` is not carried. **A state exported while any beat is running can't be imported:** `io::import` and `io::import_into` panic and name the beat, and `report()` says so on the TypeScript's side. A frame at `Spent` would otherwise end the beat at once and say nothing.
+A JavaScript generator's place and locals can't be read from outside, so **a state the TypeScript exported while a beat runs still can't be imported**: `io::import` and `import_into` refuse it by name, and `report()` says the same.
 
-So a tutorial is compared from before its program starts, by what its beats do: the die, the block and the path diff all see that. Once Rust has started the program it holds its own frames, which clone with the game.
+Rust's own bytes can: `LiveBeat.it` is carried as a counted blob holding the beat's arm and frame (empty is `Spent`), and a `Cond.test` as an arm and a number. The apply keeps both beside the row as an echo and the puppet's export writes them back, so a hand-back during a beat is refused only if a beat's place was never Rust's. Checked on tut-solo: 24 whole hand-backs with a beat running over 600 ticks, equal to the plain play. `--handback N` in the host is the check, and `HB_DEBUG=<dir>` dumps the whole Rust game before and after one, which is what found a lost `Cond.test`.
 
 ## What it does not carry
 

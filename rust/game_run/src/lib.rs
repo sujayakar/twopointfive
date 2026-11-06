@@ -51,7 +51,6 @@ pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>,
     // BRIDGE STAND-IN: THE AIM RAY'S WAY THROUGH A HOLED PANE. `BoxWorld.glassOpen` is a hook glassbreak.ts hangs on the engine's box world as the game
     // is made (glassbreak.ts:230); the bridge does not carry it, so an imported game's cursor ray landed ON a pane whose cell had fallen where the
     // TypeScript's passes through the hole (the player's aim point, his arm, his reticle). Hung here as the constructor hangs it.
-    g.engine.world.glass_open = Some(game::FnField);
     // (the level's script and its define pass are the import's own now: io::deal_scripts)
     if let Some(sc) = g.level.script { said.push(format!("the level's script, as the import dealt it: {:?}", sc)); }
     (g, said)

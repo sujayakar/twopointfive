@@ -1,5 +1,6 @@
 //! The frames of levels/tut-team.script.ts, written by the skeleton's program from the checker. Never edited by hand: a local a body wants across a yield that is not here is a question for the program.
-#![allow(unused_imports)]
+#![allow(unused_imports, unused_variables, unused_mut)]
+use crate::io::Io as _;
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
@@ -12,6 +13,8 @@ pub struct TutTeamHoldFrame {
     pub held: Vec<crate::director::UnitRef>,
 }
 
+impl crate::io::Io for TutTeamHoldFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); self.held.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s.held = crate::io::Io::r(i); s } }
+
 /// (levels/tut-team.script.ts:124-132) the beat 'cook': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamCookFrame {
@@ -21,6 +24,8 @@ pub struct TutTeamCookFrame {
     pub u: Option<crate::director::UnitRef>,
 }
 
+impl crate::io::Io for TutTeamCookFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); self.u.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s.u = crate::io::Io::r(i); s } }
+
 /// (levels/tut-team.script.ts:136-143) the beat 'ambush': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamAmbushFrame {
@@ -29,6 +34,8 @@ pub struct TutTeamAmbushFrame {
     /// yield* rake: yield* rake: the helper's frame while it runs. Step it until it answers None
     pub sub_rake: Option<alloc::boxed::Box<crate::script_tut_team::TutTeamRakeHelperFrame>>,
 }
+
+impl crate::io::Io for TutTeamAmbushFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); self.sub_rake.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s.sub_rake = crate::io::Io::r(i); s } }
 
 /// (levels/tut-team.script.ts:144-149) the beat 'pinned': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
@@ -45,6 +52,8 @@ pub struct TutTeamPinnedFrame {
     pub u: Option<crate::director::UnitRef>,
 }
 
+impl crate::io::Io for TutTeamPinnedFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); self.k.w(o); self.who.w(o); self.line.w(o); self.u.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s.k = crate::io::Io::r(i); s.who = crate::io::Io::r(i); s.line = crate::io::Io::r(i); s.u = crate::io::Io::r(i); s } }
+
 /// (levels/tut-team.script.ts:154-168) the beat 'smoke': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamSmokeFrame {
@@ -54,6 +63,8 @@ pub struct TutTeamSmokeFrame {
     pub sub_smoke: Option<alloc::boxed::Box<crate::script_tut_team::TutTeamSmokeHelperFrame>>,
 }
 
+impl crate::io::Io for TutTeamSmokeFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); self.sub_smoke.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s.sub_smoke = crate::io::Io::r(i); s } }
+
 /// (levels/tut-team.script.ts:169-175) the beat 'break': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamBreakFrame {
@@ -61,12 +72,16 @@ pub struct TutTeamBreakFrame {
     pub at: u16,
 }
 
+impl crate::io::Io for TutTeamBreakFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s } }
+
 /// (levels/tut-team.script.ts:176-176) the beat 'ordered': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamOrderedFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
+
+impl crate::io::Io for TutTeamOrderedFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s } }
 
 /// (levels/tut-team.script.ts:178-178) the beat 'blind': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
@@ -77,6 +92,8 @@ pub struct TutTeamBlindFrame {
     pub sub_harass: Option<alloc::boxed::Box<crate::script_tut_team::TutTeamHarassHelperFrame>>,
 }
 
+impl crate::io::Io for TutTeamBlindFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); self.sub_harass.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s.sub_harass = crate::io::Io::r(i); s } }
+
 /// (levels/tut-team.script.ts:181-185) the beat 'linger': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamLingerFrame {
@@ -85,6 +102,8 @@ pub struct TutTeamLingerFrame {
     /// yield* harass: yield* harass: the helper's frame while it runs. Step it until it answers None
     pub sub_harass: Option<alloc::boxed::Box<crate::script_tut_team::TutTeamHarassHelperFrame>>,
 }
+
+impl crate::io::Io for TutTeamLingerFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); self.sub_harass.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s.sub_harass = crate::io::Io::r(i); s } }
 
 /// (levels/tut-team.script.ts:190-205) the beat 'push': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
@@ -103,12 +122,16 @@ pub struct TutTeamPushFrame {
     pub u_2: Option<crate::director::UnitRef>,
 }
 
+impl crate::io::Io for TutTeamPushFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); self.k.w(o); self.left.w(o); self.i.w(o); self.u.w(o); self.u_2.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s.k = crate::io::Io::r(i); s.left = crate::io::Io::r(i); s.i = crate::io::Io::r(i); s.u = crate::io::Io::r(i); s.u_2 = crate::io::Io::r(i); s } }
+
 /// (levels/tut-team.script.ts:208-213) the beat 'indoors': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamIndoorsFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
+
+impl crate::io::Io for TutTeamIndoorsFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s } }
 
 /// (levels/tut-team.script.ts:216-220) the beat 'house': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
@@ -117,12 +140,16 @@ pub struct TutTeamHouseFrame {
     pub at: u16,
 }
 
+impl crate::io::Io for TutTeamHouseFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s } }
+
 /// (levels/tut-team.script.ts:221-225) the beat 'out': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamOutFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
+
+impl crate::io::Io for TutTeamOutFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s } }
 
 /// (levels/tut-team.script.ts:73-89) the helper generator rake: where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
@@ -159,6 +186,8 @@ pub struct TutTeamRakeHelperFrame {
     pub n: f64,
 }
 
+impl crate::io::Io for TutTeamRakeHelperFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); self.zones.w(o); self.stop.w(o); self.o.w(o); self.total.w(o); self.men.w(o); self.r.w(o); self.z.w(o); self.z_2.w(o); self.can.w(o); self.u.w(o); self.heavy.w(o); self.left.w(o); self.at_2.w(o); self.n.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s.zones = crate::io::Io::r(i); s.stop = crate::io::Io::r(i); s.o = crate::io::Io::r(i); s.total = crate::io::Io::r(i); s.men = crate::io::Io::r(i); s.r = crate::io::Io::r(i); s.z = crate::io::Io::r(i); s.z_2 = crate::io::Io::r(i); s.can = crate::io::Io::r(i); s.u = crate::io::Io::r(i); s.heavy = crate::io::Io::r(i); s.left = crate::io::Io::r(i); s.at_2 = crate::io::Io::r(i); s.n = crate::io::Io::r(i); s } }
+
 /// (levels/tut-team.script.ts:91-101) the helper generator harass: where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamHarassHelperFrame {
@@ -184,6 +213,8 @@ pub struct TutTeamHarassHelperFrame {
     pub n: f64,
 }
 
+impl crate::io::Io for TutTeamHarassHelperFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); self.marks.w(o); self.stop.w(o); self.o.w(o); self.men.w(o); self.at_2.w(o); self.north.w(o); self.u.w(o); self.heavy.w(o); self.n.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s.marks = crate::io::Io::r(i); s.stop = crate::io::Io::r(i); s.o = crate::io::Io::r(i); s.men = crate::io::Io::r(i); s.at_2 = crate::io::Io::r(i); s.north = crate::io::Io::r(i); s.u = crate::io::Io::r(i); s.heavy = crate::io::Io::r(i); s.n = crate::io::Io::r(i); s } }
+
 /// (levels/tut-team.script.ts:156-161) the helper generator smoke, inside the beat 'smoke': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamSmokeHelperFrame {
@@ -195,6 +226,8 @@ pub struct TutTeamSmokeHelperFrame {
     pub by: Vec<Option<crate::director::UnitRef>>,
 }
 
+impl crate::io::Io for TutTeamSmokeHelperFrame { fn w(&self, o: &mut crate::io::W) { self.at.w(o); self.again.w(o); self.by.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.at = crate::io::Io::r(i); s.again = crate::io::Io::r(i); s.by = crate::io::Io::r(i); s } }
+
 /// (levels/tut-team.script.ts) what the define pass names and a beat reads: the script's and its programs' locals. Its closures are your private fns: block, squad, inBunk, inKitchen, inYard, pick
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamVars {
@@ -205,6 +238,8 @@ pub struct TutTeamVars {
     pub bunk_door: Option<crate::director::DoorRef>,
 }
 
+impl crate::io::Io for TutTeamVars { fn w(&self, o: &mut crate::io::W) { self.rifle.w(o); self.yaw.w(o); self.pass_door.w(o); self.kitchen_door.w(o); self.bunk_door.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.rifle = crate::io::Io::r(i); s.yaw = crate::io::Io::r(i); s.pass_door = crate::io::Io::r(i); s.kitchen_door = crate::io::Io::r(i); s.bunk_door = crate::io::Io::r(i); s } }
+
 /// an inline shape of the script
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamZone {
@@ -214,6 +249,8 @@ pub struct TutTeamZone {
     pub by: Option<Vec<String>>,
 }
 
+impl crate::io::Io for TutTeamZone { fn w(&self, o: &mut crate::io::W) { self.lo.w(o); self.hi.w(o); self.w.w(o); self.by.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.lo = crate::io::Io::r(i); s.hi = crate::io::Io::r(i); s.w = crate::io::Io::r(i); s.by = crate::io::Io::r(i); s } }
+
 /// an inline shape of the script
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamRakeHelperO {
@@ -222,6 +259,8 @@ pub struct TutTeamRakeHelperO {
     pub spread: f64,
 }
 
+impl crate::io::Io for TutTeamRakeHelperO { fn w(&self, o: &mut crate::io::W) { self.rounds.w(o); self.gap.w(o); self.spread.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.rounds = crate::io::Io::r(i); s.gap = crate::io::Io::r(i); s.spread = crate::io::Io::r(i); s } }
+
 /// an inline shape of the script
 #[derive(Clone, Debug, Default)]
 pub struct TutTeamHarassHelperO {
@@ -229,3 +268,5 @@ pub struct TutTeamHarassHelperO {
     pub gap: [f64; 2],
     pub spread: f64,
 }
+
+impl crate::io::Io for TutTeamHarassHelperO { fn w(&self, o: &mut crate::io::W) { self.rounds.w(o); self.gap.w(o); self.spread.w(o); } fn r(i: &mut crate::io::R) -> Self { let mut s = Self::default(); s.rounds = crate::io::Io::r(i); s.gap = crate::io::Io::r(i); s.spread = crate::io::Io::r(i); s } }

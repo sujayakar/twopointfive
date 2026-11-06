@@ -57,8 +57,9 @@ const partHashes = (slot: number): number[] => { const at = X.face_part_hashes(s
 { const n = 48 * 1048576, p = X.face_alloc(n); X.face_free(p, n); }
 
 // ---- the bridge and the game
-const { exportGame, exportPart, fieldAt, bookOf, SCHEMA, parse, hostHalf } = await import('./export.ts');
+const { exportGame, exportPart, fieldAt, bookOf, SCHEMA, parse, hostHalfParts } = await import('./export.ts');
 const { applyGame } = await import('./import.ts');
+const { installAsks } = await import('./ask.ts');
 const { classTable, valueTable } = await import('./classes.ts');
 const { knobRegistry } = await import('../../src/game/knobs.ts');
 const { Game } = await import('../../src/game/game.ts');
@@ -71,6 +72,8 @@ const reg = knobRegistry(), HOOKS = { classes: classTable(), values: valueTable(
 // than the Rust game's), so the puppet keeps its own and rebuilds it when the apply says the boxes were written (PUT_BACKS)
 const APPLY_ONLY = new Set<string>(); for (const T0 of Object.values<any>(SCHEMA.types)) if (T0.k === 'struct' && T0.mod !== 'scene_box_mirror') for (const f of T0.fields) APPLY_ONLY.add(`${T0.mod}::${T0.name}.${f.rust}`);
 class Stop extends Error {}
+const NO_ASKS = has('--no-asks'); let asks: { after(): void } | null = null;
+const HANDBACK = +arg('--handback', '0'); let handbacks = 0, handbacksInBeat = 0;
 
 // ---- where in a state a byte is: the bridge's walk, entered only where one of the asked places lies. A value of a fixed width that holds none is stepped over.
 type N = any;
@@ -87,7 +90,7 @@ type Span = { q: string; s: number; e: number };
 // FIELDS THAT ARE EACH SIDE'S OWN, cut out of every compare and never handed across (PLAY.md says why for each): the box mirror is a module's own copy of the
 // box world with its own counters; the other three the export works out or reads from a module variable that the apply does not write back, so the puppet's
 // are not the Rust game's. All four stand in the game's own fields (none in a table's row), so one walk of the root finds them.
-const CUT = new Set(['scene_collision::StaticCollision.mirror', 'game::Mods.scene_box_mirror', 'game::Game.door_owns', 'anim_gltf::AnimGltfMod.nvg_bits', 'anim_gltf::AnimGltfMod.suit_bits', 'wallbreak::WallBreak.listeners']);
+const CUT = new Set<string>();
 /** the field each of `offs` (ascending) lies in: its path in the state and the struct field that declares it. `spans`: where each CUT field stands; with
  *  `rootOnly` the walk ends with the game's own fields (the tables are not entered) */
 function locate(b: Uint8Array, offs: number[], spans: Span[] | null = null, rootOnly = false, rootTy: string = SCHEMA.root, rootPath = 'g'): Place[] {
@@ -195,7 +198,7 @@ function withCutsOf(b: Uint8Array, a: Uint8Array): Uint8Array { const A = spansO
 const HOST_Q = (x: { q: string; path: string }) => x.path.startsWith('g.cmd_buf') || /^g\.tab\.(camera|input)\b/.test(x.path) || x.q === 'orders::SquadOrdersView.input' || x.q === 'orders::SquadOrdersView.cam' || x.q === 'game::Game.view_proj';
 // NOT A WRITE: an identity serial (the two sides number objects apart by design: schema.serial), a clip's place in the Rust game's own table (the export
 // writes a constant for it), `Player.kit_was` (the apply leaves the puppet's at nothing where the Rust game holds one: seen on tut-solo every tick), and the counts of collision and sense asks (collision.ts ANYTIME, SENSED: counters of the module that was asked, read by no rule)
-const OWN_Q = (x: { q: string; path: string }) => !!SCHEMA.serial?.[x.q] || !!SCHEMA.scratch?.[x.q] || x.q === 'anim_skeleton::ClipSide.at' || x.q === 'game::Player.kit_was' || x.q === 'lesson::Lesson.run' || x.q === 'tail' || /^scene_collision::SceneCollisionMod(ANYTIME|SENSED)\./.test(x.q);
+const OWN_Q = (x: { q: string; path: string }) => !!SCHEMA.serial?.[x.q] || !!SCHEMA.scratch?.[x.q] || x.q === 'tail' || /^scene_collision::SceneCollisionMod(ANYTIME|SENSED)\./.test(x.q);
 
 // ---- the run's books
 let k = 0, h = 0, slot = 0, lastState: Uint8Array | null = null, lastBlock: Uint8Array | null = null, lastRust: Uint8Array | null = null;
@@ -211,10 +214,8 @@ const count = (name: string) => CALLS.set(name, (CALLS.get(name) ?? 0) + 1);
 const now = () => performance.now();
 const tsBlock = (g: any): Uint8Array => { const w: Uint32Array = g.sim.w; return new Uint8Array(w.buffer, w.byteOffset, w.byteLength); };
 const rustBlock = (): Uint8Array => u8().subarray(X.state_addr(slot), X.state_addr(slot) + X.state_len());
-/** the host's half in the replay loop's own bytes (mission.ts h<k>.bin), for the compare below and for a module built before `face_host_half` */
-function hostHalfOld(g: any): Uint8Array { const bk: any = bookOf(g), P: [string, any][] = [];
-  const cb = fieldAt(g, reg, ['cmd_buf']); P.push([cb.ty, cb.v]);
-  for (const [id, ty] of [['CameraId', 'crate::camera::FollowCamera'], ['InputId', 'crate::input::Input']]) { const L: any[] = bk.listOf(id); P.push(['u32', L.length]); for (const row of L) P.push([ty, row]); }
+/** the host's half, the bytes handed over, held to the plain play's (mission.ts h<k>.bin) */
+function hostHalfHeld(g: any, cmds: readonly any[]): Uint8Array { const bk: any = bookOf(g), P = hostHalfParts(g, cmds);
   const mine = exportPart(g, reg, P);
   // WHAT THE SCRIPTED PLAYER PRESSED, held to what it pressed in the plain TypeScript play (the reference's h<k>.bin, where the reference kept them): the
   // first tick the two differ is the first tick the puppet showed the player something the TypeScript game did not, whatever the block says by then
@@ -223,7 +224,7 @@ function hostHalfOld(g: any): Uint8Array { const bk: any = bookOf(g), P: [string
       if (ref.length !== mine.length) where.push(`the lengths differ (${mine.length} here, ${ref.length})`);
       // (piece by piece: the record, then each camera row, then each Input row; a piece of one length on both sides is named field by field)
       else for (let i = 0; i < P.length; i++) { const n = exportPart(g, reg, [P[i]]).length, a = ref.subarray(at, at + n), b = mine.subarray(at, at + n); at += n; if (P[i][0] === 'u32' || buf(a).equals(buf(b))) continue;
-        const name = i === 0 ? 'cmd_buf' : `${P[i][0].split('::').pop()}[${bk.listOf(P[i][0].endsWith('FollowCamera') ? 'CameraId' : 'InputId').indexOf(P[i][1])}]`;
+        const name = P[i][0].endsWith('PlayerCmd') ? `record[${i - 1}]` : `${P[i][0].split('::').pop()}[${bk.listOf(P[i][0].endsWith('FollowCamera') ? 'CameraId' : 'InputId').indexOf(P[i][1])}]`;
         for (const x of locate(b, diffOffsets(a, b), null, true, P[i][0], name)) { const dv = (u: Uint8Array) => new DataView(u.buffer, u.byteOffset + x.off, Math.min(8, u.length - x.off)); const f = (u: Uint8Array) => { try { return dv(u).getFloat64(0, true); } catch { return NaN; } }; where.push(`${x.path} (${f(b)} here, ${f(a)})`); } }
       if (OUT) writeFileSync(`${OUT}/host${k}.bin`, mine);
       say(`TICK ${k}: THE HOST'S HALF PARTS from the plain TypeScript play's (what the player pressed, where its camera stood): ${where.slice(0, 40).join(' · ')}`); } }
@@ -232,29 +233,8 @@ let hostParted = 0, hostCompared = 0;
 /** the Rust game's whole state onto the puppet, and its block over the puppet's */
 function applyRust(g: any): Uint8Array {
   let t = now(); X.face_export(h); const blob = u8().slice(X.face_out_ptr(), X.face_out_ptr() + X.face_out_len()); T.export += now() - t;
-  const posture = g.orders.posture, lenses = (g.seats as any[]).map(s => ({ s, mark: s.mark, d: [s.cam.desired[0], s.cam.desired[1], s.cam.desired[2]] }));
-  t = now(); const R = applyGame(g, blob, reg, ONLY ? { hooks: HOOKS, only: APPLY_ONLY } : { hooks: HOOKS }); const el = now() - t; T.apply += el; if (el > worstApply) worstApply = el;
-  // STAND-IN: A SEAT'S CUT IS AN IDENTITY (cmd.ts:191 `takeCut`: a cut is pending while the lens's `desired` is not the array the seat last took, `mark`).
-  // The apply writes `desired` in place, so a cut made by the Rust tick never shows; and it puts into `mark` whatever object has the serial the Rust seat
-  // holds there (Rust counts writes of `desired` in `FollowCamera.desired_serial`, which no state carries), so `takeCut` then answers a cut EVERY tick and
-  // game.ts:1555 snaps the host's camera to it every tick (seen: the host's camera 4 m off the TypeScript play's as tick 2 opens). Here the seat keeps its
-  // own `mark`, and a `desired` whose numbers the apply changed is given a new array: every write of a lens's `desired` in src/game is a whole write, a cut.
-  // Belongs in the face (a call that takes the seat's cut on the Rust side) or in the bridge (`desired_serial` carried).
-  for (const x of lenses) { const c = x.s.cam, d = c.desired; x.s.mark = x.mark; if (d[0] !== x.d[0] || d[1] !== x.d[1] || d[2] !== x.d[2]) { c.desired = [d[0], d[1], d[2]]; standIns.cut++; } }
-  // STAND-IN: THE LESSON'S RUN IS THE MISSION BY IDENTITY (lesson.ts:348 `settling`: `this.run === this.g.mission`). The bridge carries `Lesson.run` as an
-  // identity serial; the Rust game deals its own serials, so the apply puts whatever TypeScript object has that number (or a placeholder) there,
-  // `settling` answers false, and the lesson's player stops (tut-solo tick 652, tools/qa/lesson-run.ts:323: "step 3 'sprint' did not go by", while the Rust
-  // lesson held the step done and settling). Here a run that the Rust game holds at all is taken to be the mission the puppet holds: wrong for the ticks
-  // between a restart's new Mission and the lesson filing it. Belongs in the bridge (the run carried as "is the mission's", not as a number).
-  if (g.lesson && g.lesson.run && g.lesson.run !== g.mission) { g.lesson.run = g.mission; standIns.run++; }
-  // STAND-IN: THE SQUAD'S POSTURE is three closures in TypeScript (silent.ts:246) and a struct of no fields in the bridge; the apply puts a bare object
-  // where the Rust game holds one, and orders.ts:885 (`this.posture?.given(def)`) then throws. The puppet keeps the object it had. Belongs in import.ts.
-  if (posture && g.orders.posture && g.orders.posture !== posture) { g.orders.posture = posture; standIns.posture++; }
-  // STAND-IN: AN ORDER ROW THE RUST GAME REGISTERED AGAIN (silent.ts `seat` runs whole on its first tick there: its memo of what it last did is a WeakMap
-  // by game that no state carries) is a new row of the table, so the apply makes a new object for it with none of the row's closures (`can`, `go`, …).
-  // The menu on the puppet would call nothing. A new row takes the functions of the row of the same id that the TypeScript game registered.
-  // Belongs in import.ts (a hook for a new OrderDef) or in the Rust game (the memo carried, so that nothing is registered twice).
-  if (R.made.OrderDef) for (const d of g.orders.defs as any[]) { if (DEFS.orig.has(d)) continue; DEFS.orig.add(d); const o = DEFS.byId.get(d.id); if (!o) { standIns.defNoTwin++; continue; } for (const key of Object.keys(o)) if (typeof o[key] === 'function' && typeof d[key] !== 'function') d[key] = o[key]; standIns.defs++; }
+  t = now(); const R = applyGame(g, blob, reg, { hooks: HOOKS }); const el = now() - t; T.apply += el; if (el > worstApply) worstApply = el;
+  asks?.after();   // (every order row the apply made, and the posture, ask the Rust game: ask.ts)
   for (const [q, n] of R.noWay) noWay.set(q, (noWay.get(q) ?? 0) + n); for (const [q, n] of R.noSetter) noSetter.set(q, (noSetter.get(q) ?? 0) + n); for (const q of R.noWindow) noWindow.add(q);
   for (const [c, n] of Object.entries(R.made)) if (n) made[c] = (made[c] ?? 0) + n;
   t = now(); const mine = tsBlock(g), theirs = rustBlock(); mine.set(theirs.subarray(0, mine.length)); lastBlock = mine.slice(); T.block += now() - t;
@@ -294,7 +274,6 @@ function taps(g: any) {
     // (not on the ticks expected: made now on the Rust side, and the puppet takes the state again so the player reads the listed world)
     uploadsLate++; X.face_upload(h); uploadsRust++; applyRust(g); lastState = exportGame(g, reg); }; }
 let uploadDone = false;
-const DEFS = { orig: new Set<any>(), byId: new Map<string, any>() }, standIns = { posture: 0, defs: 0, defNoTwin: 0, cut: 0, run: 0 };
 
 /** THE WRITE-BACK: what TypeScript wrote into the puppet since the last apply goes to the Rust game. `at`: the tick that opens next. */
 function writeBack(g: any, at: number): void {
@@ -311,9 +290,9 @@ function writeBack(g: any, at: number): void {
       if (owed.length === 1 && owed[0].path === 'g.pl[0].visibility' && g.seats.length === 1) { X.face_meter(h, g.player.visibility); wbMeter++; }
       // (a level script's beat holds its place in a generator no state carries: the Rust import refuses a state with a beat running, by a panic. What
       // TypeScript wrote while one runs cannot be handed over whole; it is named and counted, and the next apply puts the Rust game's own back)
-      else if ((bookOf(g).listOf('DirectorLiveBeatId') as any[]).some(r => r.state === 'running')) { wbRefused++; for (const x of owed) tallyAdd(WB_REFUSED, x.q, x.path, at); if (owed.some(x => x.path === 'g.pl[0].visibility')) { X.face_meter(h, g.player.visibility); wbMeter++; } }
       else { hand(withCutsOf(mine, lastRust!), (p, n) => X.face_import_into(h, p, n)); wbFired++; if (OUT && wbFired <= 400) appendFileSync(`${OUT}/writeback.txt`, `${at} ${[...new Set(owed.map(x => x.q))].join(' ')}\n   eg ${owed[0].path}\n`); }
     } else wbHostOnly++;
+    if (HANDBACK && (process.env.HB_AT ? process.env.HB_AT.split(',').includes(String(at)) : at % HANDBACK === 0)) { const dbg = () => { X.face_debug(h); return outText(); }; const before = process.env.HB_DEBUG ? dbg() : ''; hand(mine, (p, n) => X.face_import_into(h, p, n)); if (process.env.HB_DEBUG) { const after = dbg(); writeFileSync(`${process.env.HB_DEBUG}/before${at}.txt`, before); writeFileSync(`${process.env.HB_DEBUG}/after${at}.txt`, after); } handbacks++; if ((bookOf(g).listOf('DirectorLiveBeatId') as any[]).some(r => r.state === 'running')) handbacksInBeat++; }   // (a whole hand-over whether anything was written or not: what a host must be able to do at any tick, a beat running or not)
     if (blockOwed) { wbBlock++; const lay: any[] = LAYOUT ??= layoutOf(); const a = lastBlock!; for (const p of lay) { if (!buf(blk.subarray(p.off, p.off + p.len)).equals(buf(a.subarray(p.off, p.off + p.len)))) BLOCKW.set(p.name, (BLOCKW.get(p.name) ?? 0) + 1); } rustBlock().set(blk.subarray(0, X.state_len())); lastBlock = blk.slice(); }
     T.wbImport += now() - t1; openState = mine; lastState = mine;
   }
@@ -331,12 +310,12 @@ function puppetStep(g: any, dt: number, cmds: readonly any[]): void {
     if (LESSON && has('--lesson-json')) { const les = enc.encode(JSON.stringify((g.level.scenarios?.lesson?.steps ?? []).map((s: any) => s.done))); hand(les, (p, n) => X.face_lesson(h, p, n)); if (outText() && !QUIET) say(outText()); }
     if (X.state_len() !== block.length) say(`play: rust/sim's block is ${X.state_len()} bytes in the module and ${block.length} in the TypeScript game`);
     lastState = start; lastBlock = block; lastRust = start;
-    for (const d of g.orders.defs as any[]) { DEFS.orig.add(d); DEFS.byId.set(d.id, d); }
+    if (!NO_ASKS) asks = installAsks(g, reg, (kind, row, seat, b) => { hand(b, (p, n) => X.face_ask(h, kind, row, seat, p, n)); return u8().slice(X.face_out_ptr(), X.face_out_ptr() + X.face_out_len()); }, () => { applyRust(g); });
     say(`play: ${scn}:${seed}; the start ${start.length} bytes, the block ${block.length}; slot ${slot}; memory ${(mem.buffer.byteLength / 1048576).toFixed(0)} MB`);
   } else writeBack(g, k);
   // THE HOST'S HALF: each seat's record, every camera and Input row, in the bridge's own small buffer (export.ts hostHalf, io::take_host_half)
-  t = now(); const old = hostHalfOld(g); T.hostHold += now() - t; t = now();
-  if (X.face_host_half) { const hb = hostHalf(g, reg, cmds); hostBytes = hb.length; hand(hb, (p, n) => X.face_host_half(h, p, n)); } else hand(old, (p, n) => X.face_host(h, p, n, k === 1 ? 1 : 0));
+  t = now(); const hb = hostHalfHeld(g, cmds); T.hostHold += now() - t; t = now();
+  hostBytes = hb.length; hand(hb, (p, n) => X.face_host_half(h, p, n));
   T.hostHalf += now() - t;
   t = now(); X.face_step(h, dt, 0); const el = now() - t; T.step += el; if (el > worstStep) { worstStep = el; worstStepAt = k; }
   { const said = outText(); if (said && !QUIET) say(said.trimEnd()); }
@@ -415,7 +394,7 @@ function finish(g: any, code: number | null = null): never {
   say(`  THE APPLY, held to the Rust bytes it was given (the puppet exported again right after it): ${applyChecks} ticks checked (the first 3, then every ${APPLY_CHECK}th), ${applyUnequal} with a field outside the cut ones not as Rust has it`); if (applyUnequal) say(table(APPLY_MISS));
   say(`    of the fields cut out of every compare, the puppet's differed from the Rust game's on: ${[...CUTW].map(([q, n]) => `${q} ${n} of ${applyChecks}`).join(' · ') || 'none'}`);
   say(`  the apply made new rows: ${JSON.stringify(made)}; no way back: ${[...noWay].map(([q, n]) => `${q} x${n}`).join(', ') || '-'}; no setter: ${[...noSetter].map(([q, n]) => `${q} x${n}`).join(', ') || '-'}; no window: ${[...noWindow].join(', ') || '-'}`);
-  say(`  STAND-INS used: a seat's cut made anew ${standIns.cut} times (and its mark kept over every apply); the lesson's run set to the puppet's mission after ${standIns.run} applies; the squad's posture kept over ${standIns.posture} applies; ${standIns.defs} new order rows given their TypeScript twin's closures (${standIns.defNoTwin} had no twin)`);
+  if (HANDBACK) say(`  HANDED BACK WHOLE every ${HANDBACK} ticks: ${handbacks} times, ${handbacksInBeat} with a beat of the level's script running`);
   say(`  the box world listed on the Rust side ${uploadsRust} times (${uploadsLate} asked for on a tick not expected, ${uploadsMissed} expected and not asked for); out events: ${X.face_out_n ? `${outEvents} over ${outTicks} ticks, cleared and not dispatched (the whole export does not carry them)` : 'this module cannot say'}`);
   const sameEnd = !post.length ? false : (res ? refEnd.includes(`: ${res.end} (`) && refEnd.includes(`t ${res.t};`) && refEnd.includes(`team ${res.team} of ${res.of}`) && refEnd.includes(`PLAYED OUT at tick ${k} `) : les ? refEnd.includes(` at tick ${k}:`) && refEnd.includes(les.steps.map((s: any) => s.id).join(' ')) : false);
   if (code === null) code = S.parted || S.dieParted ? 1 : !post.length ? 3 : sameEnd ? 0 : (res || les) ? 4 : 0;

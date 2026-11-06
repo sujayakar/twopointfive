@@ -13,7 +13,7 @@ const SEAT_TONES: [SeatTone; 2] = [SeatTone::You, SeatTone::Purple];
 // ---------------------------------------------------------------- the seams: what skeleton 5 still does not have
 
 /// seats.ts:213 `rawGame(g) !== g` with the first seat on Game: a pass over his view and a pass over the bare Game look alike here
-fn seam_in_first_seat_view(g: &mut Game) -> bool { crate::seats::in_view() }
+fn seam_in_first_seat_view(g: &mut Game) -> bool { crate::seats::in_view(g) }
 
 // ---------------------------------------------------------------- small helpers
 
