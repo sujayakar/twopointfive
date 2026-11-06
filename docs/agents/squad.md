@@ -936,7 +936,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   touched. Known and left: no room to stack on that door → 'no room on that door.' (the stack's refusal, on a 'move'); the refusal names the door on
   the way the lock search found, which is the one walked to; a lead stopped short of his mark tries it from where he stands; a second cast is left
   out; the silent squad's stand-in for the move row (`pairorders.ts pairDark`) asks `reach` and still names an untried lock (out of this mend's
-  reach, left). `probes.ts move-walktries` (family `walktries`, `tools/qa/walktries-probes.ts`, 21 lines, sets `testDoor` itself), both stands,
+  reach, left). `probes.ts move-walktries` (family `walktries`, `tools/qa/walktries-probes.ts`, 23 lines, sets `testDoor` itself), both stands,
+  (11-06: its 'held' line is red on the page's stand by a row, a walk's try never made while a round is held on a man: `docs/agents/qa.md`, THE TWELFTH.)
   `WALKTRIES_BREAK=1` fails on both (14 lines): the office's manager door from the corridor, the pair → key off refused "manager door is locked." and
   greyed; key on taken, row live, walked ~20 m at no more than a plain move's 2.00 m/s, one handle tried, the line said once, both stacked within
   2.6 m of the frame on the corridor's side and still, then refused and greyed; the four with red alone sent (blue does not move); the Mousehole's
