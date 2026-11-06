@@ -1230,7 +1230,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT BUILT, on purpose: no gun holds its fire for range (a man who will not shoot reads as dumb; range is the rows' own spread and the cover's deal);
   the belt-fed man still falls back or takes cover when the squad is in his room (the room fight's own moves are not gated).
   Check: `bun run tools/qa/gunroles-check.ts` (families `gunroles-deal -entry -fight -lanes -off`, in `all-quick`), 23 lines on each stand (it raises the
-  switch by the stand's own word before a floor is stood up); `GUNROLES_BREAK=1` fails every family. `gunroles-off`: ten seconds of the staged room clear
+  switch by the stand's own word before a floor is stood up); `GUNROLES_BREAK=1` fails every family. `gunroles-off` (deleted 2026-11-06 with the off side: qa.md): ten seconds of the staged room clear
   digest the same off and on with nobody dealt and the cards as issued.
   MEASURED (headless, before = the commit this was built on, after = this one). The mission tally (`command-tally.ts --hands b`, the page's stand,
   room-clear-four, depot-four, warehouse-four and killhouse-four over seeds 1 to 4, sixteen floors): taken 15 → 16, clean 6 → 8, wiped 3 → 3, men lost a

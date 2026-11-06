@@ -1,5 +1,5 @@
 // THE SQUAD REACHES YOU, AND THE QUICK KEY SAYS WHY (src/game/squadnet.ts — SQUADNET.on · .why · .clear), headless:
-//   bun run tools/qa/squadnet-check.ts [why|clear|end|net|off]  (probes.ts squadnet; SQUADNET_BREAK=1 = the five switches left off: must fail)
+//   bun run tools/qa/squadnet-check.ts [why|clear|end|net]  (probes.ts squadnet; SQUADNET_BREAK=1 = the five switches left off: must fail)
 //   why    the room clear on the office with its squad of four, stacked on a door whose far room nobody has stood in: the quick key's row ends on the reason
 //          (a room nobody has been in · the last stun kept back · an enemy in sight inside), says nothing more of a plain open (a silent squad), and the man
 //          who answers the press says the reason in place of the row's own answer.
@@ -10,7 +10,6 @@
 //   net    a teammate's line said with his head off the screen clicks (a defender's does not, a teammate's on the screen does not); a teammate going down is
 //          a row of its own for its time, with the lower click, once; a man already down when the run starts is not called. The run with the rule on is the
 //          run with it off, by digest: it is the page's alone.
-//   off    the switches off = the lines as they were; the registry, a recording from before the keys, the frozen stand's rows.
 // Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the five switches and the autopilot itself. Where a far line is DRAWN (ui/bubbles.ts)
 // is not looked at here, no picture is; where it is PUT is (squadnet.ts netPlace, the one place bubbles.ts asks), in `net`.
 import { standUp, ROOT } from './headless.ts';
@@ -21,13 +20,8 @@ const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const SIL: any = await import(`${ROOT}/src/game/silent.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { knobRegistry, JOURNAL_KNOBS } = await import(`${ROOT}/src/game/knobs.ts`);
-const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`);
-const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 const { SQUADNET, whyWords, roomCall, plainCall, netPlace } = SN;
 const { AUTOPILOT, autoPick, autoEntries } = AP;
-/** the five switches as this stand stood them when the harness loaded (the shipped stand's boot has run by now; nothing here has written them yet) */
-const STOOD = [SQUADNET.on, SQUADNET.why, SQUADNET.clear, SQUADNET.endCall, SQUADNET.edge];
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -263,43 +257,8 @@ export async function squadnetNet(): Promise<boolean> {
   return F.done();
 }
 
-export async function squadnetOff(): Promise<boolean> {
-  const F = family('squadnet-off: the switches off = the lines as they were; the registry, an old recording, the frozen stand');
-  await kept(async () => {
-    const S: any = await stackedOn(5); if (S.why) { F.verdict(false, 'the squad stacks on a door with an unknown room behind it', S.why); return; }
-    const { R, D, at } = S, g = R.game, O = R.O, T = g.doorTools; SQUADNET.on = SQUADNET.why = SQUADNET.clear = SQUADNET.endCall = SQUADNET.edge = false; T.bangs = 3;
-    const row = R.hudQ(at), n0 = R.said.length; aimOf(R, D); R.W.input.pressed.add(ORDERS.quickKey); R.step(); R.step(2);
-    const ans = R.said.slice(n0).join(' | '), def = O.defs.find((d: any) => d.id === 'bangClear'), own = (def.ackNow ?? def.ack).concat(def.ack).some((a: string) => ans.includes(a)) || R.team.some((m: any) => (def.ackNow ?? def.ack).concat(def.ack).includes(m.bubble?.text));
-    F.verdict(/bang and clear/.test(row) && !/nobody|saving|they see/.test(row) && !/banging it\. nobody/.test(ans) && own && g.squadNet.stats.whys === 0, 'why off: the row and the answer are the row\'s own', `"${row}" · answered by the row's own line ${own}`);
-    const a = roomCall(g, 'mess', 3, false, false), b = roomCall(g, 'mess', 0, true, true);
-    F.verdict(a === 'mess clear.' && b === null && g.squadNet.stats.quiets === 0, 'clear off: a room nobody stands in is called clear whatever the search saw, as it was', `3 unseen, empty: ${a} · one inside: ${b}`);
-    const e1 = plainCall(g, false, 0, false, false), e2 = plainCall(g, true, 0, false, false);
-    F.verdict(e1 === null && e2 === null && g.squadNet.stats.ends === 0, 'every entry off: a room the mission has no name for is not called, as it was', `a room: ${e1} · open floor: ${e2}`);
-    const mate = R.team[0], l0 = g.squadNet.stats.lines; g.viewProj = null; g.say(mate, 'moving.');   // (no view: his head is off the screen) const m2 = R.team[1]; m2.god = false; m2.state = 'dead'; R.step(2);
-    F.verdict(g.squadNet.stats.lines === l0 && g.squadNet.rows.length === 0 && g.squadNet.stats.downs === 0 && !R.play.some((p: any) => p.name === 'radio' && p.rate === SQUADNET.downRate), 'net off: no line is counted, no man down is called, no lower click', `lines ${g.squadNet.stats.lines - l0} · rows ${g.squadNet.rows.length}`);
-    // the wiring: the registry, a recording from before the keys, the frozen stand's rows
-    SQUADNET.on = SQUADNET.why = SQUADNET.clear = SQUADNET.endCall = SQUADNET.edge = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), rides = snap.tables?.SQUADNET?.on === true && snap.tables.SQUADNET.why === true && snap.tables.SQUADNET.clear === true && snap.tables.SQUADNET.endCall === true && snap.tables.SQUADNET.edge === true; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.SQUADNET;
-    const mid = JSON.parse(JSON.stringify(snap)); delete mid.tables.SQUADNET.endCall; delete mid.tables.SQUADNET.edge;   // (a file from the build that had the first three and neither of the later two)
-    const mid2 = JSON.parse(JSON.stringify(snap)); delete mid2.tables.SQUADNET.edge;   // (…and one from the build that had four)
-    const both = await hushed(() => { applyKnobs(g, old); const off = !SQUADNET.on && !SQUADNET.why && !SQUADNET.clear && !SQUADNET.endCall && !SQUADNET.edge; SQUADNET.endCall = SQUADNET.edge = true; applyKnobs(g, mid); const three = SQUADNET.on && SQUADNET.why && SQUADNET.clear && !SQUADNET.endCall && !SQUADNET.edge; SQUADNET.endCall = SQUADNET.edge = true; applyKnobs(g, mid2); const four = SQUADNET.on && SQUADNET.why && SQUADNET.clear && SQUADNET.endCall && !SQUADNET.edge; applyKnobs(g, snap); return [off, SQUADNET.on && SQUADNET.why && SQUADNET.clear && SQUADNET.endCall && SQUADNET.edge, three, four]; });
-    F.verdict(rides && both[0] && both[1] && both[2] && both[3], 'a recording carries the five switches; one from before the keys replays with all off, one from before a later key with that key off', `rides ${rides} · old file: off ${both[0]} · a file with three: the later two off ${both[2]} · a file with four: the fifth off ${both[3]} · its own: on ${both[1]}`);
-    const reg = knobRegistry() as Record<string, unknown>, H = FROZEN_HOLDS as Record<string, string>;
-    F.verdict(reg.SQUADNET === SQUADNET && (JOURNAL_KNOBS as string[]).includes('SQUADNET') && H['SQUADNET.on'] === 'TPS_SQUADNET=1' && H['SQUADNET.why'] === 'TPS_QWHY=1' && H['SQUADNET.clear'] === 'TPS_HONESTCLEAR=1' && H['SQUADNET.endCall'] === 'TPS_ENDCALL=1' && H['SQUADNET.edge'] === 'TPS_NETEDGE=1',
-      'the table is in the knob registry; the frozen stand holds the five off under their words', `registry ${reg.SQUADNET === SQUADNET} · journal ${(JOURNAL_KNOBS as string[]).includes('SQUADNET')} · holds ${H['SQUADNET.on']} · ${H['SQUADNET.why']} · ${H['SQUADNET.clear']} · ${H['SQUADNET.endCall']} · ${H['SQUADNET.edge']}`);
-  });
-  // the stand as it was stood up: off on the frozen stand, on on the shipped one (unless a word was given)
-  await kept(async () => {
-    const shipped = process.env.TPS_PROFILE === 'shipped', given = ['TPS_SQUADNET', 'TPS_QWHY', 'TPS_HONESTCLEAR', 'TPS_ENDCALL', 'TPS_NETEDGE'].some(k => process.env[k] !== undefined);
-    // (the shipped stand: the page's own boot wrote them as the harness loaded. The frozen one: every game stood up pins them off, whatever they were)
-    Object.assign(SQUADNET, { on: true, why: true, clear: true, endCall: true, edge: true }); await hushed(() => standUp()); const got = shipped ? STOOD : [SQUADNET.on, SQUADNET.why, SQUADNET.clear, SQUADNET.endCall, SQUADNET.edge], kept2 = shipped ? SQUADNET.on && SQUADNET.why && SQUADNET.clear && SQUADNET.endCall && SQUADNET.edge : true;
-    F.verdict(given || (got.every(x => x === shipped) && kept2), `this stand (${shipped ? 'shipped' : 'frozen'}) stands the five ${shipped ? 'on, and a game stood up leaves them on' : 'off: a game stood up pins them off'}`, `on ${got[0]} · why ${got[1]} · clear ${got[2]} · every entry ${got[3]} · edge ${got[4]}${given ? ' (a word was given in the environment: not held)' : ''}`);
-  });
-  if (BREAK) { F.verdict(false, 'SQUADNET_BREAK', 'the break path: this family holds with the switches off, so it is failed by hand'); }
-  return F.done();
-}
-
 if (import.meta.main) {
-  const which = process.argv[2] ?? 'all', runs: [string, () => Promise<boolean>][] = [['why', squadnetWhy], ['clear', squadnetClear], ['end', squadnetEnd], ['net', squadnetNet], ['off', squadnetOff]];
+  const which = process.argv[2] ?? 'all', runs: [string, () => Promise<boolean>][] = [['why', squadnetWhy], ['clear', squadnetClear], ['end', squadnetEnd], ['net', squadnetNet]];
   let ok = true; for (const [n, fn] of runs) if (which === 'all' || which === n) ok = (await fn()) && ok;
   process.exit(ok ? 0 : 1);
 }

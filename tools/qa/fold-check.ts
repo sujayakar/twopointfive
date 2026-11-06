@@ -1,7 +1,7 @@
 // THE SETTLED ROWS FOLDED (tools/qa/fold.ts) AND THEIR LIST (tools/qa/switches.json), held to their word.
 //   bun run tools/qa/fold-check.ts        exit 0 = all hold · 1 = one does not      (probes.ts fold; the same on both stands: every game here is stood in a
 //                                          child on the page's stand, where the fold lives)
-//   FOLD_BREAK=1 in front = the fold is laid to COUNT a write and let it through: lines (3), (5) and (6) must FAIL.
+//   FOLD_BREAK=1 in front = the fold is laid to COUNT a write and let it through: lines (3), (6) and (9) must FAIL.
 // (1) every settled row of the list is in the knob tables, a plain value, and at the list's value on a game the page's stand stood.
 // (2) every yes/no row of the tables is on the list: a new switch says its kind, or this line is red. THE MEND for a new rule's switch:
 //     `bun run tools/qa/switch-list.ts new` (it joins as an open decision at its page value; the port's list is told after).
@@ -20,7 +20,15 @@
 //     STDERR as it ends and nothing on stdout; an arm on the old stand under a folded parent is not folded and says nothing; a child given a word its
 //     parent was not (one a module reads as it loads) has the row counted and says so; the words that ask for the fold are QA_FOLD=1 and TPS_GAME =
 //     rust, audit or table; and `switch-list.ts new` refuses a run with a word of the stand by hand.
-// WHAT THIS DOES NOT HOLD: `switch-list.ts make` and `same` (they write and read the list's own file), gate.sh's two lines, the `plain` line of a run
+// (9) for one check at a time: with the laid fold put off (foldFor(false)) a settled row is a switch again and nothing is counted; put on again it answers
+//     its page value and the write is refused; nothing written or pinned while on (a branch replaced whole among it) is there while off, and what was
+//     written while off answers again the next time it is off; the line says `"folded":false`; a child started while it is off counts nothing, the
+//     same child with it on does; the fence puts a pin back with the fold off as with none laid, and the mode back after a probe that changed it;
+//     and where it starts on and off. (10) the runner under QA_FOLD_ONLY folds the named probes alone: a red one of them is read against no row and said
+//     so, a red one of the others is read against the list as ever, a name no probe had is an error; and a probe run with the laid fold off writes a
+//     settled row as with no word.
+// WHAT THIS DOES NOT HOLD: a host that switches the fold check by check itself (the Rust host's table: (9) holds foldFor, (10) the runner's own word);
+// a runner that is a child of a runner under QA_FOLD_ONLY; `switch-list.ts make` and `same` (they write and read the list's own file), gate.sh's two lines, the `plain` line of a run
 // without the fold; that the list is what the port's list makes (`bun run tools/qa/switch-list.ts same <the port's list>`: that list is not in the
 // repository); a write through a road (6) does not walk (a menu's own row: the fold names it when a check walks it); a row read into a local before the
 // fold is laid.
@@ -61,6 +69,21 @@ if (mode === '--fold') {   // QA_FOLD=1: what the fold does
     out.fenceRemade = !!Object.getOwnPropertyDescriptor(reg[t][branch], n.key)?.get && reg[t][branch][n.key] === N.page; reg[t][branch] = old; F.foldLost(); F.foldLine('', false); }
   { const [t, branch] = N.row.split('.'), old = reg[t][branch]; reg[t][branch] = { ...old, [n.key]: !N.page }; out.plainAgain = reg[t][branch][n.key] === !N.page;   // (5) a branch replaced whole
     out.lost = F.foldLost(); out.laidAgain = reg[t][branch][n.key] === N.page; reg[t][branch] = old; out.lostAfter = F.foldLost(); }
+  { // (9) the fold off for a check and on again: nothing passes between the two
+    F.foldTake(); a.host[a.key] = !A.page; F.foldTake(); F.foldFor(false); const offClean = a.host[a.key] === A.page;                        // a write refused while ON is not there while off
+    a.host[a.key] = !A.page; const offReads = a.host[a.key] === !A.page, offCounted = F.foldTake().length, offLine = (JSON.parse(F.foldLine('x', false)) as { fold: { folded?: boolean } }).fold.folded;
+    const bare = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('QA_FOLD_LOG'))) as Record<string, string>;      // (a child with no speaker above says its own count on stderr)
+    const kid = (env: Record<string, string>) => /"fold"/.test(String(Bun.spawnSync(['bun', 'run', ME, '--write'], { env, stdout: 'pipe', stderr: 'pipe' }).stderr));
+    const kidOff = kid(bare), kidOn = kid({ ...bare, QA_FOLD_FOR: '1' });
+    F.foldFor(true); const onReads = a.host[a.key] === A.page; a.host[a.key] = !A.page; const onCounted = F.foldTake().length, onLine = (JSON.parse(F.foldLine('x', false)) as { fold: { folded?: boolean } }).fold.folded;
+    const [t, branch] = N.row.split('.'), old = reg[t][branch]; reg[t][branch] = { ...old, [n.key]: !N.page }; F.foldLost(); F.foldFor(false);     // a branch replaced whole while ON, pin and all: not there while off either
+    const lostClean = reg[t][branch][n.key] === N.page, offAgain = a.host[a.key] === !A.page; a.host[a.key] = A.page; reg[t][branch] = old; F.foldFor(true); F.foldLost(); F.foldLine('', false);
+    // …and the fence: a pin written inside it while the fold is off is put back as with no fold; a probe that leaves the mode changed finds it put back
+    F.foldFor(false); await spoken(() => { a.host[a.key] = !A.page; }); const fenceOff = a.host[a.key] === A.page && F.foldTake().length === 0;
+    F.foldFor(true); await spoken(() => { F.foldFor(false); }); const fenceMode = F.foldActive(); F.foldLine('', false);
+    const starts = (e: Record<string, string>): string => { try { return F.foldStartsOn(e) ? 'on' : 'off'; } catch { return 'stops'; } };
+    const words = [starts({ QA_FOLD: '1' }), starts({ TPS_GAME: 'rust' }), starts({ TPS_GAME: 'table' }), starts({ QA_FOLD: '1', TPS_GAME: 'table' }), starts({ QA_FOLD: '1', QA_FOLD_ONLY: 'x' }), starts({ TPS_GAME: 'table', QA_FOLD_FOR: '1' }), starts({ QA_FOLD: '1', QA_FOLD_FOR: 'yes' })].join(' ');
+    out.forOne = { offClean, offReads, offCounted, offLine, kidOff, kidOn, onReads, onCounted, onLine, lostClean, offAgain, fenceOff, fenceMode, words }; }
   if (process.env.FOLD_BREAK === '1') F.foldSettled(reg, { 'PRESSURE.second': false }, true);   // (the red path of (6): the list as it stood before 2026-11-06, with a row Hard writes called settled)
   { let threw = '', hard = '', standard = ''; F.foldTake();                                                                                                           // (6) the page's own roads
     try { const W = await quiet(() => H.standUp()); for (let i = 0; i < 120; i++) W.step(1 / 60);
@@ -94,7 +117,7 @@ async function child(args: string[], env: Record<string, string>): Promise<{ out
 const jsons = <T>(text: string, key: string): T[] => { const out: T[] = []; for (const l of text.split('\n')) { const s = l.trim(); if (s.startsWith(`{"${key}"`)) { try { out.push((JSON.parse(s) as Record<string, T>)[key]); } catch { /* not one */ } } } return out; };
 const said = (r: { err: string; code: number }): string => `the child said nothing (exit ${r.code}): ${r.err.trim().split('\n').slice(-2).join(' / ')}`;
 const refusedText = (xs: readonly Refused[]): string => few(xs.map(x => `${x.row}=${String(x.value)} @${x.writer}${x.n > 1 ? ` ×${x.n}` : ''}`));
-if (BREAK) console.log('FOLD_BREAK=1: the fold counts a write and lets it through — lines (3), (5) and (6) must FAIL');
+if (BREAK) console.log('FOLD_BREAK=1: the fold counts a write and lets it through — lines (3), (6) and (9) must FAIL');
 
 const L = switchRows(), settled = Object.keys(settledOf(L));
 // (the rows this check names itself: two a word of the harness writes, DOORWAY.oneWay by ONEWAY as it loads and GLASSFX.on by GLASSFX as its module loads,
@@ -108,7 +131,7 @@ const L = switchRows(), settled = Object.keys(settledOf(L));
     R ? `on no list: ${few(R.unlisted, 12)}${R.unlisted.length ? ' — a new rule\'s switch joins by `bun run tools/qa/switch-list.ts new`' : ''}` : 'no reading'); }
 
 { const r = await child([ME, '--fold'], { QA_FOLD: '1' }), R = jsons<any>(r.out, 'result')[0], c: Refused[] = R?.counted ?? [];
-  if (!R) { for (const n of [3, 4, 5, 6]) line(false, `(${n}) the fold, in a child`, said(r)); }
+  if (!R) { for (const n of [3, 4, 5, 6, 9]) line(false, `(${n}) the fold, in a child`, said(r)); }
   else {
     line(R.laid === settled.length && !R.skipped.length && !R.missing.length && R.reads === true && c.length === 1 && c[0].row === R.A && c[0].n === 2 && /^tools\/qa\/fold-check\.ts:\d+$/.test(c[0].writer) && R.open === true,
       `(3) under the fold ${R.A} answers its page value whatever is written, two writes of the other value are one count of 2 by this file, the page's own value counts nothing, and ${R.O} (not settled) is still a switch`,
@@ -119,7 +142,11 @@ const L = switchRows(), settled = Object.keys(settledOf(L));
     line(R.plainAgain === true && lost.some(x => x.startsWith(`${R.N} (was at`)) && lost.every(x => x.startsWith(branch)) && R.laidAgain === true && !R.lostAfter.length, `(5) ${R.N}'s branch replaced whole: the row is plain again, that is found and named with the value it was left at, and it is laid again`,
       `plain after the replace ${R.plainAgain} · found: ${few(lost)} · reads its page value after ${R.laidAgain} · with the old branch back: ${few(R.lostAfter)}`);
     line(!R.stood.threw && R.stood.hard === 'hard' && R.stood.standard === 'standard' && !R.stood.refused.length && !R.stood.lost.length, `(6) the page's own code writes no settled row off its value: a game stood and stepped, Hard and back, each of the camera's modes, under the fold, is refused nothing`,
-      `${R.stood.threw ? `threw: ${R.stood.threw} · ` : ''}Hard reads '${R.stood.hard}', back to '${R.stood.standard}' · refused: ${refusedText(R.stood.refused)} · holds lost: ${few(R.stood.lost)}`); } }
+      `${R.stood.threw ? `threw: ${R.stood.threw} · ` : ''}Hard reads '${R.stood.hard}', back to '${R.stood.standard}' · refused: ${refusedText(R.stood.refused)} · holds lost: ${few(R.stood.lost)}`);
+    const O = R.forOne;
+    line(O.offClean === true && O.offReads === true && O.offCounted === 0 && O.offLine === false && O.kidOff === false && O.kidOn === true && O.onReads === true && O.onCounted === 1 && O.onLine === undefined && O.lostClean === true && O.offAgain === true && O.fenceOff === true && O.fenceMode === true && O.words === 'on on off on off on stops',
+      `(9) for one check at a time: with the fold put off ${R.A} is a switch again and nothing is counted, here or in a child; put on again it answers its page value and the write is refused; nothing written or pinned while on is there while off, and what was written while off answers again the next time it is off`,
+      `a write refused while on is gone while off ${O.offClean} · off: the write takes ${O.offReads}, counted ${O.offCounted}, the line says folded ${String(O.offLine)}, a child of it counts ${O.kidOff ? 'a refusal ✗' : 'nothing'} (the same child with the fold on: ${O.kidOn ? 'a refusal' : 'nothing ✗'}) · on again: reads its page value ${O.onReads}, counted ${O.onCounted} · a branch replaced whole while on is gone while off ${O.lostClean} · off again: the earlier write answers ${O.offAgain} · the fence with the fold off puts a pin back ${O.fenceOff}, and puts the mode back after a probe that changed it ${O.fenceMode} · it starts, under QA_FOLD=1 / TPS_GAME=rust / table / QA_FOLD=1 and table / QA_FOLD_ONLY / table with QA_FOLD_FOR=1 / QA_FOLD_FOR=yes: ${O.words}`); } }
 
 { const run = resolve(import.meta.dir, 'probes.ts'), A = settledYesNo(L, 2)!;
   const page = await child([run, 'selftest-fold'], { QA_FOLD: '1' }), hand = await child([run, 'selftest-pass'], { QA_FOLD: '1', ONEWAY: '0', GLASSFX: 'off' }), old = await child([run, 'selftest-fold'], { QA_FOLD: '1', TPS_PROFILE: 'frozen' }), plain = await child([run, 'selftest-fold'], {});
@@ -147,6 +174,16 @@ const L = switchRows(), settled = Object.keys(settledOf(L));
       && words === 'false false true stops true true true false',
     `(8) who speaks: a check file's own main run alone says its probe's line with its child's write in it; a process alone says its own on stderr; an arm on the old stand under a folded parent is not folded and says nothing; a child given a word its parent was not has the row counted; the words that ask are QA_FOLD=1 and TPS_GAME = rust, audit or table; switch-list.ts new refuses a word by hand`,
     `a main alone: ${M.length} line(s), writers ${few(mw)} · a process alone: ${alone.length} line(s) on stderr, ${jsons(top.out, 'fold').length} on stdout · an old-stand arm of a folded parent: ${!/SETTLED ROWS/.test(other.err) && !jsons(other.err, 'fold').length ? 'silent, nothing counted' : 'spoke ✗'} · switch-list.ts new under TPS_GEAR=0: exit ${fresh.code} · GLASSFX=off given to a child: ${W ? refusedText(W.refused.filter(x => x.row === 'GLASSFX.on')) : 'no line'} · nothing / QA_FOLD=0 / 1 / on / TPS_GAME=rust / audit / table / ts: ${words}`); }
+
+{ const run = resolve(import.meta.dir, 'probes.ts'), some = await child([run, 'selftest'], { QA_FOLD: '1', QA_FOLD_ONLY: 'selftest-fail' }), none = await child([run, 'selftest-pass'], { QA_FOLD: '1', QA_FOLD_ONLY: 'selftest' });
+  const off = await child([run, 'selftest-fold'], { QA_FOLD: '1', QA_FOLD_FOR: '0' }), offLine = jsons<{ probe?: string; folded?: boolean; refused: Refused[] }>(off.out, 'fold').find(x => x.probe === 'selftest-fold'), A = settledYesNo(L, 2)!;
+  const lines = jsons<{ probe?: string; folded?: boolean }>(some.out, 'fold'), of = (n: string) => lines.find(x => x.probe === n);
+  line(!!of('selftest-fail') && of('selftest-fail')!.folded === undefined && of('selftest-pass')?.folded === false && of('selftest-throw')?.folded === false
+      && /^  the reds of folded probes .* are read against no row: 1 — selftest-fail$/m.test(some.out) && /^    NEW RED +selftest-throw/m.test(some.out) && !/^    NEW RED +selftest-fail/m.test(some.out)
+      && /^error: QA_FOLD_ONLY names selftest, and no probe of this run has that name/m.test(none.out) && none.code === 1
+      && !!offLine && offLine.folded === false && !offLine.refused.length && new RegExp(`${A.row.replace('.', '\\.')} written off its page value here and in a child \\(exit 0\\); it reads ${String(!A.page)} now`).test(off.out),
+    `(10) the runner under QA_FOLD_ONLY=selftest-fail folds that probe alone: its red is read against no row and said so, selftest-throw's red is a NEW RED as ever; a name no probe had is an error; and with the laid fold off a probe's write of ${A.row} takes, uncounted`,
+    some.code > 1 ? said(some) : `fold lines ${lines.length}: selftest-fail folded ${of('selftest-fail') ? String(of('selftest-fail')!.folded ?? true) : 'no line'}, selftest-pass folded ${String(of('selftest-pass')?.folded ?? '?')} · ${(/^  the reds of folded probes.*$/m.exec(some.out) ?? ['no line of the folded reds'])[0].trim()} · ${(some.out.match(/^    NEW RED +\S+/gm) ?? []).map(x => x.trim()).join(', ') || 'no NEW RED'} · QA_FOLD_ONLY=selftest (a family's name): ${/^error: QA_FOLD_ONLY/m.test(none.out) ? `an error, exit ${none.code}` : 'no error ✗'} · the fold laid and off: ${offLine ? `folded ${String(offLine.folded)}, refused ${offLine.refused.length}` : 'no line'}`); }
 
 console.log(fails ? `=== fold-check: ${fails} FAILED ===` : '=== fold-check: ALL PASS ===');
 process.exit(fails ? 1 : 0);
