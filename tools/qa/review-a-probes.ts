@@ -245,21 +245,25 @@ export async function reviewKickLeaf() {
     park(K, 0); park(N, 1); game.playerInvisible = true;
     // an office door authored SHUT off the corridor (storage / server / the break room's north door), the man's spot behind it on free floor
     const off = 0.42;   // where a man about to take the handle stands: by the latch edge, his front a hand off the leaf
-    let d: any = null, manAt: Vec3 = [0, 0, 0], samAt: Vec3 = [0, 0, 0], mid = 0;
-    for (const name of ['storage', 'server', 'breakroom_n', 'fire_exit']) {
+    // SAM KICKS FROM A FACE THE LEAF GIVES AT: the keyed face (the corridor) where a boot drives it from there, else the other. Where a shut leaf opens one
+    // way (doors.ts bootHolds, the frame rule, on in the page) a boot at the face it opens TOWARD lands on the frame and nothing gives: the case, kicking from
+    // the keyed face of the break room's door, read a leaf that never moved. The man stands on the face the leaf is driven into, either way.
+    let d: any = null, manAt: Vec3 = [0, 0, 0], samAt: Vec3 = [0, 0, 0], mid = 0, kickSide: 1 | -1 = 1;
+    pick: for (const name of ['storage', 'server', 'breakroom_n', 'fire_exit']) {
       const x = game.doors.byName(name); if (!x || x.def.steel || Math.abs(x.def.angle ?? 0) > 1e-3) continue;
-      x.reset(); const [hx, hz0] = x.def.hinge; const u = x.dir(); const n: [number, number] = [-u[1], u[0]]; const ks = x.keySide as 1 | -1; mid = x.def.width - 0.1;
-      const m: Vec3 = [hx + u[0] * mid - n[0] * ks * off, 0, hz0 + u[1] * mid - n[1] * ks * off];
-      const sm: Vec3 = [hx + u[0] * x.def.width * 0.6 + n[0] * ks * 0.9, 0, hz0 + u[1] * x.def.width * 0.6 + n[1] * ks * 0.9];
-      if (game.col.nav.isBlocked(m[0], m[2]) || game.col.nav.isBlocked(sm[0], sm[2])) continue;
-      d = x; manAt = m; samAt = sm; break;
+      x.reset(); const [hx, hz0] = x.def.hinge; const u = x.dir(); const n: [number, number] = [-u[1], u[0]]; mid = x.def.width - 0.1;
+      for (const ks of (process.env.REVIEWKICK_BREAK === '1' ? [x.keySide] : [x.keySide, -x.keySide]) as (1 | -1)[]) {   // (REVIEWKICK_BREAK=1 = the staging as it was: the keyed face whatever the frame holds. Red where the frame rule is on, the page's stand; the old stand has no such rule to break)
+        const m: Vec3 = [hx + u[0] * mid - n[0] * ks * off, 0, hz0 + u[1] * mid - n[1] * ks * off];
+        const sm: Vec3 = [hx + u[0] * x.def.width * 0.6 + n[0] * ks * 0.9, 0, hz0 + u[1] * x.def.width * 0.6 + n[1] * ks * 0.9];
+        if (game.col.nav.isBlocked(m[0], m[2]) || game.col.nav.isBlocked(sm[0], sm[2]) || (game.doors.bootHolds(x, sm) && process.env.REVIEWKICK_BREAK !== '1')) continue;
+        d = x; manAt = m; samAt = sm; kickSide = ks; break pick; }
     }
-    if (!d) { ok = verdict(false, `@${hz}: staging`, 'no shut office door with free floor both sides') && ok; continue; }
-    const kickSide = d.keySide as 1 | -1; const u = d.dir(); const n: [number, number] = [-u[1], u[0]];   // Sam kicks from the keyed face (the corridor); the man stands on the room side
+    if (!d) { ok = verdict(false, `@${hz}: staging`, 'no shut office door with free floor both sides and a face a boot drives it from') && ok; continue; }
+    const u = d.dir(); const n: [number, number] = [-u[1], u[0]];
     plant(game, R, manAt, Math.atan2(n[0] * kickSide, n[1] * kickSide)); R.heardUpTo = 1e12;   // facing the door, deaf to the crack of it (this is about the leaf, not his ears)
     game.teleportPlayer(samAt); W.step(DT);
     const side0 = game.doors.side(d, R.char.pos); const p0 = v3.copy(R.char.pos);
-    game.doors.kickIn(d, pl.char.pos, PLAYER_ID);
+    const gave = game.doors.kickIn(d, pl.char.pos, PLAYER_ID);
     let crossed = 0, maxDisp = 0, maxA = 0; const trace: string[] = [];
     const dt = 1 / hz;
     for (let f = 0; f < hz * 1.2; f++) {
@@ -270,8 +274,9 @@ export async function reviewKickLeaf() {
     }
     // the angle at which the leaf's face would reach his near side: he stands 0.55 off the closed line at `mid` along → the leaf touches him about atan((0.55 − r − ht)/mid)
     const touchA = Math.atan2(off - 0.34 - d.thick / 2, mid);
-    const pass = crossed === 0 && maxDisp < 0.3 && d.lockBroken;
-    ok = verdict(pass, `${d.def.name} @${hz} Hz: the leaf never passes his centre, he is moved < 0.3 m, and it stood no wider than a body past first touch`, `crossed on ${crossed} frame(s), moved ${f2(maxDisp)} m, max |angle| ${f2(maxA)} rad (touch ≈ ${f2(touchA)}), lockBroken ${d.lockBroken}${VERBOSE || !pass ? '\n      ' + trace.join('\n      ') : ''}`) && ok;
+    const wide = touchA + 0.34 / mid;   // (first touch and a body's depth more, as an angle at where he stands along the leaf: a leaf that swings free of him goes to 1.5 rad)
+    const pass = gave && maxA > 0 && maxA < wide && crossed === 0 && maxDisp < 0.3 && d.lockBroken;
+    ok = verdict(pass, `${d.def.name} @${hz} Hz: the leaf never passes his centre, he is moved < 0.3 m, and it stood no wider than a body past first touch`, `${gave ? `kicked from the ${kickSide === d.keySide ? 'keyed' : 'far'} face` : 'THE STAGING: the kick was not given'}, crossed on ${crossed} frame(s), moved ${f2(maxDisp)} m, max |angle| ${f2(maxA)} rad (touch ≈ ${f2(touchA)}, a body past it ${f2(wide)}), lockBroken ${d.lockBroken}${VERBOSE || !pass ? '\n      ' + trace.join('\n      ') : ''}`) && ok;
   }
   return done('review-kick-leaf', ok);
 }

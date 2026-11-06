@@ -46,7 +46,7 @@ export async function passCheck(): Promise<boolean> {
   const BREAK = process.env.PASS_BREAK === '1';
 
   // 1 — the file is fresh
-  const fresh = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/levels/export.ts`, 'pass', '--check'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+  const fresh = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/levels/export.ts`, 'pass', '--check'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });
   line(fresh.exitCode === 0, 'levels/pass.json is what tools/levels/pass.ts writes', fresh.exitCode === 0 ? '' : `export --check exit ${fresh.exitCode}`);
 
   const data = parseLevelData(readFileSync(`${ROOT}/levels/pass.json`, 'utf8'));

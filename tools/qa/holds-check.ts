@@ -12,6 +12,7 @@
 // WHAT (5) CANNOT SEE: that every arm of a main goes through the call (it reads the file's text for the call and the names; a main with one arm wrapped and one
 // bare passes); a check file none of whose probes is in the table (it is not read at all: run alone its parts have no fence between them); and a probe the
 // runner dispatches in a shape it does not read is said, not guessed.
+import { callEnd } from './call-text.ts';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT } from './headless.ts';
@@ -45,10 +46,10 @@ if (BREAK) console.log('HOLDS_BREAK=1: probes run bare, mains read as bare, the 
 // and where each one's body is: a file (read off the two shapes the runner writes a dispatch line in — the name and the import on one line; a loop over
 // [name, export] pairs with the import on the line under it), or the runner itself (a run('name', …) line that imports nothing)
 const probesSrc = readFileSync(resolve(HERE, 'probes.ts'), 'utf8'), srcLines = probesSrc.split('\n');
-const listed = Bun.spawnSync(['bun', 'run', resolve(HERE, 'probes.ts'), 'list'], { stdout: 'pipe', stderr: 'pipe' }), known = new Set<string>();
+const listed = Bun.spawnSync(['bun', 'run', resolve(HERE, 'probes.ts'), 'list'], { stdout: 'pipe', stderr: 'pipe', env: process.env }), known = new Set<string>();
 for (const ln of listed.stdout.toString().split('\n').slice(1)) for (const w of ln.split(/[\s:]+/)) if (/^[A-Za-z0-9][A-Za-z0-9-]*$/.test(w)) known.add(w);
 /** the text of a call's arguments: from just after its '(' to the ')' that closes it */
-const argsAt = (s: string, from: number): string => { let depth = 1, i = from; for (; i < s.length && depth; i++) { if (s[i] === '(') depth++; else if (s[i] === ')') depth--; } return s.slice(from, i - 1); };
+const argsAt = (s: string, from: number): string => s.slice(from, callEnd(s, from) - 1);
 const ran = new Set<string>(), placed = new Map<string, string>(), exported = new Map<string, string>(), inRunner = new Set<string>(), scripts = new Set<string>(), PAIRS = /for \(const \[\w+, \w+\] of \[(\[.*\])\]/;
 srcLines.forEach((ln, i) => {
   for (const m of ln.matchAll(/\bon\(/g)) { const first = /^'([^']+)'/.exec(argsAt(ln, m.index! + 3)); if (first) ran.add(first[1]); }

@@ -238,7 +238,7 @@ const deadLines = () => { for (const d of DEAD) console.log(`- FAIL — a worker
 async function farm<T>(jobs: string[][], n: number): Promise<T[]> {
   const out: T[] = []; let next = 0;
   await Promise.all(Array.from({ length: n }, async () => { while (next < jobs.length) { const j = jobs[next++];
-    const proc = Bun.spawn(['bun', 'run', import.meta.path, ...j], { stdout: 'pipe', stderr: 'pipe' }); const [text, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]); await proc.exited;
+    const proc = Bun.spawn(['bun', 'run', import.meta.path, ...j], { stdout: 'pipe', stderr: 'pipe', env: process.env }); const [text, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]); await proc.exited;
     const line = text.split('\n').find(l => l.startsWith('RESULT ')); if (line) out.push(JSON.parse(line.slice(7))); else DEAD.push(`${j.join(' ')}: ${(err || text).trim().split('\n').slice(-3).join(' | ')}`); } }));
   return out;
 }

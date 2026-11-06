@@ -21,12 +21,15 @@
 //               drops him — at 60 the panel takes it and the round goes into the ceiling; a light taken is kept while the camera's lead slides its dot from
 //               under a cursor left where it was, the right button then OCPs it, and moving the cursor off lets go; a drawn fixture is taken anywhere on its box.
 import { standUp, ROOT } from './headless.ts';
+import { underWord } from './stand.ts';
 const { v3, DEG, wrapAngle, lerp } = await import(`${ROOT}/src/math/vec.ts`);
 const { updateAim } = await import(`${ROOT}/src/game/player.ts`);
 const { resetChase, playerGroundVel } = await import(`${ROOT}/src/game/guards.ts`);
 const Aim = await import(`${ROOT}/src/game/aim.ts`);
 const { AIM, trackGuard, trackPlayer, aimReady, guardRound, handsCone, aimBrake, playerAim, samAim, guardAcquired, noteBore, boreFouled, AIM_DEBUG } = Aim;
 const { STARTLE, STARTLE_STATS } = await import(`${ROOT}/src/game/startle.ts`);
+const { AIMCOST } = await import(`${ROOT}/src/game/aimcost.ts`);
+const { TURN } = await import(`${ROOT}/src/game/character.ts`);
 /** what the startle holds a man's first round by, from first sight, where its rule is on (startle.ts: the beat, then the draw — no round leaves him in either).
  *  Read after a game is stood up. AIMFIRST_BREAK=1, the red path: a second more than the rule says — aim-first's two lines must fail on either stand. */
 const startleLead = (): number => (STARTLE.on ? STARTLE.beat + STARTLE.draw : 0) + (process.env.AIMFIRST_BREAK === '1' ? 1 : 0);
@@ -49,7 +52,16 @@ function missAngle(e: any, at: Vec3): number { const d = v3.normalize(v3.sub(e.t
 const trunkOf = (game: any): Vec3 => { const pc = game.player.char; const t = pc.bones.spine2 ?? pc.bones.hips; return [t ? t[0] : pc.pos[0], pc.pos[1] + (game.player.crouch ? 0.8 : 1.25), t ? t[2] : pc.pos[2]]; };
 
 // ================================================================ (a) the model, driven
-export async function aimUnit() {
+/** THE MODEL'S UNIT NUMBERS ARE ASKED WITHOUT TWO RULES THAT MOVE WHAT THE PROBE STAGES, on either stand: the turn weight (character.ts TURN.on, on in
+ *  the page) keeps a weighted gun on the man through the six frames the drain line takes it off him ('drained to 1 (want 0.7)'), and the aim cost of moving
+ *  (aimcost.ts AIMCOST.move, on in the page) opens every cone the feet touch (the running cone, the remembered run and sprint, the walking feet's term).
+ *  The weight is snap-probes' to hold and the feet's cost is aimcost-check.ts's line 5, each on both stands. Both are held off by their words for the
+ *  probe's stand-ups and put back after it. AIMUNIT_BREAK=1 = the red path: both are held ON instead (five lines' numbers FAIL, on either stand). */
+export async function aimUnit(): Promise<boolean> {
+  const on = process.env.AIMUNIT_BREAK === '1';
+  return underWord('TPS_TURN', on, () => underWord('TPS_MOVECOST', on, aimUnitAsked, { table: AIMCOST, key: 'move' }), { table: TURN, key: 'on' });
+}
+async function aimUnitAsked() {
   console.log('\n=== aim-unit: the model driven directly — a guard\'s track (climb / drain / hold / gone / jump / capped / pinned), the cone × at track 0 · 0.5 · 1, the feet and target terms; Sam\'s track (caps, a new man, back onto him, crouched) and cone; the ring\'s pixels ===');
   Math.random = seeded(901);
   const W = await standUp(); const { game } = W; const G = AIM.guard, Y = AIM.player;

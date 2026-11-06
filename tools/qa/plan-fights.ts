@@ -134,7 +134,7 @@ if (import.meta.main) {
   const seeds = seedsOf(flag('--seeds') ?? '1-6'), jobs = Math.max(1, Number(flag('--jobs') ?? 3)), runs: FightOut[] = []; let next = 0; const t0 = Date.now();
   const worker = async () => { for (;;) { const seed = seeds[next++]; if (seed === undefined) return;
     const file = resolve(tmpdir(), `plan-fights-${process.pid}-${seed}.json`);
-    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${scn}:${seed}`, '--out', file, '--cap', String(cap), '--set', JSON.stringify(set), '--place', String(place), '--at', ats.join(',')], { stdout: 'ignore', stderr: 'pipe' });
+    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${scn}:${seed}`, '--out', file, '--cap', String(cap), '--set', JSON.stringify(set), '--place', String(place), '--at', ats.join(',')], { stdout: 'ignore', stderr: 'pipe', env: process.env });
     const errText = await new Response(pr.stderr).text(); await pr.exited;
     let r: FightOut; try { r = JSON.parse(readFileSync(file, 'utf8')); rmSync(file); } catch { r = { scn, seed, place: '', way: '', end: 'error', why: `the run left no result — ${errText.trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`, secs: 0, team: 0, of: 0, theirs: 0, theirsOf: 0, contact: null, loud: null, alert: null, start: [], snaps: [], falls: [], rooms: [], orders: 0, refused: [], entries: [] }; }
     runs.push(r); console.error(`  ${scn}:${seed} ${r.end} ${r.secs} s · team ${r.team}/${r.of} · theirs ${r.theirs}/${r.theirsOf} up · contact ${r.contact ?? '—'} s${r.end === 'error' ? ` — ${r.why}` : ''}`); } };

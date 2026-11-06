@@ -305,7 +305,7 @@ if (import.meta.main) {
     for (const r of routes) if (!ROUTES.some(x => x.id === r)) { console.error(`no route '${r}' — ${ROUTES.map(x => x.id).join(', ')}`); process.exit(2); }
     const Q = routes.flatMap(route => seeds.flatMap(dice => arms.map(arm => ({ route, dice, arm })))), outs: Out[] = []; let next = 0, bad = 0;
     const worker = async () => { for (;;) { const j = Q[next++]; if (!j) return; const file = `${tmpdir()}/pairsneak-${process.pid}-${j.route}-${j.dice}-${j.arm}.json`;
-        const pr = Bun.spawn(['bun', 'run', import.meta.path, 'one', `${j.route}:${j.dice}:${j.arm}`, '--out', file, ...(hard ? ['--hard'] : []), ...(set ? ['--set', JSON.stringify(set)] : [])], { stdout: 'ignore', stderr: 'pipe' });
+        const pr = Bun.spawn(['bun', 'run', import.meta.path, 'one', `${j.route}:${j.dice}:${j.arm}`, '--out', file, ...(hard ? ['--hard'] : []), ...(set ? ['--set', JSON.stringify(set)] : [])], { stdout: 'ignore', stderr: 'pipe', env: process.env });
         const code = await pr.exited;
         try { outs.push(JSON.parse(readFileSync(file, 'utf8'))); rmSync(file); } catch { bad++; outs.push({ route: j.route, dice: j.dice, arm: j.arm as Arm, hard, end: 'error', t: 0, why: `worker exit ${code}: ${(await new Response(pr.stderr).text()).slice(-400)}`, huh: null, noticed: null, mateSeenS: 0, samSeenS: 0, peak: 0, mate: null }); } } };
     await Promise.all(Array.from({ length: jobs }, worker));

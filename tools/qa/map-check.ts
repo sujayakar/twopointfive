@@ -80,7 +80,7 @@ try { data = JSON.parse(readFileSync(PATH, 'utf8')); } catch (e) { fail(`levels/
 // (a generator is tools/levels/<name>.ts, or one under another file name whose NAME is this map's: blocksquads.ts → block-squads)
 const GEN = existsSync(resolve(ROOT, 'tools/levels', `${name}.ts`)) ? name : readdirSync(resolve(ROOT, 'tools/levels')).filter(f => f.endsWith('.ts') && f !== 'export.ts').find(f => new RegExp(`export const NAME\\s*=\\s*['"]${name}['"]`).test(readFileSync(resolve(ROOT, 'tools/levels', f), 'utf8')))?.replace(/\.ts$/, '');
 if (GEN) {
-  const p = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/levels/export.ts'), GEN, '--check'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+  const p = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/levels/export.ts'), GEN, '--check'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });
   const out = (await new Response(p.stdout).text() + await new Response(p.stderr).text()).trim().split('\n').pop() ?? ''; await p.exited;
   verdict(p.exitCode === 0, `its generator tools/levels/${GEN}.ts gives this file`, p.exitCode === 0 ? '' : out);
 } else note(`no generator under tools/levels/ for '${name}': the file is its own source`);
