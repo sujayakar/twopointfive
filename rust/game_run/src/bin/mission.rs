@@ -7,7 +7,7 @@
 //!
 //! THE GAME IS IMPORTED ONCE. From then on the Rust game is its own: its die, its knobs, its poses, its lights. Before each tick it takes only the host's half
 //! (see `host_half`), because the host's code between two ticks is not run on this side. AFTER EVERY TICK the block of rust/sim is hashed part by part and
-//! compared with post.txt, and so is the die's count. The alarm is every part but `poses` (see POSES below). At the first tick a part parts, the state and
+//! compared with post.txt, and so is the die's count. The alarm is every part, the pose pool among them. At the first tick a part parts, the state and
 //! the block are written (n<k>.bin, ns<k>.bin), `--after` more ticks run, and the exit code is 1. A panic prints `PANIC in tick <k>`, its message and
 //! place and the game's frames of the backtrace; the exit code is then 2. A kept tick (--keep / --every) writes n<k>.bin and ns<k>.bin for tools/blitz/diff.ts.
 //!
@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 static TICK: AtomicUsize = AtomicUsize::new(0);
 
-use game_run::{part_hash, NAMES, POSES};
+use game_run::{part_hash, NAMES};
 
 fn ranges(s: &str) -> Vec<(usize, usize)> {
     s.split(',').filter(|x| !x.is_empty()).map(|x| { let mut p = x.split('-').map(|y| y.trim().parse::<usize>().expect("a tick number")); let lo = p.next().unwrap(); (lo, p.next().unwrap_or(lo)) }).collect()
@@ -94,7 +94,7 @@ fn main() {
         let (mut parted, mut spent, mut worst) = (0usize, std::time::Duration::ZERO, std::time::Duration::ZERO);
         let mut restarts: Vec<usize> = Vec::new();
         let rows0 = g.tab.boxes.len();
-        let (mut n_parted, mut was_same, mut pool_parted, mut die_parted, mut done) = (0usize, true, false, 0usize, 0usize);
+        let (mut n_parted, mut was_same, mut die_parted, mut done) = (0usize, true, 0usize, 0usize);
         for k in 1..=ticks {
             // THE HOST PUT A CHECKPOINT BACK in the TypeScript's run before this tick opened (`<k> chron_load`): the whole game was replaced by a saved one,
             // which no stepper can follow from its own state. The Rust game takes the TypeScript's state as this tick opens (L<k>.bin, Ls<k>.bin) as a NEW
@@ -147,11 +147,8 @@ fn main() {
             let p = post.get(k - 1);
             let mut off: Vec<&str> = Vec::new();
             if let Some(p) = p { for (i, P) in sim::state::PARTS.iter().enumerate() { if p.get(4 + i).map(|s| s.as_str()) != Some(part_hash(&w[P.off / 4..(P.off + P.len) / 4]).to_string().as_str()) { off.push(NAMES[i]); } } } else { off.push("no line of post.txt"); }
-            let pool_off = off.contains(&NAMES[POSES]);
-            // (BLITZ_POSES=1: the pool is IN the alarm, to see where and why it first parts)
-            if std::env::var("BLITZ_POSES").is_err() { off.retain(|n| *n != NAMES[POSES]); }
+            // (the pose pool is IN the alarm, like every other part: the bridge carries which sets are at home and what each animator holds)
             let same = off.is_empty();
-            if same && pool_off && !pool_parted { pool_parted = true; println!("TICK {}: the part `poses` parts and every other part is the same: from here the alarm is the block without `poses`", k); }
             let die_same = p.map(|p| p[1] == d.n.to_string()).unwrap_or(false);
             if !die_same && die_parted == 0 { die_parted = k; }
             let first_part = !same && parted == 0; if first_part { parted = k; }
@@ -186,10 +183,12 @@ fn main() {
             for (k, n) in v.iter().take(14) { println!("   {} x {}", n, k); }
         }
         beats_line(&g);
+        // (the loop's counters of places mended by reading: game/b_tap.rs)
+        { let t = game::game::b_tap::read(); println!("TAPS {}", game::game::b_tap::NAMES.iter().zip(t.iter()).map(|(n, c)| format!("{} {}", n, c)).collect::<Vec<_>>().join(" · ")); }
         if !restarts.is_empty() { println!("NEW STARTS (a checkpoint put back by the TypeScript's host): as ticks {:?} opened", restarts); }
-        println!("DONE: {} ticks; the die's count {}; the block without `poses` the same after every tick; `poses` {}; mean Rust tick {:.2} ms, worst {:.1} ms",
+        println!("DONE: {} ticks; the die's count {}; every part of the block, `poses` too, the same after every tick; mean Rust tick {:.2} ms, worst {:.1} ms",
             done, if die_parted == 0 { "the same after every tick".to_string() } else { format!("FIRST PARTED AT TICK {}", die_parted) },
-            if pool_parted { "parted (reported above)" } else { "the same after every tick" }, spent.as_secs_f64() * 1e3 / done.max(1) as f64, worst.as_secs_f64() * 1e3);
+            spent.as_secs_f64() * 1e3 / done.max(1) as f64, worst.as_secs_f64() * 1e3);
         if die_parted != 0 { let _ = std::io::stdout().flush(); std::process::exit(1); }
     }).unwrap();
     std::process::exit(if h.join().is_ok() { 0 } else { 2 });

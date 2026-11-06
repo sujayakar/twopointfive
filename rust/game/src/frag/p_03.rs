@@ -250,7 +250,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     let w_spot = crate::frag::FleeSpotWise { path: wise.path.clone(), keep: keep_goal, not, apart: Some(crate::frag::FleeSpotWiseApart { stay: apart.stay.clone(), go: apart.go.clone() }) };
     let legs = crate::kitload::load_pace(g, gd, speed);
     let pick = acc * crate::kitload::load_pace_on(g, crate::kitload::LoadPaceOnWho::Guard(gd));
-    let mut spot = flee_spot(g, crate::frag::FleeSpotC { pos }, dz, legs, fuse, Some(pick), Some(&w_spot), Some(gd));
+    let (mut spot, mut spot_is_keep) = crate::frag::flee_spot_kept(g, crate::frag::FleeSpotC { pos }, dz, legs, fuse, Some(pick), Some(&w_spot), Some(gd));
     {
         let time = g.time;
         let l = &mut live!(g, i);
@@ -266,13 +266,17 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     if by_door {
         let w_door = crate::frag::FleeByDoorWise { path: wise.path.clone(), keep: keep_goal, not, apart: Some(crate::frag::FleeByDoorWiseApart { stay: apart.stay, go: apart.go }) };
         if let Some(out) = flee_by_door(g, crate::frag::FleeByDoorC { pos }, dz, legs, fuse, pick, &w_door, Some(gd)) {
-            if Some(out.goal) != keep_goal { g.stats.frag.by_door += 1; }
+            // (fleeByDoor answers `wise.keep` ITSELF for a way out within 5 cm of it, and a fresh point otherwise: there the numbers do say which)
+            spot_is_keep = Some(out.goal) == keep_goal;
+            if !spot_is_keep { g.stats.frag.by_door += 1; }
             spot = Some(out.goal);
             if out.via { live!(g, i).via.get_or_insert_with(JsSet::new).add(gd); }
         }
     }
     if let Some(k) = keep {   // the leg he has: his path and his stride are left as they are
-        if spot == k.goal { live!(g, i).flee.set(gd, Some(k)); return; }
+        // (`spot === keep.goal`: the kept goal's own OBJECT, not its numbers; and no spot against a kept "down where he is" is `null === null`, the same)
+        let same = match (spot, k.goal) { (None, None) => true, (Some(_), Some(_)) => spot_is_keep, _ => false };
+        if same { live!(g, i).flee.set(gd, Some(k)); return; }
     }
     let script = match spot {
         Some(s) => crate::game::GuardScript { goal: Some(s), speed: Some(speed), upper: Some(crate::character::UpperMode::None), crouch: Some(false), ..Default::default() },

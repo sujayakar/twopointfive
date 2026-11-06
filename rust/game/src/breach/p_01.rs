@@ -455,6 +455,7 @@ fn tick_kick(g: &mut Game, t: f64, d: DoorId) {
         if live_of(g).map_or(false, |l| l.loud_boot) && !crate::doors::door_off(g, d) {
             let p = crate::doors::door_pos(g, d);
             let time = g.time;
+            crate::game::b_tap::tap(crate::game::b_tap::LOUD_BOOT);
             let serial = g.serial();   // (an event is an object: every heard-once set keys on its serial, and one born with none is "the first again")
             g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Kick, pos: [p[0], 0.0, p[2]], time, loud: true, level: Some(1.0), who: Some(id), serial, ..Default::default() });
         }

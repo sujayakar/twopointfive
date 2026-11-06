@@ -55,9 +55,9 @@ export const tallyAdd = (T: Tally, q: string, eg: string, k: number) => { const 
 const spanMemo = new WeakMap<Uint8Array, Span[]>();
 export const spansOf = (b: Uint8Array): Span[] => { let s = spanMemo.get(b); if (!s) { s = []; locate(b, [], s, true); spanMemo.set(b, s); } return s; };
 const armTy = (T: any, a: number): string | null => T.k === 'data' ? T.vars[a].ty ?? null : (T.arms[a].match(/\((.*)\)/)?.[1] ?? null);
-const fieldsOf = (T: any): { N: N; q: string; dot: string }[] => T.__play ??= T.fields.map((f: any) => ({ N: parse(f.ty), q: `${T.mod}::${T.name}.${f.rust}`, dot: `.${f.rust}` }));
+export const fieldsOf = (T: any): { N: N; q: string; dot: string }[] => T.__play ??= T.fields.map((f: any) => ({ N: parse(f.ty), q: `${T.mod}::${T.name}.${f.rust}`, dot: `.${f.rust}` }));
 /** where the value of type `n` that starts at `p` ends */
-function skipIn(b: Uint8Array, dv: DataView, p: number, n: N): number {
+export function skipIn(b: Uint8Array, dv: DataView, p: number, n: N): number {
   const w = width(n); if (w >= 0) return p + w;
   switch (n.k) {
     case 'str': return p + 4 + dv.getUint32(p, true);

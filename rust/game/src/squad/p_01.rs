@@ -130,7 +130,7 @@ pub fn strafe_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed:
 
 /// One frame of a man under a script: moved to his goal, gun and eyes on his aim, the animator fed, `arrived` written back. (squad.ts runGuardScript)
 pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
-    let s = g.gd[gd].script.unwrap();
+    let mut s = g.gd[gd].script.unwrap();
     let c = g.gd[gd].ch;
     let (x0, z0) = (g.ch[c].pos[0], g.ch[c].pos[2]);
     let ordered = match s.speed { Some(x) => x, None => g.tune.guard_walk };
@@ -160,7 +160,12 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
                 move_speed = g.gd[gd].speed;
                 home = done && g.gd[gd].path_i >= g.gd[gd].path.len();
             }
+            // (`s` is the script OBJECT in squad.ts: an order given him under his own walk (a lane's back-out out of followPath's gate, lanes.ts) is
+            //  written into it, and every line from here reads it as ordered; what was worked out above (pace, strafing, the leg's numbers) stands.
+            //  The same object = the same serial; a script put in its place is another, and he finishes this frame on the one he began)
+            if let Some(n) = g.gd[gd].script { if n.serial == s.serial { s = n; } }
         }
+        let goal = s.goal.unwrap_or(goal);
         if home {
             let mut w = match g.m.squad.settle_watch.get(gd).copied() {
                 Some(w) if w.goal == goal => w,

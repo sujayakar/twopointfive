@@ -380,10 +380,34 @@ pub fn update_fire(g: &mut Game, dt: f64) {
     let s = state_of(g);
     s.fires = fires;
     s.lit = lit;
+    fire_draws(g);   // (fire.ts:406: the update ends with the picture's list; what of that is the game's is below)
 }
 
-/// The fires the picture draws. Picture only, behind DRESS.fires at game.ts:1836: not translated (conventions 6), the stub stays. (fire.ts fireDraws)
-pub fn fire_draws(g: &mut crate::game::Game) { todo!("picture only: stays on the TypeScript dressing side") }
+/// The fires the picture draws: the list itself (`engine.fires`) is the picture's and is not made here. What the body ASKS of the game is: the wind at
+/// the mouth of every fire it would draw (fire.ts:426 `windAt`), and the wind counts its asks (`WIND_STATS.atCalls`, a counter the bridge carries). So
+/// the asks are made, for the same fires in the same order, and nothing else. Called by the update (fire.ts:406) and under the DRESS row `fires`
+/// straight behind the fog's turn (game.ts:1709). (fire.ts fireDraws)
+pub fn fire_draws(g: &mut crate::game::Game) {
+    if !g.k.fire.on { return; }
+    let focus = match g.engine.view_focus {
+        Some(f) => f,
+        None => { let h = crate::seats::host_man(g); let c = g.pl[h].ch; g.ch[c].pos }
+    };
+    let (fog, draw_r) = (g.k.fire.fog, g.k.fire.draw_r);
+    let mut i = 0;
+    while i < g.targets.len() {
+        let t = g.targets[i];
+        i += 1;
+        if !is_fire(g, t) { continue; }
+        let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
+        let lit = burns(g, t);
+        if !lit && !(fog && g.tab.light[l].fog_ghost.unwrap_or(0.0) > 0.0) { continue; }
+        let mouth = mouth_of(g, t);
+        let d = m::hyp2(mouth.pos[0] - focus[0], mouth.pos[2] - focus[2]);
+        if !(d < draw_r) { continue; }
+        let _ = wind_at(g, mouth.pos);
+    }
+}
 
 /// One line for the panel and the probes. Host only: not translated (conventions 6), the stub stays. (fire.ts fireSummary)
 pub fn fire_summary(g: &mut crate::game::Game) -> String { todo!("host only: the panel and the probes") }

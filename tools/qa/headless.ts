@@ -159,6 +159,8 @@ export interface Headless {
   /** one frame exactly as main.ts steps it (minus rendering): game.update → camera → lights → box upload → input.endFrame. `follow` is what main.ts calls
    *  demoPos: the showcase tour's camera look-at for this frame (Demo.update's return, called BEFORE this) — the camera then follows it and drops the aim lead */
   step(dt: number, follow?: Vec3 | null): void;
+  /** n steps with none of the tool's code between them (the same as `step` n times) */
+  steps(n: number, dt: number, follow?: Vec3 | null): void;
   /** put the cursor on a world point (what the automation hooks' __mouse does after projecting) */
   cursorAt(p: [number, number, number]): boolean;
 }
@@ -225,12 +227,17 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
       if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
-      { const me = game.hostSeat().view; cam.update(dt, follow ?? me.followPos(), follow || game.spectate >= 0 ? null : me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
+      { const me = game.hostSeat().view, look = (game as any).rustHost?.look?.();   // (a game that steps somewhere else, in a quiet run of steps: the camera's two inputs asked of it, tools/blitz/PLAY.md)
+        cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
       engine.lights.update(dt, game.time);
       engine.world.dynamics = game.dynBoxes;
       if (frame++ % uploadEvery === 0) engine.world.upload();   // CPU pack + grid (what the cursor's raycast and the lasers read); the GPU writes go nowhere
       input.endFrame();
     },
+    // N STEPS WITH NONE OF THE TOOL'S CODE BETWEEN THEM. The same as calling `step` n times; a tool that says so lets a host whose game steps somewhere
+    // else (TPS_GAME, tools/blitz/PLAY.md) bring the game's state across once, as the run ends, where `step` brings it across after every tick.
+    steps(n: number, dt: number, follow: Vec3 | null = null) { const H = (game as any).rustHost, q = n > 1 && !!H?.quietBegin?.();
+      try { for (let i = 0; i < n; i++) W.step(dt, follow); } finally { if (q) H.quietEnd(); } },
     cursorAt(p) { const [sx, sy, front] = cam.project(p, canvas.clientWidth, canvas.clientHeight); if (front) { input.mouseX = sx; input.mouseY = sy; } return front; },
     snapshot(label = 'harness', force = true) { return saveState(game, { label, kind: 'harness', force }); },
     restore(s) { loadState(game, s); cam.target = v3.copy(game.player.char.pos); input.keys.clear(); input.pressed.clear(); input.buttons = 0; input.clicked = 0; },

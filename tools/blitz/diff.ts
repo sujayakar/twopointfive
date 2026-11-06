@@ -1,6 +1,6 @@
 // THE DIFF of two whole states (a TypeScript export and a Rust one) in O(file) memory, walking both by the schema side by side: no list of every path is built
 // (paths.ts's diff holds 2 to 3 GB for a 10 MB state; a state grows by the frame's boxes every tick).
-//   bun run tools/blitz/diff.ts <a.bin> <b.bin> [--show 30] [--out file.tsv] [--canon BoxId,LightId | --canon-file canon.txt] [--known known.txt] [--blocks s.bin ns.bin] [--why] [--dump <path regex> [--dump-max 400]] [--dynboxes] [--leave-out skin,look]
+//   bun run tools/blitz/diff.ts <a.bin> <b.bin> [--show 30] [--out file.tsv] [--canon BoxId,LightId | --canon-file canon.txt] [--known known.txt[,more.txt]] [--blocks s.bin ns.bin] [--why] [--dump <path regex> [--dump-max 400]] [--dynboxes] [--leave-out skin,look]
 //   exit 0 the same but for what is known · 1 they part
 // CANON: a table named in --canon (default BoxId) is compared BY REACH, not by row number: each side's rows are numbered in the order one fixed walk first meets them
 // (the root, then every other table's rows in order, then the rows those reach), and a row nothing reaches is not compared. The TypeScript's walk numbers a made box
@@ -12,7 +12,13 @@ const { SCHEMA, parse } = await import('./export.ts');
 type Node = { k: string; [x: string]: any };
 const argv = process.argv.slice(2), opt = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const SHOW = +opt('--show', '30'), OUT = opt('--out', ''), CANON = new Set((opt('--canon-file', '') ? readFileSync(opt('--canon-file', ''), 'utf8').trim() : opt('--canon', 'BoxId')).split(',').filter(Boolean));
-const KNOWN = readFileSync(opt('--known', `${import.meta.dir}/known.txt`), 'utf8').split('\n').filter(l => l && !l.startsWith('#')).map(l => { const [re, why] = l.split('\t'); return { re: new RegExp(re), why, n: 0 }; });
+// (`--known a.txt,b.txt`: several files. A line's THIRD column narrows it by the two values: `bits:<mask>` = known only where the two numbers differ in
+//  those bits and no other; `ts:<regex>` / `rs:<regex>` = known only where the TypeScript's / the Rust's value matches (several, a space between; no
+//  space inside one). With no third column the path alone decides.)
+const KNOWN = opt('--known', `${import.meta.dir}/known.txt`).split(',').flatMap(f => readFileSync(f, 'utf8').split('\n')).filter(l => l && !l.startsWith('#')).map(l => { const [re, why, only] = l.split('\t');
+  const W = (only ?? '').split(' '), of = (k: string) => W.find(x => x.startsWith(k))?.slice(k.length);
+  const bits = of('bits:') !== undefined ? Number(of('bits:')) : -1, ts = of('ts:') !== undefined ? new RegExp(of('ts:')!) : null, rs = of('rs:') !== undefined ? new RegExp(of('rs:')!) : null;
+  return { re: new RegExp(re), why, n: 0, ok: (a: string, b: string) => (bits < 0 || ((Number(a.split(' ')[0]) ^ Number(b.split(' ')[0])) & ~bits) === 0) && (!ts || ts.test(a)) && (!rs || rs.test(b)) }; });
 // (a field the two sides are KNOWN to hold differently is not walked for reach, or the two numberings would part there: BoxMirror.things_of, a reference the TypeScript's walk writes as a value)
 const NOREACH = new Set(opt('--noreach', 'things_of,lamp_pick,WorkThings.cache,DoortoolsMod.sky').split(','));   // (… the fog's lamps' list, picture-only and not filled by the Rust tick; the work things' memo the test driver's own asks fill)
 const DEC = new TextDecoder();
@@ -75,11 +81,12 @@ function index(s: Side): void {
   const ty = new Map<string, Node>(SCHEMA.tables.map((t: any) => [t.id, parse(t.ty)]));
   for (let i = 0; i < queue.length; i++) { const [id, v] = queue[i]; const at = s.rows.get(id)!; if (v >= at.length) continue; s.p = at[v]; skip(ty.get(id)!, s, onId); }
 }
-// LEFT OUT (--leave-out skin,look, the default): boxes of two picture-only lanes the Rust game does not run. A box keyed MKEY.skin is what stands of a holed
+// LEFT OUT (--leave-out skin,look; nothing by default): boxes of a lane one side does not run, to see the rest. A box keyed MKEY.skin is what stands of a holed
 // wall's paint (src/game/wallskin.ts); one keyed MKEY.look is a LOOK piece, drawn and in no collision list (a broken edge's rubble and bars: src/game/edgeLook.ts).
-// Such a box is in no reach numbering and is dropped from every list of boxes before the lists are compared; how many on each side is said at the end.
+// Both lanes run on both sides and are compared. A box left out is in no reach numbering and is dropped from every list of boxes before the lists are
+// compared; how many on each side is said at the end.
 const MKEY_FAMILY: Record<string, number> = { look: 9, skin: 10 };
-const LEAVE = new Set(opt('--leave-out', 'skin,look').split(',').filter(Boolean).map(w => { if (!(w in MKEY_FAMILY)) throw new Error(`diff: --leave-out knows ${Object.keys(MKEY_FAMILY).join(', ')}, not ${w}`); return MKEY_FAMILY[w]; }));
+const LEAVE = new Set(opt('--leave-out', '').split(',').filter(Boolean).map(w => { if (!(w in MKEY_FAMILY)) throw new Error(`diff: --leave-out knows ${Object.keys(MKEY_FAMILY).join(', ')}, not ${w}`); return MKEY_FAMILY[w]; }));
 const BOX_T: any = SCHEMA.tables.find((t: any) => t.id === 'BoxId'), BOX_N: any = BOX_T ? T(parse(BOX_T.ty).path) : null, MKEY_AT = BOX_N ? BOX_N.fields.findIndex((f: any) => f.rust === 'mkey') : -1;
 function leftOut(s: Side, id: string, v: number): boolean {
   if (id !== 'BoxId' || !LEAVE.size || MKEY_AT < 0) return false;
@@ -95,7 +102,7 @@ function leftOut(s: Side, id: string, v: number): boolean {
 let SER = false, KEYSER = false, serialN = 0, scratchN = 0, nullN = 0, rowN = 0;
 let n = 0, unknown = 0; const by = new Map<string, number>(), shown: string[] = [], all: string[] = [];
 const P: string[] = [];
-function rep(mod: string, a: string, b: string, tail = '') { n++; const path = P.join('') + tail; const k = KNOWN.find(k => k.re.test(path)); if (k) { k.n++; return; } unknown++; by.set(mod, (by.get(mod) ?? 0) + 1); const l = `${mod}\t${path}\t${a}\t${b}`; if (shown.length < SHOW) shown.push(l); if (OUT && all.length < 200000) all.push(l); }
+function rep(mod: string, a: string, b: string, tail = '') { n++; const path = P.join('') + tail; const k = KNOWN.find(k => k.re.test(path) && k.ok(a, b)); if (k) { k.n++; return; } unknown++; by.set(mod, (by.get(mod) ?? 0) + 1); const l = `${mod}\t${path}\t${a}\t${b}`; if (shown.length < SHOW) shown.push(l); if (OUT && all.length < 200000) all.push(l); }
 function leaf(n: Node, s: Side): string {
   switch (n.k) { case 'f64': { const v = s.dv.getFloat64(s.p, true); return `${v} ${s.hex(8)}`; } case 'f32': { const v = s.dv.getFloat32(s.p, true); return `${v} ${s.hex(4)}`; }
     case 'bool': return s.u8() ? 'true' : 'false'; case 'u8': case 'i8': return String(s.u8()); case 'u16': case 'i16': return String(s.u16()); case 'u32': case 'i32': case 'usize': return String(s.u32()); case 'u64': case 'i64': return s.hex(8);

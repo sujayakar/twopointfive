@@ -360,6 +360,12 @@ pub fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runne
         r.at = v3::copy(pos);
         r.stall = 0.0;
     }
+    // (`S.goal = v3.copy(goal)` is a NEW ARRAY, and his script's goal is that object from the next drive on: the settle watch squad.ts:81 keeps for
+    //  the goal OBJECT it was made for (`w.goal !== s.goal`) is made again at its next read, even where the route is to the same spot. Here the watch is
+    //  asked by value, so only a watch that holds THESE numbers would be taken for this goal's: that one goes. Any other stays as the TypeScript's
+    //  stale row stays, and the next read replaces it. STAND-IN by value: with the same numbers the TypeScript keeps a stale row until that read and
+    //  this side has none; it belongs to the identity device.)
+    if g.m.squad.settle_watch.get(gd).map_or(false, |w| w.goal == goal) { g.m.squad.settle_watch.delete(gd); }
     let mut free = |g: &mut Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
     let path = crate::doors::doors_thread_path(g, p.as_deref().unwrap_or(&[]), pos, Some(&mut free));
     let serial = g.serial();   // (a new array: readers ask by identity)
@@ -538,6 +544,7 @@ pub fn plan_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]
     let ask = g.k.runner.ask_cells;
     let b = match flood(g, gd, &[], Some(ask), Some(e)).out { Some(b) => b, None => return false };
     let was = *run!(g, gd);
+    let watch_was = g.m.squad.settle_watch.get(gd).copied();   // (the goal object he had comes back below, and the watch made for it with it)
     let (path, path_serial, path_i, path_goal, repath_t, line_side) = {
         let o = &g.gd[gd];
         (o.path.clone(), o.path_serial, o.path_i, o.path_goal, o.repath_t, o.line_side)
@@ -554,6 +561,7 @@ pub fn plan_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]
         r.at = was.at;
         r.stall = was.stall;
     }
+    if let Some(w) = watch_was { g.m.squad.settle_watch.set(gd, w); }
     let o = &mut g.gd[gd];
     o.path = path;
     o.path_serial = path_serial;   // (the same array back: its old serial, none dealt)
@@ -817,6 +825,7 @@ pub fn gone(g: &mut crate::game::Game, gd: GuardId) {
     r.is_out = true;
     r.goal = Some(v3::copy(pos));
     r.script.arrived = Some(true);
+    if g.m.squad.settle_watch.get(gd).map_or(false, |w| w.goal == pos) { g.m.squad.settle_watch.delete(gd); }   // (a new goal object, as `route` says)
     drive(g, gd);
 }
 

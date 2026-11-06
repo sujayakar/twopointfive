@@ -387,6 +387,7 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
     s.t = t;
     let walk = g.gd[gd].path_serial;
     let s = st!(g, gd);
+    if s.spot.is_some() { crate::game::b_tap::tap(crate::game::b_tap::DOORWAY_WALK_ASKED); if s.path != Some(walk) { crate::game::b_tap::tap(crate::game::b_tap::DOORWAY_WALK_NEW); } }
     if s.spot.is_some() && s.path != Some(walk) { s.spot = None; s.door = None; }   // given a new walk while he waited at a jamb: the old door is no longer his business (the time held is kept)
     let turn = !match g.gd[gd].script.as_ref().and_then(|s| s.over.as_ref()) { Some(o) => o.walk == Some(true) && o.face.is_some(), None => false };
     // in an opening: he clears it, whoever stands about
