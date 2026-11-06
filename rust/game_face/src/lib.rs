@@ -55,6 +55,7 @@
 //!                                             place (rust/sim's own `state_addr` / `state_len` / `state_part` say the same of the whole block)
 //!   face_part_hashes(slot) -> p               13 words: each part's hash as tools/blitz/mission.ts takes it (its words up to the last not zero)
 use std::cell::{Cell, RefCell};
+mod page;
 
 type Game = game::game::Game;
 /// a game and what the host has handed over for its next step

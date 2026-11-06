@@ -233,6 +233,10 @@ async function main() {
   if (keep.role === 'leave') return;
   // NO MODULE, NO GAME (sim/sim.ts): the simulation is the Rust module's and nothing else works it out, so a page that cannot run it stops here, before
   // anything is built. With no WebAssembly (a browser whose policy turns this site's JIT off) it is the card below; anything else is a fault of the build
+  // THE RUST GAME (`?rust=1`, host/rustgame.ts): its module is fetched and compiled here, before anything has asked for the simulation's, and handed to
+  // src/sim as the one instance, so `__ready` waits on it behind the boot card. Without the word nothing of it is loaded and the page is as it was
+  const rustGame = q.get('rust') === '1' ? await import('./host/rustgame') : null;
+  if (rustGame) await rustGame.rustBoot();
   { const no = simWhyNot(); if (no) { console.info(simSay()); throw noWasm() ? new NoWasmError(no) : new Error(`the Rust simulation did not start: ${no}`); } }
   if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
   keymap.KEYMAP.handWhen = () => HANDRING.on;   // (…and his own actions on the key that leaves spare, the whistle's row with no key: host/keymap.ts HAND, the rule game/handring.ts)
@@ -380,6 +384,7 @@ async function main() {
     ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed }));
   }
   boot.span('gameCtor', tGame); boot.mark('game');
+  if (rustGame) { rustGame.rustAttach(game); (window as any).__rust = Object.assign(rustGame.RUST_GAME, { hashes: rustGame.rustHashes, means: rustGame.rustMeans, resync: rustGame.rustResync }); }   // (?rust=1: from here the game's tick is the Rust game's and this Game its puppet)
   if (LOOK.on) lookDoors(game.doors.list, engine.world.statics, LOOK_DOORS[(q.get('levelFile') ?? '').replace(/-gwot(?=\.json$)/, '')]);   // (picture only: under the default look a level that wears it has its door leaves in its own paint and weathered wood, not the office's veneer — scene/lookTidy.ts)
   // … and the maps of what the level stands up with are made before its first frame (render/gbuffer.ts needLook, awaited with the pipelines below): every static,
   // door's leaf and loose prop's part is asked its word, by the one rule (whatever a paint is told by: its colour, or a name) and after the leaves have their paint

@@ -12,6 +12,7 @@ import { handleLevels } from "./levels-api.ts";
 import { localCloud } from "./cloud/local.ts";
 import { devRunner, type DevRunner } from "./mp/runner.ts";
 import { writePieces } from "./qa/capture-pieces.ts";
+import { faceWasm } from "./blitz/face-build.ts";   // the Rust game's module (rust/game_face), built when its sources are newer: the page asks for it only under ?rust=1
 
 const COMMIT = (() => { try { const r = Bun.spawnSync(["git", "rev-parse", "--short=12", "HEAD"]); return r.success ? new TextDecoder().decode(r.stdout).trim() : ""; } catch { return ""; } })();   // (read once at start: a dev server outlives commits, but the journal only wants "about which build")
 let CLOUD: ReturnType<typeof localCloud> = null;   // the local build's backend (tools/cloud/local.ts), started below once the port is ours: null on a plain start — `bun run dev` asks for one (TPS_LOCAL_CLOUD=1), TPS_DEV_CLOUD names one that is already up
@@ -54,6 +55,11 @@ const server = Bun.serve({
       let pieces = 0; try { pieces = writePieces("./captures", name, body).length; } catch (e) { console.error(`capture: its pieces were not written (${e}); cut it with: bun run tools/qa/capture-pieces.ts captures/${name}.tpscap.gz`); }
       console.log(`capture: captures/${name}.tpscap.gz${pieces ? ` (and in ${pieces} pieces, ${name}.part1of${pieces}.tpscap.gz …)` : ''}  ·  bun run tools/qa/capture-read.ts captures/${name}.tpscap.gz`);
       return new Response(pieces ? `captured in ${pieces} pieces` : "captured");
+    }
+    if (path === "/game_face.wasm") {   // THE RUST GAME (src/host/rustgame.ts, ?rust=1): the module's file, built first where a source under rust/ is newer (tools/blitz/face-build.ts); where it cannot be built, the reason in words the page shows
+      const r = await faceWasm(l => console.log(l));
+      if ("why" in r) return new Response(r.why, { status: 503, headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" } });
+      return new Response(Bun.file(r.path), { headers: { "Content-Type": "application/wasm", "Cache-Control": "no-store" } });
     }
     const lv = await handleLevels(req); if (lv) return lv;
     if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (the session journal files it with a recording: src/ui/sessionrec.ts)
