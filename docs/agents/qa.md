@@ -314,7 +314,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   its own on STDERR as it ends; what the harness refused as it loaded (a word given by hand) has a line of its own, `"outside"`. A folded
   run's reds are NOT read against the list of expected reds (the runner says why: it is not the stand as it opens). `gate.sh` carries
   the notice and how many lines had a refusal. `QA_VERDICTS=1` on a run without the fold prints `{"plain":{"probe":…,"red":…}}` a probe, to
-  lay the two side by side. WHAT A REFUSED WRITE MEANS: the check's staging may not have formed. A check that pinned a neighbour off to get a
+  lay the two side by side. FOR ONE CHECK AT A TIME (asked by the Rust goal: its table stands some checks on the Rust game, which must be
+  folded, and keeps the rest on the TypeScript tick exactly as with no word until they are restaged): `fold.ts foldFor(on)` puts the laid
+  fold off or on. Off, every held row is plain in effect and nothing is counted; the probe's line says `"folded":false`. A write refused
+  while on leaves no trace in what a row answers while off, and the other way about, so nothing passes between a folded check and an
+  unfolded one. It is called BETWEEN checks; the fence (`holds.ts asProbe`) takes the mode as it opens and puts it back first as it closes
+  (a check that switches the fold inside its own fence is not held). It rides to a child started after it. THE FOLD STARTS OFF where it
+  is asked for check by check (`TPS_GAME=table` with no `QA_FOLD=1`; `QA_FOLD_ONLY`), so what the harness writes as it loads is there for
+  the unfolded checks (a folded check does not have it, and that is not said); the notice on stderr says 'LAID AND OFF'. By hand, the
+  runner's word `QA_FOLD_ONLY=<probe,probe…>` beside `QA_FOLD=1` folds the named probes alone (a probe's own name; one no probe of the
+  run had is an error; a check file run alone does not read it). A run so mixed reads its unfolded reds against the list of expected
+  reds as ever and says 'the reds of folded probes … are read against no row' with their names (gate.sh carries that line). WHAT A REFUSED WRITE MEANS: the check's staging may not have formed. A check that pinned a neighbour off to get a
   fight, and counts what happened in that fight, can pass with nothing to count: green under the fold with a refused write is not a re-aimed
   check until its lines are read against the same run without the fold. WHAT IT CANNOT HOLD: a branch of a table replaced whole (the rows under
   it are plain until the next look, which lays them again and names them `lost`; the fence looks before and after it puts the tables back); a
@@ -336,10 +346,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   plain, at `page` on a stood game; (2) every yes/no row of the tables (959) is on the list; (3) a refused write reads the page value and is
   counted once by row, value and writer; (4) the fence leaves the fold standing, says the probe's line, names a branch replaced inside it;
   (5) a branch replaced whole is found and laid again; (6) a game stood and stepped, Hard and back, each camera mode: refused nothing; (7)
-  the runner's line carries a child's write, a by-hand word is said before the first probe; (8) who speaks. `FOLD_BREAK=1` (the fold counts
-  and lets through; (6) with a row Hard writes called settled): (3), (5) and (6) FAIL. NOT HELD by it: `switch-list.ts make` and `same`,
+  the runner's line carries a child's write, a by-hand word is said before the first probe; (8) who speaks; (9) the fold put off and on
+  for one check; (10) the runner under `QA_FOLD_ONLY`. `FOLD_BREAK=1` (the fold counts and lets through; (6) with a row Hard writes called
+  settled): (3), (6) and (9) FAIL. NOT HELD by it: `switch-list.ts make` and `same`,
   gate.sh's two lines, the `plain` line. Four reviews at the highest effort, 57 points, worked in or said here; the last rework run again and
-  not reviewed. Nothing here looks at a picture.
+  not reviewed. (The switch for one check at a time: two more reviews, 28 points; its last rework run again and not reviewed.) Nothing here looks at a picture.
   tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
