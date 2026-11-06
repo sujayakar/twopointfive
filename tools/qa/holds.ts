@@ -26,12 +26,11 @@ export const HOLDS: readonly { readonly list: string; readonly names: readonly s
   // THE ORDER MENU'S ROWS AS THEY WERE. These probes list a menu's rows key by key and press them — the pair has no 'wait for my word' row, a floor menu has
   // none, F on a door's first page turns to the tools, F on a greyed row of its own is refused. src/game/planlay.ts (PLANLAY.on, on in the page) puts that row
   // under every menu and makes it LAY the order; the row as the page has it is planlay-check.ts's, on both stands.
-  { list: 'ROWS_AS_THEY_WERE', names: ['squadplay(-*)', 'thresholdmenu(-*)', 'orderkeys(-*)', 'pressorders(-*)', 'doormenu(-*)', 'doortools-menu(-*)', 'orders-menu(-*)'], holds: [atStandUp('TPS_PLANLAY', 'PLANLAY')] },
+  { list: 'ROWS_AS_THEY_WERE', names: ['squadplay(-*)', 'thresholdmenu(-*)', 'orderkeys(-*)', 'doormenu(-*)', 'doortools-menu(-*)', 'orders-menu(-*)'], holds: [atStandUp('TPS_PLANLAY', 'PLANLAY')] },
   // WHO TAKES AN ORDER, AS IT WAS. These probes step who the order goes to with T and send red to one door and blue to another by the quick key, and they
   // list a teammate's own menu. src/game/cmdring.ts CMDRING.wholeSquad (on in the page) makes every order of the squad's key or its ring everyone's and
   // takes the choice away; the rule as the page has it is wholesquad-check.ts's, on both stands. (Measured on the page's stand: squadplay 31 FAIL lines with
-  // the rule on and 1 with it held off, orderkeys 49 and 30 — the counts they had before the rule went in; pressorders reads the same either way and is not
-  // on this list. doormenu-man asks that a teammate under the cursor has his own menu on X and is the man on T: the choice the rule takes away. The family's
+  // the rule on and 1 with it held off, orderkeys 49 and 30 — the counts they had before the rule went in. doormenu-man asks that a teammate under the cursor has his own menu on X and is the man on T: the choice the rule takes away. The family's
   // other lines ask the page's rule: doormenu-probes.ts sweep counts a teammate under the cursor as the squad there.)
   { list: 'WHO_AS_IT_WAS', names: ['squadplay(-*)', 'orderkeys(-*)', 'doormenu-man(-*)'], holds: [atStandUp('TPS_WHOLESQUAD', 'CMDRING', 'wholeSquad')] },
   // THE KIT CARDS AS THEY WERE. These probes set a wall charge or the breaching shotgun through rows of their own and count pouches for them — the
@@ -73,7 +72,7 @@ export const HOLDS: readonly { readonly list: string; readonly names: readonly s
   // pair's: with a tool in the squad the page has the big slot's row on its own key, and the walk that reads that page as the page opens it, in every
   // scenario, is orderkeys-walk. (kitpaste: its squads' big slots are the table's; a paste over a lent tool is kitdeal-more's line. squadplay-wait, -side: a
   // four's door tools page is read row for row, and the lent shotgun adds 'H shotgun and clear'.)
-  { list: 'MORE_AS_IT_WAS', names: ['frameholds-tools', 'doortest', 'doormenu-rows', 'thresholdmenu-rows', 'shutdoor-menu', 'silent-pick', 'silent-tools', 'silent-boot', 'pressorders-squad4', 'pressorders-nightbreach4', 'squadplay-wait', 'squadplay-side', 'kitpaste(-*)'], holds: [row('TPS_KITMORE', 'KITDEAL', 'more')] },
+  { list: 'MORE_AS_IT_WAS', names: ['frameholds-tools', 'doortest', 'doormenu-rows', 'thresholdmenu-rows', 'shutdoor-menu', 'silent-pick', 'silent-tools', 'silent-boot', 'squadplay-wait', 'squadplay-side', 'kitpaste(-*)'], holds: [row('TPS_KITMORE', 'KITDEAL', 'more')] },
   // PROBES WRITTEN AGAINST ONE CARD FOR EVERY MISSION (kit.ts KITDEAL.stealth): on the page's stand a stealth run wears your STEALTH card, issued as the
   // mission's kit, and a sponge round rides five to a pouch — so a probe that changes the loud card and stages a quiet run alone, or prices sponge rounds a
   // pouch each, runs with the key held off. The rule's own lines are kitstealth's. (owncharge puts its charges on the card a night alone wears: it reads both.

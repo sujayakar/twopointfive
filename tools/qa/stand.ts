@@ -39,3 +39,13 @@ export async function underWord<T>(word: string, on: boolean, fn: () => Promise<
   const w0 = process.env[word], v0 = row?.table[row.key]; process.env[word] = on ? '1' : '0';
   try { return await fn(); } finally { if (w0 === undefined) delete process.env[word]; else process.env[word] = w0; if (row) row.table[row.key] = v0; }
 }
+
+/** A CHILD'S STAND WORDS, EVERY ONE OF THEM SAID. An arm of a check that plays a rule OFF says so with the word '0': a word left out of a child's
+ *  environment is the game as the page opens it, the rule ON (it was the other way about before a tool with no word stood the page's game, and three
+ *  tools' 'off', 'old' and 'before' arms played the rule they were the control of: snap-probes, entry-strip, doorpath-probes). `words`: true = '1',
+ *  false = '0', a string = that value; nothing is ever deleted, and the rest of `base` goes through as it is. */
+export function childEnv(words: Record<string, boolean | string>, base: Record<string, string | undefined> = process.env): Record<string, string> {
+  const E: Record<string, string> = {}; for (const [k, v] of Object.entries(base)) if (v !== undefined) E[k] = v;
+  for (const [k, v] of Object.entries(words)) E[k] = v === true ? '1' : v === false ? '0' : v;
+  return E;
+}
