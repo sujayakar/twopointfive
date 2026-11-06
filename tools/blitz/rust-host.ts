@@ -87,7 +87,7 @@ async function bridge(): Promise<any> {
   const SU = await import('./surface.ts'), SC = await import('./scan.ts'); SU.installSurface(); const E = await import('./export.ts'), I = await import('./import.ts'), AK = await import('./ask.ts'), C = await import('./classes.ts'), P = await import('./puppet-apply.ts'), O = await import('./out-dispatch.ts'), A = await import('./audit.ts');
   const K = await import('../../src/game/knobs.ts'), D = await import('../../src/math/dice.ts'), DR = await import('../../src/game/dress.ts');
   const LJ = JSON.parse(readFileSync(new URL('./puppet-lists.json', import.meta.url).pathname, 'utf8'));
-  O.OUT_HOST.tap = SU.fireTap; BR = { ...E, surfaceHost: SU.surfaceHost, makeTaps: SU.makeTaps, makeScan: SC.makeScan, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable(), made: Object.fromEntries(MEN.map(c => [c, (o: object) => { MADE_MEN.add(o); }])) }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll, DRESS: DR.DRESS,
+  O.OUT_HOST.tap = SU.fireTap; BR = { ...E, surfaceHost: SU.surfaceHost, makeTaps: SU.makeTaps, makeScan: SC.makeScan, installAsks: AK.installAsks, applyGame: I.applyGame, hooks: { classes: C.classTable(), values: C.valueTable(), made: Object.fromEntries(MEN.map(c => [c, (o: object) => { MADE_MEN.add(o); MADE.n++; }])) }, puppetRows: P.puppetRows, SLOW: P.SLOW, VALS: P.VALS, OUT: O.OUT, A, reg: K.knobRegistry(), newDice: D.newDice, dressAll: DR.dressAll, DRESS: DR.DRESS,
     lists: { step: new Set<string>(LJ.step), start: new Set<string>(LJ.start) } };
   BR.PUT_BACKS = (await import('../../src/math/side.ts')).PUT_BACKS;
   snaps(await import('../../src/game/savestate.ts'));
@@ -112,7 +112,7 @@ const TOOL_GONE = new FinalizationRegistry<{ k: number; host: RustHost }>(e => {
 /** THE GAMES THAT GAVE THEIR SLOT UP AND KEEP THEIR BYTES (a clone in the module, 10 to 30 MB each): the last few; an older one's are let go and its re-step is refused */
 const OFF_KEPT: RustHost[] = [], OFF_CAP = 6;
 /** the classes of a man: a row of one of these that the APPLY made (a man the Rust game spawned) has no store row and no pose store on the TypeScript side */
-const MEN = ['Character', 'Guard', 'Player'], MADE_MEN = new WeakSet<object>();
+const MEN = ['Character', 'Guard', 'Player'], MADE_MEN = new WeakSet<object>(), MADE = { n: 0 };
 
 const now = () => performance.now();
 /** how many hosted games of the process are inside their own update now (see `surfaceOpen`) */
@@ -185,7 +185,18 @@ export class RustHost {
   inHook(): boolean { return this.dispatching; }
   surfaceCall(row: number, bytes: Uint8Array): Uint8Array { const X = this.F.X; this.scanFlush(); this.busy++; try { { const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds ?? []); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); }   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, p, n)); const out = this.F.outView().slice(); this.applyStep(); this.dispatch(); return out; } finally { this.busy--; this.scanRebase(); } }
   /** what the tool wrote since the walk last looked goes to the Rust game */
-  private scanFlush(): void { if (this.audit || !this.h) return; this.tapsOn?.sweep(); if (process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => this.count(`scan: ${q}`)); this.scan.rebase(); } else this.scan.flush(); this.T.scan += now() - t; }
+  private scanFlush(): void { if (this.audit || !this.h) return; this.tapsOn?.sweep(); this.blockBack(); if (process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => this.count(`scan: ${q}`)); this.scan.rebase(); } else this.scan.flush(); this.T.scan += now() - t; }
+  /** WHAT THE TOOL WROTE INTO rust/sim's BLOCK. A door's swing and latch, a man's place and the die live in the block (the puppet's objects read and
+   *  write its copy of it: `d.vel = 2`, `d.latched = false`), and no walk of the schema's fields meets them. After every apply the puppet's copy IS the
+   *  Rust game's; where a part of it differs as a tick opens or a call is about to cross, the tool (or TypeScript run on the puppet) wrote it, and that
+   *  part goes to the Rust game whole. `poses` is left out: a pose is posed again on either side and the two differ by design from the first death. */
+  blockWrites = new Map<string, number>(); private partsAt: { name: string; off: number; len: number }[] | null = null;
+  private blockBack(): void { if (OFF.has('block') || this.inApply) return; const X = this.F.X, mine = this.tsBlock(), theirs = this.rustBlock(), n = Math.min(mine.length, theirs.length), A = this.B.A;
+    if (A.buf(mine.subarray(0, n)).equals(A.buf(theirs.subarray(0, n)))) return;
+    this.partsAt ??= this.F.NAMES.map((name, i) => ({ name, off: (X.face_part_addr(0, i) >>> 0) - (X.state_addr(0) >>> 0), len: X.face_part_len(i) }));
+    for (const P of this.partsAt) { if (P.name === 'poses' || P.off + P.len > n) continue; const a = mine.subarray(P.off, P.off + P.len); if (A.buf(a).equals(A.buf(theirs.subarray(P.off, P.off + P.len)))) continue;
+      theirs.set(a, P.off); this.blockWrites.set(P.name, (this.blockWrites.get(P.name) ?? 0) + 1); this.count(`the block: ${P.name} written on the puppet since the last apply (handed to the Rust game)`); } }
+  private inApply = false;
   /** an apply moved the puppet: that is what the next walk is held to */
   scanRebase(): void { if (!this.scan) return; const t = now(); this.scan.rebase(); this.T.scan += now() - t; }
 
@@ -618,10 +629,16 @@ export class RustHost {
   private tail(dt: number, k: number): Uint8Array | null {
     const g = this.g, X = this.F.X; let t = now();
     // ---- the apply
-    this.applyStep();
+    const made0 = MADE.n; this.applyStep();
     let rust: Uint8Array | null = null;
     if (this.audit) rust = this.applyWhole('audit');
-    else { const why = this.wholeOwed(k); if (why) this.applyWhole(why); }
+    // (A MAN THE STEP'S APPLY MADE, the Rust game having restarted or spawned inside its tick, holds only the fields of the every-tick list: his rifle's
+    // rows, his kit, read `undefined` to whatever reads the puppet next. The puppet takes the whole state at once.)
+    else { const why = MADE.n !== made0 ? 'the apply made a man' : this.wholeOwed(k); if (why) this.applyWhole(why); }
+    // THE RUST GAME BEGAN ITS MISSION AGAIN INSIDE THE TICK (the player's own restart: Enter once down, Shift+Enter). The TypeScript's restart makes a new
+    // mission RECORD, and that identity is how everything outside the tick knows a run began (the save controller's `missionRef`: a fresh run, an empty
+    // shelf; a driver's own `game.mission !== before`). The apply wrote the fields into the record that stood, so the puppet is given a new one here.
+    { const m = g.mission; if (m && m === this.missionRef && m.t0 !== this.t0Ref && !OFF.has('newrun')) { g.mission = { ...m, stats: { ...m.stats } }; this.count('the Rust game restarted inside its tick: the puppet\'s mission record made anew'); } }
     this.dispatch();
     // ---- the dress step: what the tick does that has no Rust body and a reader of the puppet needs
     // (THE AUTOSAVE is the host's and decides off the frame as it now stands, so it runs here, on the puppet. Its one write into the game is the
