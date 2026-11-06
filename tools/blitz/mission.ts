@@ -34,6 +34,8 @@ const { play, entryOf } = await import('../qa/playthrough.ts');
 // (`<k> select_verb <kind> <verb>` in hostwrites.txt). It is run here WITHOUT its model of the sky's light on the other men's meters (a hook over the game's
 // own light asks, which the Rust game has no word for), so a lesson that leans on the moon may stop short of its end: how far it went is said.
 const LESSON = scn.startsWith('tut-');
+// (…and one lesson's own player hooks the same asks itself, tools/qa/lessons/tut-squad.ts: its word for "the estimate as every other tool has it")
+if (LESSON) process.env.TUT_SQUAD_SKY = '0';
 if (!LESSON && !entryOf(scn)) { say(`mission.ts: the scripted player has no mission '${scn}' (tools/qa/playthrough.ts plays the room clears, the rescues and the raids: bun run tools/qa/playthrough.ts --scn x names them)`); process.exit(64); }
 const { newDice } = await import('../../src/math/dice.ts');
 const { dressAll } = await import('../../src/game/dress.ts');
