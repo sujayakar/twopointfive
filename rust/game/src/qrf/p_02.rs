@@ -38,7 +38,13 @@ fn write_station(g: &mut Game, x: GuardId, want: V3) -> (V3, bool) {
     st[1] = 0.0;
     st[2] = want[2];
     let st = *st;
-    if tied { if let Some(s) = g.gd[x].script.as_mut() { s.goal = Some(st); } }
+    if tied {
+        if let Some(s) = g.gd[x].script.as_mut() { s.goal = Some(st); }
+        // (… and so does the runner's settle watch: squad.ts:81 keeps the goal OBJECT it was made for (`w.goal !== s.goal`), which is this station, so a
+        //  station written in place leaves the watch standing with its best and its clock. By value alone every creep of the file made a fresh watch
+        //  here, and a man the TypeScript stands still as "stuck short of his mark" went on easing onto it.)
+        if let Some(mut w) = g.m.squad.settle_watch.get(x).copied() { if w.goal == old { w.goal = st; g.m.squad.settle_watch.set(x, w); } }
+    }
     (st, tied)
 }
 

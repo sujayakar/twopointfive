@@ -58,6 +58,11 @@ let k = 0, n = 0, uploads = 0, loadsSeen = 0; const gives: string[] = [];
 for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt', ...(LESSON ? ['meter.txt'] : [])]) writeFileSync(`${outDir}/${f}`, '');
 const { SCHEMA } = await import('./export.ts'); const wordAt = (ty: string, w: unknown) => w === undefined ? -1 : SCHEMA.types[ty].words.indexOf(w);
 writeFileSync(`${outDir}/post.txt`, `parts ${SIM_PARTS.join(' ')}\n`);
+// A LINE A TICK of host.txt and post.txt, by the tick's number. The host can step the game TWICE in one frame (a checkpoint put back: the save controller
+// loads, steps, loads again and steps again); the step that stands is the last, so a second line for the same tick takes the first one's place.
+const hostL: string[] = [], postL: string[] = [], meterL: string[] = [];
+function row(file: string, L: string[], line: string) { const head = file === 'post.txt' ? `parts ${SIM_PARTS.join(' ')}\n` : '';
+  if (L.length >= k) { L[k - 1] = line; writeFileSync(`${outDir}/${file}`, head + L.join('\n') + '\n'); } else { L.push(line); appendFileSync(`${outDir}/${file}`, line + '\n'); } }
 function tapGives(g: any) { const O = g.orders, was = O.give; O.give = function (this: any, id: string, t: any, who: any, opts: any) {
   if (!g.ticking) { const T = t ?? this.targetAt(g.aimPoint), w = who === undefined ? '-' : typeof who === 'object' ? `g${g.guards.indexOf(who)}` : String(who);
     const tail = T.kind === 'door' ? ` door ${g.doors.list.indexOf(T.door)} ${T.side} book${bookOf(g).ids.get('DoorId')?.get(T.door)}` : T.kind === 'none' && T.man ? ` man ${g.guards.indexOf(T.man)}` : T.kind === 'foe' ? ` man ${g.guards.indexOf(T.foe)}` : (T.wall || T.thing) ? ' UNSUPPORTED-wall-or-thing' : '';
@@ -86,13 +91,13 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     // opens are written (L<k>.bin, Ls<k>.bin) and the runner takes them as a new start before it steps tick k.
     if (g.chronicle.counts.loads !== loadsSeen) { loadsSeen = g.chronicle.counts.loads; if (k > 1) { appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_load\n`); writeFileSync(`${outDir}/L${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/Ls${k}.bin`, block(g)); } }
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds as any[]));
-    if (LESSON) appendFileSync(`${outDir}/meter.txt`, `${g.player.visibility}\n`);
-    appendFileSync(`${outDir}/host.txt`, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}\n`); uploads = 0;
+    if (LESSON) row('meter.txt', meterL, `${g.player.visibility}`);
+    row('host.txt', hostL, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}`); uploads = 0;
     const saves0 = g.chronicle.counts.saves;
     try { return step.call(this, dt, cmds); } finally {
       // THE HOST'S CHECKPOINT: the autosave controller (savestate.ts, the host's) writes a chronicle row and a count as the tick's last thing
       if (g.chronicle.counts.saves !== saves0) { const E = g.chronicle.events, e = E[E.length - 1]; appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_save ${JSON.stringify(e?.kind === 'checkpoint' ? (e.label ?? e.data?.label ?? '') : 'NOT-LAST')}\n`); }
-      appendFileSync(`${outDir}/post.txt`, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}\n`);
+      row('post.txt', postL, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}`);
       if (keep(k)) { writeFileSync(`${outDir}/a${k}.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s${k}.bin`, block(g)); } }
   };
   try { (was as any).apply(this, a); } catch (e) { err = e; } finally { delete g.stepSeats; }
