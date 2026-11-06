@@ -17,9 +17,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   THE WORD: giving a child no word asks for the page's (`rerun.ts` for a tape made on the old stand, `rust-check.ts`'s old-stand arms, `lesson-gate.ts`'s
   frozen runs, `ships.ts` / `kit-cells.ts` / `solo-night.ts` `--base`, `blast-frame.ts --arm round1` all say it). NO NEW FIXTURE IS RECORDED ON IT. What
   that leaves: (1) the recordings that were made on it are taken again on the page's stand, each by its owner in a commit of its own: `ident-pin.ts`
-  records on the stand a family names (`hold({ stand })`: the page's for a tool that says `stand: 'shipped'`, which is the glass's `pane-words.json` from
-  the commit after step 1572, then the layers' `layer-words.json` and the senses' `sense-words.json` as each owner's commit lands; the old one until a
-  family says), and `rust-check.ts` asks a family's child on the stand its recording is of. A RUN OF AN IDENT THAT IS HELD TO NOTHING FAILS, said as
+  records on the page's stand and on no other (its `RECORDED_ON`; a family names no stand: the glass's `pane-words.json`, the senses' `sense-words.json`
+  and the layers' `layer-words.json` were each taken again there by step 1576, and the first two keep the old stand's recording beside it, held and
+  never written again), and `rust-check.ts` asks a family's child on the page's stand (the glass's on the old one as well, which is what keeps that entry of `pane-words.json` held; the layers' file has no old entry, and a layers run on the old stand fails as NOT HELD). A RUN OF AN IDENT THAT IS HELD TO NOTHING FAILS, said as
   NOT HELD, unless the tool or its caller says the word (`unpinned`, `--unpinned`: `docs/agents/rust.md`, "What holds a family once its TypeScript is
   gone"); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
   hold nothing on a run with no word, and say so; (2) a check that was green on the old stand and red on the page's is red in a plain run now:
