@@ -1,11 +1,12 @@
 // THE BRIDGE ALONE: a live TypeScript game mid-mission, exported, imported in Rust and exported again, must be the same bytes. Needs no translated body.
 //   TPS_PROFILE=shipped bun run tools/blitz/bridge-check.ts [--level compound.json] [--query 'levelFile=compound.json&roomclear&squad4'] [--ticks 600] [--play room-clear-four:1:2400] [--out x.bin]
 // It writes the blob; `BRIDGE_BLOB=x.bin cargo test --lib bridge_round_trip` in the crate is the other half. Exit 1 if two exports with no tick between differ.
+import { tmpdir } from 'node:os';
 import { writeFileSync } from 'node:fs';
-import { exportGame, report, SIZES, ROWS, SERIALS } from './export';
+import { exportGame, report, SIZES, rowsReport, SERIALS } from './export';
 import { decode } from './paths';
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
-const query = arg('--query', 'levelFile=compound.json&roomclear&squad4'), ticks = +arg('--ticks', '600'), out = arg('--out', '/tmp/bridge.bin');
+const query = arg('--query', 'levelFile=compound.json&roomclear&squad4'), ticks = +arg('--ticks', '600'), out = arg('--out', `${tmpdir()}/bridge.bin`);
 const { knobRegistry } = await import('../../src/game/knobs.ts');
 const reg = knobRegistry();
 let g: any;
@@ -22,7 +23,7 @@ let same = a.length === b.length; if (same) for (let i = 0; i < a.length; i++) i
 const rows = a.length < 40e6 ? decode(a).length : -1;
 console.log(`${moment || query} after ${moment ? '' : ticks} ticks, game time ${g.time.toFixed(2)}: ${a.length} bytes, ${rows} leaves, ${ms.toFixed(1)} ms. Two exports ${same ? 'are the same' : 'DIFFER'}`);
 console.log('largest:'); for (const [k, v] of [...SIZES].sort((p, q) => q[1] - p[1]).slice(0, +arg('--sizes', '40'))) console.log(`  ${(v / 2 / 1e6).toFixed(2)} MB ${k}`);
-console.log('rows:'); for (const [k, v] of ROWS) console.log(`  ${v.n} ${k} (first ${v.first})`);
+console.log('rows:'); for (const [k, v] of rowsReport(g)) console.log(`  ${v.n} ${k} (first ${v.first})`);
 const R = [...rep].sort((x, y) => y[1].n - x[1].n); console.log(`what did not fit: ${R.length} kinds`); for (const [k, v] of R.slice(0, +arg('--show', '60'))) console.log(`  ${v.n}× ${k} (${v.eg})`);
 writeFileSync(out + '.report.json', JSON.stringify(R.map(([k, v]) => ({ at: k, ...v }))));
 writeFileSync(out + '.serials.json', JSON.stringify([...SERIALS].sort()));

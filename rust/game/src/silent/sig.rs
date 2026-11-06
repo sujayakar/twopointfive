@@ -91,3 +91,12 @@ pub fn silent_tick(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/silent.ts:268 silentSummary)
 pub fn silent_summary(g: &mut crate::game::Game) -> String { todo!() }
+
+
+/// INVENTED: `posture.word()` (silent.ts:247)
+pub fn posture_word(g: &mut crate::game::Game) -> Option<String> { todo!() }
+/// INVENTED: `posture.mark(def)` (silent.ts:248)
+pub fn posture_mark(g: &mut crate::game::Game, def: OrdersOrderDefId) -> &'static str { todo!() }
+/// INVENTED: `posture.given(def)` (silent.ts:249)
+pub fn posture_given(g: &mut crate::game::Game, def: OrdersOrderDefId) { todo!() }
+

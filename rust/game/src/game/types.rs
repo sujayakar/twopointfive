@@ -825,6 +825,8 @@ pub struct Game {
     pub loose_poses: Vec<crate::anim_skeleton::LoosePose>,
     /// what this step did that the host shows: out-events.json. The host drains it (the face clears it before a step)
     pub out: Vec<crate::out_events::OutEvent>,
+    /// INVENTED: how many with_seat calls stand open: seats.ts tells a seat's view from the bare Game by identity (`rawGame(g) !== g`). Zero between ticks, so the bridge does not carry it
+    pub view_depth: u32,
     /// state.ts:136 SimState.stamp, for what is made from the block (the fog's grid, the air): a native game has one block, and whatever writes it wholesale raises this
     pub sim_stamp: f64,
     /// the table of these things: never shrinks
@@ -1000,6 +1002,7 @@ impl Game {
             box_frame_free: Vec::new(),
             loose_poses: Vec::new(),
             out: Vec::new(),
+            view_depth: 0,
             sim_stamp: 1.0,
             ch: Tab::new(),
             dr: Tab::new(),

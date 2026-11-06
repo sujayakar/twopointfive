@@ -27,6 +27,12 @@ What a rule does that the host has to show or play, as a list the host drains af
 - **The fire's bed.** fire.ts:379 plays `fireBed` with a `follow` closure. The Rust fire has no such call, so no event carries it, and a fire has no held voice on the Rust side.
 - **Null.** Three parameters are `T | null` in TypeScript and `Option` in Rust (`audio.play`'s `pos`, `reach.changed`'s `rect`, a mark's `s`): the dispatcher writes `?? null`. The rest are optional and take `undefined`.
 
+## An arm that changes the game
+
+`CheckpointsRequest` is the one that does, and it is not the picture's: an authored checkpoint of a rails level stops the level's program for the take, so a host that counts and clears it plays on with the program running and parts from the TypeScript 33 ticks later (bringup/host1-log.md 22 and 23). Dispatch it, or take the checkpoint on the Rust side.
+
+The checker can't show this one (`Checkpoints` is a host object, so `request` writes no game field). What it says of the rest, in `inventory/out-arms.json`: `SessionRecorder.cut` writes the recorder's own counters; `messBurst`, `messOpened`, `messWall` and `bangScorch` write only `StaticCollision`'s query scratch (stamps, trig memo). The other 27 write no game field. Read off the static list, not run.
+
 ## How it was checked
 - `cargo test --lib out_round` (`OUT_BLOB`, `OUT_FILE`): imports a whole state, calls each generated function once with zero bytes, plays four sounds with each kind of options, and writes a filtered start: 37 events.
 - `bridge/out-check.ts`: stands a game at that frame, applies the file and dispatches every event. Methods go to recording stand-ins, functions of the game run for real on room-clear-four: 33 of 33 arms, none threw.

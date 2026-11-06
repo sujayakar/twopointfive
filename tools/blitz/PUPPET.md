@@ -9,7 +9,7 @@
 
 ## Measured
 
-room-clear-four, frames 1200 to 1206, this box. These are numbers on today's tree, where 179 new box rows a tick go whole through the slow path: **don't tune on them until frame boxes land.**
+room-clear-four, frames 1200 to 1206, this box. These are numbers on the tree of skeleton 7.3, where 179 new box rows a tick go whole through the slow path: **don't tune on them until frame boxes land.**
 
 | | |
 |---|---|
@@ -37,9 +37,22 @@ Every value on the every-tick list equals the whole state, after a start and ste
 
 The blobs are real Rust output: TypeScript state imported into Rust, then filtered there. But the Rust game did not step: these are TypeScript's states carried through.
 
-## What it means for readers
+## What goes filtered
+
+A row and a struct field inside it are filtered: only what the list names. **A value inside a list, an Option or a map goes whole**, every carried field. Lists are read by place, so if `[A, B]` loses `A`, `A`'s object takes `B`'s values. With only the listed fields, it would keep `A`'s others and read wrong with no error. Rows made in a step were whole already.
+
+**The list is the page's and the harness's.** `puppet-fields.json` holds what the page reads, and also what the scripted player's files read (`harness-fields.json`: 19 files of tools/qa, 12 fields by type and 62 by name, written by inventory.cjs). A field neither reads never moves on the puppet.
+
+| room-clear-four, frames 1200 to 1206 | bytes a step | Rust export | TypeScript apply, warm |
+|---|---:|---:|---:|
+| the page's list | 226.6 KB | 1.2 to 1.4 ms | 4.93 ms |
+| and the harness's reads | 227.6 KB | 1.05 to 1.3 ms | 4.75 ms |
+| and values whole (as it stands) | 235.3 KB | 1.35 to 1.65 ms | 4.94 ms |
+
+One mission on a box doing other work, native Rust, and the apply re-applying six ticks, so differences under about 0.2 ms are noise. On depot-four's long gaps a step is 444 to 599 KB.
+
 
 - **A changed fixed list gets a new array, in the compiled rows and in the slow path.** A step doesn't visit every holder of a shared array, so an in-place write could reach a row that didn't change (`WallSwitch.pos` did, on hostage-rescue). This replaces constraint 7's "in place" in my earlier message: nothing outside the tick may hold a V3 from a game field across a tick and expect it to move. Whole applies, and `start`, still write in place. Typed arrays stay in place (`jointData` has views into it).
-- **A value made during a step has only the listed fields.** A reader that isn't on the list sees `undefined`: `lastStandReport` threw on `st.named` on depot-four, called from tools/qa. So the harness should apply whole states, and any page reader the static list missed will fail like this, loudly. That's the list's real test.
+- **A row's field that isn't on the list stands as the row was made, or as it last was at a start.** A reader the static list missed reads a stale value and says nothing, on a page or in a harness. That's the list's real test: `by-name-only.json` and `harness-fields.json` are the two places a name can be missing from. A value inside a list is whole, so `lastStandReport`'s `st.named` reads right now.
+- **`FollowCamera.desired` is written in place** (`schema.inPlace`), because its identity is a cut; `desired_serial` says when it is a new array.
 - Fields on the long list but not the every-tick list (`BoxWorld.all`, `Wind.active`) stay as TypeScript's own, which is your one-writer rule.
-- `Game.out` isn't here yet: (C).

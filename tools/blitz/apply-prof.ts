@@ -1,5 +1,6 @@
 // WHERE AN APPLY'S TIME GOES, a tick at a time. Role a plays to frame F and exports every frame to F+K. Role b plays to F, exports (the book) and applies each in turn, several ways.
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/apply-prof.ts <scn>:<seed>:<F>:<K> --role a|b --dir d --list puppet-fields.json
+import { tmpdir } from 'node:os';
 import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { exportGame, parse, SCHEMA } from './export';
 import { applyGame } from './import';
@@ -7,7 +8,7 @@ import { classTable, valueTable } from './classes';
 import { decode } from './paths';
 import { PUT_BACKS } from '../../src/math/side';
 const argv = process.argv.slice(2); const [scn, seed, F, K] = argv[0].split(':'); const arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
-const dir = arg('--dir', '/tmp/prof'), role = arg('--role', 'a'); mkdirSync(dir, { recursive: true }); const say = (x: string) => { process.stdout.write(x + '\n'); };
+const dir = arg('--dir', `${tmpdir()}/prof`), role = arg('--role', 'a'); mkdirSync(dir, { recursive: true }); const say = (x: string) => { process.stdout.write(x + '\n'); };
 const { knobRegistry } = await import('../../src/game/knobs.ts'); const reg = knobRegistry();
 const { Game } = await import('../../src/game/game.ts'); const { play } = await import('../qa/playthrough.ts'); class Stop extends Error {}
 const frames: number[] = []; for (let i = 0; i <= +K; i++) frames.push(+F + i);
