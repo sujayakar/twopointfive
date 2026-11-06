@@ -91,7 +91,7 @@ if (!args.includes('--words')) {   // (a knob a rule reads and a question outsid
 }
 const { hold } = await import(`${ROOT}/tools/qa/ident-pin.ts`);
 const end = done.map(r => `${r.run}=${r.end}`).join(' ');
-const H = hold({ root: ROOT, tool: 'tools/qa/weather-ident.ts', fixture: 'weather-words.json', stand: 'shipped', run: runs.join(' '), runArgs: flag('--runs') ? ['--runs', runs.join(',')] : [], end, words, breakWord: 'WEATHER_BREAK', unfit: broken.length ? 'a run left nothing' : '', verdict, say: (l: string) => console.log(l) });
+const H = hold({ root: ROOT, tool: 'tools/qa/weather-ident.ts', fixture: 'weather-words.json', run: runs.join(' '), runArgs: flag('--runs') ? ['--runs', runs.join(',')] : [], end, words, breakWord: 'WEATHER_BREAK', unfit: broken.length ? 'a run left nothing' : '', verdict, say: (l: string) => console.log(l) });
 if (args.includes('--words')) process.exit(0);
 if (H.record && fails === 0) H.record();
 if (BREAK) { const moved = new Set(H.off.map((k: string) => k.split('|')[1])), stayed = NAMES.filter(n => !moved.has(n)); console.log(`- ${stayed.length ? 'NOT RED' : 'RED'} — the seam's answers bent: ${moved.size} names moved from the same runs played plain${stayed.length ? ` · THE BREAK DID NOT REACH ${stayed.join(', ')}` : ', every one of them'}`); process.exit(stayed.length || broken.length ? 0 : 1); }
