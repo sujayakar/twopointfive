@@ -247,7 +247,12 @@ export async function checkpointAutosave() {
   game.player.visibility = 0.02; game.godMode = true; game.playerInvisible = true;   // (unseen, unheard: this is about the controller, not the senses)
   const written: any[] = []; S.onSaved = (s: any, info: any) => written.push({ label: s?.label ?? info?.label, key: info?.key, t: game.time, why: S.log[S.log.length - 1]?.what });
   game.guards.forEach((gd: any, i: number) => { gd.heardUpTo = 1e12; place(gd, [8 + i * 3, 0, 1.6], Math.PI); gd.hold = true; gd.flashlight.enabled = false; });   // parked on the north verge, held
-  for (const cv of game.civilians ?? []) cv.heardUpTo = 1e12;   // (the cleaner / the late worker deaf too: a stun can going off in the cubicles sends her to the phone, and a civilian on the phone to security rightly holds the gate — review G3.4 — which is the senses' business, not the controller's)
+  // (THE CIVILIANS ARE OUT OF THIS SCRIPT, as the staff's senses are: a civilian on the phone to security rightly holds the gate (review G3.4), which is
+  // the senses' business and not the controller's. They were only made deaf, for the stun can. On the page's stand the cleaner SEES the body hauled below,
+  // runs for the reception phone and is on it until 17 s later: the body's request waits on her, the stage's and the room's JOIN it with no line of their
+  // own in the log ('body+stage+room', which this probe read as no stage request at all), and the three land as one save 8 s short of lapsing.
+  // CKPTCIV_IN=1 = the red path: the civilians are left in, deaf, as they were. It bites where the cleaner's round passes the break room, the page's stand.)
+  if (process.env.CKPTCIV_IN === '1') { for (const cv of game.civilians ?? []) cv.heardUpTo = 1e12; } else if (game.civilians) { game.tune.civilians = false; game.civilians.length = 0; }
   rollcallState(game).nextAt = 1e9;
   steps(W, 0.5);
   const req0 = S.stats.requests;
