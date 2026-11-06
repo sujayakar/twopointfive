@@ -53,7 +53,7 @@ export async function rescueflushCheck(): Promise<boolean> {
   const line = (ok: boolean, what: string, detail: string) => { if (!ok) all = false; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   /** one floor: the mission staged under `seed`; `loud`: a round of Sam's at the hostage door before the room's own men are put down (else they go down
    *  without a sound); `out`: the hostages stood at the way out first */
-  const floor = async (id: string, seed: number, on: boolean, o: { loud: boolean; out?: boolean; end?: boolean; lanes?: boolean }) => await pin({ TPS_RESCUEFLUSH: on, TPS_RESCUEEND: o.end ?? true, ...(o.lanes ? { TPS_LANES: true } : {}) }, async () => {
+  const floor = async (id: string, seed: number, on: boolean, o: { loud: boolean; out?: boolean; end?: boolean; lanes?: boolean }) => await pin({ TPS_RESCUEFLUSH: on, TPS_RESCUEEND: o.end ?? true, ...(o.lanes ? { TPS_LANES: true } : {}) }, async () => {   // (word left out on purpose: `lanes` not asked is the covered lanes as the stand has them)
     Math.random = seeded(seed);
     const E = (ALL_MISSIONS as any[]).find(e => e.id === id), { W, g, why } = await answerStand(E); if (why) throw new Error(`${id}: ${why}`);
     if (process.env.RESCUEFLUSH_BREAK === 'lanes') RESCUEFLUSH.lanesChoose = false;   // (the build before the mend, on every floor: (g) and (h) must fail)
