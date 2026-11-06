@@ -207,8 +207,12 @@ cost until those checks are staged again. The fold asks the one switch for the d
 table's `pins` (from the collector that came before the fold) are now what the fold's own line a probe says (`refused` not empty) and should be made
 again from it: not done. Every "TypeScript tick" beside a number above is the UNFOLDED one (the word's stand, or no word).
 
-Not shown: the gate's whole list (`probes.ts all-quick`) in one process by the table; the tour's and the soak's gate forms; anything but two families
-under the fold.
+The 62 probes the table stands on the Rust game, each alone UNDER THE FOLD (by the table; a red one again with `QA_FOLD=1` on the TypeScript tick,
+the reference): 42 GREEN ON THE RUST GAME; 20 red there and RED ON THE FOLDED TYPESCRIPT TICK TOO; none red on the Rust game alone. The 20 are the
+table's `both`: such a check says so as it stands a game and the closing line counts it (`N checks seen RED ON THE FOLDED TYPESCRIPT TICK TOO`).
+
+Not shown: the gate's whole list (`probes.ts all-quick`) in one process by the table; the tour's and the soak's gate forms; the kept checks under the
+fold beyond two families; the 40 `waits` and the 185 `pins` again under the fold.
 
 ## The die
 

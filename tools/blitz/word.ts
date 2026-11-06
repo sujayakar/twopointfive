@@ -25,7 +25,7 @@ export type Word = '' | 'rust' | 'audit' | 'ts';
 /** the word asked for, before the table and the stand are looked at ('' = none) */
 export function asked(): string { const w = process.env.TPS_GAME ?? DEFAULT_WORD; return w === 'none' || w === 'off' ? '' : w; }
 
-interface Kinds { probes: Record<string, string>; tools: Record<string, { word: string; why: string }>; pins?: Record<string, string[]>; waits?: Record<string, string>; families?: string[]; unread?: string[] }
+interface Kinds { probes: Record<string, string>; tools: Record<string, { word: string; why: string }>; pins?: Record<string, string[]>; waits?: Record<string, string>; both?: Record<string, string>; families?: string[]; unread?: string[] }
 let KINDS: Kinds | null = null;
 export function kinds(): Kinds { return KINDS ??= JSON.parse(readFileSync(new URL('./qa-kinds.json', import.meta.url).pathname, 'utf8')); }
 // (kinds iii and iv: a check that CALLS the tick's rules between ticks, hangs its own function on a game object, checks a TypeScript function with no
@@ -79,13 +79,14 @@ function decide(frozen: boolean): Stood {
 
 // ---- every game stood under `table`, or forced off the word asked for, is counted, said as its check's first game is stood, and summed in ONE LINE as the
 // process ends, so that a green of the old tick is not read as the Rust game's
-const SAID = { rust: new Map<string, number>(), ts: new Map<string, number>(), none: new Map<string, number>(), kinds: new Map<string, number>(), norow: new Set<string>(), frozen: 0, hooked: false };
+const SAID = { rust: new Map<string, number>(), ts: new Map<string, number>(), none: new Map<string, number>(), kinds: new Map<string, number>(), norow: new Set<string>(), both: new Set<string>(), frozen: 0, hooked: false };
 const n = (M: Map<string, number>) => [...M.values()].reduce((a, b) => a + b, 0);
 function closing(): string { const T = SAID, parts: string[] = [];
   parts.push(`${T.rust.size} checks stood ${n(T.rust)} games on the RUST game`);
   parts.push(`${T.ts.size} checks stood ${n(T.ts)} games on the TYPESCRIPT TICK${T.ts.size ? ` (${[...T.kinds].map(([k, c]) => `${k} ${c}`).join(', ')}: NOT GREENS OF THE RUST GAME): ${[...T.ts.keys()].slice(0, 40).join(' ')}${T.ts.size > 40 ? ' …' : ''}` : ''}`);
   if (T.none.size) parts.push(`${T.none.size} stood ${n(T.none)} games with no word, by a tool's row or under an engine that has no bridge (NOT GREENS OF THE RUST GAME): ${[...T.none.keys()].join(' ')}`);
   parts.push(`${T.norow.size} checks with no row${T.norow.size ? `: ${[...T.norow].slice(0, 40).join(' ')}${T.norow.size > 40 ? ' …' : ''} (tools/blitz/table-check.ts)` : ''}`);
+  if (T.both.size) parts.push(`${T.both.size} checks seen RED ON THE FOLDED TYPESCRIPT TICK TOO (a red of theirs is not the Rust game's): ${[...T.both].slice(0, 40).join(' ')}`);
   if (T.frozen) parts.push(`TPS_PROFILE=frozen: ALL ${T.frozen} games of this run were FORCED TO THE TYPESCRIPT TICK (the Rust game has no frozen stand)`);
   return `=== the game, by ${asked() === 'table' ? 'the table' : `TPS_GAME=${asked()}`}: ${parts.join(' · ')} ===\n`; }
 // A TOOL THAT PLAYS ITS GAMES IN CHILDREN (a tally's pool, a check that starts another engine) stands none itself, and a child's output may go nowhere: so the
@@ -93,10 +94,10 @@ function closing(): string { const T = SAID, parts: string[] = [];
 // environment; every process below it adds its counts to that file as it ends, and the top one sums them into the one line. A process with no such file
 // in its environment (the word asked for with no preload) says its own line.
 const TALLY = 'TPS_GAME_TALLY'; let isTop = false;
-const mine = () => JSON.stringify({ rust: [...SAID.rust], ts: [...SAID.ts], none: [...SAID.none], kinds: [...SAID.kinds], norow: [...SAID.norow], frozen: SAID.frozen }) + '\n';
+const mine = () => JSON.stringify({ rust: [...SAID.rust], ts: [...SAID.ts], none: [...SAID.none], kinds: [...SAID.kinds], norow: [...SAID.norow], both: [...SAID.both], frozen: SAID.frozen }) + '\n';
 function sum(line: string): void { let r: any; try { r = JSON.parse(line); } catch { return; }
   for (const k of ['rust', 'ts', 'none', 'kinds'] as const) for (const [name, c] of r[k] ?? []) SAID[k].set(name, (SAID[k].get(name) ?? 0) + c);
-  for (const x of r.norow ?? []) SAID.norow.add(x); SAID.frozen += r.frozen ?? 0; }
+  for (const x of r.norow ?? []) SAID.norow.add(x); for (const x of r.both ?? []) SAID.both.add(x); SAID.frozen += r.frozen ?? 0; }
 function atExit(): void { const file = process.env[TALLY], stood = SAID.rust.size + SAID.ts.size + SAID.none.size > 0;
   if (file && !isTop) { if (stood) try { appendFileSync(file, mine()); } catch { /* the line is not the tool's */ } return; }
   if (file) { try { if (existsSync(file)) { for (const l of readFileSync(file, 'utf8').split('\n')) if (l) sum(l); unlinkSync(file); } } catch { /* as above */ } }
@@ -112,6 +113,8 @@ export function stand(frozen = false): Stood {
     // (not console.log: a check may hold that while it stands its game)
     if (S.kind !== 'frozen' || !T.frozen) process.stdout.write(`  [the game: ${S.kind === 'frozen' ? 'this run' : S.who} is stood ${M === T.ts ? `on the TYPESCRIPT TICK${S.word === '' ? ' (as with no word)' : ''}` : 'WITH NO WORD'} ${S.kind === 'frozen' ? 'whatever the word' : S.kind === 'not bun' ? 'whatever the word' : 'by the table'} (${S.why}); its verdict is not the Rust game's]\n`); }
   if (S.kind === 'no row') T.norow.add(S.who); if (S.kind === 'frozen') T.frozen++;
+  // (`both`, by hand from a run under the fold: a check seen red on the Rust game AND on the folded TypeScript tick, the reference. Said and counted.)
+  { const p = probeNow(), why = p ? kinds().both?.[p] : undefined; if (p && why && asked() === 'table' && !T.both.has(p)) { T.both.add(p); process.stdout.write(`  [the game: ${p} is RED ON THE FOLDED TYPESCRIPT TICK TOO (${why}): a red here is not the Rust game's]\n`); } }
   M.set(S.who, (M.get(S.who) ?? 0) + 1);
   hook();
   return S; }
