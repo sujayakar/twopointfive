@@ -63,10 +63,11 @@ let X: Face | null = null, MEM: WebAssembly.Memory | null = null, BUF: ArrayBuff
 let PLACE: BoxMirror | null = null;
 const dec = new TextDecoder(), enc = new TextEncoder();
 const u8 = (): Uint8Array => new Uint8Array(MEM!.buffer);
-const outBytes = (): Uint8Array => { const p = X!.face_out_ptr(), n = X!.face_out_len(); return u8().subarray(p, p + n); };
+// (an address past 2 GB comes back from the module as a negative number: `>>> 0`)
+const outBytes = (): Uint8Array => { const p = X!.face_out_ptr() >>> 0, n = X!.face_out_len() >>> 0; return u8().subarray(p, p + n); };
 const outText = (): string => dec.decode(outBytes());
-const panicText = (): string => { try { const p = X!.face_panic_ptr(), n = X!.face_panic_len(); return dec.decode(u8().subarray(p, p + n)); } catch { return ''; } };
-function hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = X!.face_alloc(b.length); u8().set(b, p); try { return f(p, b.length); } finally { X!.face_free(p, b.length); } }
+const panicText = (): string => { try { const p = X!.face_panic_ptr() >>> 0, n = X!.face_panic_len() >>> 0; return dec.decode(u8().subarray(p, p + n)); } catch { return ''; } };
+function hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = X!.face_alloc(b.length) >>> 0; u8().set(b, p); try { return f(p, b.length); } finally { X!.face_free(p, b.length); } }
 /** a call into the face: a trap is the module's abort on a panic, whose words it kept */
 function call<T>(what: string, f: () => T): T { try { return f(); } catch (e) { const w = panicText(); throw new Error(w ? `the Rust game panicked in ${what}: ${w}` : `${what}: ${String((e as Error)?.message ?? e)}`); } }
 
@@ -85,7 +86,7 @@ export const RUST_GAME = {
    *  the host's half (the knobs · the light probe's answers handed in · the bridge's hand-over built and taken), the listing, the tick, the lights'
    *  update, the rails' view, the filtered export, the apply (the bridge's own walk, by its phases · the menu's questions · the doors' stand-in · the
    *  lights' stand-in), the out events, the dress step, the probe's asks read back, the save controller */
-  prof: { on: false, n: 0, knobs: 0, probeIn: 0, hostHalf: 0, upload: 0, tick: 0, lights: 0, view: 0, asked: 0, export: 0, applyWalk: 0, applyRows: 0, applyMain: 0, applyTables: 0, asks: 0, doors: 0, lightsIn: 0, out: 0, dress: 0, probeOut: 0, saves: 0 },
+  prof: { on: false, n: 0, knobs: 0, probeIn: 0, hostHalf: 0, upload: 0, tick: 0, lights: 0, view: 0, asked: 0, export: 0, applyWalk: 0, applyRows: 0, applyMain: 0, applyTables: 0, asks: 0, doors: 0, lightsIn: 0, out: 0, dress: 0, probeOut: 0, saves: 0, phases: {} as Record<string, number> },
   outEvents: 0, outArms: {} as Record<string, number>, outThrew: {} as Record<string, string>, gives: [] as string[], probeAsks: 0,
   dress: DRESS_MS,
   /** what the forward export could not carry at the last start (the bridge's own report) */
@@ -280,7 +281,7 @@ function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; 
   const blob = outBytes(), ex = performance.now() - t;
   t = performance.now();
   const R = applyGame(g, blob, reg(), { hooks: HOOKS, puppet: { lists: lists(), start: first, rows: S.rows, ctx: S.ctx, slowTable: SLOW, vals: VALS } });
-  if (RUST_GAME.prof.on && !first) { const PF = RUST_GAME.prof, ph = R.phases ?? {}; PF.applyWalk += R.ms ?? 0; PF.applyRows += ph.makeRows ?? 0; PF.applyMain += ph.main ?? 0; PF.applyTables += ph.tables ?? 0; }
+  if (RUST_GAME.prof.on && !first) { const PF = RUST_GAME.prof, ph = R.phases ?? {}; PF.applyWalk += R.ms ?? 0; PF.applyRows += ph.makeRows ?? 0; PF.applyMain += ph.main ?? 0; PF.applyTables += ph.tables ?? 0; for (const k in ph) PF.phases[k] = (PF.phases[k] ?? 0) + ph[k]; }
   after(S);
   const ap = performance.now() - t; t = performance.now();
   const ev: { arm: string; e: any }[] = R.out ?? [];
