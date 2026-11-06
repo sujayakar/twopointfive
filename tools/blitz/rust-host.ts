@@ -569,14 +569,14 @@ const TABLE_SAID = { rust: new Map<string, number>(), ts: new Map<string, number
 const ON_TS = new Set(['iii', 'iv-a', 'iv-b', 'iv-c', '?']);
 function byTable(): 'rust' | 'ts' {
   KINDS ??= JSON.parse(readFileSync(new URL('./qa-kinds.json', import.meta.url).pathname, 'utf8'));
-  const probe: string | null = (globalThis as any).__probeNow ?? null, tool = (process.argv[1] ?? '').split('/').pop() ?? '';
+  const probe: string | null = (globalThis as any).__probeNow ?? process.env.RH_PROBE ?? null, tool = (process.argv[1] ?? '').split('/').pop() ?? '';
   let word: 'rust' | 'ts', who: string, why: string;
   if (probe) { const k = KINDS!.probes[probe] ?? '?'; word = ON_TS.has(k) ? 'ts' : 'rust'; who = probe; why = k === '?' ? 'not read by the census' : `kind ${k}`; if (word === 'ts') TABLE_SAID.kinds.set(k, (TABLE_SAID.kinds.get(k) ?? 0) + (TABLE_SAID.ts.has(who) ? 0 : 1)); }
   else { const t = KINDS!.tools[tool]; word = t?.word === 'ts' ? 'ts' : 'rust'; who = tool; why = t?.why ?? 'no row: the default'; }
-  const M = TABLE_SAID[word]; if (!M.has(who) && word === 'ts') console.log(`  [the game: ${who} is stood on the TYPESCRIPT TICK by the table (${why}); its verdict is not the Rust game's]`);
+  const M = TABLE_SAID[word]; if (!M.has(who) && word === 'ts') process.stdout.write(`  [the game: ${who} is stood on the TYPESCRIPT TICK by the table (${why}); its verdict is not the Rust game's]\n`);   // (not console.log: a check may hold that while it stands its game)
   M.set(who, (M.get(who) ?? 0) + 1);
   if (!TABLE_SAID.hooked) { TABLE_SAID.hooked = true; process.on('exit', () => { const n = (M: Map<string, number>) => [...M.values()].reduce((a, b) => a + b, 0), T = TABLE_SAID;
-    console.log(`=== the game, by the table: ${T.rust.size} checks stood ${n(T.rust)} games on the RUST game · ${T.ts.size} checks stood ${n(T.ts)} games on the TYPESCRIPT TICK${T.ts.size ? ` (${[...T.kinds].map(([k, c]) => `${k === '?' ? 'not read' : k} ${c}`).join(', ') || 'by a tool\'s row'}: NOT GREENS OF THE RUST GAME): ${[...T.ts.keys()].slice(0, 40).join(' ')}${T.ts.size > 40 ? ' …' : ''}` : ''} ===`); }); }
+    process.stdout.write(`=== the game, by the table: ${T.rust.size} checks stood ${n(T.rust)} games on the RUST game · ${T.ts.size} checks stood ${n(T.ts)} games on the TYPESCRIPT TICK${T.ts.size ? ` (${[...T.kinds].map(([k, c]) => `${k === '?' ? 'not read' : k} ${c}`).join(', ') || 'by a tool\'s row'}: NOT GREENS OF THE RUST GAME): ${[...T.ts.keys()].slice(0, 40).join(' ')}${T.ts.size > 40 ? ' …' : ''}` : ''} ===\n`); }); }
   return word; }
 // ---- RH_TRACE=<file>: as the process ends, a line a game stood under the word: the tool's file that stood it (the first frame of the stack under tools/
 // that is not the harness's own), the probe running then (probes.ts names it), the ticks it stepped, its whole applies, its calls, what threw
@@ -608,7 +608,7 @@ function folded(rec: any): void {
 const CAP_AT = +(process.env.RH_CAP_AT ?? 0);
 function traceRec(word: string): any {
   const st = String(new Error().stack ?? '').split('\n').map(l => l.match(/tools\/[\w./-]+\.ts:\d+/)?.[0]).filter((x): x is string => !!x && !/rust-host\.ts|headless\.ts/.test(x));
-  const rec = { word, probe: (globalThis as any).__probeNow ?? null, by: st[0] ?? '?', k: 0, evicted: 0, starts: 0, wholes: new Map<string, number>(), calls: new Map<string, number>() };
+  const rec = { word, probe: (globalThis as any).__probeNow ?? process.env.RH_PROBE ?? null, by: st[0] ?? '?', k: 0, evicted: 0, starts: 0, wholes: new Map<string, number>(), calls: new Map<string, number>() };
   // (a tool stopped by a time cap still leaves its lines: the cap's signal becomes an ordinary exit)
   if (!TRACED.length) process.on('SIGTERM', () => process.exit(143));
   if (!TRACED.length) process.on('exit', () => { try { appendFileSync(process.env.RH_TRACE!, TRACED.map(r => JSON.stringify({ pid: process.pid, ...r, wholes: Object.fromEntries(r.wholes), calls: Object.fromEntries(r.calls), outThrew: r.outThrew ? [...r.outThrew.keys()] : undefined, WB: r.WB ? { fields: r.WB.size, top: [...r.WB].sort((a: any, b: any) => b[1].ticks - a[1].ticks).slice(0, 10).map(([q, e]: any) => `${q} x${e.ticks} (${e.eg})`) } : undefined })).join('\n') + '\n'); } catch { /* the trace is not the tool's */ } });
