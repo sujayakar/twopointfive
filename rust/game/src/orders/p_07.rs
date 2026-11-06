@@ -684,6 +684,7 @@ fn sw_take(g: &mut Game, b: OrdersAssignmentId, w: &[V3]) {
     let row = &mut g.tab.orders_assignment[b];
     row.goal = if !via.is_empty() { via[0] } else { v3::copy(row.post.unwrap()) };
     row.via = via;
+    row.new_leg = true;   // (orders.ts:2346: the corners are a fresh list and the goal one of its points or a copy: a new object, so a new leg; on Assignment.new_leg's list)
 }
 
 /// A pair goes round one way: at the end of a giving, men of one order and door nearly together who would split round a building take one of their two ways.   (orders.ts SquadOrders.sameWays)
