@@ -251,8 +251,8 @@ export async function checkpointAutosave() {
   // the senses' business and not the controller's. They were only made deaf, for the stun can. On the page's stand the cleaner SEES the body hauled below,
   // runs for the reception phone and is on it until 17 s later: the body's request waits on her, the stage's and the room's JOIN it with no line of their
   // own in the log ('body+stage+room', which this probe read as no stage request at all), and the three land as one save 8 s short of lapsing.
-  // CKPTCIV_IN=1 = the red path: the civilians are left in, deaf, as they were. It bites where the cleaner's round passes the break room, the page's stand.)
-  if (process.env.CKPTCIV_IN === '1') { for (const cv of game.civilians ?? []) cv.heardUpTo = 1e12; } else if (game.civilians) { game.tune.civilians = false; game.civilians.length = 0; }
+  // CKPTCIVIN_BREAK=1 = the red path: the civilians are left in, deaf, as they were. It bites where the cleaner's round passes the break room, the page's stand.)
+  if (process.env.CKPTCIVIN_BREAK === '1') { for (const cv of game.civilians ?? []) cv.heardUpTo = 1e12; } else if (game.civilians) { game.tune.civilians = false; game.civilians.length = 0; }
   rollcallState(game).nextAt = 1e9;
   steps(W, 0.5);
   const req0 = S.stats.requests;

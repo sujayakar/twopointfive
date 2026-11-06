@@ -6,6 +6,7 @@
 // stand alone ('old'): a run is read against the rows of its own stand. Until 2026-11-06 there were two tables here, one for either stand and one for the page's.
 // A run started with a word of the stand given by hand (a rule raised or held off by name) is not the stand as it opens, and a run of one case of a probe is
 // not the probe: neither is read against any row (probes.ts says so in one line where it has a red).
+// A run started with a break word (stand.ts BREAK_WORDS) IS read against the rows, and probes.ts adds a line on whether the word bit: a row can hide it.
 // tools/qa/holds-check.ts (8) holds the rows: every name is a probe the runner runs, every word of a `bisect` is one the stand can raise, none is a word the
 // probe's own holds put off, and no row that is red on the old stand carries a bisect. What is prose in a row is as right as its writer.
 export interface RedRow {

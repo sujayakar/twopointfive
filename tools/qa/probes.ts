@@ -3732,7 +3732,11 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
     // ONE LIST, read by stand: a row is the page's stand's unless its `on` says the old stand too, or alone. Two runs are read against no row at all, and say so
     // where they have a red: one started with a word of the stand given by hand (stand.ts BY_HAND: a probe turned green by its own rule held off would read GREEN
     // AGAIN), and one of a single case of a probe (a case's number as the third argument: `aim-door 0` passes without ever running the line its row is about).
-    const { EXPECTED_RED: LIST, rowSays } = await import('./expected-red.ts'), { STAND, BY_HAND } = await import('./stand.ts');
+    // A RUN STARTED WITH A BREAK WORD (stand.ts BREAK_WORDS) is still read against the list, and closes with one line more, because a row can hide the word:
+    // a probe that is red by its row prints EXPECTED RED whether the word bit or not (the runner's (12) under RUNNER12_BREAK on the page's stand, 11-06). The
+    // line says DID NOT BITE where nothing failed, names the reds with no row as the word's to explain, and says BITE NOT SHOWN where every red has a row.
+    // With more words than one it cannot say which of them bit.
+    const { EXPECTED_RED: LIST, rowSays } = await import('./expected-red.ts'), { STAND, BY_HAND, BREAK_WORDS } = await import('./stand.ts');
     const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
     const reads = (n: string): boolean => !other && n in LIST && (STAND === 'shipped' ? LIST[n].on !== 'old' : !!LIST[n].on);
     const reds = FAILED.filter(n => RAN_NAMES.includes(n)), banners = FAILED.filter(n => !RAN_NAMES.includes(n));
@@ -3748,6 +3752,11 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
       for (const n of fresh) console.log(`    NEW RED       ${n}`);
       for (const n of back) console.log(`    GREEN AGAIN   ${n} — listed as an expected red and it passed here: ${mend(n)}`);
     }
+    if (BREAK_WORDS.length) { const many = BREAK_WORDS.length > 1, w = `BREAK WORD${many ? 'S' : ''} ${BREAK_WORDS.join(' ')}`, all = [...reds, ...(reds.length ? [] : banners)];
+      console.log(`  ${w}: ` + (!FAILED.length ? `${many ? 'NONE BIT' : 'DID NOT BITE'} — nothing this run ran failed${other ? ` (${other})` : ''}`
+        : other ? `${all.length} red (${all.join(', ')}); the list is not asked, so whether ${many ? 'one' : 'it'} bit is by the line that failed`
+        : fresh.length ? `${fresh.length} red with no row on this stand (${fresh.join(', ')}): the word's to explain, by the line that failed${many ? '; which word bit is not said' : ''}`
+        : `BITE NOT SHOWN — every red of this run has a row on this stand and is red without the word: read which LINE failed`)); }
   }
   process.exitCode = FAILED.length ? 1 : 0;
 }
