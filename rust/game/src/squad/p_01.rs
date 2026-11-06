@@ -130,7 +130,12 @@ pub fn strafe_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed:
 
 /// One frame of a man under a script: moved to his goal, gun and eyes on his aim, the animator fed, `arrived` written back. (squad.ts runGuardScript)
 pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
-    let s = g.gd[gd].script.unwrap();
+    // THE SCRIPT IS READ LIVE, as the TypeScript reads its one object: a rule called from here may re-order the man mid-step (followPath's lane gate backs
+    // him out with a new order: pressure.ts run), and every read of `s` after that call is of the order as it then stands (the pose's crouch, the gun, the
+    // facing, the goal the settle watches). `s` is this step's copy, taken again after each call that can reach `order`; a script that is no longer the one
+    // this step began with (another serial: ended, and a new one made) is not taken, as the TypeScript goes on reading the object it began with.
+    let mut s = g.gd[gd].script.unwrap();
+    fn live(g: &crate::game::Game, gd: GuardId, s: &mut crate::game::GuardScript) { if let Some(n) = g.gd[gd].script { if n.serial == s.serial { *s = n; } } }
     let c = g.gd[gd].ch;
     let (x0, z0) = (g.ch[c].pos[0], g.ch[c].pos[2]);
     let ordered = match s.speed { Some(x) => x, None => g.tune.guard_walk };
@@ -154,14 +159,17 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         let mut home = planar <= SETTLE && !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [goal[0], 0.45, goal[2]], None);
         if !home {
             crate::guards::go_to(g, gd, goal, None);
+            live(g, gd, &mut s);
             if g.gd[gd].path_i >= g.gd[gd].path.len() { home = true; }
             else {
                 let done = if strafing { strafe_along_path(g, gd, dt, legs) } else { crate::guards::follow_path(g, gd, dt, speed) };
+                live(g, gd, &mut s);
                 move_speed = g.gd[gd].speed;
                 home = done && g.gd[gd].path_i >= g.gd[gd].path.len();
             }
         }
         if home {
+            let goal = s.goal.unwrap_or(goal);   // (the goal as the script holds it now: the settle's watch is of that one)
             let mut w = match g.m.squad.settle_watch.get(gd).copied() {
                 Some(w) if w.goal == goal => w,
                 _ => SquadModSettleWatchValue { goal, best: planar, t: 0.0 },
@@ -173,6 +181,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
                 let was = g.gd[gd].speed;
                 g.gd[gd].speed = v3::damp(was, m::min(legs, m::max(0.35, planar * 2.2)), 6.0, dt);
                 crate::guards::team_lean(g, gd, was, dt);
+                live(g, gd, &mut s);
                 let sp = g.gd[gd].speed;
                 let step = m::min(planar, sp * dt);
                 g.ch[c].pos[0] += dx / planar * step;
@@ -208,6 +217,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         let to = v3::sub(at, g.ch[c].pos);
         let yaw = m::atan2(to[0], to[2]);
         let aim_yaw = if s.over.is_some() { yaw } else { crate::guards::team_turn(g, gd, yaw, dt) };
+        live(g, gd, &mut s);
         let ch = &mut g.ch[c];
         ch.aim_yaw = aim_yaw;
         ch.aim_pitch = v3::damp(ch.aim_pitch, m::atan2(at[1] - (1.45 - 0.45 * ch.anim.crouch), m::hyp2(to[0], to[2])), 6.0, dt);
@@ -234,6 +244,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let (mut p, radius) = (g.ch[c].pos, g.ch[c].radius);
     crate::scene_collision::collide_circle(g, &mut p, radius, 0.2, 1.5, None);
     g.ch[c].pos = p;
+    live(g, gd, &mut s);
     for i in 0..g.guards.len() {
         let o = g.guards[i];
         if o == gd || g.gd[o].state == crate::game::GuardState::Dead { continue; }
@@ -244,14 +255,18 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         if l < 0.6 && l > 1e-4 { { let to = v3::mad(g.ch[c].pos, d, (0.6 - l) / l * 0.5); crate::character::pos_replace(g, c, to); } }
     }
     if crate::noshove::no_shove_keep(g, gd, x0, z0, dt) { move_speed = 0.0; }
+    live(g, gd, &mut s);
     let (upper, stance) = if s.over.is_some() { (crate::character::UpperMode::Aim, crate::character::Stance::None) }
         else { (s.upper.unwrap_or(crate::character::UpperMode::Aim), s.stance.unwrap_or(crate::character::Stance::None)) };
     let up = upper == crate::character::UpperMode::Aim || stance == crate::character::Stance::HighReady || stance == crate::character::Stance::Stack;
     let line = if up && !s.hot.unwrap_or(false) { Some(match aim { Some(at) => at, None => crate::guards::aim_ahead(g, c) }) } else { None };
     crate::guards::muzzle_check(g, gd, line, dt, None);
+    live(g, gd, &mut s);
     let gun = if upper == crate::character::UpperMode::Aim { Some(crate::gunwall::GunUp::Aim) } else if up { Some(crate::gunwall::GunUp::Port) } else { None };
     crate::gunwall::gun_wall_check(g, gd, gun, aim, dt, Some(s.over.is_some()));
+    live(g, gd, &mut s);
     let low = g.gd[gd].muzzle_down || crate::teampace::team_sprinting(g, gd);
+    live(g, gd, &mut s);
     {
         let an = &mut g.ch[c].anim;
         an.speed = move_speed;
@@ -265,6 +280,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     crate::gunwall::gun_wall_pose(g, c);
     crate::character::character_update(g, c, dt);
     crate::guards::attach_flashlight(g, gd, None);
+    live(g, gd, &mut s);
     if s.light == Some(false) && !crate::guards::light_ruled(g, gd) { let l = g.gd[gd].flashlight; g.tab.light[l].enabled = false; }
     let prev_phase = g.gd[gd].step_phase;
     let phase = g.ch[c].anim.phase;
@@ -275,7 +291,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         crate::floor::tread(g, p, base, false);
     }
     crate::teampace::team_ran(g, gd);
-    if let Some(sc) = g.gd[gd].script.as_mut() { sc.arrived = Some(arrived); }
+    if let Some(sc) = g.gd[gd].script.as_mut() { if sc.serial == s.serial { sc.arrived = Some(arrived); } }   // (the script this step began with: one made since is not this step's to mark)
 }
 
 /// Release a scripted guard back to the AI in a sane state; a man who died under a script is only unhooked. (squad.ts endGuardScript)
@@ -306,6 +322,7 @@ pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<cr
 /// Give a scripted guard new orders; a new goal drops his path, stuck timer and settle watch. A goal is a new leg even at the same spot, unless `held`
 /// says the caller keeps it and moves it (then by value). Some(None) is null; None is not in the patch. (squad.ts order)
 pub fn order(g: &mut crate::game::Game, gd: GuardId, patch: crate::squad::OrderPatch) {
+
     if g.gd[gd].script.is_none() {
         let serial = g.serial();   // (the one place a man's own script is made: doorpath.ts:178 asks by identity whether it is still his)
         g.gd[gd].script = Some(crate::game::GuardScript { serial, ..crate::game::GuardScript::zeroed() });
