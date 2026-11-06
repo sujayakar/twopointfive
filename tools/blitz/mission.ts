@@ -32,12 +32,17 @@ const [scn, seedS, frameS] = argv[0].split(':'); const seed = +(seedS ?? 1), fra
 mkdirSync(outDir, { recursive: true });
 const { knobRegistry } = await import('../../src/game/knobs.ts');
 const { Game } = await import('../../src/game/game.ts');
+if (argv.includes('--wall')) process.env.PT_WALL = '1';   // (`--wall`, below; playthrough.ts reads the word as it loads)
 const { play, entryOf } = await import('../qa/playthrough.ts');
 // A TUTORIAL MISSION (levels/tut-<name>.json with its level script) is played by its own scripted player, tools/qa/lesson-run.ts, through the input.
 // That harness feeds the player's light meter itself before every tick (meter.txt, a line a tick) and picks a row of the nearby list between ticks
 // (`<k> select_verb <kind> <verb>` in hostwrites.txt). It is run here WITHOUT its model of the sky's light on the other men's meters (a hook over the game's
 // own light asks, which the Rust game has no word for), so a lesson that leans on the moon may stop short of its end: how far it went is said.
 const LESSON = scn.startsWith('tut-');
+// `--wall`: the scripted commander takes a held room by a WALL CHARGE where a partition allows (tools/qa/wallcharge-commander.ts, its word PT_WALL=1): the
+// order is given on a wall (a floor target that carries the wall: the gives line ends `wall …`) and the commander BLOWS the charge by the module's own call
+// between ticks (`<k> wall_blow <the wall's index>` in hostwrites.txt). The stand is the page's either way.
+// (the word itself is set above, before the scripted player's file is read)
 // (…and one lesson's own player hooks the same asks itself, tools/qa/lessons/tut-squad.ts: its word for "the estimate as every other tool has it")
 if (LESSON) process.env.TUT_SQUAD_SKY = '0';
 if (!LESSON && !entryOf(scn)) { say(`mission.ts: the scripted player has no mission '${scn}' (tools/qa/playthrough.ts plays the room clears, the rescues and the raids: bun run tools/qa/playthrough.ts --scn x names them)`); process.exit(64); }
@@ -65,9 +70,11 @@ writeFileSync(`${outDir}/post.txt`, `parts ${SIM_PARTS.join(' ')}\n`);
 const hostL: string[] = [], postL: string[] = [], meterL: string[] = [];
 function row(file: string, L: string[], line: string) { const head = file === 'post.txt' ? `parts ${SIM_PARTS.join(' ')}\n` : '';
   if (L.length >= k) { L[k - 1] = line; writeFileSync(`${outDir}/${file}`, head + L.join('\n') + '\n'); } else { L.push(line); appendFileSync(`${outDir}/${file}`, line + '\n'); } }
+/** a floor target's wall, as a gives line carries it: ` wall <index> <the box's id in the book> <alongX> <u> <side> <ok> <outer: -1 none> <why, as hex>` */
+const wallTail = (g: any, W: any) => ` wall ${W.index} ${bookOf(g).ids.get('BoxId')?.get(W.box)} ${W.alongX ? 1 : 0} ${W.u} ${W.side} ${W.ok ? 1 : 0} ${W.outer === undefined ? -1 : W.outer ? 1 : 0} x${Buffer.from(String(W.why ?? ''), 'utf8').toString('hex')}`;
 function tapGives(g: any) { const O = g.orders, was = O.give; O.give = function (this: any, id: string, t: any, who: any, opts: any) {
   if (!g.ticking) { const T = t ?? this.targetAt(g.aimPoint), w = who === undefined ? '-' : typeof who === 'object' ? `g${g.guards.indexOf(who)}` : String(who);
-    const tail = T.kind === 'door' ? ` door ${g.doors.list.indexOf(T.door)} ${T.side} book${bookOf(g).ids.get('DoorId')?.get(T.door)}` : T.kind === 'none' && T.man ? ` man ${g.guards.indexOf(T.man)}` : T.kind === 'foe' ? ` man ${g.guards.indexOf(T.foe)}` : (T.wall || T.thing) ? ' UNSUPPORTED-wall-or-thing' : '';
+    const tail = T.kind === 'door' ? ` door ${g.doors.list.indexOf(T.door)} ${T.side} book${bookOf(g).ids.get('DoorId')?.get(T.door)}` : T.kind === 'none' && T.man ? ` man ${g.guards.indexOf(T.man)}` : T.kind === 'foe' ? ` man ${g.guards.indexOf(T.foe)}` : T.thing ? ' UNSUPPORTED-thing' : T.wall ? wallTail(g, T.wall) : '';
     const l = `${k + 1} ${id} ${w} ${T.kind} ${T.at.join(' ')}${tail}${opts ? ' UNSUPPORTED-opts' : ''}`; gives.push(l); appendFileSync(`${outDir}/gives.txt`, l + '\n'); }
   return was.call(this, id, t, who, opts); }; }
 const was = Game.prototype.update;
@@ -79,6 +86,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   // THE TEST DRIVER'S OWN QUESTIONS THAT WRITE THE GAME: `g.fight.roomAt(p)` asked between ticks floods a room nobody had asked for and keeps it in `g.fight.rooms`.
   // Each such ask that grew the list is a line of hostwrites.txt for the tick that opens next.
   if (k === 1 && g.fight?.roomAt) { const F = g.fight, ask = F.roomAt; F.roomAt = function (this: any, p: any) { const n0 = F.rooms.length; const r = ask.call(this, p); if (!g.ticking && F.rooms.length !== n0) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} room_at ${p[0]} ${p[1]} ${p[2]}\n`); return r; }; }
+  if (k === 1 && g.wallCharge?.blow) { const C = g.wallCharge, blow = C.blow; C.blow = function (this: any, c?: any, ...r: any[]) { if (!g.ticking && c) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} wall_blow ${c.wall.index}\n`); return arguments.length ? blow.call(this, c, ...r) : blow.call(this); }; }
   if (k === 1 && LESSON) { const pick = g.selectVerb; g.selectVerb = function (this: any, kind: string, verb?: string) { if (!g.ticking) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} select_verb ${wordAt('crate::game::InteractableKind', kind)} ${wordAt('crate::game::Verb', verb)} ${kind} ${verb}\n`); return pick.call(this, kind, verb); }; }
   if (k === 1) dressAll(false);
   if (k === 1 && !g.dice) g.dice = newDice(DIE);

@@ -84,7 +84,16 @@ pub fn give(g: &mut game::game::Game, k: usize, l: &str) -> String {
     let at = [w[4].parse::<f64>().unwrap(), w[5].parse::<f64>().unwrap(), w[6].parse::<f64>().unwrap()];
     let who = match w[2] { "-" => None, "all" => Some(Who::All), "red" => Some(Who::Red), "blue" => Some(Who::Blue), x => match x.parse::<f64>() { Ok(n) => Some(Who::Num(n)), Err(_) => { return format!("  NOTE tick {}: a `who` this runner cannot give: {}", k, l); } } };
     let t = match w[3] {
-        "floor" => { let serial = g.serial(); T::Floor(game::orders::OrderTargetFloor { at, wall: None, thing: None, serial }) }
+        "floor" => {
+            // (a floor target that carries a wall: ` wall <index> <box> <alongX> <u> <side> <ok> <outer> x<why as hex>`, mission.ts wallTail)
+            let wall = if w.get(7) == Some(&"wall") && w.len() >= 16 {
+                let n = |i: usize| w[i].parse::<f64>().unwrap();
+                let hex = &w[15][1..];
+                let why = String::from_utf8((0..hex.len() / 2).map(|i| u8::from_str_radix(&hex[2 * i..2 * i + 2], 16).unwrap()).collect()).unwrap();
+                Some(game::wallcharge::WallSpot { index: n(8), box_: game::ids::BoxId::from_ix(w[9].parse().unwrap()), along_x: w[10] == "1", u: n(11), side: n(12), ok: w[13] == "1", why, outer: match w[14] { "-1" => None, x => Some(x == "1") } })
+            } else { None };
+            let serial = g.serial(); T::Floor(game::orders::OrderTargetFloor { at, wall, thing: None, serial })
+        }
         "door" => T::Door(game::orders::OrderTargetDoor { at, door: game::ids::DoorId::from_ix(w[8].parse().unwrap()), side: w[9].parse().unwrap() }),
         "none" => T::None(game::orders::OrderTargetNone { at, man: if w.len() > 8 { Some(g.guards[w[8].parse::<usize>().unwrap()]) } else { None } }),
         _ => T::Foe(game::orders::OrderTargetFoe { at, foe: g.guards[w[8].parse::<usize>().unwrap()] }),
@@ -110,6 +119,13 @@ pub fn write_before(g: &mut game::game::Game, k: usize, l: &str) -> Option<Strin
         let verb = word(w[3]).map(|b| <game::game::Verb as Io>::r(&mut game::io::R::new(&b)));
         let ok = game::game::game_select_verb(g, kind, verb);
         return Some(format!("  the lesson's player before tick {}: selectVerb({} {}) -> {}", k, w[4], w[5], ok));
+    }
+    // HARNESS STAND-IN: the scripted commander blows a set wall charge by the module's own call between ticks (wallcharge-commander.ts `C.blow(c)`)
+    if w.get(1) == Some(&"wall_blow") {
+        let ix = w[2].parse::<f64>().unwrap();
+        let c = g.wall_charge.set.iter().copied().find(|c| g.tab.wallcharge_set_wall_charge[*c].wall.index == ix);
+        let r = game::wallcharge::wall_charge_blow(g, c, None);
+        return Some(format!("  the driver before tick {}: blows the wall charge on wall {} ({}) -> {:?}", k, ix, if c.is_some() { "set" } else { "NOT SET HERE" }, r));
     }
     if w.get(1) == Some(&"room_at") {
         let p = [w[2].parse::<f64>().unwrap(), w[3].parse::<f64>().unwrap(), w[4].parse::<f64>().unwrap()];

@@ -81,8 +81,9 @@ rust/game_run/target/debug/where_parts <out>/sK.bin <out>/nsK.bin     # which wo
 bun run tools/blitz/diff.ts <out>/aK.bin <out>/nK.bin --show 40       # which paths of the game's own state (run.sh prints the first few; use --blobs to keep nK.bin)
 ```
 
-The part `poses` is not the alarm: a dead man's ragdoll holds a pose the TypeScript keeps outside the pool and Rust keeps inside it, so from the first death
-that part differs by design. The runner says when that happens and goes on comparing every other part.
+The part `poses` is watched apart: if it parts while every other part is the same the runner says so once and goes on comparing the rest (`BLITZ_POSES=1`
+stops there instead). It no longer parts by design: a ragdoll's pose and a function's scratch pose are poses of their own outside the pool on both sides,
+and the pool is tended as a tick opens (`posehome::pose_home_tend`). A `poses` parting is a difference to chase like any other.
 
 **The die's count differs**: the two games have drawn a different number of times. Something upstream decided differently; the kept tick before it usually
 shows a path.
@@ -149,6 +150,7 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | `BoxWorld.glass_open` hung after the import | (always) | bridge: the aim ray's hook through a holed pane is not carried |
 | the test driver's orders (`gives.txt`) | (always) | the scripted player calls `orders.give` between ticks |
 | the driver's `roomAt` that floods a room (`hostwrites.txt room_at`) | (always) | a question of the driver's that writes the game |
+| the commander's blow of a set wall charge (`hostwrites.txt wall_blow`, with `--wall`) | (always) | the scripted commander calls the module's `blow` between ticks |
 | the box world listed again | `upload` | where the headless host uploaded between two ticks; the listing also frees the rows of frame boxes of the frames before it |
 | `rails_host_view` after each tick | `view` | on a tutorial mission the host sets the first view again with its own camera (game.ts hostAfter) |
 | a tutorial's authored checkpoint (`chron_save` on rails) | (always) | the save controller stops the level's program for the take; the frame starts it again |
@@ -175,9 +177,10 @@ outside the pool: the runner hands none of those over.
 - **No GPU, no picture.** The headless game has no renderer, no GPU light meter, no smoke solver and no audio; the compare is of the simulation's state only.
 - The scripted player cannot be hurt and plays one way a seed. A mission in step is that play-through in step, not the mission's every branch.
 - The scripted player plays the room clears, the rescues and the raids (`tools/qa/playthrough.ts`); it has no quiet mission.
-- The runner cannot yet give an order aimed at a wall or a thing, or with options: it says `NOTE … cannot give` and the sides will part there.
+- The runner gives an order on a wall (`--wall`: the scripted commander takes a held room by a wall charge, and its blow between ticks is replayed) but not one
+  on a thing, or with options: it says `NOTE … cannot give` and the sides will part there.
 - Not translated, and so not compared: what stands of a holed wall's paint (`wallskin`) and a broken edge's look (`edge_look`). See `--leave-out` above.
-- A pose's floats are compared only through what the pose drives (bones, boxes); the pool itself is out of the alarm after the first death.
+- A pose of its own outside the pool (a ragdoll's) is compared by its floats and by what it drives; its row number is a known difference.
 - A tutorial (`tut-<name>:<seed>`) is played by `tools/qa/lesson-run.ts` WITHOUT its model of the sky's light on every man's meter (a hook over the game's
   light asks, which the Rust game has no word for): it is the tutorial as the headless estimate lights it.
 - A kept Rust state is small again (about 8 MB): a box pushed straight onto the frame's list is a row for that frame, freed when the host lists the box world.

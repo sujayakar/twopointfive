@@ -109,13 +109,15 @@ fn main() {
                 for l in said { println!("{}", l); }
             }
             let cmd = match host_half(&mut g, &dir, k) { Some(c) => c, None => { println!("no h{}.bin: the TypeScript's run ended at tick {}", k, k - 1); break; } };
+            // HOST STEP: where the headless host listed the box world again between two ticks. BEFORE the driver's orders and writes: the host lists as its
+            // step ends, and what the driver then does to the box world (a wall charge blown by the module's own call) is not listed until the next step
+            // ends. Listed after it, the aim ray of the tick met a piece of wall the TypeScript's list did not yet hold (mousehole-four with wall charges, tick 6326).
+            if !skip("upload") && host[k - 1].get(4).copied().unwrap_or(0.0) > 0.0 { game_run::upload(&mut g); }
             for l in gives.iter().filter(|l| game_run::line_of(l, k)) { println!("{}", game_run::give(&mut g, k, l)); }
             // HARNESS STAND-IN: the test driver's own question that writes the game (`g.fight.roomAt(p)` between ticks floods a room and keeps it)
             for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_before(&mut g, k, l) { println!("{}", t); } }
             if let Some(v) = meter.get(k - 1) { game_run::meter(&mut g, *v); }
             let dt = host[k - 1][0];
-            // HOST STEP: where the headless host listed the box world again between two ticks
-            if !skip("upload") && host[k - 1].get(4).copied().unwrap_or(0.0) > 0.0 { game_run::upload(&mut g); }
             TICK.store(k, Ordering::Relaxed);
             let t0 = std::time::Instant::now();
             game_run::step_seats(&mut g, dt, &cmd);
@@ -138,7 +140,8 @@ fn main() {
             let mut off: Vec<&str> = Vec::new();
             if let Some(p) = p { for (i, P) in sim::state::PARTS.iter().enumerate() { if p.get(4 + i).map(|s| s.as_str()) != Some(part_hash(&w[P.off / 4..(P.off + P.len) / 4]).to_string().as_str()) { off.push(NAMES[i]); } } } else { off.push("no line of post.txt"); }
             let pool_off = off.contains(&NAMES[POSES]);
-            off.retain(|n| *n != NAMES[POSES]);
+            // (BLITZ_POSES=1: the pool is IN the alarm, to see where and why it first parts)
+            if std::env::var("BLITZ_POSES").is_err() { off.retain(|n| *n != NAMES[POSES]); }
             let same = off.is_empty();
             if same && pool_off && !pool_parted { pool_parted = true; println!("TICK {}: the part `poses` parts and every other part is the same: from here the alarm is the block without `poses`", k); }
             let die_same = p.map(|p| p[1] == d.n.to_string()).unwrap_or(false);
