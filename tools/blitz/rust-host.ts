@@ -115,6 +115,8 @@ const OFF_KEPT: RustHost[] = [], OFF_CAP = 6;
 const MEN = ['Character', 'Guard', 'Player'], MADE_MEN = new WeakSet<object>();
 
 const now = () => performance.now();
+/** how many hosted games of the process are inside their own update now (see `surfaceOpen`) */
+const BUSY = { n: 0 };
 /** a field hung on a game's object that a walk of its own keys does not meet */
 const hang = (o: any, k: string, v: unknown) => { Object.defineProperty(o, k, { value: v, writable: true, configurable: true, enumerable: false }); };
 /** the objects whose calls the host has already taken (a start may meet new ones: a mission started by the tool makes its own menu, fight and saves) */
@@ -167,12 +169,21 @@ export class RustHost {
   /** the fields only the harness reads go too (PuppetMemo.wide). `list: 'page'` leaves them out */
   private giveList(): void { this.F.X.face_puppet_wide?.(this.h, (this.o.list ?? process.env.TPS_GAME_LIST) === 'page' ? 0 : 1); }
   private tapsOn: any = null;
-  surfaceOpen(): boolean { return !!this.h && this.busy === 0 && !this.audit && !this.startDue; }
+  /** after the host's half is taken: the view's matrix is the host camera's as the host left it (game_run::view_live), so a call made between two
+   *  ticks (an order: on-screen-or-not) reads the camera of now and not the record of the tick before */
+  private viewLive(): void { const X = this.F.X; if (!X.face_view_live || OFF.has('view')) return; try { X.face_view_live(this.h); } catch (e) { throw new Error(`the Rust game panicked taking the host's view (face_view_live): ${this.F.panicText() || String(e)}`); } }
+  // STAND-IN: THE SURFACE FINDS A CALL'S GAME BY ITS RECEIVER ONLY WHERE THE RECEIVER IS THE GAME (surface.ts `hostOf`: `self.rustSurface`, an argument's,
+  // else the host that attached last). A method of a module's own object (`g.quiet.current()`, the first line of every `Game.update`) so crossed to
+  // ANOTHER game of the process: the sixth game stood took the first game's call, from inside the first game's own update. Here: nothing crosses while
+  // any hosted game of the process is inside its update or the host's own lines (`BUSY`), and the surface's fallback host is the game that stepped last
+  // (`step`), not the one that attached last. A tool's call on an object of a game that is not the one it last stepped still goes to the wrong game.
+  // Belongs in surface.ts: the host by the receiver's game (49 classes hold `g`), never a fallback.
+  surfaceOpen(): boolean { return !!this.h && this.busy === 0 && BUSY.n === 0 && !this.audit && !this.startDue; }
   /** the Rust game stands and is this puppet's game (not let go, not waiting for a new start) */
   private live(): boolean { return !!this.h && !this.startDue; }
   surfaceDispatching(): boolean { return false; }
   inHook(): boolean { return this.dispatching; }
-  surfaceCall(row: number, bytes: Uint8Array): Uint8Array { const X = this.F.X; this.scanFlush(); this.busy++; try { { const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds ?? []); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); X.face_view_live?.(this.h); }   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, p, n)); const out = this.F.outView().slice(); this.applyStep(); this.dispatch(); return out; } finally { this.busy--; this.scanRebase(); } }
+  surfaceCall(row: number, bytes: Uint8Array): Uint8Array { const X = this.F.X; this.scanFlush(); this.busy++; try { { const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds ?? []); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); }   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, p, n)); const out = this.F.outView().slice(); this.applyStep(); this.dispatch(); return out; } finally { this.busy--; this.scanRebase(); } }
   /** what the tool wrote since the walk last looked goes to the Rust game */
   private scanFlush(): void { if (this.audit || !this.h) return; this.tapsOn?.sweep(); if (process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => this.count(`scan: ${q}`)); this.scan.rebase(); } else this.scan.flush(); this.T.scan += now() - t; }
   /** an apply moved the puppet: that is what the next walk is held to */
@@ -195,7 +206,7 @@ export class RustHost {
     if (o.die !== null && !g.dice) g.dice = B.newDice(o.die ?? 20942);
     // (hung as fields no walk of the game's own keys meets: rollback.ts `stateHash` walks them, and a stand's word must not change for being a puppet)
     hang(g, 'stepSeats', function (dt: number, cmds: readonly any[]) { H.step(dt, cmds); });
-    hang(g, 'rustHost', H); hang(g, 'rustSurface', H); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; try { return up.apply(this, a); } finally { H.busy--; H.scanRebase(); } }); } H.taps(g);
+    hang(g, 'rustHost', H); hang(g, 'rustSurface', H); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; BUSY.n++; try { return up.apply(this, a); } finally { H.busy--; BUSY.n--; H.scanRebase(); } }); } H.taps(g);
     if (process.env.TPS_GAME_SAY) process.on('exit', () => { const L = [...H.calls].sort((a, b) => b[1] - a[1]).slice(0, 60); process.stderr.write(`rust-host: ${H.k} ticks; scan ${(H.T.scan / Math.max(1, H.k)).toFixed(2)} ms a tick; ${JSON.stringify(H.scan?.stats?.() ?? null)}\n` + L.map(([n, c]) => `  ${c} ${n}\n`).join('')); });
     if (o.out) for (const f of ['writeback.txt', 'gives.txt']) writeFileSync(`${o.out}/${f}`, '');
     return H; }
@@ -397,7 +408,7 @@ export class RustHost {
     // (BETWEEN TWO TICKS the host has moved its own camera and Input on since the Rust game was last handed them (headless.ts `cam.update` after
     // `game.update`); the whole state would put them back a frame. depot-four parted so at tick 1578, a frame after a room was flooded. The host's rows
     // are handed over first, as a tick's opening hands them.)
-    if (!this.inStep && this.lastCmds) { const hb: Uint8Array = B.hostHalf(g, B.reg, this.lastCmds); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); X.face_view_live?.(this.h); }
+    if (!this.inStep && this.lastCmds) { const hb: Uint8Array = B.hostHalf(g, B.reg, this.lastCmds); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); }
     // (a copy out of the module: a whole apply keeps the bytes of the fields the Rust game owns beside their objects, as places in this very blob (the
     // bridge's echo), and the module's memory is written again by the next call)
     X.face_export(this.h); const blob = this.F.outView().slice(); this.wholeBytes = blob.length; this.T.exportWhole += now() - t;
@@ -565,7 +576,7 @@ export class RustHost {
   step(dt: number, cmds: readonly any[]): void {
     const g = this.g, X = this.F.X, B = this.B, k = ++this.k; let t = now();
     if (!this.wall0) this.wall0 = t; this.wallLast = t;
-    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; RustHost.last = this; if (this.rec) { this.rec.k = k; this.rec.quiet = this.quietSteps; if (SITES) site(this.rec); } if (CAP_AT && (k & 31) === 0 && Date.now() > CAP_AT) process.exit(143);
+    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; if (RustHost.last !== this) B.surfaceHost(this); RustHost.last = this; if (this.rec) { this.rec.k = k; this.rec.quiet = this.quietSteps; if (SITES) site(this.rec); } if (CAP_AT && (k & 31) === 0 && Date.now() > CAP_AT) process.exit(143);
     // (THE GAME'S DIE ROLLED BETWEEN TWO TICKS: a rule of the tick ran in TypeScript on the puppet, called by the tool. Counted: such a tool leans on code
     // the Rust game has in its place)
     if (this.h && g.dice && g.dice.n !== this.dieRef) { this.dieMoved++; if (this.rec) this.rec.dieMoved = this.dieMoved; }
@@ -573,7 +584,7 @@ export class RustHost {
     if (this.starts > 0 && this.scanStart !== this.starts) { this.scanStart = this.starts; this.scan = null; } if (!this.quietOn) this.scanFlush();
     this.o.beforeHost?.(this, cmds);
     // THE HOST'S HALF: each seat's record, every camera and Input row, in the bridge's own small buffer (export.ts hostHalf, io::take_host_half)
-    t = now(); const hb: Uint8Array = B.hostHalf(g, B.reg, cmds); this.hostBytes = hb.length; this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); if (!OFF.has('view')) X.face_view_live?.(this.h);   /* (the view's matrix is the host camera's as the host left it: game_run::view_live) */ this.T.hostHalf += now() - t;
+    t = now(); const hb: Uint8Array = B.hostHalf(g, B.reg, cmds); this.hostBytes = hb.length; this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive();   /* (the view's matrix is the host camera's as the host left it: game_run::view_live) */ this.T.hostHalf += now() - t;
     // THE STEP'S OWN WARM-UP (`warmSteps`, off by default): a second game made from the same start, stepped with this tick's record and let go before
     // the game's own first step. MEASURED TO BUY NOTHING: the first tick is the worst of a play (about 20 ms on a quiet machine) with three such steps
     // before it as without (19.8 against 19.5 ms, night-breach:1), and no step grows the memory once room is reserved. So the first tick's cost is the

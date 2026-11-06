@@ -201,6 +201,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
   const rngGame = mulberry32(seed * 7919 + 13);      // the game's own dice (reactT jitter, spread, ragdoll twist…)
   const rng = mulberry32(seed * 104729 + 71);       // the schedule's
   Math.random = rngGame;
+  if (process.env.SOAK_DIFFICULTY) (await import(`${ROOT}/src/game/difficulty.ts`)).setDifficulty(process.env.SOAK_DIFFICULTY as any, false);   // SOAK_DIFFICULTY=hard: the player's difficulty laid before the game is stood (tools/blitz/fuzz.sh --hard)
   if (process.env.SOAK_DESTR === '1') (await import(`${ROOT}/src/game/destructionSwitch.ts`)).DESTRUCTION.on = true;   // SOAK_DESTR=1: THE destruction switch as the page has it (walls and cover come apart, charges throw the furniture) — off, the soak as it always ran
   if (process.env.SOAK_DESTR === '0') (await import(`${ROOT}/src/game/destructionSwitch.ts`)).DESTRUCTION.on = false;   // SOAK_DESTR=0: … and held OFF where the stand raised it (TPS_PROFILE=shipped): the page under ?nodestruction
   const W = await standUp();
@@ -755,6 +756,8 @@ async function runSeed(seed: number): Promise<SeedReport> {
   if (CHECKPOINT_AT >= 0 && saveMod2) moreStims.push({ name: 'load-newest-checkpoint', perMin: 0.15, when: () => game.time >= qrfHoldOff && !tour && !game.quietUtility && !game.touring && !!game.saves?.newest(false), run: () => {   // (--checkpoint-at only, LAST in the list: the default schedule stays byte for byte what it was) an autosave slot loaded back mid-run (the down card's path, by hand): refused with the reason or the loaded world sane
     const info = game.saves.newest(false); const why = game.saves.load(game, info.key); if (why) return `refused: ${why}`; afterLoad('stimulus'); return `loaded ${info.key.replace('twopointsix.save.', '')} '${info.label}' (${(info.bytes / 1024).toFixed(0)} KB, ${game.saves.ageWords(game, info)})`; } });
   stims.push(...moreStims);
+  // SOAK_SKIP=a,b / SOAK_ONLY=a,b: the schedule without those stimuli, or with those alone (tools/blitz/fuzz.sh: past a stimulus two ticks are known to part on, to the next)
+  { const skip = new Set((process.env.SOAK_SKIP ?? '').split(',').filter(Boolean)), only = new Set((process.env.SOAK_ONLY ?? '').split(',').filter(Boolean)); if (skip.size || only.size) { const keep = stims.filter(s => !skip.has(s.name) && (!only.size || only.has(s.name))); stims.length = 0; stims.push(...keep); } }
   /** respite: aggressive stimuli off, the player parked out of the way with the meter low — so an alarm episode can actually lapse (the floor escalates on its own,
    *  a natural lockdown deals its own clear) and a clear can reach its late phases before the scheduled interrupt (if any) lands */
   let respiteUntil = -1; let interruptAt = -1; let alertSince = -1;
