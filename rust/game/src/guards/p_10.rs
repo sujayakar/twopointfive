@@ -363,7 +363,8 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
         weapon: Some(weapon),
         keys: Some(Vec::new()),
     });
-    let def = crate::rig_props::torch_light_def(&format!("unitlight{}", id), id, g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
+    let (fi, f0, f1) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
+    let def = crate::rig_props::p_03::torch_light_def_in(g, &format!("unitlight{}", id), id, fi, f0, f1);
     let fl = crate::render_lights::light_set_add(g, def);
     let look = crate::game::GuardNewLook {
         tint2: Some(match o.tint2 { Some(t) => t, None => *crate::guards::team_tint2().get(String::from(o.team.as_str())).unwrap() }),

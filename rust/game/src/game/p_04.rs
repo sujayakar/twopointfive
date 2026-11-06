@@ -51,7 +51,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.weather = crate::weather::weather_new(g);
     let p = g.player;
     let player_light = g.tune.player_light;
-    let rail = crate::rig_props::rail_light_def(crate::consts::PLAYER_ID, player_light);
+    let rail = crate::rig_props::p_03::rail_light_def_in(g, crate::consts::PLAYER_ID, player_light);
     g.pl[p].light = crate::render_lights::light_set_add(g, rail);
     // light targets from analytic lights + switchables; contactor groups restrike staggered by order of first appearance
     let mut group_stagger: JsMap<String, f64> = JsMap::new();
@@ -259,7 +259,8 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     let tints: [V3; 3] = [[0.42, 0.36, 0.25], [0.3, 0.34, 0.4], [0.38, 0.28, 0.28]];
     for (i, &r) in level.routes.iter().enumerate() {
         let id = 10.0 + i as f64;
-        let def = crate::rig_props::torch_light_def(&format!("flashlight{}", i), id, g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
+        let (fi, f0, f1) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
+        let def = crate::rig_props::p_03::torch_light_def_in(g, &format!("flashlight{}", i), id, fi, f0, f1);
         let fl = crate::render_lights::light_set_add(g, def);
         let gd = crate::game::guard_new(g, men, ch, id, r, i as i32, fl, tints[i % tints.len()], None);
         g.guards.push(gd);

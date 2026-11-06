@@ -5,7 +5,7 @@
 //   every tick   h<k>.bin    THE HOST'S HALF as tick k opens: the record `cmd_buf`, every camera and Input row, the dialogue's room memo (the bridge's own writers)
 //                host.txt    a line: dt, the probe's pending, time, the die's count, how often the host listed the box world since the last tick
 //                post.txt    after the tick, a line: `k die_n die_s time <a hash of each part of rust/sim's block, in SIM_PARTS' order>` (line 1 names the parts)
-//   tick 1       c1.bin, s0.bin (the state and the block both sides start from), menrows.txt (which row of the block's `men` each guard has)
+//   tick 1       c1.bin, s0.bin (the state and the block both sides start from), menrows.txt (which row of the block's `men` each guard has), level.txt (the level's name)
 //   --keep / --every   a<k>.bin, s<k>.bin: the whole state and the block as tick k returns, for diff.ts
 //   --open       c<k>.bin: the whole state as tick k opens (`diff.ts a<k-1>.bin c<k>.bin` then shows what the HOST wrote between two ticks)
 //   gives.txt        the test driver's orders, given between ticks through the menu's own call: a line for the tick that opens next
@@ -28,11 +28,13 @@ const [scn, seedS, frameS] = argv[0].split(':'); const seed = +(seedS ?? 1), fra
 mkdirSync(outDir, { recursive: true });
 const { knobRegistry } = await import('../../src/game/knobs.ts');
 const { Game } = await import('../../src/game/game.ts');
-const { play } = await import('../qa/playthrough.ts');
+const { play, entryOf } = await import('../qa/playthrough.ts');
+if (!entryOf(scn)) { say(`mission.ts: the scripted player has no mission '${scn}' (tools/qa/playthrough.ts plays the room clears, the rescues and the raids: bun run tools/qa/playthrough.ts --scn x names them)`); process.exit(64); }
 const { newDice } = await import('../../src/math/dice.ts');
 const { dressAll } = await import('../../src/game/dress.ts');
 const { simPart, simLayout, SIM_PARTS, P_MEN } = await import('../../src/sim/state.ts');
 const { sim } = await import('../../src/sim/sim.ts');
+const { levelNameOf } = await import('../../src/scene/levelLoad.ts');
 const reg = knobRegistry();
 class Stop extends Error {}
 const words = (g: any): Uint32Array => g.sim.w;
@@ -75,6 +77,8 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     if (k === 1) g.sim.settle(g);
     if (k === 1) { writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g));
       // (A MAN'S ROW in the block's `men` part, by the bridge's GuardId: the bridge carries his owner / rank / reason / since as plain fields and not which row they are)
+      // (THE LEVEL'S NAME: a table keyed by the Level object, which the bridge's walk cannot key; a tick asks it for the level's snow)
+      writeFileSync(`${outDir}/level.txt`, `${levelNameOf(g.level) ?? ''}\n`);
       writeFileSync(`${outDir}/menrows.txt`, (bookOf(g) as any).listOf('GuardId').map((gd: any, i: number) => `${i} ${gd.r}`).join('\n') + '\n'); }
     else if (inR(OPEN, k)) writeFileSync(`${outDir}/c${k}.bin`, exportGame(g, reg));
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g));

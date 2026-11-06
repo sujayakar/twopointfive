@@ -3,7 +3,7 @@
 //!   mission <dir> [ticks] [--keep "1,21,300-310"] [--every N] [--after N]
 //!
 //! Reads from <dir>, as tools/blitz/mission.ts wrote them: c1.bin (the state as the first tick opens), s0.bin (rust/sim's block then), host.txt, post.txt,
-//! gives.txt, hostwrites.txt, menrows.txt, knobs.bin, and h<k>.bin (the host's half) before each tick.
+//! gives.txt, hostwrites.txt, menrows.txt, level.txt, knobs.bin, and h<k>.bin (the host's half) before each tick.
 //!
 //! THE GAME IS IMPORTED ONCE. From then on the Rust game is its own: its die, its knobs, its poses, its lights. Before each tick it takes only the host's half
 //! (see `host_half`), because the host's code between two ticks is not run on this side. AFTER EVERY TICK the block of rust/sim is hashed part by part and
@@ -11,7 +11,7 @@
 //! the block are written (n<k>.bin, ns<k>.bin), `--after` more ticks run, and the exit code is 1. A panic prints `PANIC in tick <k>`, its message and
 //! place and the game's frames of the backtrace; the exit code is then 2. A kept tick (--keep / --every) writes n<k>.bin and ns<k>.bin for tools/blitz/diff.ts.
 //!
-//! BLITZ_SKIP=<names> leaves a host stand-in out (debris, sparks, men, lights, upload, rects), to learn by a run whether it is still needed.
+//! BLITZ_SKIP=<names> leaves a host stand-in out (debris, level, men, lights, upload, rects), to learn by a run whether it is still needed.
 use game::ids::Id;
 use game::io::Io;
 use std::io::Write;
@@ -156,8 +156,9 @@ fn main() {
         // HOST STEP: the TypeScript side runs with every DRESS row down (mission.ts dressAll(false)); the bridge does not carry the DRESS table, and the one row a
         // Rust body reads is `debris` (debris.ts: under DEBRIS.dress a host that draws nothing holds no pool).
         if !skip("debris") { g.m.dress.dress.debris = false; }
-        // HOST STEP: Game.sparks is not carried by the bridge, so an imported game has an empty pool (the constructor's line again).
-        if !skip("sparks") { game::sparks::b_01::sparks_after_import(&mut g); }
+        // HOST STEP: the level's name (level.txt). The TypeScript keeps it in a table keyed by the Level object, which the bridge cannot walk, so an imported game
+        // has none; a tick asks it for the level's lying snow (snowBog.ts snowBogMay), and a game has one level: the table's one row.
+        if !skip("level") { let name = std::fs::read_to_string(format!("{}/level.txt", dir)).unwrap_or_default(); let name = name.trim(); if !name.is_empty() && g.m.scene_level_load.level_names.len() == 0 { g.m.scene_level_load.level_names.set(0, name.to_string()); println!("the level's name, handed over: {}", name); } }
         let (mut parted, mut spent, mut worst) = (0usize, std::time::Duration::ZERO, std::time::Duration::ZERO);
         let (mut n_parted, mut was_same, mut pool_parted, mut die_parted, mut done) = (0usize, true, false, 0usize, 0usize);
         let mut men_gen: Vec<u32> = Vec::new();

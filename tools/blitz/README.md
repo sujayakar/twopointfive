@@ -55,6 +55,12 @@ shows a path.
 these too: they are tomorrow's parting. `diff.ts --dump '<path regex>'` prints every leaf under a path on both sides; `--why` counts the known lines that
 matched; `--dynboxes` says which kinds of frame box one side has more of.
 
+**Thousands of paths at once, most of them `scene_boxes`**: almost always ONE thing and its echo. The frame's boxes and several other tables are compared by
+reach (the order one walk first meets a row), so a single box more on one side shifts every number after it. `diff.ts … --dynboxes` names the kinds of
+frame box one side has more of; mend that and the rest goes. Two picture-only lanes the Rust game does not run put boxes in the frame's list (a holed
+wall's paint, keyed `skin`; a broken edge's rubble, keyed `look`): the diff leaves those out of every list before comparing and says how many each side
+had (`boxes left out as the picture's 36 / 0`). `--leave-out ""` compares them too.
+
 **Is it the host?** Before you read Rust, check whether the TypeScript's own host wrote the difference between two ticks: run with `--open "K+1" --keep "K"` and
 
 ```sh
@@ -112,7 +118,7 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`, and `BLITZ_S
 | `light_set_update(dt)` after each tick | `lights` | the host retires flashes between ticks, and the next tick's light reads it |
 | the men's columns written back into the block | `men` | a man's owner / rank / reason / since are the block's columns in the TypeScript and plain fields in the Rust types |
 | `g.m.dress.dress.debris = false` | `debris` | the TypeScript side runs with every dress row down, and the bridge does not carry that table |
-| the sparks' pool made again after the import | `sparks` | the bridge does not carry `Game.sparks` |
+| the level's name (`level.txt`) as the one row of the names' table | `level` | the TypeScript keys that table by the Level object and the bridge cannot walk it; a tick asks the name for the level's lying snow |
 
 ## Files
 
@@ -127,7 +133,11 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`, and `BLITZ_S
 
 - **No GPU, no picture.** The headless game has no renderer, no GPU light meter, no smoke solver and no audio; the compare is of the simulation's state only.
 - The scripted player cannot be hurt and plays one way a seed. A mission in step is that play-through in step, not the mission's every branch.
+- A man who ENTERS after the start (a snatch's target, a response team) has no row of the block's `men` part on the Rust side: the block parts in `men` the
+  tick he is made. The men's columns are a stand-in of the runner's until the Rust types have them.
+- The scripted player plays the room clears, the rescues and the raids (`tools/qa/playthrough.ts`); it has no quiet mission.
 - The runner cannot yet give an order aimed at a wall or a thing, or with options: it says `NOTE … cannot give` and the sides will part there.
+- Not translated, and so not compared: what stands of a holed wall's paint (`wallskin`) and a broken edge's look (`edge_look`). See `--leave-out` above.
 - A pose's floats are compared only through what the pose drives (bones, boxes); the pool itself is out of the alarm after the first death.
 - Three functions stay `todo!()` by decision: the director's `beat_frame_new`, `beat_next`, `beat_test` (level scripts). A mission that runs a script beat
   stops there.
