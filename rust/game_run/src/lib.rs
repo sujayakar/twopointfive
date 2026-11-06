@@ -96,6 +96,28 @@ pub fn give(g: &mut game::game::Game, k: usize, l: &str) -> String {
                 if std::env::var_os("BLITZ_CASE_RAW").is_none() { let p = g.gd[gd].path_goal; game::guards::guard_set_path_goal(g, gd, p); }
             }
             "!f" => { game::nightbreach::night_breach_order(g); }
+            // (`--case keeper`: a man a press left to keep his room HEARS A FIGHT outside it, as the room fight writes it when a loud event reaches
+            //  him, roomfight.ts:661: `<k> !keeper_hears <guard> <x> <y> <z>`)
+            // (`--case keeper-left`: where no press of the run leaves a keeper, the press's own two writes are made for one man with a mate of his room
+            //  up: pressure.ts:668 `st.stay.set(keeper, T)` and :698 `st.sent.add(room)`: `<k> !keeper_left <guard> <T's place in the fight's rooms>`)
+            "!keeper_left" => {
+                let gd = g.guards[n.unwrap_or(0.0) as usize];
+                let t = w[3].parse::<usize>().ok().and_then(|i| g.fight.rooms.get(i).copied());
+                let d = g.fight.defs.iter().copied().find(|d| g.tab.roomfight_def[*d].gd == gd);
+                match (d, t) {
+                    (Some(d), Some(t)) => { let room = g.tab.roomfight_def[d].room; let st = game::pressure::state_of(g); st.stay.set(d, t); if let Some(r) = room { st.sent.add(r); } }
+                    _ => return format!("  NOTE tick {}: the case's man or room is not of the room fight here: {}", k, l),
+                }
+            }
+            "!keeper_hears" => {
+                let gd = g.guards[n.unwrap_or(0.0) as usize];
+                let at = [w[3].parse::<f64>().unwrap(), w[4].parse::<f64>().unwrap(), w[5].parse::<f64>().unwrap()];
+                let now = g.time;
+                match g.fight.defs.iter().copied().find(|d| g.tab.roomfight_def[*d].gd == gd) {
+                    Some(d) => { let row = &mut g.tab.roomfight_def[d]; row.noise_at = Some(at); row.noise_t = now; row.noise_out = true; }
+                    None => return format!("  NOTE tick {}: the case's man is no defender of the room fight here: {}", k, l),
+                }
+            }
             _ => return format!("  NOTE tick {}: a write of the driver's this runner does not know: {}", k, l),
         }
         return format!("  the driver's write before tick {}: {}", k, l);
@@ -175,9 +197,19 @@ pub fn write_before(g: &mut game::game::Game, k: usize, l: &str) -> Option<Strin
 /// grenade's rest and fills the memo of the walls its burst would open, which the tick's own flee then reads, so it is made here too. A rule this
 /// does not know is a NOTE in the log, never silence. It belongs on the generated call surface, by the rule's own name.
 pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
+    let all: Vec<&str> = rule.split(' ').collect();
     let mut w = rule.split(' ');
     let (rule, arg) = (w.next().unwrap_or(""), w.next());
     match rule {
+        // (`--case sticky`: one sticky camera leaves the player's tube by the module's own call, stickycam.ts fireCam, from and toward the points the
+        //  TypeScript side chose: `call sticky_fire <from x y z> <target x y z>`. The count in the tube is the caller's to take and is left alone.)
+        "sticky_fire" => {
+            let n: Vec<f64> = all[1..].iter().filter_map(|x| x.parse::<f64>().ok()).collect();
+            if n.len() != 6 { return format!("  NOTE tick {}: sticky_fire takes six numbers: {:?}", k, all); }
+            let pl = g.player;
+            let c = game::stickycam::fire_cam(g, pl, [n[0], n[1], n[2]], [n[3], n[4], n[5]]);
+            format!("  the case's call before tick {}: a sticky camera fired ({:?}); {} out", k, c, g.pl[pl].cams.len())
+        }
         // (a lesson's player asks the words of a set door charge: the answer is kept a quarter second and the tick's own ask reads it, doortools.ts closeAt)
         "door_close_words" => match arg.and_then(|x| x.parse::<usize>().ok()).and_then(|i| g.door_tools.set.get(i).copied()) {
             Some(c) => { let said = game::doortools::door_tools_close_words(g, c); format!("  the driver's ask before tick {}: door_close_words -> {:?}", k, said) }

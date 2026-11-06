@@ -31,6 +31,7 @@ const KEEP = ranges(arg('--keep', '')), OPEN = ranges(arg('--open', ''));
 const inR = (R: number[][], k: number) => R.some(([a, b]) => k >= a && k <= b), keep = (k: number) => inR(KEEP, k) || (EVERY > 0 && k % EVERY === 0);
 const [scn, seedS, frameS] = argv[0].split(':'); const seed = +(seedS ?? 1), frame = +(frameS ?? 1);
 mkdirSync(outDir, { recursive: true });
+if (/^(solo|quiet)-/.test(argv[0])) for (const [k, v] of [['GLASSFX', 'on'], ['TPS_MOVES', '1'], ['TPS_TURN', '1'], ['TPS_CAST', '1'], ['TPS_OPENING', '1'], ['TPS_QRFSILENT', '1'], ['TPS_QRFSQUAD', '1']]) process.env[k] ??= v;   // (tools/qa/solo-night.ts's own stand words, before any game module loads)
 const { knobRegistry } = await import('../../src/game/knobs.ts');
 const { Game } = await import('../../src/game/game.ts');
 // `--die tool`: the die a tally rolls for this mission and seed (tools/qa/playthrough.ts under the harness's word, PLAY.md): the stand is the word's own
@@ -44,13 +45,20 @@ const { play, entryOf } = await import('../qa/playthrough.ts');
 // (`<k> select_verb <kind> <verb>` in hostwrites.txt). It is run here WITHOUT its model of the sky's light on the other men's meters (a hook over the game's
 // own light asks, which the Rust game has no word for), so a lesson that leans on the moon may stop short of its end: how far it went is said.
 const LESSON = scn.startsWith('tut-');
+// A QUIET MISSION OR THE PLAIN SOLO NIGHT (`solo-<plan>:<seed>`, `quiet-<plan>:<seed>`; plan = walk | sneak | careful | rush | loud): played by
+// tools/qa/solo-night.ts's scripted Sam, one man on the floor through the input, mortal and seen (his meter fed every frame from the CPU's estimate of
+// the light on him: the `meter` line of the record). `quiet-` is the level's quiet mission (`--quiet`, dealt off the seed), `solo-` the plain office
+// after dark. BLITZ_SOLO="<more of solo-night.ts's options>" (`--unseen`, `--ghost`, `--god`, `--squad 1`, `--level kit-yard.json`, `--cap 120`).
+// That tool is a program, not a function: it is given its own command line and loaded, and its exit is caught. Its stand words are set here before
+// any module of the game loads, as it sets them itself.
+const SOLO = /^(solo|quiet)-/.test(scn);
 // `--wall`: the scripted commander takes a held room by a WALL CHARGE where a partition allows (tools/qa/wallcharge-commander.ts, its word PT_WALL=1): the
 // order is given on a wall (a floor target that carries the wall: the gives line ends `wall …`) and the commander BLOWS the charge by the module's own call
 // between ticks (`<k> wall_blow <the wall's index>` in hostwrites.txt). The stand is the page's either way.
 // (the word itself is set above, before the scripted player's file is read)
 // (…and one lesson's own player hooks the same asks itself, tools/qa/lessons/tut-squad.ts: its word for "the estimate as every other tool has it")
 if (LESSON) process.env.TUT_SQUAD_SKY = '0';
-if (!LESSON && !entryOf(scn)) { say(`mission.ts: the scripted player has no mission '${scn}' (tools/qa/playthrough.ts plays the room clears, the rescues and the raids: bun run tools/qa/playthrough.ts --scn x names them)`); process.exit(64); }
+if (!LESSON && !SOLO && !entryOf(scn)) { say(`mission.ts: the scripted player has no mission '${scn}' (tools/qa/playthrough.ts plays the room clears, the rescues and the raids: bun run tools/qa/playthrough.ts --scn x names them)`); process.exit(64); }
 const { newDice } = await import('../../src/math/dice.ts');
 const { dressAll, DRESS } = await import('../../src/game/dress.ts');
 const { simLayout, SIM_PARTS } = await import('../../src/sim/state.ts');
@@ -67,8 +75,13 @@ function dressStand() { dressAll(false); if (!DRESS_WORD) return;
 // game is stood, which lays the PRESSURE and DIGIN tables and the fog's rows; a lesson's player takes `hard`). `--set '<json>'`: any rows the scripted
 // player's `--set` takes (a lever alone: '{"DIFFICULTY":{"fog":"<rung>"}}'). The start and knobs.bin carry the tables, so one option serves both sides.
 const HARD = argv.includes('--hard'), SET: Record<string, Record<string, unknown>> = HARD ? { DIFFICULTY: { level: 'hard' } } : JSON.parse(arg('--set', '{}'));
+// `--lever <key>=<rung>[,…]`: A LEVER MOVED ON THE STANDING GAME, before the first tick (difficulty.ts setLever, as the mission sheet's row moves it): for
+// the fourth lever, "you're told" (`told=guided|standard|bare`), which is a lever only once the page's switches are up (TOLD.on, raised as the game is
+// stood) and so is not one the scripted player's `--set` can name. The tables it lays are in the start and in knobs.bin.
+const LEVER = arg('--lever', '');
 class Stop extends Error {}
 const CALLS = (process.env.BLITZ_CALL ?? '').split(';').map(x => x.trim()).filter(Boolean).map(x => ({ w: x.split(' '), at: 0, down: 0 })); let shotLast = false, fragSaid = 0;
+const await0d: any = LEVER ? await import('../../src/game/difficulty.ts') : null;
 const await0 = CALLS.length ? await import('../../src/game/qrf.ts') : (null as any);
 let selAfter = 0;   // the highlighted row of the nearby list as the last tick left it
 // A SCRIPTED CASE (`--case pie | orbit | boot`): a write BETWEEN TWO TICKS that the missions' seeds never make, so that a place mended by reading is
@@ -79,7 +92,16 @@ let selAfter = 0;   // the highlighted row of the nearby list as the last tick l
 //   orbit  a man backing off in a standoff has his goal written again as ANOTHER ARRAY of the same numbers, as goTo does (`v3.copy`):
 //          guards.ts:1163 `gd.pathGoal !== S.orbitGoal`                                                                      `<k> !path_goal_same <guard>`
 //   boot   Sam's word (F) twice at once on a level with a breach plan ('go on set'): the pair stacks, then goes in by the boot (breach.ts:220, the loud boot) `<k> !f`
-const CASE = arg('--case', ''); let caseN = 0, caseSaw = '';
+//   keeper a man a press LEFT TO KEEP HIS ROOM, idle and out of contact, hears a fight outside it (the room fight's own write when a loud event reaches
+//          him, roomfight.ts:661: `D.noiseAt`, `D.noiseT`, `D.noiseOut`), up to three times a run. With DIGIN.keeper off (`--hard`) he lets it lie
+//          (digin.ts:705); with it on he starts to think of digging in. Nothing is written until a press has left such a man: case.txt says how many
+//          men were left to keep a room, and after each write what the man did.                                    `<k> !keeper_hears <guard> <x> <y> <z>`
+//   sticky the player's tube sends a STICKY CAMERA over the nearest hostile up (3 to 14 m off) by the module's own call (stickycam.ts fireCam), up to
+//          three in a run, 300 ticks apart: a stuck camera is an eye of the fog, a wedge about its wall's normal that the fog's cone narrows
+//          (stickycam.ts:195; at the page's numbers the cone, 120, is wider than the camera's 110: `--set '{"FOG":{"coneDeg":40}}'` beside the
+//          difficulty's hard makes the read count).                                                     `<k> call sticky_fire <from x y z> <target x y z>`
+const CASE = arg('--case', ''); let caseN = 0, caseSaw = '', caseAt = -1000, caseMan: any = null;
+const caseMods: any = CASE === 'keeper' ? { P: await import('../../src/game/pressure.ts') } : CASE === 'sticky' ? { S: await import('../../src/game/stickycam.ts') } : {};
 function caseStep(g: any) {
   if (!CASE) return;
   const w = (l: string) => { appendFileSync(`${outDir}/gives.txt`, l + '\n'); between(l, 'give'); appendFileSync(`${outDir}/case.txt`, l + '\n'); caseN++; };
@@ -90,6 +112,28 @@ function caseStep(g: any) {
     if (i >= 0) { const gd = g.guards[i]; gd.pathGoal = [gd.pathGoal[0], gd.pathGoal[1], gd.pathGoal[2]]; w(`${k} !path_goal_same ${i}`); } }
   else if (CASE === 'boot') { const N = g.nightBreach; if (N && N.state !== caseSaw) { caseSaw = N.state; appendFileSync(`${outDir}/case.txt`, `# tick ${k}: the drill is '${caseSaw}'\n`); } if (caseN >= 2) return;
     if (N?.active && N.drill && k > 30) { if (N.order()) w(`${k} !f`); } }   // (the second word at once: 'go on set', before the scripted player's first order of its own calls the pair off)
+  else if (CASE === 'keeper' || CASE === 'keeper-left') { const top = (globalThis as any).__tpsTop ?? {}, st = top['src/game/pressure.ts']?.STATES?.get(g), ds = top['src/game/digin.ts']?.states?.get(g), F = g.fight; if (!st || !F) return;
+    const note = (t: string) => appendFileSync(`${outDir}/case.txt`, `# tick ${k}: ${t}\n`);
+    if (caseMan) { const { D, M, t } = caseMan; caseMan = null; note(`the man who heard: phase '${M?.phase}', ${M?.knowT === t ? 'the noise taken as heard' : 'the noise NOT taken'}${M?.phase === 'idle' && M?.knowT === t ? ' (heard, and let lie)' : ''}; DIGIN.keeper ${(knobRegistry() as any).DIGIN.keeper}; still a keeper ${st.stay.has(D)}`); }
+    const said = `${st.stay.size} left to keep a room, ${st.sent.size} rooms a man left`; if (said !== caseSaw) { caseSaw = said; note(said); }
+    if (caseN >= 3 || k - caseAt < 180 || !ds || g.rescue?.active) return;
+    // (`keeper-left`: no press of this run has left a man, so the press's own two writes are made for one: a defender holding a room with a mate of
+    //  it up, idle and out of contact, is left to keep it against the room next door (pressure.ts:668 `st.stay.set`, :698 `st.sent.add`))
+    if (CASE === 'keeper-left' && !st.stay.size && k >= 300) { const up = (X: any) => X.gd.state !== 'dead' && X.gd.team === 'hostile';
+      for (const D of F.defs) { const gd = D.gd, M = ds.men.get(gd); if (!up(D) || D.mode !== 'hold' || !D.room || !D.room.entries.length || !M || M.phase !== 'idle' || g.time - gd.lastSeenT < 3 || g.time < gd.dazzledUntil) continue;
+        if (!isNaN(ds.rooms.get(D.room)?.enteredAt ?? NaN) || !F.defs.some((X: any) => X !== D && up(X) && X.room === D.room)) continue;
+        const T = F.rooms.find((R: any) => R !== D.room && R.entries.some((e: any) => D.room.entries.some((x: any) => x.door === e.door))) ?? F.rooms.find((R: any) => R !== D.room); if (!T) continue;
+        st.stay.set(D, T); st.sent.add(D.room); w(`${k} !keeper_left ${g.guards.indexOf(gd)} ${F.rooms.indexOf(T)}`); caseN--; note(`guard ${g.guards.indexOf(gd)} is left to keep room ${D.room.id} against room ${T.id} (the press's own two writes: no press of this run left a man)`); break; } }
+    for (const D of F.defs) { const gd = D.gd, M = ds.men.get(gd); if (gd.state === 'dead' || !M || M.phase !== 'idle' || !st.stay.has(D) || !caseMods.P.pressKeeps(g, D)) continue;
+      if (g.time < gd.dazzledUntil || g.time - gd.lastSeenT < 3 || !D.room || !D.room.entries.length || !isNaN(ds.rooms.get(D.room)?.enteredAt ?? NaN)) continue;
+      if (D.noiseAt && D.noiseOut && g.time - D.noiseT < 6 && D.noiseT > M.knowT) { note(`guard ${g.guards.indexOf(gd)}, a keeper, has heard a fight by the game's own rules (nothing written)`); caseMan = { D, M, t: D.noiseT }; caseAt = k; return; }
+      const p = g.player.char.pos, at = [p[0], p[1], p[2]]; D.noiseAt = at; D.noiseT = g.time; D.noiseOut = true; caseAt = k; caseMan = { D, M, t: g.time };
+      w(`${k} !keeper_hears ${g.guards.indexOf(gd)} ${at.join(' ')}`); note(`guard ${g.guards.indexOf(gd)}, left to keep room ${D.room.id}, hears a fight at ${at.map((x: number) => x.toFixed(2)).join(' ')}`); return; } }
+  else if (CASE === 'sticky') { const pl = g.player, c = pl.char; if (caseN >= 3 || k < 120 || k - caseAt < 300 || pl.down) return;
+    const near = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead').map((x: any) => ({ x, d: Math.hypot(x.char.pos[0] - c.pos[0], x.char.pos[2] - c.pos[2]) })).filter((o: any) => o.d > 3 && o.d < 14).sort((a: any, b: any) => a.d - b.d)[0]; if (!near) return;
+    const from = [c.pos[0], 1.3, c.pos[2]], to = [near.x.char.pos[0], caseMods.S.STICKY.aimY, near.x.char.pos[2]];
+    if (FRAG_ASK && fragSaid !== k) { between(`${k} frag_step_off`, 'call'); fragSaid = k; }   // (the scripted player's ask stood before this call)
+    caseMods.S.fireCam(g, pl, from, to); caseAt = k; caseN++; const l = `${k} sticky_fire ${from.join(' ')} ${to.join(' ')}`; between(l, 'call'); appendFileSync(`${outDir}/case.txt`, `${l}\n# tick ${k}: a camera over guard ${g.guards.indexOf(near.x)} at ${near.d.toFixed(1)} m; ${pl.cams.length} out; FOG.cone ${(knobRegistry() as any).FOG.cone} coneDeg ${(knobRegistry() as any).FOG.coneDeg}\n`); }
 }
 const words = (g: any): Uint32Array => g.sim.w;
 const block = (g: any): Uint8Array => { const w = words(g); return new Uint8Array(w.buffer, w.byteOffset, w.byteLength).slice(); };
@@ -115,7 +159,7 @@ const write1 = (l: string) => { appendFileSync(`${outDir}/hostwrites.txt`, l + '
 // good) and fills the memo of the walls its burst would open (wallsFor), both of which the next tick's own flee reads. It is a function of a module, not
 // a method of an object, so there is nothing to hang a tap on: the line is written for every tick the scripted player steps (it asks before every step
 // unless PT_STAND), and the driver's source is read once to see that the ask still stands where this was read.
-const FRAG_ASK = (() => { if (LESSON || process.env.PT_STAND) return false;
+const FRAG_ASK = (() => { if (LESSON || SOLO || process.env.PT_STAND) return false;
   const src = readFileSync(new URL('../qa/playthrough.ts', import.meta.url), 'utf8'), asks = src.split('fragStepOff(g)').length - 1, steps = src.split('W.step(DT)').length - 1;
   if (asks !== 1 || steps !== 3 || !src.includes('const clear = STAND ? null : fragStepOff(g)')) { say(`mission.ts: the scripted player's step is not as it was read (fragStepOff(g) x${asks}, W.step(DT) x${steps}): read its calls between ticks again (between.txt)`); process.exit(3); }
   return true; })();
@@ -175,7 +219,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   // orders' own sequence (`<k> !wall_carried <n | null>`): the order after it is refused without it.
   if (k === 1 && g.wallCharge?.setCarried) { const C = g.wallCharge; for (const f of ['setCarried', 'raiseCarried'] as const) { const was = C[f]; C[f] = function (this: any, n: any) { if (!g.ticking) { const l = `${k + 1} !wall_${f === 'setCarried' ? 'carried' : 'raised'} ${n}`; give1(l); } return was.call(this, n); }; } }
   if (k === 1 && g.wallCharge?.blow) { const C = g.wallCharge, blow = C.blow; C.blow = function (this: any, c?: any, ...r: any[]) { if (!g.ticking && c) write1(`${k + 1} wall_blow ${c.wall.index}`); return arguments.length ? blow.call(this, c, ...r) : blow.call(this); }; }
-  if (k === 1 && LESSON) { const pick = g.selectVerb; g.selectVerb = function (this: any, kind: string, verb?: string) { if (!g.ticking) write1(`${k + 1} select_verb ${wordAt('crate::game::InteractableKind', kind)} ${wordAt('crate::game::Verb', verb)} ${kind} ${verb}`); return pick.call(this, kind, verb); }; }
+  if (k === 1 && (LESSON || SOLO)) { const pick = g.selectVerb; g.selectVerb = function (this: any, kind: string, verb?: string) { if (!g.ticking) write1(`${k + 1} select_verb ${wordAt('crate::game::InteractableKind', kind)} ${wordAt('crate::game::Verb', verb)} ${kind} ${verb}`); return pick.call(this, kind, verb); }; }
   // THE SCRIPTED PLAYER'S WORD TO THE HOSTAGES / THE MAN IN HAND, given by the module's own call between ticks (playthrough.ts: `R.ending.word(g.player.char)`
   // once the room is held and men of theirs are still up, `X.word(...)` on a snatch that ends in the van): `<k> rescue_word|snatch_word player|none`.
   if (k === 1) for (const [name, E] of [['rescue_word', g.rescue?.ending], ['snatch_word', g.snatch?.out]] as [string, any][]) if (E?.word) { const word = E.word; E.word = function (this: any, by: any) { if (!g.ticking) write1(`${k + 1} ${name} ${by === g.player.char ? 'player' : by ? 'UNSUPPORTED-man' : 'none'}`); return word.call(this, by); }; }
@@ -183,6 +227,9 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   // close). The answer is KEPT, stamped with the time, and answers every ask of the next quarter second (doortools.ts closeAt), the tick's own among
   // them: a call line of the ordered record, `<k> call door_close_words <the charge's place in the set list>`.
   if (k === 1 && g.doorTools?.closeWords) { const D = g.doorTools, cw = D.closeWords; D.closeWords = function (this: any, c: any) { if (!g.ticking) between(`${k + 1} door_close_words ${D.set.indexOf(c)}`, 'call'); return cw.call(this, c); }; }
+  if (k === 1 && LEVER) { const Df = await0d; for (const kv of LEVER.split(',')) { const [key, rung] = kv.split('=');
+      if (!Df.leversNow().some((L: any) => L.key === key && L.rungs.some((r: any) => r.id === rung))) { say(`mission.ts: --lever knows ${Df.leversNow().map((L: any) => `${L.key}=${L.rungs.map((r: any) => r.id).join('|')}`).join(', ')}, not '${kv}'`); process.exit(64); }
+      Df.setLever(key, rung, false); } say(`mission.ts: the levers before tick 1: ${Df.leversLine(true)}; TOLD.rung ${(knobRegistry() as any).TOLD?.rung}`); }
   if (k === 1) dressStand();
   caseStep(g);
   if (k === 1 && (!g.dice || /^\d+$/.test(arg('--die', '')))) g.dice = newDice(DIE);   // (`--die N` seeds the die of a game stood WITH one too: a tutorial's)
@@ -199,7 +246,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     // THE SCRIPTED PLAYER PUT THE HIGHLIGHT ON ANOTHER ROW of the nearby list between the last tick and this one (playthrough.ts:865 writes
     // `g.player.nearSel` and calls pickHover for a door's own row; `g.selectVerb` does the same by kind and verb): `<k> near_sel <row>`, unless the
     // pick was written as a lesson's `select_verb` already.
-    if (k > 1 && !LESSON && !CALLS.some(C => C.at === k) && g.player.nearSel !== selAfter) write1(`${k} near_sel ${g.player.nearSel}`);
+    if (k > 1 && !LESSON && !SOLO && !CALLS.some(C => C.at === k) && g.player.nearSel !== selAfter) write1(`${k} near_sel ${g.player.nearSel}`);
     if (FRAG_ASK && fragSaid !== k) between(`${k} frag_step_off`, 'call');
     between(`${k} ${g.player.visibility}`, 'meter');
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds as any[]));
@@ -222,9 +269,15 @@ Game.prototype.update = function (this: any, ...a: any[]) {
 } as any;
 const log = console.log, er = console.error, wn = console.warn; let res: any = null;
 let les: any = null;
-try { if (LESSON) les = await (await import('../qa/lesson-run.ts')).runLesson(scn, { seed, sky: false, glow: false, floor: 0, ...(HARD ? { hard: true } : {}) }); else res = await play(scn, seed, 300, false, SET); } catch (e) { if (!(e instanceof Stop)) { console.log = log; throw e; } } finally { console.log = log; console.error = er; console.warn = wn; }
+let solo = '';
+try { if (SOLO) { const [kind, plan] = scn.split('-'), was = process.argv, exit = process.exit, lines: string[] = [];
+    process.argv = [was[0], 'solo-night.ts', '--trace', String(seed), '--plan', plan, ...(kind === 'quiet' ? ['--quiet'] : []), ...(HARD ? ['--hard'] : []), ...(process.env.BLITZ_SOLO ?? '').split(' ').filter(Boolean)];
+    (process as any).exit = () => { throw new Stop(); }; console.log = (...x: unknown[]) => { lines.push(x.join(' ')); };
+    try { await import('../qa/solo-night.ts'); } finally { process.argv = was; (process as any).exit = exit; solo = lines.slice(-14).join('\n   '); } }
+  else if (LESSON) les = await (await import('../qa/lesson-run.ts')).runLesson(scn, { seed, sky: false, glow: false, floor: 0, ...(HARD ? { hard: true } : {}) }); else res = await play(scn, seed, 300, false, SET); } catch (e) { if (!(e instanceof Stop)) { console.log = log; throw e; } } finally { console.log = log; console.error = er; console.warn = wn; }
 // (the module's knob table as the TypeScript game wrote it: the runner's check of the generated `knobs_to_rust`)
 { const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); }
+if (SOLO) say(`TypeScript: ${scn} seed ${seed} (tools/qa/solo-night.ts ${process.env.BLITZ_SOLO ?? ''}) at tick ${k}; its last lines:\n   ${solo}`);
 if (les) { for (const l of les.lines.slice(-8)) say('   ' + l); say(`TypeScript: the lesson ${scn} seed ${seed} at tick ${k}: ${les.code === 0 ? 'every step went by and the run ended' : `STOPPED (${les.why})`}; ${les.steps.length} steps gone by: ${les.steps.map((s: any) => s.id).join(' ')}`); }
 if (res) say(`TypeScript: ${scn} seed ${seed} PLAYED OUT at tick ${k} on the stand ${process.env.TPS_PROFILE}: ${res.end} (${res.why}); t ${res.t}; team ${res.team} of ${res.of}; hostiles ${res.hostiles} of ${res.hostilesOf}`);
 for (const C of CALLS) say(`BLITZ_CALL ${C.w.join(' ')}: ${C.at ? `before tick ${C.at}` : 'NEVER REACHED (no such tick in this run)'}`);
