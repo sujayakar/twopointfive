@@ -48,4 +48,12 @@ if (NAMES) {
   // (the same without the three heaviest names' fields, to see what a list by hand would cost)
   const top = [...hit].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([q, c]) => `${q} x${c}`).join(', '); say(`  the most rows: ${top}`);
   void parse; }
+// ---- the whole apply, and the same without the parts that never move after a start (the meshes, the clips, the shadow meshes: no tick writes them)
+{ const { applyGame } = await import('./import.ts'); const { classTable, valueTable } = await import('./classes.ts'); const hooks = { classes: classTable(), values: valueTable() };
+  const still = (T: any, f: any) => T.name === 'MeshData' || T.name === 'Clip' || (T.mod === 'game' && T.name === 'Game' && f.rust === 'mesh_shadows');
+  const only = new Set<string>(); for (const T of Object.values<any>(SCHEMA.types)) if (T.k === 'struct') for (const f of T.fields) if (!still(T, f)) only.add(`${T.mod}::${T.name}.${f.rust}`);
+  const blob = exportGame(g, reg); for (let i = 0; i < 2; i++) applyGame(g, blob, reg, { hooks });
+  const tA = med(() => applyGame(g, blob, reg, { hooks })); for (let i = 0; i < 2; i++) applyGame(g, blob, reg, { hooks, only });
+  const tL = med(() => applyGame(g, blob, reg, { hooks, only }));
+  say(`the whole apply (the game's own export applied onto itself): ${tA.toFixed(1)} ms; the same with the meshes, the clips and the shadow meshes read past: ${tL.toFixed(1)} ms`); }
 process.exit(0);
