@@ -288,6 +288,16 @@ export class RustHost {
       const r = F.hand(enc.encode(line), (p, n) => X.face_hostwrite(H.h, H.k + 1, p, n)), said = F.outText();
       if (r !== 1) H.say(`rust-host: the face did not take selectVerb(${kind}, ${verb})`);
       H.reapply('a pick of a verb'); H.T.calls += now() - t0 - (H.nest - n0); return / -> true\s*$/.test(said); }); }
+    // (the scripted player's word to the hostages, or to the man in hand, is the module's own call between two ticks: made on the Rust side, as a pick is.
+    //  The puppet's own body does not run: what it would write the apply brings.)
+    for (const [name, E] of [['rescue_word', g.rescue?.ending], ['snatch_word', g.snatch?.out]] as [string, any][]) if (E?.word && !TAPPED.has(E)) { const word = E.word; TAPPED.add(E); hang(E, 'word', function (this: any, by: any) {
+      if (!H.h || g.ticking) return word.call(this, by);
+      const who = by === g.player.char ? 'player' : by ? null : 'none'; if (who === null) { H.say(`rust-host: ${name} for a man the face has no word for; run on the puppet`); return word.call(this, by); }
+      H.count(`${name} (the module's own word, made on the Rust side)`); const t0 = now(), n0 = H.nest; H.handWrites(H.k + 1);
+      const line = `${H.k + 1} ${name} ${who}`; H.wrote.push(line);
+      const r = F.hand(enc.encode(line), (p, n) => X.face_hostwrite(H.h, H.k + 1, p, n)), said = F.outText();
+      if (r !== 1) H.say(`rust-host: the face did not take ${name}(${who})`);
+      H.reapply('a word to follow'); H.T.calls += now() - t0 - (H.nest - n0); return / -> true\s*$/.test(said); }); }
     // THE HOST'S STEPS ROUND A TICK THAT THE RUST SIDE MAKES TOO.
     // The lights' update: made on the Rust side after every step. Audit, and a fast tick that took the whole state: the puppet already holds what it
     // left, and run again in TypeScript a flash's envelope would be stepped twice. A fast tick that took only the filtered state: no lamp is on that list,

@@ -32,6 +32,10 @@ const [scn, seedS, frameS] = argv[0].split(':'); const seed = +(seedS ?? 1), fra
 mkdirSync(outDir, { recursive: true });
 const { knobRegistry } = await import('../../src/game/knobs.ts');
 const { Game } = await import('../../src/game/game.ts');
+// `--die tool`: the die a tally rolls for this mission and seed (tools/qa/playthrough.ts under the harness's word, PLAY.md): the stand is the word's own
+// (`TPS_GAME=ts`: one draw of the scripted player's seeded Math.random as the game is stood, the dress rows down), so the scripted player's own draws
+// after it are the tally's too and the game played here is the very game the tally played. The die is written to die.txt.
+if (arg('--die', '') === 'tool') { process.env.TPS_GAME = 'ts'; process.env.RH_DIE_SAY = `${outDir}/die.txt`; }
 if (argv.includes('--wall')) process.env.PT_WALL = '1';   // (`--wall`, below; playthrough.ts reads the word as it loads)
 const { play, entryOf } = await import('../qa/playthrough.ts');
 // A TUTORIAL MISSION (levels/tut-<name>.json with its level script) is played by its own scripted player, tools/qa/lesson-run.ts, through the input.
@@ -88,6 +92,9 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   if (k === 1 && g.fight?.roomAt) { const F = g.fight, ask = F.roomAt; F.roomAt = function (this: any, p: any) { const n0 = F.rooms.length; const r = ask.call(this, p); if (!g.ticking && F.rooms.length !== n0) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} room_at ${p[0]} ${p[1]} ${p[2]}\n`); return r; }; }
   if (k === 1 && g.wallCharge?.blow) { const C = g.wallCharge, blow = C.blow; C.blow = function (this: any, c?: any, ...r: any[]) { if (!g.ticking && c) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} wall_blow ${c.wall.index}\n`); return arguments.length ? blow.call(this, c, ...r) : blow.call(this); }; }
   if (k === 1 && LESSON) { const pick = g.selectVerb; g.selectVerb = function (this: any, kind: string, verb?: string) { if (!g.ticking) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} select_verb ${wordAt('crate::game::InteractableKind', kind)} ${wordAt('crate::game::Verb', verb)} ${kind} ${verb}\n`); return pick.call(this, kind, verb); }; }
+  // THE SCRIPTED PLAYER'S WORD TO THE HOSTAGES / THE MAN IN HAND, given by the module's own call between ticks (playthrough.ts: `R.ending.word(g.player.char)`
+  // once the room is held and men of theirs are still up, `X.word(...)` on a snatch that ends in the van): `<k> rescue_word|snatch_word player|none`.
+  if (k === 1) for (const [name, E] of [['rescue_word', g.rescue?.ending], ['snatch_word', g.snatch?.out]] as [string, any][]) if (E?.word) { const word = E.word; E.word = function (this: any, by: any) { if (!g.ticking) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} ${name} ${by === g.player.char ? 'player' : by ? 'UNSUPPORTED-man' : 'none'}\n`); return word.call(this, by); }; }
   if (k === 1) dressAll(false);
   if (k === 1 && !g.dice) g.dice = newDice(DIE);
   let err: unknown = null;
