@@ -426,7 +426,8 @@ pub fn hands(g: &mut crate::game::Game, gd: GuardId) {
     let mut t0 = tk.t0;
     // (`T.spot[0] = …; T.spot[2] = …` IN PLACE. orders.ts hands that very object on as his goal (spottedFeet → order), so in the TypeScript his script's
     //  goal and his settle watch's goal ARE the spot and creep with it: no new leg, the path and the watch kept. By value every creep read as a new goal.
-    //  So a goal and a watch that hold the spot's numbers as they were are written through, as qrf's write_station does for a station.)
+    //  So a goal and a watch that hold the spot's numbers as they were are written through, as qrf's write_station does for a station.
+    //  STAND-IN by value: equal numbers stand for the same object; it belongs to the identity device.)
     let old_spot = tk.spot;
     let new_spot = [hp[0] + dx / d * 0.6, old_spot[1], hp[2] + dz / d * 0.6];
     if let Some(row) = man(g, gd).take.as_mut() { row.spot = new_spot; }

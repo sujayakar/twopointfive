@@ -25,6 +25,7 @@ pub fn def_fix_to_pt(g: &mut crate::game::Game, d: RoomfightDefId) {
 /// D.pt moved in place: whatever of his IS that object moves with it, with no new fix. His fix, when it is the point (the stamp); and `covers`, which
 /// belief.ts:21 makes that very object on the page's path (`gd.covers = pt`, with D.pt handed in): here a copy, so equal bits stand for the same
 /// object, as roomfight's own twin of this has it. Every in-place write of a Def's point comes through here or through that twin.
+/// STAND-IN by value (`covers`): it belongs to the identity device.
 pub fn def_move_pt(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
     let same = def_fix_is_pt(g, d);
     let (gd, old) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
