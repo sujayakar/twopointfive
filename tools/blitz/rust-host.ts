@@ -283,7 +283,7 @@ export class RustHost {
   /** THE KEPT GAME STANDS AGAIN and the puppet takes its whole state: one whole apply; what the filtered export last sent is the whole state */
   private backTo(k: number, why: string): void { const X = this.F.X;
     if (!this.h || !X.face_back(this.h, k)) throw new Error(`rust-host: that kept game is gone (it was of a game that has been stood again since); asked by ${toolLine()}`);
-    this.applyWhole(why); X.face_puppet(this.h, 1); this.refs(); this.scanRebase(); this.backs++; if (this.rec) this.rec.backs = this.backs; }
+    this.applyWhole(why); X.face_puppet(this.h, 1); this.refs(); this.scanRebase(); this.shelfSig = ''; this.backs++; if (this.rec) this.rec.backs = this.backs; }
   /** A SAVE (savestate.ts writeMem, through SNAPS.take). The controller has just written the chronicle's row on the puppet; the row is made on the Rust
    *  side first (`face_checkpoint`), so the kept game holds it. No state is walked in TypeScript and nothing is applied whole. */
   snapTake(): KeptGame { const g = this.g, X = this.F.X;
@@ -308,6 +308,17 @@ export class RustHost {
     if (this.backDue) { const b = this.backDue; this.backDue = null; this.tookRow = false; this.F.hand(enc.encode(b.label), (p, n) => X.face_loaded(this.h, p, n, b.loads, b.saves)); this.applyStep(); this.refs(); return true; }
     if (this.tookRow) { this.tookRow = false; this.applyStep(); this.savesRef = this.g.chronicle?.counts?.saves ?? 0; return true; }
     return false; }
+  private cutDue = false; private shelfSig = '';
+  /** THE CONTROLLER'S SHELF AS THE TICK READS IT (Enter once down asks for this run's newest save, player.ts:493; the Rust game's `g.saves` is no part of
+   *  the bridge): handed over as a step opens whenever it has changed. The page's own lines (src/host/rustgame.ts `shelfIn`), for `face_saves_in`. */
+  private shelfIn(): void { const sv = this.g.saves, sh = sv?.shelf, X = this.F.X; if (!sv || !sh?.all || !X.face_saves_in) return;
+    const rows: any[] = sh.all().map((e: any) => e.info), sig = `${sv.runId}|${rows.map(r => `${r.key}:${r.savedAt}:${r.regret ?? ''}`).join(',')}`; if (sig === this.shelfSig) return; this.shelfSig = sig;
+    const parts: Uint8Array[] = [], u32 = (v: number) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, v, true); parts.push(b); }, f64 = (v: number) => { const b = new Uint8Array(8); new DataView(b.buffer).setFloat64(0, v, true); parts.push(b); },
+      text = (t: string) => { const b = enc.encode(t); u32(b.length); parts.push(b); }, byte = (v: number) => parts.push(Uint8Array.of(v));
+    text(String(sv.runId ?? '')); u32(rows.length);
+    for (const r of rows) { text(r.key); byte(r.slot === 'manual' ? 1 : 0); f64(r.n); text(r.label ?? ''); f64(r.savedAt); f64(r.missionT); text(r.stage ?? ''); text(r.runId ?? ''); if (r.regret) { byte(1); text(r.regret); } else byte(0); }
+    let n = 0; for (const b of parts) n += b.length; const all = new Uint8Array(n); n = 0; for (const b of parts) { all.set(b, n); n += b.length; }
+    this.F.hand(all, (p, m) => X.face_saves_in(this.h, p, m)); this.count('the controller\'s shelf handed to the Rust game (face_saves_in)'); }
   /** THE HARNESS'S OWN SNAPSHOT (tools/qa/headless.ts `W.snapshot`): the file of the puppet's fields is made as ever (a tool reads it), and the Rust game is
    *  kept beside it. `W.restore` of that same file, unchanged, is the kept game standing again; anything else is the TypeScript's `loadState` on the puppet. */
   keptFor(s: object): void { if (!this.keeps() || !this.live() || this.inStep) return; this.scanFlush();
@@ -376,7 +387,7 @@ export class RustHost {
     // (the start's own bytes, 10 MB and more, are read again only by the audit and by the step's warm-up: the fast way lets them go, or each of the four
     // games that stand in a slot would hold its start for as long as it stands there)
     { const keep = this.audit || (this.o.warmSteps ?? 0) > 0; this.lastState = keep ? start : null; this.lastBlock = keep ? block : null; this.lastRust = keep ? start : null; }
-    this.starts++; if (this.rec) this.rec.starts = this.starts; this.warmDue = this.starts === 1; this.scan = null; this.scanStart = this.starts;
+    this.starts++; if (this.rec) this.rec.starts = this.starts; this.warmDue = this.starts === 1; this.shelfSig = ''; this.scan = null; this.scanStart = this.starts;
     // THE MENU'S QUESTIONS: every order row and the squad's posture ask the Rust game by the row's id (ask.ts, `face_ask`); a row's `issue` gives the order
     // on the Rust side and the puppet takes the state again
     if (this.starts === 1 && this.o.asks !== false && X.face_ask) this.asks = B.installAsks(g, B.reg, (kind: number, row: number, seat: number, b: Uint8Array) => { this.asked++; this.F.hand(b, (p, n) => X.face_ask(this.h, kind, row, seat, p, n)); return this.F.outView().slice(); }, () => { this.reapply('an order row issued'); });
@@ -401,7 +412,11 @@ export class RustHost {
     for (const [q, n] of R.noWay) this.noWay.set(q, (this.noWay.get(q) ?? 0) + n); for (const [q, n] of R.noSetter) this.noSetter.set(q, (this.noSetter.get(q) ?? 0) + n); for (const q of R.noWindow) this.noWindow.add(q);
     for (const [c, n] of Object.entries<number>(R.made)) if (n) this.made[c] = (this.made[c] ?? 0) + n; }
   /** after every apply: the rows and the posture the apply made get the closures that ask the Rust game (ask.ts) */
-  private after(R: any): void { this.asks?.after(); this.took(R); this.visApplied = this.g.player?.visibility; this.hoverApplied = this.g.hover; this.dieRef = this.g.dice?.n; this.clockRef = this.clock(); this.putRef = this.B.PUT_BACKS.n; if (!this.tookRow) this.savesRef = this.g.chronicle?.counts?.saves ?? 0; }
+  // STAND-IN: THE HIGHLIGHTED ROW IS ONE OF THE NEARBY LIST'S ROWS in the TypeScript (player.ts pickHover: `g.hover = rows[pl.nearSel]`), and a reader
+  // holds it to the list by identity (the soak's `selector-highlight`; the scripted player's own highlight). The bridge carries `Game.hover` as a value,
+  // so the apply leaves a row of its own beside the list. Put back on the list's row here. Belongs in the schema: `hover` a reference into `nearby`.
+  private hoverRow(): void { const g = this.g, hv = g.hover, N = g.nearby; if (!hv || !Array.isArray(N) || N.includes(hv) || OFF.has('hoverrow')) return; const r = N[g.player?.nearSel ?? 0]; if (r && r.kind === hv.kind && r.verb === hv.verb) g.hover = r; }
+  private after(R: any): void { this.asks?.after(); this.took(R); this.hoverRow(); this.visApplied = this.g.player?.visibility; this.hoverApplied = this.g.hover; this.dieRef = this.g.dice?.n; this.clockRef = this.clock(); this.putRef = this.B.PUT_BACKS.n; if (!this.tookRow) this.savesRef = this.g.chronicle?.counts?.saves ?? 0; }
   private copyBlock(): void { const t = now(), mine = this.tsBlock(), theirs = this.rustBlock(); mine.set(theirs.subarray(0, mine.length)); if (this.audit) this.lastBlock = mine.slice(); this.T.block += now() - t; }
   /** THE FILTERED APPLY: the listed fields of what changed since the last one, and the step's out events */
   applyStep(): void {
@@ -593,6 +608,7 @@ export class RustHost {
     if (this.h && g.dice && g.dice.n !== this.dieRef) { this.dieMoved++; if (this.rec) this.rec.dieMoved = this.dieMoved; }
     { const why = this.startWhy(); if (why === 'back') { this.restep(); this.handWrites(k); } else if (why !== null) this.start(why); else this.handWrites(k); }
     if (this.starts > 0 && this.scanStart !== this.starts) { this.scanStart = this.starts; this.scan = null; } if (!this.quietOn) this.scanFlush();
+    if (this.keeps()) this.shelfIn();
     this.o.beforeHost?.(this, cmds);
     // THE HOST'S HALF: each seat's record, every camera and Input row, in the bridge's own small buffer (export.ts hostHalf, io::take_host_half)
     t = now(); const hb: Uint8Array = B.hostHalf(g, B.reg, cmds); this.hostBytes = hb.length; this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive();   /* (the view's matrix is the host camera's as the host left it: game_run::view_live) */ this.T.hostHalf += now() - t;
@@ -607,6 +623,11 @@ export class RustHost {
     t = now(); try { X.face_step(this.h, dt, 0); } catch (e) { throw new Error(`the Rust game's tick ${k} panicked: ${this.F.panicText() || String(e)}`); } const el = now() - t; this.T.step += el; if (el > this.worstStep) { this.worstStep = el; this.worstStepAt = k; }
     if (this.F.mem.buffer.byteLength !== this.memPages) this.grew++;
     if (!this.o.quiet) { const said = this.F.outText(); if (said) this.say(said.trimEnd()); }
+    // WHAT THE TICK ASKED OF THE SAVE CONTROLLER (player.ts:493, Enter once down): a save in memory to go back to as this update ends. The controller is
+    // the host's: its `due` is set on the puppet and its tick, in the dress step, puts the kept game back. (The page's path: src/host/rustgame.ts.)
+    if (this.keeps() && X.face_saves_asked) { const asked = X.face_saves_asked(this.h); if ((asked & 1) && g.saves) { g.saves.due = this.F.outText(); this.count('the tick asked for a save in memory to be put back (Enter once down)'); }
+      // (the same call puts the Rust game's flag of a restart's camera cut down; the puppet's own update takes the cut on its next frame, as the TypeScript's does)
+      if (asked & 2) this.cutDue = true; }
     this.o.afterStep?.(this);
     // (RH_HALF=<ticks, comma>: the host's half of those ticks, a line a field's value, for two runs to be held to each other by `diff`)
     if (process.env.RH_HALF?.split(',').includes(String(k))) { const A = B.A; for (const [ty, v] of B.hostHalfParts(g, cmds) as [string, any][]) { if (ty === 'u32') continue; const b: Uint8Array = B.exportPart(g, B.reg, [[ty, v]]); const offs: number[] = []; for (let i = 0; i < b.length; i += 8) offs.push(i);
@@ -638,6 +659,7 @@ export class RustHost {
     // THE RUST GAME BEGAN ITS MISSION AGAIN INSIDE THE TICK (the player's own restart: Enter once down, Shift+Enter). The TypeScript's restart makes a new
     // mission RECORD, and that identity is how everything outside the tick knows a run began (the save controller's `missionRef`: a fresh run, an empty
     // shelf; a driver's own `game.mission !== before`). The apply wrote the fields into the record that stood, so the puppet is given a new one here.
+    if (this.cutDue) { this.cutDue = false; g.restartCut = true; }
     { const m = g.mission; if (m && m === this.missionRef && m.t0 !== this.t0Ref && !OFF.has('newrun')) { g.mission = { ...m, stats: { ...m.stats } }; this.count('the Rust game restarted inside its tick: the puppet\'s mission record made anew'); } }
     this.dispatch();
     // ---- the dress step: what the tick does that has no Rust body and a reader of the puppet needs
