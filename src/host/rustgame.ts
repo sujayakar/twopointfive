@@ -30,6 +30,8 @@ import { PUT_BACKS } from '../math/side';
 import { knobRegistry } from '../game/knobs';
 import { knobsToRust } from '../game/rustknobs';
 import { DC } from '../sim/doorshome';
+import { simPart, simPartLen, P_DICE } from '../sim/state';
+import { takeSnapshot, restoreSnapshot, type Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
 import type { PlayerCmd } from '../game/cmd';
 import { dressStep, DRESS_MS } from './rustdress';
@@ -64,7 +66,7 @@ export const RUST_GAME = {
   on: false, bytes: 0, fetchMs: 0, compileMs: 0, startMs: 0, startBytes: 0, handle: 0, slot: -1, ticks: 0, starts: 0, grew: 0, memory: 0,
   /** ms of the last step and summed over every step: the host's half, the tick, the filtered export, the apply, the out events, the dress step */
   last: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, sum: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, worst: { step: 0, apply: 0, at: 0 },
-  pokes: 0, lightsMade: 0,
+  pokes: 0, lightsMade: 0, wholes: 0, wholeMs: 0, rowsKept: 0, backs: 0, snapMs: 0,
   outEvents: 0, outArms: {} as Record<string, number>, outThrew: {} as Record<string, string>, bareRows: [] as string[], gives: [] as string[], cuts: 0, probeAsks: 0,
   dress: DRESS_MS,
   /** what the forward export could not carry at the last start (the bridge's own report) */
@@ -93,7 +95,7 @@ export async function rustBoot(): Promise<void> {
 }
 
 // ---- a game
-interface Held { g: Game; doorKept: number[]; lightOf: Map<number, Record<string, any>>; flags: boolean[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; cutSerial: number[]; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; defsSeen: WeakSet<object>; defFns: Map<Record<string, any>, { fns: [string, unknown][]; when: unknown }> }
+interface Held { g: Game; snap0: Snapshot | null; doorKept: number[]; lightOf: Map<number, Record<string, any>>; flags: boolean[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; cutSerial: number[]; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; defsSeen: WeakSet<object>; defFns: Map<Record<string, any>, { fns: [string, unknown][]; when: unknown }> }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
@@ -114,14 +116,14 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { g, doorKept: [], lightOf: new Map(), flags: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, cutSerial: [], ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, defsSeen: new WeakSet(), defFns: new Map() };
+  H = { g, snap0: null, doorKept: [], lightOf: new Map(), flags: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, cutSerial: [], ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, defsSeen: new WeakSet(), defFns: new Map() };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // A START FROM OUTSIDE A TICK: the TypeScript stands or restores the game on the puppet as it always did; the Rust game is started again from it as the
   // next step opens. (Inside a step these are the Rust game's own and never run here.)
   for (const name of ['restartEncounter', 'loadState']) {
     const was = G[name]; if (typeof was !== 'function') continue;
-    G[name] = function (this: unknown, ...a: unknown[]) { const r = was.apply(this, a); if (!held.inStep) held.stale = name; return r; };
+    G[name] = function (this: unknown, ...a: unknown[]) { if (name === 'restartEncounter' && !held.inStep && held.h && !held.stale) backToStart(held); const r = was.apply(this, a); if (!held.inStep) held.stale = name; return r; };
   }
   // THE BOX WORLD LISTED for the picture (engine.world.upload, between ticks) is also where the Rust game lists its own and frees the frame boxes gone by:
   // a listing since the last step is made there as the next step opens
@@ -156,6 +158,9 @@ function start(S: Held): void {
   const slot = g.sim.bind();
   if ((PLACE as unknown as { slot: number }).slot !== slot) throw new Error(`rust=1: the game's block stands in slot ${slot} of the module and the world kept for the Rust game is ${(PLACE as unknown as { slot: number }).slot}: the two must be one number (rust/game box_mirror_take)`);
   if (S.h) { X!.face_drop(S.h); S.h = 0; }
+  // (the bridge's book of which object has which row is a game's for as long as the Rust game it was exported into: a new Rust game, a new book)
+  { const bk = bookOf(g); if (bk) { bk.ids.clear(); bk.lists.clear(); bk.first.clear(); bk.loose.clear(); } }
+  { const t = performance.now(); S.snap0 = takeSnapshot(g); RUST_GAME.snapMs = performance.now() - t; }   // (the game as the TypeScript stood it: what a restart from a card goes back to, `backToStart`)
   const state = exportGame(g, reg());
   RUST_GAME.notCarried = [...report()].map(([k, v]) => `${k} x${v.n}`);
   const h = call('face_new_at', () => hand(state, (p, n) => X!.face_new_at(p, n, slot)));
@@ -174,34 +179,31 @@ function start(S: Held): void {
 const cutOf = (S: Held, seat: number): { at: [number, number, number]; serial: number } => { X!.face_seat_cut(S.h, seat); const b = outBytes(); if (b.length < 32) return { at: [0, 0, 0], serial: -1 }; const d = new DataView(b.buffer, b.byteOffset, 32); return { at: [d.getFloat64(0, true), d.getFloat64(8, true), d.getFloat64(16, true)], serial: d.getFloat64(24, true) }; };
 
 /** THE FILTERED EXPORT ONTO THE PUPPET, its out events dispatched. Answers the ms of the export, the apply and the dispatch. */
-function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; bytes: number } {
+/** WHAT STANDS ROUND EVERY APPLY, the filtered one and the whole one: the stand-ins for what the bridge does not carry, the picture's lights, and what
+ *  the host's writes between ticks are told by (`posture`: the squad's posture as the puppet had it before the apply) */
+function after(S: Held, R: any, posture: any, first: boolean): void {
   const g = S.g, G = g as unknown as Record<string, any>;
-  let t = performance.now();
-  call('face_puppet', () => X!.face_puppet(S.h, first ? 1 : 0)); grown(g);
-  const blob = outBytes(), ex = performance.now() - t;
-  t = performance.now();
-  // STAND-IN: THE SQUAD'S POSTURE is three closures in TypeScript (silent.ts) and a struct of no fields in the bridge: the apply puts a bare object where
-  // the Rust game holds one. The puppet keeps the object it had. Belongs in the generated apply (the next cut's closures by id).
-  const posture = G.orders?.posture;
-  // STAND-IN: THE LESSON'S RUN is the Mission by identity (lesson.ts `settling`: `this.run === this.g.mission`) and an identity serial in the bridge.
-  const R = applyGame(g, blob, reg(), { hooks: HOOKS, puppet: { lists: lists(), start: first, rows: S.rows, ctx: S.ctx, slowTable: SLOW, vals: VALS } });
   if (G.orders && G.orders.posture !== posture && typeof G.orders.posture?.word !== 'function') G.orders.posture = typeof posture?.word === 'function' ? posture : null;   // (one the Rust game made inside a tick, where the puppet had none: no posture is shown until its closures are generated)
   if (G.lesson && G.lesson.run && G.lesson.run !== G.mission) G.lesson.run = G.mission;   // (wrong for the ticks between a restart's new Mission and the lesson filing it. Belongs in the bridge: the run carried as "is the mission's")
   // STAND-IN: AN ORDER ROW MADE INSIDE A TICK arrives with none of its closures (label, can, issue: silent.ts, doortools.ts, pairorders.ts and others
   // register rows as the fight goes). Until the generated closures that ask the Rust game by the row's id, such a row is shown greyed, with a reason, and
   // gives nothing. Belongs in the generated apply.
-  if (R.made?.OrderDef || first) for (const d of (G.orders?.defs ?? []) as Record<string, any>[]) {
-    if (S.defsSeen.has(d)) continue; S.defsSeen.add(d);
-    if (typeof d.issue === 'function' && (typeof d.label === 'function' || typeof d.label === 'string')) continue;
+  // (…wherever the HUD meets one: the table of rows, and the open menu's own list, which can hold a row the table does not: the posture's)
+  const bare = (d: Record<string, any>) => {
+    if (S.defsSeen.has(d)) return; S.defsSeen.add(d);
+    if (typeof d.issue === 'function' && (typeof d.label === 'function' || typeof d.label === 'string')) return;
     if (typeof d.label !== 'function' && typeof d.label !== 'string') d.label = String(d.id);
     d.can = () => 'not under ?rust=1 yet'; if (typeof d.issue !== 'function') d.issue = () => 'not under ?rust=1 yet';
     if (!RUST_GAME.bareRows.includes(String(d.id))) RUST_GAME.bareRows.push(String(d.id));
-  }
+  };
+  if (R.made?.OrderDef || first) for (const d of (G.orders?.defs ?? []) as Record<string, any>[]) bare(d);
+  for (const d of (G.orders?.menu?.rows ?? []) as Record<string, any>[]) bare(d);
   // STAND-IN: A ROW'S CLOSURES ARE NOT IN THE BRIDGE, and a value the apply makes anew inside a row (`standsIn`: its `when`) has only the listed fields. A
   // row the puppet stood with keeps the functions it had; a row made in a tick stands in for nothing. Belongs in the generated apply, with the rows above.
   for (const d of (G.orders?.defs ?? []) as Record<string, any>[]) { const was = S.defFns.get(d);
     if (was) for (const [k, v] of was.fns) if (typeof d[k] !== 'function') d[k] = v;
     if (d.standsIn && typeof d.standsIn.when !== 'function') d.standsIn.when = typeof was?.when === 'function' ? was.when : () => false; }
+  for (const d of (G.orders?.menu?.rows ?? []) as Record<string, any>[]) if (d.standsIn && typeof d.standsIn.when !== 'function') d.standsIn.when = () => false;
   // STAND-IN: A DOOR'S KEPT CENTRE is a memo in two halves: the angle it was made for and its x and z are columns of the block (sim/doorshome.ts
   // posAngle, posX, posZ), the array `Door.posAt` an object's field that is on neither list of the filtered export. The puppet's array stays as the
   // start left it, and doors.ts posAside (a look ahead between ticks) writes it back over the columns the Rust tick wrote: seen as doors at [0, 1, 0]
@@ -220,6 +222,19 @@ function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; 
   S.flags = FLAGS.map(k => !!G[k]); S.launch = G.player?.launchHeld ?? null;   // (the host's switches as the Rust game has them now: what differs by the next step, the host wrote)
   S.putBacks = PUT_BACKS.n;   // (the apply counts itself as a put-back, for the box world's copy: any other count by the next step is a snapshot somebody put back)
   S.loads = G.chronicle?.counts?.loads | 0;   // (…and a checkpoint read from a file counts itself here: savestate.ts loadState)
+}
+function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; bytes: number } {
+  const g = S.g, G = g as unknown as Record<string, any>;
+  let t = performance.now();
+  call('face_puppet', () => X!.face_puppet(S.h, first ? 1 : 0)); grown(g);
+  const blob = outBytes(), ex = performance.now() - t;
+  t = performance.now();
+  // STAND-IN: THE SQUAD'S POSTURE is three closures in TypeScript (silent.ts) and a struct of no fields in the bridge: the apply puts a bare object where
+  // the Rust game holds one. The puppet keeps the object it had. Belongs in the generated apply (the next cut's closures by id).
+  const posture = G.orders?.posture;
+  // STAND-IN: THE LESSON'S RUN is the Mission by identity (lesson.ts `settling`: `this.run === this.g.mission`) and an identity serial in the bridge.
+  const R = applyGame(g, blob, reg(), { hooks: HOOKS, puppet: { lists: lists(), start: first, rows: S.rows, ctx: S.ctx, slowTable: SLOW, vals: VALS } });
+  after(S, R, posture, first);
   const ap = performance.now() - t; t = performance.now();
   const ev: { arm: string; e: any }[] = R.out ?? [];
   if (ev.length && !first) { RUST_GAME.outEvents += ev.length;
@@ -229,6 +244,41 @@ function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; 
   void dispatchOut;
   return { ex, ap, out: performance.now() - t, bytes: blob.length };
 }
+/** STAND-IN: A RESTART FROM OUTSIDE A TICK (a card's button: `Game.restart` → `restartEncounter`) cannot run on the puppet as play left it. The filtered
+ *  apply makes a value with its listed fields only, and neither apply makes a container the Rust game holds empty (the importer keeps `undefined`
+ *  where the TypeScript had none and the Rust value is blank), so the TypeScript's own reset code meets values with fields missing: seen as
+ *  `st.wedges is not iterable` (digin.ts digInReset) and 'row undefined of the men left twice' (the player's `Character.man_row` back as nothing).
+ *  So the puppet is first put back to THE GAME AS THE TYPESCRIPT STOOD IT at the last start (a snapshot taken there: game/rollback.ts), with the clock
+ *  and the die's place kept as play left them, as a TypeScript restart keeps them; then `restartEncounter` runs as it always did, and the next step starts
+ *  the Rust game from it. What else a TypeScript restart carries over from the try that ended is lost here. Belongs in the bridge (values made whole, a
+ *  man's row) or in the Rust game (the restart made there, with the hooks a new man needs on the puppet). */
+function backToStart(S: Held): void {
+  if (!S.snap0) return;
+  const g = S.g, time = g.time, at = simPart(P_DICE) >>> 2, n = simPartLen(P_DICE) >>> 2, dice = g.sim.w.slice(at, at + n);
+  restoreSnapshot(S.snap0);
+  (g as unknown as { time: number }).time = time; g.sim.bind(); g.sim.w.set(dice, at);
+  RUST_GAME.backs++;
+}
+/** THE WHOLE STATE ONTO THE PUPPET (`face_export` → the bridge's whole apply): for the moments TypeScript is about to run a START on the puppet (a restart
+ *  from a card: `restartEncounter` reads and resets fields the filtered export never carried, and on a value the filtered apply made it finds them
+ *  missing: seen as `st.wedges is not iterable` in digin.ts). A third of a second, once, outside any step. */
+function whole(S: Held): void {
+  const g = S.g, G = g as unknown as Record<string, any>, t = performance.now();
+  // (the box world's copy in the module is each side's own: boxMirror.ts; its fields are left as the puppet has them)
+  WHOLE ??= (() => { const only = new Set<string>(); for (const T of Object.values<any>(SCHEMA.types)) if (T.k === 'struct' && T.mod !== 'scene_box_mirror') for (const f of T.fields) only.add(`${T.mod}::${T.name}.${f.rust}`); return only; })();
+  call('face_export', () => X!.face_export(S.h)); grown(g);
+  const posture = G.orders?.posture;
+  // STAND-IN: A MAN'S ROW OF THE BLOCK (sim/men/cols.ts ManCols `S`, `r`) is written by the whole apply from the bridge's `Character.man_row`, and for
+  // the player's own character that came back as nothing after play (seen: `r` undefined, then 'row undefined of the men left twice' in the restart).
+  // Rows change hands only in a start or inside a tick, so a man keeps the row he had where the apply leaves him none. Belongs in the bridge.
+  const men: Record<string, any>[] = []; for (const s of g.seats) men.push(s.view.player, s.view.player.char); for (const m of [...g.guards, ...(G.civilians ?? [])]) men.push(m, m.char);
+  const rows = men.map(m => [m.S, m.r]);
+  const R = applyGame(g, outBytes(), reg(), { hooks: HOOKS, only: WHOLE });
+  men.forEach((m, i) => { if (m.r === undefined || m.S === undefined) { m.S = rows[i][0]; m.r = rows[i][1]; RUST_GAME.rowsKept++; } });
+  after(S, R, posture, true);
+  RUST_GAME.wholes++; RUST_GAME.wholeMs = performance.now() - t;
+}
+let WHOLE: Set<string> | null = null;
 /** STAND-IN: the generated dispatcher calls `g.saves.request(why, label)`; the method is `request(g, why, label)` (savestate.ts). Belongs in out-dispatch.ts. */
 const OUT_OWN: Record<string, (g: any, e: any) => void> = {
   CheckpointsRequest: (g, e) => { g.saves?.request(g, e.why, e.label); },
@@ -320,6 +370,7 @@ export function rustHashes(): { die: number; time: number; parts: Record<string,
 /** FOR A TOOL THAT WROTE THE PUPPET BY NAME between ticks (a staging hook, a panel's button): the Rust game is started again from the puppet as the next
  *  step opens. Only as good as the puppet is whole: what the filtered export does not carry stands on the puppet as it stood at the last start. */
 export function rustResync(why = 'a tool asked'): void { if (H) H.stale = why; }
+/** …and the other way, before a tool READS the puppet for something the page does not show: the Rust game's whole state onto it */
+export function rustWhole(): void { if (H && H.h && !H.stale && !H.inStep) whole(H); }
 /** mean ms a step of each stage, over the steps so far */
 export function rustMeans(): Record<string, number> { const n = Math.max(1, RUST_GAME.ticks), M = RUST_GAME.sum; return { ticks: RUST_GAME.ticks, host: M.host / n, step: M.step / n, export: M.export / n, apply: M.apply / n, out: M.out / n, dress: M.dress / n, bytes: M.bytes / n }; }
-void SCHEMA;
