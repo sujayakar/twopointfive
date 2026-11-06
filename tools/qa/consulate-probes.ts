@@ -17,11 +17,12 @@
 import { readFileSync, mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { standUp, ROOT } from './headless.ts';
+import { exporterCheck } from './level-file.ts';
 const { RESCUE, checkRescue } = await import(`${ROOT}/src/game/rescue.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { parseLevelData, validateLevelData, structuralDiff } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { lintLevel } = await import(`${ROOT}/src/editor/lint.ts`);
-const { build: buildConsulate, CONSULATE_ROOMS } = await import(`${ROOT}/tools/levels/consulate.ts`);
+const { CONSULATE_ROOMS } = await import(`${ROOT}/tools/levels/consulate.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { BoxFlag, MAX_GLASS } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { SCENARIOS, specOfQuery, entryOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
@@ -60,10 +61,7 @@ export const consulateLevel = guarded(async () => {
   const { verdict, done } = family("consulate-level: the file, the lint, the sizes, the rescue's data on its floor, the mission row");
   const data = parseLevelData(readFileSync(FILE, 'utf8')), errs: string[] = validateLevelData(data);
   verdict(errs.length === 0, 'the file validates', errs.length ? errs.slice(0, 6).join(' · ') : `${data.boxes.length} boxes · ${data.doors.length} doors · ${data.props.length} props · scenarios ${Object.keys(data.scenarios ?? {}).join(', ')}`);
-  const gen = buildConsulate(); gen.level.scenarios = gen.scenarios; { const DS = await import('../../src/scene/doorSize.ts'); DS.fitDoors(gen.level.doors); DS.fitWaysOut(gen.level, (gen.scenarios as any)?.quiet); }   // (as tools/levels/export.ts writes it: the leaves and the ways out fitted to the real doors)
-  { const FL = await import('../levels/flatLayers.ts'), LV = await import('../../src/scene/lived.ts'); FL.layGeneratedFloor(gen.level.boxes, gen.groups, LV.isLived, BoxFlag); }   // (… and its floor swept into order, as the export sweeps it before it writes: flatLayers.ts)
-  const diffs: string[] = []; const n = structuralDiff(gen.level, loadLevel(data, { lived: true, dressing: false }), diffs);   // (the generator builds the lived-in rooms' furniture: src/scene/lived.ts — and none of the dressing tools/levels/dress.ts appends for the destruction switch, which is on where the page's switches are: left out by name, so the line reads the same on both stands)
-  verdict(n === 0, "the file is the generator's level (tools/levels/consulate.ts build → the same Level, field for field)", n ? `${n} diffs: ${diffs.slice(0, 4).join(' · ')} — bun run tools/levels/export.ts consulate` : '0 diffs (before the dressing export.ts adds)');
+  { const ex = exporterCheck('consulate'); verdict(ex.ok, "the file is the generator's level, and its look twin with it (the exporter's own answer: tools/qa/level-file.ts)", ex.said); }
   const lint = lintLevel(data), bad = lint.findings.filter((f: any) => f.severity !== 'info');
   verdict(lint.errors === 0 && lint.warnings === 0, 'the level lint is clean (no error, no warning)', bad.length ? bad.slice(0, 5).map((f: any) => `${f.severity}: ${f.message}`).join(' · ') : `${lint.infos} notes in all`);
   const L = loadLevel(data), glass = L.boxes.filter((b: any) => (b.flags ?? 0) & BoxFlag.Glass).length;

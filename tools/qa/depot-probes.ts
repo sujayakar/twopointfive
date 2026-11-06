@@ -38,15 +38,16 @@
 // the knobs a probe names, and those are put back.
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { exporterCheck } from './level-file.ts';
 const { NIGHTBREACH, SQUAD4_BUDGET } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR, checkStructure } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { ROOMFIGHT } = await import(`${ROOT}/src/game/roomfight.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { parseLevelData, validateLevelData, structuralDiff } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { lintLevel } = await import(`${ROOT}/src/editor/lint.ts`);
-const { build: buildDepot, DEPOT_ROOMS } = await import(`${ROOT}/tools/levels/depot.ts`);
+const { DEPOT_ROOMS } = await import(`${ROOT}/tools/levels/depot.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { GUARD_EYE, eyeContact, lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
 const { BoxFlag, MAX_GLASS } = await import(`${ROOT}/src/scene/boxes.ts`);
@@ -191,14 +192,7 @@ export const depotLevelFile = guarded(async () => {
   if (errs.length) return done();   // (nothing below can load it)
   const lint = lintLevel(data, {}), named = lint.findings.filter((x: any) => x.severity !== 'info').slice(0, 4).map((x: any) => `${x.severity} ${x.code}: ${x.message}${x.ids?.length ? ` [${x.ids.slice(0, 3).join(', ')}]` : ''}`);
   verdict(lint.errors === 0 && lint.warnings === 0, 'level-lint is clean on it (no errors, no warnings): spawn → objectives → exit reachable on the nav grid, every door walkable both sides, no overlapping statics', `${lint.errors} errors · ${lint.warnings} warnings${named.length ? ' · ' + named.join(' · ') : ''}`);
-  const { level: gen, scenarios, groups } = buildDepot(); gen.scenarios = scenarios; { const DS = await import('../../src/scene/doorSize.ts'); DS.fitDoors(gen.doors); DS.fitWaysOut(gen, scenarios?.quiet); }   // (as tools/levels/export.ts writes it: the leaves and the ways out fitted to the real doors)
-  { const FL = await import('../levels/flatLayers.ts'), LV = await import('../../src/scene/lived.ts'); FL.layGeneratedFloor(gen.boxes, groups, LV.isLived, BoxFlag); }   // (… and its floor swept into order, as the export sweeps it before it writes: flatLayers.ts)
-  // (the export's DRESSING — tools/levels/dress.ts, the file's last boxes — is not the generator's: the loader leaves it out with the destruction switch off, as
-  //  the frozen stand has it, so the switch is lowered for this one load on the shipped stand too. `export.ts depot --check` holds the dressed file)
-  const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`), wasOn = DESTRUCTION.on; let bare: any;
-  try { DESTRUCTION.on = false; bare = loadLevel(parseLevelData(text), { lived: true }); } finally { DESTRUCTION.on = wasOn; }   // (the generator builds the lived-in rooms' furniture: src/scene/lived.ts)
-  const diffs: string[] = []; const n = structuralDiff(gen, bare, diffs);
-  verdict(n === 0, 'the file reloads to the generator\'s Level field for field (not stale: tools/levels/export.ts depot --check)', n ? `${n} diffs · ${diffs.slice(0, 4).join(' · ')}` : '0 diffs');
+  { const ex = exporterCheck('depot'); verdict(ex.ok, 'the file is the generator\'s level, and its look twin with it (the exporter\'s own answer: tools/qa/level-file.ts)', ex.said); }
   const L = depotLevel(); const glass = L.boxes.filter((b: any) => b.flags & BoxFlag.Glass).length;
   const out = L.boxes.filter((b: any) => { const y = b.yaw ?? 0, c = Math.abs(Math.cos(y)), sn = Math.abs(Math.sin(y)), hx = b.h[0] * c + b.h[2] * sn, hz = b.h[0] * sn + b.h[2] * c;   // (a yawed box's own footprint)
     return b.c[0] - hx < WORLD.min[0] - 1e-6 || b.c[0] + hx > WORLD.max[0] + 1e-6 || b.c[2] - hz < WORLD.min[2] - 1e-6 || b.c[2] + hz > WORLD.max[2] + 1e-6 || b.c[1] + b.h[1] > WORLD.max[1] + 1e-6 || b.c[1] - b.h[1] < WORLD.min[1] - 1e-6; }).length;

@@ -259,10 +259,17 @@ export const squadplayTry = guarded(async () => {
     const as = reds.map((m: any) => O.of(m)), back = as.every((a: any, i: number) => a?.order === 'stack' && a.door === d && String(a.there).startsWith('rear security') && dist(a.post, before[i]) > 0.5);
     const armed = R.until(() => D.set.length === 1, 45); R.step(30);
     const note = R.notes().filter(s => /^\[F\]/.test(s)).join(' ; ');
-    R.press(F); const l2 = R.last(); const blown = R.until(() => D.set.length === 0, 2); R.until(() => !D.ops.length, 40); R.step(60);
+    // (F is pressed half a second after the charge is set, with blue still walking to its stand-off: the charge blows when the pair is stood off, the 'armed'
+    // beat, with nothing more asked of Sam. The line waited two seconds flat for it, which was the rest of that walk: 1.90 s on the old stand, 2.08 s at the
+    // squad's pace on the page's. It holds the blow to the frame both are true, the later of the word and the armed beat, ten seconds at most, and nobody of
+    // ours inside the blast (the game arms on a man who has stood still short of his mark, too). SQUADTRY_BREAK=1: half a second at most, shorter than the
+    // walk on either stand: the wait is what it breaks, the frame is read only of a charge that blew.)
+    const back0 = D.stats.backblast; R.press(F); const l2 = R.last(), tWord = R.game.time; const blown = R.until(() => D.set.length === 0, process.env.SQUADTRY_BREAK === '1' ? 0.5 : 10), tBlow = R.game.time - tWord;
+    const onArmed = blown && Math.abs(R.beatT(op, 'blow') - Math.max(R.beatT(op, 'armed'), R.beatT(op, 'the word'))) < 1e-6, clear = D.stats.backblast === back0;
+    R.until(() => !D.ops.length, 40); R.step(60);
     const stillRed = reds.every((m: any) => m.state === 'dead' || (O.of(m)?.order === 'stack' && O.of(m).door === d));
     verdict(red && l0?.order === 'stack' && set && blue && /^breach with a charge/.test(row?.text ?? '') && !row?.off && l1?.order === 'charge' && l1.who.join(' + ') === 'Blue One + Blue Two' && back, 'red stacked on the manager\'s door by T + B; T, X on it, 5, 3: the charge is blue\'s, and red steps back to rear security with its order still \'stack up\' on that door', `${line(l0)} · ${line(l1)} · ${reds.map((m: any, i: number) => `${m.callsign} ${at(before[i])} → ${at(as[i].post)} [${as[i].there}]`).join(' · ')}`);
-    verdict(armed && /^\[F\] go · blue waiting/.test(note) && l2?.order === 'go' && l2.who.join(' + ') === 'Blue One + Blue Two' && blown && op?.ended === 'in' && stillRed && R.held === 0, 'the charge set, the block offers F; F: the charge is blown and blue goes in behind it — red keeps its order; nothing held', `set ${armed} · "${note}" · ${line(l2)} · blown ${blown} · blue's order ended '${op?.ended}' · red still on 'stack' ${stillRed} · most keys held ${R.held} · ${R.keys.join(' ')}`); }
+    verdict(armed && /^\[F\] go · blue waiting/.test(note) && l2?.order === 'go' && l2.who.join(' + ') === 'Blue One + Blue Two' && blown && onArmed && clear && op?.ended === 'in' && stillRed && R.held === 0, 'the charge set, the block offers F; F: the charge is blown as the pair is stood off and blue goes in behind it — red keeps its order; nothing held', `set ${armed} · "${note}" · ${line(l2)} · blown ${blown}${blown ? ` ${f2(tBlow)} s after the word, ${onArmed ? 'on' : 'NOT ON'} the frame the word and the armed beat are both in, ${clear ? 'nobody' : 'ONE OF OURS'} in the blast` : ''} · blue's order ended '${op?.ended}' · red still on 'stack' ${stillRed} · most keys held ${R.held} · ${R.keys.join(' ')}`); }
   return done();
 });
 
