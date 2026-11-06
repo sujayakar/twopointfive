@@ -66,7 +66,7 @@ async function stand(file: string | null, seed: number, on: boolean, q: string |
   if (way) ROOMCLEAR.way = way;   // (the room clear's way in: 2 = the level's first other start)
   if (q && (g.level.scenarios?.quiet || /roomclear|rescue/.test(q))) await hushed(() => startFromQuery(g, q));
   g.godMode = true; g.aiEnabled = true; g.tune.qrf = true; g.tune.perimeter = false;
-  for (let i = 0; i < 20; i++) W.step(DT);
+  W.steps(20, DT);
   return W;
 }
 const steps = (W: any, secs: number, until?: () => boolean, each?: () => void) => { for (let i = 0; i < Math.round(secs * 60); i++) { each?.(); W.step(DT); if (until?.()) return true; } return !!until?.(); };

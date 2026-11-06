@@ -16,6 +16,9 @@ for f in files:
         v, bound, recv, args, close = m.group(1), m.group(2).strip(), m.group(3), m.group(4).strip(), m.group(5)
         opened = '{' in m.group(0)[:m.group(0).index(recv)].split(')')[-1]
         if re.search(r'\b' + re.escape(v) + r'\b', bound + ' ' + args) or not args or opened != bool(close): return m.group(0)
+        # (THE BOUND IS A NUMBER WORKED OUT ONCE: digits, plain names, arithmetic and Math's functions. A bound that reads the game (`&& Q.state !== …`,
+        # a `.length`, a call) is tool code between two steps, and such a loop is left alone)
+        if not re.fullmatch(r'(?:\s|\d|\.\d|[-+*/()]|Math\.(?:round|floor|ceil|max|min|trunc)|\b[A-Za-z_$][\w$]*\b(?![.\[(]))+', bound): return m.group(0)
         n += 1; return f'{recv}.steps({bound}, {args});'
     t = PAT.sub(sub, s)
     if n: tot += n; nf += 1

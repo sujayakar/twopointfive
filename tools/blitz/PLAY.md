@@ -126,8 +126,16 @@ tally under `ts` is not the tally the tool makes with no word (which rolls `Math
   between them). The host hands its half over, steps the Rust game and asks it the camera's two inputs (`face_look`: where to follow, the aim point);
   nothing is exported or applied until the run ends, when the puppet takes what changed over the whole run in one filtered apply, the run's out events
   are dispatched in order and the dress step runs once. What differs from the same steps one by one: an autosave due inside the run is taken as it
-  ends, the par clock and the verdict tick once, an out event reaches the host's objects late. `tools/blitz/quiet-loops.py` rewrites a loop that only
-  steps into that call (the exact shape only).
+  ends, the par clock and the verdict tick once, an out event reaches the host's objects late. ASKED FOR BY NAME (`RH_QUIET=1`) AND NOT YET THE SAME
+  PLAY: the Rust tick writes the lens's own row at times (a start snaps it onto the man) and a quiet run does not bring it across, so the host hands
+  its own lens back. `tools/blitz/quiet-check.ts` (the office walked by input in six runs, 2,340 ticks): the die and the block equal on every tick
+  under `ts`, quiet and with an apply every step; the host's half of the quiet run differs from tick 2 (`FollowCamera.target`); 3.4 ms a tick quiet
+  against 8.5 with an apply every step. It wants the camera's rows brought across on the quiet path. `tools/blitz/quiet-loops.py` rewrites a loop that
+  only steps into that call (the exact shape only: the counter from 0, a bound of plain arithmetic; a condition that reads the game is tool code).
+- **Two plays of one tool held to each other tick by tick.** `RH_TICKS=<folder>` under `ts` and under `rust`: a line a tick (the die's count, the host's
+  half as handed in, the orders given so far, a hash of each part of the block but `poses`). For a tool whose own stand `play.ts` cannot make again
+  (a tally's run: the word seeds the game's die off the tool's own `Math.random`). `RH_DIE_SAY=<file>` writes that die; `RH_HALF=<ticks>` prints the
+  host's half of those ticks a field a line.
 - **What a check does to the game between two ticks**: `tools/blitz/qa-census.py` (a probe a row, by kind).
 
 ## Stand-ins (each marked `STAND-IN:` in the code with its reason and where it belongs)

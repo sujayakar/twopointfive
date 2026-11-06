@@ -293,10 +293,10 @@ export class RustHost {
     // listed world; a listing asked for on another tick is made then and the puppet takes the state again. Fast: the list of every box and the ray grid
     // are not on the filtered list (they are the TypeScript's own there), so the TypeScript's listing runs as it is, and the Rust game lists its own
     // at the same moment.
-    const upload = W.upload;
+    const upload = W.upload; this.tsUpload = () => { this.tsOnly = true; try { W.upload(); } finally { this.tsOnly = false; } };
     if (!TAPPED.has(W)) { TAPPED.add(W); hang(W, 'upload', function (this: any, ...a: any[]) {
       if (!H.h) return upload.apply(this, a);
-      if (!H.audit) { X.face_upload(H.h); H.uploads.rust++;
+      if (!H.audit) { if (!H.tsOnly) { X.face_upload(H.h); H.uploads.rust++; } if (H.quietOn) return;
         // STAND-IN: A BOX WHOSE MARKINGS WENT is `marks: null` after an apply (the importer writes a None as null), and the listing tests
         // `b.marks !== undefined` (scene/boxes.ts:841) and then reads its length: it threw at tick 1817 of tut-solo. Belongs in import.ts: the None of a
         // field the TypeScript declares optional is `undefined`.
@@ -352,7 +352,7 @@ export class RustHost {
   // ---- THE STEP, in place of `stepSeats`
   step(dt: number, cmds: readonly any[]): void {
     const g = this.g, X = this.F.X, B = this.B, k = ++this.k; let t = now();
-    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; if (this.rec) { this.rec.k = k; if (SITES) site(this.rec); } if (CAP_AT && (k & 31) === 0 && Date.now() > CAP_AT) process.exit(143);
+    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; if (this.rec) { this.rec.k = k; this.rec.quiet = this.quietSteps; if (SITES) site(this.rec); } if (CAP_AT && (k & 31) === 0 && Date.now() > CAP_AT) process.exit(143);
     // (THE GAME'S DIE ROLLED BETWEEN TWO TICKS: a rule of the tick ran in TypeScript on the puppet, called by the tool. Counted: such a tool leans on code
     // the Rust game has in its place)
     if (this.h && g.dice && g.dice.n !== this.dieRef) { this.dieMoved++; if (this.rec) this.rec.dieMoved = this.dieMoved; }
@@ -372,11 +372,26 @@ export class RustHost {
     if (this.F.mem.buffer.byteLength !== this.memPages) this.grew++;
     if (!this.o.quiet) { const said = this.F.outText(); if (said) this.say(said.trimEnd()); }
     this.o.afterStep?.(this);
+    // (RH_HALF=<ticks, comma>: the host's half of those ticks, a line a field's value, for two runs to be held to each other by `diff`)
+    if (process.env.RH_HALF?.split(',').includes(String(k))) { const A = B.A; for (const [ty, v] of B.hostHalfParts(g, cmds) as [string, any][]) { if (ty === 'u32') continue; const b: Uint8Array = B.exportPart(g, B.reg, [[ty, v]]); const offs: number[] = []; for (let i = 0; i < b.length; i += 8) offs.push(i);
+      for (const x of A.locate(b, offs, null, true, ty, ty.split('::').pop())) { let f = NaN; try { f = new DataView(b.buffer, b.byteOffset + x.off, 8).getFloat64(0, true); } catch { /* the last bytes */ } process.stderr.write(`half ${k} ${x.path} ${f}\n`); } } }
     if (TICKS_DIR) { if (k === 1 || this.ticksFile === '') { this.ticksFile = ticksFile(this.audit ? 'audit' : 'rust'); writeFileSync(this.ticksFile, ''); } tickLine(this.F, this.ticksFile, k, this.dieN(), this.rustBlock(), hb, this.gave.map(l => { const w = l.split(' '); return `${w[0]}:${w[1]}`; }).join(',')); }
     // ---- the host's steps after a tick, on the Rust side: the lights' update, the host's view of a level on rails, the camera's ask
     t = now(); X.face_lights(this.h, dt); X.face_view(this.h); X.face_follow?.(this.h);
     if (this.audit) { const U = this.o.uploadEvery ?? 4; if (k % U === 1 % U) { X.face_upload(this.h); this.uploads.rust++; if (this.uploadDone) this.uploads.missed++; this.uploadDone = true; } else if (this.uploadDone) { this.uploads.missed++; this.uploadDone = false; } }
     this.T.after += now() - t;
+    // ---- A QUIET STEP (`quietBegin`): the tool that asked for this run of steps has said none of its code runs between them, so nothing of the state
+    // goes to the puppet until the run ends. The host's own camera needs two things of the game after every tick: asked for by `face_look`.
+    this.lastDt = dt;
+    if (this.quietOn) { const at = (X.face_look(this.h) >>> 0) >>> 3, L = new Float64Array(this.F.mem.buffer).subarray(at, at + 6); this.lookNow = { follow: [L[0], L[1], L[2]], aim: [L[3], L[4], L[5]] };
+      this.quietOwed++; this.quietSteps++; this.inStep = false; return; }
+    const rust = this.tail(dt, k);
+    this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.missionRef = g.mission; this.inStep = false; this.dieRef = g.dice?.n;
+    this.auditAfter(rust, k);
+  }
+  /** after a step, or a quiet run of them: the apply, the out events, the dress step. Returns the whole Rust state where the audit took one */
+  private tail(dt: number, k: number): Uint8Array | null {
+    const g = this.g, X = this.F.X; let t = now();
     // ---- the apply
     this.applyStep();
     let rust: Uint8Array | null = null;
@@ -404,8 +419,9 @@ export class RustHost {
       if (g.chronicle.counts.saves !== s0) { const Ev = g.chronicle.events, e = Ev[Ev.length - 1], label = e?.kind === 'checkpoint' ? String(e.label ?? e.data?.label ?? '') : ''; this.count('saves.tick took a checkpoint (made on the Rust side by face_checkpoint)'); this.wrote.push(`${k} chron_save ${JSON.stringify(e?.kind === 'checkpoint' ? (e.label ?? e.data?.label ?? '') : 'NOT-LAST')}`);
         this.F.hand(enc.encode(label), (p, n) => X.face_checkpoint(this.h, p, n)); this.applyStep(); if (this.audit) rust = this.applyWhole('audit'); this.dispatch(); } }
     this.T.dress += now() - t - (this.nest - nest0);
-    this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.missionRef = g.mission; this.inStep = false; this.dieRef = g.dice?.n;
-    // ---- audit: the puppet as the apply left it is what the next write-back is held to
+    return rust; }
+  // ---- audit: the puppet as the apply left it is what the next write-back is held to
+  private auditAfter(rust: Uint8Array | null, k: number): void { const g = this.g, B = this.B; let t = now();
     if (this.audit && rust) { t = now(); const N = this.o.applyCheck ?? 50, chk = N > 0 && (k <= 3 || k % N === 0), A = B.A;
       if ((this.o.baseline ?? 'rust') === 'rust' && !chk) this.lastState = rust;
       else { const mine: Uint8Array = B.exportGame(g, B.reg); this.lastState = (this.o.baseline ?? 'rust') === 'rust' ? rust : mine;
@@ -413,6 +429,24 @@ export class RustHost {
           if (D.length) { this.applyUnequal++; for (const x of D) A.tallyAdd(this.APPLY_MISS, x.q, x.path, k); if (this.o.out && this.applyUnequal === 1) { writeFileSync(`${this.o.out}/apply-rust${k}.bin`, rust); writeFileSync(`${this.o.out}/apply-puppet${k}.bin`, mine); } } } } }
       this.T.check += now() - t; }
   }
+  // ---- A QUIET RUN OF STEPS (tools/qa/headless.ts `W.steps`): between `quietBegin` and `quietEnd` a step is the host's half handed over, the Rust tick,
+  // its own steps after it, and the camera's two numbers: no export, no apply, no out event dispatched, no dress step. As the run ends the puppet takes
+  // what changed over the whole run in ONE filtered apply (the export's memo holds what was last sent), the out events of every tick of the run are
+  // dispatched in their order, and the dress step runs once. WHAT DIFFERS from the same steps taken one by one: an autosave that fell due inside the
+  // run is taken as it ends; the par clock and the verdict tick once for the run; an out event reaches the host's objects late.
+  quietOn = false; quietSteps = 0; quietRuns = 0; private quietOwed = 0; private lastDt = 1 / 60; private lookNow: { follow: number[]; aim: number[] } | null = null;
+  private tsUpload: (() => void) | null = null; tsOnly = false;
+  /** true where the host can step quietly (the fast way, a face that answers `face_look`) */
+  // NOT YET THE SAME PLAY, so it is asked for by name (RH_QUIET=1): the Rust tick writes the lens's own row at times (a start snaps it onto the man), a
+  // quiet run does not bring that across, and the host hands its own lens back with the next record. tools/blitz/quiet-check.ts: the die and the
+  // block equal on every one of 2,340 ticks, the host's half not (FollowCamera.target at tick 2). It wants the camera's rows on the quiet path.
+  quietBegin(): boolean { if (this.audit || !this.F.X.face_look || OFF.has('quiet') || process.env.RH_QUIET !== '1') return false; this.quietOn = true; this.quietOwed = 0; return true; }
+  quietEnd(): void { if (!this.quietOn) return; this.quietOn = false; this.lookNow = null; if (!this.quietOwed || !this.h) return; this.quietRuns++;
+    const g = this.g; this.inStep = true; this.tail(this.lastDt, this.k);
+    this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.missionRef = g.mission; this.inStep = false; this.dieRef = g.dice?.n; this.quietOwed = 0;
+    g.engine.world.dynamics = g.dynBoxes; this.tsUpload?.(); }
+  /** in a quiet run: where the host's camera is to follow and the seat's aim point, as the Rust game has them */
+  look(): { follow: number[]; aim: number[] } | null { return this.quietOn ? this.lookNow : null; }
   /** fast: is a whole apply owed this tick, and why */
   private wholeOwed(k: number): string | null {
     const g = this.g, N = this.o.wholeEvery ?? 0;
