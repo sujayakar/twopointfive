@@ -495,6 +495,8 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         if g.pl[pl].sprinting && firearm_reloading(g, rifle) { firearm_cancel_reload(g, rifle); crate::character::anim_cancel_reload(g, c); }
         let tap_row = tap.map(|t| crate::player::StrideStepTap { speed: t.speed });
         let stalk_row = stalk.map(|s| crate::player::StrideStepStalk { pace: s.pace, keep: s.keep });
+        // (the stride puts a NEW array in his `pos`'s place, player.ts:448 `c.pos = v3.mad(…)`, on the lent legs: said here, where the man is known)
+        { let c = g.pl[pl].ch; crate::character::pos_replaced(g, c); }
         own_legs(g, pl, |g, m| stride_step(g, m, mx, mz, ml, tap_row, stalk_row, dt, None));
     }
     let speed = m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]);

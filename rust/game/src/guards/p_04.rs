@@ -15,6 +15,15 @@ fn lay_path(g: &mut Game, gd: GuardId, path: Vec<V3>) {
     g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
 }
 
+/// `gd.pathGoal = <anything>`: THE ONE SETTER of a man's path goal. The standoff asks whether his goal IS its own back-off point, the very object
+/// (guards.ts:1163 `gd.pathGoal !== S.orbitGoal`); a Vec3 here is a value, so `path_goal_orbit` says it, and any other write of the goal is by
+/// that fact no longer that object. Every whole write of `path_goal` outside the standoff goes through here, so the flag cannot be left standing.
+pub fn guard_set_path_goal(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>) {
+    let o = &mut g.gd[gd];
+    o.path_goal = goal;
+    o.path_goal_orbit = false;
+}
+
 /// standoffAlert's setGoal
 fn set_goal(g: &mut Game, gd: GuardId, s: GuardsStandoffId, p: Option<V3>) {
     g.gd[gd].path_goal_orbit = false;   // whatever comes next, S.orbitGoal is no longer the object pathGoal may hold
@@ -115,7 +124,8 @@ pub fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate:
     } else if let Some(goal) = g.tab.guards_standoff[s].orbit_goal {
         if backing {
             // (pathGoal !== S.orbitGoal, of two objects: path_goal_orbit says they are the one object)
-            if !g.gd[gd].path_goal_orbit {
+            // (…and the flag is believed only while the goal still holds that point's numbers: a write that slipped past the setter cannot leave it up)
+            if !(g.gd[gd].path_goal_orbit && g.gd[gd].path_goal == Some(goal)) {
                 lay_path(g, gd, vec![goal]);
                 g.gd[gd].path_i = 0;
                 g.gd[gd].path_goal = Some(goal);

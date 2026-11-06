@@ -581,6 +581,7 @@ pub fn anim_sheath_rest_inv(g: &mut crate::game::Game, c: CharId) -> Quat {
     let fresh = crate::anim_skeleton::pose_new(g, n);
     crate::anim_skeleton::rest_pose(g, rig, fresh);
     crate::anim_skeleton::pose_fk_run(g, &mut f, fresh);
+    crate::anim_skeleton::pose_done(g, fresh);   // (the scratch is dropped)
     let an = &mut g.ch[c].anim;
     let q = v3::quat::conj(f.rot[an.nodes.spine3]);
     an.rc_inv = Some(q);
@@ -816,7 +817,7 @@ fn to_model_d_of(yaw: f64, wd: V3) -> V3 {
 
 /// The controller's world placement to the model space the layers pose in: a point. (character.ts CharacterAnimator.toModelP)
 pub fn anim_to_model_p(g: &mut crate::game::Game, c: CharId, wp: V3) -> V3 {
-    let p0 = g.ch[c].pos;
+    let p0 = crate::character::anim_pos_in(g, c);   // (`this.posIn`: the array handed in at the last update, not the body's place now)
     to_model_p_of(g.ch[c].anim.body_yaw_in, p0, wp)
 }
 

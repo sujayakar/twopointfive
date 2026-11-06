@@ -83,6 +83,7 @@ pub fn character_new(g: &mut crate::game::Game, ch: RigId, d: crate::character::
     crate::anim_skeleton::rest_pose(g, ch, rp);
     let origin = v3::m4::create();
     skel_update(g, id, rp, &origin, false, None);
+    crate::anim_skeleton::pose_done(g, rp);   // (the scratch is dropped)
     let n = g.ch[id].anim.nodes;
     g.ch[id].rest_chest_inv = v3::quat::conj(g.ch[id].skel.global_rot[n.spine3]);
     g.ch[id].rest_head_inv = v3::quat::conj(g.ch[id].skel.global_rot[n.head]);
@@ -157,9 +158,11 @@ pub fn character_chest_frame(g: &mut crate::game::Game, id: CharId) -> Option<cr
 
 // ---- the frame ----
 
-/// His frame; the stage is gone: an update always stands in its game's block. (Character.update)
+/// His frame. A man whose poses are not yet at home (made inside this tick) is lent the stage for it. (Character.update)
 pub fn character_update(g: &mut crate::game::Game, id: CharId, dt: f64) {
+    let lent = crate::posehome::stage_open(g, id);
     character_update_standing(g, id, dt);
+    if let Some(st) = lent { crate::posehome::stage_shut(g, id, st); }
 }
 /// The turn, the animator, the skeleton and what is read off it. (Character.updateStanding)
 pub fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {
@@ -183,8 +186,9 @@ pub fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64)
         c.anim.aim_yaw_offset = v3::clamp(v3::wrap_angle(c.aim_yaw - c.body_yaw), -1.9, 1.9);
         c.anim.aim_pitch = c.aim_pitch;
         c.anim.body_yaw_in = c.body_yaw;
+        c.anim.pos_in = POS_IN_IS_POS;   // (`this.anim.posIn = this.pos`: the animator holds the body's own array again)
     }
-    anim_update(g, id, dt);   // (anim.posIn = this.pos is gone with the alias: the animator reads g.ch[c].pos)
+    anim_update(g, id, dt);
     let (pos, by) = (g.ch[id].pos, g.ch[id].body_yaw);
     g.ch[id].world = v3::m4::from_trs(pos, v3::quat::yaw(by), [1.0, 1.0, 1.0]);
     let n = g.ch[id].anim.nodes;
@@ -647,6 +651,8 @@ pub fn character_update_ragdoll(g: &mut crate::game::Game, id: CharId, dt: f64) 
         let rd = c.rd.as_mut().unwrap();
         rd.synced = sleeping;
         let x = &rag.x;
+        // (a new array: an animator handed the old one keeps it. pos_replace's rule, written out for the row in hand)
+        if c.anim.pos_in[0].is_nan() { c.anim.pos_in = c.pos; }
         c.pos = [x[0], 0.0, x[2]];
         let y_q = v3::quat::yaw(c.body_yaw); let yi = v3::quat::conj(y_q);
         c.world = v3::m4::from_trs(c.pos, y_q, [1.0, 1.0, 1.0]);
@@ -1059,4 +1065,39 @@ mod tests {
             (0.9, 7, 3.0, [0x3fd143b7034bc990, 0x3fd4f12061d607ed, 0xbfb27b50b645cee7]),
         ]);
     }
+}
+
+
+// ---- the animator's place: `anim.posIn = this.pos` (character.ts:4419) is a REFERENCE to the body's position array
+//
+// The TypeScript hands the animator the body's own `pos` array at every Character.update. Until the next update the animator reads THAT ARRAY: it
+// sees a write made in place (the collision's push, a door's shove), and it does NOT see a new array put in `pos`'s place (`c.pos = v3.mad(…)`, the
+// step of every man who walks; a snap, a lerp onto a spot): from the first such replacement of a tick to that tick's Character.update, `posIn` is
+// where the body stood before it. kitanim.ts asks in that window (kitSwap's `toModelP(shown.r)`: where the hands are, in the model's space), so a
+// man who changes guns while he walks starts the errand a step back.
+//
+// STAND-IN for a serial on the position (the types are generated): `Anim.pos_in` holds POS_IN_IS_POS while the animator's array IS the body's, and
+// the body's place as it was from the first replacement on. It belongs in a `pos_serial` on Character with the serial the animator was handed
+// (the device asked for a goal: a value with the serial of the object it is).
+
+/// `anim.pos_in` while the animator's array is the body's own
+pub const POS_IN_IS_POS: V3 = [f64::NAN, f64::NAN, f64::NAN];
+
+/// A NEW ARRAY in `pos`'s place (the TypeScript's `c.pos = <a fresh array>`): the animator keeps the one it was handed.
+pub fn pos_replace(g: &mut crate::game::Game, c: CharId, to: V3) {
+    let ch = &mut g.ch[c];
+    if ch.anim.pos_in[0].is_nan() { ch.anim.pos_in = ch.pos; }
+    ch.pos = to;
+}
+
+/// The same, said before a replacement made on a lent copy of the body (the player's legs): the animator keeps the place as it stands now.
+pub fn pos_replaced(g: &mut crate::game::Game, c: CharId) {
+    let ch = &mut g.ch[c];
+    if ch.anim.pos_in[0].is_nan() { ch.anim.pos_in = ch.pos; }
+}
+
+/// `this.posIn`: the array the animator was handed at the last Character.update, as it reads now.
+pub fn anim_pos_in(g: &crate::game::Game, c: CharId) -> V3 {
+    let ch = &g.ch[c];
+    if ch.anim.pos_in[0].is_nan() { ch.pos } else { ch.anim.pos_in }
 }

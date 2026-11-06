@@ -26,7 +26,8 @@ What it does:
    tick** it compares its block's hashes, part by part, and its die's count with the TypeScript's, and stops at the first tick that parts.
 3. **The path diff** (`diff.ts`) of every tick both sides kept, minus `known.txt`. The tick the block first parted is kept by the Rust side on its own.
 
-Exit: 0 in step and no unknown path · 1 the block or the die parted, or a kept tick has a path that is not known · 2 the Rust tick panicked · 3 a side did not run.
+Exit: 0 in step and no unknown path · 1 the block or the die parted, or a kept tick has a path that is not known · 2 the Rust tick panicked · 3 a side did not run ·
+4 the game parted at one of the loop's intended differences and nowhere before it (below).
 
 `--no-ts` runs the Rust side again over the TypeScript side `--out` already holds (the same ticks kept): the loop while you mend is a build and a few seconds.
 `--open "K"` also writes the state as tick K opens. `--after N` runs N more ticks after the block parts. `--blobs` keeps each kept Rust state after
@@ -45,6 +46,40 @@ The host lists the box world after every tick and updates the lamps, as `seats-r
 bare Game for a seat's field (seats.ts SEAT_ASKS) and the first tick it did: from that tick a path under `g.m.guards.ground_track` is the TypeScript's
 third row (the bare Game's own memo of "the player's" ground speed), which the Rust game does not keep.
 
+### The co-op check
+
+```sh
+bun run tools/blitz/coop-check.ts [--only asks,lock,full] [--no-build]      # about six minutes; EXPECTED RED until the seats' parts are mended
+```
+
+Three lines, one for each kind of two-seat fault the TypeScript has and the translation copied (needs 11 to 13 of the Library's blitz/coop-needs.md). Each
+runs a game of two through `run.sh` and reads the RUST side: its log and the states it kept. They are the target of the seats' mends, not a gate.
+
+- `asks` (`two-roomclear:9`): the TypeScript's count of asks of the bare Game for a seat's field, and whether the Rust game stayed in step.
+- `lock` (`two-lock0:9`, `two-lock1:9`): the hands idle; that seat's pair is given `stack` on the locked server door before tick 2 and `openClear` before
+  tick 961 through the seat's OWN order book. A line of gives.txt that ends `seat<N>` is given as that seat on both sides (`game_run::give` →
+  `seats::with_seat`). Both men are across the frame line within 5 s of the order, read off the Rust states every half second. Today seat 0's pair takes
+  9.5 s and 10.5 s: seat 1's door tools sling seat 0's breaching shotgun every tick.
+- `full` (`two-full:3`, the barracks, 120 s of the scripted fight): the men the Rust game holds against what the picture holds (17 against 16). It cannot
+  see the hand-over to the picture: the loop stands with the dress down and the Rust renderer is an empty boundary (`--men` on seats.ts hands the
+  TypeScript's men to its picture with room made for the 17th, for its count; `g.rig_fits` then differs by design).
+
+**The barracks game parts on purpose, and it is the first place a seat need shows.** At tick 5499 a man of seat 1 is sent through a door with two corners
+left on his order. The TypeScript's door walk asks the bare Game's order book (the first seat's, which has no order of his) and does not take the way
+round; the Rust door walk is stepped as his seat and finds his own order (`g.door_path.walks{…}.via.len` 0 against 2). The game's own state differs from
+there, the block from tick 5781, the die from 6349.
+
+## Intended differences
+
+The TypeScript is frozen and has faults a game of two seats shows. Where the Rust game copies such a fault it stays in step, and that is right for
+now (the nets of `slingTick` and `hammerOutTick`, the budgets that count one player: `coop-check.ts` holds them red). Where the Rust game is RIGHT BY
+CONSTRUCTION and the TypeScript is not, the Rust stays right and the loop parts there on purpose. `run.sh` names such a game (exit 4) when it first parts
+at the tick written in its `intended` list and nowhere before. One so far:
+
+| game | from tick | what |
+|---|---|---|
+| `two-full:3` | 5499 | `doorpath.ts own()` asks `this.g.orders.of(gd)` on the bare Game, which in a game of two is the FIRST seat's order book. For a man of seat 1 sent through a door with corners left on his order it finds no order, leaves the way round on the order, and the walk stands "off this order". The Rust door walk is started from that seat's door tools, inside the seat's view, and finds his own order: it takes the way round (`walks{…}.via` 2 against 0). Seventeen paths at 5499; the block (`doors`) parts at 5781. A game of one seat is not touched. |
+
 ## Reading the stop
 
 **`PANIC in tick K`** with a `todo!()` or "not yet implemented": a function nobody wrote. The frames under it name it and who called it. Read the TypeScript it
@@ -58,8 +93,9 @@ rust/game_run/target/debug/where_parts <out>/sK.bin <out>/nsK.bin     # which wo
 bun run tools/blitz/diff.ts <out>/aK.bin <out>/nK.bin --show 40       # which paths of the game's own state (run.sh prints the first few; use --blobs to keep nK.bin)
 ```
 
-The part `poses` is not the alarm: a dead man's ragdoll holds a pose the TypeScript keeps outside the pool and Rust keeps inside it, so from the first death
-that part differs by design. The runner says when that happens and goes on comparing every other part.
+The part `poses` is watched apart: if it parts while every other part is the same the runner says so once and goes on comparing the rest (`BLITZ_POSES=1`
+stops there instead). It no longer parts by design: a ragdoll's pose and a function's scratch pose are poses of their own outside the pool on both sides,
+and the pool is tended as a tick opens (`posehome::pose_home_tend`); a man made inside a tick is lent the pool's end for his update (`posehome::stage_open`). A `poses` parting is a difference to chase like any other.
 
 **The die's count differs**: the two games have drawn a different number of times. Something upstream decided differently; the kept tick before it usually
 shows a path.
@@ -123,9 +159,10 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | stand-in | name | why |
 |---|---|---|
 | a record a seat, every camera and Input row that is no seat's (`io::take_host_half`) | (always) | the host samples input and moves its camera between ticks |
-| `BoxWorld.glass_open` hung after the import | (always) | bridge: the aim ray's hook through a holed pane is not carried |
+| every imported pose set told it is at home, every imported animator told it holds its body's position array | (always) | bridge: `PoseSet.home` and `anim.posIn` (a reference to `Character.pos`) are not carried |
 | the test driver's orders (`gives.txt`) | (always) | the scripted player calls `orders.give` between ticks |
 | the driver's `roomAt` that floods a room (`hostwrites.txt room_at`) | (always) | a question of the driver's that writes the game |
+| the commander's blow of a set wall charge (`hostwrites.txt wall_blow`, with `--wall`) | (always) | the scripted commander calls the module's `blow` between ticks |
 | the box world listed again | `upload` | where the headless host uploaded between two ticks; the listing also frees the rows of frame boxes of the frames before it |
 | `rails_host_view` after each tick | `view` | on a tutorial mission the host sets the first view again with its own camera (game.ts hostAfter) |
 | a tutorial's authored checkpoint (`chron_save` on rails) | (always) | the save controller stops the level's program for the take; the frame starts it again |
@@ -152,9 +189,10 @@ outside the pool: the runner hands none of those over.
 - **No GPU, no picture.** The headless game has no renderer, no GPU light meter, no smoke solver and no audio; the compare is of the simulation's state only.
 - The scripted player cannot be hurt and plays one way a seed. A mission in step is that play-through in step, not the mission's every branch.
 - The scripted player plays the room clears, the rescues and the raids (`tools/qa/playthrough.ts`); it has no quiet mission.
-- The runner cannot yet give an order aimed at a wall or a thing, or with options: it says `NOTE … cannot give` and the sides will part there.
+- The runner gives an order on a wall (`--wall`: the scripted commander takes a held room by a wall charge, and its blow between ticks is replayed) but not one
+  on a thing, or with options: it says `NOTE … cannot give` and the sides will part there.
 - Not translated, and so not compared: what stands of a holed wall's paint (`wallskin`) and a broken edge's look (`edge_look`). See `--leave-out` above.
-- A pose's floats are compared only through what the pose drives (bones, boxes); the pool itself is out of the alarm after the first death.
+- A pose of its own outside the pool (a ragdoll's) is compared by its floats and by what it drives; its row number is a known difference.
 - A tutorial (`tut-<name>:<seed>`) is played by `tools/qa/lesson-run.ts` WITHOUT its model of the sky's light on every man's meter (a hook over the game's
   light asks, which the Rust game has no word for): it is the tutorial as the headless estimate lights it.
 - A kept Rust state is small again (about 8 MB): a box pushed straight onto the frame's list is a row for that frame, freed when the host lists the box world.

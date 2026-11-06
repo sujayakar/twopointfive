@@ -105,7 +105,7 @@ pub fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId) {
     } else {
         let spot = crate::doors::doors_work_spot(g, d, pos, None, None);
         g.ch[c].vel = [0.0, 0.0, 0.0];
-        g.ch[c].pos = v3::lerp3(g.ch[c].pos, spot.pos, 1.0 - m::exp(-10.0 * dt));
+        { let to = v3::lerp3(g.ch[c].pos, spot.pos, 1.0 - m::exp(-10.0 * dt)); crate::character::pos_replace(g, c, to); }
         collide_player(g, 1.0);
         keep_off_guards(g, dt, 1.0, None);
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, spot.yaw, 12.0 * dt);
@@ -203,7 +203,7 @@ pub fn update_wanding(g: &mut crate::game::Game, dt: f64) {
         let along = g.dr[d].def.width * 0.5;
         let spot = crate::doors::doors_work_spot(g, d, pos, Some(0.5), Some(along));
         g.ch[c].vel = [0.0, 0.0, 0.0];
-        g.ch[c].pos = v3::lerp3(g.ch[c].pos, spot.pos, 1.0 - m::exp(-10.0 * dt));
+        { let to = v3::lerp3(g.ch[c].pos, spot.pos, 1.0 - m::exp(-10.0 * dt)); crate::character::pos_replace(g, c, to); }
         collide_player(g, 1.0);
         keep_off_guards(g, dt, 1.0, None);
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, spot.yaw, 12.0 * dt);
@@ -473,7 +473,7 @@ pub fn update_kick(g: &mut crate::game::Game, dt: f64) {
         yaw = crate::bigkit::sam_big_walk(g, dt);
         collide_player(g, 1.7);
     } else if crate::character::anim_kick_time(g, c) < 0.45 {
-        g.ch[c].pos = v3::lerp3(g.ch[c].pos, spot_at, 1.0 - m::exp(-12.0 * dt));
+        { let to = v3::lerp3(g.ch[c].pos, spot_at, 1.0 - m::exp(-12.0 * dt)); crate::character::pos_replace(g, c, to); }
         collide_player(g, 1.7);
     }
     keep_off_guards(g, dt, 1.7, None);

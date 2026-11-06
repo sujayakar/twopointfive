@@ -601,7 +601,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
         g.gd[gd].speed = v3::damp(g.gd[gd].speed, want, 4.0, dt);
         let sp = g.gd[gd].speed;
         g.ch[c].vel = [m::sin(yaw) * sp, 0.0, m::cos(yaw) * sp];
-        g.ch[c].pos = v3::mad(g.ch[c].pos, g.ch[c].vel, dt);
+        { let to = v3::mad(g.ch[c].pos, g.ch[c].vel, dt); crate::character::pos_replace(g, c, to); }
     } else {
         fear(g, gd).at = true;
         g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);

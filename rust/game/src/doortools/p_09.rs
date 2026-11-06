@@ -167,7 +167,7 @@ pub fn door_tools_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: 
     if ai { g.gd[gd].witness.dazzled += 1.0; }
     crate::game::guard_set_path(g, gd, Vec::new());
     let r = &mut g.gd[gd];
-    r.path_goal = None;
+    r.path_goal = None; r.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
     r.speed = 0.0;
     r.dazzled_at = Some(v3::copy(at));
     let c = r.ch;

@@ -120,7 +120,7 @@ pub fn strafe_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed:
         let sp = g.gd[gd].speed;
         let vel = [dx / d * sp, 0.0, dz / d * sp];
         g.ch[c].vel = vel;
-        g.ch[c].pos = v3::mad(g.ch[c].pos, vel, dt);
+        { let to = v3::mad(g.ch[c].pos, vel, dt); crate::character::pos_replace(g, c, to); }
         return false;
     }
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 10.0, dt);
@@ -241,7 +241,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         let mut d = v3::sub(g.ch[c].pos, g.ch[oc].pos);
         d[1] = 0.0;
         let l = v3::len(d);
-        if l < 0.6 && l > 1e-4 { g.ch[c].pos = v3::mad(g.ch[c].pos, d, (0.6 - l) / l * 0.5); }
+        if l < 0.6 && l > 1e-4 { { let to = v3::mad(g.ch[c].pos, d, (0.6 - l) / l * 0.5); crate::character::pos_replace(g, c, to); } }
     }
     if crate::noshove::no_shove_keep(g, gd, x0, z0, dt) { move_speed = 0.0; }
     let (upper, stance) = if s.over.is_some() { (crate::character::UpperMode::Aim, crate::character::Stance::None) }
@@ -295,8 +295,9 @@ pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<cr
         EndGuardScriptState::Alert => crate::game::GuardState::Alert,
         EndGuardScriptState::Search => crate::game::GuardState::Search,
     };
-    man.path = Vec::new();
-    man.path_goal = None;
+    // (`gd.path = []; gd.pathGoal = null`: guard_set_path and guard_set_path_goal, written out for the row in hand)
+    man.path = Vec::new(); man.path_serial = man.path_serial.wrapping_add(1);
+    man.path_goal = None; man.path_goal_orbit = false;
     if state == EndGuardScriptState::Patrol {
         man.awareness = 0.0; man.react_t = 0.0; man.search_t = 0.0; man.last_known = None; man.body_duty = None;
     }
@@ -314,7 +315,7 @@ pub fn order(g: &mut crate::game::Game, gd: GuardId, patch: crate::squad::OrderP
         let new_leg = match goal { None => had.is_some(), Some(_) => !patch.held || goal != had };
         if new_leg {
             let man = &mut g.gd[gd];
-            man.path = Vec::new(); man.path_goal = None; man.stuck_t = 0.0;
+            man.path = Vec::new(); man.path_serial = man.path_serial.wrapping_add(1); man.path_goal = None; man.path_goal_orbit = false; man.stuck_t = 0.0;   // (a new array and no goal: the setters' two rules, for the row in hand)
             if let Some(s) = man.script.as_mut() { s.arrived = Some(false); }
             g.m.squad.settle_watch.delete(gd);
         }
@@ -402,8 +403,8 @@ pub fn room_clear_start(g: &mut crate::game::Game, id: RoomClearId) {
     for (i, gd) in men.iter().copied().enumerate() {
         let c = g.gd[gd].ch;
         if let (false, Some(from)) = (live, from) {
+            crate::character::pos_replace(g, c, v3::copy(from[i]));
             let ch = &mut g.ch[c];
-            ch.pos = v3::copy(from[i]);
             ch.vel = [0.0, 0.0, 0.0];
             let yaw = m::atan2(stack[i][0] - from[i][0], stack[i][2] - from[i][2]);
             ch.aim_yaw = yaw; ch.body_yaw = yaw;

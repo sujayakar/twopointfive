@@ -82,7 +82,7 @@ pub fn wall_charge_shock(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: 
     g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.6);
     if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
     crate::game::guard_set_path(g, gd, Vec::new());
-    g.gd[gd].path_goal = None;
+    crate::guards::guard_set_path_goal(g, gd, None);
     g.gd[gd].speed = 0.0;
     let c = g.gd[gd].ch;
     crate::character::anim_hit(g, c);
@@ -97,7 +97,7 @@ pub fn wall_charge_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at:
     if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
     if g.ai_enabled { g.gd[gd].witness.dazzled += 1.0; }
     crate::game::guard_set_path(g, gd, Vec::new());
-    g.gd[gd].path_goal = None;
+    crate::guards::guard_set_path_goal(g, gd, None);
     g.gd[gd].speed = 0.0;
     let c = g.gd[gd].ch;
     crate::character::anim_hit(g, c);

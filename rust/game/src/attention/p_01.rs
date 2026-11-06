@@ -151,7 +151,7 @@ pub fn attention_step(g: &mut crate::game::Game, gd: GuardId, at: V3) {
         let man = &mut g.gd[gd];
         man.path = Vec::new();
         man.path_serial = man.path_serial.wrapping_add(1);
-        man.path_goal = None;
+        man.path_goal = None; man.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
     }
 }
 
@@ -352,7 +352,7 @@ pub fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
                 man.react_t = 0.0;
                 man.path = Vec::new();
                 man.path_serial = man.path_serial.wrapping_add(1);
-                man.path_goal = None;
+                man.path_goal = None; man.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
                 man.stall_ref = None;
                 g.stats.attention.spent += 1;
                 log(g, gd, "spent", LogH { kind: cand.kind, secs: 0.0, nth });

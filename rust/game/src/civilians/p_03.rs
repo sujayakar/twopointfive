@@ -58,7 +58,7 @@ pub fn prime_guard(g: &mut crate::game::Game, o: GuardId, pos: V3, beat: f64) {
     let man = &mut g.gd[o];
     if man.state == GuardState::Patrol { man.state = GuardState::Suspicious; man.search_t = 0.0; man.body_duty = None; }
     man.react_t = m::max(man.react_t, beat);
-    crate::game::guard_set_path(g, o, Vec::new()); g.gd[o].path_goal = None; g.gd[o].stall_ref = None;
+    crate::game::guard_set_path(g, o, Vec::new()); crate::guards::guard_set_path_goal(g, o, None); g.gd[o].stall_ref = None;
 }
 
 /// she tells him, face to face (civilians.ts report)
@@ -95,7 +95,7 @@ pub fn deliver_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId, how: c
     crate::game::guard_set_path(g, o, Vec::new());
     {
         let man = &mut g.gd[o];
-        man.path_goal = None; man.stall_ref = None;
+        man.path_goal = None; man.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand) man.stall_ref = None;
         if armed { man.state = GuardState::Search; man.search_t = 0.0; man.search_plan = None; man.react_t = 0.6; }
         else { if man.state == GuardState::Patrol || man.state == GuardState::Suspicious { man.state = GuardState::Suspicious; man.search_t = 0.0; } man.react_t = 0.9; }
     }
@@ -125,7 +125,7 @@ pub fn deliver_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId, how: c
 /// she takes the handset off the hook (civilians.ts toPhone)
 pub fn to_phone(g: &mut crate::game::Game, gd: GuardId, s: &crate::civilians::CivSpot) {
     let cid = g.gd[gd].civ.unwrap(); let c = g.gd[gd].ch;
-    g.cv[cid].talk_t = 0.0; g.cv[cid].target = None; crate::game::guard_set_path(g, gd, Vec::new()); g.gd[gd].path_goal = None;
+    g.cv[cid].talk_t = 0.0; g.cv[cid].target = None; crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None);
     let lines = crate::dialogue::civ_lines();
     let armed = g.cv[cid].armed;
     let pool: Vec<String> = if away(g) { vec![if armed { lines.own.phone_armed.clone() } else { lines.own.phone.clone() }] }
@@ -193,7 +193,7 @@ pub fn phone_call(g: &mut crate::game::Game, gd: GuardId) {
 /// out of the building: gone; unless evacuated, control rings the floor a little later (civilians.ts toGone)
 pub fn to_gone(g: &mut crate::game::Game, gd: GuardId, evac: bool) {
     let cid = g.gd[gd].civ.unwrap(); let c = g.gd[gd].ch;
-    g.ch[c].anim.act = None; crate::game::guard_set_path(g, gd, Vec::new()); g.gd[gd].path_goal = None; g.cv[cid].target = None;
+    g.ch[c].anim.act = None; crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.cv[cid].target = None;
     if evac { g.stats.civilians.evacuated += 1; log(g, gd, "off the floor (evacuated)"); }
     else if crate::snatch::snatch_is_man(g, gd) { log(g, gd, "off the floor — gone"); }
     else if !g.cv[cid].reported {
@@ -248,7 +248,7 @@ pub fn to_cower(g: &mut crate::game::Game, gd: GuardId, complied: bool) {
     let roll = g.cv[cid].dice.roll();
     let cv = &mut g.cv[cid];
     cv.cower_at = Some(spot); cv.found_t = 0.0; cv.found_by = None; cv.found_line_at = -1.0; cv.found_told = false; cv.whimper_at = now + 2.0 + roll * 4.0;
-    crate::game::guard_set_path(g, gd, Vec::new()); g.gd[gd].path_goal = None; g.ch[c].anim.act = None; g.cv[cid].target = None;
+    crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.ch[c].anim.act = None; g.cv[cid].target = None;
     g.stats.civilians.cowered += 1; if complied { g.stats.civilians.complied += 1; }
     set_state(g, gd, CivState::Cower);
 }
@@ -258,7 +258,7 @@ pub fn hostage_lead(g: &mut crate::game::Game, gd: GuardId, lead: Option<CharId>
     let Some(cid) = g.gd[gd].civ else { return; };
     if g.gd[gd].state == GuardState::Dead || g.cv[cid].state != CivState::Cower { return; }
     g.cv[cid].lead = lead; g.cv[cid].lead_gap = gap; g.cv[cid].lead_to = None;
-    crate::game::guard_set_path(g, gd, Vec::new()); g.gd[gd].path_goal = None; g.gd[gd].stall_ref = None;
+    crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.gd[gd].stall_ref = None;
     if lead.is_none() { g.cv[cid].cower_at = Some(g.ch[g.gd[gd].ch].pos); }
 }
 
@@ -266,7 +266,7 @@ pub fn hostage_lead(g: &mut crate::game::Game, gd: GuardId, lead: Option<CharId>
 pub fn civilian_led_to(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>) {
     let Some(cid) = g.gd[gd].civ else { return; };
     if g.cv[cid].lead.is_none() { return; }
-    g.cv[cid].lead_to = to; crate::game::guard_set_path(g, gd, Vec::new()); g.gd[gd].path_goal = None; g.gd[gd].stall_ref = None;
+    g.cv[cid].lead_to = to; crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.gd[gd].stall_ref = None;
 }
 
 /// taken off the floor by the team: gone, nobody told (civilians.ts civilianOff)
@@ -274,7 +274,7 @@ pub fn civilian_off(g: &mut crate::game::Game, gd: GuardId) {
     let Some(cid) = g.gd[gd].civ else { return; };
     if g.gd[gd].state == GuardState::Dead || g.cv[cid].state == CivState::Gone { return; }
     let c = g.gd[gd].ch;
-    g.cv[cid].lead = None; g.cv[cid].lead_to = None; g.ch[c].anim.act = None; crate::game::guard_set_path(g, gd, Vec::new()); g.gd[gd].path_goal = None; g.cv[cid].target = None;
+    g.cv[cid].lead = None; g.cv[cid].lead_to = None; g.ch[c].anim.act = None; crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.cv[cid].target = None;
     log(g, gd, "off the floor — in the team's hands"); forget_meter(g, gd); set_state(g, gd, CivState::Gone);
 }
 
@@ -290,7 +290,7 @@ pub fn follow(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::civilia
             if !g.gd[gd].path.is_empty() || half_second_tick(g, dt) { go_to(g, gd, to, None); }
             follow_path(g, gd, dt, 1.6); move_ = g.gd[gd].speed;
         } else {
-            crate::game::guard_set_path(g, gd, Vec::new()); g.gd[gd].path_goal = None; g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 10.0, dt); g.ch[c].vel = [0.0, 0.0, 0.0];
+            crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 10.0, dt); g.ch[c].vel = [0.0, 0.0, 0.0];
         }
         return Follow { move_, crouch: 0.0 };
     }
@@ -304,7 +304,7 @@ pub fn follow(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::civilia
         follow_path(g, gd, dt, speed);
         move_ = g.gd[gd].speed;
     } else {
-        crate::game::guard_set_path(g, gd, Vec::new()); g.gd[gd].path_goal = None; g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 10.0, dt); g.ch[c].vel = [0.0, 0.0, 0.0];
+        crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 10.0, dt); g.ch[c].vel = [0.0, 0.0, 0.0];
         let p = g.ch[c].pos;
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, m::atan2(lp[0] - p[0], lp[2] - p[2]), 3.0 * dt);
     }
@@ -646,7 +646,7 @@ fn notice_panic(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
         if g.gd[o].state == GuardState::Patrol {
             let man = &mut g.gd[o];
             man.state = GuardState::Suspicious; man.search_t = 0.0; man.react_t = m::max(man.react_t, 0.7);
-            crate::game::guard_set_path(g, o, Vec::new()); g.gd[o].path_goal = None; g.gd[o].stall_ref = None;
+            crate::game::guard_set_path(g, o, Vec::new()); crate::guards::guard_set_path_goal(g, o, None); g.gd[o].stall_ref = None;
         }
         if !bubble_within(g, o, 1.5) {
             let text = if seen { format!("{}? — hey. HEY. what is it —", g.cv[cid].name) } else { format!("— that was {} —", g.cv[cid].name) };
@@ -730,7 +730,7 @@ pub fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     if g.gd[o].script.is_none() {
         g.gd[o].awareness = m::max(g.gd[o].awareness, 0.7); crate::belief::word(g, o, body);
         g.gd[o].react_t = 1.2; g.gd[o].body_duty = None; g.gd[o].task = None;
-        crate::game::guard_set_path(g, o, Vec::new()); g.gd[o].path_goal = None;
+        crate::game::guard_set_path(g, o, Vec::new()); crate::guards::guard_set_path_goal(g, o, None);
         let man = &mut g.gd[o];
         if man.state == GuardState::Patrol || man.state == GuardState::Search { man.state = GuardState::Suspicious; man.search_t = 0.0; man.search_plan = None; man.pieing = None; }
     }

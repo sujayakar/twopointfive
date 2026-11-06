@@ -504,7 +504,7 @@ pub fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx: f64, 
     if e_prev < 1.0 {
         if ws.on && ws.slow && u != u_was {
             let pos = g.ch[c].pos;
-            g.ch[c].pos = [pos[0] + t[0] * (u - u_was), pos[1], pos[2] + t[2] * (u - u_was)];
+            { let to = [pos[0] + t[0] * (u - u_was), pos[1], pos[2] + t[2] * (u - u_was)]; crate::character::pos_replace(g, c, to); }
         }
         let w3 = g.pl[p].wall.unwrap();
         let e0 = wall_ease(w3.settle, w3.take_t, ws.ease_pow);
@@ -518,10 +518,10 @@ pub fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx: f64, 
             sx *= cap / sl;
             sz *= cap / sl;
         }
-        g.ch[c].pos = [pos[0] + sx, pos[1], pos[2] + sz];
+        { let to = [pos[0] + sx, pos[1], pos[2] + sz]; crate::character::pos_replace(g, c, to); }
     } else {
         let py = g.ch[c].pos[1];
-        g.ch[c].pos = [tx, py, tz];
+        { let to = [tx, py, tz]; crate::character::pos_replace(g, c, to); }
     }
     collide_player(g, y1);
     keep_off_guards(g, dt, y1, None);
@@ -641,7 +641,7 @@ pub fn update_takedown(g: &mut crate::game::Game, dt: f64) {
         };
         let mut td_yaw = td.yaw;
         if g.gd[gd].state != crate::game::GuardState::Dead {
-            g.ch[c].pos = v3::lerp3(g.ch[c].pos, at, 1.0 - m::exp(-14.0 * dt));
+            { let to = v3::lerp3(g.ch[c].pos, at, 1.0 - m::exp(-14.0 * dt)); crate::character::pos_replace(g, c, to); }
             collide_player(g, y1);
             let (a, b) = (g.ch[gc].pos, g.ch[c].pos);
             let y = m::atan2(a[0] - b[0], a[2] - b[2]);
@@ -652,7 +652,7 @@ pub fn update_takedown(g: &mut crate::game::Game, dt: f64) {
     } else if g.gd[gd].state != crate::game::GuardState::Dead {
         let b = g.ch[gc].pos;
         let want: V3 = [b[0] - m::sin(yaw) * 0.55, 0.0, b[2] - m::cos(yaw) * 0.55];
-        g.ch[c].pos = v3::lerp3(g.ch[c].pos, want, 1.0 - m::exp(-14.0 * dt));
+        { let to = v3::lerp3(g.ch[c].pos, want, 1.0 - m::exp(-14.0 * dt)); crate::character::pos_replace(g, c, to); }
         collide_player(g, y1);
     }
     g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, yaw, 14.0 * dt);

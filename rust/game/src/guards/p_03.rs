@@ -566,7 +566,7 @@ pub fn step_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f
         g.gd[gd].speed = legs;
         let vel: V3 = [dx / d * legs, 0.0, dz / d * legs];
         g.ch[c].vel = vel;
-        g.ch[c].pos = v3::mad(pos, vel, dt);
+        { let to = v3::mad(pos, vel, dt); crate::character::pos_replace(g, c, to); }
         return false;
     }
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 10.0, dt);
