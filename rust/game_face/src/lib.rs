@@ -56,6 +56,8 @@
 //!   face_part_hashes(slot) -> p               13 words: each part's hash as tools/blitz/mission.ts takes it (its words up to the last not zero)
 use std::cell::{Cell, RefCell};
 
+mod harness;
+
 type Game = game::game::Game;
 /// a game and what the host has handed over for its next step
 struct Held {

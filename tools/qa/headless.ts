@@ -235,5 +235,8 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     snapshot(label = 'harness', force = true) { return saveState(game, { label, kind: 'harness', force }); },
     restore(s) { loadState(game, s); cam.target = v3.copy(game.player.char.pos); input.keys.clear(); input.pressed.clear(); input.buttons = 0; input.clicked = 0; },
   };
+  // TPS_RUST in front of any headless tool (tools/blitz/PLAY.md): the game stood here is a PUPPET of the Rust game, which steps in its place from the first
+  // `game.update` (1; `audit`), or it is stood the same way and stepped by the TypeScript tick (`ts`: the other side of a tally). Unset: nothing is loaded.
+  if (process.env.TPS_RUST) await (await import('../blitz/rust-host.ts')).standRust(game, process.env.TPS_RUST);
   return W;
 }
