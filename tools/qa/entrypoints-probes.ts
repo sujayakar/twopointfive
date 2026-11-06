@@ -13,6 +13,8 @@
 //                       the manager's door plays the same game with the switch off as the tracker alone leaves it (digest for digest).
 //   bun run tools/qa/entrypoints-probes.ts table      the count's rows as markdown (the page's table)
 // The same-seed play-through numbers (points dealt in play, deaths at such points) are tools/qa/playthrough.ts's: RunOut.entry and Death.open.
+// ENTRYOFF_BREAK=1 = entrypoints-off's run without the tracker plays with the switch on: must fail on both stands.
+// entrypoints-count is RED ON BOTH STANDS by a row of tools/qa/expected-red.ts (11-06): one moved point of the killhouse's bunks, its watch point out of his line.
 import { ROOT } from './headless.ts';
 import { stage } from './bang-tally.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
@@ -126,12 +128,21 @@ export const entrypointsOff = guarded(async () => {
   verdict(doors > 0 && diff === 0, 'pods() with the switch off: the points the old function deals and none with an opening to hold, on every door of every scenario, either face, for two and for four', `${doors} askings, ${diff} differ`);
   verdict(stayBad === 0 && watched > 0 && mvBad === 0 && movedOnly > 0, 'the two halves switch apart: with the move off every point stays and the risky ones are given their opening to hold; with the watch off points move and none is given one, each keeping the facing it was dealt', `move off: ${stayBad} askings moved a point, ${watched} points given an opening · watch off: ${mvBad} askings wrong, ${movedOnly} moved a point`);
   // the tracker alone changes nothing: one seeded entry, the switch off, with the tracker ticking and with it stopped
-  const play = async (track: boolean) => { const S: any = await quiet(() => stage('room-clear-pair', 3)); const g = S.g, O = g.orders, D = g.doorTools; ENTRY.offOpenings = false; if (!track) g.entry.tick = () => {};
-    const d = g.doors.list.find((x: any) => x.def.name === 'manager') ?? S.defs[0].room.entries[0].door; let h = '';
-    await quiet(() => { O.give('stack', O.targetAt(d.frameCentre)); for (let i = 0; i < 60 * 8; i++) S.step(); O.give(D.bangs > 0 ? 'bangClear' : 'openClear', O.targetAt(d.frameCentre)); for (let i = 0; i < 60 * 20; i++) { S.step(); if (i % 30 === 0) h = String(hashDigest(h + JSON.stringify(digestGame(g, true)))); } });
-    Object.assign(ENTRY, keep); return { h, dealt: g.entry.stats.pods }; };
+  // (THE ROW IS GIVEN AGAIN WHERE THE FIRST ENDED AT THE HANDLE. The manager's door is locked: where the men try a door before they work it
+  // (DOORTOOLS.testDoor, the page's stand) the order ends 'found shut', nobody goes in, no point is dealt, and the two digests were equal over a run
+  // with no entry in it. The same row given again is the page's own way through: the men kick it and go in. The old stand's run is as it was: its
+  // first order goes through the lock. The line asks that the entry went in. ENTRYOFF_BREAK=1 = the run without the tracker plays with the
+  // switch ON: another game, and the line must fail.)
+  const play = async (track: boolean) => { const S: any = await quiet(() => stage('room-clear-pair', 3)); const g = S.g, O = g.orders, D = g.doorTools; ENTRY.offOpenings = !track && process.env.ENTRYOFF_BREAK === '1'; if (!track) g.entry.tick = () => {};
+    const d = g.doors.list.find((x: any) => x.def.name === 'manager') ?? S.defs[0].room.entries[0].door; let h = '', again = false;
+    const ended = (how: string) => D.done.some((o: any) => o.door === d && o.ended === how), row = () => O.give(D.bangs > 0 ? 'bangClear' : 'openClear', O.targetAt(d.frameCentre));
+    await quiet(() => { O.give('stack', O.targetAt(d.frameCentre)); for (let i = 0; i < 60 * 8; i++) S.step(); row();
+      for (let i = 0, after = 0; i < 60 * 80 && (i < 60 * 20 || (again && after < 60 * 5)); i++) { S.step(); if (i % 30 === 0) h = String(hashDigest(h + JSON.stringify(digestGame(g, true))));
+        if (!again && ended('found shut') && !ended('in')) { row(); again = true; } if (again && ended('in')) after++; } });
+    const went = ended('in');
+    Object.assign(ENTRY, keep); return { h, dealt: g.entry.stats.pods, went, again }; };
   const a = await play(true), b = await play(false);
-  verdict(a.h === b.h && a.dealt > 0, 'a seeded entry with the switch off plays the same game whether the tracker runs or not', `digest ${a.h} against ${b.h} · ${a.dealt} points dealt`);
+  verdict(a.h === b.h && a.dealt > 0 && a.went && b.went, 'a seeded entry with the switch off plays the same game whether the tracker runs or not', `digest ${a.h} against ${b.h} · ${a.dealt} points dealt · the entry went in: ${a.went} / ${b.went}${a.again || b.again ? ' (the row given again after \'found shut\')' : ''}`);
   return done();
 });
 
