@@ -5,7 +5,7 @@
 // so two exports of one game agree. TABLES COME LAST because walking a row can reach a new thing of another table.
 // exportGame(g) never writes to the game. What it could not carry is in `report()`: every kind of value that did not fit the schema's type, by field.
 import { readFileSync } from 'node:fs';
-import { sideRegistry, rawKey } from '../../src/math/side';
+import { sideRegistry, rawKey, SideMap, SideSet } from '../../src/math/side';
 
 const here = import.meta.dir;
 export const SCHEMA: any = JSON.parse(readFileSync(`${here}/schema.json`, 'utf8'));
@@ -52,6 +52,33 @@ class Book { ids = new Map<string, Map<object, number>>(); lists = new Map<strin
   listOf(id: string): object[] { return this.lists.get(id) ?? []; }
   serialOf(o: object): number { let s = this.serial.get(o); if (s === undefined) { s = this.nextSerial++; this.serial.set(o, s); this.serials.set(o, s); } return s; } }
 const BOOKS = new WeakMap<object, Book>();
+// ---- A WEAK TABLE LISTS THE KEYS OF THE GAME BEING WALKED. `liveKeys()` is every key alive in the process, whichever game's, so a second game of a process would be walked with the first game's men, routes and players as rows of its own, a table of one thing's own row would give the first game's (`K[0]`), and an apply that puts a table's keys in the Rust game's order would strike every other game's off the list. Every walk of a game by the bridge goes through `forGame`: while it runs a table lists only that game's keys, the keys a walk from the game reaches. A start finds them (`startExport`): the game is exported with every table listing only the keys the walk has numbered so far (and the game and its views), again until an export numbers no key it had left out; what the book then holds is the game's, the book is put back as it was, and the start's own export lists exactly those. After a start: those keys, and a key first seen since (a thing made in play) unless a start left it out or it is in another game's book. Outside the walks `liveKeys()` is as it was
+type KeyMode = { kind: 'reach' } | { kind: 'exact' | 'own'; mine: WeakSet<object>; not?: WeakSet<object> };
+let CUR: any = null, MODE: KeyMode | null = null, DROPPED: Set<object> | null = null;
+const MODE_OF = new WeakMap<object, KeyMode>(), OWNER = new WeakMap<object, object>(), WALKED = new Set<any>(), KEYED = new WeakSet<object>();
+const inBook = (bk: any, k: object): boolean => { if (!bk) return false; for (const M of bk.ids.values() as Iterable<Map<object, number>>) if (M.has(k)) return true; return bk.serial.has(k); };
+const foreign = (k: any): boolean => { const M = MODE; if (!M || k === CUR || rawKey(k) === CUR) return false; if (M.kind === 'reach') { if (inBook(BOOKS.get(CUR), k)) return false; DROPPED?.add(k); return true; } if (M.mine.has(k)) return false; if (M.kind === 'exact') return true; if (M.not!.has(k)) return true; const o = OWNER.get(k); return o !== undefined && o !== CUR; };
+let keysHeld = false;
+const holdKeys = () => { if (!keysHeld) { keysHeld = true; for (const P of [SideMap.prototype, SideSet.prototype] as any[]) { const was = P.liveKeys; P.liveKeys = function (this: any, out: object[] = []) { const n0 = out.length, K: object[] = was.call(this, out); if (!MODE) return K; let n = n0; for (let i = n0; i < K.length; i++) if (!foreign(K[i])) K[n++] = K[i]; K.length = n; return K; }; } }
+  // (a list of keys written over while a game is walked keeps the other games' keys in front of it)
+  for (const t of sideRegistry().tables as any[]) { const K = t.sideKeys; if (!K || KEYED.has(K)) continue; KEYED.add(K); let refs: WeakRef<object>[] = K.refs; Object.defineProperty(K, 'refs', { configurable: true, enumerable: true, get: () => refs, set: (v: WeakRef<object>[]) => { if (!MODE) { refs = v; return; } const keep = refs.filter(r => { const k = r.deref(); return k !== undefined && foreign(k); }); refs = keep.length ? keep.concat(v) : v; } }); } };
+/** a walk of `g`: its tables list its keys */
+export function forGame<T>(g: any, f: () => T): T { const c = CUR, m = MODE; CUR = g; MODE = MODE_OF.get(g) ?? null; WALKED.add(g); try { return f(); } finally { CUR = c; MODE = m; } }
+/** every object in a game's book is that game's, for the other games of the process (the first game to number it) */
+function owned(g: any, bk: any): void { const put = (k: object) => { if (!OWNER.has(k)) OWNER.set(k, g); }; put(g); if (!bk) return; for (const M of bk.ids.values() as Iterable<Map<object, number>>) for (const k of M.keys()) put(k); for (const k of (bk.serials as Map<object, number>).keys()) put(k); }
+/** A START'S EXPORT, with every weak table listing this game's keys and no other game's. `say` is told what was left out */
+export function startExport(g: any, knobs: Record<string, unknown>, say?: (s: string) => void): Uint8Array { holdKeys(); for (const o of WALKED) if (o !== g) owned(o, BOOKS.get(o)); WALKED.clear();
+  const FIELDS = ['ids', 'lists', 'first', 'loose', 'serials', 'serial', 'nextSerial'] as const; const fresh = (bk: any) => { bk.ids = new Map(); bk.lists = new Map(); bk.first = new Map(); bk.loose = new Map(); bk.serials = new Map(); bk.serial = new WeakMap(); bk.nextSerial = 1; };
+  const bk0: any = BOOKS.get(g), saved: any = bk0 ? Object.fromEntries(FIELDS.map(f => [f, bk0[f]])) : null; if (bk0) fresh(bk0); MODE_OF.set(g, { kind: 'reach' });
+  let out: Uint8Array, left = new Set<object>(), passes = 0, found = 0;
+  for (;;) { DROPPED = new Set(); out = exportGame(g, knobs); left = DROPPED; DROPPED = null; passes++; const bk = BOOKS.get(g); let again = 0; for (const k of left) if (inBook(bk, k)) again++; found += again; if (!again) break; if (passes >= 8) { say?.(`A START'S REACH DID NOT SETTLE in 8 exports (${again} keys still found late)`); break; } }
+  const bk: any = BOOKS.get(g), mine = new WeakSet<object>(), not = new WeakSet<object>(); let nNot = 0; for (const M of bk.ids.values() as Iterable<Map<object, number>>) for (const k of M.keys()) mine.add(k); for (const k of (bk.serials as Map<object, number>).keys()) mine.add(k); for (const k of left) if (!mine.has(k)) { not.add(k); nNot++; }
+  // (the book as it was: a start after the first keeps every number it has given; the first start whose one export left out no key it then met IS the export)
+  if (saved) Object.assign(bk, saved); else if (passes > 1) fresh(bk);
+  if (saved || passes > 1) { MODE_OF.set(g, { kind: 'exact', mine }); out = exportGame(g, knobs); }
+  MODE_OF.set(g, { kind: 'own', mine, not }); owned(g, BOOKS.get(g));
+  if (nNot || passes > 1) say?.(`a start's export: ${nNot} keys of other games' rows left out of the weak tables; ${passes} exports to find this game's own (${found} keys met late)`);
+  return out!; }
 /** A FIELD RUST OWNS AND TYPESCRIPT CANNOT HOLD (schema `echo`): the apply keeps its bytes beside the object (import.ts), and the walk writes them back. So a re-export after an apply is Rust's own bytes there, and the walk's expression is only for a game that has never been applied onto */
 export const ECHO = new WeakMap<object, Map<string, Uint8Array>>();
 export const hasEcho = (o: object, q: string) => !!ECHO.get(o)?.has(q);
@@ -173,7 +200,7 @@ export function seedBook(g: any, knobs: Record<string, unknown>) { helpersOf(g, 
 /** the bytes of values of the given schema types, written by the walk's own writers against the game's book (the book must exist: one exportGame first) */
 /** one value's bytes at a time, for a walk that writes many: the game's book and helpers stand for the walk (scan.ts). The answer holds only until the next call */
 export function leafBytes(g: any, knobs: Record<string, unknown>): (n: Node, v: unknown) => Uint8Array { G = g; BK = BOOKS.get(g)!; B = helpers(g, knobs); const o = new Out(); return (n, v) => { o.n = 0; wr(n, v, o); return o.view().slice(); }; }
-export function exportPart(g: any, knobs: Record<string, unknown>, parts: [string | Node, any][]): Uint8Array { G = g; BK = BOOKS.get(g)!; B = helpers(g, knobs); const o = new Out(); for (const [ty, v] of parts) wr(typeof ty === 'string' ? parse(ty) : ty, v, o); return o.view().slice(); }
+export function exportPart(g: any, knobs: Record<string, unknown>, parts: [string | Node, any][]): Uint8Array { return forGame(g, () => { G = g; BK = BOOKS.get(g)!; B = helpers(g, knobs); const o = new Out(); for (const [ty, v] of parts) wr(typeof ty === 'string' ? parse(ty) : ty, v, o); return o.view().slice(); }); }
 /** WHAT THE HOST HANDS THE RUST GAME BEFORE EACH STEP, in about 2 KB (rust: io::take_host_half): each seat's record in seat order (`cmds`, as `Game.update` makes them), then every camera and Input row, then each seat's mark (the cut the host last took). The book must exist. */
 export function hostHalfParts(g: any, cmds: readonly any[]): [string, any][] { const bk = BOOKS.get(g)!, P: [string, any][] = [['u32', cmds.length]]; for (const c of cmds) P.push(['crate::cmd::PlayerCmd', c]);
   for (const [id, ty] of [['CameraId', 'crate::camera::FollowCamera'], ['InputId', 'crate::input::Input']]) { const L: any[] = bk.listOf(id); P.push(['u32', L.length]); for (const row of L) P.push([ty, row]); }
@@ -185,7 +212,8 @@ export function fieldAt(g: any, knobs: Record<string, unknown>, path: string[]):
   for (const p of path) { const T = SCHEMA.types[ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')]; if (!T || T.k !== 'struct') throw new Error('fieldAt: ' + ty + ' is no struct'); const f = T.fields.find((x: any) => x.rust === p); if (!f) throw new Error('fieldAt: no ' + p + ' in ' + ty);
     v = f.expr !== undefined ? compiled(f.expr)(v, G, B) : (f.ts !== undefined ? v[f.ts] : undefined); ty = f.ty; }
   return { ty, v }; }
-export function exportGame(g: any, knobs: Record<string, unknown>): Uint8Array {
+export function exportGame(g: any, knobs: Record<string, unknown>): Uint8Array { return forGame(g, () => exportGameNow(g, knobs)); }
+function exportGameNow(g: any, knobs: Record<string, unknown>): Uint8Array {
   G = g; let bk = BOOKS.get(g); if (!bk) { bk = new Book(); BOOKS.set(g, bk); } BK = bk; REP = new Map(); AT = ''; B = helpers(g, knobs);
   for (const [id, e] of Object.entries(SCHEMA.seeds as Record<string, string>)) { let L: any; try { L = compiled(e)(g, g, B); } catch { L = null; } if (L && Symbol.iterator in Object(L)) for (const x of L) if (x && typeof x === 'object') BK.idOf(id, x); else miss(`a seed of ${id} not a list`); }
   const main = new Out(); wType({ k: 'type', path: SCHEMA.root }, g, main);
