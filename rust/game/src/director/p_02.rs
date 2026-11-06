@@ -901,6 +901,7 @@ pub fn director_enter_show(g: &mut crate::game::Game, r: DirectorRunId) {
     g.touring = true;
     crate::game::game_clear_aftermath(g);
     crate::smoke_types::smoke_system_like_clear_all(g);
+    crate::out_events::push_smoke_system_like_clear_all(g);
     crate::player::cancel_actions(g);
     for d in g.doors.list.clone() {
         crate::doors::door_reset(g, d);
@@ -992,6 +993,7 @@ pub fn director_exit_show(g: &mut crate::game::Game, r: DirectorRunId) {
     g.mission_in_tour = false;
     crate::game::game_clear_aftermath(g);
     crate::smoke_types::smoke_system_like_clear_all(g);
+    crate::out_events::push_smoke_system_like_clear_all(g);
     crate::game::game_restart_encounter(g);
     if let Some(cam) = g.director.cam {
         g.tab.camera[cam].pin = None;
@@ -1070,6 +1072,7 @@ pub fn director_hand_over(g: &mut crate::game::Game, r: DirectorRunId, caption: 
     blackout_off_unless_permanent(g);
     crate::game::game_clear_aftermath(g);
     crate::smoke_types::smoke_system_like_clear_all(g);
+    crate::out_events::push_smoke_system_like_clear_all(g);
     crate::game::game_restart_encounter(g);
     g.player_invisible = false;
     g.god_mode = sv.god;

@@ -1334,7 +1334,7 @@ export function puppetRows(C: Ctx) {
     { const c = o.rlB; if (c && typeof c === 'object') f_character_AnimRlB(c); else C.slow(329, o); }   // rl_b
     { const c = o.rlShown; if (c && typeof c === 'object') f_character_AnimRlShown(c); else C.slow(330, o); }   // rl_shown
     C.slow(331, o);   // kit
-    { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_41[dv.getUint16(C.p, true)]; C.p += 2; if (o.kitHold !== v) o.kitHold = v; } else if (o.kitHold !== undefined && o.kitHold !== null) o.kitHold = null; } else if (o.kitHold !== undefined && o.kitHold !== null) o.kitHold = null; }   // kit_hold
+    { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_41[dv.getUint16(C.p, true)]; C.p += 2; if (o.kitHold !== v) o.kitHold = v; } else if (o.kitHold !== undefined && o.kitHold !== null) o.kitHold = null; } else if (o.kitHold !== undefined) o.kitHold = undefined; }   // kit_hold
     { if (b[C.p++]) { const c = o.kitLie; let same = c !== null && c !== undefined && c.length === 4; const p0 = C.p; if (same) for (let i = 0; i < 4; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 32; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 4; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(4); for (let i = 0; i < 4; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.kitLie = a; } } } else if (o.kitLie !== undefined && o.kitLie !== null) o.kitLie = null; }   // kit_lie
     { const c = o.mv2; if (c && typeof c === 'object') f_character_AnimMv2(c); else C.slow(332, o); }   // mv2
     { const c = o.mv2Shown; if (c && typeof c === 'object') f_character_AnimMv2Shown(c); else C.slow(333, o); }   // mv2_shown
@@ -2159,7 +2159,7 @@ export function puppetRows(C: Ctx) {
     { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.shown; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.shown = v !== 0 as any; else o.shown = v; } }   // shown
   }
   function f_character_AnimSw(o: any) {
-    { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_63[dv.getUint16(C.p, true)]; C.p += 2; if (o.cur !== v) o.cur = v; } else if (o.cur !== undefined && o.cur !== null) o.cur = null; } else if (o.cur !== undefined && o.cur !== null) o.cur = null; }   // cur
+    { if (b[C.p++]) { if (b[C.p++]) { const v = WORDS_63[dv.getUint16(C.p, true)]; C.p += 2; if (o.cur !== v) o.cur = v; } else if (o.cur !== undefined && o.cur !== null) o.cur = null; } else if (o.cur !== undefined) o.cur = undefined; }   // cur
     { if (b[C.p++]) { const v = WORDS_63[dv.getUint16(C.p, true)]; C.p += 2; if (o.from !== v) o.from = v; } else if (o.from !== undefined && o.from !== null) o.from = null; }   // from
     { if (b[C.p++]) { const v = WORDS_63[dv.getUint16(C.p, true)]; C.p += 2; if (o.to !== v) o.to = v; } else if (o.to !== undefined && o.to !== null) o.to = null; }   // to
     { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
