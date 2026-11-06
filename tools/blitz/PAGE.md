@@ -117,9 +117,11 @@ The rule: what the simulation's own code computes from the game's state for the 
 | the fog of war's block (`fogOfWar.frame`: the team's eyes and their fields, the fog's levels, the lit fog's lamps, the thin walls' bits) | `fogofwar/p_02.rs fog_of_war_pass`, `p_03.rs` (`full_block`, `lit_block`), `render_lights pack_light` | the filtered export (the block is on both lists) |
 | the lights' fog classes (the team's ids and lights) | `fogofwar/p_03.rs fog_of_war_full_block` | the filtered export (`LightSet.fog_team`) |
 | particle records, impulses, the fires' heat | every site of `particle_fx`, `blast_look`, `destruction`, `break_table`, … through `render_particles::particles_emit` | out events (`ParticlesEmit`, `ParticlesImpulse`, `ParticlesSetHeat`) |
+| a particle record's shape (cone, burst, ring, puff) and whether it is the team's own doing (the fog's mark) | `render_particles::particles_emit` | STAND-IN `face_emits_ours` → `OUT_OWN.ParticlesEmit`: the event's schema has neither |
+| smoke sources (a shot's gas, a stun's jets and trails, the can, a holed wall's puff) | `effects`, `combat`, `destruction`, `fire`, `smokebreak` | out event `SmokeSystemLikeEmit`; its kind, its grid and what it rides by STAND-IN `face_smoke_out` → `OUT_OWN.SmokeSystemLikeEmit`: the event's schema has none of the three |
 | a burst's fragments: a wall charge's, a door charge's, a thrown can's | `blast_look/b_01.rs blast_sparks` | out events |
 | which boxes are a laser's beam, a tracer's streak, an infrared line | `thinline thin_note / thin_air`, `irlaser ir_note` | STAND-IN `face_notes_out` → `notesIn` (the page's own side tables) |
-| the wind's two lists (the sources that blow; the ones for the particles) | `wind/p_01.rs wind_update` | STAND-IN `face_wind_out` → `windIn`; `windOut` hands them to the solver and the pool |
+| the wind's two lists (the sources that blow; the ones for the particles) and each source's record (speed, direction, place, reach) | `wind/p_01.rs wind_update` | STAND-IN `face_wind_out` → `windIn`; `windOut` hands them to the solver and the pool, and the rain's lean reads the storm's off the same record |
 | the weather frame, the sky's two colours, the haze, the exposure, the gloss, the box world's geometry serial | `weather`, `lighting`, `hours`, `wallbreak` | STAND-IN `face_picture_out` → `pictureIn` |
 
 What the tick has to be TOLD of the host, because a rule asks it: whether there is a particle pool (`particleFx.ts gpuFx`: with one, embers and

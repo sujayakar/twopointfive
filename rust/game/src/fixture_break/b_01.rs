@@ -4,9 +4,9 @@
 //! look reads the box world (a ray down, the furniture's footprints, sight lines to where it will lie) and this frame's hearing events. So the lane
 //! runs here, under its DRESS row, as it runs in the TypeScript.
 //!
-//! LEFT TO THE PICTURE'S SIDE: the particles (the lead's sparks, the tube's glass, the dust a landing kicks up). A Rust game has no particle system
-//! (`gpu_fx` is false), which is the TypeScript's own `if (P)`; the seeds those emits would have dealt (`Rec.emits`) are therefore not advanced, and
-//! `emits` is no state a rule or a box reads.
+//! THE PARTICLES (the lead's sparks, the tube's glass, the splinters a landing throws) go to the host's pool where it has one (`gpu_fx`, the
+//! TypeScript's own `if (P)`), each with a seed of the fixture's own (`seed_of`, which counts on `Rec.emits`); a host with none gets none and the
+//! count stays, as there.
 //! The module's state is `g.m.fixture_break.state` (the TypeScript's SideMap by the game); `by` (a Map by the target) is the record's own `t`.
 #![allow(unused_imports, unused_variables)]
 use super::*;                      // your own module: its types, its other parts' functions
@@ -247,6 +247,7 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>, dt: 
         state(g).recs = keep; for r in gone.iter() { let_go(g, r); }
     }
     let mut boxes = 0;
+    let pool = crate::particle_fx::gpu_fx(g);
     for ri in 0..state(g).recs.len() {
         let mut r = state(g).recs[ri].clone();
         let a = now - r.born;
@@ -259,7 +260,9 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>, dt: 
         if hang && r.phase == 1.0 {   // coming down: the hinge end in free fall, the tray flattening out as it goes, flat as it lands
             let tt = m::sqrt(2.0 * m::max(0.1, r.h0[1] - r.lie[1]) / 9.8); let s = m::min(1.0, m::max(0.0, a - r.t0) / tt);
             r.th = r.th0 * (1.0 - s); if s > r.lay { r.lay = s; } land(&mut r, s);
-            if s >= 1.0 { r.phase = 2.0; r.still = true; }   // (the dust its landing kicks up: particles, the picture's)
+            if s >= 1.0 { r.phase = 2.0; r.still = true;
+                if pool { let seed = seed_of(&mut r); crate::render_particles::particles_emit(g, PKind::Debris, [r.hinge[0] + r.uh[0] * r.l / 2.0, r.lie[1], r.hinge[2] + r.uh[2] * r.l / 2.0], [0.0, 1.0, 0.0], 10.0,
+                    EmitOpts { speed: 1.2, speed_jit: Some(0.7), spread: Some(1.4), life: 25.0, life_jit: Some(0.3), size: 0.012, size_jit: Some(0.6), aspect: Some(1.6), pos_jit: Some(m::min(0.3, r.l * 0.3)), color: Some(GLASS), seed: Some(seed), ..EmitOpts::default() }); } }
             pose(g, &mut r);
         } else if hang && !r.still {   // the swing: a damped spring about the rest angle, the ceiling its stop
             let h = m::min(dt, 1.0 / 30.0); r.om += (-f.swing_k * (r.th - r.rest) - f.swing_c * r.om) * h; r.th += r.om * h;
@@ -271,7 +274,20 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>, dt: 
             let mut sp = GlowAtOut { sparks: 0.0 };
             let gl = glow_at(g, &mut r, m::max(0.0, a), &mut sp); let warm = m::min(1.0, m::max(0.0, a) / 1.5);
             if hang { let e = f.glow_tip * gl; g.tab.boxes[r.hang[5]].emissive = [e * (0.8 + 0.2 * warm), e * (0.9 - 0.25 * warm), e * (1.0 - 0.8 * warm)]; }
-            // (the sparks and the tube's glass: particles, the picture's; `glassOut` is said only where a particle system took them, as the TypeScript's `if (P)`)
+            // (every emit carries a seed of the fixture's own, so the particles' serial is never advanced by the look)
+            if pool && sp.sparks > 0.0 {
+                // out past its free end and down from where it hangs, up off where it lies
+                let d: V3 = if r.phase == 2.0 { [r.uh[0] * f.spark_aside, f.spark_up, r.uh[2] * f.spark_aside] } else if hang { [r.uh[0] * f.spark_aside, -f.spark_down, r.uh[2] * f.spark_aside] } else { [r.uh[0] * f.spark_aside * 0.5, -1.0, r.uh[2] * f.spark_aside * 0.5] };
+                let seed = seed_of(&mut r);
+                crate::render_particles::particles_emit(g, PKind::Spark, r.tip, v3::normalize(d), sp.sparks,
+                    EmitOpts { speed: f.spark.speed, speed_jit: Some(f.spark.speed_jit), spread: Some(f.spark.spread), life: f.spark.life, life_jit: Some(f.spark.life_jit), size: f.spark.size, seed: Some(seed), ..EmitOpts::default() });
+                g.stats.fixture_break.sparks += sp.sparks as i32;
+            }
+            if pool && !r.glass_out && a >= f.glass_at && hang { r.glass_out = true;   // born well under the ceiling, in two lots along the fixture
+                for k in [0.3, 0.7] { let seed = seed_of(&mut r);
+                    crate::render_particles::particles_emit(g, PKind::Debris, [r.hinge[0] + r.uh[0] * r.l * k, r.hinge[1] - 0.3, r.hinge[2] + r.uh[2] * r.l * k], [0.0, -1.0, 0.0], (js::to_i32(f.glass) >> 1) as f64,
+                        EmitOpts { speed: 1.3, speed_jit: Some(0.8), spread: Some(1.25), life: 25.0, life_jit: Some(0.3), size: f.glass_size, size_jit: Some(0.6), aspect: Some(1.7), pos_jit: Some(m::min(0.2, r.l * 0.2)), color: Some(GLASS), seed: Some(seed), ..EmitOpts::default() }); }
+            }
         } else if hang && g.tab.boxes[r.hang[5]].emissive[0] > 0.0 { g.tab.boxes[r.hang[5]].emissive = [0.0, 0.0, 0.0]; }
         for pi in 0..r.pieces.len() {
             let mut p = r.pieces[pi];
@@ -287,7 +303,10 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>, dt: 
                 b.c = [b.c[0] + p.v[0] * h, b.c[1] + p.v[1] * h, b.c[2] + p.v[2] * h]; p.ang += p.rate * h; b.rot = Some(quat::mul(quat::axis_angle(p.axis, p.ang), p.q0));
                 let lie = p.floor_y + b.h[1] + 0.002;
                 if b.c[1] <= lie + (if p.bounced { 0.0 } else { m::max(b.h[0], b.h[2]) * 0.5 }) {   // down: one dead bounce for a diffuser piece, then flat where it stopped
-                    if !p.bounced && !p.glass { p.bounced = true; p.v = [p.v[0] * 0.4, 1.1, p.v[2] * 0.4]; p.rate *= 0.5; b.c[1] = lie + m::max(b.h[0], b.h[2]) * 0.5; }
+                    if !p.bounced && !p.glass { p.bounced = true; p.v = [p.v[0] * 0.4, 1.1, p.v[2] * 0.4]; p.rate *= 0.5; b.c[1] = lie + m::max(b.h[0], b.h[2]) * 0.5;
+                        let at: V3 = [b.c[0], p.floor_y + 0.03, b.c[2]];
+                        if pool { let seed = seed_of(&mut r); crate::render_particles::particles_emit(g, PKind::Debris, at, [0.0, 1.0, 0.0], 8.0,
+                            EmitOpts { speed: 1.4, speed_jit: Some(0.7), spread: Some(1.3), life: 25.0, life_jit: Some(0.3), size: 0.012, size_jit: Some(0.6), aspect: Some(1.6), pos_jit: Some(0.15), color: Some(GLASS), seed: Some(seed), ..EmitOpts::default() }); } }
                     else { p.rest = true; b.c[1] = lie; b.rot = Some(quat::yaw(p.yaw + p.ang * 0.3)); b.yaw = p.yaw + p.ang * 0.3; }
                 }
             }
@@ -298,6 +317,16 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>, dt: 
         state(g).recs[ri] = r;
     }
     g.stats.fixture_break.boxes = boxes;
+}
+
+/// the tube's glass
+const GLASS: V3 = [0.88, 0.92, 0.92];
+use crate::render_particles::{EmitOpts, PKind};
+/// a seed of the fixture's own for one emit   (fixtureBreak.ts:194 seedOf)
+fn seed_of(r: &mut Rec) -> f64 {
+    let n = r.emits; r.emits += 1.0;
+    let v = m::imul(js::to_i32((js::to_i32(r.seed) ^ 0x51ED270B) as f64 + n * 7919.0), 0x9E3779B1u32 as i32) as u32;
+    if v == 0 { 1.0 } else { v as f64 }
 }
 
 /// a record dropped (the fixture repaired, the clock jumped): its boxes are let go, as the TypeScript drops the objects
