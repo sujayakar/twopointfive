@@ -244,6 +244,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   man dead on his, and on the page's stand two marks are dealt 0.21 m apart; a new line gives the same order after a fall-in and passes on both
   stands (0.90 m). Two readings side by side, not a cause traced (the old stand passes both). On both stands one mark is dealt where the body lies.
   The detail prints each man's mark, the nearest two marks and the body. The door tools' owner's.
+  THE ELEVENTH (11-06), one mend, one red made true, one row put right. `loudchaos-levels` (red on both stands): it built each generator's level on
+  the game's own maths, which every stand of the harness has on (`src/math/exact.ts`), where the exporter writes the file on the engine's: four boxes
+  of the records office sharing one yaw (an arctangent's last place) and one box centre of the compound differed in the sixteenth digit. The two
+  loads, the generator and the steps after it run through `headless.ts asExporter`, the whole comparison on one maths as `level-probes` has it
+  (`LOUDLEVELS_BREAK=1`: on the stand's maths, 2 levels FAIL on both). GREEN ON THIS LINUX BOX: the engine's maths is the system's, and nobody has
+  run it on a Mac (true of `export.ts --check` and `level-identity` too). It still walks the exporter's steps by hand.
+  `runner` (12), nothing is outside: NOT GREEN, its red made true, the enemies' owner's. The cornered man picks the corner farthest from the enemies
+  inside `cornerM` (25 m) of him by the floor, and picks again every `retrySecs` from wherever he has got to. On the page's stand he takes six in
+  turn the length of the compound, about 80 m of floor, and settles 36.7 m from where he broke at 30.6 s; on the old stand his first (18.2 m) stays
+  the best. Either of two page rules alone opens the west: he reckons from the men he knows of (`PICTURE.run`: Sam alone), or the team has fallen in
+  on Sam. The first line had been red by half a second of a thirty-second watch, and read him 1.5 s after his first arrival, when a second look can
+  have sent him on: it watches sixty, reads him `retrySecs` and half a second after an arrival he stays at (LOOSENED in time: it never bounded it),
+  and passes on both stands. A NEW line holds the corner he settles in to `cornerM` from where he broke: FAIL on the page's stand, its row.
+  `RUNNER12_BREAK=1` is `cornerM` 0, he stays at the man's feet (the first line FAILS on both). `nightbreach-contested`: read, NOT mended, its row
+  put right: Sam's covering fire down the door's line from behind the stack downs both his own men on the page (friendly fire is live: the
+  staging's), and with that held off by hand the pin peaks 0.43 of the 0.6 it needs, 0.99 on the old stand (could be real: the suppression's
+  owner's). Its other two lines are not read.
   tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
