@@ -6,6 +6,7 @@ use alloc::{string::String, vec::Vec};
 /// which level's script this is, by the level file's name (scene/levelScripts.ts LEVEL_SCRIPTS); the body is levels/<name>.script.ts, its define pass called by a match
 #[derive(Clone, Copy, Debug)]
 pub enum LevelScriptFn {
+    Unset,
     TutSky,
     TutTeam,
     TutQueue,

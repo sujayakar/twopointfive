@@ -180,7 +180,7 @@ pub fn director_ctx_of(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorL
 pub fn cond_label(c_2: &crate::director::Cond) -> String { todo!() }
 
 /// (src/game/director.ts:1092 nearOf)
-pub fn near_of(g: &mut crate::game::Game, pos: V3, what: &crate::director::NearWhat, within: f64) { todo!() }
+pub fn near_of(g: &mut crate::game::Game, pos: V3, what: &crate::director::NearWhat, within: f64) -> bool { todo!() }
 
 /// (src/game/director.ts:1100 samViewOf)
 pub fn sam_view_of(g: &mut crate::game::Game) -> crate::director::SamView { todo!() }
@@ -220,6 +220,7 @@ pub fn program_beat(p: &mut crate::director::ProgramDef, name: &str, script: &cr
 pub fn beat_frame_new(script: &crate::scene_level::LevelScriptFn, beat: &str) -> crate::director::BeatFrame {
     use crate::scene_level::LevelScriptFn as S; use crate::director::BeatFrame as F;
     match (script, beat) {
+        (S::Unset, b) => panic!("the beat {} has no script: its script was not dealt (io::deal_scripts), or the blank was read", b),
         (S::TutKit, "hold") => F::TutKitHold(Default::default()),
         (S::TutKit, "gun") => F::TutKitGun(Default::default()),
         (S::TutKit, "bags") => F::TutKitBags(Default::default()),
@@ -544,6 +545,7 @@ pub mod util {
 pub fn script_define(script: crate::scene_level::LevelScriptFn, m: &mut crate::director::Manifest) -> Result<(), String> {
     use crate::scene_level::LevelScriptFn as S; use crate::director::ScriptVars as V;
     m.vars = match script {
+        S::Unset => return Err(String::from("a level with no script was asked to define one")),
         S::TutKit => V::TutKit(crate::script_tut_kit::tut_kit_define(m)?),
         S::TutPair => V::TutPair(crate::script_tut_pair::tut_pair_define(m)?),
         S::TutQueue => V::TutQueue(crate::script_tut_queue::tut_queue_define(m)?),
@@ -555,4 +557,21 @@ pub fn script_define(script: crate::scene_level::LevelScriptFn, m: &mut crate::d
         S::TutTeam => V::TutTeam(crate::script_tut_team::tut_team_define(m)?),
     };
     Ok(())
+}
+
+/// INVENTED: the script of the level of this name, as scene/levelScripts.ts LEVEL_SCRIPTS hangs it (each script file is levels/<name>.script.ts)
+pub fn level_script_of(name: &str) -> Option<crate::scene_level::LevelScriptFn> {
+    use crate::scene_level::LevelScriptFn as S;
+    match name {
+        "tut-kit" => Some(S::TutKit),
+        "tut-pair" => Some(S::TutPair),
+        "tut-queue" => Some(S::TutQueue),
+        "tut-quiet" => Some(S::TutQuiet),
+        "tut-road" => Some(S::TutRoad),
+        "tut-sky" => Some(S::TutSky),
+        "tut-solo" => Some(S::TutSolo),
+        "tut-squad" => Some(S::TutSquad),
+        "tut-team" => Some(S::TutTeam),
+        _ => None,
+    }
 }

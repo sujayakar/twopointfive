@@ -11,3 +11,5 @@ pub mod p_03;
 pub use p_03::{you_can_rows, you_guns_can, kit_gun_can, mix_of, charge_rows, big_row, build_rows, build_rows_big, build_rows_guns, build_rows_tree, kit_rows, kit_row_cost, kit_name, kit_words, big_words, wall_words, kit_changed, over_why, row_of, kit_peek, peek, kit_try, kit_step, kit_set, set_row, kit_preset_card, kit_preset, kit_preset_why, kit_preset_all, kit_preset_of, kit_paste_card, rows_moved, kit_paste_peek, paste_peek, kit_paste, kit_wears, store_get_item, store_set_item, store_remove_item, kit_sanitize};
 pub mod p_04;
 pub use p_04::{kit_issued_page, kit_packs, kit_lesson_page, page_issued, page_frags, kit_issue_whole, kit_issue, as_issued, kept_of, kept_now, kit_reset, kit_of, kit_index, kit_goggles, kit_pistol, kit_big, kit_you_light, kit_you_nvg, stealth_run, kit_rings_lent, kit_tree_on, kit_player, kit_alone, kit_solo, kit_solo_if, kit_solo_stand, kit_fresh, kit_show, kit_stage, kit_walls, kit_pool, kit_smokes};
+pub use p_01::slot_amount;
+pub use p_01::slot_put;
