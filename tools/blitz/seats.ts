@@ -20,6 +20,7 @@
 import '../qa/stand.ts';
 import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 const { exportGame } = await import('./host.ts');
+const { startFacts } = await import('./startfacts.ts');
 const { hostHalf, bookOf } = await import('./export.ts');
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
@@ -79,6 +80,7 @@ function watchPair() { if (!COOP.door || !G.gives) return; const s = G.gives[0].
   if (!pair.length) pair = g.seats[s].view.orders.squad().map((gd: any) => ({ gd, side: sideOfDoor(gd.char.pos) }));
   for (const m of pair) { const now = sideOfDoor(m.gd.char.pos); if (now !== 0 && now !== m.side && COOP.crossed[m.gd.callsign] === undefined) COOP.crossed[m.gd.callsign] = k; } }
 dressAll(false);
+{ const w = argv.includes('--dress') ? argv[argv.indexOf('--dress') + 1] : ''; if (w === 'all') dressAll(true); else if (w) { const { DRESS } = await import('../../src/game/dress.ts'); for (const r of w.split(',')) (DRESS as any)[r] = true; } }   // (`--dress all|rows`: the dressing rows as the page has them, mission.ts)
 if (G.room && argv.includes('--men')) { const { DRESS } = await import('../../src/game/dress.ts'); DRESS.men = true; }   // (`--men`: the men ARE handed to the TypeScript's picture, for its count; the Rust game hands nobody anything, and the picture's own state (g.rig_fits) then differs by design)
 if (!g.dice) throw new Error('seats.ts: the game of two has no die of its own');
 // (`--asks`: every ask of the Game's own seat field made inside a tick, by where it came from, and the first tick with one: seats.ts SEAT_ASKS)
@@ -89,7 +91,7 @@ for (let i = 0; i < TICKS && !threw; i++) {
   const cmds = P.sample(i); k = i + 1;
   const step = g.stepSeats;
   g.stepSeats = function (this: any, dt: number, c: unknown) {
-    if (k === 1) { g.sim.settle(g); writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g)); }
+    if (k === 1) { g.sim.settle(g); writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g)); writeFileSync(`${outDir}/starts.txt`, startFacts(g, 1) + '\n'); }
     else if (inR(OPEN, k)) writeFileSync(`${outDir}/c${k}.bin`, exportGame(g, reg));
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds));
     appendFileSync(`${outDir}/host.txt`, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : 1}\n`);

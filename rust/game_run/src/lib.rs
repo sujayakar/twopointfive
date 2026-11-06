@@ -13,8 +13,8 @@ use game::io::Io;
 
 /// The block's parts by name, in src/sim/state.ts SIM_PARTS' order. post.txt's first line carries the TypeScript's list and the two must agree.
 pub const NAMES: [&str; 13] = ["head", "dice", "doors", "falls", "props", "slabs", "items", "men", "lights", "weather", "smoke", "poses", "panes"];
-/// POSES: a dead man's ragdoll drive holds a pose the TypeScript keeps OUTSIDE the pool for good, and a Rust pose lives in the pool, so from the first death
-/// the pool's bytes differ by that pose and say nothing more. That part is reported when it first parts and is not the alarm.
+/// the pose pool's place among the parts. It is in the alarm like the rest: a pose of its own (a ragdoll's, a function's scratch) is outside the pool on
+/// both sides, and a start states which sets are at home (`start_facts`).
 pub const POSES: usize = 11;
 
 /// one part's hash: its words up to the last that is not zero (a parked block of the TypeScript's may be shorter than the Rust slot; the zeros say nothing)
@@ -62,6 +62,24 @@ pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>,
     (g, said)
 }
 
+/// THE TWO FACTS OF A START THE BRIDGE DOES NOT CARRY, as the TypeScript's side wrote them beside the start (tools/blitz/startfacts.ts, a line of
+/// starts.txt): `<k> home <set ids…> | posin <char id>:<x>,<y>,<z> … | odd <n>`. `start` above ASSUMES them (a set on the game's list of sets at home
+/// is at home; every animator holds its body's own array); this STATES them: exactly the sets named are at home, and an animator named holds the numbers
+/// given, every other its body's array. Answers a line for the log: how many of each, and how many the assumption would have got wrong (`odd`).
+pub fn start_facts(g: &mut game::game::Game, line: &str) -> String {
+    let mut parts = line.split(" | ");
+    let home: Vec<u32> = parts.next().unwrap_or("").split(' ').skip(2).filter_map(|x| x.parse().ok()).collect();
+    let posin: Vec<(u32, [f64; 3])> = parts.next().unwrap_or("").split(' ').skip(1).filter_map(|x| {
+        let (id, v) = x.split_once(':')?; let n: Vec<f64> = v.split(',').filter_map(|y| y.parse().ok()).collect();
+        if n.len() == 3 { Some((id.parse().ok()?, [n[0], n[1], n[2]])) } else { None } }).collect();
+    let odd = parts.next().unwrap_or("").trim_start_matches("odd ").trim().to_string();
+    for s in g.tab.pose_set.ids().collect::<Vec<_>>() { g.tab.pose_set[s].home = if home.contains(&(s.ix() as u32)) { Some(game::Opaque) } else { None }; }
+    for c in g.ch.ids().collect::<Vec<_>>() {
+        g.ch[c].anim.pos_in = match posin.iter().find(|p| p.0 as usize == c.ix()) { Some(p) => p.1, None => game::character::POS_IN_IS_POS };
+    }
+    format!("START FACTS: {} pose sets at home, {} animators holding an older place than their body's; the runner's old assumption would have been wrong of {}", home.len(), posin.len(), odd)
+}
+
 /// HARNESS STAND-IN: a lesson's harness feeds the player's light meter itself before every tick (a line of meter.txt)
 pub fn meter(g: &mut game::game::Game, v: f64) { let pl = g.player; g.pl[pl].visibility = v; }
 
@@ -84,6 +102,17 @@ pub fn give(g: &mut game::game::Game, k: usize, l: &str) -> String {
     use game::orders::{OrderTarget as T, Who};
     let mut w: Vec<&str> = l.split(' ').collect();
     let seat: Option<usize> = match w.last().and_then(|x| x.strip_prefix("seat")) { Some(n) => { let n = n.parse::<usize>().ok(); w.pop(); n } None => None };
+    // HARNESS STAND-IN: a write of the driver's that stands in the orders' own sequence (mission.ts: the scripted commander of `--wall` gives itself a wall
+    // charge where the kit issued none, then gives the order on the wall): `<k> !wall_carried <n | null>`, `<k> !wall_raised <n>`
+    if w.get(1).map_or(false, |x| x.starts_with('!')) {
+        let n = w.get(2).and_then(|x| x.parse::<f64>().ok());
+        match w[1] {
+            "!wall_carried" => game::wallcharge::wall_charge_set_carried(g, n),
+            "!wall_raised" => game::wallcharge::wall_charge_raise_carried(g, n.unwrap_or(0.0)),
+            _ => return format!("  NOTE tick {}: a write of the driver's this runner does not know: {}", k, l),
+        }
+        return format!("  the driver's write before tick {}: {}", k, l);
+    }
     if l.contains("UNSUPPORTED") || w.len() < 7 { return format!("  NOTE tick {}: an order of the driver's this runner cannot give: {}", k, l); }
     if let Some(n) = seat { if n >= g.seats.len() { return format!("  NOTE tick {}: an order for seat {} in a game of {}: {}", k, n, g.seats.len(), l); } }
     let at = [w[4].parse::<f64>().unwrap(), w[5].parse::<f64>().unwrap(), w[6].parse::<f64>().unwrap()];
