@@ -564,14 +564,17 @@ export async function standRust(g: any, word: string): Promise<RustHost | null> 
 // hangs its own function on a game object, checks a TypeScript function with no game, or holds the game to a walk of the JavaScript objects (iv-a, iv-b,
 // iv-c) stays on the TypeScript tick until the generated call surface and taps land; a probe the census did not read stays there too. Every such probe is
 // said as its first game is stood and counted in one line as the process ends, so that its green is not read as the Rust game's.
-let KINDS: { probes: Record<string, string>; tools: Record<string, { word: string; why: string }> } | null = null;
+let KINDS: { probes: Record<string, string>; tools: Record<string, { word: string; why: string }>; pins?: Record<string, string[]> } | null = null;
 const TABLE_SAID = { rust: new Map<string, number>(), ts: new Map<string, number>(), kinds: new Map<string, number>(), hooked: false };
 const ON_TS = new Set(['iii', 'iv-a', 'iv-b', 'iv-c', '?']);
 function byTable(): 'rust' | 'ts' {
   KINDS ??= JSON.parse(readFileSync(new URL('./qa-kinds.json', import.meta.url).pathname, 'utf8'));
   const probe: string | null = (globalThis as any).__probeNow ?? process.env.RH_PROBE ?? null, tool = (process.argv[1] ?? '').split('/').pop() ?? '';
   let word: 'rust' | 'ts', who: string, why: string;
-  if (probe) { const k = KINDS!.probes[probe] ?? '?'; word = ON_TS.has(k) ? 'ts' : 'rust'; who = probe; why = k === '?' ? 'not read by the census' : `kind ${k}`; if (word === 'ts') TABLE_SAID.kinds.set(k, (TABLE_SAID.kinds.get(k) ?? 0) + (TABLE_SAID.ts.has(who) ? 0 : 1)); }
+  if (probe) { const k = KINDS!.probes[probe] ?? '?'; word = ON_TS.has(k) ? 'ts' : 'rust'; who = probe; why = k === '?' ? 'not read by the census' : `kind ${k}`;
+    // (a check that runs with a SETTLED switch off its page value asks for a game the Rust game does not have: `pins`, from a run with RH_FOLDED)
+    const pin = KINDS!.pins?.[probe]; if (word === 'rust' && pin?.length) { word = 'ts'; why = `it runs with a settled switch off its page value: ${pin.slice(0, 3).join(', ')}`; TABLE_SAID.kinds.set('pins a settled switch', (TABLE_SAID.kinds.get('pins a settled switch') ?? 0) + (TABLE_SAID.ts.has(who) ? 0 : 1)); }
+    else if (word === 'ts') TABLE_SAID.kinds.set(k, (TABLE_SAID.kinds.get(k) ?? 0) + (TABLE_SAID.ts.has(who) ? 0 : 1)); }
   else { const t = KINDS!.tools[tool]; word = t?.word === 'ts' ? 'ts' : 'rust'; who = tool; why = t?.why ?? 'no row: the default'; }
   const M = TABLE_SAID[word]; if (!M.has(who) && word === 'ts') process.stdout.write(`  [the game: ${who} is stood on the TYPESCRIPT TICK by the table (${why}); its verdict is not the Rust game's]\n`);   // (not console.log: a check may hold that while it stands its game)
   M.set(who, (M.get(who) ?? 0) + 1);

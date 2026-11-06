@@ -262,7 +262,7 @@ json.dump(J, open(f'{OUT}/qa-census.json', 'w'), indent=1)
 # --kinds <file>: the table TPS_GAME=table reads (tools/blitz/rust-host.ts `byTable`): a probe's kind; the rows of the stand-alone tools are kept as they are
 if arg('--kinds'):
     old = json.load(open(arg('--kinds'))) if os.path.exists(arg('--kinds')) else {}
-    json.dump({'what': 'a probe of tools/qa/probes.ts by what it does to the game between two ticks (tools/blitz/qa-census.py --kinds, by reading); `tools`: the stand-alone tools, by hand', 'tools': old.get('tools', {}), 'probes': {n: r['kind'] for n, r in sorted(PROBE.items())}}, open(arg('--kinds'), 'w'), indent=0)
+    json.dump({'what': 'a probe of tools/qa/probes.ts by what it does to the game between two ticks (tools/blitz/qa-census.py --kinds, by reading); `tools`: the stand-alone tools, by hand', 'tools': old.get('tools', {}), 'pins': old.get('pins', {}), 'probes': {n: r['kind'] for n, r in sorted(PROBE.items())}}, open(arg('--kinds'), 'w'), indent=0)
 print(f"{len(PROBE)} probes read of {len(ALLN)} names known ({len(J['unmapped'])} names with no line found); kinds: {J['kinds']}")
 print(f"rules called between ticks: {len(rule_probes)} distinct (+ {len(unj_probes)} the inventory never judged, + {len(ask_probes)} asks); {sum(1 for r in J['rules'] + J['unjudged'] if r['cannot_cross'])} take an argument that cannot cross")
 for t, r in TOOL.items(): print(f"  {t}: kind {r['kind']} · rules {sorted(r['rules'])[:8]} · unjudged {sorted(r['unjudged'])[:6]} · writes {len(r['writes'])} · wraps {sorted(r['wraps'])[:4]} · {sorted(r['word'])}")
