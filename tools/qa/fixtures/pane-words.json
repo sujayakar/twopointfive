@@ -1,10 +1,11 @@
 {
- "what": "tools/qa/pane-ident.ts: every name's count of calls and word over its run on the frozen stand (tools/qa/ident-pin.ts; --record writes it)",
+ "what": "tools/qa/pane-ident.ts: every name's count of calls and word over its run on the shipped stand (tools/qa/ident-pin.ts; --record writes it)",
  "stands": {
   "frozen": {
    "run": "office.json,glasshouse.json,barracks.json,consulate.json n 300 seed 1",
    "end": "5447 calls",
    "tree": "the port, the last tree where the TypeScript twin stood",
+   "stood": "TPS_CPUSENSE=1",
    "words": {
     "annealed": {
      "asked": 328,
@@ -177,6 +178,186 @@
     "widen": {
      "asked": 268,
      "word": "aae7f60fce2d24fd"
+    }
+   }
+  },
+  "shipped": {
+   "run": "office.json,glasshouse.json,barracks.json,consulate.json n 300 seed 1",
+   "end": "5453 calls",
+   "tree": "506e79e7 (step 1572); on this tree the old stand's run folds to the first recording's words, 43 of 43",
+   "stood": "TPS_CPUSENSE=1",
+   "words": {
+    "annealed": {
+     "asked": 517,
+     "word": "c6a6a05163c90172"
+    },
+    "arm": {
+     "asked": 150,
+     "word": "e9e456b96c1731d0"
+    },
+    "armHole": {
+     "asked": 93,
+     "word": "82a05607ed9729e3"
+    },
+    "armPast": {
+     "asked": 28,
+     "word": "f06b02e324f078d3"
+    },
+    "barsBlast": {
+     "asked": 152,
+     "word": "f87716c7888ff688"
+    },
+    "barsTaken": {
+     "asked": 61,
+     "word": "9b5f72b1d7692a7d"
+    },
+    "blast": {
+     "asked": 199,
+     "word": "991a9f429af22ed4"
+    },
+    "block": {
+     "asked": 1082,
+     "word": "9f0c37646709ca2c"
+    },
+    "clump": {
+     "asked": 5867,
+     "word": "6437376758fd9f0e"
+    },
+    "crater": {
+     "asked": 125,
+     "word": "215fdc13f6424850"
+    },
+    "cross": {
+     "asked": 600,
+     "word": "6084233d518622ea"
+    },
+    "crossHole": {
+     "asked": 47,
+     "word": "518844aa09efe4ee"
+    },
+    "crossInto": {
+     "asked": 24,
+     "word": "b1864a8e447042a3"
+    },
+    "dagger": {
+     "asked": 2304,
+     "word": "2520ed9e6cc6e5c0"
+    },
+    "diced": {
+     "asked": 74,
+     "word": "3d300ff4acfffe84"
+    },
+    "heard": {
+     "asked": 300,
+     "word": "9f29d4d271a30480"
+    },
+    "impact": {
+     "asked": 1161,
+     "word": "1d6b0c707b40ade7"
+    },
+    "laminated": {
+     "asked": 55,
+     "word": "35e4d225c4bfbefa"
+    },
+    "landed": {
+     "asked": 3902,
+     "word": "4a6c3ea09f804d40"
+    },
+    "noRoom": {
+     "asked": 4,
+     "word": "6be2621ab8eb94ff"
+    },
+    "path": {
+     "asked": 600,
+     "word": "67aae4f1a239a0bb"
+    },
+    "pathOne": {
+     "asked": 115,
+     "word": "b362f743a99bcfaa"
+    },
+    "pathTwo": {
+     "asked": 16,
+     "word": "392cbaf306c4cd2d"
+    },
+    "punched": {
+     "asked": 1594,
+     "word": "6a596d40ebf27005"
+    },
+    "raked": {
+     "asked": 119,
+     "word": "dd25c4f2d4c8764c"
+    },
+    "runByFire": {
+     "asked": 394,
+     "word": "0a7572eec3c2ac2f"
+    },
+    "runByOne": {
+     "asked": 70,
+     "word": "33a91bcf9ef98d9a"
+    },
+    "sheetOut": {
+     "asked": 2,
+     "word": "27aa71d244677357"
+    },
+    "shotAllowed": {
+     "asked": 578,
+     "word": "bfc858c2901b09ca"
+    },
+    "shotRefused": {
+     "asked": 22,
+     "word": "9e918977f2926424"
+    },
+    "softCrack": {
+     "asked": 258,
+     "word": "f7d1b736671704b4"
+    },
+    "supportFell": {
+     "asked": 1180,
+     "word": "593116cf05198d1a"
+    },
+    "tempered": {
+     "asked": 487,
+     "word": "1c7fe398e089320a"
+    },
+    "toll": {
+     "asked": 600,
+     "word": "9e236ac3904b0f85"
+    },
+    "tollPass": {
+     "asked": 578,
+     "word": "b9ad4591830d63f0"
+    },
+    "tollSpent": {
+     "asked": 22,
+     "word": "f8318977359843e0"
+    },
+    "toothOut": {
+     "asked": 1180,
+     "word": "593116cf05198d1a"
+    },
+    "update": {
+     "asked": 1019,
+     "word": "87efed0488d70786"
+    },
+    "viewBlown": {
+     "asked": 4800,
+     "word": "336b61c5c58a1115"
+    },
+    "viewCounted": {
+     "asked": 4800,
+     "word": "a59e79c5fb8ad199"
+    },
+    "viewWary": {
+     "asked": 4800,
+     "word": "0fab99c5d8b3471b"
+    },
+    "wasOpen": {
+     "asked": 714,
+     "word": "2978bae6c1a8ccee"
+    },
+    "widen": {
+     "asked": 372,
+     "word": "9d5a24f1af96e43e"
     }
    }
   }

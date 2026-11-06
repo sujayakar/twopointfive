@@ -860,9 +860,17 @@ one stops the tool by name, on an address one does nothing and says so in the co
     the run under that name moved, which a break upstream of it does too: only a word that STAYED is certain. Two languages on one input
     said which name's own arithmetic was bent; one language cannot. WHAT KEEPS ONE NAME HONEST is `--against`: a change to one layer shows, against the
     tree before it, that its word moved and no other did.) THE PIN: a fixture
-    under `tools/qa/fixtures`, recorded ON THE FROZEN STAND ONLY (`--record`, which writes the tree it was taken on beside the words), because a
-    run's course moves there only by the frozen digests' ceremony; on the page's stand it moves with every rule that lands, and a recording
-    there would be written again by reflex and hold nothing. A family's FIRST recording is taken on the last tree where both languages stood and
+    under `tools/qa/fixtures`, recorded on ONE stand, the family's (`hold({ stand })`; `--record` writes the tree it was taken on and how the
+    stand was stood beside the words, and is refused on any other stand). From 2026-11-05 that is the page's stand for a family that has recorded
+    there (the glass: `pane-words.json`); the layers' and the senses' recordings are still the old stand's until their owners take them again, and
+    a file may keep the old stand's recording beside the page's while the old stand can be stood. A recording of whole runs on the page's stand
+    moves with every rule that moves play under it: the commit that records again says which rule. A RUN IS HELD OR IT FAILS (the same day; the
+    glass check had printed PASS on both stands with nothing compared, its recording carrying no word of how its stand was stood): no recording
+    for the stand, a recording of another run, or a stand stood with other words than the recording's is a FAIL that says NOT HELD. The one way
+    out is a word: the tool's own `hold({ unpinned: '<why>' })` for a run it keeps no recording of by design (the senses over levels, a run of
+    another length, the layers' plain run while their recording is the old stand's), or `--unpinned` from a caller that plays a tool otherwise
+    than it was recorded; the output then says UNPINNED and why, in a line that is no verdict. `--to-recording` holds a run stood with other
+    words to the recording all the same (how a commit that records again shows which rule moved the run). A family's FIRST recording is taken on the last tree where both languages stood and
     agreed on every call of that same run: that is all the pin ever knew of the TypeScript. `--against <root>`: the same run played by the tool
     of another checkout, every count and word the same; for a change that must move no answer, on any stand, with no file. IT IS A LOWER BAR: a
     mistake both recordings share is held as firmly as the truth, and a branch no run reached while there were two languages was never compared
@@ -2226,5 +2234,3 @@ one stops the tool by name, on an address one does nothing and says so in the co
   the logarithm of a number that small.
 - **Not seen.** Nothing here draws, so nothing here was seen on a GPU; the page check runs the bundle on the software adapter with the frames undrawn. Nobody
   has built the crate on a Mac or on Windows.
-
-- **The weather** (`rust/sim/src/wind.rs`, `weather.rs`, `air.rs`, `snow.rs`; a part `weather` of a block, an always-home tenant; asked through `src/sim/weatherhome.ts`, `collision.ts ruleOpen`): what it is, what is gameplay and dressing file by file, and what holds it: `docs/agents/weather.md`, the bullet "The weather that play reads". The hour is not in it yet. A man's place, head and coat are a call's numbers until the men's columns land.
