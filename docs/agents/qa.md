@@ -16,10 +16,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the retire tool's proofs, `stand-bisect.ts`); the process the word is given to says so once on stderr. A TOOL THAT WANTS THE OLD STAND OF A CHILD SAYS
   THE WORD: giving a child no word asks for the page's (`rerun.ts` for a tape made on the old stand, `rust-check.ts`'s old-stand arms, `lesson-gate.ts`'s
   frozen runs, `ships.ts` / `kit-cells.ts` / `solo-night.ts` `--base`, `blast-frame.ts --arm round1` all say it). NO NEW FIXTURE IS RECORDED ON IT. What
-  that leaves: (1) the recordings that were made on it stand until each one's owner records it again on the page's stand: `layer-words.json` and
-  `sense-words.json` are still asked, by `rust-check.ts`, of a child it stands on the old stand by name, and `ident-pin.ts` records on the stand a family names (`hold({ stand })`: the page's for the glass's `pane-words.json`
-  from the commit after step 1572; the old one until a family says). A RUN OF AN IDENT THAT IS HELD TO NOTHING FAILS, said as NOT HELD, unless
-  the tool or its caller says the word (`unpinned`, `--unpinned`: `docs/agents/rust.md`, "What holds a family once its TypeScript is gone"); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
+  that leaves: (1) the recordings that were made on it are taken again on the page's stand, each by its owner in a commit of its own: `ident-pin.ts`
+  records on the stand a family names (`hold({ stand })`: the page's for a tool that says `stand: 'shipped'`, which is the glass's `pane-words.json` from
+  the commit after step 1572, then the layers' `layer-words.json` and the senses' `sense-words.json` as each owner's commit lands; the old one until a
+  family says), and `rust-check.ts` asks a family's child on the stand its recording is of. A RUN OF AN IDENT THAT IS HELD TO NOTHING FAILS, said as
+  NOT HELD, unless the tool or its caller says the word (`unpinned`, `--unpinned`: `docs/agents/rust.md`, "What holds a family once its TypeScript is
+  gone"); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
   hold nothing on a run with no word, and say so; (2) a check that was green on the old stand and red on the page's is red in a plain run now:
   `tools/qa/expected-red.ts` is where each is named with its cause and whose it is (its page-stand rows are a plain run's rows now); (3) headers that say
   "frozen by default" or "run it on BOTH stands" are older than this: once, with no word. Proof of the flip itself: `stand-dump.ts` with no word after =
