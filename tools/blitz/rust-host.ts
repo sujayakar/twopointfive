@@ -63,8 +63,8 @@ export interface HostOpts {
 export interface Face { X: any; mem: WebAssembly.Memory; NAMES: string[]; u8(): Uint8Array; u32(): Uint32Array; outText(): string; outView(): Uint8Array; panicText(): string; hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T; partHashes(slot: number): number[] }
 const FACES = new Map<string, Face>();
 export const DEFAULT_WASM = new URL('../../rust/game_face/target/wasm32-unknown-unknown/release/game_face.wasm', import.meta.url).pathname;
-export function loadFace(wasm = DEFAULT_WASM): Face {
-  let F = FACES.get(wasm); if (F) return F;
+export function loadFace(wasm = DEFAULT_WASM, fresh = false): Face {
+  let F = fresh ? undefined : FACES.get(wasm); if (F) return F;
   if (!existsSync(wasm)) throw new Error(`rust-host: no module at ${wasm} (cd rust/game_face && cargo build --target wasm32-unknown-unknown --release)`);
   const X: any = new WebAssembly.Instance(new WebAssembly.Module(readFileSync(wasm)), {}).exports, mem: WebAssembly.Memory = X.memory, dec = new TextDecoder();
   const u8 = () => new Uint8Array(mem.buffer), u32 = () => new Uint32Array(mem.buffer);
@@ -76,7 +76,7 @@ export function loadFace(wasm = DEFAULT_WASM): Face {
     panicText: () => { try { const p = X.face_panic_ptr() >>> 0; return dec.decode(u8().subarray(p, p + X.face_panic_len())); } catch { return ''; } },
     hand<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = X.face_alloc(b.length) >>> 0; u8().set(b, p); try { return f(p, b.length); } catch (e) { const w = F.panicText(); if (w) console.error('the Rust game panicked:', w); throw e; } finally { X.face_free(p, b.length); } },
     partHashes: (slot: number) => { const at = (X.face_part_hashes(slot) >>> 0) >>> 2; return Array.from(u32().subarray(at, at + NAMES.length)); } };
-  FACES.set(wasm, F); return F; }
+  if (!fresh) FACES.set(wasm, F); return F; }
 
 // ---- the bridge, loaded once and after the game's own modules (classes.ts enters src/game by game.ts, the one door)
 let BR: any = null;
@@ -144,7 +144,9 @@ export class RustHost {
   /** before the game's first update (after `await RustHost.ready()`): from then on `game.update` steps the Rust game */
   static attach(g: any, o: HostOpts = {}): RustHost {
     if (!BR) throw new Error('rust-host: `await RustHost.ready()` first');
-    const B = BR, F = loadFace(o.wasm), H = new RustHost(g, F, B, o);
+    // (RH_FRESH_FACE=1: a module of its own for every game, to tell what a second game of a process owes to the module's own memory from what it owes
+    // to the TypeScript modules' tables)
+    const B = BR, F = loadFace(o.wasm, process.env.RH_FRESH_FACE === '1'), H = new RustHost(g, F, B, o);
     if (o.reserveMb !== 0) { const n = (o.reserveMb ?? 48) * 1048576, p = F.X.face_alloc(n); F.X.face_free(p, n); }
     if (o.dressDown !== false) B.dressAll(false);
     if (o.die !== null && !g.dice) g.dice = B.newDice(o.die ?? 20942);
@@ -156,11 +158,11 @@ export class RustHost {
   /** the Rust game is let go (its slot is free for another) and the game steps in TypeScript again */
   detach(): void { const X = this.F.X; if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; } RustHost.live.delete(this); delete this.g.stepSeats; delete this.g.rustHost; }
   /** the hosts whose Rust game stands in a slot, and when each last stepped */
-  private static live = new Set<RustHost>(); private static clock = 0; private stamp = 0; evicted = 0;
+  private static live = new Set<RustHost>(); private static clock = 0; private static last: RustHost | null = null; private stamp = 0; evicted = 0;
   /** this game's slot goes to another: the puppet takes the whole state, the Rust game is let go; a later step starts a new one from the puppet */
   private giveUp(): void { const X = this.F.X; if (!this.h) return;
     try { this.applyWhole('its slot went to another game'); } catch (e) { this.count(`THE WHOLE APPLY THREW as the slot was given up: ${String((e as any)?.message ?? e).slice(0, 100)}`); }
-    X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; this.evicted++; if (this.rec) this.rec.evicted = this.evicted; RustHost.live.delete(this); }
+    X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; if (RustHost.last === this) RustHost.last = null; this.evicted++; if (this.rec) this.rec.evicted = this.evicted; RustHost.live.delete(this); }
   /** RH_TRACE=<file>: a line a game as the process ends (who stood it, how far it stepped, what it took), for a table of what a tool does with its games */
   rec: any = null;
 
@@ -176,6 +178,9 @@ export class RustHost {
   private start(): void {
     const g = this.g, X = this.F.X, B = this.B, t = now();
     this.taps(g);   // (the tool may have started another mission since the game was stood: its menu, its fight and its saves are new objects)
+    // (ANOTHER GAME OF THIS PROCESS STEPPED LAST: the modules' own tables and variables, which every game of a process shares and a start reads, hold what
+    // the filtered apply left of it. Its puppet takes the whole state first, so that this start reads what the TypeScript tick would have left there.)
+    { const L = RustHost.last; if (L && L !== this && L.h && !L.audit && !OFF.has('last')) try { L.applyWhole('another game of the process starts'); } catch (e) { L.count(`THE WHOLE APPLY THREW as another game started: ${String((e as any)?.message ?? e).slice(0, 100)}`); } }
     g.sim.settle(g);
     const start: Uint8Array = B.exportGame(g, B.reg), block = this.tsBlock().slice();
     if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); }
@@ -352,7 +357,7 @@ export class RustHost {
   // ---- THE STEP, in place of `stepSeats`
   step(dt: number, cmds: readonly any[]): void {
     const g = this.g, X = this.F.X, B = this.B, k = ++this.k; let t = now();
-    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; if (this.rec) { this.rec.k = k; this.rec.quiet = this.quietSteps; if (SITES) site(this.rec); } if (CAP_AT && (k & 31) === 0 && Date.now() > CAP_AT) process.exit(143);
+    this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; RustHost.last = this; if (this.rec) { this.rec.k = k; this.rec.quiet = this.quietSteps; if (SITES) site(this.rec); } if (CAP_AT && (k & 31) === 0 && Date.now() > CAP_AT) process.exit(143);
     // (THE GAME'S DIE ROLLED BETWEEN TWO TICKS: a rule of the tick ran in TypeScript on the puppet, called by the tool. Counted: such a tool leans on code
     // the Rust game has in its place)
     if (this.h && g.dice && g.dice.n !== this.dieRef) { this.dieMoved++; if (this.rec) this.rec.dieMoved = this.dieMoved; }
