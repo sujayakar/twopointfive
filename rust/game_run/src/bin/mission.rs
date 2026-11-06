@@ -30,6 +30,17 @@ fn host_half(g: &mut game::game::Game, dir: &str, k: usize) -> Option<game::cmd:
     Some(game_run::host_half(g, &hb, k == 1))
 }
 
+/// one line at the run's end: every beat of the level's script the Rust game started, with how often it was started and the resumes it had in all
+fn beats_line(g: &game::game::Game) {
+    let mut seen: Vec<(String, usize, f64, String)> = Vec::new();
+    for b in g.tab.director_live_beat.ids().collect::<Vec<_>>() {
+        let lb = &g.tab.director_live_beat[b];
+        let st = format!("{:?}", lb.state).to_lowercase();
+        match seen.iter_mut().find(|x| x.0 == lb.name) { Some(x) => { x.1 += 1; x.2 += lb.step; x.3 = st; } None => seen.push((lb.name.clone(), 1, lb.step, st)) }
+    }
+    if !seen.is_empty() { println!("BEATS the Rust game ran ({}): {}", seen.len(), seen.iter().map(|x| format!("{} x{} ({} resumes, {})", x.0, x.1, x.2, x.3)).collect::<Vec<_>>().join(" · ")); }
+}
+
 fn main() {
     let a: Vec<String> = std::env::args().collect();
     if a.len() < 2 { eprintln!("mission <dir> [ticks] [--keep \"1,21,300-310\"] [--every N] [--after N]"); std::process::exit(64); }
@@ -91,7 +102,9 @@ fn main() {
             game_run::step(&mut g, dt, &cmd);
             let el = t0.elapsed(); spent += el; if el > worst { worst = el; }
             done = k;
+            // (a level script's beats as they stand: every beat this game started, how many resumes it has had, where it is)
             if std::env::var("BLITZ_BEATS").is_ok() { for b in g.tab.director_live_beat.ids().collect::<Vec<_>>() { let lb = &g.tab.director_live_beat[b]; println!("  beat after tick {}: {} {:?} step {} waiting {:?} it {:?}", k, lb.name, lb.state, lb.step, lb.waiting, lb.it); } }
+            if parted > 0 && k >= parted + after { beats_line(&g); }
             for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_after(&mut g, k, l) { println!("{}", t); } }
             if k == 1 {
                 if let Ok(want) = std::fs::read(format!("{}/knobs.bin", dir)) {
@@ -131,6 +144,7 @@ fn main() {
                 std::process::exit(1);
             }
         }
+        beats_line(&g);
         println!("DONE: {} ticks; the die's count {}; the block without `poses` the same after every tick; `poses` {}; mean Rust tick {:.2} ms, worst {:.1} ms",
             done, if die_parted == 0 { "the same after every tick".to_string() } else { format!("FIRST PARTED AT TICK {}", die_parted) },
             if pool_parted { "parted (reported above)" } else { "the same after every tick" }, spent.as_secs_f64() * 1e3 / done.max(1) as f64, worst.as_secs_f64() * 1e3);
