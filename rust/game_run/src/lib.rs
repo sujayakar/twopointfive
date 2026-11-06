@@ -46,9 +46,8 @@ pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>,
         core::ptr::write_bytes(at, 0, len);
         core::ptr::copy_nonoverlapping(block.as_ptr(), at, block.len().min(len));
     }
-    g.sim = slot;
-    // (the box mirror's world of rust/sim's is a number the bytes carry, and it is the TypeScript game's: this game's world is its own slot's)
-    if g.col.mirror.slot >= 0.0 { g.col.mirror.slot = slot as f64; }
+    // (the slot is held in two fields, the game's and the box mirror's: the bridge's one call sets both)
+    game::io::set_slot(&mut g, slot);
     // BRIDGE STAND-IN: THE LEVEL'S SCRIPT. A script is code, hung on the Level by the level's name as it is loaded (scene/levelScripts.ts), and the bridge
     // carries neither which script a beat's body is (BeatDef.fn_ arrives as the type's first arm) nor the define pass's locals (Manifest.vars). The level's
     // name is carried, so the define pass is run again here, as the Director's constructor runs it; the diff compares what it declares with the TypeScript's.

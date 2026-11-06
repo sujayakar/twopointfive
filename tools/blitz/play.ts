@@ -2,7 +2,7 @@
 // TypeScript `Game` is a PUPPET: the state the Rust game exports after each step is applied onto it in place (import.ts), the scripted player reads the
 // puppet to decide its keys, and what it presses goes to the Rust game as the tick's record. The TypeScript tick (`stepSeats`' body) never runs.
 //   bun run --preload ./tools/blitz/expose.ts tools/blitz/play.ts <mission>:<seed> --ref DIR [--out DIR] [--ticks N] [--wasm FILE] [--baseline puppet|rust]
-//                                                                 [--apply-check N] [--upload-every N] [--no-dress] [--go-on] [--quiet]
+//                                                                 [--apply-check N] [--upload-every N] [--no-dress] [--go-on] [--quiet] [--lesson-json]
 // --ref DIR is the same mission and seed played by the plain TypeScript game (mission.ts wrote it: post.txt, the die's count and a hash of each part of
 // rust/sim's block after every tick). AFTER EVERY TICK the Rust game's die and parts are held to that line. If the puppet shows the scripted player what
 // the TypeScript game would have shown, the player presses the same keys and the two stay equal to the mission's end. The first tick that parts is the
@@ -57,7 +57,7 @@ const partHashes = (slot: number): number[] => { const at = X.face_part_hashes(s
 { const n = 48 * 1048576, p = X.face_alloc(n); X.face_free(p, n); }
 
 // ---- the bridge and the game
-const { exportGame, exportPart, fieldAt, bookOf, SCHEMA, parse } = await import('./export.ts');
+const { exportGame, exportPart, fieldAt, bookOf, SCHEMA, parse, hostHalf } = await import('./export.ts');
 const { applyGame } = await import('./import.ts');
 const { classTable, valueTable } = await import('./classes.ts');
 const { knobRegistry } = await import('../../src/game/knobs.ts');
@@ -87,7 +87,7 @@ type Span = { q: string; s: number; e: number };
 // FIELDS THAT ARE EACH SIDE'S OWN, cut out of every compare and never handed across (PLAY.md says why for each): the box mirror is a module's own copy of the
 // box world with its own counters; the other three the export works out or reads from a module variable that the apply does not write back, so the puppet's
 // are not the Rust game's. All four stand in the game's own fields (none in a table's row), so one walk of the root finds them.
-const CUT = new Set(['scene_collision::StaticCollision.mirror', 'game::Mods.scene_box_mirror', 'game::Game.door_owns', 'anim_gltf::AnimGltfMod.nvg_bits', 'wallbreak::WallBreak.listeners']);
+const CUT = new Set(['scene_collision::StaticCollision.mirror', 'game::Mods.scene_box_mirror', 'game::Game.door_owns', 'anim_gltf::AnimGltfMod.nvg_bits', 'anim_gltf::AnimGltfMod.suit_bits', 'wallbreak::WallBreak.listeners']);
 /** the field each of `offs` (ascending) lies in: its path in the state and the struct field that declares it. `spans`: where each CUT field stands; with
  *  `rootOnly` the walk ends with the game's own fields (the tables are not entered) */
 function locate(b: Uint8Array, offs: number[], spans: Span[] | null = null, rootOnly = false, rootTy: string = SCHEMA.root, rootPath = 'g'): Place[] {
@@ -109,7 +109,8 @@ function locate(b: Uint8Array, offs: number[], spans: Span[] | null = null, root
       case 'type': { const T = SCHEMA.types[n.path];
         if (T.k === 'struct') { for (const f of T.fields) { const fq = `${T.mod}::${T.name}.${f.rust}`; if (spans && CUT.has(fq)) { const s = p; go(parse(f.ty), `${path}.${f.rust}`, fq); spans.push({ q: fq, s, e: p }); } else go(parse(f.ty), `${path}.${f.rust}`, fq); } return; }
         if (T.k === 'enum') { take(p + 2, path, q); p += 2; return; }
-        const a = dv.getUint16(p, true); take(p + 2, path + '#', q); p += 2; const t: string | null = T.k === 'data' ? T.vars[a].ty ?? null : (T.arms[a].match(/\((.*)\)/)?.[1] ?? null); if (t) go(parse(t), path, q); return; }
+        const a = dv.getUint16(p, true); take(p + 2, path + '#', q); p += 2; if (T.k === 'wordEnum') { for (const f of T.arms[a].fields) go(parse(f.ty), `${path}.${f.rust}`, q); return; }
+        const t = armTy(T, a); if (t) go(parse(t), path, q); return; }
       default: take(p + w, path, q); p += w; return; }
   };
   go(parse(rootTy), rootPath, '');
@@ -138,7 +139,8 @@ function skipIn(b: Uint8Array, dv: DataView, p: number, n: N): number {
     case 'map': { const L = dv.getUint32(p, true); p += 4; for (let i = 0; i < L; i++) { p = skipIn(b, dv, p, n.K); p = skipIn(b, dv, p, n.V); } return p; }
     case 'set': { const L = dv.getUint32(p, true); p += 4; for (let i = 0; i < L; i++) p = skipIn(b, dv, p, n.K); return p; }
     case 'type': { const T = SCHEMA.types[n.path]; if (T.k === 'struct') { for (const f of fieldsOf(T)) p = skipIn(b, dv, p, f.N); return p; }
-      const a = dv.getUint16(p, true), t = armTy(T, a); return t ? skipIn(b, dv, p + 2, parse(t)) : p + 2; } }
+      const a = dv.getUint16(p, true); p += 2; if (T.k === 'wordEnum') { for (const f of T.arms[a].fields) p = skipIn(b, dv, p, parse(f.ty)); return p; }
+      const t = armTy(T, a); return t ? skipIn(b, dv, p, parse(t)) : p; } }
   throw new Error(`play: no way past ${n.k}`); }
 const LEAF = new Set(['f64', 'u64', 'i64', 'f32', 'u32', 'i32', 'usize', 'id', 'bool', 'u8', 'i8', 'u16', 'i16']);
 /** THE FIELDS IN WHICH STATE `b` DIFFERS FROM `a`, each with an example path, the CUT fields apart (`cut`: which of those differ, by name). The two states
@@ -169,7 +171,10 @@ function fieldsDiffering(a: Uint8Array, b: Uint8Array, cut: string[] | null = nu
         if (T.k === 'struct') { for (const f of fieldsOf(T)) {
           if (CUT.has(f.q)) { const sa = pa, sb = pb; pa = skipIn(a, da, pa, f.N); pb = skipIn(b, db, pb, f.N); if (cut && (pa - sa !== pb - sb || !eq(sa, sb, pa - sa))) cut.push(f.q); continue; }
           st.push(f.dot); go(f.N, f.q); st.pop(); } return; }
-        const xa = da.getUint16(pa, true), xb = db.getUint16(pb, true); pa += 2; pb += 2; const ta = armTy(T, xa), tb = armTy(T, xb);
+        const xa = da.getUint16(pa, true), xb = db.getUint16(pb, true); pa += 2; pb += 2;
+        // (a record told apart by a word of its own, each arm with fields of its own: a lesson step's test)
+        if (T.k === 'wordEnum') { if (xa !== xb) { add(q, `${at()}# arm ${xa} | ${xb}`); for (const f of T.arms[xa].fields) pa = skipIn(a, da, pa, parse(f.ty)); for (const f of T.arms[xb].fields) pb = skipIn(b, db, pb, parse(f.ty)); return; } for (const f of T.arms[xa].fields) { st.push(`.${f.rust}`); go(parse(f.ty), q); st.pop(); } return; }
+        const ta = armTy(T, xa), tb = armTy(T, xb);
         if (xa !== xb) { add(q, `${at()}# arm ${xa} | ${xb}`); if (ta) pa = skipIn(a, da, pa, parse(ta)); if (tb) pb = skipIn(b, db, pb, parse(tb)); return; }
         if (ta) go(parse(ta), q); return; } }
     throw new Error(`play: no compare of ${n.k}`); };
@@ -189,12 +194,13 @@ function withCutsOf(b: Uint8Array, a: Uint8Array): Uint8Array { const A = spansO
 // Input and camera)
 const HOST_Q = (x: { q: string; path: string }) => x.path.startsWith('g.cmd_buf') || /^g\.tab\.(camera|input)\b/.test(x.path) || x.q === 'orders::SquadOrdersView.input' || x.q === 'orders::SquadOrdersView.cam' || x.q === 'game::Game.view_proj';
 // NOT A WRITE: an identity serial (the two sides number objects apart by design: schema.serial), a clip's place in the Rust game's own table (the export
-// writes a constant for it), and the counts of collision and sense asks (collision.ts ANYTIME, SENSED: counters of the module that was asked, read by no rule)
-const OWN_Q = (x: { q: string; path: string }) => !!SCHEMA.serial?.[x.q] || !!SCHEMA.scratch?.[x.q] || x.q === 'anim_skeleton::ClipSide.at' || x.q === 'tail' || /^scene_collision::SceneCollisionMod(ANYTIME|SENSED)\./.test(x.q);
+// writes a constant for it), `Player.kit_was` (the apply leaves the puppet's at nothing where the Rust game holds one: seen on tut-solo every tick), and the counts of collision and sense asks (collision.ts ANYTIME, SENSED: counters of the module that was asked, read by no rule)
+const OWN_Q = (x: { q: string; path: string }) => !!SCHEMA.serial?.[x.q] || !!SCHEMA.scratch?.[x.q] || x.q === 'anim_skeleton::ClipSide.at' || x.q === 'game::Player.kit_was' || x.q === 'tail' || /^scene_collision::SceneCollisionMod(ANYTIME|SENSED)\./.test(x.q);
 
 // ---- the run's books
 let k = 0, h = 0, slot = 0, lastState: Uint8Array | null = null, lastBlock: Uint8Array | null = null, lastRust: Uint8Array | null = null;
-const T = { driver: 0, hostTs: 0, wbExport: 0, wbCompare: 0, wbImport: 0, hostHalf: 0, step: 0, after: 0, export: 0, apply: 0, block: 0, check: 0, dress: 0 };
+let hostBytes = 0;
+const T = { hostHold: 0, driver: 0, hostTs: 0, wbExport: 0, wbCompare: 0, wbImport: 0, hostHalf: 0, step: 0, after: 0, export: 0, apply: 0, block: 0, check: 0, dress: 0 };
 let worstStep = 0, worstStepAt = 0, worstApply = 0, tLeft = 0, outEvents = 0, outTicks = 0;
 const WB: Tally = new Map(), HOSTW: Tally = new Map(), OWNW: Tally = new Map(), CUTW = new Map<string, number>(), APPLY_MISS: Tally = new Map(), BLOCKW = new Map<string, number>(), CALLS = new Map<string, number>();
 const WB_REFUSED: Tally = new Map(); let wbRefused = 0;
@@ -205,7 +211,8 @@ const count = (name: string) => CALLS.set(name, (CALLS.get(name) ?? 0) + 1);
 const now = () => performance.now();
 const tsBlock = (g: any): Uint8Array => { const w: Uint32Array = g.sim.w; return new Uint8Array(w.buffer, w.byteOffset, w.byteLength); };
 const rustBlock = (): Uint8Array => u8().subarray(X.state_addr(slot), X.state_addr(slot) + X.state_len());
-function hostHalf(g: any): Uint8Array { const bk: any = bookOf(g), P: [string, any][] = [];
+/** the host's half in the replay loop's own bytes (mission.ts h<k>.bin), for the compare below and for a module built before `face_host_half` */
+function hostHalfOld(g: any): Uint8Array { const bk: any = bookOf(g), P: [string, any][] = [];
   const cb = fieldAt(g, reg, ['cmd_buf']); P.push([cb.ty, cb.v]);
   for (const [id, ty] of [['CameraId', 'crate::camera::FollowCamera'], ['InputId', 'crate::input::Input']]) { const L: any[] = bk.listOf(id); P.push(['u32', L.length]); for (const row of L) P.push([ty, row]); }
   const mine = exportPart(g, reg, P);
@@ -307,7 +314,7 @@ function writeBack(g: any, at: number): void {
 }
 
 // ---- the step, in place of `stepSeats`
-function puppetStep(g: any, dt: number): void {
+function puppetStep(g: any, dt: number, cmds: readonly any[]): void {
   let t = now();
   if (k === 1) {
     g.sim.settle(g);
@@ -315,13 +322,16 @@ function puppetStep(g: any, dt: number): void {
     if (OUT) { writeFileSync(`${OUT}/start.bin`, start); }
     h = hand(start, (p, n) => hand(block, (bp, bn) => X.face_new(p, n, bp, bn))); if (!h) throw new Error('face_new: no free slot');
     slot = X.face_slot(h); if (outText() && !QUIET) say(outText());
-    if (LESSON) { const les = enc.encode(JSON.stringify((g.level.scenarios?.lesson?.steps ?? []).map((s: any) => s.done))); hand(les, (p, n) => X.face_lesson(h, p, n)); if (outText() && !QUIET) say(outText()); }
+    if (LESSON && has('--lesson-json')) { const les = enc.encode(JSON.stringify((g.level.scenarios?.lesson?.steps ?? []).map((s: any) => s.done))); hand(les, (p, n) => X.face_lesson(h, p, n)); if (outText() && !QUIET) say(outText()); }
     if (X.state_len() !== block.length) say(`play: rust/sim's block is ${X.state_len()} bytes in the module and ${block.length} in the TypeScript game`);
     lastState = start; lastBlock = block; lastRust = start;
     for (const d of g.orders.defs as any[]) { DEFS.orig.add(d); DEFS.byId.set(d.id, d); }
     say(`play: ${scn}:${seed}; the start ${start.length} bytes, the block ${block.length}; slot ${slot}; memory ${(mem.buffer.byteLength / 1048576).toFixed(0)} MB`);
   } else writeBack(g, k);
-  t = now(); hand(hostHalf(g), (p, n) => X.face_host(h, p, n, k === 1 ? 1 : 0)); T.hostHalf += now() - t;
+  // THE HOST'S HALF: each seat's record, every camera and Input row, in the bridge's own small buffer (export.ts hostHalf, io::take_host_half)
+  t = now(); const old = hostHalfOld(g); T.hostHold += now() - t; t = now();
+  if (X.face_host_half) { const hb = hostHalf(g, reg, cmds); hostBytes = hb.length; hand(hb, (p, n) => X.face_host_half(h, p, n)); } else hand(old, (p, n) => X.face_host(h, p, n, k === 1 ? 1 : 0));
+  T.hostHalf += now() - t;
   t = now(); X.face_step(h, dt, 0); const el = now() - t; T.step += el; if (el > worstStep) { worstStep = el; worstStepAt = k; }
   { const said = outText(); if (said && !QUIET) say(said.trimEnd()); }
   // ---- held to the plain TypeScript play, where its hashes were taken: as the tick returns, before the host's steps
@@ -367,7 +377,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   const g = this; k++; const t0 = now(); if (k > 1) T.driver += t0 - tOut; else wall0 = t0;
   if (k === 1) { dressAll(false); if (!g.dice) g.dice = newDice(DIE); taps(g); }
   let inStep = 0, err: unknown = null;
-  g.stepSeats = function (dt: number) { const s = now(); try { puppetStep(g, dt); } finally { inStep = now() - s; } };
+  g.stepSeats = function (dt: number, cmds: readonly any[]) { const s = now(); try { puppetStep(g, dt, cmds); } finally { inStep = now() - s; } };
   try { (was as any).apply(this, a); } catch (e) { err = e; } finally { delete g.stepSeats; }
   T.hostTs += now() - t0 - inStep; tOut = now();
   if (err) { const words = panicText(); if (words) { say(`PANIC in tick ${k}: ${words}`); finish(g, 2); } say(`TICK ${k} THREW on the puppet: ${(err as any)?.stack ?? err}`); finish(g, 3); }
@@ -386,7 +396,7 @@ function finish(g: any, code: number | null = null): never {
   say(`  the block: ${S.parted ? `PARTED AT TICK ${S.parted} in [${S.partedIn}]` : `equal after every one of ${S.compared} ticks`}; the die's count: ${S.dieParted ? `PARTED AT TICK ${S.dieParted}` : 'equal after every tick'}; \`poses\` ${S.poolParted ? `parts from tick ${S.poolParted}` : 'equal'}`);
   say(`  the end here:           ${mineEnd} at tick ${k}`);
   say(`  the end in TypeScript:  ${refEnd.replace(/^TypeScript: /, '')}`);
-  say(`  ms a tick (mean of ${k}): the scripted player and its world's own lines ${per(T.driver)} · Game.update's own lines ${per(T.hostTs)} · write-back: the puppet's export ${per(T.wbExport)}, the compare ${per(T.wbCompare)}, the hand-over ${per(T.wbImport)} · the host's half ${per(T.hostHalf)} · face_step ${per(T.step)} (worst ${worstStep.toFixed(1)} at tick ${worstStepAt}) · lights, view, listing ${per(T.after)} · face_export ${per(T.export)} · the apply ${per(T.apply)} (worst ${worstApply.toFixed(0)}) · the block's copy ${per(T.block)} · the dress step ${per(T.dress)} · the puppet exported again and held to the Rust bytes ${per(T.check)}`);
+  say(`  ms a tick (mean of ${k}): the scripted player and its world's own lines ${per(T.driver)} · Game.update's own lines ${per(T.hostTs)} · write-back: the puppet's export ${per(T.wbExport)}, the compare ${per(T.wbCompare)}, the hand-over ${per(T.wbImport)} · the host's half ${per(T.hostHalf)} (${hostBytes} bytes; held to the reference's first: ${per(T.hostHold)}) · face_step ${per(T.step)} (worst ${worstStep.toFixed(1)} at tick ${worstStepAt}) · lights, view, listing ${per(T.after)} · face_export ${per(T.export)} · the apply ${per(T.apply)} (worst ${worstApply.toFixed(0)}) · the block's copy ${per(T.block)} · the dress step ${per(T.dress)} · the puppet exported again and held to the Rust bytes ${per(T.check)}`);
   say(`  wall: ${wall.toFixed(1)} s for ${k} ticks (${(wall * 1000 / Math.max(1, k)).toFixed(1)} ms a tick); the module's memory ${(mem.buffer.byteLength / 1048576).toFixed(0)} MB; the last state ${lastRust?.length ?? 0} bytes`);
   say(`  THE WRITE-BACK (held to ${BASE === 'rust' ? 'the Rust bytes last applied' : 'the puppet exported as the apply left it'}): of ${Math.max(0, k - 1)} compares, ${wbHostOnly} found nothing but the host's half, ${wbMeter} only the player's light meter (handed by face_meter), ${wbFired} something else (the whole puppet handed by face_import_into); the block differed ${wbBlock} times (${[...BLOCKW].map(([n, c]) => `${n} ${c}`).join(', ') || '-'})`);
   say(`  what TypeScript wrote into the game between ticks, by field (not the host's half):`); say(table(WB));
@@ -408,5 +418,5 @@ const LOG = console.log, ERR = console.error, WARN = console.warn; let G0: any =
 try { if (LESSON) les = await (await import('../qa/lesson-run.ts')).runLesson(scn, { seed, sky: false, glow: false, floor: 0 }); else res = await play(scn, seed, 300, false, {}); }
 catch (e) { if (!(e instanceof Stop)) { console.log = LOG; say(`play: ${(e as any)?.stack ?? e}`); finish(G0, 3); } }
 // (playthrough.ts turns whatever is thrown under it into a run that ended 'error': this file's own stop is not the player's)
-if (stopped) res = null; else if (res?.end === 'error') say(`play: THE SCRIPTED PLAYER THREW ON THE PUPPET at tick ${k}: ${res.why}`);
+if (stopped) { res = null; les = null; } else if (les && les.code !== 0) say(`play: THE LESSON'S PLAYER STOPPED ON THE PUPPET at tick ${k}: ${String(les.why).slice(0, 600)}`); else if (res?.end === 'error') say(`play: THE SCRIPTED PLAYER THREW ON THE PUPPET at tick ${k}: ${res.why}`);
 finish(G0);

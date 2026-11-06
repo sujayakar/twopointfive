@@ -62,6 +62,8 @@ struct Held {
     g: Box<Game>,
     /// the record face_host took for the next step
     cmd: Option<game::cmd::PlayerCmd>,
+    /// every seat's record, as face_host_half took them for the next step (a host that plays: the bridge's own small hand-over)
+    cmds: Option<Vec<game::cmd::PlayerCmd>>,
     /// the lines of hostwrites.txt that are written as a tick's last thing
     after: Vec<(usize, String)>,
 }
@@ -152,7 +154,7 @@ pub unsafe extern "C" fn face_new(state: *const u8, n: usize, block: *const u8, 
     let Some(slot) = free_slot() else { return 0 };
     let (g, said) = game_run::start(bytes(state, n), bytes(block, bn), slot);
     out(said.join("\n").into_bytes());
-    put(Held { g, cmd: None, after: Vec::new() })
+    put(Held { g, cmd: None, cmds: None, after: Vec::new() })
 }
 #[no_mangle]
 pub extern "C" fn face_blank() -> u32 {
@@ -163,7 +165,7 @@ pub extern "C" fn face_blank() -> u32 {
     // (a block with nothing in it is zeros under the layout's word: whatever game stood in the slot before is gone)
     unsafe { core::ptr::write_bytes(sim::state::addr(slot) as *mut u8, 0, core::mem::size_of::<sim::state::State>()); }
     sim::state::state(slot).head.layout = sim::state::LAYOUT;
-    put(Held { g, cmd: None, after: Vec::new() })
+    put(Held { g, cmd: None, cmds: None, after: Vec::new() })
 }
 #[no_mangle]
 pub extern "C" fn face_drop(h: u32) {
@@ -197,6 +199,15 @@ pub unsafe extern "C" fn face_lesson(h: u32, p: *const u8, n: usize) {
 pub unsafe extern "C" fn face_host(h: u32, p: *const u8, n: usize, first: u32) {
     let b = bytes(p, n);
     with(h, |x| x.cmd = Some(game_run::host_half(&mut x.g, b, first != 0)));
+}
+/// THE HOST'S HAND-OVER OF A HOST THAT PLAYS (export.ts `hostHalf`): each seat's record, then every camera and Input row. The rows that are no seat's
+/// are taken now; the records are kept for the next `face_step`, which then steps every seat (`game_step_seats`).
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_host_half(h: u32, p: *const u8, n: usize) {
+    let b = bytes(p, n);
+    with(h, |x| x.cmds = Some(game::io::take_host_half(&mut x.g, b)));
 }
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
@@ -234,8 +245,10 @@ pub const VIEW: u32 = 4;
 pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
     let said = with(h, |x| {
         if flags & UPLOAD != 0 { game_run::upload(&mut x.g); }
-        let cmd = x.cmd.take().or_else(|| x.g.cmd_buf.clone()).expect("face_step: no record of the tick's input (face_host hands one over, or the state carries one in Game.cmd_buf)");
-        game_run::step(&mut x.g, dt, &cmd);
+        if let Some(cmds) = x.cmds.take() { game::game::game_step_seats(&mut x.g, dt, &cmds); } else {
+            let cmd = x.cmd.take().or_else(|| x.g.cmd_buf.clone()).expect("face_step: no record of the tick's input (face_host or face_host_half hands one over, or the state carries one in Game.cmd_buf)");
+            game_run::step(&mut x.g, dt, &cmd);
+        }
         let mut said = String::new();
         for (k, l) in core::mem::take(&mut x.after) { if let Some(t) = game_run::write_after(&mut x.g, k, &l) { said.push_str(&t); said.push('\n'); } }
         if flags & LIGHTS != 0 { game_run::lights(&mut x.g, dt); }
