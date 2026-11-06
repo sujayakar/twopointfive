@@ -18,6 +18,7 @@
 //! a game (a handle; as many at once as rust/sim has slots, `state_games()`)
 //!   face_new(state, n, block, bn) -> h        a game from a start: the bridge's bytes (`io::import`) and rust/sim's block as the start was taken, copied
 //!                                             into the first free slot. 0 where every slot is taken.
+//!   face_lesson(h, p, n)                      a tutorial mission's tests (tools/blitz lesson.json), which the bridge does not carry: once, after face_new
 //!   face_blank() -> h                         a game as its field initialisers leave it (no level): proves the module stands
 //!   face_drop(h)                              the game and its slot are free again
 //!   face_slot(h) -> slot                      which of rust/sim's slots the game stands in (`state_addr(slot)` is its block)
@@ -27,7 +28,8 @@
 //!   face_host(h, p, n, first)                 one tick's host half (tools/blitz h<k>.bin: the seats' record, the host's cameras and Input rows).
 //!                                             `first` = 1 for the tick the start was taken at, whose record the start itself carries.
 //!   face_give(h, k, p, n)                     a line of gives.txt (an order the test driver gave between ticks); the log's line is at face_out
-//!   face_hostwrite(h, k, p, n) -> 1 | 2 | 0   a line of hostwrites.txt: 1 done now (the driver's question that writes the game), 2 kept for the end of
+//!   face_meter(h, v)                          the player's light meter as the host metered it (a tutorial mission's harness feeds it before every tick)
+//!   face_hostwrite(h, k, p, n) -> 1 | 2 | 0   a line of hostwrites.txt: 1 done now (the driver's question that writes the game, a lesson's pick of a verb), 2 kept for the end of
 //!                                             the next step (the autosave's row), 0 not known
 //!
 //! the step
@@ -147,7 +149,9 @@ pub extern "C" fn face_out_len() -> usize {
 pub unsafe extern "C" fn face_new(state: *const u8, n: usize, block: *const u8, bn: usize) -> u32 {
     hook();
     let Some(slot) = free_slot() else { return 0 };
-    put(Held { g: game_run::start(bytes(state, n), bytes(block, bn), slot), cmd: None, after: Vec::new() })
+    let (g, said) = game_run::start(bytes(state, n), bytes(block, bn), slot);
+    out(said.join("\n").into_bytes());
+    put(Held { g, cmd: None, after: Vec::new() })
 }
 #[no_mangle]
 pub extern "C" fn face_blank() -> u32 {
@@ -174,6 +178,15 @@ pub extern "C" fn face_slot(h: u32) -> usize {
 pub unsafe extern "C" fn face_import_into(h: u32, p: *const u8, n: usize) {
     let b = bytes(p, n);
     with(h, |x| game::io::import_into(&mut x.g, b));
+}
+
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_lesson(h: u32, p: *const u8, n: usize) {
+    let b = bytes(p, n);
+    let said = with(h, |x| game_run::lesson(&mut x.g, b));
+    out(said.unwrap_or_default().into_bytes());
 }
 
 // ---- the host's half
@@ -207,6 +220,11 @@ pub unsafe extern "C" fn face_hostwrite(h: u32, k: usize, p: *const u8, n: usize
     r
 }
 
+#[no_mangle]
+pub extern "C" fn face_meter(h: u32, v: f64) {
+    with(h, |x| game_run::meter(&mut x.g, v));
+}
+
 // ---- the step
 pub const UPLOAD: u32 = 1;
 pub const LIGHTS: u32 = 2;
@@ -236,7 +254,7 @@ pub extern "C" fn face_lights(h: u32, dt: f64) {
 #[no_mangle]
 pub unsafe extern "C" fn face_checkpoint(h: u32, p: *const u8, n: usize) {
     let l = text(p, n);
-    with(h, |x| game_run::checkpoint(&mut x.g, &l));
+    with(h, |x| { game_run::checkpoint(&mut x.g, &l); });
 }
 
 // ---- reading back

@@ -89,7 +89,7 @@ function leftOut(s: Side, id: string, v: number): boolean {
 // BY RULE (schema.json, as paths.ts): a field in `schema.scratch` is a memo no rule reads back and is not compared; a field in `schema.serial` holds an object's
 // identity serial, which the two sides deal apart by design: its value is not compared (whether it is there still is), and a map or set marked `<field>{}`
 // is keyed by one and is compared by place. How many leaves each rule passed over is said at the end.
-let SER = false, KEYSER = false, serialN = 0, scratchN = 0;
+let SER = false, KEYSER = false, serialN = 0, scratchN = 0, nullN = 0;
 let n = 0, unknown = 0; const by = new Map<string, number>(), shown: string[] = [], all: string[] = [];
 const P: string[] = [];
 function rep(mod: string, a: string, b: string, tail = '') { n++; const path = P.join('') + tail; const k = KNOWN.find(k => k.re.test(path)); if (k) { k.n++; return; } unknown++; by.set(mod, (by.get(mod) ?? 0) + 1); const l = `${mod}\t${path}\t${a}\t${b}`; if (shown.length < SHOW) shown.push(l); if (OUT && all.length < 200000) all.push(l); }
@@ -112,7 +112,10 @@ function cmp(n: Node, A: Side, B: Side, mod: string): void {
       if (n.k === 'f64') { const lo = A.dv.getUint32(A.p, true) === B.dv.getUint32(B.p, true), hi = A.dv.getUint32(A.p + 4, true) === B.dv.getUint32(B.p + 4, true); if (lo && hi) { A.p += 8; B.p += 8; return; } }
       const a = leaf(n, A), b = leaf(n, B); if (a !== b && !(nan(a) && nan(b))) { if (SER) serialN++; else rep(mod, a, b); } return; }
     case 'unit': return;
-    case 'opt': { const a = A.u8(), b = B.u8(); if (!a && !b) return; if (a && b) { cmp(n.of, A, B, mod); return; } if (a) rep(mod, word(n.of, A), 'None'); else rep(mod, 'None', word(n.of, B)); return; }
+    case 'opt': { const a = A.u8(), b = B.u8(); if (!a && !b) return; if (a && b) { cmp(n.of, A, B, mod); return; }
+      // (`T | null | undefined` is Option<Option<T>>, and the TypeScript's walk writes null and undefined alike as None: None beside Some(None) is that, counted)
+      if (n.of.k === 'opt') { const s = a ? A : B; if (!s.b[s.p]) { s.p++; nullN++; return; } }
+      if (a) rep(mod, word(n.of, A), 'None'); else rep(mod, 'None', word(n.of, B)); return; }
     case 'vec': if (n.of.k === 'id' && n.of.id === 'BoxId' && CANON.has('BoxId') && LEAVE.size) { const rd = (s: Side) => { const L = s.u32(), o: number[] = []; for (let k = 0; k < L; k++) { const v = s.u32(); if (!leftOut(s, 'BoxId', v)) o.push(v); } return o; };
         const a = rd(A), b = rd(B); if (a.length !== b.length) rep(mod, String(a.length), String(b.length), '.len'); const c = Math.min(a.length, b.length);
         for (let k = 0; k < c; k++) { const x = A.cid('BoxId', a[k]), y = B.cid('BoxId', b[k]); if (x !== y) { P.push(`[${k}]`); rep(mod, x, y); P.pop(); } }
@@ -157,7 +160,7 @@ if (argv.includes('--dynboxes')) {
   const a = count(A), b = count(B); for (const k of new Set([...a.keys(), ...b.keys()])) if ((a.get(k) ?? 0) !== (b.get(k) ?? 0)) console.log(`  dyn boxes ${a.get(k) ?? 0} / ${b.get(k) ?? 0}: ${k}`);
 }
 let bytes = -1; { const i = argv.indexOf('--blocks'); if (i >= 0) { const s = readFileSync(argv[i + 1]), t = readFileSync(argv[i + 2]); bytes = 0; for (let k = 0; k < Math.max(s.length, t.length); k++) if ((s[k] ?? 0) !== (t[k] ?? 0)) bytes++; } }
-console.log(`${n} paths differ, ${n - unknown} known, ${unknown} NOT KNOWN${unknown ? ': ' + [...by].sort((x, y) => y[1] - x[1]).map(([m, c]) => `${m} ${c}`).join(' · ') : ''}${bytes >= 0 ? `; block ${bytes} bytes` : ''}${A.leftN || B.leftN ? `; boxes left out as the picture's ${A.leftN} / ${B.leftN}` : ''}${serialN || scratchN ? `; by rule not compared: ${serialN} identity serials that differ, ${scratchN} scratch fields that differ` : ''}; boxes reached ${A.order.get('BoxId')?.length ?? '-'} / ${B.order.get('BoxId')?.length ?? '-'} of ${A.tableLen.get('BoxId')} / ${B.tableLen.get('BoxId')}; ${(process.memoryUsage().rss / 1e9).toFixed(2)} GB`);
+console.log(`${n} paths differ, ${n - unknown} known, ${unknown} NOT KNOWN${unknown ? ': ' + [...by].sort((x, y) => y[1] - x[1]).map(([m, c]) => `${m} ${c}`).join(' · ') : ''}${bytes >= 0 ? `; block ${bytes} bytes` : ''}${A.leftN || B.leftN ? `; boxes left out as the picture's ${A.leftN} / ${B.leftN}` : ''}${serialN || scratchN || nullN ? `; by rule not compared: ${serialN} identity serials that differ, ${scratchN} scratch fields that differ${nullN ? `, ${nullN} null beside undefined` : ''}` : ''}; boxes reached ${A.order.get('BoxId')?.length ?? '-'} / ${B.order.get('BoxId')?.length ?? '-'} of ${A.tableLen.get('BoxId')} / ${B.tableLen.get('BoxId')}; ${(process.memoryUsage().rss / 1e9).toFixed(2)} GB`);
 if (argv.includes('--why')) for (const k of KNOWN) if (k.n) console.log(`   known ${k.n}: ${k.why.slice(0, 150)}`);
 for (const x of shown) console.log('     ' + x.slice(0, 230));
 if (OUT) writeFileSync(OUT, all.join('\n') + '\n');

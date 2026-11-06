@@ -4,7 +4,7 @@
 //   bun run tools/blitz/wasm-run.ts <dir> [ticks] [--wasm FILE] [--two] [--one-call] [--reserve MB] [--max-mb N] [--js-every N] [--quiet]
 //   bun run tools/blitz/wasm-run.ts --ts-time <mission>:<seed>   the TypeScript tick's own time for the same play (nothing written, no module loaded)
 //   bun run tools/blitz/wasm-run.ts --exports [--wasm FILE]      the module's exports beside the shipped simulation's (src/sim/built.ts): missing, extra, same
-// <dir> is a folder run.sh / mission.ts filled (c1.bin, s0.bin, h<k>.bin, host.txt, post.txt, gives.txt, hostwrites.txt, knobs.bin). The mission is not played again.
+// <dir> is a folder run.sh / mission.ts filled (c1.bin, s0.bin, h<k>.bin, host.txt, post.txt, gives.txt, hostwrites.txt, knobs.bin; a tutorial mission's lesson.json and meter.txt). The mission is not played again.
 // AFTER EVERY TICK the die's count and each part's hash are held to post.txt's line; the first tick a part other than `poses` parts is the stop (`poses` parts
 // by design from the first death: README.md). The hashes are taken inside the module (face_part_hashes); every --js-every'th tick (100) and the last they are
 // also taken HERE over the module's memory in place, through face_part_addr / face_part_len, and the two must agree.
@@ -71,6 +71,7 @@ const MAX_MB = +arg('--max-mb', '0');
 const QUIET = has('--quiet'), TWO = has('--two'), ONE = has('--one-call'), JS_EVERY = +arg('--js-every', '100');
 const text = (n: string) => existsSync(`${dir}/${n}`) ? readFileSync(`${dir}/${n}`, 'utf8') : '', lines = (n: string) => text(n).split('\n').filter(Boolean);
 const post = lines('post.txt').map(l => l.split(' ')), head = post.shift() ?? [];
+const meter = lines('meter.txt').map(Number);
 const host = lines('host.txt').map(l => l.split(' ').map(Number)), gives = lines('gives.txt'), hostwrites = lines('hostwrites.txt');
 let ticks = argv[1] && !argv[1].startsWith('--') ? +argv[1] : +text('ticks.txt') || host.length;
 
@@ -100,7 +101,8 @@ const UPLOAD = 1, LIGHTS = 2;
 let k = 0;
 try {
   const games: number[] = [];
-  for (let i = 0; i < (TWO ? 2 : 1); i++) { const h = hand(start, (p, n) => hand(block, (bp, bn) => X.face_new(p, n, bp, bn))); if (!h) throw new Error('face_new: no free slot'); games.push(h); }
+  for (let i = 0; i < (TWO ? 2 : 1); i++) { const h = hand(start, (p, n) => hand(block, (bp, bn) => X.face_new(p, n, bp, bn))); if (!h) throw new Error('face_new: no free slot'); games.push(h); if (i === 0 && outText()) say(outText());
+    if (existsSync(`${dir}/lesson.json`)) { hand(readFileSync(`${dir}/lesson.json`), (p, n) => X.face_lesson(h, p, n)); if (i === 0 && outText()) say(outText()); } }
   const slots = games.map(h => X.face_slot(h));
   say(`wasm-run: ${games.length} game${TWO ? 's' : ''} in slot${TWO ? 's' : ''} ${slots.join(', ')}; memory after the import ${(mem.buffer.byteLength / 1048576).toFixed(1)} MB`);
   const st = games.map(() => ({ parted: 0, poolParted: 0, dieParted: 0, nParted: 0, wasSame: true, left: new Set<number>() }));
@@ -114,6 +116,7 @@ try {
       hand(hb, (ptr, n) => X.face_host(h, ptr, n, k === 1 ? 1 : 0));
       for (const l of gives) if (+l.split(' ')[0] === k) { hand(enc.encode(l), (ptr, n) => X.face_give(h, k, ptr, n)); if (!QUIET) say(outText() + tag); }
       for (const l of hostwrites) if (+l.split(' ')[0] === k) { const r = hand(enc.encode(l), (ptr, n) => X.face_hostwrite(h, k, ptr, n)); if (r === 1 && !QUIET) say(outText() + tag); if (r === 0) say(`  NOTE tick ${k}: a line of hostwrites.txt the face does not know: ${l}`); }
+      if (meter.length >= k) X.face_meter(h, meter[k - 1]);
       // (the box world's list is asked for by name outside the clock, as the native runner's is; --one-call hands it to the step as a flag)
       if (up && !ONE) X.face_upload(h);
       const b0 = mem.buffer.byteLength, a = performance.now();

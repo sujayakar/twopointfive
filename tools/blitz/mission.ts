@@ -29,7 +29,12 @@ mkdirSync(outDir, { recursive: true });
 const { knobRegistry } = await import('../../src/game/knobs.ts');
 const { Game } = await import('../../src/game/game.ts');
 const { play, entryOf } = await import('../qa/playthrough.ts');
-if (!entryOf(scn)) { say(`mission.ts: the scripted player has no mission '${scn}' (tools/qa/playthrough.ts plays the room clears, the rescues and the raids: bun run tools/qa/playthrough.ts --scn x names them)`); process.exit(64); }
+// A TUTORIAL MISSION (levels/tut-<name>.json with its level script) is played by its own scripted player, tools/qa/lesson-run.ts, through the input.
+// That harness feeds the player's light meter itself before every tick (meter.txt, a line a tick) and picks a row of the nearby list between ticks
+// (`<k> select_verb <kind> <verb>` in hostwrites.txt). It is run here WITHOUT its model of the sky's light on the other men's meters (a hook over the game's
+// own light asks, which the Rust game has no word for), so a lesson that leans on the moon may stop short of its end: how far it went is said.
+const LESSON = scn.startsWith('tut-');
+if (!LESSON && !entryOf(scn)) { say(`mission.ts: the scripted player has no mission '${scn}' (tools/qa/playthrough.ts plays the room clears, the rescues and the raids: bun run tools/qa/playthrough.ts --scn x names them)`); process.exit(64); }
 const { newDice } = await import('../../src/math/dice.ts');
 const { dressAll } = await import('../../src/game/dress.ts');
 const { simLayout, SIM_PARTS } = await import('../../src/sim/state.ts');
@@ -46,7 +51,8 @@ function hashes(w: Uint32Array): number[] {
   return LAY.map(({ off, len }) => { let n = Math.min(off + len, w.length); while (n > off && w[n - 1] === 0) n--; let h = 0x811c9dc5; for (let i = off; i < n; i++) h = Math.imul(h ^ w[i], 0x01000193); return h >>> 0; });
 }
 let k = 0, n = 0, uploads = 0; const gives: string[] = []; 
-for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt']) writeFileSync(`${outDir}/${f}`, '');
+for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt', ...(LESSON ? ['meter.txt'] : [])]) writeFileSync(`${outDir}/${f}`, '');
+const { SCHEMA } = await import('./export.ts'); const wordAt = (ty: string, w: unknown) => w === undefined ? -1 : SCHEMA.types[ty].words.indexOf(w);
 writeFileSync(`${outDir}/post.txt`, `parts ${SIM_PARTS.join(' ')}\n`);
 function tapGives(g: any) { const O = g.orders, was = O.give; O.give = function (this: any, id: string, t: any, who: any, opts: any) {
   if (!g.ticking) { const T = t ?? this.targetAt(g.aimPoint), w = who === undefined ? '-' : typeof who === 'object' ? `g${g.guards.indexOf(who)}` : String(who);
@@ -66,15 +72,19 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   // THE TEST DRIVER'S OWN QUESTIONS THAT WRITE THE GAME: `g.fight.roomAt(p)` asked between ticks floods a room nobody had asked for and keeps it in `g.fight.rooms`.
   // Each such ask that grew the list is a line of hostwrites.txt for the tick that opens next.
   if (k === 1 && g.fight?.roomAt) { const F = g.fight, ask = F.roomAt; F.roomAt = function (this: any, p: any) { const n0 = F.rooms.length; const r = ask.call(this, p); if (!g.ticking && F.rooms.length !== n0) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} room_at ${p[0]} ${p[1]} ${p[2]}\n`); return r; }; }
+  if (k === 1 && LESSON) { const pick = g.selectVerb; g.selectVerb = function (this: any, kind: string, verb?: string) { if (!g.ticking) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} select_verb ${wordAt('crate::game::InteractableKind', kind)} ${wordAt('crate::game::Verb', verb)} ${kind} ${verb}\n`); return pick.call(this, kind, verb); }; }
   if (k === 1) dressAll(false);
   if (k === 1 && !g.dice) g.dice = newDice(DIE);
   let err: unknown = null;
   g.stepSeats = function (this: any, dt: number, cmds: unknown) {
     if (k === 1) g.sim.settle(g);
     if (k === 1) { writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g));
+      // (A LESSON'S TESTS: the bridge does not carry a step's `done`, a record by its `is` word; the runner reads them from this file)
+      if (LESSON) writeFileSync(`${outDir}/lesson.json`, JSON.stringify((g.level.scenarios?.lesson?.steps ?? []).map((s: any) => s.done)));
     }
     else if (inR(OPEN, k)) writeFileSync(`${outDir}/c${k}.bin`, exportGame(g, reg));
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g));
+    if (LESSON) appendFileSync(`${outDir}/meter.txt`, `${g.player.visibility}\n`);
     appendFileSync(`${outDir}/host.txt`, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}\n`); uploads = 0;
     const saves0 = g.chronicle.counts.saves;
     try { return step.call(this, dt, cmds); } finally {
@@ -88,9 +98,11 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   if (k >= TICKS) { say(`TypeScript: ${scn} seed ${seed}, ticks ${frame}..${frame + k - 1}, stand ${process.env.TPS_PROFILE}; time ${g.time.toFixed(4)}; die n=${g.dice?.n}; ${g.guards.length} guards`); throw new Stop(); }
 } as any;
 const log = console.log, er = console.error, wn = console.warn; let res: any = null;
-try { res = await play(scn, seed, 300, false, {}); } catch (e) { if (!(e instanceof Stop)) { console.log = log; throw e; } } finally { console.log = log; console.error = er; console.warn = wn; }
+let les: any = null;
+try { if (LESSON) les = await (await import('../qa/lesson-run.ts')).runLesson(scn, { seed, sky: false, glow: false, floor: 0 }); else res = await play(scn, seed, 300, false, {}); } catch (e) { if (!(e instanceof Stop)) { console.log = log; throw e; } } finally { console.log = log; console.error = er; console.warn = wn; }
 // (the module's knob table as the TypeScript game wrote it: the runner's check of the generated `knobs_to_rust`)
 { const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); }
+if (les) { for (const l of les.lines.slice(-8)) say('   ' + l); say(`TypeScript: the lesson ${scn} seed ${seed} at tick ${k}: ${les.code === 0 ? 'every step went by and the run ended' : `STOPPED (${les.why})`}; ${les.steps.length} steps gone by: ${les.steps.map((s: any) => s.id).join(' ')}`); }
 if (res) say(`TypeScript: ${scn} seed ${seed} PLAYED OUT at tick ${k} on the stand ${process.env.TPS_PROFILE}: ${res.end} (${res.why}); t ${res.t}; team ${res.team} of ${res.of}; hostiles ${res.hostiles} of ${res.hostilesOf}`);
 say(`ticks ${k}; the driver's orders ${gives.length}; the die's count ${k ? 'in post.txt' : '-'}; resident ${(process.memoryUsage().rss / 1e9).toFixed(2)} GB`);
 writeFileSync(`${outDir}/ticks.txt`, `${k}\n`);

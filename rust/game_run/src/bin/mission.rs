@@ -12,6 +12,7 @@
 //! place and the game's frames of the backtrace; the exit code is then 2. A kept tick (--keep / --every) writes n<k>.bin and ns<k>.bin for tools/blitz/diff.ts.
 //!
 //! BLITZ_SKIP=<names> leaves one of the host's calls round a step out (lights, upload), to see by a run what it is for.
+use game::ids::Id;
 use std::io::Write;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -51,6 +52,7 @@ fn main() {
     let s0 = rd("s0.bin");
     let host: Vec<Vec<f64>> = text("host.txt").lines().map(|l| l.split(' ').map(|x| x.parse().unwrap()).collect()).collect();
     let gives: Vec<String> = text("gives.txt").lines().map(String::from).collect();
+    let meter: Vec<f64> = text("meter.txt").lines().filter_map(|l| l.trim().parse().ok()).collect();
     let hostwrites: Vec<String> = text("hostwrites.txt").lines().map(String::from).collect();
     let len = core::mem::size_of::<sim::state::State>();
     println!("runner: rust/sim's block is {} bytes here, {} in s0.bin; layout word {}", len, s0.len(), sim::state::LAYOUT);
@@ -70,7 +72,9 @@ fn main() {
     // (the tick's frames are deep in a build with no optimisation: a thread with room)
     let h = std::thread::Builder::new().stack_size(2 << 30).spawn(move || {
         let skip = |n: &str| skips.iter().any(|s| s == n);
-        let mut g = game_run::start(&a0, &s0, 0);
+        let (mut g, said) = game_run::start(&a0, &s0, 0);
+        for l in said { println!("{}", l); }
+        if let Ok(txt) = std::fs::read(format!("{}/lesson.json", dir)) { if let Some(l) = game_run::lesson(&mut g, &txt) { println!("{}", l); } }
         let (mut parted, mut spent, mut worst) = (0usize, std::time::Duration::ZERO, std::time::Duration::ZERO);
         let (mut n_parted, mut was_same, mut pool_parted, mut die_parted, mut done) = (0usize, true, false, 0usize, 0usize);
         for k in 1..=ticks {
@@ -78,6 +82,7 @@ fn main() {
             for l in gives.iter().filter(|l| game_run::line_of(l, k)) { println!("{}", game_run::give(&mut g, k, l)); }
             // HARNESS STAND-IN: the test driver's own question that writes the game (`g.fight.roomAt(p)` between ticks floods a room and keeps it)
             for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_before(&mut g, k, l) { println!("{}", t); } }
+            if let Some(v) = meter.get(k - 1) { game_run::meter(&mut g, *v); }
             let dt = host[k - 1][0];
             // HOST STEP: where the headless host listed the box world again between two ticks
             if !skip("upload") && host[k - 1].get(4).copied().unwrap_or(0.0) > 0.0 { game_run::upload(&mut g); }
@@ -86,6 +91,7 @@ fn main() {
             game_run::step(&mut g, dt, &cmd);
             let el = t0.elapsed(); spent += el; if el > worst { worst = el; }
             done = k;
+            if std::env::var("BLITZ_BEATS").is_ok() { for b in g.tab.director_live_beat.ids().collect::<Vec<_>>() { let lb = &g.tab.director_live_beat[b]; println!("  beat after tick {}: {} {:?} step {} waiting {:?} it {:?}", k, lb.name, lb.state, lb.step, lb.waiting, lb.it); } }
             for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_after(&mut g, k, l) { println!("{}", t); } }
             if k == 1 {
                 if let Ok(want) = std::fs::read(format!("{}/knobs.bin", dir)) {
