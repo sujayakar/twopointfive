@@ -122,6 +122,24 @@ the census did not read are stood on the TypeScript tick; everything else on the
 game is stood (`[the game: <name> is stood on the TYPESCRIPT TICK by the table (kind iii); its verdict is not the Rust game's]`) and the process ends on
 one line that counts both sides and names them (`=== the game, by the table: … ===`), so a green of the old tick is not read as the Rust game's.
 
+The table also lists (`pins`) the checks that RAN WITH A SETTLED SWITCH OFF ITS PAGE VALUE (a row the Rust game folded to a constant: the check asks
+for a game the Rust game does not have), from a run of the gate's families with `RH_FOLDED`: 185 probes; they stay on the TypeScript tick too.
+
+## The gate's playing tools under each word (the changed-only export, the joined bodies; one at a time, the box at a load of 9 to 15)
+
+| tool | `ts` | `rust` | what is red under `rust`, by kind |
+|---|---|---|---|
+| `playthrough.ts --seeds 1-4 --jobs 2` (84 runs) | 1,452 s | 2,498 s | 84 of 84 END THE SAME; 14 whole records equal; 7 places differ (`smells.#.detail` 68 runs, `destr.fixWhy` 11, `destr.skins.*` 7, `deaths.#.hole` 3, `entries.#.blind` 1): the tool's own watchers and wrappers |
+| the digest of every half second (`PT_DIGEST`) | | | equal on 28 of 84; two fields part and no other in 11 missions looked at: `decals` (the host's decal list holds marks the out arm lays and nobody tags as the picture's) and `civilians[i].dice` (the same 32 bits, unsigned on the puppet) |
+| `bench-seeds.ts --twice snow:10`, `dark:1` (the same run twice) | 45 s, 38 s PASS | 113 s, 84 s PASS | the same digest under both words; "Sam hit" is the tool's own tap (2 | 0) |
+| `seats-run.ts` | 87 s PASS | 170 s PASS | |
+| `seats-check.ts` | 319 s PASS | 477 s, 3 red | `rollback`, `twin`: a word made by walking the JavaScript objects (and `walkAhead` on the puppet); `down`: calls `hitPlayer` |
+| `mpserver-check.ts` | 226 s, 2 red (clocks) | 443 s, 4 red | `same fight`, `late joiner`: the check runs on the wall clock and the games stepped 650 to 917 of 1,200 ticks; `lag`, `ahead` red under `ts` too |
+| `tools/qa/coop-check.ts` | 209 s, 4 red | 520 s, 4 red | its second engine (node) has no preload under either word; under `rust` the tool's own die in `Math.random`'s place is not the Rust game's |
+| `dice-check.ts` | 24 s, 1 red | 51 s, 2 red | `default`: the word gives the game a die (both words); `same seed`: provokes its fight by a rule |
+| `knobs-check.ts` | PASS | PASS | stands no game |
+| `tools/blitz/coop-check.ts` | 430 s, its 3 lines red as its header expects | | stands no game through the harness and reads no word |
+
 ## A tool that stands many games, and what it does with them
 
 - **The second game of a process.** The simulation keeps much of its state in weak tables beside its objects, one table a process (src/math/side.ts), and
