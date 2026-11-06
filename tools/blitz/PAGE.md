@@ -84,6 +84,11 @@ is beside each row), so read the proportions, not the milliseconds.
 | the host's half in, the knobs | | 0.72 ms |
 | the dress step | | 0.59 ms |
 
+**With the changed mask** (the every-tick export sends only the leaves that changed), measured the same way on a box about twice as loaded, so in
+ticks: room clear, the apply 0.87 to 0.89 ticks (it was 1.44), the export 0.59 to 0.63 (it was 0.52), the Rust page's update 1.3 to 1.6 times the
+TypeScript's (it was 1.9); depot, the apply 1.05 ticks (1.48), the export 0.60 (0.41), the update 1.9 times (2.1). A CPU profile of the same build puts
+the apply's gain at 15% and the export's loss at as much. The tables above are the build before it.
+
 The Rust tick alone is quicker than the TypeScript's. The surplus is the puppet: the export and the apply are three fifths of a step, and they exist only
 while there is a puppet. What they spend it on (reads that take the importer's slow path, a step, room clear): a man's bones 1,110; the box world's
 statics 874; the fog frame's lights 769; the frame's boxes, the fog's things and the world's dynamics 430 each; a thing's ghost 281; a box's optional
