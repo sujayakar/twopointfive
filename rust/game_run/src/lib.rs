@@ -130,6 +130,13 @@ pub fn write_before(g: &mut game::game::Game, k: usize, l: &str) -> Option<Strin
         let ok = if w[1] == "rescue_word" { game::rescueend::rescue_end_word(g, by) } else { game::snatchout::snatch_out_word(g, by) };
         return Some(format!("  the driver before tick {}: {}({}) -> {}", k, w[1], w[2], ok));
     }
+    // HARNESS STAND-IN: the scripted player puts the highlight on a row of the nearby list between ticks (it writes `Player.nearSel` and calls
+    // pickHover: playthrough.ts:865, and `Game.selectVerb` on a mission that is no lesson)
+    if w.get(1) == Some(&"near_sel") {
+        let i = w[2].parse::<i32>().expect("a row");
+        let pl = g.player; g.pl[pl].near_sel = i; game::player::pick_hover(g);
+        return Some(format!("  the driver before tick {}: the highlight on row {} of {} ({:?})", k, i, g.nearby.len(), g.hover.as_ref().map(|h| h.line1.clone())));
+    }
     if w.get(1) == Some(&"room_at") {
         let p = [w[2].parse::<f64>().unwrap(), w[3].parse::<f64>().unwrap(), w[4].parse::<f64>().unwrap()];
         let r = game::roomfight::room_fight_room_at(g, p);

@@ -126,7 +126,7 @@ export class RustHost {
   wb = { fired: 0, meter: 0, block: 0, hostOnly: 0, refused: 0 }; handbacks = 0; handbacksInBeat = 0; applyChecks = 0; applyUnequal = 0;
   private lastState: Uint8Array | null = null; private lastBlock: Uint8Array | null = null;
   private pup: any; private say: (s: string) => void;
-  private visApplied = NaN; private wholeNow = false; private uploadDone = false;
+  private hoverApplied: unknown = null; private visApplied = NaN; private wholeNow = false; private uploadDone = false;
   private missionRef: any = null; private loadsRef = 0; private stageRef: any = null; private downRef = -1; private outQ: { arm: string; e: any }[] = [];
   private asks: { after(): void } | null = null; asked = 0;
   private threw: Record<string, number> = {}; private warmDue = false;
@@ -203,7 +203,7 @@ export class RustHost {
     // row as if it had changed, and applying a row that holds what the puppet holds changes nothing.
     X.face_puppet(this.h, 1);
     const warm = this.o.warm ?? 4; if (X.face_puppet_warm) for (let i = 0; i < warm; i++) { X.face_puppet_warm(this.h); const R = B.applyGame(g, this.F.outView(), B.reg, { hooks: B.hooks, puppet: { ...this.pup, start: false } }); this.after(R); }
-    this.visApplied = g.player?.visibility; this.missionRef = g.mission; this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.stageRef = this.endMark(); this.downRef = this.downCount();
+    this.visApplied = g.player?.visibility; this.hoverApplied = g.hover; this.missionRef = g.mission; this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.stageRef = this.endMark(); this.downRef = this.downCount();
     this.memPages = this.F.mem.buffer.byteLength; this.T.start += now() - t;
     if (!this.o.quiet) this.say(`rust-host: ${this.starts === 1 ? 'the start' : `A NEW START as tick ${this.k} opens (the TypeScript round the last step put another game in the puppet's place)`}: ${start.length} bytes, the block ${block.length}; slot ${this.slot}; memory ${(this.F.mem.buffer.byteLength / 1048576).toFixed(0)} MB`);
   }
@@ -218,7 +218,7 @@ export class RustHost {
     for (const [q, n] of R.noWay) this.noWay.set(q, (this.noWay.get(q) ?? 0) + n); for (const [q, n] of R.noSetter) this.noSetter.set(q, (this.noSetter.get(q) ?? 0) + n); for (const q of R.noWindow) this.noWindow.add(q);
     for (const [c, n] of Object.entries<number>(R.made)) if (n) this.made[c] = (this.made[c] ?? 0) + n; }
   /** after every apply: the rows and the posture the apply made get the closures that ask the Rust game (ask.ts) */
-  private after(R: any): void { this.asks?.after(); this.took(R); this.visApplied = this.g.player?.visibility; this.dieRef = this.g.dice?.n; }
+  private after(R: any): void { this.asks?.after(); this.took(R); this.visApplied = this.g.player?.visibility; this.hoverApplied = this.g.hover; this.dieRef = this.g.dice?.n; }
   private copyBlock(): void { const t = now(), mine = this.tsBlock(), theirs = this.rustBlock(); mine.set(theirs.subarray(0, mine.length)); if (this.audit) this.lastBlock = mine.slice(); this.T.block += now() - t; }
   /** THE FILTERED APPLY: the listed fields of what changed since the last one, and the step's out events */
   applyStep(): void {
@@ -331,6 +331,12 @@ export class RustHost {
     if (this.audit) { this.writeBack(at); return; }
     const g = this.g, v = g.player?.visibility;
     if (v !== this.visApplied && typeof v === 'number') { this.F.X.face_meter(this.h, v); this.visApplied = v; this.wb.meter++; }
+    // (the scripted player put the highlight on a row itself: it writes `player.nearSel` and calls pickHover, which hands `g.hover` a row of the
+    //  puppet's own list. The highlight's number is not on the filtered list, so the pick is known by the hover: another object than the apply left,
+    //  and one of the list's rows. The row's number goes to the Rust game, whose own pickHover takes it.)
+    const hv = g.hover, row = hv && hv !== this.hoverApplied ? (g.nearby ?? []).indexOf(hv) : -1;
+    if (row >= 0) { const line = `${at} near_sel ${row}`; this.wrote.push(line); if (this.F.hand(enc.encode(line), (p, n) => this.F.X.face_hostwrite(this.h, at, p, n)) !== 1) this.say(`rust-host: the face did not take the highlight on row ${row}`); this.count('the highlight put on a row by the tool (made on the Rust side)'); }
+    this.hoverApplied = hv;
   }
   /** audit: the whole puppet held to the bytes last applied */
   private writeBack(at: number): void {
