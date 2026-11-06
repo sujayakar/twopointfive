@@ -10,7 +10,8 @@
 #   i      plays through the host's input, steps and reads (a start or a load between ticks is the host's: a new start)
 #   ii     … and writes the game's fields by name between ticks
 #   iii    … and calls a rule of the simulation between ticks (a function of src/game, anim, math, sim, scene that writes game state)
-#   iv-a   hangs its own function on an object of the game (a wrapper the tick is meant to call): another stepper never calls it
+#   iv-a   hangs its own function on an object of the game (a wrapper the tick is meant to call): another stepper never calls it. A wrapper on the HUD's
+#          `msg` / `say` / `note` alone is not counted here but flagged (`hud`): one out event's arm calling the game's own method would reach it
 #   iv-b   calls the simulation's functions with no game stood: it checks the TypeScript function itself
 #   iv-c   holds the game to a word made by walking the JavaScript objects (rollback.ts stateHash / canon), or replays a session journal (the sensors' seam)
 # It is a reading by name: a call through a variable, a write through a helper of another folder, and the order of a write and the first step are not seen.
@@ -31,8 +32,9 @@ SCRATCH = re.compile(r'^(StaticCollision\.|SkyState\.|BoxWorld\.|AABB\.|AirDust\
 INV = {}   # TS name -> {'verdict', 'writes' (not scratch), 'n'}
 for f in CALLS:
     n = re.split(r'[#.]', f['key'])[-1]; real = [w for w in (f.get('writes') or []) if not SCRATCH.match(w)]
+    if re.match(r'^(Input|FollowCamera|Sensors|FlatState)\.', f['key']): continue   # (the host's own: its input, its camera, the sensors' frame)
     e = INV.setdefault(n, {'keys': [], 'real': 0, 'n': 0, 'verdict': set(), 'dice': False}); e['keys'].append(f['key']); e['real'] = max(e['real'], len(real)); e['n'] = max(e['n'], f.get('writesN') or 0); e['verdict'].add(f['verdict']); e['dice'] = e['dice'] or bool(f.get('dice'))
-STARTS = {'startFromQuery', 'startScenario', 'restartEncounter', 'restart', 'loadState', 'quitScenario', 'restartMission', 'startMission', 'saveState', 'canLoad', 'loadLevel', 'standGame'}
+STARTS = {'loadGltfCast', 'loadGltfCharacter', 'parseLevelData', 'startFromQuery', 'startScenario', 'restartEncounter', 'restart', 'loadState', 'quitScenario', 'restartMission', 'startMission', 'saveState', 'canLoad', 'loadLevel', 'standGame'}
 def judge(name):
     """start · rule · ask · unjudged (a ported function that takes the game to write and the inventory never met) · none (not the simulation's)"""
     if name in STARTS: return 'start'
@@ -58,7 +60,7 @@ class File:
     def __init__(s, path):
         s.path = path; s.text = open(path, errors='ignore').read(); s.fns = {}; s.frozen = {}; s.local = {}
         starts = [(m.start(), m.group(1)) for m in re.finditer(r'^(?:export\s+)?(?:async\s+)?function\*?\s+(\w+)', s.text, re.M)]
-        starts += [(m.start(), m.group(1)) for m in re.finditer(r'^(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s*)?(?:\([^)]*\)|\w+)\s*(?::\s*[^=]+)?=>', s.text, re.M)]
+        starts += [(m.start(), m.group(1)) for m in re.finditer(r'^(?:export\s+)?(?:const|let)\s+(\w+)\b', s.text, re.M)]   # (every top-level name: a function held in a const, wrapped or not, and a table)
         starts.sort()
         for i, (at, name) in enumerate(starts): s.fns[name] = s.text[at:(starts[i + 1][0] if i + 1 < len(starts) else len(s.text))]
         s.head = s.text[:starts[0][0]] if starts else s.text
@@ -72,6 +74,7 @@ class File:
             if FROZEN.search(frm): s.frozen[alias] = orig
             elif re.match(r'^\.\/[\w.-]+\.ts$', frm) or '/tools/qa/' in frm: s.local[alias] = (QA + os.path.basename(frm), orig)
 FILES = {}
+HARNESS = {'headless.ts', 'stand.ts', 'holds.ts', 'expected-red.ts', 'webgpu-stub.ts'}   # (the stand itself: what it does is the host's)
 def file(p):
     if p not in FILES and os.path.exists(p): FILES[p] = File(p)
     return FILES.get(p)
@@ -80,17 +83,20 @@ def closure(path, fn):
     seen, heads, texts, todo = set(), set(), [], [(path, fn)]
     while todo:
         p, f = todo.pop(); F = file(p)
-        if not F or (p, f) in seen: continue
+        if not F or (p, f) in seen or os.path.basename(p) in HARNESS: continue
         seen.add((p, f))
         if p not in heads: heads.add(p); texts.append((p, F.head))
         body = F.text if f is None else F.fns.get(f)
+        if body is None and (p, f) == (path, fn): f, body = None, F.text   # (the probe's own function not found by name: its file is read whole)
         if body is None: continue
         texts.append((p, body))
-        if f is None: nxt = [(p2, o) for (p2, o) in F.local.values()]
-        else: nxt = [(p, n) for n in F.fns if n != f and re.search(r'(?<![\w.])' + re.escape(n) + r'\b', body)] + [F.local[a] for a in F.local if re.search(r'(?<![\w.])' + re.escape(a) + r'\b', body)]
+        nxt = [(QA + m.group(1), m.group(2)) for m in re.finditer(r"import\(\s*['`\"]\./([\w.-]+)['`\"]\s*\)\s*\)(?: as any\))?\.(\w+)", body)]
+        if f is None: nxt += [(p2, o) for (p2, o) in F.local.values()]
+        else: nxt += [(p, n) for n in F.fns if n != f and re.search(r'(?<![\w.])' + re.escape(n) + r'\b', body)] + [F.local[a] for a in F.local if re.search(r'(?<![\w.])' + re.escape(a) + r'\b', body)]
         todo += nxt
     return texts, heads
 HOST_LHS = re.compile(r'^(?:W|w|H|P|world)?\.?(?:input|cam|canvas|audioLog|I\d?|inp)\b|^(?:console|process|Math|globalThis|module|exports|opts?|o|args?|res|out|r|R|F|T|S|rec|row|acc|st|stats?|ctx|cfg|env)\.')
+OUT_CALLS = re.compile(r'(audio\.(play|footstep|rain)|smoke\.(emit|push|keepHot|clearAll|obstaclesChanged)|particles\.(emit|impulse|setHeat)|decals\.(add|touch|clear)|saves\.\w+|journal\.cut|engine\.\w+|sensors\.\w+)$')   # (what the out events' dispatcher calls on the host's objects, and the host's own hooks)
 WRAP_OK = re.compile(r'^(console|process|Math|globalThis|window|document|performance|Date|JSON|Bun)\.')
 def read(path, fn):
     texts, heads = closure(path, fn); T = '\n'.join(t for _, t in texts)
@@ -98,12 +104,12 @@ def read(path, fn):
     for p in heads: frozen.update(FILES[p].frozen)
     names = set();
     for p in heads: names.update(BYNAME.get(p, {}).get('writes', []))
-    r = {'stand': bool(re.search(r'\b(standUp|standTwo|runLesson|standGame)\(|(?<![\w.])play\(', T)), 'steps': len(re.findall(r'\.step\(|\bstep\(\s*W\b|\.update\(\s*(?:dt|DT|1\s*/)|stepSeats\(', T)),
-         'rules': set(), 'asks': set(), 'unjudged': set(), 'starts': set(), 'writes': set(), 'wraps': set(), 'word': set()}
+    r = {'stand': bool(re.search(r'\b(standUp|standTwo|runLesson|standGame|runScript)\(|(?<![\w.])play\(|\bnew Game\(', T)), 'steps': len(re.findall(r'\.step\(|\bstep\(\s*W\b|\.update\(\s*(?:dt|DT|1\s*/)|stepSeats\(', T)),
+         'rules': set(), 'asks': set(), 'unjudged': set(), 'starts': set(), 'writes': set(), 'wraps': set(), 'word': set(), 'hud': set()}
     called = set(n for n in frozen if re.search(r'(?<![\w.])' + re.escape(n) + r'\s*\(', T))
     for m in re.finditer(r'\.([a-z][A-Za-z0-9]+)\s*\(', T):
         n = m.group(1)
-        if n in INV and any('.' in k for k in INV[n]['keys']) and (INV[n]['real'] > 5 or n in STARTS) and n not in ('update', 'tick', 'step', 'reset', 'clear', 'add', 'set', 'push', 'play', 'open', 'close', 'fire', 'give'): called.add(n); frozen.setdefault(n, n)
+        if n in INV and re.search(r'[A-Z]', n) and any('.' in k for k in INV[n]['keys']) and (INV[n]['real'] > 0 or n in STARTS): called.add(n); frozen.setdefault(n, n)
     if re.search(r'\borders\.give\(|\.give\(\s*[\'"`]', T): r['rules'].add('Orders.give')
     for a in called:
         n = frozen.get(a, a); k = judge(n)
@@ -116,7 +122,7 @@ def read(path, fn):
         if n in names and not HOST_LHS.match(lhs + n): r['writes'].add(n)
     for m in re.finditer(r'((?:[\w$\]\[\'"?!]+\.)+)(\w+)\s*=\s*(?:async\s*)?(?:function\b|\([^()\n]{0,80}\)\s*(?::\s*\w+\s*)?=>|\w+\s*=>)', T):
         full = m.group(1) + m.group(2)
-        if not WRAP_OK.match(full) and not HOST_LHS.match(full) and not re.match(r'^(?:W|w)\.(?:step|snapshot|restore)$', full) and m.group(2) not in ('onmessage', 'onerror', 'onclose', 'onopen', 'log', 'error', 'warn', 'random'): r['wraps'].add(full)
+        if not WRAP_OK.match(full) and not HOST_LHS.match(full) and not re.match(r'^(?:W|w)\.(?:step|snapshot|restore)$', full) and m.group(2) not in ('onmessage', 'onerror', 'onclose', 'onopen', 'log', 'error', 'warn', 'random') and not OUT_CALLS.search(full): (r['hud'] if m.group(2) in ('msg', 'say', 'note') else r['wraps']).add(full)
     if re.search(r'\bstateHash\(|\bcanon\(|rollbackVar\(|from [\'"].*rollback\.ts', T) and re.search(r'\bstateHash\(|\bcanon\(', T): r['word'].add('stateHash / canon (a walk of the JavaScript objects)')
     if re.search(r'journal\.ts|replay\.ts|SessionRecorder|replaySession|\brecorder\b', T) and re.search(r'\b(replaySession|SessionRecorder|recordSession|replayFile|replayJournal|runReplay)\b', T): r['word'].add('a session journal (the sensors\' seam)')
     sim = r['rules'] | r['asks'] | r['unjudged']
@@ -160,9 +166,9 @@ for at, fam, path in LOOPS:
         if n not in TARGET: TARGET[n] = [(path, None)]
 def merge(rs):
     order = ['0', 'i', 'ii', 'iii', 'iv-b', 'iv-a', 'iv-c']; out = {'kind': '0', 'stand': False, 'steps': 0}
-    for k in ('rules', 'asks', 'unjudged', 'starts', 'writes', 'wraps', 'word'): out[k] = set()
+    for k in ('rules', 'asks', 'unjudged', 'starts', 'writes', 'wraps', 'word', 'hud'): out[k] = set()
     for r in rs:
-        for k in ('rules', 'asks', 'unjudged', 'starts', 'writes', 'wraps', 'word'): out[k] |= r[k]
+        for k in ('rules', 'asks', 'unjudged', 'starts', 'writes', 'wraps', 'word', 'hud'): out[k] |= r[k]
         out['stand'] = out['stand'] or r['stand']; out['steps'] += r['steps']
         if order.index(r['kind']) > order.index(out['kind']): out['kind'] = r['kind']
     return out
@@ -185,15 +191,15 @@ for n, r in PROBE.items():
     for f in r['wraps']: wrap_probes[f] += 1
 # (a rule's count of FILES: every file of tools/qa that names it as a call, whichever probe it serves)
 ALLQA = sorted(glob.glob(QA + '**/*.ts', recursive=True)); file_count = collections.Counter()
+WANT = {f.split('.')[-1]: f for f in set(rule_probes) | set(unj_probes) | set(ask_probes)}
 for p in ALLQA:
-    t = open(p, errors='ignore').read()
-    for f in set(rule_probes) | set(unj_probes) | set(ask_probes):
-        if re.search(r'(?<![\w])' + re.escape(f.split('.')[-1]) + r'\s*\(', t): file_count[f] += 1
+    for n in set(re.findall(r'(?<![\w])(\w+)\s*\(', open(p, errors='ignore').read())):
+        if n in WANT: file_count[WANT[n]] += 1
 fn_row = lambda f, c: {'fn': f, 'probes': c, 'files': file_count[f], 'writes': INV.get(f.split('.')[-1], {}).get('n'), 'rolls_the_die': INV.get(f.split('.')[-1], {}).get('dice'), 'cannot_cross': crossing(f.split('.')[-1])}
 J = {'kinds': dict(collections.Counter(r['kind'] for r in PROBE.values())), 'probes_mapped': len(PROBE), 'names_known': len(ALLN), 'unmapped': sorted(n for n in ALLN if n not in PROBE and n not in LIST or (n in LIST and LIST[n] == [n] and n not in PROBE)),
      'tools': {t: ser(r) for t, r in TOOL.items()}, 'families': fam_rows, 'probes': {n: ser(r) for n, r in sorted(PROBE.items())},
      'rules': [fn_row(f, c) for f, c in rule_probes.most_common()], 'unjudged': [fn_row(f, c) for f, c in unj_probes.most_common()], 'asks': [fn_row(f, c) for f, c in ask_probes.most_common()],
-     'writes_by_name': write_probes.most_common(), 'wraps': wrap_probes.most_common()}
+     'writes_by_name': write_probes.most_common(), 'wraps': wrap_probes.most_common(), 'hud_taps': sum(1 for r in PROBE.values() if r['hud']), 'hud_taps_by_kind': dict(collections.Counter(r['kind'] for r in PROBE.values() if r['hud']))}
 json.dump(J, open(f'{OUT}/qa-census.json', 'w'), indent=1)
 print(f"{len(PROBE)} probes read of {len(ALLN)} names known ({len(J['unmapped'])} names with no line found); kinds: {J['kinds']}")
 print(f"rules called between ticks: {len(rule_probes)} distinct (+ {len(unj_probes)} the inventory never judged, + {len(ask_probes)} asks); {sum(1 for r in J['rules'] + J['unjudged'] if r['cannot_cross'])} take an argument that cannot cross")
