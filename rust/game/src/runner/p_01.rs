@@ -361,8 +361,11 @@ pub fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runne
         r.stall = 0.0;
     }
     // (`S.goal = v3.copy(goal)` is a NEW ARRAY, and his script's goal is that object from the next drive on: the settle watch squad.ts:81 keeps for
-    //  the goal OBJECT it was made for (`w.goal !== s.goal`) is made again, even where the route is to the same spot. Here the watch is asked by value.)
-    g.m.squad.settle_watch.delete(gd);
+    //  the goal OBJECT it was made for (`w.goal !== s.goal`) is made again at its next read, even where the route is to the same spot. Here the watch is
+    //  asked by value, so only a watch that holds THESE numbers would be taken for this goal's: that one goes. Any other stays as the TypeScript's
+    //  stale row stays, and the next read replaces it. STAND-IN by value: with the same numbers the TypeScript keeps a stale row until that read and
+    //  this side has none; it belongs to the identity device.)
+    if g.m.squad.settle_watch.get(gd).map_or(false, |w| w.goal == goal) { g.m.squad.settle_watch.delete(gd); }
     let mut free = |g: &mut Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
     let path = crate::doors::doors_thread_path(g, p.as_deref().unwrap_or(&[]), pos, Some(&mut free));
     let serial = g.serial();   // (a new array: readers ask by identity)
@@ -822,7 +825,7 @@ pub fn gone(g: &mut crate::game::Game, gd: GuardId) {
     r.is_out = true;
     r.goal = Some(v3::copy(pos));
     r.script.arrived = Some(true);
-    g.m.squad.settle_watch.delete(gd);   // (a new goal object, as `route` says)
+    if g.m.squad.settle_watch.get(gd).map_or(false, |w| w.goal == pos) { g.m.squad.settle_watch.delete(gd); }   // (a new goal object, as `route` says)
     drive(g, gd);
 }
 

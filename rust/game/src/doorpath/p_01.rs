@@ -612,7 +612,7 @@ pub fn door_path_move(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk, 
         if let Some(post) = g.tab.orders_assignment[a].post {
             if flat(&post, &old) < 0.1 {
                 let goal: V3 = [q[0], post[1], q[2]];
-                g.tab.orders_assignment[a].post = Some(goal); g.tab.orders_assignment[a].had = None;   // (a NEW ARRAY in `post`'s place: `A.had === A.post`, orders.ts:1472, is an identity, so the mark he had is no longer this one)
+                g.tab.orders_assignment[a].post = Some(goal); if g.tab.orders_assignment[a].had == Some(goal) { g.tab.orders_assignment[a].had = None; }   // (a NEW ARRAY in `post`'s place: `A.had === A.post`, orders.ts:1472, is an identity: a mark he had that holds THESE numbers is not this one, and `had` is asked by value, so that one goes; any other stays, as the TypeScript's stale one stays. STAND-IN by value)
                 g.tab.orders_assignment[a].goal = goal;
                 if let Some(s) = g.gd[gd].script.as_mut() {
                     if let Some(sg) = s.goal {
