@@ -1,7 +1,7 @@
 // A POSE'S BULK ARITHMETIC IN SINGLES (src/anim/skeleton.ts POSEMATH.singles) — the switch's own check. With it on, blendPose and the step sampleClip takes
 // between two keys are worked in singles, a rotation's length a plain root, in the TypeScript (Math.fround at every step) and in the Rust module (singles to
 // begin with, four nodes a step: rust/sim/src/single.rs). Off = the build as it was.
-//   bun run tools/qa/posemath-check.ts                 this stand (frozen by default; TPS_PROFILE=shipped = the page's). RUN IT ON BOTH.
+//   bun run tools/qa/posemath-check.ts                 the page's stand (TPS_PROFILE=frozen in front = the old one, where the rule is held off).
 //   POSEMATH_BREAK=1 bun run tools/qa/posemath-check.ts   the red path, must exit 1: the module is asked every blend and sample WITHOUT the rule's bit while the
 //                                                      TypeScript twin works in singles — the two sides of one rule apart
 // lines
@@ -19,6 +19,7 @@
 //            with it off and put on (POSEMATH_LATE=1) is the game stood with it on: nothing kept from the build stands on the other arithmetic. That is
 //            what lets a recording's rule be written by journal.ts applyKnobs alone, after the game is stood (tools/qa/replay.ts says no word for it)
 // exit 0 = every line · 1 = a line failed. Nothing here has been seen on a GPU: it is arithmetic, and the picture's skinning reads the same poses.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.POSEMATH_BREAK === '1', STAND = process.env.TPS_PROFILE === 'shipped' ? 'shipped' : 'frozen';
@@ -70,9 +71,10 @@ console.log(`a pose's arithmetic in singles · the ${STAND} stand${BREAK ? ' · 
     `on: ${a ? `${a.asked} questions, ${a.differ} differ (sample ${a.by.sample}, lines ${a.by.lines}, blend ${a.by.blend})` : last(on.out)} · off: ${b ? `${b.asked} questions, ${b.differ} differ` : last(off.out)}`);
 }
 // ---- layers (asked on the page's stand: the layers' check plays one scripted mission, and under the frozen stand's rules that mission asks too few of
-//      the layers for the check to call itself fair — its own verdict there is "asked too little", with or without this rule and whatever answers)
+//      the layers for the check to call itself fair — its own verdict there is "asked too little", with or without this rule and whatever answers.
+//      --unpinned: the layers' recording is of the page as it opens, and this child raises the rule, so its words are no run of the recording's)
 if (STAND === 'shipped') {
-  const r = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { [WORD]: '1', RUST_BREAK: undefined, TPS_PROFILE: 'shipped' });
+  const r = child(['bun', 'run', 'tools/qa/layer-ident.ts', '--unpinned'], { [WORD]: '1', RUST_BREAK: undefined, TPS_PROFILE: 'shipped' });
   line(r.status === 0 && /layer-ident: PASS/.test(r.out), 'layers: with the rule on the module\'s layers pass their own check', last(r.out));
 } else console.log('- (layers: not asked on the frozen stand, where the layers\' check calls its own mission unfair: too few layers asked)');
 // ---- game, rule

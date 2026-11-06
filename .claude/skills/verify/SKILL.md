@@ -113,8 +113,8 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
   walk. No row is ever on a digit above 5. While the menu is up the digits are not Sam's weapon slots.
 - **Off switches worth knowing when a boot fails or a run looks different**: `?nodestruction`, `?glassfx=0`, `?mannequin`,
   `?noslots`, `?nodoorpath`, `?radiocheck=0` (each takes one shipped-on feature back out). A headless tool stands the game up
-  FROZEN by default (the newer rules held off, as every frozen digest was recorded); `TPS_PROFILE=shipped` in front of it stands
-  it up as the page opens (`src/host/profile.ts`; `bun run tools/qa/probes.ts shipped`, and against the real page
+  as the page opens it (`src/host/profile.ts`); `TPS_PROFILE=frozen` in front of it is the old stand, the newer rules held off, kept
+  for the switch cleanup only (`bun run tools/qa/probes.ts shipped` holds the two apart, and against the real page
   `PORT=<port> node tools/qa/shipped-page.cjs`).
 
 ## Gotchas

@@ -56,6 +56,8 @@ pub const GW: usize = 64;
 /// panes a burst's own reckoning of the glass can name (glass.rs, the view): where each gives, four doubles a pane
 pub const MAX_VIEW: usize = 256;
 pub const VD: usize = 4;
+/// `panes_g`: no block (a world of zeros stands in no data segment of the module: 0, not some other number)
+pub const NO_BLOCK: u32 = 0;
 
 /// DOUBLES A BOX: centre, half sizes, cos and sin of its yaw (worked out by the side that owns the maths in place — the same two numbers the TypeScript's own
 /// cache keeps beside the yaw), the yaw itself, the rotation (x y z w), its cut record's place and plane count, and what kind of box it is.
@@ -81,6 +83,16 @@ pub const K_SHAPED: u32 = K_ROT | K_ROUND | K_CUT;
 /// the flags of src/scene/boxes.ts BoxFlag that a question here reads
 pub const F_NO_SHADOW: u32 = 2;
 pub const F_GLASS: u32 = 1 << 17;
+
+/// the sheets of glass a level may have (src/scene/boxMirror.ts PANE_CAP, src/game/levelfit.ts)
+pub const MAX_SHEETS: usize = 256;
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Sheet {
+    pub bi: u32,
+    pub sky: i32,
+    pub gap: f64,
+}
 
 #[repr(C)]
 pub struct World {
@@ -124,6 +136,15 @@ pub struct World {
     pub view_bi: [u32; MAX_VIEW],
     pub view_n: u32,
     pub view_kind: u32,
+    /// WHOSE PANES THESE ARE: the slot of the game's block whose rows a line or a ray here reads where they stand, plus one (panes.rs; set as the copy is stood up,
+    /// let go as it shuts, for a world outlives its game), or NO_BLOCK: the copy's rows above, the rule being the host's
+    pub panes_g: u32,
+    /// THE LEVEL'S SHEETS OF GLASS, ascending, for the rule (panes.rs): which static, which face has the sky, how far it stands on the plan from the nearest door's opening.
+    /// The level's, not the game's: no part of any block, and written with the statics by src/scene/boxMirror.ts
+    pub sheet_n: u32,
+    pub sheets: [Sheet; MAX_SHEETS],
+    /// …and with those, a burst's view is its numbers: the point, how far it reaches, how hard, and 1 where a man counts on it (panes.rs gives)
+    pub view_at: [f64; 6],
     /// WHAT SNOW A STATIC IS, a byte a static (snowBog.ts ground: 0 none · SNOW_BARE ground somebody cleared · SNOW_PACKED trodden · SNOW_OLD old · SNOW_BANK snow
     /// that stands or caps): where a thrown thing bogs down is asked of these and of the statics' own rows (items.rs bog_at)
     pub snow: [u8; MAX_BOXES],
@@ -164,6 +185,10 @@ const BLANK: World = World {
     view_bi: [0; MAX_VIEW],
     view_n: 0,
     view_kind: 0,
+    panes_g: NO_BLOCK,
+    sheet_n: 0,
+    sheets: [Sheet { bi: 0, sky: 0, gap: 0.0 }; MAX_SHEETS],
+    view_at: [0.0; 6],
     snow: [0; MAX_BOXES],
     w: 0,
     h: 0,

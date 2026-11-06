@@ -20,6 +20,7 @@
 //  15  a blast's place    a blast placed by word and heard: the room fight's evidence takes the place of the blast, and a thirty second old noise does not pass for it
 // BELIEF_BREAK=1 = the rule stays down where the check raises it, which puts the door back into his belief: lines 1, 2, 4, 11, 12 and 15 must fail.
 // exit 0 = all hold · 1 = one does not. Nothing here is a picture: no gun has been looked at on a GPU by this check.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 type Vec3 = [number, number, number];
