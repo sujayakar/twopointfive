@@ -147,7 +147,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the door is has the defender in sight at once and has lost him half a second later, as the row is read, on the page's stand alone (the line's detail
   says both times now); an order to cover the door first makes it pass by two more men and hides that, so it was taken back and the row is the owner's.
   `kitload`'s cards do take once written to the card a night alone wears (the stealth card), but four of its lines take the loud issue for the reference,
-  which is the kit's owner's to settle (the row says what was measured). `doorpath-paths` and `doorpath-gun` are the old stand's alone now
+  which is the kit's owner's to settle (the row says what was measured). THE SIXTH (2026-11-06): `particles-sites` was red on the page's stand by `tune.chaos`, which the
+  harness held at 0 for every game until a tool with no word stood the page's (0.5): at chaos a round's strike also carries destruction's burst (by the
+  heat of the rounds before it) and wall wear's flakes, and a stun drops a ceiling tile's dust, each at the same point as the recipe this family counts.
+  The family holds chaos at 0 itself now (`stage()`; those emits are `loudchaos`' and `wallwear`'s to hold), and a round that goes on through a thin wall
+  is counted where it struck (`shotAt`: the thin walls' own hook says whether it went on; one that stops in the wall still owes the whole queue to its
+  strike). `PARTSITES_BREAK=1` reads each round's site a metre off (the pistol's and the rifle's lines FAIL on both stands), `=chaos` drops the hold (the
+  rifle's and the stun's FAIL on both). The first attempt counted sites alone and named the wrong rule; a review's runs found chaos. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
   (green on the page's). NOT DONE: `flashweight`'s two older rows are the old stand's measurements, kept as rows of both stands and not read again on the page's (the family
   did not finish inside half an hour on a loaded box). tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
