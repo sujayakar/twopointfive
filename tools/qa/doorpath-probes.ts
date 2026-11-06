@@ -50,7 +50,7 @@ const memo = new Map<string, Promise<any>>();
 function runOne(spec: string, env: Record<string, string>, pre = ''): Promise<any> {
   const key = spec + '|' + JSON.stringify(env) + (pre && '|' + pre); let p = memo.get(key);
   if (!p) { p = (async () => { const f = `${tmpdir()}/doorpath-${process.pid}-${memo.size}.json`, E: Record<string, string> = { ...(process.env as any), PT_DIGEST: '1', ...env };
-      for (const k of ['TPS_DOORPATH', 'TPS_CAST', 'TPS_MOVES', 'TPS_TURN', 'PT_PATHS', 'DOORPATH_INERT']) if (!(k in env)) delete E[k];
+      for (const k of ['TPS_DOORPATH', 'TPS_CAST', 'TPS_MOVES', 'TPS_TURN', 'PT_PATHS', 'DOORPATH_INERT']) if (!(k in env)) delete E[k];   // (word left out on purpose: a word a job does not name is not the shell's either — the run plays that rule as the stand has it, a shell's TPS_MOVES=0 included; a job that wants one OFF says '0')
       if (!('PT_PATHS' in env)) delete E.PT_NOCLOSER;   // (the digests are the runs as they were: doors shut themselves)
       const pr = Bun.spawn(['bun', 'run', ...(pre ? ['--preload', pre] : []), `${ROOT}/tools/qa/playthrough.ts`, '--one', spec, '--out', f], { env: E, stdout: 'ignore', stderr: 'pipe' });
       if (await pr.exited !== 0 || !existsSync(f)) throw new Error(`${spec}: the run did not finish — ${await new Response(pr.stderr).text()}`);

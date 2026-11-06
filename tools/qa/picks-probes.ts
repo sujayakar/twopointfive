@@ -19,7 +19,7 @@
 //                URL's settings, not every default of the page), no console error — and RUNS: thirty seconds of the simulation with nobody at the keys, nothing thrown, the game's clock and digest moving
 //   picks-play   every scenario row played from its staging to its END by tools/qa/playthrough.ts's scripted commander at the row's team size, difficulty, hour and weather,
 //                three seeds each, STOOD UP AS THE PAGE OPENS (glass on, the movement pass, turn weight, destruction on, defenders carry frags — the env and --set
-//                the one build's page defaults need under the harness; PICKS_PLAIN=1 = the harness's own plain stand-up instead): no run errors, every run
+//                the one build's page defaults need under the old stand; on the page's they are what it has): no run errors, every run
 //                reports the row's own difficulty and hour, and every run ends (won or lost, never an error). The `pair` switch reads
 //                the page's URL and is not in these runs (picks-boot holds it on); the solo night has no scripted player (picks-boot holds its boot)
 import { resolve } from 'node:path';
@@ -388,13 +388,12 @@ export async function picksBoot(secs = 30): Promise<boolean> {
 
 // ───────────────────────────────────────────────────────────── play ─────────────────────────────────────────────────────────────
 export async function picksPlay(seeds = '1-3'): Promise<boolean> {
-  const plain = process.env.PICKS_PLAIN === '1';
-  const F = family(`picks-play: every scenario row played to its end by the scripted commander with the row's settings, ${plain ? "on the harness's plain stand-up" : 'stood up as the page opens (glass, moves, turn weight, destruction, defenders\' frags)'} (seeds ${seeds})`);
+  const F = family(`picks-play: every scenario row played to its end by the scripted commander with the row's settings, stood up as the page opens (glass, moves, turn weight, destruction, defenders' frags) (seeds ${seeds})`);
   const L: any[] = P.PICKS, tmp = `${process.env.TMPDIR ?? '/tmp'}/picks-play-${process.pid}`;
   for (let i = 0; i < L.length; i++) { const p = L[i], e: any = P.pickEntry(p), w = wantOf(p);
     if (!e) { console.log(`- (no scripted player for the solo night: ${p.id} is held by picks-boot)`); continue; }
-    const set: any = { DIFFICULTY: { level: w.difficulty } }; if (w.weather) set.WEATHER = { kind: w.weather }; if (!plain) set.FRAG = { defenders: true };
-    const env: Record<string, string> = { ...process.env as any, PT_DIGEST: '1', ...(plain ? {} : { GLASSFX: 'on', TPS_MOVES: '1', TPS_TURN: '1', PT_DESTR: '1' }) }; if (w.squad !== e.squad) env.PT_SQUAD = String(w.squad); if (w.hour) env.PT_HOUR = w.hour;
+    const set: any = { DIFFICULTY: { level: w.difficulty } }; if (w.weather) set.WEATHER = { kind: w.weather }; set.FRAG = { defenders: true };
+    const env: Record<string, string> = { ...process.env as any, PT_DIGEST: '1', GLASSFX: 'on', TPS_MOVES: '1', TPS_TURN: '1', PT_DESTR: '1' }; if (w.squad !== e.squad) env.PT_SQUAD = String(w.squad); if (w.hour) env.PT_HOUR = w.hour;   // (PICKS_PLAIN, 'the harness's plain stand-up instead', went 2026-11-06: it asked by leaving these words out, which is the page's stand since the flip — the same game as this arm)
     const out = `${tmp}-${p.id}.json`, proc = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/playthrough.ts`, '--scn', e.id, '--seeds', seeds, '--jobs', '3', '--json', out, '--set', JSON.stringify(set)], { cwd: ROOT, env, stdout: 'pipe', stderr: 'pipe' });
     const [text, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]); await proc.exited;
     let runs: any[] = []; try { runs = JSON.parse(readFileSync(out, 'utf8')).runs; } catch { /* no file: the run died */ } try { rmSync(out); } catch { /* none */ }
