@@ -314,7 +314,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   its own on STDERR as it ends; what the harness refused as it loaded (a word given by hand) has a line of its own, `"outside"`. A folded
   run's reds are NOT read against the list of expected reds (the runner says why: it is not the stand as it opens). `gate.sh` carries
   the notice and how many lines had a refusal. `QA_VERDICTS=1` on a run without the fold prints `{"plain":{"probe":…,"red":…}}` a probe, to
-  lay the two side by side. WHAT A REFUSED WRITE MEANS: the check's staging may not have formed. A check that pinned a neighbour off to get a
+  lay the two side by side. FOR ONE CHECK AT A TIME (asked by the Rust goal: its table stands some checks on the Rust game, which must be
+  folded, and keeps the rest on the TypeScript tick exactly as with no word until they are restaged): `fold.ts foldFor(on)` puts the laid
+  fold off or on. Off, every held row is plain in effect and nothing is counted; the probe's line says `"folded":false`. A write refused
+  while on leaves no trace in what a row answers while off, and the other way about, so nothing passes between a folded check and an
+  unfolded one. It is called BETWEEN checks; the fence (`holds.ts asProbe`) takes the mode as it opens and puts it back first as it closes
+  (a check that switches the fold inside its own fence is not held). It rides to a child started after it. THE FOLD STARTS OFF where it
+  is asked for check by check (`TPS_GAME=table` with no `QA_FOLD=1`; `QA_FOLD_ONLY`), so what the harness writes as it loads is there for
+  the unfolded checks (a folded check does not have it, and that is not said); the notice on stderr says 'LAID AND OFF'. By hand, the
+  runner's word `QA_FOLD_ONLY=<probe,probe…>` beside `QA_FOLD=1` folds the named probes alone (a probe's own name; one no probe of the
+  run had is an error; a check file run alone does not read it). A run so mixed reads its unfolded reds against the list of expected
+  reds as ever and says 'the reds of folded probes … are read against no row' with their names (gate.sh carries that line). WHAT A REFUSED WRITE MEANS: the check's staging may not have formed. A check that pinned a neighbour off to get a
   fight, and counts what happened in that fight, can pass with nothing to count: green under the fold with a refused write is not a re-aimed
   check until its lines are read against the same run without the fold. WHAT IT CANNOT HOLD: a branch of a table replaced whole (the rows under
   it are plain until the next look, which lays them again and names them `lost`; the fence looks before and after it puts the tables back); a
@@ -336,10 +346,47 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   plain, at `page` on a stood game; (2) every yes/no row of the tables (959) is on the list; (3) a refused write reads the page value and is
   counted once by row, value and writer; (4) the fence leaves the fold standing, says the probe's line, names a branch replaced inside it;
   (5) a branch replaced whole is found and laid again; (6) a game stood and stepped, Hard and back, each camera mode: refused nothing; (7)
-  the runner's line carries a child's write, a by-hand word is said before the first probe; (8) who speaks. `FOLD_BREAK=1` (the fold counts
-  and lets through; (6) with a row Hard writes called settled): (3), (5) and (6) FAIL. NOT HELD by it: `switch-list.ts make` and `same`,
+  the runner's line carries a child's write, a by-hand word is said before the first probe; (8) who speaks; (9) the fold put off and on
+  for one check; (10) the runner under `QA_FOLD_ONLY`. `FOLD_BREAK=1` (the fold counts and lets through; (6) with a row Hard writes called
+  settled): (3), (6) and (9) FAIL. NOT HELD by it: `switch-list.ts make` and `same`,
   gate.sh's two lines, the `plain` line. Four reviews at the highest effort, 57 points, worked in or said here; the last rework run again and
-  not reviewed. Nothing here looks at a picture.
+  not reviewed. (The switch for one check at a time: two more reviews, 28 points; its last rework run again and not reviewed.) Nothing here looks at a picture.
+  THE OFF SIDE'S OWN PROBES, DELETED (11-06, under the maintainer's word of 11-04 on old checks: "feel free to delete them if they're no
+  longer relevant or fix them"). WHAT THE FOLD SHOWED FIRST: of the gate's names, 39 families were run under it (not `qrf` and `response`,
+  another lane's; not `perf` and the families the port's count had no pin in; `kit`, `missions` and `threshold` hit the 25 minute cap and
+  were read as far as they got). AT LEAST 207 probes go red once their pin is refused, and about two thirds of their lines still pass. Most
+  are NOT tests of an off side: they test a live rule staged on an older neighbour (the six `bigslot` probes hold the gun slots off and
+  stage the shotgun on the old kit model; with the pin refused the staging never forms). Those are TO BE RESTAGED, by cluster, not yet
+  begun: the kit model first (the tables most pinned: KITDEAL, OWNBLOW, GUNSLOTS, SLOTSETUP, KITTREE), then door tools, words, close-in
+  before the stalk, quiet fog, silent (the Rust goal's order). Until then the reference for the Rust game is the TypeScript tick UNDER THE
+  FOLD, line for line. DELETED are nineteen whose whole subject was a settled switch's off side, each read line by line under the fold and
+  again in a review: `close-off`, `doorpath-off`, `glasspen-off` (a gate family of its own: gone from all-quick), `gunlook-off`,
+  `gunroles-off`, `gunslots-off`, `hands-off`, `handwork-off`, `holdglass-off`, `kitanim-off`, `off-hinges-off`, `owncharge-off`,
+  `roomfit-off`, `squadnet-off`, `stealthpose-off`, `sticky-off`, `words-off`, `work-off`, `workstow-off`. Most of their lines were of four
+  kinds: 'off = the build before' (the old behaviour played, or a run that digests the same with the rule off), 'a recording from before
+  the key replays with it off', 'the switch is one of the two stands' rows and the page writes it on unless ?no…', and an on-arm that was
+  the off-arm's control (each such on-arm is held by a sibling: `gunroles-deal`, `gunlook-hands`, `owncharge-door`, `sticky-kit`). ONE
+  LIVE LINE WAS CARRIED OVER: 'src/game/doorpath.ts brings in no other game module but for its types' is `doorpath-file`'s now (its red
+  path's preload rests on it). With the nineteen went `tools/qa/doorpath-inert.ts` (the preload that took the door walk out of a
+  process), ten helpers and the imports nothing else used.
+  WHAT IS LOST WITH THEM, said plainly. (a) The on-against-off identities ('the switch on with no charge carried is the same run as the
+  switch off', 'the radio hand and the swap move nothing of the game') and a few run-against-run lines that lived in them
+  (`stealthpose-off`: the same run twice writes the same poses). (b) The only checks of some switches' OWN WIRING: the `?no…` address word
+  and the recording reader's from-before-the-key branch of GUNLOOK, GUNROLES, GUNSLOTS, OWNCHARGE, STICKY, WORKSTOW and SQUADNET. (c) THE
+  OFF BRANCHES THEMSELVES ARE STILL IN `src/`: the page's address words, the old stand and its words, and `journal.ts applyKnobs` still
+  play them, and from this cut an edit that breaks one lands green. They are shipped and unheld until the rows are retired from the source
+  (`tools/retire`), which the freeze of the gameplay TypeScript holds back until the port is done.
+  KEPT, though named `-off`: `wand-off` (its first line is a live identity: a wand carried and never used digests the same as none
+  carried), `kittree-off` (one line is the kept cards of an older build coming through whole) and `stay-open-off` (three lines are the
+  rule ON: no leaf has a closer, but a showcase keeps its own), each for its cluster; `bigslot-off` (green under the fold: its row is a
+  player's); `lineoffire-off` and `silent-off` (green under the fold WITH a refused write, so not cleared: to be read against the unfolded
+  run); `roomclear-off` (green, nothing refused: its subject is a scenario not started); `takedown-off` (red under the fold with nothing
+  refused: not read yet). SEEN BY READING AND NOT TAKEN: `cutboxes-off` (in `perf`, never run under the fold) is of the deleted kind.
+  A CLASS FOUND, COUNTED BY ITS WORDS ONLY: a break word whose red path IS a switch's off side (`DOORPATH_OLD=1`: "the entry as it was";
+  `OWNCHARGE_BREAK=1`, `STICKY_BREAK=1`, `WORKSTOW_BREAK=1` and their like: "the switch left off: must fail") cannot bite under the fold
+  where that switch is settled. About 111 of the tools' 604 break words describe themselves so (a grep of their own usage lines; which of
+  those switches are settled, and which words do bite another way, is not sorted). A check on a game with no off needs its red path at the
+  check (a wrong expectation), not in the game.
   tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 

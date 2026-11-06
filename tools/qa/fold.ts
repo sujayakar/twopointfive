@@ -18,7 +18,25 @@
 //             fold)`, and says so on stderr.
 //   A WORD GIVEN BY HAND over a settled row (TPS_GEAR=0 in front of a folded run) is refused wherever it is read: as the harness loads (the `outside`
 //             line), as each game is stood and in each child (the PROBE's line, writer `src/host/standup.ts:… (from <the check>)`).
-//   A FOLDED RUN IS NOT THE STAND AS IT OPENS while a check still pins a settled row: the runner does not read its reds against the list of expected reds.
+//   FOR ONE CHECK AT A TIME: the laid fold can be OFF for a check and ON for the next (`foldFor`). Off, every held row is plain in effect: a read answers
+//             what was last written while off, a write takes, nothing is counted or named lost, and the check runs as with no fold laid; its line says
+//             `"folded":false`. On, a row answers its page value and a write is refused and leaves NO trace in what the row answers while off. So
+//             nothing passes between a folded check and an unfolded one in either direction. For a host that stands some checks on the Rust game
+//             (folded: that game has the rows as constants) and keeps the rest on the TypeScript tick as they are until they are restaged.
+//             · THE FOLD STARTS OFF where it is asked for check by check: under TPS_GAME=table with no QA_FOLD=1, and under QA_FOLD_ONLY (so what the
+//               harness writes as it loads, a word given by hand, is there for the unfolded checks as with no word; a folded check does not have it,
+//               and that is not said). Under QA_FOLD=1 alone, rust and audit it starts on. The notice on stderr says which.
+//             · CALL `foldFor` BETWEEN CHECKS, before the next check's fence opens (probes.ts run() → holds.ts asProbe). The fence takes the mode as it
+//               opens and puts it back FIRST as it closes, so its own put-back of the tables runs in the mode it copied them in. A check that
+//               switches the fold itself inside its fence is not held: what it wrote in the other mode stays.
+//             · It rides to a child started after the call (QA_FOLD_FOR = 1 or 0; another spelling stops the tool). Where no fold is laid it is nothing.
+//             · BY HAND, THE RUNNER'S WORD: `QA_FOLD_ONLY=<probe,probe…>` beside QA_FOLD=1 makes probes.ts fold the named probes alone (a probe's own
+//               name; one that no probe of the run had is an error, and so is a list that names nothing). A check file run alone does not read it:
+//               there the fold stays off. A run so mixed reads its unfolded reds against the list of expected reds as ever, and names its folded
+//               reds apart; a red that is no probe's name (a family's banner) is read as before.
+//             · NOT HELD while off: an old branch object put back by reference after a look laid its replacement (the two share the row's cell).
+//   A FOLDED PROBE IS NOT THE STAND AS IT OPENS while a check still pins a settled row: the runner reads no folded probe's red against the list of
+//             expected reds (a run folded whole says so in one line).
 //   beside:   QA_VERDICTS=1 on a run WITHOUT the fold makes the runner (the outermost one) print `{"plain":{"probe":…,"red":…}}` after each probe, to lay
 //             the two runs side by side.
 // What it cannot hold, and says instead:
@@ -61,7 +79,7 @@ export function foldWanted(env: Record<string, string | undefined> = process.env
 }
 
 export const FOLD = { on: false, rows: 0, skipped: [] as string[], missing: [] as string[], offAtLay: [] as { row: string; value: unknown }[] };
-interface Laid { row: string; root: Record<string, unknown>; path: string[]; key: string; held: unknown; gone?: boolean }
+interface Laid { row: string; root: Record<string, unknown>; path: string[]; key: string; held: unknown; now: unknown; gone?: boolean }   // (`now`: what the row answers while the fold is off)
 const REFUSED = new Map<string, Refused>(), TAKEN = new Map<string, number>(), LAID: Laid[] = [], LOST: string[] = [];
 /** a yes/no row is 0 / 1 in some tables and false / true in others: the same answer either way */
 export const sameValue = (a: unknown, b: unknown): boolean => a === b || (typeof a === 'boolean' && typeof b === 'number' && (b === 0 || b === 1) && a === !!b) || (typeof b === 'boolean' && typeof a === 'number' && (a === 0 || a === 1) && b === !!a);
@@ -91,11 +109,26 @@ const count = (row: string, value: unknown, w = writer()): void => { const k = `
 /** the object a row's key lives on, under the table `root` */
 export const hostOf = (root: unknown, path: readonly string[]): Record<string, unknown> | null => { let h = root; for (const k of path) h = (h as Record<string, unknown> | null)?.[k]; return h && typeof h === 'object' ? h as Record<string, unknown> : null; };
 let through = false;   // (the check's red path, FOLD_BREAK=1: a write is counted and TAKES)
-function lay(L: Laid, host: Record<string, unknown>): void {
-  const d = Object.getOwnPropertyDescriptor(host, L.key)!; let now = d.value as unknown;
-  Object.defineProperty(host, L.key, { enumerable: d.enumerable, configurable: true, get: () => through ? now : L.held,
-    set: (v: unknown) => { if (!sameValue(v, L.held)) count(L.row, v); now = v; } });
+/** the laid fold is on (see the head, FOR ONE CHECK AT A TIME). As the process starts: QA_FOLD_FOR where a parent left it; else on under QA_FOLD=1 with no
+ *  QA_FOLD_ONLY; else off where the fold is asked for check by check (QA_FOLD_ONLY, TPS_GAME=table); else on. */
+export function foldStartsOn(env: Record<string, string | undefined> = process.env): boolean {
+  if (!['1', '0', '', undefined].includes(env.QA_FOLD_FOR)) throw new Error(`QA_FOLD_FOR=${env.QA_FOLD_FOR}: 1 = the laid fold is on, 0 = off (tools/qa/fold.ts foldFor writes it for a child)`);
+  if (env.QA_FOLD_FOR) return env.QA_FOLD_FOR === '1';
+  if (env.QA_FOLD_ONLY) return false;
+  return env.QA_FOLD === '1' || env.TPS_GAME !== 'table';
 }
+let active = foldStartsOn();
+function lay(L: Laid, host: Record<string, unknown>): void {
+  const d = Object.getOwnPropertyDescriptor(host, L.key)!;
+  Object.defineProperty(host, L.key, { enumerable: d.enumerable, configurable: true, get: () => !active || through ? L.now : L.held,
+    set: (v: unknown) => { if (!active) { L.now = v; return; } if (!sameValue(v, L.held)) count(L.row, v); if (through) L.now = v; } });
+}
+/** the laid fold on or off from here on. Nothing where no fold is laid, and nothing for `null` (the mode of a process with none laid). */
+export function foldFor(on: boolean | null): void { if (!FOLD.on || on === null) return; active = on; process.env.QA_FOLD_FOR = on ? '1' : '0'; }
+/** the mode now: on, off, or null where no fold is laid (what a fence takes as it opens and hands back to foldFor as it closes) */
+export const foldMode = (): boolean | null => FOLD.on ? active : null;
+/** a fold is laid AND on: the settled rows answer their page value now */
+export const foldActive = (): boolean => FOLD.on && active;
 
 /** lay the fold over the registry's tables: `settled` = row → its value on the page */
 export function foldSettled(reg: Record<string, object>, settled: Record<string, unknown>, letThrough = false): void {
@@ -108,7 +141,7 @@ export function foldSettled(reg: Record<string, object>, settled: Record<string,
     // (the table's own type is kept: a list that says true of a row the table keeps as 1 holds 1)
     const held = typeof d.value === typeof page ? page : typeof d.value === 'number' && typeof page === 'boolean' ? +page : typeof d.value === 'boolean' && typeof page === 'number' ? !!page : page;
     if (!sameValue(d.value, held)) FOLD.offAtLay.push({ row, value: d.value });   // (it stood off its page value already: a word given by hand that its module read as it loaded, or a row the page raises only as a game is stood. Said once, by headless.ts)
-    const L: Laid = { row, root, path, key, held }; lay(L, host); LAID.push(L); FOLD.rows++;
+    const L: Laid = { row, root, path, key, held, now: d.value }; lay(L, host); LAID.push(L); FOLD.rows++;
   }
   if (FOLD.on) return; FOLD.on = true;
   // what nobody took by the end: to the speaker this process is a child of, else said here, on stderr
@@ -125,6 +158,7 @@ export function foldSettled(reg: Record<string, object>, settled: Record<string,
  *  process that a module read as it loaded. The first process of a tree has nothing to compare with: its notice names them all (headless.ts). */
 export const offAtLayText = (): string => FOLD.offAtLay.map(o => `${o.row}=${text(o.value)}`).join(', ');
 export function foldBefore(parents: string): string[] {
+  if (!active) return [];   // (the fold is off for this child: the row is plain there, and the word took)
   const had = new Set(parents.split(', ')), more = FOLD.offAtLay.filter(o => !had.has(`${o.row}=${text(o.value)}`));
   for (const o of more) count(o.row, o.value, '(a word read before the fold)');
   return more.map(o => `${o.row}=${text(o.value)}`);
@@ -133,9 +167,12 @@ export function foldBefore(parents: string): string[] {
  *  line. A row whose branch is not there at all is named once, `(gone)`, and looked for again each time. */
 export function foldLost(): string[] {
   const lost: string[] = [];
-  for (const L of LAID) { const host = hostOf(L.root, L.path); if (!host || !(L.key in host)) { if (!L.gone) { L.gone = true; lost.push(`${L.row} (gone)`); } continue; }
+  for (const L of LAID) { const host = hostOf(L.root, L.path); if (!host || !(L.key in host)) { if (active && !L.gone) { L.gone = true; lost.push(`${L.row} (gone)`); } continue; }
     L.gone = false; const d = Object.getOwnPropertyDescriptor(host, L.key); if (!d || d.get) continue;
-    lost.push(sameValue(d.value, L.held) ? L.row : `${L.row} (was at ${text(d.value)})`); if (d.configurable) lay(L, host); }
+    // (while the fold is off a branch replaced whole is the check's own business: the row takes what stands there and nothing is named. While it is on,
+    // what was written into the plain row is a pin like any other: named, and it leaves no trace in what the row answers while off.)
+    if (active) lost.push(sameValue(d.value, L.held) ? L.row : `${L.row} (was at ${text(d.value)})`); else L.now = d.value;
+    if (d.configurable) lay(L, host); }
   LOST.push(...lost); return lost;
 }
 /** everything refused that no earlier call returned */
@@ -179,6 +216,6 @@ function gather(): { refused: Refused[]; lost: string[] } {
   return { refused: [...by.entries()].sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0).map(e => e[1]), lost: [...new Set([...LOST.splice(0), ...kids.lost])].sort() };
 }
 /** one probe's line: what it, and its children, tried to write over a settled row */
-export function foldLine(probe: string, red: boolean): string { const G = gather(); return `  ${JSON.stringify({ fold: { probe, red, refused: G.refused, ...(G.lost.length ? { lost: G.lost } : {}) } })}`; }
+export function foldLine(probe: string, red: boolean): string { const G = gather(); return `  ${JSON.stringify({ fold: { probe, red, ...(active ? {} : { folded: false }), refused: G.refused, ...(G.lost.length ? { lost: G.lost } : {}) } })}`; }
 /** what was refused or lost outside any probe since the last line (as the harness loaded, between two probes): a line of its own, '' when there is nothing */
 export function foldOutside(where: string): string { const G = gather(); return G.refused.length || G.lost.length ? `  ${JSON.stringify({ fold: { outside: where, refused: G.refused, ...(G.lost.length ? { lost: G.lost } : {}) } })}` : ''; }

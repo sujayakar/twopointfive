@@ -1,5 +1,5 @@
 // The 'off-hinges' family: A BLAST TAKES A DOOR OFF ITS HINGES (src/game/doorblast.ts; the maintainer, 10-08: 'doors … can be blown off hinges'). Run through
-// probes.ts:   bun run tools/qa/probes.ts off-hinges | off-hinges-blast | off-hinges-hung | off-hinges-restart | off-hinges-charge | off-hinges-walk | off-hinges-sweep | off-hinges-off
+// probes.ts:   bun run tools/qa/probes.ts off-hinges | off-hinges-blast | off-hinges-hung | off-hinges-restart | off-hinges-charge | off-hinges-walk | off-hinges-sweep
 // PASS / FAIL each, all headless (the Game of headless.ts; nothing is drawn — 'reads open' is the collision layer's own sight / shot / sound / nav queries, the
 // ones the picture's boxes and the AI share, NOT a picture looked at).
 //   off-hinges-blast    a frag-sized blast a metre off a shut office door: the leaf is off its frame, flies AWAY from the blast, lands, lies flat and loose on the
@@ -14,7 +14,6 @@
 //   off-hinges-walk     a man sent through the doorway walks it as the open doorway it is: he arrives, and nothing about the door or the slab changes
 //   off-hinges-sweep    every ordinary door of every level, from both faces, by a frag-sized blast and by a set charge: each comes off, lands inside six seconds,
 //                       rests clear of the statics, and leaves its doorway open to sight
-//   off-hinges-off      DOORBLAST.on false: Doors.blast answers nothing, the charge flings the leaf in on its hinge as it did
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -349,15 +348,5 @@ export const offHingesSweep = guarded(async () => {
   }
   for (const l of perLevel) console.log(`    ${l}`);
   verdict(total > 0 && bad.length === 0, `${total} leaves taken off over ${perLevel.length} levels: every one landed, rests clear of the statics, and left its doorway open`, bad.length ? `${bad.length} bad:\n      ${bad.slice(0, 24).join('\n      ')}` : `${backs} of them fell back through their own doorway for want of room ahead · ${DOORBLAST_STATS.nudged - T0.nudged} had their resting place moved clear of a static (the furthest ${f2(DOORBLAST_STATS.nudgeMax)} m), ${DOORBLAST_STATS.laid - T0.laid} of those laid through their own doorway for want of any spot`);
-  return done();
-});
-
-// ---------------------------------------------------------------- the switch
-export const offHingesOff = guarded(async () => {
-  const { verdict, done } = family('off-hinges-off: DOORBLAST.on false — no blast takes a leaf');
-  const R = await rig(29), g = R.g, d = R.door('manager') ?? ordinary(g)[0];
-  shut(g, d); R.step(3); DOORBLAST.on = false; const b0 = DOORBLAST_STATS.blasts;
-  const r = g.doors.blast(off(d, 1, 0.5, 0.9), 3, PLAYER_ID), t = tearOff(g, d, off(d, 1, 0.5), PLAYER_ID, 1); R.step(60);
-  verdict(r.length === 0 && !t && !d.off && d.isClosed() && d.latched && DOORBLAST_STATS.blasts === b0, 'Doors.blast answers nothing, tearOff refuses, the leaf is shut and latched as it stood', `blast ${r.length} · tearOff ${t} · off ${d.off} · angle ${f2(d.angle)} · latched ${d.latched}`);
   return done();
 });
