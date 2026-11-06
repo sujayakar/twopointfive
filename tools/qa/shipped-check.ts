@@ -7,8 +7,10 @@
 //      play-through adds nothing of its own;
 //   4. the stand's NAME: no word and 'shipped' are the page's stand, 'frozen' the old one, any other word is refused (src/host/standEnv.ts standOf, the
 //      one rule), and the harness's own reading of the environment (profile.ts harnessProfile) says the same;
-//   5. every tool that reads a `.TPS_PROFILE` loads tools/qa/stand.ts before its own lines, or names its stand itself first (earlyReaders below).
-// STAND_BREAK=1 = the red path of 4 and 5: no word is expected to be the old stand, and stand.ts is forgotten (every reader is early).
+//   5. every tool that reads a `.TPS_PROFILE` loads tools/qa/stand.ts before its own lines, or names its stand itself first (earlyReaders below);
+//   6. no tool asks for a rule OFF by leaving its word out of an environment (wordsLeftOut below): with no word a game stands as the page opens it.
+// STAND_BREAK=1 = the red path of 4, 5 and 6: no word is expected to be the old stand, stand.ts is forgotten (every reader is early), and three sample
+// lines of the slip are read with the tools' own.
 // Each stand is its own bun (the pins run as headless.ts loads), with every word either stand reads cleared from its environment first.
 // That the SHIPPED stand is the page's is the other half, and needs the page: `node tools/qa/shipped-page.cjs` (software adapter, ~3 minutes a boot).
 // Exit 0 = all pass, 1 = a check failed.
@@ -27,15 +29,14 @@ const MISSION = 'levelFile=compound.json&roomclear&squad4';
  *  would call the page's stand "frozen". A .cjs page driver cannot load stand.ts, so one that reads the word is named whatever it imports. Also named: a
  *  file that DOES load stand.ts and then writes `??= …'frozen'…`, which can no longer take. STAND_BREAK=1 forgets stand.ts, so every reader is one.
  *  WHAT IT CANNOT SEE: it reads text. A tool that clears the word for a child, or gives a child an environment without it, asks for the page's stand
- *  and is not seen here: a tool that wants the old stand of a child says 'frozen'. */
+ *  and is not seen here: a tool that wants the old stand of a child says 'frozen'. (A RULE's word left out is the next function's.) */
 export function earlyReaders(root = ROOT): string[] {
-  const walk = (d: string, out: string[] = []): string[] => { for (const n of readdirSync(d)) { const p = join(d, n); if (statSync(p).isDirectory()) { if (!/^(fixtures?|node_modules)$/.test(n)) walk(p, out); } else if (/\.(ts|cjs|mjs|js)$/.test(n)) out.push(p); } return out; };   // (a fixture folder is data: a tree a tool is tried on)
   const code = (f: string) => readFileSync(f, 'utf8').split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
   const imports = (f: string): string[] => [...code(f).matchAll(/^\s*(?:import|export)\s(?!type\b)(?:[^;'"]*?\sfrom\s+)?['"](\.[^'"]+)['"]/gm)].map(m => resolve(dirname(f), m[1])).filter(existsSync);
   const STANDFILE = resolve(root, 'tools/qa/stand.ts'), memo = new Map<string, boolean>();
   const loads = (f: string, seen = new Set<string>()): boolean => { if (f === STANDFILE) return !BREAK; if (!f.endsWith('.ts')) return false; if (memo.has(f)) return memo.get(f)!; if (seen.has(f)) return false; seen.add(f); const r = imports(f).some(i => loads(i, seen)); memo.set(f, r); return r; };
   const READ = /[\w\])]\??\.TPS_PROFILE\b|\[['"]TPS_PROFILE['"]\]/, NAMED = /^[\w\])]\??\.TPS_PROFILE\s*(\?\?=|=(?!=))/, LATE = /\.TPS_PROFILE\s*\?\?=[^;\n]*'frozen'/;
-  return walk(resolve(root, 'tools')).sort().filter(f => { if (f === STANDFILE) return false; const c = code(f), at = c.search(READ); if (at < 0) return false;
+  return toolFiles(root).filter(f => { if (f === STANDFILE) return false; const c = code(f), at = c.search(READ); if (at < 0) return false;
     return loads(f) ? LATE.test(c) : !NAMED.test(c.slice(at)); }).map(f => f.slice(root.length + 1));
 }
 
@@ -46,6 +47,53 @@ async function stand(profile: 'frozen' | 'shipped', query: string, dir: string):
   if (code !== 0) throw new Error(`stand-dump (${profile}${query ? `, ${query}` : ''}) failed: ${err.slice(-600)}`);
   return JSON.parse(readFileSync(out, 'utf8')) as StandDump;
 }
+
+/** every file of the tools a lint here reads, sorted (a fixture folder is data: a tree a tool is tried on) */
+function toolFiles(root: string): string[] {
+  const walk = (d: string, out: string[] = []): string[] => { for (const n of readdirSync(d)) { const p = join(d, n); if (statSync(p).isDirectory()) { if (!/^(fixtures?|node_modules)$/.test(n)) walk(p, out); } else if (/\.(ts|cjs|mjs|js)$/.test(n)) out.push(p); } return out; };
+  return walk(resolve(root, 'tools')).sort();
+}
+
+/** A RULE ASKED OFF BY LEAVING ITS WORD OUT. Before a tool with no word stood the page's game, a stand word left out of an environment was the rule off, and
+ *  tools asked for an 'off', 'old' or 'before' arm that way. It is the rule ON now, and such an arm plays the rule it is the control of while every line
+ *  that only compares words still passes (snap-probes' control runs and its --turn 0, entry-strip's 'before', the doorpath family's own red path, the picks
+ *  family's plain mode: found by hand and by two reviews, 2026-11-06). THIS IS A NET WITH HOLES, not the class closed: it names a line of a tool that
+ *    (a) gives a stand word a value with `undefined` in it       { ...PAGE, TPS_TURN: undefined } · TPS_X: on ? '1' : undefined · env.TPS_X = off ? undefined : w
+ *    (b) puts one in on a condition and nothing otherwise         ...(old ? {} : { TPS_DOORPATH: '1' }) · on ? { TPS_X: '1' } : undefined · ...(on && { TPS_X: '1' })
+ *    (c) deletes one from an environment not written `process.env`   delete env.TPS_DOORPATH
+ *    (d) deletes over a list that names one, in one statement     for (const k of ['TPS_TURN', …]) … delete E[k]
+ *  A word with no prefix of its own (SNEAK, PAIR, ONEWAY: also the names of knob tables) is read only on a line whose code says `env`.
+ *  LET THROUGH: a line that SETS the stand itself (`TPS_PROFILE:` or `=`: a word left out there is that stand's own default, by a writer who named the
+ *  stand); a put-back of what the tool found (`if (w === undefined) delete E.X; else E.X = w`: that statement alone is taken out of the line before it is
+ *  read); and a line that carries the words `word left out on purpose:` and its reason. The mend is the word '0' (tools/qa/stand.ts childEnv).
+ *  WHAT IT CANNOT SEE: an environment built over several lines (`const E = { ...process.env }; if (on) E.X = '1'`), a word dropped by a helper or a list
+ *  kept in a name, a computed key, `delete process.env.X` before a stand-up in the tool's own process (fifteen such lines today, each read and meant), a
+ *  comment that is not at the line's start or after a space and `//`. What closes the class is a run held to the rule its game had (snap-probes `turnOn`).
+ *  `files`: [where, text] pairs. Returns where each named line is. */
+export function wordsLeftOut(words: readonly string[], files: readonly (readonly [string, string])[]): string[] {
+  const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), own = words.filter(w => w !== 'TPS_PROFILE');
+  const sure = own.filter(w => /^[A-Z]+_/.test(w)).map(esc).join('|'), bare = own.filter(w => !/^[A-Z]+_/.test(w)).map(esc).join('|');
+  const shapes = (alt: string): RegExp[] => alt ? [
+    new RegExp(`(?<![.\\w])(?:${alt})\\b['"]?\\]?\\s*:\\s*[^,}]*\\bundefined\\b`), new RegExp(`\\.(?:${alt})\\s*=(?!=)[^;]*\\bundefined\\b`),
+    new RegExp(`\\?\\s*(?:\\{\\s*\\}|undefined|null)\\s*:\\s*\\{[^}]*\\b(?:${alt})\\b|\\?\\s*\\{[^}]*\\b(?:${alt})\\b[^}]*\\}\\s*:\\s*(?:\\{\\s*\\}|undefined|null)|&&\\s*\\{[^}]*\\b(?:${alt})\\b`),
+    new RegExp(`\\bdelete\\s+(?!process\\.env\\b)[\\w.]+(?:\\.|\\[['"])(?:${alt})\\b`),
+    new RegExp(`\\[[^\\]]*['"](?:${alt})['"][^\\]]*\\][^;]*\\bdelete\\s+\\w+\\[\\w+\\]`)] : [];
+  const SURE = shapes(sure), BARE = shapes(bare), PUTBACK = /\bif\s*\([^()]*===\s*undefined\)\s*delete\s+([\w.]+)(\.\w+|\[['"]\w+['"]\]);\s*else\s+\1\2\s*=\s*[^;]+;?/g;
+  const named: string[] = [];
+  for (const [at, text] of files) text.split('\n').forEach((ln, i) => {
+    if (/word left out on purpose:/.test(ln) || /\bTPS_PROFILE\b['"]?\s*(?::|=(?!=))/.test(ln)) return;
+    const code = ln.replace(/^\s*(?:\/\/|\*|\/\*).*$/, '').replace(/\s\/\/.*$/, '').replace(PUTBACK, '');
+    if (SURE.some(re => re.test(code)) || (/\benv\b/i.test(code) && BARE.some(re => re.test(code)))) named.push(`${at}:${i + 1}`); });
+  return named;
+}
+/** the lint's own samples: the slips as they were written (each must be named) and the lines it lets through (none may be) */
+const SLIPS = ["const OFF = { ...PAGE, TPS_TURN: undefined }, rs = await snapRuns(ALL, OFF);", "const rs = await snapRuns(runs, { ...PAGE, TPS_TURN: turn === '0' ? undefined : turn });",
+  "if (on) env.TPS_DOORPATH = process.env.TPS_DOORPATH ?? '1'; else delete env.TPS_DOORPATH;", "const watched = () => runJobs(RUNS.map(s => [s, { PT_PATHS: '1', ...(OLD() ? {} : { TPS_DOORPATH: '1' }) }]));",
+  "const env = { ...process.env, PT_DIGEST: '1', ...(plain ? {} : { GLASSFX: 'on', TPS_MOVES: '1', TPS_TURN: '1' }) };", "for (const k of ['TPS_DOORPATH', 'TPS_TURN']) if (!(k in env)) delete E[k];",
+  "const env = { ...base, ...(on && { TPS_RAILS: '1' }) };", "env.TPS_TURN = off ? undefined : word;", "const env = { ...process.env, ONEWAY: undefined };"];
+const MEANT = ["const env = { ...process.env, TPS_PROFILE: 'shipped' }; delete env.TPS_WALLRUN;", "try { return await fn(); } finally { if (was === undefined) delete env.TPS_FALLIN; else env.TPS_FALLIN = was; }",
+  "for (const k of ['TPS_DOORPATH', 'TPS_TURN']) if (!(k in env)) delete E[k];   // (word left out on purpose: a job that wants one off says '0')", "const old = snap(); delete old.tables.SNEAK; J.applyKnobs(g, old);",
+  "const w = had ? process.env.TPS_TURN : undefined;", "const env = childEnv({ PT_PATHS: 'rec', TPS_DOORPATH: on ? '1' : false });", "// was: { ...PAGE, TPS_TURN: undefined }"];
 
 export async function shippedCheck(): Promise<boolean> {
   const { FROZEN_HOLDS, STAND_ENV, harnessProfile } = await import(`${ROOT}/src/host/profile.ts`) as { FROZEN_HOLDS: Record<string, string>; STAND_ENV: readonly string[]; harnessProfile: () => string };
@@ -80,6 +128,13 @@ export async function shippedCheck(): Promise<boolean> {
       check(off.length === 0, `no word and 'shipped' are one stand, the page's; 'frozen' is the old one; any other word is refused${off.length ? ` — not so: ${off.map(r => `${r[0]}: the rule says ${r[1]}, the harness ${r[2]}`).join(' · ')}` : ''}`); }
     { const early = earlyReaders();
       check(early.length === 0, `every tool that reads the stand's word loads stand.ts before its own lines (a static import, or headless.ts), or names its stand first${early.length ? ` — not so (${early.length}): ${early.join(' · ')}` : ''}`); }
+    { // (the samples first: a lint that names nothing is green for the wrong reason. STAND_BREAK: the slips are read as tools' lines too — the last line must fail)
+      const one = (lines: string[]) => lines.map((l, i) => wordsLeftOut(STAND_ENV, [[String(i), l]]).length > 0), slips = one(SLIPS), meant = one(MEANT);
+      const missed = SLIPS.filter((_, i) => !slips[i]), wrong = MEANT.filter((_, i) => meant[i]);
+      check(missed.length === 0 && wrong.length === 0, `the lint of words left out names each of its ${SLIPS.length} sample slips and none of the ${MEANT.length} lines it lets through${missed.length ? ` — NOT NAMED: ${missed.join(' ⏎ ')}` : ''}${wrong.length ? ` — WRONGLY NAMED: ${wrong.join(' ⏎ ')}` : ''}`);
+      const self = resolve(import.meta.dir, 'shipped-check.ts'), files = toolFiles(ROOT).filter(f => f !== self).map(f => [f.slice(ROOT.length + 1), readFileSync(f, 'utf8')] as const);   // (this file holds the samples)
+      const out = wordsLeftOut(STAND_ENV, BREAK ? [...files, ['(STAND_BREAK: the sample slips)', SLIPS.join('\n')] as const] : files);
+      check(out.length === 0, `no tool asks for a rule off by leaving its word out of an environment, in the four spellings read for: off is the word '0' (${files.length} files, ${STAND_ENV.length - 1} words)${out.length ? ` — not so (${out.length}): ${out.join(' · ')}` : ''}`); }
     console.log(`  (the rows, and the word that turns each on for a frozen run:\n${listed.map(k => `     ${k.padEnd(24)} ${FROZEN_HOLDS[k]}`).join('\n')})`);
   } finally { rmSync(dir, { recursive: true, force: true }); }
   return ok;
