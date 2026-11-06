@@ -621,10 +621,10 @@ pub fn burst_summary(g: &mut crate::game::Game) -> String {
         if g.gd[gd].state == crate::game::GuardState::Dead || row.burst.is_none() { continue; }
         let cap = row.mag_capacity;
         let ready = crate::weapons::firearm_rounds_ready(g, w);
-        let reloading = if g.gd[gd].reload_t >= 0.0 { format!(" reloading {:.1} s", g.gd[gd].reload_t) } else { String::new() };
+        let reloading = if g.gd[gd].reload_t >= 0.0 { format!(" reloading {} s", js::to_fixed(g.gd[gd].reload_t, 1)) } else { String::new() };
         let beat = match g.fa[w].burst {
             Some(b) => format!("burst {}/{}{}", b.idx, b.n, if b.off.is_some() { " (opening, wide)" } else { "" }),
-            None => format!("cd {:.2}", m::max(0.0, g.gd[gd].fire_cd)),
+            None => format!("cd {}", js::to_fixed(m::max(0.0, g.gd[gd].fire_cd), 2)),
         };
         parts.push(format!("{}: {}/{}{} · {} · {} bursts", g.gd[gd].callsign, ready, cap, reloading, beat, g.fa[w].bursts));
     }

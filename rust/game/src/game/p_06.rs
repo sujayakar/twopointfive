@@ -394,7 +394,12 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     let rig0 = out.len();
     crate::combat::hand_props(g, &mut out);
     g.fog_of_war.rig_from = rig0 as f64; g.fog_of_war.rig_to = out.len() as f64;
-    g.fx.clear();   // (DRESS.fx down: a host that draws nothing keeps no list of them)
+    // (game.ts:1816, whole and in its order: last row first, its box on the frame's list, then its time; with the DRESS row down a host that draws nothing
+    //  keeps no list of them and no row's time is stepped)
+    if g.m.dress.dress.fx {
+        let mut i = g.fx.len();
+        while i > 0 { i -= 1; out.push(g.fx[i].box_); g.fx[i].ttl -= dt; if g.fx[i].ttl <= 0.0 { g.fx.remove(i); } }
+    } else { g.fx.clear(); }
     if !g.tune.tracers && js::truthy(g.tracers.live) { crate::tracers::tracers_clear(g); }
     let px = g.m_per_px;
     crate::tracers::tracers_update(g, dt, &mut out, Some(px));

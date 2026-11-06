@@ -334,7 +334,8 @@ pub fn furniture_blast(g: &mut crate::game::Game, at: V3, src: crate::furnblast:
     let mut mb = g.k.furn.mouth.chunks;
     for r in mouths { mouth_in(g, at, who, r, &mut mb); }
     let s = g.stats.furnblast.clone();
-    let line = format!("{:.2} {} at {:.1},{:.1} origins {} · groups {} statics {} props {}/{} chunks {} (totals)", g.time, src.as_str(), at[0], at[2], origins.len(), s.groups, s.statics, s.props_thrown, s.props_broken, s.chunks);
+    // (toFixed rounds a half up, where `{:.1}` rounds it to even: 14.25 reads "14.3" in the TypeScript's line)
+    let line = format!("{} {} at {},{} origins {} · groups {} statics {} props {}/{} chunks {} (totals)", js::to_fixed(g.time, 2), src.as_str(), js::to_fixed(at[0], 1), js::to_fixed(at[2], 1), origins.len(), s.groups, s.statics, s.props_thrown, s.props_broken, s.chunks);
     g.m.furnblast.furn_log.push(line);
     if g.m.furnblast.furn_log.len() > 200 { g.m.furnblast.furn_log.drain(0..100); }
 }

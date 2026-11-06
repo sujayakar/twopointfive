@@ -77,6 +77,72 @@ fn give(g: &mut game::game::Game, k: usize, l: &str) {
     println!("  the driver's order before tick {}: {} -> {:?}", k, l, why);
 }
 
+/// BRIDGE STAND-IN: A LESSON'S TESTS (lesson.json, written by mission.ts). The bridge does not carry `LessonStep.done` (a record told apart by its `is`
+/// word), so an imported lesson's every test is the type's first arm and no step ever goes by. The file is the level's own `scenarios.lesson.steps[..].done`.
+#[derive(Debug, Clone)]
+enum J { Null, Bool(bool), Num(f64), Str(String), Arr(Vec<J>), Obj(Vec<(String, J)>) }
+fn json(s: &[u8], p: &mut usize) -> J {
+    let ws = |p: &mut usize| while *p < s.len() && (s[*p] as char).is_whitespace() { *p += 1; };
+    ws(p);
+    match s[*p] {
+        b'{' => { *p += 1; let mut o = Vec::new(); loop { ws(p); if s[*p] == b'}' { *p += 1; break; } if s[*p] == b',' { *p += 1; continue; } let k = match json(s, p) { J::Str(k) => k, x => panic!("lesson.json: a key {:?}", x) }; ws(p); assert!(s[*p] == b':'); *p += 1; o.push((k, json(s, p))); } J::Obj(o) }
+        b'[' => { *p += 1; let mut a = Vec::new(); loop { ws(p); if s[*p] == b']' { *p += 1; break; } if s[*p] == b',' { *p += 1; continue; } a.push(json(s, p)); } J::Arr(a) }
+        b'"' => { *p += 1; let mut o = Vec::new(); while s[*p] != b'"' { if s[*p] == b'\\' { *p += 1; o.push(match s[*p] { b'n' => b'\n', b't' => b'\t', c => c }); } else { o.push(s[*p]); } *p += 1; } *p += 1; J::Str(String::from_utf8(o).unwrap()) }
+        b't' => { *p += 4; J::Bool(true) } b'f' => { *p += 5; J::Bool(false) } b'n' => { *p += 4; J::Null }
+        _ => { let a = *p; while *p < s.len() && matches!(s[*p], b'-' | b'+' | b'.' | b'e' | b'E' | b'0'..=b'9') { *p += 1; } J::Num(std::str::from_utf8(&s[a..*p]).unwrap().parse().unwrap()) }
+    }
+}
+fn lesson_test(j: &J) -> game::scene_scenarios::LessonTestKind {
+    use game::scene_scenarios::{LessonTestKind as K, Rect};
+    let J::Obj(o) = j else { return K::Unknown { is: String::new() } };
+    let get = |k: &str| o.iter().find(|(n, _)| n == k).map(|(_, v)| v);
+    let num = |k: &str| match get(k) { Some(J::Num(x)) => Some(*x), _ => None };
+    let text = |k: &str| match get(k) { Some(J::Str(x)) => Some(x.clone()), _ => None };
+    let flag = |k: &str| match get(k) { Some(J::Bool(x)) => Some(*x), _ => None };
+    let v3 = |k: &str| match get(k) { Some(J::Arr(a)) if a.len() == 3 => { let f = |x: &J| if let J::Num(n) = x { *n } else { f64::NAN }; Some([f(&a[0]), f(&a[1]), f(&a[2])]) } _ => None };
+    let rect = |k: &str| match get(k) { Some(J::Obj(r)) => { let f = |n: &str| r.iter().find(|(m, _)| m == n).and_then(|(_, v)| if let J::Num(x) = v { Some(*x) } else { None }).unwrap_or(f64::NAN); Some(Rect { x0: f("x0"), x1: f("x1"), z0: f("z0"), z1: f("z1") }) } _ => None };
+    let list = |k: &str| match get(k) { Some(J::Arr(a)) => a.clone(), _ => Vec::new() };
+    let is = text("is").unwrap_or_default();
+    let s = |k: &str| text(k).unwrap_or_default();
+    let unknown = || K::Unknown { is: is.clone() };
+    match is.as_str() {
+        "in" => rect("area").map(|area| K::In { area }).unwrap_or_else(unknown),
+        "near" => v3("at").map(|at| K::Near { at, r: num("r") }).unwrap_or_else(unknown),
+        "flag" => K::Flag { flag: s("flag"), value: flag("value") },
+        "slot" => K::Slot { slot: s("slot"), drawn: flag("drawn") },
+        "pace" => K::Pace { below: num("below"), above: num("above") },
+        "meter" => K::Meter { which: s("which"), below: num("below"), above: num("above") },
+        "stage" => K::Stage { stage: s("stage") },
+        "door" => K::Door { door: s("door"), state: s("state") },
+        "target" => K::Target { name: s("name"), on: flag("on").unwrap_or(false) },
+        "men" => K::Men { down: num("down") },
+        "did" => K::Did { what: s("what"), on: text("on"), n: num("n") },
+        "downed" => K::Downed { how: s("how"), n: num("n") },
+        "body" => rect("area").map(|area| K::Body { area }).unwrap_or_else(unknown),
+        "calm" => K::Calm { route: text("route") },
+        "loaded" => K::Loaded, "reload" => K::Reload,
+        "launcher" => K::Launcher { on: s("on"), fired: flag("fired").unwrap_or(false) },
+        "burst" => K::Burst { n: num("n") },
+        "threw" => K::Threw { kind: text("kind"), quick: flag("quick").unwrap_or(false), area: rect("area") },
+        "orderTo" => K::OrderTo { who: s("who") },
+        "stackOn" => K::StackOn { door: s("door"), who: text("who"), set: flag("set").unwrap_or(false) },
+        "pairsOn" => K::PairsOn { doors: num("doors") },
+        "word" => K::Word { doors: num("doors") },
+        "taken" => K::Taken { room: s("room") },
+        "following" => K::Following,
+        "mate" => K::Mate { area: rect("area"), at: v3("at"), r: num("r"), by: num("by"), away: num("away") },
+        "pair" => K::Pair { what: s("what"), n: num("n") },
+        "cue" => K::Cue { name: s("name") },
+        "view" => K::View { turned: num("turned"), zoomed: num("zoomed"), panned: num("panned") },
+        "squad" => rect("area").map(|area| K::Squad { area, n: num("n") }).unwrap_or_else(unknown),
+        "stacks" => K::Stacks { doors: list("doors").iter().filter_map(|x| if let J::Str(d) = x { Some(d.clone()) } else { None }).collect(), n: num("n"), set: flag("set").unwrap_or(false) },
+        "watching" => v3("at").map(|at| K::Watching { at, r: num("r"), n: num("n") }).unwrap_or_else(unknown),
+        "all" => K::All { of: list("of").iter().map(lesson_test).collect() },
+        "any" => K::Any { of: list("of").iter().map(lesson_test).collect() },
+        _ => unknown(),
+    }
+}
+
 fn main() {
     let a: Vec<String> = std::env::args().collect();
     if a.len() < 2 { eprintln!("mission <dir> [ticks] [--keep \"1,21,300-310\"] [--every N] [--after N]"); std::process::exit(64); }
@@ -99,6 +165,7 @@ fn main() {
     let s0 = rd("s0.bin");
     let host: Vec<Vec<f64>> = text("host.txt").lines().map(|l| l.split(' ').map(|x| x.parse().unwrap()).collect()).collect();
     let gives: Vec<String> = text("gives.txt").lines().map(String::from).collect();
+    let meter: Vec<f64> = text("meter.txt").lines().filter_map(|l| l.trim().parse().ok()).collect();
     let hostwrites: Vec<String> = text("hostwrites.txt").lines().map(String::from).collect();
     let len = core::mem::size_of::<sim::state::State>();
     println!("runner: rust/sim's block is {} bytes here, {} in s0.bin; layout word {}", len, s0.len(), sim::state::LAYOUT);
@@ -125,6 +192,25 @@ fn main() {
             core::ptr::copy_nonoverlapping(s0.as_ptr(), at, s0.len().min(len));
         }
         g.sim = 0;
+        // BRIDGE STAND-IN: THE LEVEL'S SCRIPT. A script is code, hung on the Level by the level's name as it is loaded (scene/levelScripts.ts), and the bridge
+        // carries neither which script a beat's body is (BeatDef.fn_ arrives as the type's first arm) nor the define pass's locals (Manifest.vars). The level's
+        // name is carried, so the define pass is run again here, as the Director's constructor runs it; the diff compares what it declares with the TypeScript's.
+        {
+            use game::scene_level::LevelScriptFn as S;
+            let script = match g.m.scene_level_load.level_names.as_deref() { Some("tut-sky") => Some(S::TutSky), Some("tut-team") => Some(S::TutTeam), Some("tut-queue") => Some(S::TutQueue), Some("tut-solo") => Some(S::TutSolo), Some("tut-road") => Some(S::TutRoad), Some("tut-kit") => Some(S::TutKit), Some("tut-squad") => Some(S::TutSquad), Some("tut-quiet") => Some(S::TutQuiet), Some("tut-pair") => Some(S::TutPair), _ => None };
+            if let Some(s) = script {
+                g.level.script = Some(s);
+                if g.director.manifest.is_some() { g.director.manifest = Some(game::director::manifest_of(s).expect("the script's define pass")); println!("the level's script, defined again after the import: {:?}", s); }
+            }
+        }
+        if let Ok(txt) = std::fs::read(format!("{}/lesson.json", dir)) {
+            let mut p = 0;
+            if let (J::Arr(tests), Some(l)) = (json(&txt, &mut p), g.level.scenarios.as_mut().and_then(|s| s.lesson.as_mut())) {
+                assert!(tests.len() == l.steps.len(), "lesson.json has {} tests and the level {} steps", tests.len(), l.steps.len());
+                for (st, j) in l.steps.iter_mut().zip(tests.iter()) { st.done = lesson_test(j); }
+                println!("the lesson's {} tests, handed over (the bridge does not carry a step's `done`)", tests.len());
+            }
+        }
         let (mut parted, mut spent, mut worst) = (0usize, std::time::Duration::ZERO, std::time::Duration::ZERO);
         let (mut n_parted, mut was_same, mut pool_parted, mut die_parted, mut done) = (0usize, true, false, 0usize, 0usize);
         for k in 1..=ticks {
@@ -133,12 +219,22 @@ fn main() {
             // HARNESS STAND-IN: the test driver's own question that writes the game (`g.fight.roomAt(p)` between ticks floods a room and keeps it)
             for l in hostwrites.iter().filter(|l| l.split(' ').next().and_then(|x| x.parse::<usize>().ok()) == Some(k)) {
                 let w: Vec<&str> = l.split(' ').collect();
+                // HARNESS STAND-IN: a lesson's scripted player picks a row of the nearby list between ticks (`Game.selectVerb`), by the bridge's words for the two enums
+                if w.get(1) == Some(&"select_verb") {
+                    let word = |s: &str| -> Option<Vec<u8>> { s.parse::<u16>().ok().map(|x| x.to_le_bytes().to_vec()) };
+                    let kind = <game::game::InteractableKind as Io>::r(&mut game::io::R::new(&word(w[2]).expect("a kind")));
+                    let verb = word(w[3]).map(|b| <game::game::Verb as Io>::r(&mut game::io::R::new(&b)));
+                    let ok = game::game::game_select_verb(&mut g, kind, verb);
+                    println!("  the lesson's player before tick {}: selectVerb({} {}) -> {}", k, w[4], w[5], ok);
+                }
                 if w.get(1) == Some(&"room_at") {
                     let p = [w[2].parse::<f64>().unwrap(), w[3].parse::<f64>().unwrap(), w[4].parse::<f64>().unwrap()];
                     let r = game::roomfight::room_fight_room_at(&mut g, p);
                     println!("  the driver's question before tick {}: roomAt({:?}) -> {:?} ({} rooms)", k, p, r, g.fight.rooms.len());
                 }
             }
+            // HARNESS STAND-IN: a lesson's harness feeds the player's light meter itself before every tick (meter.txt)
+            if let Some(v) = meter.get(k - 1) { let pl = g.player; g.pl[pl].visibility = *v; }
             let dt = host[k - 1][0];
             // HOST STEP: where the headless host listed the box world again between two ticks
             if !skip("upload") && host[k - 1].get(4).copied().unwrap_or(0.0) > 0.0 { game::host_api::b_01::host_world_upload(&mut g); }
@@ -147,9 +243,13 @@ fn main() {
             game::game::game_step(&mut g, dt, &cmd);
             let el = t0.elapsed(); spent += el; if el > worst { worst = el; }
             done = k;
+            if std::env::var("BLITZ_BEATS").is_ok() { for b in g.tab.director_live_beat.ids().collect::<Vec<_>>() { let lb = &g.tab.director_live_beat[b]; println!("  beat after tick {}: {} {:?} step {} waiting {:?} it {:?}", k, lb.name, lb.state, lb.step, lb.waiting, lb.it); } }
             for l in hostwrites.iter().filter(|l| l.split(' ').next().and_then(|x| x.parse::<usize>().ok()) == Some(k)) {
                 let mut w = l.splitn(3, ' '); let (_, what, rest) = (w.next(), w.next().unwrap_or(""), w.next().unwrap_or(""));
                 // HOST STEP: the autosave controller is the host's, and its one write into the game is the chronicle's row, the tick's last thing
+                // (…and on a tutorial mission the checkpoint is an authored one: the save controller stops the level's program for the take and has the frame
+                //  start it again on the next tick, savestate.ts:991)
+                if what == "chron_save" && game::rails::rails_live(&mut g) { if let Some(r) = g.director.run { if !g.tab.director_run[r].ended { game::director::director_stop(&mut g, Some(false)); game::rails::rails_resume(&mut g); println!("  the host's authored checkpoint after tick {}: the level's program stopped for the take", k); } } }
                 if what == "chron_save" { let label = rest.trim_matches('"'); let _ = game::chronicle::chron_checkpoint(&mut g, game::chronicle::ChronCheckpointWhat::Save, Some(label)); println!("  the host's checkpoint after tick {}: {}", k, rest); }
             }
             if k == 1 {

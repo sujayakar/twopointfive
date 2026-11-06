@@ -653,7 +653,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
         } else if !up.is_empty() { "with you — moving!" } else { "they've hit the others — get in there!" };
         crate::game::game_say(g, gd, line, Some(true), None, None);
     }
-    let what = format!("press {} on room {}: {} to {} ({:.1} m)", p_id, g.tab.roomfight_room[tt].id, role.as_str(), door_name(g, door), way.l);
+    let what = format!("press {} on room {}: {} to {} ({} m)", p_id, g.tab.roomfight_room[tt].id, role.as_str(), door_name(g, door), js::to_fixed(way.l, 1));
     note(g, gd, &what);
 }
 
@@ -737,7 +737,7 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
             let s = &mut state_of(g).stats;
             if role == ManRole::Flank { s.flank_landed += 1.0; s.flank_lead += lead; if first { s.flank_cue_first += 1.0; } if heard { s.flank_heard += 1.0; } }
             else { s.press_landed += 1.0; s.press_lead += lead; if first { s.press_cue_first += 1.0; } if heard { s.press_heard += 1.0; } }
-            let what = format!("press {}: lands {:.1} s after his shout{}", p.id, lead, if heard { ", boots heard" } else { "" });
+            let what = format!("press {}: lands {} s after his shout{}", p.id, js::to_fixed(lead, 1), if heard { ", boots heard" } else { "" });
             note(g, gd, &what);
         }
     }

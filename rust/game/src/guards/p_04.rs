@@ -276,18 +276,17 @@ pub fn standoff_summary(g: &mut crate::game::Game) -> String {
             _ => None,
         };
         let line = match fs {
-            Some(f) => format!("{:.1} m, {}° off their rear, clear {:.2}{}", f.dist, m::round(f.rear / v3::DEG), f.clear, if f.ok { " LINE" } else { "" }),
+            Some(f) => format!("{} m, {}° off their rear, clear {}{}", js::to_fixed(f.dist, 1), m::round(f.rear / v3::DEG), js::to_fixed(f.clear, 2), if f.ok { " LINE" } else { "" }),
             None => String::from("pair gone"),
         };
         let so = g.tab.guards_standoff[s];
         let feet = match so.orbit_goal {
-            Some(o) => format!("to ({:.1}, {:.1})", o[0], o[2]),
+            Some(o) => format!("to ({}, {})", js::to_fixed(o[0], 1), js::to_fixed(o[2], 1)),
             None => String::from(if so.cornered { "cornered" } else if so.rest_t > 0.0 { "resting" } else { "planted" }),
         };
         parts.push(format!(
-            "{}: {} · side {} · {} · {} shot{}, {:.1} m walked, seen {:.1} s ago",
-            g.gd[gd].callsign, line, if so.side > 0.0 { "+" } else { "−" }, feet, so.shots, if so.shots == 1.0 { "" } else { "s" }, so.orbit_m, g.time - so.seen_t
-        ));
+            "{}: {} · side {} · {} · {} shot{}, {} m walked, seen {} s ago",
+            g.gd[gd].callsign, line, if so.side > 0.0 { "+" } else { "−" }, feet, so.shots, if so.shots == 1.0 { "" } else { "s" }, js::to_fixed(so.orbit_m, 1), js::to_fixed(g.time - so.seen_t, 1)));
     }
     parts.join(" | ")
 }
@@ -588,7 +587,7 @@ pub fn unstick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::g
         if let Some(row) = g.m.guards.unstick_legs.get_mut(gd) { row.stall_t = stall_t; }
         if stall_t > UNSTICK_STALL_SECS {
             if crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) {
-                let why = format!("no nearer than {:.2} m in {} s of stepping", u.best, UNSTICK_STALL_SECS);
+                let why = format!("no nearer than {} m in {} s of stepping", js::to_fixed(u.best, 2), UNSTICK_STALL_SECS);
                 unstick_snap(g, gd, Some(u.to), &why);
             }
             return crate::guards::UnstickStep::Done;

@@ -669,12 +669,12 @@ pub fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: GuardId) {
     s(g).said_t = now;
     let r = &g.tab.lanes_lane[l];
     let what = format!(
-        "lane {}: called — fire from ({:.1}, {:.1}) down to ({:.1}, {:.1}), {} cells, {} down",
+        "lane {}: called — fire from ({}, {}) down to ({}, {}), {} cells, {} down",
         r.id,
-        r.from[0],
-        r.from[2],
-        r.at[0],
-        r.at[2],
+        js::to_fixed(r.from[0], 1),
+        js::to_fixed(r.from[2], 1),
+        js::to_fixed(r.at[0], 1),
+        js::to_fixed(r.at[2], 1),
         r.cells.as_ref().unwrap().len(),
         r.downs
     );
