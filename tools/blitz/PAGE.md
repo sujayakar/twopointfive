@@ -103,6 +103,18 @@ game's and is made current again every frame (0.30 ms); the target under the cur
 Memory does not grow over 1,800 steps (153 MB; the module reserves once at the start). A save is 4 to 24 ms where the TypeScript's snapshot is 79 to
 103 ms; a load is 280 to 550 ms (one whole apply) where the TypeScript's is 27 to 51 ms.
 
+## What the picture lacks (drawn frames of both pages, software adapter, never a GPU)
+
+Seven drawn frames of a room clear on each page, read back from the frame's own texture, and three frames of the live loop: no page error and no GPU
+validation error on either; the die, the clock, the lights' and the boxes' counts equal at each. Looked at pair by pair, the Rust page differs in:
+
+- **the fog of war's picture block** (`fogOfWar.frame`: the team's eyes, the lit fog's lamps, the thin walls' bits) is blank on the puppet for the whole
+  game: the Rust pass writes `on` and `full` and leaves the rest to the picture, and nothing on the page fills it. The first frame ever drawn shows no
+  men at all on the Rust page;
+- **a red point at a man's muzzle** that the page without the word does not show;
+- **a blast's flash and its fragments**: the page without the word shows them, the Rust page neither (no `ParticlesEmit` arm arrived in that run);
+- **sparks** are drawn as the fallback's streak boxes, where the page without the word sends embers to the GPU's particles and keeps its pool empty.
+
 ## Checking it
 
 A scripted player in the page (the same hands as `tools/qa/lesson-run.ts`, over the page's own Input) plays the address without the word and keeps every
