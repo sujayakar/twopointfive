@@ -152,12 +152,28 @@ As a game is stood, the probe running then (the runner names it) or the tool's o
 Each check kept off the Rust game says so as its first game is stood (`[the game: <name> is stood on the TYPESCRIPT TICK by the table (kind iii); its
 verdict is not the Rust game's]`) and the run ends on one line that counts both sides and names them (`=== the game, by the table: … ===`), so a green
 of the old tick is not read as the Rust game's. HOW a kept check is stood is one constant of word.ts, `KEPT_STAND` (`TPS_KEPT=ts|none` for one run):
-`'ts'` the word's own stand (the game owns its die, the dress rows down), `'none'` exactly as with no word.
+`'none'` (the default) exactly as with no word, to the byte, so nothing a kept check recorded moves when the default word becomes `table`; `'ts'` the
+word's own stand (the game owns its die, the dress rows down), under which every exact number recorded with no word moves once (seen on the first
+families tried: `weapons-identity` 2 of 2 red, `workstow` 2 of 5, green both with no word and under `'none'`). A FROZEN run is always stood as with no word.
+
+A stand-alone tool: by its row, `rust` (seen to play the same on the Rust game: `playthrough.ts`, `seats-run.ts`, `bench-seeds.ts`, `thrice.ts`,
+`die-check.ts`), `ts` (`tour.ts`, `soak.ts`, `seats-check.ts`, `lesson-run.ts`) or `none` (`coop-check.ts`, `exact-check.ts`, `dice-check.ts`). A TOOL
+WITH NO ROW is kept on the TypeScript tick and counted like a probe with none (485 files of tools/qa stand a game; run as its own main a check file has
+no probe name). One of this folder's own tools with no row stands its games itself and gets no word. A process that is not bun (a child under node)
+has no bridge: its game is stood with no word, said and counted.
 
 `tools/blitz/table-check.ts` (by hand, after a probe is added, renamed or deleted) holds the table to `probes.ts list`: red when the runner lists a name
 the table has no row for (as a probe, a family that only runs its members, or an unread name) or the table has a row, a pin or a wait of a name the
 runner lost. The census on this tree: 1,512 names known; 1,258 probes read (iii 766, iv-a 186, ii 114, 0 83, iv-b 61, iv-c 39, i 9), 150 families,
-105 unread. BY THE TABLE: 1,075 probes on the TypeScript tick, 101 on the Rust game (92 of kind ii, 9 of kind i) less the `waits`, 82 stand no game.
+105 unread. BY THE TABLE: 61 probes on the Rust game, about 1,115 kept on the TypeScript tick, 82 that stand no game.
+
+The `waits` are from a run of each of the 101 probes of kinds i and ii that no pin holds, one at a time under the table word, a red one again with
+no word: 61 GREEN ON THE RUST GAME; 35 of kind ii red on the Rust game and green with no word (they write the game's fields by name between ticks);
+2 of kind i the same (`charmats-cast`: a cast man's cloth tint; `standupgc`: 25 games stood back to back grow the heap 125 MB where 60 is allowed);
+2 over a 240 s cap under both; 1 red under both (`entrypoints-count`: its own red on this tree).
+
+`tools/qa/missions-gate.ts --seeds 1 --quiet-seeds 1-2 --jobs 1` by the table: every line PASS (1,210 s on a loaded box): the 21 squad missions on
+the Rust game, the 16 quiet runs on the TypeScript tick (`solo-night.ts` has no row: a quiet mission has never been played on the Rust game).
 
 ## The die
 
@@ -309,7 +325,9 @@ THE GAME SERVER'S TICK was something else: a networked game's tick lists the box
 `upload()`, and so the Rust game never listed its world: every tick's frame boxes stayed in its tables (the whole state 10.7 MB at tick 100, 28.4 MB at
 tick 600), the every-tick walk met them all (its time 9, 17, 27, 25, 38, 41 ms over the first six hundred ticks; its size a steady 185 KB) and the step
 and the apply slowed with it. `relist` is tapped now (`face_upload`): 4.0, 2.9, 4.4, 7.2, 4.9, 2.3 ms at the same load, and the chained raw-bits word
-of the server's game after 600 ticks is the `ts` game's before and after the mend.
+of the server's game after 600 ticks is the `ts` game's before and after the mend. `mpserver-check.ts` under `rust` after it: 199 s where 473, a tick
+27 to 45 ms in each of its three processes where 120 to 175, 13 lines PASS and 2 red, `lag` and `ahead`, the two that are red under `ts` too
+(`same fight` and `late joiner` are green: every game stepped its 1,200 ticks).
 
 The start (the whole export, the Rust game made, the memo filled, four warm applies) is 300 to 700 ms once. The module stands at 160 to 175 MB for a whole
 mission (pass-four passed 2 GB before the memo's buffers were trimmed). No step grew the memory once 48 MB is reserved before play.
