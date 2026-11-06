@@ -5,6 +5,7 @@
 //       [--ticks DIR]      a line a tick a game in DIR/<word>-g<n>.txt: the tick, the die's count, a hash of each part of rust/sim's block
 //       [--dump DIR --at 1019,1020]   the whole state of every game as those ticks return, DIR/<word>-g<n>-t<k>.bin (tools/blitz/diff.ts holds two to each other)
 //   --one: one seat, nobody at the keys (`W.step` and nothing else)
+//   --weave: after the first game, the later games are stood TOGETHER and stepped in turn, a tick each (two games alive and stepping in one process)
 //   exit 0: one digest at every second in every game · 1: a game parted from the first (the second it parted in is said)
 import { mkdirSync, writeFileSync, appendFileSync } from 'node:fs';
 const A = process.argv.slice(2), arg = (k: string, d: string) => { const i = A.indexOf(k); return i >= 0 && A[i + 1] !== undefined ? A[i + 1] : d; };
@@ -29,7 +30,10 @@ function tickOut(n: number, k: number, g: any): void {
   if (DUMP && AT.has(k)) { const H = g.rustHost; let blob: Uint8Array; if (H) { H.F.X.face_export(H.h); blob = H.F.outView().slice(); } else { g.sim.settle(g); blob = bridge.exportGame(g, bridge.reg); } writeFileSync(`${DUMP}/${WORD}-g${n}-t${k}.bin`, blob); } }
 
 const N = Math.round(SECS * 60); let records: string[][] | null = null; const words: string[][] = [];
-for (let n = 1; n <= GAMES; n++) {
+const WEAVE = A.includes('--weave') && !ONE;
+const said = (n: number, my: string[], g: any) => { const part = my.findIndex((w, k) => w !== words[0][k]);
+  console.log(`game ${n}: ${N} ticks · starts on ${my[0]} · ends on ${my[my.length - 1]} · the die rolled ${g.dice?.n} times${n === 1 ? '' : part < 0 ? ' · THE SAME as the first at the start and at every second' : part === 0 ? ' · PARTS FROM THE FIRST BEFORE A TICK' : ` · PARTS FROM THE FIRST in second ${part}`}`); };
+for (let n = 1; n <= (WEAVE ? 1 : GAMES); n++) {
   if (TICKS) writeFileSync(`${TICKS}/${WORD}-g${n}.txt`, '');
   const my: string[] = []; let g: any, tick: (i: number) => void;
   if (ONE) { Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed: SEED }); g = W.game; const r = startFromQuery(g, QUERY); if (r.why) throw new Error(`thrice: ${QUERY} refused: ${r.why}`); tick = () => W.step(DT); }
@@ -37,10 +41,12 @@ for (let n = 1; n <= GAMES; n++) {
     tick = (i: number) => { const cmds = records ? records[i].map(cmdFromText) : P.sample(i); if (!records) mine.push(cmds.map(cmdText)); P.tick(cmds); if (!records && i === N - 1) records = mine; }; }
   my.push(hashDigest(digestGame(g)));
   for (let i = 0; i < N; i++) { tick(i); tickOut(n, i + 1, g); if (i % 60 === 59) my.push(hashDigest(digestGame(g))); }
-  words.push(my);
-  const part = my.findIndex((w, k) => w !== words[0][k]);
-  console.log(`game ${n}: ${N} ticks · starts on ${my[0]} · ends on ${my[my.length - 1]} · the die rolled ${g.dice?.n} times${n === 1 ? '' : part < 0 ? ' · THE SAME as the first at the start and at every second' : part === 0 ? ' · PARTS FROM THE FIRST BEFORE A TICK' : ` · PARTS FROM THE FIRST in second ${part}`}`);
+  words.push(my); said(n, my, g);
 }
+if (WEAVE) { const P: any[] = [], W: string[][] = [];
+  for (let n = 2; n <= GAMES; n++) { if (TICKS) writeFileSync(`${TICKS}/${WORD}-g${n}.txt`, ''); const p = await standTwo(QUERY, SEED, null); P.push(p); W.push([hashDigest(digestGame(p.g))]); }
+  for (let i = 0; i < N; i++) P.forEach((p, j) => { p.tick(records![i].map(cmdFromText)); tickOut(j + 2, i + 1, p.g); if (i % 60 === 59) W[j].push(hashDigest(digestGame(p.g))); });
+  P.forEach((p, j) => { words.push(W[j]); said(j + 2, W[j], p.g); }); }
 const bad = words.filter(w => w.join() !== words[0].join()).length;
 console.log(bad ? `=== thrice (${WORD}): ${bad} of ${GAMES - 1} later games PLAYED ANOTHER GAME than the first ===` : `=== thrice (${WORD}): ${GAMES} games of one process, one digest at the start and at each of ${SECS} seconds: ${words[0][words[0].length - 1]} ===`);
 process.exit(bad ? 1 : 0);
