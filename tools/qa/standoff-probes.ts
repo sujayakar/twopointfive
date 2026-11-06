@@ -82,10 +82,21 @@ export async function stageHold(seed: number, victimI: number, at: Vec3, yaw: nu
   const P = pairOf(game); const faceDeg = P ? P.facing / DEG : yaw / DEG;
   return { W, game, victim, others, faceDeg, ...taps };
 }
-/** un-park a man onto a spot facing a point, calm and hearing again from now */
-export function bringIn(game: any, gd: any, p: Vec3, face: Vec3, state: 'patrol' | 'suspicious' = 'patrol', fix: Vec3 | null = null) {
-  gd.dazzledUntil = -1; gd.heardUpTo = game.eventSeq; place(gd, p, Math.atan2(face[0] - p[0], face[2] - p[2]));
+/** un-park a man onto a spot facing a point, calm and hearing again from now. `pause` (seconds): he stands that long where he is put, looking about as a
+ *  patrolling man does at a waypoint, before his round takes him on. A man brought in with none turns for his next waypoint at once: on the old stand his
+ *  eye has the pair inside twenty frames all the same, on the page's it is slower (awareness 0.09 at frame 30) and he has turned away before he sees
+ *  them, so a case that needs him IN the standoff never gets it. With the pause he has them by frame 36 as the cases stage him; over the whole of his
+ *  look's phase it is up to 106 frames (measured on the page's stand, 11-06), so the pause is three seconds and a case that waits for the standoff waits
+ *  that long. `hold` and `pinned` are no use for this: the standoff's own perception refuses a held or a pinned man outright (guards.ts
+ *  standoffPerceive). WHAT THE PAUSE WRITES is `wait`, the patrol's waypoint clock, which is more than still feet: when it runs out his round goes on from
+ *  the NEXT waypoint, needs.ts and doze.ts read a waiting man as standing at the waypoint he is on, and a need of his that falls due inside it walks him
+ *  off all the same (the patrol asks his needs first). STANDOFFIN_BREAK=1 = the red path of the cases that ask for a pause: he is brought in facing
+ *  away, with none. */
+export function bringIn(game: any, gd: any, p: Vec3, face: Vec3, state: 'patrol' | 'suspicious' = 'patrol', fix: Vec3 | null = null, pause = 0) {
+  const away = pause > 0 && process.env.STANDOFFIN_BREAK === '1';
+  gd.dazzledUntil = -1; gd.heardUpTo = game.eventSeq; place(gd, p, Math.atan2(face[0] - p[0], face[2] - p[2]) + (away ? Math.PI : 0));
   gd.state = state; gd.awareness = state === 'suspicious' ? 0.5 : 0; gd.lastKnown = fix ? v3.copy(fix) : null; gd.reactT = 0; gd.searchT = 0; gd.lastSeenT = -100; gd.sightT = -100;
+  if (pause > 0 && !away) gd.wait = pause;
 }
 /** per-frame track of one observer through a run */
 export interface Track { enterT: number; firstLineT: number; shots: { t: number; clear: number; rear: number; ok: boolean; dist: number }[]; minDist: number; maxDistAfter: number; poseBad: number; poseAim: number; poseLow: number; frames: number; lostStandoff: number; }
@@ -234,8 +245,9 @@ export async function standoffFF() {
   {
     const S = await stageHold(331, 1, [33.0, 0, 17.8], 190 * DEG); const { W, game, victim, lines, msgs, faceDeg } = S;
     const A = game.guards[0]; const P0 = pairOf(game)!;
-    bringIn(game, A, bearingPoint(P0.centre, faceDeg, 4.2), P0.centre);   // square in front, on the ring
-    for (let i = 0; i < 45; i++) W.step(DT);   // he sees it, calls it, comes up to aim (his CONTACT beat)
+    bringIn(game, A, bearingPoint(P0.centre, faceDeg, 4.2), P0.centre, 'patrol', null, 3);   // square in front, on the ring, stood there looking: the case is a round fired in a standoff, and needs one
+    for (let i = 0; i < 180 && !A.standoff; i++) W.step(DT);   // he sees it (when his look comes round: the pause's three seconds at most) …
+    for (let i = 0; i < 26; i++) W.step(DT);   // … calls it, comes up to aim (his CONTACT beat)
     const inStandoff = !!A.standoff; const escBefore = game.escalation; const raisedBefore = game.alarm.raisedAt; const linesBefore = lines.length;
     game.godMode = false; const hitsLeft0 = game.player.hitsLeft;
     const P = pairOf(game)!; const fsBefore = flankShot(game, A, P);
@@ -300,7 +312,7 @@ export async function standoffEnd() {
   for (const how of ['choke'] as const) for (const vis of [0.7, 0.02]) {   // (the E shove is gone: a hold ends in front of them by the choke — or by Sam going down, which standoff-ff covers)
     const S = await stageHold(how === 'choke' ? 341 : 345, 1, [33.0, 0, 17.8], 190 * DEG, false); const { W, game, victim, lines, msgs, faceDeg } = S;
     const A = game.guards[0]; const P0 = pairOf(game)!;
-    bringIn(game, A, bearingPoint(P0.centre, faceDeg, 4.6), P0.centre);   // square in front on the ring: no line, and none coming (Sam keeps the man on him)
+    bringIn(game, A, bearingPoint(P0.centre, faceDeg, 4.6), P0.centre, 'patrol', null, 3);   // square in front on the ring: no line, and none coming (Sam keeps the man on him). He stands there looking: the case is the standoff's END, and needs one
     game.player.visibility = vis; (game as any).__probeVis = vis;
     const t0 = game.time; let endT = -1, firstShotT = -1, foundT = -1, standoffGoneT = -1; let shotsBefore = 0; let exc = ''; const log: string[] = [];
     let freedDead = false; let hits = 0, prevHit = game.player.hitFlash; let victimAlertT = -1; let everStandoff = false;
@@ -311,7 +323,7 @@ export async function standoffEnd() {
       if (how === 'choke') { game.selectVerb('held', 'choke'); W.input.pressed.add(IK); } else W.input.pressed.add('KeyE');   // the choke's row, tapped once: it commits and runs on its own
       for (let f = 0; f < 60 * 8; f++) {
         if (endT < 0) W.cursorAt(v3.add(A.char.pos, [0, 1.2, 0]));
-        W.step(DT); const t = game.time;
+        W.step(DT); const t = game.time; if (endT < 0) everStandoff ||= !!A.standoff;
         if (game.player.hitFlash > prevHit + 1e-9) hits++; prevHit = game.player.hitFlash;
         if (endT < 0 && (how === 'choke' ? victim.state === 'dead' : !victim.held)) endT = t;
         if (endT < 0) for (const e of game.events) if (e.kind === 'guardShot' && e.time === t) shotsBefore++;
@@ -328,6 +340,7 @@ export async function standoffEnd() {
     if (exc) fails.push('exception: ' + exc.split('\n')[0]);
     if (endT < 0) fails.push(`the hold never ended by ${how}`);
     if (shotsBefore) fails.push(`${shotsBefore} round(s) BEFORE the hold ended, with Novak square between`);
+    if (vis > 0.05 && !everStandoff) fails.push(`staging: no standoff formed round a lit pair (${vis}) before the hold ended, so its end was never asked`);
     if (vis <= 0.05) {   // IN THE DARK (since 08-11): a pair at 0.02 is a pair nobody has seen — no standoff can have formed, so no round and no finding follow the choke; Kowalski walks his beat none the wiser
       if (everStandoff) fails.push('a standoff formed round a pair standing in the dark (0.02)');
       if (firstShotT >= 0) fails.push(`a round was fired (+${f2(firstShotT - t0)} s) at a pair nobody could see`);

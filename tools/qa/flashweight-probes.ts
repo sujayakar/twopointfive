@@ -387,7 +387,7 @@ export const flashweightLights = guarded(async () => {
 });
 const tallyRows = async (args: string[]): Promise<any[]> => {
   const file = `${process.env.TMPDIR ?? '/tmp'}/flashweight-${process.pid}-${Math.random().toString(36).slice(2)}.json`;
-  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/bang-tally.ts`, ...args, '--jobs', '4', '--json', file], { stdout: 'ignore', stderr: 'pipe' }); const err = await new Response(p.stderr).text(); const code = await p.exited;
+  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/bang-tally.ts`, ...args, '--jobs', '4', '--json', file], { stdout: 'ignore', stderr: 'pipe', env: process.env }); const err = await new Response(p.stderr).text(); const code = await p.exited;
   if (code > 1) throw new Error(`bang-tally ${args.join(' ')} exited ${code}\n${err.slice(-600)}`);   // (1 = a scenario's own verdict line failed — the rows are whole; anything else = it did not run them)
   try { const j = JSON.parse(await Bun.file(file).text()); return j.results ?? []; } finally { try { (await import('node:fs')).unlinkSync(file); } catch { } }
 };
@@ -414,7 +414,7 @@ export const flashweightCorners = guarded(async () => {
 export const flashweightEntry = guarded(async () => {
   const F = family('flashweight-entry: behind the bang, every scenario loses fewer and takes or empties as many rooms (bang-tally.ts)');
   const seeds = process.env.FLASHWEIGHT_SEEDS ?? '1-3';
-  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/bang-tally.ts`, '--seeds', seeds, '--arms', 'open,bang', '--jobs', '4'], { stdout: 'pipe', stderr: 'ignore' });
+  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/bang-tally.ts`, '--seeds', seeds, '--arms', 'open,bang', '--jobs', '4'], { stdout: 'pipe', stderr: 'ignore', env: process.env });
   const text = await new Response(p.stdout).text(); const code = await p.exited;
   const lines = text.split('\n'); let n = 0;
   for (const l of lines) { const m = l.match(/^(PASS|FAIL) — ([^:]+): (.*)$/); if (!m) continue; n++; F.verdict(m[1] === 'PASS', `${m[2]} (seeds ${seeds})`, m[3]); }

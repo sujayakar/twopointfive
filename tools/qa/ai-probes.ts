@@ -5,6 +5,8 @@ import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
+const tacticsMod = await import(`${ROOT}/src/game/tactics.ts`);
+const { netQuietOf } = await import(`${ROOT}/src/game/netquiet.ts`);
 const { crouchPace } = await import(`${ROOT}/src/game/player.ts`);
 const { sightGain } = guardsMod;
 
@@ -160,7 +162,7 @@ export async function muzzle() {
  *  on a calm floor, Sam gone: NOTHING may come of it until the net's radio check (~90 s): then the count-in without him, his name asked for ~4 s later, a free
  *  man sent round his route ~8 s after the call, and either the body found on the way (the ordinary 'man down!' and its aftermath, the floor up on 'body') or
  *  the whole route walked and 'not at his post' putting the floor up a step on 'missing'. (D) two men down where no indoor eye can reach, one left: he runs the
- *  whole thing alone, one name per check. (C) the lockdown pair: the leader dies unseen and his body is spirited ten metres off through two walls — twenty
+ *  whole thing alone, one name per check. (C) the lockdown pair: the leader dies unseen (the first frame no colleague has him in his eyes) and his body is spirited ten metres off behind walls — twenty
  *  seconds on, the follower calls him, gets nothing, reports him, and is himself sent round the route. PASS / FAIL. */
 export async function missing() {
   console.log('\n=== missing: an undiscovered death becomes known through the radio check — and not a moment before ===');
@@ -289,14 +291,57 @@ export async function missing() {
     if (!follower) verdict(false, '(C) partner awareness', `no pair: ${game.escalationSummary()}`);
     else {
       const L = follower.leader; const R = rollcallState(game); R.nextAt = game.time + 400;   // (the scheduled check pushed right out: this is about the follower noticing, not the net)
-      // the leader dies where he walks and the body is put ten metres off through walls (the storage room's far corner) — as if hauled off fast while the follower looked away
+      // THE PREMISE: HE DIES UNSEEN. The game has rules by which a man's fall is seen as it happens, each by a colleague's eyes on the frame he goes down
+      // (combat.ts killGuard): netquiet.ts netQuietFall and morale.ts moraleManDown ask guards.ts canSeeChar (the mate KNOWS him gone without asking for
+      // him), tactics.ts tacticsManDown asks pointInView at sixteen metres (within 2.2 m of a doorway that doorway is a kill zone, called on the net, and
+      // the men stack on it). Fifteen seconds into the lockdown his follower walks at his shoulder with him full in view, on either stand; on the page's
+      // the pair is at the storage doorway besides, so the kill was called 0.8 s on and the stack found the body in the room behind 4.8 s on: nothing was
+      // left for the follower to MISS. So the kill waits for the first frame NO living man of his side has him in his eyes by either test (a corner
+      // turned, a look elsewhere: 28.8 s after the mark on the old stand, 19.6 s on the page's, ninety at most), and the line fails with THE PREMISE DID
+      // NOT HOLD when anything came of the death before the follower's own call. MISSING_BREAK=seen = no wait, the kill at the mark, in their eyes.
+      const brk = process.env.MISSING_BREAK ?? ''; let waited = 0; const CAP = 60 * 90;
+      const eyesOn = (): any[] => { const chest = L.char.bones.chest ?? v3.add(L.char.pos, [0, 1.1, 0]);
+        return game.guards.filter((o: any) => o !== L && o.state !== 'dead' && o.team === L.team && (guardsMod.canSeeChar(game, o, L.char, false).visible || guardsMod.pointInView(game, o, chest, 16, 60))); };
+      while (brk !== 'seen' && eyesOn().length && waited < CAP) { W.step(DT); waited++; }
+      const sawIt: string[] = eyesOn().map(name); const esc0 = game.escalation;
+      // the leader dies where he walks and the body is put ten metres off through walls — as if hauled off fast while the follower looked away
       killGuard(game, L, [1, 0, 0], true); const tKill = game.time;
-      const rag = L.char.ragdoll; const hips0 = v3.copy(L.char.bones.hips ?? L.char.pos); const dest: Vec3 = [34.5, 0, 6.0];
+      const rag = L.char.ragdoll; const hips0 = v3.copy(L.char.bones.hips ?? L.char.pos);
+      // WHERE THE BODY IS PUT. The storage room's far corner, as ever, where that is ten metres from the fall, inside the sixteen the follower's watch
+      // reaches (so a wall hides it from him, not the range) and walled off from every living head, guards' and civilians': the line the game's own body
+      // rules ask (guards.ts bodySeen and partnerWatch, civilians.ts: segmentBlocked, a head to the body), at three heights, because the body is moved
+      // as it stands on the kill frame and settles after. Where the corner fails one of those, the spot is looked for by the same tests, and of those
+      // that pass the one furthest from every round of the level. The heads are where they are on the kill frame: men walk on, and a body seen later
+      // is what the premise line is for. MISSING_BREAK=insight = the red path of the placement: ten metres off IN a living man's line, the spot nearest such a man.
+      const heads: Vec3[] = [...game.guards, ...(game.civilians ?? [])].filter((x: any) => x !== L && x.state !== 'dead').map((x: any) => (x.char.bones.head ?? v3.add(x.char.pos, [0, 1.65, 0])) as Vec3);
+      const fEye: Vec3 = follower.char.bones.head ?? v3.add(follower.char.pos, [0, 1.65, 0]);
+      const lineTo = (e: Vec3, q: Vec3) => [0.45, 0.85, 1.25].some(y => !game.col.segmentBlocked(e, [q[0], y, q[2]]));
+      const inReach = (q: Vec3) => v3.distXZ(q, hips0) >= 10 && v3.dist(fEye, [q[0], 0.45, q[2]]) < 16;
+      const gEyes: Vec3[] = game.guards.filter((x: any) => x !== L && x.state !== 'dead').map((x: any) => (x.char.bones.head ?? v3.add(x.char.pos, [0, 1.65, 0])) as Vec3);
+      const fits = (q: Vec3) => inReach(q) && (brk === 'insight' ? gEyes.some(e => lineTo(e, q)) : !heads.some(e => lineTo(e, q)));
+      let dest: Vec3 = [34.5, 0, 6.0]; let spot = 'the storage corner';
+      if (brk === 'insight' || !fits(dest)) { const { WORLD } = await import(`${ROOT}/src/scene/world.ts`); const rounds: Vec3[] = game.level.routes.flatMap((r: any) => r.points); let best = -Infinity; spot = '';
+        for (let x = WORLD.min[0] + 1; x < WORLD.max[0] - 1; x += 0.5) for (let z = WORLD.min[2] + 1; z < WORLD.max[2] - 1; z += 0.5) { const q: Vec3 = [x, 0, z];
+          if (game.col.nav.isBlocked(x, z) || !fits(q)) continue;
+          const d = brk === 'insight' ? -Math.min(...gEyes.filter(e => lineTo(e, q)).map(e => v3.distXZ(q, e))) : Math.min(...rounds.map((r: Vec3) => v3.distXZ(q, r)));
+          if (d > best) { best = d; dest = q; spot = brk === 'insight' ? `IN a living man's line, ${(-d).toFixed(1)} m from him (MISSING_BREAK)` : `a spot looked for, ${d.toFixed(1)} m from the nearest round`; } }
+      }
       if (rag) { const dx = dest[0] - hips0[0], dz = dest[2] - hips0[2]; for (let i = 0; i < 16; i++) rag.nudge(i, dx, dz); }   // (all sixteen particles by the same offset: the body as it lies, elsewhere)
       L.char.update(DT);
       let tCallHim = -1, tSent = -1, tOutcome = -1; let sentWho: any = null;
+      // the premise: until the follower's own call, nothing whatever has come of the death. Read from the probe's own eyes test on the kill frame and from
+      // the game's records of it: a mate who KNOWS him gone (netquiet.ts), a kill zone made by his drop (tactics.ts), the floor's level, his body found,
+      // a civilian who has seen it.
+      const cameOfIt = (): string => { const knows = game.guards.filter((o: any) => o !== L && netQuietOf(o)?.known.has(L.char.id)).map(name);
+        const zone = tacticsMod.dangerDoors(game).find((r: any) => r.victim === L.callsign);   // (a record that names him: made, or armed again, by his drop or by his body found)
+        const civ = (game.civilians ?? []).find((cv: any) => cv.civ?.knownBodies?.has(L));
+        return L.found ? 'the body was found' : knows.length ? `known gone without asking, by ${knows.join(' and ')} (netquiet.ts: the fall in his eyes, or told of it)`
+          : zone ? `the ${tacticsMod.doorLabel(zone.door)} doorway is a kill zone for his side (${zone.why})` : civ ? `${civ.callsign ?? 'a civilian'} has seen the body` : game.escalation !== esc0 ? `the floor went from level ${esc0} to ${game.escalation}` : ''; };
+      let leak = !spot ? 'NO SPOT of the floor is ten metres from the fall, inside his sixteen and walled off from every head'
+        : sawIt.length ? `the fall was in the eyes of ${sawIt.join(' and ')}${waited >= CAP ? `, who never lost him in the ${CAP / 60} s after the mark` : ''}` : '';
       for (let f = 0; f < 60 * 200; f++) {
         W.step(DT);
+        if (tCallHim < 0 && !leak) { const c = cameOfIt(); if (c) leak = `+${(game.time - tKill).toFixed(1)} s: ${c}`; }
         if (tCallHim < 0) { const l = lines.find(x => x.t > tKill && x.text.includes(`lost ${L.callsign}`)); if (l) tCallHim = l.t; }
         if (tSent < 0) { const c = game.guards.find((x: any) => x.state !== 'dead' && x.task?.kind === 'checkOn' && x.task.who === L); if (c) { tSent = game.time; sentWho = c; } }
         if (tOutcome < 0 && (L.found || lines.some(x => /not at his post/.test(x.text)))) tOutcome = game.time;
@@ -304,9 +349,9 @@ export async function missing() {
       }
       const rel = (t: number) => t >= 0 ? `+${(t - tKill).toFixed(1)} s` : 'never';
       const bodyAt = L.char.bones.hips ?? L.char.pos;
-      const ok = tCallHim >= 0 && tCallHim - tKill < 40 && tSent >= 0 && tSent - tCallHim < 5 && tOutcome >= 0;
-      verdict(ok, '(C) lockdown follower: his leader dead and gone ten metres through two walls while he looked away',
-        `${name(L)} killed at ${tKill.toFixed(1)} s, body now at (${bodyAt[0].toFixed(1)}, ${bodyAt[2].toFixed(1)}); follower ${name(follower)} called him ${rel(tCallHim)} (want < 40 s: 20 s unseen + the walk-on), ${sentWho ? name(sentWho) : 'nobody'} sent round his route ${rel(tSent)}; outcome ${L.found ? 'body found' : tOutcome >= 0 ? "'not at his post'" : 'none'} ${rel(tOutcome)}; floor: ${game.escalationSummary()}`);
+      const ok = !leak && tCallHim >= 0 && tCallHim - tKill < 40 && tSent >= 0 && tSent - tCallHim < 5 && tOutcome >= 0;
+      verdict(ok, '(C) lockdown follower: his leader dead out of every colleague\'s eyes and gone ten metres off behind walls',
+        `${leak ? `THE PREMISE DID NOT HOLD, ${leak}. ` : ''}${name(L)} killed at ${tKill.toFixed(1)} s${waited ? ` (${(waited * DT).toFixed(1)} s after the mark, ${sawIt.length ? 'STILL in their eyes' : 'the first frame out of them'})` : ''} at (${hips0[0].toFixed(1)}, ${hips0[2].toFixed(1)}), body now at (${bodyAt[0].toFixed(1)}, ${bodyAt[2].toFixed(1)}), ${v3.distXZ(bodyAt, hips0).toFixed(1)} m off: ${spot || 'nowhere to put it'}; follower ${name(follower)} called him ${rel(tCallHim)} (want < 40 s: 20 s unseen + the walk-on), ${sentWho ? name(sentWho) : 'nobody'} sent round his route ${rel(tSent)}; outcome ${L.found ? 'body found' : tOutcome >= 0 ? "'not at his post'" : 'none'} ${rel(tOutcome)}; floor: ${game.escalationSummary()}`);
       console.log('    ' + lines.filter(l => l.t >= tKill - 0.01).slice(0, 14).map(l => `${rel(l.t).padStart(9)} ${l.who}: ${l.text}`).join('\n    '));
     }
   }

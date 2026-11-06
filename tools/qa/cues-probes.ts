@@ -103,7 +103,7 @@ export async function cuesRun(): Promise<boolean> {
   const F = family('cues-run: the same seed with the switch on and off — every man the same, frame for frame; the net on the strip only with it on');
   const was = { ...CUES };
   try {
-    const out: { moves: string; strip: Set<string>; cueOnMan: number; stats: any; kinds: any; hold: string; place: string }[] = [];
+    const out: { moves: string; strip: Set<string>; cueOnMan: number; stats: any; kinds: any; hold: string; down: boolean; heldWhy: string; place: string }[] = [];
     for (const on of [true, false]) {
       const W = await rig(2, on), g = W.game; g.godMode = true;
       const cueTexts = new Set<string>(); let moves = '', cueOnMan = 0; const strip = new Set<string>(); let hold = '';
@@ -118,18 +118,25 @@ export async function cuesRun(): Promise<boolean> {
       // (a fixed point in the old mess was out of every eye on the rebuilt block: nobody called anything and three lines went red)
       const rc = g.level.scenarios?.roomClear, aim = rc?.rooms?.find((r: any) => r.id === rc.squads?.[0]?.rooms?.[0])?.marks?.[0]?.aimAt;
       if (!aim) throw new Error('cues-run: block-squads.json has no first squad room with a mark to stage Sam in front of');
+      // (THE TEAM IS TOLD TO HOLD WHERE IT STANDS before Sam goes, the same on both stands. The page's squad opens following Sam: it walked after him
+      // onto the squad's room, dropped the three men who had a line to that spot and lost two of its own, and with god mode off nobody was left to see
+      // Sam: 38 s lit on the mark, not a round at him, never down, so the line his fall is owed was never said. The held team still fights from where it
+      // stands; the case rests on the men with a line to Sam being left to it, and says the order's answer when he never falls.
+      // CUESRUN_BREAK=1 = Sam's god mode is left on: he never falls, on either stand. =follow = no hold: the team follows as the stand has it.)
+      const heldWhy = g.orders?.active && process.env.CUESRUN_BREAK !== 'follow' ? g.orders.give('hold', g.orders.targetAt(g.player.char.pos), 'all') : 'not given';
       g.teleportPlayer([aim[0], 0, aim[2]]);
       for (let i = 60; i < 12 * 60; i++) { g.player.visibility = 1; W.step(DT); frame(i); }
-      g.godMode = false;   // …and now their rounds count: Sam drops where he stands, and the floor's fight is over
+      g.godMode = process.env.CUESRUN_BREAK === '1';   // …and now their rounds count: Sam drops where he stands, and the floor's fight is over
       for (let i = 12 * 60; i < 50 * 60; i++) { if (!g.player.down) g.player.visibility = 1; W.step(DT); frame(i); }
-      out.push({ moves, strip, cueOnMan, stats: { ...g.cues.stats }, kinds: { ...g.cues.kinds }, hold, place: placeName(g.level, [2, 0, 2]) + ' / ' + roomName(g.level, [2, 0, 2]) });
+      out.push({ moves, strip, cueOnMan, stats: { ...g.cues.stats }, kinds: { ...g.cues.kinds }, hold, down: !!g.player.down, heldWhy: String(heldWhy ?? 'taken'), place: placeName(g.level, [2, 0, 2]) + ' / ' + roomName(g.level, [2, 0, 2]) });
     }
     const [A, B] = out;
     F.verdict(A.moves === B.moves && A.moves.split(' ').length > 90, 'every man, door and item digests the same with the cues on and off, every half second for 50 s', `${A.moves.split(' ').length - 1} digests · ${A.moves === B.moves ? 'identical' : 'first difference at ' + (A.moves.split(' ').findIndex((h, i) => h !== B.moves.split(' ')[i]) * 0.5).toFixed(1) + ' s'}`);
     F.verdict(A.cueOnMan === 0, "no cue is ever written on a man (Guard.bubble is the bark clocks' to read)", `${A.cueOnMan} frames`);
     F.verdict([...A.strip].some(t => /^radio: Alpha: contact/.test(t)) && A.stats.heardDrawn >= 3 && B.strip.size === 0, "the defenders' net reaches the strip with the switch on, and none of it with it off", `on: ${A.stats.heardDrawn} of ${A.stats.heard} lines drawn (${[...A.strip].slice(0, 3).join(' · ')}…) · off: ${B.strip.size} rows`);
     F.verdict(A.stats.cues >= 2 && A.stats.cueDrawn >= 1 && B.stats.cues === 0, 'silent decisions get a line with it on (and none is made with it off)', `on: ${JSON.stringify(A.kinds)}, ${A.stats.cueDrawn} on the strip · off: ${B.stats.cues}`);
-    F.verdict((A.hold === '' || /hold where you are/.test(A.hold)) && (B.hold === '' || /back to your posts/.test(B.hold)) && A.hold + B.hold !== '', "Sam down: the floor is told to hold where it is — 'back to your posts' only with the switch off", `on: '${A.hold}' · off: '${B.hold}'`);
+    // (with Sam known down on both runs each floor's own words are owed: an empty string on either side passed while his fall was not read)
+    F.verdict(A.down && B.down && /hold where you are/.test(A.hold) && /back to your posts/.test(B.hold), "Sam down: the floor is told to hold where it is — 'back to your posts' only with the switch off", `${A.down && B.down ? '' : `STAGING: Sam never went down (on: ${A.down}, off: ${B.down}; the team's 'hold' was ${A.heldWhy} / ${B.heldWhy}) · `}on: '${A.hold}' · off: '${B.hold}'`);
     F.verdict(/^outside the [\w ]+ \/ the [\w ]+$/.test(A.place) && !/car park|back offices/.test(A.place) && B.place === 'the car park / the car park', "a place on the net, and the dialogue's room noun, are the level's own (off: 'the car park' for both, on a floor with none — the words as they were)", `on: '${A.place}' · off: '${B.place}'`);
   } finally { Object.assign(CUES, was); }
   return F.done();

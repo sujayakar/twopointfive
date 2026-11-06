@@ -52,7 +52,7 @@ check(codeTyped(' bq-7zk w!x ') === 'BQZKW' && codeWhole('BQZKW') && !codeWhole(
 check(/^[a-z0-9]{40}$/.test(freshId()) && freshId() !== freshId() && Number.isInteger(freshSeed()) && freshSeed() >= 0 && freshSeed() <= 0xFFFFFFFF, 'a tab\'s id is one the control plane takes, and a new game\'s die one the server takes');
 
 console.log('settings');
-{ const recipe = async (search: string): Promise<{ tables: Record<string, unknown> } | null> => { const p = Bun.spawn(['bun', 'run', 'tools/mp/setup.ts', JSON.stringify({ search, seed: 7 })], { cwd: ROOT, stdout: 'pipe', stderr: 'ignore' }); const l = (await new Response(p.stdout).text()).split('\n').find(x => x.startsWith('MPSETUP ')); return l ? JSON.parse(l.slice(8)) as never : null; };
+{ const recipe = async (search: string): Promise<{ tables: Record<string, unknown> } | null> => { const p = Bun.spawn(['bun', 'run', 'tools/mp/setup.ts', JSON.stringify({ search, seed: 7 })], { cwd: ROOT, stdout: 'pipe', stderr: 'ignore', env: process.env }); const l = (await new Response(p.stdout).text()).split('\n').find(x => x.startsWith('MPSETUP ')); return l ? JSON.parse(l.slice(8)) as never : null; };
   const at = (d: string) => coopScenario(`?roomclear&difficulty=${d}`), [std, hard, bare] = await Promise.all([recipe(at('standard')), recipe(at('hard')), recipe(coopScenario('?roomclear'))]);
   const moved = std && hard ? Object.keys(std.tables).filter(k => JSON.stringify(std.tables[k]) !== JSON.stringify(hard.tables[k])) : [];
   check(!!std && !!hard && !!bare && moved.length > 0 && JSON.stringify(bare.tables) === JSON.stringify(std.tables), `the host's difficulty is the server's: a Hard address stands a recipe that differs from a Standard one's in ${moved.join(', ') || 'nothing'}, and an address that names none is Standard`); }
@@ -86,7 +86,7 @@ try {
   check(/already has two players/.test(third) && /no game with that code/.test(none), `a third tab is told "${third}"; a code nobody has, "${none}"`);
 
   console.log('fight');
-  const bot = (v: GameView) => { const p = Bun.spawn(['bun', 'run', 'tools/mp/bot.ts', '--url', v.address, '--game', v.game, '--key', v.seatKey, '--build', BUILD, '--ticks', '240', '--timeout', '120'], { cwd: ROOT, stdout: 'pipe', stderr: 'ignore' });
+  const bot = (v: GameView) => { const p = Bun.spawn(['bun', 'run', 'tools/mp/bot.ts', '--url', v.address, '--game', v.game, '--key', v.seatKey, '--build', BUILD, '--ticks', '240', '--timeout', '120'], { cwd: ROOT, stdout: 'pipe', stderr: 'ignore', env: process.env });
     return new Response(p.stdout).text().then(t => { const l = t.split('\n').find(x => x.startsWith('MPBOT ')); return l ? JSON.parse(l.slice(6)) as { seat: number; confirmed: number; wordsOk: number; bad: unknown; word: string } : null; }); };
   const [ba, bb] = b ? await Promise.all([bot(a), bot(b)]) : [null, null];
   check(!!ba && !!bb && ba.seat === 0 && bb.seat === 1 && ba.confirmed >= 240 && bb.confirmed >= 240 && !ba.bad && !bb.bad && ba.wordsOk >= 8 && bb.wordsOk >= 8,

@@ -268,7 +268,7 @@ async function leversRun3(): Promise<boolean> {
       try {
         for (const kit of ['none', 'stuns']) {
           const file = resolve(dir, `${kit}.json`);
-          const pr = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/qa/playthrough.ts'), '--scn', 'room-clear-four', '--seeds', '1-8', '--jobs', '4', '--cap', '300', '--set', J({ DIFFICULTY: { level: 'standard', kit: broken ? 'none' : kit }, SQUADDEAL: { on: false } }), '--json', file], { stdout: 'ignore', stderr: 'ignore' });
+          const pr = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/qa/playthrough.ts'), '--scn', 'room-clear-four', '--seeds', '1-8', '--jobs', '4', '--cap', '300', '--set', J({ DIFFICULTY: { level: 'standard', kit: broken ? 'none' : kit }, SQUADDEAL: { on: false } }), '--json', file], { stdout: 'ignore', stderr: 'ignore', env: process.env });
           await pr.exited;
           const out = JSON.parse(readFileSync(file, 'utf8')), list: any[] = out.runs ?? out;
           for (const r of list) { const n = r.def?.tactics?.bangs ?? 0; if (kit === 'stuns') bangsOn += n; else bangsOff += n; if (r.end === 'error' || r.error) errs++;
