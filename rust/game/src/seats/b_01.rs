@@ -24,18 +24,45 @@ fn swap_set(g: &mut Game, o: &mut SeatSet) {
     swap(&mut g.view_proj, &mut o.view_proj); swap(&mut g.threat_proximity, &mut o.threat_proximity); swap(&mut g.torch_on_t, &mut o.torch_on_t);
 }
 
+/// HOW DEEP IN A SEAT'S VIEW THE CALL STANDS. seats.ts tells a seat's view from the bare Game by identity (`rawGame(g) !== g`); here the first seat's set
+/// stands on Game both bare and inside his view, so the two are told apart by whether a `with_seat` is open. STAND-IN for a word on Game (the types are
+/// generated): a count of the process, right while one game is stepped at a time.
+static VIEW_DEPTH: core::sync::atomic::AtomicUsize = core::sync::atomic::AtomicUsize::new(0);
+
+/// is this call inside a seat's view (seats.ts `rawGame(g) !== g`), and not on the bare Game
+pub fn in_view() -> bool { VIEW_DEPTH.load(core::sync::atomic::Ordering::Relaxed) > 0 }
+
 /// INVENTED BY THE SKELETON (conventions, SEATS): a pass about another seat. That seat's SEAT_KEYS fields are put on Game for the call and
 /// taken back after; the seat that stood on Game keeps its own meanwhile. The seat already on Game runs as it stands (so a nesting is fine).
-/// NEVER RUN in the bring-up past its first line: the missions compared have one seat.
+/// For the length of the call the game is "a seat's view" (`in_view`), the first seat's too.
 pub fn with_seat<R>(g: &mut crate::game::Game, seat: SeatId, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
-    if g.seat == seat { return f(g); }
+    use core::sync::atomic::Ordering::Relaxed;
+    if g.seat == seat { VIEW_DEPTH.fetch_add(1, Relaxed); let r = f(g); VIEW_DEPTH.fetch_sub(1, Relaxed); return r; }
     let from = g.seat;
     let mut theirs = match g.tab.cmd_seat[seat].own.take() { Some(o) => o, None => panic!("with_seat: that seat keeps no set") };
     swap_set(g, &mut theirs);                 // Game now stands on `seat`; `theirs` holds what `from` had
     g.tab.cmd_seat[from].own = Some(theirs);
+    VIEW_DEPTH.fetch_add(1, Relaxed);
     let r = f(g);
+    VIEW_DEPTH.fetch_sub(1, Relaxed);
     let mut back = g.tab.cmd_seat[from].own.take().unwrap();
     swap_set(g, &mut back);
     g.tab.cmd_seat[seat].own = Some(back);
+    r
+}
+
+/// THE BARE GAME FOR THE LENGTH OF A TICK: the first seat's set on Game and no view open (seats.ts seatsStand: inside a tick the Game's own fields of a
+/// seat's name answer the FIRST seat's). Where another seat stood on Game (a host that shows the second player), the sets are changed over and back.
+pub fn on_first_bare<R>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
+    let first = g.seats[0];
+    if g.seat == first { return f(g); }
+    let from = g.seat;
+    let mut theirs = match g.tab.cmd_seat[first].own.take() { Some(o) => o, None => panic!("on_first_bare: the first seat keeps no set") };
+    swap_set(g, &mut theirs);
+    g.tab.cmd_seat[from].own = Some(theirs);
+    let r = f(g);
+    let mut back = g.tab.cmd_seat[from].own.take().unwrap();
+    swap_set(g, &mut back);
+    g.tab.cmd_seat[first].own = Some(back);
     r
 }

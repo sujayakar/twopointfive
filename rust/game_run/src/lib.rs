@@ -240,5 +240,27 @@ pub fn view(g: &mut game::game::Game) {
     if let Some(cam) = cam { game::rails::rails_host_view(g, cam); }
 }
 
+/// THE HOST'S HALF OF A GAME OF SEVERAL SEATS (the bytes of h<k>.bin as tools/blitz/seats.ts writes them): the count of seats and a record a seat, then
+/// every camera and Input row. A game of two is stepped from its seats' records and from nothing the Game's own `cmd_buf` holds, so the records are read
+/// at the first tick too. The cameras and Inputs that are no seat's are the scripted hands' own; they are taken as `host_half` takes them.
+pub fn host_half_seats(g: &mut game::game::Game, hb: &[u8]) -> Vec<game::cmd::PlayerCmd> {
+    let mut r = game::io::R::new(hb);
+    let n = <u32 as Io>::r(&mut r) as usize;
+    let cmds: Vec<game::cmd::PlayerCmd> = (0..n).map(|_| <Option<game::cmd::PlayerCmd> as Io>::r(&mut r).expect("a seat's record")).collect();
+    let nc = <u32 as Io>::r(&mut r) as usize;
+    let cams: Vec<game::camera::FollowCamera> = (0..nc).map(|_| <game::camera::FollowCamera as Io>::r(&mut r)).collect();
+    let ni = <u32 as Io>::r(&mut r) as usize;
+    let inputs: Vec<game::input::Input> = (0..ni).map(|_| <game::input::Input as Io>::r(&mut r)).collect();
+    assert!(r.p == hb.len(), "the host's half: {} bytes left over", hb.len() - r.p);
+    let seat_cams: Vec<game::ids::CameraId> = g.seats.iter().map(|s| g.tab.cmd_seat[*s].cam).collect();
+    for c in g.tab.camera.ids().collect::<Vec<_>>() { if !seat_cams.contains(&c) && c.ix() < cams.len() { g.tab.camera[c] = cams[c.ix()].clone(); } }
+    let seat_ins: Vec<game::ids::InputId> = g.seats.iter().map(|s| g.tab.cmd_seat[*s].input).collect();
+    for i in g.tab.input.ids().collect::<Vec<_>>() { if !seat_ins.contains(&i) && i.ix() < inputs.len() { g.tab.input[i] = inputs[i.ix()].clone(); } }
+    cmds
+}
+
+/// the tick of a game of several seats, a record a seat
+pub fn step_seats(g: &mut game::game::Game, dt: f64, cmds: &[game::cmd::PlayerCmd]) { game::game::game_step_seats(g, dt, cmds); }
+
 /// the tick
 pub fn step(g: &mut game::game::Game, dt: f64, cmd: &game::cmd::PlayerCmd) { game::game::game_step(g, dt, cmd); }

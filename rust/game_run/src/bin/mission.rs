@@ -25,9 +25,10 @@ fn ranges(s: &str) -> Vec<(usize, usize)> {
 }
 
 /// the host's half of tick k from its file (game_run::host_half says what is taken); None where the TypeScript's run wrote none
-fn host_half(g: &mut game::game::Game, dir: &str, k: usize) -> Option<game::cmd::PlayerCmd> {
+/// (a game of several seats, `seats`: a record a seat, as tools/blitz/seats.ts wrote them)
+fn host_half(g: &mut game::game::Game, dir: &str, k: usize, seats: bool) -> Option<Vec<game::cmd::PlayerCmd>> {
     let hb = std::fs::read(format!("{}/h{}.bin", dir, k)).ok()?;
-    Some(game_run::host_half(g, &hb, k == 1))
+    Some(if seats { game_run::host_half_seats(g, &hb) } else { vec![game_run::host_half(g, &hb, k == 1)] })
 }
 
 /// one line at the run's end: every beat of the level's script the Rust game started, with how often it was started and the resumes it had in all
@@ -85,12 +86,15 @@ fn main() {
     let h = std::thread::Builder::new().stack_size(2 << 30).spawn(move || {
         let skip = |n: &str| skips.iter().any(|s| s == n);
         let (mut g, said) = game_run::start(&a0, &s0, 0);
+        // (seats.txt: the TypeScript side was a game of several seats, stepped from a record a seat)
+        let seats = std::path::Path::new(&format!("{}/seats.txt", dir)).exists();
+        if seats { println!("a game of {} seats: each tick stepped from a record a seat", g.seats.len()); }
         for l in said { println!("{}", l); }
         if let Ok(txt) = std::fs::read(format!("{}/lesson.json", dir)) { if let Some(l) = game_run::lesson(&mut g, &txt) { println!("{}", l); } }
         let (mut parted, mut spent, mut worst) = (0usize, std::time::Duration::ZERO, std::time::Duration::ZERO);
         let (mut n_parted, mut was_same, mut pool_parted, mut die_parted, mut done) = (0usize, true, false, 0usize, 0usize);
         for k in 1..=ticks {
-            let cmd = match host_half(&mut g, &dir, k) { Some(c) => c, None => { println!("no h{}.bin: the TypeScript's run ended at tick {}", k, k - 1); break; } };
+            let cmd = match host_half(&mut g, &dir, k, seats) { Some(c) => c, None => { println!("no h{}.bin: the TypeScript's run ended at tick {}", k, k - 1); break; } };
             for l in gives.iter().filter(|l| game_run::line_of(l, k)) { println!("{}", game_run::give(&mut g, k, l)); }
             // HARNESS STAND-IN: the test driver's own question that writes the game (`g.fight.roomAt(p)` between ticks floods a room and keeps it)
             for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_before(&mut g, k, l) { println!("{}", t); } }
@@ -100,7 +104,7 @@ fn main() {
             if !skip("upload") && host[k - 1].get(4).copied().unwrap_or(0.0) > 0.0 { game_run::upload(&mut g); }
             TICK.store(k, Ordering::Relaxed);
             let t0 = std::time::Instant::now();
-            game_run::step(&mut g, dt, &cmd);
+            if seats { game_run::step_seats(&mut g, dt, &cmd); } else { game_run::step(&mut g, dt, &cmd[0]); }
             let el = t0.elapsed(); spent += el; if el > worst { worst = el; }
             done = k;
             // (a level script's beats as they stand: every beat this game started, how many resumes it has had, where it is)

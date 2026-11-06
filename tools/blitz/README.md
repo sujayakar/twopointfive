@@ -32,6 +32,19 @@ Exit: 0 in step and no unknown path · 1 the block or the die parted, or a kept 
 `--open "K"` also writes the state as tick K opens. `--after N` runs N more ticks after the block parts. `--blobs` keeps each kept Rust state after
 it is diffed.
 
+## A game of two seats
+
+```sh
+tools/blitz/run.sh two-roomclear:9 --every 300 [--asks]     # also two-nightbreach:9, two-compound:3
+```
+
+A name `two-*` takes `seats.ts` for the TypeScript side: `tools/qa/seats-run.ts`'s `standTwo` (two seats, each driven by scripted hands), stepped by
+`g.stepSeats(1/60, [record, record])`. The host's half of a tick is then a record a SEAT (h<k>.bin begins with the count), and the runner steps the Rust
+game with `game_step_seats` on the same two records; the compare is the same (the die and every part of the block after every tick, paths at kept ticks).
+The host lists the box world after every tick and updates the lamps, as `seats-run.ts`'s `tick` does. `--asks` prints where the TypeScript's tick asked the
+bare Game for a seat's field (seats.ts SEAT_ASKS) and the first tick it did: from that tick a path under `g.m.guards.ground_track` is the TypeScript's
+third row (the bare Game's own memo of "the player's" ground speed), which the Rust game does not keep.
+
 ## Reading the stop
 
 **`PANIC in tick K`** with a `todo!()` or "not yet implemented": a function nobody wrote. The frames under it name it and who called it. Read the TypeScript it
@@ -125,7 +138,7 @@ outside the pool: the runner hands none of those over.
 
 ## Files
 
-- `run.sh` the one command · `mission.ts` the TypeScript side · `host.ts` the bridge's writers for one part of a game (the host's half)
+- `run.sh` the one command · `mission.ts` the TypeScript side (`seats.ts` for a game of two seats) · `host.ts` the bridge's writers for one part of a game (the host's half)
 - `diff.ts` two whole states by path, in the file's memory, tables numbered by reach (`canon.txt` names the tables) · `known.txt` the known differences
 - `timeline.ts` a mission's events by tick · `stubcalls.py` calls that land on a stub
 - the bridge, written by the skeleton's program (`BRIDGE.md`): `export.ts`, `expose.ts`, `paths.ts`, `schema.json`, `not-carried.json`, `bridge-check.ts`,
