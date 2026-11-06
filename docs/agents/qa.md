@@ -155,7 +155,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   strike). `PARTSITES_BREAK=1` reads each round's site a metre off (the pistol's and the rifle's lines FAIL on both stands), `=chaos` drops the hold (the
   rifle's and the stun's FAIL on both). The first attempt counted sites alone and named the wrong rule; a review's runs found chaos. `doorpath-paths` and `doorpath-gun` are the old stand's alone now
   (green on the page's). NOT DONE: `flashweight`'s two older rows are the old stand's measurements, kept as rows of both stands and not read again on the page's (the family
-  did not finish inside half an hour on a loaded box). tools/qa is typechecked by its own
+  did not finish inside half an hour on a loaded box). THE EIGHTH (2026-11-06), a class and seven reds.
+  A BUN CHILD GIVEN NO ENVIRONMENT GETS THE ONE THE TOOL STARTED WITH: `Bun.spawn` and `Bun.spawnSync` with no `env` do not hand on `process.env` as it
+  stands (bun 1.4.4; node's `child_process` and `Bun.$` do). Every word written after start was lost on the way to such a child: the stand `stand.ts`
+  writes down, `QA_STAND_SAID` (so a child on the old stand said the banner again: `picks-boot` there read it as seven console errors), a probe's holds
+  (`holds.ts`), a word a check sets for its arm. Fifty-one calls of the tools stood so and all name `env: process.env` now; `shipped-check.ts`
+  `bareChildren` (the check's seventh rule; `STAND_BREAK=1` reads its ten sample calls as a tool's) names a call that does not, a net with the holes its
+  note lists (a command or options kept in a name, a helper, a regex literal inside the call), read by one scanner with holds-check
+  (`tools/qa/call-text.ts`). No reading moved by it on the page's stand: no held probe plays its game in such a child (looked for by name; the runner's
+  script children hold their own words by `asProbe`), so only the banner on the old stand changed. `sup-sam`: THREE things read as a cone of 45°. A
+  round that goes through a partition (`wallpen.ts`) sounds a second impact on what stands behind (ten "impacts" of five rounds): a round's impact is
+  its FIRST strike. Where rounds are sent level along the cursor's heading (`aim.ts AIM.player.level`, a stand row with no word, on in the page) the
+  strike moves with the muzzle and the line does not turn: there the scatter is of the rounds' lines, and where a round is sent at the point (the old
+  stand, a puppet's aim) of the strikes about their mean, as it was; each read by the other's measure is the muzzle's own centimetres. And the puppet's
+  aim was 6 cm inside the wall: it is the point the cursor's rounds were clicked at. 0.019 rad at 0.8 on both stands against the formula's 0.023, 0.000
+  to 0.001 at rest; `SUPSCATTER_BREAK=1` holds every arm at 0.8 (the arm at rest FAILS on both). `orderkeys-walk`: the cursor on the first teammate's
+  chest was on ANOTHER man on three levels, who stands 0.6 m off and nearer the camera there; the menu opened on him, rightly. The line now asks for the
+  man the cursor is on by its own reckoning (the nearest body along the cursor's ray), so a pick that took the farther man is still red;
+  `ORDERKEYS_BREAK=man` asks for another (22 levels FAIL on both). `review-kick-leaf`: its boot at the keyed face landed on the frame (`bootHolds`): it
+  kicks from a face the leaf gives at, the leaf's width is held as its label says, and it is HELD at the build before the throw (`holds.ts`
+  `LEAF_STOPS_AS_IT_WAS`: `DOORTHROW`, on in the page by the maintainer's word, throws that man; `doorthrow` 'booted' is the page's line). Its red
+  paths: `TPS_DOORTHROW=1` by hand (67 frames crossed, 0.47 m, both stands) and `REVIEWKICK_BREAK=1`, the staging as it was (the page's stand only: the
+  old one has no frame rule). `sidedoor-feet`: asked `whyNot` of an 'outside' row the page's board has not, threw, and the throw failed its second line
+  too; its last line wanted a boot where the page's men try a locked door and hold. Rows are the board's and the locked door is the rule's
+  (`DOORTOOLS.outsidePlain`, `.testDoor`, read off each game as it is stood up, so a word given by hand is read right); `SIDEFEET_BREAK=1` reads both
+  the other way round (two lines FAIL on both). `aim-unit`: the aim model's unit numbers are asked without the two rules that move what it stages, on
+  either stand (the turn weight keeps a weighted gun on the man through the six frames its drain line takes it off him; the aim cost of moving opens
+  every cone the feet touch): the probe holds `TPS_TURN` and `TPS_MOVECOST` off for its own stand-ups (`stand.ts underWord`; `TURN.on` is a number, so
+  the holds table cannot carry it), `snap` and `aimcost` hold the two rules themselves, and `AIMUNIT_BREAK=1` holds both ON (five lines FAIL on both).
+  DELETED: `thresholdmenu-rows` and `thresholdmenu-held`, which walked the threshold's page behind X, 5, 4
+  and the held page of what next, with `outsidePlain` and `testDoor` pinned off to have them. The page has had neither page since the squad game build
+  (10-16): 'clear from outside' is one plain order on row 4. Both were green on the old stand and red on the page's on the floodlit yard alone. WHAT NO
+  CHECK HOLDS ANY MORE, on the old stand or under `?outsideplain=0`: the held page's rows pressed by their keys in the seven scenarios, the four's
+  on-the-word path to a hold (X, F, 4, 1, then F), a stale held page greying with F refused, Esc back a page at a time. `calls` still asks its calls on
+  those pages (`pagesAsTheyWere`); `thresholdmenu-probes.ts` stays as the rig twenty checks stand on. `flashweight-fog`'s row said one line and
+  the two stands fail DIFFERENT lines (the row says both now). CHAOS IS NOT THE OTHER REDS' CAUSE: thirty-two unexplained rows were run on the page's
+  stand with `tune.chaos` held at 0 from each game's first update (a preload; a stand-up still builds at 0.5): none went green, twenty-nine failed their
+  rows' own lines and three ran past 25 minutes four at a time (`corridor`, `flashweight-entry`, `wall-snap-sweep`). tools/qa is typechecked by its own
   `tools/qa/tsconfig.json` (`bun run typecheck:qa`). That program (every tool, `tools/mp` and the whole of `src/` behind them) takes about 2.4 GB to check, past node's default heap on a small box, so the script gives node 8 GB (`--max-old-space-size=8192`); with a system `tsc` say `NODE_OPTIONS=--max-old-space-size=8192` in front, or it aborts out of memory with no type error to show.
 
 <!-- was CLAUDE.md lines 398–468 -->
