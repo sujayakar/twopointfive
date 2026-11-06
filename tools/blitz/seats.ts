@@ -79,6 +79,7 @@ function watchPair() { if (!COOP.door || !G.gives) return; const s = G.gives[0].
   if (!pair.length) pair = g.seats[s].view.orders.squad().map((gd: any) => ({ gd, side: sideOfDoor(gd.char.pos) }));
   for (const m of pair) { const now = sideOfDoor(m.gd.char.pos); if (now !== 0 && now !== m.side && COOP.crossed[m.gd.callsign] === undefined) COOP.crossed[m.gd.callsign] = k; } }
 dressAll(false);
+{ const w = argv.includes('--dress') ? argv[argv.indexOf('--dress') + 1] : ''; if (w === 'all') dressAll(true); else if (w) { const { DRESS } = await import('../../src/game/dress.ts'); for (const r of w.split(',')) (DRESS as any)[r] = true; } }   // (`--dress all|rows`: the dressing rows as the page has them, mission.ts)
 if (G.room && argv.includes('--men')) { const { DRESS } = await import('../../src/game/dress.ts'); DRESS.men = true; }   // (`--men`: the men ARE handed to the TypeScript's picture, for its count; the Rust game hands nobody anything, and the picture's own state (g.rig_fits) then differs by design)
 if (!g.dice) throw new Error('seats.ts: the game of two has no die of its own');
 // (`--asks`: every ask of the Game's own seat field made inside a tick, by where it came from, and the first tick with one: seats.ts SEAT_ASKS)

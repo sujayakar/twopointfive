@@ -19,3 +19,5 @@ pub mod p_07;
 pub use p_07::{game_fog_lift, game_fog_back, game_draw_men, game_sense_step, game_light_meter, game_meter_read, game_select_verb, game_escape, game_backable, game_visibility_of, game_update_doors, game_door_contact, game_door_acts, game_door_after};
 pub mod p_08;
 pub use p_08::{game_hands_on_doors, game_update_props, game_drop_throwable, game_throw_count, game_objective_pos, game_objective_text};
+// the loop's counters (b_tap.rs): by path, `crate::game::b_tap::tap`
+pub mod b_tap;

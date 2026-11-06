@@ -184,11 +184,18 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     for &s in &seats { in_seat(g, s, |g| crate::disarm::disarm_tick(g, dt)); }
     // (wet characters: the coats are the picture's, but the soak's ask stands the rule's copy of the box world and may cast the sky's rays: game.ts updateWetness)
     crate::wet::update_wetness(g, dt);
+    // THE DRESSING ROWS WHOSE STEPS THE TICK ITSELF READS (game.ts:1697, :1699; dress.ts). The wind's sources are read by the moths' pull (`wind.at`), and
+    // the moths are keyed boxes of the frame's list, which the fog of war's records, the frame's room and the kit's place in the list count: so both
+    // run here under their rows, as in the TypeScript. The rows between them (the air's field, the snow's look, the particle rain, the wet ground's
+    // words for the renderer) write what only the picture reads and stay with the host.
+    if g.m.dress.dress.wind { crate::wind::wind_update(g, dt); }
+    if g.m.dress.dress.moths { crate::moths::moths_update(g, dt); }
     crate::combat::update_items(g, dt);
     crate::glass::update_glass(g);
     crate::glassbreak::glass_break_update(g, dt);
     crate::shards::glass_shards_update(g, dt);
     crate::fogofwar::fog_of_war_update(g, dt);
+    if g.m.dress.dress.fires { crate::fire::fire_draws(g); }   // (game.ts:1709: the fires' draws again behind the fog's turn; the Rust body makes only its asks of the wind)
     // characters: the seats' men, the guards, civilians last
     let mut all: Vec<CharId> = Vec::new();
     for &s in &seats { let c = man_char(g, s); all.push(c); }
@@ -204,6 +211,10 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
         g.pl[pl].hit_flash = m::max(0.0, g.pl[pl].hit_flash - dt * 3.0);
         in_seat(g, s, |g| g.act = None);   // (this frame's Space verb has been read by everyone who reads it)
     }
+    // (game.ts:1720, :1721: the squad's net and the defenders' cues, read off the settled frame. Their books are the same books the rules' own entries
+    //  write (a line said, a cue called), so the step that settles them runs where those do, under its row.)
+    if g.m.dress.dress.net { crate::squadnet::squad_net_tick(g); }
+    if g.m.dress.dress.cues { crate::cues::cues_tick(g); }
     crate::teamtally::team_tally_tick(g);
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
@@ -373,7 +384,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
     crate::condition::condition_pose(g);
 }
 
-/// this frame's dynamic boxes, and what steps while they are gathered. Returns whether stature scaled anybody: never here, the row being the picture's   (game.ts stepFxAndDynBoxes)
+/// this frame's dynamic boxes, and what steps while they are gathered. Returns whether stature scaled anybody   (game.ts stepFxAndDynBoxes)
 pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64, cam: CameraId, canvas: crate::host_hud::View) -> bool {
     g.dyn_boxes.clear();
     // (the list is lent to the callees for the whole gathering: none of them reads g.dyn_boxes)
@@ -383,6 +394,7 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     crate::throwables::throwables_boxes(g, &mut out);
     crate::destruction::destruction_boxes(g, &mut out);
     crate::devices::device_boxes(g, &mut out);
+    if g.m.dress.dress.moths { crate::moths::moths_boxes(g, &mut out); }   // (game.ts:1805)
     if !g.rings.is_empty() { crate::launcher::ring_boxes(g, &mut out); }
     let seats = g.seats.clone();
     for &s in seats.iter() {
@@ -393,7 +405,8 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     if !g.shells.is_empty() { crate::he40::shell_boxes(g, &mut out); }
     let lens = crate::game::GameViewPxCam { distance: g.tab.camera[cam].distance, fov: g.tab.camera[cam].fov };
     g.m_per_px = game_view_px(g, lens, crate::game::GameViewPxCanvas { height: canvas.height });
-    let statured = false;   // (DRESS.stature: statureTick is the picture's)
+    // STATURE (game.ts:1814): each man's drawn scale about his feet this frame; false with no cast loaded, and nothing below is asked
+    let statured = g.m.dress.dress.stature && crate::stature::stature_tick(g, all, dt);
     let rig0 = out.len();
     crate::combat::hand_props(g, &mut out);
     g.fog_of_war.rig_from = rig0 as f64; g.fog_of_war.rig_to = out.len() as f64;
@@ -406,12 +419,20 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     // (A ROW OF `g.fx` IS THE ONLY HOLDER OF ITS BOX: the TypeScript drops the object with the row. Here the box is a row of the table, so as the fx row
     //  goes its box joins the frame's rows, and the host's next listing frees it once it is on no list: boxes_frame_reset. Most fx rows live one frame
     //  (a charge's slab being placed, a stack's marker), so without this every such frame left a row for good.)
+    // (game.ts:1818: his rig and a can in his fist are drawn where his drawn hands are: Box.dc / dh; the boxes themselves stay the simulation's)
+    if statured { crate::stature::drawn_boxes(g, all, &mut out, rig0 as f64); }
     if !g.tune.tracers && js::truthy(g.tracers.live) { crate::tracers::tracers_clear(g); }
     let px = g.m_per_px;
     crate::tracers::tracers_update(g, dt, &mut out, Some(px));
     crate::sparks::sparks_update(g, dt);
     crate::sparks::sparks_boxes(g, &mut out);
+    // (game.ts:1822: spent cases heard landing when they are due: the list is the tick's own (a shot adds to it), so the step that empties it is here too)
+    if g.m.dress.dress.cases { crate::particle_fx::update_particle_fx(g); }
     for &s in seats.iter() { in_seat(g, s, |g| crate::blast_look::blast_look_tick(g, &mut out)); }
+    // (game.ts:1824: the feel of a wall charge going off; what of it is the tick's is blast_feel's own head)
+    if g.m.dress.dress.blast_feel { for &s in seats.iter() { let cam = g.tab.cmd_seat[s].cam; in_seat(g, s, |g| crate::blast_feel::blast_feel_tick(g, cam)); } }
+    // (game.ts:1825: a fixture that broke, LAST in the list: keyed boxes of the frame's list, fixture_break's own head)
+    if g.m.dress.dress.fixtures { crate::fixture_break::fixture_break_boxes(g, &mut out, dt); }
     g.dyn_boxes = out;
     statured
 }

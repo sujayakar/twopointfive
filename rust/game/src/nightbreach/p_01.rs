@@ -9,9 +9,12 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---- private helpers
 
-/// `T !== applied` by value: only the two rows the write copies, so a start with the same ones writes the same knobs. (nightbreach.ts:179)
+/// `T !== applied`, an identity of the level's own rows (a structure's team start, one of its other ways in, the night breach's own): here the row
+/// whole, by value. Another start with the same place for Sam is ANOTHER start in the TypeScript and writes the knobs again (a knob moved by hand
+/// since is put back), so every field is asked, not only the two the write copies. Two rows of one level alike in every field would still read as
+/// one: that wants the row's place kept beside `applied`, which the generated type has no field for. (nightbreach.ts:179)
 fn same_team(a: &crate::scene_scenarios::TeamStart, b: &crate::scene_scenarios::TeamStart) -> bool {
-    a.sam == b.sam && a.sam_yaw == b.sam_yaw
+    a.sam == b.sam && a.sam_yaw == b.sam_yaw && a.ops == b.ops && a.ops_yaw == b.ops_yaw
 }
 
 /// `layout?.team`: the one layout is the room clear's, and its team is a getter asked at each read. (roomclear.ts:270)
@@ -783,12 +786,12 @@ mod tests {
     }
 
     #[test]
-    fn two_starts_are_the_same_when_the_rows_the_write_copies_are() {
+    fn two_starts_are_the_same_when_every_row_is() {
         let a = TeamStart { sam: [1.0, 0.0, 2.0], sam_yaw: 0.5, ops: None, ops_yaw: None };
         assert!(same_team(&a, &a.clone()));
         assert!(!same_team(&a, &TeamStart { sam_yaw: 0.25, ..a.clone() }));
         assert!(!same_team(&a, &TeamStart { sam: [1.0, 0.0, 3.0], ..a.clone() }));
-        assert!(same_team(&a, &TeamStart { ops: Some(Vec::new()), ops_yaw: Some(0.0), ..a.clone() }));
+        assert!(!same_team(&a, &TeamStart { ops: Some(alloc::vec![[9.0, 0.0, 9.0]]), ..a.clone() }));   // (another row of the level: another start, though Sam stands the same)
     }
 
     /// The burst's beats up to the first round: what is written lands in the caller's row. (nightbreach.ts:112 to 115)

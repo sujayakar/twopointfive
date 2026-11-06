@@ -284,7 +284,7 @@ pub fn team_known(g: &mut crate::game::Game) -> Vec<V3> {
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
         if !alive(g, gd) { continue; }
-        if g.time - g.gd[gd].last_seen_t < 4.0 { let pt = g.tab.roomfight_def[d].pt; if let Some(seen) = crate::belief::eyes_fix(g, gd, pt) { out.push(seen); } }
+        if g.time - g.gd[gd].last_seen_t < 4.0 { let pt = g.tab.roomfight_def[d].pt; if let Some(seen) = crate::belief::eyes_fix_def(g, gd, d) { out.push(seen); } }
         if let Some(n) = g.tab.roomfight_def[d].noise_at { if g.time - g.tab.roomfight_def[d].noise_t < 4.0 { out.push(n); } }
     }
     out
@@ -391,7 +391,7 @@ pub fn team_known_how(g: &mut crate::game::Game) -> Vec<crate::enemysquads::Know
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
         if !alive(g, gd) { continue; }
-        if g.time - g.gd[gd].last_seen_t < 4.0 { let pt = g.tab.roomfight_def[d].pt; if let Some(seen) = crate::belief::eyes_fix(g, gd, pt) { out.push(Known { p: seen, firm: true }); } }
+        if g.time - g.gd[gd].last_seen_t < 4.0 { let pt = g.tab.roomfight_def[d].pt; if let Some(seen) = crate::belief::eyes_fix_def(g, gd, d) { out.push(Known { p: seen, firm: true }); } }
         if let Some(n) = g.tab.roomfight_def[d].noise_at {
             if g.time - g.tab.roomfight_def[d].noise_t < 4.0 {
                 let c = pos_of(g, gd);

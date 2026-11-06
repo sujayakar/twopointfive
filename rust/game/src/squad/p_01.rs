@@ -167,9 +167,13 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
                 move_speed = g.gd[gd].speed;
                 home = done && g.gd[gd].path_i >= g.gd[gd].path.len();
             }
+            // (`s` is the script OBJECT in squad.ts: an order given him under his own walk (a lane's back-out out of followPath's gate, lanes.ts) is
+            //  written into it, and every line from here reads it as ordered; what was worked out above (pace, strafing, the leg's numbers) stands.
+            //  The same object = the same serial; a script put in its place is another, and he finishes this frame on the one he began)
+            if let Some(n) = g.gd[gd].script { if n.serial == s.serial { s = n; } }
         }
+        let goal = s.goal.unwrap_or(goal);
         if home {
-            let goal = s.goal.unwrap_or(goal);   // (the goal as the script holds it now: the settle's watch is of that one)
             let mut w = match g.m.squad.settle_watch.get(gd).copied() {
                 Some(w) if w.goal == goal => w,
                 _ => SquadModSettleWatchValue { goal, best: planar, t: 0.0 },

@@ -13,8 +13,8 @@ use game::io::Io;
 
 /// The block's parts by name, in src/sim/state.ts SIM_PARTS' order. post.txt's first line carries the TypeScript's list and the two must agree.
 pub const NAMES: [&str; 13] = ["head", "dice", "doors", "falls", "props", "slabs", "items", "men", "lights", "weather", "smoke", "poses", "panes"];
-/// POSES: a dead man's ragdoll drive holds a pose the TypeScript keeps OUTSIDE the pool for good, and a Rust pose lives in the pool, so from the first death
-/// the pool's bytes differ by that pose and say nothing more. That part is reported when it first parts and is not the alarm.
+/// the pose pool's place among the parts. It is in the alarm like the rest: a pose of its own (a ragdoll's, a function's scratch) is outside the pool on
+/// both sides, and a start carries which sets are at home (`PoseSet.home` on the wire).
 pub const POSES: usize = 11;
 
 /// one part's hash: its words up to the last that is not zero (a parked block of the TypeScript's may be shorter than the Rust slot; the zeros say nothing)
@@ -75,6 +75,29 @@ pub fn give(g: &mut game::game::Game, k: usize, l: &str) -> String {
     use game::orders::{OrderTarget as T, Who};
     let mut w: Vec<&str> = l.split(' ').collect();
     let seat: Option<usize> = match w.last().and_then(|x| x.strip_prefix("seat")) { Some(n) => { let n = n.parse::<usize>().ok(); w.pop(); n } None => None };
+    // HARNESS STAND-IN: a write of the driver's that stands in the orders' own sequence (mission.ts: the scripted commander of `--wall` gives itself a wall
+    // charge where the kit issued none, then gives the order on the wall): `<k> !wall_carried <n | null>`, `<k> !wall_raised <n>`
+    if w.get(1).map_or(false, |x| x.starts_with('!')) {
+        let n = w.get(2).and_then(|x| x.parse::<f64>().ok());
+        match w[1] {
+            "!wall_carried" => game::wallcharge::wall_charge_set_carried(g, n),
+            "!wall_raised" => game::wallcharge::wall_charge_raise_carried(g, n.unwrap_or(0.0)),
+            // A SCRIPTED CASE'S WRITE (mission.ts `--case`): the write a rule of the TypeScript makes, made here through the Rust game's own setter; with
+            // BLITZ_CASE_RAW set, made as the Rust made it BEFORE the mend (no setter: the array's serial not bumped, the orbit's flag left up)
+            "!path_new" => {
+                let gd = g.guards[n.unwrap_or(0.0) as usize];
+                if std::env::var_os("BLITZ_CASE_RAW").is_some() { g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None; }
+                else { game::game::guard_set_path(g, gd, Vec::new()); game::guards::guard_set_path_goal(g, gd, None); }
+            }
+            "!path_goal_same" => {
+                let gd = g.guards[n.unwrap_or(0.0) as usize];
+                if std::env::var_os("BLITZ_CASE_RAW").is_none() { let p = g.gd[gd].path_goal; game::guards::guard_set_path_goal(g, gd, p); }
+            }
+            "!f" => { game::nightbreach::night_breach_order(g); }
+            _ => return format!("  NOTE tick {}: a write of the driver's this runner does not know: {}", k, l),
+        }
+        return format!("  the driver's write before tick {}: {}", k, l);
+    }
     if l.contains("UNSUPPORTED") || w.len() < 7 { return format!("  NOTE tick {}: an order of the driver's this runner cannot give: {}", k, l); }
     if let Some(n) = seat { if n >= g.seats.len() { return format!("  NOTE tick {}: an order for seat {} in a game of {}: {}", k, n, g.seats.len(), l); } }
     let at = [w[4].parse::<f64>().unwrap(), w[5].parse::<f64>().unwrap(), w[6].parse::<f64>().unwrap()];

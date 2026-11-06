@@ -474,7 +474,7 @@ fn foot_knobs(g: &Game) -> crate::debris::FootKnobs {
 
 /// Per frame: rubble at men's feet, the pools, the heat's decay, the queued dust.   (destruction.ts Destruction.update)
 pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
-    if !g.touring || g.destr.show_chaos.is_some() {
+    if g.k.rubble.on && (!g.touring || g.destr.show_chaos.is_some()) {
         let men: Vec<crate::debris::FootMan> = destruction_on_foot(g).into_iter().map(|c| crate::debris::FootMan { pos: g.ch[c].pos, vel: g.ch[c].vel }).collect();
         let knobs = foot_knobs(g);
         if !g.destr.debris.list.is_empty() {
@@ -489,7 +489,8 @@ pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
         crate::debris::debris_update(g, dt);
     }
     crate::break_table::breaks_tick(g);
-    crate::edge_look::edge_look_update(g, dt); // (:351's walls.skins.update() is wallskin.ts, the picture's: not called, see notes)
+    crate::edge_look::edge_look_update(g, dt);
+    crate::wallskin::wall_skin_update(g);
     g.destr.thuds_this_frame = 0.0;
     if chaos_of(g) <= 0.0 && !g.destr.any_heat {
         return;
@@ -548,7 +549,8 @@ pub fn destruction_on_foot(g: &mut crate::game::Game) -> Vec<CharId> {
 /// The rigid debris' and the blown walls' shadow-casting boxes, for the picture.   (destruction.ts Destruction.boxes)
 pub fn destruction_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     crate::debris::debris_boxes(g, out);
-    crate::edge_look::edge_look_boxes(g, out); // (:371's walls.skins.boxes(out) is wallskin.ts, the picture's: not called, see notes)
+    crate::edge_look::edge_look_boxes(g, out);
+    crate::wallskin::wall_skin_boxes(g, out);   // (…and what stands of a holed wall's paint: wallskin.ts)
 }
 
 /// Level reset: every hidden static back as authored, pools emptied, heat, caps and the counter back to the start.   (destruction.ts Destruction.reset)

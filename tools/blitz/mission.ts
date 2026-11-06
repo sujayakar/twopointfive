@@ -1,5 +1,5 @@
 // THE TYPESCRIPT SIDE OF A WHOLE MISSION, tick by tick, WITHOUT a whole state a tick (a state grows by the frame's boxes: 35 KB a tick, gigabytes a mission).
-//   bun run --preload ./tools/blitz/expose.ts tools/blitz/mission.ts <mission>:<seed> --out DIR [--ticks N] [--keep "100,200-210"] [--every N] [--open "559"]
+//   bun run --preload ./tools/blitz/expose.ts tools/blitz/mission.ts <mission>:<seed> --out DIR [--ticks N] [--keep "100,200-210"] [--every N] [--open "559"] [--wall] [--dress all|rows]
 // Run by run.sh. It stands the mission up headless on THE PAGE'S STAND (no TPS_PROFILE word: tools/qa/stand.ts), plays it with tools/qa/playthrough.ts's scripted
 // player, and writes into DIR:
 //   every tick   h<k>.bin    THE HOST'S HALF as tick k opens: a record a seat, every camera and Input row (the bridge's own writer, export.ts hostHalf)
@@ -15,7 +15,7 @@
 //                    (a checkpoint put back before tick k opened: the state as it opens in L<k>.bin, the block in Ls<k>.bin), `<k> room_at x y z`
 //                    (the driver's own question that floods a room and keeps it)
 // What is done to the game so that two sides can be stepped from one start (each a harness matter): every DRESS row is put down before the start (dress.ts says
-// that is the same game to the bit); the game has ITS OWN DIE from the first tick, so its word and count are in the block; `sim.settle` is called before the
+// that is the same game to the bit) unless `--dress` raises them; the game has ITS OWN DIE from the first tick, so its word and count are in the block; `sim.settle` is called before the
 // start is taken, so every pose is in the pool (the bridge carries no floats of a pose that is not at home).
 import '../qa/stand.ts';
 import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
@@ -51,13 +51,40 @@ const LESSON = scn.startsWith('tut-');
 if (LESSON) process.env.TUT_SQUAD_SKY = '0';
 if (!LESSON && !entryOf(scn)) { say(`mission.ts: the scripted player has no mission '${scn}' (tools/qa/playthrough.ts plays the room clears, the rescues and the raids: bun run tools/qa/playthrough.ts --scn x names them)`); process.exit(64); }
 const { newDice } = await import('../../src/math/dice.ts');
-const { dressAll } = await import('../../src/game/dress.ts');
+const { dressAll, DRESS } = await import('../../src/game/dress.ts');
 const { simLayout, SIM_PARTS } = await import('../../src/sim/state.ts');
 const { sim } = await import('../../src/sim/sim.ts');
 const reg = knobRegistry();
+// `--dress <all | row,row,…>`: THE DRESSING ROWS AS THE PAGE HAS THEM (dress.ts DRESS, every row up in the page), or only the rows named, up from the first
+// tick; without the word every row is down on both sides, the stand of a host that draws nothing. The bridge carries the table, so the Rust game
+// reads the same rows. What a row's step does on a stand with no GPU is README's "The dressing rows up".
+const DRESS_WORD = arg('--dress', '');
+function dressStand() { dressAll(false); if (!DRESS_WORD) return;
+  if (DRESS_WORD === 'all') { dressAll(true); return; }
+  for (const r of DRESS_WORD.split(',')) { if (!(r in DRESS)) { say(`mission.ts: --dress knows ${Object.keys(DRESS).join(', ')}, not '${r}'`); process.exit(64); } (DRESS as any)[r] = true; } }
 class Stop extends Error {}
 const CALL = (process.env.BLITZ_CALL ?? '').split(' ');
 let selAfter = 0;   // the highlighted row of the nearby list as the last tick left it
+// A SCRIPTED CASE (`--case pie | orbit | boot`): a write BETWEEN TWO TICKS that the missions' seeds never make, so that a place mended by reading is
+// reached by a run. Each is a line of gives.txt (the runner makes the same write through the Rust game's own setter; with BLITZ_CASE_RAW=1 it makes the
+// write as the Rust made it BEFORE the mend, to show the run parting without it):
+//   pie    a man slicing a doorway on the path he began on has his path replaced by a NEW EMPTY ARRAY and his goal dropped, as frag.ts does when the
+//          grenade he fled is gone (`gd.path = []; gd.pathGoal = null`): guards.ts:2025 `gd.path !== P.pathRef`            `<k> !path_new <guard>`
+//   orbit  a man backing off in a standoff has his goal written again as ANOTHER ARRAY of the same numbers, as goTo does (`v3.copy`):
+//          guards.ts:1163 `gd.pathGoal !== S.orbitGoal`                                                                      `<k> !path_goal_same <guard>`
+//   boot   Sam's word (F) twice at once on a level with a breach plan ('go on set'): the pair stacks, then goes in by the boot (breach.ts:220, the loud boot) `<k> !f`
+const CASE = arg('--case', ''); let caseN = 0, caseSaw = '';
+function caseStep(g: any) {
+  if (!CASE) return;
+  const w = (l: string) => { appendFileSync(`${outDir}/gives.txt`, l + '\n'); appendFileSync(`${outDir}/case.txt`, l + '\n'); caseN++; };
+  const alive = (gd: any) => gd.state !== 'dead';
+  if (CASE === 'pie' && caseN < 1) { const i = g.guards.findIndex((gd: any) => alive(gd) && gd.pieing && gd.pieing.phase !== 'cross' && gd.pieing.pathRef === gd.path && gd.path.length > 0);
+    if (i >= 0) { const gd = g.guards[i]; gd.path = []; gd.pathGoal = null; w(`${k} !path_new ${i}`); } }
+  else if (CASE === 'orbit' && caseN < 1) { const i = g.guards.findIndex((gd: any) => alive(gd) && gd.standoff?.orbitGoal && gd.pathGoal === gd.standoff.orbitGoal);
+    if (i >= 0) { const gd = g.guards[i]; gd.pathGoal = [gd.pathGoal[0], gd.pathGoal[1], gd.pathGoal[2]]; w(`${k} !path_goal_same ${i}`); } }
+  else if (CASE === 'boot') { const N = g.nightBreach; if (N && N.state !== caseSaw) { caseSaw = N.state; appendFileSync(`${outDir}/case.txt`, `# tick ${k}: the drill is '${caseSaw}'\n`); } if (caseN >= 2) return;
+    if (N?.active && N.drill && k > 30) { if (N.order()) w(`${k} !f`); } }   // (the second word at once: 'go on set', before the scripted player's first order of its own calls the pair off)
+}
 const words = (g: any): Uint32Array => g.sim.w;
 const block = (g: any): Uint8Array => { const w = words(g); return new Uint8Array(w.buffer, w.byteOffset, w.byteLength).slice(); };
 // A HASH OF EACH PART OF THE BLOCK, over its words up to the last that is not zero (a parked block may be shorter than the Rust slot; the zeros say nothing).
@@ -97,18 +124,22 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   // THE TEST DRIVER'S OWN QUESTIONS THAT WRITE THE GAME: `g.fight.roomAt(p)` asked between ticks floods a room nobody had asked for and keeps it in `g.fight.rooms`.
   // Each such ask that grew the list is a line of hostwrites.txt for the tick that opens next.
   if (k === 1 && g.fight?.roomAt) { const F = g.fight, ask = F.roomAt; F.roomAt = function (this: any, p: any) { const n0 = F.rooms.length; const r = ask.call(this, p); if (!g.ticking && F.rooms.length !== n0) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} room_at ${p[0]} ${p[1]} ${p[2]}\n`); return r; }; }
+  // THE DRIVER'S OWN WRITE OF THE CARRIED COUNT: the scripted commander of `--wall` gives itself a wall charge where the kit issued none
+  // (wallcharge-commander.ts `C.setCarried(1)`), between ticks and BEFORE the order it then gives on the wall. It is a line of gives.txt, in the
+  // orders' own sequence (`<k> !wall_carried <n | null>`): the order after it is refused without it.
+  if (k === 1 && g.wallCharge?.setCarried) { const C = g.wallCharge; for (const f of ['setCarried', 'raiseCarried'] as const) { const was = C[f]; C[f] = function (this: any, n: any) { if (!g.ticking) { const l = `${k + 1} !wall_${f === 'setCarried' ? 'carried' : 'raised'} ${n}`; gives.push(l); appendFileSync(`${outDir}/gives.txt`, l + '\n'); } return was.call(this, n); }; } }
   if (k === 1 && g.wallCharge?.blow) { const C = g.wallCharge, blow = C.blow; C.blow = function (this: any, c?: any, ...r: any[]) { if (!g.ticking && c) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} wall_blow ${c.wall.index}\n`); return arguments.length ? blow.call(this, c, ...r) : blow.call(this); }; }
   if (k === 1 && LESSON) { const pick = g.selectVerb; g.selectVerb = function (this: any, kind: string, verb?: string) { if (!g.ticking) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} select_verb ${wordAt('crate::game::InteractableKind', kind)} ${wordAt('crate::game::Verb', verb)} ${kind} ${verb}\n`); return pick.call(this, kind, verb); }; }
   // THE SCRIPTED PLAYER'S WORD TO THE HOSTAGES / THE MAN IN HAND, given by the module's own call between ticks (playthrough.ts: `R.ending.word(g.player.char)`
   // once the room is held and men of theirs are still up, `X.word(...)` on a snatch that ends in the van): `<k> rescue_word|snatch_word player|none`.
   if (k === 1) for (const [name, E] of [['rescue_word', g.rescue?.ending], ['snatch_word', g.snatch?.out]] as [string, any][]) if (E?.word) { const word = E.word; E.word = function (this: any, by: any) { if (!g.ticking) appendFileSync(`${outDir}/hostwrites.txt`, `${k + 1} ${name} ${by === g.player.char ? 'player' : by ? 'UNSUPPORTED-man' : 'none'}\n`); return word.call(this, by); }; }
-  if (k === 1) dressAll(false);
+  if (k === 1) dressStand();
+  caseStep(g);
   if (k === 1 && !g.dice) g.dice = newDice(DIE);
   let err: unknown = null;
   g.stepSeats = function (this: any, dt: number, cmds: unknown) {
     if (k === 1) g.sim.settle(g);
-    if (k === 1) { writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g));
-    }
+    if (k === 1) { writeFileSync(`${outDir}/c1.bin`, exportGame(g, reg)); writeFileSync(`${outDir}/s0.bin`, block(g)); }
     else if (inR(OPEN, k)) writeFileSync(`${outDir}/c${k}.bin`, exportGame(g, reg));
     // THE HOST PUT A CHECKPOINT BACK between the last tick and this one (savestate.ts, the host's save controller: a lesson's player went down and the
     // rails asked for it): the whole game is the saved one again. No stepper can follow that from its own state, so the state and the block as THIS tick

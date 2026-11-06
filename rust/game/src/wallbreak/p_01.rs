@@ -536,6 +536,8 @@ pub fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreakableId,
     }
     if is_hard(&g.tab.wallbreak_breakable[b]) { for &c in &opened { g.destr.walls.shell_gaps.add(crate::Num(c)); } }
     g.stats.wallbreak.nav_opened += opened.len() as i32;
+    // (wallbreak.ts:416, :417: the two lanes of the look are told, as every way a cell opens comes through here)
+    { let bl = crate::edge_look::break_like(g, b); crate::edge_look::edge_look_opened(g, &bl, &fresh, cause.as_str(), dir, quiet); crate::wallskin::wall_skin_opened(g, &bl); }
     if !quiet && (cause == LevelChangeCause::Fire || cause == LevelChangeCause::Collapse) { crate::floormess::mess_opened(g, [x0, z0, x1, z1]); }
     let walkable = !opened.is_empty(); let n_opened = opened.len();
     let c = WallBreakNoteC { kind, cause, id: b_id, name: None, pos, rect: [x0, z0, x1, z1], opened, walkable, sight: true, dead, who };
