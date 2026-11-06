@@ -134,11 +134,29 @@ ring, the three pushes, the ceiling's dust) are queued closures in the TypeScrip
 event (the crack, which nothing else plays: STAND-IN, `OUT_OWN.GameAudioLikePlay`) through `blastFeel.ts wallFeelPicture`, and the dress step lets
 their later stages go (`blastFeelStages`).
 
-MEASURED SO FAR (two tapes of the office room clear played back on both pages, software adapter, nothing drawn): the fog's block equal field by
-field at 52 of 52 and 28 of 28 points; particle records arrive and are equal by kind at every point; the die and every part equal. NOT YET equal,
-and mended in the tree but not yet run: the wind's records (the sources stood at speed 0 on the puppet, and the rain fell plumb), the smoke
-sources of a shot and a stun (never sent; and no kind, lattice or track on the ones that were). Open: a frag's scorch decals (3 against 1), the
-hash of some particle records. No drawn pair has been taken on this tree yet.
+MEASURED (software adapter; nothing here has been seen on a GPU). Four tapes, each played by the page without the word and played back on both pages
+with one set of readers: the office room clear twice (2,150 and 2,031 frames: a door, the squad sent in, shots, a smoke can, a frag, a stun), a second
+frag and stun tape (899), and mousehole with a wall charge set and blown (3,769). At every point of all four (52, 52, 28, 76) the die, every part of
+the game's block and the poses are equal, and so are: the fog's block field by field, the team's ids and the lights' fog classes, the smoke solver's
+wind inputs and the pool's, the weather frame, the sky's rows, the camera's kick, every bright box and the whole light list. Particle records are
+equal number for number and shape for shape over each whole run (301, 374, 144) but for the fog's mark on a round's chips off a wall (9, 9, 1
+records: below). Decals are equal over the wall run (52) and not at a frag (below).
+
+DRAWN (640x360, one browser, both pages off the same tape): the wall charge, sixteen consecutive frames from two before the blast: mean difference a
+channel 0.13 to 0.18 of 255, at most 0.09% of pixels over 32, after the first (0.68: the first frame a page ever draws). The same flash, lit room,
+hole, cut paint and burst; single sparks stand in other places. A pair taken as the one drawn frame after hundreds undrawn is NOT a fair picture of
+either page: the pool gives birth and the solver steps only when a frame is drawn, so everything filed since the last drawn frame starts at once and
+the pool's cap picks by the queue's order; two shots of ONE page at one frame taken that way in two runs differ by 4.9 of 255.
+
+WHAT STILL DIFFERS, each with its cause:
+- a frag's scorches and floor films: `BangScorch` and `MessBurst` run marks.ts and floormess.ts on the puppet AFTER the tick, and both read what
+  stands round the burst, which the blast has by then thrown or broken (2 scorches missing, 2 films larger, a later film refused as crowded).
+- the fog's mark on particles a host-run event throws (`WallWearRound`: a round's chips): the shooter's `begin` is over when the event runs.
+- a wall charge's report is heard up to 0.25 s early and its three later fans of fragments one and two frames early (queues of closures in the
+  TypeScript; the generated queue rows hold no data).
+- a stun's smoke trails are 10 where the other page has 12, and a holed wall's puffs a few more: both ask the host's solver for its budget, and
+  the tick has no answer of the host's.
+- a smoke can's and its vent's source does not ride the can while it rolls (no arm for an item in the Rust `Track`).
 
 ## Checking it
 
