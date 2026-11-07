@@ -1246,7 +1246,7 @@ but synthetic writes still work.
   `tools/qa/plainair-check.ts` (the Engine built on a stand-in device as any load and in plain air: one plain module, no text of the real march, no twin asked for,
   every other program as ever; the plain module AS CUT declares no walking function and is a third of the real one or less; the numbers it copies from the real march
   are still the real march's, and on any load the weight of a lamp's glow through smoke (the look's row, `Engine.smokeDraw.ahead`) reaches the frame at 0 with
-  only its two writers naming it, so the real march's cut is the plain one's; `TPS_COMPACTSHADERS=1` in front for the page's writing; `PLAINAIR_BREAK=1` fails five
+  only its two writers naming it, so the real march's cut is the plain one's; (since 2026-11-07 the march has one writing and no word is needed: `PLAINAIR_BREAK=1` fails seven) `TPS_COMPACTSHADERS=1` in front for the page's writing; `PLAINAIR_BREAK=1` fails five
   lines, seven with the compact set); and
   `tools/qa/plainair-page.cjs` on the real page (headless Chromium, software adapter, `?plainair=1`: every program made, 117 where the page makes 118; the browser is
   handed `volumetricsPlain` and no text of the real march, no twin is asked for, the warning is printed, a canister's plume shows in the picture and in the volumetric
@@ -1327,7 +1327,7 @@ but synthetic writes still work.
   word, 0 with it. Making it the default is open: 84 files of `tools/qa` lean on this commander, and every table before it was made with the walker.
 - **Every shader text compiled in twenty seconds: `node tools/qa/wgsl-compile.cjs`** (11-01; `tools/qa/wgsl-dump.ts` writes the texts). The Engine and the smoke
   solver are built on a stand-in device that records every module's text, as a plain boot makes them and again as the look page builds them (its prelude consts
-  up), in TWO runs: bare, and with every shader row's word in the environment (`TPS_COMPACTSHADERS=1` and the rest: the rows are read once at import, and a first
+  up), in TWO runs: bare, and with every shader row's word in the environment (since 2026-11-07 that is `TPS_FIRSTFRAME=1` alone; before, `TPS_COMPACTSHADERS=1` and the rest: the rows are read once at import, and a first
   writing that flipped the row after the import compiled none of the compact writings and said nothing). Each distinct text (68 today) goes to headless
   Chromium's `createShaderModule` and its errors are printed with the line. Parse and type errors only: it makes no pipeline and draws nothing, so it does not replace a page boot (see the first-frame bullet in `render.md`).
   `WGSL_BREAK=1` adds a function that names nothing declared and must fail.

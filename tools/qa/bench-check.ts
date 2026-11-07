@@ -262,19 +262,19 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   check(steps === BENCH_SCENES.length && store.size === 0 && closedTo[0] === '/?quality=low', `every scene got its page, the record is gone at the end, and Close goes back to where the run was started (${closedTo[0]})`);
   check(benchLegOfPage(tab(at)) === null, 'a scene\'s address opened with no run under way is a plain mission page');
   // the shader rows on trial ride along (asked for beside ?bench, a row is what the run was meant to measure: dropped at the first scene, the numbers were the plain build's)
-  { const t2 = tab(`?bench&hour=noon&fogpass=old&pipequeue=0&shadertrim=0&shaderfold=0&downloads=1&cloud=0&cloudfiles=0&cloudprefs=0&${SHADER_ROW_WORDS.map((w, i) => `${w}=${i % 2}`).join('&')}`); benchBegin(false, t2);
+  { const t2 = tab(`?bench&hour=noon&fogpass=old&pipequeue=0&shadertrim=0&shaderfold=0&downloads=1&cloud=0&cloudfiles=0&cloudprefs=0&${SHADER_ROW_WORDS.map((w, i) => `${w}=${(i + 1) % 2}`).join('&')}`); benchBegin(false, t2);
     const u = new URLSearchParams(searchOf(t2.went[0]));
-    check(SHADER_ROW_WORDS.length > 0 && SHADER_ROW_WORDS.every((w, i) => u.get(w) === String(i % 2)) && u.get('pipequeue') === '0' && u.get('shadertrim') === '0' && u.get('shaderfold') === '0' && u.get('downloads') === '1' && u.get('cloud') === '0' && u.get('cloudfiles') === '0' && u.get('cloudprefs') === '0' && !u.has('hour') && !u.has('fogpass'), `every shader row's word, on or off, the compile queue's, the trim's and the fold's are on the first scene's address (${t2.went[0]})`);
+    check(SHADER_ROW_WORDS.length > 0 && SHADER_ROW_WORDS.every((w, i) => u.get(w) === String((i + 1) % 2)) && u.get('pipequeue') === '0' && u.get('shadertrim') === '0' && u.get('shaderfold') === '0' && u.get('downloads') === '1' && u.get('cloud') === '0' && u.get('cloudfiles') === '0' && u.get('cloudprefs') === '0' && !u.has('hour') && !u.has('fogpass'), `every shader row's word, on or off, the compile queue's, the trim's and the fold's are on the first scene's address (${t2.went[0]})`);
     const pg = tab(searchOf(t2.went[0])), l = benchLegOfPage(pg)!;
     check(l.leg.notes.filter(n => /^the scenes were played without hour, fogpass from the address/.test(n)).length === 1, `the words no scene is played with are named in the run's notes (${l.leg.notes.join(' | ')})`);
     const notesOf = (search: string) => { store.clear(); const t = tab(search); benchBegin(false, t); return benchLegOfPage(tab(searchOf(t.went[0])))!.leg.notes.filter(n => /played without/.test(n)); };
     const mission = notesOf('?levelFile=block.json&roomclear=1&squad4&seed=1&difficulty=hard&noverdict&nokeep&bench&hour=dusk&hour=noon&=x&quality=low');
     check(mission.length === 1 && /^the scenes were played without hour from the address/.test(mission[0]), `asked on a mission's own address: only the visitor's flag is named, once, and no word a scene's address says itself (${mission[0]})`);
     const many = notesOf('?bench&' + Array.from({ length: 14 }, (_, i) => `nosomethingquitelong${i}`).join('&'));
-    check(many.length === 1 && many[0].length <= 150 && / and \d+ more from the address/.test(many[0]) && notesOf('?bench&mute&quality=low&compactshaders=1').length === 0, `a long address: the note still fits a line of the report; nothing left behind: no note (${many[0]})`);
+    check(many.length === 1 && many[0].length <= 150 && / and \d+ more from the address/.test(many[0]) && notesOf('?bench&mute&quality=low&firstframe=1').length === 0, `a long address: the note still fits a line of the report; nothing left behind: no note (${many[0]})`);
     l.leg.onward({ steps: [{ id: `scene:${l.scene.id}` } as any], notes: l.leg.notes, scenes: [], boot: null, away: 0 });
     const u1 = new URLSearchParams(searchOf(pg.went[0]));
-    check(u1.get('benchrun') === '1' && SHADER_ROW_WORDS.every((w, i) => u1.get(w) === String(i % 2)), `and on the next scene's (${pg.went[0]})`);
+    check(u1.get('benchrun') === '1' && SHADER_ROW_WORDS.every((w, i) => u1.get(w) === String((i + 1) % 2)), `and on the next scene's (${pg.went[0]})`);
     store.clear(); }
   // …and the word for how a save's picture is taken: `?bench&savepic=0` against `?bench` is the pair that prices the wider canvas (docs/agents/qa.md), and with the
   // word dropped at the first scene that pair was one run twice
