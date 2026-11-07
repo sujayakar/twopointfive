@@ -5,19 +5,47 @@ picture, the sound, the HUD and the menus go on reading. Without the word nothin
 `src/host/rustgame.ts` (its head says what a step is); the lines of the TypeScript tick that are for the picture only are `src/host/rustdress.ts`; the face's
 exports for a host that shows the game are `rust/game_face/src/page.rs`.
 
-## Building
+## Building, and a first run
 
-`rust/game_face` is built by `tools/blitz/face-build.ts` (the dev server and `bun run build` both call it when a source under `rust/` is newer than the
-module). The file is about 24 MB and is never checked in. Where it cannot be built the reason is said in plain words, and the page shows it under the word:
+`rust/game_face` is built by `tools/blitz/face-build.ts`. The file is 25 to 27 MB and is never checked in. Two profiles (`rust/game_face/Cargo.toml`):
 
-| the machine | what is said |
+| profile | what it is | who builds it | measured here (3 jobs, from nothing) |
+|---|---|---|---|
+| `play` | opt-level 3, one unit, NO link-time optimisation | the dev server (`bun run dev`), when a source under `rust/` is newer than the module | 7 min 33 s, rustc peaking at 6.2 GB, 25.1 MB |
+| `release` | the same with the fat link | `bun run build` (`FACE_PROFILE=play` in front builds the other) | the link alone passed 10.5 GB and was killed in a 12 GB box three times |
+
+A module of either profile that is newer than the sources is served as it is. **A first `bun run dev` builds nothing.** The first page opened with
+`?rust=1` asks for `/game_face.wasm`; the server starts the build and does not hold the request: it answers 202 with a line, the page shows that line
+where `loading…` stands and asks again every two seconds, and cargo's own lines (each crate as it compiles, what rustup fetches) go to the server's
+terminal. When the build ends the page starts by itself. `rust/rust-toolchain.toml` names the compiler (1.97.0) and the wasm32-unknown-unknown target:
+with rustup installed the first build fetches both.
+
+| the machine | what the page says (the fatal card, in these words; the terminal says the same) |
 |---|---|
-| no cargo, no built module | The Rust game is not built, and this machine has no cargo to build it (rustup, then the wasm32-unknown-unknown target). |
+| no cargo, never built | The Rust game is not built, and this machine has no cargo to build it. Install Rust with rustup (one line in a terminal: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` ), then load this page again: the dev server builds the module itself … |
 | no cargo, a module older than its sources | the file as it stands is served, and the server says so |
-| a cargo that cannot link wasm (no `lld`, no target) | The Rust game did not build: `linker lld not found` …, and that rustup's pinned toolchain brings both |
+| a cargo that cannot build for wasm (no `lld`, no target) | The Rust game did not build: … This cargo (its path) cannot build for wasm32-unknown-unknown. If it is rustup's: `rustup target add wasm32-unknown-unknown` . If it is not (a system package): install rustup … |
+| the compiler killed (memory) | The Rust game did not build: … The compiler was killed, most likely for memory (this build needs about 7 GB free): close what else is running and load the page again. |
 | a build without `game_face.wasm` (a static host) | `?rust=1: there is no Rust game to play here. This build was made without game_face.wasm …` |
 
+Shown with a stand-in for cargo (the four answers of the server and its terminal's lines); a real first build through the dev server and the two
+lines on the screen have not been run in a browser.
+
+## The switches that are constants now
+
+866 switch rows of the knob tables are settled (`tools/qa/switches.json`): the Rust game has only the branch the page takes. On the TypeScript page
+they are still switches, moved by a row of the debugger's panel kept in the browser's store, by a word on the address, by a click. Under `?rust=1`
+each is held at its page value from before the level is built (`rustSettledHold`, as `tools/qa/fold.ts` holds them for a headless run): a read answers
+that value, a write of another is refused, and what was refused is named once in the console and stays on the debugger panel's first line ("N kept
+rows or address words are settled in this build and are not applied: …"; `window.__rust.settled`). So the half of the game the page still runs (the
+HUD, the menus, the picture's dressing) and the tick agree. Rows that are still switches (open decisions, the player's own, the difficulty's) cross
+to the Rust game with the knob tables AS A GAME STARTS; one changed in the middle of a mission (the debugger's Difficulty row) does not reach the
+Rust game until the next start.
+
 ## A game kept: saves, loads, the restart
+
+**A save of the Rust page does not survive a reload today.** Every save, by hand or by the game, lives in the page's memory (a game kept inside the
+module) and is gone with the tab. The design for saves that outlive the page is in the line's log, not in the tree.
 
 The save controller (`src/game/savestate.ts`) runs on the puppet with its slots, labels and rhythm as ever. What it keeps is not the puppet:
 

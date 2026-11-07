@@ -11,7 +11,7 @@ const PASS = Symbol('run the TypeScript');
 const DEC = new TextDecoder();
 export interface SurfaceHost { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array): Uint8Array; count?(s: string): void }
 const TALLY: any = (globalThis as any).__tpsTally ?? { crossed: 0, pass() {} };   // (expose.ts keeps it, from before any game is stood, and prints it)
-const passed = (key: string, how: 'noHost' | 'noRow' | 'unlisted') => TALLY.pass(key, how);
+const passed = (key: string, how: 'noHost' | 'noRow' | 'unlisted' | 'closed') => TALLY.pass(key, how);
 const hosts = new Set<SurfaceHost>(); let current: SurfaceHost | null = null;
 export const surfaceHost = (H: SurfaceHost | null, gone?: SurfaceHost) => { if (H) TALLY.standing = false; if (gone) { hosts.delete(gone); if (current === gone) current = null; } if (H) { hosts.add(H); current = H; } };
 const hostOf = (self: any, args: any[]): SurfaceHost | null => { if (self?.rustSurface) return self.rustSurface; for (const a of args) if (a && typeof a === 'object' && a.rustSurface) return a.rustSurface; return current; };
@@ -32,7 +32,7 @@ function val(n: any, I: In, bk: any): any { const dv = I.dv; switch (n.k) {
     if (T.k === 'data' || T.k === 'handEnum') { const a = dv.getUint16(I.p, true); I.p += 2; const V = T.vars?.[a]; const ty = V?.ty ?? (T.arms?.[a]?.match(/\((.*)\)/)?.[1]); if (!ty) return V?.str ?? (V?.kw !== undefined ? { kind: V.kw } : V?.tag ?? T.arms?.[a]); const x = val(parse(ty), I, bk); if (V?.kw !== undefined && x && typeof x === 'object') x.kind = V.kw; return x; } }
   } throw new Error(`surface: no way to read a ${n.k} ${n.path ?? ''}`); }
 const ROWS: any[] = (CALLS as any).rows;
-function call(row: number, self: any, args: any[]): any { const H = hostOf(self, args); if (!H) { passed(ROWS[row].key, 'noHost'); return PASS; } if (H.surfaceDispatching()) return undefined; if (!H.surfaceOpen()) return PASS;
+function call(row: number, self: any, args: any[]): any { const H = hostOf(self, args); if (!H) { passed(ROWS[row].key, 'noHost'); return PASS; } if (H.surfaceDispatching()) return undefined; if (!H.surfaceOpen()) { passed(ROWS[row].key, 'closed'); return PASS; }
   const C = ROWS[row], g = H.g, parts: [string, unknown][] = []; for (const a of C.args) parts.push([a.ty, a.from === 'this' ? self : args[a.from]]);
   // AN ID THE FUNCTION DOES NOT TAKE AS OPTIONAL, AND NOTHING THERE: the TypeScript would throw on it, so this throws; in Rust it would be a panic, and the game lost
   for (const [ty, v] of parts) if ((v === null || v === undefined) && parse(ty).k === 'id') throw new TypeError(`${C.key}: an argument of type ${ty} is ${v}`);
@@ -54,3 +54,11 @@ export function fireTap(g: any, row: number, args: number[], answer: number[]): 
   const A = T.ret ? val(parse(T.ret), new In(Uint8Array.from(answer)), bk) : undefined; const o = T.recv === 'self' ? a.shift() : recvOf(g, T.recv); if (!o || typeof o[T.m] !== 'function') return; const was = firing; firing = { id: T.id, answer: A }; try { o[T.m](...a); } finally { firing = was; } }
 export function installSurface(): void { const c: any = call; c.PASS = PASS; c.newGame = () => { current = null; TALLY.standing = true; }; c.tapFiring = (id: number) => firing?.id === id; c.tapAnswer = () => firing!.answer; c.passed = (key: string) => { if (firing) return; if (!current) passed(key, 'noHost'); else if (current.surfaceOpen()) passed(key, 'unlisted'); }; (globalThis as any).__tpsCall = c; }
 export const surfaceRows = ROWS;
+// ---- THE CROSSING AS A PLAIN FUNCTION: what a function of the tick is once its TypeScript body is gone (blitz/skeleton/STUBS.md): `return crossing('DoorTools.order', this, [o, who]) as any`. By the row's `stub` word, which does not move with a cut. There is no TypeScript to run: where the guard would have run it this says so
+let ROW_OF: Map<string, number> | null = null, TAP_OF: Map<string, number> | null = null;
+export function crossing(key: string, self: unknown, args: unknown[]): unknown {
+  TAP_OF ??= new Map(TAP.map(T => [T.key, T.id])); const t = TAP_OF.get(key); if (t !== undefined && firing?.id === t) return firing.answer;
+  ROW_OF ??= new Map(ROWS.map((r, i) => [r.stub, i])); const row = ROW_OF.get(key); if (row === undefined) throw new Error(`the call surface: no row ${key}`);
+  const r = call(row, self, args as any[]); if (r === PASS) throw new Error(`the call surface: ${key} was called where it cannot cross (no game stands, the host's own lines are running, or an argument is a row Rust has not got)`); return r; }
+/** a tapped function with no row: all it still does is answer a tool that replaced it and called through */
+export function tapAnswer(key: string): unknown { TAP_OF ??= new Map(TAP.map(T => [T.key, T.id])); return firing?.id === TAP_OF.get(key) ? firing!.answer : undefined; }

@@ -1,14 +1,24 @@
 // THE RUST GAME'S MODULE FOR THE PAGE (rust/game_face → game_face.wasm, FACE.md): where the file is, whether it is older than its sources, and the build.
-// The file is 12 to 19 MB and is never checked in (rust/.gitignore: target/). The dev server (tools/serve.ts) answers /game_face.wasm with it and the static
+// The file is 20 to 27 MB and is never checked in (rust/.gitignore: target/). The dev server (tools/serve.ts) answers /game_face.wasm with it and the static
 // build (tools/build.ts) copies it into dist/; both build it first when a source under rust/ is newer than the file. Where it cannot be built (no cargo, no
-// wasm target) the answer is the reason in plain words, which the page shows under `?rust=1` (src/host/rustgame.ts); without the word the page never asks.
-//   bun run tools/blitz/face-build.ts [--check]     build if stale and say where the file is · --check: only say whether it is stale
+// wasm target) the answer is the reason in plain words WITH THE ONE COMMAND THAT MENDS IT, which the page shows under `?rust=1` (src/host/rustgame.ts);
+// without the word the page never asks.
+// TWO PROFILES (rust/game_face/Cargo.toml). `play`: optimised, no link-time optimisation: what the DEV SERVER builds, because the release profile's fat
+// link needs over 10.5 GB of memory and many minutes, and a first `bun run dev` should not. `release`: the fat link, what `bun run build` ships
+// (FACE_PROFILE=play in front of it builds the other). A module of EITHER profile that is newer than the sources is served as it is: nobody is made to
+// wait for a second build of the same tree.
+// THE DEV SERVER DOES NOT HOLD THE PAGE'S REQUEST WHILE IT BUILDS: `faceAsk` starts the build and answers at once with what is going on (`faceNow`),
+// and the page asks again every two seconds and shows the line.
+//   bun run tools/blitz/face-build.ts [--check] [--profile play|release]     build if stale and say where the file is · --check: only say whether it is stale
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 
 const ROOT = resolve(import.meta.dir, '../..'), RUST = join(ROOT, 'rust'), CRATE = join(RUST, 'game_face');
-export const FACE_WASM = join(CRATE, 'target/wasm32-unknown-unknown/release/game_face.wasm');
+export type FaceProfile = 'play' | 'release';
+export const faceFile = (profile: FaceProfile): string => join(CRATE, `target/wasm32-unknown-unknown/${profile}/game_face.wasm`);
+/** the release profile's file (the mission loop through wasm and the simulation's build name it) */
+export const FACE_WASM = faceFile('release');
 /** the crates the module is made from (tools/sim/build.ts FILE_MODULES holds this list to the crate's own lock) */
 export const FACE_CRATES = ['prim', 'sim', 'game', 'game_run', 'game_face'] as const;
 
@@ -21,43 +31,78 @@ function newest(): { t: number; file: string } {
   if (existsSync(join(RUST, 'rust-toolchain.toml'))) see(join(RUST, 'rust-toolchain.toml'));
   return best;
 }
-/** '' = the file is there and no source is newer; else why it is stale */
-export function faceStale(): string {
-  if (!existsSync(FACE_WASM)) return 'not built yet';
-  const n = newest(), t = statSync(FACE_WASM).mtimeMs;
+/** '' = the profile's file is there and no source is newer; else why it is stale */
+export function faceStale(profile: FaceProfile = 'release'): string {
+  const f = faceFile(profile); if (!existsSync(f)) return 'not built yet';
+  const n = newest(), t = statSync(f).mtimeMs;
   return n.t > t ? `${n.file.slice(ROOT.length + 1)} is newer than the module` : '';
 }
+/** a module that is up to date, the asked profile's first: its path, or null */
+function fresh(profile: FaceProfile): string | null { for (const p of [profile, profile === 'play' ? 'release' : 'play'] as FaceProfile[]) if (!faceStale(p)) return faceFile(p); return null; }
 /** the compiler rust/rust-toolchain.toml picks: rustup's cargo (the system's own cannot link wasm where it has no lld) */
 function cargo(): string | null {
   const own = join(homedir(), '.cargo/bin/cargo'); if (existsSync(own)) return own;
   return Bun.which('cargo');
 }
-let building: Promise<{ path: string } | { why: string }> | null = null;
+/** THE ONE COMMAND for a machine with no cargo, and for one whose cargo cannot build for wasm */
+const RUSTUP = `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`;
+const NO_CARGO = `The Rust game is not built, and this machine has no cargo to build it. Install Rust with rustup (one line in a terminal: ${RUSTUP} ), then load this page again: the dev server builds the module itself (rust/rust-toolchain.toml names the compiler and the wasm32-unknown-unknown target, which rustup fetches on the first build).`;
+type Answer = { path: string } | { why: string };
+/** what the build is doing now, for whoever shows it: `building` with its seconds so far and cargo's last line, or the last build's failure */
+const NOW = { building: false, since: 0, line: '', profile: 'play' as FaceProfile, failed: '', failedAt: 0 };
+export function faceNow(): { building: boolean; secs: number; line: string; profile: FaceProfile; failed: string } { return { building: NOW.building, secs: NOW.building ? Math.round((performance.now() - NOW.since) / 1000) : 0, line: NOW.line, profile: NOW.profile, failed: NOW.failed }; }
+let building: Promise<Answer> | null = null;
+let saidNoCargo = false;
 /** THE MODULE'S FILE, built first where it is stale: `{ path }`, or `{ why }` in words a player can be shown. One build at a time; a second ask waits on the first. */
-export function faceWasm(say: (line: string) => void = () => {}): Promise<{ path: string } | { why: string }> {
-  const stale = faceStale(); if (!stale) return Promise.resolve({ path: FACE_WASM });
-  return building ??= (async () => {
-    const c = cargo();
-    if (!c) return existsSync(FACE_WASM) ? (say(`game_face.wasm: ${stale}, and there is no cargo on this machine to build it: the file as it stands is served`), { path: FACE_WASM }) : { why: 'The Rust game is not built, and this machine has no cargo to build it (rustup, then the wasm32-unknown-unknown target).' };
-    say(`game_face.wasm: ${stale}; building (cargo build --release in rust/game_face: minutes) …`);
-    const t0 = performance.now();
-    const p = Bun.spawn([c, 'build', '--target', 'wasm32-unknown-unknown', '--release'], { cwd: CRATE, stdout: 'pipe', stderr: 'pipe', env: { ...process.env, PATH: `${join(homedir(), '.cargo/bin')}:${process.env.PATH ?? ''}` } });
-    const [err, code] = await Promise.all([new Response(p.stderr).text(), p.exited]);
+export function faceWasm(say: (line: string) => void = () => {}, profile: FaceProfile = (process.env.FACE_PROFILE === 'play' ? 'play' : 'release')): Promise<Answer> {
+  const have = fresh(profile); if (have) return Promise.resolve({ path: have });
+  return building ??= (async (): Promise<Answer> => {
+    const stale = faceStale(profile), file = faceFile(profile), c = cargo();
+    // (no compiler: an older module of either profile is better than none, and the server says that it is old)
+    if (!c) { const old = [file, faceFile(profile === 'play' ? 'release' : 'play')].find(f => existsSync(f)); if (old) { say(`game_face.wasm: ${stale}, and there is no cargo on this machine to build it: the file as it stands is served (${old.slice(ROOT.length + 1)})`); return { path: old }; } if (!saidNoCargo) { saidNoCargo = true; say(`game_face.wasm: ${NO_CARGO}`); } return { why: NO_CARGO }; }
+    say(`game_face.wasm: ${stale}; building it (cargo build --profile ${profile} in rust/game_face: ${profile === 'play' ? 'a few minutes the first time, and about 7 GB of memory' : 'the fat link: many minutes and over 10 GB of memory'}) …`);
+    const t0 = performance.now(); NOW.building = true; NOW.since = t0; NOW.line = 'starting cargo'; NOW.profile = profile; NOW.failed = '';
+    const p = Bun.spawn([c, 'build', '--target', 'wasm32-unknown-unknown', '--profile', profile], { cwd: CRATE, stdout: 'ignore', stderr: 'pipe', env: { ...process.env, PATH: `${join(homedir(), '.cargo/bin')}:${process.env.PATH ?? ''}` } });
+    // cargo's own words as they come: the crates it compiles and what rustup fetches are said, the compiler's warnings are not
+    let err = '', part = '', lastSaid = 0;
+    const dec = new TextDecoder();
+    for await (const chunk of p.stderr as unknown as AsyncIterable<Uint8Array>) { const text = dec.decode(chunk, { stream: true }); err += text; if (err.length > 4_000_000) err = err.slice(-2_000_000);
+      const lines = (part + text).split('\n'); part = lines.pop() ?? '';
+      for (const l of lines) { const m = l.match(/^\s*(Compiling|Finished|Downloading|Downloaded|Updating|Blocking|info: (?:syncing|downloading|installing).*|error(?:\[E\d+\])?:.*)\b(.*)$/); if (!m) continue; NOW.line = l.trim().replace(/\s*\(.*\)$/, '').slice(0, 120); const t = performance.now(); if (/^\s*(error|info:)/.test(l) || t - lastSaid > 1500) { say(`game_face.wasm: ${NOW.line} (${((t - t0) / 1000).toFixed(0)} s)`); lastSaid = t; } } }
+    const code = await p.exited; NOW.building = false;
     if (code !== 0) {
       const first = err.split('\n').filter(l => /^error/.test(l)).slice(0, 3).join(' · ') || err.trim().split('\n').slice(-2).join(' · ');
-      // (the commonest way a machine that HAS a cargo cannot build this: a compiler with no wasm target or no linker for it, where rustup's own would have both)
-      const hint = /linker `lld` not found|target may not be installed|can't find crate for `(core|std)`/.test(err) ? ` (this cargo, ${c}, cannot build for wasm32-unknown-unknown: rustup's toolchain, pinned in rust/rust-toolchain.toml, brings the target and its linker)` : '';
-      say(`game_face.wasm: the build failed: ${first}${hint}`);
-      return { why: `The Rust game did not build: ${first.slice(0, 300)}${hint}` };
+      // (the commonest ways a machine that HAS a cargo cannot build this: a compiler with no wasm target or no linker for it, where rustup's own would have
+      //  both; and a compiler killed for memory)
+      const noTarget = /linker `lld` not found|target may not be installed|can't find crate for `(core|std)`/.test(err), killed = /signal: 9|SIGKILL/.test(err);
+      const hint = noTarget ? ` This cargo (${c}) cannot build for wasm32-unknown-unknown. If it is rustup's: rustup target add wasm32-unknown-unknown . If it is not (a system package): install rustup (${RUSTUP} ), whose toolchain, pinned in rust/rust-toolchain.toml, brings the target and its linker.`
+        : killed ? ' The compiler was killed, most likely for memory (this build needs about 7 GB free): close what else is running and load the page again.' : '';
+      NOW.failed = `The Rust game did not build: ${first.slice(0, 400)}${hint}`; NOW.failedAt = performance.now();
+      say(`game_face.wasm: the build failed after ${((performance.now() - t0) / 1000).toFixed(0)} s: ${first}${hint}`);
+      return { why: NOW.failed };
     }
-    say(`game_face.wasm: built in ${((performance.now() - t0) / 1000).toFixed(0)} s, ${statSync(FACE_WASM).size} bytes`);
-    return { path: FACE_WASM };
+    say(`game_face.wasm: built in ${((performance.now() - t0) / 1000).toFixed(0)} s, ${statSync(file).size} bytes (${file.slice(ROOT.length + 1)})`);
+    return { path: file };
   })().finally(() => { building = null; });
+}
+/** FOR A SERVER THAT MUST NOT HOLD A REQUEST FOR MINUTES: the file if one is up to date; else the build is started (if none runs) and the answer is what
+ *  is going on now: `{ wait }` = a line for the page to show while it asks again, `{ why }` = it cannot be built and why. A build that failed is not
+ *  started again by every ask: its reason stands for ten seconds, and a reload after that tries once more. */
+export function faceAsk(say: (line: string) => void = () => {}, profile: FaceProfile = 'play'): Answer | { wait: string } {
+  const have = building ? null : fresh(profile); if (have) return { path: have };   // (while a build runs its file may be half written: nothing is served until it has ended)
+  if (!building && NOW.failed && performance.now() - NOW.failedAt < 10_000) return { why: NOW.failed };
+  let settled: Answer | null = null;
+  void faceWasm(say, profile).then(r => { settled = r; });
+  if (settled) return settled;   // (never: the build's answer comes a turn later; kept for a cargo-less machine's quick answer below)
+  if (!cargo()) { const old = [faceFile(profile), faceFile(profile === 'play' ? 'release' : 'play')].find(f => existsSync(f)); return old ? { path: old } : { why: NO_CARGO }; }
+  const n = faceNow();
+  return { wait: `Building the Rust game: ${n.secs} s so far${n.line ? ` (${n.line})` : ''}. The first build takes a few minutes; the terminal that runs the dev server shows it. This page starts by itself when it is done.` };
 }
 
 if (import.meta.main) {
-  if (process.argv.includes('--check')) { const s = faceStale(); console.log(s ? `game_face.wasm: ${s}` : `game_face.wasm: up to date (${statSync(FACE_WASM).size} bytes)`); process.exit(s ? 1 : 0); }
-  const r = await faceWasm(l => console.log(l));
+  const at = process.argv.indexOf('--profile'), profile: FaceProfile = (at > 0 ? process.argv[at + 1] : process.env.FACE_PROFILE) === 'play' ? 'play' : 'release';
+  if (process.argv.includes('--check')) { const s = faceStale(profile), f = faceFile(profile); console.log(s ? `game_face.wasm (${profile}): ${s}` : `game_face.wasm (${profile}): up to date (${statSync(f).size} bytes)`); process.exit(s ? 1 : 0); }
+  const r = await faceWasm(l => console.log(l), profile);
   if ('why' in r) { console.error(r.why); process.exit(1); }
   console.log(r.path.slice(ROOT.length + 1));
 }
