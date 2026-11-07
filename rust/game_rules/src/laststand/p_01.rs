@@ -170,7 +170,7 @@ pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
 /// fit to speak or be spoken to: up, not held, his wits about him (laststand.ts fitGd)
 pub fn fit_gd(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::owner::has_him(g, gd, crate::owner::own().runner)
-        && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
+        && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
 /// (laststand.ts fit)

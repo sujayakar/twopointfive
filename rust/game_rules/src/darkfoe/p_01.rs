@@ -335,7 +335,7 @@ pub fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<Roomfight
     if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold { return Some(String::from("on the move")); }
     if g.tab.roomfight_def[d].rally_at == f64::INFINITY { return Some(String::from("the mission's man")); }
     if g.tab.roomfight_def[d].room.is_none() { return Some(String::from("no room of his own")); }
-    if g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || g.time < g.gd[gd].dazzled_until { return Some(String::from("not his own man")); }
+    if g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || crate::control::man::blind(g, gd) { return Some(String::from("not his own man")); }
     if g.gd[gd].state != crate::game::GuardState::Alert { return Some(String::from("not alert")); }
     if g.time - g.gd[gd].last_seen_t < g.k.darkfoe.quiet_secs
         || g.time - g.gd[gd].witness.heard.last_shot_t < g.k.darkfoe.calm_secs

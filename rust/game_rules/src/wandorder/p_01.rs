@@ -39,8 +39,8 @@ pub fn carries(g: &crate::game::Game, gd: GuardId) -> bool {
 /// The fight has him: its lease, blind, folded, or the room fight's aim over his order. (wandorder.ts fought)
 pub fn fought(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     g.tab.orders_assignment[a].yield_t >= 0.0
-        || g.time < g.gd[gd].dazzled_until
-        || g.time < g.gd[gd].stagger_until
+        || crate::control::man::blind(g, gd)
+        || crate::control::man::staggered(g, gd)
         || g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
 }
 
