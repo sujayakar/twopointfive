@@ -217,7 +217,6 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/peeksight.ts PEEK_STATS': 'TALLY · counted in peeksight.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/peeksight.ts:61)',
   'src/game/picture.ts PICTURE_STATS': 'TALLY · counted in picture.ts and suppression.ts:279; read by the summary (477); squadthrow.ts:183-185 copies three counts and puts them back round a trial — no rule reads a value',
   'src/game/picture.ts VIEWING': 'SCRATCH · set and put back (finally) inside pictureQuiet / viewOf (picture.ts:312, 417); it only says whether the two tallies count',
-  'src/game/planlay.ts PLANLAY_STATS': 'TALLY · counted in planlay.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
   'src/game/props.ts cc': 'SCRATCH · the circle-box test\'s answer (props.ts:298-299), read by the caller straight after the test returned true (232-236, 284-285)',
   'src/game/props.ts sat': 'SCRATCH · the SAT test\'s answer (props.ts:101-109), read by the caller on the lines after the test returned true (259-261, 312-317, 349-352)',
   'src/game/quiet.ts QUIET_STATS': 'TALLY · counted in quiet.ts; no read in src/game, src/scene or src/anim',

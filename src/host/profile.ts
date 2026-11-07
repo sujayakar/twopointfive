@@ -516,7 +516,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'GUNHAND.on': 'TPS_GUNHAND=1',
   'INHAND.on': 'TPS_INHAND=1',
   'PACKSIDE.on': 'TPS_PACKSIDE=1',
-  'PLANLAY.on': 'TPS_PLANLAY=1',
   'STACKROOM.on': 'TPS_STACKROOM=1',
   'HANDLE.toolNear': 'TPS_TOOLNEAR=1',
   'HANDWORK.on': 'TPS_HANDWORK=1',
