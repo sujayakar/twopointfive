@@ -10,7 +10,7 @@
 //   stand     on his feet behind the same man: the grab's tell, the hand up at his neck; crouched with the pistol up 'grabGun'.
 // REACHUP_BREAK=1 = Sam is stood 2.6 m back, out of reach, where `stand` asks for him behind the man: both lines must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: nothing here is a picture (tools/qa/close-stills.ts + pose-mesh-raster.py draw the same staging on the worn mesh).
-import { standUp, ROOT } from './headless.ts';
+import { standUp } from './headless.ts';
 import { asProbe } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 

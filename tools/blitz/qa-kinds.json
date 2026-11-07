@@ -95,9 +95,6 @@
 "checkpoint-turn": [
 "SAVETIMELINE.turn=false"
 ],
-"civilians-identity": [
-"CIV.greet=false"
-],
 "deathrecap": [
 "RECAP.on=false",
 "RECAP.live=false"
@@ -550,13 +547,6 @@
 "GUNSLOTS.on=false",
 "QUIETFOG.wand=false",
 "WAND.on=false"
-],
-"sticky-ways": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"TOLD.on=false",
-"TOLD.fogOff=false",
-"GUNSLOTS.on=false"
 ],
 "threshold-doors": [
 "DOORTOOLS.wordNoCan=false"
@@ -1077,7 +1067,6 @@
 "civilians-comply": "iii",
 "civilians-determinism": "iii",
 "civilians-hearing": "iii",
-"civilians-identity": "iii",
 "civilians-phone": "iii",
 "civilians-scoring": "iii",
 "civilians-sight": "iii",
@@ -1574,11 +1563,9 @@
 "moves-cast": "iv-a",
 "moves-dazzle": "0",
 "moves-entry": "0",
-"moves-gait": "0",
 "moves-game": "iv-b",
 "moves-hands": "iv-b",
 "moves-kept": "0",
-"moves-off": "0",
 "moves-react": "ii",
 "moves-recoil": "0",
 "moves-reload": "0",
@@ -2011,7 +1998,6 @@
 "sticky-save": "ii",
 "sticky-take": "iv-a",
 "sticky-wand": "iii",
-"sticky-ways": "ii",
 "stripfirst": "iii",
 "sunglint": "0",
 "sup-hostage": "iii",

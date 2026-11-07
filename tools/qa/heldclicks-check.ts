@@ -28,7 +28,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const BREAK = process.env.HELDCLICKS_BREAK === '1';
 const DT = 1 / 60, EAST = Math.PI / 2, LMB = 1, RMB = 4;
-const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x)), f3 = (x: number) => (Number.isFinite(x) ? x.toFixed(3) : String(x)), J = (x: unknown) => JSON.stringify(x);
+const f3 = (x: number) => (Number.isFinite(x) ? x.toFixed(3) : String(x)), J = (x: unknown) => JSON.stringify(x);
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function place(gd: any, p: P3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 function park(gd: any, i: number) { gd.hold = true; gd.pinned = true; gd.dazzledUntil = 1e9; gd.heardUpTo = 1e12; place(gd, [37.5, 0, 6 + i * 1.5], EAST); }

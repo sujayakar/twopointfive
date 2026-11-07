@@ -30,8 +30,7 @@
 // Two door rules the page ships came after these stagings: an entry halts at a door found shut (DOORTOOLS.testDoor) and 'clear from outside' is one order
 // (DOORTOOLS.outsidePlain). The rig holds both OFF on either stand — the loud squad these lines compare against boots a lock on the first order and has the
 // threshold's own orders — and the 'page' lines of silent-pick, silent-cans and silent-tools run with both ON: what the silent order does under them.
-// The cross-commit identity (the order never given = the base build) is `bun run tools/qa/nvg-probes.ts digest` and the play-throughs, run here and in a
-// checkout of the base: the same lines.
+// The cross-commit identity (the order never given = the base build) is the play-throughs, run here and in a checkout of the base: the same lines.
 import { standUp, ROOT } from './headless.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
