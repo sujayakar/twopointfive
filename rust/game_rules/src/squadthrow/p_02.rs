@@ -696,7 +696,7 @@ pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
         issue: crate::orders::OrderIssue::Nothing,
         ..crate::orders::OrderDef::zeroed()
     };
-    let open = g.tab.orders_order_def.push(open);
+    let open = crate::orders::squad_orders_row(g, open);
     let mut out = vec![open];
     for kind in [SquadThrowKind::Frag, SquadThrowKind::Stun] {
         let one = crate::orders::OrderDef {
@@ -711,7 +711,7 @@ pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
             tick: Some(crate::orders::OrderTick::ThrowRow),
             ..crate::orders::OrderDef::zeroed()
         };
-        out.push(g.tab.orders_order_def.push(one));
+        out.push(crate::orders::squad_orders_row(g, one));
     }
     out
 }
