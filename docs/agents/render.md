@@ -189,9 +189,8 @@ row on his machine is the answer, and the word puts the count back on any machin
   `prevCam.w` and `volCfg.w` bits 8‥11 are free), the composite's binding 11 and the particles' binding 4 (the three after it renumbered), `Caps.vol`,
   `Caps.marchLights`, `FroxelTier`, SMOKE KEEP with `?smokekeep`, `withSmoke`, `Quality.resmoke` and its Tab row, `?froxel`, `?nofroxel`, `__froxel`,
   `__hotFroxel`, the debugger's Froxels section and 'plume: lights lit per step' row, the sweep's `froxel` and `marchLights` rows,
-  tools/qa/froxel-ab.js and froxel-scenes.js, the froxel ghost proof in rfix-proofs.ts. UNREAD, LEFT FOR THE RUST SIDE TO DROP WITH ITS COPY of the
-  settings table (a field leaves both sides in one Rust batch): `smokeKeep`, `smokeMarchLights`, `froxelVol`, `froxelH`, `froxelD`, `froxelK`,
-  `froxelHistory`, `froxelNear`, `froxelFar`, `froxelCurve`, `froxelTopRays`, `froxelSharp`, `froxelBias`. The smoke lab's 'lamps that light each
+  tools/qa/froxel-ab.js and froxel-scenes.js, the froxel ghost proof in rfix-proofs.ts, and the settings `smokeKeep`, `smokeMarchLights` and every
+  `froxel*`, on both sides of the wire. The smoke lab's 'lamps that light each
   step' row moves `volLightCap` now (it moved `smokeMarchLights`, which high never read).
   WHAT MOVES FOR A PLAYER. HIGH: nothing. Its smoke march is the same text line for line, and the haze's `volK > 0` wrappers are unwrapped with K
   never under 1. MEDIUM AND LOW: beams and smoke are marched per pixel, as high's are, with two lights a step: a beam's edge is the pixel's own (no
@@ -521,7 +520,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `fullRateDomains` went with the boxes. Measure with `tools/qa/stress-scene.js` (`await import('/qa/stress-scene.js')`
   → `__stress.setup()` / `.record(n)` / `.ab(applyA, applyB)` / `.caps(on)` / `.table(r)`, serialized frames, orbiting camera) and `__hotVol(src?)` (recompile
   volumetrics.wgsl from disk — the dev server serves src/render/shaders under /qa/shader/ — and swap the pipeline in without rebooting a staged scene).
-- **Froxel volumetrics** (GONE SINCE 2026-11-07, deleted whole: ONE FOG MARCH ON EVERY TIER above. The `settings.froxel*` fields and `smokeMarchLights` are unread and leave with the Rust side's copy of the table) (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **Froxel volumetrics** (GONE SINCE 2026-11-07, deleted whole: ONE FOG MARCH ON EVERY TIER above, the settings too) (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Lossy options** (engine settings, default OFF in `defaultSettings`, switched ON by the presets as above; `LOSSY:` rows in the
   Tab panel for A/B; `checkerDirect` and `dimRays`, which only the old estimator read, went with it 2026-11-07): `gatherThird` / `volQuarter` (gather at 1/3, volumetrics at 1/4 res: `passes.setDivisors`, divisors
   in `frame.lossyCfg.xy`), `rcHalfRate` (`rc.halfRate`: uppers even frames, c0 + bake odd). `engine.render` mirrors the booleans every
@@ -1710,6 +1709,23 @@ row on his machine is the answer, and the word puts the count back on any machin
   pattern, its cut faces are bare. No check holds any of this. SEEN: on the software adapter only (the compound, squad of four, very low, 800×500, one seed,
   night and midday, 118 of 118 pipelines, no GPU or console error, the same two views with and without the word). Never seen on a GPU: the look at the play
   resolution, motion, shimmer under the temporal blend, the noise it adds to bounce light, and the cost (it is raster work, which no trusted timer covers).
+- **A FLOOR IS NOT STOOD OFF, AND THE BOUNCE KEEPS TO ITS ROOM (2026-11-07; the maintainer on his M4 Max, the pass at midday: "glowing near edges").** Two
+  faults of the picture, both of light taken from the room behind a wall. No switch: an estimator's own rule put right (`?look=walls:0` puts the second off).
+  (1) A WHITE LINE ALONG EVERY OUTER WALL'S FOOT. Three readers stand a point off its own face in plan before they ask where it is: the exposure by 30 cm
+  (`place_common.wgsl lookPlaceLevels`), the fog by 6 (`fogofwar.wgsl fowSeen`) and the fog's light classes by 6 (`common.wgsl fogSeenAt`). The normal is the SHADING
+  normal, and lying snow leans with its drift: at a wall's foot, at the wall, so the spot came out in the dark room and the snow took that room's gain (and,
+  with the fog drawn, an unseen hairline). All three now ask through one line, `common.wgsl standOff`: what looks up (N.y over 0.5) lies where it lies.
+  (2) LIGHT AT A ROOM'S UPPER CORNERS. The bounce's filter (`denoise.wgsl radAtrous`, the reflections' too: one text) tells surfaces apart by plane, normal and depth, and
+  an outer wall's one face runs through two rooms past the end of a partition: the brighter room's light came round the end. A texel whose place the floor plan knows
+  (`placeOf`, over `sideAt`) takes no tap of another place, nor of a texel that takes every tap (a doorway's, one the plan is silent on), which would hand
+  the far room on at the next pass. A wall's top is of neither room and is not asked.
+  NOT REACHED: a texel over 1.2 m from any other place takes every tap (a far camera or a low preset takes taps from past that); two places past a probe's reach may share a
+  number; a window's reveal and a wall's end are parted at their wall's line; the composite's 3 × 3 upsample of the bounce, the temporal clamp's 5 × 5 and the direct
+  light's filter do not ask. A FACE still steps its whole 30 cm, as before, so beside a doorway or a corner it can be answered by the far side.
+  CHECK: `wallsides-check` (11,616 points and leaning normals at three walls' feet, 913 of the far side stood off as it was, none now; 209 pairs across a
+  partition's ends, none blended, 418 of 418 within a room kept; the shaders' texts pinned); `fog-edge`'s text hash moved (its replica is handed the spot already stood off).
+  STILLS (software adapter, High, midday): 1,604 white pixels in the bounce's debug view at a wall's foot are none; the corner reads as the wall beside it (it was nearly
+  twice). Never seen on a GPU; not timed (up to nine plan reads a gather texel an iteration, only where a wall is near; the exposure reads no more than before).
 - **THE LOOK IS EVERY PAGE'S PICTURE (2026-11-07; the maintainer: "should we work on merging the new look too?", then "we can also get everything
   merged and then try to fix forward, especially as we clean everything up and simplify the code").** Until this the look's layers drew only with a
   `look` row on the address (the bullet below, which still says how they are made). Now `scene/look.ts lookPageOn` is true unless the address says

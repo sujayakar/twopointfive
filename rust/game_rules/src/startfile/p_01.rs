@@ -38,7 +38,7 @@ fn fall_in_here(g: &mut Game, men: &[GuardId]) -> f64 {
     if crate::orders::order_issue(g, def, &up, &t, None).is_some() { return 0.0; }
     let mut took = 0.0;
     for &m in &up {
-        if let Some(a) = crate::orders::squad_orders_of(g, m) {
+        if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), m) {
             if g.tab.orders_assignment[a].order == "fallIn" { took += 1.0; }
         }
     }

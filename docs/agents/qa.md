@@ -328,11 +328,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   THE SETTLED ROWS ARE RAISED IN ONE PLACE (2026-11-07; `src/host/settled.ts settledUp`, the first line of `pageSwitches`): each at its page value
   off `tools/qa/switches.json`. WHAT WENT WITH IT: the page's 354 address words that moved settled rows and nothing else (the page held those rows
   already, so a word said there did nothing), the journal's lines for a file from before such a row, and the reads of those rows in the files the
-  page keeps (`src/ui`, `src/host`, `src/render`, `src/audio`). An address word quoted in these notes for a settled row does nothing: ask
+  page keeps (`src/ui`, `src/host`, `src/render`; not `src/audio`: the music and the sounds page play it with no page boot). An address word quoted in these notes for a settled row does nothing: ask
   `switches.json` whether a row is settled. A word a game module reads as it loads over a settled row (`GLASSFX=off`) does nothing either, and is
   not said any more. MEASURED: every table after `shippedBoot()` the same as before (one row, `CUT.on`, is raised there and no longer as a game is
   stood), and each of 708 words of the source at seven values moves the same rows that are still switches, but for three: `?autotune=0`, `?goals=0`
-  and `?qring=0` moved such rows through a settled one. FROZEN_HOLDS, `standup.ts` and the reads in `src/game` are as they were.
+  and `?qring=0` moved such rows through a settled one, as `?findtuned=0` did the outline's own table (in no registry). Seven page checks still say
+  one of the four and lose the arm or the staging they made with it: autocam-page, findme-page, findme-squad-page, findtuned-page, goals-page,
+  squadkeys-page, engine-replay-page (`fog`, `turn`). FROZEN_HOLDS, `standup.ts` and the reads in `src/game` are as they were.
   THE HOLDS TABLE IS TWO ROWS (2026-11-07; `tools/qa/holds.ts`). It held rules OFF for probes written for an older model. Fourteen of its sixteen
   rows held only settled rows: on the page's stand every such hold was refused under the fold (101 a run of `holds`, which was red in all-quick by
   it) and the probe ran on the page's model whatever the table said; on the old stand those rows are off already and the hold did nothing. Those
@@ -1412,6 +1414,28 @@ but synthetic writes still work.
   without, `kittree-sponge` before it dies in the bridge at its second stand and leaves no game; with, it stands, runs on to a function whose
   TypeScript went with the tick, and leaves a game whose gear rows come back from Rust without what hangs under what. Both are older faults the
   crash hid. Nothing of this touches the page.
+- **The host's camera and keys are handed to the game ONCE, at the stand, by every host** (2026-11-07; `Game.hostHands(cam, input)`, called at the end of
+  `standGame`; the fields are `game.hostCam` / `game.hostInput`, `host_cam` / `host_input` in Rust, on the wire's hosts-own list). BEFORE: `Game.update`
+  handed the Director the camera and Input it was stepped with, every frame (`director.attach`, and the same line in Rust's tick), so a host that
+  steps by records alone (a watcher, a game server: `stepSeats`) had a Director with neither, a page had the page's, the harness had its stand-in,
+  and the native runner GUESSED which camera to draw from ("the first that is no seat's": it picked a check's lens when one was made). Now the page
+  makes its Input before the stand, with no listeners, and passes it (`StandOpts.input`; its listeners go on where the page's Input was always made,
+  `Input.listen`: a key tapped while the page boots is still nobody's), the harness passes its stand-in, a host that passes none gets a detached one,
+  and the native start hands the pair it makes (`rust/game_start stand.rs host_new`). The Director's beats and the show read the game's fields; the
+  native runner reads `host_cam` and refuses, by name, a game that was handed none. NOT DONE (the design is written down for the next step): the
+  camera and Input a frame is STEPPED with are still arguments of `update` (a replay's player steps with a camera of its own), so the tick is not
+  yet one that takes the host's rows as its only input from outside. WHAT IT COST KEPT RUNS: a run kept by a host of records alone is one camera row
+  and one Input row short in every host's half (`export.ts hostHalfParts`), and not at the end, so `hold.sh`'s rule (a half may only GROW AT ITS END)
+  refused all three kept two-seat games. `tools/blitz/half-grow.ts` gives each kept half those two rows as the fresh start's tick 1 has them, at
+  the places the fresh start says (`hostrows.txt`, written by `seats.ts` / `mission.ts --start-only`: `export.ts hostRowsText`), and refuses,
+  writing nothing, unless every kept half is short by exactly those two rows and the kept tick 1 so grown IS the fresh tick 1 byte for byte
+  (`HALFGROW_BREAK=1` in front of `hold.sh`: every such run must read NOT HELD). THE ROWS IT GIVES ARE A STAND-IN AT EVERY TICK AFTER THE FIRST: a
+  fresh run would move them (seats.ts drives its first seat through the host's own Input and camera) and the kept run never recorded them. A grown
+  run holds for as long as no rule of the tick reads the host's own rows on a host that steps by records; the day one does, it parts from a fresh
+  run and is kept anew. `hold.sh` calls the grower only when the end-grown rule fails, and says so on the run's line. The snapshot's list of
+  what is the host's (`src/game/rollback.ts HOST_FIELDS`) has the two fields too: it is a second list beside the wire's (`tools/wire/wire.ts
+  HOSTS_OWN`), in the TypeScript's names and with another rule (what a snapshot leaves alone, against what no state word reads), and the two are
+  not made one here.
 - **A game stood up has done with the last one: `standUp` asks for a full collection first** (2026-11-05; `tools/qa/headless.ts STANDUP_COLLECTS`; the
   harness only, nothing of the game). FOUND by the merge: the workers of `bang-tally.ts` (the `flashweight` family's tally, missions back to back in one
   process) grew about 1.6 GB a minute on the page's stand and two died at a 12 GB limit; old, on every build looked at. Reproduced here: one worker from

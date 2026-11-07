@@ -59,8 +59,9 @@ fn main() {
             let mut g = Box::new(game::io::import(&state));
             unsafe { let at = sim::state::addr(1) as *mut u8; core::ptr::write_bytes(at, 0, len); core::ptr::copy_nonoverlapping(blk.as_ptr(), at, blk.len().min(len)); }
             game::io::set_slot(&mut g, 1);
-            // (the TypeScript's state does not hold its host's Input and camera before a first frame: this host makes its own, as the start does)
-            let hb = stand::host_new(&mut g);
+            // (the TypeScript's start was handed its host's Input and camera at ITS stand, and they came across with it: this host steps with
+            //  those rows. A state from before a stand handed them holds none, and is given a pair as the start gives one)
+            let hb = stand::host_of(&g).unwrap_or_else(|| stand::host_new(&mut g));
             Some((g, hb))
         } else { None };
         // (BLITZ_STATE=<file>: the game's state words as it stands and after every frame, a line each, for two processes to be held word by word: a state

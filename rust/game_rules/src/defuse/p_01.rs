@@ -350,7 +350,7 @@ pub fn defuse_sam_tick(g: &mut crate::game::Game, d: &crate::scene_scenarios::De
     let need = defuse_work_secs(g);
     let t = g.time - s.t0;
     let more = crate::handwork::WorkAtMore {
-        hand: if js::truthy(crate::handwork::sam_work_hand(g)) { None } else { Some(0.0) },
+        hand: if js::truthy(crate::handwork::sam_work_hand(g, &crate::seats::here(g))) { None } else { Some(0.0) },
         ..Default::default()
     };
     crate::handwork::work_at(g, c, crate::character::WorkKind::Take, [dev.pos[0], dev.pos[1], dev.pos[2]], n3(dev), t, need, Some(&more));
@@ -419,7 +419,7 @@ pub fn defuse_objective(g: &mut crate::game::Game) -> Option<crate::defuse::Defu
     let mut live: Vec<(usize, Option<String>)> = Vec::new();
     for i in 0..d.devices.len() {
         if g.defuse.states.get(i) == Some(&ChargeState::Armed) {
-            let by = defuse_on_it(g, i as f64);
+            let by = defuse_on_it(g, &crate::seats::here(g), i as f64);
             live.push((i, by));
         }
     }
@@ -457,7 +457,7 @@ pub fn defuse_objective(g: &mut crate::game::Game) -> Option<crate::defuse::Defu
     let how = if !safe.is_empty() || any_by {
         String::new()
     } else {
-        format!(" · press Space at one{}", if crate::orders::squad_orders_active(g) { ", or X on it" } else { "" })
+        format!(" · press Space at one{}", if crate::orders::squad_orders_active(g, &crate::seats::here(g)) { ", or X on it" } else { "" })
     };
     let done = if !safe.is_empty() { format!(" · {}", safe.join(" · ")) } else { String::new() };
     Some(DefuseObjective {
@@ -467,9 +467,9 @@ pub fn defuse_objective(g: &mut crate::game::Game) -> Option<crate::defuse::Defu
 }
 
 /// Who is at charge i or on his way to it by an order, as the row says it (None: nobody).   (defuse.ts Defuse.onIt)
-pub fn defuse_on_it(g: &crate::game::Game, i: f64) -> Option<String> {
+pub fn defuse_on_it(g: &crate::game::Game, seat: &crate::seats::SeatRef, i: f64) -> Option<String> {
     if g.defuse.sam.map_or(false, |s| s.dev == i) { return Some(String::from("you on it")); }
-    let w = crate::workthings::work_things_on_device(g, i)?;
+    let w = crate::workthings::work_things_on_device(g, seat, i)?;
     Some(format!("{} {}", g.gd[w.gd].callsign, if w.on { "on it" } else { "going" }))
 }
 

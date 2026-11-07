@@ -65,7 +65,7 @@ export class Music {
   private get playing(): Piece | null { return this.piece ? PIECES[this.piece - 1] : null; }
   /** a mission began (main.ts: the Game dealt a fresh encounter — not a load, not a show's scratch copy). Once the piece playing has had MUSIC.missionAfter seconds the new mission gets the next one; a quick
    *  restart keeps its music. */
-  mission() { if (this.hands && this.dealt && !this.themeOnly && !this.own && this.want < 0 && this.be.now() - this.since > MUSIC.missionAfter) this.want = this.next(); }   // (a level with music of its own keeps it across its restarts: the clock alone turns its list)
+  mission() { if (MUSIC.pieces && this.hands && this.dealt && !this.themeOnly && !this.own && this.want < 0 && this.be.now() - this.since > MUSIC.missionAfter) this.want = this.next(); }   // (a level with music of its own keeps it across its restarts: the clock alone turns its list)
   /** ask for piece i by hand (the listening page, the panel): at the next bar line behind a bar of swell, or `now` = cut to its first bar at once */
   setPiece(i: number, now = false) {
     if (!this.hands || !(i >= 0 && i < PIECE_NAMES.length)) return;
@@ -84,7 +84,7 @@ export class Music {
     if (own && own.join() !== was && this.dealt && !this.themeOnly && !own.includes(this.picked)) this.want = own[0];
   }
   private list: readonly number[] | null = null;
-  private get own(): readonly number[] | null { return this.list && this.list.length ? this.list : null; }
+  private get own(): readonly number[] | null { return MUSIC.byLevel && this.list && this.list.length ? this.list : null; }
   /** the next piece: the level's own list in its order (the one after the piece playing; its first when the piece playing is not the level's), else off the bag — every
    *  piece but the one playing, shuffled on the page's own die, refilled when it runs out, so the visit opens with the newer pieces in some order and the theme comes
    *  round after them */
@@ -110,7 +110,7 @@ export class Music {
   private turn(t: number, barLen: number, x: number): boolean {
     if (!this.hands) return false;
     if (this.want >= 0 && this.leaving) { this.begin(this.want, t); return true; }
-    if (this.want < 0 && this.dealt && this.bar % 4 === 3) { const age = t - this.since, lim = MUSIC.minutes * 60; if (age > lim * 2 || (age > lim && x < 0.3)) { const n = this.next(); if (n !== this.piece) this.want = n; } }   // (a list of one piece plays on)
+    if (this.want < 0 && MUSIC.pieces && this.dealt && this.bar % 4 === 3) { const age = t - this.since, lim = MUSIC.minutes * 60; if (age > lim * 2 || (age > lim && x < 0.3)) { const n = this.next(); if (n !== this.piece) this.want = n; } }   // (a list of one piece plays on)
     if (this.want >= 0) { this.leaving = true; this.swell(t, barLen); }
     return false;
   }
@@ -122,7 +122,7 @@ export class Music {
       if (this.piece !== 0) this.want = 0; else if (this.want > 0) { this.want = -1; this.leaving = false; }
     } else if (!this.dealt) {   // play opens on one of the newer pieces: at once when nothing has sounded yet, else handed over from the menu's theme — and a piece the menu never took back plays on
       this.dealt = true;
-      if (!this.hands) { /* the theme alone */ }
+      if (!MUSIC.pieces || !this.hands) { /* the theme alone */ }
       else if (!(this.step || this.bar)) this.begin(this.next());
       else if (this.piece === 0) { if (this.want < 0) this.want = this.next(); }
       else if (this.want === 0) { this.want = -1; this.leaving = false; }

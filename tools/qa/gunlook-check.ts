@@ -14,7 +14,7 @@
 // stand-in's muzzle, the issue carbine's length on you, the stand-in's voice) and its two comparisons with the off run (every gun drawn differently from
 // its stand-in, the issue pair drawn as it was); of `bare`, the off half of one line, its two lines for the switch off and its two for a stand with no
 // gear tree. `GUNLOOK_BREAK=1` is gunlook.ts's own. It raises the big slot itself (a run's own). Nothing here looks at a picture or hears a sound
-// (tools/qa/gunlook-sheet.ts and gunlook-plates.ts draw the pictures; the listening page plays the voices).
+// (gunlook-plates.ts draws the pictures; the listening page plays the voices).
 import { ROOT } from './headless.ts';
 import { rig } from './doortools-probes.ts';
 import { sfxContext } from '../../src/audio/backend';

@@ -77,7 +77,7 @@ export interface LoadoutOpts {
     /** a key the highlighted row did not take, before the screen's own Enter / Esc / W A S D: true = it was the host's (the one starting page's walkthrough — ui/kitGuide.ts: an open pop-up's Esc is the card's first) */ rest?(code: string, repeat: boolean): boolean };
   /** Deploy is about to load `search` with `n` teammates (told before the load or `deploy`; nothing is replaced) */
   onDeploy?: (search: string, n: SquadSize) => void;
-  /** told at the end of every paint (the one starting page draws the picked man from it: ui/kitFigure.ts) */
+  /** told at the end of every paint (the one starting page's picture of the team follows it: ui/kitView.ts) */
   onPaint?: (s: LoadoutScreen) => void;
   /** the words on the block that deploys (absent: 'Deploy' and the team's size). A host that deploys its own way says what its way is (ui/coop.ts) */
   deployWords?: string;

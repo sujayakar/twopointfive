@@ -598,7 +598,6 @@
 "selftest-fail",
 "selftest-fold",
 "selftest-side",
-"selftest-knobs",
 "selftest-pass",
 "selftest-quiet",
 "selftest-throw",
@@ -644,6 +643,7 @@
 "workthings"
 ],
 "probes": {
+"standdie": "i",
 "aim-door": "iii",
 "aim-door-chase": "iii",
 "aim-door-sweep": "iii",

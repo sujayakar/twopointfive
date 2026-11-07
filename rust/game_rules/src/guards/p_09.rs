@@ -24,9 +24,9 @@ fn play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) {
 }
 /// `ordersOf(g, gd)`'s `sams && mine(gd)` (seats.ts:246): the book on Game with one book, his seat's otherwise, asked inside that seat.
 fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
-    if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(g) && crate::orders::squad_orders_mine(g, gd); }
+    if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(g, &crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd); }
     let s = crate::seats::seat_of(g, gd);
-    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(g) && crate::orders::squad_orders_mine(g, gd))
+    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(g, &crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd))
 }
 /// `gd.path = []; gd.pathGoal = null`: a new array, so `path_serial` moves (`gd.path === W.arr` elsewhere), and the goal is no longer the standoff's point (`path_goal_orbit`).
 fn no_path(d: &mut crate::game::Guard) {

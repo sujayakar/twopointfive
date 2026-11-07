@@ -8,14 +8,14 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// This view's row for `gd`, a copy (`states.get(g)?.jobs.get(gd)`). The TypeScript's `J` is the row itself: `put_job` after a write, `lens_out` included.
-fn job(g: &Game, gd: GuardId) -> Option<Job> {
-    let k = crate::seats::view_key(g);
+fn job(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<Job> {
+    let k = crate::seats::view_key(g, seat);
     g.m.wandorder.states.get(k).and_then(|st| st.jobs.get(gd).copied())
 }
 
 /// Writes a copy back over the row, if the row is still there (never sets a new one: that would move it in the walk's order).
 fn put_job(g: &mut Game, gd: GuardId, j: Job) {
-    let k = crate::seats::view_key(g);
+    let k = crate::seats::view_key(g, &crate::seats::here(g));
     if let Some(row) = g.m.wandorder.states.get_mut(k).and_then(|st| st.jobs.get_mut(gd)) {
         *row = j;
     }
@@ -115,7 +115,7 @@ pub fn lens_out(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder
 /// Done with it: the lens out, a word, a plain hold: beside the latch jamb with his gun on the doorway when the leaf moved, else where he stands.
 /// (wandorder.ts settle)
 pub fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job, line: Option<&str>, moved: bool) {
-    let k = crate::seats::view_key(g);
+    let k = crate::seats::view_key(g, &crate::seats::here(g));
     let c = g.gd[gd].ch;
     let d = j.door;
     lens_out(g, gd, j);
@@ -173,11 +173,11 @@ pub fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::
 pub fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Issue {
     let p = pick(g, men, t);
     let (Pick::Arm1(p), crate::orders::OrderTarget::Door(t)) = (p, t) else { return Issue::Arm1(()) };
-    let st_key = crate::seats::view_key(g);
+    let st_key = crate::seats::view_key(g, &crate::seats::here(g));
     if !g.m.wandorder.states.has(st_key) {
         return Issue::Arm1(());
     }
-    if let Some(mut old) = job(g, p.gd) {
+    if let Some(mut old) = job(g, &crate::seats::here(g), p.gd) {
         lens_out(g, p.gd, &mut old); // (sent from one door to another on his knees: he gets up first)
         put_job(g, p.gd, old);
     }
@@ -212,7 +212,7 @@ pub fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::Orde
             ..Default::default()
         },
     );
-    let a = crate::orders::squad_orders_of(g, gd).unwrap();
+    let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).unwrap();
     let new_job = Job {
         door: d,
         side: p.side,
@@ -234,7 +234,7 @@ pub fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::Orde
 
 /// The order's beat for one man: walk, kneel, feed, look; ends when the leaf moves, the switch goes, or his mark is moved. (wandorder.ts tick)
 pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
-    let Some(mut j) = job(g, gd) else { return };
+    let Some(mut j) = job(g, &crate::seats::here(g), gd) else { return };
     if j.a != a {
         return;
     }
@@ -320,16 +320,16 @@ pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
         tick: Some(crate::orders::OrderTick::Wand),
         ..Default::default()
     };
-    g.tab.orders_order_def.push(def)
+    crate::orders::squad_orders_row(g, def)
 }
 
 /// Once a frame per seat: keeps the row on the menus only while a living squad man carries a wand and there is a fog; takes the lens out of a man the
 /// fight or another order has; reads the row's key while a menu lists it. True = the key was the order's (and is eaten). (wandorder.ts wandOrderKey)
 pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
-    let k = crate::seats::view_key(g);
+    let k = crate::seats::view_key(g, &crate::seats::here(g));
     let mut want = false;
     if live(g) {
-        for gd in crate::orders::squad_orders_squad(g) {
+        for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
             if g.gd[gd].state != crate::game::GuardState::Dead && carries(g, gd) {
                 want = true;
                 break;
@@ -352,13 +352,13 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
         crate::orders::squad_orders_unregister(g, WAND_ORDER);
     }
     if !g.m.wandorder.states.get(k).unwrap().jobs.is_empty() {
-        let squad = crate::orders::squad_orders_squad(g);
+        let squad = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
         let now = g.time;
         // (a live walk: settle deletes the row it stands on and calls out to the orders)
         let mut at = 0usize;
         while let Some(gd) = g.m.wandorder.states.get(k).unwrap().jobs.next_key(&mut at) {
-            let mut j = job(g, gd).unwrap();
-            let a = crate::orders::squad_orders_of(g, gd);
+            let mut j = job(g, &crate::seats::here(g), gd).unwrap();
+            let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
             if g.gd[gd].state == crate::game::GuardState::Dead || !squad.contains(&gd) || a != Some(j.a) {
                 if j.knelt {
                     let c = g.gd[gd].ch;
@@ -404,7 +404,7 @@ pub fn mate_wand_eye(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::fo
 
 /// `mateWandEye` from its second line on, in his seat's view.
 fn eye_in_view(g: &mut Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
-    let k = crate::seats::view_key(g);
+    let k = crate::seats::view_key(g, &crate::seats::here(g));
     let st = g.m.wandorder.states.get(k)?;
     if st.jobs.is_empty() {
         return None;
@@ -440,7 +440,7 @@ fn eye_in_view(g: &mut Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
 
 /// Every teammate's live lens: a device feed under 'only my own eyes'. (wandorder.ts mateWandEyes)
 pub fn mate_wand_eyes(g: &mut crate::game::Game) -> Vec<crate::fogofwar::FogEye> {
-    let k = crate::seats::view_key(g);
+    let k = crate::seats::view_key(g, &crate::seats::here(g));
     let Some(st) = g.m.wandorder.states.get(k) else { return Vec::new() };
     if st.jobs.is_empty() {
         return Vec::new();

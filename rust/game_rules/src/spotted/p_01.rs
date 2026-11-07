@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------ small helpers
 fn pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-fn sam_pos(g: &Game) -> V3 { g.ch[g.pl[g.player].ch].pos }
+fn sam_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 /// a man's row, made by spotted_tick before anything here asks for it; it borrows all of `g`: use it for a few lines and let it go
 fn man(g: &mut Game, gd: GuardId) -> &mut crate::spotted::Man {
     g.m.spotted.men.get_mut(gd).expect("spotted: a man's row is made by spotted_tick or looked for first")
@@ -72,18 +72,18 @@ pub fn lit_at(g: &mut crate::game::Game, q: &[f64]) -> f64 {
 }
 
 /// his foe is Sam on his feet, or a live operative (spotted.ts ours)
-pub fn ours(g: &crate::game::Game, h: GuardId) -> bool {
+pub fn ours(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
     match g.gd[h].foe {
-        Some(crate::game::Foe::Player) => !g.pl[g.player].down,
+        Some(crate::game::Foe::Player) => !g.pl[seat.player].down,
         Some(crate::game::Foe::Guard(f)) => g.gd[f].team == crate::teams::Team::Operative && g.gd[f].state != crate::game::GuardState::Dead,
         None => false,
     }
 }
 
 /// an alert man with a real sighting of one of them inside `freshSecs` (spotted.ts hasThem)
-pub fn has_them(g: &crate::game::Game, h: GuardId) -> bool {
+pub fn has_them(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
     let since = g.time - g.gd[h].last_seen_t;
-    g.gd[h].state == crate::game::GuardState::Alert && since >= 0.0 && since < g.k.spotted.fresh_secs && ours(g, h)
+    g.gd[h].state == crate::game::GuardState::Alert && since >= 0.0 && since < g.k.spotted.fresh_secs && ours(g, seat, h)
 }
 
 /// the switch on, under the silent posture, alive (spotted.ts live)
@@ -122,13 +122,13 @@ pub fn spotted_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -
 /// an alert / searching man is a danger to one of them now (spotted.ts dangerNow)
 pub fn danger_now(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
     let since = g.time - g.gd[h].last_seen_t;
-    if since >= 0.0 && since < g.k.spotted.fresh_secs && ours(g, h) { return true; }
+    if since >= 0.0 && since < g.k.spotted.fresh_secs && ours(g, &crate::seats::here(g), h) { return true; }
     let hp = pos(g, h);
     let cos = m::cos(g.k.spotted.face_deg * m::PI / 180.0);
     let yaw = g.ch[g.gd[h].ch].aim_yaw;
     let (fx, fz) = (m::sin(yaw), m::cos(yaw));
     let close_m = g.k.spotted.close_m;
-    let ps: [Option<V3>; 2] = [Some(pos(g, gd)), if g.pl[g.player].down { None } else { Some(sam_pos(g)) }];
+    let ps: [Option<V3>; 2] = [Some(pos(g, gd)), if g.pl[g.player].down { None } else { Some(sam_pos(g, &crate::seats::here(g))) }];
     for p in ps {
         let Some(p) = p else { continue };
         let (dx, dz) = (p[0] - hp[0], p[2] - hp[2]);
@@ -211,8 +211,8 @@ pub fn cue(g: &mut crate::game::Game, gd: GuardId, text: &str, gap: Option<f64>)
 }
 
 /// candidate spots round `p`, nearest first: on the floor, a straight walk from where he stands, off every doorway and off Sam (spotted.ts ring)
-pub fn ring(g: &crate::game::Game, p: V3, max_m: f64) -> Vec<V3> {
-    let sam = sam_pos(g);
+pub fn ring(g: &crate::game::Game, seat: &crate::seats::SeatRef, p: V3, max_m: f64) -> Vec<V3> {
+    let sam = sam_pos(g, seat);
     let mut spots = Vec::new();
     let mut r = 0.8;
     while r <= max_m + 1e-6 {
@@ -231,8 +231,8 @@ pub fn ring(g: &crate::game::Game, p: V3, max_m: f64) -> Vec<V3> {
 }
 
 /// between Sam's gun and the man it may be on (spotted.ts inSamsLine)
-pub fn in_sams_line(g: &crate::game::Game, q: V3, h: GuardId) -> bool {
-    let (a, b) = (sam_pos(g), pos(g, h));
+pub fn in_sams_line(g: &crate::game::Game, seat: &crate::seats::SeatRef, q: V3, h: GuardId) -> bool {
+    let (a, b) = (sam_pos(g, seat), pos(g, h));
     let (dx, dz) = (b[0] - a[0], b[2] - a[2]);
     let l = m::hyp2(dx, dz);
     if l < 0.5 { return false; }
@@ -244,7 +244,7 @@ pub fn in_sams_line(g: &crate::game::Game, q: V3, h: GuardId) -> bool {
 /// SUSPICIOUS: where he goes: out of the line if lit in it, else still; Sam past the leash, he follows (spotted.ts hide)
 pub fn hide(g: &mut crate::game::Game, gd: GuardId) {
     let k = g.k.spotted;
-    let (p, sam) = (pos(g, gd), sam_pos(g));
+    let (p, sam) = (pos(g, gd), sam_pos(g, &crate::seats::here(g)));
     let d_sam = flat(&p, &sam);
     let wary = man(g, gd).wary.clone();
     let mut seen: Vec<GuardId> = Vec::new();
@@ -263,7 +263,7 @@ pub fn hide(g: &mut crate::game::Game, gd: GuardId) {
     r.exposed = exposed;
     if d_sam > k.leash_m { r.trail = true; } else if d_sam < k.leash_m * 0.45 { r.trail = false; }
     let mut follow = r.trail;
-    if !follow && (!crate::orders::squad_orders_sam_stopped(g) || d_sam > k.leash_m * 0.45) {
+    if !follow && (!crate::orders::squad_orders_sam_stopped(g, &crate::seats::here(g)) || d_sam > k.leash_m * 0.45) {
         for &h in wary.iter() { if crate::sneak::sneak_coming(g, gd, h) { follow = true; break; } }
     }
     if follow { let r = man(g, gd); r.spot = None; r.what = None; return; }
@@ -277,8 +277,8 @@ pub fn hide(g: &mut crate::game::Game, gd: GuardId) {
     if !seen.is_empty() && real_t >= 0.0 && g.time - real_t >= k.slip_wait && lit_at(g, &p) >= k.lit_at {
         let mut best: Option<V3> = None;
         let mut bs = f64::INFINITY;
-        for q in ring(g, p, k.slip_m) {
-            if flat(&q, &sam) > k.leash_m || wary.iter().any(|&h| in_sams_line(g, q, h)) { continue; }
+        for q in ring(g, &crate::seats::here(g), p, k.slip_m) {
+            if flat(&q, &sam) > k.leash_m || wary.iter().any(|&h| in_sams_line(g, &crate::seats::here(g), q, h)) { continue; }
             let out = !any_in_line(g, &wary, &q);
             if !out && lit_at(g, &q) >= k.lit_at { continue; }
             let cost = flat(&p, &q) + if out { 0.0 } else { 2.0 };
@@ -336,14 +336,14 @@ pub fn cover(g: &mut crate::game::Game, gd: GuardId) {
     let hp = pos(g, h);
     if what == Some(crate::spotted::ManWhat::Step) {
         if let Some(sp) = spot {
-            if shot_from(g, gd, &sp, hp) && !in_sams_line(g, sp, h) { return; }
+            if shot_from(g, gd, &sp, hp) && !in_sams_line(g, &crate::seats::here(g), sp, h) { return; }
         }
     }
     if shot_from(g, gd, &p, hp) { let r = man(g, gd); r.spot = None; r.what = None; return; }
     let mut best: Option<V3> = None;
     let mut bs = f64::INFINITY;
-    for q in ring(g, p, k.step_m) {
-        if !shot_from(g, gd, &q, hp) || in_sams_line(g, q, h) || flat(&q, &hp) < 2.5 { continue; }
+    for q in ring(g, &crate::seats::here(g), p, k.step_m) {
+        if !shot_from(g, gd, &q, hp) || in_sams_line(g, &crate::seats::here(g), q, h) || flat(&q, &hp) < 2.5 { continue; }
         let cost = flat(&p, &q) + if lit_at(g, &q) >= k.lit_at { 1.5 } else { 0.0 };
         if cost < bs { bs = cost; best = Some(q); }
     }
@@ -521,10 +521,10 @@ pub fn fresh(g: &mut crate::game::Game) -> Vec<crate::spotted::FreshItem> {
 
 /// once a frame, after silent.ts has the posture and before the orders pose the men (spotted.ts spottedTick)
 pub fn spotted_tick(g: &mut crate::game::Game) {
-    if !g.k.spotted.on || !crate::silent::squad_silent(g) { return; }
+    if !g.k.spotted.on || !crate::silent::squad_silent(g, &crate::seats::here(g)) { return; }
     let k = g.k.spotted;
     let t = g.time;
-    for gd in crate::orders::squad_orders_squad(g) {
+    for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
         if g.gd[gd].state == crate::game::GuardState::Dead || !crate::silent::under_silence(g, gd) { continue; }
         if !g.m.spotted.men.has(gd) { g.m.spotted.men.set(gd, new_man(t)); }
         let r = man(g, gd);
@@ -541,7 +541,7 @@ pub fn spotted_tick(g: &mut crate::game::Game) {
             let (mine, his) = (g.gd[gd].team, g.gd[h].team);
             if g.gd[h].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, mine, his) { continue; }
             let d = flat(&pos(g, gd), &pos(g, h));
-            if has_them(g, h) {
+            if has_them(g, &crate::seats::here(g), h) {
                 if d < k.caught_m && d < bd { bd = d; by = Some(h); }
             } else if g.gd[h].state == crate::game::GuardState::Suspicious && d < k.wary_m {
                 let r = man(g, gd);

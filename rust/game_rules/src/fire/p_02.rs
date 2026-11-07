@@ -125,7 +125,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
     let mut lit = 0.0;
     let look = g.m.render_frame.look_config;
     let mut jets: Vec<crate::smoke_types::WindGpuSource> = Vec::new();
-    let snow_lift = look.on && look.fire_snow > 0.0;
+    let snow_lift = look.fire_snow > 0.0;
     if moved { state_of(g).frames += 1.0; }
     let mut i = 0;
     while i < g.targets.len() {
@@ -278,7 +278,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                 p.smokes += 1.0;
                 let sk = if wl > 8.0 { 8.0 / wl } else { 1.0 };
                 let dir = [wv[0] * sk * b.lean, 1.0, wv[2] * sk * b.lean];
-                let l = if look.on && look.fire_smoke > 0.0 { Some(fl_smoke) } else { None };
+                let l = if look.fire_smoke > 0.0 { Some(fl_smoke) } else { None };
                 let a = match l { Some(l) if fit => Some(axis_at(g, height * l.up, wind)), _ => None };
                 smoke_emit(g, &crate::smoke_types::SmokeEmitter {
                     pos: [mouth.pos[0] + a.map_or(0.0, |a| a[0]), mouth.pos[1] + height * l.map_or(b.up, |l| l.up), mouth.pos[2] + a.map_or(0.0, |a| a[1])],
@@ -300,7 +300,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                 });
             }
             // the look prototype: the fire puffs, a short burst of thicker, hotter gas, a few a second
-            if look.on && look.fire_smoke > 0.0 {
+            if look.fire_smoke > 0.0 {
                 let l = fl_smoke;
                 let ps = m::floor(time / l.puff_every);
                 if ps != m::floor(was / l.puff_every) || !goes {
@@ -366,7 +366,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         if let Some(stir) = g.engine.host_books.as_mut().and_then(|b| b.fire.as_mut()).and_then(|p| p.stir.as_mut()) {
             stir.clear();
         }
-        if look.on && crate::particle_fx::gpu_fx(g) { crate::render_particles::particles_set_heat(g, &jets); }
+        if crate::particle_fx::gpu_fx(g) { crate::render_particles::particles_set_heat(g, &jets); }
         // the solver keeps hot gas on its fine lattice only while a fire's flame is that gas
         let (gas_on, keep) = (g.k.fire.gas.on, g.k.fire.gas.keep);
         let p = book(g);

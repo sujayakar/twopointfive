@@ -200,6 +200,8 @@ impl Default for StackPost { fn default() -> Self { Self::zeroed() } }
 pub struct SquadOrders {
     pub knobs: crate::knobs::OrdersK,
     pub defs: Vec<OrdersOrderDefId>,
+    /// the row of the table this seat's menu has for an order's id, on the menu or off it (`squad_orders_row`; Rust's own: not on the wire)
+    pub made: JsMap<String, OrdersOrderDefId>,
     pub owners: Vec<crate::orders::SquadOwner>,
     pub notes: Vec<crate::orders::OrderNoteFn>,
     pub posture: Option<crate::orders::SquadOrdersPosture>,
@@ -253,6 +255,7 @@ impl SquadOrders {
         SquadOrders {
             knobs: crate::knobs::OrdersK { key: String::from("KeyX"), mouse_opens: true, click_gives: false, who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wheel_element: false, wait_key: String::from("Digit5"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray: true, door_ray_pad: 0.08, door_ray_reach_m: 3.0, self_body: false, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, second_floor: true, work_out: true, work_seen_m: 4.0, hall_file: true, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_hold: false, file_spread: false, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, back_end: false, in_way: false, retake_goal: false, walk_tries: false, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, aside_clear: false, file_queue: false, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round: false, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, pin_posted: true, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared: true, cleared_dear: 20.0, known_face: true, own_door: true, round_cap: 0.0, round_own: true, same_way: false, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_doors: false, trail_reach_m: 3.0, trail_long: 1.5 },
             defs: Vec::new(),
+            made: JsMap::new(),
             owners: Vec::new(),
             notes: Vec::new(),
             posture: None,
@@ -2192,6 +2195,13 @@ pub struct Row {
     pub issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>,
     pub tick: Option<fn(&mut Game, GuardId, OrdersAssignmentId)>,
     pub frame: Option<fn(&mut Game)>,
+}
+impl Row {
+    /// An order with the three things every order has. The rest are `None` until its file says otherwise:
+    /// `Row { frame: Some(frame), ..Row::new(ID, label, issue) }`.
+    pub const fn new(id: &'static str, label: fn(&mut Game, &OrderTarget) -> String, issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>) -> Row {
+        Row { id, label, can: None, only: None, valid: None, issue, tick: None, frame: None }
+    }
 }
 impl core::fmt::Debug for Row {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { write!(f, "Row({})", self.id) }

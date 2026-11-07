@@ -98,7 +98,8 @@ export function knobTables(): Record<string, object> { return knobsNamed(JOURNAL
 export interface InputRec { k?: string[]; p?: string[]; c?: number; b?: number; m?: [number, number]; w?: number; }
 /** the engine-side facts the simulation reads (see the head) + the fixtures' restrike stagger by target name */
 export interface EnvSnap { debrisCap: number; emissiveScale: number; flashlightRadius: number; markings: boolean; particlesOn: boolean;
-  /** recorded under the game page's HUD (main.ts): its speech bubbles null an expired `bubble` after each update (hudExpireBubbles) — a replay of such a file does the same; a headless recording has no HUD */
+  /** recorded under the game page's HUD (main.ts). The HUD used to null an expired speech bubble on its speaker after each update, and a replay of such a
+   *  file did the same; it writes nothing of the game now (a line is over when its time is), and the field only says where the file was made */
   hud: boolean;
   /** HostApi.glassFracture where the recording's engine said either way (the page: were its shaders compiled with the fracture's cracks; native: false): glass.ts files a pane's star decal — which the digest counts — only where the renderer does NOT draw the fracture's own cracks, so a replay must stand on the same answer. Absent = the engine did not say (the headless stub; every file from before the new glass) */
   glassFracture?: boolean;
@@ -285,8 +286,8 @@ export class SessionRecorder {
     const t = text(); if (t) { this.slots.loads.push([this.frame, key, t]); this.slotOwn.add(key); this.bytes += t.length + 24; }
   }
   /** `between`: finished between two frames (cut(), an immediate stop with no update running). The closing digest taken there is, on a page, the state AFTER
-   *  the HUD's one write of the last frame (hudExpireBubbles below), not the one straight after its update: the file says so (`meta.between`) and a replay
-   *  makes that write before it compares that digest (tools/qa/replay.ts). */
+   *  what the page did after the last frame's update, not the one straight after it: the file says so (`meta.between`), from when the HUD wrote an
+   *  expired bubble off its speaker there (it writes nothing of the game now). */
   private finish(why: string, between = false, lost = false): SessionFile {
     const g = this.g; this.stopAfterNext = null;
     if (this.inUpdate) { g.sensors.endFrame(); this.frame++; this.inUpdate = false; }   // (stopped from inside a frame — a hook, the cap: that frame is in the file whole)
@@ -370,15 +371,6 @@ export function canStart(g: Game): string | null {
   const why = canSave(g, false); if (why) return why;
   if (g.engine.lights.lights.some(l => l.ttl >= 0 || l.transient)) return 'a flash is still lit';
   return null;
-}
-
-/** The HUD's one write to the game (ui/bubbles.ts, after each frame's update on the game page): a speech bubble past its duration is nulled on its speaker — every
- *  reader in the game guards on the clock anyway, but the field is state (a checkpoint files it, the digest prints it, needs.ts reads its tail). Here so the page's
- *  bubbles and a REPLAY of a page recording (tools/qa/replay.ts, env.hud) make the very same write at the very same point; the headless harness never calls it. */
-export function hudExpireBubbles(game: Game): void {
-  const speakers = game.civilians.length ? [...game.guards, ...game.civilians] : game.guards;
-  for (const s of speakers) { const b = s.bubble; if (!b || (s.state === 'dead' && !s.wound) || (s.civ && s.civ.state === 'gone')) continue; if (game.time - b.t > b.dur) s.bubble = null; }
-  const pl = game.player, sb = pl.bubble; if (sb && !pl.down && game.time - sb.t > sb.dur) pl.bubble = null;
 }
 
 // ================================================================================================================================ REPLAY (the reading side of the streams)

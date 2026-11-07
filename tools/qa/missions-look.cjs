@@ -71,7 +71,7 @@ const tap = (page, sel) => page.locator(sel).first().evaluate(e => e.click());
     await tap(page, `#missions .mrow[data-mission="${s.ids[0]}"]`);
     await page.keyboard.press('KeyS'); const a = (await page.evaluate(STATE)).sel; await page.keyboard.press('ArrowDown'); const b = (await page.evaluate(STATE)).sel; await page.keyboard.press('KeyW'); const c = (await page.evaluate(STATE)).sel;
     // (the list leads with Training, whose rows take no difficulty: D and A are pressed on a row that does)
-    await tap(page, '#missions .mrow[data-mission="warehouse-four"]');
+    await tap(page, '#missions .mrow[data-mission="depot-four"]');
     await page.keyboard.press('KeyD'); const hard = await page.evaluate(STATE); await page.keyboard.press('KeyA'); const std = await page.evaluate(STATE);
     check(a === 1 && b === 2 && c === 1 && hard.hard && /difficulty=hard/.test(hard.href) && !std.hard && !/difficulty=hard/.test(std.href), 'real keys: S and ↓ move down, W up; D puts the defenders on hard (on the link too), A back', `highlight ${a} ${b} ${c} · ${hard.href} · ${std.href}`);
     const still = await page.evaluate(() => ({ t: window.__game.time, x: window.__game.player.char.pos[0], z: window.__game.player.char.pos[2] }));
@@ -88,13 +88,13 @@ const tap = (page, sel) => page.locator(sel).first().evaluate(e => e.click());
     const btns = await page.evaluate(() => [...document.querySelectorAll('#menu .actions button')].map(b => `${b.textContent}${b.disabled ? ' (disabled)' : ''}${b.classList.contains('primary') ? ' [primary]' : ''}`));
     check(btns[0] === 'Missions' && btns.includes('Start') && await page.evaluate(() => document.querySelectorAll('#menu .picks .prow').length > 0), 'the real start card: the short list\'s rows lead it (tools/qa/picks-look.cjs), Missions first among the buttons and not the primary one, Start beside it', btns.join(' · '));
     await tap(page, '#menu button:has-text("Missions")'); await page.waitForSelector('#missions.on');
-    await tap(page, '#missions .mrow[data-mission="warehouse-four"]'); await page.waitForTimeout(450); await shot(page, 'list-over-start-card');
+    await tap(page, '#missions .mrow[data-mission="depot-four"]'); await page.waitForTimeout(450); await shot(page, 'list-over-start-card');
     const want = (await page.evaluate(STATE)).href;
     // (the loadout screen stands between the list and the load — ui/loadout.ts wireMissions: Space opens it, Enter there deploys the mission's own team = the row's own URL)
     await page.keyboard.press('Space'); await page.waitForSelector('#loadout', { timeout: 5000 });
     await Promise.all([page.waitForNavigation({ waitUntil: 'commit', timeout: 15000 }), page.keyboard.press('Enter')]);
     const landed = new URL(page.url()).search;
-    check(landed === want && /levelFile=warehouse\.json&roomclear&squad4/.test(landed) && /quality=/.test(landed), "Space on The warehouse, then Enter on its loadout: the page loads that row's own URL, the visitor's flags kept", `${landed}`);
+    check(landed === want && /levelFile=depot\.json&roomclear&squad4/.test(landed) && /quality=/.test(landed), "Space on The depot, then Enter on its loadout: the page loads that row's own URL, the visitor's flags kept", `${landed}`);
     await page.close(); };
   // ───────────── solo: ?solo is the plain night with no start card
   const soloPage = async () => { const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 }); watch(page, 'solo');
