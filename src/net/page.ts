@@ -7,7 +7,7 @@
 // WHO STEPS THE GAME: this file, through the loop's `tick` seam (host/loop.ts LoopCtx.tick). On each tick of the page the player's input is sampled into a
 // record (game/cmd.ts sampleCmd, off the page's own camera) and SENT; the game itself is stepped only through the ticks the server has confirmed, each on the
 // records the server decided, by step.ts netStep — the one tick every machine runs. So this page's game is the server's to the bit, and its state word is held
-// against the server's every NET.wordEvery ticks. Round those ticks it does the host's half of one (Game.hostBefore / hostAfter: update's own lines).
+// against the server's every NET.wordEvery ticks. Round those ticks it does the host's half of one (Game.hostAfter: update's own lines).
 // HOW FAST: a page tick walks one confirmed tick, two while more than NET.lead wait (the page's clock and the server's are two clocks). A page far behind
 // (NETPAGE.far ticks: it joined late, its tab slept) CATCHES UP as a replay seeks — the mixer shut, as many ticks a page tick as fit in NETPAGE.farMs, its
 // hands off the keys, nothing drawn between two of those ticks, and the picture's queues let go when it is level again (engineplay.ts unseenDone). Nothing smooths a tick that came late: no playout buffer is built.

@@ -4795,7 +4795,6 @@
 "orders::SquadOrders.aside_mem",
 "orders::SquadOrders.back",
 "orders::SquadOrders.back_fix",
-"orders::SquadOrders.by_hand",
 "orders::SquadOrders.clear_by",
 "orders::SquadOrders.clear_t",
 "orders::SquadOrders.cmd_press",

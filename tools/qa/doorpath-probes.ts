@@ -3,7 +3,6 @@
 // tools/qa/paths-watch.ts on every frame of every room entry:
 //   doorpath-paths   over the seeded runs below: no man of an entry in a door leaf (and no leaf swept through one), none through a
 //                    friend, no two on one spot (centres under 0.45 m for over 0.3 s), none in a jamb or any other static — and the walk was really used (men sent on it, most of them walked it out)
-//   doorpath-gun     WITH THE GUN RULE ON (the stand's word TPS_DOORPATH=1,gun=1 handed to each run — the rule ships off: doorpath.ts says why): no man of an entry carries his rifle, or shines his weapon light, through a door leaf — each its own line. A spell
 //                    of `GUN_SECS` or longer fails; a shorter brush (a muzzle swung past a leaf's edge) is listed, not failed
 //   doorpath-file    the men cross the frame line one at a time in the order dealt (nobody crosses while a man dealt ahead of him is
 //                    still outside; nobody is dealt ahead of a man who stood well nearer the frame AT HIS OWN JAMB), no two nearer than a body apart
@@ -62,23 +61,8 @@ export async function doorpathPaths(): Promise<boolean> {
   }
   { const B = R.flatMap(r => (r.paths.spells as any[]).filter(s => s.kind === 'body').map(s => `${r.scn}:${r.seed} ${s.who} on ${s.what} at ${s.t0} s`));
     console.log(`- (listed, not judged) a man of an entry standing on a fallen defender for over 0.3 s: ${B.length}${B.length ? ` — ${B.slice(0, 4).join(' · ')}${B.length > 4 ? ' · …' : ''}` : ''}`); }
-  for (const kind of ['rifle', 'light'] as const) { const n = R.reduce((a, r) => a + (r.paths.spells as any[]).filter(s => s.kind === kind && s.frames / 60 >= GUN_SECS).length, 0);
-    console.log(`- (listed, not judged here — the gun rule ships off; doorpath-gun judges it with the rule on) a ${kind === 'rifle' ? 'rifle' : 'burning weapon light'} through a door leaf for ${GUN_SECS} s or more: ${n}`); }
   { const sent = R.reduce((a, r) => a + (r.doorpath?.sent ?? 0), 0), walked = R.reduce((a, r) => a + (r.doorpath?.walked ?? 0), 0), gave = R.reduce((a, r) => a + (r.doorpath?.gaveUp ?? 0), 0);
     C.verdict(sent > 0 && walked >= sent * 0.6, 'the walk is what carried them: men were sent on it and most walked it out', `sent ${sent}, walked to the point ${walked}, handed back to the nav ${gave}, taken by the fight ${R.reduce((a, r) => a + (r.doorpath?.taken ?? 0), 0)}, no way round a leaf ${R.reduce((a, r) => a + (r.doorpath?.noRound ?? 0), 0)}`); }
-  return C.done();
-}
-
-export async function doorpathGun(): Promise<boolean> {
-  const C = check(`doorpath-gun: no rifle carried, no weapon light shone, through a door leaf, WITH THE GUN RULE ON (TPS_DOORPATH=1,gun=1: the rule ships off)`);
-  const R = await watched(',gun=1'), secs = (s: any) => s.frames / 60;   // (the frames he was in it: the runs step at 60 Hz)
-  for (const kind of ['rifle', 'light'] as const) {
-    const all = R.flatMap(r => (r.paths.spells as any[]).filter(s => s.kind === kind).map(s => ({ ...s, run: `${r.scn}:${r.seed}` }))), bad = all.filter(s => secs(s) >= GUN_SECS);
-    const row = (s: any) => `${s.run} ${s.who} through the leaf of ${s.what} at ${s.t0} s for ${secs(s).toFixed(2)} s, ${kind === 'rifle' ? 'muzzle' : 'lens'} ${s.worst} m beyond`;
-    C.verdict(bad.length === 0, kind === 'rifle' ? `no man of an entry has his rifle through a door leaf for ${GUN_SECS} s` : `no man of an entry has his burning weapon light through a door leaf for ${GUN_SECS} s`,
-      bad.length ? `${bad.length}: ${bad.slice(0, 6).map(row).join(' · ')}${bad.length > 6 ? ' · …' : ''}` : `${all.length} shorter brush${all.length === 1 ? '' : 'es'}${all.length ? ` (${all.slice(0, 4).map(row).join(' · ')})` : ''} over ${R.reduce((a, r) => a + r.paths.entries, 0)} entries`);
-  }
-  C.verdict(R.some(r => (r.doorpath?.gunS ?? 0) + (r.doorpath?.gunAhead ?? 0) > 0), 'the rule is what did it: guns were lowered, or carried along the walk, at a leaf', R.map(r => `${r.scn}:${r.seed} down ${(r.doorpath?.gunS ?? 0).toFixed(1)} s, along the walk ${(r.doorpath?.gunAhead ?? 0).toFixed(1)} s`).join(' · '));
   return C.done();
 }
 
@@ -114,5 +98,5 @@ export async function doorpathFile(): Promise<boolean> {
 }
 
 if (import.meta.main) {
-  let ok = true; for (const f of [doorpathPaths, doorpathGun, doorpathFile]) ok = await f() && ok; process.exit(ok ? 0 : 1);
+  let ok = true; for (const f of [doorpathPaths, doorpathFile]) ok = await f() && ok; process.exit(ok ? 0 : 1);
 }

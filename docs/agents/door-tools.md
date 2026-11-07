@@ -473,7 +473,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   GOAL'S RULE FOR WHERE A BODY STANDS BY A LEAF IS IN THE SAME TREE, theirs wins), in one file in the order the door order dealt (`gapM` 0 / `shortM` 0.6: the second gun 0.3 s
   behind the first, nobody inside a body's width of the man ahead; never held past `cap`). Takes any count of entrants; changes no point of domination but a moved one,
   no order, and (as shipped) no gun. `DOORPATH.on`: ON in the page (`?nodoorpath` = the old entry, 48 run digests equal 4b510dd), OFF in the harness unless
-  `TPS_DOORPATH=1[,knob=value…]`; the native host never sets it. `DOORPATH.gun` (OFF, `?doorpath=gun`, `TPS_DOORPATH=1,gun=1`): a walking teammate's rifle is carried along his walk /
+  `TPS_DOORPATH=1[,knob=value…]`; the native host never sets it. `DOORPATH.gun` (cut 2026-11-07, settled off and folded out): a walking teammate's rifle is carried along his walk /
   lowered to the low ready where its line crosses an open leaf — measured, it costs teammates (the office −23 of 576 against the walk alone) and buys rifles and lights out of
   the server door's leaf; `bodyM` (0, untallied) = a point within that of a fallen man is moved off him. Seams in doortools.ts (the enter stage's queue asks `g.doorPath.mayGo`)
   and game.ts (`doorPath.tick` before the men walk, `.after`); roomfight.ts untouched. MEASURED (page arm `TPS_CAST=1 TPS_MOVES=1 TPS_TURN=1`, 144 seeds, paired by seed against the old entry): room clear four

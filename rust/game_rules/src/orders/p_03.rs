@@ -1167,19 +1167,15 @@ pub fn squad_orders_pick(g: &mut crate::game::Game, i: Option<f64>) -> Option<St
         let mut give = |g: &mut Game| squad_orders_give(g, &id, Some(&target), None, Some(&opts));
         return squad_orders_part_give(g, &m, &mut give);
     }
-    g.orders.by_hand = true;
     let opts = GiveOpts { ack: None, on_word: Some(true), men: None };
     let no = squad_orders_give(g, &id, Some(&m.target), None, if on_word { Some(&opts) } else { None });
-    g.orders.by_hand = false;
     no
 }
 
 /// An order of the ring that adds a goal, given by hand to its men alone (orders.ts SquadOrders.partGive)
 pub fn squad_orders_part_give(g: &mut crate::game::Game, m: &crate::orders::Menu, give: &mut dyn FnMut(&mut crate::game::Game) -> Option<String>) -> Option<String> {
     let n = g.orders.group;
-    g.orders.by_hand = true;
     let no = give(g);
-    g.orders.by_hand = false;
     if g.orders.group != n {
         g.stats.planmode.goals += 1;
         if on(m.split) { g.stats.planmode.split += 1; }
