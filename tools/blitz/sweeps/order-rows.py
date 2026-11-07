@@ -3,7 +3,7 @@
 
     python3 tools/blitz/sweeps/order-rows.py [--check]
 
-Rewrites every `g.tab.orders_order_def.push(<def>)` in the body files of rust/game_rules/src (`p_NN.rs`, `b_NN.rs`; not a
+Rewrites every `g.tab.orders_order_def.push(<def>)` in the body files of rust/game_rules/src (not a
 file's tests) into `crate::orders::squad_orders_row(g, <def>)`. The call writes the row this seat's menu has for that id in
 place and pushes only an id this menu has never had (orders/p_02.rs), where a push left the row before it in the table for good.
 The menu a player sees is the same; the table no longer grows with every re-listing, and its rows are numbered the same
@@ -13,7 +13,8 @@ Two pushes stay, and are read past: the call's own, and the wall tools' digitles
 has taken (`wall_charge_undigit`), which is a second row of the same id on purpose, made once and kept in a map of its own.
 With `--check` nothing is written and the exit is 1 if any other row is still pushed.
 """
-import glob, os, re, sys
+import os, re, sys
+from bodies import bodies
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game_rules', 'src')
 PUSH = 'g.tab.orders_order_def.push('
@@ -27,8 +28,7 @@ STAY = {
 def main():
     check = '--check' in sys.argv
     n, files = 0, 0
-    for path in sorted(glob.glob(os.path.join(ROOT, '*', '[pb]_[0-9][0-9].rs'))):
-        rel = os.path.relpath(path, ROOT)
+    for path, _, rel in bodies(ROOT):
         text = open(path).read()
         cut = text.find('#[cfg(test)]')
         body, tail = (text, '') if cut < 0 else (text[:cut], text[cut:])
