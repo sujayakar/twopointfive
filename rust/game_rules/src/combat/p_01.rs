@@ -575,7 +575,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     }
     // bullet wake through smoke: each straight leg one line on the look page, else the row of soft dots
     let mut lined = false;
-    if third && g.m.render_frame.look_config.on && g.m.render_frame.look_config.stir > 0.0 {
+    if third && g.m.render_frame.look_config.stir > 0.0 {
         let far = m::min(t_hit, 25.0);
         if let Some(p) = &pen {
             for k in &p.path.segs {
