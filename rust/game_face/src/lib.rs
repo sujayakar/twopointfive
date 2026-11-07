@@ -201,8 +201,7 @@ pub extern "C" fn face_blank() -> u32 {
     let mut g = Box::new(Game::blank());
     g.sim = slot;
     // (a block with nothing in it is zeros under the layout's word: whatever game stood in the slot before is gone)
-    unsafe { core::ptr::write_bytes(sim::state::addr(slot) as *mut u8, 0, core::mem::size_of::<sim::state::State>()); }
-    sim::state::state(slot).head.layout = sim::state::LAYOUT;
+    sim::state::put(slot, &[]);
     put(Held { g, cmd: None, cmds: None, after: Vec::new() })
 }
 #[no_mangle]

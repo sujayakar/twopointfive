@@ -686,10 +686,6 @@ pub struct Game {
     pub civilians: Vec<GuardId>,
     pub targets: Vec<FixtureId>,
     pub events: Vec<crate::game::GameEvent>,
-    pub probe: crate::sensors::ProbeLike,
-    pub sensors: crate::sensors::Sensors,
-    pub cpu_smoke: crate::sense::CpuSmoke,
-    pub smoke_owned: bool,
     pub journal: crate::journal::SessionRecorder,
     pub search_probe_n: f64,
     pub time: f64,
@@ -832,7 +828,6 @@ pub struct Game {
     /// a bit for each function of tools/blitz/taps.json a tool has replaced on the puppet: where set, the function reports its call as an out event. The host sets them (face_tap); nothing in the game reads them but the function itself
     pub taps: u64,
     /// state.ts:136 SimState.stamp, for what is made from the block (the fog's grid, the air): a native game has one block, and whatever writes it wholesale raises this
-    pub sim_stamp: f64,
     /// the table of these things: never shrinks
     pub ch: Tab<CharId, crate::character::Character>,
     /// the table of these things: never shrinks
@@ -877,10 +872,6 @@ impl Game {
             civilians: Vec::new(),
             targets: Vec::new(),
             events: Vec::new(),
-            probe: crate::sensors::ProbeLike::zeroed(),
-            sensors: crate::sensors::Sensors::blank(),
-            cpu_smoke: crate::sense::CpuSmoke::blank(),
-            smoke_owned: false,
             journal: crate::journal::SessionRecorder::blank(),
             search_probe_n: 0.0,
             time: 0.0,
@@ -1011,7 +1002,6 @@ impl Game {
             out: Vec::new(),
             view_depth: 0,
             taps: 0,
-            sim_stamp: 1.0,
             ch: Tab::new(),
             dr: Tab::new(),
             gd: Tab::new(),

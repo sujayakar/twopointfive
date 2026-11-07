@@ -120,13 +120,6 @@ pub fn pair_sight_rate(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards
     rate
 }
 
-/// Forget the probe's answers under the held man's keys. (guards.ts forgetHeldMeter)
-pub fn forget_held_meter(g: &mut crate::game::Game, gd: GuardId) {
-    let id = g.ch[g.gd[gd].ch].id;
-    crate::game::game_light_forget(g, &format!("heldC{}", id));
-    crate::game::game_light_forget(g, &format!("heldH{}", id));
-}
-
 /// The held man's own light meter while he is held, kept per hold; started over for a new hold and for a pair unmetered for a gap that has moved. (guards.ts heldVisibility)
 pub fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f64 {
     let hd = p.held;
@@ -141,14 +134,13 @@ pub fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f6
     };
     if stale {
         row = None;
-        forget_held_meter(g, hd);
     }
     if let Some(r) = &row {
         if r.t == now {
             return r.vis;
         }
     }
-    let e = meter_of(g, hc, "held");
+    let e = light_on(g, hc);
     let dt = match &row {
         Some(r) => m::min(0.1, m::max(0.0, now - r.t)),
         None => 0.1,

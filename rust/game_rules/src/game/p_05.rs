@@ -431,7 +431,6 @@ pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
 pub fn game_restart_encounter(g: &mut crate::game::Game) {
     crate::journal::session_recorder_cut(g, "the encounter was staged again", None);   // (game.ts:1490, first of all; `lost` left to its default)
     crate::math_dice::use_dice(g);
-    crate::sensors::sensors_own_reset(g);
     crate::quiet::quiet_mission_current(g);
     g.stats.cleanrestart.restarts += 1;
     g.stats.cleanrestart.lines += g.messages.len() as i32;
@@ -479,7 +478,7 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     game_clear_aftermath(g);
     crate::smoke_types::smoke_system_like_clear_all(g);
     crate::out_events::push_smoke_system_like_clear_all(g);   // (game.ts:1505: the host's solver hears it too)
-    if g.cpu_smoke.grid.is_some() { crate::sense::smoke_grid_renew(g); }
+    crate::sense::smoke_renew(g);
     g.engine.host_books = None;
     for &s in &seats {
         crate::seats::with_seat(g, s, &mut |g| { g.hover = None; g.interactables = Vec::new(); g.nearby = Vec::new(); g.act = None; });

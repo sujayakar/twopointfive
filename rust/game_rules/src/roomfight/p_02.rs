@@ -99,7 +99,6 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
         }
     }
     while !g.fight.reports.is_empty() && g.time - g.fight.reports[0].t > 2.0 { g.fight.reports.remove(0); }
-    room_fight_smoke(g);
     for (k, d) in g.fight.defs.clone().into_iter().enumerate() {
         let gd = g.tab.roomfight_def[d].gd;
         if !is_dead(g, gd) { room_fight_tick_def(g, d, dt, k as f64); }
@@ -175,8 +174,7 @@ pub fn room_fight_stop(g: &mut crate::game::Game) {
     }
     for d in g.fight.defs.clone() { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].skill = None; }
     for o in g.fight.ops.clone() { let x = g.tab.roomfight_op[o].gd; g.gd[x].skill = None; }
-    for k in g.fight.trans.keys() { crate::sensors::sensors_forget(g, &k); }
-    g.fight.live = false; g.fight.defs = Vec::new(); g.fight.ops = Vec::new(); g.fight.trans.clear(); g.fight.called.clear(); g.fight.down_called.clear(); g.fight.blind_rounds = 0.0; g.fight.hot_t = -100.0; g.fight.reports = Vec::new();
+    g.fight.live = false; g.fight.defs = Vec::new(); g.fight.ops = Vec::new(); g.fight.called.clear(); g.fight.down_called.clear(); g.fight.blind_rounds = 0.0; g.fight.hot_t = -100.0; g.fight.reports = Vec::new();
     crate::digin::dig_in_reset(g);
 }
 /// a fresh staging.   (roomfight.ts reset)
@@ -184,28 +182,6 @@ pub fn room_fight_reset(g: &mut crate::game::Game) {
     room_fight_stop(g);
     g.fight.blind_fire = true; g.fight.drill_said = false; g.fight.log.clear(); g.fight.stats = RoomFightStats::zeroed();
 }
-/// the smoke between every operative and every defender in reach of each other.   (roomfight.ts smoke)
-pub fn room_fight_smoke(g: &mut crate::game::Game) {
-    let mut pairs: Vec<(GuardId, GuardId)> = Vec::new();
-    for i in 0..g.fight.ops.len() {
-        let og = g.tab.roomfight_op[g.fight.ops[i]].gd; if is_dead(g, og) { continue; }
-        for &d in &g.fight.defs { let dg = g.tab.roomfight_def[d].gd; if !is_dead(g, dg) && flat(pos_of(g, og), pos_of(g, dg)) < 18.0 { pairs.push((og, dg)); } }
-    }
-    if pairs.is_empty() { for k in g.fight.trans.keys() { crate::sensors::sensors_forget(g, &k); } g.fight.trans.clear(); return; }
-    let mut live: JsSet<String> = JsSet::default();
-    let n = pairs.len() as f64;
-    for (i, &(a, b)) in pairs.iter().enumerate() {
-        let (ac, bc) = (g.gd[a].ch, g.gd[b].ch);
-        let key = pair_key(g.ch[ac].id, g.ch[bc].id); live.add(key.clone());
-        let ask = js::rem(js::rem(i as f64 - g.fight.rr, n) + n, n) < g.k.roomfight.pairs;
-        let (eye, chest) = (eye_of(g, ac), chest_of(g, bc));
-        let v = crate::sensors::sensors_segment(g, &key, eye, chest, Some(ask));
-        g.fight.trans.set(key, match v { Some(x) if x.is_finite() => x, _ => 1.0 });
-    }
-    g.fight.rr = js::rem(g.fight.rr + g.k.roomfight.pairs, n);
-    for k in g.fight.trans.keys() { if !live.has(k.clone()) { g.fight.trans.delete(k.clone()); crate::sensors::sensors_forget(g, &k); } }
-}
-
 // ---------------------------------------------------------------- rooms
 fn cell_free(g: &Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
     let (w, h) = (g.col.nav.w, g.col.nav.h);

@@ -200,7 +200,6 @@ pub fn to_gone(g: &mut crate::game::Game, gd: GuardId, evac: bool) {
         let secs = g.k.civ.outside_call_secs;
         later(g, secs, &LaterP { kind: PendKind::OutsideCall, cv: gd, o: None, ..LaterP::zeroed() });
     }
-    forget_meter(g, gd);
     set_state(g, gd, CivState::Gone);
 }
 
@@ -273,7 +272,7 @@ pub fn civilian_off(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].state == GuardState::Dead || g.cv[cid].state == CivState::Gone { return; }
     let c = g.gd[gd].ch;
     g.cv[cid].lead = None; g.cv[cid].lead_to = None; g.ch[c].anim.act = None; crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.cv[cid].target = None;
-    log(g, gd, "off the floor — in the team's hands"); forget_meter(g, gd); set_state(g, gd, CivState::Gone);
+    log(g, gd, "off the floor — in the team's hands"); set_state(g, gd, CivState::Gone);
 }
 
 /// the half-second tick her path search is asked again on
@@ -515,7 +514,6 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
     if g.gd[gd].held.is_some() { g.gd[gd].held = None; g.ch[c].anim.held_pose = None; }
     g.ch[c].anim.act = None; g.cv[cid].target = None; g.cv[cid].report_to = None;
     crate::character::character_ragdollize(g, c, true, dir, quiet);
-    forget_meter(g, gd);
     let dead = how == DownKind::Shot;
     let mark = crate::snatch::snatch_is_man(g, gd);
     let hostage = crate::rescue::rescue_is_hostage(g, gd);

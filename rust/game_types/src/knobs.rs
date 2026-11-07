@@ -9330,11 +9330,6 @@ impl Default for PosemathK { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/sense.ts:33 SENSE, src/game/sense.ts:33)
 #[derive(Clone, Copy, Debug)]
 pub struct SenseK {
-    pub cpu: bool,
-    pub grid: bool,
-    pub bounce: bool,
-    pub drift: bool,
-    pub moon: bool,
     pub glow: crate::knobs::SenseKGlow,
     pub smoke: crate::knobs::SenseKSmoke,
 }
@@ -9342,11 +9337,6 @@ impl SenseK {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         SenseK {
-            cpu: false,
-            grid: false,
-            bounce: false,
-            drift: false,
-            moon: false,
             glow: crate::knobs::SenseKGlow::zeroed(),
             smoke: crate::knobs::SenseKSmoke::zeroed(),
         }
@@ -10778,7 +10768,6 @@ pub struct RoomfightK {
     pub door_shots: bool,
     pub door_shot_m: f64,
     pub hold_short_secs: f64,
-    pub pairs: f64,
     pub move_engage_m: f64,
     pub lamp: f64,
     pub preaim_deg: f64,
@@ -10822,7 +10811,6 @@ impl RoomfightK {
             door_shots: false,
             door_shot_m: 0.0,
             hold_short_secs: 0.0,
-            pairs: 0.0,
             move_engage_m: 0.0,
             lamp: 0.0,
             preaim_deg: 0.0,
@@ -13890,7 +13878,7 @@ pub fn page_posemath() -> PosemathK {
 }
 
 pub fn page_sense() -> SenseK {
-    crate::knobs::SenseK { cpu: false, grid: false, bounce: false, drift: false, moon: false, glow: crate::knobs::SenseKGlow { albedo: 0.3, share: 0.1, passes: 2.0, sweep: 32.0 }, smoke: crate::knobs::SenseKSmoke { sigma: 6.0, decay: 0.14, spread: 0.2, widest: 3.5, rise: 1.0, rise_rate: 0.3, in_wind: 0.15, least: 0.05, gone: 0.02, cap: 48.0, emitters: 64.0, reserve: 12.0 } }
+    crate::knobs::SenseK { glow: crate::knobs::SenseKGlow { albedo: 0.3, share: 0.1, passes: 2.0, sweep: 32.0 }, smoke: crate::knobs::SenseKSmoke { sigma: 6.0, decay: 0.14, spread: 0.2, widest: 3.5, rise: 1.0, rise_rate: 0.3, in_wind: 0.15, least: 0.05, gone: 0.02, cap: 48.0, emitters: 64.0, reserve: 12.0 } }
 }
 
 pub fn page_cmdcheck() -> CmdcheckK {
@@ -14006,7 +13994,7 @@ pub fn page_doortools() -> DoortoolsK {
 }
 
 pub fn page_roomfight() -> RoomfightK {
-    crate::knobs::RoomfightK { on: true, evidence_secs: 12.0, sticky: 0.25, crowd: 0.2, fear_min: 0.15, fall_back: true, rally: true, fall_back_in: true, doorway: true, nearest: true, close_m: 2.5, no_shot: 0.4, close_lane: true, point_blank: 2.0, sam_behind: true, sam_beside: true, sam_travel: true, no_shot_go: 1.5, no_shot_pass: 4.0, rally_k: 1.0, arc_half_deg: 100.0, cover_keep: true, cover_half_deg: 45.0, cover_near_m: 6.0, team_hot: 45.0, let_go: 0.8, step_look_secs: 5.0, door_ears: true, door_look_secs: 3.5, door_shots: true, door_shot_m: 8.0, hold_short_secs: 4.0, pairs: 6.0, move_engage_m: 7.0, lamp: 0.7, preaim_deg: 12.0, sights: true, sights_foe: false, sights_deg: 45.0 }
+    crate::knobs::RoomfightK { on: true, evidence_secs: 12.0, sticky: 0.25, crowd: 0.2, fear_min: 0.15, fall_back: true, rally: true, fall_back_in: true, doorway: true, nearest: true, close_m: 2.5, no_shot: 0.4, close_lane: true, point_blank: 2.0, sam_behind: true, sam_beside: true, sam_travel: true, no_shot_go: 1.5, no_shot_pass: 4.0, rally_k: 1.0, arc_half_deg: 100.0, cover_keep: true, cover_half_deg: 45.0, cover_near_m: 6.0, team_hot: 45.0, let_go: 0.8, step_look_secs: 5.0, door_ears: true, door_look_secs: 3.5, door_shots: true, door_shot_m: 8.0, hold_short_secs: 4.0, move_engage_m: 7.0, lamp: 0.7, preaim_deg: 12.0, sights: true, sights_foe: false, sights_deg: 45.0 }
 }
 
 pub fn page_orders() -> OrdersK {

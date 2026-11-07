@@ -49,12 +49,8 @@ pub struct StartOpts {
     pub link: Option<String>,
     /// the rows that only dress the picture up (a page) or down (a host that draws nothing: the moths do not fly, the fixtures do not swing)
     pub dress: bool,
-    /// THE SENSES WORKED OUT BY THE GAME ITSELF (game/sense.ts SENSE.cpu, and the sky's light in its estimate, SENSE.moon): what a host with no
-    /// picture has for eyes. Off = the page's own stand, where the renderer's light meter answers; on a host with no renderer nothing does, and
-    /// every man is in the dark for good (the harness's TPS_CPUSENSE=1 TPS_MOONLIGHT=1)
-    pub cpu_senses: bool,
 }
-impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, dress: false, cpu_senses: false } } }
+impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, dress: false } } }
 
 /// THE HOST'S OWN HALF of a stood game: the Input a hand writes, the camera that follows, the canvas's size (headless.ts standUp: `input`, `cam`, `canvas`).
 #[derive(Clone, Copy, Debug)]
@@ -64,9 +60,7 @@ pub struct Stood { pub game: Box<Game>, pub host: Host, pub level: level::Loaded
 
 /// a block for a game that had none: zeros under the layout's word (state.ts born; a slot another game stood in is that game's no more)
 fn born(slot: usize) {
-    let len = core::mem::size_of::<sim::state::State>();
-    unsafe { core::ptr::write_bytes(sim::state::addr(slot) as *mut u8, 0, len); }
-    sim::state::state(slot).head.layout = sim::state::LAYOUT;
+    sim::state::put(slot, &[]);
 }
 
 /// the level's statics into the host's box world and its lights into the light set (standup.ts populateHost)
@@ -84,7 +78,6 @@ fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
 pub fn settle(g: &mut Game) {
     game::math_dice::use_dice(g);
     game::posehome::pose_home_tend(g);
-    game::sense::settle_grid(g);
     // what the TypeScript's stores say of themselves in the block's head as they are made or moved in (state.ts keep, settle), and the Rust stores,
     // which hold their part of the block from the start, do not: the pose pool (2), the doors (4), the furniture (32), the thrown things (128) and the
     // men's columns (256) are at home. No rule reads these bits; the block is then the block the TypeScript start leaves, to the byte.
@@ -140,7 +133,6 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     g.engine.lights = game::render_lights::LightSet::blank();
     g.engine.settings = settings::default_settings();
     g.engine.effective_scale = 1.0;
-    if o.cpu_senses { g.k.sense.cpu = true; g.k.sense.moon = true; }
     let (dressing, lived) = (g.k.destruction.on, g.k.lived.on);
     let mut loaded = level::load(&mut g, data, dressing, lived);
     populate_host(&mut g, &mut loaded.boxes);
