@@ -1566,7 +1566,7 @@ impl GlassbreakKBreakE {
 impl Default for GlassbreakKBreakE { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum GlassbreakKRhoKey {
     Annealed,
     Laminated,
@@ -1581,7 +1581,7 @@ impl GlassbreakKRhoKey {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum GlassbreakKRadialsKey {
     Annealed,
     Laminated,

@@ -19,15 +19,20 @@ pub struct Opaque;
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FnField;
 /// an object used as a key, until a hand decision gives it an ID
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ObjKey(pub u32);
 /// a number used as a key of a Map
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Num(pub f64);
-impl PartialEq for Num { fn eq(&self, o: &Self) -> bool { self.0.to_bits() == o.0.to_bits() } }
+impl Num {
+    /// the key this number is, as the language's Map has it: -0 is 0, and every NaN is one NaN
+    fn key(self) -> u64 { if self.0 == 0.0 { 0 } else if self.0.is_nan() { f64::NAN.to_bits() } else { self.0.to_bits() } }
+}
+impl PartialEq for Num { fn eq(&self, o: &Self) -> bool { self.key() == o.key() } }
 impl Eq for Num {}
+impl core::hash::Hash for Num { fn hash<H: core::hash::Hasher>(&self, h: &mut H) { h.write_u64(self.key()); } }
 impl PartialOrd for Num { fn partial_cmp(&self, o: &Self) -> Option<core::cmp::Ordering> { Some(self.cmp(o)) } }
-impl Ord for Num { fn cmp(&self, o: &Self) -> core::cmp::Ordering { self.0.total_cmp(&o.0) } }
+impl Ord for Num { fn cmp(&self, o: &Self) -> core::cmp::Ordering { f64::from_bits(self.key()).total_cmp(&f64::from_bits(o.key())) } }
 /// a value no rule could write for a blank (see the STOP list)
 pub fn skel_blank<T>() -> T { todo!() }
 /// A function a caller names and nobody has written: the call says which, in the panic the host shows.

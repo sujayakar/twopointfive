@@ -10,7 +10,7 @@ pub enum ExposureAsker {
 }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Who {
     Guard(GuardId),
     Player,
