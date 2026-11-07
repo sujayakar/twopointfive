@@ -138,9 +138,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `orders-menu`'s. NO LONGER HELD BY ANY CHECK, on the old stand, under `?qonly=0` or for a kept binding of X: a held X is one press and letting go
   closes nothing; a key down with no press opens nothing; the middle button twice, the wheel or the arrows and Space give a row. They come back from
   history with the file if that route is ever a key again. `foursquad-stage` loses its two
-  lines of the who key for the same reason, and keeps what they said of a pair that is down. `loudchaos-off` holds glass to its own rule on either side
-  of the destruction switch (the same floor stood with the switch off reads the same) where it asked that glass be off (`LOUDGLASS_BREAK=1` reads the
-  switch-on arms' glass the other way about: both comparisons FAIL on both stands). `noshove` is NOT mended and its row was wrong: on the page's stand the arm the page plays fails too (the player moved 0.032 m with the
+  lines of the who key for the same reason, and keeps what they said of a pair that is down. `loudchaos-off` held glass to its own rule on either side
+  of the destruction switch until 11-07; that switch is settled, and the probe now asks only that with NO scenario up the loud rules stay down
+  (`LOUDOFF_BREAK=1` starts the scenario: red). `noshove` is NOT mended and its row was wrong: on the page's stand the arm the page plays fails too (the player moved 0.032 m with the
   rule on, the line's bar 0.01 m), which is the squad's owner's to read. `aim-first` adds what the startle holds a first round by to its floors, from the
   rule's own table (`STARTLE.beat + STARTLE.draw` where the rule is on: 1.533 s against a floor of 1.515; `AIMFIRST_BREAK=1`: 2 FAIL on both).
   `gunhold-variant` takes the key that draws on a held man from the row's own rule (`HANDSLOT.on`: 1, else E; `GUNHOLDKEY_BREAK=1`: 1 FAIL on both).
@@ -371,8 +371,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   blast: the squad's key is not his charge's, ownblow.ts), `samBreach` (both), `squadBreach` (the order to all, then the squad's key once armed). Each
   says which step did not come about. Read on the Rust game: `holebase`, `underfoot` and `outerwall-sam` went from no hole to ALL PASS; `holesnow`,
   `menclear` and `hungcharge` pass the lines that only wanted a hole. A red after a hand-made row or a wrapped hook is the CHECK's: its expected-red
-  row is `is: 'stale'`, never a fault listed for the game. STILL BY HAND (to move): wallsafe, wallkill, wallshot, wallkeep, pall, mess, wallfurn, the
-  wall charge probes' trigger / reset / hold / standoff, and standfire's sightings (`fog.recs.set`).
+  row is `is: 'stale'`, never a fault listed for the game. `samSets` stands Sam on the game's own spot for the setting (`WallCharge.setSpot`: it steps
+  along the wall off a thing at its foot; a man put ON such a thing is pushed off and breaks the setting). A second charge is not offered on a wall the
+  first has opened: a check that wants three blasts puts the floor back between them (`restartEncounter`) or stands a second game. STILL BY HAND (to
+  move): wallfurn, the wall charge probes' trigger (door charges pushed) and cost (`D.charges = n`), standfire's sightings (`fog.recs.set`), mess's
+  full ring (`decals.add`) and its pool cut to six (`engine.settings.debrisCap` written after the stand-up), pall's starved solver (`smoke.budget`
+  wrapped).
+  WHAT WAS SAID IS READ FROM THE GAME'S STATE (2026-11-07; `tools/qa/heard.ts`). About seventy check files learnt what the player was told by wrapping
+  `game.msg` and `game.say` on the game object they hold. The Rust tick calls neither wrap, so every "and he is told …" line read an empty list.
+  `listen(game)` keeps two lists that only grow, read from what the page itself draws from: `said` from `game.messages` (the log's newest five rows)
+  and `spoke` from each man's `bubble` (his last line); call `poll()` after every step (a rig's own `step` is the place). The wall charge and outer
+  wall rigs and the start-file probes are on it: `wallcharge-sam` went ALL PASS, `wallcharge-squad` from 9 of 12 to 11. THE GAME'S COUNTERS RUN ON
+  from floor to floor in one process (`PALL_STATS`, `MESS_STATS`): zeroing the copy's table zeroes nothing, so a check reads a counter as the
+  difference since its floor stood (`pall-check.ts since`). A CHECK THAT NEEDS THE DEBRIS POOL OR THE WIND'S SOURCES (the storm, the vents) stands with
+  `standUp({ dress: true })`: those rows are dressing, and the harness stand keeps dressing down (`wxwind` and the `wind` family's lines went green on
+  it; `wet`, `wxkinds`, `wetground` and `hourwx` fail the same lines with it and without, so they stand as they did).
   ROWS OF THE RUST GAME ARE PRINTED FROM A RUN, AND THE LIST IS FIVE TABLES (2026-11-07; `tools/qa/red-rows.ts`, `expected-red.ts RED_TABLES`).
   `bun run tools/qa/probes.ts <family> > run.txt 2>&1; bun run tools/qa/red-rows.ts run.txt` prints a row for every red probe whose failing lines
   are all the page's own side (nothing refused by the fold, no line under the "other side" note): 'real' with the place where the Rust game
@@ -1398,6 +1411,21 @@ but synthetic writes still work.
   without, `kittree-sponge` before it dies in the bridge at its second stand and leaves no game; with, it stands, runs on to a function whose
   TypeScript went with the tick, and leaves a game whose gear rows come back from Rust without what hangs under what. Both are older faults the
   crash hid. Nothing of this touches the page.
+- **The host's camera and keys are handed to the game ONCE, at the stand, by every host** (2026-11-07; `Game.hostHands(cam, input)`, called at the end of
+  `standGame`; the fields are `game.hostCam` / `game.hostInput`, `host_cam` / `host_input` in Rust, on the wire's hosts-own list). BEFORE: `Game.update`
+  handed the Director the camera and Input it was stepped with, every frame (`director.attach`, and the same line in Rust's tick), so a host that
+  steps by records alone (a watcher, a game server: `stepSeats`) had a Director with neither, a page had the page's, the harness had its stand-in,
+  and the native runner GUESSED which camera to draw from ("the first that is no seat's": it picked a check's lens when one was made). Now the page
+  makes its Input before the stand and passes it (`StandOpts.input`), the harness passes its stand-in, a host that passes none gets a detached one,
+  and the native start hands the pair it makes (`rust/game_start stand.rs host_new`). The Director's beats and the show read the game's fields; the
+  native runner reads `host_cam` and refuses, by name, a game that was handed none. NOT DONE (the design is written down for the next step): the
+  camera and Input a frame is STEPPED with are still arguments of `update` (a replay's player steps with a camera of its own), so the tick is not
+  yet one that takes the host's rows as its only input from outside. WHAT IT COST KEPT RUNS: a run kept by a host of records alone is one camera row
+  and one Input row short in every host's half (`export.ts hostHalfParts`), and not at the end, so `hold.sh`'s rule (a half may only GROW AT ITS END)
+  refused all three kept two-seat games. `tools/blitz/half-grow.ts` gives each kept half those two rows as the fresh start's tick 1 has them
+  (nothing moves them on such a host: no record is sampled from them, nothing steps the camera), at the places the fresh start says
+  (`hostrows.txt`, written by `seats.ts` / `mission.ts --start-only`), and refuses unless the kept tick 1 so grown IS the fresh tick 1 byte for byte.
+  `hold.sh` calls it only when the end-grown rule fails, and says so on the run's line.
 - **A game stood up has done with the last one: `standUp` asks for a full collection first** (2026-11-05; `tools/qa/headless.ts STANDUP_COLLECTS`; the
   harness only, nothing of the game). FOUND by the merge: the workers of `bang-tally.ts` (the `flashweight` family's tally, missions back to back in one
   process) grew about 1.6 GB a minute on the page's stand and two died at a 12 GB limit; old, on every build looked at. Reproduced here: one worker from

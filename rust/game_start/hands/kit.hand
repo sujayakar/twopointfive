@@ -1,0 +1,20 @@
+# KIT: the squad goes quiet, closes on the nearest man who is not theirs, throws what it carries at him on order, covers him,
+# then goes loud, holds and falls in; and again.
+# REACHES: going silent and loud, the move order, the throws' page (a flash and a frag thrown by a teammate on order), cover,
+# hold, fall in; and where a floor stages them, smoke and the wand under a door. The tool says, a floor, which of these lines
+# the game never took there and why (an order that floor's kit does not bring is "no such order").
+# DOES NOT REACH: a pair's orders on a man (its two lines are here, and no room clear tried so far has those orders on its menu),
+# the 40 mm (no floor here stages shells: its own test is tests/orders.rs), wall charges, working a thing.
+unhurt
+at 1               order silent sam all
+every 20 from 2    order move nearest all
+every 20 from 9    order stunThere nearest all
+every 20 from 13   order fragThere nearest all
+every 20 from 16   order cover nearest all
+every 40 from 5    order smokeThere nearest all
+every 40 from 7    order wandLook door all
+every 40 from 11   order pairTake nearest red
+every 40 from 15   order pairWatch nearest blue
+every 40 from 25   order loud sam all
+every 40 from 27   order hold sam all
+every 40 from 37   order fallIn sam all

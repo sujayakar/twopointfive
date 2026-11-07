@@ -62,7 +62,7 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
   `__quality`
   (`.apply('verylow'|'low'|'medium'|'high')`, `.sample(dt)`), `__audio` (`.stats`).
 - Squad hooks: `__orders` (`.open(target?)`, `.pick(i?)`, `.give(id, target?, who?)`, `.close()`, `.menu`, `.who`, `.cycleWho()`,
-  `.log`, `.summary()`), `__roomclear` / `__nightbreach` / `__rescue` (`.start()`, `.stop()`, `.restage()`, `.state`,
+  `.log`), `__roomclear` / `__nightbreach` / `__rescue` (`.start()`, `.stop()`, `.restage()`, `.state`,
   `.summary()`, `.log`), `__scenarios` (`.list`, `.current()`, `.pick(id)`, `.quit()`), `__picks` (`.list`, `.current()`, `.href(id)`).
 - Clean captures without the HUD: run `bun run tools/shot-server.ts` (needs to bind :5174 → outside the sandbox), then
   `await __shot('name', jpegQuality=0.86, scale=1)` renders one offscreen frame, reads it back and POSTs it to

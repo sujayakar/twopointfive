@@ -168,9 +168,8 @@ export async function charmatsTables() {
 // ---------------------------------------------------------------- charmats-off
 export async function charmatsOff() {
   const F = family('charmats-off: off hands the renderer nothing new, on hands it a table per man on screen, and the simulation never notices (game.ts × charLook.ts)');
-  // (the SNEAKING SUIT held off for this probe — scene/look.ts LOOK.suit; the probe runner puts the table back after: under TPS_LOOK=1 Sam on the plain night would be all in black,
-  //  and this probe asks about a man's rows and proxies in his SIDE's table — four colours and more across his proxies. cast-probes.ts cast-look holds the suit's own rows.)
-  LOOK.suit = false;
+  // (until 2026-11-07 the SNEAKING SUIT was written off here — scene/look.ts LOOK.suit, a settled row: the write was refused. Sam on the plain night is in the suit,
+  //  so what this probe asks of SAM's rows and proxies in his side's table is asked of a man the suit dresses: cast-probes.ts cast-look holds the suit's own rows.)
   CM.resetCharMats();
   Math.random = seeded(7); const W: any = await standUp(); const { game } = W; const S = game.engine.settings;
   const mats = (): Float32Array => (game.chars as any).matData; const world = game.engine.world;

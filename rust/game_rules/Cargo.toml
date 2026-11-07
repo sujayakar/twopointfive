@@ -1,0 +1,21 @@
+# The rules of the game. May name the data and the wire.
+[workspace]
+
+[package]
+name = "game_rules"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+game_types = { path = "../game_types" }
+game_wire = { path = "../game_wire" }
+sim = { path = "../sim" }
+prim = { path = "../prim" }
+
+[profile.dev]
+opt-level = 0
+debug = false

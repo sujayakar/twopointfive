@@ -17,13 +17,15 @@
 //                      leaves a charge its way in. NOT staged here: a picker with a hostile in his sights, a picker shot at the lock, an order cancelled
 //                      mid-pick, a real shared gate — the pick's own machinery, silent-pick's lines)
 //   frameholds-sam     the player: his kick row on that face is greyed with the reason and a tap on it starts no kick; the pick row still works; a sprint into
-//                      it starts no kick (off: the row live, the sprint a kick, the keep torn out); from the push face his rows as ever
+//                      it starts no kick; from the push face his rows as ever (2026-11-07: its rule-off staging is gone, the rule being settled; the other three
+//                      probes of this family still run both arms and are to be cut the same way)
 //   frameholds-wedge   the last three defenders of the compound ordered into one room (a last stand wedges any door of its room), that room's doors hung to open
 //                      OUT of it: nobody wedges one and each door passed over is counted (off: wedged all the same); hung to open INTO it: wedged as ever
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 import { tapVerb } from './verbs.ts';
+import { listen } from './heard.ts';
 const { DOORWAY, DOORSTAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { DOORMANNERS } = await import(`${ROOT}/src/game/doorway.ts`);
 const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);
@@ -230,14 +232,15 @@ export const frameholdsTools = guarded(async () => {
 // ---------------------------------------------------------------- frameholds-sam
 export const frameholdsSam = guarded(async () => {
   const F = family('frameholds-sam: the player at a door locked on the face it opens toward');
-  const stage = async (on: boolean, toward: boolean) => { reset(); arm(on); const W = await boot(), g = W.game; g.godMode = true; g.playerInvisible = true; g.tune.civilians = false; g.guards.length = 0;
+  // (2026-11-07: the frame's rule is settled. Gone with that: the third staging with the rule off and every '(off: …)' half. What he is told is read from the
+  //  game's own log (heard.ts). 'No noise' was counted through a wrap of the doors' emit on the tools' copy, which the Rust tick never calls: that clause went.)
+  const stage = async (toward: boolean) => { reset(); const W = await boot(), g = W.game; g.godMode = true; g.playerInvisible = true; g.tune.civilians = false; g.guards.length = 0;
     const d = g.doors.list.find((x: any) => x.def.name === 'manager'), ks = d.keySide as number; hangToward(g, d, toward ? ks : -ks); fresh(d, true);
-    const at = () => { for (let i = 0; i < 90 && (g.player.kick || g.player.char.anim.kicking); i++) W.step(DT); fresh(d, true); g.teleportPlayer(off(d, ks, 0.9, d.def.width * 0.7)); g.player.crouch = false; g.player.fHeld = false; W.step(DT); W.cursorAt(d.pos); W.step(DT); W.step(DT); };
-    const said: string[] = []; { const msg = g.msg.bind(g); g.msg = (t: string) => { said.push(t); msg(t); }; }
-    let thuds = 0, kicks = 0; { const emit0 = g.doors.emit; g.doors.emit = (e: any) => { if (e.sound === 'thud') thuds++; if (e.sound === 'kick') kicks++; emit0(e); }; }
+    const ears = listen(g), step = () => { W.step(DT); ears.poll(); };
+    const at = () => { for (let i = 0; i < 90 && (g.player.kick || g.player.char.anim.kicking); i++) step(); fresh(d, true); g.teleportPlayer(off(d, ks, 0.9, d.def.width * 0.7)); g.player.crouch = false; g.player.fHeld = false; W.step(DT); W.cursorAt(d.pos); W.step(DT); W.step(DT); };
     let yaw = 0; at(); const rows = (g.nearby as any[]).filter(r => r.kind === 'door' && r.door === d), kick = rows.find(r => r.verb === 'kick'), pick = rows.find(r => r.verb === 'pick');
     // a tap on the kick row
-    const had = tapVerb(W, 'door', 'kick'); let kicked = !!g.player.kick; for (let i = 0; i < 100; i++) { W.step(DT); kicked ||= !!g.player.kick; }
+    const had = tapVerb(W, 'door', 'kick'); let kicked = !!g.player.kick; for (let i = 0; i < 100; i++) { step(); kicked ||= !!g.player.kick; }
     const tap = { had, kicked, broken: !!d.lockBroken, open: Math.abs(d.angle) };
     // a sprint into it: the camera turned so W runs him square at the leaf, W + Shift held from 1.8 m off (the corridor's furniture allows no more)
     at(); g.teleportPlayer(off(d, ks, 1.8, d.def.width * 0.7)); W.step(DT);
@@ -250,17 +253,17 @@ export const frameholdsSam = guarded(async () => {
     const ran = far > 1.2 && near < 0.75 && fastest > 1.5 ? 1 : 0, sprint = `from ${f2(far)} m off the leaf to ${f2(near)} m at up to ${f2(fastest)} m/s into it`;
     // the pick still works from that face
     at(); const picking = tapVerb(W, 'door', 'pick'); let picked = false; for (let i = 0; i < 60 * 7 && !picked; i++) { W.step(DT); picked = !d.locked; }
-    return { d, kick, pick, tap, sprintKick, ran, sprint, picking, picked, said, thuds, kicks, holds: g.doors.bootHolds(d, off(d, ks, 0.9)) };
+    ears.poll(); return { d, kick, pick, tap, sprintKick, ran, sprint, picking, picked, said: ears.said, holds: g.doors.bootHolds(d, off(d, ks, 0.9)) };
   };
-  const A = await stage(true, true), B = await stage(false, true), P = await stage(true, false);
+  const A = await stage(true), P = await stage(false);
   const line = (r: any) => r ? `${r.off ? '(off) ' : ''}${r.line2}` : 'no row';
-  F.verdict(!!A.kick && A.kick.off && /it opens toward you, so that won't work/.test(A.kick.line2) && !/sprint/.test(A.kick.line2) && !!A.pick && !A.pick.off && !!B.kick && !B.kick.off && /kick it in — LOUD/.test(B.kick.line2),
-    'his kick row at that door is greyed and says why; the pick row beside it is live (off: the kick row live, "or sprint into it")', `on: ${line(A.kick)} | ${line(A.pick)}\n    off: ${line(B.kick)}`);
-  F.verdict(A.tap.had && !A.tap.kicked && !A.tap.broken && A.tap.open < 0.01 && A.said.some(t => /a kick won't move it/.test(t)) && A.thuds === 0 && A.kicks === 0 && B.tap.had && B.tap.kicked && B.tap.broken,
-    'a tap on the greyed row: a word, no kick thrown, no noise, the lock whole (off: the kick, the keep torn out)', `on: kick started ${A.tap.kicked} · keep broken ${A.tap.broken} · said: ${A.said.filter(t => /boot/.test(t)).join(' / ')}\n    off: kick started ${B.tap.kicked} · keep broken ${B.tap.broken} · open ${f2(B.tap.open)}`);
-  F.verdict(A.ran === 1 && !A.sprintKick && !A.d.lockBroken && B.ran === 1 && B.sprintKick, 'a sprint into that face starts no kick: he stops on it as on any locked door (off: the sprint is a kick)', `on: ran at it ${A.sprint}, a kick started ${A.sprintKick} · off: ran at it ${B.sprint}, a kick started ${B.sprintKick}`);
+  F.verdict(!!A.kick && A.kick.off && /it opens toward you, so that won't work/.test(A.kick.line2) && !/sprint/.test(A.kick.line2) && !!A.pick && !A.pick.off,
+    'his kick row at that door is greyed and says why; the pick row beside it is live', `${line(A.kick)} | ${line(A.pick)}`);
+  F.verdict(A.tap.had && !A.tap.kicked && !A.tap.broken && A.tap.open < 0.01 && A.said.some(t => /a kick won't move it/.test(t)),
+    'a tap on the greyed row: a word, no kick thrown, the lock whole', `kick started ${A.tap.kicked} · keep broken ${A.tap.broken} · open ${f2(A.tap.open)} · said: ${A.said.filter(t => /kick|boot/.test(t)).join(' / ') || 'nothing of it'}`);
+  F.verdict(A.ran === 1 && !A.sprintKick && !A.d.lockBroken, 'a sprint into that face starts no kick: he stops on it as on any locked door', `ran at it ${A.sprint}, a kick started ${A.sprintKick}`);
   F.verdict(A.picking && A.picked && !A.d.lockBroken, 'and the pick opens it from there as from any face', `pick started ${A.picking} · unlocked ${A.picked}`);
-  F.verdict(!P.holds && !!P.kick && !P.kick.off && P.tap.kicked && P.tap.broken && P.ran === 1 && P.sprintKick, 'the same door hung the way it was dealt (locked on the face it opens away from), the switch on: the kick row live, the tap a kick, the sprint a kick', `${line(P.kick)} · tap kicked ${P.tap.kicked}, keep broken ${P.tap.broken} · sprint kick ${P.sprintKick}`);
+  F.verdict(!P.holds && !!P.kick && !P.kick.off && P.tap.kicked && P.tap.broken && P.ran === 1 && P.sprintKick, 'the same door hung the way it was dealt (locked on the face it opens away from): the kick row live, the tap a kick, the sprint a kick', `${line(P.kick)} · tap kicked ${P.tap.kicked}, keep broken ${P.tap.broken} · sprint kick ${P.sprintKick}`);
   return F.done();
 });
 

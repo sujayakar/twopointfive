@@ -3,7 +3,7 @@
 // browser's compiler), so the three cannot come to boot different pages.
 // The boot is main.ts's own order: the Engine's pipelines, the smoke solver's, the Game stood on that Engine, the Game's own GPU modules (mesh shadows,
 // particles, the light probe, the skinned raster), the programs asked for ahead of their first use (engine.ts warmFirstUse: the fog of war's). In front of it, what main.ts writes before it builds
-// the Engine on a plain address: cut boxes on, round things on the GPU with them, the glass fracture, and the dust's own look (the march's dust twin).
+// the Engine on a plain address: cut boxes on, round things on the GPU with them, the glass fracture, and the dust's own look (in the march's text).
 // THE SETTINGS are the switches a page is opened under, each a different set of texts since the fold of constant switches (gpu/wgslTrim.ts SHADER_FOLD):
 //   title   the page as it opens
 //   snow    a snow level in its weather: every switch a LEVEL raises (the weather kinds, lying snow and its look rows)

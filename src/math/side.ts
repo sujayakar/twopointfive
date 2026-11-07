@@ -72,6 +72,13 @@ export class SideSet<K extends object> extends WeakSet<K> {
  *  that are a seat's (game/seats.ts SEAT_TABLES) and the second against the rest — a world table read through a view finds no row, a seat's read through the
  *  Game finds the wrong one, and neither throws. Nothing is noted, and no call costs anything more, until it is asked. */
 export const RAW: unique symbol = Symbol('raw');
+/** THE NAMED SIDE TABLES THAT ARE A SEAT'S (keyed by the view they were handed: a row a player). A plain table handed a view that is not listed here is a
+ *  mistake — world state forked in two — and tools/qa/seats-check.ts is red on it: such a table is a `GameSideMap`. */
+export const SEAT_TABLES: readonly string[] = ['blastFeel.STATE', 'blastLook.STATE', 'close.STATE', 'guards.groundTrack', 'holdfire.states', 'player.lightAt', 'rearwatch.books', 'samlook.STATE',
+  'showwhy.states', 'silent.seats', 'silent.states', 'squad40.states', 'squadsmoke.states', 'squadthrow.states', 'stalk.STATE', 'tapstep.STATE', 'unseen.states', 'wandorder.states'];
+/** a table of one of these is keyed by a seat's view (the Game itself in a game of one seat), and the Rust game keeps it by that seat's man: the bridge crosses between the two keys */
+export const isSeatTable = (t: { sideName?: string } | null | undefined): boolean => !!t?.sideName && SEAT_TABLES.includes(t.sideName);
+
 /** set on the view another cast of the squad's code is run over (game/squadcast.ts): what tells it from a Game and from a seat's view */
 export const CAST_VIEW: unique symbol = Symbol('cast view');
 export const rawKey = <K extends object>(k: K): K => (k as { [RAW]?: K })[RAW] ?? k;

@@ -182,7 +182,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `useCut` on the lighting passes, the probe, the cascades, the froxels, the particles and the fog of war; the engine's per-frame swap and the
   raster's "drawn whole until the second set is in" (`gbuffer.ts`: a cut box is drawn cut from the first frame); `__cut.programs`,
   `__cut.stats.drawnWhole`, `?cutprograms`; the visit's `cut` record; the start's wait on the second set; tools/qa/cut-march.js. `cutConfig.swap`
-  is UNREAD AND UNWRITTEN (the knob row `CUT.swap`, the settled-switch list and the Rust mirror still name it: theirs to drop); the look page's
+  is GONE from the table and from the settled-switch list (11-07; its field on the wire to the Rust game goes with the Rust goal's next batch); the look page's
   rule that a geometry trial drops the round's GPU half (`main.ts roundConfig.gpu`) asks for the trial itself now, and draws what it drew. THE COMPILE QUEUE's background
   lane (`gpu/device.ts`) was given by text, to any module holding the cut rule's line; it is now the LATER pipelines' alone, and a module's size is
   kept beside the module. WHAT MOVES: about twenty programs fewer compiled after each boot (21 s of background compile on the cloud's NVIDIA
@@ -924,6 +924,45 @@ row on his machine is the answer, and the word puts the count back on any machin
   3.7 | 4.3 · gatherTrace 3.7 | 4.1 · froxelInjectJ 3.6 | 4.0 · reflect 2.9 | 3.4. A brief's Start waits for every program (`docs/agents/menus.md`),
   so for a player the whole sum is the wait. What follows from the table: one set of ray programs is half of it; then the march, three writings of one
   kernel (vol, volFroxel, volDust) and over a third of what is left. On the software adapter the tool's milliseconds are that adapter's and say nothing.
+- **The dust's look is part of the march's text, not a third march program (2026-11-07; `shaders/dust_look.wgsl`, `shaders/volumetrics.wgsl`, `engine.ts
+  smokeDrawWords`).** The march was three programs of one kernel: `vol` (the classic tiers'), `volFroxel` (with the froxel-lit smoke march) and `volDust`,
+  which was `volFroxel`'s text with five statements swapped at eleven sites by string (`render/dustLookVol.ts`, deleted), compiled on every page and
+  chosen by the frame while some brick of smoke held dust. It was the dearest program of the page to build (10.0 s alone on the cloud card, the table
+  above), a third of the march's sum, and until it was in dust was drawn as plain smoke. Now the two lit marches are WRITTEN with the dust's statements
+  (`let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);`, the tint on both in-scatter terms, the dust's
+  self-shadow where `dl.dust > 0`), and `dustDensity` opens on `if (!dustAlive())`: the march's own masked read, no tint, `dust` 0. `dustAlive` is bit 1 of
+  `frame.sideCfg.z`, beside the smoke lab's streak bit, raised by `SmokeBinding.dusty` (never with `?nodustlook`: `smoke.ts` asks `DUST_DRAW` there now).
+  So with no dust alive every sample's density is the read it was, the tint is exactly 1 (`1 + 0 / max(d, 1e-6)`, and a product by exactly 1 is exact
+  however a compiler orders it) and the self-shadow is the plain one: the picture of a frame without dust cannot move by arithmetic. With dust alive the
+  statements run are the twin's own. What changes for a player: dust is dust from its first frame (no wait for a later program), and on a classic tier a
+  dust frame runs `vol` where it ran the froxel text with the froxel march not taken (the same classic march, read off the same text). The K = 0 march
+  (its own program, no row ships it) still draws dust as plain smoke. PASTED SIZE (`shaderinline-check`, with the cut test's text): vol 337 to 364 KB,
+  volFroxel 421 to 474 (it is what volDust was, 470, and four more for the test), volDust's 470 gone; the three together 1,228 to 838 KB. The budget row
+  for the march is 400 (was 382; 395 on the look's page) and volDust's row is out. CHECKS: `tools/qa/dust-look-check.ts` pins the statements and the
+  plain read as text (the wallbreak family's looks probe runs the same pin), `shaderrows-check` reads that both programs carry the look and that no
+  `volDust` is asked for, `fog-air` that the dust's drawn density still goes through `fogSmoke`. NOT READ: the smoke solver does not run on the software
+  adapter (five storage textures in a stage), so no frame with smoke or dust in it was drawn here before or after; frames without smoke were, and are
+  PIXEL-EQUAL to the tree before (`draw-equal`, office-night and firefight at high, both checkpoints). ON THE CLOUD NVIDIA CARD (A10G, Vulkan; the named
+  tree `5dbe0d75` against it with the fold, the benchmark on two boxes of one kind): first load's shaders 21.9 s to 20.9 s, 100 of 100 programs on both
+  (the fold is one fewer and the look page's mend one more), the last program ready on both the froxel march at 20.9 s; the volumetrics pass 3.2 ms on
+  both and every row's GPU ms inside the spread, so the bit costs a frame nothing that reads. A second is inside what two boxes differ by (1.5 s that
+  morning); what is not is the sum: every program alone, driver's cache off, 108 programs and 70.5 s of one compiler thread where the morning's tree was
+  128 and 140.9 s (the ray programs' one set, the composite and this). Dearest alone now: volFroxel 10.7 s, vol 7.0, particlesUpdate 6.9, restir 5.0,
+  composite 4.8, compositeS 4.6, gatherTrace 4.1, froxelInjectJ 3.9, reflect 3.4. The second and third loads of that pair read 10.3 and 7.3 s on the
+  named tree and 3.7 and 3.2 s with the fold; nothing in the fold touches the programs that were built again there (the particle update, the composite),
+  so that is the box's driver cache and no result of this.
+  WHY THE MARCH IS STILL TWO PROGRAMS, MEASURED (the same card, the hour after; the one-program form is a commit kept off the build, `Render: the
+  march is one program for every tier`). With `const VOL_FROXEL_MARCH` gone and the one text compiled once, a frame taking the froxel-lit march by
+  `FrameFlags.FroxelVol` alone: 107 programs and 61.4 s alone where the fold left 108 and 70.5 s (the one march 10.0 s alone). But the wait a person
+  sits through first is the boot's set, and on that card it ends when the march does: `?firstframe=1`, 92 programs in 17.6 s with the two programs (the
+  boot's march 7.0 s alone, last in at 17.6 s) and in 19.7 s with the one (10.0 s alone, last in at 19.6 s); every program waited for, 99 in 19.1 s
+  against 98 in 18.2 s. One run each, on boxes that differ by a second or two, so read the direction and not the tenths: the one program takes about
+  nine seconds off the sum and about a second off the whole set, and puts two or three on the first wait, because the boot then holds the dearer
+  text. (The benchmark of the one-program form landed on a box of the slower kind, 42.1 s to its first start, so it says nothing of the load; its
+  volumetrics pass read 3.1 ms against 3.2, so the one text costs a frame at high nothing that reads.) That is what the twin was made for (2026-10-26), and it still holds. So the twin stays until the march itself is cheaper to build, or the
+  froxel-lit smoke march is a program of its own beside the classic one (its result feeds the rain and the beams in `main`, so that is a pass with a
+  target between, not a move of text). What the table says to try first, unmeasured: the march is asked for 1.7 s into the boot and needs 7 s alone, yet
+  is the last program in at 17 to 19 s; where the compile queue is off (everywhere but Windows) nothing asks for the dearest program first.
 - **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
   Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
   had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:

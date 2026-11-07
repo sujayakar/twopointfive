@@ -63,7 +63,7 @@ const KNOWN: Record<string, Record<string, Row>> = {
   'game/game.ts': {
     decals: [1, 'TO JUDGE (2026-11-05): whether the decal layer runs; the digest counts decals'],
     markings: [1, 'CARRIED: the floor markings\' lights'], markingTexel: [1, 'PICTURE: the markings\' texture'],
-    debugView: [1, 'PICTURE: a debug view of the draw'], meshShadows: [1, 'PICTURE: the draw block'], rtMeshHits: [1, 'PICTURE: the draw block'], sdfRigSmooth: [1, 'PICTURE: the draw block'], sharpDecouple: [1, 'PICTURE: the draw block'],
+    debugView: [1, 'PICTURE: a debug view of the draw'], sharpDecouple: [1, 'PICTURE: the draw block'],
     wetChars: [1, 'PICTURE: the draw block (whether a wet man is shaded wet)'],
   },
   'game/irlaser.ts': { debugView: [1, 'PICTURE: a debug view of the draw'] },

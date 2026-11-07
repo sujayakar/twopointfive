@@ -80,7 +80,7 @@ export async function directorShowcaseScan(): Promise<boolean> {
     const f: string[] = []; for (const w of want) if (!got.has(w)) f.push(`missed ${w}`); for (const h of hits) if (h.beat === 'innocent' || h.program === 'show') f.push(`false positive ${key(h)}`);
     // run time: the play program's beat throws on its first showcase verb — failed and logged, the world untouched (no caption anywhere, Sam where he was), and the lint had already disarmed it: force-arm to see the runtime refuse
     Math.random = seeded(8); const W: any = await standUp(); const errBefore = console.error; console.error = () => { /* the disarmed-script + failed-beat lines */ };
-    let D2: any; try { D2 = new Dm.Director(W.game, naughty); D2.armed = true; D2.strict = false; const p0 = [...W.game.player.char.pos]; D2.start('main'); for (let i = 0; i < 3; i++) W.step(DT);
+    let D2: any; try { D2 = new Dm.Director(W.game, naughty); D2.armed = true; const p0 = [...W.game.player.char.pos]; D2.start('main'); for (let i = 0; i < 3; i++) W.step(DT);
       const rows = D2.rowsOf() as any[]; const failed = rows.find(r => r.kind === 'error' && r.beat === 'talky'); if (!failed || !/showcase-only/.test(failed.what)) f.push(`talky did not fail on c.caption at run time (${failed?.what ?? 'no error row'})`);
       if (D2.frame) f.push('a frame (caption / veil) exists for a play program'); if (Math.hypot(W.game.player.char.pos[0] - p0[0], W.game.player.char.pos[2] - p0[2]) > 1e-6) f.push('Sam moved');
       D2.stop();
@@ -118,7 +118,7 @@ export async function directorScheduler(): Promise<boolean> {
     Math.random = seeded(seed); const W: any = await standUp(); const { game } = W;
     game.playerInvisible = true; game.godMode = true; for (let i = 0; i < 20; i++) W.step(DT);
     const errBefore = console.error; console.error = () => { /* the failed beats' lines */ };
-    const D = new Dm.Director(game, testScript); game.director = D; D.strict = false;
+    const D = new Dm.Director(game, testScript); game.director = D; W.beatsThrow = false;   // (this probe watches beats fail: the harness is not to throw on one)
     const notes: string[] = []; let saveWhy = ''; let whistled = false; let maxGuards = 0; const nGuards0 = game.guards.length;
     try {
       const why = D.start('main'); if (why) notes.push('refused: ' + why);
@@ -153,7 +153,7 @@ export async function directorScheduler(): Promise<boolean> {
     const opened = find('note', 'mover', 'opened'); if (!opened || opened.data?.open !== true || opened.data?.ext !== false) f.push(`door/group: ${JSON.stringify(opened?.data)}`);
     if (R1.maxGuards !== R1.nGuards0 + 1) f.push(`guards peaked at ${R1.maxGuards} (want ${R1.nGuards0 + 1})`);
     const extra = R1.W.game.guards.find((x: any) => x.callsign === 'Extra'); if (!extra) f.push('the unit is gone after a PLAY program ended (should stay, as AI)'); else if (extra.script || extra.state !== 'patrol') f.push(`the released unit: script ${!!extra.script} state ${extra.state}`);
-    // error isolation: thrower failed at step 1 with its message, spinner failed as a runaway, intro still finished the program; strict off → no throw reached us
+    // error isolation: thrower failed at step 1 with its message, spinner failed as a runaway, intro still finished the program; the harness told not to throw → no throw reached us
     const thr = find('error', 'thrower', /threw at step 1: scripted mistake/); if (!thr) f.push('thrower not failed / logged with its step and message');
     const spin = find('error', 'spinner', /runaway/); if (!spin) f.push('spinner (yield wait(0) for ever) not caught as a runaway');
     const fin = rows.find((r: any) => r.kind === 'program' && r.what === 'finished'); if (!fin) f.push('the program never finished (intro → c.finish)');

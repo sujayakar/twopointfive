@@ -957,6 +957,15 @@ export class Game {
    *  plumbing — built last in the constructor from level.script (none = no programs, as on every shipped level: the game exactly), ticked in update() right
    *  before tacticsTick, read by main.ts through `frame` (the pinned look-at, caption, veil) while a showcase program has the frame */
   director!: Director;
+  /** THE HOST'S OWN CAMERA AND KEYS, handed to the game ONCE, at its stand, by every host alike (host/standup.ts standGame). They are the host's: what a player's machine draws through and types on, never part of
+   *  what two machines of one game compare (the wire's hosts-own list). The game names them for the three things that reach for them: a level
+   *  script's show (director.ts: its pin, its lock of the keys), a rails level's first view, and the view's matrix between two ticks. Before this the
+   *  Director kept them and `update` handed them over again every frame, so a host that stepped by `update` held two rows more than one that stepped by
+   *  `stepSeats`, and two machines of one game numbered their cameras differently. */
+  hostCam: FollowCamera | null = null; hostInput: Input | null = null;
+  /** the stand's one call (standGame). A tick is still SAMPLED from whatever camera and Input `update` is handed (a replay's player steps with the tape's
+   *  own): these two are what the HOST shows through and types on, which is what a show pins and locks */
+  hostHands(cam: FollowCamera, input: Input): void { this.hostCam = cam; this.hostInput = input; }
   /** the night breach playtest (nightbreach.ts; ?nightbreach / native --nightbreach / __nightbreach): Sam leading two AI operatives against three men barricaded in the
    *  break room. Off — the game exactly — until its start(); ticked right after the Director */
   nightBreach!: NightBreach;
@@ -1465,7 +1474,6 @@ export class Game {
     this.journal.frameStart(dt, input, cam, canvas);   // the session journal (journal.ts): idle, a return; asked for, it takes its checkpoint and re-enters it HERE, before anything of the frame has run; recording, it files this frame's dt / camera / input and opens the sensors' frame
     this.director?.injectInput(input);   // a showcase beat's synthetic key / click from LAST frame's tick (director.ts c.press / c.click) becomes this frame's input, ahead of everybody who reads it — a return on its first line otherwise
     this.hostBefore(input);
-    this.director?.attach({ cam, input });   // (a showcase locks the HOST's keys and pins the HOST's camera: the director keeps those two, the step hands it neither)
     this.cmdBuf = sampleCmd(me.view, input, cam, canvas, this.cmdBuf);
     if (this.seats.length === 1) this.step(dt, this.cmdBuf); else this.stepSeats(dt, this.seats.map(s => s === this.localSeat ? this.cmdBuf! : s.handed(this.cmdBuf!)));
     this.hostAfter(input, cam, canvas);
@@ -1555,7 +1563,7 @@ export class Game {
    *  everything that reads them, stay the tape's.
    *  `px` (over 0: the picture's own pixel in metres, `viewPx` of the camera and window it is drawn with): the thin lines a step sized for ITS view's pixel — laser beams,
    *  tracer streaks (thinline.ts) — are handed over re-sized for the picture's. A tape recorded at another zoom or window size drew a beam as a fat pale bar. */
-  fogLift(want: boolean, tube: boolean | null = null, px = 0) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.fogLift', this, [want, tube, px]); if (__r !== RUST_PASS) return __r as any; } }
+  fogLift(want: boolean, tube: boolean | null = null, px = 0) {
     if (this.fogHeld) return;   // (already lifted for this draw)
     const fog = this.fogOfWar, bare = want && fog.viewer && fog.active;
     const ir = fog.viewer && tube !== null && !(this.engine.settings.debugView > 0) && tube !== irViewer(this);   // (the viewer's tube is not the run's: the infrared lines follow the picture — a debug view shows no tube, so none are added to one)
@@ -1574,7 +1582,7 @@ export class Game {
     if (thin) B = thinFit(B, px) ?? B;
     world.dynamics = B;
   }
-  fogBack() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.fogBack', this, []); if (__r !== RUST_PASS) return __r as any; } }
+  fogBack() {
     const H = this.fogHeld; if (!H) return; this.fogHeld = null;
     const fog = this.fogOfWar, world = this.engine.world;
     if (fog.bared) fog.facesBack();
@@ -1592,9 +1600,8 @@ export class Game {
       const down = new Set<Character>(); for (const gd of this.guards) if (gd.state === 'dead') down.add(gd.char);
       if (down.size) drawn = [...drawn.filter(c => !down.has(c)), ...drawn.filter(c => down.has(c))];
     }
-    const looks = draw ? charLookFrame(this) : null;
+    const looks = draw ? charLookFrame(this) : null;   // CHARACTER MATERIALS (charLook.ts): null unless settings.charMats — then every man is his two tints, as ever
     const sideOf = this.ch.cast ? charSides(this) : null;   // (the cast's placeholder colours go over by side — below; nothing with the mannequin loaded)
-    const oneColourHits = (this.engine.settings.rtMeshHits && this.engine.settings.meshShadows) || this.engine.settings.sdfRigSmooth;   // mesh hits / the smooth union read ONE colour a man (proxy record 0): it then carries all of him, not his lower trunk   // CHARACTER MATERIALS (charLook.ts): null unless settings.charMats — then every man is his two tints, as ever
     // ONE MAN'S FAULT IS ONE MAN'S: a man who cannot be posed or handed over (a row with no rig behind it) is left out of this frame and SAID once by name
     // in the console; the men after him are drawn. `n` counts the men handed over, so nobody's instance is left a hole.
     let n = 0;
@@ -1614,7 +1621,7 @@ export class Game {
       this.chars.setMaterials(i, looks ? (f, o) => f.set(looks.palette(c), o) : undefined);
       let capAlb = v3.lerp(c.tint, [0.5, 0.5, 0.5], 0.3);
       if (wetOn && c.wet > 0) { const k = 1 - 0.35 * c.wet; capAlb = [capAlb[0] * k, capAlb[1] * k, capAlb[2] * k]; }   // his shadow proxies (what bounce rays and reflections see of him) darken with the coat like the fabric on screen
-      const { caps, bound } = drawnCapsules(c, c.capsules(), tall); world.addCharacterCapsules(c.id, looks ? looks.proxies(c, wetOn && c.wet > 0 ? 1 - 0.35 * c.wet : 1, oneColourHits) : capAlb, caps, bound);   // (per slot: one colour per proxy — his head bounces as helmet and skin, his legs as trousers)
+      const { caps, bound } = drawnCapsules(c, c.capsules(), tall); world.addCharacterCapsules(c.id, looks ? looks.proxies(c, wetOn && c.wet > 0 ? 1 - 0.35 * c.wet : 1, false) : capAlb, caps, bound);   // (per slot: one colour per proxy — his head bounces as helmet and skin, his legs as trousers)
       n++;
     } catch (e) { manNotDrawn(this, c, e); } }
     this.chars.finish(draw ? n : 0);

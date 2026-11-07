@@ -13,7 +13,7 @@
 // holds it). A whole apply keeps a copy of its bytes beside the object and writes nothing; the puppet's export writes those bytes back (export.ts). So a re-export after an apply is Rust's bytes everywhere, and such a field needs no class of its own in a host's compare.
 import GAME_REF_LIST from './game-ref.json';
 import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS, forGame, classWord, isGameSide } from './export';
-import { rawKey, PUT_BACKS } from '../../src/math/side';
+import { rawKey, PUT_BACKS, isSeatTable } from '../../src/math/side';
 
 export type Hooks = { made?: Record<string, (row: any, g: any) => void>; gone?: Record<string, (row: any, g: any) => void>; classes?: Record<string, { prototype: object }>; values?: Record<string, any> };
 export type Puppet = { lists: { step: Set<string>; start: Set<string> }; start: boolean; rows?: any; ctx?: any; slowTable?: { type: string; field: string }[]; vals?: string[] };
@@ -31,7 +31,7 @@ const differs = (a: unknown, b: unknown) => !Object.is(a, b) && !(a == null && b
 
 // ---- reading past a value
 type Keep = { field: (q: string, ty: string) => boolean; desc: (ty: string | N) => boolean };
-function skipper(b: Uint8Array, I: { p: number; K?: Keep | null }) { const dv = new DataView(b.buffer, b.byteOffset, b.byteLength); I.p = 0;
+export function skipper(b: Uint8Array, I: { p: number; K?: Keep | null }) { const dv = new DataView(b.buffer, b.byteOffset, b.byteLength); I.p = 0;
   const sk = (n: N): void => { switch (n.k) {
     case 'f64': case 'u64': case 'i64': I.p += 8; return; case 'f32': case 'u32': case 'i32': case 'usize': case 'id': I.p += 4; return; case 'bool': case 'u8': case 'i8': I.p += 1; return; case 'u16': case 'i16': I.p += 2; return; case 'unit': return;
     case 'str': I.p += 4 + dv.getUint32(I.p, true); return;
@@ -203,7 +203,7 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
   function readId(n: N, cur: any): any { const v = dv.getUint32(I.p, true); I.p += 4; if (v === 0xffffffff) return cur && typeof cur === 'object' ? null : cur; if (typeof cur === 'number') return v; const e = SCHEMA.idExpr[n.id]; const viaExpr = e && cur && typeof cur === 'object' ? compiledExpr(e)(cur, g, B) : undefined; if (typeof viaExpr === 'number') { if (viaExpr === v) return cur; const k = `id ${n.id} at ${curQ}`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } const L = BK.listOf(n.id); if (v >= L.length) { const k = `id ${n.id} past its table`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } return L[v]; }
   const firstKey = (m: any): unknown => { if (m instanceof Map || m instanceof Set) { for (const k of m instanceof Map ? m.keys() : m) return k; return undefined; } return keysIn(m)[0]; };
   function keyOf(K: N, curMap: any): any { if (K.k === 'u32') { const v = dv.getUint32(I.p, true); I.p += 4; const first = firstKey(curMap); if (first && typeof first === 'object') return objOfSerial(c, v); if (isSide(curMap)) return objOfSerial(c, v); return v; }
-    if (K.k === 'id' && K.id === 'PlayerId') { const row = readId(K, undefined); for (const k of keysIn(curMap)) if (k && typeof k === 'object' && (k as any).player === row) return k; return row; }
+    if (K.k === 'id' && K.id === 'PlayerId') { const row = readId(K, undefined); if (isSeatTable(curMap)) { for (const s of g.seats ?? []) if (s.view?.player === row) return s.view; return g; }   /* (a seat's table: keyed by the view the TypeScript asks by, whatever the table holds yet) */ for (const k of keysIn(curMap)) if (k && typeof k === 'object' && (k as any).player === row) return k; return row; }
     if (K.k === 'f64') { const v = dv.getFloat64(I.p, true); I.p += 8; if (curMap && !(curMap instanceof Map) && !isSide(curMap) && !(curMap instanceof Set)) return String(v); const first = firstKey(curMap); return typeof first === 'string' ? String(v) : v; }
     return read(K, undefined); }
   const keysIn = (m: any): unknown[] => m instanceof Map ? [...m.keys()] : m instanceof Set ? [...m] : isSide(m) ? m.liveKeys() : m && typeof m === 'object' ? Object.keys(m) : [];

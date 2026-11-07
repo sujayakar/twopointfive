@@ -4,6 +4,7 @@ declare module 'tps-bridge/export' {
   export const SCHEMA: any;
   export function exportGame(g: any, knobs: Record<string, unknown>): Uint8Array;
   export function hostHalf(g: any, knobs: Record<string, unknown>, cmds: readonly any[]): Uint8Array;
+  export function shownSeat(g: any): number;
   export function bookOf(g: object): any;
   export function report(): Map<string, { n: number; eg: string }>;
 }
@@ -43,6 +44,6 @@ declare module 'tps-bridge/switches.json' {
   export default list;
 }
 declare module 'tps-bridge/surface' {
-  export function surfaceHost(H: { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array): Uint8Array } | null, gone?: unknown): void;
+  export function surfaceHost(H: { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array, view?: number): Uint8Array } | null, gone?: unknown): void;
   export function crossing(key: string, self: unknown, args: unknown[]): unknown;
 }

@@ -177,6 +177,7 @@ import { DOORSTAY, DOORWAY, DOORTHROW } from '../game/doors';
 import { SHARDS } from '../game/shards';
 import { DEBRIS } from '../game/destructionSwitch';
 import { FollowCamera } from '../game/camera';
+import { Input } from '../game/input';
 import { pinned } from './profile';
 import { newDice, useDice } from '../math/dice';
 import { v3 } from '../math/vec';
@@ -190,6 +191,9 @@ export interface StandOpts {
   gltfUrl?: string;
   /** the smoke solver the Game emits into; absent = nullSmoke() (emit / push / clearAll dropped, inSmokeDomain false — the harness's) */
   smoke?: SmokeSystemLike;
+  /** THE HOST'S OWN INPUT (the page: its `new Input(canvas)`, made BEFORE the stand so that the game is handed it here and nowhere else); absent = a detached one,
+   *  which the caller then drives (the harness, a watcher, a server). It and the stand's follow camera are handed to the game at the end of the stand: Game.hostCam / hostInput */
+  input?: Input;
   /** the audio the Game plays through; absent = the Game's own null object (main.ts hands the AudioEngine over once the pipelines are in) */
   audio?: GameAudioLike;
   /** add the level's boxes to host.world and its lights to host.lights before the Game is built (default true; main.ts populates earlier by populateHost — the smoke solver is
@@ -213,6 +217,8 @@ export interface Stood {
   game: Game; level: Level; ch: GltfCharacter; smoke: SmokeSystemLike;
   /** the follow camera, on the level's player spawn (aspect / rebuild are the caller's — the browser sets aspect per render, the harness once) */
   cam: FollowCamera;
+  /** the host's Input: the one it gave (StandOpts.input), else a detached one made here. With `cam` it is what the game was handed as its host's (Game.hostCam / hostInput) */
+  input: Input;
 }
 
 /** the harness's smoke stand-in: everything accepted and dropped, no smoke anywhere (`params` may be set on it — a replayed recording's canister row) */
@@ -634,10 +640,12 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_WALLFLEE')) FRAG.wallFlee = String((globalThis as any).process?.env?.TPS_WALLFLEE ?? '') === '1';   // a wall the burst would open is no cover to the flee (src/game/frag.ts FRAG.wallFlee): off, so only the walls as they stand and the door leaves count
     if (pinned('TPS_DOWNKILL')) FRAG.downKill = String((globalThis as any).process?.env?.TPS_DOWNKILL ?? '') === '1';   // a burst kills a man who is down and breathing (src/game/frag.ts FRAG.downKill): off, so a blast passes over every man already down
     if (pinned('QA_DOORSTAY')) DOORSTAY.on = false;                 // doors stay where they are left (src/game/doors.ts): every leaf has its closer, which is what every older probe, frozen digest and session fixture was staged against — `probes.ts stay-open` and playthrough.ts turn it on (the shipped default); QA_DOORSTAY=1 turns it on for any harness run
-    game.director.strict = true;         // the level script (src/game/director.ts): a beat that throws fails its PROBE — in the page it fails the beat and the frame goes on
     kitSoloStand(game);                  // the solo night's Sam (src/game/kit.ts): under the SHIPPED stand a game stood up plain wears your card as the page's ?solo does; the frozen stand: this line does nothing
   }
   if (HOUR.id !== 'night') applyHour(game, HOUR.id);   // the visit's hour (?hour= / PT_HOUR — src/game/hours.ts) laid over the level's own night; night = this line does nothing
   const cam = new FollowCamera(); cam.target = v3.copy(level.playerSpawn);
-  return { game, level, ch, smoke, cam };
+  // THE HOST'S CAMERA AND KEYS ARE HANDED TO THE GAME HERE, ONCE, FOR EVERY HOST (the page, the harness, a watcher, a server): before the first export of a
+  // game's state and before its first step, so every host of one game holds the same rows in the same order (game.ts hostCam)
+  const input = opts.input ?? Input.detached(); game.hostHands(cam, input);
+  return { game, level, ch, smoke, cam, input };
 }

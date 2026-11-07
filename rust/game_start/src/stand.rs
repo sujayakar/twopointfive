@@ -103,6 +103,9 @@ pub fn host_new(g: &mut Game) -> Host {
     g.tab.camera[cam].aspect = canvas.width / canvas.height;
     game::camera::follow_camera_rebuild(g, cam);
     game::host_api::b_01::host_world_upload(g);
+    // (the host's camera and keys are handed to the game here, once, as standGame hands a TypeScript host's: game.ts hostCam)
+    g.host_cam = Some(cam);
+    g.host_input = Some(input);
     Host { input, cam, canvas }
 }
 
@@ -137,9 +140,8 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     g.col.boxes = loaded.boxes.clone();   // (`level.boxes`, which the constructor reads as the collision's list)
     game::game::game_new(&mut g, rig, Some(game::game::GameNewOpts { seats: Some(o.seats as f64) }));
     settle(&mut g);
-    // the harness's stand (standGame with `harness`): the level's script strict, the solo night's card on a game stood plain
+    // the harness's stand (standGame with `harness`): the solo night's card on a game stood plain
     // (the flag is the page's boot: host/profile.ts shippedBoot raises it, and the page's own plain night asks `kitSoloIf` by its address)
-    g.director.strict = true;
     g.m.kit.kit_solo.stand = true;
     game::kit::kit_solo_stand(&mut g, None);
     let host = host_new(&mut g);

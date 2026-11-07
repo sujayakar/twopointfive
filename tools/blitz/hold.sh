@@ -18,6 +18,9 @@
 # new tick-1 half is the kept one with bytes added at its end, those bytes are added to every kept half (STAND-IN: they are tick 1's, taken as the same
 # all run: today the engine's four words of what the host draws, which a headless host never changes); any other change of its shape is refused, and so
 # is a run that puts a checkpoint back (L<k>.bin is a whole state of the older layout). A game of two seats is stood by seats.ts the same way.
+# ONE OTHER CHANGE OF THE HALF IS TAKEN: a run kept by a host that stepped by records alone, before every host handed the game its camera and Input at
+# the stand, is one camera row and one Input row short: tools/blitz/half-grow.ts gives its halves those two rows (the fresh tick 1's: nothing moves them
+# on such a host) and refuses unless tick 1 then is the fresh half byte for byte.
 cd "$(dirname "$0")/../.." || exit 64
 [ -n "$1" ] || { sed -n '2,3p' "$0"; exit 64; }
 if [ "$2" != --no-build ] && [ -z "$BLITZ_RUNNER" ]; then ( cd rust/game_run && cargo build --bins > /dev/null 2>&1 ) || { echo "hold.sh: the runner does not build"; exit 3; }; fi
@@ -37,9 +40,15 @@ fresh() { local D=$1 c e M n a=()
   [ -s "$D/fresh/c1.bin" ] && [ -s "$D/fresh/s0.bin" ] && [ -s "$D/fresh/h1.bin" ] || { WHY="the start did not stand here: $(grep -a -m1 'rror' "$D/fresh.log" | cut -c1-220)"; return 1; }
   [ -s "$D/h1.bin" ] || { WHY="it holds no host's half of tick 1"; return 1; }
   n=$(( $(stat -c %s "$D/fresh/h1.bin") - $(stat -c %s "$D/h1.bin") ))
-  [ "$n" -ge 0 ] && cmp -s -n "$(stat -c %s "$D/h1.bin")" "$D/h1.bin" "$D/fresh/h1.bin" || { WHY="the host's half of a tick changed shape, not only grew at its end"; return 1; }
-  if [ "$n" -gt 0 ]; then tail -c "$n" "$D/fresh/h1.bin" > "$D/fresh/tail"; for h in "$D"/h[0-9]*.bin; do cat "$D/fresh/tail" >> "$h"; done; fi
-  HOW="the start made again here, layout $LAY; $( [ ! -e "$D/s0.bin" ] && echo "no start was kept" || { cmp -s "$D/s0.bin" "$D/fresh/s0.bin" && echo "its block the kept one" || echo "ITS BLOCK NOT THE KEPT ONE"; } ); the host's half $n bytes longer"
+  local rows=
+  if [ "$n" -ge 0 ] && cmp -s -n "$(stat -c %s "$D/h1.bin")" "$D/h1.bin" "$D/fresh/h1.bin"; then
+    if [ "$n" -gt 0 ]; then tail -c "$n" "$D/fresh/h1.bin" > "$D/fresh/tail"; for h in "$D"/h[0-9]*.bin; do cat "$D/fresh/tail" >> "$h"; done; fi
+  else
+    # …OR IT IS SHORT OF THE HOST'S OWN CAMERA AND INPUT ROWS, which every host hands the game at its stand now and a host that steps by records alone
+    # never moves: half-grow.ts gives each kept half the two rows as the fresh tick 1 has them, and refuses unless tick 1 then IS the fresh one
+    rows=$(bun run --preload ./tools/blitz/expose.ts tools/blitz/half-grow.ts "$D" "$D/fresh" 2>&1 | tail -1) && n=rows || { WHY="the host's half of a tick changed shape, not only grew at its end ($rows)"; return 1; }
+  fi
+  HOW="the start made again here, layout $LAY; $( [ ! -e "$D/s0.bin" ] && echo "no start was kept" || { cmp -s "$D/s0.bin" "$D/fresh/s0.bin" && echo "its block the kept one" || echo "ITS BLOCK NOT THE KEPT ONE"; } ); the host's half $( [ "$n" = rows ] && echo "given the host's own rows: $rows" || echo "$n bytes longer" )"
   cp "$D/fresh/c1.bin" "$D/fresh/s0.bin" "$D/"; [ "$(stat -c %s "$D/fresh/knobs.bin")" = "$(stat -c %s "$D/knobs.bin" 2>/dev/null)" ] || cp "$D/fresh/knobs.bin" "$D/"
   rm -rf "$D/fresh"; }
 for f in $( [ -d "$1" ] && find "$1" -name '*.tar.zst' | sort || echo "$1" ); do
