@@ -29,9 +29,9 @@ fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
     crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(g) && crate::orders::squad_orders_mine(g, gd))
 }
 /// `gd.lastKnown = at`: a new object in the TypeScript, so every whole write bumps `fix_stamp` (doze.ts:244's identity question).
-fn write_fix(d: &mut crate::game::Guard, at: V3) {
-    d.last_known = Some(at);
-    d.fix_stamp = d.fix_stamp.wrapping_add(1);
+fn write_fix(g: &mut crate::game::Game, gd: GuardId, at: V3) {
+    g.gd[gd].last_known = Some(at);
+    g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
 }
 /// `gd.path = []; gd.pathGoal = null`: a new array, so `path_serial` moves (`gd.path === W.arr` elsewhere), and the goal is no longer the standoff's point (`path_goal_orbit`).
 fn no_path(d: &mut crate::game::Guard) {
@@ -321,7 +321,7 @@ pub fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &
     let pos: V3 = if !pts.is_empty() { v3::copy(pts[i0]) } else { v3::copy(post_of(g, m)) };
     let t0 = g.time;
     g.gd[gd].task = Some(GuardTask::CheckOn(GuardTaskCheckOn { pos, who: m, wp: i0 as f64, left: m::max(1.0, pts.len() as f64), t0 }));
-    write_fix(&mut g.gd[gd], v3::copy(pos));
+    write_fix(g, gd, v3::copy(pos));
     crate::mind::raise(g, gd, 0.42, "guards");
     if g.gd[gd].state == GuardState::Patrol { crate::mind::set_state(g, gd, GuardState::Suspicious, "guards"); g.gd[gd].react_t = 0.8; }
     g.gd[gd].search_t = 0.0;
@@ -342,7 +342,7 @@ pub fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
             let t0 = g.time;
             g.gd[gd].body_duty = Some(GuardBodyDuty { body: who, role: GuardBodyDutyRole::Called, stage: GuardBodyDutyStage::To, t: 0.0, t0, spot: None });
             let body = body_pos(g, who);
-            write_fix(&mut g.gd[gd], body);
+            write_fix(g, gd, body);
             crate::mind::raise(g, gd, 0.45, "guards");
             g.gd[gd].react_t = 0.5;
             g.gd[gd].search_t = 0.0;
@@ -363,17 +363,16 @@ pub fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
         _ => return,
     };
     if left <= 0.0 || pts.is_empty() { check_on_done(g, gd, who, false); return; }
-    let d = &mut g.gd[gd];
     let mut pos = [0.0; 3];
-    if let Some(GuardTask::CheckOn(k)) = &mut d.task {
+    if let Some(GuardTask::CheckOn(k)) = &mut g.gd[gd].task {
         k.wp = js::rem(k.wp + 1.0, pts.len() as f64);
         pos = v3::copy(pts[k.wp as usize]);
         k.pos = pos;
     }
-    write_fix(d, v3::copy(pos));
-    d.search_t = 0.0;
-    no_path(d);
-    d.stall_ref = None;
+    write_fix(g, gd, v3::copy(pos));
+    g.gd[gd].search_t = 0.0;
+    no_path(&mut g.gd[gd]);
+    g.gd[gd].stall_ref = None;
     if left == m::floor(pts.len() as f64 / 2.0) {
         let line = format!("halfway around — nothing yet. {}, if you can hear this, sound off", g.gd[who].callsign);
         crate::game::game_say(g, gd, &line, Some(true), None, None);
