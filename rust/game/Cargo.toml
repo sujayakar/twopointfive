@@ -1,3 +1,4 @@
+# The top: every module by its old path, and what asks a rule by its row from outside (the call table, the menu's questions).
 [workspace]
 
 [package]
@@ -10,6 +11,9 @@ publish = false
 crate-type = ["rlib"]
 
 [dependencies]
+game_types = { path = "../game_types" }
+game_wire = { path = "../game_wire" }
+game_rules = { path = "../game_rules" }
 sim = { path = "../sim" }
 prim = { path = "../prim" }
 
