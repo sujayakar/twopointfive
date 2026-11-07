@@ -205,7 +205,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the fist 1.0 cm from the handle on the draw (0.7 cm across a bare back), his wrist as the game reads it identical on and off. `bigslot-check` holds the rule off: its lines
   are about a bare back. NOT DONE / NOT SEEN: in a crouch the pack lies flat on a bent back and the tool lies along it — a long
   handle stands out behind him (the pictures say so); with kit handling on and the rifle kept on his back, Sam's rifle still crosses the radio for a few frames as it is slung or
-  unslung (the hand goes over the right shoulder, the rifle rests at the pack's left); the kit figure draws no big tool and does not apply `packMask` (it shows the breacher's ram);
+  unslung (the hand goes over the right shoulder, the rifle rests at the pack's left); 
   the swapped mask's fit is solved on first use, not with the cast's pre-solved set, and the worn mask is a frame behind a change of tool; `PACKSIDE`'s numbers are first-pass, placed against the mesh offline, judged on stills from the
   offline pose tool only — never seen in the renderer, on a GPU, or played.
 - **IN HAND = what a man holds is in the hand that holds it** (`src/game/inhand.ts INHAND`, the maintainer, 10-18, of a teammate crouched on the rear with his sidearm out: "gun not
@@ -244,7 +244,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   with that switch off, the frozen stand, it is as it was); a defender threw overhand with the carbine in the throwing fist (MENDED since under its own switch: `GUNHAND.throwFree`,
   enemies.md 'A defender throws with his free hand' — IN HAND's long hold stays on the grip through that throw). THE VIEWER draws by the rule too (`src/viewer/runtime.ts` says the staged man's
   word as combat.ts does; the workbench raises the switch as the page does, `?inhand=0` there too; page line: `HALF=bench … inhand-page.cjs`), so a rig number fitted there is judged on
-  the picture the game draws. The Team & kit figure (`src/ui/kitFigure.ts`) still draws without it. NEVER SEEN ON A GPU OR IN PLAY: judged on Blender
+  the picture the game draws.  NEVER SEEN ON A GPU OR IN PLAY: judged on Blender
   Workbench sheets of the skinned cast and by the numbers above.
 - **The rifle family's probes read the page's rules where they are live** (`tools/qa/fn2000-probes.ts`, 10-16; tests only, no game code). `kit-slots`, `rifle-cadence`,
   `rifle-reload` and `rifle-slot` pinned the old kit's beats and were red on the SHIPPED stand. Now: a kit change carried by hand is waited out (`kitWait`: `stage()`, kit-slots'
@@ -545,7 +545,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   now CUT: no `src/game/shield.ts`, no `SHIELD` knob table, no `TPS_SHIELD` word or `FROZEN_HOLDS` row, no `?shield`, no Tab row; `MemberKit` has no `shield` field and the big slot
   offers empty · breaching shotgun · dynamic hammer · wall charge; slots.json v10 has no shield tool and no 'Shield and shotgun' squad kit; a round, a blast and a defender's aim
   no longer ask about a plate (combat.ts, frag.ts, guards.ts), a stack is dealt by the plain rule (doortools.ts, orders.ts: no shield man put first), the figure has no plate
-  layer (`character.ts`), the kit figure and the Team & kit door picture draw none (`ui/kitFigure.ts`, `host/kitView.ts`). NO SWITCH: every stand is the build as it was with the
+  layer (`character.ts`), the Team & kit door picture draws none (`host/kitView.ts`). NO SWITCH: every stand is the build as it was with the
   shield off, so the shipped stand's digests are unmoved and the frozen stand's move only where a shield was staged (the long hall; the kit probes that planted one). WHAT OLD
   DATA DOES: a stored or pasted card that says `shield` is a card without one — `kitSanitize` takes only what a row offers, and the next change of a row writes the store without
   the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`scene/levelData.ts`: 'the ballistic shield is out of the game:
@@ -707,7 +707,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   recording from before the table replays with it off (`journal.ts applyKnobs`). WHAT A ROW NAMES: `weapons.ts WeaponDef.own = { model, voice, flame }` beside its
   stand-in fields (`rig`, `report.voice`, `muzzleFx`), read only through `gunlook.ts gunOwn / voiceOf / flameOf`. NO PLAY NUMBER MOVED. MODELS: `LONG_MODELS` /
   `PISTOL_MODELS`, part tables in the group's own axes (the trigger hand, the sling and the holster stay where the group has them); `Character.gunLook
-  { hand, long, side, bareLong, bareSide }` is dealt each step (`game.ts` for a teammate, `player.ts armRifle` for you, `ui/kitFigure.ts` for its figure) and read by `rigProps.ts`
+  { hand, long, side, bareLong, bareSide }` is dealt each step (`game.ts` for a teammate, `player.ts armRifle` for you) and read by `rigProps.ts`
   (in the hands, slung, hung down the front, holstered; the roster chip and the card's icon are `ui/kitIcons.ts OWN_GUN`). The big slot's pump gun (`m870`) is a
   model too, with a 12 gauge's voice; its muzzle and hand are where the short rifle's were. THREE THINGS THE SIMULATION READS, only of a man who carries one of the
   rows: his MUZZLE is the model's far face (ahead of the wrist: Mk 12 0.70 m, Mk 46 0.62, M1014 0.56, MP7 0.40 — the stand-ins were 0.52, 0.52, 0.50 and, on you,
@@ -722,9 +722,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `tools/qa/gunlook-check.ts` (`own`: every row a slot hands out names a model, a voice, a flame and a casing row, no two guns share one — by name and by what is
   in them — and what two guns may share is said in the file; `hands`: a teammate and you with every pick are told, drawn and heard as that gun, off = the
   stand-in; `off`: ten seconds of the staged room clear digest the same with the switch off and on, seed 17, cards as issued) and `tools/qa/gunreload-check.ts`;
-  `probes.ts gunlook` runs both; `GUNLOOK_BREAK=1` fails them. The kit figure's own check (`tools/qa/kit-figure-roster-check.ts`) has a pose per model: the fist on the
-  model's pistol grip (its `is: 'grip'` part) under that check's own rows, the hand on the fore-end by the model's hold, and the model the one drawn. PICTURES WITHOUT A GPU: `tools/qa/gunlook-plates.ts` (every model flat, side and top, one scale) and
-  `tools/qa/gunlook-sheet.ts` (the kit figure with each gun, software-drawn; `--off` the before); `tools/qa/gunlook-page.cjs` boots the real page with all six on
+  `probes.ts gunlook` runs both; `GUNLOOK_BREAK=1` fails them. PICTURES WITHOUT A GPU: `tools/qa/gunlook-plates.ts` (every model flat, side and top, one scale); `tools/qa/gunlook-page.cjs` boots the real page with all six on
   a team of four. NOT DONE / KNOWN: the HK45 is hard to tell from the issue pistol at the game's distance (a darker, fatter can and a tan grip are all it has);
   the Glock 18's long magazine is mostly hidden by the hands; a teammate's reload is always shown as a gun run dry, and when he takes his long gun up after his
   sidearm the whole feed is mimed with only its first sound; with the shells key OFF the books still take the whole tube out at the row's `out` and put it back at `in_`, so a
