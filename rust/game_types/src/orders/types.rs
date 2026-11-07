@@ -2193,6 +2193,13 @@ pub struct Row {
     pub tick: Option<fn(&mut Game, GuardId, OrdersAssignmentId)>,
     pub frame: Option<fn(&mut Game)>,
 }
+impl Row {
+    /// An order with the three things every order has. The rest are `None` until its file says otherwise:
+    /// `Row { frame: Some(frame), ..Row::new(ID, label, issue) }`.
+    pub const fn new(id: &'static str, label: fn(&mut Game, &OrderTarget) -> String, issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>) -> Row {
+        Row { id, label, can: None, only: None, valid: None, issue, tick: None, frame: None }
+    }
+}
 impl core::fmt::Debug for Row {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { write!(f, "Row({})", self.id) }
 }
