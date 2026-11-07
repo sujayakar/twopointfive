@@ -113,6 +113,9 @@ fn free_slot() -> Option<usize> {
 }
 
 // ---- memory
+/// THE GENERATION OF THE BRIDGE this module was built with (io::LAYOUT, and `layout` in schema.json): a host refuses a module of another generation.
+#[no_mangle]
+pub extern "C" fn face_layout() -> u32 { game::io::LAYOUT }
 #[no_mangle]
 pub extern "C" fn face_alloc(n: usize) -> *mut u8 {
     hook();
