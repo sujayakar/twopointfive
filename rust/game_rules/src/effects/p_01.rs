@@ -12,7 +12,7 @@ type Kind = crate::smoke_types::SmokeEmitterKind;
 type Lattice = crate::smoke_types::SmokeEmitterLattice;
 
 /// A stored `Track` called: its `{ pos, dir }`, read live, or nothing once what it rides has gone. (combat.ts fireWeaponRaw track and port; sparks.ts tracker)
-fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
+pub fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
     match *track {
         Track::Muzzle { by } => Some((g.ch[by].muzzle, g.ch[by].gun_dir)),
         Track::EjectPort { by } => {
