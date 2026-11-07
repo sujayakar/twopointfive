@@ -22,12 +22,17 @@ maintainer played a tutorial and a few levels on his own machine. Not checked: c
 character's files in, a `Game` the tick runs out, through the game's own constructor (`game_new`, which had never run), with nothing made by
 TypeScript. Its scene builder WRITES A LEVEL FILE (rooms, doors, lamps, men, a room clear's block), so a test's scene goes in by the level format
 and there is one start. `cargo test` in `rust/game_start` stands scenes and holds five behaviours in about half a minute; `rust/game_start/README.md`
-is the how-to, with what the start does not carry yet (it refuses such a file by name: box shapes, civilians, devices, vents, daylight, the office's
-plans, most scenario kinds). `tools/blitz/start.sh <level file>` holds the Rust start to the TypeScript start of the same file, path by path
+is the how-to. EVERY FILE UNDER `levels/` IS READ WHOLE, round things and box shapes included: the file's tree remembers which members were asked
+for (`src/json.rs`), so a record or a member the reader has no line for is found by the reading itself and the file is refused by name (a test
+holds all of `levels/` to it). The records the game keeps as its own types are read by those types, a line a type (`src/records.rs`). `tools/blitz/start.sh <level file>` or `--mission <id>` holds the Rust start to the TypeScript start, path by path
 (`known-start.txt` is what may differ, each line with its reason), and with `--frames N` steps both starts in Rust and compares every frame.
-Checked: `kit-yard.json` plain and with its room clear started, and the tests' four scenes: no path not known, the block equal to the byte, in
-step for 600 to 1,800 frames. Not checked: any other level; a page starting a level this way (the page still starts in TypeScript); nothing of it
-on a GPU.
+`rust/game_start/LEVELS.md` is the mission list row by row (written by `bun run tools/blitz/start-levels.ts --write`), and the README's "What
+stands between this and the page starting a level in Rust" is the list of what a page start still needs: first an address's words as a type
+(`startFromQuery` stops in Rust: a mission is started here by `start_scenario`), then the puppet's objects.
+Checked: every row of the mission list (`LEVELS.md`: no path not known at the start, 300 frames in step with an idle hand, no path not known as
+they end; the office's four on a copy of its file with its scenarios written in), and the tests' scenes for 900 frames. Not checked: a mission
+started as the page starts it (from its address); a hand on the controls in those frames; two seats; a page starting a level this way (the page
+still starts in TypeScript); nothing of it on a GPU.
 
 **The rows and the maths are NOT SWITCHES any more** (the bullet "Not switches", near the end, 2026-11-05). Every `TPS_RUST`, `TPS_RUST<ROW>`, `TPS_EXACT`,
 `?rust`, `?rust<row>` and `?noexact` in the bullets below is how that step was measured on its day. None of them is a word now: in a tool's environment
