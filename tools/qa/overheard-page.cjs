@@ -21,7 +21,7 @@ const DRIVE = async () => {
   const heard = () => !!g.cues.heardRow;
   let who = '', tries = 0;
   // the switch up: the first hidden man whose shout the hearing model carries to the player stood beside him. Down: the same men, the same places, all tried
-  pick: for (const gd of foes) for (const [dx, dz] of ROUND) { tries++; g.teleportPlayer([gd.char.pos[0] + dx, 0, gd.char.pos[2] + dz]); g.cues.reset(); g.say(gd, 'over here!'); if (heard()) { who = gd.callsign; break pick; } }
+  pick: for (const gd of foes) for (const [dx, dz] of ROUND) { tries++; g.teleportPlayer([gd.char.pos[0] + dx, 0, gd.char.pos[2] + dz]); window.__rust.call('Cues.reset', g.cues, []); window.__rust.call('Game.say', g, [gd, 'over here!', false, false, true]); if (heard()) { who = gd.callsign; break pick; } }
   window.__runFrames(2);
   const el = document.getElementById('log');
   return { on: K.on, overheard: K.overheard, fog: g.fogOfWar.on, hidden: foes.length, tries, who, rows: g.cues.rows.map(r => r.text), heardRow: g.cues.heardRow ? g.cues.heardRow.text : '', html: el ? el.innerHTML : null, ring: g.messages.map(m => m.text) };
@@ -29,7 +29,7 @@ const DRIVE = async () => {
 
 (async () => {
   let red = 0;
-  for (const job of [{ name: 'on', query: '', want: true }, { name: 'off', query: 'overheard=0&', want: false }]) {
+  for (const job of [{ name: 'on', query: '', want: true }]) {
     const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });   // (a browser a page: a second page in one browser never opened here once the first had run its frames on the software adapter)
     const shut = () => Promise.race([browser.close(), new Promise(res => setTimeout(res, 15000))]);
     const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();

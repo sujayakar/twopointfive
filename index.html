@@ -203,7 +203,7 @@
     /* radio traffic (overlay.ts): only what goes over a net — the guards' channel you are listening in on, and (later) your own side. Everything else the old
        message log printed is carried by the interaction panel, the kit column and the world itself. */
     #log { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(620px, 70vw / var(--tz, 1)); font: italic 12px/1.45 var(--h-font); color: var(--h-ink); text-align: center; text-shadow: var(--h-shadow); white-space: pre-wrap; pointer-events: none; letter-spacing: 0.02em; }
-    #log .rx { display: block; opacity: 0.92; } #log .rx b { font: 700 11px/1 var(--h-head); color: var(--h-hi); letter-spacing: 0.12em; margin-right: 6px; } #log .rx.old { opacity: 0.5; }
+    #log .rx { display: block; opacity: 0.92; } #log .rx b { font: 700 11px/1 var(--h-head); color: var(--h-hi); letter-spacing: 0.12em; margin-right: 6px; } #log .rx.old { opacity: 0.5; } #log .rx.said { opacity: 0.8; font-style: normal; }
     /* mission: one objective line top-centre and a small diamond on (or, clamped to the screen edge, toward) the current objective — the same caps as the meters; the objective is one of the things the orange is for (overlay.ts) */
     #objective { position: absolute; left: 50%; top: 5px; padding: 5px 12px 4px; background: rgba(var(--h-plate),0.5); border-radius: 2px; transform: translateX(-50%); font: 12px/1 var(--h-font); letter-spacing: 0.02em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0.95; }
     #objective b { margin-right: 3px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--h-acc); } #objective.done b, #objective.failed b { color: inherit; }

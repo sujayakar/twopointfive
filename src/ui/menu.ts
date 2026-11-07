@@ -26,6 +26,7 @@ import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions 
 import { cloudNote } from './cloudnote';
 import { COOP } from '../net/lobby';
 import { coopRows } from './coop';
+import { pageSay } from '../view/pagesaid';
 
 /** the title screen's line under the wordmark */
 const TITLE_LINE = 'Squad tactics and stealth. Every light, shadow and wisp of smoke is live.';
@@ -255,7 +256,7 @@ export class Menu {
   private checkpointButton(cls = '', armed: () => boolean = () => true): HTMLElement | null {
     const g = this.d.game, load = this.d.loadCheckpoint; if (!load) return null;
     const info = this.checkpointInfo(); if (!info) return null;
-    return button(`Restart from checkpoint (${g.saves.ageWords(g, info)})`, () => { if (!armed()) return; const why = load(info.key); if (why) { g.msg(`checkpoint: ${why}`); this.render(); return; } this.close(); }, cls);
+    return button(`Restart from checkpoint (${g.saves.ageWords(g, info)})`, () => { if (!armed()) return; const why = load(info.key); if (why) { pageSay(`checkpoint: ${why}`); this.render(); return; } this.close(); }, cls);
   }
   /** 'Quit to scenarios' (the pause card and the down card while a scenario is up): the scenario stopped and the start card's picker back (main.ts) */
   private quitButton(armed: () => boolean = () => true): HTMLElement { return button('Quit to scenarios', () => { if (!armed()) return; this.d.stopTour?.(); this.d.scenario?.quit(); }, 'quit'); }
@@ -289,7 +290,7 @@ export class Menu {
       if (info.slot === 'manual') t.appendChild(el('i'));
       t.title = info.label || (info.slot === 'manual' ? 'by hand' : 'autosave'); t.setAttribute('aria-label', `${info.slot === 'manual' ? 'saved by hand' : 'autosave'}, ${g.saves.ageWords(g, info)}`);
       t.tabIndex = -1;
-      t.onclick = () => { if (!armed()) return; const why = load(info.key); if (why) { g.msg(`checkpoint: ${why}`); this.render(); return; } this.close(); };
+      t.onclick = () => { if (!armed()) return; const why = load(info.key); if (why) { pageSay(`checkpoint: ${why}`); this.render(); return; } this.close(); };
       strip.appendChild(t); return t;
     });
     if (due) { const t = el('div', 'tile hand due'); t.appendChild(el('i')); t.setAttribute('aria-label', 'a save by hand, written as play goes on'); strip.insertBefore(t, tiles[line.findIndex(x => x.missionT > now + 0.5)] ?? null); }   // (before the saves a load has left ahead of this moment)

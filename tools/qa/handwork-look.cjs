@@ -113,7 +113,7 @@ const PLAY = ({ secs, tap, cursor }) => {
   if (ONLY.includes('radio') || ONLY.includes('swap') || ONLY.includes('guard')) await sam([8, 0, 17]);   // (Sam out of these: the guards are the subject)
   if (ONLY.includes('radio')) {   // ---- a hand to the radio while his line is on the net
     await ai(false); await play(0.5);
-    await page.evaluate(() => { const g = window.__game; g.say(g.guards[0], 'control, east corridor is clear', true); }); await play(0.6); const G0 = await guardPin(0, 0.6); await lamp(G0.p, G0.n, 0.6); await play(0.05); await still('radio-1-hand-up');
+    await page.evaluate(() => { const g = window.__game; window.__rust.call('Game.say', g, [g.guards[0], 'control, east corridor is clear', true, false, true]); }); await play(0.6); const G0 = await guardPin(0, 0.6); await lamp(G0.p, G0.n, 0.6); await play(0.05); await still('radio-1-hand-up');
     await guardPin(0, 0.35, 1.4, 0.25); await play(0.1); await still('radio-2-close'); await play(3.0);
   }
   if (ONLY.includes('swap')) {   // ---- the torch put away and the sidearm drawn: a strip
