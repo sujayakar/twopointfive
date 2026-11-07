@@ -1,5 +1,6 @@
 //! src/game/frag.ts lines 1 to 297
 use super::*;                      // your own module: its types, its other parts' functions
+use crate::ask::Over;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -32,15 +33,17 @@ pub fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fro
 }
 
 /// Is a burst's line from a to b stopped: by anything solid, and by glass as glass is to a burst. (frag.ts burstBlocked)
-pub fn burst_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+pub fn burst_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool { burst_blocked_over(g, &Over::OWN, a, b) }
+/// …of the world as the question takes it
+pub fn burst_blocked_over(g: &mut Game, over: &Over, a: V3, b: V3) -> bool {
     if !crate::glassbreak::glass_break_live(g) {
-        return crate::scene_collision::shot_blocked(g, a, b, None, None);
+        return crate::scene_collision::shot_blocked_over(g, over, a, b, None, None);
     }
     if g.k.frag.pane_energy > 0.0 {
         let energy = g.k.frag.pane_energy;
-        crate::scene_collision::shot_blocked(g, a, b, Some(0.02), Some(energy))
+        crate::scene_collision::shot_blocked_over(g, over, a, b, Some(0.02), Some(energy))
     } else {
-        crate::scene_collision::solid_blocked(g, a, b, Some(0.02))
+        crate::scene_collision::solid_blocked_over(g, over, a, b, Some(0.02))
     }
 }
 
@@ -51,7 +54,9 @@ pub fn burst_line(g: &mut crate::game::Game, from: V3, to: V3, view: Option<crat
 }
 
 /// Share (0‥1) of a man the burst point has a clear line to: four points from shin to head. (frag.ts exposure)
-pub fn exposure(g: &mut crate::game::Game, from: V3, feet: V3, head: V3, view: Option<crate::frag::GlassView>) -> f64 {
+pub fn exposure(g: &mut crate::game::Game, from: V3, feet: V3, head: V3, view: Option<crate::frag::GlassView>) -> f64 { exposure_over(g, &Over::OWN, from, feet, head, view) }
+/// …of the world as the question takes it
+pub fn exposure_over(g: &mut Game, over: &Over, from: V3, feet: V3, head: V3, view: Option<crate::frag::GlassView>) -> f64 {
     let view = view.unwrap_or(GlassView::Wary);
     let h = m::max(0.5, head[1] - feet[1]);
     let pts: [V3; 4] = [
@@ -60,30 +65,18 @@ pub fn exposure(g: &mut crate::game::Game, from: V3, feet: V3, head: V3, view: O
         [v3::lerp(feet[0], head[0], 0.8), feet[1] + 0.78 * h, v3::lerp(feet[2], head[2], 0.8)],
         [head[0], head[1], head[2]],
     ];
-    through_glass(g, from, view, &mut |g: &mut Game| share_clear(g, from, &pts))
+    through_glass(g, from, view, &mut |g: &mut Game| share_clear(g, over, from, &pts))
 }
 
 /// The closure `exposure` and `lyingShows` both hand the glass: the share of `pts` with a clear line. (frag.ts:242, 296)
-fn share_clear(g: &mut Game, from: V3, pts: &[V3]) -> f64 {
+fn share_clear(g: &mut Game, over: &Over, from: V3, pts: &[V3]) -> f64 {
     let mut n = 0.0;
     for &p in pts {
-        if !burst_blocked(g, from, p) {
+        if !burst_blocked_over(g, over, from, p) {
             n += 1.0;
         }
     }
     n / pts.len() as f64
-}
-
-/// A question asked with these door leaves out of the collision layer's list, the list put back after. (frag.ts withoutLeaves)
-pub fn without_leaves<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, leaves: &[BoxId], fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    if leaves.is_empty() {
-        return fn_(g);
-    }
-    let dyn_ = g.col.dynamic_boxes.clone();
-    g.col.dynamic_boxes.retain(|b| !leaves.contains(b));
-    let r = fn_(g);
-    g.col.dynamic_boxes = dyn_;
-    r
 }
 
 /// The leaves a hand grenade bursting at `from` would take off its hinges. (frag.ts leavesFor)
@@ -101,16 +94,9 @@ pub fn exposed_to(g: &mut crate::game::Game, from: V3, feet: V3, head: V3, view:
     }
     let walls = walls_for(g, from);
     let leaves = leaves_for(g, from);
-    if !walls.is_empty() {
-        return crate::destruction::destruction_with_walls_open(g, &walls, &mut |g: &mut Game| {
-            without_leaves(g, &leaves, &mut |g: &mut Game| exposure(g, from, feet, head, view))
-        });
-    }
-    if !leaves.is_empty() {
-        without_leaves(g, &leaves, &mut |g: &mut Game| exposure(g, from, feet, head, view))
-    } else {
-        e
-    }
+    if walls.is_empty() && leaves.is_empty() { return e; }
+    let over = Over::but(&leaves).walls_open(g, &walls);
+    exposure_over(g, &over, from, feet, head, view)
 }
 
 /// The walls and cover a hand grenade bursting at `from` would open; the plan asked once a tick for a point. (frag.ts wallsFor)
@@ -182,8 +168,10 @@ fn lying_up(p: V3) -> V3 {
 }
 
 /// How much of those points a burst at `from` has a line to (0‥1), through the glass as `view` reckons it. (frag.ts lyingShows)
-pub fn lying_shows(g: &mut crate::game::Game, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 {
-    through_glass(g, from, view, &mut |g: &mut Game| share_clear(g, from, pts))
+pub fn lying_shows(g: &mut crate::game::Game, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 { lying_shows_over(g, &Over::OWN, from, pts, view) }
+/// …of the world as the question takes it
+pub fn lying_shows_over(g: &mut Game, over: &Over, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 {
+    through_glass(g, from, view, &mut |g: &mut Game| share_clear(g, over, from, pts))
 }
 
 /// THE BLAST: its sparks and dust are its thrower's doing. (frag.ts blast)
@@ -214,26 +202,6 @@ mod tests {
         for (a, b, bits) in rows {
             assert_eq!(hash01(a, b).to_bits(), bits, "{a} {b}");
         }
-    }
-    #[test]
-    fn without_leaves_filters_the_list_and_puts_it_back() {
-        let mut g = Game::blank();
-        let all = vec![BoxId(3), BoxId(1), BoxId(7), BoxId(1)];
-        g.col.dynamic_boxes = all.clone();
-        // every copy of a leaf goes, the rest keep their order; a nested view sees the outer one's list
-        let (once, twice) = without_leaves(&mut g, &[BoxId(1)], &mut |g: &mut Game| {
-            let once = g.col.dynamic_boxes.clone();
-            let twice = without_leaves(g, &[BoxId(7)], &mut |g: &mut Game| g.col.dynamic_boxes.clone());
-            (once, twice)
-        });
-        assert_eq!(once, vec![BoxId(3), BoxId(7)]);
-        assert_eq!(twice, vec![BoxId(3)]);
-        assert_eq!(g.col.dynamic_boxes, all);
-        // what the question itself left in the list is not kept: the put-back is of what was found
-        without_leaves(&mut g, &[BoxId(3)], &mut |g: &mut Game| g.col.dynamic_boxes.push(BoxId(9)));
-        assert_eq!(g.col.dynamic_boxes, all);
-        // no leaves: asked as it stands
-        assert_eq!(without_leaves(&mut g, &[], &mut |g: &mut Game| g.col.dynamic_boxes.clone()), all);
     }
     #[test]
     fn flat_has_the_typescript_s_bits() {

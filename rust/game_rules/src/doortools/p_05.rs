@@ -120,12 +120,7 @@ pub fn door_tools_can_reach(g: &mut crate::game::Game, d: DoorId, side: f64, p: 
     }
     let w = g.dr[d].def.width;
     let inn = door_pt(g, d, w / 2.0, 0.45, -side, Some(1.1));
-    // (the try/finally of the TypeScript: the list is put back, nothing in between can leave early)
-    let (leaf, keep) = (g.dr[d].box_, g.col.dynamic_boxes.clone());
-    g.col.dynamic_boxes.retain(|&b| b != leaf);
-    let blocked = crate::scene_collision::solid_blocked(g, inn, [p[0], 1.1, p[2]], None);
-    g.col.dynamic_boxes = keep;
-    !blocked
+    !crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::but_door(g, d), inn, [p[0], 1.1, p[2]], None)
 }
 /// Sam himself beyond the door, in a stun can's reach (doortools.ts samBehind)
 pub fn door_tools_sam_behind(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
@@ -1171,7 +1166,7 @@ pub fn door_tools_standoff_posts_as_were(g: &mut crate::game::Game, d: DoorId, s
     let sam = sam_pos(g, &crate::seats::here(g));
     let held = crate::orders::squad_orders_held_on(g, &crate::seats::here(g), d, men, None);
     let from = g.k.doortools.backblast_m + 0.4;
-    let hall = crate::orders::squad_orders_hall_places(g, d, side, n, from, &mut |_g: &mut Game, q: V3| {
+    let hall = crate::orders::squad_orders_hall_places(g, &crate::ask::Over::OWN, d, side, n, from, &mut |_g: &mut Game, q: V3| {
         v3::dist_xz(sam, q) < 0.7 || held.iter().any(|&h| v3::dist_xz(h, q) < 0.7)
     });
     if hall.len() as f64 == n {

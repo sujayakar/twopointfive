@@ -22,7 +22,7 @@ use crate::knobs::*;
 use crate::lines::{self, ASK_GLASS};
 use crate::maths::{hypot2, hypot3, round_half_up};
 use crate::pattern::{self, clip_rect, frags_of, hull, order_of, poly_area, Dice, Frag, Pt, FRAGS_PER_SITE, MAX_PTS, REMAINDER};
-use crate::state::state;
+use crate::state::{state, state_read};
 use crate::world::{js_abs, js_ceil, js_max, js_min, sign_or_one, world, World, GD, GW, REC, R_C, R_COS, R_H, R_SIN};
 use core::mem::{offset_of, size_of};
 use prim::{floor, sqrt};
@@ -241,6 +241,12 @@ impl Panes {
     pub fn row(&mut self, r: usize) -> &mut Row {
         let at = self.rows_at() + r * ROW_W;
         unsafe { &mut *(self.body.as_mut_ptr().add(at) as *mut Row) }
+    }
+    /// …to read
+    #[inline]
+    pub fn row_read(&self, r: usize) -> &Row {
+        let at = self.rows_at() + r * ROW_W;
+        unsafe { &*(self.body.as_ptr().add(at) as *const Row) }
     }
     #[inline]
     pub fn hole(&mut self, h: usize) -> &mut Hole {
@@ -2145,9 +2151,12 @@ pub fn open_at(g: usize, bi: u32, x: f64, y: f64, z: f64) -> bool {
 /// A LINE OR A RAY OF THIS MODULE MEETS STATIC `bi`: glass.rs `open`, reading the pane's row where it stands
 #[inline]
 pub fn row_for(g: usize, bi: u32) -> Option<(&'static [f64], &'static [u32])> {
-    let p = pn(g);
+    let p = &state_read(g).panes;
+    if p.used == 0 {
+        return None; // (a slot no pane was touched in: its counts read none, whatever lies past the first word)
+    }
     let ri = p.row_of(bi)?;
-    let r: &'static Row = p.row(ri);
+    let r: &'static Row = p.row_read(ri);
     if r.n_open == 0 && r.qn == 0 && !dicing(r) && !gone(r) {
         return None;
     }
@@ -2156,7 +2165,7 @@ pub fn row_for(g: usize, bi: u32) -> Option<(&'static [f64], &'static [u32])> {
 /// glassbreak.ts wouldGive, the view's half: would a burst of this size take pane `bi` out of the way at (x, y, z). `sure`: a man counting on it (the near reach alone), else a wary one (the whole pane or nothing).
 pub fn gives(g: usize, o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
     let (at, radius, power, sure) = ([o.view_at[0], o.view_at[1], o.view_at[2]], o.view_at[3], o.view_at[4], o.view_at[5] != 0.0);
-    let p = pn(g);
+    let p = &state_read(g).panes;
     let s = match sheet_of(o, bi as u32) {
         Some(s) => s,
         None => return false,
@@ -2170,7 +2179,8 @@ pub fn gives(g: usize, o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
     if kk < js_min(js_min(k(GB_BLAST_DICE_K), k(GB_BLAST_SHEET_K)), if sure { k(GB_TOOTH_K) } else { BLAST_MIN_K }) {
         return false;
     }
-    let (over, sky, gap) = (over_of(p, bi as u32), o.sheets[s].sky, o.sheets[s].gap);
+    // (a slot no pane was touched in: its counts read none, whatever lies past the first word)
+    let (over, sky, gap) = (if p.used == 0 { NO_OVER } else { over_of(p, bi as u32) }, o.sheets[s].sky, o.sheets[s].gap);
     // (every sheet's sky was settled as the level stood up: a line asks no line of its own here)
     let ty = if over != NO_OVER { over } else { place_rule(sky != 0 && sky != SKY_UNKNOWN, b[R_H], b[R_H + 1], b[R_H + 2], b[R_C + 1], gap) };
     if ty == TEMPERED {

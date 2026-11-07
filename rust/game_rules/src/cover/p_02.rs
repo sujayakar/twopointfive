@@ -85,9 +85,9 @@ pub fn cover_build(g: &mut Game) {
     let nav = GapsOfNav { w: g.col.nav.w, h: g.col.nav.h, cell: g.col.nav.cell, blocked: g.col.nav.blocked.clone() };
     let k = g.k.cover;
     // (the statics' sight alone decides what a gap is)
-    let leaves = core::mem::take(&mut g.col.dynamic_boxes);
+    let walls = crate::ask::Over::statics();
     let found = {
-        let mut solid = |a: V3, b: V3| crate::scene_collision::segment_blocked(g, a, b, None, None, None);
+        let mut solid = |a: V3, b: V3| crate::scene_collision::segment_blocked_over(g, &walls, a, b, None, None);
         // (an opening gets its row of g.tab.cover_opening only once it is kept, below: nothing holds the others)
         let mut found = gaps_of(&nav, true, &k, Some(&mut solid));
         found.extend(gaps_of(&nav, false, &k, Some(&mut solid)));
@@ -99,7 +99,6 @@ pub fn cover_build(g: &mut Game) {
         let o = g.tab.cover_opening.push(o);
         gaps.push(o);
     }
-    g.col.dynamic_boxes = leaves;
     doors.extend(gaps);
     g.cover.openings = doors;
 }
