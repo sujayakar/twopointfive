@@ -121,6 +121,16 @@ const OFF_KEPT: RustHost[] = [], OFF_CAP = 6;
 const MEN = ['Character', 'Guard', 'Player'], MADE_MEN = new WeakSet<object>(), MADE = { n: 0 };
 
 const now = () => performance.now();
+/** RH_WHO=1: the fiftieth crossing of each row of the call surface is counted with the source lines that led to it (who asks a rule between two ticks) */
+const WHO = process.env.RH_WHO === '1';
+/** RH_SCAN_AUDIT=<n> (64): one tick in n the walks between it and the next encode every structured leaf (1: every walk, as before the cheap word; 0: never) */
+const SCAN_AUDIT = +(process.env.RH_SCAN_AUDIT ?? 64);
+// THE ROWS OF THE CALL SURFACE WHOSE RUST FUNCTION CANNOT WRITE THE GAME (tools/blitz/reads.json: the keys of calls.json's rows whose function takes the
+// game by a shared borrow, by the compiler's proof; made by the program that demotes `&mut Game` wherever the crate still compiles; EMPTY until it
+// has run). After a crossing of such a row nothing can have moved: no export, no apply, no second walk. The walk BEFORE it stays: what a tool wrote
+// must reach the Rust game before any rule reads it. Never a guess: a row is on the list or the puppet takes the state again.
+let READS: Set<number> | null = null;
+function reads(): Set<number> { if (READS) return READS; READS = new Set(); try { const dir = new URL('.', import.meta.url).pathname, keys = new Set<string>(JSON.parse(readFileSync(`${dir}reads.json`, 'utf8')).rows ?? []); if (keys.size) for (const r of JSON.parse(readFileSync(`${dir}calls.json`, 'utf8')).rows as { id: number; key: string }[]) if (keys.has(r.key)) READS.add(r.id); } catch { /* no list: every row may write */ } return READS; }
 const ASKS = ['label', 'can', 'only', 'valid', 'when', 'gone', 'word', 'mark', 'given', 'issue', 'give'];
 /** how many hosted games of the process are inside their own update now (see `surfaceOpen`) */
 const BUSY = { n: 0 };
@@ -190,10 +200,10 @@ export class RustHost {
   private live(): boolean { return !!this.h && !this.startDue; }
   surfaceDispatching(): boolean { return false; }
   inHook(): boolean { return this.dispatching; }
-  surfaceCall(row: number, bytes: Uint8Array): Uint8Array { const X = this.F.X; this.scanFlush(); this.busy++; try { { const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds ?? []); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); }   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, p, n)); const out = this.F.outView().slice(); this.applyStep(); this.dispatch(); return out; } finally { this.busy--; if (this.lastChanged || OFF.has('skipwalk')) this.scanRebase(); } }   /* (a crossing whose apply changed nothing and sent no event left the puppet as the walk last saw it: no second walk. `RH_OFF=skipwalk` walks as before.) */
+  surfaceCall(row: number, bytes: Uint8Array): Uint8Array { const X = this.F.X; if (WHO) { const n = (this.whoN.get(row) ?? 0) + 1; this.whoN.set(row, n); if (n === 50) this.count(`who calls row ${row}: ${String(new Error().stack ?? '').split('\n').slice(2).map(l => l.match(/((?:src|tools)\/[\w./-]+\.ts:\d+)/)?.[1]).filter(x => !!x && !/rust-host|surface\.ts/.test(x!)).slice(0, 6).join(' < ')}`); } this.scanFlush(); this.busy++; this.N.cross++; let t0 = now(); try { { const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds ?? []); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); this.N.crossHalfMs += now() - t0; t0 = now(); }   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, p, n)); const out = this.F.outView().slice(); this.N.crossCallMs += now() - t0; t0 = now(); if (reads().has(row) && !OFF.has('reads')) { this.N.crossReads++; this.lastChanged = false; return out; } this.applyStep(); this.dispatch(); this.N.crossApplyMs += now() - t0; if (this.lastChanged) this.N.crossChanged++; return out; } finally { this.busy--; if (this.lastChanged || OFF.has('skipwalk')) this.scanRebase(); } }   /* (a crossing whose apply changed nothing and sent no event left the puppet as the walk last saw it: no second walk. `RH_OFF=skipwalk` walks as before.) */
   /** what the tool wrote since the walk last looked goes to the Rust game */
-  private scanFlush(): void { if (this.audit || !this.h) return; this.tapsOn?.sweep(); this.blockBack(); if (process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => { if (q !== 'game::Game.cmd_buf') this.poked++; this.count(`scan: ${q}`); }); this.scan.rebase(); } else this.scan.flush(); this.T.scan += now() - t;
-    if (this.poked) { this.poked = 0; if (!OFF.has('pokesync') && !this.inApply) { this.pokeSyncs++; this.applyStep(); } } }
+  private scanFlush(): void { if (this.audit || !this.h) return; { const t = now(); this.tapsOn?.sweep(); this.N.tapsMs += now() - t; const t1 = now(); this.blockBack(); this.N.blockBackMs += now() - t1; } if (process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => { if (q !== 'game::Game.cmd_buf') this.poked++; this.count(`scan: ${q}`); }, false, { traps: !OFF.has('traps'), audit: SCAN_AUDIT }); this.scan.rebase(this.auditGap); } else this.scan.flush(this.auditGap); { const e = now() - t; this.T.scan += e; this.N.flush++; this.N.flushMs += e; }
+    if (this.poked) { this.poked = 0; if (!OFF.has('pokesync') && !this.inApply) { this.pokeSyncs++; this.applyStep(); if (this.lastChanged) this.scanRebase(); } } }
   /** STAND-IN (belongs with the scan: a write by name of a field that lives in the block): WHAT THE TOOL WROTE INTO rust/sim's BLOCK. A door's swing and latch, a man's place and the die live in the block (the puppet's objects read and
    *  write its copy of it: `d.vel = 2`, `d.latched = false`), and no walk of the schema's fields meets them. After every apply the puppet's copy IS the
    *  Rust game's; where a part of it differs as a tick opens or a call is about to cross, the tool (or TypeScript run on the puppet) wrote it, and that
@@ -204,7 +214,12 @@ export class RustHost {
     this.partsAt ??= this.F.NAMES.map((name, i) => ({ name, off: (X.face_part_addr(0, i) >>> 0) - (X.state_addr(0) >>> 0), len: X.face_part_len(i) }));
     for (const P of this.partsAt) { if (P.name === 'poses' || P.off + P.len > n) continue; const a = mine.subarray(P.off, P.off + P.len); if (A.buf(a).equals(A.buf(theirs.subarray(P.off, P.off + P.len)))) continue;
       theirs.set(a, P.off); this.F.rec?.mem(theirs.byteOffset + P.off, a); this.blockWrites.set(P.name, (this.blockWrites.get(P.name) ?? 0) + 1); this.count(`the block: ${P.name} written on the puppet since the last apply (handed to the Rust game)`); } }
-  private inApply = false;
+  private inApply = false; private whoN = new Map<number, number>();
+  /** THE WALK'S AUDIT (scan.ts): from the walk after one tick in `SCAN_AUDIT` to the walk as the next opens, every walk encodes every structured leaf as
+   *  every walk once did, so a write the cheap word did not see is sent, and counted on the exit line */
+  private auditGap = false;
+  /** counts for RH_TIMES: the walks by kind and their ms, the crossings, those whose apply changed the puppet, and the ms of a crossing's parts */
+  N = { flush: 0, flushMs: 0, rebase: 0, rebaseMs: 0, cross: 0, crossReads: 0, crossChanged: 0, crossHalfMs: 0, crossCallMs: 0, crossApplyMs: 0, blockBackMs: 0, tapsMs: 0 };
   // STAND-IN (belongs in the generated poke: a write by path brings the memo's row of that path up to date): A FIELD THE TOOL WROTE AND A RULE THEN PUT
   // BACK. The walk pokes the tool's value into the Rust game; the every-tick export's memo still holds what the puppet was SENT before the tool wrote.
   // Where a rule then sets the field to that old value (the soak crouches the player by name and calls `startGrab`, which stands him up) nothing differs
@@ -216,7 +231,7 @@ export class RustHost {
   // tick 1322 with the host's half differing from 1244.)
   private poked = 0; pokeSyncs = 0;
   /** an apply moved the puppet: that is what the next walk is held to */
-  scanRebase(): void { if (!this.scan) return; const t = now(); this.scan.rebase(); this.T.scan += now() - t; }
+  scanRebase(): void { if (!this.scan) return; const t = now(); this.scan.rebase(this.auditGap); const e = now() - t; this.T.scan += e; this.N.rebase++; this.N.rebaseMs += e; }
 
   private constructor(readonly g: any, readonly F: Face, readonly B: any, readonly o: HostOpts) {
     this.audit = !!o.audit; this.say = o.say ?? ((s: string) => { process.stdout.write(s + '\n'); });
@@ -235,8 +250,8 @@ export class RustHost {
     if (o.die !== null && !g.dice) g.dice = B.newDice(o.die ?? 20942);
     // (hung as fields no walk of the game's own keys meets: rollback.ts `stateHash` walks them, and a stand's word must not change for being a puppet)
     hang(g, 'stepSeats', function (dt: number, cmds: readonly any[]) { H.step(dt, cmds); });
-    hang(g, 'rustHost', H); hang(g, 'rustSurface', H); hang(g, 'stateWords', () => ({ die: H.dieN(), parts: H.hashes() })); hang(g, 'quietRun', (on: boolean) => { if (on) H.quietBegin(); else H.quietEnd(); }); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; BUSY.n++; try { return up.apply(this, a); } finally { H.busy--; BUSY.n--; H.scanRebase(); } }); } H.taps(g);
-    if (process.env.TPS_GAME_SAY) process.on('exit', () => { const L = [...H.calls].sort((a, b) => b[1] - a[1]).slice(0, 60); process.stderr.write(`rust-host: ${H.k} ticks; scan ${(H.T.scan / Math.max(1, H.k)).toFixed(2)} ms a tick; ${H.pokeSyncs} exports after a walk that poked; ${H.asksRefused} asks refused; ${JSON.stringify(H.scan?.stats?.() ?? null)}\n` + L.map(([n, c]) => `  ${c} ${n}\n`).join('')); });
+    hang(g, 'rustHost', H); hang(g, 'rustSurface', H); hang(g, 'stateWords', () => ({ die: H.dieN(), parts: H.hashes() })); hang(g, 'quietRun', (on: boolean) => { if (on) H.quietBegin(); else H.quietEnd(); }); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; BUSY.n++; try { return up.apply(this, a); } finally { H.busy--; BUSY.n--; H.auditGap = SCAN_AUDIT > 0 && H.k % SCAN_AUDIT === 0; H.scanRebase(); } }); } H.taps(g);
+    if (process.env.TPS_GAME_SAY) process.on('exit', () => { const L = [...H.calls].sort((a, b) => b[1] - a[1]).slice(0, 60); process.stderr.write(`rust-host: ${H.k} ticks; scan ${(H.T.scan / Math.max(1, H.k)).toFixed(2)} ms a tick; ${H.pokeSyncs} exports after a walk that poked; ${H.scan?.stats?.().deepMissed ?? 0} WRITES THE WALK'S CHEAP WORD DID NOT SEE (found by its audit: ${(H.scan?.stats?.().missed ?? []).join(', ')}); ${H.asksRefused} asks refused; ${JSON.stringify(H.scan?.stats?.() ?? null)}\n` + L.map(([n, c]) => `  ${c} ${n}\n`).join('')); });
     if (o.out) for (const f of ['writeback.txt', 'gives.txt']) writeFileSync(`${o.out}/${f}`, '');
     return H; }
   private startDue = false;
@@ -834,7 +849,7 @@ export async function standRust(g: any, word: string): Promise<RustHost | null> 
 const TIMED: RustHost[] = [];
 function timed(H: RustHost): void {
   if (!TIMED.length) { process.on('SIGTERM', () => process.exit(143)); process.on('exit', () => { try { appendFileSync(process.env.RH_TIMES!, TIMED.filter(h => h.k > 0).map(h => JSON.stringify({ pid: process.pid, tool: (process.argv[1] ?? '').split('/').pop(), args: process.argv.slice(2, 6).join(' ').slice(0, 80), probe: (globalThis as any).__probeNow ?? process.env.RH_PROBE ?? null,
-    k: h.k, wall: +(h.wallLast - h.wall0).toFixed(1), spent: +h.spent().toFixed(1), T: Object.fromEntries(Object.entries(h.T).map(([n, v]) => [n, +(v as number).toFixed(1)])), starts: h.starts, wholes: Object.fromEntries(h.wholes), calls: Object.fromEntries(h.calls), evicted: h.evicted })).join('\n') + '\n'); } catch { /* the line is not the tool's */ } }); }
+    k: h.k, wall: +(h.wallLast - h.wall0).toFixed(1), spent: +h.spent().toFixed(1), N: Object.fromEntries(Object.entries(h.N).map(([n, v]) => [n, +(v as number).toFixed(1)])), scan: (h as any).scan?.stats?.() ?? null, T: Object.fromEntries(Object.entries(h.T).map(([n, v]) => [n, +(v as number).toFixed(1)])), starts: h.starts, wholes: Object.fromEntries(h.wholes), calls: Object.fromEntries(h.calls), evicted: h.evicted })).join('\n') + '\n'); } catch { /* the line is not the tool's */ } }); }
   TIMED.push(H); }
 // (TPS_GAME=table, and a run forced off its word: tools/blitz/word.ts, the one switch; `standRust` is handed the word that came out of it)
 // ---- RH_TRACE=<file>: as the process ends, a line a game stood under the word: the tool's file that stood it (the first frame of the stack under tools/
