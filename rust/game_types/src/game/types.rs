@@ -271,7 +271,7 @@ impl SlotKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum GuardState {
     Patrol,
     Suspicious,
@@ -1461,7 +1461,7 @@ impl GameDoorHandRecsValue {
 impl Default for GameDoorHandRecsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash)]
 pub enum Foe {
     Guard(GuardId),
     Player,

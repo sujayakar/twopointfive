@@ -92,7 +92,7 @@ impl QrfReason {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Phase {
     Bang,
     Fan,
@@ -401,7 +401,7 @@ impl QrfSpent {
 impl Default for QrfSpent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum QrfWordKey {
     Guard(GuardId),
     Player,
