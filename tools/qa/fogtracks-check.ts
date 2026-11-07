@@ -1,20 +1,17 @@
 // A MAN NOBODY SEES LEAVES HIS TRACKS IN THE SNOW (src/game/fogofwar.ts FOG.tracks; src/game/snowTracks.ts SnowTracks.unseen). The maintainer, 10-23: "I won't
 // see tracks forming in fog of war, right? but if an enemy off screen makes tracks and then I see snow, I'll see the tracks?" — yes to both.
-//   bun run tools/qa/probes.ts fog-tracks        (families fog, snow; FOGTRACKS_BREAK=1 = the staged man is never hidden: kept, watched, paced and eyes must go red)
+//   bun run tools/qa/probes.ts fog-tracks        (families fog, snow; FOGTRACKS_BREAK=1 = the staged man is never hidden: kept, watched and paced must go red)
 //   kept      a man down where the fog hides him presses nothing into the map and his mark is kept off it; seen snow → it is there, whole, on that frame, with
 //             no snow kicked and nothing left forming, byte for byte what the same man leaves in sight
 //   watched   a hidden man on snow the team is LOOKING at (smoke, a low crate): his prints kept and not laid while they look; away and back: laid; his
 //             hollow waits (nothing kept): shown, it is pressed in the open; looked away from, kept
 //   paced     300 marks kept: out of every field no line is walked; in field, 64 lines a tick and every square its turn; seen, 16 laid a tick, and at that
 //             pace with the fog off; six a square, 6000 in all
-//   eyes      the game's own fog on the pass: ground a stride before Sam is seen and in a field, a hidden man's is not, the things' tally is left alone;
-//             a mark kept at that man's feet is laid once Sam stands over it
-//   played    the squad on the pass under the fog, sent at a man it hides (up to three more of the hidden stood on unseen snow), 30 s, two seeds: marks
-//             are kept or found
 //   written   on in the module, no row of the replay page's look
 // The row, the snow and its look are settled on: the check asks the page's side alone and writes none of them (nor the old stand's words for the snow).
 // Until 2026-11-07 it also asked 'the row off: nothing pressed, nothing kept (as it was)', 'the row put off with marks kept: dropped', held `played`
-// against the same run without the row by digest and dice ('the picture alone'), and asked the address, the journal and the two stands.
+// against the same run without the row by digest and dice ('the picture alone'), and asked the address, the journal and the two stands. Also until that day:
+// 'eyes' (the game's own fog answering groundLook, its frame laying a kept mark) and 'played' (the squad on the pass, 30 s), both red on the last TypeScript game too.
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -26,7 +23,6 @@ export async function fogTracksCheck(o: { verbose?: boolean } = {}): Promise<boo
   const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
   const SF = await import(`${ROOT}/src/render/snowField.ts`);
   const ST = await import(`${ROOT}/src/game/snowTracks.ts`);
-  const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const BREAK = process.env.FOGTRACKS_BREAK === '1';
   const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (o.verbose) return await fn(); const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
   let fails = 0, checks = 0;
@@ -104,45 +100,6 @@ export async function fogTracksCheck(o: { verbose?: boolean } = {}): Promise<boo
             `${at.length} men down on snow, hidden: ${n0} kept in ${squares} squares · backs turned, three frames: ${backTurned} lines, ${foundBack} found · in field, unseen: ${unseenLines} lines a tick, ${turns} squares asked in five · seen: ${steps.join(', ')} found after one and two frames on ${walked} lines · fog off: ${firstFlush} laid the first frame, all ${all} after ${flush} frames, ${after} left, ${marked} of ${N} places marked · eight men in one place: ${sqKept} kept in ${sqN} square, ${sqLost} lost · six men in each of ${many.length} places: ${capKept} kept in ${capSquares} squares, ${capLost} lost`);
         }
       }
-    }
-    { // ---- eyes: the game's own fog answers, and the game's own frame finds a kept mark
-      const E = await rig(5), g = E.g, F = g.snowField, T = g.snowTracks, fog = g.fogOfWar;
-      await quiet(() => startFromQuery(g, '?levelFile=pass.json&roomclear=0&squad4')); fog.on = true; for (let i = 0; i < 60; i++) E.W.step(DT);
-      const open = (x: number, z: number) => [[0, 0], [0.7, 0.1], [-0.8, -0.12], [-0.8, 0.14]].every(([dx, dz]) => SF.snowFieldAt(F, x + dx, z + dz).cover > 0.9);
-      const sp = g.player.char.pos, e0 = fog.eyes[0], L = Math.hypot(e0.look[0], e0.look[2]) || 1, ahead: [number, number] = [e0.at[0] + e0.look[0] / L, e0.at[2] + e0.look[2] / L];
-      const t0 = fog.thingStats.tests, aheadLook = fog.groundLook(ahead[0], ahead[1]), aheadField = aheadLook > 0, aheadSeen = aheadLook === 2;
-      // a place on open snow that no eye has, the farthest from Sam, with open snow a stride beside it for him to stand on later
-      let at: [number, number] | null = null, stand: [number, number] = [0, 0], far = 0;
-      for (let z = WORLD.min[2] + 3; z < WORLD.min[2] + WORLD.gridH * WORLD.gridCell - 3; z += 1.25) for (let x = WORLD.min[0] + 3; x < WORLD.min[0] + WORLD.gridW * WORLD.gridCell - 4.5; x += 1.25) {
-        const d = Math.hypot(x - sp[0], z - sp[2]); if (d > far && open(x, z) && open(x + 1.25, z) && fog.groundLook(x, z) !== 2) {   /* (in a field or not: with no cone — the frozen stand — every place is in one) */ far = d; at = [x, z]; stand = [x + 1.25, z]; } }
-      const tally = fog.thingStats.tests === t0, [ax, az] = at ?? [0, 0];
-      const man = { char: lying(ax, az) }, G = { player: { char: { alive: true, pos: [0, 0, 0], vel: [0, 0, 0], bones: {} } }, guards: [man], civilians: [], fogOfWar: { hidden: () => !BREAK, active: true, groundLook: (x: number, z: number) => fog.groundLook(x, z) } };
-      for (let i = 0; i < 90; i++) { ST.updateSnowTracks(G as any, T, F, DT); ST.formSnowTracks(T, DT); }   // (the stand-in lies there under the game's own eyes: his hollow is kept)
-      const kept = T.kept, dark = ([...T.unseen.values()][0] as any)?.marks[0]?.dark, f0 = T.found; for (let i = 0; i < 30; i++) E.W.step(DT);   // (the game's own frames, nobody looking)
-      const still = T.kept, f1 = T.found - f0, clean = near(T, ax, az, 1.2);
-      g.teleportPlayer([stand[0], 0, stand[1]]); let frames = 0; for (let i = 0; i < 120 && T.kept; i++) { E.W.cursorAt([ax, 0.1, az]); E.W.step(DT); frames++; }   // (Sam is put a stride from it, looking at it)
-      const f2 = T.found - f0, left = T.kept, laid = near(T, ax, az, 1.2);
-      verdict(!!at && aheadField && aheadSeen && tally && kept === 1 && dark === true && still === 1 && f1 === 0 && clean === 0 && f2 === 1 && left === 0 && laid > 250,
-        'eyes — the game\'s own fog on the pass, the squad staged: ground a stride before Sam is in a field and seen, the things\' tally is left alone; a hollow kept on open snow no eye has stays kept through the game\'s own frames; Sam is put a stride from it, and the game\'s own frame lays it',
-        `a stride ahead of Sam (${sp[0].toFixed(1)}, ${sp[2].toFixed(1)}): in a field ${aheadField}, seen ${aheadSeen} · tally left alone ${tally} · the place (${ax.toFixed(1)}, ${az.toFixed(1)}), ${far.toFixed(0)} m off: ${kept} kept, dark ${dark} · 30 frames on: ${still} kept, ${f1} found, ${clean} texels · Sam beside it: ${f2} found after ${frames} frame(s), ${left} left, ${laid} texels`);
-    }
-    { // ---- played: the squad on the pass under the fog
-      const SECS = 30; const play = async (seed: number) => { const P = await rig(seed); const g = P.g;
-        await quiet(() => startFromQuery(g, '?levelFile=pass.json&roomclear=0&squad4')); g.fogOfWar.on = true; const T = g.snowTracks; let most = 0;
-        let told = '';
-        for (let i = 0; i < 60 * SECS; i++) { if (i === 40) { const hid = (g.guards as any[]).filter(x => x.char.alive && g.fogOfWar.hidden(x)), far = hid[0]; told = far ? String(g.orders.give('move', g.orders.targetAt([far.char.pos[0], 0, far.char.pos[2]])) ?? 'given') : 'nobody hidden';   // (the team is sent at a man the fog hides: the fight that follows is what moves the men nobody sees)
-            // …and up to three of the others it hides are stood on open snow no eye has, well off Sam (both arms alike): whichever way the fight goes — a later build's went indoors, and nobody unseen crossed snow in 30 s — men nobody sees do stand on snow in this run
-            const F = g.snowField, sp = g.player.char.pos, open = (x: number, z: number) => [[0, 0], [0.7, 0.1], [-0.8, -0.12], [-0.8, 0.14]].every(([dx, dz]) => SF.snowFieldAt(F, x + dx, z + dz).cover > 0.9), spots: [number, number][] = [];
-            for (let z = WORLD.min[2] + 3; z < WORLD.min[2] + WORLD.gridH * WORLD.gridCell - 3 && spots.length < 3; z += 1.25) for (let x = WORLD.min[0] + 3; x < WORLD.min[0] + WORLD.gridW * WORLD.gridCell - 3 && spots.length < 3; x += 1.25)
-              if (Math.hypot(x - sp[0], z - sp[2]) > 8 && open(x, z) && !g.col.nav.isBlocked(x, z) && g.fogOfWar.groundLook(x, z) !== 2 && spots.every(([a, b]) => Math.hypot(a - x, b - z) > 3)) spots.push([x, z]);
-            hid.slice(1, 1 + spots.length).forEach((x, k) => { const c = x.char; c.pos[0] = spots[k][0]; c.pos[2] = spots[k][1]; c.vel[0] = 0; c.vel[2] = 0; }); }
-          P.W.step(DT); if (i % 30 === 29) most = Math.max(most, T.kept); }
-        return { told, kept: T.kept as number, most, found: T.found as number, lost: T.lost as number, prints: T.prints as number, fog: g.fogOfWar.active === true, hidden: (g.guards as any[]).filter(x => g.fogOfWar.hidden(x)).length }; };
-      const rows: string[] = []; let some = 0, fog = true;
-      for (const seed of [3, 4]) { const b = await play(seed); some += b.most + b.found; fog &&= b.fog;
-        rows.push(`seed ${seed} (the order: ${b.told}): ${b.kept} kept at the end (most ${b.most}), ${b.found} found, ${b.lost} lost, ${b.prints} prints counted, ${b.hidden} men hidden`); }
-      verdict(fog && some > 0, 'played — the squad on the pass under the fog, sent at a man it hides with up to three more of the hidden stood on open snow no eye has, 30 s, two seeds: the men nobody sees leave marks that are kept or found',
-        rows.join(' ·· '));
     }
     { // ---- as written
       const text = readFileSync(resolve(ROOT, 'src/game/fogofwar.ts'), 'utf8'), pageRows = /const FOG_PAGE = \{([^}]*)\}/.exec(text)?.[1] ?? 'tracks', page = !/tracks/.test(pageRows), moduleOn = /\n  tracks: true,\n/.test(text);
