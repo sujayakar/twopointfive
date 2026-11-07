@@ -86,7 +86,6 @@ import { SQUADS, SQUADS_DEFAULTS, squadsSummary, squadsLive, squadDrillWords, sq
 import { CUES, CUES_DEFAULTS, saveCues } from '../game/cues';
 import { LANES, LANES_DEFAULTS, lanesSummary } from '../game/lanes';
 import { GUNHOLD, GUNHOLD_DEFAULTS, gunHoldSummary } from '../game/gunhold';
-import { BUDDY, BUDDY_DEFAULTS, saveBuddy, buddySummary } from '../game/buddy';
 import { LASTSTAND, LASTSTAND_DEFAULTS, saveLastStand, lastStandSummary } from '../game/laststand';
 import { SNEAK, SNEAK_DEFAULTS, saveSneak, sneakSummary } from '../game/sneak';
 import { PAIRUP, PAIRUP_DEFAULTS, savePairUp, pairUpApply, pairUpSummary } from '../game/pairup';
@@ -111,7 +110,6 @@ import { SQUADTHROW } from '../game/squadthrow';
 import { AUTOPILOT } from '../game/autopilot';
 import { CMDRING } from '../game/cmdring';
 import { STICKY, stickyIssue, stickySummary } from '../game/stickycam';
-import { CLEARLINE, CLEARLINE_DEFAULTS, saveClearLine, clearLineSummary } from '../game/clearline';
 import { DIFFICULTIES, difficultyNow, setDifficulty, difficultyWords, difficultyCustom, setConeVisit } from '../game/difficulty';
 import { STRESS, standExtra, stressSummary } from '../game/stress';
 import { nvgSummary } from '../game/nvg';
@@ -1580,16 +1578,6 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.text(sq, () => squadDrillWords(game));
     panel.text(sq, () => `squads: ${squadsSummary(game)}`);
   }
-  // (game/buddy.ts: a scenario defender left alone in his room radios for a buddy — off by default; kept per machine)
-  { const bd = panel.section('Lone defender radios for a buddy', { open: false, summary: () => buddySummary(game) });
-    knobRows(panel, bd, BUDDY as unknown as KnobTable, BUDDY_DEFAULTS as unknown as KnobTable, saveBuddy, [
-      { k: 'on', kind: 'toggle', label: 'radio for a buddy', title: 'a defender of a loud scenario who has lost the men of his room says so on their net (a radio line in your log) once his room has gone quiet; the nearest colleague who is free and has a way to him that does not cross your team answers, walks over — boots your men can hear — and holds the room with him from another door. Off (shipped) = every man holds or rallies by himself, exactly as before. Measured with a scripted team: on, the team keeps clearly more men — the man who answers holds a room instead of coming to the fight' },
-      { k: 'staged', kind: 'toggle', adv: true, label: 'a man posted alone calls too', title: 'off (shipped): only a man who HAD company and lost it calls. On = a man staged alone in his room also calls, once the floor has gone loud' },
-      { k: 'emptyRoom', kind: 'toggle', adv: true, label: "a room's last man may answer", title: 'on (shipped): a man who is the last of his squad in his own room, or set on a door he has wedged, may leave it to answer a call — his room stands empty and the two hold the caller\'s. Off = those men stay, and on a level staged in squads most calls then go unanswered' },
-      { k: 'calls', label: 'calls a man at most', min: 1, max: 4, step: 1, title: 'how many times one defender asks' },
-    ]);
-    panel.text(bd, () => `buddy: ${buddySummary(game)}`);
-  }
   panel.system(SYS.stealth);
   // (game/pairup.ts: two person stealth as one switch over its three parts below and the quiet orders — off by default; kept per machine)
   { const pu = panel.section('The pair (two person stealth)', { open: false, summary: () => pairUpSummary() });
@@ -1805,35 +1793,6 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.text(ls, () => `last defenders: ${lastStandSummary(game)}`);
   }
   panel.system(SYS.squad);
-  // (game/clearline.ts: a teammate whose shot is masked by a friend steps to a clear line, gets to cover, or kneels — one switch, off by default; kept per machine)
-  { const cl = panel.section('Line of fire (a friend in a teammate\'s shot)', { open: false, summary: () => clearLineSummary(game) });
-    knobRows(panel, cl, CLEARLINE as unknown as KnobTable, CLEARLINE_DEFAULTS as unknown as KnobTable, saveClearLine, [
-      { k: 'on', kind: 'toggle', label: 'blocked teammates step clear', title: 'a teammate on one of your orders who can see a man but has you (or a mate) between his gun and him: he says so ("blocked — stepping left."), walks to the nearest spot the round is clear from — beside the line, back off it, or up level with whoever is in it — and shoots from there, then goes back to what you ordered. Nowhere to step: he gets off the line to cover ("no shot — getting off the line.") until the place he left is clear, or goes down on a knee and tells you you are in his line. He never fires past a friend and never runs. Off (shipped) = he lowers his gun and stands where he is (also ?clearline)' },
-      { k: 'after', adv: true, label: 'masked for (s)', min: 0, max: 1.5, step: 0.05, title: 'seconds a friend has masked his shot before he moves' },
-      { k: 'afterEdge', adv: true, label: 'edge wait (s)', min: 0, max: 2, step: 0.1, title: 'you are in his line only because you are walking (stood still where you are, his round would pass you): seconds his shot is masked without a break before he moves — that line mostly opens by itself. 0, or anything not longer than "masked for", = no such case' },
-      { k: 'inEntry', kind: 'toggle', adv: true, label: 'also inside an entry', title: 'on = he steps clear wherever his order has him. off = not between the shove and his point on a door order (the can in the air, the wait behind it, going in): he keeps his way through the door, and steps clear again once he is on his point' },
-      { k: 'holdBehind', adv: true, label: 'hold behind (s)', min: 0, max: 5, step: 0.5, title: 'shipped 2. 0 = the rule as first built: nowhere to step, he goes to cover or a knee. more = not while the friend in his line is ahead of him and walking at that same man, nor for this many seconds after the friend stops: he holds behind him with his eyes on the man and says so' },
-      { k: 'holdStep', kind: 'toggle', adv: true, label: 'hold behind: no step either', title: 'shipped on; with hold behind above 0. off = the hold stops cover and the knee only. on = the step too: in file behind a friend who is walking at that same man he keeps his place — no step out from behind his lead, no cover. a friend crossing the line or stepping off it is not leading: the rule is as it was for him' },
-      { k: 'still', adv: true, label: 'only if he stands (s)', min: 0, max: 5, step: 0.5, title: '0 = as it was. more = no step, no cover and no knee while you are on the move in his line, nor for this many seconds after you stop: he holds, eyes on the man, and says you are in his line. the rule is then for a player who has stood in a line' },
-      { k: 'stillFar', adv: true, label: 'only past (m)', min: 0, max: 16, step: 1, title: 'with only if he stands above 0. 0 = that wait at any range, as it was. more = only while his man is farther off than this: nearer, he gets off the line at once whatever you are doing. 8 = the range past which a man needs his whole time to line up' },
-      { k: 'reachM', adv: true, label: 'step within (m)', min: 1, max: 5, step: 0.5, title: 'how far the walk to a clear line may be before it is cover instead' },
-      { k: 'pace', adv: true, label: 'pace (m/s)', min: 0.8, max: 2.2, step: 0.1, title: 'the pace he walks it at — never over the team\'s walking pace' },
-      { k: 'cover', kind: 'toggle', adv: true, label: 'nowhere to step: cover', title: 'with no spot to shoot from he goes to the nearest place the man cannot see him; off = he kneels where he is' },
-      { k: 'kneel', kind: 'toggle', adv: true, label: 'no cover either: a knee', title: 'with no spot and no cover he goes down on a knee and says you are in his line; off = he stands, gun down, as before' },
-      { k: 'cue', kind: 'toggle', adv: true, label: 'he says what he is doing', title: 'the spoken line over him as he moves' },
-    ]);
-    tf = cl;
-    feelRows('ROOMFIGHT', [
-      { k: 'letGo', label: 'team ▸ masked man s', title: 'lets a masked man go (s) — held off a man this long for a friend in his line with nowhere to step, a teammate turns to an enemy who is shooting from somewhere else. 0 = never: he stays on the man he cannot shoot' },
-      { k: 'samLine', label: 'team ▸ gun down when you are in line', title: 'a teammate in a fight whose line to his man runs through you lowers his gun until you are out of it. Off = he holds his fire with the gun up on you' },
-      { k: 'closeLane', label: 'team ▸ shoots past a mate up close', title: 'at arm\'s length a teammate holds his fire only for a mate the line really passes through: the clearance he keeps round a friend grows with how far along the line the friend stands. Off = 0.45 m at any range and a metre past the target, which in a doorway scrum put every gun down' },
-      { k: 'samBehind', label: 'team ▸ shoots with you past the man', title: 'you standing BEYOND the man a teammate is on: he holds his fire only if the line really runs on into you — your own breadth and a fifth of how far past the man you stand. Between his gun and the man you are always owed the whole lane. Off = a metre either side of the line behind the man too, which put his gun (and his light) down on a man standing between you' },
-      { k: 'samTravel', label: 'team ▸ your lane by real travel', title: 'the room you are given in a teammate\'s line of fire widens with how fast you are really getting somewhere, not with the key you hold: shuffling on the spot or walking into a wall you count as standing. Off = as it was — the speed you ask for alone, so beside a line in a corridor you held every gun behind you down' },
-      { k: 'samBeside', label: 'team ▸ beside his muzzle is clear', title: 'you level with or behind a teammate\'s muzzle are not in his line of fire: he holds for you only once you are in front of it, and gives you the whole lane from a stride ahead. Off = as it was — walking shoulder to shoulder with a man, inside half a metre of his muzzle (a metre on the move), held his gun and its light down whichever way it pointed' },
-      { k: 'sideStep', label: 'teammates ▸ step off a friend\'s line', title: 'step out of a friend\'s line — a teammate with a friend in his line of fire steps to the side' },
-    ]);
-    panel.text(cl, () => `line of fire: ${clearLineSummary(game)}`);
-  }
   panel.system(SYS.stealth);
   // the level-design devices (game/devices.ts): cameras + tripwires sensing at all, the beams alone, a camera's two thresholds (lit-seconds), the haze cones — kept per machine (saveDeviceTune)
   const dvs = panel.section('Devices (cameras · keypads · lasers)', { open: false, summary: () => game.devices.summary(game), reset: () => resetDeviceTune(game), resetTitle: 'the device knobs back to the shipped values, and the copy kept on this machine dropped' });

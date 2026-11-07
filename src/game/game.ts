@@ -1476,7 +1476,6 @@ export class Game {
       if (cut && !cam.pin) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); cam.rebuild(); } }
     this.journal.frameStart(dt, input, cam, canvas);   // the session journal (journal.ts): idle, a return; asked for, it takes its checkpoint and re-enters it HERE, before anything of the frame has run; recording, it files this frame's dt / camera / input and opens the sensors' frame
     this.director?.injectInput(input);   // a showcase beat's synthetic key / click from LAST frame's tick (director.ts c.press / c.click) becomes this frame's input, ahead of everybody who reads it — a return on its first line otherwise
-    this.hostBefore(input);
     this.cmdBuf = sampleCmd(me.view, input, cam, canvas, this.cmdBuf);
     const cmds: readonly PlayerCmd[] = this.seats.length === 1 ? (this.stepBuf[0] = this.cmdBuf, this.stepBuf) : this.seats.map(s => s === this.localSeat ? this.cmdBuf! : s.handed(this.cmdBuf!));
     this.replayTap?.(dt, cmds[0]);   // the replay buffer's run tape (runtape.ts): this step's dt and the first seat's record, before anything of it has run — reads only
@@ -1488,9 +1487,6 @@ export class Game {
   /** THE HOST'S HALF OF A TICK, round the step — `update`'s own lines, named for a host that steps the game by records it did not sample itself (a networked
    *  page: net/page.ts). Before: what the host's INPUT is told. After: what the tick hands back for the camera of the seat this host shows (`hostSeat`), and
    *  that seat's live view put back. */
-  hostBefore(input: Input) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.hostBefore', this, [input]); if (__r !== RUST_PASS) return __r as any; } }
-    input.dragOff = STALK.on && STALK.drag;   // (the HOST's input, input.ts: a held press's cursor is followed off the view only while the creep reads the mouse as a stick — stalk.ts STALK.drag)
-  }
   hostAfter(input: Input, cam: FollowCamera, canvas: View) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.hostAfter', this, [input, cam, canvas]); if (__r !== RUST_PASS) return __r as any; } }
     const me = this.hostSeat();
     cam.peekOffset = me.cam.peekOffset; cam.kick = me.cam.kick;
