@@ -19,9 +19,14 @@
 //                      charge in and blind fire off — takes the break room with real rounds, calls it, and ends nothing while three rooms are held
 //   roomclear-ends     'taken' fires once, on the last defender, with every room clear; 'wiped' fires when Sam goes down, and stays (the rooms emptied afterwards
 //                      do not turn it into a win, and are not called); the pair down is not an end in play ('pair:down' logged, said once and only by this
-//                      scenario, Sam fights on) and IS one under the tally's switch; the stealth mission's stages stand still under it and move again after
-//   roomclear-restart  a restart under it (Shift+Enter, a bare restartEncounter) stages the structure again: fresh cast, every room held, no end, doors shut — the
-//                      next placement of the seed with re-deal on, the same one with it off; start(seed) deals that seed's placement
+//                      scenario, Sam fights on); the stealth mission's stages stand still under it and move again after
+//   roomclear-restart  a restart under it (Shift+Enter, a bare restartEncounter) stages the structure again: fresh cast, every room held, no end, doors shut;
+//                      start(seed) deals that seed's placement
+//                      (2026-11-07, settled switches no longer written: out went the re-deal of a restart — 'the seed's next placement', 'attempt 2 is
+//                      not attempt 1's placement', 'attempt 3', 'with re-deal off', 'its next restart is attempt 2' — which this probe asked with
+//                      SAMESTART put off, the rule that took the re-deal away; out of roomclear-ends: 'under the tally's switch both teammates down IS
+//                      wiped' (ROOMCLEAR.pairOnly) and the words-off pass of the log's words (WORDS.on); the one real entry no longer puts the night
+//                      breach's blind fire off)
 //   roomclear-stop     stop() puts the night back (the shift, the civilians, the lights, Game.tune, the mission's objective line) and drops the layout — the night
 //                      breach started afterwards is the break room's three; the night breach's own stop under it ends this scenario too; a checkpoint load is
 //                      refused while it is up
@@ -31,8 +36,6 @@ const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { killGuard, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
 const { canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
-const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
-const { SAMESTART } = await import(`${ROOT}/src/game/samestart.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -177,7 +180,7 @@ export const roomclearRooms = guarded(async () => {
     verdict(!R.room('breakroom').cleared && R.cleared() === 'none', 'one of the break room\'s two down: the room is still held', `${RC.summary()}`);
     R.drop('storage', 1, true);
     verdict(R.room('storage').cleared && R.cleared() === 'storage' && R.logged('cleared:storage') === 1 && Number.isFinite(R.room('storage').clearedAt) && RC.end === null, 'storage\'s one man struck, out cold: storage is clear (down is down), and it is the only one', `cleared ${R.cleared()} · at ${f2(R.room('storage').clearedAt)} · ${RC.summary()}`);
-    if (WORDS.on) R.step(45);   // (the dialogue pass: rooms that come clear together are called in ONE line, 0.6 s after the first — and a room nobody of the team stood in is 'nobody left in', not 'clear')
+    R.step(45);   // (the dialogue pass: rooms that come clear together are called in ONE line, 0.6 s after the first — and a room nobody of the team stood in is 'nobody left in', not 'clear')
     verdict(g.objectiveText().includes('✓ storage') && !g.objectiveText().includes('✓ break room') && g.messages.some((m: any) => /(?:storage clear|nobody left in storage) — 3 rooms to go/.test(m.text)), 'it is called on the HUD and ticked on the objective line', `'${g.objectiveText()}' · said: ${g.messages.map((m: any) => m.text).filter((t: string) => /clear/.test(t)).join(' | ')}`);
     // a living defender of another room standing in a cleared one holds it again (nobody walks today — they are pinned — so he is carried)
     const man = R.room('manager').defenders[0]; const home = [...man.char.pos]; man.char.pos = [33.0, 0, 7.0];
@@ -195,8 +198,8 @@ export const roomclearRooms = guarded(async () => {
     const order = RC.log.filter((l: any) => /^cleared:/.test(l.what)).map((l: any) => l.what.slice(8));
     verdict(RC.rooms.every((r: any) => r.cleared) && order.join(',') === 'storage,storage,manager,breakroom,server', 'the last room goes, and the log has the rooms in the order they were cleared', `order ${order.join(' → ')}`);
   }
-  { // one real entry: F, F on the break room's west door with the charge in and blind fire off (the night breach's walkover setting) — real rounds take the room
-    const R = await rig(12, {}, true, { blindFire: false }); const { game: g, RC, NB } = R; g.tune.chaos = 0;
+  { // one real entry: F, F on the break room's west door with the charge in — real rounds take the room
+    const R = await rig(12); const { game: g, RC, NB } = R; g.tune.chaos = 0;
     R.step(60); R.press(); R.until(() => NB.state === 'set', 30); R.press();
     const called = R.until(() => R.room('breakroom').cleared, 30); R.until(() => NB.drill.phase === 'done', 10);
     const beats = NB.drill.beats.map((b: any) => b.what);
@@ -234,7 +237,7 @@ export const roomclearEnds = guarded(async () => {
   }
   { const R = await rig(11); const { game: g, RC, NB } = R; R.step(30);
     R.drop('storage');
-    if (WORDS.on) R.step(45);   // (the dialogue pass says a room clear a beat after it empties, so rooms that empty together are one line: let that beat pass before he falls)
+    R.step(45);   // (the dialogue pass says a room clear a beat after it empties, so rooms that empty together are one line: let that beat pass before he falls)
     for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]);
     R.step(2);
     verdict(g.player.down && RC.end === 'wiped' && RC.endWhy === 'player down' && R.logged('end:wiped') === 1 && up(NB.ops) === 2, '\'wiped\' fires when Sam goes down (the pair still up: the player\'s run is over)', `Sam down ${g.player.down} · end ${RC.end} (${RC.endWhy}) · pair ${up(NB.ops)}/2`);
@@ -258,12 +261,6 @@ export const roomclearEnds = guarded(async () => {
     R.step(2);
     verdict(g.player.down && RC.end === 'wiped' && R.logged('end:taken') === 0 && RC.rooms.every((r: any) => r.cleared) && /(team wiped|player down) — press enter/.test(g.objectiveText()), 'the last defender and Sam down inside one frame is \'wiped\', not a win', `end ${RC.end} (${RC.endWhy}) · cleared ${R.cleared()} · '${g.objectiveText()}'`);
   }
-  { const R = await rig(11, { pairOnly: true }); const { game: g, RC, NB } = R; R.step(30);
-    killGuard(g, NB.ops[0], [1, 0, 0], false, 'shot', 'guard'); R.step(5); const one = RC.end;
-    killGuard(g, NB.ops[1], [1, 0, 0], false, 'shot', 'guard'); R.step(5);
-    verdict(one === null && RC.end === 'wiped' && RC.endWhy === 'the pair down' && !g.player.down && /shift\+enter/.test(g.objectiveText()) && R.heard(/team wiped — the pair down\. press Shift\+Enter to restart/) === 1 && R.heard(/the rest is up to you/) === 0,
-      'under the tally\'s switch (the team is the pair alone) both teammates down IS \'wiped\', with Sam standing — and the HUD names the key that works for a standing man', `after one ${one} · after both ${RC.end} (${RC.endWhy}) · '${g.objectiveText()}'`);
-  }
   { // the point man dropped on the stack with his number two still up: the drill's entry is off — said once, by this scenario
     const R = await rig(11); const { game: g, RC, NB } = R; R.step(60); R.press(); R.until(() => NB.state === 'set', 30);
     killGuard(g, NB.ops[0], [1, 0, 0], false, 'shot', 'hostile'); R.until(() => NB.state === 'failed', 10); R.step(60);
@@ -272,11 +269,10 @@ export const roomclearEnds = guarded(async () => {
   }
   { // WHAT THE LOG CALLS IT (words.ts, on in the page; from a tape of the compound: 'guard: man down.' over a teammate, 'guard down — dead' beside 'Tango 4 down — Red
     // One's round', 'team wiped — Sam down' with three of four standing): a defender the PLAYER drops is a Tango by name, a unit's cut-off line goes under his own
-    // callsign, Sam down with a man still up is 'Sam down' — and 'team wiped' once nobody is. Switch off = every one of them as it read before.
-    const was = WORDS.on;
-    try {
-      for (const on of [true, false]) {
-        const R = await rig(11); const { game: g, RC, NB } = R; WORDS.on = on; R.step(30);   // (after the stand-up: the frozen stand pins the switch off as it stands a game)
+    // callsign, Sam down with a man still up is 'Sam down' — and 'team wiped' once nobody is.
+    {
+      { const on = true;
+        const R = await rig(11); const { game: g, RC, NB } = R; R.step(30);
         const h = R.room('storage').defenders[0]; const n0 = R.said.length; killGuard(g, h, [1, 0, 0], false, 'shot', 'player'); const mine = R.said.slice(n0);   // (his line alone: the teammate's own way down below logs the old words too)
         const op = NB.ops[0]; op.bubble = { text: 'man down.', t: g.time, dur: 2, radio: false }; killGuard(g, op, [1, 0, 0], false, 'shot', 'hostile'); R.step(2);
         for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]);
@@ -284,17 +280,17 @@ export const roomclearEnds = guarded(async () => {
         const kill = on ? `${h.callsign} down` : 'guard down — dead', cut = `${on ? op.callsign : 'guard'}: man down.`;
         const end = on ? /^the mission is over\. press Enter to restart$/ : /^team wiped — player down\. press Enter to restart$/, obj = on ? /^player down — press enter to restart/ : /^team wiped — press enter to restart/;
         verdict(mine.includes(kill) && R.said.includes(cut) && R.heard(end) === 1 && obj.test(g.objectiveText()) && up(NB.ops) === 1 && RC.end === 'wiped' && RC.endWhy === 'player down',
-          `words ${on ? 'on' : 'off'}: the player's kill, a teammate's cut-off line and Sam down with a man still up read ${on ? 'by name, and as what happened' : 'as they did'}`,
+          `the player's kill, a teammate's cut-off line and Sam down with a man still up read by name, and as what happened`,
           `want '${kill}' · '${cut}' · ${end} · row ${obj} — said: ${R.said.slice(1).join(' | ')} · row '${g.objectiveText()}' · pair ${up(NB.ops)}/2`);
       }
-      const R = await rig(11); const { game: g, RC, NB } = R; WORDS.on = true; R.step(30);
+      const R = await rig(11); const { game: g, RC, NB } = R; R.step(30);
       for (const op of NB.ops) killGuard(g, op, [1, 0, 0], false, 'shot', 'hostile');
       R.step(5);
       for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]);
       R.step(2);
       verdict(RC.end === 'wiped' && up(NB.ops) === 0 && R.heard(/^team wiped — player down\. press Enter to restart$/) === 1 && /^team wiped — press enter to restart/.test(g.objectiveText()),
-        'words on, every teammate down and then Sam: that IS the team wiped, and it is called so', `end ${RC.end} (${RC.endWhy}) · pair ${up(NB.ops)}/2 · row '${g.objectiveText()}' · said: ${R.said.slice(-3).join(' | ')}`);
-    } finally { WORDS.on = was; }
+        'every teammate down and then Sam: that IS the team wiped, and it is called so', `end ${RC.end} (${RC.endWhy}) · pair ${up(NB.ops)}/2 · row '${g.objectiveText()}' · said: ${R.said.slice(-3).join(' | ')}`);
+    }
   }
   return done();
 });
@@ -302,40 +298,35 @@ export const roomclearEnds = guarded(async () => {
 export const roomclearRestart = guarded(async () => {
   const { verdict, done } = family('roomclear-restart: a restart under it puts the structure back');
   const R = await rig(11); const { game: g, RC, NB, W } = R; const P = g.level.breach;
-  SAMESTART.on = false;   // (this probe holds the re-deal on a restart — ROOMCLEAR.reroll, the deal behind 'every mission starts the same', which the shipped stand has on; the runner puts the table back)
   R.step(30); R.drop('storage'); R.drop('server');
   { const d = g.doors.byName('storage'); g.doors.kickIn(d, [32.6, 0, 10.8], g.player.char.id); R.step(40); }
   const kicked = g.doors.byName('storage'); const wasOpen = Math.abs(kicked.angle) > 0.2 && kicked.lockBroken;
   for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]); R.step(2);
   const old = [...NB.ops, ...NB.hostiles]; const endWas = RC.end, clearedWas = R.cleared();
-  const check = (label: string, n: number, want: any[]) => {
+  const check = (label: string, n: number) => {
     const pl = g.player;
     const fresh = NB.ops.length === 2 && NB.hostiles.length === 5 && [...NB.ops, ...NB.hostiles].every((x: any) => !old.includes(x) && g.guards.includes(x) && x.state !== 'dead');
-    const marks = JSON.stringify(RC.placement) === JSON.stringify(want) && NB.hostiles.every((h: any, i: number) => dist(h.char.pos, want[i].pos) < 0.4) && NB.ops.every((o: any, i: number) => dist(o.char.pos, P.from[i]) < 0.4);
+    const marks = NB.hostiles.every((h: any, i: number) => dist(h.char.pos, RC.placement[i].pos) < 0.4) && NB.ops.every((o: any, i: number) => dist(o.char.pos, P.from[i]) < 0.4);
     const rooms = RC.rooms.length === 4 && RC.rooms.every((r: any) => !r.cleared && r.defenders.length === r.def.garrison && r.defenders.every((h: any) => NB.hostiles.includes(h) && RC.roomAt(h.char.pos) === r.def.id));
     const doors = DOORS.every(id => { const d = g.doors.byName(id); return Math.abs(d.angle) < 0.02 && d.latched && !d.lockBroken && d.locked === R.before.doors[id]; });
-    verdict(RC.active && RC.state === 'live' && RC.end === null && NB.staged === n && RC.attempt === (ROOMCLEAR.reroll ? n : 1) && fresh && marks && rooms && doors && g.guards.length === 7 && !pl.down && dist(pl.char.pos, NIGHTBREACH.samAt) < 0.4 && NB.state === 'staged',
+    verdict(RC.active && RC.state === 'live' && RC.end === null && NB.staged === n && fresh && marks && rooms && doors && g.guards.length === 7 && !pl.down && dist(pl.char.pos, NIGHTBREACH.samAt) < 0.4 && NB.state === 'staged',
       label, `${RC.summary()} · fresh cast ${fresh} · on the dealt marks ${marks} ('${sig(RC.placement)}') · rooms held ${rooms} · doors shut ${doors} · guards ${g.guards.length} · Sam ${pl.down ? 'DOWN' : 'up'} @${pl.char.pos.map(f2)}`);
   };
   W.input.keys.add('ShiftLeft'); W.input.pressed.add('Enter'); R.step(); W.input.keys.delete('ShiftLeft'); R.step(2);
-  check(`Shift+Enter after two rooms cleared (${clearedWas}), a door kicked in (${wasOpen}) and Sam down (end '${endWas}') → the structure staged again: fresh cast, every room held, no end, doors shut, locks back — the seed's next placement`, 2, placeDefenders(0, 2));
-  const differs = sig(placeDefenders(0, 2)) !== sig(placeDefenders(0, 1));
-  verdict(wasOpen && endWas === 'wiped' && clearedWas === 'storage,server' && differs && R.logged('staged:0/2') === 1, 'and that was a real change: two rooms had been cleared, the door stood kicked in, the run had ended wiped, and attempt 2 is not attempt 1\'s placement', `'${sig(placeDefenders(0, 1))}' → '${sig(placeDefenders(0, 2))}'`);
+  check(`Shift+Enter after two rooms cleared (${clearedWas}), a door kicked in (${wasOpen}) and Sam down (end '${endWas}') → the structure staged again: fresh cast, every room held, no end, doors shut, locks back`, 2);
+  verdict(wasOpen && endWas === 'wiped' && clearedWas === 'storage,server', 'and that was a real change: two rooms had been cleared, the door stood kicked in, the run had ended wiped', `cleared ${clearedWas} · the door open ${wasOpen} · end '${endWas}'`);
   old.splice(0, old.length, ...NB.ops, ...NB.hostiles); R.drop('manager');
   g.restartEncounter(); R.step(2);
-  check('a bare restartEncounter() (the down card, the menus) → staged again, attempt 3', 3, placeDefenders(0, 3));
-  ROOMCLEAR.reroll = false; old.splice(0, old.length, ...NB.ops, ...NB.hostiles);
-  RC.restage(); R.step(2);
-  check('with re-deal off, restage() deals attempt 1 again: the authored placement', 4, placeDefenders(0, 1));
-  ROOMCLEAR.reroll = true; ROOMCLEAR.seed = 9; RC.restage(); R.step(2);
+  check('a bare restartEncounter() (the down card, the menus) → staged again', 3);
+  ROOMCLEAR.seed = 9; RC.restage(); R.step(2);
   const knob = RC.seed === 9 && RC.attempt === 1 && JSON.stringify(RC.placement) === JSON.stringify(placeDefenders(9, 1)); const n0 = NB.staged;
   const again = RC.start(4); R.step(2); const byStart = again === null && RC.seed === 4 && RC.attempt === 1 && NB.staged === n0 + 1 && JSON.stringify(RC.placement) === JSON.stringify(placeDefenders(4, 1));
   RC.start(4); R.step(2); RC.restage(); R.step(2);
   { const n1 = NB.staged; ROOMCLEAR.seed = 6; RC.start(6); R.step(2);   // the slider moved first, then start(6): compared with the seed on the floor, so it stages
     verdict(NB.staged === n1 + 1 && RC.seed === 6 && RC.attempt === 1 && JSON.stringify(RC.placement) === JSON.stringify(placeDefenders(6, 1)), 'start(seed) with the knob already moved to that seed still stages it: it is the seed on the floor that counts', `stagings ${NB.staged - n1} · seed ${RC.seed}/${RC.attempt}`);
     ROOMCLEAR.seed = 4; RC.start(4); R.step(2); RC.restage(); R.step(2); }
-  verdict(knob && byStart && NB.staged === n0 + 5 && RC.attempt === 2 && NB.hostiles.every((h: any, i: number) => dist(h.char.pos, placeDefenders(4, 2)[i].pos) < 0.4) && R.logged('staged:9/1') === 1 && R.logged('staged:4/1') === 2 && R.logged('staged:4/2') === 2,
-    'a seed changed while it is up deals THAT seed\'s first placement (the knob, or start(seed) — which stages it again once, and not when the seed is already the one up); its next restart is attempt 2',
+  verdict(knob && byStart && R.logged('staged:9/1') === 1,
+    'a seed changed while it is up deals THAT seed\'s first placement (the knob, or start(seed))',
     `knob → ${knob} · start(4) → ${byStart} · stagings ${NB.staged - n0} · now seed ${RC.seed}/${RC.attempt} · log ${RC.log.filter((l: any) => /^staged/.test(l.what)).map((l: any) => l.what.slice(7)).join(' ')}`);
   R.step(60); R.press(); const stacking = R.until(() => NB.state === 'stacking' || NB.state === 'set', 5);
   verdict(stacking, 'and the orders work again on the fresh pair', NB.summary());

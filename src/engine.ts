@@ -11,7 +11,7 @@ import { LightingPasses, type FireRecord } from './render/passes';
 import { LightSet, cardSlotsFor, type RtLight } from './render/lights';
 import { emissiveDayK } from './render/photometry';
 import { lookVeilFrame } from './render/lookveil';
-import { PowderField, powderDrawWord } from './render/powderField';
+import { PowderField, powderDrawWord, powderWarm } from './render/powderField';
 import { PlaceField } from './render/placeField';
 import { PlaceMap } from './scene/placePlan';
 import { WallSides } from './render/wallSides';
@@ -43,7 +43,7 @@ const rcGridKey = (c: RcConfig) => `${c.nx}x${c.ny}x${c.nz}/d${c.d0}/c${c.cascad
 
 /** What the renderer needs from the smoke sim (smoke/smoke.ts; the readers are shaders/smoke_read.wgsl): the table of loose bounds round the smoke (uniform, eight records), the brick atlas,
  *  the page texture that says which brick is where (scene binding 14), how many bound records to walk (0 = no smoke), and the sim's encoder. */
-export interface SmokeBinding { uniform: GPUBuffer; atlasView: GPUTextureView; pageView: GPUTextureView; count: number; /** look only (smoke/dustTint.ts): some brick holds destruction dust → the volumetric pass runs its dust twin */ /** look only: the system lets a can's smoke out in bands (the smoke lab's row, SmokeSystem.streak) → a tint is drawn as a tint alone */ streaks?: boolean; dusty?: boolean; encode?: (enc: GPUCommandEncoder, ts: (n: string) => GPUComputePassTimestampWrites | undefined) => void; }
+export interface SmokeBinding { uniform: GPUBuffer; atlasView: GPUTextureView; pageView: GPUTextureView; count: number; /** look only (smoke/dustTint.ts): some brick holds destruction dust → the frame's bit that the volumetric pass's dust look asks (smokeDrawWords) */ /** look only: the system lets a can's smoke out in bands (the smoke lab's row, SmokeSystem.streak) → a tint is drawn as a tint alone */ streaks?: boolean; dusty?: boolean; encode?: (enc: GPUCommandEncoder, ts: (n: string) => GPUComputePassTimestampWrites | undefined) => void; }
 
 /** glassLightMasks' sample lattice: three stations along a pane × a cell just off either face (module consts — review R1.4: no per-light-per-pane literals) */
 const GLASS_STATIONS: readonly number[] = [-0.7, 0, 0.7], GLASS_SIDES: readonly number[] = [-0.55, 0.55];
@@ -137,11 +137,12 @@ export class Engine {
   /** HOW SMOKE IS DRAWN, AS ROWS (the smoke lab's section of that name, host/smokelab.ts; nothing else writes them, and all at 0 the frame's two words are 0 = the picture as
    *  it was). creases: the soft light on a sample dimmed by the smoke round it (0‥2.5) · selfK: the self-shadow's extinction (0 = the shader's own 6) · selfReach: how far
    *  toward the light it looks, m (0 = 0.72) (vol_common.wgsl). The second word's bit 0 is not a row: it is up while the bound
-   *  smoke system lets a can out in bands (SmokeBinding.streaks), and tells dust_look.wgsl a tint is a streak, drawn as a tint alone. */
+   *  smoke system lets a can out in bands (SmokeBinding.streaks), and tells dust_look.wgsl a tint is a streak, drawn as a tint alone; its bit 1 is up while some
+   *  brick of the bound system's smoke holds dust (SmokeBinding.dusty), and with it down the march reads smoke as plain smoke (dust_look.wgsl dustAlive). */
   readonly smokeDraw = { creases: 0, selfK: 0, selfReach: 0, ahead: 0 };   // (ahead: how much a lamp behind smoke glows through it, 0‥1, vol_common.wgsl smokeAheadLobe; 0 = smoke only dims a lamp behind it, as it was)
   private smokeDrawWords(): [number, number] {
     const d = this.smokeDraw, b = (x: number, k: number) => Math.max(0, Math.min(255, Math.round(x * k)));
-    return [(b(d.creases, 100) | b(d.selfK, 4) << 8 | b(d.selfReach, 50) << 16 | Math.min(100, b(d.ahead, 100)) << 24) >>> 0, this.smoke?.streaks ? 1 : 0];
+    return [(b(d.creases, 100) | b(d.selfK, 4) << 8 | b(d.selfReach, 50) << 16 | Math.min(100, b(d.ahead, 100)) << 24) >>> 0, (this.smoke?.streaks ? 1 : 0) | (this.smoke?.dusty ? 2 : 0)];
   }
   /** … and the one map of the level both read (placeField.ts PlaceMap); which tables each frame block was last sent (WallSides.made; −1 = never) */
   readonly placeMap = new PlaceMap(); private sidesSent = -1; private sidesSentOut = -1;
@@ -399,9 +400,9 @@ export class Engine {
   /** THE LOOK PROTOTYPE's place field, made once (render/placeField.ts); a device that cannot make it is asked once and no more */
   /** NOTHING IS COMPILED AT ITS FIRST USE. The fog of war's sight table and its pass made their programs the first frame a mission drew the fog: the title
    *  never built them, so the first squad mission of a visit compiled three programs under play. The page asks for them
-   *  here, once its boot's own are in (main.ts, after the boot's freeze): they compile behind the start like the rest of the background set, nothing waits
-   *  for them, and on the kept page (gpu/keep.ts) a mission finds them made. A pass that gains a program of its own asks for it here too. */
-  warmFirstUse(): void { this.fogSight.warm(); this.passes.warmFog(); }
+   *  here, once its boot's own are in (main.ts, after the boot's freeze): they compile behind the start, counted with the later set while they do (a brief's
+   *  Start waits for them), and on the kept page (gpu/keep.ts) a mission finds them made. A pass that gains a program of its own asks for it here too. */
+  warmFirstUse(): void { this.fogSight.warm(); this.passes.warmFog(); if (lookConfig.on) powderWarm(this.device); }   // (the look's loose snow steps only on a snow level of the look's page: asked for on that page's every level)
   private buildPlace(): void { if (this.place || this.placeDead) return; try { this.place = new PlaceField(this.device, this.rc.diceView); } catch (err) { console.warn('place field: not built on this device', err); this.placeDead = true; } }
 
   /** true once init() has resolved: every boot pipeline exists and render() may run */
@@ -651,7 +652,6 @@ export class Engine {
     this.lastDt = dt; this.viewFocus = cam.focus;
     if (this.outline) { this.outline.exposure = this.settings.exposure; outlineBoxes(this.outline, p => cam.project(p, 1, 1)); }   // THE OUTLINE IN THE DARK (host/findme.ts → render/outline.ts): the box round each man on THIS camera's picture
     this.passes.outline = this.settings.debugView === 0 ? this.outline : null;   // (never under a debug view, as the fog)
-    this.passes.dustLook = !!this.smoke.dusty;   // (look only: destruction dust alive in the bound smoke system → render/dustLookVol.ts)
     this.passes.smokeDiffuseBilinear = this.settings.smokeDiffuseWeight === 'bilinear'; this.passes.smokeDiffuseTau0 = this.settings.smokeDiffuseStart ?? 0.35;   // (smoke battery experiment, post.wgsl diffuseMode)
     this.gbuffer.keepTargets = this.passes.keepHistories = this.settings.keepHistories;   // (the switch for everything a change of size does — texpool.ts; mirrored before either can happen below)
     if (!this.settings.keepHistories && this.pool.parkedBytes) this.pool.evict(true);    // switched off: nothing stays parked

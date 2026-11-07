@@ -40,6 +40,26 @@ line).
     goes by row index could. RULED by the Rust goal: a game's rows are numbered the same on every machine (the start exported with the first seat
     standing) and which seat a machine shows becomes the host's own fact, told after the start and changeable; it comes in the Rust goal's next
     batch with the four scratch parts taken off the words. The whole words stay out of the alarm until a two-seat run is clean.
+  - **A networked game is stood the same way on every machine** (`src/net/step.ts netStand`, once, by the server, a scripted client and a page; and
+    `tools/mp/stand.ts`, the tools' stand of one). Every seat refereed, and EVERY DRESSING ROW UP (`src/game/dress.ts`): no recipe carries that table, a
+    page has it up, the harness's own stand puts it down, and in the Rust game the rows are not picture alone (with them down the debris pool hands
+    out no chunk and no glass plate, which are rows of the game's box table, and a storm's wind source reads nothing). The tools' stand also asks for
+    `dress: true`, makes the game's START as it stands (`Stood.begin()` → the host's `startNow`: left to the first step, the export, the start and the
+    first apply are paid inside the first tick, over a second on a small box, while the server's clock runs), and walks no puppet for a tool's
+    writes (`scan: false`: nothing writes a networked game between two ticks but a seat's record). THE LOOK AHEAD crosses as a call that writes
+    nothing, by its own contract (`tools/blitz/reads-contract.json`; held by `seats-check twin`, red path `SEATS_BREAK=look`): the host takes nothing
+    back after it. Measured on the 4 core box: a look of five records 13.4 ms before, 1.6 ms now; `mpserver-check` 15 of 15 lines on a quiet box,
+    twice, `ahead` among them for the first time on the Rust game (moved on the beat of his first record; 103 and 98 clean looks, all to the
+    millimetre), and the two-seat server ran 411 and 509 ticks of 600 on the seats' own records. On a box loaded with other runs the same lines can
+    still go red: they hold a 60 Hz server and its clients to the wall clock.
+  - **A page against a bun machine, by the whole state: NOT THE SAME BYTES YET** (2026-11-07, one seat, the office, tick 1974; the narrow words equal
+    on both). 30 of 310 state words differ and 897,180 paths of the export, in four kinds: the picture's and the host's own carried in the state (the
+    quality preset under `g.engine.settings`, the cast's meshes, the look's materials on box rows, the page's wind handed to its particles, caches
+    and counters); the page's extra camera and Input rows (3 and 2 against 2 and 1), so a seat's camera is `CameraId(1)` there and `CameraId(0)` in
+    bun; the order rows (bun's table holds `thrWord` twice, 25 rows against 24); and three unplaced (`m.kit.issued_player{…}.slot`,
+    `m.kit.kit_solo.stand`, `g.director.strict`). So the whole words cannot be the alarm between a page and a server until the host's-own list
+    covers the first kind and the rows are numbered alike. The probe and the path list: the Library's
+    `rebuild/multiplayer/coop-on-rust/page-vs-bun/`.
   - **Networked machines step in QUIET RUNS** (`step.ts netQuiet`, the hosts' `quietRun(on)`): between two ticks of a run nothing is brought across to
     the host's copy of the game (no export, no apply, no out event, no dress step); as the run ends the copy takes what changed in one apply, the out
     events of every tick in their order, and the dress step over the run's whole time. The server's run is from one state word to the next (so the
@@ -78,7 +98,7 @@ line).
   a record on the wire carries no view matrices, so a game that believed its seats would stand its men still), and refuses one whose mission does not
   come up. A setup's own `tables` are a host's settings: each key must be a knob this build has, of the knob's kind, or the setup is refused
   (`stand.ts layWhy`; laid with `knobs.ts assignDeep`).
-- **Every seat is refereed on every machine** (`src/net/step.ts netSeats` sets `seat.remote` on the server AND on each client, a client's own seat too): the
+- **Every seat is refereed on every machine** (`src/net/step.ts netStand` sets `seat.remote` on the server AND on each client, a client's own seat too): the
   eye and both view matrices are worked out again from the pose (`cmd.ts checkCmd`), so a record on the wire (`WireCmd`) is the keys, the buttons, the
   cursor, the view's size and nine pose numbers — about a hundred bytes — and one working makes the view everywhere. Numbers cross as JSON to the bit
   (`cmd.ts numWord` / `wordNum`: −0, NaN and the infinities as words).

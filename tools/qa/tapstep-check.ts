@@ -1,6 +1,6 @@
 // 'tapstep' — TAP TO STEP (src/game/tapstep.ts TAPSTEP; fed by player.ts). The maintainer: "i love the tap to step idea! curious how we can make this feel awesome. and
 // also generalize between creeping on a guy to grab him vs slithering through guards".
-//   bun run tools/qa/tapstep-check.ts        (also `probes.ts tapstep`; run it on BOTH stands: TPS_PROFILE=shipped in front for the second)
+//   bun run tools/qa/tapstep-check.ts        (also `probes.ts tapstep`)
 //   tap       a press of a few frames, crouched: he goes `tapM` and stops dead, one footfall, at the quiet level, nothing after it.
 //   hold      the key kept down: `reachM` steps with a dead stop between them, one footfall each, and every one quiet: a held key cannot scuff.
 //   legs      each step moves the walk cycle on by about half a turn and it stands still between steps.
@@ -13,19 +13,18 @@
 //   letgo     the held click let go mid-stride: the legs stay on the frame they had, and the next step goes on from it ("the animation can be paused at any point").
 //   walker    the key held behind a man walking: the gap closes.
 //   crouch    standing, the keys walk as they did; Shift crouched is the quick crouch walk, no steps.
-//   harness   down on the frozen stand and in the plain page, up in the lab and with ?tapstep=1, down in the lab with ?tapstep=0; rides a recording's tables, and a
-//             recording from before the key replays with it down.
+//   harness   down in the plain page, up in the lab and with ?tapstep=1, down in the lab with ?tapstep=0; rides a recording's tables.
+// The key is an OPEN row (down on the page): the check raises it itself for each part, and that write takes. The settled rows round it (the stalk, its key,
+// no-knife, the disarm) are no longer written, and the stalk's orbit (STALK.orbit, settled on), which this card used to hold off, is as the page has it.
+// The old stand's word and the recording from before the key are out of `harness`.
 // TAPSTEP_BREAK=1 = the key left down where tap, hold, legs, soft, rush and land ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU and no hand on a key: nobody has felt the rhythm.
 import { standUp, ROOT } from './headless.ts';
 
-const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
-const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
-const { STALK, stalkPolish } = await import(`${ROOT}/src/game/stalk.ts`);
+const { STALK } = await import(`${ROOT}/src/game/stalk.ts`);
 const { TAPSTEP, TAPSTEP_STATS, tapHears } = await import(`${ROOT}/src/game/tapstep.ts`);
 const PR = await import(`${ROOT}/src/host/profile.ts`);
 const JR = await import(`${ROOT}/src/game/journal.ts`);
-const { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`);
 
 const BREAK = process.env.TAPSTEP_BREAK === '1', DT = 1 / 60, AT = [10.2, 0, 19.5], EAST = Math.PI / 2;   // (the lobby's open floor)
 let allPass = true, found = false;
@@ -35,7 +34,7 @@ const f2 = (x: number) => x.toFixed(2);
 /** the lobby's floor, Sam crouched with empty hands, the men parked; with `gap` one rifleman that far along the D key's way with his back to Sam (walking on, with `walks`) */
 async function world(on: boolean, gap = 0, walks = false) {
   const W: any = await quiet(() => standUp({ seed: 11 } as any)), g = W.game;
-  HOLD.dropGun = true; HOLD.disarm = true; CLOSE.on = true; CLOSE.noKnife = true; STALK.on = STALK.key = STALK.low = true; STALK.drag = false; STALK.orbit = false; stalkPolish(true); TAPSTEP.on = on;
+  STALK.drag = false; TAPSTEP.on = on;   // (two open rows: the lab's stick down, the key as the part asks)
   g.godMode = true; g.aiEnabled = !!walks; g.playerInvisible = true; g.player.slot = 'pistol'; g.player.holstered = true;
   g.tune.carbineGuards = 'reyes'; for (let i = 0; i < 5; i++) W.step(DT);
   const A = g.guards.find((x: any) => x.callsign === 'Reyes'), rest = g.guards.filter((x: any) => x !== A);
@@ -45,7 +44,7 @@ async function world(on: boolean, gap = 0, walks = false) {
   const at = (d: number) => [AT[0] + right[0] * d, 0, AT[2] + right[2] * d];
   const place = (d: number) => { A.char.pos = at(d); A.char.bodyYaw = A.char.aimYaw = yaw; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.awareness = 0; A.heardUpTo = 1e12; if (!walks) { A.hold = true; A.pinned = true; } };
   if (gap) { place(gap); if (walks) { A.route = { name: 'on', points: [at(gap), at(gap + 12)], wait: [0, 900] }; A.wp = 1; A.wait = 0; A.state = 'patrol'; } } else place(30);
-  const c = g.player.char, keep = () => { TAPSTEP.on = on; STALK.drag = false; STALK.orbit = false; g.player.visibility = 0.02; };
+  const c = g.player.char, keep = () => { TAPSTEP.on = on; STALK.drag = false; g.player.visibility = 0.02; };
   const seen = new Set(g.events);
   /** `n` frames with `keys` down: the footfalls filed (frame, level) and a line of where he was */
   const go = (n: number, keys: string[] = []) => { const steps: { i: number; level: number }[] = [], path: { x: number; ph: number; v: number }[] = []; W.input.keys.clear(); for (const k of keys) W.input.keys.add(k);
@@ -131,21 +130,20 @@ async function others() {
   verdict(v > 1.2 && !stops && vb > 2 && !stopsB, 'standing he walks, and Shift crouched is the quick crouch walk', `walk ${f2(v)} m/s · Shift ${f2(vb)} m/s · stops ${stops} ${stopsB}`);
 }
 async function harness() {
-  console.log('\n=== harness: the lab and ?tapstep=1 have it, the page and the frozen stand do not ===');
-  const shipped = process.env.TPS_PROFILE === 'shipped'; TAPSTEP.on = shipped ? found : true;
+  console.log('\n=== harness: the lab and ?tapstep=1 have it, the page does not ===');
+  TAPSTEP.on = found;
   const W: any = await quiet(() => standUp()), stood = TAPSTEP.on;
   const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))), had = !!snap.tables.TAPSTEP;
   TAPSTEP.on = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); TAPSTEP.on = false; JR.applyKnobs(W.game, snapUp); const kept = TAPSTEP.on;
-  delete snap.tables.TAPSTEP; TAPSTEP.on = true; JR.applyKnobs(W.game, snap); const old = TAPSTEP.on;
   const read = (q: string) => { TAPSTEP.on = !TAPSTEP.on; PR.pageSwitches(new URLSearchParams(q)); return TAPSTEP.on; };
   const plainQ = read(''), lab = read('sneaklab'), labOff = read('sneaklab&tapstep=0'), asked = read('tapstep=1');
-  verdict(stood === false && !found && (STAND_ENV as string[]).includes('TPS_TAPSTEP') && had && kept === true && old === false && !plainQ && lab && !labOff && asked, 'down as the harness stands up and in the plain page, up in the lab and with ?tapstep=1; it rides a recording, and one from before the key has it down',
-    `stood ${stood} · plain ${plainQ} · lab ${lab} · lab off ${labOff} · asked ${asked} · rides ${kept} · old ${old}`);
+  verdict(stood === false && !found && had && kept === true && !plainQ && lab && !labOff && asked, 'down as the harness stands up and in the plain page, up in the lab and with ?tapstep=1; it rides a recording',
+    `stood ${stood} · plain ${plainQ} · lab ${lab} · lab off ${labOff} · asked ${asked} · rides ${kept}`);
 }
 export async function tapstepCheck(): Promise<boolean> {
-  const hold0 = JSON.parse(JSON.stringify(HOLD)), close = JSON.parse(JSON.stringify(CLOSE)), stalk = { ...STALK }, table = { ...TAPSTEP }; allPass = true; found = TAPSTEP.on;
-  try { const safe = await tap(), H = await hold(); await rush(H.rate, H.most || safe); await beat(); await mask(safe); await land(); await letgo(); await walker(); if (!BREAK) await others(); Object.assign(STALK, stalk); await harness(); }
-  finally { Object.assign(HOLD, hold0); Object.assign(CLOSE, close); Object.assign(STALK, stalk); Object.assign(TAPSTEP, table); }
+  const drag0 = STALK.drag, on0 = TAPSTEP.on; allPass = true; found = TAPSTEP.on;
+  try { const safe = await tap(), H = await hold(); await rush(H.rate, H.most || safe); await beat(); await mask(safe); await land(); await letgo(); await walker(); if (!BREAK) await others(); STALK.drag = drag0; await harness(); }
+  finally { STALK.drag = drag0; TAPSTEP.on = on0; }
   console.log(`\n=== tapstep: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }
 if (import.meta.main) process.exit((await tapstepCheck()) ? 0 : 1);
