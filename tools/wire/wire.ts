@@ -19,7 +19,7 @@ const read = (p: string) => readFileSync(p, 'utf8'), readJ = (p: string) => JSON
 const writeFields = (L: unknown) => writeFileSync(FIELDS, JSON.stringify(L, null, 1).replace(/^ +/gm, ''));
 const fnv = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; return h >>> 0; };
 // THE STATE WORDS: a hash of the whole game, a word a part, for two machines of one networked game to compare. What a host hands in and differs by machine is left out, and so is what is only a step's output
-const HOSTS_OWN = new Set(['m.owner', 'out', 'cmd_buf', 'local_seat', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
+const HOSTS_OWN = new Set(['m.owner', 'out', 'cmd_buf', 'local_seat', 'host_cam', 'host_input', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
 function stateWords(io: string): string { const fieldsOf = (path: string): string[] => { const l = io.split('\n').find(x => x.startsWith(`impl Io for ${path} {`)) ?? die(`no line for ${path}`) as never, w = l.slice(0, l.indexOf(' fn r(')); return [...w.matchAll(/self\.([a-z_0-9]+)\.w\(o\)/g)].map(m => m[1]); };
   // SCRATCH IS NO STATE (schema.json `scratch`, the ONE list: the rows the path diff does not compare). A part named there has no word, and a field of a
   // part named there is left out of that part's word. A row names a part as the field of the type that holds it: `game::Game.alone_own`,

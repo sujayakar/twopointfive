@@ -41,8 +41,14 @@ export class Input {
    *  buttons themselves (tools/qa/headless.ts used to Object.create(Input.prototype) and forgot orbitDX / wheelCtrl / keyVeto). `el` is null: focusGame() is a no-op. */
   static detached(): Input { return new Input(null); }
 
-  constructor(private el: HTMLElement | null) {
-    if (!el) return;   // detached (above): no DOM, no listeners — the state fields above are the whole object
+  private el: HTMLElement | null = null;
+  constructor(el: HTMLElement | null) { if (el) this.listen(el); }   // (null = detached, above: no DOM, no listeners — the state fields above are the whole object)
+  /** THE DOM HALF, put on an Input made detached: its listeners on `el` and the window. The page makes its Input before the game is stood (the stand
+   *  hands it to the game, once: game.ts hostInput) and listens only here, where the page's Input was always made: a key tapped while the page still
+   *  boots is nobody's, as ever. Once. */
+  listen(el: HTMLElement): void {
+    if (this.el) throw new Error('Input.listen: this Input listens already');
+    this.el = el;
     const framed = !KEPT.shelled && (() => { try { return window.top !== window.self; } catch { return true; } })();   // (a kept page's frame — gpu/keep.ts — is the game's own window in all but name: its keys are its window's, with no sink, as on a page with nothing above it)
     if (framed) {
       const t = document.createElement('textarea'); t.setAttribute('aria-label', SINK_LABEL); t.setAttribute('inputmode', 'none'); t.tabIndex = -1; t.autocomplete = 'off'; t.spellcheck = false; t.setAttribute('autocorrect', 'off'); t.setAttribute('autocapitalize', 'off');   // (no aria-hidden on a focused element — Chrome warns; inputmode none keeps touch keyboards down)

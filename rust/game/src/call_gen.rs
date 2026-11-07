@@ -699,7 +699,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 700 => {  crate::breach::breach_drill_end(g);  }
 701 => { let a1: f64 = Io::r(&mut i); crate::breach::breach_drill_tick(g, a1);  }
 702 => { let a1: InputId = Io::r(&mut i); crate::director::director_inject_input(g, a1);  }
-703 => { let a1: crate::director::DirectorAttachO = Io::r(&mut i); crate::director::director_attach(g, a1);  }
 704 => { let a1: String = Io::r(&mut i); let a2: Option<crate::director::DirectorSignalData> = Io::r(&mut i); crate::director::director_signal(g, &a1, a2.as_ref());  }
 705 => { let a1: String = Io::r(&mut i); let a2: Option<crate::director::DirectorStartOpts> = Io::r(&mut i); let r = crate::director::director_start(g, &a1, a2); r.w(&mut o);  }
 706 => { let a1: Option<bool> = Io::r(&mut i); crate::director::director_stop(g, a1);  }
