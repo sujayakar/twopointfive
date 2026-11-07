@@ -26,7 +26,7 @@ bun run tools/qa/knobs-check.ts                           # after adding a knob 
 bun run tools/qa/rollback-check.ts --static               # after adding module state (a side table, a module `let`, a written container)
 bun run tools/sim/build.ts                                # after any change under rust/ → src/sim/built.ts, src/dress/built.ts; tools/qa/rust-check.ts is red on a stale one
 bun run tools/qa/dress-check.ts                           # after touching a picture-only step of the tick (src/game/dress.ts; docs/agents/rust.md)
-bun run tools/qa/tour.ts --runs 3 --quiet                 # + soak.ts --seeds 1,2,3 --minutes 12 --quiet after gameplay changes
+bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet   # after gameplay changes
 ```
 Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`.
 

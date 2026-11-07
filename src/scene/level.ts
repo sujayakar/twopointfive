@@ -47,7 +47,7 @@ export const CIVILIAN_TASKS: CivilianTask[] = ['stand', 'wipe', 'bin', 'sit', 'c
  *  plus, per waypoint, the `tasks` done there while the wait runs and the yaw she does it `face`-ing (Character convention; absent = as she arrived). She starts
  *  on points[0]. Nothing else about her is authored: no weapon, no keys, no torch, no radio. */
 export interface CivilianDef { name: string; kind: 'cleaner' | 'worker'; tint: Vec3; tint2?: Vec3; points: Vec3[]; wait: number[]; tasks?: CivilianTask[]; face?: number[]; }
-/** The geometry and the talk for two men clearing one room (game/squad.ts RoomClear runs it: the tour stages the conference room with its own plan in demo.ts,
+/** The geometry and the talk for two men clearing one room (game/squad.ts RoomClear runs it,
  *  the live AI takes `Level.clearPlans` in a lockdown). #1 is the point man: he stacks on the jamb, breaches and takes the open side of the room deep; #2 covers
  *  high behind him, follows him in a beat later onto the door side (the dead space behind an inward-opening leaf is his), then drops to a knee and puts his
  *  light under the furniture while #1 pushes up his wall. Every position must be reachable in a straight, clear leg from the one before it (the nav grid knows
