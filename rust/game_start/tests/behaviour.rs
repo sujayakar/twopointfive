@@ -7,17 +7,11 @@
 //! the seed, and the rule is held over the three.
 use game::game::GuardState;
 use game::orders::Who;
-use game_start::play::{dist, Opts, Play};
+use game_start::play::{dist, nudge, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
 const SEEDS: [u32; 3] = [1, 2, 3];
 fn seed(seed: u32) -> Opts { Opts { seed, ..Default::default() } }
-/// a number in -1..1 that is a fixed function of the seed and of `k` (which of a scene's numbers it moves)
-fn nudge(seed: u32, k: u32) -> f64 {
-    let mut x = seed.wrapping_mul(0x9E37_79B9) ^ k.wrapping_mul(0x85EB_CA6B);
-    x ^= x >> 16; x = x.wrapping_mul(0x7FEB_352D); x ^= x >> 15; x = x.wrapping_mul(0x846C_A68B); x ^= x >> 16;
-    x as f64 / 2_147_483_648.0 - 1.0
-}
 const NORTH: f64 = std::f64::consts::PI;   // (a yaw: 0 looks south, along +z)
 
 /// A room 10 m by 8 m with one door in its south wall and a bulb in its middle, a sentry at its west end looking east, and Sam standing about
@@ -93,10 +87,11 @@ fn a_defender_runs_from_a_live_grenade_and_gets_down() {
         p.frag_lands(grenade);
         let fuse = p.frag_fuse();
         // from the frame it lands until the fuse is out: how far he got, how much nearer he ever came than he had been, when he got down
-        let (mut far, mut back, mut low_at) = (d0, 0.0f64, None);
+        let (mut far, mut back, mut low_at, mut had) = (d0, 0.0f64, None, 0);
         let t0 = p.time();
         while p.time() - t0 < fuse - 0.05 {
             p.frame();
+            if p.rule(d) == Some("a live grenade") { had += 1; }
             let dn = dist(p.at(d), grenade);
             back = back.max(far - dn);
             far = far.max(dn);
@@ -107,11 +102,12 @@ fn a_defender_runs_from_a_live_grenade_and_gets_down() {
         let end = dist(p.at(d), grenade);
         assert!(far - end < 0.2 && back < 0.75, "seed {s}: nothing took him back toward it: {end:.2} m away as the fuse runs out, {far:.2} m at his farthest, and at some frame {back:.2} m nearer than he had been");
         assert!(low_at.is_some(), "seed {s}: he is down before it goes off");
+        assert!(had > 30, "seed {s}: the grenade's rule of the list had him for {had} frames of the fuse: {}", p.why(d));
         drop(p);
 
         let mut p = Play::scene(&two_rooms(s), &seed(s));
         let d = p.defender_at(mark);
-        if let Some(t) = p.always(1.0 + fuse, |p| dist(p.at(d), mark) < 0.3 && !p.low(d)) { panic!("seed {s}: with no grenade the defender left his mark or got down, {t:.2} s in"); }
+        if let Some(t) = p.always(1.0 + fuse, |p| dist(p.at(d), mark) < 0.3 && !p.low(d) && p.rule(d).is_none()) { panic!("seed {s}: with no grenade the defender left his mark, got down or was taken by a rule, {t:.2} s in: {}", p.why(d)); }
         assert!(p.lines(d).is_empty(), "seed {s}: with no grenade he says nothing: {:?}", p.lines(d));
     }
 }
@@ -126,8 +122,9 @@ fn the_pair_ordered_to_a_door_stacks_on_its_two_sides() {
         let scene = two_rooms(s);
         let door = scene.door_centre("west-yard");
         let mut p = Play::scene(&scene, &seed(s));
-        let mates = p.mates();
-        assert_eq!(mates.len(), 4, "seed {s}: the room clear stages four teammates");
+        let (red, blue) = (p.red(), p.blue());
+        assert_eq!((red.len(), blue.len()), (2, 2), "seed {s}: the room clear stages four teammates in two pairs");
+        let mates = [red[0], red[1], blue[0], blue[1]];
         let was: Vec<[f64; 2]> = mates.iter().map(|m| p.at(*m)).collect();
         p.run(0.5);
         p.order("stack", door, Who::Red);
