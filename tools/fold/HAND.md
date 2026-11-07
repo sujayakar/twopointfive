@@ -54,3 +54,12 @@ their two lines of the interface and of `defaultSettings()` in `src/settings.ts`
 `fold fields-gone` lists them with the other 47 and the three commands of the README drop all 49.
 Left: `whole`, the last parameter of `charLook.ts proxies` and of `render/charMaterials.ts proxyAlbedos`, is `false` at every call
 now; the comments at `src/ui/quality.ts:215` and `src/render/frame.ts:142` still name the two settings.
+
+## Before the dead-code pass on the fourth batch (the wrappers that took a query as text or as words)
+
+`spec_of_query`, `weather_of_search`, `squad_of_query` and `row_of_query` each only chose between a text and words already read and
+called the function under it; nothing but two unit tests called them. Those two tests (`a_query_naming_no_scenario_is_none`,
+`kinds_of_search`) test live code through the wrapper, and the pass would have deleted them with it. By hand: each test calls the
+live function on `Query::parse(text)` itself, and the wrapper's sentence of what it answers moved onto the function under it.
+The pass then deletes the four wrappers by name and no test.
+

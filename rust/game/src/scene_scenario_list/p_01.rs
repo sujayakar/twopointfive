@@ -20,7 +20,8 @@ pub fn spec_of_query(search: &crate::scene_scenario_list::SpecOfQuerySearch) -> 
     }
 }
 
-/// `spec_of_query` of words already read: what every reader in the game that holds an address's words asks.
+/// What a query asks for, read as the page starts it: which scenario, how many teammates, which level file and seed; None when it names none.
+/// What every reader in the game that holds an address's words asks. (scenarioList.ts specOfQuery, of words already read)
 pub fn spec_of(q: &Query) -> Option<crate::scene_scenario_list::ScenarioSpec> {
     let kind = kind_of(q)?;
     // a quiet mission is alone unless `squad=1`; any bigger size it is asked for is the one partner
@@ -206,7 +207,7 @@ mod tests {
     #[test]
     fn a_query_naming_no_scenario_is_none() {
         for text in ["", "?", "?mute", "?squad=4", "??rescue", "?ROOMCLEAR"] {
-            assert!(spec_of_query(&SpecOfQuerySearch::Text(String::from(text))).is_none(), "{text:?}");
+            assert!(spec_of(&Query::parse(text)).is_none(), "{text:?}");
         }
     }
 }
