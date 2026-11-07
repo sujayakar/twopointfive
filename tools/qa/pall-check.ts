@@ -12,6 +12,7 @@
 //   TPS_PROFILE=shipped …                     the same on the stand the page opens on
 //   PALL_BREAK=1 …                            the rule never switched on and the same lines asked: must fail
 import { standUp, ROOT } from './headless.ts';
+import { samSets } from './charge-rig.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const { CHAOS, PALL_STATS, resetChaosKnobs } = await import(`${ROOT}/src/game/destruction.ts`);
@@ -42,7 +43,7 @@ export async function floor(rule: boolean, opts: { chaos?: number; sw?: boolean 
   g.smoke.emit = (e: any) => { emits.push({ ...e, pos: [...e.pos], t: g.time, pall: inPall }); };   // (`pall`: asked by the pall's own one emitter call)
   CHAOS.pall.on = rule; CHAOS.pall.solver = true; zero();
   WALLSHOT.on = false;   // (this check holds the pall's OWN table: the share of it a wall charge asks for on the shipped stand is WALLSHOT's, held by its own check `wallshot`)
-  return { g, step, emits };
+  return { W, g, step, emits };
 }
 export type Floor = Awaited<ReturnType<typeof floor>>;
 /** the pall's emitters among what was asked, and the rest */
@@ -65,11 +66,14 @@ export function wallSpot(g: any): any {
       if (w && w.ok && C.setSpot(w) && !C.openAt(w) && C.farFloor(w) && g.destr.walls.wouldOpen(wallPt(w, 0, 0.06, H), {}).some((o: any) => o.id === w.index && o.hole)) return w; } }
   return null;
 }
-/** the charge set on the spot and blown, two seconds on: what was asked of the solver, which side of the wall each pall emitter stands on (`held`: the
+/** the charge set on the spot by Sam's own hands (charge-rig.ts samSets: one pushed onto the tools' copy of the game by hand is a write the Rust game never
+ *  gets) and set off through the module's own trigger, two seconds on: what was asked of the solver, which side of the wall each pall emitter stands on (`held`: the
  *  charge told its wall held — holeAt answering null for the one call — so what blow() hands the pall is seen) */
 export function charge(S: Floor, held = false) {
-  const g = S.g, C = g.wallCharge, w = wallSpot(g); if (!w) return null; const n0 = S.emits.length, holeAt = C.holeAt;
-  C.set.push({ wall: w, t: g.time, by: 'probe', paid: 0 }); if (held) C.holeAt = () => null; let r: any; try { r = C.blow(C.set[C.set.length - 1]); } finally { if (held) C.holeAt = holeAt; } S.step(120);
+  const g = S.g, C = g.wallCharge, w0 = wallSpot(g); if (!w0) return null; const put = samSets(S.W, w0), c = put.charge, w = put.wall; if (!c) throw new Error(`Sam could not set the charge: ${put.why}`);
+  const n0 = S.emits.length, holeAt = C.holeAt;
+  // (`held` is STILL BY HAND: a hook on the tools' copy, which the Rust game never asks. A wall that really holds under a set charge is not staged here)
+  if (held) C.holeAt = () => null; let r: any; try { r = C.blow(c); } finally { if (held) C.holeAt = holeAt; } S.step(120);
   const got = S.emits.slice(n0), { pall, rest } = split(got), off = offOf(w), T = thickOf(w);
   return { hole: !!r?.hole, wall: w.index, pall, rest, near: pall.filter(e => off(e) > 0).length, far: pall.filter(e => off(e) < -T).length, inWall: pall.filter(e => off(e) <= 0 && off(e) >= -T).length, dust: dustOf(rest) };
 }
