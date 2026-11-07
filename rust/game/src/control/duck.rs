@@ -11,7 +11,7 @@ pub struct Row { pub want: Option<TakeCover> }
 
 pub fn transition(g: &mut Game, gd: GuardId, dt: f64) {
     let want = asked(g, gd, dt);
-    g.ctl.rows.duck.at(gd).want = want;
+    super::state_mut(g).rows.duck.at(gd).want = want;
 }
 
 fn asked(g: &mut Game, gd: GuardId, dt: f64) -> Option<TakeCover> {
@@ -26,7 +26,7 @@ fn asked(g: &mut Game, gd: GuardId, dt: f64) -> Option<TakeCover> {
     Some(TakeCover { to: Some(cover), pace: g.tune.guard_investigate * g.k.suppression.displace_pace, crouch: g.k.suppression.displace_crouch, fire_wait, threat })
 }
 
-pub fn propose(g: &Game, gd: GuardId) -> Option<Intent> { g.ctl.rows.duck.get(gd).and_then(|r| r.want).map(Intent::Cover) }
+pub fn propose(g: &Game, gd: GuardId) -> Option<Intent> { super::state(g).and_then(|s| s.rows.duck.get(gd)).and_then(|r| r.want).map(Intent::Cover) }
 
 /// The shift ends where he arrives, where he is going nowhere, or when it has taken too long.
 pub fn commit(g: &mut Game, gd: GuardId, o: Outcome) {

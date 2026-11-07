@@ -54,7 +54,7 @@ fn write(g: &mut Game, gd: GuardId, was: f64, now: f64, by: &'static str) {
     g.gd[gd].awareness = now;
     if now == was { return; }
     let mark = Mark { by, t: g.time, to: now };
-    let n = g.ctl.mind.at(gd);
+    let n = crate::control::state_mut(g).mind.at(gd);
     if now > was { n.up = mark; } else if now < was { n.down = mark; }
 }
 
@@ -82,7 +82,7 @@ pub fn set_state(g: &mut Game, gd: GuardId, to: GuardState, by: &'static str) {
     g.gd[gd].state = to;
     if was == to { return; }
     let now = g.time;
-    let n = g.ctl.mind.at(gd);
+    let n = crate::control::state_mut(g).mind.at(gd);
     n.state = Mark { by, t: now, to: 0.0 };
     n.state_from = Some(was);
 }
@@ -95,7 +95,7 @@ pub fn fix(g: &mut Game, gd: GuardId, at: Option<V3>, by: &'static str) {
     let man = &mut g.gd[gd];
     man.last_known = at;
     man.fix_stamp = man.fix_stamp.wrapping_add(1);
-    g.ctl.mind.at(gd).fix = Mark { by, t: now, to: 1.0 };
+    crate::control::state_mut(g).mind.at(gd).fix = Mark { by, t: now, to: 1.0 };
 }
 
 /// His fix written without being news to him: put back as it was, carried over, or cleared with the rest of him.
@@ -103,14 +103,14 @@ pub fn fix(g: &mut Game, gd: GuardId, at: Option<V3>, by: &'static str) {
 pub fn fix_keep(g: &mut Game, gd: GuardId, at: Option<V3>, by: &'static str) {
     let now = g.time;
     g.gd[gd].last_known = at;
-    g.ctl.mind.at(gd).fix = Mark { by, t: now, to: 0.0 };
+    crate::control::state_mut(g).mind.at(gd).fix = Mark { by, t: now, to: 0.0 };
 }
 
 /// Why he is as aware as he is, in one line: his awareness and state, and who last raised him, lowered him and
 /// changed his state, with how long ago.
 pub fn why(g: &Game, gd: GuardId) -> String {
     let man = &g.gd[gd];
-    let n = g.ctl.mind.get(gd).copied().unwrap_or_default();
+    let n = crate::control::state(g).and_then(|s| s.mind.get(gd)).copied().unwrap_or_default();
     let mut s = format!("{}: {} at {:.2}", man.callsign, man.state.as_str(), man.awareness);
     let ago = |t: f64| g.time - t;
     if let Some(from) = n.state_from { s.push_str(&format!(" · {} since {:.1} s ago by {} (was {})", man.state.as_str(), ago(n.state.t), n.state.by, from.as_str())); }
@@ -151,12 +151,12 @@ mod tests {
         g.time = 6.0;
         raise(&mut g, gd, 0.4, "a sound");
         cap(&mut g, gd, 0.95, "nobody");
-        let n = *g.ctl.mind.get(gd).expect("he has a note");
+        let n = *crate::control::state(&g).and_then(|s| s.mind.get(gd)).expect("he has a note");
         assert_eq!((n.up.by, n.up.t, n.up.to), ("told", 4.0, 0.9));
         assert_eq!(n.down.by, "");
         g.time = 9.0;
         cap(&mut g, gd, 0.2, "lost him");
-        let n = *g.ctl.mind.get(gd).expect("he has a note");
+        let n = *crate::control::state(&g).and_then(|s| s.mind.get(gd)).expect("he has a note");
         assert_eq!((n.down.by, n.down.t, n.down.to), ("lost him", 9.0, 0.2));
     }
 
@@ -181,7 +181,7 @@ mod tests {
         set_state(&mut g, gd, GuardState::Alert, "guards");
         g.time = 3.0;
         set_state(&mut g, gd, GuardState::Alert, "squad");
-        let n = *g.ctl.mind.get(gd).expect("he has a note");
+        let n = *crate::control::state(&g).and_then(|s| s.mind.get(gd)).expect("he has a note");
         assert_eq!((n.state.by, n.state.t, n.state_from), ("guards", 2.0, Some(GuardState::Patrol)));
         g.time = 5.0;
         let line = why(&g, gd);

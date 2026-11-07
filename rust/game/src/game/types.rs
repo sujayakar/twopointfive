@@ -854,7 +854,7 @@ pub struct Game {
     /// which game of rust/sim's this is: every wrapper over rust/sim reads it, and the game's die lives there
     pub sim: usize,
     /// who has each man's body this tick, and who was asked (control/): written by the arbiter, read by the debugger's lines; not on the wire
-    pub ctl: crate::control::ControlState,
+    pub ctl: crate::owned::Owned,
     /// this tick's count of keyed draws a (site, man) (dice.rs): empty between ticks; not on the wire
     pub keyed: crate::dice::Keyed,
 }
@@ -1022,7 +1022,7 @@ impl Game {
             m: Mods::blank(),
             stats: Stats::blank(),
             sim: 0,
-            ctl: crate::control::ControlState::blank(),
+            ctl: crate::owned::Owned::new(),
             keyed: crate::dice::Keyed::default(),
         }
     }
