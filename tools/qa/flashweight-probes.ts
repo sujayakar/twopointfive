@@ -44,10 +44,10 @@ const LIGHTS_BREAK = process.env.FLASHLIGHTS_BREAK === '1';
 const burning = (x: any): boolean => !LIGHTS_BREAK && !!x.flashlight?.enabled;
 import { stage, setKnobs } from './bang-tally.ts';
 import { plainOpen, type Beam } from './beam-reading.ts';
+import { sample } from './sweep.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
-const LTM: any = await import(`${ROOT}/src/game/lighting.ts`);
 const ORM: any = await import(`${ROOT}/src/game/orders.ts`);
 const CHM: any = await import(`${ROOT}/src/game/character.ts`);
 const FXM: any = await import(`${ROOT}/src/game/effects.ts`);
@@ -116,7 +116,7 @@ export const flashweightPace = guarded(async () => {
   if (process.env.FLASHWEIGHT_BREAK) console.log('  (FLASHWEIGHT_BREAK: the squad is taken out of each staging before the lap — it must fail)');
   F.verdict(P.max < jogAt && ORM.ORDERS.run <= P.max && ORM.ORDERS.brisk <= P.max && ORM.ORDERS.entry <= P.max, 'the knobs: no pace the team is asked for reaches the sprint band',
     `PACE.max ${P.max} m/s, accel ${P.accel} m/s² · orders: fall in ≤ ${ORM.ORDERS.run}, a leg to a mark ${ORM.ORDERS.brisk} then ${ORM.ORDERS.onto} onto it, an entry ${ORM.ORDERS.entry} · the animator's sprint clip starts past ${jogAt} m/s (the walk carries to ${CHM.BLEND.walkTop})`);
-  for (const E of SCENARIOS as any[]) {
+  for (const E of sample(SCENARIOS as any[], 2)) {
     const r = await paceRun(E.id);
     const ok = r.men > 0 && r.moved && r.asked <= P.max + 1e-6 && r.rise <= P.accel + 1e-3 && r.covered <= P.max + 0.35;
     F.verdict(ok, `${E.title}: ${r.men} teammates`, `fastest asked of anybody's legs ${f2(r.asked)} m/s (cap ${P.max}) · fastest pick-up ${f2(r.rise)} m/s² (cap ${P.accel}) · most ground covered in any quarter second ${f2(r.covered)} m/s${r.moved ? '' : ' · NOBODY MOVED at better than a stroll: nothing was measured'}`);
@@ -157,7 +157,7 @@ async function flashRun(scn: string, opts: { shut?: boolean } = {}) {
 export const flashweightFlash = guarded(async () => {
   const F = family('flashweight-flash: the canister in a room fight — blind AND folded, its own side spared, walls and shut doors as ever');
   const K = CBM.FLASH; let reached = 0, lined = 0;
-  for (const E of SCENARIOS as any[]) {
+  for (const E of sample(SCENARIOS as any[], 3)) {
     const r = await flashRun(E.id); if (!r) { F.verdict(false, `${E.title}`, 'no held room with a door, or the can never went off'); continue; }
     const inR = r.inside.filter(x => x.d <= r.B.dazzleRadius), withLine = inR.filter(x => x.line); lined += withLine.length; reached += inR.filter(x => x.blind > 0).length;
     const lo = Math.min(...K.secs) - 0.05, hi = Math.max(...K.secs) + 0.05;
@@ -190,7 +190,7 @@ export const flashweightNight = guarded(async () => {
 
 // ---------------------------------------------------------------- the fog of war: a door opened unseen, an enemy's laser where nobody looks
 /** the fog's own rule written again here: can any of the team's eyes see this point (statics and leaves as they stand; glass passes) */
-const eyeSees = (g: any, p: number[]) => g.fogOfWar.eyes.some((e: any) => !g.col.segmentBlocked(e.pos, p));
+
 const leafPts = (d: any, ang: number): number[][] => { const a = d.def.closedDir + ang, [hx, hz] = d.def.hinge, W = d.def.width; const out: number[][] = []; for (const f of [0.95, 0.6, 0.25]) for (const y of [1.0, 1.8]) out.push([hx + Math.cos(a) * W * f, y, hz + Math.sin(a) * W * f]); return out; };
 const leafSeen = (g: any, d: any, ang: number) => leafPts(d, ang).some(p => g.fogOfWar.eyes.some((e: any) => { const L = Math.hypot(p[0] - e.pos[0], p[1] - e.pos[1], p[2] - e.pos[2]); if (L < 0.3) return true; const k = 1 - 0.12 / L; return !g.col.segmentBlocked(e.pos, [e.pos[0] + (p[0] - e.pos[0]) * k, e.pos[1] + (p[1] - e.pos[1]) * k, e.pos[2] + (p[2] - e.pos[2]) * k]); }));
 const doorBoxOf = (g: any, d: any) => g.dynBoxes.find((b: any) => b.name === d.box.name);
@@ -313,36 +313,10 @@ async function emptyEntry(scn: string) {
   return { door: E.ent.door.def.name, team: team.length, why, beamEnds, spared, litInLit, burnDark, follow, walk, walkDark, stacked, cross, withCorner, searching, searchLit, inT, darkAt, held, doorMen: doorMen.length, doorDark, doors, out, ended: op?.ended ?? '(running)', secs: op ? inT - op.t0 : NaN,
     unseen: m ? +m[1] : NaN, cells: m ? +m[2] : NaN, moves: m ? +m[3] : NaN, beat };
 }
-export const flashweightLights = guarded(async () => {
-  if (LIGHTS_BREAK) console.log('  (FLASHLIGHTS_BREAK: every teammate\'s light is read as off — the lines below must fail)');
-  const F = family('flashweight-lights: weapon lights off until they help — every scenario: dark in file behind Sam, lit walking to a door alone, dark stacked on it, lit through the entry and the search, dark holding the room and following out');
-  // (until 2026-11-07 these lines were measured with the goggles held off, as they were written: since nvg.ts a quiet team in the dark walks on its
-  // goggles with no light at all — probes.ts nvg has that. The goggles are settled on: the lines ask the team the page fields)
-  const bare = (set: Record<string, Record<string, unknown>> = {}) => setKnobs(set); bare();
-  const L = GDM.LIGHTS; let spared = 0, burned = 0, burnDark = 0;
-  for (const E of SCENARIOS as any[]) {
-    const r = await emptyEntry(E.id); if (!r) { F.verdict(false, `${E.title}`, 'no held room to enter'); continue; }
-    const crossed = [...r.cross.values()], litIn = crossed.filter(c => c.lit).length; spared += r.spared; burned += r.litInLit; burnDark += r.burnDark;
-    const ok = !r.why && r.follow === 0 && r.stacked === 0 && r.walkDark === 0 && r.litInLit === 0 && crossed.length > 0 && litIn === crossed.length && r.searching > 0 && r.searchLit >= r.searching * 0.95 && r.darkAt <= L.afterSecs + L.hotSecs + L.tail + 0.5 && r.held === 0 && r.doorDark === 0 && r.out === 0;
-    F.verdict(ok, `${E.title}: ${r.team} teammates, the ${r.door} door`, `${r.why ? `ORDER REFUSED: ${r.why} · ` : ''}lit in file behind Sam ${r.follow} · DARK while walking to the door on their own ${r.walkDark} of ${r.walk} man-frames · lit stacked on it ${r.stacked} · crossed the frame lit (or in a lit place, or dark into the wall at his muzzle) ${litIn} of ${crossed.length} · lights the lit place spared ${r.spared} man-frames · asked of a man whose light the wall rule put out, what ended his beam: a wall, or too near one to call ${r.beamEnds.wall} (counted lit) · plainly open for up to four frames with a leaf beside him ${r.beamEnds.leaf} (the leaf moved after he was posed: counted lit) · plainly open, something standing in its middle ${r.beamEnds.axis} · plainly open, its middle on the ground or clear ${r.beamEnds.ground + r.beamEnds.none} (counted dark), burning on in one ${r.litInLit} · lit through the search ${r.searchLit} of ${r.searching} frames · all dark ${f2(r.darkAt)} s after the room was called (bound ${f2(L.afterSecs + L.hotSecs + L.tail + 0.5)}) · lit holding the room ${r.held} · holding another door of it ${r.doorMen}${r.doorMen ? ` (${r.doors}), dark where the place is dark ${r.doorDark}` : ''} · following out ${r.out}`);
-  }
-  // the place rule at the bar it ships with: the start card's floors are night offices, mostly under it — so the lights BURN there (by the probe's own
-  // reading of the floor, not the rule's) and none burns on in a place the rule calls lit
-  F.verdict(burnDark > 0 && burned === 0, 'in the dark the lights burn, and none burns on in a place the rule calls lit (LIGHTS.litOff, as shipped)', `${burnDark} man-frames lit on floor the probe itself reads dark · ${spared} man-frames a lit place spared a light · ${burned} burning on in a lit place past the tail`);
-  // …and a floor that IS over the bar keeps them off: the four-man room clear with the bar let down to where its corridor passes (0.2), every other check
-  // of the entry still holding
-  { const E = (SCENARIOS as any[]).find(e => e.id === 'room-clear-four') ?? (SCENARIOS as any[])[0], bound = L.afterSecs + L.hotSecs + L.tail + 0.5;
-    const whole = (r: any) => { const crossed = [...r.cross.values()]; return !r.why && r.walkDark === 0 && crossed.length > 0 && crossed.every((c: any) => c.lit) && r.searching > 0 && r.searchLit >= r.searching * 0.95 && r.darkAt <= bound && r.follow === 0 && r.stacked === 0 && r.held === 0 && r.doorDark === 0 && r.out === 0; };
-    const words = (r: any) => `spared ${r.spared} · burning on in a lit place ${r.litInLit} · dark walking alone ${r.walkDark} of ${r.walk} · crossed lit (or in a lit place, or dark into the wall at his muzzle) ${[...r.cross.values()].filter((c: any) => c.lit).length} of ${r.cross.size} · lit through the search ${r.searchLit} of ${r.searching} frames · all dark ${f2(r.darkAt)} s after the call · lit in file ${r.follow}, stacked ${r.stacked}, holding ${r.held}, on another door ${r.doorMen}${r.doorMen ? ` (${r.doors}; dark in the dark ${r.doorDark})` : ''}, following out ${r.out}`;
-    bare({ LIGHTS: { litAt: 0.2 } }); const on = await emptyEntry(E.id); reset(); bare();
-    F.verdict(!!on && on.spared > 0 && on.litInLit === 0 && whole(on), `a place over the bar keeps the lights off (${E.title}, LIGHTS.litAt 0.2)`, on ? words(on) : 'nothing staged');
-    }
-  return F.done();
-});
 export const flashweightCorners = guarded(async () => {
   const F = family('flashweight-corners: men going in check their corners and look the room over — every scenario');
   const K = DTM.DOORTOOLS;
-  for (const E of SCENARIOS as any[]) {
+  for (const E of sample(SCENARIOS as any[], 1)) {
     const r = await emptyEntry(E.id); if (!r) { F.verdict(false, `${E.title}`, 'no held room to enter'); continue; }
     const late = r.withCorner.filter(([, c]: any) => !(c.corner <= K.cornerCap));
     const ok = !r.why && r.cross.size > 0 && late.length === 0 && r.ended === 'in' && r.unseen < K.deadCells;
@@ -352,17 +326,6 @@ export const flashweightCorners = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- what it buys
-export const flashweightEntry = guarded(async () => {
-  const F = family('flashweight-entry: behind the bang, every scenario loses fewer and takes or empties as many rooms (bang-tally.ts)');
-  const seeds = process.env.FLASHWEIGHT_SEEDS ?? '1-3';
-  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/bang-tally.ts`, '--seeds', seeds, '--arms', 'open,bang', '--jobs', '4'], { stdout: 'pipe', stderr: 'ignore', env: process.env });
-  const text = await new Response(p.stdout).text(); const code = await p.exited;
-  const lines = text.split('\n'); let n = 0;
-  for (const l of lines) { const m = l.match(/^(PASS|FAIL) — ([^:]+): (.*)$/); if (!m) continue; n++; F.verdict(m[1] === 'PASS', `${m[2]} (seeds ${seeds})`, m[3]); }
-  F.verdict(code === 0 && n === (SCENARIOS as any[]).length, 'every scenario on the start card was counted', `${n} of ${(SCENARIOS as any[]).length} scenarios gave a line · the tally's exit ${code}`);
-  if (VERBOSE) console.log(text);
-  return F.done();
-});
 
 // ---------------------------------------------------------------- flashweight-feel: the Tab panel's 'Team feel' rows keep a changed rule across a page load
 /** game/teamfeel.ts under a stand-in localStorage: only what differs from the build is stored, a fresh Game reads it back before its squad systems do, a

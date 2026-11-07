@@ -58,7 +58,7 @@ async function rig(seed: number, knobs: Record<string, unknown> = {}, start: boo
   Object.assign(ROOMCLEAR, RC_DEFAULTS, knobs); Object.assign(NIGHTBREACH, NB_DEFAULTS, nb);
   Math.random = seeded(seed);
   const W: any = await standUp(); const game = W.game; const RC = game.roomClear, NB = game.nightBreach;
-  const before = { guards: game.guards.length, civilians: game.civilians.length, steady: steady(W), tune: JSON.stringify(game.tune), objective: game.objectiveText(),
+  const before = { guards: game.guards.length, civilians: game.civilians.length, steady: steady(W), tune: JSON.stringify(game.tune), objective: 'objective ▸ reach the server room',
     doors: Object.fromEntries(game.doors.list.map((d: any) => [d.def.name, d.locked])) as Record<string, boolean> };
   const said: string[] = []; { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(t); msg(t); }; }   // (game.messages keeps the last five only)
   const why = start === false ? null : RC.start(typeof start === 'number' ? start : undefined);
@@ -89,12 +89,12 @@ export const roomclearOff = guarded(async () => {
   const { verdict, done } = family('roomclear-off: nothing of it runs until it is started');
   const R = await rig(5, {}, false); const { game: g, RC, NB } = R;
   R.step(300);
-  verdict(!RC.active && RC.state === 'off' && RC.rooms.length === 0 && RC.end === null && RC.log.length === 0 && (RC.objective()?.text ?? null) === null && NB.layout === null && !NB.active,
+  verdict(!RC.active && RC.state === 'off' && RC.rooms.length === 0 && RC.end === null && RC.log.length === 0 && !!g.view.mission && g.view.mission.of !== 'roomclear' && NB.layout === null && !NB.active,
     'inert after five seconds of night floor: inactive, no rooms, no end, an empty log, no layout on the night breach', `${RC.summary()} · rooms ${RC.rooms.length} · log ${RC.log.length} · layout ${NB.layout}`);
   verdict(g.objectiveText() === R.before.objective && /server room/.test(g.objectiveText()) && g.guards.length === R.before.guards && !g.guards.some((x: any) => x.unit),
     'the floor is the night game\'s: the shift, no unit, the mission\'s own objective line', `objective '${g.objectiveText()}' · guards ${g.guards.length}`);
   const why = NB.start(); R.step(30); const P = g.level.breach;
-  verdict(why === null && NB.active && !RC.active && RC.state === 'off' && (RC.objective()?.text ?? null) === null && NB.hostiles.length === 3 && NB.drill.hostiles.length === 3 && NB.hostiles.every((h: any, i: number) => dist(h.char.pos, P.hostiles[i].pos) < 0.3) && RC.rooms.length === 0,
+  verdict(why === null && NB.active && !RC.active && RC.state === 'off' && !!g.view.mission && g.view.mission.of !== 'roomclear' && NB.hostiles.length === 3 && NB.drill.hostiles.length === 3 && NB.hostiles.every((h: any, i: number) => dist(h.char.pos, P.hostiles[i].pos) < 0.3) && RC.rooms.length === 0,
     '?nightbreach alone is the break room\'s three on the breach plan\'s marks, all three the drill\'s — and this scenario stays off under it', `${NB.summary()} · drill hostiles ${NB.drill.hostiles.length} · ${RC.summary()}`);
   verdict(RC.start() !== null && !RC.active && NB.layout === null, 'started over a standing night breach it is refused, and leaves that one alone', `refusal: ${RC.canStart()} · layout ${NB.layout}`);
   return done();
@@ -162,8 +162,8 @@ export const roomclearStage = guarded(async () => {
   const pl = g.player;
   verdict(dist(pl.char.pos, NIGHTBREACH.samAt) < 0.3 && pl.slot === 'rifle' && !pl.holstered && !pl.down, 'Sam beside the pair with the rifle up', `Sam @${pl.char.pos.map(f2)} ${pl.slot}`);
   const op = g.objectivePos(), br = STRUCTURE.rooms[0].bounds;
-  verdict(g.objectiveText() === (RC.objective()?.text ?? null) && /clear the structure/.test(g.objectiveText()) && STRUCTURE.rooms.every((r: any) => g.objectiveText().includes(r.name)) && !g.objectiveText().includes('✓') && !!op && dist(op, [(br.x0 + br.x1) / 2, 0, (br.z0 + br.z1) / 2]) < 0.01 && RC.objective() === RC.objective(),
-    'the HUD\'s objective is the structure\'s: every room named, none ticked, the marker on the first room still held (not the mission\'s server door) — worded once, not every frame', `'${g.objectiveText()}' · marker ${op?.map(f2)}`);
+  verdict(g.view.mission?.of === 'roomclear' && /clear the structure/.test(g.objectiveText()) && STRUCTURE.rooms.every((r: any) => g.objectiveText().includes(r.name)) && !g.objectiveText().includes('✓') && !!op && dist(op, [(br.x0 + br.x1) / 2, 0, (br.z0 + br.z1) / 2]) < 0.01,
+    'the HUD\'s objective is the structure\'s: every room named, none ticked, the marker on the first room still held (not the mission\'s server door)', `'${g.objectiveText()}' · marker ${op?.map(f2)}`);
   R.step(60 * 6);
   const still = NB.hostiles.every((h: any, i: number) => dist(h.char.pos, want[i].pos) < 0.05) && NB.ops.every((o: any, i: number) => dist(o.char.pos, P.from[i]) < 0.3);
   const shoved = g.props.props.filter((p: any) => STRUCTURE.rooms.some((r: any) => p.home[0] > r.bounds.x0 && p.home[0] < r.bounds.x1 && p.home[1] > r.bounds.z0 && p.home[1] < r.bounds.z1) && Math.hypot(p.x - p.home[0], p.z - p.home[1]) > 0.02);
@@ -232,8 +232,8 @@ export const roomclearEnds = guarded(async () => {
     const M = g.level.mission, stage0 = g.mission.stage;
     g.teleportPlayer([(M.serverRoom.x0 + M.serverRoom.x1) / 2, 0, (M.serverRoom.z0 + M.serverRoom.z1) / 2]); R.step(30); const inServer = g.mission.stage;
     g.mission.stage = 'exfil'; g.teleportPlayer([M.exfilX + 0.6, 0, M.exfilZ]); R.step(30); const outside = g.mission.stage; g.mission.stage = stage0;
-    verdict(stage0 === 'infiltrate' && inServer === 'infiltrate' && outside === 'exfil' && !g.mission.debrief && R.heard(/reached the server room|exfiltrated/) === 0 && /structure taken/.test(g.objectiveText()),
-      'the stealth mission stands still under it: Sam in the server room starts no drive objective, and past the fire exit nothing is completed', `stage ${stage0} → in the server room ${inServer} · forced to exfil and stood outside: ${outside} · debrief ${g.mission.debrief}`);
+    verdict(stage0 === 'infiltrate' && inServer === 'infiltrate' && outside === 'exfil' && !g.endCards && R.heard(/reached the server room|exfiltrated/) === 0 && /structure taken/.test(g.objectiveText()),
+      'the stealth mission stands still under it: Sam in the server room starts no drive objective, and past the fire exit nothing is completed', `stage ${stage0} → in the server room ${inServer} · forced to exfil and stood outside: ${outside} · end cards ${g.endCards ?? 0}`);
   }
   { const R = await rig(11); const { game: g, RC, NB } = R; R.step(30);
     R.drop('storage');

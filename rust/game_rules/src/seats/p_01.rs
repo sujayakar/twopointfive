@@ -146,7 +146,7 @@ pub fn host_man(g: &crate::game::Game) -> PlayerId {
 }
 
 /// the man a writer with no man of its own names (seats.ts manHere): the view's; bare, Game holds the first seat's set, so both arms are g.player
-pub fn man_here(g: &crate::game::Game) -> PlayerId { g.player }
+pub fn man_here(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
 /// `f` for every seat, over its view (seats.ts eachSeat)
 pub fn each_seat(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game)) {
@@ -456,24 +456,24 @@ pub fn orders_of(g: &crate::game::Game, gd: GuardId) -> PlayerId {
 
 /// the order he is under, in whichever seat's book (seats.ts orderOf)
 pub fn order_of(g: &mut crate::game::Game, gd: GuardId) -> Option<OrdersAssignmentId> {
-    if one_book(g) { return crate::orders::squad_orders_of(g, gd); }
+    if one_book(g) { return crate::orders::squad_orders_of(g, &crate::seats::here(g), gd); }
     let s = seat_of(g, gd);
-    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_of(g, gd))
+    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_of(g, &crate::seats::here(g), gd))
 }
 
 /// is there a squad to order at all, any seat's (seats.ts teamActive)
 pub fn team_active(g: &mut crate::game::Game) -> bool {
-    if one_book(g) { return crate::orders::squad_orders_active(g); }
+    if one_book(g) { return crate::orders::squad_orders_active(g, &crate::seats::here(g)); }
     for i in 0..g.seats.len() {
         let s = g.seats[i];
-        if crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_active(g)) { return true; }
+        if crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_active(g, &crate::seats::here(g))) { return true; }
     }
     false
 }
 
 /// every seat's teammates, in the guard list's order (seats.ts teamSquad)
-pub fn team_squad(g: &crate::game::Game) -> Vec<GuardId> {
-    if one_book(g) { return crate::orders::squad_orders_squad(g); }
+pub fn team_squad(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
+    if one_book(g) { return crate::orders::squad_orders_squad(g, seat); }
     let mut out = Vec::new();
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
@@ -483,8 +483,8 @@ pub fn team_squad(g: &crate::game::Game) -> Vec<GuardId> {
 }
 
 /// … and the living of them (seats.ts teamMen)
-pub fn team_men(g: &crate::game::Game) -> Vec<GuardId> {
-    if one_book(g) { return crate::orders::squad_orders_men(g, None, None); }
+pub fn team_men(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
+    if one_book(g) { return crate::orders::squad_orders_men(g, seat, None, None); }
     let mut out = Vec::new();
     for i in 0..g.guards.len() {
         let gd = g.guards[i];

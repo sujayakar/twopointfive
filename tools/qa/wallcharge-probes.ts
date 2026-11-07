@@ -43,6 +43,8 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
+/** how an order ended: the game files an ended order on its `done` list as a record of its own, so the row a check held from before is not the one that says so */
+const endOf = (C: any, op: any): string | undefined => op.ended ?? [...(C.done ?? [])].reverse().find((d: any) => d.t0 === op.t0 && d.wall?.index === op.wall?.index)?.ended;
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -291,8 +293,8 @@ async function probeSquad(scn: string): Promise<boolean> {
   //  comes in at a slant — anywhere the wall's line is open to a man's own circle: what he must never do is cross where wall still stands)
   const gap = (m: any, x: number) => { const c: Vec3 = wallPt(W, x, -T / 2), c0: Vec3 = [...c] as Vec3; return !col.collideCircle(c, m.char.radius, 0.2, 1.5) || flat(c, c0) < 0.01; };
   const through = men.map((m: any) => { const x = op.crossed.get(m); return { m, x, off: wallOff(W, m.char.pos), A: O.of(m), rec: x !== undefined && !!hole && Math.abs(x - hole.du) <= hole.half + 0.3, open: x !== undefined && gap(m, x) }; });
-  F.verdict(ended && op.ended === 'in' && C.stats.entries === 1 && through.every(x => x.m.state === 'dead' || ((x.rec || x.open) && x.off < -T)),
-    'the squad goes in THROUGH THE HOLE: every man crosses the wall\'s line inside the gap and ends past the far face; the order ends \'in\'', `${through.map(x => `${x.m.callsign} crossed at ${x.x === undefined ? '—' : f2(x.x)} m${x.rec ? '' : x.open ? ' (past the hole\'s record, the wall gone there too)' : ' (WALL STANDS THERE)'}, ${f2(-x.off - T)} m in`).join(' · ')} · hole ${hole ? `${f2(hole.du - hole.half)} to ${f2(hole.du + hole.half)}` : '—'} m · ended '${op.ended}' ${f2(game.time - tBlow)} s after the blast`);
+  F.verdict(ended && endOf(C, op) === 'in' && C.stats.entries === 1 && through.every(x => x.m.state === 'dead' || ((x.rec || x.open) && x.off < -T)),
+    'the squad goes in THROUGH THE HOLE: every man crosses the wall\'s line inside the gap and ends past the far face; the order ends \'in\'', `${through.map(x => `${x.m.callsign} crossed at ${x.x === undefined ? '—' : f2(x.x)} m${x.rec ? '' : x.open ? ' (past the hole\'s record, the wall gone there too)' : ' (WALL STANDS THERE)'}, ${f2(-x.off - T)} m in`).join(' · ')} · hole ${hole ? `${f2(hole.du - hole.half)} to ${f2(hole.du + hole.half)}` : '—'} m · ended '${endOf(C, op)}' ${f2(game.time - tBlow)} s after the blast`);
   F.verdict(through.every(x => x.m.state === 'dead' || (x.A && x.A.order === WALL_ORDER && /^holding the (room|hole)$/.test(x.A.there))) && new Set(through.map(x => x.A?.post?.join(','))).size === through.length, 'and ends like every other entry: each man on a point of his own inside, holding the room',
     through.map(x => `${x.m.callsign} ${x.A?.there ?? 'no order'} ${x.A?.post ? at(x.A.post) : ''}`).join(' · '));
   // the door entry's last-out rule (DOORTOOLS.lastOut): three or more in — one man, the last through with a line to it, keeps the hole; nobody ends with a wall at his chest
@@ -527,7 +529,7 @@ async function probeHold(scn: string): Promise<boolean> {
       const T = 2 * (op.wall.alongX ? op.wall.box.h[2] : op.wall.box.h[0]), room = fight.roomAt(wallPt(op.wall, op.hole.du, -(T + WALLCHARGE.mouthIn)));
       const ins = (room?.entries ?? []).map((e: any) => ({ name: e.door.def.name as string, p: [e.at[0] - e.out[0] * 0.5, 1.2, e.at[2] - e.out[1] * 0.5] as Vec3 })).filter((e: any) => wallOff(op.wall, e.p) < -T);
       const lined = ins.filter((e: any) => pts.some((p: Vec3) => wallOff(op.wall, p) < 0 && flat(p, e.p) >= 0.8 && !game.col.shotBlocked([p[0], 1.2, p[2]], e.p) && !pts.some((o: Vec3) => o !== p && segNear(o, p, e.p) < WALLCHARGE.mateLine)));
-      if (!R.until(() => !C.ops.includes(op), WALLCHARGE.enterCap + 6) || op.ended !== 'in') { dbg(`not in: ${op.phase} ${op.ended}`); continue; }
+      if (!R.until(() => !C.ops.includes(op), WALLCHARGE.enterCap + 6) || endOf(C, op) !== 'in') { dbg(`not in: ${op.phase} ${endOf(C, op)}`); continue; }
       R.step(90);
       const holders = men.map((m: any) => { const A = O.of(m), w = A?.watch, e = w ? ins.find((x: any) => flat(x.p, w) < 0.05) : null; return { m, A, e, off: w ? Math.abs(Math.atan2(Math.sin(m.char.aimYaw - Math.atan2(w[0] - m.char.pos[0], w[2] - m.char.pos[2])), Math.cos(m.char.aimYaw - Math.atan2(w[0] - m.char.pos[0], w[2] - m.char.pos[2])))) : NaN }; });
       if (!ins.length) { dbg(`no inside door: room ${room ? room.entries.length : 'none'}`); continue; }

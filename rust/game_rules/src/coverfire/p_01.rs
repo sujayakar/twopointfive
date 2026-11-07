@@ -75,9 +75,9 @@ fn set_chew(g: &mut Game, gd: GuardId, f: impl FnOnce(&mut Chew)) {
     if let Some(cw) = row { f(cw); }
 }
 /// is he up, for a reader that holds the state (coverfire.ts upOf)
-fn up_now(g: &Game, who: crate::game::Foe) -> bool {
+fn up_now(g: &Game, seat: &crate::seats::SeatRef, who: crate::game::Foe) -> bool {
     match who {
-        crate::game::Foe::Player => !g.pl[g.player].down,
+        crate::game::Foe::Player => !g.pl[seat.player].down,
         crate::game::Foe::Guard(x) => g.gd[x].state != crate::game::GuardState::Dead && g.ch[g.gd[x].ch].alive,
     }
 }
@@ -164,9 +164,9 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// whose body (coverfire.ts charOf)
-pub fn char_of(g: &crate::game::Game, who: crate::game::Foe) -> CharId {
+pub fn char_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate::game::Foe) -> CharId {
     match who {
-        crate::game::Foe::Player => g.pl[g.player].ch,
+        crate::game::Foe::Player => g.pl[seat.player].ch,
         crate::game::Foe::Guard(x) => g.gd[x].ch,
     }
 }
@@ -198,7 +198,7 @@ pub fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 
 /// a sighting of `who` copied into what `gd` knows (coverfire.ts see)
 pub fn see(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, low: bool) {
-    let c = char_of(g, who);
+    let c = char_of(g, &crate::seats::here(g), who);
     let (pos, vel) = (g.ch[c].pos, g.ch[c].vel);
     let trunk = match g.ch[c].bones.get(crate::character::Bone::Spine2) {
         Some(t) => *t,
@@ -244,7 +244,7 @@ pub fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::game::Fo
     let mut out: Vec<KnownItem> = Vec::new();
     if let Some(own) = s.men.get(gd) {
         for k in own.know.iter() {
-            if who_passes(who, k.who) && time - k.t <= stale_secs && up_now(g, k.who) {
+            if who_passes(who, k.who) && time - k.t <= stale_secs && up_now(g, &crate::seats::here(g), k.who) {
                 out.push(KnownItem { k: *k, call: k.call.unwrap_or(false) });
             }
         }
@@ -258,7 +258,7 @@ pub fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::game::Fo
             if !k.call.unwrap_or(false)
                 && who_passes(who, k.who)
                 && time - k.t <= call_secs
-                && up_now(g, k.who)
+                && up_now(g, &crate::seats::here(g), k.who)
                 && !out.iter().any(|o| same_who(o.k.who, k.who) && o.k.t >= k.t)
             {
                 out.push(KnownItem { k: *k, call: true });
@@ -581,7 +581,7 @@ pub fn cover_seen(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::gam
         Some(who) => who,
     };
     state_of(g);
-    let c = char_of(g, who);
+    let c = char_of(g, &crate::seats::here(g), who);
     let k = Know { who, at: to, y0: g.ch[c].pos[1], v: [0.0, 0.0], t: g.time, call: None };
     let cw = match choose(g, gd, k, false, true) {
         Some(cw) => cw,
@@ -603,8 +603,8 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     if crate::teams::foe_down(g, gd)
         || g.gd[gd].held.is_some()
         || g.gd[gd].script.is_some()
-        || g.time < g.gd[gd].dazzled_until
-        || g.time < g.gd[gd].stagger_until
+        || crate::control::man::blind(g, gd)
+        || crate::control::man::staggered(g, gd)
     {
         return None;
     }
@@ -938,7 +938,7 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
 pub fn coverfire_saw(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, age: Option<f64>) {
     let age = age.unwrap_or(0.0);
     state_of(g);
-    let c = char_of(g, who);
+    let c = char_of(g, &crate::seats::here(g), who);
     let low = g.ch[c].anim.crouch > 0.5;
     see(g, gd, who, low);
     let t = g.time - age;

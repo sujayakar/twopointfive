@@ -31,7 +31,7 @@ import { needsTrip } from '../game/needs';
 import { headMark, waryDots } from './headmark';
 import { stickyMarks } from '../game/stickycam';
 import { CKPT } from '../game/savestate';
-import { stripRows } from '../game/cues';
+import { pageRows } from '../view/pagesaid';
 import { fragMarks } from '../game/frag';
 import { RECAP, lostLive, lostArrowsShown, type LostMan } from '../game/deathrecap';
 import { QUICKTHROW } from '../game/quickthrow';
@@ -96,7 +96,7 @@ export class Overlay implements HudLike {
   private peak = 0; private peakT = 0;
   private log = document.getElementById('log')!; private logKey = '';
   private captionEl = document.getElementById('caption')!; private captionKey = '';
-  private tlEl = document.getElementById('timeline')!; private tlKey = ''; private tlFill: HTMLElement | null = null; private tlOnPick: ((k: number) => void) | null = null;
+  private tlEl = document.getElementById('timeline')!; private tlKey = ''; private tlFill: HTMLElement | null = null;
   private equip = document.getElementById('equip')!;
   private traj = document.getElementById('traj') as unknown as SVGSVGElement;
   private trajPath: SVGPolylineElement; private trajLand: SVGCircleElement; private trajShort = false;
@@ -125,15 +125,13 @@ export class Overlay implements HudLike {
   /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet — nothing unless his Options ask */
   readonly findme = new FindMeViz(this.traj);
   /** Tour timeline: one segment per stop (width ∝ duration) with its chapter title, the live one filled to its progress; segments are clickable. */
-  setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null, onPick: (k: number) => void) {
-    this.tlOnPick = onPick;
+  setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null) {
     if (!ch) { if (this.tlKey) { this.tlKey = ''; this.tlEl.className = ''; this.tlEl.innerHTML = ''; this.tlFill = null; } return; }
     const key = ch.list.length + '|' + ch.i;
     if (key !== this.tlKey) {
       this.tlKey = key; const total = ch.list.reduce((s, c) => s + c.dur, 0) || 1;
-      this.tlEl.innerHTML = ch.list.map((c, k) => `<div class="seg${k < ch.i ? ' done' : k === ch.i ? ' cur' : ''}" data-k="${k}" title="${k + 1}. ${c.title} — click or ←/→" style="flex:${(c.dur / total * 100).toFixed(2)} 1 0"><b></b><span>${c.title}</span></div>`).join('');
+      this.tlEl.innerHTML = ch.list.map((c, k) => `<div class="seg${k < ch.i ? ' done' : k === ch.i ? ' cur' : ''}" title="${k + 1}. ${c.title}" style="flex:${(c.dur / total * 100).toFixed(2)} 1 0"><b></b><span>${c.title}</span></div>`).join('');
       this.tlEl.className = 'on'; this.tlFill = this.tlEl.querySelector('.seg.cur b');
-      if (!this.tlEl.dataset.wired) { this.tlEl.dataset.wired = '1'; this.tlEl.addEventListener('click', ev => { const seg = (ev.target as HTMLElement).closest('.seg') as HTMLElement | null; if (seg && this.tlOnPick) this.tlOnPick(Number(seg.dataset.k)); }); }
     }
     if (this.tlFill) this.tlFill.style.width = `${(ch.frac * 100).toFixed(1)}%`;
   }
@@ -353,13 +351,11 @@ export class Overlay implements HudLike {
     this.soundPeak.style.left = `calc(${(this.peak * 100).toFixed(0)}% - 1px)`; this.soundPeak.style.opacity = this.peak > 0.02 ? '0.85' : '0';
     const fl = game.tune.floorMaterials ? game.floorUnderPlayer : ('' as const); if (fl !== this.floorKey) { this.floorKey = fl; this.soundLab.innerHTML = !fl ? 'SOUND' : `SOUND <i style="opacity:.5;font-style:normal">· ${FLOOR[fl].label.toUpperCase()}</i>`; }   // rebuilt only when he crosses onto another finish
     // log
-    // radio traffic only: lines that went over the guards' net ('radio: …') within the last 8 s, newest last, older ones dimmed — the rest of game.messages
-    // stays for the harness / probes but is not drawn (the interaction panel, the kit column and the world carry it)
-    // …and, with CUES.overheard, one dim row for a shout that reached an ear from a man the fog hides ('heard: …' — cues.ts overheard)
-    { const rx = stripRows(game);   // (cues.ts: the defenders' net ranked and rate-limited; with its switch off, the message ring's 'radio: ' rows as ever)
-      const key = rx.map(m => m.text + (game.time - m.t > 5 ? '~' : '')).join('|');
-      if (key !== this.logKey) { this.logKey = key; this.log.innerHTML = rx.map(m => { const heard = m.text.startsWith('heard: ');   // (cues.ts overheard: a shout that reached an ear — the strip's own dim row from the start, under its own word; no colour of its own)
-        return `<span class="rx${heard ? ' heard old' : game.time - m.t > 5 ? ' old' : ''}"><b>${heard ? 'HEARD' : '·)) RADIO'}</b>${m.text.slice(7).replace(/[<>&]/g, c => c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;')}</span>`; }).join(''); } }
+    // the radio strip as the game tells it (game.view.radio), older rows dimmed; a shout that reached an ear from a man the fog hides is the strip's own dim row from the
+    // start, under its own word. Under them, what the page itself says (view/pagesaid.ts).
+    { const rx = game.view.radio, said = pageRows(), clean = (t: string) => t.replace(/[<>&]/g, c => c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;');
+      const key = rx.map(m => m.kind + m.text + (m.age > 5 ? '~' : '')).join('|') + '#' + said.join('|');
+      if (key !== this.logKey) { this.logKey = key; this.log.innerHTML = rx.map(m => `<span class="rx${m.kind === 'heard' ? ' heard old' : m.age > 5 ? ' old' : ''}"><b>${m.kind === 'heard' ? 'HEARD' : '·)) RADIO'}</b>${clean(m.text)}</span>`).join('') + said.map(t => `<span class="rx said">${clean(t)}</span>`).join(''); } }
     // mission: the objective line, and a diamond + distance on the objective — clamped to the screen edge in its direction when it is off screen (the
     // usual case from this camera), faded out within a couple of metres so it never fights the F reticle / door marker that takes over there
     // A TUTORIAL MISSION (game/rails.ts): its step is the one instruction on screen — big, low in the middle, each key it names drawn as a key ('[B]' in the

@@ -23,7 +23,7 @@ const JOBS = {
   off: { query: KILLHOUSE + '&noverdict', end: 'win', seed: true },
   // a tutorial mission's room clear: it ends on the card too, with nothing graded and the next mission leading. Its frame is put off (`rails=0`): with a
   // step up the frame holds the end (game/rails.ts holdsEnd), and this job ends the run by hand, not by the lesson
-  lesson: { query: 'levelFile=tut-squad.json&roomclear=1&squad4&difficulty=hard&rails=0', end: 'win', seed: false },
+  lesson: { query: 'levelFile=tut-team.json&roomclear&squad4&difficulty=hard&rails=0', end: 'win', seed: false },
 };
 const report = { checks: [], errors: [] };
 const check = (ok, label, detail) => { report.checks.push({ ok: !!ok, label, detail }); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -73,7 +73,7 @@ const CARD = () => { const m = document.getElementById('menu'), q = s => [...m.q
         await page.evaluate(PLAY, [180, ['KeyW']]);
         await page.evaluate(() => { window.__game.player.down = true; });
         await page.evaluate(PLAY, [260, []]);
-      } else { await page.evaluate(PLAY, [240, ['KeyW']]); await page.evaluate(() => { const m = window.__game.mission; m.stage = 'done'; m.debrief = true; }); await page.evaluate(PLAY, [30, []]); }
+      } else { await page.evaluate(PLAY, [240, ['KeyW']]); await page.evaluate(() => { const m = window.__game.mission; m.stage = 'done'; window.__menu.open('debrief'); }); await page.evaluate(PLAY, [30, []]); }
       await page.waitForTimeout(400);
       const c = await page.evaluate(CARD); log(name, JSON.stringify(c).slice(0, 900));
       const rec = (() => { try { return JSON.parse(c.kept || '{}')['killhouse-four|standard'] ?? JSON.parse(c.kept || '{}')['killhouse-four|hard'] ?? null; } catch { return null; } })();
@@ -87,9 +87,9 @@ const CARD = () => { const m = document.getElementById('menu'), q = s => [...m.q
       } else if (name === 'lesson') {
         check(c.db && c.word === 'CLEAR' && /^\d:\d\d$/.test(c.time || '') && /vd-squad/.test(c.cls), 'lesson: a tutorial room clear ends on the card by itself', `${c.word} ${c.time} · ${c.cls}`);
         check(c.pips.length === 0 && c.tries === 0 && !c.gold && (c.kept === null || !/tut-/.test(c.kept)), 'lesson: nothing graded and nothing kept — no ways, no tries, no record of the lesson on this machine', `pips ${c.pips.length} · ticks ${c.tries} · kept ${c.kept}`);
-        check(c.next.length === 1 && /^Next: The ledger/.test(c.next[0]) && c.lead === c.next[0] && c.focus === c.next[0], 'lesson: the next lesson leads the card (the first button, the focus)', `next ${JSON.stringify(c.next)} · primary '${c.lead}' · focus '${c.focus}'`);
+        check(c.next.length === 1 && /^Next: The fuel stop/.test(c.next[0]) && c.lead === c.next[0] && c.focus === c.next[0], 'lesson: the next lesson leads the card (the first button, the focus)', `next ${JSON.stringify(c.next)} · primary '${c.lead}' · focus '${c.focus}'`);
         const href = await page.evaluate(() => document.querySelector('#menu .db .btn.next')?.dataset.href ?? null);
-        check(/levelFile=tut-quiet\.json/.test(href || '') && !/tut-squad|roomclear|squad4/.test(href || ''), 'lesson: the button is the next row\'s own page load', String(href));
+        check(/levelFile=tut-kit\.json/.test(href || '') && !/tut-team/.test(href || ''), 'lesson: the button is the next row\'s own page load', String(href));
       } else if (name === 'down') {
         check(c.db && c.word === 'DOWN' && c.tries === 3 && c.win === 0 && c.pips.filter(p => / won/.test(p)).length === 1 && !c.pips.some(p => / now/.test(p)), 'down: the card says DOWN, three ticks and none a win, the pips as they were', `${c.word} ${c.time} · ticks ${c.tries} · ${c.pips.join(' | ')}`);
         check(c.men[0] === 'Player:dead' && c.fell === 1 && !!moved2 && moved2.n === 3 && moved2.s === 3 && !moved2.w?.doors, 'down: his row ends where he fell; the try is counted and no way is won', `${c.men.join(' · ')} · ${JSON.stringify(moved2)}`);
@@ -114,7 +114,7 @@ const CARD = () => { const m = document.getElementById('menu'), q = s => [...m.q
     const b2 = await chromium.launch({ headless: true, args: ['--disable-gpu'] }), ctx = await b2.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
     await ctx.addInitScript(() => { addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }); });
     const won = { 'compound-four': { n: 6, s: 0, w: { doors: { tries: 3, clean: false, secs: 190, wins: 2 }, walls: { tries: 1, clean: true, secs: 141, wins: 1 } } }, 'killhouse-four': { n: 2, s: 1, w: { quiet: { tries: 1, clean: true, secs: 80, wins: 1 } } },
-      'warehouse-four': { n: 9, s: 0, w: { doors: { tries: 4, clean: false, secs: 300, wins: 1 }, dark: { tries: 2, clean: true, secs: 260, wins: 1 }, quiet: { tries: 1, clean: false, secs: 400, wins: 1 } } }, 'depot-four': { n: 4, s: 4, w: {} } };
+      'mousehole-four': { n: 9, s: 0, w: { doors: { tries: 4, clean: false, secs: 300, wins: 1 }, dark: { tries: 2, clean: true, secs: 260, wins: 1 }, quiet: { tries: 1, clean: false, secs: 400, wins: 1 } } }, 'depot-four': { n: 4, s: 4, w: {} } };
     let tallOn = null;
     for (const [name, q] of [['cards', ''], ['cards-off', '&noverdict']]) {
       const page = await ctx.newPage();
@@ -128,7 +128,7 @@ const CARD = () => { const m = document.getElementById('menu'), q = s => [...m.q
           const of = id => { const r = R.querySelector(`.mrow[data-mission="${id}"]`), p = r?.querySelector(':scope > .vpips'); return p ? { cls: p.className, won: p.querySelectorAll('.vpip.won').length, one: p.querySelectorAll('.v1.on').length, all: p.querySelectorAll('.vall.on').length } : null; };
           const fit = rows.filter(vis).every(r => { const p = r.querySelector(':scope > .vpips'); if (!p) return true; const a = r.getBoundingClientRect(), b = p.getBoundingClientRect(); return b.left >= a.left - 0.5 && b.right <= a.right + 0.5 && b.bottom <= a.bottom + 0.5 && [...r.children].every(c => c === p || !vis(c) || c.classList.contains('mthumb') || c.getBoundingClientRect().right <= b.left + 0.5 || c.getBoundingClientRect().bottom <= b.top + 0.5); });
           return { rows: rows.length, strips: R.querySelectorAll('.mrow > .vpips').length, twice: rows.filter(r => r.querySelectorAll(':scope > .vpips').length > 1).length, train: rows.filter(r => /^tut-/.test(r.getAttribute('data-mission')) && r.querySelector('.vpips')).length,
-            lessons: rows.filter(r => /^tut-/.test(r.getAttribute('data-mission'))).length, compound: of('compound-four'), warehouse: of('warehouse-four'), depot: of('depot-four'), fit,
+            lessons: rows.filter(r => /^tut-/.test(r.getAttribute('data-mission'))).length, compound: of('compound-four'), mousehole: of('mousehole-four'), depot: of('depot-four'), fit,
             // (the menus' two rules for anything on a card: it does not change the card's height, and it takes no pointer — the card under it is the link)
             tall: Object.fromEntries(rows.filter(vis).map(r => [r.getAttribute('data-mission'), Math.round(r.getBoundingClientRect().height * 10) / 10])),
             inert: rows.filter(vis).every(r => { const p = r.querySelector(':scope > .vpips'); if (!p || !vis(p)) return true; const b = p.getBoundingClientRect(), hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return getComputedStyle(p).pointerEvents === 'none' && p.tabIndex < 0 && !(hit && p.contains(hit)); }),
@@ -136,7 +136,7 @@ const CARD = () => { const m = document.getElementById('menu'), q = s => [...m.q
         const c = await read(); log(name, JSON.stringify(c));
         if (name === 'cards') {
           check(c.strips === c.rows - c.lessons && c.twice === 0 && c.train === 0 && c.lessons > 0, 'cards: every mission\'s card carries one strip of pips; the tutorial missions none', `${c.strips} strips on ${c.rows} rows (${c.lessons} lessons)`);
-          check(c.compound && /gold/.test(c.compound.cls) && c.compound.won === 2 && c.compound.one === 1 && c.compound.all === 1 && c.warehouse?.won === 3 && c.depot && c.depot.won === 0 && /none/.test(c.depot.cls), 'cards: what is kept is what is lit — two ways and gold on the compound (one at the first try, one with nobody lost), three on the warehouse, four dim marks on a mission tried and never won', JSON.stringify({ compound: c.compound, warehouse: c.warehouse, depot: c.depot }));
+          check(c.compound && /gold/.test(c.compound.cls) && c.compound.won === 2 && c.compound.one === 1 && c.compound.all === 1 && c.mousehole?.won === 3 && c.depot && c.depot.won === 0 && /none/.test(c.depot.cls), 'cards: what is kept is what is lit — two ways and gold on the compound (one at the first try, one with nobody lost), three on Mousehole, four dim marks on a mission tried and never won', JSON.stringify({ compound: c.compound, mousehole: c.mousehole, depot: c.depot }));
           check(c.fit, 'cards: on every card drawn the strip sits inside the card and over nothing else on its line', `fit ${c.fit}`);
           tallOn = c.tall; check(c.inert, 'cards: the strip takes no pointer and no focus — a click on it lands on the card', `inert ${c.inert}, ${c.inset} px from the card\'s right edge`);
           await page.screenshot({ path: path.join(outDir, 'cards-page.png'), timeout: 60000 }).catch(e => log('no still', String(e).split('\n')[0]));

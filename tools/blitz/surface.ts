@@ -3,7 +3,7 @@
 //   surfaceHost(H);               a game's host stands: H.surfaceCall(row, bytes) => bytes, H.surfaceOpen() => is a call to cross now (no Rust game yet, or inside the host's own lines: no)
 // INSIDE THE HOST'S OWN LINES nothing crosses: a guard reached from `Game.update`'s lines, an apply or the dress step runs as the TypeScript it is.
 // A CALL THROUGH A TOOL'S HOOK: an out event's dispatch calls the method on the puppet as it stands, so a tool's replacement fires, and its call through to the original does nothing: the Rust game has already done it (`dispatching`).
-import { SCHEMA, parse, bookOf, exportPart, PAST } from './export';
+import { SCHEMA, parse, bookOf, exportPart, PAST, gameOfRow } from './export';
 import CALLS from './calls.json';
 import TAPS from './taps.json';
 import { WEAPONS } from '../../src/game/weapons';
@@ -12,22 +12,26 @@ import { RAW } from '../../src/math/side';
 const PASS = Symbol('run the TypeScript');
 const DIE: { f: (() => number) | null } = { f: null }; (globalThis as any).__tpsRoll = () => { if (!DIE.f) throw new Error('the call surface: the Rust game asked a die no caller handed in'); return DIE.f(); };
 const DEC = new TextDecoder();
-export interface SurfaceHost { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array, view?: number): Uint8Array; count?(s: string): void }
+export interface SurfaceHost { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; /** a game that stands and has never started: started now, for a call to a function with no TypeScript body. True if the call may now cross */ surfaceStart?(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array, view?: number): Uint8Array; count?(s: string): void }
 const TALLY: any = (globalThis as any).__tpsTally ?? { crossed: 0, pass() {} };   // (expose.ts keeps it, from before any game is stood, and prints it)
 const passed = (key: string, how: 'noHost' | 'noRow' | 'unlisted' | 'closed') => TALLY.pass(key, how);
-// (no list of every host that ever stood: it kept every game of a process alive, 11 MB a game; a call's game is its receiver's, else the game stood last)
-let current: SurfaceHost | null = null;
-export const surfaceHost = (H: SurfaceHost | null, gone?: SurfaceHost) => { if (H) TALLY.standing = false; if (gone && current === gone) current = null; if (H) current = H; };
-// A CALL'S OWN GAME: the receiver, or an argument, that is a game or holds one (`o.g`, game-ref.json). What holds none goes to the game stood last
-const gameOf = (o: any): SurfaceHost | null => !o || typeof o !== 'object' ? null : o.rustSurface ?? o.g?.rustSurface ?? null;
-const hostOf = (self: any, args: any[]): SurfaceHost | null => { const H = gameOf(self); if (H) return H; for (const a of args) { const A = gameOf(a); if (A) return A; } return current; };
-class In { p = 0; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); } }
+// A CALL'S GAME IS NAMED BY THE CALL: its receiver or an argument is the game, holds it (`o.g`, game-ref.json), is one of its parts (`g.doors`) or is one of its rows (the book that numbered it). A call that names none has no game: its TypeScript body runs, whatever stands and however many stand, as it does on the page, and reads what the apply keeps. There is no "game stood last". A function with a body, on a game that stands and has not started, runs on the puppet, which the start takes across; a function with none starts that game and crosses (`startFor`).
+// (no list of every host that ever stood: it kept every game of a process alive, 11 MB a game. `lastStood` is for the tally of what ran where, and no call goes by it)
+let lastStood: SurfaceHost | null = null;
+const PART_OF = new WeakMap<object, SurfaceHost | null>();
+/** the game's own parts, its top level: a thing with no `.g` of its own and no row, as a module's object is */
+const partsOf = (H: SurfaceHost) => { PART_OF.set(H.g, H); for (const k of Object.keys(H.g)) { const v = H.g[k]; if (!v || typeof v !== 'object' || ArrayBuffer.isView(v) || Array.isArray(v)) continue; const was = PART_OF.get(v); PART_OF.set(v, was === undefined || was === H ? H : null); } };
+export const surfaceHost = (H: SurfaceHost | null, gone?: SurfaceHost) => { if (H) { TALLY.standing = false; partsOf(H); } if (gone && lastStood === gone) lastStood = null; if (H) lastStood = H; };
+const gameOf = (o: any): SurfaceHost | null => { if (!o || typeof o !== 'object') return null; const x = o[RAW] ?? o; if (x.rustSurface) return x.rustSurface; const part = PART_OF.get(x) ?? (x.g && PART_OF.get(x.g)); if (part) return part; const row = gameOfRow(x); return row ? PART_OF.get(row) ?? null : null; };
+/** a list handed in is its first member's */
+const hostOf = (self: any, args: any[]): SurfaceHost | null => { const H = gameOf(self); if (H) return H; for (const a of args) { const A = gameOf(Array.isArray(a) ? a[0] : a); if (A) return A; } return null; };
+class In { p = 0; strict = false; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); } }
 function val(n: any, I: In, bk: any): any { const dv = I.dv; switch (n.k) {
   case 'f64': { const v = dv.getFloat64(I.p, true); I.p += 8; return v; } case 'f32': { const v = dv.getFloat32(I.p, true); I.p += 4; return v; }
   case 'bool': return I.b[I.p++] !== 0; case 'u8': return I.b[I.p++]; case 'i8': { const v = dv.getInt8(I.p); I.p += 1; return v; } case 'u16': { const v = dv.getUint16(I.p, true); I.p += 2; return v; } case 'i16': { const v = dv.getInt16(I.p, true); I.p += 2; return v; }
   case 'u32': case 'usize': { const v = dv.getUint32(I.p, true); I.p += 4; return v; } case 'i32': { const v = dv.getInt32(I.p, true); I.p += 4; return v; } case 'u64': case 'i64': { const v = dv.getFloat64(I.p, true); I.p += 8; return v; }
   case 'str': { const L = dv.getUint32(I.p, true); I.p += 4; const s = DEC.decode(I.b.subarray(I.p, I.p + L)); I.p += L; return s; } case 'unit': return undefined;
-  case 'id': { const v = dv.getUint32(I.p, true); I.p += 4; return v === 0xffffffff ? null : bk.listOf(n.id)[v] ?? null; }
+  case 'id': { const v = dv.getUint32(I.p, true); I.p += 4; if (v === 0xffffffff) return null; const o = bk.listOf(n.id)[v]; if (o === undefined && I.strict) throw new Error(`the bridge: ${n.id} ${v} is no row of this page's game (it has ${bk.listOf(n.id).length})`); return o ?? null; }
   case 'opt': return I.b[I.p++] ? val(n.of, I, bk) : null;
   case 'vec': { const L = dv.getUint32(I.p, true); I.p += 4; const a: any[] = []; for (let i = 0; i < L; i++) a.push(val(n.of, I, bk)); return a; }
   case 'arr': { const a: any[] = []; for (let i = 0; i < n.n; i++) a.push(val(n.of, I, bk)); return a; } case 'tup': return n.of.map((x: any) => val(x, I, bk));
@@ -42,6 +46,9 @@ function val(n: any, I: In, bk: any): any { const dv = I.dv; switch (n.k) {
 const ROWS: any[] = []; for (const r of (CALLS as any).rows) ROWS[r.id] = r;
 /** A SEAT'S VIEW AMONG THE ARGUMENTS SAYS WHOSE THE CALL IS. In the TypeScript a rule handed a view read "the player" through it; the Rust game keeps those fields on Game for whichever seat stands there, so the call runs under that seat. By what the value is, for every row (a one-seat game's Game is no view: -1, the game as it stands) */
 function viewSeat(self: any, args: any[]): number { for (const a of [self, self?.g, ...args]) if (a && typeof a === 'object' && a[RAW] && a.seat) return a.seat.index; return -1; }
+/** A RECORD THE RUST GAME HANDED OVER, read by the table (a `view::TickView`): every id is this page's own object, and an id it has no row for is a throw
+ *  that names it, never a hole in what the HUD is told */
+export function readRecord(g: object, type: string, bytes: Uint8Array): any { const I = new In(bytes); I.strict = true; const r = val(parse(type), I, bookOf(g)); if (I.p !== bytes.length) throw new Error(`the bridge: ${type} is ${bytes.length} bytes and ${I.p} were read`); return r; }
 function call(row: number, self: any, args: any[]): any { const H = hostOf(self, args); if (!H) { passed(ROWS[row].key, 'noHost'); return PASS; } if (H.surfaceDispatching()) return undefined; if (!H.surfaceOpen()) { passed(ROWS[row].key, 'closed'); return PASS; }
   // A DIE THE CALLER HANDS IN (`rnd`): the game's own is no argument at all. A tool's own is asked as the Rust function asks it, by the face's import `face_roll`
   const C = ROWS[row], g = H.g, parts: [string, unknown][] = []; let die: (() => number) | null = null; for (const a of C.args) { if (a.ty === 'rnd') { const f = args[a.from]; die = typeof f === 'function' && f !== simRandom ? f : null; parts.push(['bool', die !== null]); continue; } parts.push([a.ty, a.from === 'this' ? self : args[a.from]]); }
@@ -67,13 +74,13 @@ export function makeTaps(g: any, classes: Record<string, any>, set: (id: number,
   return { sweep(): void { for (const T of TAP) { const v = now(T), was = T.recv === 'self' ? CLASS_BASE.get(T.id) : (base.has(T.id) && base.get(T.id) !== undefined ? base.get(T.id) : (base.set(T.id, v), v)), on = v !== undefined && v !== was; if (on !== sent.has(T.id)) { set(T.id, on); if (on) sent.add(T.id); else sent.delete(T.id); } } }, reset(): void { sent.clear(); } }; }
 export function fireTap(g: any, row: number, args: number[], answer: number[]): void { const T = TAP[row], bk = bookOf(g), I = new In(Uint8Array.from(args)), a: any[] = []; for (const p of T.args) { if (!p.ty) { a.push(undefined); continue; } const v = val(parse(p.ty), I, bk); a.push(p.def ? (WEAPONS as any)[v] : v); }
   const A = T.ret ? val(parse(T.ret), new In(Uint8Array.from(answer)), bk) : undefined; const o = T.recv === 'self' ? a.shift() : recvOf(g, T.recv); if (!o || typeof o[T.m] !== 'function') return; const was = firing; firing = { id: T.id, answer: A }; try { o[T.m](...a); } finally { firing = was; } }
-export function installSurface(): void { const c: any = call; c.PASS = PASS; c.newGame = () => { current = null; TALLY.standing = true; }; c.tapFiring = (id: number) => firing?.id === id; c.tapAnswer = () => firing!.answer; c.passed = (key: string) => { if (firing) return; if (!current) passed(key, 'noHost'); else if (current.surfaceOpen()) passed(key, 'unlisted'); }; (globalThis as any).__tpsCall = c; }
+export function installSurface(): void { const c: any = call; c.PASS = PASS; c.newGame = () => { lastStood = null; TALLY.standing = true; }; c.startFor = (self: any, args: any[]) => !!hostOf(self, args)?.surfaceStart?.(); c.tapFiring = (id: number) => firing?.id === id; c.tapAnswer = () => firing!.answer; c.passed = (key: string) => { if (firing) return; if (!lastStood) passed(key, 'noHost'); else if (lastStood.surfaceOpen()) passed(key, 'unlisted'); }; (globalThis as any).__tpsCall = c; }
 export const surfaceRows = ROWS;
 // ---- THE CROSSING AS A PLAIN FUNCTION: what a function of the tick is once its TypeScript body is gone (blitz/skeleton/STUBS.md): `return crossing('DoorTools.order', this, [o, who]) as any`. By the row's `stub` word, which does not move with a cut. There is no TypeScript to run: where the guard would have run it this says so
 let ROW_OF: Map<string, number> | null = null, TAP_OF: Map<string, number> | null = null;
 export function crossing(key: string, self: unknown, args: unknown[]): unknown {
   TAP_OF ??= new Map(TAP.map(T => [T.key, T.id])); const t = TAP_OF.get(key); if (t !== undefined && firing?.id === t) return firing.answer;
   ROW_OF ??= new Map((CALLS as any).rows.map((r: any) => [r.stub, r.id])); const row = ROW_OF.get(key); if (row === undefined) throw new Error(`the call surface: no row ${key}`);
-  const r = call(row, self, args as any[]); if (r === PASS) throw new Error(`the call surface: ${key} was called where it cannot cross (no game stands, the host's own lines are running, or an argument is or holds a row the Rust game has not got${PAST.id ? `: the last such row written was a ${PAST.id}` : ''}: a thing made by hand on the puppet is not in the game; make it through a function that crosses)`); return r; }
+  let r = call(row, self, args as any[]); if (r === PASS && (call as any).startFor(self, args)) r = call(row, self, args as any[]); if (r === PASS) throw new Error(`the call surface: ${key} was called where it cannot cross (no game stands, the host's own lines are running, or an argument is or holds a row the Rust game has not got${PAST.id ? `: the last such row written was a ${PAST.id}` : ''}: a thing made by hand on the puppet is not in the game; make it through a function that crosses)`); return r; }
 /** a tapped function with no row: all it still does is answer a tool that replaced it and called through */
 export function tapAnswer(key: string): unknown { TAP_OF ??= new Map(TAP.map(T => [T.key, T.id])); return firing?.id === TAP_OF.get(key) ? firing!.answer : undefined; }

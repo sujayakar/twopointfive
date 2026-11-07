@@ -199,7 +199,7 @@ export const FIRE_LOOK_SMOKE = {
   snow: { speed: 2.6, reach: 2.2, spread: 0.2, mouth: 1.3, top: 4.5 },   // the jet: m/s on its axis at the mouth, the height (m) at which that has halved, how fast it widens (tan), its width at the mouth (× the mouth's radius), where it ends (m)
 };
 /** whether a fire's pieces are filed as one column (the look page, with its Fire smoke row up) */
-const fits = () => lookConfig.on && lookConfig.fireSmoke > 0 && lookConfig.fireFit > 0;
+const fits = () => lookConfig.fireSmoke > 0 && lookConfig.fireFit > 0;
 /** THE FLAME'S OWN MIDDLE `up` metres over its mouth, as the picture leans it (fire.wgsl fireBend × the capped wind it is handed): how far downwind it stands
  *  (x, z) and its slope there (metres downwind a metre up) */
 function axisAt(up: number, wind: readonly [number, number]): [number, number, number, number] {
@@ -322,7 +322,7 @@ const NO_JETS: readonly WindGpuSource[] = [];   // (never written: the list a fi
 export function updateFire(g: Game, dt: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('updateFire', undefined, [g, dt]); if (__r !== RUST_PASS) return __r as any; } }
   const E = g.engine;
   if (!FIRE.on) {
-    if (states.get(g)) { for (const t of g.targets) if (isFire(t)) { plain(t); g.lightHome.feedBurning(t.light!); } states.delete(g); if (E.fires?.length) E.fires = []; if (E.hostBooks?.fire?.kept) g.smoke.keepHot?.(0); if (E.hostBooks) E.hostBooks.fire = undefined; if (lookConfig.on) gpuFx(g)?.setHeat(NO_JETS); }   // (put off in a running page: the lamp back where the level hung it, its strength is updateTargets' again)
+    if (states.get(g)) { for (const t of g.targets) if (isFire(t)) { plain(t); g.lightHome.feedBurning(t.light!); } states.delete(g); if (E.fires?.length) E.fires = []; if (E.hostBooks?.fire?.kept) g.smoke.keepHot?.(0); if (E.hostBooks) E.hostBooks.fire = undefined; gpuFx(g)?.setHeat(NO_JETS); }   // (put off in a running page: the lamp back where the level hung it, its strength is updateTargets' again)
     return;
   }
   let any = false; for (const t of g.targets) if (isFire(t)) { any = true; break; }
@@ -332,7 +332,7 @@ export function updateFire(g: Game, dt: number) { { const __s = RUST_SURFACE; if
   if (moved) { P = E.hostBooks?.fire ?? null; if (!P || was < P.time - 1e-9) P = (E.hostBooks ??= {}).fire = { n: 0, time: 0, bed: [], smoke: [], smokes: 0, beds: 0, ember: [], embers: 0, gas: [], gasMix: [], gases: 0 }; P.n++; P.time = time; }
   const focus = E.viewFocus ?? hostMan(g).char.pos, drawing = g.smoke.drawing?.() === true && g.engine.settings?.fireSmoke !== false;   // (… and the graphics preset on draws a fire's smoke: the floor rung does not, ui/quality.ts FIRE SMOKE SHED)
   let fires = 0, lit = 0;
-  const jets: WindGpuSource[] = [], snowLift = lookConfig.on && lookConfig.fireSnow > 0;
+  const jets: WindGpuSource[] = [], snowLift = lookConfig.fireSnow > 0;
   if (moved) T.frames++;
   for (const t of g.targets) {
     if (!isFire(t)) continue;
@@ -366,7 +366,7 @@ export function updateFire(g: Game, dt: number) { { const __s = RUST_SURFACE; if
       jets.push({ kind: 'jet', name: 'fire', pos: [M.pos[0], M.pos[1], M.pos[2]], dir: [A[2] / n, 1 / n, A[3] / n], speed: W.speed * heat, reach: W.reach, tanSpread: W.spread, r0: M.r * W.mouth, dMax: W.top, bound: { c: M.pos, r: W.top }, heat: true }); }
     const FL = FIRE_LOOK_SMOKE, eUp = flameH * FL.emberUp, eA = fit ? axisAt(eUp, wind) : null;   // (ONE COLUMN: an ember leaves the upper flame, on its leaning middle and along it; a crack's throw is wider and harder, from the same place)
     const ember = (n: number, hard: number, k: number) => { if (!emberKept) { emberEmit(n, hard, k); return; } const mine = PX!.ours; PX!.ours = true; try { emberEmit(n, hard, k); } finally { PX!.ours = mine; } };   // (set and put back round the one call, as fogofwar.ts doing() does)
-    const emberKept = lookConfig.on && FL.emberFog && FOG.ours && K.fog && l.fog !== 1;   // (the look page: where the fog's picture keeps this fire's flame it keeps its embers, FIRE_LOOK_SMOKE.emberFog)
+    const emberKept = FL.emberFog && FOG.ours && K.fog && l.fog !== 1;   // (the look page: where the fog's picture keeps this fire's flame it keeps its embers, FIRE_LOOK_SMOKE.emberFog)
     const emberEmit = (n: number, hard: number, k: number) => PX!.emit('spark', eA ? [M.pos[0] + eA[0], M.pos[1] + eUp, M.pos[2] + eA[1]] : [M.pos[0], M.pos[1] + flameH * (0.25 + 0.3 * hard), M.pos[2]], eA ? [eA[2], 1, eA[3]] : [wv[0] * 0.15, 1, wv[2] * 0.15], n, { shape: 'cone', spread: eA ? FL.emberSpread + 0.6 * hard : 0.5 + 0.5 * hard, speed: K.emberSpeed * (eA ? FL.emberSpeed : 1) * (1 + 1.6 * hard), speedJit: 0.6,
       life: K.emberLife * (1 - 0.45 * hard), lifeJit: 0.45, size: K.emberSize, sizeJit: 0.4, posJit: M.r * (eA ? FL.emberJit : 0.7), ember: Math.min(0.99, K.emberGain * (0.5 + 0.5 * heat)), seed: (Math.imul(si + 1, 0x9E3779B1) ^ Math.imul(k + 1, 0x85EBCA77)) >>> 0 });
     if (P?.stir?.length && P.stir.includes(ix)) { if (PX && K.emberCrack > 0) { const n = Math.round(K.emberCrack * 2); ember(n, 1, P.embers); P.embers += n; } }   // (a round or a blast went into it: FIRE.hardy)
@@ -381,12 +381,12 @@ export function updateFire(g: Game, dt: number) { { const __s = RUST_SURFACE; if
     // the smoke: a short source on the solver, filed afresh every `every` s while the fire is near the view
     if (P && drawing && K.smoke.on && d < K.smoke.viewR) { const B = K.smoke, slot = Math.floor(time / B.every), goes = P.smoke[ix] === P.n - 1; P.smoke[ix] = P.n;
       if (slot !== Math.floor(was / B.every) || !goes) { P.smokes++;
-        const sk = wl > 8 ? 8 / wl : 1, dir: Vec3 = [wv[0] * sk * B.lean, 1, wv[2] * sk * B.lean], L = lookConfig.on && lookConfig.fireSmoke > 0 ? FIRE_LOOK_SMOKE : null;
+        const sk = wl > 8 ? 8 / wl : 1, dir: Vec3 = [wv[0] * sk * B.lean, 1, wv[2] * sk * B.lean], L = lookConfig.fireSmoke > 0 ? FIRE_LOOK_SMOKE : null;
         const A = L && fit ? axisAt(K.height * L.up, wind) : null;   // (ONE COLUMN: born on the flame's leaning middle, leaving along it, and soot)
         g.smoke.emit({ pos: [M.pos[0] + (A ? A[0] : 0), M.pos[1] + K.height * (L ? L.up : B.up), M.pos[2] + (A ? A[1] : 0)], dir: A ? [A[2], 1, A[3]] : dir, speed: B.speed, radius: L ? L.radius : B.radius, minVoxels: B.cells, density: B.density * heat * (L ? L.density : 1), temperature: B.temp * heat, ttl: B.every, age: 0, kind: 'cloud',
           push: B.push, jitter: B.jitter, lattice: 'coarse', look: true, ...(A ? { tint: L!.soot } : {}) }); }
       // THE LOOK PROTOTYPE: the fire PUFFS (FIRE_LOOK_SMOKE below) — a short burst of thicker, hotter gas that pushes the air round it apart, a few a second
-      if (lookConfig.on && lookConfig.fireSmoke > 0) { const L = FIRE_LOOK_SMOKE, ps = Math.floor(time / L.puffEvery);
+      if (lookConfig.fireSmoke > 0) { const L = FIRE_LOOK_SMOKE, ps = Math.floor(time / L.puffEvery);
         if (ps !== Math.floor(was / L.puffEvery) || !goes) { const a = Math.min(2, lookConfig.fireSmoke), ox = (h01(si + ps * 31 + 11) - 0.5) * 2 * L.puffOff, oz = (h01(si + ps * 31 + 12) - 0.5) * 2 * L.puffOff, k = 0.7 + 0.6 * h01(si + ps * 31 + 13);
           const A = fit ? axisAt(K.height * L.puffUp, wind) : null;
           g.smoke.emit({ pos: [M.pos[0] + ox + (A ? A[0] : 0), M.pos[1] + K.height * L.puffUp, M.pos[2] + oz + (A ? A[1] : 0)], dir: A ? [A[2] + ox, 1, A[3] + oz] : [wv[0] * B.lean + ox, 1, wv[2] * B.lean + oz], speed: L.puffSpeed * k, radius: L.puffRadius, minVoxels: B.cells, density: L.puffDensity * heat * a * k, temperature: L.puffTemp * heat * k,
@@ -401,7 +401,7 @@ export function updateFire(g: Game, dt: number) { { const __s = RUST_SURFACE; if
       P.gasMix[ix] = Math.min(1, Math.max(0, (P.gasMix[ix] ?? 0) + (goes ? dt : -dt) * G.ease)); }
   }
   if (P?.stir?.length) P.stir.length = 0;
-  if (P && lookConfig.on) gpuFx(g)?.setHeat(jets);   // (the look page: an empty list on a frame with no fire near, or with the row off)
+  if (P) gpuFx(g)?.setHeat(jets);   // (the look page: an empty list on a frame with no fire near, or with the row off)
   if (P) { const hot = K.gas.on && P.gas.some(n => n === P!.n) ? K.gas.keep : 0; if (hot !== P.kept) { P.kept = hot; g.smoke.keepHot?.(hot); } }   // (the solver keeps hot gas on its fine lattice only while a fire's flame is that gas)
   T.fires = fires; T.lit = lit;
   fireDraws(g);

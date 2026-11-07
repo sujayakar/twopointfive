@@ -346,7 +346,7 @@ export class Rails {
     const S = this.lesson(), of = S?.L.steps.length ?? 0; if (!S || !of) return null;
     // (every step done and the mission not yet over — the last metre to an exit, the last man of a fight: the last line stays up until the mission's own
     //  end. The small row it would fall back to is the one a tutorial mission never shows)
-    if (S.i >= of ? BREAK || this.g.lesson.over() : !this.g.lesson.objective()) return null;
+    if ((BREAK && S.i >= of) || this.g.lesson.over()) return null;
     const i = Math.min(S.i, of - 1);
     // (the squad's ring is up ON THE STEP'S MARK: the line is what to press in it — on its first page `menuLine`, on a page under it `pageLine`; a flat ring, RAILS.flatRing: `flatLine`)
     const T = S.L.steps[i], M = S.i < of ? this.g.orders?.menu : null, on = !!M && (!T.at || Math.hypot(M.target.at[0] - T.at[0], M.target.at[2] - T.at[2]) < MENU_M);

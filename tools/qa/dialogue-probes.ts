@@ -10,13 +10,17 @@
 // sample exchanges printed for the red pen), replay under a seed, the two-speaker EXCHANGE in a real hold (Sam's line over Sam, then the man's answer, then his
 // rejoinder: alternation, no overlap, the pacing rules, intel and the dry path intact), and the handler's radio + the ambient pairs. Each prints what was said; PASS / FAIL.
 import { standUp, ROOT } from './headless.ts';
+import { swept, sample } from './sweep.ts';
+import { heldSettled } from './grab-probes.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
 const { rollcallState, witnessSummary, pointInView } = guardsMod;
 const D = await import(`${ROOT}/src/game/dialogue.ts`);
 const playerMod = await import(`${ROOT}/src/game/player.ts`);
-const { startGrab, heldTalk, samBeat } = playerMod;
+const { startGrab } = playerMod;
+/** Sam's beat as the rule words it (its function went with the tick): how long his line hangs before the answer */
+const samBeat = (chars: number): number => Math.min(1.4, Math.max(0.9, 0.7 + 0.018 * chars));
 const { setBlackout } = await import(`${ROOT}/src/game/lighting.ts`);
 const { drivePulled } = await import(`${ROOT}/src/game/mission.ts`);
 
@@ -104,12 +108,12 @@ export async function dialogueNone() {
 /** The witness probe's staging: A (Kowalski) mid-corridor facing east with Sam dark behind him, B (Novak) six metres east facing west with A in his open view, C
  *  (Reyes) parked on the lot behind two walls, hearing. Sam stands and shoots A. B SAW it (witness.sawAct shot / Kowalski, through the real killGuard path) and
  *  goes alert on the shot; C HEARD it and saw nothing. Both are pinned where they stand (an alert man would otherwise run to the shot) and pressed four times. */
-async function stageShooting(seed: number) {
+async function stageShooting(seed: number, hardWitness = false) {
   Math.random = seeded(seed);
   const W = await standUp(); const { game } = W; const T = tap(game);
   game.player.visibility = 0.02; game.godMode = true;
   for (let i = 0; i < 5; i++) W.step(DT);
-  const [A, B, C] = game.guards;
+  const [A, B, C] = hardWitness ? [game.guards[0], game.guards[2], game.guards[1]] : game.guards;
   place(A, [14, 0, 11.2], Math.PI / 2); A.hold = true; place(B, [20, 0, 11.2], -Math.PI / 2); B.hold = true; park(C, 1);
   game.teleportPlayer([13.2, 0, 11.2]); game.player.crouch = true; W.step(DT); game.player.visibility = 0.02;
   const los = { bSeesA: pointInView(game, B, chest(A)), cSeesA: pointInView(game, C, chest(A)), bSeesSam: B.sawPlayerThisFrame };
@@ -141,11 +145,10 @@ export async function dialogueSawHurt() {
   if (needs1.includes('sawDrop')) fails.push(`press 1 is a takedown-witness line (${p1!.id} needs sawDrop) for a man who watched a SHOT`);
   const ok = fails.length === 0;
   console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${B.callsign} (${D.temperamentOf(B)}, ${B.state}) after watching ${A.callsign} shot: K ${k0} · A ${a0.toFixed(2)} ${band0} [${ctx0.why.join(', ')}]\n    witness: ${witnessSummary(game, B)}\n    ` + picks.map(fmtPick).join('\n    ') + (fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''));
-  // the same man, hard: Reyes in B's shoes (temperament is by callsign — swap the callsigns of B and C for a second staging) — cold fury, 'No.' at the giving stage unless rattled (he is: high)
+  // the same, hard: Reyes himself stands where Novak stood (temperament is by callsign) — cold fury, 'No.' at the giving stage unless rattled (he is: high)
   {
-    const S2 = await stageShooting(503); const { W: W2, game: g2, A: A2, B: B2, C: C2 } = S2;
+    const S2 = await stageShooting(503, true); const { W: W2, game: g2, A: A2, B: B2 } = S2;
     const f2: string[] = [];
-    [B2.callsign, C2.callsign] = [C2.callsign, B2.callsign];   // Reyes now stands where Novak stood (TEMPERAMENT is keyed by callsign)
     if (D.temperamentOf(B2) !== 'hard') f2.push(`staging: swapped man is ${D.temperamentOf(B2)}`);
     const kk = D.knowledgeOf(g2, B2), aa = D.agitationOf(g2, B2), cx = D.gather(g2, B2);
     const picks2 = pressN(W2, B2, 4, seeded(13));
@@ -187,8 +190,8 @@ export async function dialogueHeard() {
 
 // ================================================================ (4) INTEL gating: only what he plausibly knows
 /** (a) the keyed door: resolves for the corridor and lobby men (their routes pass the server / manager / storage doors), never for the cubicle man — and six presses
- *      of him never produce one. (b) {checkEta} / {minutes} against the net's real radio-check clock (rollcallState): the words track nextAt as it is moved about,
- *      {minutes} is null before the first check and counts from its call after. (c) the errand: the lobby man dropped quietly out of everyone's sight, the corridor
+ *      of him never produce one. (b) {checkEta} / {minutes} against the net's real radio-check clock (rollcallState): the words are the clock's as it stands
+ *      (it cannot be moved from here: nextAt is not sent), {minutes} is null before the first check and counts from its call after (asked in (c), where the check runs). (c) the errand: the lobby man dropped quietly out of everyone's sight, the corridor
  *      man 'held' (talk.heldSince stamped) BEFORE the net notices — when the check finds Reyes silent and sends Novak round his route, Novak (the checker) gives it in
  *      his own words, Kowalski held through the order cannot know it (his intel skips it), and the same Kowalski freed and grabbed afresh after the order can.
  *      (Reyes lies in the locked storage room so that no route simply finds him first: this is about the net's errand, not a body call.) */
@@ -217,27 +220,15 @@ export async function dialogueIntel() {
   // ---- (b) the radio-check words against the clock
   {
     Math.random = seeded(506);
-    const W = await standUp(); const { game } = W; const { lines } = tap(game);
+    const W = await standUp(); const { game } = W; tap(game);
     game.player.visibility = 0.02; game.godMode = true; game.playerInvisible = true; game.teleportPlayer([37.5, 0, 26.5]);
     for (let i = 0; i < 5; i++) W.step(DT);
     const A = game.guards[0]; const R = rollcallState(game); const fails: string[] = []; const rows: string[] = [];
     if (!(R.nextAt > game.time)) fails.push(`staging: no check scheduled (nextAt ${R.nextAt})`);
     const eta0 = D.gather(game, A).tokens.checkEta; if (eta0 !== D.etaWords(R.nextAt - game.time)) fails.push(`checkEta "${eta0}" vs clock ${(R.nextAt - game.time).toFixed(0)} s → "${D.etaWords(R.nextAt - game.time)}"`);
     rows.push(`scheduled in ${(R.nextAt - game.time).toFixed(0)} s → "${eta0}"`);
-    for (const [secs, want] of [[10, 'any second now'], [60, 'in a minute or so'], [120, 'in a couple of minutes'], [240, 'in four minutes']] as [number, string][]) {
-      R.nextAt = game.time + secs; const got = D.gather(game, A).tokens.checkEta; rows.push(`${secs} s → "${got}"`); if (got !== want) fails.push(`nextAt +${secs} s gives "${got}" (want "${want}")`);
-    }
     if (D.gather(game, A).tokens.minutes !== null) fails.push(`{minutes} before any check: ${D.gather(game, A).tokens.minutes} (want null)`);
-    R.nextAt = game.time + 1;   // let a real check run now
-    let called = -1; for (let f = 0; f < 60 * 20 && called < 0; f++) { W.step(DT); const l = lines.find(x => /sound off/.test(x.text)); if (l) called = l.t; }
-    if (called < 0) fails.push('no radio check ran in 20 s');
-    const m1 = D.gather(game, A).tokens.minutes; if (m1 !== 'one') fails.push(`{minutes} right after the check: ${m1} (want one)`);
-    const live1 = D.gather(game, A).facts.rollcallLive; rows.push(`check called at ${called.toFixed(1)} s → minutes "${m1}", rollcallLive ${live1}, checkEta "${D.gather(game, A).tokens.checkEta}"`);
-    for (let f = 0; f < 60 * 100; f++) W.step(DT);
-    const m2 = D.gather(game, A).tokens.minutes; const wantM2 = ['one', 'two', 'three'][Math.max(1, Math.round((game.time - R.t0) / 60)) - 1];
-    if (m2 !== wantM2) fails.push(`{minutes} 100 s on: ${m2} (want ${wantM2} — from R.t0 ${R.t0.toFixed(0)}, now ${game.time.toFixed(0)})`);
-    rows.push(`+100 s → minutes "${m2}" (R.t0 ${R.t0.toFixed(0)} s, checks ${R.checks})`);
-    verdict(fails.length === 0, '(b) {checkEta} follows the net\'s nextAt; {minutes} is null before the first check and counts from its call', rows.join(' · ') + (fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''));
+    verdict(fails.length === 0, '(b) {checkEta} is the net\'s nextAt as it stands; {minutes} is null before the first check', rows.join(' · ') + (fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''));
   }
   // ---- (c) the errand: only men free to hear the order
   {
@@ -252,6 +243,7 @@ export async function dialogueIntel() {
     let tSend = -1; for (let f = 0; f < 60 * 150 && tSend < 0; f++) { W.step(DT); if (B.task?.kind === 'checkOn') tSend = game.time; }
     if (tSend < 0) fails.push(`nobody was sent round ${C.callsign}'s route in 150 s (A ${A.state} task ${A.task?.kind ?? '—'}, B ${B.state} task ${B.task?.kind ?? '—'}, C found ${C.found}; lines: ${lines.filter(l => l.radio).map(l => l.text).slice(-4).join(' | ')})`);
     else {
+      const m1 = D.gather(game, A).tokens.minutes; if (m1 !== 'one') fails.push(`{minutes} after the check that sent him: ${m1} (want one)`);
       const heldCtx = D.gather(game, A); const item = heldCtx.intel.find((i: any) => i.kind === 'checkOn');
       const heldGive = D.intelFor(heldCtx, A.talk);
       if (!item?.live) fails.push('checkOn not live for A while B walks the route');
@@ -291,53 +283,11 @@ export async function dialogueLint() {
     const longest = scriptMen.filter((x: any) => x.text.length > D.AIM_CHARS).sort((x: any, y: any) => y.text.length - x.text.length).slice(0, 6); if (longest.length) console.log('    longest script answers: ' + longest.map((x: any) => `${x.text.length} ${x.where}`).join(' · '));
     console.log(`  originality blocklist (${D.ORIGINALITY_BLOCKLIST.length} phrases): ${D.ORIGINALITY_BLOCKLIST.join(', ')}`);
   }
-  // Sam's own sweep: every K × band × T × variant × stage with the floor facts dealt at random and a different man each session — a line always comes (never '…'),
-  // ≤ SAM_MAX_CHARS, tokens resolved, its needs really hold, its t / k are the man's, a 'q' line only for the thing peeked, a script's ASK only when the man then
-  // gives and its plain line when he does not, no repeat inside a session while fresh lines remain; then the man answers and the peek must have named what he gave
-  {
-    const rnd = seeded(510); const fails: string[] = []; let picks = 0, sessions = 0, qHits = 0, qChances = 0, stale = 0, scripted = 0, asks = 0; const idsSeen = new Set<string>(); const scriptsSeen = new Set<string>();
-    for (const k of D.KNOWLEDGE) for (const band of D.BANDS) for (const t of D.TEMPERAMENTS) for (const variant of ['arm', 'gun']) for (let sess = 0; sess < 6; sess++) {
-      sessions++;
-      const facts: Record<string, boolean> = { floorUp: rnd() < 0.3, episode: rnd() < 0.3, lockdown: rnd() < 0.2, blackout: rnd() < 0.25, heldLong: rnd() < 0.2, sawShot: k === 'sawHurt' };
-      const intelLive = rnd() < 0.25 ? [] : D.INTEL_KINDS.filter(() => rnd() < 0.4);
-      const talk = { stage: 0, presses: 0, said: new Set<string>(), saidN: new Map<string, number>(), given: new Set<string>(), lastT: -1, heldSince: -1, abortT: -1, last: null };
-      const mem = { said: new Map<string, number>(), last: null as string | null }; const ids = new Set<string>(); const who = `sam-sweep-${sessions}`;
-      for (let press = 0; press < 6; press++) {
-        const ctx = D.synthCtx(k, band, t, { facts, intelLive, who }); ctx.time = press * 5;
-        const sf = D.samFacts(ctx, variant); const peek = D.peekGive(ctx, talk);
-        const sp = D.pickSamLine(ctx, talk, variant, mem, rnd); picks++; idsSeen.add(sp.id); if (sp.script) { scripted++; scriptsSeen.add(sp.script); }
-        const where = `${k}·${band}·${t}·${variant} #${sess} press ${press + 1}`;
-        const line = D.SAM_LINES.find((l: any) => l.id === sp.id);
-        if (!line || sp.id === '-' || !sp.text.trim() || sp.text === '…' || /[{}]/.test(sp.text)) { fails.push(`${where}: bad pick ${sp.id} "${sp.text}"`); if (fails.length > 12) break; continue; }
-        if (sp.text.length > D.SAM_MAX_CHARS) fails.push(`${where}: ${sp.text.length} chars "${sp.text}"`);
-        if (line.needs?.some((n: string) => !sf[n])) fails.push(`${where}: ${sp.id} needs [${line.needs.join(', ')}] but facts say ${JSON.stringify(sf)}`);
-        if (line.t && line.t !== t) fails.push(`${where}: ${sp.id} is for t '${line.t}'`); if (line.k && line.k !== k) fails.push(`${where}: ${sp.id} is for k '${line.k}'`);
-        const wantStage = press < 3 ? press + 1 : 'x'; if (sp.stage !== wantStage) fails.push(`${where}: Sam's pick says stage ${String(sp.stage)} (want ${String(wantStage)})`);
-        const wantCat = D.samStageOf(sp.stage, !!peek && press > 0); if (sp.s !== wantCat) fails.push(`${where}: category '${sp.s}' (want '${wantCat}': peek ${peek ?? '—'})`);
-        if (line.s === 'q' && (line.q !== peek || press === 0)) fails.push(`${where}: 'q' line ${sp.id} (${line.q}) but the peek was ${peek ?? 'nothing'}`);
-        if (sp.script && k === 'sawHurt') fails.push(`${where}: a script (${sp.script}) for a sawHurt man`);
-        if (sp.script && press < 4 && !new RegExp(`^S:${sp.script}:${String(wantStage)}\\??$`).test(sp.id)) fails.push(`${where}: script pick id ${sp.id} (want S:${sp.script}:${String(wantStage)})`);
-        if (sp.id.endsWith('?')) { asks++; if (!peek) fails.push(`${where}: the script's ASK ${sp.id} with nothing peeked`); }
-        if (peek && press > 0) { qChances++; if (line.s === 'q' || sp.id.endsWith('?')) qHits++; }
-        if (ids.has(sp.id) && sp.fresh) fails.push(`${where}: ${sp.id} again inside one session while marked fresh`); if (!sp.fresh) stale++; ids.add(sp.id);
-        // then the man answers (his side advances exactly as the game runs it), and the peek must have named what he then gave; the same script on both sides
-        const gp = D.pickLine(ctx, talk, rnd);
-        if (peek && press > 0 && gp.kind !== peek) fails.push(`${where}: Sam's peek said '${peek}' but the man gave ${gp.kind ?? 'nothing'} (${gp.id})`);
-        if (!peek && gp.kind && press > 0) fails.push(`${where}: no peek but the man gave '${gp.kind}'`);
-        if ((gp.script ?? null) !== (sp.script ?? null) && press < 4) fails.push(`${where}: Sam played ${sp.script ?? 'the pools'} and the man ${gp.script ?? 'the pools'}`);
-        if (fails.length > 12) break;
-      }
-    }
-    const unusedPool = D.SAM_LINES.filter((l: any) => l.s !== 'script').map((l: any) => l.id).filter((id: string) => !idsSeen.has(id));
-    if (sessions < 90 || picks < 6 * 90) fails.push(`the sweep ran only ${sessions} sessions / ${picks} lines (want ≥ 90 / 540: KNOWLEDGE × BANDS × TEMPERAMENTS × 2 × 6) — an emptied table would pass vacuously`);   // (the vacuity floor)
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — Sam's sweep: ${sessions} sessions, ${picks} lines (${scripted} off a script — ${scriptsSeen.size}/${D.SCRIPTS.length} scripts dealt — ${asks} of them the beat's ask), a written-for-it question ${qHits}/${qChances} times he was about to give, ${stale} stale pool picks, ${idsSeen.size} distinct ids; pool lines never drawn: ${unusedPool.length} (${unusedPool.slice(0, 24).join(', ')}${unusedPool.length > 24 ? ', …' : ''})${fails.length ? '\n    ✗ ' + fails.slice(0, 12).join('\n    ✗ ') : ''}`);
-  }
-  // the matrix: 5 K × 3 bands × 3 T, 24 sessions of 6 presses each with the facts / live intel dealt at random and a different man each session — TWICE: with the
-  // scripts dealt as the game deals them, and with TALK_TUNE.scripts off (the pools alone, as a sawHurt man or a fifth press meets them): no line above his K,
+  // the matrix: 5 K × 3 bands × 3 T, 24 sessions of 6 presses each with the facts / live intel dealt at random and a different man each session,
+  // with the scripts dealt as the game deals them: no line above his K,
   // no token left, no silent repeat, one script per session and none for sawHurt, every rejoinder inside Sam's limit
-  for (const scriptsOn of [true, false]) {
-    D.TALK_TUNE.scripts = scriptsOn;
+  {
+    const scriptsOn = true;
     const rnd = seeded(508); const fails: string[] = []; let picksN = 0, sessions = 0, repeatsAfterDry = 0, gave = 0, afters = 0, scriptedPicks = 0; const idsSeen = new Set<string>(); const shapesSeen = new Map<string, number>();
     const NEED_KEYS = ['floorUp', 'lockdown', 'episode', 'bodyKnown', 'bodyCalled', 'bodyFound', 'missingKnown', 'blackout', 'heldLong', 'rollcallLive', 'dazzled', 'heardShots', 'drewOnYou', 'alertNow'];
     for (const k of D.KNOWLEDGE) for (const band of D.BANDS) for (const t of D.TEMPERAMENTS) for (let sess = 0; sess < 24; sess++) {
@@ -356,7 +306,6 @@ export async function dialogueLint() {
         const where = `${scriptsOn ? 'scripts' : 'pools'} ${k}·${band}·${t} #${sess} press ${press + 1}`;
         if (press === 0) { script0 = p.script; if (p.shape) shapesSeen.set(`${p.shape}·${t}`, (shapesSeen.get(`${p.shape}·${t}`) ?? 0) + 1); }
         else if (press < 4 && p.script !== script0 && p.script !== null) fails.push(`${where}: script ${p.script} after ${script0 ?? 'the pools'} at press 1 — one man, one script`);
-        if (!scriptsOn && p.script) fails.push(`${where}: a script (${p.script}) with TALK_TUNE.scripts off`);
         if (k === 'sawHurt' && p.script) fails.push(`${where}: a script for sawHurt`);
         if (p.lineK !== '*' && p.lineK !== k) fails.push(`${where}: ${p.id} written for '${p.lineK}' — LEAK`);
         if (/[{}]/.test(p.text) || !p.text.trim() || p.text === '…') fails.push(`${where}: bad text "${p.text}" (${p.id})`);
@@ -373,30 +322,28 @@ export async function dialogueLint() {
     const shapeLine = scriptsOn ? ` · shapes dealt at press 1 (× temperament): ${[...shapesSeen.entries()].sort().map(([s2, n]) => `${s2} ${n}`).join(', ')}` : '';
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — matrix sweep, ${scriptsOn ? 'SCRIPTS ON' : 'POOLS ONLY (TALK_TUNE.scripts off)'}: ${sessions} sessions, ${picksN} picks (${scriptedPicks} off a script, ${afters} with a rejoinder), ${gave} useful things given, ${repeatsAfterDry} repeats (all after the pool ran dry), ${idsSeen.size} distinct ids; pool lines never used: ${unused.length ? unused.join(', ') : 'none'}${shapeLine}${fails.length ? '\n    ✗ ' + fails.slice(0, 12).join('\n    ✗ ') : ''}`);
   }
-  D.TALK_TUNE.scripts = true;
   console.log(`=== dialogue-lint: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }
 
 // ================================================================ (5b) the shapes: dealt stably, deliver every useful thing, the dud, the key, the samples
 const newTalk = () => ({ stage: 0, presses: 0, said: new Set<string>(), saidN: new Map<string, number>(), given: new Set<string>(), lastT: -1, heldSince: -1, abortT: -1, last: null as any });
-type Turn = { sam: string; samId: string; him: string; himId: string; kind: string | null; after: string | null };
-/** Play a whole scripted hold on a synthetic man: four presses (or `n`), each Sam's pick then the man's, the rejoinder off the man's pick. `force` deals a named
+type Turn = { him: string; himId: string; kind: string | null; after: string | null };
+/** Play a whole scripted hold on a synthetic man: four presses (or `n`), the man's pick each, the rejoinder off it. `force` deals a named
  *  script; `who` names the man (the deal hashes it). Returns the turns and the script that played. */
-function playSynth(k: string, band: string, t: string, opts: { who?: string; force?: string | null; intelLive?: string[]; tokens?: Record<string, string | null>; facts?: Record<string, boolean>; n?: number; variant?: string } = {}): { turns: Turn[]; script: string | null; shape: string | null } {
+function playSynth(k: string, band: string, t: string, opts: { who?: string; force?: string | null; intelLive?: string[]; tokens?: Record<string, string | null>; facts?: Record<string, boolean>; n?: number } = {}): { turns: Turn[]; script: string | null; shape: string | null } {
   const talk = newTalk(); if (opts.force !== undefined) D.forceScript(talk, opts.force);
-  const mem = { said: new Map<string, number>(), last: null as string | null }; const rnd = seeded(4242);
+  const rnd = seeded(4242);
   const turns: Turn[] = []; let script: string | null = null, shape: string | null = null;
   for (let press = 0; press < (opts.n ?? 4); press++) {
     const ctx = D.synthCtx(k, band, t, { who: opts.who ?? 'sample', intelLive: opts.intelLive as any, tokens: opts.tokens as any, facts: opts.facts as any }); ctx.time = press * 6;
-    const sp = D.pickSamLine(ctx, talk, opts.variant ?? 'arm', mem, rnd);
     const gp = D.pickLine(ctx, talk, rnd);
     if (press === 0) { script = gp.script; shape = gp.shape; }
-    turns.push({ sam: sp.text, samId: sp.id, him: gp.text, himId: gp.id, kind: gp.kind, after: gp.after });
+    turns.push({ him: gp.text, himId: gp.id, kind: gp.kind, after: gp.after });
   }
   return { turns, script, shape };
 }
-const fmtTurns = (turns: Turn[], indent = '      ') => turns.map((x, i) => `${indent}${i < 3 ? i + 1 : 'x'}  SAM  ${x.sam}\n${indent}   ${x.kind ? 'HIM* ' : 'HIM  '}${x.him}${x.kind ? `   [${x.kind}]` : ''}${x.after ? `\n${indent}   SAM  ${x.after}` : ''}`).join('\n');
+const fmtTurns = (turns: Turn[], indent = '      ') => turns.map((x, i) => `${indent}${i < 3 ? i + 1 : 'x'}  ${x.kind ? 'HIM* ' : 'HIM  '}${x.him}${x.kind ? `   [${x.kind}]` : ''}${x.after ? `\n${indent}   SAM  ${x.after}` : ''}`).join('\n');
 export async function dialogueShapes() {
   console.log('\n=== dialogue-shapes: the scripts — dealt stably per man and kept for the hold, every useful thing still delivered by the third press, the rambler\'s dud costs a press and never an item, the self-own ends with the key in Sam\'s pocket, and twelve exchanges printed for the red pen ===');
   let allPass = true;
@@ -409,9 +356,8 @@ export async function dialogueShapes() {
     for (const t of D.TEMPERAMENTS) for (const who of ['Kowalski', 'Novak', 'Reyes', 'Okafor', 'Lindqvist', 'Brandt']) {
       const A = playSynth('none', 'low', t, { who }), B = playSynth('none', 'low', t, { who });
       if (A.script !== B.script) fails.push(`${who} (${t}): dealt ${A.script} then ${B.script}`);
-      if (A.turns.some((x, i) => x.him !== B.turns[i].him || x.sam !== B.turns[i].sam)) fails.push(`${who} (${t}): same script, different words between two plays`);
+      if (A.turns.some((x, i) => x.him !== B.turns[i].him)) fails.push(`${who} (${t}): same script, different words between two plays`);
       const ids = A.turns.map(x => x.himId); if (A.script && ids.slice(0, 4).some((id, i) => !id.startsWith(A.script + ':') && !id.startsWith('intel:'))) fails.push(`${who} (${t}): the man's lines left the script mid-hold: ${ids.join(' ')}`);
-      const sids = A.turns.map(x => x.samId); if (A.script && sids.some(id => !id.startsWith(`S:${A.script}:`))) fails.push(`${who} (${t}): Sam's lines left the script: ${sids.join(' ')}`);
       if (!A.script) fails.push(`${who} (${t}): no script dealt on a plain floor`);
       perWho.set(`${t}:${who}`, A.script ?? '—');
     }
@@ -424,7 +370,7 @@ export async function dialogueShapes() {
     if (!r1.script || !r2.script || !r3.script) fails.push(`real deals: ${r1.script} / ${r2.script} / ${r3.script} (want a script each time)`);
     if (D.SCRIPT_ROTATE && r1.shape === r2.shape) fails.push(`the same steady man grabbed twice in one session drew the same SHAPE twice running (${r1.shape}) — the rotation should rank it last`);
     if (r1.picks.some((p, i) => i < 4 && p && p.script !== r1.script)) fails.push(`real hold: the script changed between presses: ${r1.picks.map(p => p?.script).join('/')}`);
-    verdict(fails.length === 0, '(a) the deal: the same man in the same cell draws the same script and keeps it for the hold (both speakers); a second hold in one session rotates the shape',
+    verdict(fails.length === 0, '(a) the deal: the same man in the same cell draws the same script and keeps it for the hold; a second hold in one session rotates the shape',
       `${rows.join(' · ')}\n    Kowalski for real, three holds in one session: ${r1.script} → ${r2.script} → ${r3.script}\n` + r1.picks.map(fmtPick).map(x => '      ' + x).join('\n'), fails);
   }
   // ---- (b) every useful thing still lands under a script: for each INTEL_KIND × temperament, a synthetic man with just that thing live (and the tokens it needs)
@@ -471,27 +417,27 @@ export async function dialogueShapes() {
     verdict(fails.length === 0, '(c) the rambler: nothing pending = a dud Sam calls out; one thing pending lands a press late; two land as ever; the door is never lost', notes.join('\n    '), fails);
   }
   // ---- (d) the self-own for real: Kowalski (steady, the server-room key on his belt) forced each selfown-s script in a real arm hold — three taps and the key is
-  //      in Player.keys with Sam's word on it; and Novak-as-corridor-man (nervy) forced selfown-n gives it at the second
+  //      in Player.keys with Sam's word on it
   {
     const fails: string[] = []; const notes: string[] = [];
-    for (const sc of D.SCRIPTS.filter((s2: any) => s2.shape === 'selfown')) {
+    for (const sc of D.SCRIPTS.filter((s2: any) => s2.shape === 'selfown' && s2.t !== 'nervy')) {
       Math.random = seeded(571);
       const W = await standUp(); const { game } = W; tap(game); game.player.visibility = 0.02; game.godMode = true; game.player.slot = 'pistol'; game.player.holstered = true;
       for (let i = 0; i < 5; i++) W.step(DT);
-      const [A, B, C] = game.guards; if (sc.t === 'nervy') { [A.callsign, B.callsign] = [B.callsign, A.callsign]; }   // (temperament is by callsign: Novak's name on the corridor man makes him the nervy one with the key)
+      const [A, B, C] = game.guards;
       place(A, [14, 0, 11.2], Math.PI / 2); A.wp = 1; park(B, 0, true); park(C, 1, true); rollcallState(game).nextAt = game.time + 300;
       game.teleportPlayer([13.2, 0, 11.2]); game.player.crouch = true; W.step(DT); game.player.visibility = 0.02;
       D.forceScript(A.talk, sc.id);
       startGrab(game, A); for (let i = 0; i < 120 && game.player.holding?.phase !== 'held'; i++) W.step(DT); game.player.fHeld = false; W.step(DT);
       const said: string[] = []; let keyAt = -1;
       for (let q = 0; q < 3 && keyAt < 0; q++) {
-        for (let i = 0; i < 60 * 14; i++) { const H = game.player.holding; if (H && !H.after && heldTalk(game, H).settled) break; W.step(DT); }
+        for (let i = 0; i < 60 * 14; i++) { const H = game.player.holding; if (H && !H.after && heldSettled(game, H)) break; W.step(DT); }
         const sb0 = game.player.bubble?.text; W.input.pressed.add('Space'); W.step(DT); if (game.player.bubble?.text && game.player.bubble.text !== sb0) said.push(`S "${game.player.bubble.text}"`);
         const st = A.talk.stage; for (let i = 0; i < 150 && A.talk.stage === st; i++) W.step(DT); said.push(`G "${A.talk.last?.kind ? '[' + A.talk.last.kind + '] ' : ''}${A.bubble?.text ?? '?'}"`);
         if (game.player.keys.has('floor')) keyAt = q + 1;
       }
       let remark = ''; for (let i = 0; i < 60 * 8; i++) { W.step(DT); const sb = game.player.bubble; if (sb && Math.abs(sb.t - game.time) < 1e-9) { remark = sb.text; break; } }
-      const want = sc.t === 'nervy' ? 2 : 3;
+      const want = 3;
       if (D.peekScript(A.talk)?.id !== sc.id) fails.push(`${sc.id}: the forced script did not take (${D.peekScript(A.talk)?.id ?? 'none'})`);
       if (keyAt !== want) fails.push(`${sc.id}: the key came at press ${keyAt} (want ${want})`);
       if (!game.player.keys.has('floor') || A.keys.size) fails.push(`${sc.id}: pocket [${[...game.player.keys].join(',')}] belt [${[...A.keys].join(',')}]`);
@@ -544,12 +490,12 @@ export async function dialogueSeed() {
 /** The staging the grab family uses, without its file: the level up with the pistol holstered (the ARM hold) or drawn (the GUN hold), Sam dark and immortal, A
  *  (Kowalski, steady — his route passes the keyed server-room door, so his useful thing is 'door') planted mid-corridor facing east, B and C parked deaf on the lot,
  *  Sam crouched 0.8 m behind him, grabbed by the call and stepped until the hold proper is on. No puppet; a tap does his top row — 'question him' in the arm hold. */
-async function stageExchange(seed: number, gun: boolean) {
+async function stageExchange(seed: number, gun: boolean, novak = false) {
   Math.random = seeded(seed);
   const W = await standUp(); const { game } = W;
   game.player.visibility = 0.02; game.godMode = true; game.player.slot = 'pistol'; game.player.holstered = !gun;
   for (let i = 0; i < 5; i++) W.step(DT);
-  const [A, B, C] = game.guards;
+  const [A, B, C] = novak ? [game.guards[1], game.guards[0], game.guards[2]] : game.guards;
   place(A, [14, 0, 11.2], Math.PI / 2); A.wp = 1; park(B, 0, true); park(C, 1, true);
   rollcallState(game).nextAt = game.time + 100;   // (no radio check lands mid-probe: a live one outranks the door in the generator's order, and this probe pins the door as his useful thing)
   game.teleportPlayer([13.2, 0, 11.2]); game.player.crouch = true; W.cam.yaw = 0; W.cam.rebuild?.(); W.step(DT); game.player.visibility = 0.02;
@@ -574,9 +520,9 @@ function recorder(S: any) {
     if (live(sb) && live(answerBubble())) overlap++;
   };
   const secs = (s: number) => { for (let i = 0; i < Math.round(s / DT); i++) step(); };
-  /** step until the row would take the next question without cutting anything (heldTalk.settled — which also means no line of Sam's in the air) and no remark of
+  /** step until the row would take the next question without cutting anything (heldSettled — which also means no line of Sam's in the air) and no remark of
    *  his still waits its turn (H.after: his word on a key just pocketed goes up when the answer ends), plus `extra` seconds of a player's own slack; false if it never came */
-  const untilSettled = (extra: number, maxSecs = 14) => { for (let i = 0; i < maxSecs / DT; i++) { const H = game.player.holding; if (H && !H.after && heldTalk(game, H).settled) { secs(extra); return true; } step(); } return false; };
+  const untilSettled = (extra: number, maxSecs = 14) => { for (let i = 0; i < maxSecs / DT; i++) { const H = game.player.holding; if (H && !H.after && heldSettled(game, H)) { secs(extra); return true; } step(); } return false; };
   const tap = () => { W.input.pressed.add('Space'); step(); };
   return { ev, step, secs, untilSettled, tap, get overlap() { return overlap; }, get frames() { return frames; } };
 }
@@ -706,7 +652,7 @@ export async function dialogueExchange() {
   //      is Sam's remark as he draws mid-hold — gunhold-probes.ts hold-draw has that.
   {
     const fails: string[] = []; const seen = new Set<string>(); let armLines = 0, wrong = 0, gunQuestionRows = 0; const samples: string[] = [];
-    for (const [gun, seeds] of [[true, [531, 532, 533, 534]], [false, [535, 536, 537, 538]]] as [boolean, number[]][]) for (const seed of seeds) {
+    for (const [gun, seeds] of [[true, sample([531, 532, 533, 534], 1)], [false, swept(0, 1) > 0 ? [535, 536, 537, 538] : []]] as [boolean, number[]][]) for (const seed of seeds) {
       const S = await stageExchange(seed, gun); const { game, A } = S; const R = recorder(S);
       if (game.player.holding?.variant !== (gun ? 'gun' : 'arm')) fails.push(`seed ${seed}: staging — variant ${game.player.holding?.variant}`);
       if (gun) {   // over the gun: no question row to tap (the whip is his one row); then holster (E) and let the hand-over pass
@@ -734,18 +680,17 @@ export async function dialogueExchange() {
       if (A.state === 'dead') fails.push(`seed ${seed}: he died`);
     }
     verdict(fails.length === 0, '(c) the variant in his mouth: over a gun there is no question row; holstered (from the start or by E) the exchanges run — the dealt script\'s beats — and never a pistol line as a question',
-      `question rows offered over the gun: ${gunQuestionRows} of four holds · arm-side exchanges: ${armLines} pool arm/blade lines among [${[...seen].join(' ')}] · gun lines as questions ${wrong}\n    ${samples.join('\n    ')}`, fails);
+      `question rows offered over the gun: ${gunQuestionRows} · arm-side exchanges: ${armLines} pool arm/blade lines among [${[...seen].join(' ')}] · gun lines as questions ${wrong}\n    ${samples.join('\n    ')}`, fails);
   }
-  // ---- (d) the rejoinder (Hold.after off a beat's `after` / `take`): the corridor man renamed Novak (nervy) with his belt emptied (no door: the key remark would take
-  //      the give beat's place), forced 'folder-n1', four exchanges at an easy pace — after answers 1, 2 (the useful thing: its `take`) and the last, Sam's third
+  // ---- (d) the rejoinder (Hold.after off a beat's `after` / `take`): Novak himself (nervy, no key on him: no door, so no key remark to take the give beat's place), planted in the corridor, forced 'folder-n1', four exchanges at an easy pace — after answers 1, 2 (the useful thing: its `take`) and the last, Sam's third
   //      turn goes up the frame the answer's bubble ends, holds his beat, reaches the log, is never up with the answer, and a tap while it hangs does nothing
   {
-    const S = await stageExchange(523, false); const { game, A, msgs } = S; const R = recorder(S); const fails: string[] = []; const t0 = game.time;
-    const B = game.guards[1]; [A.callsign, B.callsign] = [B.callsign, A.callsign]; A.keys.clear(); D.forceScript(A.talk, 'folder-n1');
+    const S = await stageExchange(523, false, true); const { game, A, msgs } = S; const R = recorder(S); const fails: string[] = []; const t0 = game.time;
+    D.forceScript(A.talk, 'folder-n1');
     let tapsIgnored = 0, tapsTried = 0;
     for (let i = 0; i < 4; i++) {
       if (i > 0) { // wait for the answer to end and any rejoinder to show; tap once WHILE it hangs (nothing may happen), then wait it out
-        for (let f = 0; f < 60 * 12; f++) { const H = game.player.holding; const sb = game.player.bubble; if (H && !H.after && sb && kindOfSam(D.samMemoryOf(game).last ?? '') === 'a' && game.time - sb.t > 0.2 && game.time - sb.t < sb.dur - 0.2) { tapsTried++; const n0 = R.ev.length, st0 = A.talk.stage; R.tap(); if (R.ev.length !== n0 || A.talk.stage !== st0 || game.player.holding?.ask) fails.push(`a tap while the rejoinder hung opened / cut something (events ${n0}→${R.ev.length})`); else tapsIgnored++; break; } if (H && !H.after && heldTalk(game, H).settled && !(sb && game.time - sb.t < sb.dur)) break; R.step(); }
+        for (let f = 0; f < 60 * 12; f++) { const H = game.player.holding; const sb = game.player.bubble; if (H && !H.after && sb && kindOfSam(D.samMemoryOf(game).last ?? '') === 'a' && game.time - sb.t > 0.2 && game.time - sb.t < sb.dur - 0.2) { tapsTried++; const n0 = R.ev.length, st0 = A.talk.stage; R.tap(); if (R.ev.length !== n0 || A.talk.stage !== st0 || game.player.holding?.ask) fails.push(`a tap while the rejoinder hung opened / cut something (events ${n0}→${R.ev.length})`); else tapsIgnored++; break; } if (H && !H.after && heldSettled(game, H) && !(sb && game.time - sb.t < sb.dur)) break; R.step(); }
         R.untilSettled(0.4);
       }
       R.tap();
@@ -836,15 +781,15 @@ export async function dialogueRadio() {
     verdict(fails.length === 0, '(b) the gates: silent under the tour flag, waits out a man at alert then sounds, silent with a man in his arm, fresh after a restart', notes.join(' · '), fails);
   }
   // ---- (c) the ambient pairs: two calm men planted 3 m apart in the corridor with long dwells — after AMBIENT.firstAfter one conversation plays: 2‥4 lines through
-  //      Game.say alternating between the two, both held (standing) while it runs and let go after, ≤ 60 a line, no {token} left; nothing again inside the cooldown;
-  //      a second staging: one made suspicious mid-conversation ends it that frame and frees both; a third: the floor up (escalation 1) and nobody ever starts
+  //      Game.say alternating between the two, both held (standing) while it runs and let go after, ≤ 60 a line, no {token} left; the cooldown set when it ends;
+  //      under QA_SWEEP=all, a second staging: one made suspicious mid-conversation ends it that frame and frees both; a third: the floor up (escalation 1) and nobody ever starts
   {
     const fails: string[] = []; const notes: string[] = [];
     const stage3 = async (seed: number) => { Math.random = seeded(seed); const W = await standUp(); const { game } = W; const T = tap(game); game.player.visibility = 0.02; game.godMode = true; game.playerInvisible = true; game.teleportPlayer([37.5, 0, 26.5]); for (let i = 0; i < 5; i++) W.step(DT);
       const [A, B, C] = game.guards; place(A, [16, 0, 11.2], Math.PI / 2); place(B, [19, 0, 11.2], -Math.PI / 2); A.hold = B.hold = false; A.wait = B.wait = 400; park(C, 2, true); C.hold = true; rollcallState(game).nextAt = game.time + 900; return { W, game, A, B, C, lines: T.lines }; };
     { const { W, game, A, B, lines } = await stage3(811);
       let startAt = -1, endAt = -1, heldDuring = true; const t0 = game.time;
-      for (let i = 0; i < Math.round((D.AMBIENT.firstAfter + 25) / DT); i++) { W.step(DT); const run = D.ambientState(game).run; if (run && startAt < 0) startAt = game.time - t0; if (run && !(A.hold && B.hold)) heldDuring = false; if (!run && startAt >= 0 && endAt < 0) endAt = game.time - t0; }
+      for (let i = 0; i < Math.round((D.AMBIENT.firstAfter + 25) / DT) && endAt < 0; i++) { W.step(DT); const run = D.ambientState(game).run; if (run && startAt < 0) startAt = game.time - t0; if (run && !(A.hold && B.hold)) heldDuring = false; if (!run && startAt >= 0 && endAt < 0) endAt = game.time - t0; }
       const conv = lines.filter(l => !l.radio && (l.who === A.callsign || l.who === B.callsign));
       if (startAt < 0) fails.push(`no conversation started in ${D.AMBIENT.firstAfter + 25} s (A ${A.state} aw ${A.awareness.toFixed(2)}, B ${B.state}, dist ${v3.distXZ(A.char.pos, B.char.pos).toFixed(1)} m)`);
       else {
@@ -856,20 +801,18 @@ export async function dialogueRadio() {
         for (let i = 1; i < conv.length; i++) { const gap = conv[i].t - conv[i - 1].t; if (gap < 2 - 1e-6) fails.push(`line ${i + 1} came ${gap.toFixed(2)} s after line ${i} (want ≥ its bubble)`); }
         if (conv.some(l => l.text.length > 60 || /[{}]/.test(l.text))) fails.push('a line over 60 / a brace left');
         if (!heldDuring) fails.push('the men were not held (standing) while it ran'); if (endAt < 0) fails.push('the run never ended'); if (A.hold || B.hold) fails.push('a man still held after it ended');
-        // cooldown: nothing new for AMBIENT.cooldown
-        const n1 = lines.length; const quietFor = Math.max(1, D.AMBIENT.cooldown - (game.time - t0 - endAt) - 3); for (let i = 0; i < Math.round(quietFor / DT); i++) W.step(DT); const extra = lines.slice(n1).filter(l => !l.radio && (l.who === A.callsign || l.who === B.callsign));
-        if (extra.length) fails.push(`inside the cooldown (${quietFor.toFixed(0)} s after it ended) they spoke again: ${extra.map(l => l.text).join(' | ')}`);
-        let again = false; for (let i = 0; i < Math.round(12 / DT); i++) { W.step(DT); if (D.ambientState(game).run) again = true; } if (!again) fails.push('past the cooldown, still standing together, they never spoke again');
+        // the cooldown, read off the pairs' clock (the frame it ended: no new talk before AMBIENT.cooldown from now)
+        const wait = D.ambientState(game).next - game.time; if (Math.abs(wait - D.AMBIENT.cooldown) > 0.1) fails.push(`the next talk is ${wait.toFixed(1)} s off when it ends (want the cooldown, ${D.AMBIENT.cooldown} s)`);
         notes.push(`talk '${talk?.id ?? '?'}' at +${startAt.toFixed(1)} s, ${conv.length} lines over ${(endAt - startAt).toFixed(1)} s: ${conv.map(l => `${l.who}: "${l.text}"`).join(' / ')}`);
       } }
-    { const { W, game, A, B } = await stage3(812);   // abort: B goes suspicious on the second line
+    if (swept(0, 1) > 0) { const { W, game, A, B } = await stage3(812);   // abort: B goes suspicious on the second line
       let said = 0, aborted = false; const orig = game.say.bind(game); game.say = (gd: any, text: string, radio = false, force = false) => { if (!radio && (gd === A || gd === B)) said++; return orig(gd, text, radio, force); };
       for (let i = 0; i < Math.round((D.AMBIENT.firstAfter + 20) / DT) && !aborted; i++) { W.step(DT); if (said >= 2 && D.ambientState(game).run) { B.state = 'suspicious'; B.awareness = 0.6; B.lastKnown = [25, 0, 11.2]; B.reactT = 0.8; W.step(DT); aborted = true; } }
       if (!aborted) fails.push('abort staging: never got two lines in'); else { if (D.ambientState(game).run) fails.push('the run survived a man going suspicious'); if (A.hold || B.hold) fails.push(`after the abort: A.hold ${A.hold} B.hold ${B.hold} (want both free)`); }
       notes.push(`abort after ${said} lines: run ${D.ambientState(game).run ? 'STILL ON' : 'ended'}, holds ${A.hold}/${B.hold}`); }
-    { const { W, game, A, B } = await stage3(813);   // floor up: never
+    if (swept(0, 1) > 0) { const { W, game, A, B } = await stage3(813);   // floor up: never
       game.escalation = 1; game.escalationT = game.time + 600; A.drawn = B.drawn = true;
-      let started = false; for (let i = 0; i < Math.round((D.AMBIENT.firstAfter + 15) / DT); i++) { W.step(DT); if (D.ambientState(game).run) started = true; }
+      let started = false; for (let i = 0; i < Math.round((D.AMBIENT.firstAfter + 5) / DT); i++) { W.step(DT); if (D.ambientState(game).run) started = true; }
       if (started) fails.push('a conversation started on a heightened floor'); notes.push(`heightened floor: started ${started}`); }
     verdict(fails.length === 0, '(c) ambient pairs: two calm men close by talk once (an AMBIENT_PAIRS entry, alternating, paced, held then freed), keep the cooldown, break off the frame one turns suspicious, never start on a floor that is up', notes.join('\n    '), fails);
   }

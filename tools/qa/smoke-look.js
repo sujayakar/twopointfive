@@ -2,7 +2,6 @@
 // captures + ×k crops + simple texture metrics, so today's build and older builds served beside can be compared frame for frame (ONE CONFIG PER FRESH BOOT:
 // navigate `?paused&quality=high&mute`, then ONE of the stagings below, then capture — never two stagings in one page).
 //   await import('/qa/smoke-look.js'); await __sk.boot();
-//   await __sk.tour({ frames })                     the REAL tour stop 7 (seeded restart, __demo.start + goto(7)), stepped `frames` at 1/60
 //   await __sk.door({ dist, yaw, dev, freeze })     the same doorway plume restaged under a PINNED camera (no puppet, no torches): canister at the sill, `dev` s of growth, frozen or live
 //   await __sk.lot({ lamp: 'e'|'s', storm, dist, yaw, dev, freeze })   a canister under a sodium street lamp at night
 //   await __sk.run(n)                                step n frames (serialized every 8)
@@ -31,7 +30,7 @@
   function state() {
     const S = E().settings, sm = window.__smoke, P = E().passes;
     return { commit: window.__skCommit ?? null, internal: [E().width, E().height], output: [E().outWidth, E().outHeight], scale: S.renderScale, maxH: S.maxInternalHeight, preset: window.__quality?.current ?? null,
-      volQuarter: !!S.volQuarter, gatherThird: !!S.gatherThird, volDiv: P.volDiv ?? P.divVol ?? null, froxel: !!S.froxelVol, froxelTopRays: S.froxelTopRays, froxelGrid: window.__froxel?.grid ?? null,
+      volQuarter: !!S.volQuarter, gatherThird: !!S.gatherThird, volDiv: P.volDiv ?? P.divVol ?? null,
       taau: !!S.taau, sharp: !!S.sharpDirect, sharpOn: !!E().sharpOn, decouple: !!S.sharpDecouple, gbaa: !!S.gbaa, taauMotionAlpha: S.taauMotionAlpha, taauAlpha: S.taauAlpha, motionCalm: S.restirSpatialAll && S.restirPenRays,
       volLightCap: S.volLightCap, volEvery: S.volShadowEvery, volStep: S.volStepVoxels, volSteps: S.volSteps, smokeShadowSteps: S.smokeShadowSteps,
       calm: sm?.params?.calmCells, frozen: !!sm?.params?.frozen, bricks: sm?.stats?.pool ?? 0, stepped: sm?.stats?.stepped ?? 0,
@@ -41,17 +40,6 @@
     g.guards.forEach((gd, i) => { gd.hold = true; gd.lightDeadUntil = 1e9; gd.char.anim.phase = 0; });
     g.player.char.anim.phase = 0;
     const A = window.__anim; if (A) { A.LIFE.on = 0; A.FEET.on = 0; }
-  }
-  /** the REAL tour stop: seeded restart, the tour started and jumped to stop 7, stepped `frames` (the can leaves his hand at ~1.6 s, the doorway is full by ~7 s, the shot cuts at 15 s) */
-  async function tour(opts = {}) {
-    const g = G(); const frames = opts.frames ?? 480;
-    seed(opts.seed ?? 4242); g.restartEncounter(); restarted = true;
-    for (const gd of g.guards) gd.char.anim.phase = 0; g.player.char.anim.phase = 0;
-    E().passes.grain = 0;
-    window.__demo.start(); window.__demo.goto(7);
-    window.__resetClock(); E().passes.grain = 0;
-    await run(frames);
-    return { shotT: window.__demo.shotT, cam: camInfo(), ...brief() };
   }
   function camInfo() { const c = window.__cam; return { target: Array.from(c.target).map(v => +v.toFixed(2)), yaw: +(c.yaw / DEG).toFixed(1), pitch: +(c.pitch / DEG).toFixed(1), dist: +c.distance.toFixed(2) }; }
   function brief() { const s = state(); return { internal: s.internal, output: s.output, scale: s.scale, volQuarter: s.volQuarter, calm: s.calm, bricks: s.bricks, frameIdx: s.frameIdx }; }
@@ -190,25 +178,25 @@
     for (const nm of names) { const keys = Object.keys(res[nm][0] ?? {}); const o = {}; for (const k of keys) { const vals = res[nm].map(x => x[k]); o[k] = { min: Math.min(...vals), med: [...vals].sort((a, b) => a - b)[Math.floor(vals.length / 2)], all: vals }; } summary[nm] = o; }
     return { summary, rounds: res };
   }
-  /** GPU-error sweep: presets × froxel on/off × K 0/3/6 × smoke frozen/live × debug views 0/5/3, a few frames each, uncaptured errors collected (stage a plume first) */
+  /** GPU-error sweep: presets × lights a step 1/3/6 × smoke frozen/live × debug views 0/5/3, a few frames each, uncaptured errors collected (stage a plume first) */
   async function validate() {
     const errs = []; const h = e => errs.push(String(e.error && e.error.message).slice(0, 240)); E().device.addEventListener('uncapturederror', h);
-    const S = E().settings, Q = window.__quality, sm = window.__smoke; const was = { preset: Q?.current, froxel: S.froxelVol, K: S.smokeMarchLights, view: S.debugView, frozen: sm.params.frozen };
+    const S = E().settings, Q = window.__quality, sm = window.__smoke; const was = { preset: Q?.current, K: S.volLightCap, view: S.debugView, frozen: sm.params.frozen };
     let n = 0;
     for (const preset of ['high', 'medium', 'low', 'verylow']) {
       Q.apply(preset); window.__runFrames(2, 1 / 60, []); await settle();
-      for (const froxel of [true, false]) for (const K of [0, 3, 6]) for (const frozen of [true, false]) {
-        S.froxelVol = froxel; S.smokeMarchLights = K; sm.params.frozen = frozen;
+      for (const K of [1, 3, 6]) for (const frozen of [true, false]) {
+        S.volLightCap = K; sm.params.frozen = frozen;
         for (const view of [0, 5, 3]) { S.debugView = view; window.__runFrames(2, 1 / 60, []); n += 2; }
         await settle();
       }
     }
-    S.debugView = was.view; S.froxelVol = was.froxel; S.smokeMarchLights = was.K; sm.params.frozen = was.frozen; if (was.preset) Q.apply(was.preset);
+    S.debugView = was.view; S.volLightCap = was.K; sm.params.frozen = was.frozen; if (was.preset) Q.apply(was.preset);
     window.__runFrames(2, 1 / 60, []); await settle();
     E().device.removeEventListener('uncapturederror', h);
     return { frames: n, errors: errs.length, errs: errs.slice(0, 8) };
   }
   function project(p) { const v = document.getElementById('view'); const r = window.__cam.project(p, v.clientWidth, v.clientHeight); const W = E().outWidth || E().width, H = E().outHeight || E().height; return [Math.round(r[0] * W / v.clientWidth), Math.round(r[1] * H / v.clientHeight), r[2]]; }
-  window.__sk = { K, seed, settle, boot, state, tour, door, lot, run, frame, motionFrame, readback, crop, full, hash, metrics, temporal, take, costAB, project, camInfo, lumAt, cropStretch, colProfile, orbitFrame, validate };
-  return 'smoke-look ready: __sk.boot() then ONE of tour / door / lot, then frame / crop / metrics';
+  window.__sk = { K, seed, settle, boot, state, door, lot, run, frame, motionFrame, readback, crop, full, hash, metrics, temporal, take, costAB, project, camInfo, lumAt, cropStretch, colProfile, orbitFrame, validate };
+  return 'smoke-look ready: __sk.boot() then ONE of door / lot, then frame / crop / metrics';
 })();

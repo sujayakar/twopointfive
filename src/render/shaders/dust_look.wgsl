@@ -13,7 +13,7 @@
 //   (3) breaks the body into slow billows (mean kept): the coarse lattice's field in a filled room is smooth, and smooth lit fog reads as one flat blob;
 // the in-scatter takes the tint, weighted by whose density is at the sample (gypsum is not white smoke; plain smoke sharing the ray keeps its white); and where the
 // sample is dust the march's own self-shadow taps read the same drawn density, so a billow has a lit side and a fold.
-// EVERY OTHER READER IS UNTOUCHED: the scene's shadow rays, the haze's and the froxels' smoke terms, and above all the light probe's sight lines read .x through
+// EVERY OTHER READER IS UNTOUCHED: the scene's shadow rays, the haze's smoke terms, and above all the light probe's sight lines read .x through
 // smoke_read.wgsl like any smoke, so this file cannot move a sight line. The price, said plainly: the picture and the sight lines no longer read
 // the very same field in a dust cloud — the outer 0.2‥0.5 m of a cloud and its thinnest veil are drawn thinner than a man's sight line (and the cloud's shadow on
 // the floor) reads them, and through the body a ray crossing a billow's crest is drawn denser, one crossing a trough thinner, than the smooth field the sight line reads (the same on

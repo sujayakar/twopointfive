@@ -26,11 +26,8 @@ struct Frame {
   weatherC: vec4f,                          // the interior footprint x0, z0, x1, z1: no rain on rays that end inside it, none drawn inside its column
   glassCfg: vec4f,                          // glass panes (FLAG_GLASS): x = reflection strength (× the physical Fresnel term; 1 = as computed), y = tint depth (exponent on the pane's albedo per crossing, ÷ cos of the crossing angle), z = dust glow gain (× GLASS_DUST), w = REFRACTION: the index of refraction (≥ 1) while settings.glassRefract, 0 = off — composite bends the view ray through every glass box it meets (composite.wgsl glassRefractPath)
   weatherD: vec4f,                          // a second, small no-rain footprint x0, z0, x1, z1 (the west stair tower's roofed landing): rays ending inside it draw no rain; all zero = none
-  volCfg: vec4u,                            // volumetric worst-case caps (volumetrics.wgsl VOL_KMAX): x = K, the most lights a smoke-march step / a haze ray traces shadow rays for (0 = off: the pass exactly as it was); y = the march's shadow-ray refresh period in steps; z = its step in tenths of a voxel; w = bits 0‥3 the SHADOW rays' smoke sample count (smokeShadowSteps(): 0 = 8) | bits 8‥11 the smoke march's per-step light count (vol_common.wgsl smokeMarchLights(); 0 = J-lit)
-  froxelA: vec4f,                           // froxel volumetrics (FLAG_FROXEL_VOL, render/froxels.ts): x = distance of slice boundary 0 along the pixel ray (m), y = of boundary D (m), z = slice curve a (thickness grows e^a from first to last slice; → 0 = uniform), w = history weight this frame (0 = none: first frame of a grid, or history off)
-  froxelB: vec4u,                           // x, y, z = the froxel grid W × H × D (0 = no grid: the flag is never up then), w = k, shadow-rayed lights per froxel (bits 0‥7) | the fetch's screen filter << 8 (0 = cubic B-spline, 1 = plain trilinear — settings.froxelSharp) | (depth strata for the strongest light − 1) << 9, 2 bits (settings.froxelTopRays)
-  froxelC: vec4f,                           // xyz = this frame's sample jitter inside every froxel (0‥1, a Halton triple), w = the lookup's depth bias in slices (toward the eye: what a surface reads never includes scatter from behind it)
-  prevCam: vec4f,                           // xyz = the camera position of the PREVIOUS frame (prevViewProj's eye; the froxel history reprojects distances from it), w = the previous frame's froxelA.x (the near boundary follows the camera's height, so the history's slices are laid out on last frame's near)
+  volCfg: vec4u,                            // volumetric worst-case caps (volumetrics.wgsl VOL_KMAX): x = K, the most lights a smoke-march step / a haze ray traces shadow rays for (1 or more); y = the march's shadow-ray refresh period in steps; z = its step in tenths of a voxel; w = bits 0‥3 the SHADOW rays' smoke sample count (smokeShadowSteps(): 0 = 8) | bits 8‥11 free (the froxel-lit march's own light count until 2026-11-07)
+  prevCam: vec4f,                           // xyz = the camera position of the PREVIOUS frame (prevViewProj's eye: the specular denoiser's mirror-image validation reads it), w free (the froxel history's near boundary until 2026-11-07)
   rtCfg: vec4f,                             // ray-traced reflections (renderer v3 phase 4, reflect.wgsl): x = max roughness that gets a ray (composite fades the term out toward it), y = rays per pixel (1|2), z = anisotropy 0..1 on aniso-finished (wet) ground + 2 × the wet ground's break-up in tenths (settings.wetBreakup; read an = z − 2·floor(z/2)), w = the reflection target's resolution divisor — 0 = the pass is OFF this frame (nothing dispatched, composite reads nothing: the frame as it was)
   matCfg: vec4f,                            // materials: x = analytic-highlight gain (the GGX image of point / spot / panel lights on a finish; 1 = physical), y = reflection strength × the whole traced term, z = luminance bound on one reflection ray's radiance (firefly guard), w = the g-buffer's detail-layer amount 0..1 (worn paths, dust on tall tops, scuffed skirting, edge wear on metal — 0 = fsBox exactly as it was)
   p5Cfg: vec4u,                             // renderer v3 phase 5 (ultra-only extras; every field 0 = the pass exactly as it was): x, y free (the resampling gather's mode and numbers until 2026-11-07), z = the reflection pass's bits: 1 = characters are their skinned MESH at reflection hits (closest-hit walk of the mesh-shadow trees, reflect.wgsl; needs FLAG_MESH_SHADOWS up), 2 = the second reflection ray decorrelated (antithetic azimuth) + the hit's lighting reused from last frame's record when the hit point matches (rtHitReuse); w = the lowest light slot holding a TRANSIENT light this frame (lights.ts firstTransientSlot: they are born at the tail) — gather_common's per-hit subtraction walk starts there instead of at 0, testing each slot it visits as before (0 when none is alive)
@@ -44,14 +41,14 @@ struct Frame {
   giCfg: vec4f,                             // four free words (the young-history gather rays read them until 2026-11-07)
   weatherE: vec4f,                          // PARTICLE RAIN (experiment, game/rainFx.ts + shaders/particles*.wgsl): xy = centre xz of the near-field particle layer's disc, z = its radius (m), w = the share 0‥1 of the LATTICE rain volumetrics.wgsl drops inside it (rainNearKeep) — 0 = no particle layer: the lattice exactly as it was (NEGATIVE on a snow level: the metres past the level's rim the snow goes on falling, particles_common.wgsl snowPast — every lattice reader asks `> 0.0`)
   weatherF: vec4f,                          // PARTICLE RAIN v2: the drop's PHASE the lattice's streaks share with the particles' (volumetrics.wgsl rainLight): x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain — w 0 = the lattice's isotropic sum exactly as it was
-  shadeCfg: vec4f,                          // THE LOOK PROTOTYPE, eyes adjust to shade (engine.ts lookShade writes it on the look page, zeros anywhere else = the picture as it was; the one exposure model's, place_common.wgsl lookExpoFor): x = the share of its dark a place darker than the open air is brought up by (0 = off), y = the mean radiance open air holds from the sky alone (luminance), z = spare, w = the irradiance open ground gets from the sky alone (luminance)
-  veilA: vec4f,                             // THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame, zeros anywhere else = none): xy = 1 ∕ the floor plan the powder's field covers (width, depth), z = how much of it is drawn 0‥1, w = what the sun (or the moon) puts on level ground, as luminance
+  shadeCfg: vec4f,                          // THE LOOK PROTOTYPE, eyes adjust to shade (engine.ts lookShade writes it, zeros = the picture as it was; the one exposure model's, place_common.wgsl lookExpoFor): x = the share of its dark a place darker than the open air is brought up by (0 = off), y = the mean radiance open air holds from the sky alone (luminance), z = spare, w = the irradiance open ground gets from the sky alone (luminance)
+  veilA: vec4f,                             // THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame, zeros = none): xy = 1 ∕ the floor plan the powder's field covers (width, depth), z = how much of it is drawn 0‥1, w = what the sun (or the moon) puts on level ground, as luminance
   veilB: vec4f,                             // xy = that plan's corner (m, x z), zw = the way to the sun along the ground per metre of height
-  eyeCfg: vec4f,                            // THE LOOK PROTOTYPE, one exposure (render/lookexpo.ts lookExpoFrame, zeros anywhere else = off): x = the most a place is brought up (the night's exposure over the hour's), y = the day's share, z = the power of the eyes' darkness the open is overexposed by, w = −1 − the Eyes follow Sam row: under 0 = the model is on
-  gradeCfg: vec4f,                          // THE LOOK PROTOTYPE, the day's contrast is the open air's (place_common.wgsl lookExpoFor; render/lookgrade.ts, zeros anywhere else = nothing undone): x = 1 / the contrast the tone map turns the day's stops by, y = the radiance the turn is about
-  lampCfg: vec4f,                           // THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros anywhere else = off): x = × the night's lamp strength a fixture is drawn at this hour, y = × a glowing face's drawn strength as a ray takes it (lampFloorK, boxEmissiveRay below), z = 1 while the Steady bounce row is up (lighting_common.wgsl dayBoundK) · w = the Room brightness row (composite.wgsl lookExpoGain; 0 = not set)
-  sideCfg: vec4u,                           // THE LOOK PROTOTYPE, which side of a wall (the look panel's row `walls`; render/wallSides.ts; zeros anywhere else = every cache read as it was): x = 1 `sides` is this frame's level · y, z = THE SMOKE LAB's drawing rows (vol_common.wgsl HOW SMOKE IS DRAWN, AS ROWS; zeros = the picture as it was)
-  placeCfg: vec4f,                          // THE LOOK PROTOTYPE, light keeps its order across places (the look panel's row `order`; composite.wgsl lookExpoGain; zeros anywhere else = off): x = how far a pixel's own light caps its place's gain · y = the slot of the light list's first portal + 1, 0 with none (skyKeep below) · z, w = THE EYES' WIDEST (place_common.wgsl lookExpoFor; set whenever the model is on): z = the dim level in the night's units, w = the most a place under it is shown by over the night's exposure
+  eyeCfg: vec4f,                            // THE LOOK PROTOTYPE, one exposure (render/lookexpo.ts lookExpoFrame, zeros = off): x = the most a place is brought up (the night's exposure over the hour's), y = the day's share, z = the power of the eyes' darkness the open is overexposed by, w = −1 − the Eyes follow Sam row: under 0 = the model is on
+  gradeCfg: vec4f,                          // THE LOOK PROTOTYPE, the day's contrast is the open air's (place_common.wgsl lookExpoFor; render/lookgrade.ts, zeros = nothing undone): x = 1 / the contrast the tone map turns the day's stops by, y = the radiance the turn is about
+  lampCfg: vec4f,                           // THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros = off): x = × the night's lamp strength a fixture is drawn at this hour, y = × a glowing face's drawn strength as a ray takes it (lampFloorK, boxEmissiveRay below), z = 1 while the Steady bounce row is up (lighting_common.wgsl dayBoundK) · w = the Room brightness row (composite.wgsl lookExpoGain; 0 = not set)
+  sideCfg: vec4u,                           // THE LOOK PROTOTYPE, which side of a wall (the look panel's row `walls`; render/wallSides.ts; zeros = every cache read as it was): x = 1 `sides` is this frame's level · y, z = THE SMOKE LAB's drawing rows (vol_common.wgsl HOW SMOKE IS DRAWN, AS ROWS; zeros = the picture as it was)
+  placeCfg: vec4f,                          // THE LOOK PROTOTYPE, light keeps its order across places (the look panel's row `order`; composite.wgsl lookExpoGain; zeros = off): x = how far a pixel's own light caps its place's gain · y = the slot of the light list's first portal + 1, 0 with none (skyKeep below) · z, w = THE EYES' WIDEST (place_common.wgsl lookExpoFor; set whenever the model is on): z = the dim level in the night's units, w = the most a place under it is shown by over the night's exposure
   levelCfg: vec4u,                          // WHAT THE LEVEL RAISES (render/frame.ts LevelSw, written by writeFrame from the page's own switches): x = a bit a switch — the weather kinds' reads, the snow, the rows of the snow's look. Asked as lv(NAME) below. Data and not constants, so the office, a level with its own roofs and a snow level are ONE shader text
   sides: array<vec4u, 1750>,                // … its words, a u32 a cell of the floor plan (sideAt below)
   sideCols: array<vec4u, 140>,              // … and the place of each probe column of the cache's first cascade, a nibble a column (index z × dims.x + x; lighting_common.wgsl diceTapsBy)
@@ -81,7 +78,6 @@ const FLAG_MESH_SHADOWS: u32 = 8388608u; // ultra: occluded() / occludedT() test
 const FLAG_PARTICLES: u32 = 16777216u;   // experiment: the GPU particle system is live this frame (render/particles.ts + shaders/particles*.wgsl: its own compute pass and a splat into the HDR target after the composite) — informational for the scene passes, none of which reads it
 const FLAG_BOUNCE_CARDS: u32 = 33554432u; // torch bounce cards (default off): the final gather samples each carried spot's footprint as an analytic one-bounce emitter (cards.wgsl builds them, fgather.wgsl samples them and excludes the light's direct term where its rays land inside a footprint); off = nothing built, sampled or excluded
 const FLAG_GLASS: u32 = 268435456u;    // glass panes (E3, SceneInfo.glass) — composite tints / reflects over what stands behind them and draws the crack decals on them, fgather traces their mirror ray, direct tints light through them; off = scene.glassInfo.x is 0 and nobody loops
-const FLAG_FROXEL_VOL: u32 = 536870912u;   // froxel volumetrics (renderer v3 Phase 2b, render/froxels.ts + shaders/froxel.wgsl): haze + smoke in-scatter injected into a camera-frustum voxel grid (frame.froxelA/B/C), accumulated over frames, integrated front to back — composite / the particles read ONE trilinear sample at the pixel's distance and volumetrics.wgsl only draws the rain; off = the per-pixel march exactly as it was
 
 struct BoxGeo { c: vec3f, rot: u32, h: vec3f, flags: u32 };
 const BOX_NOPRIMARY: u32 = 1u;
@@ -108,7 +104,7 @@ struct Light {
   cosInner: f32, volumetric: f32, owner: u32, radius: f32,
 };
 
-struct SmokeBound {                // a loose box round some of the smoke (smoke.wgsl `boxes`): what a reader clips a ray against before it marches (the marches' and the froxels' comments call one a 'domain', from when it was a solver box). Never storage, never a limit on the smoke
+struct SmokeBound {                // a loose box round some of the smoke (smoke.wgsl `boxes`): what a reader clips a ray against before it marches (the marches' comments call one a 'domain', from when it was a solver box). Never storage, never a limit on the smoke
   origin: vec3f, voxel: f32,       // world min corner, voxel size (m) of the lattice it bounds
   pad0: vec3u, live: u32,
   dims: vec3u, pad1: u32,          // its size in voxels
@@ -146,7 +142,7 @@ fn boxEmissive(i: u32) -> vec3f { return boxMat[i * 4u + 1u].xyz * frame.emissiv
 /// exposure and a glowing face at its real strength capped at white (render/photometry.ts): right for the eye, but a ray that took the face at that strength would make a
 /// bulb's own 8 cm of glass a lamp a thousand times the bulb. A ray takes the face at what it gave the night's rays × the day's lamp strength. (A mirror keeps boxEmissive: the eye.)
 fn boxEmissiveRay(i: u32) -> vec3f { return boxEmissive(i) * select(1.0, frame.lampCfg.y, frame.lampCfg.x > 0.0); }
-/// × a fixed night floor on a lamp's light (W/m²) by day: the same share of the day's lamp strength (1 at night and off the look page)
+/// × a fixed night floor on a lamp's light (W/m²) by day: the same share of the day's lamp strength (1 at night)
 fn lampFloorK() -> f32 { return select(1.0, frame.lampCfg.x, frame.lampCfg.x > 0.0); }
 
 /// WHICH SIDE OF A WALL (frame.sides; render/wallSides.ts, where the why is; the look page's row `walls`). The level's floor plan in 0.4 m cells (the exposure's own
@@ -184,6 +180,11 @@ fn sideLine(c: vec2i, m: vec2f) -> vec2f {
 }
 /// is cell `c` a doorway's that knows its line (kind 3)
 fn sideIsDoor(c: vec2i) -> bool { if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return false; } let k = u32(c.y * SIDE_W + c.x); return (frame.sides[k >> 2u][k & 3u] & 3u) == 3u; }
+/** A SPOT STOOD `d` METRES OFF ITS OWN FACE, IN PLAN (xz; add it to the point): so that the wall a face is of does not stand in the spot's own way. WHAT LOOKS UP IS NOT
+ *  STOOD OFF: it has no wall under it to be clear of, and the normal handed here is the shading normal, which on lying snow leans with the drift. At the
+ *  foot of a wall such snow leans at the wall, and a step along it ended in the room behind: shown by that room's exposure (a white line along every outer
+ *  wall by day), and unseen by the fog's eyes (a dark one). Whoever asks where a surface stands on the plan asks through this one line. */
+fn standOff(N: vec3f, d: f32) -> vec2f { return select(N.xz * d, vec2f(0.0), N.y > 0.5); }
 /** the albedo SECONDARY rays see (gather / cascade / probe / card hits): the box's albedo with its markings' area average folded in on the CPU (boxes.ts upload) — the very same three floats as boxAlbedo for a box without markings, or with markings off */
 fn boxAlbedoSec(i: u32) -> vec3f { return boxMat[i * 4u + 3u].xyz; }
 /** × the emission of the box's emissive markings (a switchable's supply factor: game/lighting.ts) */
@@ -211,12 +212,12 @@ fn boxOwner(b: BoxGeo) -> u32 { return (b.flags >> 8u) & 0xffu; }
 struct Finish { rough: f32, metal: bool, aniso: bool };
 /** THE LOOK PROTOTYPE: the picture's word for box i, carried above the finish in the same float (8 × it; scene/boxes.ts packBox, render/gbuffer.ts lookWordOf):
  *  bits 0-4 what it is made of (look.wgsl's classes, 0 = plain; decided on the CPU from the box's own paint), bit 5 = it moves (a box past the level's statics),
- *  bits 6-11 a number of the box's own, 0‥44. 0 on every other page. */
+ *  bits 6-11 a number of the box's own, 0‥44. */
 fn boxLook(i: u32) -> u32 { return u32(boxMat[i * 4u + 1u].w * 0.125); }
 fn boxStuff(i: u32) -> u32 { return boxLook(i) & 31u; }   // (five bits: render/gbuffer.ts LOOK_WORD)
 fn boxFinish(i: u32) -> Finish {
   var w = boxMat[i * 4u + 1u].w; var f: Finish;
-  if (LOOK) { w -= 8.0 * floor(w * 0.125); }   // (THE LOOK PROTOTYPE: boxLook's word, above)
+  w -= 8.0 * floor(w * 0.125);   // (THE LOOK'S OWN LINE: boxLook's word, above)
   f.aniso = w >= 4.0; w -= select(0.0, 4.0, f.aniso);
   f.metal = w >= 2.0; w -= select(0.0, 2.0, f.metal);
   f.rough = clamp(w, 0.0, 1.0);
@@ -1021,7 +1022,7 @@ fn rtHiFade(maxR: f32) -> vec2f { return mix(vec2f(maxR - 0.12, maxR + 0.001), R
 // frame whose picture is the tube's, and every pass of the picture takes it as a steady light like any other (evalLight; the engine restarts the screen
 // histories the frame the tube comes off). The game's own readings never do: evalLightTrue gives nothing for it, and directIrradiance (the cascades the light meter reads its bounce from) skips it.
 const LIGHT_IR: u32 = 0x8000000u;
-// AN OPENING TO THE OUTSIDE (lights.ts LIGHT_PORTAL; engine.ts lookOpeningLights makes them on the look page, none anywhere else): an area light (kind 3)
+// AN OPENING TO THE OUTSIDE (lights.ts LIGHT_PORTAL; engine.ts lookOpeningLights makes them): an area light (kind 3)
 // that is no lamp but a hole the outside is seen through. DAYLIGHT IS COUNTED ONCE: the sky's light that comes through an opening is THIS light's, with a
 // direct light's direction and shadows, and the bounce takes none of it WITHIN THE LIGHT'S REACH (skyKeep below, at every ray of the gather that would have, and the cache's
 // dice: rc.wgsl rcDice). The reach is where the light alone stops being worth a ray (scene/openings.ts openingReach): past it the bounce has the sky,
@@ -1327,7 +1328,7 @@ fn fogSeenAt(P: vec3f, N: vec3f) -> f32 {
   fogSeenKeyP = P; fogSeenKeyN = N; fogSeenVal = 1.0;
   let cfg = fogSight.cfg;
   if (cfg.y != 1.0) { return 1.0; }
-  let q = vec2f(P.x + N.x * 0.06, P.z + N.z * 0.06);
+  let q = P.xz + standOff(N, 0.06);
   var best = 0.0;
   let thinWas = fogEyeThin; fogEyeThin = fogThinOn();   // (FOG.thin: the walks below are fog eyes' — put back before this returns)
   for (var k = 0; k < i32(cfg.x); k++) {
@@ -1676,44 +1677,6 @@ fn worldFromDepth(pix: vec2f, depth: f32) -> vec3f {
   return w.xyz / w.w;
 }
 
-// ---- froxel volumetrics (FLAG_FROXEL_VOL): the one mapping every producer / consumer of the volume shares (render/froxels.ts fills frame.froxelA/B/C) ----
-// The grid is W × H over the screen (froxel (ix, iy) covers uv [ix/W, (ix+1)/W) — the same uv the G-buffer's pixels have, jitter and all) × D slices in
-// DISTANCE ALONG THE PIXEL'S OWN RAY from the eye (radial, what `distance(P, camPos)` gives a consumer): slice boundary s (0‥D, continuous) sits at
-//   d(s) = near + (far − near) · (e^{a·s/D} − 1) / (e^a − 1)      — thickness grows by e^a from the first slice to the last (a → 0: uniform)
-// A texel of the INTEGRATED volume (slice k, centre w = (k + ½)/D) holds (rgb = in-scatter reaching the eye from everything nearer than boundary k+1,
-// a = transmittance of that stretch), so what lies in front of a surface at distance d is the trilinear sample at w = (s(d) − ½)/D — one fetch.
-fn froxelCurveA() -> f32 { return max(frame.froxelA.z, 1e-3); }
-fn froxelDist(s: f32) -> f32 { let a = froxelCurveA(); return frame.froxelA.x + (frame.froxelA.y - frame.froxelA.x) * (exp(a * s / f32(frame.froxelB.z)) - 1.0) / (exp(a) - 1.0); }
-fn froxelSliceN(d: f32, near: f32) -> f32 { let a = froxelCurveA(); let u = (d - near) / (frame.froxelA.y - near) * (exp(a) - 1.0); return f32(frame.froxelB.z) / a * log(max(1.0 + u, 1e-6)); }
-fn froxelSlice(d: f32) -> f32 { return froxelSliceN(d, frame.froxelA.x); }
-/** the slice coordinate distance d had in LAST frame's volume (its near boundary rode last frame's camera height: frame.prevCam.w) — the history's reprojection */
-fn froxelSlicePrev(d: f32) -> f32 { return froxelSliceN(d, frame.prevCam.w); }
-/** unit direction of the eye ray through screen uv (0‥1, y down — a G-buffer pixel's uv is (pix + ½) · invScreen) */
-fn froxelDir(uv: vec2f) -> vec3f { return normalize(worldFromDepth(uv * frame.screen, 1.0) - frame.camPos); }
-/** (in-scatter rgb, transmittance a) between the eye and distance `dist` along the ray through `uv`, from the integrated froxel volume `vt` — biased frame.froxelC.w
- *  slices toward the eye so a surface never collects scatter injected behind it (the froxel it sits in straddles it). ACROSS the screen the fetch is a cubic
- *  B-spline (four trilinear taps — Sigg & Hadwiger's offsets): a froxel is a dozen pixels wide, and the trilinear kernel alone shows every froxel boundary as
- *  a crease along a beam's edge; the B-spline is C² across them (softer by half a froxel, never creased). Along the ray it stays linear (that axis is the eye's own). */
-fn froxelW(vt: texture_3d<f32>, uv: vec2f, w: f32) -> vec4f {
-  let G = vec2f(frame.froxelB.xy);
-  let tc = uv * G - 0.5; let it = floor(tc); let f = tc - it;
-  let f2 = f * f; let f3 = f2 * f;
-  let w0 = (1.0 / 6.0) * (-f3 + 3.0 * f2 - 3.0 * f + 1.0); let w1 = (1.0 / 6.0) * (3.0 * f3 - 6.0 * f2 + 4.0);
-  let w2 = (1.0 / 6.0) * (-3.0 * f3 + 3.0 * f2 + 3.0 * f + 1.0); let w3 = (1.0 / 6.0) * f3;
-  let g0 = w0 + w1; let g1 = w2 + w3;
-  let h0 = (it - 0.5 + w1 / g0) / G; let h1 = (it + 1.5 + w3 / g1) / G;   // (texel centres sit at (i + ½) / G)
-  return g0.y * (g0.x * textureSampleLevel(vt, linSamp, vec3f(h0.x, h0.y, w), 0.0) + g1.x * textureSampleLevel(vt, linSamp, vec3f(h1.x, h0.y, w), 0.0))
-       + g1.y * (g0.x * textureSampleLevel(vt, linSamp, vec3f(h0.x, h1.y, w), 0.0) + g1.x * textureSampleLevel(vt, linSamp, vec3f(h1.x, h1.y, w), 0.0));
-}
-fn froxelFetch(vt: texture_3d<f32>, uv: vec2f, dist: f32) -> vec4f {
-  let D = f32(frame.froxelB.z);
-  let s = clamp(froxelSlice(dist) - frame.froxelC.w, 0.0, D);
-  let w = (max(s, 1.0) - 0.5) / D;
-  var v: vec4f;
-  if ((frame.froxelB.w & 256u) != 0u) { v = textureSampleLevel(vt, linSamp, vec3f(uv, w), 0.0); } else { v = froxelW(vt, uv, w); }
-  if (s < 1.0) { return mix(vec4f(0.0, 0.0, 0.0, 1.0), v, s); }   // inside the first slice: between nothing and its far boundary
-  return v;
-}
 
 // Octahedral mapping: unit dir <-> [0,1]^2
 fn octEncode(n: vec3f) -> vec2f {

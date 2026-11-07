@@ -74,8 +74,8 @@
     for (const [p, r] of Object.entries(G.results || {})) {
       if (!r || r.error) { out[p] = { error: r && r.error }; continue; }
       const S = r.serialized, P = S.passes, pick = k => P[k] ? [P[k].mean, P[k].p95, P[k].max] : null;
-      const volSum = ['volumetrics', 'volFroxel', 'volInject', 'volTemporal', 'volInteg'].filter(k => P[k]);   // everything volumetric: the 2D pass + the froxel kernels (renderer v3 phase 2b) — per-frame sums are not kept here, so vol = Σ of the passes' own mean / p95 / max (an upper bound on the true p95 / max)
-      out[p] = { res: r.res.join('x'), union: [S.union.mean, S.union.p50, S.union.p95, S.union.max], direct: pick('direct'), vol: volSum.length ? [0, 1, 2].map(i => +volSum.reduce((a, k) => a + pick(k)[i], 0).toFixed(2)) : null, vol2D: pick('volumetrics'), volFroxel: pick('volFroxel'), gather: pick('gather'), softblur: pick('softblur'), smoke: pick('smoke'), live: r.live && r.live.frames ? { fpsMean: r.live.fps.mean, fpsP5: r.live.fps.p5, dtP95: r.live.dt.p95, dtMax: r.live.dt.max, unionP95: r.live.gpuUnion && r.live.gpuUnion.p95, over25: r.live.over25 } : null, lights: r.state && r.state.lights, smokeDomains: r.state && r.state.smoke };
+      const volSum = ['volumetrics'].filter(k => P[k]);   // everything volumetric: the one march — per-frame sums are not kept here, so vol = Σ of the passes' own mean / p95 / max (an upper bound on the true p95 / max)
+      out[p] = { res: r.res.join('x'), union: [S.union.mean, S.union.p50, S.union.p95, S.union.max], direct: pick('direct'), vol: volSum.length ? [0, 1, 2].map(i => +volSum.reduce((a, k) => a + pick(k)[i], 0).toFixed(2)) : null, gather: pick('gather'), softblur: pick('softblur'), smoke: pick('smoke'), live: r.live && r.live.frames ? { fpsMean: r.live.fps.mean, fpsP5: r.live.fps.p5, dtP95: r.live.dt.p95, dtMax: r.live.dt.max, unionP95: r.live.gpuUnion && r.live.gpuUnion.p95, over25: r.live.over25 } : null, lights: r.state && r.state.lights, smokeDomains: r.state && r.state.smoke };
     }
     return out;
   },

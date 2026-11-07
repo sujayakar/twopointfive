@@ -60,7 +60,7 @@ pub fn point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: Optio
     if crate::doze::doze_asleep(g, gd) { return false; }
     let c = g.gd[gd].ch;
     let eye = bone_or(g, c, crate::character::Bone::Head, 1.65);
-    let look = g.ch[c].chest_dir;
+    let look = crate::guards::look_of(g, c);
     let to = v3::sub(p, eye);
     let l = v3::len(to);
     if l > range { return false; }
@@ -89,7 +89,7 @@ pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == victim || g.gd[o].state == crate::game::GuardState::Dead || g.time < g.gd[o].dazzled_until || crate::doze::doze_asleep(g, o) { continue; }
+        if o == victim || g.gd[o].state == crate::game::GuardState::Dead || crate::control::man::blind(g, o) || crate::doze::doze_asleep(g, o) { continue; }
         if (!g.player_invisible && point_in_view(g, o, at, None, None)) || g.gd[o].saw_player_this_frame {
             let kind = match how {
                 crate::game::DownKind::Wounded | crate::game::DownKind::Shot => crate::game::WitnessSawActKind::Shot,

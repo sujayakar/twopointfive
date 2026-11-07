@@ -106,7 +106,7 @@ const live = async (fn: (W: any, g: any) => void): Promise<string> => {
   line(!why && wallSeen, 'on the step that blows the wall charge the wall\'s face is in the live picture', why || `fog of war ${fogOn ? `on, ${eyes} eyes` : 'off'} · the wall's face ${wallSeen ? 'shown live' : 'HIDDEN'}`);
 }
 // 7 ---- every smoke can is called by the man who throws it
-{ const { MOVES } = await import(`${ROOT}/src/game/character.ts`), { stripRows } = await import(`${ROOT}/src/game/cues.ts`);
+{ const { MOVES } = await import(`${ROOT}/src/game/character.ts`), stripRows = (g: any): { text: string }[] => g.view.radio;
   let arms = false; const cans: { t: number; who: string; said: string; lead: number; arm: boolean; drawn: boolean }[] = [];
   const why = await live((W, g) => {
     g.director.signal('lesson:ambush'); for (let i = 0; i < 240; i++) W.step(1 / 60);
@@ -115,7 +115,7 @@ const live = async (fn: (W: any, g: any) => void): Promise<string> => {
       if (BROKEN) for (const gd of g.guards) if (gd.unit && gd.bubble && /smoke/i.test(gd.bubble.text)) gd.bubble = null;
       for (const it of g.items.items) { if (it.kind !== 'smoke' || seen.has(it.serial)) continue; seen.add(it.serial);
         const gd = g.guards.find((x: any) => x.char.id === it.who), b = gd?.bubble, up = !!b && g.time - b.t < b.dur && /smoke/i.test(b.text) && !!b.radio;
-        cans.push({ t: g.time, who: gd?.callsign ?? '?', said: up ? b.text : '', lead: up ? g.time - b.t : 0, arm: !!gd?.char.anim.tossing, drawn: up && g.cues.bubbleOf(gd) === b && stripRows(g).some((r: any) => r.text.includes(gd.callsign) && r.text.includes(b.text)) }); } };   // (bubbleOf: the line the page draws over him; stripRows: the HUD's radio strip)
+        cans.push({ t: g.time, who: gd?.callsign ?? '?', said: up ? b.text : '', lead: up ? g.time - b.t : 0, arm: !!gd?.char.anim.tossing, drawn: up && g.view.bubbles.some((v: any) => v.man === gd.char.id && v.text === b.text) && stripRows(g).some((r: any) => r.text.includes(gd.callsign) && r.text.includes(b.text)) }); } };   // (game.view.bubbles: the line the page draws over him; game.view.radio: the HUD's radio strip)
     g.director.signal('lesson:smoke'); for (let i = 0; i < 180; i++) frame();
     const first = cans.length; for (let i = 0; i < 60 * 30 && cans.length < first + 2; i++) frame();
   });

@@ -8,6 +8,9 @@
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 
+/** the man's own row on the Rust game's record of the mission's line (in hand or loose, the word is 'snatch') */
+const rowOf = (g: any, of: string) => g.view.mission?.of === of ? g.view.mission : null;
+
 export async function snatchCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -47,7 +50,7 @@ export async function snatchCheck(): Promise<boolean> {
       const bad = checkSnatch(g);
       line(bad.length === 0, `the block's points stand on floor with a walk to each of its ${N.exits.length} ways out${bad.length ? ` — ${bad.join(' · ')}` : ''}`);
       line(!!S.active && !!S.man && g.civilians.includes(S.man) && S.man.team === 'civilian', `he is staged with the room clear: ${S.man ? `${S.man.civ.name}, team ${S.man.team}, at ${at(S.man.char.pos)}` : 'no man'}`);
-      line(/^objective ▸ take .* alive/.test(g.objectiveText?.() ?? S.objective()?.text ?? ''), `the objective row is his while he is loose: "${S.objective()?.text ?? ''}"`);
+      line(/^objective ▸ take .* alive/.test(rowOf(g, 'snatch')?.text ?? ''), `the objective row is his while he is loose: "${rowOf(g, 'snatch')?.text ?? ''}"`);
       await A.step(6);
       const c = S.man?.civ, p = S.man?.char.pos ?? [0, 0, 0], home = flat(p, N.man.pos) < 6;
       line(!!c && (c.state === 'work' || c.state === 'startled') && home && !S.end, `six quiet seconds: he keeps to his room (${c?.state}, ${at(p)}, ${flat(p, N.man.pos).toFixed(1)} m from his mark)`);
@@ -60,7 +63,7 @@ export async function snatchCheck(): Promise<boolean> {
     }
     // ---- 3 · a man on his way out: in the DARK he is not seen and is run into (hands up); LIT, he turns him; both ways held and seen, he goes to ground
     { const A = await stage(), { g, S, N } = A; await A.clearHouse(); await A.step(0.2);
-      line(!S.end && !!g.roomClear.end, `the house taken (${g.roomClear.end}) with him loose is not the end (end ${S.end}); the row reads "${S.objective()?.text ?? ''}"`);
+      line(!S.end && !!g.roomClear.end, `the house taken (${g.roomClear.end}) with him loose is not the end (end ${S.end}); the row reads "${rowOf(g, 'snatch')?.text ?? ''}"`);
       const gate = N.exits[0].pos; A.light.sam = 0.02; g.teleportPlayer([gate[0] - 1.0, 0, gate[2] + 0.2]);
       A.shot([16, 0, 15]);
       const met = await A.step(20, () => S.handsUp || !!S.end), d = flat(S.man.char.pos, g.player.char.pos);
@@ -109,10 +112,10 @@ export async function snatchCheck(): Promise<boolean> {
       line(said.size >= 3 && other.length === 0, `his voice: ${said.size} different lines over the run, all his own${other.length ? ` — NOT his: ${other.map(s => `"${s}"`).join(' · ')}` : ''}`); }
     // ---- 6 · off: the switch, and a level without the block
     { SNATCH.on = false; const A = await stage(); await A.step(1);
-      line(!A.S.active && !A.S.man && !A.g.civilians.some((x: any) => x.civ?.name === A.N.man.name) && A.S.objective() === null, `SNATCH.on false: no man on the floor, no objective line (the room clear alone)`);
+      line(!A.S.active && !A.S.man && !A.g.civilians.some((x: any) => x.civ?.name === A.N.man.name) && !!A.g.view.mission && A.g.view.mission.of !== 'snatch', `SNATCH.on false: no man on the floor, no objective line (the room clear alone)`);
       SNATCH.on = !brk;
       const B = await stage('test-rooms.json'); await B.step(1);
-      line(!B.S.active && !B.S.man && B.S.objective() === null && B.S.snapshot() === undefined, `a level without the block (test-rooms): nothing staged, no line`);
+      line(!B.S.active && !B.S.man && !!B.g.view.mission && B.g.view.mission.of !== 'snatch' && B.S.snapshot() === undefined, `a level without the block (test-rooms): nothing staged, no line`);
     }
   } catch (e: any) { failed = true; console.log(`- FAIL — threw: ${e?.stack ?? e}`); }
   finally { knobsBack(knobs0); }

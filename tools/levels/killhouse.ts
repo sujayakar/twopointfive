@@ -18,7 +18,7 @@
 //   lights: every room lit, both halls dark · garrison: tyres 1 · bunks 1 · radio 1 · store 1 · mess 2
 //
 //   bun run tools/levels/export.ts killhouse [--check]      → levels/killhouse.json
-//   page: ?levelFile=killhouse.json&roomclear&squad4        (&way=2: the back door · &nopar: the room clear alone)
+//   page: ?levelFile=killhouse.json&roomclear&squad4        (&way=2: the back door)
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { KitViewData, LevelScenarios, ParData, Rect, StructureData } from '../../src/scene/scenarios';

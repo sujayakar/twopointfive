@@ -14,4 +14,5 @@ setSurface({
   tapFiring(key) { const c = G.__tpsCall, id = TAP.get(key); return id !== undefined && !!c?.tapFiring?.(id); },
   tapAnswer() { return G.__tpsCall.tapAnswer(); },
   newGame() { G.__tpsCall?.newGame?.(); },
+  startFor(self, args) { return !!G.__tpsCall?.startFor?.(self, args); },
 });

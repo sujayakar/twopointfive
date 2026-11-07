@@ -115,7 +115,7 @@ async function pool() {
 
 /** Identity: FNV hashes of deterministic stills, ONE FRESH BOOT PER VIEW (the fixtures' flicker, the haze clock and the TAAU phase all key on the frame index). Views:
  *  'marks' = the conference glass with a crack star per pane + a scorch + 80 seeded bullet marks on the floor / walls (decals.wgsl through the g-buffer AND the composite's glass path),
- *  'lot' = the lit car park from above (froxel beams, rain off), 'lobby' = the polished lobby floor (RT reflections + markings). Same call sequence on two builds → same hashes. */
+ *  'lot' = the lit car park from above (beams, rain off), 'lobby' = the polished lobby floor (RT reflections + markings). Same call sequence on two builds → same hashes. */
 const DEG = Math.PI / 180;
 /** the conference partition's three east sheets (c.x 10.75, 11.85, 12.95 on z = 10), BY WHERE THEY STAND: they were boxes 112‥114 until the door-size export of 10-10 moved them one along */
 const CONF_EAST = [officePane(10.75, 10), officePane(11.85, 10), officePane(12.95, 10)];
@@ -204,7 +204,7 @@ async function validate() {
         __daylight(true); await step(8); __daylight(false); await step(8);                                                             // the light rig swapped both ways (invalidateWorldCache)
         __weather.strike({ bearing: 3.5, elevDeg: 35, distKm: 1.2, peak: 40 }); await step(6);                                        // a transient alive (the gather's subtraction walk)
         window.__resetClock(); await step(6);                                                                                           // R2.7
-        __stage({ look: [30, 0, 20], yaw: 0, pitch: ${50 * DEG}, dist: 12 }, {}); await step(6);                                        // a camera CUT (R2.8's froxel restart) 
+        __stage({ look: [30, 0, 20], yaw: 0, pitch: ${50 * DEG}, dist: 12 }, {}); await step(6);                                        // a camera CUT
         for (const v of [3, 4, 9, 13, 0]) { __engine.settings.debugView = v; await step(2); }                                          // a few debug views and back
         await step(20);
         const oom = await dev.popErrorScope(); const val = await dev.popErrorScope();
@@ -219,34 +219,6 @@ async function validate() {
   if (bad) process.exitCode = 1;
 }
 
-/** R2.8: the froxel ghost across a hard cut — settle 40 frames on the lot's lamp beams, CUT to the corridor, and compare the frame 1 / 2 / 4 / 8 after the cut against the settled
- *  frame 30 after it (mean |Δ| luminance over the frame, and over its top third where the haze sits): a history that follows the cut carries the lot's beams into those frames. */
-async function ghost() {
-  const c = await Cdp.launch({ port });
-  try {
-    await boot(c, 'quality=high');
-    const r = await c.eval(`(async () => {
-      await import('/qa/perf-harness.js');
-      seed(9); calm({ look: [20, 0, 31], yaw: ${180 * DEG}, pitch: ${50 * DEG}, dist: 14 }, { pos: [30, 0, 20], yaw: 0, invisible: true }); __engine.settings.grain = 0; window.__resetClock();
-      await step(40);
-      if (${process.env.GHOST_TURN ? 'true' : 'false'}) __stage({ look: [20, 0, 31], yaw: ${90 * DEG}, pitch: ${50 * DEG}, dist: 14 }, {}); else __stage({ look: [15, 0, 11.1], yaw: ${90 * DEG}, pitch: ${30 * DEG}, dist: 6 }, {});   // GHOST_TURN: the same look point swung 90° at once (frusta overlap: world-space history survives reprojection) — else a 13 m cut to the corridor
-      const grab = async () => { await __perf.render(1); const fr = await __perf.readback(); return fr; };
-      const frames = {}; let n = 0;
-      for (const k of [1, 2, 4, 8, 30]) { await step(k - n); n = k; frames[k] = await grab(); }
-      const lum = (d, o) => 0.2126 * d[o] + 0.7152 * d[o + 1] + 0.0722 * d[o + 2];
-      const ref = frames[30]; const W = ref.w, H = ref.h; const out = {};
-      for (const k of [1, 2, 4, 8]) {
-        const f = frames[k]; let s = 0, sTop = 0, mx = 0, cnt = 0, cntTop = 0;
-        for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) { const o = (y * W + x) * 4; const d = Math.abs(lum(f.data, o) - lum(ref.data, o)); s += d; cnt++; if (y < H / 3) { sTop += d; cntTop++; } if (d > mx) mx = d; }
-        out['f' + k] = { mean: +(s / cnt).toFixed(3), meanTop: +(sTop / cntTop).toFixed(3), max: +mx.toFixed(1) };
-      }
-      return { out, taaResets: __taa.resets, lastReset: __taa.lastReset, froxAge: __engine.passes.froxels.age };
-    })()`, { timeoutMs: 400000 });
-    console.log(JSON.stringify(r));
-    if (process.env.SHOT) await saveReadback(c, 'docs/shots/rfix_ghost_f30.jpg');
-  } finally { await c.close(); }
-}
-
-const table: Record<string, () => Promise<void>> = { r101, r101b, pool, identity, look, validate, ghost };
+const table: Record<string, () => Promise<void>> = { r101, r101b, pool, identity, look, validate };
 if (!table[cmd]) { console.error('unknown subcommand', cmd, Object.keys(table)); process.exit(2); }
 await table[cmd]();

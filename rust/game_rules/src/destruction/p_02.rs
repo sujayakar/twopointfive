@@ -238,34 +238,6 @@ pub fn destruction_walls_for(g: &mut crate::game::Game, at: V3, opts: Option<cra
     crate::wallbreak::wall_break_would_open(g, at, Some(ask))
 }
 
-/// Run `fn_` with the level's line tests as they would be once `walls` had opened; everything is put back.   (destruction.ts withWallsOpen)
-pub fn destruction_with_walls_open<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, walls: &[crate::wallbreak::WallOpening], fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    if walls.is_empty() { return fn_(g); }
-    let no_shadow = crate::scene_boxes::box_flag().no_shadow;
-    let mut was: Vec<(BoxId, f64)> = Vec::new();
-    let mut extra: Vec<BoxId> = Vec::new();
-    for w in walls {
-        for &b in &w.standing {
-            let f = seam_box(g, b).flags;
-            was.push((b, f));
-            seam_box(g, b).flags = or_bits(f, no_shadow);
-        }
-        for &b in &w.left { extra.push(b); }
-    }
-    // (with nothing left over the TypeScript assigns the same list back: nothing to swap)
-    let keep = if extra.is_empty() { None } else {
-        let keep = g.col.dynamic_boxes.clone();
-        g.col.dynamic_boxes.extend_from_slice(&extra);
-        Some(keep)
-    };
-    crate::scene_collision::wrote(g);
-    let out = fn_(g);
-    if let Some(keep) = keep { g.col.dynamic_boxes = keep; }
-    for &(b, f) in was.iter().rev() { seam_box(g, b).flags = f; }
-    crate::scene_collision::wrote(g);
-    out
-}
-
 /// Furniture under a blast, for a charge that does not come through blast().   (destruction.ts furnBlast)
 pub fn destruction_furn_blast(g: &mut crate::game::Game, at: V3, src: crate::furnblast::BlastSource, who: Option<f64>) {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);

@@ -47,12 +47,15 @@ const compiled = (expr: string) => { let f = fieldFn.get(expr); if (!f) { f = ne
 // TypeScript made since has a number past that, and bytes that hold it name a row that is not there: a list of the Rust game's would index past its
 // table's end on the next tick. Every such id written is counted here; the scan reads the count round a leaf's bytes and does not send them (scan.ts).
 export const PAST = { n: 0, id: '' };
-class Book { /** rows of each table the Rust game has, once an apply has said (import.ts) */ known?: Map<string, number>; ids = new Map<string, Map<object, number>>(); lists = new Map<string, object[]>(); serial = new WeakMap<object, number>(); nextSerial = 1; serials = new Map<object, number>(); /** once the Rust game deals the serials (import.ts takes its counter with every apply), what this side deals comes from a range of its own: two things must never share a number */ rustDeals = false; ownSerial = 0x40000000;
+// WHICH GAME A ROW IS OF: the book that gave it its number, so that a call handed a row is that row's game's call and no other's (surface.ts). A row two books hold (a thing every game of a process shares) names no game.
+const ROW_BOOK = new WeakMap<object, Book | null>();
+export const gameOfRow = (o: object): object | null => ROW_BOOK.get(o)?.game ?? null;
+class Book { constructor(readonly game: object) {} /** rows of each table the Rust game has, once an apply has said (import.ts) */ known?: Map<string, number>; ids = new Map<string, Map<object, number>>(); lists = new Map<string, object[]>(); serial = new WeakMap<object, number>(); nextSerial = 1; serials = new Map<object, number>(); /** once the Rust game deals the serials (import.ts takes its counter with every apply), what this side deals comes from a range of its own: two things must never share a number */ rustDeals = false; ownSerial = 0x40000000;
   /** (for the importer: every object that has a serial) */ serialOfObjects() { return this.serials; }
   first = new Map<object, string>();
   /** poses that have no place in the pool, in the order first met: their floats go at the end of the bytes */
   loose = new Map<object, number>();
-  idOf(id: string, o: object): number { let M = this.ids.get(id); if (!M) { M = new Map(); this.ids.set(id, M); this.lists.set(id, []); } let i = M.get(o); if (i === undefined) { i = M.size; M.set(o, i); this.lists.get(id)!.push(o); this.first.set(o, AT); } return i; }
+  idOf(id: string, o: object): number { let M = this.ids.get(id); if (!M) { M = new Map(); this.ids.set(id, M); this.lists.set(id, []); } let i = M.get(o); if (i === undefined) { i = M.size; M.set(o, i); this.lists.get(id)!.push(o); this.first.set(o, AT); const was = ROW_BOOK.get(o); ROW_BOOK.set(o, was === undefined || was === this ? this : null); } return i; }
   listOf(id: string): object[] { return this.lists.get(id) ?? []; }
   serialOf(o: object): number { let s = this.serial.get(o); if (s === undefined) { s = this.rustDeals ? this.ownSerial++ : this.nextSerial++; this.serial.set(o, s); this.serials.set(o, s); } return s; } }
 const BOOKS = new WeakMap<object, Book>();
@@ -212,6 +215,9 @@ export function seedBook(g: any, knobs: Record<string, unknown>) { helpersOf(g, 
 /** one value's bytes at a time, for a walk that writes many: the game's book and helpers stand for the walk (scan.ts). The answer holds only until the next call */
 export function leafBytes(g: any, knobs: Record<string, unknown>): (n: Node, v: unknown) => Uint8Array { G = g; BK = BOOKS.get(g)!; B = helpers(g, knobs); const o = new Out(); return (n, v) => { o.n = 0; wr(n, v, o); return o.view().slice(); }; }
 export function exportPart(g: any, knobs: Record<string, unknown>, parts: [string | Node, any][]): Uint8Array { return forGame(g, () => { G = g; BK = BOOKS.get(g)!; B = helpers(g, knobs); const o = new Out(); for (const [ty, v] of parts) wr(typeof ty === 'string' ? parse(ty) : ty, v, o); return o.view().slice(); }); }
+/** WHICH OF THE HALF'S CAMERA ROWS AND INPUT ROWS ARE THE HOST'S OWN (game.ts hostCam / hostInput, handed at the stand), as the text of `hostrows.txt`:
+ *  their places in the book's two lists, the order the half lists them in. -1 = the game was handed none. Read by half-grow.ts. */
+export function hostRowsText(g: any): string { const bk: any = BOOKS.get(g)!; return `cam ${bk.listOf('CameraId').indexOf(g.hostCam)}\ninput ${bk.listOf('InputId').indexOf(g.hostInput)}\n`; }
 /** WHAT THE HOST HANDS THE RUST GAME BEFORE EACH STEP, in about 2 KB (rust: io::take_host_half): each seat's record in seat order (`cmds`, as `Game.update` makes them), then every camera and Input row, then each seat's mark (the cut the host last took). The book must exist. */
 export function hostHalfParts(g: any, cmds: readonly any[]): [string, any][] { const bk = BOOKS.get(g)!, P: [string, any][] = [['u32', cmds.length]]; for (const c of cmds) P.push(['crate::cmd::PlayerCmd', c]);
   for (const [id, ty] of [['CameraId', 'crate::camera::FollowCamera'], ['InputId', 'crate::input::Input']]) { const L: any[] = bk.listOf(id); P.push(['u32', L.length]); for (const row of L) P.push([ty, row]); }
@@ -229,7 +235,7 @@ export function shownSeat(g: any): number { const i = g.seats?.indexOf?.(g.local
 /** A GAME'S ROWS ARE NUMBERED THE SAME ON EVERY MACHINE. The walk meets the rows of the seat the accessors answer first, so it walks with the first seat standing, whichever seat this host shows */
 export function exportGame(g: any, knobs: Record<string, unknown>): Uint8Array { return forGame(g, () => { if (!(g.seats?.length > 1)) return exportGameNow(g, knobs); const shown = g.localSeat; g.localSeat = g.seats[0]; try { return exportGameNow(g, knobs); } finally { g.localSeat = shown; } }); }
 function exportGameNow(g: any, knobs: Record<string, unknown>): Uint8Array {
-  G = g; let bk = BOOKS.get(g); if (!bk) { bk = new Book(); BOOKS.set(g, bk); } BK = bk; REP = new Map(); AT = ''; B = helpers(g, knobs);
+  G = g; let bk = BOOKS.get(g); if (!bk) { bk = new Book(g); BOOKS.set(g, bk); } BK = bk; REP = new Map(); AT = ''; B = helpers(g, knobs);
   for (const [id, e] of Object.entries(SCHEMA.seeds as Record<string, string>)) { let L: any; try { L = compiled(e)(g, g, B); } catch { L = null; } if (L && Symbol.iterator in Object(L)) for (const x of L) if (x && typeof x === 'object') BK.idOf(id, x); else miss(`a seed of ${id} not a list`); }
   const main = new Out(); wType({ k: 'type', path: SCHEMA.root }, g, main);
   // tables: a row can reach a new thing of another table, so go round until none grows

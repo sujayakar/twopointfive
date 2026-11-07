@@ -60,13 +60,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Defender cues (10-07;** `src/game/cues.ts`, `Game.cues`, record rebuild/telegraphing/cues.md; the maintainer: "maybe we just need more
   telegraphing from the NPCs then"; `CUES.on` DEFAULT ON, Tab ▸ Sandbox ▸ 'Defender cues', `?nocues`, persisted `twopointsix.cues`; off = the strip and every line as they
   were, digest for digest). Three things, all for a ROOM FIGHT's defenders (team 'hostile' units while `fightLive`): (1) their radio lines reach the RADIO STRIP — `say()`
-  hands them to `cues.heard`, both overlays draw `stripRows(game)` (the cues' own row list: an undrawn row can no longer push a drawn one out of the five-row message ring;
+  hands them to `cues.heard`, the overlay draws `game.view.radio` (`cues::radio_rows`, the cues' own row list: an undrawn row can no longer push a drawn one out of the five-row message ring;
   `'radio: '` rows from `Game.msg` are filed as class 0, always drawn; `adopt()` on a checkpoint load); (2) the strip RANKS and RATE-LIMITS (classes 1 coming round / to help ·
   2 stood down · 3 holding on purpose · 4 the net knows · 5 fell back · 6 still alert — `CLASSES` regexes for the old lines, `LINES[kind].cls` for the new; dup 10 s, per-class
   gaps once two rows are up, ≤ 2 rows a class, a better class takes the worst row; one squelch a frame); (3) the SILENT decisions get a line (`LINES`: help, stay / stayOurs,
   huntOver, calm, cover, still, fellBack, planted / pinnedIn, squadHears / Copies / Stays / Quiet, + spoken surprised / flinch), read off `RoomFight.log` notes and each `Def`
   at the tail of `Game.update`. **THE FILE ONLY READS THE GAME: a cue is never put on `Guard.bubble` (the bark clocks read it and would move a die) — cue bubbles live in a
-  WeakMap behind `cues.bubbleOf(gd)` (both bubble UIs), no `Math.random`, nothing a digest reads.** Two say-site rewordings ride the switch and DO change bubble text (so the
+  WeakMap behind `cues_bubble_of` (the HUD is told it: `game.view.bubbles`), no `Math.random`, nothing a digest reads.** Two say-site rewordings ride the switch and DO change bubble text (so the
   frozen-digest probes pin `CUES.on` off: threshold-identity, nvg / irlaser `digestLines` — a new default-on switch, the list grows by this one): a unit's 'back to your posts'
   → "he's down — hold where you are", and tactics.ts names places through `dialogue.ts placeName` (a level's own rooms and its `scenarios.places` / 'outside the mess'; with the switch on
   `roomName` — the dialogue templates' noun — and two of rescue.ts's lines are the level's own too off the office, never 'the car park' / 'the corridor'; off = the office's
@@ -921,10 +921,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   7, team standing 24 → 23 of 64, 8 of 16 the same. Standard, seeds 1‥8 (squads dig in there too): the compound's wedges 36 → 39, won 4 → 3, team standing
   8 → 4 of 32; the warehouse won 5 and 5. So it gives the compound back wedges its placement was tallied without, and the compound is a little steeper for
   it: a claim to the compound's owner, `?nohaulhome` is the way back.
-  NOT mended, and not this rule's: (1) with the furniture AT the door and the leaf not yet latched, his hand waits `latchSecs` (2.5 s) and then he lets
+  NOT mended, and not this rule's: (1) with the furniture AT the door and the leaf not yet latched, his hand waited `latchSecs` (2.5 s) and then he let
   the brace go without a word — a closing leaf a few frames from home (deal 2: 0.02 rad), or a mate still standing in the doorway (the probe's stay-open
-  arm on deals 4, 7, 8: a mate 0.5 m from the door). That wait is `DIGIN.shutOpen`'s ground (7 s, pushes home, pulls again), which ships off because it
-  overshot the barracks; (2) nothing about which furniture he picks or where he pushes from. Never seen on a GPU, never played by a person.
+  arm on deals 4, 7, 8: a mate 0.5 m from the door). MENDED 2026-11-07 for the closing leaf: `digin hand_waits` holds a man with furniture while `doors_coming_home` says the leaf is still on its
+  way (a pulled leaf from wide open takes about five seconds, and doors stay where they are left, so many doors he brings furniture to are open); he still lets go of a leaf a body has stopped on the clock, and a man who
+  only came to shut it leaves on the clock as before (the pull finishes without him). No switch. Native: `rust/game_start/tests/offers.rs` (red before on the compound's bunk room: 'to cover', no wedge).
+  `DIGIN.shutOpen` (7 s, pushes home, pulls again, other doors) stays off: it overshot the barracks. Measured with `hold`, before against after, all five hands, seeds 1 and 2, 240 s, standard difficulty, on compound, barracks and depot: 0 of 30 runs part, so wedges (compound 32, barracks 14, depot 0) and who is left standing are unchanged. Doors mostly start shut and men dig in before anyone has opened them, so these runs never reach the case; the bunk room in the test stages it. Hard not run. Never seen on a GPU, never played by a person;
+  (2) nothing about which furniture he picks or where he pushes from.
 - **A calm guard with a long wait in the dark sits down and dozes (10-13)** (`src/game/doze.ts`, `DOZE.on`; page on, `?nodoze`; frozen stand off, `TPS_DOZE=1`;
   on the shipped stand `TPS_DOZE=0` puts it off; a `FROZEN_HOLDS` row; table in `knobs.ts` + `JOURNAL_KNOBS`, a recording from before the key replays with it
   off; Tab ▸ Sandbox ▸ Detection & movement 'calm guards doze in the dark' + a read-only line). The maintainer's ask (2026-10-13): 'guards sleeping in dark
@@ -1070,13 +1073,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   wall changes the way they come. No man is added and nobody's eyes, aim or health change. A pure function: no dice, no clock, no state (nothing for a
   checkpoint). WHAT IT COSTS, known: with squads staged the floor is a squads level to every rule that asks (`squadsLive`): the press stands down, men
   dig in on their squad's word, and HARD on these eight levels is the drilled garrison and no longer "the defenders come at you together" — the mission
-  sheet says so (`difficulty.ts squadsHeld`, read by ui/picks.ts and ui/missions.ts; `squadsOf` stays the row's fact about its level FILE). The
+  sheet says so (`difficulty.ts squadsHeld`, read by ui/missions.ts; `squadsOf` stays the row's fact about its level FILE). The
   maintainer's call is asked on that. With the enemy kit on stun charges at standard, the office room clear's defenders put 1 charge through a door in 8 scripted runs
   where one pool puts three or more (it is the press that carries them, and the press stands down): the kit lever does little on these levels while
   the rule is on (`levers-run` holds the rule off for its two tallies: it measures the kit lever on one pool). SWITCH: ON in the page (`?nosquaddeal`; the debugger
   row 'enemies are in squads on every level'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` `'SQUADDEAL.on': 'TPS_SQUADDEAL=1'`), in the
   knob registry and `JOURNAL_KNOBS` (a recording from before the key replays with it off). SEAMS in others' files, one clause each: roomclear.ts
-  (`onStaged`), difficulty.ts (`squadsHeld`), ui/picks.ts and ui/missions.ts (the Hard sentence asks `squadsHeld`), enemysquads-probes.ts (its "no
+  (`onStaged`), difficulty.ts (`squadsHeld`), ui/missions.ts (the Hard sentence asks `squadsHeld`), enemysquads-probes.ts (its "no
   squads block = none staged" line holds the rule off), levers-probes.ts (as above). CHECK: `tools/qa/squaddeal-check.ts` (probe `squaddeal`), 7 lines:
   (a) the cut on the eight rows (every room in one squad, a man in each, the count the men call for, roomclear.ts `checkSquads` silent), (b) the file
   wins (the warehouse: the same object), (c) a loud way in draws men to the noise with their word 1.5 s or more before the first is there (the kill

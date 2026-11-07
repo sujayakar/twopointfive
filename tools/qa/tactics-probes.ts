@@ -11,10 +11,10 @@
 //                     and only goes on — at a walk — after loneWait or when a second man turns up; the same man with Sam four metres off fights as he always did.
 //   tactics-door      a man struck down IN the storage doorway under his colleague's eyes: the doorway is a kill zone for their side — the colleague sent through
 //                     it stops short on the jamb out of the opening's line (his capsule never inside the gap till the drill starts), radios it, waits, slices the
-//                     pie and goes in at a run; staged again with a stun charge on him, the bang lands inside first.
+//                     pie and goes in at a run.
 //   tactics-rounds    Sam's rifle fired out of the break room through its open west door past a man in the cubicles: that door is dangerous for the guards and
 //                     the man's way to Sam's fix re-plans through the north door (his path never touches the west door's gap cells).
-//   tactics-decay     a dangerous door is plain again doorDanger seconds later (and one banged and entered, at once).
+//   tactics-decay     a dangerous door is plain again doorDanger seconds later.
 import { standUp, ROOT } from './headless.ts';
 const { v3, wrapAngle, DEG } = await import(`${ROOT}/src/math/vec.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
@@ -47,7 +47,9 @@ export function tapSay(game: any) {
 
 // ================================================================ shared staging for the behaviour probes (tactics.ts imported here, not at the top: the identity run above must load on a tree without it)
 const tac = await import(`${ROOT}/src/game/tactics.ts`);
-const { tacticsRoleOf, roleRecord, loneRecord, gateRecord, plansOf, dangerDoors, dangerAt, giveStuns, TACTICS_DEBUG } = tac;
+const { tacticsRoleOf, roleRecord, loneRecord, gateRecord, plansOf, dangerDoors, TACTICS_DEBUG } = tac;
+/** the danger record on a door (tactics.ts dangerAt's answer, which went with the tick: the same list on the copy) */
+const dangerAt = (g: any, d: any, team: string) => dangerDoors(g, team).find((r: any) => r.door === d) ?? null;
 /** the level up off `seed`, god mode, Sam's meter pinned dark by the caller each frame; TACTICS_DEBUG lines collected (printed under --verbose) */
 async function stage(seed: number) {
   Math.random = seeded(seed);
@@ -208,25 +210,24 @@ export async function tacticsLone() {
   return allPass;
 }
 
-// ================================================================ (d) a man down in a doorway, in view: the doorway is a kill zone — stop short, call, wait, slice, cross fast (and with a charge: bang first)
+// ================================================================ (d) a man down in a doorway, in view: the doorway is a kill zone — stop short, call, wait, slice, cross fast
 /** the door gap's floor rectangle: along the frame line hinge → latch, ± `depth` either side of it */
 function inGap(game: any, d: any, p: Vec3, depth = 0.35): boolean {
   const hx = d.def.hinge[0], hz = d.def.hinge[1], ux = Math.cos(d.def.closedDir), uz = Math.sin(d.def.closedDir); const nx = -uz, nz = ux;
   const a = (p[0] - hx) * ux + (p[2] - hz) * uz, b = (p[0] - hx) * nx + (p[2] - hz) * nz;
   return a > -0.1 && a < d.def.width + 0.1 && Math.abs(b) < depth;
 }
-async function doorRun(seed: number, stun: boolean) {
+async function doorRun(seed: number) {
   const S = await stage(seed); const { W, game, pl, A, B, C, lines, tlog } = S;
   park(B, 1);
   game.teleportPlayer([6.0, 0, 22.0]); game.playerInvisible = true;
   const d = game.doors.byName('storage');
   C.hold = false; C.pinned = false; C.dazzledUntil = -1; C.heardUpTo = game.eventSeq; place(C, [32.7, 0, 10.45], Math.PI);   // Reyes in the storage doorway, corridor side of the shut leaf
   place(A, [28.5, 0, 11.2], Math.PI / 2); W.step(DT);                                                                          // Kowalski four metres up the corridor, looking straight at him
-  if (stun) giveStuns(A, 1);
   killGuard(game, C, [0, 0, -1], true);   // struck down there (Sam's takedown, unseen: Sam is the sandbox's ghost) — under Kowalski's eyes
   const dangerAtOnce = !!dangerAt(game, d, 'guard');
   fixAlert(A, game, [33.5, 0, 6.5]); A.reactT = 0.4;   // and Kowalski sent in: a fix inside the room, the doorway between
-  let gateAt = -1, stackedAt = -1, drillAt = -1, crossAt = -1, inAt = -1, bangAt = -1, bangPos: Vec3 | null = null; let inGapBefore = 0, minGapDistBefore = Infinity, radioT = -1;
+  let gateAt = -1, stackedAt = -1, drillAt = -1, crossAt = -1, inAt = -1; let inGapBefore = 0, minGapDistBefore = Infinity, radioT = -1;
   const phases: string[] = []; let lastPhase = ''; const slicePos: string[] = []; const trail: string[] = [];
   const bounds = { x0: 30.12, x1: 35.88, z0: 4.12, z1: 9.94 };
   for (let f = 0; f < 60 * 26; f++) {
@@ -237,19 +238,18 @@ async function doorRun(seed: number, stun: boolean) {
     if (ph !== lastPhase) { phases.push(`${f1(t)}s ${ph}`); lastPhase = ph; if (ph === 'wait' && stackedAt < 0) stackedAt = t; if ((ph === 'slice' || ph === 'toss') && drillAt < 0) drillAt = t; if (ph === 'cross' && crossAt < 0) crossAt = t; }
     if (drillAt < 0) { if (inGap(game, d, A.char.pos)) inGapBefore++; minGapDistBefore = Math.min(minGapDistBefore, Math.abs(A.char.pos[2] - 10)); }
     if (G?.phase === 'slice' && f % 6 === 0) slicePos.push(`(${f2(A.char.pos[0])},${f2(A.char.pos[2])})→yaw ${Math.round(A.char.aimYaw / DEG)}°`);
-    for (const e of game.events) if (e.kind === 'bang' && e.time === t && bangAt < 0) { bangAt = t; bangPos = v3.copy(e.pos); }
     if (inAt < 0 && A.char.pos[0] > bounds.x0 && A.char.pos[0] < bounds.x1 && A.char.pos[2] < bounds.z1 - 0.3) inAt = t;
     if (radioT < 0) { const r = lines.find(l => l.radio && l.who === 'Kowalski' && /doorway|door/.test(l.text)); if (r) radioT = r.t; }
     if (f % 30 === 0) trail.push(`${f1(t)}s Kowalski ${A.state} (${f2(A.char.pos[0])}, ${f2(A.char.pos[2])}) ${tacticsRoleOf(game, A) ?? '-'} ${G ? G.phase : ''} spd ${f2(A.speed)} crouch ${f1(A.char.anim.crouchTarget)} · leaf ${f2(d.angle)}${d.latched ? 'L' : ''}`);
     if (inAt >= 0 && t - inAt > 1.5) break;
   }
-  return { ...S, d, dangerAtOnce, gateAt, stackedAt, drillAt, crossAt, inAt, bangAt, bangPos, inGapBefore, minGapDistBefore, radioT, phases, slicePos, trail, bounds };
+  return { ...S, d, dangerAtOnce, gateAt, stackedAt, drillAt, crossAt, inAt, inGapBefore, minGapDistBefore, radioT, phases, slicePos, trail, bounds };
 }
 export async function tacticsDoor() {
-  console.log('\n=== tactics-door: Reyes struck down in the storage doorway under Kowalski\'s eyes, Kowalski then sent into the room — the doorway is a kill zone: he stacks on the jamb OUT of the opening (never in the gap before the drill), radios it, waits doorWait, slices the pie, crosses at a run; again with a stun charge on him: the bang lands INSIDE first ===');
+  console.log('\n=== tactics-door: Reyes struck down in the storage doorway under Kowalski\'s eyes, Kowalski then sent into the room — the doorway is a kill zone: he stacks on the jamb OUT of the opening (never in the gap before the drill), radios it, waits doorWait, slices the pie, crosses at a run ===');
   let allPass = true;
   {
-    const R = await doorRun(805, false); const { game, A, d, lines, tlog } = R;
+    const R = await doorRun(805); const { game, A, d, lines, tlog } = R;
     const fails: string[] = [];
     if (!R.dangerAtOnce) fails.push('the storage door was not marked dangerous the frame Reyes dropped in it under Kowalski\'s eyes');
     if (R.gateAt < 0) fails.push('the gate never took Kowalski');
@@ -264,24 +264,7 @@ export async function tacticsDoor() {
     const crossTrail = R.trail.filter(s => / cross /.test(s)).map(s => Number(/spd ([0-9.]+)/.exec(s)?.[1] ?? 0)); peakIn = Math.max(0, ...crossTrail);
     if (R.crossAt >= 0 && crossTrail.length && peakIn < game.tune.guardInvestigate) fails.push(`he crossed at ${f2(peakIn)} m/s peak (want a run, > ${game.tune.guardInvestigate})`);
     const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (1) no charge: dangerous at once ${R.dangerAtOnce}; gate at ${f1(R.gateAt)} s; in the gap before the drill: ${R.inGapBefore} frames (nearest ${f2(R.minGapDistBefore)} m off the frame line); radio at ${R.radioT < 0 ? '—' : f1(R.radioT) + ' s'}; waited ${R.stackedAt >= 0 && R.drillAt >= 0 ? f1(R.drillAt - R.stackedAt) : '—'} s; cross at ${R.crossAt < 0 ? '—' : f1(R.crossAt)} s peaking ${f2(peakIn)} m/s; inside at ${R.inAt < 0 ? '—' : f1(R.inAt) + ' s'}\n    phases: ${R.phases.join(' → ')}\n    slice stations (pos → aim yaw): ${R.slicePos.join(' ')}\n    radio: ${lines.filter((l: any) => l.radio).map((l: any) => `${f1(l.t)}s ${l.who}: "${l.text}"`).join(' · ')}\n    ${R.trail.join('\n    ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-    dumpLog(tlog, 30);
-  }
-  {
-    const R = await doorRun(806, true); const { game, A, d, lines, tlog, bounds } = R;
-    const fails: string[] = [];
-    if (R.bangAt < 0) fails.push('no bang');
-    else {
-      const p = R.bangPos!; const inside = p[0] > bounds.x0 && p[0] < bounds.x1 && p[2] > bounds.z0 && p[2] < bounds.z1;
-      if (!inside) fails.push(`the charge went off at ${posS(p)} — not inside the storage room`);
-      if (R.crossAt >= 0 && R.bangAt > R.crossAt + 1e-6) fails.push(`the bang (${f1(R.bangAt)} s) came after he started in (${f1(R.crossAt)} s)`);
-      if (A.dazzledUntil > R.bangAt) fails.push('the thrower dazzled himself');
-    }
-    if (R.inAt < 0) fails.push('he never went in after the bang');
-    if (R.inGapBefore > 0) fails.push(`in the gap on ${R.inGapBefore} frame(s) before the drill`);
-    const rec = dangerAt(game, d, 'guard');
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (2) a stun charge on him: bang at ${R.bangAt < 0 ? '—' : f1(R.bangAt) + ' s ' + posS(R.bangPos)}; cross at ${R.crossAt < 0 ? '—' : f1(R.crossAt)} s; inside at ${R.inAt < 0 ? '—' : f1(R.inAt) + ' s'}; the doorway after: ${rec ? `still dangerous ${f1(rec.until - game.time)} s` : 'plain again (banged + entered)'}\n    phases: ${R.phases.join(' → ')}\n    lines: ${lines.filter((l: any) => l.who === 'Kowalski').map((l: any) => `${f1(l.t)}s ${l.radio ? 'RADIO ' : ''}"${l.text}"`).join(' · ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — dangerous at once ${R.dangerAtOnce}; gate at ${f1(R.gateAt)} s; in the gap before the drill: ${R.inGapBefore} frames (nearest ${f2(R.minGapDistBefore)} m off the frame line); radio at ${R.radioT < 0 ? '—' : f1(R.radioT) + ' s'}; waited ${R.stackedAt >= 0 && R.drillAt >= 0 ? f1(R.drillAt - R.stackedAt) : '—'} s; cross at ${R.crossAt < 0 ? '—' : f1(R.crossAt)} s peaking ${f2(peakIn)} m/s; inside at ${R.inAt < 0 ? '—' : f1(R.inAt) + ' s'}\n    phases: ${R.phases.join(' → ')}\n    slice stations (pos → aim yaw): ${R.slicePos.join(' ')}\n    radio: ${lines.filter((l: any) => l.radio).map((l: any) => `${f1(l.t)}s ${l.who}: "${l.text}"`).join(' · ')}\n    ${R.trail.join('\n    ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
     dumpLog(tlog, 30);
   }
   console.log(`=== tactics-door: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
@@ -343,18 +326,13 @@ export async function tacticsRounds() {
 
 // ================================================================ (f) danger decays
 export async function tacticsDecay() {
-  console.log('\n=== tactics-decay: a doorway marked dangerous is plain again tune.doorDanger seconds later; the A* prices it while it lasts and not after; a record banged AND entered clears at once ===');
+  console.log('\n=== tactics-decay: a doorway marked dangerous is plain again tune.doorDanger seconds later (that the plan prices it while it lasts: tactics-rounds) ===');
   const { W, game, pl, A, B, C, tlog } = await stage(808);
   park(A, 0); park(B, 1); park(C, 2); game.teleportPlayer([6, 0, 22]); game.playerInvisible = true;
   const d = game.doors.byName('server'); const T0 = game.time;
   const rec = tac.markDanger(game, d, 'guard', 'rounds', null);
   const until0 = rec.until;
   let liveAt10 = false, liveAtEnd = true, goneAt = -1;
-  // the penalty seen by a guard's plan through that door while it lasts: Kowalski (parked, but a guard) asking for a route from the corridor into the server room
-  A.hold = false; A.pinned = false; A.state = 'search'; place(A, [17.7, 0, 11.3], Math.PI);
-  const pen0 = tac.tacticsPenalty(game, A, [17.7, 0, 7.0]);
-  const { doorCells } = guardsMod; const DC = doorCells(game); let doorMult = 1; if (pen0) for (const [i, dd] of DC) if (dd === d) { const nav = game.col.nav; doorMult = Math.max(doorMult, pen0(i % nav.W, Math.floor(i / nav.W))); }
-  A.hold = true; A.pinned = true;
   for (let f = 0; f < 60 * (game.tune.doorDanger + 3); f++) {
     pl.visibility = 0.02; W.step(DT);
     const live = !!dangerAt(game, d, 'guard');
@@ -362,23 +340,13 @@ export async function tacticsDecay() {
     if (!live && goneAt < 0) goneAt = game.time - T0;
   }
   liveAtEnd = !!dangerAt(game, d, 'guard');
-  A.hold = false; A.pinned = false; const penAfter = tac.tacticsPenalty(game, A, [17.7, 0, 7.0]); A.hold = true; A.pinned = true;
-  // banged + entered clears at once
-  const d2 = game.doors.byName('manager'); const r2 = tac.markDanger(game, d2, 'guard', 'drop', 'Reyes'); r2.banged = true;
-  const G = { door: d2, rec: r2, phase: 'cross', role: 'lead', lead: null, crossed: true } as any;   // (the release's own bookkeeping, driven by hand: a lead who crossed a banged doorway)
-  B.hold = false; B.pinned = false; (tac as any).gateRecord(game, B);   // (touch: the state exists)
-  // emulate: releaseGate is private — the public effect is rec.until once a crossing lead is let go; assert through a real gate would need the whole drill, which tactics-door runs. Here: the rule as data.
-  const clearedEarly = (() => { if (r2.banged) { r2.entered = true; r2.until = Math.min(r2.until, game.time); } return !dangerAt(game, d2, 'guard'); })();
   const fails: string[] = [];
   if (Math.abs(until0 - T0 - game.tune.doorDanger) > 0.05) fails.push(`until ${f2(until0 - T0)} s (want doorDanger ${game.tune.doorDanger})`);
   if (!liveAt10) fails.push('not live 10 s in');
   if (liveAtEnd) fails.push(`still live ${f1(game.time - T0)} s in`);
   if (goneAt < 0 || Math.abs(goneAt - game.tune.doorDanger) > 0.1) fails.push(`went plain at ${f2(goneAt)} s (want ${game.tune.doorDanger})`);
-  if (!(doorMult >= 20)) fails.push(`the door's cells cost ×${f1(doorMult)} while dangerous (want ≥ 20)`);
-  if (penAfter !== undefined) fails.push('a penalty function is still handed out after the danger lapsed (want undefined = plain A*)');
-  if (!clearedEarly) fails.push('banged + entered did not clear the record');
   const ok = fails.length === 0;
-  console.log(`- ${ok ? 'PASS' : 'FAIL'} — marked at ${f1(T0)} s for ${f1(until0 - T0)} s; live at +10 s ${liveAt10}; plain again at +${f2(goneAt)} s; door cells ×${f1(doorMult)} while it lasted, penalty after: ${penAfter === undefined ? 'none (plain A*)' : 'STILL PRICED'}; banged+entered → cleared ${clearedEarly}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+  console.log(`- ${ok ? 'PASS' : 'FAIL'} — marked at ${f1(T0)} s for ${f1(until0 - T0)} s; live at +10 s ${liveAt10}; plain again at +${f2(goneAt)} s${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   dumpLog(tlog, 10);
   console.log(`=== tactics-decay: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
   return ok;

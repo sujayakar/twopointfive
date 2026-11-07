@@ -103,7 +103,7 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      all (a developer: `?downloads=1`, or after the fact `__saveUp.on = false` in the console and `__journal.save()` /
                      `__perfrec.deliver(__lastPerfDump)`); a page left while a large file is going up loses it (the benchmark card's Close waits up
                      to `BENCH_SEND_MS` for `cloud.filesIdle`, and its line turns to "were sent"); a file HELD on a page that never shows the
-                     notice (F9 on a mission opened by its link, first visit) is lost with the page. A long take fits: the backend packs text. A page is one bundle: the workbench has no listener, and the replay pages carry no door.
+                     notice (F9 on a mission opened by its link, first visit) is lost with the page. A long take fits: the backend packs text. A page is one bundle: the replay pages carry no door.
                      `bun run tools/qa/savefile-check.ts` (`SAVEFILE_BREAK=1` must fail; it also drives the door over the
                      real `FileSync` and reads main.ts's mapping) is red on a `.download =` or createObjectURL of its own in src/. Checked 2026-10-27:
                      that check and bench-check on both stands; on a page, see qa.md. Never seen on a GPU.
@@ -117,20 +117,20 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      download with no address of the page's making and no `download` spelling (a `data:` link built as an object).
 src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity
                      maps for the reservoirs), rc.ts (cascades), probe.ts (the light meter / smoke probe queries), gbuffer.ts, texpool.ts (pooled targets + history resampling),
-                     denoise.ts (the shared denoiser's pipelines), froxels.ts, particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic
+                     denoise.ts (the shared denoiser's pipelines), particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic
                      map), meshbvh.ts + meshShadows.ts (mesh-traced character shadows at ultra), sdfrig.ts (round-cone proxy fit)
 src/render/shaders/  common.wgsl (structs, flags, box/grid traversal, glassTrace, round-cone character terms) + sdfrig.wgsl; direct: restir.wgsl (THE estimator + the hybrid held-light path)
                      over direct_common.wgsl (direct.wgsl, the leader/tail estimator, went 2026-11-07); sharp_direct / sharp_edge / gdown / gbaa (output-res direct + edge AA); refract_common.wgsl (pure refraction helpers: glass + rain); denoise.wgsl (one core, three
                      clients) + softtile (the old chains dtemporal / softblur / temporal / giblur went 2026-11-07); fgather.wgsl + gather_split.wgsl (the final gather's helpers and its two programs; gatherStrata variant) over gather_split_common
                      + lighting_common (the reflections over gather_common); rc.wgsl / probe.wgsl (radiance cache, meter); reflect.wgsl + reflect_p5.wgsl (RT reflections; the ultra program), detail.wgsl, markings.wgsl,
-                     decals.wgsl; froxel.wgsl + volumetrics.wgsl over vol_common (haze, smoke march, rain); particles.wgsl / particles_common / particles_draw (+ wind_field.wgsl shared with the solver);
+                     decals.wgsl; volumetrics.wgsl over vol_common (haze, smoke march, rain: one march on every tier); particles.wgsl / particles_common / particles_draw (+ wind_field.wgsl shared with the solver);
                      gbuffer.wgsl, cards.wgsl, composite.wgsl (+ its SHARP compute twin) → taau.wgsl (or fxaa.wgsl on ?notaau) → bloom → post (AgX); resample.wgsl (history resampling); trace_lab.wgsl (the traversal lab);
                      smoke_read.wgsl (how every ray and march reads the smoke: appended to the scene prelude after common.wgsl)
 src/smoke/           ONE POOL OF 8³-CELL BRICKS on a level-wide lattice (the *Smoke = one pool of bricks* bullet; the eight 64³ boxes it replaced are in git history before 2026-10-10): smoke.ts
                      (SmokeSystem), smoke.wgsl, smokeGrid.ts (the lattice + the consts both shader sides get), red-black SOR pressure solve, emitters; SoundSeal'd door LEAVES are obstacles (a
                      ≤ 32-leaf sealers uniform, re-baked when a leaf shuts / opens / moves and on `SmokeSystem.obstaclesChanged(c, r)`: destruction hides a static); ω clamped [1, 1.95];
                      wind_force.wgsl = the wind lane's forcing; types.ts = the face game code sees (`SmokeSystemLike`)
-src/scene/           stage.ts (the viewer stage), markings.ts + markingDefaults.ts (the markings model + per-kind recipes), level.ts (runtime types Level / LightDef / PropDef / plans + buildLevel() = loadLevel(levels/office.json), imported so Bun
+src/scene/           markings.ts + markingDefaults.ts (the markings model + per-kind recipes), level.ts (runtime types Level / LightDef / PropDef / plans + buildLevel() = loadLevel(levels/office.json), imported so Bun
                      inlines it into the bundle), levelData.ts (the FILE format LevelData v1: ids, flag names, materials, refs by id; validate /
                      canonical serialize / digest / structuralDiff / id helpers — docs/level-format.md), levelLoad.ts (loadLevel data→Level and
                      levelToData Level→data, order-preserving: data.boxes[i] ≡ world.statics[i]), officeGen.ts (LEGACY procedural generator,
@@ -151,7 +151,7 @@ src/game/            game.ts (Game: state, constructor, event plumbing, doors/pr
                      drill, live Clearing dispatcher), qrf.ts (the response to going loud: trigger, radio telegraph, the four-man
                      element through the west stair door, the perimeter tier), consts.ts),
                      marks.ts (decal emit sites), particleFx.ts (GPU particle sites), glass.ts (rounds star panes), weather.ts (the storm), wet.ts (wet characters: the model + prints / drips),
-                     demo.ts (the old showcase tour: Shot list + puppet choreography; console and tools/qa/tour.ts only), breach.ts (BreachDrill: the two-man
+                     breach.ts (BreachDrill: the two-man
                      breach the night breach scenario runs live), character.ts (anim graph, aim, tactical stances /
                      kick / signals / lockpick layers), camera.ts (follow cam; spectate auto-yaw + low pitch up close),
                      ragdoll.ts, doors.ts, props.ts (pushable furniture), throwables.ts (canisters, dropped mags/
@@ -159,25 +159,24 @@ src/game/            game.ts (Game: state, constructor, event plumbing, doors/pr
                      (carbine tracer streaks: pooled NoShadow boxes muzzle→impact + a transient head light, rule off the Firearm's counters,
                      one call in fireWeapon behind `tune.tracers`), launcher.ts (the FN2000's ring airfoil: flight, hit zones, items),
                      rigProps.ts (everything bolted to a mannequin: goggles, pistol parts, holster, torch, the guards' carbine,
-                     Sam's FN2000 in hand / slung — the viewer's "copy constants" pastes into RIG here), input.ts
+                     Sam's FN2000 in hand / slung), input.ts
                      ALSO in src/game/ (each has its bullet below): teams.ts, interact.ts, devices.ts, attract.ts, savestate.ts, dialogue.ts, floor.ts, civilians.ts, tactics.ts, needs.ts, whistle.ts,
                      qrf.ts, destruction.ts + debris.ts + sheetModel.ts, wind.ts + moths.ts, wet.ts, weather.ts, glass.ts, marks.ts, particleFx.ts, audio_iface.ts, consts.ts
 src/ui/              menu.ts (start/pause card + the debrief / down card), debrief.ts, bindings.ts (the tweak panel = the debugger, on the backslash key — every knob), quality.ts (presets, auto calibration, the ladder + climb),
                      overlay.ts (HUD), panel.ts, boot.ts (boot card + timeline), bubbles.ts, capture.ts, perfrec.ts (F9 recorder)
 src/anim/            gltf.ts (loader; accepts embedded data-URI buffers), skeleton.ts, characters.ts (skinning, CharInst)
 src/audio/ gpu/      audio.ts (mixer, propagation use, voice cap), music.ts (score; its newer pieces: pieces.ts), sfx.ts; gpu/device.ts (adapter/device, the Async pipeline helpers + progress), timer.ts (per-pass timestamps + union)
-src/editor/ viewer/  the level editor (app.ts core host, editor.ts + doc.ts undo, paint/paintui, ui, tools, view, scene, lint, persist, api) and the character viewer runtime/ui/scenes/sheet — both housed
-src/workbench/       by workbench/main.ts (modes, two worlds on one engine); src/math/ vec.ts; src/debugHooks.ts (typed window hooks)
+src/math/            vec.ts; src/debugHooks.ts (typed window hooks)
 tools/               serve.ts (+ levels-api.ts), build.ts, shot-server.ts, artifact-page.py, build-roadmap.ts (board generator), publish-public.sh,
                      level-export.ts (officeGen → levels/office.json; --check = stale test),
-                     qa/ (headless harness: headless.ts, soak.ts, probes.ts, tour.ts, gait.ts = the animation's numbers, audio-render.ts,
+                     qa/ (headless harness: headless.ts, soak.ts, probes.ts, gait.ts = the animation's numbers, audio-render.ts,
                      mesh-shadow-ref.ts = the mesh-shadow BVH / capsule-vs-mesh numbers + the GPU replay fixture, level-probes.ts = the
                      level-as-data identity / validate / round-trip family, fixtures/ (panel-inventory-main.json = the frozen Tab-row inventory),
                      sessions/*.json.gz = the F10 journal fixtures the gate replays, gpu-quiet.sh,
                      the in-page instruments *.js (served at /qa/<file>.js) and the review-page generators *-page.py — see 'A lane's deliverables' under Workflow)
 docs/                internal/<topic>.md = the notebooks (method, numbers, negatives) + review-ledger.md + architecture-review.md + morning-YYYY-MM-DD.html; review/<topic>.html = the self-contained
                      review pages published as Artifacts; perf/*.json = every measured take; shots/ = captures (shots/ab/ lossless, gitignored); design/ (level-scripting.md) + research/
-                     (destruction-survey.md) = design work awaiting the maintainer's one-line decisions; level-format.md (VIEWER.md sits at the repo root)
+                     (destruction-survey.md) = design work awaiting the maintainer's one-line decisions; level-format.md
 docs/roadmap.json    build-board data (phases, log, vitals, shots) → `bun run tools/build-roadmap.ts` → Artifact
 STYLE.md             the look as built, as rules to hold new work to (camera, light, the grade, colour, surfaces, places, people, gear, motion, effects, screens; each number names its file)
 STATUS.md            a pointer since 2026-10-09: the queue through 08-16 is archived at docs/internal/status-archive-2026-08.md; the live queue is outside the repo (handoff.md + git log are the newest in-repo record)
@@ -197,9 +196,9 @@ buffer at binding 13 + skin/refit dispatches ('mesh' in the HUD), `common.wgsl m
 the round-cone proxies; `engine.meshShadowsAvailable` false when the adapter's storage-buffer budget has no 10th slot; `tools/qa/mesh-shadow-ref.ts` = the numbers +
 `--fixture` → `__meshTrace(fixture)` replays it on the GPU; `?meshShadows`); `Decals` 4194304 (up only while a mark exists), `Particles` 16777216
 (informational: the pass graph, not a shader, reads it), the perf lane's `BounceCards` 33554432,
-`Glass` 268435456 (`settings.glass`), `FroxelVol` 536870912 (`settings.froxelVol`, see the froxel bullet) — bit 31 (the sign bit: compare with `>>> 0` / `!== 0` on the CPU) is free, and since 2026-11-07 so are bits 14, 16, 26, 27 and 30 (16384, 65536, 67108864, 134217728, 1073741824: TailChroma, CheckerDirect, DirectSeedHold, GiAdaptiveHist and Restir, the old estimator's and the old denoiser's). Bit 15 (32768) is `RcRoom`, the look's. `bun run tools/qa/frame-layout.ts` prints the free bits. **`frame.ts FrameFlags` is the one table** (common.wgsl's `FLAG_*` consts must
+`Glass` 268435456 (`settings.glass`) — bit 31 (the sign bit: compare with `>>> 0` / `!== 0` on the CPU) is free, and since 2026-11-07 so are bit 29 (536870912: `FroxelVol`, gone with the froxel grid) and bits 14, 16, 26, 27 and 30 (16384, 65536, 67108864, 134217728, 1073741824: TailChroma, CheckerDirect, DirectSeedHold, GiAdaptiveHist and Restir, the old estimator's and the old denoiser's). Bit 15 (32768) is `RcRoom`, the look's. `bun run tools/qa/frame-layout.ts` prints the free bits. **`frame.ts FrameFlags` is the one table** (common.wgsl's `FLAG_*` consts must
 carry the same values under the same names) and the `Frame` uniform's tail is laid out cards @416 · cardSlots @432 · weatherA/B/C @464/480/496 · glassCfg
-@512 · weatherD @528 · volCfg @544 · froxelA/B/C @560/576/592 · prevCam @608 · rtCfg @624 · matCfg @640 · p5Cfg @656 · jitter @672 · markCfg @688 · sharpCfg @704 · sharpCfgB @720 · sharpCfgC @736 · rigCfg @752 · rigCfgB @768 · giCfg @784 · weatherE @800 · weatherF @816 (the particle rain's two rows) · shadeCfg @832 (the look prototype's shade row, zeros anywhere else) · `FRAME_BYTES` 848 (byte table at the top of frame.ts); `bun run tools/qa/frame-layout.ts` (also `probes.ts frame-layout`, and under
+@512 · weatherD @528 · volCfg @544 · prevCam @560 · rtCfg @576 · matCfg @592 · p5Cfg @608 · jitter @624 · markCfg @640 · sharpCfg @656 · sharpCfgB @672 · sharpCfgC @688 · rigCfg @704 · rigCfgB @720 · giCfg @736 · weatherE @752 · weatherF @768 (the particle rain's two rows) · shadeCfg @784 (the look prototype's shade row, zeros anywhere else) and the look's rows and tables after it (the three froxel rows, froxelA/B/C, went 2026-11-07 and every row after them moved 48 bytes down; the byte table at the top of frame.ts is the whole layout and `FRAME_BYTES`); `bun run tools/qa/frame-layout.ts` (also `probes.ts frame-layout`, and under
 `perf`) recomputes the struct's WGSL layout and fails on any offset / size / bit that disagrees — run it whenever you touch either side. Box flags in `scene/boxes.ts`
 (`NoShadow` = invisible to every ray, `NoPrimary` = not rasterised, `Cutaway` (viewer stage only), `Dynamic`,
 `Emissive` (auto), `AreaLit`, `Rot`, `Gloss` = 128 (polished floor finish: lobby stone, corridor / break-room lino — the last bit of the
@@ -279,3 +278,24 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
   It works only because no top-level statement USES an import: a module-level table or `new X()` built from another game module's exports captures `undefined` / TDZ-throws at boot — and
   the browser bundle orders bindings differently from bun's headless import, so it can break ONLY IN THE PAGE (journal.ts's eager `KNOB_TABLES`: every headless probe green, F10 threw on
   its first page frame; made lazy at cfd0047). Build such tables lazily and boot a new game module once in the page, not only under the harness.
+
+- **The workbench is gone** (2026-11-04; the maintainer: "we also don't really use the level viewer and editor right? if so we could
+  remove those?"). REMOVED: `src/editor`, `src/viewer`, `src/workbench`, `src/scene/stage.ts`, the three pages (`workbench.html`,
+  `viewer.html`, `editor.html`) with their routes in `tools/serve.ts`, `tools/build.ts` and `vercel.json`, the title's two Extras rows
+  that opened them, the page's `?level=local` boot off the editor's stash (`level.ts` has one `buildLevel()` now), the dev server's
+  POST to `/levels/`, `VIEWER.md`, and the checks `editor-probes`, `viewer-ui`, `viewer-scenes` and the viewer half of
+  `inhand-page.cjs`. With them, code only they called: the rig's "copy constants" (`rigSource`, `assignRig`, `clearAdjs`,
+  `RIG_DEFAULTS`, `cloneRig`; `RIG`'s numbers are edited in `rigProps.ts`), the debugger panel's number rows (`Panel.number` /
+  `numbers`), `hingeOnCell`, `GLYPH_NAMES`.
+  KEPT, moved: the level lint is `src/scene/lint.ts` (`tools/qa/level-lint.ts`; its check is `level-lint` in the `level` family, with
+  `devices-lint` for the devices' findings); the dev server's `/levels/` answers reads only, to whoever the server answers
+  (`?levelFile=` fetches through it; check `level-serve`); the page's still helper is `src/ui/domshot.ts`. The rig's node list
+  (`rigProps.ts RigNodeMeta`) stays: the Team & kit figure reads it (`ui/kitFigure.ts`).
+  LEFT, with no saver any more: the save door's `'level'` kind (`host/savefile.ts SAVE_UP.local`, the one kind still downloaded) and
+  the backend intake's word for it (`cloud/files.ts FILESYNC.skip`); `savefile-check` and `cloud-check` still hold both.
+  An older bullet in any area file that says "the viewer", "the workbench" or "the editor" of a character, a rig number or a level
+  tool describes a page that is not there: the git history has it.
+  CHECKED: both typechecks, `bun run build` (four pages) and `build:one`, the changed checks on both stands, and the page in headless
+  Chromium on the software adapter: the removed pages are 404, the plain page comes ready with no page error, the title's Extras
+  list Replays, Sounds and the benchmark, a mission on a level file boots through `/levels/`, and `?level=local` is the office.
+  Never seen on a GPU, never played.

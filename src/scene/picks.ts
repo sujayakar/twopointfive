@@ -1,7 +1,7 @@
 // THE SHORT LIST (the maintainer, 10-08: 'keep polishing, optimizing, curating missions'): the few missions worth playing first, IN PLAY ORDER, each with the
-// settings that show it at its best — and nothing else. THIS TABLE IS THE ONE PLACE: the start card's rows (ui/picks.ts), the 'next' button on the pause and
+// settings that show it at its best — and nothing else. THIS TABLE IS THE ONE PLACE: the start page's first missions (ui/startpage.ts), the 'next' button on the pause and
 // debrief cards (ui/menu.ts), `?pick=<id>` typed by hand (main.ts) and the probes (tools/qa/picks-probes.ts) all read PICKS; to reorder, retune or swap a
-// mission, edit a row here. Every mission the build has stays on the mission list (ui/missions.ts — the card's Missions button), with its own team, hour and
+// mission, edit a row here. Every mission the build has stays on the mission list (ui/missions.ts), with its own team, hour and
 // weather rows: a pick is only a shortcut to one row of that list with its settings already on the URL.
 //
 // A PICK IS A PAGE LOAD, like every start on this build: pickHref(p) is the mission's own query (scene/scenarioList.ts scenarioQuery, or `?solo`) with the
@@ -13,11 +13,11 @@
 // answers it with one redirect to pickHref.
 //
 // THE ONE CHOICE A ROW OFFERS IS STANDARD OR HARD (the maintainer, 10-08: no switches 'other than easy/hard'; the names are the build's own, game/difficulty.ts):
-// every other setting is this table's. A row opens on its own difficulty (pickDifficulty) and the card puts the other one beside it (ui/picks.ts) — the same
+// every other setting is this table's. A row opens on its own difficulty (pickDifficulty); the other one is the same
 // URL with the other `difficulty=` on it (pickHref's last argument). Both read back as the same pick (pickOfQuery), so 'next' and the quit work on either,
 // and 'next' carries a difficulty the player chose over the row's own on to the row after.
 //
-// THE SWITCH: `?nopicks` — the start card, the pause card and the boot are the build's as it was (PICKS_UI.on false: no rows, no 'next', no redirect).
+// THE SWITCH: `?nopicks` — the start page's order, the pause card and the boot are the build's as it was (PICKS_UI.on false: no 'next', no redirect).
 // Types and pure functions (the guarded read of the page's own query string aside): nothing here imports the game at run time or touches the DOM.
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
 import { ALL_MISSIONS, SCENARIO_KEYS, quitSearch, specOfQuery } from './scenarioList';
@@ -49,8 +49,6 @@ export interface Pick {
    *  the visit; the page's flag — a headless tool sets SILENT.start itself). A flag listed on ANY row is the list's: no other row's URL carries a visitor's copy of it.
    *  No row sets one today (the quiet pair on The block is off the list until a quiet run is shown to reach an end); the mechanism stays */
   flags?: string[];
-  /** words for a flag the card should say ('with a partner'); the team, a hard difficulty, the hour and the weather are tagged without being asked */
-  tags?: string[];
   /** RESERVED, NOT READ YET: a kit for this entry, by the name the loadout will give it. Kit is kept per machine today (game/loadout.ts) and is on no URL,
    *  so no row sets this and nothing reads it (tools/qa/picks-probes.ts holds that no row does until pickHref carries it) */
   loadout?: string;
@@ -63,25 +61,15 @@ const SOLO_KEY = 'solo';
 export const PICKS: Pick[] = [
   { id: 'compound', mission: 'compound-four',
     line: 'Start here, at night. The gate beside you is dark, the main gate is lit, and nobody holds the pantry.' },
-  { id: 'registry', mission: 'rescue-registry',
-    line: 'Two hostages and a captor who will not wait. Look through the glass before you go in.' },
-  { id: 'warehouse', mission: 'warehouse-four', oneDifficulty: true,
-    line: 'The hard one. The rooms make a ring, so if you fight at one door, someone will walk around behind you.' },
   { id: 'depot', mission: 'depot-four',
     line: 'A lit yard watched from the dark. The mains are behind the hut that has no door on the yard.' },
-  { id: 'barracks-day', mission: 'barracks-four', hour: 'midday',
-    line: "Two wings round a yard, by day. A gallery post watches the doors across it. The wash room is out of its sight." },
   { id: 'solo', mission: SOLO_ID,
     line: 'Alone in the office after dark. Reach the server room, pull the drive, leave by the fire exit.' },
 ];
 
-/** the switch: off = the build as it was before the short list (the start card's rows, the 'next' buttons, the ?pick= redirect) */
-export const PICKS_UI = { on: true,
-  /** A ROW OPENS ITS LOADOUT FIRST (the maintainer, 10-09, playing the list: 'how do i do the loadout? scenario goes straight to the game'): a click on a row
-   *  is that mission's loadout screen (ui/loadout.ts — team, kit, the squad kit row) and its Deploy is the page load; 'go ›' at the row's end is still
-   *  straight in. `?pickstraight` = false: a click starts the row, as it was (ui/picks.ts) */
-  loadout: true };
-try { const q = new URLSearchParams(location.search); if (q.has('nopicks')) PICKS_UI.on = false; if (q.has('pickstraight')) PICKS_UI.loadout = false; } catch { /* no page (the harness) */ }
+/** the switch: off = the build as it was before the short list (the 'next' buttons, the ?pick= redirect) */
+export const PICKS_UI = { on: true };
+try { const q = new URLSearchParams(location.search); if (q.has('nopicks')) PICKS_UI.on = false; } catch { /* no page (the harness) */ }
 
 // ─────────────────────────────────────────────────────────────── a pick and the query string ───────────────────────────────────────────────────────────────
 export const PICK_KEY = 'pick';

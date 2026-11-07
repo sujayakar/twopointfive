@@ -13,7 +13,7 @@
 //
 // This file also computes each marking's per-entry COVERAGE FRACTIONS (the mean the shader fades to; area-averaged over the box, the albedo the secondary
 // rays see — boxes.ts upload: GI energy right at zero ray cost) and its MEAN EMISSION (an emissive marking is a LIGHT: game.ts registers a one-sided
-// rectangular emitter for it exactly like an emissive fixture box, so ReSTIR shadows, froxel beams, the bounce and the light meter all see it).
+// rectangular emitter for it exactly like an emissive fixture box, so ReSTIR shadows, the beams, the bounce and the light meter all see it).
 import type { Vec3 } from '../math/vec';
 import { onExact } from '../math/exact';
 
@@ -289,7 +289,6 @@ export const STENCIL: Readonly<Record<string, readonly number[]>> = {
   '→': face5('..... ..#.. ...#. ##### ...#. ..#.. .....'), '←': face5('..... ..#.. .#... ##### .#... ..#.. .....'),
   '↑': face5('..#.. .###. #.#.# ..#.. ..#.. ..#.. ..#..'), '↓': face5('..#.. ..#.. ..#.. ..#.. #.#.# .###. ..#..'),
 };
-export const GLYPH_NAMES = ['this side up', 'fragile', 'keep dry', 'cross', 'mark'];
 /** 5×7 pictograms, row 0 = TOP, bit 4 = leftmost column */
 export const GLYPHS: readonly (readonly number[])[] = [
   [0b00100, 0b01110, 0b10101, 0b00100, 0b00100, 0b00100, 0b11111],   // arrow up over a base line: this side up

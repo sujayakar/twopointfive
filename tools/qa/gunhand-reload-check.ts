@@ -117,7 +117,7 @@ export async function gunhandReloadCheck(): Promise<boolean> {
     for (const [name, who, gun, beat, clock, poses] of CASES) for (const p of poses) runs.push({ name, pose: p, beat, clock, on: play(who, gun, POSES[p], beat, clock) });
     const each = (f: (r: typeof runs[number]) => { ok: boolean; say: string }, verbose = VERBOSE): { ok: boolean; say: string } => { let ok = true; const bad: string[] = [], allSay: string[] = [];
       for (const r of runs) { const v = f(r); ok &&= v.ok; const s = `${r.name}, ${r.pose}: ${v.say}`; allSay.push(s); if (!v.ok) bad.push(s); } return { ok, say: (verbose || !ok ? (ok ? allSay : bad) : []).join('\n    ') }; };
-    const span = (f: (r: Row) => number, rs: Row[][]) => { const v = rs.map(r => mx(r, f)); return `${f1(Math.min(...v))}‥${f1(Math.max(...v))}`; };
+    
     const body = (rs: Row[], b: Beat) => rs.filter(r => r.t < b.dur);
 
     // (3) on the grip

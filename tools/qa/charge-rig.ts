@@ -38,23 +38,27 @@ function clearOf(g: any, w: any): Vec3 | null {
 
 /** Sam sets a charge on wall `w` with his own hands: stood at its foot with the cursor on it, the wall's own row given on the interaction key and stood on for
  *  setSecs. `each` is called before every step (a rig's own per-step staging: a defender held still, the player kept dark). On return `charge` is the game's
- *  own row of it (null where it did not come about, and `why` says which step). */
-export function samSets(W: Stand, w: any, each?: () => void): Breach & { charge: any } {
+ *  own row of it (null where it did not come about, and `why` says which step).
+ *  `aim` = the place the cursor is laid on where that is not `w` itself: the game settles a charge from where the cursor lies, and a place it settled from
+ *  one point of a wall is not always the place it settles from that place's own middle. */
+export function samSets(W: Stand, w: any, each?: () => void, aim: any = w): Breach & { charge: any } {
   const g = W.game, C = g.wallCharge, D = g.doorTools, I = W.input, out: Breach & { charge: any } = { set: false, blown: false, hole: null, wall: w, why: '', charge: null };
   if (!w || !w.ok) { out.why = `no place for a charge on that wall${w?.why ? ` (${w.why})` : ''}`; return out; }
   D.alone(DOORTOOLS.charges); C.setCarried(null);   // (a man who sets it himself has the door tools' bag, and a wall takes its charges out of it)
   // (WITH A SQUAD ON THE FLOOR `alone` deals nothing: the bag is the roster's, and one wall may have emptied it. The game then offers no row, by its own
   //  rule (WallCharge.affordable). A second charge is then one that was BROUGHT, the kit's own count, as squadBreach puts it)
   if (!C.affordable) C.setCarried(1);
-  const n0 = C.set.length, on: Vec3 = wallPt(w, 0, 0, 1.0) as Vec3;   // (a point of the wall's near face a metre up: where a cursor on that wall lies. Its top edge is no pick of it)
+  // (WHERE THE CURSOR LIES: a point of the wall's near face a metre up; its top edge is no pick of it. Where a thing stands between that point and the camera, or
+  //  a man or a switch is under it, the cursor is on that thing and the wall's row is not offered: a point higher and one lower on the same face are tried)
+  const n0 = C.set.length, ons = [1.0, 1.7, 0.4].map(h => wallPt(aim, 0, 0, h) as Vec3);
   // (WHERE HE STANDS: the game's own spot for the setting first, then the foot and a step along it either way. A man put where a thing stands at the wall's
   //  foot is pushed off it, and a step breaks the setting off ('charge not set'): the next place is tried, and `why` says what the last one came to)
   const nav = g.col.nav, places = [C.setSpot?.(w) ?? null, wallPt(w, 0, 0.55), wallPt(w, 0.4, 0.55), wallPt(w, -0.4, 0.55)].filter((p): p is Vec3 => !!p && !nav.isBlocked(p[0], p[2]));
-  for (const p of places) {
+  place: for (const p of places) for (const on of ons) {
     g.teleportPlayer([p[0], 0, p[2]]); steps(W, 90, () => { each?.(); W.cursorAt(on); });   // (the cursor held on the wall while the camera settles on him)
     if (!g.selectVerb('wall', 'charge')) { out.why = `no 'breach the wall' row at its foot (rows: ${(g.nearby as any[]).map(r => `${r.kind}:${r.verb ?? '-'}`).join(' ') || 'none'} · the bag: ${D.charges} charges, ${C.carried ?? 'no'} wall charges carried, roster ${D.roster?.length ?? '-'})`; continue; }
     I.pressed.add('Space'); W.step(DT);
-    if (until(W, () => C.set.length > n0, DOORTOOLS.setSecs + 1, each)) { out.why = ''; break; }
+    if (until(W, () => C.set.length > n0, DOORTOOLS.setSecs + 1, each)) { out.why = ''; break place; }
     out.why = `the charge was not on the wall ${DOORTOOLS.setSecs + 1} s after the row was given`;
   }
   if (C.set.length <= n0) { if (!out.why) out.why = 'no free floor at its foot'; return out; }

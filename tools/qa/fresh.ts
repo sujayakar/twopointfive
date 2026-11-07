@@ -8,15 +8,14 @@
 //                                                              but for THE_PROCESS_S (two that describe the process's tables)
 //   what is counted of a game, or left by one call             a name the state bridge carries whose row of tools/qa/rollback-exempt.ts is a TALLY
 //                                                              or a SCRATCH
-//   what the Rust game itself keeps as a count                 a carried name with no row there (the TypeScript no longer writes it, so the
+//   what the Rust game itself keeps, and hands back            a carried name with no row there (the TypeScript no longer writes it, so the
 //                                                              static pass lets it have none) that the bridge's schema reads into one of the
-//                                                              Rust game's `…Stats` structs (tools/blitz/schema.json): Rust says it is a tally
-//   a log only a Rust game's state is written into             the same, for the few logs: A_GAMES below, each with its row here
+//                                                              Rust game's `…Stats` structs, or that comes back every tick (tools/wire/fields.json)
 // EVERYTHING ELSE IS LEFT ALONE: a knob table, a row that is a CONFIG, a CACHE, a CONST or a HOST's, a table keyed weakly by a game's objects, and
 // ANY CARRIED NAME NOTHING CLASSES. That last is on purpose. A name with no row may be a setting a tool turns between two games (the kit's cards, a
 // pace switch), and a start that put it back would undo the tool's hand and leave its check green on nothing. So such a name is never written; if it
 // has changed since the first start it is NAMED (FRESH.unlisted; start.ts --again prints it and the table is red on it), and whoever reads that gives
-// it a row: in A_GAMES if a game's state is written into it, in rollback-exempt.ts as a CONFIG if a tool or a mission's start sets it.
+// it a row: `wire.ts list` if a game's state is written into it, in rollback-exempt.ts as a CONFIG if a tool or a mission's start sets it.
 // A name is reached through the bridge's window on a module's own variables (tools/blitz/expose.ts), so with no bridge in the process only the registry
 // is put back: no game is stepped there (only the Rust game steps), so no tally moves. Only what DIFFERS is written, in place, and never through a getter.
 // The check that keeps it: tools/blitz/start-levels.ts --again (a second start in one process, after a game was stood and played, is the first's).
@@ -29,6 +28,7 @@ import { ROLLBACK_EXEMPT } from './rollback-exempt.ts';
 
 /** registered names that describe the PROCESS's tables, not a game: put back, they would belie the tables they describe */
 export const THE_PROCESS_S: Record<string, string> = {
+  'src/game/kit.ts KIT': 'the kit cards a menu or a tool sets and the next start reads: a function with no game writes them here, and the scan carries them to a game that stands',
   'nightbreach.applied': 'which level\'s team numbers the knob tables hold now: the tables are the process\'s, and a start asks this to know whether to write them',
   'edgeLook.EDGE': 'a table of settings, registered because a failed build puts its `on` down in the middle of a frame: the numbers are a tool\'s to turn',
 };
@@ -71,28 +71,14 @@ function putBack(live: unknown, was: unknown): boolean {
   return false;
 }
 
-/** carried LOGS with no row in rollback-exempt.ts (the TypeScript writes none of them any more, and that list is of what it writes) that a Rust game's
- *  state is written into through the bridge. (A count needs no row here: the schema says which names the Rust game keeps among its Stats.) */
-export const A_GAMES: Record<string, string> = {
-  'src/game/nvg.ts NVG_LOG': 'TALLY · a log of the goggles going down and up',
-  'src/game/clearline.ts CLEARLINE_LOG': 'TALLY · a log of the lines of fire held and cleared',
-  'src/game/kitanim.ts KITANIM_LOG': 'TALLY · a log of the kit\'s moves',
-  'src/game/morale.ts MORALE_LOG': 'TALLY · a log of the defenders\' minds changing',
-  'src/game/netquiet.ts NETQUIET_LOG': 'TALLY · a log of the quiet net',
-  'src/game/sneak.ts SNEAK_LOG': 'TALLY · a log of the sneak\'s beats',
-  'src/game/squad40.ts SQUAD40_LOG': 'TALLY · a log of the squad\'s launcher',
-  'src/game/squadthrow.ts SQUADTHROW_LOG': 'TALLY · a log of the squad\'s throws',
-  'src/game/whistle.ts WHISTLE_LOG': 'TALLY · a log of the whistles blown and answered',
-  'src/game/coverfire.ts COVERFIRE_WHY': 'TALLY · rounds through cover, counted by reason',
-};
-let STATS: Set<string> | null = null;
-/** the carried names the Rust game keeps among its Stats: every `B.top(file, NAME)` a field of a struct named `…Stats` is read from */
-function rustStats(): Set<string> {
-  if (STATS) return STATS;
-  STATS = new Set();
-  const types: Record<string, { k?: string; name?: string; fields?: { expr?: string }[] }> = JSON.parse(readFileSync(resolve(import.meta.dir, '../blitz/schema.json'), 'utf8')).types;
-  for (const t of Object.values(types)) if (t.k === 'struct' && t.name?.endsWith('Stats')) for (const f of t.fields ?? []) for (const m of (f.expr ?? '').matchAll(/B\.top\("([^"]+)", "([^"]+)"/g)) STATS.add(`${m[1]} ${m[2]}`);
-  return STATS;
+let GAMES: Set<string> | null = null;
+/** the carried names that are a game's by the wire's own word: every `B.top(file, NAME)` a field of a struct named `…Stats` is read from, and every one that comes back every tick (tools/wire/fields.json `everyTick`: the Rust game writes it, and the apply lays it on the module's copy) */
+function ofTheGame(): Set<string> {
+  if (GAMES) return GAMES;
+  GAMES = new Set();
+  const types: Record<string, { k?: string; mod?: string; name?: string; fields?: { rust?: string; expr?: string }[] }> = JSON.parse(readFileSync(resolve(import.meta.dir, '../blitz/schema.json'), 'utf8')).types, every = new Set<string>(JSON.parse(readFileSync(resolve(import.meta.dir, '../wire/fields.json'), 'utf8')).everyTick);
+  for (const t of Object.values(types)) if (t.k === 'struct') for (const f of t.fields ?? []) if (t.name?.endsWith('Stats') || every.has(`${t.mod}::${t.name}.${f.rust}`)) for (const m of (f.expr ?? '').matchAll(/B\.top\("([^"]+)", "([^"]+)"/g)) GAMES.add(`${m[1]} ${m[2]}`);
+  return GAMES;
 }
 
 interface Kept { name: string; get: () => unknown; set: ((v: unknown) => void) | null; was: unknown }
@@ -118,8 +104,8 @@ export function freshStart(): void {
       const name = `${file} ${n}`; if (!d.get || KEPT.has(name) || WATCHED.has(name)) continue;
       if (vars.has(`${file.slice(file.lastIndexOf('/') + 1, -3)}.${n}`)) continue;   // (a registered variable: kept above, under its registered name)
       const row = ROLLBACK_EXEMPT[name], get = d.get.bind(T[file]), set = d.set ? d.set.bind(T[file]) : null;
-      if (row !== undefined ? row.startsWith('TALLY ·') || row.startsWith('SCRATCH ·') : name in A_GAMES || rustStats().has(name)) { keep(KEPT, name, get, set); continue; }
-      if (row !== undefined) continue;
+      if (row !== undefined ? row.startsWith('TALLY ·') || row.startsWith('SCRATCH ·') : ofTheGame().has(name)) { keep(KEPT, name, get, set); continue; }
+      if (row !== undefined || name in THE_PROCESS_S) continue;
       const v = get(); if (v instanceof WeakMap || v instanceof WeakSet || typeof v === 'function' || registered.has(v) || knobs.has(v)) continue;
       keep(WATCHED, name, get, set);
     }

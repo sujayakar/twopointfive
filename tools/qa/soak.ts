@@ -471,7 +471,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
       return `stage ${m.stage} (nothing to do)`;
     } },
     { name: 'ai-toggle', perMin: 0.1, run: () => { game.aiEnabled = false; aiOffUntil = game.time + rr(1, 8); return `off for ${(aiOffUntil - game.time).toFixed(1)}s`; } },
-    { name: 'tour-blip', perMin: 0.1, when: () => !tour, run: () => {   // what Demo.start / stop do to the game, minus the beats
+    { name: 'tour-blip', perMin: 0.1, when: () => !tour, run: () => {   // what a show's start and stop do to the game, minus the beats
       const saved = { ai: game.aiEnabled, god: game.godMode, invisible: game.playerInvisible, pos: v3.copy(game.player.char.pos) };
       game.quietUtility = true; game.clearAftermath(); releaseKeys(); cursorDoor = null;
       if (game.player.down) { game.restartEncounter(); teleportedThisFrame = true; missionRef = game.mission; stageIdx = 0; } else game.resetGuards();
@@ -1357,7 +1357,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
     if (!game.quietUtility && esc > 0 && t >= game.escalationT && !game.alarm.episode && !hunting && !stillLooking(game)) { if (++overdueFrames >= 2) violate('esc-clock', 'overdue-stepdown', `level ${esc} clock lapsed ${(t - game.escalationT).toFixed(1)} s ago, no episode, nobody hunting or out looking for a silent man, yet no step-down for ${overdueFrames} frames`); } else overdueFrames = 0;   // (one frame is legit: a clear finishing inside updateEscalation puts the pair back on patrol after this frame's step-down check; a route walk for a silent colleague / the net asking after one holds the level by design — guards.ts stillLooking)
     if (!game.quietUtility && game.aiEnabled) { const R = rollcallState(game); if (R.stage !== 'idle' && t - R.t0 > 60) violate('rollcall-stuck', R.stage, `radio check stuck at '${R.stage}' for ${(t - R.t0).toFixed(0)} s (missing ${R.missing ? routeName(R.missing) + ' ' + R.missing.state + (R.missing.found ? ' found' : '') : 'none'}, caller ${R.caller ? routeName(R.caller) + ' ' + R.caller.state : 'none'})`); }
     for (const gd of game.guards) if (gd.state !== 'dead' && gd.task?.kind === 'checkOn' && t - gd.task.t0 > 200) violate('checkon-overlong', routeName(gd), `${routeName(gd)} has walked ${routeName(gd.task.who)}'s route for ${(t - gd.task.t0).toFixed(0)} s (cap 150 + slack; state ${gd.state})`);
-    if (game.mission.debrief) { game.mission.debrief = false; smells.debriefs = (smells.debriefs ?? 0) + 1; tl(`DEBRIEF: ${game.objectiveText()}`); }
+    if ((game.endCards ?? 0) > (smells.debriefs ?? 0)) { smells.debriefs = game.endCards; tl(`DEBRIEF: ${game.objectiveText()}`); }
     if (esc < 2 && !game.quietUtility && game.guards.some((gd: any) => gd.state !== 'dead' && (gd.leader || gd.post))) violate('lockdown-duty-leak', `level${esc}`, `level ${esc} but somebody still has a leader/post: ${game.escalationSummary()}`);
     // the response to going loud (lane qrf, src/game/qrf.ts): the state machine sane, its men only ever hunting or fighting (never talked calm), the character
     // budget held (spawnUnit throws past it: an exception would already be a violation), the wave never called under the tour's flag or with the AI off, its

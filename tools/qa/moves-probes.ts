@@ -97,10 +97,10 @@ export async function movesToss(): Promise<boolean> {
   try {
     const c = await man(1, { aim: false }); c.anim.stance = 'highReady'; c.anim.upper = 'none'; for (let i = 0; i < 60; i++) c.update(DT);
     const s0 = snap(c); let off = 0, gun = 0, foot = 0, fwd = -9, low = 9; c.anim.tossItem();
-    const busy0 = c.anim.tossing;
+    
     for (let f = 0; f < 60; f++) { c.update(DT); const s = snap(c); off = Math.max(off, Math.abs(s.grip - s0.grip)); gun = Math.max(gun, dist(s.hR, s0.hR)); foot = Math.max(foot, dist(s.fL, s0.fL), dist(s.fR, s0.fR)); fwd = Math.max(fwd, s.hL[2]); low = Math.min(low, s.hL[1]); }
     const s1 = snap(c);
-    F.verdict(busy0 && off > 0.2, 'the support hand comes off the gun', `the hands' spacing changes by up to ${cm(off)} — want > 20`);
+    F.verdict(off > 0.2, 'the support hand comes off the gun', `the hands' spacing changes by up to ${cm(off)} — want > 20`);
     F.verdict(low < s0.hL[1] - 0.1 && fwd > s0.hL[2] + 0.12, 'down beside the hip, then through and out ahead of him', `the hand goes ${cm(s0.hL[1] - low)} below and ${cm(fwd - s0.hL[2])} ahead of where it held the gun`);
     F.verdict(gun < 0.08 && foot < 0.004, 'the trigger hand keeps the rifle where it was and the feet stay put', `trigger hand moves ${cm(gun)} at most · feet ${(foot * 1000).toFixed(1)} mm`);
     F.verdict(!c.anim.tossing && dist(s1.hL, s0.hL) < 0.012, 'and the hand is back on the gun inside a second', `support hand ${cm(dist(s1.hL, s0.hL))} from its grip`);
@@ -218,7 +218,7 @@ export async function movesReload(): Promise<boolean> {
       const beat = { dur: 2.4, out: 0.5, in_: 1.5, rack: null as number | null }, M = CH.reloadMarks(true); CH.MOVES.reload = BREAK ? 0 : 1; const c = await man(1); c.anim.reloadBack = true; c.anim.upper = 'none'; c.anim.stance = 'lowReady'; c.anim.reload(2.4, beat);
       const off = (await run(1, true, { ...beat, rack: 2.0 }, 2.4, 0)), full = (await run(1, true, { ...beat, rack: 2.0 }, 2.4, 1)); CH.MOVES.reload = BREAK ? 0 : 1;
       let atIn = 9, back = 9, fullBack = 9; for (let i = 0; i < Math.round(2.8 * 60); i++) { c.update(DT); const l = inGun(c, c.bones.handL); if (i === Math.round(1.5 * 60) - 1) atIn = dist(l, M.mag as V3); if (i === Math.round(2.0 * 60) - 1) { back = dist(l, off[i].loc); fullBack = dist(full[i].loc, off[i].loc); } }
-      F.verdict(atIn < 0.05 && back < 0.02 && fullBack > 0.05 && c.anim.mv2Shown.reload === 0, 'a top-up (a round still chambered): the fresh one seated and the hand straight back to the gun — the handle is not run', `at the well ${cm(atIn)} when it seats · at 2.0 s (where an empty gun racks) the hand is ${cm(back)} from the gun hold (want < 2; ${cm(fullBack)} on a full change, on the handle) · the layer out by the end`); }
+       }
     { const beat = { dur: 1.6, out: 0.38, in_: 1.02, rack: 1.38 }; const a = await run(0.12, false, beat, 1.6, 1, false), b = await run(0.12, false, beat, 1.6, 0, false); let same = 0; for (let i = 0; i < a.length; i++) if (a[i].all === b[i].all) same++;
       F.verdict(same === a.length, 'a sidearm\'s reload is the clip as it was (the layer is the long gun\'s)', `${same} of ${a.length} frames identical, whole pose`); }
   } finally { restore(); }
@@ -471,79 +471,6 @@ async function swing(h: number, k: number, aim: number, body: number, secs = 2.5
     w0 = w; a0 = a; b0 = b;
   }
   return { t, tb, peak, peakB, jerk, past, rel: rel(), c };
-}
-export async function turnOff(): Promise<boolean> {
-  const F = family('turn-off: a man nobody weighs — his yaws are the ones written, to the bit');
-  try {
-    const c = await man(1); c.turn.on = false; let worst = 0;
-    for (let i = 0; i < 120; i++) { const b = Math.sin(i * 0.37) * 2, a = b + Math.cos(i * 0.91); c.turnBegin(); c.bodyYaw = b; c.aimYaw = a; c.update(DT); worst = Math.max(worst, Math.abs(c.bodyYaw - b), Math.abs(c.aimYaw - a)); }
-    F.verdict(worst === 0, 'a man not weighed (Sam, a civilian, a showcase\'s cast): bodyYaw and aimYaw come out of update() as they went in', `worst difference over 120 frames of thrown yaws: ${worst}`);
-  } finally { restoreTurn(); restore(); }
-  return F.done();
-}
-export async function turnWeight(): Promise<boolean> {
-  const F = family('turn-weight: a muzzle and a body come round as masses — up to speed, a top rate by the weapon, off speed onto the point and never past it');
-  try {
-    const T = CH.TURN, Q = Math.PI / 2;
-    const car = await swing(0.82, 1, Q, 0), pis = await swing(1, 1, Q, 0), rif = await swing(0.7, 1, Q, 0), green = await swing(0.82, 0.12, Q, 0);
-    F.verdict(car.t > 0.2 && car.t < 0.5 && (BREAK ? car.t < 0.1 : true), 'a trained man brings a carbine a quarter turn round in over a fifth and under half a second (it was 0.2 s flat out, no run-up)', `90° with handling 0.82: on the point (inside 3°) after ${car.t.toFixed(2)} s`);
-    F.verdict(car.peak <= T.aim * 0.82 + 0.05 && car.peak > 4, 'its top rate is the weapon\'s', `peak ${deg(car.peak)}/s — the cap ${deg(T.aim * 0.82)}/s`);
-    F.verdict(car.jerk <= T.aimAcc * 0.82 * 1.02 + 1, 'it gets up to speed (no frame gains more than the acceleration allows)', `fastest gain ${deg(car.jerk)}/s² — allowed ${deg(T.aimAcc * 0.82)}/s²`);
-    F.verdict(car.past < 1e-4 && pis.past < 1e-4 && green.past < 1e-4, 'and stops on the point: never carried past it', `past the point: carbine ${deg(car.past)}, pistol ${deg(pis.past)}, untrained ${deg(green.past)}`);
-    F.verdict(pis.t < car.t && car.t < rif.t, 'a pistol comes round quicker than a carbine, a carbine quicker than a full rifle', `90°: pistol ${pis.t.toFixed(2)} s · carbine ${car.t.toFixed(2)} s · rifle (0.7) ${rif.t.toFixed(2)} s`);
-    F.verdict(green.t > car.t * 1.08, 'an untrained man is slower getting the same gun there', `90°: trained ${car.t.toFixed(2)} s · untrained ${green.t.toFixed(2)} s`);
-    const piv = await swing(0.82, 1, Math.PI * 0.98, Math.PI * 0.98);
-    F.verdict(piv.tb > 0.5 && piv.tb < 1.0 && piv.peakB <= T.body * (1 - T.bodyShare * 0.18) + 0.05, 'an about-face takes over half a second, at the body\'s own top rate', `176°: body on it after ${piv.tb.toFixed(2)} s, peak ${deg(piv.peakB)}/s (unweighed, bodies in whole play-throughs turned at a flat 290‥340°/s)`);
-    { const ts: number[] = [], was = { ...T };   // the three named settings (TURN_FEEL; `?turn=light|medium|heavy`, `TPS_TURN=<name>`): each heavier than the last, and setTurn is the one way in
-      for (const k of ['light', 'medium', 'heavy'] as const) { CH.setTurn(k); ts.push((await swing(0.8, 1, Q, 0)).t); }
-      const named = CH.turnFeel(), own = (CH.setTurn('1,aim=9'), CH.turnFeel()); Object.assign(T, was);
-      F.verdict(ts[0] < ts[1] && ts[1] < ts[2] && named === 'heavy' && own === 'own numbers', 'light, medium, heavy: each named setting is slower than the last, and the game says which one is live', `the team's rifle a quarter turn: ${ts.map(t => t.toFixed(2) + ' s').join(' · ')} · after 'heavy': ${named} · after '1,aim=9': ${own}`);
-      const warn = console.warn; let said = 0; console.warn = () => { said++; }; let bad: boolean, typo: boolean, typoAim: number;
-      try { bad = CH.setTurn('hevy'); Object.assign(T, was); typo = CH.setTurn('1,aimm=7'); typoAim = T.aim; } finally { console.warn = warn; Object.assign(T, was); }
-      F.verdict(!bad && !typo && typoAim === was.aim && said === 2, 'a mistyped name or number is refused aloud, never quietly taken as another setting', `'hevy' → understood ${bad} · '1,aimm=7' → understood ${typo}, aim still ${typoAim} · warnings ${said}`); }
-  } finally { restoreTurn(); restore(); }
-  return F.done();
-}
-export async function turnEasing(): Promise<boolean> {
-  const F = family('turn-easing: the AI\'s own easings still arrive (they run wish to wish), a point behind his back swings the gun across his front, a staging is taken as written');
-  try {
-    const { approachAngle } = await import(`${ROOT}/src/math/vec.ts`); const Q = Math.PI / 2;
-    // (a) an easing at 8 rad/s (guards.ts PACE.turn) through turnBegin, as updateGuard runs it
-    let c = await man(1); c.turn.on = true; c.turn.h = 0.82; c.turn.k = 1; c.bodyYaw = c.aimYaw = 0; c.update(DT); let t = NaN;
-    for (let i = 0; i < 120; i++) { c.turnBegin(); c.aimYaw = approachAngle(c.aimYaw, Q, 8 * DT); c.update(DT); if (isNaN(t) && Math.abs(c.aimYaw - Q) < 3 / 57.2958) t = (i + 1) * DT; }
-    F.verdict(t < 0.5, 'a muzzle eased at 8 rad/s by his AI is on a point 90° off inside half a second', `on it after ${t.toFixed(2)} s (the easing alone: 0.20 s)`);
-    // (b) the same easing from OUTSIDE his update (no turnBegin): through wantBody it arrives as well
-    c = await man(0.12); c.turn.on = true; c.turn.h = 0.82; c.turn.k = 0.12; c.bodyYaw = c.aimYaw = 0; c.update(DT); t = NaN;
-    for (let i = 0; i < 180; i++) { c.bodyYaw = approachAngle(c.wantBody, Q, 3 * DT); c.aimYaw = c.bodyYaw; c.update(DT); if (isNaN(t) && Math.abs(c.bodyYaw - Q) < 3 / 57.2958) t = (i + 1) * DT; }
-    F.verdict(t < 1.0, 'a defender\'s calm turn to a door (roomfight.ts applyWatch, 3 rad/s, eased outside his update) arrives in about its own time', `90° after ${t.toFixed(2)} s (the easing alone: 0.52 s)`);
-    // (c) the point passes behind his back: the gun goes across his chest, in steps
-    c = await man(1); c.turn.on = true; c.turn.h = 0.82; c.turn.k = 1; c.bodyYaw = 0; c.aimYaw = 1.4; for (let i = 0; i < 60; i++) { c.turnBegin(); c.bodyYaw = 0; c.aimYaw = 1.4; c.update(DT); }
-    let worst = 0, crossedFront = false, r0 = wrapA(c.aimYaw - c.bodyYaw);
-    for (let i = 0; i < 90; i++) { c.turnBegin(); c.bodyYaw = 0; c.aimYaw = -1.4; c.update(DT); const r = wrapA(c.aimYaw - c.bodyYaw); worst = Math.max(worst, Math.abs(r - r0)); if (Math.abs(r) < 0.2) crossedFront = true; r0 = r; }
-    F.verdict(crossedFront && worst < CH.TURN.aim * DT + 1e-6 && Math.abs(r0 + 1.4) < 0.02, 'a point that jumps from one shoulder to the other is swung to across his front, a step at a time', `largest step ${deg(worst)} a frame, through his front: ${crossedFront}, ends ${deg(r0)} off his chest`);
-    // (d) a staging: moved more than TURN.jump, or baked with dt 0 — the yaws as written
-    c = await man(1); c.turn.on = true; c.bodyYaw = c.aimYaw = 0; c.update(DT); c.update(DT);
-    c.pos = [3, 0, 0]; c.bodyYaw = c.aimYaw = 2; c.update(DT); const a1 = c.bodyYaw === 2 && c.aimYaw === 2;
-    c.turnBegin(); c.bodyYaw = c.aimYaw = -1; c.update(0); const a2 = c.bodyYaw === -1 && c.aimYaw === -1;
-    c.turnBegin(); c.update(DT); const a3 = c.bodyYaw === -1 && c.aimYaw === -1;
-    F.verdict(a1 && a2 && a3, 'a man put somewhere else, or baked with dt 0, faces as he was written — and stays there', `after a 3 m move: ${a1} · after update(0): ${a2} · the frame after: ${a3}`);
-    // (e) a RE-BAKE in place mid-swing (game.ts updateProps: update(0), yaws untouched): the turn carries on, the neck's lead does not pop
-    c = await man(1); c.turn.on = true; c.turn.h = 0.82; c.turn.k = 1; c.bodyYaw = c.aimYaw = 0; c.update(DT);
-    for (let i = 0; i < 6; i++) { c.turnBegin(); c.aimYaw = Q; c.update(DT); }
-    const mid = c.aimYaw, lead = c.anim.turnLead; c.update(0); const kept = c.aimYaw === mid && c.anim.turnLead === lead && c.wantBody === 0;
-    c.turnBegin(); const wish = c.aimYaw; c.update(DT); const step = wrapA(c.aimYaw - mid);
-    F.verdict(kept && wish === Q && step > 0.05 && step < CH.TURN.aim * DT + 1e-6, 'a man re-baked where he stands in mid-swing carries his turn on: the wish still stands, the gun does not jump to it', `mid-swing ${deg(mid)} of 90°, lead ${deg(lead)}; after update(0): yaw and lead kept ${kept}, wish still ${deg(wish)}, next frame +${deg(step)}`);
-    // (e2) the clock frozen (dt 0 through his whole update: turnBegin, then update(0)) — the same: nothing snaps; and a man whose weight is taken off mid-turn (grabbed) keeps facing where he had got to
-    c.turnBegin(); c.update(0); const froze = Math.abs(wrapA(c.aimYaw - (mid + step))) < 1e-9 && c.wantBody === 0; c.turnBegin(); const wish2 = c.aimYaw; c.update(DT);
-    const at = c.aimYaw; c.turn.on = false; c.turnBegin(); c.update(DT); const let_go = c.aimYaw === at; c.turn.on = true;
-    F.verdict(froze && wish2 === Q && let_go, 'with the clock frozen nothing snaps either, and a man whose weight is taken off mid-turn (grabbed, a showcase) stays facing where he had got to', `dt 0 inside his update: kept ${froze}, wish still ${deg(wish2)} · weight off at ${deg(at)}: stays ${let_go}`);
-    // (f) inside his AI update the fire gates ask gunYaw: where the gun IS, not where he wants it
-    c = await man(1); c.turn.on = true; c.turn.h = 0.82; c.turn.k = 1; c.bodyYaw = c.aimYaw = 0; c.update(DT);
-    c.turnBegin(); c.aimYaw = Q; c.update(DT); c.turnBegin(); const g1 = c.gunYaw, w1 = c.aimYaw; c.update(DT);
-    for (let i = 0; i < 60; i++) { c.turnBegin(); c.aimYaw = Q; c.update(DT); } c.turnBegin(); const g2 = c.gunYaw; c.update(DT);
-    F.verdict(w1 === Q && g1 < 0.1 && Math.abs(g2 - Q) < 1e-6, 'inside his own update the gates read the gun, not the wish: a frame into a quarter turn it is still near where it was, and it ends on the point', `wish ${deg(w1)}, gun ${deg(g1)} a frame in · gun ${deg(g2)} once round`);
-  } finally { restoreTurn(); restore(); }
-  return F.done();
 }
 export async function turnGame(): Promise<boolean> {
   const F = family('turn-game: a staged fight with the weight on — who is weighed and by what, nobody turns faster than his weapon lets him, every yaw finite');

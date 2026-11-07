@@ -113,10 +113,10 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
   check(shared[0] + shared[1] <= 11, `three rounds of 23 rows: two rows are neighbours again in a later round ${shared[0]} + ${shared[1]} times of 44 (in order, reversed, in order: all 44)`);
   check(same(sweepOrder(['only'], 5), ['only']) && sweepOrder([], 3).length === 0 && same(list, Array.from({ length: 23 }, (_, k) => 'r' + k)), 'one row, no rows; the list handed in is left as it was');
   // and through a real sweep: the segments it logs
-  const S2: any = { heldAdaptive: false, heldRays: 4, gatherThird: false, renderScale: 0.8, sharpDirect: true, taau: true, volLightCap: 4, froxelVol: false };
+  const S2: any = { heldAdaptive: false, heldRays: 4, gatherThird: false, renderScale: 0.8, sharpDirect: true, taau: true, volLightCap: 4, wxAirSteps: 0 };
   const run = () => { const e2: any[] = []; const r2: any = { recording: false, start() { this.recording = true; }, stop() { this.recording = false; }, event(_k: string, t: string) { e2.push(JSON.parse(t)); } };
     const p = new PerfSweep({ settings: S2, width: 100, height: 50, timer: { enabled: true } } as any, { fogOfWar: null } as any, { current: 'high', calibrating: false, label: 'high', auto: true } as any, { stats: { live: 0 }, params: { enabled: true } } as any, r2, () => {});
-    p.start({ rounds: 3, settleMs: 0, measureMs: 0, settleFrames: 1, measureFrames: 2, only: ['heldAdaptive', 'held2', 'held0', 'gatherHalf', 'volK', 'froxel'] });
+    p.start({ rounds: 3, settleMs: 0, measureMs: 0, settleFrames: 1, measureFrames: 2, only: ['heldAdaptive', 'held2', 'held0', 'gatherHalf', 'volK', 'wxAir'] });
     for (let i = 0; i < 4000 && p.active; i++) { now += 16; p.tick(); } return { p, segs: e2.filter(e => e.op === 'seg'), begin: e2.find(e => e.op === 'begin') }; };
   const A = run(), B = run(), ids: string[] = A.begin.rows.map((r: any) => r.id), n = ids.length;
   const flips = (r: number) => A.segs.filter((s: any) => s.round === r && s.state === 'flip').map((s: any) => s.id as string);
@@ -124,7 +124,7 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
   check(same(flips(0), ids) && [1, 2].every(r => same([...flips(r)].sort(), [...ids].sort())) && !same(flips(1), flips(2)), `round 1 as listed (${flips(0).join(' ')}), then ${flips(1).join(' ')}, then ${flips(2).join(' ')}`);
   check(same(A.segs.map((s: any) => s.id), B.segs.map((s: any) => s.id)), 'the same sweep run again takes the same order');
   check(A.segs.every((s: any) => same(Object.keys(s), ['op', 'i', 'of', 'round', 'id', 'state'])), 'a segment\'s line in the take is shaped as before (op, i, of, round, id, state)');
-  check(S2.heldAdaptive === false && S2.heldRays === 4 && S2.gatherThird === false && S2.volLightCap === 4 && S2.froxelVol === false, 'all back after the shuffled rounds');
+  check(S2.heldAdaptive === false && S2.heldRays === 4 && S2.gatherThird === false && S2.volLightCap === 4 && S2.wxAirSteps === 0, 'all back after the shuffled rounds');
 }
 { // the slow, live-only rows: 'wind sim off' and 'one snow in one air off'
   const mk = (hook: (() => any) | null) => {

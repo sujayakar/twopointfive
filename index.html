@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>twopointsix — 2.5D RT stealth sandbox</title>
   <link rel="icon" href="data:," />
+  <script>/* the page that draws a game it does not hold (draw.html) */ if (new URLSearchParams(location.search).has('draw')) location.replace('draw.html' + location.search + location.hash);</script>
   <style>
     /* THE FIGHT SCREEN WEARS THE MENUS' LOOK (src/ui/theme.ts): sand ink on warm black and the ONE orange, which here marks what leads on: the row a tap of Space does,
        the objective, a lost man's way. Every other hue still means something (gold / red / blue = who an order goes to; amber then red = alarm; blue = a door; red = a man).
@@ -202,7 +203,7 @@
     /* radio traffic (overlay.ts): only what goes over a net — the guards' channel you are listening in on, and (later) your own side. Everything else the old
        message log printed is carried by the interaction panel, the kit column and the world itself. */
     #log { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(620px, 70vw / var(--tz, 1)); font: italic 12px/1.45 var(--h-font); color: var(--h-ink); text-align: center; text-shadow: var(--h-shadow); white-space: pre-wrap; pointer-events: none; letter-spacing: 0.02em; }
-    #log .rx { display: block; opacity: 0.92; } #log .rx b { font: 700 11px/1 var(--h-head); color: var(--h-hi); letter-spacing: 0.12em; margin-right: 6px; } #log .rx.old { opacity: 0.5; }
+    #log .rx { display: block; opacity: 0.92; } #log .rx b { font: 700 11px/1 var(--h-head); color: var(--h-hi); letter-spacing: 0.12em; margin-right: 6px; } #log .rx.old { opacity: 0.5; } #log .rx.said { opacity: 0.8; font-style: normal; }
     /* mission: one objective line top-centre and a small diamond on (or, clamped to the screen edge, toward) the current objective — the same caps as the meters; the objective is one of the things the orange is for (overlay.ts) */
     #objective { position: absolute; left: 50%; top: 5px; padding: 5px 12px 4px; background: rgba(var(--h-plate),0.5); border-radius: 2px; transform: translateX(-50%); font: 12px/1 var(--h-font); letter-spacing: 0.02em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0.95; }
     #objective b { margin-right: 3px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--h-acc); } #objective.done b, #objective.failed b { color: inherit; }
@@ -309,8 +310,6 @@
     #menu .note.bootstatus { color: var(--m-btn-text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
     #menu .bootstatus .bbar { display: block; height: 2px; margin-top: 6px; background: rgba(var(--m-edge),0.18); }
     #menu .bootstatus .bbar i { display: block; height: 100%; width: 0; background: var(--m-accent); transition: width 0.2s; }
-    #menu .sandbox { display: flex; gap: 18px; margin: 10px 2px 2px; font-size: 11px; letter-spacing: 0.06em; color: var(--m-dim); text-transform: uppercase; }
-    #menu .sandbox label { display: flex; align-items: center; gap: 5px; cursor: pointer; } #menu .sandbox input { margin: 0; accent-color: var(--m-accent); }
     #menu .refused { margin: 0 0 6px; padding: 6px 10px; font-size: 12px; color: #f0c27a; border-left: 3px solid #e8b46a; background: rgba(232,180,106,0.08); }   /* the URL named a scenario and its start said no (ui/menu.ts) */
     /* THE TITLE SCREEN (#menu.title: the start card while the one starting page is the way in): the wordmark and the main menu down the left, the floor — and the attract reel — showing through on the right */
     #menu.title { align-items: stretch; justify-content: flex-start; background: linear-gradient(90deg, rgba(var(--m-base-rgb),0.97) 0, rgba(var(--m-base-rgb),0.9) 24%, rgba(var(--m-base-rgb),0.4) 56%, rgba(var(--m-base-rgb),0.06) 100%); }
@@ -426,9 +425,6 @@
     #menu .saves .tile.ahead .age { color: var(--m-dim); }
     #menu .btn.quit { border-color: rgba(240,196,110,0.55); color: #f3d79a; }
     #menu .body { margin-top: 10px; }
-    #menu .controls .row { display: flex; gap: 14px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    #menu .controls .k { flex: 0 0 128px; font: 12px/1.4 var(--m-mono); color: var(--m-accent-hi); letter-spacing: 0.04em; }
-    #menu .controls .v { flex: 1; color: var(--m-text); }
     #menu .note { font-size: 11px; color: var(--m-dim); margin: -2px 0 6px 2px; }
     #menu .foot { margin-top: 12px; font: 11px var(--m-mono); color: var(--m-faint); letter-spacing: 0.06em; }
     #menu .t2 b { color: var(--m-accent-hi); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }   /* the debrief card's rating word */
@@ -563,7 +559,7 @@
     #timeline { position: absolute; left: max(310px, calc(50% - 450px)); right: max(40px, calc(50% - 450px)); bottom: 14px; height: 30px; display: none; gap: 3px; pointer-events: auto; font: 600 10px/1 var(--h-head); letter-spacing: 0.12em; text-transform: uppercase; user-select: none; z-index: 6; }
     #timeline.on { display: flex; }
     body.panel-open #timeline { right: max(398px, calc(50% - 450px)); }
-    #timeline .seg { position: relative; min-width: 0; cursor: pointer; border-top: 2px solid rgba(var(--h-edge),0.28); padding-top: 7px; color: rgba(var(--h-edge),0.5); transition: color .2s, border-color .2s; }
+    #timeline .seg { position: relative; min-width: 0; border-top: 2px solid rgba(var(--h-edge),0.28); padding-top: 7px; color: rgba(var(--h-edge),0.5); transition: color .2s, border-color .2s; }
     #timeline .seg span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: var(--h-shadow); }
     #timeline .seg b { position: absolute; left: 0; top: -2px; height: 2px; width: 0; background: var(--h-acc); }
     #timeline .seg.done { border-top-color: rgba(var(--h-edge),0.7); color: rgba(var(--h-edge),0.75); }

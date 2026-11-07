@@ -536,7 +536,6 @@ pub struct Mission {
     pub alarm_on: bool,
     pub sweep_at: f64,
     pub spotted_t: f64,
-    pub debrief: bool,
     pub down_card_at: f64,
     pub hands_on: bool,
     pub stats: crate::game::MissionStats,
@@ -554,7 +553,6 @@ impl Mission {
             alarm_on: false,
             sweep_at: 0.0,
             spotted_t: 0.0,
-            debrief: false,
             down_card_at: 0.0,
             hands_on: false,
             stats: crate::game::MissionStats::zeroed(),
@@ -762,17 +760,24 @@ pub struct Game {
     pub glass_break: crate::glassbreak::GlassBreak,
     pub shards: crate::shards::GlassShards,
     pub director: crate::director::Director,
+    /// THE HOST'S OWN CAMERA AND KEYS, handed to the game once, at its stand, by every host alike (game.ts hostCam; the native start: game_start `host_new`).
+    /// The host's: on the wire's hosts-own list, in no state word. Named here for what reaches for them: a level script's show, a rails level's first
+    /// view, the view's matrix between two ticks.
+    pub host_cam: Option<CameraId>,
+    pub host_input: Option<InputId>,
     pub night_breach: crate::nightbreach::NightBreach,
     pub quiet: crate::quiet::QuietMission,
     pub lesson: crate::lesson::Lesson,
     pub rails: crate::rails::Rails,
     pub par: crate::par::Par,
+    pub recap: crate::deathrecap::Recap,
     pub verdict: crate::verdict::Verdict,
     pub snatch: crate::snatch::Snatch,
     pub defuse: crate::defuse::Defuse,
     pub room_clear: crate::roomclear::RoomClearScenario,
     pub orders: crate::orders::SquadOrders,
     pub fog_of_war: crate::fogofwar::FogOfWar,
+    pub fog_picture: crate::fogofwar::FogPicture,
     pub fight: crate::roomfight::RoomFight,
     pub cues: crate::cues::Cues,
     pub squad_net: crate::squadnet::SquadNet,
@@ -806,10 +811,6 @@ pub struct Game {
     pub ticking: bool,
     pub alone_own: crate::game::AsideOwn,
     pub cmd_buf: Option<crate::cmd::PlayerCmd>,
-    pub men_all: Vec<CharId>,
-    pub men_statured: bool,
-    pub men_bare: bool,
-    pub fog_held: Option<crate::game::GameFogHeld>,
     pub door_owns: Vec<Option<usize>>,
     pub door_was: Vec<f64>,
     pub door_hand_recs: JsMap<CharId, crate::game::GameDoorHandRecsValue>,
@@ -939,7 +940,7 @@ impl Game {
             last_sting_t: -100.0,
             event_seq: 0.0,
             messages: Vec::new(),
-            mission: crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, debrief: false, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::zeroed() } },
+            mission: crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::zeroed() } },
             chronicle: crate::chronicle::Chronicle::blank(),
             qrf: crate::qrf::Qrf::blank(),
             devices: crate::devices::Devices::blank(),
@@ -951,17 +952,21 @@ impl Game {
             glass_break: crate::glassbreak::GlassBreak::blank(),
             shards: crate::shards::GlassShards::blank(),
             director: crate::director::Director::blank(),
+            host_cam: None,
+            host_input: None,
             night_breach: crate::nightbreach::NightBreach::blank(),
             quiet: crate::quiet::QuietMission::blank(),
             lesson: crate::lesson::Lesson::blank(),
             rails: crate::rails::Rails::blank(),
             par: crate::par::Par::blank(),
+            recap: crate::deathrecap::Recap::blank(),
             verdict: crate::verdict::Verdict::blank(),
             snatch: crate::snatch::Snatch::blank(),
             defuse: crate::defuse::Defuse::blank(),
             room_clear: crate::roomclear::RoomClearScenario::blank(),
             orders: crate::orders::SquadOrders::blank(),
             fog_of_war: crate::fogofwar::FogOfWar::blank(),
+            fog_picture: crate::fogofwar::FogPicture::blank(),
             fight: crate::roomfight::RoomFight::blank(),
             cues: crate::cues::Cues::blank(),
             squad_net: crate::squadnet::SquadNet::blank(),
@@ -995,10 +1000,6 @@ impl Game {
             ticking: false,
             alone_own: crate::game::AsideOwn::blank(),
             cmd_buf: None,
-            men_all: Vec::new(),
-            men_statured: false,
-            men_bare: false,
-            fog_held: None,
             door_owns: Vec::new(),
             door_was: Vec::new(),
             door_hand_recs: JsMap::new(),
@@ -1404,23 +1405,6 @@ impl AsideOwn {
     }
 }
 impl Default for AsideOwn { fn default() -> Self { Self::blank() } }
-
-/// (TypeScript: inline at src/game/game.ts:1865 Game.fogHeld, src/game/game.ts:1865)
-#[derive(Clone, Debug)]
-pub struct GameFogHeld {
-    pub dyn_: Vec<BoxId>,
-    pub on: bool,
-}
-impl GameFogHeld {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GameFogHeld {
-            dyn_: Vec::new(),
-            on: false,
-        }
-    }
-}
-impl Default for GameFogHeld { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/game.ts:2127 Game.doorHandRecs, src/game/game.ts:2127)
 #[derive(Clone, Copy, Debug)]
@@ -3330,14 +3314,12 @@ pub struct Mods {
     pub lighting: crate::lighting::LightingMod,
     pub hours: crate::hours::HoursMod,
     pub chronicle: crate::chronicle::ChronicleMod,
-    pub mission: crate::mission::MissionMod,
     pub kit: crate::kit::KitMod,
     pub wandorder: crate::wandorder::WandorderMod,
     pub fogofwar: crate::fogofwar::FogofwarMod,
     pub guards: crate::guards::GuardsMod,
     pub dialogue: crate::dialogue::DialogueMod,
     pub civilians: crate::civilians::CiviliansMod,
-    pub deathrecap: crate::deathrecap::DeathrecapMod,
     pub orders: crate::orders::OrdersMod,
     pub seats: crate::seats::SeatsMod,
     pub wallcharge: crate::wallcharge::WallchargeMod,
@@ -3506,14 +3488,12 @@ impl Mods {
             lighting: crate::lighting::LightingMod::blank(),
             hours: crate::hours::HoursMod::blank(),
             chronicle: crate::chronicle::ChronicleMod::blank(),
-            mission: crate::mission::MissionMod::blank(),
             kit: crate::kit::KitMod::blank(),
             wandorder: crate::wandorder::WandorderMod::blank(),
             fogofwar: crate::fogofwar::FogofwarMod::blank(),
             guards: crate::guards::GuardsMod::blank(),
             dialogue: crate::dialogue::DialogueMod::blank(),
             civilians: crate::civilians::CiviliansMod::blank(),
-            deathrecap: crate::deathrecap::DeathrecapMod::blank(),
             orders: crate::orders::OrdersMod::blank(),
             seats: crate::seats::SeatsMod::blank(),
             wallcharge: crate::wallcharge::WallchargeMod::blank(),
@@ -3550,7 +3530,6 @@ pub struct Stats {
     pub doorblast: crate::doorblast::DoorblastStats,
     pub winbars: crate::winbars::WinbarsStats,
     pub destruction: crate::destruction::DestructionStats,
-    pub floormess: crate::floormess::FloormessStats,
     pub break_table: crate::break_table::BreakTableStats,
     pub wind: crate::wind::WindStats,
     pub glasspen: crate::glasspen::GlasspenStats,

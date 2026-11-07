@@ -272,7 +272,6 @@ pub struct State {
     pub lone_said: bool,
     pub few_n: f64,
     pub told: JsSet<RoomfightDefId>,
-    pub hint: Option<crate::laststand::Hint>,
     pub said: Vec<crate::laststand::LastStandSaid>,
     pub stats: crate::laststand::StateStats,
     pub stale: bool,
@@ -297,7 +296,6 @@ impl State {
             lone_said: false,
             few_n: 0.0,
             told: JsSet::new(),
-            hint: None,
             said: Vec::new(),
             stats: crate::laststand::StateStats::zeroed(),
             stale: false,
@@ -353,10 +351,9 @@ impl Said {
 }
 impl Default for Said { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Hint, src/game/laststand.ts:169)
+/// what their net has named that still stands: the rooms by id, and the named places that are no room
 #[derive(Clone, Debug)]
 pub struct Hint {
-    pub key: String,
     pub rooms: JsSet<String>,
     pub spots: Vec<crate::laststand::Spot>,
 }
@@ -364,7 +361,6 @@ impl Hint {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         Hint {
-            key: String::new(),
             rooms: JsSet::new(),
             spots: Vec::new(),
         }

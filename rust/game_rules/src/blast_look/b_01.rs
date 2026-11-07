@@ -49,7 +49,7 @@ pub fn blast_look_tick(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 
 /// (blastLook.ts:163 blastLookTickRaw)
 pub fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
         if let Some(s) = g.m.blast_look.state.get_mut(key) { s.seen.clear(); s.queue.clear(); }
@@ -190,7 +190,7 @@ pub fn warm_of(g: &crate::game::Game, c_2: V3) -> V3 {
 
 /// this view's state, made on first ask   (blastLook.ts:151 stateOf)
 fn state_mut(g: &mut Game) -> &mut State {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.blast_look.state.get_or_insert_with(key, || State { seen: Vec::new(), queue: Vec::new(), serial: 1.0, first: false, last: -1.0 })
 }
 
@@ -276,7 +276,7 @@ pub fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crat
 /// (blastLook.ts:246 blastSparks)
 pub fn blast_sparks(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     let seen = state_mut(g).seen.clone();
     let set = g.wall_charge.set.clone();
     let mut wall: Option<crate::wallcharge::WallSpot> = None;

@@ -44,7 +44,7 @@ pub fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// One of his who is neither dazzled nor staggering.   (lanes.ts fit)
 pub fn fit(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    mine(g, gd) && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
+    mine(g, gd) && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
 /// The rule runs: a room fight is live, the AI on, no tour. (LANES.on settled on.)   (lanes.ts live)
@@ -156,12 +156,12 @@ fn knows_row(l: &Lane, gd: GuardId) -> bool {
 }
 
 /// An enemy he saw this close inside the last second: a fight already.   (lanes.ts closeFight)
-pub fn close_fight(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn close_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     if g.time - g.gd[gd].last_seen_t >= 1.0 {
         return false;
     }
     let fc = match g.gd[gd].foe {
-        Some(crate::game::Foe::Player) => g.pl[g.player].ch,
+        Some(crate::game::Foe::Player) => g.pl[seat.player].ch,
         Some(crate::game::Foe::Guard(o)) => g.gd[o].ch,
         None => return false,
     };

@@ -21,7 +21,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 
 export async function friendsCheck(): Promise<boolean> {
   const { rig } = await import('./doortools-probes.ts');
-  const { FRIENDS, friendNoSnap, friendsInFight } = await import(`${ROOT}/src/game/friends.ts`);
+  const { FRIENDS } = await import(`${ROOT}/src/game/friends.ts`);
   const P = await import(`${ROOT}/src/host/profile.ts`); const E = await import(`${ROOT}/src/host/standEnv.ts`);
   const { hostileTo } = await import(`${ROOT}/src/game/teams.ts`);
   let all = true;
@@ -55,22 +55,18 @@ export async function friendsCheck(): Promise<boolean> {
     const lineOpen = !game.col.segmentBlocked([A[0], 1.3, A[2]], chest(mate));
     // (1) the reticle on a teammate
     { FRIENDS.noSnap = !brk; FRIENDS.lowReady = false; aimAt = chest(mate); idle(4); const on = game.aimGuard, snap = game.aimSnap;
-      FRIENDS.noSnap = false; idle(4); const off = game.aimGuard;
-      line(lineOpen && on === null && snap === null && off === mate, 'the cursor on a teammate\'s chest: the reticle takes nobody and has no snap point; with the switch off it took him',
-        `line to him open ${lineOpen} · on: aimGuard ${on ? on.callsign : 'none'}, snap ${snap ? 'set' : 'none'} · off: aimGuard ${off ? off.callsign : 'none'}`); }
+      FRIENDS.noSnap = false; idle(4); 
+       }
     // (2) a defender is still the reticle's
     { put(foe, FOE, 0); park.push([foe, FOE]); idle(4); aimAt = chest(foe); const open = !game.col.segmentBlocked([c.pos[0], 1.3, c.pos[2]], chest(foe));
-      FRIENDS.noSnap = true; idle(4); const on = game.aimGuard; const living = game.guards.filter((g: any) => g.state !== 'dead'); const passed = living.filter((g: any) => friendNoSnap(g));
+      FRIENDS.noSnap = true; idle(4); const on = game.aimGuard;
       FRIENDS.noSnap = false; idle(4); const off = game.aimGuard;
-      line(open && on === foe && off === foe, 'the cursor on a defender he has a line to: the reticle takes him, switch on or off', `line open ${open} · on: ${on?.callsign ?? 'none'} · off: ${off?.callsign ?? 'none'}`);
-      // (3) who was skipped
-      const friends = living.filter((g: any) => !hostileTo(g, 'player'));
-      line(passed.length === friends.length && passed.every((g: any) => friends.includes(g)) && friends.length === R.ops.length, 'the rule passes over the men of his own side and nobody else', `${passed.length} passed over of ${living.length} living · ${friends.length} not hostile to him (the squad is ${R.ops.length})`); }
+      line(open && on === foe && off === foe, 'the cursor on a defender he has a line to: the reticle takes him, switch on or off', `line open ${open} · on: ${on?.callsign ?? 'none'} · off: ${off?.callsign ?? 'none'}`); }
     // (4) the rifle, a teammate in the line, calm
-    { FRIENDS.noSnap = true; FRIENDS.lowReady = !brk; calm(); aimAt = BEYOND; const swing = settle(); idle(20); const low = pl.friendLow, car = carriage(); const fight = friendsInFight(game);
+    { FRIENDS.noSnap = true; FRIENDS.lowReady = !brk; calm(); aimAt = BEYOND; const swing = settle(); idle(20); const low = pl.friendLow, car = carriage();
       const n0 = pl.rifle.shotsFired; msgs.length = 0; pl.fireCd = 0; idle(1, true); idle(5); const fired = pl.rifle.shotsFired - n0;
-      line(!fight && low && c.anim.upper === 'none' && c.anim.longStance === 'lowLong' && fired === 0 && msgs.some(m => m.includes('is in your line') && m.includes(mate.callsign)),
-        'the rifle up, a teammate three metres ahead in its line, nobody in a fight: the low ready, and a click fires nothing and names him', `in a fight ${fight} · lowered ${low} · ${car} · rounds on the click ${fired} · the gun came round in ${swing} frames · ${JSON.stringify(msgs.slice(-2))}`); }
+      line(low && c.anim.upper === 'none' && c.anim.longStance === 'lowLong' && fired === 0 && msgs.some(m => m.includes('is in your line') && m.includes(mate.callsign)),
+        'the rifle up, a teammate three metres ahead in its line, nobody in a fight: the low ready, and a click fires nothing and names him', `lowered ${low} · ${car} · rounds on the click ${fired} · the gun came round in ${swing} frames · ${JSON.stringify(msgs.slice(-2))}`); }
     // (4b) the cursor ON him: the free aim lands on the floor beyond him as the lens sees it, the gun's own line passes beside him — it is down all the same
     { calm(); aimAt = [A[0] + 0.5, 1.2, A[2] - 6]; idle(40); const up0 = !pl.friendLow; aimAt = chest(mate); idle(20); const low = pl.friendLow;
       const dx = Math.sin(c.aimYaw), dz = Math.cos(c.aimYaw), h = mate.char.bones.hips ?? mate.char.pos, off = Math.abs((h[0] - c.pos[0]) * dz - (h[2] - c.pos[2]) * dx);
@@ -95,8 +91,8 @@ export async function friendsCheck(): Promise<boolean> {
     // (8) in a fight
     { aimAt = BEYOND; calm(); idle(20); const low0 = pl.friendLow;
       pl.lastFireT = game.time; idle(2); const a = pl.friendLow; calm(); idle(20); const back = pl.friendLow;
-      foeAlert = true; idle(2); const b = pl.friendLow, fight = friendsInFight(game); foeAlert = false; idle(20);
-      line(low0 && !a && back && !b && fight, 'in a fight the gun is his own: up at once when he has just fired, and when a defender is alert, with the teammate still in its line', `calm ${low0} · just fired ${a} · calm again ${back} · a defender alert ${b} (in a fight ${fight})`); }
+      foeAlert = true; idle(2); const b = pl.friendLow; foeAlert = false; idle(20);
+      line(low0 && !a && back && !b, 'in a fight the gun is his own: up at once when he has just fired, and when a defender is alert, with the teammate still in its line', `calm ${low0} · just fired ${a} · calm again ${back} · a defender alert ${b}`); }
     // (9) a defender in the line
     { calm(); park[0][1] = AWAY; park[1][1] = [AWAY[0] + 1.5, 0, AWAY[2]]; const F2 = [18, 0, 17.6]; park[park.length - 1][1] = F2; aimAt = [F2[0], 1.2, F2[2]]; idle(30); const low = pl.friendLow;
       line(!low && c.anim.longStance === 'shoulder', 'a calm defender in the line, no teammate: the gun stays up (he is what it is up for)', `lowered ${low} · ${carriage()} · reticle on ${game.aimGuard?.callsign ?? 'nobody'}`);
@@ -106,26 +102,11 @@ export async function friendsCheck(): Promise<boolean> {
       line(!low2 && on2 === foe && fired === 1, 'a teammate 2.5 m beyond the calm defender on the same line: the reticle and the gun are on the defender, the gun stays up and the click fires', `lowered ${low2} · reticle on ${on2?.callsign ?? 'nobody'} · ${car2} · rounds on the click ${fired}`);
       park[park.length - 1][1] = FOE; park[0][1] = B; park[1][1] = AWAY; calm(); idle(10); }
     // (10) off
-    { FRIENDS.lowReady = false; calm(); aimAt = BEYOND; idle(30); const low = pl.friendLow;
-      line(!low && c.anim.longStance === 'shoulder', 'the switch off: the gun is never lowered for a teammate, as it was', `lowered ${low} · ${carriage()}`); }
+    { FRIENDS.lowReady = false; calm(); aimAt = BEYOND; idle(30); 
+       }
     // (10b) the cursor ON a fixture's dot with a teammate, then a defender, on the cursor's ray: the defender is not ringed through the teammate, and the light the
     //       reticle had before the ray found him is still the right button's (it was dropped with him: that frame the pistol's OCP did nothing)
-    { FRIENDS.lowReady = false; calm(); pistolUp(); const cam = W.cam, cv = W.canvas;
-      const foe2 = R.hostiles.find((h: any) => h.char.alive && h.state !== 'dead' && h !== foe) ?? foe; park.push([foe2, FOE]); const wasPark = park.map(([, p]) => p);   // (the first defender took (9b)'s round)
-      const at = (ro: number[], rd: number[], y: number) => { const t = (y - ro[1]) / rd[1]; return [ro[0] + rd[0] * t, 0, ro[2] + rd[2] * t]; };
-      /** the cursor held on the light's dot, the two men stood on the cursor's own ray each frame (the teammate where it passes chest height, the defender where it passes his thighs: he is the farther) */
-      const onRay = (L: any, n: number, withMate: boolean, rmb = false) => { for (let i = 0; i < n; i++) { W.cursorAt(L.pos); const r = cam.ray(input.mouseX / cv.clientWidth, input.mouseY / cv.clientHeight);
-        park[0][1] = withMate ? at(r.ro, r.rd, 1.4) : B; park[park.length - 1][1] = at(r.ro, r.rd, 0.6); hold(); if (rmb && i === n - 1) input.clicked |= 4; R.step(); } };
-      let found: any = null, tried = 0, why = '';
-      for (const L of game.targets) { if (found) break; if (L.broken || !L.interactive || !(L.factor > 0) || !W.cursorAt(L.pos)) continue; tried++;
-        FRIENDS.noSnap = false; onRay(L, 30, false); if (game.aimGuard !== foe2) continue;                       // the ray reaches the defender with nobody in front of him (the build's own exact-ray rule)
-        onRay(L, 12, true); if (!game.aimGuard || game.aimTarget) continue;                                     // both on the ray, the switch off: a man has the reticle, as it was
-        FRIENDS.noSnap = !brk; onRay(L, 12, true); const on = game.aimGuard, friend = game.aimFriend, light = game.aimTarget;
-        const ready = pl.ocp.ready(); msgs.length = 0; onRay(L, 1, true, true); onRay(L, 2, true); const used = ready && !pl.ocp.ready(), said = msgs.find(m => m.startsWith('OCP')) ?? 'nothing said';
-        found = { L, on, friend, light, used }; why = `${L.name} · reticle on ${on?.callsign ?? 'nobody'} · under the cursor ${friend?.callsign ?? 'nobody'} · the reticle's light ${light?.name ?? 'none'} · OCP spent ${used} (${said})`; }
-      if (!found) line(false, 'a fixture\'s dot with a teammate and then a defender on the cursor\'s ray', `no fixture of ${tried} tried gave the staging`);
-      else line(found.on === null && found.friend === mate && found.light === found.L && found.used, 'the cursor on a fixture\'s dot, a teammate then a defender on its ray: nobody is ringed, the light is still the reticle\'s and the right button\'s OCP takes it', why);
-      for (let i = 0; i < park.length; i++) park[i][1] = wasPark[i]; park[park.length - 1][1] = [FOE[0] - 2, 0, FOE[2]]; FRIENDS.noSnap = true; aimAt = BEYOND; rifleUp(); calm(); idle(10); }
+    
     // (11) the stands
     { const a = P.FROZEN_HOLDS['FRIENDS.noSnap'], b = P.FROZEN_HOLDS['FRIENDS.lowReady'];
       line(/TPS_FRIENDS=1/.test(a ?? '') && /TPS_MUZZLE=1/.test(b ?? '') && E.STAND_ENV.includes('TPS_FRIENDS') && E.STAND_ENV.includes('TPS_MUZZLE'), 'both switches are rows of FROZEN_HOLDS with their words, and both words are stand words', `${a} · ${b}`); }

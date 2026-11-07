@@ -306,7 +306,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
         // a remark that waited for the man to finish: the answer is down and no question is going up
         if hold!(g, p).after.is_some() && hold!(g, p).phase == Ph::Held && hold!(g, p).ask.is_none() {
             let h = hold!(g, p).clone();
-            if !held_talk(g, &h).speaking {
+            if !held_talk(g, &crate::seats::here(g), &h).speaking {
                 say_after(g);
             }
         }
@@ -350,7 +350,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
                     crate::game::game_msg(g, "click — empty, and no hand free to reload");
                 }
             }
-            if !swapping && crate::input::input_rmb_hit(g, input) && (crate::lighting::ocpable(g) || (g.aim_target.is_none() && g.aim_guard.is_none())) {
+            if !swapping && crate::input::input_rmb_hit(g, input) && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.aim_target.is_none() && g.aim_guard.is_none())) {
                 let target = g.aim_target;
                 crate::game::game_ocp(g, target);
             }
@@ -382,11 +382,11 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
                 let tgt: V3 = if let Some(t) = g.aim_target {
                     v3::copy(g.tab.sim_lightshome_fixture[t].pos)
                 } else if let Some(a) = ag {
-                    man_aim(g, a, 1.25)
+                    man_aim(g, &crate::seats::here(g), a, 1.25)
                 } else {
-                    free_aim(g, Some(0.6))
+                    free_aim(g, &crate::seats::here(g), Some(0.6))
                 };
-                let (spread_sup, spread_aim) = (crate::suppression::sam_spread(g), crate::aim::sam_aim(g));
+                let (spread_sup, spread_aim) = (crate::suppression::sam_spread(g, &crate::seats::here(g)), crate::aim::sam_aim(g));
                 let opts = crate::combat::FireOpts { spread: Some(HOLD_SPREAD + spread_sup + spread_aim), ..crate::combat::FireOpts::zeroed() };
                 crate::combat::fire_weapon(g, c, tgt, true, Some(&opts));
                 if crate::weapons::firearm_rounds_ready(g, pistol) == 0.0 {
@@ -415,7 +415,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
                 match g.aim_guard {
                     Some(a) if a != gd => match (g.gd[a].wound.is_some(), g.aim_snap) {
                         (true, Some(snap)) => snap[1],
-                        _ => man_aim(g, a, 1.2)[1],
+                        _ => man_aim(g, &crate::seats::here(g), a, 1.2)[1],
                     },
                     _ => {
                         if level_on(g) {
@@ -477,7 +477,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
         let back = ml > 0.0 && mx * f[0] + mz * f[2] < -0.3; // into the rear half: hauling him backwards
         let walk = g.puppet.as_ref().and_then(|x| x.walk).unwrap_or(1.0);
         let pace_in = if ml == 0.0 { 0.0 } else { (if back { HOLD_PACE_BACK } else { HOLD_PACE }) * g.pl[p].pace * walk };
-        let max_speed = crate::kitload::sam_load_pace(g, pace_in, None);
+        let max_speed = crate::kitload::sam_load_pace(g, &crate::seats::here(g), pace_in, None);
         g.pl[p].speed_sm = v3::damp(g.pl[p].speed_sm, max_speed, if max_speed > g.pl[p].speed_sm { 6.0 } else { 12.0 }, dt);
         if ml > 0.0 {
             let sm = g.pl[p].speed_sm;
@@ -622,7 +622,7 @@ fn tail_end(g: &mut Game, dt: f64, speed: f64, c: CharId) {
     pose_gun_light(g);
     let phase = g.ch[c].anim.phase;
     if js::truthy(footfall_due(g, dt, phase, speed)) {
-        let heard = crate::kitload::load_heard(g, crate::kitload::LoadHeardWho::Player);
+        let heard = crate::kitload::load_heard(g, &crate::seats::here(g), crate::kitload::LoadHeardWho::Player);
         let at = g.ch[c].pos;
         let loud = crate::floor::tread(g, at, 0.26 * heard, true);
         let (pos, time, serial) = (v3::copy(g.ch[c].pos), g.time, g.serial());
@@ -738,7 +738,7 @@ pub fn swap_hold(g: &mut crate::game::Game) {
         g.pl[p].slot = crate::game::SlotKind::Pistol;
         set_holstered(g, false, Some(true));
         let h = hold!(g, p).clone();
-        if !h.remarked && !held_talk(g, &h).speaking && g.gd[gd].civ.is_none() {
+        if !h.remarked && !held_talk(g, &crate::seats::here(g), &h).speaking && g.gd[gd].civ.is_none() {
             if let Some(line) = crate::dialogue::sam_remark_for(g, gd, None) {
                 hold!(g, p).remarked = true;
                 let time = g.time;
@@ -859,7 +859,7 @@ pub fn keep_held_off_guards(g: &mut crate::game::Game, dt: f64) {
         if l >= KEEP_OFF || l < 1e-4 {
             continue;
         }
-        if crate::noshove::falling_in_yields(g, o) {
+        if crate::noshove::falling_in_yields(g, &crate::seats::here(g), o) {
             continue;
         }
         let (bx, bz) = (g.ch[c].pos[0], g.ch[c].pos[2]);
@@ -873,7 +873,7 @@ pub fn keep_held_off_guards(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Where the exchange with the man in his arm stands. `speaking` says the man's bubble is his answer: a write goes to `g.gd[h.g].bubble`.   (player.ts heldTalk)
-pub fn held_talk(g: &crate::game::Game, h: &crate::player::Hold) -> crate::player::HeldTalk {
+pub fn held_talk(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: &crate::player::Hold) -> crate::player::HeldTalk {
     let gd = h.g;
     let talk = g.gd[gd].talk;
     let last_t = g.tab.game_talk[talk].last_t;
@@ -885,7 +885,7 @@ pub fn held_talk(g: &crate::game::Game, h: &crate::player::Hold) -> crate::playe
     let fresh = last_t < 0.0 || last_t < h.since - 1e-6;
     let asking = h.ask.is_some();
     let sam_up = asking
-        || match &g.pl[g.player].bubble {
+        || match &g.pl[seat.player].bubble {
             Some(sb) => sb.t >= h.since - 1e-6 && time - sb.t < sb.dur - 1e-9,
             None => false,
         };
@@ -903,7 +903,7 @@ pub fn ask_held(g: &mut crate::game::Game) {
     let p = g.player;
     let Some(h) = g.pl[p].holding.clone() else { return };
     let gd = h.g;
-    let talk = held_talk(g, &h);
+    let talk = held_talk(g, &crate::seats::here(g), &h);
     if talk.sam_up {
         return;
     }
