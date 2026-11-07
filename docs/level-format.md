@@ -302,7 +302,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   level's fingerprint. Checks: the validator (the door exists, once, the name's length) and `bun run tools/qa/probes.ts words-doornames` (no bearing, no
   two doors of a level called the same, and the list of doors still owed a name — a door named here comes off `DOORS_OWED` in the same change).
 - `kitView` — THE TEAM AT THE DOOR, the start page's Team & kit picture (`src/host/kitView.ts`, `src/ui/kitView.ts`; picture only — no rule of the game reads
-  it, and a level without the block shows an empty column there: the menu's standing man is `?oldfigure`'s alone): `{ ways[], sets? }`, indexed as the team starts are (`[0]` = the room clear's own
+  it, and a level without the block shows an empty column there): `{ ways[], sets? }`, indexed as the team starts are (`[0]` = the room clear's own
   `team`, `[k]` = its `starts[k − 1]`; never more ways than starts). A way needs only `door` (a door id): the men's slots, the camera and the lamps are worked
   out from that door's frame and the side the team starts on — teammates along the wall 0.7 m off its face and 0.9 m apart from 0.45 m past the jamb away
   from the hinge, Sam across the door, no nearer its middle than 1.8 m (an authored slot for him should keep that too: a door charge's moment goes off beside him
