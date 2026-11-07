@@ -34,7 +34,7 @@ export function keepPageBoot(q: URLSearchParams, own: boolean, picture = false):
   // (a frame is KNOWN to draw with its parent's device in the Chromium family — Chrome, Edge and their kin say `Chrome/`, a headless one `HeadlessChrome/` —
   // and nowhere else has it been seen)
   const proven = /Chrome\/\d/.test(navigator.userAgent);
-  const role = keepRole({ word, tab, top, keeper: !!above?.same && (picture || direct), stale, own, picture, driven: navigator.webdriver === true || q.has('paused'), proven, onefile: !!document.querySelector('meta[name="tps-one-page"]') });
+  const role = keepRole({ word, tab, top, keeper: !!above?.same && (picture || direct), stale, own, picture, driven: navigator.webdriver === true || q.has('paused'), proven });
   if (role === 'shell') {
     const keeper = makeKeeper(() => openDevice(navigator.gpu), build, performance.now(), ((): string => { try { return String((performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type ?? ''); } catch { return ''; } })());
     if (q.get(KEEP_PAGE.drainWord) === '0') keeper.drain = false;   // (the tab's first address: the keeper is this window's for the visit)
