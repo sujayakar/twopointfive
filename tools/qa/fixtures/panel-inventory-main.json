@@ -902,59 +902,11 @@
  },
  {
   "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "per-tile light culling (lossless)",
-  "title": "each 8×8 pixel tile bounds its shading points and scores only the lights that can reach that box (in range, inside the spot cone, in front of a one-sided panel); a dropped light provably evaluates to zero at every pixel of the tile, so the image is bit-identical — off = every pixel scores every light (A/B, frame flag 4096)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "trace grid: skip empty runs (lossless, all rays)",
-  "title": "every traced ray (shadow rays here, the final gather, cascade intervals, beams, probes) walks the 1 m XZ grid cell by cell; the grid build stores each cell's Chebyshev distance to the nearest occupied cell, so an empty cell at distance d lets the DDA take its next d−1 steps without loading anything (those cells are provably empty too). Same stepping arithmetic, one iteration per cell as before, so hits are bit-identical — off = a load pair per cell (A/B, frame flag 131072)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "trace grid: height cull (lossless, all rays)",
-  "title": "the grid is 2D but the level is not: each cell also stores which 15 cm height slices its boxes occupy and each item its own padded [ymin, ymax]. A cell (or a single box) whose band the REST of the ray — from where it enters the cell to tmax / the current hit — cannot reach is not slab-tested: such a box could only have been hit behind the cell, where the walk already met it, so every dropped test was a miss or a no-op and the result is bit-identical (argument above traceClosest in common.wgsl). Rays skimming over desks toward ceiling panels, cascade intervals at chest height, gather rays under the furniture stop paying for geometry above/below them — off = every registered box tested (A/B, frame flag 262144)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "slab test: unrotated fast path (lossless, all rays)",
-  "title": "a box with yaw 0 packs its rotation as exactly (cos 1, sin 0), and rotating by that is the identity down to the last bit (1·x − 0·z = x however the compiler contracts it), so the ray/box test can use the ray as it is and the inverse direction the traversal already holds instead of two half-float unpacks, two rotations and three divisions — that is two thirds of all grid items and every global. Off = always rotate + divide (A/B, frame flag 524288)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "trace grid: globals by segment + tight spans (lossless, all rays)",
-  "title": "the handful of huge slabs kept out of the grid (ground, carpet base, corridor / break-room finishes, ceiling) used to be slab-tested by every ray whose HEIGHTS came within 4 cm of theirs — so a ray lifted 1–2 cm off the floor tested all four floors, four of its ~ten box tests. Now a global is skipped unless the ray segment's bounds meet its own on all three axes, 5 mm proud; and each cell's height span is judged 3.5 cm tighter at both ends (the packed extents carry 4 cm against < 0.4 mm of float differences), so a ray stops re-testing the desk / floor / wall top it just left. Every dropped test was a provable miss, so hits are bit-identical (argument above traceClosest in common.wgsl; tools/qa/grid-globals.ts: −40 % slab tests for rays off the floor, −60 % outdoors, −19 % cascades) — off = the height cull as it was (A/B, frame flag 1048576)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
   "kind": "text",
   "label": "",
   "title": "",
   "def": false,
   "extra": "grid 1120 cells · 385 empty (mean look-ahead 1.3) · busiest "
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "penumbra filter: skip hint-free tiles (lossless)",
-  "title": "the à-trous penumbra filter only ever changes pixels within reach of a blur hint (a shadow-ray blocker measurement); two tiny pre-passes flag the 8×8 tiles holding a hint and measure every tile's distance to the nearest one, and the filter steps copy whole tiles straight through when they are further away than a hint can travel over the entire chain — those provably pass through unchanged anyway, so the image is bit-identical while lit floors, unlit rooms and sky stop paying for the 3×3 hint scan. Off = every pixel decides for itself (A/B, frame flag 8192)",
-  "def": false,
-  "extra": ""
  },
  {
   "path": "Direct light ▸ Lights (level)",

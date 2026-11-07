@@ -74,29 +74,24 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   let occlFit = ((cfgZ >> 15u) & 1u) != 0u;                    // HIDDEN LIGHT (header; settings.dnShadowOccl)
   if (lidx < 2u) { atomicStore(&wgSliver[lidx], 0u); }   // (ordered before any lane's vote by the light-list barriers below)
   // ---- the tile's light list: direct.wgsl's lossless cull, statement for statement (a light off the list scores !ok at every live pixel of the tile) ----
-  let tileCull = (frame.flags & FLAG_TILECULL) != 0u;
   var nIter = nL;
-  if (tileCull) {
-    wgP[lidx] = vec4f(P, select(0.0, 1.0, live));
-    workgroupBarrier();
-    if (lidx < 8u) {
-      var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = 0.0;
-      for (var k = 0u; k < 8u; k++) { let q = wgP[lidx * 8u + k]; if (q.w > 0.0) { mn = min(mn, q.xyz); mx = max(mx, q.xyz); anyLive = 1.0; } }
-      wgRowMin[lidx] = vec4f(mn, anyLive); wgRowMax[lidx] = vec4f(mx, anyLive);
-    }
-    workgroupBarrier();
-    if (lidx < nL) {
-      var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = false;
-      for (var r = 0u; r < 8u; r++) { let a = wgRowMin[r]; if (a.w > 0.0) { mn = min(mn, a.xyz); mx = max(mx, wgRowMax[r].xyz); anyLive = true; } }
-      wgKeep[lidx] = select(0u, 1u, anyLive && lightReachesBox(wgLights[lidx], mn, mx));
-    }
-    workgroupBarrier();
-    if (lidx == 0u) { var n = 0u; for (var i = 0u; i < nL; i++) { if (wgKeep[i] != 0u) { wgList[n] = i; n++; } } wgCount = n; }
-    workgroupBarrier();
-    nIter = wgCount;
-  } else {
-    workgroupBarrier();   // wgLights staged
+  wgP[lidx] = vec4f(P, select(0.0, 1.0, live));
+  workgroupBarrier();
+  if (lidx < 8u) {
+    var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = 0.0;
+    for (var k = 0u; k < 8u; k++) { let q = wgP[lidx * 8u + k]; if (q.w > 0.0) { mn = min(mn, q.xyz); mx = max(mx, q.xyz); anyLive = 1.0; } }
+    wgRowMin[lidx] = vec4f(mn, anyLive); wgRowMax[lidx] = vec4f(mx, anyLive);
   }
+  workgroupBarrier();
+  if (lidx < nL) {
+    var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = false;
+    for (var r = 0u; r < 8u; r++) { let a = wgRowMin[r]; if (a.w > 0.0) { mn = min(mn, a.xyz); mx = max(mx, wgRowMax[r].xyz); anyLive = true; } }
+    wgKeep[lidx] = select(0u, 1u, anyLive && lightReachesBox(wgLights[lidx], mn, mx));
+  }
+  workgroupBarrier();
+  if (lidx == 0u) { var n = 0u; for (var i = 0u; i < nL; i++) { if (wgKeep[i] != 0u) { wgList[n] = i; n++; } } wgCount = n; }
+  workgroupBarrier();
+  nIter = wgCount;
   var U0 = vec3f(0.0); var U1 = vec3f(0.0);
   var Uw0 = vec3f(0.0); var Uw1 = vec3f(0.0);   // the part of U from lights the reach masks wall off from this cell — in U (as in the estimators') but known dark: the live lights' visibility is E ∕ (U − Uw)
   var E0 = vec3f(0.0); var E1 = vec3f(0.0);
@@ -113,7 +108,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     if (look) { N = lookGeoN(Nl, textureLoad(oId, gxy, 0).x); }
     // ---- U per class at THIS output pixel: the estimators' scoring loop (same order, same early-outs; walled-off lights stay in U here as there) ----
     for (var s = 0u; s < nIter; s++) {
-      var i = s; if (tileCull) { i = wgList[s]; }
+      let i = wgList[s];
       let li = wgLights[i];
       let ev = evalLightDirect(li, P, N);
       if (!ev.ok) { continue; }
