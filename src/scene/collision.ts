@@ -230,8 +230,8 @@ export class StaticCollision {
   /** A WINDOW ON THE COPY, FOR QUESTIONS ASKED OUTSIDE A TICK. The module answers a row's questions only over a copy that has been PROVEN (every static
    *  compared with its row: tickOpen), and a proof holds only while nobody writes a box without saying so. A tick is one such stretch. `window(fn)` is
    *  another: the copy is proven once, `fn`'s questions go to the module, and it shuts when `fn` returns, however it returns. Inside it the tick's rule
-   *  holds: a rule that writes a static says `wrote()`. Already inside a tick or a window, `fn` just runs. A tick that opens and shuts inside `fn` shuts
-   *  the window with it (a tick's writers answer to the tick alone); what `fn` asks after that is asked alone, below.
+   *  holds: a rule that writes a static says `wrote()`. Already inside a tick or a window, `fn` just runs. A step
+   *  inside `fn` is `writes`, below: what `fn` asks after it is asked of the copy proven again.
    *  A QUESTION OUTSIDE EVERY WINDOW IS ITS OWN (`lone`): the copy is proven for it and shut behind it. That is always right and costs a proof a
    *  question (about 25 ns a static), so code that asks many in a row opens a window (a level's deal, the camera's step of a frame, the sound's
    *  probe, a tool's driver). A window is proven by the first question asked in it: one that asks nothing costs nothing. */
@@ -239,6 +239,13 @@ export class StaticCollision {
     const M = this.mirror; if (M.live || this.windowed) return fn();   // (whatever ANYTIME says: a sense asked in a window has no other answer, and the window is what proves the copy for it)
     this.windowed = true;
     try { return fn(); } finally { this.windowed = false; if (M.live) M.shut(); }
+  }
+  /** THE BOXES ARE WRITTEN BY `fn`, all of them it likes and none of them said (a step of the game put onto the page's objects: tools/blitz/import.ts applyGame): no
+   *  copy stands while it runs, and the window it ran in, if it ran in one, proves the copy again at its next question. So a frame is ONE window whatever it
+   *  steps (host/loop.ts): what is asked behind a step is asked of the boxes as that step left them. */
+  writes<T>(fn: () => T): T {
+    const M = this.mirror, was = this.windowed; if (M.live) M.shut(); this.windowed = false;
+    try { return fn(); } finally { this.windowed = was; }
   }
   /** inside `window(fn)`, outside a tick: the copy is proven by the first question `fn` asks and stands until `fn` returns (a window nobody asks in costs nothing) */
   private windowed = false;

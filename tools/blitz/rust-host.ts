@@ -791,7 +791,11 @@ export class RustHost {
     if (this.audit) rust = this.applyWhole('audit');
     else { const why = this.wholeOwed(k); if (why) this.applyWhole(why); }
     if (this.cutDue) { this.cutDue = false; g.restartCut = true; }
-    this.dispatch();
+    // (one window on the box world's copy for what the host asks of it behind a step, as on the page: src/host/rustgame.ts apply)
+    // THE PICTURE'S HALF runs in it, for a game stood with the dressing rows up (a check about what is drawn): the page's own dress step, one path with the
+    // page (src/host/rustdress.ts: the men handed to the renderer, the wind's hand-over, the air, the stature). It ticks the par clock and the verdict itself
+    const picture = this.o.dress !== false && this.o.dressDown === false && this.o.draws !== false && !OFF.has('pagedress');
+    g.col.window(() => { this.dispatch(); if (!picture) return; const t0 = now(); try { B.pageDress(g, dt, this.side); } catch (e) { this.count(`the page's dress step THREW on the puppet: ${String((e as any)?.message ?? e).slice(0, 100)}`); } this.T.dress += now() - t0; });
     // ---- the dress step: what the tick does that has no Rust body and a reader of the puppet needs
     // (THE AUTOSAVE is the host's and decides off the frame as it now stands, so it runs here, on the puppet. Its one write into the game is the
     // chronicle's row, and on a level on rails it stops the level's program for the take: both are made on the Rust side by `face_checkpoint`, as the
@@ -799,11 +803,8 @@ export class RustHost {
     t = now(); const nest0 = this.nest;
     if (this.o.dress !== false) {
       // (the par clock and the verdict are the debrief's: a throw of theirs on the puppet is counted and is not the play's end)
-      // THE PICTURE'S HALF, for a game stood with the dressing rows up (a check about what is drawn): the page's own dress step, one path with the
-      // page (src/host/rustdress.ts: the men handed to the renderer, the wind's hand-over, the air, the stature). It ticks the par clock and the
-      // verdict itself. With the rows down nothing reads the picture's lists and only those two are run.
-      if (this.o.dressDown === false && this.o.draws !== false && !OFF.has('pagedress')) { try { B.pageDress(g, dt, this.side); } catch (e) { this.count(`the page's dress step THREW on the puppet: ${String((e as any)?.message ?? e).slice(0, 100)}`); } }
-      else for (const n of ['par', 'verdict'] as const) try { g[n]?.tick(); } catch (e) { this.count(`${n}.tick THREW on the puppet (first at tick ${this.threw[n] ??= k}): ${String((e as any)?.message ?? e).slice(0, 100)}`); }
+      // (with the rows down nothing reads the picture's lists and only those two are run)
+      if (!picture) for (const n of ['par', 'verdict'] as const) try { g[n]?.tick(); } catch (e) { this.count(`${n}.tick THREW on the puppet (first at tick ${this.threw[n] ??= k}): ${String((e as any)?.message ?? e).slice(0, 100)}`); }
       const S = g.saves;
       // (a take is due this tick: an authored checkpoint a rule asked for, a save by hand, a load. The puppet takes the whole state first. An autosave
       // the controller decides on inside its tick takes the whole state as the take starts: `taps`. Its gate and its triggers read the puppet as the
