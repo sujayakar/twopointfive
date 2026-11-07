@@ -54,16 +54,6 @@ pub fn column_entry(ro: V3, rd: V3, tmax: f64, cx: f64, cz: f64, r: f64, bot: f6
     t_in
 }
 
-/// The wound layer's weight this frame. (character.ts CharacterAnimator.woundShown)
-pub fn anim_wound_shown(g: &mut crate::game::Game, c: CharId) -> f64 {
-    g.ch[c].anim.wd_w
-}
-
-/// The wound layer's own clock, s since he started down. (character.ts CharacterAnimator.woundClock)
-pub fn anim_wound_clock(g: &mut crate::game::Game, c: CharId) -> f64 {
-    g.ch[c].anim.wd_t
-}
-
 /// How far down he is, 0 on his feet to 1 on the floor. (character.ts CharacterAnimator.woundDown)
 pub fn anim_wound_down(g: &mut crate::game::Game, c: CharId) -> f64 {
     let a = &g.ch[c].anim;

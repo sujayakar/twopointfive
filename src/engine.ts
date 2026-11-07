@@ -25,7 +25,6 @@ import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
 import { Decals } from './render/decals';
 import { Particles } from './render/particles';
-import { cutSwap } from './render/cutSwap';
 import { TexturePool } from './render/texpool';
 import { reachLevel } from './render/reach';
 import { ReachKeep, type KeepGuest } from './render/reachKeep';
@@ -126,8 +125,6 @@ export class Engine {
   private taauWas = false; private debugWas = 0;
   /** why the TAAU history was last dropped, and how many times (the Tab panel words it; QA counts it) */
   taaResets = 0; lastTaaReset = '';
-  /** CUT BOXES: how many traceable cut boxes this frame's g-buffer draws WHOLE (its ray programs have no cut rule yet — render/cutSwap.ts), and how many were on screen last frame */
-  cutWhole = 0; private cutSeen = 0;
   /** THE LOOK PROTOTYPE's loose snow in the air (render/powderField.ts: the powder the wind picks up and a boot kicks, carried by `air` below, drawn by the
    *  composite). Built the first frame the look page has lying snow, an air field and either row up; dropped when any of those goes (the rows at 0, the air
    *  field replaced). Picture only. game/snowFx.ts files the kicks into it. */
@@ -401,7 +398,7 @@ export class Engine {
   }
   /** THE LOOK PROTOTYPE's place field, made once (render/placeField.ts); a device that cannot make it is asked once and no more */
   /** NOTHING IS COMPILED AT ITS FIRST USE. The fog of war's sight table and its pass made their programs the first frame a mission drew the fog: the title
-   *  never built them, so the first squad mission of a visit compiled three programs (and their cut twins after them) under play. The page asks for them
+   *  never built them, so the first squad mission of a visit compiled three programs under play. The page asks for them
    *  here, once its boot's own are in (main.ts, after the boot's freeze): they compile behind the start, counted with the later set while they do (a brief's
    *  Start waits for them), and on the kept page (gpu/keep.ts) a mission finds them made. A pass that gains a program of its own asks for it here too. */
   warmFirstUse(): void { this.fogSight.warm(); this.passes.warmFog(); if (lookConfig.on) powderWarm(this.device); }   // (the look's loose snow steps only on a snow level of the look's page: asked for on that page's every level)
@@ -729,13 +726,6 @@ export class Engine {
     const { plan, wait } = this.framePace();
     this.world.drawWaits = PLAN_PACE.on;   // (under the pace a pack with no draw after it never makes the order, on the frames at once too)
     { const ranked = this.world.drawRanked, t = clock(); this.world.upload(false, wait); if (this.world.drawRanked !== ranked) spend(plan, clock() - t); }
-    cutSwap.frame(this.world.cutTraced);   // CUT BOXES (render/cutSwap.ts): the tracing programs with the cut rule only while a cut box a ray can meet is alive — a calm frame dispatches the boot's
-    { // …and the raster follows the rays: a traceable cut box is drawn cut only on a frame whose ray programs carry the rule (the second set still compiling / failed / pinned off by a dev hook = whole
-      // for both). The frame standing pieces change shape on — the set arriving under pieces born before it — is a cut for the resolve: its history shows the whole boxes
-      const n = this.world.visibleCutTraced, whole = cutSwap.drawsCut ? 0 : n;
-      if (n > 0 && this.cutSeen > 0 && (whole > 0) !== (this.cutWhole > 0)) { if (taauOn) this.resetTaa('cut pieces change shape'); else this.passes.dropRestirBeliefs(); }
-      this.cutWhole = whole; this.cutSeen = n;
-    }
     this.lightMasks(plan);   // (the lights' reach masks: where a wall changed, a step of deciding them again, before anything of this frame reads one; and THE LOOK PROTOTYPE's opening lights, each opening to the sky a light of its own, scene/openings.ts, whose masks are decided in the same step)
     const hourExp = lookConfig.on ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1;   // (THE LOOK PROTOTYPE: the exposure of the hour that is up against the night's, render/photometry.ts)
     const shadeCfg = lookConfig.on && lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined;   // (THE LOOK PROTOTYPE's shade row, below: the share of a darker place's dark the one exposure model brings up, render/lookexpo.ts; at 0 no place takes a gain)
@@ -880,7 +870,7 @@ export class Engine {
     this.fogSight.encode(enc, this.passes.fogOn ? this.fogFrame : null, this.sceneBGPlain!, ts); if (this.fogFrame) this.fogFrame.sight = this.fogSight.live;   // the fog of war's sight table, before anything lights a pixel (a no-op unless the full-picture fog is on)
     if (this.smoke.encode) this.smoke.encode(enc, ts);
     if (meshOn && this.world.charCount > 0) this.meshShadows!.encode(enc, Math.min(this.world.charCount, MESH_MAX_CHARS), ts('mesh'));   // skin + refit every listed character's tree from this frame's joint matrices — before the cascades, the first pass that traces
-    this.gbuffer.encode(enc, this.sharpOn ? this.sceneBGOut! : this.sceneBG!, this.world.visibleBuf, this.world.visibleCount, this.skin, this.dummyStorage, this.decals?.buf ?? this.dummyStorage, ts('gbuffer') as GPURenderPassTimestampWrites | undefined, this.world.visibleCutCount, this.cutWhole);   // (the decal buffer is only read under FrameFlags.Decals: without a list the dummy is bound and the flag stays down) — under sharp direct at the OUTPUT size (the output frame block: its pixel-footprint terms mean an output pixel)
+    this.gbuffer.encode(enc, this.sharpOn ? this.sceneBGOut! : this.sceneBG!, this.world.visibleBuf, this.world.visibleCount, this.skin, this.dummyStorage, this.decals?.buf ?? this.dummyStorage, ts('gbuffer') as GPURenderPassTimestampWrites | undefined, this.world.visibleCutCount);   // (the decal buffer is only read under FrameFlags.Decals: without a list the dummy is bound and the flag stays down) — under sharp direct at the OUTPUT size (the output frame block: its pixel-footprint terms mean an output pixel)
     this.gbuffer.encodeDown(enc, this.sceneBG!);   // sharp direct: the internal-size view every internal pass binds, derived from that raster (a no-op with it off)
     this.rc.encode(enc, this.sceneBG!, timer, this.frameIdx);
     if (ring && this.rc.diceBaked) ring.step(enc, this.rc.dice, ringAt, ringN, ringFresh, ts); else if (ring) timer.idle('diceRing');   // (the bake just made, kept as its point, and the mean of the points held written back: what every pass below reads)

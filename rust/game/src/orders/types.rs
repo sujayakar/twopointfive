@@ -19,11 +19,12 @@ pub enum OrderLabel {
     WallRow,
     ThrowRow { kind: crate::squadthrow::SquadThrowKind },
     ThrowOpen,
-    Shell40,
     Work,
     Smoke,
     PairGo,
     DoorThrWord,
+    /// an order written as a module (orders/rows/): its own function
+    Row(&'static crate::orders::rows::Row),
 }
 /// OrderDef.can: this man can do his part (true in the TypeScript), or the word for why not. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]
@@ -35,6 +36,8 @@ pub enum OrderCan {
     PairTake,
     PairWatch,
     PairDark,
+    /// an order written as a module (orders/rows/): its own function
+    Row(&'static crate::orders::rows::Row),
 }
 /// OrderDef.only: the men among those addressed this order is for. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
@@ -46,12 +49,13 @@ pub enum OrderOnly {
     ShutDoor,
     ThrowRow { kind: crate::squadthrow::SquadThrowKind },
     Wand,
-    Shell40,
     Work,
     Smoke,
     PairTake,
     PairGo,
     DoorThrWord,
+    /// an order written as a module (orders/rows/): its own function
+    Row(&'static crate::orders::rows::Row),
 }
 /// OrderDef.valid: these men together can carry it out here (true), or not (false, or the word for why). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
@@ -70,13 +74,14 @@ pub enum OrderValid {
     ShutDoor,
     ThrowRow { kind: crate::squadthrow::SquadThrowKind },
     Wand,
-    Shell40,
     Work,
     Smoke,
     PairTake,
     PairWatch,
     PairGo,
     DoorThrWord,
+    /// an order written as a module (orders/rows/): its own function
+    Row(&'static crate::orders::rows::Row),
 }
 /// OrderDef.issue: hand each man his assignment; a String back is a refusal. Nothing: a row that only opens a page (give() refuses it at orders.ts:862, so it is never run). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
@@ -101,7 +106,6 @@ pub enum OrderIssue {
     ShutDoor,
     ThrowRow { kind: crate::squadthrow::SquadThrowKind },
     Wand,
-    Shell40,
     Work,
     Smoke,
     PairTake { mode: crate::pairorders::JobMode },
@@ -109,6 +113,8 @@ pub enum OrderIssue {
     PairDark,
     PairGo,
     DoorThrWord,
+    /// an order written as a module (orders/rows/): its own function
+    Row(&'static crate::orders::rows::Row),
 }
 /// OrderDef.tick: once a frame for each man under the order, before he is posed. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]
@@ -117,11 +123,12 @@ pub enum OrderTick {
     ShutDoor,
     ThrowRow,
     Wand,
-    Shell40,
     Work,
     PairTake,
     PairWatch,
     PairDark,
+    /// an order written as a module (orders/rows/): its own function
+    Row(&'static crate::orders::rows::Row),
 }
 /// OrderDef.standsIn.when: the row stands in for the other one now. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]

@@ -1,11 +1,11 @@
-// The 'doorpath' family: EACH MAN OF A ROOM ENTRY WALKS A REAL PATH THROUGH THE DOOR (src/game/doorpath.ts DOORPATH; on in the page — ?nodoorpath is the entry as it was —, TPS_DOORPATH=1 in the harness).
+// The 'doorpath' family: EACH MAN OF A ROOM ENTRY WALKS A REAL PATH THROUGH THE DOOR (src/game/doorpath.ts DOORPATH: a settled rule; its gun rule, DOORPATH.gun, is still a switch and ships off).
 // The checks are made on whole seeded playthroughs (tools/qa/playthrough.ts — the scripted commander, the real door orders, the real fight), each watched by
 // tools/qa/paths-watch.ts on every frame of every room entry:
-//   doorpath-paths   with the switch ON, over the seeded runs below: no man of an entry in a door leaf (and no leaf swept through one), none through a
+//   doorpath-paths   over the seeded runs below: no man of an entry in a door leaf (and no leaf swept through one), none through a
 //                    friend, no two on one spot (centres under 0.45 m for over 0.3 s), none in a jamb or any other static — and the walk was really used (men sent on it, most of them walked it out)
-//   doorpath-gun     with the switch ON AND ITS GUN RULE ON (TPS_DOORPATH=1,gun=1 — the rule ships off: doorpath.ts says why): no man of an entry carries his rifle, or shines his weapon light, through a door leaf — each its own line. A spell
+//   doorpath-gun     WITH THE GUN RULE ON (the stand's word TPS_DOORPATH=1,gun=1 handed to each run — the rule ships off: doorpath.ts says why): no man of an entry carries his rifle, or shines his weapon light, through a door leaf — each its own line. A spell
 //                    of `GUN_SECS` or longer fails; a shorter brush (a muzzle swung past a leaf's edge) is listed, not failed
-//   doorpath-file    with the switch ON: the men cross the frame line one at a time in the order dealt (nobody crosses while a man dealt ahead of him is
+//   doorpath-file    the men cross the frame line one at a time in the order dealt (nobody crosses while a man dealt ahead of him is
 //                    still outside; nobody is dealt ahead of a man who stood well nearer the frame AT HIS OWN JAMB), no two nearer than a body apart
 //                    as they cross, and nobody is kept waiting past the cap. The order dealt is the entry's own queue, kept by the watcher from the
 //                    frame it is dealt; until 10-13 it was guessed from who stood nearer the frame at the go, whichever jamb he stood at — which a
@@ -13,10 +13,8 @@
 //                    side's man stands 0.86 m further off and is dealt second). That crossing is listed, not failed. ITS RED PATH:
 //                    `DOORPATH_FILE_BREAK=1` preloads tools/qa/doorpath-backward.ts (the walk lets each entry go back to front) and must FAIL on
 //                    the order line, with a "red path" line that must PASS
-// THE FAMILY'S OWN RED PATH: `DOORPATH_OLD=1 bun run tools/qa/probes.ts doorpath-paths` (and `… doorpath-gun`) runs the same check on the entry AS IT WAS (the
-// switch off) and must FAIL — on the build this was written against a door leaf goes through a man of the entry in every one of these runs, and a rifle and
-// its light through the server room's leaf in the first (room-clear-four seed 1, 22 s: the still the cast goal's clip caught). doorpath-file
-// has a red path of its own (DOORPATH_FILE_BREAK: above).
+// THE ENTRY AS IT WAS IS GONE (2026-11-07): `DOORPATH_OLD=1` ran paths and gun with the walk switched off and had to fail. The walk is settled, the word is
+// out, and neither of the two has a red path of its own now; doorpath-file keeps its own (DOORPATH_FILE_BREAK: above).
 // `PT_NOCLOSER=1` in front of any of them: no door shuts itself — the leaves an entry meets once doors stay open.
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -51,12 +49,11 @@ async function runJobs(jobs: Job[], soft = false): Promise<any[]> {
   await Promise.all([0, 1, 2, 3].map(async () => { while (next < jobs.length) { const i = next++; out[i] = await runOne(...jobs[i]).catch(e => { if (!soft) throw e; return { error: String(e?.message ?? e) }; }); } }));
   return out;
 }
-const OLD = () => !!process.env.DOORPATH_OLD;
-// (the entry as it was is the WORD '0': left out, a child stands the game as the page opens it, the walk on — and the red path played the rule it is the red path of)
-const watched = (knobs = '', pre = '') => runJobs(DOORPATH_RUNS.map((s): Job => [s, { PT_PATHS: '1', TPS_DOORPATH: OLD() ? '0' : '1' + knobs }, pre]));
+// (a child stands the game as the page opens it, the walk on. `knobs`: the stand's own word for the walk's table, for the one row of it that is still a switch)
+const watched = (knobs = '', pre = '') => runJobs(DOORPATH_RUNS.map((s): Job => [s, { PT_PATHS: '1', ...(knobs ? { TPS_DOORPATH: `1${knobs}` } : {}) }, pre]));
 
 export async function doorpathPaths(): Promise<boolean> {
-  const C = check(`doorpath-paths: nobody of a room entry in a leaf, through a friend or in a jamb — ${OLD() ? 'THE ENTRY AS IT WAS (DOORPATH_OLD: this must fail)' : 'the switch on'}`);
+  const C = check(`doorpath-paths: nobody of a room entry in a leaf, through a friend or in a jamb`);
   const R = await watched();
   for (const kind of ['leaf', 'friend', 'near', 'jamb'] as const) {
     const bad = R.flatMap(r => (r.paths.spells as any[]).filter(s => s.kind === kind).map(s => `${r.scn}:${r.seed} ${s.who} ${kind === 'leaf' ? `${s.swept ? 'swept by' : 'in'} the leaf of ${s.what}` : kind === 'friend' ? `through ${s.what}` : kind === 'near' ? `on one spot with ${s.what}` : `in a static at ${s.what}`} at ${s.t0} s (${s.frames} frames)`));
@@ -67,13 +64,13 @@ export async function doorpathPaths(): Promise<boolean> {
     console.log(`- (listed, not judged) a man of an entry standing on a fallen defender for over 0.3 s: ${B.length}${B.length ? ` — ${B.slice(0, 4).join(' · ')}${B.length > 4 ? ' · …' : ''}` : ''}`); }
   for (const kind of ['rifle', 'light'] as const) { const n = R.reduce((a, r) => a + (r.paths.spells as any[]).filter(s => s.kind === kind && s.frames / 60 >= GUN_SECS).length, 0);
     console.log(`- (listed, not judged here — the gun rule ships off; doorpath-gun judges it with the rule on) a ${kind === 'rifle' ? 'rifle' : 'burning weapon light'} through a door leaf for ${GUN_SECS} s or more: ${n}`); }
-  if (!OLD()) { const sent = R.reduce((a, r) => a + (r.doorpath?.sent ?? 0), 0), walked = R.reduce((a, r) => a + (r.doorpath?.walked ?? 0), 0), gave = R.reduce((a, r) => a + (r.doorpath?.gaveUp ?? 0), 0);
+  { const sent = R.reduce((a, r) => a + (r.doorpath?.sent ?? 0), 0), walked = R.reduce((a, r) => a + (r.doorpath?.walked ?? 0), 0), gave = R.reduce((a, r) => a + (r.doorpath?.gaveUp ?? 0), 0);
     C.verdict(sent > 0 && walked >= sent * 0.6, 'the walk is what carried them: men were sent on it and most walked it out', `sent ${sent}, walked to the point ${walked}, handed back to the nav ${gave}, taken by the fight ${R.reduce((a, r) => a + (r.doorpath?.taken ?? 0), 0)}, no way round a leaf ${R.reduce((a, r) => a + (r.doorpath?.noRound ?? 0), 0)}`); }
   return C.done();
 }
 
 export async function doorpathGun(): Promise<boolean> {
-  const C = check(`doorpath-gun: no rifle carried, no weapon light shone, through a door leaf — ${OLD() ? 'THE ENTRY AS IT WAS (DOORPATH_OLD: this must fail)' : 'the switch on WITH ITS GUN RULE (TPS_DOORPATH=1,gun=1: the rule ships off)'}`);
+  const C = check(`doorpath-gun: no rifle carried, no weapon light shone, through a door leaf, WITH THE GUN RULE ON (TPS_DOORPATH=1,gun=1: the rule ships off)`);
   const R = await watched(',gun=1'), secs = (s: any) => s.frames / 60;   // (the frames he was in it: the runs step at 60 Hz)
   for (const kind of ['rifle', 'light'] as const) {
     const all = R.flatMap(r => (r.paths.spells as any[]).filter(s => s.kind === kind).map(s => ({ ...s, run: `${r.scn}:${r.seed}` }))), bad = all.filter(s => secs(s) >= GUN_SECS);
@@ -81,13 +78,13 @@ export async function doorpathGun(): Promise<boolean> {
     C.verdict(bad.length === 0, kind === 'rifle' ? `no man of an entry has his rifle through a door leaf for ${GUN_SECS} s` : `no man of an entry has his burning weapon light through a door leaf for ${GUN_SECS} s`,
       bad.length ? `${bad.length}: ${bad.slice(0, 6).map(row).join(' · ')}${bad.length > 6 ? ' · …' : ''}` : `${all.length} shorter brush${all.length === 1 ? '' : 'es'}${all.length ? ` (${all.slice(0, 4).map(row).join(' · ')})` : ''} over ${R.reduce((a, r) => a + r.paths.entries, 0)} entries`);
   }
-  if (!OLD()) C.verdict(R.some(r => (r.doorpath?.gunS ?? 0) + (r.doorpath?.gunAhead ?? 0) > 0), 'the rule is what did it: guns were lowered, or carried along the walk, at a leaf', R.map(r => `${r.scn}:${r.seed} down ${(r.doorpath?.gunS ?? 0).toFixed(1)} s, along the walk ${(r.doorpath?.gunAhead ?? 0).toFixed(1)} s`).join(' · '));
+  C.verdict(R.some(r => (r.doorpath?.gunS ?? 0) + (r.doorpath?.gunAhead ?? 0) > 0), 'the rule is what did it: guns were lowered, or carried along the walk, at a leaf', R.map(r => `${r.scn}:${r.seed} down ${(r.doorpath?.gunS ?? 0).toFixed(1)} s, along the walk ${(r.doorpath?.gunAhead ?? 0).toFixed(1)} s`).join(' · '));
   return C.done();
 }
 
 export async function doorpathFile(): Promise<boolean> {
   const word = process.env.DOORPATH_FILE_BREAK ?? '', brk = word === '1';
-  if (!['', '0', '1'].includes(word) || brk && OLD()) throw new Error(`DOORPATH_FILE_BREAK='${word}' not understood: 1 (and not with DOORPATH_OLD: the old entry never asks the walk)`);
+  if (!['', '0', '1'].includes(word)) throw new Error(`DOORPATH_FILE_BREAK='${word}' not understood: 1`);
   const C = check('doorpath-file: the men go in one at a time, in the order dealt, a body apart');
   if (brk) console.log('  DOORPATH_FILE_BREAK=1: the walk lets every entry go back to front — the "dealt ahead of him" line below must FAIL and the "red path" line must PASS');
   // the red path's preload (doorpath-backward.ts) evaluates doorpath.ts ahead of every other game module: sound only while that file brings in no other
@@ -112,7 +109,7 @@ export async function doorpathFile(): Promise<boolean> {
     : other.length ? `listed, not failed — dealt ahead of a man who stood over half a metre nearer at the OTHER jamb (the two sides go in turn about): ${other.map(said).join(' · ')}` : 'none, at either jamb');
   if (brk) C.verdict(jumped.length > 0 && unread.length === 0, 'the red path: let go back to front, men read as crossing out of turn', `${jumped.length} of ${cross.length} crossings`);
   C.verdict(close.length === 0, 'no two men nearer than 0.6 m as the second crosses the frame line', close.length ? close.map(c => `${c.run} ${c.who} ${c.gapM} m behind at ${c.t} s`).join(' · ') : `gaps between men of one entry: median ${gaps[gaps.length >> 1]} s, least ${gaps[0]} s, most ${gaps[gaps.length - 1]} s`);
-  if (!OLD()) C.verdict(R.every(r => (r.doorpath?.capped ?? 0) === 0), 'nobody was held short for the whole cap', R.map(r => `${r.scn}:${r.seed} held ${(r.doorpath?.heldS ?? 0).toFixed(1)} s, let go late ${r.doorpath?.late ?? 0}`).join(' · '));
+  C.verdict(R.every(r => (r.doorpath?.capped ?? 0) === 0), 'nobody was held short for the whole cap', R.map(r => `${r.scn}:${r.seed} held ${(r.doorpath?.heldS ?? 0).toFixed(1)} s, let go late ${r.doorpath?.late ?? 0}`).join(' · '));
   return C.done();
 }
 

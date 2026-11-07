@@ -83,15 +83,6 @@ fn sweep_rest(g: &mut Game, id: RoomClearId, second: bool, t: f64) {
     sweep_begin(g, id, second, &list, t, rest_secs(&list));
 }
 
-/// The public route's patch as an order's: it cannot say null, so a None is "not in the patch".
-fn patch_of(p: RoomClearRoutePatch) -> OrderPatch {
-    OrderPatch {
-        goal: p.goal.map(Some), speed: p.speed.map(Some), face: p.face.map(Some), strafe: p.strafe.map(Some), aim_at: p.aim_at.map(Some), stance: p.stance.map(Some),
-        stack_side: p.stack_side.map(Some), crouch: p.crouch.map(Some), lean: p.lean.map(Some), upper: p.upper.map(Some), light: p.light.map(Some), arrived: p.arrived.map(Some),
-        hot: p.hot.map(Some), flinch: p.flinch.map(Some), direct: p.direct.map(Some), smoke: p.smoke.map(Some), over: p.over.map(Some), held: false,
-    }
-}
-
 fn on_his_script(g: &mut Game, gd: GuardId) -> bool {
     g.guards.contains(&gd) && g.gd[gd].script.is_some() && g.gd[gd].state != crate::game::GuardState::Dead
 }
@@ -308,18 +299,17 @@ pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<cr
     g.gd[gd].muzzle_down = false;
     let an = &mut g.ch[c].anim;
     an.crouch_target = 0.0; an.lean = 0.0; an.reverse = false;
-    let man = &mut g.gd[gd];
-    man.state = match state {
+    crate::mind::set_state(g, gd, match state {
         EndGuardScriptState::Patrol => crate::game::GuardState::Patrol,
         EndGuardScriptState::Suspicious => crate::game::GuardState::Suspicious,
         EndGuardScriptState::Alert => crate::game::GuardState::Alert,
         EndGuardScriptState::Search => crate::game::GuardState::Search,
-    };
+    }, "squad");
     // (`gd.path = []; gd.pathGoal = null`: guard_set_path and guard_set_path_goal, written out for the row in hand)
-    man.path = Vec::new(); man.path_serial = man.path_serial.wrapping_add(1);
-    man.path_goal = None; man.path_goal_orbit = false;
+    g.gd[gd].path = Vec::new(); g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
+    g.gd[gd].path_goal = None; g.gd[gd].path_goal_orbit = false;
     if state == EndGuardScriptState::Patrol {
-        man.awareness = 0.0; man.react_t = 0.0; man.search_t = 0.0; man.last_known = None; man.body_duty = None;
+        crate::mind::set(g, gd, 0.0, "squad"); g.gd[gd].react_t = 0.0; g.gd[gd].search_t = 0.0; crate::mind::fix_keep(g, gd, None, "squad"); g.gd[gd].body_duty = None;
     }
 }
 
@@ -433,9 +423,8 @@ pub fn room_clear_start(g: &mut crate::game::Game, id: RoomClearId) {
             g.gd[gd].speed = 0.0;
         }
         crate::control::set_hold(g, gd, false, "squad"); crate::control::set_pinned(g, gd, false, "squad");
-        let man = &mut g.gd[gd];
-        man.state = crate::game::GuardState::Search;
-        man.awareness = 0.0; man.last_known = None; man.react_t = 0.0; man.search_t = 0.0; man.script = None;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Search, "squad");
+        crate::mind::set(g, gd, 0.0, "squad"); crate::mind::fix_keep(g, gd, None, "squad"); g.gd[gd].react_t = 0.0; g.gd[gd].search_t = 0.0; g.gd[gd].script = None;
         g.ch[c].anim.stance = if i == 0 { crate::character::Stance::Stack } else { crate::character::Stance::HighReady };
         if !live { crate::character::character_update(g, c, 0.0); }
     }
@@ -510,11 +499,6 @@ pub fn room_clear_body_here(g: &mut crate::game::Game, id: RoomClearId, gd: Guar
     if crate::scene_collision::segment_blocked(g, head, [h[0], h[1] + 0.3, h[2]], None, None, None) { None } else { Some(bb) }
 }
 
-/// New waypoint list for a man, and orders; the drill's own null aim (squad.ts:333) goes through `route_with`. (squad.ts RoomClear.route)
-pub fn room_clear_route(g: &mut crate::game::Game, id: RoomClearId, gd: GuardId, wps: &mut Vec<V3>, pts: &[V3], patch: Option<crate::squad::RoomClearRoutePatch>) {
-    route_with(g, gd, wps, pts, patch_of(patch.unwrap_or_default()));
-}
-
 /// Pass intermediate waypoints on the fly, keep the last as the goal; true once planted on the last. (squad.ts RoomClear.advance)
 pub fn room_clear_advance(g: &mut crate::game::Game, id: RoomClearId, gd: GuardId, wps: &mut Vec<V3>) -> bool {
     let c = g.gd[gd].ch;
@@ -547,12 +531,6 @@ fn enter_sweep(g: &mut Game, id: RoomClearId, second: bool, aim: V3, list: &[V3]
     let centre = room_centre(&row.plan);
     sweep_start(if second { &mut row.sw_b } else { &mut row.sw_a }, aim, &[centre, list[0]], t, centre_check().corner);
     if list.len() > 1 { Some(list[1..].to_vec()) } else { None }
-}
-
-/// A man's entry sweep: the room's centre, then his own corner; the rest of the list is handed back. `sw_key` names the row and cannot say which of its two
-/// sweeps; as the index reads, it is swA. The drill itself calls `enter_sweep`. (squad.ts RoomClear.enterSweep)
-pub fn room_clear_enter_sweep(g: &mut crate::game::Game, id: RoomClearId, sw_key: RoomClearId, aim: V3, list: &[V3], t: f64) -> Option<Vec<V3>> {
-    enter_sweep(g, sw_key, false, aim, list, t)
 }
 
 /// The keyed breach: the leaf unlatched and shoved hard into the room, and he flows in behind it. (squad.ts RoomClear.shove)
@@ -848,12 +826,11 @@ pub fn next_door_of(g: &mut crate::game::Game, p: &crate::scene_level::RoomClear
 pub fn break_off(g: &mut crate::game::Game, gd: GuardId, awareness: f64, last_known: Option<V3>) {
     end_guard_script(g, gd, Some(EndGuardScriptState::Suspicious));
     if g.gd[gd].state == crate::game::GuardState::Dead { return; }
-    let man = &mut g.gd[gd];
-    man.state = crate::game::GuardState::Patrol;
-    man.awareness = m::max(man.awareness, awareness);
-    if let Some(k) = last_known { man.last_known = Some(v3::copy(k)); }
-    man.react_t = 0.0;
-    man.search_t = 0.0;
+    crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "squad");
+    crate::mind::raise(g, gd, awareness, "squad");
+    if let Some(k) = last_known { crate::mind::fix_keep(g, gd, Some(v3::copy(k)), "squad"); }
+    g.gd[gd].react_t = 0.0;
+    g.gd[gd].search_t = 0.0;
 }
 
 #[cfg(test)]

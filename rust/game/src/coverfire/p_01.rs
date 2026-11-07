@@ -171,11 +171,6 @@ pub fn char_of(g: &mut crate::game::Game, who: crate::game::Foe) -> CharId {
     }
 }
 
-/// is he up (coverfire.ts upOf)
-pub fn up_of(g: &mut crate::game::Game, who: crate::game::Foe) -> bool {
-    up_now(g, who)
-}
-
 /// his name (coverfire.ts nameOf)
 pub fn name_of(g: &mut crate::game::Game, who: crate::game::Foe) -> String {
     match who {
@@ -937,36 +932,6 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
             }
         }
     }
-}
-
-/// QA: the run's own numbers (coverfire.ts coverfireReport)
-pub fn coverfire_report(g: &mut crate::game::Game) -> JsMap<String, f64> {
-    let on = if live(g) { 1.0 } else { 0.0 };
-    let st = g.m.coverfire.states.as_ref().map_or(zero(), |s| s.stats);
-    let (mut never, mut never_pieces, mut pieces) = (0.0, 0.0, 0.0);
-    if let Some(s) = g.m.coverfire.states.as_ref() {
-        for r in s.by_id.values() {
-            pieces += 1.0;
-            if !js::truthy(r.gave) {
-                never += r.landed;
-                never_pieces += 1.0;
-            }
-        }
-    }
-    let w = &g.stats.wallbreak;
-    let walls = [("rounds", w.rounds), ("ports", w.ports), ("holes", w.holes), ("coverCells", w.cover_cells), ("coverDead", w.cover_dead)];
-    let rows = [
-        ("on", on), ("chews", st.chews), ("shots", st.shots), ("landed", st.landed), ("opened", st.opened), ("gaveUp", st.gave_up), ("heldFriend", st.held_friend),
-        ("heldSilent", st.held_silent), ("calls", st.calls), ("walked", st.walked), ("opChews", st.op_chews), ("defChews", st.def_chews), ("thru", st.thru),
-        ("thruShots", st.thru_shots), ("never", never), ("neverPieces", never_pieces), ("pieces", pieces),
-    ];
-    let mut out = JsMap::new();
-    for (k, v) in rows { out.set(String::from(k), v); }
-    for (k, v) in walls {
-        let base = g.m.coverfire.states.as_ref().and_then(|s| s.base.get(String::from(k)).copied()).unwrap_or(0.0);
-        out.set(alloc::format!("wall_{}", k), v as f64 - base);
-    }
-    out
 }
 
 /// QA: hand `gd` the record a real sighting of `who` leaves, `age` seconds old, standing still (coverfire.ts coverfireSaw)

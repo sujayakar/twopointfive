@@ -65,7 +65,7 @@ pub fn knobs_to_rust(g: &mut crate::game::Game) {
         g.k.moves.steady,   // 8 MOVES.steady
         g.k.moves.steady_run,   // 9 MOVES.steadyRun
         g.m.character.long_steady.run_yaw,   // 10 ANIM.LONG_STEADY.runYaw
-        (if g.k.hardbreath.on { 1.0 } else { 0.0 }),   // 11 HARDBREATH.on
+        1.0,   // 11 HARDBREATH.on
         g.k.hardbreath.chest_amp,   // 12 HARDBREATH.chestAmp
         g.k.hardbreath.chest_rate,   // 13 HARDBREATH.chestRate
         g.k.hardbreath.chest_up,   // 14 HARDBREATH.chestUp
@@ -254,7 +254,7 @@ pub fn knobs_to_rust(g: &mut crate::game::Game) {
         t_wall_pose.mend.thumb,   // 197 ANIM.WALL_POSE.mend.thumb
         t_wall_pose.mend.thumb_in,   // 198 ANIM.WALL_POSE.mend.thumbIn
         (if g.k.wallsnap.on { 1.0 } else { 0.0 }),   // 199 WALLSNAP.on
-        (if g.k.wallsnap.pose { 1.0 } else { 0.0 }),   // 200 WALLSNAP.pose
+        1.0,   // 200 WALLSNAP.pose
         g.k.wallsnap.dip,   // 201 WALLSNAP.dip
         g.k.wallsnap.nod,   // 202 WALLSNAP.nod
         g.k.wallsnap.step_lift,   // 203 WALLSNAP.stepLift
@@ -580,7 +580,7 @@ pub fn knobs_to_rust(g: &mut crate::game::Game) {
         t_hand.trig_trained,   // 523 ANIM.HAND.trigTrained
         g.k.throw_by.arm_min,   // 524 THROW_BY.armMin
         g.k.throw_by.off_min,   // 525 THROW_BY.offMin
-        (if g.k.throw_by.on { 1.0 } else { 0.0 }),   // 526 THROW_BY.on
+        1.0,   // 526 THROW_BY.on
         g.k.throw_by.pivot[0],   // 527 THROW_BY.pivot.0
         g.k.throw_by.pivot[1],   // 528 THROW_BY.pivot.1
         g.k.throw_by.pivot[2],   // 529 THROW_BY.pivot.2
@@ -787,7 +787,7 @@ pub fn knobs_to_rust(g: &mut crate::game::Game) {
         g.k.hold.catch.seat[2],   // 730 HOLD.catch.seat.2
         g.k.hold.catch.seat_lean,   // 731 HOLD.catch.seatLean
         g.k.hold.catch.settle,   // 732 HOLD.catch.settle
-        (if g.k.hold.catch_shape { 1.0 } else { 0.0 }),   // 733 HOLD.catchShape
+        1.0,   // 733 HOLD.catchShape
         g.k.hold.catch.sink,   // 734 HOLD.catch.sink
         g.k.hold.catch.via[0],   // 735 HOLD.catch.via.0
         g.k.hold.catch.via[1],   // 736 HOLD.catch.via.1
@@ -893,7 +893,7 @@ pub fn knobs_to_rust(g: &mut crate::game::Game) {
         g.k.hold.hit.hips,   // 836 HOLD.hit.hips
         g.k.hold.hit.sam_dip,   // 837 HOLD.hit.samDip
         g.k.hold.hit.sam_in,   // 838 HOLD.hit.samIn
-        (if g.k.hold.hit_shape { 1.0 } else { 0.0 }),   // 839 HOLD.hitShape
+        1.0,   // 839 HOLD.hitShape
         g.k.hold.hit.t[0],   // 840 HOLD.hit.t.0
         g.k.hold.hit.t[1],   // 841 HOLD.hit.t.1
         g.k.hold.hit.t[2],   // 842 HOLD.hit.t.2
@@ -1246,7 +1246,7 @@ pub fn knobs_to_rust(g: &mut crate::game::Game) {
         t_stealth.cable.nod_max,   // 1189 ANIM.STEALTH.cable.nodMax
         g.k.stealthpose.cable_bow,   // 1190 STEALTHPOSE.cableBow
         g.k.stealthpose.cable_step,   // 1191 STEALTHPOSE.cableStep
-        (if g.k.stealthpose.nod { 1.0 } else { 0.0 }),   // 1192 STEALTHPOSE.nod
+        1.0,   // 1192 STEALTHPOSE.nod
         t_stealth.in_secs,   // 1193 ANIM.STEALTH.inSecs
         t_stealth.out_secs,   // 1194 ANIM.STEALTH.outSecs
         t_stealth.round,   // 1195 ANIM.STEALTH.round
@@ -1284,11 +1284,11 @@ pub fn knobs_to_rust(g: &mut crate::game::Game) {
         t_stealth.creep.at[0],   // 1227 ANIM.STEALTH.creep.at.0
         t_stealth.creep.at[1],   // 1228 ANIM.STEALTH.creep.at.1
         t_stealth.creep.at[2],   // 1229 ANIM.STEALTH.creep.at.2
-        (if g.k.stealthpose.rise { 1.0 } else { 0.0 }),   // 1230 STEALTHPOSE.rise
+        1.0,   // 1230 STEALTHPOSE.rise
         g.k.stealthpose.rise_secs,   // 1231 STEALTHPOSE.riseSecs
-        (if g.k.stealthpose.idle { 1.0 } else { 0.0 }),   // 1232 STEALTHPOSE.idle
-        (if g.k.stealthpose.walk { 1.0 } else { 0.0 }),   // 1233 STEALTHPOSE.walk
-        (if g.k.stealthpose.creep { 1.0 } else { 0.0 }),   // 1234 STEALTHPOSE.creep
+        1.0,   // 1232 STEALTHPOSE.idle
+        1.0,   // 1233 STEALTHPOSE.walk
+        1.0,   // 1234 STEALTHPOSE.creep
         g.k.stealthpose.sway_secs,   // 1235 STEALTHPOSE.swaySecs
         g.k.stealthpose.sway_m,   // 1236 STEALTHPOSE.swayM
         g.k.stealthpose.drift_m,   // 1237 STEALTHPOSE.driftM
@@ -1408,14 +1408,14 @@ pub fn knobs_to_rust(g: &mut crate::game::Game) {
         g.k.glassbreak.spin,   // 1351 GLASSBREAK.spin
         g.k.glassbreak.blast_out,   // 1352 GLASSBREAK.blastOut
         g.k.glassbreak.walk_clear_h,   // 1353 GLASSBREAK.walkClearH
-        (if g.k.glassreal.drop { 1.0 } else { 0.0 }),   // 1354 GLASSREAL.drop
-        (if g.k.glassreal.place { 1.0 } else { 0.0 }),   // 1355 GLASSREAL.place
+        1.0,   // 1354 GLASSREAL.drop
+        1.0,   // 1355 GLASSREAL.place
         g.k.glassreal.hang,   // 1356 GLASSREAL.hang
         g.k.glassreal.blocks,   // 1357 GLASSREAL.blocks
         g.k.glassreal.low_m,   // 1358 GLASSREAL.lowM
         g.k.glassreal.door_m,   // 1359 GLASSREAL.doorM
         g.k.glassreal.door_foot_m,   // 1360 GLASSREAL.doorFootM
-        (if g.k.shards.by_fall { 1.0 } else { 0.0 }),   // 1361 SHARDS.byFall
+        1.0,   // 1361 SHARDS.byFall
         g.k.shards.plate_min_area,   // 1362 SHARDS.plateMinArea
         g.k.shards.pending_max,   // 1363 SHARDS.pendingMax
         *g.k.glasspen.cost.get(crate::glasspen::PaneType::Annealed).unwrap(),   // 1364 GLASSPEN.cost.annealed

@@ -175,6 +175,28 @@ row on his machine is the answer, and the word puts the count back on any machin
   (a moved frame on the plain program until the twin landed) is gone with `restirMReady`. `shaderrows-check` holds that a moved frame runs the one program
   with its taps packed. Boot texts 115 to 113; both compile in Chromium's compiler with no warning. **NOT MEASURED: what the untaken branches cost a still
   frame on a real GPU** (the old twin run at rest measured +0.2 ms of direct at High on the M4 Max, most of it the flow this writing skips). **Never seen on a GPU.**
+- **ONE SET OF RAY PROGRAMS (2026-11-07; the maintainer's yes on the shader survey's row for it).** The page compiled every program that traces
+  boxes TWICE: the boot's without the cut rule, then a second set with it in the background after every boot, swapped in while a cut piece a ray
+  could meet was alive (`render/cutSwap.ts`, "a calm room pays nothing"). There is ONE set now, with the rule in (`scenePrelude()` carries
+  `const CUT_BOXES: bool = true;` wherever cut boxes are on): what `?cutprograms=boot` compiled. GONE: `render/cutSwap.ts`; `cutSet` / `buildCut` /
+  `useCut` on the lighting passes, the probe, the cascades, the froxels, the particles and the fog of war; the engine's per-frame swap and the
+  raster's "drawn whole until the second set is in" (`gbuffer.ts`: a cut box is drawn cut from the first frame); `__cut.programs`,
+  `__cut.stats.drawnWhole`, `?cutprograms`; the visit's `cut` record; the start's wait on the second set; tools/qa/cut-march.js. `cutConfig.swap`
+  is UNREAD AND UNWRITTEN (the knob row `CUT.swap`, the settled-switch list and the Rust mirror still name it: theirs to drop); the look page's
+  rule that a geometry trial drops the round's GPU half (`main.ts roundConfig.gpu`) asks for the trial itself now, and draws what it drew. THE COMPILE QUEUE's background
+  lane (`gpu/device.ts`) was given by text, to any module holding the cut rule's line; it is now the LATER pipelines' alone, and a module's size is
+  kept beside the module. WHAT MOVES: about twenty programs fewer compiled after each boot (21 s of background compile on the cloud's NVIDIA
+  card; 72 of 141 s of ONE compiler thread by the compile-time work's serial table) and nothing swaps under play. THE BOOT'S OWN SET IS BIGGER
+  by the rule's text: 4,711 to 5,356 KB pasted on a snow page (+14 %; the visit's whole falls 9,065 to 5,356), and a cut twin compiled 5 to 15 %
+  dearer than its boot form on that card: the start card waits that much longer for its programs, a brief's Start (which waits for every
+  program) much less. Not timed on Windows. If the g-buffer's cut pipeline fails to compile, cut pieces are DRAWN whole while rays meet the cut
+  shape (the two-set build drew and traced them whole): said in the console line. A ROUND THING IS ITS PICTURE'S PRISM TO EVERY RAY AT ALL TIMES (`ROUND_AS_CUT`, `docs/agents/levels.md`),
+  where a calm room traced the cylinder; `?roundexact=1` still asks for the cylinder. THE COST, on that card (A10G, the tree before, the two
+  sets pinned in turn in one page, 2026-11-07): the office in rain +1.9 % of a frame on High and +1.7 % on Medium; the squad lesson on the look
+  page +0.5 % and 0 %. The 1.9 x fog pass once read there is not reproduced. HELD: the module list by label and text hash is IDENTICAL to the
+  tree before forced to one set (title 36, snow 36, the look page 37 modules; `shaderinline-check --json`); shaderinline, shaderfold, pipequeue
+  (its background tests ask by LATER now) and the cutboxes probe family re-aimed (the swap's two probes are out, the prelude's verdict stays).
+  NOT SEEN on a GPU as this tree; the card saw the same programs through `__cut.programs.force` on the tree before.
 - **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; the `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments and `__rigTrace` went 2026-11-07); `__sdfrig` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2658–2728 -->
@@ -843,8 +865,17 @@ row on his machine is the answer, and the word puts the count back on any machin
   lookSurface` and `snow.wgsl` ask the module's own `GBUF_SNOW`. A page draws with its level's own (`GBuffer.init`: `snowLookConfig.surface` picks) and
   asks for the other through the later lane without keeping it: a page is one level for its whole life, and the ask is for the visit's next one. So the
   kept page still compiles nothing at any level, the program a level draws with is the size it was, and a visit's first page compiles three programs
-  more (`gbufBoxesSnow`, `gbufBoxesCutSnow`, and `gbufSnow`, the hills, which is of the snow's module). The men's `cold` (look.wgsl lookMan) stays a
-  read of the level word. THE RULE IT LEAVES: a level's switch is a branch where the code is small, and a second program asked for on every page where
+  more (`gbufBoxesSnow`, `gbufBoxesCutSnow`, and `gbufSnow`, the hills, which is of the snow's module), and a fourth for the men (below).
+  **THE MEN'S PROGRAM COMES IN THE TWO WRITINGS TOO, and that was the lost device.** `look.wgsl lookMan` had `let cold = lv(SNOW_SURF) &&
+  snowCfg.p[1].z > 0.5;` (a snow level's men are cold in the face). On the look's page that one line lost the device on the software adapter the first
+  time the men were drawn: the adapter's GPU process exits on signal 11. Placed with a page read that draws unstaged (the men in frame; a staged
+  `draw-equal` view on the Rust build has them out of frame, which is why three reads here were clean): no pass working, the device lives; the g-buffer
+  pass alone, lost; in it the men's pipeline alone, lost, the boxes', the cut boxes' and the down pass clean; and with the line as `false`, as
+  `lv(SNOW_SURF)` alone or as the `snowCfg` read alone, clean. So it is the short-circuit of those two uniform reads in that fragment program, nothing of
+  size or memory. `cold` asks `GBUF_SNOW` now and `gbufSkin` has its `gbufSkinSnow` (`GBuffer.prepareSkin`: the level's own awaited, the other through
+  the later lane), so NO text of the g-buffer's module asks the level word for the snow's surface, and every one of its programs on a level without snow
+  is the text it was before the level word existed. (`LevelSw.SNOW_SURF` still rides in the word and no shader asks it.) After it: the same unstaged
+  read of the look's page draws two frames and keeps its device, and the snow level under `?look`, which lost its device here too, runs 150 s clean. THE RULE IT LEAVES: a level's switch is a branch where the code is small, and a second program asked for on every page where
   it is heavy; never a constant of a text a level's start would compile again. The card's numbers above are the branch form's: the second and third
   level's load stands (the texts a level asks for are still the visit's), the 0.1 ms is gone with the branch.
   **Checks:** `bun run tools/qa/levelset-check.ts` (the page's boot recorded under the title's switches and a snow level's, rows as written and as the
@@ -859,7 +890,9 @@ row on his machine is the answer, and the word puts the count back on any machin
   `fogofwarPre` under play, and their cut twins after them (the maintainer, 10-27: "i think we shouldn't do truly lazy compilation where then have
   stutters during gameplay"). They are asked for once the boot's own are in, behind the start: not on the start card's count, and the load's record (`made`, frozen at the
   boot's end) does not count them. While one compiles it is one of the LATER set's (`gpu/device.ts laterHold`, taken in `FogPass.program` and
-  `FogSight.program`): a brief's Start, `__ready` and auto quality's measure wait for it, where a program made at first use was counted by nobody. 104 KB pasted for the three, 143 for the cut
+  `FogSight.program`): a brief's Start, `__ready` and auto quality's measure wait for it, where a program made at first use was counted by nobody.
+  The look's loose snow (`render/powderField.ts powderWarm`, on the look's page alone) is asked for there too: its step was made the first frame a snow
+  level stood its powder, the one program a snow level under `?look` still compiled at its start. 104 KB pasted for the three, 143 for the cut
   twins. `tools/qa/pageboot.ts` asks for them as the page does, so the size and compile tools read them. A pass that gains a program of its own asks
   for it in `warmFirstUse`. Still made at first use: whatever a `?word` trial builds, the save picture's, the debug views'.
   **A trap for `draw-equal.cjs`:** against a tree from before this, the squad view DIFFERS at both checkpoints (a quarter of the pixels, at the men's

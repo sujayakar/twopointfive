@@ -167,7 +167,7 @@ fn seam_arm_label(g: &mut Game, arm: &OrderLabel, t: &OrderTarget) -> String {
             if w.is_empty() { String::from("go") } else { format!("go · {}", w) }
         }
         // (the arms order_label takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderLabel::Text { .. } | OrderLabel::Cover | OrderLabel::WallRow | OrderLabel::ThrowRow { .. } | OrderLabel::ThrowOpen | OrderLabel::Shell40 | OrderLabel::Work | OrderLabel::Smoke | OrderLabel::PairGo => unreachable!("order_label answers this arm itself"),
+        OrderLabel::Text { .. } | OrderLabel::Cover | OrderLabel::WallRow | OrderLabel::ThrowRow { .. } | OrderLabel::ThrowOpen | OrderLabel::Row(_) | OrderLabel::Work | OrderLabel::Smoke | OrderLabel::PairGo => unreachable!("order_label answers this arm itself"),
     }
 }
 /// Err(None): false, Err(Some): the word for why not
@@ -245,7 +245,7 @@ fn seam_arm_valid(g: &mut Game, arm: &OrderValid, t: &OrderTarget, men: &[GuardI
             Err(Some(crate::words::wg(g, &now, &was)))
         }
         // (the arms order_valid takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderValid::Move | OrderValid::Stack | OrderValid::WallRow | OrderValid::ShutDoor | OrderValid::ThrowRow { .. } | OrderValid::Wand | OrderValid::Shell40 | OrderValid::Work | OrderValid::Smoke | OrderValid::PairTake | OrderValid::PairWatch | OrderValid::PairGo => unreachable!("order_valid answers this arm itself"),
+        OrderValid::Move | OrderValid::Stack | OrderValid::WallRow | OrderValid::ShutDoor | OrderValid::ThrowRow { .. } | OrderValid::Wand | OrderValid::Row(_) | OrderValid::Work | OrderValid::Smoke | OrderValid::PairTake | OrderValid::PairWatch | OrderValid::PairGo => unreachable!("order_valid answers this arm itself"),
     }
 }
 /// Some: refused, in those words
@@ -290,13 +290,12 @@ fn seam_arm_issue(g: &mut Game, arm: &OrderIssue, men: &[GuardId], t: &OrderTarg
         // doortools.ts:938 `(S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody\'s waiting for you to say go.') ?? undefined`
         OrderIssue::DoorThrWord => if squad_orders_big(g) { crate::doortools::door_tools_go_men(g, men, None) } else if crate::doortools::door_tools_pair_word(g, men) { None } else { Some(String::from("nobody's waiting for you to say go.")) },
         // squad40.ts:208, squadsmoke.ts:135, pairorders.ts:211 / :227 / :240. These bodies are not in the skeleton's sig.rs: the paths resolve only in the joined crate
-        OrderIssue::Shell40 => crate::squad40::p_01::row_issue(g, men, t),
         OrderIssue::Smoke => crate::squadsmoke::p_01::row_smoke_issue(g, men, t, o),
         OrderIssue::PairTake { mode } => crate::pairorders::p_01::take_issue(g, *mode, men, t),
         OrderIssue::PairWatch => crate::pairorders::p_01::watch_issue(g, men, t),
         OrderIssue::PairDark => crate::pairorders::p_01::dark_issue(g, men, t),
         // (the arms order_issue takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderIssue::Nothing | OrderIssue::Move | OrderIssue::Stack | OrderIssue::Cover | OrderIssue::FallIn | OrderIssue::Hold | OrderIssue::Silent | OrderIssue::Loud | OrderIssue::ShutDoor | OrderIssue::ThrowRow { .. } | OrderIssue::WallRow | OrderIssue::Wand | OrderIssue::Work | OrderIssue::PairGo => unreachable!("order_issue answers this arm itself"),
+        OrderIssue::Nothing | OrderIssue::Move | OrderIssue::Stack | OrderIssue::Cover | OrderIssue::FallIn | OrderIssue::Hold | OrderIssue::Silent | OrderIssue::Loud | OrderIssue::ShutDoor | OrderIssue::ThrowRow { .. } | OrderIssue::WallRow | OrderIssue::Wand | OrderIssue::Work | OrderIssue::PairGo | OrderIssue::Row(_) => unreachable!("order_issue answers this arm itself"),
     }
 }
 
@@ -320,7 +319,7 @@ pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
             let stun = crate::squadthrow::left(g, crate::squadthrow::SquadThrowKind::Stun);
             format!("throw · frag {} · bang {}{}", frag, stun, crate::squad40::squad40_word(g))
         }
-        OrderLabel::Shell40 => format!("40 mm there · {} left", crate::squad40::squad40_left(g)),
+        OrderLabel::Row(r) => (r.label)(g, t),
         OrderLabel::Work => match t {
             OrderTarget::Floor(OrderTargetFloor { thing: Some(th), .. }) => crate::workthings::work_things_words(g, th),
             _ => String::from("work it"),
@@ -344,6 +343,7 @@ pub fn order_can(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, t:
     let Some(arm) = g.tab.orders_order_def[d].can else { return None };
     let at = at_of(t);
     match arm {
+        OrderCan::Row(r) => match r.can { Some(f) => f(g, gd, t), None => None },
         OrderCan::Move => row_move_can(g, gd, t),
         OrderCan::Cover => row_cover_can(g, gd, t),
         OrderCan::WallRow => match crate::wallcharge::wall_charge_can_of(g, gd, t) {
@@ -415,10 +415,7 @@ pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId
             }
             Vec::new()
         }
-        OrderOnly::Shell40 => match crate::squad40::plan(g, men, at, Some(crate::squad40::Asker::Only)) {
-            crate::squad40::Plan::Text(_) => Vec::new(),
-            crate::squad40::Plan::Arm1(a) => vec![a.a.gd],
-        },
+        OrderOnly::Row(r) => match r.only { Some(f) => f(g, men, t), None => men.to_vec() },
         OrderOnly::Work => crate::workthings::work_things_pick(g, men, t),
         OrderOnly::Smoke => match crate::squadsmoke::squad_smoke_thrower(g, men, at) { Some(th) => vec![th.gd], None => Vec::new() },
         OrderOnly::PairTake => {
@@ -456,10 +453,7 @@ pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
             crate::wandorder::Pick::Text(w) => Err(Some(w)),
             crate::wandorder::Pick::Arm1(_) => Ok(()),
         },
-        OrderValid::Shell40 => match crate::squad40::plan(g, men, at, Some(crate::squad40::Asker::Valid)) {
-            crate::squad40::Plan::Text(w) => Err(Some(w)),
-            crate::squad40::Plan::Arm1(a) => plain_valid(a.who),
-        },
+        OrderValid::Row(r) => match r.valid { Some(f) => f(g, t, men), None => Ok(()) },
         OrderValid::Work => {
             let OrderTarget::Floor(OrderTargetFloor { thing: Some(th), .. }) = t else { return Err(Some(String::from("nothing to work there."))) };
             if th.stand.is_none() { return Err(Some(String::from("can't get a hand on it."))); }
@@ -522,6 +516,7 @@ pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardI
             crate::workthings::WorkThingsIssue::Arm1(()) => None,
         },
         OrderIssue::PairGo => { crate::pairorders::pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::Row)); None }
+        OrderIssue::Row(r) => (r.issue)(g, men, t, o),
         arm => seam_arm_issue(g, &arm, men, t, o),
     }
 }

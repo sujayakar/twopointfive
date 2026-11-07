@@ -312,7 +312,7 @@ pub struct ClearlineStats {
 }
 
 /// (src/game/clearline.ts:110 CLEARLINE_DEFAULTS: a table nothing writes)
-pub fn clearline_defaults() -> crate::knobs::ClearlineK { crate::knobs::ClearlineK { on: false, after: 0.3, reach_m: 3.0, pace: 2.0, body_m: 0.6, spare_m: 0.15, cover: true, cover_secs: 3.0, kneel: true, cue: true, again: 0.5, lose: 1.0, hold_max: 10.0, rest: 8.0, stale: 1.5, after_edge: 0.0, in_entry: true, hold_behind: 2.0, hold_step: true, still: 0.0, still_far: 0.0 } }
+pub fn clearline_defaults() -> crate::knobs::ClearlineK { crate::knobs::ClearlineK { on: false, after: 0.3, reach_m: 3.0, pace: 2.0, body_m: 0.6, spare_m: 0.15, cover: true, cover_secs: 3.0, again: 0.5, lose: 1.0, hold_max: 10.0, rest: 8.0, stale: 1.5, after_edge: 0.0, in_entry: true, hold_behind: 2.0, hold_step: true, still: 0.0, still_far: 0.0 } }
 
 /// (src/game/clearline.ts:115 LS)
 pub const LS: &str = "twopointsix.clearline";

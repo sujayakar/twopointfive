@@ -845,13 +845,6 @@ pub fn debris_land(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
     }
 }
 
-/// The panel's and QA's line.   (debris.ts Debris.summary)
-pub fn debris_summary(g: &mut crate::game::Game) -> String {
-    let (n, cap, moving) = (g.destr.debris.list.len(), debris_cap(g), debris_moving(g));
-    let s = g.destr.debris.stats;
-    alloc::format!("debris {}/{} ({} moving) · spawned {} · refused {} · evicted {} · landings {} · peak {}/{} moving", n, cap, moving, s.spawned, s.refused, s.evicted, s.landed, s.peak_live, s.peak_moving)
-}
-
 /// The box's half extent along world direction n.   (debris.ts supportAlong)
 pub fn support_along(g: &mut crate::game::Game, b: BoxId, n: V3) -> f64 {
     let r = rot_of(g, b);

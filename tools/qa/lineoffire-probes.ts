@@ -7,18 +7,14 @@
 //                        two different spots; the man down, each is back on his mark
 //   lineoffire-walk      the same while he WALKS on an order to a mark beyond Sam: the step is taken out of the walk, and the walk goes on to its mark
 //   lineoffire-mate      a MATE (flash-blind, going nowhere) in the line: the same step — the base never even asks for one (the gun is down before the gate)
-//   lineoffire-corridor  a corridor too narrow to step square with Sam in the middle of it: he gets off the line to cover, or (no cover allowed) onto a knee,
-//                        and says which; Sam nearer one wall: he moves up level with him and shoots; walking down it to a door's stack mark: the same answers
+//   lineoffire-corridor  a corridor too narrow to step square with Sam in the middle of it: he gets off the line to cover and says so; Sam nearer one wall: he moves up level with him and shoots; walking down it to a door's stack mark: the same answers
 //   lineoffire-edge      CLEARLINE.afterEdge (0 as shipped = no such case): Sam in the line ONLY by the wider lane a walking player is owed (stood still where
 //                        he is, the round would pass him). With afterEdge 1: he walks past and stops, or taps his walk key — no move, the line opens by itself
 //                        and the teammate shoots from his mark; he keeps walking beside it — the move comes after a second, not 0.3 s. Sam's body in the
 //                        standing lane (stood dead on the line, stood at the lane's rim, walking along the line) or a blind mate in it behind him: afterEdge
 //                        changes nothing, to the frame. (Sam walks on his own keys here: the same WASD-from-the-camera lines as playthrough.ts's driver.)
-//   lineoffire-entry     CLEARLINE.inEntry (true as shipped = the rule everywhere): a pair on 'bang and clear', the can gone off, a man comes up the
-//                        corridor behind them with Sam between. As shipped both leave the door for cover and the entry is seconds late; with inEntry
-//                        off they hold their way in — no step, no cover, no word between the shove and their points — and the room is taken on the
-//                        entry's own clock. Outside that window the knob changes nothing, to the frame: on the walk up to the same order's stack,
-//                        and for a man planted on a hold order.
+//   lineoffire-entry     a pair on 'bang and clear', the can gone off, a man comes up the corridor behind them with Sam between: both leave the door
+//                        for cover and the entry is seconds late
 //   lineoffire-behind    CLEARLINE.holdBehind (seconds; 0 as shipped = the rule as it was): Sam ahead of him in the corridor and WALKING AT the man. As shipped he
 //                        leaves for cover inside a second and a half and is out of the fight; with holdBehind 2 he takes no cover and no knee, says Sam
 //                        is in his line and holds on his mark with the man in view — and drops him a third of a second after Sam is out of the line
@@ -30,11 +26,15 @@
 //                        start: the knob changes nothing, to the frame.
 //   lineoffire-far       CLEARLINE.stillFar (metres; 0 as shipped = `still` at any range): with still 2 and stillFar 8 a man whose target is nearer than 8 m steps
 //                        for a walking player exactly as the rule as first built; at 11.6 m down a corridor he holds exactly as still 2 alone; a standing player is answered at any range
-//   lineoffire-holdstep  CLEARLINE.holdStep (true as shipped, with holdBehind 2; every other probe stages the rule as first built, both off): behind a lead walking AT the man no step is taken either; the lead stopped, or standing: as it was
+//   lineoffire-holdstep  holdBehind 2 (the switch's own form; every other probe stages holdBehind 0): behind a lead walking AT the man no step is taken
+//                        either; the lead stopped is answered; the lead standing is not held for
 //   lineoffire-off       switch off: none of it — no round, no step, no word, nothing counted (the build as it was; the run-for-run identity against the base
 //                        commit is playthrough.ts's PT_DIGEST, not this)
 // Every ON case also asks: no teammate's round within a friend's lane (0.45 m of Sam, 0.3 of a mate, in plan, at the flight's height), and nobody faster than
 // the team's walking pace (guards.ts PACE.max).
+// SETTLED ROWS OF THE TABLE ARE NOT WRITTEN HERE (2026-11-07): CLEARLINE.holdStep, .cover and .inEntry, and the defenders' grenades (frag.ts). Out with them:
+// the corridor's 'no cover to be had (the knob off)', the entry's 'inEntry off' lines and its two 'the knob changes nothing' comparisons (with LOFENTRY_BREAK,
+// whose line they were), holdstep's 'the staging, holdBehind 2 alone' and the comparison in its standing line.
 // The family's own red path: LINEOFFIRE_BREAK=1 bun run tools/qa/probes.ts lineoffire must FAIL every on-case (the switch left off under them = the base).
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
@@ -46,12 +46,6 @@ const { ROOMFIGHT } = await import(`${ROOT}/src/game/roomfight.ts`);
 const CLM: any = await import(`${ROOT}/src/game/clearline.ts`);
 const CLEARLINE = CLM.CLEARLINE;
 const BREAK = !!process.env.LINEOFFIRE_BREAK;
-// THE MAN BEHIND THEM ON A DOOR ORDER THROWS NOTHING (entry()): he is staged to stand in a teammate's line with the player between, and a defender who can
-// throw (frag.ts FRAG.defenders: on in the page) throws at the stack instead — the second man then runs from the grenade, as he should, and is through the door
-// seconds late for a reason that is none of this rule's. The staging holds the defenders' grenades off for its run and puts the switch back.
-// LOFENTRY_BREAK=1 leaves them ON for it: 'they hold their way in' must FAIL on either stand.
-const { FRAG } = await import(`${ROOT}/src/game/frag.ts`);
-const ENTRY_BREAK = process.env.LOFENTRY_BREAK === '1';
 const DT = 1 / 60;
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -65,8 +59,8 @@ const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x)), at = 
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const KEEP = { ...CLEARLINE }, KEEP_RF = { ...ROOMFIGHT };
 const restore = () => { Object.assign(CLEARLINE, KEEP); Object.assign(ROOMFIGHT, KEEP_RF); };
-/** THE RULE AS FIRST BUILT: what every staging below starts from unless it says `shipped` (the switch's on form has since taken holdBehind 2 + holdStep) */
-const FIRST = { holdBehind: 0, holdStep: false };
+/** what every staging below starts from unless it says `shipped` (the switch's on form has holdBehind 2) */
+const FIRST = { holdBehind: 0 };
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } finally { restore(); } };
 
 interface Man { gd: any; rounds: number; first: number; maxV: number; idle: number; walked: number; last: number[] }
@@ -211,9 +205,6 @@ export const lineoffireCorridor = guarded(async () => {
     F.verdict(A.every(R => R.stats.covers + R.stats.kneels + R.stats.steps > 0 && R.cueAt() >= 0 && R.cueAt() < 1.5), 'Sam mid-corridor: he does something about it and says what, inside a second and a half',
       `${A.map(R => `${R.log.filter((n: any) => n.what !== 'end').map((n: any) => n.what).join('→') || 'nothing'} ('${R.cues[0]?.text ?? ''}' at ${f2(R.cueAt())} s)`).join(' · ')}`);
     F.verdict(A.every(R => R.men[0].idle < 2), 'and he does not stand in the man\'s sight with his gun down (under two seconds of ten)', `s stood upright, still, gun down, in the man's sight: ${A.map(R => f2(R.men[0].idle)).join(' ')} · rounds ${A.map(R => R.men[0].rounds).join(' ')} · man down at ${A.map(R => f2(R.foeDown)).join(' ')}`);
-    // (b) the same with no cover allowed: the knee, and the word for Sam
-    const B = await meet({ seed: 1, on: true, T: [T], sam: mid, foe, knobs: { cover: false }, secs: 6 });
-    F.verdict(B.stats.kneels > 0 && B.men[0].gd.char.anim.crouchTarget > 0.5 && B.cues.some(c => /in my line/.test(c.text)) && B.men[0].walked < 1.2, 'no cover to be had (the knob off): he goes down on a knee where he is and tells Sam he is in his line', `kneels ${B.stats.kneels} · crouched ${B.men[0].gd.char.anim.crouchTarget > 0.5} · '${B.cues.map(c => c.text).join("' / '")}' · walked ${f2(B.men[0].walked)} m`);
     // (c) Sam against the south wall: room to come up level with him on the north side
     const C = []; for (const seed of SEEDS) C.push(await meet({ seed, on: true, T: [T], sam: [25.2, 0, 11.75], foe }));
     F.verdict(C.every(R => R.stats.steps > 0 && R.men[0].first >= 0 && R.men[0].first < 5 && R.foeDown >= 0 && R.foeDown < 7), 'Sam nearer one wall: he steps to the open side (up level with him where it takes that) and drops the man',
@@ -225,7 +216,7 @@ export const lineoffireCorridor = guarded(async () => {
     // … and the order ENDS: cover has a time limit (CLEARLINE.holdMax), after which his order's legs are his again — Sam stood there all day does not park him
     for (const R of D) R.step(18 * 60);
     F.verdict(D.every(R => R.O.of(R.men[0].gd)?.arrived && !CLM.clearLineOf(R.g, R.men[0].gd)), 'and the order still ends: twenty-eight seconds on he is on the stack mark he was sent to, Sam still in the corridor', `arrived ${D.map(R => !!R.O.of(R.men[0].gd)?.arrived).join(' ')} · at ${D.map(R => at(R.men[0].gd.char.pos)).join(' ')} · covers ${D.map(R => R.stats.covers).join(' ')}`);
-    safe(F.verdict, [...A, B, ...C, ...D]);
+    safe(F.verdict, [...A, ...C, ...D]);
   } catch (err) { F.verdict(false, 'the probe ran', err instanceof Error ? (err.stack ?? err.message) : String(err)); }
   return F.done();
 });
@@ -267,12 +258,11 @@ export const lineoffireEdge = guarded(async () => {
 
 /** one staged ENTRY, played `secs` seconds: two teammates in the corridor ordered to bang and clear the break room's north door, Sam stood in the corridor,
  *  and a man who cannot be dropped spawned beyond Sam the frame the order's phase first reads `foeAt` — what the rule did, and when each man crossed */
-async function entry(o: { seed?: number; knobs?: Record<string, unknown>; sam: number[]; foe: number[]; foeAt: string; secs?: number }) {
-  restore(); Object.assign(CLEARLINE, FIRST, o.knobs ?? {}); CLEARLINE.on = !BREAK;
+async function entry(o: { seed?: number; sam: number[]; foe: number[]; foeAt: string; secs?: number }) {
+  restore(); Object.assign(CLEARLINE, FIRST); CLEARLINE.on = !BREAK;
   for (const k of Object.keys(CLM.CLEARLINE_STATS)) CLM.CLEARLINE_STATS[k] = 0; CLM.CLEARLINE_LOG.length = 0;
   Math.random = seeded(0x10f + (o.seed ?? 1) * 7919);
   const W: any = await quiet(() => standUp()); const g = W.game;
-  const theirFrags = FRAG.defenders; FRAG.defenders = ENTRY_BREAK;   // (after the stand-up, which writes the switch; put back below)
   for (const gd of g.guards) { gd.flashlight.enabled = false; g.engine.lights.remove(gd.flashlight); }
   g.guards = []; g.tune.civilians = false; g.tune.qrf = false; g.tune.devices = false; g.tune.chaos = 0;
   await quiet(() => g.restartEncounter());
@@ -298,7 +288,6 @@ async function entry(o: { seed?: number; knobs?: Record<string, unknown>; sam: n
       // on his point: the door tools say so — or (set and taken back inside one tick: sent straight on) his entry assignment has been replaced
       if (op.phase === 'enter' && op.pod.has(m) && !op.queue.some((q: any) => q.gd === m)) { const A = g.orders.of(m); if (!A0.has(m)) A0.set(m, A); if (!point.has(m) && (op.onPod.has(m) || A0.get(m) !== A)) point.set(m, t); } }
   }
-  FRAG.defenders = theirFrags;
   const log = CLM.CLEARLINE_LOG.map((n: any) => ({ ...n, t: n.t - t0 })), acts = log.filter((n: any) => n.what !== 'end');
   /** the rule's acts on a man between the shove (the can thrown) and his point */
   const inWindow = acts.filter((n: any) => { const m = men.find(x => x.callsign === n.who); return 'toss' in at && n.t >= at.toss && n.t <= (point.get(m) ?? at.end ?? Infinity); });
@@ -309,27 +298,16 @@ async function entry(o: { seed?: number; knobs?: Record<string, unknown>; sam: n
 }
 
 export const lineoffireEntry = guarded(async () => {
-  const F = family('lineoffire-entry: CLEARLINE.inEntry off — between the shove and his point on a door order the rule stands down; everywhere else it is the rule as it was');
+  const F = family('lineoffire-entry: a man comes up behind a pair on a door order with Sam between — the rule takes the pair off their door');
   try {
     // Sam in the corridor west of the stack, a man who cannot be dropped beyond him: every teammate on the door's east jamb has Sam in his line to that man
     const behind = { sam: [23.6, 0, 11.25], foe: [22.0, 0, 11.25], foeAt: 'wait' };
-    const ON = [], OFF = []; for (const seed of SEEDS) { ON.push(await entry({ ...behind, seed })); OFF.push(await entry({ ...behind, seed, knobs: { inEntry: false } })); }
+    const ON = []; for (const seed of SEEDS) ON.push(await entry({ ...behind, seed }));
     const sec = (R: any) => `go ${f2(R.at.enter ?? -1)} · crossed ${R.crossed.map(f2).join(' / ')} · end ${f2(R.at.end ?? -1)} ('${R.ended}')`, go = (R: any) => R.at.enter ?? Infinity;
-    F.verdict(ON.every(R => !R.why && 'wait' in R.at && R.inWindow.length >= 1 && !(R.crossed[0] >= 0 && R.crossed[0] - go(R) < 5)), 'the staging, inEntry as shipped: the can gone off, a man comes up behind with Sam between — the rule takes the pair off their door, and nobody is through it inside five seconds of the go',
+    F.verdict(ON.every(R => !R.why && 'wait' in R.at && R.inWindow.length >= 1 && !(R.crossed[0] >= 0 && R.crossed[0] - go(R) < 5)), 'the can gone off, a man comes up behind with Sam between — the rule takes the pair off their door, and nobody is through it inside five seconds of the go',
       `${ON.map(R => `${R.inWindow.map((n: any) => `${n.who} ${n.what} at ${f2(n.t)}`).join(', ') || 'no act'} · ${sec(R)}`).join(' ‖ ')}${ON[0].why ? ` · order refused: ${ON[0].why}` : ''}`);
-    F.verdict(OFF.every(R => !R.why && R.inWindow.length === 0 && R.cues.every((c: any) => c.t < (R.at.toss ?? 0) || c.t > Math.max(...R.point, R.at.end ?? 0))), 'inEntry off: no step, no cover, no knee and no word of the rule\'s for either man between the shove and his point', `acts in the window ${OFF.map(R => R.inWindow.length).join(' ')} · all acts ${OFF.map(R => R.acts.length).join(' ')} · on their points at ${OFF.map(R => R.point.map(f2).join(' / ')).join(' ‖ ')} s`);
-    F.verdict(OFF.every(R => R.crossed[0] >= 0 && R.crossed.every((t: number) => t >= 0 && t - go(R) < 4) && R.inRoom.every(Boolean) && /in$/.test(R.ended)), '… and they hold their way in: both through the door inside four seconds of the go, the room theirs, the order ended in it', OFF.map(sec).join(' ‖ '));
-    // the walk up to the SAME order's stack is before the shove: the man is there from the start, Sam mid-corridor ahead of the walkers
-    const ahead = { sam: [28.6, 0, 11.25], foe: [35.5, 0, 11.25], foeAt: 'stack', secs: 8 };
-    const S1 = [], S0: any[] = []; for (const seed of SEEDS) { S1.push(await entry({ ...ahead, seed })); S0.push(await entry({ ...ahead, seed, knobs: { inEntry: false } })); }
-    const sig = (R: any) => R.acts.map((n: any) => `${n.who} ${n.what} ${f2(n.t)}`).join(', ');
-    F.verdict(S1.every((R, i) => !R.why && R.acts.length >= 1 && !('toss' in R.at && R.acts[0].t >= R.at.toss) && sig(R) === sig(S0[i]) && R.cues.length === S0[i].cues.length), 'on the walk up to that order\'s stack (before any shove) the knob changes nothing: the same acts at the same moments either way', `shipped: ${S1.map(sig).join(' ‖ ')} · inEntry off: ${S0.map(sig).join(' ‖ ')}`);
-    // … and a man planted on a hold order: the planted case of this family, to the frame
-    const P1 = [], P0: any[] = []; for (const seed of SEEDS) { P1.push(await meet({ seed, on: true, T: [ROOM.T], sam: ROOM.sam, foe: ROOM.foe })); P0.push(await meet({ seed, on: true, T: [ROOM.T], sam: ROOM.sam, foe: ROOM.foe, knobs: { inEntry: false } })); }
-    F.verdict(P1.every((R, i) => R.cueAt() >= 0 && Math.abs(R.cueAt() - P0[i].cueAt()) < 1e-6 && Math.abs(R.foeDown - P0[i].foeDown) < 1e-6 && R.stats.steps === P0[i].stats.steps), 'a man planted on a hold order with Sam in his line: the same word, the same step, the man down at the same moment either way', `said at ${P1.map(R => f2(R.cueAt())).join(' ')} / ${P0.map(R => f2(R.cueAt())).join(' ')} s (shipped / inEntry off) · man down ${P1.map(R => f2(R.foeDown)).join(' ')} / ${P0.map(R => f2(R.foeDown)).join(' ')} s`);
-    const v = Math.max(...[...ON, ...OFF, ...S1, ...S0].map(R => R.maxV));
-    F.verdict(v <= PACE.max + 0.05, `nobody faster than the team's walking pace (${PACE.max} m/s) in any of it without a reason to run`, `fastest ${f2(v)} m/s over ${ON.length + OFF.length + S1.length + S0.length} staged entries`);
-    safe(F.verdict, [...P1, ...P0]);
+    const v = Math.max(...ON.map(R => R.maxV));
+    F.verdict(v <= PACE.max + 0.05, `nobody faster than the team's walking pace (${PACE.max} m/s) in any of it without a reason to run`, `fastest ${f2(v)} m/s over ${ON.length} staged entries`);
   } catch (err) { F.verdict(false, 'the probe ran', err instanceof Error ? (err.stack ?? err.message) : String(err)); }
   return F.done();
 });
@@ -414,23 +392,22 @@ export const lineoffireFar = guarded(async () => {
 });
 
 export const lineoffireHoldStep = guarded(async () => {
-  const F = family('lineoffire-holdstep: CLEARLINE.holdStep — behind a lead who is walking AT the man the hold stops the step too; a player crossing the line or standing in it: the rule as it was');
+  const F = family('lineoffire-holdstep: holdBehind 2 — behind a lead who is walking AT the man the hold stops the step too; a lead standing in the line is not held for');
   try {
     const acts = (R: any) => R.log.filter((n: any) => n.what !== 'end').map((n: any) => `${n.what} ${f2(n.t - R.t0)}`), sig = (R: any) => acts(R).join(', ') || 'nothing';
     const first = (R: any, re: RegExp) => { const n = R.log.find((x: any) => re.test(x.what)); return n ? n.t - R.t0 : -1; };
-    const both = async (o: Omit<Setup, 'on'>) => { const R1 = [], R0 = []; for (const seed of SEEDS) { R1.push(await meet({ ...o, seed, on: true, knobs: { holdBehind: 2, holdStep: true } })); R0.push(await meet({ ...o, seed, on: true, knobs: { holdBehind: 2 } })); } return [R1, R0]; };
+    const held = async (o: Omit<Setup, 'on'>) => { const R1 = []; for (const seed of SEEDS) R1.push(await meet({ ...o, seed, on: true, knobs: { holdBehind: 2 } })); return R1; };
     // (1) a room with floor beside the line, Sam ahead of him walking at the man for 1.2 s, then standing
-    const STOP = 1.2, [A1, A0] = await both({ T: [ROOM.T], sam: [30.2, 0, 15.5], foe: ROOM.foe, samWalk: [33.4, 0, 15.5], samStop: STOP, foeGod: true, secs: 6 });
-    F.verdict(A0.every(R => !R.why && first(R, /step/) >= 0 && first(R, /step/) < 1.5), 'the staging, holdBehind 2 alone: Sam walking at the man in a room with floor beside the line — the step is taken inside a second and a half', A0.map(sig).join(' ‖ '));
-    F.verdict(A1.every(R => !R.why && R.stats.behind > 0 && !(first(R, /step|cover|kneel/) >= 0 && first(R, /step|cover|kneel/) < STOP + 0.4) && R.cueAt() >= 0 && R.cueAt() < 1.5 && /in my line/.test(R.cues[0].text)), 'holdStep: while Sam walks at the man he takes no step either — he says Sam is in his line and keeps his place', `${A1.map(R => `${sig(R)} ('${R.cues[0]?.text ?? ''}' at ${f2(R.cueAt())} s, held ${R.stats.behind}×)`).join(' ‖ ')}`);
+    const STOP = 1.2, A1 = await held({ T: [ROOM.T], sam: [30.2, 0, 15.5], foe: ROOM.foe, samWalk: [33.4, 0, 15.5], samStop: STOP, foeGod: true, secs: 6 });
+    F.verdict(A1.every(R => !R.why && R.stats.behind > 0 && !(first(R, /step|cover|kneel/) >= 0 && first(R, /step|cover|kneel/) < STOP + 0.4) && R.cueAt() >= 0 && R.cueAt() < 1.5 && /in my line/.test(R.cues[0].text)), 'while Sam walks at the man he takes no step either — he says Sam is in his line and keeps his place', `${A1.map(R => `${sig(R)} ('${R.cues[0]?.text ?? ''}' at ${f2(R.cueAt())} s, held ${R.stats.behind}×)`).join(' ‖ ')}`);
     F.verdict(A1.every(R => first(R, /step|cover|kneel/) >= STOP + 1.5 && first(R, /step|cover|kneel/) < STOP + 3.6), '… and a lead who has stopped in his line is answered: the step inside three and a half seconds of the stop', `first act at ${A1.map(R => f2(first(R, /step|cover|kneel/))).join(' ')} s · Sam let go of his keys at ${STOP} s`);
-    // (2) Sam STANDING in the line: nothing changes
-    const [B1, B0] = await both({ T: [ROOM.T], sam: ROOM.sam, foe: ROOM.foe });
-    F.verdict(B1.every((R, i) => acts(R).length >= 1 && sig(R) === sig(B0[i]) && R.stats.behind === 0 && Math.abs(R.foeDown - B0[i].foeDown) < 1e-6), 'Sam STANDING in his line: the same acts at the same moments and the man down at the same moment either way', `holdStep: ${B1.map(sig).join(' ‖ ')} · without: ${B0.map(sig).join(' ‖ ')}`);
+    // (2) Sam STANDING in the line: he is answered, and nothing is held for
+    const B1 = await held({ T: [ROOM.T], sam: ROOM.sam, foe: ROOM.foe });
+    F.verdict(B1.every(R => acts(R).length >= 1 && R.stats.behind === 0), 'Sam STANDING in his line: the man acts, and no hold is counted', B1.map(sig).join(' ‖ '));
     // (3) the switch on with nothing else set IS this form
     const D = CLM.CLEARLINE_DEFAULTS, S1 = []; for (const seed of SEEDS) S1.push(await meet({ T: [ROOM.T], sam: [30.2, 0, 15.5], foe: ROOM.foe, samWalk: [33.4, 0, 15.5], samStop: STOP, foeGod: true, secs: 6, seed, on: true, shipped: true }));
     F.verdict(D.holdBehind === 2 && D.holdStep === true && S1.every((R, i) => sig(R) === sig(A1[i]) && R.stats.behind === A1[i].stats.behind), 'the switch as shipped is this form: holdBehind 2 and holdStep are the defaults, and the walking staging with nothing set plays the same acts at the same moments', `defaults holdBehind ${D.holdBehind} holdStep ${D.holdStep} · as shipped: ${S1.map(sig).join(' ‖ ')}`);
-    safe(F.verdict, [...A1, ...A0, ...B1, ...B0, ...S1]);
+    safe(F.verdict, [...A1, ...B1, ...S1]);
   } catch (err) { F.verdict(false, 'the probe ran', err instanceof Error ? (err.stack ?? err.message) : String(err)); }
   return F.done();
 });
@@ -449,7 +426,7 @@ export const lineoffireOff = guarded(async () => {
 });
 
 if (import.meta.main) {   // (a trace for the curious: bun run tools/qa/lineoffire-probes.ts — every case's log and words)
-  for (const [name, o] of Object.entries({ planted: { T: [ROOM.T], sam: ROOM.sam, foe: ROOM.foe }, corridor: { T: [[24.0, 0, 11.25]], sam: [25.2, 0, 11.25], foe: [29.8, 0, 11.25] }, 'corridor, no cover allowed': { T: [[24.0, 0, 11.25]], sam: [25.2, 0, 11.25], foe: [29.8, 0, 11.25], knobs: { cover: false } } } as Record<string, Omit<Setup, 'on'>>)) for (const on of [false, true]) {
+  for (const [name, o] of Object.entries({ planted: { T: [ROOM.T], sam: ROOM.sam, foe: ROOM.foe }, corridor: { T: [[24.0, 0, 11.25]], sam: [25.2, 0, 11.25], foe: [29.8, 0, 11.25] } } as Record<string, Omit<Setup, 'on'>>)) for (const on of [false, true]) {
     const R = await meet({ ...o, on }); console.log(`\n${name} · switch ${on ? 'ON' : 'off'}: rounds ${R.men[0].rounds} (first ${f2(R.men[0].first)} s) · man down ${f2(R.foeDown)} s · walked ${f2(R.men[0].walked)} m · idle ${f2(R.men[0].idle)} s · ends at ${at(R.men[0].gd.char.pos)}`);
     for (const n of R.log) console.log(`  ${f2(n.t - R.t0)} ${n.who}: ${n.what}${n.at ? ` to (${n.at[0].toFixed(1)}, ${n.at[1].toFixed(1)}), ${f2(n.walk)} m` : ''}${n.by ? ` — ${n.by} in his line` : ''}`);
     for (const s of R.said) console.log(`  ${f2(s.t - R.t0)} ${s.who}: "${s.text}"`);

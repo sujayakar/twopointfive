@@ -109,7 +109,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const ring = async w => { await point(w); await run(4); await point(w); await keep('KeyQ', 30); const a = await read(); if (!a.menu) return { ...a, digits: [] };
     const digits = a.keys.filter(k => /^[1-5]$/.test(k)); for (const d of digits) await tap('Digit' + d, 4); return { ...a, digits, after: await read() }; };
 
-  const url = `http://localhost:${PORT}/?levelFile=tut-kit.json&roomclear=1&squad4&paused&quality=${QUALITY}&mute`;
+  const url = `http://localhost:${PORT}/?levelFile=tut-kit.json&roomclear=1&squad4&paused&quality=${QUALITY}&mute&seed=${process.env.SEED || 7}`;   // (a page with no seed deals a fresh one each visit: a check that is to read the same twice names its own)
   log(url);
   if (!held) { await page.goto(url, { waitUntil: 'commit' }); await page.waitForFunction(() => window.__ready !== undefined, null, { timeout: 0 }); }
   const row = await page.evaluate(async ([held, god]) => { await window.__ready; window.__testVisible = true; if (held) window.__game.restartEncounter(); window.__game.godMode = god; window.__runFrames(3, 1 / 60, [], 'none');

@@ -417,9 +417,10 @@ export class WallCharge {
   /** a new Player or a new cast is a fresh run; the rows are on the menu only while the module is live. Returns live. */
   private sync(): boolean {
     const g = this.g; let i = 0, same = this.player === g.player;
-    for (const gd of g.guards) if (gd.unit && gd.team === 'operative' && this.roster[i++] !== gd) same = false;
+    // (the roster is this book's own men, by the one roster test, orders.ts mine: another seat's teammate is not on it, as in rust/game wallcharge/p_02.rs)
+    for (const gd of g.guards) if (g.orders.mine(gd) && this.roster[i++] !== gd) same = false;
     if (!same || i !== this.roster.length) {
-      const first = this.player === null, was = this.roster.length; this.roster = g.guards.filter(gd => !!gd.unit && gd.team === 'operative'); this.player = g.player;
+      const first = this.player === null, was = this.roster.length; this.roster = g.guards.filter(gd => g.orders.mine(gd)); this.player = g.player;
       // (the door tools put their counts back when the cast changes; with no cast before or after they never do — what Sam spent alone goes back here)
       if (!first && !was && !this.roster.length && this.alone > 0) { g.doorTools.sync(); while (this.alone-- > 0 && g.doorTools.charges < DOORTOOLS.charges) g.doorTools.refund('charge'); }
       this.reset();

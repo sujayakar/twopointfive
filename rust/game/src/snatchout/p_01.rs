@@ -58,9 +58,6 @@ pub fn snatch_out_owns(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.snatch.man == Some(gd) && snatch_out_free(g)
 }
 
-/// The men the bounds have planted right now. (snatchout.ts SnatchOut.planted)
-pub fn snatch_out_planted(g: &mut crate::game::Game) -> Vec<GuardId> { g.snatch.out.jobs.keys() }
-
 /// The row on him in reach. (snatchout.ts SnatchOut.rows)
 pub fn snatch_out_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::snatchout::SnatchOutRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     if !snatch_out_free(g) { return; }
@@ -446,13 +443,6 @@ pub fn snatch_out_objective(g: &mut crate::game::Game) -> Option<crate::snatchou
         [at[0], 0.0, at[2]]
     };
     Some(SnatchOutObjective { text, pos: Some(pos) })
-}
-
-/// The state a save would hold; the bounds are not carried. (snatchout.ts SnatchOut.snapshot)
-pub fn snatch_out_snapshot(g: &mut crate::game::Game) -> crate::snatchout::SnatchOutSnap {
-    let lead = g.snatch.out.lead.map(|c| g.ch[c].id);
-    let o = &g.snatch.out;
-    SnatchOutSnap { lead, led: o.led, sent: o.sent, in_at: o.in_at }
 }
 
 /// A load: every man back in the file, he follows whom he followed if that man is still here. (snatchout.ts SnatchOut.restore)

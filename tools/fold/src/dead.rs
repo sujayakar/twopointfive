@@ -92,6 +92,14 @@ pub struct World {
     pub modrs: HashMap<String, (PathBuf, String)>,
 }
 
+/// A body file: a file of one of the game's modules that holds its code. Not the module's `mod.rs`, its `types.rs`
+/// (the shapes every part shares) or its `missing.rs` (the functions nobody has written, as named panics).
+pub fn is_body(p: &Path) -> bool {
+    let n = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    let in_module = p.parent().and_then(|d| d.parent()).and_then(|d| d.file_name()).map(|d| d == "src").unwrap_or(false) && p.parent().and_then(|d| d.file_name()).map(|d| d != "bin").unwrap_or(false);
+    in_module && n.ends_with(".rs") && !matches!(n, "mod.rs" | "types.rs" | "missing.rs")
+}
+
 pub fn rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(rd) = std::fs::read_dir(dir) else { return };
     let mut v: Vec<PathBuf> = rd.filter_map(|e| e.ok().map(|e| e.path())).collect();

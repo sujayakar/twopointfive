@@ -39,22 +39,6 @@ fn id_of(g: &mut Game, gd: GuardId) -> f64 {
 
 // ---------------------------------------------------------------- the small questions
 
-/// this file's lines, every kind's or one kind's, with a line's wording of now beside it (netquiet.ts netQuietLines)
-pub fn net_quiet_lines(g: &mut crate::game::Game, kind: Option<crate::netquiet::LineKind>) -> Vec<String> {
-    let mut l: Vec<String> = Vec::new();
-    match kind {
-        Some(k) => l.extend(lines_of(k)),
-        None => {
-            for k in KINDS.iter() {
-                l.extend(lines_of(*k));
-            }
-        }
-    }
-    let now: Vec<String> = l.iter().filter_map(|t| line_now(t)).collect();
-    l.extend(now);
-    l
-}
-
 /// distance in plan (netquiet.ts flat)
 pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
@@ -1064,20 +1048,20 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
 /// on his gun: roused, at the floor's own alert line (netquiet.ts rouse)
 pub fn rouse(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].state != crate::game::GuardState::Alert {
-        g.gd[gd].state = crate::game::GuardState::Alert;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "netquiet");
     }
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
+    crate::mind::raise(g, gd, 0.92, "netquiet");
 }
 
 /// …and off it again: wary, not alert (netquiet.ts ease)
 pub fn ease(g: &mut crate::game::Game, gd: GuardId) {
-    g.gd[gd].state = crate::game::GuardState::Suspicious;
+    crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "netquiet");
     g.stats.netquiet.eased += 1;
 }
 
 /// the awareness he does not fall under, low on his spot (netquiet.ts wary)
 pub fn wary(g: &mut crate::game::Game, gd: GuardId) {
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, g.k.netquiet.wary);
+    { let to = g.k.netquiet.wary; crate::mind::raise(g, gd, to, "netquiet"); }
 }
 
 /// down where he stands, on his gun: the arc as it reads from here (netquiet.ts settle)

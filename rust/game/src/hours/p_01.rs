@@ -9,26 +9,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- the hours' words
 
-/// (hours.ts hourLabel)
-pub fn hour_label(id_2: crate::hours::HourId) -> String {
-    match hours().get(String::from(id_2.as_str())) { Some(d) => d.label.clone(), None => night().label }
-}
-
-/// (hours.ts hourClock)
-pub fn hour_clock(id_2: crate::hours::HourId) -> String {
-    match hours().get(String::from(id_2.as_str())) { Some(d) => d.clock.clone(), None => night().clock }
-}
-
-/// (hours.ts hourWords)
-pub fn hour_words(id_2: crate::hours::HourId) -> String {
-    match hours().get(String::from(id_2.as_str())) { Some(d) => d.words.clone(), None => night().words }
-}
-
-/// The hour the page stands at: with a game to hand, the game's (main.ts sets `HOUR.live` to just that). (hours.ts hourLive)
-pub fn hour_live(g: &mut crate::game::Game) -> crate::hours::HourId {
-    hour_of(g)
-}
-
 /// The enum of one of HOUR_IDS' words.
 fn hour_word(s: &str) -> Option<HourId> {
     match s {
@@ -76,11 +56,6 @@ pub fn exposure_of(g: &mut crate::game::Game) -> f64 {
     };
     let e = match own { Some(e) => e, None => g.k.env.exposure };
     if e > 0.0 { e } else { 1.0 }
-}
-
-/// The hour's sun in this game's light set; None at night. (hours.ts hourSun)
-pub fn hour_sun(g: &mut crate::game::Game) -> Option<LightId> {
-    g.m.hours.states.as_ref().map(|st| st.sun)
 }
 
 /// (hours.ts isHourSun)
@@ -541,11 +516,6 @@ fn dome_same(a: Option<SkyStateDome>, b: SkyStateDome) -> bool {
     match a { Some(a) => a.zenith == b.zenith && a.horizon == b.horizon, None => false }
 }
 
-/// What `moonLight` keeps of this game is dropped. (hours.ts moonForget)
-pub fn moon_forget(g: &mut crate::game::Game) {
-    g.m.hours.nights = None;
-}
-
 /// The light from the sky at P by the row in force (`SkyAsk`): its one directional light where P has a line to it, and the ambient of P's cell. (hours.ts skyLight)
 pub fn sky_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
     let Some(st) = sky_ask(g) else { return };
@@ -622,26 +592,6 @@ pub fn hour_light_at(g: &mut crate::game::Game, p: V3) -> f64 {
     let mut acc = vec![0.0; 6];
     hour_light(g, p, &mut acc);
     m::max_n(&acc)
-}
-
-/// One line for the panel. (hours.ts hourSummary)
-pub fn hour_summary(g: &mut crate::game::Game) -> String {
-    let Some(st) = g.m.hours.states.as_ref() else { return String::from("night (the level as authored)") };
-    let d = st.def.clone();
-    let (sun, sun_k, given, sky_k, out, storm, cells) = (st.sun, st.sun_k, st.given, st.sky_k, st.lamps.len(), st.storm.is_some(), st.cells.len());
-    let intensity = g.tab.light[sun].intensity;
-    let why = if given {
-        String::from(" set")
-    } else {
-        match crate::weather::weather_kind(g) { Some(k) => alloc::format!(" under {}'s cloud", k.as_str()), None => String::new() }
-    };
-    let sky = if sky_k != 1.0 { alloc::format!(", sky ×{}", js::to_fixed(sky_k, 2)) } else { String::new() };
-    let lamps = if d.lamps { String::from("as authored") } else { alloc::format!("out ({})", out) };
-    alloc::format!(
-        "{} {} · sun {}° up at {} (×{}{}{}) · exposure {} · outside lamps {}{} · {} cells",
-        d.label, d.clock, js::num_str(d.sun.elev_deg), js::to_fixed(intensity, 2), js::to_fixed(sun_k, 2), why, sky,
-        js::to_fixed(g.engine.settings.exposure, 2), lamps, if storm { " · storm held" } else { "" }, cells,
-    )
 }
 
 /// `t.intensity = t.peakIntensity = x` of a light (hours.ts:171, 227)
@@ -786,12 +736,6 @@ mod tests {
             assert_eq!(b3(r.d), d);
             for k in 0..6 { assert_eq!(r.c6[k].to_bits(), c[k]); }
         }
-    }
-    #[test]
-    fn night_has_no_record() {
-        assert!(hours().get(String::from("night")).is_none());
-        assert_eq!(hour_label(HourId::Night), "Night");
-        assert_eq!(hour_clock(HourId::Dusk), "17:00");
     }
     // the words checked against the TypeScript's own functions under bun
     #[test]

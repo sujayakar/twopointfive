@@ -11,28 +11,31 @@
 //   nightbreach-stage    start(): the shift benched, nobody else on the floor, two operatives on the approach marks, three hostiles held + pinned on theirs with
 //                        their guns on the door, both doors shut, Sam beside the pair with the rifle up, the budgets (≤ 8 characters, ≤ MAX_LIGHTS steady lights)
 //                        held, the response team idle; and with no order given nobody moves and nobody fires
-//   nightbreach-orders   order one stacks and HOLDS (no kick while only one order stands); order two runs kick → door → charge → bang → enter in order; with the
-//                        stun and blind fire OFF (the walkover setting) the room clears with the team whole, the defenders dazzled and silent, real rounds
-//                        fired by the team, Sam untouched
-//   nightbreach-fight    the stun off (boot and go), three seeds: the defenders return fire, a teammate is hit, and a man down never strands the drill — it runs on
-//                        to 'clear' (the survivor's) or to both men down, never an abort once the door is in
-//   nightbreach-contested  the DEFAULT (stun on, dazzled defenders fire blind): the tally over fifteen seeds with Sam idle at the page's chaos 0.5 — the defenders
-//                        fire in ≥ 12 runs, the team takes the room in 6‥11, the losses are not one number — and the rule itself: no round before the flash, at
+//   nightbreach-orders   order one stacks and HOLDS (no kick while only one order stands); order two runs kick → door → charge → bang → enter in order; the
+//                        charge dazzles every defender, real rounds fired by the team, Sam untouched
+//   nightbreach-fight    three seeds: a man down never strands the drill — it runs on to 'clear' (the survivor's) or to both men down, never an abort once
+//                        the door is in; a man dead on the stack before the word
+//   nightbreach-contested  the tally over fifteen seeds with Sam idle at the page's chaos 0.5 — the team takes the room in ≥ 11, the losses are not one
+//                        number — and the rule itself: no round before the flash, at
 //                        most BLIND.rounds a man a charge, every blind round down the door he was covering (in three dimensions), a blind round's report
 //                        moves no colleague's fix onto Sam, none from the man Sam's rifle has pinned (real rounds past him), none from a man in Sam's arm;
 //                        a real charge on men who heard the boot = one burst each, a flinch late and staggered; a second charge a second burst; a restage
-//                        mid-burst silences it; Sam dark in the aisle never hit; and the walkover setting (blind fire off) over three seeds: no round
+//                        mid-burst silences it; Sam dark in the aisle never hit
 //   nightbreach-restart  a restart under it (Shift+Enter mid-entry, then a bare restartEncounter) stages it again on the next frame: a fresh cast on the marks, the
 //                        door shut, orders back to none, Sam back beside the pair with the rifle up — and the orders work again
-//   nightbreach-drilled  hard's drilled defenders (roomfight.ts DRILLED): blind as long, doubled over half as long, more of the burst fired, said once; row off = standard
+//   nightbreach-drilled  hard's drilled defenders (roomfight.ts DRILLED): blind as long, doubled over half as long, more of the burst fired, said once
 //   nightbreach-stop     stop(): the cast gone, the shift's three men back on the list on their routes with their torches in the light set, the civilians back,
 //                        Game.tune untouched, the room's lights and the steady light count as before, and the floor runs on
+// THE STUN, THE BLIND FIRE, THE FLASH'S FOLD, THE GOGGLES AND HARD'S DRILLED ROW ARE SETTLED (NIGHTBREACH.stun, .blindFire, FLASH.on, NVG.on, HARD.drilled;
+// 2026-11-07): nothing here writes them. Out with their other side: the walkover lines (blind fire off) in `orders` and `contested`; in `fight` 'the defenders
+// return fire', 'a teammate is hit' and 'a lit Sam in the door's line is shot' (all three were the fight with the stun off); in `contested` the fifteen runs of
+// the canister as it was and the two comparisons with them, the bare-eyes pin, and the pin that had the blind burst's own lines played with nobody folded by
+// the flash; in `drilled` the run with hard's row off. A line that still asks the blind burst of men the flash now folds fails by what the game is.
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH, BLIND } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { NVG } = await import(`${ROOT}/src/game/nvg.ts`);
 const { SUPPRESSION } = await import(`${ROOT}/src/game/suppression.ts`);
 const { FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`);
-const { fireWeapon, detonateStun, FLASH } = await import(`${ROOT}/src/game/combat.ts`);
+const { fireWeapon, detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { canSave, canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
@@ -95,12 +98,7 @@ const up = (l: any[]) => l.filter(x => x.state !== 'dead').length;
 const itemsOf = (g: any): any[] => g.items.items ?? g.items.list ?? [];
 /** every probe leaves the knob table as it found it, pass, fail or throw (the runner's snapshot does not know this table) */
 const BANG_BREAK = FIGHT_SKILL.hostile.bangBreak;
-const FLASH_ON = FLASH.on;
-const NVG_ON = NVG.on;
-const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } finally { Object.assign(NIGHTBREACH, DEFAULTS); FIGHT_SKILL.hostile.bangBreak = BANG_BREAK; FLASH.on = FLASH_ON; NVG.on = NVG_ON; } };
-/** THE CANISTER AS IT WAS (combat.ts FLASH.on false: the dazzle alone, nobody folded). The blind burst's own rules — who owes one, when, how many, what silences
- *  it — are measured with it: a man doubled over by the flash (the canister's rule since 10-05) loses the turns those rules are about. */
-const canAsItWas = () => { FLASH.on = false; };
+const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } finally { Object.assign(NIGHTBREACH, DEFAULTS); FIGHT_SKILL.hostile.bangBreak = BANG_BREAK; } };
 /** The burst's MECHANICS (one burst a dazzle, its clock, its count, who loses his turns) are checked with every dazzled man firing: roomfight.ts now rolls
  *  FIGHT_SKILL.hostile.bangBreak per dazzle for a man who ducks instead (the untrained side breaking under a bang), which would make 'twelve each' a dice
  *  roll. The tallies above these checks keep the roll. `guarded` puts the number back. */
@@ -169,8 +167,8 @@ export const nightbreachStage = guarded(async () => {
 });
 
 export const nightbreachOrders = guarded(async () => {
-  const { verdict, done } = family('nightbreach-orders: order one stacks and holds, order two runs kick, bang, enter; with the stun and no blind fire the room clears');
-  const R = await rig(11, { blindFire: false }); const { NB } = R;
+  const { verdict, done } = family('nightbreach-orders: order one stacks and holds, order two runs kick, bang, enter');
+  const R = await rig(11); const { NB } = R;
   R.step(60);
   R.press();
   const set = R.until(() => NB.state === 'set', 30);
@@ -183,8 +181,7 @@ export const nightbreachOrders = guarded(async () => {
   const order = ['squeeze', 'kick', 'door-flung', 'toss', 'bang', 'enter1', 'enter2', 'clear', 'done']; const ts = order.map(w => R.beat(w));
   const inOrder = ts.every((t, i) => !isNaN(t) && (i === 0 || t >= ts[i - 1]));
   verdict(ended && inOrder, 'order two: squeeze → kick → door → charge → bang → enter1 → enter2 → clear, in that order', order.map((w, i) => `${w}@${f2(ts[i])}`).join(' '));
-  verdict(NB.state === 'clear' && up(NB.ops) === 2 && up(NB.hostiles) === 0, 'the walkover setting (stun on, blind fire off): the room clears and the team is whole', NB.summary());
-  verdict(R.dazzle.length === 3 && R.dazzle.every(d => d > 1) && (R.shots.operative ?? 0) >= 3 && !(R.shots.hostile ?? 0) && NB.blindRounds === 0 && !R.samHit && !R.bad, 'the charge dazzled every defender and none of them fired, the team\'s rounds were real, Sam was not hit',
+  verdict(R.dazzle.length === 3 && R.dazzle.every(d => d > 1) && (R.shots.operative ?? 0) >= 3 && !R.samHit && !R.bad, 'the charge dazzled every defender, the team\'s rounds were real, Sam was not hit',
     `dazzle ${R.dazzle.map(f2).join('/')} s · rounds ${JSON.stringify(R.shots)} (drill ${NB.drill.rounds.join('+')}) · Sam hit ${R.samHit}${R.bad ? ' · NaN ' + R.bad : ''}`);
   if (VERBOSE) console.log('    beats ' + NB.drill.beats.map((b: any) => `${b.what}@${f2(b.t)}`).join(' '));
   NB.stop();
@@ -192,10 +189,10 @@ export const nightbreachOrders = guarded(async () => {
 });
 
 export const nightbreachFight = guarded(async () => {
-  const { verdict, done } = family('nightbreach-fight: without the stun the defenders shoot back, a teammate is hit, and a man down never strands the drill');
+  const { verdict, done } = family('nightbreach-fight: a man down never strands the drill');
   const rows: string[] = []; let hostileRounds = 0, opsLost = 0, stranded = 0, aborted = 0, samHit = 0, bad = '';
   for (const seed of [11, 12, 13]) {
-    const R = await rig(seed, { stun: false }); const { NB } = R;
+    const R = await rig(seed); const { NB } = R;
     R.step(60); R.press(); R.until(() => NB.state === 'set', 30); R.step(120); R.press();
     const ended = R.until(() => NB.drill.phase === 'done', 45); R.step(60);
     const lost = 2 - up(NB.ops); opsLost += lost; hostileRounds += R.shots.hostile ?? 0; if (R.samHit) samHit++; if (R.bad) bad = R.bad;
@@ -207,11 +204,9 @@ export const nightbreachFight = guarded(async () => {
     rows.push(`seed ${seed}: ${NB.state} · team ${up(NB.ops)}/2 · defenders ${up(NB.hostiles)}/3 · rounds ${JSON.stringify(R.shots)} · ${beats.filter((b: string) => /opdown|nobang|clear|wiped|abort/.test(b)).join(' ')}`);
     NB.stop();
   }
-  verdict(hostileRounds > 0, 'the defenders return fire', `${hostileRounds} rounds from the hostiles over three seeds\n    ${rows.join('\n    ')}`);
-  verdict(opsLost > 0, 'a teammate is hit', `${opsLost} operatives down over three seeds`);
-  verdict(stranded === 0 && aborted === 0 && !bad, 'a man down never strands the drill: every run ends, on \'clear\' with a survivor or on both men down — no abort once the door is in', `stranded ${stranded} · aborts ${aborted}${bad ? ' · NaN ' + bad : ''}`);
+  verdict(stranded === 0 && aborted === 0 && !bad, 'a man down never strands the drill: every run ends, on \'clear\' with a survivor or on both men down — no abort once the door is in', `stranded ${stranded} · aborts ${aborted}${bad ? ' · NaN ' + bad : ''} · ${hostileRounds} rounds from the hostiles, ${opsLost} operatives down over three seeds\n    ${rows.join('\n    ')}`);
   verdict(samHit === 0, 'Sam, dark in the aisle and out of the door\'s line, is not hit', `runs with Sam hit: ${samHit}`);
-  { // the stun ON, but #2 dead on the stack before the word: no corpse chops or throws — #1 boots and goes without it
+  { // #2 dead on the stack before the word: no corpse chops or throws — #1 boots and goes without it
     const R = await rig(11); const { NB, game: g } = R;
     R.step(60); R.press(); R.until(() => NB.state === 'set', 30);
     killGuard(g, NB.ops[1], [1, 0, 0], false, 'shot', 'guard', 'operative down'); R.step(30); R.press();
@@ -227,26 +222,13 @@ export const nightbreachFight = guarded(async () => {
     verdict(NB.state === 'failed' && beats.includes('abort') && !beats.includes('kick') && b.state !== 'dead' && !b.script && b.hold && b.pinned, '#1 dead on the stack: the breach is off (abort) and the survivor is the fight AI\'s, holding where he stands',
       `${NB.summary()} · ${beats.filter(x => /opdown|abort|kick/.test(x)).join(' ')} · Blue Two ${b.state} script ${!!b.script} hold ${b.hold} pinned ${b.pinned}`);
     NB.stop(); }
-  { // Sam LIT and standing in the door's line with no stun: the defenders take him too (he is no spectator behind glass)
-    let downs = 0; const rows: string[] = [];
-    for (const seed of [11, 12]) {
-      const R = await rig(seed, { stun: false }); const { NB, game: g } = R;
-      R.step(60); R.press(); R.until(() => NB.state === 'set', 30); R.vis = 1; g.teleportPlayer([25.6, 0, 17.7]); R.step(30); R.press();
-      R.until(() => NB.drill.phase === 'done' || g.player.down, 45); R.step(120);
-      if (g.player.down) downs++; rows.push(`seed ${seed}: Sam ${g.player.down ? 'DOWN' : 'up'} · ${NB.summary()} · rounds ${JSON.stringify(R.shots)}`); NB.stop();
-    }
-    verdict(downs > 0, 'a lit Sam in the door\'s line is shot by the defenders', rows.join('\n    ')); }
   Object.assign(NIGHTBREACH, DEFAULTS);
   return done();
 });
 
 export const nightbreachContested = guarded(async () => {
-  const { verdict, done } = family('nightbreach-contested: behind the bang the room is the team\'s to take — it was a fight that went either way, and is again with the canister as it was');
+  const { verdict, done } = family('nightbreach-contested: behind the bang the room is the team\'s to take, and the blind burst\'s own rules');
   const SEEDS = Array.from({ length: 15 }, (_, i) => 11 + i);
-  // The tally compares the stun charge against the canister it replaced, on margins of one room in fifteen: it is measured with BARE EYES, as it was tuned.
-  // With the team's goggles on (nvg.ts) the same fifteen go 14 rooms / 4 men lost against the canister's 14 / 10 — the charge still far cheaper in men, the
-  // 'more rooms' margin a tie — which is a seed's worth of difference in a fight the goggles are not the subject of (guarded() puts the switch back).
-  NVG.on = false;
   /** one whole run with Sam idle in the aisle: a second in, 'stack up', set, two seconds, 'go', to the end (or 45 s) */
   const play = async (seed: number, knobs: Record<string, unknown>, chaos: number) => {
     const R = await rig(seed, knobs, true, chaos); const { NB } = R;
@@ -255,9 +237,6 @@ export const nightbreachContested = guarded(async () => {
     const out = { R, ended, early, state: NB.state as string, lost: 2 - up(NB.ops), defUp: up(NB.hostiles), defIn: inRoom(NB, R.game), hostile: R.shots.hostile ?? 0, blind: [...R.blind], sighted: R.sighted, offDoor: R.offDoor, samHit: R.samHit, bad: R.bad, counted: NB.blindRounds as number };
     NB.stop(); return out;
   };
-  // ---- the canister as it was, first: the same fifteen runs with nobody folded by the flash — the fight the breach used to be (how many fire, how many rooms)
-  let firedWas = 0, clearedWas = 0, lostWas = 0;
-  { canAsItWas(); for (const seed of SEEDS) { const o = await play(seed, {}, 0.5); if (o.hostile > 0) firedWas++; if (o.state === 'clear') clearedWas++; lostWas += o.lost; } FLASH.on = FLASH_ON; }
   // ---- the tally: the default knobs, the page's chaos, fifteen seeds
   const rows: string[] = []; let fired = 0, cleared = 0, wiped = 0, samHit = 0, stranded = 0, early = 0, over = 0, miscount = 0, off = 0, bad = ''; const losses: number[] = [];
   for (const seed of SEEDS) {
@@ -269,8 +248,7 @@ export const nightbreachContested = guarded(async () => {
   }
   const kinds = new Set(losses).size;
   const lostNow = losses.reduce((a, b) => a + b, 0);
-  verdict(firedWas >= 12 && fired < firedWas, 'the flash folds the room: the defenders get rounds off in fewer runs than with the canister as it was (which had them firing in most, ≥ 12 of 15)', `defenders fired in ${fired} of ${SEEDS.length} · as it was ${firedWas}\n    ${rows.join('\n    ')}`);
-  verdict(cleared >= 11 && cleared > clearedWas && lostNow < lostWas, 'the team takes the room in most runs (≥ 11 of 15), more often and for fewer men than with the canister as it was', `room taken ${cleared} · team wiped ${wiped} of ${SEEDS.length} · men lost ${lostNow} of ${2 * SEEDS.length} — as it was: taken ${clearedWas}, lost ${lostWas}`);
+  verdict(cleared >= 11, 'the team takes the room in most runs (≥ 11 of 15)', `room taken ${cleared} · team wiped ${wiped} of ${SEEDS.length} · men lost ${lostNow} of ${2 * SEEDS.length} · defenders fired in ${fired}\n    ${rows.join('\n    ')}`);
   verdict(kinds >= 2 && wiped < SEEDS.length, 'it is not free: the losses still vary by seed', `men lost per seed ${losses.join('')} · unhurt ${losses.filter(l => l === 0).length} · one down ${losses.filter(l => l === 1).length} · both ${wiped}`);
   verdict(stranded === 0 && !bad, 'every run ends on the room taken (a man up, nobody inside) or on both men down', `stranded ${stranded}${bad ? ' · NaN ' + bad : ''}`);
   verdict(samHit === 0, 'Sam, dark in the aisle and out of the door\'s line, is never hit by it', `runs with Sam hit: ${samHit}`);
@@ -279,7 +257,7 @@ export const nightbreachContested = guarded(async () => {
   { // SAM'S COVERING FIRE, real rounds: from the door's own line, thirty rifle rounds 0.8 m past the man facing the door from the moment the leaf flies open —
     // that man's head goes down (the game's own suppression: over the pinned line, crouched, gun lowered — the rule's suppression test and its gun-down test both
     // say no, and this check does not tell them apart) and his turns are lost; the two off the door's line are out of the rifle's reach and still fire
-    everyManFires(); canAsItWas();   // (from here to the end of this family: the blind burst's own rules, with the canister that does not fold the men who owe one)
+    everyManFires();   // (from here to the end of this family: the blind burst's own rules. Until 2026-11-07 they were played with the canister as it was, FLASH.on off, so nobody who owed a burst was folded)
     const R = await rig(11, {}, true, 0.5); const { NB, game: g } = R;
     R.step(60); R.press(); R.until(() => NB.state === 'set', 30); g.teleportPlayer([24.5, 0, 17.75]); R.step(120); R.press();
     R.until(() => !isNaN(R.beat('door-flung')), 20); const T = NB.hostiles[0].char.pos; R.cover = { at: [T[0], 1.2, T[2] + 0.8], left: 30, next: 0 };
@@ -325,22 +303,18 @@ export const nightbreachContested = guarded(async () => {
     const whileHeld = R.blind[1]; h.held = null; const left = h.dazzledUntil - g.time; R.step(90);   // let go of, still dazzled: the burst is not kept for him
     verdict(whileHeld === 0 && R.blind[1] === 0 && left > 1.4 && R.blind[0] === BLIND.rounds && R.blind[2] === BLIND.rounds, 'a dazzled man in Sam\'s arm fires no blind round, and none once let go: the turns are lost, not kept', `blind rounds ${R.blind.join('+')} (the held man is the second: ${whileHeld} while held, ${R.blind[1] - whileHeld} in the 1.5 s after, ${f2(left)} s of dazzle left at the release)`);
     NB.stop(); }
-  { // the walkover setting stays a knob position: blind fire off, three seeds — not a round from inside, the team whole
-    let rounds = 0, lost = 0, clear = 0;
-    for (const seed of [11, 12, 13]) { const o = await play(seed, { blindFire: false }, 0.5); rounds += o.hostile; lost += o.lost; if (o.state === 'clear') clear++; }
-    verdict(rounds === 0 && lost === 0 && clear === 3, 'blind fire off (the charge as the night game has it) is still the walkover: three seeds, no round from inside, nobody lost', `rounds from the defenders ${rounds} · men lost ${lost} · room taken ${clear} of 3`); }
   return done();
 });
 
-/** HARD'S DRILLED DEFENDERS (roomfight.ts DRILLED, difficulty.ts HARD.drilled): the same canister on the same seed at standard, at hard, and at hard with the
- *  row off. A drilled man is blind exactly as long, doubled over DRILLED.shaken as long, puts more of his blind burst down the door, and the first to fire says
- *  so, once; with the row off hard's three take the canister as standard's do. (Every dazzled man fires: the break roll is not what is under test.) */
+/** HARD'S DRILLED DEFENDERS (roomfight.ts DRILLED, difficulty.ts HARD.drilled): the same canister on the same seed at standard and at hard.
+ *  A drilled man is blind exactly as long, doubled over DRILLED.shaken as long, puts more of his blind burst down the door, and the first to fire says
+ *  so, once. (Every dazzled man fires: the break roll is not what is under test.) */
 export const nightbreachDrilled = guarded(async () => {
-  const { verdict, done } = family('nightbreach-drilled: hard\'s three are half as shaken by a canister — blind as long, more of the burst fired, said once; the row off is standard');
-  const { setDifficulty, HARD } = await import(`${ROOT}/src/game/difficulty.ts`), { DRILLED } = await import(`${ROOT}/src/game/roomfight.ts`);
-  const was = HARD.drilled, f2 = (x: number) => x.toFixed(2);
-  const run = async (level: 'standard' | 'hard', row: boolean) => {
-    HARD.drilled = row; setDifficulty(level, false); everyManFires();
+  const { verdict, done } = family('nightbreach-drilled: hard\'s three are half as shaken by a canister — blind as long, more of the burst fired, said once');
+  const { setDifficulty } = await import(`${ROOT}/src/game/difficulty.ts`), { DRILLED } = await import(`${ROOT}/src/game/roomfight.ts`);
+  const f2 = (x: number) => x.toFixed(2);
+  const run = async (level: 'standard' | 'hard') => {
+    setDifficulty(level, false); everyManFires();
     const R = await rig(11, {}, true, 0.5); const { NB, game: g } = R; const P = g.level.breach; R.step(60);
     let said = 0; const say0 = g.say.bind(g); g.say = (gd: any, text: string, radio?: boolean) => { if (text.startsWith('can\'t see')) said++; return say0(gd, text, radio); };
     g.events.push({ kind: 'kick', pos: [28, 0, 17.6], time: g.time, loud: true, level: 1.0, who: NB.ops[0].char.id }); R.step(90);
@@ -350,13 +324,13 @@ export const nightbreachDrilled = guarded(async () => {
     return { stag, daz, blind: R.blind.reduce((a: number, b: number) => a + b, 0), said, bad: R.bad };
   };
   try {
-    const S = await run('standard', true), H = await run('hard', true), O = await run('hard', false);
+    const S = await run('standard'), H = await run('hard');
     const near = (a: number[], b: number[], k = 1) => a.length === 3 && a.every((x, i) => x > 0.3 && Math.abs(x - b[i] * k) < 1e-6);
-    verdict(near(H.daz, S.daz) && near(O.daz, S.daz), 'blind exactly as long at standard, at hard, and at hard with the row off', `dazzled ${S.daz.map(f2).join(' / ')} s · hard ${H.daz.map(f2).join(' / ')} · row off ${O.daz.map(f2).join(' / ')}`);
-    verdict(near(H.stag, S.stag, DRILLED.shaken) && near(O.stag, S.stag), `doubled over × ${DRILLED.shaken} at hard; as standard with the row off`, `doubled over ${S.stag.map(f2).join(' / ')} s · hard ${H.stag.map(f2).join(' / ')} · row off ${O.stag.map(f2).join(' / ')}`);
-    verdict(H.blind > S.blind && H.blind > O.blind && H.blind <= BLIND.rounds * 3, 'more of the blind burst is fired at hard than at standard or with the row off', `blind rounds in 2.2 s: standard ${S.blind} · hard ${H.blind} · row off ${O.blind} (of ${BLIND.rounds * 3})`);
-    verdict(H.said === 1 && S.said === 0 && O.said === 0 && !S.bad && !H.bad && !O.bad, 'the first drilled man to fire blind says so, once; nobody says it at standard or with the row off', `said: standard ${S.said} · hard ${H.said} · row off ${O.said}`);
-  } finally { HARD.drilled = was; setDifficulty('standard', false); }
+    verdict(near(H.daz, S.daz), 'blind exactly as long at standard and at hard', `dazzled ${S.daz.map(f2).join(' / ')} s · hard ${H.daz.map(f2).join(' / ')}`);
+    verdict(near(H.stag, S.stag, DRILLED.shaken), `doubled over × ${DRILLED.shaken} at hard`, `doubled over ${S.stag.map(f2).join(' / ')} s · hard ${H.stag.map(f2).join(' / ')}`);
+    verdict(H.blind > S.blind && H.blind <= BLIND.rounds * 3, 'more of the blind burst is fired at hard than at standard', `blind rounds in 2.2 s: standard ${S.blind} · hard ${H.blind} (of ${BLIND.rounds * 3})`);
+    verdict(H.said === 1 && S.said === 0 && !S.bad && !H.bad, 'the first drilled man to fire blind says so, once; nobody says it at standard', `said: standard ${S.said} · hard ${H.said}`);
+  } finally { setDifficulty('standard', false); }
   return done();
 });
 

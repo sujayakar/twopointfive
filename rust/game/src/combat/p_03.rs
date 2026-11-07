@@ -123,7 +123,7 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
             }
             g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, g.time + secs);
             g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
-            g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.6);
+            crate::mind::raise(g, gd, 0.6, "combat");
             if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
             if g.ai_enabled { g.gd[gd].witness.dazzled += 1.0; }
             crate::game::guard_set_path(g, gd, Vec::new());

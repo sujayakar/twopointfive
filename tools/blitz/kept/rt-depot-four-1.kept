@@ -1,17 +1,28 @@
 cmd FUZZ_CAP=2400 tools/blitz/fuzz-squad.sh depot-four 1 --hard --rate 2 --alarm 130 --god all --skip kill,fire
-tree 0719cd509
+tree a174fbc4f
+layout 2871794000
 ticks 5870
 die 667
-lines 600 37hex8xbz2p2f
-lines 1200 2ggsychoffw3z
-lines 1800 wye4efl2272m
-lines 2400 tmu3hu33up95
-lines 3000 2tkpazdku2gha
-lines 3600 pjkxf72a0wjf
-lines 4200 1lp7qnyux9jrc
-lines 4800 un5oenjsnoj5
-lines 5400 nald7pt1wbzr
-lines 5870 3f1d6yjyszd2x
-state 1800 7664647 9oqc16zk9utx
-state 3600 7843779 j38kf1w9ndp8
-state 5400 7950590 3sg3f6aiptv6r
+lines 600 ohuimhu00rac
+lines 1200 1f58owkl4d7d8
+lines 1800 2d4z7g89shi6q
+lines 2400 353rd3b0j07ww
+lines 3000 30382nkh1gi5j
+lines 3600 3jkdfztntq87n
+lines 4200 20i8qv6ahxwz7
+lines 4800 1fpy4o99jfn6a
+lines 5400 1ac1rm2k0hmx1
+lines 5870 3q13xp2ac59hm
+play 600 13lr2zfwe11n1
+play 1200 3pago3ijksw8q
+play 1800 1htedbomwwphg
+play 2400 39pqxspzfey8s
+play 3000 568cqi3wt3f6
+play 3600 2u91p70k19s4a
+play 4200 1rjeyxubdi0tr
+play 4800 3grwkqjjkjwhr
+play 5400 nl6kj3cdgjh2
+play 5870 3fl7i250ufp9b
+state 1800 7664704 arieisovmg60
+state 3600 7843836 y1i09wqc011d
+state 5400 7950647 298uu5av3hicc

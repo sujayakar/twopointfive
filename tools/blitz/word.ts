@@ -1,6 +1,5 @@
 // THE ONE SWITCH: WHICH GAME A HEADLESS TOOL'S `standUp` STANDS (tools/blitz/PLAY.md, "The harness's word"). Everything that asks goes through here: the
-// harness (tools/qa/headless.ts), the bridge's preload (tools/blitz/preload.ts: whether a process needs the bridge at all) and a tool that must know on which
-// game it is (tools/qa/coop-check.ts). It imports nothing of src and nothing of bun's: it is read before any source file loads, and under node.
+// harness (tools/qa/headless.ts) and the bridge's preload (tools/blitz/preload.ts: whether a process needs the bridge at all). It imports nothing of src and nothing of bun's: it is read before any source file loads, and under node.
 //
 //   TPS_GAME=rust | audit   the game is a puppet of the Rust game
 //   TPS_GAME=ts             the same stand (the game's own die, the dress rows down), the TypeScript tick

@@ -359,10 +359,9 @@ pub fn loose(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) {
     let de = dfm(g, d);
     de.mode = crate::roomfight::DefMode::Free; de.free_at = now; de.rally_at = m::NAN;
     crate::control::set_hold(g, gd, false, "pressure"); crate::control::set_pinned(g, gd, false, "pressure");
-    let man = &mut g.gd[gd];
-    man.state = crate::game::GuardState::Alert;
-    man.awareness = m::max(man.awareness, 0.92);
-    if now - man.last_seen_t > 1.0 { crate::belief::word(g, gd, at); }
+    crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "pressure");
+    crate::mind::raise(g, gd, 0.92, "pressure");
+    if now - g.gd[gd].last_seen_t > 1.0 { crate::belief::word(g, gd, at); }
     crate::game::guard_set_path(g, gd, Vec::new());
     let man = &mut g.gd[gd];
     man.path_goal = None; man.path_goal_orbit = false;
@@ -398,8 +397,6 @@ pub fn team_boots(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
     }
     best
 }
-/// (pressure.ts hearsTeam)
-pub fn hears_team(g: &mut crate::game::Game, gd: GuardId) -> bool { team_boots(g, gd).is_some() }
 /// planted outside a door: that door is what he watches. (pressure.ts watchDoor)
 pub fn watch_door(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) {
     let room = match df(g, d).room { Some(r) => r, None => return };
@@ -480,7 +477,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
         Some(th) if th.room == tt => th,
         _ => {
             let beat = crate::roomfight::fight_skill().get(String::from("hostile")).unwrap().rally;
-            let at = g.time + pick(g, beat) * g.k.pressure.organise_k;
+            let at = g.time + pick(g, crate::dice::Who::Def(d), beat) * g.k.pressure.organise_k;
             state_of(g).think.set(d, crate::pressure::StateThinkValue { room: tt, at, held: None });
             // PRESSURE.byWay, a fight that is not next door: he says what he has placed, and the men of his room who heard it and could not place it know it from him
             if g.k.pressure.by_way && heard.is_some() && told.map(|t| t.room) != heard.map(|h| h.t) && my_room.is_some() && !next_door(g, my_room, tt) {
@@ -1042,7 +1039,7 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
         Some(at) => at,
         None => {
             let range = if why == HookedWhy::Seen { g.k.pressure.last_man_secs } else { g.k.pressure.out_secs };
-            let at = g.time + pick(g, range);
+            let at = g.time + pick(g, crate::dice::Who::Def(d), range);
             state_of(g).last.set(d, at);
             return;
         }

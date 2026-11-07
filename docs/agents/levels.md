@@ -389,7 +389,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are caught at the office door as they dig in). Two seeds is a look, not a count. The look page's audit: 4.9 % of the picture with no material to 3.3 %, boxes
   drawn 1102 to 1263, round things 0 to 6, lamps as they were; the file is 1073 boxes where it was 897 (past lived-check's warning at about 900, as five other
   level files are). PARTS FROM THIS STEP: a checkpoint or a recording made on the level with the lived-in rooms on; `tools/qa/fixtures/coop-reference.json`'s
-  records-pair row. SEEN: stills on the software adapter only, night and midday, on the look page and on this build's page, no console or device error. Never
+  records-pair row (that file went with `tools/qa/coop-check.ts`, 2026-11-07). SEEN: stills on the software adapter only, night and midday, on the look page and on this build's page, no console or device error. Never
   seen on a GPU, never played by a person. LEFT: the two cars are the old kit's two boxes (they want the library's curved vehicle, and a base move); bins, stool
   and buckets are square props (a prop's part cannot say it is round); the kit's drum is sealed where a burn drum is open; the lot's edge wants a knee rail the
   library does not have.
@@ -659,7 +659,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   boot (`main.ts`: the switch AND the cut switch); a round box has no `BOX_CUT_BIT`, its prism's eight planes sit in its own rows of the cut
   table with `ROUND_CORE_W` in the core row, it is listed at the cut list's picture-only end, and `BoxWorld.cutTraced` does not count it, so the
   cut swap (`render/cutSwap.ts`, "a calm room pays nothing") is as it was and every ray program holds a round rule from boot (the cylinder's in
-  the calm set, the prism's in the cut set). `GEO_ROUND` is
+  the calm set, the prism's in the cut set). SINCE 2026-11-07 THERE IS ONE SET (`docs/agents/render.md`): every ray meets a round as its prism at all
+  times, and wherever this bullet says "the cut set" read "every ray program". `GEO_ROUND` is
   bit 3 of the GPU flags word, which is the CPU's `Dynamic`: no shader reads that bit, and it is masked out of the word only while the round's
   GPU half is up, so with it down the words are as they were. THE SWITCH IS THE SIMULATION'S: a picture setting may not move it. On a page with
   `?nocutboxes` (or if the cut pipeline fails to compile) a round thing is DRAWN, and traced by the GPU, as the square box round it, while the

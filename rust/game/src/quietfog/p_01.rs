@@ -116,12 +116,6 @@ pub fn quiet_fog_forget(g: &mut crate::game::Game) {
     g.m.quietfog.cams_read = false;
 }
 
-/// A mission's row is one the lever is live on: a quiet mission that is not a Training lesson. (quietfog.ts quietFogRow)
-pub fn quiet_fog_row(g: &mut crate::game::Game, e: Option<&crate::quietfog::QuietFogRowE>) -> bool {
-    let Some(e) = e else { return false };
-    e.kind == "quiet" && !crate::scene_scenarios::lesson_group(e.group.as_deref())
-}
-
 /// A mission link with the quiet pick put right on it: a rung it carried is dropped, and on a quiet mission's link this machine's pick goes on where it is not the default's. (quietfog.ts quietFogHref)
 pub fn quiet_fog_href(g: &mut crate::game::Game, href: &str, quiet: bool) -> String {
     let mut split = href.split('?');
@@ -152,8 +146,7 @@ pub fn quiet_fog_href(g: &mut crate::game::Game, href: &str, quiet: bool) -> Str
 /// The rung a query asks its quiet mission to be played under: none named is the default's; 'off' for what is not a quiet mission, or a lesson. (quietfog.ts quietFogOfQuery)
 pub fn quiet_fog_of_query(g: &mut crate::game::Game, q: &crate::query::Query, lesson: Option<bool>) -> crate::quietfog::QuietRung {
     if lesson.unwrap_or(false) || !(q.has("quiet") || solo_fog_link(g, q)) { return QuietRung::Off; }
-    let v = q.get(PARAM).map(String::from);
-    match rung_of(v.as_deref()) {
+    match rung_of(q.get(PARAM)) {
         Some(rung) => rung,
         None => quiet_fog_default(g),
     }
@@ -202,35 +195,6 @@ pub fn quiet_fog_end(g: &mut crate::game::Game) {
     let Some(mut h) = g.m.quietfog.held else { return };
     lift(g, &mut h);
     g.m.quietfog.held = None;
-}
-
-/// The squad's lever while a rung is held: `fn_` runs with the rung's hand off the rows, then the rung is laid on what it left. (quietfog.ts quietFogAside)
-pub fn quiet_fog_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let Some(mut h) = g.m.quietfog.held else { return fn_(g) };
-    if g.m.quietfog.aside { return fn_(g); }
-    lift(g, &mut h);
-    g.m.quietfog.held = Some(h);
-    g.m.quietfog.aside = true;
-    let out = fn_(g);
-    g.m.quietfog.aside = false;
-    if g.m.quietfog.held.map(|now| now.serial) == Some(h.serial) {
-        if let Some(put) = g.m.quietfog.held.and_then(|h| h.cone).map(|c| c.put) {
-            let was = crate::difficulty::cone_visit_now(g);
-            if let Some(c) = g.m.quietfog.held.as_mut().and_then(|h| h.cone.as_mut()) { c.was = was; }
-            crate::difficulty::set_cone_visit(g, Some(put));
-        }
-        if let Some(put) = g.m.quietfog.held.and_then(|h| h.own).map(|o| o.put) {
-            let was = g.k.fog.own;
-            if let Some(o) = g.m.quietfog.held.as_mut().and_then(|h| h.own.as_mut()) { o.was = was; }
-            g.k.fog.own = put;
-        }
-    }
-    out
-}
-
-/// Is a quiet mission's rung on the fog's rows now? (quietfog.ts quietFogHeld)
-pub fn quiet_fog_held(g: &mut crate::game::Game) -> bool {
-    g.m.quietfog.held.is_some()
 }
 
 #[cfg(test)]
@@ -294,33 +258,6 @@ mod tests {
         lift(&mut g, &mut h);
         assert!(!g.k.fog.own);
         assert!(h.own.is_none());
-    }
-
-    #[test]
-    fn an_aside_lays_the_rung_back_only_on_the_hold_it_lifted() {
-        // the same hold: the rung off the row inside, back on after, over what the press left
-        let mut g = Game::blank();
-        g.k.fog.own = true;
-        g.m.quietfog.held = Some(Held { cone: None, own: Some(HeldOwn { was: false, put: true }), serial: 7 });
-        let inside = quiet_fog_aside(&mut g, &mut |g: &mut Game| { let lifted = g.k.fog.own; g.k.fog.own = true; lifted });
-        assert!(!inside);
-        assert!(g.k.fog.own);
-        assert_eq!(g.m.quietfog.held.unwrap().own.unwrap().was, true);
-        assert!(!g.m.quietfog.aside);
-        // a new hold made inside, with the same rows: it is not the one lifted, so nothing is laid on it
-        let mut g = Game::blank();
-        g.k.fog.own = true;
-        let same = Held { cone: None, own: Some(HeldOwn { was: false, put: true }), serial: 7 };
-        g.m.quietfog.held = Some(same);
-        quiet_fog_aside(&mut g, &mut |g: &mut Game| { g.m.quietfog.held = Some(Held { serial: 8, ..same }); });
-        assert!(!g.k.fog.own);
-        assert_eq!(g.m.quietfog.held.unwrap().serial, 8);
-        // an aside inside an aside does not lift again
-        let mut g = Game::blank();
-        g.k.fog.own = true;
-        g.m.quietfog.held = Some(same);
-        g.m.quietfog.aside = true;
-        assert!(quiet_fog_aside(&mut g, &mut |g: &mut Game| g.k.fog.own));
     }
 
     #[test]

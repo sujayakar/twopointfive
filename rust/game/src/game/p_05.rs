@@ -164,16 +164,6 @@ pub fn game_reset_guards(g: &mut crate::game::Game) {
     crate::picture::picture_reset(g);
 }
 
-/// (game.ts Game.tension)
-pub fn game_tension(g: &mut crate::game::Game, theirs: Option<bool>) -> f64 {
-    crate::guards::tension(g, theirs)
-}
-
-/// One line on the alarm escalation for the panel. (game.ts Game.escalationSummary)
-pub fn game_escalation_summary(g: &mut crate::game::Game) -> String {
-    crate::guards::escalation_summary(g)
-}
-
 /// Panel: one level up by hand. (game.ts Game.escalate)
 pub fn game_escalate(g: &mut crate::game::Game) {
     let to = if g.escalation >= 1.0 { 2.0 } else { 1.0 };
@@ -183,30 +173,6 @@ pub fn game_escalate(g: &mut crate::game::Game) {
 /// Panel: straight back to calm. (game.ts Game.standDown)
 pub fn game_stand_down(g: &mut crate::game::Game) {
     crate::guards::stand_down_escalation(g);
-}
-
-/// Panel: who is clearing what. (game.ts Game.clearingSummary)
-pub fn game_clearing_summary(g: &mut crate::game::Game) -> String {
-    crate::guards::clearing_summary(g)
-}
-
-/// Panel: one line per searching man, and who is pieing which doorway; empty when nobody is. (game.ts Game.searchSummary)
-pub fn game_search_summary(g: &mut crate::game::Game) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    for gd in g.guards.clone() {
-        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
-        let route = usize::try_from(g.gd[gd].route_i).ok().and_then(|i| g.level.routes.get(i).copied());   // (routeI -1, a man of no route, is undefined there)
-        let n = match route {
-            Some(r) => g.tab.route[r].name.clone(),
-            None => g.gd[gd].callsign.clone(),
-        };
-        let s = crate::guards::search_summary(g, gd);
-        if !s.is_empty() { parts.push(format!("{}: {}", n, s)); }
-        if let Some(pie) = &g.gd[gd].pieing {
-            parts.push(format!("{} pies the {} door ({})", n, g.dr[pie.door].def.name, pie.phase.as_str()));
-        }
-    }
-    parts.join(" | ")
 }
 
 /// Panel: the human shield's standoff. (game.ts Game.standoffSummary)
@@ -219,55 +185,9 @@ pub fn game_body_light_summary(g: &mut crate::game::Game) -> String {
     crate::guards::body_light_summary(g)
 }
 
-/// Panel: everybody's suppression. (game.ts Game.suppressionSummary)
-pub fn game_suppression_summary(g: &mut crate::game::Game) -> String {
-    crate::suppression::suppression_summary(g)
-}
-
-/// (game.ts Game.conditionSummary)
-pub fn game_condition_summary(g: &mut crate::game::Game) -> String {
-    crate::condition::condition_summary(g)
-}
-
-/// Panel: the aim-settle model. (game.ts Game.aimSummary)
-pub fn game_aim_summary(g: &mut crate::game::Game) -> String {
-    crate::aim::aim_summary(g)
-}
-
-/// Panel: the pursuit tactics. (game.ts Game.tacticsSummary)
-pub fn game_tactics_summary(g: &mut crate::game::Game) -> String {
-    crate::tactics::tactics_summary(g)
-}
-
-/// Panel: the needs. (game.ts Game.needsSummary)
-pub fn game_needs_summary(g: &mut crate::game::Game) -> String {
-    crate::needs::needs_summary(g)
-}
-
-/// Panel: the civilians. (game.ts Game.civiliansSummary)
-pub fn game_civilians_summary(g: &mut crate::game::Game) -> String {
-    crate::civilians::civilians_summary(g)
-}
-
 /// Is this record somebody on the floor right now: a man of the shift, a unit or a civilian? (game.ts Game.onFloor)
 pub fn game_on_floor(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.guards.contains(&gd) || g.civilians.contains(&gd)
-}
-
-/// Panel: one line per man, with his witness record. (game.ts Game.witnessSummary)
-pub fn game_witness_summary(g: &mut crate::game::Game) -> String {
-    let temperament = crate::game::temperament();
-    let mut parts: Vec<String> = Vec::new();
-    for gd in g.guards.clone() {
-        let callsign = g.gd[gd].callsign.clone();
-        let temper = match temperament.iter().find(|(name, _)| *name == callsign) { Some((_, t)) => t.as_str(), None => "?" };
-        let state = if g.gd[gd].state == crate::game::GuardState::Dead {
-            if g.gd[gd].wound.is_some() { ", wounded" } else if crate::game::is_breathing(g, gd) { ", out cold" } else { ", dead" }
-        } else { "" };
-        let w = crate::guards::witness_summary(g, gd);
-        parts.push(format!("{} ({}{}): {}", callsign, temper, state, if w.is_empty() { "\u{2014}" } else { &w }));
-    }
-    parts.join(" | ")
 }
 
 /// The die to pass on: the caller's own, or none for the game's. (`rnd` handed to two calls in turn)
@@ -364,9 +284,6 @@ fn audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
 
 // ------------------------------------------------------------ the panel's handles and small doors
 
-/// The rooms queued for the pair, the panel's line.   (game.ts clearQueueSummary)
-pub fn game_clear_queue_summary(g: &mut crate::game::Game) -> String { crate::guards::clear_queue_summary(g) }
-
 /// (game.ts clearNearestRoom)
 pub fn game_clear_nearest_room(g: &mut crate::game::Game) { crate::guards::force_clear(g) }
 
@@ -382,13 +299,6 @@ pub fn game_follow_pos(g: &mut crate::game::Game, at: Option<V3>) -> V3 {
 
 /// (game.ts teleportPlayer)
 pub fn game_teleport_player(g: &mut crate::game::Game, p: V3) { crate::player::teleport_player(g, p) }
-
-/// What the player's feet are on as the hearing model has it.   (game.ts floorUnderPlayer)
-pub fn game_floor_under_player(g: &mut crate::game::Game) -> crate::floor::FloorMat {
-    let c = g.pl[g.player].ch;
-    let p = g.ch[c].pos;
-    crate::floor::step_mat(g, p)
-}
 
 /// The thud of a ragdoll's trunk or head meeting something, polled after the body's update.   (game.ts bodyThud)
 pub fn game_body_thud(g: &mut crate::game::Game, c_2: CharId) {
@@ -484,14 +394,8 @@ pub fn game_reset_level_state(g: &mut crate::game::Game) {
 /// (game.ts crackTest)
 pub fn game_crack_test(g: &mut crate::game::Game) -> f64 { crate::glass::crack_test(g) }
 
-/// (game.ts glassSummary)
-pub fn game_glass_summary(g: &mut crate::game::Game) -> String { crate::glass::glass_summary(g) }
-
 /// (game.ts wetSummary)
 pub fn game_wet_summary(g: &mut crate::game::Game) -> String { crate::wet::wet_summary(g) }
-
-/// (game.ts rainSummary)
-pub fn game_rain_summary(g: &mut crate::game::Game) -> String { crate::rain_fx::rain_summary(g) }
 
 /// The clocks the last try left running, as a new Game has them.   (game.ts cleanSlate)
 pub fn game_clean_slate(g: &mut crate::game::Game) {
@@ -593,12 +497,6 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     crate::lighting::update_targets(g, 0.0);   // the lights painted as they now stand: what the next tick reads before its own paint
     crate::fire::update_fire(g, 0.0);
 }
-
-/// (game.ts setGroup)
-pub fn game_set_group(g: &mut crate::game::Game, group: &str, on: bool) { crate::lighting::set_group(g, group, on) }
-
-/// (game.ts toggleTarget)
-pub fn game_toggle_target(g: &mut crate::game::Game, t: FixtureId) { crate::lighting::toggle_target(g, t) }
 
 /// (game.ts setBlackout)
 pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::game::GameSetBlackoutCause) {

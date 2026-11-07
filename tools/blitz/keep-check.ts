@@ -40,8 +40,9 @@ console.log(`=== keep-check under ${word || 'no word'} ===`);
   line(same(A, B) === 5, 'slots: the first of six games, stepped again after the others, goes on as a game played straight through', `equal seconds ${same(A, B)} of 5 · ${A[4]} | ${B[4]}`);
   if (H) line(H.resteps === 1 && H.starts === 1, 'slots: it stood again from its own kept bytes (no new start from the puppet)', `gave its slot up ${H.evicted} · stood again ${H.resteps} · starts ${H.starts}`);
   if (H) { // (seven more games push the second game's kept bytes out: the last six that gave a slot up keep theirs)
-    for (let i = 0; i < 9; i++) { const W = await standUp({ seed: 11 }); secs(W, 1); }
+    const held: any[] = [];   // (held to the end: a game the tool has let go gives its slot and its kept bytes back, and pushes nobody's out)
+    for (let i = 0; i < 9; i++) { const W = await standUp({ seed: 11 }); secs(W, 1); held.push(W); }
     let threw = ''; try { Ws[1].step(DT); } catch (e) { threw = String((e as Error).message); }
-    line(/re-step is refused/.test(threw) && /keep-check\.ts/.test(threw), 'refused: a game whose kept bytes were let go is not stepped again, and the refusal names the tool\'s line', threw.slice(0, 260) || 'it stepped'); } }
+    line(/re-step is refused/.test(threw) && /keep-check\.ts/.test(threw), 'refused: a game whose kept bytes were let go is not stepped again, and the refusal names the tool\'s line', threw.slice(0, 260) || 'it stepped'); void held.length; } }
 console.log(`=== keep-check: ${fails ? `${fails} FAIL` : 'ALL PASS'} ===`);
 process.exit(fails ? 1 : 0);

@@ -437,17 +437,6 @@ pub fn shown_whole(g: &mut crate::game::Game) -> bool {
     s.fog.is_some() && s.ai.is_some() && s.kit.is_some()
 }
 
-/// the levers moved off the level by hand. (difficulty.ts leversSet)
-pub fn levers_set(g: &mut crate::game::Game) -> crate::difficulty::LeversSet {
-    let s = g.m.difficulty.set;
-    LeversSet { fog: s.fog, ai: s.ai, kit: s.kit, told: s.told }
-}
-
-/// the level the levers stand over. (difficulty.ts leversBase)
-pub fn levers_base(g: &mut crate::game::Game) -> crate::difficulty::Difficulty {
-    g.m.difficulty.base
-}
-
 /// levers are moved and every one stands on a rung, but on no level's. (difficulty.ts leversMixed)
 pub fn levers_mixed(g: &mut crate::game::Game) -> bool {
     any_set(g) && shown_whole(g) && difficulty_now(g) == DifficultyNow::Custom
@@ -707,27 +696,6 @@ pub fn levers_href(g: &mut crate::game::Game, href: &str) -> String {
     if q.is_empty() { String::from(path) } else { alloc::format!("{}?{}", path, q) }
 }
 
-/// is this mission held by squads, as difficultyWords wants it said. (difficulty.ts squadsOf)
-pub fn squads_of(e: Option<&crate::difficulty::SquadsOfE>) -> crate::difficulty::SquadsOf {
-    match e {
-        Some(e) if e.squads == Some(true) => match e.level.as_deref() {
-            Some(l) if !l.is_empty() => SquadsOf::Text(String::from(l)),
-            _ => SquadsOf::Bool(true),
-        },
-        _ => SquadsOf::Bool(false),
-    }
-}
-
-/// the row's own fact, or squads cut from the rooms of a room clear; SQUADDEAL.on is settled on. (difficulty.ts squadsHeld)
-pub fn squads_held(g: &mut crate::game::Game, e: Option<&crate::difficulty::SquadsHeldE>) -> crate::difficulty::SquadsHeld {
-    let of = e.map(|e| SquadsOfE { level: e.level.clone(), squads: e.squads });
-    match squads_of(of.as_ref()) {
-        SquadsOf::Text(s) if !s.is_empty() => SquadsHeld::Text(s),
-        SquadsOf::Bool(true) => SquadsHeld::Bool(true),
-        _ => SquadsHeld::Bool(e.and_then(|e| e.kind.as_deref()) == Some("roomclear")),
-    }
-}
-
 /// what a level is, in a sentence. (difficulty.ts difficultyWords)
 pub fn difficulty_words(g: &mut crate::game::Game, level: Option<crate::difficulty::DifficultyWordsLevel>, squads: Option<&crate::difficulty::DifficultyWordsSquads>) -> String {
     let level = match level {
@@ -769,13 +737,6 @@ pub fn difficulty_words(g: &mut crate::game::Game, level: Option<crate::difficul
         }
         DifficultyWordsLevel::Custom => String::from("custom: rows under the switch were moved by hand (the Enemy AI page of the debugger)"),
     }
-}
-
-/// the rung of one lever in a line. (difficulty.ts leverWords)
-pub fn lever_words(g: &mut crate::game::Game, key: crate::difficulty::LeverKey, rung: Option<&str>) -> String {
-    let now = levers_now(g);
-    let at = now.iter().find(|l| l.key == key).and_then(|l| l.rungs.iter().find(|r| Some(r.id.as_str()) == rung));
-    match at { Some(r) => r.words.clone(), None => String::new() }
 }
 
 /// the levers in a line; `all` false: only the ones moved by hand. (difficulty.ts leversLine)
@@ -839,16 +800,6 @@ mod tests {
         let (p, q) = href_parts("/a");
         assert_eq!(p, "/a");
         assert!(q.is_empty());
-    }
-
-    #[test]
-    fn squads_of_answers_as_written() {
-        assert!(matches!(squads_of(None), SquadsOf::Bool(false)));
-        let e = |l: Option<&str>, s| SquadsOfE { level: l.map(String::from), squads: s };
-        assert!(matches!(squads_of(Some(&e(Some("a.json"), None))), SquadsOf::Bool(false)));
-        assert!(matches!(squads_of(Some(&e(None, Some(true)))), SquadsOf::Bool(true)));
-        assert!(matches!(squads_of(Some(&e(Some(""), Some(true)))), SquadsOf::Bool(true)));
-        match squads_of(Some(&e(Some("a.json"), Some(true)))) { SquadsOf::Text(t) => assert_eq!(t, "a.json"), _ => panic!() }
     }
 
     #[test]
