@@ -428,6 +428,15 @@ type Mode = 'delete' | 'instrument';
 function write(mode: Mode): { files: number; text: Map<string, string>; ids?: unknown } {
   const classNow = (u: Unit): Class => mode === 'instrument' ? (u.guard ? 'kept+guard' : 'kept') : classOf(u);
   const edits = new Map<string, Ed[]>(), uses = new Map<string, Set<string>>(), mustDrop = new Map<string, Set<string>>();
+  // A MODULE THAT MUST STILL LOAD: one the bridge reads top-level names from (its window is a line added as the file loads: a file nobody imports has no
+  // window, and the start's export throws), or one with top-level statements of its own. Where every name of an import of such a module goes, the
+  // import stays as a bare `import './x'`, so the modules that load, and their order, are the ones that loaded before.
+  const loads = new Set<string>(Object.keys(SCHEMA.top)); for (const u of UNITS) if (u.kind === 'stmt' && !u.cls) loads.add(u.file);
+  const mustLoad = new Map<string, Set<string>>();
+  for (const sf of simFiles) { const file = rel(sf.fileName); for (const st of sf.statements) { if (st.kind !== SK.ImportDeclaration || !st.importClause || st.importClause.isTypeOnly) continue;
+      const mod = checker.getSymbolAtLocation(st.moduleSpecifier), to = mod?.declarations?.[0]?.getSourceFile?.(); if (!to || !loads.has(rel(to.fileName))) continue;
+      const c = st.importClause, names = [c.name, c.namedBindings?.kind === SK.NamespaceImport ? c.namedBindings.name : undefined, ...(c.namedBindings?.elements?.filter((x: any) => !x.isTypeOnly).map((x: any) => x.name) ?? [])].filter(Boolean);
+      if (names.some((n: any) => { const sy = targetOf(checker.getSymbolAtLocation(n)); return !!sy && !!(sy.flags & ts.SymbolFlags.Value); })) { let m = mustLoad.get(file); if (!m) mustLoad.set(file, m = new Set()); m.add(st.moduleSpecifier.text); } } }
   const ed = (file: string, s: number, e: number, t: string) => { let a = edits.get(file); if (!a) edits.set(file, a = []); a.push({ s, e, t }); };
   const use = (file: string, ...names: string[]) => { let a = uses.get(file); if (!a) uses.set(file, a = new Set()); for (const n of names) a.add(n); };
   const q = (s: string) => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
@@ -496,7 +505,7 @@ function write(mode: Mode): { files: number; text: Map<string, string>; ids?: un
       const ns = nb?.kind === SK.NamespaceImport && live(nb.name) ? `* as ${nb.name.text}` : '', els: any[] = nb?.kind === SK.NamedImports ? nb.elements.filter((x: any) => live(x.name)) : [];
       const had = (c.name ? 1 : 0) + (nb?.kind === SK.NamespaceImport ? 1 : 0) + (nb?.kind === SK.NamedImports ? nb.elements.length : 0), have = (def ? 1 : 0) + (ns ? 1 : 0) + els.length;
       if (have === had) continue;
-      if (!have) { const [s, e] = span(st, sf.statements[0] === st); E.push({ s, e, t: '' }); continue; }
+      if (!have) { if (mustLoad.get(file)?.has(st.moduleSpecifier.text)) { E.push({ s: st.getStart(sf), e: st.end, t: `import ${st.moduleSpecifier.getText(sf)};` }); continue; } const [s, e] = span(st, sf.statements[0] === st); E.push({ s, e, t: '' }); continue; }
       const parts = [def, ns, els.length ? `{ ${els.map((x: any) => x.getText(sf)).join(', ')} }` : ''].filter(Boolean).join(', ');
       E.push({ s: c.getStart(sf), e: c.end, t: `${c.isTypeOnly ? 'type ' : ''}${parts}` }); }
     E.sort((a, b) => b.s - a.s || b.e - a.e); for (const e of E) text = text.slice(0, e.s) + e.t + text.slice(e.e);
