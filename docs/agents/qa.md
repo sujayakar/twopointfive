@@ -1375,6 +1375,22 @@ but synthetic writes still work.
   the browser, short stays or full. Why those three, nobody knows; it is the driver's and nothing of the game's. So: A WARM BOOT TIMED ON A CLOUD BOX
   IS NOT TO BE TRUSTED BEFORE ITS FOURTH VISIT, and it says how the driver's cache behaves there, NOT whether a player's browser keeps its shaders. On
   Windows Chrome's own store is what has to hold them and is too small for this game (the shader rows above); on an Apple chip nobody has looked.
+- **A game stood up starts as the process's first did: `standUp` puts back what the last game left at a module's top** (`tools/qa/fresh.ts`
+  `freshStart`, called before `standGame`; the harness only). FOUND as: the same two-seat night breach stood twice in one process, the second's state
+  another from tick 1 (the men's unit numbers counted on, the first game's tallies and logs in the second's start). THE RULE is in the file's header.
+  Put back, to what the process's FIRST start found, is only what is KNOWN to be a game's: the registry's variables and roots (`src/math/side.ts`), a
+  module-level name the state bridge carries whose row of `rollback-exempt.ts` is a TALLY or a SCRATCH, and the names in `fresh.ts A_GAMES` (tallies
+  the TypeScript no longer writes, so that list has no row for them). EVERYTHING ELSE IS LEFT ALONE, a name nothing classes above all: it may be a
+  setting a tool turns between two games (the kit's cards, a pace switch). The first cut put such names back and a kit probe went red, and
+  `blast-pace-check` passed with both arms on one pace. SO: a tally (`X_STATS`, `X_LOG`) counts ONE game, not the process: a tool that sums one over
+  several stand-ups adds them up itself, and one that reads a tally BEFORE a stand-up to subtract afterwards reads it after. A tool's switch kept
+  inside a tally object has its row as CONFIG (`BOTH`, `ANYTIME`, `FELL`, `PRICED`, `SEAT_ASKS`). A NEW tally that only the Rust game counts: its row in
+  `A_GAMES`; `start.ts --again` names any carried name that changed and that nothing classes. NOT put back by a start: a knob table, and with it what
+  a mission's start wrote there (its team's numbers). `knobsCopy` / `knobsBack` around a run does that, and since this change carries each table's
+  NOTE of where its numbers came from (`side.ts tableNote`; `nightbreach.ts`, `rescue.ts` `applied`): before it, the depot played twice in one
+  process gave two results, the second on the office's team marks. THE CHECK: `bun run tools/blitz/start-levels.ts --again` (every mission stood,
+  played, another mission stood and played in the same process, the mission stood again: 38 of 38, two seats 23 of 23; `FRESH_BREAK=1` = every row
+  red). Read on this machine with the checked-in module; nothing of it touches the page.
 - **A game stood up has done with the last one: `standUp` asks for a full collection first** (2026-11-05; `tools/qa/headless.ts STANDUP_COLLECTS`; the
   harness only, nothing of the game). FOUND by the merge: the workers of `bang-tally.ts` (the `flashweight` family's tally, missions back to back in one
   process) grew about 1.6 GB a minute on the page's stand and two died at a 12 GB limit; old, on every build looked at. Reproduced here: one worker from
