@@ -597,7 +597,7 @@ body.taping #equip{bottom:calc(86px + (var(--tape-h,44px) + var(--sndl-h,0px)) /
 body.taping #meters{bottom:calc(16px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
 body.tapetight #equip,body.tapetight #meters{visibility:hidden}
 body.taping #log{bottom:calc(44px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
-body.taping #checkpoint,body.taping #journal{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))}
+body.taping #checkpoint{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))}
 body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1)) !important}
 #tapebar .say.off{color:#ffb35c;opacity:1}
 #tapebig{position:fixed;left:0;right:0;top:0;bottom:calc((var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1));z-index:69;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#e9e2d6;font:14px var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}

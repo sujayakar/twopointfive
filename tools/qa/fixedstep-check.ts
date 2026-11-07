@@ -9,7 +9,7 @@
 //   same game  one seed, one scripted input keyed by tick, the camera pinned: a 60, a 120, a 144 and a 50 Hz display and the harness's own W.step(1/60) play the same
 //              ten seconds digest for digest (a fight in it)
 //   off        with the switch off stepFrame runs one update a frame on the frame's own dt, as it always did
-//   frozen     a frame under the pause card: no update, the keys pressed on it reach the hotkeys once (F9 / F10 start a recording from the pause menu) and nothing after them
+//   frozen     a frame under the pause card: no update, the keys pressed on it reach the hotkeys once (F9 starts a recording from the pause menu) and nothing after them
 import { standUp, ROOT } from './headless.ts';
 const { stepFrame, planTicks, FIXEDSTEP } = await import(`${ROOT}/src/host/loop.ts`);
 const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
