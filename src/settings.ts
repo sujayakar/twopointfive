@@ -155,15 +155,15 @@ export interface RenderSettings {
   restirMotion: number;        // MOTION (lane fix/direct-motion, docs/internal/direct-motion.md; restir.wgsl header MOTION): the temporal reuse under a MOVING camera, as a bitmask — 1 = STOCHASTIC-BILINEAR
                                // reservoir reprojection (one of the four texels round the reprojected point, drawn by bilinear weight, validated as ever: lineages follow the surface and diffuse instead of
                                // sliding as a sheet under a sub-pixel pan), 2 = MOTION-SCALED CONFIDENCE (the M cap whole under restirMotionV px a frame of the pixel's own motion, × restirMotionMin past 1.6 × that: a panning pixel leans on fresh candidates), 4 =
-                               // spatial reuse wherever the pixel moves more than restirMotionPx; 0 = the estimator's program byte for byte (passes.ts compiles restir.wgsl twice behind const RESTIR_MOTION;
-                               // ?norestirmotion). At rest all three are inert by construction (motion 0)
+                               // spatial reuse wherever the pixel moves more than restirMotionPx; 0 = none of them (?norestirmotion). They are bits of the estimator's uniform, raised on
+                               // the frames the camera moved: a still camera's frame carries none and does none of their work
   restirMotionV: number;       // (2): screen motion in px a frame AT 1000 INTERNAL ROWS (scaled to the target) under which the history keeps its full confidence (1.1 — measured: at high a 0.8-px pan
                                // wants the whole memory, a 1.4–2-px walking pan about two candidates of it; docs/internal/direct-motion.md §2); the cut ramps to the floor by 1.6 × this
   restirMotionMin: number;     // (2)'s floor as a fraction of the M cap (0.1 = a 2-candidate memory at cap 20 however fast the pan)
   restirMotionPx: number;      // (4)'s threshold: screen motion in px a frame AT 1000 INTERNAL ROWS (scaled like restirMotionV) past which the spatial taps run at the pixel (0.5)
   restirMotionTaps: number;    // (4)'s tap count at such a pixel when above the tier's restirSpatial (0‥8; 0 = the tier's own k) — wider spatial reuse only where the history was cut
-  restirMotionStatic: boolean; // run the twin program under a STILL camera too (object motion — a walking man's own pixels — then gets the levers; +0.2 ms direct at high for the bigger kernel); false = a still camera
-                               // dispatches main's program, so at rest the pass is main's byte for byte and costs the same
+  restirMotionStatic: boolean; // raise the motion bits under a STILL camera too (object motion — a walking man's own pixels — then gets the levers; measured +0.2 ms direct at high); false = a still camera's
+                               // frame carries none
   // direct light's shadow denoise knobs (render/denoise.ts, the shadow client)
   directHistory: boolean;      // the shadow client's temporal reuse (off = history-free shadows, for inspection). A weight until 2026-11-07, when the estimator that blended by it went
   directBlurCap: number;       // max penumbra filter radius in px

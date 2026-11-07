@@ -734,7 +734,7 @@
   "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "toggle",
   "label": "restir: motion — run under a still camera too",
-  "title": "the motion levers live in a twin of the estimator's program that only frames on which the CAMERA moved dispatch (its levers are inert at rest, but the bigger kernel measured +0.2 ms direct at high doing nothing); on = dispatch it always, so a walking man's own pixels get the levers under a still camera as well",
+  "title": "the motion levers are switched on only on frames the CAMERA moved (their work measured +0.2 ms direct at high doing nothing at rest); on = always, so a walking man's own pixels get the levers under a still camera as well",
   "def": false,
   "extra": ""
  },
