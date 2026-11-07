@@ -143,8 +143,10 @@ export class GBuffer {
     // THE SNOW'S SURFACE IS A TEXT OF ITS OWN (2026-11-07). The boxes' fragment stage shades the snow paint off the level's snow field (snow.wgsl snowBox, and
     // under the look look.wgsl lookSnow): 113 KB of pasted text on the plain page and 200 on the look's, read by two levels. As a branch of the one text
     // (frame.ts LevelSw, tried the same day) it stood in every level's program, and the look's page lost its device at the first drawn frame on the software
-    // adapter. So the module is written twice, `GBUF_SNOW` false and true, word for word the texts a level without snow and a snow level always compiled. A
-    // page draws with its level's own and asks for the other behind it (init below): a visit builds each once, and no level's start compiles either again.
+    // adapter. So the module is written twice, `GBUF_SNOW` false and true, word for word the texts a level without snow and a snow level always compiled, and
+    // EVERY program of it comes in the level's writing: the boxes, the cut boxes, the hills and the men (no text of this module asks the frame's level word
+    // for the snow's surface). A page draws with its level's own and asks for the other behind it (init, prepareSkin): a visit builds each once, and no
+    // level's start compiles either again.
     const text = (cut: boolean, snow: boolean) => scenePrelude(cut) + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\nconst GBUF_SNOW: bool = ${snow};   // the snow's surface in the boxes' shading (gbuffer.ts: the module's two writings)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc + (cut ? gbufCutSrc : '');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
     const mod = makeShader(device, text(false, false), 'gbuffer'); this.modSnow = makeShader(device, text(false, true), 'gbufferSnow');
     this.objLayout = device.createBindGroupLayout({ label: 'gbufObj', entries: [
@@ -366,13 +368,16 @@ export class GBuffer {
    *  object skinPipe() would otherwise make synchronously inside that frame. */
   async prepareSkin(fmt: GPUVertexFormat): Promise<void> {
     if (this.skinPipes.has(fmt)) return;
+    void laterRenderPipelineAsync(this.device, this.skinDesc(fmt, !snowLookConfig.surface));   // (the men's program in the other writing, for the visit's next level: init's note)
     const p = await renderPipelineAsync(this.device, this.skinDesc(fmt));
     if (!this.skinPipes.has(fmt)) this.skinPipes.set(fmt, p);
   }
-  private skinDesc(fmt: GPUVertexFormat): GPURenderPipelineDescriptor {
+  /** the men's program, in the level's own writing of the module or the other (the constructor's note: a snow level's men are cold, look.wgsl lookMan) */
+  private skinDesc(fmt: GPUVertexFormat, snow = snowLookConfig.surface): GPURenderPipelineDescriptor {
+    const mod = snow ? this.modSnow : this.mod;
     return {
-      label: 'gbufSkin', layout: this.pipeLayout,
-      vertex: { module: this.mod, entryPoint: 'vsSkin', buffers: [
+      label: snow ? 'gbufSkinSnow' : 'gbufSkin', layout: this.pipeLayout,
+      vertex: { module: mod, entryPoint: 'vsSkin', buffers: [
         { arrayStride: 44, attributes: [
           { shaderLocation: 0, offset: 0, format: 'float32x3' },
           { shaderLocation: 1, offset: 12, format: 'float32x3' },
@@ -382,7 +387,7 @@ export class GBuffer {
         { arrayStride: fmt === 'uint8x4' ? 4 : 8, attributes: [{ shaderLocation: 2, offset: 0, format: fmt }] },
         { arrayStride: 8, attributes: [{ shaderLocation: 5, offset: 0, format: 'float32x2' }] },   // (material slot, cavity) — render/charMaterials.ts
       ] },
-      fragment: { module: this.mod, entryPoint: 'fsSkin', targets: this.targets },
+      fragment: { module: mod, entryPoint: 'fsSkin', targets: this.targets },
       primitive: { topology: 'triangle-list', cullMode: 'back' },
       depthStencil: this.depthStencil,
     };

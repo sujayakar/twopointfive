@@ -284,7 +284,7 @@ export const weatherKindConfig = { on: false };
  *  it at BOOT on a page whose level is one built for snow; false = no such statement runs. A page is one level for its whole life, so the two never meet. */
 export const snowConfig = { on: false };
 /** THE SNOW'S LOOK (game/weatherKinds.ts SNOW_LOOK; picture only): the rows of a page opened on a snow level, raised by main.ts at BOOT with snowConfig.
- *  `surface` → the g-buffer's second writing (render/gbuffer.ts `GBUF_SNOW`: heavy, so a program of its own that a level picks, and `lv(SNOW_SURF)` for the men's cold): the g-buffer shades the snow paint as one surface off the level's snow field and draws its drifts as a mesh
+ *  `surface` → the g-buffer module's second writing (render/gbuffer.ts `GBUF_SNOW`: its programs come in two texts and a level picks; no shader asks the level word's SNOW_SURF bit, which says the same to whoever reads the word): the g-buffer shades the snow paint as one surface off the level's snow field and draws its drifts as a mesh
  *  (shaders/snow.wgsl, render/snowField.ts). `wisps` → `lv(SNOW_WISPS)`: the particle shaders' half of the wisps the wind runs over the ground
  *  (game/snowFx.ts). false = no such statement runs. */
 export const snowLookConfig = { surface: false, wisps: false, tracks: false, glow: false, sparkle: false, grains: false, under: false };   // (`grains` → `lv(SNOW_GRAINS)`: the particle shaders' half of the fine grains that ride the air field, render/airField.ts; `tracks` → `lv(SNOW_TRACKS)`: snow.wgsl reads the trail texture; `glow` → `lv(SNOW_GLOW)`: the lighting shaders' wrap on snow pixels; `sparkle` → `lv(SNOW_SPARKLE)`: composite.wgsl's facet flashes on lit fresh snow; `under` → `lv(SNOW_UNDER)`: a flake asks the roofs as one)
