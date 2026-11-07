@@ -57,6 +57,12 @@ fn merge(into: &mut Report, from: Report) {
         into.table_writes.entry(k).or_default().extend(v);
     }
     into.left.extend(from.left);
+    for (k, v) in from.leaf_reads {
+        *into.leaf_reads.entry(k).or_default() += v;
+    }
+    for (k, v) in from.table_uses {
+        *into.table_uses.entry(k).or_default() += v;
+    }
 }
 
 struct Engine<'a> {
@@ -382,6 +388,7 @@ fn main() {
     let mut report_to: Option<String> = None;
     let mut settle_file: Option<String> = None;
     let mut table_to: Option<String> = None;
+    let mut knobs_to: Option<String> = None;
     let mut unnamed = false;
     let mut root = PathBuf::from(".");
     let mut it = args.iter();
@@ -393,6 +400,7 @@ fn main() {
             "--report" => report_to = Some(val()),
             "--settle" => settle_file = Some(val()),
             "--table" => table_to = Some(val()),
+            "--knobs" => knobs_to = Some(val()),
             "--root" => root = PathBuf::from(val()),
             x => {
                 eprintln!("fold: no option {x}");
@@ -430,11 +438,19 @@ fn main() {
                 None => (false, l),
             };
             let (name, why) = rest.split_once(char::is_whitespace).unwrap_or((rest, ""));
-            let Some(p) = by_name.get(name) else {
-                eprintln!("fold: keep.txt names {name}, which is no row of the Rust tables");
-                std::process::exit(3);
+            // a row by its name, or a whole table by its (`PRESSURE`: every row of it)
+            let pre = format!("{name}.");
+            let paths: Vec<String> = match by_name.get(name) {
+                Some(p) => vec![(*p).clone()],
+                None => by_name.iter().filter(|(n, _)| n.starts_with(&pre)).map(|(_, p)| (*p).clone()).collect(),
             };
-            if ok { written_ok.insert((*p).clone(), why.trim().to_string()) } else { kept_by_hand.insert((*p).clone(), why.trim().to_string()) };
+            if paths.is_empty() {
+                eprintln!("fold: keep.txt names {name}, which is no row and no table of the Rust tables");
+                std::process::exit(3);
+            }
+            for p in paths {
+                if ok { written_ok.insert(p, why.trim().to_string()) } else { kept_by_hand.insert(p, why.trim().to_string()) };
+            }
         }
     }
     // rows told settled on top of the list's own
@@ -685,6 +701,136 @@ fn main() {
             println!("fold: the report is {f}{}", if write { "" } else { " (nothing written: --write)" });
         }
         None => print!("{o}"),
+    }
+
+    // the tables' dead weight: every leaf no body reads, as the tree stands after this run
+    if let Some(f) = &knobs_to {
+        let all: HashSet<String> = HashSet::new();
+        let sc = eng.scan(&texts, &all, &out.fns, None);
+        // a table whose struct a body names outside a parameter's type (returned, stored, built) can be read where
+        // this program does not follow it: its leaves count as read
+        let mut named: HashMap<String, i64> = HashMap::new();
+        for t in &texts {
+            if let Ok(ts) = t.parse::<proc_macro2::TokenStream>() {
+                fn walk(ts: proc_macro2::TokenStream, n: &mut HashMap<String, i64>) {
+                    for t in ts {
+                        match t {
+                            proc_macro2::TokenTree::Ident(i) => *n.entry(i.to_string()).or_default() += 1,
+                            proc_macro2::TokenTree::Group(g) => walk(g.stream(), n),
+                            _ => {}
+                        }
+                    }
+                }
+                walk(ts, &mut named);
+            }
+            if let Ok(file) = syn::parse_file(t) {
+                for it in &file.items {
+                    if let syn::Item::Fn(x) = it {
+                        for a in &x.sig.inputs {
+                            if let syn::FnArg::Typed(pt) = a {
+                                let mut ty: &syn::Type = &pt.ty;
+                                while let syn::Type::Reference(r) = ty {
+                                    ty = &r.elem;
+                                }
+                                if let syn::Type::Path(p) = ty {
+                                    if let Some(sg) = p.path.segments.last() {
+                                        *named.entry(sg.ident.to_string()).or_default() -= 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // every leaf, with its table's path
+        let mut leaves: Vec<(String, String, String)> = Vec::new(); // (path, type, top table)
+        fn walk_tree(tree: &rows::Tree, ty: &str, at: &mut Vec<String>, out: &mut Vec<(String, String, String)>) {
+            match tree.get(ty) {
+                Some(fs) => {
+                    for (f, t) in fs {
+                        at.push(f.clone());
+                        walk_tree(tree, t, at, out);
+                        at.pop();
+                    }
+                }
+                None => out.push((at.join("."), ty.to_string(), at.first().cloned().unwrap_or_default())),
+            }
+        }
+        walk_tree(&rows.tree, "Knobs", &mut Vec::new(), &mut leaves);
+        let escapes = |path: &str| -> bool {
+            // the table itself, or any table it sits in, used as a value or named as a type
+            let parts: Vec<&str> = path.split('.').collect();
+            (1..parts.len()).any(|n| {
+                let pre = parts[..n].join(".");
+                let ty = rows.type_path.iter().find(|(_, p)| p.join(".") == pre).map(|(t, _)| t.clone());
+                sc.table_uses.get(&pre).copied().unwrap_or(0) > 0 || ty.map(|t| named.get(&t).copied().unwrap_or(0) > 0).unwrap_or(false)
+            })
+        };
+        // the Rust files that are not bodies (a module's types.rs and sig.rs; never the tables' own file or the wire's):
+        // a leaf one of them names after `.k.` is read there
+        let mut elsewhere: HashSet<String> = HashSet::new();
+        let leaf_set: HashSet<&str> = leaves.iter().map(|l| l.0.as_str()).collect();
+        let mut others = Vec::new();
+        dead::rs_files(&root.join("rust/game/src"), &mut others);
+        for p in others {
+            let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if body_paths.contains(&p) || matches!(name, "knobs.rs" | "io.rs" | "puppet.rs" | "call_gen.rs") {
+                continue;
+            }
+            let Ok(t) = std::fs::read_to_string(&p) else { continue };
+            let mut at = 0;
+            while let Some(i) = t[at..].find(".k.") {
+                let s0 = at + i + 3;
+                let end = t[s0..].find(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '#')).map(|j| s0 + j).unwrap_or(t.len());
+                let mut path = t[s0..end].trim_end_matches('.').to_string();
+                loop {
+                    if leaf_set.contains(path.as_str()) {
+                        elsewhere.insert(path.clone());
+                        break;
+                    }
+                    match path.rfind('.') {
+                        Some(j) => path.truncate(j),
+                        None => break,
+                    }
+                }
+                at = end.max(s0);
+            }
+        }
+        let mut o = String::new();
+        let (mut read, mut maybe, mut dead) = (0usize, 0usize, Vec::new());
+        let mut handed = 0usize;
+        let mut by_table: BTreeMap<String, (usize, usize)> = BTreeMap::new();
+        for (path, ty, top) in &leaves {
+            let e = by_table.entry(top.clone()).or_default();
+            e.0 += 1;
+            if sc.leaf_reads.get(path).copied().unwrap_or(0) > 0 {
+                read += 1;
+            } else if elsewhere.contains(path) {
+                handed += 1;
+            } else if escapes(path) {
+                maybe += 1;
+            } else {
+                e.1 += 1;
+                dead.push(format!("{path} ({ty}){}", if sc.writes.contains_key(path) { " · written by a body" } else { "" }));
+            }
+        }
+        let whole: Vec<&String> = by_table.iter().filter(|(_, (n, d))| n == d).map(|(t, _)| t).collect();
+        let _ = writeln!(o, "# The knob tables' dead weight, as the bodies stand\n");
+        let _ = writeln!(o, "leaves of the tables (a yes-or-no row, a number, a name, a list): {}", leaves.len());
+        let _ = writeln!(o, "read by a body: {read}");
+        let _ = writeln!(o, "read by no body, but named by a made file beside the bodies (the list of numbers the picture's poses get, a test): {handed}");
+        let _ = writeln!(o, "not read where this program can follow, but their table is handed on or named as a type by a body (counted as read): {maybe}");
+        let _ = writeln!(o, "READ BY NO BODY: {} ({}%) · whole tables no body reads: {} of {}", dead.len(), dead.len() * 100 / leaves.len().max(1), whole.len(), by_table.len());
+        let _ = writeln!(o, "\nThe generated wire reads and writes every leaf, and the page's own code may read a table the Rust game only carries: a leaf here is dead for the RUST game.\n");
+        let _ = writeln!(o, "## Whole tables no body reads ({})\n\n{}\n", whole.len(), whole.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", "));
+        let _ = writeln!(o, "## Leaves no body reads ({})\n", dead.len());
+        for d in &dead {
+            let _ = writeln!(o, "- {d}");
+        }
+        let _ = std::fs::write(f, &o);
+        println!("{}", o.lines().skip(2).take(4).collect::<Vec<_>>().join("\n"));
+        println!("fold: the tables' dead weight is {f}");
     }
 
     // 3. the table: each row that stays a switch, tried alone on top of the fold

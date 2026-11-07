@@ -8,6 +8,7 @@ and deletes the side that can never run.
 cargo run --release --manifest-path tools/fold/Cargo.toml -- --report fold-report.md            # dry: says what it would do
 cargo run --release --manifest-path tools/fold/Cargo.toml -- --write --report fold-report.md    # and does it
 cargo run --release --manifest-path tools/fold/Cargo.toml -- --table rows.tsv                   # every row that stays a switch, tried alone
+cargo run --release --manifest-path tools/fold/Cargo.toml -- --knobs knobs-dead.md               # every leaf of the tables no body reads
 ```
 
 Run it from the repository's root (or `--root DIR`). It reads `tools/qa/switches.json`, `rust/game/src/knobs.rs` (the tables at page
@@ -71,6 +72,7 @@ a local's drop does something; the game's bodies have no such type.
   kept out with every place that writes it, under FINDINGS. Only body files are read for this: the generated wire writes every row
   as the page hands the tables over, by design. Either the row is not settled after all, or the write is dead and goes by hand;
   then name it in `keep.txt` (`written-ok TABLE.row  why`) and run again. `keep.txt` also keeps a row out by hand (`TABLE.row  why`).
+  A bare `TABLE` in place of `TABLE.row` says it of every row of the table (a table laid whole from the page's own).
 - **A number or a name.** A settled row that is a number stays a number in its table: written in, it would be a bare literal in a
   formula and nothing would fold.
 - **A setter outside Rust.** The page's panel, its Options and a kept option write the TypeScript tables, which cross to the Rust game

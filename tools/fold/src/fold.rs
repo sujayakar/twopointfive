@@ -78,6 +78,10 @@ pub struct Report {
     pub left: Vec<String>,
     /// row path -> reads met, of rows this run does not fold
     pub other_reads: BTreeMap<String, usize>,
+    /// every leaf of the tables (a row or a number), by path -> reads met
+    pub leaf_reads: BTreeMap<String, usize>,
+    /// a whole table used as a value (copied out, handed on, compared), by path -> times
+    pub table_uses: BTreeMap<String, usize>,
     /// row path -> file -> reads of that row met there (taken rows)
     pub read_files: BTreeMap<String, BTreeMap<String, usize>>,
 }
@@ -1424,9 +1428,12 @@ impl<'ast, 'a> Visit<'ast> for Pass<'a> {
             Expr::Field(_) => {
                 if let Some(kp) = self.resolve(e) {
                     if !self.is_table(&kp) {
+                        *self.report.leaf_reads.entry(kp.path.join(".")).or_default() += 1;
                         if self.row_read(e, &kp) {
                             return;
                         }
+                    } else {
+                        *self.report.table_uses.entry(kp.path.join(".")).or_default() += 1;
                     }
                     // a table, or a row the fold does not take: only its names are walked
                     if let Some(n) = Self::root_name(e) {
