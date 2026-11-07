@@ -102,7 +102,8 @@ export function lookPageOn(q: URLSearchParams): boolean { return !q.getAll('look
 /** THE LOOK LAB: the page that asks for the look BY NAME (a row on the address: `/look`, `/smokelab`, `?look`, `?look=key:value`; or the tag a one-file build
  *  carries, where the address takes no flags), which is what the look's own page was before the picture became every page's. What that page did beyond the
  *  picture stays the lab's and is on no other page: its panel opened over the game, its kit and the fog put down (`?lookkit=0`), the trials that rewrite the
- *  level as it loads (`geo`, `lorry`), the seated posts (`?seat=0`) and a snow level's broken cloud. Each of those changes what the page's game PLAYS, and a
+ *  level as it loads (`geo`, `lorry`), the hills that rays see (`hills`: the game's own rays meet them too), the seated posts (`?seat=0`) and a snow level's
+ *  broken cloud. Each of those changes what the page's game PLAYS, and a
  *  co-op server, a headless run and a check all play the level as its file has it. main.ts reads this once at boot into LOOK_LAB */
 export function lookLabOn(q: URLSearchParams): boolean { return lookPageOn(q) && (lookPageRows(q).length > 0 || (typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-look"]'))); }
 /** …as this page booted (main.ts pageSwitches; false on every stand without a page) */
@@ -113,7 +114,7 @@ export type LookTrial = keyof typeof LOOK_TRIALS;
 /** a trial's switch: the address's own word wins; else what the panel's button last kept on this machine (on, where it kept nothing) */
 export function lookTrialOn(q: URLSearchParams, word: LookTrial): boolean { if (q.has(word)) return q.get(word) !== '0'; try { return localStorage.getItem(LOOK_TRIALS[word]) !== '0'; } catch { return true; } }
 /** the trials this machine keeps OFF and the address does not name, as the address would say them: with these on it, another page is the look this one shows */
-export function lookTrialsKept(q: URLSearchParams): string[] { const lab = lookLabOn(q), off = (Object.keys(LOOK_TRIALS) as LookTrial[]).filter(w => (lab || w === 'hills') && !q.has(w) && !lookTrialOn(q, w)).map(w => `${w}=0`);   // (`geo` and `lorry` are the lab's: on a page that is not the lab they are off whatever was kept, and no word says so)
+export function lookTrialsKept(q: URLSearchParams): string[] { const lab = lookLabOn(q), off = (Object.keys(LOOK_TRIALS) as LookTrial[]).filter(w => lab && !q.has(w) && !lookTrialOn(q, w)).map(w => `${w}=0`);   // (the trials are the lab's: on a page that is not the lab they are off whatever was kept, and no word says so)
   let cut: string | null = null; try { cut = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no store: on */ }   // (…and the cut boxes' own switch, which four of the five stand on: scene/cut.ts initCutSwitch)
   return cut === '0' && !q.has('cutboxes') && !q.has('nocutboxes') ? [...off, 'cutboxes=0'] : off; }
 /** the other words the page reads once, at boot, into its shader text and its level (main.ts, scene/cut.ts: the look's geometry is cut boxes) */
