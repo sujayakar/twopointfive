@@ -495,7 +495,7 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
 
 // ---------------------------------------------------------------- drawing (into Game.dynBoxes, beside the keypads' plates)
 /// The plate, its rocker (top proud with the lights on) and, in a room off at the switch, the small amber pilot: a decal's depth, nobody's collision, no shadow. (lightswitch.ts switchBoxes)
-pub fn switch_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn switch_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let flag = crate::scene_boxes::box_flag();
     let deco = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
     for sw in wall_switches(g) {
@@ -503,11 +503,11 @@ pub fn switch_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let lit = switch_lit(g, &sw);
         let key = crate::scene_boxes::mkey().device + SW_KEY + sw.id * 4.0;
         let a = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::mad(sw.pos, sw.n, 0.006), h: [0.042, 0.06, 0.006], yaw: Some(yaw), albedo: Some(plate()), flags: Some(deco), mkey: Some(key), ..Default::default() });
-        out.push(a);
+        out.push(a.into());
         let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.015), [0.0, if lit { 0.012 } else { -0.012 }, 0.0]), h: [0.016, 0.018, 0.005], yaw: Some(yaw), albedo: Some(rocker()), flags: Some(deco), mkey: Some(key + 1.0), ..Default::default() });
-        out.push(b);
+        out.push(b.into());
         let c = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.013), [0.0, -0.045, 0.0]), h: [0.007, 0.004, 0.002], yaw: Some(yaw), albedo: Some([0.05, 0.03, 0.01]), emissive: Some(if lit { [0.0, 0.0, 0.0] } else { glow() }), flags: Some(deco), mkey: Some(key + 2.0), ..Default::default() });
-        out.push(c);
+        out.push(c.into());
     }
 }
 

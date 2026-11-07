@@ -115,7 +115,7 @@ pub fn pad_hands(g: &mut crate::game::Game, pad: &crate::handwork::PadHandsPad, 
             let (pos, n) = (pad.def.pos, pad.n);
             let spot: V3 = [pos[0] + n[0] * 0.03 + r[0] * x, pos[1] + y, pos[2] + n[2] * 0.03 + r[2] * x];
             let bf = crate::scene_boxes::box_flag();
-            let box_ = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+            let box_ = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
                 c: spot,
                 h: [0.008, 0.007, 0.002],
                 yaw: Some(pad.def.yaw),
@@ -138,7 +138,7 @@ pub fn charge_hands(g: &mut crate::game::Game, c_2: CharId, p: V3, n: V3, t: f64
     work_at(g, c_2, crate::character::WorkKind::Charge, p, n, t, dur, Some(&more));
     if t > 0.35 && crate::character::anim_work_info(g, c_2).w > 0.5 {
         let owner = owner_of(g, c_2);
-        let box_ = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+        let box_ = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
             c: v3::mad(p, n, 0.02),
             h: [0.07, 0.11, 0.02],
             yaw: Some(m::atan2(n[0], n[2])),
@@ -315,7 +315,7 @@ pub fn drive_hands(g: &mut crate::game::Game, secs: f64, pulled: bool) {
 }
 
 /// The thing in his hand while it comes out and is put away: a caddy-sized box off the working hand. (handwork.ts workProps)
-pub fn work_props(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>) {
+pub fn work_props(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>) {
     let i = crate::character::anim_work_info(g, c_2);
     let Some(l) = i.pose else { return };
     if l.kind != crate::character::WorkKind::Take || i.w < 0.4 { return; }
@@ -341,7 +341,7 @@ pub fn work_props(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>) 
         owner: Some(owner),
         ..Default::default()
     });
-    out.push(b);
+    out.push(b.into());
 }
 
 // ---------------------------------------------------------------- the radio hand
@@ -392,7 +392,7 @@ pub fn swap_held(g: &crate::game::Game, gd: GuardId, held: Option<crate::handwor
 }
 
 /// The torch on his belt while the sidearm is out: at the front of the right hip, lens down, dark. (handwork.ts beltTorch)
-pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>) {
+pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>) {
     let Some(hp) = g.ch[c_2].bones.get(crate::character::Bone::Hips).copied() else { return };
     let f = crate::character::character_forward(g, c_2);
     let r: V3 = [-f[2], 0.0, f[0]];
@@ -410,7 +410,7 @@ pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>) 
         owner: Some(owner),
         ..Default::default()
     });
-    out.push(b);
+    out.push(b.into());
     let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c: [at[0], at[1] - 0.07, at[2]],
         h: [0.021, 0.012, 0.021],
@@ -421,7 +421,7 @@ pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>) 
         owner: Some(owner),
         ..Default::default()
     });
-    out.push(b);
+    out.push(b.into());
 }
 
 #[cfg(test)]

@@ -354,9 +354,9 @@ pub fn prop_system_new(g: &mut crate::game::Game, defs: &[crate::scene_level::Pr
 }
 
 /// every part box of what is in the level, in its order   (props.ts PropSystem.boxes)
-pub fn prop_system_boxes(g: &crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn prop_system_boxes(g: &crate::game::Game, out: &mut Vec<AnyBoxId>) {
     for &p in &g.props.props {
-        out.extend_from_slice(&g.tab.props_prop[p].boxes);
+        out.extend(g.tab.props_prop[p].boxes.iter().map(|&b| AnyBoxId::World(b)));
     }
 }
 

@@ -410,7 +410,7 @@ pub fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
         let mut stop = crate::scene_collision::collide_circle(g, &mut q, 0.15, 0.25, 1.5, Some(1.0)) || crate::scene_collision::clamp_to_world(g, &mut q, 0.15);
         if !stop {
             for &b in shut.iter() {
-                if crate::scene_boxes::ray_box(g, prev, rd, b, sp * 0.05).is_some() { stop = true; break; }
+                if crate::scene_boxes::ray_box(g, prev, rd, b.into(), sp * 0.05).is_some() { stop = true; break; }
             }
         }
         if stop { break; }

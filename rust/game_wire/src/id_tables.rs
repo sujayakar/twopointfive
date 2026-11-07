@@ -58,4 +58,5 @@ pub fn id_tables(g: &crate::game::Game) -> Vec<(&'static str, usize)> { alloc::v
     ("CivId", g.cv.len()),
     ("GameTalkId", g.tab.game_talk.len()),
     ("FirearmId", g.fa.len()),
+    ("FrameBoxId", g.tab.frame_boxes.len()),
 ] }

@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- seam: what skeleton 5 still cannot say (see notes.md)
 /// `b.…` for any box: a box's row. Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`.
 /// When the table comes this body is the one line `&mut g.<table>[b]`; every read and write of a box in this file goes through here.
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
+fn seam_box<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 // ---------------------------------------------------------------- small private helpers
 fn max3(h: V3) -> f64 { m::max_n(&[h[0], h[1], h[2]]) }
@@ -25,7 +25,7 @@ fn surf_mat_of_word(s: &str) -> Option<Mat> {
     None
 }
 /// matOf(kind, box) for a box of the world
-fn mat_of_box(g: &mut Game, kind: crate::debris::ChunkKind, b: BoxId) -> Mat {
+fn mat_of_box(g: &mut Game, kind: crate::debris::ChunkKind, b: AnyBoxId) -> Mat {
     let box_ = MatOfBox { does: seam_box(g, b).does.map(|w| String::from(w.as_str())) };
     mat_of(g, kind, &box_)
 }
@@ -42,7 +42,7 @@ fn axes_by_size(h: V3) -> [usize; 3] {
     js::sort_by(&mut ax, |i, j| h[*i] - h[*j]);
     ax
 }
-fn word_of_box(g: &mut Game, b: BoxId) -> crate::scene_boxes::WordOf {
+fn word_of_box(g: &mut Game, b: AnyBoxId) -> crate::scene_boxes::WordOf {
     let (stuff, does) = (seam_box(g, b).stuff, seam_box(g, b).does);
     crate::scene_boxes::word_of(crate::scene_boxes::WordOfB { stuff, does })
 }
@@ -104,7 +104,7 @@ pub fn breaks_share(g: &crate::game::Game) -> crate::break_table::BreaksShare {
 
 // ---------------------------------------------------------------- the pool's hooks
 /// The level and puff of a thrown piece's landing. (breakTable.ts Breaks.lands)
-pub fn breaks_lands(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, speed: f64) -> crate::break_table::BreaksLands {
+pub fn breaks_lands(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: AnyBoxId, speed: f64) -> crate::break_table::BreaksLands {
     if kind == crate::debris::ChunkKind::Shard { return BreaksLands { level: 0.0, dust: 0.0 }; }
     let mat = mat_of_box(g, kind, box_);
     let row = break_row(mat);
@@ -443,7 +443,7 @@ pub fn breaks_outline(g: &mut crate::game::Game, m: crate::break_table::Mat, row
 }
 
 /// A loose box somebody else owns takes the outline its material's row gives; keyed, none of the table's dice. (breakTable.ts Breaks.shapeLoose)
-pub fn breaks_shape_loose(g: &mut crate::game::Game, b: BoxId, surf: &str, key: f64) -> bool {
+pub fn breaks_shape_loose(g: &mut crate::game::Game, b: AnyBoxId, surf: &str, key: f64) -> bool {
     if seam_box(g, b).cut.is_some() { return false; }
     let Some(mat) = surf_mat_of_word(surf) else { return false };
     if mat == Mat::Metal { return false; }
@@ -923,7 +923,7 @@ mod tests {
         let box_ = BoxId::from_ix(n);
         *seam_box(g, box_) = b;
         let mut c = crate::debris::Chunk::zeroed();
-        c.box_ = box_;
+        c.box_ = box_.into();
         c.age = age;
         g.tab.debris_chunk.push(c)
     }
