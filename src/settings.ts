@@ -38,10 +38,6 @@ export interface RenderSettings {
   sharpDecouple: boolean;    // DECOUPLED JITTER (image-quality program C3j, sharp direct only): the OUTPUT raster — g-buffer, U, composite, GBAA, the 1 : 1 resolve — runs UNJITTERED (a rock-still picture for the
                              // analytic edge AA) while the INTERNAL raster the stochastic terms live on keeps a ±½ internal-px Halton jitter, so a hard shadow edge computed at internal resolution is still
                              // supersampled across frames and settles smooth in the resolve's history instead of a stair-step. Off = one jitter for both rasters (the sharp path as it was)
-  sharpEdgeRays: boolean;    // sharp direct EXPERIMENT (default off): where a hard shadow edge lies within ±2 internal px of an output pixel's taps (sharp_edge.wgsl's mask: the class's visibility ratio ranges by > sharpEdgeSpread
-                             // there while every SHADOWED pixel that holds a penumbra hint holds one under sharpEdgeHintPx), one deterministic shadow ray from the output pixel to the CENTRE of the class's strongest emitter decides that
-                             // light exactly (binary, at the output resolution; the jitter + TAA antialias it) and only the class's live remainder takes the upsampled ratio — a keyboard's contact shadow goes to 1.6 px. Off = the ratio everywhere
-  sharpEdgeSpread: number; sharpEdgeHintPx: number;
   sharpPlaneK: number;       // the ratio upsample's same-plane weight e^(−plane distance ∕ (view distance · k)): 0.01 = a tap a centimetre off this pixel's tangent plane per metre of distance still weighs 0.37
   // ---- DIRECT-QUALITY (lane v3/direct-quality, docs/internal/direct-quality.md): the sharp path's SLIVER rule, GBAA's same-surface clamp, the flash / jump ray budget ----
   sharpSliver: number;       // sharp direct: what an output pixel with NO internal tap on its own surface does (a sliver the internal raster never sampled — a door frame's reveal, a chair leg, a limb's edge):
@@ -75,10 +71,6 @@ export interface RenderSettings {
   // the temporal stage's 5×5 statistics and the pixel's own sample inside the history clamp's box (a thin unlit face no longer shows a hidden lamp as a bright line). Off = the client as it was.
   dnShadowIters: number; dnShadowCap: number; dnShadowClampK: number; dnShadowSigmaL: number; dnShadowPrior: boolean; dnShadowLitAlike: boolean; dnShadowOccl: boolean; dnShadowMoveCap: number; dnShadowMoveThresh: number; dnShadowJump: number;
   dnGiIters: number; dnGiCap: number; dnGiClampK: number; dnGiSigmaL: number; dnGiFast: number; dnGiFirefly: number;
-  // ---- GI IN MOTION (docs/internal/gi-motion.md; the v3 diffuse client only): giFullRes = the diffuse GI is upsampled (guided) to the INTERNAL resolution first and accumulated / clamped / à-trous
-  // filtered there (history at internal res: reprojection error one internal pixel instead of one gather texel, blotch size likewise), composite reading it 1 : 1 — false = the gather-grid chain
-  // exactly as it was; giFullIters = its à-trous iterations at internal res (strides gdiv·1, 2, 4, 8: the same ground reach as the gather-grid chain's)
-  giFullRes: boolean; giFullIters: number;
   // (D) two follow-ups on the diffuse client (both 0 = off, the client as it was): dnGiClampCut = a valid pixel whose long history the clamp had to DRAG (its bounce changed) has its length cut by how far,
   // relative to the box (the reflection chain's rule) — the next frames weigh the fresh estimate more and the young-history rays fire there; dnGiYoungWiden = the à-trous luminance edge-stop × (1 + it) on
   // texels whose history is young (steadier while one or two frames stand behind the estimate)
@@ -153,18 +145,9 @@ export interface RenderSettings {
   restirYoung: number;         // below restirRays 5 (no final ray) spatial reuse runs only where the pixel's own history is younger than this many candidates (disocclusions, resets),
                                // where its visibility bias is transient; at 5+ it runs everywhere with the final ray
   restirSpatialAll: boolean;   // A/B: spatial reuse everywhere even without the final ray (biased near shadow edges: a neighbour's visibility stands in for ours)
-  restirCoherent: boolean;     // the fresh candidate (light + emitter point) is drawn from a random stream shared by the 8×8 tile instead of per pixel: every pixel's draw is still ∝ its own weights, but the tile
-                               // traces near-parallel rays (a SIMD group walks one sort of ray: −0.6 ms of 4 at high on the M4) at the price of one-frame noise correlated in 8×8 blocks (the history decorrelates it)
   restirPenCap: number;        // D5 (image-quality program): the temporal M cap INSIDE PENUMBRAE (pixels whose inherited reservoir carries a blocker hint) — shorter memory where the estimate is a coin
                                // flip's EMA turns its slow random walk into per-frame noise the ratio filter + TAA average; 0 = off (the tier's cap everywhere)
   restirPenRays: boolean;      // D1: a second fresh candidate + shadow ray in those penumbra pixels whatever the tier's ray count (+1 ray where it matters; an auditing tile's penumbra lanes skip their audit)
-  restirPermute: boolean;      // D4 (image-quality program): PERMUTATION SAMPLING of the temporal reservoir — each frame the reprojected texel is swapped within a 2×2-ish block by a per-frame XOR pattern (RTXDI's trick), so a
-                               // pixel inherits a NEIGHBOUR's history: the reservoirs' slow random walk (temporally red noise the filters cannot average) becomes whiter frame to frame at the price of a
-                               // little cross-pixel reuse bias inside penumbrae; the texel's own depth test still rejects across edges. Default off
-  restirRatioRaw: boolean;     // A/B: the temporal confidence cut by the RAW target ratio p̂ now ÷ then (the 08-11 rule: a fluorescent's 15 % ↔ 100 % strokes dropped every reservoir under it to 1–3 samples
-                               // twice a flicker period) instead of the ratio with each side ÷ its light's power (intensity / hue changes keep the history; a swept cone or a moved lamp still lets go)
-  restirSampleHue: boolean;    // A/B: shade every traced sample in its OWN light's hue (the first cut — a red / blue per-pixel mosaic under two overlapping panels of different colours) instead of the
-                               // class's believed-visible unshadowed mix at the pixel (restir.wgsl BELIEFS: per-tile lit / dark verdicts from the tile's own rays + the pixel's darkSlot)
   restirKnownDark: boolean;    // the lights an 8×8 tile's own rays found dark everywhere last frame leave its fresh draw (known dark like a reach-masked light: no ray, no coin-flip noise from a lamp
                                // behind the wall — the 'dark speckle' on the break-room lino); false = A/B the unbiased first-cut draw over every live light
   restirAudit: number;         // 0‥1: the share of a tile's frames (spread over every 64, staggered across tiles) on which ALL its lanes spend one extra ray re-testing a tile-dark light (votes only) —
@@ -172,17 +155,15 @@ export interface RenderSettings {
   restirMotion: number;        // MOTION (lane fix/direct-motion, docs/internal/direct-motion.md; restir.wgsl header MOTION): the temporal reuse under a MOVING camera, as a bitmask — 1 = STOCHASTIC-BILINEAR
                                // reservoir reprojection (one of the four texels round the reprojected point, drawn by bilinear weight, validated as ever: lineages follow the surface and diffuse instead of
                                // sliding as a sheet under a sub-pixel pan), 2 = MOTION-SCALED CONFIDENCE (the M cap whole under restirMotionV px a frame of the pixel's own motion, × restirMotionMin past 1.6 × that: a panning pixel leans on fresh candidates), 4 =
-                               // spatial reuse wherever the pixel moves more than restirMotionPx; 0 = the estimator's program byte for byte (passes.ts compiles restir.wgsl twice behind const RESTIR_MOTION;
-                               // ?norestirmotion). At rest all three are inert by construction (motion 0)
+                               // spatial reuse wherever the pixel moves more than restirMotionPx; 0 = none of them (?norestirmotion). They are bits of the estimator's uniform, raised on
+                               // the frames the camera moved: a still camera's frame carries none and does none of their work
   restirMotionV: number;       // (2): screen motion in px a frame AT 1000 INTERNAL ROWS (scaled to the target) under which the history keeps its full confidence (1.1 — measured: at high a 0.8-px pan
                                // wants the whole memory, a 1.4–2-px walking pan about two candidates of it; docs/internal/direct-motion.md §2); the cut ramps to the floor by 1.6 × this
   restirMotionMin: number;     // (2)'s floor as a fraction of the M cap (0.1 = a 2-candidate memory at cap 20 however fast the pan)
   restirMotionPx: number;      // (4)'s threshold: screen motion in px a frame AT 1000 INTERNAL ROWS (scaled like restirMotionV) past which the spatial taps run at the pixel (0.5)
   restirMotionTaps: number;    // (4)'s tap count at such a pixel when above the tier's restirSpatial (0‥8; 0 = the tier's own k) — wider spatial reuse only where the history was cut
-  restirMotionStatic: boolean; // run the twin program under a STILL camera too (object motion — a walking man's own pixels — then gets the levers; +0.2 ms direct at high for the bigger kernel); false = a still camera
-                               // dispatches main's program, so at rest the pass is main's byte for byte and costs the same
-  restirMotionDither: boolean; // (1)'s pick: false = a per-pixel bilinear draw among the four texels (lineages diffuse; neighbours may adopt one parent and coalesce), true = ONE global sub-pixel offset a frame
-                               // (an R2 sequence: a bijective shift whose average over frames is the true flow — nothing duplicated, the pattern registered to ± ½ px)
+  restirMotionStatic: boolean; // raise the motion bits under a STILL camera too (object motion — a walking man's own pixels — then gets the levers; measured +0.2 ms direct at high); false = a still camera's
+                               // frame carries none
   // direct light's shadow denoise knobs (render/denoise.ts, the shadow client)
   directHistory: boolean;      // the shadow client's temporal reuse (off = history-free shadows, for inspection). A weight until 2026-11-07, when the estimator that blended by it went
   directBlurCap: number;       // max penumbra filter radius in px
@@ -190,17 +171,6 @@ export interface RenderSettings {
   flashlightRadius: number;    // emitter radius used for torches / the rail light (m): a real bezel is ~0.015-0.02; larger = softer torch shadows
   lightReach: boolean;         // direct pass + secondary vertices: per-light CPU reach masks over the level grid (FrameFlags.ReachMask; reach.ts) — a walled-off light never competes for a pixel's leader slots
   giFireflyK: number;          // final gather: each ray's radiance is bounded by giFireflyK × what the radiance cache says the shading point plausibly receives (÷π) — outlier rejection against the LOCAL light field instead of a global 24, so a torch hotspot on a wall cannot boil the bounce round it; 0 = off (the old absolute clamp only). A one-sided clamp, so the presets set it like a trade-off (ui/quality.ts: 4 on high‥verylow, 0 on ultra)
-  tileCull: boolean;           // direct pass: each 8x8 tile scores only the lights that can reach its bounds (lossless; FrameFlags.TileCull) — off = every pixel scores every light, for A/B
-  softTileSkip: boolean;       // penumbra filter: 8x8 tiles provably out of reach of every blur hint skip each à-trous step outright (lossless; FrameFlags.SoftTileSkip) — off = every pixel decides for itself, for A/B
-  gridSkip: boolean;           // every traced ray (traceClosest / occluded / occludedT): the DDA runs past cells the grid build proved empty without loading them — one Chebyshev-distance byte per cell (lossless; FrameFlags.GridSkip) — off = a load pair per cell as before, for A/B
-  gridYCull: boolean;          // every traced ray: cells and boxes (and the once-per-ray globals) whose stored height band the remaining stretch of the ray cannot reach are not slab-tested (per-cell 24-slice occupancy + per-item quantised extent + per-global extent; the argument is above traceClosest in common.wgsl) (lossless; FrameFlags.GridYCull) — off = every registered box is tested, for A/B
-  axisBoxFast: boolean;        // slab test: boxes with yaw exactly 0 (two thirds of the grid items, every global) skip the rotation into the local frame and reuse the ray's inverse direction instead of three divisions — the arithmetic is provably the same bits (isectBox in common.wgsl) (lossless; FrameFlags.AxisBox) — off = always rotate, for A/B
-  gridSlabs: boolean;          // every traced ray: the huge once-per-ray "global" slabs (ground, carpet base, floor finishes, ceiling) are skipped unless the ray segment's bounds meet theirs on all three axes (5 mm proud) instead of on height alone (4 cm) — a ray lifted off the floor stops testing four floors — and each cell's height span is judged 3.5 cm tighter at both ends, so a ray no longer re-tests the surface it just left (argument above traceClosest in common.wgsl; tools/qa/grid-globals.ts counts it) (lossless; FrameFlags.GridSlabs) — off = the height cull as it was, for A/B
-  /** the final gather's rays drawn from tile-coherent STRATA instead of iid (fgather.wgsl cosineDirK — ported from exp/trace-perf E8, docs/internal/trace-perf.md §2.10; passes.gatherStrata picks the second
-   *  pipeline pair, compiled behind `const GATHER_STRATA = true`): UNBIASED stratified directions — the same expectation, temporal noise equal or lower, gather −13‥16 % at high (−0.8 ms at ultra) because
-   *  a tile's k-th rays share a quarter of direction space and walk the grid coherently. NOT hash-identical to off by nature (a different sample pattern), so it defaults off: the maintainer's call.
-   *  Off = the gather module exactly as it was. `?gatherStrata`, `__gs.on`, Tab ▸ Indirect light. */
-  gatherStrata: boolean;
   // ---- LOSSY trade-offs (all default off; each independently switchable at runtime for A/B — off is exactly the untouched path) ----
   gatherThird: boolean;        // final gather (rays, temporal, à-trous) at 1/3 resolution instead of 1/2; the composite's joint-bilateral upsample follows the divisor (frame.lossyCfg.x; targets are recreated on change)
   rcHalfRate: boolean;         // radiance-cascade cache at half rate: upper cascades on even frames, c0 + dice bake on odd ones (rc.halfRate); the dice everyone reads is at most a frame older
@@ -305,8 +275,6 @@ export interface RenderSettings {
                                // little darker, off the level's traffic map: patrol routes + door thresholds), grime where the mop does not reach (floor-wall edges), scuffed skirting, dust on top
                                // faces above eye level (rougher, greyer), edge wear on metal (brighter bare metal within 2 cm of an edge). No image textures, no albedo noise. 0 = the g-buffer exactly
                                // as it was; default 0.35 ('lived-in'); Tab ▸ Materials
-  // ---- RENDERER V3 PHASE 5 — the ULTRA-only extras (docs/internal/p5-ultra.md). Each behind its own switch; every switch off = every pass byte for byte as it was (frame.p5Cfg all zero); the ultra
-  // preset turns them on, every other preset leaves them off (quality.ts Preset.p5). ----
   // ---- MARKINGS (scene/markings.ts, shaders/markings.wgsl; docs/review/legibility.html): pixel-art signifiers ON box faces — key caps, packing tape + glyphs on cartons, drawer seams, the vending
   // product window, text bars, LEDs — flat colour per world-space texel from a ≤ 3-colour palette, AA only at texel edges, minified to their mean under a pixel a texel; written into the g-buffer's
   // albedo / roughness, their emission added in composite and at reflection hits, their area average folded into the secondary rays' albedo, an emissive marking registered as a real area light ----
@@ -317,28 +285,10 @@ export interface RenderSettings {
   markingReflect: boolean;     // markings are evaluated at REFLECTION hits (reflect.wgsl shadeReflHit: the vending window in the lino) — off = the hit's plain secondary albedo / no emission
   markingReflPattern: boolean; // the analytic highlight of a marking's light is textured with the marking's pattern at the mirror point (reflect.wgsl rtGlints → markings.wgsl markPatternAtMirror); off = the uniform rectangle (A/B only: the sign of frame.markCfg.w)
   markingReflCone: number;     // × the lobe's α added to the ray-cone growth that band-limits a marking at a TRACED reflection hit (0 = the pixel's own cone only — the ray distribution + the specular denoiser realise the lobe; 2 = the whole lobe again = the double blur that erased the vending cans in the lino; default 0.25 trades a little bias for 1-ray noise)
-  rtMeshHits: boolean;         // reflections see characters as their skinned MESH (reflect_p5.wgsl: a closest-hit walk of the mesh-shadow trees — render/meshShadows.ts, refit under settings.meshShadows — instead of the
-                               // 15 round-cone proxies; the proxy path when meshShadows is off or unavailable). Off = traceClosest's round cones exactly as before
-  rtHitReuse: boolean;         // reflections: the second VNDF ray takes the antithetic azimuth of the first (the pair straddles the lobe), and each hit's LIGHTING (albedo/π × direct + bounce) is blended with last frame's
-                               // record at this texel when the hit points match (a path-space history keyed on the hit, not the pixel — the one-shadow-ray light pick at an off-screen hit stops flickering
-                               // a rough mirror); off = every ray shaded fresh, the R2 pair as before
+  rtMeshHits: boolean;         // ALWAYS FALSE: ultra's mesh hits in reflections went 2026-11-07. The field stays because game/game.ts reads it; it goes with that read
   // ---- SDF CHARACTER RIG (render/sdfrig.ts fits it, shaders/sdfrig.wgsl traces it, docs/internal/sdf-characters.md): every mannequin's 15 shadow / reflection proxies ARE round cones with radii
-  // least-squares fitted to the mesh — unconditionally, at every tier, once a fit is attached (Engine.setRigFit; BoxWorld.upload packs it into the frame's proxy list). What stays switchable is the two
-  // extras below, both rows (no preset touches them; ?sdfsmooth / ?charsoft set them from boot): frame.rigCfg bits 2 and 4/8/16/32, all 0 = the plain round-cone loops everywhere. ----
-  sdfRigSmooth: boolean;       // (ii) the reflection pass's closest character hit is the sphere-traced SMOOTH UNION of his cones (polynomial smin, a blend radius per joint) with the field's gradient as the normal — a mannequin
-                               // in the lino instead of sausage links; dispatches the reflect_p5.wgsl variant like the ultra mesh hits (which win when both are on)
-  sdfRigK: number;             // × the per-joint blend radii (render/sdfrig.ts RIG_K; 1 = as authored, 0 = the plain union of the cones) — also pads the cull spheres by the blend's bulge
-  sdfRigSteps: number;         // closest-hit sphere-trace steps (24)
-  charSoftShadow: boolean;     // (iii) EXPERIMENT: in the direct estimators (restir.wgsl AND direct.wgsl, through direct_common shadowSample) a shadow ray's CHARACTER visibility is the SDF soft-shadow query toward the emitter's
-                               // centre with the emitter's angular radius as the cone — deterministic per pixel per light, so a walking man's penumbra needs no history to converge — multiplied with the
-                               // ray-traced BOX visibility (still stochastic); the mesh-shadow / round-cone any-hit is then not asked about characters in that pass
-  charSoftAnalytic: boolean;   // (iii)'s form: true = the per-cone closest-approach clearance (no march, exact for a capsule, ~15 closest-point solves per man crossed); false = the sphere-marched field (smooth union, charSoftSteps)
-  charSoftSteps: number;       // the march's step budget (20)
-  charSoftK: number;           // × every light's angular radius in the query (1 = physical; 2 = penumbrae twice as wide)
-  charSoftMinDeg: number;      // the smallest half-angle (degrees) a light is given — a bare 1.5 cm torch bezel a metre off would otherwise draw a razor edge the raster aliases (0.35°)
-  charSoftSmooth: boolean;     // the march folds the cones with the smooth union (else their plain min — cheaper, the blend only shows at joints)
-  charSoftBroad: boolean;      // the soft query for BROAD-class emitters too (ceiling panels, area lights); false = the SHARP class only (torches, lamps, the moon) — a panel's character shadow is all
-                               // penumbra already (nothing to trail) and its disc dwarfs a limb, where the one-strip-per-man model under-counts a whole body's cover
+  // least-squares fitted to the mesh — unconditionally, at every tier, once a fit is attached (Engine.setRigFit; BoxWorld.upload packs it into the frame's proxy list). ----
+  sdfRigSmooth: boolean;       // ALWAYS FALSE: the smooth-union closest hit in reflections went 2026-11-07 with the reflection twin that traced it. Kept for game/game.ts's read, like rtMeshHits
   charSelfShadow: boolean;     // CHARACTER SELF-SHADOW (frame.rigCfg bit 64, default ON at every tier; ?noselfshadow / Tab ▸ Renderer — SDF character rig): the direct estimators' shadow rays from a man's own pixels
                                // test HIS OWN body too (common.wgsl selfShadowT: his round cones, or his mesh under meshShadows, from an origin lifted off the surface — the plain owner skip made every
                                // up-facing sliver of him glow under a light his trunk stands in front of: docs/internal/render-defects-0812.md §1); false = the owner skip whole, the frame as it was
@@ -349,11 +299,10 @@ export const defaultSettings = (): RenderSettings => ({
   taau: true, taauAlpha: 0.1, taauClipGamma: 1.0, taauPhases: 8, taauSharpen: 0.25, taauReactive: 0.8, taauKernel: 6.0, taauVelK: 1.0, taauLightJump: 1.0, taauMotionAlpha: 0.4, taauMotionClip: 0, taauSharpenMotion: 0.3, taauHistSharp: 0,   // TAAU on by default (?notaau boots the old FXAA chain); the presets place phases / gamma / sharpen per tier (ui/quality.ts)
   sharpDirect: false,   // sharp direct OFF by default (the presets place it per tier — ui/quality.ts Preset.iq; ?sharp / ?nosharp force it from boot; Tab ▸ Frame; live only under TAAU below scale 1.0 with no debug view — engine.resize)
   sharpSliver: 1, sharpSliverCap: 24, sharpDiag: 0, gbaaClamp: true, heldRays: 6, restirHueSplit: true, portalHole: true, portalWorth: 0, heldAdaptive: false, restirStableRetrace: false, restirDimClass: 0,   // direct-quality lane: same-surface-only slivers with an output-res ray, GBAA's same-surface clamp, the hybrid estimator at high's K 6 (the presets tier it; 0 / false / 0 = each path as it was)
-  sharpDecouple: false, sharpEdgeRays: false, sharpEdgeSpread: 0.3, sharpEdgeHintPx: 2.5, sharpPlaneK: 0.01,   // edge rays OFF by default: they take a keyboard's contact shadow to 1.6 px (crisper than the old renderer's 7) but a binary ray cannot draw the soft penumbra a hard one overlaps, and the fired region's rim shows the estimator's own 1–2 % bias as a faint line — docs/internal/sharp-direct.md §2 (E); Tab ▸ Frame / __sharp.set({edgeRays:true}) to judge
+  sharpDecouple: false, sharpPlaneK: 0.01,
   // (the denoiser's iterations / caps below are 'high's until a preset places them)
   dnShadowIters: 3, dnShadowCap: 12, dnShadowClampK: 1.25, dnShadowSigmaL: 4, dnShadowPrior: true, dnShadowLitAlike: true, dnShadowOccl: true, dnShadowMoveCap: 3, dnShadowMoveThresh: 0.04, dnShadowJump: 0.5,
   dnGiIters: 4, dnGiCap: 24, dnGiClampK: 1.0, dnGiSigmaL: 4, dnGiFast: 3, dnGiFirefly: 0,   // (k 1.0 / fast 3: the sweep in docs/internal/p3-denoise.md §3 — 10 % of a lights-off in 16 frames vs legacy's 14, at half its torch-hotspot boil)
-  giFullRes: false, giFullIters: 4,   // GI in motion: both OFF by default until a preset places them (ui/quality.ts Preset.dn.giFull); Tab ▸ Indirect light rows
   dnGiClampCut: 0, dnGiYoungWiden: 0,                                                     // (D): off until measured (Tab ▸ Denoiser rows)
   ladderClimb: true, capClimb: false, ladderAim: 60, ladderPaced: true, ladderHeld: true, ladderShed: true, oneCacheGrid: true, oneSmokeSolve: true, fireSmokeShed: true, fireSmoke: true, smokeKeep: 1,   // the ladder spends measured headroom on scale + divisors by default (it only ever acts on presented frames with GPU timings that show the room); the output-cap climb is opt-in (Tab ▸ Frame)
   dnSpecIters: 1, dnSpecCap: 16, dnSpecClampK: 1.0, dnSpecSigmaL: 2, dnSpecRough: 0.08,
@@ -363,18 +312,11 @@ export const defaultSettings = (): RenderSettings => ({
   skyZenith: [0.015, 0.025, 0.05], skyHorizon: [0.04, 0.05, 0.08],
   capColor: [0.010, 0.012, 0.016, 0.3],
   nvAmount: 0, nvGain: 475, hitFlash: 0,   // nvGain = intensifier tube gain (log curve), not a linear multiplier
-  restirRays: 4, restirSpatial: 3, restirHistory: 20, restirRadius: 16, restirGradient: true, restirGradK: 5, restirYoung: 8, restirSpatialAll: false, restirCoherent: false, restirSampleHue: false, restirRatioRaw: false, restirKnownDark: true, restirAudit: 0.25, restirPermute: false, restirPenCap: 0, restirPenRays: false,   // ReSTIR DI on; the presets place rays / taps / cap per tier (quality.ts), these are 'high'
-  restirMotion: 6, restirMotionV: 1.1, restirMotionMin: 0.35, restirMotionPx: 0.5, restirMotionDither: false, restirMotionTaps: 6, restirMotionStatic: false,   // MOTION (direct-motion lane, docs/internal/direct-motion.md; these are HIGH's — floor .35 / 6 taps since the 08-12 SPRINT take: at three times the walking pan the .1 floor made the light's edge noisier than no cut at all, .35 + taps sits between; the walking pan keeps most of its win): 6 = the motion-scaled confidence (2) + wider spatial reuse under motion (4) — measured at high: the light's edge under a walking pan −43 % flow, the lit floor −27 %, the dark floor −7 % (−46 / −32 with 6 taps), a slow pan and the still picture unchanged, main's 1–3.7 % motion darkening gone; the stochastic reprojection (1) stays an A/B row (a NEGATIVE at slow pans: +12‥34 %); the presets tier Min / Taps; 0 (?norestirmotion) = the estimator's program byte for byte
+  restirRays: 4, restirSpatial: 3, restirHistory: 20, restirRadius: 16, restirGradient: true, restirGradK: 5, restirYoung: 8, restirSpatialAll: false, restirKnownDark: true, restirAudit: 0.25, restirPenCap: 0, restirPenRays: false,   // ReSTIR DI on; the presets place rays / taps / cap per tier (quality.ts), these are 'high'
+  restirMotion: 6, restirMotionV: 1.1, restirMotionMin: 0.35, restirMotionPx: 0.5, restirMotionTaps: 6, restirMotionStatic: false,   // MOTION (direct-motion lane, docs/internal/direct-motion.md; these are HIGH's — floor .35 / 6 taps since the 08-12 SPRINT take: at three times the walking pan the .1 floor made the light's edge noisier than no cut at all, .35 + taps sits between; the walking pan keeps most of its win): 6 = the motion-scaled confidence (2) + wider spatial reuse under motion (4) — measured at high: the light's edge under a walking pan −43 % flow, the lit floor −27 %, the dark floor −7 % (−46 / −32 with 6 taps), a slow pan and the still picture unchanged, main's 1–3.7 % motion darkening gone; the stochastic reprojection (1) stays an A/B row (a NEGATIVE at slow pans: +12‥34 %); the presets tier Min / Taps; 0 (?norestirmotion) = the estimator's program byte for byte
   directHistory: true, directBlurCap: 10, secMinE: 0.006, flashlightRadius: 0.07,
   lightReach: true,
   giFireflyK: 4,
-  tileCull: true,              // proven exact: 4 views × final/direct/indirect bit-identical off vs on under the deterministic capture protocol (08-06); toggle stays in the Direct light panel
-  softTileSkip: true,          // exact by construction (argument in softblur.wgsl); A/B via the Direct light panel toggle / frame flag 8192
-  gridSkip: true,              // exact by construction (one DDA iteration per cell as before, only the loads of provably empty cells go); A/B via the Direct light panel toggle / frame flag 131072
-  gridYCull: true,             // exact under the grid's own registration invariant (argument above traceClosest in common.wgsl); A/B via the Direct light panel toggle / frame flag 262144
-  axisBoxFast: true,           // exact by IEEE identities (1·x − 0·z = x); A/B via the Direct light panel toggle / frame flag 524288
-  gridSlabs: true,             // exact with a 5 mm margin over < 0.4 mm of float differences (argument above traceClosest); −40 % slab tests on rays leaving the floor per tools/qa/grid-globals.ts; A/B via the Direct light panel toggle / frame flag 1048576
-  gatherStrata: true,          // ON since 08-12 (the maintainer: 'gatherStrata is looking great!'): unbiased, −13‥16 % gather, a different sample pattern (not hash-identical to the iid gather — ?nogatherstrata / __gs.on = false for the module exactly as it was) / Tab ▸ Indirect light for A/B
   gatherThird: false, rcHalfRate: false, volQuarter: false,
   rcAmortize: true, rcPeriods: [1, 1, 1, 1],   // the schedule is on but traces every level whole until a preset (quality.ts) places periods — bit-identical to the original dispatch meanwhile
   rcChunks: [1, 1, 2, 8],                        // c2's items over 2 workgroups per probe, c3's over 8: the cascades 1.77 → 1.05 ms on the M4 Max with the same output bits (docs/internal/p0a-cascades.md §6); [1,1,1,1] = the original one-workgroup-per-probe dispatch
@@ -402,8 +344,7 @@ export const defaultSettings = (): RenderSettings => ({
   glassRefract: true, glassIor: 1.5,   // refraction through the glass boxes: ON (?norefract boots without it; Tab ▸ Renderer — glass; __glass.refract / .ior)
   rtReflect: false, rtReflectDiv: 2, rtRays: 1, rtMaxRough: 0.45, rtAniso: 0.7, wetBreakup: 1, beamReflect: true, beamAir: true, wetMirror: true, beamAirK: 1, rtStrength: 1, rtGlints: 1, rtAtrous: 3, rtHistory: 32,   // RT reflections: OFF here — the presets switch it on with their own divisor / rays / cutoff (quality.ts); Tab ▸ Materials
   detail: 0.35,                // the detail layer: 'lived-in' (Tab ▸ Materials; ?detail=0 boots without it — with ?nortreflect the untouched frame)
-     // phase 5: OFF here — the ultra preset switches the three on (quality.ts Preset.p5); Tab ▸ Indirect light / Materials rows
-  rtMeshHits: false, rtHitReuse: false,
+  rtMeshHits: false,
   markings: true, markingTexel: 0.025, markingContrast: 1, markingEmissive: 1, markingReflect: true, markingReflPattern: true, markingReflCone: 0.25,   // markings ON (?nomarkings boots without them; Tab ▸ Renderer — markings)
-  sdfRigSmooth: false, sdfRigK: 1, sdfRigSteps: 24, charSoftShadow: false, charSoftAnalytic: true, charSoftSteps: 20, charSoftK: 1, charSoftMinDeg: 0.35, charSoftSmooth: false, charSoftBroad: false, charSelfShadow: true,   // the SDF character rig's two extras: OFF (self-shadow: ON, all tiers) (rows on Tab ▸ Renderer — SDF character rig; ?sdfsmooth / ?charsoft from boot; no preset touches them) — the round cones themselves have no switch
+  sdfRigSmooth: false, charSelfShadow: true,   // the SDF character rig's two extras: OFF (self-shadow: ON, all tiers) (a row on Tab ▸ Renderer — SDF character rig; no preset touches them) — the round cones themselves have no switch
 });

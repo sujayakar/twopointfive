@@ -175,8 +175,8 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     {
         let e = crate::rails::rails_eye(g);
         let s = crate::rails::rails_step_eye(g);
-        let first = s.is_some() && crate::rails::rails_eye_first(g);
-        let own = (e.is_some() || s.is_some()) && crate::rails::rails_eye_view(g);
+        let first = s.is_some();
+        let own = e.is_some() || s.is_some();
         if own { pic_own = Some(eyes.clone()); view = Some(Vec::new()); }
         let pic: &mut Vec<crate::fogofwar::FogEye> = match pic_own.as_mut() { Some(p) => p, None => &mut eyes };
         if let (Some(s), true) = (s, first) {
@@ -646,7 +646,7 @@ pub fn fog_of_war_sight_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool
 
 /// The picture's half of FOG.thin: the row, and which statics are marked, as bits by box index. Filled every frame: a breached wall's studs come and go. (FogOfWar.thinBlock)
 pub fn fog_of_war_thin_block(g: &mut crate::game::Game) {
-    g.fog_of_war.frame.thin = g.k.fog.thin;
+    g.fog_of_war.frame.thin = true;
     if !g.fog_of_war.frame.thin { return; }
     for w in g.fog_of_war.frame.thin_bits.iter_mut() { *w = 0; }
     g.fog_of_war.frame.thin_serial = g.engine.world.geom_serial;

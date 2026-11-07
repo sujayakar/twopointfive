@@ -40,14 +40,13 @@ const { wgslDecls } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof impo
 
 /** KB of pasted WGSL a kernel may not pass, by `module / entry` (a cut-set module's `Cut` off its label), the first row that matches; the last is everyone else's */
 const BUDGET: [RegExp, number][] = [
-  [/^gatherSplitS? \/ trace$/, 252],   // (the gather is two programs, render/gatherSplit.ts: its rays, then the light at what they hit)
-  [/^gatherSplit \/ light$/, 116],
+  [/^gatherSplit \/ trace$/, 252],   // (the gather is two programs, render/gatherSplit.ts: its rays, then the light at what they hit)
+  [/^gatherSplit \/ light$/, 58],   // (113 before the gather took the reflections' one-loop writing of the light loop, 2026-11-07)
   [/^composite(R|S|SR)? \/ (fs|cs)$/, 403],
   [/^volumetricsDust \/ main$/, 433],
   [/^volumetricsF? \/ main$/, 382],
   [/^particles \/ update$/, 356],
-  [/^restirM? \/ main$/, 336],   // (295 + an opening's light in this writing, 38 KB: as the table above)
-  [/^reflectP5 \/ main$/, 253],
+  [/^restir \/ main$/, 336],   // (295 + an opening's light in this writing, 38 KB: as the table above)
   [/^froxel \/ injectJ$/, 210],
   [/^reflect \/ main$/, 204],
   [/^gbuffer(Cut)? \/ fsBox(Cut)?$/, 302],   // (… and its twin with the cut rule, the same text and the cut's test: 268 where fsBox is 267. It had no row, so the look's page read red against 200)
@@ -142,9 +141,9 @@ for (const a of asked) for (const s of a.stages) {
 }
 const list = [...rows.values()].sort((a, b) => b.pasted - a.pasted || (`${a.module} ${a.entry} ${a.set}` < `${b.module} ${b.entry} ${b.set}` ? -1 : 1));
 check(lost.length === 0, `every pipeline's module and entry point were found in the recorded texts${lost.length ? ` — not so: ${lost.slice(0, 6).join(', ')}` : ''}`);
-{ // (a part of the page that fell out of this boot would leave the budget green on the rest: the card's own count is 105 pipelines, the cut set's 24)
+{ // (a part of the page that fell out of this boot would leave the budget green on the rest: the card's own count is 104 pipelines, the cut set's 23)
   const nBoot = asked.filter(a => a.set === 'boot').length, nCut = asked.length - nBoot;
-  check(mods.length >= 60 && nBoot >= 105 && nCut >= 24, `the recording is a whole boot: ${mods.length} modules (60 at least), ${nBoot} pipelines of the boot's set (105 at least), ${nCut} of the cut set's (24 at least)`); }
+  check(mods.length >= 54 && nBoot >= 102 && nCut >= 21, `the recording is a whole boot: ${mods.length} modules (54 at least), ${nBoot} pipelines of the boot's set (102 at least), ${nCut} of the cut set's (21 at least)`); }
 
 const kb = (n: number) => (n / 1024).toFixed(n < 10240 ? 1 : 0);
 /** the functions pasted more than once into a kernel, by the text their copies come to */

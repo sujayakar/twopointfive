@@ -1,4 +1,4 @@
-// Tile mask for the shadow client's pass-through (render/denoise.ts, shaders/denoise.wgsl; FLAG_SOFT_TILESKIP). One tiny dispatch a frame on the client's own
+// Tile mask for the shadow client's pass-through (render/denoise.ts, shaders/denoise.wgsl; the tile pass-through). One tiny dispatch a frame on the client's own
 // 8x8 tile grid, between its pack (which writes the per-tile hint flag: does any pixel of the tile carry a penumbra hint in either emitter class?) and its
 // à-trous chain:
 //   `tileDistances` — one invocation per tile: Chebyshev distance d, in tiles, to the nearest marked tile (0 = itself), scanning SCAN_R =

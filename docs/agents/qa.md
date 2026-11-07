@@ -51,6 +51,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   not (five today: DESTRUCTION and LIVED by a recording's env, LOOK and PLAN picture only, RECAP reads only); knobs-check is red on a written table that is neither — and on a table `journal.ts` asks a FILE for (`k.tables.X`, the rules that put a key off for a recording from before it) that no recording carries: such a rule reads every file as one from before the key (PAIR's four keys and ROOMFIGHT.doorEars stood so until 10-22).
 
 <!-- was CLAUDE.md lines 319–323 -->
+- **THE GATE BEFORE A BUILD IS NAMED IS UNDER FIVE MINUTES (2026-11-07; the maintainer: "can we slim down the gate? should be no more than 15m", "in
+  general we should try to move fast at this point (maybe <5m for gate checks) and then have async checks that we fix forward").** A change is sent as
+  single-parent commit(s) cut on the named head, and its sender runs the same reads first, from the repository's root: (1) THE SCAN: the diff against
+  the named head read for anything that must not be public, every binary in the diff read with `strings` for machine paths, ids, names and hosts, no registry address in a lock file; (2) THE BAR:
+  `tsc --noEmit -p tsconfig.json`, `tsc --noEmit -p tools/qa/tsconfig.json`, `bun run tools/qa/claude-md-check.ts`, `bun run tools/qa/knobs-check.ts`,
+  `bun run build`, all exit 0; (3) DETERMINISM, SHORT: `bun run tools/blitz/thrice.ts` (three games of one process, one digest at the start and at each of
+  40 seconds); (4) ONE QUICK MISSION: `PT_DIGEST=1 bun run tools/qa/playthrough.ts --scn night-breach --seeds 1 --json out.json` ends with no error or
+  panic and its end, second and men up are the named head's, or the sender names the move. ONLY a change to what the page does at boot (the host, the
+  loader, `src/main.ts`) adds, up to a ceiling of fifteen minutes, one mission stood and played 45 s under real keys in headless Chromium
+  (`PORT=<port> node tools/blitz/page-walk.cjs`). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
+  sender. A read with a memory kill beside it, a time cap or a lost browser is spoiled and is read again, not called. EVERYTHING ELSE IS ASYNC, after the
+  name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the 84 mission tallies
+  (seeds 1 to 4) against the named head, the check families read as a list of reds by kind (not a bar), tour, soak, the two-seat run and the co-op
+  checks, rollback, a build of the Rust module compared with the checked-in one. What the short gate does not see: a page that does not boot (unless the
+  change is of the kind above), a rule that breaks on one die in ten, any mission but one, co-op, a family's red, timing, and a real GPU (no tool has
+  one: "never seen on a GPU" stays in every note).
 - **The gates.** `bun run tools/qa/missions-gate.ts` (`probes.ts missions-shipped`) plays every squad mission of the Missions list × 2 seeds to its end AS SHIPPED and is red on a run
   that throws or stalls (≈ 4 min at four jobs; not judged: who won); the QUIET rows (`QUIET_MISSIONS`) are played by `solo-night.ts`'s ghost on that tool's own stand, × 2 seeds — for
   them the gate holds 'starts and runs to the debrief', not 'as shipped'. `tools/qa/expected-red.ts` = the reds somebody has explained, by probe name; probes.ts prints its reds against it
@@ -299,6 +315,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the door tools' owner's to say which line is promised).
   `orderui-door` (11-06): read, NOT mended, its row put right. One blue man's fall-in mark is dealt 0.31 m from Sam on the page's stand; he stands
   0.68 m short of it, called arrived, for as long as he is watched (not a settle). Could be real: the squad's owner's.
+  SINCE THE TYPESCRIPT TICK WAS DELETED (2026-11-07) A TOOL WITH NO WORD IS FOLDED: it stands the Rust game (tools/blitz/word.ts, the default word),
+  which has the settled rows as constants, so `foldWanted()` is true with nothing in front and the fold is laid as the harness loads on the page's
+  stand. WHERE THE PARAGRAPH BELOW SAYS OTHERWISE IT IS OF BEFORE THE DELETION ('NOT THE DEFAULT YET', 'a run without the fold', (1)'s 'plain'):
+  not rewritten here. `fold-check` lines (1), (7) and (8) had asked that no word means no fold and were red on every tree since the deletion. They
+  pin the new state now: (1) reads each settled row's OWN value with the laid fold put off (`QA_FOLD_FOR=0`) and asks that the fold laid every one
+  and each still answers through it after the stand; (7) that a run with no word says the same notice and the same probe's line as one under
+  `QA_FOLD=1`; (8) that `foldWanted` is true for nothing and for `QA_FOLD=0`. A default word that stops folding turns them red.
+  WHAT THE FOLD IS FOR NOW: it is the harness's hold of the settled rows (the page's is `src/host/rustgame.ts rustSettledHold`), and its line a
+  probe names every check that still writes a settled row: the list to restage or delete from. `QA_FOLD_FOR=0` / `foldFor(false)` stays the one
+  way a tool reads a settled row's own value.
+  THE HOLDS TABLE IS TWO ROWS (2026-11-07; `tools/qa/holds.ts`). It held rules OFF for probes written for an older model. Fourteen of its sixteen
+  rows held only settled rows: on the page's stand every such hold was refused under the fold (101 a run of `holds`, which was red in all-quick by
+  it) and the probe ran on the page's model whatever the table said; on the old stand those rows are off already and the hold did nothing. Those
+  fourteen are out, and no run changed by it. LEFT: `CARDS_AS_THEY_WERE` (`BIGSLOT.on`, a run-time row) and `PACE_AS_IT_WAS` (`TEAMPACE.pacing`, an
+  open decision: that hold is LIVE, `leafstall` and `noshove` run with the pacing off). THE RESTAGING LIST IS ALL 119 NAMES the table had, the 20 kit
+  probes still in it too (they were owed the deal and the gun rows as well, and now run with the big slot off and those on: a card neither stand
+  has): `git show cd215879:tools/qa/holds.ts` says who was owed what, and `tools/blitz/qa-census.py`, which read the table as data, wants that
+  version. Where an area note names a row that left (`GRAB_ROW_AS_IT_WAS`, `DEAL_AS_IT_WAS` and the rest; `holdOff(heldList(…))` in
+  `lesson-check.ts`, gone), the notes were not swept. `holds-check` (3) asks 'the name's other words held all the same' only where a probe is owed
+  two rows, and none is now; (5) reads the mains of the files that still hold a table probe, 2 of 5 where it read 24 of 41: a main of the other
+  files that stops running its parts through `asProbe` is red nowhere.
+  EVERY RUN OF A STAND AS IT OPENS IS READ AGAINST THE LIST OF EXPECTED REDS, FOLDED OR NOT (2026-11-07; `probes.ts`). The runner had read a folded
+  probe's red against no row; since the deletion that was every probe of every run with no word, so nothing read the list on the named build:
+  no EXPECTED RED / NEW RED / GREEN AGAIN, and a break word's closing line could not say whether it bit (`holds-check` (9), red by it). The
+  exception is gone: the fold is how the page's stand IS. Two runs are still read against no row, as before: one started with a word of the stand by
+  hand, and one of a single case of a probe. BUT THE LIST'S ROWS ARE OF THE OTHER GAME: they were read on the TypeScript game with nothing folded,
+  and the closing table says so in a line under itself while that is so (`expected-red.ts LIST_READ_ON`; `gate.sh` carries it). Until the list is
+  run again on the Rust game, read it so: an EXPECTED RED may fail by another line than its row says (`noshove` does: its row is of a room keeper's
+  3 cm, the run fails 8 lines of 10 on refused stagings); a GREEN AGAIN may be a staging that was refused; a NEW RED is likely a staging debt of the
+  fold, not a fault of today; and a break word run on a probe that is red without it, with no row, closes with 'red with no row: the word's to
+  explain' whether the word bit or not. RUNNING THE LIST AGAIN ON THE RUST GAME, row by row, is the next piece of this work; `LIST_READ_ON` is set
+  to '' when it is done.
+  WHAT HAS NO JOB LEFT and is still in the tree: `QA_FOLD=1` itself on the page's stand; `QA_FOLD_ONLY` and the check-by-check start under
+  `TPS_GAME=table` (fold-check (10)), there being no unfolded game to stand a check on; `QA_VERDICTS` and the `plain` line (they need a run with no
+  fold); `heldList` (no caller). KNOWN AND NOT MENDED: an old-stand runner says 'NOT FOLDED' and takes `QA_FOLD` out of what its children inherit,
+  which no longer unfolds them: a page-stand arm it starts is folded, with no notice.
   THE SETTLED ROWS, FOLDED (11-06; `tools/qa/fold.ts`, the list `tools/qa/switches.json`, its maker `tools/qa/switch-list.ts`, the check
   `tools/qa/fold-check.ts` = `probes.ts fold`, in all-quick). WHY: the Rust game has every settled switch row as a constant (the page's branch
   translated, the other dropped), and of 255 probes that step a game in the gate's families 186 did so with a settled row pinned off its page
@@ -312,7 +364,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `{"fold":{"probe":…,"red":…,"refused":[{"row","value","writer","n"}],"lost":[…]}}`, from ONE speaker down a tree of processes (the runner's
   `run()`, or the fence `holds.ts asProbe` in a check file run alone); a child hands its count to that speaker, a process nobody reads for says
   its own on STDERR as it ends; what the harness refused as it loaded (a word given by hand) has a line of its own, `"outside"`. A folded
-  run's reds are NOT read against the list of expected reds (the runner says why: it is not the stand as it opens). `gate.sh` carries
+  run's reds WERE NOT read against the list of expected reds until 2026-11-07 (they are now: 'EVERY RUN OF A STAND', above). `gate.sh` carries
   the notice and how many lines had a refusal. `QA_VERDICTS=1` on a run without the fold prints `{"plain":{"probe":…,"red":…}}` a probe, to
   lay the two side by side. FOR ONE CHECK AT A TIME (asked by the Rust goal: its table stands some checks on the Rust game, which must be
   folded, and keeps the rest on the TypeScript tick exactly as with no word until they are restaged): `fold.ts foldFor(on)` puts the laid
@@ -324,14 +376,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the unfolded checks (a folded check does not have it, and that is not said); the notice on stderr says 'LAID AND OFF'. By hand, the
   runner's word `QA_FOLD_ONLY=<probe,probe…>` beside `QA_FOLD=1` folds the named probes alone (a probe's own name; one no probe of the
   run had is an error; a check file run alone does not read it). A run so mixed reads its unfolded reds against the list of expected
-  reds as ever and says 'the reds of folded probes … are read against no row' with their names (gate.sh carries that line). WHAT A REFUSED WRITE MEANS: the check's staging may not have formed. A check that pinned a neighbour off to get a
+  reds as ever and (until 2026-11-07) said 'the reds of folded probes … are read against no row' with their names; they are read against the list now. WHAT A REFUSED WRITE MEANS: the check's staging may not have formed. A check that pinned a neighbour off to get a
   fight, and counts what happened in that fight, can pass with nothing to count: green under the fold with a refused write is not a re-aimed
   check until its lines are read against the same run without the fold. WHAT IT CANNOT HOLD: a branch of a table replaced whole (the rows under
   it are plain until the next look, which lays them again and names them `lost`; the fence looks before and after it puts the tables back); a
-  row a module copied into a local before the fold was laid; a child killed before it ends hands over nothing. UNDER IT `holds` IS RED: every
+  row a module copied into a local before the fold was laid; a child killed before it ends hands over nothing. UNDER IT `holds` WAS RED (until the table lost its settled rows, 2026-11-07, above): every
   hold of `holds.ts` over a settled row is refused, which is the point; those holds go as their checks are re-aimed or deleted.
-  THE LIST: 992 rows, each `row`, `page` (its value on the page) and `kind`: 866 settled, 93 open decision (stays a switch), 33 player's or
-  run-time (stays a variable). It is WRITTEN from the port's switch list (project files, `rebuild/rust-sim/port/blitz/port-list.json`: the
+  THE LIST: 992 rows, each `row`, `page` (its value on the page) and `kind`: settled, open decision (stays a switch), player's or run-time
+  (stays a variable). THE COUNTS ARE THE FILE'S OWN (`counts` at its head) and move as rows are ruled: 866 / 85 / 41 on the morning of 2026-11-07,
+  with the port's ruling of the open rows about to settle more (project files `rebuild/rust-sim/port/cleanup/OPEN-ROWS-RULING.md`). Of the run-time
+  rows, eight were called open until 2026-11-07: Hard turns PRESSURE.on and DIGIN.on on, a quiet mission with a squad
+  turns on PAIRUP.on, PAIR.on, SNEAK.on and SPOTTED.on, WALLSNAP.press is an Options row, POSEMATH.singles is written inside the tick. It is WRITTEN from the port's switch list (project files, `rebuild/rust-sim/port/blitz/port-list.json`: the
   source; a row changes kind there): `bun run tools/qa/switch-list.ts make <that list>`, and `… same <that list>` says whether the two agree.
   A NEW RULE'S SWITCH joins by `bun run tools/qa/switch-list.ts new` (an open decision at its page value; needs no list from outside; `make`
   keeps such a row until the port's list has it): without it `fold` line (2) is red, since every true/false row of the tables must be on the
@@ -464,7 +519,7 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
 (+ since the rebuild, the squad game's: `__orders __roomclear __nightbreach __rescue __scenarios __picks __doortools __doors __doorblast __fight __wallcharge __glassbreak __director __pair __wounds __hour __fow __extra`)
 (+ the hot-swap hooks `__hotVol __hotRestir __hotFroxel __hotDenoise __hotReflect __hotGather`: recompile a pass from source WITH its real preludes — prefer them to `__wgsl` for the big kernels;
 `__hotCommon(src?, variant?)` swaps an edited common.wgsl / `TRACE_VARIANT` into EVERY tracing pipeline at once — the ray-traversal lab's hook, see the *Stratified gather directions + the trace lab* bullet)
-(+ URL flags `?sharp` / `?nosharp` / `?noiq` / `?gbaa` / `?nomv` from the image-quality program, `?sdfsmooth` / `?charsoft` / `?charsoftmarch` + `__rigTrace(rays)` from the SDF character rig),
+(+ URL flags `?sharp` / `?nosharp` / `?noiq` / `?gbaa` / `?nomv` from the image-quality program),
 `__runFrames(n, dt=1/60, keys=[], draw=true)` (fixed-step frames with synthetic keys held; `draw` false = only the burst's last step is drawn, the others pack the world as a draw would and go on — what a script on the software adapter wants, and NOT a check of the drawn-every-step path: the GPU's senses then answer once a burst), `__mouse(x, y, buttons?)`,
 `__click`, `__pauseLoop` (stop the rAF loop; step only via `__runFrames`), `__resetClock()`, `__shot(name, q, scale)`
 (JPEG to the shot server), `__panelShot(name, {frame?, quality?, scale?})` (the tweak PANEL (the debugger, on the backslash key: `player.md`, empty hands are a slot) is HTML, outside the frame `__shot` reads back: `#panel` rasterised through
@@ -1135,71 +1190,17 @@ but synthetic writes still work.
   `device.destroy()` puts no card up and prints no error; under `?gpuretry=0` the old one-line card. On the software adapter the loss is told by the browser's GPU side, minutes
   late behind a drawn frame: a check that waits a second for it passes "no card" without the loss ever having arrived). NOT FOUND: why the AMD machine failed. Nothing here has been run on one; the other line in its notes ("invalid: resource doesn't exist")
   is not a string of the page. What would find it: the card's new second line from that machine, its `chrome://gpu` text, and whether the title drew before the card.
-- **A gentle second try: a browser that loses its device while shaders compile compiles them one at a time from then on (2026-10-29, the AMD machine's first records).**
-  `src/gpu/device.ts GENTLE` (ON; `?gentle=0` = no note written or read, as it was; `?gentle=1` = this load is gentle; a `?pipequeue` word wins; the page's own, no stand
-  differs in it). WHAT THE RECORDS SHOWED (a Radeon RX 9070 XT, Windows, Chrome 156, 16 threads, the hosted build): three losses in a minute, all "A valid external Instance
-  reference no longer exists." with reason unknown: one 7.5 s into the boot's compiles with 17 of 105 in, one 8.1 s into a mission's eight with the five heaviest kernels
-  (`vol`, `restir`, `reflect`, `compositeSR`, `gatherTraceS`) and `particlesUpdate` still out, and after the third the browser gave no adapter and no WebGL (which is what
-  the "no webgpu adapter available" of 10-27 on that machine was: the browser's GPU side switched off after its process went down repeatedly). One load in between compiled all
-  105 in 10.2 s, so the same programs come through or do not. In hand each time: the burst the queue allows at the boot or under the rush, the threads less two (fourteen).
-  WHY the process goes is NOT known: its memory under fourteen big compiles, or the driver under several at once, are guesses. THE RULE: `onLost` writes
-  `localStorage['twopointsix.gentle']` ('count:when'; a machine key, on the settings sync's skip list) when a REAL loss comes while shaders compile (the boot's count
-  open, anything in hand or waiting, the later set out) on a page that retries (so never a benchmark, the kit picture or a page a script drives) and whose load was not
-  gentle already. A load that finds the note young enough turns the queue on wherever it is with ONE in flight at the boot, after it and under the rush (`gentleQueue`),
-  says so in a warning record (`gpu.gentle`, with `why`) and on the card of a further loss ("shaders compiled one at a time"). Young enough: ONE day after a first loss
-  (one loss a healthy machine had for its own reasons must not cost it a month of slow loads), THIRTY once the burst has lost the device again within 180 days. So that
-  machine pays one more lost load the day after its first, and is gentle for a month from then. `watchPipes` counts every `…Async` creation of the device as in hand
-  from the browser being given it to its answer (beneath the queue, so at a creation's turn), and the loss's error and fatal records carry `flying` (the labels in hand
-  when the device went, as up to three strings of 80 characters, `flying2` / `flying3`, and `flyingOf` the count; kept from the first rejection of the burst, since a
-  lost device rejects what is in flight before it says it is lost and the queue then hands it what waited) and `gentle`. So a gentle load that dies too names the one
-  program it died on. CHECKS: `tools/qa/gpulost-check.ts` (the note, its count and its age as tables; what a record keeps of the labels), `tools/qa/pipequeue-check.ts`
-  (one in flight in every phase; what a loss had in hand, with the queue draining onto the dead device), `GENTLE_BREAK=1` must fail in both; and
-  `tools/qa/gentle-page.cjs` on the real page (headless Chromium launched so the page sees no driven browser, software adapter: the browser's GPU process is killed
-  through the debugging protocol while the page shows "compiling shaders 3 / 105"; the page is told the loss, notes it, loads itself again, and on that load never has
-  more than one program with the browser while over a hundred wait, prints the warning, shows no card; `GENTLE_WAIT_S=N` also waits for that load to come ready;
-  `GENTLE_BREAK=1` runs it under `?gentle=0` and must fail). `?gentle` rides a replay's and a benchmark's addresses (`VISIT_FLAGS`, `CARRIED`). PRICE: a gentle load
-  waits for the heavy kernels' sum, about a minute on that machine by its own per-kernel times where the burst took ten seconds, and each mission's start waits
-  likewise. KNOWN SEAMS: a benchmark on a noted browser reads the note and times a gentle load (its records hold the `gpu.gentle` warning; nothing on the report says
-  so); a loss told more than ten seconds after the creations failed is not counted as one while compiling unless the boot's count is still open.
-  NOT SEEN: any of it on a GPU. Whether one at a time gets that machine through is what its next visit's records say (a `gpu.gentle` warning and then a boot record, or a
-  loss with `gentle` and one label in `flying`). Still what would settle the cause: that machine's `chrome://gpu` log lines after a loss (the GPU process's exit code).
-- **Plain air: a driver that stops on the volumetric program is not handed it (2026-10-30, the AMD machine's second visit).** `src/gpu/device.ts PLAIN_AIR` (ON;
-  `?plainair=0` = no note written or read and no adapter's row, as it was; `?plainair=1` = this load is in plain air; the page's own, no stand differs in it).
-  WHAT THE RECORDS SHOWED (the same Radeon RX 9070 XT, on the build with the gentle try): the burst lost the device again starting The compound, with `compositeSR
-  restir reflect vol gatherTraceS particlesUpdate` in hand; the load after it was gentle, made `compositeSR`, `particlesEmit`, `particlesUpdate`, `restir` and `reflect`
-  one at a time (4.9, 5.6 and 4.2 s for the three heavy ones) and lost the device 23 s in with ONE program in hand, `vol`. `vol` was in hand at every loss of that machine
-  whose record names anything (four of four), alone at the last. So it is not how many compile at once. NOT known: why the driver's process goes on that program,
-  whether it does every time (one title load of the first visit made all 105, `vol` among them), and whether `vol` is the only one (the two gathers behind it in the
-  gentle order have never been tried by themselves there). THE RULE: a load in plain air gives the volumetric pass `shaders/vol_plain.wgsl` under the pass's own label
-  (`render/passes.ts traceJobs`, so the cut set's build too) and makes none of the real march's twins (`volFroxel`, `volDust`, `volK0`). The plain module has no
-  function in it that walks the boxes, a light, a shadow or the fog of war's sight (11 KB of text where the real march's module is 74): the smoke's density marched
-  across the hull of the live domains and lit by the radiance cache's mean radiance alone, a picked weather's air marched the same way with the open sky's share. Its
-  program draws no beam, so plain air forces the froxel path on every tier as `?froxel` does (`main.ts`; `?nofroxel` still wins, and then there are no beams):
-  the haze's cones are the froxel kernels'. LOST there: the lamp-lit, self-shadowed plume (it is lit by the cache alone, on the froxel tiers too), rain streaks and
-  splashes of this pass, the lit sky under lightning, the sun's shafts in a weather's air; dust is drawn as plain smoke; smoke is drawn under the fog of war whatever
-  `FOG.air` says (the page ships it so). KEPT: smoke and a weather's air stand where the men's eyes are cut by them, and a torch's cone is in the air. A load is in
-  plain air when the page says so, when the browser noted it (`localStorage['twopointsix.plainAir']`, 'count:when' as the gentle note, a machine key on the settings
-  sync's skip list: written by `onLost` for a REAL loss on a page that retries with exactly ONE program in hand, that one of `PLAIN_AIR.labels`, on a load not plain
-  already; it holds ONE day after a first such loss and THIRTY once the real march has lost the device again within 180 days, then the real program is tried
-  again), or when the adapter is one the records name (`PLAIN_AIR.adapters`: a browser on Windows whose adapter's name starts `amd rdna-4`). THE ROW IS A GUESS FROM
-  ONE MACHINE and has no second look of its own: a machine it names is never handed the program, so only a `?plainair=0` load of such a machine can say the row is
-  no longer needed; it spares that machine the lost loads a note costs (two before the note, and its third lost GPU process switches the browser's GPU off). The card
-  of the loss that wrote the note ends "Load the page again and the game will skip the shader your graphics driver stopped on. Smoke and fog will look plainer." (only
-  when the note was written); a plain load says so in a warning record (`gpu.plainair`: `why`, and `row` or `noted` / `hours`), on a further loss's card, in that
-  loss's facts (`plainAir`) and in a benchmark's notes, so a machine that still loses its device names the NEXT program with this one out of the way. CHECKS, each on
-  both stands: `tools/qa/gpulost-check.ts` (the note, the row, the word, the three reasons and the card as tables; `PLAINAIR_BREAK=1` fails seven lines);
-  `tools/qa/plainair-check.ts` (the Engine built on a stand-in device as any load and in plain air: one plain module, no text of the real march, no twin asked for,
-  every other program as ever; the plain module AS CUT declares no walking function and is a third of the real one or less; the numbers it copies from the real march
-  are still the real march's, and on any load the weight of a lamp's glow through smoke (the look's row, `Engine.smokeDraw.ahead`) reaches the frame at 0 with
-  only its two writers naming it, so the real march's cut is the plain one's; (since 2026-11-07 the march has one writing and no word is needed: `PLAINAIR_BREAK=1` fails seven) `TPS_COMPACTSHADERS=1` in front for the page's writing; `PLAINAIR_BREAK=1` fails five
-  lines, seven with the compact set); and
-  `tools/qa/plainair-page.cjs` on the real page (headless Chromium, software adapter, `?plainair=1`: every program made, 117 where the page makes 118; the browser is
-  handed `volumetricsPlain` and no text of the real march, no twin is asked for, the warning is printed, a canister's plume shows in the picture and in the volumetric
-  pass's own, no GPU error, no card; `PLAINAIR_BREAK=1` runs it under `?plainair=0` and fails four lines; eighteen minutes on this box, most of it the cut set
-  compiling behind the page). `?plainair` rides a replay's and a benchmark's addresses (`VISIT_FLAGS`, `CARRIED`). NOT SEEN: anything on a GPU; the plain plume beside
-  the real one on anything but the software adapter; the froxel path forced on high or ultra together with the plain program; a driver that stops on the real program
-  getting into the game this way (that machine's next visit says: a `gpu.plainair` warning and then a boot record with frames = it was `vol`; a lost device with
-  `plainAir` and other labels in `flying` = it was not only `vol`).
+- **The gentle second try and plain air are GONE (2026-11-07; the maintainer on the shader survey: "we should remove any mitigations we have unless they're explicitly
+  confirmed to work", and "let's just assume we only support nvidia and apple for now").** Both were written blind from ONE machine's records (a Radeon RX 9070 XT on
+  Windows, 10-29 and 10-30) and neither was ever seen to help there. Gone: `GENTLE` (a browser that lost its device while shaders compiled was handed them one at a
+  time for a day or thirty), `PLAIN_AIR` (such a driver was handed `shaders/vol_plain.wgsl`, a smoke march with no ray in it, in place of the volumetric program:
+  by a note, by `?plainair=1`, or by the adapter row `amd rdna-4`), their notes in localStorage (`twopointsix.gentle`, `twopointsix.plainAir`: a browser that holds
+  one is no longer read), `?gentle`, `?plainair`, the warning records `gpu.gentle` and `gpu.plainair`, the bench report's plain-air line, `plainair-check`,
+  `plainair-page.cjs`, `gentle-page.cjs` and their break words. **KEPT**: the lost device's one fresh load and its card (the bullet above: any machine can lose a
+  device), what the report names as in hand at the loss (`gpu/device.ts lostFlying`: every pipeline the browser was handed and had not answered, by label, kept
+  through the burst of rejections a lost device sends first; the record's `flying`, `flying2`, `flying3` hold as many whole labels as three strings of 80 take and
+  `flyingOf` the count; `gpulost-check` and `pipequeue-check` hold it), and the compile queue on Windows (`PIPE_QUEUE`: measured there). A
+  machine of that kind now gets every program as any other does. Not seen on any GPU.
 - **A start with no GPU says what the machine said, and asks twice (2026-10-27; the maintainer: a friend's AMD machine "is still crashing with failed to create WebGPU context
   provider / no webgpu adapter available", "anything we can collect from his computer?").** `src/gpu/adapter.ts GPU_ASK` (ON; `?gpuask=0` = one ask and the one line "No WebGPU
   adapter available.", as it was; like `GPU_LOST` it is the page's own, no stand differs in it). `initGpu` asked once, for `powerPreference: 'high-performance'`, and an empty

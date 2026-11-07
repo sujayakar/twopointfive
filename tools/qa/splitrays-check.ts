@@ -6,7 +6,7 @@
 // NOT here (no GPU, and a harness compiles nothing): that the WGSL compiles (tools/qa/wgsl-compile.cjs), and the picture.
 //   bun run tools/qa/splitrays-check.ts                        exit 0 = every line passed, 1 = one failed
 //   SPLITRAYS_BREAK=1 bun run tools/qa/splitrays-check.ts      `light` is read with a second call site of the light loop written into it: must FAIL
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ROOT } from './headless.ts';
@@ -29,10 +29,10 @@ export async function splitraysCheck(): Promise<boolean> {
   const calls = (m: Map<string, string>, body: string, self: string) => [...m.keys()].filter(n => n !== self && new RegExp(`\\b${n}\\(`).test(body));
   const reach = (m: Map<string, string>, from: string) => { const seen = new Set<string>([from]), todo = [from]; while (todo.length) { const f = todo.pop()!; for (const n of calls(m, m.get(f) ?? '', f)) if (!seen.has(n)) { seen.add(n); todo.push(n); } } return seen; };
   const sites = (m: Map<string, string>, within: Set<string>, callee: string) => [...within].reduce((s, f) => s + (f === callee ? 0 : (m.get(f) ?? '').split(new RegExp(`\\b${callee}\\(`)).length - 1), 0);
-  { const LIT = 'directAtPoint(Ph, n, b.w)', text0 = splitGatherSrc(false), m = fns(BRK ? text0.replace(LIT, `${LIT} + ${LIT}`) : text0), ms = fns(splitGatherSrc(true)), entries = (x: Map<string, string>) => [...x].filter(([, d]) => d.startsWith('@compute')).map(([n]) => n).sort().join(' ');
+  { const LIT = 'directAtPoint(Ph, n, b.w)', text0 = splitGatherSrc(), m = fns(BRK ? text0.replace(LIT, `${LIT} + ${LIT}`) : text0), entries = (x: Map<string, string>) => [...x].filter(([, d]) => d.startsWith('@compute')).map(([n]) => n).sort().join(' ');
     const helpers = fns(gatherHelpers());
-    line(text0.includes(LIT) && entries(m) === 'light trace' && entries(ms) === 'light trace' && !wgslDecls(fgather).some(d => /^@compute\b/.test(d)) && helpers.has('cardIrradiance'),
-      'the gather\'s module: fgather.wgsl\'s helpers, which hold no entry point, and two entry points of its own (the strata twin the same)', `entry points: ${entries(m)} · ${helpers.size} helper functions`);
+    line(text0.includes(LIT) && entries(m) === 'light trace' && !wgslDecls(fgather).some(d => /^@compute\b/.test(d)) && helpers.has('cardIrradiance'),
+      'the gather\'s module: fgather.wgsl\'s helpers, which hold no entry point, and two entry points of its own', `entry points: ${entries(m)} · ${helpers.size} helper functions`);
     const tr = reach(m, 'trace'), li = reach(m, 'light');
     line(m.has('directAtPoint') && !tr.has('directAtPoint') && !tr.has('directOnScreen'),
       '`trace` reaches no light loop: neither directAtPoint nor directOnScreen, nor a helper that calls one', `trace reaches ${tr.size} functions: ${[...tr].filter(f => /X$|^gx/.test(f)).join(', ')} of its own`);
@@ -44,13 +44,10 @@ export async function splitraysCheck(): Promise<boolean> {
     const lay = /label: 'gatherSplit', entries: \[[^\]]*?\{ binding: (\d+), visibility: CS, buffer: \{ type: 'storage' \} \},\n\s*\] \}\);/.exec(passes);
     line(v4 * 16 === SPLIT_TEXEL_BYTES && rec + 2 * slots === v4 && bind === Number(lay?.[1]) && rays + 2 === slots && !/constants: \{[^}]*RAYS/.test(passes),
       'the points\' buffer is one layout in the shader and in the engine: a texel\'s words, its header and two words a point, a slot for each ray and the two mirror rays, the binding', `RAYS ${rays} + 2 = ${slots} slots · GX_V4 ${v4} × 16 B = ${v4 * 16} (engine ${SPLIT_TEXEL_BYTES}) · ${rec} + 2 × ${slots} = ${rec + 2 * slots} · binding ${bind} (passes.ts ${lay?.[1] ?? 'not found'})`); }
-  // ---- THE LAST KERNEL IN TWO WRITINGS (render/gatherSplit.ts): gather_split_common.wgsl is the gather's, gather_common.wgsl the reflection passes'. They are one
-  //      text but for the light loop (directAtPoint and what it is written with), so a change to the staging or the take-back made in one file only is named here
-  { const A = wgslDecls(readFileSync(`${dir}/gather_split_common.wgsl`, 'utf8')), B = wgslDecls(readFileSync(`${dir}/gather_common.wgsl`, 'utf8'));
-    const LOOP = /^fn (directAtPoint|directOnScreen|directAt)\(/, sq = (d: string) => d.replace(/\s+/g, ''), a = A.filter(d => !LOOP.test(d)).map(sq), b = B.filter(d => !LOOP.test(d)).map(sq);
-    const onlyA = a.filter(d => !b.includes(d)), onlyB = b.filter(d => !a.includes(d)), name = (d: string) => /^(?:fn|const|var(?:<[^>]*>)?|struct)(\w+)/.exec(d)?.[1] ?? d.slice(0, 24);
-    line(a.length > 10 && onlyA.length === 0 && onlyB.length === 0 && A.some(d => /^fn directAtPoint\(/.test(d)) && B.some(d => /^fn directAtPoint\(/.test(d)),
-      'the gather\'s common text and the reflection passes\' are one text but for the light loop: every other declaration is in both, word for word', `${a.length} declarations beside the light loop · only the gather's: ${onlyA.map(name).join(' ') || 'none'} · only the reflections': ${onlyB.map(name).join(' ') || 'none'}`); }
+  // ---- ONE WRITING of the light loop (render/gatherSplit.ts): the gather is made from gather_common.wgsl, the file the reflection pass is made from, and no second copy stands beside it
+  { const gs = readFileSync(`${ROOT}/src/render/gatherSplit.ts`, 'utf8'), ps = readFileSync(`${ROOT}/src/render/passes.ts`, 'utf8'), files = readdirSync(dir).filter(f => /^gather.*common.*\.wgsl$/.test(f));
+    line(/import gatherCommonSrc from '\.\/shaders\/gather_common\.wgsl'/.test(gs) && /import gatherCommonSrc from '\.\/shaders\/gather_common\.wgsl'/.test(ps) && files.length === 1 && files[0] === 'gather_common.wgsl',
+      'the gather and the reflection pass are made from one gather_common.wgsl, and no other gather common file is in the shaders folder', files.join(', ')); }
   // ---- a refused buffer is heard outside the machine (a GPU too small for the buffer draws no bounce light, and did not choose that)
   { const RP = await import(`${ROOT}/src/cloud/report.ts`), heard: any[] = [], was = console.error, said: string[] = []; console.error = (...a: unknown[]) => { said.push(a.map(String).join(' ')); };
     let threw = false;
@@ -69,8 +66,8 @@ export async function splitraysCheck(): Promise<boolean> {
     let j: Sizes | null = null; try { j = JSON.parse(readFileSync(f, 'utf8')) as Sizes; } catch { /* no file: the line says so */ }
     const KB = (n: number) => `${Math.round(n / 1024)} KB`, gathers = (re: RegExp) => (j?.kernels ?? []).filter(k => re.test(k.module) && k.setting !== 'title');   // (the size tool's file carries the title's kernels after the page's own: one page is counted here)
     const old = gathers(/^fgatherS?$/), own = gathers(/^gatherSplit/), pipes = (set: string) => own.filter(k => k.set === set).flatMap(k => k.pipelines).sort().join(' ');
-    line(old.length === 0 && !(j?.modules ?? []).some(m => /^fgather/.test(m.label)) && pipes('boot') === 'gatherLight gatherTrace gatherTraceS' && pipes('cut') === pipes('boot'),
-      'a load compiles the gather\'s three pipelines in both sets and no one-kernel gather', `one-kernel gathers ${old.length} · boot set: ${pipes('boot') || 'none'} · cut set: ${pipes('cut') || 'none'}`);
+    line(old.length === 0 && !(j?.modules ?? []).some(m => /^fgather/.test(m.label)) && pipes('boot') === 'gatherLight gatherTrace' && pipes('cut') === pipes('boot'),
+      'a load compiles the gather\'s two pipelines in both sets and no one-kernel gather', `one-kernel gathers ${old.length} · boot set: ${pipes('boot') || 'none'} · cut set: ${pipes('cut') || 'none'}`);
     line(own.length > 0 && green && own.every(k => k.budgetKB !== null && k.budgetKB < 300),
       'each of the gather\'s kernels has a budget row of its own under 300 KB, and the size tool is green', `as their rows hold them, the cut test's text apart: ${[...new Set(own.map(k => `${k.entry} ${KB(k.pasted - (k.cut ?? 0))} of ${k.budgetKB}`))].join(' · ')} · size tool: ${text.trim().split('\n').slice(-1)[0] ?? ''}`);
   } finally { rmSync(tmp, { recursive: true, force: true }); }

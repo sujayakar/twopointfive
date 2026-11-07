@@ -185,16 +185,14 @@ fn fowLitHit(ro: vec3f, rd: vec3f, tmaxIn: f32) -> f32 {
   let tb = isectBounds(ro, invRd, WORLD_MIN, WORLD_MAX);
   if (tb.x > tb.y || tb.y < 0.0) { return -1.0; }
   let tmax = min(tmaxIn, tb.y);
-  let gskip = (frame.flags & FLAG_GRID_SKIP) != 0u; let ycull = (frame.flags & FLAG_GRID_YCULL) != 0u; let fast = gskip || ycull; let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
-  let slabs = (frame.flags & FLAG_GRID_SLABS) != 0u; let shrink = select(0.0, scene.grid.y, slabs);
   let yEnd = ro.y + rd.y * tmax;
   let pEnd = vec3f(ro.x + rd.x * tmax, yEnd, ro.z + rd.z * tmax);
   let sLo = min(ro, pEnd); let sHi = max(ro, pEnd);
   for (var g = 0u; g < scene.numGlobals; g++) {
-    if (globalSkipped(g, sLo, sHi, ycull, slabs)) { continue; }
+    if (globalOutside(g, sLo, sHi)) { continue; }
     let bi = scene.globals[g >> 2u][g & 3u];
     if (boxOwner(boxGeo[bi]) != 0u) { continue; }
-    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd, axisFast);
+    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd);
     if (r.x >= 0.0) { return r.x; }
   }
   var run = 0u;
@@ -212,15 +210,14 @@ fn fowLitHit(ro: vec3f, rd: vec3f, tmaxIn: f32) -> f32 {
   for (var iter = 0; iter < 96; iter++) {
     let ci = u32(cell.y * GRID_W + cell.x);
     var cw: CellWalk;
-    if (fast) { cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run, gskip, ycull, shrink); }
-    else { cw.start = gridCells[ci]; cw.end = gridCells[ci + 1u]; cw.qlo = 0u; cw.qhi = 255u; }
+    cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run);
     var bestInCell = -1.0;
     for (var k = cw.start; k < cw.end; k++) {
-      let gi = gridItem(k, cw, ycull); if (gi < 0) { continue; }
+      let gi = gridItem(k, cw); if (gi < 0) { continue; }
       let bi = u32(gi);
       let b = boxGeo[bi];
       if (boxOwner(b) != 0u) { continue; }
-      let r = isectBox(ro, rd, b, tmax, bi, invRd, axisFast);
+      let r = isectBox(ro, rd, b, tmax, bi, invRd);
       if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell)) { bestInCell = r.x; }
     }
     if (bestInCell >= 0.0) { return bestInCell; }
@@ -329,13 +326,13 @@ const FOW_WALK_WHOLE: bool = GRID_W + GRID_H <= 96;   // the walk's 96-cell cap 
 /// hit, 4 cm of height pad inside the cell's cull (a level ray: the hit is at the eye's own height). Or the walk answered 'blocked' before it got there: the same
 /// answer. A global is asked by the walk unless its bounds, 5 mm proud, miss the segment's — they cannot, around a meeting point. Not asked at all: a tumbling box
 /// (its footprint is not its yaw's) and anything the eye's own man carries (the walk skips those in the grid). false = no answer: the caller walks.
-fn fowHintBox(bi: u32, e: vec3f, rd: vec3f, tmax: f32, invRd: vec3f, axisFast: bool, owner: u32) -> bool {
+fn fowHintBox(bi: u32, e: vec3f, rd: vec3f, tmax: f32, invRd: vec3f, owner: u32) -> bool {
   var b = boxGeo[bi];
   if ((b.flags & BOX_ROT) != 0u || skipsOwner(boxOwner(b), owner) || fogThinBox(b, bi)) { return false; }   // (… nor one a fog eye passes: FOG.thin)
   let s = scene.grid.x + 0.001;
   if (b.h.x <= s || b.h.z <= s) { return false; }
   b.h = vec3f(b.h.x - s, b.h.y, b.h.z - s);
-  return isectBox(e, rd, b, tmax, bi, invRd, axisFast).x >= 0.0;
+  return isectBox(e, rd, b, tmax, bi, invRd).x >= 0.0;
 }
 /// does a box the table names for this bearing stand in the pixel's own ray, short of the spot? (fowHintBox: true = the walk would be blocked, for certain)
 fn fowHintBlocked(k: u32, e: vec4f, rd: vec3f, tmaxIn: f32) -> bool {
@@ -344,7 +341,6 @@ fn fowHintBlocked(k: u32, e: vec4f, rd: vec3f, tmaxIn: f32) -> bool {
   let tb = isectBounds(e.xyz, invRd, WORLD_MIN, WORLD_MAX);
   if (tb.x > 0.0 || tb.y < 0.0) { return false; }                // an eye outside the traced world: the walk's own business
   let tmax = min(tmaxIn, tb.y);
-  let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
   let j = i32(floor((atan2(rd.z, rd.x) / FOW_TAU + 0.5) * f32(FOW_BINS) - 0.5));   // the two bins whose bearings stand either side of this one
   let ha = textureLoad(fowHint, vec2i((j + FOW_BINS) % FOW_BINS, i32(k)), 0).x;
   let hb = textureLoad(fowHint, vec2i((j + 1) % FOW_BINS, i32(k)), 0).x;
@@ -352,11 +348,11 @@ fn fowHintBlocked(k: u32, e: vec4f, rd: vec3f, tmaxIn: f32) -> bool {
   let reach = u32(tmax * 105.0) + 50u;                           // a box the table's ray met well past the spot is not asked (it would say no: the walk is taken either way)
   if (a != 0u && (ha >> 16u) <= reach) {
     //#C fowCount.y += 1.0;
-    if (fowHintBox(a - 1u, e.xyz, rd, tmax, invRd, axisFast, u32(e.w + 0.5))) { return true; }
+    if (fowHintBox(a - 1u, e.xyz, rd, tmax, invRd, u32(e.w + 0.5))) { return true; }
   }
   if (b != 0u && b != a && (hb >> 16u) <= reach) {
     //#C fowCount.y += 1.0;
-    if (fowHintBox(b - 1u, e.xyz, rd, tmax, invRd, axisFast, u32(e.w + 0.5))) { return true; }
+    if (fowHintBox(b - 1u, e.xyz, rd, tmax, invRd, u32(e.w + 0.5))) { return true; }
   }
   return false;
 }
@@ -366,16 +362,14 @@ fn fowWalk(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> vec2f {
   let tb = isectBounds(ro, invRd, WORLD_MIN, WORLD_MAX);
   if (tb.x > tb.y || tb.y < 0.0) { return vec2f(-1.0, 0.0); }
   let tmax = min(tmaxIn, tb.y);
-  let gskip = (frame.flags & FLAG_GRID_SKIP) != 0u; let ycull = (frame.flags & FLAG_GRID_YCULL) != 0u; let fast = gskip || ycull; let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
-  let slabs = (frame.flags & FLAG_GRID_SLABS) != 0u; let shrink = select(0.0, scene.grid.y, slabs);
   let yEnd = ro.y + rd.y * tmax;
   let pEnd = vec3f(ro.x + rd.x * tmax, yEnd, ro.z + rd.z * tmax);
   let sLo = min(ro, pEnd); let sHi = max(ro, pEnd);
   for (var g = 0u; g < scene.numGlobals; g++) {
-    if (globalSkipped(g, sLo, sHi, ycull, slabs)) { continue; }
+    if (globalOutside(g, sLo, sHi)) { continue; }
     let bi = scene.globals[g >> 2u][g & 3u];
     //#C fowCount.z += 1.0;
-    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd, axisFast);
+    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd);
     if (r.x >= 0.0) { return vec2f(r.x, f32(bi) + 1.0); }
   }
   var run = 0u;
@@ -394,16 +388,15 @@ fn fowWalk(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> vec2f {
     //#C fowCount.w += 1.0;
     let ci = u32(cell.y * GRID_W + cell.x);
     var cw: CellWalk;
-    if (fast) { cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run, gskip, ycull, shrink); }
-    else { cw.start = gridCells[ci]; cw.end = gridCells[ci + 1u]; cw.qlo = 0u; cw.qhi = 255u; }
+    cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run);
     var bestInCell = -1.0; var bestBox = 0.0;
     for (var k = cw.start; k < cw.end; k++) {
-      let gi = gridItem(k, cw, ycull); if (gi < 0) { continue; }
+      let gi = gridItem(k, cw); if (gi < 0) { continue; }
       let bi = u32(gi);
       let b = boxGeo[bi];
       if (skipsOwner(boxOwner(b), skipOwner)) { continue; }
       //#C fowCount.z += 1.0;
-      let r = isectBox(ro, rd, b, tmax, bi, invRd, axisFast);
+      let r = isectBox(ro, rd, b, tmax, bi, invRd);
       if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell) && !fogThinBox(b, bi)) { bestInCell = r.x; bestBox = f32(bi) + 1.0; }
     }
     if (bestInCell >= 0.0) { return vec2f(bestInCell, bestBox); }

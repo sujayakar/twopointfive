@@ -74,7 +74,7 @@ fn side(n: i32) -> (f64, f64) {
 
 /// (walkSpot mayDuck) he is outside what it kills at, on a search that counts on a duck
 fn may_duck(g: &Game, has_lob: bool, pts: &[V3], px: f64, pz: f64) -> bool {
-    has_lob && g.k.squadthrow.duck && !pts.iter().any(|l| m::hyp2(l[0] - px, l[2] - pz) < g.k.squadthrow.duck_min_m)
+    has_lob && !pts.iter().any(|l| m::hyp2(l[0] - px, l[2] - pz) < g.k.squadthrow.duck_min_m)
 }
 
 /// (walkSpot inOwn) standing there he would be in his own frag / caught by his own canister (`ducks`: the flood's count of duck asks left)
@@ -395,8 +395,8 @@ pub fn stand_throw(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: cra
 /// SQUADTHROW.duck: a man of ours on his feet at `p` is off this frag's line before it bursts (squadthrow.ts fragClears)
 pub fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: Option<f64>, taken: Option<&mut Vec<V3>>) -> bool {
     let late = late.unwrap_or(0.0);
-    let (lob_on, duck_on, duck_min_m) = (g.k.squadthrow.lob, g.k.squadthrow.duck, g.k.squadthrow.duck_min_m);
-    if !lob_on || !duck_on || g.gd[gd].held.is_some() || g.time < g.gd[gd].stagger_until || g.time < g.gd[gd].dazzled_until { return false; }
+    let duck_min_m = g.k.squadthrow.duck_min_m;
+    if g.gd[gd].held.is_some() || g.time < g.gd[gd].stagger_until || g.time < g.gd[gd].dazzled_until { return false; }
     if pts.iter().any(|l| v3::dist_xz(p, *l) < duck_min_m) { return false; }   // (inside what it kills at nobody is asked to duck)
     let run = g.k.frag.run_speed;
     let blast = crate::teampace::team_blast_pace(g, gd, run);
@@ -569,25 +569,20 @@ pub fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate
 /// THE THROW AS IT WOULD BE ORDERED NOW: the nearest man with a throw from where he stands, else the man with the shortest walk to one (squadthrow.ts squadThrowPlan)
 pub fn squad_throw_plan(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind, fresh: Option<bool>, view: Option<bool>) -> Option<crate::squadthrow::SquadThrower> {
     let (fresh, view) = (fresh.unwrap_or(false), view.unwrap_or(false));
-    let (lob_on, walk_on) = (g.k.squadthrow.lob, g.k.squadthrow.walk);
     let th: Option<SquadThrower> = squad_thrower(g, men, at, kind).map(|t| SquadThrower { gd: t.gd, from: t.from, sol: t.sol, rest: t.rest, post: None });
     let clean = LobClean::Plan { kind, at, fresh };
-    if lob_on {
-        if let Some(t) = &th {
-            if lob_clean(g, &clean, t) { return th; }
-        }
-    } else if th.is_some() || !walk_on {
-        return th;
+    if let Some(t) = &th {
+        if lob_clean(g, &clean, t) { return th; }
     }
     // (one kept answer a kind, and the PICTURE's kept apart from the menu's and the order's: what is drawn never decides what the game reads)
-    let slot = format!("{}{}{}", if view { "v" } else { "s" }, kind.as_str(), if lob_on && men.len() == 1 { "1" } else { "" });
+    let slot = format!("{}{}{}", if view { "v" } else { "s" }, kind.as_str(), if men.len() == 1 { "1" } else { "" });
     let keys: Vec<String> = men.iter().map(|&m_| {
         let c = g.gd[m_].ch;
         let p = g.ch[c].pos;
         format!("{}:{},{}", js::num_str(g.ch[c].id), js::num_str(m::floor(p[0] * 2.0)), js::num_str(m::floor(p[2] * 2.0)))
     }).collect();
     let key = format!("{}|{}|{}", kind.as_str(), key_of(at), keys.join(";"));
-    let keep = if lob_on { g.k.squadthrow.lob_keep_secs } else { g.k.squadthrow.keep_secs };
+    let keep = g.k.squadthrow.lob_keep_secs;
     let time = g.time;
     if !fresh {
         if let Some(c) = state(g).kept.get(slot.clone()) {
@@ -596,18 +591,16 @@ pub fn squad_throw_plan(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
     }
     // (… then a throw one of them works out from where he stands, then a walk to the straight arc, then a walk to a worked-out throw — the first that catches
     //  nobody of ours; nothing clean: the first throw found all the same, and the row says who is in it)
-    let mut l: Option<Lob> = if lob_on {
+    let mut l: Option<Lob> = {
         let walls = crate::throwplan::throw_walls(g, at);
         let half = (js::to_i32(g.k.squadthrow.lob_sims) >> 1) as f64;
         Some(Lob { walls, lim: LobLim { n: half }, clean, dirty: th.clone() })
-    } else {
-        None
     };
     let mut w: Option<SquadThrower> = match l.as_mut() {
         Some(lob) => stand_throw(g, men, at, kind, Some(lob)).map(|t| SquadThrower { gd: t.gd, from: t.from, sol: t.sol, rest: t.rest, post: None }),
         None => None,
     };
-    if w.is_none() && walk_on {
+    if w.is_none() {
         if let Some(lob) = l.as_mut() { lob.lim = LobLim { n: g.k.squadthrow.lob_sims }; }
         w = walk_spot(g, men, at, kind, Some(false), l.as_mut());
     }
@@ -641,7 +634,7 @@ pub fn walk_line(g: &mut crate::game::Game, gd: GuardId, post: V3) -> Vec<V3> {
 pub fn squad_frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<crate::squadthrow::SquadFragCatchesMoved>, sam: Option<bool>, kept: Option<bool>, burst: Option<&crate::squadthrow::SquadFragCatchesBurst>) -> Option<String> {
     let (sam, kept) = (sam.unwrap_or(true), kept.unwrap_or(false));
     let moved2 = moved.map(|q| FragCatchesMoved { gd: q.gd, at: q.at });
-    if !kept || burst.is_some() || !g.k.squadthrow.lob || !g.k.squadthrow.duck {
+    if !kept || burst.is_some() {
         let burst2 = burst.map(|b| FragCatchesBurst { reach: b.reach, no: b.no.clone() });
         return frag_catches(g, rest, at, moved2, sam, burst2.as_ref());
     }
@@ -750,11 +743,6 @@ pub fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) -> Vec<St
         if stun_in(g, &pts, eye, false) { out.push(g.gd[gd].callsign.clone()); }
     }
     out
-}
-
-/// SQUADTHROW.samCall: a frag the player has a line to is his call (squadthrow.ts samCalls)
-pub fn sam_calls(g: &mut crate::game::Game) -> bool {
-    g.k.squadthrow.lob && g.k.squadthrow.sam_call
 }
 
 /// … is he inside it, where it would go off or at the spot asked for? (squadthrow.ts squadFragOnSam)

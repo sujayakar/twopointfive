@@ -52,7 +52,7 @@
    *  __stress.setup → the serialized take (+ the live take when the page is visible). opts: { presets, fight, n, liveSecs }. → { [preset]: run() result }.
    *  Kick it off without awaiting from an automation tool with a short timeout, poll `__v3gate.status`, read `__v3gate.results`. */
   async runAll(opts = {}) {
-    const { presets = ['high', 'ultra', 'medium', 'low', 'verylow'], fight = false, n = 300, liveSecs = (document.hidden ? 0 : 20) } = opts;
+    const { presets = ['high', 'medium', 'low', 'verylow'], fight = false, n = 300, liveSecs = (document.hidden ? 0 : 20) } = opts;
     G.results = {}; G.status = { phase: 'starting', preset: null, done: [] };
     for (const p of presets) {
       G.status = { ...G.status, phase: 'staging', preset: p };

@@ -9,7 +9,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp } from './headless';
-import { holdOff, heldList } from './holds.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -155,11 +154,8 @@ if (!names.length || names.includes('tut-solo')) { console.log('\n=== lesson-che
     return { W, g: W.game, why: r.why as string | undefined }; };
   const team = (g: any) => g.guards.filter((x: any) => x.unit && x.team === 'operative');
   const lessonOn = LESSON.on; LESSON.on = true;
-  // ONE CARD FOR EVERY MISSION, for this block (kit.ts KITDEAL.stealth): 'the same start off a lesson's page' is a quiet run alone, which on the page's stand wears
-  // your STEALTH card, not the kept card this block sets by hand. The lines here are about the lesson's page wearing the issue kit; the stealth card on such a page
-  // is tools/qa/kitstealth-check.ts's line. Held as a probe of that row is held (tools/qa/holds.ts: the word for a game stood up, the table for now; a word set
-  // by hand wins).
-  const stealthBack = await holdOff(heldList('STEALTH_AS_IT_WAS'));
+  // (Until 2026-11-07 this block held KITDEAL.stealth off, as a probe of the holds table's STEALTH_AS_IT_WAS row was held. That row is settled: the hold was
+  //  refused on the page's stand since the fold and did nothing on the old one, where the row is off already; the hold is gone, not the block.)
   try {
     await withDom('', async () => {
       K.kitLoad(st, ''); const set = K.kitSet(0, 'weapon', 'pistol') && K.kitSet(1, 'light', false); const st0 = m.get(K.KIT_LS);   // (this machine keeps a card with no rifle — the card that left a lesson's 'press 2' unpassable — and a teammate with no weapon light)
@@ -198,7 +194,7 @@ if (!names.length || names.includes('tut-solo')) { console.log('\n=== lesson-che
       const after = K.KIT.members[0].weapon, stored2 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim; const B = await standRow(alone);
       verdict(threw && after === 'pistol' && stored2 && B.g.player.hasRifle === true, 'a staging that throws leaves the kept table and its store in place, and the next lesson start is still the issue kit', `threw ${threw} · table '${after}' · a change written ${stored2} · next start's rifle ${B.g.player.hasRifle}`);
     });
-  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.KIT_SOLO.on = false; K.kitLoad(null, ''); LESSON.on = lessonOn; stealthBack(); }
+  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.KIT_SOLO.on = false; K.kitLoad(null, ''); LESSON.on = lessonOn; }
 }
 console.log(fails ? `\n=== lesson-check: ${fails} FAIL of ${checks} ===` : `\n=== lesson-check: ALL PASS (${checks} checks) ===`);
 process.exit(fails ? 1 : 0);

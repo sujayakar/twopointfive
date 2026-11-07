@@ -1,4 +1,4 @@
-// Shared by the final gather (fgather.wgsl) and the ray-traced reflection pass (reflect.wgsl): the per-tile light / bounce-card staging, the RNG, and
+// Shared by the final gather (fgather.wgsl + gather_split.wgsl, its `light` program) and the ray-traced reflection pass (reflect.wgsl): the per-tile light / bounce-card staging, the RNG, and
 // the direct light AT A HIT POINT (the exact on-screen textures when the point is visible this frame, else the one-shadow-ray estimate). Textually
 // included ahead of either shader by passes.ts; both declare the bindings it reads under the same names (gDepth, gNormal, directTex, softTex) and
 // fill wgLights / nL (and wgCards / wgCardOf / nC — the reflection pass leaves nC at 0: no card is ever excluded from a mirror image) in their entry point.
@@ -12,17 +12,6 @@ var<workgroup> wgCards: array<vec4f, 32>;
 var<workgroup> wgCardOf: array<i32, 64>;
 var<private> nC: u32;
 
-// ---- phase 5: world points and unit vectors packed into texel words (the gather's reservoirs — fgather.wgsl mainGi — and the reflection pass's hit records) ----
-// A point inside the traced world (WORLD_MIN‥MAX: 40 × 8.25 × 28 m) as 16 bits an axis (0.6 / 0.13 / 0.43 mm), a direction as an 8+8-bit octahedral (±1°).
-fn p5PackXZ(p: vec3f) -> u32 { let q = clamp((p.xz - WORLD_MIN.xz) / (WORLD_MAX.xz - WORLD_MIN.xz), vec2f(0.0), vec2f(1.0)); return u32(q.x * 65535.0 + 0.5) | (u32(q.y * 65535.0 + 0.5) << 16u); }
-fn p5PackYN(p: vec3f, n: vec3f) -> u32 { let qy = clamp((p.y - WORLD_MIN.y) / (WORLD_MAX.y - WORLD_MIN.y), 0.0, 1.0); let o = vec2u(clamp(octEncode(n) * 255.0 + 0.5, vec2f(0.0), vec2f(255.0))); return u32(qy * 65535.0 + 0.5) | (o.x << 16u) | (o.y << 24u); }
-fn p5UnpackPos(xz: u32, yn: u32) -> vec3f {
-  let q = vec3f(f32(xz & 0xffffu), f32(yn & 0xffffu), f32(xz >> 16u)) / 65535.0;
-  return WORLD_MIN + q * (WORLD_MAX - WORLD_MIN);
-}
-fn p5UnpackN(yn: u32) -> vec3f { return octDecode(vec2f(f32((yn >> 16u) & 255u), f32(yn >> 24u)) / 255.0); }
-fn p5PackOct16(n: vec3f) -> u32 { let o = vec2u(clamp(octEncode(n) * 255.0 + 0.5, vec2f(0.0), vec2f(255.0))); return o.x | (o.y << 8u); }
-fn p5UnpackOct16(v: u32) -> vec3f { return octDecode(vec2f(f32(v & 255u), f32((v >> 8u) & 255u)) / 255.0); }
 
 var<private> rngState: u32;
 fn rngInit(p: vec2u, f: u32) { rngState = (p.x * 1973u + p.y * 9277u + f * 26699u) | 1u; rngState = rngState ^ (rngState >> 15u); rngState *= 0x2c1b3c6du; rngState ^= rngState >> 12u; }
@@ -31,20 +20,13 @@ fn rnd() -> f32 { rngState = rngState * 747796405u + 2891336453u; var w = ((rngS
 // On-screen shadowed direct light if the point is visible this frame (exact, already denoised), else a one-ray estimate.
 // `ex` (torch bounce cards): bit k set = this point lies inside card k's claim region, whose light's direct term the card carries instead — taken back
 // out of the on-screen textures (what that light delivered here: shadowed, through smoke), left out of the off-screen sum. Always 0 with the flag off.
-// (Phase 5 once had it set a private 'took the on-screen path' flag for the reflection pass's reuse: two dead-simple stores, yet with them live in the reflect
-// kernel the Metal compiler scheduled the light loop differently and ONE light pick in a thousand flipped — a different output cell at ultra in one view. The
-// reuse asks directAt's .w instead.)
-fn directAtPoint(P: vec3f, N: vec3f, ex: u32) -> vec3f { return directAt(P, N, ex, true).xyz; }
-// directAtPoint's ON-SCREEN half alone (phase 5 — the resampling gather's cheap revalidation of a stored sample point): the exact denoised direct light at P
-// if it is visible this frame (.w = 1), else nothing (.w = 0) — never the light loop.
-fn directOnScreen(P: vec3f, N: vec3f, ex: u32) -> vec4f { return directAt(P, N, ex, false); }
-// Both of the above, as ONE body (the compile, 2026-10-26: DXC — Chrome's shader compiler on Windows — inlines every call, and this body asked evalLight three
+// ONE body (the compile, 2026-10-26: DXC — Chrome's shader compiler on Windows — inlines every call, and this body asked evalLight three
 // times and the shadow ray three times, so every caller paid for six inlined copies of the light and the tracer; a kernel that shades four hits paid for
 // twenty-four). The light walks are now the turns of ONE loop with ONE evalLight and ONE occluded: on screen, the transient slots and then the cards' lights,
 // whose share is taken back out of the textures; off screen, every steady light scored and then one more turn for the picked light's shadow ray. The
-// statements and their order are directAtPoint's as they were (the same rnd() draws), so the light is what it was. offOk = the off-screen estimate may run:
-// .w = 1 = the on-screen answer, 2 = the off-screen estimate, 0 = off screen and not asked.
-fn directAt(P: vec3f, N: vec3f, ex: u32, offOk: bool) -> vec4f {
+// statements and their order are the plain writing's as they were (the same rnd() draws), so the light is what it was. Since 2026-11-07 this is the gather's
+// light loop too (its `light` program is 46 KB of pasted text with it, 113 with the plain writing; the reflections' kernel would be 262 KB on the plain one, 196 on this).
+fn directAtPoint(P: vec3f, N: vec3f, ex: u32) -> vec3f {
   var onScreen = false;
   var Ed = vec3f(0.0);
   let clip = frame.viewProj * vec4f(P, 1.0);
@@ -64,7 +46,6 @@ fn directAt(P: vec3f, N: vec3f, ex: u32, offOk: bool) -> vec4f {
       }
     }
   }
-  if (!onScreen && !offOk) { return vec4f(0.0); }
   // ON SCREEN: the on-screen direct term includes transient lights (muzzle flashes); this estimate feeds accumulated history, so take their (unshadowed) share
   // back out — a flash must never outlive itself as bounce (skipped outright when no transient light is alive — the common case; else from the first transient's
   // slot: they sit at the tail of the list, and every slot visited is still tested — the same subset in the same order, review R2.2). Only what the flash actually
@@ -120,8 +101,8 @@ fn directAt(P: vec3f, N: vec3f, ex: u32, offOk: bool) -> vec4f {
       Ed -= sub;
     } else if (mode == 3u) { if (occ) { vis = 0.0; } }
   }
-  if (onScreen) { return vec4f(max(Ed, vec3f(0.0)), 1.0); }
-  if (pick < 0) { return vec4f(0.0, 0.0, 0.0, 2.0); }
-  return vec4f(U * vis, 2.0);
+  if (onScreen) { return max(Ed, vec3f(0.0)); }
+  if (pick < 0) { return vec3f(0.0); }
+  return U * vis;
 }
 

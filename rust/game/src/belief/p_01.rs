@@ -9,7 +9,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// The tick's first word: what a man covers is said anew each tick by the duty that holds him to it. (belief.ts dutiesAnew)
 pub fn duties_anew(g: &mut crate::game::Game) {
-    if !g.k.belief.on { return; }
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
         g.gd[gd].covers = None;
@@ -18,15 +17,7 @@ pub fn duties_anew(g: &mut crate::game::Game) {
 
 /// The room fight (and the rules that hand a man back to it): his duty has his gun on `pt`. (belief.ts cover)
 pub fn cover(g: &mut crate::game::Game, gd: GuardId, pt: V3) {
-    if g.k.belief.on {
-        g.gd[gd].covers = Some(pt);
-        return;
-    }
-    // The same object written again is no new fix (doze.ts:244), and here equal bits stand for the same object.
-    if g.gd[gd].last_known != Some(pt) {
-        g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
-    }
-    g.gd[gd].last_known = Some(pt);
+    g.gd[gd].covers = Some(pt);
 }
 
 /// His duty has nothing for his gun after all, this tick. (belief.ts uncover)
@@ -55,7 +46,7 @@ pub fn fix_is_sight(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn eyes_fix(g: &mut crate::game::Game, gd: GuardId, pt: V3) -> Option<V3> {
     let lk = g.gd[gd].last_known?;
     // Rule off, `lk !== pt` asks identity; here by value, for a caller with no Def in hand (none today: the callers ask `eyes_fix_def`).
-    let his = if g.k.belief.on { fix_is_sight(g, gd) } else { lk != pt };
+    let his = fix_is_sight(g, gd);
     if his { Some(lk) } else { None }
 }
 
@@ -63,7 +54,7 @@ pub fn eyes_fix(g: &mut crate::game::Game, gd: GuardId, pt: V3) -> Option<V3> {
 /// with D.pt's very numbers that is not D.pt): the Def knows whether his fix is its watched point (`def_fix_is_pt`, the stamp), and the numbers do not.
 pub fn eyes_fix_def(g: &mut crate::game::Game, gd: GuardId, d: RoomfightDefId) -> Option<V3> {
     let lk = g.gd[gd].last_known?;
-    let his = if g.k.belief.on { fix_is_sight(g, gd) } else { !crate::roomfight::def_fix_is_pt(g, d) };
+    let his = fix_is_sight(g, gd);
     if his { Some(lk) } else { None }
 }
 
@@ -85,7 +76,7 @@ pub fn word(g: &mut crate::game::Game, gd: GuardId, at: V3) {
 
 /// What he hears of `at` or before does not write over a word. (belief.ts wordStands)
 pub fn word_stands(g: &mut crate::game::Game, gd: GuardId, at: f64) -> bool {
-    g.k.belief.on && at <= g.gd[gd].word_t
+    at <= g.gd[gd].word_t
 }
 
 /// The same, of this moment. (belief.ts wordNow)
@@ -98,9 +89,8 @@ pub fn word_now(g: &mut crate::game::Game, gd: GuardId) -> bool {
 mod tests {
     use super::*;
 
-    fn stand(on: bool) -> (Box<Game>, GuardId) {
+    fn stand() -> (Box<Game>, GuardId) {
         let mut g = Box::new(Game::blank());
-        g.k.belief.on = on;
         let gd = g.gd.push(crate::game::Guard::blank());
         g.guards.push(gd);
         (g, gd)
@@ -108,7 +98,7 @@ mod tests {
 
     #[test]
     fn rule_on_his_duty_is_not_his_belief() {
-        let (mut g, gd) = stand(true);
+        let (mut g, gd) = stand();
         cover(&mut g, gd, [1.0, 0.0, 2.0]);
         assert_eq!((g.gd[gd].covers, g.gd[gd].last_known, g.gd[gd].fix_stamp), (Some([1.0, 0.0, 2.0]), None, 0));
         duties_anew(&mut g);
@@ -116,23 +106,8 @@ mod tests {
     }
 
     #[test]
-    fn rule_off_one_field_and_duties_stay() {
-        let (mut g, gd) = stand(false);
-        let pt = [1.0, 0.0, 2.0];
-        cover(&mut g, gd, pt);
-        assert_eq!((g.gd[gd].covers, g.gd[gd].last_known, g.gd[gd].fix_stamp), (None, Some(pt), 1));
-        cover(&mut g, gd, pt); // the same point again is no new fix
-        assert_eq!(g.gd[gd].fix_stamp, 1);
-        assert_eq!(eyes_fix(&mut g, gd, pt), None);
-        assert_eq!(eyes_fix(&mut g, gd, [9.0, 0.0, 9.0]), Some(pt));
-        g.gd[gd].covers = Some(pt);
-        duties_anew(&mut g); // only the rule's word clears the field
-        assert_eq!(g.gd[gd].covers, Some(pt));
-    }
-
-    #[test]
     fn eyes_fix_asks_where_it_came_from() {
-        let (mut g, gd) = stand(true);
+        let (mut g, gd) = stand();
         let pt = [5.0, 0.0, 5.0];
         assert_eq!(eyes_fix(&mut g, gd, pt), None);
         g.gd[gd].sight_pos = [1.0, 7.0, 1.0];
@@ -146,7 +121,7 @@ mod tests {
 
     #[test]
     fn whose_gun() {
-        let (mut g, gd) = stand(true);
+        let (mut g, gd) = stand();
         let (lk, cv) = ([1.0, 0.0, 1.0], [2.0, 0.0, 2.0]);
         g.time = 10.0;
         g.gd[gd].last_known = Some(lk);
@@ -169,14 +144,12 @@ mod tests {
 
     #[test]
     fn a_word_stands_against_what_is_heard_of_then_or_before() {
-        let (mut g, gd) = stand(true);
+        let (mut g, gd) = stand();
         g.time = 4.0;
         word(&mut g, gd, [1.0, 0.0, 1.0]);
         assert_eq!((g.gd[gd].last_known, g.gd[gd].word_t, g.gd[gd].fix_stamp), (Some([1.0, 0.0, 1.0]), 4.0, 1));
         assert!(word_now(&mut g, gd));
         assert!(word_stands(&mut g, gd, 3.0));
         assert!(!word_stands(&mut g, gd, 4.5));
-        g.k.belief.on = false;
-        assert!(!word_now(&mut g, gd));
     }
 }

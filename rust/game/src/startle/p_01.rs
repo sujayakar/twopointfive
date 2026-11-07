@@ -132,12 +132,13 @@ fn stop(g: &mut crate::game::Game, gd: GuardId, hold: bool) -> Option<crate::gam
     None
 }
 
-/// THE BODY'S SEAM: the order a man running for cover follows this frame, None = he is nobody's but his own.   (startle.ts startleScript)
-pub fn startle_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
-    let Some(run) = g.m.startle.state_of.get(gd).and_then(|s| s.run) else { return None };
+/// THE RULE'S OWN STATE, moved a tick (the first of a rule's three parts, control/): a run ends where he cannot go on with it, where he is stuck, where
+/// he has arrived or it has taken too long; else its stuck watch is kept and its script is made.   (startle.ts startleScript, the part that writes)
+pub fn startle_transition(g: &mut crate::game::Game, gd: GuardId) {
+    let Some(run) = g.m.startle.state_of.get(gd).and_then(|s| s.run) else { return };
     let now = g.time;
     let m = &g.gd[gd];
-    if !g.ai_enabled || g.touring || g.quiet_utility || m.state != crate::game::GuardState::Alert || m.held.is_some() || m.script.is_some() || now < m.dazzled_until || now < m.stagger_until { return stop(g, gd, false); }
+    if !g.ai_enabled || g.touring || g.quiet_utility || m.state != crate::game::GuardState::Alert || m.held.is_some() || m.script.is_some() || now < m.dazzled_until || now < m.stagger_until { stop(g, gd, false); return; }
     let pos = g.ch[m.ch].pos;
     let (stuck_secs, stuck_m, run_secs) = (g.k.startle.stuck_secs, g.k.startle.stuck_m, g.k.startle.run_secs);
     let s = g.m.startle.state_of.get_mut(gd).unwrap();
@@ -145,12 +146,12 @@ pub fn startle_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::g
         None => { s.ref_ = Some(v3::copy(pos)); s.ref_t = now; }
         Some(r) => {
             if now - s.ref_t >= stuck_secs {
-                if v3::dist_xz(pos, r) < stuck_m { return stop(g, gd, true); }
+                if v3::dist_xz(pos, r) < stuck_m { stop(g, gd, true); return; }
                 s.ref_ = Some(v3::copy(pos)); s.ref_t = now;
             }
         }
     }
-    if s.script.and_then(|x| x.arrived).unwrap_or(false) || v3::dist_xz(pos, run) < 0.4 || now - s.run_at > run_secs { return stop(g, gd, true); }
+    if s.script.and_then(|x| x.arrived).unwrap_or(false) || v3::dist_xz(pos, run) < 0.4 || now - s.run_at > run_secs { stop(g, gd, true); return; }
     if s.script.is_none() {
         s.script = Some(crate::game::GuardScript {
             goal: Some(run),
@@ -164,7 +165,18 @@ pub fn startle_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::g
             ..Default::default()
         });
     }
-    s.script
+}
+
+/// WHAT IT WANTS OF HIM (the second part; it only reads): the order a man running for cover follows this tick, None = he is not this rule's.
+pub fn startle_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
+    let s = g.m.startle.state_of.get(gd)?;
+    if s.run.is_some() { s.script } else { None }
+}
+
+/// THE BODY'S SEAM, as one call: the rule's state moved, then what it wants.   (startle.ts startleScript)
+pub fn startle_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
+    startle_transition(g, gd);
+    startle_propose(g, gd)
 }
 
 /// The beat is over: he draws (the fight as it was, from here) or he runs.   (startle.ts choose)

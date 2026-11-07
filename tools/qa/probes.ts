@@ -61,7 +61,7 @@
 //     particles: particles-determinism particles-off particles-queue particles-sites
 //     perf: ladder perf-cards perf-flags perf-texpool
 //     qrf: qrf-element qrf-gating qrf-limits qrf-perimeter qrf-reset qrf-timeline qrf-trigger qrf-wave qrfsquad response
-//     sdfrig: sdfrig-fit sdfrig-pack sdfrig-presets
+//     sdfrig: sdfrig-fit sdfrig-pack
 //     cast: cast-loader cast-file cast-fit cast-game cast-look cast-beam   (the look switch: both files, OFF = today's masks, one digest under either look;  a statured man's laser leaves his drawn muzzle;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
 //     selector: selector-input selector-noise selector-rows selector-sustained
 //     selftest: selftest-fail selftest-fold selftest-holds selftest-knobs selftest-pass selftest-quiet selftest-throw   (selftest-fold by its own name only)
@@ -121,7 +121,7 @@ function foldOnlyErrors(): string[] {
   if (!FOLD_ONLY.size) return ['QA_FOLD_ONLY names no probe: nothing of this run was folded'];
   return [...FOLD_ONLY].filter(n => !FOLD_MET.has(n)).map(n => `QA_FOLD_ONLY names ${n}, and no probe of this run has that name (a probe's own name, not a family's): nothing was folded for it`);
 }
-const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[] = [], RAN_CHECKED = new Set<string>(), RAN_FOLDED = new Set<string>();   // (RAN_FOLDED: the probes that ran with the settled rows folded, tools/qa/fold.ts)
+const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[] = [], RAN_CHECKED = new Set<string>();
 /** The dispatch condition: registers `names` as known and says whether this invocation (`which`) is one of them. List 'all' explicitly where 'all' should run it; 'all-quick' follows QUICK. */
 function on(...names: string[]): boolean { for (const n of names) KNOWN.add(n); return names.includes(which) || (which === 'all-quick' && names.some(n => QUICK.has(n))); }
 /** The FAIL / PASS line shapes the probe files print (and gate.sh counts): a family banner with FAIL in it, a '- FAIL —' case line, a two-space '  FAIL …' check
@@ -144,7 +144,6 @@ async function run(name: string, fn: () => unknown, standOf = name): Promise<boo
   if (speaks) { const o = FOLDM.foldOutside(`before ${name}`); if (o) console.log(o); }   // (tools/qa/fold.ts: what was refused before this probe began is not its own, and is said)
   // (QA_FOLD_ONLY, the outermost runner's alone: the laid fold on for a named probe, off for any other, and back to what stood between probes after it)
   const between = FOLDM.foldMode(), only = speaks && FOLD_ONLY && between !== null; if (only) { if (FOLD_ONLY!.has(name)) FOLD_MET.add(name); FOLDM.foldFor(FOLD_ONLY!.has(name)); }
-  const folded = FOLDM.foldActive(); if (folded) RAN_FOLDED.add(name);   // (as the probe begins, before its fence opens: QA_FOLD_ONLY's choice, or a host's foldFor)
   try { ret = await asProbe(standOf, fn); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
   finally { tapDepth--; }
@@ -3419,7 +3418,7 @@ if (on('director-scheduler', 'director', 'all')) await run('director-scheduler',
 // ---------------------------------------------------------------- the SDF character rig (sdfrig-probes.ts): the fit off the mannequin, BoxWorld's packing of it, and that no preset switches it (no tier since the capsule cleanup)
 { let ran = false;
   const sf = async (name: string, fn: string) => { if (on(name, 'sdfrig', 'all')) { ran = true; await run(name, async () => ((await import('./sdfrig-probes.ts')) as any)[fn]()); } };
-  await sf('sdfrig-fit', 'sdfrigFit'); await sf('sdfrig-pack', 'sdfrigPack'); await sf('sdfrig-presets', 'sdfrigPresets');
+  await sf('sdfrig-fit', 'sdfrigFit'); await sf('sdfrig-pack', 'sdfrigPack');
   if (ran) familyBanner('sdfrig', (await import('./sdfrig-probes.ts')).sdfrigFailures()); }
 // ---------------------------------------------------------------- the cast (cast-probes.ts): the new character meshes — the loader against a synthetic file, the shipped cast.gltf, the per-variant fits, the game standing on it
 { let ran = false;
@@ -3736,19 +3735,20 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
   { // THE REDS AGAINST THE LIST (tools/qa/expected-red.ts): which of this run's red PROBES are old and explained, which are NEW, and which listed red came back green.
     // A table for the reader — the exit code is the verdict's, unchanged: red is red. By probe name: a family's own banner name in the verdict line (it counts its
     // members) is not a row here unless no probe of the run is red to account for it; GREEN AGAIN wants a probe that checked something (a NO VERDICT is not green).
-    // ONE LIST, read by stand: a row is the page's stand's unless its `on` says the old stand too, or alone. Two runs are read against no row at all, and say so
+    // ONE LIST, AND EVERY RUN OF A STAND AS IT OPENS IS READ AGAINST IT, folded or not: the fold is how the page's stand IS since the TypeScript tick was deleted
+    // (tools/qa/fold.ts). (Until 2026-11-07 a folded probe's red was read against no row, which after the deletion was every red of every run with no word.)
+    // Read by stand: a row is the page's stand's unless its `on` says the old stand too, or alone. Two runs are read against no row at all, and say so
     // where they have a red: one started with a word of the stand given by hand (stand.ts BY_HAND: a probe turned green by its own rule held off would read GREEN
     // AGAIN), and one of a single case of a probe (a case's number as the third argument: `aim-door 0` passes without ever running the line its row is about).
     // A RUN STARTED WITH A BREAK WORD (stand.ts BREAK_WORDS) is still read against the list, and closes with one line more, because a row can hide the word:
     // a probe that is red by its row prints EXPECTED RED whether the word bit or not (the runner's (12) under RUNNER12_BREAK on the page's stand, 11-06). The
     // line says DID NOT BITE where nothing failed, names the reds with no row as the word's to explain, and says BITE NOT SHOWN where every red has a row.
     // With more words than one it cannot say which of them bit.
-    const { EXPECTED_RED: LIST, rowSays } = await import('./expected-red.ts'), { STAND, BY_HAND, BREAK_WORDS } = await import('./stand.ts');
-    const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : RAN_NAMES.length && RAN_NAMES.every(n => RAN_FOLDED.has(n)) ? 'the settled switch rows were folded (tools/qa/fold.ts: QA_FOLD or the Rust game\'s word), and the list is of a stand as it opens' : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
-    // (a run folded for SOME of its checks, fold.ts foldFor: those are read against no row, the rest as ever)
-    const reads = (n: string): boolean => !other && !RAN_FOLDED.has(n) && n in LIST && (STAND === 'shipped' ? LIST[n].on !== 'old' : !!LIST[n].on);
+    const { EXPECTED_RED: LIST, rowSays, LIST_READ_ON } = await import('./expected-red.ts'), { STAND, BY_HAND, BREAK_WORDS } = await import('./stand.ts');
+    const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
+    const reads = (n: string): boolean => !other && n in LIST && (STAND === 'shipped' ? LIST[n].on !== 'old' : !!LIST[n].on);
     const reds = FAILED.filter(n => RAN_NAMES.includes(n)), banners = FAILED.filter(n => !RAN_NAMES.includes(n));
-    const foldedReds = other ? [] : reds.filter(n => RAN_FOLDED.has(n)), old = reds.filter(reads), fresh = [...reds.filter(n => !reads(n) && !foldedReds.includes(n)), ...(reds.length ? [] : banners)];
+    const old = reds.filter(reads), fresh = [...reds.filter(n => !reads(n)), ...(reds.length ? [] : banners)];
     const back = RAN_NAMES.filter(n => reads(n) && !FAILED.includes(n) && RAN_CHECKED.has(n));
     /** what to do with a listed red that passed: the row goes, unless it is red on the other stand as well, where only this stand comes out of it */
     const mend = (n: string): string => { const shares = Object.keys(LIST).filter(m => LIST[m] === LIST[n]).length - 1, own = shares ? ` (${shares} other name${shares > 1 ? 's' : ''} share${shares > 1 ? '' : 's'} its row: this one goes, or gets a row of its own, and theirs stays)` : '';
@@ -3756,16 +3756,16 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
     if (other) { if (FAILED.length) console.log(`  the reds are not read against the list (tools/qa/expected-red.ts): ${other}`); }
     else if (old.length || fresh.length || back.length) {
       console.log(`  the reds against the list (tools/qa/expected-red.ts${STAND === 'shipped' ? '' : ", the rows that are red on the old stand"}): ${old.length} expected · ${fresh.length} NEW · ${back.length} listed and green again`);
+      if (LIST_READ_ON && STAND === 'shipped' && (old.length || back.length)) console.log(`    (${LIST_READ_ON})`);
       for (const n of old) console.log(`    EXPECTED RED  ${n} — ${rowSays(LIST[n])}`);
       for (const n of fresh) console.log(`    NEW RED       ${n}`);
       for (const n of back) console.log(`    GREEN AGAIN   ${n} — listed as an expected red and it passed here: ${mend(n)}`);
     }
-    if (foldedReds.length) console.log(`  the reds of folded probes (tools/qa/fold.ts) are read against no row: ${foldedReds.length} — ${foldedReds.join(', ')}`);
     for (const e of foldOnlyErrors()) console.log(`error: ${e}`);   // (QA_FOLD_ONLY that could not do what it was asked: an error, so that a check that had to be folded is never a green run unfolded)
     if (BREAK_WORDS.length) { const many = BREAK_WORDS.length > 1, w = `BREAK WORD${many ? 'S' : ''} ${BREAK_WORDS.join(' ')}`, all = [...reds, ...(reds.length ? [] : banners)];
       console.log(`  ${w}: ` + (!FAILED.length ? `${many ? 'NONE BIT' : 'DID NOT BITE'} — nothing this run ran failed${other ? ` (${other})` : ''}`
         : other ? `${all.length} red (${all.join(', ')}); the list is not asked, so whether ${many ? 'one' : 'it'} bit is by the line that failed`
-        : fresh.length || foldedReds.length ? `${fresh.length + foldedReds.length} red with no row on this stand (${[...fresh, ...foldedReds].join(', ')}${foldedReds.length ? `; ${foldedReds.length} of them ran folded, where no row is read` : ''}): the word's to explain, by the line that failed${many ? '; which word bit is not said' : ''}`
+        : fresh.length ? `${fresh.length} red with no row on this stand (${fresh.join(', ')}): the word's to explain, by the line that failed${many ? '; which word bit is not said' : ''}`
         : `BITE NOT SHOWN — every red of this run has a row on this stand and is red without the word: read which LINE failed`)); }
   }
   process.exitCode = FAILED.length || foldOnlyErrors().length ? 1 : 0;

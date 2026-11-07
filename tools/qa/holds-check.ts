@@ -74,16 +74,17 @@ const probeNames = [...known].filter(n => ran.has(n)).sort(), heldNames = probeN
 
 // (3) a word whoever runs the tool set is left as he set it: =1 and nothing of that row is touched (the name's other words held all the same); =0 and it is
 // the hold itself — the row off inside, the word still his after
-{ const name = heldNames.find(n => holdsOf(n).filter(h => h.now).length >= 2) ?? '', hs = holdsOf(name).filter(h => h.now), mine = hs[0], other = hs[1];
-  if (!mine || !other) line(false, '(3) a word whoever runs the tool set himself is left as he set it', 'no probe of the runner holds two rows: the line is not asked');
+// (the table had probes owed two rows until 2026-11-07; with one row left none is, and 'the name's other words held all the same' is asked only where one is)
+{ const name = heldNames.find(n => holdsOf(n).filter(h => h.now).length >= 2) ?? heldNames.find(n => holdsOf(n).some(h => h.now)) ?? '', hs = holdsOf(name).filter(h => h.now), mine = hs[0], other: Hold | undefined = hs[1];
+  if (!mine) line(false, '(3) a word whoever runs the tool set himself is left as he set it', 'no probe of the runner holds a row: the line is not asked');
   else { const was = read(mine), T = R[mine.table];
     process.env[mine.word] = '1'; T[mine.key] = true;
-    const one = await asProbe(name, () => ({ word: process.env[mine.word], row: T[mine.key], otherWord: process.env[other.word] })), oneAfter = process.env[mine.word];
+    const one = await asProbe(name, () => ({ word: process.env[mine.word], row: T[mine.key], otherWord: other ? process.env[other.word] : '0' })), oneAfter = process.env[mine.word];
     process.env[mine.word] = '0'; T[mine.key] = true;
     const zero = await asProbe(name, () => ({ word: process.env[mine.word], row: T[mine.key] })), zeroAfter = process.env[mine.word], zeroRow = T[mine.key];
     delete process.env[mine.word]; T[mine.key] = was;
     const ok = one.word === '1' && one.row === true && oneAfter === '1' && one.otherWord === '0' && zero.word === '0' && zero.row === false && zeroAfter === '0' && zeroRow === true;
-    line(ok, '(3) a word whoever runs the tool set himself is left as he set it: =1 is his to ask, =0 is the hold itself', `${name}: ${mine.word}=1 reads ${one.word} inside with ${at(mine)} ${one.row}, ${other.word} ${one.otherWord ?? 'unset'} · ${mine.word}=0 reads ${zero.word} inside with ${at(mine)} ${zero.row}, the word ${zeroAfter ?? 'gone'} after and the row ${zeroRow === true ? 'back' : 'not back'}`); } }
+    line(ok, '(3) a word whoever runs the tool set himself is left as he set it: =1 is his to ask, =0 is the hold itself', `${name}: ${mine.word}=1 reads ${one.word} inside with ${at(mine)} ${one.row}, ${other ? `${other.word} ${one.otherWord ?? 'unset'}` : 'no second row on any probe (not asked)'} · ${mine.word}=0 reads ${zero.word} inside with ${at(mine)} ${zero.row}, the word ${zeroAfter ?? 'gone'} after and the row ${zeroRow === true ? 'back' : 'not back'}`); } }
 
 // (4) the fence: a knob a probe wrote, the cut-pieces switch and the plain night's card are back after it; and a row the registry has not stops a hold by name
 { const cut = (await import(`${ROOT}/src/scene/cut.ts`)).cutConfig, kit = await import(`${ROOT}/src/game/kit.ts`);

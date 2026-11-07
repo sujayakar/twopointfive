@@ -81,7 +81,7 @@ async function arm(name: Arm, dump: string | null) {
   const particles = new Particles(S.device as never, engine.sceneLayout);   // (the page makes it beside the engine and waits for both: src/main.ts)
   let ready = false; const init = Promise.all([engine.init({ sharp: true, gbaa: true }), particles.init()]).then(() => { ready = true; });
   // THE LATER SET, by name: what the start may leave out with the row on (render/passes.ts traceJobs and init, render/froxels.ts). The dust twin only where it is drawn.
-  const LATER = ['restirM', 'gatherTrace', 'reflectP5', 'composite', 'froxelCull', 'froxelInject', 'froxelInjectJ', 'froxelTemporal', 'froxelIntegrate',
+  const LATER = ['composite', 'froxelCull', 'froxelInject', 'froxelInjectJ', 'froxelTemporal', 'froxelIntegrate',
     ...(DUST_DRAW.on ? ['volDust'] : []), 'volFroxel'];
   const later = new Set(wantFirst ? LATER : []);
   for (let turn = 0; turn < 400 && !ready; turn++) { for (const a of S.asked) if (!a.done && !later.has(a.label)) a.let(); await tick(); }
@@ -117,8 +117,6 @@ async function arm(name: Arm, dump: string | null) {
     return { err: '', by, none, flags: new Uint32Array(engine.frameData)[62], restirSent: S.wrote.includes(restirU), cfgY: new Uint32Array(restirU)[1] };
   };
   const VIEWS: { name: string; set: (s: Record<string, unknown>) => void; pass: string; own: string; meanwhile: string }[] = [
-    { name: 'the gather without strata', set: s => { s.gatherStrata = false; }, pass: 'gather', own: 'gatherTrace', meanwhile: 'gatherTraceS' },
-    { name: 'phase 5\'s reflections', set: s => { s.rtReflect = true; s.rtHitReuse = true; }, pass: 'reflect', own: 'reflectP5', meanwhile: 'reflect' },
     { name: 'the fragment composite (scale 1, nothing to decouple)', set: s => { s.renderScale = 1; s.sharpDirect = false; s.glassRefract = false; }, pass: 'composite', own: 'composite', meanwhile: '' },
   ];
   const shot = (when: string, landed: boolean) => {
@@ -135,10 +133,9 @@ async function arm(name: Arm, dump: string | null) {
     const up = (fr.flags & FrameFlags.FroxelVol) !== 0;
     check(!fr.err && up === landed, `${when}: the froxel flag is ${landed ? 'up for a tier that marches the froxels' : 'held down'}`, fr.err || `flags 0x${fr.flags.toString(16)}`);
     if (landed) { const got = fr.by.volumetrics ?? []; check(got.includes('volFroxel'), `${when}: that tier's 2D pass draws with the froxel twin`, got.join(', ')); }
-    // what the engine WRITES for a stand-in must be for the program that runs (the restir uniform goes up before the encode picks)
+    // the motion levers are bits of the one program's uniform: a frame the camera moved carries its taps beside the spatial count, whatever has landed
     const mv = frame(s => { s.restirMotion = 7; s.restirMotionStatic = true; s.restirMotionTaps = 6; }), mvGot = mv.by.direct ?? [], taps = (mv.cfgY >>> 8) & 15;
-    if (landed) check(!mv.err && mvGot.includes('restirM') && taps === 6, `${when}: a frame the camera moved runs the motion twin with its taps packed beside the spatial count`, mv.err || `direct: ${mvGot.join(', ')}, cfg.y 0x${mv.cfgY.toString(16)}`);
-    else check(!mv.err && mvGot.includes('restir') && !mvGot.includes('restirM') && mv.cfgY < 256, `${when}: a frame the camera moved runs main's restir with main's uniform (no motion taps in the word it reads as its spatial count)`, mv.err || `direct: ${mvGot.join(', ')}, cfg.y 0x${mv.cfgY.toString(16)}`);
+    check(!mv.err && mvGot.length > 0 && mvGot.every(l => l === 'restir') && taps === 6, `${when}: a frame the camera moved runs the one direct program with its motion taps packed beside the spatial count`, mv.err || `direct: ${mvGot.join(', ')}, cfg.y 0x${mv.cfgY.toString(16)}`);
   };
   if (wantFirst) {
     check(engine.passes.fragCompReady === false && engine.passes.froxels.ready === false && engine.passes.volFReady === false, 'the engine knows what is not in yet (no fragment composite, no froxel kernels)');
@@ -277,7 +274,7 @@ if (argOf('--dump') !== null) {   // this tree, the environment's row
   console.log('\n=== across the arms ===');
   const same = (x?: string[], y?: string[]) => !!x && !!y && JSON.stringify(x) === JSON.stringify(y);
   check(same(boots.off, boots.first), 'Start on first frame shaders asks for the same pipelines as the build without it, by name');
-  check(!!boots.off && ['gatherTrace', 'gatherTraceS', 'gatherLight', 'vol', 'volFroxel'].every(l => boots.off!.includes(l)) && !boots.off.some(l => /^fgather/.test(l)), 'the gather is its two programs and the volumetric pass its two, and no one-kernel gather is asked for', (boots.off ?? []).filter(l => /gather|^vol/.test(l)).join(', '));
+  check(!!boots.off && ['gatherTrace', 'gatherLight', 'vol', 'volFroxel'].every(l => boots.off!.includes(l)) && !boots.off.some(l => /^fgather/.test(l)), 'the gather is its two programs and the volumetric pass its two, and no one-kernel gather is asked for', (boots.off ?? []).filter(l => /gather|^vol/.test(l)).join(', '));
   // the page's wiring, read as text: a player's start does not wait for the later set, a script's `__ready` does
   { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
     check(/\n  window\.__started = true;\n  void laterIdle\(\)\.then\(\(\) => \{ [^\n]*readyResolve\(\); \}\);/.test(main) && !/\n\s*readyResolve\(\);/.test(main),

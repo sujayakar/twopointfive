@@ -35,8 +35,8 @@
 //               there the fold stays off. A run so mixed reads its unfolded reds against the list of expected reds as ever, and names its folded
 //               reds apart; a red that is no probe's name (a family's banner) is read as before.
 //             · NOT HELD while off: an old branch object put back by reference after a look laid its replacement (the two share the row's cell).
-//   A FOLDED PROBE IS NOT THE STAND AS IT OPENS while a check still pins a settled row: the runner reads no folded probe's red against the list of
-//             expected reds (a run folded whole says so in one line).
+//   A FOLDED PROBE IS THE STAND AS IT OPENS since the TypeScript tick was deleted (a tool with no word stands the Rust game): the runner reads its red
+//             against the list of expected reds like any other (until 2026-11-07 it read a folded probe's red against no row).
 //   beside:   QA_VERDICTS=1 on a run WITHOUT the fold makes the runner (the outermost one) print `{"plain":{"probe":…,"red":…}}` after each probe, to lay
 //             the two runs side by side.
 // What it cannot hold, and says instead:
@@ -73,7 +73,7 @@ export function settledYesNo(rows: readonly SwitchRow[], depth: number): SwitchR
  *  words do), or by the word that stands the Rust game (TPS_GAME = rust, audit or table: a constant there is a constant here, whatever QA_FOLD says. That
  *  word is the Rust host's own: nothing else in this tree reads it yet, and what else it may be spelt is that host's to say and to refuse) */
 export function foldWanted(env: Record<string, string | undefined> = process.env): boolean {
-  if (!['1', '0', '', undefined].includes(env.QA_FOLD)) throw new Error(`QA_FOLD=${env.QA_FOLD}: 1 lays the fold of the settled switch rows (tools/qa/fold.ts), 0 or nothing does not`);
+  if (!['1', '0', '', undefined].includes(env.QA_FOLD)) throw new Error(`QA_FOLD=${env.QA_FOLD}: 1 lays the fold of the settled switch rows (tools/qa/fold.ts); 0 or nothing leaves it to the word that stands the game, and the default word folds`);
   // (the word with nothing in front is the Rust host's to say too: tools/blitz/word.ts DEFAULT_WORD, the one line that makes `table` the default)
   return env.QA_FOLD === '1' || ['rust', 'audit', 'table'].includes(env.TPS_GAME ?? DEFAULT_WORD);
 }
