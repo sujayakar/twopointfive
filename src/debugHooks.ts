@@ -22,8 +22,6 @@ export interface WgslLintMessage { type: GPUCompilationMessageType; line: number
 /** The shape the knob-panel hooks share (`__wet`, `__glass`, `__rt`, `__dn`, `__taa`, `__sharp`, `__sdfrig`, `__mark`, `__destr` …): a one-line summary,
  *  usually the knob table and a setter taking a partial of it, plus the module's own verbs and read-outs (indexed loosely — each is documented in CLAUDE.md's bullet). */
 export interface KnobHook { summary(): string; knobs?(): Record<string, unknown>; set?(patch: Record<string, unknown>): unknown; [verb: string]: unknown; }
-/** a shader hot-swap hook: recompile the pass from `src` (or the file the dev server serves under /qa/shader/) into the live page — resolves to the compiler's verdict */
-export type HotSwapHook = (src?: string) => Promise<unknown>;
 
 declare global {
   interface Window {
@@ -109,8 +107,6 @@ declare global {
     __wet?: KnobHook; __weather?: KnobHook; __glass?: KnobHook; __particles?: KnobHook; __taa?: KnobHook; __sharp?: KnobHook; __sdfrig?: KnobHook; __mark?: KnobHook; __dn?: KnobHook;
     /** the RT-reflection + material knobs (renderer v3 phase 4) on the GAME page */
     __rt?: KnobHook;
-    /** shader hot-swap: volumetrics / restir / direct / reflect / gather / denoise from disk into the live page */
-    __hotVol?: HotSwapHook; __hotRestir?: HotSwapHook; __hotReflect?: HotSwapHook; __hotGather?: HotSwapHook; __hotDenoise?: HotSwapHook;
     /** the capture sink's port for this page's __shot / __png (default 5174; a lane's own sink on another) */
     __shotPort?: number;
   }
