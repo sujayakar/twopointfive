@@ -325,9 +325,7 @@ pub fn civilian_sees(g: &mut crate::game::Game, gd: GuardId, pc: CharId, mate: O
         Some(h) => h,
         None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]),
     };
-    let chest_dir = g.ch[c].chest_dir;
-    let head_dir = crate::character::character_head_dir(g, c);
-    let look = v3::normalize(v3::lerp3(chest_dir, head_dir, 0.5));
+    let look = crate::guards::look_of(g, c);
     let e = eye_of(g, gd);
     let smoke = if mate.is_some() { 1.0 } else { g.gd[gd].smoke_trans };
     let vis = crate::guards::eye_contact(

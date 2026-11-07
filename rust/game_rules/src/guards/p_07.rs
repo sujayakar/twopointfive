@@ -361,7 +361,7 @@ fn perceive(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                 let (dx, dz) = (f[0] - pos[0], f[2] - pos[2]);
                 let dd = m::hyp2(dx, dz);
                 if dd > 2.2 || dd < 1e-3 { continue; }
-                let look = g.ch[c].chest_dir;
+                let look = crate::guards::look_of(g, c);
                 if (look[0] * dx + look[2] * dz) / dd < m::cos(75.0 * v3::DEG) { continue; }
                 let off = crate::doors::door_off(g, d);
                 let spot: V3 = if off {
