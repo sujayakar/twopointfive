@@ -4,10 +4,13 @@
 // SEAT_TABLE_BREAK=1 asks the table by the player, which no reader does, and the check must fail.
 const { standUp } = await import('../qa/headless.ts');
 const { setSilent, squadSilent } = await import('../../src/game/silent.ts');
-const q = process.argv[2] ?? 'roomclear&squad4', W: any = await standUp({ search: `?${q}` } as any), g = W.game, who = process.env.SEAT_TABLE_BREAK ? g.player : g;
+const { startFromQuery } = await import('../../src/game/scenarioRun.ts');
+const q = process.argv[2] ?? 'roomclear&squad4';
+const stand = async (): Promise<any> => { const W: any = await standUp({ seed: 9 }), said = startFromQuery(W.game, q); if (said.why) { console.log(`seat-table-check: ${q} refused: ${said.why}`); process.exit(3); } return W; };
+const ticks = (W: any) => { for (let t = 0; t < 5; t++) W.step(1 / 60); };
 let bad = 0; const line = (ok: boolean, say: string) => { console.log(`${ok ? 'PASS' : 'FAIL'}: ${say}`); if (!ok) bad++; };
-setSilent(g, true); for (let t = 0; t < 5; t++) W.step(1 / 60);
-line(squadSilent(who), 'a squad set silent before the first tick is silent after it: the start carried the row and the apply brought it back');
-setSilent(g, false); for (let t = 0; t < 5; t++) W.step(1 / 60); line(!squadSilent(g), 'set loud in play, the puppet reads loud');
-setSilent(g, true); for (let t = 0; t < 5; t++) W.step(1 / 60); line(squadSilent(who), 'set silent in play, the puppet reads silent');
+{ const W = await stand(), g = W.game, who = process.env.SEAT_TABLE_BREAK ? g.player : g;   // (the table has no row until the Rust game writes it)
+  ticks(W); setSilent(g, true); ticks(W); line(squadSilent(who), 'set silent in play with no row before it, the puppet finds the row under the Game');
+  setSilent(g, false); ticks(W); line(!squadSilent(g), 'set loud in play, the puppet reads loud'); }
+{ const W = await stand(), g = W.game; setSilent(g, true); ticks(W); line(squadSilent(g), 'set silent before the first tick, the start carries the row and the squad is silent after it'); }
 console.log(`=== seat-table-check: ${bad ? `${bad} failed` : 'all pass'} ===`); process.exit(bad ? 1 : 0);
