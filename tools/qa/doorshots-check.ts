@@ -1,20 +1,18 @@
-// ROUNDS THROUGH A DOORWAY KEEP HIS GUN ON IT (ROOMFIGHT.doorShots; ?doorshots=0; TPS_DOORSHOTS=1 raises it on the frozen stand).
+// ROUNDS THROUGH A DOORWAY KEEP HIS GUN ON IT (ROOMFIGHT.doorShots, settled on; not written here since 2026-11-07: out went (1) the stand's word, (2) 'rule
+// off: … the build as it was', (6) 'off, nothing reads its number' and (7) the recording and the page's flag).
 // The maintainer, on a replay of his four stacked on a door an enemy had opened: "enemy was immediately in front of them and shooting, nothing happened". The man firing stood behind the far
 // jamb where three of the four had no line to him; one of them looked at the doorway for the door's own few seconds and then turned his back to it with the rounds still coming.
 // Staged: the office, four men told to stack on the server-room door, every defender but one put down, that one stood by hand behind the far jamb where nobody outside has a line to him. He
 // opens the door (his hand, from inside), the look a door gets is waited out, he is stood where the open leaf and the wall leave nobody a line, and then fires a round every half second out
 // through the opening, past every man, for five seconds.
-//   (1) the stand says what it holds: the page has the rule, the frozen stand does not;
-//   (2) rule off: with the rounds coming, nobody's look is on that doorway and a man with a line to it has his gun well off it (the build as it was);
-//   (3) rule on: every man with a line to the doorway and nobody in his sight (on the page's stand a jamb man leaning has the shooter in sight: he is not asked) is looking at it within a second of the first round and still is at the last, his gun on it, and a man who was turned away is turned away again after;
-//   (4) rule on, the door shut: nobody is turned (no round comes through a shut leaf: the rule's own open-leaf test is not what this line reaches);
-//   (5) rule on, the reach set shorter than where he stands from the frame: nobody is turned (the number is read); and his rounds sent into his own room instead: nobody is turned
+//   (3) every man with a line to the doorway and nobody in his sight (on the page's stand a jamb man leaning has the shooter in sight: he is not asked) is looking at it within a second of the first round and still is at the last, his gun on it, and a man who was turned away is turned away again after;
+//   (4) the door shut: nobody is turned (no round comes through a shut leaf: the rule's own open-leaf test is not what this line reaches);
+//   (5) the reach set shorter than where he stands from the frame: nobody is turned (the number is read); and his rounds sent into his own room instead: nobody is turned
 //       (no round came through the doorway);
-//   (6) off, nothing reads its number: the same run with the reach moved, every gun where it was;
-//   (7) a recording from before the key replays with it off; one that carries it keeps it; ?doorshots=0 puts it off.
 //
-//   bun run tools/qa/doorshots-check.ts            (both stands; also `probes.ts door-shots`, family roomfight)
-//   DOORSHOTS_BREAK=1 …                            (the rule's own body left out, the same lines asked: must fail)
+//   bun run tools/qa/doorshots-check.ts            (also `probes.ts door-shots`, family roomfight)
+//   DOORSHOTS_BREAK=1 …                            (a staging break: in the first runs his rounds go into his own room, so none comes through the doorway and the
+//                                                    first line must fail; the word is also an old hook of the TypeScript room fight, which the Rust tick does not read)
 // What it cannot say: one door, one room, the shooter stood and fired by hand and blind himself, nobody hit; whether a gun on the doorway wins the exchange when he steps into it is the fight's
 // dice and is not asked here. His rounds are fired by hand with his own hands' spread: one may clip the frame. Not staged: a shooter on the men's own side of the wall, a hold's arc, a man walking to a door order, a gun an order has on another door, two doorways, two
 // shooters, a room next door. Never seen on a GPU, nobody has played it.
@@ -23,8 +21,6 @@ import { guarded, family } from './thresholdmenu-probes.ts';
 const { ROOMFIGHT } = (await import(`${ROOT}/src/game/roomfight.ts`)) as any;
 const { NIGHTBREACH } = (await import(`${ROOT}/src/game/nightbreach.ts`)) as any;
 const { killGuard, fireWeapon } = (await import(`${ROOT}/src/game/combat.ts`)) as any;
-const PROFILE: any = await import(`${ROOT}/src/host/profile.ts`), { FROZEN_HOLDS } = PROFILE;
-const JOURNAL: any = await import(`${ROOT}/src/game/journal.ts`);
 const { knobsCopy, knobsBack } = (await import(`${ROOT}/src/game/knobs.ts`)) as any;
 
 const DT = 1 / 60, SEEDS = (process.env.DOORSHOTS_SEEDS ?? '3').split(',').map(Number), DOOR = 'server', QUIET_S = 5, FIRE_S = 5, EVERY = 30, DEG = Math.PI / 180;
@@ -33,20 +29,20 @@ async function quiet<T>(fn: () => T | Promise<T>): Promise<T> { const log = cons
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 
 interface Man { who: string; line: boolean; off0: number; first: number; last: number; held: number; asked: number; worst: number; after: boolean; back: number; tgt: number }
-interface Run { stood: boolean | null; why: string; men: Man[]; looks: number; yaws: number[]; hit: number; seen: number; foeUp: boolean; g: any }
+interface Run { why: string; men: Man[]; looks: number; yaws: number[]; hit: number; seen: number; foeUp: boolean; g: any }
 
 /** the office stood up, the four on the server door, one defender behind its far jamb: he opens it (unless `shut`), waits, fires `FIRE_S` seconds into his own room */
-async function play(SEED: number, on: boolean, o: { shut?: boolean; reach?: number; away?: boolean } = {}): Promise<Run> {
-  const R: Run = { stood: null, why: '', men: [], looks: 0, yaws: [], hit: 0, seen: 0, foeUp: false, g: null };
+async function play(SEED: number, o: { shut?: boolean; reach?: number; away?: boolean } = {}): Promise<Run> {
+  const R: Run = { why: '', men: [], looks: 0, yaws: [], hit: 0, seen: 0, foeUp: false, g: null };
   Math.random = seeded(0x51ab + SEED * 7919); Object.assign(NIGHTBREACH, { squad: 4 }); ROOMFIGHT.doorShotM = 8;
   const W: any = await quiet(() => standUp({ uploadEvery: 4 })), g = W.game, NB = g.nightBreach, O = g.orders; R.g = g;
-  R.stood = !!ROOMFIGHT.doorShots; ROOMFIGHT.doorShots = on; if (o.reach !== undefined) ROOMFIGHT.doorShotM = o.reach;
+  if (o.reach !== undefined) ROOMFIGHT.doorShotM = o.reach;
   g.godMode = true; await quiet(() => g.roomClear.start(SEED));
   const d = g.doors.list.find((x: any) => x.def.name === DOOR); if (!d) { R.why = `no door ${DOOR}`; return R; }
   const foes: any[] = NB.hostiles.filter((h: any) => h.state !== 'dead'), h = foes[0]; if (!h) { R.why = 'no defender'; return R; }
   for (const x of foes) if (x !== h) killGuard(g, x, [0, 0, 1], false);
   const ops = (): any[] => NB.ops.filter((m: any) => m.state !== 'dead');
-  let spot: number[] | null = null, held: number | null = null;   // (held: the leaf kept where it swung to — on the frozen stand a leaf a defender's hand opened swings to again)
+  let spot: number[] | null = null, held: number | null = null;   // (held: the leaf kept where it swung to)
   const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; h.dazzledUntil = g.time + 5; const p = spot ?? [37.5, 0, 1]; h.char.pos[0] = p[0]; h.char.pos[2] = p[2]; h.char.vel[0] = h.char.vel[2] = 0; if (held !== null) { d.angle = held; d.vel = 0; d.closing = false; d.latched = false; } W.step(DT); } };
   await quiet(() => { step(30); O.give('stack', O.targetAt(d.frameCentre)); for (let i = 0; i < 60 * 70 && !ops().every((m: any) => O.of(m)?.order === 'stack' && O.of(m).arrived); i++) step(); step(120); });
   if (!ops().every((m: any) => O.of(m)?.order === 'stack' && O.of(m).arrived) || ops().length < 4) { R.why = `the stack never formed (${ops().map((m: any) => `${m.callsign} ${O.of(m)?.order ?? '—'}${O.of(m)?.arrived ? ' there' : ''}`).join(', ')})`; return R; }
@@ -97,26 +93,16 @@ export const doorShotsCheck = guarded(async () => {
   const F = family('door-shots: rounds through a doorway keep his gun on it');
   const knobs0 = knobsCopy(), rnd0 = Math.random;
   try {
-    const off: Run[] = [], on: Run[] = []; for (const s of SEEDS) { off.push(await play(s, false)); on.push(await play(s, true)); }
+    const on: Run[] = []; for (const s of SEEDS) on.push(await play(s, process.env.DOORSHOTS_BREAK === '1' ? { away: true } : {}));
     const say = (A: Run[]) => A.map((R, i) => `seed ${SEEDS[i]}: ${show(R)}`).join(' ‖ ');
-    { const shipped = process.env.TPS_PROFILE === 'shipped', env = process.env.TPS_DOORSHOTS, want = env !== undefined ? env === '1' : shipped, row = FROZEN_HOLDS['ROOMFIGHT.doorShots'];
-      F.verdict(off[0].stood === want && row === 'TPS_DOORSHOTS=1', `the stand: ${want ? 'on, as the page opens' : 'held off, as every frozen tally was recorded'}; FROZEN_HOLDS carries the row and its word`, `after the stand-up: ${off[0].stood} · TPS_DOORSHOTS ${env ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'} · row ${row ?? 'MISSING'}`); }
-    F.verdict(off.every(R => !R.why && R.looks === 0 && R.hit === 0 && R.foeUp && R.men.some(m => m.line && !m.tgt && m.worst > 60)), 'rule off: with the rounds coming nobody\'s look is on that doorway, and a man with a line to it has his gun well off it', say(off));
     F.verdict(on.every(R => !R.why && R.hit === 0 && R.foeUp && R.men.filter(m => m.line && !m.tgt).length >= 2 && R.men.some(m => m.line && !m.tgt && m.off0 > 60) && R.men.filter(m => m.line && !m.tgt).every(m => m.first <= 1 && m.held === m.asked && m.worst <= 25 && m.after && (m.off0 <= 60 || m.back > 40))),
-      'rule on: every man with a line to the doorway and nobody in his sight (one who was turned away among them) looks at it inside a second of the first round and to the last, his gun on it, and a man who was turned away is turned away again after', say(on));
-    { const R = await play(SEEDS[0], true, { shut: true });
-      F.verdict(!R.why && R.looks === 0 && R.men.some(m => m.line), 'rule on, the door shut: nobody is turned, with the doorway still in their lines (no round comes through a shut leaf)', show(R)); }
-    { const R = await play(SEEDS[0], true, { reach: 0.4 });
-      F.verdict(!R.why && R.looks === 0, 'rule on, the reach set shorter than where he stands from the frame: nobody is turned (the number is read)', show(R)); }
-    { const R = await play(SEEDS[0], true, { away: true });
-      F.verdict(!R.why && R.looks === 0, 'rule on, his rounds sent into his own room: nobody is turned (no round came through the doorway)', show(R)); }
-    { const R = await play(SEEDS[0], false, { reach: 2 }), same = R.yaws.length === off[0].yaws.length && R.yaws.every((y, i) => y === off[0].yaws[i]);
-      F.verdict(!R.why && same && R.looks === 0, 'off, nothing reads its number: the same run with the reach moved, every gun where it was', `${R.yaws.length} gun readings, ${same ? 'all the same' : 'DIFFERENT'}`); }
-    { const g = on[0].g, snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(g)));
-      ROOMFIGHT.doorShots = true; const old = snap(); delete old.tables.ROOMFIGHT.doorShots; JOURNAL.applyKnobs(g, old); const without = ROOMFIGHT.doorShots;
-      ROOMFIGHT.doorShots = true; const own = snap(); ROOMFIGHT.doorShots = false; JOURNAL.applyKnobs(g, own); const withIt = ROOMFIGHT.doorShots;
-      PROFILE.pageSwitches(new URLSearchParams('')); const a = ROOMFIGHT.doorShots; PROFILE.pageSwitches(new URLSearchParams('doorshots=0')); const b = ROOMFIGHT.doorShots;
-      F.verdict(without === false && withIt === true && a === true && b === false, 'a recording from before the key replays with the rule off (journal.ts applyKnobs), one that carries it keeps it; the page opens with it on and ?doorshots=0 puts it off', `applyKnobs with no key → ${without} · with it on → ${withIt} · '' → ${a} · 'doorshots=0' → ${b}`); }
+      'every man with a line to the doorway and nobody in his sight (one who was turned away among them) looks at it inside a second of the first round and to the last, his gun on it, and a man who was turned away is turned away again after', say(on));
+    { const R = await play(SEEDS[0], { shut: true });
+      F.verdict(!R.why && R.looks === 0 && R.men.some(m => m.line), 'the door shut: nobody is turned, with the doorway still in their lines (no round comes through a shut leaf)', show(R)); }
+    { const R = await play(SEEDS[0], { reach: 0.4 });
+      F.verdict(!R.why && R.looks === 0, 'the reach set shorter than where he stands from the frame: nobody is turned (the number is read)', show(R)); }
+    { const R = await play(SEEDS[0], { away: true });
+      F.verdict(!R.why && R.looks === 0, 'his rounds sent into his own room: nobody is turned (no round came through the doorway)', show(R)); }
   } finally { knobsBack(knobs0); Math.random = rnd0; }
   return F.done();
 });

@@ -741,7 +741,7 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
   let T = min(lookCfg.g.y, 1.0) * min(K, 1.0); let op = side == 0u || side == 4u;
   let seed = f32(owner) * 0.618; let own = fract(seed); let own2 = fract(f32(owner) * 0.3819 + 0.27);
   let ridge = max(-cavity, 0.0);
-  let cold = lv(SNOW_SURF) && snowCfg.p[1].z > 0.5;
+  let cold = GBUF_SNOW && snowCfg.p[1].z > 0.5;   // (the module's own writing, as every snow read of the g-buffer's texts: render/gbuffer.ts. Asked of the frame's level word it was a short-circuit of two uniform reads here, and the software adapter's GPU process fell over drawing the men on the look's page)
   var alb = albedoIn; var rough = roughIn; var gain = gainIn;
   if (slot == 1u || slot == 2u || slot == 3u) {
     let tile = select(0.3, 0.16, slot == 3u);                                               // (webbing's thread is coarser)

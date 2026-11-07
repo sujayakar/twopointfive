@@ -85,7 +85,7 @@ async function againOf(m: typeof missions[number]): Promise<Row> {
   // stood after one of another kind finds that kind's numbers as left. So for each row, the TEAM'S keys of the tables its own start does NOT
   // write are let differ, and nothing else of them; the tables it does write are held like any path. (The mend is a mission's numbers on the
   // Game: rust/game_start/README.md, the team's start.)
-  const kind = /[?&](roomclear|nightbreach|rescue|quiet)\b/.exec(m.link)?.[1] ?? 'nightbreach', writes = kind === 'roomclear' ? ['roomclear', 'nightbreach'] : [kind];
+  const kind = /[?&](roomclear|nightbreach|rescue|quiet)\b/.exec(m.link)?.[1] ?? '', writes = kind === 'roomclear' ? ['roomclear', 'nightbreach'] : [kind];   // (a link that names no kind writes no table)
   const others = ['roomclear', 'nightbreach', 'rescue'].filter(k => !writes.includes(k));
   const known = resolve(out, 'known-row.txt'); writeFileSync(known, others.map(k => `^g\\.(k\\.${k}\\.(sam_at|sam_yaw|ops_at|ops_yaw|squad|seed)\\b|m\\.${k}\\.applied\\b)\tthe ${k} missions' team numbers in the process's knob table, as the last mission that wrote them left them: this mission's start does not write that table (OPEN: start-levels.ts againOf)\n`).join(''));
   const d = await runLater('bun', ['run', 'tools/blitz/diff.ts', resolve(out, 'c1.bin'), resolve(out, 'again.bin'), '--blocks', resolve(out, 's0.bin'), resolve(out, 'again-s.bin'), '--out', resolve(out, 'diff-again.tsv'), '--canon-file', 'tools/blitz/canon.txt', '--known', `tools/blitz/known-again.txt,${known}`, '--live', '--show', '4']);
@@ -95,12 +95,16 @@ async function againOf(m: typeof missions[number]): Promise<Row> {
   // function of the clip), so a game stood after another has rows the first lacked. A byte that differs where the first start HAS one is a red.
   if (line && !/; block 0 bytes/.test(line) && existsSync(resolve(out, 'parts.txt'))) {
     const a = readFileSync(resolve(out, 's0.bin')), b = readFileSync(resolve(out, 'again-s.bin')), P = readFileSync(resolve(out, 'parts.txt'), 'utf8').split('\n').map(l => l.split('\t')).find(c => c[0] === 'poses');
+    // (the rows are let be as SPANS: from a span's first differing byte to its last, the first start must hold nothing at all, so a value both
+    //  starts made that happens to hold a zero is not taken for a row the first lacked. A span ends where 64 bytes in a row are equal.)
     let memo = 0, other = a.length === b.length ? 0 : 1;
-    if (!other) for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) { if (P && i >= +P[1] && i < +P[1] + +P[2] && a[i] === 0) memo++; else other++; }
+    if (!other) for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) { let end = i, j = i; for (; j < a.length && j - end <= 64; j++) if (a[j] !== b[j]) end = j;
+      const inPoses = !!P && i >= +P[1] && end < +P[1] + +P[2]; let empty = inPoses; for (let k = i; empty && k <= end; k++) if (a[k] !== 0) empty = false;
+      if (empty) memo += end - i + 1; else other += end - i + 1; i = end; }
     if (!other && memo) { line = line.replace(/; block \d+ bytes/, '; block 0 bytes'); row.end = `${memo} bytes of pose rows the first start had not made`; }
   }
   row.start = unknownOf(line); row.end = [/(\d+) known/.exec(d.out)?.[1] ?? '', row.end].filter(Boolean).join(' · ');
-  row.ended = row.start === 'did not run' ? 'DID NOT RUN' : row.start === '0' && stoodBetween ? 'yes' : 'NOT EQUAL';
+  row.ended = row.start === 'did not run' ? 'DID NOT RUN' : row.start === '0' && stoodBetween && !unlisted ? 'yes' : 'NOT EQUAL';
   return row;
 }
 if (AGAIN) {

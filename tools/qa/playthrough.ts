@@ -1613,7 +1613,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
   const out: RunOut & { trace: string[] } = { scn, seed, end: 'error', why: '', t: 0, team: 0, of: 0, hostiles: 0, hostilesOf: 0, orders: 0, refused: [], smells: [], rooms: 0, note: '', trace: [] };
   let P: Player | null = null, cuesOn = true, clOn = false;
   MAINS.length = 0; mainsOut = false;
-  const { FRIENDLYFIRE_STATS: FF } = await import('../../src/game/friendlyfire.ts'); const ff0 = { ...FF }; const { FIRELINE_STATS: FL } = await import('../../src/game/fireline.ts'); const fl0 = { ...FL };   // (friendly fire: this run's own share of the tally, on `ff` below)
+  const { FRIENDLYFIRE_STATS: FF } = await import('../../src/game/friendlyfire.ts'); let ff0 = { ...FF }; const { FIRELINE_STATS: FL } = await import('../../src/game/fireline.ts'); let fl0 = { ...FL };   // (friendly fire: this run's own share of the tally, on `ff` below)
   // (--set reaches the feel tables, the rescue's own, and the harder defenders: THE SWITCH as the game's own row sets it — --set '{"DIFFICULTY":{"level":"hard"}}'
   // (game/difficulty.ts; HARD = what hard is beside both switches on, set first; HARD_AT = hard's own rows on one level, by its structure's name:
   // '{"HARD_AT":{"the block":{}},"DIFFICULTY":{"level":"hard"}}' = the build's hard there) — and then the two tables under it, row by row, over whatever the level wrote)
@@ -1645,6 +1645,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     Math.random = seeded(0x9137 + seed * 7919);   // (this run's counts — the JSON's `frag`, `teampace`, `noshove`, `picture`, `doorforce`, `holdfire` — begin level because every stand-up puts a tally back: tools/qa/fresh.ts)
     WEATHER_BOOT.kind = (wx?.kind as any) ?? null; if (wx?.kind) (out as any).weather = wx.kind;
     let W: any; try { W = await quiet(!verbose, () => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })); } finally { WEATHER_BOOT.kind = null; } const g = W.game;
+    ff0 = { ...FF }; fl0 = { ...FL };   // (this run's share is counted from AFTER its stand-up, which puts a game's tallies back: tools/qa/fresh.ts)
     DOORSTAY.on = (rest.DOORSTAY?.on as boolean | undefined) ?? true;   // (the page's default too: doors stay where they are left — the harness stood the game up with the closers of old; --set '{"DOORSTAY":{"on":false}}' keeps them)
     T.DOORMANNERS.on = (rest.DOORMANNERS?.on as boolean | undefined) ?? true;   // (and the doorway manners as shipped: headless.ts stands every other tool up without them; --set '{"DOORMANNERS":{"on":false}}' plays without)
     DOORBLAST.on = (rest.DOORBLAST?.on as boolean | undefined) ?? true;   // (and a blast takes a leaf off its hinges, as shipped: --set '{"DOORBLAST":{"on":false}}' = a charge flings it in on its hinge)

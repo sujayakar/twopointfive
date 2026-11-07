@@ -8,17 +8,21 @@
 //                                                              but for THE_PROCESS_S (two that describe the process's tables)
 //   what is counted of a game, or left by one call             a name the state bridge carries whose row of tools/qa/rollback-exempt.ts is a TALLY
 //                                                              or a SCRATCH
-//   what only a Rust game's state is written into              a carried name in A_GAMES below: the TypeScript no longer writes it, so the static
-//                                                              pass lets it have no row there, and it has its row here
+//   what the Rust game itself keeps as a count                 a carried name with no row there (the TypeScript no longer writes it, so the
+//                                                              static pass lets it have none) that the bridge's schema reads into one of the
+//                                                              Rust game's `…Stats` structs (tools/blitz/schema.json): Rust says it is a tally
+//   a log only a Rust game's state is written into             the same, for the few logs: A_GAMES below, each with its row here
 // EVERYTHING ELSE IS LEFT ALONE: a knob table, a row that is a CONFIG, a CACHE, a CONST or a HOST's, a table keyed weakly by a game's objects, and
 // ANY CARRIED NAME NOTHING CLASSES. That last is on purpose. A name with no row may be a setting a tool turns between two games (the kit's cards, a
 // pace switch), and a start that put it back would undo the tool's hand and leave its check green on nothing. So such a name is never written; if it
-// has changed since the first start it is NAMED (FRESH.unlisted; start.ts --again prints it), and whoever reads that gives it a row: in A_GAMES if a
-// game's state is written into it, in rollback-exempt.ts as a CONFIG if a tool or a mission's start sets it.
+// has changed since the first start it is NAMED (FRESH.unlisted; start.ts --again prints it and the table is red on it), and whoever reads that gives
+// it a row: in A_GAMES if a game's state is written into it, in rollback-exempt.ts as a CONFIG if a tool or a mission's start sets it.
 // A name is reached through the bridge's window on a module's own variables (tools/blitz/expose.ts), so with no bridge in the process only the registry
 // is put back: no game is stepped there (only the Rust game steps), so no tally moves. Only what DIFFERS is written, in place, and never through a getter.
 // The check that keeps it: tools/blitz/start-levels.ts --again (a second start in one process, after a game was stood and played, is the first's).
-// FRESH_BREAK=1 in front of it puts nothing back, and every row must be red.
+// STANDFRESH_BREAK=1 in front of it puts nothing back, and every row must be red. STANDFRESH_SAY=1 in front of any tool names what each stand-up put back.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { sideRegistry } from '../../src/math/side.ts';
 import { knobRegistry } from '../../src/game/knobs.ts';
 import { ROLLBACK_EXEMPT } from './rollback-exempt.ts';
@@ -67,19 +71,29 @@ function putBack(live: unknown, was: unknown): boolean {
   return false;
 }
 
-/** carried names with NO row in rollback-exempt.ts (the TypeScript writes none of them any more, and that list is of what it writes) that a Rust
- *  game's state is written into through the bridge: each a tally or a log of one game, with where it was seen to move */
+/** carried LOGS with no row in rollback-exempt.ts (the TypeScript writes none of them any more, and that list is of what it writes) that a Rust game's
+ *  state is written into through the bridge. (A count needs no row here: the schema says which names the Rust game keeps among its Stats.) */
 export const A_GAMES: Record<string, string> = {
-  'src/game/aimweight.ts AIMWEIGHT_STATS': 'TALLY · steps and shots off the mark, counted by the Rust game every tick of any mission',
-  'src/game/gunwall.ts GUNWALL_STATS': 'TALLY · guns asked about, lowered and tucked at a wall, counted every tick of any mission',
-  'src/game/friends.ts FRIENDS_STATS': 'TALLY · guns lowered for a friend in the line, and for how long (seen with two seats)',
-  'src/game/lesson.ts LESSON_STATS': 'TALLY · a lesson\'s steps counted (seen on every mission: the count of ticks the engine looked)',
-  'src/game/nvg.ts NVG_LOG': 'TALLY · a log of the goggles going down and up, pushed and trimmed by the Rust game',
-  'src/game/doze.ts DOZE_STATS': 'TALLY · guards seen sat and at work, counted on the quiet missions',
-  'src/game/noshove.ts NOSHOVE_STATS': 'TALLY · frames a follower was turned round the player or held short (seen with two seats; a playthrough zeroed it by hand before each run)',
-  'src/game/teampace.ts TEAMPACE_STATS': 'TALLY · the team\'s runs by reason (a playthrough zeroed it by hand before each run)',
-  'src/game/doorforce.ts DOORFORCE_STATS': 'TALLY · sounds and sightings kept of a shut door (a playthrough zeroed it by hand before each run)',
+  'src/game/nvg.ts NVG_LOG': 'TALLY · a log of the goggles going down and up',
+  'src/game/clearline.ts CLEARLINE_LOG': 'TALLY · a log of the lines of fire held and cleared',
+  'src/game/kitanim.ts KITANIM_LOG': 'TALLY · a log of the kit\'s moves',
+  'src/game/morale.ts MORALE_LOG': 'TALLY · a log of the defenders\' minds changing',
+  'src/game/netquiet.ts NETQUIET_LOG': 'TALLY · a log of the quiet net',
+  'src/game/sneak.ts SNEAK_LOG': 'TALLY · a log of the sneak\'s beats',
+  'src/game/squad40.ts SQUAD40_LOG': 'TALLY · a log of the squad\'s launcher',
+  'src/game/squadthrow.ts SQUADTHROW_LOG': 'TALLY · a log of the squad\'s throws',
+  'src/game/whistle.ts WHISTLE_LOG': 'TALLY · a log of the whistles blown and answered',
+  'src/game/coverfire.ts COVERFIRE_WHY': 'TALLY · rounds through cover, counted by reason',
 };
+let STATS: Set<string> | null = null;
+/** the carried names the Rust game keeps among its Stats: every `B.top(file, NAME)` a field of a struct named `…Stats` is read from */
+function rustStats(): Set<string> {
+  if (STATS) return STATS;
+  STATS = new Set();
+  const types: Record<string, { k?: string; name?: string; fields?: { expr?: string }[] }> = JSON.parse(readFileSync(resolve(import.meta.dir, '../blitz/schema.json'), 'utf8')).types;
+  for (const t of Object.values(types)) if (t.k === 'struct' && t.name?.endsWith('Stats')) for (const f of t.fields ?? []) for (const m of (f.expr ?? '').matchAll(/B\.top\("([^"]+)", "([^"]+)"/g)) STATS.add(`${m[1]} ${m[2]}`);
+  return STATS;
+}
 
 interface Kept { name: string; get: () => unknown; set: ((v: unknown) => void) | null; was: unknown }
 const KEPT = new Map<string, Kept>(), WATCHED = new Map<string, Kept>();
@@ -104,7 +118,7 @@ export function freshStart(): void {
       const name = `${file} ${n}`; if (!d.get || KEPT.has(name) || WATCHED.has(name)) continue;
       if (vars.has(`${file.slice(file.lastIndexOf('/') + 1, -3)}.${n}`)) continue;   // (a registered variable: kept above, under its registered name)
       const row = ROLLBACK_EXEMPT[name], get = d.get.bind(T[file]), set = d.set ? d.set.bind(T[file]) : null;
-      if (row !== undefined ? row.startsWith('TALLY ·') || row.startsWith('SCRATCH ·') : name in A_GAMES) { keep(KEPT, name, get, set); continue; }
+      if (row !== undefined ? row.startsWith('TALLY ·') || row.startsWith('SCRATCH ·') : name in A_GAMES || rustStats().has(name)) { keep(KEPT, name, get, set); continue; }
       if (row !== undefined) continue;
       const v = get(); if (v instanceof WeakMap || v instanceof WeakSet || typeof v === 'function' || registered.has(v) || knobs.has(v)) continue;
       keep(WATCHED, name, get, set);
@@ -112,13 +126,15 @@ export function freshStart(): void {
   }
   FRESH.starts++; FRESH.kept = KEPT.size; FRESH.back = [];
   for (const k of WATCHED.values()) if (!FRESH.unlisted.has(k.name) && !same(k.get(), k.was)) FRESH.unlisted.add(k.name);
-  if (process.env.FRESH_BREAK === '1') return;   // (the check's red path: nothing is put back, as it was)
+  if (process.env.STANDFRESH_BREAK === '1') return;   // (the check's red path: nothing is put back, as it was)
   for (const k of KEPT.values()) {
     if (!had.has(k.name)) continue;
     const live = k.get(); if (same(live, k.was)) continue;
     if (putBack(live, k.was)) { FRESH.back.push(k.name); continue; }
-    // (a variable that holds a table keyed weakly by a game's own objects, made afresh by its module, is held as it is: nothing of it is a row to put back)
-    if (typeof k.was === 'object' && k.was !== null) continue;
+    // (a variable that holds a table keyed weakly by a game's own objects, made afresh by its module, is held as it is: nothing of it is a row to put
+    //  back. Anything else that could not be written in place is NAMED, never passed over in silence)
+    if (typeof k.was === 'object' && k.was !== null) { if (!(k.was instanceof WeakMap || k.was instanceof WeakSet)) FRESH.unlisted.add(`${k.name} (not written back: it is no longer the kind of thing the first start found)`); continue; }
     if (k.set) { k.set(k.was); FRESH.back.push(k.name); }
   }
+  if (process.env.STANDFRESH_SAY === '1' && FRESH.back.length) process.stderr.write(`tools/qa/fresh.ts: stand-up ${FRESH.starts} put back ${FRESH.back.join(', ')}\n`);
 }

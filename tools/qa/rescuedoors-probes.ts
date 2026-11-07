@@ -11,11 +11,14 @@
 //   side door     a charge on each of the room's two doors, one man each, from the menu; ONE F blows both on the same frame (the two doors are linked for the
 //                 scenario) and both men go in; a bang and clear on the side door alone
 //   two doors     one F with a man posted in the server room: two bang and clears through one gate, both leaves on one frame, a can through each; with ONE can left it is the
-//                 corridor door's and the side door's man goes in when the men behind it do; the rescue's weapon-light switch is the door tools' men's too
+//                 corridor door's and the side door's man goes in when the men behind it do
 //   a lost lead   a gated order held stacked whose lead is shot: the next man walks to that jamb before the gate's doors open
 //   the panel     rescue.press() (the panel's F) blows a set charge as the key does; two men sent to the side door's marks one at a time get one each
+// 2026-11-07: no settled switch is held off or written here (it was staged without DOORWAY.oneWay, DOORTOOLS.testDoor and DOORTOOLS.outsidePlain, with
+// rounds stopping in a pane for the clock's scene, and its rig passed RESCUE.clock and RESCUE.flow off). Out with their off sides: 'and with ORDERS.workOut
+// switched off the stack is refused' (half a line), 'the rescue's weapon-light switch off: the men go in dark' (RESCUE.opLights).
 import { standUp, ROOT } from './headless.ts';
-import { rig, family, staged, paneStops, up, dist, f1, DT } from './rescue-probes.ts';
+import { rig, family, guarded, up, dist, f1, DT } from './rescue-probes.ts';
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`);
@@ -48,12 +51,12 @@ const inOrder = (op: any, whats: (string | RegExp)[]) => { let last = -Infinity;
 const beats = (op: any, t0: number) => (op?.beats ?? []).map((b: any) => `${(b.t - t0).toFixed(1)} ${b.what}`).join(' | ');
 /** the scenario with the men who matter to a door probe: the captor and the door man in the room, no roamer, the pair on Sam, Sam where he gives the order from */
 async function doorRig(seed: number, knobs: Record<string, unknown> = {}, sam = CORRIDOR) {
-  const T = await rig(seed, { doorMan: 'inside', roamers: 0, clock: false, flow: false, ...knobs }); const R = T.R, g = T.game; g.godMode = true; T.secs(0.3);
+  const T = await rig(seed, { doorMan: 'inside', roamers: 0, ...knobs }); const R = T.R, g = T.game; g.godMode = true; T.secs(0.3);
   T.walkSam([8.2, 0, 11.2]); T.walkSam(sam); T.secs(3);
   return { T, R, g, DTL: g.doorTools, O: g.orders, fd: g.doors.byName('manager'), sd: g.doors.byName('server_manager') };
 }
 
-export const rescueDoorTools = staged(['DOORWAY.oneWay', 'DOORTOOLS.testDoor', 'DOORTOOLS.outsidePlain'], async () => {
+export const rescueDoorTools = guarded(async () => {
   const F = family('rescue-doortools: the order menu\'s door tools on the hostage rescue\'s doors — the same rows, keys and counts as under ?roomclear');
   // ---- the menu, against ?roomclear's on the same door
   { const { T, R, g, DTL, O, fd, sd } = await doorRig(31);
@@ -76,9 +79,9 @@ export const rescueDoorTools = staged(['DOORWAY.oneWay', 'DOORTOOLS.testDoor', '
     T.walkSam([17.6, 0, 11.2]); T.walkSam([17.6, 0, 8.8], 2.5); T.walkSam([19.2, 0, 9.3], 2.5); T.secs(4);
     const t = O.targetAt(sd.frameCentre), ids = ['stack', 'openClear', 'bangClear', 'charge', 'thresholdHold', 'threshold', 'outside'];
     const whys = ids.map(id => O.whyNot(O.defs.find((x: any) => x.id === id), t));
-    const M = O.doorMarks.splice(0); const own = O.whyNot(O.defs.find((x: any) => x.id === 'stack'), t); O.knobs.workOut = false; const bare = O.whyNot(O.defs.find((x: any) => x.id === 'stack'), t); O.knobs.workOut = true; O.doorMarks.push(...M);
-    F.verdict(t.kind === 'door' && t.door === sd && t.side === 1 && whys.every(w => w === null) && own === null && typeof bare === 'string', 'from inside the server room every door row is open on the side door — by the scenario\'s marks (without them its jambs have no floor: the men work their own marks out, and with that switched off the stack is refused)',
-      `target ${t.kind} ${t.door?.def.name} face ${t.side} · ${ids.map((id, i) => `${id}: ${whys[i] ?? 'ok'}`).join(' · ')} · with the marks taken away, stack: ${own ?? 'ok'} · and ORDERS.workOut off: '${bare}'`);
+    const M = O.doorMarks.splice(0); const own = O.whyNot(O.defs.find((x: any) => x.id === 'stack'), t); O.doorMarks.push(...M);
+    F.verdict(t.kind === 'door' && t.door === sd && t.side === 1 && whys.every(w => w === null) && own === null, 'from inside the server room every door row is open on the side door — by the scenario\'s marks (without them its jambs have no floor: the men work their own marks out)',
+      `target ${t.kind} ${t.door?.def.name} face ${t.side} · ${ids.map((id, i) => `${id}: ${whys[i] ?? 'ok'}`).join(' · ')} · with the marks taken away, stack: ${own ?? 'ok'}`);
     R.stop(); }
   // ---- X, 5, 2: bang and clear from the menu on the corridor door
   { const { T, R, g, DTL, O, fd } = await doorRig(32); const t0 = g.time;
@@ -94,9 +97,7 @@ export const rescueDoorTools = staged(['DOORWAY.oneWay', 'DOORTOOLS.testDoor', '
       'it is the menu\'s order and none of F\'s (nothing of F\'s entry in the scenario\'s log) — and the room is taken with both hostages alive', `'${R.summary().slice(0, 170)}'`);
     R.stop(); }
   // ---- the captor's clock under that can, the room fight's daze at its default
-  // (this one scene with rounds stopping in glass: where a pane passes a round, a teammate shoots the captor through the office's glazing beside the door as the
-  // boot lands, before the can goes off — the room is taken all the same, and there is no dazzled captor left to read a clock on. rescue-probes.ts paneStops)
-  await paneStops(async () => { const { T, R, g, DTL, O, fd } = await doorRig(33, { clock: true, resolveSpread: 0 }); const cap = R.hostiles[0];
+  { const { T, R, g, DTL, O, fd } = await doorRig(33, { resolveSpread: 0 }); const cap = R.hostiles[0];
     const daze = JSON.stringify(FIGHT_SKILL.hostile.daze);
     T.secs(2); const r0 = R.resolve; T.secs(1); const rising = R.resolve - r0;
     const w = O.give('bangClear', O.targetAt(fd.frameCentre), 'all'); const op = DTL.ops[0];
@@ -109,7 +110,7 @@ export const rescueDoorTools = staged(['DOORWAY.oneWay', 'DOORTOOLS.testDoor', '
     F.verdict(w === null && daze === '[1,2]' && rising > 0.01 && byCan && frames >= 20 && hi - lo < 1e-9, 'the captor dazzled by the door tools\' can (the room fight\'s daze at its default): his clock was running, and stands still for every frame he is dazzled',
       `FIGHT_SKILL.hostile.daze ${daze} · resolve +${rising.toFixed(3)} in the second before the order · dazzled ${(frames * DT).toFixed(1)} s: resolve ${f1(lo * 100)} % → ${f1(hi * 100)} % (moved ${(hi - lo).toExponential(1)}) · ${cap.state === 'dead' ? 'he was shot before it wore off' : `a second after it wore off: ${before.toFixed(3)} → ${after.toFixed(3)}`}`);
     F.verdict(cap.state === 'dead' || after > before, 'and it runs again once he can see (or he did not live to)', `captor ${cap.state} · step ${R.clockStep} · hostages ${up(R.hostages)}/2`);
-    R.stop(); });
+    R.stop(); }
   // ---- X, 5, 3: a charge from the menu on the corridor door; F is its trigger
   { const { T, R, g, DTL, O, fd } = await doorRig(34); const t0 = g.time;
     pick(T.W, () => T.step(), fd.frameCentre, 5, 3); const op = DTL.ops[0];
@@ -159,8 +160,8 @@ export const rescueDoorTools = staged(['DOORWAY.oneWay', 'DOORTOOLS.testDoor', '
       'one F with a man posted in the server room: two of the menu\'s bang and clears through one gate — both leaves on the same frame, a can through each, both men up at the go and in together', `up at the go ${atGo}/2 · front: ${beats(oF, R.t0).slice(0, 200)} · side: ${beats(oS, R.t0).slice(0, 200)} · bangs left ${DTL.bangs}`);
     F.verdict(T.order(['split:set', 'split:go', 'kick', 'door-flung', 'toss', 'bang', 'enter1']) && !!T.at('door-flung:side') && !!T.at('bang:side') && !!T.at('enter:side') && !T.bad, 'and the scenario\'s log reads it under its own names', R.log.filter((l: any) => /^(split|stacked|kick|door|toss|bang|enter|clear)/.test(l.what)).map((l: any) => `${f1(l.t - R.t0)} ${l.what}`).join(' · ').slice(0, 400));
     R.stop(); }
-  // ---- one F, both doors, ONE can left: it is the corridor door's, and the side door's man goes in when the men behind it do (and RESCUE.opLights off is the door tools' men's switch too)
-  { const { T, R, g, DTL, O, fd, sd } = await doorRig(40, { opLights: false }, [8.2, 0, 11.2]);
+  // ---- one F, both doors, ONE can left: it is the corridor door's, and the side door's man goes in when the men behind it do 
+  { const { T, R, g, DTL, O, fd, sd } = await doorRig(40, {}, [8.2, 0, 11.2]);
     g.doors.kickIn(g.doors.byName('server'), [17.6, 0, 11.0], g.player.char.id); T.secs(0.6);
     O.give('move', { kind: 'floor', at: [20.4, 0, 8.7] }, 1); T.secs(14, () => INSIDE(R.ops[1].char.pos, SERVER) && dist(R.ops[1].char.pos, [20.4, 0, 8.7]) < 1.2);
     DTL.bangs = 1; T.press('KeyF'); const E = R.entry, ops = E?.ops.map((e: any) => e.op) ?? [], lit: unknown[] = [];
@@ -169,7 +170,6 @@ export const rescueDoorTools = staged(['DOORWAY.oneWay', 'DOORTOOLS.testDoor', '
     const oF = ops.find((o: any) => o.door === fd), oS = ops.find((o: any) => o.door === sd), bang = beatT(oF, 'bang · inside'), goF = beatT(oF, 'go'), shS = beatT(oS, 'shove'), goS = beatT(oS, 'go');
     F.verdict(ops.length === 2 && oF?.kind === 'bangClear' && oS?.kind === 'openClear' && oF.gate === oS.gate && DTL.bangs === 0 && !isNaN(bang) && shS >= goF - 1e-9 && goS >= goF - 1e-9 && goS - goF < 0.5 && isNaN(beatT(oS, 'toss:')) && !T.bad,
       'with one can left one F still takes both doors: the can goes in by the corridor door, and the side door is not opened until the men behind the can go — then its man goes in with them, not into the flash', `front: ${beats(oF, R.t0).slice(0, 200)} · side: ${beats(oS, R.t0).slice(0, 160)} · bangs left ${DTL.bangs}`);
-    F.verdict(lit.length > 0 && lit.every(x => x === false), 'the rescue\'s weapon-light switch off: the men the door tools send in go in dark (the night breach\'s switch is not asked)', `${lit.length} frames of a man on his point · lights ${[...new Set(lit)].join(' / ')}`);
     R.stop(); }
   // ---- what F does, from the panel's button: a set charge has the press there too; and two men sent to the side door one at a time do not get one mark
   { const { T, R, g, DTL, O, fd, sd } = await doorRig(37, {}, WEST);

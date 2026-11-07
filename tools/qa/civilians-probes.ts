@@ -1,5 +1,5 @@
 // The 'civilians' probe family (run through probes.ts: `bun run tools/qa/probes.ts civilians | civilians-spots | civilians-sight | civilians-phone | civilians-comply |
-// civilians-scoring | civilians-hearing | civilians-determinism | civilians-identity [--verbose] [--print]`): the cleaner and the late worker of src/game/civilians.ts —
+// civilians-scoring | civilians-hearing | civilians-determinism [--verbose]`): the cleaner and the late worker of src/game/civilians.ts —
 // STATUS E12 (d). Each stands the full game up headless (headless.ts), stages one situation, steps it, prints what happened, PASS / FAIL.
 //   civilians-spots        the phones, the ways out and every authored mark of both loops against the nav grid: free cells, reachable, consecutive marks joined by a path.
 //   civilians-sight        Sam crouched a metre and a half off the kneeling cleaner in the dark, hands empty, gone again after four seconds: she is startled inside a frame or two,
@@ -18,10 +18,9 @@
 //                          nothing — the guards' own odd-noise reach (7 m of open air per unit level × the path's carry + 0.5). And the FN2000's crack anywhere: fright.
 //   civilians-determinism  the same seeded ninety seconds twice with a fright staged at twenty: the module's log identical line for line, the civilians' positions
 //                          identical to the millimetre — her dice are her own.
-//   civilians-identity     three quiet minutes of the seeded night floor (Sam parked unseen), digested frame by frame over the SHIFT (state, position, aim, awareness,
-//                          waypoint, wait, path, neck, bubble), the events, the messages, the alarm and every leaf: civilians ON with the greetings off == civilians OFF
-//                          (their presence alone moves nothing of the men's night); with the greetings on the digest may move (a man answering 'Evening, Marta' has a
-//                          line in the air) — printed as information, with what differed first.
+// The greetings (CIV.greet) are settled on: every stage here plays them as the page does. Until 2026-11-07 the stages held them off, and civilians-identity
+// asked that civilians ON with the greetings off digest the same as civilians OFF over three quiet minutes: a question of the build without the greetings
+// (with them on a man answering 'Evening, Marta' has a line in the air, by design), out by ruling with nothing in its place.
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const CV = await import(`${ROOT}/src/game/civilians.ts`);
@@ -35,7 +34,6 @@ const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
-const PRINT = process.argv.includes('--print');
 const f1 = (x: number) => x.toFixed(1), f2 = (x: number) => x.toFixed(2);
 const posS = (p: Vec3 | null | undefined) => p ? `(${f1(p[0])}, ${f1(p[2])})` : '—';
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -45,23 +43,14 @@ export function civiliansFailures() { return failures; }
 const CIV0 = JSON.parse(JSON.stringify(CIV));
 function knobsBack() { for (const k of Object.keys(CIV0)) { const v = (CIV0 as any)[k]; if (v && typeof v === 'object' && !Array.isArray(v)) Object.assign((CIV as any)[k], v); else (CIV as any)[k] = Array.isArray(v) ? [...v] : v; } }
 
-/** FNV-1a over strings, 32 bits, chained */
-class Digest {
-  h = 0x811c9dc5 >>> 0; n = 0; trace: string[] | null = null;
-  add(s: string) { for (let i = 0; i < s.length; i++) { this.h ^= s.charCodeAt(i); this.h = Math.imul(this.h, 0x01000193) >>> 0; } this.n++; }
-  num(x: number | null | undefined) { this.add(x === null || x === undefined ? '~' : String(x)); }
-  vec(p: number[] | null | undefined) { if (!p) { this.add('~'); return; } this.num(p[0]); this.num(p[1]); this.num(p[2]); }
-  get hex() { return this.h.toString(16).padStart(8, '0'); }
-}
-
 /** what everybody says (game.say and the guards module's own say both land in a man's bubble: read the bubbles) — polled once a frame */
 function bubbleTap(game: any) {
   const lines: { t: number; who: string; text: string; radio: boolean }[] = []; const seen = new WeakMap<object, number>();
   return { lines, poll() { for (const x of [...game.guards, ...game.civilians]) { const b = x.bubble; if (b && seen.get(x) !== b.t) { seen.set(x, b.t); lines.push({ t: b.t, who: x.callsign, text: b.text, radio: !!b.radio }); } } } };
 }
-/** the level up off `seed`: god mode, Sam parked unseen out on the verge, the module's log collected, the knobs as shipped (greetings OFF unless asked: the men's chatter clocks then stay theirs) */
-async function stage(seed: number, opts: { greet?: boolean } = {}) {
-  Math.random = seeded(seed); knobsBack(); CIV.greet = !!opts.greet;
+/** the level up off `seed`: god mode, Sam parked unseen out on the verge, the module's log collected, the knobs as shipped */
+async function stage(seed: number) {
+  Math.random = seeded(seed); knobsBack();
   const W = await standUp(); const { game } = W; const pl = game.player;
   game.godMode = true; game.aiEnabled = true;
   const clog: string[] = []; CIV_DEBUG.log = (s: string) => clog.push(s);
@@ -317,7 +306,7 @@ export async function civiliansHearing() {
 
 // ================================================================ determinism
 async function detRun(): Promise<{ log: string[]; pos: string; lines: string[] }> {
-  const S = await stage(91, { greet: true }); const { game, M, O } = S;
+  const S = await stage(91); const { game, M, O } = S;
   const clog0 = S.clog.length;
   for (let f = 0; f < 60 * 90; f++) {
     S.step();
@@ -340,39 +329,4 @@ export async function civiliansDeterminism() {
   return ok;
 }
 
-// ================================================================ identity: their presence alone moves nothing of the men's night
-async function identityRun(mode: 'off' | 'on' | 'greet'): Promise<{ digest: string; frames: number; states: string; trace: string[]; civ: string }> {
-  Math.random = seeded(4401); knobsBack(); CIV.greet = mode === 'greet';
-  const W = await standUp(); const { game } = W; const pl = game.player;
-  game.godMode = true; game.aiEnabled = true;
-  if (mode === 'off') { game.tune.civilians = false; game.civilians.length = 0; }
-  for (let i = 0; i < 5; i++) W.step(DT);
-  game.teleportPlayer([2.0, 0, 2.0]); game.playerInvisible = true; pl.crouch = true;
-  const D = new Digest(); let states = ''; const trace: string[] = [];
-  const FRAMES = 60 * 180;
-  for (let frame = 0; frame < FRAMES; frame++) {
-    pl.visibility = 0.02; W.step(DT);
-    const h0 = D.h;
-    for (const gd of game.guards) { D.add(gd.state); D.vec(gd.char.pos); D.num(gd.char.bodyYaw); D.num(gd.char.aimYaw); D.num(gd.char.aimPitch); D.num(gd.awareness); D.num(gd.wp); D.num(gd.wait); D.num(gd.path.length); D.num(gd.pathI); D.num(gd.speed); D.num(gd.char.anim.lookYawExtra); D.add(gd.bubble ? gd.bubble.text : '~'); D.num(gd.hold ? 1 : 0); D.add(gd.lastKnown ? gd.lastKnown.join(',') : '~'); }
-    D.vec(pl.char.pos); D.num(game.events.length); D.num(game.messages.length); D.num(game.escalation);
-    for (const d of game.doors.list) D.num(d.angle);
-    if (frame % 30 === 0) trace.push(`${f1(game.time)}s ${(D.h ^ h0).toString(16)} ` + game.guards.map((g: any) => `${g.callsign[0]}:${g.state[0]}${g.wp} ${posS(g.char.pos)} ${g.bubble && game.time - g.bubble.t < g.bubble.dur ? '"' + g.bubble.text.slice(0, 24) + '"' : ''}`).join(' ') + ` msgs ${game.messages.length} doors ${game.doors.list.map((d: any) => f2(d.angle)).join(',')}`);
-    if (frame % 600 === 0) states += game.guards.map((g: any) => `${g.state[0]}${g.wp}`).join('') + ' ';
-  }
-  return { digest: D.hex, frames: FRAMES, states, trace, civ: game.civilians.length ? civiliansSummary(game) + ` · greetings ${CIV_STATS.greetings}` : 'none' };
-}
-export async function civiliansIdentity() {
-  console.log("\n=== civilians-identity: three quiet seeded minutes of the night floor digested frame by frame over the SHIFT, the events, the messages, the alarm and every leaf — civilians ON (greetings off) must equal civilians OFF; greetings on is printed as information ===");
-  const g0 = CIV_STATS.greetings;
-  const OFF = await identityRun('off'); const ON = await identityRun('on'); const GREET = await identityRun('greet');
-  const firstDiff = (A: string[], B: string[]) => { for (let i = 0; i < Math.max(A.length, B.length); i++) if (A[i] !== B[i]) return `first differing half-second: OFF ${A[i]} | ON ${B[i]}`; return 'no trace difference'; };
-  console.log(`    OFF   ${OFF.digest} · ${OFF.states.trim()}`);
-  console.log(`    ON    ${ON.digest} · ${ON.states.trim()} · ${ON.civ}`);
-  console.log(`    GREET ${GREET.digest} · ${GREET.states.trim()} · ${GREET.civ} (greetings this run ${CIV_STATS.greetings - g0})`);
-  let ok = verdict(ON.digest === OFF.digest && ON.states === OFF.states, 'civilians ON with the greetings off == civilians OFF: their walking, kneeling, sitting, door contacts and prop contacts on the authored loops move nothing of the men\'s three minutes (state / position / aim / awareness / waypoint / wait / path / neck / bubble / fix), nor the events, the messages, the alarm or any leaf', ON.digest === OFF.digest ? `${ON.digest} over ${ON.frames} frames` : `${ON.digest} vs ${OFF.digest} — ${firstDiff(OFF.trace, ON.trace)}`);
-  console.log(`- INFO — greetings ON: ${GREET.digest === OFF.digest ? 'identical too (no calm man passed within three metres of a working civilian in these minutes)' : `differs (${firstDiff(OFF.trace, GREET.trace)}) — a man answering 'Evening, Marta' has a line in the air, and the ambient chatter waits for it: the one designed coupling of an unprovoked civilian, off with CIV.greet`}`);
-  if (PRINT) { console.log('\n--- OFF trace ---'); for (const l of OFF.trace) console.log(l); console.log('\n--- ON trace ---'); for (const l of ON.trace) console.log(l); }
-  console.log(`=== civilians-identity: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) failures++;
-  return ok;
-}
 void civilianLines;

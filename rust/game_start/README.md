@@ -249,8 +249,8 @@ game again in a slot four other games have used; `start-module.ts` holds the mod
 
 The TypeScript start did not: what a module of `src/` keeps at its own top (a counter of the men's unit numbers, the tallies and logs the Rust game
 is handed as state, what a mission of another kind had staged) was the process's, and a second game found it as the first left it. `tools/qa/fresh.ts`
-is the mend, run by the harness's stand-up before every game: it puts back only what is known to be a game's (its header says how each is known) and
-leaves a setting alone. This table is what keeps it. Each mission is stood, stepped with an idle hand, then THE MISSION BEFORE IT ON THE LIST (the
+is the mend, run by the harness's stand-up before every game: it puts back only what is known to be a game's (its header says how each is known:
+for a count, that the bridge's schema reads it into one of this game's own `…Stats` structs) and leaves a setting alone. This table is what keeps it. Each mission is stood, stepped with an idle hand, then THE MISSION BEFORE IT ON THE LIST (the
 nearest the game stands for that many players) is stood and stepped in the same process, then the mission is stood again; the second start is held
 to the first, rust/sim's block byte for byte and the state path for path, but for what `tools/blitz/known-again.txt` names with its reason (the Rust
 module's own memory and memos; no game's state) and, in the block's poses, a row the first start had not made (a clip's first pose, a memo).
@@ -259,7 +259,7 @@ module's own memory and memos; no game's state) and, in the block's poses, a row
 bun run tools/blitz/start-levels.ts --again                 # 38 of 38 (300 frames each; the module must be built)
 bun run tools/blitz/start-levels.ts --again --seats 2       # 23 of 23, 15 the game refuses for two
 bun run tools/blitz/start-levels.ts --again --frames 0      # no game stepped (needs no module): only what a START leaves behind
-FRESH_BREAK=1 bun run tools/blitz/start-levels.ts --again   # nothing put back: every row red
+STANDFRESH_BREAK=1 bun run tools/blitz/start-levels.ts --again   # nothing put back: every row red
 ```
 
 ONE THING IS OPEN, and the table forgives it by name, row by row: a mission's start writes its team's numbers (where Sam and the men stand, how

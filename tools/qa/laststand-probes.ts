@@ -1,12 +1,14 @@
-// The 'laststand' family (game/laststand.ts — what the last few defenders of a room clear do once most are down: two switches, both shipped off), run through
+// The 'laststand' family (game/laststand.ts — what the last few defenders of a room clear do once most are down: the call out, which is settled and on, and
+// the regroup, an open decision that the page has off and the regroup probes raise), run through
 // probes.ts:   bun run tools/qa/probes.ts laststand | laststand-callout | laststand-regroup | laststand-keep
 // PASS / FAIL each, all headless — no picture and no sound here. Each stages levels/compound.json (five on eleven, three squads), leaves the team on its start
 // mark and takes the defenders down by hand to the three the probe names, so the endgame starts on a known floor.
-//   laststand-callout   `callOut` alone against both switches off, same seed: every man, door and item digests the same every half second (telling only);
-//                       off = no state at all; on = a radio check, answers naming the rooms the men are truly in, the count and the asker's room, the strip
+//   laststand-callout   the call out with no regroup: a radio check, answers naming the rooms the men are truly in, the count and the asker's room, the strip
 //                       draws them, the objective brackets exactly those rooms and its marker sits on one; a man with the team in his sight does not answer
 //                       and is not counted; down to one, he says he is the last and where (a man at his post: the net names his room; a man out hunting:
-//                       it names none). LASTSTAND_BREAK=1 = call out off for the two last-man runs: those two lines must fail
+//                       it names none). LASTSTAND_BREAK=1 = a second man is left up in the two last-man runs: those two lines must fail.
+//                       (The call out is settled: no line asks it off and nothing here writes it. Until 2026-11-07 the probe ran the floor twice, with
+//                       it on and off, and held the two runs' digests together with the net-goes-quiet rule pinned off; the break word was call out off.)
 //   laststand-regroup   `regroup`: nothing before three are left; then the check, an order naming one room, the others say so and walk to it, every man of it
 //                       digs in and sets, one of them says the room is shut; the rooms they left are clear for the room clear and the marker is on the stand;
 //                       two minutes later they are still set in it (no stand-down), still asking the net by the room's name
@@ -24,10 +26,7 @@ const { digInPhase, digInWedged } = await import(`${ROOT}/src/game/digin.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { stripRows } = await import(`${ROOT}/src/game/cues.ts`);
 const { placeIn } = await import(`${ROOT}/src/game/dialogue.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { NETQUIET } = await import(`${ROOT}/src/game/netquiet.ts`);
-const { RUNNER, runnerBreak, runnerOf } = await import(`${ROOT}/src/game/runner.ts`);
-const { MORALE } = await import(`${ROOT}/src/game/morale.ts`);
+const { runnerBreak, runnerOf } = await import(`${ROOT}/src/game/runner.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -36,9 +35,9 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-type Sw = { regroup: boolean; callOut: boolean };
-async function rig(seed: number, sw: Sw, level = 'compound') {
-  LASTSTAND.regroup = sw.regroup; LASTSTAND.callOut = sw.callOut; Math.random = seeded(seed);
+/** `regroup`: the open decision the page has off (LASTSTAND.regroup); the call out is the page's own */
+async function rig(seed: number, regroup: boolean, level = 'compound') {
+  LASTSTAND.regroup = regroup; Math.random = seeded(seed);
   const log = console.log, err = console.error, warn = console.warn; let W: any;
   try { console.log = console.error = console.warn = () => { };
     W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', `${level}.json`), 'utf8'))) });
@@ -59,41 +58,32 @@ function steps(W: any, secs: number, each?: (i: number) => void) { const g = W.g
 const said = (g: any) => lastStandReport(g).said as { t: number; who: string; kind: string; text: string }[];
 
 export async function lastStandCallOut(): Promise<boolean> {
-  const F = family('laststand-callout: telling only — same run with it on and off; the rooms on their net are the rooms they are in');
-  const was = { ...LASTSTAND }, nq = NETQUIET.on;
-  // the net goes quiet (netquiet.ts) is held OFF here: this probe's subject is the call out ALONE, which only tells. With that rule on (the shipped stand) a
-  // check the dead do not answer shakes the men who hear it — by that rule's own seam (laststand.ts tickCheck → netQuietClosed), so the run with call out on
-  // is no longer the run with it off, and that is the other rule's doing: `probes.ts netquiet` (Q12a) holds the two together, on the shipped stand.
-  NETQUIET.on = false;
+  const F = family('laststand-callout: the rooms on their net are the rooms they are in');
+  const was = { ...LASTSTAND };
   try {
     const KEEP = ['office', 'bunk', 'back'];
-    const out: { moves: string; rep: any; rows: Set<string>; obj: any; hint: string[]; truth: string[]; clean: number; first: number }[] = [];
-    for (const on of [true, false]) {
-      const W = await rig(5, { regroup: false, callOut: on }), g = W.game; NETQUIET.on = false;   // (again after the stand-up, which re-reads the stand's words: TPS_NETQUIET=1, the shipped stand)
-      let moves = '', clean = 0, first = -1; const rows = new Set<string>();
-      const frame = (i: number) => { if (i % 30 === 0) moves += hashDigest(digestGame(g, true)) + ' '; for (const r of stripRows(g) as { text: string }[]) rows.add(r.text); };
-      steps(W, 1, frame); clean = said(g).length + lastStandReport(g).stats.checks;
-      const kept = thin(W, KEEP);
-      steps(W, 30, i => { frame(i); if (first < 0 && said(g).length) first = i / 60; });
-      out.push({ moves, rep: lastStandReport(g), rows, obj: { ...g.roomClear.objective() }, hint: [...(lastStandHint(g)?.rooms ?? [])].sort(), truth: kept.map((h: any) => roomOf(g, h)).sort() as string[], clean, first });
-      if (on) {   // … and one of the three in a fight (the team in his sight every frame): he does not answer the next check
-        const busy = kept[1], n0 = said(g).length;
-        steps(W, LASTSTAND.every + 12, () => { busy.lastSeenT = g.time; });
-        const later = said(g).slice(n0), ans = later.filter(l => l.kind.startsWith('ans'));
-        F.verdict(later.some(l => l.kind === 'checkN') && ans.length === 1 && !later.some(l => l.who === busy.callsign) && lastStandReport(g).known.length === 2 && !lastStandReport(g).known.includes(busy.callsign),
-          'a man with the team in his sight does not answer the check, and nobody counts him', `${busy.callsign} busy: ${later.map(l => `${l.who} '${l.text}'`).join(' · ')} → known ${lastStandReport(g).known.join(', ')}`);
-      }
+    const W = await rig(5, false), g = W.game;
+    let clean = 0, first = -1; const rows = new Set<string>();
+    const frame = () => { for (const r of stripRows(g) as { text: string }[]) rows.add(r.text); };
+    steps(W, 1, frame); clean = said(g).length + lastStandReport(g).stats.checks;
+    const kept = thin(W, KEEP);
+    steps(W, 30, i => { frame(); if (first < 0 && said(g).length) first = i / 60; });
+    const A = { rep: lastStandReport(g), rows, obj: { ...g.roomClear.objective() }, hint: [...(lastStandHint(g)?.rooms ?? [])].sort(), truth: kept.map((h: any) => roomOf(g, h)).sort() as string[], clean, first };
+    {   // … and one of the three in a fight (the team in his sight every frame): he does not answer the next check
+      const busy = kept[1], n0 = said(g).length;
+      steps(W, LASTSTAND.every + 12, () => { busy.lastSeenT = g.time; });
+      const later = said(g).slice(n0), ans = later.filter(l => l.kind.startsWith('ans'));
+      F.verdict(later.some(l => l.kind === 'checkN') && ans.length === 1 && !later.some(l => l.who === busy.callsign) && lastStandReport(g).known.length === 2 && !lastStandReport(g).known.includes(busy.callsign),
+        'a man with the team in his sight does not answer the check, and nobody counts him', `${busy.callsign} busy: ${later.map(l => `${l.who} '${l.text}'`).join(' · ')} → known ${lastStandReport(g).known.join(', ')}`);
     }
     // down to one from the start: nobody answers him, he says he is the last and where. TWO MEN, because what the net then names is two rules of laststand.ts
     // (a man is named by what he SAID; 'a man out hunting is not a room to go to' — tickCheck / tellOnly `free ? null : w`, the marker comes off him):
-    //   the guard hut's — a squad of one, so no mate of his drops and he HOLDS HIS POST on both stands: he says the hut and the net names the hut;
-    //   the office's — the man this line always kept. On the frozen stand his squad is in contact the frame a mate of it drops (the squads' radio check is
-    //     held off there) and he is OUT HUNTING when he says it: he says where he truly is and the net names nothing, in a room or out of one. On the
-    //     placement before the hand one he said it in the corridor, so 'named = the room he is in' held for want of a room; on the hand placement he says
-    //     it walking through the bunk room. On the shipped stand he holds the office: the first case again.
-    // LASTSTAND_BREAK=1 = call out left OFF for these two runs: both lines must fail, on both stands.
+    //   the guard hut's — a squad of one, so no mate of his drops and he HOLDS HIS POST: he says the hut and the net names the hut;
+    //   the office's — the man this line always kept. Where his squad is in contact the frame a mate of it drops he is OUT HUNTING when he says it: he
+    //     says where he truly is and the net names nothing, in a room or out of one. Where he holds the office it is the first case again.
+    // LASTSTAND_BREAK=1 = a second man is left up with him (the bunk room's): he is not the last, and both lines must fail.
     for (const id of ['hut', 'office']) {
-      const W = await rig(5, { regroup: false, callOut: process.env.LASTSTAND_BREAK !== '1' }), g = W.game; steps(W, 1); const [one] = thin(W, [id]);
+      const W = await rig(5, false), g = W.game; steps(W, 1); const [one] = thin(W, process.env.LASTSTAND_BREAK === '1' ? [id, 'bunk'] : [id]);
       let room: string | null = null, named = '', spot = '', hunting = false, got = false;   // (where he is, what he is doing and what the net has named, the frame he says it — he may move afterwards)
       steps(W, 16, () => { if (!got && said(g).some(l => l.kind === 'lastAt')) { got = true; room = roomOf(g, one); named = [...(lastStandHint(g)?.rooms ?? [])].join(); spot = room || !LASTSTAND.places ? '' : placeIn(g.level, one.char.pos)?.name ?? ''; hunting = (g.fight.defs as any[]).find(D => D.gd === one)?.mode === 'free'; } });
       const tail = said(g), last = tail.find(l => l.kind === 'lastAt'), post = id === 'hut';
@@ -104,23 +94,20 @@ export async function lastStandCallOut(): Promise<boolean> {
           : 'the last man: nobody answers his check, he says so and where he truly is; the net names a room only if he holds one (a man out hunting is no room to go to)',
         `${tail.map(l => `${l.who} '${l.text}'`).join(' · ') || 'nothing said'} → ${!got ? 'he never says he is the last' : `${hunting ? 'out hunting' : 'holding'}, truly ${room ? 'in ' + room : 'outside the rooms'} then, named '${named}'${spot ? `, place '${spot}'` : ''}`}`);
     }
-    const [A, B] = out, a = A.moves.split(' '), b = B.moves.split(' ');
-    F.verdict(A.moves === B.moves && a.length > 55, 'every man, door and item digests the same with call out on and off, every half second for 31 s (bubbles included)', `${a.length - 1} digests · ${A.moves === B.moves ? 'identical' : 'first difference at ' + (a.findIndex((h, i) => h !== b[i]) / 2).toFixed(1) + ' s'}`);
-    F.verdict(B.rep.on === 'off' && B.rep.said.length === 0 && B.rep.stats.checks === 0 && B.hint.length === 0 && !/\[/.test(B.obj.text), 'both switches off: no check, no line, no state, the objective as it was', `${B.rep.said.length} lines, ${B.rep.stats.checks} checks · ${B.obj.text}`);
     const S = A.rep.said as { who: string; kind: string; text: string }[], ans = S.filter(l => l.kind === 'ansAt'), few = S.find(l => l.kind === 'fewAt');
     F.verdict(A.clean === 0 && A.first >= LASTSTAND.first[0] && A.first <= LASTSTAND.first[1] + 0.1, 'nothing is said with eleven up; the check goes out a few seconds after only three are left', `first line ${A.first.toFixed(1)} s after`);
     F.verdict(S[0]?.kind === 'check1' && ans.length === 2 && !!few && /3 of us/.test(few.text) && A.rep.known.length === 3, 'a radio check, two answers, and the asker says the count', S.slice(0, 5).map(l => `${l.who}: ${l.text}`).join(' · '));
     F.verdict(A.hint.join() === A.truth.join() && A.truth.length === 3, 'the rooms named on their net are the rooms the three are in', `named ${A.hint.join(', ')} · truly in ${A.truth.join(', ')}`);
     const drawn = [...A.rows].filter(t => /still up|still here|holding|of us/.test(t));
-    F.verdict(drawn.length >= 2 && [...B.rows].every(t => !/of us|who's (still|left)/.test(t)), "the answers reach the radio strip (their net's rows)", `${drawn.length} drawn: ${drawn.slice(0, 3).join(' · ')}`);
+    F.verdict(drawn.length >= 2, "the answers reach the radio strip (their net's rows)", `${drawn.length} drawn: ${drawn.slice(0, 3).join(' · ')}`);
     const br = (A.obj.text.match(/\[[^\]]+\]/g) ?? []) as string[];
     F.verdict(br.length === 3 && !!A.obj.pos, 'the objective brackets the three rooms named and keeps a marker', A.obj.text);
-  } finally { Object.assign(LASTSTAND, was); NETQUIET.on = nq; }
+  } finally { Object.assign(LASTSTAND, was); }
   return F.done();
 }
 
 async function standRun(F: { verdict: Verdict }, keep: string[], seed: number, long: boolean, squadRooms: string[] | null) {
-  const W = await rig(seed, { regroup: true, callOut: false }), g = W.game;
+  const W = await rig(seed, true), g = W.game;
   steps(W, 1); const clean = said(g).length + lastStandReport(g).stats.checks;
   const kept = thin(W, keep), was = kept.map((h: any) => roomOf(g, h));
   let orderT = -1, setT = -1, outside = 0, n = 0; const seen = new Set<string>();
@@ -176,7 +163,7 @@ export async function lastStandFew(): Promise<boolean> {
   const F = family('laststand-few: the last few are never more than a third of the men staged');
   const was = { ...LASTSTAND };
   try {
-    const W = await rig(2, { regroup: true, callOut: true }, 'block'), g = W.game; steps(W, 1);
+    const W = await rig(2, true, 'block'), g = W.game; steps(W, 1);
     const all = g.nightBreach.hostiles.slice(), down = (n: number) => { for (const h of all) if (up(g).length > n && h.state !== 'dead') killGuard(g, h, [1, 0, 0], true); };
     down(3); steps(W, 12); const at3 = said(g).length + lastStandReport(g).stats.checks;
     down(2); steps(W, 12); const at2 = said(g);
@@ -188,14 +175,13 @@ export async function lastStandFew(): Promise<boolean> {
 
 /** A MAN WHO HAS DROPPED HIS GUN AND RUN IS NO MAN OF THE RADIO CHECK (laststand.ts alive / fitGd ask runner.ts `OWN.runner`). Found in a play session on the
  *  block: a green man saw his leader shot, dropped his gun, was cornered in his room — and then LED the last stand's check and closed it counting himself.
- *  Here: the block, eight staged, three left up by hand, one of the three made to run (runner.ts `OWN.runner`, with the runner and morale raised for the run
- *  on a stand that holds them off). Two fighting men are then the last few: the check goes out, and the man who ran neither calls it, nor is asked for by
+ *  Here: the block, eight staged, three left up by hand, one of the three made to run (runner.ts `OWN.runner`). Two fighting men are then the last few: the check goes out, and the man who ran neither calls it, nor is asked for by
  *  name, nor answers, nor is counted. */
 export async function lastStandFled(): Promise<boolean> {
   const F = family('laststand-fled: a man who has dropped his gun and run is no man of the radio check');
-  const was = { ...LASTSTAND }, ron = RUNNER.on, mon = MORALE.on;
+  const was = { ...LASTSTAND };
   try {
-    const W = await rig(2, { regroup: true, callOut: true }, 'block'), g = W.game; RUNNER.on = MORALE.on = true; steps(W, 1);   // (after the stand has been raised: a frozen stand holds both off)
+    const W = await rig(2, true, 'block'), g = W.game; steps(W, 1);
     const all = g.nightBreach.hostiles.slice(); for (const h of all) if (up(g).length > 3 && h.state !== 'dead') killGuard(g, h, [1, 0, 0], true);
     steps(W, 2); const before = said(g).length + lastStandReport(g).stats.checks;
     const ran = up(g).find((h: any) => runnerBreak(g, h)) ?? null; steps(W, 40);
@@ -205,6 +191,6 @@ export async function lastStandFled(): Promise<boolean> {
     F.verdict(R.stats.checks >= 1 && R.stats.up0 === 2 && lines[0]?.kind === 'check1' && lines[0].who !== name, 'the two who still fight are the last few: the check goes out, called by one of them', `checks ${R.stats.checks}, up at the start ${R.stats.up0} · ${lines.slice(0, 2).map(l => `${l.who}: ${l.text}`).join(' · ')}`);
     F.verdict(his.length === 0 && named.length === 0 && !R.known.includes(name), 'the man who ran says nothing on the net, is not asked for by name and is not among the men known up', `his lines ${his.length}${his[0] ? ` ("${his[0].text}")` : ''} · lines naming him ${named.length}${named[0] ? ` ("${named[0].text}")` : ''} · known up: ${R.known.join(', ') || 'nobody'}`);
     F.verdict(counts.every(n => n <= 2), 'no count spoken is more than the two who fight', counts.length ? `counts spoken: ${counts.join(', ')}` : 'no count was spoken in the forty seconds (nothing to hold)');
-  } finally { Object.assign(LASTSTAND, was); RUNNER.on = ron; MORALE.on = mon; }
+  } finally { Object.assign(LASTSTAND, was); }
   return F.done();
 }
