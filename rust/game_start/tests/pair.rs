@@ -61,3 +61,30 @@ fn the_squad_line_says_low_and_contact_while_they_last() {
         assert!(seen.iter().any(|w| w == "SILENT · contact"), "seed {s}: an alert man has eyes on Sam and the word went {seen:?}: {}", p.roll());
     }
 }
+
+/// THE RULE: a blown job finished by hand ends in the partner's own words, and he falls in again, with the fight's "tango down." after them: two
+/// lines said in one frame are both shown, one after the other.
+/// A FAILURE MEANS: a later line of the same frame has replaced an earlier one (before: "he's down. on you." was never seen).
+#[test]
+fn a_blown_job_finished_by_hand_ends_in_his_own_words() {
+    for s in SEEDS {
+        let (mut p, m, t1) = pair(s);
+        let at = p.g.ch[p.g.gd[t1].ch].pos;
+        let t = game::orders::OrderTarget::Foe(game::orders::OrderTargetFoe { at, foe: t1 });
+        assert_eq!(game::orders::squad_orders_give(&mut p.g, "pairMark", Some(&t), Some(game::orders::Who::All), None), None, "seed {s}: the order on the man was refused");
+        let mut n = 0;
+        while !p.g.pair.jobs.get(m).map_or(false, |j| j.set) && n < 30 * 60 { pin(&mut p, t1, GuardState::Patrol, 0.0); p.frame(); n += 1; }
+        assert!(p.g.pair.jobs.get(m).map_or(false, |j| j.set), "seed {s}: 30 s and he is not set behind the man");
+        let mut n = 0;
+        while p.up(t1) && n < 6 * 60 { pin(&mut p, t1, GuardState::Suspicious, 0.6); p.frame(); n += 1; }
+        assert!(!p.up(t1), "seed {s}: six seconds and the man is still up");
+        p.run(1.0);
+        assert_eq!(p.g.stats.pairup.finishes, 1, "seed {s}: he was to be finished by hand");
+        let lines = p.lines(m);
+        let (a, b) = (lines.iter().position(|l| *l == "he's down. on you."), lines.iter().position(|l| *l == "tango down."));
+        assert!(a.is_some() && b.is_some() && a < b, "seed {s}: both lines, his own first: {lines:?}");
+        let (ta, tb) = { let at = |w: &str| p.said.iter().find(|x| x.who == m && x.text == w).unwrap().t; (at("he's down. on you."), at("tango down.")) };
+        assert!(tb - ta > 0.9, "seed {s}: the second came {:.2} s after the first: nobody had time to read it", tb - ta);
+        assert!(p.g.pair.jobs.get(m).is_none(), "seed {s}: the job goes on");
+    }
+}

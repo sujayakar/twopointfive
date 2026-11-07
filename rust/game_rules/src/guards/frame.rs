@@ -60,6 +60,7 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;
     crate::character::character_turn_begin(g, c);
     player_ground_vel(g);
+    crate::guards::bubble_tick(g, gd);
     if incapable(g, gd, dt) { return; }
     if g.gd[gd].gun_lost_at >= 0.0 { gun_back(g, gd); }
     if g.m.guards.held_last_frame.delete(gd) {
