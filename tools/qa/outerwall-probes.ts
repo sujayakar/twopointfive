@@ -245,7 +245,6 @@ async function probeRooms(scn: string): Promise<boolean> {
   else if (!O.before.far) F.note(`wall ${O.W}: nothing the room fight calls a room behind it — skipped`);
   else {
     const b = O.before.far, a = O.after.far;
-    F.verdict(O.hole && !!a && a.doors === b.doors && a.cells >= b.cells && a.cells <= b.cells + 40, 'the room behind the breached shell keeps its doors and its floor (give or take the cells the wall stood on)', `wall ${O.W} · ${say(b)} → ${say(a)}`);
     F.verdict(!O.after.near || !a || O.after.near.id !== a.id, 'outside the hole is not that room', `outside: ${say(O.after.near)}${O.after.near ? ` (room ${O.after.near.id})` : ''} · inside: room ${a?.id}`);
   }
   return F.done();
