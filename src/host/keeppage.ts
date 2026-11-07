@@ -3,6 +3,7 @@
 //   leave   this window is a frame under a shell it cannot stay under (the page was asked to load whole, or the shell is another build's): the tab is sent
 //           to this address. main() goes no further here either
 //   kept    a frame under its shell: boot as ever, the device taken from `keeper`
+//   beside  a picture inside a kept page (the Team & kit picture): boot as ever, the device taken from `keeper` on the picture's seat, beside its page's lease
 //   plain   a page as it always was
 import { CALLS, KEEP_PAGE, KEPT, keepRole, keeperAbove, makeKeeper, showKeptFrame, type KeepRole, type Keeper } from '../gpu/keep';
 import { openDevice } from '../gpu/device';
@@ -11,8 +12,9 @@ import { openDevice } from '../gpu/device';
 const LEFT = 'twopointsix.keeppage.left';
 interface NavEvent extends Event { hashChange: boolean; downloadRequest: string | null; destination: { url: string; sameDocument: boolean } }
 
-/** `own` = a page that keeps its own page whatever the tab does (the benchmark and its scenes, the kit picture's window) */
-export function keepPageBoot(q: URLSearchParams, own: boolean): { role: KeepRole; keeper: Keeper | null } {
+/** `own` = a page that keeps its own page whatever the tab does (the benchmark and its scenes); `picture` = this window is a second game shown inside a page
+ *  of the game (the Team & kit picture). `seat` = where the device is taken on the keeper (gpu/keep.ts Keeper.take) */
+export function keepPageBoot(q: URLSearchParams, own: boolean, picture = false): { role: KeepRole; keeper: Keeper | null; seat: string } {
   const word = q.get(KEEP_PAGE.word);
   // (the word is the tab's from the load that carried it: a pick's or a restart's address does not carry it on)
   let tab: string | null = null;
@@ -22,22 +24,24 @@ export function keepPageBoot(q: URLSearchParams, own: boolean): { role: KeepRole
   const build = Array.from(document.querySelectorAll<HTMLScriptElement>('script[type="module"][src]'), s => s.src).filter(u => u.startsWith(location.origin + '/')).join(' ');
   const above = keeperAbove(window, build);
   let top = false; try { top = window.top === window.self; } catch { /* a window of another origin above */ }
-  KEPT.shelled = !!above;
+  // (a page's shell is the window above it; a picture's is whichever window above holds one: its page's)
+  const direct = above !== null && above.depth === 1;
+  KEPT.shelled = direct && !picture;
   // (a shell of another build is left ONCE: a tab whose two pages can never agree — something rewrites one of them — must not load for ever, so a second
   // leave inside a minute is not made and the frame plays on a device of its own)
-  let stale = !!above && !above.same && !above.keeper.refused;
+  let stale = direct && !picture && !above!.same && !above!.keeper.refused;
   if (stale) try { const last = Number(sessionStorage.getItem(LEFT)) || 0; if (Date.now() - last < 60_000) stale = false; else sessionStorage.setItem(LEFT, String(Date.now())); } catch { stale = false; }
   // (a frame is KNOWN to draw with its parent's device in the Chromium family — Chrome, Edge and their kin say `Chrome/`, a headless one `HeadlessChrome/` —
   // and nowhere else has it been seen)
   const proven = /Chrome\/\d/.test(navigator.userAgent);
-  const role = keepRole({ word, tab, top, keeper: !!above?.same, stale, own, driven: navigator.webdriver === true || q.has('paused'), proven, onefile: !!document.querySelector('meta[name="tps-one-page"]') });
+  const role = keepRole({ word, tab, top, keeper: !!above?.same && (picture || direct), stale, own, picture, driven: navigator.webdriver === true || q.has('paused'), proven, onefile: !!document.querySelector('meta[name="tps-one-page"]') });
   if (role === 'shell') {
     const keeper = makeKeeper(() => openDevice(navigator.gpu), build, performance.now(), ((): string => { try { return String((performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type ?? ''); } catch { return ''; } })());
     if (q.get(KEEP_PAGE.drainWord) === '0') keeper.drain = false;   // (the tab's first address: the keeper is this window's for the visit)
     (window as unknown as Record<string, unknown>)[KEEP_PAGE.hook] = keeper;
     showKeptFrame(document, location.href);
   } else if (role === 'leave') {
-    try { window.top!.location.replace(location.href); } catch { return { role: 'plain', keeper: null }; }
+    try { window.top!.location.replace(location.href); } catch { return { role: 'plain', keeper: null, seat: KEEP_PAGE.seat }; }
   }
   if (role === 'kept') {
     // the address bar is the shell's: it takes the frame's address at each load of the frame (gpu/keep.ts showKeptFrame), and here whenever this page
@@ -59,5 +63,5 @@ export function keepPageBoot(q: URLSearchParams, own: boolean): { role: KeepRole
   }
   // (for a console and the page check: what this window is, and the lease its device came on — null before the device is asked for and on a plain page)
   (window as unknown as Record<string, unknown>).__keptPage = { role, get lease() { return KEPT.lease; }, get calls() { return CALLS.now; }, get play() { return CALLS.play; } };
-  return { role, keeper: role === 'kept' ? above!.keeper : null };
+  return { role, keeper: role === 'kept' || role === 'beside' ? above!.keeper : null, seat: role === 'beside' ? KEEP_PAGE.pictureSeat : KEEP_PAGE.seat };
 }

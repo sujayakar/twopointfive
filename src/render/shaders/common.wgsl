@@ -52,9 +52,15 @@ struct Frame {
   lampCfg: vec4f,                           // THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros anywhere else = off): x = × the night's lamp strength a fixture is drawn at this hour, y = × a glowing face's drawn strength as a ray takes it (lampFloorK, boxEmissiveRay below), z = 1 while the Steady bounce row is up (lighting_common.wgsl dayBoundK) · w = the Room brightness row (composite.wgsl lookExpoGain; 0 = not set)
   sideCfg: vec4u,                           // THE LOOK PROTOTYPE, which side of a wall (the look panel's row `walls`; render/wallSides.ts; zeros anywhere else = every cache read as it was): x = 1 `sides` is this frame's level · y, z = THE SMOKE LAB's drawing rows (vol_common.wgsl HOW SMOKE IS DRAWN, AS ROWS; zeros = the picture as it was)
   placeCfg: vec4f,                          // THE LOOK PROTOTYPE, light keeps its order across places (the look panel's row `order`; composite.wgsl lookExpoGain; zeros anywhere else = off): x = how far a pixel's own light caps its place's gain · y = the slot of the light list's first portal + 1, 0 with none (skyKeep below) · z, w = THE EYES' WIDEST (place_common.wgsl lookExpoFor; set whenever the model is on): z = the dim level in the night's units, w = the most a place under it is shown by over the night's exposure
+  levelCfg: vec4u,                          // WHAT THE LEVEL RAISES (render/frame.ts LevelSw, written by writeFrame from the page's own switches): x = a bit a switch — the weather kinds' reads, the snow, the rows of the snow's look. Asked as lv(NAME) below. Data and not constants, so the office, a level with its own roofs and a snow level are ONE shader text
   sides: array<vec4u, 1750>,                // … its words, a u32 a cell of the floor plan (sideAt below)
   sideCols: array<vec4u, 140>,              // … and the place of each probe column of the cache's first cascade, a nibble a column (index z × dims.x + x; lighting_common.wgsl diceTapsBy)
 };
+
+/// Is this level's switch up? `bit` = one of the scene prelude's level words (WX_KINDS, WX_SNOW, SNOW_SURF, SNOW_WISPS, SNOW_TRACKS, SNOW_GLOW, SNOW_SPARKLE,
+/// SNOW_GRAINS, SNOW_UNDER: render/frame.ts LevelSw). The same answer on every pixel of a frame and on every frame of a page: a branch a level does not raise
+/// is never taken.
+fn lv(bit: u32) -> bool { return (frame.levelCfg.x & bit) != 0u; }
 
 const FLAG_DIRECT: u32 = 1u;
 const FLAG_INDIRECT: u32 = 2u;
@@ -247,7 +253,7 @@ fn wxRoofed(p: vec2f) -> bool {
 const WX_WALL_IN: f32 = 0.2;   // m
 fn wxUnderRoof(p: vec2f) -> bool {
   if (!wxRoofed(p)) { return false; }
-  if (!WX_KINDS) { return true; }
+  if (!lv(WX_KINDS)) { return true; }
   if (frame.cardCfg.y == 0u) { return true; }
   let d = WX_WALL_IN;
   return wxRoofed(p + vec2f(d, d)) && wxRoofed(p + vec2f(-d, d)) && wxRoofed(p + vec2f(d, -d)) && wxRoofed(p - vec2f(d, d));

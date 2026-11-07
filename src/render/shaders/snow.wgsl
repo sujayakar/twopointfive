@@ -23,7 +23,7 @@ struct SnowCfg { p: array<vec4f, 11> };
 // (SNOWTRACKS.mess) is the same byte read the same way: its stamp breaks the outline, the bank's reach and the floor, and sets clods in the bank's half.
 @group(1) @binding(10) var snowTrackTex: texture_2d<f32>;
 
-fn snowLive() -> bool { return SNOW_SURF && snowCfg.p[1].z > 0.5; }
+fn snowLive() -> bool { return lv(SNOW_SURF) && snowCfg.p[1].z > 0.5; }
 fn snowField(xz: vec2f) -> vec4f { return textureSampleLevel(snowTex, linSamp, (xz - snowCfg.p[0].xy) * snowCfg.p[0].z / snowCfg.p[1].xy, 0.0); }
 fn snowIsPaint(a: vec3f) -> bool { return all(abs(a - snowCfg.p[7].xyz) < vec3f(0.004)); }
 /** a path's or a rut's strip, by its paint (trodden or old snow) */
@@ -80,7 +80,7 @@ fn snowShade(wp: vec3f, f: vec4f, up: vec3f, fp: f32, lying: bool) -> SnowS {
   var gx = (hxp - hxm) / (2.0 * e) + (nx - n0) / e2 * fade; var gz = (hzp - hzm) / (2.0 * e) + (nz - n0) / e2 * fade;
   // the prints: a dent the lamps model by its walls and its rim, crumbled inside (pressed snow breaks into clods); deeper where a drift's skirt stands, shallow in snow already trodden
   var pr = 0.0; var trod = 0.0; var cup = 0.0;
-  if (SNOW_TRACKS && lying && snowCfg.p[8].z > 0.0) {
+  if (lv(SNOW_TRACKS) && lying && snowCfg.p[8].z > 0.0) {
     let deep = (snowCfg.p[8].z + 0.6 * min(f.x, 0.25)) * (1.0 - 0.6 * max(f.z, f.w));
     let et = 0.75 / snowCfg.p[8].w;
     let mess = snowPrintMess(); let fine = clamp(0.0135 / max(fp, 1e-4), 0.0, 1.0);
@@ -182,7 +182,7 @@ struct SnowVOut { @builtin(position) pos: vec4f, @location(0) wp: vec3f };
   var f = snowField(v.wp.xz); f.y = 1.0;
   let s = snowShade(v.wp, f, vec3f(0.0, 1.0, 0.0), fp, true);
   o.albedo = vec4f(s.albedo, 1.0);
-  o.normal = vec4f(s.n * 0.5 + 0.5, select(1.0, 0.3333, SNOW_GLOW || SNOW_SPARKLE));   // (.a under SNOW GLOW or SNOW SPARKLE: 1∕3 = snow — gbuffer.wgsl fsBox's output line, composite.wgsl snowGlowAmt)
+  o.normal = vec4f(s.n * 0.5 + 0.5, select(1.0, 0.3333, lv(SNOW_GLOW) || lv(SNOW_SPARKLE)));   // (.a under SNOW GLOW or SNOW SPARKLE: 1∕3 = snow — gbuffer.wgsl fsBox's output line, composite.wgsl snowGlowAmt)
   o.id = u32(snowCfg.p[0].w + 0.5);   // the snow lies on the ground: its pixels are the ground slab's to every pass that asks whose they are
   o.vel = vec2f(0.0);
   o.mat = vec2f(s.rough, 0.0);
