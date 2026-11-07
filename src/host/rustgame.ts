@@ -47,6 +47,7 @@ import { CharacterAnimator } from '../game/character';
 import { SkeletonInstance } from '../anim/skeleton';
 import { sampleCmd, stillCmd, type PlayerCmd } from '../game/cmd';
 import { dressStep, DRESS_MS } from './rustdress';
+import { warmRainFx } from '../game/rainFx';
 import { markHeld } from './held';
 import { wallFeelPicture } from '../game/blastFeel';
 import { exportGame, hostHalf, shownSeat, bookOf, report, SCHEMA } from 'tps-bridge/export';
@@ -224,8 +225,10 @@ export const RUST_GAME = {
   probeForgot: 0, wallFeels: 0, pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, askRefused: { n: 0, rows: {} } as { n: number; rows: Record<string, string> }, crossed: {} as Record<string, number>, named: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0,
   /** games kept (a save, the start) and their cost: how many were taken, ms of the last take and the worst, how many the module holds now; games put back,
    *  ms of the last (the kept game stood again, the whole apply, the hand-over of the controller's lines) */
-  /** the warm-up behind a start card (`rustWarm`): ms of the Rust game's start, of the applies and of the ticks stepped and thrown away, and how many */
-  warm: { n: 0, startMs: 0, applyMs: 0, tickMs: 0, ticks: 0, firstTickMs: 0, lastTickMs: 0 },
+  /** the last start, ms by part: the block's settling, the whole export, the Rust game made from it, the whole apply, the start kept, the menu's questions with the settings' first walk */
+  startParts: { settle: 0, export: 0, make: 0, apply: 0, keep: 0, asks: 0 },
+  /** the warm-up before the first frame (`rustWarm`): ms of the Rust game's start, of the applies, of the ticks stepped and thrown away, of the picture's own step, and how many */
+  warm: { n: 0, startMs: 0, applyMs: 0, tickMs: 0, dressMs: 0, ticks: 0, firstTickMs: 0, lastTickMs: 0 },
   keeps: 0, keepMs: 0, keepWorst: 0, kept: 0, backs: 0, backMs: { back: 0, whole: 0, hand: 0 }, restarts: 0, shelfSent: 0, keepAs: 0 as 0 | 1,
   /** WHERE A STEP'S TIME GOES, finer (`prof.on`, for a check: the tick is then four calls into the module where play makes one). Sums in ms over `n` steps:
    *  the host's half (the knobs · the light probe's answers handed in · the bridge's hand-over built and taken), the listing, the tick, the lights'
@@ -444,7 +447,7 @@ export function rustAttach(g: Game): void {
 
 /** THE RUST GAME STARTED FROM THE PUPPET AS IT STANDS: the whole state across once, over the block that already stands in the puppet's slot */
 function start(S: Held): void {
-  const g = S.g, t0 = performance.now();
+  const g = S.g, t0 = performance.now(), P = RUST_GAME.startParts; let tp = t0; const part = (k: keyof typeof P): void => { const n = performance.now(); P[k] = n - tp; tp = n; };
   HOOKS ??= { classes: classTable(), values: valueTable(), made: madeHooks() };
   g.sim.settle(g);   // (as a tick's own opening: the men's poses at home, the block bound)
   const slot = g.sim.bind();
@@ -452,17 +455,21 @@ function start(S: Held): void {
   if (S.h) { X!.face_drop(S.h); S.h = 0; }
   // (the bridge's book of which object has which row is a game's for as long as the Rust game it was exported into: a new Rust game, a new book)
   { const bk = bookOf(g); if (bk) { bk.ids.clear(); bk.lists.clear(); bk.first.clear(); bk.loose.clear(); } }
+  part('settle');
   const state = g.col.writes(() => exportGame(g, reg()));   // (no copy of the box world stands as the game is handed over: a start inside a frame's window starts as one outside it)
+  part('export');
   RUST_GAME.notCarried = [...report()].map(([k, v]) => `${k} x${v.n}`);
   const h = call('face_new_at', () => hand(state, (p, n) => X!.face_new_at(p, n, slot)));
   if (!h) throw new Error('rust=1: the face made no game (no such slot)');
+  part('make');
   S.h = h; S.told = -1; S.slot = slot; S.stale = ''; S.uploaded = true; S.ctx = { p: 0 }; S.rows = puppetRows(S.ctx); S.back = null; S.took = false; S.shelfSig = '';
   grown(g);
   S.asks = null;
-  apply(S, true);
+  apply(S, true); part('apply');
   // THE START KEPT: what a restart goes back to. (Every game kept of the Rust game that stood before is gone with it: a slot that still names one is refused.)
   for (const k of S.kept) X!.face_kept_drop(k); S.kept.clear();
   S.startKept = keep(S);
+  part('keep');
   // (the menu's questions: asked of this Rust game by its rows' IDs in this book, so installed anew at every start)
   S.asks = installAsks(g, reg(), (kind, row, seat, b) => { if (RUST_PANIC.dead) return askNothing(kind, '');
     // (the HUD asks every drawn frame: a trap inside a question stops the game and answers "nothing", and is no throw of the frame's)
@@ -482,6 +489,7 @@ function start(S: Held): void {
     const scan = makeScan(g, reg(), (b: Uint8Array) => { S.viewAt = -1; call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); }, tools ? (q: string) => { RUST_GAME.scan.wrote[q] = (RUST_GAME.scan.wrote[q] ?? 0) + 1; } : () => {}, !tools, tools ? { traps: true, every: true } : {}); scan.rebase(); S.settings = scan; S.toolScan = tools;
   if (!SETTLED_SAID) { SETTLED_SAID = true; console.info(`rust=1: ${scan.stats().settledLeft} settled rows of the knob tables are the game's constants, and what a page writes to them does not reach it`); } }
   // (room asked for and given back once the game stands: the allocator keeps it, so a step seldom has to grow the memory, which detaches every view over it)
+  part('asks');   // (the menu's questions, the write by path and the settings' first walk)
   X!.face_reserve(64 * 1048576); grown(g);
   RUST_GAME.handle = h; RUST_GAME.slot = slot; RUST_GAME.starts++; RUST_GAME.startMs = performance.now() - t0; RUST_GAME.startBytes = state.length;
   console.info(`rust=1: the Rust game started from the page's (${state.length} bytes of state, slot ${slot}) in ${RUST_GAME.startMs.toFixed(0)} ms${RUST_GAME.notCarried.length ? `; the bridge could not carry ${RUST_GAME.notCarried.length} kinds of value (window.__rust.notCarried)` : ''}`);
@@ -891,14 +899,14 @@ export function rustFileIn(b: Uint8Array): SlotInfo | string {
 }
 
 // ---- before play
-/** BEHIND A START CARD, where a stall is nobody's (main.ts, beside the save controller's own warm-up): everything a first second of play would otherwise
+/** BEFORE THE FIRST FRAME, ON EVERY ROAD STRAIGHT TO PLAY (main.ts), where a stall is a little more load and no hitch in play: everything a first second of play would otherwise
  *  pay for. THE RUST GAME IS STARTED (the forward export, the import, the first apply). THE EVERY-TICK APPLY is run over every row a few times, on a
  *  puppet that already holds those values (`face_puppet_warm`): its first runs cost many times its later ones. THE TICK ITSELF is stepped `ticks` times
  *  with no key held and thrown away: the module's functions are compiled as they are first called, and the game kept before those ticks is put back
  *  after them, block and all, so the game that plays is the game that was started (a check holds the die and the block's parts to a page that was
  *  never warmed). `host`: the page's own Input, camera and view, for the record those ticks are handed. */
 export function rustWarm(host: { input: unknown; cam: unknown; canvas: unknown }, ticks = 24): void {
-  const S = H; if (!X || !S || S.inStep) return;
+  const S = H; if (!X || !S || S.inStep || TOOL_DRIVEN) return;   // (a page a script steps: what the script stages before its first run of frames is the start's)
   const g = S.g, W = RUST_GAME.warm; let t = performance.now();
   try {
     if (S.stale || !S.h) start(S);
@@ -917,7 +925,10 @@ export function rustWarm(host: { input: unknown; cam: unknown; canvas: unknown }
       // THE GAME AS IT WAS STARTED stands again, and what the filtered export last sent is filled again from it (the puppet never took the ticks above)
       call('face_back', () => X!.face_back(S.h, k)); X!.face_kept_drop(k); call('face_puppet', () => X!.face_puppet(S.h, 1)); grown(g); S.uploaded = true;
     }
-    W.tickMs = performance.now() - t; W.n++;
+    W.tickMs = performance.now() - t; t = performance.now();
+    // THE PICTURE'S OWN STEP once, at no time: its first run is what the first frame would otherwise pay (the rain's drip lines, a few thousand rays, the men's first draw). The rain's lines are made whole whether or not it rains yet. A step of dt 0 bears nothing and writes no game state: the dress step only reads the game, and the next tick's runs again over the same puppet
+    S.inStep = true; try { warmRainFx(g); dressStep(g, 0, S.side); } finally { S.inStep = false; }
+    W.dressMs = performance.now() - t; W.n++;
   } catch (e) { RUST_GAME.outThrew['warm'] ??= String((e as Error)?.stack ?? e).slice(0, 600); S.stale = 'the warm-up threw'; }
 }
 
