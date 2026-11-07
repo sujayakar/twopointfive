@@ -3,7 +3,7 @@
 //   materials-finish     the finish (rough / metal) through the level format: the office file carries it per material and per box, loadLevel resolves box over
 //                        material, an old file (no finish anywhere) loads to boxes without one, levelToData writes only what the paint does not say, the
 //                        validator trips on bad values; and Box → GPU word → back (matWord ⇄ common.wgsl boxFinish, ported)
-//   materials-presets    which presets switch the reflections on and with what (ultra ÷2 · 2 rays · ≤ 0.55 · 4, high ÷2 · 1 · ≤ 0.45 · 3, medium ÷3 · 1 · ≤ 0.35 · 3,
+//   materials-presets    which presets switch the reflections on and with what (high ÷2 · 1 · ≤ 0.45 · 3, medium ÷3 · 1 · ≤ 0.35 · 3,
 //                        low / verylow off), apply() writes exactly that, the ?nortreflect veto holds across apply()
 //   materials-frame      the engine writes rtCfg.w = the divisor with the switch on and 0 with it off, holds Gloss DOWN while on whatever settings.gloss says,
 //                        matCfg.w = the detail amount — read back off a real Engine's Frame bytes on the fake device; and settings aside, the first 624 bytes of the
@@ -90,7 +90,6 @@ export async function materialsFinish() {
 export async function materialsPresets() {
   console.log('\n=== materials-presets: which presets switch the reflections on, and with what ===');
   const P = PRESETS as Record<string, any>;
-  verdict(P.ultra.rt.on && P.ultra.rt.div === 2 && P.ultra.rt.rays === 2 && P.ultra.rt.maxRough === 0.55 && P.ultra.rt.atrous === 4, 'ultra: on, half-res target, 2 rays, finishes ≤ 0.55, 4 à-trous', JSON.stringify(P.ultra.rt));
   verdict(P.high.rt.on && P.high.rt.div === 2 && P.high.rt.rays === 1 && P.high.rt.maxRough === 0.45 && P.high.rt.atrous === 3, 'high: on, half-res target, 1 ray, finishes ≤ 0.45, 3 à-trous', JSON.stringify(P.high.rt));
   verdict(P.medium.rt.on && P.medium.rt.div === 3 && P.medium.rt.rays === 1 && P.medium.rt.maxRough === 0.35, 'medium: on, third-res target, 1 ray, finishes ≤ 0.35 (floors, screens, steel)', JSON.stringify(P.medium.rt));
   verdict(['low', 'verylow'].every(n => !P[n].rt.on), 'low / verylow: off (the finish table and the detail layer stay: they live in the g-buffer)', ['low', 'verylow'].map(n => `${n} ${P[n].rt.on}`).join(' · '));
@@ -105,17 +104,11 @@ export async function materialsPresets() {
     q.pin('low'); const offOk = engine.settings.rtReflect === false;
     q.pin('medium'); const md = { on: engine.settings.rtReflect, div: engine.settings.rtReflectDiv, rays: engine.settings.rtRays, maxR: engine.settings.rtMaxRough, at: engine.settings.rtAtrous };
     q.pin('high'); const hi = { on: engine.settings.rtReflect, div: engine.settings.rtReflectDiv, rays: engine.settings.rtRays, maxR: engine.settings.rtMaxRough, at: engine.settings.rtAtrous };
-    q.pin('ultra'); const ul = { on: engine.settings.rtReflect, div: engine.settings.rtReflectDiv, rays: engine.settings.rtRays, maxR: engine.settings.rtMaxRough, at: engine.settings.rtAtrous };
-    verdict(offOk && md.on && md.div === 3 && md.maxR === 0.35 && hi.on && hi.div === 2 && hi.rays === 1 && hi.maxR === 0.45 && hi.at === 3 && ul.on && ul.rays === 2 && ul.maxR === 0.55 && ul.at === 4, 'Quality.apply: low → off; medium / high / ultra → their blocks land in settings.rtReflect / rtReflectDiv / rtRays / rtMaxRough / rtAtrous', `medium ${JSON.stringify(md)} · high ${JSON.stringify(hi)} · ultra ${JSON.stringify(ul)}`);
+    verdict(offOk && md.on && md.div === 3 && md.maxR === 0.35 && hi.on && hi.div === 2 && hi.rays === 1 && hi.maxR === 0.45 && hi.at === 3, 'Quality.apply: low → off; medium / high → their blocks land in settings.rtReflect / rtReflectDiv / rtRays / rtMaxRough / rtAtrous', `medium ${JSON.stringify(md)} · high ${JSON.stringify(hi)}`);
     verdict(engine.settings.detail === 0.35, 'settings.detail defaults to 0.35 and no preset touches it', `detail ${engine.settings.detail}`);
     rtVeto.on = true; q.pin('medium'); q.pin('high'); const vetoed = engine.settings.rtReflect === false && engine.settings.rtReflectDiv === 2; rtVeto.on = false; q.pin('high'); const back = engine.settings.rtReflect === true;
     verdict(vetoed && back, '?nortreflect (rtVeto): high applies with the reflections held OFF (its divisor / rays still written); veto lifted → on again');
-    // renderer v3 phase 5: the ultra-only extras (Preset.p5) — on in ultra, P5_OFF everywhere else, and a hop off ultra puts them back
-    const p5of = () => ({ mesh: engine.settings.rtMeshHits, reuse: engine.settings.rtHitReuse });
-    q.pin('ultra'); const u5 = p5of(); q.pin('high'); const h5 = p5of(); q.pin('ultra'); q.pin('medium'); const m5 = p5of(); q.pin('low'); const l5 = p5of(); q.pin('verylow'); const v5 = p5of();
-    verdict(u5.mesh === true && u5.reuse === false, 'phase 5: ultra switches mesh hits ON, hit-lighting reuse OFF (measured no gain)', JSON.stringify(u5));
-    verdict([h5, m5, l5, v5].every(x => x.mesh === false && x.reuse === false), 'phase 5: high / medium / low / verylow carry both OFF (their passes byte for byte as they were), including straight after an ultra visit', [h5, m5, l5, v5].map(x => JSON.stringify(x)).join(' · '));
-    verdict(QUALITY_NAMES.every((n: string) => P[n].p5 && typeof P[n].p5.mesh === 'boolean' && typeof P[n].p5.reuse === 'boolean'), 'every preset carries a well-formed p5 block');   __teardownDom();
+    __teardownDom();
   }
   done('materials-presets');
 }

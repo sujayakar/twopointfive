@@ -154,7 +154,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   slide(sky, 'Moon height', 'degrees over the horizon: low = long shadows', 5, 85, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.elev : null; }, v => w.__moon?.set({ elev: v }));
   slide(sky, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.bearing : null; }, v => w.__moon?.set({ bearing: v }));
   const qual = panel.section('Quality', { open: true, summary: () => String(w.__quality?.current ?? '') });
-  panel.buttons(qual, 'preset', ['low', 'medium', 'high', 'ultra'].map(p => ({ text: p, run: () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } } })));   // (auto off for the visit: the ladder would move the preset again)
+  panel.buttons(qual, 'preset', ['low', 'medium', 'high'].map(p => ({ text: p, run: () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } } })));   // (auto off for the visit: the ladder would move the preset again)
   // A FRAME CAPTURE (render/framecap.ts): every target the renderer wrote, whole, with the trace of what it changed (F6)
   panel.buttons(qual, 'capture', [
     { text: 'whole picture', run: () => w.__framecap?.start({}), title: 'every render target, whole, over 2 frames, as one file in the dev server\'s captures folder (F6). A big file' },

@@ -1,12 +1,12 @@
 // SDF character rig — a debug kernel over the LIVE scene group (main.ts __rigTrace): for a list of rays it evaluates the production WGSL of shaders/sdfrig.wgsl
-// (the soft-shadow query in both forms, the round-cone any-hit, the smooth-union closest hit) so a CPU twin (tools/qa, the harness) can be checked against it
+// (the soft-shadow query in both forms, the round-cone any-hit) so a CPU twin (tools/qa, the harness) can be checked against it
 // number for number — the mesh shadows' __meshTrace pattern. Nothing here runs in a frame.
 import { makeBuffer, makeBufferWithData, makeShader } from '../gpu/device';
 import { scenePrelude } from './frame';
 
 const src = /* wgsl */`
 @group(1) @binding(0) var<storage, read> dbgRays: array<vec4f>;        // 2 per ray: (Po.xyz, tmax), (L.xyz, tanHalf)   (skip = 0)
-@group(1) @binding(1) var<storage, read_write> dbgOut: array<vec4f>;   // 2 per ray: (charSoftVis, analytic res raw, march res raw, occludedCapsules 0/1), (traceCapsules t, its index, rigClosest t, its char)
+@group(1) @binding(1) var<storage, read_write> dbgOut: array<vec4f>;   // 2 per ray: (charSoftVis, analytic res raw, march res raw, occludedCapsules 0/1), (traceCapsules t, its index, −1, −1)
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) gid: vec3u) {
   let n = arrayLength(&dbgOut) / 2u;
   if (gid.x >= n) { return; }
@@ -25,14 +25,13 @@ const src = /* wgsl */`
   }
   let occ = occludedCapsules(Po, L, tmax, 0u);
   let tc = traceCapsules(Po, L, tmax, 0u);
-  let rc = rigClosest(Po, L, tmax, 0u);
   dbgOut[gid.x * 2u] = vec4f(vis, ra, rm, select(0.0, 1.0, occ));
-  dbgOut[gid.x * 2u + 1u] = vec4f(tc.x, tc.y, rc.t, f32(rc.ch));
+  dbgOut[gid.x * 2u + 1u] = vec4f(tc.x, tc.y, -1.0, -1.0);   // (.zw were the smooth-union closest hit, a trial that went 2026-11-07)
 }
 `;
 
 let cached: { pipe: GPUComputePipeline; layout: GPUBindGroupLayout } | null = null;
-/** rays: 8 floats each (Po.xyz, tmax, L.xyz, tanHalf) → 8 floats each (charSoftVis, analytic res, march res, occluded 0/1, traceCapsules t, index, rigClosest t, char) */
+/** rays: 8 floats each (Po.xyz, tmax, L.xyz, tanHalf) → 8 floats each (charSoftVis, analytic res, march res, occluded 0/1, traceCapsules t, index, −1, −1) */
 export async function rigDebugTrace(device: GPUDevice, sceneLayout: GPUBindGroupLayout, sceneBG: GPUBindGroup, rays: Float32Array): Promise<Float32Array> {
   const n = (rays.length / 8) | 0; if (n === 0) return new Float32Array(0);
   if (!cached) {

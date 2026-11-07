@@ -12,17 +12,6 @@ var<workgroup> wgCards: array<vec4f, 32>;
 var<workgroup> wgCardOf: array<i32, 64>;
 var<private> nC: u32;
 
-// ---- phase 5: world points and unit vectors packed into texel words (the gather's reservoirs — fgather.wgsl mainGi — and the reflection pass's hit records) ----
-// A point inside the traced world (WORLD_MIN‥MAX: 40 × 8.25 × 28 m) as 16 bits an axis (0.6 / 0.13 / 0.43 mm), a direction as an 8+8-bit octahedral (±1°).
-fn p5PackXZ(p: vec3f) -> u32 { let q = clamp((p.xz - WORLD_MIN.xz) / (WORLD_MAX.xz - WORLD_MIN.xz), vec2f(0.0), vec2f(1.0)); return u32(q.x * 65535.0 + 0.5) | (u32(q.y * 65535.0 + 0.5) << 16u); }
-fn p5PackYN(p: vec3f, n: vec3f) -> u32 { let qy = clamp((p.y - WORLD_MIN.y) / (WORLD_MAX.y - WORLD_MIN.y), 0.0, 1.0); let o = vec2u(clamp(octEncode(n) * 255.0 + 0.5, vec2f(0.0), vec2f(255.0))); return u32(qy * 65535.0 + 0.5) | (o.x << 16u) | (o.y << 24u); }
-fn p5UnpackPos(xz: u32, yn: u32) -> vec3f {
-  let q = vec3f(f32(xz & 0xffffu), f32(yn & 0xffffu), f32(xz >> 16u)) / 65535.0;
-  return WORLD_MIN + q * (WORLD_MAX - WORLD_MIN);
-}
-fn p5UnpackN(yn: u32) -> vec3f { return octDecode(vec2f(f32((yn >> 16u) & 255u), f32(yn >> 24u)) / 255.0); }
-fn p5PackOct16(n: vec3f) -> u32 { let o = vec2u(clamp(octEncode(n) * 255.0 + 0.5, vec2f(0.0), vec2f(255.0))); return o.x | (o.y << 8u); }
-fn p5UnpackOct16(v: u32) -> vec3f { return octDecode(vec2f(f32(v & 255u), f32((v >> 8u) & 255u)) / 255.0); }
 
 var<private> rngState: u32;
 fn rngInit(p: vec2u, f: u32) { rngState = (p.x * 1973u + p.y * 9277u + f * 26699u) | 1u; rngState = rngState ^ (rngState >> 15u); rngState *= 0x2c1b3c6du; rngState ^= rngState >> 12u; }
@@ -96,44 +85,5 @@ fn directAtPoint(P: vec3f, N: vec3f, ex: u32) -> vec3f {
   var vis = 1.0;
   if (tmax > 0.0 && occluded(Po, pL, tmax, (pk.owner & 0xffu) << 8u)) { vis = 0.0; }
   return U * vis;
-}
-// directAtPoint's ON-SCREEN half alone (phase 5 — the resampling gather's cheap revalidation of a stored sample point): the exact denoised direct light at P
-// if it is visible this frame (.w = 1), else nothing (.w = 0) — never the light loop. The statements are directAtPoint's; keep the two in step.
-fn directOnScreen(P: vec3f, N: vec3f, ex: u32) -> vec4f {
-  let clip = frame.viewProj * vec4f(P, 1.0);
-  if (clip.w > 0.0) {
-    let ndc = clip.xyz / clip.w;
-    let uv = ndc.xy * vec2f(0.5, -0.5) + 0.5;
-    if (all(uv > vec2f(0.0)) && all(uv < vec2f(1.0))) {
-      let px = vec2u(uv * frame.screen);
-      let d = textureLoad(gDepth, px, 0);
-      if (d < 1.0) {
-        let Ps = worldFromDepth(vec2f(px) + 0.5, d);
-        let Ns = textureLoad(gNormal, px, 0).xyz * 2.0 - 1.0;
-        if (distance(Ps, P) < 0.12 && dot(Ns, N) > 0.7) {
-          var Ed = textureLoad(directTex, px, 0).xyz + textureLoad(softTex, px, 0).xyz;
-          for (var i = min(frame.p5Cfg.w, nL); i < select(0u, nL, frame.rcJitter.w > 0.0); i++) {   // (as directAtPoint: from the first transient's slot)
-            let li = wgLights[i];
-            if (!lightTransient(li)) { continue; }
-            let ev = evalLight(li, P, N);
-            if (ev.ok && !occluded(P + N * 0.01, ev.L, max(ev.dist.x - li.radius - 0.02, 0.0), (li.owner & 0xffu) << 8u)) { Ed -= ev.E; }
-          }
-          for (var k = 0u; k < select(0u, nC, ex != 0u); k++) {
-            if ((ex & (1u << k)) == 0u) { continue; }
-            let li = wgLights[u32(wgCards[k * 4u + 1u].w)];
-            let ev = evalLight(li, P, N);
-            if (!ev.ok) { continue; }
-            let tmax = max(ev.dist.x - li.radius - 0.02, 0.0);
-            if (occluded(P + N * 0.01, ev.L, tmax, (li.owner & 0xffu) << 8u)) { continue; }
-            var sub = ev.E;
-            if (frame.numSmoke > 0u) { sub *= smokeTransmittance(P + N * 0.01, ev.L, min(tmax, 30.0)); }
-            Ed -= sub;
-          }
-          return vec4f(max(Ed, vec3f(0.0)), 1.0);
-        }
-      }
-    }
-  }
-  return vec4f(0.0);
 }
 
