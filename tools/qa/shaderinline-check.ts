@@ -43,17 +43,16 @@ const BUDGET: [RegExp, number][] = [
   [/^gatherSplit \/ trace$/, 252],   // (the gather is two programs, render/gatherSplit.ts: its rays, then the light at what they hit)
   [/^gatherSplit \/ light$/, 58],   // (113 before the gather took the reflections' one-loop writing of the light loop, 2026-11-07)
   [/^composite(R|S|SR)? \/ (fs|cs)$/, 442],   // (403 until 2026-11-07: the snow's glow and sparkle are in every level's text now, asked by the frame's level word, 421 on the look's page)
-  [/^volumetricsF? \/ main$/, 400],   // (382 until 2026-11-07: the dust's look is in the march's own text, 395 on the look's page, and its second program, 433, is gone)
+  [/^volumetrics \/ main$/, 400],   // (the march is ONE program since 2026-11-07: its froxel-lit twin, its zero-light twin and its dust twin are gone, and the dust's look is in its own text)
   [/^particles \/ update$/, 356],
   [/^restir \/ main$/, 336],   // (295 + an opening's light in this writing, 38 KB: as the table above)
-  [/^froxel \/ injectJ$/, 210],
   [/^reflect \/ main$/, 204],
   [/^gbuffer(Cut)? \/ fsBox(Cut)?$/, 302],   // (… and its twin with the cut rule, the same text and the cut's test: 268 where fsBox is 267. It had no row, so the look's page read red against 200)
   [/^gbuffer(Cut)?Snow \/ fsBox(Cut)?$/, 566],   // (the boxes' second writing, with the snow's surface in it: render/gbuffer.ts. 294 on the plain page; 468 and, with the cut rule, 539 on the look's. What a snow level always compiled, and under the look no setting here read it. Every page asks for it now, behind its boot where the level has no snow, so each of this tool's settings holds it)
   [/./, 200],
 ];
 /** the cut test's own functions (common.wgsl: isectCut and the four planes it takes twice), and the KB one copy of the box test may carry of them */
-const CUT_TEST = ['isectCut', 'cutFour'], CUT_TEST_KB = 3.2, ROUND_TEST = ['isectRound'], MODS_MIN = 36, PIPES_MIN = 104;   // (the title's whole boot: its distinct modules and the pipelines it asks for)
+const CUT_TEST = ['isectCut', 'cutFour'], CUT_TEST_KB = 3.2, ROUND_TEST = ['isectRound'], MODS_MIN = 35, PIPES_MIN = 100;   // (the title's whole boot: its distinct modules and the pipelines it asks for)
 const BREAK = process.env.SHADERINLINE_BREAK === '1';
 const argv = process.argv.slice(2);
 const opt = (k: string): string | null => { const i = argv.indexOf('--' + k); if (i < 0) return null; const v = argv[i + 1]; if (v === undefined || v.startsWith('--')) { console.error(`--${k} needs a value`); process.exit(1); } return v; };

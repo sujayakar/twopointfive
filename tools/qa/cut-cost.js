@@ -24,7 +24,7 @@
   const med = a => q(a, 0.5);
   const hash01 = n => { let x = (n | 0) * 0x9E3779B1; x ^= x >>> 16; x = Math.imul(x, 0x85EBCA6B); x ^= x >>> 13; x = Math.imul(x, 0xC2B2AE35); x ^= x >>> 16; return (x >>> 0) / 4294967296; };
   const RP = ['gbuffer', 'composite', 'post', 'fxaa', 'pdraw', 'present'];   // render passes: their stamps span the drawable wait on Metal (never in the union)
-  const TRACERS = ['direct', 'softblur', 'gather', 'temporal', 'reflect', 'rdenoise', 'rc', 'probe', 'volFroxel', 'volumetrics', 'particles'];
+  const TRACERS = ['direct', 'softblur', 'gather', 'temporal', 'reflect', 'rdenoise', 'rc', 'probe', 'volumetrics', 'particles'];
   const cutOn = () => !!(C() && C().on);
 
   // ---- views + staging --------------------------------------------------------------------------------------------------------------------------------------------
