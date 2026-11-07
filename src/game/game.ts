@@ -957,6 +957,15 @@ export class Game {
    *  plumbing — built last in the constructor from level.script (none = no programs, as on every shipped level: the game exactly), ticked in update() right
    *  before tacticsTick, read by main.ts through `frame` (the pinned look-at, caption, veil) while a showcase program has the frame */
   director!: Director;
+  /** THE HOST'S OWN CAMERA AND KEYS, handed to the game ONCE, at its stand, by every host alike (host/standup.ts standGame). They are the host's: what a player's machine draws through and types on, never part of
+   *  what two machines of one game compare (the wire's hosts-own list). The game names them for the three things that reach for them: a level
+   *  script's show (director.ts: its pin, its lock of the keys), a rails level's first view, and the view's matrix between two ticks. Before this the
+   *  Director kept them and `update` handed them over again every frame, so a host that stepped by `update` held two rows more than one that stepped by
+   *  `stepSeats`, and two machines of one game numbered their cameras differently. */
+  hostCam: FollowCamera | null = null; hostInput: Input | null = null;
+  /** the stand's one call (standGame). A tick is still SAMPLED from whatever camera and Input `update` is handed (a replay's player steps with the tape's
+   *  own): these two are what the HOST shows through and types on, which is what a show pins and locks */
+  hostHands(cam: FollowCamera, input: Input): void { this.hostCam = cam; this.hostInput = input; }
   /** the night breach playtest (nightbreach.ts; ?nightbreach / native --nightbreach / __nightbreach): Sam leading two AI operatives against three men barricaded in the
    *  break room. Off — the game exactly — until its start(); ticked right after the Director */
   nightBreach!: NightBreach;
@@ -1465,7 +1474,6 @@ export class Game {
     this.journal.frameStart(dt, input, cam, canvas);   // the session journal (journal.ts): idle, a return; asked for, it takes its checkpoint and re-enters it HERE, before anything of the frame has run; recording, it files this frame's dt / camera / input and opens the sensors' frame
     this.director?.injectInput(input);   // a showcase beat's synthetic key / click from LAST frame's tick (director.ts c.press / c.click) becomes this frame's input, ahead of everybody who reads it — a return on its first line otherwise
     this.hostBefore(input);
-    this.director?.attach({ cam, input });   // (a showcase locks the HOST's keys and pins the HOST's camera: the director keeps those two, the step hands it neither)
     this.cmdBuf = sampleCmd(me.view, input, cam, canvas, this.cmdBuf);
     if (this.seats.length === 1) this.step(dt, this.cmdBuf); else this.stepSeats(dt, this.seats.map(s => s === this.localSeat ? this.cmdBuf! : s.handed(this.cmdBuf!)));
     this.hostAfter(input, cam, canvas);
