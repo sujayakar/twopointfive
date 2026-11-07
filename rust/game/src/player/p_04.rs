@@ -101,11 +101,9 @@ pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
     let ws = g.k.wallsnap;
     if g.pl[p].wall.unwrap().settle < 1.0 {
         w!(g, p).up = Some(0.0);
-        if ws.slow {
-            let clicked = g.tab.input[input].clicked;
-            let w = w!(g, p);
-            w.owed = Some(owed_with(w.owed, clicked));
-        }
+        let clicked = g.tab.input[input].clicked;
+        let w = w!(g, p);
+        w.owed = Some(owed_with(w.owed, clicked));
         stack_hold(g, p);
         return false;
     }
@@ -123,7 +121,7 @@ pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
         || (crate::weapons::rifle_attachment(g, rifle).is_some() && (crate::input::input_rmb(g, input) || crate::input::input_rmb_hit(g, input)))
         || {
             let w = g.pl[p].wall.unwrap();
-            ws.slow && truthy_opt(w.owed) && !(un(w.up) > 0.0)
+            truthy_opt(w.owed) && !(un(w.up) > 0.0)
         };
     if stack_in_way(g) {
         let w = w!(g, p);
@@ -276,16 +274,11 @@ pub fn wall_snap_pose(g: &mut crate::game::Game, dt: f64, aiming: bool) {
     if w0.take_t.is_none() { return; }
     let stacked = w0.kind == Some(WallHoldKind::Stack);
     g.ch[c].anim.wall_take = if w0.settle < 1.0 { w0.settle } else { -1.0 };
-    g.ch[c].anim.stance_in = if ws.slow { if stacked { ws.slow_in * 13.0 / 22.0 } else { ws.slow_in } } else { 0.0 };
+    g.ch[c].anim.stance_in = if stacked { ws.slow_in * 13.0 / 22.0 } else { ws.slow_in };
     let landed = w0.settle >= 1.0 && w0.seated;
     if landed {
         if w0.hit_t == Some(0.0) {
-            if ws.voice {
-                wall_voice(g, w0, true);
-            } else if ws.scuff > 0.0 {
-                let pos = g.ch[c].pos;
-                crate::audio_iface::game_audio_like_play(g, "footSoft", Some(pos), Some(ws.scuff), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
-            }
+            wall_voice(g, w0, true);
         }
         let w = w!(g, p);
         w.hit_t = Some(un(w.hit_t) + dt);
@@ -502,7 +495,7 @@ pub fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx: f64, 
     let tx = t[0] * (u + lo) + n[0] * stand;
     let tz = t[2] * (u + lo) + n[2] * stand;
     if e_prev < 1.0 {
-        if ws.on && ws.slow && u != u_was {
+        if ws.on && u != u_was {
             let pos = g.ch[c].pos;
             { let to = [pos[0] + t[0] * (u - u_was), pos[1], pos[2] + t[2] * (u - u_was)]; crate::character::pos_replace(g, c, to); }
         }

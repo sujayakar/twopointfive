@@ -340,7 +340,7 @@ pub fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&mut crat
         drawn: !g.pl[pl].holstered, at_edge: 0.0, peek: 0.0, peek_dir: side, crouched: g.pl[pl].crouch, serial,
         ..WallHold::zeroed()
     });
-    let stack = g.k.wallsnap.on && g.k.wallsnap.stack && crate::game::player_rifle_up(g, pl);
+    let stack = g.k.wallsnap.on && crate::game::player_rifle_up(g, pl);
     if g.k.wallsnap.on {
         let away_yaw = m::atan2(n[0], n[2]);
         let base = f.d + BODY_R + WALL_GAP;
@@ -409,7 +409,7 @@ pub fn wall_step_off(g: &mut crate::game::Game, mx: f64, mz: f64, ml: f64, how: 
     let Some(w) = w else { return };
     if !g.k.wallsnap.on || g.pl[pl].down { return; }
     let c = g.pl[pl].ch;
-    g.ch[c].anim.stance_out = if g.k.wallsnap.slow { g.k.wallsnap.slow_out } else { g.k.wallsnap.out_rate };
+    g.ch[c].anim.stance_out = g.k.wallsnap.slow_out;
     wall_voice(g, w, false);
     if ml > 0.0 {
         if -(mx * w.n[0] + mz * w.n[2]) < 0.5 {
@@ -425,7 +425,7 @@ pub fn wall_step_off(g: &mut crate::game::Game, mx: f64, mz: f64, ml: f64, how: 
 
 /// The hold's own two sounds, the player's ears only: `on` = his back has just landed; else he has stepped or been pushed off. (player.ts wallVoice)
 pub fn wall_voice(g: &mut crate::game::Game, w: crate::player::WallHold, on: bool) {
-    if !g.k.wallsnap.on || !g.k.wallsnap.voice || w.take_t.is_none() { return; }
+    if !g.k.wallsnap.on || w.take_t.is_none() { return; }
     if !on && !(w.hit_t.unwrap_or(0.0) > 0.0) { return; }
     let gain = if on { g.k.wallsnap.voice_on } else { g.k.wallsnap.voice_off };
     if gain > 0.0 {
@@ -517,7 +517,7 @@ pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Camer
         if p.n.is_some() && !p.held { p.held = true; p.dx = mx; p.dz = mz; p.until = now + press_again; }
         if p.n.is_some() && (ml <= 0.0 || mx * p.dx + mz * p.dz < m::cos(press_turn * v3::DEG)) { p.n = None; }
     }
-    let face = if ml > 0.0 && (!want_sprint || g.k.wallsnap.press_run) && g.puppet.is_none() && !g.touring { press_face(g, mx, mz) } else { None };
+    let face = if ml > 0.0 && g.puppet.is_none() && !g.touring { press_face(g, mx, mz) } else { None };
     let (latch_n, until) = { let p = g.m.player.ws_press.get(pl).unwrap(); (p.n, p.until) };
     let face = match face {
         Some(f) if !latch_n.map_or(false, |n| f.n[0] * n[0] + f.n[2] * n[2] > 0.9 || now < until) => f,
@@ -526,7 +526,7 @@ pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Camer
     let holstered = g.pl[pl].holstered;
     let rifle_up = !holstered && crate::game::player_rifle_up(g, pl);
     let in_hand = if holstered { None } else if rifle_up { Some(g.pl[pl].rifle) } else { Some(g.pl[pl].pistol) };
-    let gun_away = !holstered && !(g.k.wallsnap.stack && rifle_up);
+    let gun_away = !holstered && !rifle_up;
     let busy = g.pl[pl].dragging.is_some() || g.pl[pl].haul.is_some() || g.pl[pl].door_move.is_some() || g.pl[pl].easing.is_some() || g.pl[pl].charging.is_some()
         || crate::game::player_choosing(g, pl) || g.pl[pl].sel.down_t >= 0.0 || g.pl[pl].throw_held || g.orders.menu.is_some()
         || crate::input::input_lmb(g, input) || crate::input::input_rmb(g, input)
@@ -562,7 +562,7 @@ pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Camer
 
 /// Does the rifle, drawn on this hold, stack on it? (player.ts wallStacks)
 pub fn wall_stacks(g: &mut crate::game::Game, w: crate::player::WallHold) -> bool {
-    g.k.wallsnap.on && g.k.wallsnap.stack && w.take_t.is_some()
+    g.k.wallsnap.on && w.take_t.is_some()
 }
 
 /// The take's turn: his body comes round on the take's own clock. False = not taking. (player.ts wallTakeYaw)
