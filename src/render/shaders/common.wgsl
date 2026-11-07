@@ -16,9 +16,9 @@ struct Frame {
   indirectScale: f32, emissiveScale: f32, volSteps: u32, secMinE: f32,   // secMinE: at secondary vertices (cascade interval hits) a light dimmer than this (unshadowed W/m²) is not worth a shadow ray and is dropped
   capColor: vec4f,                          // rgb = section-cap tint for wall tops under the hidden ceiling, a = use albedo fraction
   post: vec4f,                              // x = night-vision amount, y = nv gain, z = hit flash, w = tan(fov/2) (metres → pixels for blur sizing)
-  rcJitter: vec4f,                          // xy = this frame's sub-texel offset for the cascades' octahedral direction set (0.5,0.5 = texel centres); z = direct-light adaptive sampling: stop after this many agreeing samples; w = number of transient lights alive this frame
-  directCfg: vec4f,                         // x = emitter samples for the strongest light per class, y = samples for the other leaders, z = penumbra filter cap (px), w = direct-light history weight (0 = none)
-  lossyCfg: vec4f,                          // the lossy options' numbers (defaults = the untouched path): x = final-gather resolution divisor (2; 3 with gatherThird), y = volumetrics divisor (2; 4 with volQuarter), z = dimRays threshold on a pixel's total unshadowed luminance below which leaders get one shadow sample (0 = off), w spare  · w = the final gather's relative firefly bound K (each ray ≤ K × the cache's irradiance at the shading point ÷ π; 0 = off)
+  rcJitter: vec4f,                          // xy = this frame's sub-texel offset for the cascades' octahedral direction set (0.5,0.5 = texel centres); z free (the old estimator's adaptive minimum until 2026-11-07); w = number of transient lights alive this frame
+  directCfg: vec4f,                         // x, y, w free (the old estimator's ray budgets and history weight until 2026-11-07), z = penumbra filter cap (px)
+  lossyCfg: vec4f,                          // the lossy options' numbers (defaults = the untouched path): x = final-gather resolution divisor (2; 3 with gatherThird), y = volumetrics divisor (2; 4 with volQuarter), z free (the old estimator's dim-ray threshold until 2026-11-07), w spare  · w = the final gather's relative firefly bound K (each ray ≤ K × the cache's irradiance at the shading point ÷ π; 0 = off)
   cardCfg: vec4u,                           // x = torch bounce cards this frame (FLAG_BOUNCE_CARDS; 0 = none: cards.wgsl not dispatched, fgather samples / excludes nothing); y, z = WEATHER KINDS' third / fourth roof footprint (wxRect; 0 = none), w = the fog in the outdoor air (wxFog; 0 = none) — game/weatherKinds.ts
   cardSlots: array<vec4u, 2>,               // the light slot each card k = 0..7 is built from ([k >> 2][k & 3]); cards.wgsl reads it, and writes the slot back into the card rows the gather stages
   weatherA: vec4f,                          // the weather (game/weather.ts → volumetrics.wgsl (c)): x = rain rate 0..1 (0: nothing drawn), y / z = wind shear of the streaks (m sideways per m of height), w = ground wetness 0..1 (splash rings)
@@ -33,15 +33,15 @@ struct Frame {
   prevCam: vec4f,                           // xyz = the camera position of the PREVIOUS frame (prevViewProj's eye; the froxel history reprojects distances from it), w = the previous frame's froxelA.x (the near boundary follows the camera's height, so the history's slices are laid out on last frame's near)
   rtCfg: vec4f,                             // ray-traced reflections (renderer v3 phase 4, reflect.wgsl): x = max roughness that gets a ray (composite fades the term out toward it), y = rays per pixel (1|2), z = anisotropy 0..1 on aniso-finished (wet) ground + 2 × the wet ground's break-up in tenths (settings.wetBreakup; read an = z − 2·floor(z/2)), w = the reflection target's resolution divisor — 0 = the pass is OFF this frame (nothing dispatched, composite reads nothing: the frame as it was)
   matCfg: vec4f,                            // materials: x = analytic-highlight gain (the GGX image of point / spot / panel lights on a finish; 1 = physical), y = reflection strength × the whole traced term, z = luminance bound on one reflection ray's radiance (firefly guard), w = the g-buffer's detail-layer amount 0..1 (worn paths, dust on tall tops, scuffed skirting, edge wear on metal — 0 = fsBox exactly as it was)
-  p5Cfg: vec4u,                             // renderer v3 phase 5 (ultra-only extras; every field 0 = the pass exactly as it was): x = the final gather's resampling mode (0 off · 1 temporal reservoir reuse · 2 + spatial reuse — fgather.wgsl mainGi), y = its numbers: fresh rays per texel (bits 0‥3) | temporal M cap << 8 (8 bits) | spatial taps << 16 (4 bits) | spatial radius in gather texels << 24, z = the reflection pass's bits: 1 = characters are their skinned MESH at reflection hits (closest-hit walk of the mesh-shadow trees, reflect.wgsl; needs FLAG_MESH_SHADOWS up), 2 = the second reflection ray decorrelated (antithetic azimuth) + the hit's lighting reused from last frame's record when the hit point matches (rtHitReuse); w = the lowest light slot holding a TRANSIENT light this frame (lights.ts firstTransientSlot: they are born at the tail) — gather_common's per-hit subtraction walk starts there instead of at 0, testing each slot it visits as before (0 when none is alive)
+  p5Cfg: vec4u,                             // renderer v3 phase 5 (ultra-only extras; every field 0 = the pass exactly as it was): x, y free (the resampling gather's mode and numbers until 2026-11-07), z = the reflection pass's bits: 1 = characters are their skinned MESH at reflection hits (closest-hit walk of the mesh-shadow trees, reflect.wgsl; needs FLAG_MESH_SHADOWS up), 2 = the second reflection ray decorrelated (antithetic azimuth) + the hit's lighting reused from last frame's record when the hit point matches (rtHitReuse); w = the lowest light slot holding a TRANSIENT light this frame (lights.ts firstTransientSlot: they are born at the tail) — gather_common's per-hit subtraction walk starts there instead of at 0, testing each slot it visits as before (0 when none is alive)
   jitter: vec4f,                            // xy = this frame's TAAU sub-pixel jitter in internal pixels (0 without TAAU / under a debug view), zw = the previous render's — a screen-space history keyed on the UNJITTERED pixel (the gather's reservoirs) takes both out of its reprojection
   markCfg: vec4f,                           // MARKINGS (scene/markings.ts, shaders/markings.wgsl): x = the base texel in metres (0 = markings OFF: nothing evaluated anywhere, the frame as it was), y = contrast 0‥1 (palette colours lerped from the box albedo), z = × the emission of emissive markings, w = 1 = evaluate markings at reflection hits too
   sharpCfg: vec4f,                          // SHARP DIRECT (docs/internal/sharp-direct.md): xy = the internal size, zw = the OUTPUT size the g-buffer / unshadowed direct / composite / TAA run at this frame — z = 0 = off: every pass as it was. (frame.screen is whichever of the two the pass binding this block runs at: the engine keeps an internal-screen and an output-screen copy of the block)
-  sharpCfgB: vec4f,                         // sharp direct's knobs: x = output-resolution EDGE RAYS on (1 — informational: the host dispatches the edge-ray pipeline; where the internal taps straddle a hard shadow edge, one deterministic ray from the output pixel to the class's strongest emitter decides that light) / off (0), y = the taps' visibility-ratio spread that flags such an edge, z = the blur-hint width (internal px) under which the edge counts as hard, w = the same-plane weight's k (plane distance ∕ (z·k))
+  sharpCfgB: vec4f,                         // sharp direct's knob: w = the same-plane weight's k (plane distance ∕ (z·k)); xyz free
   sharpCfgC: vec4f,                         // DECOUPLED JITTER under sharp direct: xy = the jitter the INTERNAL raster carries relative to the (unjittered) OUTPUT raster, internal px (gdown / sharp_direct / composite / taau / particles add it to every internal ↔ output texel map); 0 = one jitter for both rasters, the path as it was
-  rigCfg: vec4f,                            // SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (2 = smooth-union closest hit in the reflection tracer, 4 = soft-shadow character visibility in the direct estimators, 8 = its analytic form, 16 = smooth union in the soft query, 32 = it for broad-class lights too, 64 = character self-shadow in the direct estimators' shadow rays (selfShadowT), 128 = mesh shadows for near receivers only (meshShadowT); bit 1 retired — the round-cone proxy test is unconditional) — 0 = the plain round-cone loops everywhere; y = soft march steps, z = × the lights' angular radius, w = the smallest tan(half-angle) a light is given
-  rigCfgB: vec4f,                           // x = × the per-joint smooth-union radii (0 = plain union), y = closest-hit sphere-trace steps, z = its surface epsilon (m), w = the soft query's smallest march step (m)
-  giCfg: vec4f,                             // GI-in-motion (docs/internal/gi-motion.md, fgather.wgsl `main`): x = ray multiplier for YOUNG-history gather texels (≤ 1 = off: the gather as it was), y = how many texels a frame may take it (the rest first-come), z = the diffuse history length (frames) under which a texel is young, w spare
+  rigCfg: vec4f,                            // SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (64 = character self-shadow in the direct estimators' shadow rays (selfShadowT), 128 = mesh shadows for near receivers only (meshShadowT); the bits under 64 are free — the round-cone proxy test is unconditional); yzw free
+  rigCfgB: vec4f,                           // free
+  giCfg: vec4f,                             // four free words (the young-history gather rays read them until 2026-11-07)
   weatherE: vec4f,                          // PARTICLE RAIN (experiment, game/rainFx.ts + shaders/particles*.wgsl): xy = centre xz of the near-field particle layer's disc, z = its radius (m), w = the share 0‥1 of the LATTICE rain volumetrics.wgsl drops inside it (rainNearKeep) — 0 = no particle layer: the lattice exactly as it was (NEGATIVE on a snow level: the metres past the level's rim the snow goes on falling, particles_common.wgsl snowPast — every lattice reader asks `> 0.0`)
   weatherF: vec4f,                          // PARTICLE RAIN v2: the drop's PHASE the lattice's streaks share with the particles' (volumetrics.wgsl rainLight): x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain — w 0 = the lattice's isotropic sum exactly as it was
   shadeCfg: vec4f,                          // THE LOOK PROTOTYPE, eyes adjust to shade (engine.ts lookShade writes it on the look page, zeros anywhere else = the picture as it was; the one exposure model's, place_common.wgsl lookExpoFor): x = the share of its dark a place darker than the open air is brought up by (0 = off), y = the mean radiance open air holds from the sky alone (luminance), z = spare, w = the irradiance open ground gets from the sky alone (luminance)
@@ -68,23 +68,12 @@ const FLAG_DITHER: u32 = 256u;
 const FLAG_SOFTSHADOW: u32 = 512u;
 const FLAG_NIGHTVISION: u32 = 1024u;
 const FLAG_TEMPORAL: u32 = 2048u;
-const FLAG_TILECULL: u32 = 4096u;    // direct pass: per-8x8-tile light list (lights provably zero across the tile's bounds are not scored per pixel) — lossless; off = walk every light, for A/B
-const FLAG_SOFT_TILESKIP: u32 = 8192u; // penumbra filter: whole 8x8 tiles provably out of reach of every blur hint skip the pass (softtile.wgsl builds the mask) — lossless; off = every pixel decides for itself, for A/B
-const FLAG_TAIL_CHROMA: u32 = 16384u; // experiment: per-channel-unbiased tail (E_pick·V/p) instead of the bounded luminance-unbiased form
 const FLAG_RC_ROOM: u32 = 32768u;   // THE LOOK PROTOTYPE, light keeps to its room: lighting_common.wgsl hitRadiance reads the cache where the ray came from (off = a spacing along the hit face's normal, as ever)
-const FLAG_CHECKER_DIRECT: u32 = 65536u; // lossy option: shadow rays on a checkerboard half of the pixels per frame, the other half borrows its neighbours' visibility (direct.wgsl)
-const FLAG_GRID_SKIP: u32 = 131072u;  // trace grid: run past provably empty cells without touching memory (per-cell Chebyshev distance to the nearest occupied cell) — lossless; off = a load pair per cell as before, for A/B
-const FLAG_GRID_YCULL: u32 = 262144u; // trace grid: skip cells / boxes (and globals) whose height band the rest of the ray cannot reach (per-cell 24-slice occupancy, per-item quantised y extent, per-global extent) — lossless; off = every registered box is slab-tested, for A/B
-const FLAG_AXIS_BOX: u32 = 524288u;   // slab test: unrotated boxes (rot packed as exactly cos 1, sin 0) skip the rotation and reuse the ray's inverse direction — lossless (see isectBox); off = always rotate + divide, for A/B
-const FLAG_GRID_SLABS: u32 = 1048576u; // trace grid: a global is skipped unless the ray SEGMENT's bounds touch its own 5 mm-proud bounds on all three axes (not just a 4 cm height band), and a cell's height span is judged scene.grid.y tighter at both ends — lossless (see traceClosest); off = the height cull exactly as before, for A/B
 const FLAG_GLOSS: u32 = 2097152u;      // experiment (default off): floor pixels whose box carries BOX_GLOSS get one traced, Fresnel-weighted reflection ray in the final gather (fgather.wgsl → its own half-res texture → temporal + one à-trous pass → added after the diffuse terms in composite); off = nothing stored, filtered or read
 const FLAG_DECALS: u32 = 4194304u;      // experiment E1 (default on in its branch): the g-buffer's fragment stage applies render/decals.ts's marks (decals.wgsl) to the stored albedo / normal / gloss-keep; off = nothing read
 const FLAG_MESH_SHADOWS: u32 = 8388608u; // ultra: occluded() / occludedT() test characters against their skinned triangle mesh (meshShadowT below: per-character refit BVH in meshData, render/meshShadows.ts) instead of the round-cone proxies; off = the proxy loops (occludedCapsules / traceCapsules)
 const FLAG_PARTICLES: u32 = 16777216u;   // experiment: the GPU particle system is live this frame (render/particles.ts + shaders/particles*.wgsl: its own compute pass and a splat into the HDR target after the composite) — informational for the scene passes, none of which reads it
 const FLAG_BOUNCE_CARDS: u32 = 33554432u; // torch bounce cards (default off): the final gather samples each carried spot's footprint as an analytic one-bounce emitter (cards.wgsl builds them, fgather.wgsl samples them and excludes the light's direct term where its rays land inside a footprint); off = nothing built, sampled or excluded
-const FLAG_DIRECT_SEED_HOLD: u32 = 67108864u; // direct pass A/B knob (default off): with direct-light history on, the per-pixel sampling pattern advances every other frame instead of every frame
-const FLAG_GI_ADAPTIVE_HIST: u32 = 134217728u;
-const FLAG_RESTIR: u32 = 1073741824u;   // ReSTIR DI drew the direct light this frame (restir.wgsl); softblur opens its ratio clamp for its per-light hues
 const FLAG_GLASS: u32 = 268435456u;    // glass panes (E3, SceneInfo.glass) — composite tints / reflects over what stands behind them and draws the crack decals on them, fgather traces their mirror ray, direct tints light through them; off = scene.glassInfo.x is 0 and nobody loops
 const FLAG_FROXEL_VOL: u32 = 536870912u;   // froxel volumetrics (renderer v3 Phase 2b, render/froxels.ts + shaders/froxel.wgsl): haze + smoke in-scatter injected into a camera-frustum voxel grid (frame.froxelA/B/C), accumulated over frames, integrated front to back — composite / the particles read ONE trilinear sample at the pixel's distance and volumetrics.wgsl only draws the rain; off = the per-pixel march exactly as it was
 
@@ -101,7 +90,7 @@ const GEO_CUT: u32 = 65536u;      // CUT BOXES (scene/cut.ts; only ever raised i
 const BOX_GLASS: u32 = 131072u;   // a glass pane (boxes.ts BoxFlag.Glass, bit 17 — the flag word widened past its byte): never in the trace grid nor the raster; here only so a debug view can tell one
 const MAX_GLASS: u32 = 32u;       // panes SceneInfo.glass can hold (boxes.ts MAX_GLASS)
 
-struct SceneInfo { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, itemsB: u32, charBounds: array<vec4f, 16>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };   // glassInfo.x: pane count (0 = glass off); glass[3k..3k+2]: pane k = (centre.xyz, cos yaw), (half.xyz, sin yaw), (tint rgb, box index) — boxes.ts packGlass · itemsB: offset of the packed item copies in gridItems (= item count); globalsY: padded (ymin, ymax) of global 2i in .xy, of global 2i+1 in .zw; grid.x: registration slack in metres (how far a traced box can reach outside the cells it is registered in — boxes.ts buildGrid), grid.y: FLAG_GRID_SLABS' height-span shrink per end (m); globalsB[2g] / [2g+1]: min / max corner of global g's world bounds, 5 mm + slack proud of the traced box (FLAG_GRID_SLABS)
+struct SceneInfo { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, itemsB: u32, charBounds: array<vec4f, 16>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };   // glassInfo.x: pane count (0 = glass off); glass[3k..3k+2]: pane k = (centre.xyz, cos yaw), (half.xyz, sin yaw), (tint rgb, box index) — boxes.ts packGlass · itemsB: offset of the packed item copies in gridItems (= item count); globalsY: padded (ymin, ymax) of global 2i in .xy, of global 2i+1 in .zw; grid.x: registration slack in metres (how far a traced box can reach outside the cells it is registered in — boxes.ts buildGrid), grid.y: the slab reject' height-span shrink per end (m); globalsB[2g] / [2g+1]: min / max corner of global g's world bounds, 5 mm + slack proud of the traced box (the slab reject)
 // Character shadow / reflection proxies: ROUND CONES (segment a→b, radius r at a; the radius at b rides in misc's top byte — sdfrig.wgsl coneRb; 0 there = r again, an
 // untapered cone). `misc` packs owner (low 8 bits), rgb565 albedo (bits 8..23), r_b in millimetres (bits 24..31). The record keeps its old name: boxes.ts writes it.
 struct Capsule { a: vec3f, r: f32, b: vec3f, misc: u32 };
@@ -387,7 +376,7 @@ fn safeInv(v: vec3f) -> vec3f {
 }
 
 // Ray vs yawed (or, with BOX_ROT, fully rotated) box `bi`. Returns vec2(t, code). t < 0 → miss. code: axis*2 + (1 if local normal negative), 7 = origin inside.
-// invRd = safeInv(rd) from the caller; axisFast (FLAG_AXIS_BOX): a box with yaw 0 packs rot as exactly (1.0, 0.0) = 0x3C00, and for those the
+// invRd = safeInv(rd) from the caller; axisFast (the unrotated fast path): a box with yaw 0 packs rot as exactly (1.0, 0.0) = 0x3C00, and for those the
 // local frame IS the world frame — 1·x − 0·z evaluates to x exactly whatever the contraction, so lo = p, ld = rd and inv = invRd bit for bit —
 // which skips two half unpacks, both rotations and the three divisions for two thirds of all items and every global. Lossless; off = always rotate.
 const ROT_IDENTITY: u32 = 0x3C00u;
@@ -477,11 +466,11 @@ fn roundNormalAt(b: BoxGeo, bi: u32, wp: vec3f) -> vec3f {
   if ((b.flags & BOX_ROT) != 0u) { let q = boxRot(bi); let l = quatRotate(vec4f(-q.xyz, q.w), p); return quatRotate(q, normalize(vec3f(l.x, 0.0, l.z) + vec3f(1e-9, 0.0, 0.0))); }
   return normalize(vec3f(p.x, 0.0, p.z) + vec3f(1e-9, 0.0, 0.0));
 }
-fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f, axisFast: bool) -> vec2f {
+fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f) -> vec2f {
   let p = ro - b.c;
   var lo: vec3f; var ld: vec3f; var inv: vec3f;
   if ((b.flags & BOX_ROT) != 0u) { let qi = vec4f(-boxRot(bi).xyz, boxRot(bi).w); lo = quatRotate(qi, p); ld = quatRotate(qi, rd); inv = safeInv(ld); }   // rare: one extra fetch + two quaternion rotations
-  else if (axisFast && b.rot == ROT_IDENTITY) { lo = p; ld = rd; inv = invRd; }
+  else if (b.rot == ROT_IDENTITY) { lo = p; ld = rd; inv = invRd; }
   else { let cs = unpack2x16float(b.rot); lo = vec3f(cs.x * p.x - cs.y * p.z, p.y, cs.y * p.x + cs.x * p.z); ld = vec3f(cs.x * rd.x - cs.y * rd.z, rd.y, cs.y * rd.x + cs.x * rd.z); inv = safeInv(ld); }
   let tA = (-b.h - lo) * inv; let tB = (b.h - lo) * inv;
   let tmn = min(tA, tB); let tmx = max(tA, tB);
@@ -687,75 +676,12 @@ fn selfShadowT(P: vec3f, N: vec3f, rd: vec3f, tmax: f32, owner: u32) -> f32 {
   return -1.0;
 }
 
-// ---- CLOSEST mesh hit (renderer v3 phase 5: reflect.wgsl under frame.p5Cfg.z bit 1 — a mirror shows a man as his skinned mesh, not his capsules). The same
-// per-character trees and skinned corners as the shadow walk above (valid whenever FLAG_MESH_SHADOWS is up: render/meshShadows.ts refits them each such
-// frame), walked to the NEAREST triangle instead of the first: a hit leaf tests all its triangles and shrinks the search distance, so every later node
-// test prunes against the best hit so far. Skip links only run forward, so the walk still ends within N steps. ----
-struct MeshHit { t: f32, k: i32, n: vec3f };   // k = character index in this frame's list (−1 = no hit), n = the triangle's face normal turned toward the ray origin
-/** Möller–Trumbore as meshTri, returning the face normal e1 × e2 (unnormalised) in .xyz and t (or −1) in .w */
-fn meshTriN(c0: u32, ro: vec3f, rd: vec3f, tmax: f32) -> vec4f {
-  let a = bitcast<vec3f>(meshLoad(c0).xyz);
-  let e1 = bitcast<vec3f>(meshLoad(c0 + 1u).xyz) - a;
-  let e2 = bitcast<vec3f>(meshLoad(c0 + 2u).xyz) - a;
-  let p = cross(rd, e2); let det = dot(e1, p);
-  if (abs(det) < 1e-12) { return vec4f(0.0, 0.0, 0.0, -1.0); }
-  let inv = 1.0 / det; let s = ro - a;
-  let u = dot(s, p) * inv;
-  if (u < -MESH_EPS_UV || u > 1.0 + MESH_EPS_UV) { return vec4f(0.0, 0.0, 0.0, -1.0); }
-  let q = cross(s, e1);
-  let v = dot(rd, q) * inv;
-  if (v < -MESH_EPS_UV || u + v > 1.0 + MESH_EPS_UV) { return vec4f(0.0, 0.0, 0.0, -1.0); }
-  let t = dot(e2, q) * inv;
-  return vec4f(cross(e1, e2), select(-1.0, t, t > MESH_TMIN && t <= tmax));
-}
-/** character k's nearest triangle along the ray within tmaxIn: (face normal unnormalised, t) or .w = −1 */
-fn meshClosestChar(k: u32, ro: vec3f, rd: vec3f, invRd: vec3f, tmaxIn: f32) -> vec4f {
-  let hd = meshLoad(0u);
-  let N = hd.x;
-  let nb = hd.y + k * N * 2u; let tb = hd.z + k * hd.w * 3u;
-  var best = tmaxIn; var nrm = vec3f(0.0); var found = false;
-  var i = 0u; var it = 0u;
-  loop {
-    if (i >= N || it >= N) { break; }
-    it++;
-    let n0 = meshLoad(nb + i * 2u); let n1 = meshLoad(nb + i * 2u + 1u);
-    let t0 = (bitcast<vec3f>(n0.xyz) - ro) * invRd; let t1 = (bitcast<vec3f>(n1.xyz) - ro) * invRd;
-    let tmn = min(t0, t1); let tmx = max(t0, t1);
-    let tN = max(max(tmn.x, tmn.y), max(tmn.z, 0.0));
-    let tF = min(min(tmx.x, tmx.y), min(tmx.z, best));
-    if (tN > tF) { i = n0.w; continue; }         // box missed over [0, best]: skip the subtree
-    let cnt = n1.w >> 24u;
-    if (cnt == 0u) { i = i + 1u; continue; }     // internal: descend
-    let ts = n1.w & 0xffffffu;
-    for (var q = 0u; q < cnt; q++) {
-      let r = meshTriN(tb + (ts + q) * 3u, ro, rd, best);
-      if (r.w >= 0.0) { best = r.w; nrm = r.xyz; found = true; }
-    }
-    i = n0.w;                                    // leaf done: on to the skip link (the shrunk `best` prunes what follows)
-  }
-  return vec4f(nrm, select(-1.0, best, found));
-}
-/** every character in this frame's list: bounding-sphere cull against the best distance so far, owner skip, then his tree — the nearest mesh hit within tmax, if any */
-fn meshClosest(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> MeshHit {
-  var mh: MeshHit; mh.t = tmax; mh.k = -1; mh.n = -rd;
-  let invRd = safeInv(rd);
-  let nc = min(scene.numChars, MESH_MAX_CHARS);
-  for (var ch = 0u; ch < nc; ch++) {
-    let bs = scene.charBounds[ch];
-    if (!raySphere(ro, rd, bs.xyz, bs.w, mh.t)) { continue; }
-    if (skipsOwner(capsuleOwner(capsules[ch * scene.capsPerChar]), skipOwner)) { continue; }
-    let r = meshClosestChar(ch, ro, rd, invRd, mh.t);
-    if (r.w >= 0.0) { mh.t = r.w; mh.k = i32(ch); mh.n = r.xyz; }
-  }
-  if (mh.k >= 0) { let l2 = dot(mh.n, mh.n); mh.n = select(-rd, mh.n * inverseSqrt(l2), l2 > 1e-20); if (dot(mh.n, rd) > 0.0) { mh.n = -mh.n; } }   // (both faces hit alike: turn the face normal toward where the ray came from)
-  return mh;
-}
 
-// ---- trace-grid fast path (FLAG_GRID_SKIP / FLAG_GRID_YCULL; data written by boxes.ts buildGrid every upload, next to the plain arrays) ----
+// ---- trace-grid fast path (the empty-run skip / the height cull; data written by boxes.ts buildGrid every upload, next to the plain arrays) ----
 // gridCells[GRID_CB + 2ci]     = heightMask (bit s ⇔ some box registered in ci covers quantised heights [10s, 10s+9]) | cheby << 24
 // gridCells[GRID_CB + 2ci + 1] = start (24 bits) | min(count, 255) << 24          cheby = Chebyshev distance (cells) to the nearest occupied cell, 0 = occupied
 // gridItems[itemsB + k]        = box index (16 bits) | qmin << 16 | qmax << 24     q = gridYq of the box's y extent widened by 4 cm each way
-// scene.globalsY               = the same padded extent per global, in metres (globalMissesY)
+// scene.globalsY               = the same padded extent per global, in metres (no shader reads it since the height cull became globalOutside's own test: tools/qa/grid-globals.ts does)
 //
 // Why both are exact (same hit.t / idx / code, same occlusion answers, flag on or off):
 //  * Empty runs. An empty cell has no items, so not loading its (equal) start/end pair changes nothing; a cell at Chebyshev distance d from
@@ -778,7 +704,7 @@ fn meshClosest(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> MeshHit {
 //    just stepped, which is exactly 1/|rd ⟂|), clamped to the DDA start. For all but grazing rays that is a few micrometres of extra height.
 //    (Nothing can lie behind the DDA start itself: every caller's origin is inside WORLD_MIN/MAX, so t0 = 0 — an origin-inside answer comes
 //    from the start cell, whose span holds ro.y — and an origin outside the world has no box before its entry point.)
-//  * Tighter spans (FLAG_GRID_SLABS). Tallying those terms: the y-cull needs the stored extents to out-reach the tracer by the accumulated tNext
+//  * Tighter spans (the slab reject). Tallying those terms: the y-cull needs the stored extents to out-reach the tracer by the accumulated tNext
 //    drift (≤ 68 steps × ½ ulp(64 m) ≈ 2.6e-4 m of height), y(t) and cell-entry rounding (~2e-5), the f32-vs-f64 quantiser inputs (~2e-6) and
 //    the ~2e-5 by which a reported hit can sit outside its box (below) — under 3.5e-4 m in all — and they carry 4 cm. So the span a cell is judged
 //    by may be pulled in by scene.grid.y = 4 cm − 5 mm at BOTH ends without a hittable box failing either per-end test (each end was argued on
@@ -787,7 +713,7 @@ fn meshClosest(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> MeshHit {
 //    so the cell is walked only if its mask holds EVERY hull slice (an ordered span: any). That is what stops a ray lifted 1–2 cm off a desk,
 //    floor finish or wall top by its pass from slab-testing the surface it just left (its padded band reached up past the origin; nothing
 //    else about the walk changes).
-//  * Globals by segment bounds (FLAG_GRID_SLABS). If isectBox reports t ≥ 0 for box b there is a t* ∈ [0, tmax] (the reported t, or 0 from
+//  * Globals by segment bounds (the slab reject). If isectBox reports t ≥ 0 for box b there is a t* ∈ [0, tmax] (the reported t, or 0 from
 //    inside) lying in every axis' slab interval, and the point ro + rd·t* taken exactly sits within |lo| · 3·2⁻²⁴ + ½ ulp ≈ 2e-5 m of the box
 //    on each axis (lo = ro − c and the two slab distances are each one rounding off; yaw 0 makes the local frame the world frame bit for bit, a
 //    yawed global's f16 outline is inside footprint + slack by construction of the slack). Every coordinate of that point also lies between ro
@@ -800,17 +726,18 @@ struct CellWalk { start: u32, end: u32, qlo: u32, qhi: u32 };   // items [start,
 fn gridYq(y: f32) -> u32 { return u32(clamp((y - GRID_YQ0) * GRID_YQS, 0.0, GRID_YQMAX)); }
 fn gridSliceMask(qlo: u32, qhi: u32) -> u32 { let slo = qlo / 10u; let shi = qhi / 10u; return (0xffffffu >> (23u - (shi - slo))) << slo; }
 // What to walk in cell ci for a ray whose remaining stretch spans heights ya..yb (either order), judged `shrink` tighter at each end (0, or
-// scene.grid.y under FLAG_GRID_SLABS). `run` counts down the cells an earlier empty cell's Chebyshev distance has already vouched for: those
+// scene.grid.y under the slab reject). `run` counts down the cells an earlier empty cell's Chebyshev distance has already vouched for: those
 // cost no memory traffic at all.
-fn gridCell(ci: u32, ya: f32, yb: f32, run: ptr<function, u32>, gskip: bool, ycull: bool, shrink: f32) -> CellWalk {
+fn gridCell(ci: u32, ya: f32, yb: f32, run: ptr<function, u32>) -> CellWalk {
   var w: CellWalk; w.start = 0u; w.end = 0u; w.qlo = 0u; w.qhi = 255u;
   if (*run > 0u) { *run = *run - 1u; return w; }
   let w0 = gridCells[GRID_CB + 2u * ci];
-  let dist = select(0u, w0 >> 24u, gskip);
+  let dist = w0 >> 24u;
   if (dist > 0u) { *run = dist - 1u; return w; }
-  var m = 0xffffffu;
-  var need = 1u;                       // how much of m the cell's mask must hold: any slice of an ordered span; ALL of a crossed one (see above)
-  if (ycull) { w.qlo = gridYq(min(ya, yb) + shrink); w.qhi = gridYq(max(ya, yb) - shrink); m = gridSliceMask(min(w.qlo, w.qhi), max(w.qlo, w.qhi)); need = select(1u, m, w.qlo > w.qhi); }   // (shrink 0: + 0.0 and the min/max of an ordered pair are identities, need stays 1 — the flag-off walk is value for value the old one)
+  let shrink = scene.grid.y;
+  w.qlo = gridYq(min(ya, yb) + shrink); w.qhi = gridYq(max(ya, yb) - shrink);
+  let m = gridSliceMask(min(w.qlo, w.qhi), max(w.qlo, w.qhi));
+  let need = select(1u, m, w.qlo > w.qhi);   // how much of m the cell's mask must hold: any slice of an ordered span; ALL of a crossed one (see above)
   if ((w0 & m) < need) { return w; }   // ordered: (w0 & m) == 0; crossed: (w0 & m) != m, i.e. some hull slice has no box in this cell
   let w1 = gridCells[GRID_CB + 2u * ci + 1u];
   w.start = w1 & 0xffffffu;
@@ -819,8 +746,7 @@ fn gridCell(ci: u32, ya: f32, yb: f32, run: ptr<function, u32>, gskip: bool, ycu
   return w;
 }
 // Box index of item k, or −1 when the height cull proves the box outside the ray's remaining span (cull on: reads the packed copy instead).
-fn gridItem(k: u32, w: CellWalk, ycull: bool) -> i32 {
-  if (!ycull) { return i32(gridItems[k]); }
+fn gridItem(k: u32, w: CellWalk) -> i32 {
   let it = gridItems[scene.itemsB + k];
   if ((it >> 24u) < w.qlo || ((it >> 16u) & 255u) > w.qhi) { return -1; }
   return i32(it & 0xffffu);
@@ -828,20 +754,10 @@ fn gridItem(k: u32, w: CellWalk, ycull: bool) -> i32 {
 // The globals (huge boxes tested once per ray, all thin horizontal slabs in practice) get the same treatment in float: global g whose padded
 // [ymin, ymax] misses the heights the ray covers over [0, tmax] can only answer "miss" — a hit or an origin-inside answer places a ray point of
 // that t range inside the box — and a miss changes nothing in any of the three queries, so not asking is exact.
-fn globalMissesY(g: u32, ySpan: vec2f) -> bool {
-  let gy = scene.globalsY[g >> 1u];
-  let e = select(gy.xy, gy.zw, (g & 1u) == 1u);
-  return e.y < ySpan.x || e.x > ySpan.y;
-}
-// FLAG_GRID_SLABS: the same on all three axes against the segment's bounds [sLo, sHi] = [min(ro, pEnd), max(ro, pEnd)] and the global's own
+// the slab reject: the same on all three axes against the segment's bounds [sLo, sHi] = [min(ro, pEnd), max(ro, pEnd)] and the global's own
 // 5 mm-proud bounds (argument above): outside on any axis ⇒ it can only answer "miss".
 fn globalOutside(g: u32, sLo: vec3f, sHi: vec3f) -> bool {
   return any(scene.globalsB[2u * g + 1u].xyz < sLo) || any(scene.globalsB[2u * g].xyz > sHi);
-}
-// Which of the two global rejects applies to global g for this ray (slabs: the three-axis one; else the height band when the y-cull is on).
-fn globalSkipped(g: u32, sLo: vec3f, sHi: vec3f, ycull: bool, slabs: bool) -> bool {
-  if (slabs) { return globalOutside(g, sLo, sHi); }
-  return ycull && globalMissesY(g, vec2f(sLo.y, sHi.y));
 }
 
 // Closest hit through globals + XZ uniform grid. skipOwner: boxes owned by this character id are ignored (0 = none).
@@ -854,16 +770,14 @@ fn traceClosest(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
   hit.t = tmax;
   var code = 0.0;
   var found = false;
-  let gskip = (frame.flags & FLAG_GRID_SKIP) != 0u; let ycull = (frame.flags & FLAG_GRID_YCULL) != 0u; let fast = gskip || ycull; let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
-  let slabs = (frame.flags & FLAG_GRID_SLABS) != 0u; let shrink = select(0.0, scene.grid.y, slabs);
   let yFar = ro.y + rd.y * tmax;
   let pEnd = vec3f(ro.x + rd.x * tmax, yFar, ro.z + rd.z * tmax);
-  let sLo = min(ro, pEnd); let sHi = max(ro, pEnd);   // the segment's bounds over [0, tmax]: a global clear of them (its padded height band without FLAG_GRID_SLABS, its padded box with it) can only answer "miss", so it is not asked
+  let sLo = min(ro, pEnd); let sHi = max(ro, pEnd);   // the segment's bounds over [0, tmax]: a global clear of them (its padded height band without the slab reject, its padded box with it) can only answer "miss", so it is not asked
   for (var g = 0u; g < scene.numGlobals; g++) {
-    if (globalSkipped(g, sLo, sHi, ycull, slabs)) { continue; }
+    if (globalOutside(g, sLo, sHi)) { continue; }
     let bi = scene.globals[g >> 2u][g & 3u];
     let b = boxGeo[bi];
-    let r = isectBox(ro, rd, b, hit.t, bi, invRd, axisFast);
+    let r = isectBox(ro, rd, b, hit.t, bi, invRd);
     if (r.x >= 0.0 && r.x < hit.t) { hit.t = r.x; hit.idx = i32(bi); code = r.y; found = true; }
   }
   var run = 0u;
@@ -883,14 +797,13 @@ fn traceClosest(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
     if (tCell > hit.t) { break; }
     let ci = u32(cell.y * GRID_W + cell.x);
     var cw: CellWalk;
-    if (fast) { cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), ro.y + rd.y * hit.t, &run, gskip, ycull, shrink); }
-    else { cw.start = gridCells[ci]; cw.end = gridCells[ci + 1u]; cw.qlo = 0u; cw.qhi = 255u; }
+    cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), ro.y + rd.y * hit.t, &run);
     for (var k = cw.start; k < cw.end; k++) {
-      let gi = gridItem(k, cw, ycull); if (gi < 0) { continue; }
+      let gi = gridItem(k, cw); if (gi < 0) { continue; }
       let bi = u32(gi);
       let b = boxGeo[bi];
       if (skipsOwner(boxOwner(b), skipOwner)) { continue; }
-      let r = isectBox(ro, rd, b, hit.t, bi, invRd, axisFast);
+      let r = isectBox(ro, rd, b, hit.t, bi, invRd);
       if (r.x >= 0.0 && r.x < hit.t) { hit.t = r.x; hit.idx = i32(bi); code = r.y; found = true; }
     }
     if (tNext.x < tNext.y) { tCell = tNext.x; tNext.x += tDelta.x; cell.x += stp.x; tBack = tDelta.x * slack; }
@@ -917,92 +830,6 @@ fn traceClosest(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
   return hit;
 }
 
-// traceClosest whose CHARACTERS are their skinned mesh (renderer v3 phase 5 — the reflection pass's tracer: reflect_p5.wgsl). The box walk is traceClosest's
-// statement for statement (kept apart so that function — every other pass's tracer — stays exactly what it was; keep the two in step); the tail takes the
-// nearest mesh triangle (meshClosest above: t, face normal, the character's albedo off his first record — the one tint all his records carry) while
-// frame.p5Cfg.z bit 1 is up AND the trees are refit this frame (FLAG_MESH_SHADOWS), else the smooth union of his cones under frame.rigCfg bit 2, else the
-// round cones exactly as traceClosest — so meshShadows off / unavailable falls back cleanly, and with both bits down the result is bit for bit traceClosest's.
-fn traceClosestMesh(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
-  var hit: Hit; hit.t = tmaxIn; hit.idx = -1; hit.inside = false; hit.n = vec3f(0.0, 1.0, 0.0);
-  let invRd = safeInv(rd);
-  let tb = isectBounds(ro, invRd, WORLD_MIN, WORLD_MAX);
-  if (tb.x > tb.y || tb.y < 0.0) { return hit; }
-  var tmax = min(tmaxIn, tb.y);
-  hit.t = tmax;
-  var code = 0.0;
-  var found = false;
-  let gskip = (frame.flags & FLAG_GRID_SKIP) != 0u; let ycull = (frame.flags & FLAG_GRID_YCULL) != 0u; let fast = gskip || ycull; let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
-  let slabs = (frame.flags & FLAG_GRID_SLABS) != 0u; let shrink = select(0.0, scene.grid.y, slabs);
-  let yFar = ro.y + rd.y * tmax;
-  let pEnd = vec3f(ro.x + rd.x * tmax, yFar, ro.z + rd.z * tmax);
-  let sLo = min(ro, pEnd); let sHi = max(ro, pEnd);
-  for (var g = 0u; g < scene.numGlobals; g++) {
-    if (globalSkipped(g, sLo, sHi, ycull, slabs)) { continue; }
-    let bi = scene.globals[g >> 2u][g & 3u];
-    let b = boxGeo[bi];
-    let r = isectBox(ro, rd, b, hit.t, bi, invRd, axisFast);
-    if (r.x >= 0.0 && r.x < hit.t) { hit.t = r.x; hit.idx = i32(bi); code = r.y; found = true; }
-  }
-  var run = 0u;
-  let t0 = max(tb.x, 0.0);
-  let p = ro + rd * t0;
-  var cell = vec2i(clamp(vec2i(floor(p.xz / GRID_CELL)), vec2i(0), vec2i(GRID_W - 1, GRID_H - 1)));
-  let stp = vec2i(select(-1, 1, rd.x >= 0.0), select(-1, 1, rd.z >= 0.0));
-  let tDelta = vec2f(abs(GRID_CELL * invRd.x), abs(GRID_CELL * invRd.z));
-  let nextBoundary = (vec2f(cell) + vec2f(select(0.0, 1.0, rd.x >= 0.0), select(0.0, 1.0, rd.z >= 0.0))) * GRID_CELL;
-  var tNext = vec2f(t0) + (nextBoundary - p.xz) * vec2f(invRd.x, invRd.z);
-  tNext = select(tNext, vec2f(1e30), vec2<bool>(abs(rd.x) < 1e-20, abs(rd.z) < 1e-20));
-  var tCell = t0;
-  var tBack = 0.0;
-  let slack = scene.grid.x / GRID_CELL;
-  for (var iter = 0; iter < 96; iter++) {
-    if (tCell > hit.t) { break; }
-    let ci = u32(cell.y * GRID_W + cell.x);
-    var cw: CellWalk;
-    if (fast) { cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), ro.y + rd.y * hit.t, &run, gskip, ycull, shrink); }
-    else { cw.start = gridCells[ci]; cw.end = gridCells[ci + 1u]; cw.qlo = 0u; cw.qhi = 255u; }
-    for (var k = cw.start; k < cw.end; k++) {
-      let gi = gridItem(k, cw, ycull); if (gi < 0) { continue; }
-      let bi = u32(gi);
-      let b = boxGeo[bi];
-      if (skipsOwner(boxOwner(b), skipOwner)) { continue; }
-      let r = isectBox(ro, rd, b, hit.t, bi, invRd, axisFast);
-      if (r.x >= 0.0 && r.x < hit.t) { hit.t = r.x; hit.idx = i32(bi); code = r.y; found = true; }
-    }
-    if (tNext.x < tNext.y) { tCell = tNext.x; tNext.x += tDelta.x; cell.x += stp.x; tBack = tDelta.x * slack; }
-    else { tCell = tNext.y; tNext.y += tDelta.y; cell.y += stp.y; tBack = tDelta.y * slack; }
-    if (tCell > tmax || cell.x < 0 || cell.y < 0 || cell.x >= GRID_W || cell.y >= GRID_H) { break; }
-  }
-  if (found) {
-    if (code > 6.5) { hit.inside = true; hit.n = -rd; }
-    else {
-      hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx));
-      if (ROUND_BOXES) { if (roundSideHit(boxGeo[u32(hit.idx)].flags, code)) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } }   // ROUND THINGS: a round's side
-    }
-  } else { hit.idx = -1; hit.t = tmaxIn; }
-  if (GROUND_RAYS) { let tg = ghHit(ro, rd, hit.t); if (tg >= 0.0) { hit.t = tg; hit.idx = i32(boxMat[GH_BASE].z); hit.inside = false; hit.n = ghNormal((ro + rd * tg).xz); } }   // (the trial, as traceClosest)
-  if (scene.numCapsules > 0u) {
-    if ((frame.p5Cfg.z & 1u) != 0u && (frame.flags & FLAG_MESH_SHADOWS) != 0u) {   // the men as their MESH: nearest triangle over every character nearer than the box hit
-      let mh = meshClosest(ro, rd, hit.t, skipOwner);
-      if (mh.k >= 0) { hit.t = mh.t; hit.idx = CAPSULE_HIT; hit.inside = false; hit.capAlbedo = capsuleAlbedo(capsules[u32(mh.k) * scene.capsPerChar]); hit.n = mh.n; }
-      if (scene.numChars > MESH_MAX_CHARS) {   // the men past the trees' places: their round cones, as the last branch below
-        let ch = traceCapsulesFrom(ro, rd, hit.t, skipOwner, MESH_MAX_CHARS);
-        if (ch.y >= 0.0) { let cp = capsules[u32(ch.y)]; hit.t = ch.x; hit.idx = CAPSULE_HIT; hit.inside = false; hit.capAlbedo = capsuleAlbedo(cp); hit.n = proxyNormal(ro + rd * ch.x, cp); }
-      }
-    } else if (rigSmoothOn()) {   // the men as the SMOOTH UNION of their round cones (SDF rig, use ii — shaders/sdfrig.wgsl rigClosest): a mannequin, not sausage links, in the mirror
-      let rh = rigClosest(ro, rd, hit.t, skipOwner);
-      if (rh.ch >= 0) { let base = u32(rh.ch) * scene.capsPerChar; hit.t = rh.t; hit.idx = CAPSULE_HIT; hit.inside = false; hit.capAlbedo = capsuleAlbedo(capsules[base]); hit.n = rigNormal(base, ro + rd * rh.t, frame.rigCfgB.x); if (dot(hit.n, rd) > 0.0) { hit.n = -hit.n; } }
-    } else {   // the round cones, exactly as traceClosest
-      let ch = traceCapsules(ro, rd, hit.t, skipOwner);
-      if (ch.y >= 0.0) {
-        let cp = capsules[u32(ch.y)];
-        hit.t = ch.x; hit.idx = CAPSULE_HIT; hit.inside = false; hit.capAlbedo = capsuleAlbedo(cp);
-        hit.n = proxyNormal(ro + rd * ch.x, cp);
-      }
-    }
-  }
-  return hit;
-}
 
 // ---- GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts; the prelude's GROUND_RAYS, false on every page but the look's) ----
 // The snow hills' height as their mesh draws it, in boxMat's last rows: ghHit marches the stretch of a ray that runs between the ground and the highest hill
@@ -1054,15 +881,13 @@ fn occluded(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> bool {
   let tb = isectBounds(ro, invRd, WORLD_MIN, WORLD_MAX);
   if (tb.x > tb.y || tb.y < 0.0) { return false; }
   let tmax = min(tmaxIn, tb.y);
-  let gskip = (frame.flags & FLAG_GRID_SKIP) != 0u; let ycull = (frame.flags & FLAG_GRID_YCULL) != 0u; let fast = gskip || ycull; let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
-  let slabs = (frame.flags & FLAG_GRID_SLABS) != 0u; let shrink = select(0.0, scene.grid.y, slabs);
   let yEnd = ro.y + rd.y * tmax;
   let pEnd = vec3f(ro.x + rd.x * tmax, yEnd, ro.z + rd.z * tmax);
   let sLo = min(ro, pEnd); let sHi = max(ro, pEnd);
   for (var g = 0u; g < scene.numGlobals; g++) {
-    if (globalSkipped(g, sLo, sHi, ycull, slabs)) { continue; }
+    if (globalOutside(g, sLo, sHi)) { continue; }
     let bi = scene.globals[g >> 2u][g & 3u];
-    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd, axisFast);
+    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd);
     if (r.x >= 0.0) { return true; }
   }
   var run = 0u;
@@ -1080,14 +905,13 @@ fn occluded(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> bool {
   for (var iter = 0; iter < 96; iter++) {
     let ci = u32(cell.y * GRID_W + cell.x);
     var cw: CellWalk;
-    if (fast) { cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run, gskip, ycull, shrink); }
-    else { cw.start = gridCells[ci]; cw.end = gridCells[ci + 1u]; cw.qlo = 0u; cw.qhi = 255u; }
+    cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run);
     for (var k = cw.start; k < cw.end; k++) {
-      let gi = gridItem(k, cw, ycull); if (gi < 0) { continue; }
+      let gi = gridItem(k, cw); if (gi < 0) { continue; }
       let bi = u32(gi);
       let b = boxGeo[bi];
       if (skipsOwner(boxOwner(b), skipOwner)) { continue; }
-      let r = isectBox(ro, rd, b, tmax, bi, invRd, axisFast);
+      let r = isectBox(ro, rd, b, tmax, bi, invRd);
       if (r.x >= 0.0) { return true; }
     }
     if (tNext.x < tNext.y) { tCell = tNext.x; tNext.x += tDelta.x; cell.x += stp.x; tBack = tDelta.x * slack; }
@@ -1113,22 +937,20 @@ fn occludedT(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> f32 {
   if (GROUND_RAYS) { let tg = ghHit(ro, rd, select(tmaxIn, tCap, tCap >= 0.0)); if (tg >= 0.0) { tCap = tg; } }   // (the trial: a snow hill nearer than the cap is the cap — a nearer box still wins in the walk)
   return occludedTBoxes(ro, rd, tmaxIn, skipOwner, tCap);
 }
-// occludedT's box walk on its own (its statements, unchanged): the nearest of a box blocker nearer than tCap and tCap itself (−1 = clear). The SDF rig's soft-shadow
-// query (direct_common.wgsl shadowSample under frame.rigCfg bit 4) asks this with tCap −1 and multiplies the characters' analytic visibility in itself.
+// occludedT's box walk on its own (its statements, unchanged): the nearest of a box blocker nearer than tCap and tCap itself (−1 = clear). The fog of war's
+// sight rays and the place field ask this with tCap −1.
 fn occludedTBoxes(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32, tCap: f32) -> f32 {
   let invRd = safeInv(rd);
   let tb = isectBounds(ro, invRd, WORLD_MIN, WORLD_MAX);
   if (tb.x > tb.y || tb.y < 0.0) { return tCap; }
   let tmax = select(min(tmaxIn, tb.y), tCap, tCap >= 0.0);      // a nearer box than the capsule still wins below
-  let gskip = (frame.flags & FLAG_GRID_SKIP) != 0u; let ycull = (frame.flags & FLAG_GRID_YCULL) != 0u; let fast = gskip || ycull; let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
-  let slabs = (frame.flags & FLAG_GRID_SLABS) != 0u; let shrink = select(0.0, scene.grid.y, slabs);
   let yEnd = ro.y + rd.y * tmax;
   let pEnd = vec3f(ro.x + rd.x * tmax, yEnd, ro.z + rd.z * tmax);
   let sLo = min(ro, pEnd); let sHi = max(ro, pEnd);
   for (var g = 0u; g < scene.numGlobals; g++) {
-    if (globalSkipped(g, sLo, sHi, ycull, slabs)) { continue; }
+    if (globalOutside(g, sLo, sHi)) { continue; }
     let bi = scene.globals[g >> 2u][g & 3u];
-    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd, axisFast);
+    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd);
     if (r.x >= 0.0) { return r.x; }
   }
   var run = 0u;
@@ -1146,15 +968,14 @@ fn occludedTBoxes(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32, tCap: f32) 
   for (var iter = 0; iter < 96; iter++) {
     let ci = u32(cell.y * GRID_W + cell.x);
     var cw: CellWalk;
-    if (fast) { cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run, gskip, ycull, shrink); }
-    else { cw.start = gridCells[ci]; cw.end = gridCells[ci + 1u]; cw.qlo = 0u; cw.qhi = 255u; }
+    cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run);
     var bestInCell = -1.0;
     for (var k = cw.start; k < cw.end; k++) {
-      let gi = gridItem(k, cw, ycull); if (gi < 0) { continue; }
+      let gi = gridItem(k, cw); if (gi < 0) { continue; }
       let bi = u32(gi);
       let b = boxGeo[bi];
       if (skipsOwner(boxOwner(b), skipOwner)) { continue; }
-      let r = isectBox(ro, rd, b, tmax, bi, invRd, axisFast);
+      let r = isectBox(ro, rd, b, tmax, bi, invRd);
       if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell) && !fogThinBox(b, bi)) { bestInCell = r.x; }
     }
     if (bestInCell >= 0.0) { return bestInCell; }
@@ -1567,8 +1388,6 @@ fn lightReachLevel(slot: u32, P: vec3f) -> u32 {
   return (reachWord(w) >> ((ci & 15u) * 2u)) & 3u;
 }
 fn lightReaches(slot: u32, P: vec3f) -> bool { return lightReachLevel(slot, P) != 0u; }
-/** ranking weight for a reach level: a light seen from a sliver of the cell competes for leader slots at a quarter of its score */
-fn reachRankWeight(lv: u32) -> f32 { return select(select(0.25, 0.6, lv == 2u), 1.0, lv >= 3u); }
 
 /// evalLight as the PICTURE takes it: the light's irradiance under the fog's light classes (lightFogK — a torch nobody on the team sees the spot of gives nothing
 /// there). Every pass of the picture asks this one; the game's own readings (probe.wgsl: the light meter, the guards' eyes) ask evalLightTrue.

@@ -1,6 +1,6 @@
 // The look prototype's "Blowing snow" row, the frame's side (src/render/lookveil.ts lookVeilFrame): the frame says WHERE the powder's field lies over the world
 // and where the sun is, and nothing of any wind (the powder has none of its own: it rides the game's air, render/powderField.ts, whose own check is
-// tools/qa/powder-field-page.cjs). And the two writings of the shader that draws it (shaders/composite.wgsl and its compact twin) carry the same powder.
+// tools/qa/powder-field-page.cjs). And the shader that draws it (shaders/composite.wgsl) reads the powder from that field.
 // No GPU: the powder itself is never SEEN here.
 //   bun run tools/qa/lookveil-check.ts   (exit 0 = all pass; LOOKVEIL_BREAK=1 hands the frame a plan twice as wide as the field's and must fail)
 import { lookVeilFrame } from '../../src/render/lookveil';
@@ -26,11 +26,11 @@ check(frame(1, [bulb, sun], null) === null && frame(0) === null && lookVeilFrame
   check(!!day && !!dark && !!low && !!off && near(day[1][2], 0.5 / 0.7071) && near(day[1][3], -0.5 / 0.7071) && dark[1][2] === 0 && dark[1][3] === 0 && off[1][2] === 0 && near(low[1][2], 0.99 / 0.25) && Math.abs(day[0][3] - 6 * 0.7071 * (0.2126 + 0.7152 * 0.9 + 0.0722 * 0.7)) < 1e-4 && dark[0][3] === 0 && Math.abs(low[0][3] - 6 * 0.1 * (0.2126 + 0.7152 * 0.9 + 0.0722 * 0.7)) < 1e-4
     && frame(1, [{ ...sun, transient: true }])?.[0][3] === 0,
     'its lit side and its shade lean to the sun that is on (the way to it along the ground per metre of height); with none, or with it off, there is neither; a sun on the horizon is held to four metres a metre; and the frame says what that sun puts on level ground, by its colour and its true height (a lightning stroke is not the sun), so a lamp\'s pool is not shaded as the sun\'s'); }
-{ // the shader's two writings
+{ // the shader's text
   const cut = (f: string) => { const s = readFileSync(resolve(import.meta.dir, '../../src/render/shaders', f), 'utf8'); const a = s.indexOf('// ---- THE LOOK PROTOTYPE — LOOSE SNOW IN THE AIR'), b = s.indexOf('fn lookShadeGain('); const c = s.indexOf('if (LOOK) { if (frame.veilA.z > 0.0'); return a < 0 || c < 0 ? '' : s.slice(a, s.lastIndexOf('/**', b)) + s.slice(c, s.indexOf('var shadeG = 1.0;', c)) + s.slice(b, s.indexOf('\n}', b)); };
-  const a = cut('composite.wgsl'), b = cut('compact/composite.wgsl');
-  check(a.length > 2000 && a === b && /fn lookPowder\(/.test(a) && /textureSampleLevel\(powderTex, linSamp, \(q - frame\.veilB\.xy\) \* frame\.veilA\.xy/.test(a) && /max\(POWDER_ALBEDO \* [^;]*, ground\)/.test(a) && /powderThreads\(q, t\.ba\)/.test(a) && !/veilDensity|snowSparkleHash\(c \+ vec2i\(k|airWind|frame\.wind/.test(a),
-    'the kernel and its compact twin carry the same powder and the same eye, word for word; where the powder is, how much and which way it runs are READ from the field (its threads are drawn along the field\'s own velocity: the shader has no wind of its own), and it is never drawn darker than what is under it'); }
+  const a = cut('composite.wgsl');
+  check(a.length > 2000 && /fn lookPowder\(/.test(a) && /textureSampleLevel\(powderTex, linSamp, \(q - frame\.veilB\.xy\) \* frame\.veilA\.xy/.test(a) && /max\(POWDER_ALBEDO \* [^;]*, ground\)/.test(a) && /powderThreads\(q, t\.ba\)/.test(a) && !/veilDensity|snowSparkleHash\(c \+ vec2i\(k|airWind|frame\.wind/.test(a),
+    'the kernel carries the powder and the eye; where the powder is, how much and which way it runs are READ from the field (its threads are drawn along the field\'s own velocity: the shader has no wind of its own), and it is never drawn darker than what is under it'); }
 { // THE LOOK PANEL'S SNOW WISPS ROWS: the table's numbers are the shader's own consts, an untouched table is the word 0, and a moved row is its own byte
   const src = readFileSync(resolve(import.meta.dir, '../../src/render/shaders/composite.wgsl'), 'utf8'), num = (n: string) => +(new RegExp(`const ${n}: f32 = ([0-9.]+);`).exec(src)?.[1] ?? NaN);
   const own = { gain: num('POWDER_GAIN'), thin: num('POWDER_THIN'), thread: num('POWDER_THREAD'), grain: num('POWDER_GRAIN') };

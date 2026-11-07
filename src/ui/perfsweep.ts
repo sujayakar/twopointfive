@@ -383,7 +383,7 @@ export class PerfSweep {
       }
       case 'preset': {   // the next preset down as a whole (from Medium: High) — every row quality.apply writes, then all of it put back. Frozen only: a running game reads some of those rows (the debris cap) and writes others (the sky)
         if (this.opts.live) return 'frozen takes only';
-        const cur = this.quality.current as QualityName; const to: QualityName | null = cur === 'high' || cur === 'ultra' ? 'medium' : cur === 'medium' ? 'high' : null;
+        const cur = this.quality.current as QualityName; const to: QualityName | null = cur === 'high' ? 'medium' : cur === 'medium' ? 'high' : null;
         if (!to) return `no preset row from ${cur}`;
         const Q = this.quality, auto = Q.auto;
         return { row, label: `the whole ${to[0].toUpperCase()}${to.slice(1)} preset`, from: { preset: cur }, to: { preset: to }, apply: () => {

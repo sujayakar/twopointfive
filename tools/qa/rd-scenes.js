@@ -1,6 +1,6 @@
 // Render-defects lane (docs/internal/render-defects-0812.md): deterministic stagings + crops + line profiles for the three 08-12 playtest defects —
 // (1) the bright rim round Sam's silhouette, (2) screen-space banding in a lit smoke plume, (3) indirect light behind the storage shelves.
-// Paste / import into a ?paused&quality=high&gatherStrata&mute boot once __ready resolved:  await import('/qa/rd-scenes.js')  →  window.__rd
+// Paste / import into a ?paused&quality=high&mute boot once __ready resolved:  await import('/qa/rd-scenes.js')  →  window.__rd
 //   __rd.stage('rim' | 'rimTorch' | 'smoke' | 'shelf')   stage the scene (seeded restart on first use, guards parked, phases zeroed, grain off)
 //   __rd.run(n)                                          step n frames (serialized every 8)
 //   __rd.frame(view)                                     render one offscreen frame in debug view `view` (0 final · 3 direct · 4 indirect · 1 albedo) → { w, h, data (RGBA) }

@@ -62,12 +62,6 @@ fn glassVis(li: Light, gm: u32, P: vec3f) -> vec3f {
   else { let d = li.pos - P; tmax = length(d); L = d / max(tmax, 1e-4); tmax -= 0.02; }
   return glassTransmit(P, L, 0.02, tmax, gm);
 }
-// The soft character query's two signals to the estimators / the denoiser (SDF rig, use iii): shadowSample's .y = SOFT_CLEAR_Y when the segment was clear of boxes but a man's
-// analytic term darkened it, and the S-texture hint value the estimators then write for a pixel with no box hint of its own — a magnitude below any real hint (those are
-// ≥ 0.75 px ÷ MAX_BLUR_PX = 0.023), so every consumer that reads it as a blur radius reads ~⅓ px (nothing), and denoise.wgsl shTemporal takes such a pixel's ratio from
-// this frame alone: the term is deterministic, there is no noise for a history to average and no reason to trail a walking man's penumbra by the history's length.
-const SOFT_CLEAR_Y: f32 = -2.0;
-const SOFT_HINT_FLAG: f32 = 0.01;
 var<private> rngState: u32;
 fn rngInit(p: vec2u, f: u32) { rngState = (p.x * 1973u + p.y * 9277u + f * 26699u) | 1u; rngState = rngState ^ (rngState >> 15u); rngState *= 0x2c1b3c6du; rngState ^= rngState >> 12u; }
 fn rnd() -> f32 { rngState = rngState * 747796405u + 2891336453u; var w = ((rngState >> ((rngState >> 28u) + 4u)) ^ rngState) * 277803737u; w = (w >> 22u) ^ w; return f32(w) * (1.0 / 4294967296.0); }
@@ -109,25 +103,6 @@ fn shadowSample(li: Light, Po: vec3f, N: vec3f, owner: u32, k: u32, n: u32, u0: 
   }
   if (dot(dir, N) <= 0.0) { return vec2f(0.0, -1.0); }
   let skip = owner | ((li.owner & 0xffu) << 8u);   // ignore the receiver's own proxies AND whatever the light is mounted on (a weapon light is never blocked by its own gun / hands)
-  if (charSoftFor(li)) {
-    // SDF rig, use (iii): the CHARACTERS' part of this light's visibility is the soft-shadow query toward the emitter's centre with its angular radius as the cone (analytic,
-    // deterministic per pixel per light — sdfrig.wgsl charSoftVis), the boxes' part this sample's ray as ever (occludedTBoxes: the box walk alone). A box blocker still hands its
-    // PCSS width on; a man's penumbra needs no blur hint (it is drawn, not sampled), so a ray only he darkens reports the segment clear of boxes.
-    var tHill = -1.0; if (GROUND_RAYS) { tHill = ghHit(Po, dir, tmax); }   // (ground that rays can see, a trial — common.wgsl ghHit: a snow hill is a blocker the box walk's cap carries)
-    let tBox = occludedTBoxes(Po, dir, tmax, skip, tHill);
-    if (tBox >= 0.0) {
-      let dOcc = max(tBox, 0.02);
-      let pw = select(select(li.radius * dOcc / max(lightDist - dOcc, 0.05), li.radius, dOcc >= lightDist), li.radius * dOcc, kind == 2u);
-      return vec2f(0.0, pw);
-    }
-    var Lc: vec3f; var dc: f32; var tanHalf: f32;
-    if (kind == 2u) { Lc = -li.dir; dc = 80.0; tanHalf = li.radius; }
-    else { let toC = li.pos - Po; dc = length(toC); Lc = toC / max(dc, 1e-4); tanHalf = li.radius / max(dc, 0.05); dc -= 0.03; }
-    var vis = charSoftVis(Po, Lc, dc, tanHalf, skip);
-    let charShadowed = vis < 1.0;
-    if (vis > 0.0 && frame.numSmoke > 0u) { vis *= smokeTransmittance(Po, dir, min(tmax, 30.0)); }
-    return vec2f(vis, select(-1.0, SOFT_CLEAR_Y, charShadowed));   // −2 (< 0: 'clear of boxes' to every existing test) tells the estimators the darkening came from the drawn character term
-  }
   // CHARACTER SELF-SHADOW (frame.rigCfg bit 64, settings.charSelfShadow — common.wgsl selfShadowT): a man's own body between his pixel and the light, the part of the visibility the
   // owner skip below throws away. Asked first (fifteen records or one tree: cheap, and the nearest blocker there can be, so the penumbra hint stays right); never for the man
   // HOLDING this light (owner == the light's owner: a torch sits inside the fist round it — that skip stays whole).
@@ -145,3 +120,6 @@ fn shadowSample(li: Light, Po: vec3f, N: vec3f, owner: u32, k: u32, n: u32, u0: 
   if (frame.numSmoke > 0u) { vis = smokeTransmittance(Po, dir, min(tmax, 30.0)); }
   return vec2f(vis, -1.0);
 }
+/** the ratio clamp's upper bound: shadowed ≤ unshadowed per channel, except that the estimator's per-light hues can top the class's unshadowed light in one channel
+ *  (one warm light under a mixed U). Sharp direct clamps by it; the denoiser's shadow client takes the same number as a knob (render/denoise.ts ratioHi) */
+const RATIO_HI: f32 = 4.0;

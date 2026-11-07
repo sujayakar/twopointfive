@@ -21,11 +21,10 @@ import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI 
 import { START_PAGE, startPage, startPageWanted, openStartPage, openList } from './ui/startpage';
 import { setFigureCast } from './ui/kitFigure';
 import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
-import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterHold, laterProgress, PIPE_QUEUE, FATAL, plainAir } from './gpu/device';
+import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterHold, laterProgress, PIPE_QUEUE, FATAL } from './gpu/device';
 import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
-import { rigDebugTrace } from './render/rigDebug';
 import { Engine } from './engine';
 import type { HostApi } from './host/api';
 import { SAVED, SAVE_UP, saveFile, savedWords } from './host/savefile';
@@ -162,7 +161,7 @@ import { rowSettings } from './game/rowset';
 import { HOUR, HOURS, HOUR_IDS, initHour, applyHour, hourOf, hourSummary, hourLightAt, setSunStrength, sunStrength, sunToCloud, hourSun, hourWorldChanged } from './game/hours';
 import { lightEstimateAt } from './game/guards';
 import { STRESS, standExtra, stressTick, stressSummary, extraSpots } from './game/stress';
-import { Quality, ladderAimOf, smokeKeepOf, rtVeto, p5Veto, sharpForce, gbaaForce, iqForce, gimVeto, froxelVeto, froxelForce } from './ui/quality';
+import { Quality, ladderAimOf, smokeKeepOf, rtVeto, sharpForce, gbaaForce, iqForce, froxelVeto, froxelForce } from './ui/quality';
 import { buildPanel } from './ui/bindings';
 import { SceneTweak } from './ui/sceneTweak';
 import { sceneLayers } from './ui/sceneLayers';
@@ -666,7 +665,7 @@ async function main() {
   const openStartCard = !q.has('solo') && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !tape && !net && !kitViewOn;   // (?solo: the mission list's solo night — ui/missions.ts — is the plain night straight in)   // (opened below, once every hook is on window: that is the moment the card's buttons come alive and __ready resolves)
 
   let last = performance.now(); let lastTs = -1, vsDt = -1; let timeAcc = 0; let fpsSm = 60; const pace = pacer(), rate = rateMeter(); let frameCount = 0; let unionSm = 0; let simSm = 0;
-  const debugNames = ['final', 'albedo', 'normals', 'direct', 'indirect', 'volumetrics', 'depth', 'dice', 'lighting', 'denoise hints', 'specular', 'restir history', 'restir rays', 'denoise state', 'rt reflections', 'material', 'gi reservoirs', 'rt raw'];   // (16 = phase 5's gather reservoirs: r M ÷ cap, g temporal taken, b spatial taps; 17 = the reflection pass's output as fetched, before the cutoff fade)   // (specular = the glossy floors' reflection term + what the glass panes add, + the ray-traced reflections, composite debug view 10; rt reflections = the traced term alone, view 14; restir history / rays = views 11 / 12, restir.wgsl's diagnostics; 13 = the v3 shadow client's σ per class + history length)
+  const debugNames = ['final', 'albedo', 'normals', 'direct', 'indirect', 'volumetrics', 'depth', 'dice', 'lighting', 'denoise hints', 'specular', 'restir history', 'restir rays', 'denoise state', 'rt reflections', 'material', '(16: free)', 'rt raw'];   // (16 was the resampling gather's reservoirs; 17 = the reflection pass's output as fetched, before the cutoff fade)   // (specular = the glossy floors' reflection term + what the glass panes add, + the ray-traced reflections, composite debug view 10; rt reflections = the traced term alone, view 14; restir history / rays = views 11 / 12, restir.wgsl's diagnostics; 13 = the v3 shadow client's σ per class + history length)
 
   // scripted stepping for automated testing: __runFrames(n, dt, keys[]) runs n fixed steps with the given keys held
   let scripted = false;
@@ -1099,7 +1098,7 @@ async function main() {
       unionSm = unionSm * 0.9 + t.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw']) * 0.1;   // the UNION of the compute passes' intervals: what the frame really cost on the GPU — the Σ above double-counts passes Metal ran side by side (direct beside the cascade chain is normal at play cadence: docs/internal/p0a-cascades.md)
       lines.push(row('gpu ∪ ms', `${unionSm.toFixed(2)}`));
       lines.push(row('sim ms', `${simSm.toFixed(2)} · ${1 + game.guards.length + game.civilians.length} characters`));   // (the CPU's half: Game.update, and how many men it is stepping — bodies count; tools/qa/enemy-ceiling.ts measures the same call headless)
-      const order = ['smoke', 'air', 'mesh', 'rc c4', 'rc c3', 'rc c2', 'rc c1', 'rc c0', 'rc dice', 'direct', 'dtemporal', 'softblur', 'gather', 'gatherLight', 'temporal', 'reflect', 'rdenoise', 'volFroxel', 'volInject', 'volTemporal', 'volInteg', 'volumetrics', 'particles', 'pdraw', 'sharpEdge', 'sharpU', 'compS', 'gbaa', 'taau', 'bloom', 'probe'];   // compute passes only (+ sharp direct's kernels while it is live: the edge mask (edge rays only), U, the composite) ('volFroxel' = the froxel kernels, or volInject / volTemporal / volInteg with passes.froxelSplitTiming; 'volumetrics' = the 2D pass): render-pass timestamps (gbuffer / composite / post / fxaa) on Metal span the wait for the drawable and read as ~one frame each, so they are left out rather than mislead ('mesh' = the mesh-shadow skin + refit, only while settings.meshShadows is on)
+      const order = ['smoke', 'air', 'mesh', 'rc c4', 'rc c3', 'rc c2', 'rc c1', 'rc c0', 'rc dice', 'direct', 'dtemporal', 'softblur', 'gather', 'gatherLight', 'temporal', 'reflect', 'rdenoise', 'volFroxel', 'volInject', 'volTemporal', 'volInteg', 'volumetrics', 'particles', 'pdraw', 'sharpU', 'compS', 'gbaa', 'taau', 'bloom', 'probe'];   // compute passes only (+ sharp direct's kernels while it is live: U, the composite) ('volFroxel' = the froxel kernels, or volInject / volTemporal / volInteg with passes.froxelSplitTiming; 'volumetrics' = the 2D pass): render-pass timestamps (gbuffer / composite / post / fxaa) on Metal span the wait for the drawable and read as ~one frame each, so they are left out rather than mislead ('mesh' = the mesh-shadow skin + refit, only while settings.meshShadows is on)
       for (const k of order) if (t.results.has(k) && t.ranThisFrame(k)) lines.push(row('  ' + k, t.results.get(k)!.toFixed(2)));
       for (const k of t.results.keys()) if (!order.includes(k) && !RENDER_PASSES.includes(k) && t.ranThisFrame(k)) lines.push(row('  ' + k, t.results.get(k)!.toFixed(2)));   // (… and every other pass the timer holds, after the ones in their order: a pass that is timed has a row, whoever adds it. The fog of war's two passes had none, and the total was more than its rows)   // (only passes that actually ran this frame: a dormant one — particles with nothing alive — used to sit here at its last busy value)
       lines.push(row('boxes', `${engine.world.all.length} (dyn ${engine.world.dynamics.length})`));
@@ -1189,7 +1188,6 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
 
 /** the URL flags written onto the fresh Engine's settings (before the level loads and any preset applies), and __sharp */
 function urlFlagsOnEngine(engine: Engine) {
-  if (new URLSearchParams(location.search).has('legacydenoise')) engine.settings.denoiser = 'legacy';   // ?legacydenoise: renderer v3 phase 3 off from boot — dtemporal + softblur, temporal + giblur, the gloss chain: the three old denoisers byte for byte
   if (new URLSearchParams(location.search).has('noleakfix')) engine.settings.dnShadowOccl = false;   // ?noleakfix: the shadow denoiser's occluded-light reading off from boot (settings.dnShadowOccl) — a hidden torch's cone can show faintly on a lit floor behind its wall, as it did
   if (new URLSearchParams(location.search).has('notaau')) engine.settings.taau = false;   // ?notaau: renderer v3 phase 1 off from boot — no jitter, output = internal, FXAA + the browser's bilinear: the old chain byte for byte (decided before the presets apply: they start at their TAAU scale only with it on)
   if (new URLSearchParams(location.search).has('nosharp')) { sharpForce.v = false; engine.settings.sharpDirect = false; }   // ?nosharp: sharp direct (decoupled resolution — engine.ts RenderSettings.sharpDirect) off from boot AND for every preset applied: main's frame under TAAU, for A/B and the identity hashes
@@ -1200,20 +1198,17 @@ function urlFlagsOnEngine(engine: Engine) {
   (window as any).__sharp = {   // sharp direct from the console: on / off, what it runs at, its memory
     get on() { return engine.settings.sharpDirect; }, set on(v: boolean) { engine.settings.sharpDirect = !!v; },
     get live() { return engine.sharpOn; },
-    get edgeRays() { return engine.settings.sharpEdgeRays; }, set edgeRays(v: boolean) { engine.settings.sharpEdgeRays = !!v; },
-    knobs: () => { const S = engine.settings; return { edgeRays: S.sharpEdgeRays, edgeSpread: S.sharpEdgeSpread, edgeHintPx: S.sharpEdgeHintPx, planeK: S.sharpPlaneK, sliver: S.sharpSliver, sliverCap: S.sharpSliverCap, diag: S.sharpDiag, gbaaClamp: S.gbaaClamp, heldRays: S.heldRays, hueSplit: S.restirHueSplit }; },
-    set: (k: Partial<{ edgeRays: boolean; edgeSpread: number; edgeHintPx: number; planeK: number; sliver: number; sliverCap: number; diag: number; gbaaClamp: boolean; heldRays: number; hueSplit: boolean }>) => { const S = engine.settings; if (k.edgeRays !== undefined) S.sharpEdgeRays = !!k.edgeRays; if (k.edgeSpread !== undefined) S.sharpEdgeSpread = k.edgeSpread; if (k.edgeHintPx !== undefined) S.sharpEdgeHintPx = k.edgeHintPx; if (k.planeK !== undefined) S.sharpPlaneK = k.planeK;
+    knobs: () => { const S = engine.settings; return { planeK: S.sharpPlaneK, sliver: S.sharpSliver, sliverCap: S.sharpSliverCap, diag: S.sharpDiag, gbaaClamp: S.gbaaClamp, heldRays: S.heldRays, hueSplit: S.restirHueSplit }; },
+    set: (k: Partial<{ planeK: number; sliver: number; sliverCap: number; diag: number; gbaaClamp: boolean; heldRays: number; hueSplit: boolean }>) => { const S = engine.settings; if (k.planeK !== undefined) S.sharpPlaneK = k.planeK;
       if (k.sliver !== undefined) S.sharpSliver = k.sliver; if (k.sliverCap !== undefined) S.sharpSliverCap = k.sliverCap; if (k.diag !== undefined) S.sharpDiag = k.diag; if (k.gbaaClamp !== undefined) S.gbaaClamp = !!k.gbaaClamp; if (k.heldRays !== undefined) S.heldRays = k.heldRays; if (k.hueSplit !== undefined) S.restirHueSplit = !!k.hueSplit; return (window as any).__sharp.knobs(); },   // (+ the direct-quality lane's knobs: the sliver rule / cap / paint, GBAA's clamp, the hybrid estimator's K — docs/internal/direct-quality.md)
     /** the sliver census of the LAST frame: sharpE[0]'s alpha carries the fallback code per output pixel (sharp_direct.wgsl SLIVERS) → counts {px, live, ring, sliver, traced, unshadowedDefault} + the per-row mask if asked (harness: tools/qa/dq-scenes.js) */
     census: async (mask = false) => { const t = engine.passes.sharpE[0]; if (!engine.sharpOn || !t) return null; const dev = engine.device; const w = t.width, h = t.height; const bpr = Math.ceil(w * 8 / 256) * 256; const buf = dev.createBuffer({ size: bpr * h, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ }); const enc = dev.createCommandEncoder(); enc.copyTextureToBuffer({ texture: t }, { buffer: buf, bytesPerRow: bpr }, [w, h]); dev.queue.submit([enc.finish()]); await buf.mapAsync(GPUMapMode.READ); const u16 = new Uint16Array(buf.getMappedRange().slice(0)); buf.unmap(); buf.destroy();
       const f16 = (x: number) => { const e = (x >> 10) & 31, m = x & 1023; return e === 0 ? m * 5.960464477539063e-8 : (1 + m / 1024) * Math.pow(2, e - 15); }; let ring = 0, sliver = 0, traced = 0, unsh = 0; const m8 = mask ? new Uint8Array(w * h) : null;
       for (let y = 0; y < h; y++) { const row = y * bpr / 2; for (let x = 0; x < w; x++) { const c = Math.round(f16(u16[row + x * 4 + 3])); const k = c & 3; if (k === 1) ring++; else if (k === 2) sliver++; if (c & 4) traced++; if (c & 8) unsh++; if (m8) m8[y * w + x] = c; } }
       return { w, h, px: w * h, ring, sliver, traced, unshadowedDefault: unsh, sliverPct: +(100 * sliver / (w * h)).toFixed(3), tracedPct: +(100 * traced / (w * h)).toFixed(3), mask: m8 }; },
-    summary: () => `sharp direct ${engine.settings.sharpDirect ? 'ON' : 'off'}${engine.sharpOn ? ` — live: g-buffer / U / composite / TAA at ${engine.outWidth}×${engine.outHeight}, stochastic terms at ${engine.width}×${engine.height} (+${((engine.passes.sharpBytes + engine.gbuffer.sharpBytes) / 1048576).toFixed(0)} MB: the output-size raster, the direct pair, the larger HDR target, the edge mask)` : engine.settings.sharpDirect ? ` — idle (${!engine.settings.taau ? 'TAAU off' : engine.settings.debugView ? 'debug view' : 'render scale 1.0: nothing to decouple'})` : ''}`,
+    summary: () => `sharp direct ${engine.settings.sharpDirect ? 'ON' : 'off'}${engine.sharpOn ? ` — live: g-buffer / U / composite / TAA at ${engine.outWidth}×${engine.outHeight}, stochastic terms at ${engine.width}×${engine.height} (+${((engine.passes.sharpBytes + engine.gbuffer.sharpBytes) / 1048576).toFixed(0)} MB: the output-size raster, the direct pair, the larger HDR target)` : engine.settings.sharpDirect ? ` — idle (${!engine.settings.taau ? 'TAAU off' : engine.settings.debugView ? 'debug view' : 'render scale 1.0: nothing to decouple'})` : ''}`,
   };
   if (new URLSearchParams(location.search).has('nortreflect')) { rtVeto.on = true; engine.settings.rtReflect = false; }
-  if (new URLSearchParams(location.search).has('nogim')) { gimVeto.on = true; engine.settings.giFullRes = false; engine.settings.giYoungRays = 1; engine.settings.ladderClimb = false; engine.settings.capClimb = false; }   // ?nogim: GI-in-motion's switches off from boot AND its two renderer switches vetoed for the presets — the frame as it was before the lane (the identity hashes, A/B); the Tab rows still flip them by hand
-  if (new URLSearchParams(location.search).has('nop5')) { p5Veto.on = true; engine.settings.giResample = 'off'; engine.settings.rtMeshHits = false; engine.settings.rtHitReuse = false; }   // ?nop5: renderer v3 phase 5's ultra extras off from boot AND vetoed for the presets — ultra's frame as it was before the phase (the identity hashes, A/B); the Tab rows still flip them by hand   // ?nortreflect: renderer v3 phase 4's reflection pass off from boot AND vetoed for the presets (auto's ladder re-applies them) — with ?detail=0 the untouched frame for A/B; the Tab row still flips it by hand
   { const dv = new URLSearchParams(location.search).get('detail'); if (dv !== null && isFinite(parseFloat(dv))) engine.settings.detail = Math.max(0, Math.min(1, parseFloat(dv))); }
   if (new URLSearchParams(location.search).has('nomarkings')) engine.settings.markings = false;   // ?nomarkings: the markings lane's pixel-art signifiers off from boot — nothing evaluated, no marking lights registered (with ?level=relief the frame main draws)
 }
@@ -1452,17 +1447,15 @@ function soloNightHooks(game: Game) {
   (window as any).__needs = { send: (i = 0, kind: NeedKind = 'coffee') => needsSend(game, game.guards.filter(x => x.team === 'guard' && !x.unit)[i], kind), trip: (i = 0) => needsTrip(game.guards.filter(x => x.team === 'guard' && !x.unit)[i]), knobs: NEEDS, stats: NEEDS_STATS, log: NEEDS_LOG, summary: () => game.needsSummary() };   // automation / console: the needs (needs.ts) — __needs.send(0) = 'send Kowalski for a coffee' with the whole telegraph, .trip(0) his trip record, .log the last things that happened
 }
 
-/** the renderer URL flags that stood above `new Quality` (?norestir ?norestirmotion ?restirmotion ?nofroxel ?froxel ?nosmokediffuse ?gatherStrata ?nogatherstrata) and the __hot* shader swaps they sat among, __froxel, __rt, __gs */
+/** the renderer URL flags that stood above `new Quality` (?norestirmotion ?restirmotion ?nofroxel ?froxel ?nosmokediffuse) and the __hot* shader swaps they sat among, __froxel, __rt */
 function rendererFlagsAndHotSwaps(engine: Engine) {
   // __hotVol(src?): recompile the volumetric pass from a volumetrics.wgsl variant against the live device and swap it in (passes.hotSwapVol) — no src = refetch
   // the file as it is on disk from the dev server (/qa/shader/volumetrics.wgsl), so an edit can be timed against a staged stress scene without rebooting it
   (window as any).__hotVol = async (src?: string) => engine.passes.hotSwapVol(src ?? await (await fetch('/qa/shader/volumetrics.wgsl', { cache: 'no-store' })).text());
-  const hotCommon = async () => (await fetch('/qa/shader/direct_common.wgsl', { cache: 'no-store' })).text();   // both direct-light estimators get direct_common.wgsl prepended, as passes.ts builds them
-  (window as any).__hotDirect = async (src?: string) => engine.passes.hotSwapDirect(src ?? await (await fetch('/qa/shader/direct.wgsl', { cache: 'no-store' })).text(), 'direct', await hotCommon());   // the same for the direct-light pass (direct.wgsl variants — the settings.restir OFF path)
-  (window as any).__hotRestir = async (src?: string) => engine.passes.hotSwapDirect(src ?? await (await fetch('/qa/shader/restir.wgsl', { cache: 'no-store' })).text(), 'restir', await hotCommon());   // … and for restir.wgsl (the ON path)
+  const hotCommon = async () => (await fetch('/qa/shader/direct_common.wgsl', { cache: 'no-store' })).text();   // the direct-light estimator gets direct_common.wgsl prepended, as passes.ts builds it
+  (window as any).__hotRestir = async (src?: string) => engine.passes.hotSwapDirect(src ?? await (await fetch('/qa/shader/restir.wgsl', { cache: 'no-store' })).text(), await hotCommon());   // the same for the direct-light pass (restir.wgsl variants)
   (window as any).__hotSharp = async (src?: string) => engine.passes.hotSwapSharp(src ?? await (await fetch('/qa/shader/sharp_direct.wgsl', { cache: 'no-store' })).text(), await hotCommon());   // … sharp_direct.wgsl (both variants; direct-quality lane)
   (window as any).__hotGbaa = async (src?: string) => engine.passes.hotSwapGbaa(src ?? await (await fetch('/qa/shader/gbaa.wgsl', { cache: 'no-store' })).text());   // … gbaa.wgsl
-  if (new URLSearchParams(location.search).has('norestir')) engine.settings.restir = false;   // ?norestir: the leader / tail direct-light estimator (direct.wgsl) from boot — renderer v3 Phase 2a's untouched path, for A/B
   { const q = new URLSearchParams(location.search); if (q.get('holedepth') === '0') engine.settings.portalHole = false;   // &holedepth=0: an opening's daylight is its whole rectangle again (settings.portalHole)
     { const pw = Number(q.get('portalworth')); if (pw > 0) engine.settings.portalWorth = pw; }   // &portalworth=<number>: how far an opening's own light reaches, for the visit (settings.portalWorth; 0.003 = until 11-05)
     if (q.has('norestirmotion')) engine.settings.restirMotion = 0; const rm = q.get('restirmotion'); if (rm !== null && rm !== '') engine.settings.restirMotion = Math.max(0, Math.min(7, parseInt(rm, 10) || 0)); }   // ?norestirmotion / ?restirmotion=N: the direct-motion lane's reservoir-reprojection levers from boot (docs/internal/direct-motion.md; 0 = the estimator's program byte for byte)
@@ -1471,7 +1464,7 @@ function rendererFlagsAndHotSwaps(engine: Engine) {
   if (new URLSearchParams(location.search).has('nofroxel')) { froxelVeto.on = true; engine.settings.froxelVol = false; }
   if (new URLSearchParams(location.search).get('nvoval') === '1') engine.passes.nvOval = 1;   // ?nvoval=1: the goggles' dark oval over the picture, as it was (off by default: it hid too much of the screen — picture only, nothing reads it)
   if (new URLSearchParams(location.search).has('nosmokediffuse')) engine.passes.smokeDiffuse = 0;   // ?nosmokediffuse: smoke attenuates only, nothing behind it blurred (the final blit as it was)
-  if (new URLSearchParams(location.search).has('froxel') || plainAir()) { froxelForce.on = true; engine.settings.froxelVol = true; }   // (PLAIN AIR, gpu/device.ts: its program draws no beam, so on every tier the haze's are the froxel kernels')   // ?froxel: the froxel path forced even at ultra / high (their presets ship the classic per-pixel march since 08-12) — the A/B   // ?nofroxel: froxel volumetrics off from boot — the per-pixel volumetric march exactly as it was (Tab ▸ Volumetrics — froxels flips it live)
+  if (new URLSearchParams(location.search).has('froxel')) { froxelForce.on = true; engine.settings.froxelVol = true; }   // ?froxel: the froxel path forced even at ultra / high (their presets ship the classic per-pixel march since 08-12) — the A/B   // ?nofroxel: froxel volumetrics off from boot — the per-pixel volumetric march exactly as it was (Tab ▸ Volumetrics — froxels flips it live)
   // __froxel: the froxel volume for the console / automation — the grid, memory, history state, the knobs by name, a history restart
   (window as any).__froxel = {
     get on() { return engine.settings.froxelVol; }, set on(v: boolean) { engine.settings.froxelVol = !!v; },
@@ -1485,25 +1478,17 @@ function rendererFlagsAndHotSwaps(engine: Engine) {
   // __hotDenoise(src?): the same for the v3 denoiser core (render/denoise.ts hotSwap ← /qa/shader/denoise.wgsl)
   (window as any).__hotDenoise = async (src?: string) => engine.passes.den.hotSwap(src ?? await (await fetch('/qa/shader/denoise.wgsl', { cache: 'no-store' })).text());
   // __hotReflect(src?): … and for the reflection pass (passes.hotSwapReflect ← /qa/shader/reflect_p5.wgsl while the phase-5 variant is the one dispatched, else reflect.wgsl; a given src goes to whichever its bindings say)
-  (window as any).__hotReflect = async (src?: string) => engine.passes.hotSwapReflect(src ?? await (await fetch(engine.passes.rtP5 ? '/qa/shader/reflect_p5.wgsl' : '/qa/shader/reflect.wgsl', { cache: 'no-store' })).text());
-  // __rt: materials + reflections (renderer v3 phase 4) for the console / automation (+ phase 5's mesh / reuse switches)
+  (window as any).__hotReflect = async (src?: string) => engine.passes.hotSwapReflect(src ?? await (await fetch('/qa/shader/reflect.wgsl', { cache: 'no-store' })).text());
+  // __rt: materials + reflections (renderer v3 phase 4) for the console / automation
   (window as any).__rt = {
     get on() { return engine.settings.rtReflect; }, set on(v: boolean) { engine.settings.rtReflect = !!v; },
     get detail() { return engine.settings.detail; }, set detail(v: number) { engine.settings.detail = Math.max(0, Math.min(1, v)); },
-    get mesh() { return engine.settings.rtMeshHits; }, set mesh(v: boolean) { engine.settings.rtMeshHits = !!v; },
-    get reuse() { return engine.settings.rtHitReuse; }, set reuse(v: boolean) { engine.settings.rtHitReuse = !!v; },
-    knobs: () => { const S = engine.settings; return { on: S.rtReflect, div: S.rtReflectDiv, rays: S.rtRays, maxRough: S.rtMaxRough, atrous: S.rtAtrous, aniso: S.rtAniso, strength: S.rtStrength, glints: S.rtGlints, detail: S.detail, history: S.rtHistory, specClampK: S.dnSpecClampK, mesh: S.rtMeshHits, reuse: S.rtHitReuse }; },
-    set: (k: Partial<{ on: boolean; div: number; rays: number; maxRough: number; atrous: number; aniso: number; strength: number; glints: number; detail: number; history: number; specClampK: number; mesh: boolean; reuse: boolean }>) => { const S = engine.settings; if (k.on !== undefined) S.rtReflect = k.on; if (k.div !== undefined) S.rtReflectDiv = k.div; if (k.rays !== undefined) S.rtRays = k.rays; if (k.maxRough !== undefined) S.rtMaxRough = k.maxRough; if (k.atrous !== undefined) S.rtAtrous = k.atrous; if (k.aniso !== undefined) S.rtAniso = k.aniso; if (k.strength !== undefined) S.rtStrength = k.strength; if (k.glints !== undefined) S.rtGlints = k.glints; if (k.detail !== undefined) S.detail = k.detail; if (k.history !== undefined) S.rtHistory = k.history; if (k.specClampK !== undefined) S.dnSpecClampK = k.specClampK; if (k.mesh !== undefined) S.rtMeshHits = k.mesh; if (k.reuse !== undefined) S.rtHitReuse = k.reuse; return (window as any).__rt.knobs(); },
-    summary: () => { const S = engine.settings, P = engine.passes; return `rt ${S.rtReflect ? `on ÷${P.rtDiv} ${P.rw}×${P.rh} · ${S.rtRays} ray/px · rough ≤ ${S.rtMaxRough} · ${S.rtAtrous} à-trous` : 'off'} · detail ${S.detail.toFixed(2)} · gloss row ${S.gloss ? (S.rtReflect ? 'set, superseded' : 'on') : 'off'} · mesh hits ${S.rtMeshHits ? (engine.meshShadowsOn ? 'on' : 'wanted (mesh shadows off)') : 'off'} · hit reuse ${S.rtHitReuse ? 'on' : 'off'}`; },
+    knobs: () => { const S = engine.settings; return { on: S.rtReflect, div: S.rtReflectDiv, rays: S.rtRays, maxRough: S.rtMaxRough, atrous: S.rtAtrous, aniso: S.rtAniso, strength: S.rtStrength, glints: S.rtGlints, detail: S.detail, history: S.rtHistory, specClampK: S.dnSpecClampK }; },
+    set: (k: Partial<{ on: boolean; div: number; rays: number; maxRough: number; atrous: number; aniso: number; strength: number; glints: number; detail: number; history: number; specClampK: number }>) => { const S = engine.settings; if (k.on !== undefined) S.rtReflect = k.on; if (k.div !== undefined) S.rtReflectDiv = k.div; if (k.rays !== undefined) S.rtRays = k.rays; if (k.maxRough !== undefined) S.rtMaxRough = k.maxRough; if (k.atrous !== undefined) S.rtAtrous = k.atrous; if (k.aniso !== undefined) S.rtAniso = k.aniso; if (k.strength !== undefined) S.rtStrength = k.strength; if (k.glints !== undefined) S.rtGlints = k.glints; if (k.detail !== undefined) S.detail = k.detail; if (k.history !== undefined) S.rtHistory = k.history; if (k.specClampK !== undefined) S.dnSpecClampK = k.specClampK; return (window as any).__rt.knobs(); },
+    summary: () => { const S = engine.settings, P = engine.passes; return `rt ${S.rtReflect ? `on ÷${P.rtDiv} ${P.rw}×${P.rh} · ${S.rtRays} ray/px · rough ≤ ${S.rtMaxRough} · ${S.rtAtrous} à-trous` : 'off'} · detail ${S.detail.toFixed(2)} · gloss row ${S.gloss ? (S.rtReflect ? 'set, superseded' : 'on') : 'off'}`; },
   };
-  // __hotGather(src?): recompile both gather pipeline pairs (fgather.wgsl main + mainGi, × GATHER_STRATA ← /qa/shader/fgather.wgsl) against the staged scene
-  (window as any).__hotGather = async (src?: string) => engine.passes.hotSwapGather(src ?? await (await fetch('/qa/shader/fgather.wgsl', { cache: 'no-store' })).text(), await (await fetch('/qa/shader/gather_common.wgsl', { cache: 'no-store' })).text());   // (gather_common.wgsl from disk too: the two move together)
-  // ?gatherStrata / __gs: the gather's tile-coherent STRATIFIED directions (settings.gatherStrata, ported from exp/trace-perf E8 — unbiased, −13‥16 % gather, not hash-identical: default off; flips live)
-  { const q = new URLSearchParams(location.search); if (q.has('gatherStrata')) engine.settings.gatherStrata = true; if (q.has('nogatherstrata')) engine.settings.gatherStrata = false; }   // (default ON since 08-12; ?nogatherstrata = the iid gather, hash-identical to the pre-port frame)
-  (window as any).__gs = {
-    get on() { return engine.settings.gatherStrata; }, set on(v: boolean) { engine.settings.gatherStrata = !!v; },
-    summary: () => `gather strata ${engine.settings.gatherStrata ? 'ON (stratified, tile-coherent directions: pFGs / pFGRs)' : 'off (iid cosine directions, the gather as it was)'} · gather ${engine.passes.gw}×${engine.passes.gh}${engine.settings.giResample !== 'off' ? ' · resampling ' + engine.settings.giResample : ''}`,
-  };
+  // __hotGather(src?): recompile the gather's two pipelines (gather_split.wgsl's trace and light over the helpers ← /qa/shader/fgather.wgsl) against the staged scene
+  (window as any).__hotGather = async (src?: string) => engine.passes.hotSwapGather(src ?? await (await fetch('/qa/shader/fgather.wgsl', { cache: 'no-store' })).text(), await (await fetch('/qa/shader/gather_common.wgsl', { cache: 'no-store' })).text());   // (the gather's own common text from disk too: the two move together)
 }
 
 /** the ray-traversal lab: __daylight, __scenePrelude, __traceConfig, __commonSource, __hotCommon */
@@ -1525,10 +1510,9 @@ function traceLabHooks(engine: Engine, game: Game) {
     const t0 = performance.now(); const P = engine.passes; const out: Record<string, { ok: boolean; messages: string[] }> = {};
     const dc = await shader('direct_common');
     const jobs: [string, Promise<{ ok: boolean; messages: string[] }>][] = [
-      ['direct', P.hotSwapDirect(await shader('direct'), 'direct', dc)],
-      ['restir', P.hotSwapDirect(await shader('restir'), 'restir', dc)],
+      ['restir', P.hotSwapDirect(await shader('restir'), dc)],
       ['gather', P.hotSwapGather(await shader('fgather'), await shader('gather_common'))],
-      ['reflect', P.hotSwapReflect(await shader(P.rtP5 ? 'reflect_p5' : 'reflect'))],
+      ['reflect', P.hotSwapReflect(await shader('reflect'))],
       ['vol', P.hotSwapVol(await shader('volumetrics'))],
       ['froxel', P.froxels.hotSwap(await shader('froxel'))],
       ['rc', engine.rc.hotSwap()],
@@ -1541,41 +1525,28 @@ function traceLabHooks(engine: Engine, game: Game) {
   };
 }
 
-/** __gi, __gimo, __dmo */
+/** __gimo, __dmo */
 function giMotionHooks(engine: Engine) {
-  // __gi: the gather's reservoir resampling (renderer v3 phase 5, ultra) for the console / automation — mode + knobs in one object
-  (window as any).__gi = {
-    get mode() { return engine.settings.giResample; }, set mode(v: 'off' | 'temporal' | 'full') { engine.settings.giResample = v === 'full' ? 'full' : v === 'temporal' ? 'temporal' : 'off'; },
-    knobs: () => { const S = engine.settings; return { mode: S.giResample, rays: S.giResampleRays, cap: S.giResampleCap, taps: S.giResampleTaps, radius: S.giResampleRadius, revalidate: S.giResampleRevalidate }; },
-    set: (k: Partial<{ mode: 'off' | 'temporal' | 'full'; rays: number; cap: number; taps: number; radius: number; revalidate: boolean }>) => { const S = engine.settings; if (k.mode !== undefined) S.giResample = k.mode; if (k.rays !== undefined) S.giResampleRays = k.rays; if (k.cap !== undefined) S.giResampleCap = k.cap; if (k.taps !== undefined) S.giResampleTaps = k.taps; if (k.radius !== undefined) S.giResampleRadius = k.radius; if (k.revalidate !== undefined) S.giResampleRevalidate = k.revalidate; return (window as any).__gi.knobs(); },
-    summary: () => { const S = engine.settings, P = engine.passes; return `gi resampling ${S.giResample}${S.giResample !== 'off' ? ` · ${S.giResampleRays} fresh · M ≤ ${S.giResampleCap}${S.giResampleRevalidate ? ' · revalidate' : ''}${S.giResample === 'full' ? ` · ${S.giResampleTaps} taps r ${S.giResampleRadius}` : ''} · ${P.gw}×${P.gh} · ${(P.p5Bytes / 1048576).toFixed(0)} MB` : ''}`; },
-  };
-  // __gimo: GI IN MOTION (docs/internal/gi-motion.md) — the internal-res diffuse chain, the young-history gather rays, the ladder's climb, in one object for the console / automation
+  // __gimo: GI IN MOTION (docs/internal/gi-motion.md) — the ladder's climb and the motion-calm rows, in one object for the console / automation
   (window as any).__gimo = {
-    knobs: () => { const S = engine.settings; return { fullRes: S.giFullRes, fullIters: S.giFullIters, youngRays: S.giYoungRays, youngCap: S.giYoungCap, youngLen: S.giYoungLen, ladderClimb: S.ladderClimb, capClimb: S.capClimb }; },
-    set: (k: Partial<{ fullRes: boolean; fullIters: number; youngRays: number; youngCap: number; youngLen: number; ladderClimb: boolean; capClimb: boolean }>) => { const S = engine.settings; if (k.fullRes !== undefined) S.giFullRes = !!k.fullRes; if (k.fullIters !== undefined) S.giFullIters = k.fullIters; if (k.youngRays !== undefined) S.giYoungRays = k.youngRays; if (k.youngCap !== undefined) S.giYoungCap = k.youngCap; if (k.youngLen !== undefined) S.giYoungLen = k.youngLen; if (k.ladderClimb !== undefined) S.ladderClimb = !!k.ladderClimb; if (k.capClimb !== undefined) S.capClimb = !!k.capClimb; return (window as any).__gimo.knobs(); },
-    get live() { return engine.passes.giFullLive; },
-    young: () => engine.passes.readYoungCount(),
+    knobs: () => { const S = engine.settings; return { ladderClimb: S.ladderClimb, capClimb: S.capClimb }; },
+    set: (k: Partial<{ ladderClimb: boolean; capClimb: boolean }>) => { const S = engine.settings; if (k.ladderClimb !== undefined) S.ladderClimb = !!k.ladderClimb; if (k.capClimb !== undefined) S.capClimb = !!k.capClimb; return (window as any).__gimo.knobs(); },
     calm: (on?: boolean) => { if (on !== undefined) (window.__quality as any)?.applyMotionCalm(!!on); return !!(window.__quality as any)?.motionCalm; },   // the motion-calm rows on / off (quality.ts MOTION_CALM)
-    summary: () => { const S = engine.settings, P = engine.passes; return `gi in motion: full-res ${S.giFullRes ? (P.giFullLive ? `LIVE ${P.width}×${P.height} · ${S.giFullIters} à-trous · ${(P.giFullBytes / 1048576).toFixed(0)} MB` : 'wanted (not live)') : 'off'} · young rays ${S.giYoungRays > 1 ? `×${S.giYoungRays} (cap ${(S.giYoungCap * 100).toFixed(0)} % · len < ${S.giYoungLen})` : 'off'} · climb ${S.ladderClimb ? 'on' : 'off'}${S.capClimb ? ' + cap' : ''} · motion-calm rows ${(window.__quality as any)?.motionCalm ? 'ON' : 'off'}`; },
+    summary: () => { const S = engine.settings; return `gi in motion: climb ${S.ladderClimb ? 'on' : 'off'}${S.capClimb ? ' + cap' : ''} · motion-calm rows ${(window.__quality as any)?.motionCalm ? 'ON' : 'off'}`; },
   };
   // __dmo: DIRECT LIGHT IN MOTION (docs/internal/direct-motion.md) — ReSTIR's temporal reuse under a moving camera: settings.restirMotion (bitmask 1 = stochastic-bilinear reprojection, 2 = motion-scaled
   // confidence, 4 = spatial reuse under motion; 0 = the estimator as it was) and its three knobs, for the console / the harnesses (`__gim.run(tag, {extra: {restirMotion: 3}})` measures it)
   (window as any).__dmo = {
-    knobs: () => { const S = engine.settings; return { motion: S.restirMotion, v: S.restirMotionV, min: S.restirMotionMin, px: S.restirMotionPx, dither: S.restirMotionDither, taps: S.restirMotionTaps, static: S.restirMotionStatic, live: engine.passes.restirMotionLive }; },
-    set: (k: Partial<{ motion: number; v: number; min: number; px: number; dither: boolean; taps: number; static: boolean }>) => { const S = engine.settings; if (k.motion !== undefined) S.restirMotion = Math.max(0, Math.min(7, k.motion | 0)); if (k.v !== undefined) S.restirMotionV = k.v; if (k.min !== undefined) S.restirMotionMin = k.min; if (k.px !== undefined) S.restirMotionPx = k.px; if (k.dither !== undefined) S.restirMotionDither = !!k.dither; if (k.taps !== undefined) S.restirMotionTaps = k.taps; if (k.static !== undefined) S.restirMotionStatic = !!k.static; return (window as any).__dmo.knobs(); },
+    knobs: () => { const S = engine.settings; return { motion: S.restirMotion, v: S.restirMotionV, min: S.restirMotionMin, px: S.restirMotionPx, taps: S.restirMotionTaps, static: S.restirMotionStatic, live: engine.passes.restirMotionLive }; },
+    set: (k: Partial<{ motion: number; v: number; min: number; px: number; taps: number; static: boolean }>) => { const S = engine.settings; if (k.motion !== undefined) S.restirMotion = Math.max(0, Math.min(7, k.motion | 0)); if (k.v !== undefined) S.restirMotionV = k.v; if (k.min !== undefined) S.restirMotionMin = k.min; if (k.px !== undefined) S.restirMotionPx = k.px; if (k.taps !== undefined) S.restirMotionTaps = k.taps; if (k.static !== undefined) S.restirMotionStatic = !!k.static; return (window as any).__dmo.knobs(); },
     get on() { return engine.settings.restirMotion; }, set on(v: number) { engine.settings.restirMotion = Math.max(0, Math.min(7, v | 0)); },
-    summary: () => { const S = engine.settings; const m = S.restirMotion; return m ? `restir motion ${m} = ${[m & 1 ? 'stochastic-bilinear reprojection' : '', m & 2 ? `confidence whole under ${S.restirMotionV} px @1000 rows, × ${S.restirMotionMin} past ${(S.restirMotionV * 1.6).toFixed(2)}` : '', m & 4 ? `spatial past ${S.restirMotionPx} px${S.restirMotionTaps ? ` × ≥ ${S.restirMotionTaps} taps` : ''}` : ''].filter(Boolean).join(' + ')} · ${engine.passes.restirMotionLive ? 'LIVE this frame' : S.restirMotionStatic ? 'live' : 'the camera is still: main\'s program'}${S.restir ? '' : ' (restir itself is OFF)'}` : 'restir motion off — the reservoir reprojection as it was (nearest texel, full confidence)'; },
+    summary: () => { const S = engine.settings; const m = S.restirMotion; return m ? `restir motion ${m} = ${[m & 1 ? 'stochastic-bilinear reprojection' : '', m & 2 ? `confidence whole under ${S.restirMotionV} px @1000 rows, × ${S.restirMotionMin} past ${(S.restirMotionV * 1.6).toFixed(2)}` : '', m & 4 ? `spatial past ${S.restirMotionPx} px${S.restirMotionTaps ? ` × ≥ ${S.restirMotionTaps} taps` : ''}` : ''].filter(Boolean).join(' + ')} · ${engine.passes.restirMotionLive ? 'LIVE this frame' : S.restirMotionStatic ? 'live' : 'the camera is still: main\'s program'}` : 'restir motion off — the reservoir reprojection as it was (nearest texel, full confidence)'; },
   };
 }
 
 /** the SDF rig's and the character materials' URL flags (written over the applied preset, as they were), __charmat, __sdfrig */
 function characterRigFlagsAndHooks(engine: Engine, game: Game) {
-  { // the SDF CHARACTER RIG's two extras from the URL (the fitted round cones themselves are every ray's character test, no switch): ?sdfsmooth = the smooth-union closest hit in reflections ·
-    // ?charsoft = the analytic soft-shadow character visibility in the direct estimators (?charsoftmarch = its sphere-marched form). No preset touches either, so they hold for the visit.
-    const q = new URLSearchParams(location.search); const S = engine.settings;
-    if (q.has('sdfsmooth')) S.sdfRigSmooth = true;
-    if (q.has('charsoft') || q.has('charsoftmarch')) { S.charSoftShadow = true; S.charSoftAnalytic = !q.has('charsoftmarch'); }
+  { const q = new URLSearchParams(location.search); const S = engine.settings;
     if (q.has('noselfshadow')) S.charSelfShadow = false;   // ?noselfshadow: a man's own body never shadows him (the owner skip whole) — the frame as it was before the self-shadow rule, for A/B
     // CHARACTER MATERIALS (render/charMaterials.ts): on by itself for a mesh that carries slot-named materials (the contract with the models), off for the shipped mannequin —
     // ?charmats dresses that one by joint as a stand-in, ?nocharmats holds the two tints whatever the mesh says
@@ -1590,18 +1561,15 @@ function characterRigFlagsAndHooks(engine: Engine, game: Game) {
     get: (i: number | 'sam' = 'sam') => { const c = i === 'sam' || i < 0 ? game.player.char : game.guards[i]?.char; if (!c) return null; const gd = game.guards.find(x => x.char === c); const side = gd ? charLookMod.sideOfTeam(gd.team, gd.trained) : 'operator', suit = charLookMod.sneakSuit(game, c) /* (the black sneaking suit: its rows are `tables.suit`) */; return { ...charMatsMod.describePalette(side, c.tint, c.tint2, c.id, !charMatsMod.meshAuthored(game.ch.mesh), suit), suit }; },
     bump: () => charMatsMod.bumpCharMats(), reset: () => charMatsMod.resetCharMats(), summary: () => charMatsMod.charMatsSummary(game.ch, engine.settings.charMats),
   };
-  // __sdfrig: the SDF character rig for the console / automation — the extras' switches, the knobs, the fit table
+  // __sdfrig: the SDF character rig for the console / automation — self-shadow, the fit table
   (window as any).__sdfrig = {
-    get smooth() { return engine.settings.sdfRigSmooth; }, set smooth(v: boolean) { engine.settings.sdfRigSmooth = !!v; },
-    get soft() { return engine.settings.charSoftShadow; }, set soft(v: boolean) { engine.settings.charSoftShadow = !!v; },
-    get analytic() { return engine.settings.charSoftAnalytic; }, set analytic(v: boolean) { engine.settings.charSoftAnalytic = !!v; },
     get self() { return engine.settings.charSelfShadow; }, set self(v: boolean) { engine.settings.charSelfShadow = !!v; },   // character self-shadow (rigCfg bit 64; default on)
     /** are the proxies the FITTED cones? (a fit attached; false = the game's hand capsules traced as untapered cones) */
     get live() { return engine.sdfRigOn; },
     fit: () => engine.rigFit, table: () => engine.rigFit ? rigTable(engine.rigFit) : '(no fit attached)',
-    knobs: () => { const S = engine.settings; return { smooth: S.sdfRigSmooth, k: S.sdfRigK, steps: S.sdfRigSteps, soft: S.charSoftShadow, analytic: S.charSoftAnalytic, softSteps: S.charSoftSteps, softK: S.charSoftK, minDeg: S.charSoftMinDeg, softSmooth: S.charSoftSmooth, broad: S.charSoftBroad, self: S.charSelfShadow }; },
-    set: (k: Partial<{ smooth: boolean; k: number; steps: number; soft: boolean; analytic: boolean; softSteps: number; softK: number; minDeg: number; softSmooth: boolean; broad: boolean; self: boolean }>) => { const S = engine.settings; if (k.self !== undefined) S.charSelfShadow = !!k.self; if (k.broad !== undefined) S.charSoftBroad = !!k.broad; if (k.smooth !== undefined) S.sdfRigSmooth = !!k.smooth; if (k.k !== undefined) S.sdfRigK = k.k; if (k.steps !== undefined) S.sdfRigSteps = k.steps; if (k.soft !== undefined) S.charSoftShadow = !!k.soft; if (k.analytic !== undefined) S.charSoftAnalytic = !!k.analytic; if (k.softSteps !== undefined) S.charSoftSteps = k.softSteps; if (k.softK !== undefined) S.charSoftK = k.softK; if (k.minDeg !== undefined) S.charSoftMinDeg = k.minDeg; if (k.softSmooth !== undefined) S.charSoftSmooth = !!k.softSmooth; return (window as any).__sdfrig.knobs(); },
-    summary: () => { const S = engine.settings; return `sdf rig: round cones ${engine.sdfRigOn ? 'FITTED' : 'unfitted (no fit attached: hand radii, untapered)'} · reflections ${S.sdfRigSmooth ? `smooth union (k ×${S.sdfRigK}, ${S.sdfRigSteps} steps${engine.settings.rtMeshHits && engine.meshShadowsOn ? ' — superseded by mesh hits' : ''})` : engine.settings.rtMeshHits && engine.meshShadowsOn ? 'mesh hits' : 'round cones'} · direct-light character shadows ${S.charSoftShadow ? `SOFT QUERY (${S.charSoftAnalytic ? 'analytic' : `march ${S.charSoftSteps} steps${S.charSoftSmooth ? ', smooth union' : ''}`}, angular ×${S.charSoftK}, ≥ ${S.charSoftMinDeg}°)` : engine.meshShadowsOn ? 'ray-traced (mesh)' : 'ray-traced'}${S.charSelfShadow ? ' + self-shadow' : ''}`; },
+    knobs: () => ({ self: engine.settings.charSelfShadow }),
+    set: (k: Partial<{ self: boolean }>) => { if (k.self !== undefined) engine.settings.charSelfShadow = !!k.self; return (window as any).__sdfrig.knobs(); },
+    summary: () => `sdf rig: round cones ${engine.sdfRigOn ? 'FITTED' : 'unfitted (no fit attached: hand radii, untapered)'} · character shadows ${engine.meshShadowsOn ? 'ray-traced (mesh)' : 'ray-traced'}${engine.settings.charSelfShadow ? ' + self-shadow' : ''}`,
   };
 }
 
@@ -1739,7 +1707,7 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
   Object.defineProperties((window as any).__snow, { breath: { get: () => breathMod.SNOWBREATH }, steam: { get: () => breathMod.BREATHSTEAM }, breathStats: { get: () => breathMod.breathStats(game) }, breathSummary: { value: () => breathMod.breathSummary(game) } });   // … and the men's breath in its cold (game/snowBreath.ts): the numbers live with the next breath; `steam` = that breath as gas in the smoke solver, BREATHSTEAM
 }
 
-/** __taa, __dn, ?noglass / ?norefract (after the preset, as they were), __rigTrace, __meshTrace */
+/** __taa, __dn, ?noglass / ?norefract (after the preset, as they were), __meshTrace */
 function resolveGlassFlagsAndHooks(engine: Engine, gpu: Gpu) {
   // __taa: the TAAU resolve for the console / automation — on/off, the knobs, this frame's jitter, the reset count and why, the sizes
   (window as any).__taa = {
@@ -1749,13 +1717,12 @@ function resolveGlassFlagsAndHooks(engine: Engine, gpu: Gpu) {
     set: (k: Partial<{ alpha: number; clipGamma: number; phases: number; sharpen: number; reactive: number; kernel: number; velK: number; lightJump: number; motionAlpha: number; motionClip: number; sharpenMotion: number }>) => { const S = engine.settings; if (k.alpha !== undefined) S.taauAlpha = k.alpha; if (k.clipGamma !== undefined) S.taauClipGamma = k.clipGamma; if (k.phases !== undefined) S.taauPhases = k.phases; if (k.sharpen !== undefined) S.taauSharpen = k.sharpen; if (k.reactive !== undefined) S.taauReactive = k.reactive; if (k.kernel !== undefined) S.taauKernel = k.kernel; if (k.velK !== undefined) S.taauVelK = k.velK; if (k.lightJump !== undefined) S.taauLightJump = k.lightJump; if (k.motionAlpha !== undefined) S.taauMotionAlpha = k.motionAlpha; if (k.motionClip !== undefined) S.taauMotionClip = k.motionClip; if (k.sharpenMotion !== undefined) S.taauSharpenMotion = k.sharpenMotion; return (window as any).__taa.knobs(); },
     summary: () => `taau ${engine.settings.taau ? 'on' : 'off'} · ${engine.width}×${engine.height} → ${engine.outWidth}×${engine.outHeight} · jitter ${engine.jitter.map(v => v.toFixed(3)).join(',')} · ${engine.passes.taaStats.frames} resolves, ${engine.taaResets} resets (last: ${engine.lastTaaReset || '—'})`,
   };
-  // __dn: the denoiser (renderer v3 phase 3) for the console / automation — which core, the v3 clients' knobs in one object, the last frame's dispatch counts
+  // __dn: the denoiser for the console / automation — the clients' knobs in one object, the last frame's dispatch counts
   (window as any).__dn = {
-    get mode() { return engine.settings.denoiser; }, set mode(v: 'v3' | 'legacy') { engine.settings.denoiser = v === 'legacy' ? 'legacy' : 'v3'; },
     get stats() { return engine.passes.den.stats; },
     knobs: () => { const S = engine.settings; return { shadowIters: S.dnShadowIters, shadowCap: S.dnShadowCap, shadowClampK: S.dnShadowClampK, shadowSigmaL: S.dnShadowSigmaL, shadowPrior: S.dnShadowPrior, shadowLitAlike: S.dnShadowLitAlike, shadowOccl: S.dnShadowOccl, shadowMoveCap: S.dnShadowMoveCap, shadowMoveThresh: S.dnShadowMoveThresh, giIters: S.dnGiIters, giCap: S.dnGiCap, giClampK: S.dnGiClampK, giSigmaL: S.dnGiSigmaL, giFast: S.dnGiFast, giFirefly: S.dnGiFirefly, specIters: S.dnSpecIters, specCap: S.dnSpecCap, specClampK: S.dnSpecClampK, specSigmaL: S.dnSpecSigmaL, specRough: S.dnSpecRough, depthK: S.dnDepthK, normalPow: S.dnNormalPow, motionVectors: S.dnMotionVectors }; },
     set: (k: Record<string, number | boolean>) => { const S = engine.settings as unknown as Record<string, unknown>; for (const [key, v] of Object.entries(k)) { const name = 'dn' + key[0].toUpperCase() + key.slice(1); if (name in S) S[name] = v; } return (window as any).__dn.knobs(); },
-    summary: () => { const S = engine.settings, st = engine.passes.den.stats; return `denoiser ${S.denoiser} · shadow ${S.dnShadowIters} it / cap ${S.dnShadowCap} · gi ${S.dnGiIters} it / cap ${S.dnGiCap} (fast ${S.dnGiFast}) · spec ${S.dnSpecIters} it / cap ${S.dnSpecCap} · mv ${S.dnMotionVectors && S.taau ? 'on' : 'off'} · last frame ${st.shadow}+${st.gi}+${st.spec} dispatches`; },
+    summary: () => { const S = engine.settings, st = engine.passes.den.stats; return `shadow ${S.dnShadowIters} it / cap ${S.dnShadowCap} · gi ${S.dnGiIters} it / cap ${S.dnGiCap} (fast ${S.dnGiFast}) · spec ${S.dnSpecIters} it / cap ${S.dnSpecCap} · mv ${S.dnMotionVectors && S.taau ? 'on' : 'off'} · last frame ${st.shadow}+${st.gi}+${st.spec} dispatches`; },
   };
   if (new URLSearchParams(location.search).has('noglass')) engine.settings.glass = false;   // ?noglass: the glass panes off from boot (the panes become the empty openings the level had) — for A/B against a plain boot
   if (new URLSearchParams(location.search).has('nobeamreflect')) engine.settings.beamReflect = false;   // ?nobeamreflect: no laser / tracer in the reflections (no segment handed to the reflection pass: its frame as it was)
@@ -1763,13 +1730,6 @@ function resolveGlassFlagsAndHooks(engine: Engine, gpu: Gpu) {
   if (new URLSearchParams(location.search).has('nowetmirror')) engine.settings.wetMirror = false;   // ?nowetmirror: the wet ground's traced reflections at the weight they had (settings.wetMirror)
   if (new URLSearchParams(location.search).has('nowetbreak')) engine.settings.wetBreakup = 0;   // ?nowetbreak: wet ground one even film of water, the frame as it was (rtCfg.z = the anisotropy alone)
   if (new URLSearchParams(location.search).has('norefract')) engine.settings.glassRefract = false;   // ?norefract: the glass boxes' refraction off from boot (the panes' old tint rule, the read under the pixel — the frame byte for byte as it was) for A/B
-  // __rigTrace(rays): the SDF character rig's production WGSL over the live scene for a list of rays (render/rigDebug.ts): rays = [[Po.xyz, tmax, L.xyz, tanHalf], …] →
-  // per ray { vis (charSoftVis), resA / resM (the analytic / marched raw ratios), occ (occludedCapsules), t / idx (traceCapsules), tRig / ch (rigClosest) } — the CPU twin's check
-  (window as any).__rigTrace = async (rays: number[][]) => {
-    const flat = new Float32Array(rays.length * 8); rays.forEach((r, i) => flat.set(r.slice(0, 8), i * 8));
-    const out = await rigDebugTrace(gpu.device, engine.sceneLayout, engine.sceneBindGroup(), flat);
-    return rays.map((_, i) => ({ vis: out[i * 8], resA: out[i * 8 + 1], resM: out[i * 8 + 2], occ: out[i * 8 + 3], t: out[i * 8 + 4], idx: out[i * 8 + 5], tRig: out[i * 8 + 6], ch: out[i * 8 + 7] }));
-  };
   // __meshTrace(fixture): replay tools/qa/mesh-shadow-fixture.json on the GPU — poses skin slot 0 with the fixture's joint matrices, refits, runs the PRODUCTION
   // WGSL walk (common.wgsl meshAnyHitChar via a tiny kernel on the scene bind group) over its 64 rays and compares with the CPU reference's answers ray for
   // ray. Use on a ?paused page (it borrows character slot 0's joints until the next stepped frame rewrites them). Resolves to a summary + the mismatching rays.

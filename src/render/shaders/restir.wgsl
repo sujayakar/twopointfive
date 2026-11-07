@@ -1,4 +1,4 @@
-// ReSTIR DI direct lighting (renderer v3 Phase 2a) — settings.restir ON (the default); direct.wgsl is the OFF path, untouched.
+// ReSTIR DI direct lighting (renderer v3 Phase 2a): the direct-light estimator (the leader / tail one it replaced, direct.wgsl, went 2026-11-07).
 // Same inputs, same four outputs (per emitter class c ∈ {0 sharp, 1 broad}: S = shadowed estimate + signed penumbra hint, U = exact unshadowed
 // total), so dtemporal / softblur / composite consume it unchanged. What differs is how S is estimated:
 //
@@ -30,7 +30,7 @@
 //                pixel weighted by a visibility BELIEF β_i ∈ {0, 1} (BELIEFS below) — × the glass tint of the reservoir's own light. (The first cut
 //                shaded Σ_j hue(light_j)·w_j, each sample in its own light's colour: unbiased per channel, but ONE sample's hue is not the class's —
 //                under the break room's red and blue vending fronts every pixel wore the colour of whichever panel its reservoir held and the lino
-//                came out a red / blue mosaic crawling at the reservoir's rate; that form survives as the fallback and as an A/B bit, ru.cfg.w & 8.)
+//                came out a red / blue mosaic crawling at the reservoir's rate; that form survives as the fallback.)
 //     BELIEFS    per 8×8 tile, a DARK and a LIT bit a light slot, in one record per tile behind the reservoirs in the same buffer, remapped by
 //                identity like them: DARK = rays were spent on the light from this tile and every one came back blocked; LIT = some ray of the tile
 //                saw it. A light is 'tile-dark' HERE when it is DARK here and LIT in none of the 5×5 tiles round this one (a street lamp behind the
@@ -67,8 +67,8 @@
 //                the cone crossed thin geometry ("the flashlight direct lighting seems like a huge regression now. very noisy and lots of rims" — the maintainer, at high;
 //                ?norestir "looks great"). Static lights (owner 0: panels, lamps, vending fronts, the moon) keep ReSTIR unchanged. Bounded by construction: only the pixels
 //                a held light reaches, ≤ 2K + 2 rays there.
-//     MOTION     (lane fix/direct-motion, docs/internal/direct-motion.md; compiled in only under the prepended `const RESTIR_MOTION = true` — passes.ts builds the module twice and takes
-//                this program while settings.restirMotion ≠ 0, so 0 = the program above byte for byte). Under CAMERA motion the temporal reuse above flows: a pan of v px a frame
+//     MOTION     (lane fix/direct-motion, docs/internal/direct-motion.md; its three parts are bits of ru.cfg.w, which the host raises on the frames the camera moved; with none up the estimator's
+//                arithmetic is the still frame's. Until 2026-11-07 it was a second program, `restirM`). Under CAMERA motion the temporal reuse above flows: a pan of v px a frame
 //                reprojects every pixel to the NEAREST texel ⌊x − v + ½⌋, so at v = 2.44 the whole raster inherits from x − 2 while the picture moved 2.44 — the reservoir pattern
 //                slides 0.44 px a frame across the floor the resolve holds still, and after M frames a lineage was drawn and validated for points up to M × 0.44 px behind the
 //                pixel: 2–7-px blotches crawling under a panning floor and busier penumbra edges (docs/internal/gi-motion.md measured it: ReSTIR calmer than the leader path ×2‥40 at
@@ -82,9 +82,9 @@
 //                a history validated somewhere else; full memory the moment it rests; (c, 1024) spatial reuse at every pixel whose motion exceeds ru.mot.z px, with at least cfg.y >> 8 taps
 //                there (spatialAll — and wider — where the history is being handed about anyway, nothing extra at rest). U, the beliefs, the hint, the held / transient strata are untouched by all three.
 //   The reservoir written for next frame is the TEMPORAL stage's (spatial output feeds shading only: no M inflation loop).
-// Kept from direct.wgsl: the tile light list (FLAG_TILECULL, verbatim), reach masks (a walled-off light is in U, never a candidate, dark in S), glass
-// transmit on the shaded sample, the owner byte, mesh shadows (inside occludedT), the sun / moon as an ordinary candidate (kind 2). Ignored here:
-// FLAG_CHECKER_DIRECT, dimRays, the leader ray budgets (directCfg.xy) — the ray budget is ru.cfg.x, per pixel, whatever the light count.
+// Kept from direct.wgsl: the tile light list (the tile light list, verbatim), reach masks (a walled-off light is in U, never a candidate, dark in S), glass
+// transmit on the shaded sample, the owner byte, mesh shadows (inside occludedT), the sun / moon as an ordinary candidate (kind 2). The ray budget is
+// ru.cfg.x, per pixel, whatever the light count.
 const Z_RELEASE: f32 = 2.0;   // (see 'trailing edge' in phase 2)
 const MOTION_RAMP: f32 = 1.6;  // MOTION (b): the confidence cut ramps from none at ru.mot.x px a frame to its floor at MOTION_RAMP × that
 /** the light bypasses the reservoirs this frame: a transient always; under the HYBRID (header HELD) every light a character carries (owner byte ≠ 0) */
@@ -99,10 +99,10 @@ fn stratumLight(li: Light, hybrid: bool) -> bool { return lightTransient(li) || 
 @group(1) @binding(7) var gVel: texture_2d<f32>;   // the g-buffer's per-pixel OBJECT motion (TAAU's, gbuffer.wgsl GOut.vel): ndc of where this surface point WAS last frame minus where it IS, both through prevViewProj; 0 for rigid geometry
 
 struct RestirU {
-  cfg: vec4u,                     // x = shadow rays per pixel per frame (2‥6), y = spatial taps k (0 = off), z = M cap (1‥30), w = flags: 1 = tile gradient confidence, 2 = spatial everywhere (not only young pixels), 4 = tile-coherent fresh draws, 8 = A/B: shade each sample in its own light's hue (the first cut) instead of the belief-weighted class hue, 16 = A/B: tile-dark lights stay in the fresh draw (the unbiased first cut; no audits), 32 = A/B: the temporal confidence cut by the RAW target ratio (intensity changes drop history — the 08-11 rule) instead of the power-normalised one, 64 = D4 permutation, 128 = hue split; MOTION (the RESTIR_MOTION program only): 256 = stochastic-bilinear reservoir reprojection, 512 = motion-scaled confidence, 1024 = spatial reuse wherever the pixel moves
+  cfg: vec4u,                     // x = shadow rays per pixel per frame (2‥6), y = spatial taps k (0 = off), z = M cap (1‥30), w = flags: 1 = tile gradient confidence, 2 = spatial everywhere (not only young pixels), 16 = A/B: tile-dark lights stay in the fresh draw (the unbiased first cut; no audits), 128 = hue split (4, 8, 32, 64 free); MOTION: 256 = stochastic-bilinear reservoir reprojection, 512 = motion-scaled confidence, 1024 = spatial reuse wherever the pixel moves
   cfg2: vec4f,                   // x = spatial radius (px at this resolution), y = gradient threshold (the tile's z statistic under which history keeps full confidence; 0 past 1.6×), z = 'young' M threshold for spatial reuse below cfg.x 5, w = audit fraction: the share of lanes that spend one extra ray a frame testing a tile-dark light (votes only; 0‥1)
   jitter: vec4f,  // xy = this frame's TAAU jitter in internal px, zw = the previous render's (the reservoir domain is the UNJITTERED pixel centre: traced from there, reprojected from there)
-  mot: vec4f,     // MOTION (header; read only by the RESTIR_MOTION program, cfg.w bits 256 / 512 / 1024 switch its three parts): x = the screen motion (px a frame at THIS resolution — the host scales its per-1000-rows knob) under which the history keeps its full confidence · y = the floor of the cut past MOTION_RAMP × x (fraction of the M cap) · z = the motion (px) past which spatial reuse runs at the pixel · w = spare
+  mot: vec4f,     // MOTION (header; cfg.w bits 256 / 512 / 1024 switch its three parts): x = the screen motion (px a frame at THIS resolution — the host scales its per-1000-rows knob) under which the history keeps its full confidence · y = the floor of the cut past MOTION_RAMP × x (fraction of the M cap) · z = the motion (px) past which spatial reuse runs at the pixel · w = spare
   fwd: array<vec4u, 4>,           // last frame's light slot p → this frame's slot (byte p; 255 = that light is not uploaded this frame)
   inv: array<vec4u, 4>,           // this frame's slot → last frame's (255 = the light is new this frame)
   prevLights: array<Light, 64>,   // last frame's uploaded light records (positions, cones, intensities as they were): the fresh candidate's 'target then'
@@ -133,13 +133,6 @@ var<workgroup> wgStash: array<vec4f, 64>;            // (with wgP) parks Uv / Wf
 var<workgroup> wgHeld: array<vec4f, 128>;            // HELD: the two leaders' exact irradiance at the pixel (E, slot in .w) parked across the trace loop like Uv / Wf (lidx, lidx + 64)
 fn tileRecIndex(t: vec2u, dims: vec2u) -> u32 { let tilesX = (dims.x + 7u) >> 3u; let tilesY = (dims.y + 7u) >> 3u; return ((tilesX * tilesY) << 6u) + t.y * tilesX + t.x; }   // (passes.ts allocRestir sizes the buffer: whole tiles × 64 texels, then one 16-B record a tile: dark mask .xy, lit mask .zw — the neighbourhood load above inlines the same sum)
 fn tileDark(bel: vec2u, s: u32) -> bool { return ((bel[s >> 5u] >> (s & 31u)) & 1u) != 0u; }
-// A second rng stream shared by the whole 8×8 tile (seeded off the workgroup, advanced in lockstep: every lane walks the same light list) for the FRESH pick and its
-// emitter point when ru.cfg.w bit 4 is set: the 64 lanes then draw the same light and trace near-parallel rays — a SIMD group walking one sort of ray instead of
-// three (−0.6 ms of 4 at high on the M4). Each pixel's own draw is still exactly ∝ its own weights (unbiased per pixel); what changes is that the one-sample noise
-// is correlated across the tile for that frame (the history decorrelates it over frames). Off = an independent draw per pixel.
-var<private> rngTile: u32;
-fn rndTile() -> f32 { rngTile = rngTile * 747796405u + 2891336453u; var w = ((rngTile >> ((rngTile >> 28u) + 4u)) ^ rngTile) * 277803737u; w = (w >> 22u) ^ w; return f32(w) * (1.0 / 4294967296.0); }
-fn rndPick(coh: bool) -> f32 { if (coh) { return rndTile(); } return rnd(); }
 
 fn fwdSlot(p: u32) -> u32 { return (ru.fwd[p >> 4u][(p >> 2u) & 3u] >> ((p & 3u) * 8u)) & 255u; }
 fn invSlot(s: u32) -> u32 { return (ru.inv[s >> 4u][(s >> 2u) & 3u] >> ((s & 3u) * 8u)) & 255u; }
@@ -175,6 +168,7 @@ fn latticeUV(iu: u32, iv: u32) -> vec2f { return vec2f((f32(iu) + 0.5) / 16.0, (
 
 // MOTION (header): the screen motion, in px of this raster, that the LAST prevTexelAt call measured for its pixel (the reprojected point vs the pixel's own unjittered centre —
 // 0 for a still surface under a still camera whatever TAAU's jitter does); main() reads it straight after its own call, before any spatial tap's call overwrites it
+const MOTION_BITS: u32 = 1792u;   // ru.cfg.w's three MOTION bits: 256 | 512 | 1024
 var<private> mvPx: f32 = 0.0;
 /** a per-pixel-per-frame uniform variate in [0, 1) off a hash of (pixel, frame, k) — NOT the lane's stream: a spatial tap reading pixel q's history must land on the texel q itself drew */
 fn motHash(px: vec2u, k: u32) -> f32 {
@@ -190,7 +184,7 @@ fn prevTexelAt(Pw: vec3f, Px: vec3f, px: vec2u, dims: vec2u, canonical: bool) ->
   let vel = textureLoad(gVel, px, 0).xy;
   let uv = (pclip.xy / pclip.w + vel) * vec2f(0.5, -0.5) + 0.5;
   var qf = uv * vec2f(dims) - ru.jitter.zw;                 // Pw is an unjittered-centre point; in last frame's JITTERED raster it sat at (its unjittered position + that frame's jitter) — undo it
-  if (RESTIR_MOTION && (canonical || (ru.cfg.w & 256u) != 0u)) {   // (a spatial tap's call needs the flow only to re-derive the neighbour's stochastic pick (a); its mvPx is never read — three taps × two mat-vecs a pixel measured +0.2 ms at rest otherwise)
+  if ((canonical && (ru.cfg.w & MOTION_BITS) != 0u) || (ru.cfg.w & 256u) != 0u) {   // (the flow is measured only on a frame that carries a motion bit: a still camera's frame does none of this work and mvPx stays 0, as when this was a program of its own · a spatial tap's call needs the flow only to re-derive the neighbour's stochastic pick (a); its mvPx is never read — three taps × two mat-vecs a pixel measured +0.2 ms otherwise)
     // The MOTION is measured off the raster's OWN point Px (the g-buffer's exact surface point at this jittered pixel), not off Pw: Pw is rebuilt from this pixel's depth at the
     // unjittered centre and pushed back onto the tangent plane, which on a floor seen obliquely leaves it a few tenths of a pixel beside the true unjittered-centre point,
     // by an amount that changes with the jitter phase — harmless for a nearest-texel pick (always under ½ px at rest), but a bilinear pick would hand a STILL pixel its
@@ -204,21 +198,7 @@ fn prevTexelAt(Pw: vec3f, Px: vec3f, px: vec2u, dims: vec2u, canonical: bool) ->
     } else { mvPx = 1e6; }
   }
   if (any(qf < vec2f(0.0)) || any(qf >= vec2f(dims))) { return vec4u(0u); }
-  if (RESTIR_MOTION && (ru.cfg.w & 256u) != 0u && ru.mot.w > 0.5) {
-    // (a′) GLOBAL DITHER: the whole raster rounds qf with ONE sub-pixel offset this frame (an R2 low-discrepancy sequence off the frame index) — where the flow is smooth that is a
-    // bijective shift, so no lineage is duplicated or dropped (the per-pixel draw below lets two neighbours adopt one parent: lineages coalesce into patches that grow ~√M px),
-    // and over frames the shifts ⌊v + u⌋ average to the true flow v: the pattern stays registered on the surface to ± ½ px instead of sliding off it at fract(v) px a frame.
-    // A rejected texel falls back to today's nearest, then to none. At rest (flow under 0.02 px) the pixel keeps its own texel whatever u says.
-    let u2 = fract(vec2f(0.75487767, 0.56984029) * f32(frame.frameIdx & 4095u) + 0.5);
-    let own = vec2f(px) + 0.5;
-    var h1 = vec2i(floor(qf - 0.5 + u2)); if (all(abs(qf - own) < vec2f(0.02))) { h1 = vec2i(px); }
-    let tol = 0.02 + 0.006 * pclip.w;
-    if (all(h1 >= vec2i(0)) && all(h1 < vec2i(dims))) { let t = resIn[resIndex(vec2u(h1), dims)]; if (abs(texelDepth(t) - pclip.w) < tol) { return t; } }
-    let h2 = vec2i(floor(qf));   // (qf is on the raster: checked above)
-    if (any(h2 != h1)) { let t = resIn[resIndex(vec2u(h2), dims)]; if (abs(texelDepth(t) - pclip.w) < tol) { return t; } }
-    return vec4u(0u);
-  }
-  if (RESTIR_MOTION && (ru.cfg.w & 256u) != 0u) {
+  if ((ru.cfg.w & 256u) != 0u) {
     // (a) STOCHASTIC-BILINEAR: one of the four texels round qf, drawn with its bilinear weight, validated by depth like the nearest one; a rejected candidate's probability goes to the rest.
     // Texel centres sit at integer + ½: the four round qf are ⌊qf − ½⌋ + {0,1}²; a fraction inside ±0.02 of a texel centre snaps to it (at rest qf IS the pixel's own centre but for
     // float error, and the pick must then be today's texel with certainty — the still picture stays ReSTIR's still picture).
@@ -242,11 +222,6 @@ fn prevTexelAt(Pw: vec3f, Px: vec3f, px: vec2u, dims: vec2u, canonical: bool) ->
     return vec4u(0u);
   }
   var hp = vec2u(qf);
-  if ((ru.cfg.w & 64u) != 0u) {   // D4 PERMUTATION SAMPLING: the texel swapped within its 2×2-ish block by a per-frame XOR pattern (offset off the frame index) — a neighbour's history, whiter noise over frames; the depth test below still guards edges
-    let h = frame.frameIdx * 2654435761u; let off = vec2i(i32(h >> 30u), i32((h >> 28u) & 3u));
-    let q2 = ((vec2i(hp) + off) ^ vec2i(3)) - off;
-    hp = vec2u(clamp(q2, vec2i(0), vec2i(dims) - 1));
-  }
   let t = resIn[resIndex(hp, dims)];
   if (abs(texelDepth(t) - pclip.w) >= 0.02 + 0.006 * pclip.w) { return vec4u(0u); }
   return t;
@@ -297,37 +272,31 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   }
   // (the barriers of the light-list block below order these writes before any lane reads wgBelief)
 
-  // ---- per-tile light list (FLAG_TILECULL) — as direct.wgsl ----
-  let tileCull = (frame.flags & FLAG_TILECULL) != 0u;
+  // ---- per-tile light list (the tile light list) — as direct.wgsl ----
   var nIter = nL;
-  if (tileCull) {
-    wgP[lidx] = vec4f(P, select(0.0, 1.0, live));
-    workgroupBarrier();
-    if (lidx < 8u) {
-      var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = 0.0;
-      for (var k = 0u; k < 8u; k++) { let q = wgP[lidx * 8u + k]; if (q.w > 0.0) { mn = min(mn, q.xyz); mx = max(mx, q.xyz); anyLive = 1.0; } }
-      wgRowMin[lidx] = vec4f(mn, anyLive); wgRowMax[lidx] = vec4f(mx, anyLive);
-    }
-    workgroupBarrier();
-    if (lidx < nL) {
-      var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = false;
-      for (var r = 0u; r < 8u; r++) { let a = wgRowMin[r]; if (a.w > 0.0) { mn = min(mn, a.xyz); mx = max(mx, wgRowMax[r].xyz); anyLive = true; } }
-      let keep = anyLive && lightReachesBox(wgLights[lidx], mn, mx);
-      wgKeep[lidx] = select(0u, 1u, keep);
-      var gm = 0u;
-      if (keep && (frame.flags & FLAG_GLASS) != 0u) { gm = glassPairMask(wgLights[lidx], mn, mx); }
-      wgGlass[lidx] = gm;
-    }
-    workgroupBarrier();
-    if (lidx == 0u) { var n = 0u; for (var i = 0u; i < nL; i++) { if (wgKeep[i] != 0u) { wgList[n] = i; n++; } } wgCount = n; }
-    workgroupBarrier();
-    nIter = wgCount;
-  } else {
-    if (lidx < nL) { wgGlass[lidx] = lightGlassMask(wgLights[lidx]); }
-    workgroupBarrier();
+  wgP[lidx] = vec4f(P, select(0.0, 1.0, live));
+  workgroupBarrier();
+  if (lidx < 8u) {
+    var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = 0.0;
+    for (var k = 0u; k < 8u; k++) { let q = wgP[lidx * 8u + k]; if (q.w > 0.0) { mn = min(mn, q.xyz); mx = max(mx, q.xyz); anyLive = 1.0; } }
+    wgRowMin[lidx] = vec4f(mn, anyLive); wgRowMax[lidx] = vec4f(mx, anyLive);
   }
+  workgroupBarrier();
+  if (lidx < nL) {
+    var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = false;
+    for (var r = 0u; r < 8u; r++) { let a = wgRowMin[r]; if (a.w > 0.0) { mn = min(mn, a.xyz); mx = max(mx, wgRowMax[r].xyz); anyLive = true; } }
+    let keep = anyLive && lightReachesBox(wgLights[lidx], mn, mx);
+    wgKeep[lidx] = select(0u, 1u, keep);
+    var gm = 0u;
+    if (keep && (frame.flags & FLAG_GLASS) != 0u) { gm = glassPairMask(wgLights[lidx], mn, mx); }
+    wgGlass[lidx] = gm;
+  }
+  workgroupBarrier();
+  if (lidx == 0u) { var n = 0u; for (var i = 0u; i < nL; i++) { if (wgKeep[i] != 0u) { wgList[n] = i; n++; } } wgCount = n; }
+  workgroupBarrier();
+  nIter = wgCount;
 
-  let raysCfg = ru.cfg.x & 255u; let kSpatial = ru.cfg.y & select(0xffffffffu, 255u, RESTIR_MOTION); let mCap = f32(max(ru.cfg.z & 255u, 1u));   // (the MOTION program keeps a tap count for moving pixels in cfg.y bits 8‥11 — lever c; the host packs it only for that program)
+  let raysCfg = ru.cfg.x & 255u; let kSpatial = ru.cfg.y & 255u; let mCap = f32(max(ru.cfg.z & 255u, 1u));   // (the MOTION program keeps a tap count for moving pixels in cfg.y bits 8‥11 — lever c; the host packs it only for that program)
   let heldK = (ru.cfg.x >> 8u) & 15u; let hybrid = heldK > 0u;   // HELD (header): K stratified rays for each of the two carried leaders at the pixel; 0 = the hybrid off — main's transient stratum, statement for statement
   // TRADES (the lighting-cost rows; compiled in only under the prepended `const RESTIR_TRADE = true` — passes.ts builds that twin on FIRST USE, and packs ru.cfg.x bits 12‥23 only while a row is on:
   // all rows off = the estimator's program and uniform exactly as they were). Each gives up a little accuracy for shadow rays:
@@ -345,12 +314,12 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   let penCapU = (ru.cfg.z >> 8u) & 255u; let penRays = ((ru.cfg.z >> 16u) & 1u) != 0u;
   var mCapPix = mCap; var fresh2Pix = raysCfg >= 6u;
   let alt = frame.frameIdx & 1u;   // below 4 rays the classes trade the odd ray frame by frame (NOT on a checkerboard: lanes tracing different kinds of ray side by side measured dearer than the rays saved)
-  let finalRay = raysCfg >= 5u; let cohPick = (ru.cfg.w & 4u) != 0u;   // (the second fresh candidate — rays 6, or D1's penumbra pixels — is fresh2Pix above)
+  let finalRay = raysCfg >= 5u;   // (the second fresh candidate — rays 6, or D1's penumbra pixels — is fresh2Pix above)
   let auditTile = ((frame.frameIdx * 37u + wid.x * 7u + wid.y * 13u) & 63u) < u32(ru.cfg2.w * 64.0 + 0.5);   // this tile audits its dark set this frame: ru.cfg2.w of every 64 frames, SPREAD through them (the odd multiplier permutes the residues: gaps of 2‥7 frames at ¼, not 16 on / 48 off) and staggered across tiles — BELIEFS
   let bel = vec2u(atomicLoad(&wgBelief[0]), atomicLoad(&wgBelief[1]));   // the tile's DARK set by this frame's slots, in registers
 
   var N = vec3f(0.0, 1.0, 0.0); var owner = 0u; var Po = P; var PoT = P; var PoJ = P; var Pu = P; var pxPerMetre = 0.0; var viewW = 1.0;
-  var motionPx = 0.0;                    // MOTION: |screen motion| of this pixel's surface point in px (camera + object), 0 unless the RESTIR_MOTION program measured it
+  var motionPx = 0.0;                    // MOTION: |screen motion| of this pixel's surface point in px (camera + object)
   var darkSlot = 0u;                    // this pixel's own dark memory: 0 = none, else slot + 1 (this frame's numbering) of the light its fresh ray last found dark where the tile believes it lit
   let knownDark = (ru.cfg.w & 16u) == 0u;   // tile-DARK lights leave the fresh draw (known dark exactly as a reach-masked light is: in U, no ray, their true 0 without the one-sample all-or-nothing noise — a lamp
                                          // behind the wall holding 45‥80 % of the unshadowed total made the lino an EMA of coin flips, ±15‥30 % per pixel, crawling); an AUDITING share of the lanes
@@ -375,7 +344,6 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
 
   if (live) {
     rngInit(gxy, frame.frameIdx);
-    rngTile = ((wid.x * 1973u + wid.y * 9277u + frame.frameIdx * 26699u) | 1u) * 0x2c1b3c6du; rngTile ^= rngTile >> 12u;
     N = normalize(textureLoad(gNormal, gxy, 0).xyz * 2.0 - 1.0);
     owner = (textureLoad(gId, gxy, 0).x >> 20u) & 0xffu;
     // The reservoir's DOMAIN is the surface point an UNJITTERED raster would show at this pixel (content at unjittered s lands at s + jitter — engine.ts; same plane, ≤ ½ px from P):
@@ -391,10 +359,10 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     viewW = (frame.viewProj * vec4f(P, 1.0)).w;
     pxPerMetre = frame.screen.y / (2.0 * zView * frame.post.w + 1e-4);
     // ---- temporal: last frame's reservoirs for this surface point, their lights re-mapped by identity ----
-    tw = prevTexelAt(Pu, P, gxy, dims, true);   // (P: the raster's own point — the RESTIR_MOTION program measures the motion off it; unused otherwise)
-    if (RESTIR_MOTION) { motionPx = mvPx; }   // (MOTION: this pixel's own screen motion, px — read before any spatial tap's reprojection reuses mvPx)
+    tw = prevTexelAt(Pu, P, gxy, dims, true);   // (P: the raster's own point — the motion is measured off it)
+    motionPx = mvPx;   // (MOTION: this pixel's own screen motion, px — read before any spatial tap's reprojection reuses mvPx)
     { let pen = rHint(tw.x) > 0.0 || rHint(tw.z) > 0.0; if (pen && penCapU > 0u) { mCapPix = min(mCap, f32(penCapU)); } if (pen && penRays) { fresh2Pix = true; } }   // (D: this pixel sat in a penumbra last frame — see penCapU / penRays above)
-    if (RESTIR_MOTION && (ru.cfg.w & 512u) != 0u) { mCapPix = max(1.0, mCapPix * (1.0 - (1.0 - ru.mot.y) * smoothstep(ru.mot.x, ru.mot.x * MOTION_RAMP, motionPx))); }   // (b) MOTION-SCALED CONFIDENCE: the memory this pixel keeps (and stores) is whole under mot.x px a frame of its own motion and × mot.y past MOTION_RAMP × that — measured, not modelled: at 0.8 px a frame (770 rows) the nearest-texel history is still worth its 20 candidates and any cut costs 10–25 % MORE flow; at 1.4–2 px it is worth about two (docs/internal/direct-motion.md §2)
+    if ((ru.cfg.w & 512u) != 0u) { mCapPix = max(1.0, mCapPix * (1.0 - (1.0 - ru.mot.y) * smoothstep(ru.mot.x, ru.mot.x * MOTION_RAMP, motionPx))); }   // (b) MOTION-SCALED CONFIDENCE: the memory this pixel keeps (and stores) is whole under mot.x px a frame of its own motion and × mot.y past MOTION_RAMP × that — measured, not modelled: at 0.8 px a frame (770 rows) the nearest-texel history is still worth its 20 candidates and any cut costs 10–25 % MORE flow; at 1.4–2 px it is worth about two (docs/internal/direct-motion.md §2)
     darkSlot = ((tw.y >> 28u) & 7u) | (((tw.w >> 28u) & 7u) << 3u);   // (the two B words' spare bits 28‥30; read before a gone light zeroes its word below)
     if (darkSlot != 0u) { let ns = fwdSlot(darkSlot - 1u); darkSlot = select(ns + 1u, 0u, ns >= 63u); }   // by identity; gone (255) or slot 63 (unrepresentable in 6 bits + none) = none
     if (rValid(tw.y)) { curT[0] = fwdSlot(rSlot(tw.x)); if (curT[0] == 255u || stratumLight(wgLights[min(curT[0], 63u)], hybrid)) { curT[0] = 255u; tw.y = 0u; } }   // (a transient — or, under the hybrid, a carried light — is never adopted below; one held from before that rule counts as gone)
@@ -402,8 +370,8 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     // ---- score every listed light unshadowed: U (exact, stored right here), the candidate stream, the temporal samples' targets now ----
     var U0 = vec3f(0.0); var U1 = vec3f(0.0);
     for (var s = 0u; s < nIter; s++) {
-      var i = s; if (tileCull) { i = wgList[s]; }
-      let uP = rndPick(cohPick);                                   // the pick's draw for this light — taken for EVERY listed light, before any per-lane early-out, so the tile-shared stream stays in lockstep
+      let i = wgList[s];
+      let uP = rnd();                                              // the pick's draw for this light — taken for EVERY listed light, before any per-lane early-out, so the stream stays in lockstep
       let li = wgLights[i];
       let ev = evalLightDirect(li, P, N);
       if (!ev.ok) { continue; }
@@ -456,7 +424,6 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   // lane of the SIMD group (a lane with nothing at q idles through it) rather than whatever each lane happened to queue next.
   var rqSlot = array<u32, 8>(255u, 255u, 255u, 255u, 255u, 255u, 255u, 255u); var rqUv = array<u32, 8>();   // + slots 6, 7 = the transient stratum's ray per class (kind 3)
   var validT = array<bool, 2>(false, false);
-  var softC = array<bool, 2>(false, false);   // SDF rig (iii): a ray of the class came back clear of boxes but darkened by the drawn character term (shadowSample .y = SOFT_CLEAR_Y)
   if (live) {
     // the audit ray (knownDark): a lane tests ONE tile-dark light — drawn ∝ unshadowed weight within a class drawn ∝ its dark weight — in the second-fresh queue slot
     // (kind 1; rays 6, which no preset runs, keeps that slot for its second candidate). Its outcome votes and nothing else: it never enters the estimate.
@@ -466,7 +433,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     var auditC = 2u;
     if (!fresh2Pix && auditTile && Wd[0] + Wd[1] > 0.0) { auditC = select(0u, 1u, rnd() * (Wd[0] + Wd[1]) < Wd[1]); }   // the class by its share of the dark weight (both dark sets get audited over frames)
     for (var c = 0u; c < 2u; c++) {
-      let lu = rndPick(cohPick); let lv = rndPick(cohPick);       // the fresh sample's lattice cell (drawn whether or not it is traced: lockstep, as above)
+      let lu = rnd(); let lv = rnd();       // the fresh sample's lattice cell (drawn whether or not it is traced: lockstep, as above)
       if (Wl[c] <= 0.0) { continue; }
       let twB = select(tw.y, tw.w, c == 1u); let twA = select(tw.x, tw.z, c == 1u);
       var valid = rValid(twB) && curT[c] != 255u && pT[c] > 0.0;
@@ -484,9 +451,9 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
           // keeps its history — the sample's VISIBILITY is exactly as valid as it was, and the MIS below already weighs last frame's target against this frame's, so
           // the estimate follows the light within the frame either way. Cutting M there (the first cut did, symmetrically) rebuilt every reservoir under the panel
           // from one fresh sample twice per flicker period: 1–3-spp penumbrae the shadow filter could neither trust nor clamp, i.e. blotches that pumped with the
-          // tube (docs/internal/tjank.md §A). A cone that swept off the pixel or a lamp that moved still lets go as before. ru.cfg.w & 32 = A/B: the raw ratio.
+          // tube (docs/internal/tjank.md §A). A cone that swept off the pixel or a lamp that moved still lets go as before.
           var r = pT[c] / pPT[c];
-          if ((ru.cfg.w & 32u) == 0u) { let kNow = lightPower(wgLights[curT[c]]); let kPrev = lightPower(lp); if (kNow > 0.0 && kPrev > 0.0) { r *= kPrev / kNow; } }
+          { let kNow = lightPower(wgLights[curT[c]]); let kPrev = lightPower(lp); if (kNow > 0.0 && kPrev > 0.0) { r *= kPrev / kNow; } }
           Mt[c] = min(rM(twA), mCapPix) * clamp(min(r, 1.0 / r) * 1.02, 0.0, 1.0);
         }
         else { Mt[c] = min(rM(twA), mCapPix); pPT[c] = pT[c]; }
@@ -538,7 +505,6 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       if (kind == 0u) { VF[c] = vs.x; share = pF[c]; } else if (kind == 1u) { if (fresh2Pix) { VG[c] = vs.x; share = pG[c]; } } else if (kind == 2u) { VT[c] = vs.x; } else if (kind == 3u) { VTr[c] = vs.x; share = Wt[c]; } else { hV[hh] += vs.x; share = hW[hh]; }   // (kind 1 without fresh2 = the audit ray: its vote above is all it is for; kind 3 = the transient stratum's / the held tail's; 4 = a held leader's stratum)
       if (heldAdapt && kind == 4u) { if (hk == 0u) { hFirst[hh] = vs.x; } else if (hk == 1u && abs(vs.x - hFirst[hh]) < 0.02) { hStop[hh] = 1u; hN[hh] = 2.0; } }   // TRADE (held adaptive): two strata, one answer — they stand for the K
       if (vs.y >= 0.0 && !tileDark(bel, slot)) { blurPx[c] = max(blurPx[c], hintPx(vs.y, pxPerMetre, share / W[c])); }   // a blocked ray is a penumbra measurement — unless the whole tile found that light dark last frame (a lamp behind the wall measures nothing here; the audit ray never hints)
-      if (vs.y == SOFT_CLEAR_Y && q < 6u && !tileDark(bel, slot)) { softC[c] = true; }   // (gated like the hint: never off an audit ray, and never off the transient stratum's ray (slots 6, 7) — a muzzle flash past a man must not drop the class's history in his flash-shadow)
     }
   }
   workgroupBarrier();   // (uniform control flow) the parked values come back; nothing else crosses here
@@ -668,7 +634,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       // ---- spatial reuse: neighbours' temporal reservoirs (last frame's), pairwise MIS against the canonical sample (ySlot …) ----
       var sLum = wsum;                                              // Σw = the luminance estimate of the class's visible light
       var fSlot = ySlot; var fUv = yUv; var fV = yV; var fromNb = false;
-      let motSpatial = RESTIR_MOTION && (ru.cfg.w & 1024u) != 0u && motionPx > ru.mot.z;   // (c) MOTION: spatial reuse wherever this pixel's history is being handed about by motion anyway …
+      let motSpatial = (ru.cfg.w & 1024u) != 0u && motionPx > ru.mot.z;   // (c) MOTION: spatial reuse wherever this pixel's history is being handed about by motion anyway …
       var kSp = kSpatial; if (motSpatial) { kSp = max(kSp, (ru.cfg.y >> 8u) & 15u); }      // … with at least the motion tap count (cfg.y bits 8‥11): the fresh candidates a cut-down history leans on are one or two rays a pixel; the neighbours' are the rest
       if (kSp > 0u && RW > 0.0 && (finalRay || Rm < ru.cfg2.z || (ru.cfg.w & 2u) != 0u || motSpatial)) {
         let kf = f32(kSp); let Mck = Rm / kf;
@@ -688,15 +654,16 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
               let Pq = worldFromDepth(vec2f(q) + 0.5 + ru.jitter.xy, dq);   // its domain point (unjittered centre), as ours
               let Nq = normalize(textureLoad(gNormal, vec2u(q), 0).xyz * 2.0 - 1.0);
               if (abs(dot(Pq - P, N)) < max(viewW * 0.004, 0.04) && dot(Nq, N) > 0.9) {
-                var Pxq = Pq; if (RESTIR_MOTION && (ru.cfg.w & 256u) != 0u) { Pxq = worldFromDepth(vec2f(q) + 0.5, dq); }   // (its raster point, for the stochastic pick's exact flow — its own canonical call measured the same; (b) / (c) never read a tap's motion)
+                var Pxq = Pq; if ((ru.cfg.w & 256u) != 0u) { Pxq = worldFromDepth(vec2f(q) + 0.5, dq); }   // (its raster point, for the stochastic pick's exact flow — its own canonical call measured the same; (b) / (c) never read a tap's motion)
                 let tq = prevTexelAt(Pq, Pxq, vec2u(q), dims, false);
                 let qa = select(tq.x, tq.z, c == 1u); let qb = select(tq.y, tq.w, c == 1u);
                 let cs = select(255u, fwdSlot(rSlot(qa)), rValid(qb));
                 let qW = rW(qb); let qPh = rPh(qb);
                 if (cs != 255u && qW > 0.0 && qPh > 0.0) {
                   // p̂_c(x_i): the neighbour's light at OUR point now; p̂_i(y_c): our light at ITS point (its stored p̂ is p̂_i(x_i))
-                  let pcx = targetAt(cs, P, N, true);
-                  let piy = targetAt(ySlot, Pq, Nq, false);
+                  var tq: array<f32, 2>;   // (both through ONE targetAt call, p̂_c(x_i) first: DXC — Chrome's compiler on Windows — inlines each call it meets)
+                  for (var q = 0u; q < 2u; q++) { tq[q] = targetAt(select(ySlot, cs, q == 0u), select(Pq, P, q == 0u), select(Nq, N, q == 0u), q == 0u); }
+                  let pcx = tq[0]; let piy = tq[1];
                   let Mi = min(rM(qa), mCap);
                   mc += (Mck * yP) / (Mi * piy + Mck * yP + 1e-12) / kf;
                   let wi = (Mi * qPh) / (Mi * qPh + Mck * pcx + 1e-12) / kf * pcx * rV(qa) * qW;
@@ -721,15 +688,14 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
           let vs = traceSample(fSlot, Po, N, owner, fUv & 15u, fUv >> 4u); nRays++;
           visK = vs.x / max(fV, 1e-3);
           if (vs.y >= 0.0) { blurPx[c] = max(blurPx[c], hintPx(vs.y, pxPerMetre, yP / W[c])); }
-          if (vs.y == SOFT_CLEAR_Y) { softC[c] = true; }
         }
         if (visK > 0.0) { let gm = wgGlass[fSlot]; if (gm != 0u) { tint = glassVis(wgLights[fSlot], gm, P); } }
       }
       // hue: the believed-visible unshadowed mix at THIS pixel (Uv — exact irradiances, so two overlapping panels grade across the floor as they should and a
       // pixel reads the same colour whichever light its reservoir holds); the samples' own hues (col, luminance Σw too) only where nothing believed visible
-      // lights the pixel — the frame a light first reaches a tile that had it dark — or under the A/B bit
+      // lights the pixel — the frame a light first reaches a tile that had it dark
       var shade = col;
-      if ((ru.cfg.w & 8u) == 0u) { let lv = luminance(Uv[c]); if (lv > 0.0) {
+      { let lv = luminance(Uv[c]); if (lv > 0.0) {
         if ((ru.cfg.w & 128u) != 0u) { shade = Uv[c] * (max(sLum - wOut, 0.0) / lv) + colOut; }   // HUE SPLIT: the believed-visible mix colours only the luminance its own lights carried; the rest keeps its samples' hue
         else { shade = Uv[c] * (sLum / lv); } } }
       S[c] = shade * tint * (visK * min(1.0, Wl[c] / max(sLum * visK, 1e-9)));
@@ -737,7 +703,6 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       var own = blurPx[c];
       if (own <= 0.0 && hasT) { own = rHint(twA); }
       aOut[c] = -clamp(min(own, frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0);
-      if (own <= 0.0 && softC[c]) { aOut[c] = -SOFT_HINT_FLAG; }   // no box penumbra measured or remembered here, and a man's DRAWN shadow on the pixel: the denoiser takes this frame's ratio as it is (SDF rig iii)
     }
     // ---- the pixel's own dark memory, for the NEXT frame: a fresh ray blocked toward a light the tile believes lit (the inside of THIS light's shadow within a lit tile) names it;
     // seeing that light from here again (a lit fresh ray, or the reservoir holding it lit) clears it. One slot for both classes: the last such light wins.
@@ -751,21 +716,29 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     }
     // + the TRANSIENT stratum (header): E × V of the picked transient ÷ its pick probability = Wt × V, in its own hue, through its own panes — exact in expectation, no history either way
     //   (under the hybrid this is the held TAIL: the carried lights past the two leaders, one importance-picked ray a class)
-    for (var c = 0u; c < 2u; c++) {
-      if (pickT[c] == 255u || VTr[c] <= 0.0) { continue; }
-      var tt = vec3f(1.0); let gm = wgGlass[pickT[c]]; if (gm != 0u) { tt = glassVis(wgLights[pickT[c]], gm, P); }
-      S[c] += hueOf(pickT[c]) * tt * (Wt[c] * VTr[c]);
-      if (Wl[c] <= 0.0) { aOut[c] = -clamp(min(blurPx[c], frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0); }   // (a class lit here by the transient alone still hands its ray's penumbra hint on)
-    }
     // + the HELD leaders (header): each shaded EXACTLY — its irradiance here × the mean visibility of its K strata, through its own panes; a class lit by carried light alone hands its rays' hint on
-    for (var h = 0u; h < 2u; h++) {
-      if (hS[h] == 255u) { continue; }
-      let li = wgLights[hS[h]]; let c = select(0u, 1u, lightBroad(li));
-      if (Wl[c] <= 0.0) { aOut[c] = -clamp(min(blurPx[c], frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0); }
-      if (hV[h] <= 0.0) { continue; }
-      var tt = vec3f(1.0); let gm = wgGlass[hS[h]]; if (gm != 0u) { tt = glassVis(li, gm, P); }
-      var hDiv = f32(heldK); if (heldAdapt) { hDiv = hN[h]; }   // (TRADE held adaptive: the mean is over the strata actually traced)
-      S[c] += select(hE1, hE0, h == 0u) * tt * (hV[h] / hDiv);
+    // (turns 0, 1 = the transient stratum's two classes, turns 2, 3 = the two held leaders: ONE glassVis call for the four — DXC inlines each call it meets)
+    for (var q = 0u; q < 4u; q++) {
+      var slot = 0u; var c = q;
+      if (q < 2u) {
+        if (pickT[c] == 255u || VTr[c] <= 0.0) { continue; }
+        slot = pickT[c];
+      } else {
+        let h = q - 2u;
+        if (hS[h] == 255u) { continue; }
+        slot = hS[h]; c = select(0u, 1u, lightBroad(wgLights[slot]));
+        if (Wl[c] <= 0.0) { aOut[c] = -clamp(min(blurPx[c], frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0); }
+        if (hV[h] <= 0.0) { continue; }
+      }
+      var tt = vec3f(1.0); let gm = wgGlass[slot]; if (gm != 0u) { tt = glassVis(wgLights[slot], gm, P); }
+      if (q < 2u) {
+        S[c] += hueOf(slot) * tt * (Wt[c] * VTr[c]);
+        if (Wl[c] <= 0.0) { aOut[c] = -clamp(min(blurPx[c], frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0); }   // (a class lit here by the transient alone still hands its ray's penumbra hint on)
+      } else {
+        let h = q - 2u;
+        var hDiv = f32(heldK); if (heldAdapt) { hDiv = hN[h]; }   // (TRADE held adaptive: the mean is over the strata actually traced)
+        S[c] += select(hE1, hE0, h == 0u) * tt * (hV[h] / hDiv);
+      }
     }
   }
   // ---- store: reservoirs (temporal stage) with the depth signature and the pixel's darkSlot, the two S textures (U went out after scoring) ----
