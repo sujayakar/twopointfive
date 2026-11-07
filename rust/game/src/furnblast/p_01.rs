@@ -189,7 +189,7 @@ pub fn furniture_index(g: &mut crate::game::Game) -> Vec<crate::furnblast::Group
     g.destr.furn.groups.as_ref().unwrap().clone()
 }
 /// the index made ahead of the blast, off the frame the wall goes on (furnblast.ts Furniture.warm)
-pub fn furniture_warm(g: &mut crate::game::Game) { if g.m.destruction_switch.blast_pace.on && g.k.destruction.on { ensure_index(g); } }
+pub fn furniture_warm(g: &mut crate::game::Game) { if g.m.destruction_switch.blast_pace.on { ensure_index(g); } }
 /// counts for the panel and probes (furnblast.ts Furniture.inventory)
 pub fn furniture_inventory(g: &mut crate::game::Game) -> crate::furnblast::FurnitureInventory {
     ensure_index(g);
@@ -214,7 +214,7 @@ pub fn furniture_stands(g: &mut crate::game::Game, m: FurnblastMemberId) -> bool
 fn any_stands(g: &mut Game, members: &[FurnblastMemberId]) -> bool { for &mi in members { if furniture_stands(g, mi) { return true; } } false }
 /// what a blast would take first, asked before it goes off and reading only (furnblast.ts Furniture.firstToGo)
 pub fn furniture_first_to_go(g: &mut crate::game::Game, at: V3, src: crate::furnblast::BlastSource) -> Option<crate::furnblast::BlastFirst> {
-    if !g.k.destruction.on || g.destr.show_chaos.is_some() { return None; }
+    if g.destr.show_chaos.is_some() { return None; }
     let k = g.k.furn.k.get(src).copied().unwrap_or(1.0); if !(k > 0.0) { return None; }
     let apart_m = g.k.furn.apart_m * k; let shatter_m = g.k.furn.shatter_m * k;
     let apart_max_vol = g.k.furn.root.apart_max_vol;
@@ -682,7 +682,7 @@ pub fn furniture_mouth_mine(g: &mut crate::game::Game, i: f64, b: BoxId, a: crat
 /// would mouth() take static `i` from `r`, a hole not blown yet? Reading only (furnblast.ts Furniture.mouthWouldTake)
 pub fn furniture_mouth_would_take(g: &mut crate::game::Game, i: f64, r: [f64; 4], depth: Option<f64>) -> bool {
     let depth = depth.unwrap_or(0.0);
-    if !g.k.destruction.on || g.destr.show_chaos.is_some() { return false; }
+    if g.destr.show_chaos.is_some() { return false; }
     let n = m::min(g.col.boxes.len() as f64, g.destr.walls.authored) as usize;
     let b = match box_at(g, i) { Some(b) => b, None => return false };
     if i >= n as f64 || is_piece(g, b) { return false; }

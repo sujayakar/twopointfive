@@ -82,7 +82,6 @@ pub fn memo_of(g: &mut Game, ch: RigId) -> Option<Memo> {
 }
 /// The pack a man drawn with this part mask wears on his back; None with the switch off, no cast, or none worn.   (packside.ts packOf)
 pub fn pack_of(g: &mut Game, ch: RigId, mask: f64) -> Option<PackExt> {
-    if !g.k.packside.on { return None; }
     if !memo_made(g, ch) { return None; }
     let mm = g.m.packside.memo.get(ch).unwrap();
     let mask = js::to_u32(mask);
@@ -94,7 +93,7 @@ pub fn pack_of(g: &mut Game, ch: RigId, mask: f64) -> Option<PackExt> {
 }
 /// HALF 3: the mask a man is drawn with while he carries a real tool on his back.   (packside.ts packMask)
 pub fn pack_mask(g: &mut Game, ch: RigId, mask: f64, carries: bool) -> f64 {
-    if !g.k.packside.on || !g.k.packside.ram || !carries { return mask; }
+    if !carries { return mask; }
     if !memo_made(g, ch) { return mask; }
     let mm = g.m.packside.memo.get(ch).unwrap();
     let (ram, pack, mk) = (js::to_u32(mm.ram), js::to_u32(mm.pack), js::to_u32(mask));
