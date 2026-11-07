@@ -26,8 +26,8 @@
 //     its page value and the write is refused; nothing written or pinned while on (a branch replaced whole among it) is there while off, and what was
 //     written while off answers again the next time it is off; the line says `"folded":false`; a child started while it is off counts nothing, the
 //     same child with it on does; the fence puts a pin back with the fold off as with none laid, and the mode back after a probe that changed it;
-//     and where it starts on and off. (10) the runner under QA_FOLD_ONLY folds the named probes alone: a red one of them is read against no row and said
-//     so, a red one of the others is read against the list as ever, a name no probe had is an error; and a probe run with the laid fold off writes a
+//     and where it starts on and off. (10) the runner under QA_FOLD_ONLY folds the named probes alone: a red one of them is read against the list like any other (until 2026-11-07:
+//     against no row), a name no probe had is an error; and a probe run with the laid fold off writes a
 //     settled row as with no word.
 // WHAT THIS DOES NOT HOLD: a host that switches the fold check by check itself (the Rust host's table: (9) holds foldFor, (10) the runner's own word);
 // a runner that is a child of a runner under QA_FOLD_ONLY; `switch-list.ts make` and `same` (they write and read the list's own file), gate.sh's two lines, the `plain` line of a run
@@ -187,11 +187,11 @@ const L = switchRows(), settled = Object.keys(settledOf(L));
   const off = await child([run, 'selftest-fold'], { QA_FOLD: '1', QA_FOLD_FOR: '0' }), offLine = jsons<{ probe?: string; folded?: boolean; refused: Refused[] }>(off.out, 'fold').find(x => x.probe === 'selftest-fold'), A = settledYesNo(L, 2)!;
   const lines = jsons<{ probe?: string; folded?: boolean }>(some.out, 'fold'), of = (n: string) => lines.find(x => x.probe === n);
   line(!!of('selftest-fail') && of('selftest-fail')!.folded === undefined && of('selftest-pass')?.folded === false && of('selftest-throw')?.folded === false
-      && /^  the reds of folded probes .* are read against no row: 1 — selftest-fail$/m.test(some.out) && /^    NEW RED +selftest-throw/m.test(some.out) && !/^    NEW RED +selftest-fail/m.test(some.out)
+      && !/the reds of folded probes|not read against the list/.test(some.out) && /^    NEW RED +selftest-throw/m.test(some.out) && /^    NEW RED +selftest-fail/m.test(some.out)
       && /^error: QA_FOLD_ONLY names selftest, and no probe of this run has that name/m.test(none.out) && none.code === 1
       && !!offLine && offLine.folded === false && !offLine.refused.length && new RegExp(`${A.row.replace('.', '\\.')} written off its page value here and in a child \\(exit 0\\); it reads ${String(!A.page)} now`).test(off.out),
-    `(10) the runner under QA_FOLD_ONLY=selftest-fail folds that probe alone: its red is read against no row and said so, selftest-throw's red is a NEW RED as ever; a name no probe had is an error; and with the laid fold off a probe's write of ${A.row} takes, uncounted`,
-    some.code > 1 ? said(some) : `fold lines ${lines.length}: selftest-fail folded ${of('selftest-fail') ? String(of('selftest-fail')!.folded ?? true) : 'no line'}, selftest-pass folded ${String(of('selftest-pass')?.folded ?? '?')} · ${(/^  the reds of folded probes.*$/m.exec(some.out) ?? ['no line of the folded reds'])[0].trim()} · ${(some.out.match(/^    NEW RED +\S+/gm) ?? []).map(x => x.trim()).join(', ') || 'no NEW RED'} · QA_FOLD_ONLY=selftest (a family's name): ${/^error: QA_FOLD_ONLY/m.test(none.out) ? `an error, exit ${none.code}` : 'no error ✗'} · the fold laid and off: ${offLine ? `folded ${String(offLine.folded)}, refused ${offLine.refused.length}` : 'no line'}`); }
+    `(10) the runner under QA_FOLD_ONLY=selftest-fail folds that probe alone, and its red is read against the list like selftest-throw's (a NEW RED each: folded or not, a run of the stand reads the list); a name no probe had is an error; and with the laid fold off a probe's write of ${A.row} takes, uncounted`,
+    some.code > 1 ? said(some) : `fold lines ${lines.length}: selftest-fail folded ${of('selftest-fail') ? String(of('selftest-fail')!.folded ?? true) : 'no line'}, selftest-pass folded ${String(of('selftest-pass')?.folded ?? '?')} · ${/the reds of folded probes|not read against the list/.test(some.out) ? 'A RED READ AGAINST NO ROW ✗' : 'every red read against the list'} · ${(some.out.match(/^    NEW RED +\S+/gm) ?? []).map(x => x.trim()).join(', ') || 'no NEW RED'} · QA_FOLD_ONLY=selftest (a family's name): ${/^error: QA_FOLD_ONLY/m.test(none.out) ? `an error, exit ${none.code}` : 'no error ✗'} · the fold laid and off: ${offLine ? `folded ${String(offLine.folded)}, refused ${offLine.refused.length}` : 'no line'}`); }
 
 console.log(fails ? `=== fold-check: ${fails} FAILED ===` : '=== fold-check: ALL PASS ===');
 process.exit(fails ? 1 : 0);
