@@ -96,7 +96,6 @@ pub fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassF
     let fall = match f.fall { Some(r) => GlassShardsFallOf { t: r.t, pos: r.pos }, None => glass_shards_fall_of(g, f.centre, f.velocity) };
     let own = f.landed != Some(true);
     let hit_or_blast = f.cause == Cause::Hit || f.cause == Cause::Blast;
-    let by_fall = g.k.shards.by_fall;
     let fine_life = g.k.shards.fine_life;
     let fine_size = g.k.shards.fine_size;
     let fine_max = g.k.shards.fine_max;
@@ -124,8 +123,7 @@ pub fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassF
         let nf = glass_shards_budget(g, clamp_i(m::round(a * 60.0), 4.0, 40.0));
         glass_shards_emit(g, f.centre, n, nf, spray(0.8 * sp, 0.8, 1.2, fine_life, 0.4, fine_size, 0.5, 1.2, 40.0, 1.0, spread, Some(f.velocity), tint), xor_u32(f.seed, 0xF17E as f64));
         if !own { /* the rule's */ }
-        else if by_fall { glass_shards_landing(g, to_landing(fall), if plateable { 0.0 } else { 0.5 }, 0.8, a * 0.3, f.who); }
-        else if !js::truthy(plated) { glass_shards_schedule(g, to_sched(fall), FallSound::GlassTinkle, 0.5, 0.8, a * 0.3, f.who, None); }
+        else { glass_shards_landing(g, to_landing(fall), if plateable { 0.0 } else { 0.5 }, 0.8, a * 0.3, f.who); }
     } else {
         let k = (0.5 + 0.5 * e) * (if js::truthy(plated) { 1.0 } else { 2.0 });
         let want = clamp_i(m::round(a * g.k.shards.mid_per_m2 * k), g.k.shards.mid_min, g.k.shards.mid_max);
@@ -142,9 +140,7 @@ pub fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassF
             glass_shards_emit(g, v3::mad(f.centre, n, -0.03), v3::scale(n, -1.0), nb, spray((1.0 + 0.8 * e) * sp, 0.8, 1.0, fine_life * 0.8, 0.4, fine_size * 0.9, 0.6, 1.3, 45.0, 1.0, spread * 0.6, None, tint), xor_u32(f.seed, 0xBACC as f64));
         }
         if !own { /* the rule's */ }
-        else if by_fall { glass_shards_landing(g, to_landing(fall), if plateable { 0.0 } else { m::min(0.9, 0.3 + a * 8.0) }, 0.9 + 0.5 * crate::debris::hash01(f.seed), a, f.who); }
-        else if !js::truthy(plated) { glass_shards_schedule(g, to_sched(fall), FallSound::GlassTinkle, m::min(0.9, 0.3 + a * 8.0), 0.9 + 0.5 * crate::debris::hash01(f.seed), a, f.who, None); }
-        else { glass_shards_schedule(g, GlassShardsScheduleFall { t: fall.t + 0.05, pos: fall.pos }, FallSound::GlassTinkle, 0.0, 1.0, a * 0.35, f.who, Some(false)); }
+        else { glass_shards_landing(g, to_landing(fall), if plateable { 0.0 } else { m::min(0.9, 0.3 + a * 8.0) }, 0.9 + 0.5 * crate::debris::hash01(f.seed), a, f.who); }
     }
     true
 }
@@ -343,12 +339,11 @@ pub fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, 
         let k = g.k.shards.contact;
         Some(crate::debris::ChunkContact { keep_floor: k.keep_floor, keep_wall: k.keep_wall, rest: k.rest })
     };
-    let by_fall = g.k.shards.by_fall;
     {
         let row = &mut g.tab.debris_chunk[ch];
         row.glass = Some(meta.clone());
         row.contact = contact;
-        if by_fall { row.dress = Some(true); }
+        row.dress = Some(true);
     }
     let bx = g.tab.debris_chunk[ch].box_;
     seam_box(g, bx).rough = Some(0.05);
@@ -418,10 +413,6 @@ pub fn glass_shards_landed(g: &mut crate::game::Game, c_2: DebrisChunkId, speed:
     let at = seam_box(g, bx).c;
     if breaks { glass_shards_sound(g, "glassShatter", at, m::min(1.0, 0.4 + 0.5 * big + speed * 0.05), 1.25 - 0.4 * big + 0.15 * crate::debris::hash01(serial * 31.0)); }
     else { glass_shards_sound(g, "glassTinkle", at, m::min(1.0, 0.3 + 0.3 * big + speed * 0.08), (if laminated { 0.55 } else { 1.1 - 0.35 * big }) + 0.2 * crate::debris::hash01(serial * 31.0)); }
-    if !g.k.shards.by_fall {
-        let level = if breaks { g.k.shards.level + 0.05 } else { g.k.shards.level };
-        glass_shards_heard(g, at, level, who);
-    }
     true
 }
 
@@ -444,7 +435,6 @@ pub fn glass_shards_rested(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     }
     if meta.littered != Some(true) {
         g.tab.debris_chunk[c_2].glass.as_mut().unwrap().littered = Some(true);
-        if !g.k.shards.by_fall { glass_shards_deposit(g, at, meta.area * 0.5); }
         if shards_live(g) { glass_shards_shed(g, c_2); }
     }
 }
@@ -591,7 +581,6 @@ pub fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed
     let want = clamp_i(m::round(a * g.k.shards.fine_per_m2), 8.0, g.k.shards.fine_max);
     let nf = glass_shards_budget(g, want);
     glass_shards_emit(g, v3::add(bc, [0.0, 0.02, 0.0]), [0.0, 1.0, 0.0], nf, spray(0.9 + 0.35 * speed, 0.85, 1.35, fine_life, 0.4, fine_size, 0.6, 1.4, 45.0, 1.0, bh[long] * 0.7, None, meta.tint), xor_u32(meta.seed, 0x5A78 as f64));
-    if meta.littered != Some(true) && !g.k.shards.by_fall { glass_shards_deposit(g, bc, a); }
     glass_shards_note(g, &alloc::format!("plate {} (gen {}, {} cm²) broke at {} m/s into {} (+{} particles)", js::num_str(serial), js::num_str(meta.gen_), js::to_fixed(meta.area * 1e4, 0), js::to_fixed(speed, 1), js::num_str(k), js::num_str(nm + nf)));
 }
 
@@ -611,7 +600,7 @@ pub fn glass_shards_crossed(g: &mut crate::game::Game, x: crate::shards::PaneCro
     let n = glass_shards_budget(g, want);
     let (fine_life, fine_size) = (g.k.shards.fine_life, g.k.shards.fine_size);
     let sound = crate::sim_fallshome::FallSound::GlassTinkle;
-    if g.k.shards.by_fall {
+    {
         if want <= 0.0 { return true; }
         let d = v3::normalize(x.dir_out);
         let sp = (g.k.shards.exit_speed + 5.0 * v3::clamp(x.e_out, 0.0, 1.0)) * g.k.shards.speed;
@@ -729,18 +718,6 @@ pub fn glass_shards_sound(g: &mut crate::game::Game, name: &str, pos: V3, gain: 
     g.stats.shards.sounds += 1;
     crate::audio_iface::game_audio_like_play(g, name, Some(v3::copy(pos)), Some(gain + owed), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
-
-/// A landing the floor can hear: one 'prop' event a gap, floor-wide.   (shards.ts GlassShards.heard)
-pub fn glass_shards_heard(g: &mut crate::game::Game, p: V3, level: f64, who: f64) {
-    let (time, gap) = (g.time, g.k.shards.event_gap);
-    if !crate::sim_fallshome::fall_store_heard(g, time, gap, None) { return; }
-    g.stats.shards.events += 1;
-    let serial = g.serial();
-    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: [p[0], 0.0, p[2]], time, loud: false, level: Some(level), who: Some(who), serial, ..crate::game::GameEvent::zeroed() });
-}
-
-/// Glass laid in a ½ m cell.   (shards.ts GlassShards.deposit)
-pub fn glass_shards_deposit(g: &mut crate::game::Game, p: V3, amount: f64) { crate::sim_fallshome::fall_store_deposit(g, p[0], p[2], amount); }
 
 /// 0‥1: how much glass lies under `pos`.   (shards.ts GlassShards.underfoot)
 pub fn glass_shards_underfoot(g: &mut crate::game::Game, pos: V3) -> f64 {

@@ -619,14 +619,12 @@ pub fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, s
     g.stats.destruction.destr_bursts += 1;
     if !on_gpu { return; }
     let (mut surf, mut albedo) = (surf, albedo);
-    if g.k.hitstuff.on {
-        if let Some(h) = hit {
-            let see = crate::particle_fx::hit_look(g, crate::particle_fx::HitLookHit { index: h.index, prop: h.prop, box_: h.box_ });
-            if see.solid { return; }
-            if see.said {
-                surf = if see.surf == crate::scene_materials::Surf::Carpet { crate::scene_materials::Surf::Fabric } else { see.surf };
-                albedo = see.albedo;
-            }
+    if let Some(h) = hit {
+        let see = crate::particle_fx::hit_look(g, crate::particle_fx::HitLookHit { index: h.index, prop: h.prop, box_: h.box_ });
+        if see.solid { return; }
+        if see.said {
+            surf = if see.surf == crate::scene_materials::Surf::Carpet { crate::scene_materials::Surf::Fabric } else { see.surf };
+            albedo = see.albedo;
         }
     }
     let s = m::min(3.0, 0.5 + 0.5 * (e - g.k.chaos.t_burst)) * k;
