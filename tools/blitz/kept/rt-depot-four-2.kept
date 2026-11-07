@@ -1,0 +1,27 @@
+cmd FUZZ_CAP=2400 tools/blitz/fuzz-squad.sh depot-four 2 --hard --rate 2 --alarm 130 --god all --skip kill,fire
+tree 0719cd509
+ticks 10670
+die 1106
+lines 600 3r36jhu1g8w5s
+lines 1200 3aiyrqawiicg8
+lines 1800 2yqg781gob942
+lines 2400 1h1ug5xyxkwr2
+lines 3000 2tiekognq9w2k
+lines 3600 f3l4six3iyh3
+lines 4200 3ncg07y38ah9q
+lines 4800 3qfkmv0n77c0g
+lines 5400 uwyok4vp9g0m
+lines 6000 2y3nx82zvziiv
+lines 6600 3ofgzlnn4oooa
+lines 7200 1djvjxqiq8455
+lines 7800 162bxwlc7fkf9
+lines 8400 wqosvgjp0g3n
+lines 9000 1jjq9xl94a569
+lines 9600 z7s7y97iqvoj
+lines 10200 19gjknjsrsgbi
+lines 10670 2600o49ykbb1r
+state 1800 7497130 2amgormicmoek
+state 3600 7783325 3j3288gf899me
+state 5400 7952950 15w00gy44to5w
+state 7200 8050920 34g5iwmpes8vj
+state 9000 8039580 q9q6t8sa0u0o

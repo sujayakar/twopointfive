@@ -146,10 +146,47 @@ A run that is EQUAL by all three measures is worth keeping: its Rust side IS wha
 tools/blitz/fuzz-replay.sh <kept folder> [<kept folder> …] [--work DIR]
 ```
 
-plays each kept command again on the Rust game alone and says THE SAME PLAY, or the first tick whose line differs (the die, the host's half or the
-orders given, which parts of the block), the acts before it, and the first whole state whose hash differs. A kept run is of one tree: a change that
-moves the play on purpose (a rule changed, the scripted player changed, a perturbation added) makes every kept run differ at its first touched tick,
-and the run is kept again. The hashes are of the Rust game's own export (`face_export`): a change to the schema moves every one.
+plays each kept command again on the Rust game alone (`--side rust`: one process, about a minute a thousand ticks on a loaded box) and says THE SAME
+PLAY, or the first tick whose line differs (the die, the host's half or the orders given, which parts of the block), the acts before it, and the first
+whole state whose hash differs.
+
+**In the repository: `tools/blitz/kept/<name>.kept`, a kept run packed into a few lines** (`bun run tools/blitz/fuzz-replay.ts --pack <folder>`): the
+command, the tree it was shown on, the ticks played, the die's count as the last tick returned, one word for every 600 ticks' lines (ten seconds of
+play) and the whole states' hashes. `fuzz-replay.sh tools/blitz/kept/<name>.kept` plays it again and names the TEN SECONDS a new play first differs in;
+the folder itself (a line a tick; kept outside the repository, 3 MB a run) names the tick.
+
+Each run below was EQUAL to the TypeScript tick by all three measures (the die, 12 parts of the block and the host's half on every tick; 0 paths not
+known in the whole states every half minute), both sides played from one tree, Hard, the fold laid:
+
+| packed run | the command (from the repository's root) | ticks | the die at the end | whole states | how it ended, both sides | what it drives |
+|---|---|---|---|---|---|---|
+| `depot-four-2-r2` | `tools/blitz/fuzz-squad.sh depot-four 2 --hard --rate 2` | 8,006 | 225 | 4 | taken 133.4 s, 2 of 4 up | a save by hand at f508 and its load at f5054 (the clock back to 8.5 s), 30 orders of the menu's rows on doors, floor and men, a smoke can, the mains cut, the player's rounds, two kills |
+| `rt-depot-four-1` | `… depot-four 1 --hard --rate 2 --alarm 130 --god all --skip kill,fire` | 5,870 | 667 | 3 | taken 97.8 s, 4 of 4 up | the response team called at tick 130 and deployed by 1330: TWO CASTS of the door tools on one floor for 75 s, the squad and the player unhittable; 19 orders, 4 throws, 3 saves |
+| `rt-depot-four-2` | `… depot-four 2 --hard --rate 2 --alarm 130 --god all --skip kill,fire` | 10,670 | 1,106 | 5 | taken 177.8 s, 4 of 4 up | the same, the longest: both casts for two and a half minutes |
+| `rt-records-pair-1` | `… records-pair 1 --hard --rate 2 --alarm 130 --god all --skip kill,fire` | 3,752 | 812 | 2 | taken 62.5 s, 2 of 2 up | the response team on the records office, a pair |
+| `rt-records-pair-2` | `… records-pair 2 --hard --rate 2 --alarm 130 --god all --skip kill,fire` | 4,005 | 532 | 2 | taken 66.7 s | the same, another stream |
+| `rt-records-pair-3` | `… records-pair 3 --hard --rate 2 --alarm 130 --god all --skip kill,fire` | 3,356 | 396 | 1 | taken 55.9 s | the same |
+
+(`FUZZ_CAP=2400` stands in front of each in the packed file: the longest a side may run.)
+
+**What a kept run is and is not.**
+- It is of ONE TREE. A change that moves the play on purpose (a rule, the scripted player of tools/qa/playthrough.ts, a perturbation of perturb.ts, a
+  level's file, the harness's camera) makes it differ at the first tick it touches; then the run is packed again and the change says so. A change that
+  should move NO play (a refactor of the Rust game, the cleanup's column store, a new build) must leave every packed run THE SAME PLAY.
+- The line a tick holds the die, the host's half (without the lens's serial), the orders given and each part of rust/sim's block but `poses`. The
+  whole states' hashes are of the Rust game's own export (`face_export`) every 1,800 ticks: what the block cannot see (the chronicle, a talk's
+  record, an order's words, a gun's rows). A change to the schema or the export's order moves every hash and no line: pack again, having seen the
+  lines equal.
+- SHOWN: the Rust game's four whole-state hashes of `depot-four-2-r2` were the same in three separate plays, and each packed file here is THE SAME
+  PLAY as its own folder. NOT YET SHOWN: a whole `fuzz-replay.sh` play of each packed run from a clean tree (the box was not free to run it).
+- A run packed AFTER the TypeScript tick is gone was held to nothing: it pins the Rust game to itself, which is worth having and is another thing.
+- The scripts stand the Rust game by the harness's word (`TPS_GAME=rust`, `QA_FOLD=1` in fuzz.sh and fuzz-squad.sh). When the word goes with the
+  TypeScript tick, `--side rust` is what stays and the two variables go.
+
+**Still to be played on both sides and kept, in order of worth** (none is a kept run until it has been EQUAL by all three):
+`fuzz-squad.sh <hostage-rescue | rescue-registry | depot-four | warehouse-four> <1 to 6> --hard --rate 2` (even seeds with `--god player`: the squad
+dies, the player does not), `compound-four 1 --hard --rate 2` (14,872 ticks: `FUZZ_CAP=2400`), the same four missions on seed 1 with `--rate 5`,
+`rt-…` seeds 3 to 6, and the soak `fuzz.sh <1 to 20> --minutes 3` (a seed that parts in the panes alone after a load is kept too: exit 4).
 
 ### What the two fuzzes have found (to cut 7.16)
 
