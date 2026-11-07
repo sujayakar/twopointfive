@@ -5,7 +5,7 @@
 // `#missions .mrow[data-mission]` gets one `.vpips` child, made again when what is kept or the difficulty changes — from a MutationObserver on `#missions`,
 // so a list drawn again (a group opened, the page reopened) is dressed again by itself. Training rows are lessons, not runs to be won: they get none.
 // Off with the verdict's own switch (`VERDICT.on`, ?noverdict): no row is touched. Styled in index.html (`#missions .mrow > .vpips`).
-import { VERDICT, type KeptNote } from '../game/verdict';
+import type { KeptNote } from '../game/verdict';
 import { difficultyNow } from '../game/difficulty';
 import { ALL_MISSIONS } from '../scene/scenarioList';
 import { recordOf, verdictKey, keptWays } from './verdictStore';
@@ -23,7 +23,7 @@ export function dressMissionRows(root: ParentNode | null = typeof document !== '
   let n = 0;
   for (const row of Array.from(root.querySelectorAll('.mrow[data-mission]')) as HTMLElement[]) {
     const id = row.getAttribute('data-mission') ?? '', had = Array.from(row.children).find(c => (c as HTMLElement).className?.split?.(' ').includes('vpips')) as HTMLElement | undefined;
-    if (!VERDICT.on || !rowEarns(id)) { if (had) row.removeChild(had); continue; }
+    if (!rowEarns(id)) { if (had) row.removeChild(had); continue; }
     const w = ways(id), sig = (['doors', 'walls', 'dark', 'quiet'] as const).map(a => w[a] ? `${a}${w[a]!.first ? '1' : ''}${w[a]!.clean ? 'c' : ''}` : '').join(',');
     n++;
     if (had && had.getAttribute('data-ways') === sig) continue;

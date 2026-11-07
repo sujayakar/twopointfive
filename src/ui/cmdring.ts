@@ -12,7 +12,6 @@ import type { Vec3 } from '../math/vec';
 import { CMDRING, ringPin, type RingHint, type RingState, type RingView } from '../game/cmdring';
 import { handRingView } from '../game/interact';
 import { hoverKept } from './hoverkept';
-import { HANDRING } from '../game/handring';
 import { RING_BOX, RING_HOLE, RING_RIM, lonePill, loneWedge, wedgeMid, wedgeWords, type LonePill, type RingPlace } from '../game/ringlone';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -71,7 +70,7 @@ class RingDraw {
   }
   draw(V: RingView | null, tz: number) {
     if (!V) { if (this.was) { this.was = ''; if (this.g) this.g.style.display = 'none'; } return; }
-    const sc = V.zoom / tz, key = `${V.x.toFixed(0)},${V.y.toFixed(0)},${sc.toFixed(2)}|${V.lit}|${V.tone ?? ''}|${V.caption}|${HANDRING.lone}${HANDRING.loneWrap}|${V.wedges.map(w => `${w.key}${w.off ? '-' : ''}${w.opens ? '>' : ''}${w.text}`).join('|')}`;
+    const sc = V.zoom / tz, key = `${V.x.toFixed(0)},${V.y.toFixed(0)},${sc.toFixed(2)}|${V.lit}|${V.tone ?? ''}|${V.caption}|${V.wedges.map(w => `${w.key}${w.off ? '-' : ''}${w.opens ? '>' : ''}${w.text}`).join('|')}`;
     if (key === this.was) return; this.was = key;
     if (!this.g || this.els.length !== CMDRING.wedges) { this.g?.remove(); this.els = []; this.build(CMDRING.wedges); }
     const g = this.g!; g.style.display = ''; g.setAttribute('transform', `translate(${(V.x / tz).toFixed(1)},${(V.y / tz).toFixed(1)}) scale(${sc.toFixed(3)})`);
@@ -82,7 +81,7 @@ class RingDraw {
       e.g.style.display = w ? '' : 'none'; if (!w) return;
       e.g.setAttribute('class', `${V.lit === w.key ? 'lit' : ''}${w.off ? ' off' : ''}${one ? ' lone' : ''}`.trim());
       const words = wedgeWords(w);
-      if (one) { const as = `pill|${HANDRING.loneWrap ? 2 : 1}|${words}`; if (e.as !== as) this.place(e, lonePill(w, this.els.length), as, words); }   // (the pill is worked out only when its words change)
+      if (one) { const as = `pill|${words}`; if (e.as !== as) this.place(e, lonePill(w, this.els.length), as, words); }   // (the pill is worked out only when its words change)
       else { e.text.textContent = words; this.place(e, e.home, 'wheel'); } });
   }
 }
@@ -97,7 +96,7 @@ export class CmdRingViz {
   /** the hint of what the ring would open on (orders.ts hintView): the thing's outline on the floor and a glyph beside the cursor — in the ring's middle
    *  once a ring is up */
   private updateHint(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
-    const bc = document.body.classList, H = (CMDRING.on || CMDRING.hint) && !(bc.contains('blinded') || bc.contains('attract')) ? game.orders.hintView(hoverKept) : null;   // (hidden by the page under those: nothing asked)
+    const bc = document.body.classList, H = !(bc.contains('blinded') || bc.contains('attract')) ? game.orders.hintView(hoverKept) : null;   // (hidden by the page under those: nothing asked)
     if (!H) { if (this.hintWas) { this.hintWas = ''; if (this.hint) this.hint.style.display = 'none'; } return; }
     const pt = (p: Vec3): string | null => { const [x, y, front] = cam.project(p, w, h, Infinity, NEAR_W); return front ? `${x.toFixed(1)},${y.toFixed(1)}` : null; };
     let d = '';
@@ -106,7 +105,7 @@ export class CmdRingViz {
       if (out.length) d += `M${out.join('L')}Z`; }
     // (the glyph: in the ring's middle once it is up; before, up and right of the cursor — clear of the reticle's own words — and the other way where the view ends)
     const mid = H.held && !H.press;   // (the ring up: the glyph is its middle · the key down and no ring yet: it stays beside the cursor)
-    const P = mid ? this.pinned(CMDRING.pin ? game.orders.cmdRing : null, cam, w, h, tz) : null, s = H.zoom / tz, off = HINT_OFF * s, cx = (P ? P[0] : H.x) / tz, cy = (P ? P[1] : H.y) / tz;
+    const P = mid ? this.pinned(game.orders.cmdRing, cam, w, h, tz) : null, s = H.zoom / tz, off = HINT_OFF * s, cx = (P ? P[0] : H.x) / tz, cy = (P ? P[1] : H.y) / tz;
     const gx = mid ? cx : cx + (cx + 2 * off > w ? -off : off), gy = mid ? cy : cy + (cy - 2 * off < 0 ? off : -off);
     const key = `${H.kind}|${H.tone ?? ''}|${H.held}|${gx.toFixed(0)},${gy.toFixed(0)},${s.toFixed(2)}|${d}`;
     if (key === this.hintWas) return; this.hintWas = key;
@@ -126,7 +125,7 @@ export class CmdRingViz {
   /** `w`, `h`: the layer's own size · `tz`: the factor it is zoomed by (ui/textsize.ts) */
   update(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
     this.updateHint(game, cam, w, h, tz);
-    const V0 = CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null, P = V0 && CMDRING.pin ? this.pinned(game.orders.cmdRing, cam, w, h, tz) : null, V = V0 && P ? { ...V0, x: P[0], y: P[1] } : V0;
+    const V0 = game.orders.ringView(), P = V0 ? this.pinned(game.orders.cmdRing, cam, w, h, tz) : null, V = V0 && P ? { ...V0, x: P[0], y: P[1] } : V0;
     const H0 = game.player.sel.ring ? handRingView(game) : null, HP = H0 ? this.pinned(game.player.sel.ring, cam, w, h, tz) : null, H = H0 && HP ? { ...H0, x: HP[0], y: HP[1] } : H0;   // (his own ring on its thing: handring.ts onThing)
     this.orders.draw(V, tz); this.hands.draw(H, tz); this.clear(V, H, tz);
     const D = this.discs; D.length = 0; for (const R of [V, H]) if (R) D.push(R.x / tz, R.y / tz, R1 * R.zoom / tz);
