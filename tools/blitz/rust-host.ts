@@ -259,7 +259,7 @@ export class RustHost {
     // to the TypeScript modules' tables)
     reap(); const B = BR, F = loadFace(o.wasm, process.env.RH_FRESH_FACE === '1'), H = new RustHost(g, F, B, o); if ((F.X.face_layout?.() >>> 0) !== B.SCHEMA.layout) throw new Error(`rust-host: this module is of another generation than this checkout's bridge (its layout ${F.X.face_layout?.() >>> 0}, the bridge's ${B.SCHEMA.layout}): bun run tools/blitz/face-build.ts builds this checkout's`);
     if (o.reserveMb !== 0) { const n = (o.reserveMb ?? 48) * 1048576, p = F.X.face_alloc(n); F.X.face_free(p, n); }
-    if (o.dressDown !== false && !OFF.has('dress')) dressDown(B);
+    if (o.dressDown !== false && !OFF.has('dress')) dressDown(B); else (globalThis as any).__tpsDressBack?.();   // (a game asked for with the rows up finds them up, whatever the game before it left)
     if (o.die !== null && !g.dice) g.dice = B.newDice(o.die ?? 20942);
     // (hung as fields no walk of the game's own keys meets: rollback.ts `stateHash` walks them, and a stand's word must not change for being a puppet)
     hang(g, 'stepSeats', function (dt: number, cmds: readonly any[]) { H.step(dt, cmds); });
@@ -850,7 +850,7 @@ function dressDown(B: any): void { DRESS_WAS ??= { ...B.DRESS }; B.dressAll(fals
 // ---- THE HARNESS'S WORD (tools/qa/headless.ts `standUp`): TPS_GAME=rust the game the harness stands is a puppet of the Rust game; TPS_GAME=audit the
 // same with the audit; TPS_GAME=ts the SAME STAND (the game's own die, the dress rows down) stepped by the TypeScript tick, for a tally to hold the Rust
 // game's beside. Unset: nothing here is loaded. (Not TPS_RUST: src/sim/sim.ts refuses that word as a retired one.)
-export async function standRust(g: any, word: string): Promise<RustHost | null> {
+export async function standRust(g: any, word: string, o: { /** the dressing rows up for this game (a check about one of them) */ dress?: boolean } = {}): Promise<RustHost | null> {
   if (!(globalThis as any).__tpsTop) throw new Error(`TPS_GAME=${word} needs the bridge's preload in this process and its children: BUN_OPTIONS=--preload=./tools/blitz/expose.ts (tools/blitz/rust.sh sets both)`);
   // (THE DIE: the game's own, seeded off the tool's `Math.random` as it stands when the game is stood, so a tool that seeds a run by its seed number
   // (playthrough.ts:1646) rolls another die a seed, and the same die under `ts` and `rust`)
@@ -858,7 +858,7 @@ export async function standRust(g: any, word: string): Promise<RustHost | null> 
   hang(g, 'gameWord', word);   // (the word this game was stood under: tools/qa/headless.ts `seedGame` reads it)
   if (process.env.RH_DIE_SAY) appendFileSync(process.env.RH_DIE_SAY, `${process.argv.slice(2).join(' ')} die ${die}\n`);   // (to play the same game again by hand: mission.ts --die, play.ts --die)
   await sayReady();
-  if (word === 'ts') { const B = await bridge(); dressDown(B); if (die !== null) g.dice = B.newDice(die);
+  if (word === 'ts') { const B = await bridge(); if (o.dress) (globalThis as any).__tpsDressBack?.(); else dressDown(B); if (die !== null) g.dice = B.newDice(die);
     // THE SAME STAND: under the Rust word every save is one in memory (the Rust game's own clone, as on the page); so under `ts` every save is the
     // TypeScript's snapshot in memory (rollback.ts, what a squad's save already is) and none a file. A file's load stages the encounter again and pours
     // the file in: not the saved moment to the bit, and no game could be held to it tick for tick.
@@ -868,7 +868,7 @@ export async function standRust(g: any, word: string): Promise<RustHost | null> 
     if (process.env.RH_TRACE) { const rec = traceRec(word), was = g.stepSeats; g.stepSeats = function (this: any, ...a: any[]) { rec.k++; if (SITES) site(rec); if (CAP_AT && (rec.k & 31) === 0 && Date.now() > CAP_AT) process.exit(143); return was.apply(this, a); }; }
     return null; }
   if (word !== 'rust' && word !== 'audit') throw new Error(`TPS_GAME=${word}: rust (the Rust game steps), audit, or ts (the same stand, the TypeScript tick)`);
-  await RustHost.ready(); const H = RustHost.attach(g, { audit: word === 'audit', quiet: true, die, wholeEvery: +(process.env.TPS_GAME_WHOLE ?? 0) });
+  await RustHost.ready(); const H = RustHost.attach(g, { audit: word === 'audit', quiet: true, die, dressDown: !o.dress, wholeEvery: +(process.env.TPS_GAME_WHOLE ?? 0) });
   if (process.env.RH_TRACE) trace(H, word);
   if (process.env.RH_TIMES) timed(H);
   if (process.env.RH_STALE) staleAtEnd(H);

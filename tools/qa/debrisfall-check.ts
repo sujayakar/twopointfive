@@ -58,7 +58,7 @@ interface Rec { smokes: string[]; tiles: number; apart: number[]; late: number[]
 /** the scene stood up, and frame `f` of it as a function a check can call again */
 async function stage(seed: number, o: Opts) {
   Math.random = seeded(seed);
-  const W: any = await standUp({ uploadEvery: 1, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'warehouse.json'), 'utf8')), {}) }), game = W.game, engine = W.engine;
+  const W: any = await standUp({ uploadEvery: 1, dress: true, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'warehouse.json'), 'utf8')), {}) }), game = W.game, engine = W.engine;
   DESTRUCTION.on = true; FURNBLAST.on = true; S.RUST.falls = !!o.row; DEBRIS.dress = o.dress; DRESS.debris = !o.noPool;   // (a stand-up puts every switch where its stand has it: set after)
   engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true; if (o.cap) engine.settings.debrisCap = o.cap;
   game.godMode = true; game.tune.chaos = 0.5;
