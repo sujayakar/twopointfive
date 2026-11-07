@@ -14,7 +14,7 @@ pub fn smoke_grid_new(g: &crate::game::Game, sim: crate::Opaque) -> crate::sense
 
 /// Is there smoke for a step to move: an emitter not yet taken, or a brick standing.   (sense.ts SmokeGrid.smoky)
 pub fn smoke_grid_smoky(g: &mut crate::game::Game) -> bool {
-    !g.cpu_smoke.grid.as_ref().unwrap().pending.is_empty() || sim::state::state_read(g.sim).smoke.live as f64 > 8.0 + grid().rho * 8.0
+    !g.cpu_smoke.grid.as_ref().unwrap().pending.is_empty() || sim::state::state_read(g.sim).smoke.live as usize > sim::bricks::ROW + sim::bricks::O_RHO * 8
 }
 
 /// An emitter is handed over for the next step; a game no step has reached keeps the latest.   (sense.ts SmokeGrid.emit)
@@ -33,13 +33,13 @@ pub fn smoke_grid_emit(g: &mut crate::game::Game, x: f64, y: f64, z: f64, radius
 pub fn smoke_grid_step(g: &mut crate::game::Game, dt: f64, lamps: bool, wind: Option<&mut dyn FnMut(&mut crate::game::Game) -> Option<crate::scene_collision::GridWind>>) {
     let gr = g.cpu_smoke.grid.as_mut().unwrap();
     gr.clock += dt;
-    if gr.clock < GRID_STEP {
+    if gr.clock < sim::bricks::SUB {
         return;
     }
     let mut left = gr.clock;
     let mut n = 0.0;
-    while left >= GRID_STEP && n < 4.0 {
-        left -= GRID_STEP;
+    while left >= sim::bricks::SUB && n < 4.0 {
+        left -= sim::bricks::SUB;
         n += 1.0;
     }
     let s = g.k.sense.smoke;
@@ -68,10 +68,10 @@ pub fn smoke_grid_step(g: &mut crate::game::Game, dt: f64, lamps: bool, wind: Op
     let gr = g.cpu_smoke.grid.as_mut().unwrap();
     gr.stands = stands;
     if stands {
-        gr.clock = if left >= GRID_STEP { 0.0 } else { left };
+        gr.clock = if left >= sim::bricks::SUB { 0.0 } else { left };
         gr.pending.clear();
-    } else if gr.clock > 4.0 * GRID_STEP {
-        gr.clock = 4.0 * GRID_STEP;
+    } else if gr.clock > 4.0 * sim::bricks::SUB {
+        gr.clock = 4.0 * sim::bricks::SUB;
     }
 }
 
@@ -107,14 +107,7 @@ pub fn smoke_grid_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 
 /// The light that comes round on a point: the nearest square metre in clear sight, else 0.   (sense.ts SmokeGrid.glowAt)
 pub fn smoke_grid_glow_at(g: &mut crate::game::Game, p: V3) -> f64 {
-    let gc = grid();
-    let (nx, nz) = {
-        let d = &sim::state::state_read(g.sim).smoke.st;
-        (d[gc.nbx as usize] * gc.side, d[gc.nbz as usize] * gc.side)
-    };
-    if !(nx * nz <= gc.glow_max) {
-        return 0.0;
-    }
+    let (nx, nz) = sim::bricks::plan(g.sim);
     let (ix, iz) = (m::floor(p[0]), m::floor(p[2]));
     let (ax, az) = (p[0] - ix - 0.5, p[2] - iz - 0.5);
     let (sx, sz) = (if ax < 0.0 { -1.0 } else { 1.0 }, if az < 0.0 { -1.0 } else { 1.0 });
@@ -126,8 +119,8 @@ pub fn smoke_grid_glow_at(g: &mut crate::game::Game, p: V3) -> f64 {
         if !(jx >= 0.0 && jz >= 0.0 && jx < nx && jz < nz) {
             continue;
         }
-        if !crate::scene_collision::segment_blocked(g, p, [jx + 0.5, gc.chest, jz + 0.5], None, None, None) {
-            return sim::state::state_read(g.sim).smoke.st[(gc.glow_b + jz * nx + jx) as usize];
+        if !crate::scene_collision::segment_blocked(g, p, [jx + 0.5, sim::glow::CHEST, jz + 0.5], None, None, None) {
+            return sim::state::state_read(g.sim).smoke.st[sim::bricks::O_GLOW_B + (jz * nx + jx) as usize];
         }
     }
     0.0
@@ -344,23 +337,5 @@ mod tests {
         smoke_grid_step(&mut g, 0.05, false, None);
         let gr = g.cpu_smoke.grid.as_ref().unwrap();
         assert_eq!((gr.clock, gr.pending.len(), gr.stands), (0.05, 384, false));
-    }
-
-    #[test]
-    fn the_table_is_rust_sims_layout() {
-        use sim::bricks as b;
-        let c = grid();
-        assert_eq!(c.step, b::SUB);
-        assert_eq!(c.head as usize, b::HEAD);
-        assert_eq!(c.emitters as usize, b::MAX_EMIT);
-        assert_eq!(c.emit as usize, b::EMIT);
-        assert_eq!(c.bricks as usize, b::MAX_BRICKS);
-        assert_eq!(c.cells as usize, b::CELLS);
-        assert_eq!(c.vol, b::CELL * b::CELL * b::CELL);
-        assert_eq!((c.out as usize, c.given as usize, c.lost as usize), (b::H_OUT, b::H_GIVEN, b::H_LOST));
-        assert_eq!(c.side, b::SIDE);
-        assert_eq!(c.glow_max as usize, b::MAX_GLOW);
-        assert_eq!((c.glow_d as usize, c.glow_b as usize, c.glow_x as usize, c.glow_z as usize), (b::O_GLOW_D, b::O_GLOW_B, b::O_GLOW_X, b::O_GLOW_Z));
-        assert_eq!((c.glow_lamps as usize, c.rho as usize), (b::O_GLOW_LAMPS, b::O_RHO));
     }
 }
