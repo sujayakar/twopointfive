@@ -569,7 +569,6 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
                 g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, -0.12, 3.0, dt);
             }
             St::Alert => {
-                use crate::suppression::HeadDown;
                 upper = UpperMode::Aim;
                 note_door_crossings(g, gd);
                 let pc = crate::teams::foe_char(g, gd);
@@ -577,16 +576,16 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
                 let can_shoot = pc.is_some() && !down && !dazzled && !staggered && (g.time - g.gd[gd].last_seen_t < 0.5);
                 if g.gd[gd].react_t > 0.0 || !can_shoot { g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; }
                 if g.gd[gd].react_t > 0.0 || down || g.gd[gd].pinned { g.gd[gd].stall_ref = None; g.gd[gd].chase_t = 0.0; }
-                let sup_now = if g.tune.suppression && !crate::gunhold::standoff_on_feet(g, gd) { crate::suppression::head_down(g, gd, dt) } else { HeadDown::None };
+                // HIS LEGS (control/): a rule of the legs list may take them while his own fight keeps his gun on the danger; the first row is a man getting his head down
+                let legs = crate::control::grant_legs(g, gd, dt);
                 let in_standoff = g.gd[gd].standoff.is_some() && pair.is_some();
-                if !matches!(sup_now, HeadDown::None) {
+                if let Some((rule, want)) = legs {
                     duck = true;
                     g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; g.gd[gd].chase_t = 0.0;
-                    g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, g.k.suppression.head_down_delay);
+                    g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, want.fire_wait);
                     if g.gd[gd].react_t > 0.0 { g.gd[gd].react_t -= dt; }
                     if g.gd[gd].reload_t >= 0.0 { tick_reload_beat(g, gd, dt); }
-                    let src = g.gd[gd].sup.src.filter(|_| g.time - g.gd[gd].sup.src_t < g.k.suppression.src_memory_secs);
-                    let threat = match src {
+                    let threat = match want.threat {
                         Some(s) => s,
                         None => match (crate::belief::gun_point(g, gd), pc) {
                             (Some(gp), _) => gp,
@@ -595,22 +594,24 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
                         },
                     };
                     aim_at = Some([threat[0], 1.1, threat[2]]);
-                    if matches!(sup_now, HeadDown::Down) {
-                        crouch = 1.0;
-                        brake(g, gd, 8.0, dt);
-                        g.ch[c].vel = [0.0, 0.0, 0.0];
-                        g.gd[gd].stall_ref = None;
-                    } else {
-                        crouch = g.k.suppression.displace_crouch;
-                        let cover = g.gd[gd].sup.cover.expect("a man shifting has his cover spot");
-                        go_to(g, gd, cover, None);
-                        let pace = g.tune.guard_investigate * g.k.suppression.displace_pace;
-                        let arrived = follow_path(g, gd, dt, pace);
-                        move_speed = g.gd[gd].speed;
-                        if arrived { crate::suppression::end_displace(g, gd, "there"); }
-                        else if not_getting_anywhere(g, gd, dt, 1.5) { crate::suppression::end_displace(g, gd, "going nowhere"); }
-                        else if g.time - g.gd[gd].sup.displaced_at > g.k.suppression.displace_cap_secs { crate::suppression::end_displace(g, gd, "out of time"); }
-                    }
+                    crouch = want.crouch;
+                    let outcome = match want.to {
+                        None => {
+                            brake(g, gd, 8.0, dt);
+                            g.ch[c].vel = [0.0, 0.0, 0.0];
+                            g.gd[gd].stall_ref = None;
+                            crate::control::LegsOutcome::Down
+                        }
+                        Some(spot) => {
+                            go_to(g, gd, spot, None);
+                            let arrived = follow_path(g, gd, dt, want.pace);
+                            move_speed = g.gd[gd].speed;
+                            if arrived { crate::control::LegsOutcome::Arrived }
+                            else if not_getting_anywhere(g, gd, dt, 1.5) { crate::control::LegsOutcome::GoingNowhere }
+                            else { crate::control::LegsOutcome::Moving }
+                        }
+                    };
+                    (crate::control::LEGS_RULES[rule].ran)(g, gd, outcome);
                 } else if g.gd[gd].react_t > 0.0 {
                     g.gd[gd].react_t -= dt;
                     let gp = if dazzled || g.time - g.gd[gd].last_seen_t > 0.5 { crate::belief::gun_point(g, gd) } else { None };
