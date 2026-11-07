@@ -9,14 +9,11 @@ use crate::v3::V3;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
-    id: squad40::SHELL_THERE,
-    label,
-    can: None,
     only: Some(only),
     valid: Some(valid),
-    issue,
     tick: Some(squad40::turn_tick),
     frame: Some(squad40::squad40_tick),
+    ..Row::new(squad40::SHELL_THERE, label, issue)
 };
 
 fn at_of(t: &OrderTarget) -> V3 { crate::orders::rows::at(t) }
