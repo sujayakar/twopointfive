@@ -1,7 +1,8 @@
 // A GAME IN THE MODULE, AS A PAGE THAT DRAWS IT HAS IT: started, handed a player's input, stepped, and read by what it leaves to be drawn (src/draw). The page
 // holds its number and nothing of it.
 import { FaceError, type Face, type Fetched } from './face';
-import { ALL, Drawn, drawRefused, type DrawFace } from '../draw/drawn';
+import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
+import { Want } from '../draw/sections';
 import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
 import type { SaveRow } from '../ui/runcard';
@@ -37,7 +38,7 @@ export class DrawGame {
   constructor(f: Fetched) {
     this.memory = f.exports.memory as WebAssembly.Memory; this.X = this.guarded(f.exports as unknown as Face);
     const no = drawRefused(this.X as unknown as DrawFace); if (no) throw new FaceError(`${no} (tools/blitz/face-build.ts builds this checkout's)`);
-    this.drawn = new Drawn(this.X as unknown as DrawFace, this.memory, ALL);
+    this.drawn = new Drawn(this.X as unknown as DrawFace, this.memory, Want.all);
     this.hand = this.X.face_alloc(HAND.count * 8) >>> 0; this.keys = this.X.face_alloc(DrawGame.KEYS) >>> 0;
   }
 
