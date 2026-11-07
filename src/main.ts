@@ -113,7 +113,6 @@ import { checkSessionFile } from './game/journal';
 import * as digestMod from './game/digest';
 import { requestQrf, callPerimeter, qrfStandDown } from './game/qrf';
 import { needsSend, needsTrip, NEEDS, NEEDS_STATS, NEEDS_LOG, type NeedKind } from './game/needs';
-import { WOUND, WOUND_STATS, woundedMen } from './game/wounds';
 import { WALLSNAP } from './game/wallsnap';
 import * as keymap from './host/keymap';
 import { GEAR } from './game/gear';
@@ -1390,7 +1389,6 @@ function soloNightHooks(game: Game) {
   (window as any).__civ = { get list() { return game.civilians; }, panic: (i = 0, what: 'panic' | 'phone' = 'panic') => civPanic(game, game.civilians[i], what), set: (on: boolean) => setCivilians(game, on), knobs: CIV, stats: CIV_STATS, log: CIV_LOG, get spots() { return civSpots(game); }, check: () => checkCivSpots(game), summary: () => game.civiliansSummary() };   // automation / console: the civilians (civilians.ts) — __civ.panic(0) frightens the cleaner where she stands, .panic(0, 'phone') sends her to ring it in, .set(false) clears them off the floor, .log the last things that happened, .check() the marks / spots against the nav grid
   (window as any).__wallsnap = WALLSNAP;   // the wall hold's feel pass: every number live (wallsnap.ts)
   (window as any).__gear = GEAR;           // the 2010s issue kit: the switch, live (gear.ts — words and drawn boxes only)
-  (window as any).__wounds = { get on() { return WOUND.on; }, set on(v: boolean) { WOUND.on = !!v; }, knobs: WOUND, get stats() { return WOUND_STATS; }, men: () => woundedMen(game).map(x => ({ who: x.callsign, team: x.team, ...x.wound })) };   // ?wounds (game/wounds.ts): where a round lands decides — dead, or down wounded and out of the fight
   // __doze: dozing in the dark (game/doze.ts) — the switch and numbers, what the rule has of each man, every wake in order
   (window as any).__doze = { DOZE, DOZE_STATS, DOZE_LOG, of: (i = 0) => dozeOf(game.guards[i]), summary: () => dozeSummary(game), asleep: () => game.guards.filter(dozeAsleep).map(x => x.callsign), atScreen: () => game.guards.filter(x => dozeAt(x) === 'screen').map(x => x.callsign) };
   (window as any).__needs = { send: (i = 0, kind: NeedKind = 'coffee') => needsSend(game, game.guards.filter(x => x.team === 'guard' && !x.unit)[i], kind), trip: (i = 0) => needsTrip(game.guards.filter(x => x.team === 'guard' && !x.unit)[i]), knobs: NEEDS, stats: NEEDS_STATS, log: NEEDS_LOG, summary: () => game.needsSummary() };   // automation / console: the needs (needs.ts) — __needs.send(0) = 'send Kowalski for a coffee' with the whole telegraph, .trip(0) his trip record, .log the last things that happened

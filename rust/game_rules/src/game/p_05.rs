@@ -545,7 +545,6 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
         }
     }
     crate::director::director_inject_input(g, input);
-    game_host_before(g, input);
     let into = g.cmd_buf.take();
     let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
     g.cmd_buf = Some(c.clone());
@@ -560,11 +559,6 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
         game_step_seats(g, dt, &cmds);
     }
     game_host_after(g, input, cam, canvas);
-}
-
-/// What the host's input is told before a step: a held press's cursor is followed off the view only while the creep reads the mouse as a stick.   (game.ts hostBefore)
-pub fn game_host_before(g: &mut crate::game::Game, input: InputId) {
-    g.tab.input[input].drag_off = false;
 }
 
 /// What the tick hands back for the camera of the seat this host shows, and that seat's live view put back.   (game.ts hostAfter)
