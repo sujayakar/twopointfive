@@ -77,7 +77,7 @@ pub fn note(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::sh
 }
 
 /// His words are over him this frame, asked of the bubble's clock. (showwhy.ts speaking)
-pub fn speaking(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn speaking(g: &crate::game::Game, gd: GuardId) -> bool {
     match &g.gd[gd].bubble {
         Some(b) => g.time >= b.t && g.time - b.t <= b.dur,
         None => false,
@@ -104,7 +104,7 @@ pub fn sign(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::sh
 }
 
 /// `g.fight.opOf(gd)?.tgt`: the man the room fight has him on.
-fn op_tgt(g: &mut Game, gd: GuardId) -> Option<GuardId> {
+fn op_tgt(g: &Game, gd: GuardId) -> Option<GuardId> {
     let o = crate::roomfight::room_fight_op_of(g, gd)?;
     g.tab.roomfight_op[o].tgt
 }
@@ -142,7 +142,7 @@ pub fn masked(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// A mate stands in this man's line to `to` nearer to him than the player does. (showwhy.ts mateNearer)
-pub fn mate_nearer(g: &mut crate::game::Game, gd: GuardId, to: V3) -> bool {
+pub fn mate_nearer(g: &crate::game::Game, gd: GuardId, to: V3) -> bool {
     let c = g.ch[g.gd[gd].ch].pos;
     let pl = g.ch[g.pl[g.player].ch].pos;
     let dx = to[0] - c[0];
@@ -172,7 +172,7 @@ pub fn mate_nearer(g: &mut crate::game::Game, gd: GuardId, to: V3) -> bool {
 }
 
 /// The side of his line to his man the player stands on: 1 his left, -1 his right. (showwhy.ts lineSide)
-pub fn line_side(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn line_side(g: &crate::game::Game, gd: GuardId) -> f64 {
     let h = op_tgt(g, gd);
     let c = g.ch[g.gd[gd].ch].pos;
     let pl = g.ch[g.pl[g.player].ch].pos;
@@ -191,7 +191,7 @@ pub fn line_side(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// A mate has "you're in my line." up as this rule's right now. (showwhy.ts lineSaidBy)
-pub fn line_said_by(g: &mut crate::game::Game, but: GuardId) -> bool {
+pub fn line_said_by(g: &crate::game::Game, but: GuardId) -> bool {
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
@@ -225,7 +225,7 @@ pub fn waits(g: &mut crate::game::Game, op: DoorOpId) -> bool {
 }
 
 /// This man of the order is on his mark with his hands his own. (showwhy.ts standsFree)
-pub fn stands_free(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
+pub fn stands_free(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || g.time < g.gd[gd].dazzled_until {
         return false;
     }
@@ -244,7 +244,7 @@ pub fn stands_free(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool
 }
 
 /// A mate of the order in reach of his hand ahead of him, nearer the door and in front of his chest. (showwhy.ts manAhead)
-pub fn man_ahead(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
+pub fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     let reach = g.k.showwhy.squeeze_reach;
     let c = g.gd[gd].ch;
     let (pos, yaw) = (g.ch[c].pos, g.ch[c].body_yaw);

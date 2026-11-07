@@ -208,7 +208,7 @@ pub fn put(g: &mut crate::game::Game, m: &mut Vec<f64>, fl: &mut Vec<u32>, o: f6
 
 /// static `i`'s row in world `w` is box b: the row of the statics' table, the planes in the cut table.
 fn static_same(g: &mut Game, w: usize, i: usize, b: BoxId, kind: f64) -> bool {
-    let o = world(w);
+    let o = world_read(w);
     row_same(&o.rec, i * REC_, o.flags[i], &o.cut, 0, seam_box(g, b), kind)
 }
 fn static_put(g: &mut Game, w: usize, i: usize, b: BoxId, kind: f64, cut_row: f64) {
@@ -220,7 +220,7 @@ fn static_put(g: &mut Game, w: usize, i: usize, b: BoxId, kind: f64, cut_row: f6
 }
 /// row `at` of the leaves' table (a list's rows one after another) in world `w`; a leaf's cut record is its own, past the statics'
 fn leaf_same(g: &mut Game, w: usize, at: usize, b: BoxId, kind: f64) -> bool {
-    let o = world(w);
+    let o = world_read(w);
     row_same(&o.leaf, at * REC_, o.leaf_flags[at], &o.cut, 0, seam_box(g, b), kind)
 }
 fn leaf_put(g: &mut Game, w: usize, at: usize, b: BoxId, kind: f64, cut_row: f64) {
@@ -395,7 +395,7 @@ pub fn box_mirror_shut(g: &mut crate::game::Game) {
 }
 
 /// A table too small for the box world as it stands: a throw by name.   (boxMirror.ts BoxMirror.outgrown)
-pub fn box_mirror_outgrown(g: &mut crate::game::Game, what: &str, has: f64, cap: f64) {
+pub fn box_mirror_outgrown(g: &crate::game::Game, what: &str, has: f64, cap: f64) {
     let of = g.col.mirror.of.as_deref();
     if g.col.mirror.played {
         let level = match of {
@@ -459,7 +459,7 @@ pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool)
             g.col.mirror.cut_of[i] = -1;
         }
         if grid {
-            box_mirror_grid_dirty(g, &world(s).rec, (i * REC_) as f64);
+            box_mirror_grid_dirty(g, &world_read(s).rec, (i * REC_) as f64);
         }
     }
     g.col.mirror.boxes = n as f64;
@@ -470,7 +470,7 @@ pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool)
             continue;
         }
         if grid {
-            box_mirror_grid_dirty(g, &world(s).rec, (i * REC_) as f64);
+            box_mirror_grid_dirty(g, &world_read(s).rec, (i * REC_) as f64);
             let (c, h) = {
                 let x = seam_box(g, b);
                 (x.c, x.h)
@@ -560,7 +560,7 @@ pub fn box_mirror_glass_is(g: &mut crate::game::Game, g_2: Option<&crate::scene_
 }
 
 /// A static's write is still owed.   (boxMirror.ts BoxMirror.owesBoxes)
-pub fn box_mirror_owes_boxes(g: &mut crate::game::Game) -> bool {
+pub fn box_mirror_owes_boxes(g: &crate::game::Game) -> bool {
     ((g.col.mirror.owed as u32) & OWE_BOXES_) != 0
 }
 
@@ -713,12 +713,12 @@ pub fn box_mirror_glass_in(g: &mut crate::game::Game) -> bool {
 }
 
 /// Does no answer of it need an angle or a length worked out.   (boxMirror.ts BoxMirror.glassPlain)
-pub fn box_mirror_glass_plain(g: &mut crate::game::Game) -> bool {
+pub fn box_mirror_glass_plain(g: &crate::game::Game) -> bool {
     !g.col.mirror.glass_angles && !g.col.mirror.view_lengths
 }
 
 /// THE CHECK'S QUESTION of the panes' copy: how many of its rows are not the game's glass now. With glass hung there is no copy: the row is the state.   (boxMirror.ts BoxMirror.stalePanes)
-pub fn box_mirror_stale_panes(g: &mut crate::game::Game) -> f64 {
+pub fn box_mirror_stale_panes(g: &crate::game::Game) -> f64 {
     if g.col.mirror.glass.is_none() {
         return g.col.mirror.glass_n;
     }
@@ -820,7 +820,7 @@ pub fn box_mirror_things(g: &mut crate::game::Game, p: &crate::scene_box_mirror:
 }
 
 /// Part `at` of the copied list → its box.   (boxMirror.ts BoxMirror.thingBox)
-pub fn box_mirror_thing_box(g: &mut crate::game::Game, p: &crate::scene_box_mirror::Furniture, at: f64) -> Option<BoxId> {
+pub fn box_mirror_thing_box(g: &crate::game::Game, p: &crate::scene_box_mirror::Furniture, at: f64) -> Option<BoxId> {
     let mut at = at;
     for t in &p.props {
         if at < t.boxes.len() as f64 {
@@ -875,7 +875,7 @@ pub fn box_mirror_follow_row(g: &mut crate::game::Game, b: BoxId, r: &[f64]) -> 
 
 /// Leaf i's row of list 0: its centre, its yaw, its flags.   (boxMirror.ts BoxMirror.leafRow)
 pub fn box_mirror_leaf_row(g: &mut crate::game::Game, i: f64) -> Vec<f64> {
-    let (o, i) = (world(g.sim), i as usize);
+    let (o, i) = (world_read(g.sim), i as usize);
     let q = i * REC_;
     vec![o.leaf[q], o.leaf[q + 1], o.leaf[q + 2], o.leaf[q + R_YAW_], o.leaf_flags[i] as f64]
 }

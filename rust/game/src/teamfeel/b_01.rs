@@ -10,4 +10,4 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Read a machine's kept feel rows back over the knob tables. Headless there is no stored copy: nothing is written.   (teamfeel.ts loadTeamFeel)
 /// BOUNDARY: at the swap the host reads localStorage `twopointsix.teamfeel` and applies its rows to `g.k`, under TypeScript's checks (key kept, same type as shipped, number in range).
-pub fn load_team_feel(g: &mut crate::game::Game) {}
+pub fn load_team_feel(g: &crate::game::Game) {}

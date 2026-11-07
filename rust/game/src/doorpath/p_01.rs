@@ -188,7 +188,7 @@ fn on_line(p: V3, sx: f64, cz: f64, q: V3) -> bool {
 }
 
 /// One of his own (a teammate up, or Sam) in the line of a gun carried on this heading. (doorpath.ts DoorPath.friendOn)
-pub fn door_path_friend_on(g: &mut crate::game::Game, gd: GuardId, yaw: f64) -> bool {
+pub fn door_path_friend_on(g: &crate::game::Game, gd: GuardId, yaw: f64) -> bool {
     let p = g.ch[g.gd[gd].ch].pos;
     let sx = m::sin(yaw);
     let cz = m::cos(yaw);
@@ -577,7 +577,7 @@ pub fn door_path_stand(g: &mut crate::game::Game, w: &crate::doorpath::Walk, fro
 }
 
 /// Where the men down lie within `r` of a point: hips, chest and head of each. (doorpath.ts DoorPath.fallen)
-pub fn door_path_fallen(g: &mut crate::game::Game, at: V3, r: f64) -> Vec<V3> {
+pub fn door_path_fallen(g: &crate::game::Game, at: V3, r: f64) -> Vec<V3> {
     let mut out: Vec<V3> = Vec::new();
     for &x in g.guards.iter().chain(g.civilians.iter()) {
         let c = g.gd[x].ch;
@@ -630,12 +630,12 @@ pub fn door_path_move(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk, 
 }
 
 /// The whole length of his line. (doorpath.ts DoorPath.total)
-pub fn door_path_total(g: &mut crate::game::Game, w: &crate::doorpath::Walk) -> f64 {
+pub fn door_path_total(g: &crate::game::Game, w: &crate::doorpath::Walk) -> f64 {
     w.len[w.len.len() - 1]
 }
 
 /// The point `s` metres along his line. (doorpath.ts DoorPath.pointAt)
-pub fn door_path_point_at(g: &mut crate::game::Game, w: &crate::doorpath::Walk, s: f64) -> V3 {
+pub fn door_path_point_at(g: &crate::game::Game, w: &crate::doorpath::Walk, s: f64) -> V3 {
     let n = w.pts.len();
     if s >= door_path_total(g, w) {
         return w.pts[n - 1];
@@ -652,7 +652,7 @@ pub fn door_path_point_at(g: &mut crate::game::Game, w: &crate::doorpath::Walk, 
 }
 
 /// How far along his line he is now: the nearest point of it from where he was to a metre on, never back; returns how far off it he stands. (doorpath.ts DoorPath.advance)
-pub fn door_path_advance(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk) -> f64 {
+pub fn door_path_advance(g: &crate::game::Game, w: &mut crate::doorpath::Walk) -> f64 {
     let p = g.ch[g.gd[w.gd].ch].pos;
     let mut best_s = w.s;
     let mut best_d = m::INF;
@@ -683,7 +683,7 @@ pub fn door_path_advance(g: &mut crate::game::Game, w: &mut crate::doorpath::Wal
 }
 
 /// Metres of his line still to walk to the frame line of his door (negative: that far past it). (doorpath.ts DoorPath.toLine)
-pub fn door_path_to_line(g: &mut crate::game::Game, w: &crate::doorpath::Walk) -> f64 {
+pub fn door_path_to_line(g: &crate::game::Game, w: &crate::doorpath::Walk) -> f64 {
     if w.lane > 0.0 {
         w.len[w.lane as usize] - w.in_m - w.s
     } else {
@@ -694,7 +694,7 @@ pub fn door_path_to_line(g: &mut crate::game::Game, w: &crate::doorpath::Walk) -
 }
 
 /// How far past the frame line a point stands, on the room's side. (doorpath.ts DoorPath.depth)
-pub fn door_path_depth(g: &mut crate::game::Game, d: DoorId, side: f64, p: &[f64]) -> f64 {
+pub fn door_path_depth(g: &crate::game::Game, d: DoorId, side: f64, p: &[f64]) -> f64 {
     let h = g.dr[d].def.hinge;
     let ux = m::cos(g.dr[d].def.closed_dir);
     let uz = m::sin(g.dr[d].def.closed_dir);

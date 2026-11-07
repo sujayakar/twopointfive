@@ -23,10 +23,10 @@ pub fn mmss(s: f64) -> String {
 pub fn n3(d: &crate::scene_scenarios::DefuseDevice) -> V3 { [d.n[0], 0.0, d.n[1]] }
 
 /// A fresh Defuse: the field initialisers are the whole of it.   (defuse.ts Defuse.constructor)
-pub fn defuse_new(g: &mut crate::game::Game) -> crate::defuse::Defuse { crate::defuse::Defuse::blank() }
+pub fn defuse_new(g: &crate::game::Game) -> crate::defuse::Defuse { crate::defuse::Defuse::blank() }
 
 /// The block in force (None: not live).   (defuse.ts Defuse.data)
-pub fn defuse_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::DefuseData> {
+pub fn defuse_data(g: &crate::game::Game) -> Option<crate::scene_scenarios::DefuseData> {
     let has = match g.level.scenarios.as_ref().and_then(|s| s.defuse.as_ref()) {
         Some(d) => !d.devices.is_empty(),
         None => false,
@@ -38,16 +38,16 @@ pub fn defuse_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::
 }
 
 /// Is this pass the running mission's (false between a restart and the first tick after it).   (defuse.ts Defuse.mine)
-pub fn defuse_mine(g: &mut crate::game::Game) -> bool { g.defuse.run == Some(g.mission.serial) }
+pub fn defuse_mine(g: &crate::game::Game) -> bool { g.defuse.run == Some(g.mission.serial) }
 
 /// (defuse.ts Defuse.active)
-pub fn defuse_active(g: &mut crate::game::Game) -> bool { defuse_data(g).is_some() && defuse_mine(g) }
+pub fn defuse_active(g: &crate::game::Game) -> bool { defuse_data(g).is_some() && defuse_mine(g) }
 
 /// (defuse.ts Defuse.started)
-pub fn defuse_started(g: &mut crate::game::Game) -> bool { !g.defuse.t0.is_nan() }
+pub fn defuse_started(g: &crate::game::Game) -> bool { !g.defuse.t0.is_nan() }
 
 /// Seconds a hand must stay on a charge.   (defuse.ts Defuse.workSecs)
-pub fn defuse_work_secs(g: &mut crate::game::Game) -> f64 {
+pub fn defuse_work_secs(g: &crate::game::Game) -> f64 {
     match defuse_data(g).and_then(|d| d.work_secs) {
         Some(s) => s,
         None => g.k.defuse.work_secs,
@@ -55,21 +55,21 @@ pub fn defuse_work_secs(g: &mut crate::game::Game) -> f64 {
 }
 
 /// Seconds left on the clock (the whole of it until the team moves; where it stopped once it has).   (defuse.ts Defuse.left)
-pub fn defuse_left(g: &mut crate::game::Game) -> f64 {
+pub fn defuse_left(g: &crate::game::Game) -> f64 {
     let d = match defuse_data(g) { Some(d) => d, None => return 0.0 };
     if !defuse_started(g) { return d.secs; }
     d.secs - ((if g.defuse.t_end.is_nan() { g.time } else { g.defuse.t_end }) - g.defuse.t0)
 }
 
 /// Changes when the list of live charges does.   (defuse.ts Defuse.key)
-pub fn defuse_key(g: &mut crate::game::Game) -> String {
+pub fn defuse_key(g: &crate::game::Game) -> String {
     if !defuse_active(g) { return String::new(); }
     let words: Vec<&str> = g.defuse.states.iter().map(|s| s.as_str()).collect();
     words.join(",")
 }
 
 /// The charges still live: index, the point a hand goes to, the planar normal toward the man, the menu's name.   (defuse.ts Defuse.armed)
-pub fn defuse_armed(g: &mut crate::game::Game) -> Vec<crate::defuse::DefuseArmedItem> {
+pub fn defuse_armed(g: &crate::game::Game) -> Vec<crate::defuse::DefuseArmedItem> {
     let d = match defuse_data(g) { Some(d) => d, None => return Vec::new() };
     if !defuse_mine(g) || g.defuse.end.is_some() { return Vec::new(); }
     let mut out = Vec::new();
@@ -82,7 +82,7 @@ pub fn defuse_armed(g: &mut crate::game::Game) -> Vec<crate::defuse::DefuseArmed
 }
 
 /// Why charge i is no longer there to be worked (None: it is): the word the man says.   (defuse.ts Defuse.moot)
-pub fn defuse_moot(g: &mut crate::game::Game, i: f64) -> Option<String> {
+pub fn defuse_moot(g: &crate::game::Game, i: f64) -> Option<String> {
     let s = if defuse_active(g) { state_at(g, i) } else { None };
     match s {
         Some(ChargeState::Armed) => None,
@@ -360,10 +360,10 @@ pub fn defuse_sam_tick(g: &mut crate::game::Game, d: &crate::scene_scenarios::De
 }
 
 /// Is the player at a charge right now: a sustained verb.   (defuse.ts Defuse.working)
-pub fn defuse_working(g: &mut crate::game::Game) -> bool { g.defuse.sam.is_some() && defuse_active(g) }
+pub fn defuse_working(g: &crate::game::Game) -> bool { g.defuse.sam.is_some() && defuse_active(g) }
 
 /// The charge's face he is planted at and squared to while he works it (`at`: the spot he must not shift from).   (defuse.ts Defuse.samJob)
-pub fn defuse_sam_job(g: &mut crate::game::Game) -> Option<crate::defuse::DefuseSamJob> {
+pub fn defuse_sam_job(g: &crate::game::Game) -> Option<crate::defuse::DefuseSamJob> {
     let s = g.defuse.sam;
     let d = defuse_data(g);
     let (s, d) = match (s, d) { (Some(s), Some(d)) => (s, d), _ => return None };
@@ -467,7 +467,7 @@ pub fn defuse_objective(g: &mut crate::game::Game) -> Option<crate::defuse::Defu
 }
 
 /// Who is at charge i or on his way to it by an order, as the row says it (None: nobody).   (defuse.ts Defuse.onIt)
-pub fn defuse_on_it(g: &mut crate::game::Game, i: f64) -> Option<String> {
+pub fn defuse_on_it(g: &crate::game::Game, i: f64) -> Option<String> {
     if g.defuse.sam.map_or(false, |s| s.dev == i) { return Some(String::from("you on it")); }
     let w = crate::workthings::work_things_on_device(g, i)?;
     Some(format!("{} {}", g.gd[w.gd].callsign, if w.on { "on it" } else { "going" }))
@@ -532,7 +532,7 @@ pub fn defuse_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn F
 // ---------------------------------------------------------------- private helpers
 
 /// `this.states[i]` with a number for the index: anything not an index is undefined.
-fn state_at(g: &mut Game, i: f64) -> Option<ChargeState> {
+fn state_at(g: &Game, i: f64) -> Option<ChargeState> {
     if i >= 0.0 && i == m::floor(i) { g.defuse.states.get(i as usize).copied() } else { None }
 }
 

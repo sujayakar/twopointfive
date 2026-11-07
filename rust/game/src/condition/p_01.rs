@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Is this man hurt now; `now` is the clock asked of, the game's by default.   (condition.ts isHurt)
-pub fn is_hurt(g: &mut crate::game::Game, m: crate::condition::Man, now: Option<f64>) -> bool {
+pub fn is_hurt(g: &crate::game::Game, m: crate::condition::Man, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
     let hurt_at = match m {
         Man::Guard(id) => g.gd[id].hurt_at,
@@ -19,7 +19,7 @@ pub fn is_hurt(g: &mut crate::game::Game, m: crate::condition::Man, now: Option<
 }
 
 /// A blast reached this man and left him up: he is hurt from now. False = not given.   (condition.ts conditionHurt)
-pub fn condition_hurt(g: &mut crate::game::Game, m: &mut crate::condition::Man) -> bool {
+pub fn condition_hurt(g: &mut crate::game::Game, m: &crate::condition::Man) -> bool {
     let man = *m;
     if g.touring || g.puppet.is_some() { return false; }
     let refused = match man {
@@ -37,17 +37,17 @@ pub fn condition_hurt(g: &mut crate::game::Game, m: &mut crate::condition::Man) 
 }
 
 /// The speed a man's legs may be asked for: a hurt one's is capped.   (condition.ts conditionPace)
-pub fn condition_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
+pub fn condition_pace(g: &crate::game::Game, gd: GuardId, speed: f64) -> f64 {
     if is_hurt(g, Man::Guard(gd), None) { m::min(speed, g.k.condition.hurt_pace) } else { speed }
 }
 
 /// The fire his rounds are opened by: never less than `hurt_sup` on a hurt man.   (condition.ts conditionSup)
-pub fn condition_sup(g: &mut crate::game::Game, m: crate::condition::Man, v: f64) -> f64 {
+pub fn condition_sup(g: &crate::game::Game, m: crate::condition::Man, v: f64) -> f64 {
     if is_hurt(g, m, None) { m::max(v, g.k.condition.hurt_sup) } else { v }
 }
 
 /// What state a man is in, the stamps read as they stand.   (condition.ts conditionOf)
-pub fn condition_of(g: &mut crate::game::Game, m: crate::condition::Man) -> crate::condition::Condition {
+pub fn condition_of(g: &crate::game::Game, m: crate::condition::Man) -> crate::condition::Condition {
     let (down, sup, dazzled_until, stagger_until) = man_marks(g, m);
     Condition {
         shaken: !down && g.tune.suppression && sup >= g.k.suppression.flinch,
@@ -59,7 +59,7 @@ pub fn condition_of(g: &mut crate::game::Game, m: crate::condition::Man) -> crat
 }
 
 /// A man's down flag, fire on him, and the stamps of his blinding and his fold.
-fn man_marks(g: &mut Game, m: Man) -> (bool, f64, f64, f64) {
+fn man_marks(g: &Game, m: Man) -> (bool, f64, f64, f64) {
     match m {
         Man::Guard(id) => {
             let gd = &g.gd[id];
@@ -73,7 +73,7 @@ fn man_marks(g: &mut Game, m: Man) -> (bool, f64, f64, f64) {
 }
 
 /// The panel's line: every man in anything but good order.   (condition.ts conditionSummary)
-pub fn condition_summary(g: &mut crate::game::Game) -> String {
+pub fn condition_summary(g: &crate::game::Game) -> String {
     let mut parts: Vec<String> = Vec::new();
     let me = g.player;
     let mine = word(condition_of(g, Man::Player(me)));

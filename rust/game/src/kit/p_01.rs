@@ -80,7 +80,7 @@ pub fn kit_default(g: &mut crate::game::Game, i: f64) -> crate::kit::MemberKit {
 }
 
 /// The weapons.ts row a card names.   (kit.ts kitGun)
-pub fn kit_gun(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> crate::weapons::WeaponId {
+pub fn kit_gun(g: &crate::game::Game, m: &crate::kit::MemberKit) -> crate::weapons::WeaponId {
     if guns_on(g) {
         let w = if m.weapon == KitWeapon::Pistol {
             let can = if tree_up(g) { m.side_can } else { m.suppressed };
@@ -104,24 +104,24 @@ pub fn kit_gun(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> crate::w
 }
 
 /// The card has two gun rows.   (kit.ts gunsOn)
-pub fn guns_on(g: &mut crate::game::Game) -> bool {
+pub fn guns_on(g: &crate::game::Game) -> bool {
     g.k.bigslot.on && !crate::gunslots::guns_broken()
 }
 
 /// The card is laid out as a tree.   (kit.ts treeUp)
-pub fn tree_up(g: &mut crate::game::Game) -> bool {
+pub fn tree_up(g: &crate::game::Game) -> bool {
     guns_on(g) && crate::kittree::tree_on(g)
 }
 
 /// A slot's pick comes with its suppressor on or off.   (kit.ts canChoice)
-pub fn can_choice(g: &mut crate::game::Game, id_2: &str) -> bool {
+pub fn can_choice(g: &crate::game::Game, id_2: &str) -> bool {
     let a = crate::gunslots::pick_row(g, id_2, true);
     let b = crate::gunslots::pick_row(g, id_2, false);
     a.is_some() && b.is_some() && a != b
 }
 
 /// The gun in a slot of a card wears its suppressor.   (kit.ts kitSlotCan)
-pub fn kit_slot_can(g: &mut crate::game::Game, m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> bool {
+pub fn kit_slot_can(g: &crate::game::Game, m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> bool {
     let can = if slot == crate::gunslots::GunSlot::Primary { m.suppressed } else { m.side_can };
     match crate::gunslots::pick_row(g, pick_of(m, slot), can) {
         Some(w) => g.m.weapons.weapons.get(w).unwrap().suppressed,
@@ -130,7 +130,7 @@ pub fn kit_slot_can(g: &mut crate::game::Game, m: &crate::kit::MemberKit, slot: 
 }
 
 /// The gun a card's man carries that is not in his hands, or None.   (kit.ts kitSide)
-pub fn kit_side(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> Option<crate::weapons::WeaponId> {
+pub fn kit_side(g: &crate::game::Game, m: &crate::kit::MemberKit) -> Option<crate::weapons::WeaponId> {
     if m.weapon == KitWeapon::Pistol {
         return None;
     }
@@ -138,7 +138,7 @@ pub fn kit_side(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> Option<
 }
 
 /// The row in a card's secondary slot; None with the switch off.   (kit.ts kitSecond)
-pub fn kit_second(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> Option<crate::weapons::WeaponId> {
+pub fn kit_second(g: &crate::game::Game, m: &crate::kit::MemberKit) -> Option<crate::weapons::WeaponId> {
     if !guns_on(g) {
         return None;
     }
@@ -147,7 +147,7 @@ pub fn kit_second(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> Optio
 }
 
 /// The weapons.ts row of the gun in a slot of member i's card as he would deploy with it, or None.   (kit.ts kitSlotDef)
-pub fn kit_slot_def(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> Option<crate::weapons::WeaponDef> {
+pub fn kit_slot_def(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> Option<crate::weapons::WeaponDef> {
     if slot == crate::gunslots::GunSlot::Primary && m.weapon == KitWeapon::Pistol {
         return None;
     }
@@ -164,7 +164,7 @@ pub fn kit_slot_def(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit
 }
 
 /// A card's two picks are ones the table offers. Writes `m` and returns a copy of it.   (kit.ts gunsHome)
-pub fn guns_home(g: &mut crate::game::Game, m: &mut crate::kit::MemberKit) -> crate::kit::MemberKit {
+pub fn guns_home(g: &crate::game::Game, m: &mut crate::kit::MemberKit) -> crate::kit::MemberKit {
     let none = crate::gunslots::NO_PRIMARY;
     let long: Vec<String> = crate::gunslots::gun_picks(g, crate::gunslots::GunSlot::Primary).into_iter().filter(|p| p != none).collect();
     let side = crate::gunslots::gun_picks(g, crate::gunslots::GunSlot::Secondary);
@@ -183,7 +183,7 @@ pub fn wall_here() -> bool {
 }
 
 /// A loadout's tools this build cannot put on.   (kit.ts loadoutMissing)
-pub fn loadout_missing(g: &mut crate::game::Game, l: &crate::kit::SlotLoadout) -> Vec<String> {
+pub fn loadout_missing(g: &crate::game::Game, l: &crate::kit::SlotLoadout) -> Vec<String> {
     let walls = l.counts.iter().any(|c| c.get(String::from("walls")).copied().unwrap_or(0.0) > 0.0);
     let mut missing = l.missing.clone();
     if walls && !(g.k.slots.on && wall_here()) {
@@ -216,7 +216,7 @@ pub fn big_of(m: &crate::kit::MemberKit) -> crate::kit::BigPick {
 }
 
 /// The pouches one of an item fills as the rule stands.   (kit.ts priceOf)
-pub fn price_of(g: &mut crate::game::Game, it: Option<&crate::kit::SlotItem>) -> f64 {
+pub fn price_of(g: &crate::game::Game, it: Option<&crate::kit::SlotItem>) -> f64 {
     match it {
         None => 0.0,
         Some(it) => {
@@ -226,7 +226,7 @@ pub fn price_of(g: &mut crate::game::Game, it: Option<&crate::kit::SlotItem>) ->
 }
 
 /// The pouches `n` of an item fill.   (kit.ts pouchesOf)
-pub fn pouches_of(g: &mut crate::game::Game, it: Option<&crate::kit::SlotItem>, n: f64) -> f64 {
+pub fn pouches_of(g: &crate::game::Game, it: Option<&crate::kit::SlotItem>, n: f64) -> f64 {
     let p = price_of(g, it);
     if !js::truthy(p) || n <= 0.0 {
         return 0.0;
@@ -270,7 +270,7 @@ pub fn pouch_words(n: f64) -> String {
 }
 
 /// Your card's long gun has the launcher under it.   (kit.ts tubed)
-pub fn tubed(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> bool {
+pub fn tubed(g: &crate::game::Game, m: &crate::kit::MemberKit) -> bool {
     if m.weapon != KitWeapon::Rifle {
         return false;
     }
@@ -282,12 +282,12 @@ pub fn tubed(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> bool {
 }
 
 /// A teammate's card has the 40 mm row.   (kit.ts mateShells)
-pub fn mate_shells(g: &mut crate::game::Game) -> bool {
+pub fn mate_shells(g: &crate::game::Game) -> bool {
     tree_up(g) && crate::squad40::squad40_here(g)
 }
 
 /// A suppressor's flag holds a value only while its gun has the choice. Writes `m` and returns a copy of it.   (kit.ts homeCans)
-pub fn home_cans(g: &mut crate::game::Game, m: &mut crate::kit::MemberKit) -> crate::kit::MemberKit {
+pub fn home_cans(g: &crate::game::Game, m: &mut crate::kit::MemberKit) -> crate::kit::MemberKit {
     if (!m.suppressed || !m.side_can) && tree_up(g) {
         if m.weapon == KitWeapon::Pistol || !can_choice(g, &m.primary) {
             m.suppressed = true;
@@ -300,7 +300,7 @@ pub fn home_cans(g: &mut crate::game::Game, m: &mut crate::kit::MemberKit) -> cr
 }
 
 /// The launcher's rounds go home with the rifle. Writes `m` and returns a copy of it.   (kit.ts homeShells)
-pub fn home_shells(g: &mut crate::game::Game, m: &mut crate::kit::MemberKit) -> crate::kit::MemberKit {
+pub fn home_shells(g: &crate::game::Game, m: &mut crate::kit::MemberKit) -> crate::kit::MemberKit {
     home_cans(g, m);
     if !tubed(g, m) {
         m.shells = 0.0;

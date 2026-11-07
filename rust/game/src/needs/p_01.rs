@@ -56,7 +56,7 @@ fn key(s: &str) -> String {
 }
 
 /// Where a need is answered on this level, or None. (needs.ts needSpot)
-pub fn need_spot(g: &mut crate::game::Game, kind: crate::needs::NeedKind) -> Option<crate::needs::NeedSpot> {
+pub fn need_spot(g: &crate::game::Game, kind: crate::needs::NeedKind) -> Option<crate::needs::NeedSpot> {
     let Some(q) = g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()) else { return need_spots().get(key(kind.as_str())).cloned() };
     let s = q.needs.as_ref().and_then(|n| match kind {
         NeedKind::Coffee => n.coffee.as_ref(),
@@ -69,7 +69,7 @@ pub fn need_spot(g: &mut crate::game::Game, kind: crate::needs::NeedKind) -> Opt
 }
 
 /// A level's own place as a NeedSpot. (needs.ts ownSpot; `owned`'s cache is dropped, the value is a function of `s`)
-pub fn own_spot(g: &mut crate::game::Game, s: &crate::needs::OwnSpotS, kind: crate::needs::NeedKind) -> crate::needs::NeedSpot {
+pub fn own_spot(g: &crate::game::Game, s: &crate::needs::OwnSpotS, kind: crate::needs::NeedKind) -> crate::needs::NeedSpot {
     NeedSpot { kind, name: s.name.clone(), pos: s.pos, face: s.face, loop_: s.loop_.clone() }
 }
 
@@ -168,7 +168,7 @@ pub fn deal(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// May the needs play in this run at all? (needs.ts needsLive)
-pub fn needs_live(g: &mut crate::game::Game) -> bool {
+pub fn needs_live(g: &crate::game::Game) -> bool {
     g.tune.needs
         && g.ai_enabled
         && !g.quiet_utility
@@ -185,7 +185,7 @@ pub fn floor_calm(g: &mut crate::game::Game) -> bool {
 }
 
 /// Is he calm and free? (needs.ts manCalm)
-pub fn man_calm(g: &mut crate::game::Game, gd: GuardId, awareness: f64) -> bool {
+pub fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
     let x = &g.gd[gd];
     x.state == GuardState::Patrol
         && x.awareness < awareness
@@ -863,7 +863,7 @@ pub fn needs_set_level(g: &mut crate::game::Game, gd: GuardId, kind: crate::need
 }
 
 /// Read back what `save_needs` kept. Nothing is stored here: the TypeScript's "nothing stored, the shipped values stand". (needs.ts loadNeeds)
-pub fn load_needs(g: &mut crate::game::Game) {}
+pub fn load_needs(g: &crate::game::Game) {}
 
 #[cfg(test)]
 mod tests {

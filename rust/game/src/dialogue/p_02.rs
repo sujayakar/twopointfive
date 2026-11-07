@@ -22,7 +22,7 @@ pub fn place_name(g: &mut crate::game::Game, p: V3) -> String {
     match own_name(g, p) { Some(n) => n, None => room_name(g, p) }
 }
 /// the level the game was written on (its three patrol routes)   (dialogue.ts isOffice)
-pub fn is_office(g: &mut crate::game::Game) -> bool {
+pub fn is_office(g: &crate::game::Game) -> bool {
     ["corridor", "cubicles", "lobby_break"].iter().all(|n| g.level.routes.iter().any(|r| g.tab.route[*r].name == *n))
 }
 /// (dialogue.ts withThe)
@@ -185,7 +185,7 @@ pub fn room_name(g: &mut crate::game::Game, p: V3) -> String {
     String::from("the car park")
 }
 /// (dialogue.ts routeName)
-pub fn route_name(g: &mut crate::game::Game, route_i: f64) -> String {
+pub fn route_name(g: &crate::game::Game, route_i: f64) -> String {
     let route = if route_i >= 0.0 && m::floor(route_i) == route_i { g.level.routes.get(route_i as usize).copied() } else { None };
     let n = match route { Some(r) => g.tab.route[r].name.clone(), None => String::from("route") };
     if let Some(s) = route_names().get(n.clone()) { return s.clone(); }
@@ -194,7 +194,7 @@ pub fn route_name(g: &mut crate::game::Game, route_i: f64) -> String {
     alloc::format!("the {}", n.replace('_', " "))
 }
 /// (dialogue.ts doorName)
-pub fn door_name(g: &mut crate::game::Game, n: &str) -> String {
+pub fn door_name(g: &crate::game::Game, n: &str) -> String {
     let key = String::from(n);
     if let Some(s) = door_names().get(key.clone()) { return s.clone(); }
     if let Some(Some(s)) = door_names_guide().get(key.clone()) { return s.clone(); }
@@ -219,7 +219,7 @@ pub fn dist_to_route(pts: &[V3], p: V3) -> f64 {
     best
 }
 /// the keyed door nearest this man's route line, within DOOR_ROUTE_M, by its authored lock   (dialogue.ts keyedDoorOn)
-pub fn keyed_door_on(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> {
+pub fn keyed_door_on(g: &crate::game::Game, gd: GuardId) -> Option<DoorId> {
     let route = route_at(g, g.gd[gd].route_i)?;
     let pts = g.tab.route[route].points.clone();
     if pts.is_empty() { return None; }
@@ -245,7 +245,7 @@ pub fn eta_words(secs: f64) -> String {
 /// does a fact stamped on the net at game time T reach a man held since `held_since`   (dialogue.ts heardOnNet)
 pub fn heard_on_net(held_since: f64, t: f64) -> bool { t >= 0.0 && (held_since < 0.0 || t <= held_since + 0.5) }
 /// the first colleague the net has asked after by name and not raised, as far as THIS man followed it   (dialogue.ts missingKnownTo)
-pub fn missing_known_to(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
+pub fn missing_known_to(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let hs = held_since_of(g, gd);
     g.guards.iter().copied().find(|&x| {
         let (at, raised) = (g.gd[x].missed_at, g.gd[x].missing_raised);
@@ -253,7 +253,7 @@ pub fn missing_known_to(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardI
     })
 }
 /// the men this man KNOWS to be down   (dialogue.ts knownDown)
-pub fn known_down(g: &mut crate::game::Game, gd: GuardId) -> JsSet<String> {
+pub fn known_down(g: &crate::game::Game, gd: GuardId) -> JsSet<String> {
     let mut s: JsSet<String> = JsSet::default();
     let w = &g.gd[gd].witness;
     if let Some(x) = w.saw_act.as_ref() { s.add(x.victim.clone()); }
@@ -264,7 +264,7 @@ pub fn known_down(g: &mut crate::game::Game, gd: GuardId) -> JsSet<String> {
     s
 }
 /// the roster he counts from: the level's own men   (dialogue.ts staffCount)
-pub fn staff_count(g: &mut crate::game::Game) -> f64 {
+pub fn staff_count(g: &crate::game::Game) -> f64 {
     let mut n = 0.0;
     for &x in g.guards.iter() { if g.gd[x].unit.is_none() { n += 1.0; } }
     m::max(1.0, n)
@@ -272,7 +272,7 @@ pub fn staff_count(g: &mut crate::game::Game) -> f64 {
 /// his own side and his own kind   (dialogue.ts partnerOf, its closure `mate`)
 fn is_mate(g: &Game, gd: GuardId, x: GuardId) -> bool { g.gd[x].team == g.gd[gd].team && g.gd[x].unit.is_none() == g.gd[gd].unit.is_none() }
 /// (dialogue.ts partnerOf)
-pub fn partner_of(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
+pub fn partner_of(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let down = known_down(g, gd);
     if let Some(l) = g.gd[gd].leader { if l != gd && !down.has(g.gd[l].callsign.clone()) { return Some(l); } }
     let gs: &Game = g;
@@ -288,7 +288,7 @@ pub fn partner_of(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     best
 }
 /// since when this man counts as HELD: the hold's own clock, else the sandbox's stand-in, else -1   (dialogue.ts heldSinceOf)
-pub fn held_since_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn held_since_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     if let Some(h) = g.gd[gd].held.as_ref() { return h.since; }
     let talk = &g.tab.game_talk[g.gd[gd].talk];
     if talk.held_since >= 0.0 && (talk.last_t < talk.held_since || g.time - talk.last_t <= HOLD_LAPSE_SECS) { talk.held_since } else { -1.0 }
@@ -420,7 +420,7 @@ pub fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Dialog
 
 // ---------------------------------------------------------------- the picker (pure over a DialogueCtx + the man's Talk state)
 /// `driveAway()[t] ?? driveAway()['*']`   (dialogue.ts gather)
-fn drive_away_text(g: &mut Game, t: crate::game::Temperament) -> String {
+fn drive_away_text(g: &Game, t: crate::game::Temperament) -> String {
     let d = drive_away(g);
     let own = match t { crate::game::Temperament::Steady => d.steady, crate::game::Temperament::Nervy => d.nervy, crate::game::Temperament::Hard => d.hard };
     own.or(d.under).unwrap_or_default()
@@ -509,7 +509,7 @@ pub fn line_matches(l: &crate::dialogue::Line, k: crate::dialogue::Knowledge, ba
     true
 }
 /// (dialogue.ts needsHold)
-pub fn needs_hold(g: &mut crate::game::Game, l: &crate::dialogue::Line, facts: &crate::dialogue::DialogueCtxFacts) -> bool {
+pub fn needs_hold(g: &crate::game::Game, l: &crate::dialogue::Line, facts: &crate::dialogue::DialogueCtxFacts) -> bool {
     let only_ok = match l.only { None => true, Some(LineOnly::Shift) => hold_fact(facts, Need::Shift), Some(LineOnly::Office) => hold_fact(facts, Need::Office) };
     only_ok && l.needs.as_ref().map_or(true, |ns| ns.iter().all(|n| hold_fact(facts, *n)))
 }
@@ -565,7 +565,7 @@ fn sayable(text: Option<&str>, tokens: &JsMap<String, Option<String>>) -> Option
     match text { Some(x) if !x.is_empty() && REJOINDERS => expand(x, tokens), _ => None }
 }
 /// `eligible`: the pool for this cell and stage: (index in the lines, the text, its weight)   (dialogue.ts pickLine)
-fn eligible(g: &mut Game, lines: &[Line], ctx: &DialogueCtx, tokens: &JsMap<String, Option<String>>, talk: GameTalkId, s: StageKey, use_t: bool, use_a: bool, allow_said: bool) -> Vec<(usize, String, f64)> {
+fn eligible(g: &Game, lines: &[Line], ctx: &DialogueCtx, tokens: &JsMap<String, Option<String>>, talk: GameTalkId, s: StageKey, use_t: bool, use_a: bool, allow_said: bool) -> Vec<(usize, String, f64)> {
     let mut out: Vec<(usize, String, f64)> = Vec::new();
     for (i, l) in lines.iter().enumerate() {
         if !line_matches(l, ctx.k, ctx.band, ctx.t, s, use_t, use_a) || !needs_hold(g, l, &ctx.facts) { continue; }

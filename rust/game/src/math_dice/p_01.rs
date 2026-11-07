@@ -45,7 +45,7 @@ pub fn sim_dice_new(seed: f64) -> crate::math_dice::SimDice {
 }
 
 /// Where the word stands. `home` keeps the block's word as sim_random leaves it.   (dice.ts SimDice.s)
-pub fn sim_dice_s(this: &mut crate::math_dice::SimDice) -> f64 {
+pub fn sim_dice_s(this: &crate::math_dice::SimDice) -> f64 {
     match this.home {
         Some(h) => h.s,
         None => this.s0,
@@ -53,7 +53,7 @@ pub fn sim_dice_s(this: &mut crate::math_dice::SimDice) -> f64 {
 }
 
 /// How many draws have been taken.   (dice.ts SimDice.n)
-pub fn sim_dice_n(this: &mut crate::math_dice::SimDice) -> f64 {
+pub fn sim_dice_n(this: &crate::math_dice::SimDice) -> f64 {
     match this.home {
         Some(h) => h.n,
         None => this.n0,
@@ -89,7 +89,7 @@ pub fn use_dice(g: &mut crate::game::Game) {
 }
 
 /// The die in use: the game's own, since nothing in the Rust game can stand in Math.random's place.   (dice.ts diceInUse)
-pub fn dice_in_use(g: &mut crate::game::Game) -> Option<crate::math_dice::SimDice> {
+pub fn dice_in_use(g: &crate::game::Game) -> Option<crate::math_dice::SimDice> {
     g.dice
 }
 
@@ -102,7 +102,7 @@ pub fn sim_random(g: &mut crate::game::Game) -> f64 {
     let d = g.dice.as_mut().unwrap();
     if let Some(h) = d.home.as_mut() {
         let r = ::sim::dice::roll_of(slot);
-        let b = &::sim::state::state(slot).dice;
+        let b = &::sim::state::state_read(slot).dice;
         h.s = b.s as i32 as f64;
         h.n = b.n;
         return r;
@@ -115,7 +115,7 @@ pub fn sim_random(g: &mut crate::game::Game) -> f64 {
 }
 
 /// dice.ts:59 `Math.random()`
-fn seam_math_random(g: &mut Game) -> f64 {
+fn seam_math_random(g: &Game) -> f64 {
     // TEMP-BRINGUP (b_01.rs): the host's own stream, handed in draw by draw
     super::b_01::host_draw()
 }

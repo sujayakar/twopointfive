@@ -39,7 +39,7 @@ fn guard_of_char(g: &Game, c: CharId) -> Option<GuardId> {
 }
 
 /// Would the old near-is-a-hit rule have broken this fixture on these legs? A count for the checks. (combat.ts nearLamp)
-pub fn near_lamp(g: &mut crate::game::Game, t: FixtureId, legs: &[crate::aimcost::RoundLeg], slack: f64) -> bool {
+pub fn near_lamp(g: &crate::game::Game, t: FixtureId, legs: &[crate::aimcost::RoundLeg], slack: f64) -> bool {
     use crate::sim_lightshome::FixtureKind;
     let kind = g.tab.sim_lightshome_fixture[t].kind;
     let pos = g.tab.sim_lightshome_fixture[t].pos;
@@ -54,7 +54,7 @@ pub fn near_lamp(g: &mut crate::game::Game, t: FixtureId, legs: &[crate::aimcost
 }
 
 /// A guard's own hands: the row's spread off the man he is firing at. (combat.ts aiWide)
-pub fn ai_wide(g: &mut crate::game::Game, sg: Option<GuardId>, shooter: CharId, def: &crate::weapons::WeaponDef) -> f64 {
+pub fn ai_wide(g: &crate::game::Game, sg: Option<GuardId>, shooter: CharId, def: &crate::weapons::WeaponDef) -> f64 {
     let foe = match sg { Some(s) => crate::teams::foe_char(g, s), None => None };
     let tc = match foe { Some(c) => c, None => g.pl[g.player].ch };
     let tv = m::hyp2(g.ch[tc].vel[0], g.ch[tc].vel[2]);

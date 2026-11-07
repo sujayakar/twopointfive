@@ -13,7 +13,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 fn weapon_breach(g: &Game, w: crate::weapons::WeaponId) -> Option<crate::weapons::PelletSpecBreach> { g.m.weapons.weapons.get(w).and_then(|d| d.pellets.as_ref()).and_then(|p| p.breach) }
 
 fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
-fn nav_blocked(g: &mut Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
+fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn callsign(g: &Game, gd: GuardId) -> String { g.gd[gd].callsign.clone() }
 fn is_wedge(g: &Game, d: DoorId) -> bool { g.dr[d].lock_id.starts_with("wedge:") }
@@ -153,7 +153,7 @@ pub fn door_tools_start_charge(g: &mut crate::game::Game, men: &[GuardId], t: &c
 }
 
 /// A charge the player set stands on this face with no squad order on the door: the row is 'stand off'.   (doortools.ts looseOn)
-pub fn door_tools_loose_on(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> bool {
+pub fn door_tools_loose_on(g: &crate::game::Game, t: &crate::orders::OrderTarget) -> bool {
     let (door, side) = match t { crate::orders::OrderTarget::Door(x) => (x.door, x.side), _ => return false };
     let c = match door_tools_charge_on(g, door) { Some(c) => c, None => return false };
     by_sam(g, c) && g.tab.doortools_set_charge[c].side == side && !charge_order_on(g, door)
@@ -268,13 +268,13 @@ pub fn door_tools_sam_set(g: &mut crate::game::Game) -> Option<ChargeId> {
 }
 
 /// Where a charge is, in the row's words.   (doortools.ts samWhere)
-pub fn door_tools_sam_where(g: &mut crate::game::Game, c_2: ChargeId) -> String {
+pub fn door_tools_sam_where(g: &crate::game::Game, c_2: ChargeId) -> String {
     let d = g.tab.doortools_set_charge[c_2].door;
     alloc::format!("the {}", crate::orders::door_words(g, d))
 }
 
 /// The charge going on under his hands: where on the leaf, and the face's normal.   (doortools.ts samJob)
-pub fn door_tools_sam_job(g: &mut crate::game::Game) -> Option<crate::doortools::DoorToolsSamJob> {
+pub fn door_tools_sam_job(g: &crate::game::Game) -> Option<crate::doortools::DoorToolsSamJob> {
     let pl = g.player;
     let s = g.pl[pl].charging.clone()?;
     let d = s.door;
@@ -286,7 +286,7 @@ pub fn door_tools_sam_job(g: &mut crate::game::Game) -> Option<crate::doortools:
 }
 
 /// How far along it is, 0 to 1.   (doortools.ts samProgress)
-pub fn door_tools_sam_progress(g: &mut crate::game::Game) -> f64 {
+pub fn door_tools_sam_progress(g: &crate::game::Game) -> f64 {
     let pl = g.player;
     match &g.pl[pl].charging { Some(s) => v3::clamp((g.time - s.t0) / g.k.doortools.set_secs, 0.0, 1.0), None => 0.0 }
 }
@@ -421,7 +421,7 @@ pub fn door_tools_to_pick(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// A lock a pick opens: a cylinder, not a steel door's bolt, a keypad's, nor a wedge.   (doortools.ts pickable)
-pub fn door_tools_pickable(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn door_tools_pickable(g: &crate::game::Game, d: DoorId) -> bool {
     g.dr[d].def.steel != Some(true) && crate::devices::devices_pad_of(g, d).is_none() && !is_wedge(g, d)
 }
 
@@ -508,9 +508,9 @@ pub fn door_tools_pick_step(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// shell(m) of toGun: a breaching shotgun that can take this lock.
-fn gun_shell(g: &mut Game, d: DoorId, m: GuardId) -> bool { !is_wedge(g, d) && crate::shotgun::carries_breacher(g, m) }
+fn gun_shell(g: &Game, d: DoorId, m: GuardId) -> bool { !is_wedge(g, d) && crate::shotgun::carries_breacher(g, m) }
 /// can(m) of toGun: that, or a hammer in his big slot.
-fn gun_can(g: &mut Game, d: DoorId, m: GuardId) -> bool { gun_shell(g, d, m) || crate::bigkit::carries_hammer(g, m) }
+fn gun_can(g: &Game, d: DoorId, m: GuardId) -> bool { gun_shell(g, d, m) || crate::bigkit::carries_hammer(g, m) }
 
 /// A door locked against the team and a man of this order with a breaching shotgun or a hammer: he goes to the lock with it. False: the boot.   (doortools.ts toGun)
 pub fn door_tools_to_gun(g: &mut crate::game::Game, op: DoorOpId) -> bool {

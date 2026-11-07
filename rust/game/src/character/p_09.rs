@@ -335,7 +335,7 @@ pub fn anim_carry_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f6
 // ---- the long gun
 
 /// which row of LONG_RELOAD this gun's carry takes   (character.ts rlRow)
-pub fn anim_rl_row(g: &mut crate::game::Game, c: CharId) -> crate::character::LONGRELOADBox {
+pub fn anim_rl_row(g: &crate::game::Game, c: CharId) -> crate::character::LONGRELOADBox {
     let (back, has_feed) = (g.ch[c].anim.reload_back, g.ch[c].anim.feed.is_some());
     let r = crate::character::long_reload();
     if back && !(has_feed && crate::gunreload::feed_live(g)) {
@@ -346,7 +346,7 @@ pub fn anim_rl_row(g: &mut crate::game::Game, c: CharId) -> crate::character::LO
     }
 }
 /// the carriage's channels as they are posed: the springs', or those with a reload carry's share taken   (character.ts lgChannels)
-pub fn anim_lg_channels(g: &mut crate::game::Game, c: CharId) -> Vec<crate::character::AnimLgChannelsItem> {
+pub fn anim_lg_channels(g: &crate::game::Game, c: CharId) -> Vec<crate::character::AnimLgChannelsItem> {
     let a = &g.ch[c].anim;
     let cc = &a.rlc;
     if cc.k > 0.0 || cc.h > 0.0 {

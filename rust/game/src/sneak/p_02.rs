@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// A wait's first line by why: `wg(LINES_NOW.wait[why] ?? LINES.wait[why], LINES.wait[why])`.
-fn said_wait(g: &mut Game, why: Why) -> String {
+fn said_wait(g: &Game, why: Why) -> String {
     let (was, now) = (lines().wait, lines_now().wait);
     let (n, w) = match why {
         Why::Lit => (now.lit, was.lit),
@@ -21,7 +21,7 @@ fn said_wait(g: &mut Game, why: Why) -> String {
     crate::words::wg(g, &n, &w)
 }
 /// A wait's second line by why: `wg(LINES_NOW.nag[why] ?? LINES.nag[why], LINES.nag[why])`.
-fn said_nag(g: &mut Game, why: Why) -> String {
+fn said_nag(g: &Game, why: Why) -> String {
     let (was, now) = (lines().nag, lines_now().nag);
     let (n, w) = match why {
         Why::Lit => (now.lit, was.lit),

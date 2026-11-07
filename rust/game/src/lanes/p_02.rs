@@ -949,7 +949,7 @@ fn put_fire(g: &mut Game, gd: GuardId, fr: crate::lanes::PeekFire) {
 }
 
 /// he has shouted and frag.ts's wind-up has his arm (half a second past its time at the most) (lanes.ts winding)
-pub fn winding(g: &mut crate::game::Game, gd: GuardId, f: crate::lanes::PeekFrag) -> bool {
+pub fn winding(g: &crate::game::Game, gd: GuardId, f: crate::lanes::PeekFrag) -> bool {
     f.at.is_some() && crate::frag::frag_winding(g, gd) && g.time < f.until + 0.5
 }
 /// A GRENADE DOWN IT: of the men held on the lane who carry one and may throw this moment, one goes looking for an arc to the middle of where its fire came from (lanes.ts fragOut)
@@ -994,7 +994,7 @@ fn mid_of(l: &crate::lanes::Lane) -> V3 {
     best
 }
 /// the middle of where a lane's fire came from: of the places its guns fired from, the one nearest their mean (lanes.ts gunsMid)
-pub fn guns_mid(g: &mut crate::game::Game, l: LanesLaneId) -> V3 { mid_of(&g.tab.lanes_lane[l]) }
+pub fn guns_mid(g: &crate::game::Game, l: LanesLaneId) -> V3 { mid_of(&g.tab.lanes_lane[l]) }
 /// where his feet would be `s` metres on: along the walk he is on (`going`), else straight toward `to`. Edge = a covered lane's floor, or past the end of his walk; None = a wall on the straight line (lanes.ts fragPlace)
 pub fn frag_place(g: &mut crate::game::Game, gd: GuardId, to: V3, s: f64, going: bool) -> Option<crate::lanes::FragPlace> {
     use crate::lanes::FragPlace;

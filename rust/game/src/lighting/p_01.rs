@@ -73,7 +73,7 @@ pub fn lens_recheck(g: &mut crate::game::Game) {
 }
 
 /// The mains are the business of the side whose building it is.   (lighting.ts theirMains)
-pub fn their_mains(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn their_mains(g: &crate::game::Game, gd: GuardId) -> bool {
     let team = g.gd[gd].team;
     crate::teams::is_hostile(g, team, crate::teams::Team::Player)
 }
@@ -286,7 +286,7 @@ pub fn light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate:
 }
 
 /// Is there something under the reticle the OCP would act on right now?   (lighting.ts ocpable)
-pub fn ocpable(g: &mut crate::game::Game) -> bool {
+pub fn ocpable(g: &crate::game::Game) -> bool {
     if let Some(t) = g.aim_target {
         return !crate::carlamps::dead_lamp(g, t);
     }
@@ -304,7 +304,7 @@ pub fn ocpable(g: &mut crate::game::Game) -> bool {
 /// The OCP's press: on a man's light, on the breaker, or on a fixture.   (lighting.ts ocp)
 pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     let p = g.player;
-    if !crate::weapons::ocp_ready(&mut g.pl[p].ocp) {
+    if !crate::weapons::ocp_ready(&g.pl[p].ocp) {
         crate::game::game_msg(g, "OCP recharging");
         crate::audio_iface::game_audio_like_play(g, "deny", None, Some(0.5), None);
         return;
@@ -406,7 +406,7 @@ pub fn set_group(g: &mut crate::game::Game, group: &str, on: bool) {
 }
 
 /// Is the daytime variant in (setDaylight)?   (lighting.ts isDaylight)
-pub fn is_daylight(g: &mut crate::game::Game) -> bool {
+pub fn is_daylight(g: &crate::game::Game) -> bool {
     g.m.lighting.day_states.is_some()
 }
 

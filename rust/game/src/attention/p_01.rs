@@ -56,14 +56,14 @@ pub fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {
 fn set_hold(g: &mut Game, gd: GuardId, h: Option<Hold>) { mem(g, gd).hold = h; }
 
 /// The hold on this man's attention right now, or none: a copy of the row's, so a change goes back by `set_hold`. (attention.ts attentionOf)
-pub fn attention_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::attention::Hold> {
+pub fn attention_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::attention::Hold> {
     let now = g.time;
     let row = g.m.attention.mem_of.get(gd)?;
     if now - row.tick <= STALE { row.hold } else { None }
 }
 
 /// The cosine of the angle at his eye between the thing that holds him and a man at `p`. (attention.ts offCos)
-pub fn off_cos(g: &mut crate::game::Game, gd: GuardId, h: crate::attention::Hold, p: V3) -> f64 {
+pub fn off_cos(g: &crate::game::Game, gd: GuardId, h: crate::attention::Hold, p: V3) -> f64 {
     let c = g.gd[gd].ch;
     let e = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos);
     let mut ax = h.at[0] - e[0];
@@ -85,12 +85,12 @@ pub fn off_cos(g: &mut crate::game::Game, gd: GuardId, h: crate::attention::Hold
 }
 
 /// Is the floor point `p` more than `focusDeg` off the line from him to the thing. (attention.ts outside)
-pub fn outside(g: &mut crate::game::Game, gd: GuardId, h: crate::attention::Hold, p: V3) -> bool {
+pub fn outside(g: &crate::game::Game, gd: GuardId, h: crate::attention::Hold, p: V3) -> bool {
     off_cos(g, gd, h, p) < m::cos(g.k.attention.focus_deg * m::PI / 180.0)
 }
 
 /// × the rate at which this man's eye takes in a man standing at `p`. (attention.ts attentionSideK)
-pub fn attention_side_k(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
+pub fn attention_side_k(g: &crate::game::Game, gd: GuardId, p: V3) -> f64 {
     match attention_of(g, gd) {
         Some(h) if outside(g, gd, h, p) => g.k.attention.side_k,
         _ => 1.0,
@@ -119,12 +119,12 @@ pub fn attention_aside(g: &mut crate::game::Game, gd: GuardId, p: V3, gain: f64)
 }
 
 /// × a footfall's level at his ear. (attention.ts attentionEarK)
-pub fn attention_ear_k(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn attention_ear_k(g: &crate::game::Game, gd: GuardId) -> f64 {
     attention_of(g, gd).map_or(1.0, |h| h.ears)
 }
 
 /// × any other small noise's level at his ear. (attention.ts attentionNoiseK)
-pub fn attention_noise_k(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn attention_noise_k(g: &crate::game::Game, gd: GuardId) -> f64 {
     attention_of(g, gd).map_or(1.0, |h| h.noises)
 }
 
@@ -148,7 +148,7 @@ pub fn attention_step(g: &mut crate::game::Game, gd: GuardId, at: V3) {
 }
 
 /// Did he say he was done inside the last few seconds. (attention.ts attentionTold)
-pub fn attention_told(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn attention_told(g: &crate::game::Game, gd: GuardId) -> bool {
     let now = g.time;
     g.m.attention.mem_of.get(gd).map_or(false, |row| now - row.told_at < 4.0)
 }
@@ -186,7 +186,7 @@ pub fn attention_lend(g: &mut crate::game::Game, gd: GuardId, at: V3, o: Option<
 }
 
 /// Can this man's attention be held at all this frame. (attention.ts able)
-pub fn able(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn able(g: &crate::game::Game, gd: GuardId) -> bool {
     let man = &g.gd[gd];
     let calm = (man.state == crate::game::GuardState::Patrol || man.state == crate::game::GuardState::Suspicious)
         && man.body_duty.is_none()
@@ -202,7 +202,7 @@ pub fn able(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Seconds AT the thing a fresh taking of this kind is worth. (attention.ts secsFor)
-pub fn secs_for(g: &mut crate::game::Game, kind: crate::attention::DrawKind) -> f64 {
+pub fn secs_for(g: &crate::game::Game, kind: crate::attention::DrawKind) -> f64 {
     let k = &g.k.attention;
     match kind {
         DrawKind::Whistle => k.whistle_secs,
@@ -222,7 +222,7 @@ pub fn end(g: &mut crate::game::Game, gd: GuardId, why: &str) {
 }
 
 /// His suspicion is on the held thing while his fix is the thing. (attention.ts attentionTick onIt)
-fn on_it(g: &mut Game, gd: GuardId, h: &Hold) -> bool {
+fn on_it(g: &Game, gd: GuardId, h: &Hold) -> bool {
     g.gd[gd].last_known.map_or(false, |k| v3::dist_xz(k, h.at) <= 0.6)
 }
 
@@ -445,7 +445,7 @@ pub fn attention_dwell(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 
 /// The debug panel's line. (attention.ts attentionSummary)
-pub fn attention_summary(g: &mut crate::game::Game) -> String {
+pub fn attention_summary(g: &crate::game::Game) -> String {
     let mut parts: Vec<String> = Vec::new();
     let mut i = 0;
     while i < g.guards.len() {

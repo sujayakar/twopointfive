@@ -19,7 +19,7 @@ fn eye_of(g: &Game, m: GuardId) -> V3 {
     let c = g.gd[m].ch;
     match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => [g.ch[c].pos[0], 1.6, g.ch[c].pos[2]] }
 }
-fn blocked_at(g: &mut Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
+fn blocked_at(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 fn solid_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::solid_blocked(g, a, b, None) }
 fn segment_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
 
@@ -36,7 +36,7 @@ fn gate_ops(g: &Game, op: DoorOpId) -> Vec<DoorOpId> {
 fn on_entry(g: &Game, op: DoorOpId, word: &[DoorOpId], gate: &[DoorOpId], x: GuardId) -> bool {
     dop!(g, op).men.contains(&x) || word.iter().any(|o| dop!(g, *o).men.contains(&x)) || gate.iter().any(|o| dop!(g, *o).men.contains(&x))
 }
-fn near_door(g: &mut Game, d: DoorId, side: f64, q: V3) -> bool {
+fn near_door(g: &Game, d: DoorId, side: f64, q: V3) -> bool {
     off_of(g, d, q, side) > 0.0 && v3::dist_xz(q, frame(g, d)) < 5.0
 }
 
@@ -302,14 +302,14 @@ fn corner_turn(g: &mut Game, op: DoorOpId, gd: GuardId, a: OrdersAssignmentId, p
 }
 
 /// Stood on the point the entry gave him, or where he stopped short of it. (doortools.ts DoorTools.onPoint)
-pub fn door_tools_on_point(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId, pod: crate::entrypoints::Pod) -> bool {
+pub fn door_tools_on_point(g: &crate::game::Game, gd: GuardId, a: OrdersAssignmentId, pod: crate::entrypoints::Pod) -> bool {
     let p = pos(g, gd);
     let post = asg!(g, a).post;
     !(v3::dist_xz(p, pod.pos) > 0.6 && post.is_some() && v3::dist_xz(p, post.unwrap()) > 0.6)
 }
 
 /// Has he a corner of an entry still to check, with a mate through the frame behind him. (doortools.ts DoorTools.owesCorner)
-pub fn door_tools_owes_corner(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn door_tools_owes_corner(g: &crate::game::Game, gd: GuardId) -> bool {
     for op in g.door_tools.ops.iter().copied() {
         let o = &dop!(g, op);
         if o.phase != Phase::Enter { continue; }
@@ -328,7 +328,7 @@ fn cell_of(g: &Game, p: V3) -> f64 {
     m::floor(p[2] / cell) * w + m::floor(p[0] / cell) + 0.0
 }
 /// threatNote's `beyond`: in the room behind the door, or in the doorway / past the frame line.
-fn threat_beyond(g: &mut Game, op: DoorOpId, p: V3) -> bool {
+fn threat_beyond(g: &Game, op: DoorOpId, p: V3) -> bool {
     let (d, side) = (dop!(g, op).door, dop!(g, op).side);
     let key = crate::Num(cell_of(g, p));
     let room = dop!(g, op).threat.as_ref().and_then(|t| t.room);
@@ -602,7 +602,7 @@ pub fn door_tools_seen_most(g: &mut crate::game::Game, lead: GuardId, men: &[Gua
 }
 
 /// When he came through the frame on this entry; NaN until 'going in'. (doortools.ts DoorTools.inAt)
-pub fn door_tools_in_at(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> f64 {
+pub fn door_tools_in_at(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> f64 {
     let o = &dop!(g, op);
     match o.crossed.get(gd) {
         Some(tx) if o.phase == Phase::Enter => m::max(*tx, o.t0),
@@ -622,7 +622,7 @@ pub fn door_tools_on_sector(g: &mut crate::game::Game, gd: GuardId, a: OrdersAss
 }
 
 /// The men an ended entry has holding one of its room's other doors. (doortools.ts DoorTools.doorKeepers)
-pub fn door_tools_door_keepers(g: &mut crate::game::Game) -> Vec<(GuardId, DoorId, OrdersAssignmentId)> {
+pub fn door_tools_door_keepers(g: &crate::game::Game) -> Vec<(GuardId, DoorId, OrdersAssignmentId)> {
     let mut out = Vec::new();
     for (gd, r) in g.door_tools.held.iter() {
         if let Some(d) = r.door { out.push((gd, d, r.a)); }
@@ -630,7 +630,7 @@ pub fn door_tools_door_keepers(g: &mut crate::game::Game) -> Vec<(GuardId, DoorI
     out
 }
 
-fn sector_hit(g: &mut Game, gd: GuardId, p: V3, y: f64) -> bool {
+fn sector_hit(g: &Game, gd: GuardId, p: V3, y: f64) -> bool {
     crate::guards::colleague_in_line(g, gd, [p[0] + m::sin(y) * 4.0, 1.2, p[2] + m::cos(y) * 4.0], None).is_some()
 }
 
@@ -678,7 +678,7 @@ fn keep_sector(g: &mut Game, gd: GuardId, r: &mut crate::doortools::DoorToolsHel
 }
 
 /// Is he on one of this entry's other doors. (doortools.ts DoorTools.onOther)
-pub fn door_tools_on_other(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
+pub fn door_tools_on_other(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     if g.k.doortools.other_door_m > 0.0 {
         if let Some(other) = dop!(g, op).other.as_ref() {
             return other.values().any(|r| r.gd == gd);
@@ -994,7 +994,7 @@ pub fn door_tools_hold_doors(g: &mut crate::game::Game, op: DoorOpId) {
             }
             // (offSwing moves P.pos in place, and P.pos is `post`)
             let mut moved = crate::doortools::DoorToolsOffSwingP { pos: to, watch: None };
-            door_tools_off_swing(g, &mut moved, Some(d), side, &taken, Some(at));
+            door_tools_off_swing(g, &moved, Some(d), side, &taken, Some(at));
             post = Some(moved.pos);
         }
         let from = match post { Some(p) => p, None => pos(g, gd) };

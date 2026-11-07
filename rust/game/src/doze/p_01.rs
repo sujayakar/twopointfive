@@ -585,15 +585,15 @@ pub fn doze_in_chair(g: &mut crate::game::Game, gd: GuardId) -> bool {
     flat(&pos, x, z) < 1.2
 }
 /// is he asleep this frame (doze.ts dozeAsleep)
-pub fn doze_asleep(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn doze_asleep(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.doze.rec.get(gd).map_or(false, |d| d.phase == Phase::Asleep)
 }
 /// his torch is dark: sat down to it, or asleep (doze.ts dozeDark)
-pub fn doze_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn doze_dark(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.doze.rec.get(gd).map_or(false, |d| seated(*d))
 }
 /// his ears this frame: [noises, foot]; headphones on at his screen, whole for everybody else (doze.ts dozeEar)
-pub fn doze_ear(g: &mut crate::game::Game, gd: GuardId) -> [f64; 2] {
+pub fn doze_ear(g: &crate::game::Game, gd: GuardId) -> [f64; 2] {
     if g.m.doze.rec.get(gd).map_or(false, |d| d.phase == Phase::Work) {
         return [g.k.doze.noises, g.k.doze.ears];
     }

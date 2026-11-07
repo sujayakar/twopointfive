@@ -24,7 +24,7 @@ fn at_of(t: &OrderTarget) -> V3 {
     }
 }
 /// `recipients(t)` with its `who` left to the standing choice
-fn recipients_of(g: &mut Game, t: &OrderTarget) -> Vec<GuardId> {
+fn recipients_of(g: &Game, t: &OrderTarget) -> Vec<GuardId> {
     squad_orders_recipients(g, Some(t), None)
 }
 fn on(b: Option<bool>) -> bool {
@@ -43,7 +43,7 @@ fn player_ch(g: &Game) -> CharId {
 fn press_delete(g: &mut Game, input: InputId, code: &str) -> bool {
     g.tab.input[input].pressed.delete(String::from(code))
 }
-fn press_has(g: &mut Game, input: InputId, code: &str) -> bool {
+fn press_has(g: &Game, input: InputId, code: &str) -> bool {
     g.tab.input[input].pressed.has(String::from(code))
 }
 /// `input.clicked &= ~bit`
@@ -83,9 +83,9 @@ fn drop_stock_word(s: &str) -> &str {
 
 // ---- what skeleton 5 still cannot reach ----
 /// `b.owner`. Once the table of Box rows is there, the body is that row's field
-fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].owner }
+fn seam_box_owner(g: &Game, b: BoxId) -> f64 { g.tab.boxes[b].owner }
 /// `b.flags`. As seam_box_owner
-fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
+fn seam_box_flags(g: &Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
 // BRING-UP: THE DOOR ROWS' CLOSURES (doortools.ts:808-846 the constructor's rows, :864 thrRows on the page's `outsidePlain`, :908-938 sync's `go` and the big
 // slot's row). The skeleton has their arms and no named function for their bodies, so the first door order given stopped here (room-clear-four tick 1009, 'bangClear').
 // SKELETON-GAP: a public name in doortools for each Door* arm's body (label / valid / issue), as squadthrow has row_label / row_valid / row_issue; then these are calls.
@@ -114,7 +114,7 @@ fn door_can_then(g: &mut Game, what: crate::doortools::DoorToolsCanThresholdThen
     }
 }
 /// `who === 'you' ? wg(…) : `${who} is behind that door.``
-fn behind_words(g: &mut Game, who: String) -> String {
+fn behind_words(g: &Game, who: String) -> String {
     if who == "you" { let (now, was) = (String::from("you're behind that door."), String::from("you are behind that door.")); crate::words::wg(g, &now, &was) } else { format!("{} is behind that door.", who) }
 }
 fn seam_arm_label(g: &mut Game, arm: &OrderLabel, t: &OrderTarget) -> String {
@@ -411,7 +411,7 @@ pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId
             let OrderTarget::Door(x) = t else { return Vec::new() };
             for side in [x.side, -x.side] {
                 let mut there = OrderTarget::Door(OrderTargetDoor { side, ..*x });
-                if let crate::wandorder::Pick::Arm1(p) = crate::wandorder::pick(g, men, &mut there) { return vec![p.gd]; }
+                if let crate::wandorder::Pick::Arm1(p) = crate::wandorder::pick(g, men, &there) { return vec![p.gd]; }
             }
             Vec::new()
         }
@@ -449,7 +449,7 @@ pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
             plain_valid(crate::shutdoor::why_not_shut(g, x.door, men))
         }
         OrderValid::ThrowRow { kind } => crate::squadthrow::row_valid(g, men, at, kind).map_err(Some),
-        OrderValid::Wand => match crate::wandorder::pick(g, men, &mut t.clone()) {
+        OrderValid::Wand => match crate::wandorder::pick(g, men, &t.clone()) {
             crate::wandorder::Pick::Text(w) => Err(Some(w)),
             crate::wandorder::Pick::Arm1(_) => Ok(()),
         },
@@ -507,7 +507,7 @@ pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardI
             crate::wallcharge::WallChargeIssue::Text(w) => Some(w),
             crate::wallcharge::WallChargeIssue::Arm1(()) => None,
         },
-        OrderIssue::Wand => match crate::wandorder::issue(g, men, &mut t.clone()) {
+        OrderIssue::Wand => match crate::wandorder::issue(g, men, &t.clone()) {
             crate::wandorder::Issue::Text(w) => Some(w),
             crate::wandorder::Issue::Arm1(()) => None,
         },
@@ -687,7 +687,7 @@ pub fn squad_orders_rows_for(g: &mut crate::game::Game, t: &crate::orders::Order
 }
 
 /// A ring put up now is one of the flat tree (orders.ts SquadOrders.flatRing)
-pub fn squad_orders_flat_ring(g: &mut crate::game::Game) -> bool {
+pub fn squad_orders_flat_ring(g: &crate::game::Game) -> bool {
     !crate::rails::rails_live(g) || crate::rails::rails_flat_ring(g)
 }
 
@@ -739,7 +739,7 @@ pub fn squad_orders_seat(g: &mut crate::game::Game, def: OrdersOrderDefId, stood
 }
 
 /// Is the 'wait for my word' row offered under these rows (orders.ts SquadOrders.wordRowOf)
-pub fn squad_orders_word_row_of(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, rows: &[OrdersOrderDefId]) -> bool {
+pub fn squad_orders_word_row_of(g: &crate::game::Game, t: &crate::orders::OrderTarget, rows: &[OrdersOrderDefId]) -> bool {
     if matches!(t, OrderTarget::Foe(_)) { return false; }
     rows.iter().any(|&d| crate::planlay::layable(g, d))
 }
@@ -758,7 +758,7 @@ pub fn squad_orders_word_page(g: &mut crate::game::Game, m: &crate::orders::Menu
 }
 
 /// The digit the open menu's 'wait for my word' row is on (orders.ts SquadOrders.waitDigit)
-pub fn squad_orders_wait_digit(g: &mut crate::game::Game, m: &crate::orders::Menu) -> f64 {
+pub fn squad_orders_wait_digit(g: &crate::game::Game, m: &crate::orders::Menu) -> f64 {
     let k = crate::orders::digit_of(&g.k.orders.wait_key);
     if m.word_row && k <= crate::orders::ORDER_DIGITS && !m.rows.iter().any(|&d| g.tab.orders_order_def[d].key == Some(k)) { k } else { 0.0 }
 }
@@ -1193,7 +1193,7 @@ pub fn squad_orders_part_give(g: &mut crate::game::Game, m: &crate::orders::Menu
 }
 
 /// The open menu's target as its men will work it (orders.ts SquadOrders.menuTarget)
-pub fn squad_orders_menu_target(g: &mut crate::game::Game) -> Option<crate::orders::OrderTarget> {
+pub fn squad_orders_menu_target(g: &crate::game::Game) -> Option<crate::orders::OrderTarget> {
     g.orders.menu.as_ref().map(menu_target_of)
 }
 

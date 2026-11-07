@@ -18,12 +18,12 @@ fn floor_of(p: V3) -> V3 { [p[0], 0.0, p[2]] }
 pub fn flags(g: &mut Game) {}
 
 /// a man's name in a line, or 'that man'   (pairorders.ts nameOf)
-pub fn name_of(g: &mut Game, h: GuardId) -> String {
+pub fn name_of(g: &Game, h: GuardId) -> String {
     if g.gd[h].callsign.is_empty() { String::from("that man") } else { g.gd[h].callsign.clone() }
 }
 
 /// where a man is LOOKING on the floor plane: his chest and his head, halved   (pairorders.ts lookOf)
-pub fn look_of(g: &mut Game, h: GuardId) -> [f64; 2] {
+pub fn look_of(g: &Game, h: GuardId) -> [f64; 2] {
     let c = g.gd[h].ch;
     let a = g.ch[c].chest_dir;
     let b = crate::character::character_head_dir(g, c);
@@ -43,7 +43,7 @@ pub fn pair_orders_new(g: &mut Game) -> crate::pairorders::PairOrders {
 
 // ------------------------------------------------------------ who, what
 /// the rows are on the menu: the switch, a squad on the floor, and not more of it than a pair's orders are for   (PairOrders.up)
-pub fn pair_orders_up(g: &mut Game) -> bool {
+pub fn pair_orders_up(g: &Game) -> bool {
     if !g.k.pair.on { return false; }
     if !crate::orders::squad_orders_active(g) { return false; }
     let n = crate::orders::squad_orders_squad(g).len() as f64;
@@ -51,7 +51,7 @@ pub fn pair_orders_up(g: &mut Game) -> bool {
 }
 
 /// the squad is quiet enough for hands   (PairOrders.quiet)
-pub fn pair_orders_quiet(g: &mut Game) -> bool {
+pub fn pair_orders_quiet(g: &Game) -> bool {
     !g.k.silent.on || crate::silent::squad_silent(g)
 }
 
@@ -66,13 +66,13 @@ pub fn pair_orders_is_foe(g: &mut Game, h: GuardId) -> bool {
 }
 
 /// he has noticed somebody: roused, searching, or his meter past the silent order's own `noticed`   (PairOrders.noticed)
-pub fn pair_orders_noticed(g: &mut Game, h: GuardId) -> bool {
+pub fn pair_orders_noticed(g: &Game, h: GuardId) -> bool {
     let s = g.gd[h].state;
     s == crate::game::GuardState::Alert || s == crate::game::GuardState::Search || g.gd[h].awareness >= g.k.silent.noticed
 }
 
 /// the men waiting on the mark; each row a COPY: a writer goes back to g.pair.jobs by the man   (PairOrders.waiting)
-pub fn pair_orders_waiting(g: &mut Game) -> Vec<(GuardId, crate::pairorders::Job)> {
+pub fn pair_orders_waiting(g: &Game) -> Vec<(GuardId, crate::pairorders::Job)> {
     let t = g.time;
     let mut out = Vec::new();
     for (gd, j) in g.pair.jobs.iter() {
@@ -86,12 +86,12 @@ pub fn pair_orders_waiting(g: &mut Game) -> Vec<(GuardId, crate::pairorders::Job
 }
 
 /// a man's job, to read   (PairOrders.jobOf)
-pub fn pair_orders_job_of(g: &mut Game, gd: GuardId) -> Option<crate::pairorders::Job> {
+pub fn pair_orders_job_of(g: &Game, gd: GuardId) -> Option<crate::pairorders::Job> {
     g.pair.jobs.get(gd).copied()
 }
 
 /// the partner's hands are on this man, for a bounded time   (PairOrders.gripped)
-pub fn pair_orders_gripped(g: &mut Game, h: GuardId) -> bool {
+pub fn pair_orders_gripped(g: &Game, h: GuardId) -> bool {
     let (t, secs) = (g.time, g.k.pair.secs);
     for j in g.pair.jobs.values() {
         if j.foe == h && j.t0 >= 0.0 && t - j.t0 < secs + 0.5 && t >= j.t0 { return true; }
@@ -138,7 +138,7 @@ pub fn pair_orders_sees(g: &mut Game, gd: GuardId, h: GuardId) -> bool {
 }
 
 /// is `p` in the half of the floor behind the way `h` looks now, or (`mostly`) mostly faces   (PairOrders.rear)
-pub fn pair_orders_rear(g: &mut Game, h: GuardId, p: V3, mostly: Option<bool>) -> bool {
+pub fn pair_orders_rear(g: &Game, h: GuardId, p: V3, mostly: Option<bool>) -> bool {
     let y = pair_orders_yaw_of(g, h);
     let [lx, lz] = if mostly.unwrap_or(false) { [m::sin(y), m::cos(y)] } else { look_of(g, h) };
     let c = pos_of(g, h);
@@ -535,7 +535,7 @@ pub fn pair_orders_stand(g: &mut Game, gd: GuardId, words: &str, aim: Option<Gua
 
 // ------------------------------------------------------------ taking a man
 /// the way a man mostly faces, as a yaw   (PairOrders.yawOf)
-pub fn pair_orders_yaw_of(g: &mut Game, foe: GuardId) -> f64 {
+pub fn pair_orders_yaw_of(g: &Game, foe: GuardId) -> f64 {
     if let Some(hb) = g.pair.habit.get(foe) {
         if m::hyp2(hb[0], hb[1]) > 0.3 { return m::atan2(hb[0], hb[1]); }
     }
@@ -543,7 +543,7 @@ pub fn pair_orders_yaw_of(g: &mut Game, foe: GuardId) -> f64 {
 }
 
 /// `m` behind the way he mostly faces   (PairOrders.back)
-pub fn pair_orders_back(g: &mut Game, foe: GuardId, m: f64) -> V3 {
+pub fn pair_orders_back(g: &Game, foe: GuardId, m: f64) -> V3 {
     let c = pos_of(g, foe);
     let y = pair_orders_yaw_of(g, foe);
     [c[0] - m::sin(y) * m, 0.0, c[2] - m::cos(y) * m]

@@ -77,7 +77,7 @@ fn stage_words(d: &Data) -> String {
 }
 
 /// How a man was put out, in a row's words (chronicle.ts:480 and :491, one chain).
-fn put_out_how(g: &mut Game, d: &Data) -> String {
+fn put_out_how(g: &Game, d: &Data) -> String {
     if is(d, "method", "choke") { String::from("choked out") }
     else if is(d, "method", "whip") { String::from("pistol-whipped") }
     else if is(d, "method", "ring") { crate::gear::gear_text(g, "a ring to the head") }

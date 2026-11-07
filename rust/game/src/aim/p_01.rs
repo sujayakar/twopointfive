@@ -23,12 +23,12 @@ pub fn aim_state_clear(this: &mut crate::aim::AimState) {
 }
 
 /// Is the moving-feet rule of aimcost.ts in force? Never under a show. (aim.ts moveCost)
-pub fn move_cost(g: &mut crate::game::Game) -> bool {
+pub fn move_cost(g: &crate::game::Game) -> bool {
     !g.touring
 }
 
 /// Is the lamp rule of aimcost.ts in force? Never under a show. (aim.ts lampCost)
-pub fn lamp_cost(g: &mut crate::game::Game) -> bool {
+pub fn lamp_cost(g: &crate::game::Game) -> bool {
     !g.touring
 }
 
@@ -43,7 +43,7 @@ pub fn feed_feet(g: &mut crate::game::Game, a: &mut crate::aim::AimState, speed:
 }
 
 /// What the feet term reads for this shooter right now, m/s. (aim.ts feetOf)
-pub fn feet_of(g: &mut crate::game::Game, a: &crate::aim::AimState, vel: &[f64], steady_pace: f64, on: bool) -> f64 {
+pub fn feet_of(g: &crate::game::Game, a: &crate::aim::AimState, vel: &[f64], steady_pace: f64, on: bool) -> f64 {
     let f = m::max(m::hyp2(vel[0], vel[2]), a.speed_sm - steady_pace);
     if on { m::max(f, a.move_sm) * g.k.aimcost.move_k } else { f }
 }
@@ -150,12 +150,12 @@ pub fn settle_time(p: crate::aim::SettleTimeP, dist: f64) -> f64 {
 }
 
 /// The first-shot gate; true with the model off. (aim.ts aimReady)
-pub fn aim_ready(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn aim_ready(g: &crate::game::Game, gd: GuardId) -> bool {
     !g.tune.aim_model || g.gd[gd].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
 /// The standoff's flank round: are the feet he remembers still enough? (aim.ts feetSettled)
-pub fn feet_settled(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn feet_settled(g: &crate::game::Game, gd: GuardId) -> bool {
     !move_cost(g) || g.gd[gd].aim.move_sm <= g.k.aimcost.flank_at
 }
 
@@ -165,7 +165,7 @@ fn ai_spread_of(g: &crate::game::Game, gd: GuardId) -> crate::weapons::AiSpread 
 }
 
 /// The man he is firing at, Sam's body if nobody: `foeChar(g, gd) ?? g.player.char`.
-fn foe_or_player(g: &mut crate::game::Game, gd: GuardId) -> CharId {
+fn foe_or_player(g: &crate::game::Game, gd: GuardId) -> CharId {
     match crate::teams::foe_char(g, gd) {
         Some(c) => c,
         None => g.pl[g.player].ch,

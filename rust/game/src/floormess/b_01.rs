@@ -15,4 +15,4 @@ pub fn spread(g: &mut crate::game::Game, x: f64, z: f64, s: crate::floormess::Sp
 
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/floormess.ts:130 messEvicted)
-pub fn mess_evicted(g: &mut crate::game::Game, c_2: DebrisChunkId) {}
+pub fn mess_evicted(g: &crate::game::Game, c_2: DebrisChunkId) {}

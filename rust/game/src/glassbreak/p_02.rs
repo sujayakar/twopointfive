@@ -480,7 +480,7 @@ pub fn glass_break_bang(g: &mut crate::game::Game, at: V3, who: f64) -> f64 {
 
 // ---------------------------------------------------------------- a burst's view of the glass
 /// where the rule's state stands: the slot is `g.sim`, so what comes back says only that it is the module's (glassbreak.ts GlassBreak.home)
-pub fn glass_break_home(g: &mut crate::game::Game) -> Option<crate::Opaque> {
+pub fn glass_break_home(g: &crate::game::Game) -> Option<crate::Opaque> {
     Some(crate::Opaque)
 }
 
@@ -501,7 +501,7 @@ pub fn glass_break_see_through<T: Clone + core::fmt::Debug>(g: &mut crate::game:
 }
 
 /// the view in hand as numbers: which view, the burst's point, reach and power, whether a man counts on it (glassbreak.ts GlassBreak.view)
-pub fn glass_break_view(g: &mut crate::game::Game) -> Option<crate::scene_box_mirror::PaneView> {
+pub fn glass_break_view(g: &crate::game::Game) -> Option<crate::scene_box_mirror::PaneView> {
     let v = g.glass_break.view_of?;
     Some(PaneView {
         kind: if v.kind == GlassBreakViewOfKind::Blown { VIEW_BLOWN } else { VIEW_GIVES },
@@ -623,7 +623,7 @@ fn seed_mix_gust(key: f64) -> f64 { (js::to_i32(0x61A55 as f64) ^ m::imul(js::to
 // ---------------------------------------------------------------- queries
 /// nothing of a pane's is in the block: the panes part's first word, `used` (glassbreak.ts GlassBreak.untouched; `panes_untouched` takes no slot)
 pub fn glass_break_untouched(g: &mut crate::game::Game) -> bool {
-    ::sim::state::state(g.sim).panes.used == 0
+    ::sim::state::state_read(g.sim).panes.used == 0
 }
 
 /// is world point x on pane bi where a piece has fallen out (glassbreak.ts GlassBreak.openAt)

@@ -33,7 +33,7 @@ pub fn note(g: &mut crate::game::Game, s: &str) {
 }
 
 /// The slab's centre height with its foot (or its face) on the floor at this much tip. (doorblast.ts support)
-pub fn support(g: &mut crate::game::Game, d: DoorId, tip: f64) -> f64 {
+pub fn support(g: &crate::game::Game, d: DoorId, tip: f64) -> f64 {
     (g.dr[d].height / 2.0) * m::cos(tip) + (g.dr[d].thick / 2.0) * m::sin(tip) + LIFT
 }
 
@@ -301,7 +301,7 @@ pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Opt
 }
 
 /// The rounds' work a leaf stands: DOORSHOT.toll times plasterboard's. (doorblast.ts leafTough)
-pub fn leaf_tough(g: &mut crate::game::Game) -> f64 {
+pub fn leaf_tough(g: &crate::game::Game) -> f64 {
     let drywall = g.k.walls.tough.get(String::from("drywall")).copied().unwrap_or(6.0);
     let wood = g.k.walls.tough.get(String::from("wood")).copied().unwrap_or(9.0);
     m::min(drywall, wood) * m::max(0.1, g.k.doorshot.toll)
@@ -724,7 +724,7 @@ pub fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crat
     q[sim::slabs::P_BOUNCE] = g.k.doorblast.bounce;
     q[sim::slabs::P_TIP] = g.k.doorblast.tip;
     let a = sim::slabs::step(g.sim, g.col.mirror.slot as usize);
-    let q = slab_par();
+    let q = slab_par_read();
     let c = &mut g.m.sim_slabshome.slabs_stepped;
     c.rays += q[sim::slabs::P_RAYS];
     c.gathers += q[sim::slabs::P_GATHERS];

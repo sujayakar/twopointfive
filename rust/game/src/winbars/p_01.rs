@@ -35,7 +35,7 @@ fn hash_key(seed: f64, k: f64) -> f64 { m::imul(js::to_i32(seed + k), js::to_i32
 /// the k-th choice of a break   (breakBar's `R`)
 fn choice(seed: f64, k: f64) -> f64 { crate::debris::hash01(hash_key(seed, k)) }
 /// nothing of a pane's stands in this game's block   (glassbreak.ts panesUntouched; its stub takes no slot, see notes)
-fn untouched(g: &Game) -> bool { ::sim::state::state(g.sim).panes.used == 0 }
+fn untouched(g: &Game) -> bool { ::sim::state::state_read(g.sim).panes.used == 0 }
 /// the module's answers: `x.sim_scratch()` over `f64()`, its `o` being 0 here. Read before any other call into the module
 fn scratch() -> &'static [f64] {
     unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, ::sim::sim_scratch_len()) }
@@ -46,7 +46,7 @@ fn scratch() -> &'static [f64] {
 pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::winbars::BarState { g.m.winbars.state.get_or_insert_with(|| BarState { met: Vec::new() }) }
 
 /// The one gate: no showcase running.   (winbars.ts barsLive)
-pub fn bars_live(g: &mut crate::game::Game) -> bool { !g.touring }
+pub fn bars_live(g: &crate::game::Game) -> bool { !g.touring }
 
 /// Is static `index` a window's bar that still stands?   (winbars.ts barAt)
 pub fn bar_at(g: &mut crate::game::Game, index: f64) -> bool {

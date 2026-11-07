@@ -30,9 +30,9 @@ fn door_name(g: &Game, door: DoorId) -> String { g.dr[door].def.name.clone() }
 #[inline]
 fn in_cells(g: &Game, t: RoomfightRoomId, cell: f64) -> bool { g.tab.roomfight_room[t].cells.has(crate::Num(cell)) }
 #[inline]
-fn is_blocked(g: &mut Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
+fn is_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 /// a live man of the fight other than `d` stands within 0.9 m of p
-fn someone_at(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
+fn someone_at(g: &Game, d: RoomfightDefId, p: V3) -> bool {
     for i in 0..g.fight.defs.len() {
         let x = g.fight.defs[i];
         if x != d && alive(g, x) && flat(pos_of(g, gd_of(g, x)), p) < 0.9 { return true; }
@@ -225,7 +225,7 @@ pub fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
     in_room(g, r, p)
 }
 /// the last of his side alive: nobody left to go to. (pressure.ts lastAlone)
-pub fn last_alone(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+pub fn last_alone(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     for i in 0..g.fight.defs.len() {
         let x = g.fight.defs[i];
         if x != d && alive(g, x) { return false; }
@@ -418,7 +418,7 @@ pub fn told_of(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pr
     match state_of(g).told.get(d) { Some(t) if now - t.t < memory => Some(*t), _ => None }
 }
 /// PRESSURE.byWay: his room and the room being fought over share a door. (pressure.ts nextDoor)
-pub fn next_door(g: &mut crate::game::Game, r: Option<RoomfightRoomId>, t: RoomfightRoomId) -> bool {
+pub fn next_door(g: &crate::game::Game, r: Option<RoomfightRoomId>, t: RoomfightRoomId) -> bool {
     let r = match r { Some(r) => r, None => return false };
     let (a, b) = (&g.tab.roomfight_room[r].entries, &g.tab.roomfight_room[t].entries);
     a.iter().any(|e| b.iter().any(|x| x.door == e.door))

@@ -27,7 +27,7 @@ pub fn glance_toward(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Optio
 }
 
 /// Read-only peek for the panel / the QA harness (None: no whistle has ever concerned this man).   (whistle.ts whistleMem)
-pub fn whistle_mem(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::whistle::WhistleMem> {
+pub fn whistle_mem(g: &crate::game::Game, gd: GuardId) -> Option<crate::whistle::WhistleMem> {
     g.m.whistle.mem_of.get(gd).copied()
 }
 
@@ -87,14 +87,14 @@ pub fn try_whistle(g: &mut crate::game::Game) -> bool {
 }
 
 /// Mouth height off the event's floor position (a crouched man whistles from lower).   (whistle.ts mouthOf)
-pub fn mouth_of(g: &mut crate::game::Game, e: crate::game::GameEvent) -> V3 {
+pub fn mouth_of(g: &crate::game::Game, e: crate::game::GameEvent) -> V3 {
     let man = crate::seats::man_by_id(g, e.who.unwrap_or(crate::consts::PLAYER_ID));
     let crouched = man.map_or(false, |p| g.pl[p].crouch);
     [e.pos[0], if crouched { 1.0 } else { 1.55 }, e.pos[2]]
 }
 
 /// Can this man be the one who ANSWERS: calm, free, on nobody's errand, of a side that minds the player.   (whistle.ts canAnswer)
-pub fn can_answer(g: &mut crate::game::Game, gd: GuardId, who: f64) -> bool {
+pub fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
     let state = g.gd[gd].state;
     if state != crate::game::GuardState::Patrol && state != crate::game::GuardState::Suspicious { return false; }
     if g.gd[gd].held.is_some() || g.gd[gd].script.is_some() || g.gd[gd].task.is_some() { return false; }
@@ -256,7 +256,7 @@ pub fn pick(g: &mut crate::game::Game, pool: &[String], gd: GuardId, key: crate:
 }
 
 /// Is this man's suspicion (still) only a whistle's?   (whistle.ts whistleSoft)
-pub fn whistle_soft(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn whistle_soft(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(row) = g.m.whistle.mem_of.get(gd) else { return false };
     row.soft
         && g.gd[gd].state == crate::game::GuardState::Suspicious
