@@ -855,6 +855,8 @@ pub struct Game {
     pub sim: usize,
     /// who has each man's body this tick, and who was asked (control/): written by the arbiter, read by the debugger's lines; not on the wire
     pub ctl: crate::control::ControlState,
+    /// this tick's count of keyed draws a (site, man) (dice.rs): empty between ticks; not on the wire
+    pub keyed: crate::dice::Keyed,
 }
 impl Game {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -1021,6 +1023,7 @@ impl Game {
             stats: Stats::blank(),
             sim: 0,
             ctl: crate::control::ControlState::blank(),
+            keyed: crate::dice::Keyed::default(),
         }
     }
 }
