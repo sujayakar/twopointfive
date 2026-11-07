@@ -21,6 +21,7 @@ tools/blitz/rust.sh rust bun run tools/qa/playthrough.ts --scn depot-four --seed
 | `tally-diff.ts` | two `playthrough.ts --json` files side by side, a run a row |
 | `thrice.ts` | one fight stood N times in one process, every game held to the first (the digest a second; `--ticks`, `--dump` to find where two part) |
 | `fuzz.sh`, `fuzz-diff.ts` | THE FUZZ: one seed of tools/qa/soak.ts played on the folded TypeScript tick and on the Rust game, a line a tick each, and the first tick they part with what the schedule did before it |
+| `fuzz-squad.sh`, `perturb.ts` | THE FUZZ ON A SQUAD MISSION: a seeded stream of orders, throws, fire, kills, saves, loads and restarts laid between the ticks of the scripted player (`QA_PERTURB=<seed>` over any headless tool), the same two-sided compare |
 | `keep-check.ts` | a snapshot and a save put back, six games in four slots, a refused re-step: the same lines under `ts` and `rust` |
 | `qa-sweep.py` | every family of probes.ts three ways, a probe a row: the table's `sweep` rows and its Rust-only reds by kind |
 | `word.ts` | THE ONE SWITCH: the word asked for (`TPS_GAME`, else `DEFAULT_WORD`), the table, a frozen run, the closing line. No import of src |
@@ -80,6 +81,30 @@ bun run tools/blitz/fuzz-diff.ts DIR [--json] [--but-panes]
 - **To look closer**: `RH_SAY='<an expression of g>'` writes what the tool would read, a line a tick on each side (`<word>-say.txt`; `RH_SAY=digest` the
   game's digest); `RH_DUMP=<ticks>` keeps the whole state of each side at those ticks for `diff.ts`; `RH_HALF=<ticks>` prints the host's half a field a
   line under either word.
+
+### The fuzz on a squad mission
+
+The soak's level is the solo night, and Hard moves no tick of it (the reference's tick files for seeds 1 to 6 are the same bytes on Standard and on
+Hard). The squad missions are where the orders menu, the door tools, the room fight and the defenders' squads run, so the second fuzz lays its own
+stream over the scripted player of `tools/qa/playthrough.ts`:
+
+```sh
+tools/blitz/fuzz-squad.sh <mission> <seed> [--hard] [--rate K] [--skip a,b] [--only a,b] [--out DIR] [--side ts|rust]
+QA_PERTURB=<seed> [QA_PERTURB_RATE=K] [QA_PERTURB_ONLY=a,b] [QA_PERTURB_SKIP=a,b] [QA_PERTURB_FROM=<tick>] <any tool that stands its game through tools/qa/headless.ts>
+```
+
+- **`tools/blitz/perturb.ts`** is laid by `tools/qa/headless.ts` when `QA_PERTURB` is given: before every step a schedule of its own (one seeded
+  stream, never the game's die) may give a row the orders menu offers on a random door, floor spot or man (`orders.rowsFor`, `orders.give`; a refusal
+  is logged with its words), call an order off (`fallIn`), drop a frag, a flash or a smoke can, fire the player's round at one of theirs, kill one of
+  theirs (now and then one of the team), tell the hostages to follow, cut the mains, save by hand, load the last save, or press the pause card's
+  restart. Everything goes through the game's own doors, as the menu, the keys or a tool would. The log is in the soak's shape, so `fuzz-diff.ts`
+  reads either fuzz.
+- **Determinism first**: the same mission and seed twice on one side must write the same tick file; a parting between the sides means nothing
+  before that is shown.
+- **The whole states** are kept every 1,800 ticks and the latest pair both sides have is diffed by path. Two kinds of path are noise there and are
+  named in the results: rows the TypeScript's book keeps for the player of before the mission's own fresh deal (`kit.issued_player`, `kit.you_bare`:
+  they number two more guns, so every gun after them compares crosswise), and nothing else known.
+- **`FUZZ_CAP`** (900 s): a side cut short is reported as "one side stopped" and the ticks both played are still compared.
 
 ## Two ways
 
@@ -445,6 +470,25 @@ mission (pass-four passed 2 GB before the memo's buffers were trimmed). No step 
 THE WORST TICK is the first (about 20 ms quiet); a second game stepped three times from the same start before it does not lower it (19.8 against 19.5 ms),
 so it is the game's own first-tick work, not the module's compiling (`warmSteps`, off). Under load the worst tick is whichever the scheduler takes.
 A tutorial is the same path now (tut-solo: 5.1 ms a tick, 38.7 s for 7,542 ticks). `--whole-every 1` is 100 to 210 ms a tick under the load.
+
+## What a tick costs since the calls cross (cut 7.13)
+
+`RH_TIMES=1`, `playthrough.ts --scn night-breach --seeds 1`, the box at a load of 9 to 13: 1,464 ticks in 89 s of wall, 58 ms a tick (10 s under `ts`);
+the record is the same as under `ts`. By the host's own clock, a tick:
+
+| a tick's part | ms |
+|---|---|
+| the walk for writes by name (the scan) | 33.0 |
+| the changed-only export | 11.5 |
+| its apply | 5.0 |
+| `face_step` | 2.4 |
+| the block's copy | 1.1 |
+
+WHY: four calls cross every tick on that mission (`Cover.words` twice, `Cover.ready`, `fragStepOff`: reads of the scripted player and of the page's
+own lines). A crossing walks the scan before it (what the tool wrote goes first) and after it (the apply moved the puppet), and exports and applies
+once: ten walks of 3.3 ms and five exports a tick. Before the calls crossed, the whole host was about 12.7 ms a tick. A squad mission on Hard costs
+60 to 85 ms a tick on the Rust side, which is what bounds the fuzz. NOT MENDED HERE: a crossing whose export is empty needs neither the apply nor the
+second walk, and a read that is declared a read needs neither walk; both belong with the surface's rows.
 
 ## What has been played
 

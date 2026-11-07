@@ -15,7 +15,7 @@
 //   restart    the pause card's restart (`game.restart`)
 // QA_PERTURB_RATE=<k> scales every rate (1); QA_PERTURB_ONLY / QA_PERTURB_SKIP=<kinds, comma>; QA_PERTURB_FROM=<tick> (120).
 // THE LOG: a line a perturbation in `<RH_TICKS>/<word>.log`, in the soak's own shape (`  [seed N] 12.34s f741 STIM order: …`), so tools/blitz/fuzz-diff.ts
-// reads a squad run as it reads a soak. A perturbation that throws is logged with what it threw and the play goes on.
+// reads a squad run as it reads a soak. A perturbation that throws is logged with what it threw (its stack in `<word>.throws.txt`) and the play goes on.
 // It is a tool's layer: nothing here runs unless the word is given, and nothing of src reads it.
 import { appendFileSync, writeFileSync } from 'node:fs';
 const ROOT = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
@@ -61,7 +61,7 @@ export async function lay(W: any): Promise<void> {
   };
   const step = W.step;
   W.step = function (this: any, ...a: any[]) {
-    if (n >= FROM && !g.ticking) for (const k of kinds) { if (rng() >= RATES[k] * K / 3600) continue; let d: string | null; try { d = DO[k](); } catch (e) { d = `THREW ${String((e as Error)?.message ?? e).slice(0, 200)}`; } if (d !== null) say(`STIM ${k}: ${d}`); }
+    if (n >= FROM && !g.ticking) for (const k of kinds) { if (rng() >= RATES[k] * K / 3600) continue; let d: string | null; try { d = DO[k](); } catch (e) { d = `THREW ${String((e as Error)?.message ?? e).slice(0, 200)}`; if (file) appendFileSync(file.replace(/\.log$/, '.throws.txt'), `f${n} ${k}: ${String((e as Error)?.stack ?? e)}\n`); } if (d !== null) say(`STIM ${k}: ${d}`); }
     n++; return step.apply(this, a); };
   say(`--- perturbations laid, seed ${seed}: ${kinds.join(', ')}; rates a minute x${K}`);
 }

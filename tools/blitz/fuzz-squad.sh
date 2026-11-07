@@ -5,9 +5,11 @@
 # reference) and on the Rust game; a line a tick on each side, the whole states every half minute; then fuzz-diff.ts and the latest pair of whole states
 # both sides kept, diffed by path.
 #   tools/blitz/fuzz-squad.sh <mission> <seed> [--hard] [--rate K] [--skip a,b] [--only a,b] [--out DIR] [--side ts|rust]
+# FUZZ_CAP=<seconds> (900): the longest a side may run; a side cut short is "one side stopped" and the ticks both played are still compared (the Rust side
+# of a long mission on a loaded box needs more: PLAY.md, "What a tick costs").
 # Exit: fuzz-diff.ts's (0 equal on every tick both played and both played as many · 1 they part · 3 a side did not run).
 cd "$(dirname "$0")/../.." || exit 64
-M=$1; SEED=$2; shift 2 || { sed -n '2,8p' "$0"; exit 64; }
+M=$1; SEED=$2; shift 2 || { sed -n '2,10p' "$0"; exit 64; }
 HARD=; OUT=; SKIP=; ONLY=; RATE=1; SIDES="ts rust"
 while [ $# -gt 0 ]; do case "$1" in --hard) HARD=1; shift;; --out) OUT=$2; shift 2;; --skip) SKIP=$2; shift 2;; --only) ONLY=$2; shift 2;; --rate) RATE=$2; shift 2;; --side) SIDES=$2; shift 2;; *) echo "fuzz-squad.sh: no option $1"; exit 64;; esac; done
 [ -n "$OUT" ] || OUT="${TMPDIR:-/tmp}/fuzz-$M-$SEED${HARD:+-hard}"
@@ -24,7 +26,7 @@ done
 bun run tools/blitz/fuzz-diff.ts "$OUT"; CODE=$?
 L=; for k in $(echo $DUMPS | tr ',' ' '); do [ -s "$OUT/ts-t$k.bin" ] && [ -s "$OUT/rust-t$k.bin" ] && L=$k; done
 if [ -n "$L" ]; then
-  bun run tools/blitz/diff.ts "$OUT/ts-t$L.bin" "$OUT/rust-t$L.bin" --canon "$(cat tools/blitz/canon.txt),FirearmId" --known tools/blitz/known.txt --show 40 > "$OUT/end-diff.txt" 2>&1
+  bun run tools/blitz/diff.ts "$OUT/ts-t$L.bin" "$OUT/rust-t$L.bin" --canon "$(cat tools/blitz/canon.txt),FirearmId" --known tools/blitz/known.txt --show 600 > "$OUT/end-diff.txt" 2>&1
   echo "the whole states as tick $L returned (the latest both sides kept): $(head -1 "$OUT/end-diff.txt" | cut -c1-300)"
 fi
 rm -f "$OUT"/*-t[0-9]*.bin

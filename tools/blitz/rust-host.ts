@@ -291,7 +291,10 @@ export class RustHost {
    *  side first (`face_checkpoint`), so the kept game holds it. No state is walked in TypeScript and nothing is applied whole. */
   snapTake(): KeptGame { const g = this.g, X = this.F.X;
     { const why = this.startWhy(); if (why === 'back') this.restep(); else if (why !== null) this.start(why); }
-    if (!this.inStep) this.scanFlush();
+    // (the row the controller has just written on the puppet is held out of the walk: carried by name AND made by `face_checkpoint` it stood twice in
+    // the Rust game's chronicle, wherever the walk had met the list before. Found by the squad fuzz's whole states, never by a tick's line.)
+    { const C0 = g.chronicle?.counts, Ev0 = g.chronicle?.events, mine = !!C0 && (C0.saves | 0) !== this.savesRef && Ev0?.[Ev0.length - 1]?.kind === 'checkpoint', row = mine && !OFF.has('saverow') ? Ev0.pop() : null;
+      try { if (!this.inStep) this.scanFlush(); } finally { if (row) Ev0.push(row); } }
     const C = g.chronicle?.counts; if (C && (C.saves | 0) !== this.savesRef) { const Ev = g.chronicle.events, e = Ev[Ev.length - 1], label = e?.kind === 'checkpoint' ? String(e.label ?? e.data?.label ?? '') : '';
       this.F.hand(enc.encode(label), (p, n) => X.face_checkpoint(this.h, p, n)); this.savesRef = C.saves | 0; this.tookRow = true; }
     // (every kept game no slot of the controller's names any more is let go: a ring's slot taken again, a new run's shelf)
