@@ -23,7 +23,7 @@
       lamplow:{ pin: { look: [16.0, 1.2, 24.6], yaw: -1.05, pitch: 14 * DEG, dist: 9.5 }, player: { pos: [13.5, 0, 25.9], yaw: Math.PI * 0.5 }, sub: 'V7 · the sodium lamp from head height across the lot, looking INTO it through the rain: the forward lobe (streaks between the eye and the lamp flare)' },
     },
     torchLight: null,
-    /** the fixed test torch (= froxel-scenes.js's: the guards' hand torch as a static kind-1 light, owner 0) — made once, parked off unless the view asks for it */
+    /** the fixed test torch (the guards' hand torch as a static kind-1 light, owner 0) — made once, parked off unless the view asks for it */
     installTorch() {
       if (P.torchLight) return P.torchLight;
       P.torchLight = E().lights.add({ name: 'prainTorch', group: 'test', kind: 1, pos: [0, -50, 0], dir: [0, -1, 0], color: [1.0, 0.92, 0.78], intensity: 70, range: 16, innerDeg: 7, outerDeg: 19, radius: 0.07, volumetric: 1.0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 70 });

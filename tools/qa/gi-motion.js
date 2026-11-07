@@ -59,7 +59,7 @@
   // ------------------------------------------------------------------ variants: settings bundles over the boot defaults
   let S0 = null;
   // (SINCE 2026-11-07 OLD keeps ReSTIR and the shared denoiser: the old estimator and denoiser are gone, so it is no longer the pre-v3 chain)
-  const OLD = { taau: false, froxelVol: false, rtReflect: false, detail: 0, renderScale: 1.0, sharpDirect: false, sharpDecouple: false, gbaa: false, taauHistSharp: 0 };   // THE OLD RENDERER (pre-v3 chain at native rows, FXAA, the resolve configuration off)
+  const OLD = { taau: false, rtReflect: false, detail: 0, renderScale: 1.0, sharpDirect: false, sharpDecouple: false, gbaa: false, taauHistSharp: 0 };   // THE OLD RENDERER (pre-v3 chain at native rows, FXAA, the resolve configuration off)
   const VARIANTS = {
     main: {}, old: OLD,
     // (B, the diffuse GI denoised at internal res, and C, the young-history gather rays, are gone since 2026-11-07: no tier placed either)
@@ -90,7 +90,7 @@
     for (const [k, val] of Object.entries({ ...v, ...extra })) { if (!(k in s)) throw new Error('unknown setting ' + k); s[k] = val; }
     return describe();
   }
-  function describe() { const s = S(); const e = E(); return { res: [e.width, e.height, e.outWidth, e.outHeight], q: window.__quality?.current, framing, scale: s.renderScale, gatherDiv: e.passes.gatherDiv, gw: e.passes.gw, gh: e.passes.gh, sharp: s.sharpDirect, sharpLive: e.sharpOn, taau: s.taau, restir: s.restir, dn: s.denoiser, froxel: s.froxelVol, rt: s.rtReflect, gbaa: s.gbaa ?? null, giYoungRays: s.giYoungRays ?? null, dnGi: [s.dnGiIters, s.dnGiCap], grain: e.passes.grain, debugView: s.debugView, errs: (window.__errs || []).slice(0, 3) }; }   // (NB read straight after apply(): the engine's sizes / sharpLive / giFullLive catch up on the next frame — `run` records it again after the takes as appliedAfter)
+  function describe() { const s = S(); const e = E(); return { res: [e.width, e.height, e.outWidth, e.outHeight], q: window.__quality?.current, framing, scale: s.renderScale, gatherDiv: e.passes.gatherDiv, gw: e.passes.gw, gh: e.passes.gh, sharp: s.sharpDirect, sharpLive: e.sharpOn, taau: s.taau, restir: s.restir, dn: s.denoiser, rt: s.rtReflect, gbaa: s.gbaa ?? null, giYoungRays: s.giYoungRays ?? null, dnGi: [s.dnGiIters, s.dnGiCap], grain: e.passes.grain, debugView: s.debugView, errs: (window.__errs || []).slice(0, 3) }; }   // (NB read straight after apply(): the engine's sizes / sharpLive / giFullLive catch up on the next frame — `run` records it again after the takes as appliedAfter)
 
   // ------------------------------------------------------------------ projection + sampling
   /** world point → OUTPUT-frame pixel (sub-pixel, top-left origin, centres at .5) through the 4×4 column-major view-projection `vp` of the frame that was read back */

@@ -67,7 +67,7 @@
   }
   /** interleaved A/B on the current view: rounds × (warm + n) serialized renders per variant; per-pass medians + Σ + union (median and p95) */
   async function costAB(applyA, applyB, opts = {}) {
-    const { rounds = 4, n = 20, warm = 12, passes = ['reflect', 'rdenoise', 'gather', 'temporal', 'direct', 'softblur', 'volumetrics', 'volFroxel'] } = opts;
+    const { rounds = 4, n = 20, warm = 12, passes = ['reflect', 'rdenoise', 'gather', 'temporal', 'direct', 'softblur', 'volumetrics'] } = opts;
     const acc = { A: { sum: [], union: [], p: {} }, B: { sum: [], union: [], p: {} } };
     for (const k of passes) { acc.A.p[k] = []; acc.B.p[k] = []; }
     for (let r = 0; r < rounds; r++) {

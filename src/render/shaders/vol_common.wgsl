@@ -1,4 +1,4 @@
-// Shared by the per-pixel volumetric march (volumetrics.wgsl) and the froxel kernels (froxel.wgsl): the haze's phase + drifting dust density, and the
+// The volumetric march's helpers (volumetrics.wgsl): the haze's phase + drifting dust density, and the
 // MASKED smoke samplers — exact versions of smokeTransmittance / smokeSelfShadow that only visit the domains in `mask`, for callers that have proved no other
 // live domain can hold the point (a point on a segment lies only in domains whose box the segment crosses). With eight domains live and one or two of them
 // anywhere near a given ray, the unmasked loops spent most of a beam step testing boxes kilometres of corridor away. The masked density sampler itself,
@@ -59,11 +59,9 @@ fn coneInterval(O: vec3f, V: vec3f, A: vec3f, D: vec3f, cosT: f32) -> vec2f {
   return vec2f(-1e9, min(r0, sHi));
 }
 
-/** transmittance toward a light along ro + t·rd, t < tmax, for the (K > 0, non-froxel) smoke march's own step lighting: the shadow estimator at 8 samples whatever the frame's count
+/** transmittance toward a light along ro + t·rd, t < tmax, for the smoke march's own step lighting: the shadow estimator at 8 samples whatever the frame's count
  *  (= smoke_read.wgsl smokeTransmittanceN — the masked walk this file introduced is now the one everybody takes, tightened to the domains' occupied boxes) */
 fn smokeTransIn(ro: vec3f, rd: vec3f, tmax: f32) -> f32 { return smokeTransmittanceN(ro, rd, tmax, 8.0); }
-/** … with 5 samples — the froxels' haze uses it for how much a plume dims a beam beyond it (a per-froxel term, softer than the march's per-step one by construction) */
-fn smokeTransCoarse(ro: vec3f, rd: vec3f, tmax: f32) -> f32 { return smokeTransmittanceN(ro, rd, tmax, 5.0); }
 fn smokeSelfShadowIn(P: vec3f, L: vec3f, mask: u32) -> f32 {
   var od = 0.0; let ds = smokeSelfStep();
   for (var i = 1; i <= 4; i++) { od += smokeDensityIn(P + L * (f32(i) - 0.3) * ds, mask); }
@@ -116,8 +114,8 @@ fn smokeAheadE(E: vec3f, mu: f32, radius: f32, dist: f32) -> vec3f {
   if (smokeAheadW() <= 0.0) { return vec3f(0.0); }
   return E * smokeAheadLobe(mu, radius * radius / max(dist * dist, 1e-4));
 }
-/** THE SOFT LIGHT ON A SAMPLE OF SMOKE, dimmed by the smoke round it. The froxels hand the march one ambient for a whole plume (the room's light at that place, with no
- *  smoke in the way), so with little direct light on it a plume is one even tone and the curls the solver made cannot be seen in it. Soft light comes from all round, and
+/** THE SOFT LIGHT ON A SAMPLE OF SMOKE, dimmed by the smoke round it. The march's ambient is the room's light at that place, with no
+ *  smoke in the way, so with little direct light on it a plume is one even tone and the curls the solver made cannot be seen in it. Soft light comes from all round, and
  *  what stops it is the smoke between the sample and the open air: four taps on a tetrahedron 0.2 m out (one up, three a little below level) say how much smoke crowds
  *  round the sample, and the light is taken down by that much of an optical depth. A crest of a billow has open air on most sides and keeps its light, the crease between
  *  two billows has smoke on every side and goes dark. k = 0 is never called. */
@@ -130,11 +128,6 @@ fn smokeCreaseIn(P: vec3f, mask: u32, k: f32) -> f32 {
 /** the self-shadow's extinction per unit density over its 0.72 m toward the light: 6 = the march's own σt (as it always was); 9 since 08-12 — the lit side of a billow
  *  keeps its light and the fold behind it goes dark, which is much of what reads as VOLUME in a lit plume (a look constant: only this march reads it) */
 const SMOKE_SELF_K: f32 = 6.0;   // (9 deepens the folds further — a look call the maintainer has not made; Tab has no row for it yet)
-/** the smoke march's PER-STEP LIGHT count (frame.volCfg.w bits 8‥11 = settings.smokeMarchLights; docs/internal/smoke-look.md): 0 = the froxel-lit march exactly as it
- *  was (every light reaches the plume trilinearly through the J volume); K > 0 = injectJ writes only the AMBIENT into J and the march lights the K strongest lights on each
- *  stretch per step itself (exact cone edge, a shadow ray, the step's own self-shadow) — the pre-froxel plume lighting, without J's flat blob or its slice lattice.
- *  Both producers read this one number, so J and the march always agree on who lights what. */
-fn smokeMarchLights() -> u32 { return (frame.volCfg.w >> 8u) & 15u; }
 /** the MULTIPLE-SCATTERING octave's gain (frame.volCfg.w bits 12‥15 ÷ 10; settings.smokeMultiScatter, 0 = single scattering exactly as it was): per lit step a second lobe with a
  *  phase half as forward and the light seen through HALF the self-shadow's extinction (√ of the single-scatter self-shadow), integrated to the eye through half the extinction
  *  too (√T, √stepT) — Wrenninge et al. 2013's octave with a = b = c = ½. What it buys: a plume can be opaque to what stands behind it AND still show the coloured glow of its

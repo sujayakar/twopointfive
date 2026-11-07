@@ -114,7 +114,7 @@ const AFTER = /\b(?:return\b[^;{}]*;|(?:break|continue)\s*;)\s*(?!\}|continuing\
 {
   const setting = SETTINGS[SETTING];
   SHADER_TRIM.on = false; const { mods: whole, asked, faults } = await pageBoot(SETTING); SHADER_TRIM.on = true;   // every module as written; the cuts are made here
-  check(faults.length === 0 && whole.length >= 36 && asked.length >= 104, `boot, ${setting} — the page's whole boot was recorded: ${whole.length} modules, ${asked.length} pipelines`, faults.join(' · '));
+  check(faults.length === 0 && whole.length >= 35 && asked.length >= 100, `boot, ${setting} — the page's whole boot was recorded: ${whole.length} modules, ${asked.length} pipelines`, faults.join(' · '));
   // the switch: shaderText hands out the trim's own cut with SHADER_FOLD down, the folded cut with it up, and the text whole with the trim off
   { let ok = true; const t0 = { ...trimTotals };
     for (const m of whole) { SHADER_FOLD.on = false; const a = shaderText(m.code) === trimWgsl(m.code); SHADER_FOLD.on = true; const b = shaderText(m.code) === trimWgsl(m.code, true); SHADER_TRIM.on = false; const c = shaderText(m.code) === m.code; SHADER_TRIM.on = true; ok &&= a && b && c; }
