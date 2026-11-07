@@ -1,4 +1,5 @@
-//! WHAT BREAKS OFF A THING IS MADE OF THAT THING (rust/game_rules/src/break_table, rust/game_rules/src/edge_look).
+//! WHAT BREAKS OFF A THING IS MADE OF THAT THING, AND A PIECE LIES ON WHAT IS UNDER IT AND NOT ON A BODY (rust/game_rules/src/break_table,
+//! rust/game_rules/src/edge_look, rust/game_rules/src/debris).
 //!
 //! The Pass's inside partitions are mud (`mudLight`: stuff "mud wall", does "plasterboard": a charge cuts it, a round goes through). A charge is set on one
 //! by the game's own order and blown by the game's own call, and what is on the floor a few seconds on is asked what it is and where it lies.
@@ -48,6 +49,12 @@ fn pieces(p: &Play) -> Vec<Bx> {
     out.extend(p.g.destr.edge_look.rubble.iter().map(|r| p.g.tab.boxes[r.box_].clone()));
     out
 }
+/// everything at rest on the floor that a blast threw or shed, whatever it was
+fn lying(p: &Play) -> Vec<Bx> {
+    let mut out: Vec<Bx> = p.g.destr.debris.list.iter().map(|&c| &p.g.tab.debris_chunk[c]).filter(|c| c.rest).map(|c| p.g.tab.boxes[c.box_].clone()).collect();
+    out.extend(p.g.destr.edge_look.rubble.iter().map(|r| p.g.tab.boxes[r.box_].clone()));
+    out
+}
 /// how much whiter than `paint` a colour is: its mean, less the paint's
 fn whiter(c: [f64; 3], paint: [f64; 3]) -> f64 { (c[0] + c[1] + c[2] - paint[0] - paint[1] - paint[2]) / 3.0 }
 
@@ -93,5 +100,97 @@ fn an_office_partition_goes_off_as_board() {
         let board: Vec<&Bx> = all.iter().filter(|b| matches!(b.stuff, Some(BoxStuff::Plaster | BoxStuff::Skim))).collect();
         let white = board.iter().filter(|b| b.cut_core.map_or(false, |k| whiter(k, paint) > 0.05)).count();
         assert!(white >= 3, "seed {s}: of {} pieces of board {white} show a white break ({} pieces in all)", board.len(), all.len());
+    }
+}
+
+/// a man down on the far side of The Pass's partition, by where the charge will open it, and his bones
+fn man_down(p: &mut Play, at: [f64; 2]) -> game::ids::GuardId {
+    let gd = p.mates().into_iter().filter(|&gd| p.up(gd)).last().expect("somebody to lay down");   // (the charge is set: the order needs nobody now)
+    let c = p.g.gd[gd].ch;
+    p.g.ch[c].pos = [at[0], 0.0, at[1]];
+    p.frame();
+    game::combat::kill_guard(&mut p.g, gd, [1.0, 0.0, 0.0], Some(true), None, None, None, None);
+    p.run(3.0);   // (he falls, and is still)
+    gd
+}
+/// the pieces at rest lying over a down man, by a box's plan against his bones: what shows through him. Only what could cover him: a chip beside a limb is no slab on him
+fn lying_on(p: &Play, gd: game::ids::GuardId) -> Vec<String> {
+    let c = p.g.gd[gd].ch;
+    let bones = [game::character::Bone::Hips, game::character::Bone::Chest, game::character::Bone::Head, game::character::Bone::ShinL, game::character::Bone::ShinR];
+    let spots: Vec<[f64; 3]> = bones.iter().filter_map(|&k| p.g.ch[c].bones.get(k).copied()).collect();
+    assert_eq!(spots.len(), bones.len(), "he has bones");
+    let mut out = Vec::new();
+    for b in lying(p) {
+        let (yaw, reach) = (b.yaw, b.h[0].max(b.h[2]));
+        let q = b.rot.unwrap_or_else(|| game::v3::quat::yaw(yaw));
+        let inv = [-q[0], -q[1], -q[2], q[3]];
+        for s in spots.iter() {
+            if (s[0] - b.c[0]).abs() > reach + 0.1 || (s[2] - b.c[2]).abs() > reach + 0.1 { continue; }
+            if b.c[1] - b.h[1] > s[1] + 0.1 { continue; }   // (it lies clear above him, on something else that stands: a sill)
+            // his bone in the piece's own frame, level with it: within its outline by more than a hand
+            let l = game::v3::quat::rotate(inv, [s[0] - b.c[0], 0.0, s[2] - b.c[2]]);
+            if l[0].abs() < b.h[0] - 0.02 && l[2].abs() < b.h[2] - 0.02 && reach >= 0.05 { out.push(format!("a piece at {:?} half {:?} over his bone at {:?}", b.c, b.h, s)); break; }
+        }
+    }
+    out
+}
+
+/// THE RULE: blow a mud wall with a man down at its foot: no piece lies over him.
+/// A FAILURE MEANS: a body is nothing to the pieces and they lie through him (the "zsorting" of a slab over a dead man).
+#[test]
+fn a_piece_does_not_come_to_rest_on_a_man_down() {
+    for s in SEEDS {
+        let (mut p, c) = pass(s);
+        let gd = man_down(&mut p, [20.9, 9.0]);
+        game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
+        p.run(8.0);
+        let on = lying_on(&p, gd);
+        assert!(on.is_empty(), "seed {s}: {} pieces lie over the man down: {}", on.len(), on.join("; "));
+    }
+}
+
+/// THE CONTROL: the same blast with him left where he stood lays pieces on the spot he would have lain on, so the rule above is not a blast that throws nothing there.
+#[test]
+fn pieces_do_land_where_he_would_have_lain() {
+    let mut there = 0;
+    for s in SEEDS {
+        let (mut p, c) = pass(s);
+        game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
+        p.run(8.0);
+        there += lying(&p).iter().filter(|b| (b.c[0] - 20.9).abs() < 0.8 && (b.c[2] - 9.0).abs() < 0.8).count();
+    }
+    assert!(there >= 3, "over three seeds only {there} pieces lay where the man would lie: this staging proves nothing");
+}
+
+/// The Pass's bunk room with a charge set on its outer wall from outside: the cots go, and big sheets of canvas and steel lie among the wall's pieces.
+fn bunk_room(seed: u32) -> (Play, game::ids::WallChargeId) {
+    charge_set("pass.json", "?levelFile=pass.json&roomclear&squad4", seed, [34.12, 0.0, 15.0], [36.0, 15.0])
+}
+
+/// THE RULE: where two pieces of the pool lie over each other in plan, one lies on the other: no two lie through each other, near one plane (what read as bad depth sorting).
+/// A FAILURE MEANS: a piece at rest finds only the floor, and thin sheets lie at nearly one height through each other.
+#[test]
+fn pieces_lie_on_each_other_not_through_each_other() {
+    for s in SEEDS {
+        let (mut p, c) = bunk_room(s);
+        game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
+        p.run(8.0);
+        let rest: Vec<Bx> = p.g.destr.debris.list.iter().map(|&c| &p.g.tab.debris_chunk[c]).filter(|c| c.rest).map(|c| p.g.tab.boxes[c.box_].clone()).collect();
+        assert!(rest.len() >= 10, "seed {s}: only {} pieces lie at rest", rest.len());
+        let span = |b: &Bx| { let q = b.rot.unwrap_or_else(|| game::v3::quat::yaw(b.yaw)); let up = |a: [f64; 3]| game::v3::quat::rotate(q, a)[1].abs(); up([b.h[0], 0.0, 0.0]) + up([0.0, b.h[1], 0.0]) + up([0.0, 0.0, b.h[2]]) };
+        let mut through = Vec::new();
+        for i in 0..rest.len() {
+            for j in 0..i {
+                let (a, b) = (&rest[i], &rest[j]);
+                // (a circle well inside each piece's plan: these two certainly overlap)
+                let r = |x: &Bx| x.h[0].min(x.h[1]).min(x.h[2]).max(x.h[0] + x.h[1] + x.h[2] - x.h[0].max(x.h[1]).max(x.h[2]) - x.h[0].min(x.h[1]).min(x.h[2]));
+                let d = ((a.c[0] - b.c[0]).powi(2) + (a.c[2] - b.c[2]).powi(2)).sqrt();
+                if d > (r(a) + r(b)) * 0.7 { continue; }
+                let (ah, bh) = (span(a), span(b));
+                let gap = (a.c[1] - b.c[1]).abs() - ah - bh;
+                if gap < -0.003 { through.push(format!("{:?}+{:?} and {:?}+{:?} (by {:.3})", a.c, a.h, b.c, b.h, -gap)); }
+            }
+        }
+        assert!(through.is_empty(), "seed {s}: {} pairs of pieces lie through each other: {}", through.len(), through.join("; "));
     }
 }
