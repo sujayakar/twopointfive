@@ -440,9 +440,16 @@ function pokes(S: Held): void {
  *  mission afresh; this one is the same deal again, from the same die. Belongs in the Rust game (`game_restart`), once a new man has his hook. */
 function toStart(S: Held, said?: string): void {
   const g = S.g, G = g as unknown as Record<string, any>;
+  // WHAT IS NOT THE START'S TO TAKE BACK: the switches the player and this machine set on the game since (god mode, the AI, unlimited ammunition, the
+  // tune's rows, the furniture's friction, the fog's switch): the TypeScript's restart leaves them as they are now, and so does a load (savestate.ts
+  // loadMem). Seen on the page: god mode ticked, the pause card's restart, and the next frag killed him. They are read here, written back on the
+  // puppet after the start stands, and sent to the Rust game by the write by path (`pokes`).
+  const mine = watched(g).filter(w => w[0] === g && w[1][0] !== 'engine');
   stoodAgain(S, S.startKept, S.startOwn);
   if (G.saves) G.saves.missionRef = null;   // (the controller's word for 'a fresh run': a new name, an empty shelf, its triggers from nothing. savestate.ts:983)
   apply(S, true); sweep(S);   // (what the filtered export last sent was forgotten with the game that stood: the long list again, the HUD's lines as the start had them)
+  for (const [, path, v] of mine) { let o: any = g; for (let i = 0; i < path.length - 1 && o; i++) o = o[path[i]]; if (o && !Object.is(o[path[path.length - 1]], v)) o[path[path.length - 1]] = v; }
+  pokes(S);
   if (said) g.msg(said);
   try { G.saves?.onPutBack?.({ key: '', slot: 'auto', n: 0, label: 'the start', kind: 'auto', savedAt: 0, missionT: 0, stage: String(G.mission?.stage ?? ''), runId: '', bytes: 0, mem: true }); } catch (e) { RUST_GAME.outThrew['restart.host'] ??= String((e as Error)?.stack ?? e).slice(0, 600); }
   if (CLEANRESTART.on && CLEANRESTART.picture) G.engine?.restartPicture?.('level restarted');
