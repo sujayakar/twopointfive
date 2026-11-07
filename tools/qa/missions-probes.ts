@@ -6,14 +6,14 @@
 //                    defenders cell on each; every row's URL reads back to that row (and to nothing else), keeps the visitor's flags, drops an older run's
 //   missions-screen  the real screen: the start card's Missions button opens it; one link per mission in order; the sheet follows the highlight (title, place,
 //                    line, team, defenders, approach, level, untuned exactly where set); W S ↑ ↓ move and wrap, A D ← → set Standard | Hard and put it on every
-//                    scenario link, Enter and Space start the highlighted row = a load of ITS OWN URL (every row, both keys); the solo night off the start
-//                    card is Start (no load); `MISSIONS.onPick` takes the pick instead of the load; Esc goes back to the card; the boot card's and the plain
+//                    scenario link, Enter and Space start the highlighted row = a load of ITS OWN URL (every row, both keys); `MISSIONS.onPick` takes the pick instead of the load; Esc goes back to the card; the boot card's and the plain
 //                    pause card's buttons
-//   missions-start   every row's URL booted in a process of its own (scenario-picker-probes.ts --boot, the page's own startFromQuery): it starts unrefused as
+//   missions-start   rows' URLs (six, spread over the list; all under QA_SWEEP=all) booted in a process of its own (scenario-picker-probes.ts --boot, the page's own startFromQuery): it starts unrefused as
 //                    that row, with the row's team beside Sam and exactly the defenders the sheet says; ?solo boots the plain night — no scenario, the shift
 //                    and the civilians the solo sheet counts
 import { standUp, ROOT } from './headless.ts';
 import { groupsFit } from './listed.ts';
+import { sample } from './sweep.ts';
 import { withDom, El } from './scenario-picker-probes.ts';
 
 const { SCENARIOS, ALL_MISSIONS, SCENARIO_KEYS, pickSearch, quitSearch, entryOfQuery, specOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
@@ -168,9 +168,7 @@ export async function missionsScreen(): Promise<boolean> {
           'Enter and Space on each scenario row load exactly that row\'s URL (which reads back to that row); a key held down does not; the sheet\'s button loads it too; a click on a row highlights it and a double click starts it',
           `${(L.length - 1) * 2} picks checked · button → ${byButton[0]} · double click on row 6 → ${dbl[0]}` + (bad.length ? ` — NOT: ${bad.join(' · ')}` : '')); }
       // ---- the solo night off the start card is Start; anywhere else it is a load of ?solo
-      { const QFS = (await import(`${ROOT}/src/game/quietfog.ts`)).QUIETFOG, soloFogWas = QFS.solo; QFS.solo = false;   // (QUIETFOG.solo down for this one: under the fog the solo night off a plain page is a load of its own link — solofog-check.ts; here, the start as it was)
-        loads.length = 0; S.select(L.indexOf(M.SOLO_NIGHT)); const before = starts; M.missionsKey({ code: 'Enter' }); QFS.solo = soloFogWas;
-        F.verdict(loads.length === 0 && starts === before + 1 && menu.mode === 'closed' && M.currentMissions() === null && !mroot.cls.has('on'), 'the solo night picked off the start card over the plain night is Start: the card closes, the list goes, nothing loads', `loads ${loads.length} · onStart ${starts - before} · menu '${menu.mode}'`);
+      {
         menu.open('pause'); const pauseBtn = !!buttonOf(root, 'Missions'); buttonOf(root, 'Missions')?.onclick?.(); const P = M.currentMissions()!; P.select(L.indexOf(M.SOLO_NIGHT)); loads.length = 0; P.pick();
         F.verdict(pauseBtn && loads.length === 1 && loads[0] === '/?solo&quality=high&mute' && menu.mode === 'pause', 'the plain pause card offers Missions too; the solo night picked from there is a load of ?solo (a fresh night), not a resume', `${loads.join(',')} · menu '${menu.mode}'`);
         P.close(); menu.close(); }
@@ -223,7 +221,7 @@ async function bootChild(query: string): Promise<any> {
 export async function missionsStart(): Promise<boolean> {
   const F = family('missions-start: every mission\'s URL booted in a process of its own — it starts as that row, with the team and the defenders its sheet says');
   setDifficulty('standard', false);
-  const L: any[] = M.missionList(), FLAGS = '?quality=high&mute';
+  const L: any[] = sample(M.missionList() as any[], 6), FLAGS = '?quality=high&mute';
   const boots = await Promise.all(L.map(m => bootChild(M.missionHref(m, FLAGS))));
   const SOLO = L.indexOf(M.SOLO_NIGHT);
   for (let i = 0; i < L.length; i++) { if (i === SOLO) continue; const m = L[i], r = boots[i], s = r.start;

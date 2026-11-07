@@ -67,7 +67,8 @@ export const consulateLevel = guarded(async () => {
   const L = loadLevel(data), glass = L.boxes.filter((b: any) => (b.flags ?? 0) & BoxFlag.Glass).length;
   const out = L.boxes.filter((b: any) => b.c[0] - b.h[0] < WORLD.min[0] - 1e-6 || b.c[0] + b.h[0] > WORLD.max[0] + 1e-6 || b.c[2] - b.h[2] < WORLD.min[2] - 1e-6 || b.c[2] + b.h[2] > WORLD.max[2] + 1e-6).length;
   verdict(L.boxes.length <= WORLD.maxBoxes && glass <= MAX_GLASS && out === 0, "inside the renderer's fixed sizes: the world box, the box count, the glass panes", `${L.boxes.length} boxes of ${WORLD.maxBoxes} · ${glass} glass panes of ${MAX_GLASS} · ${out} boxes outside the world box`);
-  const W = await stand(1, 4), g = W.game, S = g.level.scenarios.rescue, was: string[] = checkRescue(g);
+  const W = await stand(1, 4), g = W.game, S = g.level.scenarios.rescue; W.step(1 / 60);   // (the first tick stands the host the rule's call crosses to)
+  const was: string[] = checkRescue(g);
   verdict(was.length === 0, "the rescue's data sits on the floor (checkRescue, the route's own check included)", was.length ? was.join(' · ') : `every mark standable and clear of the furniture; the room's men inside it; a way on foot to every mark; ${S.flow.route.length} openings on the route, each with a stand and a watch`);
   const men = 2 + (S.guards?.length ?? 0) + (S.cast?.roamers ?? 0), chars = 1 + 4 + men + S.hostages.length;
   verdict(men <= 11 && chars <= 16 && (S.cast?.roamers ?? 0) < S.roamers.length, 'the cast fits: eleven defenders at most, sixteen skinned characters in all, fewer roamers than places for them', `${men} defenders (the captor, ${S.guards?.length ?? 0} more in the room, the door man, ${S.cast?.roamers} roamers on ${S.roamers.length} marks) · ${chars} characters with Sam, the four and ${S.hostages.length} hostages`);

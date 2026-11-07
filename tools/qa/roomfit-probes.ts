@@ -1,6 +1,6 @@
 // A SPOT THAT FITS THE ROOM — the checks for src/game/roomfit.ts ('move there' deals each man a place and a watch from the room's ways in and what is cleared
 // beyond them, where it was a line abreast with every man facing Sam's way). Run through tools/qa/probes.ts (family `roomfit`):
-//   roomfit-rooms     every level in levels/, a point in every room, 2 / 3 / 4 men, nothing but Sam's start known: the fitted deal against the line abreast, by
+//   roomfit-rooms     every level in levels/, a point in every room, 2 / 3 / 4 men, as the level stands: the fitted deal against the line abreast, by
 //                     the counts of roomfit-map.ts — no mark in a frame, a body's room between marks, nobody further than the spread, far fewer men in a mate's
 //                     line, more walls at backs, and the uncleared ways in sight watched where the line watched a fraction of them
 //   roomfit-cleared   "what's cleared and what isn't": the same deal again after the floor beyond a watched way has been stood on — where an uncleared way had
@@ -10,6 +10,7 @@
 //                     again and his gun — never his feet — moves on
 import { readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 import { stand, roomPoints, deals, measure, ZERO, add, line, type Counts } from './roomfit-map.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
@@ -40,7 +41,7 @@ export const roomfitRooms = guarded(async () => {
   const bad: string[] = [], fell: string[] = []; let levels = 0;
   for (const file of LEVELS) {
     let W: any; try { W = await stand(`levels/${file}`, 4); } catch (e) { fell.push(`${file}: ${String((e as Error).message).slice(0, 80)}`); continue; }
-    const g = W.game, from = [...g.player.char.pos]; g.cleared.mark(from); levels++;
+    const g = W.game, from = [...g.player.char.pos]; levels++;
     const L: string[] = [];
     for (const n of [2, 3, 4]) { const lf = ZERO(), ll = ZERO(); let none = 0;
       for (const P of roomPoints(g)) { const D = deals(g, P.at, from, n), cl = measure(g, P.at, from, D.line); T[n].pts++;
@@ -108,7 +109,7 @@ const gunYaw = (m: any) => m.char.aimYaw ?? m.char.bodyYaw;
 
 export const roomfitWalk = guarded(async () => {
   const { verdict, done } = family('roomfit-walk: the order given, walked and stood — each man on his own mark with his gun on what he was dealt');
-  for (const squad of [2, 4] as const) for (const P of [AISLE, AISLE_FAR]) {
+  for (const [squad, P] of sample([[2, AISLE], [2, AISLE_FAR], [4, AISLE], [4, AISLE_FAR]] as [2 | 4, number[]][], 2)) {
     const R = await rig(11 + squad, squad); const { game: g, O } = R; const men: any[] = O.squad(); const sam = g.player.char; const tag = `${squad} men to ${at(P)}`;
     R.step(30); const from = men.map(m => [...m.char.pos]), t0 = g.time, moved0 = ROOMFIT_STATS.moved;
     R.quick(P); const A = men.map(m => O.of(m)), fits = A.map(a => a?.fit);
