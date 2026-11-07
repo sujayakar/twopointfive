@@ -307,7 +307,7 @@ pub fn morale_release(g: &mut crate::game::Game, gd: GuardId) {
         if s.act != MoraleAct::None || s.drive { end(g, gd); }
     }
     let t = g.time;
-    crate::owner::release_man(g, gd, crate::owner::own().morale, t);
+    crate::owner::release(g, gd, crate::owner::by::MORALE, t);
 }
 
 /// A position as three numbers, NaN for none. (morale.ts n3)

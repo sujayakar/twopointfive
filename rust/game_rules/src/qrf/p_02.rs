@@ -823,7 +823,7 @@ pub fn sweep_places(g: &mut crate::game::Game) -> Vec<crate::qrf::SweepPlacesIte
         for r in &rooms {
             let mut held = false;
             for &h in &r.defenders {
-                if g.gd[h].state != crate::game::GuardState::Dead && !crate::owner::has_him(g, h, crate::owner::own().runner) { held = true; break; }
+                if g.gd[h].state != crate::game::GuardState::Dead && !crate::owner::has(g, h, crate::owner::by::RUNNER) { held = true; break; }
             }
             if !held { out.push(SweepPlacesItem { name: r.def.name.clone(), pos: mid(&r.def.bounds) }); }
         }

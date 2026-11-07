@@ -137,6 +137,12 @@ Strongest first, with why each stands above the next:
 
 For a team: his part in a door or wall drill, then a pair's job, then a plain order, then fall in.
 
+**What stands today**: `owner::TASKERS` (`game_types/src/owner/types.rs`) is that list of fifteen, a line each with
+its name and its reasons, in the code's present order. Who has a man is one word, a bit a tasker: `owner::claim(g,
+man, by::LANE, t, why)`, `owner::release`, `owner::has(&Game, man, by::PRESS | by::BUDDY)`, and `owner::who` (the
+strongest, why, since when), which `control_line` prints. It RECORDS: a tasker takes its man whoever has him, and
+each rule asks `has` of those it yields to. Deciding by the list is step G.
+
 In code an assignment is three calls, and a tasker is whoever makes them (not built yet; step E makes the
 first, for `hold` and `pinned`):
 

@@ -227,22 +227,21 @@ pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<St
     if roused(g, gd) {
         return Some("in a fight".into());
     }
-    let own = crate::owner::own();
-    if crate::rescue::rescue_crew_hides(g, gd) || crate::rescue::rescue_captor(g) == Some(gd) || crate::owner::has_him(g, gd, own.stand) {
+    if crate::rescue::rescue_crew_hides(g, gd) || crate::rescue::rescue_captor(g) == Some(gd) || crate::owner::has(g, gd, crate::owner::by::STAND) {
         return Some("the captor / lying in wait / last stand".into());
     }
     if crate::digin::dig_in_phase(g, gd) != "idle" {
         return Some("dug in".into());
     }
-    if crate::owner::has_him(g, gd, own.squad_word) {
+    if crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD) {
         return Some("his squad's".into());
     }
-    let holds = (js::to_i32(own.lane) | js::to_i32(own.last_man)) as f64;
-    if crate::gunroles::gun_keeps_post(g, gd) || crate::owner::has_him(g, gd, holds) {
+    let holds = crate::owner::by::LANE | crate::owner::by::LAST_MAN;
+    if crate::gunroles::gun_keeps_post(g, gd) || crate::owner::has(g, gd, holds) {
         return Some("holds a lane / the last man".into());
     }
-    let hands = (js::to_i32(own.press) | js::to_i32(own.buddy)) as f64;
-    if crate::owner::has_him(g, gd, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) || crate::buddy::buddy_paired(g, d) {
+    let hands = crate::owner::by::PRESS | crate::owner::by::BUDDY;
+    if crate::owner::has(g, gd, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) || crate::buddy::buddy_paired(g, d) {
         return Some("the press's".into());
     }
     None
@@ -530,16 +529,16 @@ pub fn power_out_reset(g: &mut crate::game::Game) {
 
 /// who the breaker's party has, on the one record: out for the lights, or waiting to be sent. (powerout.ts breakerSay)
 pub fn breaker_say(g: &mut crate::game::Game) {
-    let rule = crate::owner::own().breaker;
+    let rule = crate::owner::by::BREAKER;
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
         let t = g.time;
         if g.m.powerout.states.as_ref().map_or(false, |s| s.men.iter().any(|x| x.gd == gd)) {
-            crate::owner::claim_man(g, gd, rule, t, None);
+            crate::owner::claim(g, gd, rule, t, None);
         } else {
-            crate::owner::release_man(g, gd, rule, t);
+            crate::owner::release(g, gd, rule, t);
         }
     }
 }

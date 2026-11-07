@@ -1189,7 +1189,7 @@ pub fn director_query_signalled(g: &crate::game::Game, r: DirectorRunId, n: &str
 /// (director.ts Query.routed)
 pub fn director_query_routed(g: &mut crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     match director_guard_of(g, r, u) {
-        Ok(gd) => crate::owner::has_him(g, gd, crate::owner::own().runner),
+        Ok(gd) => crate::owner::has(g, gd, crate::owner::by::RUNNER),
         Err(_) => false,
     }
 }

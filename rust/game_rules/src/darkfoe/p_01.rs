@@ -344,15 +344,14 @@ pub fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<Roomfight
         return Some(String::from("in a fight"));
     }
     if crate::digin::dig_in_phase(g, gd) != "idle" { return Some(String::from("dug in")); }
-    let own = crate::owner::own();
-    if crate::owner::has_him(g, gd, own.squad_word) { return Some(String::from("his squad's")); }
-    if crate::gunroles::gun_keeps_post(g, gd) || crate::owner::has_him(g, gd, own.lane) { return Some(String::from("holds a lane")); }
+    if crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD) { return Some(String::from("his squad's")); }
+    if crate::gunroles::gun_keeps_post(g, gd) || crate::owner::has(g, gd, crate::owner::by::LANE) { return Some(String::from("holds a lane")); }
     let man = g.tab.roomfight_def[d].gd;
-    let hands = (js::to_i32(own.press) | js::to_i32(own.buddy)) as f64;
-    if crate::owner::has_him(g, man, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) || crate::buddy::buddy_paired(g, d) {
+    let hands = crate::owner::by::PRESS | crate::owner::by::BUDDY;
+    if crate::owner::has(g, man, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) || crate::buddy::buddy_paired(g, d) {
         return Some(String::from("the press's"));
     }
-    if crate::rescue::rescue_captor(g) == Some(gd) || crate::owner::has_him(g, gd, own.stand) {
+    if crate::rescue::rescue_captor(g) == Some(gd) || crate::owner::has(g, gd, crate::owner::by::STAND) {
         return Some(String::from("the captor / last stand"));
     }
     None

@@ -293,13 +293,13 @@ pub fn morale_reset(g: &mut crate::game::Game, men: Option<bool>) {
     g.m.morale.blasts_of = None;
     if men.unwrap_or(false) {
         let mut i = 0;
-        let rule = crate::owner::own().morale;
+        let rule = crate::owner::by::MORALE;
         while i < g.guards.len() {
             let gd = g.guards[i];
             i += 1;
             g.m.morale.state_of.delete(gd);
             let t = g.time;
-            crate::owner::release_man(g, gd, rule, t);
+            crate::owner::release(g, gd, rule, t);
         }
     }
 }
@@ -649,13 +649,13 @@ pub fn morale_tick(g: &mut crate::game::Game, dt: f64) {
         if r.act != MoraleAct::None { step(g, gd, dt); }
     }
     // who this file's script has this frame, as it stands when the sequences have all been stepped
-    let rule = crate::owner::own().morale;
+    let rule = crate::owner::by::MORALE;
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
         let t = g.time;
-        if g.m.morale.state_of.get(gd).map_or(false, |s| s.drive) { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+        if g.m.morale.state_of.get(gd).map_or(false, |s| s.drive) { crate::owner::claim(g, gd, rule, t, None); } else { crate::owner::release(g, gd, rule, t); }
     }
 }
 

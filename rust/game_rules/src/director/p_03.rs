@@ -158,7 +158,7 @@ pub fn director_beat_rout(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
     if g.tab.director_run[r].units.has(crate::Num(u.id)) { return Ok(false); }
     let gd = director_guard_of(g, r, u)?;
     if g.gd[gd].state == crate::game::GuardState::Dead { return Ok(false); }
-    if crate::owner::has_him(g, gd, crate::owner::own().runner) { return Ok(true); }
+    if crate::owner::has(g, gd, crate::owner::by::RUNNER) { return Ok(true); }
     if !crate::runner::runner_break(g, gd) { return Ok(false); } // (asked while he is still in this beat's hand: refused, he is exactly as he was)
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
     crate::control::set_hold(g, gd, false, "director");
