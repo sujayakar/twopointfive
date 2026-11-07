@@ -1089,11 +1089,11 @@ but synthetic writes still work.
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; 154 minutes at 320x180 on a four-core box on 2026-11-04, so its `DEADLINE` allows 240 by default). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
 - **THE PRICING RUN (`src/ui/pricerun.ts`, `src/host/runpage.ts`, 2026-11-04; `localhost:5173/?look&pricelevels&downloads=1`, hands off)** walks every level of the mission list
-  (`=a,b` for some), a page load a state: the look page (played four seconds of the game's clock, the picture held on one step, timed with the look's
-  switchable layers off and on in turn) and then the same mission WITHOUT the look, held on the same step. One file, `price-levels-<date>.json` (version 6),
+  (`=a,b` for some), a page load a level: the look page (played four seconds of the game's clock, the picture held on one step, timed with the look's
+  switchable layers off and on in turn). The look is the only picture, so the layers off are what a row is read against, and what the look's shaders and shapes cost is in both numbers. One file, `price-levels-<date>.json` (version 7),
   a row a level, each with the run's own verdict against the bar (`priceOver`, the one place a GPU number of it is judged; the file's `bar.ruled` says
-  which rows of the bar the maintainer has ruled on). A ROW THAT IS NOT ONE PICTURE IS NOT JUDGED (`apart`: the picture moved between its turns, its two
-  pages stood at another size, rung or step, or frames were queued ahead of the GPU in a state, `queuedWords`): its numbers stand and no verdict is read off
+  which rows of the bar the maintainer has ruled on). A ROW THAT IS NOT ONE PICTURE IS NOT JUDGED (`apart`: the picture moved between its turns,
+  or frames were queued ahead of the GPU in a state, `queuedWords`): its numbers stand and no verdict is read off
   them. The GPU's lag is no line of the verdict (it reads 2 to 3 wherever the page waits for the GPU, more on a 120 Hz display). TWO NUMBERS a state: the
   compute passes' busy span (the game's own "GPU ms") and that span with the g-buffer's pass in it (`all`: every stamped pass but the ones that draw to the
   display, whose stamps span the display's wait; the g-buffer's was read against recorded frames on an M4 Max and follows its own work — one chip, so each
@@ -1104,8 +1104,8 @@ but synthetic writes still work.
   turn waits for are counted the same way), so a level the GPU cannot hold sixty on reads as that and queues nothing ahead; a row says its rung, its size
   and the step it was held at. ONE WAY TO PLAY, on every page: the loop is held from before the boot, the run asks for the page's warm-up (`__prewarm`) and
   lets the page draw with the clock held until the page says the warm-up's clear is over (`window.__prewarmed`), and then the mission is played by the
-  page's scripted step, a step a display frame, every step drawn, with no more frames with the GPU than the page's own pacer keeps there. So a level's two
-  pages have run the same steps, drawn the same frames and stand on the same render clock at any display rate. (Stepped with no warm-up first, a snow
+  page's scripted step, a step a display frame, every step drawn, with no more frames with the GPU than the page's own pacer keeps there. So a level
+  has run the same steps, drawn the same frames and stands on the same render clock at any display rate. (Stepped with no warm-up first, a snow
   level had no snow in its air: the warm-up clears the particles' ring some frames after the page's first frame of its own, which then came after the
   play. Played by the page's own loop instead, two pages stood on render clocks a few milliseconds apart and a 120 Hz display ran other frames than a
   60 Hz one.) A PAGE WHOSE PART THROWS, or whose loop has stopped, is one page not priced, with its cause in the file's notes, and the run goes on.
@@ -1114,11 +1114,11 @@ but synthetic writes still work.
   `ownPage` keeps its own page under the kept-page rule, since a run walks by loading its next address). ITS FILE GOES OUT BY THE SAVE DOOR (kind `price`):
   to whoever listens, and to the browser as a download only with `downloads=1`, a flag the run carries with the benchmark's other carried words
   (`ui/benchrun.ts carriedWords`); where nobody took it the card holds the file's text under the table for Copy. A word of the asking address that no
-  page carries is named in the file's notes. Words: `quality=` (default high), `pricesecs=`, `pricepage=0` (look pages only), `pricelive=N` (below); a mission's link sheds them
+  page carries is named in the file's notes. Words: `quality=` (default high), `pricesecs=`, `pricelive=N` (below); a mission's link sheds them
   all (`PRICE_ASK_WORDS`). Checked by `bun run tools/qa/pricerun-check.ts` (no page: the verdicts, the wait's rule, frames queued ahead, the report, the
   addresses, on made-up rows; `PRICERUN_BREAK=1` must fail) and by
   `node tools/qa/pricerun-page.cjs [level …]` (the real page on the software adapter, as a person's page runs it: the chain, one rung, one step, the file
-  down; no number there is a price, and its frames are seconds long, so it proves nothing of the pacing) and with `--real` on a machine with a GPU (`--look "<words>" --look-only` prices a look page under other words). Run on
+  down; no number there is a price, and its frames are seconds long, so it proves nothing of the pacing) and with `--real` on a machine with a GPU (`--look "<words>"` prices the look page under other words). Run on
   a rented NVIDIA card through Vulkan only (11-04); NEVER RUN ON METAL OR ON A DISPLAY (a headless card has none, so nothing of a 120 Hz display's frames has been seen), and nobody has read a row of it against the bar. The level tools below read its file.
   A LONG WALK TIRES (11-05, the rented card, 29 levels in one browser): from about the 15th level the GPU's answer came later and later (to 57 ms for 10 ms
   of passes) while the pages' boots kept their time, and the last seven rows read the look page CHEAPER than the page without it with every check green;
@@ -1136,16 +1136,14 @@ but synthetic writes still work.
   stepping: a sixtieth of the game's clock a frame, the frames paced to sixty by THE PAGE'S OWN PACER (`host/pace.ts pacer`, a second one of the turn's:
   `turn`'s `drive`), so the world runs at the game's rate on a 60 or a 120 Hz display. It is NOT the page's own loop, which a card freezes (a lesson's
   card on a tutorial nobody plays, `main.ts frozen`): a scripted step is the one way the world runs on every level. The row keeps the running read BESIDE
-  the held one (`run`, `page.run`: the turn, the clock where it ended, programs made while it ran) with a verdict of its own (`overRun`, `priceOverRun`:
-  the bar's own lines by `barLines`, which the held verdict shares; NOBODY HAS RULED ON A RUNNING READ) and its own reasons not to be judged (`runApart`:
+  the held one (`run`: the turn, with the layers on, the clock where it ended, programs made while it ran) with a verdict of its own (`overRun`, `priceOverRun`:
+  the frame's time alone, because it has no layers-off turn to be read against; NOBODY HAS RULED ON A RUNNING READ) and its own reasons not to be judged (`runApart`:
   frames queued, a late answer, a clock that did not run, SOMEONE WENT TO ALERT since the mission began or its stage moved, by the mission's own word; a
   row whose held read is apart is not judged running either). What the page stood on and what the switch compiled are taken BEFORE the world runs and are
   the held read's; a throw in the running part leaves the held read standing. `rowRun` and `judgeRow` write and judge a row and the check asks them. THE
   LATE ANSWER'S RULE READS EACH KIND AGAINST THE LEAST OF ITS OWN KIND (`leastAnswer` held, `leastAnswerRun` running): a running state is paced to sixty,
-  so on a fast display it answers sooner than a held state, and one least for both would call every held state late. Where a held state says the
-  g-buffer's stamp holds the display's wait, the running read judges nothing by it either. A `pricelive` that is no second is said in the file's notes;
-  one not past the held second is no running read; the file says `bar.runS` only where a page took one. Both pages take the same steps to second 20 and
-  then step on through their own turn, so the two running reads are not one picture to the step as the held ones are.
+  so on a fast display it answers sooner than a held state, and one least for both would call every held state late. A `pricelive` that is no second is said in the file's notes;
+  one not past the held second is no running read; the file says `bar.runS` only where a page took one.
   LIGHTS IN FOG ARE IN THE HELD READ; what running adds is the stepping (solver, wind, powder, flakes and drops) and a grown plume's share of the fog
   march. NO FIGHT is in either read: a fight's smoke, grenades and charges are above both. TWENTY IS ONE MEASURE (the rented card, the snow road with
   three fires near the player, stepped as the run steps for 60 s): 1,289 bricks of smoke after 5 s, 1,947 after 10, 2,141 after 15, then 1,850 to 2,310
@@ -1156,17 +1154,17 @@ but synthetic writes still work.
   Checked on made-up rows by `pricerun-check` (`PRICERUN_BREAK=run` must fail on the running read's cases alone) and end to end by the driver on the
   software page (twelve more steps, then the turn; there the pacer reads no display, so every callback is a step). THE RUNNING READ HAS NEVER RUN ON A
   GPU as the run takes it (the measure above stepped a page by hand), and the late answer's 12 ms was set by held states. `level-table.ts` shows it in
-  three columns on the rented card's table (ranked by it where every level has one), lists the Mac's running verdict apart from "over a bar", shows a
+  two columns on the rented card's table, beside the layers on held, lists the Mac's running verdict apart from "over a bar", shows a
   running read only at the newest running file's second (a row keeps its own file's, `ranTo`), keeps a level's newest running read on its line when a
-  later run took held pictures only, and prints the run's own reasons where it set one apart. The report prints no share the running verdict did not
-  judge (`addedRun`, `waitsOn`), and a wait for the GPU's queue in the play and the run-up has the run's own limit (`capS`).
+  later run took held pictures only, and prints the run's own reasons where it set one apart. The report prints no "running adds" where the g-buffer's stamp holds the display's wait
+  (`waitsOn`), and a wait for the GPU's queue in the play and the run-up has the run's own limit (`capS`).
 - **THE LEVEL TOOLS (2026-11-04; files only, no GPU, no page of the game's changed).** `bun run tools/qa/level-audit.ts [level …]` counts every level the mission
   list draws as the look page draws it (boxes, cut planes, round things, lamps burning at its hour, how much of the picture is each material and how much
   has none: a box is made of what it says, `Box.stuff`, read as the renderer reads it), about a second a level; `--check <level>` holds the engine's caps and the PROPOSED bars of `level-count.ts` (`LEVELAUDIT_BREAK=1` must fail),
   `--counts` gives a level's row for its dressing file, `--write-base` the baseline (`fixtures/level-audit-base.json`: the levels before they were
   dressed). `node tools/qa/level-cost-page.cjs <level>` is one boot of the look page on the software adapter: what it compiled, layers off against on, a
   still; a relative read, and the GPU's particles are never stepped in it, so a snow or rain level is read without what is in its air.
-  `bun run tools/qa/level-table.ts --dir <folder>` makes one page of every level from those files, a GPU's price file and each dressing row (the folder's `notice.txt` is printed first and marks a level whose price no longer stands; `cloud/before/` holds the run the newest one takes the place of, printed beside it). "Which levels
+  `bun run tools/qa/level-table.ts --dir <folder>` makes one page of every level from those files, a GPU's price file and each dressing row (the folder's `notice.txt` is printed first and marks a level whose price no longer stands; `cloud/before/` holds the run the newest one takes the place of, printed beside it). It reads a row's layers off and on; rows merge within one version of the file; a Mac file older than version 7 is shown as an older build with no verdicts, because a 6's were read against a second page no run opens now. "Which levels
   the list draws" is one answer (`scene/scenarioList.ts listedLevels`) and the render passes are one list (`gpu/timer.ts RENDER_PASSES`): both tools ask those.
 - **A picture fault is debugged from a frame capture** (F6 on the page: every render target over 8 frames and the trace of what the renderer changed;
   `tools/qa/capture-read.ts` reads it; `docs/agents/render.md`, "A CAPTURE IS EVERY TARGET OF A FEW FRAMES").

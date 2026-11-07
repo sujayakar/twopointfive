@@ -268,10 +268,10 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
     beatsThrow: true,
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
+      tell();   // (what the step said, to a tool that listens: above)
       { const L: any[] | undefined = (game as any).director?.log, n = L?.length ?? 0, last = n ? L![n - 1] : null, key = last ? `${last.run}:${last.t}:${last.beat}:${last.kind}:${last.what}` : '';   // (the rows filed since the last step: from the log's end back to the row last seen)
         if (key !== beatSeen) { let bad: any = null; for (let i = n - 1; i >= 0; i--) { const r = L![i]; if (`${r.run}:${r.t}:${r.beat}:${r.kind}:${r.what}` === beatSeen) break; if (r.kind === 'error') bad = r; } beatSeen = key;
           if (bad && W.beatsThrow) throw new Error(`the level's script: beat '${bad.program}/${bad.beat}' ${bad.what}`); } }
-      tell();   // (what the step said, to a tool that listens: above)
       if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view, look = (game as any).rustHost?.look?.();   // (a game that steps somewhere else, in a quiet run of steps: the camera's two inputs asked of it, tools/blitz/PLAY.md)
         cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
