@@ -119,6 +119,8 @@ export const LOOSE = 0xffff0000;
 export const SERIALS = new Set<string>();
 let G: any; let BK: Book; let B: any;
 const isTyped = (v: any) => ArrayBuffer.isView(v) && !(v instanceof DataView);
+/** a weak table's row of a player who is no longer in the game (the man before a mission's fresh deal) is that man's, and is not this game's state */
+const isWeak = (v: any) => typeof v?.liveKeys === 'function', seated = (k: unknown): boolean => { const S = CUR?.seats; if (!S) return true; const r = rawKey(k as object); return rawKey(CUR.player) === r || S.some((s: any) => rawKey(s.view?.player) === r); };
 function keysOf(v: any): { keys: unknown[]; get: (k: any) => unknown } | null {
   if (v instanceof Map) return { keys: [...v.keys()], get: k => v.get(k) };
   if (v instanceof Set) return { keys: [...v], get: k => k };
@@ -155,7 +157,7 @@ function wr(n: Node, v: any, o: Out): void {
     case 'vec': { if (v === null || v === undefined) { miss('nothing for a list', v); o.u32(0); return; } if (!Array.isArray(v) && !isTyped(v)) { miss('not a list', v); o.u32(0); return; } const len = v.length; o.u32(len); for (let i = 0; i < len; i++) { const x = v[i]; if (x === undefined && !(i in v)) { zero(n.of, o); continue; } wr(n.of, x, o); } return; }
     case 'arr': { if (!v || typeof v.length !== 'number') { miss('not a fixed list', v); zero(n, o); return; } if (v.length !== n.n) miss(`a list of ${v.length} for ${n.n}`, v.length); for (let i = 0; i < n.n; i++) wr(n.of, v[i], o); return; }
     case 'tup': { if (!Array.isArray(v)) { miss('not a tuple', v); zero(n, o); return; } n.of.forEach((x: Node, i: number) => wr(x, v[i], o)); return; }
-    case 'map': { const E = keysOf(v); if (!E) { miss('not a map', v); o.u32(0); return; } o.u32(E.keys.length); for (const k of E.keys) { wKey(n.K, k, o); wr(n.V, E.get(k), o); } return; }
+    case 'map': { const E = keysOf(v); if (!E) { miss('not a map', v); o.u32(0); return; } const K = n.K.k === 'id' && n.K.id === 'PlayerId' && isWeak(v) ? E.keys.filter(seated) : E.keys; o.u32(K.length); for (const k of K) { wKey(n.K, k, o); wr(n.V, E.get(k), o); } return; }
     case 'set': { const E = keysOf(v); if (!E) { miss('not a set', v); o.u32(0); return; } o.u32(E.keys.length); for (const k of E.keys) wKey(n.K, k, o); return; }
     case 'id': { if (v && typeof v === 'object') { const e = SCHEMA.idExpr[n.id]; if (e) { const r = compiled(e)(v, G, B); if (typeof r === 'number') { o.u32(r); return; } } o.u32(BK.idOf(n.id, v)); return; } if (typeof v === 'number') { o.u32(v); return; } miss(`nothing for ${n.id}`, v); o.u32(0xffffffff); return; }
     case 'type': return wType(n, v, o);
@@ -210,6 +212,7 @@ export function exportPart(g: any, knobs: Record<string, unknown>, parts: [strin
 export function hostHalfParts(g: any, cmds: readonly any[]): [string, any][] { const bk = BOOKS.get(g)!, P: [string, any][] = [['u32', cmds.length]]; for (const c of cmds) P.push(['crate::cmd::PlayerCmd', c]);
   for (const [id, ty] of [['CameraId', 'crate::camera::FollowCamera'], ['InputId', 'crate::input::Input']]) { const L: any[] = bk.listOf(id); P.push(['u32', L.length]); for (const row of L) P.push([ty, row]); }
   { const L: any[] = bk.listOf('SeatId'); P.push(['u32', L.length]); for (const s of L) P.push(['u32', seatMark(s)]); }
+  { const E = g.engine, Pt = E?.particles; P.push(['u32', (Pt ? 1 : 0) | (E?.reach ? 2 : 0) | (Pt?.collide ? 4 : 0) | (Pt?.sparkBounce ? 8 : 0)]); }
   return P; }
 export const hostHalf = (g: any, knobs: Record<string, unknown>, cmds: readonly any[]): Uint8Array => exportPart(g, knobs, hostHalfParts(g, cmds));
 /** a field of the game by its Rust path (['m', 'dialogue', 'room_rects']): its schema type and its value now */

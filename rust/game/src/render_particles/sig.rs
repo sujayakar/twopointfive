@@ -15,7 +15,7 @@ pub fn hash_u32(x: f64) -> f64 { todo!() }
 pub fn particles_new(g: &mut crate::game::Game, device: crate::Opaque, scene_layout: crate::Opaque) -> crate::render_particles::Particles { todo!() }
 
 /// (src/render/particles.ts:363 Particles.emit)
-pub fn particles_emit(g: &mut crate::game::Game, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 { g.out.push(crate::out_events::OutEvent::ParticlesEmit(crate::out_events::OutParticlesEmit { kind: kind, pos: pos, dir: dir, count: count, o: o })); 0.0 }
+pub fn particles_emit(g: &mut crate::game::Game, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 { todo!() }
 
 /// (src/render/particles.ts:386 Particles.impulse)
 pub fn particles_impulse(g: &mut crate::game::Game, pos: V3, radius: f64, strength: f64, o: Option<&crate::render_particles::ImpulseOpts>) -> bool { g.out.push(crate::out_events::OutEvent::ParticlesImpulse(crate::out_events::OutParticlesImpulse { pos: pos, radius: radius, strength: strength, o: o.cloned() })); false }
