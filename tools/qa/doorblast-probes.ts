@@ -315,11 +315,11 @@ export const offHingesAfter = guarded(async () => {
 const LEVELS = [undefined, 'records.json', 'depot.json', 'block.json', 'block-squads.json', 'barracks.json', 'compound.json', 'warehouse.json', 'kit-yard.json', 'test-rooms.json'];
 export const offHingesSweep = guarded(async () => {
   const { verdict, done } = family('off-hinges-sweep: every ordinary door of every level, both faces, by a blast and by a set charge — off, landed, clear of the walls, the doorway open');
-  let total = 0, backs = 0; const bad: string[] = []; const perLevel: string[] = []; const T0 = { ...DOORBLAST_STATS }; DOORBLAST_STATS.nudgeMax = 0;
+  let total = 0, backs = 0; const bad: string[] = []; const perLevel: string[] = []; let nudged = 0, laid = 0, nudgeMax = 0;   // (summed a level at a time: a stand-up puts a game's tallies back, so the tally holds one level's — tools/qa/fresh.ts)
   for (const file of LEVELS) {
     let R: Awaited<ReturnType<typeof rig>>;
     try { R = await rig(23, file); } catch (e) { bad.push(`${file ?? 'office'}: did not load (${String(e).slice(0, 60)})`); continue; }   // (a level that does not load is a FAIL and no level swept, as in doorstay-probes: it was a logged line under a PASS)
-    const g = R.g, doors = ordinary(g); let n = 0, b0 = DOORBLAST_STATS.back, longest = 0;
+    const g = R.g, doors = ordinary(g); let n = 0, b0 = DOORBLAST_STATS.back, longest = 0; const n0 = DOORBLAST_STATS.nudged, l0 = DOORBLAST_STATS.laid; DOORBLAST_STATS.nudgeMax = 0;
     for (const d of doors) for (const side of [1, -1] as const) for (const how of ['blast', 'charge', 'open'] as const) {
       shut(g, d); for (const x of g.doors.list) if (x !== d && x.off) x.reset();
       if (how === 'open') { d.latched = false; d.angle = side * 1.2; d.place(); }   // (a leaf standing open INTO the blast's side: it still leaves away from the blast)
@@ -336,10 +336,10 @@ export const offHingesSweep = guarded(async () => {
       if (!g.doors.list.every((x: any) => x.box.c.every(Number.isFinite))) bad.push(`${tag}: a door box is not finite`);
     }
     for (const d of g.doors.list) d.reset();
-    backs += DOORBLAST_STATS.back - b0;
+    backs += DOORBLAST_STATS.back - b0; nudged += DOORBLAST_STATS.nudged - n0; laid += DOORBLAST_STATS.laid - l0; nudgeMax = Math.max(nudgeMax, DOORBLAST_STATS.nudgeMax);
     perLevel.push(`${file ?? 'office'}: ${doors.length} doors, ${n} leaves off (${DOORBLAST_STATS.back - b0} fell back for want of room), longest flight ${f2(longest)} s`);
   }
   for (const l of perLevel) console.log(`    ${l}`);
-  verdict(total > 0 && bad.length === 0, `${total} leaves taken off over ${perLevel.length} levels: every one landed, rests clear of the statics, and left its doorway open`, bad.length ? `${bad.length} bad:\n      ${bad.slice(0, 24).join('\n      ')}` : `${backs} of them fell back through their own doorway for want of room ahead · ${DOORBLAST_STATS.nudged - T0.nudged} had their resting place moved clear of a static (the furthest ${f2(DOORBLAST_STATS.nudgeMax)} m), ${DOORBLAST_STATS.laid - T0.laid} of those laid through their own doorway for want of any spot`);
+  verdict(total > 0 && bad.length === 0, `${total} leaves taken off over ${perLevel.length} levels: every one landed, rests clear of the statics, and left its doorway open`, bad.length ? `${bad.length} bad:\n      ${bad.slice(0, 24).join('\n      ')}` : `${backs} of them fell back through their own doorway for want of room ahead · ${nudged} had their resting place moved clear of a static (the furthest ${f2(nudgeMax)} m), ${laid} of those laid through their own doorway for want of any spot`);
   return done();
 });

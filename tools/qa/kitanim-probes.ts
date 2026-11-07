@@ -574,15 +574,16 @@ export async function kitNvProbe(): Promise<boolean> { return keep(async () => {
     verdict(!fails.length, 'N again half way turns them round from where they are; a kit change asked mid-flip takes the arm and the goggles still arrive', `N twice: goggles ${cm(R.gStep)} a frame, wrist ${cm(R.hand)} · draw mid-flip: wrist ${cm(R2.hand)} (the draw alone ${cm(base)}), goggles ${cm(R2.gStep)}${bad(fails)}`);
   }
   { // (f) hands busy at the aim and at a sprint: each press is played as a nod
-    const run = async () => { const S = await world(41); toPistol(S); S.pl.pistol.lightOn = true; S.step(50); const out: { h: Vec3; yaw: number; pitch: number }[] = [];
+    // (a count is read AFTER the game it counts is stood: a stand-up puts a game's tallies back, tools/qa/fresh.ts)
+    const run = async () => { const S = await world(41), n0 = { ...KITANIM_STATS.nv }; toPistol(S); S.pl.pistol.lightOn = true; S.step(50); const out: { h: Vec3; yaw: number; pitch: number }[] = [];
       for (let f = 0; f < 70; f++) { if (f === 4 || f === 34) S.tap('KeyN'); S.step(1); const d = S.c.headDir(); out.push({ h: [...S.c.bones.head] as Vec3, yaw: Math.atan2(d[0], d[2]), pitch: Math.asin(Math.max(-1, Math.min(1, d[1]))) }); }
-      return { out, by: { ...KITANIM_STATS.nv } }; };
-    const n0 = { ...KITANIM_STATS.nv }, A = await run(), nods = A.by.nod - n0.nod;
+      return { out, nods: KITANIM_STATS.nv.nod - n0.nod }; };
+    const A = await run(), nods = A.nods;
     const fails: string[] = []; if (nods !== 2) fails.push(`${nods} nods played (want 2)`);
-    const runS = async () => { const S = await world(41); S.input.keys.add('KeyW'); S.input.keys.add('ShiftLeft'); S.step(12); const out: { h: Vec3; pitch: number }[] = []; let spr = 0;
+    const runS = async () => { const S = await world(41), s0 = { ...KITANIM_STATS.nv }; S.input.keys.add('KeyW'); S.input.keys.add('ShiftLeft'); S.step(12); const out: { h: Vec3; pitch: number }[] = []; let spr = 0;
       for (let f = 0; f < 44; f++) { if (f === 2) S.tap('KeyN'); S.step(1); if (S.pl.sprinting) spr++; const d = S.c.headDir(); out.push({ h: [...S.c.bones.head] as Vec3, pitch: Math.asin(Math.max(-1, Math.min(1, d[1]))) }); }
-      S.input.keys.delete('KeyW'); S.input.keys.delete('ShiftLeft'); return { out, spr, by: { ...KITANIM_STATS.nv } }; };
-    const s0 = { ...KITANIM_STATS.nv }, As = await runS(), sNods = As.by.nod - s0.nod;
+      S.input.keys.delete('KeyW'); S.input.keys.delete('ShiftLeft'); return { out, spr, nods: KITANIM_STATS.nv.nod - s0.nod }; };
+    const As = await runS(), sNods = As.nods;
     if (As.spr < 40 || sNods !== 1) fails.push(`staging: sprinting on ${As.spr} of 44 frames, ${sNods} nod(s) played`);
     verdict(!fails.length, 'the pistol at the aim, and at a sprint: each press of N is played as a nod', `at the aim: ${nods} nods of 2 presses · at a sprint (${As.spr} of 44 frames): ${sNods} of 1` + bad(fails));
   }
