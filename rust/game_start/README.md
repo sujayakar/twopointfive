@@ -123,7 +123,8 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game/src/game/p_04.rs`), which had never run before this crate |
 | the moving state at home in the block | `settle` (the die, the pose pool, the smoke grid) |
 | the host's Input and camera | the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild` |
-| a mission, where asked | the game's `start_scenario`, or `start_from_query` on an address's words (`StartOpts.link`), as a click on a row of the mission list starts it |
+| the address's words, where one is handed (`StartOpts.link`), BEFORE the game is made | the game's `address_before_game`: the row's own hour and weather onto the words, the weather the game is born in, the visit's hour (`src/host/standup.ts addressBeforeGame`) |
+| a mission, where asked | the game's `start_scenario`; or, from an address, `start_at_address`: `start_from_query` on its words, then the solo card's question, as a click on a row of the mission list starts it on a page |
 
 `frame(g, host, dt)` is one frame of that host: the game's `game_update` on the host's Input and camera, the camera after the man, the lights'
 envelopes, the box world listed again. It answers what the step told its host (sounds, marks, lines said).
@@ -164,10 +165,12 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
    its row's link on both sides (`LEVELS.md`).
    What is left: the page hands `location.search` across once and the Rust game starts from it. Two things to know when that is written.
    An address's words are NOT on the wire (the table declares that arm of a `string | URLSearchParams` argument as holding nothing, and a
-   `Query` writes nothing and reads back empty): a host hands the TEXT. And the page reads three more things off the address before the
-   stand-up, which this start does not: the weather and the hour as it boots, the kit and the words. The game crate's readers of those
-   (`init_weather`, the kit's, the words') were called by nothing and went with the dead code; they come back, taking a `&Query`, with the
-   page's start.
+   `Query` writes nothing and reads back empty): a host hands the TEXT. And the page reads more off the address before the stand-up. THE
+   WEATHER AND THE HOUR ARE DONE (2026-11-07): `address_before_game` reads them onto the blank game before `game_new`, as the page's
+   `addressBeforeGame` does, and the TypeScript start this one is held to (`start.ts`) takes the address at its stand the same way; a game
+   stood from an address no longer has the harness's solo card put on at the stand (`stood.solo_stand` stays down, as on a page), and the
+   address's own question is asked once the mission is staged. STILL THE PAGE'S ALONE: the kit this machine keeps and the words. The game
+   crate's readers of those were called by nothing and went with the dead code; they come back, taking a `&Query`, with the page's start.
 2. **The puppet's objects.** The picture reads TypeScript objects that only the TypeScript start builds, and the apply writes onto objects it
    finds: of a man, his rig, his row of the men's columns, his capsules and his entry in the light probe's table; of the level, the box world
    the GPU is packed from (`BoxWorld`: the pack, the cut and round tables, the glass listed to the GPU), the light set, the marks' texture, the
