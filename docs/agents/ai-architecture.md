@@ -286,8 +286,9 @@ Under `rust/game_rules/src/`. One man's frame, in the order it runs (`guards/fra
 
 The squad's side: an order is `orders/rows/<name>.rs` and a line of `rows!`; a throw is `squadthrow/plan.rs`; who is
 asked about which player's seat is a `SeatRef` (`seats/seat_ref.rs`). What the team knows under the fog is
-`fogofwar/p_02.rs`, what the picture shows of it `fogofwar/picture.rs`. The room fight's defenders and operatives are
-still `roomfight/p_01..03.rs`.
+`fogofwar/p_02.rs`, what the picture shows of it `fogofwar/picture.rs`. The room fight is `roomfight/{defender,
+operative,rooms,line,fight}.rs`: a man who holds a room, a squad man in the fight (his frame is a dozen named parts),
+the rooms, who is in the line of a round, the whole.
 
 ## 7. Add a reaction, an order, a behaviour
 
