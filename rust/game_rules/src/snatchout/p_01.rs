@@ -11,7 +11,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// The player a row is built for and a press is read from. (snatchout.ts who)
-pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
+pub fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
 /// Nothing led, nobody planted: the field initialisers; the constructor only keeps `g` and `S`. (snatchout.ts SnatchOut.constructor)
 pub fn snatch_out_new(g: &crate::game::Game) -> crate::snatchout::SnatchOut { SnatchOut::blank() }
@@ -61,7 +61,7 @@ pub fn snatch_out_owns(g: &crate::game::Game, gd: GuardId) -> bool {
 /// The row on him in reach. (snatchout.ts SnatchOut.rows)
 pub fn snatch_out_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::snatchout::SnatchOutRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     if !snatch_out_free(g) { return; }
-    let pl = who(g);
+    let pl = who(g, &crate::seats::here(g));
     let gd = g.snatch.man.unwrap();
     let civ = g.gd[gd].civ.unwrap();
     let hp = g.ch[g.gd[gd].ch].pos;
@@ -117,7 +117,7 @@ pub fn snatch_out_word(g: &mut crate::game::Game, by: Option<CharId>) -> bool {
 pub fn snatch_out_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     let gd = g.snatch.man.unwrap();
     let van = snatch_out_van(g).unwrap();
-    let pl = who(g);
+    let pl = who(g, &crate::seats::here(g));
     let act = if g.pl[pl].down { None } else { g.act.clone() };
     if let Some(act) = act {
         let lead = act.verb == Some(crate::game::Verb::Lead);
@@ -155,7 +155,7 @@ pub fn snatch_out_tick(g: &mut crate::game::Game, dt: f64) -> bool {
 
 /// Is the one he follows down. (snatchout.ts SnatchOut.downed)
 pub fn snatch_out_downed(g: &mut crate::game::Game, c_2: CharId) -> bool {
-    let pl = who(g);
+    let pl = who(g, &crate::seats::here(g));
     if c_2 == g.pl[pl].ch { return g.pl[pl].down; }
     g.guards.iter().any(|x| g.gd[*x].ch == c_2 && g.gd[*x].state == crate::game::GuardState::Dead)
 }
@@ -186,7 +186,7 @@ pub fn snatch_out_fighting(g: &crate::game::Game, gd: GuardId) -> bool {
 /// Whoever is moving him: the one he follows, or the player with him in an arm or in his hands. (snatchout.ts SnatchOut.mover)
 pub fn snatch_out_mover(g: &mut crate::game::Game) -> Option<CharId> {
     if let Some(lead) = g.snatch.out.lead { return Some(lead); }
-    let pl = who(g);
+    let pl = who(g, &crate::seats::here(g));
     let gd = g.snatch.man?;
     if (g.gd[gd].held.is_some() || g.pl[pl].dragging == Some(gd)) && !g.pl[pl].down { Some(g.pl[pl].ch) } else { None }
 }
@@ -426,13 +426,13 @@ pub fn snatch_out_bound(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// The objective's row once he is in hand: where to take him (None: not this rule's to say). (snatchout.ts SnatchOut.objective)
-pub fn snatch_out_objective(g: &mut crate::game::Game) -> Option<crate::snatchout::SnatchOutObjective> {
+/// The objective's row once he is in hand: where to take him (None: not this rule's to say).
+pub fn snatch_out_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::snatchout::SnatchOutObjective> {
     let ruled = snatch_out_ruled(g);
     let man = g.snatch.man;
     if !ruled || man.is_none() || g.snatch.end.is_some() || !crate::snatch::snatch_in_hand(g) { return None; }
     let gd = man.unwrap();
-    let pl = who(g);
+    let pl = who(g, seat);
     let moving = g.snatch.out.lead.is_some() || g.gd[gd].held.is_some() || g.pl[pl].dragging == Some(gd);
     let van_name = crate::snatch::snatch_block(g).unwrap().van.unwrap().name;
     let text = format!("objective ▸ get {} to {}", g.cv[g.gd[gd].civ.unwrap()].name, van_name);
@@ -450,7 +450,7 @@ pub fn snatch_out_restore(g: &mut crate::game::Game, s: Option<crate::snatchout:
     snatch_out_reset(g);
     let Some(s) = s else { return; };
     if !snatch_out_ruled(g) { return; }
-    let pl = who(g);
+    let pl = who(g, &crate::seats::here(g));
     let by = match s.lead {
         None => None,
         Some(id) => {

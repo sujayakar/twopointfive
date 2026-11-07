@@ -130,7 +130,7 @@ export class Demo {
         // from the tour's staged men (guards.ts standoffPerceive / raiseEscalation); the men who must not take part are held / pinned instead, and Sam is unseen
         // (playerInvisible) until beat C. So: the player's own mission is swapped for a scratch copy while it runs (the live seconds tick that, not his run — the
         // drive stop's trick), and the exit hands the flag, the alarm and the men back the way the firefight expects them (quiet, calm, fresh). (The objective
-        // diamond stays off through it: mission.ts objectivePos also reads Game.touring, which start() raises for the whole tour.)
+        // diamond stays off through it: the Rust game's `mission::objective` gives no line while Game.touring is up, which start() raises for the whole tour.)
         // The verbs are the player's rows, tapped as a player taps them (interact.ts: a one-frame Space does the highlighted row): 'grab him' on the man's row once it
         // is in reach, 'question him' — the top row while he is held — for each exchange, and for the end the choke's own row, chosen (Game.selectVerb: what holding
         // Space and scrolling to it does by hand) and tapped; it then runs on its own clock while the puppet keeps the shield square. Kowalski is simply un-held: he

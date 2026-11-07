@@ -689,13 +689,10 @@ pub fn night_breach_blind_fire(g: &mut crate::game::Game) {
     }
 }
 
-/// The HUD's objective while the night breach is up by itself. (nightbreach.ts NightBreach.objective)
-pub fn night_breach_objective(g: &mut crate::game::Game) -> Option<crate::nightbreach::NightBreachObjective> {
+/// The HUD's objective while the night breach is up by itself.
+pub fn night_breach_objective(g: &crate::game::Game) -> Option<crate::nightbreach::NightBreachObjective> {
     if !g.night_breach.active || g.night_breach.layout.is_some() || g.night_breach.hostiles.is_empty() { return None; }
     let taken = all_taken(g);
-    if let Some(of) = g.night_breach.obj_of.as_ref() {
-        if of.taken == taken { return Some(NightBreachObjective { text: of.o.text.clone(), pos: of.o.pos }); }
-    }
     let plan = g.level.breach.as_ref().map(|p| (p.door.clone(), p.room.clone()));
     let room = plan.as_ref().and_then(|p| p.1.clone()).unwrap_or_else(|| String::from("room"));
     let text = if taken { format!("{} taken — press shift+enter to restart", room) } else { format!("objective ▸ take the {}", room) };
@@ -707,7 +704,6 @@ pub fn night_breach_objective(g: &mut crate::game::Game) -> Option<crate::nightb
             None => None,
         }
     };
-    g.night_breach.obj_of = Some(NightBreachObjOf { taken, o: NightBreachObjOfO { text: text.clone(), pos } });
     Some(NightBreachObjective { text, pos })
 }
 

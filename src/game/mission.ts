@@ -1,17 +1,16 @@
-// Mission thread: stage machine (infiltrate → drive → exfil), the drive pull, the rack check errand, debrief stats, objective text/marker.
+// Mission thread: stage machine (infiltrate → drive → exfil), the drive pull, the rack check errand, debrief stats. (The objective's text and marker are the Rust game's: `mission::objective`, in the view.)
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
 import './seats';
-import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { DRIVE_SECS } from './consts';
 import { driveHands } from './handwork';
 import type { Game, Guard, MissionStats } from './game';
 import { fmtClock } from './game';
-import { chronObjective, debriefOf } from './chronicle';
+import { chronObjective } from './chronicle';
 import { handlerBeat } from './dialogue';
 import { takeTold } from './takecheck';
-import { quietOf, quietWords, nearestExit, exitPoint, holderStand } from './quiet';   // (called inside functions only: src/game is one import cycle)
+import { quietOf, quietWords, holderStand } from './quiet';   // (called inside functions only: src/game is one import cycle)
 import { LIGHT_IN } from '../sim/lightshome';
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
@@ -88,41 +87,3 @@ export function sendRackCheck(g: Game) { { const __s = RUST_SURFACE; if (__s) { 
   g.say(best, `rack ${M.rack.index + 1} just dropped off the network — going to take a look`, true); g.audio.play('radio', best.char.pos, 0.6);
   handlerBeat(g, 'rack', 2.6);   // she heard that on their net too: a line behind his
 }
-
-/** Where the HUD's objective marker points (null: nothing to point at, or the tour is running). */
-export function objectivePos(g: Game): Vec3 | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('objectivePos', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  if ((g.quietUtility || g.touring) && !g.missionInTour) return null;
-  { const o = g.director?.objective; if (o) return o.pos; }   // a level-script program's own objective (director.ts c.objective) stands over the stage machine's while it runs
-  { const o = g.lesson?.objective(); if (o) return o.pos; }   // a training lesson's step (lesson.ts) stands over its scenario's own objective until the last one is done
-  { const o = g.snatch?.objective(); if (o) return o.pos; }   // a snatch level's man (snatch.ts) while he is loose
-  { const o = g.defuse?.objective(); if (o) return o.pos; }   // a defuse mission's charges (defuse.ts) stand over the room clear's own objective while one is live
-  { const o = g.roomClear?.objective(); if (o) return o.pos; }   // … and the room clear's: the first room still held
-  { const o = g.rescue?.objective(); if (o) return o.pos; }   // … and the hostage rescue's: the hostage room
-  { const o = g.nightBreach?.objective(); if (o) return o.pos; }   // … and the night breach's by itself: the held room's door
-  const M = g.level.mission; const s = g.mission.stage;
-  if (s === 'exfil') { const X = nearestExit(g, g.player.char.pos); if (X) return g.doors.byName(X.door)?.frameCentre ?? exitPoint(X, 0); }   // (a quiet mission: the nearest of its ways out — quiet.ts)
-  return s === 'infiltrate' ? (g.doors.byName(M.entryDoor)?.frameCentre ?? null) : s === 'drive' ? M.rack.front : s === 'exfil' ? (g.doors.byName(M.exfilDoor)?.frameCentre ?? null) : null;
-}
-
-/** The HUD's one objective line ('' while the tour runs). */
-export function objectiveText(g: Game): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('objectiveText', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  if ((g.quietUtility || g.touring) && !g.missionInTour) return '';
-  { const o = g.director?.objective; if (o) return 'objective ▸ ' + o.text; }
-  { const o = g.lesson?.objective(); if (o) return o.text; }
-  { const o = g.defuse?.objective(); if (o) return o.text; }
-  { const o = g.snatch?.objective(); if (o) return o.text; }
-  { const o = g.roomClear?.objective(); if (o) return g.par ? g.par.objective(o.text) : o.text; }   // the room clear (roomclear.ts) while it is up: its rooms, ticked off
-  { const o = g.rescue?.objective(); if (o) return o.text; }   // the hostage rescue (rescue.ts) while it is up: the hostages, and how far the captor's clock has got
-  { const o = g.nightBreach?.objective(); if (o) return o.text; }   // the night breach by itself (nightbreach.ts): the room to take
-  const m = g.mission; const s = m.stage; const n = g.level.mission.rack.index + 1;
-  const W = quietWords(g);
-  if (W && s === 'infiltrate') return `objective ▸ reach ${W.place}`;
-  if (W && s === 'drive') return m.driveT >= 0 ? `objective ▸ taking ${W.thing}… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ take ${W.thing} from ${W.holder} (press Space in front of it, then stay on it)`;
-  if (W && s === 'exfil') return `objective ▸ get out through ${W.outs}`;
-  if (s === 'infiltrate') return 'objective ▸ reach the server room';
-  if (s === 'drive') return m.driveT >= 0 ? `objective ▸ pulling the drive… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ pull the drive from rack ${n} (press Space in front of it, then stay on it)`;
-  if (s === 'exfil') return 'objective ▸ get out through the fire exit';
-  if (s === 'done') { let t = doneLine.get(m); if (!t) { const D = debriefOf(g); t = ['mission complete — ' + fmtClock(m.stats.elapsed), D.grade].filter(Boolean).join(' · '); doneLine.set(m, t); } return t; }   // (worked out once per finished run, not sixty times a second: nothing on it can change any more)
-  return 'mission failed — press enter to restart';
-}
-const doneLine = new SideMap<object, string>('mission.doneLine');
