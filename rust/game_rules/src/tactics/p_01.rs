@@ -378,7 +378,7 @@ pub fn tactics_man_down(g: &mut crate::game::Game, victim: GuardId) {
             && g.gd[o].state != crate::game::GuardState::Dead
             && g.gd[o].team == team
             && g.gd[o].held.is_none()
-            && g.time >= g.gd[o].dazzled_until
+            && !crate::control::man::blind(g, o)
             && crate::guards::point_in_view(g, o, at, Some(16.0), Some(60.0))
         {
             seen = true;
@@ -728,7 +728,7 @@ pub fn fit_for_role(g: &crate::game::Game, m: GuardId) -> bool {
         && g.gd[m].state == crate::game::GuardState::Alert
         && g.gd[m].last_known.is_some()
         && !crate::teams::foe_down(g, m)
-        && !(g.time < g.gd[m].dazzled_until)
+        && !crate::control::man::blind(g, m)
 }
 
 #[cfg(test)]

@@ -144,7 +144,7 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, seats: window.__pageKeeper
   } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
 
   if (want('picture')) { const name = 'picture', { browser, page, errs, docs } = await open(); try {
-    const FIRST = process.env.PICTURE_FIRST || 'room-clear-pair', PICKED = process.env.PICTURE_PICKED || 'depot-four', MAY = Number(process.env.PICTURE_MAY ?? 0);   // (MAY: the most a picture or the mission after it may compile — none: every level is one set of programs, render/frame.ts LevelSw)
+    const FIRST = process.env.PICTURE_FIRST || 'room-clear-pair', PICKED = process.env.PICTURE_PICKED || 'records-pair', MAY = Number(process.env.PICTURE_MAY ?? 0);   // (MAY: the most a picture or the mission after it may compile — none: every level is one set of programs, render/frame.ts LevelSw)
     await page.goto(`${BASE}?${BREAK ? 'keeppage=0' : 'keeppage=1'}&${REST}`); await page.evaluate(() => { window.__mark = 'opened'; });
     const r1 = await ready(page, !BREAK, BREAK ? null : 1); if (r1 !== 'ok') throw new Error(`the start page: ${r1}`);
     const G = () => BREAK ? page.mainFrame() : frameOf(page);   // the game's own window

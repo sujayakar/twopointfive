@@ -358,6 +358,7 @@ pub mod ui_missions { pub mod types; pub use types::*; }
 pub mod ui_shaderrows { pub mod types; pub use types::*; }
 pub mod unseen { pub mod types; pub use types::*; }
 pub mod verdict { pub mod types; pub use types::*; }
+pub mod view { pub mod types; pub use types::*; }
 pub mod walkahead { pub mod types; pub use types::*; }
 pub mod wallbreak { pub mod types; pub use types::*; }
 pub mod wallcharge { pub mod types; pub use types::*; }

@@ -35,7 +35,7 @@ const PASTE = { params: { buoyancy: 1.6, weight: 0.03, velDamp: 0.3, densDecay: 
   check(look[0] === 1 && Math.abs(look[1] - 4 / 3) < 1e-9 && look[2] === 1 && look[3] === 1, 'on it high\'s step is the tuned one, a cheaper preset\'s is longer in proportion, and none is under a cell', look.map(x => +x.toFixed(3)).join(', ')); }
 
 { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), q = readFileSync(`${ROOT}/src/ui/quality.ts`, 'utf8');
-  const on = main.indexOf('smokeLook.on = q.get(\'smokelook\') !== \'0\''), preset = main.indexOf('new Quality('), put = main.indexOf('if (smokeLook.on) putSmokeLook(engine)');
+  const on = main.indexOf('smokeLook.on = lookConfig.on && q.get(\'smokelook\') !== \'0\''), preset = main.indexOf('new Quality('), put = main.indexOf('if (smokeLook.on) putSmokeLook(engine)');
   check(on > 0 && preset > on && put > 0, 'the page turns it on for the look alone, before the first preset is put on, and writes the table once', `switch at ${on}, first preset at ${preset}, table at ${put}`);
   check(/S\.volStepVoxels = smokeLookStep\(K\.volStep\)/.test(q) && (q.match(/S\.volStepVoxels = /g) ?? []).length === 1, 'the preset\'s one writer of the march step asks the table');
   check(lookPageWord('smokelook', '0'), 'a benchmark asked for on the look page carries ?smokelook'); }

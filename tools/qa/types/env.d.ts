@@ -106,7 +106,7 @@ declare const process: {
   argv: string[];
   env: Record<string, string | undefined>;
   exitCode: number | undefined;
-  pid: number; platform: string; version: string; versions: Record<string, string>; execPath: string; execArgv: string[]; arch: string;
+  pid: number; platform: string; version: string; versions: Record<string, string>; execPath: string; arch: string;
   cwd(): string;
   exit(code?: number): never;
   kill(pid: number, signal?: number | string): boolean;

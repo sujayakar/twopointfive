@@ -66,7 +66,7 @@ export async function snowUnderCheck(o: { verbose?: boolean } = {}): Promise<boo
 
     const A = await rig(true); const on = compiled(); await rig(false); const off = compiled(); SNOW_LOOK.under = true;
     // ---- prelude
-    { const main = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'); const fed = /snowLookConfig\.under = true;/.test(main);
+    { const main = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'); const fed = /snowLookConfig\.under = SNOW_LOOK\.under;/.test(main);
       verdict(on === true && off === false && fed, 'prelude — the page hands the shaders the switch: the level word\'s SNOW_UNDER bit up with it on, down with it off',
         `the frame's level word with the switch on: SNOW_UNDER ${on} · off: ${off} · main.ts hands it over at boot: ${fed}`); }
 

@@ -7,7 +7,7 @@
 //     --json     keep the runs: <prefix>.standard.json and <prefix>.hard.json (playthrough.ts's own files, for lost-men.ts / threshold-tally.ts)
 // WHAT IT CHECKS, in order (each line a PASS / FAIL / NOTE):
 //   file       levels/<name>.json parses and validates (LevelData v1); its generator tools/levels/<name>.ts, when there is one, still gives that file
-//   lint       src/scene/lint.ts: errors fail, warnings are counted
+//   lint       src/editor/lint.ts (the editor's own): errors fail, warnings are counted
 //   footsteps  the level's own `surfaces` block (game/floor.ts reads it: which footstep, how far it carries), or a note that it falls back to the office's map
 //   size       it fits the world the renderer is built round (40 × 28 m, y ≤ 8 m), and the frame's tables: boxes, lights, characters, glass panes
 //   structure  game/roomclear.ts checkStructure on the stood-up game: team start, marks, doors, defenders that fit
@@ -30,7 +30,7 @@ import { entryOf } from './playthrough.ts';
 import { El, withDom, missionRows } from './scenario-picker-probes.ts';
 
 const { validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-const { lintLevel, formatLint } = await import(`${ROOT}/src/scene/lint.ts`);
+const { lintLevel, formatLint } = await import(`${ROOT}/src/editor/lint.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { floorAt } = await import(`${ROOT}/src/game/floor.ts`);
 const { BoxFlag, MAX_GLASS } = await import(`${ROOT}/src/scene/boxes.ts`);

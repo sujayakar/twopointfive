@@ -251,13 +251,13 @@ export async function deathrecapCheck(): Promise<boolean> {
           'his mate sees him go down: the squad has the way, and the mate says which side — the fog\'s own word for it, by the player\'s shoulders',
           mate ? `${mate.B.callsign}: "${mate.said}" · words ${mate.calls}` : 'the run did not play');
         { // nothing is DRAWN for that way (RECAP.liveArrows; RECAP_BREAK=arrows: the arrows left on — must FAIL)
-          const fs = await import('node:fs'), ov: string = fs.readFileSync(`${ROOT}/src/ui/overlay.ts`, 'utf8');
+          const fs = await import('node:fs'), ov: string = fs.readFileSync(`${ROOT}/src/ui/overlay.ts`, 'utf8'), pf: string = fs.readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8');
           if (process.env.RECAP_BREAK === 'arrows') RECAP.liveArrows = true; else RECAP.liveArrows = was.liveArrows;
           const shipped = RECAP.liveArrows === false && M.lostArrowsShown() === false; RECAP.liveArrows = true; const back = M.lostArrowsShown() === true; RECAP.live = false; const dead = M.lostArrowsShown() === false; RECAP.live = true; RECAP.liveArrows = was.liveArrows;
-          const sites = (ov.match(/lostArrowsShown\(\)/g) ?? []).length, stroke = /lostArrowsShown\(\) \? lostLive\(game\) : \[\]/.test(ov), rowMark = /o\.lost && lostArrowsShown\(\) \? lostArrow\(/.test(ov);
-          line(!!mate && !!mate.L && anEighth(mate.L.from) && mate.row!.gone && shipped && back && dead && stroke && rowMark,
-            'the way is known and said, and nothing is drawn for it: no arrow on his row, no stroke on the ground (RECAP.liveArrows off, as the page has it)',
-            `row ${mate?.row?.gone ? 'struck' : 'plain'}, the way known ${!!mate?.L?.from} · drawn as shipped ${!shipped} · with the key on ${back} · with the live rule off ${!dead} · overlay.ts asks before the stroke ${stroke}, before the row's arrow ${rowMark} (${sites} asks)`); }
+          const sites = (ov.match(/lostArrowsShown\(\)/g) ?? []).length, stroke = /lostArrowsShown\(\) \? lostLive\(game\) : \[\]/.test(ov), rowMark = /o\.lost && lostArrowsShown\(\) \? lostArrow\(/.test(ov), flag = /RECAP\.liveArrows = q\.get\('recaparrows'\) === '1'/.test(pf);
+          line(!!mate && !!mate.L && anEighth(mate.L.from) && mate.row!.gone && shipped && back && dead && stroke && rowMark && flag,
+            'the way is known and said, and nothing is drawn for it: no arrow on his row, no stroke on the ground (RECAP.liveArrows off, as the page has it; ?recaparrows=1 = both back)',
+            `row ${mate?.row?.gone ? 'struck' : 'plain'}, the way known ${!!mate?.L?.from} · drawn as shipped ${!shipped} · with the key on ${back} · with the live rule off ${!dead} · overlay.ts asks before the stroke ${stroke}, before the row's arrow ${rowMark} (${sites} asks) · the page's flag ${flag}`); }
         const told = mate ? JSON.stringify(mate.L ?? {}) + JSON.stringify(mate.row ?? {}) + mate.said : '';
         line(!!mate && !told.includes(mate.H.callsign) && mate.keys === 'at from id knownAt name t' && mate.card === null,
           'what the squad is handed is a way off the man: never the shooter\'s name, never his place — and the card\'s record is still shut', mate ? `fields: ${mate.keys}` : '');

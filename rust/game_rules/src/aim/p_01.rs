@@ -128,7 +128,7 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let facing_err = m::abs(v3::wrap_angle(brg - gun_yaw));
     let dist = v3::dist_xz(g.ch[c].pos, g.ch[pc].pos);
     let on_tol = p.on_deg * v3::DEG + m::atan2(0.35, m::max(dist, 0.3));
-    let on = g.gd[gd].state == crate::game::GuardState::Alert && g.gd[gd].react_t <= 0.0 && g.time >= g.gd[gd].dazzled_until && facing_err < on_tol;
+    let on = g.gd[gd].state == crate::game::GuardState::Alert && g.gd[gd].react_t <= 0.0 && !crate::control::man::blind(g, gd) && facing_err < on_tol;
     let cap = if if move_cost(g) { m::max(speed, g.gd[gd].aim.move_sm) > m::min(p.stop_to_shoot, g.k.aimcost.plant_at) } else { speed > p.stop_to_shoot } { p.moving_track_cap } else { 1.0 };
     if on {
         let k = match &g.gd[gd].skill {

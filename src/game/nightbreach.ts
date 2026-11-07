@@ -315,18 +315,6 @@ export class NightBreach {
 
 
 
-  /** The HUD's objective while the night breach is up BY ITSELF (mission.ts objectiveText / objectivePos — a layout's scenario, the room clear, words its own
-   *  first; null = not this scenario's to say): the held room, a marker on the plan's door until the room is taken. Without it the line read the solo night's
-   *  'reach the server room' with its diamond on the server door, all through a scenario about another room. */
-  objective(): { text: string; pos: Vec3 | null } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('NightBreach.objective', this, []); if (__r !== RUST_PASS) return __r as any; } }
-    if (!this.active || this.layout || !this.hostiles.length) return null;
-    const g = this.g, P = g.level.breach, room = P?.room ?? 'room';
-    const taken = this.hostiles.every(h => h.state === 'dead' || h.fled);
-    if (this.objOf && this.objOf.taken === taken) return this.objOf.o;
-    const o = { text: taken ? `${room} taken — press shift+enter to restart` : `objective ▸ take the ${room}`, pos: taken ? null : (P ? g.doors.byName(P.door)?.frameCentre ?? null : null) };
-    this.objOf = { taken, o }; return o;
-  }
-  private objOf: { taken: boolean; o: { text: string; pos: Vec3 | null } } | null = null;
 
   /** where the breach stands, in one word */
   get state(): NightBreachState {

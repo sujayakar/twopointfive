@@ -1,5 +1,5 @@
-// A round through smoke is ONE LINE (src/smoke/smoke.ts `round` and `push` with `line`; smoke.wgsl emR2, emitter mode 3; game/combat.ts asks with the
-// Stirred smoke row up). It used to be a row of soft shoves 7 cm across for one step, which moved nothing anyone could see. No GPU here: the cut of a line to a lattice's smoke is
+// A round through smoke is ONE LINE (src/smoke/smoke.ts `round` and `push` with `line`; smoke.wgsl emR2, emitter mode 3; game/combat.ts asks on the look page
+// only). It used to be a row of soft shoves 7 cm across for one step, which moved nothing anyone could see. No GPU here: the cut of a line to a lattice's smoke is
 // run as it stands, the solver's distance is mirrored as numbers and its text is read. What the smoke then DOES is never seen here.
 //   bun run tools/qa/smokeline-check.ts   (exit 0 = all pass; SMOKELINE_BREAK=1 measures a line as a point, sends a leg uncut and wakes bricks by its middle: must fail)
 import '../../src/host/gpuEnums';   // (first: the solver's module reads GPU enums as it loads)
@@ -108,6 +108,6 @@ const segToBox = (e: { pos: V; dir: V; tall: number }, lo: V, hi: V) => {
   check(wgsl.includes('u += e.dir * max(e.speed * clamp(exp(-r2) * e.push, 0.0, 1.0) - dot(u, e.dir), 0.0);') && /LINE_MOST = 4 /.test(ts) && /readonly wake = \{ speed: 9, radius: 0\.12, push: 4 \};/.test(ts),
     'a line brings the air along it up to its speed once: no frame length in it, never slower, never turned');
   check(/\(e\.line \?\? 0\) > 0 \? 3 : 0;/.test(ts) && /const j = \(e\.line \?\? 0\) > 0 \? 0 : /.test(ts), 'a line is packed as mode 3 with its half length, and its direction is not jittered');
-  check(/if \(third && lookConfig\.stir > 0 && g\.smoke\.round\)/.test(combat) && /if \(third && !lined\) for \(let d = 0\.3;/.test(combat), 'combat asks the smoke for a line with its Stirred smoke row up, and sends its dots when the smoke did not take it');
+  check(/if \(third && lookConfig\.on && lookConfig\.stir > 0 && g\.smoke\.round\)/.test(combat) && /if \(third && !lined\) for \(let d = 0\.3;/.test(combat), 'combat asks the smoke for a line on the look page only, with its Stirred smoke row up, and sends its dots when the smoke did not take it');
 }
 console.log(red ? `smokeline-check: ${red} FAILED` : 'smokeline-check: all passed'); process.exit(red ? 1 : 0);

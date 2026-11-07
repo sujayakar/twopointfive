@@ -20,14 +20,14 @@ export async function sunGlintCheck(): Promise<boolean> {
   console.log(`\n=== sunglint: a smooth finish catches the sun${BRK ? ' (the rule off: must fail)' : ''} ===`);
   const read = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8'), src = (f: string) => readFileSync(resolve(ROOT, 'src', f), 'utf8');
   const texts = [read('reflect.wgsl')];
-  const { scenePrelude, sunGlintConfig } = await import(`${ROOT}/src/render/frame.ts`);
-  // 1. the prelude's word: true with the switch up, false with the switch down; the switch itself ships up, and
+  const { scenePrelude, lookConfig, sunGlintConfig } = await import(`${ROOT}/src/render/frame.ts`);
+  // 1. the prelude's word: true on the look's page with the switch up, false with the switch down, false off the look's page; the switch itself ships up, and
   //    its off word is wired: main.ts lowers it for ?nosunglint, a replay's visit keeps the word, and the look's page knows it for one of its own
-  { const was = sunGlintConfig.on; let a: string | undefined, b: string | undefined;
-    const word = (sw: boolean) => { sunGlintConfig.on = sw; return /const SUN_GLINT: bool = (true|false);/.exec(scenePrelude())?.[1]; };
-    try { a = word(was && !BRK); b = word(false); } finally { sunGlintConfig.on = was; }
+  { const was = [lookConfig.on, sunGlintConfig.on]; let a: string | undefined, b: string | undefined, c: string | undefined;
+    const word = (look: boolean, sw: boolean) => { lookConfig.on = look; sunGlintConfig.on = sw; return /const SUN_GLINT: bool = (true|false);/.exec(scenePrelude())?.[1]; };
+    try { a = word(true, was[1] && !BRK); b = word(true, false); c = word(false, true); } finally { lookConfig.on = was[0]; sunGlintConfig.on = was[1]; }
     const wired = /if \(q\.has\('nosunglint'\)\) sunGlintConfig\.on = false;/.test(src('main.ts')) && /VISIT_FLAGS = \[[^\]]*'nosunglint'/.test(src('ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'nosunglint'/.test(src('scene/look.ts'));
-    verdict(was === true && a === 'true' && b === 'false' && wired, 'the switch ships up; the prelude says the rule with the switch as it ships and not with it down; and ?nosunglint is wired (the page lowers the switch, a replay\'s visit keeps the word, a run of pages carries it)', `the switch ${was} · as it ships ${a} · switch down ${b} · the off word wired ${wired}`); }
+    verdict(was[1] === true && a === 'true' && b === 'false' && c === 'false' && wired, 'the switch ships up; the prelude says the rule on the look\'s page with the switch as it ships, and nowhere else; and ?nosunglint is wired (the page lowers the switch, a replay\'s visit keeps the word, the look\'s page counts it its own)', `the switch ${was[1]} · look page ${a} · switch down ${b} · another page ${c} · the off word wired ${wired}`); }
   // 2. the text: the sun's head, its four numbers and rtGlints are ONE text in the two passes; without the word the sun's flag is a constant false and the
   //    lamps' skip is the old one; with it the sun is taken out of the contest before the four slots (never an unshadowed credit), has its own turn of the
   //    one shadow loop (no call site more), and is faded in and bounded by its own light
@@ -65,18 +65,18 @@ export async function sunGlintCheck(): Promise<boolean> {
       `per unit of the sun: at the mirror ${peak.toFixed(2)} · 10° off ${off10.toFixed(3)} · 60° off ${off60} · turned away ${back} · a white wall ${wall.toFixed(2)} · at 0.45 ${rough45.toFixed(3)}, under cloud ${cloud.toFixed(4)} · a grazing eye ${rim.toFixed(2)}, steel ${steel.toFixed(2)} of the bound ${PEAK} · the sheen's largest step a quarter degree ${step.toFixed(4)} · cut ${CUT}, floor ${FLOOR}`); }
   // 4. NO LAMP'S HIGHLIGHT IS CREDITED UNSEEN (the prelude's GLINT_PICK, render/frame.ts glintPickConfig; the look's page, &glintpick=1, off unless asked;
   //    GLINTPICK_BREAK=1 = the half credit asked the same lines: must FAIL). The word, then the text in the two passes
-  { const { glintPickConfig } = await import(`${ROOT}/src/render/frame.ts`); const was = glintPickConfig.on; let a: string | undefined, b: string | undefined;
-    const word = (sw: boolean) => { glintPickConfig.on = sw; return /const GLINT_PICK: bool = (true|false);/.exec(scenePrelude())?.[1]; };
-    try { a = word(true); b = word(false); } finally { glintPickConfig.on = was; }
+  { const { glintPickConfig } = await import(`${ROOT}/src/render/frame.ts`); const was = [lookConfig.on, glintPickConfig.on]; let a: string | undefined, b: string | undefined, c: string | undefined;
+    const word = (look: boolean, sw: boolean) => { lookConfig.on = look; glintPickConfig.on = sw; return /const GLINT_PICK: bool = (true|false);/.exec(scenePrelude())?.[1]; };
+    try { a = word(true, true); b = word(true, false); c = word(false, true); } finally { lookConfig.on = was[0]; glintPickConfig.on = was[1]; }
     const wired = /if \(q\.get\('glintpick'\) === '1'\) glintPickConfig\.on = true;/.test(src('main.ts')) && /VISIT_FLAGS = \[[^\]]*'glintpick'/.test(src('ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'glintpick'/.test(src('scene/look.ts'));
     const cut = (t: string) => { const k = t.indexOf('fn rtGlints('), j = t.indexOf('\n}\n', k); return k < 0 || j < 0 ? '' : t.slice(k, j); }, f = texts.map(cut), t0 = f[0];
     const lines = t0.includes('var poolW = 0.0; var pu = pick;')
       && t0.includes('      var c = g;\n      if (w > g0.w) { c = g2; g2 = g1; g1 = g0; g0 = g; } else if (w > g1.w) { c = g2; g2 = g1; g1 = g; } else if (w > g2.w) { c = g2; g2 = g; }\n      if (c.w > 0.0) { rest += c.spec; let first = poolW == 0.0; poolW += c.w; if (first) { g3 = c; } else { let p = c.w / poolW; if (pu < p) { g3 = c; pu = pu / p; } else { pu = (pu - p) / (1.0 - p); } } }\n      continue;\n    }\n    if (w > g0.w) { rest += g3.spec;')
       && t0.includes('  if (GLINT_PICK) { g3.spec = rest; rest = vec3f(0.0); }') && t0.includes('  var G = rest * 0.5;') && t0.includes('else if (k == 3u) { g = g3; }') && t0.includes('G += g.spec * tr;') && texts.every(x => /\nconst RT_GLINT_RAYS: u32 = 4u;/.test(x)) && (t0.match(/if \(GLINT_PICK/g) ?? []).length === 2 && (t0.match(/rnd\(\)|hash13\(/g) ?? []).length === 0;
     const call = texts.every(t => (t.match(/rtGlints\(P, Po, N, V, T, B, axh, ayh, F0h, owner, select\(1\.0 - kEmit, 1\.0, rays == 0u\), fract\(cpx \+ f32\(frame\.frameIdx % 4096u\) \* 0\.7548777\)\) \* frame\.matCfg\.x;/g) ?? []).length === 1 && (t.match(/let cpx = rnd\(\); let cpy = rnd\(\);/g) ?? []).length === 1 && /rngInit\(gid\.xy, 0x51f7u\);\n  let cpx = rnd\(\)/.test(t));
-    verdict(was === false && a === 'true' && b === 'false' && wired && f.every(x => x.length > 0 && x === t0) && lines && call,
-      'the pick ships DOWN: the prelude says it only with the word, and &glintpick=1 is wired (the page raises the switch before the first pipeline, a replay\'s visit keeps the word, a run of pages carries it); the three passes hold one text of it: three slots by strength, what leaves them or never joined them summed and one of it kept by its weight with ONE number handed on (the first without asking, and no division of a weight by itself), that one\'s ray answering for the sum, in front of the lines as they were; the number is the caller\'s, the pixel\'s own that is the same every frame stepped by the golden ratio, and no draw is added to the kernel\'s stream',
-      `the switch as shipped ${was} · with the word ${a} · without ${b} · wired ${wired} · one text ${f.every(x => x === t0)} · its lines ${lines} · the caller's number ${call}`); }
+    verdict(was[1] === false && a === 'true' && b === 'false' && c === 'false' && wired && f.every(x => x.length > 0 && x === t0) && lines && call,
+      'the pick ships DOWN: the prelude says it only on the look\'s page with the word, and &glintpick=1 is wired (the page raises the switch before the first pipeline, a replay\'s visit keeps the word, the look\'s page counts it its own); the three passes hold one text of it: three slots by strength, what leaves them or never joined them summed and one of it kept by its weight with ONE number handed on (the first without asking, and no division of a weight by itself), that one\'s ray answering for the sum, in front of the lines as they were; the number is the caller\'s, the pixel\'s own that is the same every frame stepped by the golden ratio, and no draw is added to the kernel\'s stream',
+      `the switch as shipped ${was[1]} · look page with the word ${a} · without ${b} · another page ${c} · wired ${wired} · one text ${f.every(x => x === t0)} · its lines ${lines} · the caller's number ${call}`); }
   // 5. the pick's arithmetic, written again as the shader has it, in colour (a lamp = its highlight's rgb, its weight the luminance, and whether it is seen).
   //    The rule as it was: the four strongest by their rays, the rest at half unseen. With the word: three by their rays, the rest summed, one of the rest
   //    kept by its weight (the one number, handed on), and the sum drawn if that one is seen. The number over the frames is the shader's own: a pixel's

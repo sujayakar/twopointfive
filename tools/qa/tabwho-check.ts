@@ -39,7 +39,7 @@ export async function tabWhoCheck(): Promise<boolean> {
     set('off', false, 'brief'); if (T.tabNow() !== 'brief') bad.push(`nobody chose → ${T.tabNow()}`);
     line(bad.length === 0, 'others: every other choice is what it was under the rule', bad.join(' · ') || 'off, brief, run, keys, and the first choice where nobody chose');
     // ---- wired (the page's half, read as text: this check hands its own whoGone in, so the page's wire is asked for here)
-    const { readFileSync, readdirSync } = await import('node:fs'), main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), at = main.indexOf('TABKEY.whoGone = () => true;'), raw: string[] = [];
+    const { readFileSync, readdirSync } = await import('node:fs'), main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), at = main.indexOf('TABKEY.whoGone = () => CMDRING.wholeSquad;'), raw: string[] = [];
     const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = `${d}/${e.name}`; if (e.isDirectory()) walk(p); else if (e.name.endsWith('.ts') && !p.endsWith('/ui/tabkey.ts')) readFileSync(p, 'utf8').split('\n').forEach((l, i) => { if (/TABKEY\.does\b/.test(l.replace(/\/\/.*$/, ''))) raw.push(`${p.slice(ROOT.length + 1)}:${i + 1}`); }); } };
     walk(`${ROOT}/src`);
     line(at >= 0 && at < main.indexOf('const menu = new Menu(') && raw.length === 0, "wired: the page hands the rule in before the menu is made, and nothing under src reads the raw choice but tabkey.ts", `the wire ${at >= 0 ? 'found' : 'MISSING'} · raw readers: ${raw.join(' ') || 'none'}`);

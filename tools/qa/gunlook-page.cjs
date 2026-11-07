@@ -8,7 +8,7 @@
 //   shells the shells key (GUNLOOK.shells) with the M1014 in YOUR hands: one shell and a whole tube each take their own time, the trigger breaks the
 //          feeding off and fires; the same page with ?nogunshells: one shell takes the row's whole length again
 // exit 0 = both, with no page error · 1 = otherwise. ONLY=on|off|shells runs one. STILLS=1 with an outDir: each man close, and you with the cover up — minutes
-// each on the SOFTWARE adapter, and the mission is at night: they show that the frame draws, little of a gun.
+// each on the SOFTWARE adapter, and the mission is at night: they show that the frame draws, little of a gun (tools/qa/gunlook-sheet.ts is the picture).
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OUT = process.argv[2] || '', ONLY = process.env.ONLY || '', STILLS = process.env.STILLS === '1';

@@ -10,7 +10,7 @@
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', ONLY = process.env.ONLY || '';   // (ONLY=on|clear|off = that page alone: a boot is minutes on the software adapter)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const MISSION = 'levelFile=registry.json&rescue&difficulty=hard&seed=7&squad=0';   // (no teammates: with the pair on the floor the men left are shot inside the 20 s and the run is won cleared — which is the rule, and not what the first page asks)
+const MISSION = 'levelFile=registry.json&rescue&difficulty=hard&pick=registry&seed=7&squad=0';   // (no teammates: with the pair on the floor the men left are shot inside the 20 s and the run is won cleared — which is the rule, and not what the first page asks)
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let failed = false;
   const line = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -44,13 +44,13 @@ const MISSION = 'levelFile=registry.json&rescue&difficulty=hard&seed=7&squad=0';
   if (!ONLY || ONLY === 'on') { // ── on: not before, the row, out
     const { page, errors } = await open(MISSION);
     const A = await page.evaluate(() => { const g = window.__game, R = g.rescue, K = window.__knobs.registry(); window.__smoke.params.enabled = false; window.__reStep(60); window.__reTake(); window.__reStep(20 * 60);
-      return { staged: !!R?.active, end: K.RESCUEEND?.on, flush: K.RESCUEFLUSH?.on, state: R.state, result: R.result?.state ?? null, theirs: window.__reUp(R.hostiles).length, objective: R.objective()?.text ?? '' }; });
+      return { staged: !!R?.active, end: K.RESCUEEND?.on, flush: K.RESCUEFLUSH?.on, state: R.state, result: R.result?.state ?? null, theirs: window.__reUp(R.hostiles).length, objective: g.view.mission?.of === 'rescue' ? g.view.mission.text : '' }; });
     line(A.staged && A.end === true && A.flush === true, 'the registry\'s rescue is staged and both switches are up in the page\'s registry', `staged ${A.staged} · RESCUEEND.on ${A.end} · RESCUEFLUSH.on ${A.flush}`);
     line(A.state === 'secured' && A.result === null && A.theirs > 0 && /bring them out, or clear the building/.test(A.objective), 'the room taken and stood in for 20 s does not end the run; the objective asks for the way out or a clear',
       `state ${A.state} · result ${A.result ?? 'none'} · theirs alive ${A.theirs} · "${A.objective}"`);
     const B = await page.evaluate(() => { const g = window.__game, R = g.rescue, up = window.__reUp(R.hostages), it = window.__reRow(up[0]); const sel = g.selectVerb('guard', 'lead');
       const rows = (it?.verbs ?? g.nearby?.verbs ?? []).map(v => v.text ?? v.verbText ?? '').filter(Boolean); window.__input.pressed.add('Space'); window.__reStep(2);   // (a press and its release inside one frame: the tap)
-      return { row: it ? `${it.line1}` : null, rows, sel: !!sel, led: up.filter(h => h.civ.lead === g.player.char).length, n: up.length, objective: R.objective()?.text ?? '' }; });
+      return { row: it ? `${it.line1}` : null, rows, sel: !!sel, led: up.filter(h => h.civ.lead === g.player.char).length, n: up.length, objective: g.view.mission?.of === 'rescue' ? g.view.mission.text : '' }; });
     line(B.row !== null && B.led === B.n && B.n > 0 && /the way you came in/.test(B.objective), 'a hostage in reach has a row; it and one Space get every living hostage following Sam; the objective points at the way out',
       `row ${B.row ? `"${B.row}"` : 'none'} · led ${B.led} of ${B.n} · "${B.objective}"`);
     const C = await page.evaluate(() => { const g = window.__game, R = g.rescue; window.__reWalk(R.ending.out); for (let i = 0; i < 30 && !R.result; i++) window.__reStep(30);

@@ -3,7 +3,7 @@ import { trackOf } from './track';
 import '../../src/game/game';
 import { WEAPONS } from '../../src/game/weapons';
 import { recapRound } from '../../src/game/deathrecap';
-import { messBurst, messOpened, messWall } from '../../src/game/floormess';
+import { messBurst, messOpened, messWall, messEvicted } from '../../src/game/floormess';
 import { bangScorch, bulletMark, chipMark, kickScuff } from '../../src/game/marks';
 import { clearSnowBlast } from '../../src/game/snowBlast';
 import { clearSnowMarks } from '../../src/game/snowMarks';
@@ -30,7 +30,6 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   ParticlesImpulse: (g, e) => { g.engine.particles?.impulse?.(e.pos, e.radius, e.strength, e.o); },
   ParticlesSetHeat: (g, e) => { g.engine.particles?.setHeat?.(e.srcs); },
   ReachKeepChanged: (g, e) => { g.engine.reach?.changed?.(e.rect ?? null, e.hold); },
-  SessionRecorderCut: (g, e) => { g.journal?.cut?.(e.why, e.lost); },
   SmokeSystemLikeClearAll: (g, e) => { g.smoke?.clearAll?.(); },
   SmokeSystemLikeEmit: (g, e) => { if (e.e.track) e.e.track = trackOf(g, e.e.track); g.smoke?.emit?.(e.e); },
   SmokeSystemLikeKeepHot: (g, e) => { g.smoke?.keepHot?.(e.heat); },
@@ -51,6 +50,7 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   ClearSnowTracks: (g, e) => { if (g.snowTracks) clearSnowTracks(g.snowTracks); },
   Tap: (g, e) => { OUT_HOST.tap?.(g, e.row, e.args, e.answer); },
   WallFeel: (g, e) => { OUT_HOST.wallFeel?.(g, e.at); },
+  MessEvicted: (g, e) => { messEvicted(g, e.c, e.h, e.yaw, e.rot, e.mat, e.kind); },
 };
 /** after an apply: every event of the step, in the order the rules made them */
 export function dispatchOut(g: any, events: { arm: string; e: any }[]): void { for (const { arm, e } of events) OUT[arm](g, e); }

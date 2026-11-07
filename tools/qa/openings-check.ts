@@ -136,9 +136,9 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
     const KEEPS: any[] = [];   // (every borrowed engine's keeper of its own lights' masks: render/reachKeep.ts)
     const mk = () => Object.assign(Object.create(Engine.prototype), { lights: LS, world: g.engine.world, settings: { skyZenith: HOURS.overcast.sky.zenith, skyHorizon: HOURS.overcast.sky.horizon, exposure: HOURS.overcast.exposure }, viewFocus: [20, 0, 10], openRecs: [], dayLights: [], openLevel: null, openSerial: -1, openTick: 0, openSeen: NaN, openPlanned: NaN, openWait: 0, openLeaves: NaN, openWalls: null, openJob: new Steps(), reach: KEEPS[KEEPS.push(new ReachKeep(g.engine.world, LS)) - 1] }) as any;   // (… and a keeper of its own for the masks of its own lights: render/reachKeep.ts)
     const E = mk(), M = (l: any) => { if (l) for (const k of KEEPS) { const m = k.of(l); if (m) return m; } return undefined; };   // (a day light's mask: the engine's keeper holds it, no light carries one)
-    const was = { windows: lookConfig.windows, rooms: lookConfig.rooms, eye: lookConfig.eyeAt, gaps: lookConfig.doorGaps, lit: LOOK_OPENINGS.lit };
+    const was = { on: lookConfig.on, windows: lookConfig.windows, rooms: lookConfig.rooms, eye: lookConfig.eyeAt, gaps: lookConfig.doorGaps, lit: LOOK_OPENINGS.lit };
     const quiet = <T>(f: () => T): T => { const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
-    try { lookConfig.windows = 1; lookConfig.rooms = 1;
+    try { lookConfig.on = true; lookConfig.windows = 1; lookConfig.rooms = 1;
       let eye: [number, number] = [20, 10]; lookConfig.eyeAt = () => eye;
       lookConfig.doorGaps = () => g.doors.list.map((d: any) => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, wd = d.def.width; return [hx, hz, hx + Math.cos(a) * wd, hz + Math.sin(a) * wd]; });
       // (a drawn frame: the engine's pass alone. The game is NOT stepped between them: behind the start card and on a paused page it is not either)
@@ -497,7 +497,7 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
         lookConfig.rooms = 0; const E2 = mk(); quiet(() => { E2.lookOpeningLights(); E2.lookOpeningLights(); }); const a2 = (E2.dayLights as any[]).filter(l => l.enabled).length; lookConfig.rooms = 1; quiet(() => E2.lookOpeningLights()); const b2 = (E2.dayLights as any[]).filter(l => l.enabled && M(l)).length;
         check(n0 === O.length && off === n0 && bare && on === n0 && masked && a2 === n0 && b2 === n0, 'with "Light stays in its room" put off the lights are lit with no mask, and put on again, or on for the first time in the middle of a level, every one is lit on that same frame with its mask', `${n0} lit · the row off ${off} · on again ${on} · a level begun with the row off ${a2}, the row put on ${b2}`); }
       lookConfig.windows = 0; frames(1); check(day().length === 0, 'the row at 0 takes every one of them out');
-    } finally { lookConfig.windows = was.windows; lookConfig.rooms = was.rooms; lookConfig.eyeAt = was.eye; lookConfig.doorGaps = was.gaps; LOOK_OPENINGS.lit = was.lit; } }
+    } finally { lookConfig.on = was.on; lookConfig.windows = was.windows; lookConfig.rooms = was.rooms; lookConfig.eyeAt = was.eye; lookConfig.doorGaps = was.gaps; LOOK_OPENINGS.lit = was.lit; } }
 }
 
 // ---- the office: windows wider than a doorway and strips of glass over head height (the first cut of this rule lost both)

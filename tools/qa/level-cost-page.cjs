@@ -6,7 +6,7 @@
 //     drift of the machine falls on both: the wall time of a drawn frame, and where the adapter stamps them, each pass's own time
 //   · a still, read back from the frame before anything is switched (the play camera at the mission's start, at the hour its row opens at).
 // "Off" is every row the look panel lists as a layer with a cost of its own (ui/lookpanel.ts hands them to the sweep), each at its own off value, while the
-// shaders, the level's shapes and the camera stay as they are.
+// shaders, the level's shapes and the camera stay as they are. It is NOT the plain build: that page has other shader text (see --plain-page).
 //
 // EVERY NUMBER HERE IS A RELATIVE READ. A software adapter runs each pass on the CPU, one after another: a frame that takes seconds here takes milliseconds on a
 // GPU, and what is dear here (a wide filter, many texture taps) is not what is dear there. What carries over is the DIRECTION and roughly the SHARE: on over off
@@ -22,6 +22,9 @@
 //   --quality <q>      the preset the page stands at (default medium: at High a frame is half a minute on this adapter, and the read is relative either way)
 //   --size <WxH>       the window (default 480x270)
 //   --frames <n>       timed frames a turn (default 3) · --rounds <n>  turns of each state (default 2)
+//   --plain-page       ALSO boot the same mission WITHOUT the look page (the build's own picture as this branch draws it) and say what that page compiled and how
+//                      long its frame takes: the look's price in shader text and compile time, which every player pays whichever way the layers stand.
+//                      Its still, plain-page.png, beside look.png is the before and after of the look itself
 //   env PLAYWRIGHT_BROWSERS_PATH: the browser. The page loses its device at the end of its boot on Chromium 153; the checks were written on 141 (playwright 1.56.1)
 // Exit 0 = every page came ready, nothing more was compiled by the switch, no GPU error and no page error; 1 = one of those; 2 = a level the list does not have.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -30,9 +33,9 @@ const { execFileSync, spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '../..');
 const argv = process.argv.slice(2); const opt = (k, d) => { const i = argv.indexOf('--' + k); if (i < 0) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
+const has = k => { const i = argv.indexOf('--' + k); if (i < 0) return false; argv.splice(i, 1); return true; };
 const PORT = Number(opt('port', process.env.PORT || 5199)), OUT = path.resolve(opt('out', path.join(ROOT, 'dist/level-cost'))), QUALITY = opt('quality', 'medium');
-const [W, H] = String(opt('size', '480x270')).split('x').map(Number), FRAMES = Number(opt('frames', 3)), ROUNDS = Number(opt('rounds', 2));
-{ const stray = argv.filter(a => a.startsWith('--')); if (stray.length) { console.error(`level-cost-page: no such flag: ${stray.join(' ')}`); process.exit(2); } }   // (all flags are off argv by here: what is left is a mistake, never a level's name)
+const [W, H] = String(opt('size', '480x270')).split('x').map(Number), FRAMES = Number(opt('frames', 3)), ROUNDS = Number(opt('rounds', 2)), PLAIN_PAGE = has('plain-page');
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 const RELATIVE = 'software adapter: a relative read, never seen on a GPU';
@@ -82,27 +85,27 @@ const PLAY = (secs) => { const e = window.__engine, real = e.render; let threw =
 
 /** ONE SCENE on every boot of a level: the die pinned (the page draws it from the clock otherwise, and a mission with no seed of its own is dealt anew each
  *  boot), and the look page as the mission plays on it, not as it opens for a visitor (`lookkit=0`: the fog of war and the kit as dealt, where a visitor's look
- *  page puts the fog down). So every boot of a level is the same picture, and the pricing run times the same */
+ *  page puts the fog down). So the look page and the page without the look are the same picture but for the look, and the pricing run times the same */
 const SCENE = '&seed=1&lookkit=0';
 const median = a => { const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : NaN; };
 const up = () => new Promise(res => { const r = http.get({ host: 'localhost', port: PORT, path: '/', timeout: 2000 }, x => { x.resume(); res(x.statusCode === 200); }); r.on('error', () => res(false)); r.on('timeout', () => { r.destroy(); res(false); }); });
 
-/** one page: boot, count, the off / on turns and the still */
-async function boot(browser, level, query, dir) {
-  const R = { url: `http://localhost:${PORT}/?look&${query}${SCENE}&paused&mute&quality=${QUALITY}`, errors: [], gpuErrors: [] };
+/** one page: boot, count, and (on the look page) the off / on turns and the stills */
+async function boot(browser, level, query, look, dir) {
+  const R = { page: look ? 'look' : 'plain', url: `http://localhost:${PORT}/?${look ? 'look&' : ''}${query}${SCENE}&paused&mute&quality=${QUALITY}`, errors: [], gpuErrors: [] };
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   await page.addInitScript(() => { window.__testVisible = true; }); await page.addInitScript(COUNT);
   page.on('pageerror', x => R.errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 500)));
   page.on('console', m => { const x = m.text(); if (m.type() === 'error' && !/Failed to load resource/.test(x)) (/WebGPU|GPU device|pipeline|shader/i.test(x) ? R.gpuErrors : R.errors).push(x.slice(0, 400)); });
   page.on('response', r => { if (r.status() >= 400 && !/favicon/.test(r.url())) R.errors.push(`http ${r.status()}: ${r.url()}`); });
   try {
-    log(level, 'goto', R.url); const t = Date.now();
+    log(level, R.page, 'goto', R.url); const t = Date.now();
     await page.goto(R.url, { waitUntil: 'commit' });
     await page.waitForFunction(() => !!window.__ready, null, { timeout: 1500000 });
     const ready = await page.evaluate(async () => { await window.__ready; const e = window.__engine, c = window.__levelCost; c.readyAt = performance.now();
       return { fatal: document.getElementById('fatal')?.textContent || '', boot: window.__boot?.line ?? '', pipelines: window.__boot?.pipelines ?? null, stamps: !!e.timer?.enabled, look: !!window.__look }; });
     R.readySecs = +((Date.now() - t) / 1000).toFixed(1); Object.assign(R, ready); if (ready.fatal) R.errors.push('fatal: ' + ready.fatal);
-    log(level, `ready in ${R.readySecs} s`);
+    log(level, R.page, `ready in ${R.readySecs} s`);
     // the start card away, the smoke solver off (a step of it is seconds on this adapter), the mission staged
     await page.evaluate(() => { window.__menu?.close(); if (window.__smoke?.params) window.__smoke.params.enabled = false; });
     const threw = await page.evaluate(PLAY, 2); if (threw) R.errors.push('play threw: ' + threw);
@@ -110,21 +113,23 @@ async function boot(browser, level, query, dir) {
     Object.assign(R, await page.evaluate(() => { const e = window.__engine; return { internal: [e.width, e.height], out: [e.outWidth, e.outHeight], scale: +e.settings.renderScale.toFixed(3), quality: window.__quality?.label ?? null }; }));   // (the sizes as the first drawn frames left them: at ready the canvas has none yet)
     // THE STILL, before anything is switched: the picture is an accumulation over frames, and for a dozen frames after a switch it is still mostly the state before it
     // (a still taken in a turn with the layers off was the layers on, to a hundredth). So one still, of the page as it opens, on a history that has seen nothing else
-    { const st = await page.evaluate(STILL), name = 'look.png'; if (st.url) { fs.writeFileSync(path.join(dir, name), Buffer.from(st.url.split(',')[1], 'base64')); R.still = { file: name, size: [st.w, st.h], mean: st.mean }; } else R.errors.push(`still: ${st.err}`); }
+    { const st = await page.evaluate(STILL), name = look ? 'look.png' : 'plain-page.png'; if (st.url) { fs.writeFileSync(path.join(dir, name), Buffer.from(st.url.split(',')[1], 'base64')); R.still = { file: name, size: [st.w, st.h], mean: st.mean }; } else R.errors.push(`still: ${st.err}`); }
     const made = () => page.evaluate(() => { const c = window.__levelCost; return { mods: c.mods.length, pipes: c.pipes.length }; });
     const before = await made();
     const turns = { on: [], off: [] }; let passes = { on: null, off: null }, union = { on: [], off: [] }, how = null;
-    turns_: for (let r = 0; r < ROUNDS; r++) for (const off of [true, false]) {
+    if (look) turns_: for (let r = 0; r < ROUNDS; r++) for (const off of [true, false]) {
       const did = await page.evaluate(LOOK_OFF, off); if (off) how = did; if (off && did === null) { R.errors.push('the page has no way to put the look\'s layers off (its panel\'s rows are not on the sweep)'); break turns_; }
       await page.evaluate(TIME, 1);   // (the frame the switch lands on)
       const got = await page.evaluate(TIME, FRAMES), k = off ? 'off' : 'on'; turns[k].push(...got.ms); passes[k] = got.passes; if (got.union !== null) union[k].push(got.union);
       log(level, `layers ${off ? 'off' : 'on '}: ${got.ms.map(v => (v / 1000).toFixed(2)).join(' ')} s a frame`);
     }
+    else { const got = await page.evaluate(TIME, FRAMES * ROUNDS); turns.on.push(...got.ms); passes.on = got.passes; if (got.union !== null) union.on.push(got.union); }
     const after = await made(), c = await page.evaluate(() => window.__levelCost);
     const atBoot = x => x.at <= c.readyAt, texts = new Set(c.mods.map(m => m.h));
     R.compiled = { modules: c.mods.length, texts: texts.size, textKB: Math.round([...new Map(c.mods.map(m => [m.h, m.chars])).values()].reduce((s, n) => s + n, 0) / 1024), pipelines: c.pipes.length,
       pipelinesBeforeReady: c.pipes.filter(atBoot).length, pipelinesSync: c.pipes.filter(p => p.sync).length, afterReady: c.pipes.filter(p => !atBoot(p)).map(p => p.label),
       bySwitch: { modules: after.mods - before.mods, pipelines: after.pipes - before.pipes, labels: c.pipes.slice(before.pipes, after.pipes).map(p => p.label) } };
+    R.pipelineLabels = c.pipes.map(p => p.label); R.textHashes = [...texts];
     R.offBy = how; R.frameMs = { on: turns.on.map(v => +v.toFixed(0)), off: turns.off.map(v => +v.toFixed(0)), onMedian: +median(turns.on).toFixed(0), offMedian: turns.off.length ? +median(turns.off).toFixed(0) : null };
     if (turns.off.length) R.frameMs.onOverOff = +(median(turns.on) / median(turns.off)).toFixed(3);
     if (passes.on) { R.passMs = { on: passes.on, off: passes.off, unionOn: union.on.length ? +median(union.on).toFixed(1) : null, unionOff: union.off.length ? +median(union.off).toFixed(1) : null };
@@ -139,7 +144,7 @@ let server = null; const stopServer = () => { try { server?.kill(); } catch { /*
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { stopServer(); process.exit(130); });
 (async () => {
   const rows = JSON.parse(execFileSync('bun', ['run', path.join(__dirname, 'level-audit.ts'), '--rows'], { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').pop());
-  const want = argv, unknown = want.filter(n => !rows.some(r => r.level === n));
+  const want = argv.filter(a => !a.startsWith('--')), unknown = want.filter(n => !rows.some(r => r.level === n));
   if (!want.length || unknown.length) { console.error(unknown.length ? `level-cost-page: not on the mission list: ${unknown.join(', ')}` : 'level-cost-page: name a level', `\nthe list has: ${rows.map(r => r.level).join(' ')}`); process.exit(2); }
   if (!(await up())) { log(`no dev server on ${PORT}: starting one from this checkout`); server = spawn('bun', ['run', 'tools/serve.ts'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
     for (let i = 0; i < 60 && !(await up()); i++) await new Promise(r => setTimeout(r, 500)); if (!(await up())) { console.error('level-cost-page: the dev server did not come up'); stopServer(); process.exit(1); } }
@@ -148,17 +153,22 @@ for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { stopServer(); p
   for (const level of want) {
     const row = rows.find(r => r.level === level), dir = path.join(OUT, level); fs.mkdirSync(dir, { recursive: true });
     const query = row.address.replace(/^\?/, '');
-    const L = await boot(browser, level, query, dir);
-    const out = { level, mission: row.missions[0], hour: row.hour, address: `?look&${query}${SCENE}`, adapter: 'software (SwiftShader)', read: RELATIVE, air: 'the GPU particles were never stepped in this read: a snow or rain level is timed without what is in its air', quality: QUALITY, window: [W, H], frames: FRAMES, rounds: ROUNDS, at: new Date().toISOString(), look: L };
+    const L = await boot(browser, level, query, true, dir), P = PLAIN_PAGE ? await boot(browser, level, query, false, dir) : null;
+    const out = { level, mission: row.missions[0], hour: row.hour, address: `?look&${query}${SCENE}`, adapter: 'software (SwiftShader)', read: RELATIVE, air: 'the GPU particles were never stepped in this read: a snow or rain level is timed without what is in its air', quality: QUALITY, window: [W, H], frames: FRAMES, rounds: ROUNDS, at: new Date().toISOString(), look: L, plainPage: P };
+    if (P && L.pipelineLabels && P.pipelineLabels) { const had = new Set(P.textHashes); const count = a => a.reduce((m, l) => (m.set(l, (m.get(l) ?? 0) + 1), m), new Map()), a = count(L.pipelineLabels), b = count(P.pipelineLabels);
+      out.againstPlainPage = { textsOnlyOnLook: L.textHashes.filter(h => !had.has(h)).length, textsShared: L.textHashes.filter(h => had.has(h)).length, textKB: [P.compiled?.textKB, L.compiled?.textKB], pipelines: [P.compiled?.pipelines, L.compiled?.pipelines],
+        pipelinesOnlyOnLook: [...a].filter(([l, n]) => n > (b.get(l) ?? 0)).map(([l, n]) => n - (b.get(l) ?? 0) > 1 ? `${l} ×${n - (b.get(l) ?? 0)}` : l), readySecs: [P.readySecs, L.readySecs], frameMs: [P.frameMs?.onMedian, L.frameMs?.onMedian] }; }
+    for (const R of [L, P]) if (R) { delete R.pipelineLabels; delete R.textHashes; }
     fs.writeFileSync(path.join(dir, 'cost.json'), JSON.stringify(out, null, 1) + '\n');
-    const bad = [...L.errors, ...L.gpuErrors], sw = L.compiled?.bySwitch;
+    const bad = [...L.errors, ...L.gpuErrors, ...(P ? [...P.errors, ...P.gpuErrors] : [])], sw = L.compiled?.bySwitch;
     const ok = bad.length === 0 && !!L.frameMs?.onOverOff && sw && sw.modules === 0 && sw.pipelines === 0; if (!ok) red++;
     console.log(`\n${ok ? 'PASS' : 'FAIL'} — ${level} (${row.hour}, ${QUALITY}, ${L.internal?.join('×') ?? '?'} inside ${W}×${H}; ${RELATIVE})`);
     if (L.compiled) console.log(`  compiled: ${L.compiled.modules} shader modules (${L.compiled.texts} texts, ${L.compiled.textKB} KB), ${L.compiled.pipelines} pipelines, ${L.compiled.pipelinesBeforeReady} before the page came ready in ${L.readySecs} s; switching the layers off and on made ${sw.modules} modules and ${sw.pipelines} pipelines${sw.labels.length ? ` (${sw.labels.join(', ')})` : ''}`);
     if (L.frameMs?.onOverOff) console.log(`  a frame: layers off ${(L.frameMs.offMedian / 1000).toFixed(2)} s, on ${(L.frameMs.onMedian / 1000).toFixed(2)} s — on is ${L.frameMs.onOverOff} × off (${L.offBy}; medians of ${L.frameMs.on.length} frames each)`);
     if (L.passMs?.dearest) console.log(`  the passes that grew most with the layers on (ms on this adapter): ${L.passMs.dearest.filter(d => d.more > 0).map(d => `${d.pass} ${d.off} → ${d.on}`).join(', ') || 'none grew'}`);
+    if (out.againstPlainPage) { const A = out.againstPlainPage; console.log(`  against the page without the look: shader text ${A.textKB[0]} → ${A.textKB[1]} KB, pipelines ${A.pipelines[0]} → ${A.pipelines[1]}${A.pipelinesOnlyOnLook.length ? ` (more on the look page: ${A.pipelinesOnlyOnLook.join(', ')})` : ''}, ready in ${A.readySecs[0]} → ${A.readySecs[1]} s, a frame ${A.frameMs[0]} → ${A.frameMs[1]} ms`); }
     for (const b of bad) console.log(`  ! ${b}`);
-    console.log(`  written: ${dir}/cost.json${L.still ? ', look.png' : ''}`);
+    console.log(`  written: ${dir}/cost.json${L.still ? ', look.png' : ''}${P?.still ? ', plain-page.png (the same mission without the look)' : ''}`);
   }
   await browser.close(); stopServer();
   process.exit(red ? 1 : 0);

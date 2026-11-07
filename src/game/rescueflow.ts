@@ -151,12 +151,6 @@ export class RescueFlow {
       default: return shut ? 'shut' : 'unknown';
     }
   }
-  /** the objective line's tail: the openings behind Sam and what is known of each, and any hot one still ahead of him ('' with neither) */
-  line(): string {
-    const row = (k: Known) => `${k.o.short} ${this.word(k)}`;
-    const behind = this.known.filter(k => this.passed.has(k.o.id)).map(row), ahead = this.known.filter(k => !this.passed.has(k.o.id) && k.state === 'hot').map(row);
-    return [behind.length ? `behind you ▸ ${behind.join(' · ')}` : '', ahead.length ? `ahead ▸ ${ahead.join(' · ')}` : ''].filter(x => x).join(' · ');
-  }
   summary(): string {
     if (!this.known.length) return 'flow: not staged';
     const jobs = [...this.jobs].map(([gd, J]) => `${gd.callsign} ${J.kind === 'corridor' ? 'corridor' : J.o.short}${J.chain.length ? ` +${J.chain.length}` : ''}`).join(', ');

@@ -76,3 +76,37 @@ fn no_pose_takes_a_mans_sight() {
     quick_and_whole("down, gun up", || How::Posed(Stance::None, UpperMode::Aim, true));
     quick_and_whole("standing, gun low", || How::Posed(Stance::LowReady, UpperMode::None, false));
 }
+
+/// A lit hall with one defender in it, his gun up on its east door; the team out of the way in the yard. Sam is put `ang` degrees round from the
+/// defender's gun line (over 0: to his left), 6 m from him, in plain line and in the bulb's light. The seconds until the defender is alert.
+fn beside_his_gun(seed: u32, ang: f64) -> Option<f64> {
+    let mut sc = Scene::new("gun-line");
+    sc.room("hall", 10.0, 8.0, 24.0, 22.0).door("east", Axis::Z, 24.0, 14.4).door("south", Axis::X, 22.0, 20.4).bulb(16.0, 15.0).moon();
+    sc.team([8.0, 25.0], 0.0, &[[6.0, 25.0], [6.0, 26.5], [8.0, 26.5], [4.0, 26.0]]);
+    sc.defender("hall", [12.25, 15.25], "east");
+    let mut p = Play::scene(&sc, &Opts { seed, ..Default::default() });
+    p.sam_unhurt();
+    let d = p.defender_at([12.25, 15.25]);
+    p.run(3.0);
+    let (at, c) = (p.at(d), p.g.gd[d].ch);
+    assert_eq!(p.g.ch[c].anim.long_shown, Some(game::character::LongStance::Shoulder), "seed {seed}: the defender's rifle is in his shoulder on the door he holds");
+    let y = game::character::character_gun_yaw(&p.g, c) + ang.to_radians();
+    p.sam_put([at[0] + 6.0 * y.sin(), at[1] + 6.0 * y.cos()]);
+    p.until(4.0, |p| p.state(d) == game::game::GuardState::Alert)
+}
+
+/// THE RULE: a defender holding a door with his rifle up sees a lit man in the open beside his gun line as soon on one side of it as on the other,
+/// and does not see one well round to either side.
+/// A FAILURE MEANS: his eyes have gone back to his chest, which a man with a rifle up carries turned to the right of his gun. (Before the mend, on
+/// all three seeds, a man 20 degrees to the LEFT of his gun line was not noticed in six seconds, and one 50 degrees to the right was, in 1.4 to 4.9.)
+#[test]
+fn a_man_beside_the_gun_line_is_seen_on_either_side_of_it() {
+    for s in SEEDS {
+        for ang in [20.0, 40.0] {
+            let (left, right) = (beside_his_gun(s, ang), beside_his_gun(s, -ang));
+            assert!(left.is_some() && right.is_some(), "seed {s}: {ang} degrees round from his gun, alert after {left:?} on his left and {right:?} on his right");
+            assert!((left.unwrap() - right.unwrap()).abs() < 1.0, "seed {s}: {ang} degrees round from his gun, {:.2} s on his left and {:.2} s on his right", left.unwrap(), right.unwrap());
+        }
+        for ang in [80.0, -80.0] { let t = beside_his_gun(s, ang); assert!(t.is_none(), "seed {s}: a man {ang} degrees round from his gun was seen after {t:?}"); }
+    }
+}

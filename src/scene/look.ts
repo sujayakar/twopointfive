@@ -39,9 +39,11 @@ export function setLookPlace(gwot: boolean) { lookPlace = gwot; }
 export function lookDress(): boolean { return LOOK.on && lookPlace; }
 /** the look on, in a place that is not the look's (the office): the men of the first cast, dressed for a building */
 export function lookOffice(): boolean { return LOOK.on && !lookPlace; }
-/** is the level a page's query boots one of the look's places? No `levelFile` = the bundled office; `office.json` / `office-*.json` = the office family */
+/** is the level a page's query boots one of the look's places? No `levelFile` = the bundled office (or the editor's document under `?level=local`: asked by its
+ *  name where the stash can be read); `office.json` / `office-*.json` = the office family */
 export function placeOfQuery(q: URLSearchParams): boolean {
   const lf = q.get('levelFile'); if (lf && /^[\w.-]+\.json$/.test(lf)) return !/^office(-[\w.-]+)?\.json$/.test(lf);   // (a name main.ts's boot will not fetch boots the bundled office)
+  if (q.get('level') === 'local') { try { const n = JSON.parse((globalThis as any).localStorage?.getItem('twopointsix.editorLevel') ?? 'null')?.name; return typeof n === 'string' && n !== 'office' && !n.startsWith('office-'); } catch { return false; } }
   return false;
 }
 
@@ -76,7 +78,7 @@ export const LOOK_DOORS: Readonly<Record<string, { out: readonly [number, number
 /** the file to LOAD for a level the URL / a mission row names: the look's while the switch is on and the level has one, else the file itself */
 export function lookLevelFile(file: string): string { return LOOK.on ? LOOK_LEVELS[file] ?? file : file; }
 /** what a page's query says: on unless `?look=plain` (or `?look=0` / `?look=off` / `?nolook`) */
-export function lookOfQuery(q: URLSearchParams): boolean { return !(q.has('nolook') || q.getAll('look').some(dressOff)); }   // (any `look` word of the address: a row of the look's lab may stand beside the dress's word in either order)
+export function lookOfQuery(q: URLSearchParams): boolean { return !(q.has('nolook') || q.getAll('look').some(dressOff)); }   // (any `look` word of the address: the picture's own off word, LOOK_OLD below, may stand beside the dress's in either order)
 function dressOff(v: string | null): boolean { return v === 'plain' || v === '0' || v === 'off'; }
 /** a value of `look` on an address is the DRESS's off word (the level a run plays), not a row of the look prototype's page: the two share the word */
 export const lookDressWord = (v: string | null): boolean => dressOff(v);
@@ -85,22 +87,25 @@ export function suitOfQuery(q: URLSearchParams): boolean { const v = q.get('suit
 
 // THE LOOK (the material picture: render/frame.ts lookConfig, shaders/look.wgsl; not the dress above, though they share the word): what on an address is its.
 // One reader, so that the page and a run of several pages that is to be ONE look from its first page to its last (ui/benchrun.ts) cannot come to read an
-// address two ways. A `look` value is one of two things: the DRESS's off word (above), or a ROW of the look.
-/** a `look` value that is a row of the look's: bare, or `key:value`. Any other word is neither the dress's nor a row and asks for nothing (`look=old` drew
- *  the picture before this one; an address that still says it is an ordinary page, not the lab) */
-const lookRow = (v: string): boolean => v === '' || v.includes(':');
+// address two ways. A `look` value is one of three things: the DRESS's off word (above), the PICTURE's off word, or a ROW of the look.
+/** THE PICTURE'S OFF WORD, `?look=old`: the picture as it was drawn before the look became every page's (2026-11-07). A temporary word: it goes with the
+ *  commit that deletes that second way to draw */
+export const LOOK_OLD = 'old';
+/** a `look` value that is a row of the look's (bare, or `key:value`) */
+const lookRow = (v: string): boolean => !dressOff(v) && v !== LOOK_OLD;
 /** its rows (`?look`, `?look=key:value`) */
 export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('look').filter(lookRow); }
-// THE PICTURE IS THE LOOK'S ON EVERY PAGE, and on every other host of the engine: there is no switch (2026-11-07; the maintainer: "should we work on merging
-// the new look too?", and of the way to do it "single path when possible"). Until then it drew only with a row on the address, and for one step of the build
-// `?look=old` drew the picture as it was. THE PICTURE ONLY: nothing a step of the game reads follows it (what the look's own page added to PLAY is the lab's, below).
+/** THE PICTURE IS THE LOOK'S ON EVERY PAGE unless the address says `?look=old` (2026-11-07, the maintainer: "should we work on merging the new look too?";
+ *  until then only with a row on the address or a one-file build's tag). Read once, at boot: the look is a constant of the shader text. THE PICTURE ONLY:
+ *  nothing a step of the game reads follows it (what the look's own page added to PLAY is the lab's, below) */
+export function lookPageOn(q: URLSearchParams): boolean { return !q.getAll('look').includes(LOOK_OLD); }
 /** THE LOOK LAB: the page that asks for the look BY NAME (a row on the address: `/look`, `/smokelab`, `?look`, `?look=key:value`; or the tag a one-file build
  *  carries, where the address takes no flags), which is what the look's own page was before the picture became every page's. What that page did beyond the
  *  picture stays the lab's and is on no other page: its panel opened over the game, its kit and the fog put down (`?lookkit=0`), the trials that rewrite the
  *  level as it loads (`geo`, `lorry`), the hills that rays see (`hills`: the game's own rays meet them too), the seated posts (`?seat=0`) and a snow level's
  *  broken cloud. Each of those changes what the page's game PLAYS, and a
  *  co-op server, a headless run and a check all play the level as its file has it. main.ts reads this once at boot into LOOK_LAB */
-export function lookLabOn(q: URLSearchParams): boolean { return lookPageRows(q).length > 0 || (typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-look"]')); }
+export function lookLabOn(q: URLSearchParams): boolean { return lookPageOn(q) && (lookPageRows(q).length > 0 || (typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-look"]'))); }
 /** …as this page booted (main.ts pageSwitches; false on every stand without a page) */
 export const LOOK_LAB = { on: false };
 /** ITS TRIALS: the address's word of each, and the key under which the look panel's button keeps it on this machine */
@@ -114,6 +119,8 @@ export function lookTrialsKept(q: URLSearchParams): string[] { const lab = lookL
   return cut === '0' && !q.has('cutboxes') && !q.has('nocutboxes') ? [...off, 'cutboxes=0'] : off; }
 /** the other words the page reads once, at boot, into its shader text and its level (main.ts, scene/cut.ts: the look's geometry is cut boxes) */
 const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set([...Object.keys(LOOK_TRIALS), 'roll', 'lorrykit', 'seat', 'firefit', 'longfoot', 'walked', 'firesnow', 'firesoot', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'nosunglint', 'glintpick', 'holedepth', 'portalworth', 'kept', 'lookworkers']);
+/** a word of an address, decoded, is the picture's off word: a run of several pages asked for on the old picture carries it, so that every page of it is that picture */
+export const lookOldWord = (k: string, v: string): boolean => k === 'look' && v === LOOK_OLD;
 /** a word of an address, decoded, is the look page's own */
 export function lookPageWord(k: string, v: string): boolean { return k === 'look' ? lookRow(v) : k === 'round' ? v === '1' : LOOK_PAGE_WORDS.has(k); }   // (`round=1` is the page's: its round test compiled beside a trial's cut boxes; `round=0` is a rule's off switch, another fight)
 /** HOW KEPT THE PLACE IS, for the frame (render/frame.ts lookConfig.kept → look.wgsl lookKept): the address's `&kept=<0‥1>` for the visit, else the level's

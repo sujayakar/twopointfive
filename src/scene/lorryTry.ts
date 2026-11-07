@@ -98,7 +98,7 @@ export function dressLorry(level: { boxes: Box[] }): number {
   return out.length;
 }
 
-/** THE LORRY'S FITTINGS, A TRIAL ON THE TRIAL (the look lab only, with the lorry's curves on: main.ts; `?lorrykit=0` = the curved lorry without them). Asked
+/** THE LORRY'S FITTINGS, A TRIAL ON THE TRIAL (the look page only, with the lorry's curves on: main.ts; `?lorrykit=0` = the curved lorry without them). Asked
  *  2026-10-30 on a picture of it at midday beside the yard's new round props: "truck could use some dressing up. but overall the round surfaces look nice".
  *  From above the curved lorry is still three plain masses: a cab, a tilt and a nose. Here it gets what a lorry of its kind carries where a camera over the
  *  yard sees it: an exhaust stack up the cab's back corner, mirrors on arms, a beacon, steps under the doors, a door seam and a handle a side, an air cleaner on

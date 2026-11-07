@@ -95,20 +95,21 @@ export async function rowsetCheck(): Promise<boolean> {
         if (!me || !other) { say(false, 'the sheet lists the two borrowed rows', `${!!me} ${!!other}`); return; }
         const again = () => { S.select(other.id); S.select(me.id); };   // (a repaint of the row)
         S.select(me.id); const plainRows = rowsOf(), p0 = S.hrefOf(me);
-        own(L, 'dusk', 'dust'); again(); const rows = rowsOf(), h0 = S.hrefOf(me);
+        own(L, 'dusk', 'dust'); again(); const rows = rowsOf(), h0 = S.hrefOf(me), startsIn = `${S.startHour}/${S.startWeather}`;
         const key = (code: string) => M.missionsKey({ code, repeat: false }); key('KeyH'); key('KeyJ'); const keyH = S.hourNow, keyJ = S.weather;
-        S.hour('midday'); S.setWeather('overcast'); const h1 = S.hrefOf(me), o1 = S.hrefOf(other);
+        S.hour('midday'); S.setWeather('overcast'); const h1 = S.hrefOf(me), o1 = S.hrefOf(other), still = `${S.startHour}/${S.startWeather}`;
         own(L, 'dusk'); again(); const rowsHourOnly = rowsOf(), noteMine = noteOf('mwx');
         own(L); S.hour('dusk'); again(); const notePlain = noteOf('mwx'); S.hour('night'); again(); const noteNight = noteOf('mwx');
         own(L, undefined, 'dust'); again(); const rowsWxOnly = rowsOf(), hourNote = noteOf('mhour');
         const once = (h: string, k: string, v: string) => (h.match(new RegExp(`[?&]${k}=`, 'g')) ?? []).length === 1 && new RegExp(`[?&]${k}=${v}(&|$)`).test(h);
-        say(plainRows === 'hour,weather' && rows === '' && keyH === 'night' && keyJ === null, 'the Hour and Weather rows are not drawn for the row, and H and J do nothing on it', `plain: '${plainRows}' · its own: '${rows}' · after H and J: ${keyH}, ${keyJ}`);
+        say(plainRows === 'hour,weather' && rows === '' && keyH === 'night' && keyJ === null && startsIn === 'dusk/dust' && still === 'dusk/dust', 'the Hour and Weather rows are not drawn for the row, H and J do nothing on it, and it starts in its own whatever is picked', `plain: '${plainRows}' · its own: '${rows}' · after H and J: ${keyH}, ${keyJ} · starts in ${startsIn}, after Midday and Overcast ${still}`);
         say(h0 === p0 && !/hour=|weather=/.test(h0) && once(h1, 'hour', 'midday') && once(h1, 'weather', 'overcast') && once(o1, 'hour', 'midday'), 'its link is any row\'s link: no key unpicked, the visitor\'s picks once picked', `${h0} · ${h1}`);
         say(rowsHourOnly === 'weather' && noteMine !== '' && noteMine === notePlain && noteMine !== noteNight, 'a row that names only an hour keeps its Weather row, and the note reads for the row\'s hour', `'${noteMine}' · at night it reads '${noteNight}'`);
         say(rowsWxOnly === 'hour' && /the mission's own weather/.test(hourNote), 'a row that names only a weather keeps its Hour row, and the note says the weather is the mission\'s own', `'${hourNote}'`);
       } finally { own(L); own(E); try { S.hour('night'); S.setWeather(null); } catch { /* the sheet is gone */ } M.closeMissions(); }
     });
     { // the switch is the page's
+      const prof = readFileSync(resolve(ROOT, 'src/host/profile.ts'), 'utf8'), wrote = prof.includes("ROWSET.on = q.get('rowset') !== '0';");
       const want = process.env.TPS_ROWSET !== undefined ? process.env.TPS_ROWSET === '1' : process.env.TPS_PROFILE === 'shipped';
       // (the tape's tables are a RECIPE's since the page can also play a game server's ticks: main.ts lays them with its own recipeTables() at each point of the boot
       //  that wrote over them, and the first of those calls is the one the rule must come after. ROWSET_ORDER_BREAK=1 reads the source with the rule's call moved
@@ -116,7 +117,7 @@ export async function rowsetCheck(): Promise<boolean> {
       const src0 = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'), call = /^ *rowSettings\(q\);[^\n]*\n/m.exec(src0)?.[0] ?? '', hourAt = /^ *initHour\(q\);[^\n]*\n/m.exec(src0);
       const src = process.env.ROWSET_ORDER_BREAK === '1' && call && hourAt ? (x => x.slice(0, x.indexOf(hourAt[0]) + hourAt[0].length) + call + x.slice(x.indexOf(hourAt[0]) + hourAt[0].length))(src0.replace(call, '')) : src0;
       const p = src.indexOf('pageSwitches(q)'), t = src.search(/^ *recipeTables\(\);/m), r = src.indexOf('rowSettings(q)'), w = src.indexOf('initWeather(q)'), h = src.indexOf('initHour(q)'), s = src.indexOf('snowLevelOfQuery(q)');
-      say(stood === want && FROZEN_HOLDS['ROWSET.on'] === 'TPS_ROWSET=1', 'this stand has the switch as its profile says, and the frozen stand\'s list has its row', `on this stand: ${stood} · ${FROZEN_HOLDS['ROWSET.on']}`);
+      say(wrote && stood === want && FROZEN_HOLDS['ROWSET.on'] === 'TPS_ROWSET=1', 'the page raises the switch and ?rowset=0 puts it off (pageSwitches), this stand has it as its profile says, and the frozen stand\'s list has its row', `on this stand: ${stood} · ${FROZEN_HOLDS['ROWSET.on']}`);
       say(p > 0 && t > 0 && p < r && t < r && r < w && r < h && r < s, 'main.ts runs the rule after the page\'s switches and the recipe\'s tables (a tape\'s, or a game server\'s), and before it reads the weather, the snow and the hour');
     }
   } finally { ROWSET.on = on0; own(L); own(E); unhush(); }

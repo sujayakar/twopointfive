@@ -89,7 +89,7 @@ pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == victim || g.gd[o].state == crate::game::GuardState::Dead || g.time < g.gd[o].dazzled_until || crate::doze::doze_asleep(g, o) { continue; }
+        if o == victim || g.gd[o].state == crate::game::GuardState::Dead || crate::control::man::blind(g, o) || crate::doze::doze_asleep(g, o) { continue; }
         if (!g.player_invisible && point_in_view(g, o, at, None, None)) || g.gd[o].saw_player_this_frame {
             let kind = match how {
                 crate::game::DownKind::Wounded | crate::game::DownKind::Shot => crate::game::WitnessSawActKind::Shot,

@@ -321,7 +321,7 @@ const LOUD_BREAK = process.env.LOUDCARD_BREAK === '1';
 export async function debriefLoud() {
   console.log("\n=== debrief-loud: a mission that leans loud carries no stealth rating, no score and no badges (VERDICT.loudCard) ===");
   const fails: string[] = [], notes: string[] = [];
-  const { VERDICT, loudRow, rowFile } = await import(`${ROOT}/src/game/verdict.ts`), { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { objectiveText } = await import(`${ROOT}/src/game/mission.ts`), { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { readFileSync } = await import('node:fs');
+  const { VERDICT, loudRow, rowFile } = await import(`${ROOT}/src/game/verdict.ts`), { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { readFileSync } = await import('node:fs');
   const graded = (t: string) => BANDS.some((b: any) => t.includes(b.word)); void VERDICT;
   try {
     // ---- the tutorial's solo fight: the stealth game's kind, a row that leans loud
@@ -331,13 +331,13 @@ export async function debriefLoud() {
       if (D.scored) fails.push('…and its debrief is still scored'); if (graded(D.summary)) fails.push(`…and its copied line carries a rating: "${D.summary}"`);
       if (D.badges.some((b: any) => b.on && D.summary.includes(b.name))) fails.push(`…and its copied line carries a badge: "${D.summary}"`);
       if (!/^twopointsix — \d\d:\d\d · seen /.test(D.summary)) fails.push(`…and its copied line does not open on the clock: "${D.summary}"`);
-      g.mission.stage = 'done'; const line = objectiveText(g);
+      W.step(1 / 60); g.mission.stage = 'done'; const line = g.objectiveText();
       if (!/^mission complete — \d+:\d\d$/.test(line)) fails.push(`…and the line over the card is not the clock alone: "${line}"`); if (D.grade !== '') fails.push(`…and its grade is '${D.grade}'`);
       notes.push(`loud: "${D.summary.slice(0, 44)}…" · over the card "${line.slice(0, 40)}"`); }
     // ---- a row that leans quiet, and the plain night with no row up: graded
     { const W = await standRow('tut-quiet.json', '?levelFile=tut-quiet.json&quiet'), g = W.game; const D = debriefOf(g);
       if (W.why) fails.push(`the quiet tutorial did not start: ${W.why}`); if (loudRow(g) || !D.scored || !graded(D.summary)) fails.push(`a row that leans quiet: loudRow ${loudRow(g)}, scored ${D.scored}, "${D.summary.slice(0, 40)}"`);
-      g.mission.stage = 'done'; const line = objectiveText(g); if (!/^mission complete — /.test(line) || !line.endsWith(` · ${D.rating} ${D.score}`)) fails.push(`…and the line over its card is not the clock and the rating: "${line}"`); }
+      W.step(1 / 60); g.mission.stage = 'done'; const line = g.objectiveText(); if (!/^mission complete — /.test(line) || !line.endsWith(` · ${D.rating} ${D.score}`)) fails.push(`…and the line over its card is not the clock and the rating: "${line}"`); }
     // ---- a squad's kind on a row that leans loud: not asked (its end card never showed the rating; its 'run so far' and its card under ?noverdict keep it)
     { const W = await standRow('killhouse.json', '?levelFile=killhouse.json&roomclear&squad4'), g = W.game; const D = debriefOf(g), row = (await import(`${ROOT}/src/game/scenarioRun.ts`)).runningScenario(g, 'killhouse.json');
       if (W.why || row?.kind !== 'roomclear' || row?.entry?.lean !== 'loud') fails.push(`the shoot house's room clear did not stand as a loud row: ${W.why || `${row?.kind} ${row?.entry?.lean}`}`);

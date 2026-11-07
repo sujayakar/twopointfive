@@ -59,14 +59,14 @@ export async function waysCheck(): Promise<boolean> {
   // 4. the wiring, by its text: one layer wears a pixel, the map is read once, use follows feet, and nothing of the game's imports the ways
   { const sh = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8'), look = sh('look.wgsl'), det = sh('detail.wgsl'), gb = sh('gbuffer.wgsl'), gc = sh('gbuffer_cut.wgsl'), mk = sh('markings.wgsl');
     const body = look.slice(look.indexOf('fn lookSurface('));
-    const one = /let floorPix = !byLook && /.test(det) && /let skirtPix = !byLook && /.test(det) && gb.includes('let lookW = !cap && lookWears(n, bi, v.hf);') && gc.includes('let lookW = !cap && own < 0 && !side && lookWears(n, bi, hfS);')
+    const one = /let floorPix = !byLook && /.test(det) && /let skirtPix = !byLook && /.test(det) && gb.includes('let lookW = LOOK && !cap && lookWears(n, bi, v.hf);') && gc.includes('let lookW = LOOK && !cap && own < 0 && !side && lookWears(n, bi, hfS);')
       && [gb, gc].every(t => /detailSurface\([^;]*frame\.matCfg\.w, lookW\);/.test(t) && /lookSurface\([^;]*frame\.invScreen\.y, lookW, (?:true|!bent)\);/.test(t) && (t.match(/lookMarkSoft\(\), lookTrod\(\)\)/g) ?? []).length >= 1)
       && look.includes('fn lookWears(n: vec3f, bi: u32, hf: vec4f) -> bool { return lookCfg.a.w > 0.0 && lookDresses(n, bi, hf); }') && body.includes('if (!lookDresses(n, bi, hf) || (all(lookCfg.a == vec4f(0.0))') && body.includes('  if (wears) {');
     const once = (body.match(/lookWayAt\(/g) ?? []).length === 2 && (body.match(/textureSampleLevel\(wearTex/g) ?? []).length === 0 && body.includes('let wm = lookWay;');
     const use = look.includes('worn *= 1.0 + 0.8 * lookWayAt(') && body.includes('smoothstep(0.44 - 0.22 * beside, 0.6 - 0.22 * beside,') && mk.includes('- (0.72 - 0.12 * age * soft2.y - 0.16 * trod));') && mk.includes('* worn * max(soft2.y, min(trod, 1.0));');   // (… in a place kept like new too: the years' share of a mark's wear asks how kept the place is, feet's does not — kept-check.ts)
     const game = readdirSync(resolve(ROOT, 'src/game')).filter(f => f.endsWith('.ts') && /scene\/ways/.test(readFileSync(resolve(ROOT, 'src/game', f), 'utf8')));
     const main = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'), gm = readFileSync(resolve(ROOT, 'src/game/game.ts'), 'utf8');
-    verdict(one && once && use && game.length === 0 && main.includes("if (q.get('walked') === '0') lookConfig.walked = 0;") && gm.includes('lookConfig.walked > 0);'),
+    verdict(one && once && use && game.length === 0 && main.includes("if (q.get('walked') === '0') lookConfig.walked = 0;") && gm.includes('lookConfig.on && lookConfig.walked > 0);'),
       'on the look\'s page one layer wears a pixel\'s floor and skirting (the g-buffer asks once and tells both layers; a cut face and a round\'s side have neither), the traffic map is read once a pixel in it (a floor where it is, a kept wall a stride out from its foot), a piece\'s history, a wall\'s knocked foot and a painted mark\'s wear follow where feet go, the page\'s word puts the ways off, and nothing in src/game imports them',
       `one layer ${one} · read once ${once} · use follows feet ${use} · src/game imports of scene/ways: ${game.length}`); }
   console.log(all ? '=== ways: ALL PASS ===' : '=== ways: FAILURES above ===');

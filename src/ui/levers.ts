@@ -1,7 +1,7 @@
 // THE DIFFICULTY LEVERS' ROWS (the maintainer, 10-10: 'let's actually unbundle difficulty a bit now since i think we'll need some play testing' · 'so fog of
 // war has three rungs' · 'can have other levers for enemy ai and kit etc.'): one row per lever of game/difficulty.ts LEVERS — its label, a button per rung,
 // and the line that says what the lit rung does — put on the screens a mission is set up on BEFORE it starts: the mission list's sheet (ui/missions.ts,
-// under its Standard | Hard row).
+// under its Standard | Hard row) and, where the loadout is a screen of its own (?cards), the loadout (ui/loadout.ts: a short-list row opens there).
 // Standard | Hard puts every lever on that level's rung; a lever's own button moves that lever alone and is kept on this machine (setLever) — and a lever
 // put back on the rung the level has for the mission shown is let go of again. What is lit is READ OFF the game's tables (leversShown), so a row moved
 // under a lever by hand in the Tab panel shows as no rung lit.
@@ -21,7 +21,8 @@
 // CONTROLS: a click on a rung (the keys stay the sheet's own: W S the missions, A D standard / hard). The DOM asked for is the little the probes' stand-in
 // has: createElement, className, textContent, setAttribute, appendChild, onclick.
 import { leversNow, difficultyNow, leversShown, leversSet, leversBase, leversMixed, leverWords, setLever, setBase, type LeverKey } from '../game/difficulty';
-import { QUIET_RUNGS, quietFog, setQuietFog, quietFogWords, quietFogAside, quietCams, setQuietCams, quietFogDefault, quietCamsDefault, type QuietRung } from '../game/quietfog';
+import { TOLD } from '../game/told';
+import { QUIETFOG, QUIET_RUNGS, quietFog, setQuietFog, quietFogWords, quietFogAside, quietCams, setQuietCams, quietFogDefault, quietCamsDefault, type QuietRung } from '../game/quietfog';
 import { STICKY } from '../game/stickycam';
 import { WAND } from '../game/wand';
 
@@ -41,11 +42,11 @@ export interface LeverRowsUi {
   readonly touched: boolean;
 }
 /** the cameras row's one line (the note under it while it is lit, and its button's title) */
-const camWords = () => `The last one you put on a wall is one more eye in the fog.${WAND.on ? ' An optical wand for doors comes with them.' : ''}`;   // (quietfog.ts quietWand: the mission's cameras come with a wand)
+const camWords = () => `The last one you put on a wall is one more eye in the fog.${QUIETFOG.wand && WAND.on ? ' An optical wand for doors comes with them.' : ''}`;   // (quietfog.ts quietWand: the mission's cameras come with a wand)
 const el = (tag: string, cls: string, text?: string) => { const e = document.createElement(tag); e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 
 /** every lever's rung in a word, for a screen that repaints its links only when something changed */
-export function leversSig(): string { const S = quietFogAside(() => leversShown()), M = leversSet(); return `${leversBase()}|${S.fog}|${S.ai}|${S.kit}|${M.fog ?? ''}|${M.ai ?? ''}|${M.kit ?? ''}|${quietFog()}${quietCams() ? '+cams' : ''}|${S.told}|${M.told ?? ''}`; }
+export function leversSig(): string { const S = quietFogAside(() => leversShown()), M = leversSet(); return `${leversBase()}|${S.fog}|${S.ai}|${S.kit}|${M.fog ?? ''}|${M.ai ?? ''}|${M.kit ?? ''}${QUIETFOG.on ? `|${quietFog()}${quietCams() ? '+cams' : ''}` : ''}${TOLD.on ? `|${S.told}|${M.told ?? ''}` : ''}`; }
 
 /** Build the rows into `host`. `onChange`: after a press changed the tables. */
 export function leverRows(host: HTMLElement, cls: LeverCls, onChange: () => void): LeverRowsUi {
@@ -58,7 +59,7 @@ export function leverRows(host: HTMLElement, cls: LeverCls, onChange: () => void
     const btns = rungs.map(g => { const b = el('button', cls.btn, g.label) as HTMLButtonElement; b.type = 'button'; b.setAttribute('data-rung', g.id); b.title = g.words; b.onclick = press(() => put(g.id)); r.appendChild(b); return b; });
     const n = el('span', cls.note); r.appendChild(n); notes.set(key, n);
     host.appendChild(r); rows.push({ key, el: r, btns });
-    if (key === 'fog' && STICKY.on) {
+    if (key === 'fog' && QUIETFOG.on && STICKY.on) {
       const c = el('div', cls.row); c.setAttribute('data-lever', 'cams'); c.appendChild(el('span', cls.label, 'Sticky cameras'));   // (named as the kit card names them: a bare 'Cameras' under Enemy AI / Enemy kit read as the level's own wall cameras)
       const cb = [false, true].map(on => { const b = el('button', cls.btn, on ? String(STICKY.issue) : 'None') as HTMLButtonElement; b.type = 'button'; b.setAttribute('data-cams', on ? '1' : '0');
         b.title = on ? camWords() : ''; b.onclick = press(() => setQuietCams(on)); c.appendChild(b); return b; });
@@ -66,21 +67,22 @@ export function leverRows(host: HTMLElement, cls: LeverCls, onChange: () => void
     }
   };
   const off = QUIET_RUNGS[0];   // (the fog lever's bottom rung: on a quiet mission's row the quiet pick's, made while that rule is on; on a squad mission's row the squad lever's own, made while game/told.ts TOLD.fogOff is up — leversNow() lists it then; hidden on a row that has neither)
-  for (const L of leversNow()) row(L.key, L.label, L.rungs,
-    id => { if (L.key === 'fog' && lastQuiet) setQuietFog(id as QuietRung); else quietFogAside(() => setLever(L.key, id as never, true, lastAt)); });   // (quietFogAside: a quiet mission being played under its rung is not the squad lever's to move)
+  const squadOff = TOLD.fogOff;
+  for (const L of leversNow()) row(L.key, L.label, L.key === 'fog' && QUIETFOG.on && !squadOff ? [off, ...L.rungs] : L.rungs,
+    id => { if (L.key === 'fog' && lastQuiet) setQuietFog(id as QuietRung); else if (id !== off.id || squadOff) quietFogAside(() => setLever(L.key, id as never, true, lastAt)); });   // (quietFogAside: a quiet mission being played under its rung is not the squad lever's to move)
   let lastLive: LeverLive = true, lastAt: string | undefined, lastQuiet = false;
   const U: LeverRowsUi = {
     rows,
     get touched() { return touched; },
     paint(liveOf: LeverLive = true, structure?: string, quiet = false) {
-      lastLive = liveOf; lastAt = structure; lastQuiet = quiet;
+      lastLive = liveOf; lastAt = structure; lastQuiet = quiet && QUIETFOG.on;
       const S = quietFogAside(() => leversShown(structure)) as Record<string, string | null>, M = leversSet() as Record<string, string | undefined>;
       for (const R of rows) {
         const live = typeof liveOf === 'function' ? liveOf(R.key) : liveOf;
         const mine = lastQuiet && R.key === 'fog', lit = mine ? quietFog() : S[R.key], moved = mine ? lit !== quietFogDefault() : M[R.key] !== undefined;   // (a quiet row's lever is 'moved' off where a quiet mission STARTS: QUIETFOG.def)
         R.el.className = `${cls.row}${live ? '' : ' na'}${moved ? ' moved' : ''}`;
         for (const b of R.btns) { const id = b.getAttribute('data-rung'), on = id === lit; b.className = on ? `${cls.btn} on` : cls.btn; b.setAttribute('aria-pressed', on ? 'true' : 'false');
-          if (R.key === 'fog') { if (id === off.id) (b as HTMLElement & { style: { display: string } }).style.display = mine || live || on ? '' : 'none';   /* (the squad's own bottom rung: on a row where the fog's lever is live — and wherever it is the rung lit, greyed or not) */ b.title = mine ? quietFogWords(id) : leverWords('fog', id); } }
+          if (R.key === 'fog' && (QUIETFOG.on || squadOff)) { if (id === off.id) { (b as HTMLElement & { style: { display: string } }).style.display = mine || (squadOff && (live || on)) ? '' : 'none';   /* (the squad's own bottom rung: on a row where the fog's lever is live — and wherever it is the rung lit, greyed or not) */ if (squadOff) b.title = mine ? quietFogWords(id) : leverWords('fog', id); } else b.title = mine ? quietFogWords(id) : leverWords('fog', id); } }
         if (R.key === 'fog' && camRow) { const on = mine && quietCams(); (camRow.el as HTMLElement & { style: { display: string } }).style.display = mine ? '' : 'none';
           camRow.el.className = `${cls.row}${live ? '' : ' na'}${mine && quietFog() !== off.id && on !== quietCamsDefault() ? ' moved' : ''}`; camRow.note.textContent = on ? camWords() : ''; camRow.note.title = camRow.note.textContent;
           for (const b of camRow.btns) { const lit = (b.getAttribute('data-cams') === '1') === on; b.className = lit ? `${cls.btn} on` : cls.btn; b.setAttribute('aria-pressed', lit ? 'true' : 'false'); } }

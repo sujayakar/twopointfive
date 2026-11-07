@@ -73,7 +73,7 @@ export async function snowSparkleCheck(o: { verbose?: boolean } = {}): Promise<b
   const CARELESS = ['  r.E = li.color * (att * c); r.ok = true;\n', '  r.E = li.color * (att * c) * (1.0 + snowSparkleLobe(N, L, N) * SNOW_SPARKLE_GAIN); r.ok = true;\n'] as const;
   for (const f of files) {
     let t = readFileSync(resolve(SH, f), 'utf8');
-    t = t.split('\n').map(l => /\/\/.*THE LOOK'S OWN LINE/.test(l) ? '' : l).join('\n');   // (the look's own lines, each tagged in its comment — shaders/look.wgsl. They read and write the mark's fourth level, alpha 0, and are not this check's. Until 2026-11-07 they also stood behind a constant, LOOK, and were told by both)
+    t = t.split('\n').map(l => /\/\/.*THE LOOK PROTOTYPE/.test(l) && /\bLOOK\b/.test(l.replace(/\/\/.*$/, '')) ? '' : l).join('\n');   // (the look prototype's own lines, each tagged in its comment and behind LOOK in its code: live only on its page — shaders/look.wgsl. It reads and writes the mark's fourth level, alpha 0, and is not this check's)
     if (BREAK) { t = t.replace(/if \(lv\(SNOW_SPARKLE\)\) \{/g, '{'); if (f === 'common.wgsl') t = t.replace(CARELESS[0], CARELESS[1]); }
     text[f] = t;
   }
@@ -91,15 +91,16 @@ export async function snowSparkleCheck(o: { verbose?: boolean } = {}): Promise<b
     // ---- stands
     { const up = await rig(true), down = await rig(false), unsaid = await rig(null);
       const prof = PR.harnessProfile(); const row = String(PR.FROZEN_HOLDS['SNOW_LOOK.sparkle'] ?? '');
+      const page = /SNOW_LOOK\.sparkle = q\.get\('snowsparkle'\) !== '0';/.test(readFileSync(resolve(ROOT, 'src/host/profile.ts'), 'utf8'));   // (read, not run: pageSwitches writes every switch the page has)
       const mod = /export const SNOW_LOOK = \{[^}]*\bsparkle: false\b[^}]*\}/.test(readFileSync(resolve(ROOT, 'src/game/weatherKinds.ts'), 'utf8'));
       const reg = !!KN.JOURNAL_KNOBS && (KN.JOURNAL_KNOBS as readonly string[]).includes('SNOW_LOOK');
       // (the switch reaches the shaders as a bit of the frame block's level word, render/frame.ts LevelSw: the shader TEXT is the same with it on or off)
       const cfgWas = FR.snowLookConfig.sparkle; FR.snowLookConfig.sparkle = false; const p0 = FR.scenePrelude(), w0 = FR.levelSwitches(); FR.snowLookConfig.sparkle = true; const p1 = FR.scenePrelude(), w1 = FR.levelSwitches(); FR.snowLookConfig.sparkle = cfgWas;
       const word = p0 === p1 && /const SNOW_SPARKLE: u32 = 64u;/.test(p1) && FR.LevelSw.SNOW_SPARKLE === 64 && (w0 & 64) === 0 && (w1 ^ w0) === 64;
-      const boot = /snowLookConfig\.sparkle = true;/.test(readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'));
+      const boot = /snowLookConfig\.sparkle = SNOW_LOOK\.on && SNOW_LOOK\.sparkle;/.test(readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'));
       const env = /'TPS_SNOWSPARKLE'/.test(readFileSync(resolve(ROOT, 'src/host/standEnv.ts'), 'utf8'));
-      verdict(up.stood === true && down.stood === false && unsaid.stood === (prof === 'shipped') && /TPS_SNOWSPARKLE=1/.test(row) && mod && reg && word && boot && env,
-        'stands — the switch\'s words on this stand', `${prof} stand · TPS_SNOWSPARKLE=1 → ${up.stood}, =0 → ${down.stood}, not said → ${unsaid.stood} (${prof === 'shipped' ? 'the page: on' : 'frozen: off'}) · FROZEN_HOLDS row: ${row ? `'${row.slice(0, 40)}…'` : 'NONE'} · off in the module: ${mod} · its table rides in the journal's registry: ${reg} · the stand's word is a listed name: ${env} · the frame's level word follows snowLookConfig.sparkle in its one bit, and no shader text differs: ${word} · main.ts raises it only with the surface: ${boot}`); }
+      verdict(up.stood === true && down.stood === false && unsaid.stood === (prof === 'shipped') && /TPS_SNOWSPARKLE=1/.test(row) && page && mod && reg && word && boot && env,
+        'stands — the switch\'s words on this stand', `${prof} stand · TPS_SNOWSPARKLE=1 → ${up.stood}, =0 → ${down.stood}, not said → ${unsaid.stood} (${prof === 'shipped' ? 'the page: on' : 'frozen: off'}) · FROZEN_HOLDS row: ${row ? `'${row.slice(0, 40)}…'` : 'NONE'} · the page's boot reads ?snowsparkle=0 and is on without it: ${page} · off in the module: ${mod} · its table rides in the journal's registry: ${reg} · the stand's word is a listed name: ${env} · the frame's level word follows snowLookConfig.sparkle in its one bit, and no shader text differs: ${word} · main.ts raises it only with the surface: ${boot}`); }
 
     // ---- mark: the snow mark under either switch, the term × it, and only fresh snow
     { const both = /\blv\(SNOW_GLOW\) \|\| lv\(SNOW_SPARKLE\)/g;

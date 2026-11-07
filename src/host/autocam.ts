@@ -273,13 +273,14 @@ export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoSce
       const inLine = !g.col.segmentBlocked(eye, [q[0], 1.3, q[2]]); if (inLine) { A.seen.push([q[0], 0, q[2]]); A.lineT.set(gd, now); }
       const last = A.lineT.get(gd); if (last !== undefined && now >= last && now - last <= K.swayLinger) A.fight.push([q[0], 0, q[2]]);   // (a man of the fight: the sway's)
       // the soft lock's man: the nearest in his line who is not onto him — the one it has until another is clearly nearer, and through a moment out of the line
-      if (gd.state !== 'alert' && (inLine || gd === had && last !== undefined && now >= last && now - last <= K.lockLinger)) { const d = flat(p, q) - (gd === had ? K.lockStick : 0); if (d < lockD) { lockD = d; A.lockGd = gd; } }
+      if (K.lock && gd.state !== 'alert' && (inLine || gd === had && last !== undefined && now >= last && now - last <= K.lockLinger)) { const d = flat(p, q) - (gd === had ? K.lockStick : 0); if (d < lockD) { lockD = d; A.lockGd = gd; } }
       if (inLine || flat(p, q) <= K.nearM) A.shown++;   // (behind cover but this near: a step puts him in the line)
     }
     // (somebody is onto him, or was a moment ago: that is a fight, and the fight's rules frame it)
-    if (onto || now < A.lockFightT) A.lockFightT = onto ? now : -1e9; A.lockFight = now >= A.lockFightT && now - A.lockFightT < (onto ? Infinity : K.lockCalm); if (A.lockFight) A.lockGd = null;
+    if (!K.lock) A.lockFight = false;
+    else { if (onto || now < A.lockFightT) A.lockFightT = onto ? now : -1e9; A.lockFight = now >= A.lockFightT && now - A.lockFightT < (onto ? Infinity : K.lockCalm); if (A.lockFight) A.lockGd = null; }
   }
-  const lmb = input.lmb(), lock = autoLock(A, g, lmb ? stalkOn(g) : null, lmb && !!stalkWait(g));   // (a stalk, and the wait at a corner, live only under the held click)
+  const lmb = input.lmb(), lock = K.lock ? autoLock(A, g, lmb ? stalkOn(g) : null, lmb && !!stalkWait(g)) : null;   // (a stalk, and the wait at a corner, live only under the held click)
   // ---- the squad: the newest beat — a door order's phase as it changes (the order given, its men set, the word, the entry), or men just sent somewhere
   let beat: AutoScene['beat'] = null;
   if (g.orders?.active) {
@@ -324,7 +325,7 @@ export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoSce
   }
   const room: AutoScene['room'] = A.mid ? { at: A.mid, w: 1 } : null, inRoom = !!A.mid;
   const sky = !g.weather?.underRoof(p[0], p[2]);
-  const zoomK = (closeMode(g) || K.lockIn > 0 && K.zoomAmt > 0 && !!pl.holding && !A.lockFight ? K.closeK : inRoom ? K.roomK : sky ? K.skyK : 1) * (pl.sup.v > K.fireAt ? K.fireK : 1);
+  const zoomK = (closeMode(g) || K.lock && K.lockIn > 0 && K.zoomAmt > 0 && !!pl.holding && !A.lockFight ? K.closeK : inRoom ? K.roomK : sky ? K.skyK : 1) * (pl.sup.v > K.fireAt ? K.fireK : 1);
   const free = !pl.holding && !pl.dragging && !pl.throwPreview && !pl.launchHeld && !pl.wall && !g.rails?.locks('camera') && g.lesson?.step?.done?.is !== 'view';
   return A.scene = { sam: [p[0], p[1], p[2]], threats: A.seen, beat, door, room, zoomK, hold: input.buttons !== 0, still, free, vel: [c.vel[0], c.vel[2]], fight: A.fight, shown: A.shown, zoomFree: !g.rails?.locks('zoom'), firedAgo: now - pl.lastFireT, lock, onto: A.lockFight };
 }
@@ -342,8 +343,8 @@ export function autoFrame(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: numbe
   // the soft lock: its strength eased to what the scene asks. A held button stills the frame, the zoom and the strength — but not the held click of a
   // stalk, not a man in his arm, and not the letting go once a fight has begun (a stalk the man broke, the button still down: the fight is not left
   // in close; a man shot under a held aim with nobody onto him is, until the button is up)
-  const L = S.lock ?? null, stilled = S.hold && !L?.stalk, moves = !stilled || (L ? !L.at : !!S.onto);
-  if (moves) { A.lockS += ((L ? L.s : 0) - A.lockS) * Math.min(1, dt * K.lockEase); if (A.lockS < 1e-4 && !L) A.lockS = 0; }
+  const L = K.lock && S.lock ? S.lock : null, stilled = S.hold && !L?.stalk, moves = !stilled || (L ? !L.at : !!S.onto);
+  if (!K.lock) A.lockS = 0; else if (moves) { A.lockS += ((L ? L.s : 0) - A.lockS) * Math.min(1, dt * K.lockEase); if (A.lockS < 1e-4 && !L) A.lockS = 0; }
   const ls = A.lockS;
   const take = (at: Vec3, share: number, w: number) => { share *= K.leanK; ox += (share * (at[0] - p[0]) - ox) * w; oz += (share * (at[2] - p[2]) - oz) * w; };
   if (S.room) take(S.room.at, K.room, S.room.w);
@@ -361,7 +362,7 @@ export function autoFrame(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: numbe
   if (!stilled) { const e = Math.min(1, dt * K.lean); A.off[0] += (ox - A.off[0]) * e; A.off[1] += (oz - A.off[1]) * e; }
   [A.off[0], A.off[1]] = box(A.off[0], A.off[1]);
   // the zoom: the hand's own by where he stands, and out to hold what is framed from where the look-at is going
-  if (S.zoomFree && A.base > 0) {
+  if (K.zoom && S.zoomFree && A.base > 0) {
     const lockIn = K.lockIn * Math.max(0, Math.min(1, K.zoomAmt));   // (the lock's zoom is a zoom of the mode's own: the hand's share of those is its share of this)
     const V = reach(cam), fit = (at: Vec3) => { const x = at[0] - p[0] - ox, z = at[2] - p[2] - oz, r = Math.abs(x * B.right[0] + z * B.right[2]), f = x * B.fwd[0] + z * B.fwd[2]; return Math.max(r / V.side, f > 0 ? f / V.up : -f / V.down) / K.fitIn; };
     let need = fit(p); for (const t of S.threats) need = Math.max(need, fit(t)); const men = need; if (S.beat && S.beat.w > 0.5) need = Math.max(need, fit(S.beat.at)); if (S.door && S.door.w > 0.5) need = Math.max(need, fit(S.door.at));
@@ -395,7 +396,7 @@ const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
  *  him, or the thing framed lying on the lens's side of him. `blocked` = the level's sight line. */
 export function turnGoal(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: number, blocked: (a: Vec3, b: Vec3) => boolean): number | null {
   const K = AUTOCAM; A.stillT = S.still ? A.stillT + dt : 0; A.turnT += dt;
-  if (!(K.rest || K.restAhead) || A.stillT < K.still || A.turnT < K.gap || S.hold || !S.free || S.shown || S.threats.length || S.firedAgo < K.calm) return null;
+  if (!K.turn || !(K.rest || K.restAhead) || A.stillT < K.still || A.turnT < K.gap || S.hold || !S.free || S.shown || S.threats.length || S.firedAgo < K.calm) return null;
   const p = S.sam, sub = S.beat && S.beat.w > 0.5 ? S.beat.at : S.door && S.door.w > 0.5 ? S.door.at : null;
   if (sub && K.restAhead) {
     const dx = sub[0] - p[0], dz = sub[2] - p[2], d = Math.hypot(dx, dz), B = cam.planarBasis();
@@ -417,6 +418,7 @@ export function turnGoal(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: number
  *  whose speed is capped. Nothing in it steps: every way it stops or changes its mind goes through the spring or a decay. */
 export function autoSway(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: number, blocked: (a: Vec3, b: Vec3) => boolean): number {
   const K = AUTOCAM; if (!(dt > 0)) return 0;
+  if (!K.sway) { if (A.sway || A.swayV) swayDrop(A); return 0; }
   if (!A.sway && !A.swayV) A.swayHome = cam.yaw;
   A.swayCalm = S.hold || !S.free ? 0 : A.swayCalm + dt;
   if (A.swayCalm < K.swayAfter) return swayCoast(A, dt);   // a button down (or just up), or his hands at something the view serves

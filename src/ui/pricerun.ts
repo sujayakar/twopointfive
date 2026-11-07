@@ -6,32 +6,36 @@
 // (price-levels-<date>.json) that leaves by the page's one door (host/savefile.ts): to whoever listens there, and to the browser's downloads where the
 // address that asked says `downloads=1` (the run carries that word). Where neither took it the card says so and holds the file's own text under the table,
 // so Copy keeps the run.
-//   WHAT A LEVEL'S PAGE DOES. Its mission's own address ON THE LOOK'S PAGE, at the hour its row opens at, the die pinned: it plays a few seconds so the
+//   WHAT A LEVEL'S TWO PAGES DO. First its mission's own address ON THE LOOK PAGE, at the hour its row opens at, the die pinned: it plays a few seconds so the
 //   men stand where the mission puts them (by the page's scripted step, a step a frame, after the page's own warm-up: PRICE.playS), then HOLDS THE WORLD STILL and times that one picture with the look's layers off and on in turn (off, on, off, on):
-//   the frame's time, and where the browser stamps the passes, the GPU's. Then the next level. Each is a run's page (host/runpage.ts): the kit and the fog of war
-//   as the mission deals them, no sandbox row of this machine's. AND ONE RUNG OF THE QUALITY LADDER: a page of a run
+//   the frame's time, and where the browser stamps the passes, the GPU's. Then the same mission on the page WITHOUT the look (no `look` on the address), held at
+//   the same step of the game's own clock and timed as it stands. Then the next level. Both are a run's pages (host/runpage.ts): the kit and the fog of war
+//   as the mission deals them, no sandbox row of this machine's, so the two pictures are of one scene. AND ONE RUNG OF THE QUALITY LADDER: a page of a run
 //   says the page's own words for it on its address: `quality=<preset>` pins the preset and keeps the climb off, `adapt=0` switches the ladder off (the
 //   menu's "Hold frame rate") before the first frame is sampled, both read by the ladder's one reader (ui/quality.ts visit), and `giveway=0` keeps the
 //   window from giving way to one in focus elsewhere (host/pace.ts). No rule of the page knows a priced page. With these, the ladder does nothing: the scale, the
-//   cap on rows, the gather's and the volumetrics' resolution and the sharp pass are the preset's own on every page, whatever this machine's frame rate. Each
-//   page writes what it stood on (`rung`), and the report says so where a run's pages stood on more than one. (First run on a real GPU, 11-04: left to itself the
-//   ladder cut the look page of two levels from High's own 0.77 of the window to 0.75.)
-//   "LOOK OFF" IS THE LAYERS OFF: the same page, shaders, shapes, camera, quality and scale, with every row the look panel lists as a layer with a cost of its own
-//   (ui/lookpanel.ts hands them to the sweep as `look.<row>`) at its own off value, all at once. It says what the layers cost where they run, and it is NOT
-//   the panel's "plain boxes", which leaves the lighting's, the smoke's and the eye's layers on.
+//   cap on rows, the gather's and the volumetrics' resolution and the sharp pass are the preset's own on both pages, whatever this machine's frame rate. Each
+//   page writes what it stood on (`rung`), and a level whose two pages differ in any of it says so. (First run on a real GPU, 11-04: left to itself the
+//   ladder cut the look page of two levels from High's own 0.77 of the window to 0.75 and left their pages without the look at 0.77.)
+//   TWO MEANINGS OF "LOOK OFF", both in the file:
+//     · THE PAGE WITHOUT THE LOOK is the budget's own ("GPU time within 10% of look off"): the game as it is drawn today. It is another page: other shader
+//       text, and the level as its file has it (none of the look's round things and broken wall tops). Its row is `page`; the table's OVER is read against it.
+//     · THE LAYERS OFF is the same page, shaders, shapes, camera, quality and scale, with every row the look panel lists as a layer with a cost of its own
+//       (ui/lookpanel.ts hands them to the sweep as `look.<row>`) at its own off value, all at once. It says what the layers cost where they run, and it is NOT
+//       the panel's "plain boxes", which leaves the lighting's, the smoke's and the eye's layers on.
 //   AND THE WORLD RUNNING (`run`, 11-05). A held picture steps nothing: on a step of no length the smoke solver encodes nothing, the wind over the floor and
 //   the loose snow are not stepped, and a flake or a drop is handed back as it was. So a level with snow, rain, a fire or wind read cheaper held than
 //   played (a walk of 29 levels had no stamp of the solver in any row, and its wind pass read 0). After a page's held turns the SAME scripted steps play on
-//   to PRICE.runS of the game's clock, every step drawn, and one more turn is timed with the world still stepping and the layers on: a step of the game's clock at the
-//   game's own rate, paced by the page's own pacer (host/pace.ts) where the GPU has room. The running read stands BESIDE the held one
-//   (`run`), with its own verdict (`overRun`) and its own reasons not to be judged (`runApart`): the held read is one picture with the layers off and on and
-//   says what they cost; the running read has no layers-off turn to be read against, so its verdict is the frame's time alone, and it is nearer what is played.
+//   to PRICE.runS of the game's clock, every step drawn, and one more turn is timed with the world still stepping: a step of the game's clock at the
+//   game's own rate, paced by the page's own pacer (host/pace.ts) where the GPU has room. Both pages of a level take the same steps up to that second. The running read stands BESIDE the held one
+//   (`run`, `page.run`), with its own verdict (`overRun`) and its own reasons not to be judged (`runApart`): the held read is one picture on both pages and
+//   says what each layer costs; the running read is nearer what is played.
 //   WHAT IT DOES NOT SAY. A fight's frame (nobody fires at a mission's start, held or running) and a first visit's compile (ui/boot.ts times that; each row keeps the
-//   boot's own line as its page had it). Nor what the look's shaders and shapes cost with its layers off: the look is the only picture, so there is nothing to read that against. AND THE GPU'S TIME IS THE COMPUTE PASSES' ONLY, as everywhere on the page (gpu/timer.ts unionMs: a render pass's stamps
+//   boot's own line as its page had it). AND THE GPU'S TIME IS THE COMPUTE PASSES' ONLY, as everywhere on the page (gpu/timer.ts unionMs: a render pass's stamps
 //   span the wait for the display): the look's SURFACE layers (paint, relief, finish, cavities, weather, edges, marks, the men's kit) are shaded in a render
 //   pass, the g-buffer's, so their cost is not in that number, and the time between two frames shows it only once the display's rate is lost. So the run
 //   ALSO takes the GPU's busy span over THE COMPUTE PASSES AND THE G-BUFFER (`all`: the same union with only the passes that draw to the display left out, so
-//   passes the driver ran side by side are not counted twice), and says what the layers ADD to it, as a share of their GPU time with the layers off: the verdict reads
+//   passes the driver ran side by side are not counted twice), and says what the look ADDS to it, as a share of the baseline's GPU time: the verdict reads
 //   that beside the game's own number. WHY THOSE PASSES: the stamps that span the wait for the drawable are the ones of the passes that draw to the display
 //   (post, fxaa, a drawn composite). The g-buffer draws into the page's own textures; on an M4 Max under Metal its stamp was read against 50,000 recorded
 //   frames (2026-11-04) and follows the g-buffer's work, not the frame's length — one chip, so the run still CHECKS each state (`spansWait`): where the span
@@ -45,13 +49,13 @@
 //   display's. (Two older ways and why they went, both 11-04: a frame's "cost" as the lesser of `work` and the time between callbacks read the display's
 //   interval in every state. And a priced page that did not wait for the GPU queued hundreds of frames ahead on a level the card could not hold sixty on:
 //   a switch of the layers then reached the stamps ten seconds late, inside the other state's turn, and the two states read alike.)
-//   The frame's time is read AGAINST THE LAYERS OFF too: a machine that does not hold sixty at this preset with the layers off is not the layers' doing. The lag
+//   The frame's time is read AGAINST THE BASELINE too: a machine that does not hold sixty at this preset without the look is not the look's doing. The lag
 //   is no line of the verdict (it reads 2 to 3 wherever the page waits for the GPU, and more on a fast display): far past that (PRICE.lagFrames) frames were
 //   queued ahead of the GPU, a state's stamps may hold another's work, and the row is NOT JUDGED. So is a row where the GPU's answer came late for no work
 //   of the state's own (PRICE.lateMs): the lag in frames cannot see that, because the page waits for the GPU and its frames slow with the answer.
 //   THE WORDS. `?pricelevels` = every level; `?pricelevels=pass,block` = these; `&pricesecs=N` = N seconds measured a turn (default 3); `&quality=<preset>` =
 //   the preset every page stands at (default high: the budget is said for High; `auto` lets each page settle its own, and the row says where it settled);
-//   `&pricelive=N` = the world runs to second N before its read (default PRICE.runS; 0 = held pictures only). THE LOOK'S OWN WORDS on the address that asked (`look=walls:0`, `geo=0` …) ride on every page
+//   `&pricepage=0` = the look page only, half the loads; `&pricelive=N` = the world runs to second N before its read (default PRICE.runS; 0 = held pictures only). THE LOOK'S OWN WORDS on the address that asked (`look=walls:0`, `geo=0` …) ride on every look page
 //   of the run, with the trials this machine's look panel keeps off, as the benchmark carries them (ui/benchrun.ts): the file says which look was priced.
 //   A reload in the middle does not start it again (the page finds its own mark and is a plain mission page); Esc stops a run.
 // THE PAGE'S HALF IS ONE LINE (main.ts, before the boot): `if (priceLevelsPage(q)) return;`. Everything else is asked of what the page already puts on `window`
@@ -59,7 +63,7 @@
 import { listedLevels } from '../scene/scenarioList';
 import { pacer } from '../host/pace';
 import { scenarioQuery } from '../scene/scenarios';
-import { lookTrialsKept } from '../scene/look';
+import { LOOK_OLD, lookTrialsKept } from '../scene/look';
 import { HELD_LADDER_WORD, HELD_WINDOW_WORD, PRICE_ASK_WORDS, PRICE_LEVELS_WORD, PRICE_RUN_WORD } from '../host/runpage';
 import { PRESENT_PASSES, RENDER_PASSES, SURFACE_PASS } from '../gpu/timer';
 import { saveFile, savedWords } from '../host/savefile';
@@ -75,8 +79,8 @@ const DRAWN = [...RENDER_PASSES], SURFACE = SURFACE_PASS, PRESENTS = [...PRESENT
 export const PRICE = {
   /** seconds OF THE GAME'S OWN CLOCK the mission plays before its picture is held. ONE WAY, on every page: the page's loop is held from before its boot and
    *  the mission is played in fixed sixtieths by the page's own scripted step (main.ts `__runFrames`), ONE STEP A DISPLAY FRAME, EVERY STEP DRAWN, to exactly
-   *  the step asked. So a level has run the same steps, drawn the same number of frames and stands on the same render clock (a lamp's flicker
-   *  reads it) on every run, whatever its frames cost and whatever the display's rate; a lesson whose card holds the clock on a page nobody plays is stepped like the
+   *  the step asked. So a level's two pages have run the same steps, drawn the same number of frames and stand on the same render clock (a lamp's flicker
+   *  reads it), whatever their frames cost and whatever the display's rate; a lesson whose card holds the clock on a page nobody plays is stepped like the
    *  rest. The play WAITS FOR THE GPU as the page's own pacer does (host/pace.ts): no step is drawn while as many frames are still with the GPU as the
    *  pacer keeps there (`window.__pace().flight`; `flight` here where a build does not say), so what the game reads back from the GPU comes as late as on a
    *  player's page and no later.
@@ -87,7 +91,8 @@ export const PRICE = {
    *  does not say) before a step is played: the clear is over before a flake falls */
   playS: 4, flight: 2, warmFrames: 16,
   /** THE GPU CATCHES UP BEFORE ANYTHING IS TIMED: a boot hands it seconds of work (its pipelines, its first frames), and for a while after the queue's "done"
-   *  comes many frames late whatever a frame costs (11-04, a rented card on a long run: hundreds of frames behind on a page with 6 ms of work). The held picture is drawn until a frame's work is done within `lagFrames` frames three times running, for at most this many seconds; a
+   *  comes many frames late whatever a frame costs (11-04, a rented card on a long run: hundreds of frames behind on a page with 6 ms of work, with the look
+   *  and without). The held picture is drawn until a frame's work is done within `lagFrames` frames three times running, for at most this many seconds; a
    *  page still behind then says so on its row, and there the lag is the page's own. 0 = no wait (a check on an adapter whose frame is seconds long) */
   catchS: 30,
   /** a turn: the start that is dropped, then the part that is measured (seconds; `pricesecs` on the address is the second) */ settleS: 1.2, measureS: 3,
@@ -114,7 +119,7 @@ export const PRICE = {
   runS: 20,
   /** a frame longer than this (seconds) is the tab having been away: the turn starts over, at most `retries` times */ awayS: 1.5, retries: 3,
   /** THE BAR the table sets each level against (the look task's, 11-02; `ruled` below says which of its rows the maintainer has ruled on): the GPU's time with the layers on within this of off */ gpuMore: 0.10,
-  /** which rows stand by the maintainer's word and which are still a proposal: written into the file and the report, so neither claims more than was ruled */ ruled: 'GPU time within 10% of look off and sixty frames a second held were ruled on 2026-11-04 (of the page without the look, which is gone: read here against the layers off, which leaves the look\'s shaders and shapes in what it is read against); the same with the g-buffer counted and "no program made by the switch" are still proposed',
+  /** which rows stand by the maintainer's word and which are still a proposal: written into the file and the report, so neither claims more than was ruled */ ruled: 'GPU time within 10% of no look and sixty frames a second held were ruled on 2026-11-04; the same with the g-buffer counted and "no program made by the switch" are still proposed',
   /** … and sixty frames a second held on High. Between two frames of a 60 Hz display there are 16.67 ms, which the proposal's "under 16.6" would call over, so
    *  the bar on a frame's time is that with 2% of the clock's noise on it */ frameMs: 17,
   /** FRAMES QUEUED AHEAD OF THE GPU: its "done" for a frame later than this many drawn frames after the frame began. The page waits for the GPU with two
@@ -126,11 +131,11 @@ export const PRICE = {
    *  changes and which is read off THE SAME RUN: the least any of its states took beyond its own passes (`answerOf`). A state over that sum by more than
    *  this many ms is late (`lateRows`). Read against the run's own least and not a fixed time, because a browser's answer is itself a frame or a few long,
    *  and longer on a fast display. Seen 11-05 on a rented card that walked 29 levels in one browser: from about the 15th level the answer came later and
-   *  later (to 57 ms for 10 ms of passes) while the pages' boots kept their time, and the last seven rows read the look CHEAPER than the old picture
-   *  with every check green: the lag in drawn frames stayed near 1.7, because the frames slowed with the answer. The same seven levels alone drew a
+   *  later (to 57 ms for 10 ms of passes) while the pages' boots kept their time, and the last seven rows read the look page CHEAPER than the page without
+   *  it with every check green: the lag in drawn frames stayed near 1.7, because the frames slowed with the answer. The same seven levels alone drew a
    *  frame every 17 ms and read sane. THE NUMBER IS SET BY THAT ONE WALK: its least answer was 8 ms, the 22 rows that read right had no state over 8.4 by
-   *  this measure (most stand below nought: two frames of passes explain more than a fresh browser needs) and each of the seven had one at 21 to 28. That
-   *  walk had a third state a row, the old picture's. A walk now has two to be caught by: there the walk's pass (4) would have slipped through and its bazaar (16) not. Something
+   *  this measure (most stand below nought: two frames of passes explain more than a fresh browser needs) and each of the seven had one at 21 to 28. A
+   *  walk of look pages only has two states a row to be caught by: there the walk's pass (4) would have slipped through and its bazaar (16) not. Something
    *  the stamps do not show holds the GPU, so the row is NOT JUDGED. 0 = the rule is not asked. A run of one level has little to be read against */ lateMs: 12,
   /** THE G-BUFFER'S STAMP HOLDS THE DISPLAY'S WAIT where the compute passes with the g-buffer take this much of the time between frames (`waitAll`) and the
    *  g-buffer puts this much of that time on the compute passes (`waitGap`). HALF A FRAME, on purpose: a g-buffer that is honest work must never trip it. On
@@ -155,26 +160,31 @@ export interface PriceRow {
   off: PriceWin; on: PriceWin;
   /** the game's clock where the picture was held, seconds (null: the page shows no clock) */ heldAt: number | null;
   /** layers on over layers off, less one: of the GPU's span where there is one, of the time between frames; and what the layers add to the compute passes with the g-buffer, as a share of the layers-off GPU's span */ gpuMore: number | null; allMore: number | null; msMore: number;
+  /** THE PAGE WITHOUT THE LOOK, the same mission held at the same step (absent: the run was asked for without it, or that page did not finish) */
+  page?: { win: PriceWin; quality: string; scale: number; internal: [number, number]; rung: PriceRung; heldAt: number | null; programs: { boot: number; after: number }; boot: string; /** … and with the world running */ run?: PriceRun };
   /** THE LOOK PAGE WITH THE WORLD RUNNING, its layers on (absent: not asked, a file from before 11-05, or the page has no scripted step) */
   run?: PriceRun;
+  /** the look page with its layers on over the page without the look, less one (null: no such page, or no GPU times); and what the look adds to the compute passes with the g-buffer, as a share of that page's GPU's span */ gpuOverPage: number | null; allOverPage: number | null; msOverPage: number | null;
   /** how the layers were put off */ offBy: string;
   /** shader programs: made before the page came ready, after it, and by the switch itself (the budget's "shaders compile once": nothing) */ programs: { boot: number; after: number; bySwitch: number };
   /** the boot as the page timed it (ui/boot.ts line) */ boot: string;
   notes: string[];
-  /** WHY THE ROW IS NOT ONE PICTURE, in words (none: it is): the picture moved between its turns, or frames were queued ahead of the GPU. Such a row keeps its
-   *  numbers and is NOT JUDGED: `over` stays empty and the report says so */
+  /** WHY THE ROW IS NOT ONE PICTURE, in words (none: it is): the picture moved between its turns, or its two pages stood at another size, on another rung of
+   *  the ladder or on another step of the game's clock. Such a row keeps its numbers and is NOT JUDGED: `over` stays empty and the report says so */
   apart: string[];
   /** THE VERDICT, written by the run once the row is whole (priceOver): what puts it over the bar, in words; none = under it. The table of levels
    *  (tools/qa/level-table.ts) prints these and judges nothing itself */
   over: string[];
   /** … and the same two of THE RUNNING READ (absent where the row has none): why it is not judged (frames queued, a late answer; a row whose held read is
-   *  apart is not judged running either), and what puts it over the bar (priceOverRun) */
+   *  apart is not judged running either: its two pages are not one size or rung), and what puts it over the bar (priceOverRun) */
   runApart?: string[]; overRun?: string[];
 }
-interface Carry { v: 7; from: string; startedAt: string; /** the levels of the run, a page each */ steps: string[]; i: number; live: number; quality: string; secs: number; /** the second the world runs to before its read (0: held pictures only) */ run?: number; /** the look page's words, as the address that asked wrote them */ look: string[]; /** the visitor's flags every page of the run carries (ui/benchrun.ts carriedWords) */ keep: string[]; rows: PriceRow[]; notes: string[] }
-export interface PriceFile { /** 7: a row has no second page and `over` is read against the layers off (a 6 was read against the page without the look) */ version: 7; what: string; at: string; /** the build the pages were (the page's own word for it, as a benchmark's file has it; none where the page has none) */ commit?: string; startedAt: string; address: string; /** the words every look page of the run carried */ look: string[]; userAgent: string; /** the adapter the page drew on */ gpu: string; machine: BenchMachine; screen: string; dpr: number; quality: string; secs: number; bar: { gpuMore: number; frameMs: number; lagFrames: number; /** (from 11-05: a file from before has none, nor has a run that did not ask the rule) */ lateMs?: number; /** the second the world ran to before its read (none: held pictures only) */ runS?: number; ruled: string }; /** the least any state of the run took to answer beyond its own passes, ms (answerOf: the machine's own; a state late against it by more than bar.lateMs put its row apart) */ leastAnswer?: number; /** … and the least any RUNNING state took, which the running states are read against (lateRows) */ leastAnswerRun?: number; rows: PriceRow[]; notes: string[] }
+/** a page of the run: a level on the look page, or on the page without it */
+interface Step { level: string; look: boolean }
+interface Carry { v: 6; from: string; startedAt: string; steps: Step[]; i: number; live: number; quality: string; secs: number; /** the second the world runs to before its read (0: held pictures only) */ run?: number; /** the look page's words, as the address that asked wrote them */ look: string[]; /** the visitor's flags every page of the run carries (ui/benchrun.ts carriedWords) */ keep: string[]; rows: PriceRow[]; notes: string[] }
+export interface PriceFile { version: 6; what: string; at: string; /** the build the pages were (the page's own word for it, as a benchmark's file has it; none where the page has none) */ commit?: string; startedAt: string; address: string; /** the words every look page of the run carried */ look: string[]; userAgent: string; /** the adapter the page drew on */ gpu: string; machine: BenchMachine; screen: string; dpr: number; quality: string; secs: number; bar: { gpuMore: number; frameMs: number; lagFrames: number; /** (from 11-05: a file from before has none, nor has a run that did not ask the rule) */ lateMs?: number; /** the second the world ran to before its read (none: held pictures only) */ runS?: number; ruled: string }; /** the least any state of the run took to answer beyond its own passes, ms (answerOf: the machine's own; a state late against it by more than bar.lateMs put its row apart) */ leastAnswer?: number; /** … and the least any RUNNING state took, which the running states are read against (lateRows) */ leastAnswerRun?: number; rows: PriceRow[]; notes: string[] }
 
-const read = (): Carry | null => { try { const t = sessionStorage.getItem(KEY), c = t ? JSON.parse(t) as Carry : null; return c && c.v === 7 && Array.isArray(c.rows) && Array.isArray(c.steps) && Array.isArray(c.look) && Array.isArray(c.keep) ? c : null; } catch { return null; } };
+const read = (): Carry | null => { try { const t = sessionStorage.getItem(KEY), c = t ? JSON.parse(t) as Carry : null; return c && c.v === 6 && Array.isArray(c.rows) && Array.isArray(c.steps) && Array.isArray(c.look) && Array.isArray(c.keep) ? c : null; } catch { return null; } };
 const write = (c: Carry): boolean => { try { sessionStorage.setItem(KEY, JSON.stringify(c)); return true; } catch { return false; } };
 const clear = (): void => { try { sessionStorage.removeItem(KEY); } catch { /* no store: nothing was kept */ } };
 
@@ -189,13 +199,13 @@ export function priceLookWords(search: string): string[] {
   const q = new URLSearchParams(search), own = search.replace(/^\?/, '').split('&').filter(p => !!p && lookWord(p));   // (with or without a `look` word beside them: every look page of a run is one, so `?pricelevels&geo=0` prices the look without that trial)
   return [...(own.some(p => /^look(=|$)/.test(p)) ? [] : ['look']), ...own, ...lookTrialsKept(q)];
 }
-/** the address a step is priced on: its mission's own words on the look's page with that page's words, the die pinned, no verdict kept of
+/** the address a step is priced on: its mission's own words (on the look page with that page's words, or with none of them), the die pinned, no verdict kept of
  *  the try and no replay filed (the run is nobody's play: as a benchmark's scene, ui/benchrun.ts), no sound, the preset, and its place in the run */
-export function priceSearch(level: string, i: number, quality: string, look: string[] = ['look'], keep: string[] = []): string {
+export function priceSearch(level: string, i: number, quality: string, look: string[] | null = ['look'], keep: string[] = []): string {
   const L = priceLevels().find(l => l.level === level); if (!L) throw new Error(`no level '${level}' on the mission list`);
   // (the page's own words for a held picture: the preset pinned and the ladder off, the window giving way to nobody. `auto` leaves the ladder to the page)
   const own = `${L.query.slice(1)}&seed=1&noverdict&nokeep&mute${quality === 'auto' ? '' : `&quality=${quality}&${HELD_LADDER_WORD}`}&${HELD_WINDOW_WORD}&${PRICE_RUN_KEY}=${i}`, has = new URLSearchParams(own);
-  return `?${[...[...look, ...keep].filter(p => !has.has(p.split('=')[0])), own].join('&')}`;   // (a word the page's own address says for itself — its preset, no sound — is not said twice)
+  return `?${[...[...(look ?? [`look=${LOOK_OLD}`]), ...keep].filter(p => !has.has(p.split('=')[0])), own].join('&')}`;   // (a word the page's own address says for itself — its preset, no sound — is not said twice. No look words = the page without the look, which since 2026-11-07 has to be asked for: scene/look.ts LOOK_OLD)
 }
 
 /** THE WORDS OF THE ASKING ADDRESS NO PAGE OF THE RUN CARRIES (the benchmark names its own the same way, ui/benchrun.ts `left`): every word that is neither
@@ -218,17 +228,17 @@ export function priceOverruled(search: string, level: string, quality: string, l
 export function priceLevelsPage(q: URLSearchParams, loc: Location = location): boolean {
   if (q.has(PRICE_KEY) && !q.has(PRICE_RUN_KEY)) {
     const all = priceLevels().map(l => l.level), asked = (q.get(PRICE_KEY) ?? '').split(',').map(s => s.trim()).filter(Boolean), levels = asked.length ? asked.filter(l => all.includes(l)) : all;
-    const secs = parseFloat(q.get('pricesecs') ?? ''), quality = q.get('quality') ?? 'high', run = parseFloat(q.get('pricelive') ?? '');
-    const steps = levels;   // (one page a level, its layers put off and on: the look has been the only picture since 2026-11-07)
+    const secs = parseFloat(q.get('pricesecs') ?? ''), quality = q.get('quality') ?? 'high', both = q.get('pricepage') !== '0', run = parseFloat(q.get('pricelive') ?? '');
+    const steps: Step[] = levels.flatMap(level => both ? [{ level, look: true }, { level, look: false }] : [{ level, look: true }]);
     const rest = loc.search.replace(/^\?/, '').split('&').filter(p => p && !PRICE_ASK_WORDS.includes(p.split('=')[0]));   // (the address that asked, with the run's own words off it: where the card's Close goes)
-    const c: Carry = { v: 7, from: loc.pathname + (rest.length ? '?' + rest.join('&') : '') + loc.hash, startedAt: new Date().toISOString(), steps, i: 0, live: -1, quality, secs: isFinite(secs) && secs > 0 ? secs : PRICE.measureS, ...(isFinite(run) && run >= 0 ? { run } : {}), look: priceLookWords(loc.search), keep: carriedWords(loc.search), rows: [],
+    const c: Carry = { v: 6, from: loc.pathname + (rest.length ? '?' + rest.join('&') : '') + loc.hash, startedAt: new Date().toISOString(), steps, i: 0, live: -1, quality, secs: isFinite(secs) && secs > 0 ? secs : PRICE.measureS, ...(isFinite(run) && run >= 0 ? { run } : {}), look: priceLookWords(loc.search), keep: carriedWords(loc.search), rows: [],
       notes: [...(asked.length && levels.length < asked.length ? [`not on the mission list, left out: ${asked.filter(l => !all.includes(l)).join(', ')}`] : []),
         ...(q.has('pricelive') && !(isFinite(run) && run >= 0) ? [`pricelive=${q.get('pricelive')} is no second of the game's clock: the world ran to the run's own ${PRICE.runS} s`] : [])] };
     if (levels.length) { const left = priceLeft(loc.search, levels[0], quality, c.look, c.keep), over = priceOverruled(loc.search, levels[0], quality, c.look, c.keep);
       if (left.length) c.notes.push(`every page was priced without ${left.join(', ')}: ${left.length > 1 ? 'words' : 'a word'} of the address that asked which no page of a run carries`);
       if (over.length) c.notes.push(`the address that asked said ${over.join(', ')}: a run's pages say ${over.length > 1 ? 'these' : 'this'} for themselves`); }
     if (!levels.length || !write(c) || !read()) { console.info(levels.length ? 'price every level: this tab keeps no session store, so a run cannot be carried from page to page' : `price every level: none of ${asked.join(', ')} is on the mission list (${all.join(' ')})`); return false; }
-    loc.replace(loc.pathname + priceSearch(steps[0], 0, quality, c.look, c.keep) + loc.hash);   // (the address that asked is not left in the tab's history, where Back would ask again)
+    loc.replace(loc.pathname + priceSearch(steps[0].level, 0, quality, steps[0].look ? c.look : null, c.keep) + loc.hash);   // (the address that asked is not left in the tab's history, where Back would ask again)
     return true;
   }
   const at = q.get(PRICE_RUN_KEY); if (at === null) return false;
@@ -351,8 +361,8 @@ export const lateBy = (w: PriceWin, least: number, flight = 2, waits = spansWait
  *  0 = not asked (the leasts null, the rows as they are) */
 export function lateRows(rows: PriceRow[], lateMs = PRICE.lateMs, flight = 2): { rows: PriceRow[]; least: number | null; leastRun: number | null } {
   type State = [what: string, w: PriceWin, waits: boolean];
-  const held = (r: PriceRow): State[] => [['the layers off', r.off, spansWait(r.off)], ['the layers on', r.on, spansWait(r.on)]];
-  const live = (r: PriceRow): State[] => r.run ? [['the look page with the world running', r.run.win, spansWait(r.on)]] : [];
+  const held = (r: PriceRow): State[] => [['the layers off', r.off, spansWait(r.off)], ['the layers on', r.on, spansWait(r.on)], ...(r.page ? [['the page without the look', r.page.win, spansWait(r.page.win)] as State] : [])];
+  const live = (r: PriceRow): State[] => r.run ? [['the look page with the world running', r.run.win, spansWait(r.on)], ...(r.page?.run ? [['the page without the look with the world running', r.page.run.win, spansWait(r.page.win)] as State] : [])] : [];   // (a row's running read is its look page's: no row without one has running states)
   const asked = lateMs > 0 && isFinite(lateMs), leastOf = (of: (r: PriceRow) => State[]): number | null => { const a = asked ? rows.flatMap(r => of(r).map(([, w, waits]) => answerOf(w, waits))).filter((v): v is number => v !== null) : []; return a.length ? Math.min(...a) : null; };
   const least = leastOf(held), leastRun = leastOf(live);
   if (least === null && leastRun === null) return { rows, least, leastRun };
@@ -363,12 +373,17 @@ export function lateRows(rows: PriceRow[], lateMs = PRICE.lateMs, flight = 2): {
 }
 /** `a` over `b`, less one (null: either is missing) */
 const more = (a: number | null, b: number | null): number | null => a !== null && b ? +(a / b - 1).toFixed(4) : null;
-/** A ROW WITH ITS RUNNING READ PUT ON IT, as the run writes it. `ran` undefined = the page has none, and the row stands as it was; `why` = the page's own
- *  reasons its running read is not to be judged */
-export function rowRun(r: PriceRow, ran: PriceRun | undefined, why: string[]): PriceRow {
-  return ran ? { ...r, run: ran, runApart: [...why, ...queuedWords(ran.win, 'the look page with the world running')] } : r;
+/** A ROW WITH A PAGE'S RUNNING READ PUT ON IT, as the run writes it (`look`: the look page's, else the page without the look's, whose `page` the row must
+ *  already have). `ran` undefined = that page has none; `why` = that page's own reasons its running read is not to be judged. The look page's read is
+ *  the row's; the other page's goes on `page`, and where the look page has a read and the other has none the pair cannot be judged, which is said */
+export function rowRun(r: PriceRow, look: boolean, ran: PriceRun | undefined, why: string[]): PriceRow {
+  if (look) return ran ? { ...r, run: ran, runApart: [...why, ...queuedWords(ran.win, 'the look page with the world running')] } : r;
+  // (the row's running read is the look page's. Where that page took none, the other page's has nothing to be read beside and is not kept: said in the notes)
+  if (!r.run) return ran ? { ...r, notes: [...r.notes, 'the page without the look was read with the world running and the look page was not: that read is not kept'] } : r;
+  const page = r.page && ran ? { ...r.page, run: ran } : r.page;
+  return { ...r, page, runApart: [...(r.runApart ?? []), ...why.map(t => `the page without the look: ${t}`), ...(ran ? queuedWords(ran.win, 'the page without the look with the world running') : ['the page without the look has no running read'])] };
 }
-/** A ROW JUDGED, as the run judges it once it is whole: a row whose states are not one picture is NOT JUDGED (an "under the bar" read off two
+/** A ROW JUDGED, as the run judges it once it is whole: a row whose states or pages are not one picture is NOT JUDGED (an "under the bar" read off two
  *  different pictures would be a verdict on nothing), and its running read is not judged then either, nor where that read has a reason of its own */
 export const judgeRow = (r: PriceRow, bar: PriceFile['bar']): PriceRow => ({ ...r, over: r.apart.length ? [] : priceOver(r, bar), ...(r.run ? { overRun: r.apart.length || r.runApart?.length ? [] : priceOverRun(r, bar) } : {}) });
 /** the second a run's pages run the world to before their running read (0: held pictures only): the asking address's, else the run's own */
@@ -378,6 +393,8 @@ const added = (on: PriceWin, base: PriceWin): number | null => on.all === null |
 /** what a page stands on of the ladder's */
 const rungOf = (w: PageHooks): PriceRung => { const S = w.__engine!.settings, Q = w.__quality, b = (v: boolean | undefined) => v === undefined ? null : !!v;
   return { preset: Q?.label ?? '', adaptive: b(Q?.adaptive), scale: +S.renderScale.toFixed(3), cap: S.maxInternalHeight ?? null, gatherThird: b(S.gatherThird), volQuarter: b(S.volQuarter), sharp: b(S.sharpDirect) }; };
+/** the levers two pages differ in, in words (none: one rung) */
+export const rungDiffers = (a: PriceRung, b: PriceRung): string[] => (['preset', 'scale', 'cap', 'gatherThird', 'volQuarter', 'sharp'] as const).filter(k => a[k] !== b[k]).map(k => `${k} ${a[k]} / ${b[k]}`);
 
 /** THIS PAGE'S PART OF THE RUN. Whatever it changes of the page (the world held, the ladder's sample, the layers, its own key) goes on `undo` and is put back
  *  however the part ends: by its next page, by Esc, or by a throw, which also takes the veil down (the same view's, not a new one's) */
@@ -388,19 +405,19 @@ async function leg(c: Carry, i: number, loc: Location) {
     // A PAGE WHOSE PART THREW (a step of the game, a lost device, a loop that stopped) IS ONE PAGE NOT PRICED, with its cause: the rows before it stand and
     // the run goes on to its next page, as from a page that failed any other way. Only where that cannot be done either is the run given up
     console.error('price every level: this page\'s part threw —', e);
-    try { await handOn(c, { ...c, i: i + 1, live: -1, notes: [...c.notes, `${c.steps[i]}: not priced — its part threw: ${String((e as Error)?.message ?? e).slice(0, 200)}`] }, i, loc, view); }
+    try { const S = c.steps[i]; await handOn(c, { ...c, i: i + 1, live: -1, notes: [...c.notes, `${S.level}${S.look ? '' : ', the page without the look'}: not priced — its part threw: ${String((e as Error)?.message ?? e).slice(0, 200)}`] }, i, loc, view); }
     catch (e2) { clear(); view?.progress(null); console.error('price every level: the run stopped —', e2); }
   }
   finally { while (undo.length) try { undo.pop()!(); } catch { /* the page is on its way out */ } }
 }
 async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof benchView>, undo: (() => void)[]) {
-  const w = window as unknown as PageHooks, L = priceLevels().find(l => l.level === c.steps[i])!, of = c.steps.length;
+  const w = window as unknown as PageHooks, S = c.steps[i], L = priceLevels().find(l => l.level === S.level)!, of = c.steps.length;
   Object.assign(PRICE, (window as unknown as { __priceOpts?: Partial<typeof PRICE> }).__priceOpts ?? {});   // (a check's own times: tools/qa/pricerun-page.cjs drives a run on an adapter whose frame is seconds long)
   let stopped = false; const onKey = (e: KeyboardEvent) => { if (e.code === 'Escape') stopped = true; }; addEventListener('keydown', onKey, true); undo.push(() => removeEventListener('keydown', onKey, true));
-  const say = (t: string) => view?.progress(`pricing the look, page ${i + 1} of ${of}: ${L.title} — ${t}   (hands off; Esc stops)`);
+  const say = (t: string) => view?.progress(`pricing the look, page ${i + 1} of ${of}: ${L.title}${S.look ? '' : ', without the look'} — ${t}   (hands off; Esc stops)`);
   say('loading');
   // THE PAGE'S LOOP IS HELD FROM BEFORE ITS BOOT (this runs on the page's one line, before the boot): the mission's clock then runs only by the steps of the
-  // play below. Held only from ready, a page played by itself for as long as its last shaders took to build behind the start
+  // play below, on both pages of a level. Held only from ready, a page played by itself for as long as its last shaders took to build behind the start
   // (a cold machine's first page was held at 4.2 s where the rest held at 4, 11-04; where a person sits the start does not wait for the later set at all)
   const loopWas = w.__pauseLoop; w.__pauseLoop = true; undo.push(() => { w.__pauseLoop = loopWas; });
   while (!w.__ready) await new Promise(r => setTimeout(r, 50));
@@ -414,7 +431,7 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
   // from sampling the held picture, as it takes no sample behind a card
   const Qh = w.__quality, held = !!Qh && Qh.auto === false && Qh.adaptive === false;
   if (held && c.quality !== 'auto' && Qh!.current !== undefined && Qh!.current !== c.quality) notes.push(`quality ${c.quality} was asked for and is no preset of this page: it stands on ${Qh!.current}, held, and the row is that preset's`);
-  if (!held) notes.push(!Qh || Qh.auto !== false ? 'the quality is not a pinned preset: its ladder was left to settle by itself, so the run\'s pages may stand on different rungs, and its frames are paced to the ladder\'s own rate' : 'the quality ladder\'s switch was on: it may have cut the scale before the picture was held');
+  if (!held) notes.push(!Qh || Qh.auto !== false ? 'the quality is not a pinned preset: its ladder was left to settle by itself, so a level\'s two pages may stand on different rungs, and its frames are paced to the ladder\'s own rate' : 'the quality ladder\'s switch was on: it may have cut the scale before the picture was held');
   const E = w.__engine!, size = () => `${E.width}×${E.height}@${E.settings.renderScale.toFixed(3)}${E.settings.sharpDirect ? ' sharp' : ''}`;
   const bag = (): Bag => ({ ms: [], gpu: [], all: [], work: [], passes: new Map(), drew: null }), acc = { off: bag(), on: bag() };
   let ran: PriceRun | undefined, heldMade = -1; const runApart: string[] = [];
@@ -434,7 +451,7 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
   if (!failed) {
     say('the mission stands up');
     const G = w.__game, pace = w.__timeScale ?? 1; undo.push(() => { w.__timeScale = pace; });
-    if (G && w.__runFrames) {   // (the page's loop has been paused since before its boot: the mission's clock stands at its start)
+    if (G && w.__runFrames) {   // (the page's loop has been paused since before its boot: the mission's clock stands at its start on both pages)
       // the page's warm-up, with the clock held (PRICE.playS: what it clears, it clears before anything is in the air). The page says when it has cleared
       // (`__prewarmed`); a build without that word is given `warmFrames` frames of its own
       const worked = () => w.__pace?.().worked, w0 = worked(); let seen = 0;
@@ -450,11 +467,11 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
     w.__timeScale = 0; w.__pauseLoop = loopWas; heldAt = G ? +G.time.toFixed(4) : null;   // the world holds still and the page's own loop draws it again: one picture, every state
     for (let t0 = performance.now(); w.__quality?.calibrating && !stopped;) { await frame(); if (performance.now() - t0 > 60000) { notes.push('auto quality was still measuring after a minute: priced where it stood'); break; } }
     if (!held && Qh && typeof Qh.sample === 'function') { Qh.sample = () => { }; undo.push(() => { delete Qh.sample; }); }   // (a ladder left on takes no sample of the held picture: nothing of the size, the scale or what is shed moves between the turns. A held one samples nothing anyway)
-    for (let t0 = performance.now(); !w.__perfsweep?.extra?.some(x => x.id.startsWith('look.')) && performance.now() - t0 < 5000;) await frame();   // (the look panel hands its rows to the sweep once the page's recorder is there: a few frames after ready)
+    if (S.look) for (let t0 = performance.now(); !w.__perfsweep?.extra?.some(x => x.id.startsWith('look.')) && performance.now() - t0 < 5000;) await frame();   // (the look panel hands its rows to the sweep once the page's recorder is there: a few frames after ready)
     { const behind = await caughtUp(w, () => stopped); if (behind !== null) notes.push(`the GPU's "done" still came ${behind.toFixed(0)} display frames late after ${PRICE.catchS} s of holding the picture`); }
     afterMade = made.n; const size0 = size();
-    for (let r = 0; r < PRICE.rounds && !failed && !stopped; r++) for (const state of ['off', 'on'] as const) {
-      say(`layers ${state}, turn ${r + 1} of ${PRICE.rounds}`);
+    for (let r = 0; r < PRICE.rounds && !failed && !stopped; r++) for (const state of S.look ? ['off', 'on'] as const : ['on'] as const) {
+      say(S.look ? `layers ${state}, turn ${r + 1} of ${PRICE.rounds}` : `turn ${r + 1} of ${PRICE.rounds}`);
       const sw = state === 'off' ? layersOff(w) : null; if (state === 'off' && !sw) { failed = 'this page has no way to put the look\'s layers off (its panel\'s rows are not on the sweep)'; break; }
       if (sw) { offBy = sw.how; undo.push(sw.back); }
       const got = await turn(w, c.secs, () => stopped); if (sw) { undo.pop(); sw.back(); }
@@ -498,12 +515,20 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
   if (heldMade < 0) heldMade = made.n;   // (a page that failed before its held read was whole: as it stands now)
   const next: Carry = { ...c, i: i + 1, live: -1 }, stood = { ...(facts ?? factsNow()), heldAt };
   const on = winOf(acc.on), bar = barOf(c), judged = (r: PriceRow): PriceRow => judgeRow(r, bar);
-  if (failed) next.notes = [...c.notes, `${L.level}: not priced — ${failed}`];
-  else { const off = winOf(acc.off);
+  if (failed) next.notes = [...c.notes, `${L.level}${S.look ? '' : ', the page without the look'}: not priced — ${failed}`];
+  else if (S.look) { const off = winOf(acc.off);
     if (off.gpu === null) notes.push('the browser stamps no GPU times here: the frame\'s time is all there is, and under the display\'s rate it says nothing');
-    next.rows = [...c.rows, judged(rowRun({ level: L.level, mission: L.mission, title: L.title, hour: L.hour, query: loc.search, ...stood, out: [E.outWidth, E.outHeight], off, on, gpuMore: more(on.gpu, off.gpu), allMore: added(on, off), msMore: more(on.ms, off.ms) ?? 0,
+    next.rows = [...c.rows, judged(rowRun({ level: L.level, mission: L.mission, title: L.title, hour: L.hour, query: loc.search, ...stood, out: [E.outWidth, E.outHeight], off, on, gpuMore: more(on.gpu, off.gpu), allMore: added(on, off), msMore: more(on.ms, off.ms) ?? 0, gpuOverPage: null, allOverPage: null, msOverPage: null,
       offBy, programs: { boot: bootMade, after: afterMade - bootMade, bySwitch: heldMade - afterMade }, boot: w.__boot?.line ?? '',
-      apart: [...apart, ...queuedWords(off, 'the layers off'), ...queuedWords(on, 'the layers on')], notes: [...notes, ...(spansWait(on) || spansWait(off) ? [`the g-buffer's stamp spans the wait for the display on this machine (with it ${on.all} ms, the compute passes alone ${on.gpu} ms, a frame every ${on.ms} ms): what the look's surface layers cost cannot be read here, and nothing is judged by "with the g-buffer"`] : [])], over: [] }, ran, runApart))]; }
+      apart: [...apart, ...queuedWords(off, 'the layers off'), ...queuedWords(on, 'the layers on')], notes: [...notes, ...(spansWait(on) || spansWait(off) ? [`the g-buffer's stamp spans the wait for the display on this machine (with it ${on.all} ms, the compute passes alone ${on.gpu} ms, a frame every ${on.ms} ms): what the look's surface layers cost cannot be read here, and nothing is judged by "with the g-buffer"`] : [])], over: [] }, true, ran, runApart))]; }
+  else { const at = c.rows.findIndex(r => r.level === L.level);   // (the page without the look: its turns go on the level's own row, beside the look page's)
+    if (at < 0) next.notes = [...c.notes, `${L.level}: the page without the look was timed (GPU ${on.gpu ?? '—'} ms, with the g-buffer ${on.all ?? '—'} ms, a frame every ${on.ms} ms) but its look page was not`];
+    else { const R = c.rows[at]; next.rows = c.rows.map((r, k) => k !== at ? r : judged(rowRun({ ...R, page: { win: on, ...stood, programs: { boot: bootMade, after: heldMade - bootMade }, boot: w.__boot?.line ?? '' }, gpuOverPage: more(R.on.gpu, on.gpu), allOverPage: added(R.on, on), msOverPage: more(R.on.ms, on.ms),
+        notes: [...R.notes, ...notes.map(t => `the page without the look: ${t}`)],
+        apart: [...R.apart, ...apart.map(t => `the page without the look: ${t}`), ...queuedWords(on, 'the page without the look'),
+          ...(stood.internal.join('×') !== R.internal.join('×') || stood.scale !== R.scale ? [`the page without the look drew at ${stood.internal.join('×')} ×${stood.scale}, the look page at ${R.internal.join('×')} ×${R.scale}: not the same size`] : []),
+          ...(rungDiffers(R.rung, stood.rung).length ? [`the two pages stood on different rungs of the quality ladder (the look page / the page without it): ${rungDiffers(R.rung, stood.rung).join(', ')}`] : []),
+          ...(heldAt !== R.heldAt ? [`the page without the look was held at ${heldAt ?? '—'} s of the game's clock, the look page at ${R.heldAt ?? '—'} s: not the same step`] : [])] }, false, ran, runApart))); } }
   await handOn(c, next, i, loc, view, bar);
 }
 /** THE BUILD THE PAGE IS, by the one small file a dev server carries (tools/serve.ts /qa/commit: the page's recorders ask the same file when they start);
@@ -517,14 +542,14 @@ const barOf = (c: Carry): PriceFile['bar'] => ({ gpuMore: PRICE.gpuMore, frameMs
 async function handOn(c: Carry, next: Carry, i: number, loc: Location, view: ReturnType<typeof benchView>, bar0: PriceFile['bar'] = barOf(c)) {
   const bar = { ...bar0 };
   const w = window as unknown as PageHooks, E = w.__engine, of = c.steps.length;
-  if (i + 1 < of) { if (!write(next)) throw new Error('the session store took no more'); loc.replace(loc.pathname + priceSearch(c.steps[i + 1], i + 1, c.quality, c.look, c.keep) + loc.hash); return; }
+  if (i + 1 < of) { if (!write(next)) throw new Error('the session store took no more'); const N = c.steps[i + 1]; loc.replace(loc.pathname + priceSearch(N.level, i + 1, c.quality, N.look ? c.look : null, c.keep) + loc.hash); return; }
   // ---- the last page: the table, and the one file
   clear(); view?.progress(null);
   const M = machineFacts(E?.gpu?.adapterInfo ?? '', E?.gpu?.adapterFallback, w.__quality?.displayHzPin || w.__quality?.displayHz || 0); await Promise.race([M.more, new Promise(r => setTimeout(r, 1500))]);   // (the adapter the page drew on and the display's rate, as the benchmark's file has them)
   const commit = w.__perfrec?.commit ?? await buildWord();
   const late = lateRows(next.rows, bar.lateMs ?? 0, w.__pace?.().flight ?? 2);   // (the whole run is here: a state whose answer came late against the run's own least puts its row apart, PRICE.lateMs)
   if (!late.rows.some(r => r.run)) delete bar.runS;   // (the second the world ran to is said only where a page took a running read: a run asked for one that no page could take has none)
-  const file: PriceFile = { version: 7, what: `twopointsix: what the look costs on every level, one held picture a level — the look page with its layers off, and with them on${bar.runS ? `; then with the world running, read after ${bar.runS} s of the game's clock` : ''} (ui/pricerun.ts)`, at: new Date().toISOString(), ...(commit ? { commit } : {}), startedAt: c.startedAt, address: c.from, look: c.look, userAgent: navigator.userAgent, gpu: M.now.webgpu, machine: M.now,
+  const file: PriceFile = { version: 6, what: `twopointsix: what the look costs on every level, one held picture a level — the page without the look, the look page with its layers off, and with them on${bar.runS ? `; then each page again with the world running, read after ${bar.runS} s of the game's clock` : ''} (ui/pricerun.ts)`, at: new Date().toISOString(), ...(commit ? { commit } : {}), startedAt: c.startedAt, address: c.from, look: c.look, userAgent: navigator.userAgent, gpu: M.now.webgpu, machine: M.now,
     screen: `${screen.width}×${screen.height}`, dpr: devicePixelRatio || 1, quality: c.quality, secs: c.secs, bar, ...(late.least !== null ? { leastAnswer: late.least } : {}), ...(late.leastRun !== null ? { leastAnswerRun: late.leastRun } : {}), rows: late.rows, notes: next.notes };
   // THE ONE FILE goes out by the page's one door (host/savefile.ts): to whoever listens, and to the browser as a download only where the address asks for the
   // door as it was (`?downloads=1`, a flag the run carries from the address that asked). The card says which, in the door's own words.
@@ -543,37 +568,52 @@ async function handOn(c: Carry, next: Carry, i: number, loc: Location, view: Ret
   if (view) view.show(report + said, () => loc.assign(c.from || loc.pathname), went); else console.info(report);
 }
 
-/** what puts a row over the bar, in words (none = it is under it). Everything is read against the layers off: the GPU's time by the game's own number, what
- *  the layers add over the compute passes with the g-buffer (where the stamps hold no display's wait), the frame's time, said with the layers off's beside
- *  it, as the machine's where that is over the bar too. THE ONE PLACE a row is judged: the run writes these words on the row (`over`), and the table of levels prints them */
+/** what puts a row over the bar, in words (none = it is under it). Everything is read against the page without the look where the run has one (the
+ *  budget's own "look off"), else against the layers off: the GPU's time by the game's own number, what the look adds over the compute passes with the g-buffer (where the
+ *  stamps hold no display's wait), the frame's time, said with the baseline's beside it, as the machine's where the baseline is
+ *  over the bar too. THE ONE PLACE a row is judged: the run writes these words on the row (`over`), and the table of levels prints them */
 export function priceOver(r: PriceRow, bar: PriceFile['bar']): string[] {
-  const pc = (v: number) => `${v >= 0 ? '+' : ''}${(100 * v).toFixed(1)}%`, top = `the bar is +${(100 * bar.gpuMore).toFixed(0)}%`, { on, off, gpuMore: gpu, allMore: all } = r;
-  return [gpu !== null && gpu > bar.gpuMore ? `on the GPU the look adds ${pc(gpu)} against its layers off (${off.gpu} → ${on.gpu} ms; ${top})` : '',
-    all !== null && all > bar.gpuMore ? `with the g-buffer counted the look adds ${((on.all ?? 0) - (off.all ?? 0)).toFixed(2)} ms, ${pc(all)} of the GPU's time with its layers off (${off.all} → ${on.all} ms, its GPU ms ${off.gpu}; ${top})` : '',
-    on.ms <= bar.frameMs ? '' : `a frame comes every ${on.ms.toFixed(1)} ms with the look on, ${off.ms.toFixed(1)} ms with its layers off${off.ms > bar.frameMs ? ': neither holds sixty a second at this preset on this machine' : ''} (the bar is ${bar.frameMs} ms)`,
+  return [...barLines({ on: r.on, base: r.page ? r.page.win : r.off, vs: r.page ? 'the page without the look' : 'its layers off', gpu: r.page ? r.gpuOverPage : r.gpuMore, all: r.page ? r.allOverPage : r.allMore }, bar),
     r.programs.bySwitch > 0 ? `switching the layers made ${r.programs.bySwitch} shader programs (the bar is none)` : ''].filter(Boolean);
 }
-/** … and what puts THE RUNNING READ over the bar (none = under it, or the row has no such read): the frame's time alone, because the running turn is timed with
- *  the layers on only and there is nothing to read its GPU time against. A switch's programs are the held read's line. NOBODY HAS RULED ON A RUNNING READ */
+/** THE BAR'S THREE LINES OF A READ, for the held read and the running one alike: `on` against `base` (null: nothing to read it against, so the frame's time
+ *  alone), `gpu` and `all` what the look adds by the game's own number and with the g-buffer counted (null: not judged), `lead` the read's own words in
+ *  front. The frame's time is said with the baseline's beside it, and the machine is named where the baseline is over the bar too. The GPU's lag is no
+ *  line of the budget: past PRICE.lagFrames the row is not judged at all (queuedWords) */
+function barLines(x: { on: PriceWin; base: PriceWin | null; vs: string; gpu: number | null; all: number | null; lead?: string }, bar: PriceFile['bar']): string[] {
+  const pc = (v: number) => `${v >= 0 ? '+' : ''}${(100 * v).toFixed(1)}%`, top = `the bar is +${(100 * bar.gpuMore).toFixed(0)}%`, { on, base, vs, gpu, all, lead } = x;
+  return [base && gpu !== null && gpu > bar.gpuMore ? `${lead ? `${lead}, ` : ''}on the GPU the look adds ${pc(gpu)} against ${vs} (${base.gpu} → ${on.gpu} ms; ${top})` : '',
+    base && all !== null && all > bar.gpuMore ? `${lead ? `${lead} and ` : 'with '}the g-buffer counted the look adds ${((on.all ?? 0) - (base.all ?? 0)).toFixed(2)} ms, ${pc(all)} of the GPU's time on ${vs} (${base.all} → ${on.all} ms, its GPU ms ${base.gpu}; ${top})` : '',
+    on.ms <= bar.frameMs ? '' : `${lead ? `${lead} ` : ''}a frame comes every ${on.ms.toFixed(1)} ms with the look on${base ? `, ${base.ms.toFixed(1)} ms on ${vs}${base.ms > bar.frameMs ? ': neither holds sixty a second at this preset on this machine' : ''}` : ''} (the bar is ${bar.frameMs} ms)`].filter(Boolean);
+}
+/** … and what puts THE RUNNING READ over the bar (none = under it, or the row has no such read): the same lines, read between the two pages with the
+ *  world running; the frame's time alone where the run has no page without the look. Nothing is judged by "with the g-buffer" where a HELD state of
+ *  either page says the g-buffer's stamp holds the display's wait: the running turn is paced to sixty and cannot show a faster display's wait itself.
+ *  A switch's programs are the held read's line. NOBODY HAS RULED ON A RUNNING READ: the lines are the bar's, read off another picture */
 export function priceOverRun(r: PriceRow, bar: PriceFile['bar']): string[] {
-  const a = r.run?.win; return !a || a.ms <= bar.frameMs ? [] : [`with the world running a frame comes every ${a.ms.toFixed(1)} ms with the look on (the bar is ${bar.frameMs} ms)`];
+  const a = r.run?.win, b = r.page?.run?.win ?? null; if (!a) return [];
+  return barLines({ on: a, base: b, vs: 'the page without the look', gpu: b ? more(a.gpu, b.gpu) : null, all: addedRun(r), lead: 'with the world running' }, bar);
 }
 /** the g-buffer's stamp holds the display's wait somewhere on this row: any state of it says so (spansWait) */
-export const waitsOn = (r: PriceRow): boolean => [r.off, r.on, r.run?.win].some(w => !!w && spansWait(w));
+export const waitsOn = (r: PriceRow): boolean => [r.off, r.on, r.page?.win, r.run?.win, r.page?.run?.win].some(w => !!w && spansWait(w));
+/** what the look adds with the world running, with the g-buffer counted, as a share of the other page's GPU's span (null: a page has no running read, or
+ *  the row has a display's wait in its stamps). ONE NUMBER for the running verdict and the report's column */
+export const addedRun = (r: PriceRow): number | null => r.run && r.page?.run && !waitsOn(r) ? added(r.run.win, r.page.run.win) : null;
 /** THE TABLE, as text: a line a level, the levels over the bar marked and named under it */
 export function priceReport(f: PriceFile): string {
   const pct = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `${v >= 0 ? '+' : ''}${(100 * v).toFixed(1)}%`).padStart(7), n = (v: number | null | undefined, d = 2) => (v === null || v === undefined ? '—' : v.toFixed(d)).padStart(7);
+  const three = (a: number | null | undefined, b: number | null, c: number | null) => `${n(a)} ${n(b)} ${n(c)}`;
   const runs = f.rows.some(r => !!r.run), sub = (a: number | null | undefined, b: number | null | undefined) => a === null || a === undefined || b === null || b === undefined ? null : a - b;
   // (a column is its title and its cell: both are padded to the wider, so the head and the lines stand in line whatever a column is called)
   const cols: [string, (r: PriceRow) => string, boolean?][] = [
     ['level', r => r.level, true], ['hour', r => r.hour, true], ['quality', r => r.quality, true], ['size', r => `${r.internal.join('×')} ×${r.scale.toFixed(2)}`, true],
-    ['GPU ms: layers off, on', r => `${n(r.off.gpu)} ${n(r.on.gpu)}`], ['on vs off', r => pct(r.gpuMore)],
-    ['with the g-buffer ms: off, on', r => `${n(r.off.all)} ${n(r.on.all)}`], ['look adds', r => pct(r.allMore)],
-    ['surface ms: off, on', r => `${n(r.off.passes?.[SURFACE])} ${n(r.on.passes?.[SURFACE])}`], ['GPU done, frames: off, on', r => `${n(r.off.lag, 1)} ${n(r.on.lag, 1)}`],
-    ['a frame every: off, on', r => `${n(r.off.ms, 1)} ${n(r.on.ms, 1)}`], ['programs', r => `${r.programs.boot}+${r.programs.after}+${r.programs.bySwitch}${r.apart.length ? '   NOT JUDGED' : r.over.length ? '   OVER' : ''}`, true],
-    // (THE WORLD RUNNING, where the run has such a read: the same span, what the running adds to the page's held picture, and the frame)
-    ...(runs ? [['RUNNING, with the g-buffer ms', r => n(r.run?.win.all)], ['running adds ms', r => waitsOn(r) ? n(null) : n(sub(r.run?.win.all, r.on.all))],
-      ['a frame every, running', r => n(r.run?.win.ms, 1)],
+    ['GPU ms: no look, layers off, on', r => three(r.page?.win.gpu, r.off.gpu, r.on.gpu)], ['on vs: no look, off', r => `${pct(r.gpuOverPage)} ${pct(r.gpuMore)}`],
+    ['with the g-buffer ms: no look, off, on', r => three(r.page?.win.all, r.off.all, r.on.all)], ['look adds: vs no look, off', r => `${pct(r.allOverPage)} ${pct(r.allMore)}`],
+    ['surface ms: off, on', r => `${n(r.off.passes?.[SURFACE])} ${n(r.on.passes?.[SURFACE])}`], ['GPU done, frames: no look, on', r => `${n(r.page?.win.lag, 1)} ${n(r.on.lag, 1)}`],
+    ['a frame every: no look, on', r => `${n(r.page?.win.ms, 1)} ${n(r.on.ms, 1)}`], ['programs', r => `${r.programs.boot}+${r.programs.after}+${r.programs.bySwitch}${r.apart.length ? '   NOT JUDGED' : r.over.length ? '   OVER' : ''}`, true],
+    // (THE WORLD RUNNING, where the run has such a read: the same span, what the running adds to each page, what the look adds between them, and the frame)
+    ...(runs ? [['RUNNING, with the g-buffer ms: no look, on', r => `${n(r.page?.run?.win.all)} ${n(r.run?.win.all)}`], ['running adds ms: no look, on', r => waitsOn(r) ? `${n(null)} ${n(null)}` : `${n(sub(r.page?.run?.win.all, r.page?.win.all))} ${n(sub(r.run?.win.all, r.on.all))}`],
+      ['look adds, running', r => pct(addedRun(r))], ['a frame every, running: no look, on', r => `${n(r.page?.run?.win.ms, 1)} ${n(r.run?.win.ms, 1)}`],
       ['running', r => !r.run ? 'no read' : r.apart.length || r.runApart?.length ? 'NOT JUDGED' : r.overRun?.length ? 'OVER' : '', true]] as [string, (r: PriceRow) => string, boolean?][] : [])];
   const cells = f.rows.map(r => cols.map(c => c[1](r))), wide = cols.map((c, k) => Math.max(c[0].length, ...cells.map(x => x[k].length)));
   const line = (x: string[]) => x.map((t, k) => cols[k][2] ? t.padEnd(wide[k]) : t.padStart(wide[k])).join(' | ').trimEnd();
@@ -582,18 +622,19 @@ export function priceReport(f: PriceFile): string {
   const aparts = f.rows.filter(r => r.apart.length).map(r => `  ${r.level}: ${r.apart.join('; ')}`);
   const oversRun = f.rows.filter(r => r.overRun?.length).map(r => `  ${r.level}: ${r.overRun!.join('; ')}`), apartsRun = f.rows.filter(r => r.runApart?.length).map(r => `  ${r.level}: ${r.runApart!.join('; ')}`);
   // the rungs the pages stood on, in words: one line where they are one, each named where they are not, and said plainly where a ladder was left on
-  const rungs = f.rows.map(r => r.rung), loose = rungs.filter(g => g.adaptive !== false).length;
+  const rungs = f.rows.flatMap(r => [r.rung, ...(r.page ? [r.page.rung] : [])]), loose = rungs.filter(g => g.adaptive !== false).length;
   const rungWords = [...new Set(rungs.map(g => `${g.preset} ×${g.scale}${g.cap ? `, at most ${g.cap} rows` : ''}, gather at a ${g.gatherThird ? 'third' : 'half'}, volumetrics at a ${g.volQuarter ? 'quarter' : 'half'}, sharp ${g.sharp ? 'on' : 'off'}`))];
   const rungLine = !rungs.length ? '' : loose ? `THE QUALITY LADDER WAS LEFT ON on ${loose} of ${rungs.length} pages (see the notes): the pages stood on ${rungWords.length === 1 ? 'one rung' : `${rungWords.length} rungs`} — ${rungWords.join(' | ')}.`
     : rungWords.length === 1 ? `EVERY PAGE stood on its preset's own rows with the quality ladder off: ${rungWords[0]}.` : `THE PAGES STOOD ON ${rungWords.length} RUNGS though the ladder was off: ${rungWords.join(' | ')}.`;
-  const waits = f.rows.some(r => spansWait(r.on) || spansWait(r.off));
+  const waits = f.rows.some(r => spansWait(r.on) || spansWait(r.off) || (r.page ? spansWait(r.page.win) : false));
   return [`WHAT THE LOOK COSTS, a held picture a level${runs ? ', and the world running' : ''}  ·  ${f.at.slice(0, 16).replace('T', ' ')} UTC${f.commit ? `  ·  build ${f.commit.slice(0, 8)}` : ''}`, `${f.gpu}${f.machine.hz ? `  ·  a ${f.machine.hz} Hz display` : ''}  ·  screen ${f.screen} ×${f.dpr}  ·  asked for quality ${f.quality}, ${f.secs} s a turn  ·  the look page's words: ${f.look.join('&')}`, f.userAgent, '',
     head, ...lines, '',
+    'no look    = the same mission on the page WITHOUT the look, held at the same step of the game\'s clock: the game as it is drawn today (the budget\'s own "look off").',
     'layers off = the look page with every layer of the look that has a cost of its own put off at once; on = the look page as it opens.',
     'GPU ms     = the GPU\'s busy span over the compute passes, as the page takes it everywhere: a render pass\'s stamps span the wait for the display, so they are left out,',
     '             and with them the look\'s surface layers (paint, relief, finish, weather, marks), which are shaded in one.',
     'with the g-buffer = the GPU\'s busy span over the compute passes AND the g-buffer\'s render pass: every stamped pass but the ones that draw to the display.',
-    '             "look adds" is what the layers put on it, as a share of the GPU ms with them off.',
+    '             "look adds" is what the look puts on it, as a share of the baseline\'s GPU ms.',
     waits ? '             ON THIS MACHINE the g-buffer\'s stamp spans the wait for the display (the span reads about a whole frame): nothing is judged by it, and what the' : '             (Good where the g-buffer\'s stamp holds no wait for the display, as here. Where it does, the run says so and judges nothing by it.)',
     ...(waits ? ['             look\'s surface layers cost cannot be read here.'] : []),
     'surface ms = the stamp of the g-buffer\'s pass alone, where the surface layers are shaded.',
@@ -605,10 +646,10 @@ export function priceReport(f: PriceFile): string {
     ...(runs ? [`RUNNING    = the same page after its held turns: played on by the same scripted steps to ${f.bar.runS ?? '—'} s of the game's clock, then timed with the world still stepping`,
       '             (falling snow and rain, a fire\'s smoke and the solver that moves it, the wind over the floor). A held picture steps none of these. Lights in fog',
       '             are in the held read already. NO FIGHT is in either read (a running read in which someone went to alert is not judged and is named below):',
-      '             a fight\'s smoke, grenades and charges are above both. The layers stay on through it, so its verdict is the frame\'s time alone: NOBODY HAS RULED ON IT.',
+      '             a fight\'s smoke, grenades and charges are above both. Its verdict reads the bar\'s own lines off this other picture: NOBODY HAS RULED ON IT.',
       ...(f.leastAnswerRun !== undefined ? [`             A running state's answer is read for lateness against the least among the running states (${f.leastAnswerRun} ms), not the held ones' (${f.leastAnswer ?? '—'} ms).`] : [])] : []),
-    'NOT JUDGED = the row\'s states were not one picture (the size, the scale or the sharp pass moved), or frames were queued ahead of the GPU, or its answer came late for no work of the state\'s own: said under the table.',
-    `OVER       = past the bar (${f.bar.ruled}): with the look on, GPU ms within ${(100 * f.bar.gpuMore).toFixed(0)}% of the layers off and no more than that added with the g-buffer counted, sixty frames a second held (a frame every ${f.bar.frameMs} ms or less), no program made by the switch.`,
+    'NOT JUDGED = the row\'s states or its two pages were not one picture (another size, rung or step of the game\'s clock), or frames were queued ahead of the GPU, or its answer came late for no work of the state\'s own: said under the table.',
+    `OVER       = past the bar (${f.bar.ruled}): with the look on, GPU ms within ${(100 * f.bar.gpuMore).toFixed(0)}% of no look and no more than that added with the g-buffer counted, sixty frames a second held (a frame every ${f.bar.frameMs} ms or less), no program made by the switch.`,
     ...(rungLine ? [rungLine] : []),
     ...(overs.length ? ['', 'Over the bar:', ...overs] : f.rows.length ? ['', aparts.length === f.rows.length ? 'No level was judged.' : aparts.length ? 'No level that was judged is over the bar.' : 'No level is over the bar.'] : ['', 'No level was priced.']),
     ...(aparts.length ? ['', 'Not judged, because the row is not one picture, its frames were queued or the GPU\'s answer came late (its numbers stand, no verdict is read off them):', ...aparts] : []),

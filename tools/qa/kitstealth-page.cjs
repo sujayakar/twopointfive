@@ -55,7 +55,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     const c = await read(page);
     line(c.card.cams === 1 && c.card.rings === 5 && noLent(c), 'THE PAGE OPENED AGAIN: the stealth card as it was left', say(c));
     line(errors.length === 0, 'no page error opened again', errors.join(' | ') || 'none'); await page.close(); }
-  if (part('loud')) { const { page, errors } = await open(`loadout=${LOUD}${BREAK}`, !part('own'));
+  if (part('loud')) { const { page, errors } = await open(`loadout=${LOUD}${BREAK}&oldfigure`, !part('own'));   // (&oldfigure: no second game for the door picture — on the software adapter it is minutes more a page)
     const d = await read(page); await shot(page, 'kitstealth-loud');
     line(d.card.frags === 1 && d.card.smoke === 1 && !d.card.rings && !d.card.cams && !d.card.wand && (!part('own') || d.store.stealth?.cams === 1), 'A LOUD MISSION\'S SCREEN ON THE SAME STORE: the loud card, and the stealth one still kept', say(d));
     line(errors.length === 0, 'no page error on the loud screen', errors.join(' | ') || 'none'); await page.close(); }

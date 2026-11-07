@@ -230,7 +230,7 @@ export class SmokeSystem implements SmokeSystemLike {
   /** THE SMOKE LAB'S STREAKS (host/smokelab.ts; nothing else writes them; pack below): bands = how dark a can's dark bands are (0‥0.6, a tint its smoke carries: the
    *  picture alone) · puffs = how unevenly it lets smoke out (0‥0.9: this one moves the density, so sight lines too) · every = seconds from one band to the next */
   readonly streak = { bands: 0, puffs: 0, every: 1.4 };
-  /** A ROUND THROUGH SMOKE (the smoke lab's rows; game/combat.ts asks with the Stirred smoke row up). The maintainer, 11-02: "also still can't see bullets leaving trails through
+  /** A ROUND THROUGH SMOKE (the smoke lab's rows; game/combat.ts asks on the look page only). The maintainer, 11-02: "also still can't see bullets leaving trails through
    *  the somke". A round used to be a row of soft shoves 7 cm across (a cell and a bit) for one step, which moved nothing anyone could see. It is ONE LINE now (`push`
    *  with `line`): the air within about `radius` of the path is brought up to `speed` along it, once (smoke.wgsl: never slowed, never turned, the same whatever the
    *  frame's length), and a long thin jet is nearly free of divergence, so the pressure step leaves it standing: it drags smoke after the round out of the far side

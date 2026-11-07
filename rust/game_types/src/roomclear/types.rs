@@ -102,7 +102,6 @@ pub struct RoomClearScenario {
     pub team_said: bool,
     pub clear_due: Vec<crate::scene_scenarios::StructureRoom>,
     pub clear_at: f64,
-    pub obj: Option<crate::roomclear::RoomClearScenarioObj>,
     pub layout: crate::nightbreach::NightBreachLayout,
 }
 impl RoomClearScenario {
@@ -125,7 +124,6 @@ impl RoomClearScenario {
             team_said: false,
             clear_due: Vec::new(),
             clear_at: f64::NAN,
-            obj: None,
             layout: crate::nightbreach::NightBreachLayout { name: String::from("room clear") },
         }
     }
@@ -148,27 +146,6 @@ impl RoomClearScenarioLogItem {
     }
 }
 impl Default for RoomClearScenarioLogItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/roomclear.ts:263 RoomClearScenario.obj, src/game/roomclear.ts:263)
-#[derive(Clone, Debug)]
-pub struct RoomClearScenarioObj {
-    pub text: String,
-    pub pos: Option<V3>,
-    pub ticks: bool,
-    pub hint: String,
-}
-impl RoomClearScenarioObj {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomClearScenarioObj {
-            text: String::new(),
-            pos: None,
-            ticks: false,
-            hint: String::new(),
-        }
-    }
-}
-impl Default for RoomClearScenarioObj { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomclear.ts:93 placeDefenders(S), src/game/roomclear.ts:93)
 #[derive(Clone, Debug)]

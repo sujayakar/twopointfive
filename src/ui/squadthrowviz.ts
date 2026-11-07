@@ -7,7 +7,7 @@ import type { Vec3 } from '../math/vec';
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import { SQUADTHROW, squadThrowPlans, squadThrowKept, type SquadThrowKept } from '../game/squadthrow';
-import { squad40Plans } from '../game/squad40';
+import { SQUAD40, squad40Plans } from '../game/squad40';
 import { FRAG } from '../game/frag';
 import { planDrawsThrows } from '../game/floorplan';
 
@@ -35,8 +35,8 @@ export class SquadThrowViz {
     this.root.appendChild(g); return E;
   }
   update(game: Game, cam: FollowCamera, w: number, h: number, edge: number) {
-    const throws = SQUADTHROW.on && !planDrawsThrows() ? squadThrowPlans(game, keptOf(game)) : [];   // (the floor plan draws them itself while it is on: ui/planfloor.ts · the preview's search is kept HERE, on the picture's side: nothing of the game's is written)
-    const plans = [...throws, ...squad40Plans(game)];   // (a teammate's 40 mm on order — game/squad40.ts: who fires, the arc, where it goes off; empty unless a card brought a round)
+    const throws = SQUADTHROW.draw && SQUADTHROW.on && !planDrawsThrows() ? squadThrowPlans(game, keptOf(game)) : [];   // (the floor plan draws them itself while it is on: ui/planfloor.ts · the preview's search is kept HERE, on the picture's side: nothing of the game's is written)
+    const plans = SQUAD40.draw ? [...throws, ...squad40Plans(game)] : throws;   // (a teammate's 40 mm on order — game/squad40.ts: who fires, the arc, where it goes off; empty unless a card brought a round)
     // one path per part: a point out of the view BREAKS the line there (never a chord across the gap), and a ring the view's edge cuts keeps the part of it in view
     const path = (pts: Vec3[] | undefined, closed: boolean) => {
       if (!pts || pts.length < 2) return '';

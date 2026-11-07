@@ -297,7 +297,7 @@ export async function musicCheck(): Promise<boolean> {
           if (now > 0.01 || sNow > 0.01) why.push(`a teammate's left-over wariness still holds the score up: ${now.toFixed(2)} wary, ${sNow.toFixed(2)} searching`);
           if (!BREAK && show !== 0.68) why.push(`a show's own scripted man no longer reads: ${show}`);
         }
-        const main = await Bun.file(`${ROOT}/src/main.ts`).text(); if (!/audio\.music\.intensity = game\.tension\(true\)/.test(main)) why.push('main.ts does not hand the score what they know of him');
+        const main = await Bun.file(`${ROOT}/src/main.ts`).text(); if (!/audio\.music\.intensity = game\.tension\(MUSIC\.theirs\)/.test(main)) why.push('main.ts does not hand the score the switch');
       } finally { console.log = say; console.warn = warn; console.error = err; if (REST && rest0) Object.assign(REST, rest0); }
       line(!why.length, "the team's nerves: with every defender down a teammate's left-over wariness does not hold the score up; a fight and a show's own men still read; switch off = as it was", why.join(' · ') || told);
     }

@@ -21,7 +21,7 @@
 // `?keeppage=1` asks: a page a script drives or steps (navigator.webdriver, `?paused`: the page tools read the page's own window), and a browser where a
 // frame drawing with its parent's device has not been seen (anything but the Chromium family). Always: the benchmark (its loads are what it times) and the
 // one-file page. A frame that finds itself under a shell of another build, or that must load whole, sends the tab there; a
-// frame sent to ANOTHER page of the site (the replay viewer, the listening pages) sends the tab there too, so that page has the address bar to itself.
+// frame sent to ANOTHER page of the site (the replay viewer, the workbench) sends the tab there too, so that page has the address bar to itself.
 // THE TEAM & KIT PICTURE IS ON THE SAME DEVICE (2026-11-07). It is a second game in a window inside the game's page, and it had a device of its own: every
 // program compiled again when the step opened, and what it compiled went with it. Under a shell it now takes a lease BESIDE its page's, on a seat of its
 // own (`Keeper.take(seat)`, `keepRole`'s `beside`): the visit's programs answer it, and the ones it adds (the picked mission's own) are there when Deploy

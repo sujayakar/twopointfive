@@ -7,6 +7,7 @@ import type { Box } from './boxes';
 import type { MarkingDef } from './markings';
 import type { LevelData, SurfacesData } from './levelData';
 import { loadLevel } from './levelLoad';
+import { parseLevelData } from './levelData';
 import officeData from '../../levels/office.json' with { type: 'json' };
 import officeReliefData from '../../levels/office-relief.json' with { type: 'json' };   // the office BEFORE the markings lane's demotion pass: main's boxes exactly (tools/level-export.ts --relief) — ?level=relief boots on it for the ray-cost A/B and the identity hashes
 import type { WeaponId } from '../game/weapons';   // (type only: what a route may hand its man — erased at runtime, so the scene layer still loads below the game's)
@@ -46,7 +47,7 @@ export const CIVILIAN_TASKS: CivilianTask[] = ['stand', 'wipe', 'bin', 'sit', 'c
  *  plus, per waypoint, the `tasks` done there while the wait runs and the yaw she does it `face`-ing (Character convention; absent = as she arrived). She starts
  *  on points[0]. Nothing else about her is authored: no weapon, no keys, no torch, no radio. */
 export interface CivilianDef { name: string; kind: 'cleaner' | 'worker'; tint: Vec3; tint2?: Vec3; points: Vec3[]; wait: number[]; tasks?: CivilianTask[]; face?: number[]; }
-/** The geometry and the talk for two men clearing one room (game/squad.ts RoomClear runs it,
+/** The geometry and the talk for two men clearing one room (game/squad.ts RoomClear runs it: the tour stages the conference room with its own plan in demo.ts,
  *  the live AI takes `Level.clearPlans` in a lockdown). #1 is the point man: he stacks on the jamb, breaches and takes the open side of the room deep; #2 covers
  *  high behind him, follows him in a beat later onto the door side (the dead space behind an inward-opening leaf is his), then drops to a knee and puts his
  *  light under the furniture while #1 pushes up his wall. Every position must be reachable in a straight, clear leg from the one before it (the nav grid knows
@@ -197,10 +198,26 @@ export interface Level {
     exfilOut?: [number, number] };
 }
 
+/** True when THIS boot's level came off the editor's stash (?level=local found one that parsed and validated). The file's validator cannot promise the GAME builds on a
+ *  document mid-edit — the drill plans ride through it untyped, a route may name a weapon that is not in the table, a mission block lose its rack — and a stash that
+ *  kills the Game constructor killed every boot until somebody cleared localStorage by hand (W8.11); so main.ts, when the constructor throws with this set, logs it and
+ *  builds again on buildBundledLevel(). Never set headless or in the bundle's ordinary boot. */
+export let bootedLocalLevel = false;
 /** The office level, loaded from its data (levels/office.json → loadLevel). A fresh Level every call: the game mutates the one it is given (box flags,
  *  the breach's scratch routes), so nothing may be shared between two boots. The JSON is imported, not fetched — Bun inlines it into the bundle, so the
  *  playable Artifact and the headless harness both get it with no extra asset. */
 export function buildLevel(): Level {
+  // ?level=local: boot on the level EDITOR's current document (editor ▶ writes it to localStorage 'twopointsix.editorLevel' and opens /?level=local — src/editor)
+  bootedLocalLevel = false;
+  if (typeof location !== 'undefined' && typeof localStorage !== 'undefined' && new URLSearchParams(location.search).get('level') === 'local') {
+    try { const t = localStorage.getItem('twopointsix.editorLevel'); if (t) { const lvl = loadLevel(parseLevelData(t)); bootedLocalLevel = true; return lvl; } }
+    catch (e) { console.error('?level=local: falling back to the bundled office —', e); }
+  }
+  return buildBundledLevel();
+}
+/** The bundled office whatever the stash holds (?level=relief still honoured): the ordinary boot, and the fallback above. */
+export function buildBundledLevel(): Level {
+  bootedLocalLevel = false;
   if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('level') === 'relief') return loadLevel(OFFICE_RELIEF_DATA);   // ?level=relief: the pre-demotion office (main's geometry, no markings)
   return loadLevel(OFFICE_DATA);
 }

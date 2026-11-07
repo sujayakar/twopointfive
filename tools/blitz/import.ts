@@ -12,6 +12,7 @@
 // AN ECHO (schema `echo`, hand2.cjs H.bridge.echo): a field Rust owns that the TypeScript cannot hold (a place in a level script, a memo a module keeps where the walk cannot write it, the copy of the box world in the module that
 // holds it). A whole apply keeps a copy of its bytes beside the object and writes nothing; the puppet's export writes those bytes back (export.ts). So a re-export after an apply is Rust's bytes everywhere, and such a field needs no class of its own in a host's compare.
 import GAME_REF_LIST from './game-ref.json';
+import CLASS_DEFAULTS from './class-defaults.json';
 import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS, forGame, classWord, isGameSide } from './export';
 import { rawKey, PUT_BACKS, isSeatTable } from '../../src/math/side';
 
@@ -89,6 +90,10 @@ const INVERSE: Record<string, Inverse> = {
 /** the classes that hold their game: a row of one that the apply makes has run no constructor, and its methods read `this.g` (gameref.py) */
 const GAME_REF = new Set<string>(GAME_REF_LIST as string[]);
 const CLASSES = new Map<string, object>();
+// WHAT A THING THE APPLY MAKES HOLDS BESIDE WHAT IT IS SENT (class-defaults.json, written by tools/wire/class-defaults.ts from the things a start builds): a leaf the class keeps in a typed array, so that it arrives as one, and each plain field no list carries, at its class's value. The picture's own half is a made hook's (rustgame.ts).
+const TYPED_LEAF: Record<string, any> = { Float32Array, Float64Array, Int32Array, Uint32Array, Int16Array, Uint16Array, Int8Array, Uint8Array };
+const DEFAULTS = CLASS_DEFAULTS as Record<string, { plain?: Record<string, unknown>; typed?: Record<string, [string, number]>; lists?: string[]; nan?: string[]; inf?: string[] }>;
+function fillDefaults(o: any, T: any): void { const d = DEFAULTS[`${T.mod}::${T.name}`]; if (!d) return; if (d.typed) for (const k in d.typed) { const [c, n] = d.typed[k]; o[k] = new TYPED_LEAF[c](n); } if (d.plain) for (const k in d.plain) o[k] = d.plain[k]; if (d.lists) for (const k of d.lists) o[k] = []; if (d.nan) for (const k of d.nan) o[k] = NaN; if (d.inf) for (const k of d.inf) o[k] = Infinity; }
 /** a row whose numbers are the block's columns reads them through these: what its constructor would have set, the row itself coming with the fields */
 const BLOCK_ROW: Record<string, (o: any, g: any) => void> = { Item: (o, g) => { o.S = g.items.store; o.things = g.props.all; o.kept = null; } };
 let looseOrder: object[] = [];
@@ -153,7 +158,7 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
   serialNext = dv.getUint32(I.p, true); I.p += 4; tail = I.p;
   // (WHETHER THE RUST GAME'S STATE MOVED AT ALL since the last export: no part and no row sent, the same table sizes. A host then has no need to look at the puppet again)
   if (pup && !pup.start) { const mainLen = dv.getUint32(0, true); let any = heads.some(h => h.entries > 0 || h.n !== h.whole); for (let k = 4; !any && k < 4 + mainLen; k++) if (blob[k]) any = true; R.changed = any; } else R.changed = true;
-  const t2 = performance.now(); R.phases.skim = t2 - t1; for (const { t, n } of heads) { const L = BK.listOf(t.id); if (L.length >= n) continue; const T0 = SCHEMA.types[t.ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')]; const proto = CLASSES.get(`${T0?.mod}::${T0?.name}`) ?? (L.length ? Object.getPrototypeOf(L[0]) : Object.prototype); const made: any[] = []; while (BK.listOf(t.id).length < n) { const o = Object.create(proto); BK.idOf(t.id, o); madeRows.add(o); made.push(o); } R.made[t.ts] = made.length; (c as any)[`made:${t.id}`] = made; }
+  const t2 = performance.now(); R.phases.skim = t2 - t1; for (const { t, n } of heads) { const L = BK.listOf(t.id); if (L.length >= n) continue; const T0 = SCHEMA.types[t.ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')]; const proto = CLASSES.get(`${T0?.mod}::${T0?.name}`) ?? (L.length ? Object.getPrototypeOf(L[0]) : Object.prototype); const made: any[] = []; while (BK.listOf(t.id).length < n) { const o = Object.create(proto); if (T0) fillDefaults(o, T0); BK.idOf(t.id, o); madeRows.add(o); made.push(o); } R.made[t.ts] = made.length; (c as any)[`made:${t.id}`] = made; }
 
   // ---- a new row that stands in the game's block, before its fields go in
   for (const { t } of heads) { const M = (c as any)[`made:${t.id}`]; const f = BLOCK_ROW[t.ts]; if (M && f) for (const o of M) f(o, g); }
@@ -218,7 +223,7 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
     if (isSide(cur)) { const want = new Set(keys); for (const k of cur.liveKeys()) if (!want.has(k)) cur.delete(k); for (const k of keys) if (k && typeof k === 'object') cur.add(k); orderSide(cur, keys); return cur; }
     if (typeof cur === 'object') { for (const k of Object.keys(cur)) delete cur[k]; for (const k of keys) cur[k] = true; return cur; }
     return cur; }
-  function newOf(T: any): any { const P = CLASSES.get(`${T.mod}::${T.name}`); const o = P ? Object.create(P) : {}; if (P && GAME_REF.has(T.name)) o.g = g; fresh.add(o); return o; }
+  function newOf(T: any): any { const P = CLASSES.get(`${T.mod}::${T.name}`); const o = P ? Object.create(P) : {}; if (P && GAME_REF.has(T.name)) o.g = g; fillDefaults(o, T); fresh.add(o); return o; }
   const fresh = new WeakSet<object>();
   function readType(n: N, cur: any): any { const T = SCHEMA.types[n.path];
     if (T.k === 'struct') { const o = cur && typeof cur === 'object' ? cur : newOf(T); const K = keep; if (K && !K.desc(n)) { keep = null; I.K = null; readStruct(T, o); keep = K; I.K = pup ? K : null; return o; } readStruct(T, o); return o; }

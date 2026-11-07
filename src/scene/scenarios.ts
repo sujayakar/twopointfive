@@ -386,7 +386,7 @@ export interface DefuseData {
  *  instance of the page opened `?kitview`): where the men stand and how the camera looks, per WAY IN. `ways` is indexed as the team starts are — [0] the
  *  structure's own `team`, [k] its `starts[k − 1]` (roomclear.ts RoomClearScenario.way). A way needs only its `door` (a door id): the slots, the camera and the
  *  lamps are worked out from the door's frame and the side the team starts on; every other key lays an authored value over that. Picture only: no rule of the
- *  game reads this block, and a level without it shows an empty column there. */
+ *  game reads this block, and a level without it shows the menu's standing man as before. */
 export interface KitViewLamp {
   /** RtLight.kind (render/lights.ts): 0 point · 1 spot · 3 area disk */
   kind: 0 | 1 | 3;

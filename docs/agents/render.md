@@ -1709,35 +1709,15 @@ row on his machine is the answer, and the word puts the count back on any machin
   pattern, its cut faces are bare. No check holds any of this. SEEN: on the software adapter only (the compound, squad of four, very low, 800×500, one seed,
   night and midday, 118 of 118 pipelines, no GPU or console error, the same two views with and without the word). Never seen on a GPU: the look at the play
   resolution, motion, shimmer under the temporal blend, the noise it adds to bounce light, and the cost (it is raster work, which no trusted timer covers).
-- **A FLOOR IS NOT STOOD OFF, AND THE BOUNCE KEEPS TO ITS ROOM (2026-11-07; the maintainer on his M4 Max, the pass at midday: "glowing near edges").** Two
-  faults of the picture, both of light taken from the room behind a wall. No switch: an estimator's own rule put right (`?look=walls:0` puts the second off).
-  (1) A WHITE LINE ALONG EVERY OUTER WALL'S FOOT. Three readers stand a point off its own face in plan before they ask where it is: the exposure by 30 cm
-  (`place_common.wgsl lookPlaceLevels`), the fog by 6 (`fogofwar.wgsl fowSeen`) and the fog's light classes by 6 (`common.wgsl fogSeenAt`). The normal is the SHADING
-  normal, and lying snow leans with its drift: at a wall's foot, at the wall, so the spot came out in the dark room and the snow took that room's gain (and,
-  with the fog drawn, an unseen hairline). All three now ask through one line, `common.wgsl standOff`: what looks up (N.y over 0.5) lies where it lies.
-  (2) LIGHT AT A ROOM'S UPPER CORNERS. The bounce's filter (`denoise.wgsl radAtrous`, the reflections' too: one text) tells surfaces apart by plane, normal and depth, and
-  an outer wall's one face runs through two rooms past the end of a partition: the brighter room's light came round the end. A texel whose place the floor plan knows
-  (`placeOf`, over `sideAt`) takes no tap of another place, nor of a texel that takes every tap (a doorway's, one the plan is silent on), which would hand
-  the far room on at the next pass. A wall's top is of neither room and is not asked.
-  NOT REACHED: a texel over 1.2 m from any other place takes every tap (a far camera or a low preset takes taps from past that); two places past a probe's reach may share a
-  number; a window's reveal and a wall's end are parted at their wall's line; the composite's 3 × 3 upsample of the bounce, the temporal clamp's 5 × 5 and the direct
-  light's filter do not ask. A FACE still steps its whole 30 cm, as before, so beside a doorway or a corner it can be answered by the far side.
-  CHECK: `wallsides-check` (11,616 points and leaning normals at three walls' feet, 913 of the far side stood off as it was, none now; 209 pairs across a
-  partition's ends, none blended, 418 of 418 within a room kept; the shaders' texts pinned); `fog-edge`'s text hash moved (its replica is handed the spot already stood off).
-  STILLS (software adapter, High, midday): 1,604 white pixels in the bounce's debug view at a wall's foot are none; the corner reads as the wall beside it (it was nearly
-  twice). Never seen on a GPU; not timed (up to nine plan reads a gather texel an iteration, only where a wall is near; the exposure reads no more than before).
 - **THE LOOK IS EVERY PAGE'S PICTURE (2026-11-07; the maintainer: "should we work on merging the new look too?", then "we can also get everything
   merged and then try to fix forward, especially as we clean everything up and simplify the code").** Until this the look's layers drew only with a
-  `look` row on the address (the bullet below, which still says how they are made). Now there is no switch: the engine draws it on every page, with what stands on it (the walls' two sides, the men's side rows, the smoke's shorter step, the
-  stirred smoke and the fire's column, the maps made on workers). `?look=key:value` still
+  `look` row on the address (the bullet below, which still says how they are made). Now `scene/look.ts lookPageOn` is true unless the address says
+  `?look=old`, and `main.ts` raises `lookConfig.on` and what stands on it (the walls' two sides, the men's side rows, the smoke's shorter step, the
+  stirred smoke and the fire's column, the maps made on workers) on every boot of the game's page. `?look=key:value` still
   opens the page with a row's amount; `?look=plain|0|off` is still the GWOT dress's word, read from any `look` word of the address, and no longer
-  decides the picture's layers. THE OTHER WAY IS DELETED (the same day, the second commit): the prelude's `const LOOK`, its 35 branches in eleven
-  shaders, every reader of `lookConfig.on` in the page, the stub functions the g-buffer was given without it, `?look=old` (which drew the picture as it was
-  for a few hours of the build) and the pricing run's second page. The tools' page boot counts 47 distinct shader texts over its settings (one of them with the walls row
-  down) where it counted 53. `lookConfig.on` ITSELF IS GONE from both sides (the Rust
-  game had never heard it, so from the day it played the page a fire had no hot air and a bullet's wake through smoke was the soft dots).
-  The lines tagged `THE LOOK'S OWN LINE` are passed over by `snowglow-check` and `snowsparkle-check`; many comments
-  still say "on the look page" of what is on every page.
+  decides the picture's layers. `?look=old` IS A TEMPORARY WORD: it is the second way to draw the picture and goes with the commit that deletes
+  that way (the prelude's `LOOK` constant and every branch on it). A benchmark or a pricing run asked for on it carries it to every page
+  (`ui/benchrun.ts flags`, `ui/pricerun.ts priceSearch`), and the first scene's notes say so.
   THE PICTURE ONLY. The look's own page did more than draw, and each of those things changes what the page's game PLAYS, which a co-op server, a
   headless run and every check do not have. They stay with THE LOOK LAB (`scene/look.ts lookLabOn` → `LOOK_LAB.on`, read once at boot): a page
   that asks for the look BY NAME, exactly the pages that were the look's before (`/look`, `/smokelab`, `?look`, `?look=key:value`, a one-file
@@ -1761,14 +1741,14 @@ row on his machine is the answer, and the word puts the count back on any machin
   different ground. THE RULE THIS TEACHES: before a switch is called the picture's, look for its readers under `src/scene`, `src/game` and
   `rust/`, and run `PORT=<dev server> node tools/qa/mpclient-page.cjs`: its `wider word` line is the check that a page's game is its server's.
   If rays should see the hills on every page, that is a rule of the game with its own registered switch, laid on every machine from the recipe.
-  No `FROZEN_HOLDS` row, no knob table, no journal key. THE TOOLS' PAGE BOOT (`tools/qa/pageboot.ts`): its settings are `title` (the page as it opens), `snow` and `smokelab`.
-  CHECKS: `bench-check` (a run with no look word carries the
+  NOT THE LOOK'S YET: the replay viewer (`/replay`, `src/replay/viewer.ts`) and the workbench (`src/workbench.ts`) have their own boots and never
+  raised `lookConfig.on`: they draw the old picture until the constant goes. The headless stands have no picture and are as they were. No
+  `FROZEN_HOLDS` row, no knob table, no journal key: no state a step hashes reads the look (the stirred smoke and the fire's column are the page's
+  smoke, kept on the host). THE TOOLS' PAGE BOOT (`tools/qa/pageboot.ts`) still calls the look-off engine `title` and the page as it opens `look`:
+  its settings are re-named with the deletion, and until then a check that says `title` is reading the old picture's texts.
+  CHECKS: `bench-check` (a run on the old picture carries `look=old` to every scene and no word of the look's; a run with no look word carries the
   picture's trial and nothing of the lab's; the kit, the panel and the notes are pinned in `main.ts`'s text), `pricerun-check`, `smokelook-check`,
-  `stuff-check`, `kept-check`; both typechecks. No break word: there is no off side.
-  THE DELETION HELD TO THE COMMIT BEFORE IT: `tools/qa/draw-equal.cjs` (software adapter, High), the office at night and the squad's cast, drawn frames 2
-  and 4, 4 of 4 captures EQUAL, and again on the tree that was sent with the rain at dusk beside them, 6 of 6; `tools/qa/wgsl-compile.cjs`, every boot text compiles with no warning; `thrice` and night-breach seed 1 the same; co-op's wider word on
-  732 of 732 word ticks (one seat). Not drawn: a fire, smoke, a tape played back. Never seen on a GPU.
-  THE FIRST COMMIT, WHEN BOTH WAYS STOOD:
+  `stuff-check`, `kept-check`; both typechecks. No break word of its own: `?look=old` is the off side and it is drawn below.
   READ ON THE SOFTWARE ADAPTER (headless Chromium 153, 640 by 360, High, the office at night; the merge's `pagedraw.cjs`, two frames drawn and read
   back): the page with no word draws and keeps its device (158,323 and 159,234 of 230,400 pixels lit), `?look=old` draws the old picture (146,060
   and 149,491); these two on the tree before the lab was parted from the picture, the page's source otherwise this commit's. On this commit
@@ -2300,7 +2280,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   foot, a wall's top) had no place and took its level from the cache at the pixel: it now takes the place on its own side of the wall's line (`sideOut`, up to four
   cells out), under the row above.
 - **STONES GATHER ALONG A LONG FACE, NOT ROUND A THING PUT DOWN** (11-04, in place of 11-03's shelter rule; `render/wear.ts buildWearMap(level, nav, longFoot)`,
-  `faceRuns`, `bandByFaces`). THE SWITCH: on, and `?longfoot=0` is the band as every
+  `faceRuns`, `bandByFaces`). THE SWITCH: on the look's page only (`game.ts` asks for it when `lookConfig.on`), and `?longfoot=0` there is the band as every
   other page has it. Every other page has the traffic map's wall channel byte for byte as it always was (`bandByOccupancy`, the old code whole; checked
   against the old file on all 58 level files, and `probes.ts materials-wear` holds its sum on the office), so `detail.wgsl`'s grime band in the build does
   not move. The maintainer, 11-03 on the smoke lab's shed with the look on: "circles on ground near table legs are weird"; his 11-04 shots of a dressed yard
@@ -3622,7 +3602,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   already that fast is left alone, nothing is slowed or turned, and a second round down the same line adds nothing while the first's jet stands. `wake.push` 4
   = how flat the jet's top is (full speed out to 1.18 of `wake.radius` 0.12 m). A long thin jet is nearly free of divergence, so the pressure step leaves it
   standing: it drags smoke after the round out of the far side of a plume, pulls clear air in at the near side, and its edges roll up. LOOK PAGE ONLY
-  (`combat.ts` asks with the look panel's Stirred smoke row up; with that row at 0, and with the lab's row "how fast a
+  (`combat.ts` asks under `lookConfig.on` with the look panel's Stirred smoke row up; anywhere else, with that row at 0, and with the lab's row "how fast a
   round drags the air" at 0, the dots as they were), so the build's page is as it was. No frozen row: a headless run has no smoke system, and nothing here is
   the simulation's state. It does change what a guard sees through smoke on the look page (the same field is the sight line). Check:
   `bun run tools/qa/smokeline-check.ts` (the cut run as it stands over a system that is only its lists, the distance and the brick reach mirrored, the brick
@@ -3963,7 +3943,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   its red, the smoke crossing the blue front is lit by it (brighter and cooler there than the plume's far side). NOT SEEN: a GPU; the compound or
   the records office by day; midday or overcast anywhere.
 - **THE LOOK PAGE WITH A GEOMETRY TRIAL ON IS COMPILED WITHOUT THE ROUND TEST** (`main.ts urlFlagsBeforeEngine`: `roundConfig.gpu` is false when
-  a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
+  `lookConfig.on` and a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
   page lost its SOFTWARE device on its first drawn frame ("A valid external Instance reference no longer exists") where the plain page at the same
   quality drew. Runs that settled it: look with every trial off and `round=0` draws; look with every trial on and `round=0` draws; look with every
   trial on and rounds compiled in dies. The reading (the software adapter's room, above; not bisected further): a trial keeps the cut twin of every ray
@@ -4260,7 +4240,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   paint's row's, and the box stood up for it carries it. A TONE OF A PALETTE ROW is made of what the row is: the kit's `toned` (`gwotKit.ts`)
   and the snow levels' rock (`tools/levels/snowRock.ts`) hand their numbers through `tonedAs`, which is how ground dressing, stains, worn
   paths and cut rock keep their earth, gravel and slab. The kit's wall-face and yard pieces (the look page's hand-built trials until 11-05) are made of
-  palette rows and say their words, their trim in a paint of its own included (`gwotKit.ts trimIn`; `stuff-check` line 12). The editor kept, copied, set and showed a paint's word (`editor/paint.ts`, the paint panel's 'made of' row: gone with the level editor, and `stuff-check`'s line 13 with it), a
+  palette rows and say their words, their trim in a paint of its own included (`gwotKit.ts trimIn`; `stuff-check` line 12). The editor keeps, copies, sets and shows a paint's word (`editor/paint.ts`, the paint panel's 'made of' row), a
   said plain included; a blank document's paints say theirs.
   LEVEL FILES: every level file of the build is its generator's output, so each was written again by its generator
   (`tools/levels/export.ts`, `tools/level-export.ts`). `tools/levels/stuff-bake.ts` brings forward a file laid WITHOUT its generator (the

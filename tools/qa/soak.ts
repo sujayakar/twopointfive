@@ -471,7 +471,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
       return `stage ${m.stage} (nothing to do)`;
     } },
     { name: 'ai-toggle', perMin: 0.1, run: () => { game.aiEnabled = false; aiOffUntil = game.time + rr(1, 8); return `off for ${(aiOffUntil - game.time).toFixed(1)}s`; } },
-    { name: 'tour-blip', perMin: 0.1, when: () => !tour, run: () => {   // what a show's start and stop do to the game, minus the beats
+    { name: 'tour-blip', perMin: 0.1, when: () => !tour, run: () => {   // what Demo.start / stop do to the game, minus the beats
       const saved = { ai: game.aiEnabled, god: game.godMode, invisible: game.playerInvisible, pos: v3.copy(game.player.char.pos) };
       game.quietUtility = true; game.clearAftermath(); releaseKeys(); cursorDoor = null;
       if (game.player.down) { game.restartEncounter(); teleportedThisFrame = true; missionRef = game.mission; stageIdx = 0; } else game.resetGuards();

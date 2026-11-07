@@ -8,7 +8,7 @@ export const BENCH_RUN_WORD = 'benchrun', PRICE_RUN_WORD = 'pricerun';
 /** the words that ASK for a run: the benchmark's, the pricing run's */
 export const BENCH_WORD = 'bench', PRICE_LEVELS_WORD = 'pricelevels';
 /** … and the words that shape a pricing run on the address that asks (ui/pricerun.ts): a run's own, never a mission's */
-export const PRICE_ASK_WORDS: readonly string[] = [PRICE_LEVELS_WORD, 'pricesecs', 'pricelive', /* retired: it asked for no second page, and an old saved address still carries it */ 'pricepage'];
+export const PRICE_ASK_WORDS: readonly string[] = [PRICE_LEVELS_WORD, 'pricesecs', 'pricepage', 'pricelive'];
 export const RUN_PAGE_WORDS: readonly string[] = [BENCH_RUN_WORD, PRICE_RUN_WORD];
 export const runPage = (q: URLSearchParams): boolean => RUN_PAGE_WORDS.some(w => q.has(w));
 /** A RUN KEEPS ITS OWN PAGE (host/keeppage.ts `own`): the address that asks for one and every page of it load whole, each a boot of its own — that boot is what a
@@ -16,7 +16,7 @@ export const runPage = (q: URLSearchParams): boolean => RUN_PAGE_WORDS.some(w =>
 export const ownPage = (q: URLSearchParams): boolean => q.has(BENCH_WORD) || q.has(PRICE_LEVELS_WORD) || runPage(q);
 /** … and A PAGE WHOSE PICTURE IS PRICED: a level of the pricing run. Its address says the page's own words for a held picture (`quality=<preset>&adapt=0`:
  *  the ladder's one reader pins the preset and switches the ladder off before a frame is sampled; `giveway=0`: its window gives way to nobody), so nothing
- *  of the picture moves with this machine's frame rate and a level stands on the same rows on every run (ui/pricerun.ts ONE RUNG). What the page still asks
+ *  of the picture moves with this machine's frame rate and a level's two pages stand on the same rows (ui/pricerun.ts ONE RUNG). What the page still asks
  *  here: its sandbox row stands off for the page's whole life. Not the benchmark's scene: what its ladder does with the scene is part of what it reports. */
 export const heldPage = (q: URLSearchParams): boolean => q.has(PRICE_RUN_WORD);
 /** … the two words its address says for that, as the page reads them (ui/quality.ts visit; host/pace.ts giveway) · and their names: a mission picked from a

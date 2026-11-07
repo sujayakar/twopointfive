@@ -2,6 +2,7 @@
 // captures + ×k crops + simple texture metrics, so today's build and older builds served beside can be compared frame for frame (ONE CONFIG PER FRESH BOOT:
 // navigate `?paused&quality=high&mute`, then ONE of the stagings below, then capture — never two stagings in one page).
 //   await import('/qa/smoke-look.js'); await __sk.boot();
+//   await __sk.tour({ frames })                     the REAL tour stop 7 (seeded restart, __demo.start + goto(7)), stepped `frames` at 1/60
 //   await __sk.door({ dist, yaw, dev, freeze })     the same doorway plume restaged under a PINNED camera (no puppet, no torches): canister at the sill, `dev` s of growth, frozen or live
 //   await __sk.lot({ lamp: 'e'|'s', storm, dist, yaw, dev, freeze })   a canister under a sodium street lamp at night
 //   await __sk.run(n)                                step n frames (serialized every 8)
@@ -40,6 +41,17 @@
     g.guards.forEach((gd, i) => { gd.hold = true; gd.lightDeadUntil = 1e9; gd.char.anim.phase = 0; });
     g.player.char.anim.phase = 0;
     const A = window.__anim; if (A) { A.LIFE.on = 0; A.FEET.on = 0; }
+  }
+  /** the REAL tour stop: seeded restart, the tour started and jumped to stop 7, stepped `frames` (the can leaves his hand at ~1.6 s, the doorway is full by ~7 s, the shot cuts at 15 s) */
+  async function tour(opts = {}) {
+    const g = G(); const frames = opts.frames ?? 480;
+    seed(opts.seed ?? 4242); g.restartEncounter(); restarted = true;
+    for (const gd of g.guards) gd.char.anim.phase = 0; g.player.char.anim.phase = 0;
+    E().passes.grain = 0;
+    window.__demo.start(); window.__demo.goto(7);
+    window.__resetClock(); E().passes.grain = 0;
+    await run(frames);
+    return { shotT: window.__demo.shotT, cam: camInfo(), ...brief() };
   }
   function camInfo() { const c = window.__cam; return { target: Array.from(c.target).map(v => +v.toFixed(2)), yaw: +(c.yaw / DEG).toFixed(1), pitch: +(c.pitch / DEG).toFixed(1), dist: +c.distance.toFixed(2) }; }
   function brief() { const s = state(); return { internal: s.internal, output: s.output, scale: s.scale, volQuarter: s.volQuarter, calm: s.calm, bricks: s.bricks, frameIdx: s.frameIdx }; }
@@ -197,6 +209,6 @@
     return { frames: n, errors: errs.length, errs: errs.slice(0, 8) };
   }
   function project(p) { const v = document.getElementById('view'); const r = window.__cam.project(p, v.clientWidth, v.clientHeight); const W = E().outWidth || E().width, H = E().outHeight || E().height; return [Math.round(r[0] * W / v.clientWidth), Math.round(r[1] * H / v.clientHeight), r[2]]; }
-  window.__sk = { K, seed, settle, boot, state, door, lot, run, frame, motionFrame, readback, crop, full, hash, metrics, temporal, take, costAB, project, camInfo, lumAt, cropStretch, colProfile, orbitFrame, validate };
-  return 'smoke-look ready: __sk.boot() then ONE of door / lot, then frame / crop / metrics';
+  window.__sk = { K, seed, settle, boot, state, tour, door, lot, run, frame, motionFrame, readback, crop, full, hash, metrics, temporal, take, costAB, project, camInfo, lumAt, cropStretch, colProfile, orbitFrame, validate };
+  return 'smoke-look ready: __sk.boot() then ONE of tour / door / lot, then frame / crop / metrics';
 })();

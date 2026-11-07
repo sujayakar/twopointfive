@@ -13,7 +13,7 @@ struct PoolR { hdr: array<vec4u, 4>, parts: array<Particle> };
 @group(1) @binding(3) var volTex: texture_2d<f32>;   // rgb in-scatter, a transmittance toward the surface (volumetrics.wgsl), 1/frame.lossyCfg.y res
 @group(1) @binding(4) var sceneTex: texture_2d<f32>;  // PARTICLE RAIN v2: the composite's copy (render/passes.ts hdrCopy, this pass's own size) the rain streaks REFRACT — a 1×1 black stand-in when em.rainCfgC.x is 0
 @group(1) @binding(5) var sceneSamp: sampler;         // … read bilinear
-@group(1) @binding(6) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this text). Zeros = none
+@group(1) @binding(6) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this text). Zeros = none, on every other page, and never read there
 /** A PARTICLE'S LIGHT IS SHOWN BY ITS PLACE, AS THE FLOOR IT LIES ON IS (the look page under the one exposure model; the maintainer on his GPU, 11-04:
  *  "GPU particles (like casings) look like they're not lit"). The composite shows each place's surfaces by the place's gain and the smoke march its air;
  *  the splat came after both with no gain at all, so brass on the floor of a room shown thirty times brighter was drawn at a thirtieth of the floor it
@@ -28,7 +28,7 @@ struct PoolR { hdr: array<vec4u, 4>, parts: array<Particle> };
  *  where a brighter place is a stride away, which is the only place the row asks. (And on the top of a mass so wide that no cell within four holds a
  *  level, where a point is its own place, the particle's level is its light as handed on, the bounce still scaled.) ONE CALL, where the vertex stage hands its answer on (vs below), so
  *  no kind's own writing can miss it. A SPARK'S LIGHT IS ITS OWN and is sent on as it was: what a glowing thing is shown by (a lamp's face, a screen, a
- *  spark) is one question, not asked yet. `c` unchanged with the shade row down and until the field is live. */
+ *  spark) is one question, not asked yet. `c` unchanged off the look page, with the shade row down and until the field is live. */
 var<private> partAt: vec4f;   // where the particle of this vertex is (xyz) and the share of the light on it that it sends back (w: its albedo's brightness; 1 for glass and water, which send on what they are handed; 0 = no particle, or one whose light is its own)
 fn partShow(X: vec3f, c: vec3f, alb: f32) -> vec3f {
   if (!(frame.shadeCfg.x > 0.0 && frame.eyeCfg.w < 0.0)) { return c; }
@@ -107,7 +107,7 @@ fn shardVertex(p: Particle, corner: u32, k1: vec4f) -> VOut {
 @vertex fn vs(@builtin(vertex_index) vi: u32) -> VOut {
   partAt = vec4f(0.0);
   var o = vsKind(vi);
-  if (partAt.w > 0.0) { o.shade = partShow(partAt.xyz, o.shade, partAt.w); }   // (THE LOOK'S OWN LINE: a lit particle's light as its place shows it, partShow above)
+  if (LOOK) { if (partAt.w > 0.0) { o.shade = partShow(partAt.xyz, o.shade, partAt.w); } }   // (THE LOOK PROTOTYPE: a lit particle's light as its place shows it, partShow above; never compiled in off the look page)
   return o;
 }
 fn vsKind(vi: u32) -> VOut {

@@ -926,7 +926,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   arm on deals 4, 7, 8: a mate 0.5 m from the door). MENDED 2026-11-07 for the closing leaf: `digin hand_waits` holds a man with furniture while `doors_coming_home` says the leaf is still on its
   way (a pulled leaf from wide open takes about five seconds, and doors stay where they are left, so many doors he brings furniture to are open); he still lets go of a leaf a body has stopped on the clock, and a man who
   only came to shut it leaves on the clock as before (the pull finishes without him). No switch. Native: `rust/game_start/tests/offers.rs` (red before on the compound's bunk room: 'to cover', no wedge).
-  `DIGIN.shutOpen` (7 s, pushes home, pulls again, other doors) stays off: it overshot the barracks. Not measured: what this does to a tally of wedges or wins on any level. Never seen on a GPU, never played by a person;
+  `DIGIN.shutOpen` (7 s, pushes home, pulls again, other doors) stays off: it overshot the barracks. Measured with `hold`, before against after, all five hands, seeds 1 and 2, 240 s, standard difficulty, on compound, barracks and depot: 0 of 30 runs part, so wedges (compound 32, barracks 14, depot 0) and who is left standing are unchanged. Doors mostly start shut and men dig in before anyone has opened them, so these runs never reach the case; the bunk room in the test stages it. Hard not run. Never seen on a GPU, never played by a person;
   (2) nothing about which furniture he picks or where he pushes from.
 - **A calm guard with a long wait in the dark sits down and dozes (10-13)** (`src/game/doze.ts`, `DOZE.on`; page on, `?nodoze`; frozen stand off, `TPS_DOZE=1`;
   on the shipped stand `TPS_DOZE=0` puts it off; a `FROZEN_HOLDS` row; table in `knobs.ts` + `JOURNAL_KNOBS`, a recording from before the key replays with it
@@ -1073,13 +1073,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   wall changes the way they come. No man is added and nobody's eyes, aim or health change. A pure function: no dice, no clock, no state (nothing for a
   checkpoint). WHAT IT COSTS, known: with squads staged the floor is a squads level to every rule that asks (`squadsLive`): the press stands down, men
   dig in on their squad's word, and HARD on these eight levels is the drilled garrison and no longer "the defenders come at you together" — the mission
-  sheet says so (`difficulty.ts squadsHeld`, read by ui/missions.ts; `squadsOf` stays the row's fact about its level FILE). The
+  sheet says so (`difficulty.ts squadsHeld`, read by ui/picks.ts and ui/missions.ts; `squadsOf` stays the row's fact about its level FILE). The
   maintainer's call is asked on that. With the enemy kit on stun charges at standard, the office room clear's defenders put 1 charge through a door in 8 scripted runs
   where one pool puts three or more (it is the press that carries them, and the press stands down): the kit lever does little on these levels while
   the rule is on (`levers-run` holds the rule off for its two tallies: it measures the kit lever on one pool). SWITCH: ON in the page (`?nosquaddeal`; the debugger
   row 'enemies are in squads on every level'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` `'SQUADDEAL.on': 'TPS_SQUADDEAL=1'`), in the
   knob registry and `JOURNAL_KNOBS` (a recording from before the key replays with it off). SEAMS in others' files, one clause each: roomclear.ts
-  (`onStaged`), difficulty.ts (`squadsHeld`), ui/missions.ts (the Hard sentence asks `squadsHeld`), enemysquads-probes.ts (its "no
+  (`onStaged`), difficulty.ts (`squadsHeld`), ui/picks.ts and ui/missions.ts (the Hard sentence asks `squadsHeld`), enemysquads-probes.ts (its "no
   squads block = none staged" line holds the rule off), levers-probes.ts (as above). CHECK: `tools/qa/squaddeal-check.ts` (probe `squaddeal`), 7 lines:
   (a) the cut on the eight rows (every room in one squad, a man in each, the count the men call for, roomclear.ts `checkSquads` silent), (b) the file
   wins (the warehouse: the same object), (c) a loud way in draws men to the noise with their word 1.5 s or more before the first is there (the kill

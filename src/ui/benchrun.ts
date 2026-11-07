@@ -14,7 +14,7 @@
 import { BENCH_SCENES, BENCH_SET, type BenchSceneDef } from '../host/benchScenes';
 import { SCENARIOS, quitSearch } from '../scene/scenarioList';
 import { scenarioQuery } from '../scene/scenarios';
-import { lookPageWord, lookTrialsKept } from '../scene/look';
+import { lookOldWord, lookPageOn, lookPageWord, lookTrialsKept } from '../scene/look';
 import type { BenchLeg, BenchStep, BenchSceneRun, BenchBoot, BenchOpts } from './bench';
 import { SHADER_ROW_WORDS } from './shaderrows';
 
@@ -61,12 +61,16 @@ const CARRIED = new RegExp(`^(mute|nomusic|quality|adapt|pipequeue|shadertrim|sh
  *  page says so in the report's notes (main.ts), and what that page gives a visitor (its kit, its fog put down, its panel) stands down on a scene's address.
  *  A word is judged decoded, as the page reads it, and carried as it was written */
 /** a word of the look page's own, as an address wrote it (scene/look.ts lookPageWord): the benchmark's scenes and a pricing run's pages (ui/pricerun.ts) carry the same */
-export const lookWord = (p: string): boolean => { const kv = [...new URLSearchParams(p)][0]; return !!kv && lookPageWord(kv[0], kv[1]); };
+const wordOf = (p: string): [string, string] | undefined => [...new URLSearchParams(p)][0];
+export const lookWord = (p: string): boolean => { const kv = wordOf(p); return !!kv && lookPageWord(kv[0], kv[1]); };
+/** the picture's off word, as an address wrote it (scene/look.ts LOOK_OLD) */
+const lookOld = (p: string): boolean => { const kv = wordOf(p); return !!kv && lookOldWord(kv[0], kv[1]); };
 /** the visitor's flags of an address that ride along a run's pages, as they were written: the benchmark's scenes carry them, and so does a run of any other
  *  kind (ui/pricerun.ts) — ONE list, so a flag that changes how the page is built or where its file goes is the same on both */
 export const carriedWords = (search: string): string[] => search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p));
-const flags = (search: string): string[] => { const q = new URLSearchParams(search);
-  return [...search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p) || lookWord(p)), ...lookTrialsKept(q)]; };
+const flags = (search: string): string[] => { const q = new URLSearchParams(search), look = lookPageOn(q);
+  const keep = search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p) || (look ? lookWord(p) : lookOld(p)));   // (the old picture's word rides along as the look's own do: a run is one picture from its first scene to its last)
+  return look ? [...keep, ...lookTrialsKept(q)] : keep; };
 /** the report's line for the words of the asked address that no scene was played with (none: no line): the visitor's own flags, so not a mission's words
  *  (quitSearch takes those and the benchmark's off) nor the ones every scene's address says for itself. The names only, once each, as many as a line holds */
 const left = (search: string): string[] => {

@@ -58,7 +58,8 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
 
 - Long soaks: kick off an `async` IIFE that loops `__runFrames(60)` + MessageChannel yields and stores its result on
   `window.__res`, return immediately, then poll `window.__res` in a second call (a `setTimeout` poll is fine there).
-- `__quality`
+- `__demo` (the OLD showcase tour, no longer on any card: `.start()/.stop()`, jump with `__demo.shotI = k-1; __demo.shotT = 999`),
+  `__quality`
   (`.apply('verylow'|'low'|'medium'|'high')`, `.sample(dt)`), `__audio` (`.stats`).
 - Squad hooks: `__orders` (`.open(target?)`, `.pick(i?)`, `.give(id, target?, who?)`, `.close()`, `.menu`, `.who`, `.cycleWho()`,
   `.log`), `__roomclear` / `__nightbreach` / `__rescue` (`.start()`, `.stop()`, `.restage()`, `.state`,
@@ -85,15 +86,22 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
   `PORT=<port> node tools/qa/panel-keys.cjs` (headless Chromium on the software adapter, ~3 min).
 - `Space` at a door / walk or sprint into it (`__game.doors.byName('server')` → `.angle`, events via `onDoorEvent`);
   `__game.setBlackout(30,'debug')` / `.endBlackout()` (watch `targets.filter(t=>t.factor>0).length` restrike);
-  (`P` starts nothing from the page: the night and day showcases were removed).
+  `__demo.start()` tour end-to-end must leave `__demo.active === false` with camera yaw/dist restored and no `#fatal` text
+  (`P` starts nothing from the page: the night and day showcases were removed — it only stops a tour that is running).
 - Console: filter for `error:` / `Invalid` — WGSL reserved words and storage-texture aliasing show up there, not as exceptions.
 
 ## Squad flows (the game as it is played now)
 - **The page opens on the title**: Play › · Options · Controls (`src/ui/menu.ts`; W S walk the buttons, Enter = Play). Play
   opens the one starting page (`src/ui/startpage.ts`, two steps that each fit the window: MISSION = the missions as a text list, the
   briefing with its plan, a Setup rail of one row a setting; Enter → TEAM & KIT = who comes and what each carries; Enter = Deploy, Esc back). Options is its own screen (`src/ui/options.ts`: Graphics · Audio · Game · Controls; keys 1–4, Esc back),
-  also from the pause card. `?pick=<id>` redirects to that short-list row's own URL (`src/scene/picks.ts PICKS`).
-- **Start page → Team & kit → Deploy**: the Mission step lists the solo night and one row per `src/scene/scenarioList.ts SCENARIOS` entry (`H` / `J` step the Hour / Weather rows); its Team & kit step (`src/ui/loadout.ts`: how many teammates, none to four, each man's kit card, the Squad kit row) deploys by a PAGE LOAD of the mission's URL. `?loadout=<mission id>` opens the start page on that step.
+  also from the pause card. `?cards` = the older start card, which opens on the short list: six rows
+  (`src/scene/picks.ts PICKS`: compound, registry, warehouse, depot, barracks-day, solo), each a link that deploys
+  straight in with the kit as issued, and a **Missions** button for the mission list (`?cards&nopicks` = the card before the
+  short list). `?pick=<id>` redirects to that row's own URL.
+- **Missions list → Loadout → Deploy**: Missions (`src/ui/missions.ts`: the solo night + one row per `src/scene/scenarioList.ts
+  SCENARIOS` entry; `H` / `J` step the sheet's Hour / Weather rows) → a pick opens the Loadout screen (`src/ui/loadout.ts`: how
+  many teammates, none to four, each man's kit card, the Squad kit row) → Deploy is a PAGE LOAD of the mission's URL.
+  `?loadout=<mission id>` lands on that screen directly.
 - **Straight in by URL** (what a row loads; one config per fresh boot): `?roomclear` (the pair), `?roomclear&squad4` or
   `?squad=N` (0‥4 teammates), `?nightbreach`, `?rescue`, plus `&levelFile=<name>.json` for a level of its own (records, depot,
   block, block-squads, warehouse, compound, barracks, registry). After `await __ready` check `__scenarios.current()`,

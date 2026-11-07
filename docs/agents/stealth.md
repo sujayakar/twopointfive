@@ -158,8 +158,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   nothing: it reads the quiet fog's own rows, so a frozen run of the solo night under the fog is `TPS_QUIETFOG=1 TPS_QUIETDEF=team TPS_STICKY=1
   TPS_QUIETWAND=1 TPS_SOLOFOG=1` (and the wand's own word) with `?solo` staged. Older checks that state the solo night as it was hold the switch
   down for that row or follow it (`missions-probes`, `loadout-probes`, `kitlent-check`, `quietfog-check`; `levers-probes` follows it). KNOWN, LEFT:
-  (1) `?solo&levelFile=<level>` is read as a solo night too and gets the fog, though the mission list has no such
-  row. (2) Alone, the rung 'own eyes' plays as 'cones' does. (3) `tools/qa/solo-night.ts`, the tour and the soak play a game stood up PLAIN: their
+  (1) the old start card's own Start (`?cards`, `ui/menu.ts`) closes the card over the plain page: a solo night with no fog, as it was; the starting
+  page's solo row is the fogged one. (2) `?solo&levelFile=<level>` is read as a solo night too and gets the fog, though the mission list has no such
+  row. (3) Alone, the rung 'own eyes' plays as 'cones' does. (4) `tools/qa/solo-night.ts`, the tour and the soak play a game stood up PLAIN: their
   tallies, on either stand, are of the solo night with every guard shown, not of the page's fogged one. (5) The kit note reads 'Alone on the office
   floor.' under the fog (`game/loadout.ts noteOf`), its old second half where it is off. Measured on the bundled office, one seed, both stands. Never
   seen on a GPU and never played: whether the office night is fair under the fog with two cameras and a wand is unmeasured (the quiet missions were
@@ -388,7 +389,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   off. THE LETTER IS NOT THE ROW'S while it is freed and unbound: `keyText` rewrites no line for it. WHAT FOLLOWS, all through one helper
   (`wallWay()` in ui/options.ts: 'key' | 'walk' | 'none'): the Controls list keeps the row, its cap a dashed — that is not marked as moved, its
   words 'Back to a wall: walk into it' ('none' = he unbound it AND switched the walk-in off: 'no key: click the cap to give it one'); the start
-   Options ▸ Game's walk-in row
+  card's and the boot card's list show a 'Wall' row for the 'Q' one (`controlRows`, ui/menu.ts; no row for 'none'); Options ▸ Game's walk-in row
   says 'Off, Q takes it instead'; two lesson lines no longer name Q (train-move 'Walk into the container and keep walking: your back goes to it',
   train-hands 'Back to the wall in the dark corner beside it'); the README's Play table. WHAT ONLY THE KEY DID, gone from the page's board unless
   he binds one: taking a wall with a pistol out while anyone is alert (`pressCalm` keeps the walk-in from putting his gun away in a fight; the

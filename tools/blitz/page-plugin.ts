@@ -13,7 +13,7 @@ import { resolve, join } from 'node:path';
 
 const HERE = resolve(import.meta.dir), ROOT = resolve(HERE, '../..');
 const SCHEMA = JSON.parse(readFileSync(join(HERE, 'schema.json'), 'utf8'));
-export const FILES: Record<string, string> = { export: 'export.ts', import: 'import.ts', classes: 'classes.ts', 'puppet-apply': 'puppet-apply.ts', 'out-dispatch': 'out-dispatch.ts', ask: 'ask.ts', surface: 'surface.ts', poke: 'poke.ts', scan: 'scan.ts', 'schema.json': 'schema.json', 'puppet-lists.json': 'puppet-lists.json' };
+export const FILES: Record<string, string> = { export: 'export.ts', import: 'import.ts', classes: 'classes.ts', 'puppet-apply': 'puppet-apply.ts', 'out-dispatch': 'out-dispatch.ts', ask: 'ask.ts', surface: 'surface.ts', poke: 'poke.ts', scan: 'scan.ts', 'schema.json': 'schema.json', 'puppet-lists.json': 'puppet-lists.json', 'switches.json': '../qa/switches.json' };   // (the last: the list of the switch rows and their kinds, tools/qa: the page holds the settled ones under the word)
 /** a swap that must find its line: a generated file that changed shape is said at build time, not found out in the page */
 function swap(text: string, file: string, from: string | RegExp, to: string): string {
   const out = text.replace(from, to); if (out === text) throw new Error(`page-plugin: tools/blitz/${file} no longer holds ${String(from)}: the page's bridge needs that line swapped`);
