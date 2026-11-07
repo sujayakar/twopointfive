@@ -107,7 +107,9 @@ pub const LOOK: usize = boxes::LOOK + 4;
 
 /// what one host of one game draws it from
 #[derive(Default)]
-pub struct Drawn { pub fog: Vec<fog::Fog>, pub view: Vec<view::View>, pub sky: Vec<sky::Sky>, pub boxes: boxes::Boxes, pub lights: lights::Lights, pub men: men::Men, pub doorways: Vec<doorways::Doorway>, pub events: events::Events, tick: Option<u32>, stood: u32, had: u32, want: u32, table: Vec<u32> }
+pub struct Drawn { pub fog: Vec<fog::Fog>, pub view: Vec<view::View>, pub sky: Vec<sky::Sky>, pub boxes: boxes::Boxes, pub lights: lights::Lights, pub men: men::Men, pub doorways: Vec<doorways::Doorway>, pub events: events::Events, tick: Option<u32>, stood: u32,
+    /// the distance the host's camera was on its way to as the step was handed it
+    pub desired: f64, had: u32, want: u32, table: Vec<u32> }
 impl Drawn {
     /// A TICK HAS RUN: the sections of `want`, made again from the game as it stands
     pub fn take(&mut self, g: &Game, want: u32) {
@@ -117,7 +119,7 @@ impl Drawn {
         let again = self.tick == Some(now);
         self.tick = Some(now);
         if want & want::fog != 0 { self.fog.clear(); fog::fill(g, &mut self.fog); }
-        if want & want::view != 0 { self.view.clear(); view::fill(g, self.stood, &mut self.view); }
+        if want & want::view != 0 { self.view.clear(); view::fill(g, self.stood, self.desired, &mut self.view); }
         if want & want::sky != 0 { self.sky.clear(); sky::fill(g, &mut self.sky); }
         if want & want::geo != 0 { let night = g.pl[game::seats::host_man(g)].nv_amount > 0.5; self.boxes.take(g, night, again && self.had & want::geo != 0); }
         if want & want::lights != 0 { self.lights.take(g, again && self.had & want::lights != 0); }
