@@ -208,9 +208,12 @@ Game.prototype.update = function (this: any, ...a: any[]) {
       // (`qrf_stage`: the response team staged as tools/qa/qrf-squad-check.ts stages it: the sandbox's rows written (the team on, 14 s out, four men, no
       //  perimeter, the squad's own code for its rooms), the alarm placed where the player stands, the team asked for. `qrfcast` is then the tick its cast stands.)
       else if (rule === 'qrf_stage') { const T = g.tune, p = g.player.char.pos; T.qrf = true; T.qrfEta = 14; T.qrfSize = 4; T.perimeter = false; T.qrfSquad = true; g.alarm.placed = true; g.alarm.pos = [p[0], p[1], p[2]]; g.alarm.raisedAt = g.time; (await0.requestQrf)(g, 'panel'); }
+      // (`qrf_stage_rack`: the same staging with the alarm AT THE MISSION'S RACK, the solo night's server room, whose door is locked: the team's
+      //  squad code then stacks on a locked door with the building's keys. The record's line carries the place: `call qrf_stage_at x y z`.)
+      else if (rule === 'qrf_stage_rack') { const T = g.tune, p = g.level.mission.rack.front; T.qrf = true; T.qrfEta = 14; T.qrfSize = 4; T.perimeter = false; T.qrfSquad = true; g.alarm.placed = true; g.alarm.pos = [p[0], 0, p[2]]; g.alarm.raisedAt = g.time; (await0.requestQrf)(g, 'panel'); between(`${k} qrf_stage_at ${g.alarm.pos.join(' ')}`, 'call'); }
       else if (rule === 'shift_enter' || rule === 'enter') { const I = a.find((x: any) => x?.pressed instanceof Set && x?.keys instanceof Set); if (!I) throw new Error('BLITZ_CALL shift_enter: no Input among the frame\'s arguments'); if (rule === 'shift_enter') I.keys.add('ShiftLeft'); I.pressed.add('Enter'); }   // (`enter`: Enter alone, the down card's restart)
       else throw new Error(`BLITZ_CALL: no rule ${rule}`);
-      if (rule !== 'shift_enter' && rule !== 'enter' && C.w[2] !== 'start') between(`${k} ${rule}`, 'call');
+      if (rule !== 'shift_enter' && rule !== 'enter' && rule !== 'qrf_stage_rack' && C.w[2] !== 'start') between(`${k} ${rule}`, 'call');
       appendFileSync(`${outDir}/call.txt`, `${k} ${C.w.slice(1).join(' ')}; ${g.guards.length} guards, ${g.guards.filter((x: any) => x.team === 'hostile' && x.state === 'alert').length} hostile alert, qrf ${g.qrf?.state ?? '-'} with ${g.qrf?.men?.length ?? 0} men, time ${g.time}\n`); } }
   // THE TEST DRIVER'S OWN QUESTIONS THAT WRITE THE GAME: `g.fight.roomAt(p)` asked between ticks floods a room nobody had asked for and keeps it in `g.fight.rooms`.
   // Each such ask that grew the list is a line of hostwrites.txt for the tick that opens next.
@@ -237,6 +240,9 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   if (k === 1 && !LESSON && !SOLO) { const sb = g.setBlackout; g.setBlackout = function (this: any, secs: number, cause: string) { if (!g.ticking) { if (secs === 86400 && cause === 'hand') between(`${k + 1} set_blackout_hand`, 'call'); else between(`${k + 1} UNSUPPORTED set_blackout ${secs} ${cause}`, 'call'); } return sb.call(this, secs, cause); }; }
   if (!LESSON && !SOLO && k > 1) { if (g.player.nv && !nvSaid && !nvAfter) { nvSaid = true; between(`${k} nv_on`, 'call'); }
     for (const e of g.events as any[]) if (e?.ptNoise && !noiseSaid.has(e)) { noiseSaid.add(e); between(`${k} noise_shot ${e.pos[0]} ${e.pos[1]} ${e.pos[2]}`, 'call'); } }
+  // (BLITZ_HOLD_SAM=<tick>: from that tick on the scripted player's keys are taken off the host's Input before every tick, so the player's man stands where he is
+  //  whatever his script wants: a floor nobody walks, for a staged case)
+  if (process.env.BLITZ_HOLD_SAM && k >= +process.env.BLITZ_HOLD_SAM) { const I = a.find((x: any) => x?.pressed instanceof Set && x?.keys instanceof Set); if (I) { I.keys.clear(); I.pressed.clear(); } }
   if (k === 1) dressStand();
   caseStep(g);
   if (k === 1 && (!g.dice || /^\d+$/.test(arg('--die', '')))) g.dice = newDice(DIE);   // (`--die N` seeds the die of a game stood WITH one too: a tutorial's)
@@ -290,7 +296,7 @@ if (SOLO && process.env.BLITZ_QUIETFOG) { const Q = (await import('../../src/gam
 try { if (SOLO) { const [kind, plan] = scn.split('-'), was = process.argv, exit = process.exit, lines: string[] = [];
     process.argv = [was[0], 'solo-night.ts', '--trace', String(seed), '--plan', plan, ...(kind === 'quiet' ? ['--quiet'] : []), ...(HARD ? ['--hard'] : []), ...(process.env.BLITZ_SOLO ?? '').split(' ').filter(Boolean)];
     (process as any).exit = () => { throw new Stop(); }; console.log = (...x: unknown[]) => { lines.push(x.join(' ')); };
-    try { await import('../qa/solo-night.ts'); } finally { process.argv = was; (process as any).exit = exit; solo = lines.slice(-14).join('\n   '); } }
+    try { await import('../qa/solo-night.ts'); } finally { process.argv = was; (process as any).exit = exit; solo = [...lines.filter(l => /QRF|CONTROL|door /.test(l)).slice(0, 30), '…', ...lines.slice(-14)].join('\n   '); } }
   else if (LESSON) les = await (await import('../qa/lesson-run.ts')).runLesson(scn, { seed, sky: false, glow: false, floor: 0, ...(HARD ? { hard: true } : {}) }); else res = await play(scn, seed, 300, false, SET); } catch (e) { if (!(e instanceof Stop)) { console.log = log; throw e; } } finally { console.log = log; console.error = er; console.warn = wn; }
 // (the module's knob table as the TypeScript game wrote it: the runner's check of the generated `knobs_to_rust`)
 { const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); }
