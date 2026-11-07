@@ -227,7 +227,7 @@ pub fn state_words(g: &mut crate::game::Game, o: &mut W, out: &mut Vec<u32>) { o
     o.b.clear(); g.m.wandorder.w(o); out.push(word(&o.b));
     o.b.clear(); g.m.fogofwar.w(o); out.push(word(&o.b));
     o.b.clear(); g.m.guards.w(o); out.push(word(&o.b));
-    o.b.clear(); { g.m.dialogue.room_rects.w(o); g.m.dialogue.recent_by_game.w(o); g.m.dialogue.sam_lines.w(o); g.m.dialogue.sam_mem_by_game.w(o); g.m.dialogue.script_by_talk.w(o); g.m.dialogue.forced_by_talk.w(o); g.m.dialogue.radio_by_game.w(o); g.m.dialogue.ambient_by_game.w(o); } out.push(word(&o.b));
+    o.b.clear(); g.m.dialogue.w(o); out.push(word(&o.b));
     o.b.clear(); g.m.civilians.w(o); out.push(word(&o.b));
     o.b.clear(); g.m.orders.w(o); out.push(word(&o.b));
     o.b.clear(); g.m.seats.w(o); out.push(word(&o.b));

@@ -561,7 +561,7 @@ pub fn ps_kit_KitMod(s: &crate::kit::KitMod, o: &mut W) { s.hand.w(o); ps_kit_Ki
 pub fn ps_wandorder_WandorderMod(s: &crate::wandorder::WandorderMod, o: &mut W) { s.states.w(o); }
 pub fn ps_fogofwar_FogofwarMod(s: &crate::fogofwar::FogofwarMod, o: &mut W) { ps_fogofwar_FogofwarModFOGPAGE(&s.fog_page, o); }
 pub fn ps_guards_GuardsMod(s: &crate::guards::GuardsMod, o: &mut W) { s.ground_track.w(o); s.body_meters.w(o); s.body_probe_n.w(o); s.held_meters.w(o); s.unstick_legs.w(o); ps_guards_GuardsModUNSTICK(&s.unstick, o); s.lit_seen.w(o); s.dark_seen.w(o); s.wall_seen.w(o); s.torch_low_seen.w(o); s.lit_man_seen.w(o); s.rollcalls.w(o); s.engagements.w(o); }
-pub fn ps_dialogue_DialogueMod(s: &crate::dialogue::DialogueMod, o: &mut W) { s.room_rects.w(o); s.own_rects.w(o); s.sam_mem_by_game.w(o); s.script_by_talk.w(o); s.radio_by_game.w(o); s.ambient_by_game.w(o); }
+pub fn ps_dialogue_DialogueMod(s: &crate::dialogue::DialogueMod, o: &mut W) { s.sam_mem_by_game.w(o); s.script_by_talk.w(o); s.radio_by_game.w(o); s.ambient_by_game.w(o); }
 pub fn ps_civilians_CiviliansMod(s: &crate::civilians::CiviliansMod, o: &mut W) { s.own_spots.w(o); s.civ_log.w(o); s.floors.w(o); }
 pub fn ps_orders_OrdersMod(s: &crate::orders::OrdersMod, o: &mut W) { s.follow_word.w(o); }
 pub fn ps_particle_fx_ParticleFxMod(s: &crate::particle_fx::ParticleFxMod, o: &mut W) { s.state.w(o); }
@@ -974,7 +974,6 @@ pub fn ps_guards_GuardsModTorchLowSeenValue(s: &crate::guards::GuardsModTorchLow
 pub fn ps_guards_GuardsModLitManSeenValue(s: &crate::guards::GuardsModLitManSeenValue, o: &mut W) { s.t.w(o); s.tgt.w(o); s.v.w(o); }
 pub fn ps_guards_Rollcall(s: &crate::guards::Rollcall, o: &mut W) { s.next_at.w(o); s.stage.w(o); s.t0.w(o); s.caller.w(o); s.missing.w(o); s.answered.w(o); s.checks.w(o); }
 pub fn ps_guards_Engagement(s: &crate::guards::Engagement, o: &mut W) { s.operatives.w(o); s.hostiles.w(o); s.t0.w(o); s.timeout.w(o); s.done.w(o); s.result.w(o); s.kills.w(o); s.rounds.w(o); s.alive.w(o); }
-pub fn ps_dialogue_DialogueModRoomRectsValue(s: &crate::dialogue::DialogueModRoomRectsValue, o: &mut W) { s.rooms.w(o); ps_dialogue_Rect(&s.building, o); s.office.w(o); }
 pub fn ps_dialogue_PlaceRect(s: &crate::dialogue::PlaceRect, o: &mut W) { s.id.w(o); }
 pub fn ps_dialogue_SamMemory(s: &crate::dialogue::SamMemory, o: &mut W) { s.said.w(o); s.last.w(o); }
 pub fn ps_dialogue_Script(s: &crate::dialogue::Script, o: &mut W) { ps_dialogue_ScriptBeats(&s.beats, o); }
@@ -1763,7 +1762,7 @@ pub fn pa_kit_KitMod(s: &crate::kit::KitMod, o: &mut W) { s.hand.w(o); pa_kit_Ki
 pub fn pa_wandorder_WandorderMod(s: &crate::wandorder::WandorderMod, o: &mut W) { s.states.w(o); }
 pub fn pa_fogofwar_FogofwarMod(s: &crate::fogofwar::FogofwarMod, o: &mut W) { pa_fogofwar_FogofwarModFOGPAGE(&s.fog_page, o); }
 pub fn pa_guards_GuardsMod(s: &crate::guards::GuardsMod, o: &mut W) { s.ground_track.w(o); s.body_meters.w(o); s.body_probe_n.w(o); s.held_meters.w(o); s.unstick_legs.w(o); pa_guards_GuardsModUNSTICK(&s.unstick, o); s.lit_seen.w(o); s.dark_seen.w(o); s.wall_seen.w(o); s.torch_low_seen.w(o); s.lit_man_seen.w(o); s.rollcalls.w(o); s.engagements.w(o); }
-pub fn pa_dialogue_DialogueMod(s: &crate::dialogue::DialogueMod, o: &mut W) { s.room_rects.w(o); s.own_rects.w(o); s.sam_mem_by_game.w(o); s.script_by_talk.w(o); s.radio_by_game.w(o); s.ambient_by_game.w(o); }
+pub fn pa_dialogue_DialogueMod(s: &crate::dialogue::DialogueMod, o: &mut W) { s.sam_mem_by_game.w(o); s.script_by_talk.w(o); s.radio_by_game.w(o); s.ambient_by_game.w(o); }
 pub fn pa_civilians_CiviliansMod(s: &crate::civilians::CiviliansMod, o: &mut W) { s.own_spots.w(o); s.civ_log.w(o); s.floors.w(o); }
 pub fn pa_orders_OrdersMod(s: &crate::orders::OrdersMod, o: &mut W) { s.follow_word.w(o); }
 pub fn pa_particle_fx_ParticleFxMod(s: &crate::particle_fx::ParticleFxMod, o: &mut W) { pa_particle_fx_ParticleFxModDUST(&s.dust, o); pa_particle_fx_ParticleFxModDUSTLOOK(&s.dust_look, o); pa_particle_fx_ParticleFxModPFX(&s.pfx, o); s.state.w(o); }
@@ -2206,7 +2205,6 @@ pub fn pa_guards_GuardsModTorchLowSeenValue(s: &crate::guards::GuardsModTorchLow
 pub fn pa_guards_GuardsModLitManSeenValue(s: &crate::guards::GuardsModLitManSeenValue, o: &mut W) { s.t.w(o); s.tgt.w(o); s.v.w(o); }
 pub fn pa_guards_Rollcall(s: &crate::guards::Rollcall, o: &mut W) { s.next_at.w(o); s.stage.w(o); s.t0.w(o); s.caller.w(o); s.missing.w(o); s.answered.w(o); s.checks.w(o); }
 pub fn pa_guards_Engagement(s: &crate::guards::Engagement, o: &mut W) { s.operatives.w(o); s.hostiles.w(o); s.t0.w(o); s.timeout.w(o); s.done.w(o); s.result.w(o); s.kills.w(o); s.rounds.w(o); s.alive.w(o); }
-pub fn pa_dialogue_DialogueModRoomRectsValue(s: &crate::dialogue::DialogueModRoomRectsValue, o: &mut W) { s.rooms.w(o); pa_dialogue_Rect(&s.building, o); s.office.w(o); }
 pub fn pa_dialogue_PlaceRect(s: &crate::dialogue::PlaceRect, o: &mut W) { s.id.w(o); }
 pub fn pa_dialogue_SamMemory(s: &crate::dialogue::SamMemory, o: &mut W) { s.said.w(o); s.last.w(o); }
 pub fn pa_dialogue_Script(s: &crate::dialogue::Script, o: &mut W) { s.id.w(o); s.shape.w(o); s.k.w(o); s.pin.w(o); pa_dialogue_ScriptBeats(&s.beats, o); }
@@ -2409,6 +2407,7 @@ pub fn pa_scene_scenarios_KitViewLightOverPorchFixture(s: &crate::scene_scenario
 pub fn pa_scene_level_data_ShapePieceData(s: &crate::scene_level_data::ShapePieceData, o: &mut W) { s.arc.w(o); }
 pub fn pa_fogofwar_FogPicture(s: &crate::fogofwar::FogPicture, o: &mut W) { pa_render_fogofwar_FogFrame(&s.frame, o); s.lamp_pick.w(o); s.lamp_n.w(o); pa_fogofwar_FogOfWarLitStats(&s.lit_stats, o); pa_fogofwar_FogOfWarFullStats(&s.full_stats, o); s.viewer.w(o); s.look_frames.w(o); s.raw_list.w(o); s.raw_at.w(o); s.face_recs.w(o); }
 pub fn pa_par_Par(s: &crate::par::Par, o: &mut W) { s.live.w(o); s.run.w(o); s.marks.w(o); s.fired0.w(o); s.t0.w(o); s.res.w(o); }
+pub fn pa_view_TickView(s: &crate::view::TickView, o: &mut W) { s.radio.w(o); s.bubbles.w(o); s.me.w(o); s.place.w(o); }
 pub fn pm_autopilot_AutoPick(s: &crate::autopilot::AutoPick, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.word.w(o); } c.push(o.b.len() as u32); match &s.t { crate::orders::OrderTarget::Floor(x0) => { (0 as u16).w(o); ps_orders_OrderTargetFloor(&x0, o); } crate::orders::OrderTarget::Door(x0) => { (1 as u16).w(o); ps_orders_OrderTargetDoor(&x0, o); } crate::orders::OrderTarget::None(x0) => { (2 as u16).w(o); ps_orders_OrderTargetNone(&x0, o); } crate::orders::OrderTarget::Foe(x0) => { (3 as u16).w(o); ps_orders_OrderTargetFoe(&x0, o); } #[allow(unreachable_patterns)] _ => 0xffffu16.w(o), } c.push(o.b.len() as u32); }
 pub fn pm_break_table_ShedBudget(s: &crate::break_table::ShedBudget, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.heap.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_cmd_CheckCmd(s: &crate::cmd::CheckCmd, o: &mut W, c: &mut Vec<u32>) { pm_cmd_PlayerCmd(&s.cmd, o, c); }
@@ -2964,7 +2963,7 @@ pub fn pm_kit_KitMod(s: &crate::kit::KitMod, o: &mut W, c: &mut Vec<u32>) { s.ha
 pub fn pm_wandorder_WandorderMod(s: &crate::wandorder::WandorderMod, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.states.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_fogofwar_FogofwarMod(s: &crate::fogofwar::FogofwarMod, o: &mut W, c: &mut Vec<u32>) { if o.wide { ps_fogofwar_FogofwarModFOGPAGE(&s.fog_page, o); } c.push(o.b.len() as u32); }
 pub fn pm_guards_GuardsMod(s: &crate::guards::GuardsMod, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.ground_track.w(o); } c.push(o.b.len() as u32); if o.wide { s.body_meters.w(o); } c.push(o.b.len() as u32); if o.wide { s.body_probe_n.w(o); } c.push(o.b.len() as u32); if o.wide { s.held_meters.w(o); } c.push(o.b.len() as u32); if o.wide { s.unstick_legs.w(o); } c.push(o.b.len() as u32); if o.wide { ps_guards_GuardsModUNSTICK(&s.unstick, o); } c.push(o.b.len() as u32); if o.wide { s.lit_seen.w(o); } c.push(o.b.len() as u32); if o.wide { s.dark_seen.w(o); } c.push(o.b.len() as u32); if o.wide { s.wall_seen.w(o); } c.push(o.b.len() as u32); if o.wide { s.torch_low_seen.w(o); } c.push(o.b.len() as u32); if o.wide { s.lit_man_seen.w(o); } c.push(o.b.len() as u32); s.rollcalls.w(o); c.push(o.b.len() as u32); if o.wide { s.engagements.w(o); } c.push(o.b.len() as u32); }
-pub fn pm_dialogue_DialogueMod(s: &crate::dialogue::DialogueMod, o: &mut W, c: &mut Vec<u32>) { s.room_rects.w(o); c.push(o.b.len() as u32); if o.wide { s.own_rects.w(o); } c.push(o.b.len() as u32); s.sam_mem_by_game.w(o); c.push(o.b.len() as u32); if o.wide { s.script_by_talk.w(o); } c.push(o.b.len() as u32); s.radio_by_game.w(o); c.push(o.b.len() as u32); s.ambient_by_game.w(o); c.push(o.b.len() as u32); }
+pub fn pm_dialogue_DialogueMod(s: &crate::dialogue::DialogueMod, o: &mut W, c: &mut Vec<u32>) { s.sam_mem_by_game.w(o); c.push(o.b.len() as u32); if o.wide { s.script_by_talk.w(o); } c.push(o.b.len() as u32); s.radio_by_game.w(o); c.push(o.b.len() as u32); s.ambient_by_game.w(o); c.push(o.b.len() as u32); }
 pub fn pm_civilians_CiviliansMod(s: &crate::civilians::CiviliansMod, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.own_spots.w(o); } c.push(o.b.len() as u32); if o.wide { s.civ_log.w(o); } c.push(o.b.len() as u32); s.floors.w(o); c.push(o.b.len() as u32); }
 pub fn pm_orders_OrdersMod(s: &crate::orders::OrdersMod, o: &mut W, c: &mut Vec<u32>) { s.follow_word.w(o); c.push(o.b.len() as u32); }
 pub fn pm_particle_fx_ParticleFxMod(s: &crate::particle_fx::ParticleFxMod, o: &mut W, c: &mut Vec<u32>) { s.state.w(o); c.push(o.b.len() as u32); }
@@ -3277,7 +3276,6 @@ pub fn pm_guards_GuardsModTorchLowSeenValue(s: &crate::guards::GuardsModTorchLow
 pub fn pm_guards_GuardsModLitManSeenValue(s: &crate::guards::GuardsModLitManSeenValue, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.t.w(o); } c.push(o.b.len() as u32); if o.wide { s.tgt.w(o); } c.push(o.b.len() as u32); if o.wide { s.v.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_guards_Rollcall(s: &crate::guards::Rollcall, o: &mut W, c: &mut Vec<u32>) { s.next_at.w(o); c.push(o.b.len() as u32); s.stage.w(o); c.push(o.b.len() as u32); s.t0.w(o); c.push(o.b.len() as u32); s.caller.w(o); c.push(o.b.len() as u32); s.missing.w(o); c.push(o.b.len() as u32); s.answered.w(o); c.push(o.b.len() as u32); s.checks.w(o); c.push(o.b.len() as u32); }
 pub fn pm_guards_Engagement(s: &crate::guards::Engagement, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.operatives.w(o); } c.push(o.b.len() as u32); if o.wide { s.hostiles.w(o); } c.push(o.b.len() as u32); if o.wide { s.t0.w(o); } c.push(o.b.len() as u32); if o.wide { s.timeout.w(o); } c.push(o.b.len() as u32); if o.wide { s.done.w(o); } c.push(o.b.len() as u32); if o.wide { s.result.w(o); } c.push(o.b.len() as u32); if o.wide { s.kills.w(o); } c.push(o.b.len() as u32); if o.wide { s.rounds.w(o); } c.push(o.b.len() as u32); if o.wide { s.alive.w(o); } c.push(o.b.len() as u32); }
-pub fn pm_dialogue_DialogueModRoomRectsValue(s: &crate::dialogue::DialogueModRoomRectsValue, o: &mut W, c: &mut Vec<u32>) { s.rooms.w(o); c.push(o.b.len() as u32); pm_dialogue_Rect(&s.building, o, c); if o.wide { s.office.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_dialogue_PlaceRect(s: &crate::dialogue::PlaceRect, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.id.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_dialogue_SamMemory(s: &crate::dialogue::SamMemory, o: &mut W, c: &mut Vec<u32>) { s.said.w(o); c.push(o.b.len() as u32); s.last.w(o); c.push(o.b.len() as u32); }
 pub fn pm_dialogue_Script(s: &crate::dialogue::Script, o: &mut W, c: &mut Vec<u32>) { pm_dialogue_ScriptBeats(&s.beats, o, c); }

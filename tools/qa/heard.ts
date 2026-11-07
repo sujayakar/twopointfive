@@ -8,6 +8,9 @@
 //   a man's bubble  ({ text, t, radio }: his last line, over his head or over the net)       → `spoke` ({ who, text, radio })
 // `listen(game)` keeps both as lists that only grow. Call `poll()` once after every step (a rig's own step is the place): the log keeps five rows and a bubble
 // one line, so a check that steps many frames between polls can miss what was said in between. Nothing here writes to the game.
+/** the radio strip as the HUD is told it (game.view.radio), each row under its word: 'radio: …', 'heard: …' */
+export const stripRows = (g: any): { text: string; t: number }[] => g.view.radio.map((r: any) => ({ text: `${r.kind === 'heard' ? 'heard' : 'radio'}: ${r.text}`, t: g.time - r.age }));
+
 export interface Heard {
   /** every row the log has shown since `listen`, in order */
   said: string[];

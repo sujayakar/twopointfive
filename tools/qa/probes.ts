@@ -2988,7 +2988,6 @@ if (on('enemysquads-contact', 'enemysquads', 'all')) await run('enemysquads-cont
 if (on('enemysquads-radiocheck', 'enemysquads', 'all')) await run('enemysquads-radiocheck', async () => (await import('./enemysquads-probes.ts')).enemysquadsRadiocheck());
 // ---------------------------------------------------------------- the defenders' cues (cues-probes.ts; game/cues.ts — their net on the radio strip, a line for the silent decisions): 'cues' = the family
 if (on('cues-lines', 'cues', 'all')) await run('cues-lines', async () => (await import('./cues-probes.ts')).cuesLines());
-if (on('cues-strip', 'cues', 'all')) await run('cues-strip', async () => (await import('./cues-probes.ts')).cuesStrip());
 if (on('cues-run', 'cues', 'all')) await run('cues-run', async () => (await import('./cues-probes.ts')).cuesRun());
 // the last few defenders of a room clear (game/laststand.ts — the call out, settled on, and the regroup, an open decision the page has off): tools/qa/laststand-probes.ts
 if (on('laststand-callout', 'laststand', 'all')) await run('laststand-callout', async () => (await import('./laststand-probes.ts')).lastStandCallOut());

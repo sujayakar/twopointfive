@@ -16,6 +16,7 @@
 //                        to the bytes last applied: what differs outside the host's half is something TypeScript wrote into the game between two
 //                        ticks. It is named, counted and handed to the Rust game whole (`face_import_into`). Slow (two walks of the state a tick):
 //                        the way to find a write the fast way has no call for.
+import { NO_VIEW } from '../../src/view/seatview';
 import { faceHere, FACE_WASM } from './face-build.ts';
 import { recorded } from './record';
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'node:fs';
@@ -434,7 +435,7 @@ export class RustHost {
   wholeNames(): string[] { const X = this.F.X; if (!X.face_state_n) return []; if (!this.stateNames) { this.stateNames = []; for (let i = 0; i < X.face_state_n(); i++) { X.face_state_name(i); this.stateNames.push(this.F.outText()); } } return this.stateNames; }
   /** WHAT A HUD IS TOLD, asked of the Rust game as it stands, with whatever the tool has written since the tick sent first (src/view/seatview.ts: the page draws
    *  the same record). Blank while no Rust game of this host stands: before the first tick, with a new start due, after this game's slot was given up */
-  view(): any { if (!this.h || this.startDue || this.audit) return { mission: null }; if (!this.inApply && !this.inStep && !this.quietOn && this.busy === 0) this.scanFlush(); this.tellShown();
+  view(): any { if (!this.h || this.startDue || this.audit) return NO_VIEW; if (!this.inApply && !this.inStep && !this.quietOn && this.busy === 0) this.scanFlush(); this.tellShown();
     try { this.F.X.face_tick_view(this.h); } catch (e) { throw new Error(`the Rust game's view panicked: ${this.F.panicText() || String(e)}`); } return this.B.readRecord(this.g, 'crate::view::TickView', this.F.outView().slice()); }
   /** how the mission ended, asked of the Rust game itself (`face_verdict`, a read with nothing kept: null while it is played). For a host with no puppet;
    *  on the page the puppet's own `g.verdict.result` is the latched one, with the card's rows. Hung on the game as `verdictNow` */

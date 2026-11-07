@@ -1720,9 +1720,6 @@
 "dialogue::Beat.him",
 "dialogue::Beat.sam",
 "dialogue::Beat.sam_now",
-"dialogue::DialogueModRoomRectsValue.building",
-"dialogue::DialogueModRoomRectsValue.office",
-"dialogue::DialogueModRoomRectsValue.rooms",
 "dialogue::PlaceRect.id",
 "dialogue::RadioState.blackout",
 "dialogue::RadioState.done",
@@ -9358,7 +9355,11 @@
 "workthings::Job.last_t",
 "workthings::Job.t0",
 "workthings::Job.thing",
-"workthings::WorkThings.row"
+"workthings::WorkThings.row",
+"view::TickView.radio",
+"view::TickView.bubbles",
+"view::TickView.me",
+"view::TickView.place"
 ],
 "pageTick": [
 "aim::AimState.bearing_rate",
@@ -10055,7 +10056,6 @@
 "dialogue::AmbientState.next",
 "dialogue::AmbientState.played",
 "dialogue::AmbientState.run",
-"dialogue::DialogueModRoomRectsValue.rooms",
 "dialogue::RadioState.blackout",
 "dialogue::RadioState.done",
 "dialogue::RadioState.esc",

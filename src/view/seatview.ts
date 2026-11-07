@@ -13,7 +13,16 @@ import type { Vec3 } from '../math/vec';
 export type MissionOf = 'stages' | 'script' | 'lesson' | 'defuse' | 'snatch' | 'roomclear' | 'rescue' | 'nightbreach';
 /** the mission's one line and the place its marker stands on */
 export interface MissionView { of: MissionOf; text: string; pos: Vec3 | null }
-export interface TickView { /** null: a show runs */ mission: MissionView | null }
+/** a row of the radio strip: a line on a net, or a shout that reached an ear of the team's (his words alone) */
+export interface RadioRow { kind: 'net' | 'heard'; text: string; /** seconds since it was said */ age: number }
+/** a line being said on the floor. A man is named by his character's id; null: a man who went down, called from `at` */
+export interface BubbleView { man: number | null; text: string; /** the words at the edge of the view, with whose they are */ edge: string; /** seconds since it was said · seconds it stands */ age: number; dur: number; /** it went over the net */ radio: boolean;
+  tone: 'calm' | 'sus' | 'alert' | 'own';
+  /** over: over him, and nowhere while that is off the screen · overOrEdge: over him while that is on the screen, else at the edge of the view on his side · edge: at the edge, wherever he is */
+  place: 'over' | 'overOrEdge' | 'edge';
+  /** where he stands (or fell) */ at: Vec3 }
+export interface TickView { /** null: a show runs */ mission: MissionView | null; /** the radio strip, oldest first */ radio: RadioRow[]; /** what is being said on the floor */ bubbles: BubbleView[];
+  /** the seat's own man (his character's id) */ me: number; /** the room the seat's man stands in, by the level's own name for it */ place: string }
 
 /** what a game no host steps is told */
-export const NO_VIEW: TickView = { mission: null };
+export const NO_VIEW: TickView = { mission: null, radio: [], bubbles: [], me: -1, place: '' };
