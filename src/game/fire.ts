@@ -132,7 +132,7 @@ export const FIRE = {
    *  brick's heat; fire.wgsl fireFlameG): white-hot where it is as hot as `ref`, cooling as it climbs, no flame under `lo` of that; the noise only tears its
    *  skin. Its middle `up` of the flame's height over the coals, `radius` m wide and `cells` at least, `density` and `temp` a second, leaving at `speed` m/s;
    *  filed afresh every `every` s; a fire eases to it and back over 1 / `ease` s. While it is gas the DRAWN smoke is off (the fire's smoke is the solver's).
-   *  `on` false = the flame of noise: the page's default until the gas has been seen (`?firegas=1`; a row in the fire lab). While it is on, gun gas and
+   *  `on` false = the flame of noise: always, on the page: the shader's half of this is gone, and the rest goes with the Rust fold. While it is on, gun gas and
    *  breath hotter than `keep` linger as long as the flame does. SET on five stills of the real page on the software adapter (the pass, its storm blowing 0.5 m/s
    *  at the drum): a white heart, orange body and red tip with no haze, one streamer about a metre and a half long that the wind leans some 45° and curls;
    *  `temp` 12 at `speed` 1.2 was thinner and lay lower. One streamer, not the noise's field of tongues: the solver's cells are two centimetres and its
