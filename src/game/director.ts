@@ -462,7 +462,7 @@ export class Director {
     const P = this.manifest.programs.get(name); if (!P) return `no program '${name}' (programs: ${this.programs.join(', ') || 'none'})`;
     if (!this.armed) return 'the script is not armed (lint errors — see the console)';
     if (this.run && !this.run.ended) return `program '${this.run.name}' is running`;
-    if (P.opts.showcase && this.g.touring) return 'the tour or attract mode has the floor';   // (a caller stops them first; a bare start() over them would fight their resets — review 08-10 #22)
+    if (P.opts.showcase && this.g.touring) return 'attract mode has the floor';   // (a caller stops them first; a bare start() over them would fight their resets — review 08-10 #22)
     if (P.opts.showcase && (this.g.qrf?.state !== undefined && this.g.qrf.state !== 'idle' || this.g.guards.some(x => x.unit))) return 'a response unit is on the floor (the cast would not fit the character budget)';
     if (P.opts.showcase && !this.g.tune.teams && [...this.manifest.loadouts.values()].length && [...P.beats.values()].some(B => /\.\s*spawn\s*\(/.test(String(B.fn)))) return 'sides are switched off (tune.teams) — the cast cannot be spawned';   // (only a program whose beats spawn anybody: the night showcase casts the shift itself and runs with sides off)
     return null;

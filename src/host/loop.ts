@@ -4,7 +4,7 @@
 // 22-file import cycle: no top-level use of a game import in a host module — this file has none).
 //
 //   time += dt · frozen → dt 0 + input.endFrame() · afterFreeze (main: the attract still refresh) · cam.zoom / rotate off Ctrl-wheel / Ctrl-drag · hotkeys (main: debug view,
-//   exposure, Tab, F9 / F10, P, arrows; on a frozen frame they are shown the keys pressed on it, and only they are) · [view has a size:] attract.update · game.update(dt, input, cam,
+//   exposure, Tab, F9 / F10, P; on a frozen frame they are shown the keys pressed on it, and only they are) · [view has a size:] attract.update · game.update(dt, input, cam,
 //   view) · the director's frame + postUpdate (main: the show class, the debrief card) · nvAmount / hitFlash → settings · audio listener + update · smoke.update · spectate
 //   auto-yaw / ease-yaw + the pitch ease · cam.update(dt, look-at, aim lead) · caption + timeline · lights.update(dt, t) · render(cam, t, dt, present) · hud.update ·
 //   bubbles.update (+ hudExpireBubbles inside it) · input.endFrame()
@@ -34,7 +34,7 @@ import type { DirectorFrame } from '../game/director';
 import { v3, type Vec3 } from '../math/vec';
 import { PLAYER_ID } from '../game/consts';
 import type { RenderSettings } from '../settings';
-import type { HudLike, BubblesLike, View, Chapters } from './hud';
+import type { HudLike, BubblesLike, View } from './hud';
 import { TWEEN, type Tween } from './tween';
 import { FINDME, AUTOVIEW, setAutoView, ctrlTurn, behindYaw, behindStep, aimCarry, carryStep, CARRY_KEYS, type AimCarry } from './findme';
 import { AUTOCAM, AUTOCAM_STATS, autoCam, autoBegin, autoRest, autoSway, swayDrop, swayCoast, autoZoom, autoHand, autoFree, autoRead, autoFrame, turnGoal, turnEase, turnCoast, walkKey, type AutoCam } from './autocam';
@@ -165,7 +165,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
   if (orbit && !fixed) cam.rotate(orbit);                                  // (the fixed step turns the camera in the frame's first TICK, below: a turn on a frame with no tick would reach the next tick's record through the frame's own rebuild, and two displays would be two games)
   // The camera's key tapped twice (host/findme.ts `behind`, off unless the player's Options say so): the view comes round to look where his man looked at that moment — a step
   // with each camera step below (a frame's on the free step, a tick's on the fixed one, as the orbit is). The tap's own frame may carry a pixel of orbit (a hand's
-  // tremor on the key): the tap wins it. After that a hand's turn drops it, and so does anything else that takes the view (a pin, a show, the tour, a spectated man)
+  // tremor on the key): the tap wins it. After that a hand's turn drops it, and so does anything else that takes the view (a pin, a show, a spectated man)
   const viewFree = () => game.spectate < 0 && !game.director.showing && !ctx.attract?.active && !cam.pin;
   // THE AUTO CAMERA'S MODE (host/autocam.ts; AUTOCAM.on): that double tap puts it ON — and brings the view round as the Options row's does, whatever the row says, so
   // the hand sees it took (in the mode, a double tap is that turn again) — and the hand on the camera puts it OFF: the key held with the mouse moved past a tremor, or
@@ -251,7 +251,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       if (ctx.fixed) { ctx.fixed.acc = 0; ctx.fixed.drift = 0; ctx.fixed.owed = null; if (!frozen && ctx.fixed.orbit) { cam.rotate(ctx.fixed.orbit); ctx.fixed.orbit = 0; } }   // (a hand's turn the fixed step still owed a tick)
       ctx.ticks = frozen ? 0 : 1;
       const showingBefore = !frozen && D.showing;   // a level-script showcase (the breach) has the frame: its drill, beats and camera run INSIDE the game step (director.tick) — attract stays out of it
-      attractPos = showingBefore || frozen || !attract ? null : attract.update(dt);   // attract mode's look-at when no scripted programme has the frame (it keys yaw / distance itself, as the tour does)
+      attractPos = showingBefore || frozen || !attract ? null : attract.update(dt);   // attract mode's look-at when no scripted programme has the frame (it keys yaw / distance itself)
       if (!frozen) ctx.beforeTick?.(dt);   // (outside the update's own timing: a hands-off player's thinking is not the game's)
       if (!frozen) carryAim();
       { const tU = performance.now(); if (!frozen) { if (ctx.tick) ctx.tick(dt, input, cam, view); else game.update(dt, input, cam, view); } ctx.updateMs = performance.now() - tU; }
@@ -295,7 +295,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
     if (!fixed) camStep(dt, attractPos, false);   // (the fixed step stepped it with each tick above)
     if (ctx.hud) {
       const sh = showCaption(ctx); ctx.hud.setCaption(sh ? sh.caption : '', sh ? sh.sub : '');
-      ctx.hud.setTimeline(dshow ? D.chapters() : null, () => {});   // (a level-script showcase's chapters are shown, not stepped)
+      ctx.hud.setTimeline(dshow ? D.chapters() : null);   // (a level-script showcase's chapters are shown, not stepped)
     }
     if (!fixed && !ctx.tick) ctx.host.lights.update(dt, ctx.time);
     { const pose = tw ? tw.camAt(blend, cam) : null; if (pose) cam.drawIn(pose); }   // (between two ticks the camera is drawn between where they left it, as the men are: out again with the kick)

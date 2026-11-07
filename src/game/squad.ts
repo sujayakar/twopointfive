@@ -74,8 +74,6 @@ export class Sweep {
 }
 
 // ================================================================ two-man room clear
-/** The plan's shape (marks, facings, aim lists, lines) lives with the level data: scene/level.ts RoomClearPlan — re-exported here for the stagers. */
-export type { RoomClearPlan };
 
 /** Two scripted guards clearing a room like a trained pair, telegraphing every step out loud: stack (0–2.5 s), breach (the #2's squeeze, #1's
  *  kick — the real leaf, flung off the real hinge, banging off its stop — or, for staff at their own doors, the keyed shove that does the same

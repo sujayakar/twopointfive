@@ -41,7 +41,6 @@
     g.player.char.anim.phase = 0;
     const A = window.__anim; if (A) { A.LIFE.on = 0; A.FEET.on = 0; }
   }
-  /** the REAL tour stop: seeded restart, the tour started and jumped to stop 7, stepped `frames` (the can leaves his hand at ~1.6 s, the doorway is full by ~7 s, the shot cuts at 15 s) */
   function camInfo() { const c = window.__cam; return { target: Array.from(c.target).map(v => +v.toFixed(2)), yaw: +(c.yaw / DEG).toFixed(1), pitch: +(c.pitch / DEG).toFixed(1), dist: +c.distance.toFixed(2) }; }
   function brief() { const s = state(); return { internal: s.internal, output: s.output, scale: s.scale, volQuarter: s.volQuarter, calm: s.calm, bricks: s.bricks, frameIdx: s.frameIdx }; }
   /** the doorway plume under a PINNED camera: no puppet, no torches, the two rooms' panels on, the leaf at the tour's 1.35 rad, a can on the sill, `dev` seconds of growth, then frozen (unless live) */
@@ -198,6 +197,6 @@
     return { frames: n, errors: errs.length, errs: errs.slice(0, 8) };
   }
   function project(p) { const v = document.getElementById('view'); const r = window.__cam.project(p, v.clientWidth, v.clientHeight); const W = E().outWidth || E().width, H = E().outHeight || E().height; return [Math.round(r[0] * W / v.clientWidth), Math.round(r[1] * H / v.clientHeight), r[2]]; }
-  window.__sk = { K, seed, settle, boot, state, tour, door, lot, run, frame, motionFrame, readback, crop, full, hash, metrics, temporal, take, costAB, project, camInfo, lumAt, cropStretch, colProfile, orbitFrame, validate };
-  return 'smoke-look ready: __sk.boot() then ONE of tour / door / lot, then frame / crop / metrics';
+  window.__sk = { K, seed, settle, boot, state, door, lot, run, frame, motionFrame, readback, crop, full, hash, metrics, temporal, take, costAB, project, camInfo, lumAt, cropStretch, colProfile, orbitFrame, validate };
+  return 'smoke-look ready: __sk.boot() then ONE of door / lot, then frame / crop / metrics';
 })();

@@ -244,7 +244,7 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
       game.update(dt, input, cam, canvas);
       if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view, look = (game as any).rustHost?.look?.();   // (a game that steps somewhere else, in a quiet run of steps: the camera's two inputs asked of it, tools/blitz/PLAY.md)
-        cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
+        cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (a look-at given: no aim lead)
       engine.lights.update(dt, game.time);
       engine.world.dynamics = game.dynBoxes;
       if (frame++ % uploadEvery === 0) engine.world.upload();   // CPU pack + grid (what the cursor's raycast and the lasers read); the GPU writes go nowhere

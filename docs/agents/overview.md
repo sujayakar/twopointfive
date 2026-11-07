@@ -170,7 +170,7 @@ src/editor/ viewer/  the level editor (app.ts core host, editor.ts + doc.ts undo
 src/workbench/       by workbench/main.ts (modes, two worlds on one engine); src/math/ vec.ts; src/debugHooks.ts (typed window hooks)
 tools/               serve.ts (+ levels-api.ts), build.ts, shot-server.ts, artifact-page.py, build-roadmap.ts (board generator), publish-public.sh,
                      level-export.ts (officeGen → levels/office.json; --check = stale test),
-                     qa/ (headless harness: headless.ts, soak.ts, probes.ts, tour.ts, gait.ts = the animation's numbers, audio-render.ts,
+                     qa/ (headless harness: headless.ts, soak.ts, probes.ts, gait.ts = the animation's numbers, audio-render.ts,
                      mesh-shadow-ref.ts = the mesh-shadow BVH / capsule-vs-mesh numbers + the GPU replay fixture, level-probes.ts = the
                      level-as-data identity / validate / round-trip family, fixtures/ (panel-inventory-main.json = the frozen Tab-row inventory),
                      sessions/*.json.gz = the F10 journal fixtures the gate replays, gpu-quiet.sh,

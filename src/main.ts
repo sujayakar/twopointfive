@@ -40,7 +40,7 @@ import { pageSwitches, pageRows } from './host/profile';
 import { MARKING_TEXEL } from './scene/markings';
 import { LOOK, LOOK_DOORS, LOOK_LAB, lookLabOn, lookLevelFile, lookPageOn, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs, lookKeptOf } from './scene/look';
 import { lookTidy, lookDoors } from './scene/lookTidy';
-import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
+import { stepFrame, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
 import { findMeOutline } from './ui/findme';
 import { makeOutlineFrame } from './render/outline';
@@ -424,7 +424,7 @@ async function main() {
   /** END a level-script program should a level ever carry one — back to the start card (Esc / P while it runs) */
   const endShow = () => { if (game.director.showing || game.director.handedOver) game.director.stop(true); if (menu.mode !== 'start') menu.open('start'); };
   soloNightHooks(game);
-  /** whichever hands-off programme is running (the tour, or a showcase program of a level script), for the veil / captions / timeline / hotkeys below — never both:
+  /** the hands-off programme running (a showcase program of a level script), for the veil / captions / timeline / hotkeys below:
    *  each refuses to start over the other */
   const show = (): { caption: string; sub: string; fade: number } | null => game.director.showing ? (game.director.frame ?? { caption: '', sub: '', fade: 0 }) : null;
   // WGSL compile check against the live device (Chrome/Tint is the compiler we ship to; naga is not available on this machine):
@@ -781,7 +781,7 @@ async function main() {
       return `${H.end === 'taken' ? 'taken in' : H.end === 'sam' ? 'Sam down at' : 'fighting at'} ${Math.round(H.t)} s, ${up} of ${sq.length} up`; },
   } : null;
   let benchAway = false; document.addEventListener('visibilitychange', () => { if (document.hidden) benchAway = true; });
-  const benchBlocked = () => perfsweep.active ? 'the sweep is running' : tape ? 'a replay is playing' : game.director.showing ? 'the tour is running' : missionsBusy() || optionsOpen() ? 'a screen is open' : null;
+  const benchBlocked = () => perfsweep.active ? 'the sweep is running' : tape ? 'a replay is playing' : game.director.showing ? 'a show is running' : missionsBusy() || optionsOpen() ? 'a screen is open' : null;
   const bench: Bench = new Bench(engine, quality, perfrec, { idle: capMs => cloud ? cloud.filesIdle(capMs) : Promise.resolve(true), boot: () => boot.summary(), rows: shaderRowsOn, machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz), hz: () => quality.displayHzPin || quality.displayHz, view: benchView(() => missionsBusy() || optionsOpen()), smoke,
     blocked: () => benchBlocked(),
     covered: () => missionsBusy() || optionsOpen() ? 'a screen came up over it' : null,

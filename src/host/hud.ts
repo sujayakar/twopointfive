@@ -14,7 +14,7 @@ export interface HudLike {
   /** the showcase caption + sub-line (empty strings = none) */
   setCaption(text: string, sub: string): void;
   /** the showcase timeline (null = none); onPick(k) seeks chapter k */
-  setTimeline(chapters: Chapters | null, onPick: (k: number) => void): void;
+  setTimeline(chapters: Chapters | null, _unused?: unknown): void;
   /** everything drawn off the game once a frame (markers, meters, rows, tags…) */
   update(game: Game, cam: FollowCamera, view: View): void;
   /** the interactables' light dots (Tab ▸ toggles it) */
