@@ -101,6 +101,7 @@ fn main() {
         let mut restarts: Vec<usize> = Vec::new();
         let rows0 = g.tab.boxes.len();
         let (mut n_parted, mut was_same, mut die_parted, mut done) = (0usize, true, 0usize, 0usize);
+        let mut verdict_said = false;
         for k in 1..=ticks {
             // THE HOST PUT A CHECKPOINT BACK in the TypeScript's run before this tick opened (`<k> chron_load`): the whole game was replaced by a saved one,
             // which no stepper can follow from its own state. The Rust game takes the TypeScript's state as this tick opens (L<k>.bin, Ls<k>.bin) as a NEW
@@ -151,6 +152,8 @@ fn main() {
             game_run::step_seats(&mut g, dt, &cmd);
             let el = t0.elapsed(); spent += el; if el > worst { worst = el; }
             done = k;
+            // (the mission's verdict as the game itself answers it, game::verdict::verdict_ended: the first tick it does, once)
+            if !verdict_said { if let Some((won, word, why)) = game::verdict::verdict_ended(&mut g) { verdict_said = true; println!("VERDICT at tick {}: {} {}{}", k, if won { "won" } else { "lost" }, word, if why.is_empty() { String::new() } else { format!(" ({})", why) }); } }
             // (a level script's beats as they stand: every beat this game started, how many resumes it has had, where it is)
             if std::env::var("BLITZ_BEATS").is_ok() { for b in g.tab.director_live_beat.ids().collect::<Vec<_>>() { let lb = &g.tab.director_live_beat[b]; println!("  beat after tick {}: {} {:?} step {} waiting {:?} it {:?}", k, lb.name, lb.state, lb.step, lb.waiting, lb.it); } }
             for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_after(&mut g, k, l) { println!("{}", t); } }
