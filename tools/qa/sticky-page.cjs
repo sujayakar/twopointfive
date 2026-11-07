@@ -15,7 +15,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   await ctx.addInitScript(() => { addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }); });
   const page = await ctx.newPage();
   page.on('pageerror', e => { if (!/WebGPU|adapter/i.test(String(e))) errors.push(String(e).slice(0, 300)); });
-  const open = async q => { await page.goto(`http://localhost:${PORT}/?${q}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(500);
+  const open = async q => { await page.goto(`http://localhost:${PORT}/?offlist=0&${q}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(500);
     await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on', { timeout: 20000 }); await page.waitForTimeout(500); };
   const goRow = async id => { const sel = `#missions .mrow[data-mission="${id}"]`;
     const head = await page.evaluate(q => { const e = document.querySelector(q); return e && e.classList.contains('shut') ? e.getAttribute('data-group') : null; }, sel);
