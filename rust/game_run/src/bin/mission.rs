@@ -194,6 +194,7 @@ fn main() {
             if !skip("follow") { game_run::follow(&mut g); }
             if parted > 0 && k >= parted + after {
                 beats_line(&g);
+                println!("CONTROL (man-ticks a rule had a man) {}", game::control::control_tally(&g));
                 println!("THE BLOCK FIRST PARTED AT TICK {}; stopped after tick {}", parted, k);
                 let _ = std::io::stdout().flush();
                 std::process::exit(1);
@@ -209,6 +210,7 @@ fn main() {
             for (k, n) in v.iter().take(14) { println!("   {} x {}", n, k); }
         }
         beats_line(&g);
+        println!("CONTROL (man-ticks a rule had a man) {}", game::control::control_tally(&g));
         // (the loop's counters of places mended by reading: game/b_tap.rs)
         { let t = game::game::b_tap::read(); println!("TAPS {}", game::game::b_tap::NAMES.iter().zip(t.iter()).map(|(n, c)| format!("{} {}", n, c)).collect::<Vec<_>>().join(" · ")); }
         if !restarts.is_empty() { println!("NEW STARTS (a checkpoint put back by the TypeScript's host): as ticks {:?} opened", restarts); }

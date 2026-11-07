@@ -1,6 +1,7 @@
 //! The Rust start of a level file, written out for the compare with the TypeScript start (tools/blitz/start.sh; README.md "The compare").
 //!
-//!   start <level file> --out DIR [--seed N] [--scenario roomclear|nightbreach|rescue|quiet [--squad N] [--deal N]] [--cpu] [--frames N [--beside]]
+//!   start --lacks <level file>…        a file a line: what the start does not carry of it
+//!   start <level file> --out DIR [--seed N] [--seats 2] [--scenario roomclear|nightbreach|rescue|quiet [--squad N] [--deal N] | --link '?words'] [--cpu] [--frames N [--beside]]
 //!
 //! Stands the level by `game_start::stand` and writes into DIR `n1.bin` (the whole state, by the bridge's writer) and `ns0.bin` (rust/sim's block),
 //! the names tools/blitz/diff.ts reads beside the TypeScript start's `c1.bin` and `s0.bin`. With `--frames N` it then runs N frames of a host with
@@ -15,8 +16,24 @@ use game_start::{block, files, json, stand};
 fn main() {
     let a: Vec<String> = std::env::args().collect();
     let opt = |n: &str| a.iter().position(|x| x == n).and_then(|i| a.get(i + 1)).cloned();
-    let (Some(file), Some(out)) = (a.get(1).filter(|f| !f.starts_with("--")), opt("--out")) else { eprintln!("start <level file> --out DIR [--seed N] [--scenario <kind> [--squad N] [--deal N]] [--frames N]"); std::process::exit(64); };
+    // `start --lacks <level file>…`: a file a line, what the start does not carry of it (a record or a member nobody reads), or why it could
+    // not be read at all (a value of the wrong kind stops the reader with its place)
+    if a.get(1).map(|x| x.as_str()) == Some("--lacks") {
+        std::panic::set_hook(Box::new(|_| {}));
+        for f in &a[2..] {
+            let data = match json::parse(&files::level_text(f)) { Ok(d) => d, Err(e) => { println!("{}\tNOT READ\t{}", f, e); continue; } };
+            if !data.has("boxes") { println!("{}\tnot a level file\t", f); continue; }
+            match std::panic::catch_unwind(|| game_start::level::lacks_of(&data)) {
+                Ok(lacks) => println!("{}\t{}\t{}", f, if lacks.is_empty() { "carried" } else { "NOT CARRIED" }, lacks.join(" · ")),
+                Err(e) => println!("{}\tNOT READ\t{}", f, e.downcast_ref::<String>().cloned().unwrap_or_default().replace('\n', " ")),
+            }
+        }
+        return;
+    }
+    let (Some(file), Some(out)) = (a.get(1).filter(|f| !f.starts_with("--")), opt("--out")) else { eprintln!("start <level file> --out DIR [--seed N] [--scenario <kind> [--squad N] [--deal N]] [--cpu] [--frames N [--beside]]"); std::process::exit(64); };
     let seed: u32 = opt("--seed").map(|s| s.parse().expect("--seed")).unwrap_or(20942);
+    let link = opt("--link");
+    let seats: u32 = opt("--seats").map(|s| s.parse().expect("--seats")).unwrap_or(1);
     let frames: usize = opt("--frames").map(|s| s.parse().expect("--frames")).unwrap_or(0);
     let beside = a.iter().any(|x| x == "--beside");
     let cpu = a.iter().any(|x| x == "--cpu");
@@ -30,7 +47,7 @@ fn main() {
     let h = std::thread::Builder::new().stack_size(1 << 30).spawn(move || {
         let ch = files::CharacterFiles::read();
         let data = json::parse(&files::level_text(&file)).unwrap_or_else(|e| panic!("{}: {}", file, e));
-        let mut s = stand::stand(&data, ch.assets(), &stand::StartOpts { seed, scenario, cpu_senses: cpu, ..Default::default() });
+        let mut s = stand::stand(&data, ch.assets(), &stand::StartOpts { seed, seats, scenario, link, cpu_senses: cpu, ..Default::default() });
         std::fs::create_dir_all(&out).unwrap();
         let len = block::len();
         std::fs::write(format!("{}/n1.bin", out), game::io::export(&s.game)).unwrap();

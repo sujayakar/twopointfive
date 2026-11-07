@@ -87,7 +87,7 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
         window.__runFrames(10, 1 / 60, keys, 'none');
         if (!S().far) { const a = S().ahead; ahead.samples++; if (a && a.move > 0.02) ahead.on++; if (a && a.move > ahead.most) ahead.most = a.move; }
         if (n % 20 === 0) console.log('[mpc] main', n, S().confirmed, S().behind, S().far, S().wordsOk, JSON.stringify(S().bad), JSON.stringify(S().ahead), Math.round(performance.now() - tm));
-        if (BREAK && !broke && S().confirmed >= base + 90) { broke = true; const p = g.player.char.pos, f = new Float64Array([p[0]]), u = new Uint32Array(f.buffer); u[0] ^= 1; p[0] = f[0]; }
+        if (BREAK && !broke && S().confirmed >= base + 90) { broke = true; const p = g.player.char.pos, f = new Float64Array([p[0]]), u = new Uint32Array(f.buffer); u[0] ^= 1; const why = window.__rust.poke(g.player.char, ['pos', 0], f[0]); if (why) console.log('[mpc] THE BREAK DID NOT REACH THE GAME: ' + why); }   // (the puppet and the Rust game at once: a write to the puppet alone is the picture's and no state word would say so)
         await tick0();
       }
       const rowsOf = () => { const R = {}; for (const r of document.querySelectorAll('#panel .row')) { const l = r.querySelector('label'); if (l) R[l.textContent.trim()] = r; } return R; };

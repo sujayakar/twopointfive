@@ -151,7 +151,7 @@ pub fn run(g: &mut crate::game::Game, d: RoomfightDefId, spot: V3, door: Option<
     let here = pos_of(g, gd);
     let de = dfm(g, d);
     de.mode = crate::roomfight::DefMode::Move; de.move_kind = crate::roomfight::DefMoveKind::Fallback; de.came_by = door; de.move_t = 0.0; de.stall_at = here; de.stall_t = 0.0; de.rally_at = m::NAN;
-    g.gd[gd].pinned = false;
+    crate::control::set_pinned(g, gd, false, "pressure");
     let speed = g.tune.guard_chase + fast;
     crate::squad::order(g, gd, crate::squad::OrderPatch {
         goal: Some(Some(spot)), speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), aim_at: Some(None),
@@ -358,8 +358,8 @@ pub fn loose(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) {
     let now = g.time;
     let de = dfm(g, d);
     de.mode = crate::roomfight::DefMode::Free; de.free_at = now; de.rally_at = m::NAN;
+    crate::control::set_hold(g, gd, false, "pressure"); crate::control::set_pinned(g, gd, false, "pressure");
     let man = &mut g.gd[gd];
-    man.hold = false; man.pinned = false;
     man.state = crate::game::GuardState::Alert;
     man.awareness = m::max(man.awareness, 0.92);
     if now - man.last_seen_t > 1.0 { crate::belief::word(g, gd, at); }
@@ -854,7 +854,7 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
             if to.is_some() || crate::scene_collision::nav_grid_find_path(g, here, spot, None, None).map_or(false, |w| !w.is_empty()) {
                 let x = &mut g.tab.pressure_man[mi];
                 x.fell = true; x.moving = true;
-                g.gd[gd].hold = true;
+                crate::control::set_hold(g, gd, true, "pressure");
                 crate::game::guard_set_path(g, gd, Vec::new());
                 let who = &mut g.gd[gd];
                 who.path_goal = None; who.path_goal_orbit = false;

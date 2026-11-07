@@ -62,12 +62,11 @@ export class AutosaveSession {
 /** WHAT '▶ play from here' CAN START on a document: the plain night, and each mission its `scenarios` block carries, as the query keys the page starts it by
  *  (scene/scenarioList.ts specOfQuery — `roomclear` (+ `squad4`), `rescue` (+ `squad=4`), `quiet` (+ `squad=1`), `nightbreach`; a `lesson` block rides whichever of
  *  them is started and has no key). `?level=local` alone names no mission: the page comes up on the start card over the document's own routes, which on a level
- *  built for a squad is an empty building. A document of the office family with no block of its own gets the office's (levels/office.scenarios.ts, attached by
- *  scene/level.ts buildLevel). `row` = the mission list's row for the file it was loaded from, where there is one: its team size and seed are the choice's. */
+ *  built for a squad is an empty building. `row` = the mission list's row for the file it was loaded from, where there is one: its team size and seed are the choice's. */
 export interface PlayChoice { id: string; label: string; query: string; row?: ScenarioEntry }
 export function playChoices(data: LevelData, file: string | null = null): PlayChoice[] {
-  const office = data.name === 'office' || data.name.startsWith('office-'), S: any = data.scenarios ?? (office ? { nightBreach: {}, roomClear: {}, rescue: {} } : {});
-  const rows = office && !data.scenarios ? ALL_MISSIONS.filter(e => !e.level) : rowsOf(data, file), lesson = S.lesson ? ' + its lesson' : '';
+  const S: any = data.scenarios ?? {};
+  const rows = rowsOf(data, file), lesson = S.lesson ? ' + its lesson' : '';
   const out: PlayChoice[] = [{ id: 'solo', label: 'solo night (start card)', query: '' }];
   const add = (kind: ScenarioEntry['kind'], squad: ScenarioEntry['squad'], label: string) => {
     const row = rows.find(e => e.kind === kind && e.squad === squad), q = scenarioQuery({ id: '', title: '', kind, squad, seed: row?.seed });
@@ -87,10 +86,11 @@ export function playDefault(data: LevelData, file: string | null = null): PlayCh
   const first = rowsOf(data, file)[0];
   return (first && C.find(c => c.row === first)) ?? C[1] ?? C[0];
 }
-/** the mission list's rows played on this document's file (the file it was loaded from, else its name; a look file answers for the plain file it is the look of) */
+/** the mission list's rows played on this document's file (the file it was loaded from, else its name; a look file answers for the plain file it is the look of;
+ *  a row that names no level is on the bundled office, office.json) */
 function rowsOf(data: LevelData, file: string | null): ScenarioEntry[] {
   const f = `${file ?? data.name}.json`, plain = Object.keys(LOOK_LEVELS).find(k => LOOK_LEVELS[k] === f) ?? f;
-  return ALL_MISSIONS.filter(e => e.level === plain);
+  return ALL_MISSIONS.filter(e => (e.level ?? 'office.json') === plain);
 }
 /** put the current document where the game's ?level=local looks; returns the URL to open. `as` = a playChoices id (absent / unknown: playDefault) */
 export function stashForPlay(ed: Editor, as?: string): string {

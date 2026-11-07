@@ -64,7 +64,7 @@
 //     sdfrig: sdfrig-fit sdfrig-pack sdfrig-presets
 //     cast: cast-loader cast-file cast-fit cast-game cast-look cast-beam   (the look switch: both files, OFF = today's masks, one digest under either look;  a statured man's laser leaves his drawn muzzle;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
 //     selector: selector-input selector-noise selector-rows selector-sustained
-//     selftest: selftest-fail selftest-fold selftest-holds selftest-knobs selftest-pass selftest-quiet selftest-throw   (selftest-fold by its own name only)
+//     selftest: selftest-fail selftest-fold selftest-holds selftest-knobs selftest-pass selftest-quiet selftest-side selftest-throw   (selftest-fold and selftest-side by their own names only)
 //     snap: snap-bites snap-page   (+ snap-open, by its own name only: red today)
 //     standoff: standoff-discipline standoff-door standoff-end standoff-ff standoff-flank standoff-lost standoff-see standoff-tour
 //     tactics: tactics-decay tactics-door tactics-flank tactics-lone tactics-rounds tactics-single
@@ -129,7 +129,27 @@ function on(...names: string[]): boolean { for (const n of names) KNOWN.add(n); 
 const FAIL_LINE = /^(=== .*\bFAIL|- FAIL\b|  FAIL |error:|!! FAIL)/, PASS_LINE = /^(- PASS\b|  PASS |=== .*\b(ALL|all) PASS)/;
 let tapDepth = 0, tapFails = 0, tapPasses = 0;
 const rawLog = console.log.bind(console), rawErr = console.error.bind(console);
-function scan(args: unknown[]) { const s = args.map(a => typeof a === 'string' ? a : '').join(' '); for (const ln of s.split('\n')) { if (FAIL_LINE.test(ln)) tapFails++; else if (PASS_LINE.test(ln)) tapPasses++; } }
+/** WHICH SIDE A PROBE'S LINES ASKED (tools/qa/fold.ts foldOtherSide): its case lines counted by whether the other side of a settled switch was wanted as each
+ *  was made. `failOff` of `failOn + failOff` failing lines were made with that side wanted, a question the page no longer has; a red probe with no `failOn` and no throw is red by
+ *  nothing else, and the closing table says so (OTHER SIDE ONLY: its lines are to delete, not to mend). `threw` = the first line of what it threw. */
+interface Sides { failOn: number; failOff: number; passOff: number; rows: Set<string>; threw?: string }
+const CASE_FAIL = /^(- FAIL\b|  FAIL )/, CASE_PASS = /^(- PASS\b|  PASS )/, THROWN = /^\s*(?:Type|Range|Reference)?Error: (.+)$/, SIDES = new Map<string, Sides>();
+let sides: Sides | null = null;
+function scan(args: unknown[]) { const s = args.map(a => typeof a === 'string' ? a : '').join(' ');
+  for (const ln of s.split('\n')) {
+    if (FAIL_LINE.test(ln)) tapFails++; else if (PASS_LINE.test(ln)) tapPasses++;
+    if (sides && !sides.threw) { const t = THROWN.exec(ln); if (t) sides.threw = t[1].slice(0, 160); }   // (a check that catches its own throw and prints it: the same tag as one the runner caught)
+    const f = CASE_FAIL.test(ln); if (!sides || !(f || CASE_PASS.test(ln))) continue;
+    const off = FOLDM.foldOtherSide(); for (const r of off) sides.rows.add(r);
+    if (f) { if (off.length) sides.failOff++; else sides.failOn++; } else if (off.length) sides.passOff++;
+  } }
+/** the tag a red probe's row of the closing table carries, '' where it has none */
+function sideTag(n: string): string { const s = SIDES.get(n); if (!s) return '';
+  const rows = [...s.rows], named = `${rows.slice(0, 4).join(', ')}${rows.length > 4 ? ` and ${rows.length - 4} more` : ''}`;
+  if (s.threw) return ` [THREW: ${s.threw}]`;
+  if (s.failOff && !s.failOn) return ` [OTHER SIDE ONLY: its ${s.failOff} failing line${s.failOff > 1 ? 's' : ''} made with the other side of a settled switch wanted (${named}): an arm or a staging the page no longer has]`;
+  if (s.failOff) return ` [${s.failOff} of its ${s.failOff + s.failOn} failing lines were made with the other side of a settled switch wanted (${named})]`;
+  return ''; }
 console.log = (...args: unknown[]) => { if (tapDepth) scan(args); rawLog(...args); };
 console.error = (...args: unknown[]) => { if (tapDepth) scan(args); rawErr(...args); };
 /** Run one probe under the verdict: failed when it returns false, throws (logged as an 'error:' line, the run goes on), or prints a FAIL / error line while it runs.
@@ -140,13 +160,16 @@ console.error = (...args: unknown[]) => { if (tapDepth) scan(args); rawErr(...ar
  *  and the loud card first in the table. */
 async function run(name: string, fn: () => unknown, standOf = name): Promise<boolean> {   // (standOf: the probe whose stand it runs on — its own, but for selftest-holds)
   RAN++; RAN_NAMES.push(name); (globalThis as any).__probeNow = name; process.env.RH_PROBE = name;   /* (read by tools/blitz/rust-host.ts, which probe stood a game: its trace, RH_TRACE, and its table of which game a check is stood on, TPS_GAME=table; the environment's copy is for a probe that runs as a child) */ const f0 = tapFails, p0 = tapPasses; tapDepth++;
+  const mine: Sides = { failOn: 0, failOff: 0, passOff: 0, rows: new Set() }, outer = sides; sides = mine; FOLDM.foldOtherSideClear();
   let ok = true, ret: unknown; const plainSays = process.env.QA_VERDICTS === '1' && !FOLDM.FOLD.on && (process.env.QA_VERDICTS_BY ??= String(process.pid)) === String(process.pid), speaks = FOLDM.foldSpeaker('runner');
   if (speaks) { const o = FOLDM.foldOutside(`before ${name}`); if (o) console.log(o); }   // (tools/qa/fold.ts: what was refused before this probe began is not its own, and is said)
   // (QA_FOLD_ONLY, the outermost runner's alone: the laid fold on for a named probe, off for any other, and back to what stood between probes after it)
   const between = FOLDM.foldMode(), only = speaks && FOLD_ONLY && between !== null; if (only) { if (FOLD_ONLY!.has(name)) FOLD_MET.add(name); FOLDM.foldFor(FOLD_ONLY!.has(name)); }
   try { ret = await asProbe(standOf, fn); if (ret === false) ok = false; }
-  catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
-  finally { tapDepth--; }
+  catch (e: any) { ok = false; mine.threw = String(e?.message ?? e).split('\n')[0].slice(0, 160); console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
+  finally { tapDepth--; sides = outer; }
+  if (mine.threw || mine.failOff || mine.passOff) { SIDES.set(name, mine);
+    if (speaks) console.log(`  ${JSON.stringify({ sides: { probe: name, fail: mine.failOn + mine.failOff, failOtherSide: mine.failOff, passOtherSide: mine.passOff, rows: [...mine.rows], ...(mine.threw ? { threw: mine.threw } : {}) } })}`); }
   if (speaks) console.log(FOLDM.foldLine(name, tapFails > f0 || !ok));
   if (only) FOLDM.foldFor(between);   // (tools/qa/fold.ts: what this probe, and its children, tried to write over a settled row)
   else if (plainSays) console.log(`  ${JSON.stringify({ plain: { probe: name, red: tapFails > f0 || !ok } })}`);   // (the outermost runner's alone, as the fold's line is)
@@ -3702,6 +3725,14 @@ if (on('selftest-fold')) await run('selftest-fold', async () => { const F = awai
   const [t, k] = A.row.split('.'), T = (knobRegistry() as Record<string, Record<string, unknown>>)[t]; T[k] = !A.page;
   const code = await Bun.spawn(['bun', 'run', `${import.meta.dir}/fold-check.ts`, '--write'], { stdout: 'inherit', stderr: 'inherit', env: process.env }).exited;
   console.log(`- ${code === 0 ? 'PASS' : 'FAIL'} — ${A.row} written off its page value here and in a child (exit ${code}); it reads ${String(T[k])} now`); return code === 0; });
+// `selftest-side` (by its own name only): a settled switch row written off its page value, a FAIL line printed, the row written back. Under the fold the
+// closing table tags the red OTHER SIDE ONLY (fold-check (11)). SIDES_BREAK=1 prints one more FAIL line after the row is back: a failing line of the page's
+// own side, so the tag must say one of two.
+if (on('selftest-side')) await run('selftest-side', async () => { const F = await import('./fold.ts'), { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`), A = F.settledYesNo(F.switchRows(), 2)!;
+  const [t, k] = A.row.split('.'), T = (knobRegistry() as Record<string, Record<string, unknown>>)[t]; T[k] = !A.page;
+  console.log(`- FAIL — deliberately: a line made with ${A.row} wanted off its page value`); T[k] = A.page;
+  if (process.env.SIDES_BREAK === '1') console.log('- FAIL — deliberately (SIDES_BREAK=1): a line made with the row back at its page value');
+  return false; });
 if (on('selftest-quiet')) await run('selftest-quiet', () => { console.log('  (a probe that prints no check and returns nothing)'); });
 if (on('selftest-knobs', 'selftest')) {   // run() puts the knob singletons back: one probe scribbles on three tables and 'forgets', the next finds them as they were
   const T = knobTables() as any; const before = JSON.stringify([T.WHISTLE?.twiceWindow, T.CIV?.greet, T.NEEDS?.dwell]);
@@ -3758,8 +3789,8 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
     else if (old.length || fresh.length || back.length) {
       console.log(`  the reds against the list (tools/qa/expected-red.ts${STAND === 'shipped' ? '' : ", the rows that are red on the old stand"}): ${old.length} expected · ${fresh.length} NEW · ${back.length} listed and green again`);
       if (LIST_READ_ON && STAND === 'shipped' && (old.length || back.length)) console.log(`    (${LIST_READ_ON})`);
-      for (const n of old) console.log(`    EXPECTED RED  ${n} — ${rowSays(LIST[n])}`);
-      for (const n of fresh) console.log(`    NEW RED       ${n}`);
+      for (const n of old) console.log(`    EXPECTED RED  ${n}${sideTag(n)} — ${rowSays(LIST[n])}`);
+      for (const n of fresh) console.log(`    NEW RED       ${n}${sideTag(n)}`);
       for (const n of back) console.log(`    GREEN AGAIN   ${n} — listed as an expected red and it passed here: ${mend(n)}`);
     }
     for (const e of foldOnlyErrors()) console.log(`error: ${e}`);   // (QA_FOLD_ONLY that could not do what it was asked: an error, so that a check that had to be folded is never a green run unfolded)

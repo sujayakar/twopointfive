@@ -53,8 +53,8 @@ its scene, plays three real floors instead (docs/agents/qa.md 'THE BENCHMARK'). 
   exercised by `probes.ts nightbreach`. Nothing runs it as a Director drill any more.
 - **The Director = level scripting M1** (`src/game/director.ts`, `Game.director`, `__director`; spec docs/design/level-scripting.md, record docs/internal/director.md; merged 54fd23c):
   a level's SCRIPT is a plain function `(D: DirectorApi) => void` in `levels/<name>.script.ts` importing NOTHING from src/ at run time (`import type` only; scene/level.ts
-  `withScript` attaches one as a NON-ENUMERABLE `Level.script`). NO SHIPPED LEVEL HAS ONE: the office's held only the two removed showcases, so `withOfficeScript` now attaches
-  the office's scenario data alone and every Game's Director has no manifest and idles. Define time = handles by name (`D.mark / door / volume / route / plan / loadout / lightGroup /
+  `withScript` attaches one as a NON-ENUMERABLE `Level.script`). NO SHIPPED LEVEL HAS ONE: the office's held only the two removed showcases, so nothing is
+  attached to the office at load (its scenario data is its file's own block) and every Game's Director has no manifest and idles. Define time = handles by name (`D.mark / door / volume / route / plan / loadout / lightGroup /
   variant`) + `D.program(name, P => …, {showcase, lowerThird, endVeil, endHold})` + `D.expect.*` / `D.systems.*` → a MANIFEST linted against the level in the Game constructor
   (`lintManifest`: a missing door / volume / route / plan / group, an unknown weapon, an undeclared beat… = `armed` false, one console error, `start()` refused — the game plays on).
   TRIGGERS per program (`P.onStart / after / onEvent(kind, beat, filter) / onSignal / onEnter(volume, beat, {who}) / when(pred)`, once a run) start BEATS = GENERATORS

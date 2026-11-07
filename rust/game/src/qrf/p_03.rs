@@ -472,8 +472,8 @@ pub fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
     for &man in el {
         if g.gd[man].script.is_some() { crate::squad::end_guard_script(g, man, Some(crate::squad::EndGuardScriptState::Alert)); }
         let is_seer = man == seer;
-        g.gd[man].hold = false;
-        g.gd[man].pinned = false;
+        crate::control::set_hold(g, man, false, "qrf");
+        crate::control::set_pinned(g, man, false, "qrf");
         g.gd[man].state = crate::game::GuardState::Alert;
         g.gd[man].awareness = m::max(g.gd[man].awareness, if is_seer { 1.0 } else { 0.95 });
         let known = match g.gd[man].last_known { Some(k) if is_seer => k, _ => fix };
@@ -655,7 +655,7 @@ pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
         match crate::guards::spawn_unit(g, &o) {
             Ok(gd) => {
                 g.gd[gd].trained = true;
-                g.gd[gd].hold = false;
+                crate::control::set_hold(g, gd, false, "qrf");
                 g.gd[gd].state = crate::game::GuardState::Search;
                 g.gd[gd].awareness = HUNT_AWARENESS;
                 g.gd[gd].heard_up_to = g.event_seq;
@@ -714,8 +714,8 @@ pub fn to_post(g: &mut crate::game::Game, p: usize) {
     let row = &mut g.qrf.perim.as_mut().unwrap().men[p];
     row.fighting = false;
     let (gd, post) = (row.gd, row.post.clone());
-    g.gd[gd].pinned = false;
-    g.gd[gd].hold = false;
+    crate::control::set_pinned(g, gd, false, "qrf");
+    crate::control::set_hold(g, gd, false, "qrf");
     crate::squad::order(g, gd, crate::squad::OrderPatch {
         goal: Some(Some(v3::copy(post.pos))), speed: Some(Some(POST_SPEED)), face: Some(Some(post.yaw)), strafe: Some(Some(false)), stance: Some(Some(crate::character::Stance::None)),
         upper: Some(Some(crate::character::UpperMode::Aim)), crouch: Some(Some(false)), aim_at: Some(Some(v3::copy(post.sweep[0]))), ..Default::default()
@@ -734,7 +734,7 @@ pub fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
         if g.gd[gd].script.is_some() {
             if g.qrf.perim.as_ref().unwrap().men[idx].arrived_at < 0.0 && (man_arrived(g, gd) || (flat(man_pos(g, gd), post.pos) < 0.7 && g.gd[gd].speed < 0.2)) {
                 g.qrf.perim.as_mut().unwrap().men[idx].arrived_at = g.time;
-                g.gd[gd].pinned = true;
+                crate::control::set_pinned(g, gd, true, "qrf");
                 note(g, &format!("post:{}", post.name));
             }
             let arrived_at = g.qrf.perim.as_ref().unwrap().men[idx].arrived_at;
@@ -754,7 +754,7 @@ pub fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
             } else if eyes {
                 // eyes on him from the post (or at arm's length on the way): the AI fires from where he stands, the others are told where
                 crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert));
-                g.gd[gd].pinned = arrived_at >= 0.0;
+                crate::control::set_pinned(g, gd, arrived_at >= 0.0, "qrf");
                 g.gd[gd].state = crate::game::GuardState::Alert;
                 g.gd[gd].awareness = 1.0;
                 g.gd[gd].react_t = 0.35;
@@ -780,7 +780,7 @@ pub fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 g.gd[gd].standoff = None;
                 g.gd[gd].search_plan = None;
                 to_post(g, idx);
-                if g.qrf.perim.as_ref().unwrap().men[idx].arrived_at >= 0.0 && flat(man_pos(g, gd), post.pos) < 1.0 { g.gd[gd].pinned = true; }
+                if g.qrf.perim.as_ref().unwrap().men[idx].arrived_at >= 0.0 && flat(man_pos(g, gd), post.pos) < 1.0 { crate::control::set_pinned(g, gd, true, "qrf"); }
             }
         }
     }

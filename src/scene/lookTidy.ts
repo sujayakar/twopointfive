@@ -38,9 +38,9 @@ export function lookTidy(world: { statics: Box[]; geomSerial: number }, rest = f
   let T = tidies.get(world.statics); if (T === undefined) { T = find(world.statics); tidies.set(world.statics, T); }   // (found as the level stands when the page first asks, at rest or not: a wall holed since would not be read as a wall)
   if (!T) return;
   if (T.serial === world.geomSerial && T.rest === rest) return;
-  let changed = false; T.rest = rest;
-  T.pairs.forEach(([d, ws], k) => { const box = world.statics[d]; if (!box) return; const want = !rest && ws.some(w => world.statics[w] && world.statics[w].flags & BoxFlag.NoPrimary) ? T!.flags0[k] | BoxFlag.NoPrimary : T!.flags0[k]; if (box.flags !== want) { box.flags = want; changed = true; } });
-  if (changed) world.geomSerial++;
+  T.rest = rest;
+  T.pairs.forEach(([d, ws], k) => { const box = world.statics[d]; if (!box) return; const want = !rest && ws.some(w => world.statics[w] && world.statics[w].flags & BoxFlag.NoPrimary) ? T!.flags0[k] | BoxFlag.NoPrimary : T!.flags0[k]; if (box.flags !== want) box.flags = want; });
+  // (the sheets' flags are the picture's and no reader of the world's serial asks after them: that number is the game's own count of what broke)
   T.serial = world.geomSerial;
 }
 

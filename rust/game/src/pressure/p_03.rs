@@ -216,7 +216,7 @@ pub fn stand_and_fight(g: &mut crate::game::Game) {
         let fp = g.ch[fc].pos;
         if !crate::guards::clear_shot(g, c, [fp[0], fp[1] + 1.2, fp[2]]) { continue; }
         if crate::lanes::lane_exposed(g, gd) { continue; }   // (floor his side knows a gun covers: no place to plant himself)
-        g.gd[gd].hold = true;
+        crate::control::set_hold(g, gd, true, "pressure");
         crate::game::guard_set_path(g, gd, Vec::new());
         crate::guards::guard_set_path_goal(g, gd, None);
         crate::roomfight::room_fight_stand_on(g, d, true);

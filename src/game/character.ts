@@ -1981,12 +1981,15 @@ export class CharacterAnimator {
   /** A TAKEDOWN'S OWN MOVE (game/takedown.ts, right after the strike() it rides): `at` = where the blow lands, `at2` = where the free hand goes (world points
    *  on the man), landing `hit` s in and over by `end`; with `vic` both points ride his neck / head as he moves (the blow's until it lands). Poses only: the
    *  game's own clock still says when he is out. */
-  blow(style: BlowStyle, at: Vec3, at2: Vec3 | null = null, o: BlowOpts = {}): void { return goneWithTick('CharacterAnimator.blow') as any; }
+  blow(style: BlowStyle, at: Vec3, at2: Vec3 | null = null, o: BlowOpts = {}) {
+    this.bw = { style, t: 0, hit: o.hit ?? 0.28, end: o.end ?? 0.62, tail: o.tail ? BLOW.tail : 0, rise: o.rise ?? true, at: v3.copy(at), at2: at2 ? v3.copy(at2) : null, live: o.live ?? null };
+    this.kbSlash = style === 'slash'; this.kbBack = style === 'mouth';
+  }
   /** the man it was being done to, let go of: his reaction eases out over a fifth of a second (one not yet begun never begins) */
   takenCancel(): void { return goneWithTick('CharacterAnimator.takenCancel') as any; }
   /** …AND THE MAN IT IS DONE TO, while he is still on his feet: from `delay` s on he arches back onto the knife man's shoulder / hunches under a blow from
    *  behind, knees going / his head snaps back off one from in front. Eases out by itself after TAKEN.secs (he is mostly a ragdoll long before). */
-  taken(style: TakenStyle, delay = 0): void { return goneWithTick('CharacterAnimator.taken') as any; }
+  taken(style: TakenStyle, delay = 0) { this.tk = { style, t: 0, delay, off: -1 }; }
   /** the reload one-shot (Pistol_Reload over the upper body), retimed to take `dur` seconds — the weapon's own beat: the Five-seveN's 1.6, the SC-20K's 2.4 */
   reload(dur = 1.6, beat?: ReloadBeat) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('CharacterAnimator.reload', this, [dur, beat]); if (__r !== RUST_PASS) return __r as any; } }
     this.reloadT = 0; this.reloadDur = Math.max(0.3, dur);
@@ -2048,7 +2051,11 @@ export class CharacterAnimator {
   private get kitRifle(): boolean { const k = this.kit; return !!k && (k.from === 'rifle' || k.to === 'rifle'); }
   /** KIT: a magazine change as the drawer needs it — is the magazine out of the gun, and is one in the support hand (the kept one on its way to the pouch, the
    *  fresh one on its way to the well). null = no change shown. */
-  get reloadShow(): { out: boolean; hand: boolean } | null { return goneWithTick('CharacterAnimator.reloadShow') as any; }
+  get reloadShow(): { out: boolean; hand: boolean } | null {
+    if (!(this.mv2Shown.reload > 0.5)) return null;
+    const B = this.rlB, t = this.mv2.rlAt;
+    return { out: t >= B.out && t < B.in_, hand: (B.keep >= 0 && t >= B.out && t < B.keep) || (t >= B.fresh + 0.04 && t < B.in_) };
+  }
   /** the change the support hand is SHOWING, as its beat and where it is on it (gunreload.ts reloadShow / reloadHandBoxes work a gun's own feeding out from this
    *  and nothing else: no state of their own). null = no change shown. */
   get feedClock(): { t: number; dur: number; out: number; in_: number; rack: number; pull: boolean; keep: number; fresh: number } | null {

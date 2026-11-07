@@ -21,7 +21,7 @@
 import './seats';
 import type { Game, Guard, Player } from './game';
 import { SUPPRESSION } from './suppression';
-import { crossToRust, goneWithTick } from './crossing';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export const CONDITION = {
   on: false,
@@ -63,7 +63,12 @@ export function isHurt(g: Game, m: Man, now = g.time): boolean {   // (`now`: th
 
 /** A blast reached this man and left him up (frag.ts blast, its 'wounded' result): he is hurt from now. Not a civilian, not a man the debugger keeps whole,
  *  not the player in god mode, and nobody under a showcase's choreography (its men walk the marks it was written against). */
-export function conditionHurt(g: Game, m: Man): boolean { return crossToRust('conditionHurt', undefined, [g, m]) as any; }
+export function conditionHurt(g: Game, m: Man): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('conditionHurt', undefined, [g, m]); if (__r !== RUST_PASS) return __r as any; } }
+  if (!CONDITION.on || g.touring || g.puppet) return false;
+  if (isGuard(m) ? m.civ || m.god || m.state === 'dead' : g.godMode || m.down) return false;
+  if (!isHurt(g, m)) CONDITION_STATS.hurt++;
+  m.hurtAt = g.time; return true;
+}
 
 /** the speed a man's legs may be asked for: a hurt one's is capped (anybody else: as asked) */
 export function conditionPace(g: Game, gd: Guard, speed: number): number { return isHurt(g, gd) ? Math.min(speed, CONDITION.hurtPace) : speed; }

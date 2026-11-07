@@ -69,7 +69,6 @@ const { defaultRcConfig } = await import(`${ROOT}/src/render/rc.ts`);
 const { PRESETS } = await import(`${ROOT}/src/ui/quality.ts`);
 const { ROUGH_DEFAULT } = await import(`${ROOT}/src/scene/boxes.ts`);
 const HOURS: Record<string, { lamps: boolean } | undefined> = (await import(`${ROOT}/src/game/hours.ts`)).HOURS;
-const { OFFICE_SCENARIOS } = await import(`${ROOT}/levels/office.scenarios.ts`) as { OFFICE_SCENARIOS: { response?: unknown } };
 const { harnessProfile, pageSwitches } = await import(`${ROOT}/src/host/profile.ts`);
 
 interface Paint { albedo: number[]; rough?: number; metal?: boolean }
@@ -410,7 +409,7 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
     say('picture', disk && list, `${e.id}: ${disk && list ? 'public/assets/menu has its picture' : !disk ? `no public/assets/menu/${e.id}.jpg (the card falls back to the drawn plan)` : 'on disk, not in stills.json'}`); }
   // ---- the Team & kit picture
   if (rows.length && !lesson) {
-    const own = name === 'office' ? /KIT_VIEW/.test(readFileSync(resolve(ROOT, 'levels/office.scenarios.ts'), 'utf8')) : S.kitView !== undefined;
+    const own = S.kitView !== undefined;
     say('kit picture', own, own ? 'the file carries a kitView block' : 'no scenarios.kitView: Team & kit shows an empty column where the picture would be');
     if (twin && own) { const same = JSON.stringify(twin.scenarios?.kitView) === JSON.stringify(S.kitView); say('kit picture', same, same ? 'the look twin carries the same block' : 'the look twin\'s kitView block is not the plain file\'s'); }
   }
@@ -430,7 +429,7 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
     say('floor', own ? true : 'note', own ? 'its own footstep map' : `no \`surfaces\` block: ${S.quiet ? 'every step is on lino, the yard\'s too' : shell ? 'built in the office\'s shell and walked on the office\'s footstep map: right only where its rooms lie as the office\'s do' : 'walked on the office\'s footstep map, and the building is not where the office\'s is: its carpet, lino and stone fall where they fall'}`); }
   // ---- the ground: stretches with nothing on them, the look twin's too (its ground is its own)
   for (const [who, F] of [['', L], ['look twin: ', twin]] as const) { if (!F) continue;
-    const all = bareGround(F, startsOf([name === 'office' ? OFFICE_SCENARIOS : F.scenarios, (F as { mission?: unknown }).mission])), within = all.filter(s => !s.margin), big = within.filter(s => s.area >= GROUND.big), rim = all.filter(s => s.margin).reduce((a, s) => a + s.area, 0);
+    const all = bareGround(F, startsOf([F.scenarios, (F as { mission?: unknown }).mission])), within = all.filter(s => !s.margin), big = within.filter(s => s.area >= GROUND.big), rim = all.filter(s => s.margin).reduce((a, s) => a + s.area, 0);
     const at = (s: Stretch) => `${Math.floor(s.area)} m² of ${s.mat} at [${s.x.toFixed(1)}, ${s.z.toFixed(1)}]`, edge = rim >= GROUND.big ? `; ${Math.round(rim)} m² more is bare outside the place (past its walls, or along the world's edge with no start on it)` : '';
     say('ground', big.length ? 'note' : true, who + (big.length ? `${big.length} stretch${big.length > 1 ? 'es' : ''} of ${GROUND.big} m² or more of ground with nothing on ${big.length > 1 ? 'them' : 'it'} (no paint that reads against its own, no rubble or kerb, within ${GROUND.reach} m): ${big.slice(0, GROUND.list).map(at).join('; ')}${big.length > GROUND.list ? ` and ${big.length - GROUND.list} more` : ''}${edge}`
       : `no ${GROUND.big} m² of ground is one bare sheet (the largest: ${within.length ? at(within[0]) : `under ${GROUND.least} m²`})${edge}`)); }
@@ -469,7 +468,7 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
       say('kit', 'note', `${locked} locked and ${steel} steel of ${L.doors.length} doors, against ${charges} door charge${charges === 1 ? '' : 's'} as issued (steel takes no charge, hammer or shotgun): say how each is meant to be opened`); } }
   // ---- a response team, or none on purpose
   if (rows.length && !lesson) {
-    const R = name === 'office' ? OFFICE_SCENARIOS.response as NonNullable<LevelFile['scenarios']>['response'] : S.response, none = NOBODY_COMES[name];
+    const R = S.response, none = NOBODY_COMES[name];
     if (R) { const why = typeof R.why === 'string' ? R.why.trim() : '', raid = !!R.raid;
       say('response', why.length > WHY_MIN, `a response team comes here (${typeof R.team === 'string' ? R.team : 'no `team` word'}; it answers ${raid ? 'a squad\'s room clear and nothing else' : 'a quiet night gone loud'}): ${why.length > WHY_MIN ? 'the file says why' : `its \`why\` is not a sentence (over ${WHY_MIN} characters)`}`);
       if (none !== undefined) say('response', false, `NOBODY_COMES says nobody comes here ('${none}') and the file carries a response block: one of the two is stale`);

@@ -18,9 +18,9 @@ import { type ThrowSolution } from './throwables';
 import { bodyHit } from './combat';
 import './civilians';
 import './particleFx';
-import { arcSolve } from './launcher';
-import { type BlastReport } from './frag';
-import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
+import { arcSolve, launchVel } from './launcher';
+import { blast, FRAG, type BlastReport } from './frag';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 /** Every number of the round's flight and of what a dud does (the blast's numbers are frag.ts FRAG's: one blast). */
 export const HE40 = {
@@ -78,8 +78,21 @@ export function previewTooClose(g: Game): boolean { const pl = g.player; return 
 
 
 /** Let one round go from `from` at `target` off `shooter`'s launcher: in the air from this frame (Game.shells), the tube's thump, and the room hears it go. */
-export function fireShell(g: Game, shooter: Character, from: Vec3, target: Vec3): Shell { return crossToRust('fireShell@src/game/he40.ts', undefined, [g, shooter, from, target]) as any; }
+export function fireShell(g: Game, shooter: Character, from: Vec3, target: Vec3): Shell { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('fireShell@src/game/he40.ts', undefined, [g, shooter, from, target]); if (__r !== RUST_PASS) return __r as any; } }
+  const sh: Shell = { pos: v3.copy(from), vel: launchVel(from, target, HE40), age: 0, flown: 0, shooter, spin: 0 };
+  g.shells.push(sh); HE40_STATS.fired++;
+  g.audio.play('launcher', from, 1.0, { rate: 0.6 });   // (no sample of its own yet: the ring launcher's, pitched down to a thump)
+  g.events.push({ kind: 'prop', pos: v3.copy(shooter.pos), time: g.time, loud: false, level: HE40.launchNoise, who: shooter.id });
+  if (shooter === g.player.char) g.player.noise = Math.max(g.player.noise, HE40.launchNoise);
+  return sh;
+}
 
+function logEnd(e: ShellEnd) { HE40_LOG.push(e); if (HE40_LOG.length > 32) HE40_LOG.shift(); }
+/** ARMED and stopped: the burst, judged from `pt` (a point in the room, HE40.standoff off whatever it struck) — frag.ts's blast and nothing else. */
+function burst(g: Game, sh: Shell, pt: Vec3, met: ShellEnd['met']) {
+  const report = blast(g, [pt[0], pt[1] - FRAG.lift, pt[2]], { who: sh.shooter.id, name: '40 mm grenade' });   // (blast() judges from FRAG.lift over the point it is given: handed the point that much lower, it judges from `pt`)
+  HE40_STATS.bursts++; logEnd({ at: v3.copy(pt), flown: sh.flown, armed: true, met, report });
+}
 
 
 

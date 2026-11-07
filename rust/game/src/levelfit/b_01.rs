@@ -212,7 +212,7 @@ pub fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables:
     let bars = flagged(g, &col.boxes, flag.bar);
     rows.push(row("bars", "window's bars (a row a bar gone, in the game's block)", bars, if held { ::sim::panes_cap(0) as f64 } else { inf }, None));
     rows.push(row("doors", "doors (a row a door, and a row a leaf off its hinges)", big.doors, cap.doors, None));
-    rows.push(row("men", "the first seat's man and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture's budget of characters)", 1.0 + guards, crate::guards::MAX_SKINNED, None));
+    rows.push(row("men", "a man a seat and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture's budget of characters)", crate::seats::seat_count(g) + guards, crate::guards::MAX_SKINNED, None));
     let man_rows = men_most(g, civs);
     rows.push(row("manrows", "rows of the men's columns against every man a game can hold (menMost: at most what a step's hand-over holds, by civMost; a man who has left keeps no row)", man_rows, crate::sim_men_schema::MEN_ROWS, None));
     let poses = if held { let c = civ_most(g); men_most(g, c) * man_singles_of(g, g_2) } else { 0.0 };

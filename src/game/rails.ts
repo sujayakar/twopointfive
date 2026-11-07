@@ -150,6 +150,9 @@ const ACTS: Record<string, Act> = {
   //  row's digit is the row's — `gate`, below — and off the setup the swap is the rifle's own key)
   load: {},
 };
+/** never locked: the page's own (the pause, the back key, a restart, the one-tick codes the host hands the tick) */
+/** the lookout's id among the fog's eyes: no character's, and under the sticky cameras' (stickycam.ts EYE_ID, which its count starts at) */
+const LOOKOUT_ID = 199, STEP_EYE_ID = 198;
 /** seconds a refused tap's words stay up under the line */
 const NOTE_SECS = 2.6;
 /** metres from the step's mark the squad's ring may be opened and still be the step's ring (its `menuLine`) */
@@ -158,6 +161,7 @@ const MENU_M = 6;
 const said = (A: { line?: string; word?: string }, gave: number): string | undefined => gave === 2 ? A.word ?? A.line : A.line;
 /** the most a step's card may say (its `explain.text`): three short sentences */
 const CARD_CHARS = 260;
+function lookoutEye(id: number, e: { at: Vec3; yaw: number; fov?: number }): FogEye { return { id, pos: e.at, look: [Math.sin(e.yaw), 0, Math.cos(e.yaw)], at: e.at, fov: e.fov ?? 120, near: 0 }; }
 export const RAILS_ACTIONS: readonly string[] = Object.keys(ACTS);
 
 /** A ROWS LIST THAT TAKES AN ACT BACK OUT OF HIS HANDS (`rails.rows`): a list names the verbs a mission teaches, and every other row is withheld — the act that
@@ -297,10 +301,21 @@ export class Rails {
   /** THE MENU'S ROWS on a tutorial mission (orders.ts rowsFor): only the orders the level names — a row nobody taught is not on the ring */
   orderRows<T extends { id: string }>(rows: T[]): T[] { const L = this.live && !BREAK ? this.data?.orders : undefined; return L ? rows.filter(d => L.includes(d.id)) : rows; }
   /** the sky seat's lookout (fogofwar.ts update: one more eye of the picture's, and of the team's only with RAILS.eyeView off): null without one */
-  eye(): FogEye | null { return goneWithTick('Rails.eye') as any; }
+  eye(): FogEye | null {
+    const e = this.data?.sky?.eye; if (!e) return null;
+    return this.lookout ??= lookoutEye(LOOKOUT_ID, e);
+  }
   private lookout: FogEye | null = null;
+  /** the step's eye has a place in the fog's list whatever else is in it (RAILS.eyeFirst) */
+  get eyeFirst(): boolean { return RAILS.eyeFirst; }
+  /** the frame's eyes are the picture's alone (RAILS.eyeView) */
+  get eyeView(): boolean { return RAILS.eyeView && !BREAK; }
   /** the step's own lookout (its `eye`), for as long as the step is up: null without one */
-  stepEye(): FogEye | null { return goneWithTick('Rails.stepEye') as any; }
+  stepEye(): FogEye | null {
+    const S = this.lesson(), e = S?.L.steps[S.i]?.eye; if (!e || BREAK) return null;
+    if (this.stepLook?.i !== S!.i) this.stepLook = { i: S!.i, eye: lookoutEye(STEP_EYE_ID, e) };
+    return this.stepLook.eye;
+  }
   private stepLook: { i: number; eye: FogEye } | null = null;
 
   /** between ticks, with the HOST's camera (game.ts update): the mission again opens on the view the first run opened on. A view left zoomed all the way out

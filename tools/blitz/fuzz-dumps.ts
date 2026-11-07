@@ -18,7 +18,7 @@ const loadAt = (() => { if (!existsSync(`${dir}/ts.log`)) return Infinity; for (
 for (const k of R) { const b = readFileSync(`${dir}/rust-t${k}.bin`); hashes.push(`${k} ${b.length} ${Bun.hash(b).toString(36)}`); }
 if (R.length) writeFileSync(`${dir}/rust-hashes.txt`, hashes.join('\n') + '\n');
 for (const k of R) { if (!T.has(k) || k > upto) continue; pairs++;
-  const p = Bun.spawnSync(['bun', 'run', `${here}/diff.ts`, `${dir}/ts-t${k}.bin`, `${dir}/rust-t${k}.bin`, '--live', '--canon', canon, '--known', k >= loadAt ? `${here}/known.txt,${here}/known-loaded.txt` : `${here}/known.txt`, '--show', '400', '--why'], { stdout: 'pipe', stderr: 'pipe' });
+  const p = Bun.spawnSync(['bun', 'run', `${here}/diff.ts`, `${dir}/ts-t${k}.bin`, `${dir}/rust-t${k}.bin`, '--live', '--canon', canon, '--known', k >= loadAt ? `${here}/known.txt,${here}/known-loaded.txt` : `${here}/known.txt`, '--show', '400', '--why'], { stdout: 'pipe', stderr: 'pipe', env: process.env });   // (an environment by name: with none a child gets the one this process STARTED with)
   const out = p.stdout.toString() + p.stderr.toString(), m = out.match(/^(\d+) paths differ, (\d+) known, (\d+) NOT KNOWN(?:: ([^;]*))?/);
   if (!m) { lines.push(`${k} ? ? | the diff did not run: ${out.trim().split('\n').pop()?.slice(0, 200)}`); bad++; writeFileSync(`${dir}/diff-${k}.txt`, out); continue; }
   const stale = out.match(/by reach from the live game[^:]*: (\d+ \/ \d+)/)?.[1] ?? '0 / 0';

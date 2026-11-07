@@ -96,7 +96,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             if g.tab.orders_assignment[a].yield_t < 0.0 {
                 g.tab.orders_assignment[a].yield_t = g.time;
             }
-            if g.tab.orders_assignment[a].post.is_some() { g.gd[gd].pinned = true; g.orders.ours.add(gd); }
+            if g.tab.orders_assignment[a].post.is_some() { crate::control::set_pinned(g, gd, true, "orders"); g.orders.ours.add(gd); }
             let hot = g.gd[gd].reload_t >= 0.0
                 || g.time - m::max(m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_shot_t), g.tab.orders_assignment[a].yield_t) < g.k.orders.cold_secs;
             if hot { continue; }
@@ -128,7 +128,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                 g.tab.orders_assignment[a].via_t = None; g.tab.orders_assignment[a].via_for = None;
             }
         }
-        if g.orders.ours.delete(gd) { g.gd[gd].pinned = false; }
+        if g.orders.ours.delete(gd) { crate::control::set_pinned(g, gd, false, "orders"); }
         let order_id = g.tab.orders_assignment[a].order.clone();
         let def = g.orders.defs.iter().copied().find(|&x| g.tab.orders_order_def[x].id == order_id);
         if let Some(d) = def {

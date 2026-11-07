@@ -67,13 +67,16 @@ import { kitStage } from './kit';
 import { isOffice } from './dialogue';   // (called inside the crew's lines only: nothing of dialogue.ts is touched at load)
 import './cues';
 import type { RescueData, Rect, TeamStart } from '../scene/scenarios';
-import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
+import { sameTeamStart } from '../scene/scenarios';
+import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled level's own file: its scenarios block is where these knobs start from. JSON, so safe at the top of the game's import cycle)
+const OFFICE_RESCUE = (officeData as unknown as { scenarios: { rescue: RescueData } }).scenarios.rescue;
 import { SAMESTART } from './samestart';   // (a leaf)
 import { gunDeal } from './gunroles';   // (called inside the staging only)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import './owner';
 import './rescuecheck';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
+import { seatCount } from './seats';   // (how many players' men stand: every budget of characters counts it)
 
 /** The scenario's knobs (Tab ▸ Sandbox ▸ Hostage rescue, __rescue.knobs). Who stands where, the stun, the lights and the clock's dealt length are read at a staging
  *  ('restage' applies them); the clocks' other numbers, blind fire and the clock's own switch are read as it runs. */
@@ -141,15 +144,15 @@ export const RESCUE = {
   squad: 2 as SquadSize,
   /** where the team is staged: the LEVEL's (scene/scenarios.ts RescueData.team — start() writes the team start of the level it stages on here; these are the
    *  office's until it has: the lobby arch at the corridor's west end) */
-  samAt: [...OFFICE_SCENARIOS.rescue.team.sam] as Vec3, samYaw: OFFICE_SCENARIOS.rescue.team.samYaw, opsAt: OFFICE_SCENARIOS.rescue.team.ops!.slice(0, 2).map(p => [...p]) as [Vec3, Vec3],
+  samAt: [...OFFICE_RESCUE.team.sam] as Vec3, samYaw: OFFICE_RESCUE.team.samYaw, opsAt: OFFICE_RESCUE.team.ops!.slice(0, 2).map(p => [...p]) as [Vec3, Vec3],
 };
 /** the team start RESCUE.samAt / samYaw / opsAt were last written from (start()) */
-let applied: TeamStart | null = OFFICE_SCENARIOS.rescue.team;   // (the knobs above ARE the office's: a knob moved by hand before the first start on the office stays moved)
+let applied: TeamStart | null = OFFICE_RESCUE.team;   // (the knobs above ARE the bundled office's: a knob moved by hand before the first start on the office stays moved)
 
-/** WHO STANDS WHERE is level data (scene/scenarios.ts RescueData — Level.scenarios.rescue; the office's: levels/office.scenarios.ts): the hostage room and its
+/** WHO STANDS WHERE is level data (scene/scenarios.ts RescueData — Level.scenarios.rescue): the hostage room and its
  *  doors, the marks of everybody the scenario stands on the floor, the team's start, the route's openings. Rescue.data is the one place it is read from. */
 /** THE OFFICE'S side-door marks, under the name its probes import them by (the game reads the level's own: Rescue.data.side) */
-export const SIDE_MARKS = { stack: OFFICE_SCENARIOS.rescue.side!.stack as Vec3[], standoff: OFFICE_SCENARIOS.rescue.side!.standoff as Vec3[] };
+export const SIDE_MARKS = { stack: OFFICE_RESCUE.side!.stack as Vec3[], standoff: OFFICE_RESCUE.side!.standoff as Vec3[] };
 const NUMBER = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const yawTo = v3.yawTo;
@@ -257,7 +260,7 @@ export class Rescue {
   start(): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Rescue.start', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (this.active) return null;
     const why = this.canStart(); if (why) return why;
-    { const T = this.data!.team; if (T !== applied) { applied = T; RESCUE.samAt = [...T.sam] as Vec3; RESCUE.samYaw = T.samYaw; RESCUE.opsAt = [[...T.ops![0]] as Vec3, [...T.ops![1]] as Vec3]; } }   // (once per team start: a knob moved by hand since stays moved)
+    { const T = this.data!.team; if (!sameTeamStart(T, applied)) { applied = T; RESCUE.samAt = [...T.sam] as Vec3; RESCUE.samYaw = T.samYaw; RESCUE.opsAt = [[...T.ops![0]] as Vec3, [...T.ops![1]] as Vec3]; } }   // (once per team start: a knob moved by hand since stays moved)
     this.bench();
     this.active = true; this.staged = 0; this.log.length = 0; this.failure = null;
     this.g.restartEncounter();   // (the benched shift is off the list and spawnCivilians stands nobody while this is up: the fresh floor is empty) → onEncounterRestart stages
@@ -284,6 +287,8 @@ export class Rescue {
   /** who has the pair: 'door' = F's entry on the hostage room is under way (the dynamic tempo stands aside — rescueflow.ts), 'free' otherwise. The men are the
    *  order menu's either way. */
   get mode(): 'free' | 'door' { return this.entry ? 'door' : 'free'; }
+  /** F's entry has this man right now: he is on one of its door orders (the flow leaves him be; the menu does not ask — any order takes him) */
+  owns(gd: Guard): boolean { const E = this.entry; return this.active && !!E && E.ops.some(e => e.ended === null && e.op.men.includes(gd)); }
   /** is this civilian one of the scenario's hostages (player.ts: no grab row on her) */
   isHostage(gd: Guard): boolean { return this.active && this.hostages.includes(gd); }
 
@@ -349,7 +354,7 @@ export class Rescue {
     for (let i = 2; i < K.squad; i++) at.push(S.team.ops?.[i] ? v3.copy(S.team.ops[i]) : g.nightBreach.standBy(at[i - 2], [...at, K.samAt], yaw));   // (the loadout's third and fourth: the level's own marks where it has them, else a stride behind the pair's)
     for (let i = 0; i < K.squad; i++) {
       const m = K.squad > 2 ? SQUAD4[i] : null;   // (up to two: the pair as ever, in no pair of the order menu's — three or four: the four-man squad's roster and colours)
-      const gd = spawnUnit(g, m ? { team: 'operative', pos: at[i], yaw, name: m.name, light: false, pair: m.pair, tint: m.tint, tint2: m.tint2, budget: Math.max(SQUAD4_BUDGET, 2 + g.guards.length) } : { team: 'operative', pos: at[i], yaw, name: i === 0 ? 'Blue One' : 'Blue Two', light: false, budget: 2 + g.guards.length });
+      const gd = spawnUnit(g, m ? { team: 'operative', pos: at[i], yaw, name: m.name, light: false, pair: m.pair, tint: m.tint, tint2: m.tint2, budget: Math.max(SQUAD4_BUDGET - 1 + seatCount(g), seatCount(g) + 1 + g.guards.length) } : { team: 'operative', pos: at[i], yaw, name: i === 0 ? 'Blue One' : 'Blue Two', light: false, budget: seatCount(g) + 1 + g.guards.length });
       gd.hold = true; gd.pinned = true; gd.trained = K.trained; this.ops.push(gd);
     }
     // the hostages: the building's own two civilians' names and clothes when the level has them
@@ -487,6 +492,15 @@ export class Rescue {
     const A = this.g.orders.of(op), SB = this.fromBounds;
     if (!A || !A.post || A.via.length || !SB || !this.serverOut || !inBounds(op.char.pos, SB) || inBounds(A.post, SB)) return;
     A.via = [v3.copy(this.serverOut)]; A.goal = A.via[0];
+  }
+  /** A man the scenario lets go of where he stands: handed to the order menu as its 'cover' (gun up on `look` — default the way he faces — until Sam says
+   *  otherwise; the room fight shoots for him through it). */
+  private post(op: Guard, look?: Vec3, door?: string) {
+    const p = op.char.pos, y = look ? v3.yawTo(p, look) : op.char.bodyYaw;
+    const watch: Vec3 = look ? [look[0], 1.1, look[2]] : [p[0] + Math.sin(y) * 4, 1.1, p[2] + Math.cos(y) * 4];
+    const words = door ? `covering ${door}` : 'holding';
+    this.g.orders.assign(op, { order: 'cover', post: [p[0], 0, p[2]], face: y, watch, stance: 'none', upper: 'aim', going: words, there: words });
+    const A = this.g.orders.of(op); if (A) this.auto.add(A);
   }
 
 

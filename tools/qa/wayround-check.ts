@@ -59,14 +59,13 @@ if (one) {
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
   const { squadWaysRound, squadsLive } = await import(`${ROOT}/src/game/enemysquads.ts`);
   const { PRESSURE } = await import(`${ROOT}/src/game/pressure.ts`);
   const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`);
   const E = (SCENARIOS as any[]).find(e => e.id === id); if (!E) { log(JSON.stringify({ error: `no mission '${id}'` })); process.exit(0); }
   let out: { rows: Row[]; squads: boolean; lived: boolean; cell?: number; error?: string };
   try {
-    const level = E.level ? (() => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', E.level), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); })() : undefined;
+    const level = E.level ? (() => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', E.level), 'utf8')); return loadLevel(data); })() : undefined;
     Math.random = (() => { let s = (0x9137 + seed * 7919) >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
     const W: any = await standUp({ uploadEvery: 4, ...(level ? { level } : {}) }), g = W.game;
     let q = scenarioQuery(E) as string; if (E.kind === 'roomclear') q = q.replace(/(^|[?&])roomclear(=\d+)?(?=&|$)/, `$1roomclear=${seed}`);

@@ -143,6 +143,8 @@ export function roomKept(g: Game, gd: Guard): boolean { return REARWATCH.room &&
 export function rearSees(g: Game, p: Vec3, o: Opening, front: Vec3): Vec3 | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('rearSees', undefined, [g, p, o, front]); if (__r !== RUST_PASS) return __r as any; } }
   return g.cover.sightFrom(p, o) ?? (flat(p, front) <= REARWATCH.reach && flat(p, front) > 0.9 && !g.col.segmentBlocked([p[0], EYE, p[2]], front) ? front : null);
 }
+/** cover.ts deal(): the way this man is pinned to (null: none — he is dealt as anybody) */
+export function rearPinOf(g: Game, gd: Guard): RearPin | null { const B = books.get(g); return !B ? null : (REARWATCH.on ? B.pins.get(gd) : undefined) ?? (REARWATCH.room ? B.keeps.get(gd)?.pin : undefined) ?? null; }
 /** … whatever the switch says (QA, the debug read-out) */
 export function rearPin(g: Game, gd: Guard): RearPin | null { return books.get(g)?.pins.get(gd) ?? null; }
 

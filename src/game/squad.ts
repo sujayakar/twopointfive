@@ -132,6 +132,8 @@ export class RoomClear {
     const g = this.g, a = this.a, b = this.b;
     return !!this.door && g.guards.includes(a) && !!a.script && a.state !== 'dead' && (!b || (g.guards.includes(b) && !!b.script && b.state !== 'dead'));
   }
+  /** rallied on the door after calling it — or long enough after that a man who cannot make his mark is not waited for (live sequencing) */
+  get complete(): boolean { const tr = this.tNow - this.tResolve; return this.phase === 'resolve' && (tr > 7.5 || (tr > 2.8 && this.done.has('#formup') && this.aHome && this.bHome)); }
 
   private men(): Guard[] { return this.b ? [this.a, this.b] : [this.a]; }
   /** first time only: line keys as they are, other one-offs (signals, orders) under '#…' */

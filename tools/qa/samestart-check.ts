@@ -23,7 +23,6 @@ export async function sameStartCheck(only: string[] = [], verbose = false): Prom
   const { SAMESTART } = await import(`${ROOT}/src/game/samestart.ts`);
   const { ROOMCLEAR, placeDefenders } = await import(`${ROOT}/src/game/roomclear.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
   const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
@@ -33,7 +32,7 @@ export async function sameStartCheck(only: string[] = [], verbose = false): Prom
   let failed = false, checks = 0;
   const line = (ok: boolean, s: string) => { checks++; if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}`); };
   const quiet = async <T>(f: () => Promise<T> | T): Promise<T> => { const l = console.log, w = console.warn, e = console.error; console.log = console.warn = console.error = () => { }; try { return await f(); } finally { console.log = l; console.warn = w; console.error = e; } };
-  const levelOf = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+  const levelOf = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
   interface Row { id: string; kind: string; level?: string; query: string }
   const rows: Row[] = [{ id: 'solo', kind: 'solo', query: 'solo' }, ...(ALL_MISSIONS as { id: string; kind: string; level?: string }[]).map(e => ({ id: e.id, kind: e.kind, level: e.level, query: scenarioQuery(e) as string }))]
     .filter(r => !only.length || only.includes(r.id));

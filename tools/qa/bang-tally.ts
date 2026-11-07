@@ -45,7 +45,6 @@ const CVM: any = await import(`${ROOT}/src/game/cover.ts`);
 const BDM: any = await import(`${ROOT}/src/game/buddy.ts`).catch(() => null);   // (null in a checkout from before the lone defender's radio call)
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 
 const DT = 1 / 60;
 export type { Arm, Result, Spec } from './bang-tally-row.ts';   // (the row, and the rules that read it, stand no game: bang-tally-row.ts)
@@ -68,7 +67,7 @@ function resetKnobs() {
   for (const [k, t] of Object.entries(TABLES)) Object.assign(t, clone(DEFAULTS[k]));
   for (const [k, row] of Object.entries(SET)) { if (!TABLES[k]) throw new Error(`--set: no table '${k}' (have ${Object.keys(TABLES).join(', ')})`); for (const key of Object.keys(row)) if (!(key in TABLES[k])) throw new Error(`--set: no knob '${k}.${key}'`); Object.assign(TABLES[k], clone(row)); }
 }
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 const quiet = async <T>(on: boolean, fn: () => T | Promise<T>): Promise<T> => { if (!on) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 
 /** TALLYDIFF_BREAK=1 (tools/qa/bang-tally-diff.ts's own red path): the door an entry is played on has a crate half a metre across laid a stride and a half

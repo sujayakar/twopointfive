@@ -1317,7 +1317,7 @@ async function outer(browser) {
     await page.setViewportSize({ width: 1440, height: 900 }); await page.waitForFunction(() => !!document.querySelector('#missions.kv-on iframe.kv'), null, { timeout: 15000 }).catch(() => {}); const w2 = await state();
     check(w0.kvOn && !w1.kvOn && w1.frames === 0 && w2.kvOn && w2.frames === 1 && w2.hist === k0.hist, 'the window drawn under 720 px while shown: no kv-on, no iframe; wide again the picture is back, and the tab\'s history is as long as it was', `shown ${w0.kvOn} → at 700 px kv-on ${w1.kvOn}, ${w1.frames} iframe(s) → wide kv-on ${w2.kvOn}, ${w2.frames} iframe(s) · history ${k0.hist} → ${w2.hist}`);
     await page.keyboard.press('Escape'); await page.waitForTimeout(400); }
-  // THE BUNDLED OFFICE (a mission with NO level file: its block is levels/office.scenarios.ts): the parent asks for its picture all the same, with no `levelFile`
+  // THE BUNDLED OFFICE (a mission with NO level file: its block is its own file's, levels/office.json): the parent asks for its picture all the same, with no `levelFile`
   { await goRow('room-clear-pair').catch(() => {}); await kit(); await page.waitForFunction(() => !!document.querySelector('#missions.kv-on iframe.kv'), null, { timeout: 300000 }).catch(() => {}); const f0 = await state();
     check(f0.pane === 'loadout' && f0.kvOn && f0.frames === 1 && !/levelFile=/.test(f0.src || '') && /[?&]roomclear\b/.test(f0.src || ''), 'the bundled office (room-clear-pair: no level file): its picture is up, asked for with the mission\'s own query and no levelFile', `kv-on ${f0.kvOn} · ${f0.frames} iframe(s) · ${String(f0.src || '').replace(/^[^?]*/, '').slice(0, 120)}`);
     await page.keyboard.press('Escape'); await page.waitForTimeout(400); }

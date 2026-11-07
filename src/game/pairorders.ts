@@ -30,15 +30,15 @@ import { SideMap, rollbackRoot } from '../math/side';
 import type { Game, Guard } from './game';
 import { v3, type Vec3 } from '../math/vec';
 import './combat';
-import './guards';
+import { lightEstimateAt, canSeeChar, sightGainOn, pointInView, BODY_LIGHT, GUARD_EYE } from './guards';
 import { SILENT, squadSilent } from './silent';
 import { pairUp } from './pairup';
 import './sneak';
 import { spottedGripped } from './spotted';
 import { HOSTILE } from './teams';
 import './takedown';   // the partner's takedown as a move, and the man it lands on (takedown.ts): poses only
-import './orders';
-import { crossToRust } from './crossing';
+import { type SquadOrders } from './orders';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 export const PAIR = {
   /** THE SWITCH: the quiet orders for one partner (off: the game as it was) */
@@ -182,7 +182,46 @@ export class PairOrders {
    *  enough on him to start that man inside `watchSecs`, or whose open view holds the floor the man will lie on with the bodies-by-light bar met by the light
    *  now on him (guards.ts canSeeChar · sightGainOn · pointInView · BODY_LIGHT — nothing of this module's own). A quiet pair of hands makes no sound: there is
    *  nothing to hear (PAIR.scuffle 0). */
-  watcher(foe: Guard, gd: Guard): Guard | null { return crossToRust('PairOrders.watcher', this, [foe, gd]) as any; }
+  watcher(foe: Guard, gd: Guard): Guard | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('PairOrders.watcher', this, [foe, gd]); if (__r !== RUST_PASS) return __r as any; } }
+    const g = this.g, hp = foe.char.bones.hips ?? foe.char.pos, at: Vec3 = [hp[0], 0.35, hp[2]];
+    for (const o of g.guards) {
+      if (o === foe || o.state === 'dead' || o.held || o.team === 'operative' || !HOSTILE.player[o.team]) continue;
+      const s = canSeeChar(g, o, gd.char, false);
+      if (s.visible && sightGainOn(g, o, gd, s.dist) * PAIR.watchSecs >= PAIR.watchAw) return o;
+      if (o.team !== foe.team || !pointInView(g, o, at)) continue;   // (bodyInView: a man finds a body of his own side)
+      if (this.bodyLit(o, foe, at)) return o;
+    }
+    return null;
+  }
+  /** the bodies-by-light bar from `o`'s eye, met by the light now on the man (his meter where he has one, the floor's own estimate where he does not: staff
+   *  carry no meter. Smoke between them is not asked: he errs to holding) */
+  private bodyLit(o: Guard, foe: Guard, at: Vec3): boolean { const B = BODY_LIGHT;
+    const eye = o.char.bones.head ?? [o.char.pos[0], o.char.pos[1] + 1.65, o.char.pos[2]], d = Math.hypot(eye[0] - at[0], eye[1] - at[1], eye[2] - at[2]);   // (eye to the body, as bodyLit measures it)
+    const bar = !this.g.tune.bodyLight || d <= B.nearM ? -1 : B.litNear + (B.lit - B.litNear) * Math.min(1, (d - B.nearM) / Math.max(0.1, B.farM - B.nearM));
+    return Math.max(foe.visibility, this.litAt(at)) >= bar; }
+  /** HE'LL LOOK BACK (PAIR.lookBack): the man who was watching has only turned his head — he is up, calm, standing where he stood, and what he would see
+   *  when it comes back is still there to see: inside what his eyes sweep (the way he mostly faces, widened by how far his look has lately swung, his own
+   *  reach, a line to it) is the floor the body would lie on with the bodies-by-light bar met, or the partner with light enough on him — the watcher's own
+   *  two tests, with the sweep where the open view was. A lamp put out, or the partner gone from his line, ends the hold */
+  private looksBack(w: Guard, foe: Guard, gd: Guard): boolean {
+    if (!PAIR.lookBack || w.state === 'dead' || w.held || (this.stood.get(w) ?? 0) < 0.5) return false;
+    const H = this.habit.get(w), L = H ? Math.hypot(H[0], H[1]) : 0; if (!H || L < 0.3) return false;
+    const eye = w.char.bones.head ?? [w.char.pos[0], w.char.pos[1] + 1.65, w.char.pos[2]], half = GUARD_EYE.halfDeg * Math.PI / 180 + (this.swept.get(w) ?? 0);
+    const swept = (x: number, y: number, z: number): number => { const dx = x - eye[0], dz = z - eye[2], d = Math.hypot(dx, dz); if (d > GUARD_EYE.range || d < 0.05) return -1;
+      return Math.acos(Math.max(-1, Math.min(1, (dx * H[0] + dz * H[1]) / (d * L)))) < half && !this.g.col.segmentBlocked([eye[0], eye[1], eye[2]], [x, y, z]) ? d : -1; };
+    const hp = foe.char.bones.hips ?? foe.char.pos, at: Vec3 = [hp[0], 0.35, hp[2]];
+    if (w.team === foe.team && swept(at[0], at[1], at[2]) >= 0 && this.bodyLit(w, foe, at)) return true;
+    const c = gd.char.pos, d = swept(c[0], c[1] + 1.0, c[2]);
+    return d >= 0 && sightGainOn(this.g, w, gd, d) * PAIR.watchSecs >= PAIR.watchAw;
+  }
+  /** would the mark, given now, find this man held up by a watcher (he is near enough for the question, and nothing has forced him) */
+  private held(J: Job, gd: Guard): boolean { return PAIR.watched && !J.force && J.t0 < 0 && (!!J.watcher || flat(gd.char.pos, J.foe.char.pos) < PAIR.heelRing) && (!!this.watcher(J.foe, gd) || (!!J.watcher && this.looksBack(J.watcher, J.foe, gd))); }   // (once held he stays held while the watcher looks, wherever the man walks)
+  /** off the job, onto a plain hold where he stands — with his gun on `aim` when the job ended in the man being roused */
+  private stand(S: SquadOrders, gd: Guard, words: string, aim: Guard | null) {
+    const p = gd.char.pos, here: Vec3 = [p[0], 0, p[2]]; this.jobs.delete(gd);
+    S.assign(gd, aim ? { order: 'hold', post: here, face: yawTo(p, aim.char.pos), watch: [aim.char.pos[0], 1.1, aim.char.pos[2]], stance: 'none', upper: 'aim', going: words, there: words }
+      : { order: 'hold', post: here, face: gd.char.bodyYaw, stance: 'lowReady', upper: 'none', going: words, there: words });
+  }
 
   // ------------------------------------------------------------ taking a man
   private yawOf(foe: Guard): number { const H = this.habit.get(foe); return H && Math.hypot(H[0], H[1]) > 0.3 ? Math.atan2(H[0], H[1]) : foe.char.bodyYaw; }
@@ -202,7 +241,7 @@ export class PairOrders {
    *  estimate (guards.ts lightEstimateAt: no bounce) */
   /** litAt per nav cell, kept a few seconds (the stalk asks it of every cell it prices; the steady lamps change only when one is shot or switched) */
   private litCells = new Map<number, [number, number]>();
-  litAt(p: Vec3): number { return crossToRust('PairOrders.litAt', this, [p]) as any; }
+  litAt(p: Vec3): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('PairOrders.litAt', this, [p]); if (__r !== RUST_PASS) return __r as any; } } const g = this.g; return g.visibilityOf(lightEstimateAt(g, [p[0], PAIR.darkH, p[2]], () => true, true)); }
 
   summary(): string {
     if (!PAIR.on) return 'off';

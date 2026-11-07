@@ -76,7 +76,6 @@ const askedPicks = (process.env.PICKS || '').split(',').map(s => s.trim()).filte
 
 const asked = (process.env.LEVEL || '').split(',').map(s => s.trim().replace(/\.json$/, '')).filter(Boolean);
 const names = asked.length ? asked : [...fs.readdirSync(DIR).filter(f => f.endsWith('.json') && !f.endsWith('-gwot.json') && !f.includes('.lint.') && f !== 'office.json').map(f => f.slice(0, -5)), 'office'].sort();
-const officeScenarios = () => { try { return JSON.parse(require('child_process').execFileSync('bun', ['-e', `import { OFFICE_SCENARIOS as S } from ${JSON.stringify(path.join(DIR, 'office.scenarios.ts'))}; console.log(JSON.stringify(S));`], { encoding: 'utf8' })); } catch (e) { console.log(`(the office's scenarios could not be read through bun: ${String(e).slice(0, 160)})`); return {}; } };
 /** the mission's own link, as tools/qa/kitview-levels.cjs builds it (scene/scenarios.ts scenarioQuery, game/loadout.ts squadSearch — through bun) */
 const missionQuery = (name, kind, n) => { if (kind === 'solo') return name === 'office' ? 'solo' : `solo&levelFile=${name}.json`;
   const code = `import { ALL_MISSIONS } from ${JSON.stringify(path.join(SRC, 'scene/scenarioList.ts'))}; import { scenarioQuery } from ${JSON.stringify(path.join(SRC, 'scene/scenarios.ts'))}; import { squadSearch } from ${JSON.stringify(path.join(SRC, 'game/loadout.ts'))};
@@ -86,7 +85,7 @@ const missionQuery = (name, kind, n) => { if (kind === 'solo') return name === '
   catch (e) { console.log(`kitview-work: the mission's own link for ${name} (${kind}, ${n}) could not be built through bun: ${String(e).slice(0, 300)}`); process.exit(1); } };
 const WAYS = [];
 for (const name of names) { let S;
-  if (name === 'office') S = officeScenarios(); else { try { S = JSON.parse(fs.readFileSync(path.join(DIR, `${name}.json`), 'utf8')).scenarios || {}; } catch { continue; } }
+  try { S = JSON.parse(fs.readFileSync(path.join(DIR, `${name}.json`), 'utf8')).scenarios || {}; } catch { continue; }
   const K = S.kitView; if (!K || !Array.isArray(K.ways)) continue;
   const kind = process.env.KIND || (S.roomClear ? 'roomclear' : S.rescue ? 'rescue' : S.nightBreach ? 'nightbreach' : S.quiet ? 'quiet' : 'solo');
   const squad = process.env.SQUAD !== undefined ? Math.max(0, Math.min(kind === 'quiet' ? 1 : 4, +process.env.SQUAD || 0)) : kind === 'quiet' || kind === 'solo' ? 0 : 4;

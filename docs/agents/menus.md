@@ -1258,7 +1258,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   facts and the job (`.mblurb`), the list's own elements shown by this file's rules and no new sentence. It adds to the facts row WHAT THE PLACE ASKS OF
   A KIT, counted off the level's file by the plan's own fetch AS THE MISSION IS STAGED (`ui/missions.ts placeNeeds`, `Plan.needs`): the doors found
   locked, those of them that are steel, a rescue's hostages — a rescue's side door (`scenarios.rescue.side.door`) is unlocked by its staging and is not
-  counted; the bundled office's rescue is read from `levels/office.scenarios.ts`. The cells are `.mfact.kb`, drawn on this step only; a count is a digit
+  counted; the bundled office's rescue is read from its own file, which is in the build. The cells are `.mfact.kb`, drawn on this step only; a count is a digit
   to five and a word past it (`countWords`), and the list's Defenders cell was drawn AGAIN by this file with its count in words ('eleven'; since 10-23 only under `?mystery=0`), the list's
   own cell hidden on this step. IN A SHORT WINDOW (800 px tall and under: the maintainer's own is about 1000 x 673) THE BAND IS NOT A PIXEL TALLER THAN
   THE NAME ALONE WAS: the map a small mark, the name, the facts under it, and no job sentence (no text is cut to fit: `textsize-page` holds that) — the

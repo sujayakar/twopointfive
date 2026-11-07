@@ -14,8 +14,8 @@ pub fn team_words(e: crate::scene_scenario_list::TeamWordsE) -> String { crate::
 /// (scenarioList.ts specOfQuery)
 pub fn spec_of_query(search: &crate::scene_scenario_list::SpecOfQuerySearch) -> Option<crate::scene_scenario_list::ScenarioSpec> {
     let (q, asked) = match search {
-        SpecOfQuerySearch::Text(s) => (params_of_text(s), crate::loadout::SquadOfQuerySearch::Text(s.clone())),
-        SpecOfQuerySearch::URLSearchParams(p) => (seam_params_of_opaque(p), crate::loadout::SquadOfQuerySearch::URLSearchParams(*p)),
+        SpecOfQuerySearch::Text(s) => (crate::query::Query::parse(s).words().to_vec(), crate::loadout::SquadOfQuerySearch::Text(s.clone())),
+        SpecOfQuerySearch::URLSearchParams(p) => (p.words().to_vec(), crate::loadout::SquadOfQuerySearch::URLSearchParams(p.clone())),
     };
     let kind = kind_of(&q)?;
     // a quiet mission is alone unless `squad=1`; any bigger size it is asked for is the one partner
@@ -28,8 +28,6 @@ pub fn spec_of_query(search: &crate::scene_scenario_list::SpecOfQuerySearch) -> 
     Some(ScenarioSpec { kind, squad, level, seed })
 }
 
-/// The URLSearchParams arm of the union: `crate::Opaque` holds no pairs. (scenarioList.ts:241)
-fn seam_params_of_opaque(params: &crate::Opaque) -> Vec<(String, String)> { todo!("needs: a type for URLSearchParams that holds its pairs") }
 
 /// `?squad4` alone is the room clear with the four; beside another scenario's flag it is only that scenario's size.
 fn kind_of(q: &[(String, String)]) -> Option<ScenarioSpecKind> {
@@ -60,7 +58,7 @@ fn place_of(kind: ScenarioSpecKind, q: &[(String, String)]) -> (Option<String>, 
 
 /// `s && Number.isFinite(Number(s))` then `Math.floor(Number(s))`.
 fn seed_of_word(s: Option<&str>) -> Option<f64> {
-    let n = number_of(s.filter(|s| !s.is_empty())?);
+    let n = crate::query::number_of(s.filter(|s| !s.is_empty())?);
     if n.is_finite() { Some(m::floor(n)) } else { None }
 }
 
@@ -76,96 +74,6 @@ fn is_level_file(lf: &str) -> bool {
 fn has(q: &[(String, String)], key: &str) -> bool { q.iter().any(|(k, _)| k == key) }
 /// URLSearchParams.get: the first value of the key
 fn get<'a>(q: &'a [(String, String)], key: &str) -> Option<&'a str> { q.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str()) }
-
-/// `new URLSearchParams(string)`: one leading `?` off, the pairs in order, an empty piece skipped, a bare key's value ''.
-fn params_of_text(s: &str) -> Vec<(String, String)> {
-    let s = s.strip_prefix('?').unwrap_or(s);
-    s.split('&')
-        .filter(|piece| !piece.is_empty())
-        .map(|piece| {
-            let (k, v) = piece.split_once('=').unwrap_or((piece, ""));
-            (form_decoded(k), form_decoded(v))
-        })
-        .collect()
-}
-
-/// `+` is a space, `%HH` a byte (a `%` with no two hex digits after it stays), the bytes read as UTF-8 with U+FFFD for what is not.
-fn form_decoded(s: &str) -> String {
-    let b = s.as_bytes();
-    let mut out = Vec::with_capacity(b.len());
-    let mut i = 0;
-    while i < b.len() {
-        let hex = if b[i] == b'%' && i + 2 < b.len() { hex_digit(b[i + 1]).zip(hex_digit(b[i + 2])) } else { None };
-        if let Some((hi, lo)) = hex {
-            out.push(hi * 16 + lo);
-            i += 3;
-        } else {
-            out.push(if b[i] == b'+' { b' ' } else { b[i] });
-            i += 1;
-        }
-    }
-    String::from_utf8_lossy(&out).into_owned()
-}
-
-fn hex_digit(b: u8) -> Option<u8> { (b as char).to_digit(16).map(|d| d as u8) }
-
-/// `Number(string)`: the language's own grammar, not Rust's (which takes 'inf' and 'nan', and refuses '' and hex).
-fn number_of(s: &str) -> f64 {
-    let t = s.trim_matches(is_js_space);
-    if t.is_empty() { return 0.0; }
-    let b = t.as_bytes();
-    if b.len() >= 2 && b[0] == b'0' {
-        let bits = match b[1] { b'x' | b'X' => 4, b'o' | b'O' => 3, b'b' | b'B' => 1, _ => 0 };
-        if bits != 0 { return radix_value(&b[2..], bits); }
-    }
-    let unsigned = t.strip_prefix(['+', '-']).unwrap_or(t);
-    if unsigned == "Infinity" { return if b[0] == b'-' { f64::NEG_INFINITY } else { f64::INFINITY }; }
-    if !is_decimal_literal(unsigned) { return f64::NAN; }
-    t.parse().unwrap_or(f64::NAN)
-}
-
-/// digits [. digits] [e [+-] digits], with a digit somewhere before the exponent.
-fn is_decimal_literal(s: &str) -> bool {
-    let digits = |s: &str| s.bytes().take_while(u8::is_ascii_digit).count();
-    let whole = digits(s);
-    let mut rest = &s[whole..];
-    let mut fraction = 0;
-    if let Some(after) = rest.strip_prefix('.') {
-        fraction = digits(after);
-        rest = &after[fraction..];
-    }
-    if whole + fraction == 0 { return false; }
-    if rest.is_empty() { return true; }
-    let Some(exp) = rest.strip_prefix(['e', 'E']) else { return false };
-    let exp = exp.strip_prefix(['+', '-']).unwrap_or(exp);
-    !exp.is_empty() && digits(exp) == exp.len()
-}
-
-/// A `0x` / `0o` / `0b` literal's digits, `bits` a digit, rounded once to the nearest double as the language does; NaN if none or a bad one.
-fn radix_value(digits: &[u8], bits: u32) -> f64 {
-    if digits.is_empty() { return f64::NAN; }
-    let (mut kept, mut scale) = (0u64, 0u32);
-    for &b in digits {
-        let Some(d) = (b as char).to_digit(1 << bits) else { return f64::NAN };
-        if kept >> (64 - bits) == 0 {
-            kept = kept << bits | d as u64;
-        } else {
-            scale += bits;
-            if d != 0 { kept |= 1; } // past 54 bits only "was anything left" matters to the rounding
-        }
-    }
-    let mut v = kept as f64;
-    for _ in 0..scale {
-        v *= 2.0;
-        if v.is_infinite() { break; }
-    }
-    v
-}
-
-/// The language's StrWhiteSpaceChar (`char::is_whitespace` differs at U+0085 and U+FEFF).
-fn is_js_space(c: char) -> bool {
-    matches!(c, '\t' | '\n' | '\u{B}' | '\u{C}' | '\r' | ' ' | '\u{A0}' | '\u{1680}' | '\u{2000}'..='\u{200A}' | '\u{2028}' | '\u{2029}' | '\u{202F}' | '\u{205F}' | '\u{3000}' | '\u{FEFF}')
-}
 
 #[cfg(test)]
 mod tests {
@@ -285,7 +193,7 @@ mod tests {
     #[test]
     fn reads_every_query_as_the_typescript_does() {
         for &(text, kind, level, seed) in CASES {
-            let q = params_of_text(text);
+            let q = crate::query::Query::parse(text).words().to_vec();
             let got = kind_of(&q);
             assert_eq!(got, kind, "kind of {text:?}");
             let Some(k) = got else { continue };

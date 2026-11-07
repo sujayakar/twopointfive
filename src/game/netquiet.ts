@@ -45,6 +45,7 @@
 // Type-only game imports but for the functions below, used inside calls only (src/game is one import cycle).
 import { SideMap } from '../math/side';
 import type { Game, Guard } from './game';
+import type { RoomFight } from './roomfight';
 import { Vec3, clamp, DEG } from '../math/vec';
 import { MORALE, moraleShock, trainingOf, sawLeaderFall } from './morale';
 import './enemysquads';
@@ -56,6 +57,7 @@ import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
+type Def = RoomFight['defs'][number];
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nonetquiet) and by the shipped stand; the harness's frozen
  *  stand leaves it off (TPS_NETQUIET=1 turns it on — with TPS_MORALE=1, without which it does nothing). The shocks are morale.ts dread, 0‥1, before its nerve
@@ -174,12 +176,26 @@ export function netQuietFall(g: Game, victim: Guard) { { const __s = RUST_SURFAC
 
 
 
+// ---------------------------------------------------------------- the tick
+/** may this file act on him this frame: the AI on, no show on the floor, free of Sam's arm, himself (not dazzled, not doubled over), not morale.ts's */
+const free = (g: Game, gd: Guard) => g.aiEnabled && !g.touring && !g.quietUtility && !gd.held && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil && !hasHim(gd, OWN.morale) && !hasHim(gd, OWN.runner);
 /** the last man at his act, and this file's to keep where he is: his line said, backing, or low — not a man who has waited `giveUp` past his beat for the
  *  fight to hand him back (he is the fight's and his squad's again until he holds) */
 const mine = (N: Mind) => !NETQUIET_QA.broken && N.last >= SAID && N.last <= LOW && !(N.last === SAID && N.t > NETQUIET.lastBeat + NETQUIET.giveUp);
+/** at his post: holding his room, on nobody's scripted leg */
+const posted = (gd: Guard, D: Def) => D.mode === 'hold' && gd.hold && !gd.script;
 /** ONCE A FRAME, right after morale.ts's tick (game.ts update; the rungs are this frame's) and before anybody moves: the lines owed are said, the noises the
  *  men's ears counted last frame are read for a whip, the last man is taken a step through his act. A return on its first line with either switch off. */
 export function netQuietTick(g: Game, dt: number): void { return crossToRust('netQuietTick', undefined, [g, dt]) as any; }
+/** what he watches from the spot: the middle of the arc his doors sit in — moved round, by no more than it takes, until every door of it is inside his EYES
+ *  (`eye`, `eyeHalf`: they sit round from his gun, toward his chest, and narrow — measured on a crouched man: 45° round, 26° either way; with his gun on the
+ *  middle of a 34° arc neither door was in them past the near field, and a man walked 2.4 m into the room unseen). So his gun rests off the middle, toward
+ *  his off side, and his eyes hold the doors; an arc wider than his eyes (doors on three walls) has their middle on its middle and its ends outside them. */
+function watch(N: Mind) {
+  const s = N.spot!; if (N.arc > Math.PI) { N.look = null; return; }
+  const room = Math.max(0, N.eyeHalf - NETQUIET.eyeSlack * DEG - N.arc / 2), y = N.yaw - Math.sign(N.eye) * Math.max(0, Math.abs(N.eye) - room);
+  N.look = [s[0] + Math.sin(y) * 6, 0, s[2] + Math.cos(y) * 6];
+}
 
 // ---------------------------------------------------------------- the seams that pose him
 /** WHAT A MAN HOLDING A ROOM WATCHES (roomfight.ts applyWatch, after it has written `pt`): the last man's arc, low on his spot; a whip's noise. Untouched

@@ -746,6 +746,8 @@ pub fn door_tools_hammer_step(g: &mut crate::game::Game, op: DoorOpId) {
 pub fn door_tools_sling_tick(g: &mut crate::game::Game) {
     for gd in g.guards.clone() {
         if !g.gd[gd].slung.as_ref().map_or(false, |s| s.out) { continue; }
+        // (only this book's own men are judged by this book's jobs: another seat's man on HIS seat's lock is not ours to put the gun away for)
+        if !crate::orders::squad_orders_mine(g, gd) { continue; }
         let on_lock = g.door_tools.ops.iter().any(|o| {
             let x = &g.tab.doortools_door_op[*o];
             x.phase == Phase::Kick && x.kick.and_then(|k| k.gun).map_or(false, |u| u.by == gd && u.hammer != Some(true))
