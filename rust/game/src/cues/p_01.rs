@@ -848,7 +848,7 @@ pub fn strip_rows(g: &mut crate::game::Game) -> Vec<crate::cues::StripRowsItem> 
 }
 
 /// Host work: the debugger's panel keeps three rows in the browser's storage. No game state moves.   (cues.ts saveCues)
-pub fn save_cues(g: &mut crate::game::Game) { todo!("host work: the panel's localStorage, kept in the TypeScript host") }
+pub fn save_cues(g: &mut crate::game::Game) {}   // (the panel's rows in the browser's storage: nothing of the game moves; it answers rather than panics, as sneak's and spotted's do)
 
 
 #[doc(hidden)] pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {

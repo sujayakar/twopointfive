@@ -823,8 +823,6 @@ pub fn flank_tick(g: &mut crate::game::Game, l: LanesLaneId) {
     pin_start(g, l);
 }
 
-/// the run-in under the fire: LANES.pinGo is settled off on the page and nobody calls this (lanes.ts flankGo)
-pub fn flank_go(g: &mut crate::game::Game, l: LanesLaneId) { todo!("not translated: LANES.pinGo is settled off") }
 
 /// FIRE FROM AN ANGLE: of the men held on the lane with a burst in his gun and a corner no nearer the guns than `pinMinM`, in turn, one steps to it (lanes.ts pinStart)
 pub fn pin_start(g: &mut crate::game::Game, l: LanesLaneId) {

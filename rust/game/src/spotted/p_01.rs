@@ -646,8 +646,8 @@ pub fn spotted_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::spott
     })
 }
 
-/// the debugger panel's row, kept in the browser's storage: host work, not translated (spotted.ts saveSpotted)
-pub fn save_spotted(g: &mut crate::game::Game) { todo!("host only: localStorage, the panel's rows") }
+/// The panel's rows kept in the browser's storage: host work, nothing of the game moves. pairup.ts:85 calls it, so it answers rather than panics. (spotted.ts saveSpotted)
+pub fn save_spotted(g: &mut crate::game::Game) {}
 
 #[cfg(test)]
 mod tests {

@@ -396,8 +396,6 @@ pub fn ring_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     }
 }
 
-/// The panel's line of rings. Host only (triage: host): not translated, the skeleton's stub. (launcher.ts ringSummary)
-pub fn ring_summary(g: &mut crate::game::Game) -> String { todo!("host only: panel / QA text (conventions 6)") }
 
 #[cfg(test)]
 mod tests {

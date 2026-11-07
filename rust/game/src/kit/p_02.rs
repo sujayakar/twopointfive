@@ -23,11 +23,8 @@ fn can_mix(mix: CanMix) -> (f64, f64) { let x = can_mixes().get(String::from(mix
 fn big_kit_of(tool: &str) -> BigKit {
     match tool { "shotgun" => BigKit::Shotgun, "hammer" => BigKit::Hammer, _ => unreachable!("a tool the deal lends") }
 }
-// Seams: KitRow's functions are gone from the skeleton and these two stubs still have no `g`.
-fn seam_row_has(r: &KitRow, m: &MemberKit) -> bool { todo!("needs: g in row_has (kit.ts:759, 904, 910: whether the card is a tree, and `tubed`)") }
-fn seam_row_under(r: &KitRow, m: &MemberKit) -> Option<crate::gunslots::GunSlot> { todo!("needs: g in row_under (kit.ts:757, 904, 908, 910: whether the card is a tree)") }
-/// `SLOT_AMOUNT[k](c)` of a row that reads the switches
-fn seam_squad_amount(k: &str, c: &MemberKit) -> f64 { todo!("needs: g in squad_has (kit.ts:546; SLOT_AMOUNT's shotgun, hammer, cams, rings, wand read the switches); inside this file the body is squad_has_g") }
+/// `long(m)` of the tree's rows (kit.ts:902): the card carries a long gun
+fn long_gun(m: &MemberKit) -> bool { m.weapon != KitWeapon::Pistol }
 
 /// `SLOTS.on`: the getter's `ruleOn` (kit.ts:293). One variable; the page's value is on the row.
 fn rule_is_on(g: &Game) -> bool { g.k.slots.on }
@@ -427,22 +424,8 @@ pub fn squad_used(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t:
     s
 }
 
-/// How many of one thing they carry (kit.ts squadHas). Five of SLOT_AMOUNT's rows read the switches and this stub has no `g`: inside this file the body is squad_has_g
-pub fn squad_has(cards: &[crate::kit::MemberKit], k: &str, n: f64) -> f64 {
-    let mut s = 0.0;
-    for c in coming(cards, n).iter() {
-        s += match k {
-            "smoke" => slot_amount::smoke(c),
-            "bangs" => slot_amount::bangs(c),
-            "frags" => slot_amount::frags(c),
-            "shells" => slot_amount::shells(c),
-            "charges" => slot_amount::charges(c),
-            "walls" => slot_amount::walls(c),
-            _ => seam_squad_amount(k, c),
-        };
-    }
-    s
-}
+/// How many of one thing they carry (kit.ts squadHas). SLOT_AMOUNT's rows read the switches, so the game is asked; the skeleton's line has no `g`.
+pub fn squad_has(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], k: &str, n: f64) -> f64 { squad_has_g(g, cards, k, n) }
 
 fn squad_has_g(g: &mut Game, cards: &[MemberKit], k: &str, n: f64) -> f64 {
     let mut s = 0.0;
@@ -880,20 +863,25 @@ pub fn kit_loadout_of(g: &mut crate::game::Game, only: Option<f64>) -> Option<St
     None
 }
 
-/// A row is on a card as it stands (kit.ts rowHas). The rows with a `has` are the tree's suppressor over a long gun and the launcher's three loads
-pub fn row_has(r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> bool {
+/// A row is on a card as it stands (kit.ts rowHas: `!r.has || r.has(m)`). Only the TREE's rows carry a `has` (kit.ts buildRowsTree): its suppressor
+/// over the long gun (`slot === 'secondary' || long(m)`, :904) and the launcher's three loads (`tubed`, :910). The same fields on a card that is no
+/// tree are rows with no `has`. The row holds no function here, so the game says which card it is: the skeleton's line has no `g`.
+pub fn row_has(g: &mut crate::game::Game, r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> bool {
     match r.field {
-        KitField::Suppressed | KitField::Rings | KitField::Shells | KitField::Cams => seam_row_has(r, m),
+        KitField::Suppressed => !tree_up(g) || long_gun(m),
+        KitField::Rings | KitField::Shells | KitField::Cams => !tree_up(g) || tubed(g, m),
         _ => true,
     }
 }
 
-/// The gun row it hangs under there, if any (kit.ts rowUnder). A second suppressor and the sponge rounds are rows of the tree alone; the other four hang only there
-pub fn row_under(r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> Option<crate::gunslots::GunSlot> {
+/// The gun row it hangs under there, if any (kit.ts rowUnder). Only the tree's rows have an `under`: each suppressor under its own gun (:904), the
+/// light under the gun in hand (:908), the launcher's loads under the long gun (:910).
+pub fn row_under(g: &mut crate::game::Game, r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> Option<crate::gunslots::GunSlot> {
+    if !tree_up(g) { return None; }
     match r.field {
         KitField::SideCan => Some(crate::gunslots::GunSlot::Secondary),
-        KitField::Rings => Some(crate::gunslots::GunSlot::Primary),
-        KitField::Suppressed | KitField::Light | KitField::Shells | KitField::Cams => seam_row_under(r, m),
+        KitField::Suppressed | KitField::Rings | KitField::Shells | KitField::Cams => Some(crate::gunslots::GunSlot::Primary),
+        KitField::Light => Some(if long_gun(m) { crate::gunslots::GunSlot::Primary } else { crate::gunslots::GunSlot::Secondary }),
         _ => None,
     }
 }

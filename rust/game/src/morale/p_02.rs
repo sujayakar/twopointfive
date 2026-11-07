@@ -323,20 +323,8 @@ pub fn morale_roster(g: &mut crate::game::Game) -> String {
     alloc::format!("men ▸ {}", if body.is_empty() { "nobody" } else { body.as_str() })
 }
 
-/// HOST WORK, the tab's sessionStorage: not translated (conventions 6). Only the host's address reader reaches it. (morale.ts kept)
-pub fn kept() -> crate::morale::Kept {
-    todo!("host work: the browser's sessionStorage, read by the host")
-}
 
-/// HOST WORK, the tab's sessionStorage: not translated (conventions 6). Only the debugger's panel (ui/bindings.ts) calls it. (morale.ts moraleKeep)
-pub fn morale_keep(g: &mut crate::game::Game, row: crate::morale::MoraleKeepRow) {
-    todo!("host work: the browser's sessionStorage, written by the host")
-}
 
-/// HOST WORK, the address and the tab's store: not translated (conventions 6). Only host/profile.ts calls it; `q` is `Opaque`. (morale.ts moraleFromQuery)
-pub fn morale_from_query(g: &mut crate::game::Game, q: crate::Opaque) {
-    todo!("host work: the host reads the address and sets g.k.morale")
-}
 
 /// runner.ts: the man is that file's from here: whatever sequence has him ends where it stands, and this rule lets go of him; dread and rung stay (morale.ts moraleRelease)
 pub fn morale_release(g: &mut crate::game::Game, gd: GuardId) {

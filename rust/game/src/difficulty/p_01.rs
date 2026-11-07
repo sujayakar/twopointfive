@@ -483,10 +483,6 @@ pub fn write(g: &mut crate::game::Game, fog_only: Option<bool>) {
     }
 }
 
-/// the machine's store keeps the level's name: the body is `store_name_in`, which this file calls. (difficulty.ts storeName)
-pub fn store_name(level: crate::difficulty::Difficulty) {
-    todo!("needs: g in the signature, to reach savestate::save_store_*; nobody calls this one")
-}
 
 /// the kept rungs this visit's switches hide; with both switches settled on, none. (difficulty.ts keptHidden)
 pub fn kept_hidden(g: &mut crate::game::Game) -> crate::difficulty::KeptHidden {

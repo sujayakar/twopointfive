@@ -382,8 +382,6 @@ pub fn squad_orders_hover_words(g: &mut crate::game::Game, t: Option<&crate::ord
     }
 }
 
-/// The interaction panel's rows. Picture only: read by ui/overlay.ts and ui/tabcard.ts alone, and it writes nothing the game reads (triage: dress), so not translated.   (orders.ts SquadOrders.hud)
-pub fn squad_orders_hud(g: &mut crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> crate::orders::SquadOrdersHud { todo!("picture only, not translated: conventions 6") }
 
 /// Where the menu that is up is frozen, for a mark in the world: the point, a word for it, the addressed element's colour.   (orders.ts SquadOrders.mark)
 pub fn squad_orders_mark(g: &mut crate::game::Game) -> Option<crate::orders::SquadOrdersMark> {
@@ -416,8 +414,6 @@ pub fn squad_orders_mark(g: &mut crate::game::Game) -> Option<crate::orders::Squ
     Some(SquadOrdersMark { at, text, tone })
 }
 
-/// One line for the console. Host only, reached by the debugger's `__orders` alone (triage: host), so not translated.   (orders.ts SquadOrders.summary)
-pub fn squad_orders_summary(g: &mut crate::game::Game) -> String { todo!("host only, not translated: conventions 6") }
 
 // ------------------------------------------------------------ ORDERS.propRound
 

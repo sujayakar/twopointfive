@@ -185,8 +185,6 @@ pub fn turn_dir(a: V3, b: V3, s: f64) -> V3 {
     unit([a[0] * co + x[0] * si + ax[0] * k, a[1] * co + x[1] * si + ax[1] * k, a[2] * co + x[2] * si + ax[2] * k], b)
 }
 
-/// Waits on the skeleton: no `g`, and a ragdoll's points are reached through it. The body is `lie_of_g`. (hands.ts lieOf)
-pub fn lie_of(rag: RagdollId) -> crate::hands::Lie { todo!("needs: g: &mut Game (hands.ts:177), ragdoll_point takes it; body is lie_of_g") }
 
 /// How the body lies now. (hands.ts lieOf)
 fn lie_of_g(g: &mut Game, r: RagdollId) -> crate::hands::Lie {
@@ -222,8 +220,6 @@ pub fn carry_rides(g: &mut crate::game::Game, c_2: crate::hands::CarryRidesC, ra
     crate::ragdoll::ragdoll_ride(g, rag, [was[0], 0.0, was[1]], dx * ride, dz * ride, dyaw * ride);
 }
 
-/// Waits on the skeleton: no `g`, and a ragdoll's pins are reached through it. The body is `lie_pins_g`. (hands.ts liePins)
-pub fn lie_pins(rag: RagdollId, dim: [f64; 4], l: crate::hands::Lie) { todo!("needs: g: &mut Game (hands.ts:197), ragdoll_set_pin takes it; body is lie_pins_g") }
 
 /// The five pins of a lie: both hips, the spine, both knees, each at the body's own length from the last. (hands.ts liePins)
 fn lie_pins_g(g: &mut Game, r: RagdollId, dim: [f64; 4], l: crate::hands::Lie) {

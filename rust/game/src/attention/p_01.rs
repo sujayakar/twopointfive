@@ -479,15 +479,7 @@ pub fn attention_marks(g: &mut crate::game::Game) -> Vec<crate::attention::Atten
     out
 }
 
-/// The overlay's table of kept ways: an interface the drawer fills (ui/attentionviz.ts), and attentionWay, its one reader, is not in the game. (attention.ts AttentionWayStore.get)
-pub fn attention_way_store_get(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::attention::AttentionWayKept> {
-    todo!("picture only, no caller: the drawer's table, not the game's (notes, Dropped)")
-}
 
-/// The overlay's table of kept ways: an interface the drawer fills (ui/attentionviz.ts), and attentionWay, its one reader, is not in the game. (attention.ts AttentionWayStore.set)
-pub fn attention_way_store_set(g: &mut crate::game::Game, gd: GuardId, w: &crate::attention::AttentionWayKept) -> crate::Opaque {
-    todo!("picture only, no caller: the drawer's table, not the game's (notes, Dropped)")
-}
 
 /// The debug panel's line. (attention.ts attentionSummary)
 pub fn attention_summary(g: &mut crate::game::Game) -> String {
