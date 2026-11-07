@@ -373,8 +373,7 @@ pub fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) 
     let now = g.time;
     let lent = crate::squadthrow::squad_lend(g, gd, t);
     let mut w = turn_of(lent, v3::copy(at), now, -1.0, a);
-    crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-        order: String::from(SHELL_THERE),
+    crate::orders::rows::assign(g, &crate::orders::rows::shell40::ORDER, gd, crate::orders::SquadOrdersAssignA {
         post: Some([p[0], 0.0, p[2]]),
         face: Some(v3::yaw_to(p, at)),
         watch: Some(to),
@@ -393,15 +392,14 @@ pub fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) 
     None
 }
 
-/// the order's row on the throws' page. (squad40.ts row)
-pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
-    let def = crate::orders::rows::def(&crate::orders::rows::shell40::ORDER, crate::orders::OrderDef {
+/// the order's row, put on the throws' page. (squad40.ts row)
+fn list(g: &mut crate::game::Game) {
+    crate::orders::rows::list(g, &crate::orders::rows::shell40::ORDER, crate::orders::OrderDef {
         page: Some(String::from(crate::squadthrow::THROW_PAGE)),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
         ..Default::default()
     });
-    crate::orders::squad_orders_row(g, def)
 }
 
 /// the squad's HUD block: what is left while this staging brought any, and the shot just made. (squad40.ts notes)
@@ -435,9 +433,8 @@ pub fn squad40_tick(g: &mut crate::game::Game) {
     let want = brought > 0.0 && def_listed(g, crate::squadthrow::THROW_OPEN);
     if has == want { return; }
     if g.orders.menu.is_some() { crate::orders::squad_orders_close(g); }
-    if !want { crate::orders::squad_orders_unregister(g, SHELL_THERE); return; }
-    let def = row(g);
-    crate::orders::squad_orders_register(g, def, None);
+    if !want { crate::orders::rows::unlist(g, &crate::orders::rows::shell40::ORDER); return; }
+    list(g);
     // (`s.noted !== S`: a row is one view's and a view's SquadOrders is made once, as the game stands: game.ts:1373, squadcast.ts:25)
     let s = g.m.squad40.states.get_mut(key).unwrap();
     if !s.noted {
