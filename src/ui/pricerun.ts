@@ -63,7 +63,7 @@
 import { listedLevels } from '../scene/scenarioList';
 import { pacer } from '../host/pace';
 import { scenarioQuery } from '../scene/scenarios';
-import { lookTrialsKept } from '../scene/look';
+import { LOOK_OLD, lookTrialsKept } from '../scene/look';
 import { HELD_LADDER_WORD, HELD_WINDOW_WORD, PRICE_ASK_WORDS, PRICE_LEVELS_WORD, PRICE_RUN_WORD } from '../host/runpage';
 import { PRESENT_PASSES, RENDER_PASSES, SURFACE_PASS } from '../gpu/timer';
 import { saveFile, savedWords } from '../host/savefile';
@@ -205,7 +205,7 @@ export function priceSearch(level: string, i: number, quality: string, look: str
   const L = priceLevels().find(l => l.level === level); if (!L) throw new Error(`no level '${level}' on the mission list`);
   // (the page's own words for a held picture: the preset pinned and the ladder off, the window giving way to nobody. `auto` leaves the ladder to the page)
   const own = `${L.query.slice(1)}&seed=1&noverdict&nokeep&mute${quality === 'auto' ? '' : `&quality=${quality}&${HELD_LADDER_WORD}`}&${HELD_WINDOW_WORD}&${PRICE_RUN_KEY}=${i}`, has = new URLSearchParams(own);
-  return `?${[...[...(look ?? []), ...keep].filter(p => !has.has(p.split('=')[0])), own].join('&')}`;   // (a word the page's own address says for itself — its preset, no sound — is not said twice)
+  return `?${[...[...(look ?? [`look=${LOOK_OLD}`]), ...keep].filter(p => !has.has(p.split('=')[0])), own].join('&')}`;   // (a word the page's own address says for itself — its preset, no sound — is not said twice. No look words = the page without the look, which since 2026-11-07 has to be asked for: scene/look.ts LOOK_OLD)
 }
 
 /** THE WORDS OF THE ASKING ADDRESS NO PAGE OF THE RUN CARRIES (the benchmark names its own the same way, ui/benchrun.ts `left`): every word that is neither
