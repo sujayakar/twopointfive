@@ -111,12 +111,12 @@ pub fn fog_of_war_update(g: &mut crate::game::Game, dt: f64) {
 pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     if !fog_of_war_active(g) {
         // (the fog has gone off since the pass last ran: what the team knew is dropped, and the picture's block with it)
-        if g.fog_of_war.full_on || g.fog_of_war.loaded {
+        if g.fog_of_war.live || g.fog_of_war.loaded {
             crate::fogofwar::picture::off(g);
             let f = &mut g.fog_of_war;
             f.loaded = false; f.props_loaded = false; f.eyes = Vec::new(); f.hidden_chars.clear(); f.pending.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear();
             f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.fire_clock = 0.0; f.lamp_recs.clear();
-            f.full_on = false;
+            f.live = false;
             g.engine.lights.fog_team.on = false;
             g.engine.lights.fog_team.owners.clear();
             g.engine.lights.fog_team.lights.clear();
@@ -376,7 +376,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
 /// Who the team is this frame, for the lights' classes and for what the team's own doing shows (`ours_id`): every seat's man and every teammate, and the
 /// light each carries. From here the rule is live (`ours_on`).   (fogofwar.ts FogOfWar.fullBlock, its first half)
 fn fog_of_war_team(g: &mut crate::game::Game) {
-    g.fog_of_war.full_on = true;
+    g.fog_of_war.live = true;
     g.engine.lights.fog_team.on = true;
     g.engine.lights.fog_team.owners.clear();
     g.engine.lights.fog_team.lights.clear();
