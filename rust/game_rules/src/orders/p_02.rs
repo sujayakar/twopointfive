@@ -379,9 +379,10 @@ pub fn squad_orders_new(g: &mut crate::game::Game, cast: Option<&crate::orders::
             ..Default::default()
         },
     ];
-    for row in rows {
-        let id = crate::orders::squad_orders_row(g, row);
-        s.defs.push(id);
+    for row in rows {   // (rows of its own: a menu newly stood has none yet, whoever's orders stand on the game while it is made)
+        let (id, d) = (row.id.clone(), new_row(g, row));
+        s.made.set(id, d);
+        s.defs.push(d);
     }
     // the night breach's drill owns the pair from Sam's 'stack up' (F) until the room is called or lost (its closures are the functions nightbreach_owns, _release, _status)
     s.owners.push(SquadOwner { name: String::from("nightbreach") });
@@ -670,20 +671,49 @@ pub fn squad_orders_new_group(g: &mut crate::game::Game) -> f64 {
     g.orders.group
 }
 
-/// A ROW OF THE MENU IS ONE ROW OF THE TABLE, HOWEVER OFTEN IT IS LISTED. The table's row of this id is written in place, on the menu or off it;
-/// only an id the table has never held is a new row. Every module that lists an order makes its row through here.
+/// A ROW OF A SEAT'S MENU IS ONE ROW OF THE TABLE, HOWEVER OFTEN IT IS LISTED. The row this seat's menu has for the id is written in place, on the
+/// menu or off it; an id this menu has never had is a new row. Every module that lists an order makes its row through here.
 ///
 /// Before, each listing pushed a new row and the one before it was left in the table for good: a row re-listed when the squad's roster changed,
 /// when a held door's page was rebuilt or when the man with the hammer fell left an orphan each time, every later row stood one place further
 /// on, and two machines of one game that had seen a different number of re-listings numbered their rows differently.
 ///
-/// THE FIRST row of an id is the one meant. The wall tools keep a digitless copy of a row whose digit their own row has taken
-/// (`wall_charge_undigit`): a later row of the same id, made once and written in place by them, never by this.
+/// THE ROW IS THE MENU'S OWN (`SquadOrders.made`): each seat has its own, and so has a second cast's. Rows are written in place (a digit dealt, a page, a target that
+/// comes and goes with the pairs), so two menus that shared one would change each other's.
 pub fn squad_orders_row(g: &mut crate::game::Game, def: crate::orders::OrderDef) -> OrdersOrderDefId {
-    let had = g.tab.orders_order_def.iter().find(|(_, r)| r.id == def.id).map(|(d, _)| d);
-    match had {
-        Some(d) => { g.tab.orders_order_def[d] = def; d }
-        None => g.tab.orders_order_def.push(def),
+    if g.orders.made.len() == 0 && !g.orders.defs.is_empty() && !g.in_cast { adopt_rows(g); }
+    if let Some(d) = g.orders.made.get(def.id.clone()).copied() {
+        g.tab.orders_order_def[d] = def;
+        return d;
+    }
+    let (id, d) = (def.id.clone(), new_row(g, def));
+    g.orders.made.set(id, d);
+    d
+}
+
+/// a row the table has not had
+fn new_row(g: &mut Game, def: OrderDef) -> OrdersOrderDefId { g.tab.orders_order_def.push(def) }
+
+/// THE ROWS OF A MENU THAT CAME OFF THE WIRE, which carries the table and each menu's list but not whose the rest of the rows are: a game read from
+/// bytes finds its own again. Of an id, the row on this menu; else the first that no other seat has, counting the seats in order, since a
+/// start makes its rows seat after seat. The wall tools' digitless copies are nobody's.
+fn adopt_rows(g: &mut Game) {
+    let copies: Vec<OrdersOrderDefId> = g.m.wallcharge.stand_ins.keys().into_iter().filter_map(|k| g.m.wallcharge.stand_ins.get(k).copied()).collect();
+    let mut ids: Vec<String> = Vec::new();
+    for (d, r) in g.tab.orders_order_def.iter() { if !copies.contains(&d) && !ids.contains(&r.id) { ids.push(r.id.clone()); } }
+    for id in ids {
+        let rows: Vec<OrdersOrderDefId> = g.tab.orders_order_def.iter().filter(|(d, r)| r.id == id && !copies.contains(d)).map(|(d, _)| d).collect();
+        let mut left = rows.clone();
+        let mine: Option<OrdersOrderDefId> = rows.iter().copied().find(|d| g.orders.defs.contains(d));
+        let mut ahead = 0;   // (the seats before this one that have none of it listed: each takes the next)
+        let mut past = false;
+        for &s in g.seats.iter() {
+            if s == g.seat { past = true; continue; }
+            let Some(o) = g.tab.cmd_seat[s].own.as_ref() else { continue };
+            let theirs = rows.iter().copied().find(|d| o.orders.defs.contains(d)).or_else(|| o.orders.made.get(id.clone()).copied());
+            match theirs { Some(d) => left.retain(|&x| x != d), None => if !past { ahead += 1; } }
+        }
+        if let Some(d) = mine.or_else(|| left.get(ahead).copied()) { g.orders.made.set(id, d); }
     }
 }
 
