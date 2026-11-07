@@ -128,7 +128,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                             || crate::guards::point_in_view(g, gd, short_of, Some(10.0), Some(75.0))
                             || crate::guards::point_in_view(g, gd, [e.pos[0], 0.15, e.pos[2]], Some(10.0), Some(75.0)))
                     {
-                        g.gd[gd].awareness = m::min(0.28, g.gd[gd].awareness + 0.18);
+                        { let to = m::min(0.28, g.gd[gd].awareness + 0.18); crate::mind::set(g, gd, to, "guards"); }
                         crate::whistle::glance_toward(g, gd, e.pos, Some(1.8));
                         small(g, gd, &e, e.pos);
                         crate::chronicle::chron_heard(g, gd, e, None);
@@ -144,7 +144,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                         Some(s) => s,
                         None => e.pos,
                     };
-                    g.gd[gd].awareness = 0.4;
+                    crate::mind::set(g, gd, 0.4, "guards");
                     if !placed {
                         write_fix(g, gd, at);
                     }
@@ -191,7 +191,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                 && d_straight >= 0.1
                 && crate::guards::shot_relation(g, gd, shot_e(&e)) == crate::guards::ShotRelation::Threat);
         if odd && !gunfire && d < 7.0 * carry * m::max(0.3, e.level.unwrap_or(0.6) / 0.6) * ear + 0.5 {
-            g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.5);
+            crate::mind::raise(g, gd, 0.5, "guards");
             let at = if prop.direct { e.pos } else { heard_at };
             if !placed && (g.gd[gd].state != S::Alert || g.gd[gd].last_known.is_none() || g.time - g.gd[gd].last_seen_t > 1.0) {
                 write_fix(g, gd, at);
@@ -229,7 +229,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                 h.last_t = now;
             }
             let calm = was_calm(g, gd);
-            g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
+            crate::mind::raise(g, gd, 0.92, "guards");
             crate::chronicle::chron_heard(g, gd, e, None);
             if rel == crate::guards::ShotRelation::Own {
                 let at = crate::guards::colleague_fire_pos(g, gd, crate::guards::ColleagueFirePosE { who: e.who, pos: e.pos, to: e.to, blind: e.blind });
@@ -282,7 +282,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             let a = e.level.unwrap_or(0.2) * v3::clamp(1.0 - d / 12.0, 0.0, 1.0) * (if by_guard { 0.0 } else { 1.0 }) * carry * dull * crate::attention::attention_noise_k(g, gd);
             if a > 0.08 {
                 let aw = g.gd[gd].awareness;
-                g.gd[gd].awareness = m::min(1.0, m::max(aw, m::min(if e.loud { 0.75 } else { 0.45 }, aw + a)));
+                crate::mind::set(g, gd, m::min(1.0, m::max(aw, m::min(if e.loud { 0.75 } else { 0.45 }, aw + a))), "guards");
                 if !placed && (g.gd[gd].last_known.is_none() || g.gd[gd].state != S::Alert) {
                     write_fix(g, gd, heard_at);
                 }
@@ -298,7 +298,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             if a > 0.06 {
                 let calm = was_calm(g, gd);
                 let aw = g.gd[gd].awareness;
-                g.gd[gd].awareness = m::min(1.0, m::max(aw, m::min(0.85, 0.4 + a)));
+                crate::mind::set(g, gd, m::min(1.0, m::max(aw, m::min(0.85, 0.4 + a))), "guards");
                 if !placed && (g.gd[gd].last_known.is_none() || g.gd[gd].state != S::Alert) {
                     write_fix(g, gd, heard_at);
                 }
@@ -322,7 +322,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             let a = e.level.unwrap_or(0.3) * v3::clamp(1.0 - d / 9.0, 0.0, 1.0) * carry * keen * foot * crate::attention::attention_ear_k(g, gd);
             if a > 0.12 {
                 let aw = g.gd[gd].awareness;
-                g.gd[gd].awareness = m::min(1.0, m::max(aw, m::min(0.6, aw + a * 0.5)));
+                crate::mind::set(g, gd, m::min(1.0, m::max(aw, m::min(0.6, aw + a * 0.5))), "guards");
                 if !placed && (g.gd[gd].last_known.is_none() || g.gd[gd].state == S::Patrol) {
                     write_fix(g, gd, heard_at);
                 }

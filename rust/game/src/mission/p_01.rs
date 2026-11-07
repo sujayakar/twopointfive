@@ -300,17 +300,16 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     }
     let Some(best) = best else { return };
     {
-        let b = &mut g.gd[best];
-        b.task = Some(GuardTask::Arm0(GuardTaskArm0 { kind: GuardTaskArm0Kind::Rack, pos: goal }));
-        b.last_known = Some(v3::copy(goal));
-        b.fix_stamp = b.fix_stamp.wrapping_add(1);
-        b.awareness = m::max(b.awareness, 0.42);
-        b.state = GuardState::Suspicious;
-        b.react_t = 1.2;
-        b.search_t = 0.0;
-        b.path = Vec::new();
-        b.path_serial = b.path_serial.wrapping_add(1);
-        b.path_goal = None; b.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+        g.gd[best].task = Some(GuardTask::Arm0(GuardTaskArm0 { kind: GuardTaskArm0Kind::Rack, pos: goal }));
+        g.gd[best].last_known = Some(v3::copy(goal));
+        g.gd[best].fix_stamp = g.gd[best].fix_stamp.wrapping_add(1);
+        crate::mind::raise(g, best, 0.42, "mission");
+        crate::mind::set_state(g, best, GuardState::Suspicious, "mission");
+        g.gd[best].react_t = 1.2;
+        g.gd[best].search_t = 0.0;
+        g.gd[best].path = Vec::new();
+        g.gd[best].path_serial = g.gd[best].path_serial.wrapping_add(1);
+        g.gd[best].path_goal = None; g.gd[best].path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
     }
     if let Some(w) = &w {
         crate::game::game_say(g, best, &format!("something's tripped in {} — going to take a look", w.place), Some(true), None, None);

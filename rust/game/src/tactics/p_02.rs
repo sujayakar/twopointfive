@@ -598,7 +598,7 @@ pub fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics:
             continue;
         }
         let was_calm = matches!(man.state, crate::game::GuardState::Patrol | crate::game::GuardState::Suspicious | crate::game::GuardState::Search);
-        g.gd[o].awareness = m::max(g.gd[o].awareness, 0.92);
+        crate::mind::raise(g, o, 0.92, "tactics");
         if was_calm || g.gd[o].last_known.is_none() {
             crate::belief::word(g, o, l.fix);
         }
@@ -1072,28 +1072,27 @@ pub fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactic
     let marks = plan_for(g, door_id, g_2.side, g_2.near_a);
     let spot = stack_spot(g, door_id, g_2.side, g_2.near_a, 1.0, marks.as_ref()).pos;
     {
-        let b = &mut g.gd[best];
-        b.last_known = Some(v3::copy(spot));
-        b.fix_stamp = b.fix_stamp.wrapping_add(1);
-        b.awareness = m::max(b.awareness, 0.5);
-        b.search_t = 0.0;
-        b.path = Vec::new();
-        b.path_serial = b.path_serial.wrapping_add(1);
-        b.path_goal = None;
-        b.path_goal_orbit = false;
-        b.stall_ref = None;
-        b.body_duty = None;
-        b.search_plan = None;
-        b.task = None;
-        if b.state == crate::game::GuardState::Patrol {
-            b.state = crate::game::GuardState::Suspicious;
-            b.react_t = 0.5;
-        } else if b.state == crate::game::GuardState::Search {
-            b.state = crate::game::GuardState::Suspicious;
-            b.react_t = 0.3;
-            b.pieing = None; // (his own update may already have run this frame: the doorway he was slicing is let go of here)
+        g.gd[best].last_known = Some(v3::copy(spot));
+        g.gd[best].fix_stamp = g.gd[best].fix_stamp.wrapping_add(1);
+        crate::mind::raise(g, best, 0.5, "tactics");
+        g.gd[best].search_t = 0.0;
+        g.gd[best].path = Vec::new();
+        g.gd[best].path_serial = g.gd[best].path_serial.wrapping_add(1);
+        g.gd[best].path_goal = None;
+        g.gd[best].path_goal_orbit = false;
+        g.gd[best].stall_ref = None;
+        g.gd[best].body_duty = None;
+        g.gd[best].search_plan = None;
+        g.gd[best].task = None;
+        if g.gd[best].state == crate::game::GuardState::Patrol {
+            crate::mind::set_state(g, best, crate::game::GuardState::Suspicious, "tactics");
+            g.gd[best].react_t = 0.5;
+        } else if g.gd[best].state == crate::game::GuardState::Search {
+            crate::mind::set_state(g, best, crate::game::GuardState::Suspicious, "tactics");
+            g.gd[best].react_t = 0.3;
+            g.gd[best].pieing = None; // (his own update may already have run this frame: the doorway he was slicing is let go of here)
         } else {
-            b.react_t = m::max(b.react_t, 0.3);
+            g.gd[best].react_t = m::max(g.gd[best].react_t, 0.3);
         }
     }
     g.tab.tactics_danger_rec[rec].summoned = Some(best);
