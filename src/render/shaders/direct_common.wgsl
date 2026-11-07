@@ -145,3 +145,6 @@ fn shadowSample(li: Light, Po: vec3f, N: vec3f, owner: u32, k: u32, n: u32, u0: 
   if (frame.numSmoke > 0u) { vis = smokeTransmittance(Po, dir, min(tmax, 30.0)); }
   return vec2f(vis, -1.0);
 }
+/** the ratio clamp's upper bound: shadowed ≤ unshadowed per channel, except that the estimator's per-light hues can top the class's unshadowed light in one channel
+ *  (one warm light under a mixed U). Sharp direct clamps by it; the denoiser's shadow client takes the same number as a knob (render/denoise.ts ratioHi) */
+const RATIO_HI: f32 = 4.0;

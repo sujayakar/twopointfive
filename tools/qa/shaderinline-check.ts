@@ -47,7 +47,6 @@ const BUDGET: [RegExp, number][] = [
   [/^volumetricsF? \/ main$/, 382],
   [/^particles \/ update$/, 356],
   [/^restirM? \/ main$/, 336],   // (295 + an opening's light in this writing, 38 KB: as the table above)
-  [/^direct \/ main$/, 282],   // (248 + an opening's light in this writing, 31 KB)
   [/^reflectP5 \/ main$/, 253],
   [/^froxel \/ injectJ$/, 210],
   [/^reflect \/ main$/, 204],
@@ -143,9 +142,9 @@ for (const a of asked) for (const s of a.stages) {
 }
 const list = [...rows.values()].sort((a, b) => b.pasted - a.pasted || (`${a.module} ${a.entry} ${a.set}` < `${b.module} ${b.entry} ${b.set}` ? -1 : 1));
 check(lost.length === 0, `every pipeline's module and entry point were found in the recorded texts${lost.length ? ` — not so: ${lost.slice(0, 6).join(', ')}` : ''}`);
-{ // (a part of the page that fell out of this boot would leave the budget green on the rest: the card's own count is 118 pipelines, the cut set's 24)
+{ // (a part of the page that fell out of this boot would leave the budget green on the rest: the card's own count is 105 pipelines, the cut set's 24)
   const nBoot = asked.filter(a => a.set === 'boot').length, nCut = asked.length - nBoot;
-  check(mods.length >= 60 && nBoot >= 118 && nCut >= 24, `the recording is a whole boot: ${mods.length} modules (60 at least), ${nBoot} pipelines of the boot's set (118 at least), ${nCut} of the cut set's (24 at least)`); }
+  check(mods.length >= 60 && nBoot >= 105 && nCut >= 24, `the recording is a whole boot: ${mods.length} modules (60 at least), ${nBoot} pipelines of the boot's set (105 at least), ${nCut} of the cut set's (24 at least)`); }
 
 const kb = (n: number) => (n / 1024).toFixed(n < 10240 ? 1 : 0);
 /** the functions pasted more than once into a kernel, by the text their copies come to */

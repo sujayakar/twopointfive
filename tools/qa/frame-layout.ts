@@ -4,6 +4,7 @@
 //   2. FrameFlags (frame.ts) ⇄ the FLAG_* consts (common.wgsl): each a distinct power of two, no two features on one bit, the same value under the same
 //      name on both sides, and every WGSL flag known to the host.
 //   3. BoxFlag (boxes.ts) ⇄ BOX_* (common.wgsl): distinct bits; the GPU's names carry the CPU's values.
+//   4. the shadow ratio clamp's bound: direct_common.wgsl RATIO_HI = render/denoise.ts's knob ratioHi.
 //   bun run tools/qa/frame-layout.ts        (exit 1 on any FAIL; also `probes.ts frame-layout`)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -120,6 +121,13 @@ console.log('\n=== frame-layout: BoxFlag (boxes.ts) vs BOX_* (common.wgsl) ===')
   const rows: string[] = [];
   for (const [n, v] of wg) { const hv = byName.get(norm(n.replace(/^BOX_/, ''))); if (!Number.isFinite(v)) rows.push(`${n}: literal not understood`); else if (hv === undefined) rows.push(`${n} (${v}) has no BoxFlag entry`); else if (hv !== v) rows.push(`${n} = ${v} but BoxFlag = ${hv}`); }
   verdict(rows.length === 0 && wg.length >= 6, `every BOX_ const (${wg.length} ≥ 6 read) names a BoxFlag of the same value`, rows.join(' · '));
+}
+
+// ---------------------------------------------------------------- 4. one number said in two languages: the shadow ratio clamp's bound
+{
+  const wg = /^const RATIO_HI\s*:\s*f32\s*=\s*([0-9.]+);/m.exec(readFileSync(`${ROOT}/src/render/shaders/direct_common.wgsl`, 'utf8'))?.[1];
+  const ts = /\bratioHi: ([0-9.]+),/.exec(readFileSync(`${ROOT}/src/render/denoise.ts`, 'utf8'))?.[1];   // (read as text: the module asks for a GPU at load)
+  verdict(wg !== undefined && ts !== undefined && Number(wg) === Number(ts), 'the shadow ratio clamp has one bound: direct_common.wgsl RATIO_HI (sharp direct) = the denoiser knobs\' ratioHi', `RATIO_HI ${wg} · ratioHi ${ts}`);
 }
 
 console.log(`\n=== frame-layout: ${fails ? `${fails} FAIL` : 'ALL PASS'} ===`);

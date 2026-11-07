@@ -181,7 +181,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     } else {
       let sr0 = sharpRatio(accS0 * iw, accU0 * iw, U0); let sr1 = sharpRatio(accS1 * iw, accU1 * iw, U1);
       E0 = U0 * sr0.xyz; E1 = U1 * sr1.xyz;
-      let hiR = select(1.0, 4.0, (frame.flags & (FLAG_RESTIR | FLAG_TAIL_CHROMA)) != 0u);
+      let hiR = RATIO_HI;
       if (occlFit) {   // HIDDEN LIGHT: where the taps' U differs and their S does not follow it, what differs is light the surface does not see — S is carried across, not the ratio
         E0 = mix(min(accS0 * iw, U0 * hiR), E0, fitSlope(fit0)); E1 = mix(min(accS1 * iw, U1 * hiR), E1, fitSlope(fit1));
       }
@@ -269,7 +269,7 @@ fn fitSlope(f: Fit) -> f32 {
  *  is lit in (Uo) but the taps hold next to none of (a coloured light's footprint finer than the internal raster) takes the taps' LUMINANCE ratio instead of a 0∕0; taps that hold no light
  *  of the class at all (the class reaches this pixel and none of them) read unshadowed — nothing nearer knows better (.w = 1 when that default fired, for the diagnostic count). */
 fn sharpRatio(S: vec3f, U: vec3f, Uo: vec3f) -> vec4f {
-  let hiR = select(1.0, 4.0, (frame.flags & (FLAG_RESTIR | FLAG_TAIL_CHROMA)) != 0u);
+  let hiR = RATIO_HI;
   let lU = luminance(U);
   let none = lU < 1e-5 * max(luminance(Uo), 1e-6);
   let rl = select(clamp(luminance(S) / max(lU, 1e-6), 0.0, hiR), 1.0, none);
