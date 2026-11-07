@@ -336,7 +336,9 @@ export const doortoolsLights = guarded(async () => {
   const R = await rig(7, { door: 'breakroom_w' }); const { D, game } = R; const L = R.W.engine.lights; const Wd = R.door('breakroom_w'); const room = R.room('breakroom');
   const on = () => L.lights.filter((l: any) => l.enabled && l.intensity > 0).length; const staged = on(), listed = L.lights.length;
   const proto = L.lights.find((l: any) => l.enabled && l.intensity > 0 && l.ttl < 0); let pad = 0;
-  while (on() < MAX_LIGHTS) { L.add({ ...proto, name: `pad${pad++}`, pos: [2 + pad * 0.1, 2.5, 2], color: [...proto.color], dir: [...proto.dir], slot: -1 }); }
+  // (a pad is a lamp of nobody's fixture: the copy leaves the level lamp's row and its steady self behind. A row is one lamp's place among the level's
+  //  own, sim/lightshome.ts stand, and a second lamp that says it holds one is a mistake the light question throws by name)
+  while (on() < MAX_LIGHTS) { L.add({ ...proto, name: `pad${pad++}`, row: undefined, steady: undefined, pos: [2 + pad * 0.1, 2.5, 2], color: [...proto.color], dir: [...proto.dir], slot: -1 }); }
   L.upload(game.time); const full = L.activeCount;
   const near = room.defenders[0]; near.char.pos[0] = Wd.frameCentre[0] + 3.2; near.char.pos[2] = Wd.frameCentre[2]; R.step(1);
   D.set.push({ door: Wd, side: R.target('breakroom_w').side, t: game.time, by: 'probe' });

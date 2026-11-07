@@ -2,9 +2,6 @@
 // `bun run tools/sim/build.ts` after any change under rust/; `bun run tools/sim/build.ts --check` (and tools/qa/rust-check.ts) is red when this file is not
 // the build of rust/sim as it stands.
 /** the hash of the crates' sources this was built from */
-export const SIM_SOURCE = '9199f0770ce96d276c63f895bbf1dc79';
-/** the compiler and the kind of machine that built it (the same sources built by another may give other bytes) */
-export const SIM_BUILDER = 'rustc 1.97.0 on x86_64-unknown-linux-gnu';
 /** the module's size in bytes */
 export const SIM_BYTES = 889195;
 export const SIM_WASM: readonly string[] = [

@@ -17,6 +17,7 @@
 // EXIT: 0 = every run identical to the bit · 1 = something differs (per run: 'bits' alone = the two sides' arithmetic differs in the last place and nothing came
 // of it; 'digest' = they drifted apart by more than the digest rounds away; 'outcome' = they played a different game) · 2 = no node / no reference, or a run did not finish.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { pool, jobsOf } from './pool.ts';
 
 const REF = new URL('./fixtures/coop-reference.json', import.meta.url);
 const RUNS = ['night-breach:1', 'records-pair:1', 'hostage-rescue:1', 'room-clear-four:1'];
@@ -29,7 +30,12 @@ const platformName = (): string => `${process.platform} ${process.arch}`;
 async function one(scn: string, seed: number): Promise<Row> {
   process.env.TPS_PROFILE ??= 'shipped'; process.env.PT_DIGEST ??= '1';
   let draws = 0;   // how much of the seeded stream the run drew (whatever die the harness installs is wrapped as it is installed)
-  { let cur = Math.random; Object.defineProperty(Math, 'random', { configurable: true, get() { return cur; }, set(f: () => number) { const w = () => { draws++; return f(); }; Object.assign(w, f); cur = w; } }); }
+  // (UNDER THE HARNESS'S WORD, tools/blitz/word.ts, the game owns its die, and draws it only while Math.random is the very function it was when the die was made
+  // (src/math/dice.ts). A die somebody puts BACK (civilians.ts withDice puts back the function it read) must then come back as the same function, not as a new
+  // counter round it: with a new one the TypeScript tick drew this tool's stream for the rest of the run and the Rust game its own die. With no word every
+  // assignment is wrapped as it always was, and `draws` counts what it always counted.)
+  const owned = !!(await import('../blitz/word.ts')).resolve(process.env.TPS_PROFILE === 'frozen').word, mine = new WeakSet<() => number>();
+  { let cur = Math.random; Object.defineProperty(Math, 'random', { configurable: true, get() { return cur; }, set(f: () => number) { if (owned && mine.has(f)) { cur = f; return; } const w = () => { draws++; return f(); }; Object.assign(w, f); mine.add(w); cur = w; } }); }
   const { Game } = await import('../../src/game/game.ts');
   const PT = await import('./playthrough.ts');
   const { rawBits, RAW_BITS_SEED } = await import('../../src/game/digest.ts');
@@ -82,17 +88,12 @@ async function runOne(engine: 'bun' | 'node', scn: string, seed: number): Promis
   if (!line) { console.log(`- FAIL — ${scn}:${seed}: the ${engine} run did not finish (exit ${code}) ${err.trim().split('\n').slice(-2).join(' / ')}`); return null; }
   return JSON.parse(line.slice(MARK.length)).row as Row;
 }
-/** at most `n` of the jobs at once (a run is a busy process: one a core) */
-async function pool<T>(jobs: (() => Promise<T>)[], n: number): Promise<T[]> {
-  const out: T[] = new Array(jobs.length); let next = 0;
-  await Promise.all(Array.from({ length: Math.min(n, jobs.length) }, async () => { while (next < jobs.length) { const k = next++; out[k] = await jobs[k](); } }));
-  return out;
-}
-const CORES = Math.max(1, Math.floor(Number(process.env.COOP_JOBS ?? 4)) || 4);   // (COOP_JOBS=1 = one run at a time; a word that is no number = 4)
+/** how many runs at once (a run is a busy process: one a core). COOP_JOBS=1 (or less) = one run at a time; a word that is no number = 4 */
+const CORES = jobsOf(process.env.COOP_JOBS, 4);
 
 if (!byRef) {   // ---- two engines, this commit, this machine
   console.log(`=== coop-check: ${runs.length} scripted run(s), each under bun (JavaScriptCore) and under node (V8) · ${platformName()}${BREAK ? ' · COOP_BREAK: the engines on their own sin and cos' : ''} ===`);
-  const rows = await pool(runs.flatMap(({ scn, seed }) => [() => runOne('bun', scn, seed), () => runOne('node', scn, seed)]), CORES);
+  const rows = await pool(runs.flatMap(({ scn, seed }) => [() => runOne('bun', scn, seed), () => runOne('node', scn, seed)]), CORES, job => job());
   if (rows.length !== runs.length * 2 || [...rows].some(r => !r)) process.exit(2);
   let differ = 0;
   for (let i = 0; i < runs.length; i++) { const v = judge(rows[2 * i] as Row, rows[2 * i + 1] as Row, 'node'); if (!v.same) differ++; console.log(v.line + (v.same ? '' : ' (bun first, node in brackets)')); }
@@ -101,7 +102,7 @@ if (!byRef) {   // ---- two engines, this commit, this machine
 }
 
 console.log(`=== coop-check: ${runs.length} scripted run(s) on ${engineName()} · ${platformName()} ===`);
-const rows: (Row | null)[] = await pool(runs.map(({ scn, seed }) => () => runOne('bun', scn, seed)), CORES);
+const rows: (Row | null)[] = await pool(runs.map(({ scn, seed }) => () => runOne('bun', scn, seed)), CORES, job => job());
 if (rows.some(r => !r)) process.exit(2);
 const got = rows as Row[];
 

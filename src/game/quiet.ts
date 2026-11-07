@@ -27,7 +27,6 @@
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
 import type { Game, Guard } from './game';
 import type { Level } from '../scene/level';
-import type { FollowCamera } from './camera';
 import type { QuietData, QuietExit, QuietSpot, QuietStart } from '../scene/scenarios';
 import { v3, type Vec3 } from '../math/vec';
 import { mulberry32, simRandom } from '../math/dice';
@@ -42,6 +41,7 @@ import { SPOTTED } from './spotted';
 import { SILENT } from './silent';
 import { staffVsOperatives } from './teams';
 import { stickyVisitSet } from './stickycam';   // (called inside functions only)
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 /** what a run was dealt: indices into the block's lists (patrol −1 = every route: the block names no sets) */
 export interface QuietDeal { start: number; spot: number; patrol: number }
@@ -49,10 +49,6 @@ export interface QuietDeal { start: number; spot: number; patrol: number }
 export interface QuietSnap { deal: QuietDeal; pin: number | null; squad: 0 | 1 }
 
 export const QUIET_STATS = { starts: 0, deals: 0, mates: 0 };
-/** an exit's half width when its row gives none (the office's fire exit: |z − exfilZ| < 1.8) */
-export const EXIT_HALF_W = 1.8;
-/** how far past an exit's point still reads as 'out through it' (a strip, not a half plane: an exit whose outward line crosses floor further on is not out there) */
-export const EXIT_DEPTH = 12;
 /** THE PARTNER RUN THAT HAS THE MODULE SWITCHES RIGHT NOW (the pair rules, the silent posture, staff against operatives): they are tables of their modules, not
  *  of a Game, so a Game dropped mid-run (the harness; a probe that never stops what it started) would leave them on for the next, and two Games in one process
  *  would run on each other's. So they FOLLOW THE GAME THAT IS RUNNING: a Game's constructor, its every update and its mission's start call `current()`, which
@@ -63,10 +59,7 @@ const heldNow = (): Held => ({ pairup: PAIRUP.on, pair: PAIR.on, sneak: SNEAK.on
 const heldSet = (H: Held) => { PAIRUP.on = H.pairup; PAIR.on = H.pair; SNEAK.on = H.sneak; SPOTTED.on = H.spotted; SILENT.on = H.silent; SILENT.start = H.silentStart; };
 
 /** out through this exit: past its point going its own way, inside its width */
-export function outThrough(x: QuietExit, p: Vec3): boolean {
-  const dx = p[0] - x.x, dz = p[2] - x.z, along = dx * x.out[0] + dz * x.out[1], side = Math.abs(dx * x.out[1] - dz * x.out[0]);
-  return along > 0 && along < EXIT_DEPTH && side < (x.halfW ?? EXIT_HALF_W);
-}
+export function outThrough(x: QuietExit, p: Vec3): boolean { return goneWithTick('outThrough') as any; }
 /** a point a stride past the exit, on its own line (the marker; a scripted player's goal) */
 export function exitPoint(x: QuietExit, past = 0.9): Vec3 { return [x.x + x.out[0] * past, 0, x.z + x.out[1] * past]; }
 
@@ -115,7 +108,7 @@ export class QuietMission {
     return null;
   }
   /** Start it: the deal, a fresh encounter on it, the partner beside Sam. Returns the reason when refused (or when the staging failed: everything put back). */
-  start(pin: number | null = null, squad: 0 | 1 = 0): string | null {
+  start(pin: number | null = null, squad: 0 | 1 = 0): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('QuietMission.start', this, [pin, squad]); if (__r !== RUST_PASS) return __r as any; } }
     if (this.active) return null;
     const why = this.canStart(squad); if (why) return why;
     const g = this.g;
@@ -139,7 +132,7 @@ export class QuietMission {
     return this.active ? null : (this.failure ?? 'the staging failed');
   }
   /** Stop it: the partner gone, every route manned, the level's authored mission and spawn back, a fresh night encounter. */
-  stop() {
+  stop() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('QuietMission.stop', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (!this.active) return;
     const g = this.g;
     this.active = false; this.putBack(); this.release();
@@ -161,13 +154,13 @@ export class QuietMission {
   }
   /** THIS GAME IS THE ONE RUNNING (its constructor, the first statement of its update, its mission's start): another Game's partner run hands the switches back
    *  as they stood before it — kept as it had them, for when that Game next runs — and this Game's own run, if it has one up, takes them again. */
-  current() {
+  current() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('QuietMission.current', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (holder === this) return;
     if (holder) { const H = holder; if (H.was) { H.mine = heldNow(); heldSet(H.was); H.was = null; staffVsOperatives(false); PAIR_HELD.row = null; } holder = null; }
     if (this.active && this.squad && this.mine) { this.was = heldNow(); PAIR_HELD.row = PAIRUP.on; heldSet(this.mine); staffVsOperatives(true); holder = this; }
   }
   /** deal afresh on the same run (the panel; the probes) */
-  restage() { if (this.active) this.g.restartEncounter(); }
+  restage() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('QuietMission.restage', this, []); if (__r !== RUST_PASS) return __r as any; } } if (this.active) this.g.restartEncounter(); }
 
   /** restartEncounter's FIRST act (game.ts): the deal for the encounter about to be made, written into the level before the fresh Player and Guards read it. */
   beforeRestart() {
@@ -190,21 +183,6 @@ export class QuietMission {
     if (!this.active) return;
     try { this.stage(); }
     catch (e) { this.failure = `the staging failed: ${e instanceof Error ? e.message : String(e)}`; console.error('quiet mission:', e); stickyVisitSet(this.g, 0); this.stop(); this.g.msg(`quiet mission — ${this.failure}`); }
-  }
-  /** once a frame (game.ts, with the scenarios' ticks): the partner told to follow, the first tick the orders have him */
-  tick(cam: FollowCamera | null = null) {
-    if (!this.active) return;
-    const g = this.g;
-    if (this.squad && this.ops[0] && !g.guards.includes(this.ops[0])) {   // the partner was despawned under it by something short of a restart (a bare resetGuards — the panel's reset, a console): a full restart, which stages
-      g.restartEncounter(); if (!this.active) return;
-    }
-    if (this.cut && cam) { this.cut = false; cam.target = v3.copy(g.followPos()); cam.desired = v3.copy(cam.target); }
-    if (!this.fallIn) return;
-    const m = this.ops[0];
-    if (!m || m.state === 'dead' || !g.orders.active) return;
-    this.fallIn = false;
-    const why = g.orders.give('fallIn', g.orders.targetAt(g.player.char.pos), 'all');
-    this.note(why ? `fall in refused: ${why}` : 'partner following');
   }
 
   // ---------------------------------------------------------------- checkpoints (savestate.ts)
@@ -284,7 +262,7 @@ export class QuietMission {
  *  the free nav cells within a stride and a bit of the face, the nearest that is on the face's side of every solid (a clear line at chest height: never the next
  *  room's floor through a thin wall, never round the holder's corner) and, given the room, inside it. `ok` false = no such cell: `pos` is then the nearest free
  *  cell whatever is between (null: none at all), which the checker reports and the game still walks to. */
-export function holderStand(g: Game, front: Vec3, area?: { x0: number; x1: number; z0: number; z1: number } | null): { pos: Vec3 | null; ok: boolean; clear: boolean; inside: boolean } {
+export function holderStand(g: Game, front: Vec3, area?: { x0: number; x1: number; z0: number; z1: number } | null): { pos: Vec3 | null; ok: boolean; clear: boolean; inside: boolean } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('holderStand', undefined, [g, front, area]); if (__r !== RUST_PASS) return __r as any; } }
   const nav = g.col.nav, e = 0.3; let best: Vec3 | null = null, bs = Infinity, clear = false, inside = false;
   for (let i = -6; i <= 6; i++) for (let j = -6; j <= 6; j++) {
     const dx = i * 0.2, dz = j * 0.2, x = front[0] + dx, z = front[2] + dz; if (nav.isBlocked(x, z)) continue;
@@ -305,13 +283,6 @@ export function quietWords(g: Game) {
   const outs = exits.length === 1 ? exits[0].name : exits.length === 2 ? `${exits[0].name} or ${exits[1].name}` : `${exits.slice(0, -1).map(x => x.name).join(', ')} or ${exits[exits.length - 1].name}`;
   return { place: P.place, holder: P.holder, thing, outs, bare: thing.replace(/^(the|a|an) /i, '') };
 }
-/** the exit Sam went out by (the nearest whose line he is past), for the last line and the card */
-export function exitTaken(g: Game, p: Vec3): QuietExit | null {
-  const Q = quietOf(g); if (!Q) return null;
-  let best: QuietExit | null = null, bd = Infinity;
-  for (const x of Q.exits) if (outThrough(x, p)) { const d = Math.hypot(p[0] - x.x, p[2] - x.z); if (d < bd) { bd = d; best = x; } }
-  return best;
-}
 /** the way out nearest `p` on foot-less distance (the marker; null with none up) */
 export function nearestExit(g: Game, p: Vec3): QuietExit | null {
   const Q = quietOf(g); if (!Q) return null;
@@ -323,7 +294,7 @@ export function nearestExit(g: Game, p: Vec3): QuietExit | null {
 // ---------------------------------------------------------------- the checker (tools/qa/quiet-check.ts; the probes): the block against the BUILT floor
 /** Everything the level file's validator cannot say (scene/levelData.ts checks shapes and names): free floor, the ways on foot, first sight. `g` is a Game stood
  *  up on the level, as booted (nothing started). Returns the faults, each a line an author can act on. */
-export function checkQuiet(g: Game): string[] {
+export function checkQuiet(g: Game): string[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('checkQuiet', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const Q = g.level.scenarios?.quiet, out: string[] = [];
   if (!Q) return ['the level carries no scenarios.quiet block'];
   const nav = g.col.nav, at = (p: readonly number[]) => `(${p[0]}, ${p[2]})`;

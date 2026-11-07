@@ -84,7 +84,7 @@ let lastErr = '';
 /** one arm played: every scenario × seed through ships.ts as the page ships it (`zero`: with the rule at 0) */
 const playArm = async (zero: boolean): Promise<Run[]> => {
   const file = resolve(tmpdir(), `other-door-check-${process.pid}-${zero ? 'off' : 'on'}.json`);
-  const pr = Bun.spawn(['bun', 'run', resolve(import.meta.dir, 'ships.ts'), '--scn', scns.join(','), '--seeds', seeds, '--cap', cap, '--jobs', jobs, '--json', file, ...(zero ? ['--set', RULE0] : [])], { stdout: 'ignore', stderr: 'pipe' });
+  const pr = Bun.spawn(['bun', 'run', resolve(import.meta.dir, 'ships.ts'), '--scn', scns.join(','), '--seeds', seeds, '--cap', cap, '--jobs', jobs, '--json', file, ...(zero ? ['--set', RULE0] : [])], { stdout: 'ignore', stderr: 'pipe', env: process.env });
   const err = await new Response(pr.stderr).text(), code = await pr.exited; if (err.trim()) lastErr = err.trim().split('\n').pop()!.slice(0, 160);
   if (code === 2) { console.error(err.trim() || 'ships.ts refused its flags'); process.exit(2); }
   try { return JSON.parse(readFileSync(file, 'utf8')).runs; } catch { return []; } finally { try { rmSync(file); } catch { /* not there */ } }

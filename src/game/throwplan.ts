@@ -22,13 +22,14 @@ import { FRAG } from './frag';
 import { flashFuse } from './combat';
 import { SQUADSMOKE } from './squadsmoke';
 import { SQUADTHROW } from './squadthrow';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const THROWPLAN_STATS = { sims: 0 };
 export interface ThrowFlight { end: Vec3; land: Vec3; points: Vec3[]; landed: boolean }
 const flat = v3.distXZ;
 
 /** WHERE A THING THROWN FROM `from` AT `v0` GOES OFF: the pool's own flight (see the head of the file). `land` = its first contact, `points` = its way */
-export function throwFlight(g: Game, kind: 'frag' | 'stun', from: Vec3, v0: Vec3, STEP = 1 / 60): ThrowFlight {
+export function throwFlight(g: Game, kind: 'frag' | 'stun', from: Vec3, v0: Vec3, STEP = 1 / 60): ThrowFlight { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('throwFlight', undefined, [g, kind, from, v0, STEP]); if (__r !== RUST_PASS) return __r as any; } }
   const frag = kind === 'frag', radius = frag ? FRAG_ITEM.radius : 0.055, restitution = frag ? FRAG_ITEM.restitution : 0.38, friction = frag ? FRAG_ITEM.friction : 0.35;
   let pos = v3.copy(from), vel = v3.copy(v0), settled = false, bounces = 0, age = 0, fuse = frag ? FRAG.orderFuse : flashFuse(g), land: Vec3 | null = null;
   const points: Vec3[] = [v3.copy(pos)], h = STEP / 2, col = g.col, props = g.props; THROWPLAN_STATS.sims++;

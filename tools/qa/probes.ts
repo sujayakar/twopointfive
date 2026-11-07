@@ -2,7 +2,7 @@
 // what happened, so a finding comes with a deterministic repro instead of a seed + frame.
 //   bun run tools/qa/probes.ts <probe | family | all | all-quick | repros | selftest | list> [n] [--verbose] [--print] [--write]
 //   ('all' = every asserting probe, hours; 'all-quick' = the union of the gate lists a lane runs before handing back — perf · player (incl. selector) · doors · qrf · checkpoints ·
-//    journal · ui + every identity card + the rebuild's families (room clear, threshold, silent, lines of fire, door walk, kit, missions, depot, registry, the two stands), `sh tools/qa/gate.sh all-quick`; 'repros' = the informational who-does-what tables with no expectation to assert (leaf-wedge,
+//    journal · ui + every identity card + the rebuild's families (room clear, threshold, silent, lines of fire, door walk, kit, missions, depot, registry, the two stands, the fold of the settled switch rows), `sh tools/qa/gate.sh all-quick`; 'repros' = the informational who-does-what tables with no expectation to assert (leaf-wedge,
 //    silent-repair, dead-script, motion) — NO VERDICT by design, kept out of 'all'; 'selftest' = the runner's own red / green paths; 'list' prints the index below, exit 0.
 //    'player' = the player-side PASS/FAIL set: the wall-clip family minus its 4-minute doors sweep, wall-snap minus its 2-minute grid sweep, selector, world-edge, teleport-cancel,
 //    crush, controls-behind, no-mag-pickup, kit-slots, whistle-keys, aim-snap — ≈ 5 min; 'wall-clip' = all five wall-clip probes ≈ 8 min: every way the player's 0.42 m circle could end up
@@ -25,18 +25,18 @@
 //     devices: devices-camera devices-editor devices-keypad devices-laser
 //     dialogue: dialogue-exchange dialogue-heard dialogue-intel dialogue-lint dialogue-none dialogue-radio dialogue-sawhurt dialogue-seed dialogue-shapes
 //     director: director-lint director-scheduler director-showcase-scan
-//     hands: hands-body hands-door hands-team hands-off hands-harness
-//     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-held work-walk work-defuse work-off work-harness
-//     handwork: handwork-work handwork-radio handwork-swap handwork-off handwork-harness
+//     hands: hands-body hands-door hands-team hands-harness
+//     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-held work-walk work-defuse work-harness
+//     handwork: handwork-work handwork-radio handwork-swap handwork-harness
 //     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-quick wand-off
-//     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
-//     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
-//     workstow: workstow-sam workstow-mate workstow-wall workstow-off
-//     squadnet: squadnet-why squadnet-clear squadnet-end squadnet-net squadnet-off
-//     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns gunslots-off
+//     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand
+//     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save
+//     workstow: workstow-sam workstow-mate workstow-wall
+//     squadnet: squadnet-why squadnet-clear squadnet-end squadnet-net
+//     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns
 //     kittree: kittree-rows kittree-guns kittree-sponge kittree-off kittree-mate40
-//     gunlook: gunlook-own gunlook-hands gunlook-bare gunlook-off (+ the gunreload family: how each is fed; gunshells: a tube gun by the shell)
-//     gunroles: gunroles-deal gunroles-entry gunroles-fight gunroles-lanes gunroles-off
+//     gunlook: gunlook-own gunlook-hands gunlook-bare (+ the gunreload family: how each is fed; gunshells: a tube gun by the shell)
+//     gunroles: gunroles-deal gunroles-entry gunroles-fight gunroles-lanes
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-weight bigslot-wiring
 //     kitpaste: kitpaste-fit kitpaste-cases
 //     kitlent: kitlent-tiles
@@ -44,8 +44,8 @@
 //     kitdeal: kitdeal-cards kitdeal-more kitdeal-run kitdeal-screen kitdeal-stands
 //     noshield: noshield-gone noshield-card noshield-staged noshield-tape
 //     takedown: takedown-harness takedown-rules takedown-off takedown-moves takedown-partner takedown-breathe takedown-lower takedown-kill takedown-beats
-//     stealthpose: stealthpose-harness stealthpose-off stealthpose-idle stealthpose-walk stealthpose-rise stealthpose-creep stealthpose-cable stealthpose-standdown
-//     close: close-dark close-duo close-grab close-harness close-held close-marks close-melee close-mode close-off close-offer close-rows close-seat close-tell close-windows
+//     stealthpose: stealthpose-harness stealthpose-idle stealthpose-walk stealthpose-rise stealthpose-creep stealthpose-cable stealthpose-standdown
+//     close: close-dark close-duo close-grab close-harness close-held close-marks close-melee close-mode close-offer close-rows close-seat close-tell close-windows
 //     editor: editor-doc editor-materials editor-restore editor-save editor-ui
 //     glass: glass-blast glass-flags glass-lines glass-off glass-shot glass-sight glass-sound
 //     grab: grab-auto grab-choke grab-gate grab-release grab-rollcall grab-talk grab-walk
@@ -64,7 +64,7 @@
 //     sdfrig: sdfrig-fit sdfrig-pack sdfrig-presets
 //     cast: cast-loader cast-file cast-fit cast-game cast-look cast-beam   (the look switch: both files, OFF = today's masks, one digest under either look;  a statured man's laser leaves his drawn muzzle;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
 //     selector: selector-input selector-noise selector-rows selector-sustained
-//     selftest: selftest-fail selftest-holds selftest-knobs selftest-pass selftest-quiet selftest-throw
+//     selftest: selftest-fail selftest-fold selftest-holds selftest-knobs selftest-pass selftest-quiet selftest-throw   (selftest-fold by its own name only)
 //     snap: snap-bites snap-page   (+ snap-open, by its own name only: red today)
 //     standoff: standoff-discipline standoff-door standoff-end standoff-ff standoff-flank standoff-lost standoff-see standoff-tour
 //     tactics: tactics-decay tactics-door tactics-flank tactics-lone tactics-rounds tactics-single
@@ -72,7 +72,7 @@
 //     wall-clip: wall-clip-doors wall-clip-ends wall-clip-moves wall-clip-shove wall-clip-speed
 //     wall-snap: wall-snap-engage wall-snap-release wall-snap-slide wall-snap-sweep
 //     wallsnap: wallsnap-camera wallsnap-kit wallsnap-cover wallsnap-duo wallsnap-landing wallsnap-off wallsnap-off-same wallsnap-reach wallsnap-stack wallsnap-take wallpress wallrun wallfelt leangun   (the wall hold's feel pass + the rifle stack, WALLSNAP.on; ~40 s)
-//     kitanim: kitanim-close kitanim-equip kitanim-harness kitanim-joints kitanim-midswap kitanim-nv kitanim-off kitanim-reload kitanim-sling   (Sam's hands carry his kit, the three magazine changes, the close-in carriage by distance — KITANIM.on; ~15 s)
+//     kitanim: kitanim-close kitanim-equip kitanim-harness kitanim-joints kitanim-midswap kitanim-nv kitanim-reload kitanim-sling   (Sam's hands carry his kit, the three magazine changes, the close-in carriage by distance — KITANIM.on; ~15 s)
 //     gunhand: gunhand-reload gunhand-throw gunhand-whistle   (a move keeps to the free hand — src/game/gunhand.ts GUNHAND.on: a long gun reloads with a move of its own, a man with a long gun throws with his free hand, a whistle is answered with the torch up in the hand that holds it; ~40 s)
 //     weapons: weapons-identity
 //     weather: weather-daylight weather-flash weather-off weather-scheduler weather-smoke weather-thunder
@@ -88,6 +88,7 @@
 //   1 = at least one probe failed (the banner names them), 2 = an unknown probe / family name (the known ones are listed; nothing ran).
 import { standUp, ROOT } from './headless.ts';
 import { asProbe, holdsOf } from './holds.ts';
+import * as FOLDM from './fold.ts';
 const IK = 'Space';   // the game's interact key (src/game/consts.ts INTERACT_KEY)
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard, dropFromHand, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
@@ -107,11 +108,20 @@ const DT = 1 / 60;
 const KNOWN = new Set<string>(['all', 'all-quick']);
 /** 'all-quick' = the union of the gate lists a lane is told to run before handing back (CLAUDE.md: perf · player (incl. selector) · doors · qrf · checkpoints · journal · ui + every identity
  *  card) — some twenty minutes where 'all' is hours; a dispatch line rides it when any of its names is one of these families / probes. `sh tools/qa/gate.sh all-quick` is the one-word gate. */
-const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'weapons-identity', 'civilians-identity', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'glasspen-off', 'pellets-identity', 'director-scheduler',
-  'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'workstow', 'squadnet', 'gunslots', 'gunroles', 'gunlook', 'kittree', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky', 'holds']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice and its switch off)
+const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'fold', 'weapons-identity', 'civilians-identity', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'pellets-identity', 'director-scheduler',
+  'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'workstow', 'squadnet', 'gunslots', 'gunroles', 'gunlook', 'kittree', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky', 'holds']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice)
 // (first line: + glass-break's switch-off identity and the Director's idle identity, landed after the list froze — wave-4 review)
 /** The probes that failed this invocation (by name), the count run, and how many of those produced anything checkable (a boolean, a PASS / FAIL line, a banner). */
-const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[] = [], RAN_CHECKED = new Set<string>();
+/** QA_FOLD_ONLY=<probe,probe…> beside the word that lays the fold (tools/qa/fold.ts, FOR ONE CHECK AT A TIME): the named probes alone run folded */
+const FOLD_ONLY = process.env.QA_FOLD_ONLY ? new Set(process.env.QA_FOLD_ONLY.split(',').map(x => x.trim()).filter(Boolean)) : null, FOLD_MET = new Set<string>();
+/** what QA_FOLD_ONLY asked that this run did not do: judged by the outermost runner alone (a runner that is a child of one decides nothing) */
+function foldOnlyErrors(): string[] {
+  if (!FOLD_ONLY || process.env.QA_FOLD_LOG_OWNER && process.env.QA_FOLD_LOG_OWNER !== String(process.pid)) return [];
+  if (!FOLDM.FOLD.on) return ["QA_FOLD_ONLY names probes to fold and no fold is laid: it wants QA_FOLD=1 beside it, on the page's stand"];
+  if (!FOLD_ONLY.size) return ['QA_FOLD_ONLY names no probe: nothing of this run was folded'];
+  return [...FOLD_ONLY].filter(n => !FOLD_MET.has(n)).map(n => `QA_FOLD_ONLY names ${n}, and no probe of this run has that name (a probe's own name, not a family's): nothing was folded for it`);
+}
+const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[] = [], RAN_CHECKED = new Set<string>(), RAN_FOLDED = new Set<string>();   // (RAN_FOLDED: the probes that ran with the settled rows folded, tools/qa/fold.ts)
 /** The dispatch condition: registers `names` as known and says whether this invocation (`which`) is one of them. List 'all' explicitly where 'all' should run it; 'all-quick' follows QUICK. */
 function on(...names: string[]): boolean { for (const n of names) KNOWN.add(n); return names.includes(which) || (which === 'all-quick' && names.some(n => QUICK.has(n))); }
 /** The FAIL / PASS line shapes the probe files print (and gate.sh counts): a family banner with FAIL in it, a '- FAIL —' case line, a two-space '  FAIL …' check
@@ -129,11 +139,18 @@ console.error = (...args: unknown[]) => { if (tapDepth) scan(args); rawErr(...ar
  *  next probe of the same process — an identity digest silently depending on the previous family's leftovers), with the cut-pieces switch, the plain night's card
  *  and the loud card first in the table. */
 async function run(name: string, fn: () => unknown, standOf = name): Promise<boolean> {   // (standOf: the probe whose stand it runs on — its own, but for selftest-holds)
-  RAN++; RAN_NAMES.push(name); const f0 = tapFails, p0 = tapPasses; tapDepth++;
-  let ok = true, ret: unknown;
+  RAN++; RAN_NAMES.push(name); (globalThis as any).__probeNow = name; process.env.RH_PROBE = name;   /* (read by tools/blitz/rust-host.ts, which probe stood a game: its trace, RH_TRACE, and its table of which game a check is stood on, TPS_GAME=table; the environment's copy is for a probe that runs as a child) */ const f0 = tapFails, p0 = tapPasses; tapDepth++;
+  let ok = true, ret: unknown; const plainSays = process.env.QA_VERDICTS === '1' && !FOLDM.FOLD.on && (process.env.QA_VERDICTS_BY ??= String(process.pid)) === String(process.pid), speaks = FOLDM.foldSpeaker('runner');
+  if (speaks) { const o = FOLDM.foldOutside(`before ${name}`); if (o) console.log(o); }   // (tools/qa/fold.ts: what was refused before this probe began is not its own, and is said)
+  // (QA_FOLD_ONLY, the outermost runner's alone: the laid fold on for a named probe, off for any other, and back to what stood between probes after it)
+  const between = FOLDM.foldMode(), only = speaks && FOLD_ONLY && between !== null; if (only) { if (FOLD_ONLY!.has(name)) FOLD_MET.add(name); FOLDM.foldFor(FOLD_ONLY!.has(name)); }
+  const folded = FOLDM.foldActive(); if (folded) RAN_FOLDED.add(name);   // (as the probe begins, before its fence opens: QA_FOLD_ONLY's choice, or a host's foldFor)
   try { ret = await asProbe(standOf, fn); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
   finally { tapDepth--; }
+  if (speaks) console.log(FOLDM.foldLine(name, tapFails > f0 || !ok));
+  if (only) FOLDM.foldFor(between);   // (tools/qa/fold.ts: what this probe, and its children, tried to write over a settled row)
+  else if (plainSays) console.log(`  ${JSON.stringify({ plain: { probe: name, red: tapFails > f0 || !ok } })}`);   // (the outermost runner's alone, as the fold's line is)
   if (tapFails > f0) ok = false;
   if (typeof ret === 'boolean' || tapFails > f0 || tapPasses > p0) { CHECKED++; RAN_CHECKED.add(name); }
   if (!ok && !FAILED.includes(name)) FAILED.push(name);
@@ -2350,7 +2367,6 @@ if (on('off-hinges-charge', 'off-hinges', 'doors', 'all')) await run('off-hinges
 if (on('off-hinges-walk', 'off-hinges', 'doors', 'all')) await run('off-hinges-walk', async () => (await import('./doorblast-probes.ts')).offHingesWalk());
 if (on('off-hinges-after', 'off-hinges', 'doors', 'all')) await run('off-hinges-after', async () => (await import('./doorblast-probes.ts')).offHingesAfter());
 if (on('off-hinges-sweep', 'off-hinges', 'doors', 'all')) await run('off-hinges-sweep', async () => (await import('./doorblast-probes.ts')).offHingesSweep());
-if (on('off-hinges-off', 'off-hinges', 'doors', 'all')) await run('off-hinges-off', async () => (await import('./doorblast-probes.ts')).offHingesOff());
 if (on('doorstun', 'off-hinges', 'frag', 'he40', 'all')) await run('doorstun', async () => (await import('./doorstun-check.ts')).doorstunCheck());   // a burst that takes a door off stuns the men behind it (src/game/frag.ts FRAG.doorStun)
 if (on('wallstun', 'frag', 'he40', 'all')) await run('wallstun', async () => (await import('./wallstun-check.ts')).wallstunCheck());   // a burst that holes a wall or breaks cover stuns the men behind it (src/game/frag.ts FRAG.wallStun)
 // ---------------------------------------------------------------- the floor you walk on: one material map for the mixer, the guards' ears and the meter (floor-probes.ts)
@@ -2405,12 +2421,10 @@ if (on('close-rows', 'close', 'all')) await run('close-rows', async () => (await
 if (on('close-marks', 'close', 'all')) await run('close-marks', async () => (await import('./close-probes.ts')).closeMarksProbe());   // the floor marks (off as shipped) drawn = offered
 if (on('close-seat', 'close', 'all')) await run('close-seat', async () => (await import('./close-probes.ts')).closeSeatProbe());   // a seated man
 if (on('close-harness', 'close', 'all')) await run('close-harness', async () => (await import('./close-probes.ts')).closeHarness());   // the two stands, the page switch, the knob table
-if (on('close-off', 'close', 'all')) await run('close-off', async () => (await import('./close-probes.ts')).closeOff());   // the switch off is the build, digest for digest
 if (on('close-duo', 'close', 'all')) await run('close-duo', async () => (await import('./close-probes.ts')).closeDuo());   // all of it beside a partner in the two-person game
 if (on('hands-body', 'hands', 'all')) await run('hands-body', async () => (await import('./hands-probes.ts')).handsBody());   // a body is taken from the end he is at, by its beats, hauled with both hands on it, laid down, taken again from the other end
 if (on('hands-door', 'hands', 'all')) await run('hands-door', async () => (await import('./hands-probes.ts')).handsDoor());   // a door row brings the leaf round under his hand with him stepped clear of its swing; it never passes through him
 if (on('hands-team', 'hands', 'all')) await run('hands-team', async () => (await import('./hands-probes.ts')).handsTeam());   // a door somebody else works: the ordered lead's hand on the leaf as his shove moves it, a hand on a leaf pulled to
-if (on('hands-off', 'hands', 'all')) await run('hands-off', async () => (await import('./hands-probes.ts')).handsOff());   // the switch off: the ankle drag on the tap, the flung leaf
 if (on('hands-harness', 'hands', 'all')) await run('hands-harness', async () => (await import('./hands-probes.ts')).handsHarness());   // the two stands, the page switch, the knob table
 // ---------------------------------------------------------------- a teammate works a thing in the level (workthings-probes.ts; src/game/workthings.ts): 'workthings' = the family
 if (on('work-breaker', 'workthings', 'all')) await run('work-breaker', async () => (await import('./workthings-probes.ts')).workBreaker());   // X on the breaker: its own order on 1; a teammate goes, throws it, holds; it stays thrown; B re-arms
@@ -2422,13 +2436,11 @@ if (on('work-face', 'workthings', 'all')) await run('work-face', async () => (aw
 if (on('work-held', 'workthings', 'all')) await run('work-held', async () => (await import('./workthings-probes.ts')).workHeld());   // fire held, an unaware defender in sight of the panel: the man sent still throws the breaker, his partner's gun on that man
 if (on('work-walk', 'workthings', 'all')) await run('work-walk', async () => (await import('./workthings-probes.ts')).workWalk());   // a follower is not left standing on the walk of the man who comes to the breaker
 if (on('work-defuse', 'workthings', 'all')) await run('work-defuse', async () => (await import('./workthings-probes.ts')).workDefuse());   // a charge the run ended on (Sam down) is not called safe by the man at it
-if (on('work-off', 'workthings', 'all')) await run('work-off', async () => (await import('./workthings-probes.ts')).workOff());   // the switch off: the floor's menu, no such order
 if (on('work-harness', 'workthings', 'all')) await run('work-harness', async () => (await import('./workthings-probes.ts')).workHarness());   // the two stands, the page switch, the knob table
 // ---------------------------------------------------------------- hands at work (src/game/handwork.ts, handwork-probes.ts): a hand on the pad / the charge / the breaker / the drive, a hand to the radio, the torch ↔ sidearm swap
 if (on('handwork-work', 'handwork', 'all')) await run('handwork-work', async () => (await import('./handwork-probes.ts')).handworkWork());   // a hand on the thing while the verb runs and gone after, at each of the four, for Sam, a teammate and the guard at the breaker
 if (on('handwork-radio', 'handwork', 'all')) await run('handwork-radio', async () => (await import('./handwork-probes.ts')).handworkRadio());   // a radio line lifts the left hand to the handset and it comes down after; a reload, a long gun up, have the arm first
 if (on('handwork-swap', 'handwork', 'all')) await run('handwork-swap', async () => (await import('./handwork-probes.ts')).handworkSwap());   // the swap takes its time both ways, the torch on his belt meanwhile, the first round no later
-if (on('handwork-off', 'handwork', 'all')) await run('handwork-off', async () => (await import('./handwork-probes.ts')).handworkOff());   // the switch off: everything on the tap as it was; the picture-only halves digest the same on and off
 if (on('handwork-harness', 'handwork', 'all')) await run('handwork-harness', async () => (await import('./handwork-probes.ts')).handworkHarness());   // the two stands, the page switch, the knob table
 // ---------------------------------------------------------------- the optical wand (src/game/wand.ts, wand-check.ts): a piece of your kit; carrying it, a look under a shut door where the fog of war hides the room
 // A PRIMARY AND A SECONDARY FOR EVERY MAN (src/game/gunslots.ts; tools/qa/gunslots-check.ts raises the switch itself, so it asks the same on either stand; GUNSLOTS_BREAK=1 must fail)
@@ -2436,7 +2448,6 @@ if (on('gunslots-card', 'gunslots', 'kit', 'all')) await run('gunslots-card', as
 if (on('gunslots-mate', 'gunslots', 'all')) await run('gunslots-mate', async () => (await import('./gunslots-check.ts')).gunslotsMate());            // a staged teammate's second gun, out when dry and near, back and reloaded when nobody is in front of him
 if (on('gunslots-fight', 'gunslots', 'all')) await run('gunslots-fight', async () => (await import('./gunslots-check.ts')).gunslotsFight());         // two men dry at five metres: the third man goes down to a sidearm inside the reload
 if (on('gunslots-guns', 'gunslots', 'all')) await run('gunslots-guns', async () => (await import('./gunslots-check.ts')).gunslotsGuns());             // the guns the two rows offer, each set apart by a measure: reach, who hears it, the turn, the feed; a fight with each
-if (on('gunslots-off', 'gunslots', 'all')) await run('gunslots-off', async () => (await import('./gunslots-check.ts')).gunslotsOff());               // off = the same run by digest, the stands' row, the registry, a recording from before it
 // THE GEAR SCREEN AS A TREE (src/game/kittree.ts; tools/qa/kittree-check.ts raises the switch itself, so it asks the same on either stand; KITTREE_BREAK=1 must fail)
 if (on('kittree-rows', 'kittree', 'kit', 'all')) await run('kittree-rows', async () => (await import('./kittree-check.ts')).kittreeRows());       // one list of rows for every man, what rides on a gun under it, a row the card has not is not there to step
 if (on('kittree-guns', 'kittree', 'all')) await run('kittree-guns', async () => (await import('./kittree-check.ts')).kittreeGuns());              // a suppressor per gun as deployed and as staged, guns that have no choice, the four bars
@@ -2448,23 +2459,19 @@ if (on('owncharge-kit', 'owncharge', 'kit', 'all')) await run('owncharge-kit', a
 if (on('owncharge-door', 'owncharge', 'doortools', 'all')) await run('owncharge-door', async () => (await import('./owncharge-check.ts')).ownchargeDoor());   // alone: the card's count, the row, set / broken off / handed back / blown, a restart, one more row on a lock
 if (on('owncharge-squad', 'owncharge', 'doortools', 'all')) await run('owncharge-squad', async () => (await import('./owncharge-check.ts')).ownchargeSquad());   // one bag, the same blast as a teammate's on the same door, the squad stands off and goes in behind it
 if (on('owncharge-save', 'owncharge', 'all')) await run('owncharge-save', async () => (await import('./owncharge-check.ts')).ownchargeSave());       // the counts in a checkpoint's player slice
-if (on('owncharge-off', 'owncharge', 'all')) await run('owncharge-off', async () => (await import('./owncharge-check.ts')).ownchargeOff());         // off, or carried and never set = the same run
 // THE GUN IS PUT AWAY FOR A TWO-HANDED JOB (src/game/workstow.ts; tools/qa/workstow-check.ts raises the switch itself, so it asks the same on either stand; WORKSTOW_BREAK=1 must fail)
 if (on('workstow-sam', 'workstow', 'all')) await run('workstow-sam', async () => (await import('./workstow-check.ts')).workstowSam());       // a door charge by your hands: what you held is away for it, both wrists on the charge, back after, no round before it is up; a step and the trigger break it off
 if (on('workstow-mate', 'workstow', 'doortools', 'all')) await run('workstow-mate', async () => (await import('./workstow-check.ts')).workstowMate());   // a teammate's charge on order: his gun hangs, no round from it, back up after; a man the fight has drops the job with nothing spent
 if (on('workstow-wall', 'workstow', 'wallcharge', 'all')) await run('workstow-wall', async () => (await import('./workstow-check.ts')).workstowWall());  // the same for a wall charge, by your hands and on order
-if (on('workstow-off', 'workstow', 'all')) await run('workstow-off', async () => (await import('./workstow-check.ts')).workstowOff());            // off = the plant as it was; the switch's wiring (the knob snapshot, an old recording, the frozen hold)
 // THE SQUAD REACHES YOU, AND THE QUICK KEY SAYS WHY (src/game/squadnet.ts; tools/qa/squadnet-check.ts raises the four switches itself, so it asks the same on either stand; SQUADNET_BREAK=1 must fail)
 if (on('squadnet-why', 'squadnet', 'squadorders', 'all')) await run('squadnet-why', async () => (await import('./squadnet-check.ts')).squadnetWhy());     // the quick key's row ends on the reason, the man who answers says it, and the entry's end is called as its search found it
 if (on('squadnet-clear', 'squadnet', 'all')) await run('squadnet-clear', async () => (await import('./squadnet-check.ts')).squadnetClear());   // 'clear' only of a room whose floor was all seen; 'quiet' of floor unseen; nothing with an enemy in sight
 if (on('squadnet-end', 'squadnet', 'doortools', 'all')) await run('squadnet-end', async () => (await import('./squadnet-check.ts')).squadnetEnd());       // an entry into a room the mission has no name for ends with the lead's call; off, with nothing said
 if (on('squadnet-net', 'squadnet', 'all')) await run('squadnet-net', async () => (await import('./squadnet-check.ts')).squadnetNet());       // a teammate's line from off the screen clicks, a teammate down is called once; the page's alone, by digest
-if (on('squadnet-off', 'squadnet', 'all')) await run('squadnet-off', async () => (await import('./squadnet-check.ts')).squadnetOff());       // off = the lines as they were; the switches' wiring (the knob snapshot, an old recording, the frozen holds, the stand)
 // EACH GUN ITS OWN LOOK, SOUND AND FLAME (src/game/gunlook.ts; tools/qa/gunlook-check.ts raises the switch itself, so it asks the same on either stand; GUNLOOK_BREAK=1 must fail)
 if (on('gunlook-own', 'gunlook', 'kit', 'all')) await run('gunlook-own', async () => (await import('./gunlook-check.ts')).gunlookOwn());           // every row a slot hands out: a model, a voice, a flame and a casing row, no two guns sharing one
 if (on('gunlook-hands', 'gunlook', 'all')) await run('gunlook-hands', async () => (await import('./gunlook-check.ts')).gunlookHands());             // a teammate and you with each gun: told, drawn and heard as that gun; off = the stand-in
 if (on('gunlook-bare', 'gunlook', 'all')) await run('gunlook-bare', async () => (await import('./gunlook-check.ts')).gunlookBare());               // a gun with its suppressor off: a bare barrel where the can was, nothing ahead of the pistol's slide
-if (on('gunlook-off', 'gunlook', 'all')) await run('gunlook-off', async () => (await import('./gunlook-check.ts')).gunlookOff());                   // off = the same run by digest, the stands' row, the registry, a recording from before it
 if (on('gunreload', 'gunlook', 'kitanim', 'all')) await run('gunreload', async () => (await import('./gunreload-check.ts')).gunreloadCheck());              // how each is fed: the belt under its cover, shells one at a time, a magazine up a grip — as long as it was, the gun's own sounds
 if (on('gunshells', 'gunlook', 'kitanim', 'all')) await run('gunshells', async () => (await import('./gunreload-check.ts')).gunreloadShells());             // the shells key: a tube gun fed a shell at a time, in time and in the books (GUNSHELLS_BREAK=1 must fail)
 // A GUN IS USED FOR WHAT IT IS FOR, AND THE DEFENDERS DRAW FROM THE SAME TABLE (src/game/gunroles.ts; tools/qa/gunroles-check.ts raises the switch itself by the stand's own word; GUNROLES_BREAK=1 must fail)
@@ -2472,7 +2479,6 @@ if (on('gunroles-deal', 'gunroles', 'all')) await run('gunroles-deal', async () 
 if (on('gunroles-entry', 'gunroles', 'all')) await run('gunroles-entry', async () => (await import('./gunroles-check.ts')).gunrolesEntry());      // four on a door: the MP7 at the frame and first through, the Mk 12 and the Mk 46 on the rear marks and last; issue carbines as off
 if (on('gunroles-fight', 'gunroles', 'all')) await run('gunroles-fight', async () => (await import('./gunroles-check.ts')).gunrolesFight());      // string length by gun: a defender's PKM against the carbines, a teammate's Mk 46 and Mk 12 against the pair
 if (on('gunroles-lanes', 'gunroles', 'all')) await run('gunroles-lanes', async () => (await import('./gunroles-check.ts')).gunrolesLanes());      // the belt-fed defender is not taken from his gun's place; the far opening is worth more to the long gun, less to a pistol
-if (on('gunroles-off', 'gunroles', 'all')) await run('gunroles-off', async () => (await import('./gunroles-check.ts')).gunrolesOff());            // off = the same run by digest, the stands' row, the registry, the page's flag, a recording from before it
 // ONE BIG SLOT A CARD, AND ITS TWO TOOLS ON A LOCK (src/game/kit.ts BIGSLOT, src/game/bigkit.ts; tools/qa/bigslot-check.ts raises the switch itself, so it asks the same on either stand; BIGKIT_BREAK=1 must fail)
 if (on('bigslot-card', 'bigslot', 'kit', 'all')) await run('bigslot-card', async () => (await import('./bigslot-check.ts')).bigCard());             // one big row a card, the shotgun off the weapon row, never two big things, never a pouch; old stores
 if (on('bigslot-off', 'bigslot', 'all')) await run('bigslot-off', async () => (await import('./bigslot-check.ts')).bigOff());                      // the switch off: no row, nobody carries either, the same run by digest
@@ -2535,7 +2541,6 @@ if (on('sneaklab', 'stealth', 'all')) await run('sneaklab', async () => (await i
 if (on('footfall', 'player', 'all')) await run('footfall', async () => (await import('./footfall-check.ts')).footfallCheck());   // one footfall a step (player.ts FOOTFALL.once; the check writes the key itself for each arm): a walk cycle rocking over one edge files one, a plain walk what it always did, a man a stride in front does not hear twenty — and its second key, FOOTFALL.owed: a walk with the cycle turned about before it reaches an edge (the cursor shaken across him, a man hauled by the two keys by turns) files a walk's footfalls, a steady walk what it always did
 // STEALTH POSES (src/game/stealthpose.ts; tools/qa/stealthpose-check.ts writes the switch itself for each arm, so it asks the same on either stand; STEALTHPOSE_BREAK=1 must fail). One process shares the staged runs
 if (on('stealthpose-harness', 'stealthpose', 'all')) await run('stealthpose-harness', async () => (await import('./stealthpose-check.ts')).stealthposeHarness());       // the frozen stand's row and word, the page's switch, the knob registry, a recording's tables
-if (on('stealthpose-off', 'stealthpose', 'all')) await run('stealthpose-off', async () => (await import('./stealthpose-check.ts')).stealthposeOff());                   // off: nothing fed, the layer never made; on with every half off = the same poses and digest
 if (on('stealthpose-idle', 'stealthpose', 'all')) await run('stealthpose-idle', async () => (await import('./stealthpose-check.ts')).stealthposeIdle());                 // crouched at a stand: wrists forward of the knees, low, never a held frame
 if (on('stealthpose-walk', 'stealthpose', 'all')) await run('stealthpose-walk', async () => (await import('./stealthpose-check.ts')).stealthposeWalk());                 // the crouch walk: the hand opposite the forward foot leads
 if (on('stealthpose-rise', 'stealthpose', 'all')) await run('stealthpose-rise', async () => (await import('./stealthpose-check.ts')).stealthposeRise());                 // up and down on the move: arms only, the head never higher
@@ -2563,7 +2568,6 @@ if (on('solo-fog', 'solofog', 'all')) await run('solo-fog', async () => (await i
 if (on('told', 'levers', 'all')) await run('told', async () => (await import('./told-check.ts')).toldCheck());   // TOLD.on / TOLD.fogOff: the fourth difficulty lever (guided | standard | bare), its last-seen marks on the first two, and the squad fog lever's bottom rung, off; both down = three levers and no mark; TOLD_BREAK=1 must fail
 if (on('peek-sight', 'peeksight', 'all')) await run('peek-sight', async () => (await import('./peeksight-check.ts')).peekSight());   // PEEKSIGHT.on: back to a wall and pushed into its open end, the fog's eye is where a head leaned round it would be — the floor and a man through the doorway are seen; off = the eye over his feet, the same digest
 if (on('sticky-wand', 'sticky', 'quietfog', 'all')) await run('sticky-wand', async () => (await import('./sticky-check.ts')).stickyWand());   // QUIETFOG.wand: the mission's cameras come with an optical wand; not the fog alone, not without fog; off = the mission as it was
-  if (on('sticky-off', 'sticky', 'all')) await run('sticky-off', async () => (await import('./sticky-check.ts')).stickyOff());   // off, or on with none carried: the same run by digest; the two stands' row and the registry
 // ---------------------------------------------------------------- suppression: one scalar per man off the rounds going past him, and the guards ducking under it (suppression-probes.ts): 'suppression' = the family
 if (on('sup-math', 'suppression', 'all')) await run('sup-math', async () => (await import('./suppression-probes.ts')).supMath());
 if (on('sup-pin', 'suppression', 'all')) await run('sup-pin', async () => (await import('./suppression-probes.ts')).supPin());
@@ -2887,7 +2891,6 @@ if (on('rescue-doortools', 'rescue', 'all')) await run('rescue-doortools', async
 // ---------------------------------------------------------------- the dialogue pass (words-probes.ts; game/words.ts WORDS.on, ?oldwords): 'words' = the family
 if (on('words-lint', 'words', 'all')) await run('words-lint', async () => (await import('./words-probes.ts')).wordsLint());
 if (on('words-hostage', 'words', 'all')) await run('words-hostage', async () => (await import('./words-probes.ts')).wordsHostage());
-if (on('words-off', 'words', 'all')) await run('words-off', async () => (await import('./words-probes.ts')).wordsOff());
 if (on('words-routes', 'words', 'all')) await run('words-routes', async () => (await import('./words-probes.ts')).wordsRoutes());   // every level's patrol routes are said as plain words
 if (on('words-doornames', 'words', 'all')) await run('words-doornames', async () => (await import('./words-probes.ts')).wordsDoorNames());   // a level names its own doors where the rooms cannot (scenarios.doorNames, WORDS.doors), and the list of doors still called by a bearing
 if (on('words-doors', 'words', 'all')) await run('words-doors', async () => (await import('./words-probes.ts')).wordsDoors());   // a shorthand door id is said by the rooms it joins, one name a door (doornames.ts)
@@ -2948,9 +2951,6 @@ if (on('threshold-grenade', 'threshold', 'all')) await run('threshold-grenade', 
 if (on('door-grenade', 'doortools', 'all')) await run('door-grenade', async () => (await import('./doorgrenade-probes.ts')).doorGrenade());   // DOORTOOLS.fragHold — a grenade scatters the men of a door order: the door is not opened, a charge's man not given up on and a word makes no sound until they are back on their marks, `fragHoldCap` s at most. FRAGHOLD_BREAK=1 must fail
 if (on('threshold-play', 'threshold', 'all')) await run('threshold-play', async () => (await import('./threshold-probes.ts')).thresholdPlay());
 if (on('threshold-identity', 'threshold', 'all')) await run('threshold-identity', async () => (await import('./threshold-probes.ts')).thresholdIdentity());
-// ---------------------------------------------------------------- … and as an order on the door menu (thresholdmenu-probes.ts; doortools.ts THR_PAGE / HELD_PAGE: both forms behind X, 5, 4 in every start-card scenario, what next behind X, 5 while the jambs are held — all by keys)
-if (on('thresholdmenu-rows', 'thresholdmenu', 'all')) await run('thresholdmenu-rows', async () => (await import('./thresholdmenu-probes.ts')).thresholdmenuRows());
-if (on('thresholdmenu-held', 'thresholdmenu', 'all')) await run('thresholdmenu-held', async () => (await import('./thresholdmenu-probes.ts')).thresholdmenuHeld());
 // ---------------------------------------------------------------- the calls taken while the maintainer was away, both sides of each switch (calls-probes.ts; rebuild/away-build/calls.md)
 if (on('calls-shipped', 'calls', 'all')) await run('calls-shipped', async () => (await import('./calls-probes.ts')).callsShipped());
 if (on('calls-menu', 'calls', 'all')) await run('calls-menu', async () => (await import('./calls-probes.ts')).callsMenu());
@@ -2967,7 +2967,6 @@ if (on('roomfit-rooms', 'roomfit', 'all')) await run('roomfit-rooms', async () =
 if (on('roomfit-cleared', 'roomfit', 'all')) await run('roomfit-cleared', async () => (await import('./roomfit-probes.ts')).roomfitCleared());
 if (on('roomfit-hall', 'roomfit', 'all')) await run('roomfit-hall', async () => (await import('./roomfit-probes.ts')).roomfitHall());
 if (on('roomfit-walk', 'roomfit', 'all')) await run('roomfit-walk', async () => (await import('./roomfit-probes.ts')).roomfitWalk());
-if (on('roomfit-off', 'roomfit', 'all')) await run('roomfit-off', async () => (await import('./roomfit-probes.ts')).roomfitOff());
 // ---------------------------------------------------------------- the way a teammate walks to where an order sends him (ordereddoor-probes.ts; cleared.ts — the stack on the known face, the entry through the ordered door, walks round rooms nobody has been in): 'ordereddoor' = the family
 if (on('ordereddoor-face', 'ordereddoor', 'all')) await run('ordereddoor-face', async () => (await import('./ordereddoor-probes.ts')).ordereddoorFace());
 if (on('ordereddoor-feet', 'ordereddoor', 'all')) await run('ordereddoor-feet', async () => (await import('./ordereddoor-probes.ts')).ordereddoorFeet());
@@ -3050,14 +3049,6 @@ if (on('pairs-go', 'pairs', 'all')) await run('pairs-go', async () => (await imp
 if (on('pairs-tool', 'pairs', 'all')) await run('pairs-tool', async () => (await import('./pairs-probes.ts')).pairsTool());
 if (on('pairs-haltback', 'pairs', 'all')) await run('pairs-haltback', async () => (await import('./pairs-probes.ts')).pairsHaltback());
 if (on('pairs-lanes', 'pairs', 'all')) await run('pairs-lanes', async () => (await import('./pairs-probes.ts')).pairsLanes());
-// ---------------------------------------------------------------- every order a key press, nothing held (pressorders-probes.ts; the press menu on every scenario that takes orders: X, a digit, T, B, F — and the code search): 'pressorders' = the family
-if (on('pressorders-roomclear', 'pressorders', 'all')) await run('pressorders-roomclear', async () => (await import('./pressorders-probes.ts')).pressRoomclear());
-if (on('pressorders-squad4', 'pressorders', 'all')) await run('pressorders-squad4', async () => (await import('./pressorders-probes.ts')).pressSquad4());
-if (on('pressorders-rescue', 'pressorders', 'all')) await run('pressorders-rescue', async () => (await import('./pressorders-probes.ts')).pressRescue());
-if (on('pressorders-nightbreach', 'pressorders', 'all')) await run('pressorders-nightbreach', async () => (await import('./pressorders-probes.ts')).pressNightbreach());
-if (on('pressorders-nightbreach4', 'pressorders', 'all')) await run('pressorders-nightbreach4', async () => (await import('./pressorders-probes.ts')).pressNightbreach4());
-if (on('pressorders-held', 'pressorders', 'all')) await run('pressorders-held', async () => (await import('./pressorders-probes.ts')).pressHeld());
-if (on('pressorders-search', 'pressorders', 'all')) await run('pressorders-search', async () => (await import('./pressorders-probes.ts')).pressSearch());
 // ---------------------------------------------------------------- every order within reach of the left hand (orderkeys-probes.ts; every menu of every scenario on the start card's list walked by its keys — no row on a digit above ORDER_DIGITS): 'orderkeys' = the family
 if (on('orderkeys-walk', 'orderkeys', 'all')) await run('orderkeys-walk', async () => (await import('./orderkeys-probes.ts')).orderkeysWalk());
 if (on('orderkeys-give', 'orderkeys', 'all')) await run('orderkeys-give', async () => (await import('./orderkeys-probes.ts')).orderkeysGive());
@@ -3113,7 +3104,6 @@ if (on('holdglass-quiet', 'holdglass', 'silent', 'all')) await run('holdglass-qu
 if (on('holdglass-release', 'holdglass', 'silent', 'all')) await run('holdglass-release', async () => (await import('./holdglass-probes.ts')).holdglassRelease());
 if (on('holdglass-other', 'holdglass', 'silent', 'all')) await run('holdglass-other', async () => (await import('./holdglass-probes.ts')).holdglassOther());
 if (on('holdglass-open', 'holdglass', 'silent', 'all')) await run('holdglass-open', async () => (await import('./holdglass-probes.ts')).holdglassOpen());
-if (on('holdglass-off', 'holdglass', 'silent', 'all')) await run('holdglass-off', async () => (await import('./holdglass-probes.ts')).holdglassOff());
 if (on('pair-menu', 'pair', 'all')) await run('pair-menu', async () => (await import('./pair-probes.ts')).pairMenu());
 if (on('pair-wait', 'pair', 'all')) await run('pair-wait', async () => (await import('./pair-probes.ts')).pairWait());
 if (on('pair-dark', 'pair', 'all')) await run('pair-dark', async () => (await import('./pair-probes.ts')).pairDark());
@@ -3151,7 +3141,6 @@ if (on('wallpress', 'wallsnap', 'wall-snap', 'all')) await run('wallpress', asyn
 if (on('wallrun', 'wallsnap', 'wall-snap', 'all')) await run('wallrun', async () => (await import('./wallrun-check.ts')).wallRunCheck());   // a sprint held straight into a wall takes it, and that run is not then a way off it (player.ts wallPress / wallRanOn, WALLSNAP.pressRun / ?wallrun=0; WALLRUN_BREAK=1 must fail)
 if (on('wallfelt', 'wallsnap', 'wall-snap', 'all')) await run('wallfelt', async () => (await import('./wallfelt-check.ts')).wallFeltCheck());   // the hold's two sounds and the unhurried take (WALLSNAP.voice / .slow; WALLFELT_BREAK=1 must fail)
 // ---------------------------------------------------------------- Sam handles his kit (kitanim-probes.ts; game/kitanim.ts KITANIM.on, character.ts KIT)
-if (on('kitanim-off', 'kitanim', 'all')) await run('kitanim-off', async () => (await import('./kitanim-probes.ts')).kitOff());   // switch off: nothing dealt, the build's lock-outs and reload rows
 if (on('kitanim-equip', 'kitanim', 'all')) await run('kitanim-equip', async () => (await import('./kitanim-probes.ts')).kitEquip());   // every change of what is in the fist is carried in order; a gun fires only once it is up
 if (on('kitanim-midswap', 'kitanim', 'all')) await run('kitanim-midswap', async () => (await import('./kitanim-probes.ts')).kitMidswap());   // a change in the middle of a change; a throw takes the arms
 if (on('kitanim-reload', 'kitanim', 'all')) await run('kitanim-reload', async () => (await import('./kitanim-probes.ts')).kitReloadProbe());   // empty / dry / tactical by the gun's state, both guns
@@ -3203,7 +3192,7 @@ for (const [nm, fn] of [['turn-off', 'turnOff'], ['turn-weight', 'turnWeight'], 
   if (on(nm, 'turn', 'moves', 'all')) await run(nm, async () => ((await import('./moves-probes.ts')) as any)[fn]());
 // ---------------------------------------------------------------- a room entry's men on real paths through the door (doorpath-probes.ts; game/doorpath.ts DOORPATH): on = nobody in a leaf, through a friend or in a jamb, one file a body apart; off = the runs as they were.
 // Whole seeded playthroughs in child processes (a few minutes); the red path is DOORPATH_OLD=1 … doorpath-paths / doorpath-gun (the entry as it was: must FAIL)
-for (const [nm, fn] of [['doorpath-paths', 'doorpathPaths'], ['doorpath-gun', 'doorpathGun'], ['doorpath-file', 'doorpathFile'], ['doorpath-off', 'doorpathOff']] as const)
+for (const [nm, fn] of [['doorpath-paths', 'doorpathPaths'], ['doorpath-gun', 'doorpathGun'], ['doorpath-file', 'doorpathFile']] as const)
   if (on(nm, 'doorpath', 'all')) await run(nm, async () => ((await import('./doorpath-probes.ts')) as any)[fn]());
 // ---------------------------------------------------------------- guns, trunks and heads that snap (snap-probes.ts): whole room fights at the page's defaults hold no gun swing of 60° inside a tenth and nothing drawn comes a quarter turn round — and the watcher finds both with the turn weight off
 if (on('snap-page', 'snap', 'all')) await run('snap-page', async () => (await import('./snap-probes.ts')).snapPage());
@@ -3378,7 +3367,7 @@ let glassBannerPending: { f0: number } | null = null;
   // and glass, the line of fire agreeing with the round, what a pane never hears of, the switch off = the base. All but the off digest also ride 'glass'.
   { let pr = false; const pf0 = FAILED.length;
     const pf = async (name: string, fn: string, ...extra: string[]) => { if (on(name, 'glasspen', ...extra, 'all')) { pr = which === 'glasspen' || which === name; await run(name, async () => ((await import('./glasspen-probes.ts')) as any)[fn]()); } };
-    await pf('glasspen-player', 'glasspenPlayer', 'glass'); await pf('glasspen-ai', 'glasspenAi', 'glass'); await pf('glasspen-rule', 'glasspenRule', 'glass'); await pf('glasspen-lines', 'glasspenLines', 'glass'); await pf('glasspen-near', 'glasspenNear', 'glass'); await pf('glasspen-off', 'glasspenOff');
+    await pf('glasspen-player', 'glasspenPlayer', 'glass'); await pf('glasspen-ai', 'glasspenAi', 'glass'); await pf('glasspen-rule', 'glasspenRule', 'glass'); await pf('glasspen-lines', 'glasspenLines', 'glass'); await pf('glasspen-near', 'glasspenNear', 'glass');
     if (pr && which === 'glasspen') familyBanner('glasspen', FAILED.length - pf0); }
   if (glassBannerPending) { familyBanner('glass', FAILED.length - glassBannerPending.f0); glassBannerPending = null; } }
 // ---------------------------------------------------------------- broken glass AFTER it lets go (game/shards.ts + shardModel.ts + the 'shard' particle kind, shards-probes.ts): 'shards' = the family — the CPU
@@ -3440,7 +3429,7 @@ if (on('director-scheduler', 'director', 'all')) await run('director-scheduler',
   if (ran) familyBanner('cast', (await import('./cast-probes.ts')).castFailures()); }
 /** A stand-alone QA script run as a child (its process.exit stays its own): every line echoed through console.log so run() and gate.sh count its check lines; a non-zero exit is a FAIL line. */
 async function runScript(file: string, args: string[] = []): Promise<boolean> {
-  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/${file}`, ...args], { stdout: 'pipe', stderr: 'pipe' });
+  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/${file}`, ...args], { stdout: 'pipe', stderr: 'pipe', env: process.env });
   const [out, err] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text()]); const code = await p.exited;
   for (const ln of (out + err).split('\n')) if (ln.trim()) console.log(ln);
   if (code !== 0) console.log(`- FAIL — ${file} exited ${code}`);
@@ -3454,6 +3443,7 @@ if (on('sweep-fog', 'fog', 'perf', 'all')) await run('sweep-fog', () => runScrip
 if (on('sweep-snow', 'snow', 'perf', 'all')) await run('sweep-snow', () => runScript('sweep-snow-check.ts'));   // the F8 sweep's two snow flips: when each refuses, what it writes, that it puts it back
 if (on('held-meter', 'standoff', 'all')) await run('held-meter', () => runScript('held-meter-check.ts'));   // a held man's light meter is this hold's: a new hold, the same man again, a pair moved a room on, a pair where it stood (HELDMETER_BREAK=1 fails three of its four)
 if (on('standupgc', 'perf', 'all')) await run('standupgc', () => runScript('standupgc-check.ts'));   // a game stood up has done with the last one: twenty-five games stood up back to back in a process of their own must not grow the heap (a dropped game stayed as garbage; headless.ts standUp asks for the collection)
+if (on('fold', 'all')) await run('fold', () => runScript('fold-check.ts'));   // the settled switch rows held at their page value (tools/qa/fold.ts) and their list (tools/qa/switches.json): the list is the game's, a write is refused and counted, the runner says it by probe
 if (on('holds', 'all')) await run('holds', () => runScript('holds-check.ts'));   // the stand a probe is owed by its name (holds.ts): the table's rows are the game's, a held probe runs with them off and they are back after, and a check file with a main of its own runs through the same call (HOLDS_BREAK=1 must fail)
 if (on('passtimer', 'perf', 'render', 'all')) await run('passtimer', () => runScript('passtimer-check.ts'));   // every GPU pass the page opens has a timer, or a row in passtimer-exempt.ts that says why not: a pass with none is in no HUD row, no recording and not in the ladder's reading (the look's place pass was 2 ms nobody could see)
 if (on('quality-plan', 'perf', 'all')) await run('quality-plan', () => runScript('quality-plan.ts'));   // auto quality on paper (quality-plan.ts): plan()'s picks for the synthetic machines + the 39 state checks of the Quality controller (calibration, the ladder, the climb) — two-space '  PASS — …' lines
@@ -3697,15 +3687,21 @@ if (on('secondway', 'missions', 'all')) await run('secondway', async () => (awai
 // … and a defender sees what he watches: dressing never blinds a mark (tools/qa/marksight-check.ts, a program of its own)
 if (on('marksight', 'missions', 'all')) await run('marksight', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/marksight-check.ts`], { stdout: 'inherit', stderr: 'inherit', env: { ...process.env, TPS_PROFILE: 'shipped' } }).exited) === 0);
 // … and its starts and doors are on a way (tools/qa/walked-check.ts, a program of its own; it loads each level as the page does whatever the stand: what the ways do not reach is owed by name, a file a level)
-if (on('walked', 'missions', 'all')) await run('walked', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/walked-check.ts`], { stdout: 'inherit', stderr: 'inherit' }).exited) === 0);
+if (on('walked', 'missions', 'all')) await run('walked', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/walked-check.ts`], { stdout: 'inherit', stderr: 'inherit', env: process.env }).exited) === 0);
 // ---------------------------------------------------------------- aimed fire chews cover (src/game/coverfire.ts, coverfire-probes.ts — a program of its own: run as one, its exit code the verdict)
-{ if (on('coverfire', 'coverfire')) await run('coverfire', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/coverfire-probes.ts`, 'all'], { stdout: 'inherit', stderr: 'inherit' }).exited) === 0); }
+{ if (on('coverfire', 'coverfire')) await run('coverfire', async () => (await Bun.spawn(['bun', 'run', `${import.meta.dir}/coverfire-probes.ts`, 'all'], { stdout: 'inherit', stderr: 'inherit', env: process.env }).exited) === 0); }
 
 // ---------------------------------------------------------------- the runner's own self-tests (never in 'all'): `selftest-fail` must turn the verdict and gate.sh red, `selftest-throw` likewise without
 // stopping the probe after it, `selftest-pass` green, `selftest-quiet` = a probe that checks nothing → NO VERDICT (gate.sh: ERROR)
 if (on('selftest-fail', 'selftest')) await run('selftest-fail', () => { console.log('- FAIL — deliberately: the runner\'s red path'); return false; });
 if (on('selftest-throw', 'selftest')) await run('selftest-throw', () => { throw new Error('deliberately thrown: the runner logs it and carries on'); });
 if (on('selftest-pass', 'selftest')) await run('selftest-pass', () => { console.log('- PASS — the runner\'s green path (after a fail and a throw when run as the selftest family)'); return true; });
+// `selftest-fold` (by its own name only): one settled switch row written off its page value here and once more in a child. Under the fold (tools/qa/fold.ts)
+// both are refused and the probe's fold line names both writers (fold-check (7)); with no fold the write takes and the fence round the probe puts it back.
+if (on('selftest-fold')) await run('selftest-fold', async () => { const F = await import('./fold.ts'), { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`), A = F.settledYesNo(F.switchRows(), 2)!;
+  const [t, k] = A.row.split('.'), T = (knobRegistry() as Record<string, Record<string, unknown>>)[t]; T[k] = !A.page;
+  const code = await Bun.spawn(['bun', 'run', `${import.meta.dir}/fold-check.ts`, '--write'], { stdout: 'inherit', stderr: 'inherit', env: process.env }).exited;
+  console.log(`- ${code === 0 ? 'PASS' : 'FAIL'} — ${A.row} written off its page value here and in a child (exit ${code}); it reads ${String(T[k])} now`); return code === 0; });
 if (on('selftest-quiet')) await run('selftest-quiet', () => { console.log('  (a probe that prints no check and returns nothing)'); });
 if (on('selftest-knobs', 'selftest')) {   // run() puts the knob singletons back: one probe scribbles on three tables and 'forgets', the next finds them as they were
   const T = knobTables() as any; const before = JSON.stringify([T.WHISTLE?.twiceWindow, T.CIV?.greet, T.NEEDS?.dwell]);
@@ -3743,11 +3739,16 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
     // ONE LIST, read by stand: a row is the page's stand's unless its `on` says the old stand too, or alone. Two runs are read against no row at all, and say so
     // where they have a red: one started with a word of the stand given by hand (stand.ts BY_HAND: a probe turned green by its own rule held off would read GREEN
     // AGAIN), and one of a single case of a probe (a case's number as the third argument: `aim-door 0` passes without ever running the line its row is about).
-    const { EXPECTED_RED: LIST, rowSays } = await import('./expected-red.ts'), { STAND, BY_HAND } = await import('./stand.ts');
-    const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
-    const reads = (n: string): boolean => !other && n in LIST && (STAND === 'shipped' ? LIST[n].on !== 'old' : !!LIST[n].on);
+    // A RUN STARTED WITH A BREAK WORD (stand.ts BREAK_WORDS) is still read against the list, and closes with one line more, because a row can hide the word:
+    // a probe that is red by its row prints EXPECTED RED whether the word bit or not (the runner's (12) under RUNNER12_BREAK on the page's stand, 11-06). The
+    // line says DID NOT BITE where nothing failed, names the reds with no row as the word's to explain, and says BITE NOT SHOWN where every red has a row.
+    // With more words than one it cannot say which of them bit.
+    const { EXPECTED_RED: LIST, rowSays } = await import('./expected-red.ts'), { STAND, BY_HAND, BREAK_WORDS } = await import('./stand.ts');
+    const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : RAN_NAMES.length && RAN_NAMES.every(n => RAN_FOLDED.has(n)) ? 'the settled switch rows were folded (tools/qa/fold.ts: QA_FOLD or the Rust game\'s word), and the list is of a stand as it opens' : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
+    // (a run folded for SOME of its checks, fold.ts foldFor: those are read against no row, the rest as ever)
+    const reads = (n: string): boolean => !other && !RAN_FOLDED.has(n) && n in LIST && (STAND === 'shipped' ? LIST[n].on !== 'old' : !!LIST[n].on);
     const reds = FAILED.filter(n => RAN_NAMES.includes(n)), banners = FAILED.filter(n => !RAN_NAMES.includes(n));
-    const old = reds.filter(reads), fresh = [...reds.filter(n => !reads(n)), ...(reds.length ? [] : banners)];
+    const foldedReds = other ? [] : reds.filter(n => RAN_FOLDED.has(n)), old = reds.filter(reads), fresh = [...reds.filter(n => !reads(n) && !foldedReds.includes(n)), ...(reds.length ? [] : banners)];
     const back = RAN_NAMES.filter(n => reads(n) && !FAILED.includes(n) && RAN_CHECKED.has(n));
     /** what to do with a listed red that passed: the row goes, unless it is red on the other stand as well, where only this stand comes out of it */
     const mend = (n: string): string => { const shares = Object.keys(LIST).filter(m => LIST[m] === LIST[n]).length - 1, own = shares ? ` (${shares} other name${shares > 1 ? 's' : ''} share${shares > 1 ? '' : 's'} its row: this one goes, or gets a row of its own, and theirs stays)` : '';
@@ -3759,6 +3760,13 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
       for (const n of fresh) console.log(`    NEW RED       ${n}`);
       for (const n of back) console.log(`    GREEN AGAIN   ${n} — listed as an expected red and it passed here: ${mend(n)}`);
     }
+    if (foldedReds.length) console.log(`  the reds of folded probes (tools/qa/fold.ts) are read against no row: ${foldedReds.length} — ${foldedReds.join(', ')}`);
+    for (const e of foldOnlyErrors()) console.log(`error: ${e}`);   // (QA_FOLD_ONLY that could not do what it was asked: an error, so that a check that had to be folded is never a green run unfolded)
+    if (BREAK_WORDS.length) { const many = BREAK_WORDS.length > 1, w = `BREAK WORD${many ? 'S' : ''} ${BREAK_WORDS.join(' ')}`, all = [...reds, ...(reds.length ? [] : banners)];
+      console.log(`  ${w}: ` + (!FAILED.length ? `${many ? 'NONE BIT' : 'DID NOT BITE'} — nothing this run ran failed${other ? ` (${other})` : ''}`
+        : other ? `${all.length} red (${all.join(', ')}); the list is not asked, so whether ${many ? 'one' : 'it'} bit is by the line that failed`
+        : fresh.length || foldedReds.length ? `${fresh.length + foldedReds.length} red with no row on this stand (${[...fresh, ...foldedReds].join(', ')}${foldedReds.length ? `; ${foldedReds.length} of them ran folded, where no row is read` : ''}): the word's to explain, by the line that failed${many ? '; which word bit is not said' : ''}`
+        : `BITE NOT SHOWN — every red of this run has a row on this stand and is red without the word: read which LINE failed`)); }
   }
-  process.exitCode = FAILED.length ? 1 : 0;
+  process.exitCode = FAILED.length || foldOnlyErrors().length ? 1 : 0;
 }

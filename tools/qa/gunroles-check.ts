@@ -8,8 +8,6 @@
 //           issue carbine through the room fight's — what the trigger answers, and the gaps between the rounds of a staged fight at nine metres
 //   lanes   the belt-fed defender keeps his post (lanes.ts laneBars) through a fight next door; the cover's deal: the far opening to the long gun
 //           before the pistol
-//   off     off = the run of the build before, by digest; on with nobody dealt and the cards as issued = that run too; the stands' row, the registry,
-//           the page's flag, a recording from before it
 // Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the switch itself, by the stand's own word, before a floor is stood up. No picture.
 const { standUp, ROOT } = await import('./headless.ts');
 const { rig } = await import('./doortools-probes.ts');
@@ -29,10 +27,6 @@ const { WEAPONS, Firearm } = await import(`${ROOT}/src/game/weapons.ts`);
 const { burstTrigger, spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`);
-const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
-const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -204,26 +198,9 @@ export async function gunrolesLanes(): Promise<boolean> {
   F.verdict(L.went ? L.role === 'reach' && L.slung[0] > 0 && L.str === 0 : true, 'with his sidearm out after a dry primary a Mk 12 man is still the Mk 12 man for the stack and the cover — and the trigger in his hands is the pistol\'s', L.went ? `sidearm out · role ${L.role} · far opening ${f2(L.slung[0])} · string ${L.str}` : 'the two gun slots are held off on this stand (TPS_GUNSLOTS): no sidearm comes out, nothing to ask');
   return F.done();
 }
-// ───────────────────────────────────────────────────────────── off
-export async function gunrolesOff(): Promise<boolean> {
-  const F = family('gunroles-off: the switch off is the build before; on, the cast is dealt');
-  const run = async (on: boolean, keys: Partial<typeof GUNROLES> = {}) => withSwitch(on, async () => {
-    const R: any = await hushed(() => rig(17, { stage: false })); const g = R.game; await hushed(() => R.RC.start(17)); const hashes: string[] = [];
-    for (let i = 0; i < 600; i++) { R.step(); if (i % 150 === 149) hashes.push(hashDigest(digestGame(g, true))); }
-    return { hashes, guns: [...new Set(R.hostiles.map((h: any) => h.weapon.def.id as string))].sort() }; }, keys);
-  const off = await run(false), bare = await run(true, { deal: false }), on = await run(true);
-  F.verdict(J(off.guns) === J(['aks74u']) && J(off.hashes) === J(bare.hashes), 'ten seconds of the staged room clear with the switch off: every defender carries the short carbine; on, with the deal\'s key off and the squad\'s cards as issued, the run digests the same — no squad rule answers differently until a card names another gun', `off:              ${off.hashes.join(' ')} (${off.guns.join(' ')})\n    on, nobody dealt: ${bare.hashes.join(' ')} (${bare.guns.join(' ')})`);
-  F.verdict(on.guns.length > 1, 'on, the same cast carries more than the one row', `on: ${on.hashes.join(' ')} (${on.guns.join(' ')})`);
-  const reg = knobRegistry(), page = /GUNROLES\.on = !q\.has\('nogunroles'\)/.test(await Bun.file(`${ROOT}/src/host/profile.ts`).text());
-  F.verdict('GUNROLES.on' in FROZEN_HOLDS && reg.GUNROLES === GUNROLES && page, 'the switch is one of the two stands\' rows, in the knob registry, and the page writes it on unless ?nogunroles', `frozen hold: ${(FROZEN_HOLDS as any)['GUNROLES.on']} · registered ${reg.GUNROLES === GUNROLES} · pageSwitches writes it: ${page}`);
-  const R: any = await hushed(() => rig(17, { stage: false })); GUNROLES.on = true; const snap = knobsSnapshot(R.game); const has = !!snap.tables.GUNROLES; delete snap.tables.GUNROLES; applyKnobs(R.game, snap); const after = GUNROLES.on; Object.assign(GUNROLES, DEFAULTS);
-  GUNROLES.on = true; const snap2 = knobsSnapshot(R.game); const carries = (snap2.tables.GUNROLES as any)?.captor === false; delete (snap2.tables.GUNROLES as any).captor; applyKnobs(R.game, snap2); const day = GUNROLES.captor; Object.assign(GUNROLES, DEFAULTS);   // (a file of the day the hostage holder was dealt a pistol: the table without the key)
-  F.verdict(has && after === false && carries && day === true, 'a recording carries the table, and one from before it replays with the switch off — one from the day the man with a hostage was dealt a pistol replays with him dealt one', `carried ${has} · after a file without it: on = ${after} · the captor key carried ${carries} · after a file without the key: captor = ${day}`);
-  return F.done();
-}
 
 if (import.meta.main) {
-  const which = process.argv[2] ?? 'all', fams: Record<string, () => Promise<boolean>> = { deal: gunrolesDeal, entry: gunrolesEntry, fight: gunrolesFight, lanes: gunrolesLanes, off: gunrolesOff };
+  const which = process.argv[2] ?? 'all', fams: Record<string, () => Promise<boolean>> = { deal: gunrolesDeal, entry: gunrolesEntry, fight: gunrolesFight, lanes: gunrolesLanes };
   let ok = true; for (const [k, fn] of Object.entries(fams)) if (which === 'all' || which === k) ok = (await fn()) && ok;
   console.log(`\n${ok ? 'gunroles-check: ALL PASS' : 'gunroles-check: FAILURES above'}`); process.exit(ok ? 0 : 1);
 }

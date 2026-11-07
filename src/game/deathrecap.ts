@@ -15,7 +15,7 @@
  *  Seams: combat.ts fireWeapon → `recapRound` (the round that is about to land on a man: one line), game.ts `recapTick` (last in Game.step), ui/debrief.ts
  *  mounts the panel. */
 import { men, allDown, manOf as playerOf, menUp, playerName } from './seats';
-import { SideMap, SideSet, GameSideMap } from '../math/side';
+import { SideSet, GameSideMap } from '../math/side';
 import type { Game, Guard, GameEvent, Player } from './game';
 import type { Character } from './character';
 import type { Vec3 } from '../math/vec';
@@ -25,6 +25,7 @@ import { plainShort } from './gear';
 import { civiliansShown } from './civilians';
 import { FOG, gazeOf } from './fogofwar';
 import { BoxFlag } from '../scene/boxes';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const RECAP = {
   on: true,
@@ -204,7 +205,7 @@ function flush(g: Game, S: State, early: boolean): void {
 }
 
 /** Last in Game.step: this frame's rounds, who went down in it, a sample of the floor when one is due. */
-export function recapTick(g: Game): void {
+export function recapTick(g: Game): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('recapTick', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   if (!live(g)) { const Z = states.get(g); if (Z) Z.primed = false; return; }   // (not watching: whoever goes down meanwhile is not a death seen — the next look starts from the floor as it is)
   const S = stateOf(g); const now = g.time; S.lastT = now;
   // rounds and blasts filed this frame (the game forgets an event after half a second)

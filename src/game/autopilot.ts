@@ -37,7 +37,7 @@ import { sideOf } from './orders';   // (these three are called inside functions
 import { squadSilent } from './silent';
 import { offOf } from './doortools';
 import { isHostile } from './teams';
-import { whyWords } from './squadnet';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 export const AUTOPILOT = {
   /** the quick key on a door the addressed men wait on sends them in by the entry they pick (false: it is the target's first row, as it was) */
@@ -90,7 +90,7 @@ function contactBehind(g: Game, t: DoorTarget, far: number): boolean {
 
 /** The entries in the order the squad would take them on a door it is stacked on (`t.side`: the men's face): the first is its choice, the rest what it
  *  falls back to. `shut`: with the charge a door known shut ends on (it asks the door tools what the team knows of the lock — the press; never the HUD). */
-export function autoEntries(g: Game, t: DoorTarget, shut = true): { ids: string[]; why: AutoPick['why']; kept?: boolean } {
+export function autoEntries(g: Game, t: DoorTarget, shut = true): { ids: string[]; why: AutoPick['why']; kept?: boolean } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('autoEntries', undefined, [g, t, shut]); if (__r !== RUST_PASS) return __r as any; } }
   const DT = g.doorTools;
   if (squadSilent(g)) return { ids: ['openClear'], why: 'silent' };
   if (AUTOPILOT.plain) return { ids: ['openClear'], why: 'known' };   // (the key never picks a tool: the plain entry, as the word's key gives it — no reason to say)
@@ -103,7 +103,7 @@ export function autoEntries(g: Game, t: DoorTarget, shut = true): { ids: string[
 
 /** What the quick key does on `t` for the men it would go to. `check`: the entry is the first its row's `valid` takes (a path search per man: the press);
  *  without, the first choice unasked (the HUD's line, every frame: no path search, nothing written). */
-export function autoPick(g: Game, t: OrderTarget, check = true, men?: Guard[]): AutoPick {
+export function autoPick(g: Game, t: OrderTarget, check = true, men?: Guard[]): AutoPick { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('autoPick', undefined, [g, t, check, men]); if (__r !== RUST_PASS) return __r as any; } }
   const S = g.orders, first = (): AutoPick => ({ id: S.defaultFor(t)?.id ?? null, men: null, word: false, why: 'first', t });
   if (t.kind !== 'door') return first();
   const DT = g.doorTools, R = men ?? S.recipients(t), W = DT.waitsOn(R, t.door);   // (`men`: planmode.ts asks for a goal's own men)
@@ -125,23 +125,10 @@ export function autoPick(g: Game, t: OrderTarget, check = true, men?: Guard[]): 
 
 /** The quick key, pressed on `t`: true when the press was the autopilot's (an order given and stamped as its own in the order book, or refused aloud, or
  *  a charge left alone on its word). False: nothing was there to give. */
-export function autoQuick(g: Game, t: OrderTarget): boolean {
-  const S = g.orders, P = autoPick(g, t), K = AUTOPILOT_STATS, tail = S.log[S.log.length - 1]; K.presses++;
-  if (P.why === 'pending') return true;
-  if (P.why === 'set') { S.again('stack', t, P.men!, RESTACK_LINES); K.again++; return true; }
-  let no: string | null;
-  if (P.word) { const p = g.player.char.pos; no = S.big ? S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men: P.men ?? undefined }) : g.doorTools.go(S.who); }
-  else if (P.id) no = S.give(P.id, t, undefined, { men: P.men ?? undefined, ack: whyWords(P)?.ack });   // (no `who` named: the standing choice. squadnet.ts: a pick that is not a plain open is answered with its reason; undefined with its switch off)
-  else return false;
-  if (no !== null) { K.refused++; return true; }
-  if (!P.word && whyWords(P)) g.squadNet.stats.whys++;
-  const row = S.log[S.log.length - 1]; if (row && row !== tail) row.auto = true;   // (floorplan.ts draws its men for showSecs)
-  if (P.word) K.word++; else if (P.why === 'first') K.first++; else if (P.why === 'blow') K.blow++; else if (P.id === 'bangClear') K.bang++; else if (P.id === 'charge') K.charge++; else K.open++;
-  return true;
-}
+export function autoQuick(g: Game, t: OrderTarget): boolean { return crossToRust('autoQuick', undefined, [g, t]) as any; }
 
 /** the quick key's line on the HUD: the row's own words for the squad's first choice on what the cursor is on (null: nothing) */
-export function autoHint(g: Game, t: OrderTarget, P = autoPick(g, t, false)): string | null {
+export function autoHint(g: Game, t: OrderTarget, P = autoPick(g, t, false)): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('autoHint', undefined, [g, t, P]); if (__r !== RUST_PASS) return __r as any; } }
   const S = g.orders;
   if (P.word && !S.big) return 'go';
   const id = P.word ? 'go' : P.id, d: OrderDef | undefined = id ? S.defs.find(x => x.id === id) : undefined;

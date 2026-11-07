@@ -27,13 +27,13 @@
 // The team = Sam and every living operative unit; with a second player it is each player's character, asked the same way (teamOf below is the one place).
 import type { Game } from './game';
 import type { Guard } from './game';
-import type { Character } from './character';
 import type { SnatchData } from '../scene/scenarios';
 import { v3, type Vec3 } from '../math/vec';
-import { spawnTarget, civilianYield, civilianBolt, civilianTie, civilianSees, toAlarmed } from './civilians';
-import { DOWN_CARD_SECS } from './mission';
+import { spawnTarget, civilianTie } from './civilians';
+import './mission';
 import { SNATCH_LINES, snatchLines } from './dialogue';
 import { SnatchOut, type SnatchOutSnap } from './snatchout';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const SNATCH = {
   on: true,
@@ -74,13 +74,9 @@ export class Snatch {
 
   /** this level's block while the overlay's switch is up (snatchout.ts reads the van off it) */
   get block(): SnatchData | null { return this.data; }
-  /** the mission still hangs on him: loose — or, where he is to be driven off (snatchout.ts), not yet in the van (roomclear.ts: the house taken is not the end) */
-  get owes(): boolean { return !this.end && (this.out.ruled || !this.inHand); }
   private get data(): SnatchData | null { return SNATCH.on ? this.g.level.scenarios?.snatch ?? null : null; }
   get active(): boolean { return !!this.man && !!this.data && !!this.g.roomClear?.active; }
   isMan(gd: Guard): boolean { return gd === this.man; }
-  /** civilians.ts: the wrists-behind pose is his once he is tied */
-  isTied(gd: Guard): boolean { return gd === this.man && this.tied; }
   /** alive and in the team's hands: tied, in Sam's arm, or out cold by Sam's hands */
   get inHand(): boolean { const m = this.man; return !!m && (m.state === 'dead' ? m.downKind !== 'shot' : this.tied || !!m.held); }
   /** civilians.ts civSay: what HE says in place of a civilian's line (dialogue.ts SNATCH_LINES) — by what he is doing; null = nothing (calm, he is silent: the
@@ -94,13 +90,6 @@ export class Snatch {
   /** combat.ts: a round has found him (before he goes down) — whose, for the tally */
   roundOn(gd: Guard, shooter: Guard | null) { if (gd === this.man) this.killer = shooter ? { side: shooter.team, who: shooter.callsign } : { side: 'player', who: 'Player' }; }
 
-  /** the team's living characters: Sam and every operative unit that is up */
-  private teamOf(): { c: Character; gd: Guard | null }[] {
-    const g = this.g, out: { c: Character; gd: Guard | null }[] = [];
-    if (!g.player.down) out.push({ c: g.player.char, gd: null });
-    for (const gd of g.guards) if (gd.unit && gd.team === 'operative' && gd.state !== 'dead' && gd.char.alive) out.push({ c: gd.char, gd });
-    return out;
-  }
   /** notes made this run (the log itself is cut to its last rows) */
   notes = 0;
   note(what: string) { this.notes++; this.log.push(`${this.g.time.toFixed(1)} ${what}`); if (this.log.length > 60) this.log.splice(0, 20); }
@@ -113,103 +102,9 @@ export class Snatch {
     this.man = spawnTarget(g, N.man);
     this.note(`${N.man.name} staged in his room`);
   }
-  private drop() { const g = this.g; if (this.man) g.civilians = g.civilians.filter(c => c !== this.man); this.man = null; this.run = null; this.end = null; this.out.reset(); }
 
-  tick(dt: number) {
-    const g = this.g, N = this.data;
-    if (!N) { if (this.man) this.drop(); return; }
-    if (!g.roomClear?.active || g.touring) { if (this.man) this.drop(); return; }
-    if (this.run !== g.mission || !this.man || !g.civilians.includes(this.man)) this.stage(N);
-    if (this.end) return;
-    const gd = this.man!, C = gd.civ!, c = gd.char, name = C.name;
-    if (C.state !== 'work' && C.state !== 'startled' && this.times.ran < 0) this.times.ran = g.time;
-    if (g.roomClear.end === 'wiped') return;   // (the team is gone: the room clear's own end stands, and what he does next is nobody's mission)
-    // ---- the two ways it is lost
-    if (C.state === 'gone') { this.lose('gone', `${name} got out by ${this.lastExit ?? 'a way nobody had a man on'}`); return; }
-    if (gd.state === 'dead' && gd.downKind === 'shot') {
-      // (no round of anybody's was on him: a BLAST killed him — frag.ts names its thrower on `killerId` after the fact)
-      const blast = !this.killer; if (blast) { const by = gd.killerId >= 0 ? g.guards.find(x => x.char.id === gd.killerId) : null; this.killer = by ? { side: by.team, who: by.callsign } : gd.downBy === 'player' ? { side: 'player', who: 'Player' } : null; }
-      const k = this.killer, what = blast ? 'grenade' : 'round';
-      this.lose('dead', `${name} is dead — ${k ? (k.side === 'player' ? `your ${what}` : k.side === 'operative' ? `${k.who}'s ${what}` : `one of their own men's ${what}s`) : `a ${blast ? 'blast' : 'round'}`}`); return;
-    }
-    // ---- won: he is in the van (snatchout.ts, where the level has one and the rule is up) — or, as it was, the house is the team's and he is in hand
-    const van = this.out.ruled;
-    if (van) { if (this.out.tick(dt)) return; }
-    else if (g.roomClear.end === 'taken' && this.inHand) { this.end = 'won'; this.why = `${name} taken alive`; this.times.end = g.time; this.note('WON'); g.msg(`MISSION COMPLETE — ${name} taken alive and the house is yours. press Shift+Enter to restart`); return; }
-    if (gd.state === 'dead') { if (!this.saidOut) { this.saidOut = true; this.note('out cold'); g.msg(van ? `${name} is out cold but breathing, and he's yours. carry him to ${N.van!.name}` : g.roomClear.end === 'taken' ? `${name} is out cold but breathing, and he's yours` : `${name} is out cold but breathing, and he's yours. now clear the rest of the house`); } return; }
-    if (gd.held) { this.handsUp = false; this.seen = v3.copy(c.pos); return; }   // (in Sam's arm: the civilians' own rows)
-    // tied stays tied: Sam's arm letting go of him, or his own 'stay down' row with its clock, sets nobody running
-    if (this.tied) { if (C.state !== 'cower' || !C.complied || C.complyUntil !== Infinity) civilianTie(g, gd); return; }
-    // ---- who of the team has a line to him (the TEAM's hold on him: all round, whatever the light — their eyes, their goggles) and whom HE makes out (his own
-    //      eye, by the light on the man: civilians.ts civilianSees)
-    const eye = c.bones.head ?? v3.add(c.pos, [0, 1.5, 0]);
-    let near: Character | null = null, nearD = Infinity; const inSight: { m: Character; d: number }[] = [];
-    for (const { c: m, gd: mate } of this.teamOf()) {
-      const d = v3.distXZ(m.pos, c.pos);
-      if (d <= SNATCH.seeM && d < nearD) {
-        const chest = m.bones.chest ?? v3.add(m.pos, [0, 1.1, 0]), head = m.bones.head ?? v3.add(m.pos, [0, 1.6, 0]);
-        if (!(g.col.segmentBlocked(eye, chest) && g.col.segmentBlocked(eye, head))) { nearD = d; near = m; }
-      }
-      if (civilianSees(g, gd, m, mate, SNATCH.seeRate)) inSight.push({ m, d });
-    }
-    inSight.sort((a, b) => a.d - b.d);
-    if (near) { this.seen = v3.copy(c.pos); this.fear = v3.copy(near.pos); }
-    // a promise Sam took from him by hand (the civilians' 'stay down' row) is his hands up as well; one that something else took off him is not
-    if (this.handsUp && (C.state !== 'cower' || !C.complied)) this.handsUp = false;
-    if (!this.handsUp && C.state === 'cower' && C.complied) { this.handsUp = true; this.nearT = 0; this.aloneT = 0; if (this.times.up < 0) this.times.up = g.time; }
-    if (this.handsUp) {
-      C.complyUntil = Infinity;
-      if (near && nearD <= SNATCH.cuffM) { this.nearT += dt; this.aloneT = 0; if (this.nearT >= SNATCH.cuffSecs) this.tie(near); }
-      else if (near) { this.aloneT = 0; this.nearT = 0; }
-      else { this.nearT = 0; this.aloneT += dt; if (this.aloneT >= SNATCH.boltSecs) { this.handsUp = false; this.aloneT = 0; this.stats.bolted++; this.note('nobody on him: he bolts'); civilianBolt(g, gd, this.fear ?? c.pos); } }
-      return;
-    }
-    // ---- he gives up to one of the team close by with a line to him (the challenge is the team's: from any side)
-    if (near && nearD <= SNATCH.giveUpM) { this.giveUp(near, 'close'); return; }
-    // ---- quiet at his marks and he makes out one of the team: the fright the civilians give Sam with a gun out
-    if ((C.state === 'work' || C.state === 'startled') && inSight.length) { toAlarmed(g, gd, 'gun', v3.copy(inSight[0].m.pos), true); return; }
-    // ---- running at a way out and he makes out one of the team between him and it
-    const T = C.state === 'flee' ? C.target : null;
-    if (T && T.kind === 'exit') {
-      this.lastExit = T.name;
-      const mine = v3.distXZ(c.pos, T.pos);
-      const ahead = inSight.find(x => v3.distXZ(x.m.pos, T.pos) < mine - 0.5);
-      if (ahead) {
-        if (ahead.d <= SNATCH.haltM) { this.giveUp(ahead.m, 'cut off'); return; }
-        C.badTargets.add(T.spot!); C.target = null; this.stats.turned++; this.note(`turned from ${T.name}: a man on it`);
-      }
-    }
-  }
   private lastExit: string | null = null;
 
-  private giveUp(to: Character, how: string) {
-    const g = this.g, gd = this.man!;
-    civilianYield(g, gd, to.pos);
-    this.handsUp = true; this.nearT = 0; this.aloneT = 0; if (this.times.up < 0) this.times.up = g.time;
-    this.note(`hands up (${how})`);
-    const mate = g.guards.find(x => x.char === to);
-    if (mate) g.say(mate, 'hands! on your head! down!');
-  }
-  private tie(by: Character) {
-    const g = this.g, gd = this.man!, name = gd.civ!.name;
-    this.tied = true; this.times.tied = g.time; civilianTie(g, gd);
-    this.note('tied');
-    const mate = g.guards.find(x => x.char === by);
-    if (mate) g.say(mate, `${name} secured.`, true);
-    g.msg(this.out.ruled ? `${name} is secured. now get him to ${this.data!.van!.name}` : g.roomClear?.end === 'taken' ? `${name} is secured` : `${name} is secured. now clear the rest of the house`);
-  }
-  /** snatchout.ts: he is in the van */
-  win(why: string) {
-    const g = this.g;
-    this.end = 'won'; this.why = why; this.times.end = g.time; this.note('WON'); g.msg(`MISSION COMPLETE — ${why}. press Shift+Enter to restart`);
-  }
-  private lose(how: 'gone' | 'dead', why: string) {
-    const g = this.g, m = g.mission;
-    this.end = 'lost'; this.lost = how; this.why = why; this.times.end = g.time; this.note(`LOST — ${why}`);
-    this.out.letGo();   // (snatchout.ts: nothing of its ticks after an end — the men it planted go back to the file here)
-    if (m.stage !== 'failed' && m.stage !== 'done' && !g.player.down) { m.stage = 'failed'; m.driveT = -1; m.downCardAt = g.missionInTour ? -1 : g.time + DOWN_CARD_SECS; }
-    g.msg(`MISSION FAILED — ${why}. press Enter to restart`);
-  }
 
   /** mission.ts objectiveText / objectivePos: his line and marker while he is loose (or it is over); null = the room clear's own. A live row leads with
    *  'objective ▸ ' as the room clear's, the defuse's and the rescue's do; the two end rows do not, as the room clear's 'structure taken' does not */
@@ -238,7 +133,7 @@ export class Snatch {
    *  for the day that changes: a load is a restart, and the restart's room clear has not staged him yet, so the civilians' own slice found nobody to put back — he is staged here,
    *  stood where the file had him, and the overlay's flags (and the pose they mean) are put back. What is NOT carried: his fright mid-run (he comes back as his flags say: at
    *  work, hands up, or tied) and a man out cold (he comes back standing). */
-  restore(s: SnatchSnap | undefined) {
+  restore(s: SnatchSnap | undefined) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Snatch.restore', this, [s]); if (__r !== RUST_PASS) return __r as any; } }
     const N = this.data; if (!s || !N) return;
     if (!this.man || !this.g.civilians.includes(this.man)) { this.stage(N); const c = this.man!.char; c.pos[0] = s.at[0]; c.pos[2] = s.at[2]; c.bodyYaw = s.yaw; }
     this.run = this.g.mission;
@@ -250,7 +145,7 @@ export class Snatch {
 }
 
 /** the block against the built floor: he and his ways out stand on floor a man can walk, and every way out can be walked to from where he keeps */
-export function checkSnatch(g: Game): string[] {
+export function checkSnatch(g: Game): string[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('checkSnatch', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const N = g.level.scenarios?.snatch; if (!N) return [];
   const out: string[] = [], nav = g.col.nav;
   const pts: [string, Vec3][] = [['man.pos', N.man.pos], ...(N.man.points ?? []).map((p, i): [string, Vec3] => [`man.points[${i}]`, p]), ...N.exits.map((e, i): [string, Vec3] => [`exits[${i}] ${e.name}`, e.pos])];

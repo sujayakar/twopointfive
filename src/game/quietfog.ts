@@ -40,6 +40,7 @@ import { FOG } from './fogofwar';
 import { STICKY, stickyVisit } from './stickycam';   // (read inside functions only)
 import type { Game } from './game';
 import { lessonGroup } from '../scene/scenarios';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 export const QUIETFOG: { on: boolean; def: QuietRung; wand: boolean; solo: boolean } = { on: false, def: 'off', wand: false, solo: false };
 /** the solo night's row is one the lever is live on (QUIETFOG.solo): the screens ask this where a quiet row is asked quietFogRow */
@@ -71,7 +72,7 @@ let PICK_DEF: QuietRung = 'off';   // (the default PICK was read under: a defaul
 /** where a quiet mission starts with nothing kept and nothing on its link (never anything but a rung) */
 export const quietFogDefault = (): QuietRung => (isRung(QUIETFOG.def) ? QUIETFOG.def : 'off');
 /** the rung this machine keeps for its quiet missions (the default with nothing kept; 'off' always with the switch off) */
-export function quietFog(): QuietRung {
+export function quietFog(): QuietRung { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('quietFog', undefined, []); if (__r !== RUST_PASS) return __r as any; } }
   if (!QUIETFOG.on) return 'off';
   const def = quietFogDefault();
   if (PICK === null || (PICK_DEF !== def && !KEPT)) { PICK = def; PICK_DEF = def; KEPT = false; try { const v = globalThis.localStorage?.getItem(LS); if (isRung(v)) { PICK = v; KEPT = true; } } catch { /* no store */ } }
@@ -87,12 +88,12 @@ let CAMS: boolean | null = null;   // (null: no pick made or kept — the defaul
 let CAMS_READ = false;
 /** the cameras come with the fog unasked where a quiet mission STARTS under the fog (QUIETFOG.def); where it starts with all shown they are a button to press */
 export const quietCamsDefault = (): boolean => quietFogDefault() !== 'off';
-export function quietCams(): boolean {
+export function quietCams(): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('quietCams', undefined, []); if (__r !== RUST_PASS) return __r as any; } }
   if (!QUIETFOG.on || !STICKY.on) return false;
   if (!CAMS_READ) { CAMS_READ = true; try { const v = globalThis.localStorage?.getItem(LS_CAMS); if (v === '1') CAMS = true; else if (v === '0') CAMS = false; } catch { /* no store */ } }
   return (CAMS ?? quietCamsDefault()) && quietFog() !== 'off';
 }
-export function setQuietCams(on: boolean, keep = true) {
+export function setQuietCams(on: boolean, keep = true) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setQuietCams', undefined, [on, keep]); if (__r !== RUST_PASS) return __r as any; } }
   CAMS = on; CAMS_READ = true;
   if (keep) try { const ls = globalThis.localStorage; if (on !== quietCamsDefault()) ls?.setItem(LS_CAMS, on ? '1' : '0'); else if (on || ls?.getItem(LS_CAMS) !== '0') ls?.removeItem(LS_CAMS); } catch { /* no store */ }   // (the default's own stores nothing — but a 'None' kept where the cameras come with the fog is not taken by a None pressed where they are a button)
   if (on && quietFog() === 'off') setQuietFog(quietCamsDefault() ? quietFogDefault() : 'team', keep);
@@ -106,7 +107,7 @@ export function quietCamsOfQuery(q: URLSearchParams, lesson = false): number {
   const n = Number(q.get(PARAM_CAMS)); return Number.isFinite(n) ? Math.max(0, Math.min(STICKY.carry, Math.floor(n))) : 0;
 }
 /** move the lever on a quiet row. `keep` (the screens) stores it on this machine (the default's own rung stores nothing: a fresh machine and one put back are the same) */
-export function setQuietFog(rung: QuietRung, keep = true) {
+export function setQuietFog(rung: QuietRung, keep = true) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setQuietFog', undefined, [rung, keep]); if (__r !== RUST_PASS) return __r as any; } }
   if (!isRung(rung)) return;
   const def = quietFogDefault();
   PICK = rung; PICK_DEF = def; KEPT = rung !== def;
@@ -117,14 +118,14 @@ export function setQuietFog(rung: QuietRung, keep = true) {
   }
 }
 /** the pick forgotten, to be read from the store again (the checks; a page never needs it) */
-export function quietFogForget() { PICK = null; KEPT = false; CAMS = null; CAMS_READ = false; }
+export function quietFogForget(): void { return crossToRust('quietFogForget', undefined, []) as any; }
 
 /** a mission's row is one the lever is live on: a quiet mission that is not a Training lesson, while the rule is on */
 export const quietFogRow = (e: { kind: string; group?: string } | null | undefined): boolean => QUIETFOG.on && !!e && e.kind === 'quiet' && !lessonGroup(e.group);
 /** A mission link with the quiet pick put right on it: whatever rung it carried is dropped (the visitor's own flags ride on every link — a rung is one
  *  mission's), and `quiet` — the link is a quiet mission's, not a Training lesson's — puts this machine's pick on it where that is not the default's
  *  (QUIETFOG.def: a bare quiet link IS the default). The switch's own `quietfog=0` is left where it is; with the switch off the link is returned as it came. */
-export function quietFogHref(href: string, quiet: boolean): string {
+export function quietFogHref(href: string, quiet: boolean): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('quietFogHref', undefined, [href, quiet]); if (__r !== RUST_PASS) return __r as any; } }
   if (!QUIETFOG.on) return href;
   const [path, query = ''] = href.split('?'), all = query.split('&').filter(k => k);
   const keys = all.filter(k => { const [n, v] = k.split('='); return n !== PARAM_CAMS && (n !== PARAM || v === '0'); });   // (`cams`: the cameras handed with the rung — one mission's, like it)
@@ -161,7 +162,7 @@ export function quietFogStart(q: URLSearchParams, rung: QuietRung) {
   if (!q.has('fogown')) { const put = rung === 'own'; HELD.own = { was: FOG.own, put }; FOG.own = put; }
 }
 /** the scenario quit, or another started over it: the rows as they stood (a row moved by hand since stays where it was moved to) */
-export function quietFogEnd() {
+export function quietFogEnd() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('quietFogEnd', undefined, []); if (__r !== RUST_PASS) return __r as any; } }
   if (!HELD) return;
   lift(HELD); HELD = null;
 }

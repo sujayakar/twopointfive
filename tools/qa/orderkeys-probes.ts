@@ -11,15 +11,18 @@
 //                     rows of a page share a digit, or when the panel shows another key than the one that gives it. The hint line may name no digit.
 //   orderkeys-give    in each scenario: every row of every page, on each kind of target, GIVEN by the keys the walk read — X, then the digits — on a fresh
 //                     staging: the order is logged as that order and the menu is gone (a row greyed there, with its reason, must be refused and log
-//                     nothing: it is counted apart). Only X and the digits 1 to ORDER_DIGITS are ever pressed.
+//                     nothing: it is counted apart). A FREE row (the silent word, a throw: it takes nobody off his order and give() logs no order for
+//                     it) is given when its own deed ran once and did not refuse. Only X and the digits 1 to ORDER_DIGITS are ever pressed.
 //   orderkeys-four    the four's two rows that are not orders, from the left hand: 'wait for my word' flipped by its digit on the tools page, by F there,
 //                     and by F from the door's first page (which turns to the tools with it on); the word given by F with a floor menu up and with none
 //   orderkeys-high    the digits above ORDER_DIGITS (and 0) pressed with each page of each menu up: nothing given, the menu as it was, Sam's slot as it was
+//                     (the threshold's page where the tools page turns to one; where 'clear from outside' is a plain row on 4, that is what is held)
 //   orderkeys-table   the table itself: ORDER_DIGITS is 5, the keys the orders read are X T B F and nothing else, register() never deals a digit above it
 //                     (a page of twelve rows: five digits, the rest on the wheel), and no line of the order path names a digit key above it
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { LETTERS, leftKey as leftKeyOf, toolsRow4 } from './order-keys.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -55,11 +58,14 @@ const LIST: Scn[] = [
   ...SCENARIOS.map((e: any) => ({ name: e.title as string, query: scenarioQuery(e) as string, level: e.level as string | undefined, squad: e.squad as 2 | 4 })),
   { name: 'Night breach with the four (typed, not on the list)', query: '?nightbreach&squad4', squad: 4 },
 ];
-/** the keys an order may be on: its own four letters, the digits it reaches off W A S D, and the two letters a full page spills onto */
-const LETTERS = ['X', 'T', 'B', 'F', 'G', 'H'];   // (G: the door tools' frag row — the key beside F, where the page's five digits are taken.
-// H: the big slot's row on that same page and squad smoke's on the floor's — one key past G and a stretch from W A S D, which is an open call
-// with the maintainer, not this walk's to refuse. No walk met it before a team of four was lent a tool as issued — KITDEAL.more, menus.md.)
-const leftKey = (k: string) => LETTERS.includes(k) || (/^[1-9]$/.test(k) && Number(k) <= ORDER_DIGITS);
+/** a key of the left hand (order-keys.ts): its own letters, and the digits an order reaches off W A S D */
+const leftKey = (k: string) => leftKeyOf(k, ORDER_DIGITS);
+/** ORDERKEYS_BREAK, the family's red paths, one a value so that each shows its own lines can fail: `1` = one tool put on a digit out of reach (rig: the walk,
+ *  the table, the digits pressed); `free` = every free row's deed refuses (orderkeys-give: each such row must read WRONG; the old stand has none on a digit, so
+ *  it bites on the page's stand alone); `four` = the door tools' fourth row
+ *  put on 6 (orderkeys-high: its page under the tools page, or the plain row on 4, is not there to hold); `man` = the walk asks its teammate's menu of
+ *  another man than the one the cursor is on (orderkeys-walk: every level's teammate line must read WRONG) */
+const BREAK = process.env.ORDERKEYS_BREAK ?? '';
 const nameOf = (code: string) => code.replace(/^Key|^Digit/, '');
 
 /** One game on the scenario's own level with the scenario started as its row starts it. step() keeps Sam dark and the defenders dazzled (this family is about
@@ -104,12 +110,21 @@ async function rig(scn: Scn, seed = 21) {
       return null;
     },
     onSam() { R.aim = () => { const p = game.player.char.pos; return [p[0], 0.05, p[2]]; }; R.step(2); },
-    onMan(k = 0) { R.aim = () => { const m = R.ops[k].char.pos; return [m[0], 1.2, m[2]]; }; R.step(2); },
+    /** the cursor put on the first teammate's chest; returns THE MAN IT IS ON THERE, by this file's own reckoning and not the orders': the nearest of
+     *  the men's bodies along the cursor's ray (null: the ray meets none). A man stood between the camera and the first man covers his chest on the
+     *  screen, and the cursor is on him. */
+    onMan(): any | null {
+      R.aim = () => { const m = R.ops[0].char.pos; return [m[0], 1.2, m[2]]; }; R.step(2);
+      const ray = W.cam.ray(input.mouseX / Math.max(1, W.canvas.clientWidth), input.mouseY / Math.max(1, W.canvas.clientHeight));
+      let man: any = null, best = Infinity; for (const o of R.ops) { if (o.state === 'dead') continue; const t = o.char.rayHit(ray.ro, ray.rd, 200); if (t >= 0 && t < best) { best = t; man = o; } }
+      return man;
+    },
     /** X pressed on what the cursor is on, then a few frames with every key up: the menu (or null) */
     openX(wait = 6): any { R.press(ORDERS.key); R.step(wait); return O.menu; },
   };
-  // the family's own red path (ORDERKEYS_BREAK=1 bun run tools/qa/probes.ts orderkeys-walk must FAIL): one tool put back on a digit out of reach
-  if (process.env.ORDERKEYS_BREAK) { const d = O.defs.find((x: any) => x.id === 'bangClear'); if (d) d.key = 7; }
+  // the family's own red paths (ORDERKEYS_BREAK=1 bun run tools/qa/probes.ts orderkeys-walk must FAIL): one tool put back on a digit out of reach; `four`: row 4 of the door tools on 6
+  if (BREAK === '1') { const d = O.defs.find((x: any) => x.id === 'bangClear'); if (d) d.key = 7; }
+  if (BREAK === 'four') { const d = O.defs.find((x: any) => x.id === toolsRow4(DOORTOOLS)); if (d) d.key = 6; }
   R.step(30);
   return R;
 }
@@ -190,7 +205,12 @@ export const orderkeysWalk = guarded(async () => {
     // from where the scenario puts Sam: the floor, himself, a teammate — each by X on the cursor
     const spot = R.onFloor(); if (!spot) bad.push('no spot of floor found near Sam'); else { const M = R.openX(); if (M && M.target.kind !== 'floor') bad.push(`floor: the menu opened on ${M.target.kind}`); take('floor', M); }
     R.onSam(); { const M = R.openX(); if (M && !(M.target.kind === 'none' && !M.target.man)) bad.push(`Sam: the menu opened on ${M.target.kind}`); take('Sam', M); }
-    R.onMan(0); { const M = R.openX(); if (M && !(M.target.kind === 'none' && M.target.man === R.ops[0])) bad.push(`teammate: the menu opened on ${M.target.kind}`); take('teammate', M); }
+    // (the teammate is the man the cursor is ON with its point on the first man's chest: the nearest body along its ray. The line asked for the first man
+    // whoever stood in front of him, and on three levels of the page's stand another stands 0.6 m off and nearer the camera, over that chest on the screen:
+    // the menu opened on him, rightly. ORDERKEYS_BREAK=man: another man than the cursor's is asked for)
+    { const a = R.onMan(), want = BREAK === 'man' ? R.ops.find((o: any) => o !== a) : a;
+      if (!a) bad.push(`teammate: the cursor's ray through the first man's chest meets none of the ${R.ops.length}`);
+      else { const M = R.openX(); if (M && !(M.target.kind === 'none' && M.target.man === want)) bad.push(`teammate: the menu opened on ${M.target.kind}${M.target.kind === 'none' ? ` (${M.target.man?.callsign ?? 'no man'}, where the cursor is on ${want?.callsign})` : ''}`); take('teammate', M); } }
     // every door of the level: X on the cursor where Sam can be stood by it and the cursor finds it; else the menu opened on it directly (its keys pressed all the same)
     let byX = 0;
     for (const d of g.doors.list) {
@@ -224,7 +244,7 @@ export const orderkeysGive = guarded(async () => {
       R.fresh();
       if (kind === 'door') { R.onSam(); R.openX(); R.press('Digit3'); R.aim = null;   // fall in, by presses: the men come to the door with Sam
         if (!door || !R.atDoor(door)) return false; const sam = g.player.char.pos; R.until(() => R.ops.every((m: any) => m.state === 'dead' || dist(m.char.pos, sam) < 3 + 1.2 * R.ops.length), 14); R.step(20); return true; }
-      if (kind === 'floor') return !!R.onFloor(); if (kind === 'Sam') { R.onSam(); return true; } R.onMan(0); return true;
+      if (kind === 'floor') return !!R.onFloor(); if (kind === 'Sam') { R.onSam(); return true; } return !!R.onMan();
     };
     for (const kind of ['floor', 'door', 'Sam', 'teammate']) {
       if (!stage(kind)) { out.push(`${kind}: could not be staged`); wrong++; continue; }
@@ -241,11 +261,19 @@ export const orderkeysGive = guarded(async () => {
         if (M && O.menu === M) O.refresh();
         const i = M && O.menu === M ? M.rows.findIndex((r: any) => r.id === path.id) : -1, why = i >= 0 ? M.why[i] : 'not on the page';
         // (the order is the first thing logged on the press; a scenario may log one of its own behind it — the rescue calls the other man in on Sam's first order)
+        // (a FREE row — one that takes nobody off his order: the squad's silent / loud, a throw — is not written to the order log by give() (orders.ts), and
+        //  only some log a line of their own. So it answers as that row when its own issue() ran once on the press AND DID NOT REFUSE (a refusal is the
+        //  string it returns: 'no bangs left.') and nothing but its own line was logged; every other row answers by its line in the log. A greyed free
+        //  row's deed must not have run at all. ORDERKEYS_BREAK=free: every free row's deed refuses — each must read WRONG)
+        const def = O.defs.find((x: any) => x.id === path.id), issue0 = def?.issue; let ran = 0, said: unknown = null;
+        if (def?.free) def.issue = (...a: any[]) => { ran++; return (said = BREAK === 'free' ? 'refused (ORDERKEYS_BREAK=free)' : issue0.apply(def, a)); };
         R.press(`Digit${path.keys[path.keys.length - 1]}`); const l = O.log[l0] ?? null, logged = O.log.length - l0, own = O.log.slice(l0 + 1).every((x: any) => x.order === 'fallIn'); R.step(2);
+        if (def?.free) def.issue = issue0;
         const keys = `X ${path.keys.map(k => typeof k === 'number' ? k : nameOf(k)).join(' ')}`;
-        if (!why && logged >= 1 && own && l?.order === path.id && O.menu === null) { given++; out.push(`${kind} ${keys} ${path.id}: given${logged > 1 ? ` (+${logged - 1} of the scenario's own)` : ''}`); }
-        else if (why && logged === 0 && O.menu === null) { grey++; out.push(`${kind} ${keys} ${path.id}: greyed there (${why}) and refused`); }
-        else { wrong++; out.push(`${kind} ${keys} ${path.id}: WRONG — ${why ? `greyed (${why}) ` : ''}logged ${logged}${l ? ` (${l.order})` : ''}, menu ${O.menu ? 'still up' : 'gone'}`); }
+        if (def?.free && !why && ran === 1 && typeof said !== 'string' && (logged === 0 || (l?.order === path.id && own)) && O.menu === null) { given++; out.push(`${kind} ${keys} ${path.id}: given (a free row: its own deed ran once${logged ? '' : ', and it logs no order'})`); }
+        else if (!def?.free && !why && logged >= 1 && own && l?.order === path.id && O.menu === null) { given++; out.push(`${kind} ${keys} ${path.id}: given${logged > 1 ? ` (+${logged - 1} of the scenario's own)` : ''}`); }
+        else if (why && logged === 0 && ran === 0 && O.menu === null) { grey++; out.push(`${kind} ${keys} ${path.id}: greyed there (${why}) and refused`); }
+        else { wrong++; out.push(`${kind} ${keys} ${path.id}: WRONG — ${why ? `greyed (${why}) ` : ''}logged ${logged}${l ? ` (${l.order})` : ''}${def?.free ? `, its deed ran ${ran}×${typeof said === 'string' ? ` and refused ("${said}")` : ''}` : ''}, menu ${O.menu ? 'still up' : 'gone'}`); }
       }
     }
     const high = R.pressed.filter(c => /^Digit/.test(c) && !(Number(c.slice(5)) >= 1 && Number(c.slice(5)) <= ORDER_DIGITS)), other = [...new Set(R.pressed.filter(c => !/^Digit/.test(c) && c !== ORDERS.key && c !== 'Escape' && !openers.has(c)))];
@@ -314,7 +342,13 @@ export const orderkeysHigh = guarded(async () => {
     R.onFloor(); R.openX(); hit('floor menu'); R.press(ORDERS.key);
     R.onSam(); R.openX(); hit('Sam menu'); R.press(ORDERS.key);
     if (door) { R.atDoor(door); const M = R.openX(); hit('door menu, first page'); const k = M?.rows.find((r: any) => r.opens)?.key; R.press(`Digit${k}`); ok &&= !!O.menu && O.menu.page !== null; hit('door menu, tools page');
-      const k2 = O.menu?.rows.find((r: any) => r.opens)?.key; R.press(`Digit${k2}`); ok &&= !!O.menu && O.menu.page !== null && O.menu.page !== 'tools'; hit('door menu, threshold page'); R.press(ORDERS.key); }
+      // (…and the page under the tools page, where the menu has one: the threshold's. Where 'clear from outside' is a plain row of the tools page
+      //  — doortools.ts DOORTOOLS.outsidePlain — there is no page to turn to, and the line says so instead of pressing a key that opens nothing)
+      const k2 = O.menu?.rows.find((r: any) => r.opens)?.key;
+      if (k2 !== undefined) { R.press(`Digit${k2}`); ok &&= !!O.menu && O.menu.page !== null && O.menu.page !== 'tools'; hit('door menu, threshold page'); }
+      else { const M2 = O.menu, four = M2?.rows[3], plain = !!M2 && M2.page === 'tools' && DOORTOOLS.outsidePlain === true && four?.id === 'thresholdHold' && String(four.key) === '4' && !M2.rows.some((r: any) => r.opens);
+        ok &&= plain; out.push(plain ? 'no page under the tools page (outside is a plain row there, on 4)' : !M2 ? 'THE MENU WAS GONE FROM THE TOOLS PAGE' : `NO PAGE UNDER THE TOOLS PAGE (page ${M2.page}, rows ${M2.rows.map((r: any) => `${r.key} ${r.id}`).join(' · ')})`); }
+      R.press(ORDERS.key); }
     verdict(ok && O.menu === null, `${scn.name} (${scn.query}): ${HIGH.map(nameOf).join(' ')} pressed with each menu page up and with none — no order, no page turned, Sam's slot as it was`, `${out.join(' · ')} · orders logged ${O.log.length - l0} · slot ${slot0} → ${g.player.slot}`);
   }
   return done();
@@ -343,14 +377,18 @@ export const orderkeysTable = guarded(async () => {
     for (let i = 0; i < 4; i++) { const id = `t-first-${i}`; ids.push(id); O.register({ id, label: id, targets: ['floor'], issue: () => { } }); }
     for (let i = 0; i < 12; i++) { const id = `t-page-${i}`; ids.push(id); O.register({ id, page: 'tools', label: id, targets: ['door'], issue: () => { } }); }
     O.register({ id: 't-nine', key: 9, label: 't-nine', targets: ['none'], issue: () => { } }); ids.push('t-nine');
+    O.register({ id: 't-nine-own', key: 9, page: 't-own', label: 't-nine-own', targets: ['none'], issue: () => { } }); ids.push('t-nine-own');   // (…and one that asks for 9 on a page of its own, where every digit is free)
     const defs: any[] = O.defs, over = defs.filter(d => d.key !== undefined && !(d.key >= 1 && d.key <= ORDER_DIGITS));
     const dup = (rows: any[]) => { const k = rows.filter(d => d.key !== undefined).map(d => d.key); return new Set(k).size !== k.length; };
     const floor = O.rowsFor({ kind: 'floor', at: [0, 0, 0] }), tools = O.rowsFor({ kind: 'door', at: [0, 0, 0], door: R.game.doors.list[0], side: 1 }, 'tools'), nine = defs.find(d => d.id === 't-nine');
     const keysOf = (rows: any[]) => rows.map(d => `${d.id}=${d.key ?? '·'}`).join(' ');
+    // (a row that asks for 9 is dealt a digit in reach where one is free: 5 on the first page, or none where the menu of its target has a row of the game's on 5
+    //  already (asked of the menu itself); 1 on a page of its own — orders.ts register)
+    const fiveTaken = O.rowsFor({ kind: 'none', at: [0, 0, 0] }).some((d: any) => d.id !== 't-nine' && d.key === 5), nineOwn = defs.find(d => d.id === 't-nine-own');
     for (const id of ids) O.unregister(id);
-    verdict(over.length === 0 && !dup(floor) && !dup(tools) && tools.filter((d: any) => d.key !== undefined).length === ORDER_DIGITS && floor.filter((d: any) => d.key !== undefined).length === ORDER_DIGITS && nine?.key === 5,
-      'register() with more rows than digits (four more on the floor\'s page, twelve more on the tools page, one that asks for 9): no digit above 5 is dealt, no two rows of a page share one, the rest are left to the wheel',
-      `floor: ${keysOf(floor)}\n    tools: ${keysOf(tools)}\n    asked for 9 on Sam's menu: got ${nine?.key ?? 'none'}`);
+    verdict(over.length === 0 && !dup(floor) && !dup(tools) && tools.filter((d: any) => d.key !== undefined).length === ORDER_DIGITS && floor.filter((d: any) => d.key !== undefined).length === ORDER_DIGITS && !!nine && nine.key === (fiveTaken ? undefined : 5) && nineOwn?.key === 1,
+      'register() with more rows than digits (four more on the floor\'s page, twelve more on the tools page, two that ask for 9): no digit above 5 is dealt, no two rows of a page share one, a row that asks for 9 gets a digit in reach where one is free, the rest are left to the wheel',
+      `floor: ${keysOf(floor)}\n    tools: ${keysOf(tools)}\n    asked for 9 on Sam's menu: got ${nine ? nine.key ?? 'none' : 'NO ROW'} (5 is ${fiveTaken ? 'a row of the game\'s there: none is right' : 'free there'}) · asked for 9 on a page of its own: got ${nineOwn?.key ?? 'none'} (want 1)`);
   }
   { // the code: the order path names no digit key above the reach (a literal, or a loop bound it would have to read)
     const PATH = ['src/game/orders.ts', 'src/game/doortools.ts', 'src/game/nightbreach.ts', 'src/game/roomclear.ts', 'src/game/rescue.ts', 'src/game/rescueflow.ts'];

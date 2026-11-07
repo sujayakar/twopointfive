@@ -531,7 +531,7 @@ if (TAPE) {
   async function ghosts(levels: string[]): Promise<{ runs: CoverOut[]; lost: string[] }> {
     const todo = levels.flatMap(level => seeds.map(seed => ({ level, seed }))), runs: CoverOut[] = [], lost: string[] = []; let next = 0;
     await Promise.all(Array.from({ length: jobs }, async () => { for (;;) { const job = todo[next++]; if (!job) return; const f = resolve(dir, `${job.level}.${job.seed}.json`);
-      const pr = Bun.spawn(['bun', 'run', import.meta.path, '--ghost', job.level, '--one', String(job.seed), '--outfile', f, '--deal', DEAL ? 'seed' : 'die', ...pass], { stdout: 'ignore', stderr: 'pipe' }); const code = await pr.exited;
+      const pr = Bun.spawn(['bun', 'run', import.meta.path, '--ghost', job.level, '--one', String(job.seed), '--outfile', f, '--deal', DEAL ? 'seed' : 'die', ...pass], { stdout: 'ignore', stderr: 'pipe', env: process.env }); const code = await pr.exited;
       try { runs.push(JSON.parse(readFileSync(f, 'utf8'))); } catch { const w = `${job.level}:${job.seed} — the run's process exited ${code}: ${(await new Response(pr.stderr).text()).slice(-500)}`; lost.push(w); console.log(`  ${w}`); } } }));
     runs.sort((a, b) => levels.indexOf(a.level) - levels.indexOf(b.level) || (a.seed ?? 0) - (b.seed ?? 0)); return { runs, lost }; }
   if (!ALLQ) {

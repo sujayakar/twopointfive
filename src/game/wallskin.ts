@@ -49,6 +49,7 @@ import { type Box, BoxFlag, MKEY, copyBox, boxDrawn } from '../scene/boxes';
 import type { Game } from './game';
 import { frameRoom, type BreakLike } from './edgeLook';
 import { cutBoxesOn, cutRecord, MAX_CUT_PLANES, type CutPlane } from '../scene/cut';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const WALLSKIN = {
   on: false,
@@ -156,14 +157,12 @@ export class WallSkin {
   private fail(e: unknown) { this.clear(); this.failed = true; console.error('wall skin switched off:', e); }
   private count() { let whole = 0; for (const l of this.cut.values()) if (!l.length) whole++; const S = this.stats; S.cut = this.cut.size; S.whole = whole; S.pieces = this.last; }
 
-  /** once a frame, before the frame's box list is made again (Destruction.update, beside edgeLook's): what the list can still take of ours */
-  update() { if (this.cut.size || this.dirty.size) this.room = frameRoom(this.g, this.last, WALLSKIN.boxSlack) ?? this.room; }
   /** the rule is in force on this level: the switch is up and no error has put it down */
   get live(): boolean { return WALLSKIN.on && !this.failed; }
   /** what stands of the cut sheets, into the frame's dynamic list, and the world told which authored boxes to leave out (every frame: the world is the
    *  host's, and holds no word of ours a tick put back could leave stale). A sheet something else has since hidden (the hangers threw it, the box that
    *  says it as trim went) is gone whole: its pieces are not handed over. A sheet whose pieces the list has no room for is drawn as authored this frame */
-  boxes(out: Box[]) {
+  boxes(out: Box[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallSkin.boxes', this, [out]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g, world = g.engine?.world, on = WALLSKIN.on && !this.failed;
     if (!on && (this.cut.size || this.dirty.size)) { const f = this.failed; this.clear(); this.failed = f; }   // (put down under a standing game: the bands as authored)
     if (on && !this.was) for (const B of this.all()) if (B.open.some(x => x !== 0)) this.opened(B);   // (raised under a standing game: every wall that has opened is asked again)

@@ -19,6 +19,7 @@ const { Input } = await import(`${ROOT}/src/game/input.ts`);
 const { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { stateHash } = await import(`${ROOT}/src/game/rollback.ts`);
+const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { WALL_STATS } = await import(`${ROOT}/src/game/wallbreak.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -54,7 +55,9 @@ export async function standTwo(query = 'roomclear&squad4', seed = 9, level: stri
     /** the tick and what a headless host does round it (headless.ts step, less the sampling): the lamps, the boxes, each seat's lens and the end of its input's frame */
     tick(cmds: any[]) { g.stepSeats(DT, cmds); g.engine.lights.update(DT, g.time); g.engine.world.dynamics = g.dynBoxes; g.engine.world.upload();
       for (const h of hands) { h.cam.update(DT, h.v.followPos(), h.v.aimPoint); h.I.endFrame(); } },
-    word: () => stateHash(g, false, true) };
+    // (THE WORD. `stateHash` walks the JavaScript objects of the game, which a game that is the puppet of another stepper cannot equal field for field;
+    // under the harness's word TPS_GAME (tools/blitz/PLAY.md: `ts`, `rust`, `audit`) the word is the game's digest, the same reading on every side)
+    word: () => process.env.TPS_GAME ? hashDigest(digestGame(g)) : stateHash(g, false, true) };
 }
 const standName = (): 'frozen' | 'shipped' => standOf(process.env.TPS_PROFILE);   // (standEnv.ts: no word is the page's stand; TPS_PROFILE=frozen the old one)
 /** play `secs` of the scripted fight and keep its records */

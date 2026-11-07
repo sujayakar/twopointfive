@@ -37,7 +37,7 @@ async function called(seed: number, fix: Vec3, on: boolean) {
   Math.random = seeded(seed);
   const W = await standUp(); const { game } = W;
   game.godMode = true; game.aiEnabled = true; game.tune.qrf = true; game.tune.qrfEta = 14; game.tune.qrfSize = 4; game.tune.perimeter = false; game.tune.qrfSquad = on;
-  for (let i = 0; i < 20; i++) W.step(DT);
+  W.steps(20, DT);
   hideSam(game); game.alarm.placed = true; game.alarm.pos = [...fix]; game.alarm.raisedAt = game.time;
   requestQrf(game, 'panel');
   return W;
@@ -100,7 +100,7 @@ export async function qrfSquadCheck(): Promise<boolean> {
       if (!isNaN(tShown) && isNaN(tFight) && Q.phase === 'fight') { tFight = game.time; pool = Q.bangs; alert = Q.men.filter((m: any) => m.state === 'alert' && !m.script).length; left = Q.men.filter((m: any) => cast.orders.has(m)).length + cast.tools.ops.length; opLeft = !!Q.op; }
       if (!isNaN(tFight) || (!isNaN(tShown) && game.time - tShown > 6)) break;
     }
-    const ok5 = !!cast && tFight - tShown <= 1.5 && alert === 4 && left === 0 && !opLeft && pool === 4; restart = () => { game.resetGuards(); for (let i = 0; i < 5; i++) W.step(DT); return { built: !!cast, cast: game.qrf.cast, op: game.qrf.op, state: game.qrf.state as string, held: cast ? cast.tools.ops.length + cast.orders.squad().filter((m: any) => cast.orders.has(m)).length : -1 }; };
+    const ok5 = !!cast && tFight - tShown <= 1.5 && alert === 4 && left === 0 && !opLeft && pool === 4; restart = () => { game.resetGuards(); W.steps(5, DT); return { built: !!cast, cast: game.qrf.cast, op: game.qrf.op, state: game.qrf.state as string, held: cast ? cast.tools.ops.length + cast.orders.squad().filter((m: any) => cast.orders.has(m)).length : -1 }; };
     line(ok5, '(5) contact in the stack: all four to the fight inside 1.5 s, the entry let go of, the unthrown can back in the pool', `shown at ${f1(tShown)} · fight ${isNaN(tFight) ? 'NEVER' : `${(tFight - tShown).toFixed(2)} s later`} · alert and off the script ${alert}/4 · still on the cast's books ${left} · entry kept ${opLeft} · cans ${pool}`); }
 
   // ---- (6): Sam's own squad code

@@ -10,9 +10,9 @@ import { WORLD } from './world';
 import type { Level, LightDef, LevelDoorDef, PropKind, PropPart, PropDef } from './level';
 import { MarkingDef, MARKING_TEXEL } from './markings';
 import * as MD from './markingDefaults';
-import { fitOpenings, fitDoorDef, fitSlot, JAMB_FACE, DOOR_HEAD, DOOR_GAP, LEAF_W, LEAF_H } from './doorSize';
+import { fitOpenings, fitDoorDef, fitSlot, JAMB_FACE, DOOR_HEAD, LEAF_W, LEAF_H } from './doorSize';
 import { fitPropFootprint } from './levelLoad';
-export { DOOR_GAP, LEAF_W };
+export { LEAF_W };
 
 /** the ceiling's underside (walls run floor to here) */
 export const KIT_H = WORLD.ceilingY;

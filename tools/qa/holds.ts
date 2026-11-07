@@ -11,6 +11,7 @@
 // game up, the table's row put off as well. A word whoever runs the tool set himself wins: `TPS_STALK=1 bun run tools/qa/reachup-check.ts` asks the check with
 // the stalk on (and `TPS_STALK=0` in front is the hold itself, said by hand: a stand-up raises a row for '1' alone).
 import { resolve } from 'node:path';
+import { FOLD, foldLost, foldSpeaker, foldOutside, foldLine, foldFor, foldMode } from './fold.ts';
 const ROOT = resolve(import.meta.dir, '../..');   // (not the harness's own: a tool that names its stand before it loads the harness can still import this file first)
 
 /** One held row: the stand word, the knob table and the row's key (src/game/knobs.ts's registry), and whether the row is put off at once as well as the word
@@ -26,12 +27,11 @@ export const HOLDS: readonly { readonly list: string; readonly names: readonly s
   // THE ORDER MENU'S ROWS AS THEY WERE. These probes list a menu's rows key by key and press them — the pair has no 'wait for my word' row, a floor menu has
   // none, F on a door's first page turns to the tools, F on a greyed row of its own is refused. src/game/planlay.ts (PLANLAY.on, on in the page) puts that row
   // under every menu and makes it LAY the order; the row as the page has it is planlay-check.ts's, on both stands.
-  { list: 'ROWS_AS_THEY_WERE', names: ['squadplay(-*)', 'thresholdmenu(-*)', 'orderkeys(-*)', 'pressorders(-*)', 'doormenu(-*)', 'doortools-menu(-*)', 'orders-menu(-*)'], holds: [atStandUp('TPS_PLANLAY', 'PLANLAY')] },
+  { list: 'ROWS_AS_THEY_WERE', names: ['squadplay(-*)', 'orderkeys(-*)', 'doormenu(-*)', 'doortools-menu(-*)', 'orders-menu(-*)'], holds: [atStandUp('TPS_PLANLAY', 'PLANLAY')] },
   // WHO TAKES AN ORDER, AS IT WAS. These probes step who the order goes to with T and send red to one door and blue to another by the quick key, and they
   // list a teammate's own menu. src/game/cmdring.ts CMDRING.wholeSquad (on in the page) makes every order of the squad's key or its ring everyone's and
   // takes the choice away; the rule as the page has it is wholesquad-check.ts's, on both stands. (Measured on the page's stand: squadplay 31 FAIL lines with
-  // the rule on and 1 with it held off, orderkeys 49 and 30 — the counts they had before the rule went in; pressorders reads the same either way and is not
-  // on this list. doormenu-man asks that a teammate under the cursor has his own menu on X and is the man on T: the choice the rule takes away. The family's
+  // the rule on and 1 with it held off, orderkeys 49 and 30 — the counts they had before the rule went in. doormenu-man asks that a teammate under the cursor has his own menu on X and is the man on T: the choice the rule takes away. The family's
   // other lines ask the page's rule: doormenu-probes.ts sweep counts a teammate under the cursor as the squad there.)
   { list: 'WHO_AS_IT_WAS', names: ['squadplay(-*)', 'orderkeys(-*)', 'doormenu-man(-*)'], holds: [atStandUp('TPS_WHOLESQUAD', 'CMDRING', 'wholeSquad')] },
   // THE KIT CARDS AS THEY WERE. These probes set a wall charge or the breaching shotgun through rows of their own and count pouches for them — the
@@ -73,7 +73,7 @@ export const HOLDS: readonly { readonly list: string; readonly names: readonly s
   // pair's: with a tool in the squad the page has the big slot's row on its own key, and the walk that reads that page as the page opens it, in every
   // scenario, is orderkeys-walk. (kitpaste: its squads' big slots are the table's; a paste over a lent tool is kitdeal-more's line. squadplay-wait, -side: a
   // four's door tools page is read row for row, and the lent shotgun adds 'H shotgun and clear'.)
-  { list: 'MORE_AS_IT_WAS', names: ['frameholds-tools', 'doortest', 'doormenu-rows', 'thresholdmenu-rows', 'shutdoor-menu', 'silent-pick', 'silent-tools', 'silent-boot', 'pressorders-squad4', 'pressorders-nightbreach4', 'squadplay-wait', 'squadplay-side', 'kitpaste(-*)'], holds: [row('TPS_KITMORE', 'KITDEAL', 'more')] },
+  { list: 'MORE_AS_IT_WAS', names: ['frameholds-tools', 'doortest', 'doormenu-rows', 'shutdoor-menu', 'silent-pick', 'silent-tools', 'silent-boot', 'squadplay-wait', 'squadplay-side', 'kitpaste(-*)'], holds: [row('TPS_KITMORE', 'KITDEAL', 'more')] },
   // PROBES WRITTEN AGAINST ONE CARD FOR EVERY MISSION (kit.ts KITDEAL.stealth): on the page's stand a stealth run wears your STEALTH card, issued as the
   // mission's kit, and a sponge round rides five to a pouch — so a probe that changes the loud card and stages a quiet run alone, or prices sponge rounds a
   // pouch each, runs with the key held off. The rule's own lines are kitstealth's. (owncharge puts its charges on the card a night alone wears: it reads both.
@@ -103,6 +103,11 @@ export const HOLDS: readonly { readonly list: string; readonly names: readonly s
   // out of his hand (character.ts HOLD.disarm, on in the page), the second he has none. Held at the build before the move; the move's own lines are
   // disarm-check.ts's, on both stands.
   { list: 'DISARM_AS_IT_WAS', names: ['takedown-beats'], holds: [row('TPS_DISARM', 'HOLD', 'disarm')] },
+  // THE LEAF THAT STOPS AGAINST A MAN. review-kick-leaf boots a door with a man stood at its handle on the far side and holds, at 60 and at 20 frames a
+  // second, that the leaf stops against him and he is not moved. src/game/doors.ts DOORTHROW (on in the page) makes a booted leaf THROW that man: he is
+  // carried clear and folded, by the maintainer's word. Held at the build before the throw; the boot as the page has it is doorthrow-check.ts's 'booted'
+  // lines, on both stands.
+  { list: 'LEAF_STOPS_AS_IT_WAS', names: ['review-kick-leaf'], holds: [row('TPS_DOORTHROW', 'DOORTHROW')] },
 ];
 
 /** whether a name written in the table (one of its three ways) is this probe's */
@@ -139,17 +144,24 @@ export async function holdOff(holds: readonly Hold[]): Promise<() => void> {
  *  restored in place; the cut-pieces switch is one of them), 'the plain night wears your card' (kit.ts KIT_SOLO, a flag of the visit in no knob table), and the
  *  loud card first in the table again (kit.ts kitMission: a probe that staged a quiet run leaves your stealth card first). Throws, after everything else is
  *  back, if the tables cannot be put back. */
+let fenceDepth = 0;
 export async function asProbe<T>(name: string, fn: () => T | Promise<T>): Promise<T> {
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), kit = await import(`${ROOT}/src/game/kit.ts`);
+  // (tools/qa/fold.ts: one line a probe from whoever runs the probes, the outermost. Under the runner, whose run() says it, this says nothing.)
+  const says = fenceDepth === 0 && foldSpeaker('probe'); if (says) { const o = foldOutside(`before ${name}`); if (o) console.log(o); }   // (a probe run inside another's fence is the outer one's)
+  const foldWas = fenceDepth === 0 ? foldMode() : null;   // (fold.ts foldFor: the fold on or off as this fence opens, put back FIRST as it closes, so the tables go back in the mode they were copied in)
   const soloOn = kit.KIT_SOLO.on, knobs = knobsCopy(), release = await holdOff(holdsOf(name));
-  let threw: unknown, failed = false;
-  try { return await fn(); }
-  catch (e) { failed = true; threw = e; throw e; }
+  let threw: unknown, failed = false, red = false; fenceDepth++;
+  try { const r = await fn(); red = (r as unknown) === false; return r; }
+  catch (e) { failed = true; red = true; threw = e; throw e; }
   finally {
+    foldFor(foldWas);
     try { kit.kitMission(null); } catch { /* (as the runner always ran it: a throw here is not the probe's verdict) */ }
     release(); kit.KIT_SOLO.on = soloOn;
-    try { knobsBack(knobs); }
+    fenceDepth--; if (FOLD.on) { try { foldLost(); } catch { /* the put-back below still runs */ } }   // (tools/qa/fold.ts: a settled row's hold lost to a branch replaced whole is found BEFORE the tables go back, so it is named with the value the probe left it at)
+    try { knobsBack(knobs); if (FOLD.on) foldLost(); }   // (…and after: the put-back makes again a branch the probe deleted, plain)
     catch (e: any) { throw new Error(`the knob tables could not be put back after '${name}' — ${e?.stack ?? e}${failed ? ` (and the probe itself threw — ${(threw as any)?.stack ?? threw})` : ''}`); }
+    finally { if (says) console.log(foldLine(name, red)); }
   }
 }
 

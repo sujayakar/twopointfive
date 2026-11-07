@@ -453,7 +453,7 @@ if (import.meta.main) {
   const kept = was.filter(id => !queue.includes(id) && all.some(m => m.id === id));
   if (kept.length && prev?.w && prev.h && (prev.w !== O.W || prev.h !== O.H)) { console.error(`--size ${O.W}x${O.H}: ${kept.length} pictures this run leaves alone are ${prev.w}x${prev.h}, and stills.json names one size. Use --size ${prev.w}x${prev.h}, or another --out.`); process.exit(2); }
   await Promise.all(Array.from({ length: Math.max(1, jobs) }, async () => { for (;;) { const id = queue.shift(); if (!id) return;
-    const p = Bun.spawn(['bun', 'run', import.meta.path, '--one', id, '--size', `${O.W}x${O.H}`, '--spp', String(spp), '--out', out, '--set', set], { stdout: 'inherit', stderr: 'inherit' }); if (await p.exited !== 0) { bad++; console.error(`FAILED ${id}`); } } }));
+    const p = Bun.spawn(['bun', 'run', import.meta.path, '--one', id, '--size', `${O.W}x${O.H}`, '--spp', String(spp), '--out', out, '--set', set], { stdout: 'inherit', stderr: 'inherit', env: process.env }); if (await p.exited !== 0) { bad++; console.error(`FAILED ${id}`); } } }));
   // the list the menu reads: every picture in the folder that is a mission's (a run that names missions keeps the rest). A picture of a mission that is gone is
   // removed only if the folder's last list named it: nothing else in a folder handed to --out is this tool's to delete.
   const ids: string[] = []; for (const fn of readdirSync(out)) { if (!fn.endsWith('.jpg')) continue; const id = fn.slice(0, -4); if (all.some(m => m.id === id)) ids.push(id); else if (was.includes(id)) unlinkSync(join(out, fn)); }

@@ -13,23 +13,10 @@
 //                    side's man stands 0.86 m further off and is dealt second). That crossing is listed, not failed. ITS RED PATH:
 //                    `DOORPATH_FILE_BREAK=1` preloads tools/qa/doorpath-backward.ts (the walk lets each entry go back to front) and must FAIL on
 //                    the order line, with a "red path" line that must PASS
-//   doorpath-off     with the switch OFF nothing of the walk is in the run: each run ends the same way and digests the same as the same run with
-//                    tools/qa/doorpath-inert.ts preloaded in front of it (every method of the walk throwing but its three per-frame entries, which
-//                    are emptied; every knob but `on` set to nonsense), and each of the runs sends men through a door — three runs on the harness's
-//                    frozen stand and three on the stand the page ships (TPS_PROFILE=shipped), the walk pinned off on both; all of DOORPATH_RUNS
-//                    with DOORPATH_ALL=1. THE TREE IS COMPARED WITH ITSELF, so play moving on for any other reason never turns it red (it read
-//                    frozen digests until 10-13: ordinary merges after the last freeze had moved them, at least six times, and it had been red
-//                    for two days with the walk not in it). ITS RED PATHS, each must FAIL: `DOORPATH_OFF_BREAK=1` the walk on in both runs (the
-//                    preloaded one dies on its first frame) · `=2` the walk switched on behind the pin in the preloaded run alone (the two runs
-//                    end, and digest apart) · `=3` the walk on in both and only the knobs set to nonsense in the second (the nonsense is read) — and each
-//                    says, in a "red path" line that must PASS, that it went red for that reason and not for a preload that fell over.
-//                    WHAT IT DOES NOT SHOW: that off = the build before the module (taken once, 48 runs of 48 against 4b510dd, when the walk went
-//                    in), nor an edit to the entry's own switched-off branch (doortools.ts, the `: t < q.at` arm of the queue) — that changes both
-//                    runs alike and is the door tools' checks to catch. A recorded digest would show both, and is what went stale
 // THE FAMILY'S OWN RED PATH: `DOORPATH_OLD=1 bun run tools/qa/probes.ts doorpath-paths` (and `… doorpath-gun`) runs the same check on the entry AS IT WAS (the
 // switch off) and must FAIL — on the build this was written against a door leaf goes through a man of the entry in every one of these runs, and a rifle and
-// its light through the server room's leaf in the first (room-clear-four seed 1, 22 s: the still the cast goal's clip caught). doorpath-file and doorpath-off
-// have red paths of their own (DOORPATH_FILE_BREAK, DOORPATH_OFF_BREAK: above).
+// its light through the server room's leaf in the first (room-clear-four seed 1, 22 s: the still the cast goal's clip caught). doorpath-file
+// has a red path of its own (DOORPATH_FILE_BREAK: above).
 // `PT_NOCLOSER=1` in front of any of them: no door shuts itself — the leaves an entry meets once doors stay open.
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -50,7 +37,7 @@ const memo = new Map<string, Promise<any>>();
 function runOne(spec: string, env: Record<string, string>, pre = ''): Promise<any> {
   const key = spec + '|' + JSON.stringify(env) + (pre && '|' + pre); let p = memo.get(key);
   if (!p) { p = (async () => { const f = `${tmpdir()}/doorpath-${process.pid}-${memo.size}.json`, E: Record<string, string> = { ...(process.env as any), PT_DIGEST: '1', ...env };
-      for (const k of ['TPS_DOORPATH', 'TPS_CAST', 'TPS_MOVES', 'TPS_TURN', 'PT_PATHS', 'DOORPATH_INERT']) if (!(k in env)) delete E[k];
+      for (const k of ['TPS_DOORPATH', 'TPS_CAST', 'TPS_MOVES', 'TPS_TURN', 'PT_PATHS']) if (!(k in env)) delete E[k];   // (word left out on purpose: a word a job does not name is not the shell's either — the run plays that rule as the stand has it, a shell's TPS_MOVES=0 included; a job that wants one OFF says '0')
       if (!('PT_PATHS' in env)) delete E.PT_NOCLOSER;   // (the digests are the runs as they were: doors shut themselves)
       const pr = Bun.spawn(['bun', 'run', ...(pre ? ['--preload', pre] : []), `${ROOT}/tools/qa/playthrough.ts`, '--one', spec, '--out', f], { env: E, stdout: 'ignore', stderr: 'pipe' });
       if (await pr.exited !== 0 || !existsSync(f)) throw new Error(`${spec}: the run did not finish — ${await new Response(pr.stderr).text()}`);
@@ -65,7 +52,8 @@ async function runJobs(jobs: Job[], soft = false): Promise<any[]> {
   return out;
 }
 const OLD = () => !!process.env.DOORPATH_OLD;
-const watched = (knobs = '', pre = '') => runJobs(DOORPATH_RUNS.map((s): Job => [s, { PT_PATHS: '1', ...(OLD() ? {} : { TPS_DOORPATH: '1' + knobs }) }, pre]));
+// (the entry as it was is the WORD '0': left out, a child stands the game as the page opens it, the walk on — and the red path played the rule it is the red path of)
+const watched = (knobs = '', pre = '') => runJobs(DOORPATH_RUNS.map((s): Job => [s, { PT_PATHS: '1', TPS_DOORPATH: OLD() ? '0' : '1' + knobs }, pre]));
 
 export async function doorpathPaths(): Promise<boolean> {
   const C = check(`doorpath-paths: nobody of a room entry in a leaf, through a friend or in a jamb — ${OLD() ? 'THE ENTRY AS IT WAS (DOORPATH_OLD: this must fail)' : 'the switch on'}`);
@@ -102,6 +90,18 @@ export async function doorpathFile(): Promise<boolean> {
   if (!['', '0', '1'].includes(word) || brk && OLD()) throw new Error(`DOORPATH_FILE_BREAK='${word}' not understood: 1 (and not with DOORPATH_OLD: the old entry never asks the walk)`);
   const C = check('doorpath-file: the men go in one at a time, in the order dealt, a body apart');
   if (brk) console.log('  DOORPATH_FILE_BREAK=1: the walk lets every entry go back to front — the "dealt ahead of him" line below must FAIL and the "red path" line must PASS');
+  // the red path's preload (doorpath-backward.ts) evaluates doorpath.ts ahead of every other game module: sound only while that file brings in no other
+  // game module's values. (This line was the off side's probe's until that went, 2026-11-06.)
+  { const src = readFileSync(`${ROOT}/src/game/doorpath.ts`, 'utf8'), value: string[] = []; let types = 0, outside = 0;
+    for (const m of src.matchAll(/^(?:import\s*(?:(type\s)?([^'";]*?)\sfrom\s*)?|export\s+(type\s)?(?:\*|\{[^}]*\})[^'";]*?\sfrom\s*)['"]([^'"]+)['"]/gm)) {
+      const names = /^\{([^}]*)\}$/.exec((m[2] ?? '').trim())?.[1].split(',').map(n => n.trim()).filter(Boolean);
+      if (m[1] || m[3] || names?.length && names.every(n => /^type\s/.test(n))) types++;
+      else if (new URL(m[4], 'file:///src/game/doorpath.ts').pathname.startsWith('/src/game/')) value.push(m[0].replace(/\s+/g, ' '));
+      else outside++;
+    }
+    if (/\bimport\s*\(/.test(src)) value.push('an import() call');
+    C.verdict(value.length === 0, 'src/game/doorpath.ts brings in no other game module but for its types (the red path\'s preload may evaluate it first)',
+      value.length ? value.join(' · ') : `${types} imports of types${outside ? `, ${outside} of values from outside src/game (not followed)` : ''}`); }
   const R = await watched('', brk ? `${ROOT}/tools/qa/doorpath-backward.ts` : '');
   const cross = R.flatMap(r => (r.paths.cross as any[]).map(c => ({ ...c, run: `${r.scn}:${r.seed}` }))), said = (c: any) => `${c.run} ${c.who} at ${c.door}, ${c.t} s`;
   const unread = cross.filter(c => !(c.turn >= 0)), jumped = cross.filter(c => c.jumped), own = cross.filter(c => c.far === 'own'), other = cross.filter(c => c.far === 'other' && !c.jumped);
@@ -116,58 +116,6 @@ export async function doorpathFile(): Promise<boolean> {
   return C.done();
 }
 
-/** the walk taken out of a process: preloaded in front of the second run of each pair */
-const INERT = `${ROOT}/tools/qa/doorpath-inert.ts`;
-/** the short list: a four in the office, a four on a built level, the rescue (each sends men through a door on both stands — asserted below) */
-const OFF_RUNS = DOORPATH_RUNS.filter(s => /^(room-clear-four|depot-four|hostage-rescue):/.test(s));
-const OFF_ARMS: [string, Record<string, string>][] = [["the harness's frozen stand", { TPS_PROFILE: 'frozen' }], ['the stand the page ships', { TPS_PROFILE: 'shipped' }]];
-const OUT = 'with the walk taken out of the process and its knobs set to nonsense';
-/** DOORPATH_OFF_BREAK: what each red path pins the walk to in both runs, what it tells the preload to do in the second, and what that second run then is */
-const OFF_BREAKS: Record<string, [pin: string, inert: string, second: string]> = { '': ['0', '', OUT], '0': ['0', '', OUT], '1': ['1', '', OUT],
-  '2': ['0', 'leak', 'with the walk switched on behind the pin'], '3': ['1', 'scramble', 'with the walk on and its knobs alone set to nonsense'] };
-
-export async function doorpathOff(): Promise<boolean> {
-  const C = check('doorpath-off: with the switch off nothing of the walk is in the run');
-  const word = process.env.DOORPATH_OFF_BREAK ?? '';
-  if (!Object.hasOwn(OFF_BREAKS, word)) throw new Error(`DOORPATH_OFF_BREAK='${word}' not understood: 1 | 2 | 3`);
-  const [on, inert, second] = OFF_BREAKS[word], red = on !== '0' || !!inert;
-  const specs = process.env.DOORPATH_ALL === '1' ? DOORPATH_RUNS : OFF_RUNS, pin = { TPS_DOORPATH: on }, pre: Record<string, string> = inert ? { DOORPATH_INERT: inert } : {};
-  if (red) console.log(`  DOORPATH_OFF_BREAK=${word}: every "end and digest the same" line below must FAIL, and every "red path" line must PASS`);
-  C.verdict(OFF_RUNS.length === 3, 'the short list is three of the family\'s runs: a four in the office, a four on a built level, the rescue', OFF_RUNS.join(', ') || 'none of them is in DOORPATH_RUNS');
-  // the preload evaluates doorpath.ts ahead of every other game module: sound only while that file brings in no other game module's values
-  const src = readFileSync(`${ROOT}/src/game/doorpath.ts`, 'utf8'), value: string[] = []; let types = 0, outside = 0;
-  for (const m of src.matchAll(/^(?:import\s*(?:(type\s)?([^'";]*?)\sfrom\s*)?|export\s+(type\s)?(?:\*|\{[^}]*\})[^'";]*?\sfrom\s*)['"]([^'"]+)['"]/gm)) {
-    const names = /^\{([^}]*)\}$/.exec((m[2] ?? '').trim())?.[1].split(',').map(n => n.trim()).filter(Boolean);
-    if (m[1] || m[3] || names?.length && names.every(n => /^type\s/.test(n))) types++;
-    else if (new URL(m[4], 'file:///src/game/doorpath.ts').pathname.startsWith('/src/game/')) value.push(m[0].replace(/\s+/g, ' '));
-    else outside++;
-  }
-  if (/\bimport\s*\(/.test(src)) value.push('an import() call');
-  C.verdict(value.length === 0, 'src/game/doorpath.ts brings in no other game module but for its types (the preload may evaluate it first)',
-    value.length ? value.join(' · ') : `${types} imports of types${outside ? `, ${outside} of values from outside src/game (not followed)` : ''}`);
-  // every run of both stands, plain and with the walk out, through the one pool
-  const R = await runJobs(OFF_ARMS.flatMap(([, env]) => specs.flatMap((s): Job[] => [[s, { ...env, ...pin }], [s, { ...env, ...pin, ...pre }, INERT]])), true);
-  /** a run that never started says why on bun's `error:` line (the lines before it are the source frame) */
-  const died = (e: unknown) => { const l = String(e).split('\n'); return (l.find(x => /^error:/.test(x)) ?? l[0]).slice(0, 200); };
-  const said = (r: any) => r.error ? `did not finish (${died(r.error)})` : `${r.end} at ${Number(r.t).toFixed(1)} s, ${r.digest || 'no digest'}${r.end === 'error' ? ` (${String(r.why).split('\n')[0].slice(0, 160)})` : ''}`;
-  OFF_ARMS.forEach(([name], a) => {
-    const at = (i: number) => [R[(a * specs.length + i) * 2], R[(a * specs.length + i) * 2 + 1]];
-    const ended = (r: any) => !r.error && r.end !== 'error' && !!r.digest;
-    const same = (i: number) => { const [p, q] = at(i); return ended(p) && ended(q) && p.end === q.end && p.digest === q.digest; };
-    const bad = specs.filter((_, i) => !same(i)), idle = specs.filter((_, i) => !(at(i)[0].entry?.pods > 0));
-    C.verdict(bad.length === 0, `${specs.length} runs on ${name} end and digest the same ${second}`,
-      bad.length ? bad.map(s => { const [p, q] = at(specs.indexOf(s)); return `${s}: ${said(p)} as it is; ${said(q)} ${inert ? second : 'with the walk out'}`; }).join(' · ') : specs.map((s, i) => `${s} ${at(i)[0].digest}`).join(', '));
-    C.verdict(idle.length === 0, `each of them sends men through a door on ${name} (the walk would have had a say)`,
-      specs.map((s, i) => { const p = at(i)[0]; return `${s} ${p.error ? 'did not finish' : `${p.entry?.pods ?? 0} places dealt inside`}`; }).join(', '));
-    // a red path is red for ITS reason: the take-out stopping a walk that is on, or two whole runs on digests apart — never a preload that fell over
-    if (red) { const why = (i: number) => { const [p, q] = at(i); return inert ? ended(p) && ended(q) && p.digest !== q.digest : ended(p) && q.end === 'error' && /DOORPATH\.on was set/.test(String(q.why)); };
-      const off = specs.filter((_, i) => !why(i));
-      C.verdict(off.length === 0, inert ? `the red path on ${name}: both runs of every pair ended, on digests apart` : `the red path on ${name}: the take-out stopped every run on its first frame of a walk that is on`,
-        off.length ? off.map(s => { const [p, q] = at(specs.indexOf(s)); return `${s}: ${said(p)}; ${said(q)}`; }).join(' · ') : `${specs.length} of ${specs.length}`); }
-  });
-  return C.done();
-}
-
 if (import.meta.main) {
-  let ok = true; for (const f of [doorpathPaths, doorpathGun, doorpathFile, doorpathOff]) ok = await f() && ok; process.exit(ok ? 0 : 1);
+  let ok = true; for (const f of [doorpathPaths, doorpathGun, doorpathFile]) ok = await f() && ok; process.exit(ok ? 0 : 1);
 }

@@ -1,5 +1,5 @@
 // THE GUN IS PUT AWAY FOR A TWO-HANDED JOB (src/game/workstow.ts — a door charge and a wall charge, by your hands and by a teammate's), headless:
-//   bun run tools/qa/workstow-check.ts [sam|mate|wall|off]      (probes.ts workstow; WORKSTOW_BREAK=1 = the switch left off: must fail)
+//   bun run tools/qa/workstow-check.ts [sam|mate|wall]      (probes.ts workstow; WORKSTOW_BREAK=1 = the switch left off: must fail)
 // The maintainer, 10-23: "characters should fully unequip their weapon when planting door charges, etc. -- they can reequip after they're done".
 //   sam    alone in the office, a door charge by hand, with the pistol up and with the rifle up: what he held is away from the row's first frame to the
 //          charge set, BOTH wrists are on the charge half way through, it is back in his hand when the job is over, no round leaves it before it is up (a
@@ -11,8 +11,6 @@
 //          it is set, and a round forced out of the gun puts it in his hands at once. The fight has him half way through a second one: the job is
 //          dropped, nothing spent, his gun is up `mateUp` later, and when the fight lets him go he sets it.
 //   wall   the same two on a wall charge, where the stand has walls to charge: by your hands (away, back) and on order (hung, the clock, back).
-//   off    the switch off = the build as it was: the plant takes setSecs with the gun never out of the hand, a teammate's gun never leaves his; a run with
-//          the switch on and no charge set is the run with it off, by digest; the two stands' row and the registry.
 // Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the switch, hands at work and — where it says so — kit handling itself. No picture is looked at.
 import { ROOT } from './headless.ts';
 import { rig } from './doortools-probes.ts';
@@ -26,10 +24,6 @@ const K = await import(`${ROOT}/src/game/kit.ts`);
 const { DOORTOOLS, doorPt } = await import(`${ROOT}/src/game/doortools.ts`);
 const WCM = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { knobRegistry, JOURNAL_KNOBS } = await import(`${ROOT}/src/game/knobs.ts`);
-const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`);
-const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -232,38 +226,9 @@ export async function workstowWall(): Promise<boolean> {
   return F.done();
 }
 
-// ───────────────────────────────────────────────────────────── off
-export async function workstowOff(): Promise<boolean> {
-  const F = family('workstow-off: the switch off is the build as it was; on with no charge set, the same run');
-  await kept(async () => {
-    { const R: any = await hushed(() => rig(11, { stage: false })); const { game: g, D } = R, pl = g.player; raise(false); WORKSTOW.on = false; soloWith(g, 2);
-      const d = R.door('breakroom_w'), side = faceToward(d, [20, 0, 18.9]); shut(d); arm(R, 'pistol'); const s0 = { ...WORKSTOW_STATS }, P = plant(R, d, side);
-      F.verdict(!!P && P.set && P.away === 0 && P.held1 === 'pistol' && Math.abs(P.secs - DOORTOOLS.setSecs) < 0.25 && !pl.workStow && WORKSTOW_STATS.samDown === s0.samDown,
-        'off, by your hands: the pistol never leaves his hand and the plant is setSecs', P ? `away on ${P.away} of ${P.frames} frames · ${f2(P.secs)} s · in hand after: ${P.held1}` : 'the row never started'); }
-    { const on = WORKSTOW.on; WORKSTOW.on = false; const R: any = await hushed(() => rig(7, { door: 'breakroom_w' })); OWNCHARGE.on = true; HANDWORK.on = true; WORKSTOW.on = false; const { D, game: g } = R; const d = R.door('breakroom_w'); shut(d);
-      R.give('charge', 'breakroom_w'); R.until(() => !!D.ops[0] && !isNaN(D.ops[0].setT), 45); const op = D.ops[0], lead = op?.lead, onT = g.time; let ever = false;
-      while (op && D.set.length === 0 && D.ops.includes(op) && g.time - onT < 8) { R.step(); ever ||= !!lead.workStow || stowHang(g, lead) || sideLocked(g, lead); }
-      F.verdict(!!op && D.set.length === 1 && !ever && Math.abs(g.time - onT - DOORTOOLS.setSecs) < 0.06, 'off, on order: his gun never leaves his hands and the charge is set setSecs after he came onto it', `set ${D.set.length} · ever hung or locked ${ever} · ${f2(g.time - onT)} s`); WORKSTOW.on = on; }
-    { const on = WORKSTOW.on; const R: any = await hushed(() => rig(7, { door: 'breakroom_w' })); OWNCHARGE.on = true; HANDWORK.on = false; WORKSTOW.on = true; const { D, game: g } = R; const d = R.door('breakroom_w'); shut(d);
-      R.give('charge', 'breakroom_w'); R.until(() => !!D.ops[0] && !isNaN(D.ops[0].setT), 45); const op = D.ops[0], lead = op?.lead, onT = g.time; let ever = false;
-      while (op && D.set.length === 0 && D.ops.includes(op) && g.time - onT < 8) { R.step(); ever ||= !!lead.workStow || stowHang(g, lead) || sideLocked(g, lead); }
-      F.verdict(!!op && D.set.length === 1 && !ever && Math.abs(g.time - onT - DOORTOOLS.setSecs) < 0.06, 'on, with the hands that do the work off: no gun is put away for a job no hands go to — the charge is set setSecs after he came onto it', `set ${D.set.length} · ever hung or locked ${ever} · ${f2(g.time - onT)} s`); WORKSTOW.on = on; HANDWORK.on = true; }
-    const run = async (on: boolean) => { const R: any = await hushed(() => rig(11, { stage: false })); WORKSTOW.on = on; const g = R.game; soloWith(g, 2); R.input.keys.add('KeyW'); R.step(240); R.input.keys.delete('KeyW'); R.step(120); return hashDigest(digestGame(g, true)) as string; };
-    const a = await run(false), b = await run(true);
-    F.verdict(a === b, 'the switch on with no charge set is the run with it off, by digest', `off ${a} · on ${b}`);
-    { const R: any = await hushed(() => rig(11, { stage: false })); const g = R.game; WORKSTOW.on = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), rides = snap.tables?.WORKSTOW?.on === true; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.WORKSTOW;
-      const both = await hushed(() => { applyKnobs(g, old); const off = WORKSTOW.on === false; applyKnobs(g, snap); return [off, WORKSTOW.on === true]; }); WORKSTOW.on = false;
-      F.verdict(rides && both[0] && both[1], 'the switch rides the knob snapshot, and a recording from before the key replays with it off', `in the snapshot ${rides} · one without the key: off ${both[0]} · one with it: on ${both[1]}`); }
-    const reg = knobRegistry() as Record<string, unknown>;
-    F.verdict(reg.WORKSTOW === WORKSTOW && (JOURNAL_KNOBS as string[]).includes('WORKSTOW') && (FROZEN_HOLDS as Record<string, string>)['WORKSTOW.on'] === 'TPS_WORKSTOW=1',
-      'the table is in the knob registry and a recording carries it; the frozen stand holds it off under TPS_WORKSTOW=1', `registry ${reg.WORKSTOW === WORKSTOW} · journal ${(JOURNAL_KNOBS as string[]).includes('WORKSTOW')} · hold ${(FROZEN_HOLDS as Record<string, string>)['WORKSTOW.on']}`);
-  });
-  return F.done();
-}
-
 if (import.meta.main) {
-  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['sam', workstowSam], ['mate', workstowMate], ['wall', workstowWall], ['off', workstowOff]];
-  const bad = want.filter(w => !all.some(([n]) => n === w)); if (bad.length) { console.error(`unknown: ${bad.join(' ')} (sam mate wall off)`); process.exit(2); }
+  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['sam', workstowSam], ['mate', workstowMate], ['wall', workstowWall]];
+  const bad = want.filter(w => !all.some(([n]) => n === w)); if (bad.length) { console.error(`unknown: ${bad.join(' ')} (sam mate wall)`); process.exit(2); }
   let ok = true; for (const [n, fn] of all) if (!want.length || want.includes(n)) { try { ok = (await fn()) && ok; } catch (e) { ok = false; console.log(`- FAIL — workstow-${n} threw\n    ${(e as Error).stack}`); } }
   console.log(`\n=== workstow-check: ${ok ? 'ALL PASS' : 'FAILED'} ===`); process.exit(ok ? 0 : 1);
 }

@@ -14,14 +14,11 @@
 //                       is not one to stay on); two men behind the glass: no round, the muzzle settles; their guns on a calm man their side, the man behind the
 //                       glass goes alert: he is the one shot; holdFire off: no hold
 //   holdglass-open      no glass on the line: a quiet gun on a silent man shoots as ever (the rule is about the pane)
-//   holdglass-off       SILENT.glass off = the build before the rule (the suspicious man is shot through the pane); and a loud minute digests the same every
-//                       frame with the rule on and off
 //
 //   bun run tools/qa/holdglass-probes.ts [name…]         (also `probes.ts holdglass`)
 // On the build before the rule (no SILENT.glass) the noticed-man and quiet-gun lines of holdglass-quiet are the red ones.
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { MOVES } = await import(`${ROOT}/src/game/character.ts`);
 const SLM: any = await import(`${ROOT}/src/game/silent.ts`);
 const GPM: any = await import(`${ROOT}/src/game/glasspen.ts`);
@@ -174,24 +171,8 @@ export const holdglassOpen = guarded(async () => {
   return done();
 });
 
-export const holdglassOff = guarded(async () => {
-  const { verdict, done } = family('holdglass-off: the switch off is the build before the rule; the rule is nothing to a loud squad');
-  const off = await stage(11, { silent: true, foe: 'noticed', rule: false });
-  verdict(off.shots > 0 && off.through > 0 && off.down && off.heldGlass === 0, 'SILENT.glass off, silent, a man who has made them out: shot through the pane (the old behaviour)', row(off));
-  const gun = await stage(11, { silent: true, foe: 'calm', quietGun: true, rule: false });
-  verdict(gun.shots > 0 && gun.through > 0 && gun.heldGlass === 0, 'SILENT.glass off, the quiet pistols: fired through the pane at a man who has not noticed (the old behaviour)', row(gun));
-  const wall = await stage(11, { silent: true, foe: 'noticed', pen: false });
-  verdict(wall.shots === 0 && wall.heldGlass === 0, 'rounds stopping in glass (the penetration switch off): a pane is a wall, there is no such shot and the rule counts nothing', row(wall));
-  // a loud eight seconds, digested every frame, the SWITCH on and off: the same game (against the BUILD before the rule it is the tally's --same over PT_DIGEST
-  // play-throughs that says so — this lap cannot see a line both arms share)
-  const lap = async (rule: boolean) => { const digs: string[] = []; const R = await stage(23, { foe: 'calm', rule, secs: 0 }); for (let i = 0; i < 60 * 8; i++) { R.step(1); digs.push(JSON.stringify(digestGame(R.game, true))); } return { digs, shots: R.fired() }; };
-  const A = await lap(true), B = await lap(false); let first = -1; for (let i = 0; i < A.digs.length; i++) if (A.digs[i] !== B.digs[i]) { first = i; break; }
-  verdict(first < 0 && A.shots > 0 && A.shots === B.shots, 'loud, rounds going through the glass: every frame digests the same with the switch on and off', `${A.digs.length} frames · first difference ${first < 0 ? 'none' : 'frame ' + first} · rounds ${A.shots} / ${B.shots}`);
-  return done();
-});
-
 if (import.meta.main) {
-  const all: Record<string, () => Promise<boolean>> = { 'holdglass-loud': holdglassLoud, 'holdglass-quiet': holdglassQuiet, 'holdglass-release': holdglassRelease, 'holdglass-other': holdglassOther, 'holdglass-open': holdglassOpen, 'holdglass-off': holdglassOff };
+  const all: Record<string, () => Promise<boolean>> = { 'holdglass-loud': holdglassLoud, 'holdglass-quiet': holdglassQuiet, 'holdglass-release': holdglassRelease, 'holdglass-other': holdglassOther, 'holdglass-open': holdglassOpen };
   const want = process.argv.slice(2).filter(a => !a.startsWith('--')); let ok = true;
   for (const [name, fn] of Object.entries(all)) if (!want.length || want.includes(name)) ok = (await fn()) && ok;
   process.exit(ok ? 0 : 1);

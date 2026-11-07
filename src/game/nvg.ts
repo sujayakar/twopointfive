@@ -28,16 +28,17 @@
 // NVG.on false = no goggles on anybody, no dark, no tube: every function below answers as if this file did not exist (the build before it, to the frame).
 // State is per Game and derived every frame (nothing saved: a load re-derives it inside a frame).
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
-import { men, orderOf } from './seats';
-import { SideMap, GameSideMap } from '../math/side';
-import { Vec3, v3, clamp } from '../math/vec';
+import { men } from './seats';
+import { GameSideMap } from '../math/side';
+import { Vec3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
-import { lightEstimateAt, escalationOf, lightRuled, LIGHTS } from './guards';
+import './guards';
 import { fightLive } from './roomfight';
 import { kitGoggles } from './kit';
-import { inEstimate, exposureOf } from './hours';
-import { irOnMan, irCarried } from './irlight';
+import { exposureOf } from './hours';
+import { irOnMan } from './irlight';
 import { tubeGain } from './env';
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 export const NVG = {
   /** off = the team as it was: no goggles, lights by guards.ts LIGHTS alone */
@@ -92,8 +93,6 @@ export interface NvgNote { t: number; who: string; what: string }
 /** QA / the panel: what changed and when (the last 200) */
 export const NVG_LOG: NvgNote[] = [];
 const teams = new GameSideMap<Game, Team>('nvg.teams');
-const fresh = (): Team => ({ t: -100, mode: 'off', why: 'no rule', men: new Map(), leadLitT: -Infinity, huntT: -Infinity, alarmT: -Infinity, calledT: -Infinity, callDue: false });
-const note = (g: Game, gd: Guard | null, what: string) => { NVG_LOG.push({ t: g.time, who: gd ? gd.callsign : '-', what }); if (NVG_LOG.length > 200) NVG_LOG.splice(0, 50); };
 /** the team's state while it is this frame's (or the last few: the rig is drawn after the tick, a paused frame draws again) */
 function live(g: Game): Team | null { const T = teams.get(g); return NVG.on && T && T.mode !== 'off' && g.time - T.t >= 0 && g.time - T.t < 0.25 ? T : null; }
 
@@ -105,12 +104,8 @@ export function tubeVis(g: Game, E: number): number {
   return sig > 0 ? g.visibilityOf(sig / k) * sig / (sig + NVG.noise) : 0;
 }
 /** The tube's PICTURE of a matte floor under irradiance `E`: 0‥1 of its range — the same curve as tubeVis above, before it is read back for a man's meter. */
-export function tubeSig(g: Game, E: number): number {
-  const k = NVG.albedo / Math.PI * exposureOf(g), gain = tubeGain();
-  return clamp(Math.log(1 + Math.max(E, 0) * k * gain) / Math.log(1 + gain), 0, 1);
-}
+export function tubeSig(g: Game, E: number): number { return goneWithTick('tubeSig') as any; }
 
-const isMate = (gd: Guard) => gd.team === 'operative' && !!gd.unit && gd.state !== 'dead' && kitGoggles(gd);   // (kit.ts: a man whose card took his goggles off is no man of this file's)
 /** when the other side last gave the team reason to think it knows: the loudest thing a teammate's ears hold (roomfight.ts Op.hotT, a stager's hotT), a
  *  hunting man in a teammate's sight, an alarm */
 function loudT(g: Game, T: Team): number {
@@ -121,82 +116,16 @@ function loudT(g: Game, T: Team): number {
 /** the light of the place at a point: guards.ts lightEstimateAt's fixtures (nothing carried) plus what that estimate leaves out and the meter has — the moon
  *  (a kind-2 light: its whole irradiance wherever the sky its way is open, common.wgsl evalLight; never a stroke of lightning — a transient is not the
  *  place's light). A moonlit lot is not a black place to a tube. */
-export function nvgPlaceLight(g: Game, P: Vec3): number {
-  let E = lightEstimateAt(g, P, () => true);
-  for (const l of g.engine.lights.lights) {
-    if (l.kind !== 2 || !l.enabled || l.intensity <= 0 || l.transient || l.ttl >= 0 || inEstimate(g, l)) continue;   // (in the estimate above already: an hour's sun, and under sense.ts SENSE.moon the night's moon — hours.ts inEstimate)
-    if (!g.col.segmentBlocked(P, [P[0] - l.dir[0] * 60, P[1] - l.dir[1] * 60, P[2] - l.dir[2] * 60])) E += (0.2126 * l.color[0] + 0.7152 * l.color[1] + 0.0722 * l.color[2]) * l.intensity;
-  }
-  return E;
-}
-/** his place, the place's own lights only (nothing anybody carries — two mates' lights must not flip each other's goggles): the floor under him, along his
- *  gun to the first wall (LOOK_M), the mark he is walking to once within LIGHTS.litMarkM of it, the man his gun is on — and where an enemy's footfall last
- *  reached him from (roomfight's Op.stepBy, for as long as guards.ts LIGHTS would light it) and the point he is turning to look at. DIM = any of it dark to
- *  the bare eye; BLACK = something he is LOOKING AT inside TUBE_M (not the floor under him, not the far end of a hall) showing nothing through the tube, for
- *  NVG.blackReads readings running. (guards.ts litPlace asks the light rule's question of fewer points: 'is where he is and is going LIT'. This one asks
- *  'is anything he must see DARK', which is not its negation.) */
-const LOOK_M = [2, 5, 8, 12, 16], TUBE_M = 8;
-function readPlace(g: Game, gd: Guard, M: Man) {
-  if (g.time - M.placeT >= 0 && g.time - M.placeT < 0.5) return;
-  const c = gd.char, eye: Vec3 = [c.pos[0], 1.5, c.pos[2]], fx = Math.sin(c.aimYaw), fz = Math.cos(c.aimYaw);
-  let dim = false, black = false;
-  const lamp = irCarried();   // (irlight.ts: a man with an illuminator on his goggles has no place too dark for his tube — the white-light fallback is for the man without one)
-  const at = (x: number, z: number, tube = true) => { const E = nvgPlaceLight(g, [x, 1.2, z]); if (g.visibilityOf(E) < NVG.darkAt) dim = true; if (tube && !lamp && tubeVis(g, E) < NVG.blackAt) black = true; };
-  at(c.pos[0], c.pos[2], false);
-  for (const r of LOOK_M) { const P: Vec3 = [eye[0] + fx * r, 1.2, eye[2] + fz * r]; if (g.col.segmentBlocked(eye, P)) break; at(P[0], P[2], r <= TUBE_M); }
-  const A = orderOf(g, gd); if (A?.post && !A.arrived && v3.distXZ(c.pos, A.post) < LIGHTS.litMarkM) at(A.post[0], A.post[2]);
-  const O = g.fight.opOf(gd);
-  if (O?.tgt && O.tgt.state !== 'dead') at(O.tgt.char.pos[0], O.tgt.char.pos[2], false);
-  if (O?.stepBy && g.time - O.stepBy.t < LIGHTS.stepSecs) at(O.stepBy.at[0], O.stepBy.at[2]);
-  if (O?.turn?.pt) at(O.turn.pt[0], O.turn.pt[2]);
-  M.placeT = g.time; M.dim = dim;
-  M.run = black ? Math.max(M.run, 0) + 1 : Math.min(M.run, 0) - 1;
-  if (M.run >= NVG.blackReads) M.black = true; else if (-M.run >= NVG.clearReads) M.black = false;
-}
+export function nvgPlaceLight(g: Game, P: Vec3): number { return crossToRust('nvgPlaceLight', undefined, [g, P]) as any; }
 
-/** Once a frame from Game.update, after the room fight has heard this frame's events and before anybody's light is posed. */
-export function nvgTick(g: Game) {
-  let T = teams.get(g);
-  if (!NVG.on || !fightLive(g)) { if (T && T.mode !== 'off') { T.mode = 'off'; T.men.clear(); } return; }
-  let known = !T || T.men.size === 0; if (T && !known) for (const gd of T.men.keys()) if (g.guards.includes(gd)) { known = true; break; }
-  if (!T || T.mode === 'off' || T.t > g.time || !known) { T = fresh(); teams.set(g, T); }   // (a fresh staging — every man of the last one gone from the floor — or the clock put back by a load: nothing remembered)
-  const squad = g.guards.filter(isMate); for (const gd of T.men.keys()) if (!squad.includes(gd)) T.men.delete(gd);
-  if (!squad.length) { T.mode = 'off'; return; }
-  // ---- what the team knows of its own secret
-  const up = men(g).filter(pl => !pl.down);   // (the players still up: the team's lead is any of them)
-  if (up.some(pl => (pl.pistolUp && pl.pistol.lightOn) || (pl.rifleUp && pl.rifle.lightOn))) T.leadLitT = g.time;   // (the SWITCH, the gun in his hands: a sprint or a busy hand lowers the beam a moment — player.ts poseGunLight — and is no change of mind)
-  if (escalationOf(g) >= 1) T.alarmT = g.time;
-  if (NVG.huntFrees) for (const h of g.guards) if (h.unit && h.team === 'hostile' && (h.state === 'alert' || h.state === 'search') && g.fight.teamSees(h)) { T.huntT = g.time; break; }
-  const lead: Mode | null = !NVG.lead || !up.length ? null : g.time - T.leadLitT < NVG.leadTail ? 'free' : up.some(pl => pl.nv) ? 'dark' : null;
-  const quiet = g.time - loudT(g, T) >= NVG.quietSecs;
-  const mode: Mode = lead ?? (NVG.own && quiet ? 'dark' : 'free');
-  const why: Why = lead === 'free' ? 'your light' : lead === 'dark' ? 'your goggles' : !NVG.own ? 'no rule' : quiet ? 'not compromised' : 'compromised';
-  const was = T.mode; T.t = g.time; T.mode = mode; T.why = why;
-  if (mode !== was) { note(g, null, `team ${mode === 'dark' ? 'dark' : 'lights free'} (${why})`); T.callDue = mode === 'dark' && was === 'free'; }
-  // ---- each man
-  let caller: Guard | null = null;
-  for (const gd of squad) {
-    let M = T.men.get(gd); if (!M) { M = { down: false, dark: false, agreeT: g.time - 10, placeT: -Infinity, dim: false, black: false, run: 0 }; T.men.set(gd, M); }
-    readPlace(g, gd, M);
-    const ruled = lightRuled(g, gd), dark = mode === 'dark' && ruled && !(lead === null && M.black);
-    if (dark !== M.dark) note(g, gd, dark ? 'dark' : mode === 'dark' && ruled ? 'lights: too dark for the tube' : 'light his own again');
-    M.dark = dark; if (dark) caller ??= gd;
-    const want = M.dim && (dark || !gd.flashlight.enabled);   // (his light as last frame posed it; a dark man's is going off this frame)
-    if (want === M.down) M.agreeT = g.time;
-    else if (g.time - M.agreeT >= (want ? NVG.downSecs : NVG.upSecs)) { M.down = want; M.agreeT = g.time; note(g, gd, want ? 'goggles down' : 'goggles up'); }
-  }
-  if (T.callDue && caller && g.time - T.calledT >= NVG.callGap) { T.callDue = false; T.calledT = g.time; g.say(caller, 'going dark.'); }   // (said by the first man who really is dark, the frame there is one)
-}
 
 /** his weapon light is held off this frame (guards.ts attachFlashlight asks before the light rule) */
 export function nvgDark(g: Game, gd: Guard): boolean { return !!live(g)?.men.get(gd)?.dark; }
 /** he wears the goggles at all / they are over his eyes (combat.ts handProps draws them: parked on the forehead, or down and lit) */
 export function nvgWorn(g: Game, gd: Guard): boolean { return NVG.on && gd.team === 'operative' && !!gd.unit && kitGoggles(gd) && fightLive(g); }   // (a downed man keeps his)
 export function nvgDown(g: Game, gd: Guard): boolean { return !!live(g)?.men.get(gd)?.down; }
-/** what he is looking at shows nothing even through the tube (readPlace's `black`: the light rule may have him) */
-export function nvgBlack(g: Game, gd: Guard): boolean { return !!live(g)?.men.get(gd)?.black; }
 /** the light to read for `o` through `viewer`'s goggles (0 with them up, or no goggles): guards.ts sightGainOn takes it when it beats the light on the man */
-export function nvgSight(g: Game, viewer: Guard, o: Guard): number { return nvgDown(g, viewer) ? tubeVis(g, o.irradiance + irOnMan(g, o)) : 0; }   // (+ the infrared light on him: irlight.ts — only a tube adds it; 0 with that switch off)
+export function nvgSight(g: Game, viewer: Guard, o: Guard): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('nvgSight', undefined, [g, viewer, o]); if (__r !== RUST_PASS) return __r as any; } } return nvgDown(g, viewer) ? tubeVis(g, o.irradiance + irOnMan(g, o)) : 0; }   // (+ the infrared light on him: irlight.ts — only a tube adds it; 0 with that switch off)
 /** QA / the panel: the team's mode and why, and each man's kit */
 export function nvgState(g: Game): { mode: Mode; why: Why; quietFor: number; men: { gd: Guard; down: boolean; dark: boolean; dim: boolean; black: boolean }[] } {
   const T = live(g); if (!T) return { mode: 'off', why: 'no rule', quietFor: Infinity, men: [] };

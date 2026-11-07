@@ -57,6 +57,22 @@ async function stage(seed: number) {
 const civLine = (cv: any) => { const C = cv.civ; return cv.state === 'dead' ? `${cv.callsign} DOWN(${cv.downKind}) @${posS(cv.char.pos)}` : `${cv.callsign} ${C.state}${C.cause ? `[${C.cause}${C.armed ? ',armed' : ''}]` : ''}${C.target ? `→${C.target.name}` : ''}${C.complied ? ' complied' : ''}${C.reported ? ' reported' : ''} @${posS(cv.char.pos)} aw ${f2(cv.awareness)} heard ${cv.heardUpTo}`; };
 
 // ================================================================================================================================ G3.1 / G3.7
+/** THE SHIFT STOOD OFF THE CIVILIANS: each man at a point of his own round with no line to any of `them` (the game's own line test, eye to chest and to
+ *  the floor where a body lies), the furthest such point from the nearest of them; a round with no such point gives its furthest point. His feet are held
+ *  (returns who stands how far from the first of them). `blind` = pinned, deaf and blind as well, for a spell in which nobody may find anybody. `onHer` (a
+ *  red path): the nearest man a metre and a half from the first of them instead, facing her and free: a calm man inside CIV.foundM with a clear line asks
+ *  her, and she tells him. */
+function standOff(game: any, them: any[], blind = false, onHer = false): string {
+  const her = them[0], near = (p: Vec3) => Math.min(...them.map(c => v3.distXZ(p, c.char.pos)));
+  const sees = (p: Vec3) => them.some(c => !game.col.solidBlocked(v3.add(p, [0, 1.3, 0]), v3.add(c.char.pos, [0, 0.9, 0])) || !game.col.solidBlocked(v3.add(p, [0, 1.3, 0]), v3.add(c.char.ragdoll?.x ? [c.char.ragdoll.x[0], 0, c.char.ragdoll.x[2]] : c.char.pos, [0, 0.2, 0])));
+  const far = (gd: any): Vec3 => { const pts: Vec3[] = game.level.routes[gd.routeI]?.points ?? [gd.char.pos], hid = pts.filter(p => !sees(p)); return v3.copy((hid.length ? hid : pts).reduce((a, b) => near(b) > near(a) ? b : a)); };
+  const men = [...game.guards].sort((a: any, b: any) => v3.distXZ(a.char.pos, her.char.pos) - v3.distXZ(b.char.pos, her.char.pos));
+  men.forEach((gd: any, i: number) => { const on = onHer && i === 0;
+    gd.char.pos = on ? [her.char.pos[0] + 1.5, 0, her.char.pos[2]] : far(gd); gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.hold = !on;
+    if (blind && !on) { gd.pinned = true; gd.heardUpTo = 1e12; gd.dazzledUntil = 1e9; }
+    if (on) gd.char.bodyYaw = gd.char.aimYaw = -Math.PI / 2; gd.char.update(0); });
+  return men.map((gd: any) => `${gd.callsign} ${v3.distXZ(gd.char.pos, her.char.pos).toFixed(1)} m${sees(gd.char.pos) ? ' IN SIGHT' : ''}`).join(', ');
+}
 export async function checkpointCivilians() {
   console.log('\n=== checkpoint-civilians: the civilians are IN the checkpoint — a complied cleaner + a knocked-out worker load as they were a minute later (counts and price consistent); a civilian mid-run loads mid-run and gets there; a stun charge a metre off frightens a working civilian straight after a load (no deafness); no double construction ===');
   let ok = true;
@@ -71,9 +87,15 @@ export async function checkpointCivilians() {
     const complied = grabbed && civilianComply(game); steps(W, 0.5);
     killGuard(game, O, [0, 0, 1], true, 'struck');   // (the takedown's blow, by the player: −10 on the card)
     game.teleportPlayer([2.0, 0, 2.0]); game.playerInvisible = true;
-    steps(W, 12, () => !!O.char.ragdoll?.sleeping); const settledIn = game.time - O.diedAt; steps(W, 0.5);   // (the body asleep before a plain save may file it — canSave's falling rule, civilians included now)
+    // (FROM THE GRAB TO THE SAVE THE SHIFT STANDS OFF HER CORNER, feet held and nothing else: sighted, and free again in the file. Where the night's opening and
+    // the one-way doors have the shift (the page's stand) Kowalski's round brings him inside three metres of her while Owen's body settles: he finds her, she
+    // answers, and the save is written with her report a second from delivered, so the load 'loses' a promise that was already spent. On the old stand he is
+    // 11 m off. The hold is put on after the grab, which ends the pair's chat and its own hold with it, and again every frame of the wait.
+    // CKPTCIV_BREAK=save = this staging left out, as it was: red where his round passes her, the page's stand.)
+    const off = process.env.CKPTCIV_BREAK !== 'save', stoodAtSave = off ? standOff(game, [M, O]) : 'where their rounds had them';
+    steps(W, 12, () => { if (off) for (const gd of game.guards) gd.hold = true; return !!O.char.ragdoll?.sleeping; }); const settledIn = game.time - O.diedAt; steps(W, 0.5, () => { if (off) for (const gd of game.guards) gd.hold = true; return false; });   // (the body asleep before a plain save may file it — canSave's falling rule, civilians included now)
     if (VERBOSE) console.log(`    Owen's body asleep ${settledIn.toFixed(1)} s after the blow`);
-    for (const gd of game.guards) { gd.heardUpTo = game.eventSeq; gd.awareness = 0; gd.state = 'patrol'; gd.lastKnown = null; }
+    for (const gd of game.guards) { gd.heardUpTo = game.eventSeq; gd.awareness = 0; gd.state = 'patrol'; gd.lastKnown = null; if (off) gd.hold = false; }
     const before = { marta: { state: M.civ.state, complied: M.civ.complied, complyUntil: M.civ.complyUntil, pos: v3.copy(M.char.pos), cause: M.civ.cause }, owen: { state: O.state, downKind: O.downKind, hips: v3.copy(O.char.ragdoll?.x ? [O.char.ragdoll.x[0], O.char.ragdoll.x[1], O.char.ragdoll.x[2]] : O.char.pos), sleeping: O.char.ragdoll?.sleeping }, counts: { ...game.chronicle.counts }, score: debriefOf(game).score, t: game.time };
     const why = canSave(game); const res = why ? null : game.saves.write(game, 'manual', 'civilians');
     ok = verdict(!!grabbed && !!complied && O.state === 'dead' && !why && !!res?.ok, '(1) staged: Marta grabbed + complied, Owen out cold (his body asleep); the checkpoint writes', `grabbed ${grabbed}, complied ${complied}, Owen ${O.state}/${O.downKind} asleep after ${settledIn.toFixed(1)} s, canSave ${why ?? 'yes'}, ${res?.ok ? `${(res.bytes / 1024).toFixed(1)} KB → ${res.info.key}` : res?.why ?? '—'}; score ${before.score}, civKO ${before.counts.civKO}, civComplied ${before.counts.civComplied}`) && ok;
@@ -81,7 +103,7 @@ export async function checkpointCivilians() {
       const fileCiv = res.state.civilians;
       ok = verdict(!!fileCiv && fileCiv.list.length === 2 && fileCiv.list.some((c: any) => c.id === 'Marta' && c.state === 'cower' && c.complied) && fileCiv.list.some((c: any) => c.id === 'Owen' && c.down?.kind === 'struck' && c.down.rag?.x?.length === 48), '(1) the file carries the civilians slice: Marta cowering + complied, Owen down (struck) with his 16 particles', fileCiv ? fileCiv.list.map((c: any) => `${c.id} ${c.down ? `down/${c.down.kind} rag ${c.down.rag ? c.down.rag.x.length / 3 : 0}` : `${c.state}${c.complied ? ' complied' : ''}`} heard ${c.heardUpTo}`).join(' · ') + ` · queue ${fileCiv.floor.pending.length}` : 'no slice') && ok;
       // a minute of the abandoned future: Sam wanders the corridor unseen; then the event count is run far on (a long future) before the load
-      steps(W, 60); game.eventSeq += 1000; const seqFuture = game.eventSeq;
+      steps(W, 60); const cf = game.chronicle.counts, future = `Owen ${O.found ? 'found' : 'not found'}, Marta ${M.civ.reported ? 'told a man' : 'silent'}, score ${debriefOf(game).score} (${before.score} at the save), civilian reports ${cf.civReported ?? 0}`; game.eventSeq += 1000; const seqFuture = game.eventSeq;
       const spawned0 = CIV_STATS.spawned;
       const lw = game.saves.load(game, res.info.key); W.cam.target = v3.copy(game.player.char.pos); steps(W, DT);
       const [M2, O2] = game.civilians;
@@ -93,8 +115,8 @@ export async function checkpointCivilians() {
       ok = verdict(c2.civKO === before.counts.civKO && c2.civComplied === before.counts.civComplied && c2.civKO === 1 && c2.civComplied === 1 && c2.loads === 1 && sc2 === before.score - SCORE.load, '(1) the card: civKO 1 / civComplied 1 carried, one load counted, the score = at-save − the load\'s price (nothing double, nothing lost)', `civKO ${c2.civKO}, civComplied ${c2.civComplied}, loads ${c2.loads}; score ${before.score} → ${sc2} (−${SCORE.load})`) && ok;
       ok = verdict(spawnedBy === 2 && M2.heardUpTo <= game.eventSeq && game.eventSeq < seqFuture, '(1) ONE construction of the two civilians on the load (restart only — no second reset in the restore), and their ear markers at or under the wound-back event count', `spawned +${spawnedBy}; Marta heardUpTo ${M2.heardUpTo} ≤ eventSeq ${game.eventSeq} (the future had reached ${seqFuture})`) && ok;
       // and the promise holds after the load: a quiet half minute with the men kept off her corner (one walking ONTO her gets it out of her — by design, not by the load), she has told nobody
-      for (const gd of game.guards) { gd.hold = true; gd.heardUpTo = 1e12; }
-      steps(W, 30); ok = verdict(M2.civ.state === 'cower' && !M2.civ.reported && !M2.civ.foundTold, '(1) half a minute on (the men held off her corner): still down, still silent (the promise survived the load)', civLine(M2)) && ok;
+      const keptOff = standOff(game, [M2, O2], true, process.env.CKPTCIV_BREAK === '1');   // (… and for this half minute pinned, deaf and blind too. CKPTCIV_BREAK=1: the nearest man is stood by her, free)
+      steps(W, 30); ok = verdict(M2.civ.state === 'cower' && !M2.civ.reported && !M2.civ.foundTold, '(1) half a minute on (the men held off her corner): still down, still silent (the promise survived the load)', `${civLine(M2)} · the men stood ${keptOff} from her${M2.civ.reportTo ? `, and she told ${M2.civ.reportTo.callsign}` : ''} · at the save: ${stoodAtSave} · the minute thrown away: ${future}`) && ok;
     }
   }
   // ---- (2) Owen sent running for a phone; saved MID-RUN (harness snapshot); half a minute on he has rung it in; loaded: mid-run again, same target / spot / path, and he gets there
@@ -234,14 +256,21 @@ export async function laserCivilian() {
   const S = await stage(1717); const { W, game, M } = S;
   const L = game.devices?.lasers?.[0];
   if (!L) { ok = verdict(false, 'a tripwire on the level', 'none'); console.log('=== rb-laser-civilian: FAILURES above ==='); failures++; return false; }
-  steps(W, 0.5); const full = L.cut, len = L.len, trips0 = L.trips;
   const mid: Vec3 = [(L.def.from[0] + L.def.to[0]) / 2, 0, (L.def.from[2] + L.def.to[2]) / 2];
+  // (THE SHIFT IS STOOD OUT OF THE BEAM, pinned and blind, at points of its rounds with no line to the beam's middle. Nobody was: under the night's opening
+  // (the page's stand) Kowalski starts his round half a metre from the emitter and walks through the beam in the probe's first half second, so the 'whole'
+  // beam it measured was already cut at his legs, and cut again where he had got to at each later reading. On the old stand he starts eight metres off.
+  // RBLASER_BREAK=1 = the red path: a man is stood in the beam, between the emitter and where she will stand.)
+  const stood = standOff(game, [{ char: { pos: mid } }], true);
+  if (process.env.RBLASER_BREAK === '1') { const g0 = game.guards[0], f = L.def.from; g0.char.pos = [(f[0] + mid[0]) / 2, 0, (f[2] + mid[2]) / 2]; g0.char.update(0); }
+  steps(W, 0.5); const full = L.cut, len = L.len, trips0 = L.trips;
+  ok = verdict(Math.abs(full - len) < 0.02, 'staged: the beam is whole before she stands in it', `cut ${f2(full)} of ${f2(len)} m; the men: ${stood}`) && ok;
   const park = (p: Vec3) => { M.char.pos = v3.copy(p); M.char.vel = [0, 0, 0]; M.speed = 0; M.path = []; M.pathGoal = null; M.wait = 100; M.civ.state = 'work'; M.civ.settleT = -1; M.char.update(0); };
   park(mid); steps(W, 3 * DT); park(mid); steps(W, 2 * DT);
   const cutIn = L.cut, trips1 = L.trips; const expect = v3.dist(L.def.from, [mid[0], L.def.from[1], mid[2]]);
   ok = verdict(cutIn < len - 0.3 && Math.abs(cutIn - expect) < 0.45 && trips1 === trips0, 'Marta stood mid-beam: the beam ends at her (cut ≈ emitter → her legs) and no trip is filed (staff, to the system)', `len ${f2(len)} m, cut ${f2(full)} → ${f2(cutIn)} m (she stands ${f2(expect)} m from the emitter), trips ${trips0} → ${trips1}`) && ok;
   park([mid[0] + 3, 0, mid[2] + 6]); steps(W, 3 * DT);
-  ok = verdict(Math.abs(L.cut - full) < 0.02, 'gone again: the beam is whole', `cut ${f2(L.cut)} (whole ${f2(full)})`) && ok;
+  ok = verdict(Math.abs(L.cut - len) < 0.02, 'gone again: the beam is whole', `cut ${f2(L.cut)} (whole ${f2(len)})`) && ok;
   console.log(`=== rb-laser-civilian: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); if (!ok) failures++;
   return ok;
 }

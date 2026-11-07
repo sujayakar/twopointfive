@@ -1,4 +1,4 @@
-// The `handwork` probes (src/game/handwork.ts) — `bun run tools/qa/probes.ts handwork`, or one of handwork-work / handwork-radio / handwork-swap / handwork-off /
+// The `handwork` probes (src/game/handwork.ts) — `bun run tools/qa/probes.ts handwork`, or one of handwork-work / handwork-radio / handwork-swap /
 // handwork-harness. Staged headless on the real Game on the office, HANDWORK.on raised by the probe itself — the frozen stand holds it off (TPS_HANDWORK=1).
 //   handwork-work     Sam's hand is on the thing while the verb runs and gone after, at each of the four: the mains breaker (the mains go with his hand, and the move is
 //                     committed: Space, a step, a click change nothing), the server room's keypad (he steps in, four keys beep under his finger, the door opens), the drive
@@ -9,8 +9,6 @@
 //   handwork-swap     the shift going up a step: the torch leaves his hand, his hand is empty for a beat, the sidearm is in it — and back the other way when
 //                     the floor stands down; the torch hangs on his belt while the sidearm is out; an alerted guard's first round is no later than with the
 //                     switch off
-//   handwork-off      the switch off: the breaker flips on the tap, the pad's one beep then three, no step in, no pose anywhere, the swap instant — and half a
-//                     minute of the shift going up a step and talking on the net digests the same on and off (the radio hand and the swap are picture only)
 //   handwork-harness  the frozen stand holds it off, the page turns it on unless ?nohandwork, the table is a registered knob table a recording carries
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
@@ -28,7 +26,6 @@ const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { handProps, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { requestQrf } = await import(`${ROOT}/src/game/qrf.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -276,30 +273,6 @@ export async function handworkSwap(): Promise<boolean> { return keep(async () =>
   return allPass;
 }); }
 
-// ================================================================ off
-export async function handworkOff(): Promise<boolean> { return keep(async () => {
-  console.log('\n=== handwork-off: the switch off — the breaker on the tap, the pad\'s one beep then three, no pose, the swap instant; picture-only halves digest the same ===');
-  allPass = true; Object.assign(HANDWORK_STATS, { work: 0, radio: 0, swaps: 0, levers: 0 });
-  { const R = await rig(false), { g, pl, c, W } = R, bp: Vec3 = g.level.breaker.pos; g.teleportPlayer([bp[0], 0, bp[2] - 0.9]); pl.holstered = true; R.step(20);
-    g.selectVerb('breaker', 'breakerOff'); R.tap(); let fB = -1, moved = false; R.step(30, i => { if (fB < 0 && g.blackout.active) fB = i; moved ||= !!pl.breakerMove || !!R.work().pose; });
-    verdict(fB >= 0 && fB <= 2 && !moved, 'the breaker flips on the tap, no move, no pose', `blackout ${fB < 0 ? 'never' : `${fB} frames after the tap`} · move or pose seen ${moved}`);
-    g.endBlackout(); R.step(10);
-    const Kp = g.devices.keypads[0], fc = Kp.door.frameCentre, n = Kp.n; learnCode(g, Kp.door.lockId, 'told'); g.teleportPlayer([fc[0] + n[0] * 0.9, 0, fc[2] + n[2] * 0.9]); R.step(20);
-    const p0 = v3.copy(c.pos); W.audioLog = []; g.selectVerb('door', 'code'); R.tap(); const t0 = g.time; let tOpen = -1, pose = false; R.step(150, () => { pose ||= !!R.work().pose; if (tOpen < 0 && (W.audioLog as any[]).some(a => a.name === 'padOpen')) tOpen = g.time - t0; });
-    const beeps = (W.audioLog as any[]).filter(a => a.name === 'padBeep').length; W.audioLog = null;
-    verdict(beeps === 4 && Math.abs(tOpen - CODE_SECS) < 0.08 && flat(c.pos, p0) < 0.02 && !pose, 'the keypad: its beep on the tap and three more, open at CODE_SECS, his feet where they were, no pose', `beeps ${beeps} · open ${f2(tOpen)} s · moved ${f2(flat(c.pos, p0))} m · pose ${pose}`);
-    const rf: Vec3 = g.level.mission.rack.front; g.mission.stage = 'drive'; g.teleportPlayer([rf[0], 0, rf[2] + 0.9]); R.step(20); g.selectVerb('objective', 'drive'); R.tap(); let fP = -1; pose = false; R.step(Math.round((DRIVE_SECS + 0.5) * 60), i => { pose ||= !!R.work().pose; if (fP < 0 && g.mission.stage !== 'drive') fP = i; });
-    verdict(fP > 0 && !pose, 'the drive: pulled, no pose', `pulled at frame ${fP} · pose ${pose}`); }
-  { const R = await rig(false, { ai: true }), { g } = R; g.teleportPlayer([8, 0, 17]); R.step(30); const gd = g.guards.find((x: any) => G.inHand(x) === 'torch'), an = gd.char.anim;
-    G.raiseEscalation(g, 1, 'device'); let bad = 0, rad = 0; g.say(gd, 'control, checking in', true); R.step(90, () => { if (an.swapHeld(G.inHand(gd)) !== G.inHand(gd) || an.swapInfo().a >= 0) bad++; rad = Math.max(rad, an.radioShown); });
-    verdict(bad === 0 && rad === 0 && G.inHand(gd) === 'weapon', 'the shift up a step and a radio line: what his hand shows IS the rule on every frame, no move, no radio hand', `frames the shown thing differed from the rule ${bad} · best radio weight ${f2(rad)}`);
-    verdict(Object.values(HANDWORK_STATS).every(v => v === 0), 'and the module counted nothing', JSON.stringify(HANDWORK_STATS)); }
-  { const run = async (on: boolean) => { const R = await rig(on, { ai: true, seed: 3 }), { g } = R; g.teleportPlayer([8, 0, 17]); R.step(300); G.raiseEscalation(g, 1, 'device'); R.step(120); g.say(g.guards[0], 'control, nothing here', true); R.step(60 * 20); return hashDigest(digestGame(g, true)); };
-    const A = await run(true), B = await run(false);
-    verdict(A === B, 'twenty-seven seconds of the shift going up a step and talking on the net digest the same on and off: the radio hand and the swap move nothing of the game', `on ${A} · off ${B}`); }
-  return allPass;
-}); }
-
 // ================================================================ harness
 export async function handworkHarness(): Promise<boolean> { return keep(async () => {
   console.log('\n=== handwork-harness: the frozen stand holds the switch off, the page turns it on unless ?nohandwork, the table is a registered knob table ===');
@@ -322,7 +295,6 @@ if (import.meta.main) {
   if (which === 'all' || which === 'work') ok = await handworkWork() && ok;
   if (which === 'all' || which === 'radio') ok = await handworkRadio() && ok;
   if (which === 'all' || which === 'swap') ok = await handworkSwap() && ok;
-  if (which === 'all' || which === 'off') ok = await handworkOff() && ok;
   if (which === 'all' || which === 'harness') ok = await handworkHarness() && ok;
   console.log(ok ? '\n=== handwork: ALL PASS ===' : '\n=== handwork: FAILED ==='); process.exit(ok ? 0 : 1);
 }
