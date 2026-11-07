@@ -218,7 +218,7 @@ pub fn silent_compromised(g: &crate::game::Game) -> bool {
 
 /// the posture's two rows on the menu: made anew at each call, as the TypeScript's literals are   (silent.ts rows)
 pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
-    let silent = g.tab.orders_order_def.push(crate::orders::OrderDef {
+    let silent = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
         id: String::from("silent"),
         head: Some(String::from(HEAD)),
         label: crate::orders::OrderLabel::Text { text: String::from("go silent") },
@@ -230,7 +230,7 @@ pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
         issue: crate::orders::OrderIssue::Silent,
         ..Default::default()
     });
-    let loud = g.tab.orders_order_def.push(crate::orders::OrderDef {
+    let loud = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
         id: String::from("loud"),
         head: Some(String::from(HEAD)),
         label: crate::orders::OrderLabel::Text { text: String::from("go loud") },
