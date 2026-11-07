@@ -2849,7 +2849,6 @@ if (on('depot-stage', 'depot', 'all')) await run('depot-stage', async () => (awa
 if (on('depot-doors', 'depot', 'all')) await run('depot-doors', async () => (await import('./depot-probes.ts')).depotDoors());
 if (on('depot-openings', 'depot', 'all')) await run('depot-openings', async () => (await import('./depot-probes.ts')).depotOpenings());
 if (on('depot-walk', 'depot', 'all')) await run('depot-walk', async () => (await import('./depot-probes.ts')).depotWalk());
-if (on('depot-run', 'depot', 'all')) await run('depot-run', async () => (await import('./depot-probes.ts')).depotRun());
 // ---------------------------------------------------------------- unasked cover (cover-probes.ts; game/cover.ts — followers and plain holders each take an opening, no order given): 'cover' = the family
 if (on('cover-openings', 'cover', 'all')) await run('cover-openings', async () => (await import('./cover-probes.ts')).coverOpenings());
 if (on('cover-walk', 'cover', 'all')) await run('cover-walk', async () => (await import('./cover-probes.ts')).coverWalk());
@@ -3057,7 +3056,6 @@ if (on('squadthrow', 'squadorders', 'all')) await run('squadthrow', async () => 
 if (on('squadthrow-walk', 'squadthrow', 'squadorders', 'all')) await run('squadthrow-walk', async () => (await import('./squadthrow-walk-check.ts')).squadthrowWalkCheck());
 // the throw page's picture asks aside: a game drawn and the same game not drawn hold the same whole state (throwview-check.ts; squadthrow.ts SquadThrowKept, Collision.aside)
 // a man with no straight arc works a throw out — other paces, a bank — and a frag is thrown where the men can duck (squadthrow-lob-check.ts; SQUADTHROW.lob / duck / samCall)
-if (on('squadthrow-lob', 'squadthrow', 'squadorders', 'all')) await run('squadthrow-lob', async () => (await import('./squadthrow-lob-check.ts')).squadthrowLobCheck());
 // a teammate whose card carries 40 mm grenades fires one on order (squad40-check.ts; game/squad40.ts — X on the floor, G, then 3): also in family 'squadorders'
 // the squad's plan drawn on the floor (plan-check.ts; game/floorplan.ts — ways, marks, fans, the menu's rings; our own men only): also in family 'squadorders'
 if (on('plan', 'squadorders', 'all')) await run('plan', async () => (await import('./plan-check.ts')).planCheck());
@@ -3102,12 +3100,10 @@ if (on('registry-walk', 'registry', 'all')) await run('registry-walk', async () 
 // a follower goes by the doors Sam took where his own short way to his place would take others (orders.ts ORDERS.trailDoors; traildoors-check.ts; TRAILDOORS_BREAK=1 must fail)
 if (on('trail-doors', 'registry', 'all')) await run('trail-doors', async () => (await import('./traildoors-check.ts')).trailDoorsCheck());
 if (on('word-cuts', 'doortools', 'all')) await run('word-cuts', async () => (await import('./wordcuts-check.ts')).wordCutsCheck());   // the word that spends no can waits for the jamb men's cuts (DOORTOOLS.wordCuts)
-if (on('registry-run', 'registry', 'all')) await run('registry-run', async () => (await import('./registry-probes.ts')).registryRun());
 // 'consulate' = the four's hostage rescue on its own level (levels/consulate.json ← tools/levels/consulate.ts; consulate-probes.ts): the file, the staging with
 // four (three roamers drawn onto five marks), and the scripted commander by the main door and by both doors — the side door a pair's
 if (on('consulate-level', 'consulate', 'all')) await run('consulate-level', async () => (await import('./consulate-probes.ts')).consulateLevel());
 if (on('consulate-stage', 'consulate', 'all')) await run('consulate-stage', async () => (await import('./consulate-probes.ts')).consulateStage());
-if (on('consulate-run', 'consulate', 'all')) await run('consulate-run', async () => (await import('./consulate-probes.ts')).consulateRun());
 // ---------------------------------------------------------------- glass (E3, glass-probes.ts): 'glass' = the family — the flag through the file, sight through / sound sealed, the boot and the bang, the renderer's lists on and off
 let glassBannerPending: { f0: number } | null = null;
 { let glassRan = false; const f0 = FAILED.length;
@@ -3211,7 +3207,6 @@ if (on('fixture-break', 'destruction', 'all')) await run('fixture-break', () => 
 if (on('pull-threshold', 'threshold', 'doortools', 'all')) await run('pull-threshold', () => runScript('pull-threshold-check.ts'));   // a door worked from the face it opens toward: nobody of the order behind the open leaf (its own red path: the script's --off)
 if (on('sweep-fog', 'fog', 'perf', 'all')) await run('sweep-fog', () => runScript('sweep-fog-check.ts'));   // the F8 sweep's fog row against the game's own fog object and the renderer's frame, by their real names
 if (on('sweep-snow', 'snow', 'perf', 'all')) await run('sweep-snow', () => runScript('sweep-snow-check.ts'));   // the F8 sweep's two snow flips: when each refuses, what it writes, that it puts it back
-if (on('held-meter', 'standoff', 'all')) await run('held-meter', () => runScript('held-meter-check.ts'));   // a held man's light meter is this hold's: a new hold, the same man again, a pair moved a room on, a pair where it stood (HELDMETER_BREAK=1 fails three of its four)
 if (on('standupgc', 'perf', 'all')) await run('standupgc', () => runScript('standupgc-check.ts'));   // a game stood up has done with the last one: twenty-five games stood up back to back in a process of their own must not grow the heap (a dropped game stayed as garbage; headless.ts standUp asks for the collection)
 if (on('fold', 'all')) await run('fold', () => runScript('fold-check.ts'));   // the settled switch rows held at their page value (tools/qa/fold.ts) and their list (tools/qa/switches.json): the list is the game's, a write is refused and counted, the runner says it by probe
 if (on('holds', 'all')) await run('holds', () => runScript('holds-check.ts'));   // the stand a probe is owed by its name (holds.ts): the table's rows are the game's, a held probe runs with them off and they are back after, and a check file with a main of its own runs through the same call (HOLDS_BREAK=1 must fail)

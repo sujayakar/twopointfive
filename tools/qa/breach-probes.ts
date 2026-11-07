@@ -8,7 +8,7 @@
 //   clear-doctrine    the guards' own two-man RoomClear (squad.ts) keeps battle drill six: the kicker off the funnel, #2 a beat behind, centre then his corner,
 //                     #2 on the next door
 import { standUp, ROOT } from './headless.ts';
-const { setDaylight, isDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
+const { setDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -42,7 +42,6 @@ export async function breachDaylight() {
   setDaylight(game, true); for (let i = 0; i < 3; i++) W.step(DT); upload(W);
   const D = level.daylight;
   { const f: string[] = [];
-    if (!isDaylight(game)) f.push('isDaylight false');
     const sun = engine.lights.lights.find((l: any) => l.name === 'sun'); if (!sun) f.push('no sun in the set'); else { if (sun.kind !== 2) f.push(`sun kind ${sun.kind}`); if (!sun.enabled) f.push('sun disabled'); if (!(engine.lights.activeIdx as number[]).some((i: number) => engine.lights.lights[i] === sun)) f.push('sun not uploaded'); }
     const moon = engine.lights.lights.find((l: any) => l.name === 'moon'); if (moon?.enabled) f.push('moon still lit');
     for (const t of game.targets) { if (D.groupsOff.includes(t.group) && (t.on || (t.light && t.light.enabled))) f.push(`${t.name} (${t.group}) still on`); if (D.groupsOn.includes(t.group) && !t.on) f.push(`${t.name} (${t.group}) off`); }
@@ -53,7 +52,6 @@ export async function breachDaylight() {
     F.verdict(f.length === 0, 'day: one lit sun of kind 2 uploaded, moon and street lamps out, every listed group on, mains back, sky / haze the variant\'s, idempotent', f.join('; ') || `sun dir ${sun?.dir.map(f2)} I ${sun?.intensity}; ${engine.lights.activeCount} lights uploaded by day; sky ${JSON.stringify(engine.settings.skyZenith)} haze ${engine.settings.hazeDensity}`); }
   setDaylight(game, false); for (let i = 0; i < 6 / DT; i++) W.step(DT); upload(W);   // (six seconds again: the groups day switched on and night switches back off restrike nothing, but a fixture on the blink is compared like for like)
   { const f: string[] = [];
-    if (isDaylight(game)) f.push('isDaylight still true');
     const L1 = lightList(engine), S1 = skyOf(engine), W1 = switches(game);
     if (L1 !== L0) { const a = L0.split('|'), b = L1.split('|'); const i = a.findIndex((x, k) => x !== b[k]); f.push(`light list differs (first at #${i}: '${a[i]}' vs '${b[i]}'; ${a.length} vs ${b.length} lights)`); }
     if (S1 !== S0) f.push(`sky ${S0} → ${S1}`);

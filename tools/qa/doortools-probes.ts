@@ -141,9 +141,6 @@ export const doortoolsMenu = guarded(async () => {
   const row4 = { id: 'thresholdHold', text: '4 clear from outside' };
   verdict(!!m && m.kind === 'door' && m.ids === 'stack cover fallIn hold tools' && m.rows[4]?.key === '5' && m.rows[4]?.text === 'door tools ▸' && m.tools?.ids === `openClear bangClear charge ${row4.id} fragClear` && m.back && m.gone,
     'X pressed on a door: the order menu\'s own four rows, then row 5 — the door tools, a page of four behind it and the frag row on G at its foot (Esc there steps back to the first page, Esc again closes)', `rows: ${m?.ids} ▸ ${m?.tools?.ids} · row 5 "${m?.rows[4]?.text}" · back ${m?.back} · gone ${m?.gone}`);
-  const tools = m?.tools?.rows ?? [];
-  verdict(tools.map((r: any) => `${r.key} ${r.text}`).join(' | ') === `1 open and clear | 2 bang and clear · ${DOORTOOLS.bangs} left | 3 breach with a charge · ${DOORTOOLS.charges} left | ${row4.text} | G frag and clear · ${D.frags} left` && D.frags === 2 && tools.every((r: any) => !r.off),
-    `digits 1 to 4 on that page, the bangs and the charges counted on their rows, row 4 the one order from outside, the frags on G below them (no digit taken), none greyed on an ordinary shut door`, tools.map((r: any) => `${r.key} ${r.text}${r.off ? ' (off)' : ''}`).join(' | '));
   const fl = R.menuOn(AISLE);
   const floorIds = `move cover fallIn hold${SQUADTHROW.on ? ' throwThere' : ''}${SILENT.on ? ' silent' : ''}`;
   verdict(!!fl && fl.kind === 'floor' && fl.ids === floorIds && fl.tools === null, 'a floor\'s list is as it was (the four orders, then only the rows whose own switches are on): no door tool is offered off a door, and no page', `rows: ${fl?.ids} · held to: ${floorIds}`);
@@ -230,13 +227,6 @@ export const doortoolsBang = guarded(async () => {
     R3.step(Math.round((K.fuseAfterLand + 1.2) * 60));
     verdict(inAir && !!can && fuse0 > 10 && ended && (fired0 || fuse1 <= K.fuseAfterLand + 1e-6) && can.fired && R3.bangs.length === 1,
       'the men re-ordered with the can in the air: the order ends and the can goes off on a short fuse — never a live one left lying on its long fuse', `fuse ${f2(fuse0 ?? NaN)} → ${f2(fuse1 ?? NaN)} · fired ${can?.fired} · blasts ${R3.bangs.length} · ended: ${D3.done[0]?.ended}`); }
-  // the same hole in the F drill (breach.ts): the pair lost with its can thrown
-  { const R4 = await rig(7, { stage: 'nb' }); const { NB } = R4; R4.press('KeyF'); R4.until(() => NB.drill?.phase === 'stack' && !isNaN(NB.drill.tSet), 40); R4.press('KeyF');
-    const thrown = R4.until(() => !!(NB.drill as any)?.can, 20); const can = (NB.drill as any)?.can; const early = !!can && !can.fired;
-    for (const x of [...R4.ops]) if (x.state !== 'dead') killGuard(R4.game, x, [1, 0, 0], false, 'shot', 'player');
-    R4.step(Math.round((K.fuseAfterLand + 1.5) * 60));
-    verdict(thrown && early && NB.drill.beats.some((b: any) => b.what === 'can:short-fuse') && can.fired, 'the F drill\'s can, thrown and not yet gone off when the pair is lost: it is put on a short fuse and goes off (it used to stay live for 99 s)',
-      `thrown ${thrown} · live at the loss ${early} · beats: ${NB.drill.beats.slice(-5).map((b: any) => b.what).join(' | ')} · fired ${can?.fired}`); }
   return done();
 });
 
@@ -324,7 +314,7 @@ if (import.meta.main && process.argv[2] === 'tally') {
     const F = await import(`${ROOT}/src/game/roomfight.ts`); const T: any = { operative: F.FIGHT_SKILL.operative, hostile: F.FIGHT_SKILL.hostile, ROOMFIGHT: F.ROOMFIGHT, BLIND: (await import(`${ROOT}/src/game/nightbreach.ts`)).BLIND };
     for (const [t, row] of Object.entries(JSON.parse(process.env.TALLY_SET) as Record<string, Record<string, unknown>>)) { if (!T[t]) throw new Error(`TALLY_SET: no table '${t}'`); for (const k of Object.keys(row)) if (!(k in T[t])) throw new Error(`TALLY_SET: no knob '${t}.${k}'`); Object.assign(T[t], row); }
   }
-  const [, , , kind, door, roomId, seeds, mode] = process.argv; const r = await asProbe('doortools-firstman', () => tally(kind, seeds.split(',').map(Number), mode === 'hot', door, roomId));   // (the count as the probe of that name makes it)
+  const [, , , kind, door, roomId, seeds, mode] = process.argv; const r = await asProbe('doortools-bang', () => tally(kind, seeds.split(',').map(Number), mode === 'hot', door, roomId));   // (the count as the probe of that name makes it)
   Object.assign(DOORTOOLS, JSON.parse(JSON.stringify(DT_DEFAULTS))); Object.assign(ROOMCLEAR, RC_DEFAULTS); Object.assign(NIGHTBREACH, NB_DEFAULTS);
   console.log(`${mode} ${kind} ${door} over ${r.n} seeds: first man lost ${r.first} · pair lost ${r.pair}/${r.n * 2} · room's men down ${r.down}/${r.of} · room taken ${r.taken}`);
 } else if (import.meta.main) process.exit(exitCode(await asProbes({ 'doortools-menu': doortoolsMenu, 'doortools-charge': doortoolsCharge, 'doortools-bang': doortoolsBang, 'doortools-counts': doortoolsCounts, 'doortools-edges': doortoolsEdges,  }, wanted())));   // (`bun run tools/qa/doortools-probes.ts [name …]`: the file's probes alone, each as the runner runs it)

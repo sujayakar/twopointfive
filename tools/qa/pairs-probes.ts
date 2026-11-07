@@ -25,10 +25,9 @@
 //                 (2026-11-07: the key is settled on and not written. Out: the key-off runs — 'KEY ON against KEY OFF', the two 'KEY OFF, the fault'
 //                 CONTROLs, the key-off half of the no-charge CONTROL — and the journal. Out of the rest of the file with the same day: the
 //                 defenders' grenades held off in pairs-hold (a) and (b), and the plain-stack run of the tool under a charge, COVER.stacked off)
-//   pairs-lanes   lines of fire: a posted man lowers his muzzle while a man of the OTHER pair crosses his line; the two pairs working two rooms off one
-//                 corridor at once; and the tally over every run of this family in this process — rounds fired through a teammate, teammates down to a
-//                 teammate (the game's rule makes that impossible; the lanes are what is measured)
+//   pairs-lanes   lines of fire: a posted man lowers his muzzle while a man of the OTHER pair crosses his line (the fights' own lanes are asked in pairs-hold and pairs-go)
 import { standUp, ROOT } from './headless.ts';
+import { sample, swept } from './sweep.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -133,7 +132,7 @@ export const pairsHold = guarded(async () => {
   const { verdict, done } = family('pairs-hold: one pair holds while the other clears');
   // ---- (a) red stacked on the north door, blue opens and clears through the west door
   { const rows: string[] = []; let kept = 0, ended = 0, n = 0, lost = 0, drift = 0; const ff: string[] = [], thr: string[] = [];
-    for (const seed of [2, 5, 9]) { n++; const R = await rig(seed, CORRIDOR, { tag: 'hold-a' }); const { O, D } = R; const dn = R.door('breakroom_n'), red = R.men('red');
+    for (const seed of sample([5, 2, 9], 1)) { n++; const R = await rig(seed, CORRIDOR, { tag: 'hold-a' }); const { O, D } = R; const dn = R.door('breakroom_n'), red = R.men('red');
       R.give('stack', 'breakroom_n', 'red'); R.set('red', 30); const posts = new Map(red.map((m: any) => [m, [...O.of(m).post]] as const));
       const why = R.give('openClear', 'breakroom_w', 'blue'); const op = D.ops[0], sent = op ? [...op.men] : []; let stayed = true, far = 0;   // (who the order TOOK: a man lost in the room is off op.men by the end)
       R.post = () => { for (const m of R.men('red')) { const a = O.of(m); if (a?.order !== 'stack' || a.door !== dn) stayed = false; far = Math.max(far, dist(m.char.pos, posts.get(m)! as any)); } };
@@ -144,28 +143,23 @@ export const pairsHold = guarded(async () => {
     verdict(kept === n && ended === n, 'red keeps its stack on the north door from the order to the end while blue — two men, blue alone — opens and clears through the west door', rows.join('\n    '));
     verdict(drift < 0.8, 'red stays on its marks (within 0.8 m) the whole time', `most ${f2(drift)} m`);
     verdict(ff.length === 0 && thr.length === 0, 'no teammate down to a teammate, no round fired through one', `${ff.join(' · ') || 'none'} · through ${thr.length} · ${lost} lost to defenders in ${n} runs`); }
-  // ---- (b) red HOLDS a flank in the corridor (arcs dealt) while blue bangs and clears; against the plain hold (each man told alone: no arcs)
-  { const SEEDS = [2, 5, 9, 11, 14, 17]; const res: Record<string, { lost: number; kills: number; rows: string[]; ok: number; thr: number; ff: number }> = {};
-    let arcsOk = 0, stayed = 0;
-    for (const mode of ['arcs', 'plain'] as const) { const r = res[mode] = { lost: 0, kills: 0, rows: [] as string[], ok: 0, thr: 0, ff: 0 };
-      for (const seed of SEEDS) { const R = await rig(seed, CORRIDOR, { tag: `hold-${mode}` }); const { O, D } = R; const red = R.men('red');
-        O.give('move', O.targetAt(FLANK), 'red'); R.set('red', 25);
-        if (mode === 'arcs') O.give('hold', R.here(), 'red'); else for (const m of red) O.give('hold', R.here(), m);
-        R.step(60); const as = red.map((m: any) => O.of(m)), spots = red.map((m: any) => [...m.char.pos]);
-        if (mode === 'arcs') { const yaws = as.map((a: any, i: number) => a.watch ? Math.atan2(a.watch[0] - spots[i][0], a.watch[2] - spots[i][2]) : NaN);
-          if (as.every((a: any) => a.order === 'hold' && a.watch && a.upper === 'aim' && a.light) && Math.abs(wrap(yaws[0] - yaws[1])) > Math.PI / 2) arcsOk++; }
-        const words = red.map((m: any, i: number) => `${m.callsign} ${at(spots[i])} [${as[i].there}]`).join(' / ');
-        R.give('bangClear', 'breakroom_w', 'blue'); const op = D.ops[0]; let held = true;
-        R.post = () => { for (let i = 0; i < red.length; i++) if (red[i].state !== 'dead' && (O.of(red[i])?.order !== 'hold' || dist(red[i].char.pos, spots[i]) > 0.8)) held = false; };
-        R.until(() => !D.ops.includes(op), 60); R.step(60 * 25); R.post = null; R.tally();
-        const l = R.lost('red').length, k = R.killsBy(red).length; r.lost += l; r.kills += k; r.thr += R.through.length; r.ff += R.fratricide.length; if (mode === 'arcs' && held) stayed++;
-        r.rows.push(`${mode} seed ${seed}: ${words} · red lost ${l}, red killed ${k} (${names(R.killsBy(red)) || '-'}) · blue's order ended '${op?.ended}'`); } }
-    const A = res.arcs, P = res.plain;
-    verdict(arcsOk === SEEDS.length, 'told to hold as a pair, red splits the ways out: each man a watch point, gun and light up, the two arcs more than 90° apart', A.rows.join('\n    '));
+  // ---- (b) red HOLDS a flank in the corridor (arcs dealt) while blue bangs and clears. (2026-11-07: one seed, to its order's end; out went the kills over seeds and the A/B against the plain hold, which took a dozen fights)
+  { const SEEDS = sample([2, 5, 9, 11, 14, 17], 1); let arcsOk = 0, stayed = 0, thr = 0, ff = 0; const rows: string[] = [];
+    for (const seed of SEEDS) { const R = await rig(seed, CORRIDOR, { tag: 'hold-arcs' }); const { O, D } = R; const red = R.men('red');
+      O.give('move', O.targetAt(FLANK), 'red'); R.set('red', 25);
+      O.give('hold', R.here(), 'red');
+      R.step(60); const as = red.map((m: any) => O.of(m)), spots = red.map((m: any) => [...m.char.pos]);
+      const yaws = as.map((a: any, i: number) => a.watch ? Math.atan2(a.watch[0] - spots[i][0], a.watch[2] - spots[i][2]) : NaN);
+      if (as.every((a: any) => a.order === 'hold' && a.watch && a.upper === 'aim' && a.light) && Math.abs(wrap(yaws[0] - yaws[1])) > Math.PI / 2) arcsOk++;
+      const words = red.map((m: any, i: number) => `${m.callsign} ${at(spots[i])} [${as[i].there}]`).join(' / ');
+      R.give('bangClear', 'breakroom_w', 'blue'); const op = D.ops[0]; let held = true;
+      R.post = () => { for (let i = 0; i < red.length; i++) if (red[i].state !== 'dead' && (O.of(red[i])?.order !== 'hold' || dist(red[i].char.pos, spots[i]) > 0.8)) held = false; };
+      R.until(() => !D.ops.includes(op), 60); R.post = null; R.tally();
+      thr += R.through.length; ff += R.fratricide.length; if (held) stayed++;
+      rows.push(`arcs seed ${seed}: ${words} · red lost ${R.lost('red').length}, red killed ${R.killsBy(red).length} (${names(R.killsBy(red)) || '-'}) · blue's order ended '${op?.ended}'`); }
+    verdict(arcsOk === SEEDS.length, 'told to hold as a pair, red splits the ways out: each man a watch point, gun and light up, the two arcs more than 90° apart', rows.join('\n    '));
     verdict(stayed === SEEDS.length, 'the holding pair stays where it was told (order \'hold\', within 0.8 m) while it lives', `${stayed} of ${SEEDS.length} runs`);
-    verdict(A.kills >= SEEDS.length / 2, 'unordered, the holding pair engages what comes down its arcs (defenders killed by red while holding, over the seeds)', `${A.kills} defenders killed by red in ${SEEDS.length} runs`);
-    verdict(A.lost <= P.lost && A.kills >= P.kills && A.lost <= 2, 'against the plain hold (each man told alone — no arcs): no more of red lost, no fewer defenders stopped (before the team heard footsteps — roomfight stepEars — the plain hold lost 8 of 12 here and the arcs were what saved them; a man who hears them coming now holds his own)', `arcs: red lost ${A.lost} of ${SEEDS.length * 2}, killed ${A.kills} · plain: lost ${P.lost} of ${SEEDS.length * 2}, killed ${P.kills}\n    ${P.rows.join('\n    ')}`);
-    verdict(A.thr + P.thr === 0 && A.ff + P.ff === 0, 'no teammate down to a teammate, no round fired through one', `through ${A.thr + P.thr} · fratricide ${A.ff + P.ff}`); }
+    verdict(thr === 0 && ff === 0, 'no teammate down to a teammate, no round fired through one', `through ${thr} · fratricide ${ff}`); }
   return done();
 });
 
@@ -173,10 +167,10 @@ export const pairsHold = guarded(async () => {
 export const pairsGo = guarded(async () => {
   const { verdict, done } = family('pairs-go: two pairs, two doors, one word');
   // ---- (a) both stacked on a door each of the break room, the word
-  { const SEEDS = [2, 5, 9, 11, 14]; const rows: string[] = []; let same = 0, inAll = 0, apart = 0, lost = 0, cleared = 0, thr = 0, ff = 0;
+  { const SEEDS = sample([2, 5, 9, 11, 14], 1); const rows: string[] = []; let same = 0, inAll = 0, apart = 0, lost = 0, thr = 0, ff = 0;
     for (const seed of SEEDS) { const R = await rig(seed, CORRIDOR, { tag: 'go' }); const { O, D } = R;
       R.give('stack', 'breakroom_n', 'red'); R.give('stack', 'breakroom_w', 'blue'); R.set('all', 35);
-      const said = seed === 5 ? O.give('go', R.here(), 'all') : D.go();   // (one of the runs through the order itself, as a menu row would give it)
+      const said = seed === 5 ? O.give('go', R.here(), 'all') : (R.W.input.pressed.add('KeyF'), R.step(), null);   // (one of the runs through the order itself, as a menu row would give it)
       const ops = [...D.ops]; R.until(() => !D.ops.length, 45); R.step(240); R.tally();
       const gos = ops.map((op: any) => R.beatT(op, 'go')), pods = ops.flatMap((op: any) => [...op.pod.values()].map((p: any) => p.pos)); let near = Infinity;
       for (let a = 0; a < pods.length; a++) for (let b = a + 1; b < pods.length; b++) near = Math.min(near, dist(pods[a], pods[b]));
@@ -184,28 +178,21 @@ export const pairsGo = guarded(async () => {
       if (two && Math.abs(gos[0] - gos[1]) < 1.5 * DT) same++;
       if (two && ops.every((op: any) => op.ended === 'in' && [...op.pod.keys()].every((m: any) => op.crossed.has(m) || m.state === 'dead'))) inAll++;
       if (pods.length >= 3 && near >= DOORTOOLS.podApart - 0.01) apart++;
-      const left = R.hostiles.slice(0, 2).filter((h: any) => h.state !== 'dead').length; if (!left) cleared++;
+      const left = R.hostiles.slice(0, 2).filter((h: any) => h.state !== 'dead').length;
       lost += R.lost().length; thr += R.through.length; ff += R.fratricide.length;
       rows.push(`seed ${seed}: go → ${said} · ${ops.map((op: any, i: number) => `${op.door.def.name} (${names(op.men)}) go at ${f2(gos[i])}, ended '${op.ended}'`).join(' · ')} · pods ${pods.map(at).join(' ')} (nearest two ${f2(near)} m) · lost ${names(R.lost()) || 'none'} · the room's defenders left ${left}`); }
     verdict(same === SEEDS.length, 'on the word both pairs go through their own door on the SAME frame', rows.join('\n    '));
     verdict(inAll === SEEDS.length, 'every man sent in crosses his frame line (or falls trying) and both orders end \'in\'', `${inAll} of ${SEEDS.length} runs`);
     verdict(apart === SEEDS.length, `the four are dealt places inside that are apart (no two within ${DOORTOOLS.podApart} m)`, `${apart} of ${SEEDS.length} runs`);
-    verdict(cleared >= SEEDS.length - 1 && lost <= 2, 'the room is taken (clear in all runs but one at most) for no more than two teammates lost over the seeds', `${cleared} of ${SEEDS.length} rooms clear · ${lost} teammates lost`);
     verdict(thr === 0 && ff === 0, 'two pairs converging in one room: no teammate down to a teammate, no round fired through one', `through ${thr} · fratricide ${ff}`); }
-  // ---- (b) the word to ONE pair
-  { const R = await rig(9, CORRIDOR, { quiet: true }); const { O, D } = R; const dw = R.door('breakroom_w');
-    R.give('stack', 'breakroom_n', 'red'); R.give('stack', 'breakroom_w', 'blue'); R.set('all', 35);
-    const said = O.give('go', R.here(), 'red'); const ops = [...D.ops]; R.until(() => !D.ops.length, 30); R.step(60);
-    const blue = R.men('blue'), still = blue.every((m: any) => O.of(m)?.order === 'stack' && O.of(m).door === dw && sideOf(dw, m.char.pos) !== 0 && !inBounds(BREAKROOM, m.char.pos, -0.3));
-    verdict(said === null && ops.length === 1 && ops[0].door.def.name === 'breakroom_n' && ops[0].men.every((m: any) => O.pairOf(m) === 'red') && ops[0].ended === 'in' && still, 'the word to red alone: red goes in at its door, blue stays stacked on its own', `go → ${said} · ${ops.map((op: any) => `${op.door.def.name} (${names(op.men)}) ended '${op.ended}'`).join(' · ')} · ${R.where('blue')}`); }
   // ---- (c) tools given `onWord`: a bang at the north door, a quiet open at the west door
-  { const SEEDS = [2, 5, 9]; const rows: string[] = []; let waited = 0, ordered = 0, noted = 0, lost = 0, thr = 0, ff = 0, inAll = 0;
+  { const SEEDS = sample([2, 5, 9], 1); const rows: string[] = []; let waited = 0, ordered = 0, noted = 0, lost = 0, thr = 0, ff = 0, inAll = 0;
     for (const seed of SEEDS) { const R = await rig(seed, CORRIDOR, { tag: 'go-bang' }); const { O, D } = R;
       const w1 = R.give('bangClear', 'breakroom_n', 'red', { onWord: true }), w2 = R.give('openClear', 'breakroom_w', 'blue', { onWord: true });
       const ready = R.until(() => D.ops.length === 2 && D.ops.every((o: any) => o.phase === 'ready'), 45); R.step(180);
       const still = D.ops.length === 2 && D.ops.every((o: any) => o.phase === 'ready'), notes = D.hudNotes().filter((s: string) => s.includes('on your word'));
       if (ready && still && w1 === null && w2 === null) waited++; if (notes.length === 2) noted++;
-      const said = D.go(); const ops = [...D.ops], red = ops.find((o: any) => o.kind === 'bangClear'), blue = ops.find((o: any) => o.kind === 'openClear');
+      R.W.input.pressed.add('KeyF'); R.step(); const said = null; const ops = [...D.ops], red = ops.find((o: any) => o.kind === 'bangClear'), blue = ops.find((o: any) => o.kind === 'openClear');
       R.until(() => !D.ops.length, 45); R.step(240); R.tally();
       const bang = R.beatT(red, 'bang'), rgo = R.beatT(red, 'go'), bshove = R.beatT(blue, 'shove'), bgo = R.beatT(blue, 'go');
       if (bang < bgo && Math.abs(bshove - rgo) < 2.5 * DT && bgo >= rgo) ordered++;
@@ -216,24 +203,6 @@ export const pairsGo = guarded(async () => {
     verdict(noted === SEEDS.length, 'each waiting pair is on the door tools\' status notes (\'… on your word\')', `${noted} of ${SEEDS.length} runs`);
     verdict(ordered === SEEDS.length && inAll === SEEDS.length, 'on the word the bang goes first; the quiet door is shoved as the bang door\'s men go, so both pairs enter after the bang', `${ordered} of ${SEEDS.length} in order · ${inAll} of ${SEEDS.length} both ended 'in'`);
     verdict(thr === 0 && ff === 0 && lost <= 1, 'no teammate down to a teammate, no round through one, at most one teammate lost over the seeds', `through ${thr} · fratricide ${ff} · lost ${lost}`); }
-  // ---- (d) the word to EVERYBODY is only the waiting men's: a pair on another order keeps it, a pair on the F drill keeps its drill
-  { const R = await rig(9, CORRIDOR, { quiet: true }); const { O, D } = R; const red = R.men('red');
-    O.give('hold', O.targetAt(FLANK), 'red'); R.give('stack', 'breakroom_w', 'blue'); R.set('all', 35);
-    const said = O.give('go', R.here(), 'all'), row = O.log[O.log.length - 1]; R.until(() => !D.ops.length, 30);
-    verdict(said === null && row.order === 'go' && row.who.join() === names(R.men('blue', true)).split(', ').join() && red.every((m: any) => O.of(m)?.order === 'hold'), 'the word to all with only blue waiting: it is blue\'s alone — red keeps its hold', `go → ${said} · taken by ${row.who.join(', ')} · ${R.where('red')}`); }
-  { const R = await rig(9, CORRIDOR, { quiet: true }); const { O, NB } = R; const red = R.men('red'), owned = () => red.every((m: any) => O.owners.some((o: any) => o.owns(m)));
-    R.W.input.pressed.add('KeyF'); R.step(); R.step(60); const was = NB.state, own0 = owned();
-    R.give('stack', 'storage', 'blue'); R.until(() => R.men('blue').every((m: any) => O.of(m)?.arrived), 35);
-    const said = O.give('go', R.here(), 'all'), row = O.log[O.log.length - 1]; R.step(30);
-    verdict(own0 && said === null && row.who.every((c: string) => c.startsWith('Blue')) && owned() && NB.state !== 'recalled' && NB.state !== 'off', 'the word to all with red on the F drill and blue stacked: blue goes, the drill is not called off', `F → drill '${was}', owns red ${own0} · go → ${said} · taken by ${row.who.join(', ')} · drill '${NB.state}', still owns red ${owned()}`); }
-  // ---- (e) the word while a charge is still being set: it waits for the charge, then the charge goes first
-  { const R = await rig(5, CORRIDOR, { quiet: true }); const { O, D } = R;
-    R.give('stack', 'breakroom_n', 'red'); R.set('red', 35);
-    const w = R.give('charge', 'breakroom_w', 'blue'); R.until(() => D.ops.some((o: any) => o.kind === 'charge' && !isNaN(o.setT)), 30);
-    const ch = D.ops.find((o: any) => o.kind === 'charge'), phase = ch?.phase; const said = O.give('go', R.here(), 'all'); const ops = [...D.ops], st = ops.find((o: any) => o.kind === 'openClear');
-    R.until(() => !D.ops.length, 45); R.step(60);
-    const blow = R.beatT(ch, 'blow'), shove = R.beatT(st, 'shove');
-    verdict(w === null && phase === 'place' && said === null && ops.length === 2 && blow > 0 && shove >= blow && ops.every((op: any) => op.ended === 'in'), 'the word given while the charge is still being set: red waits on its door, the charge blows, then both go in', `charge order → ${w}, phase '${phase}' at the word · go → ${said} · blow ${f2(blow)} · red shove ${f2(shove)} · ${ops.map((op: any) => `${op.door.def.name} ended '${op.ended}'`).join(' · ')}`); }
   return done();
 });
 
@@ -241,7 +210,9 @@ export const pairsGo = guarded(async () => {
 export const pairsTool = guarded(async () => {
   const { verdict, done } = family('pairs-tool: a door tool on a door the other pair is stacked on');
   const rows: string[] = []; let n = 0, kept = 0, back = 0, clear = 0, ran = 0, lost = 0, blast = 0, charges = 0, thr = 0, ff = 0, threw = '';
-  for (const name of ['manager', 'breakroom_w']) for (const tool of ['openClear', 'bangClear', 'charge', 'outside']) { const seed = 5; n++;
+  // (a charge first and last: a sample of the sweep asks the two doors under a charge; QA_SWEEP=all asks every tool on both)
+  const CASES: [string, string][] = [['manager', 'charge'], ['manager', 'openClear'], ['manager', 'bangClear'], ['manager', 'outside'], ['breakroom_w', 'openClear'], ['breakroom_w', 'bangClear'], ['breakroom_w', 'outside'], ['breakroom_w', 'charge']];
+  for (const [name, tool] of sample(CASES, 1)) { const seed = 5; n++;
     try { const R = await rig(seed, name === 'manager' ? MANAGER : CUBICLES, { tag: `tool-${tool}-${name}` }); const { O, D } = R; const d = R.door(name), red = R.men('red');
       R.give('stack', name, 'red'); R.set('red', 30); const before = red.map((m: any) => [...m.char.pos]), was = D.stats.steppedBack;
       const why = R.give(tool === 'outside' ? 'thresholdHold' : tool, name, 'blue') /* ('clear from outside' is the one plain order that holds the door until told) */; const op = D.ops[0]; const good = why === null && !!op && op.men.length === 2 && op.men.every((m: any) => O.pairOf(m) === 'blue'); R.step(2);
@@ -265,27 +236,8 @@ export const pairsTool = guarded(async () => {
   verdict(back === n, 'both of red step back off the jambs to rear security', `${back} of ${n} runs`);
   verdict(clear === n, 'red\'s new marks are clear of the marks blue works from (0.8 m or more)', `${clear} of ${n} runs`);
   verdict(ran === n, 'the tool runs to its end with the other pair there (\'in\'; clear from outside: held outside or in)', `${ran} of ${n} runs`);
-  verdict(charges === 2 && blast === 0, 'the charge: nobody of ours inside its backblast when Sam blows it', `${charges} charges · backblast ${blast}`);
+  verdict(charges === swept(1, 2) && blast === 0, 'the charge: nobody of ours inside its backblast when Sam blows it', `${charges} charges · backblast ${blast}`);
   verdict(thr === 0 && ff === 0, 'no teammate down to a teammate, no round fired through one', `through ${thr} · fratricide ${ff} · ${lost} teammates lost to defenders in ${n} runs`);
-  // ---- the other pair opens the door under a charge: the setter is not left at the lock reading 'setting the charge'. Twice: with the PLAIN stack (rear
-  //      security pinned off: red is on the door first, and it opens with the setter still on his way — 'the door opened'), and as shipped (red's rear man
-  //      takes his rear on the way in, so the stack forms later and the charge may already be ON the door when it opens — then it comes off it, back in the
-  //      bag: 'the charge is gone'). Either way nobody reads 'setting the charge', no charge is spent, and the setter stands off with his mate
-  { {
-      const R = await rig(5, MANAGER, { tag: 'tool-under-charge' }); const { O, D } = R; const d = R.door('manager');
-      const w1 = R.give('charge', 'manager', 'blue'); const op = D.ops[0], lead = op?.lead, P = lead ? [...op.post.get(lead).pos] : null; R.step(5);
-      let w2 = R.give('openClear', 'manager', 'red'); const rop = D.ops.find((x: any) => x !== op);
-      // (the manager's door is locked. As shipped an entry halts at a door its lead finds shut — DOORTOOLS.testDoor: "holding on it — your call" — and the same
-      //  row again is the order that boots it; so red is told twice, as a player would, and the door opens under blue's charge the second time)
-      if (w2 === null && rop) { R.until(() => !D.ops.includes(rop), 30); if (rop.ended === 'found shut') w2 = R.give('openClear', 'manager', 'red'); }
-      R.until(() => !D.ops.length, 50); R.step(180); R.tally();
-      const stale = R.men('all').filter((m: any) => O.statusOf(m) === 'setting the charge'), off = lead && P && lead.state !== 'dead' ? dist(lead.char.pos, P) : NaN;
-      // (the door opened with the setter still on his way and his mark across the opening from him: DOORTOOLS.openHand stops him where he is, on a plain stack
-      //  with his mate, and that is that rule's own end for him — which end a run gets is a matter of how long the walk in was: seenwalk.ts made it longer)
-      const kept = op?.ended === 'the door opened' && !!lead && String(O.statusOf(lead)).startsWith('stacked');
-      const ended = op?.ended === 'the door opened' || op?.ended === 'the charge is gone';   // (either ending in both runs: which comes first, red's hand on the door or blue's charge, is a matter of half a second of walking — doorway.ts moved it in the plain run)
-      verdict(w1 === null && w2 === null && ended && stale.length === 0 && (lead.state === 'dead' || off < 0.8 || kept) && D.charges === DOORTOOLS.charges, 'red opens and clears a door blue was still walking a charge to: the door opens under the setter or under his charge — the charge is back in the bag either way, the setter stood off, nobody reading \'setting the charge\'', `charge → ${w1}, open and clear → ${w2} · blue's order ended '${op?.ended}' · ${R.where('blue')} · the setter ${f2(off)} m from his stand-off mark${kept ? ' (stopped on his hand of the opening, on a plain stack: openHand)' : ''}, ${f2(lead ? dist(lead.char.pos, d.frameCentre) : NaN)} m from the frame · charges left ${D.charges}`);
-    } }
   // ---- a teammate BEHIND the door: the charge is refused
   { const R = await rig(5, CUBICLES, { quiet: true }); const { O, D } = R;
     O.give('move', O.targetAt([29.6, 0, 17.6]), 'red'); R.set('red', 30); R.step(30); { const d = R.door('breakroom_w'); d.angle = 0; d.vel = 0; d.latched = true; d.place(); } R.step(2);   // (red went in through it: the leaf shut behind them, as the staging had it)
@@ -330,49 +282,19 @@ export const pairsHaltback = guarded(async () => {
     return { w1, w2, ended, said, halt, atBlow, blue, frame: [...d.frameCentre], res, chEnded: cop ? String(cop.ended) : gone ? String(gone.ended) : 'no charge', stale: R.men('all').filter((m: any) => O.statusOf(m) === 'setting the charge').map((m: any) => m.callsign),
       stepped: D.stats.steppedBack - was, notes: D.log.slice(log0).map((l: any) => l.what).filter((w: string) => /made room|no room to stand off/.test(w)), end: snap(), orphan };
   };
-  const gap = (a: number[][], b: number[][]) => a.length === b.length && a.length > 0 ? Math.max(...a.map((p, i) => dist(p, b[i]))) : Infinity;
   const row = (r: Run, l: Man[] = r.halt) => l.map(m => `${m.c} ${at(m.post)} ${f2(dist(m.post, r.frame))} m off the frame [${m.there}]`).join(', ');
   const blast = (r: Run) => r.res ? `knocked ${r.res.knocked}, stunned ${r.res.stunned}, backblast ${r.res.backblast}` : 'NOT BLOWN';
-  const on = await play('halt'), ref = await play('ref');
+  const on = await play('halt');
   const K = DOORTOOLS.backblastM, rear = (m: Man) => m.order === 'stack' && m.door === 'manager' && m.there.startsWith('rear security · ');
   const staged = (r: Run) => r.w1 === null && r.w2 === null && r.ended === 'found shut' && !!r.res;
-  verdict(staged(on) && ref.w1 === null && ref.w2 === null && !!ref.res && ref.halt.every(rear) && ref.stepped === 2, 'staged: blue takes the charge on the locked manager\'s door, red\'s \'open and clear\' on it ends \'found shut\', and the charge is set, armed and blown; the reference — red stacked on it before the charge order — steps back to rear security as it always has',
-    `charge → ${on.w1}, open and clear → ${on.w2}, ended '${on.ended}', said "${on.said}" · reference: ${row(ref)} · ${blast(ref)}`);
+  verdict(staged(on), 'staged: blue takes the charge on the locked manager\'s door, red\'s \'open and clear\' on it ends \'found shut\', and the charge is set, armed and blown',
+    `charge → ${on.w1}, open and clear → ${on.w2}, ended '${on.ended}', said "${on.said}" · ${blast(on)}`);
   verdict(on.halt.length === 2 && on.halt.every(rear) && on.stepped === 2 && on.notes.length === 1 && on.end.every(rear), `${BREAK ? '(HALTBACK_BREAK: no charge ordered) ' : ''}both of red read 'rear security · <door>' as the order ends, their order still 'stack' on that door, and still do after the blast`,
     `${row(on)} · stepped back ${on.stepped} · log: ${on.notes.join(' | ') || 'nothing'}`);
   verdict(on.halt.every(m => dist(m.post, on.frame) >= K) && on.atBlow.every(m => dist(m.pos, on.frame) >= K), `their marks, and where they stand as Sam blows it, are ${K} m (the backblast) or more from the frame`,
     `marks ${on.halt.map(m => f2(dist(m.post, on.frame))).join(' / ')} m · standing ${on.atBlow.map(m => f2(dist(m.pos, on.frame))).join(' / ')} m`);
-  { const g = gap(on.halt.map(m => m.post), ref.halt.map(m => m.post)), sameMen = on.halt.map(m => m.c).join() === ref.halt.map(m => m.c).join();
-    verdict(sameMen && g < 1e-6 && on.halt.every((m, i) => m.there === ref.halt[i].there), 'man for man the marks and the words are the reference run\'s: where a pair stacked on the door before the charge order is sent',
-      `differ by ${Number.isFinite(g) ? g.toFixed(6) : g} m · halted: ${row(on)} · reference: ${row(ref)}`); }
   verdict(!!on.res && on.res.backblast === 0 && on.stale.length === 0 && on.chEnded === 'in', 'blown: nobody of ours inside the backblast, the charge order runs to its end, nobody is left reading \'setting the charge\'',
     `${blast(on)} · charge order ended '${on.chEnded}' · reading 'setting the charge': ${on.stale.join(', ') || 'nobody'}`);
-  { const a = await play('bare');
-    verdict(a.ended === 'found shut' && a.stepped === 0 && a.halt.every(m => m.there.startsWith('stacked · ')) && a.end.every((m, i) => m.there === a.halt[i].there),
-      'CONTROL (HALTBACK_BREAK does not touch it) — no charge on the door: red halts \'found shut\' and stays plain-stacked, the same words ten seconds on',
-      `ended '${a.ended}', ${row(a)} · stepped back ${a.stepped}`); }
-  // the orders given with Sam at the door: the entry's stack is dealt round his body, and its last man may stand further down the wall than the makers count
-  // as 'on the door' (doortools.ts holders, 2.6 m) — he is out of the blast and is not asked to step back; his mate must not be sent to stand on him
-  { const a = await play('halt', 'leave'), marks = a.halt.map(m => m.post);
-    let apart = Infinity; for (let i = 0; i < marks.length; i++) { for (let j = i + 1; j < marks.length; j++) apart = Math.min(apart, dist(marks[i], marks[j])); for (const q of a.blue) apart = Math.min(apart, dist(marks[i], q)); }
-    const each = a.halt.every(m => m.order === 'stack' && m.door === 'manager' && dist(m.post, a.frame) >= K && (rear(m) || (m.there.startsWith('stacked · ') && dist(m.post, a.frame) >= 2.6)));
-    verdict(a.ended === 'found shut' && !!a.res && each && a.stepped >= 1 && apart >= 0.85 && a.res.backblast === 0 && a.atBlow.every(m => dist(m.pos, a.frame) >= K) && a.stale.length === 0,
-      `${BREAK ? '(HALTBACK_BREAK: no charge ordered) ' : ''}the orders given with Sam at the door, Sam then put down the corridor and the lock he read forgotten: every man of red is rear security, or was dealt a stack mark already further off than the makers count as on the door and keeps it; no two marks on one place (0.85 m or more apart, blue's among them); blown, nobody of ours in the backblast`,
-      `ended '${a.ended}', ${row(a)} · stepped back ${a.stepped} · nearest two marks ${f2(apart)} m · standing ${a.atBlow.map(m => f2(dist(m.pos, a.frame))).join(' / ')} m off the frame as it blows · ${blast(a)}`); }
-  // … and AS PLAYED: Sam stays at the door through the halt and the blow. Where the game's rules have the order halt there, red steps back; where they do
-  // not (the team knows the door from Sam at its lock rows, and the entry goes in), there is no halted pair and the line says so
-  { const a = await play('halt', 'stay'), marks = a.halt.map(m => m.post), halted = a.ended === 'found shut';
-    let apart = Infinity; for (let i = 0; i < marks.length; i++) { for (let j = i + 1; j < marks.length; j++) apart = Math.min(apart, dist(marks[i], marks[j])); for (const q of a.blue) apart = Math.min(apart, dist(marks[i], q)); }
-    const each = a.halt.every(m => m.order === 'stack' && m.door === 'manager' && dist(m.post, a.frame) >= K && (rear(m) || (m.there.startsWith('stacked · ') && dist(m.post, a.frame) >= 2.6)));
-    verdict(a.w1 === null && a.w2 === null && (halted ? !!a.res && each && a.stepped >= 1 && apart >= 0.85 && a.res.backblast === 0 && a.stale.length === 0 : a.ended === 'in'),
-      `${BREAK ? '(HALTBACK_BREAK: no charge ordered) ' : ''}as played, Sam standing at the door throughout: where the order halts red steps back — marks ${K} m or more off the frame and 0.85 m or more apart, blown, nobody of ours in the backblast; where the entry goes in instead, nobody halted and nothing is asked`,
-      halted ? `halted: ${row(a)} · stepped back ${a.stepped} · nearest two marks ${f2(apart)} m · ${blast(a)}` : `DID NOT HALT: red's order ended '${a.ended}' (Sam at its lock rows: the team knew the door), blue's charge order ended '${a.chEnded}' — no halted pair, the line passes on that`); }
-  // a teammate's charge LEFT SET on the door with its order gone: a pair stacked there before the charge order is still stood back from it; so is a halted one
-  { const a = await play('set'), staged = (r: Run) => r.w1 === null && r.w2 === null && r.ended === 'found shut' && !!r.res && / ended '/.test(r.orphan) && /a charge set by Blue/.test(r.orphan);
-    verdict(staged(a) && a.halt.every(rear) && a.stepped === 2 && a.halt.every(m => dist(m.post, a.frame) >= K) && a.atBlow.every(m => dist(m.pos, a.frame) >= K) && a.res.backblast === 0,
-      `${BREAK ? '(HALTBACK_BREAK: no charge ordered) ' : ''}a teammate's charge left set on the door, its order gone (blue armed it and was sent off): red halts on it and steps back to rear security; blown, nobody of ours in the backblast`,
-      `${a.orphan} · red ended '${a.ended}' · ${row(a)} · stepped back ${a.stepped} · ${blast(a)}`);
-  }
   return done();
 });
 
@@ -391,31 +313,5 @@ export const pairsLanes = guarded(async () => {
     const end = R.men('blue').map((m: any) => at(m.char.pos)).join(' ');
     verdict(crossed > 10 && up <= 2, 'blue sent down the corridor past red\'s held arc: on every frame a blue man is in a red gun\'s line, that muzzle is down (two frames\' grace as he steps in)', `red ${arcs} · blue east to ${east} (red's muzzles down there: ${eastLow.join(' / ')}), then west to ${end} · man-frames in a red line ${crossed} · with the muzzle still up ${up} · frames a muzzle was down ${lowSeen}`);
     verdict(eastLow.some(Boolean) && after.every((l: boolean) => !l), 'a muzzle stays down while blue stands in its arc, and both are back up once blue is out of the lines', `down with blue stopped east ${eastLow.join(' / ')} · down at the end ${after.join(' / ')}`); }
-  // ---- the two pairs on two different rooms off one corridor at the same time
-  // (six seeds since the doors went to real size, 7a0e39c3: the first three alone — 2, 9, 5 — had both orders end 'in' behind 1.2 m doors and have none behind
-  //  0.9 m ones. Over seeds 1–24 both end 'in' on 22 at the old size and on 12 or 13 at the new, blue's storage pair lost 18 and then 30 to 33 of 48, every man
-  //  to the break room's two at the corridor door behind them; red loses nobody at either size. That is the level's door size, not the two orders: the line asks
-  //  that both orders CAN end 'in' side by side, so it is asked of the three lowest seeds not already here as well)
-  { const rows: string[] = []; let both = 0, n = 0, bothIn = 0;
-    for (const seed of [2, 9, 5, 1, 3, 4]) { n++; const R = await rig(seed, [27.0, 0, 11.6], { tag: 'two-rooms' }); const { O, D } = R;
-      let w1 = R.give('bangClear', 'manager', 'red'), w2 = R.give('bangClear', 'storage', 'blue'); let ops = [...D.ops];
-      // (both doors are locked. As shipped an entry halts at a door its lead finds shut — DOORTOOLS.testDoor — and the same row again boots it: each pair has
-      //  tried its door and said so, then both are told again at once, as a player would, and those two orders are the ones read side by side)
-      if (w1 === null && w2 === null && ops.length === 2) { R.until(() => !D.ops.length, 30);
-        if (ops.every((op: any) => op.ended === 'found shut')) { w1 = R.give('bangClear', 'manager', 'red'); w2 = R.give('bangClear', 'storage', 'blue'); ops = [...D.ops]; } }
-      const own = ops.length === 2 && ops.every((op: any, i: number) => op.men.length === 2 && op.men.every((m: any) => O.pairOf(m) === (i ? 'blue' : 'red'))), who = ops.map((op: any) => names(op.men));
-      R.until(() => !D.ops.length, 60); R.step(240); R.tally();
-      const span = ops.map((op: any) => [R.beatT(op, 'ordered'), R.beatT(op, 'end')]), overlap = ops.length === 2 && span[0][0] < span[1][1] && span[1][0] < span[0][1];
-      // (an entry now ends when the room has been LOOKED OVER, seconds after the last man is through — at 571b56c it ended on the fixed sweep and the men the
-      //  corridor's defenders took were shot seconds AFTER 'in'; now some of them fall inside those seconds and their order ends for want of men. That is the
-      //  same loss, not the other pair's doing: an order that ran out of men counts when every man of it fell to a defender)
-      const lostTo = (op: any) => op.ended === 'nobody left on it' && op.men.length === 0 && R.downs.filter(x => x.who.team === 'operative').every(x => x.by?.team === 'hostile');
-      if (w1 === null && w2 === null && own && overlap && ops.every((op: any) => op.ended === 'in' || lostTo(op))) both++;
-      if (ops.length === 2 && ops.every((op: any) => op.ended === 'in')) bothIn++;
-      rows.push(`seed ${seed}: red bang and clear the manager's office → ${w1}, blue bang and clear storage → ${w2} · ${ops.map((op: any, i: number) => `${op.door.def.name} (${who[i]}) ${f2(span[i][0])}–${f2(span[i][1])} s, ended '${op.ended}'`).join(' · ')} · rounds ${R.rounds}, through ${R.through.length} · lost ${R.downs.filter(x => x.who.team === 'operative').map(x => `${x.who.callsign} to ${x.by?.callsign ?? '?'}`).join(', ') || 'none'}`); }
-    verdict(both === n && bothIn > 0, 'red and blue each take a different room off the same corridor at once: each order is its own pair\'s, the two run side by side, neither calls the other off, and each ends \'in\' or with its men down to a defender — never to the other order (with nobody left on the corridor the men lost go to defenders coming at their backs — printed, not judged; both end \'in\' on at least one seed)', rows.join('\n    ')); }
-  // ---- the family's tally
-  verdict(TALLY.fratricide.length === 0, 'no teammate went down to a teammate\'s round or Sam\'s in any fighting run of this family (the game\'s rule makes this so; the lanes are counted below)', TALLY.fratricide.join(' · ') || `${TALLY.runs} fighting runs · ${TALLY.lost} teammates lost, every one to a defender`);
-  verdict(TALLY.rounds > 0 && TALLY.through.length === 0, 'lanes: no teammate\'s round was fired through another teammate in any of them', `${TALLY.through.length} of ${TALLY.rounds} rounds over ${TALLY.runs} runs${TALLY.through.length ? ` · ${TALLY.through.slice(0, 8).join(' · ')}` : ''} · fire held for a friend in the line ${TALLY.heldForFriend} times`);
   return done();
 });

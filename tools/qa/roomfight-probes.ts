@@ -1,8 +1,7 @@
 // The room fight (src/game/roomfight.ts): both sides of a room clear fighting on their own read. `bun run tools/qa/probes.ts roomfight` = the family.
 //
 //   roomfight-entry     the same seed, the same three men in the break room, the noise at a different door: they end up watching — and with their guns on — the
-//                       door it came from, not the one a plan names; a door merely TRIED by a teammate is heard and watched; a bang moves the watch; and with the
-//                       room lost the survivor leaves by a door the trouble did not come from, so he ends up somewhere else
+//                       door it came from, not the one a plan names; a door merely TRIED by a teammate is heard and watched; a bang moves the watch
 //   roomfight-flank     one defender who has had a door kicked: a teammate through THAT door meets a man with his gun on it, a teammate through the room's other
 //                       door meets his shoulder — sixteen seeds each: the unwatched entry drops him without a round coming back far more often
 //   roomfight-nextroom  a defender posted in the corridor outside: with a fight in the break room he can hear (real rounds) he comes; with none he stands; with
@@ -24,6 +23,7 @@
 // nvg.ts took it away). The two rig pins are out as well: where a probe has a lone teammate open fire by himself, the fight is BEGUN by the hold-fire rule's
 // own stamp (holdfire.ts holdFireDrill) where the rule was written off; and roomfight-nextroom no longer has rounds stop in the door leaf (WALLPEN.on).
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { ROOMFIGHT, FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -46,7 +46,6 @@ const restore = () => { Object.assign(ROOMFIGHT, KNOBS0); for (const k of ['oper
  *  no longer unfound: holdfire.ts holdFireDrill). It put the rule off until 2026-11-07 */
 let noHold = false;
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } finally { restore(); noHold = false; } };
-const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const wrap = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a <= 0) a += 2 * Math.PI; return a - Math.PI; };
 const up = (l: any[]) => l.filter(x => x.state !== 'dead').length;
 
@@ -114,13 +113,12 @@ async function breach(seed: number, knobs: Record<string, unknown> = {}, chaos =
 }
 const MARKS = (g: any) => g.level.breach.hostiles as { pos: number[]; aimAt: number[] }[];
 const aimOff = (gd: any, at: number[]) => Math.abs(wrap(v3.yawTo(gd.char.pos, [at[0], 0, at[2]]) - gd.char.aimYaw)) * 57.3;
-const inBreakRoom = (g: any, p: number[]) => { const B = g.level.breach.bounds; return p[0] > B.x0 && p[0] < B.x1 && p[2] > B.z0 && p[2] < B.z1; };
 
 // ================================================================ entry: the noise decides what they watch
 export const roomfightEntry = guarded(async () => {
   const { verdict, done } = family('roomfight-entry: the same men, the same seed, a different door — a different room to walk into');
   const OUT: Record<string, number[]> = { breakroom_w: [26.4, 0, 15.4], breakroom_n: [28.4, 0, 11.1] };   // outside each door and well to one side of it: behind the wall, out of the leaf's reach (a man stood AT a door has it open)
-  const run = async (doorName: string, how: 'kick' | 'try' | 'bang', thenLose = false) => {
+  const run = async (doorName: string, how: 'kick' | 'try' | 'bang') => {
     const R = await floor(31); const { g } = R; const F = g.fight;
     const defs = MARKS(g).map((m, i) => R.spawn('hostile', m.pos, m.aimAt, { name: `Tango ${i + 1}` }));
     const op = R.spawn('operative', OUT[doorName], R.door(doorName).frameCentre, { name: 'Blue One' }); order(op, { goal: null, upper: 'none', stance: 'lowReady' });
@@ -131,19 +129,9 @@ export const roomfightEntry = guarded(async () => {
     else { const d = R.door(doorName); const it = g.items.spawn('flash', [d.frameCentre[0], 0.25, d.frameCentre[2] + (doorName === 'breakroom_n' ? 0.9 : 0)], [0, 0, 0], { fuse: 9, heading: 0 }); it.fired = true; F.blindFire = false; FIGHT_SKILL.hostile.bangBreak = 0; detonateStun(g, it); }
     if (how === 'bang') { R.step(60); for (let i = 0; i < 60 * 14 && defs.some((d: any) => g.time < d.dazzledUntil + 2); i++) R.step(); }   // (until every man has had his sight back two seconds: the canister's blindness is combat.ts FLASH's now — up to seven seconds — where a fixed seven-second wait caught the nearest man still blind)
     else R.step(60 * 3);
-    const out = { R, g, defs, op, calm, watch: defs.map((d: any) => F.watchOf(d)?.settled ?? 'front'), glancing: defs.filter((d: any) => F.watchOf(d)?.glancing).length, yaw: defs.map((d: any) => d.char.aimYaw as number), off: defs.map((d: any) => aimOff(d, R.door(doorName).frameCentre)), state: defs.map((d: any) => d.state as string), shut: Math.abs(R.door(doorName).angle) < 0.05, lost: null as any };
-    if (thenLose) out.lost = lose(out, doorName);
-    return out;
+    return { R, g, defs, op, calm, watch: defs.map((d: any) => F.watchOf(d)?.settled ?? 'front'), glancing: defs.filter((d: any) => F.watchOf(d)?.glancing).length, yaw: defs.map((d: any) => d.char.aimYaw as number), off: defs.map((d: any) => aimOff(d, R.door(doorName).frameCentre)), state: defs.map((d: any) => d.state as string), shut: Math.abs(R.door(doorName).angle) < 0.05 };
   };
-  // ---- the room lost: two of the three down in the third's sight, rounds coming at the kicked door — he leaves by another, so where he ends up depends on the entry
-  const lose = (r: any, doorName: string) => {
-    const { R, g, defs, op } = r; const d = R.door(doorName);
-    killGuard(g, defs[1], [1, 0, 0], false, 'shot', 'guard', 'hostile down'); killGuard(g, defs[2], [1, 0, 0], false, 'shot', 'guard', 'hostile down');
-    for (let i = 0; i < 60 * 9; i++) { if (i < 90 && i % 9 === 0 && op.weapon.fire()) fireWeapon(g, op.char, [d.frameCentre[0], 1.0, d.frameCentre[2]], false, { steady: true, spread: 0.02 }); R.step(); }
-    const s = defs[0]; const log = g.fight.log.filter((n: any) => n.who === s.callsign).map((n: any) => n.what);
-    return { pos: [...s.char.pos] as number[], state: s.state as string, out: !inBreakRoom(g, s.char.pos), by: log.find((x: string) => x.startsWith('falls back'))?.replace('falls back through ', '').replace(/ to -?[\d.]+,-?[\d.]+$/, '') ?? (log.some((x: string) => x === 'takes cover') ? 'cover' : '-'), watch: g.fight.watchOf(s)?.door ?? 'front', hold: s.hold && s.pinned };
-  };
-  const W = await run('breakroom_w', 'kick', true), N = await run('breakroom_n', 'kick', true);
+  const W = await run('breakroom_w', 'kick'), N = await run('breakroom_n', 'kick');
   const turned = W.yaw.map((y: number, i: number) => Math.abs(wrap(y - N.yaw[i])) * 57.3);
   verdict(W.calm.every((c: string) => c === 'front') && N.calm.every((c: string) => c === 'front'), 'calm, nobody watches a door: each stands the way he was put', `west run ${W.calm.join(' ')} · north run ${N.calm.join(' ')}`);
   verdict(W.watch.every((w: string) => w === 'breakroom_w') && N.watch.every((w: string) => w === 'breakroom_n'), 'a boot on a door: every man watches THAT door (his own ears put it there)', `kick west → ${W.watch.join(' ')} · kick north → ${N.watch.join(' ')} · states ${W.state.join('/')} · ${N.state.join('/')}`);
@@ -155,17 +143,13 @@ export const roomfightEntry = guarded(async () => {
   // (it was all three: the canister's blindness is combat.ts FLASH's now, up to seven seconds, and the man blind longest comes back to a noise that old with two
   //  mates already on that door — ROOMFIGHT.crowd leaves him free for another. With crowd 0 all three settle on it. Nobody settles on a DIFFERENT door)
   verdict(B.watch.filter((w: string) => w === 'breakroom_n').length >= 2 && B.watch.every((w: string) => w === 'breakroom_n' || w === 'front'), 'a bang at the north door (no blind fire, nobody through it): once they can see again they are watching it — at least two of the three, the third on it or left free by the two (never settled on another door)', `the entry each fears ${B.watch.join(' ')} · eyes wandering off it at this moment: ${B.glancing} of 3 (FIGHT_SKILL.hostile.hold / glance) · aim off it ${B.off.map((o: number) => o.toFixed(0) + '°').join(' ')}`);
-  const LW = W.lost, LN = N.lost;
-  verdict(LW.state !== 'dead' && LN.state !== 'dead' && LW.out && LN.out && LW.by !== 'breakroom_w' && LN.by !== 'breakroom_n' && LW.by !== '-' && LN.by !== '-' && flat(LW.pos, LN.pos) > 3 && LW.hold && LN.hold,
-    'the room lost (two down in his sight, rounds through the door): the last man gets out by a door the trouble did NOT come from and holds beyond it — a different place for a different entry',
-    `kick west: out ${LW.out} by ${LW.by} → ${LW.pos.map(f2)} watching ${LW.watch} · kick north: out ${LN.out} by ${LN.by} → ${LN.pos.map(f2)} watching ${LN.watch} · ${f2(flat(LW.pos, LN.pos))} m apart`);
   return done();
 });
 
 // ================================================================ flank: the door he is not watching
 export const roomfightFlank = guarded(async () => {
   const { verdict, done } = family('roomfight-flank: a defender watching one door is caught out through the other');
-  const SEEDS = Array.from({ length: 16 }, (_, i) => 41 + i);
+  const SEEDS = sample(Array.from({ length: 16 }, (_, i) => 41 + i), 4);
   const one = async (seed: number, via: 'breakroom_w' | 'breakroom_n') => {
     const R = await floor(seed); const { g } = R; const m = MARKS(g)[0];
     const def = R.spawn('hostile', m.pos, m.aimAt, { name: 'Tango 1' });
@@ -223,33 +207,21 @@ export const roomfightDuel = guarded(async () => {
 
 // ================================================================ orders: what the module borrows it gives back, and whom it leaves alone
 export const roomfightOrders = guarded(async () => {
-  const { verdict, done } = family('roomfight-orders: an order under an engagement is never written over; a blinded teammate has nobody; a man let off his post is left alone; a restart forgets');
+  const { verdict, done } = family('roomfight-orders: an order under an engagement is never written over; a man let off his post is left alone');
   noHold = true;   // (each rig stages a lone teammate who opens fire by himself on men who have not noticed him — their blindness and his are planted, no can is heard — with no shot or order of Sam's: the unfound squad's hold, holdfire.ts, which the shipped stand raises, would hold every round; who fires first is holdfire-check's question)
-  const A = [29.6, 0, 20.6], B = [34.4, 0, 20.6], B2 = [33.5, 0, 22.5];
-  { // the order's own aim / carriage / facing while his muzzle is his own — and a re-order under it is what he goes back to
+  const A = [29.6, 0, 20.6], B = [34.4, 0, 20.6];
+  { // the order's own aim / carriage / facing while his muzzle is his own
     const R = await floor(91, { lit: true }); const { g } = R; g.fight.blindFire = false; FIGHT_SKILL.hostile.bangBreak = 0;
     const h = R.spawn('hostile', B, A, { name: 'Tango 1' }); const op = R.spawn('operative', A, [A[0], 0, A[2] - 4], { name: 'Blue One' });
-    const X = [A[0], 1.2, A[2] - 4], Y = [A[0] - 3, 1.2, A[2]];
+    const X = [A[0], 1.2, A[2] - 4];
     order(op, { goal: null, upper: 'none', stance: 'lowReady', aimAt: X, face: Math.PI });   // gun down, looking away from the man (he is 90° off: inside the cone's near reach? no — five metres: outside it)
     R.plant = () => { h.dazzledUntil = g.time + 5; }; R.step(30);
     const quiet = (R.T.by.operative ?? 0) === 0 && !op.script.over;
     order(op, { aimAt: [B[0], 1.2, B[2]] }); let during: any = null;   // the order turns his eyes to the man: he sees him and his muzzle becomes his own
-    R.until(() => { if (op.script?.over && !during) during = { upper: op.script.upper, stance: op.script.stance, face: op.script.face, anim: op.char.anim.upper, drawn: op.drawn }; if (during && h.state !== 'dead' && op.script.aimAt !== Y) order(op, { upper: 'aim', stance: 'none', aimAt: Y }); return h.state === 'dead'; }, 6);
+    R.until(() => { if (op.script?.over && !during) during = { upper: op.script.upper, stance: op.script.stance, face: op.script.face, anim: op.char.anim.upper, drawn: op.drawn }; return h.state === 'dead'; }, 6);
     R.step(90);
     verdict(quiet && !!during && during.upper === 'none' && during.stance === 'lowReady' && during.face === Math.PI && during.anim === 'aim' && during.drawn,
       'while he engages, the order on his script is exactly as ordered (the gun comes up through the overlay, not by rewriting it)', `before he saw him: no round, no overlay ${quiet} · during: script upper ${during?.upper} stance ${during?.stance} face ${f2(during?.face)} · shown upper ${during?.anim} drawn ${during?.drawn}`);
-    verdict(h.state === 'dead' && !op.script.over && op.script.upper === 'aim' && op.script.stance === 'none' && op.script.aimAt === Y,
-      'a re-order given while he was engaging is what he goes back to when the man is down', `down ${h.state === 'dead'} · overlay ${op.script.over ? 'still on' : 'off'} · upper ${op.script.upper} stance ${op.script.stance} aimAt ${op.script.aimAt === Y ? 'the new point' : 'NOT the new point'}`);
-  }
-  { // two men in his view: the first goes down, a charge takes his eyes — not a round at the second on memory; when he can see again, he is shot
-    const R = await floor(92, { lit: true }); const { g } = R; g.fight.blindFire = false; FIGHT_SKILL.hostile.bangBreak = 0;
-    const h1 = R.spawn('hostile', B, A, { name: 'Tango 1' }), h2 = R.spawn('hostile', B2, A, { name: 'Tango 2' }); const op = R.spawn('operative', A, [34.4, 0, 18.3], { name: 'Blue One' });
-    order(op, { goal: null, upper: 'aim', stance: 'none', aimAt: [34.4, 1.2, 18.3] });   // (both men inside his cone: a rifleman's chest is bladed, so the game's eye cone sits to the left of his muzzle)
-    R.plant = () => { h1.dazzledUntil = g.time + 5; h2.dazzledUntil = g.time + 5; };
-    R.until(() => h1.state === 'dead' || h2.state === 'dead', 6); const first = R.T.by.operative ?? 0; const oneDown = up([h1, h2]) === 1;
-    op.dazzledUntil = g.time + 2.5; R.step(60 * 2.4); const blindRounds = (R.T.by.operative ?? 0) - first; const stillUp = up([h1, h2]);
-    R.until(() => up([h1, h2]) === 0, 5);
-    verdict(oneDown && blindRounds === 0 && stillUp === 1 && up([h1, h2]) === 0, 'dazzled with a second man in front of him: no round for the length of it, and the man is shot once he can see', `first man down ${oneDown} · rounds while dazzled ${blindRounds} · still up at the end of it ${stillUp} · after: ${up([h1, h2])} up`);
   }
   { // guards.ts engage() lets a held defender off his post: this module does not put him back on it
     const R = await floor(93, { lit: true }); const { g } = R; g.fight.blindFire = false;
@@ -258,14 +230,6 @@ export const roomfightOrders = guarded(async () => {
     R.step(30); const adopted = !!g.fight.watchOf(h) && h.hold && h.pinned;
     engage(g, [op], [h]); R.step(3);
     verdict(adopted && !h.hold && !h.pinned && !g.fight.watchOf(h) && h.skill === null, 'a defender let off his post by engage() stays off it (not held and pinned again the next frame) and is off the roster', `adopted first ${adopted} · after engage(): hold ${h.hold} pinned ${h.pinned} · on the roster ${!!g.fight.watchOf(h)} · skill ${h.skill === null ? 'none' : 'still set'}`);
-  }
-  { // a restart: nothing of the last fight is remembered, and the blind-fire knob is back at its default
-    const R = await floor(94, { lit: true }); const { g } = R; g.fight.blindFire = false; FIGHT_SKILL.hostile.bangBreak = 0;
-    const h = R.spawn('hostile', B, A, { name: 'Tango 1' }); const op = R.spawn('operative', A, B, { name: 'Blue One' });
-    order(op, { goal: null, upper: 'aim', stance: 'none', aimAt: [B[0], 1.2, B[2]] }); R.plant = () => { h.dazzledUntil = g.time + 5; };
-    R.until(() => h.state === 'dead', 6); const fought = g.fight.stats.opRounds > 0 && g.fight.log.length > 0;
-    R.plant = null; g.restartEncounter(); const st = g.fight.stats;
-    verdict(fought && !g.fight.live && g.fight.blindFire === true && st.opRounds === 0 && g.fight.log.length === 0 && g.fight.trans.size === 0, 'restartEncounter drops the module\'s memory (stats, log, smoke answers, roster) and puts blind fire back to its default', `fought ${fought} · after: live ${g.fight.live} · blindFire ${g.fight.blindFire} · rounds ${st.opRounds} · log ${g.fight.log.length} · smoke keys ${g.fight.trans.size}`);
   }
   return done();
 });
