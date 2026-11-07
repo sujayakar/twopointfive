@@ -51,6 +51,11 @@ tools/blitz/rust.sh rust bun run tools/qa/playthrough.ts --scn depot-four --seed
 `start()` THROWS, naming the tool's line, for a new start from a puppet that holds a man the apply made (a man the Rust game made has no store row or
 pose store on the TypeScript side).
 
+**A game the tool has let go is freed.** Nothing in the host keeps a game alive: what a host holds in the module (its game's handle, the clone kept as
+its slot went, the games kept for saves and snapshots) is in a cell of its own, and the host's lists hold hosts weakly. As the next game is attached, and
+before a slot is taken from a game still held, every host the collector has taken gives back what it held (`reap`). A tool that wants a game kept holds
+the game. (Before this the call surface listed every host that ever stood: 25 games stood back to back grew the heap 276 MB.)
+
 **A slot given up** (rust/sim has four; a tool that stands a fifth game takes the slot of the game stepped longest ago) keeps a clone of its game in
 the module; stepped again, the game stands again from it (`restep`). Only the last six games that gave a slot up keep theirs: an older one's re-step
 THROWS and names the tool's line. `tools/blitz/keep-check.ts` holds all of this under either word.
