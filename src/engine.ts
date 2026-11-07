@@ -11,7 +11,7 @@ import { LightingPasses, type FireRecord } from './render/passes';
 import { LightSet, cardSlotsFor, type RtLight } from './render/lights';
 import { emissiveDayK } from './render/photometry';
 import { lookVeilFrame } from './render/lookveil';
-import { PowderField, powderDrawWord } from './render/powderField';
+import { PowderField, powderDrawWord, powderWarm } from './render/powderField';
 import { PlaceField } from './render/placeField';
 import { PlaceMap } from './scene/placePlan';
 import { WallSides } from './render/wallSides';
@@ -402,9 +402,9 @@ export class Engine {
   /** THE LOOK PROTOTYPE's place field, made once (render/placeField.ts); a device that cannot make it is asked once and no more */
   /** NOTHING IS COMPILED AT ITS FIRST USE. The fog of war's sight table and its pass made their programs the first frame a mission drew the fog: the title
    *  never built them, so the first squad mission of a visit compiled three programs (and their cut twins after them) under play. The page asks for them
-   *  here, once its boot's own are in (main.ts, after the boot's freeze): they compile behind the start like the rest of the background set, nothing waits
-   *  for them, and on the kept page (gpu/keep.ts) a mission finds them made. A pass that gains a program of its own asks for it here too. */
-  warmFirstUse(): void { this.fogSight.warm(); this.passes.warmFog(); }
+   *  here, once its boot's own are in (main.ts, after the boot's freeze): they compile behind the start, counted with the later set while they do (a brief's
+   *  Start waits for them), and on the kept page (gpu/keep.ts) a mission finds them made. A pass that gains a program of its own asks for it here too. */
+  warmFirstUse(): void { this.fogSight.warm(); this.passes.warmFog(); if (lookConfig.on) powderWarm(this.device); }   // (the look's loose snow steps only on a snow level of the look's page: asked for on that page's every level)
   private buildPlace(): void { if (this.place || this.placeDead) return; try { this.place = new PlaceField(this.device, this.rc.diceView); } catch (err) { console.warn('place field: not built on this device', err); this.placeDead = true; } }
 
   /** true once init() has resolved: every boot pipeline exists and render() may run */
