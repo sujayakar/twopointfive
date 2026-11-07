@@ -2528,7 +2528,7 @@ if (on('kitpack', 'kit', 'all')) await run('kitpack', async () => (await import(
 if (on('kitdeal-run', 'kitdeal', 'kit', 'all')) await run('kitdeal-run', async () => (await import('./kitdeal-check.ts')).dealRun());   // the same run by digest; cards dealt for four staged smaller; a mission's own issue
 if (on('kitdeal-screen', 'kitdeal', 'kit', 'all')) await run('kitdeal-screen', async () => (await import('./kitdeal-check.ts')).dealScreen());   // the roster of four on the Team & kit screen
 if (on('kitdeal-stands', 'kitdeal', 'kit', 'all')) await run('kitdeal-stands', async () => (await import('./kitdeal-check.ts')).dealStands());   // the two stands, the registry, a recording's tables
-// THE BALLISTIC SHIELD IS GONE FROM THE GAME (10-18; tools/qa/noshield-check.ts — the same lines on either stand: there is no switch left to differ in)
+// THE BALLISTIC SHIELD IS GONE FROM THE GAME (10-18; tools/qa/noshield-check.ts: there is no switch left for the lines to differ in)
 if (on('noshield-gone', 'noshield', 'all')) await run('noshield-gone', async () => (await import('./noshield-check.ts')).noshieldGone());            // no module, no knob table, no stand's word, no Tab row, no key of the kit view
 if (on('noshield-card', 'noshield', 'kit', 'all')) await run('noshield-card', async () => (await import('./noshield-check.ts')).noshieldCard());        // no card offers one; a stored or pasted card that says shield is a card without, and is saved without the word
 if (on('noshield-staged', 'noshield', 'all')) await run('noshield-staged', async () => (await import('./noshield-check.ts')).noshieldStaged());        // the long hall stages in the plain issue; no level issues one, and one that says so is refused in words; no mission's words name one
@@ -3023,7 +3023,7 @@ if (on('enemysquads-radiocheck', 'enemysquads', 'all')) await run('enemysquads-r
 if (on('cues-lines', 'cues', 'all')) await run('cues-lines', async () => (await import('./cues-probes.ts')).cuesLines());
 if (on('cues-strip', 'cues', 'all')) await run('cues-strip', async () => (await import('./cues-probes.ts')).cuesStrip());
 if (on('cues-run', 'cues', 'all')) await run('cues-run', async () => (await import('./cues-probes.ts')).cuesRun());
-// the last few defenders of a room clear (game/laststand.ts — two switches, both off as shipped): tools/qa/laststand-probes.ts
+// the last few defenders of a room clear (game/laststand.ts — the call out, settled on, and the regroup, an open decision the page has off): tools/qa/laststand-probes.ts
 if (on('laststand-callout', 'laststand', 'all')) await run('laststand-callout', async () => (await import('./laststand-probes.ts')).lastStandCallOut());
 if (on('laststand-regroup', 'laststand', 'all')) await run('laststand-regroup', async () => (await import('./laststand-probes.ts')).lastStandRegroup());
 if (on('laststand-keep', 'laststand', 'all')) await run('laststand-keep', async () => (await import('./laststand-probes.ts')).lastStandKeep());
@@ -3210,7 +3210,7 @@ for (const [nm, fn] of [['moves-off', 'movesOff'], ['moves-recoil', 'movesRecoil
 // ---------------------------------------------------------------- a hit can wound a man instead of killing him (wounds-probes.ts; game/wounds.ts WOUND.on, off as shipped): the rule as geometry, off = every hit kills, the state, both sides, no counter, checkpoints + found
 for (const [nm, fn] of [['wounds-zone', 'woundsZone'], ['wounds-off', 'woundsOff'], ['wounds-state', 'woundsState'], ['wounds-both', 'woundsBoth'], ['wounds-again', 'woundsAgain'], ['wounds-save', 'woundsSave'], ['wounds-play', 'woundsPlay']] as const)
   if (on(nm, 'wounds', 'all')) await run(nm, async () => ((await import('./wounds-probes.ts')) as any)[fn]());
-// ---------------------------------------------------------------- turning with the weapon's weight (moves-probes.ts; character.ts TURN): off = the yaws as written; on = a run-up, a top rate by the weapon, no overshoot, the AI's easings still arrive
+// ---------------------------------------------------------------- turning with the weapon's weight (moves-probes.ts; character.ts TURN, settled on): a man nobody weighs keeps the yaws as written; a weighed one has a run-up, a top rate by the weapon, no overshoot, and the AI's easings still arrive
 for (const [nm, fn] of [['turn-off', 'turnOff'], ['turn-weight', 'turnWeight'], ['turn-easing', 'turnEasing'], ['turn-game', 'turnGame']] as const)
   if (on(nm, 'turn', 'moves', 'all')) await run(nm, async () => ((await import('./moves-probes.ts')) as any)[fn]());
 // ---------------------------------------------------------------- a room entry's men on real paths through the door (doorpath-probes.ts; game/doorpath.ts DOORPATH): on = nobody in a leaf, through a friend or in a jamb, one file a body apart; off = the runs as they were.
