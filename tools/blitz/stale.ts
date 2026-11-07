@@ -5,7 +5,7 @@
 // it to the Rust game's whole state, and every RH_STALE_EVERY ticks (300) before that (tools/blitz/rust-host.ts `staleLook`); this reads the file and says,
 // a field a line: which list it is on, in how many of the games and of the looks it differed, one of the places, and (with --readers) whether something the page runs reads it.
 //   RH_STALE=/tmp/stale.tsv bun run tools/qa/playthrough.ts --scn night-breach --seeds 1
-//   bun run tools/blitz/stale.ts /tmp/stale.tsv [--readers puppet-readers.tsv [--page]] [--all] [--tsv]     --page: only the fields the page reads
+//   bun run tools/blitz/stale.ts /tmp/stale.tsv [--readers puppet-readers.tsv [--page | --read]] [--all] [--tsv]     --page: only the fields the picture, the sound, the HUD or the page's host reads · --read: only those any surviving code reads (the simulation code that stays and the tools too)
 //   exit 0: no field on no list differed · 1: at least one did (--all also prints the fields on the every-tick list that differed: the host's dress step
 //   and a tool's own writes since the last apply are among them, they are not faults by themselves)
 // A RUN UNDER RH_STALE IS A LOOK, NOT A TALLY: the play is the same (night-breach seed 1: the digest series equal), but a look exports the puppet whole,
@@ -18,7 +18,7 @@ const L = JSON.parse(readFileSync(`${import.meta.dir}/puppet-lists.json`, 'utf8'
 // THE READERS TABLE (a line a TypeScript field: `Type.field`, then columns of how many places read it, by kind): a field counts as read by the page where
 // the picture, the sound, the HUD or the page's host reads it. The wire names a field in Rust's spelling; the schema has the TypeScript's.
 const readersFile = arg('--readers'); let readers: Map<string, string> | null = null;
-if (readersFile) { readers = new Map(); const T = readFileSync(readersFile, 'utf8').split('\n').map(l => l.split('\t')), H = T[0], col = (n: string) => H.indexOf(n), K = ['picture', 'sound', 'hud or menu', 'page host'].map(col).filter(i => i >= 0);
+if (readersFile) { readers = new Map(); const T = readFileSync(readersFile, 'utf8').split('\n').map(l => l.split('\t')), H = T[0], col = (n: string) => H.indexOf(n), K = (has('--read') ? ['picture', 'sound', 'hud or menu', 'page host', 'simulation code that stays', 'other pages', 'net', 'tools'] : ['picture', 'sound', 'hud or menu', 'page host']).map(col).filter(i => i >= 0);
   for (const r of T.slice(1)) { if (!r[0]) continue; const by = K.map(i => +r[i] ? `${H[i]} ${r[i]}` : '').filter(Boolean); readers.set(r[0], by.join(', ')); } }
 const SCHEMA = JSON.parse(readFileSync(`${import.meta.dir}/schema.json`, 'utf8'));
 const tsName = (q: string): string => { const [ty, f] = [q.slice(0, q.lastIndexOf('.')), q.slice(q.lastIndexOf('.') + 1)], T = SCHEMA.types?.[`crate::${ty}`], F = T?.fields?.find((x: any) => x.rust === f); return `${ty.split('::').pop()}.${F?.ts ?? f}`; };
@@ -32,9 +32,9 @@ for (const l of readFileSync(file, 'utf8').split('\n')) { if (!l) continue; cons
   const r = rows.get(c[0]) ?? { q: c[0], games: 0, places: 0, eg: c[2], looks: 0 }; r.games++; r.places += +c[1]; r.looks += +(c[3] ?? 1); rows.set(c[0], r); }
 const all = [...rows.values()].map(r => ({ ...r, list: listOf(r.q), read: readBy(r.q) }));
 const off = all.filter(r => r.list !== 'every tick').sort((a, b) => a.list.localeCompare(b.list) || b.games - a.games || a.q.localeCompare(b.q)), on = all.filter(r => r.list === 'every tick').sort((a, b) => b.games - a.games);
-const line = (r: typeof all[number]) => has('--tsv') ? [r.q, r.list, r.games, r.looks, r.places, r.read, r.eg].join('\t') : `  ${r.list.padEnd(10)} ${r.q}  · ${r.games} of ${held} games, ${r.looks} of ${looks} looks${readers ? ` · ${r.read === 'not in the table' ? 'not in the readers table' : r.read ? `THE PAGE READS IT (${r.read})` : 'no page reader'}` : ''} · e.g. ${r.eg}`;
+const line = (r: typeof all[number]) => has('--tsv') ? [r.q, r.list, r.games, r.looks, r.places, r.read, r.eg].join('\t') : `  ${r.list.padEnd(10)} ${r.q}  · ${r.games} of ${held} games, ${r.looks} of ${looks} looks${readers ? ` · ${r.read === 'not in the table' ? 'not in the readers table' : r.read ? `READ BY ${r.read}` : 'no page reader'}` : ''} · e.g. ${r.eg}`;
 console.log(`stale: ${games} games in the file, ${held} held to their Rust game in ${looks} looks · ${off.length} fields that are not sent every tick differ on the puppet (${off.filter(r => r.list === 'NO LIST').length} on no list, ${off.filter(r => r.list === 'START ONLY').length} sent at a start only) · ${on.length} fields on the every-tick list differ`);
-for (const r of off) if (!has('--page') || (r.read && r.read !== 'not in the table' && r.read !== '?')) console.log(line(r));
+for (const r of off) if (!(has('--page') || has('--read')) || (r.read && r.read !== 'not in the table' && r.read !== '?')) console.log(line(r));
 if (has('--all')) { console.log('on the every-tick list and differing (the dress step, a tool\'s writes since the last apply, or an apply that lost something):'); for (const r of on) console.log(line(r)); }
 for (const n of notes.slice(0, 12)) console.log(`  note: ${n}`);
 process.exit(off.length ? 1 : 0);

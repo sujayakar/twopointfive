@@ -268,22 +268,16 @@ pub fn box_mirror_boot(g: &mut crate::game::Game) {
     if c.leaves != crate::sim_propshome::PROP_PARTS || c.things != crate::sim_propshome::PROP_CAP {
         panic!("the Rust module's copy lists {} leaves and {} things of furniture: src/sim/propshome.ts says {} boxes and {} things", c.leaves, c.things, crate::sim_propshome::PROP_PARTS, crate::sim_propshome::PROP_CAP);
     }
-    x.scratch = (sim::sim_scratch() as usize / 8) as f64;
     x.scratch_len = sim::sim_scratch_len() as f64;
-    x.lamps = (sim::light_lamps() / 8) as f64;
     x.lamp_cap = sim::light_cap() as f64;
-    x.blobs = (sim::smoke_blobs() / 8) as f64;
     x.blob_cap = sim::smoke_cap() as f64;
-    x.wind = (sim::grid_wind() as usize / 8) as f64;
     x.wind_cap = sim::grid_wind_cap() as f64;
-    x.nav_shut = sim::nav_addr(0) as f64;
     x.nav_cap = sim::nav_cap(0) as f64;
-    x.way = (sim::nav_addr(1) / 8) as f64;
-    x.nav_want = (sim::nav_addr(2) / 4) as f64;
-    x.nav_price = (sim::nav_addr(3) / 8) as f64;
     x.cut_of = vec![-1; c.boxes as usize];
 }
 
+/// THE MIRROR KEEPS NO ADDRESS of the module's tables: where a table lies in memory differs by machine and by process, and a state must mean the same on
+/// any of them. A reader asks the module (sim::world_addr and its like) when it reads.
 /// This game's world in the module. True = the world is newly this game's and nothing in it is ours. HELD hands a process's worlds round its games there;
 /// a `Game` here reaches no other game, and `g.sim` is its slot for its life, with as many worlds as slots (world.rs WORLDS, state.rs GAMES).   (boxMirror.ts BoxMirror.take)
 pub fn box_mirror_take(g: &mut crate::game::Game) -> bool {
@@ -296,30 +290,8 @@ pub fn box_mirror_take(g: &mut crate::game::Game) -> bool {
         return false; // (no other game can have taken it: g.sim)
     }
     let s = g.sim;
-    let at = |t: f64, by: usize| (sim::world_addr(s, t as u32) / by) as f64;
     let x = &mut g.col.mirror;
     x.slot = s as f64;
-    x.rec = at(T_REC, 8);
-    x.leaf = at(T_LEAF, 8);
-    x.cut = at(T_CUT, 8);
-    x.pane_t = at(T_PANE_T, 8);
-    x.flags = at(T_FLAGS, 4);
-    x.leaf_flags = at(T_LEAF_FLAGS, 4);
-    x.start = at(T_START, 4);
-    x.items = at(T_ITEMS, 4);
-    x.tilted = at(T_TILTED, 4);
-    x.pane_bi = at(T_PANE_BI, 4);
-    x.pt = at(T_PT, 8);
-    x.list = at(T_LIST, 4);
-    x.eyes = (sim::fog_eyes(s) / 8) as f64;
-    x.thing = at(T_THING, 8);
-    x.thing_live = at(T_THING_LIVE, 4);
-    x.snow_at0 = at(T_SNOW, 1);
-    x.glass_d = at(T_GLASS, 8);
-    x.glass_w = at(T_GLASS_W, 4);
-    x.glass_of = at(T_GLASS_OF, 4);
-    x.view_d = at(T_VIEW, 8);
-    x.view_bi = at(T_VIEW_BI, 4);
     true
 }
 

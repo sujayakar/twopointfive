@@ -3,6 +3,7 @@
 //   bun run tools/wire/wire.ts add <mod::Type.field> --ty <type> [--ts <name>] [--expr <e>] [--start-only]    a field the page reads; refused if nothing the page runs reads that name
 //   bun run tools/wire/wire.ts add-struct <mod::Type> <field:type,...>              a struct of the table, new: its line on the wire and its write by path
 //   bun run tools/wire/wire.ts drop <mod::Type.field>...                            fields off the wire · --file <list> takes the names one a line
+//   bun run tools/wire/wire.ts drop-type <mod::Type>...                             a type off the table once no field names it
 //   tools/blitz/rust.sh rust bun run tools/wire/cost.ts [address]                   what a tick's export and apply cost now, on the page's list
 // An enum arm needs nothing: an arm the table does not know goes out as the tag 0xffff, and the page keeps what it had.
 import { execFileSync } from 'node:child_process';
@@ -19,8 +20,17 @@ const fnv = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i
 // THE STATE WORDS: a hash of the whole game, a word a part, for two machines of one networked game to compare. What a host hands in and differs by machine is left out, and so is what is only a step's output
 const HOSTS_OWN = new Set(['m.owner', 'out', 'cmd_buf', 'local_seat', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
 function stateWords(io: string): string { const fieldsOf = (path: string): string[] => { const l = io.split('\n').find(x => x.startsWith(`impl Io for ${path} {`)) ?? die(`no line for ${path}`) as never, w = l.slice(0, l.indexOf(' fn r(')); return [...w.matchAll(/self\.([a-z_0-9]+)\.w\(o\)/g)].map(m => m[1]); };
-  const P: [string, string][] = []; const push = (name: string, ex: string) => { if (!HOSTS_OWN.has(name)) P.push([name, ex]); };
-  for (const f of fieldsOf('crate::game::Game')) { if (f === 'm') for (const x of fieldsOf('crate::game::Mods')) push(`m.${x}`, `g.m.${x}`); else if (f === 'engine') for (const x of fieldsOf('crate::host_api::HostApi')) push(`engine.${x}`, `g.engine.${x}`); else push(f, `g.${f}`); }
+  // SCRATCH IS NO STATE (schema.json `scratch`, the ONE list: the rows the path diff does not compare). A part named there has no word, and a field of a
+  // part named there is left out of that part's word. A row names a part as the field of the type that holds it: `game::Game.alone_own`,
+  // `game::Mods.scene_collision`; and a field of a part as a field of the part's own type: `scene_collision::StaticCollision.mirror`. The rule a row
+  // must pass: two equal games, the part made anew in one at some tick, every OTHER word equal from there to the end. (A scratch field deeper than a
+  // part's own fields is still in its part's word: the word is of the bytes the wire's line writes.)
+  const SC: Record<string, boolean> = readJ(SCHEMA).scratch ?? {}, TY: Record<string, any> = readJ(SCHEMA).types, q = (path: string, f: string) => `${path.replace(/^crate::/, '')}.${f}`;
+  const tyOf = (holder: string, f: string): string => (TY[holder]?.fields ?? []).find((x: any) => x.rust === f)?.ty ?? '';
+  const P: [string, string][] = [];
+  const push = (name: string, ex: string, holder = '', f = '') => { if (HOSTS_OWN.has(name) || (holder && SC[q(holder, f)])) return; const ty = holder ? tyOf(holder, f) : '', own = TY[ty]?.k === 'struct' ? fieldsOf(ty) : [], cut = own.filter(x => SC[q(ty, x)]);
+    P.push([name, cut.length ? `{ ${own.filter(x => !cut.includes(x)).map(x => `${ex}.${x}.w(o);`).join(' ')} }` : ex]); };
+  for (const f of fieldsOf('crate::game::Game')) { if (f === 'm') for (const x of fieldsOf('crate::game::Mods')) push(`m.${x}`, `g.m.${x}`, 'crate::game::Mods', x); else if (f === 'engine') for (const x of fieldsOf('crate::host_api::HostApi')) push(`engine.${x}`, `g.engine.${x}`, 'crate::host_api::HostApi', x); else push(f, `g.${f}`, 'crate::game::Game', f); }
   const ex = io.slice(io.indexOf('pub fn export(g: &crate::game::Game)')), end = ex.indexOf('o.b }'); for (const m of ex.slice(0, end).matchAll(/\bg\.([a-z_0-9.]+)\.w\(&mut o\)/g)) push(m[1], `g.${m[1]}`);
   // A SEAT'S SET BY SEAT, wherever it lies: on Game for the seat standing there (which differs by machine), in `cmd_seat[k].own` for the rest. A word a key of the set, all seats in their order
   const setKeys = fieldsOf('crate::seats::SeatSet').filter(k => k !== 'seat' && !HOSTS_OWN.has(k)), inSet = new Set(fieldsOf('crate::seats::SeatSet')); for (let i = P.length - 1; i >= 0; i--) if (inSet.has(P[i][0])) P.splice(i, 1);
@@ -73,9 +83,16 @@ function drop(Q: string[]): void { const S = readJ(SCHEMA), L = readJ(FIELDS), i
     const p = lineOf('Poke', path); let i2 = 0; io[p] = io[p].replace(` ${at} => self.${f}.poke(i),`, '').replace(/ \d+ => self\.([a-z_0-9]+)\.poke\(i\),/g, (_, x) => ` ${i2++} => self.${x}.poke(i),`); }
   for (const k of ['everyTick', 'pageTick', 'atStartOnly']) { const b = L[k].length; L[k] = L[k].filter((x: string) => !set.has(x)); listed += b - L[k].length; } S.knobSettled = (S.knobSettled ?? []).filter((x: string) => !set.has(x));
   writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); writeFields(L); gen(false); console.log(`wire: ${n} fields off the wire (${listed} list rows)`); }
+/** a type off the table, once no field names it: its lines on the wire go with it. The Rust type itself is a person's to delete */
+function dropType(Q: string[]): void { const S = readJ(SCHEMA), ioP = rustFile('io.rs'); let io = read(ioP).split('\n');
+  for (const q of Q) { const path = q.startsWith('crate::') ? q : `crate::${q}`, T = S.types[path]; if (!T) die(`${path} is no type of the table`); const named = new RegExp(`\\b${path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+    const users = Object.entries(S.types).filter(([k, x]: [string, any]) => k !== path && JSON.stringify([x.fields, x.vars]).match(named)).map(([k]) => k); if (users.length) die(`${path} is still named by ${users.slice(0, 5).join(', ')}`);
+    delete S.types[path]; const before = io.length; io = io.filter(l => !l.startsWith(`impl Io for ${path} {`) && !l.startsWith(`impl Poke for ${path} {`)); console.log(`wire: ${path} off the table, ${before - io.length} lines on the wire`); }
+  writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
 const A = process.argv.slice(2), opt = (n: string) => { const i = A.indexOf(n); return i < 0 ? undefined : A[i + 1]; };
 switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
   case 'add': add(A[1], opt('--ty') ?? die('add: --ty') as never, opt('--ts'), opt('--expr'), A.includes('--start-only')); break;
   case 'add-struct': addStruct(A[1], A[2]); break;
+  case 'drop-type': dropType(A.slice(1)); break;
   case 'drop': { const f = opt('--file'); drop(f ? read(f).split('\n').map(x => x.trim()).filter(Boolean) : A.slice(1)); break; }
   default: console.error(read(import.meta.path).split('\n').slice(0, 7).join('\n')); process.exit(64); }
