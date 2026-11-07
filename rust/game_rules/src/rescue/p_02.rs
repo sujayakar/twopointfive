@@ -350,7 +350,7 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
             let line = format!("learned:{}", g.gd[h].callsign);
             rescue_note(g, &line);
         }
-        if def_of(g, h).learned.is_nan() && (g.gd[h].state != GuardState::Patrol || g.gd[h].awareness >= 0.3) && !crate::owner::has_him(g, h, crate::owner::own().walk) {
+        if def_of(g, h).learned.is_nan() && (g.gd[h].state != GuardState::Patrol || g.gd[h].awareness >= 0.3) && !crate::owner::has(g, h, crate::owner::by::WALK) {
             g.rescue.defs.get_mut(h).unwrap().learned = g.time;
             let line = format!("learned:{}", g.gd[h].callsign);
             rescue_note(g, &line);

@@ -32,7 +32,7 @@ fn cover_pt(g: &mut Game, d: RoomfightDefId) {
     crate::belief::cover(g, gd, pt);
 }
 /// `DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)`
-fn digs_in(g: &mut Game, gd: GuardId) -> bool { g.k.digin.on || crate::enemysquads::squads_live(g) || crate::owner::has_him(g, gd, crate::owner::own().stand) }
+fn digs_in(g: &mut Game, gd: GuardId) -> bool { g.k.digin.on || crate::enemysquads::squads_live(g) || crate::owner::has(g, gd, crate::owner::by::STAND) }
 
 // ---------------------------------------------------------------- what the other parts call
 /// the sight gain, with the hunting man's x2.2 for a scripted man.   (roomfight.ts rateOn)
@@ -320,8 +320,8 @@ pub fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
     let gd = g.tab.roomfight_def[d].gd; let base = hostile_skill(g);
     g.gd[gd].skill = Some(crate::game::GuardSkill { settle_k: base.settle_k, spread_k: base.spread_k });
     if g.gd[gd].held.is_some() { room_fight_blind(g, d, k); return; }
-    if crate::owner::has_him(g, gd, crate::owner::own().morale) { return; }
-    if crate::owner::has_him(g, gd, crate::owner::own().runner) { return; }
+    if crate::owner::has(g, gd, crate::owner::by::MORALE) { return; }
+    if crate::owner::has(g, gd, crate::owner::by::RUNNER) { return; }
     if digs_in(g, gd) {
         let keeps = g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()).and_then(|r| r.dig_in) != Some(false);
         if keeps && !crate::lanes::lane_throws(g, gd) { crate::digin::dig_in_tick(g, d, dt); }
@@ -630,7 +630,7 @@ const BEYOND: [(f64, f64); 9] = [(3.0, 1.6), (3.0, -1.6), (2.4, 1.2), (2.4, -1.2
 pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let threat = room_fight_threat_of(g, d);
     g.tab.roomfight_def[d].moved_at = g.time;
-    let stays = crate::owner::has_him(g, gd, crate::owner::own().stand);
+    let stays = crate::owner::has(g, gd, crate::owner::by::STAND);
     let rp = if stays { None } else { crate::enemysquads::squad_rally(g, gd, threat) };
     if let Some(rp) = rp {
         crate::pressure::run(g, d, rp, None, Some(0.3));

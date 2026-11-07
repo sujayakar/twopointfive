@@ -192,12 +192,11 @@ pub fn free(g: &mut crate::game::Game, x: RoomfightDefId, mine: Option<u32>) -> 
     if g.time - done_t < g.k.buddy.again {
         return false; // (he has only just come to somebody: not off again on the next call)
     }
-    let own_ = crate::owner::own();
-    if crate::owner::has_him(g, gd, own_.press)
+    if crate::owner::has(g, gd, crate::owner::by::PRESS)
         || crate::pressure::press_keeps_home(g, x, None)
         || g.gd[gd].stays_in_rooms
-        || crate::owner::has_him(g, gd, own_.squad_word)
-        || crate::owner::has_him(g, gd, own_.stand)
+        || crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD)
+        || crate::owner::has(g, gd, crate::owner::by::STAND)
     {
         return false;
     }
@@ -317,7 +316,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
             return;
         }
     };
-    if crate::owner::has_him(g, gd, crate::owner::own().stand) {
+    if crate::owner::has(g, gd, crate::owner::by::STAND) {
         let w = man_of(g, d);
         w.call_at = m::NAN;
         w.open = false;
@@ -566,7 +565,7 @@ pub fn nearest_entry(g: &crate::game::Game, r: RoomfightRoomId, p: V3) -> f64 {
 /// who the call has (owner.ts): a colleague is on his way to him. (buddy.ts buddySay)
 pub fn buddy_say(g: &mut crate::game::Game) {
     let on = g.k.buddy.on;
-    let rule = crate::owner::own().buddy;
+    let rule = crate::owner::by::BUDDY;
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
@@ -578,9 +577,9 @@ pub fn buddy_say(g: &mut crate::game::Game) {
             };
         let t = g.time;
         if called {
-            crate::owner::claim_man(g, gd, rule, t, None);
+            crate::owner::claim(g, gd, rule, t, None);
         } else {
-            crate::owner::release_man(g, gd, rule, t);
+            crate::owner::release(g, gd, rule, t);
         }
     }
 }
@@ -639,13 +638,13 @@ pub fn buddy_stop(g: &mut crate::game::Game) {
     st.men.clear();
     st.errands = Vec::new();
     st.stale = true;
-    let rule = crate::owner::own().buddy;
+    let rule = crate::owner::by::BUDDY;
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
         let t = g.time;
-        crate::owner::release_man(g, gd, rule, t);
+        crate::owner::release(g, gd, rule, t);
     }
 }
 

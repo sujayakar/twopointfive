@@ -1153,7 +1153,7 @@ pub fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconside
         if g.time - man.last_seen_t < 0.6 && man.last_known.map_or(false, |k| flat(k, c) < 5.0) { return (R::Later, String::from("a man at arm's length")); }
         let mut to = wall_react_spot(g, gd, threat, pb, &others);
         if let Some(q) = to {
-            if crate::owner::has_him(g, gd, crate::owner::own().stand) || g.gd[gd].stays_in_rooms || crate::digin::dig_in_set(g, gd) {
+            if crate::owner::has(g, gd, crate::owner::by::STAND) || g.gd[gd].stays_in_rooms || crate::digin::dig_in_set(g, gd) {
                 if crate::roomfight::room_fight_room_at(g, q) != g.tab.roomfight_def[d].room { to = None; }
             }
         }

@@ -75,14 +75,14 @@ pub fn ours(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// …on the net: alive, not in Sam's arm, not a man who has run (netquiet.ts onNet)
 pub fn on_net(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    ours(g, gd) && g.gd[gd].held.is_none() && !crate::owner::has_him(g, gd, crate::owner::own().runner)
+    ours(g, gd) && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
 }
 
 /// gone to his mates, whether or not they know it yet (netquiet.ts lostTo)
 pub fn lost_to(g: &mut crate::game::Game, m: GuardId) -> bool {
     g.gd[m].state == crate::game::GuardState::Dead
         || g.gd[m].held.is_some()
-        || crate::owner::has_him(g, m, crate::owner::own().runner)
+        || crate::owner::has(g, m, crate::owner::by::RUNNER)
         || !g.guards.contains(&m)
 }
 
@@ -306,7 +306,7 @@ pub fn body_of(g: &mut crate::game::Game, finder: GuardId, men: &[GuardId]) -> O
 /// a body found: the finder, and the men of `men` he tells (netquiet.ts netQuietBody)
 pub fn net_quiet_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &[GuardId]) {
     let Some(finder) = finder else { return };
-    if !ours(g, finder) || crate::owner::has_him(g, finder, crate::owner::own().runner) {
+    if !ours(g, finder) || crate::owner::has(g, finder, crate::owner::by::RUNNER) {
         return;
     }
     let (k_body, k_told, calm_secs, body_beat) = (g.k.netquiet.body, g.k.netquiet.body_told, g.k.netquiet.calm_secs, g.k.netquiet.body_beat);
@@ -646,8 +646,8 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
         && g.gd[gd].held.is_none()
         && !crate::control::man::blind(g, gd)
         && !crate::control::man::staggered(g, gd)
-        && !crate::owner::has_him(g, gd, crate::owner::own().morale)
-        && !crate::owner::has_him(g, gd, crate::owner::own().runner)
+        && !crate::owner::has(g, gd, crate::owner::by::MORALE)
+        && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
 }
 
 /// is he the last: 2 = he had mates and none of his side is up anywhere · 1 = his squad is down and he knows it, nobody at his side · 0 = neither (netquiet.ts lastKind)
@@ -711,16 +711,16 @@ pub fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// the record of who is the last man at his act, as the frame's acts leave it (netquiet.ts syncLastMan)
 pub fn sync_last_man(g: &mut crate::game::Game) {
-    let last_man = crate::owner::own().last_man;
+    let last_man = crate::owner::by::LAST_MAN;
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
         let t = g.time;
         if mine(g, gd) {
-            crate::owner::claim_man(g, gd, last_man, t, None);
+            crate::owner::claim(g, gd, last_man, t, None);
         } else {
-            crate::owner::release_man(g, gd, last_man, t);
+            crate::owner::release(g, gd, last_man, t);
         }
     }
 }
@@ -759,7 +759,7 @@ pub fn net_quiet_tick(g: &mut crate::game::Game, dt: f64) {
             g.m.netquiet.state_of.delete(gd);
             continue;
         }
-        if crate::owner::has_him(g, gd, crate::owner::own().runner) {
+        if crate::owner::has(g, gd, crate::owner::by::RUNNER) {
             if let Some(n) = g.m.netquiet.state_of.get_mut(gd) {
                 n.last = NONE;
                 n.t = 0.0;

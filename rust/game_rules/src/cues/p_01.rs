@@ -757,7 +757,7 @@ pub fn cues_tick(g: &mut crate::game::Game) {
             let drawn_again = !m_rally.is_nan() && !d_rally.is_nan() && d_rally > m_rally + 1.0;
             if !hold || t - noise_t > 6.0 {
                 cues_man(g, gd).ep = -1.0;
-            } else if !crate::owner::has_him(g, gd, crate::owner::own().squad) && !crate::owner::has_him(g, gd, crate::owner::own().press) && !crate::pressure::press_keeps_home(g, d, None) && sight > 3.0 && t - cues_man(g, gd).again_t > g.k.cues.again_secs && noise_at.is_some()
+            } else if !crate::owner::has(g, gd, crate::owner::by::SQUAD) && !crate::owner::has(g, gd, crate::owner::by::PRESS) && !crate::pressure::press_keeps_home(g, d, None) && sight > 3.0 && t - cues_man(g, gd).again_t > g.k.cues.again_secs && noise_at.is_some()
                 && (drawn_again || (d_rally.is_nan() && t - cues_man(g, gd).ep >= g.k.cues.stay_secs && t - noise_t < 1.5))
             {
                 let at = cues_at(g, noise_at.unwrap());
