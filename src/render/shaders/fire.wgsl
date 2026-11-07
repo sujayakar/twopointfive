@@ -7,7 +7,7 @@
 //   a = where the coals are (the middle of the drum's mouth) + the mouth's radius (m)      b = flame height (m) · heat 0‥1 · the fire's own seed 0‥1 · its clock (s)
 //   c = the wind at the flame (x, z; m/s) · the light's flicker this frame (about 1) · spare      d = the bed of coals' radius (m; 0 = none drawn) · under the fog of war: 0 = drawn wherever it stands, 1 = only where the team sees, 2 = only where it does not (the composite's test: fireOver)
 struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (c.w: how much of this fire's flame is the solver's gas, 0‥1 — fireFlame · d.z: how far its smoke is the solver's soot, 0‥1 — fireFlameN)
-// THE LOOK'S NUMBERS, the same for every fire (game/fire.ts FIRE.look, live in the page's fire lab):
+// THE LOOK'S NUMBERS, the same for every fire (game/fire.ts FIRE.look):
 //   a = × the flame's light · × its white heart · how soon it hides what is behind it (1/m) · × how fast it climbs
 //   b = × its height · how torn it is 0‥2 · the smoke off its tips 0‥2 (0 = none) · the shimmer of the hot air over it (m the picture behind is pushed, 0 = none)
 //   c = how dark and sooty its cool edge is 0‥1 · how hard it breathes 0‥2 · spare · spare

@@ -134,7 +134,7 @@ export class Engine {
   diceRing: DiceRing | null = null;   // the look page's steady bounce (render/diceRing.ts): made at the first day frame with the row up
   /** THE LOOK PROTOTYPE's wall sides (render/wallSides.ts: which place each cell of the floor plan is in, carried by the frame so that every cache read keeps to its own side of a wall): the look page's row `walls` */
   readonly wallSides = new WallSides();
-  /** HOW SMOKE IS DRAWN, AS ROWS (the smoke lab's section of that name, host/smokelab.ts; nothing else writes them, and all at 0 the frame's two words are 0 = the picture as
+  /** HOW SMOKE IS DRAWN, AS ROWS (render/smokeLook.ts writes them; and all at 0 the frame's two words are 0 = the picture as
    *  it was). creases: the soft light on a sample dimmed by the smoke round it (0‥2.5) · selfK: the self-shadow's extinction (0 = the shader's own 6) · selfReach: how far
    *  toward the light it looks, m (0 = 0.72) (vol_common.wgsl). The second word's bit 0 is not a row: it is up while the bound
    *  smoke system lets a can out in bands (SmokeBinding.streaks), and tells dust_look.wgsl a tint is a streak, drawn as a tint alone; its bit 1 is up while some

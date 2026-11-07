@@ -116,7 +116,7 @@ export const STALK = {
    *  camera's forward, as the move keys have it), and how far it is, from `dragDead` px (nothing) to `dragFull` px (all of it), is how much of `pace`. The
    *  mouse left where it was pressed = he holds still in the pose. He faces the man throughout; he is never walked closer than `keyM` (the way into the man
    *  is taken off the stick there, the way round him is not); the rest is the creep's own rules (the arc, the walls, the key's grab). PROTOTYPE: OFF here,
-   *  on the frozen stand AND in the plain page; up in the sneak lab (?sneaklab) and anywhere with ?stalkdrag=1; ?stalkdrag=0 puts it down in the lab. */
+   *  on the frozen stand AND in the plain page; up with ?stalkdrag=1. */
   drag: false, dragDead: 14, dragFull: 140,
   /** ROUND HIM (the maintainer: "when you're clicking on an enemy and moving around them, you should really be "orbiting" them"). With `orbit` up, a move
    *  key while the button holds a man no longer ends the creep: the way the keys point is taken round the man, not past him. The part of it toward or away from
@@ -164,8 +164,6 @@ const able = (g: Game): boolean => !samStaggered(g) && !g.player.breakerMove;
 const beginM = (): number => STALK.low ? Math.max(CLOSE.modeM, STALK.lowBeginM) : CLOSE.modeM;
 const outM = (): number => STALK.low ? Math.max(CLOSE.modeOutM, STALK.lowOutM) : CLOSE.modeOutM;
 /** how far off a press begins a stalk, and how far off one is given up (the lab's rings, close.ts's hint) */
-export function stalkBeginM(): number { return beginM(); }
-export function stalkOutM(): number { return outM(); }
 /** is the held click the ONE way to grab a man from behind (no row grabs him)? `only`, until the key finishes the grab (STALK.key) — and still on a wall,
  *  where the wait at the corner is the click's and no stalk can be the key's */
 export function stalkClickOnly(g?: Game): boolean { return STALK.on && STALK.only && (!STALK.key || !!g?.player.wall) && !(g && shut(g)); }   // (a step that takes the click gives the row back: a line that named the click would name a dead button)
