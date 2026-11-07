@@ -21,7 +21,7 @@ fn plainWxSteps() -> u32 { let n = (frame.volCfg.w >> 24u) & 31u; return select(
 fn main(@builtin(global_invocation_id) gid: vec3u) {
   let odims = textureDimensions(outVol);
   if (gid.x >= odims.x || gid.y >= odims.y) { return; }
-  var wxAirOn = false; if (WX_VOL) { if (WX_KINDS) { wxAirOn = frame.cardCfg.w != 0u; } }
+  var wxAirOn = false; if (WX_VOL) { if (lv(WX_KINDS)) { wxAirOn = frame.cardCfg.w != 0u; } }
   let smokeOn = (frame.flags & FLAG_SMOKE) != 0u && frame.numSmoke > 0u;
   if (!smokeOn && !wxAirOn) { textureStore(outVol, gid.xy, vec4f(0.0, 0.0, 0.0, 1.0)); textureStore(outReact, gid.xy, vec4f(0.0, 1.0, 0.0, 0.0)); return; }
   let vdiv = u32(frame.lossyCfg.y);
@@ -67,7 +67,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let Tsmoke = T;
 
   var Tair = 1.0;
-  if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) {
+  if (WX_VOL) { if (lv(WX_KINDS)) { if (frame.cardCfg.w != 0u) {
     let top = CEIL_Y + WX_TOP;
     var ta = 0.0; var tb = tSurf; var any = true;
     if (abs(rd.y) > 1e-5) { let a0 = (top - ro.y) / rd.y; let a1 = -ro.y / rd.y; ta = max(ta, min(a0, a1)); tb = min(tb, max(a0, a1)); }

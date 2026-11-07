@@ -20,7 +20,7 @@ export async function rainWallsCheck(): Promise<boolean> {
   const common = read('common.wgsl'), vol = read('volumetrics.wgsl'), draw = read('particles_draw.wgsl'), pc = read('particles_common.wgsl');
   const IN = Number(/const WX_WALL_IN: f32 = ([0-9.]+);/.exec(common)?.[1]);
   const body = (/fn wxUnderRoof\(p: vec2f\) -> bool \{\n([\s\S]*?)\n\}/.exec(common)?.[1] ?? '').replace(/\s+/g, ' ').trim();
-  const WANT = 'if (!wxRoofed(p)) { return false; } if (!WX_KINDS) { return true; } if (frame.cardCfg.y == 0u) { return true; } let d = WX_WALL_IN; return wxRoofed(p + vec2f(d, d)) && wxRoofed(p + vec2f(-d, d)) && wxRoofed(p + vec2f(d, -d)) && wxRoofed(p - vec2f(d, d));';
+  const WANT = 'if (!wxRoofed(p)) { return false; } if (!lv(WX_KINDS)) { return true; } if (frame.cardCfg.y == 0u) { return true; } let d = WX_WALL_IN; return wxRoofed(p + vec2f(d, d)) && wxRoofed(p + vec2f(-d, d)) && wxRoofed(p + vec2f(d, -d)) && wxRoofed(p - vec2f(d, d));';
   const { WORLD } = await import(`${ROOT}/src/scene/world.ts`); const CY: number = WORLD.ceilingY;
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { roofsOf } = await import(`${ROOT}/src/game/weather.ts`), { packRect, unpackRect } = await import(`${ROOT}/src/game/weatherKinds.ts`);

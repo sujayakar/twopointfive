@@ -161,7 +161,7 @@ const ROOMS: Record<string, [number, number]> = { tea: [17, 8], kitchen: [25, 8]
 { const c = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), num = (n: string) => +(c.match(new RegExp(`const ${n}: \\w+ = ([0-9.]+)u?;`))?.[1] ?? NaN);
   const frameTs = readFileSync(`${ROOT}/src/render/frame.ts`, 'utf8'), words = +(c.match(/sides: array<vec4u, (\d+)>/)?.[1] ?? NaN) * 4, cols = +(c.match(/sideCols: array<vec4u, (\d+)>/)?.[1] ?? NaN) * 4;
   const { SIDE_COL_WORDS, SIDE_WORDS } = await import(`${ROOT}/src/render/wallSides.ts`);
-  check(num('SIDE_W') === PLACE_W && num('SIDE_H') === PLACE_H && num('SIDE_RES') === PLACE_RES && num('SIDE_UNKNOWN') === SIDE_UNKNOWN && num('SIDE_DOOR') === SIDE_DOOR && words === SIDE_WORDS && cols === SIDE_COL_WORDS && frameTs.includes('u.set(sc, 7240)'),
+  check(num('SIDE_W') === PLACE_W && num('SIDE_H') === PLACE_H && num('SIDE_RES') === PLACE_RES && num('SIDE_UNKNOWN') === SIDE_UNKNOWN && num('SIDE_DOOR') === SIDE_DOOR && words === SIDE_WORDS && cols === SIDE_COL_WORDS && frameTs.includes(`u.set(sc, ${+(frameTs.match(/u\.set\(sd, (\d+)\)/)?.[1] ?? NaN) + SIDE_WORDS})`),   // (the column table is written straight after the words, wherever the head ends)
     'the shader reads the plan at the map\'s own size and the frame holds as many words as the tables have', `common.wgsl ${num('SIDE_W')} × ${num('SIDE_H')} at ${num('SIDE_RES')} a metre, ${words} + ${cols} words · the map ${PLACE_W} × ${PLACE_H} at ${PLACE_RES}, ${SIDE_WORDS} + ${SIDE_COL_WORDS}`); }
 
 // 8. THE EXPOSURE'S QUESTION: which place a pixel is of (place_common.wgsl lookPlaceLevels and placeSideCell, the same rule step for step: the shader asks its candidate cells in one loop, with

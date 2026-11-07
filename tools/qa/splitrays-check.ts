@@ -15,7 +15,7 @@ import { ROOT } from './headless.ts';
 
 /** the three functions of fgather.wgsl that gather_split.wgsl's trace / glossReflectionX / glassShadeX were copied from (comments out, as wgslDecls reads them): a change to
  *  one is a change the split needs too — make it there, then pin the new text here */
-const COPIED: Record<string, string> = { main: 'ba820f9b5b5c', glossReflection: 'ad4738009399', glassShade: '8471046e5bbb' };
+const COPIED: Record<string, string> = { main: 'ba820f9b5b5c', glossReflection: '3c6daf511955', glassShade: '8471046e5bbb' };
 
 type Kernel = { setting?: string; module: string; entry: string; set: string; pipelines: string[]; pasted: number; cut?: number; budgetKB: number | null };   // (cut: the cut test's text in it, which the size tool counts apart from the kernel's row)
 type Sizes = { modules: { label: string; h: string }[]; kernels: Kernel[] };

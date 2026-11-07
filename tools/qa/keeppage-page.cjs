@@ -8,9 +8,13 @@
 //            …and the first mission's Game is gone from the browser's memory once the collector has run (a mark on it, held weakly by the shell).
 //   picture  the Team & kit picture (a second game in a window inside the start page) draws with the tab's one device, on a lease BESIDE its page's
 //            (`beside`, the picture's seat): no second device is opened, the start page's lease is still held, and of what the picture asked for the
-//            browser compiled only what that mission needs beyond the title (named in the line), never the set again. Another mission picked: the
-//            first picture's lease is over and the next one holds the seat. Deploy: the mission's page loads in the frame on the page's next lease,
-//            the picture's lease gone with its page, and finds what the picture compiled: at most a few of what it asks are compiled (named)
+//            browser compiled NOTHING (a level in another weather, with other men, is the title's own programs: render/frame.ts LevelSw). Another
+//            mission picked: the first picture's lease is over and the next one holds the seat, nothing compiled. Deploy: the mission's page loads in
+//            the frame on the page's next lease, the picture's lease gone with its page, nothing compiled
+//   levels   EVERY MISSION OF THE LIST, one after another in the frame from the title (`__scenarios.pick`, the list's own page load): each asks for its
+//            programs and the browser compiles none, nor a shader module: the snow levels, the levels with their own roofs, the office, the quiet ones.
+//            LEVELS=a,b = only those rows. (The pages are `?paused`: what a pass first asks for under play is not this job's — the fog of war's
+//            programs are asked for at every boot, engine.ts warmFirstUse, and a played visit's own count is its load record's `made`)
 //   stay     the ways back in that were never a page load stay none (a restart, a checkpoint loaded: the same document, the same lease), and the ones that
 //            are a load are the frame's: Quit to the mission list, then the same mission picked again — the tab's document kept, nothing compiled
 //   record   the same visit pointed at a STAND-IN backend (cloud/test/standin.ts: `npm ci` in cloud/ first): the first load's record says `kept` 1 with what
@@ -137,40 +141,42 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, seats: window.__pageKeeper
   } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
 
   if (want('picture')) { const name = 'picture', { browser, page, errs, docs } = await open(); try {
-    const FIRST = process.env.PICTURE_FIRST || 'room-clear-pair', PICKED = process.env.PICTURE_PICKED || 'records-pair', MAY = Number(process.env.PICTURE_MAY ?? 3);
+    const FIRST = process.env.PICTURE_FIRST || 'room-clear-pair', PICKED = process.env.PICTURE_PICKED || 'records-pair', MAY = Number(process.env.PICTURE_MAY ?? 0);   // (MAY: the most a picture or the mission after it may compile — none: every level is one set of programs, render/frame.ts LevelSw)
     await page.goto(`${BASE}?${BREAK ? 'keeppage=0' : 'keeppage=1'}&${REST}`); await page.evaluate(() => { window.__mark = 'opened'; });
     const r1 = await ready(page, !BREAK, BREAK ? null : 1); if (r1 !== 'ok') throw new Error(`the start page: ${r1}`);
     const G = () => BREAK ? page.mainFrame() : frameOf(page);   // the game's own window
+    // (a click is the element's own: the browser's pointer waits for a page that paints, and this one is still compiling behind its start)
+    const click = async (sel) => { if (!(await G().evaluate(q => { const e = document.querySelector(q); if (!e) return false; e.click(); return true; }, sel))) throw new Error(`nothing to click at '${sel}'`); };
     const t0 = await G().evaluate(SEEN); log(` ${name}: the start page — ${JSON.stringify(t0.stats)} of boot ${JSON.stringify(t0.boot)}`);
     // the start page's own way to a mission's Team & kit step (tools/qa/kitview-page.cjs open / goRow / kit)
-    await G().waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(500); await G().click('#menu .actions button.primary'); await G().waitForSelector('#missions.one.on', { timeout: 20000 }); await page.waitForTimeout(500);
+    await G().waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(500); await click('#menu .actions button.primary'); await G().waitForSelector('#missions.one.on', { timeout: 20000 }); await page.waitForTimeout(500);
     const goRow = async (id) => { const g = G(), sel = `#missions .mrow[data-mission="${id}"]`;
       const away = await g.evaluate(() => { const l = document.querySelector('#missions .mgrid, #missions .mlist'); return !!l && l.getClientRects().length === 0; });
-      if (away) { await g.click('#missions .mstep[data-step="list"]'); await page.waitForTimeout(200); }
+      if (away) { await click('#missions .mstep[data-step="list"]'); await page.waitForTimeout(200); }
       if (!(await g.evaluate(q => !!document.querySelector(q), sel))) throw new Error(`no row '${id}' on the mission list`);
       if (await g.evaluate(q => !!document.querySelector(q + '.sel'), sel)) return;
       const head = await g.evaluate(q => { const e = document.querySelector(q); return e && e.classList.contains('shut') ? e.getAttribute('data-group') : null; }, sel);
-      if (head) { await g.click(`#missions .msec[data-head="${head}"]`); await page.waitForTimeout(150); }
-      await g.click(sel); await page.waitForTimeout(300); };
+      if (head) { await click(`#missions .msec[data-head="${head}"]`); await page.waitForTimeout(150); }
+      await click(sel); await page.waitForTimeout(300); };
     // the picture's window: the frame inside the game's window, on a `kitview` address, booted on lease `n` of the picture's seat
     const picture = async (n, secs = 900) => { for (const end = Date.now() + secs * 1000; Date.now() < end;) { const g = G(), f = page.frames().find(x => x.parentFrame() === g && /[?&]kitview/.test(x.url()));
         if (f) try { const r = await f.evaluate((want) => Promise.race([window.__ready.then(() => window.__keptPage && (!window.__keptPage.lease || window.__keptPage.lease.n === want) ? 'ok' : 'wait', e => 'dead: ' + e), new Promise(r => setTimeout(() => r('wait'), 400))]), n); if (r === 'ok') return f; if (r !== 'wait') throw new Error(`the picture's window: ${r}`); } catch (e) { if (/the picture's window/.test(String(e.message))) throw e; /* between two documents */ }
         await page.waitForTimeout(400); } throw new Error('the picture\'s window did not boot in time'); };
-    await goRow(FIRST); await G().click('#missions #loadout [data-act="kit"]');
+    await goRow(FIRST); await click('#missions #loadout [data-act="kit"]');
     const P1 = await picture(1), p1 = await P1.evaluate(SEEN), s1 = await page.evaluate(SHELL), t1 = await G().evaluate(SEEN);
     log(` ${name}: the picture of '${FIRST}' — ${JSON.stringify(p1.stats)} at ${p1.href}`);
     if (p1.role !== 'beside' || p1.seat !== 'page/picture' || p1.n !== 1 || !p1.alive || !p1.game) throw new Error(`the picture did not take the tab's device beside its page: ${JSON.stringify({ role: p1.role, seat: p1.seat, n: p1.n, alive: p1.alive, game: p1.game })}`);
     if (s1.opened !== 1 || s1.seats !== 'page,page/picture' || s1.mark !== 'opened' || docs.length !== 1) throw new Error(`a second device, or the tab's page went: ${JSON.stringify(s1)}, ${docs.length} loads of the tab`);
     if (t1.n !== 1 || !t1.alive || !t1.game) throw new Error(`the start page lost its lease to the picture: ${JSON.stringify({ n: t1.n, alive: t1.alive })}`);
-    if (!(p1.stats.asked > 50) || p1.stats.pipelines * 2 > p1.stats.asked) throw new Error(`the picture compiled the set again: ${JSON.stringify(p1.stats)}`);
+    if (!(p1.stats.asked > 50) || p1.stats.pipelines > MAY) throw new Error(`the picture compiled ${p1.stats.pipelines} of ${p1.stats.asked} on the tab's device (at most ${MAY}): ${p1.stats.labels.join(', ')}`);
     // another mission picked: one picture at a time on the seat
-    await goRow(PICKED); await G().click('#missions #loadout [data-act="kit"]').catch(() => { /* the step is up already */ });
+    await goRow(PICKED); await click('#missions #loadout [data-act="kit"]').catch(() => { /* the step is up already */ });
     const P2 = await picture(2), p2 = await P2.evaluate(SEEN), s2 = await page.evaluate(SHELL);
     log(` ${name}: the picture of '${PICKED}' — ${JSON.stringify(p2.stats)} at ${p2.href}`);
     if (p2.role !== 'beside' || p2.n !== 2 || !p2.alive || s2.opened !== 1 || s2.seats !== 'page,page/picture' || s2.leases !== 3) throw new Error(`the second picture: ${JSON.stringify({ role: p2.role, n: p2.n, alive: p2.alive })} ${JSON.stringify(s2)}`);
-    if (p2.stats.pipelines * 2 > p2.stats.asked) throw new Error(`the second picture compiled the set again: ${JSON.stringify(p2.stats)}`);
+    if (!(p2.stats.asked > 50) || p2.stats.pipelines > MAY) throw new Error(`the second picture compiled ${p2.stats.pipelines} of ${p2.stats.asked} (at most ${MAY}): ${p2.stats.labels.join(', ')}`);
     // Deploy: the mission's own page, in the frame, on the page's next lease
-    await G().click('#missions #loadout [data-act="deploy"]');
+    await click('#missions #loadout [data-act="deploy"]');
     const r3 = await ready(page, true, 2); if (r3 !== 'ok') throw new Error(`the mission's frame: ${r3}`);
     const m = await frameOf(page).evaluate(SEEN), s3 = await page.evaluate(SHELL);
     log(` ${name}: the mission — ${JSON.stringify(m.stats)} of boot ${JSON.stringify(m.boot)} at ${m.href}`);
@@ -178,6 +184,33 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, seats: window.__pageKeeper
     if (!(m.stats.asked > 50) || m.stats.pipelines > MAY || m.boot.failed) throw new Error(`the mission compiled ${m.stats.pipelines} of ${m.stats.asked} after its picture had (at most ${MAY}): ${m.stats.labels.join(', ')}`);
     if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
     pass(name, `one device for the start page, two pictures and the mission; the first picture compiled ${p1.stats.pipelines} of ${p1.stats.asked} asked${p1.stats.labels.length ? ` (${p1.stats.labels.join(', ')})` : ''}, the second ${p2.stats.pipelines} of ${p2.stats.asked}${p2.stats.labels.length ? ` (${p2.stats.labels.join(', ')})` : ''}, the mission after it ${m.stats.pipelines} of ${m.stats.asked}${m.stats.labels.length ? ` (${m.stats.labels.join(', ')})` : ''}`);
+  } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
+
+  if (want('levels')) { const name = 'levels', { browser, page, errs, docs } = await open(); try {
+    await page.goto(`${BASE}?${BREAK ? 'keeppage=0' : 'keeppage=1'}&${REST}`); await page.evaluate(() => { window.__mark = 'opened'; });
+    const r1 = await ready(page, !BREAK, BREAK ? null : 1); if (r1 !== 'ok') throw new Error(`the title: ${r1}`);
+    const t0 = await (BREAK ? page.mainFrame() : frameOf(page)).evaluate(SEEN); if (BREAK) throw new Error('not a kept page: every mission is a whole load, which compiles its whole set');
+    // (the title is held until it has asked for everything it asks for behind its start: the later twins, the fog of war's programs and, once those are in,
+    // their cut twins. A person reads a menu for longer than that takes; a script that picks a mission the moment the title is ready would see the next
+    // load ask for them first, which is a background compile moved, not a level's own)
+    let t1 = t0; for (let still = 0, end = Date.now() + 900000; still < 6 && Date.now() < end;) { await page.waitForTimeout(1000); const t = await frameOf(page).evaluate(SEEN); still = t.stats.asked === t1.stats.asked ? still + 1 : 0; t1 = t; }
+    log(` ${name}: the title — ${JSON.stringify(t0.stats)} at ready, ${t1.stats.asked} asked and ${t1.stats.pipelines} compiled once it had asked for its background set`);
+    const only = (process.env.LEVELS || '').split(',').map(x => x.trim()).filter(Boolean);
+    const ids = (await frameOf(page).evaluate(() => window.__scenarios.all.filter(m => !m.offList).map(m => m.id))).filter(id => !only.length || only.includes(id));
+    if (!ids.length) throw new Error('no mission on the list');
+    const rows = [], bad = [];
+    for (let i = 0; i < ids.length; i++) { const id = ids[i];
+      await frameOf(page).evaluate((id) => { if (!window.__scenarios.pick(id)) throw new Error('no such mission'); }, id);
+      const r = await ready(page, true, i + 2); if (r !== 'ok') throw new Error(`'${id}': ${r}`);
+      // (a tick more: the programs asked for behind the start are asked for by now)
+      await page.waitForTimeout(300); const f = await frameOf(page).evaluate(SEEN);
+      rows.push(`${id} ${f.stats.pipelines}/${f.stats.asked}`); log(` ${name}: ${id} — ${JSON.stringify(f.stats)} at ${f.href.replace(/^[^?]*/, '')}`);
+      if (f.n !== i + 2 || !f.game || !(f.stats.asked > 50) || f.stats.pipelines > 0 || f.stats.modules > 0 || (f.boot && f.boot.failed)) bad.push(`${id}: ${f.stats.pipelines} of ${f.stats.asked} pipelines and ${f.stats.modules} modules (${f.stats.labels.join(', ')})`); }
+    const s = await page.evaluate(SHELL);
+    if (s.opened !== 1 || s.mark !== 'opened' || docs.length !== 1) throw new Error(`the tab's page went: ${JSON.stringify(s)}, ${docs.length} loads of the tab`);
+    if (bad.length) throw new Error(`${bad.length} of ${ids.length} missions compiled something the title had not built — ${bad.join(' · ')}`);
+    if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
+    pass(name, `the title compiled ${t1.stats.pipelines} pipelines and ${t1.stats.modules} modules; ${ids.length} missions after it on the one device compiled none (compiled/asked: ${rows.join(', ')})`);
   } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
 
   if (want('stay')) { const name = 'stay', { browser, page, errs, docs } = await open(); try {

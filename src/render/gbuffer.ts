@@ -1,7 +1,7 @@
 // G-buffer targets + raster pipelines (boxes, skinned characters).
 import { makeShader, makeBuffer, renderPipelineAsync, renderPipelineOrNull } from '../gpu/device';
 import { cutSwap } from './cutSwap';
-import { scenePrelude, snowLookConfig, lookConfig } from './frame';
+import { scenePrelude, lookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
 import { capUsage } from './framecap';
@@ -328,7 +328,7 @@ export class GBuffer {
       depthStencil: this.depthStencil,
     }).then(p => { this.boxPipe = p; })];
     if (opts.sharp) jobs.push(this.prepareDown());
-    if (snowLookConfig.surface) jobs.push(renderPipelineOrNull(this.device, {   // THE SNOW'S HILLS (snow.wgsl vsSnow / fsSnow): same targets, same depth rule; drawn before the boxes. One that fails to compile is left null: the level's own snow boxes show, as they are drawn under it anyway
+    jobs.push(renderPipelineOrNull(this.device, {   // THE SNOW'S HILLS (snow.wgsl vsSnow / fsSnow): same targets, same depth rule; drawn before the boxes. Made on every level, drawn where a level has drifts (draw below): a snow level asks for no program the visit has not built. One that fails to compile is left null: the level's own snow boxes show, as they are drawn under it anyway
       label: 'gbufSnow', layout: this.pipeLayout,
       vertex: { module: this.mod, entryPoint: 'vsSnow', buffers: [{ arrayStride: 8, stepMode: 'instance', attributes: [{ shaderLocation: 0, offset: 0, format: 'uint32x2' }] }] },
       fragment: { module: this.mod, entryPoint: 'fsSnow', targets: this.targets },

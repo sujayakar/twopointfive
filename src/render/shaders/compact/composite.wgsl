@@ -508,7 +508,7 @@ fn snowGlowAmt(a: f32) -> f32 {
   return clamp((1.0 - a) * 1.5, 0.0, 1.0); }
 fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> vec3f {
   var fac = vec4f(0.0); var kS = vec3f(0.0); var kB = vec3f(0.0); let V = (frame.camPos - P) / max(z, 1e-4);   // SNOW SPARKLE (below): this pixel's facet, what it flashes per class
-  if (SNOW_SPARKLE) { snowSparkleL = vec3f(0.0); fac = snowSparkleFacet(P, N, z); if (!SNOW_GLOW && fac.w <= 0.0) { return vec3f(0.0); } }   // (the sparkle alone, and no facet here: nothing to do)
+  if (lv(SNOW_SPARKLE)) { snowSparkleL = vec3f(0.0); fac = snowSparkleFacet(P, N, z); if (!lv(SNOW_GLOW) && fac.w <= 0.0) { return vec3f(0.0); } }   // (the sparkle alone, and no facet here: nothing to do)
   let r = i32(clamp(SNOW_GLOW_REACH / max(z * 2.0 * frame.post.w * frame.invScreen.y, 1e-5), 1.0, 14.0) + 0.5);
   let hi = vec2i(textureDimensions(gDepth)) - 1;
   var Nk: array<vec3f, 4>; var S = vec2f(luminance(EdS), luminance(EdB)); var pts = 1.0;
@@ -536,8 +536,8 @@ fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> 
     let u = w * (max(c, 0.0) + max(dot(Nk[0], ev.L), 0.0) + max(dot(Nk[1], ev.L), 0.0) + max(dot(Nk[2], ev.L), 0.0) + max(dot(Nk[3], ev.L), 0.0));   // what the direct pass scored for it over the stencil, unshadowed
     let broad = lightBroad(li);
     if (broad) { U.y += u; Q.y += w; } else { U.x += u; Q.x += w; }
-    if (SNOW_SPARKLE) { if (fac.w > 0.0 && c > 0.0) { let k = mix(ev.E, vec3f(w), SNOW_SPARKLE_WHITEN) * (snowSparkleLobe(fac.xyz, ev.L, V) * smoothstep(0.0, SNOW_SPARKLE_EDGE, c)); if (broad) { kB += k * SNOW_SPARKLE_BROAD; } else { kS += k; } } }
-    if (!SNOW_GLOW) { continue; }   // (the sparkle alone walks this loop: none of the glow's terms below)
+    if (lv(SNOW_SPARKLE)) { if (fac.w > 0.0 && c > 0.0) { let k = mix(ev.E, vec3f(w), SNOW_SPARKLE_WHITEN) * (snowSparkleLobe(fac.xyz, ev.L, V) * smoothstep(0.0, SNOW_SPARKLE_EDGE, c)); if (broad) { kB += k * SNOW_SPARKLE_BROAD; } else { kS += k; } } }
+    if (!lv(SNOW_GLOW)) { continue; }   // (the sparkle alone walks this loop: none of the glow's terms below)
     if (c <= -SNOW_GLOW_WRAP) { continue; }
     if (select(S.x, S.y, broad) <= 0.0) { continue; }   // (its class is wholly shadowed over the stencil: its share is × 0 below)
     let t = (c + SNOW_GLOW_WRAP) / SNOW_GLOW_WRAP; let l = 1.0 - min(c, 1.0); let l2 = l * l;
@@ -546,7 +546,7 @@ fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> 
   }
   // per class: the stencil's shadowed ∕ unshadowed light (the direct pass's own rays, penumbra filter and smoke), × how sure the stencil is (its mean cosine ∕ CONF)
   let vis = clamp(S / max(U, vec2f(1e-4)), vec2f(0.0), vec2f(1.0)) * clamp(U / max(Q * (pts * SNOW_GLOW_CONF), vec2f(1e-6)), vec2f(0.0), vec2f(1.0));
-  if (SNOW_SPARKLE) { snowSparkleL = (kS * vis.x + kB * vis.y) * (fac.w * SNOW_SPARKLE_GAIN); }
+  if (lv(SNOW_SPARKLE)) { snowSparkleL = (kS * vis.x + kB * vis.y) * (fac.w * SNOW_SPARKLE_GAIN); }
   return gS * vis.x + gB * vis.y;
 }
 
@@ -824,7 +824,7 @@ struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 
 @group(1) @binding(17) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; lookExpoGain). A buffer, not a texture: this stage has no sampled texture left. All zeros = no field
 const BEAM_R0 = 0.0022;                           // combat.ts beamBoxes: the beam's own half-width, m
 fn beamOutdoors(p: vec2f) -> bool {
-  if (WX_KINDS) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } }
+  if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } }
   let I = frame.weatherC; let A = frame.weatherD;
   return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w);
 }
@@ -1117,12 +1117,12 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     if (GLASS_REFRACT) { zg = z0; Ng = select(N, N0, moved); }
     var dif = albedo * (Ed + Ei) * (1.0 / PI);   // (the old product, untouched: the pass-off frame hashes identical to main — docs/internal/p4-materials.md §5)
     var sparkle = vec3f(0.0);                    // SNOW SPARKLE (snowSparkleFacet above): the facets' flashes at this pixel — zero unless SNOW_SPARKLE, on lit fresh snow
-    if (SNOW_GLOW || SNOW_SPARKLE) {   // SNOW GLOW (snowGlow above): on a snow pixel, the light that wrapped its terminator, and shade that leans to blue — never a man's pixel or a section cap's (one walk of the lights for the glow and the sparkle)
+    if (lv(SNOW_GLOW) || lv(SNOW_SPARKLE)) {   // SNOW GLOW (snowGlow above): on a snow pixel, the light that wrapped its terminator, and shade that leans to blue — never a man's pixel or a section cap's (one walk of the lights for the glow and the sparkle)
       let sa = snowGlowAmt(textureLoad(gNormal, sPix, 0).a);
       if (sa > 0.0 && ((id >> 28u) & 3u) == 0u) {
         let glow = snowGlow(sPix, P, N, z, EdS, EdB);
-        if (SNOW_GLOW) { let lE = luminance(Ed); let lI = luminance(Ei); dif += albedo * (glow + Ei * (SNOW_GLOW_SHADE - vec3f(1.0)) * (lI / max(lE + lI, 1e-5))) * (sa / PI); }
-        if (SNOW_SPARKLE) { sparkle = snowSparkleL * (sa * snowSparkleFresh(textureLoad(gMat, sPix, 0).x)); }
+        if (lv(SNOW_GLOW)) { let lE = luminance(Ed); let lI = luminance(Ei); dif += albedo * (glow + Ei * (SNOW_GLOW_SHADE - vec3f(1.0)) * (lI / max(lE + lI, 1e-5))) * (sa / PI); }
+        if (lv(SNOW_SPARKLE)) { sparkle = snowSparkleL * (sa * snowSparkleFresh(textureLoad(gMat, sPix, 0).x)); }
       }
     }
     if (LOOK) { if (frame.veilA.z > 0.0 && ((id >> 29u) & 1u) == 0u && P.y < POWDER_TOP) {   // THE LOOK PROTOTYPE: loose snow in the air (lookPowder above) — any pixel under the layer's top: the snow, a boot, a wall's foot; never a section cap's
@@ -1138,7 +1138,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         let sunPix = frame.veilA.w * facing / toSun.y; let sunsOwn = clamp(sunPix / max(luminance(Ed), 1e-4), 0.0, 1.0);
         let graze = min(1.0 / max(facing, 0.5), 2.0);
         dif = mix(ground, max(POWDER_ALBEDO * (Ed * mix(1.0, vv.z * graze, sunsOwn) + Ei) * (1.0 / PI), ground), vv.x);
-        if (SNOW_SPARKLE) { sparkle *= 1.0 - vv.x; }   // (the facets under the powder do not flash through it)
+        if (lv(SNOW_SPARKLE)) { sparkle *= 1.0 - vv.x; }   // (the facets under the powder do not flash through it)
         // (and the powder has grains of its own that catch the sun for a moment: a few in a thousand of 3 cm spots, new ten times a second)
         dif += POWDER_ALBEDO * Ed * (sunsOwn * vv.x * step(0.994, hash13(vec3f(floor(P.xz / 0.03), floor(frame.time * 10.0)))) * (2.0 / PI));
       }
@@ -1158,7 +1158,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     if ((frame.flags & FLAG_GLOSS) != 0u && glossPix) { spec = lookShow(upsampleSpecular(pix, pin, zg, Ng) * select(albedo4.a, specK, glassPix), shadeG); color += spec; }   // × the decals' gloss-keep: soot on the lino does not mirror the ceiling panel (1.0 wherever no mark lies) — except through a pane, whose texels carry the floor's AND the pane's reflection in one read: the pane's must not vanish over a scorch behind it, so the keep is waived there (and the cracks' boost applies)
     else if (glassPix) { spec = lookShow(upsampleSpecAny(pix, pin, zg, Ng) * specK, shadeG); color += spec; }
     if ((id & 0x50000000u) == 0x50000000u) { let ws = lookShow(wetCoatSpec(id, P, N, z, EdS, EdB, Ei), shadeG); spec += ws; color += ws * glassT; }   // a WET character pixel (bits 30 + 28: gbuffer.wgsl fsSkin — never a dry man's, never with the setting off): the clear coat's light, through the pane like the rest of him if he stands behind one
-    if (SNOW_SPARKLE) { spec += sparkle; color += sparkle * glassT; }   // SNOW SPARKLE: light, not paint — added as it is
+    if (lv(SNOW_SPARKLE)) { spec += sparkle; color += sparkle * glassT; }   // SNOW SPARKLE: light, not paint — added as it is
     if (((id >> 29u) & 1u) == 1u) { color = mix(frame.capColor.rgb, albedo * frame.capColor.rgb * 4.0, frame.capColor.a); }
     if (dbg == 1u) { color = select(albedo, albedo * glassT + vec3f(0.0, 0.08, 0.06), glassPix); }   // (albedo view: pixels behind glass carry the tint and a faint teal wash, so the panes can be found)
     else if (dbg == 2u) { color = Nl * 0.5 + 0.5; }
@@ -1183,7 +1183,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
   if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, rdT, tT, beamPix()); }
   if (dbg == 0u && beams.fireN.x > 0u) { color = fireOver(color, pixf, rdT, tT); }
   if (dbg == 0u || dbg == 5u) {
-    if (!sky) { if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) { wxAirT = wxAirTEst(pixf, zg); } } } }
+    if (!sky) { if (WX_VOL) { if (lv(WX_KINDS)) { if (frame.cardCfg.w != 0u) { wxAirT = wxAirTEst(pixf, zg); } } } }
     // (on a surface the fog along the PIXEL's ray to its own surface — zg — whatever a bend read; view 5 keeps the sky under the volumetrics, as the old path always did)
     if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, tT); color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u && !sky); }
     else {
@@ -1191,7 +1191,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u && !sky);
     }
   }
-  if (WX_KINDS && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) {   // WEATHER FOG (a kind picked, game/weatherKinds.ts) along the pixel's ray to its surface: the field the men's eyes are cut by (weather.ts airTrans); over the void past the lot as over the ground beside it. (The flat veil — under WX_VOL the weather's air is a volume the volumetric pass marched: it is in `vol` above)
+  if (lv(WX_KINDS) && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) {   // WEATHER FOG (a kind picked, game/weatherKinds.ts) along the pixel's ray to its surface: the field the men's eyes are cut by (weather.ts airTrans); over the void past the lot as over the ground beside it. (The flat veil — under WX_VOL the weather's air is a volume the volumetric pass marched: it is in `vol` above)
     if (WX_EDGE && !sky) {   // (the veil at the building's shell — common.wgsl wxFogApplySurf: an outside wall's face is asked where its normal points; a man's pixel and a box he carries — bit 28 / the owner byte of the PIXEL's own id — where he stands)
       var idg = id; if (GLASS_REFRACT) { if (moved) { idg = textureLoad(gId, pix, 0).x; } }
       color = wxFogApplySurf(color, dirS, zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));

@@ -319,7 +319,7 @@ fn mirrorTail(r: RayHit, ro: vec3f, R: vec3f, trOwner: u32, F: f32, isGloss: boo
   }
   if (isGloss) {
     let Wc = frame.weatherC; var wetOut = select(0.0, frame.weatherA.w, P.x < Wc.x || P.z < Wc.y || P.x > Wc.z || P.z > Wc.w);
-    if (WX_KINDS) { if (frame.cardCfg.y != 0u && wxRoofed(P.xz)) { wetOut = 0.0; } }   // (weather kinds: every roof of the level keeps its floor dry, not the first alone)
+    if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u && wxRoofed(P.xz)) { wetOut = 0.0; } }   // (weather kinds: every roof of the level keeps its floor dry, not the first alone)
     return L * (min(F * (1.0 + 2.5 * wetOut), 1.0) * GLOSS_STRENGTH);
   }
   return L * F;

@@ -411,7 +411,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   var wetF = 1.0;
   if (aniso && beams.k.y > 0.0) {
     let Wc = frame.weatherC; var wetOut = select(0.0, frame.weatherA.w, P.x < Wc.x || P.z < Wc.y || P.x > Wc.z || P.z > Wc.w);
-    if (WX_KINDS) { if (frame.cardCfg.y != 0u && wxRoofed(P.xz)) { wetOut = 0.0; } }
+    if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u && wxRoofed(P.xz)) { wetOut = 0.0; } }
     wetF = 1.0 + beams.k.y * wetOut;
   }
   let Po = P + N * 0.02;
