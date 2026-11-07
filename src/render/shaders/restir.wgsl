@@ -67,8 +67,8 @@
 //                the cone crossed thin geometry ("the flashlight direct lighting seems like a huge regression now. very noisy and lots of rims" — the maintainer, at high;
 //                ?norestir "looks great"). Static lights (owner 0: panels, lamps, vending fronts, the moon) keep ReSTIR unchanged. Bounded by construction: only the pixels
 //                a held light reaches, ≤ 2K + 2 rays there.
-//     MOTION     (lane fix/direct-motion, docs/internal/direct-motion.md; compiled in only under the prepended `const RESTIR_MOTION = true` — passes.ts builds the module twice and takes
-//                this program while settings.restirMotion ≠ 0, so 0 = the program above byte for byte). Under CAMERA motion the temporal reuse above flows: a pan of v px a frame
+//     MOTION     (lane fix/direct-motion, docs/internal/direct-motion.md; its three parts are bits of ru.cfg.w, which the host raises on the frames the camera moved; with none up the estimator's
+//                arithmetic is the still frame's. Until 2026-11-07 it was a second program, `restirM`). Under CAMERA motion the temporal reuse above flows: a pan of v px a frame
 //                reprojects every pixel to the NEAREST texel ⌊x − v + ½⌋, so at v = 2.44 the whole raster inherits from x − 2 while the picture moved 2.44 — the reservoir pattern
 //                slides 0.44 px a frame across the floor the resolve holds still, and after M frames a lineage was drawn and validated for points up to M × 0.44 px behind the
 //                pixel: 2–7-px blotches crawling under a panning floor and busier penumbra edges (docs/internal/gi-motion.md measured it: ReSTIR calmer than the leader path ×2‥40 at
@@ -99,10 +99,10 @@ fn stratumLight(li: Light, hybrid: bool) -> bool { return lightTransient(li) || 
 @group(1) @binding(7) var gVel: texture_2d<f32>;   // the g-buffer's per-pixel OBJECT motion (TAAU's, gbuffer.wgsl GOut.vel): ndc of where this surface point WAS last frame minus where it IS, both through prevViewProj; 0 for rigid geometry
 
 struct RestirU {
-  cfg: vec4u,                     // x = shadow rays per pixel per frame (2‥6), y = spatial taps k (0 = off), z = M cap (1‥30), w = flags: 1 = tile gradient confidence, 2 = spatial everywhere (not only young pixels), 16 = A/B: tile-dark lights stay in the fresh draw (the unbiased first cut; no audits), 128 = hue split (4, 8, 32, 64 free); MOTION (the RESTIR_MOTION program only): 256 = stochastic-bilinear reservoir reprojection, 512 = motion-scaled confidence, 1024 = spatial reuse wherever the pixel moves
+  cfg: vec4u,                     // x = shadow rays per pixel per frame (2‥6), y = spatial taps k (0 = off), z = M cap (1‥30), w = flags: 1 = tile gradient confidence, 2 = spatial everywhere (not only young pixels), 16 = A/B: tile-dark lights stay in the fresh draw (the unbiased first cut; no audits), 128 = hue split (4, 8, 32, 64 free); MOTION: 256 = stochastic-bilinear reservoir reprojection, 512 = motion-scaled confidence, 1024 = spatial reuse wherever the pixel moves
   cfg2: vec4f,                   // x = spatial radius (px at this resolution), y = gradient threshold (the tile's z statistic under which history keeps full confidence; 0 past 1.6×), z = 'young' M threshold for spatial reuse below cfg.x 5, w = audit fraction: the share of lanes that spend one extra ray a frame testing a tile-dark light (votes only; 0‥1)
   jitter: vec4f,  // xy = this frame's TAAU jitter in internal px, zw = the previous render's (the reservoir domain is the UNJITTERED pixel centre: traced from there, reprojected from there)
-  mot: vec4f,     // MOTION (header; read only by the RESTIR_MOTION program, cfg.w bits 256 / 512 / 1024 switch its three parts): x = the screen motion (px a frame at THIS resolution — the host scales its per-1000-rows knob) under which the history keeps its full confidence · y = the floor of the cut past MOTION_RAMP × x (fraction of the M cap) · z = the motion (px) past which spatial reuse runs at the pixel · w = spare
+  mot: vec4f,     // MOTION (header; cfg.w bits 256 / 512 / 1024 switch its three parts): x = the screen motion (px a frame at THIS resolution — the host scales its per-1000-rows knob) under which the history keeps its full confidence · y = the floor of the cut past MOTION_RAMP × x (fraction of the M cap) · z = the motion (px) past which spatial reuse runs at the pixel · w = spare
   fwd: array<vec4u, 4>,           // last frame's light slot p → this frame's slot (byte p; 255 = that light is not uploaded this frame)
   inv: array<vec4u, 4>,           // this frame's slot → last frame's (255 = the light is new this frame)
   prevLights: array<Light, 64>,   // last frame's uploaded light records (positions, cones, intensities as they were): the fresh candidate's 'target then'
@@ -168,6 +168,7 @@ fn latticeUV(iu: u32, iv: u32) -> vec2f { return vec2f((f32(iu) + 0.5) / 16.0, (
 
 // MOTION (header): the screen motion, in px of this raster, that the LAST prevTexelAt call measured for its pixel (the reprojected point vs the pixel's own unjittered centre —
 // 0 for a still surface under a still camera whatever TAAU's jitter does); main() reads it straight after its own call, before any spatial tap's call overwrites it
+const MOTION_BITS: u32 = 1792u;   // ru.cfg.w's three MOTION bits: 256 | 512 | 1024
 var<private> mvPx: f32 = 0.0;
 /** a per-pixel-per-frame uniform variate in [0, 1) off a hash of (pixel, frame, k) — NOT the lane's stream: a spatial tap reading pixel q's history must land on the texel q itself drew */
 fn motHash(px: vec2u, k: u32) -> f32 {
@@ -183,7 +184,7 @@ fn prevTexelAt(Pw: vec3f, Px: vec3f, px: vec2u, dims: vec2u, canonical: bool) ->
   let vel = textureLoad(gVel, px, 0).xy;
   let uv = (pclip.xy / pclip.w + vel) * vec2f(0.5, -0.5) + 0.5;
   var qf = uv * vec2f(dims) - ru.jitter.zw;                 // Pw is an unjittered-centre point; in last frame's JITTERED raster it sat at (its unjittered position + that frame's jitter) — undo it
-  if (RESTIR_MOTION && (canonical || (ru.cfg.w & 256u) != 0u)) {   // (a spatial tap's call needs the flow only to re-derive the neighbour's stochastic pick (a); its mvPx is never read — three taps × two mat-vecs a pixel measured +0.2 ms at rest otherwise)
+  if ((canonical && (ru.cfg.w & MOTION_BITS) != 0u) || (ru.cfg.w & 256u) != 0u) {   // (the flow is measured only on a frame that carries a motion bit: a still camera's frame does none of this work and mvPx stays 0, as when this was a program of its own · a spatial tap's call needs the flow only to re-derive the neighbour's stochastic pick (a); its mvPx is never read — three taps × two mat-vecs a pixel measured +0.2 ms otherwise)
     // The MOTION is measured off the raster's OWN point Px (the g-buffer's exact surface point at this jittered pixel), not off Pw: Pw is rebuilt from this pixel's depth at the
     // unjittered centre and pushed back onto the tangent plane, which on a floor seen obliquely leaves it a few tenths of a pixel beside the true unjittered-centre point,
     // by an amount that changes with the jitter phase — harmless for a nearest-texel pick (always under ½ px at rest), but a bilinear pick would hand a STILL pixel its
@@ -197,7 +198,7 @@ fn prevTexelAt(Pw: vec3f, Px: vec3f, px: vec2u, dims: vec2u, canonical: bool) ->
     } else { mvPx = 1e6; }
   }
   if (any(qf < vec2f(0.0)) || any(qf >= vec2f(dims))) { return vec4u(0u); }
-  if (RESTIR_MOTION && (ru.cfg.w & 256u) != 0u) {
+  if ((ru.cfg.w & 256u) != 0u) {
     // (a) STOCHASTIC-BILINEAR: one of the four texels round qf, drawn with its bilinear weight, validated by depth like the nearest one; a rejected candidate's probability goes to the rest.
     // Texel centres sit at integer + ½: the four round qf are ⌊qf − ½⌋ + {0,1}²; a fraction inside ±0.02 of a texel centre snaps to it (at rest qf IS the pixel's own centre but for
     // float error, and the pick must then be today's texel with certainty — the still picture stays ReSTIR's still picture).
@@ -295,7 +296,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   workgroupBarrier();
   nIter = wgCount;
 
-  let raysCfg = ru.cfg.x & 255u; let kSpatial = ru.cfg.y & select(0xffffffffu, 255u, RESTIR_MOTION); let mCap = f32(max(ru.cfg.z & 255u, 1u));   // (the MOTION program keeps a tap count for moving pixels in cfg.y bits 8‥11 — lever c; the host packs it only for that program)
+  let raysCfg = ru.cfg.x & 255u; let kSpatial = ru.cfg.y & 255u; let mCap = f32(max(ru.cfg.z & 255u, 1u));   // (the MOTION program keeps a tap count for moving pixels in cfg.y bits 8‥11 — lever c; the host packs it only for that program)
   let heldK = (ru.cfg.x >> 8u) & 15u; let hybrid = heldK > 0u;   // HELD (header): K stratified rays for each of the two carried leaders at the pixel; 0 = the hybrid off — main's transient stratum, statement for statement
   // TRADES (the lighting-cost rows; compiled in only under the prepended `const RESTIR_TRADE = true` — passes.ts builds that twin on FIRST USE, and packs ru.cfg.x bits 12‥23 only while a row is on:
   // all rows off = the estimator's program and uniform exactly as they were). Each gives up a little accuracy for shadow rays:
@@ -318,7 +319,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   let bel = vec2u(atomicLoad(&wgBelief[0]), atomicLoad(&wgBelief[1]));   // the tile's DARK set by this frame's slots, in registers
 
   var N = vec3f(0.0, 1.0, 0.0); var owner = 0u; var Po = P; var PoT = P; var PoJ = P; var Pu = P; var pxPerMetre = 0.0; var viewW = 1.0;
-  var motionPx = 0.0;                    // MOTION: |screen motion| of this pixel's surface point in px (camera + object), 0 unless the RESTIR_MOTION program measured it
+  var motionPx = 0.0;                    // MOTION: |screen motion| of this pixel's surface point in px (camera + object)
   var darkSlot = 0u;                    // this pixel's own dark memory: 0 = none, else slot + 1 (this frame's numbering) of the light its fresh ray last found dark where the tile believes it lit
   let knownDark = (ru.cfg.w & 16u) == 0u;   // tile-DARK lights leave the fresh draw (known dark exactly as a reach-masked light is: in U, no ray, their true 0 without the one-sample all-or-nothing noise — a lamp
                                          // behind the wall holding 45‥80 % of the unshadowed total made the lino an EMA of coin flips, ±15‥30 % per pixel, crawling); an AUDITING share of the lanes
@@ -358,10 +359,10 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     viewW = (frame.viewProj * vec4f(P, 1.0)).w;
     pxPerMetre = frame.screen.y / (2.0 * zView * frame.post.w + 1e-4);
     // ---- temporal: last frame's reservoirs for this surface point, their lights re-mapped by identity ----
-    tw = prevTexelAt(Pu, P, gxy, dims, true);   // (P: the raster's own point — the RESTIR_MOTION program measures the motion off it; unused otherwise)
-    if (RESTIR_MOTION) { motionPx = mvPx; }   // (MOTION: this pixel's own screen motion, px — read before any spatial tap's reprojection reuses mvPx)
+    tw = prevTexelAt(Pu, P, gxy, dims, true);   // (P: the raster's own point — the motion is measured off it)
+    motionPx = mvPx;   // (MOTION: this pixel's own screen motion, px — read before any spatial tap's reprojection reuses mvPx)
     { let pen = rHint(tw.x) > 0.0 || rHint(tw.z) > 0.0; if (pen && penCapU > 0u) { mCapPix = min(mCap, f32(penCapU)); } if (pen && penRays) { fresh2Pix = true; } }   // (D: this pixel sat in a penumbra last frame — see penCapU / penRays above)
-    if (RESTIR_MOTION && (ru.cfg.w & 512u) != 0u) { mCapPix = max(1.0, mCapPix * (1.0 - (1.0 - ru.mot.y) * smoothstep(ru.mot.x, ru.mot.x * MOTION_RAMP, motionPx))); }   // (b) MOTION-SCALED CONFIDENCE: the memory this pixel keeps (and stores) is whole under mot.x px a frame of its own motion and × mot.y past MOTION_RAMP × that — measured, not modelled: at 0.8 px a frame (770 rows) the nearest-texel history is still worth its 20 candidates and any cut costs 10–25 % MORE flow; at 1.4–2 px it is worth about two (docs/internal/direct-motion.md §2)
+    if ((ru.cfg.w & 512u) != 0u) { mCapPix = max(1.0, mCapPix * (1.0 - (1.0 - ru.mot.y) * smoothstep(ru.mot.x, ru.mot.x * MOTION_RAMP, motionPx))); }   // (b) MOTION-SCALED CONFIDENCE: the memory this pixel keeps (and stores) is whole under mot.x px a frame of its own motion and × mot.y past MOTION_RAMP × that — measured, not modelled: at 0.8 px a frame (770 rows) the nearest-texel history is still worth its 20 candidates and any cut costs 10–25 % MORE flow; at 1.4–2 px it is worth about two (docs/internal/direct-motion.md §2)
     darkSlot = ((tw.y >> 28u) & 7u) | (((tw.w >> 28u) & 7u) << 3u);   // (the two B words' spare bits 28‥30; read before a gone light zeroes its word below)
     if (darkSlot != 0u) { let ns = fwdSlot(darkSlot - 1u); darkSlot = select(ns + 1u, 0u, ns >= 63u); }   // by identity; gone (255) or slot 63 (unrepresentable in 6 bits + none) = none
     if (rValid(tw.y)) { curT[0] = fwdSlot(rSlot(tw.x)); if (curT[0] == 255u || stratumLight(wgLights[min(curT[0], 63u)], hybrid)) { curT[0] = 255u; tw.y = 0u; } }   // (a transient — or, under the hybrid, a carried light — is never adopted below; one held from before that rule counts as gone)
@@ -633,7 +634,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       // ---- spatial reuse: neighbours' temporal reservoirs (last frame's), pairwise MIS against the canonical sample (ySlot …) ----
       var sLum = wsum;                                              // Σw = the luminance estimate of the class's visible light
       var fSlot = ySlot; var fUv = yUv; var fV = yV; var fromNb = false;
-      let motSpatial = RESTIR_MOTION && (ru.cfg.w & 1024u) != 0u && motionPx > ru.mot.z;   // (c) MOTION: spatial reuse wherever this pixel's history is being handed about by motion anyway …
+      let motSpatial = (ru.cfg.w & 1024u) != 0u && motionPx > ru.mot.z;   // (c) MOTION: spatial reuse wherever this pixel's history is being handed about by motion anyway …
       var kSp = kSpatial; if (motSpatial) { kSp = max(kSp, (ru.cfg.y >> 8u) & 15u); }      // … with at least the motion tap count (cfg.y bits 8‥11): the fresh candidates a cut-down history leans on are one or two rays a pixel; the neighbours' are the rest
       if (kSp > 0u && RW > 0.0 && (finalRay || Rm < ru.cfg2.z || (ru.cfg.w & 2u) != 0u || motSpatial)) {
         let kf = f32(kSp); let Mck = Rm / kf;
@@ -653,7 +654,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
               let Pq = worldFromDepth(vec2f(q) + 0.5 + ru.jitter.xy, dq);   // its domain point (unjittered centre), as ours
               let Nq = normalize(textureLoad(gNormal, vec2u(q), 0).xyz * 2.0 - 1.0);
               if (abs(dot(Pq - P, N)) < max(viewW * 0.004, 0.04) && dot(Nq, N) > 0.9) {
-                var Pxq = Pq; if (RESTIR_MOTION && (ru.cfg.w & 256u) != 0u) { Pxq = worldFromDepth(vec2f(q) + 0.5, dq); }   // (its raster point, for the stochastic pick's exact flow — its own canonical call measured the same; (b) / (c) never read a tap's motion)
+                var Pxq = Pq; if ((ru.cfg.w & 256u) != 0u) { Pxq = worldFromDepth(vec2f(q) + 0.5, dq); }   // (its raster point, for the stochastic pick's exact flow — its own canonical call measured the same; (b) / (c) never read a tap's motion)
                 let tq = prevTexelAt(Pq, Pxq, vec2u(q), dims, false);
                 let qa = select(tq.x, tq.z, c == 1u); let qb = select(tq.y, tq.w, c == 1u);
                 let cs = select(255u, fwdSlot(rSlot(qa)), rValid(qb));
