@@ -9,6 +9,9 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---- private helpers
 
+/// The four-man squad's budget of characters: the seats' men, the four and the layout's five defenders (nightbreach.ts SQUAD4_BUDGET: ten in a game of one).
+pub(crate) fn squad4_budget(g: &crate::game::Game) -> f64 { SQUAD4_BUDGET - 1.0 + crate::seats::seat_count(g) }
+
 /// `T !== applied`, an identity of the level's own rows (a structure's team start, one of its other ways in, the night breach's own): here the row
 /// whole, by value. Another start with the same place for Sam is ANOTHER start in the TypeScript and writes the knobs again (a knob moved by hand
 /// since is put back), so every field is asked, not only the two the write copies. Two rows of one level alike in every field would still read as
@@ -88,7 +91,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
     let n = g.k.nightbreach.squad;
     let four = n > 2.0;
     let layout_budget = if layout.is_some() { crate::roomclear::room_clear_scenario_budget(g) } else { None };
-    let budget = if four { Some(m::max(SQUAD4_BUDGET, layout_budget.unwrap_or(0.0))) } else { layout_budget };
+    let budget = if four { Some(m::max(squad4_budget(g), layout_budget.unwrap_or(0.0))) } else { layout_budget };
     let yaw = team.as_ref().and_then(|s| s.ops_yaw).unwrap_or(m::PI / 2.0);
     if !four {
         for i in 0..core::cmp::min(2, n as usize) {
@@ -147,6 +150,10 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
             .map(|h| NightBreachMark { pos: h.pos, aim_at: h.aim_at, name: None, drill: None })
             .collect()
     };
+    // (THE FLOOR HOLDS SIXTEEN WITH EVERY SEAT COUNTED: the team stands first, then as many defenders, in the order of their marks, as that
+    //  leaves room for. A game of one has room for every garrison a level may hold, so it stands as ever; a game of two on a full floor
+    //  stands one defender fewer, where it stood seventeen and the picture held sixteen.)
+    let marks: Vec<NightBreachMark> = { let room = crate::seats::floor_room(g); marks.into_iter().take(m::max(0.0, room) as usize).collect() };
     g.night_breach.marks = marks.clone();
     for (i, h) in marks.iter().enumerate() {
         let name = match &h.name { Some(s) => s.clone(), None => format!("Tango {}", i + 1) };

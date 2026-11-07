@@ -46,7 +46,6 @@ import { SNOW_LOOK, WX_OWN } from './weatherKinds';
 import { windOf } from './wind';
 import { airSimStats, airLive, airWant } from './airSim';
 import { stepSnowBlast, snowBlastFeed, snowBlastPuffs, snowBlastThrow } from './snowBlast';
-import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The numbers (judged on software-rendered stills only — the maintainer's to move; `__snow.fx` on the console, live). Authored data, not player switches. */
 export const SNOWFX = {
@@ -230,7 +229,7 @@ const num = (v: unknown, d: number) => typeof v === 'number' && Number.isFinite(
 const rimTaper = (r01: number) => { const t = clamp((r01 - 0.7) / 0.3, 0, 1); return 1 - t * t * (3 - 2 * t); };   // (the emit kernel's own acceptance toward the disc's rim)
 
 /** Once a frame, in the rain recycler's place (game.ts → rainFx.ts updateRainFx, after the weather and the wind, before render). */
-export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('updateSnowFx', undefined, [g, dt, cam]); if (__r !== RUST_PASS) return __r as any; } }
+export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
   const st = stateOf(g); const S = st.stats; const F = SNOWFX;
   stepSnowBlast(g, dt);   // (a blast in the snow, snowBlast.ts: what is still throwing ages — before anything is filed for it below)
   const e = g.engine as unknown as { settings: Record<string, unknown>; weather?: WeatherFrame };

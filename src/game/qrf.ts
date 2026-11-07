@@ -28,7 +28,7 @@
 // man who said it — or the alarm's own place, never where the player is. With nothing said, on a floor with no room plans, they walk the level's named
 // places. Whoever is against them on the level (a partner, a teammate) is their enemy by the shared sight test, not Sam alone.
 // QA: tools/qa/qrf-probes.ts (`probes.ts qrf`), soak.ts --loud-at; tools/qa/qrf-squad-check.ts (the squad's drill); tools/qa/response-check.ts (the level's own team).
-import { allDown } from './seats';
+import { allDown, seatCount } from './seats';
 import { SideSet } from '../math/side';
 import { QRF_TINT, QRF_TINT2 } from './consts';
 import { Vec3, v3, clamp } from '../math/vec';
@@ -145,7 +145,7 @@ function marksOf(g: Game): Marks | null {
 }
 /** how many more men the floor can be given: the eight that cast shadows, as it was — or, the team the level's own, the skinned characters one frame draws
  *  (guards.ts MAX_SKINNED) less the civilians: the men past the eighth character have no shadow proxy (guards.ts spawnUnit's `budget`) */
-function roomFor(g: Game): number { const n = (RESPONSE.on ? MAX_SKINNED - g.civilians.length : CHAR_BUDGET) - 1 - g.guards.length; return raid(g) ? Math.min(n, SQUAD_MAX_MEN - g.nightBreach.hostiles.length - g.qrf.men.length) : n; }   // (a raid: never more than the eleven a squad ever faces, the garrison as staged and the team together)
+function roomFor(g: Game): number { const n = (RESPONSE.on ? MAX_SKINNED - g.civilians.length : CHAR_BUDGET) - seatCount(g) - g.guards.length; return raid(g) ? Math.min(n, SQUAD_MAX_MEN - g.nightBreach.hostiles.length - g.qrf.men.length) : n; }   // (a raid: never more than the eleven a squad ever faces, the garrison as staged and the team together)
 const budgetOf = (g: Game) => RESPONSE.on ? { budget: MAX_SKINNED - g.civilians.length } : {};
 /** the most men this level's response may ever have on the floor, element and outside posts together (the level's `men`; the sandbox's two numbers without) */
 function mostMen(g: Game): number { const R = RESPONSE.on ? responseOf(g) : null; return R?.men ? R.men[1] : 8; }

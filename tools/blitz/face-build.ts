@@ -80,7 +80,8 @@ const NOW = { building: false, since: 0, line: '', profile: 'play' as FaceProfil
 export function faceNow(): { building: boolean; secs: number; line: string; profile: FaceProfile; failed: string } { return { building: NOW.building, secs: NOW.building ? Math.round((performance.now() - NOW.since) / 1000) : 0, line: NOW.line, profile: NOW.profile, failed: NOW.failed }; }
 let building: Promise<Answer> | null = null;
 let saidNoCargo = false;
-/** `--prebuilt`: the build maps the checkout's and the home folder's paths away, so the file it makes carries no machine's paths */
+/** `--prebuilt`: the build maps the home folder's and the checkout's paths away, so the file it makes carries no machine's paths. The compiler takes the LAST rule that
+ *  matches, so the checkout's own rule goes last: a checkout lying under the home folder is then `./…`, not `~/<where it lies>/…` */
 let MAPPED = false;
 /** THE MODULE'S FILE, built first where it is stale: `{ path }`, or `{ why }` in words a player can be shown. One build at a time; a second ask waits on the first. */
 export function faceWasm(say: (line: string) => void = () => {}, profile: FaceProfile = (process.env.FACE_PROFILE === 'play' ? 'play' : 'release')): Promise<Answer> {
@@ -91,7 +92,7 @@ export function faceWasm(say: (line: string) => void = () => {}, profile: FacePr
     if (!c) { const old = [file, faceFile(profile === 'play' ? 'release' : 'play')].find(f => existsSync(f)); if (old) { say(`game_face.wasm: ${stale}, and there is no cargo on this machine to build it: the file as it stands is served (${old.slice(ROOT.length + 1)})`); return { path: old }; } const why = NO_CARGO + otherSources(); if (!saidNoCargo) { saidNoCargo = true; say(`game_face.wasm: ${why}`); } return { why }; }
     say(`game_face.wasm: ${stale}; building it (cargo build --profile ${profile} in rust/game_face: ${profile === 'play' ? 'a few minutes the first time, and about 7 GB of memory' : 'the fat link: many minutes and over 10 GB of memory'}) …`);
     const t0 = performance.now(); NOW.building = true; NOW.since = t0; NOW.line = 'starting cargo'; NOW.profile = profile; NOW.failed = '';
-    const p = Bun.spawn([c, 'build', '--target', 'wasm32-unknown-unknown', '--profile', profile], { cwd: CRATE, stdout: 'ignore', stderr: 'pipe', env: { ...process.env, PATH: `${join(homedir(), '.cargo/bin')}:${process.env.PATH ?? ''}`, ...(MAPPED || process.env.FACE_BUILD === '1' ? { RUSTFLAGS: `${process.env.RUSTFLAGS ?? ''} --remap-path-prefix=${ROOT}=. --remap-path-prefix=${homedir()}=~`.trim() } : {}) } });
+    const p = Bun.spawn([c, 'build', '--target', 'wasm32-unknown-unknown', '--profile', profile], { cwd: CRATE, stdout: 'ignore', stderr: 'pipe', env: { ...process.env, PATH: `${join(homedir(), '.cargo/bin')}:${process.env.PATH ?? ''}`, ...(MAPPED || process.env.FACE_BUILD === '1' ? { RUSTFLAGS: `${process.env.RUSTFLAGS ?? ''} --remap-path-prefix=${homedir()}=~ --remap-path-prefix=${ROOT}=.`.trim() } : {}) } });
     // cargo's own words as they come: the crates it compiles and what rustup fetches are said, the compiler's warnings are not
     let err = '', part = '', lastSaid = 0;
     const dec = new TextDecoder();
@@ -138,6 +139,9 @@ if (import.meta.main) {
     const r = await faceWasm(l => console.log(l), 'play'); if ('why' in r) { console.error(r.why); process.exit(1); }
     if (r.path !== f || statSync(f).mtimeMs === was) { console.error(`--prebuilt: no new build was made (${r.path.slice(ROOT.length + 1)} was already up to date): touch a source or remove the file, and run again`); process.exit(1); }
     const bytes = readFileSync(f), text = bytes.toString('latin1'); for (const bad of [ROOT, homedir()]) if (text.includes(bad)) { console.error(`--prebuilt: the module still carries a path of this machine (${bad}): not copied`); process.exit(1); }
+    // (…and ANY absolute path of a source file that is not in a mapped form is a machine's: the two tests above miss a checkout lying under the home folder mapped by the home's rule alone. A path counts where nothing of a path stands before its first `/`: mapped forms begin `./` or `~/` and a path named in a message begins with a word. The compiler's own library is `/rustc/<its hash>/` and `/rust/deps/`)
+    { const seen = new Set<string>(); for (const m of text.matchAll(/\/(?:[\w.+\-]+\/)+[\w.+\-]+\.rs/g)) { const before = text[m.index! - 1] ?? ''; if (/[\w.~+\-]/.test(before) || m[0].startsWith('/rustc/') || m[0].startsWith('/rust/deps/')) continue; seen.add(m[0]); }
+      if (seen.size) { console.error(`--prebuilt: the module carries ${seen.size} absolute path(s) of this machine, not copied; the first: ${[...seen][0]}`); process.exit(1); } }
     mkdirSync(join(CRATE, 'prebuilt'), { recursive: true }); copyFileSync(f, PREBUILT); writeFileSync(PREBUILT_SOURCES, `${sourcesHash()}\n`);
     console.log(`${PREBUILT.slice(ROOT.length + 1)}: ${bytes.length} bytes, sources ${sourcesHash().slice(0, 12)}`); process.exit(0);
   }

@@ -42,6 +42,9 @@ import { SNAPS, SAVETIMELINE, levelFingerprint, type SlotInfo } from '../game/sa
 import { CLEANRESTART } from '../game/cleanrestart';
 import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
+import { Character } from '../game/character';
+import { Firearm } from '../game/weapons';
+import { loneMen } from '../sim/men/store';
 import { sampleCmd, stillCmd, type PlayerCmd } from '../game/cmd';
 import { dressStep, DRESS_MS } from './rustdress';
 import { wallFeelPicture } from '../game/blastFeel';
@@ -210,6 +213,10 @@ function recover(S: Held, shift: boolean): void {
 /** what the page says of the Rust game, on `window.__rust` */
 export const RUST_GAME = {
   on: false, bytes: 0, fetchMs: 0, compileMs: 0, startMs: 0, startBytes: 0, handle: 0, slot: -1, ticks: 0, starts: 0, grew: 0, memory: 0,
+  /** rows the game MADE at run time, counted by class over the steps' applies; what the made men and guns took from a twin of their class's own
+   *  constructor (fields and classes of parts the bridge does not carry); a class whose twin could not be built, and why */
+  made: {} as Record<string, number>, madeTook: {} as Record<string, number>, madeThrew: {} as Record<string, string>,
+  madeLast: {} as Record<string, object>, madeAtRunTime: (row: object): boolean => MADE_ROWS.has(row),
   /** ms of the last step and summed over every step: the host's half, the tick, the filtered export, the apply, the out events, the dress step */
   last: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, sum: { host: 0, step: 0, export: 0, apply: 0, out: 0, dress: 0, bytes: 0 }, worst: { step: 0, apply: 0, at: 0 },
   probeForgot: 0, wallFeels: 0, pokes: 0, poked: {} as Record<string, number>, pokeRefused: {} as Record<string, string>, askRefused: { n: 0, rows: {} } as { n: number; rows: Record<string, string> }, crossed: {} as Record<string, number>, named: 0, wholes: 0, wholeMs: 0, rowsKept: 0, nulls: 0,
@@ -222,6 +229,8 @@ export const RUST_GAME = {
    *  the host's half (the knobs · the light probe's answers handed in · the bridge's hand-over built and taken), the listing, the tick, the lights'
    *  update, the rails' view, the filtered export, the apply (the bridge's own walk, by its phases · the menu's questions · the doors' stand-in), the out events, the dress step, the probe's asks read back, the save controller */
   prof: { on: false, n: 0, knobs: 0, probeIn: 0, hostHalf: 0, upload: 0, tick: 0, lights: 0, view: 0, asked: 0, export: 0, applyWalk: 0, applyRows: 0, applyMain: 0, applyTables: 0, asks: 0, doors: 0, out: 0, dress: 0, probeOut: 0, saves: 0, phases: {} as Record<string, number> },
+  /** quiet runs of steps (`rustQuiet`): how many ended in an apply, and the steps taken inside them */
+  quiet: { runs: 0, ticks: 0 },
   outEvents: 0, outArms: {} as Record<string, number>, outThrew: {} as Record<string, string>, gives: [] as string[], probeAsks: 0,
   dress: DRESS_MS,
   /** what the forward export could not carry at the last start (the bridge's own report) */
@@ -326,11 +335,53 @@ function ownCopy(v: any, depth = 0): any {
 function ownKeep(g: Game): unknown[] { const G = g as unknown as Record<string, any>; return OWN.map(name => { const o = G[name]; if (!o) return null; const c: Record<string, unknown> = {}; for (const k of Object.keys(o)) if (k !== 'g') c[k] = ownCopy(o[k]); return c; }); }
 function ownPut(g: Game, K: unknown[] | undefined): void { const G = g as unknown as Record<string, any>; OWN.forEach((name, i) => { const o = G[name], c = K?.[i] as Record<string, unknown> | null | undefined; if (!o || !c) return; for (const k of Object.keys(c)) o[k] = ownCopy(c[k]); }); }
 let SETTLED_SAID = false;
-interface Held { settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null }
+interface Held { settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null; quiet: boolean; owed: number; quietDt: number }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
-let HOOKS: { classes: Record<string, { prototype: object }>; values: Record<string, unknown> } | null = null;
+let HOOKS: { classes: Record<string, { prototype: object }>; values: Record<string, unknown>; made: Record<string, (row: any, g: any) => void> } | null = null;
+
+/** A ROW THE APPLY MAKES IS ITS CLASS'S PROTOTYPE AND ITS CARRIED FIELDS: the picture's half of it (a man's skeleton and its buffers, his animator's springs
+ *  and node table, a gun's event list) is not carried, being no part of the game's state. The start has that half from the class's own constructor; a row
+ *  made at run time takes it here from a TWIN the SAME constructor builds: every field the row lacks, and the class of every part the apply made plain.
+ *  Nothing the apply wrote is overwritten, and a man's columns row is never the twin's (the twin stands on a lone store of its own). */
+function completeFrom(row: any, twin: any, skip: readonly string[], depth = 0, seen: Set<object> = new Set()): number {
+  if (depth > 8 || seen.has(twin)) return 0;
+  seen.add(twin); let n = 0;
+  for (const k of Object.keys(twin)) {
+    if (skip.includes(k)) continue;
+    const a = row[k], b = twin[k];
+    if (a === undefined) { if (b !== undefined) { row[k] = b; n++; } continue; }
+    if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object' || a === b) continue;
+    if (Array.isArray(a) || Array.isArray(b) || ArrayBuffer.isView(a) || ArrayBuffer.isView(b) || a instanceof Map || a instanceof Set) continue;
+    const pa = Object.getPrototypeOf(a), pb = Object.getPrototypeOf(b);
+    if (pa !== pb) { if (pa !== Object.prototype && pa !== null) continue; Object.setPrototypeOf(a, pb); n++; }
+    n += completeFrom(a, b, NO_SKIP, depth + 1, seen);
+  }
+  return n;
+}
+const NO_SKIP: readonly string[] = [];
+/** what each class's made rows took from their twins (`__rust.madeTook`), and a made row the twin could not be built for, said once a class */
+function madeHooks(): Record<string, (row: any, g: any) => void> {
+  const took = (cls: string, n: number) => { RUST_GAME.madeTook[cls] = (RUST_GAME.madeTook[cls] ?? 0) + n; };
+  const guard = (cls: string, f: (row: any, g: any) => number) => (row: any, g: any) => { try { took(cls, f(row, g)); } catch (e) { const why = String((e as Error)?.message ?? e).slice(0, 300); if (!RUST_GAME.madeThrew[cls]) console.error(`rust=1: a ${cls} the game made could not be given its picture half: ${why}`); RUST_GAME.madeThrew[cls] = why; } };
+  const own: Record<string, (row: any, g: any) => void> = {
+    // (the SAME constructor the start calls for every man: character.ts. His columns row, `S` and `r`, is the game's own and stays)
+    Character: guard('Character', (row, g) => {
+      const twin = new Character(row.ch ?? g.ch, { id: row.id, tint: row.tint, tint2: row.tint2, pos: row.pos, yaw: row.bodyYaw ?? 0, men: loneMen() }) as any;
+      const n = completeFrom(row, twin, ['S', 'r']);
+      // (what a posing layer is handed with the rig, character.ts `cast`: the constructor's own record, naming THIS man's node table and poses)
+      if (row.anim && twin.anim?.cast) row.anim.cast = { ...twin.anim.cast, nodes: row.anim.nodes, poses: row.anim.poses };
+      return n;
+    }),
+    Firearm: guard('Firearm', row => row.def ? completeFrom(row, new Firearm(row.def), NO_SKIP) : 0),
+  };
+  // (every class the apply makes a row of is told here, whether or not it has a twin: the last made row of each is kept for a reader, and which rows were
+  //  made at run time can be asked: `__rust.madeLast`, `__rust.madeAtRunTime(row)`)
+  const all: Record<string, (row: any, g: any) => void> = {};
+  return new Proxy(own, { get: (_t, cls) => typeof cls !== 'string' ? undefined : (all[cls] ??= (row: any, g: any) => { RUST_GAME.madeLast[cls] = row; MADE_ROWS.add(row); own[cls]?.(row, g); }) });
+}
+const MADE_ROWS = new WeakSet<object>();
 const PUP = { step: null as Set<string> | null, start: null as Set<string> | null };
 const lists = () => ({ step: PUP.step ??= new Set<string>(LISTS.step), start: PUP.start ??= new Set<string>(LISTS.start) });
 
@@ -347,9 +398,12 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { g, lastCmds: null, kept: new Set(), startKept: 0, startOwn: [], back: null, took: false, saves: 0, shelfSig: '', doorKept: [], poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null };
+  H = { g, lastCmds: null, kept: new Set(), startKept: 0, startOwn: [], back: null, took: false, saves: 0, shelfSig: '', doorKept: [], poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
+  // (for a networked game, src/net/step.ts: a quiet run of steps, and the game's own words for its state, as `rustHashes` reads them by name for a check)
+  G.quietRun = rustQuiet;
+  G.stateWords = () => { if (!X || !held.h) return null; const n = X.face_parts(), at = X.face_part_hashes(held.slot) >>> 0; return { die: X.face_die_n(held.h), parts: new Uint32Array(MEM!.buffer, at, n) }; };
   // (`?rustpanic=<tick>[,<tick>…]`: a panic planted in the step that would be that tick, for the check of the way back. A tick with `x` after it is
   //  planted outside any game.)
   if (typeof location !== 'undefined') for (const w of (new URLSearchParams(location.search).get('rustpanic') ?? '').split(',')) { const n = parseInt(w, 10); if (Number.isFinite(n) && n >= 0 && !RUST_PANIC.planted.some(p => p.tick === n)) RUST_PANIC.plant(n, /x$/.test(w) ? 1 : 0); }
@@ -407,7 +461,7 @@ export function rustAttach(g: Game): void {
 /** THE RUST GAME STARTED FROM THE PUPPET AS IT STANDS: the whole state across once, over the block that already stands in the puppet's slot */
 function start(S: Held): void {
   const g = S.g, t0 = performance.now();
-  HOOKS ??= { classes: classTable(), values: valueTable() };
+  HOOKS ??= { classes: classTable(), values: valueTable(), made: madeHooks() };
   g.sim.settle(g);   // (as a tick's own opening: the men's poses at home, the block bound)
   const slot = g.sim.bind();
   if ((PLACE as unknown as { slot: number }).slot !== slot) throw new Error(`rust=1: the game's block stands in slot ${slot} of the module and the world kept for the Rust game is ${(PLACE as unknown as { slot: number }).slot}: the two must be one number (rust/game box_mirror_take)`);
@@ -475,6 +529,17 @@ function after(S: Held): void {
  *  to the man undone by the long list). So before any apply that is not a tick's own the host's half is handed over first. */
 function handHost(S: Held): void { if (S.inStep || !S.lastCmds || !S.h) return; const hb = hostHalf(S.g, reg(), S.lastCmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n)); }
 /** THE FILTERED EXPORT ONTO THE PUPPET, its out events dispatched. Answers the ms of the export, the apply and the dispatch. */
+// STAND-IN: THE START LIST IN A GAME OF MORE THAN ONE SEAT. As imported, and until its first step, the Rust game holds EVERY seat's set in the seat's
+// row and the shown seat's on the Game too (the TypeScript's export writes a record of own fields for every seat; `seats::with_seat` puts that right
+// in the first step). The Game's fields of a seat's name (`orders`, `wallCharge`, `work` …) are accessors onto the shown seat's record
+// (game/seats.ts), so in that one blob the shown seat's order book is met twice, as `Game.orders` and as its row's, the same value in other bytes at
+// the two places, and the apply gives an object met a second time with other bytes a MADE one: the book and the wall charge came back as objects of
+// the schema's fields alone (no `notes`, no `fight`, `people` with no `ray`) and the HUD threw every frame. For the start apply's length the accessors
+// answer a scratch record: each seat's objects are reached once, by their own rows, and the Game's copy of the same set lands on nothing. Every later
+// apply is left alone: between ticks the Rust Game carries the set of the seat it was told is shown (`Game.local_seat`), which is the seat the
+// accessors answer. WHAT REMOVES IT: the apply holding "met again" by the decoded value and not by bytes that depend on the holder's list
+// (tools/blitz/import.ts), or the seat swap gone from the game (a squad passed by its id, no `with_seat`).
+function startSeated<T>(g: Game, f: () => T): T { const G = g as unknown as { seats?: readonly unknown[]; localSeat: unknown }; if (!G.seats || G.seats.length < 2) return f(); const shown = G.localSeat; G.localSeat = { own: {} }; try { return f(); } finally { G.localSeat = shown; } }
 function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; bytes: number } {
   const g = S.g, G = g as unknown as Record<string, any>;
   handHost(S);
@@ -482,7 +547,8 @@ function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; 
   call('face_puppet', () => X!.face_puppet(S.h, first ? 1 : 0)); grown(g);
   const blob = outBytes(), ex = performance.now() - t;
   t = performance.now();
-  const R = applyGame(g, blob, reg(), { hooks: HOOKS, puppet: { lists: lists(), start: first, rows: S.rows, ctx: S.ctx, slowTable: SLOW, vals: VALS } });
+  const ap1 = () => applyGame(g, blob, reg(), { hooks: HOOKS, puppet: { lists: lists(), start: first, rows: S.rows, ctx: S.ctx, slowTable: SLOW, vals: VALS } }), R = first ? startSeated(g, ap1) : ap1();
+  if (!first) for (const k in R.made) if (R.made[k]) RUST_GAME.made[k] = (RUST_GAME.made[k] ?? 0) + R.made[k];   // (rows the game made at run time, by class: `__rust.made`)
   if (RUST_GAME.prof.on && !first) { const PF = RUST_GAME.prof, ph = R.phases ?? {}; PF.applyWalk += R.ms ?? 0; PF.applyRows += ph.makeRows ?? 0; PF.applyMain += ph.main ?? 0; PF.applyTables += ph.tables ?? 0; for (const k in ph) PF.phases[k] = (PF.phases[k] ?? 0) + ph[k]; }
   after(S);
   const ap = performance.now() - t; t = performance.now();
@@ -681,6 +747,44 @@ function step(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
     try { whole(S); RUST_GAME.ticks++; } catch (e2) { if (!RUST_PANIC.dead) died('the whole apply after a step threw', e2); }
   }
 }
+/** AFTER A STEP, or a quiet run of them: the apply onto the puppet, the out events (inside `apply`), the dress step, what the tick asked of the light probe,
+ *  the save controller */
+function tail(S: Held, dt: number, cmds: readonly PlayerCmd[], tHost: number, tStep: number): void {
+  const g = S.g, G = g as unknown as Record<string, any>, PF = RUST_GAME.prof; let t = performance.now(), tp = 0;
+  const A = apply(S, false);
+  t = performance.now();
+  dressStep(g, dt, S.side);
+  if (PF.on) { tp = performance.now(); PF.dress += tp - t; PF.export += A.ex; PF.out += A.out; }
+  // what the tick asked of the light probe, for the frame's GPU pass (the table is the Rust game's until the pass takes it: `face_probe_took`)
+  { const P = G.sensors?.probeOf?.(); if (P && Array.isArray(P.pending)) { X!.face_probe_asks(S.h); const b = outBytes(), d = new DataView(b.buffer, b.byteOffset, b.byteLength); let at = 4; const n = d.getUint32(0, true); P.pending.length = 0;
+      for (let i = 0; i < n; i++) { const kl = d.getUint32(at, true); at += 4; const key = dec.decode(b.subarray(at, at + kl)); at += kl; const pos = [d.getFloat64(at, true), d.getFloat64(at + 8, true), d.getFloat64(at + 16, true)]; at += 24; const skipOwner = d.getFloat64(at, true); at += 8;
+        const hasB = b[at++]; let bb: number[] | undefined; if (hasB) { bb = [d.getFloat64(at, true), d.getFloat64(at + 8, true), d.getFloat64(at + 16, true)]; at += 24; } const rank = d.getFloat64(at, true); at += 8;
+        P.pending.push(bb ? { key, pos, skipOwner, b: bb, rank } : { key, pos, skipOwner, rank }); }
+      // (the answers the tick still holds: one it forgot inside the tick is let go here too, as `Sensors.forget` lets it go on the page that ticks,
+      //  or the next step's hand-over would give the stale answer straight back)
+      if (at + 4 <= b.length && P.results instanceof Map) { const kn = d.getUint32(at, true); at += 4; const held = new Set<string>();
+        for (let i = 0; i < kn; i++) { const kl = d.getUint32(at, true); at += 4; held.add(dec.decode(b.subarray(at, at + kl))); at += kl; }
+        for (const k of [...P.results.keys()]) if (!held.has(k)) { P.results.delete(k); RUST_GAME.probeForgot++; } }
+      RUST_GAME.probeAsks += n; } }
+  if (PF.on) { const n = performance.now(); PF.probeOut += n - tp; tp = n; }
+  // THE SAVE CONTROLLER is the host's and decides off the frame as it now stands (savestate.ts Checkpoints.tick, the TypeScript tick's last line): on the
+  // puppet. A save it takes is the Rust game kept (`take`), a load the kept game stood again (`put`).
+  // STAND-IN: F5, the save by hand (player.ts:498, a line of the TypeScript tick the Rust tick does not have): read off the tick's own record here.
+  // Belongs in the Rust tick (the controller's `hand`, read back with `face_saves_asked`).
+  if (SAVETIMELINE.on && cmds[g.seats.indexOf(g.hostSeat())]?.pressed.includes('F5') && !g.player.down) G.saves?.askSave();
+  { const sv = G.saves, D = G.director, R = G.rails, authored = !!sv?.authored && !!R?.live, stop = D?.stop, resume = R?.resume;
+    // (an authored checkpoint of a tutorial mission: the controller stops the level's program for the take, savestate.ts:991. That is the Rust game's
+    //  to do, and `take` does it there in the same order; the TypeScript's two calls would run on a puppet's program, which holds no beat)
+    if (authored) { D.stop = () => {}; R.resume = () => {}; }
+    try { sv?.tick(g, dt); } catch (e) { RUST_GAME.outThrew['saves.tick'] ??= String((e as Error)?.stack ?? e).slice(0, 600); }
+    finally { if (authored) { D.stop = stop; R.resume = resume; } }
+    if (S.took) { S.took = false; apply(S, false); } }
+  if (PF.on) PF.saves += performance.now() - tp;
+  const tDress = performance.now() - t;
+  const L = RUST_GAME.last, M = RUST_GAME.sum; L.host = tHost; L.step = tStep; L.export = A.ex; L.apply = A.ap; L.out = A.out; L.dress = tDress; L.bytes = A.bytes;
+  M.host += tHost; M.step += tStep; M.export += A.ex; M.apply += A.ap; M.out += A.out; M.dress += tDress; M.bytes += A.bytes;
+  if (A.ap > RUST_GAME.worst.apply) RUST_GAME.worst.apply = A.ap;
+}
 function stepOne(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
   const g = S.g, G = g as unknown as Record<string, any>;
   // (a kept game stood again since the last step: what the controller wrote on the puppet after it goes across first, and is then no sign of a stranger's write)
@@ -721,41 +825,28 @@ function stepOne(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
     { const asked = X!.face_saves_asked(S.h);
       if (asked & 2) { toStart(S); RUST_GAME.ticks++; return; }
       if ((asked & 1) && G.saves) G.saves.due = outText(); }
-    const A = apply(S, false);
-    t = performance.now();
-    dressStep(g, dt, S.side);
-    if (PF.on) { tp = performance.now(); PF.dress += tp - t; PF.export += A.ex; PF.out += A.out; }
-    // what the tick asked of the light probe, for the frame's GPU pass (the table is the Rust game's until the pass takes it: `face_probe_took`)
-    { const P = G.sensors?.probeOf?.(); if (P && Array.isArray(P.pending)) { X!.face_probe_asks(S.h); const b = outBytes(), d = new DataView(b.buffer, b.byteOffset, b.byteLength); let at = 4; const n = d.getUint32(0, true); P.pending.length = 0;
-        for (let i = 0; i < n; i++) { const kl = d.getUint32(at, true); at += 4; const key = dec.decode(b.subarray(at, at + kl)); at += kl; const pos = [d.getFloat64(at, true), d.getFloat64(at + 8, true), d.getFloat64(at + 16, true)]; at += 24; const skipOwner = d.getFloat64(at, true); at += 8;
-          const hasB = b[at++]; let bb: number[] | undefined; if (hasB) { bb = [d.getFloat64(at, true), d.getFloat64(at + 8, true), d.getFloat64(at + 16, true)]; at += 24; } const rank = d.getFloat64(at, true); at += 8;
-          P.pending.push(bb ? { key, pos, skipOwner, b: bb, rank } : { key, pos, skipOwner, rank }); }
-        // (the answers the tick still holds: one it forgot inside the tick is let go here too, as `Sensors.forget` lets it go on the page that ticks,
-        //  or the next step's hand-over would give the stale answer straight back)
-        if (at + 4 <= b.length && P.results instanceof Map) { const kn = d.getUint32(at, true); at += 4; const held = new Set<string>();
-          for (let i = 0; i < kn; i++) { const kl = d.getUint32(at, true); at += 4; held.add(dec.decode(b.subarray(at, at + kl))); at += kl; }
-          for (const k of [...P.results.keys()]) if (!held.has(k)) { P.results.delete(k); RUST_GAME.probeForgot++; } }
-        RUST_GAME.probeAsks += n; } }
-    if (PF.on) { const n = performance.now(); PF.probeOut += n - tp; tp = n; }
-    // THE SAVE CONTROLLER is the host's and decides off the frame as it now stands (savestate.ts Checkpoints.tick, the TypeScript tick's last line): on the
-    // puppet. A save it takes is the Rust game kept (`take`), a load the kept game stood again (`put`).
-    // STAND-IN: F5, the save by hand (player.ts:498, a line of the TypeScript tick the Rust tick does not have): read off the tick's own record here.
-    // Belongs in the Rust tick (the controller's `hand`, read back with `face_saves_asked`).
-    if (SAVETIMELINE.on && cmds[g.seats.indexOf(g.hostSeat())]?.pressed.includes('F5') && !g.player.down) G.saves?.askSave();
-    { const sv = G.saves, D = G.director, R = G.rails, authored = !!sv?.authored && !!R?.live, stop = D?.stop, resume = R?.resume;
-      // (an authored checkpoint of a tutorial mission: the controller stops the level's program for the take, savestate.ts:991. That is the Rust game's
-      //  to do, and `take` does it there in the same order; the TypeScript's two calls would run on a puppet's program, which holds no beat)
-      if (authored) { D.stop = () => {}; R.resume = () => {}; }
-      try { sv?.tick(g, dt); } catch (e) { RUST_GAME.outThrew['saves.tick'] ??= String((e as Error)?.stack ?? e).slice(0, 600); }
-      finally { if (authored) { D.stop = stop; R.resume = resume; } }
-      if (S.took) { S.took = false; apply(S, false); } }
-    if (PF.on) PF.saves += performance.now() - tp;
-    const tDress = performance.now() - t;
-    const L = RUST_GAME.last, M = RUST_GAME.sum; L.host = tHost; L.step = tStep; L.export = A.ex; L.apply = A.ap; L.out = A.out; L.dress = tDress; L.bytes = A.bytes;
-    M.host += tHost; M.step += tStep; M.export += A.ex; M.apply += A.ap; M.out += A.out; M.dress += tDress; M.bytes += A.bytes;
+    // A QUIET RUN (`rustQuiet`): nothing goes to the puppet until the run ends
+    if (S.quiet) { S.owed++; S.quietDt += dt; RUST_GAME.sum.host += tHost; RUST_GAME.sum.step += tStep; RUST_GAME.ticks++; RUST_GAME.quiet.ticks++; return; }
+    tail(S, dt, cmds, tHost, tStep);
     RUST_GAME.ticks++;
-    if (tStep > RUST_GAME.worst.step) { RUST_GAME.worst.step = tStep; RUST_GAME.worst.at = RUST_GAME.ticks; } if (A.ap > RUST_GAME.worst.apply) RUST_GAME.worst.apply = A.ap;
+    if (tStep > RUST_GAME.worst.step) { RUST_GAME.worst.step = tStep; RUST_GAME.worst.at = RUST_GAME.ticks; }
   } finally { S.inStep = false; }
+}
+
+// ---- A QUIET RUN OF STEPS, for a caller none of whose code reads the game between them (a networked page far behind its server, src/net/page.ts: a
+// seek, nothing drawn between two ticks). Between `rustQuiet(true)` and `rustQuiet(false)` a step is the host's half handed over, the Rust tick and its
+// own steps after it: no export, no apply, no out event, no dress step. As the run ends the puppet takes what changed over the whole run in ONE filtered
+// apply (the export's memo holds what was last sent), the out events of every tick of the run are dispatched in their order, and the dress step (over
+// the run's whole time), the probe's asks and the save controller run once. The tools' host has the same run (tools/blitz/rust-host.ts quietBegin / quietEnd).
+export function rustQuiet(on: boolean): void {
+  const S = H; if (!S || S.quiet === on) return;
+  S.quiet = on; if (on) { S.owed = 0; S.quietDt = 0; return; }
+  const owed = S.owed; S.owed = 0;
+  if (!owed || !S.h || S.stale || RUST_PANIC.dead) return;
+  RUST_GAME.quiet.runs++; S.inStep = true;
+  try { tail(S, S.quietDt, S.lastCmds ?? [], 0, 0); }
+  catch (e) { if (e instanceof WebAssembly.RuntimeError || e instanceof RustStopped) died('the apply after a quiet run', e); else try { whole(S); } catch (e2) { if (!RUST_PANIC.dead) died('the whole apply after a quiet run threw', e2); } }
+  finally { S.inStep = false; }
 }
 
 // ---- for a check: the die's count and the block's parts, hashed as tools/blitz/mission.ts hashes them

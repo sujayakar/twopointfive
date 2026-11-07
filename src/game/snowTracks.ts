@@ -25,7 +25,6 @@ import { snowFieldAt, type SnowField } from '../render/snowField';
 import { civiliansShown } from './civilians';
 import { SNOW_LOOK } from './weatherKinds';
 import { FOG } from './fogofwar';
-import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const TRACK_RES = 32;     // texels per metre (a boot is ten texels long)
 /** rows of the map past the world's far edge that are not plan: the middle one's first texel carries `SNOWTRACKS.mess` to the shader (× 100; the rows either side
@@ -473,7 +472,7 @@ export function pressClods(T: Stamp, cx: number, cz: number, n: number, near: nu
 }
 
 /** Once a frame (game.ts, after everybody has moved and been posed): this frame's footfalls and falls, pressed into the snow they came down on. */
-export function updateSnowTracks(g: Game, T: SnowTracks, field: SnowField, dt: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('updateSnowTracks', undefined, [g, T, field, dt]); if (__r !== RUST_PASS) return __r as any; } }
+export function updateSnowTracks(g: Game, T: SnowTracks, field: SnowField, dt: number) {
   if (!(dt > 0)) return;
   tellMess(T);
   // (a man the fog of war hides puts nothing on the map while he is hidden: nothing live shows in the fog, and a trail growing across unseen ground is him.

@@ -32,9 +32,9 @@ holds all of `levels/` to it). The records the game keeps as its own types are r
 stands between this and the page starting a level in Rust" is the list of what a page start still needs: first the page handing its address across (an address's words are a type of the
 game crate, `rust/game/src/query.rs`, every reader takes it, and `StartOpts.link` starts a mission by `start_from_query` as a click on its row does), then the puppet's objects.
 Checked: every row of the mission list (`LEVELS.md`: no path not known at the start, 300 frames in step with an idle hand, no path not known as
-they end, each mission started from its row's link as the page starts it, with one seat and as a game of two), and the tests' scenes for 900
-frames. Not checked: what the page reads off its address before the stand-up (the weather and the hour at boot, the kit, the words); a hand on
-the controls in those frames; a page starting a level this way (the page still starts in TypeScript); nothing of it on a GPU.
+they end; the office's four on a copy of its file with its scenarios written in), and the tests' scenes for 900 frames. Not checked: a mission
+started as the page starts it (from its address); a hand on the controls in those frames; two seats; a page starting a level this way (the page
+still starts in TypeScript); nothing of it on a GPU.
 
 **The rows and the maths are NOT SWITCHES any more** (the bullet "Not switches", near the end, 2026-11-05). Every `TPS_RUST`, `TPS_RUST<ROW>`, `TPS_EXACT`,
 `?rust`, `?rust<row>` and `?noexact` in the bullets below is how that step was measured on its day. None of them is a word now: in a tool's environment

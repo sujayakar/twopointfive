@@ -152,7 +152,8 @@ pub fn quiet_fog_href(g: &mut crate::game::Game, href: &str, quiet: bool) -> Str
 /// The rung a query asks its quiet mission to be played under: none named is the default's; 'off' for what is not a quiet mission, or a lesson. (quietfog.ts quietFogOfQuery)
 pub fn quiet_fog_of_query(g: &mut crate::game::Game, q: &crate::query::Query, lesson: Option<bool>) -> crate::quietfog::QuietRung {
     if lesson.unwrap_or(false) || !(q.has("quiet") || solo_fog_link(g, q)) { return QuietRung::Off; }
-    match rung_of(q.get(PARAM)) {
+    let v = q.get(PARAM).map(String::from);
+    match rung_of(v.as_deref()) {
         Some(rung) => rung,
         None => quiet_fog_default(g),
     }

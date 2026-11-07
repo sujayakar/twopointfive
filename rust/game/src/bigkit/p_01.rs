@@ -711,7 +711,8 @@ pub fn hammer_out_tick(g: &mut crate::game::Game, mine: &mut dyn FnMut(&mut crat
             g.ch[c].anim.big_tool = None;
             continue;
         }
-        if end < 0.0 && !mine(g, gd) {
+        // (only this book's own man is told to put it away for want of a job in this book: another seat's hammer is on that seat's door)
+        if end < 0.0 && crate::orders::squad_orders_mine(g, gd) && !mine(g, gd) {
             hammer_in(g, gd, None);
         }
         let Some((t0, end)) = g.gd[gd].big_out.as_ref().map(|h| (h.t0, h.end)) else { continue };

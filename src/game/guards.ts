@@ -1,7 +1,7 @@
 // Guard AI: hearing (the same propagation the mixer uses), vision (the player's light-meter irradiance, marched through smoke), patrol / suspicious / alert / search state machine, path following, torch handling, and their barks.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
-import { men, eachSeat, orderOf, ordersOf, viewOfBody } from './seats';
+import { men, eachSeat, orderOf, ordersOf, viewOfBody, seatCount } from './seats';
 import { SideMap, SideSet, GameSideMap, rollbackVar, rollbackRoot } from '../math/side';
 import { openingStart } from './opening';
 import { Vec3, v3, clamp, damp, lerp, smoothstep, DEG } from '../math/vec';
@@ -1329,7 +1329,7 @@ export function spawnUnit(g: Game, o: UnitOpts): Guard { { const __s = RUST_SURF
   if (!g.tune.teams) throw new Error('spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned');
   if (o.team === 'player') throw new Error("spawnUnit: the 'player' side is the player alone — spawn an 'operative' for a man on his side");
   if (o.team === 'civilian') throw new Error("spawnUnit: civilians are not units — civilians.ts stands them up from the level's civilians block (Game.civilians)");
-  const chars = 1 + g.guards.length;
+  const chars = seatCount(g) + g.guards.length;   // (a man a seat, and everybody else who stands)
   const cap = Math.max(MAX_CHARACTERS, Math.min(o.budget ?? 0, MAX_SKINNED));
   if (chars + 1 > cap) throw new Error(cap > MAX_CHARACTERS ? `spawnUnit: ${chars} characters already stand (the player + ${g.guards.length} guards/units) and this caller's budget is ${cap} — despawn a unit or reset the guards first`
     : `spawnUnit: ${chars} characters already stand (the player + ${g.guards.length} guards/units) and the shadow-capsule budget is ${MAX_CHARACTERS} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first`);

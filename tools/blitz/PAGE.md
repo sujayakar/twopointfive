@@ -150,6 +150,22 @@ stopped frame loop. Now (`src/host/rustgame.ts`, "a panic"; `rust/game_face/src/
 What it does not cover: a panic while a game is being kept or put back (the kept games' own table would be left borrowed: the card then offers the page
 again); a save asked from a panel while the card is up (it throws to the page's red card); a fault that leaves the Rust game wrong without a panic.
 
+## A row the game makes at run time
+
+The start builds the page's game with the classes' own constructors, so every row has its picture half: a man's skeleton and its buffers, his
+animator's springs and node table, a gun's event list. None of that is the game's state and the bridge carries none of it. A row the tick makes later
+(a level's program stands three men at a roadblock, an alarm calls a team) reaches the page as its class's prototype and its carried fields, and
+nothing else. Such a man could not be posed: `headRot` and `capsules` threw, the dress step's `men` and `snowBreath` lines threw every tick, he was
+not drawn, and the poses the host owes the game for him were never worked out, so rounds fired at him did not land.
+
+`src/host/rustgame.ts` `madeHooks` is told of every made row by the apply (`hooks.made`). For a `Character` and a `Firearm` it builds a TWIN with
+the same constructor the start calls and the made row takes from it every field it lacks and the class of every part the apply made plain; nothing
+the apply wrote is overwritten and a man's columns row stays the game's. `window.__rust.made` counts made rows by class, `madeTook` what the twins
+gave, `madeThrew` a class whose twin could not be built, `madeLast[class]` the last made row and `madeAtRunTime(row)` answers for any row.
+
+`Game.drawMen` hands the men over one at a time: a man who throws there is left out of that frame, said once by name in the console and kept on
+`game.menNotDrawn`; the men after him are drawn.
+
 ## What a step costs, and what stands in the way
 
 Measured on the built page, software adapter, undrawn frames, 1,800 frames with no input after 600 to settle. The box was never quiet (the load average

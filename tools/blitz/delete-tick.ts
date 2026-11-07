@@ -142,7 +142,7 @@ const implOf = (u: Unit): any => u.nodes.filter(n => bodyOf(n)).pop();
   const taps = new Map<string, any>(); for (const t of TAPS) taps.set(`${t.file}\n${t.key}`, t);
   let ng = 0, nt = 0;
   for (const u of UNITS) { const r = rows.get(`${u.file}\n${u.key}`); if (r && guards.has(r.id) && u.fnLike) { u.row = r; u.guard = guards.get(r.id); ng++; } const t = taps.get(`${u.file}\n${u.key}`); if (t && u.fnLike) { u.tap = t; nt++; } }
-  if (ng !== guards.size) { const got = new Set(UNITS.filter(u => u.guard).map(u => u.row.id)); console.error(`calls.json guards ${guards.size} functions and ${ng} were found by key: ${[...guards.keys()].filter(i => !got.has(i)).slice(0, 12).map(i => `${CALLS.rows[i].key} (${CALLS.rows[i].file})`).join(', ')}`); process.exit(2); }
+  if (ng !== guards.size) { const got = new Set(UNITS.filter(u => u.guard).map(u => u.row.id)); console.error(`calls.json guards ${guards.size} functions and ${ng} were found by key: ${[...guards.keys()].filter(i => !got.has(i)).slice(0, 12).map(i => { const r = CALLS.rows.find((x: any) => x.id === i); return `${r?.key} (${r?.file})`; }).join(', ')}`); process.exit(2); }
   const tapsHere = Object.values<any>(CALLS.taps ?? {}).reduce((a, l) => a + l.length, 0); if (nt < tapsHere) { const got = new Set(UNITS.filter(u => u.tap).map(u => u.tap.id)); console.error(`calls.json places ${tapsHere} taps and ${nt} were found by key: ${TAPS.filter(t => !got.has(t.id)).map(t => `${t.key} (${t.file})`).join(', ')}`); process.exit(2); } }
 
 // ---- references

@@ -111,6 +111,36 @@ fn turn_row<'a>(t: &'a mut crate::knobs::TurnK, k: &str) -> Option<&'a mut f64> 
     }
 }
 
+/// `Number(string)`: blanks trimmed, nothing is 0, 0x / 0o / 0b unsigned, else a decimal; NaN when it is none. Rust's "inf" and "nan" are not finite
+/// either, and the only reader asks for a finite number.
+fn js_number(s: &str) -> f64 {
+    let s = s.trim_matches(|c: char| (c.is_whitespace() && c != '\u{85}') || c == '\u{feff}');
+    if s.is_empty() {
+        return 0.0;
+    }
+    let radix = match s.get(..2) {
+        Some("0x") | Some("0X") => 16,
+        Some("0o") | Some("0O") => 8,
+        Some("0b") | Some("0B") => 2,
+        _ => 0,
+    };
+    if radix == 0 {
+        return s.parse::<f64>().unwrap_or(m::NAN);
+    }
+    let digits = &s[2..];
+    if digits.is_empty() {
+        return m::NAN;
+    }
+    let mut r = 0.0;
+    for c in digits.chars() {
+        match c.to_digit(radix) {
+            Some(d) => r = r * radix as f64 + d as f64,
+            None => return m::NAN,
+        }
+    }
+    r
+}
+
 /// setTurn on the table itself.
 fn set_turn_on(t: &mut crate::knobs::TurnK, spec: &str, dflt: f64) -> bool {
     let mut parts = spec.split(',');
@@ -141,7 +171,7 @@ fn set_turn_on(t: &mut crate::knobs::TurnK, spec: &str, dflt: f64) -> bool {
         let mut pair = kv.split('=');
         let k = pair.next().unwrap_or("");
         let n = match pair.next() {
-            Some(v) if !v.is_empty() => js::number_of(v),
+            Some(v) if !v.is_empty() => js_number(v),
             _ => m::NAN,
         };
         match turn_row(t, k) {
@@ -233,12 +263,12 @@ mod tests {
     #[test]
     fn number_reads_as_the_language_does() {
         for (s, want) in [("7", 7.0), (" 7 ", 7.0), ("0x10", 16.0), ("1e3", 1000.0), (".5", 0.5), ("5.", 5.0), ("+2", 2.0), ("-0.25", -0.25), (" ", 0.0), ("0b11", 3.0), ("0o7", 7.0)] {
-            assert_eq!(js::number_of(s), want);
+            assert_eq!(js_number(s), want);
         }
         for s in ["abc", "1_0", "-0x10", "0x"] {
-            assert!(js::number_of(s).is_nan());
+            assert!(js_number(s).is_nan());
         }
-        assert!(!js::number_of("Infinity").is_finite());
+        assert!(!js_number("Infinity").is_finite());
     }
 
     fn turn_light() -> crate::knobs::TurnK {

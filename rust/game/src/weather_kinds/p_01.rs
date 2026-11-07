@@ -57,8 +57,11 @@ pub fn snow_level(g: &mut crate::game::Game, name: Option<&str>) -> bool {
 
 /// snowLevel asked of a page's query: its `levelFile`. (weatherKinds.ts snowLevelOfQuery)
 pub fn snow_level_of_query(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
-    let Some(lf) = q.get("levelFile") else { return false };
-    if !is_level_file(lf) {
+    let lf = match q.get("levelFile").map(String::from) {
+        Some(lf) => lf,
+        None => return false,
+    };
+    if !is_level_file(&lf) {
         return false;
     }
     snow_level(g, lf.strip_suffix(".json"))
@@ -168,19 +171,18 @@ pub fn in_rect(r: &[f64], x: f64, z: f64) -> bool {
 
 /// The kind a query string or the host's query names, if any. (weatherKinds.ts weatherOfSearch)
 pub fn weather_of_search(search: &crate::weather_kinds::WeatherOfSearchSearch) -> Option<crate::weather_kinds::WeatherKind> {
-    match search {
-        WeatherOfSearchSearch::Text(s) => weather_of(&crate::query::Query::parse(s)),
-        WeatherOfSearchSearch::URLSearchParams(q) => weather_of(q),
-    }
+    let v = match search {
+        WeatherOfSearchSearch::Text(s) => crate::query::Query::parse(s).get(WEATHER_KEY).map(String::from),
+        WeatherOfSearchSearch::URLSearchParams(q) => q.get(WEATHER_KEY).map(String::from),
+    };
+    startable_kind(&v?)
 }
-
-/// `weather_of_search` of words already read.
-pub fn weather_of(q: &crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> { startable_kind(q.get(WEATHER_KEY)?) }
 
 /// Reads ?weather= at boot and locks the page to it; an unknown name boots the level as it is. (weatherKinds.ts initWeather)
 pub fn init_weather(g: &mut crate::game::Game, qs: &crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> {
+    let v = qs.get(WEATHER_KEY).map(String::from);
     g.m.weather_kinds.weather_boot.locked = true;
-    let kind = weather_of(qs);
+    let kind = v.and_then(|v| startable_kind(&v));
     g.m.weather_kinds.weather_boot.kind = kind;
     kind
 }

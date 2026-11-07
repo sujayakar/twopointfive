@@ -77,8 +77,8 @@ fn lines_of(w: &crate::ringlone::Wedge) -> Vec<String> {
     for (i, _) in s.match_indices(' ') {
         let after = &s[i + 1..];
         let dot = after.starts_with("· ");
-        let a = js::trim(&s[..i]);
-        let b = js::trim(if dot { &after["· ".len()..] } else { after });
+        let a = js_trim(&s[..i]);
+        let b = js_trim(if dot { &after["· ".len()..] } else { after });
         if a.is_empty() || b.is_empty() || b == "▸" || a.ends_with('·') || b.starts_with('·') { continue; }
         let longer = m::max(len16(a), len16(b));
         let score = if dot && longer <= max { longer - max } else { longer }; // (a dot's break that fits comes before every other)
@@ -93,6 +93,11 @@ fn lines_of(w: &crate::ringlone::Wedge) -> Vec<String> {
 /// A string's `.length` in the TypeScript.
 fn len16(s: &str) -> f64 {
     s.encode_utf16().count() as f64
+}
+
+/// `String.prototype.trim`: Rust's `trim` also takes U+0085 and leaves U+FEFF.
+fn js_trim(s: &str) -> &str {
+    s.trim_matches(|c: char| (c.is_whitespace() && c != '\u{85}') || c == '\u{feff}')
 }
 
 /// The width a line of a pill's words is set to. (ringlone.ts wordsW)

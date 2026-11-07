@@ -25,8 +25,7 @@ while [ $# -gt 0 ]; do case "$1" in
   --mission) MISSION=$2; shift 2;; --link) LINK=$2; shift 2;; --seats) SEATS=$2; shift 2;;
   --seed) SEED=$2; shift 2;; --scenario) SCN=$2; shift 2;; --squad) SQUAD=$2; shift 2;; --deal) DEAL=$2; shift 2;; --cpu) CPU=1; shift;; --frames) FRAMES=$2; shift 2;; --out) OUT=$2; shift 2;; --show) SHOW=$2; shift 2;; --no-ts) TS=; shift;; --no-build) BUILD=; shift;;
   *) echo "start.sh: no option $1"; exit 64;; esac; done
-# (a folder a start: the file, the kind, and a link by its sum, so one start's state is never read as another's)
-[ -n "$OUT" ] || OUT="${TMPDIR:-/tmp}/start-${MISSION:-$(basename "$L" .json)${SCN:+-$SCN}${LINK:+-link$(printf %s "$LINK" | cksum | cut -d' ' -f1)}}${SEATS:+-seats$SEATS}"
+[ -n "$OUT" ] || OUT="${TMPDIR:-/tmp}/start-${MISSION:-$(basename "$L" .json)${SCN:+-$SCN}}${SEATS:+-seats$SEATS}"
 mkdir -p "$OUT" || exit 3
 OUT=$(cd "$OUT" && pwd) || exit 3   # (said whole: the build below runs from another folder)
 echo "start.sh: ${MISSION:+mission $MISSION}$L, die seed $SEED${SCN:+, scenario $SCN}${LINK:+, from $LINK}${SEATS:+, $SEATS seats}; blobs in $OUT"
@@ -40,8 +39,6 @@ fi
 if [ -n "$MISSION" ]; then
   [ -s "$OUT/mission.txt" ] || { echo "start.sh: no $OUT/mission.txt (the TypeScript side names a mission's file and link)"; exit 3; }
   L=$(sed -n 1p "$OUT/mission.txt"); LINK=$(sed -n 2p "$OUT/mission.txt")
-  # (a folder written before a mission was started from its link holds the mission's kind on that line)
-  case "$LINK" in \?*) ;; *) echo "start.sh: $OUT/mission.txt is not of this start.ts (its second line is no link: '$LINK'): run it again without --no-ts"; exit 3;; esac
 fi
 MORE="${SCN:+--scenario $SCN} ${SQUAD:+--squad $SQUAD} ${DEAL:+--deal $DEAL}"
 if [ -n "$BUILD" ]; then
