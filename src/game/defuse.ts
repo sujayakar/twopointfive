@@ -19,6 +19,7 @@
 // pair for a checkpoint (savestate.ts). Per-player state is asked through one accessor (who()), so a second player is one place to change.
 //
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
+import { ofThisMission } from './thisrun';   // (the same mission by its serial, as the Rust game asks it)
 import type { Game, Guard, Interactable, Player } from './game';
 import type { DefuseData, DefuseDevice } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
@@ -86,7 +87,7 @@ export class Defuse {
     return g.roomClear?.active && g.roomClear.rooms.length ? D : null;
   }
   /** is this pass the running mission's (false between a restart and the first tick after it: the state is the last run's and nobody's) */
-  private get mine(): boolean { return this.run === this.g.mission; }
+  private get mine(): boolean { return ofThisMission(this.g, this.run); }
   get active(): boolean { return !!this.data && this.mine; }
   get started(): boolean { return !isNaN(this.t0); }
   /** seconds a hand must stay on a charge */
