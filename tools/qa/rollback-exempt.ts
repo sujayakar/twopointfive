@@ -203,7 +203,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/kit.ts ruleOn': 'CONFIG · the issue rule\'s switch: written by its setter only (kit.ts:254, the kit screen / URL)',
   'src/game/kit.ts store': 'CONFIG · the machine\'s store handle: kitLoad (784); nulled and put back inside asIssued (825-827)',
   'src/game/kit.ts team': 'CONFIG · the team size the kit screen is set to: kitTeam (393), kitLoad (784), and put back as it was by asIssued\'s finally (827)',
-  'src/game/rails.ts RAILS_STATS': 'TALLY · counted in rails.ts; no read in src/game, src/scene or src/anim; read by tools/qa/rails-check.ts',
+  'src/game/rails.ts RAILS_STATS': 'TALLY · counted in rails.ts; no read in src/game, src/scene or src/anim',
   'src/game/lighting.ts LENS_STATS': 'TALLY · counted in lighting.ts:42-46 (maxBack keeps a peak: max of itself); no other read',
   'src/game/morale.ts MORALE_STATS': 'TALLY · counted in morale.ts; no read in src/game, src/scene or src/anim',
   'src/game/needs.ts NEEDS_STATS': 'TALLY · counted in needs.ts; no read in src/game, src/scene or src/anim; shown by main.ts',

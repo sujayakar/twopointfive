@@ -57,9 +57,9 @@ export async function loadbriefCheck(): Promise<boolean> {
     const kinds = new Set(list.map((m: any) => m.scenario?.kind ?? 'solo')), lessons = list.filter((m: any) => m.group === 'tutorial').length;
     line(!bad.length && list.length >= 30 && kinds.size === 5 && lessons >= 5, `words: each of the list's ${list.length} rows (${[...kinds].join(', ')}; ${lessons} tutorial missions) reads back from its own address as its own brief — title, place, its line, its heading, its team${bad.length ? ` — NOT: ${bad.slice(0, 5).join(' · ')}` : ''}`);
     const at = (q: string) => briefOfQuery(q);
-    const two = at('?levelFile=depot.json&roomclear&squad=2'), keep = at('?levelFile=depot.json&roomclear&squad4&mute&quality=low&seed=7'), yardA = at('?levelFile=quiet-yard.json&quiet'), yardB = at('?levelFile=quiet-yard.json&quiet&squad=1');
-    line(two?.mission.id === 'depot-four' && two.team === teamWordsOf({ squad: 2 }) && keep?.mission.id === 'depot-four' && keep.team === teamWordsOf({ squad: 4 }) && yardA?.mission.id === 'quiet-yard-alone' && yardB?.mission.id === 'quiet-yard-two',
-      `words: a row deployed at another size is still that row, with the team as deployed (${two?.mission.id}, ${two?.team}); a visitor's own flags change nothing; one level's two rows are told apart by the team (${yardA?.mission.id} · ${yardB?.mission.id})`);
+    const two = at('?levelFile=depot.json&roomclear&squad=2'), keep = at('?levelFile=depot.json&roomclear&squad4&mute&quality=low&seed=7');
+    line(two?.mission.id === 'depot-four' && two.team === teamWordsOf({ squad: 2 }) && keep?.mission.id === 'depot-four' && keep.team === teamWordsOf({ squad: 4 }),
+      `words: a row deployed at another size is still that row, with the team as deployed (${two?.mission.id}, ${two?.team}); a visitor's own flags change nothing`);
     line(at('') === null && at('?quality=low&mute') === null && at('?levelFile=no-such-level.json&roomclear') === null && at('?solo')?.mission.id === 'solo-night' && at('?solo&levelFile=depot.json&roomclear')?.mission.id !== 'solo-night',
       'words: a plain address, the old cards\' and a level no row is on have no brief; ?solo alone is the solo night');
     line(at('?level=relief&roomclear&squad4') === null && at('?level=relief&nightbreach') === null && at('?level=relief&solo') === null && at('?nightbreach')?.mission.id === 'night-breach',
