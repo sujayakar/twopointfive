@@ -42,10 +42,8 @@ import { SNAPS, SAVETIMELINE, levelFingerprint, type SlotInfo } from '../game/sa
 import { CLEANRESTART } from '../game/cleanrestart';
 import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
-import { Character } from '../game/character';
-import { Firearm } from '../game/weapons';
-import { loneMen } from '../sim/men/store';
-import { useDice } from '../math/dice';
+import { CharacterAnimator } from '../game/character';
+import { SkeletonInstance } from '../anim/skeleton';
 import { sampleCmd, stillCmd, type PlayerCmd } from '../game/cmd';
 import { dressStep, DRESS_MS } from './rustdress';
 import { markHeld } from './held';
@@ -345,48 +343,28 @@ const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
 let HOOKS: { classes: Record<string, { prototype: object }>; values: Record<string, unknown>; made: Record<string, (row: any, g: any) => void> } | null = null;
 
-/** A ROW THE APPLY MAKES IS ITS CLASS'S PROTOTYPE AND ITS CARRIED FIELDS: the picture's half of it (a man's skeleton and its buffers, his animator's springs
- *  and node table, a gun's event list) is not carried, being no part of the game's state. The start has that half from the class's own constructor; a row
- *  made at run time takes it here from a TWIN the SAME constructor builds: every field the row lacks, and the class of every part the apply made plain.
- *  Nothing the apply wrote is overwritten, and a man's columns row is never the twin's (the twin stands on a lone store of its own). */
-function completeFrom(row: any, twin: any, skip: readonly string[], depth = 0, seen: Set<object> = new Set()): number {
-  if (depth > 8 || seen.has(twin)) return 0;
-  seen.add(twin); let n = 0;
-  for (const k of Object.keys(twin)) {
-    if (skip.includes(k)) continue;
-    const a = row[k], b = twin[k];
-    if (a === undefined) { if (b !== undefined) { row[k] = b; n++; } continue; }
-    if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object' || a === b) continue;
-    if (Array.isArray(a) || Array.isArray(b) || ArrayBuffer.isView(a) || ArrayBuffer.isView(b) || a instanceof Map || a instanceof Set) continue;
-    const pa = Object.getPrototypeOf(a), pb = Object.getPrototypeOf(b);
-    if (pa !== pb) { if (pa !== Object.prototype && pa !== null) continue; Object.setPrototypeOf(a, pb); n++; }
-    n += completeFrom(a, b, NO_SKIP, depth + 1, seen);
-  }
-  return n;
-}
-const NO_SKIP: readonly string[] = [];
-/** what each class's made rows took from their twins (`__rust.madeTook`), and a made row the twin could not be built for, said once a class */
+/** A ROW THE APPLY MAKES IS ITS CLASS'S PROTOTYPE AND ITS CARRIED FIELDS: the picture's half of it is not carried, being no part of the game's state.
+ *  The start has that half from the class's own constructor; a row made at run time is given it here by THE SAME FUNCTION the constructor calls
+ *  (`picture()`: skeleton.ts SkeletonInstance and PoseFK, character.ts CharacterAnimator), on the made row itself. Those functions draw no die and
+ *  write no state field, so nothing of the game is touched and no second man is built. A gun needs none: the one field a made `Firearm` lacks
+ *  (`ev`) is read by nothing.
+ *  STAND-IN (the apply's, for every class: a carried part whose type is a declared class is made a plain object): the made man's `skel` is given its
+ *  class here before its picture half. His animator's springs stay plain objects with the right values and his seven named poses are not the set's:
+ *  no code the page runs calls either on a made man (the animator's update is the Rust tick's). */
 function madeHooks(): Record<string, (row: any, g: any) => void> {
   const took = (cls: string, n: number) => { RUST_GAME.madeTook[cls] = (RUST_GAME.madeTook[cls] ?? 0) + n; };
   const guard = (cls: string, f: (row: any, g: any) => number) => (row: any, g: any) => { try { took(cls, f(row, g)); } catch (e) { const why = String((e as Error)?.message ?? e).slice(0, 300); if (!RUST_GAME.madeThrew[cls]) console.error(`rust=1: a ${cls} the game made could not be given its picture half: ${why}`); RUST_GAME.madeThrew[cls] = why; } };
   const own: Record<string, (row: any, g: any) => void> = {
-    // (the SAME constructor the start calls for every man: character.ts. His columns row, `S` and `r`, is the game's own and stays)
     Character: guard('Character', (row, g) => {
-      // THE GAME'S DIE IS PARKED WHILE A TWIN IS BUILT. The animator's constructor draws a phase off the simulation's die (character.ts), which on this
-      // page is the game's own, in its block: with the die in place every man made at run time cost the game one draw its tick never made, and the page
-      // played another deal than the same seed plays anywhere else from the first made man on. The hazard is general: ANY object the page builds for
-      // the picture while a game is live must not draw the game's die or write its state, and a constructor shared with the start does both.
-      const die = useDice(null); let twin: any;
-      try { twin = new Character(row.ch ?? g.ch, { id: row.id, tint: row.tint, tint2: row.tint2, pos: row.pos, yaw: row.bodyYaw ?? 0, men: loneMen() }); } finally { useDice(die); }
-      const n = completeFrom(row, twin, ['S', 'r']);
-      // (what a posing layer is handed with the rig, character.ts `cast`: the constructor's own record, naming THIS man's node table and poses)
-      if (row.anim && twin.anim?.cast) row.anim.cast = { ...twin.anim.cast, nodes: row.anim.nodes, poses: row.anim.poses };
-      return n;
+      const ch = row.ch ?? g.ch; row.ch ??= ch;
+      if (row.skel && Object.getPrototypeOf(row.skel) !== SkeletonInstance.prototype) Object.setPrototypeOf(row.skel, SkeletonInstance.prototype);
+      (row.skel as SkeletonInstance).picture(ch);
+      row.anim.ch ??= ch; (row.anim as CharacterAnimator).picture();
+      return 1;
     }),
-    Firearm: guard('Firearm', row => { if (!row.def) return 0; const die = useDice(null); try { return completeFrom(row, new Firearm(row.def), NO_SKIP); } finally { useDice(die); } }),
   };
-  // (every class the apply makes a row of is told here, whether or not it has a twin: the last made row of each is kept for a reader, and which rows were
-  //  made at run time can be asked: `__rust.madeLast`, `__rust.madeAtRunTime(row)`)
+  // (every class the apply makes a row of is told here, whether or not it has a picture half: the last made row of each is kept for a reader, and which
+  //  rows were made at run time can be asked: `__rust.madeLast`, `__rust.madeAtRunTime(row)`)
   const all: Record<string, (row: any, g: any) => void> = {};
   return new Proxy(own, { get: (_t, cls) => typeof cls !== 'string' ? undefined : (all[cls] ??= (row: any, g: any) => { RUST_GAME.madeLast[cls] = row; MADE_ROWS.add(row); own[cls]?.(row, g); }) });
 }
