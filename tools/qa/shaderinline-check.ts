@@ -49,7 +49,8 @@ const BUDGET: [RegExp, number][] = [
   [/^restir \/ main$/, 336],   // (295 + an opening's light in this writing, 38 KB: as the table above)
   [/^froxel \/ injectJ$/, 210],
   [/^reflect \/ main$/, 204],
-  [/^gbuffer(Cut)? \/ fsBox(Cut)?$/, 566],   // (302 until 2026-11-07, 267 for fsBox on the look's page. The snow's surface is in every level's text now and not a snow level's alone (render/frame.ts LevelSw: one text a level, so no level compiles it again): 469 for fsBox and 539 for its twin with the cut rule on the look's page, what a snow level under the look always was and no setting here read)
+  [/^gbuffer(Cut)? \/ fsBox(Cut)?$/, 302],   // (… and its twin with the cut rule, the same text and the cut's test: 268 where fsBox is 267. It had no row, so the look's page read red against 200)
+  [/^gbuffer(Cut)?Snow \/ fsBox(Cut)?$/, 566],   // (the boxes' second writing, with the snow's surface in it: render/gbuffer.ts. 294 on the plain page; 468 and, with the cut rule, 539 on the look's. What a snow level always compiled, and under the look no setting here read it. Every page asks for it now, behind its boot where the level has no snow, so each of this tool's settings holds it)
   [/./, 200],
 ];
 /** the cut test's own functions (common.wgsl: isectCut and the four planes it takes twice), and the KB one copy of the box test may carry of them */
