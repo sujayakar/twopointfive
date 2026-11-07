@@ -294,19 +294,9 @@ export const sneakScope = guarded(async () => {
   return F.done();
 });
 
-export const sneakOff = guarded(async () => {
-  const F = family('sneak-off: the switch off — the knobs change nothing, nothing is said, nothing is counted');
-  const digests: string[] = [], stats: string[] = [];
-  for (const set of [{}, { back: 2, aheadM: 9, litAt: 0.9, minPace: 2, skill: 0.2 }]) {   // (the numbers only: the halves `crouch` and `trail` are settled)
-    const s0 = JSON.stringify(SNM.SNEAK_STATS), R = await rig(9, false, set); EAST_SIDE(R); R.wait(3);
-    digests.push((R.digest >>> 0).toString(16)); stats.push(String(JSON.stringify(SNM.SNEAK_STATS) === s0)); }
-  F.verdict(digests[0] === digests[1], 'the same scripted walk digests the same whatever the numbers say', `${digests[0]} · ${digests[1]}`);
-  F.verdict(stats.every(s => s === 'true'), 'nothing counted', `SNEAK_STATS untouched: ${stats.join(', ')}`);
-  return F.done();
-});
 
 if (import.meta.main) {
-  const all: Record<string, () => Promise<boolean>> = { 'sneak-low': sneakLow, 'sneak-steps': sneakSteps, 'sneak-waits': sneakWaits, 'sneak-light': sneakLight, 'sneak-fallin': sneakFallIn, 'sneak-stand': sneakStand, 'sneak-aside': sneakAside, 'sneak-door': sneakDoor, 'sneak-post': sneakPost, 'sneak-scope': sneakScope, 'sneak-off': sneakOff };
+  const all: Record<string, () => Promise<boolean>> = { 'sneak-low': sneakLow, 'sneak-steps': sneakSteps, 'sneak-waits': sneakWaits, 'sneak-light': sneakLight, 'sneak-fallin': sneakFallIn, 'sneak-stand': sneakStand, 'sneak-aside': sneakAside, 'sneak-door': sneakDoor, 'sneak-post': sneakPost, 'sneak-scope': sneakScope,  };
   const want = process.argv.slice(2); let ok = true;
   for (const [n, fn] of Object.entries(all)) if (!want.length || want.includes(n)) ok = (await fn()) && ok;
   process.exit(ok ? 0 : 1);

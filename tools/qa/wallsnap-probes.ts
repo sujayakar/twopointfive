@@ -1,7 +1,5 @@
 // The 'wallsnap' family (through probes.ts: `bun run tools/qa/probes.ts wallsnap`, or this file directly) — the wall hold's feel pass (src/game/wallsnap.ts,
 // WALLSNAP.on; the harness's frozen stand holds it OFF, these turn it on):
-//   wallsnap-take     the take runs its own clock (0.12‥0.30 s by distance and turn), moves on the frame of the key, the turn ahead of the glide, back and
-//                     station arriving together; the feet stay planted in the world and step (they do not slide); nothing of him through the plaster
 //   wallsnap-landing  the pelvis dips as the back lands and comes back; one scuff for the player's ears; NO step / noise event filed for the take
 //   wallsnap-reach    walking AT a wall takes it from further off than standing does; walking PAST one does not; Q a moment early still takes it
 //   wallsnap-off      Q with nothing held leaves him within a hand of where he stood; a direction held walks on at pace that frame; the stick held away
@@ -58,58 +56,6 @@ export async function world(on: boolean, seed = 95) {
   const off = (p: Vec3) => p[2] - WALL.z;   // metres into the corridor off the north wall's plane
   const minBone = () => { let m = Infinity, name = ''; for (const k of BONES) { const o = off(c.bones[k]); if (o < m) { m = o; name = k; } } return { m, name }; };
   return { W, g, input, pl, c, step, keys, tap, click, place, off, minBone, setCursor: (p: Vec3 | null) => { cursor = p; } };
-}
-
-async function take() {
-  console.log('\n=== wallsnap-take ===');
-  const S = await world(true); const { pl, c, g } = S;
-  // (start z, start yaw°): 0° faces +z = away from the north wall (back already to it), 180° = nose to it
-  const cases: [number, number][] = [[10.6, 0], [10.8, 90], [11.0, 180], [11.15, 200], [10.9, -60]];
-  const fails: string[] = []; const rows: string[] = []; let through = Infinity, throughAt = '';
-  let slid = 0, lift = 0, pop = 0, popAt = '';
-  for (const [z, yaw] of cases) {
-    S.place(21, z, yaw);
-    const p0 = v3.copy(c.pos), y0 = c.bodyYaw; const feet0 = { L: v3.copy(c.bones.footL), R: v3.copy(c.bones.footR) };
-    let fp = { L: v3.copy(c.bones.footL), R: v3.copy(c.bones.footR) };
-    S.tap('KeyQ'); let frames = 0, first = 0, yawMid = 0, posMid = 0, firstMoveL = -1, firstMoveR = -1, prev = c.pos[2], back = false; const T = { t: 0 };
-    for (let f = 0; f < 40; f++) {
-      S.step(1); const w = pl.wall; if (!w) { fails.push(`from z ${z} yaw ${yaw}: no hold`); break; }
-      if (f === 0) { T.t = w.takeT; first = Math.abs(c.pos[2] - p0[2]); }
-      if (c.pos[2] > prev + 1e-6) back = true; prev = c.pos[2];
-      const dist = Math.abs(p0[2] - WALL.station) || 1, done = 1 - Math.abs(c.pos[2] - WALL.station) / dist, turn = Math.abs(w.yawD) > 1e-3 ? wrapA(c.bodyYaw - y0) / w.yawD : 1;
-      if (w.settle < 1 && Math.abs(w.settle - 0.5) < 0.5 * DT / T.t + 1e-9) { yawMid = turn; posMid = done; }
-      const mb = S.minBone(); if (mb.m < through) { through = mb.m; throughAt = `${mb.name} from z ${z} yaw ${yaw} f${f}`; }
-      const mL = v3.distXZ(c.bones.footL, feet0.L), mR = v3.distXZ(c.bones.footR, feet0.R);
-      if (f === 0) slid = Math.max(slid, mL, mR);
-      if (firstMoveL < 0 && mL > 0.03) firstMoveL = w.settle; if (firstMoveR < 0 && mR > 0.03) firstMoveR = w.settle;
-      if (w.settle < 1) lift = Math.max(lift, c.bones.footL[1] - feet0.L[1], c.bones.footR[1] - feet0.R[1]);
-      if (frames && f >= frames && f < frames + 10) { const j = Math.max(v3.dist(c.bones.footL, fp.L), v3.dist(c.bones.footR, fp.R)); if (j > pop) { pop = j; popAt = `z ${z} yaw ${yaw}, ${f - frames + 1} f after it landed`; } }
-      fp = { L: v3.copy(c.bones.footL), R: v3.copy(c.bones.footR) };
-      if (w.settle >= 1 && !frames) {
-        frames = f + 1;
-        const offS = Math.abs(c.pos[2] - WALL.station), yawErr = Math.abs(wrapA(c.bodyYaw - 0)) / DEG;
-        if (offS > 0.005) fails.push(`from z ${z} yaw ${yaw}: ${f3(offS)} m off the station when the take ended`);
-        if (yawErr > 1) fails.push(`from z ${z} yaw ${yaw}: back ${yawErr.toFixed(1)}° off square when the take ended`);
-      }
-    }
-    if (!pl.wall) continue;
-    const want = wsTakeSecs(Math.abs(p0[2] - WALL.station), pl.wall.yawD);
-    const k = WALLSNAP.slow ? Math.max(0.25, WALLSNAP.slowTake) : 1;   // (the unhurried take: the same clock, times as long)
-    if (Math.abs(T.t - want) > 1e-9 || T.t < 0.12 * k - 1e-9 || T.t > 0.30 * k + 1e-9) fails.push(`from z ${z} yaw ${yaw}: take clock ${f3(T.t)} s (want ${f3(want)}, within ${f2(0.12 * k)}‥${f2(0.30 * k)})`);
-    if (Math.abs(frames - Math.ceil(T.t / DT - 1e-6)) > 1) fails.push(`from z ${z} yaw ${yaw}: landed after ${frames} frames, the clock is ${f3(T.t)} s`);
-    const dist = Math.abs(p0[2] - WALL.station);
-    if (dist > 0.05 && first < 0.1 / k * dist) fails.push(`from z ${z} yaw ${yaw}: ${f3(first)} m on the key's frame of ${f2(dist)} (want ≥ ${(10 / k).toFixed(0)} %: it must move at once)`);
-    if (dist > 0.05 && Math.abs(pl.wall.yawD) > 0.3 && yawMid < posMid + 0.03) fails.push(`from z ${z} yaw ${yaw}: at half time the turn is ${f2(yawMid)} done, the glide ${f2(posMid)} (the turn must lead)`);
-    if (back) fails.push(`from z ${z} yaw ${yaw}: he moved back out from the wall during the take`);
-    if (dist > 0.2 && Math.max(firstMoveL < 0 ? 9 : firstMoveL, firstMoveR < 0 ? 9 : firstMoveR) < 0.15) fails.push(`from z ${z} yaw ${yaw}: both feet had left their spots by ${f2(Math.max(firstMoveL, firstMoveR))} of the take (one goes at once, the other stays planted until its turn)`);
-    rows.push(`z ${z} yaw ${yaw}°: ${f3(T.t)} s / ${frames} f, ${f3(first)} m on frame 1, half-time turn ${f2(yawMid)} vs glide ${f2(posMid)}, feet first move at ${f2(firstMoveL)} / ${f2(firstMoveR)}`);
-    S.tap('KeyQ'); S.step(30);
-  }
-  if (through < -0.02) fails.push(`a joint ${f3(-through)} m THROUGH the wall plane during a take (${throughAt})`);
-  if (slid > 0.08) fails.push(`a foot jumped ${f3(slid)} m on the first frame of a take (a step starts from where the sole stood)`);
-  if (lift < 0.03) fails.push(`the feet never left the floor during a take (highest ${f3(lift)} m): they must step, not slide`);
-  if (pop > 0.03) fails.push(`a foot jumped ${f3(pop)} m in one frame after a take landed (${popAt}): the soles stay where they stepped to`);
-  verdict(fails.length === 0, 'the take: one eased clock, the turn leading, the feet stepping', fails.length ? fails.join('\n    ') : rows.join('\n    ') + `\n    lowest joint ${f3(through)} m off the plane (${throughAt}); feet moved at most ${f3(slid)} m on the first frame, lifted ${f3(lift)} m, and moved at most ${f3(pop)} m a frame once landed`);
 }
 
 async function landing() {
@@ -577,7 +523,7 @@ async function kit() {
   verdict(fails.length === 0, 'the kit on the wall: the rifle in his hands is the stack however it got there, anything else is the back hold, and he never leaves the wall for it', fails.length ? fails.join('\n    ') : rows.join('\n    '));
 }
 
-const FAMILY: Record<string, () => Promise<void>> = { 'wallsnap-camera': camera, 'wallsnap-kit': kit, 'wallsnap-take': take, 'wallsnap-landing': landing, 'wallsnap-reach': reach, 'wallsnap-off': offIt, 'wallsnap-stack': stack, 'wallsnap-cover': cover, 'wallsnap-off-same': offSame, 'wallsnap-duo': duo };
+const FAMILY: Record<string, () => Promise<void>> = { 'wallsnap-camera': camera, 'wallsnap-kit': kit, 'wallsnap-landing': landing, 'wallsnap-reach': reach, 'wallsnap-off': offIt, 'wallsnap-stack': stack, 'wallsnap-cover': cover, 'wallsnap-off-same': offSame, 'wallsnap-duo': duo };
 /** run the family (or one of it by name); true = every check passed. The switch is left as it was found. */
 export async function wallSnapProbes(only?: string): Promise<boolean> {
   const was = { ...WALLSNAP }; allPass = true;

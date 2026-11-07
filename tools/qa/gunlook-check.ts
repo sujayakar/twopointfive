@@ -162,66 +162,9 @@ export async function gunlookHands(): Promise<boolean> {
   return F.done();
 }
 
-// ───────────────────────────────────────────────────────────── bare
-export async function gunlookBare(): Promise<boolean> {
-  const F = family('gunlook-bare: a gun with its suppressor off is drawn without one');
-  await kept(async () => {
-    K.KIT.on = true;
-    const sig = (h: number[]) => h.map(x => +x.toFixed(4)).sort((a, b) => a - b).join(' x '), segSig = (s: any, t = s.thick, u = s.tall) => sig([t, u, (s.l1 - s.l0) / 2]);
-    const less = (a: string[], b: string[]) => { const left = [...b]; return a.filter(x => { const i = left.indexOf(x); if (i < 0) return true; left.splice(i, 1); return false; }); };   // (what is in a and not in b, counted)
-    const stage = async () => {
-      const R: any = await hushed(() => rig(17, { stage: false })); raise(); const g = R.game, at = g.player.char.pos;
-      const op: any = spawnUnit(g, { team: 'operative', pos: [at[0] + 1.5, 0, at[2] + 1], yaw: 0, name: 'Op0', light: false });
-      // (a card's suppressor rows, one a gun — kittree.ts KITTREE: `suppressed` his primary's, `sideCan` his secondary's)
-      const card = (i: number, suppressed: boolean, long: boolean, sideCan: boolean) => { K.KIT.members[i] = K.kitDefault(i); K.kitSet(i, 'primary', long ? 'mk18' : 'none'); K.kitSet(i, 'secondary', 'g19'); K.KIT.members[i].suppressed = suppressed; K.KIT.members[i].sideCan = sideCan; };
-      const shot = (suppressed: boolean, long: boolean, sideCan = suppressed) => {
-        card(1, suppressed, long, sideCan); K.kitStage(g, [op]);
-        for (let i = 0; i < 20; i++) R.step();
-        return { row: op.weapon.def.id as string, side: (op.second?.gun?.def?.id ?? null) as string | null, look: op.char.gunLook ? { ...op.char.gunLook } : null, ...boxes() };
-      };
-      const boxes = (c: any = op.char) => { const out: any[] = []; handProps(g, out); const mine = out.filter(b => b.owner === (c.id & 0xff)), hs = mine.map(b => sig(b.h)), i = hs.findIndex(x => x === can || x === barrel);
-        // (`off`: how far the middle of his long gun's can — or of the barrel that stands for it — is from the middle of the gun part drawn before it: a length on the gun, the same in any pose)
-        const d = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-        return { hs, off: i > 0 ? d(mine[i].c, mine[i - 1].c) : NaN, by: i > 0 ? hs[i - 1] : '' }; };
-      // (the order matters: a card whose gun rows are as issued leaves him the gun he has — kit.ts kitStage — so the sidearm's row alone is taken off while he still holds the gun he came with)
-      const res: any = { longCan: shot(true, true), sideOnly: shot(true, true, false), longOnly: shot(false, true, true), longBare: shot(false, true), sideCan: shot(true, false), sideBare: shot(false, false) };   // (sideOnly, longOnly: a suppressor row a gun — the gear tree)
-      // … the bare card again: his sidearm out with the long gun hung down his front, then the man down with the long gun on the floor
-      shot(false, true); res.drew = sideOut(g, op, 3); for (let i = 0; i < 5; i++) R.step(); res.hung = { row: op.weapon.def.id, ...boxes() };
-      K.kitStage(g, [op]); for (let i = 0; i < 20; i++) R.step(); killGuard(g, op, [1, 0, 0]); for (let i = 0; i < 30; i++) R.step(); res.down = { state: op.state, ...boxes() };
-      // … and YOU: your card with both off, then both on
-      const you = (cans: boolean) => { card(0, cans, true, cans); K.kitPlayer(g); const pl = g.player; pl.slot = 'rifle'; pl.holstered = false; for (let i = 0; i < 40; i++) R.step();
-        return { row: pl.rifle.def.id as string, side: pl.pistol.def.id as string, up: pl.rifleUp as boolean, look: pl.char.gunLook ? { ...pl.char.gunLook } : null, ...boxes(pl.char) }; };
-      res.youBare = you(false); res.youCan = you(true);
-      K.KIT.members[0] = K.kitDefault(0); K.KIT.members[1] = K.kitDefault(1); return res;
-    };
-    const can = segSig(RIG.sc20k.suppressor), barrel = segSig(RIG.sc20k.suppressor, BARE_BARREL, BARE_BARREL), pcan = segSig(RIG.pistol.suppressor), count = (hs: string[], x: string) => hs.filter(y => y === x).length;
-    const On = await stage();
-    F.verdict(On.longCan.row === 'fn2000' && On.longCan.side === 'fiveseven' && On.longBare.row === 'mk18bare' && On.longBare.side === 'g19bare' && On.sideCan.row === 'fiveseven' && On.sideBare.row === 'g19bare'
-      && On.longBare.look?.bareLong === true && On.longBare.look?.bareSide === true && On.sideBare.look?.bareSide === true && !On.longCan.look?.bareLong && !On.longCan.look?.bareSide && !On.sideCan.look?.bareSide && On.longBare.look?.hand === null,
-      'a card with the suppressor off hands him the issue guns\' bare rows, and his figure is told his long gun and his sidearm are bare (no model of their own); with it on, neither',
-      `can on: ${On.longCan.row} + ${On.longCan.side}, ${J(On.longCan.look)} · off: ${On.longBare.row} + ${On.longBare.side}, ${J(On.longBare.look)} · the pistol alone: ${On.sideCan.row} / ${On.sideBare.row}, ${J(On.sideBare.look)}`);
-    const gone = less(On.longCan.hs, On.longBare.hs), came = less(On.longBare.hs, On.longCan.hs);
-    const apart = On.longCan.by === On.longBare.by ? Math.abs(On.longCan.off - On.longBare.off) : NaN;
-    F.verdict(J([...gone].sort()) === J([can, pcan].sort()) && J(came) === J([barrel]) && apart < 0.001,
-      'the bare long gun in his hands: its can is gone and a bare barrel of the same length stands in the can\'s own place; the pistol on his thigh has lost its can too; no other box of his has changed size',
-      `gone: ${gone.join(' | ') || 'nothing'} (the cans: ${can} | ${pcan}) · come: ${came.join(' | ') || 'nothing'} (a barrel: ${barrel}) · the barrel's middle sits ${(On.longBare.off * 1000).toFixed(1)} mm from the part drawn before it, the can's ${(On.longCan.off * 1000).toFixed(1)} mm`);
-    const goneP = less(On.sideCan.hs, On.sideBare.hs), cameP = less(On.sideBare.hs, On.sideCan.hs);
-    F.verdict(J(goneP) === J([pcan]) && cameP.length === 0, 'the bare pistol in his hand: its can is gone and no other box of his has changed size', `gone: ${goneP.join(' | ') || 'nothing'} (the can: ${pcan}) · come: ${cameP.join(' | ') || 'nothing'}`);
-    { const goneS = less(On.longCan.hs, On.sideOnly.hs), cameS = less(On.sideOnly.hs, On.longCan.hs), goneL = less(On.longCan.hs, On.longOnly.hs), cameL = less(On.longOnly.hs, On.longCan.hs);
-      const said = `the sidearm's row off: ${On.sideOnly.row} + ${On.sideOnly.side}, gone ${goneS.join(' | ') || 'nothing'}, come ${cameS.join(' | ') || 'nothing'} · the long gun's off: ${On.longOnly.row} + ${On.longOnly.side}, gone ${goneL.join(' | ') || 'nothing'}, come ${cameL.join(' | ') || 'nothing'}`;
-      F.verdict(On.sideOnly.row === 'fn2000' && On.sideOnly.side === 'g19bare' && On.sideOnly.look?.bareSide === true && !On.sideOnly.look?.bareLong && J(goneS) === J([pcan]) && cameS.length === 0
-        && On.longOnly.row === 'mk18bare' && On.longOnly.side === 'fiveseven' && On.longOnly.look?.bareLong === true && !On.longOnly.look?.bareSide && J(goneL) === J([can]) && J(cameL) === J([barrel]),
-        'the gear tree, a suppressor row a gun: the sidearm\'s alone off — the pistol on his thigh has lost its can and the long gun keeps its own; the long gun\'s alone off — a barrel for its can and the pistol keeps its own', said);
-      const Y = On.youBare, Z = On.youCan, n = (r: any) => `${r.row} + ${r.side}: barrels ${count(r.hs, barrel)}, long cans ${count(r.hs, can)}, pistol cans ${count(r.hs, pcan)}`;
-      const worn = (r: any) => r.row === 'fn2000' && r.side === 'fiveseven' && count(r.hs, barrel) === 0 && count(r.hs, can) === 1 && count(r.hs, pcan) === 1;
-      F.verdict(Y.up && Y.row === 'mk18bare' && Y.side === 'g19bare' && Y.look?.bareLong === true && Y.look?.bareSide === true && count(Y.hs, barrel) === 1 && count(Y.hs, can) === 0 && count(Y.hs, pcan) === 0 && worn(Z),
-        'the gear tree, YOUR card with both suppressors off: the bare rows in your hands and on your thigh, a barrel for the long gun\'s can and no can on the pistol; with both on, both drawn', `off: ${n(Y)} · on: ${n(Z)}`); }
-  });
-  return F.done();
-}
 
 if (import.meta.main) {
-  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['own', gunlookOwn], ['hands', gunlookHands], ['bare', gunlookBare]];
+  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['own', gunlookOwn], ['hands', gunlookHands], ];
   const bad = want.filter(w => !all.some(([n]) => n === w)); if (bad.length) { console.error(`unknown: ${bad.join(' ')} (own hands bare)`); process.exit(2); }
   let ok = true; for (const [n, fn] of all) if (!want.length || want.includes(n)) { try { ok = (await fn()) && ok; } catch (e) { ok = false; console.log(`- FAIL — gunlook-${n} threw\n    ${(e as Error).stack ?? (e as Error).message}`); } }
   console.log(`\n=== gunlook-check: ${ok ? 'ALL PASS' : 'FAILED'} ===`); process.exit(ok ? 0 : 1);

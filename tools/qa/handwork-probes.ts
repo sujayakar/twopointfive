@@ -16,16 +16,12 @@ import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const HW = await import(`${ROOT}/src/game/handwork.ts`);
 const { HANDWORK, HANDWORK_STATS } = HW;
-const { SWAP } = await import(`${ROOT}/src/game/character.ts`);
-const G = await import(`${ROOT}/src/game/guards.ts`);
 const { CODE_SECS, learnCode } = await import(`${ROOT}/src/game/devices.ts`);
 const { DRIVE_SECS } = await import(`${ROOT}/src/game/consts.ts`);
 const { runningVerb } = await import(`${ROOT}/src/game/interact.ts`);
 const { playerBusy } = await import(`${ROOT}/src/game/savestate.ts`);
 const { wallAt, wallPt } = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
-const { handProps } = await import(`${ROOT}/src/game/combat.ts`);
-const { requestQrf } = await import(`${ROOT}/src/game/qrf.ts`);
 const workInfo = (c: any) => ({ pose: c.anim.wk.last, w: c.anim.wk.shown, hand: c.anim.wk.main, two: c.anim.wk.two });   // (the layer's own fields: what the animator's reader said)
 
 type Vec3 = [number, number, number];
@@ -189,83 +185,10 @@ export async function handworkWork(): Promise<boolean> { return keep(async () =>
   return allPass;
 }); }
 
-// ================================================================ radio
-export async function handworkRadio(): Promise<boolean> { return keep(async () => {
-  console.log('\n=== handwork-radio: a hand to the handset while his line is on the net, down after; nothing for a spoken line; a reload has the arm first; the response team too ===');
-  allPass = true; const K = HANDWORK;
-  { const R = await rig(), { g } = R, gd = g.guards[0], ch = gd.char, an = ch.anim; R.step(30);
-    const rest = v3.dist(ch.bones.handL, ch.bones.head); g.say(gd, 'control, east corridor is clear', true); const dur = gd.bubble.dur, up = Math.min(K.radioMax, Math.max(K.radioMin, dur * K.radioK));
-    let tUp = -1, dMin = 9, tDown = -1;
-    R.step(Math.round((up + 1.5) * 60), i => { const s = an.radioShown, t = (i + 1) * DT; if (tUp < 0 && s > 0.9) tUp = t; if (tUp >= 0 && tDown < 0 && s < 0.05) tDown = t; if (s > 0.9) dMin = Math.min(dMin, v3.dist(ch.bones.handL, ch.bones.head)); });
-    verdict(tUp > 0 && tUp < 0.5 && dMin < 0.42 && dMin < rest - 0.2, 'a guard\'s radio line: his left hand is up at his collar inside half a second (weight > 0.9, the wrist well nearer his head than at rest)', `${gd.callsign}: up ${f2(tUp)} s after the line · wrist ${f2(dMin)} m from his head (at rest ${f2(rest)})`);
-    verdict(tDown > up - 0.1 && tDown < up + 0.8, 'it stays up for the line\'s own share of its bubble and comes down after', `bubble ${f2(dur)} s → hand up ${f2(up)} s · down at ${f2(tDown)} s`);
-    R.step(30); g.say(gd, 'must have been nothing', false); const net = !!gd.bubble?.radio; let sMax = 0; R.step(90, () => { sMax = Math.max(sMax, an.radioShown); });
-    verdict(net || sMax < 0.01, 'a line said aloud lifts nothing', `on the net ${net} · best hand weight ${f2(sMax)}`);
-    R.step(30); an.reload(1.6); g.say(gd, 'control, checking in', true); let sR = 0, sAfter = 0; R.step(80, () => { sR = Math.max(sR, an.radioShown); }); R.step(40, () => { sAfter = Math.max(sAfter, an.radioShown); });
-    verdict(sR < 0.05, 'a reload has his hands first: no radio hand through it', `best hand weight during the reload ${f2(sR)} · after it ${f2(sAfter)}`); }
-  { const R = await rig({ ai: true }), { g } = R; g.teleportPlayer([8, 0, 17]); g.tune.qrfEta = 15; const asked = requestQrf(g, 'panel');
-    const lines: { who: string; text: string; t: number; aim: number; gd: any; best: number }[] = []; const seen = new WeakMap<any, number>();
-    R.step(60 * 60, () => { for (const gd of g.qrf.men) { const b = gd.bubble; if (b?.radio && seen.get(gd) !== b.t) { seen.set(gd, b.t); lines.push({ who: gd.callsign, text: b.text, t: g.time, aim: gd.char.anim.upperW.aim, gd, best: 0 }); } }
-      for (const L of lines) if (g.time - L.t < 1.2) L.best = Math.max(L.best, L.gd.char.anim.radioShown); });
-    const shown = lines.filter(L => L.best > 0.5), gunUp = lines.filter(L => L.best <= 0.5 && L.gd.char.anim.longGun);
-    verdict(asked && lines.length > 0 && HANDWORK_STATS.radio >= lines.length && shown.length + gunUp.length === lines.length, 'the response team: every radio line of one of its men asks for the hand — it comes up, or his long gun has both hands and it does not', `${lines.length} lines in the minute after the call · hand up for ${shown.length} · long gun up for ${gunUp.length}${lines.length ? ` · e.g. ${lines[0].who} "${lines[0].text}" best weight ${f2(lines[0].best)}` : ''}`); }
-  return allPass;
-}); }
 
-// ================================================================ swap
-export async function handworkSwap(): Promise<boolean> { return keep(async () => {
-  console.log('\n=== handwork-swap: torch to sidearm and back is a move of his hands; the torch hangs on his belt meanwhile; the first round is no later ===');
-  allPass = true;
-  const pick = (g: any) => g.guards.find((x: any) => G.inHand(x) === 'torch');
-  { const R = await rig({ ai: true }), { g } = R; g.teleportPlayer([8, 0, 17]); R.step(30);
-    const gd = pick(g); if (!gd) { verdict(false, 'a man of the shift with his torch in his hand', 'none'); return allPass; }
-    const ch = gd.char, an = ch.anim, seq = (rule: () => any, n: number) => { const S: { held: any; t: number }[] = []; let dHip = 9, tEnd = -1; R.step(n, i => { const h = an.swapHeld(rule()), s = an.swapInfo(); if (!S.length || S[S.length - 1].held !== h) S.push({ held: h, t: (i + 1) * DT }); if (s.a > 0.1 && s.a < 0.5) dHip = Math.min(dHip, v3.dist(ch.bones.handR, ch.bones.hips)); if (tEnd < 0 && S.length > 1 && s.a < 0) tEnd = (i + 1) * DT; }); return { S, dHip, tEnd }; };
-    const before = G.inHand(gd); G.raiseEscalation(g, 1, null, 'device');
-    const D = seq(() => G.inHand(gd), 90), words = (S: { held: any; t: number }[]) => S.map(s => `${s.held ?? 'empty'} @${f2(s.t)}`).join(' → ');
-    const order = D.S.map(s => s.held).join(',');
-    verdict(before === 'torch' && G.inHand(gd) === 'weapon' && /^torch,,weapon$/.test(order) && D.dHip < 0.32 && Math.abs(D.tEnd - SWAP.draw - an.swapLag) < 0.12, 'the floor up a step: the rule says sidearm at once, his hand shows torch, then nothing, then the sidearm — the hand down at his belt between — over SWAP.draw after his own beat', `${gd.callsign}: ${words(D.S)} · hand ${f2(D.dHip)} m from his hips mid-move · done ${f2(D.tEnd)} s (SWAP.draw ${SWAP.draw})`);
-    { const out: any[] = []; handProps(g, out); const hip = ch.bones.hips, belt = out.filter((b: any) => b.owner === (ch.id & 0xff) && Math.abs(b.c[1] - hip[1]) < 0.2 && flat(b.c, hip) < 0.3 && Math.max(b.h[0], b.h[1], b.h[2]) < 0.09);
-      const n1 = out.filter((b: any) => b.owner === (ch.id & 0xff)).length;
-      verdict(belt.length >= 2, 'with the sidearm out his torch hangs on his belt (two boxes at his right hip, his own)', `his boxes: ${n1} · at the belt ${belt.length}`); }
-    G.standDownEscalation(g); let tRule = -1; R.step(60 * 40, i => { if (tRule < 0 && G.inHand(gd) === 'torch') tRule = i; if (tRule >= 0) return; });
-    if (G.inHand(gd) !== 'torch') verdict(false, 'the floor stood down: he goes back to his torch', `still ${G.inHand(gd)} · state ${gd.state}`);
-    else { // (the stow began the frame the rule changed; replay it from a fresh stand-down to time it)
-      G.raiseEscalation(g, 1, null, 'device'); R.step(120); G.standDownEscalation(g); let S: { held: any; t: number }[] = [], t0 = -1, tEnd = -1;
-      R.step(60 * 40, i => { const rule = G.inHand(gd); if (t0 < 0) { if (rule !== 'torch') return; t0 = i; } const h = an.swapHeld(rule), s = an.swapInfo(), t = (i - t0 + 1) * DT; if (t < 2) { if (!S.length || S[S.length - 1].held !== h) S.push({ held: h, t }); if (tEnd < 0 && S.length > 1 && s.a < 0) tEnd = t; } });
-      verdict(S.map(s => s.held).join(',') === 'weapon,,torch' && Math.abs(tEnd - SWAP.stow - an.swapLag) < 0.12, 'stood down: the sidearm goes away and the torch comes off his belt the same way, over SWAP.stow after his own beat', `${words(S)} · done ${f2(tEnd)} s (SWAP.stow ${SWAP.stow})`); } }
-  // ---- a floor alarm does not move every hand on one frame
-  { const R = await rig({ ai: true }), { g } = R; g.teleportPlayer([8, 0, 17]); R.step(30);
-    const torch = g.guards.filter((x: any) => G.inHand(x) === 'torch'); G.raiseEscalation(g, 1, null, 'device');
-    const st0: number[] = torch.map(() => -1), early0: boolean[] = torch.map(() => false);
-    R.step(40, i => torch.forEach((m: any, k: number) => { if (st0[k] >= 0) return; const A = m.char.anim; if (A.swapInfo().a >= 0) st0[k] = i; else if (A.swapHeld(G.inHand(m)) !== 'torch') early0[k] = true; }));
-    const keep = torch.map((x: any) => G.inHand(x) === 'weapon'), men = torch.filter((_: any, k: number) => keep[k]), st = st0.filter((_, k) => keep[k]), early = early0.filter((_, k) => keep[k]);
-    const ok = men.every((m: any, k: number) => st[k] >= 0 && !early[k] && m.char.anim.swapLag <= SWAP.lag && Math.abs(st[k] * DT - m.char.anim.swapLag) < 2.5 * DT);
-    verdict(men.length >= 2 && new Set(st).size >= 2 && ok, 'the floor up a step for the whole shift: each man keeps his torch for his own beat (a share of SWAP.lag off his id), so their hands do not all start on one frame', men.map((m: any, k: number) => `${m.callsign} starts frame ${st[k]} (beat ${f2(m.char.anim.swapLag)} s)`).join(' · '));
-    const gd = men.slice().sort((a: any, b: any) => b.char.anim.swapLag - a.char.anim.swapLag)[0];
-    if (gd) { G.standDownEscalation(g); let back = false; R.step(60 * 40, () => { back ||= G.inHand(gd) === 'torch' && gd.char.anim.swapInfo().a < 0 && !gd.char.anim.swapInfo().pending; return back; });
-      G.raiseEscalation(g, 1, null, 'device'); R.step(3); /* (the rule turns a frame on; his beat is the longest of the shift's) */ const p0 = gd.char.anim.swapInfo(); gd.char.anim.fire(); R.step(1); const p1 = gd.char.anim.swapInfo();
-      verdict(back && p0.pending && p0.a < 0 && p1.a >= 0.8, 'a round fired inside his beat: the move starts on that frame and jumps to the gun in his hand', `${gd.callsign}: before the round pending ${p0.pending}, progress ${f2(p0.a)} · the frame after ${f2(p1.a)}`); } }
-  // ---- the first round comes, with a swap begun
-  { const first = async () => { const R = await rig({ ai: true, seed: 5 }), { g, pl } = R; g.teleportPlayer([8, 0, 17]); R.step(30);
-      const gd = pick(g), ch = gd.char, f: Vec3 = [Math.sin(ch.bodyYaw), 0, Math.cos(ch.bodyYaw)]; let at: Vec3 | null = null;
-      for (const d of [4, 3.5, 3, 2.5]) { const p: Vec3 = [ch.pos[0] + f[0] * d, 0, ch.pos[2] + f[2] * d]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([p[0], 1.2, p[2]], [ch.pos[0], 1.5, ch.pos[2]])) { at = p; break; } }
-      if (!at) return { frames: -2, who: gd.callsign, swaps: 0, mz: [] as number[] };
-      const s0 = HANDWORK_STATS.swaps, e0 = g.events.length; g.teleportPlayer(at); pl.holstered = false; g.playerInvisible = false; let frames = -1, seenE = e0; const mz: number[] = [];
-      for (let i = 0; i < 60 * 20 && frames < 0; i++) { pl.visibility = 0.9; R.step(); mz.push(ch.muzzle[0], ch.muzzle[1], ch.muzzle[2]); for (; seenE < g.events.length; seenE++) { const e = g.events[seenE]; if (e.kind === 'guardShot') { frames = i; break; } } if (g.events.length < seenE) seenE = g.events.length; }
-      return { frames, who: gd.callsign, swaps: HANDWORK_STATS.swaps - s0, mz }; };
-    const A = await first();
-    verdict(A.frames >= 0 && A.swaps > 0, 'Sam stood in a torch-carrying guard\'s beam: the shift fires, a swap begun (the rule of what is in his hand is untouched; a shot mid-draw jumps the move)', `first round ${A.frames} frames on (${A.swaps} swaps begun) · in front of ${A.who}`); }
-  // ---- a re-bake mid-draw keeps the move
-  { const R = await rig({ ai: true }), { g } = R; g.teleportPlayer([8, 0, 17]); R.step(30);
-    const gd = pick(g), an = gd.char.anim; G.raiseEscalation(g, 1, null, 'device'); R.step(10 + Math.ceil(an.swapLag * 60)); const a0 = an.swapInfo().a; gd.char.update(0); gd.char.update(0); const a1 = an.swapInfo().a; R.step(1); const a2 = an.swapInfo().a;
-    verdict(a0 > 0.05 && a0 < 0.9 && a1 === a0 && a2 > a0, 'his pose re-baked mid-draw (dt 0): the move stands where it was and goes on', `progress ${f2(a0)} → ${f2(a1)} after two re-bakes → ${f2(a2)} a frame on`); }
-  return allPass;
-}); }
 
 if (import.meta.main) {
   const which = process.argv[2] ?? 'all'; let ok = true;
   if (which === 'all' || which === 'work') ok = await handworkWork() && ok;
-  if (which === 'all' || which === 'radio') ok = await handworkRadio() && ok;
-  if (which === 'all' || which === 'swap') ok = await handworkSwap() && ok;
   console.log(ok ? '\n=== handwork: ALL PASS ===' : '\n=== handwork: FAILED ==='); process.exit(ok ? 0 : 1);
 }

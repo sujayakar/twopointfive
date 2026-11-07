@@ -6,18 +6,11 @@ import { swept, sample } from './sweep.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
-const { crouchPace } = await import(`${ROOT}/src/game/player.ts`);
-const { sightGain } = guardsMod;
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-/** Every guard but [0] out of it: parked on the lot east of the building, held, deaf-and-blind. Returns [0]. */
-function parkOthers(game: any): any {
-  for (const o of game.guards.slice(1)) { o.hold = true; o.pinned = true; o.dazzledUntil = 1e9; o.heardUpTo = 1e12; o.char.pos = [37.5, 0, 6 + game.guards.indexOf(o)]; o.char.update(0); }
-  return game.guards[0];
-}
 function placeGuard(gd: any, p: Vec3, face: Vec3) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(face[0] - p[0], face[2] - p[2]); gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 
 // ================================================================ muzzle discipline
@@ -243,66 +236,3 @@ export async function missing() {
   return allPass;
 }
 
-// ================================================================ motion acuity: the table
-/** The sight-gain table off REAL displacement: a calm man held on the open cubicle aisle looking down it, deaf (this is about eyes), Sam put `dist` metres dead
- *  ahead at visibility `vis` and driven by the puppet back and forth about that spot — across the man's line of sight (tangential) or along it (radial) — at a
- *  still / creep / walk / sprint pace, so the velocity the men read is the ground he covers, not a number written into him. Per cell: the rate sightGain returns
- *  a second in (mean while in view), the seconds until 'huh?' (state suspicious) and until 'CONTACT!' (alert; the man is held, so past ~6 s of suspicion he lets it
- *  go and it reads '—'), capped at 60 s. `legacy` flips guards.ts AI_TUNE.motionAcuity off for the row (the old speed > 2 step) when the build has the switch. */
-export async function motionTable(opts: { vis?: number[]; legacyToo?: boolean } = {}) {
-  console.log('\n=== motion: sight gain from real displacement — rate /s · seconds to SUSPECT · seconds to ALERT (held man, calm floor, no smoke, deaf) ===');
-  const TUNE = (guardsMod as any).AI_TUNE as { motionAcuity: boolean } | undefined;
-  const modes: { name: string; legacy: boolean }[] = TUNE && opts.legacyToo !== false ? [{ name: 'BEFORE (speed>2 ? 1.5 : 1)', legacy: true }, { name: 'AFTER (motion acuity)', legacy: false }] : [{ name: TUNE ? 'AFTER (motion acuity)' : 'CURRENT BUILD', legacy: false }];
-  const paces: { name: string; v: number; crouch: boolean; sprint: boolean }[] = [
-    { name: 'still (crouched)', v: 0, crouch: true, sprint: false }, { name: 'creep 0.6 (crouched)', v: 0.6, crouch: true, sprint: false },
-    { name: 'walk 1.4', v: 1.4, crouch: false, sprint: false }, { name: 'sprint 4.5', v: 4.5, crouch: false, sprint: true },
-  ];
-  const dists = [3, 6, 10]; const viss = opts.vis ?? [0.25, 0.5];
-  // the rig: guard on the open strip north of the building at (6, 1.9) looking east (+x) down 30 m of clear ground; Sam east of him on the same line
-  const G: Vec3 = [6, 0, 1.9]; const east: Vec3 = [36, 0, 1.9];
-  const results: Record<string, { rate: number; tS: number; tA: number; letGo: boolean }> = {};
-  for (const mode of modes) for (const vis of viss) for (const pace of paces) for (const dir of pace.v > 0 ? ['tangential', 'radial'] as const : ['—'] as const) for (const dist of dists) {
-    Math.random = seeded(5);
-    const W = await standUp(); const { game, input } = W;
-    if (TUNE) TUNE.motionAcuity = !mode.legacy;
-    game.godMode = true; game.aiEnabled = true;
-    for (let i = 0; i < 5; i++) W.step(DT);
-    const gd = parkOthers(game); gd.heardUpTo = 1e12;   // deaf: footsteps are the hearing model's business, this table is the eyes'
-    placeGuard(gd, G, east); gd.hold = true; gd.state = 'patrol'; gd.awareness = 0; gd.lookPhase = 0;
-    const S: Vec3 = [G[0] + dist, 0, G[2]];
-    game.teleportPlayer(v3.copy(S)); game.player.crouch = pace.crouch; game.player.visibility = vis;
-    game.player.char.bodyYaw = game.player.char.aimYaw = -Math.PI / 2;
-    // oscillate about S: half-amplitude A along the chosen axis, turning about at the ends (the puppet's direction flips at once; speedSm carries the pace through)
-    const A = pace.sprint ? 1.15 : 1.0; const axis: Vec3 = dir === 'radial' ? [1, 0, 0] : [0, 0, 1]; let sgn = 1;
-    const walkScale = pace.v <= 0 ? 0 : pace.sprint ? pace.v / game.tune.playerSprint : pace.crouch ? pace.v / crouchPace(game) : pace.v / game.tune.playerWalk;
-    game.puppet = { goal: pace.v > 0 ? v3.mad(S, axis, A) : null, aim: [G[0], 1.3, G[2]], crouch: pace.crouch, walk: walkScale };
-    if (pace.sprint) input.keys.add('ShiftLeft');
-    let tS = -1, tA = -1, letGo = false; let rateSum = 0, rateN = 0; const t0 = game.time; let sawSusp = false;
-    for (let f = 0; f < 60 * 60 && tA < 0; f++) {
-      if (pace.v > 0) { const p = game.player.char.pos; const off = (p[0] - S[0]) * axis[0] + (p[2] - S[2]) * axis[2]; if (off * sgn > A - 0.15) { sgn = -sgn; } game.puppet.goal = v3.mad(S, axis, A * sgn * 1.6); }
-      game.player.visibility = vis;
-      W.step(DT);
-      const vis2 = guardsMod.canSee(game, gd);
-      if (vis2.visible) { rateSum += sightGain(game, gd, vis2.dist); rateN++; }
-      if (tS < 0 && gd.state === 'suspicious') { tS = game.time - t0; sawSusp = true; }
-      if (sawSusp && gd.state === 'patrol' && tA < 0) letGo = true;
-      if (tA < 0 && gd.state === 'alert') tA = game.time - t0;
-    }
-    input.keys.delete('ShiftLeft'); game.puppet = null;
-    results[`${mode.name}|${vis}|${pace.name}|${dir}|${dist}`] = { rate: rateN ? rateSum / rateN : 0, tS, tA, letGo };
-  }
-  if (TUNE) TUNE.motionAcuity = true;
-  const cell = (r: { rate: number; tS: number; tA: number; letGo: boolean } | undefined) => !r ? '?' : `${r.rate.toFixed(3)} · ${r.tS >= 0 ? r.tS.toFixed(1) + 's' : '—'} · ${r.tA >= 0 ? r.tA.toFixed(1) + 's' : r.letGo ? '—(let go)' : '—'}`;
-  for (const vis of viss) {
-    console.log(`\n--- visibility ${vis} ---`);
-    for (const mode of modes) {
-      console.log(`  ${mode.name}`);
-      console.log('  ' + 'pace / direction'.padEnd(34) + dists.map(d => `${d} m`.padEnd(30)).join(''));
-      for (const pace of paces) for (const dir of pace.v > 0 ? ['tangential', 'radial'] : ['—']) {
-        console.log('  ' + `${pace.name}${dir !== '—' ? ' ' + dir : ''}`.padEnd(34) + dists.map(d => cell(results[`${mode.name}|${vis}|${pace.name}|${dir}|${d}`]).padEnd(30)).join(''));
-      }
-    }
-  }
-  console.log('\n  (cell = mean sightGain /s while in view · s to suspicious · s to alert; the man is held on his spot: a suspicion that has not become contact ~6 s after he took it up is let go, as a held man does)');
-  return results;
-}

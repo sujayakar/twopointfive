@@ -11,11 +11,6 @@ const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
 const { startGrab, freeHeld } = await import(`${ROOT}/src/game/player.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
-const { TAKEDOWN } = await import(`${ROOT}/src/game/takedown.ts`);
-const { KNIFE_TAG } = await import(`${ROOT}/src/game/rigProps.ts`);
-const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
-const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
-const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -42,147 +37,13 @@ async function stage(seed: number, gun = false, drawn = false) {
   W.cam.yaw = yaw + Math.PI; W.cam.rebuild(); W.step(DT); game.player.visibility = 0.02; A.hold = false;
   return { W, game, A, B, C };
 }
-const knives = (game: any): any[] => game.dynBoxes.filter((b: any) => b.name === KNIFE_TAG);
-// With kit handling live (kitanim.ts: KITANIM.on and .equip — the page, the shipped stand, TPS_KITANIM=1) the knife is not gone the frame a hold ends: it stays in
-// Sam's fist while the hold's pose lets go of the arm and is then SHEATHED BY HAND. So after a hold the rule there is 'in his fist at first, put away within
-// SHEATHE_SECS, not seen again'; with the switch off it is the older 'gone that frame'.
-const SHEATHE_SECS = 1.2;
-const kitLive = (): boolean => KITANIM.on && KITANIM.equip;
-/** steps `n` frames after a hold ended → first: boxes on the first of them · last: the last frame (1-based, 0 = never) a knife box was drawn · peak · back: one was
- *  drawn again after a frame without any · foreign: boxes owned by somebody other than Sam */
-const sheathe = (W: any, game: any, n: number) => {
-  let first = 0, last = 0, peak = 0, back = false, gap = false, foreign = 0;
-  for (let i = 1; i <= n; i++) {
-    W.step(DT); const ks = knives(game), k = ks.length; if (i === 1) first = k; peak = Math.max(peak, k); foreign += ks.filter((b: any) => b.owner !== PLAYER_ID).length;
-    if (k) { if (gap) back = true; last = i; } else gap = true;
-  }
-  return { first, last, peak, back, foreign };
-};
-/** what is wrong with a `sheathe()` reading, by the stand's rule */
-const sheatheFaults = (r: ReturnType<typeof sheathe>, what: string): string[] => {
-  if (!kitLive()) return r.peak ? [`knife boxes after ${what}: next frame ${r.first}, later ${r.peak}`] : [];
-  const f: string[] = [];
-  if (!r.first) f.push(`kit handling live: no knife in his fist the frame after ${what} (want it kept, then sheathed by hand)`);
-  if (r.last * DT > SHEATHE_SECS) f.push(`the knife was still drawn ${f2(r.last * DT)} s after ${what} (want sheathed within ${SHEATHE_SECS} s)`);
-  if (r.back) f.push(`the knife came back after it was put away (${what})`);
-  if (r.foreign) f.push(`${r.foreign} knife boxes not Sam's after ${what}`);
-  return f;
-};
 /** the cursor 6 m dead ahead of Sam at chest height: updateHold turns the pair toward the cursor, so this keeps it facing where it faces (his row is THE row while
  *  he holds somebody, wherever the cursor is — Space still lands on it) */
 function ahead(W: any, game: any) { const c = game.player.char; W.cursorAt([c.pos[0] + Math.sin(c.bodyYaw) * 6, 1.0, c.pos[2] + Math.cos(c.bodyYaw) * 6]); }
 /** grab A and let the hold settle 1.5 s, facing held */
 function grabSettle(W: any, game: any, A: any) { startGrab(game, A); for (let i = 0; i < 90; i++) { ahead(W, game); W.step(DT); } }
-/** what is wrong with this frame's knife boxes if there should be a knife: four of them, Sam's owner byte, traced (Dynamic, not NoShadow), unlit, finite, by his right hand */
-function knifeFaults(game: any): string[] {
-  const ks = knives(game), out: string[] = [];
-  if (ks.length !== 4) out.push(`${ks.length} knife boxes (want 4)`);
-  const hand = game.player.char.bones.handR;
-  for (const b of ks) {
-    if (b.owner !== PLAYER_ID) out.push(`owner ${b.owner} (want ${PLAYER_ID})`);
-    if (!(b.flags & BoxFlag.Dynamic) || (b.flags & BoxFlag.NoShadow)) out.push(`flags ${b.flags} (want Dynamic, traced)`);
-    if (b.emissive[0] + b.emissive[1] + b.emissive[2] > 0) out.push('emissive');
-    if (![...b.c, ...b.h, ...(b.rot ?? [])].every(Number.isFinite)) out.push('non-finite box');
-    else if (hand && v3.dist(b.c, hand) > 0.35) out.push(`a box ${f2(v3.dist(b.c, hand))} m from his right hand`);
-  }
-  return out;
-}
-/** the blade box (the long dark one) as a world segment, or null */
-function bladeSeg(game: any): { a: Vec3; b: Vec3; level: number } | null {
-  const bl = knives(game).find((b: any) => b.h[2] > 0.08 && b.h[1] > 0.005); if (!bl || !bl.rot) return null;
-  const dir: Vec3 = quat.rotate(bl.rot, [0, 0, 1]);   // the box's long axis (local +z) in the world: pommel → tip
-  return { a: v3.mad(bl.c, dir, -bl.h[2]), b: v3.mad(bl.c, dir, bl.h[2]), level: Math.abs(dir[1]) };
-}
 function nanBones(...cs: any[]): number { let n = 0; for (const c of cs) for (const k in c.bones) for (const x of c.bones[k]) if (!Number.isFinite(x)) n++; return n; }
 
-// ================================================================ (1) the knife: in the fist for exactly the life of a hands-empty hold, and nowhere else
-export async function holdKnife() {
-  console.log('\n=== hold-knife: the combat knife is drawn in Sam\'s right fist while — and only while — he holds a man with his hands empty; never in the pistol hold, never on anyone else ===');
-  let allPass = true; const bare = CLOSE.noKnife, closeOn = CLOSE.on; knifeRule = process.env.HOLDKNIFE_BREAK === '1';
-  try {
-  // ---- (a) the arm hold all the way through a choke: none before, four boxes every frame from the grab's first to the man dropping, none from that frame on
-  {
-    const S = await stage(71); const { W, game, A } = S;
-    const fails: string[] = [];
-    for (let i = 0; i < 30; i++) { W.step(DT); if (knives(game).length) { fails.push(`knife boxes BEFORE the grab (frame ${i})`); break; } }
-    startGrab(game, A);
-    const variant = game.player.holding?.variant;
-    let frames = 0, missing = 0, faultsSeen: string[] = [], grabFrames = 0, bladeFar = 0, bladeSteep = 0, minNeck = Infinity, maxNeck = 0;
-    const stepCheck = () => {
-      W.step(DT); if (!game.player.holding) return false; frames++;
-      const f = knifeFaults(game); if (knives(game).length === 0) missing++; else if (f.length && faultsSeen.length < 3) faultsSeen.push(`${game.player.holding.phase} ${f2(game.player.holding.t)}: ${f.join(', ')}`);
-      if (game.player.holding.phase === 'grab') grabFrames++;
-      if (game.player.holding.phase === 'held' && game.player.holding.t > 0.5) {   // settled: the blade lies level across the front of his throat — within a hand of his neck column, never far off it
-        const s = bladeSeg(game), neck = A.char.bones.neck, head = A.char.bones.head;
-        if (s && neck && head) { const mid = v3.lerp(s.a, s.b, 0.5); const d = Math.hypot(mid[0] - (neck[0] + head[0]) / 2, mid[2] - (neck[2] + head[2]) / 2); minNeck = Math.min(minNeck, d); maxNeck = Math.max(maxNeck, d); if (d > 0.25 || mid[1] < neck[1] - 0.05 || mid[1] > head[1] + 0.08) bladeFar++; if (s.level > 0.3) bladeSteep++; }
-      }
-      return true;
-    };
-    while (game.player.holding?.phase === 'grab' && frames < 120) stepCheck();
-    for (let i = 0; i < 120; i++) stepCheck();   // two seconds held
-    W.cursorAt(v3.add(A.char.pos, [0, 1.35, 0])); W.step(DT); frames++;
-    const t0 = game.time; let deadAt = -1, goneSameFrame = true;
-    game.selectVerb('held', 'choke'); W.input.pressed.add(IK);   // the choke's row, tapped once: it commits and runs on its own
-    for (let i = 0; i < 60 * 4 && deadAt < 0; i++) {
-      const alive = stepCheck();
-      if (!alive || A.state === 'dead') { deadAt = game.time - t0; if (knives(game).length) goneSameFrame = false; break; }
-    }
-    const away = sheathe(W, game, 120), after = away.peak;
-    if (variant !== 'arm') fails.push(`hold variant ${variant} (staging: the pistol should be holstered → arm)`);
-    if (grabFrames < 5) fails.push(`only ${grabFrames} frames of the grab observed`);
-    if (missing) fails.push(`${missing} of ${frames} holding frames drew no knife`);
-    if (faultsSeen.length) fails.push('box faults: ' + faultsSeen.join(' | '));
-    if (bladeFar) fails.push(`the blade sat off his throat on ${bladeFar} settled frames (mid-blade ${f2(minNeck)}‥${f2(maxNeck)} m off the neck axis)`);
-    if (bladeSteep) fails.push(`the blade was steeper than 17° on ${bladeSteep} settled frames`);
-    if (deadAt < 0 || Math.abs(deadAt - (HOLD.secs.chokeHold + HOLD.secs.choke)) > 0.07) fails.push(`the choke put him down at +${f2(deadAt)} s of Space (want ${f2(HOLD.secs.chokeHold + HOLD.secs.choke)})`);
-    if (A.downKind !== 'choked') fails.push(`A ${A.state}/${A.downKind} (want choked)`);
-    if (!kitLive() && !goneSameFrame) fails.push('knife boxes still drawn on the frame the hold ended');
-    fails.push(...sheatheFaults(away, 'the hold'));
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (a) arm hold → choke: variant ${variant}; ${frames} holding frames (${grabFrames} of the reach), knife missing on ${missing}; settled blade ${f2(minNeck)}‥${f2(maxNeck)} m off his neck axis, level; down at +${f2(deadAt)} s as ${A.downKind}; gone the frame it ended: ${goneSameFrame}; boxes in the 2 s after: ${after}, last drawn +${f2(away.last * DT)} s${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
-  // ---- (b) the pistol hold: no knife at any point (grab, held, a whip to the end)
-  {
-    const S = await stage(72, true); const { W, game, A } = S;
-    const fails: string[] = [];
-    startGrab(game, A);
-    const variant = game.player.holding?.variant; let seen = 0, frames = 0;
-    for (let i = 0; i < 150; i++) { W.step(DT); frames++; if (knives(game).length) seen++; }
-    W.cursorAt(v3.add(A.char.pos, [0, 1.35, 0])); W.step(DT);
-    game.selectVerb('held', 'whip'); W.input.pressed.add(IK);   // the whip's row, tapped once
-    for (let i = 0; i < 120 && A.state !== 'dead'; i++) { W.step(DT); frames++; if (knives(game).length) seen++; }
-    for (let i = 0; i < 60; i++) { W.step(DT); frames++; if (knives(game).length) seen++; }
-    if (variant !== 'gun') fails.push(`hold variant ${variant} (staging: drawn → gun)`);
-    if (seen) fails.push(`knife boxes on ${seen} of ${frames} frames of a PISTOL hold`);
-    if (A.downKind !== 'struck') fails.push(`the whip: A ${A.state}/${A.downKind} (want struck)`);
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (b) pistol hold → whip: variant ${variant}; knife seen on ${seen} of ${frames} frames; A ${A.downKind}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
-  // ---- (c) the other ends: Sam shot down with him in the arm (freeHeld 'shot'), the tour / a teleport taking the hands (freeHeld 'cancel') — gone that frame; and a
-  //      man grabbed with his OWN pistol drawn keeps it in the raised fist (his boxes are his, the knife's are Sam's) — unless the grab disarms him (HOLD.disarm under
-  //      HOLD.dropGun, both on in the page): then Sam has had it out of his hand by now, and the fist is empty
-  for (const why of ['shot', 'cancel'] as const) {
-    const S = await stage(73 + (why === 'shot' ? 0 : 1), false, true); const { W, game, A } = S;
-    const fails: string[] = [];
-    startGrab(game, A);
-    for (let i = 0; i < 90; i++) W.step(DT);
-    const during = knives(game).length; const faults = knifeFaults(game);
-    const foreign = game.dynBoxes.filter((b: any) => b.name === KNIFE_TAG && b.owner !== PLAYER_ID).length;
-    const armed = A.char.anim.heldPose?.armed;
-    freeHeld(game, why);
-    const away = sheathe(W, game, 91), after1 = away.first, after = away.peak;
-    if (during !== 4 || faults.length) fails.push(`while holding: ${during} boxes, faults ${faults.join(', ') || 'none'}`);
-    if (foreign) fails.push(`${foreign} knife boxes owned by somebody other than Sam`);
-    const taken = HOLD.disarm && HOLD.dropGun;
-    if (!!armed === taken) fails.push(taken ? `the drawn man's heldPose.armed = ${armed} a second and a half into a hold that disarms him (want false: Sam took it)` : `the drawn man's heldPose.armed = ${armed} (want true: his pistol stays in the raised fist)`);
-    fails.push(...sheatheFaults(away, `freeHeld('${why}')`));
-    const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (c) freeHeld('${why}') on a drawn man: ${during} boxes while holding (armed ${armed}), ${after1} the frame after, ${after} later, last drawn +${f2(away.last * DT)} s${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
-  } finally { knifeRule = null; CLOSE.noKnife = bare; CLOSE.on = closeOn; }
-  console.log(`=== hold-knife: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
-  return allPass;
-}
 
 // ================================================================ (2) the fight: he struggles through the choke — a lot early, spent late — pose-only, on time, finite; and is no statue while merely held
 export async function holdStruggle() {

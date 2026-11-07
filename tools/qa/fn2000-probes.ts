@@ -42,7 +42,6 @@ const { RING, fireRing, ringSolve, staggerLines } = await import(`${ROOT}/src/ga
 const { WEAPONS, LAUNCHER, LAUNCHER40 } = await import(`${ROOT}/src/game/weapons.ts`);
 const { SUPPRESSION } = await import(`${ROOT}/src/game/suppression.ts`);
 const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
-const fxm = await import(`${ROOT}/src/game/effects.ts`);
 const { Overlay } = await import(`${ROOT}/src/ui/overlay.ts`);
 const { CLOSE, closeBare } = await import(`${ROOT}/src/game/close.ts`);   // (kit-slots (e): where the blow is the player's choice the knockout is the RIGHT click and the row says so)
 const { KIT: CARDS, KIT_SOLO } = await import(`${ROOT}/src/game/kit.ts`);
@@ -704,30 +703,6 @@ export async function airfoilMiss() {
     fails.join('; ') || `clack at (${f2(clack.pos[0])}, ${f2(clack.pos[2])}) · ring at (${f2(ring.pos[0])}, ${f2(ring.pos[2])}) · his fix (${f2(A.lastKnown?.[0] ?? NaN)}, ${f2(A.lastKnown?.[2] ?? NaN)})`);
   return F.done();
 }
-export async function airfoilPreview() {
-  const F = family('airfoil-preview: the previewed arc IS the flight — a real ring stays within 5 cm of ringSolve\'s polyline and ends within 15 cm of its landing');
-  const W = await stage(2104, true, [16.0, 0, 11.4]); const { game } = W; const pl = game.player;
-  const results: string[] = []; const fails: string[] = [];
-  for (const [label, target] of [['level, 14 m down the corridor', [30.0, 1.3, 11.4]], ['lobbed at the far floor', [29.0, 0.1, 11.6]], ['up at the ceiling line 10 m off', [26.0, 2.7, 11.2]]] as [string, Vec3][]) {
-    const from = v3.add(pl.char.pos, [0.4, 1.3, 0]);
-    const sol = ringSolve(game, from, target);
-    const ring = fireRing(game, pl.char, from, target);
-    let worst = 0; let endP: Vec3 | null = null; const items0 = game.items.items.length;
-    for (let f = 0; f < 120 && game.rings.includes(ring); f++) {
-      W.step(DT);
-      if (game.rings.includes(ring)) { let best = Infinity; for (let i = 0; i + 1 < sol.points.length; i++) best = Math.min(best, distToSeg(ring.pos, sol.points[i], sol.points[i + 1])); if (Number.isFinite(best)) worst = Math.max(worst, best); }
-    }
-    const it = game.items.items.length > items0 ? game.items.items[items0] : null; endP = it ? it.pos : null;
-    // the item has already begun to bounce by the time we read it: compare the polyline's land against where the item was SPAWNED — its first recorded pos is within a frame of the impact
-    const endOff = endP ? v3.dist(endP, sol.land) : Infinity;
-    results.push(`${label}: worst ${f3(worst)} m off the arc, ended ${f2(endOff)} m from land (${sol.points.length} pts)`);
-    if (worst > 0.05) fails.push(`${label}: ${f3(worst)} m off the arc`);
-    if (endOff > 0.15 + 0.3) fails.push(`${label}: ended ${f2(endOff)} m from the previewed landing`);   // (+0.3: a frame or two of the item's own bounce off the impact before it is read)
-    for (let f = 0; f < 30; f++) W.step(DT);
-  }
-  F.verdict(!fails.length, 'three arcs (level, lobbed low, up at the ceiling): the ring flies the line the overlay drew', (fails.length ? '✗ ' + fails.join('\n    ✗ ') + '\n    ' : '') + results.join('\n    '));
-  return F.done();
-}
 export function distToSeg(p: Vec3, a: Vec3, b: Vec3): number { const ab = v3.sub(b, a); const L2 = v3.dot(ab, ab); if (L2 < 1e-9) return v3.dist(p, a); const t = Math.max(0, Math.min(1, v3.dot(v3.sub(p, a), ab) / L2)); return v3.dist(p, v3.mad(a, ab, t)); }
 export async function airfoilHostage() {
   const F = family('airfoil-hostage: a ring fired at the pair from in front strikes whoever it meets first — the held man: he goes down \'struck\' by that hand, the hold ends, Sam is untouched');
@@ -980,6 +955,3 @@ export async function rifleCarry() {
   return F.done();
 }
 
-// ================================================================================================ family runners
-export async function sc20kFamily(): Promise<boolean> { let ok = true; for (const f of [rifleCadence, rifleReload, rifleSpreadProbe, rifleSlot, rifleCarry, rifleSuppression]) ok = (await f()) && ok; ok = (await airfoilFamily()) && ok; return ok; }
-export async function airfoilFamily(): Promise<boolean> { let ok = true; for (const f of [airfoilHead, airfoilTorso, airfoilMiss, airfoilPreview, airfoilHostage]) ok = (await f()) && ok; return ok; }

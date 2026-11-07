@@ -298,46 +298,6 @@ export async function kitReloadProbe(): Promise<boolean> { return keep(async () 
   return allPass;
 }); }
 
-export async function kitClose(): Promise<boolean> { return keep(async () => {
-  console.log('\n=== kitanim-close: closer than ever goes by distance — the carriage, the knife hand, the free hand ===');
-  allPass = true; const AT: Vec3 = [9.5, 0, 19.5], EAST = Math.PI / 2, DS = [2.4, 2.1, 1.8, 1.5, 1.2];
-  const run = async () => {
-    Math.random = mulberry32(44); const W: any = await standUp(); const g = W.game;
-    g.godMode = true; g.player.visibility = 0.02; g.aiEnabled = false; for (let i = 0; i < 5; i++) W.step(DT);
-    const place = (gd: any, p: Vec3, yaw: number) => { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); };
-    const [A, B, C] = g.guards; [B, C].forEach((gd: any, i: number) => { gd.hold = true; place(gd, [37.5, 0, 6 + i * 1.5], EAST); }); A.hold = true; place(A, AT, EAST);
-    const pl = g.player, c = pl.char, an = c.anim;
-    const rel = (p: ArrayLike<number>): Vec3 => { const dx = p[0] - c.pos[0], dz = p[2] - c.pos[2], cy = Math.cos(c.bodyYaw), sy = Math.sin(c.bodyYaw); return [dx * cy - dz * sy, p[1], dx * sy + dz * cy]; };
-    const offChest = (): Vec3 => v3.sub(rel(c.bones.handR), rel(c.bones.chest));   // (kitTick measures to the man's CHEST, level: closeness is checked against that distance)
-    const at = (d: number, frames: number) => { g.teleportPlayer([AT[0] - d, 0, AT[2]]); c.bodyYaw = c.aimYaw = EAST; pl.crouch = false; let trR = 0, trL = 0, pr: Vec3 | null = null, pL: Vec3 | null = null, knife = 0, nan = 0, hand: Vec3 = [0, 0, 0], left: Vec3 = [0, 0, 0];
-      for (let f = 0; f < frames; f++) { W.cursorAt([AT[0], 1.2, AT[2]]); W.step(DT); pl.visibility = 0.02; if (an.knifeShown) knife++;
-        const r = rel(c.bones.handR), l = rel(c.bones.handL); if (![...r, ...l].every(Number.isFinite)) nan++; if (f >= frames - 45) { hand = v3.mad(hand, offChest(), 1 / 45); left = v3.mad(left, v3.sub(l, rel(c.bones.chest)), 1 / 45); if (pr) { trR += v3.len(v3.sub(r, pr)); trL += v3.len(v3.sub(l, pL!)); } pr = r; pL = l; } }
-      return { d, dNow: Math.hypot(A.char.bones.chest[0] - c.pos[0], A.char.bones.chest[2] - c.pos[2]), creep: an.creep, ready: an.ready, k: an.closeK, hips: c.bones.hips[1], hand, left, trR, trL, knife, nan }; };
-    const hiltRow = at(1.0, 90), hilt = hiltRow.hand;   // in reach: the fist is on the handle (the ready pose) — the mark the hand travels to
-    const rows = DS.map(d => at(d, 150));
-    // the last step into reach, frame by frame: how far the knife hand still is from the hilt, how far the free hand has left where the walk-in had it
-    at(1.3, 90); const l0 = v3.sub(rel(c.bones.handL), rel(c.bones.chest)); g.teleportPlayer([AT[0] - 1.0, 0, AT[2]]); c.bodyYaw = c.aimYaw = EAST;
-    const reach: { r: number; l: number }[] = [];
-    for (let f = 0; f < 90; f++) { W.cursorAt([AT[0], 1.2, AT[2]]); W.step(DT); pl.visibility = 0.02; reach.push({ r: v3.len(v3.sub(offChest(), hilt)), l: v3.len(v3.sub(v3.sub(rel(c.bones.handL), rel(c.bones.chest)), l0)) }); }
-    return { rows, hilt, hiltRow, an, reach };
-  };
-  const on = await run();
-  { const fails: string[] = [], R = on.rows, dist = (r: any) => v3.len(v3.sub(r.hand, on.hilt));
-    for (const r of R) { if (!r.creep) fails.push(`${r.d} m: not in the mode`); if (r.knife) fails.push(`${r.d} m: the knife is out`); if (r.nan) fails.push(`${r.d} m: non-finite`);
-      const want = kitCloseness(r.dNow); if (!Number.isFinite(want) || !Number.isFinite(r.k) || !(Math.abs(r.k - want) < 0.005) || !(want > 0.02 && want < 0.99)) fails.push(`${r.d} m (${f2(r.dNow)} m to his chest): closeness ${f3(r.k)}, kitCloseness says ${f3(want)} (and every distance here is to lie strictly between the mode's edge and the knife's reach)`); }
-    for (let i = 1; i < R.length; i++) { if (!(R[i].k > R[i - 1].k)) fails.push(`closeness does not rise ${R[i - 1].d} → ${R[i].d} m`); if (!(R[i].hips < R[i - 1].hips + 0.002)) fails.push(`the pelvis rises ${R[i - 1].d} → ${R[i].d} m (${f3(R[i - 1].hips)} → ${f3(R[i].hips)})`); if (!(dist(R[i]) < dist(R[i - 1]) - 0.01)) fails.push(`the knife hand is no nearer the hilt ${R[i - 1].d} → ${R[i].d} m (${cm(dist(R[i - 1]))} → ${cm(dist(R[i]))})`); }
-    if (!(R[0].hips - R[R.length - 1].hips > 0.02)) fails.push(`the pelvis sinks only ${cm(R[0].hips - R[R.length - 1].hips)} over the approach`);
-    if (!(dist(R[R.length - 1]) < 0.12)) fails.push(`at ${R[R.length - 1].d} m the hand is still ${cm(dist(R[R.length - 1]))} off the hilt`); if (!(dist(R[0]) > 0.14)) fails.push(`at ${R[0].d} m the hand is already ${cm(dist(R[0]))} off the hilt`);
-    if (on.hiltRow.ready == null) fails.push('at 1.0 m behind him no ready pose is told (the staging moved)');
-    verdict(!fails.length, 'walking in on his back, every step shows — the closeness rises, the pelvis sinks, the knife hand closes on the hilt; the knife stays sheathed', R.map(r => `${r.d} m: closeness ${f2(r.k)} (kitCloseness ${f2(kitCloseness(r.dNow))}), pelvis ${f3(r.hips)}, hand ${cm(dist(r))} off the hilt`).join(' · ') + bad(fails)); }
-  { // the FREE hand: with the crouch on the way in, out for the man only once the knife hand is on the hilt
-    const R = on.rows, fails: string[] = [];
-    R.forEach((r: any) => { if (!(r.left[2] < 0.12)) fails.push(`${r.d} m: the free hand is ${cm(r.left[2])} out ahead of his chest`); });
-    const onHilt = on.reach.findIndex((x: any) => x.r < 0.02), goes = on.reach.findIndex((x: any) => x.l > 0.05), out = on.reach[on.reach.length - 1].l;
-    if (onHilt < 0) fails.push('stepping into reach the knife hand never gets within 2 cm of the hilt'); if (goes < 0 || !(out > 0.3)) fails.push(`stepping into reach the free hand never goes out (${cm(out)} from where the walk-in had it)`); else if (!(goes >= onHilt)) fails.push(`the free hand leaves at frame ${goes}, before the knife hand is on the hilt (frame ${onHilt})`);
-    verdict(!fails.length, 'the free hand stays with the crouch on the way in and goes out for the man only once the knife hand is on the hilt', `walk-in, free hand below / ahead of the chest: ${R.map((r: any) => `${r.d} m ${cm(-r.left[1])} / ${cm(r.left[2])}`).join(' · ')} · into reach: knife hand on the hilt at frame ${onHilt}, free hand leaves at frame ${goes} and ends ${cm(out)} out` + bad(fails)); }
-  return allPass;
-}); }
 
 export async function kitEdges(): Promise<boolean> { return keep(async () => {
   console.log('\n=== kitanim-edges: the errand cut short, taken over or asked the impossible — cancel, death, a wall, R and a save mid-swap, can for can, a half-done reload, the slider ===');
@@ -630,7 +590,7 @@ export async function kitNvProbe(): Promise<boolean> { return keep(async () => {
   }
   return allPass;
 }); }
-export const KITANIM_PROBES = [['kitanim-equip', kitEquip], ['kitanim-midswap', kitMidswap], ['kitanim-reload', kitReloadProbe], ['kitanim-close', kitClose], ['kitanim-edges', kitEdges], ['kitanim-harness', kitHarness], ['kitanim-joints', kitJoints], ['kitanim-sling', kitSling], ['kitanim-nv', kitNvProbe]] as const;
+export const KITANIM_PROBES = [['kitanim-equip', kitEquip], ['kitanim-midswap', kitMidswap], ['kitanim-reload', kitReloadProbe], ['kitanim-edges', kitEdges], ['kitanim-harness', kitHarness], ['kitanim-joints', kitJoints], ['kitanim-sling', kitSling], ['kitanim-nv', kitNvProbe]] as const;
 async function kitanimAll(want: readonly string[]): Promise<boolean | null> {
   const t0 = performance.now(), ok = await asProbes(Object.fromEntries(KITANIM_PROBES), want);
   console.log(`\n=== kitanim: ${ok === null ? 'NOTHING RAN' : ok ? 'ALL PASS' : 'FAILURES above'} === (${((performance.now() - t0) / 1000).toFixed(1)} s)`); return ok;

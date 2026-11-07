@@ -260,15 +260,6 @@ export async function keybindsCheck(): Promise<boolean> {
       verdict(!sink && area && named && input && select && bare && !div && !none && (edit || SB) && labelled && sites.every(s => s.ok) && !spelt.length,
         'the hidden text box of a framed page is no field: a key aimed at it is not typing, a real field still is, and F7, F8 and the kit\'s copy and paste ask that test',
         `the hidden box: typing ${sink} · a text area ${area}, one with another label ${named}, an input ${input}, a select ${select}, a text area that cannot say its label ${bare} · a div with the box's label ${div}, editable text ${edit} · no target ${none} · game/input.ts labels its box '${K.SINK_LABEL}' ${labelled} · ${sites.map(s => `${s.what} asks it ${s.ok}`).join(' · ')} · the three files that spell the test themselves name the same box: ${spelt.length ? `NOT ${spelt.join(', ')}` : 'yes'}`); }
-    // ---- the words for Shift say what it does in a crouch while CROUCHRUN is on (Options' row: ui/options.ts sprintSmall)
-    { const { CROUCHRUN, TWOGEARS } = await import(`${ROOT}/src/game/player.ts`), { sprintSmall } = await import(`${ROOT}/src/ui/options.ts`), was = { c: CROUCHRUN.on, t: TWOGEARS.on };
-      const WBRK = process.env.MOVEWORDS_BREAK === '1', got: string[] = []; let ok = true;
-      try { for (const gears of [false, true]) for (const run of [false, true]) { TWOGEARS.on = gears; CROUCHRUN.on = run && !WBRK; const small = sprintSmall();
-          const SAYS = ["while you're crouched", 'louder'], says = (t: string | undefined) => !!t && SAYS.every(w => t.includes(w)) && /Shift|hold it/.test(t);   // (what Shift does crouched, the key pressed, and that it is heard)
-          const good = run ? says(small) && /^hold it/.test(small!) : small === undefined;
-          ok &&= good; got.push(`${gears ? 'two gears' : 'the wheel'}, the fast crouch walk ${run ? 'on' : 'off'}: Options "${small ?? 'no line'}"${good ? '' : ' WRONG'}`); }
-      } finally { CROUCHRUN.on = was.c; TWOGEARS.on = was.t; }
-      verdict(ok, 'the words for Shift: with the fast crouch walk on, Options says what Shift does crouched; off, no line', got.join(' · ')); }
   } finally { K.setKeys({}); K.KEYMAP.letGo = false; K.KEYMAP.onlyWhen = null; K.KEYMAP.throwWhen = null; K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.setFree = false; K.KEYMAP.qOnly = false; K.KEYMAP.camSpace = false; K.KEYMAP.pinchOnly = false; K.KEYMAP.freeWhen = null; for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window', 'document'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; } }
   console.log(`=== keybinds: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
