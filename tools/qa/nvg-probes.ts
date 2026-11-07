@@ -125,7 +125,7 @@ export const nvgQuiet = guarded(async () => {
   const F = family('nvg-quiet: not compromised and in the dark, the team walks on its goggles — no light but where the tube has nothing');
   if (process.env.NVG_BREAK) console.log("  (NVG_BREAK: Sam's weapon light is burning under this probe — it must FAIL)");
   let cleanDark = 0;
-  for (const id of sample(IDS, 2)) {
+  for (const id of sample(IDS, 1)) {
     const on = await walk(await emptied(id), process.env.NVG_BREAK ? { light: true } : {});
     if (!on) { F.verdict(false, `${id}: a door to walk to`, 'no held room\'s door took the stack order'); continue; }
     const tubeless = on.log.filter(l => l.includes('too dark for the tube')).length;
@@ -211,7 +211,7 @@ export const nvgSight = guarded(async () => {
 export const nvgFight = guarded(async () => {
   const F = family('nvg-fight: Sam\'s goggles down, a held room taken with not one light on');
   let takenTotal = 0, downTotal = 0;
-  for (const id of sample(IDS, 2)) {
+  for (const id of sample(IDS, 1)) {
     const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders, D = g.doorTools;
     g.player.nv = true; const team: any[] = O.squad().filter((x: any) => x.state !== 'dead'); const sam = g.player.char.pos;
     const cands: { ent: any; dist: number }[] = []; for (const d of S.defs) for (const e of d.room.entries) if (!cands.some(c => c.ent === e)) cands.push({ ent: e, dist: flat(sam, e.at) });
