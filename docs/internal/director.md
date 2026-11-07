@@ -79,7 +79,8 @@ level's own men, torches out).
 **The Director object** (`game.director`, `window.__director`): `manifest`, `problems`, `scan`, `armed`, `programs`, `canStart(name)`, `start(name, {seed})`,
 `stop(finished)`, `run`, `lastRun`, `log` / `rowsOf(serial)`, `frame` (`{look, caption, sub, fade, lowerThird, program}` while a showcase has the frame), `showing`,
 `lowerThird`, `chapters()`, `objective`, `blocksSave()`, `strict` (headless.ts sets it: a throwing beat fails the PROBE; in the page it fails the beat and the frame goes
-on), `onProgramEnd`, `attach({cam, input})`, `summary()`.
+on), `onProgramEnd`, `summary()`. (Since 2026-11-07 there is no `strict` and no `attach`: a failed beat is a row of the log that the host acts
+on, and the camera and keys a beat moves are the game's `hostCam` / `hostInput`, handed at the stand by every host.)
 
 ## 3. Tick order (per frame, inside `Game.update`, immediately before `tacticsTick`)
 
