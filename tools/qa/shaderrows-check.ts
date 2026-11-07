@@ -79,7 +79,7 @@ async function arm(name: Arm, dump: string | null) {
   const particles = new Particles(S.device as never, engine.sceneLayout);   // (the page makes it beside the engine and waits for both: src/main.ts)
   let ready = false; const init = Promise.all([engine.init({ sharp: true, gbaa: true }), particles.init()]).then(() => { ready = true; });
   // THE LATER SET, by name: what the start may leave out with the row on (render/passes.ts traceJobs and init, render/froxels.ts).
-  const LATER = ['composite', 'froxelCull', 'froxelInject', 'froxelInjectJ', 'froxelTemporal', 'froxelIntegrate'];
+  const LATER = ['composite', 'froxelCull', 'froxelInject', 'froxelInjectJ', 'froxelTemporal', 'froxelIntegrate', 'volFroxel'];
   const later = new Set(wantFirst ? LATER : []);
   for (let turn = 0; turn < 400 && !ready; turn++) { for (const a of S.asked) if (!a.done && !later.has(a.label)) a.let(); await tick(); }
   const out = () => S.asked.filter(a => !a.done).map(a => a.label).sort();
@@ -94,11 +94,11 @@ async function arm(name: Arm, dump: string | null) {
   const mod = (label: string) => S.mods.filter(m => m.label === label);
   const has = (label: string) => S.asked.some(a => a.label === label);
   {
-    const v = mod('volumetrics');
-    check(v.length === 1 && mod('volumetricsF').length === 0 && has('vol') && !has('volFroxel') && !has('volDust'), 'the volumetric pass is one program for every tier: no froxel twin and no dust twin is asked for');
-    check(v.length === 1 && !v[0].code.includes('VOL_FROXEL_MARCH') && /if \(froxel && \(frame\.flags & FLAG_SMOKE\) != 0u/.test(v[0].code), 'it carries the froxel-lit march, taken by the frame\'s flag and by no constant');
-    check(v.every(m => m.code.includes('const VOL_K0: bool = false;')), 'it does not carry the K = 0 smoke march');
-    check(v.every(m => m.code.includes('fn dustAlive() -> bool') && m.code.includes('let dl = dustDensity(X, onMask, true);')), 'it carries the dust\'s look behind the frame\'s bit');
+    const v = mod('volumetrics'), f = mod('volumetricsF');
+    check(v.length === 1 && v[0].code.includes('const VOL_FROXEL_MARCH: bool = false;') && !v[0].code.includes('const VOL_FROXEL_MARCH: bool = true;'), 'the volumetric pass\'s boot program is compiled without the froxel-lit march');
+    check(f.length === 1 && f[0].code.includes('const VOL_FROXEL_MARCH: bool = true;') && has('volFroxel'), 'its froxel twin (volFroxel) carries that march');
+    check([...v, ...f].every(m => m.code.includes('const VOL_K0: bool = false;')), 'neither carries the K = 0 smoke march');
+    check([...v, ...f].every(m => m.code.includes('fn dustAlive() -> bool') && m.code.includes('let dl = dustDensity(X, onMask, true);')) && !has('volDust'), 'both carry the dust\'s look behind the frame\'s bit, and no third program is asked for');
   }
 
   // ---- frames: which program each pass is given
@@ -129,24 +129,24 @@ async function arm(name: Arm, dump: string | null) {
     const fr = frame(s => { s.froxelVol = true; s.volumetrics = true; });
     const up = (fr.flags & FrameFlags.FroxelVol) !== 0;
     check(!fr.err && up === landed, `${when}: the froxel flag is ${landed ? 'up for a tier that marches the froxels' : 'held down'}`, fr.err || `flags 0x${fr.flags.toString(16)}`);
-    { const got = fr.by.volumetrics ?? []; check(got.includes('vol') && !got.includes('volFroxel'), `${when}: the 2D pass draws with the one march program`, got.join(', ')); }
+    if (landed) { const got = fr.by.volumetrics ?? []; check(got.includes('volFroxel'), `${when}: that tier's 2D pass draws with the froxel twin`, got.join(', ')); }
     // the motion levers are bits of the one program's uniform: a frame the camera moved carries its taps beside the spatial count, whatever has landed
     const mv = frame(s => { s.restirMotion = 7; s.restirMotionStatic = true; s.restirMotionTaps = 6; }), mvGot = mv.by.direct ?? [], taps = (mv.cfgY >>> 8) & 15;
     check(!mv.err && mvGot.length > 0 && mvGot.every(l => l === 'restir') && taps === 6, `${when}: a frame the camera moved runs the one direct program with its motion taps packed beside the spatial count`, mv.err || `direct: ${mvGot.join(', ')}, cfg.y 0x${mv.cfgY.toString(16)}`);
   };
   if (wantFirst) {
-    check(engine.passes.fragCompReady === false && engine.passes.froxels.ready === false, 'the engine knows what is not in yet (no fragment composite, no froxel kernels)');
+    check(engine.passes.fragCompReady === false && engine.passes.froxels.ready === false && engine.passes.volFReady === false, 'the engine knows what is not in yet (no fragment composite, no froxel kernels)');
     shot('while the LATER set compiles', false);
     // (what a script's `__ready` waits on, main.ts: the start card is live for the player, a tool's first picture is the settings' own)
     let idle = false; void laterIdle().then(() => { idle = true; }); await tick(); await tick();
     check(!idle && engine.standsIn === true, 'while it compiles the engine says a pass stands in, and what a script\'s `__ready` waits on (laterIdle) has not resolved');
     for (let turn = 0; turn < 50 && S.asked.some(a => !a.done); turn++) { for (const a of S.asked) a.let(); await tick(); }
-    check(engine.passes.fragCompReady && engine.passes.froxels.ready, 'every LATER pipeline arrives: the fragment composites and the froxel kernels are in');
+    check(engine.passes.fragCompReady && engine.passes.froxels.ready && engine.passes.volFReady, 'every LATER pipeline arrives: the fragment composites, the froxel kernels and the volumetric twin are in');
     for (let turn = 0; turn < 10 && !idle; turn++) await tick();
     check(idle && engine.standsIn === false, 'with all of it in nothing stands in and laterIdle resolves');
     shot('once it is in', true);
   } else {
-    check(engine.passes.fragCompReady && engine.passes.froxels.ready, 'the fragment composites and the froxel kernels are in when the start resolves');
+    check(engine.passes.fragCompReady && engine.passes.froxels.ready && engine.passes.volFReady, 'the fragment composites, the froxel kernels and the volumetric pass are in when the start resolves');
     shot('at the start', true);
   }
   {   // the K = 0 smoke march: only in its own twin, built the first frame it is asked for
@@ -271,7 +271,7 @@ if (argOf('--dump') !== null) {   // this tree, the environment's row
   console.log('\n=== across the arms ===');
   const same = (x?: string[], y?: string[]) => !!x && !!y && JSON.stringify(x) === JSON.stringify(y);
   check(same(boots.off, boots.first), 'Start on first frame shaders asks for the same pipelines as the build without it, by name');
-  check(!!boots.off && ['gatherTrace', 'gatherLight', 'vol'].every(l => boots.off!.includes(l)) && !boots.off.some(l => /^fgather|^volFroxel$|^volDust$/.test(l)), 'the gather is its two programs and the volumetric pass its one, and no one-kernel gather is asked for', (boots.off ?? []).filter(l => /gather|^vol/.test(l)).join(', '));
+  check(!!boots.off && ['gatherTrace', 'gatherLight', 'vol', 'volFroxel'].every(l => boots.off!.includes(l)) && !boots.off.some(l => /^fgather/.test(l)), 'the gather is its two programs and the volumetric pass its two, and no one-kernel gather is asked for', (boots.off ?? []).filter(l => /gather|^vol/.test(l)).join(', '));
   // the page's wiring, read as text: a player's start does not wait for the later set, a script's `__ready` does
   { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
     check(/\n  window\.__started = true;\n  void laterIdle\(\)\.then\(\(\) => \{ [^\n]*readyResolve\(\); \}\);/.test(main) && !/\n\s*readyResolve\(\);/.test(main),

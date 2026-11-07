@@ -16,6 +16,7 @@
 // words the line already said.
 //
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
+import { ofThisMission } from './thisrun';   // (the same mission by its serial, as the Rust game asks it)
 import type { Game } from './game';
 import type { ParData } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
@@ -68,7 +69,7 @@ export class Par {
     return g.roomClear?.active ? D : null;
   }
   /** has the clock started (for THIS mission) */
-  get started(): boolean { return this.run === this.g.mission && Number.isFinite(this.t0); }
+  get started(): boolean { return ofThisMission(this.g, this.run) && Number.isFinite(this.t0); }
   /** seconds on the clock now (0 before it starts; held at the end's own time once the room clear has ended) */
   get secs(): number { if (!this.started) return 0; const rc = this.g.roomClear, t = rc?.end ? rc.endAt : this.g.time; return Math.max(0, t - this.t0); }
   /** teammates down now, of how many */
@@ -76,7 +77,7 @@ export class Par {
   /** Sam's rounds and throws so far this mission (the mission's own tally + the chronicle's count: both fresh with the mission) */
   private fired(): number { const g = this.g; return (g.mission?.stats?.shots ?? 0) + (g.chronicle?.counts?.thrown ?? 0); }
   /** the finished run (null: not taken yet, wiped, or no par here) */
-  result(): ParResult | null { return this.data && this.run === this.g.mission ? this.res : null; }
+  result(): ParResult | null { return this.data && ofThisMission(this.g, this.run) ? this.res : null; }
   /** the result's line as shown: with the page's words about the best time, once it has handed them in */
   get shown(): string | null { const R = this.result(); return R ? R.line + (this.bestWords ? ` · ${this.bestWords}` : '') : null; }
   /** THE PAGE's words about this machine's best time for this run (main.ts, the frame the result first appears): they go on the line already said and on the
@@ -87,7 +88,7 @@ export class Par {
   tick() {
     const D = this.data; if (!D) return;
     const g = this.g, lg = g.orders?.log ?? [], tail = lg[lg.length - 1] ?? null;
-    if (this.run !== g.mission) { this.fresh(tail); this.t0 = NaN; this.said = false; this.note(`armed: gold ${D.gold} · silver ${D.silver} · bronze ${D.bronze} · a man lost ${D.lossSecs}`); }
+    if (!ofThisMission(g, this.run)) { this.fresh(tail); this.t0 = NaN; this.said = false; this.note(`armed: gold ${D.gold} · silver ${D.silver} · bronze ${D.bronze} · a man lost ${D.lossSecs}`); }
     const rc = g.roomClear;
     if (!Number.isFinite(this.t0)) {
       const p = g.player.char.pos, moved = Math.hypot(p[0] - this.origin[0], p[2] - this.origin[2]) > PAR_START_M, shot = this.fired() !== this.fired0;
@@ -116,13 +117,13 @@ export class Par {
     const D = this.data; if (!D) return '';
     const rc = this.g.roomClear;
     if (rc.end) return '';   // (taken: objective() words it · wiped: no time)
-    if (this.run !== this.g.mission || !this.started) return `par ${clock(D.gold)} / ${clock(D.silver)} / ${clock(D.bronze)} · `;
+    if (!ofThisMission(this.g, this.run) || !this.started) return `par ${clock(D.gold)} / ${clock(D.silver)} / ${clock(D.bronze)} · `;
     const [lost] = this.lost(), total = this.secs + lost * D.lossSecs, up = MEDALS.find(m => Math.floor(total) <= D[m]);
     return `⏱ ${clock(this.secs)}${lost ? ` +${clock(lost * D.lossSecs)}` : ''} → ${up ? `${up} ${clock(D[up])}` : 'past bronze'} · `;
   }
 
   /** a checkpoint's slice (savestate.ts): absent with no par live */
-  snapshot(): ParSnap | undefined { if (!this.data) return undefined; const mine = this.run === this.g.mission; return { t0: mine && Number.isFinite(this.t0) ? this.t0 : null, said: mine && this.said }; }
+  snapshot(): ParSnap | undefined { if (!this.data) return undefined; const mine = ofThisMission(this.g, this.run); return { t0: mine && Number.isFinite(this.t0) ? this.t0 : null, said: mine && this.said }; }
   /** a checkpoint loaded (savestate.ts, after the mission slice — Game.time is the file's again, so the file's own start stands). A file without the slice
    *  (made with the par off): the clock starts over from the load */
   restore(s: ParSnap | undefined) {

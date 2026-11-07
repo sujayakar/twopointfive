@@ -43,7 +43,7 @@ const BUDGET: [RegExp, number][] = [
   [/^gatherSplit \/ trace$/, 252],   // (the gather is two programs, render/gatherSplit.ts: its rays, then the light at what they hit)
   [/^gatherSplit \/ light$/, 58],   // (113 before the gather took the reflections' one-loop writing of the light loop, 2026-11-07)
   [/^composite(R|S|SR)? \/ (fs|cs)$/, 442],   // (403 until 2026-11-07: the snow's glow and sparkle are in every level's text now, asked by the frame's level word, 421 on the look's page)
-  [/^volumetrics \/ main$/, 400],   // (the march is ONE program since 2026-11-07, with the froxel-lit march and the dust's look in it, 395 on the look's page: its three were 337, 421 and 470 with the cut test's text)
+  [/^volumetricsF? \/ main$/, 400],   // (382 until 2026-11-07: the dust's look is in the march's own text, 395 on the look's page, and its second program, 433, is gone)
   [/^particles \/ update$/, 356],
   [/^restir \/ main$/, 336],   // (295 + an opening's light in this writing, 38 KB: as the table above)
   [/^froxel \/ injectJ$/, 210],
