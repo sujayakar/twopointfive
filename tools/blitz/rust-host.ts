@@ -250,13 +250,13 @@ export class RustHost {
     if (o.die !== null && !g.dice) g.dice = B.newDice(o.die ?? 20942);
     // (hung as fields no walk of the game's own keys meets: rollback.ts `stateHash` walks them, and a stand's word must not change for being a puppet)
     hang(g, 'stepSeats', function (dt: number, cmds: readonly any[]) { H.step(dt, cmds); });
-    hang(g, 'rustHost', H); hang(g, 'rustSurface', H); hang(g, 'stateWords', () => ({ die: H.dieN(), parts: H.hashes() })); hang(g, 'quietRun', (on: boolean) => { if (on) H.quietBegin(); else H.quietEnd(); }); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; BUSY.n++; try { return up.apply(this, a); } finally { H.busy--; BUSY.n--; H.auditGap = SCAN_AUDIT > 0 && H.k % SCAN_AUDIT === 0; H.scanRebase(); } }); } H.taps(g);
+    hang(g, 'rustHost', H); hang(g, 'rustSurface', H); hang(g, 'stateWords', () => ({ die: H.dieN(), parts: H.hashes() })); hang(g, 'wholeWords', () => H.wholeWords()); hang(g, 'wholeNames', () => H.wholeNames()); hang(g, 'quietRun', (on: boolean) => { if (on) H.quietBegin(); else H.quietEnd(); }); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; BUSY.n++; try { return up.apply(this, a); } finally { H.busy--; BUSY.n--; H.auditGap = SCAN_AUDIT > 0 && H.k % SCAN_AUDIT === 0; H.scanRebase(); } }); } H.taps(g);
     if (process.env.TPS_GAME_SAY) process.on('exit', () => { const L = [...H.calls].sort((a, b) => b[1] - a[1]).slice(0, 60); process.stderr.write(`rust-host: ${H.k} ticks; scan ${(H.T.scan / Math.max(1, H.k)).toFixed(2)} ms a tick; ${H.pokeSyncs} exports after a walk that poked; ${H.scan?.stats?.().deepMissed ?? 0} WRITES THE WALK'S CHEAP WORD DID NOT SEE (found by its audit: ${(H.scan?.stats?.().missed ?? []).join(', ')}); ${H.asksRefused} asks refused; ${JSON.stringify(H.scan?.stats?.() ?? null)}\n` + L.map(([n, c]) => `  ${c} ${n}\n`).join('')); });
     if (o.out) for (const f of ['writeback.txt', 'gives.txt']) writeFileSync(`${o.out}/${f}`, '');
     return H; }
   private startDue = false;
   /** the Rust game is let go (its slot is free for another) and the game steps in TypeScript again */
-  detach(): void { const X = this.F.X; this.unkeepAll(); if (this.keptOff > 0) { X.face_kept_drop(this.keptOff); const i = OFF_KEPT.indexOf(this); if (i >= 0) OFF_KEPT.splice(i, 1); } this.keptOff = 0; if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; } RustHost.live.delete(this); delete this.g.stepSeats; delete this.g.rustHost; delete this.g.stateWords; delete this.g.quietRun; delete this.g.rustSurface; delete this.g.update; delete this.g.restartEncounter; this.B.surfaceHost(null, this); }
+  detach(): void { const X = this.F.X; this.unkeepAll(); if (this.keptOff > 0) { X.face_kept_drop(this.keptOff); const i = OFF_KEPT.indexOf(this); if (i >= 0) OFF_KEPT.splice(i, 1); } this.keptOff = 0; if (this.h) { X.face_puppet_drop?.(this.h); X.face_drop(this.h); this.h = 0; } RustHost.live.delete(this); delete this.g.stepSeats; delete this.g.rustHost; delete this.g.stateWords; delete this.g.wholeWords; delete this.g.wholeNames; delete this.g.quietRun; delete this.g.rustSurface; delete this.g.update; delete this.g.restartEncounter; this.B.surfaceHost(null, this); }
   /** the hosts whose Rust game stands in a slot, and when each last stepped */
   private static live = new Set<RustHost>(); private static clock = 0; private static last: RustHost | null = null; private stamp = 0; evicted = 0;
   /** this game's slot goes to another: the puppet takes the whole state, the Rust game is let go; a later step starts a new one from the puppet */
@@ -385,6 +385,10 @@ export class RustHost {
   rustBlock(): Uint8Array { const X = this.F.X, at = X.state_addr(this.slot) >>> 0; return this.F.u8().subarray(at, at + X.state_len()); }
   time(): number { return this.F.X.face_time(this.h); }
   dieN(): number { return this.F.X.face_die_n(this.h); }
+  /** the whole game's words, one a part, with what a host hands in left out (face_state_words; src/net/step.ts netWord folds them on a word tick), and the parts' names. null / none on a module that has not got them */
+  wholeWords(): Uint32Array | null { const X = this.F.X; if (!X.face_state_words || !this.h) return null; X.face_state_words(this.h); return new Uint32Array(this.F.outView().slice().buffer); }
+  private stateNames: string[] | null = null;
+  wholeNames(): string[] { const X = this.F.X; if (!X.face_state_n) return []; if (!this.stateNames) { this.stateNames = []; for (let i = 0; i < X.face_state_n(); i++) { X.face_state_name(i); this.stateNames.push(this.F.outText()); } } return this.stateNames; }
   /** THE GAME'S OWN DIE PUT AT THE START OF `seed`'S STREAM, ON THE RUST SIDE (tools/qa/headless.ts `seedGame`, which has put the puppet's: a tool that wants a
    *  given stream after the game is stood seeds the game's die; nothing lets the Rust tick draw a tool's `Math.random`). The die is the `dice` part of the
    *  game's block (rust/sim/src/dice.rs: the count of draws as a double, then the mulberry32 word), written in place.
