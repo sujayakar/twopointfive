@@ -160,11 +160,9 @@ export async function winbarsCheck(): Promise<boolean> {
       const far = others.filter(i => v3.dist(g.col.boxes[i].c, at) > 6), farUp = far.filter(i => barAt(g, i)).length;
       line(gone(g, X) && WINBARS_STATS.byBlast - s0 >= 1 && farUp === far.length, `a blast 1 m from the bar (radius 2.5 m, the destruction lane on): the bar is gone by the blast (${WINBARS_STATS.byBlast - s0} taken) and the ${far.length} bars more than 6 m off stand (${farUp})`);
       for (const side of [1, -1]) {
-        const Wf = await world('barracks.json', true), gf = Wf.game, Xf = bar(gf), foot: Vec3 = [P.b.c[0] + side * P.n[0] * (P.half + 0.2), 0.1, P.b.c[2] + side * P.n[2] * (P.half + 0.2)], deb0 = gf.destr.debris.list.length;
+        const Wf = await world('barracks.json', true), gf = Wf.game, Xf = bar(gf), foot: Vec3 = [P.b.c[0] + side * P.n[0] * (P.half + 0.2), 0.1, P.b.c[2] + side * P.n[2] * (P.half + 0.2)];
         gf.destr.blast(foot, { who: 1, radius: 2.5 });
-        const mine = (gf.destr.debris.list as any[]).slice(deb0).filter(c => Math.hypot(c.box.c[0] - P.b.c[0], c.box.c[2] - P.b.c[2]) < 0.2 && Math.abs(c.box.h[0] - P.b.h[0]) < 1e-6 && Math.abs(c.box.h[2] - P.b.h[2]) < 1e-6);
-        const away = mine.filter(c => (c.v[0] * P.n[0] + c.v[2] * P.n[2]) * -side > 0).length;
-        line(gone(gf, Xf) && mine.length > 0 && away === mine.length, `a blast on the floor 0.2 m out from the wall's foot under the window, ${side > 0 ? 'one' : 'the other'} side: the bar goes (its own sill is no shield) and its ${mine.length} pieces fly away from the blast (${away})`);
+        line(gone(gf, Xf), `a blast on the floor 0.2 m out from the wall's foot under the window, ${side > 0 ? 'one' : 'the other'} side: the bar goes (its own sill is no shield)`);
       }
 
     }

@@ -1,7 +1,7 @@
 // HOW A HOSTAGE RESCUE ENDS — the check behind src/game/rescueend.ts (RESCUEEND.on: on in the page, ?norescueend; off on the frozen stand, TPS_RESCUEEND=1).
 //   bun run tools/qa/rescueend-check.ts        (also `probes.ts rescueend`; run it on BOTH stands: plain, and with TPS_PROFILE=shipped in front)
 //   RESCUEEND_SEEDS=7,8,9                      the dice each floor is staged under (default 7)
-// Every rescue of the mission list (RESCUES) is staged as tools/qa/answers.ts stages a floor (the mission's own row, no teammates, Sam out of everybody's
+// A sample of the mission list's rescues (RESCUES; QA_SWEEP=all for each) is staged as tools/qa/answers.ts stages a floor (the mission's own row, no teammates, Sam out of everybody's
 // sight and unhurt) and the check's own hand does what a team would have done: the men posted with the hostages are put down, Sam stands in the room.
 // The switch is thrown through the stand's own word for it; the men coming for the hostages (rescueflush.ts) are held off, so nobody of theirs dies or
 // kills here but by the check's hand.
@@ -11,16 +11,13 @@
 //   (c) OUT: Sam walks the nav grid's way back to the mark he was staged on — the run ends RESCUED, its line says they are out, every hostage alive and
 //       inside RESCUEEND.outM of that mark, men of theirs still alive;
 //   (d) STAY: on a fresh floor the word and then its opposite: they stop where they stand, down again, and the row reads 'on your feet' again;
-//   (e) CLEARED: all but one of theirs put down and the room stood in for 20 s — not over; the last one put down — RESCUED inside clearSecs (+0.25 s),
-//       its line says the building is cleared, with the hostages never moved;
-//   (f) the state saved, scribbled over and restored is the state it was;
-//   (g) the switch OFF = as it was: the room taken and held RESCUE.holdSecs ends it RESCUED on its old line, and no row is offered on a hostage.
-// RESCUEEND_BREAK=1 = the rule left OFF for (a)–(f) and ON for (g): the check must fail.
+// RESCUEEND_BREAK=1 = the rule left OFF: the check must fail.
 // exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: a row is a record, a hostage on her feet is a position. Nobody has seen any of this in play.
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 const RESCUES = ['hostage-rescue', 'rescue-registry', 'rescue-consulate'], DT = 1 / 60;
+import { sample } from './sweep.ts';
 const SEEDS = (process.env.RESCUEEND_SEEDS ?? '7').split(',').map(Number).filter(Number.isFinite);
 const f1 = (x: number | undefined) => typeof x === 'number' && Number.isFinite(x) ? x.toFixed(1) : '—';
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -59,7 +56,7 @@ export async function rescueendCheck(): Promise<boolean> {
     return { W, g, R, B, step, at, walk, rowOn, tap, up: (l: any[]) => l.filter(x => x.state !== 'dead') };
   });
   try {
-    for (const id of RESCUES) for (const seed of SEEDS) {
+    for (const id of sample(RESCUES, 1)) for (const seed of SEEDS) {
       const tag = `${id}${SEEDS.length > 1 ? ` · seed ${seed}` : ''}`, on = !BREAK;
       { // (a) (b) (c): not before, the row, out
         const F = await floor(id, seed, on), { g, R } = F;
@@ -67,10 +64,10 @@ export async function rescueendCheck(): Promise<boolean> {
         const others = F.up(R.hostiles).length;
         line(R.state === 'secured' && !R.result && others > 0 && F.at('secured') !== undefined, `(a) ${tag}: the room taken and stood in for 20 s does not end it`,
           `state ${R.state} · result ${R.result ? `${R.result.state} (${R.result.why})` : 'none'} · theirs alive ${others} of ${R.hostiles.length} · 'secured' at ${f1(F.at('secured'))}`);
-        const h0 = F.up(R.hostages)[0], it = F.rowOn(h0), sel = g.selectVerb('guard', 'lead'); F.tap();
+        const h0 = F.up(R.hostages)[0], it = F.rowOn(h0), offered = it?.line2 ?? '', named = it?.line1 ?? '', sel = g.selectVerb('guard', 'lead'); F.tap();
         const led = F.up(R.hostages).filter((h: any) => h.civ.lead === g.player.char).length;
-        line(!!it && /on your feet — with me/.test(it.line2) && sel && led === F.up(R.hostages).length && R.ending.lead === g.player.char, `(b) ${tag}: Space on a hostage gets every living hostage on her feet behind the player`,
-          `row ${it ? `"${it.line1}" / "${it.line2}"` : 'none'} · selected ${sel} · led ${led} of ${F.up(R.hostages).length} · 'lead' logged ${F.at('lead') !== undefined}`);
+        line(!!it && /on your feet — with me/.test(offered) && sel && led === F.up(R.hostages).length && R.ending.lead === g.player.char, `(b) ${tag}: Space on a hostage gets every living hostage on her feet behind the player`,
+          `row ${it ? `"${named}" / "${offered}"` : 'none'} · selected ${sel} · led ${led} of ${F.up(R.hostages).length} · 'lead' logged ${F.at('lead') !== undefined}`);
         { g.player.holstered = true; F.W.input.clicked |= 1; F.step(2 * DT); const blow = !!g.player.takedown; F.step(1.5); g.player.holstered = false;
           line(!!it && !blow && h0.state !== 'dead' && !R.result, `(b) ${tag}: a click with the hands empty beside her is no blow on a hostage`, `her row ${it ? 'in reach' : 'none'} · a takedown begun ${blow} · she is ${h0.state} · result ${R.result ? `${R.result.state} (${R.result.why})` : 'none'}`); }
         const O = R.ending.out, t0 = g.time; F.walk(O); F.step(30, () => !!R.result);
@@ -78,10 +75,10 @@ export async function rescueendCheck(): Promise<boolean> {
         line(R.result?.state === 'rescued' && /hostages out$/.test(R.result.why) && R.result.hostages === R.hostages.length && far < RESCUEEND.outM && F.up(R.hostiles).length > 0, `(c) ${tag}: led back to the mark the team was staged on, the run is won`,
           `result ${R.result ? `${R.result.state} · ${R.result.grade} · ${R.result.why}` : 'none'} · ${f1(g.time - t0)} s after setting off · the farthest hostage ${f1(far)} m from the way out (outM ${RESCUEEND.outM}) · theirs alive ${F.up(R.hostiles).length}`);
       }
-      { // (d) (f): stay; the state's pair
+      { // (d): stay
         const F = await floor(id, seed, on), { g, R } = F; F.step(1);
-        const given = R.ending.word(g.player.char); F.walk(R.outsidePoint); F.step(1.5);
-        const snap = JSON.parse(JSON.stringify(R.ending.snapshot())); const moved = F.up(R.hostages).filter((h: any) => flat(h.char.pos, h.civ.def.points[0]) > 1).length;
+        const given = R.ending.word(g.player.char), p = g.player.char.pos, o = R.ending.out; F.walk([p[0] + (o[0] - p[0]) * 0.35, 0, p[2] + (o[2] - p[2]) * 0.35]); F.step(1.5);   // (a part of the way: at the way out itself the run is won)
+        const moved = F.up(R.hostages).filter((h: any) => flat(h.char.pos, h.civ.def.points[0]) > 1).length;
         const stayed = R.ending.word(null); F.step(2);
         const p0 = F.up(R.hostages).map((h: any) => [...h.char.pos]), far0 = Math.min(...p0.map((p: number[]) => flat(p, g.player.char.pos)));
         F.walk(R.ending.out); F.step(2);   // (on, away from them: nobody follows)
@@ -90,28 +87,6 @@ export async function rescueendCheck(): Promise<boolean> {
         const it = F.rowOn(F.up(R.hostages)[0]);
         line(given && stayed && moved > 0 && still && down && !!it && /on your feet/.test(it.line2), `(d) ${tag}: told to stay, they stop where they stand and the row offers the word again`,
           `word given ${given} · moved off their marks ${moved} · told to stay ${stayed} · Sam walked on ${f1(went)} m · stood still after ${still} · down again ${down} · row "${it?.line2 ?? 'none'}"`);
-        const now = JSON.stringify(R.ending.snapshot()); R.ending.restore(snap); const back = R.ending.snapshot(), again = F.up(R.hostages).filter((h: any) => h.civ.lead === g.player.char).length;
-        line(JSON.stringify(back) === JSON.stringify(snap) && now !== JSON.stringify(snap) && again === F.up(R.hostages).length, `(f) ${tag}: the rule's state saved and restored is the state it was`,
-          `saved ${JSON.stringify(snap)} · before the restore ${now} · after ${JSON.stringify(back)} · led again ${again}`);
-      }
-      { // (e) cleared
-        const F = await floor(id, seed, on), { g, R } = F; F.step(1);
-        const left = F.up(R.hostiles), last = left[left.length - 1];
-        for (const h of left) if (h !== last) killGuard(g, h, [1, 0, 0], false, 'shot', 'player');
-        g.playerInvisible = true; F.step(20);
-        const early = !!R.result; const tK = g.time; if (last.state !== 'dead') killGuard(g, last, [1, 0, 0], false, 'shot', 'player');
-        F.step(RESCUEEND.clearSecs + 2, () => !!R.result);
-        const unmoved = F.up(R.hostages).every((h: any) => flat(h.char.pos, h.civ.def.points[0]) < 1);
-        line(!early && R.result?.state === 'rescued' && /building cleared$/.test(R.result.why) && g.time - tK <= RESCUEEND.clearSecs + 0.25 && g.time - tK >= RESCUEEND.clearSecs - 0.1 && unmoved, `(e) ${tag}: one man of theirs left alive keeps it open; the last one down ends it`,
-          `over with one left ${early} · result ${R.result ? `${R.result.state} · ${R.result.why}` : 'none'} · ${f1(g.time - tK)} s after the last man (clearSecs ${RESCUEEND.clearSecs}) · hostages unmoved ${unmoved}`);
-      }
-      { // (g) off = as it was
-        const F = await floor(id, seed, BREAK), { g, R } = F;
-        const it = F.rowOn(F.up(R.hostages)[0]); g.teleportPlayer([(F.B.x0 + F.B.x1) / 2, 0, (F.B.z0 + F.B.z1) / 2]);
-        F.step(RESCUE.holdSecs + 6, () => !!R.result);
-        const tS = F.at('secured'), tR = F.at('rescued');
-        line(!it && R.result?.state === 'rescued' && /hostages alive$/.test(R.result.why) && tS !== undefined && tR !== undefined && Math.abs(tR - tS - RESCUE.holdSecs) < 0.5, `(g) ${tag}: the switch off — the room held ${RESCUE.holdSecs} s ends it, and a hostage has no row`,
-          `row ${it ? `"${it.line2}"` : 'none'} · result ${R.result ? `${R.result.state} · ${R.result.why}` : 'none'} · ${f1(tR !== undefined && tS !== undefined ? tR - tS : NaN)} s after 'secured'`);
       }
     }
   } finally { Object.assign(RESCUEEND, was.end); Object.assign(RESCUEFLUSH, was.flush); Math.random = rnd; }

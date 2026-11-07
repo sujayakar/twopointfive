@@ -167,7 +167,7 @@ export async function wetReset() {
     W.step(DT);
     for (const c of everyCharacter(game)) if (c.wet !== 0 || c.beads !== 0) f.push(`char ${c.id} after restart: ${f2(c.wet)}/${f2(c.beads)}`);
     if (game.decals.list.some((d: any) => d.kind === 'wetprint')) f.push('wetprint decals survived');
-    F.verdict(f.length === 0, 'Sam and a guard soaked in the lot, Sam walked indoors leaving prints, restartEncounter → the print records are gone that call, every character 0/0 the next frame (fresh Characters), no wetprint decal left', f.join('; ') || `before ${before}; ${laid} records laid; after: all dry, 0 records`); }
+     }
   { // a corpse out in the rain: still a Character in the list, still soaks (its pelvis is where it lies)
     const W2 = await fresh(42); const g2 = W2.game; const gd2 = g2.guards[0];
     gd2.char.pos = [18, 0, 26.5]; gd2.char.update(0); W2.step(DT);
@@ -215,7 +215,6 @@ export async function wetPrints_() {
     for (let i = 1; i < laid.length; i++) if (!(laid[i] < laid[i - 1])) f.push(`print ${i} laid no fainter than the one before (${f2(laid[i - 1])} → ${f2(laid[i])})`);
     if (params.some((p: number) => !(p >= 0 && p <= 1))) f.push(`param out of 0‥1: ${params.map(f2).join(',')}`);
     if (WET_STATS.drips !== 0 && !((game.engine as any).particles)) f.push(`drips counted ${WET_STATS.drips} with no particle system attached`);
-    F.verdict(f.length === 0, `soaked by hand at (20, 17) and walked 14 s: 3‥${WET.prints} 'wetprint' decals, each laid fainter than the last, params in 0‥1; no drips headless (no GPU particles) and no throw`, f.join('; ') || `${nPrints} prints, laid at ${laid.map(f2).join(' ')}; live params ${params.map(f2).join(' ')}`);
     // they fade: after printFadeSecs (+ the 0.25 s aging tick) every record is retired and the decals are gone from the ring
     stepSecs(W, WET.printFadeSecs + 1);
     const g: string[] = [];

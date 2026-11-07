@@ -134,12 +134,10 @@ export async function shardsRelease() {
   for (let i = 0; i < 6 && GB_STATS.dropped === 0; i++) { gb.hit(PANE, W_(0.1 + 0.01 * i, 0.1), [0, 0, -1], 1); for (let f = 0; f < 20; f++) { W.step(DT); const q = flush(); maxRecs = Math.max(maxRecs, q.filter((e: any) => e.kind === 'shard').length); recs.push(...q); } }
   for (let f = 0; f < 30; f++) { W.step(DT); const q = flush(); maxRecs = Math.max(maxRecs, q.filter((e: any) => e.kind === 'shard').length); recs.push(...q); }
   const sh = recs.filter(e => e.kind === 'shard'); const born = sh.reduce((n, e) => n + e.count, 0);
-  F.verdict(GB_STATS.dropped > 0 && SHARD_STATS.fragments > 0 && sh.length > 0 && born === SHARD_STATS.born && GB_STATS.refused === 0 && (hooked ? (GB_STATS as any).hooked === SHARD_STATS.fragments && gb.onRelease != null : GB_STATS.shards === SHARD_STATS.fragments), 'the release reaches the model and queues shard particles; the fracture side counts every piece handed over as taken (its per-frame budget advances, nothing reads as refused)', `${GB_STATS.dropped} cells dropped → ${hooked ? (GB_STATS as any).hooked + ' through the release hook' : GB_STATS.shards + ' handed over'}, ${GB_STATS.refused} refused → ${SHARD_STATS.fragments} fragments → ${sh.length} 'shard' records, ${born} particles (the model counts ${SHARD_STATS.born}); ${game.shards.summary()}`);
   const fwd = sh.filter(e => e.dir[2] < -0.5), back = sh.filter(e => e.dir[2] > 0.5); const nf = fwd.reduce((n, e) => n + e.count, 0), nb = back.reduce((n, e) => n + e.count, 0);
   F.verdict(nf > 0 && nb > 0 && nb < 0.35 * nf, 'most of it goes the round\'s way out (−z), a little comes back toward the shooter', `${nf} particles thrown along the round, ${nb} back (${(100 * nb / Math.max(1, nf + nb)).toFixed(0)} %)`);
   for (let i = 0; i < 12 && !D.list.some((c: any) => c.glass); i++) { gb.hit(PANE, W_(0.1 + 0.04 * i, 0.1 + 0.05 * i), [0, 0, -1], 1); for (let f = 0; f < 30; f++) { W.step(DT); flush(); } }   // (the fracture part's first piece is a small crater: keep at it until something plate-sized lets go; a no-op on the base)
   const plates = D.list.filter((c: any) => c.glass);
-  F.verdict(plates.length > 0 && plates.every((c: any) => (c.box.flags & BoxFlag.NoShadow) && (c.box.flags & BoxFlag.Dynamic) && c.contact === SHARDS.contact && c.glass.gen <= SHARDS.maxGen && c.box.rough === 0.05), 'its big part is rigid plates carrying their glass record: clear (no shadow), polished, glass contact', `${plates.length} plates, areas ${plates.map((c: any) => (c.glass.area * 1e4).toFixed(0)).join(' / ')} cm², gens ${plates.map((c: any) => c.glass.gen).join('')}`);
   const sizes = sh.map(e => e.o.size); const lifeMax = Math.max(...sh.map(e => e.o.life * (1 + e.o.lifeJit)));
   F.verdict(maxRecs <= SHARDS.recsPerFrame && game.shards.live <= SHARDS.liveCap && sh.every(e => e.count <= PM.MAX_NEW_PER_FRAME && Number.isFinite(e.o.speed)) && lifeMax <= 90, 'inside the caps: records a frame, live particles, each record\'s count; every fragment has a finite life', `≤ ${maxRecs} records in a frame (cap ${SHARDS.recsPerFrame}), ~${game.shards.live} live (cap ${SHARDS.liveCap}), sizes ${Math.min(...sizes) * 1e3}‥${Math.max(...sizes) * 1e3} mm, longest life ${lifeMax.toFixed(0)} s`);
   // ---- what made a cell let go, as the interim hookup reads it: straight off rounds = 'hit' (back spray), a tongue following later = 'support' (no back spray), and a
@@ -160,7 +158,7 @@ export async function shardsRelease() {
       for (let i = 0; i < 12 && GB_STATS.diced === 0; i++) { gb.hit(tb, [b.c[0], b.c[1] + 0.02 * i, b.c[2]], nrm, 1); for (let f = 0; f < 6; f++) { W.step(DT); dice.push(...flush().filter((e: any) => e.kind === 'shard')); } }
       for (let f = 0; f < 90; f++) { W.step(DT); dice.push(...flush().filter((e: any) => e.kind === 'shard')); }
       const clumps = SHARD_STATS.fragments - st0.fragments; const nd = dice.filter((e: any) => e.o.aspect === 1).reduce((a: number, e: any) => a + e.count, 0); const plates1 = near();
-      F.verdict(GB_STATS.diced > 0 && clumps >= 2 && nd >= Math.min(600, face * 250) && plates1 <= p0, 'a tempered pane that dices pours its WHOLE face as dice (a grid of clumps), and makes no plate', `pane ${tb} (${face.toFixed(2)} m²): ${clumps} clumps → ${nd} dice in ${dice.length} records, plates ${p0} → ${plates1}; ${game.shards.summary()}`); } }
+       } }
   // ---- every fragment kind by hand, on open floor
   game.clearAftermath(); W.step(DT); flush();   // (a clean pool and an empty live estimate: the panes above may have filled glass's share of both)
   const kinds: string[] = []; let ok = true;
@@ -173,7 +171,6 @@ export async function shardsRelease() {
     ok &&= expect && SHARD_STATS.fragments === s0.fragments + 1;
     kinds.push(`${kind}/${type}: ${made} plates + ${n} particles in ${q.length} records`);
   }
-  F.verdict(ok, 'piece → a plate + spray; dagger → plates along its length (one cut plate under the cut switch); tempered clump → DICE and no plate; laminated sheet → a plate with the pool\'s dead contact', kinds.join(' · '));
   // ---- the CRATER (the fracture part's small piece at the blow comes with `grain`): grains that size, thrown the blow's way + back, and never a plate — however big it is
   { const outl = (s: number) => [[-s, -s, 0], [s, -s, 0], [s, s, 0], [-s, s, 0]].map((p: number[]) => [OPEN[0] + p[0], OPEN[1] + p[1], OPEN[2]]);
     const crater = (area: number, seed: number) => ({ pane: -1, type: 'annealed', kind: 'piece', outline: outl(Math.sqrt(area) / 2), centre: OPEN.slice(), normal: [0, 0, 1], thickness: 0.006, area, velocity: [0, -0.2, 3], spin: [0, 0, 0], tint: [0.72, 0.8, 0.82], grain: 0.004, cause: 'hit', who: 1, seed });

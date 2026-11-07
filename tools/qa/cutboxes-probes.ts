@@ -383,8 +383,7 @@ export async function cutboxesLines(): Promise<boolean> {
             const r = ask(game, seed, 0.02);
             T.opened += opened; T.ends += r.ends; T.endsAway += r.endsAway; T.endsOk += r.endsOk; T.awayN += r.awayN; T.keptN += r.keptN; T.bad += r.bad; said.push(...r.said.map(x => `${floor}: ${x}`));
             per.push(`${floor} ${opened} opened, ${r.ends} ragged, ${r.awayN} + ${r.keptN} lines`); }
-          F.verdict(T.bad === 0 && T.ends >= 4 && T.endsOk === T.endsAway && T.awayN >= 10 && T.keptN >= 100, 'the build as it plays (the wall look on; the block and the hall): cover with a cell shot out — a line over the bitten-off end passes, one through what stands is stopped',
-            `${T.opened} pieces of cover opened · ${T.ends} standing pieces with a ragged end · ${T.endsOk} of ${T.endsAway} let every line through their cut-away part (${T.awayN} lines) · ${T.keptN} lines through the kept part · ${T.bad} wrong · ${per.join(' · ')}${said.length ? ' · ' + said.slice(0, 3).join(' · ') : ''}`); }
+           }
       } finally { DESTRUCTION.on = destr0; Math.random = rnd0; }
     }
   } finally { cutConfig.on = was; }

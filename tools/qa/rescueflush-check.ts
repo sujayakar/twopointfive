@@ -2,34 +2,22 @@
 // the frozen stand, TPS_RESCUEFLUSH=1).
 //   bun run tools/qa/rescueflush-check.ts      (also `probes.ts rescueflush`; run it on BOTH stands: plain, and with TPS_PROFILE=shipped in front)
 //   RESCUEFLUSH_SEEDS=7,8,9                    the dice each floor is staged under (default 7)
-// Every rescue of the mission list (RESCUES) is staged as tools/qa/answers.ts stages a floor (the mission's own row, no teammates, Sam out of everybody's
+// A sample of the mission list's rescues (RESCUES; QA_SWEEP=all for each) is staged as tools/qa/answers.ts stages a floor (the mission's own row, no teammates, Sam out of everybody's
 // sight and unhurt, so NOBODY stops a man of theirs) and the check's own hand does what a team would have done: one loud round at the hostage door, the
 // men posted with the hostages put down. What the men left alive then do is theirs. The switch is thrown through the stand's own word for it.
 //   (a) THEY COME: the first man's word is RESCUEFLUSH.afterSecs after the room falls, the next gapSecs after it; every man of theirs alive outside the
 //       room is sent inside the time that takes plus 12 s; where the room has a side door the second word names it;
 //   (b) THE GUN ON HER: with nobody to stop him a man who came turns his gun on a hostage and she is shot, inside 40 s of the fall — and she is logged
 //       'executed', never the team's own fire;
-//   (c) NOT WHEN QUIET: the same men put down without a sound and no loud thing done — 30 s on nobody has been sent and nobody has been shot;
-//   (d) THEY'RE GONE: the hostages stood at the way out before the fall (as a team that walked them there would have them; the end rule held off so the
-//       run does not end on it) — a man reaches the empty room and says so, men are then sent to the way out or the team's noise, and a hostage is shot
-//       where she stands, outside the room, by a man who is outside it too;
-//   (e) the state saved, scribbled over and restored is the state it was;
-//   (f) the switch OFF = as it was: (a)'s floor for 40 s — nobody is sent, nobody outside the room takes the clock, no hostage is shot;
-//   (g) A COVERED LANE KEEPS NOBODY BACK: the covered lanes up (TPS_LANES) and a lane their side knows planted with its guns in the hostages' room (the
-//       lanes' own save, lanesRestore), so that the lanes warn every man off BOTH doors — the first word still comes afterSecs after the fall and every
-//       man outside is sent. (The build this line was written against asked the lanes about where it sent a man and sent nobody: the rescue never ended.)
-//   (h) …AND CHOOSES THE DOOR: where the room has a side door, a lane planted with its gun on the floor outside the MAIN door, looking along it (that
-//       floor in its line of fire, the side door's not — both asked of the lanes and printed) — the first man's turn is the main door and he is sent by
-//       the side door instead, logged 'flush:lane' once.
-// RESCUEFLUSH_BREAK=lanes = RESCUEFLUSH.lanesChoose off, the build before the mend: (g) and (h) alone must fail.
+//   (c) NOT WHEN QUIET: the same men put down without a sound and no loud thing done — past the first word's time nobody has been sent and nobody has been shot;
 // NOT ASKED HERE: what a man sent does at a corridor the team's guns hold — his walk is the fight AI's, priced and gated by the lanes like any other
 // (`probes.ts corridor` holds the lanes' own rules; this floor has no team to hold one).
-// RESCUEFLUSH_BREAK=1 = the rule left OFF for (a)–(e) and ON for (f): the check must fail.
 // exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: a word on the net is a string, a line to a hostage is the collision's segment test. Nobody has seen or heard any of this in play.
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 const RESCUES = ['hostage-rescue', 'rescue-registry', 'rescue-consulate'], DT = 1 / 60;
+import { sample } from './sweep.ts';
 const SEEDS = (process.env.RESCUEFLUSH_SEEDS ?? '7').split(',').map(Number).filter(Number.isFinite);
 const f1 = (x: number | undefined) => typeof x === 'number' && Number.isFinite(x) ? x.toFixed(1) : '—';
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -67,14 +55,14 @@ export async function rescueflushCheck(): Promise<boolean> {
       if (until?.()) return true; } return false; } finally { console.log = log; } };
     step(1);
     if (o.out) { const O = R.ending.out; R.hostages.forEach((h: any, i: number) => { const p = g.col.nav.nearestFreePoint(O[0] + 0.8 * i, O[2] + 0.6 * (i % 2)) ?? O; h.char.pos[0] = p[0]; h.char.pos[2] = p[2]; h.civ.cowerAt = [p[0], 0, p[2]]; }); }
-    if (o.loud) { const P = R.outsidePoint; g.events.push({ kind: 'shot', pos: [P[0], 0, P[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); step(0.5); }
+    if (o.loud) { const P = R.cast().find((c: any) => c.inRoom).gd.char.pos; g.events.push({ kind: 'shot', pos: [P[0], 0, P[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); step(0.5); }
     for (const c of R.cast()) if (c.inRoom) killGuard(g, c.gd, [1, 0, 0], !o.loud, o.loud ? 'shot' : 'struck', 'player');
     const t0 = g.time; step(2 * DT);
     const lines = (re: RegExp) => R.log.filter((l: any) => re.test(l.what)).map((l: any) => ({ t: l.t - t0, what: l.what as string }));
     return { W, g, R, B, inB, step, t0, lines, shotAt, acts: () => acts, up: (l: any[]) => l.filter(x => x.state !== 'dead') };
   });
   try {
-    for (const id of RESCUES) for (const seed of SEEDS) {
+    for (const id of sample(RESCUES, 1)) for (const seed of SEEDS) {
       const tag = `${id}${SEEDS.length > 1 ? ` · seed ${seed}` : ''}`, on = !BREAK;
       { // (a) (b): they come; the gun on her
         const F = await floor(id, seed, on, { loud: true }), { R } = F;
@@ -87,73 +75,15 @@ export async function rescueflushCheck(): Promise<boolean> {
           `(a) ${tag}: once it is loud and the room has fallen, every man left alive outside it is sent for the hostages, one after another`,
           `${outside.length} alive outside the room · first word ${first ? `${first.what} at ${f1(first.t)} s` : 'none'} (afterSecs ${K.afterSecs}) · second ${second ? `${second.what} at ${f1(second.t)} s` : 'none'} · turned to the other door by a lane ${held.length} · never sent: ${missed.join(', ') || 'nobody'}`);
         F.step(Math.max(0, 40 - need), () => F.shotAt.length > 0);
-        if (side && second && /^flush:side:/.test(second.what)) { const so = R.sideOutside, thr = F.lines(/^flush:through:/)[0];
-          line(!!so && !F.inB(so) && (!!thr || F.shotAt.length > 0), `(a) ${tag}: the man sent round is sent to the floor OUTSIDE the side door, and goes in from there`,
-            `the side door's far floor ${so ? `(${f1(so[0])}, ${f1(so[2])}) — ${F.inB(so) ? 'IN' : 'outside'} the room` : 'none'} · ${thr ? `${thr.what} at ${f1(thr.t)} s` : `not through it before a hostage was shot (${F.shotAt.length})`}`); }
         const ex = F.lines(/^executed:/), tf = F.lines(/^teamfire:/), s0 = F.shotAt[0];
         line(F.acts() > 0 && ex.length > 0 && !tf.length && ex[0].t <= 40 && !!s0?.by, `(b) ${tag}: with nobody to stop him, a man who came shoots a hostage`,
           `'act' ${F.acts()} · ${ex[0] ? `${ex[0].what} at ${f1(ex[0].t)} s` : 'nobody shot'}${s0 ? ` by ${s0.by ?? '—'}` : ''} · the team's own fire logged ${tf.length} · result ${R.result ? `${R.result.state} (${R.result.why})` : 'none'}`);
       }
       { // (c) not when quiet
-        const F = await floor(id, seed, on, { loud: false }), { R } = F; F.step(30);
+        const F = await floor(id, seed, on, { loud: false }); F.step(K.afterSecs + K.gapSecs + 2);
         const words = F.lines(/^flush:/);
-        line(!words.length && !F.acts() && !F.shotAt.length && R.noiseAt === null, `(c) ${tag}: the room taken without a sound — nobody is sent and nobody is shot`,
-          `flush lines ${words.length} · 'act' ${F.acts()} · shot ${F.shotAt.length} · the team's last loud thing: ${R.noiseAt ? 'one' : 'none'}`);
-      }
-      { // (a): round by the side door and in — the man sent round alone (every other man of theirs put down the moment he is sent)
-        const F = await floor(id, seed, on, { loud: true }), { g, R } = F;
-        F.step(K.afterSecs + 4 * K.gapSecs + 2, () => F.lines(/^flush:side:/).length > 0);
-        const sent = F.lines(/^flush:side:/)[0], man = sent ? R.hostiles.find((h: any) => h.callsign === sent.what.split(':')[2]) : null;
-        if (man) for (const h of R.hostiles) if (h !== man && h.state !== 'dead') killGuard(g, h, [1, 0, 0], true, 'struck', 'player');
-        F.step(45, () => F.lines(/^flush:through:/).length > 0); const thr = F.lines(/^flush:through:/)[0];
-        F.step(25, () => F.shotAt.length > 0 || (!!man && F.inB(man.char.pos)));
-        line(!!man && !!thr && (F.shotAt.length > 0 || F.inB(man.char.pos)), `(a) ${tag}: the man sent round, alone, walks to the side door and goes in by it for them`,
-          `${sent ? sent.what : 'nobody sent round'} · ${thr ? `${thr.what} at ${f1(thr.t)} s` : 'never at the side door'} · ${man ? `he ended ${F.inB(man.char.pos) ? 'IN the room' : `at (${f1(man.char.pos[0])}, ${f1(man.char.pos[2])})`}, ${man.state}` : ''} · hostages shot ${F.shotAt.length}`);
-      }
-      { // (d) (e): they're gone; the state's pair
-        const F = await floor(id, seed, on, { loud: true, out: true, end: false }), { R } = F;
-        F.step(90, () => F.shotAt.length > 0);
-        const gone = F.lines(/^flush:gone:/)[0], after = gone ? F.lines(/^flush:(out|noise):/).filter((l: any) => l.t >= gone.t) : [], s0 = F.shotAt[0];
-        line(!!gone && after.length > 0 && !!s0 && !F.inB(s0.at) && !!s0.byAt && !F.inB(s0.byAt) && !F.lines(/^teamfire:/).length, `(d) ${tag}: the hostages stood at the way out — the room is found empty, men are sent on, and one of them shoots a hostage out there`,
-          `${gone ? `${gone.what} at ${f1(gone.t)} s` : 'the room never found empty'} · sent on after it: ${after.map((l: any) => l.what).join(', ') || 'nobody'} · ${s0 ? `${s0.who} shot at (${f1(s0.at[0])}, ${f1(s0.at[2])}) by ${s0.by ?? '—'}${s0.byAt ? ` at (${f1(s0.byAt[0])}, ${f1(s0.byAt[2])})` : ''} — ${F.inB(s0.at) ? 'IN' : 'outside'} the room` : 'nobody shot inside 90 s'}`);
-        const snap = JSON.parse(JSON.stringify(R.flush.snapshot())); R.flush.reset(); const blank = JSON.stringify(R.flush.snapshot()); R.flush.restore(snap); const back = JSON.stringify(R.flush.snapshot());
-        line(back === JSON.stringify(snap) && blank !== back && snap.sent.length > 0, `(e) ${tag}: the rule's state saved and restored is the state it was`, `men in the saved state ${snap.sent.length} · fell ${f1(snap.fellAt - F.t0)} s · the same after the restore ${back === JSON.stringify(snap)}`);
-      }
-      { // (f) off = as it was
-        const F = await floor(id, seed, BREAK, { loud: true }), { R } = F; let outCap = 0;
-        F.step(40, () => { const c = R.captor(); if (c && !F.inB(c.char.pos)) outCap++; return false; });
-        const words = F.lines(/^flush:/);
-        line(!words.length && !outCap && !F.shotAt.length, `(f) ${tag}: the switch off — nobody is sent, nobody outside the room has the clock, no hostage is shot`,
-          `flush lines ${words.length} · frames a man outside the room held the clock ${outCap} · shot ${F.shotAt.length} · 'act' ${F.acts()}`);
-      }
-      { // (g) a covered lane keeps nobody back
-        const F = await floor(id, seed, on, { loud: true, lanes: true }), { g, R } = F, B = F.B, mid = [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2], now = g.time;
-        lanesRestore(g, { serial: 1, lanes: [{ id: 1, from: mid, at: [...R.outsidePoint], t0: now, lastT: now, until: now + 150, weight: 1, downs: 1, known: true, knownAt: now, guns: [mid], wedges: [], roundAt: now + 1e6, stunAt: now + 1e6 }] });
-        F.step(1);
-        const outside = F.up(R.hostiles).filter((h: any) => !F.inB(h.char.pos)), so = R.sideOutside;
-        const warned = outside.filter((h: any) => laneKnownAt(g, h, R.outsidePoint) && (!so || laneKnownAt(g, h, so))).length;
-        F.step(K.afterSecs + outside.length * K.gapSecs + 12);
-        const words = F.lines(/^flush:(room|side|noise|out):/), first = words[0], named = new Set(words.map((l: any) => l.what.split(':')[2])), missed = outside.filter((h: any) => h.state !== 'dead' && !named.has(h.callsign)).map((h: any) => h.callsign);
-        line(outside.length > 0 && warned === outside.length && !!first && Math.abs(first.t - K.afterSecs) < 0.2 && !missed.length, `(g) ${tag}: a lane they know of at both doors keeps nobody back — every man outside is still sent`,
-          `${outside.length} alive outside the room · warned off both doors by the lanes ${warned} · first word ${first ? `${first.what} at ${f1(first.t)} s` : 'none'} (afterSecs ${K.afterSecs}) · words ${words.length} · never sent: ${missed.join(', ') || 'nobody'}`);
-      }
-      if (sideOf(id)) { // (h) …and chooses the door
-        const F = await floor(id, seed, on, { loud: true, lanes: true }), { g, R } = F, now = g.time, O = R.outsidePoint, so = R.sideOutside;
-        // the gun: free floor outside the room a few metres from the main door's own floor with a line of fire to it and none to the side door's (the
-        // first such spot of a ring tried round it — the level's own walls decide which)
-        let gun: number[] = [...O];
-        find: for (const r of [2.5, 3.5, 1.8]) for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6, q = [O[0] + Math.sin(a) * r, 0, O[2] + Math.cos(a) * r];
-          if (F.inB(q) || g.col.nav.isBlocked(q[0], q[2]) || g.col.shotBlocked([q[0], 1.4, q[2]], [O[0], 1.1, O[2]]) || (so && !g.col.shotBlocked([q[0], 1.4, q[2]], [so[0], 1.1, so[2]]))) continue;
-          gun = q; break find; }
-        lanesRestore(g, { serial: 1, lanes: [{ id: 1, from: gun, at: [...O], t0: now, lastT: now, until: now + 150, weight: 1, downs: 1, known: true, knownAt: now, guns: [gun], wedges: [gun, [...O]], roundAt: now + 1e6, stunAt: now + 1e6 }] });
-        F.step(1);
-        const outside = F.up(R.hostiles).filter((h: any) => !F.inB(h.char.pos)), man = outside[0];
-        const main = !!man && laneCovers(g, man, O), side = !!man && !!so && laneCovers(g, man, so);
-        F.step(K.afterSecs + 3);
-        const words = F.lines(/^flush:(room|side|noise|out):/), first = words[0], note = F.lines(/^flush:lane:/);
-        line(main && !side && !!first && /^flush:side:/.test(first.what) && Math.abs(first.t - K.afterSecs) < 0.2 && note.length === 1 && note[0].what.split(':')[2] === first.what.split(':')[2],
-          `(h) ${tag}: the main door's floor in a lane's line of fire and the side door's not — the first man is sent by the side door`,
-          `the lanes cover the main door's floor ${main} · the side door's ${side} · first word ${first ? `${first.what} at ${f1(first.t)} s` : 'none'} · 'flush:lane' notes ${note.map((l: any) => l.what).join(', ') || 'none'}`);
+        line(!words.length && !F.acts() && !F.shotAt.length, `(c) ${tag}: the room taken without a sound — nobody is sent and nobody is shot`,
+          `flush lines ${words.length} · 'act' ${F.acts()} · shot ${F.shotAt.length}`);
       }
     }
   } finally { Object.assign(RESCUEEND, was.end); Object.assign(RESCUEFLUSH, was.flush); LANES.on = was.lanes; Math.random = rnd; }

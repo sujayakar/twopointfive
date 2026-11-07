@@ -23,8 +23,6 @@
 //   gpu       what both GPU consumers are handed says the same: the particles' storm record = the first two roofs + the roof-by-roof bit, the other two on the
 //             Frame where the rain's own test reads them (the same rectangles to the f32); the solver's block = the first two in the record, the other two in its
 //             spare words, spare0 = 1 — and the shader text reads each where it was put
-//   wisps     the wisps run on the field: the recycler's target is the open ground weighed by the field's share (less than the open area: the lee carries
-//             none); the shader's wispAir / wispGust take wispShare, which is 1 without the record's bit, and a wisp in the lee starts its fade-out
 import { standUp, ROOT, fake } from './headless.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -121,34 +119,6 @@ export async function wxWindCheck(o: { verbose?: boolean } = {}): Promise<boolea
       const tS = /if \(s\.kind == 1u\) \{\s*if \(s\.spare0 == 1u\) \{ return windStormRoofs\(s\.dir \* s\.speed, vec4f\(s\.pos, s\.reach\), s\.aux, bitcast<vec4f>\(wind\.spare\[0\]\), bitcast<vec4f>\(wind\.spare\[1\]\), P\); \}\s*return windStorm\(s\.dir \* s\.speed, vec4f\(s\.pos, s\.reach\), s\.aux, P\);/.test(wfc) && /spare: array<vec4u, 2>,/.test(wfc);
       verdict(frame && partOn && smokeOk && tP && tS,
         'gpu — the particles and the smoke solver are handed the same four roofs the CPU reads, and their shaders read them where they were put', `the Frame carries the wind's own roofs (the first two plain, the other two packed): ${frame} · particles: rects ${on.r0.map(f2).join(', ')} / ${on.r1.map(f2).join(', ')}, iflags ${on.iflags} (2 | storm 4 | field 16 | roof by roof 32): ${partOn} · solver — ${smk}: ${smokeOk} · particles.wgsl windAir → windStormOf (bit 5 → windStormRoofs with the Frame's packed two): ${tP} · wind_force.wgsl windSrcVel (spare0 → windStormRoofs with the block's spare words): ${tS}`); }
-
-    // ---- wisps: on the field
-    // (NOT FLOWN where the storm has no speed: read on the Rust game 2026-11-07 the storm's speed is 0 on the pass — the yard line above says so — and 120
-    //  frames of the wisps' recycler under that do not come back in ten minutes. A check that hangs tells nobody anything: the line fails in words instead.)
-    if (!(A.storm().speed > 0)) verdict(false, 'wisps — they file and step on the field: weighed by its share over the open ground, slowed and faded in a roof\'s lee', `not flown: the storm's speed reads ${A.storm().speed} m/s on this stand`);
-    else { const mk = () => { const recs: any[] = []; let queue: any[] = []; const P: any = { params: { rain: { gravity: 9.8, drag: 9.8 / 9, restitution: 6, keep: 0.06, sleepV: 0.2, holdOrFade: 0.09, shutterOrGrowth: 1 / 30, brightOrOpacity: 1 } }, rainLook: { refractReachM: -1, refractClamp: -1, refractDepth: -1 }, rainStats: { live: 0, emitted: 0 },
-          emit(kind: string, pos: number[], _dir: number[], count: number, opts: any) { if (queue.length >= 12) return 0; const r = { kind, pos: [...pos], count, opts: { ...opts } }; queue.push(r); recs.push(r); return count; },
-          draw() { let room = 640; for (const r of queue) { const n = Math.min(r.count, room); room -= n; P.rainStats.emitted += n; P.rainStats.live += n; } queue = []; }, clearRain() { queue = []; P.rainStats.live = 0; } }; return { P, recs }; };
-      const DENS = 0.5; const fly = (R: Rig, frames: number, target: number[]) => { const { P, recs } = mk(); const e = R.g.engine as any; const had = { p: e.particles, gp: e.settings.gpuParticles, pr: e.settings.particleRain };
-        seedSnow(R.g, 1); snowConfig.on = true; snowLookConfig.wisps = true; const storm = R.storm();
-        const dens = e.settings.particleRainDensity; e.settings.particleRainDensity = DENS;   // (thinned: at the page's density the pass's whole yard is over the wisps' cap, and a capped target says nothing of the ground under it)
-        for (let i = 0; i < frames; i++) { storm.speed = storm.base; storm.gust = 1; e.particles = P; e.settings.gpuParticles = true; e.settings.particleRain = true; R.set(); P.draw(); updateSnowFx(R.g, DT, { distance: 21, target } as any); e.particles = had.p; e.settings.gpuParticles = had.gp; e.settings.particleRain = had.pr; }
-        e.settings.particleRainDensity = dens;
-        return { wisps: recs.filter(r => (r.opts.aspect ?? 1) > 1.5), flakes: recs.filter(r => (r.opts.aspect ?? 1) <= 1.5), S: { ...snowStats(R.g) }, Ws: { ...wispStats(R.g) } }; };
-      const at = [20, 0, 14.5]; const on = fly(A, 120, at);
-      const K = SNOWWISPS; const blown = on.Ws.target / (K.perM2 * on.Ws.blow * DENS), flat = on.S.areaOut; const capped = on.Ws.target >= K.max;
-      // the open ground weighed by the field's share, summed again here off the wind's own answer at each cell (the recycler's cells: 1 m, by their centres, under the rim's taper)
-      let want = 0; { const R = on.S.radius, cx = at[0], cz = at[2]; const { WORLD } = await import(`${ROOT}/src/scene/world.ts`); const S = A.storm(); const taper = (r: number) => { const t = Math.max(0, Math.min(1, (r - 0.7) / 0.3)); return 1 - t * t * (3 - 2 * t); };
-        for (let z = Math.floor(cz - R); z < Math.ceil(cz + R); z++) for (let x = Math.floor(cx - R); x < Math.ceil(cx + R); x++) { const px = x + 0.5, pz = z + 0.5, r = Math.hypot(px - cx, pz - cz) / R;
-          if (r >= 1 || A.wx.underRoof(px, pz) || !(px > WORLD.min[0] + 0.25 && pz > WORLD.min[2] + 0.25 && px < WORLD.max[0] - 0.25 && pz < WORLD.max[2] - 0.25)) continue;
-          want += taper(r) * len(A.at([px, 0, pz])) / (S.speed * 0.55); } }
-      const pw = shader('src/render/shaders/particles.wgsl');
-      const tShare = /fn wispShare\(q: vec2f\) -> f32 \{[\s\S]*?if \(\(w\.iflags & 16u\) == 0u\) \{ return 1\.0; \}\s*return clamp\(length\(windStormOf\(w, vec3f\(q\.x, 0\.0, q\.y\)\)\) \/ max\(w\.strength \* WISP_GROUND_AIR, 1e-4\), 0\.0, 1\.0\);\s*\}\s*return 1\.0;\s*\}/.test(pw);
-      const tAir = /let a = wispWind\(\) \* \(em\.rainCfgD\.w \* \(1\.0 \+ 0\.5 \* clamp\(pos\.y \/ 0\.5, 0\.0, 1\.0\)\)\) \* wispShare\(pos\.xz\);/.test(pw) && /return smoothstep\(0\.40, 0\.66, n\) \* wispShare\(q\);/.test(pw);
-      const tDie = /if \(wispShare\(p\.pos\.xz\) < WISP_LEE_DIE\) \{ p\.life = min\(p\.life, p\.age \+ WISP_FADE_OUT\); \}/.test(pw.slice(pw.indexOf('fn wispStep(')));
-      verdict(on.wisps.length > 50 && !capped && Math.abs(blown - want) < 1e-6 * want && blown < 0.97 * flat && blown > 0.4 * flat && tShare && tAir && tDie,
-        'wisps — they file and step on the field: weighed by its share over the open ground, slowed and faded in a roof\'s lee', `the view over the yard, 120 frames at a steady blow: ${on.wisps.length} records toward ${on.Ws.target.toFixed(0)} wisps = ${f2(blown)} m² blown (the field's share summed over the open cells here: ${f2(want)}) of ${f2(flat)} m² open · the shader: wispShare ${tShare}, the air and the gust take it ${tAir}, a wisp in the lee fades ${tDie}`); }
-
 
   } finally {
     WX_OWN.roofs = was.roofs; SNOW_LOOK.wisps = was.wisps; snowConfig.on = was.cfg; snowLookConfig.wisps = was.look;

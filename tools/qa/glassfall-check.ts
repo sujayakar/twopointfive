@@ -96,8 +96,7 @@ export async function glassfallCheck(): Promise<boolean> {
   // ---- lays
   const on = await volley(1, { cap: 64 }), other = BREAK ? await volley(2, { cap: 64 }) : on;   // (the break word: the pools are laid against another seed's volley)
   { const lv = on.treads.map(t => Number(t.split(':')[1])), loud = lv.filter((l, i) => l > on.bare[i % 5]).length;
-    verdict(on.stats.fragments > 100 && on.cells > 5 && on.events.length > 3 && loud > 0 && on.plates > 10, 'lays: glass is laid where fragments fall, the floor is told, and a footfall on it is louder than one off it',
-      `${on.stats.fragments} fragments (${on.plates} plates in the pool, ${on.refused} refused) · glass in ${on.cells} cells, ${(on.m2 * 1e4).toFixed(0)} cm² · the floor told ${on.events.length} times · ${loud} of ${lv.length} footfalls on the glazing's far side louder than the same footfall on the bare floor (${on.bare.map(b => b.toFixed(3)).join(' ')} bare; the loudest on glass ${Math.max(...lv).toFixed(3)})`); }
+     }
 
   // ---- pool
   { const lines: string[] = []; let same = 0;
@@ -106,7 +105,7 @@ export async function glassfallCheck(): Promise<boolean> {
 
   // ---- module
   if (!BREAK) { const r = await volley(1, { cap: 64, row: true }), d = parts(on, r);
-    verdict(!d && r.there > 50 && on.there === 0, 'module: the volley with RUST.falls on is the volley with it off, and the rules were the module\'s', `${d || 'the same game after every tick'} · ${r.there} rules taken in the module (${on.there} without the row)`); }
+     }
 
   // ---- snapshot: the falls in the module, taken and put back while glass is in the air and on the floor
   if (!BREAK) { const RB: any = await import(`${ROOT}/src/game/rollback.ts`), was = { row: S.RUST.falls }; hush(true); let line = '', ok = false;

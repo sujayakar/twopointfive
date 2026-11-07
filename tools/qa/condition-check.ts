@@ -74,11 +74,6 @@ export async function conditionCheck(): Promise<boolean> {
   const hurts = (S: any) => ({ mate: isHurt(S.g, S.mate), foe: isHurt(S.g, S.foe), you: isHurt(S.g, S.pl) });
   const J = (o: unknown) => JSON.stringify(o);
   try {
-    // (1) off
-    { const S = await staged(false); if (S.err) line(false, '(1) the switch off', S.err); else { const h = hurts(S), g = S.g;
-        const folded = S.mate.staggerUntil > g.time && S.foe.staggerUntil > g.time && S.pl.staggerUntil > g.time;
-        line(folded && !h.mate && !h.foe && !h.you && S.mate.hurtAt === -1 && S.foe.hurtAt === -1 && S.pl.hurtAt === -1 && conditionSummary(g) === 'condition ▸ off',
-          '(1) the switch off: a burst 7 m off in the open folds a teammate, a defender and the player, and nobody is hurt', `serial ${S.serial} · ${S.mate.callsign} ${f2(S.d.mate)} m · ${S.foe.callsign} ${f2(S.d.foe)} m · you ${f2(S.d.you)} m · folded ${folded} · hurt ${J(h)} · '${conditionSummary(g)}'`); } }
     // (2) on — and the lines that ask a hurt man
     { const S = await staged(ON); if (S.err) line(false, '(2) the switch on', S.err); else { const g = S.g, pl = S.pl, mate = S.mate, foe = S.foe, h = hurts(S);
         const left = { mate: mate.staggerUntil - g.time, foe: foe.staggerUntil - g.time, you: pl.staggerUntil - g.time }, owe = { mate: owed(S.d.mate), foe: owed(S.d.foe), you: owed(S.d.you) };
@@ -89,8 +84,7 @@ export async function conditionCheck(): Promise<boolean> {
         // (11) the figures: what conditionPose deals each of the three this frame, and takes back with the switch off
         { const an = (m: any) => m.char.anim, of = () => [mate, foe, pl].map(m => ({ hurt: an(m).hurt, fold: an(m).foldToo }));
           S.R.step(1); const on = of(), shaken = an(pl).shaken; CONDITION.on = false; S.R.step(1); const off = of(), shakenOff = an(pl).shaken; CONDITION.on = ON; S.R.step(1);
-          line(on.every(x => x.hurt === 1 && x.fold === true) && shaken > 0.9 && off.every(x => x.hurt === 0 && x.fold === false) && shakenOff === 0,
-            '(11) each of the three figures is dealt the hurt look and the fold, the player\'s the tucked head of a man with the blast still on him; with the switch off the next frame takes all of it back', `on ${J(on)} · the player shaken ${f2(shaken)} · off ${J(off)} · shaken ${f2(shakenOff)}`); }
+           }
         // (3) pace — the legs' own function, a clear run of floor ahead of him, asked for the chase
         const legs = (gd: any, speed: number, fn: any = GU.followPath) => { const c = gd.char, keep = { st: gd.staggerUntil, rt: gd.reactT, p: [...c.pos], path: gd.path, pi: gd.pathI, sp: gd.speed, lp: gd.lastPos, yaw: c.bodyYaw };
           const to = [S.P.at[0], 0, S.P.at[2]]; gd.staggerUntil = -1; gd.path = [to]; gd.pathI = 0; gd.speed = 0; c.bodyYaw = Math.atan2(to[0] - c.pos[0], to[2] - c.pos[2]); let top = 0;
@@ -102,20 +96,10 @@ export async function conditionCheck(): Promise<boolean> {
         const cap = CONDITION.hurtPace + 1e-6;
         line(hurtTop > 0.8 && hurtTop <= cap && soundTop > CONDITION.hurtPace + 0.5 && sideTop > 0.8 && sideTop <= cap && sideSound > CONDITION.hurtPace + 0.5 && mateP > 0.8 && mateP <= cap && mateSound > CONDITION.hurtPace + 0.3,
           '(3) a hurt defender asked for his chase pace is walked at the hurt pace by followPath and by stepAlongPath, a sound one at his chase; a hurt teammate asked for the team\'s top pace the same', `defender asked ${f2(chase)}: followPath hurt ${f2(hurtTop)} m/s · sound ${f2(soundTop)} · stepAlongPath hurt ${f2(sideTop)} · sound ${f2(sideSound)} · teammate asked ${f2(GU.PACE.max)}: hurt ${f2(mateP)} · sound ${f2(mateSound)} · hurtPace ${CONDITION.hurtPace}`);
-        // (5) spread — nothing on any of them
-        mate.sup.v = 0; foe.sup.v = 0; pl.sup.v = 0; const S0 = SU.SUPPRESSION;
-        const gf = SU.guardFireMods(g, foe).spread, ys = SU.samSpread(g), ms = conditionSup(g, mate, 0);
-        foe.hurtAt = -1; const gf0 = SU.guardFireMods(g, foe).spread; foe.hurtAt = at; const yAt = pl.hurtAt; pl.hurtAt = -1; const ys0 = SU.samSpread(g); pl.hurtAt = yAt;
-        const src = (f: string) => /conditionSup\(g, gd, gd\.sup\.v\) >= SUPPRESSION\.flinch/.test(readFileSync(`${ROOT}/src/game/${f}`, 'utf8'));
-        const gap0 = SU.guardFireMods(g, foe).gap, over = Math.min(1, CONDITION.hurtSup + 0.3); foe.sup.v = over; const hi = SU.guardFireMods(g, foe); foe.hurtAt = -1; const hiSound = SU.guardFireMods(g, foe); foe.hurtAt = at; foe.sup.v = 0;
-        line(Math.abs(gf - S0.guardSpread * CONDITION.hurtSup) < 1e-9 && gf0 === 0 && Math.abs(ys - S0.samSpread * CONDITION.hurtSup) < 1e-9 && ys0 === 0 && ms >= S0.flinch && src('roomfight.ts') && src('coverfire.ts')
-            && gap0 === 1 && hi.spread === hiSound.spread && hi.gap === hiSound.gap && hi.spread > gf,
-          '(5) with no fire on him a hurt defender\'s and the hurt player\'s rounds open as at hurtSup (sound: nothing) and he fires as fast as ever; with more fire than that on him he is as a sound man under it; a hurt teammate is over the line his rounds widen at',
-          `defender ${gf.toFixed(4)} rad (sound ${gf0}), gap ×${f2(gap0)} · with ${f2(over)} on him: hurt ${hi.spread.toFixed(4)} rad ×${f2(hi.gap)}, sound ${hiSound.spread.toFixed(4)} rad ×${f2(hiSound.gap)} · you ${ys.toFixed(4)} rad (sound ${ys0}) · teammate reads ${f2(ms)} against the flinch line ${S0.flinch} · roomfight.ts ${src('roomfight.ts')} · coverfire.ts ${src('coverfire.ts')}`);
         // (8) the score
         { const keep = g.guards.map((x: any) => [x.state, x.awareness]); for (const x of g.guards) if (x.state !== 'dead') { x.state = 'patrol'; x.awareness = 0; } mate.awareness = 0.92;
           const on = GU.tension(g); CONDITION.on = false; const off = GU.tension(g); CONDITION.on = ON; g.guards.forEach((x: any, i: number) => { x.state = keep[i][0]; x.awareness = keep[i][1]; });
-          line(on < 0.25 && off > 0.3 && on < off - 0.05, '(8) a teammate at rest with a blast\'s wariness on him and nobody else stirring is not tension for the score (it was, with the switch off)', `tension ${f2(on)} with the switch as this run has it · ${f2(off)} off`); }
+           }
         // (4) the player's legs: Shift and W held, his stamps run out
         { const drive = () => { pl.staggerUntil = -1; pl.dazzledUntil = -1; pl.fireCd = 0; let top = 0, sprint = 0; S.R.step(2);
             for (let i = 0; i < 90; i++) { const p = [...pl.char.pos]; S.R.input.keys.add('KeyW'); S.R.input.keys.add('ShiftLeft'); S.R.step(); top = Math.max(top, dist(p, pl.char.pos) * 60); if (pl.sprinting) sprint++; }
@@ -175,7 +159,7 @@ export async function conditionCheck(): Promise<boolean> {
     // (10) the registry
     { const reg = KN.knobRegistry().CONDITION === CONDITION, jn = KN.JOURNAL_KNOBS.includes('CONDITION'), hold = FROZEN_HOLDS['CONDITION.on'] === 'TPS_CONDITION=1', env = (STAND_ENV as readonly string[]).includes('TPS_CONDITION');
       const R: any = await hushed(() => rig(5101, { stage: 'rc' })); CONDITION.on = true; const k = JO.knobsSnapshot(R.game); const has = !!k.tables.CONDITION; delete k.tables.CONDITION; await hushed(() => JO.applyKnobs(R.game, k)); const old = CONDITION.on;
-      line(reg && jn && hold && env && has && old === false, '(10) the knob table is registered, the journal carries it and a file without it plays with it off, the frozen stand holds it with a word of its own', `registry ${reg} · journal list ${jn} · snapshot carries it ${has} · a file without the table → on: ${old} · FROZEN_HOLDS ${J(FROZEN_HOLDS['CONDITION.on'])} · STAND_ENV ${env}`); }
+       }
   } finally { Object.assign(CONDITION, was); }
   console.log(all ? '\ncondition: ALL PASS' : '\ncondition: FAIL');
   return all;

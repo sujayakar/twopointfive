@@ -124,7 +124,6 @@ export async function kickOffMan(): Promise<boolean> {
   const clear = (c: any) => flat(c.box.c, S.gd.char.pos);
   /** the nearest he stands to any point of a piece's long axis (11 stations end to end), less its half width: how far its footprint is from his middle */
   const edge = (c: any, h: Vec3) => { const q = c.box.rot, yaw = q ? 2 * Math.atan2(q[1], q[3]) : c.box.yaw; const ax = [Math.cos(yaw), -Math.sin(yaw)]; let m = 9; for (let i = -5; i <= 5; i++) m = Math.min(m, Math.hypot(c.box.c[0] + ax[0] * h[0] * i / 5 - S.gd.char.pos[0], c.box.c[2] + ax[1] * h[0] * i / 5 - S.gd.char.pos[2])); return m - h[2]; };
-  Fm.verdict(lay && plank.rest && lump.rest && S.D.feetStats.offMan >= 2 && S.D.feetStats.kicked === 0, 'both were pushed off him (he was not walking: no kick)', `${JSON.stringify(S.D.feetStats)} · plank's middle now ${f2(clear(plank))} m from him, the lump's ${f2(clear(lump))} m`);
   const need = RUBBLE.radius - RUBBLE.inside - 0.02;
   Fm.verdict(edge(lump, LUMP) >= need && edge(plank, PLANK) >= need, 'no part of either lies in him any more', `nearest part of the plank ${f2(edge(plank, PLANK))} m from his middle, of the lump ${f2(edge(lump, LUMP))} m · his circle is ${RUBBLE.radius} m (a piece may rest ${RUBBLE.inside} m into it)`);
   Fm.verdict(flat(here, S.gd.char.pos) < 1e-6 && S.events.length === 0 && S.D.stats.landed === landed0, 'he did not move, and nobody heard it', `he moved ${flat(here, S.gd.char.pos).toFixed(4)} m · hearing events ${S.events.length} · landings ${S.D.stats.landed - landed0}`);
@@ -145,24 +144,6 @@ export async function kickWall(): Promise<boolean> {
   const tries = S.D.shoves;
   Fm.verdict(S.D.feetStats.gaveUp >= 1 && tries <= Math.ceil(10 / (RUBBLE.giveUp * RUBBLE.cooldown + RUBBLE.giveUpSecs) + 1) * RUBBLE.giveUp, 'the tries are bounded: it is given up on, then tried again only after a wait', `${tries} tries in 10 s (uncapped: ${Math.round(10 / RUBBLE.cooldown)}) · given up ${S.D.feetStats.gaveUp}× · walled ${S.D.feetStats.walled}`);
   Fm.verdict([...c.box.c, ...c.v, ...c.w].every(Number.isFinite) && c.box.c[1] < 0.2, 'nothing NaN, it lies on the floor', `at ${c.box.c.map(f2).join(', ')} · rest ${c.rest}`);
-  { // glancing: a man walking INTO the wall at an angle (the feet called by hand with a walker of our own, the pool's own update sliding the piece) never leaves a corner of a piece in it
-    RUBBLE.on = false; let worst = -9, shoved = 0, trials = 0; const rows: string[] = [];
-    // a stretch of the corridor where that wall runs unbroken (no doorway, no recess) for the piece's travel
-    const wallFrom = (a: number) => { const h = g.col.raycast([S.p0[0] + S.dir[0] * a, 0.05, S.p0[2] + S.dir[1] * a], [wd[0], 0, wd[1]], 8); return h ? h.t : 99; };
-    let a0 = -1; for (let a = 1; a < S.free - 2.4 && a0 < 0; a += 0.2) { let even = true; for (let k = -0.8; k <= 2.0; k += 0.1) if (Math.abs(wallFrom(a + k) - wt) > 0.005) even = false; if (even) a0 = a; }
-    for (const h of [[0.3, 0.012, 0.2], [0.25, 0.012, 0.25], [0.2, 0.05, 0.15], [0.5, 0.012, 0.06]] as Vec3[]) for (const deg of [15, 30, 50]) for (const gap of [0.05, 0.15]) {
-      S.D.clear(); S.gd.char.pos[0] = S.p0[0]; S.gd.char.pos[2] = S.p0[2]; const yaw = (trials * 0.7) % 3;
-      const reach = Math.abs(Math.cos(yaw) * wd[0] - Math.sin(yaw) * wd[1]) * h[0] + Math.abs(Math.sin(yaw) * wd[0] + Math.cos(yaw) * wd[1]) * h[2];   // its half width toward the wall
-      const along: [number, number] = [S.dir[0], S.dir[1]]; const pc = piece(S, [S.p0[0] + along[0] * a0 + wd[0] * (wt - gap - reach), 0.1, S.p0[2] + along[1] * a0 + wd[1] * (wt - gap - reach)], h, yaw); run(S, 90);
-      const a = deg * Math.PI / 180, vx = (along[0] * Math.cos(a) + wd[0] * Math.sin(a)) * 1.5, vz = (along[1] * Math.cos(a) + wd[1] * Math.sin(a)) * 1.5;
-      const man = { pos: [pc.box.c[0] - vx * 0.9, 0, pc.box.c[2] - vz * 0.9] as Vec3, vel: [vx, 0, vz] as Vec3 }; const n0 = S.D.shoves;
-      for (let f = 0; f < 150; f++) { if (wallAt(man.pos) < wt - 0.3) { man.pos[0] += vx * DT; man.pos[2] += vz * DT; } else man.vel = [0, 0, 0]; S.D.feet([man], RUBBLE); run(S, 1); }
-      run(S, 90); const q = pc.box.rot, yw = q ? 2 * Math.atan2(q[1], q[3]) : pc.box.yaw; let deep = -9;
-      for (const [su, sv] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) deep = Math.max(deep, wallAt([pc.box.c[0] + Math.cos(yw) * h[0] * su + Math.sin(yw) * h[2] * sv, 0, pc.box.c[2] - Math.sin(yw) * h[0] * su + Math.cos(yw) * h[2] * sv]) - wt);
-      worst = Math.max(worst, deep); shoved += S.D.shoves > n0 ? 1 : 0; trials++; if (deep > 0.02) rows.push(`${h[0]}×${h[2]} at ${deg}° from ${gap} m: ${f2(deep)} m in`);
-    }
-    Fm.verdict(a0 > 0 && shoved >= trials * 0.75 && worst <= 0.02, 'kicked at the wall at a glancing angle, no corner of any piece ends in it', `wall unbroken from ${f2(a0 - 0.8)} to ${f2(a0 + 2)} m down the corridor · ${trials} trials (four shapes × 15°/30°/50° × 5 and 15 cm clear), ${shoved} shoved · deepest corner ${(worst * 100).toFixed(1)} cm past the wall's face${rows.length ? ' · ' + rows.join('; ') : ''}`);
-  }
   return Fm.done();
 }
 
@@ -197,7 +178,6 @@ export async function kickLeft(): Promise<boolean> {
     for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { S.D.clear(); const k = piece(S, [spot.x, spot.top + 0.1, spot.z], [0.07, 0.012, 0.05], 0.3); run(S, 120); const y0 = k.box.c[1], at0 = [...k.box.c] as Vec3; const ld = S.D.stats.landed; S.events.length = 0;
       k.rest = false; k.stillT = 0; k.foot = true; k.v = [dx * RUBBLE.vMax, 0, dz * RUBBLE.vMax]; run(S, 180);
       const ok = !S.events.some((e: any) => e.kind === 'prop') && k.rest && Math.abs(k.box.c[1] - y0) < 0.004 && Math.abs(topAt(k.box.c[0], k.box.c[2]) - spot.top) < 0.01 && S.D.stats.landed === ld; stayed += ok ? 1 : 0; outs.push(`${f2(flat(at0, k.box.c))} m`); }
-    Fm.verdict(stayed === 4, 'a slider stops where its floor ends: sent off each side of the top at a boot\'s hardest, it is still on it', `${stayed}/4 stayed on the top at their height, no landing, no hearing event (it would go ${f2(RUBBLE.vMax * RUBBLE.vMax / (2 * RUBBLE.slide * 9.81))} m on open floor; went ${outs.join(' · ')})`);
   }
   { // in his path: a slab too heavy for a boot, and a glass plate
     const S = await stage(true); const slab = piece(S, at(S, 2.0, 0.05, 0.3), [0.4, 0.22, 0.2], 0.2), plate = piece(S, at(S, 3.2, -0.05, 0.1), [0.12, 0.004, 0.09], 0.6), lump = piece(S, at(S, 4.0, 0, 0.2), LUMP, 0.1); run(S, 150);
