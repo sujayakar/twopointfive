@@ -131,7 +131,7 @@ export class PerfRecorder {
   /** frames: the most this take may hold (default the ten minutes at 60) */
   start(note = '', frames = MAX_FRAMES): void {
     this.ring.reset(Math.max(1, Math.floor(frames))); this.events = []; this.t0 = performance.now(); this.startedAt = new Date().toISOString(); this.recording = true;
-    if (this.commit === undefined && typeof document !== 'undefined') try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }   // (asked on the first recording, as the session journal asks: ui/sessionrec.ts)
+    if (this.commit === undefined && typeof document !== 'undefined') try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }   // (asked on the first recording)
     this.settings0 = this.snapSettings(); this.lastSettingsKey = this.settingsKey(); this.shed0 = !!this.quality.shed;
     this.lastSaves = -1; this.lastLoads = -1;
     this.lastPreset = this.quality.label; this.lastEff = this.engine.effectiveScale; this.lastEsc = -1; this.lastQualityNote = this.quality.lastChange ?? ''; this.lastReallocs = this.engine.passes.reallocs;

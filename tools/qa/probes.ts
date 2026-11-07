@@ -75,7 +75,7 @@
 //     gunhand: gunhand-reload gunhand-throw gunhand-whistle   (a move keeps to the free hand — src/game/gunhand.ts GUNHAND.on: a long gun reloads with a move of its own, a man with a long gun throws with his free hand, a whistle is answered with the torch up in the hand that holds it; ~40 s)
 //     weapons: weapons-identity
 //     weather: weather-daylight weather-flash weather-off weather-scheduler weather-smoke weather-thunder
-//     wxkinds: wxkinds-default wxkinds-hearing wxkinds-journal wxkinds-roofs wxkinds-save wxkinds-sight wxkinds-url
+//     wxkinds: wxkinds-default wxkinds-hearing wxkinds-roofs wxkinds-save wxkinds-sight wxkinds-url
 //     hourwx: hourwx-air hourwx-cloud hourwx-query hourwx-save hourwx-sheet hourwx-storm
 //     wet: wet-cast wet-off wet-prints wet-reset wet-roof wet-shading wet-soak
 //     whistle: whistle-alert whistle-door whistle-keys whistle-nearest whistle-reach whistle-torch whistle-twice
@@ -2844,8 +2844,6 @@ if (on('writing', 'ui', 'words', 'all')) await run('writing', async () => (await
 if (on('mystery', 'ui', 'words', 'all')) await run('mystery', async () => (await import('./mystery-check.ts')).mysteryCheck());   // how many are inside is a mystery (ui/missions.ts MYSTERY): no mission has a Defenders cell, no row, pick line or Hard sentence says a head count; no stand, nothing of the game runs; MYSTERY_BREAK=1 must fail
 if (on('loadbrief', 'ui', 'all')) await run('loadbrief', async () => (await import('./loadbrief-check.ts')).loadbriefCheck());   // a mission's page loads behind that mission's own brief and waits for Start (src/ui/loadbrief.ts): every row's words off its own address, the screen and its hand-over on a fake DOM, main.ts's wiring, off on both stands; LOADBRIEF_BREAK=1 must fail
 if (on('lightswitch', 'player', 'all')) await run('lightswitch', async () => (await import('./lightswitch-check.ts')).lightswitchCheck());   // a room's lights have a switch on the wall: the plates every level is given, Sam's row and the tap, the room dark to the light estimate, a defender who puts it back, a checkpoint, off = no plate and the same run by digest (src/game/lightswitch.ts; LIGHTSWITCH_BREAK=1 must FAIL)
-if (on('recordcut', 'checkpoints', 'all')) await run('recordcut', async () => (await import('./journalcut-check.ts')).journalCutCheck());   // an F10 recording ends whole before a checkpoint's load or a restart made between frames (journal.ts cut), and that file replays
-if (on('recordload', 'checkpoints', 'all')) await run('recordload', async () => (await import('./journalload-check.ts')).journalLoadCheck());   // an F10 recording runs on across a checkpoint loaded INSIDE an update (the bare Enter once down) and its file replays: a save in memory made under the tape, a file slot from before it; JOURNALLOAD_BREAK=1 must fail
 if (on('statediff', 'checkpoints', 'all')) await run('statediff', async () => (await import('./statediff-check.ts')).statediffCheck());   // two states side by side (rollback.ts stateFlat / flatDiff): light to keep, a value that differs leaves the walk in step, a shape is said once and passed over; STATEDIFF_BREAK=1 must fail; ~10 s
 if (on('savetimeline', 'checkpoints', 'all')) await run('savetimeline', async () => (await import('./savetimeline-check.ts')).savetimelineCheck());   // the saves roll (five by hand beside five autosaves), keep a picture, are kept in memory with a team on the floor, and each entry of the strip loads and plays on as its save did; SAVETIMELINE_BREAK=1 must fail
 if (on('saveplan', 'checkpoints', 'all')) await run('saveplan', async () => (await import('./saveplan-check.ts')).savePlanCheck());   // a save from a build that had plan mode (a `plan` slice in the file) still loads, plays on as the same file without it does, and is not written again
@@ -3522,14 +3520,7 @@ if (on('checkpoint-refuse', 'checkpoints', 'all')) await run('checkpoint-refuse'
 { let civFail = 0;   // checkpoint-civilians lives in review-b-probes.ts (also 'rb-checkpoint-civilians' there): its verdict joins this family's banner, printed after the LAST member
   if (on('checkpoint-civilians', 'checkpoints')) { if (!await run('checkpoint-civilians', async () => (await import('./review-b-probes.ts')).checkpointCivilians())) civFail = 1; }
   if (KNOWN.has(which) && which.startsWith('checkpoint')) familyBanner('checkpoints', (await import('./checkpoint-probes.ts')).checkpointFailures() + civFail); }
-// ---------------------------------------------------------------- the session journal (journal-probes.ts; src/game/journal.ts + sensors.ts + digest.ts): 'journal' = the family — a 90 s scripted session
-// recorded headless replays identically in a fresh game; a forged sensor value / a gameplay knob nudged is caught as a divergence at the right frame with the field named; every fixture
-// under tools/qa/sessions/ replays identically on this build (`probes.ts journal --write` re-files the scripted fixture; tools/qa/replay.ts <file> replays one by hand)
-if (on('journal-roundtrip', 'journal', 'all')) await run('journal-roundtrip', async () => (await import('./journal-probes.ts')).journalRoundtrip());
-if (on('journal-pagelike', 'journal', 'all')) await run('journal-pagelike', async () => (await import('./journal-probes.ts')).journalPagelike());
-if (on('journal-perturb', 'journal', 'all')) await run('journal-perturb', async () => (await import('./journal-probes.ts')).journalPerturb());
-if (on('journal-knob', 'journal', 'all')) await run('journal-knob', async () => (await import('./journal-probes.ts')).journalKnob());
-if (on('journal-fixtures', 'journal', 'all')) await run('journal-fixtures', async () => (await import('./journal-probes.ts')).journalFixtures());
+// ---------------------------------------------------------------- what a tape's recipe carries (src/game/journal.ts): 'journal' = the family
 let journalKnobsRed = 0;
 if (on('journal-knobs', 'journal', 'all')) journalKnobsRed = (await run('journal-knobs', async () => (await import('./knobs-check.ts')).knobsCheck())) ? 0 : 1;   // THE list of knob tables (src/game/knobs.ts): the recording's set, the feel panel's tables, the copy / put-back round trip
 if (on('settings-reads', 'journal', 'all')) await run('settings-reads', async () => (await import('./settings-check.ts')).settingsReads());   // THE PICTURE'S SETTINGS ARE NOT THE GAME'S (src/game/env.ts): no file under src/game reads a setting of the engine's outside the named rows — the static lines of tools/qa/settings-check.ts
@@ -3545,7 +3536,7 @@ if (on('farcalm', 'farsight', 'all')) await run('farcalm', async () => (await im
 if (on('look', 'all')) await run('look', async () => (await import('./look-check.ts')).lookCheck());   // THE DEFAULT LOOK (src/scene/look.ts): a level's file in the look is the plain file in other paint — box for box, the same to every classifier and every destruction index
 if (on('does', 'destruction', 'look', 'all')) await run('does', async () => (await import('./does-check.ts')).doesCheck());   // NO RULE READS A COLOUR TO KNOW WHAT A THING IS (src/scene/materials.ts, Box.does): the table, the source, and six levels stood up with every colour moved and replaced, the rules' answers the same (DOES_BREAK=1 must fail; both stands)
 if (on('floororder', 'look', 'all')) await run('floororder', async () => (await import('./floor-order-check.ts')).floorOrderCheck());   // EVERY LEVEL'S FLOOR DRAWS IN ORDER (tools/levels/flatLayers.ts layFloor): no two things drawn at the floor in different paint share a plane, in any level file
-if (KNOWN.has(which) && which.startsWith('journal')) familyBanner('journal', (await import('./journal-probes.ts')).journalFailures() + journalKnobsRed);
+if (KNOWN.has(which) && which.startsWith('journal')) familyBanner('journal', journalKnobsRed);
 // ---------------------------------------------------------------- review-b (review-b-probes.ts): the deep review's game-systems findings fixed by lane game-fixes-B (docs/internal/review-ledger.md
 // G3.1‥G3.8, U9.2 / U9.9 / U9.10) — 'review-b' = the family
 if (on('rb-checkpoint-civilians', 'review-b', 'all')) await run('rb-checkpoint-civilians', async () => (await import('./review-b-probes.ts') as any).checkpointCivilians());
@@ -3565,7 +3556,6 @@ if (on('wxkinds-roofs', 'wxkinds', 'all')) await run('wxkinds-roofs', async () =
 if (on('wxkinds-sight', 'wxkinds', 'all')) await run('wxkinds-sight', async () => (await import('./weather-kinds-probes.ts')).wxSight());
 if (on('wxkinds-hearing', 'wxkinds', 'all')) await run('wxkinds-hearing', async () => (await import('./weather-kinds-probes.ts')).wxHearing());
 if (on('wxkinds-save', 'wxkinds', 'all')) await run('wxkinds-save', async () => (await import('./weather-kinds-probes.ts')).wxSave());
-if (on('wxkinds-journal', 'wxkinds', 'all')) await run('wxkinds-journal', async () => (await import('./weather-kinds-probes.ts')).wxJournal());
 if (on('wxkinds-url', 'wxkinds', 'all')) await run('wxkinds-url', async () => (await import('./weather-kinds-probes.ts')).wxUrl());
 // ---------------------------------------------------------------- the weather's dust in the rooms (airdust-probes.ts — game/airDust.ts): 'airdust' = the family
 if (on('airdust-shut', 'airdust', 'all')) await run('airdust-shut', async () => (await import('./airdust-probes.ts')).airShut());

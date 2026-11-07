@@ -182,7 +182,7 @@ export interface Headless {
 }
 
 /** A fresh level + engine stand-in + Game. Math.random should already be seeded by the caller if determinism matters (Guard / Character constructors draw from it).
- *  `env` (a session journal's EnvSnap — tools/qa/replay.ts): stand the engine up as the RECORDING's was where the simulation can tell — its settings (debris cap,
+ *  `env` (a tape's EnvSnap — tools/qa/rerun.ts): stand the engine up as the RECORDING's was where the simulation can tell — its settings (debris cap,
  *  emissive scale, torch radius, marking lights) before the Game is built, a fake GPU particle system attached if it had one (the effect sites then take the branch
  *  they took), the canister row on the null smoke. Absent = the harness exactly as it always stood.
  *  `level` (a Level — loadLevel(parseLevelData(text)) of any file under levels/): stand the game up on THAT level instead of the bundled office.

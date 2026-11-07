@@ -33,7 +33,7 @@ const TAG_MS = 7000;
 export type ReplaySent = Awaited<ReturnType<typeof cloudFile>>;
 /** how long a save waits on the backend's answer before it says the replay is waiting to be sent and lets the key go (the answer's own line follows) */
 const SEND_SAY_MS = 600;
-/** the tag: under the checkpoint and REC tags (index.html #checkpoint, #journal), over the cards and the debugger's panel, on a plate of its own so it reads over either */
+/** the tag: under the checkpoint tag (index.html #checkpoint), over the cards and the debugger's panel, on a plate of its own so it reads over either */
 const TAG_CSS = 'position:fixed;right:14px;top:42px;max-width:min(64ch,70vw / var(--tz, 1));z-index:45;padding:3px 7px;border-radius:3px;background:rgba(var(--h-plate,12,11,9),0.94);font:11px/1.4 var(--h-font,sans-serif);letter-spacing:0.01em;text-align:right;color:var(--h-ink,#d2c9b5);pointer-events:none;opacity:0;transition:opacity .3s';
 /** how often the page tells the keeper whether the run is over, and how long the end's beat may wait for an idle moment (keeper.ts watch: a run's end is
  *  filed at once). A run that ends and is begun again inside one look is not seen: its ending is filed by the next beat, as every ending was before */
@@ -61,6 +61,7 @@ export class ReplayKey {
   constructor(private game: Game, cam: { target: ArrayLike<number>; yaw: number; distance: number }, private note: (s: string) => void, private meta: () => Partial<ReplayMeta> = () => ({})) {
     // (a game page is up — booted, or handed back by the browser as it was left: the last trip to a replay is over, and leaveFor's mark is one trip's)
     try { if (!/[?&]playtape=/.test(location.search)) { sessionStorage.removeItem(CAME_FROM); window.addEventListener('pageshow', e => { if ((e as PageTransitionEvent).persisted) { try { sessionStorage.removeItem(CAME_FROM); } catch { /* */ } } }); } } catch { /* */ }
+    try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }
     let on = true;
     try { if (new URLSearchParams(location.search).has('noreplay') || localStorage.getItem(LS) === '0') on = false; } catch { /* a sandboxed frame: on */ }
     this.buf = on ? new ReplayBuffer() : null;
@@ -70,7 +71,6 @@ export class ReplayKey {
     // instead of on its slow round, so a number moved while playing is taped at the step it first acts on. The game's own view is not a control)
     try { for (const ev of ['input', 'change', 'click']) document.addEventListener(ev, e => { if ((e.target as Element | null)?.id !== 'view') buf.tape.touched(); }, true); } catch { /* */ }
     this.keep();
-    try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }
     window.addEventListener('keydown', e => {
       if (!f7(e)) return;
       e.preventDefault();

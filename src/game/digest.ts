@@ -3,9 +3,8 @@
 // episode, the radio check), the decal count, the civilians. Positions to the millimetre, clocks to the hundredth: two games that agree on this every couple
 // of seconds are, for every purpose the QA harness has, the same game.
 //
-// Two readers: the checkpoint probes (tools/qa/checkpoint-probes.ts: continue ≡ load ≡ load-into-a-fresh-game — this function moved here from that file, its
-// shape unchanged) and the SESSION JOURNAL (journal.ts / tools/qa/replay.ts): a recording carries one of these every JOURNAL_DIGEST_EVERY frames and a replay
-// compares its own, naming the FIELD that first differs (diffDigest) — 'guards[1].aw 0.31 ≠ 0.29' says which man and what, not just 'diverged'.
+// Its reader: the checkpoint probes (tools/qa/checkpoint-probes.ts: continue ≡ load ≡ load-into-a-fresh-game — this function moved here from that file, its
+// shape unchanged). A comparison names the FIELD that first differs (diffDigest) — 'guards[1].aw 0.31 ≠ 0.29' says which man and what, not just 'diverged'.
 import type { Game } from './game';
 import { FRAG } from './frag';
 import { rollcallState } from './guards';
@@ -22,7 +21,7 @@ const p3 = (p: Vec3 | number[] | null | undefined) => p ? [f3(p[0]), f3(p[1]), f
 export type GameDigest = Record<string, unknown>;
 
 /** ONE sample of everything the identity claim is over (see the head). The checkpoint rows / counters of the chronicle are left out: they ARE the legitimate
- *  difference between a game stepped on and one loaded. `compact` (the session journal's form, one every couple of seconds in a file): the same fields with the
+ *  difference between a game stepped on and one loaded. `compact` (a shorter form): the same fields with the
  *  two that grow without bound folded — a speech bubble to its length + hash, the chronicle's kind list to a hash + its last three rows — ~2 KB instead of 3+. */
 export function digestGame(game: Game, compact = false): GameDigest {
   const bub = (b: { text: string; t: number } | null | undefined) => !b ? null : compact ? `${b.text.length}#${hashStr(b.text).toString(36)}@${f2(b.t)}` : `${b.text}@${f2(b.t)}`;
@@ -71,7 +70,7 @@ export function diffDigest(a: unknown, b: unknown, max = 12): string[] {
   return out;
 }
 
-/** mulberry32 — the one seeded die the harness, the checkpoints' identity claim and the session journal all mean by 'seeded' (math/dice.ts) */
+/** mulberry32 — the one seeded die the harness, and the checkpoints' identity claim both mean by 'seeded' (math/dice.ts) */
 export { mulberry32 } from '../math/dice';
 
 // ---- THE RAW BITS: the digest above rounds (to the mm, to the hundredth) — right for 'the same game for every purpose', blind to two games whose arithmetic parted

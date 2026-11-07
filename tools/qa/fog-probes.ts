@@ -30,7 +30,6 @@ const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { MKEY } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { say, spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
-import { replaySession } from './replay.ts';
 
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
@@ -297,21 +296,6 @@ export async function fogRules(): Promise<boolean> {
     let lo = 9, hi = -9, off = 0; for (let i = 0; i < 90; i++) { Q.W.input.keys.add('KeyD'); Q.W.input.keys.add('ShiftLeft'); Q.step(); lo = Math.min(lo, eyeY()); hi = Math.max(hi, eyeY()); off = Math.max(off, overFeet()); }
     const stand = eyeY(); Q.W.input.keys.clear(); g4.player.crouch = true; for (let i = 0; i < 60; i++) { g4.player.crouch = true; pc.anim.crouchTarget = 1; Q.step(); } const low = eyeY();
     verdict(hi - lo < 1e-4 && Math.abs(stand - 1.55) < 1e-4 && off < 1e-4 && low < 1.2 && low >= 0.95 - 1e-4 && F4.frame.eyes[3] === pc.id, 'the mask\'s eye for Sam: 1.55 m over his feet through a second and a half of running (the head bone bobs; this does not), lower crouched, his id beside it', `standing / running ${lo.toFixed(3)}‥${hi.toFixed(3)} m · off his feet ${off.toFixed(3)} m · crouched ${low.toFixed(2)} m · crouch shown ${pc.anim.crouch.toFixed(2)}`);
-  }
-  { // F10 under the fog: the switch rides in the file's knobs, so the replay asks what the recording asked
-    Object.assign(FOG, FOG_DEFAULTS); Math.random = seeded(18);
-    const W: any = await standUp(); const g5 = W.game; g5.fogOfWar.on = true; g5.godMode = true; FOG.linger = 0.3;
-    for (let i = 0; i < 30; i++) { g5.player.visibility = 0.1; W.step(DT); }
-    const okReq = g5.journal.request({ seed: 515151, note: 'fog-probes: a session under the fog of war' });
-    let f = 0; for (; f < 600; f++) { if (f > 60 && f < 420) W.input.keys.add('KeyD'); W.step(DT); }
-    const F = g5.journal.stop('fog-probes', true);
-    if (!okReq || !F) verdict(false, 'a session recorded under the fog', `request ${okReq} · file ${!!F} · ${g5.journal.summary()}`);
-    else {
-      const fowKeys = F.sensors.keys.filter((k: string) => k.startsWith('fow')).length;
-      const Rp = await replaySession(JSON.parse(JSON.stringify(F)), 'fog', { quiet: true });
-      verdict(F.knobs.flags.fog === true && F.knobs.tables.FOG?.linger === 0.3 && Rp.ok && Rp.sensor.divergences === 0, 'ten seconds recorded with the fog on (F10\'s recorder) replay identically in a fresh game: the switch and its knobs are in the file', `flag in the file ${F.knobs.flags.fog} · FOG.linger in the file ${F.knobs.tables.FOG?.linger} · fow sensor keys journaled ${fowKeys} · replay ok ${Rp.ok}, ${Rp.digestsChecked} digests, ${Rp.sensor.divergences} sensor divergences${Rp.bad ? ' · ' + Rp.bad : ''}`);
-    }
-    Object.assign(FOG, FOG_DEFAULTS);
   }
   return done();
 }

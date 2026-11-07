@@ -45,8 +45,8 @@ page();
 }
 { // a listener that throws, and one whose promise is refused
   SAVED.sink = () => { throw new Error('the backend is away'); }; const n = clicks.length;
-  let threw = false, went: Went = { went: 'sent', local: true }; try { went = saveFile('session', 'd.json', new Blob(['x'])); } catch { threw = true; }
-  if (!BREAK) SAVED.sink = (() => Promise.reject(new Error('the backend is away'))) as any; const went2 = saveFile('session', 'd2.json', new Blob(['x']));
+  let threw = false, went: Went = { went: 'sent', local: true }; try { went = saveFile('perf', 'd.json', new Blob(['x'])); } catch { threw = true; }
+  if (!BREAK) SAVED.sink = (() => Promise.reject(new Error('the backend is away'))) as any; const went2 = saveFile('perf', 'd2.json', new Blob(['x']));
   await new Promise(r => setTimeout(r, 20));
   check(!threw && is(went, false, false) && is(went2, false, false) && clicks.length === n && rejections === 0, 'a listener that throws or whose promise is refused: the caller hears no error, is told the file went nowhere, and no rejection is left unhandled');
 }

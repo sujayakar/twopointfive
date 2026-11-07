@@ -273,10 +273,6 @@
     #checkpoint.on { opacity: 0.8; transition: opacity .15s; }
     #checkpoint b { display: inline-block; width: 5px; height: 5px; margin-right: 7px; transform: rotate(45deg); background: currentColor; vertical-align: 1px; }
     body.touring #checkpoint { display: none; }
-    /* the session journal's REC tag (game/journal.ts, overlay.ts; F10): under the checkpoint tag, red while recording, amber while it waits for a moment it may start on */
-    #journal { position: absolute; right: 14px; top: 26px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; color: #e8b04c; text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .3s; }
-    #journal.on { opacity: 0.9; }
-    #journal.rec { color: #ff5a4e; }
     .objmark { position: absolute; transform: translate(-50%, -5px); pointer-events: none; text-align: center; }
     .objmark i { display: block; width: 7px; height: 7px; margin: 0 auto; border: 1.5px solid var(--h-acc); transform: rotate(45deg); box-shadow: 0 0 5px rgba(0,0,0,0.8); }
     .objmark span { display: block; margin-top: 6px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: nowrap; }
@@ -715,7 +711,6 @@
     <div id="tabcard"></div>
     <div id="alarm"></div>
     <div id="checkpoint"><b></b>CHECKPOINT</div>
-    <div id="journal"></div>
     <div id="caption"></div>
       <div id="timeline"></div>
     <div class="bar top"></div><div class="bar bot"></div><div id="blind"></div><div id="veil"></div>

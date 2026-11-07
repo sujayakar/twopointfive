@@ -1,9 +1,9 @@
-// EVERY FILE THE PAGE SAVES goes out through this one door (2026-10-27): a recorder's take, a benchmark's result, a session journal, an
+// EVERY FILE THE PAGE SAVES goes out through this one door (2026-10-27): a recorder's take, a benchmark's result, an
 // exported checkpoint, a level from the editor. It began as the one place the page clicked an <a download>, with a listener (`SAVED.sink`) told of each file
 // so that a hosted build's backend could keep the same one (the maintainer: "can you make it so benchmark results upload automatically?", "we should do that
 // for everything that gets downloaded"). THEN, the same day: "we should get rid of local downloads entirely", and his pick for a file that cannot go: no
 // download, the page says it was not sent, the editor keeps saving its level files. So a file now goes to the LISTENER ALONE and the browser is handed
-// nothing, for every kind that has given its download up (`SAVE_UP`): the recorder's take, the benchmark's result, the session journal and an exported checkpoint have. A kind still
+// nothing, for every kind that has given its download up (`SAVE_UP`): the recorder's take, the benchmark's result and an exported checkpoint have. A kind still
 // on `SAVE_UP.local` is downloaded as before and told to the listener too: the editor's level, the one kind that stays. `?downloads=1` is the door as it
 // was, for a developer: every file downloaded, the listener told.
 // A REPLAY DOES NOT COME THIS WAY, and nothing downloads one. F7 and the engine replay's Save hand theirs to the backend with `cloud.ts cloudFile`, which
@@ -16,7 +16,7 @@
 // A PAGE IS ONE BUNDLE: the workbench has a door of its own, and no listener unless that page sets one. The replay pages carry no door at all.
 // THIS MODULE IMPORTS NOTHING: ui/ and editor/ save through it.
 /** every kind of file the door knows, as a list (the type below is made of it; tools/qa/savefile-check.ts walks it, so a kind added here is watched at once) */
-export const SAVED_KINDS = ['perf', 'bench', 'price', 'session', 'checkpoint', 'level', 'modelerr', 'capture'] as const;
+export const SAVED_KINDS = ['perf', 'bench', 'price', 'checkpoint', 'level', 'modelerr', 'capture'] as const;
 export type SavedKind = typeof SAVED_KINDS[number];
 /** a file as it went out. `meta`: short facts of it for whoever keeps it (the build's commit, what a take was of), never the file again */
 export interface SavedFile { kind: SavedKind; name: string; blob: Blob; meta?: Record<string, string> }
