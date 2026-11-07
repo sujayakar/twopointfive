@@ -1145,7 +1145,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   clear is refused with a teammate behind the door, like the charge; `orders.notes` may return keyed lines (`OrderNote`): the squad block shows '[F] go · red + blue
   waiting' or 'blue waiting · T, then F', 'word given · waiting for blue', and says 'F blows it' of a set charge only while F would.
   A cursor on a door picks it only where the camera can SEE the doorway (a wall in front hides its foot: point at the visible part, or turn the camera).
-  QA: `probes.ts squadplay` (go / wait / try / side / key / off — every order a one-frame press, nothing held).
+  QA: `probes.ts squadplay` (go / wait / try / side / key / off — every order a one-frame press, nothing held). (2026-11-07: the `squadplay` family is
+  DELETED: it pressed the old menu's T, X and B keys, and the ring is the only way in.)
 
 <!-- was CLAUDE.md lines 2550–2563 -->
 - **A teammate works a thing** (`src/game/workthings.ts`, `Game.work: WorkThings`; `WORK.on` — on in the page, `?noworkthings` = as it was; the frozen stand holds it off,
@@ -1390,6 +1391,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the run with it off by digest once one is said; off is the build as it was (seeds 1–4, two entries each, both stands, against the build
   head it was merged on). The pre-existing named call has no such guard: a response team that ends an entry in a listed room of a room clear
   would call it by name, as it did before any of this (not seen, not changed here).
+  (2026-11-07: `squadnet-why` is DELETED: the squad picks no entry, the command is the door's first row, so no reason is given.)
   CHECK `bun run tools/qa/squadnet-check.ts` (also `probes.ts squadnet`: why · clear · end · net · off; `end` runs under `doortools` too;
   `SQUADNET_BREAK=1` fails all five; `net` holds where a far line is put by `netPlace`: eight ways out, you out by the border, a spot under a card or on another line, 960 placings none off the view), both stands, the room clear on the office with four, seeds 5, 7 and 11, and the response team on seed
   41. It reads what a man SAID off his bubble, a frame at a time. MEASURED on the office (the squad of four, the quick key's own pick, the

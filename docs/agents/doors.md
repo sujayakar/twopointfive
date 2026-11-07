@@ -57,7 +57,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   they are expected by opens away AND he would have wedged it (`wouldBrace` = startBrace's first tests, asked without starting anything), the room's next door is tried instead
   (`nextDoors`) — the rule moves a wedge, it never adds one. `DIGIN_STATS.opensAway` = doors he would have wedged and passed over (once a door), `wedgedAway` = wedges put on a door opening away, counted whatever
   the switch says — 0 with the rule on. NOT touched: the drills' own `d.vel` writes (always the push face); `director.ts c.doors.kick` goes through kickIn, so in a PLAY program a
-  kick from a pull face now thuds (showcases are staged: as they were). QA: `probes.ts frameholds` (boot / tools / sam / wedge — lines run with the switch on AND off; `frameholds-boot`
+  kick from a pull face now thuds (showcases are staged: as they were). QA (2026-11-07: the rule is settled, the off stagings are gone, and so are `frameholds-boot`, which drove the deleted TypeScript doors, and `stay-open-digin`, whose rule is settled off; `frameholds-tools` stands a squad with empty big slots): `probes.ts frameholds` (boot / tools / sam / wedge — lines run with the switch on AND off; `frameholds-boot`
   also rides `doors`), `oneway-leaf` splits its booted openers by face under `QA_FRAMEHOLDS=1`.
 - **Doors stay where they are left** (`doors.ts DOORSTAY`, on by default in the page; `?doorclosers` / Tab ▸ Sandbox ▸ Player, doors & props / `__doors.stay`; off = every leaf with its
   hydraulic closer, the game as it was by run digest): `Doors.stay` = the switch AND no showcase on the stage (`Doors.staged`, a callback Game sets to `() => this.touring`: the tour,
