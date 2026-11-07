@@ -13,12 +13,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // read; the frame's box list takes a box a live spark (game.ts:1820, no DRESS row). So the whole class is translated: round one's three no-ops (clear, update, boxes)
 // would have left every trail standing at the burst point. `tracker` itself is effects' Track::Spark { slot, gen_ } (p_effects_01 track_at): its stub stays.
 
-/// the pool's 96 slots   (sparks.ts Sparks.constructor)
-pub fn sparks_new(g: &mut crate::game::Game, params: crate::sparks::SparkParams) -> crate::sparks::Sparks {
-    let mut pool = Vec::with_capacity(96);
-    for _ in 0..96 { pool.push(Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }); }
-    Sparks { pool, live: 0.0, params }
-}
 /// a free slot, else the spark nearest its end   (sparks.ts Sparks.slot)
 pub fn sparks_slot(g: &mut crate::game::Game) -> f64 {
     let n = m::min(js::to_i32(g.sparks.params.max_live) as f64, g.sparks.pool.len() as f64);
@@ -139,11 +133,3 @@ pub fn sparks_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     }
 }
 
-/// A HOST STEP AFTER AN IMPORT: the bridge does not carry `Game.sparks` (not-carried.json: "its type holds what the bridge cannot read"), so an imported
-/// game has an empty pool and params at zero. This is game.ts:938 `new Sparks(fx.sparks)` again.  BRIDGE-ASK: carry Game.sparks (a pool of plain numbers and its params).
-pub fn sparks_after_import(g: &mut crate::game::Game) {
-    if !g.sparks.pool.is_empty() { return; }
-    let k = crate::effects::sparks();
-    let p = SparkParams { gravity: k.gravity, drag: k.drag, hold: k.hold, brightness: k.brightness, max_live: k.max_live, emissive: k.emissive, thickness: k.thickness, shutter: k.shutter, min_streak: k.min_streak, collide: k.collide };
-    g.sparks = sparks_new(g, p);
-}

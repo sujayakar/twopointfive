@@ -1,4 +1,4 @@
-// A KIT ISSUED BY THE LEVEL — the check behind src/game/kit.ts `kitIssue` (`ISSUE.on`, the level block `scenarios.issue`; today levels/hall.json alone).
+// A KIT ISSUED BY THE LEVEL — the check behind src/game/kit.ts `kitIssue` (the level block `scenarios.issue`; today levels/hall.json alone).
 //   bun run tools/qa/issue-check.ts
 // What it holds (the game stood up by the harness, the long hall's room clear staged with the four):
 //   1. the file: the block is read (the long hall's names no card: the plain issue for every man), and the validator refuses a place that is no member, an unknown field and a count out of range
@@ -9,9 +9,9 @@
 //   3. a restart stages the same cards again
 //      and YOUR OWN four counts are what a level with no block gives you, with the pouches rule on (one of each) and off (what a Player is built with)
 //      and at EVERY SQUAD SIZE a URL can stage (4, 3, 2, 1, 0; pouches rule on) the named card is on the first man who comes and on nobody else
-//   4. off (`ISSUE.on` false, the page's ?noissue): the same staging wears the kept kit
-//   5. a level without the block: the switch on and off stage the same game, digest for digest, over two seconds
-//   ISSUE_BREAK=1  the switch is left off where the lines above want it on: the check must FAIL (exit 1) — the proof that it can
+//   SINCE 2026-11-07 the rule is settled on and the check does not write its switch: "off: the same staging wears the kept kit" and "a level without the
+//   block is the same game with the switch on and off" are out.
+//   ISSUE_BREAK=1  every level staged here has its issue block taken out of its text first, so the kept kit is worn: the check must FAIL (exit 1)
 // exit 0 = all hold · 1 = one does not
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -22,10 +22,9 @@ const CARD = { weapon: 'pistol', bangs: 2, charges: 0, frags: 0 };
 
 export async function issueCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
-  const K = await import(`${ROOT}/src/game/kit.ts`), { ISSUE, KIT, KIT_LS } = K;
+  const K = await import(`${ROOT}/src/game/kit.ts`), { KIT, KIT_LS } = K;
   const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`), { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
   const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
   const brk = process.env.ISSUE_BREAK === '1', knobs0 = knobsCopy();
 
@@ -37,8 +36,9 @@ export async function issueCheck(): Promise<boolean> {
   /** the long hall's text with CARD in its block, at the first teammate's place */
   const named = () => { const d = JSON.parse(textOf(FILE)); d.scenarios.issue = { members: { '1': CARD } }; return JSON.stringify(d); };
   /** a Game on `file` (or on `text`, a level's own words) with its room clear staged for `squad` teammates (the four unless said); the men in roster order */
-  async function stage(file: string, on: boolean, dice: number | null = 5, slots?: boolean, squad = 4, text = textOf(file)) {
-    ISSUE.on = on && !brk; ROOMCLEAR.seed = 0; ROOMCLEAR.way = 0; NIGHTBREACH.squad = squad;
+  async function stage(file: string, dice: number | null = 5, slots?: boolean, squad = 4, text = textOf(file)) {
+    if (brk) { const d = JSON.parse(text); delete d.scenarios?.issue; text = JSON.stringify(d); }
+    ROOMCLEAR.seed = 0; ROOMCLEAR.way = 0; NIGHTBREACH.squad = squad;
     const W: any = await quiet(() => standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(text)), seed: dice }));
     if (slots !== undefined) K.SLOTS.on = slots && K.SLOTS.ok;
     const g = W.game, why = await quiet(() => g.roomClear.start(0)); if (why) throw new Error(`the room clear did not start on ${file}: ${why}`);
@@ -65,13 +65,13 @@ export async function issueCheck(): Promise<boolean> {
     line((KIT.members[2] as any).weapon === 'pistol' && (KIT.members[1] as any).bangs === 0, 'the machine keeps another kit: Red Two with a pistol, Red One with no cans');
     const issue1 = K.kitDefault(1);
     // 2a. the long hall as it is filed: the plain issue for every man
-    const H = await stage(FILE, true); await H.step(3);
+    const H = await stage(FILE); await H.step(3);
     { const m = H.men();
       line(m.length === 4 && m.every(x => !pistol(x)) && K.kitOf(m[0])?.bangs === issue1.bangs && K.kitOf(m[0])?.charges === issue1.charges && issue1.bangs > 0,
         `${FILE} staged with the plain issue whatever is kept (no pistol on Red Two, Red One's cans on him) — ${worn(m)}`);
       line(JSON.stringify(KIT.members) === kept0 && st.m.get(KIT_LS) === store0, 'the table and its store are as the machine kept them: nothing worn, nothing written'); }
     // 2b. a block that names a card: its fields over the issue card of that place, the others plain
-    const A = await stage(FILE, true, 5, undefined, 4, named()); await A.step(3);
+    const A = await stage(FILE, 5, undefined, 4, named()); await A.step(3);
     { const m = A.men();
       line(m.length === 4 && pistol(m[0]) && m.slice(1).every(x => !pistol(x)),
         `a block that names a card (${JSON.stringify(CARD)} for the first teammate): staged with the level's cards whatever is kept — ${worn(m)}`);
@@ -89,7 +89,7 @@ export async function issueCheck(): Promise<boolean> {
     K.kitLoad(null, ''); K.kitReset();
     for (const rule of [true, false]) {
       const mine = (g: any) => [g.player.canisters, g.player.flashbangs, g.player.frags, g.player.rifle.shells].join(' / ');
-      const h = mine((await stage(FILE, true, 5, rule)).g), p = mine((await stage(PLAIN, true, 5, rule)).g);
+      const h = mine((await stage(FILE, 5, rule)).g), p = mine((await stage(PLAIN, 5, rule)).g);
       line(h === p && K.SLOTS.on === rule, `pouches rule ${rule ? 'on' : 'off'}: your smoke / stun / frags / 40 mm are ${h}, as on a level with no block (${p})`);
     }
 
@@ -99,21 +99,10 @@ export async function issueCheck(): Promise<boolean> {
       const row = SCENARIOS.find((e: any) => e.id === 'hall-four'), sizes = row ? squadChoices(row).filter((c: any) => c.ok).map((c: any) => c.n) : [];
       line(!!row && sizes.join() === '4' && row.blurb.length <= 140, `the row deploys at four only (a URL or a tool still stages the other sizes, next lines) — sizes offered: ${sizes.join(', ') || 'none'}`); }
     for (const n of [4, 3, 2, 1, 0]) {
-      const C = await stage(FILE, true, 5, true, n, named()); await C.step(3); const m = C.men();
+      const C = await stage(FILE, 5, true, n, named()); await C.step(3); const m = C.men();
       line(m.length === n && m.every((x, i) => pistol(x) === (i === 0)) && (n === 0 || (K.kitOf(m[0])?.bangs === CARD.bangs && K.kitOf(m[0])?.charges === CARD.charges)),
         `${n} teammate${n === 1 ? '' : 's'}, pouches rule on, the block with its card: ${n ? `${worn(m)} · ${m[0].callsign} has ${K.kitOf(m[0])?.charges} charges` : 'nobody comes, nobody carries it'}`);
     }
-
-    // 4. off
-    K.kitLoad(st, '?noslots');
-    const B = await stage(FILE, false); await B.step(3);
-    { const m = B.men(); line(!brk && !pistol(m[0]) && pistol(m[1]) && K.kitOf(m[0])?.bangs === 0, `switch off: the kept kit is worn — ${worn(m)}`); }
-    K.kitLoad(null, '?noslots'); K.kitReset();
-
-    // 5. a level without the block
-    const run = async (on: boolean) => { const R = await stage(PLAIN, on); const h: string[] = []; for (let i = 0; i < 4; i++) { await R.step(30); h.push(hashDigest(digestGame(R.g, true))); } ISSUE.on = on; return h.join(' '); };
-    const hOn = await run(true), hOff = await run(false);
-    line(hOn === hOff, `${PLAIN} (no block): switch on and off are the same game over two seconds — ${hOn === hOff ? 'four digests equal' : `${hOn} ≠ ${hOff}`}`);
   } catch (e) { failed = true; console.log(`- FAIL — threw: ${(e as Error).stack ?? e}`); }
   finally { K.kitLoad(null, ''); K.kitReset(); knobsBack(knobs0); }
   console.log(`=== issue-check: ${failed ? 'FAILURES above' : 'ALL PASS'} (${checks} lines) ===`);

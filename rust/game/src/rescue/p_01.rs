@@ -373,11 +373,6 @@ pub fn rescue_face_of(g: &mut crate::game::Game, d: DoorId) -> f64 {
 /// One of the cast before he is spawned (rescue.ts stage's `cast`)
 struct CastRow { role: Role, in_room: bool, mark: crate::scene_scenarios::ScenarioMark, name: String }
 
-/// Everybody on his mark on the fresh encounter. (rescue.ts Rescue.stage)
-pub fn rescue_stage(g: &mut crate::game::Game) {
-    if let Err(e) = stage_tried(g) { panic!("{}", e); }
-}
-
 /// The staging; Err is the message of what the TypeScript's staging throws, spawnUnit's among them.
 fn stage_tried(g: &mut Game) -> Result<(), String> {
     let Some(s) = rescue_data(g) else { return Err(String::from("the level has no hostage rescue data")); };
@@ -441,7 +436,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         let n = m::max(0.0, m::min(len, m::round(g.k.rescue.roamers))) as usize;
         for i in 0..n { cast.push(CastRow { role: Role::Roamer, in_room: false, mark: s.roamers[i % s.roamers.len()], name: format!("Roamer {}", i + 1) }); }
     }
-    let budget = 1.0 + cast.len() as f64;
+    let budget = crate::seats::budget_with_seats(g, 1.0 + cast.len() as f64);
     for (k, c) in cast.iter().enumerate() {
         let gd = crate::guards::spawn_unit(g, &crate::guards::UnitOpts {
             team: crate::teams::Team::Hostile, pos: c.mark.pos, yaw: Some(v3::yaw_to(c.mark.pos, c.mark.aim_at)),

@@ -7,7 +7,7 @@
 // the numbers (POWDER), a step's encoding (one dispatch and a copy, one uniform write), the kicks' short lives, and the read-back for the test page.
 // WHO JUDGED WHICH NUMBER: the rows the maintainer moved on his GPU on 11-05 are named at POWDER and POWDER_DRAW below. Every other row was judged on Chromium's
 // software adapter, from pictures of the read-back field (tools/qa/powder-field-page.cjs), and stands as he left it untouched in the panel.
-import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
+import { makeBuffer, makeShader, computePipelineAsync, laterHold } from '../gpu/device';
 import type { AirField } from './airField';
 import { AIR_RES } from './airField';
 import powSrc from './shaders/powder_field.wgsl' with { type: 'text' };
@@ -83,6 +83,9 @@ function programOf(device: GPUDevice): { bgl: GPUBindGroupLayout; pipe: Promise<
   p = { bgl, pipe: computePipelineAsync(device, { label: 'powder step', layout, compute: { module, entryPoint: 'powderStep' } }) };
   PROGRAMS.set(device, p); return p;
 }
+/** ASKED FOR AHEAD OF ITS FIRST USE (engine.ts warmFirstUse, on the look's page): the step's program was made the first frame a snow level stood its powder,
+ *  so on the kept page a snow level's start compiled one program the title had not. One of the later set's while it compiles (gpu/device.ts laterHold). */
+export function powderWarm(device: GPUDevice): void { const letGo = laterHold(); programOf(device).pipe.then(letGo, letGo); }
 export class PowderField {
   readonly w: number; readonly h: number;
   /** what the picture reads: rgba16float, w × h, texel (i, j) = cell (i, j)'s centre (world x = (i + ½) / POW_RES): r = the powder's column, g = column × height (m),

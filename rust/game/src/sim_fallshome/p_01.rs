@@ -169,11 +169,6 @@ pub fn fall_store_rule<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, w
     there(g)
 }
 
-/// The replacer of the both-ways arm's JSON, the one tool nothing in Rust takes: an Opaque holds no number, so only the road that hands `v` back exists. (fallshome.ts nanSafe)
-pub fn nan_safe(_k: &str, v: crate::Opaque) -> crate::Opaque {
-    v
-}
-
 /// The cell (x, z) is in, or NCELLS where the world has no floor under it. (fallshome.ts cell)
 pub fn cell(x: f64, z: f64) -> f64 {
     let (ix, iz) = (m::floor(x / FALL_CELL), m::floor(z / FALL_CELL));

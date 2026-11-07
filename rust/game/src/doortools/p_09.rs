@@ -159,11 +159,10 @@ fn blow_seat(g: &mut Game, d: DoorId, side: f64, fc: V3, inn: V3, out: V3) -> bo
 pub fn door_tools_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
     let until = g.time + secs;
     let ai = g.ai_enabled;
-    let r = &mut g.gd[gd];
-    r.dazzled_until = m::max(r.dazzled_until, until);
-    r.react_t = m::max(r.react_t, secs);
-    r.awareness = m::max(r.awareness, 0.6);
-    if r.state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
+    g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, until);
+    g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
+    crate::mind::raise(g, gd, 0.6, "doortools");
+    if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
     if ai { g.gd[gd].witness.dazzled += 1.0; }
     crate::game::guard_set_path(g, gd, Vec::new());
     let r = &mut g.gd[gd];
@@ -412,24 +411,6 @@ pub fn door_tools_thr_far(g: &mut crate::game::Game, op: DoorOpId) -> Option<cra
     let DoorToolsThrSpot { q, from } = door_tools_thr_spot(g, op, fs, p);
     let here = if floor_ok(g, from, q) { q } else { p };
     Some(DoorToolsThrFar { far, fs, here })
-}
-
-/// with the men stacked and the door still shut, the far gun steps onto its diagonal and comes up on the door   (doortools.ts DoorTools.thrSetFar)
-pub fn door_tools_thr_set_far(g: &mut crate::game::Game, op: DoorOpId) {
-    use crate::character::{Stance, UpperMode};
-    let (d, side) = (o!(g, op).door, o!(g, op).side);
-    let name = crate::orders::door_words(g, d);
-    if super::is_open(g, d) || door_tools_locked_out(g, d, side) { return; }
-    let f = match door_tools_thr_far(g, op) { Some(f) => f, None => return };
-    let l = door_tools_slice_looks(g, op, f.here, f.fs);
-    let mid = l[l.len() >> 1];
-    let pace = g.k.doortools.slice_pace;
-    let light = lights_of(g);
-    door_tools_assign(g, op, f.far, &DoorToolsAssignA { post: Some(f.here), face: Some(v3::yaw_to(f.here, mid)), watch: Some(mid), stance: Some(Stance::None), upper: Some(UpperMode::Aim), light: Some(light), pace: if pace > 0.0 { Some(pace) } else { None }, going: format!("setting on the jamb · {}", name), there: format!("set on the door · {}", name), ..Default::default() });
-    let now = g.time;
-    o!(g, op).thr_pre = Some(DoorToolsDoneItemThrPre { far: f.far, t: now });
-    let what = format!("far gun {} sets", g.gd[f.far].callsign);
-    door_tools_beat(g, op, &what);
 }
 
 /// is this a threshold order on a hostage room whose captor has given his last warning, and the order's own to time   (doortools.ts DoorTools.lastCall)

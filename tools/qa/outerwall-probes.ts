@@ -17,6 +17,7 @@
 //   (reset)   a restart after a breach: the wall is whole and structure again (the engine has let it go); a checkpoint taken after a breach, loaded: the hole is there.
 import { standUp, ROOT } from './headless.ts';
 import { samBlows, samBreach } from './charge-rig.ts';
+import { listen } from './heard.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const WC = await import(`${ROOT}/src/game/wallcharge.ts`);
@@ -65,19 +66,20 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
   // (until 2026-11-07 the rig wrote OWNBLOW.on off here, for lines that press the squad's key on a charge set by hand: a settled rule, the write was refused)
   game.godMode = true; game.tune.chaos = o.chaos ?? 0.5;
   if (o.squad ?? true) { const { why } = await quiet(() => startFromQuery(game, new URLSearchParams(scenarioQuery(E)))); if (why) throw new Error(`start refused — ${why}`); }
-  const said: string[] = [], spoke: { who: string; text: string }[] = [];
-  { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(t); msg(t); }; const say = game.say.bind(game); game.say = (gd: any, t: string, ...r: any[]) => { spoke.push({ who: gd?.callsign ?? '?', text: t }); return say(gd, t, ...r); }; }
+  const ears = listen(game);   // (what the log showed and what the men said, read from the game's own state each step: heard.ts. Until 2026-11-07 two wraps on the tools' copy, which the Rust tick never calls)
   const O = game.orders, D = game.doorTools, C = game.wallCharge;
   // (A MAN ALONE: the door tools' bag is put as a man alone had it, and nothing is carried. Until 2026-11-07 his own charges' switch was written off here, a settled
   // row: the write was refused, so these lines have run on the page's side since the fold.)
   if (!(o.squad ?? true)) { D.alone(DOORTOOLS.charges); C.setCarried(null); }
   const still = () => { for (const gd of game.guards) if (gd.team !== 'operative') { gd.hold = true; gd.pinned = true; gd.heardUpTo = 1e12; if (gd.flashlight) gd.flashlight.enabled = false; } };
-  const R = { W, game, input, O, D, C, said, spoke, scn,
+  const R = { W, game, input, O, D, C, scn,
+    /** what the log has shown and what the men have said, read now (heard.ts) */
+    get said(): string[] { ears.poll(); return ears.said; }, get spoke(): { who: string; text: string; radio: boolean }[] { ears.poll(); return ears.spoke; },
     get team(): any[] { return O.squad(); }, get up(): any[] { return O.squad().filter((m: any) => m.state !== 'dead'); },
     get hostiles(): any[] { return game.guards.filter((x: any) => x.team !== 'operative' && x.team !== 'civilian'); },
     /** what the rig does before every step (handed to charge-rig.ts, which steps the stand itself) */
-    each() { game.player.visibility = 0.05; if (o.still ?? true) still(); },
-    step(n = 1) { for (let i = 0; i < n; i++) { R.each(); W.step(DT); } },
+    each() { ears.poll(); game.player.visibility = 0.05; if (o.still ?? true) still(); },
+    step(n = 1) { for (let i = 0; i < n; i++) { R.each(); W.step(DT); ears.poll(); } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
     press(code: string) { input.pressed.add(code); R.step(); },
     pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(6); } },

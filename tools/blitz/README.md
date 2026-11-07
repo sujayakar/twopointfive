@@ -114,20 +114,23 @@ third row (the bare Game's own memo of "the player's" ground speed), which the R
 ### The co-op check
 
 ```sh
-bun run tools/blitz/coop-check.ts [--only asks,lock,full] [--no-build]      # about six minutes; EXPECTED RED until the seats' parts are mended
+bun run tools/blitz/coop-check.ts [--only held,lock,full] [--no-build]      # about four minutes with the runner built; ALL PASS since 2026-11-07
 ```
 
-Three lines, one for each kind of two-seat fault the TypeScript has and the translation copied (needs 11 to 13 of the Library's blitz/coop-needs.md). Each
-runs a game of two through `run.sh` and reads the RUST side: its log and the states it kept. They are the target of the seats' mends, not a gate.
+A game of two players held to the kinds of fault a game of two had on the TypeScript game and the translation copied (needs 12 and 13 of the Library's
+blitz/coop-needs.md, mended in rust/game on 2026-11-07). NO TypeScript tick is run: the three games are the kept runs `tools/blitz/kept/two-*.tar.zst`
+(PLAY.md, "Kept runs: the three games of two seats"); `hold.sh` stands each start again from this tree, the native runner steps the Rust game through
+the kept records, and the check reads the whole states the runner keeps.
 
-- `asks` (`two-roomclear:9`): the TypeScript's count of asks of the bare Game for a seat's field, and whether the Rust game stayed in step.
-- `lock` (`two-lock0:9`, `two-lock1:9`): the hands idle; that seat's pair is given `stack` on the locked server door before tick 2 and `openClear` before
-  tick 961 through the seat's OWN order book. A line of gives.txt that ends `seat<N>` is given as that seat on both sides (`game_run::give` →
-  `seats::with_seat`). Both men are across the frame line within 5 s of the order, read off the Rust states every half second. Today seat 0's pair takes
-  9.5 s and 10.5 s: seat 1's door tools sling seat 0's breaching shotgun every tick.
-- `full` (`two-full:3`, the barracks, 120 s of the scripted fight): the men the Rust game holds against what the picture holds (17 against 16). It cannot
-  see the hand-over to the picture: the loop stands with the dress down and the Rust renderer is an empty boundary (`--men` on seats.ts hands the
-  TypeScript's men to its picture with room made for the 17th, for its count; `g.rig_fits` then differs by design).
+- `held`: each of the three plays the series kept with it.
+- `lock` (`two-lock0-9`, `two-lock1-9`): the hands idle; that seat's pair is given `stack` on the locked server door before tick 2 and `openClear` before
+  tick 961 through the seat's OWN order book (a line of gives.txt that ends `seat<N>` is given as that seat: `game_run::give` → `seats::with_seat`). Both
+  men are across the frame line within 5 s of the order, read off the states every half second: 3.5 s and 4.5 s for seat 0's pair, 3.5 s and 3.0 s for
+  seat 1's. (On the TypeScript game seat 0's pair took 9.3 s and 10.1 s: seat 1's door tools slung seat 0's breaching shotgun every tick.)
+- `full` (`two-full-3`, the barracks, 120 s of the scripted fight): the men the game holds against what the picture holds, at ticks 1, 3600 and 7200
+  (16 against 16; it was 17). It cannot see the hand-over to the picture: the runner draws nobody.
+
+Gone: `asks` (the TypeScript tick's own count of asks of the bare Game for a seat's field).
 
 **The barracks game parts on purpose, and it is the first place a seat need shows.** At tick 5499 a man of seat 1 is sent through a door with two corners
 left on his order. The TypeScript's door walk asks the bare Game's order book (the first seat's, which has no order of his) and does not take the way
@@ -137,7 +140,7 @@ there, the block from tick 5781, the die from 6349.
 ## Intended differences
 
 The TypeScript is frozen and has faults a game of two seats shows. Where the Rust game copies such a fault it stays in step, and that is right for
-now (the nets of `slingTick` and `hammerOutTick`, the budgets that count one player: `coop-check.ts` holds them red). Where the Rust game is RIGHT BY
+now. (The nets of `slingTick` and `hammerOutTick` and the budgets that count one player were such faults until 2026-11-07: they are mended, and `coop-check.ts` holds them.) Where the Rust game is RIGHT BY
 CONSTRUCTION and the TypeScript is not, the Rust stays right and the loop parts there on purpose. `run.sh` names such a game (exit 4) when it first parts
 at the tick written in its `intended` list and nowhere before. One so far:
 

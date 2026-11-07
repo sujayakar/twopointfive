@@ -1,17 +1,19 @@
 // COPY AND PASTE FOR LOADOUTS (src/game/kit.ts kitPasteCard / kitPastePeek / kitPaste / kitWears; the two buttons and the keys are ui/kitCard.ts's), headless:
 //   bun run tools/qa/kitpaste-check.ts [fit|cases]      (KITPASTE_BREAK=1 = a paste writes the copied card as it is, unfitted and unasked: must FAIL)
 // The maintainer, 10-15: "we should have copy and paste for loadouts".
-//   fit     squads made by the tiles' own steps under a seed, every way the card's rules stand (the pouches rule, the big slot, your own charges with the
-//           wand and the sticky cameras — each on and off), and every man's card pasted onto every man's: the squad is still a legal one, every row of
+//   fit     squads made by the tiles' own steps under a seed, every way the card's rules stand (the pouches rule, the big slot — each on and off),
+//           and every man's card pasted onto every man's: the squad is still a legal one, every row of
 //           the card pasted onto holds a value its own tile offers (or, where it could not show the copied value at all, what it held), a count is the
 //           copied one or his tile's most, the man's colours and every field his
 //           card has no tile for are as they were, nobody else's card moved, the copied card did not, `changed` names the tiles that moved, a second
 //           paste moves nothing (he wears it), and the store is written once for a paste that moved a tile and not at all for one that moved none
-//   cases   by name, with the big slot on: a hammer man onto you (his hammer in your big slot, where your shotgun was), a man with nothing in his onto you (yours is emptied), a wall charge man onto you (your big slot keeps what it held), your own card copied and
+//   cases   by name, with the big slot on: a hammer man onto you (his hammer in your big slot, where your shotgun was), a man with nothing in his onto you (yours is emptied), a wall charge man onto you (the wall charge is yours: your big row offers it), your own card copied and
 //           pasted back with the pouches rule off (nothing moves), you onto a teammate (his row's most, no
 //           launcher round, wand or camera), a teammate onto you (your launcher rounds go: his card carries none), a pistol card onto you, colours kept,
 //           and under a table with a squad limit a paste the squad has no room for is refused with the reason and nothing is written
-// Run it on both stands (plain, and TPS_PROFILE=shipped): it sets every switch it reads itself, puts them back, and says which stand it ran on.
+// It sets the two rules of the card that are a run's own (the pouches rule, the big slot) each way and puts them back. SINCE 2026-11-07 it no longer
+// writes your own charges, the wand or the sticky cameras: settled rows, constants of the game. The four lines of `fit` that asked every paste again
+// with those three off are cut, and so is the line of `cases` for a wall charge man onto you with your own charges off.
 // Nothing here looks at the page: the buttons, the keys and the roster's marks are tools/qa/kitpaste-page.cjs's.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -19,9 +21,6 @@ import { ROOT } from './headless.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
-const { WAND } = await import(`${ROOT}/src/game/wand.ts`);
-const { STICKY } = await import(`${ROOT}/src/game/stickycam.ts`);
-const { OWNCHARGE } = await import(`${ROOT}/src/game/owncharge.ts`);
 const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -45,12 +44,12 @@ function writable(i: number): Set<string> {
 }
 /** the kit table, its rules and the switches this check moves, as they stood, put back after `fn` (the store the table writes to is left on nothing) */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const was = cards(), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, wand = WAND.on, sticky = STICKY.on, own = OWNCHARGE.on, team = K.kitTeam(), table = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8'));
-  try { return await fn(); } finally { K.slotsSet(table); K.kitLoad(null, ''); WAND.on = wand; STICKY.on = sticky; OWNCHARGE.on = own; K.BIGSLOT.on = big; K.SLOTS.on = slots; K.KIT.on = on; K.kitTeam(team); for (let i = 0; i < N; i++) K.KIT.members[i] = was[i]; }
+  const was = cards(), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, team = K.kitTeam(), table = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8'));
+  try { return await fn(); } finally { K.slotsSet(table); K.kitLoad(null, ''); K.BIGSLOT.on = big; K.SLOTS.on = slots; K.KIT.on = on; K.kitTeam(team); for (let i = 0; i < N; i++) K.KIT.members[i] = was[i]; }
 }
 /** the rules put one way, the cards as issued, a store that counts its writes under the table */
-function stand(o: { slots: boolean; big: boolean; extras: boolean }) {
-  WAND.on = STICKY.on = OWNCHARGE.on = o.extras; K.BIGSLOT.on = o.big;
+function stand(o: { slots: boolean; big: boolean }) {
+  K.BIGSLOT.on = o.big;
   const store = memStore(); K.kitLoad(store, o.slots ? '' : '?noslots'); K.BIGSLOT.on = o.big; K.kitTeam(N - 1); K.kitReset(); store.writes = 0;
   return store;
 }
@@ -60,8 +59,8 @@ export async function pasteFit(): Promise<boolean> {
   const F = family('kitpaste-fit: any man\'s card pasted onto any man\'s is a card his own tiles could have made, and the squad is still a legal one');
   await kept(() => {
     const SEEDS = 40;
-    for (const slots of [true, false]) for (const big of [true, false]) for (const extras of [true, false]) {
-      const store = stand({ slots, big, extras }), bad: string[] = []; let pastes = 0, moved = 0, refused = 0, clamped = 0, dropped = 0;
+    for (const slots of [true, false]) for (const big of [true, false]) {
+      const store = stand({ slots, big }), bad: string[] = []; let pastes = 0, moved = 0, refused = 0, clamped = 0, dropped = 0;
       const say = (s: string) => { if (bad.length < 6) bad.push(s); else if (bad.length === 6) bad.push('…'); };
       for (let seed = 1; seed <= SEEDS; seed++) {
         const rnd = seeded(0x9e37 + seed * 7919); K.kitReset();
@@ -95,7 +94,7 @@ export async function pasteFit(): Promise<boolean> {
           const w1 = store.writes, again = K.kitPaste(to, clip); if (!again.ok || again.changed.length || store.writes !== w1 || J(K.KIT.members[to]) !== J(after[to])) say(`${at}: a second paste moved ${again.changed.join(' ') || 'something'}`);
         }
       }
-      F.verdict(!bad.length && pastes === SEEDS * N * N, `pouches rule ${slots ? 'on' : 'off'}, big slot ${big ? 'on' : 'off'}, own charges / wand / cameras ${extras ? 'on' : 'off'}: every paste leaves a legal squad and a card of the man's own tiles`,
+      F.verdict(!bad.length && pastes === SEEDS * N * N, `pouches rule ${slots ? 'on' : 'off'}, big slot ${big ? 'on' : 'off'}: every paste leaves a legal squad and a card of the man's own tiles`,
         `${pastes} pastes over ${SEEDS} seeded squads · ${moved} moved a tile, ${refused} refused · ${clamped} counts brought down to a tile's most, ${dropped} tiles that cannot show the copied value left as they were${bad.length ? '\n    ' + bad.join('\n    ') : ''}`);
     }
   });
@@ -107,7 +106,7 @@ export async function pasteCases(): Promise<boolean> {
   const F = family('kitpaste-cases: what a paste carries over, by name');
   await kept(() => {
     const put = (i: number, o: Record<string, unknown>) => { K.KIT.members[i] = { ...K.kitDefault(i), ...o }; };
-    { const store = stand({ slots: true, big: true, extras: true });
+    { const store = stand({ slots: true, big: true });
       put(3, { big: 'hammer', charges: 2, bangs: 1 }); put(0, { big: 'shotgun' });
       const r = K.kitPaste(0, { ...K.KIT.members[3] }), you = K.KIT.members[0];
       F.verdict(r.ok && K.bigOf(you) === 'hammer' && you.charges === 2 && you.bangs === 1 && you.shells === 0 && !K.kitLegal(),
@@ -116,13 +115,11 @@ export async function pasteCases(): Promise<boolean> {
       { K.kitReset(); put(3, { charges: 2, bangs: 1 }); put(0, { big: 'hammer' });
         const o = K.kitPaste(0, { ...K.KIT.members[3] }), y = K.KIT.members[0];
         F.verdict(o.ok && K.bigOf(y) === 'none' && y.charges === 2 && y.bangs === 1 && !K.kitLegal(), 'a man with an empty big slot onto you: yours is emptied with it (the hammer goes home, and no row of yours is left unasked)', `you: ${J(y)} · legal: ${K.kitLegal() ?? 'yes'}`); }
-      // … and a big thing your row does not offer (a teammate's wall charge, your own charges off): the row cannot show it, so your big slot keeps what it held;
-      // with your own charges on the row offers it and it is yours like any other value
-      if (K.wallHere()) for (const own of [false, true]) { OWNCHARGE.on = own; K.kitReset(); put(3, { walls: 1, charges: 0, bangs: 1 }); put(0, { big: 'hammer' });
+      // … and a teammate's wall charge: your big row offers it (your own charges), and it is yours like any other value
+      if (K.wallHere()) { K.kitReset(); put(3, { walls: 1, charges: 0, bangs: 1 }); put(0, { big: 'hammer' });
         const offers = ((K.kitRows(0).find((r: any) => r.field === 'big')?.values ?? []) as string[]).includes('wall'), o = K.kitPaste(0, { ...K.KIT.members[3] }), y = K.KIT.members[0];
-        F.verdict(o.ok && K.bigOf(K.KIT.members[3]) === 'wall' && K.bigOf(y) === (offers ? 'wall' : 'hammer') && y.bangs === 1 && !K.kitLegal() && (own || !offers),
-          `a wall charge man onto you, your own charges ${own ? 'ON' : 'OFF'}: his counts are yours, and ${offers ? 'so is the wall charge (your big row offers it)' : 'the wall charge is not (your big row does not offer it): your big slot keeps the hammer it held'}`, `your big row offers it: ${offers} · you: ${J(y)} · legal: ${K.kitLegal() ?? 'yes'}`); }
-      OWNCHARGE.on = true;
+        F.verdict(offers && o.ok && K.bigOf(K.KIT.members[3]) === 'wall' && K.bigOf(y) === 'wall' && y.bangs === 1 && !K.kitLegal(),
+          'a wall charge man onto you: his counts are yours, and so is the wall charge (your big row offers it)', `your big row offers it: ${offers} · you: ${J(y)} · legal: ${K.kitLegal() ?? 'yes'}`); }
       K.kitReset(); put(0, { smoke: 3, bangs: 0, frags: 0, shells: 1, wand: false, cams: 0 }); put(2, {});
       const smokeMost = Math.max(...(rows(2).find(x => x.field === 'smoke')?.values ?? [0]) as number[]);
       const r2 = K.kitPaste(2, { ...K.KIT.members[0] }), mate = K.KIT.members[2];
@@ -141,13 +138,13 @@ export async function pasteCases(): Promise<boolean> {
         'colours are kept: the kit goes over, the suit and the trim stay the man\'s own, in one write of the store', `Red Two: bangs ${m5.bangs}, ${m5.suit} / ${m5.trim} · changed ${r5.changed.join(' ')} · ${store.writes - w0} write`);
       F.verdict(K.kitWears(2, K.KIT.members[1]) && !K.kitWears(3, K.KIT.members[1]) && K.kitPastePeek(3, K.KIT.members[1]).why === '', 'he wears it once pasted (whatever his colours); a man who does not is not said to', `Red Two wears Red One's: ${K.kitWears(2, K.KIT.members[1])} · Blue One: ${K.kitWears(3, K.KIT.members[1])}`);
     }
-    { const store = stand({ slots: false, big: true, extras: true });
+    { const store = stand({ slots: false, big: true });
       put(0, { smoke: 2, bangs: 1 }); const mine = { ...K.KIT.members[0] }, wears = K.kitWears(0, mine), r = K.kitPaste(0, mine), w = store.writes;
       put(2, { bangs: 3 }); const r2 = K.kitPaste(0, { ...K.KIT.members[2] }), you = K.KIT.members[0];
       F.verdict(wears && r.ok && !r.changed.length && w === 0 && r2.ok && you.smoke === 2 && you.bangs === 1,
         'the pouches rule off, your cans a split of your own (2 smoke, 1 stun): your own card copied and pasted back moves nothing, and a teammate\'s card leaves your cans as they were (the one row cannot show his counts)', `wears own copy ${wears} · changed ${r.changed.join(' ') || 'nothing'} · after a teammate's: smoke ${you.smoke}, stun ${you.bangs}`);
     }
-    { const store = stand({ slots: true, big: true, extras: true });
+    { const store = stand({ slots: true, big: true });
       const table = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8')); table.squad.pouches = 7;
       const why0 = K.slotsSet(table); K.kitReset(); store.writes = 0;
       const before = J(K.KIT.members), r = K.kitPaste(3, { ...K.KIT.members[1] }), why = K.kitPastePeek(3, K.KIT.members[1]).why;
@@ -161,7 +158,7 @@ export async function pasteCases(): Promise<boolean> {
 /** the file's probes, by the names the runner calls them (the holds each is owed — the card's one gun row, the table's layout — are tools/qa/holds.ts's) */
 const PROBES = { 'kitpaste-fit': pasteFit, 'kitpaste-cases': pasteCases };
 async function kitpasteCheck(want: readonly string[]): Promise<boolean | null> {
-  console.log(`kitpaste-check on the ${STAND.toUpperCase()} stand (it sets the card's rules itself, each way)${BROKEN ? ' — KITPASTE_BREAK=1: a paste writes the copied card unfitted, the lines below must FAIL' : ''}`);
+  console.log(`kitpaste-check on the ${STAND.toUpperCase()} stand (it sets the pouches rule and the big slot itself, each way)${BROKEN ? ' — KITPASTE_BREAK=1: a paste writes the copied card unfitted, the lines below must FAIL' : ''}`);
   const ok = await asProbes(PROBES, want);
   console.log(`\nkitpaste-check (${STAND} stand): ${ok === null ? 'NOTHING RAN' : ok ? 'ALL PASS' : 'FAILED'}`);
   return ok;

@@ -7,6 +7,5 @@ use alloc::{string::String, vec::Vec};
 
 
 /// (src/game/orders.ts:2583 SquadOrders.hud)
+/// NOT WRITTEN ON PURPOSE: the orders' panel is built on the page, from the puppet, by the TypeScript of this name; the Rust game draws no HUD.
 pub fn squad_orders_hud(g: &mut crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> crate::orders::SquadOrdersHud { crate::no_body("orders::squad_orders_hud") }
-/// (src/game/orders.ts:2626 SquadOrders.summary)
-pub fn squad_orders_summary(g: &mut crate::game::Game) -> String { crate::no_body("orders::squad_orders_summary") }

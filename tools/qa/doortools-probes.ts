@@ -1,12 +1,12 @@
 // The 'doortools' family (game/doortools.ts — a page of rows behind row 5 of the squad's order menu when it is opened on a door: open and clear, bang and clear,
-// breach with a charge, and the turn to the threshold's page, where clear from outside now sits), run through probes.ts:
-//   bun run tools/qa/probes.ts doortools | doortools-menu | doortools-charge | doortools-bang | doortools-outside | doortools-counts | doortools-lights | doortools-firstman
+// breach with a charge, clear from outside), run through probes.ts:
+//   bun run tools/qa/probes.ts doortools | doortools-menu | doortools-charge | doortools-bang | doortools-counts | doortools-lights | doortools-firstman
 // PASS / FAIL each, all headless (the Game of headless.ts under the room clear's staging — game.roomClear.start(seed) — unless a probe says the night breach). The
 // harness has no light meter: Sam's visibility is planted dark and he is in god mode (a round that finds him ends nothing: these probes are about the pair), and
 // what anybody SEES of anybody is guards.ts's direct-light estimate, not the page's. Nothing here looks at a picture: the charge on the leaf, the flash and the
 // leaf flying are untested by eye.
 //   doortools-menu      with no squad nothing runs and nothing is offered; with one, X pressed on a door lists the order menu's own rows and then 5 door tools ▸ — the page
-//                       behind it: 1 open and clear / 2 bang and clear · N left / 3 breach with a charge · N left / 4 work it from the threshold ▸ (no order is on a digit
+//                       behind it: 1 open and clear / 2 bang and clear · N left / 3 breach with a charge · N left / 4 clear from outside (no order is on a digit
 //                       above 5); a floor's list is as it was; the counts stand on the squad's HUD block; a steel door refuses the charge in words; X, 5 and a
 //                       digit runs its row; another order takes the men off it
 //   doortools-charge    a charge order ends with a man at the lock, the squad stood off, the charge on the door — and then NOTHING until Sam's trigger (five
@@ -18,8 +18,6 @@
 //                       order; the pair is not blinded by its own can; a bang is spent; the men under the order shoot through the room fight (rounds fired with
 //                       the order still theirs, orders.fight null: one mechanism); a locked door gets the boot first; a can in the air when the order is taken
 //                       away goes off on a short fuse; the F drill's own can does the same when the pair is lost under it (breach.ts)
-//   doortools-outside   clear from outside: the door opened, the men slice it from Sam's side, a defender is seen and shot at from out there, and for the whole of
-//                       it NO man of the pair is inside the room's bounds or over the frame line — until an entry order, when they cross
 //   doortools-counts    the counts run out: a bang spent, the row is refused in words and greyed, the F drill goes in without one and says so; a charge spent on
 //                       being set, a second door is refused while the set one still blows; a restart puts the counts back
 //   doortools-lights    the 64-light cap: with every slot of the upload taken by a steady light a charge is blown — nothing throws, the flash's own light is
@@ -27,6 +25,10 @@
 //   doortools-firstman  the comparison: on an ALERTED floor (a bang heard four seconds before the order) the break room's west door by open and clear, by bang
 //                       and clear and by a charge over six seeds — fewer first men lost behind the bang, and behind the charge, than through the plain door.
 //                       The quiet floor's numbers are printed as information (there the plain door wins by surprise: that is the point of having three tools)
+// 2026-11-07, settled switches no longer written here: doortools-outside is gone (the SLICING order of the threshold's own page, which the menu has not had
+// since 'clear from outside' became one plain order: doortest-check.ts and threshold-probes.ts hold today's order); the F drill's lines no longer put the
+// night breach's blind fire off; the two lines at the locked manager's door give their order twice (the first is halted at the handle, as the game has it);
+// doortools-firstman runs on the floor as the page deals it (it held the squads from the rooms off).
 import { standUp, ROOT } from './headless.ts';
 import { asProbe, asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -58,11 +60,10 @@ const AISLE: number[] = [15, 0, 17.6];
 
 /** One game under a seed: the room clear staged (`stage: 'nb'` = the night breach alone, false = neither), Sam put by `door`, in god mode and dark.
  *  `hot`: a stun canister goes off in the lobby four seconds before the probe starts — the whole floor has heard it (the pair's eyes are given back). */
-export async function rig(seed: number, o: { stage?: 'rc' | 'nb' | false; door?: string; hot?: boolean; /** false: squads from the rooms (SQUADDEAL) held off for this floor, by the stand's own word */ deal?: boolean; knobs?: Record<string, unknown>; nb?: Record<string, unknown> } = {}) {
+export async function rig(seed: number, o: { stage?: 'rc' | 'nb' | false; door?: string; hot?: boolean; knobs?: Record<string, unknown>; nb?: Record<string, unknown> } = {}) {
   Object.assign(DOORTOOLS, JSON.parse(JSON.stringify(DT_DEFAULTS)), o.knobs ?? {}); Object.assign(ROOMCLEAR, RC_DEFAULTS); Object.assign(NIGHTBREACH, NB_DEFAULTS, o.nb ?? {});
   Math.random = seeded(seed);
-  const sd0 = process.env.TPS_SQUADDEAL; if (o.deal === false) process.env.TPS_SQUADDEAL = '0';
-  const W: any = await standUp().finally(() => { if (o.deal !== false) return; if (sd0 === undefined) delete process.env.TPS_SQUADDEAL; else process.env.TPS_SQUADDEAL = sd0; }); const game = W.game, input = W.input; const RC = game.roomClear, NB = game.nightBreach, O = game.orders, D = game.doorTools;
+  const W: any = await standUp(); const game = W.game, input = W.input; const RC = game.roomClear, NB = game.nightBreach, O = game.orders, D = game.doorTools;
   game.godMode = true;
   // (until 2026-11-07 the rig wrote OWNBLOW.on off here, for lines that press the squad's key on a charge set by hand. The rule is settled and the write was
   //  refused: a line that still presses that key asks the game before the rule, and is to go where it is met)
@@ -136,15 +137,14 @@ export const doortoolsMenu = guarded(async () => {
       'with no squad on the floor: no list on X, the order refused, nothing under way, nothing logged, no HUD block', `orders active ${O.active} · menu ${m} · give: ${w} · ops ${D.ops.length} · log ${D.log.length} · ${D.summary()}`); }
   const R = await rig(3, { door: 'breakroom_w' }); const { O, D } = R; const Wd = R.door('breakroom_w');
   const m = R.menuOn(Wd.frameCentre);
-  // (row 4 of the page is read under the stand's own rule, each stand held to its own words: the turn to the threshold's page, or — DOORTOOLS.outsidePlain,
-  // a FROZEN_HOLDS row, on in the page — the one plain order 'clear from outside'. The floor's list below likewise: the four orders, then exactly the rows
-  // whose switches are on — the squad throw's (SQUADTHROW.on) and go silent (SILENT.on); the frozen stand has neither.)
-  const plain = !!DOORTOOLS.outsidePlain, row4 = plain ? { id: 'thresholdHold', text: '4 clear from outside' } : { id: 'thr', text: '4 work it from the threshold ▸' };
+  // (row 4 of the page is the one plain order 'clear from outside'. The floor's list below: the four orders, then exactly the rows whose switches are on —
+  // the squad throw's (SQUADTHROW.on) and go silent (SILENT.on).)
+  const row4 = { id: 'thresholdHold', text: '4 clear from outside' };
   verdict(!!m && m.kind === 'door' && m.ids === 'stack cover fallIn hold tools' && m.rows[4]?.key === '5' && m.rows[4]?.text === 'door tools ▸' && m.tools?.ids === `openClear bangClear charge ${row4.id} fragClear` && m.back && m.gone,
     'X pressed on a door: the order menu\'s own four rows, then row 5 — the door tools, a page of four behind it and the frag row on G at its foot (Esc there steps back to the first page, Esc again closes)', `rows: ${m?.ids} ▸ ${m?.tools?.ids} · row 5 "${m?.rows[4]?.text}" · back ${m?.back} · gone ${m?.gone}`);
   const tools = m?.tools?.rows ?? [];
   verdict(tools.map((r: any) => `${r.key} ${r.text}`).join(' | ') === `1 open and clear | 2 bang and clear · ${DOORTOOLS.bangs} left | 3 breach with a charge · ${DOORTOOLS.charges} left | ${row4.text} | G frag and clear · ${D.frags} left` && D.frags === 2 && tools.every((r: any) => !r.off),
-    `digits 1 to 4 on that page, the bangs and the charges counted on their rows, row 4 ${plain ? 'the one order from outside (outsidePlain)' : 'the turn to the threshold\'s page'}, the frags on G below them (no digit taken), none greyed on an ordinary shut door`, tools.map((r: any) => `${r.key} ${r.text}${r.off ? ' (off)' : ''}`).join(' | '));
+    `digits 1 to 4 on that page, the bangs and the charges counted on their rows, row 4 the one order from outside, the frags on G below them (no digit taken), none greyed on an ordinary shut door`, tools.map((r: any) => `${r.key} ${r.text}${r.off ? ' (off)' : ''}`).join(' | '));
   const fl = R.menuOn(AISLE);
   const floorIds = `move cover fallIn hold${SQUADTHROW.on ? ' throwThere' : ''}${SILENT.on ? ' silent' : ''}`;
   verdict(!!fl && fl.kind === 'floor' && fl.ids === floorIds && fl.tools === null, 'a floor\'s list is as it was (the four orders, then only the rows whose own switches are on): no door tool is offered off a door, and no page', `rows: ${fl?.ids} · held to: ${floorIds}`);
@@ -217,9 +217,10 @@ export const doortoolsBang = guarded(async () => {
   verdict(blindAtBang >= 1 && R.opDazzle <= 0 && D.bangs === K.bangs - 1, 'it blinds the room (not the pair, whose heads are turned), and one bang is spent', `room's men blind at the bang ${blindAtBang}/${room.defenders.length} · pair blinded at most ${f2(Math.max(0, R.opDazzle))} s · bangs left ${D.bangs}`);
   verdict(R.orderedShots > 0 && O.fight === null && !R.bad, 'the men under the order fight through the room fight (rounds fired with the order still theirs; orders.fight is not used)', `rounds under an order ${R.orderedShots} · orders.fight ${O.fight}`);
   // a locked door: the boot first
-  // (the SHIPPED stand has the lead TRY a door nobody knew was locked and the order end there, 'found shut' — DOORTOOLS.testDoor, a FROZEN_HOLDS row, held by
-  // doortest-check.ts. This line is about the order that boots it and goes on, so it plays the door as it was; `guarded` and the next rig put the knob back.)
-  { const R2 = await rig(7, { door: 'manager' }); DOORTOOLS.testDoor = false; const D2 = R2.D, Md = R2.door('manager'); const locked0 = Md.locked; R2.give('bangClear', 'manager'); const op2 = D2.ops[0];
+  // (the lead TRIES a door nobody knew was locked and the order ends there, 'found shut' — doortest-check.ts. This line is about the order that boots it and
+  // goes on: the order is given, halted at the handle, and given again)
+  { const R2 = await rig(7, { door: 'manager' }); const D2 = R2.D, Md = R2.door('manager'); const locked0 = Md.locked; R2.give('bangClear', 'manager'); R2.until(() => D2.ops.length === 0, 40);
+    R2.give('bangClear', 'manager'); const op2 = D2.ops[0]; if (!op2) { verdict(false, 'a locked door: the order given again after the handle is tried', `orders under way ${D2.ops.length} · halted ${D2.stats.halted}`); return done(); }
     R2.until(() => D2.ops.length === 0, 40); const T2 = (s: string) => R2.beatT(op2, s); const c2 = op2.crossed.size ? Math.min(...[...op2.crossed.values()] as number[]) : NaN;
     verdict(locked0 && T2('kick') < T2('toss') && T2('toss') < T2('bang') && T2('bang') < c2 && Md.lockBroken && !!op2.bangAt && inBounds(R2.room('manager').def.bounds, op2.bangAt),
       'a locked door: the lead\'s boot, then the can, the bang inside that room, then the first man in', R2.beats(op2)); }
@@ -231,44 +232,13 @@ export const doortoolsBang = guarded(async () => {
     verdict(inAir && !!can && fuse0 > 10 && ended && (fired0 || fuse1 <= K.fuseAfterLand + 1e-6) && can.fired && R3.bangs.length === 1,
       'the men re-ordered with the can in the air: the order ends and the can goes off on a short fuse — never a live one left lying on its long fuse', `fuse ${f2(fuse0 ?? NaN)} → ${f2(fuse1 ?? NaN)} · fired ${can?.fired} · blasts ${R3.bangs.length} · ended: ${D3.done[0]?.ended}`); }
   // the same hole in the F drill (breach.ts): the pair lost with its can thrown
-  { const R4 = await rig(7, { stage: 'nb', nb: { blindFire: false } }); const { NB } = R4; R4.press('KeyF'); R4.until(() => NB.drill?.phase === 'stack' && !isNaN(NB.drill.tSet), 40); R4.press('KeyF');
+  { const R4 = await rig(7, { stage: 'nb' }); const { NB } = R4; R4.press('KeyF'); R4.until(() => NB.drill?.phase === 'stack' && !isNaN(NB.drill.tSet), 40); R4.press('KeyF');
     const thrown = R4.until(() => !!(NB.drill as any)?.can, 20); const can = (NB.drill as any)?.can; const early = !!can && !can.fired;
     for (const x of [...R4.ops]) if (x.state !== 'dead') killGuard(R4.game, x, [1, 0, 0], false, 'shot', 'player');
     R4.step(Math.round((K.fuseAfterLand + 1.5) * 60));
     verdict(thrown && early && NB.drill.beats.some((b: any) => b.what === 'can:short-fuse') && can.fired, 'the F drill\'s can, thrown and not yet gone off when the pair is lost: it is put on a short fuse and goes off (it used to stay live for 99 s)',
       `thrown ${thrown} · live at the loss ${early} · beats: ${NB.drill.beats.slice(-5).map((b: any) => b.what).join(' | ')} · fired ${can?.fired}`); }
   return done();
-});
-
-// ---------------------------------------------------------------- from outside
-const outsideBody = async () => {
-  const { verdict, done } = family('doortools-outside: the doorway worked from outside — eyes and rounds in, no man in, until an entry order');
-  // The other rooms' men are held out of this one (`ROOMFIGHT.rally` off for its length, by the wrapper below): it is about the door, and since a man who leaves a lost room stays in
-  // the building (`ROOMFIGHT.fallBackIn`) the break room's second man is shot from outside too, the fight runs on, and two men from the cubicles walk over and take
-  // the pair in the back while it holds (24 s) — the floor's answer to a room falling, counted by the playthroughs, not what is being checked here.
-  const R = await rig(1, { door: 'breakroom_w' }); const { O, D, game } = R; const Wd = R.door('breakroom_w'); const room = R.room('breakroom'); const B = room.def.bounds;
-  let inside = 0, margin = Infinity, contactT = NaN, contactWho = ''; let watching = true;
-  R.post = () => { if (!watching) return;
-    for (const x of R.ops) { if (x.state === 'dead') continue; if (inBounds(B, x.char.pos)) inside++; margin = Math.min(margin, B.x0 - x.char.pos[0]); }
-    if (isNaN(contactT)) for (const h of room.defenders) { if (h.state === 'dead') continue; const by = game.fight.seenBy(h).filter((x: any) => R.ops.includes(x)); if (by.length) { contactT = game.time; contactWho = `${by[0].callsign} on ${h.callsign}`; break; } } };
-  // (the SHIPPED stand plays 'clear from outside' as one plain order that holds the door — DOORTOOLS.outsidePlain, a FROZEN_HOLDS row — and has no 'outside' row:
-  // this probe is about the SLICING order, so it asks for the threshold's page as it was; the rows are dealt again on the next frame, `guarded` puts the knob back)
-  if (DOORTOOLS.outsidePlain) { DOORTOOLS.outsidePlain = false; R.step(2); }
-  const w = R.give('outside', 'breakroom_w'); const op = D.ops[0];
-  if (w !== null || !op) { verdict(false, 'the order is taken', `refused: ${w ?? 'no order under way'}`); return done(); }
-  const held = R.until(() => op.phase === 'held', 45); const shotsOut = R.shots.operative ?? 0; R.step(60 * 6);
-  verdict(w === null && !isNaN(R.beatT(op, 'slice')) && held && isOpen(Wd) && op.phase === 'held' && D.ops[0] === op, 'the order: stacked, the door opened, the opening sliced a station at a time, then held — and it stays held, the door kept open', R.beats(op));
-  verdict(!isNaN(contactT) && shotsOut > 0, 'from out there a man of the room is seen and shot at', `first contact ${f2(contactT - R.t0)} s: ${contactWho} · rounds from outside ${shotsOut} · the room's men down ${room.defenders.filter((h: any) => h.state === 'dead').length}/${room.defenders.length}`);
-  verdict(inside === 0 && op.crossed.size === 0 && margin > 0, 'and through all of it no man of the pair is inside the room\'s bounds or over the frame line', `frames inside ${inside} · over the line ${op.crossed.size} · nearest any got to the room's floor ${f2(margin)} m short of it`);
-  watching = false;
-  const alive = R.ops.filter((x: any) => x.state !== 'dead').length; const w2 = R.give('openClear', 'breakroom_w'); const op2 = D.ops[0];
-  const crossed = R.until(() => !!op2 && op2.crossed.size > 0, 20);
-  verdict(alive > 0 && w2 === null && op2 !== op && op2?.kind === 'openClear' && crossed && !R.bad, 'an entry order on the same door, and they go in', `pair standing ${alive} · ${R.beats(op2)}`);
-  return done();
-};
-export const doortoolsOutside = guarded(async () => {
-  const { ROOMFIGHT } = await import(`${ROOT}/src/game/roomfight.ts`); const rally0 = ROOMFIGHT.rally; ROOMFIGHT.rally = false;
-  try { return await outsideBody(); } finally { ROOMFIGHT.rally = rally0; }
 });
 
 // ---------------------------------------------------------------- the counts
@@ -285,11 +255,11 @@ export const doortoolsCounts = guarded(async () => {
     verdict(w3 === null && D.stats.blown === 1 && !Wd.latched, 'the set one still blows from its row', `give: ${w3} · blown ${D.stats.blown}`);
     R.game.restartEncounter(); R.step(5);
     verdict(D.charges === 1 && D.bangs === 1 && D.set.length === 0 && D.ops.length === 0, 'a restart is a fresh run: the counts back, nothing set, nothing under way', D.summary()); }
-  { const R = await rig(7, { stage: 'nb', knobs: { bangs: 0 }, nb: { blindFire: false } }); const { NB, D } = R;
+  { const R = await rig(7, { stage: 'nb', knobs: { bangs: 0 } }); const { NB, D } = R;
     R.press('KeyF'); R.until(() => NB.drill?.phase === 'stack' && !isNaN(NB.drill.tSet), 40); R.press('KeyF'); R.until(() => NB.drill?.phase === 'done' || NB.drill?.beats.some((b: any) => /^in/.test(b.what)), 25);
     const tossed = NB.drill.beats.some((b: any) => /^toss/.test(b.what));
     verdict(D.bangs === 0 && !tossed && R.bangs.length === 0 && R.said.some(t => /no flashbangs left/.test(t)), 'the night breach\'s F drill takes its can from the same count: with none left the pair goes in without one, and says so', `bangs ${D.bangs} · a toss ${tossed} · blasts ${R.bangs.length} · said: ${R.said.filter(t => /bang/.test(t)).join(' / ')}`); }
-  { const R = await rig(7, { stage: 'nb', nb: { blindFire: false } }); const { NB, D } = R; const b0 = D.bangs;
+  { const R = await rig(7, { stage: 'nb' }); const { NB, D } = R; const b0 = D.bangs;
     R.press('KeyF'); R.until(() => NB.drill?.phase === 'stack' && !isNaN(NB.drill.tSet), 40); R.press('KeyF'); R.until(() => R.bangs.length > 0, 25);
     verdict(b0 === DOORTOOLS.bangs && D.bangs === b0 - 1 && R.bangs.length === 1, '… and with some left it spends one', `bangs ${b0} → ${D.bangs} · blasts ${R.bangs.length}`); }
   return done();
@@ -310,7 +280,8 @@ export const doortoolsEdges = guarded(async () => {
     R.game.restartEncounter(); const w = R.give('openClear', 'manager'); const n0 = D.ops.length; R.step(3);
     verdict(w === null && n0 === 1 && D.ops.length === 1 && D.ops[0].kind === 'openClear', 'an order given straight after a restart stands', `give: ${w} · orders under way ${n0} → ${D.ops.length}`); }
   { // the bang is the order's from the word: a second order cannot be given on the same last can, and an order that ends before the throw gives it back
-    const R = await rig(7, { door: 'manager', knobs: { bangs: 1 } }); DOORTOOLS.testDoor = false; const { D, O } = R;   // (the manager's door is locked: with the handle tried first the order ends 'found shut' and the can goes back unthrown — this line is about the can, so the door is not tried, as below)
+    const R = await rig(7, { door: 'manager', knobs: { bangs: 1 } }); const { D, O } = R;   // (the manager's door is locked: with the handle tried first the order ends 'found shut' and the can goes back unthrown — this line is about the can, so the handle is tried first, and the order then given again)
+    O.give('bangClear', R.target('manager'), 0); R.until(() => D.ops.length === 0, 40);
     const w1 = O.give('bangClear', R.target('manager'), 0); const b1 = D.bangs; const w2 = O.give('bangClear', R.target('storage'), 1);
     const tossed = R.until(() => R.bangs.length > 0, 45); const crossedFirst = [...D.ops, ...D.done].some((o: any) => !o.beats.some((b: any) => /^bang/.test(b.what)) && o.beats.some((b: any) => /^cross:/.test(b.what)));
     verdict(w1 === null && b1 === 0 && /^no bangs left/.test(w2 ?? '') && tossed && !crossedFirst, 'one can, two doors: the first order has it, the second is refused — nobody goes in behind a bang that is not there', `give 1: ${w1} (bangs → ${b1}) · give 2: ${w2} · blasts ${R.bangs.length}`);
@@ -324,7 +295,7 @@ export const doortoolsEdges = guarded(async () => {
     const res = D.blow();
     verdict(c0 === DOORTOOLS.charges - 1 && D.set.length === 0 && D.charges === DOORTOOLS.charges && res === null && D.stats.blown === 0 && R.said.some(t => /came open/.test(t)), 'the charged door comes open: the charge is off it and back in the bag, and F blows nothing', `charges ${c0} → ${D.charges} · set ${D.set.length} · blow: ${JSON.stringify(res)}`); }
   { // the F drill's can and the count
-    const R = await rig(7, { stage: 'nb', nb: { blindFire: false } }); const { NB, D, O } = R; const b0 = D.bangs;
+    const R = await rig(7, { stage: 'nb' }); const { NB, D, O } = R; const b0 = D.bangs;
     R.press('KeyF'); R.step(20); R.press('KeyF'); const took = D.bangs; const w = O.give('fallIn', O.targetAt(R.game.player.char.pos)); R.step(5);
     verdict(took === b0 - 1 && w === null && D.bangs === b0 && R.bangs.length === 0, 'the F drill called off between "go on set" and the throw: its can goes back', `bangs ${b0} → ${took} → ${D.bangs} · recall: ${w} · state ${NB.state}`); }
   return done();
@@ -355,7 +326,7 @@ export const doortoolsLights = guarded(async () => {
 async function tally(kind: string, seeds: number[], hot: boolean, door = 'breakroom_w', roomId = 'breakroom') {
   const out = { n: 0, first: 0, pair: 0, down: 0, of: 0, taken: 0 };
   for (const seed of seeds) {
-    const R = await rig(seed, { door, hot, deal: false }); const { D } = R; const room = R.room(roomId); out.of += room.defenders.length;   // (a ROOM-FIGHT floor: with squads dealt from the rooms the room's men are their squad's, still thinking four seconds after the bang and dug in behind wedged doors by twenty-five — the plain door then loses nobody, or nobody gets in, and there is nothing for a bang to beat)
+    const R = await rig(seed, { door, hot }); const { D } = R; const room = R.room(roomId); out.of += room.defenders.length;   // (the floor as the page deals it. Until 2026-11-07 the squads from the rooms were held off here: with them dealt the room's men are their squad's, still thinking four seconds after the bang and dug in behind wedged doors by twenty-five)
     R.give(kind, door); const op = D.ops[0]; if (!op) { out.n++; continue; }
     for (let i = 0; i < 60 * 45 && D.ops.length; i++) { R.step(); if (kind === 'charge' && op.phase === 'armed') R.press('KeyF'); }
     R.step(60 * 6);
@@ -366,7 +337,7 @@ async function tally(kind: string, seeds: number[], hot: boolean, door = 'breakr
   return out;
 }
 export const doortoolsFirstMan = guarded(async () => {
-  const { verdict, done } = family('doortools-firstman: behind a bang or a charge fewer first men are lost than through the plain door · a room-fight floor (squads from the rooms held off inside these runs)');
+  const { verdict, done } = family('doortools-firstman: behind a bang or a charge fewer first men are lost than through the plain door');
   const seeds = [1, 2, 3, 4, 5, 6], line = (k: string, t: any) => `${k}: first man lost ${t.first}/${t.n} · pair lost ${t.pair}/${t.n * 2} · room's men down ${t.down}/${t.n * 2} · room taken ${t.taken}/${t.n}`;
   const open = await tally('openClear', seeds, true), bang = await tally('bangClear', seeds, true), charge = await tally('charge', seeds, true);
   verdict(bang.first < open.first && charge.first < open.first, `an ALERTED floor (a bang heard four seconds before), the break room's west door, seeds ${seeds.join(' ')}: the first man through is lost less often behind a bang, and behind a charge, than through the plain door`,
@@ -387,4 +358,4 @@ if (import.meta.main && process.argv[2] === 'tally') {
   const [, , , kind, door, roomId, seeds, mode] = process.argv; const r = await asProbe('doortools-firstman', () => tally(kind, seeds.split(',').map(Number), mode === 'hot', door, roomId));   // (the count as the probe of that name makes it)
   Object.assign(DOORTOOLS, JSON.parse(JSON.stringify(DT_DEFAULTS))); Object.assign(ROOMCLEAR, RC_DEFAULTS); Object.assign(NIGHTBREACH, NB_DEFAULTS);
   console.log(`${mode} ${kind} ${door} over ${r.n} seeds: first man lost ${r.first} · pair lost ${r.pair}/${r.n * 2} · room's men down ${r.down}/${r.of} · room taken ${r.taken}`);
-} else if (import.meta.main) process.exit(exitCode(await asProbes({ 'doortools-menu': doortoolsMenu, 'doortools-charge': doortoolsCharge, 'doortools-bang': doortoolsBang, 'doortools-outside': doortoolsOutside, 'doortools-counts': doortoolsCounts, 'doortools-edges': doortoolsEdges, 'doortools-lights': doortoolsLights, 'doortools-firstman': doortoolsFirstMan }, wanted())));   // (`bun run tools/qa/doortools-probes.ts [name …]`: the file's probes alone, each as the runner runs it)
+} else if (import.meta.main) process.exit(exitCode(await asProbes({ 'doortools-menu': doortoolsMenu, 'doortools-charge': doortoolsCharge, 'doortools-bang': doortoolsBang, 'doortools-counts': doortoolsCounts, 'doortools-edges': doortoolsEdges, 'doortools-lights': doortoolsLights, 'doortools-firstman': doortoolsFirstMan }, wanted())));   // (`bun run tools/qa/doortools-probes.ts [name …]`: the file's probes alone, each as the runner runs it)

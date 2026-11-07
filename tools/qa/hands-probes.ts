@@ -1,15 +1,18 @@
-// The `hands` probes (src/game/hands.ts) — `bun run tools/qa/probes.ts hands`, or one of hands-body / hands-door / hands-team / hands-harness.
+// The `hands` probes (src/game/hands.ts) — `bun run tools/qa/probes.ts hands`, or one of hands-body / hands-door / hands-team.
 // Staged headless on the real Game, on Training lesson 1 (levels/train-move.json: one man in the yard, the hut whose door opens INTO it), with the doors as the
-// page has them (one-way, staying where they are left) and HANDS.on raised by the probe itself — the frozen stand holds it off (TPS_HANDS=1).
-//   hands-body     the 'second time' bug (the head end of a body offers no row with the switch off, and does with it on) · a body is taken up by its beats
+// page has them (one-way, staying where they are left).
+//   hands-body     the head end of a body offers the row (the 'second time' bug) · a body is taken up by its beats
 //                  (reach → rise → carry; no pin before the lift) from the feet AND from the head, hauled over a metre from either with both hands on the
 //                  limbs he has, laid down (pins lowered before they come off), and taken again from the other end — never 'wedged'
 //   hands-door     the hut door worked from four spots inside it (it opens toward him: the tight room) and two outside: the leaf never passes through him and
 //                  never stands in him, it ends open, his hand comes onto it, it makes the row's one creak; then shut from where that left him: latched
 //   hands-team     a door somebody ELSE works (HANDS.team): the squad's lead ordered to open a door has his hand on the leaf on the frame his shove moves it, on a
-//                  push face and on a pull face; a man who pulls a leaf to has a hand on it while it is in his reach; with the row off neither has, and the
-//                  leaf moves on the same frames either way
-//   hands-harness  the frozen stand holds it off, the page turns it on unless ?nohands, the table is a registered knob table a recording carries
+//                  push face and on a pull face; a man who pulls a leaf to has a hand on it while it is in his reach
+// SINCE 2026-11-07 the rule's switches and the two door rules it is staged with are settled on and nothing here writes them. Out: hands-body's
+// 'the switch off offers no row', its whole floor haul ((b3), and the 'along the floor' turns of (b4) and (d): the carry is the one haul), hands-door's
+// 'as loud as the flung leaf's first', its two-way door staging and the flung-leaf run beside the silent partner's, hands-team's 'the row off: no hand'
+// and 'the leaf turns the same either way', and the probe hands-harness (the two stands, ?nohands, the registry). The motion pass is no longer raised
+// for (d): it is on.
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
@@ -19,8 +22,6 @@ const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { bodyDist } = await import(`${ROOT}/src/game/player.ts`);
 const { HANDS } = await import(`${ROOT}/src/game/hands.ts`);
-const { MOVES } = await import(`${ROOT}/src/game/character.ts`);
-const { DOORWAY, DOORSTAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { RAG } = await import(`${ROOT}/src/game/ragdoll.ts`);
 
 type Vec3 = [number, number, number];
@@ -30,14 +31,12 @@ const verdict = (pass: boolean, what: string, detail = '') => { console.log(`- $
 const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x)), wrapAngle = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const f2 = (x: number) => x.toFixed(2), fp = (p: ArrayLike<number>) => `${f2(p[0])},${f2(p[2])}`;
 
-/** the lesson stood up as the page plays it (one-way doors that stay, the quiet scenario started), the switch as asked; everything put back by `keep` */
-async function rig(hands: boolean) {
+/** the lesson stood up as the page plays it (the quiet scenario started); the numbers a probe moves are put back by `keep` */
+async function rig() {
   const log = console.log, warn = console.warn; console.log = console.warn = () => {};
   let W: any;
   try {
-    DOORWAY.oneWay = true;
     W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8'))), seed: 1 });
-    DOORSTAY.on = true; HANDS.on = hands;
     startFromQuery(W.game, `?levelFile=${LEVEL}.json&quiet&difficulty=hard`);
   } finally { console.log = log; console.warn = warn; }
   const g = W.game, I = W.input, msgs: string[] = []; const om = g.msg.bind(g); g.msg = (s: string, ...a: any[]) => { msgs.push(s); return om(s, ...a); };
@@ -56,9 +55,9 @@ async function rig(hands: boolean) {
   return { W, g, I, msgs, step, tap, keyFor, dirOf, freeM, openKey };
 }
 async function keep(fn: () => Promise<boolean>): Promise<boolean> {
-  const was = { on: HANDS.on, body: HANDS.body, door: HANDS.door, carry: HANDS.carry, ride: HANDS.carryRide, nearM: HANDS.carryNearM, stepM: HANDS.stepM, roundM: HANDS.roundM, oneWay: DOORWAY.oneWay, stay: DOORSTAY.on };
+  const was = { ride: HANDS.carryRide, nearM: HANDS.carryNearM, stepM: HANDS.stepM, roundM: HANDS.roundM };
   try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; }
-  finally { HANDS.on = was.on; HANDS.body = was.body; HANDS.door = was.door; HANDS.carry = was.carry; HANDS.carryRide = was.ride; HANDS.carryNearM = was.nearM; HANDS.stepM = was.stepM; HANDS.roundM = was.roundM; DOORWAY.oneWay = was.oneWay; DOORSTAY.on = was.stay; }
+  finally { HANDS.carryRide = was.ride; HANDS.carryNearM = was.nearM; HANDS.stepM = was.stepM; HANDS.roundM = was.roundM; }
 }
 
 /** the one man of the lesson put out cold where he stands and left to settle; helpers round his ragdoll */
@@ -76,14 +75,13 @@ const hasRow = (g: any, verb: string) => g.nearby.some((r: any) => r.kind === 'b
 export async function handsBody(): Promise<boolean> { return keep(async () => {
   console.log('\n=== hands-body: a body is picked up from wherever he stands at it and carried over the shoulder, upright; put down on the floor; picked up again. Along the floor (the carry off, or no room for it): taken by the end he is at, both hands on it ===');
   allPass = true;
-  // (a) the reach: 0.9 m beyond the shoulders, the old reach (ankles, hips) offers nothing — the 'second time' — and the switch offers the row
-  { const R = await rig(false), B = body(R), { g, step } = R; const at = B.beyond('head', 0.9);
-    g.teleportPlayer(at); step(8); const off = { d: bodyDist(g, B.gd, 9), row: hasRow(g, 'drag') };
-    HANDS.on = true; step(3); const on = { d: bodyDist(g, B.gd, 9), row: hasRow(g, 'drag') };
-    verdict(!off.row && off.d >= 1.3 && on.row && on.d < 1.3, 'standing at the HEAD of a body: the switch off offers no row (the bug: nothing the second time, come back from the far end), on offers the row',
-      `off: reach ${f2(off.d)} row ${off.row} · on: reach ${f2(on.d)} row ${on.row} · stood at ${fp(at)}, shoulders ${fp(B.head())}, feet ${fp(B.feet())}`); }
+  // (a) the reach: 0.9 m beyond the shoulders (the old reach, ankles and hips, offered nothing there — the 'second time') the row is offered
+  { const R = await rig(), B = body(R), { g, step } = R; const at = B.beyond('head', 0.9);
+    g.teleportPlayer(at); step(8); const on = { d: bodyDist(g, B.gd, 9), row: hasRow(g, 'drag') };
+    verdict(on.row && on.d < 1.3, 'standing at the HEAD of a body: the row is offered (the bug was nothing the second time, come back from the far end)',
+      `reach ${f2(on.d)} row ${on.row} · stood at ${fp(at)}, shoulders ${fp(B.head())}, feet ${fp(B.feet())}`); }
   // (b) OVER THE SHOULDER (the page's default): three pick-ups in a row on one body — from its feet, from its head, from beside it
-  { const R = await rig(true), B = body(R), { g, step, tap, msgs, dirOf, freeM, openKey } = R, pl = g.player, c = pl.char;
+  { const R = await rig(), B = body(R), { g, step, tap, msgs, dirOf, freeM, openKey } = R, pl = g.player, c = pl.char;
     const hipMid = (): Vec3 => B.mid(RAG.hipL, RAG.hipR), label = () => g.nearby.find((r: any) => r.kind === 'body' && (r.verb === 'drag' || r.verb === 'drop'))?.line2 ?? '';
     let n = 0;
     for (const from of ['feet', 'head', 'side'] as const) {
@@ -122,7 +120,7 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
     }
   }
   // (b2) no room to carry (here: nowhere he may lift from) = the body along the floor, as below, without a word
-  { const R = await rig(true), B = body(R), { g, step, tap, msgs } = R, pl = g.player, near = HANDS.carryNearM; HANDS.carryNearM = -9;
+  { const R = await rig(), B = body(R), { g, step, tap, msgs } = R, pl = g.player, near = HANDS.carryNearM; HANDS.carryNearM = -9;
     g.teleportPlayer(B.beyond('feet', 0.8)); step(8); msgs.length = 0; g.selectVerb('body', 'drag'); tap(); step(260);
     verdict(!!pl.dragging && !!pl.haul && !pl.haul.carry && pl.haul.phase === 'carry' && pl.crouch && !msgs.some(m => /wedged|dropped/.test(m)), 'no room to lift it: he takes it along the floor instead — still in his hands, nothing dropped',
       `dragging ${!!pl.dragging} · haul ${pl.haul ? (pl.haul.carry ? 'shoulder' : 'floor') + '/' + pl.haul.phase : null} · crouched ${pl.crouch} · msgs ${msgs.join(' / ')}`);
@@ -130,7 +128,7 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
   // (b4) HIS HEAD COMES ROUND WITH HIM: over the whole haul — taken up, walked off with through a turn, put down — his head never moves more than a few degrees in one
   // frame against his body. (It whipped to the new facing in a single frame as he took hold and as he turned to lay it down; and in the old floor haul the look at
   // his own hands, straight under his eyes, flipped side to side with the walk.)
-  for (const carry of [true, false]) { const R = await rig(true), B = body(R), { g, step, tap, keyFor } = R, pl = g.player, c = pl.char; HANDS.carry = carry;
+  { const carry = true, R = await rig(), B = body(R), { g, step, tap, keyFor } = R, pl = g.player, c = pl.char;
     g.teleportPlayer(B.beyond('feet', 0.8)); step(8);
     let prev: Vec3 | null = null, prevYaw = 0, worst = 0, at = '', frames = 0;
     const watch = () => { const hd = c.headDir(), by = c.bodyYaw; if (prev && pl.haul) { const turn = Math.abs(wrapAngle(by - prevYaw)), d = Math.max(0, Math.acos(clamp(v3.dot(prev, hd), -1, 1)) - turn) * 180 / Math.PI; frames++; if (d > worst) { worst = d; at = pl.haul.phase; } } prev = hd; prevYaw = by; };
@@ -144,7 +142,7 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
   // (b5) IT HANGS OFF HIM: walked to and fro and round a square with it on his shoulder, its arms, shins and head stay near the hang they have on a man standing
   // still, and no part of it gets far from him. (They streamed out behind every stride and turn — the body's damping was against the floor, not against the man
   // carrying it: 'ragdolls are a bit too floppy when carried'. With the ride off the same walk shows it.)
-  { const sway = async (ride: number) => { const R = await rig(true), B = body(R), { g, step, tap, openKey } = R, pl = g.player, c = pl.char; const was = HANDS.carryRide; HANDS.carryRide = ride; HANDS.carry = true;
+  { const sway = async (ride: number) => { const R = await rig(), B = body(R), { g, step, tap, openKey } = R, pl = g.player, c = pl.char; const was = HANDS.carryRide; HANDS.carryRide = ride;
       try {
         g.teleportPlayer(B.beyond('feet', 0.8)); step(8); g.selectVerb('body', 'drag'); tap(); step(240);
         const up = pl.haul?.phase === 'carry' && !!pl.haul.carry, limbs: [number, number][] = [[RAG.shoL, RAG.handL], [RAG.shoR, RAG.handR], [RAG.kneeL, RAG.ankL], [RAG.kneeR, RAG.ankR], [RAG.neck, RAG.head]];
@@ -163,39 +161,8 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
     verdict(no.up && no.worst > 50 && no.far > on.far + 0.15, 'the ride off, the same walk shows the fault: limbs past 50° off the hang, parts of it further out from him',
       `ride off: worst ${f2(no.worst)}° · farthest part ${f2(no.far)} m (on: ${f2(on.far)} m)`);
     console.log(`    (ride ${HANDS.carryRide}: limbs ≤ ${f2(on.worst)}° off the hang, farthest part ${f2(on.far)} m · ride 0: ≤ ${f2(no.worst)}°, ${f2(no.far)} m)`); }
-  // (b3) ALONG THE FLOOR (the carry switched off): three pick-ups in a row on one body: feet, head, feet
-  { const R = await rig(true), B = body(R), { g, step, tap, msgs, keyFor } = R, pl = g.player, c = pl.char; HANDS.carry = false;
-    let n = 0;
-    for (const end of ['feet', 'head', 'feet'] as const) {
-      n++; const tag = `pick-up ${n} (from the ${end})`;
-      g.teleportPlayer(B.beyond(end, end === 'feet' ? 0.8 : 0.9)); step(8); msgs.length = 0;
-      const sel = g.selectVerb('body', 'drag');
-      const phases: string[] = []; let pinEarly = false, y0 = 0; const gripY = () => pl.haul ? (B.P(pl.haul.iL)[1] + B.P(pl.haul.iR)[1]) / 2 : 0;
-      const watch = () => { const h = pl.haul; if (!h) return; if (phases[phases.length - 1] !== h.phase) phases.push(h.phase); if (h.phase === 'reach') { if (!y0) y0 = gripY(); else if (gripY() > y0 + 0.05) pinEarly = true; } };
-      tap(watch); step(100, [], watch);
-      const took = !!pl.dragging && pl.haul?.end === end && phases.join('>') === 'reach>rise>carry';
-      const carryY = gripY(), wantY = end === 'feet' ? HANDS.carryFeet : HANDS.carryHead;
-      verdict(sel && took && !pinEarly && Math.abs(carryY - wantY) < 0.06, `${tag}: taken by that end, reach → rise → carry, nothing lifted before the hands are down, then held at carry height`,
-        `row selected ${sel} · dragging ${!!pl.dragging} · end ${pl.haul?.end} · beats ${phases.join('>')} · lifted during the reach ${pinEarly} · grip height ${f2(carryY)} (want ${wantY}) · msgs ${msgs.join(' / ')}`);
-      // haul it away from itself for 2.5 s: it comes, his hands stay on the two limbs
-      const h0 = v3.copy(B.hips()), away = v3.normalize([c.pos[0] - h0[0], 0, c.pos[2] - h0[2]]), key = keyFor(away);
-      let frames = 0, on = 0, gap = 0;
-      step(150, [key], () => { const h = pl.haul; if (!h || h.phase !== 'carry') return; frames++; const a = v3.dist(c.bones.handL, B.P(h.iL)), b = v3.dist(c.bones.handR, B.P(h.iR)); gap = Math.max(gap, a, b); if (a < 0.12 && b < 0.12) on++; });
-      const moved = v3.distXZ(h0, B.hips()), wedged = msgs.some(m => /wedged/.test(m));
-      verdict(!!pl.dragging && moved > 1.0 && !wedged && frames > 100 && on / frames > 0.9, `${tag}: hauled — the body comes over a metre, both wrists on the limbs he has, never torn out of his hands`,
-        `still dragging ${!!pl.dragging} · hips moved ${f2(moved)} m (${key}) · wrists within 12 cm of their limbs ${on}/${frames} frames, worst ${f2(gap)} · wedged ${wedged}`);
-      console.log(`    (${tag}: worst wrist ↔ limb gap ${f2(gap)} m over ${frames} frames of the haul, hips came ${f2(moved)} m)`);
-      // lay it down
-      step(20); msgs.length = 0; const selD = g.selectVerb('body', 'drop'); let sawSet = false, lowY = 9;
-      tap(() => { if (pl.haul?.phase === 'set') { sawSet = true; lowY = Math.min(lowY, gripY()); } }); step(60, [], () => { if (pl.haul?.phase === 'set') { sawSet = true; lowY = Math.min(lowY, gripY()); } });
-      verdict(selD && sawSet && !pl.dragging && !pl.haul && !c.anim.haul && lowY < 0.28 && msgs.includes('body set down'), `${tag}: 'let go of him' lays it down — the limbs lowered to the floor before the hands come off`,
-        `row selected ${selD} · a set beat ${sawSet} · dragging after ${!!pl.dragging} · lowest the grip stood before release ${f2(lowY)} · msgs ${msgs.join(' / ')}`);
-      step(90);
-    }
-    HANDS.carry = true;
-  }
   // (c) torn out of his hands: a sprint is the old instant drop (from his shoulder too)
-  { const R = await rig(true), B = body(R), { g, step, tap, keyFor } = R, pl = g.player, c = pl.char;
+  { const R = await rig(), B = body(R), { g, step, tap, keyFor } = R, pl = g.player, c = pl.char;
     g.teleportPlayer(B.beyond('feet', 0.8)); step(8); g.selectVerb('body', 'drag'); tap(); step(240);
     const had = !!pl.dragging && pl.haul?.phase === 'carry' && !!pl.haul.carry; const h = B.hips(), key = keyFor(v3.normalize([c.pos[0] - h[0], 0, c.pos[2] - h[2]]));
     step(6, [key, 'ShiftLeft']);
@@ -207,17 +174,15 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
     const rose = inRise(); step(3, [key, 'ShiftLeft']);
     verdict(alone && rose && !pl.dragging && !pl.haul, 'Shift alone never makes the step in to it a sprint; Shift + his own key in the middle of the lift lets go at once', `Shift alone kept it ${alone} · reached the lift ${rose} · dragging after ${!!pl.dragging}`); }
   // (d) rounds past him / a round into him while he hauls (the movement pass on, as the page has it): the reaction would turn the trunk under rigid arms — his hands stay on the limbs
-  { const moves = MOVES.on;
-    try { for (const carry of [true, false]) {
-      const R = await rig(true), B = body(R), { g, step, tap } = R, pl = g.player, c = pl.char; MOVES.on = 1; HANDS.carry = carry;   // (after the stand-up: the frozen stand pins the pass off)
+  { { const carry = true;
+      const R = await rig(), B = body(R), { g, step, tap } = R, pl = g.player, c = pl.char;
       g.teleportPlayer(B.beyond('feet', 0.8)); step(8); g.selectVerb('body', 'drag'); tap(); step(240);
       const had = !!pl.dragging && pl.haul?.phase === 'carry' && !!pl.haul.carry === carry; let frames = 0, gap = 0;
       const meas = () => { const h = pl.haul, a = c.anim.haul; if (!h || !a) return; frames++; gap = Math.max(gap, v3.dist(c.bones.handL, a.l), (a.rw ?? 1) > 0.9 ? v3.dist(c.bones.handR, a.r) : 0); };
       c.anim.flinchFrom([1, 0, 0]); step(45, [], meas); c.anim.hitFrom([0, 0, 1]); step(45, [], meas);
       verdict(had && !!pl.dragging && frames === 90 && gap < 0.08, `flinching and hit while he ${carry ? 'carries it over his shoulder' : 'hauls it along the floor'}: ${carry ? 'his hand stays on its legs' : 'both wrists stay on the limbs he has'} (the reaction yields to the haul as to the lock tools; without that a round home swings them 10 cm off)`,
         `held ${had} · still dragging ${!!pl.dragging} · frames ${frames} · worst wrist ↔ grip gap ${f2(gap)} m`); }
-      HANDS.carry = true; }
-    finally { MOVES.on = moves; } }
+  }
   return allPass;
 }); }
 
@@ -242,7 +207,7 @@ function work(R: Awaited<ReturnType<typeof rig>>, d: any, secs: number) {
 export async function handsDoor(): Promise<boolean> { return keep(async () => {
   console.log('\n=== hands-door: a door row brings the leaf round under his hand, him stepped clear of its swing — never through him; shut again, it latches ===');
   allPass = true;
-  const R = await rig(true), { g, step } = R, d = g.doors.byName('hut'), need = 0.34 + d.thick / 2;
+  const R = await rig(), { g, step } = R, d = g.doors.byName('hut'), need = 0.34 + d.thick / 2;
   for (const S of SPOTS) {
     d.reset(); g.teleportPlayer(S.at); step(12);
     const row = g.nearby.find((r: any) => r.kind === 'door')?.line2 ?? '?';
@@ -256,8 +221,8 @@ export async function handsDoor(): Promise<boolean> { return keep(async () => {
   }
   // the sound of it: one opening = the row's one creak, as Doors.use always said it (level 0.2) — heard by the same ears
   { d.reset(); g.teleportPlayer(SPOTS[4].at); step(12); const ev = work(R, d, 1.6).heard;
-    HANDS.on = false; d.reset(); g.teleportPlayer(SPOTS[4].at); step(40); const was = work(R, d, 1.6).heard; HANDS.on = true;
-    verdict(ev.length === 1 && was.length >= 1 && Math.abs(ev[0] - was[0]) < 1e-9, 'an opening by hand files ONE door noise, as loud as the first one the flung leaf makes (the creak — and none of the flung leaf\'s knocks after it)', `by hand: ${JSON.stringify(ev)} · flung: ${JSON.stringify(was)}`); }
+
+    verdict(ev.length === 1, 'an opening by hand files ONE door noise (the creak — and none of a flung leaf\'s knocks after it)', `by hand: ${JSON.stringify(ev)}`); }
   // a step of his own takes his feet back; the leaf still never goes into him
   { d.reset(); g.teleportPlayer(SPOTS[0].at); step(12); const key = R.keyFor([0, 0, -1]);
     g.selectVerb('door'); R.tap(); let passers = 0, minGap = 9; step(90, [key], () => { passers |= d.passers; if (Math.abs(d.angle) > 0.02) minGap = Math.min(minGap, leafGap(d, g.player.char.pos)); });
@@ -268,8 +233,8 @@ export async function handsDoor(): Promise<boolean> { return keep(async () => {
   // a limp body lying in the leaf's swing, the door pushed from its other face. One-way doors: a hand's leaf moves him aside like any push (doors.ts). Two-way
   // doors (the frozen stand, `?twoway`): only the flung leaf leaving its latch does, so the move is refused and the row does what it always did — a leaf brought
   // round by hand used to stop a few degrees open on a limb, still shut to every test, with nothing but walking into it to get it open
-  for (const oneWay of [true, false]) {
-    const R2 = await rig(true), g2 = R2.g, d2 = g2.doors.byName('hut'), gd = g2.guards[0]; DOORWAY.oneWay = oneWay; d2.reset();
+  { const oneWay = true;
+    const R2 = await rig(), g2 = R2.g, d2 = g2.doors.byName('hut'), gd = g2.guards[0]; d2.reset();
     const into = oneWay ? d2.swing : -1;   // (this leaf's negative angles are the hut's inside: x past the hinge's)
     killGuard(g2, gd, [1, 0, 0], true); R2.step(150);
     // (laid where the lesson run that found it had him: a knee 14 cm beyond the shut leaf's line, half way along it — the settled body moved there as it lies)
@@ -287,7 +252,7 @@ export async function handsDoor(): Promise<boolean> { return keep(async () => {
   // him and the doorway. He used to be stepped into the pocket behind it — or left beside the hinge — and then walked into the leaf's back; now he comes out
   // round its free end as it comes, ends on the opening's side of it, and walks in. (The last start is the latch half: as it always was.)
   {
-    const R3 = await rig(true), g3 = R3.g, d3 = g3.doors.byName('gate_w'), hx = d3.def.hinge[0], hz = d3.def.hinge[1], s = d3.swing > 0 ? -1 : 1, need3 = 0.34 + d3.thick / 2;
+    const R3 = await rig(), g3 = R3.g, d3 = g3.doors.byName('gate_w'), hx = d3.def.hinge[0], hz = d3.def.hinge[1], s = d3.swing > 0 ? -1 : 1, need3 = 0.34 + d3.thick / 2;
     const side = (a: number, q: ArrayLike<number>) => { const dir = d3.def.closedDir + a; return Math.cos(dir) * (q[2] - hz) - Math.sin(dir) * (q[0] - hx); };
     const latch = [hx + Math.cos(d3.def.closedDir) * d3.def.width, 0, hz + Math.sin(d3.def.closedDir) * d3.def.width];
     for (const [name, off] of [['beside the hinge', [0.5, -0.25]], ['in front of the hinge', [0.5, 0.1]], ['the hinge half', [0.5, 0.3]], ['the hinge half, further out', [0.7, 0.2]], ['well beyond the hinge', [0.45, -0.6]], ['the latch half', [0.9, 0.5]]] as const) {
@@ -305,8 +270,8 @@ export async function handsDoor(): Promise<boolean> { return keep(async () => {
   // him or at Sam, and the men turned to the door as it opens see no more of him than under the flung leaf
   { const { Run, squadUp } = await import('./pairsneak.ts'); const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
     const res: Record<string, { began: boolean; open: number; funnel: boolean; v: number; moved: number; mateGap: number; samGap: number; seen: number; face: string; need: number }> = {};
-    for (const hands of [true, false]) {
-      const P = await Run.start('roomclear=10&squad=1', 6, { sneak: true }); P.stopOnNotice = false; squadUp(P); HANDS.on = hands;
+    { const hands = true;
+      const P = await Run.start('roomclear=10&squad=1', 6, { sneak: true }); P.stopOnNotice = false; squadUp(P);
       const dd = P.door('breakroom_w'), fc = dd.frameCentre, T1 = P.hostiles[0]; dd.def.closer = false;
       const th = dd.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th), in0 = Math.sign((T1.char.pos[0] - fc[0]) * nx + (T1.char.pos[2] - fc[2]) * nz) || 1;
       const spot = P.free([fc[0] + nx * in0 * 4.3, 0, fc[2] + nz * in0 * 4.3 + 0.3]); T1.char.pos[0] = spot[0]; T1.char.pos[2] = spot[2];
@@ -324,31 +289,29 @@ export async function handsDoor(): Promise<boolean> { return keep(async () => {
       for (let i = 0; i < 150; i++) { P.step(); if (P.pl.doorMove) began = true; if (Math.abs(dd.angle - a0) > 0.02) { mateGap = Math.min(mateGap, leafGap(dd, m.char.pos)); samGap = Math.min(samGap, leafGap(dd, P.pos)); } }
       res[String(hands)] = { began: row && began, open: Math.abs(dd.angle), funnel, v, moved: flat(p0, m.char.pos), mateGap, samGap, seen: P.mateSeenS - seen0, face, need: 0.34 + dd.thick / 2 };
     }
-    HANDS.on = true; const a = res.true, b = res.false;
+    const a = res.true;
     const w = (x: typeof a) => `the ${x.face} face · move began ${x.began} · open ${f2(x.open)} rad · partner in the shut door's line ${x.funnel}, moving ${f2(x.v)} m/s before, moved ${f2(x.moved)} m after · leaf's line nearest the partner ${f2(x.mateGap)}, nearest Sam ${f2(x.samGap)} (a body + the leaf: ${f2(x.need)}) · eyes on the partner ${f2(x.seen)} s`;
-    verdict(a.began && a.open >= 1.0 && !b.began && b.open >= 1.0, 'with a silent partner behind him: the push row works the door by hand and it ends open (the switch off: the flung leaf)', `by hand: ${w(a)}\n    flung: ${w(b)}`);
+    verdict(a.began && a.open >= 1.0, 'with a silent partner behind him: the push row works the door by hand and it ends open', w(a));
     verdict(!a.funnel && a.v < 0.1 && a.moved < 0.3, '… the partner is out of the doorway\'s line and still before the leaf moves, and stays where he is while it comes round', w(a));
     verdict(a.mateGap >= a.need - 0.04 && a.samGap >= a.need - 0.04, '… and the leaf comes at neither of them', w(a));
-    console.log(`    (by hand: ${w(a)})\n    (flung: ${w(b)})`);
-    verdict(a.seen < 0.1 && a.seen <= b.seen + 0.05, '… the men looking at the door as it opens do not see the partner (2.5 s of it), no more than under the flung leaf', `by hand ${f2(a.seen)} s · flung ${f2(b.seen)} s`); }
+    verdict(a.seen < 0.1, '… the men looking at the door as it opens do not see the partner (2.5 s of it)', `eyes on him ${f2(a.seen)} s`); }
   return allPass;
 }); }
 
 // ================================================================ a door somebody else works
 /** the office's room clear with the four, doors as the page has them, every defender taken off the floor (doortools-probes.ts's rig: its first step resets the level) */
-async function teamRig(team: boolean) {
+async function teamRig() {
   const { rig: dtRig } = await import('./doortools-probes.ts'); const { despawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
-  const set = () => { DOORWAY.oneWay = true; DOORSTAY.on = true; HANDS.on = true; HANDS.team = team; };
-  set(); const R: any = await dtRig(1, { stage: 'rc' }); set();
+  const R: any = await dtRig(1, { stage: 'rc' });
   for (const h of [...R.game.guards]) if (h.team === 'hostile') despawnUnit(R.game, h);
   R.step(10);
   return R;
 }
 const handW = (c: any) => { const h = c.anim.doorHands(); return Math.max(h.L, h.R); };
 /** the door ordered open from one of its faces: the frame the leaf first moves, the lead's hand on that frame, the leaf's angle over the next half second */
-async function orderedOpen(team: boolean, name: string, pull: boolean) {
+async function orderedOpen(name: string, pull: boolean) {
   const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
-  const R = await teamRig(team), g = R.game, d = R.door(name), c = d.def.closedDir, ux = Math.cos(c), uz = Math.sin(c), H = d.def.hinge, W = d.def.width;
+  const R = await teamRig(), g = R.game, d = R.door(name), c = d.def.closedDir, ux = Math.cos(c), uz = Math.sin(c), H = d.def.hinge, W = d.def.width;
   const off = (f: number, o: number): Vec3 => [H[0] + ux * W * 0.5 - uz * o * f, 0, H[1] + uz * W * 0.5 + ux * o * f];
   const pf = [1, -1].find(f => g.doors.pullFace(d, off(f, 0.8)))!, f = pull ? pf : -pf, sam = off(f, 2.6);
   d.locked = false; g.teleportPlayer(sam);   // (the room clear's staging has the door shut; Door.reset would put the level's own angle back — this one is authored open)
@@ -368,8 +331,8 @@ async function orderedOpen(team: boolean, name: string, pull: boolean) {
   return { refused: '', at, w, trace: tr.join(' ') };
 }
 /** a teammate stood half a metre off an open leaf pulls it to: the most his hand is on it, the leaf's angle every frame */
-async function pulledTo(team: boolean) {
-  const R = await teamRig(team), g = R.game, d = R.door('breakroom_w'), m = R.ops[0];
+async function pulledTo() {
+  const R = await teamRig(), g = R.game, d = R.door('breakroom_w'), m = R.ops[0];
   d.locked = false; d.latched = false; d.angle = Math.abs(d.maxA) > 0.5 ? Math.min(1.4, d.maxA) : Math.max(-1.4, d.minA); d.vel = 0; d.place();
   const a = d.def.closedDir + d.angle, u = [Math.cos(a), Math.sin(a)], n = [-u[1], u[0]], H = d.def.hinge, W = d.def.width, end = [H[0] + u[0] * W * 0.8, H[1] + u[1] * W * 0.8];
   const at = [1, -1].map(s => [end[0] + n[0] * 0.55 * s, 0, end[1] + n[1] * 0.55 * s] as Vec3).find(q => !g.col.nav.isBlocked(q[0], q[2]))!;
@@ -380,40 +343,19 @@ async function pulledTo(team: boolean) {
   for (let i = 0; i < 120; i++) { R.step(1); w = Math.max(w, handW(m.char)); tr.push(d.angle.toFixed(4)); }
   return { open0, w, end: Math.abs(d.angle), trace: tr.join(' ') };
 }
-export async function handsTeam(): Promise<boolean> { const was = HANDS.team; return keep(async () => {
+export async function handsTeam(): Promise<boolean> { return keep(async () => {
   console.log('\n=== hands-team: a door somebody else works — the squad\'s lead ordered to open one, a man pulling one to: a hand on the leaf as it moves ===');
   allPass = true;
   const log = console.log, warn = console.warn; const quiet = async <T>(fn: () => Promise<T>): Promise<T> => { console.log = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.warn = warn; } };
   for (const [name, pull] of [['breakroom_w', false], ['fire_exit', false], ['fire_exit', true]] as [string, boolean][]) {
-    const on = await quiet(() => orderedOpen(true, name, pull)), no = await quiet(() => orderedOpen(false, name, pull)), face = pull ? 'pull' : 'push';
-    if (on.refused || no.refused) { verdict(false, `${name}, ordered open from its ${face} face`, `refused: ${on.refused || no.refused}`); continue; }
+    const on = await quiet(() => orderedOpen(name, pull)), face = pull ? 'pull' : 'push';
+    if (on.refused) { verdict(false, `${name}, ordered open from its ${face} face`, `refused: ${on.refused}`); continue; }
     verdict(on.at >= 0 && on.w >= 0.6, `${name}, ordered open from its ${face} face: the lead's hand is on the leaf on the frame it first moves`, `opened at frame ${on.at} · hand ${f2(on.w)}`);
-    verdict(no.at >= 0 && no.w < 0.05, `${name}, ${face} face, the row off: no hand on it then (the leaf goes by itself, as it did)`, `opened at frame ${no.at} · hand ${f2(no.w)}`);
-    verdict(on.at === no.at && on.trace === no.trace, `${name}, ${face} face: the leaf first moves on the same frame and turns the same either way`, `on: frame ${on.at} · off: frame ${no.at}${on.trace === no.trace ? '' : ' · the angles differ'}`);
-    console.log(`  (${name}, ${face} face: the leaf moves at frame ${on.at}; the lead's hand ${f2(on.w)} with the row on, ${f2(no.w)} off)`);
+    console.log(`  (${name}, ${face} face: the leaf moves at frame ${on.at}; the lead's hand ${f2(on.w)})`);
   }
-  const on = await quiet(() => pulledTo(true)), no = await quiet(() => pulledTo(false));
+  const on = await quiet(() => pulledTo());
   verdict(on.open0 > 1 && on.end < on.open0 - 0.5 && on.w >= 0.6, 'a man pulling an open leaf to: it comes shut under his hand', `open ${f2(on.open0)} → ${f2(on.end)} · hand at most ${f2(on.w)}`);
-  verdict(no.w < 0.05, 'the row off: no hand on a leaf he pulls to', `hand at most ${f2(no.w)}`);
-  verdict(on.trace === no.trace, 'the leaf turns the same either way, every frame', `ended ${f2(on.end)} on · ${f2(no.end)} off`);
-  console.log(`  (pulled to: ${f2(on.open0)} → ${f2(on.end)} rad in two seconds; his hand at most ${f2(on.w)} with the row on, ${f2(no.w)} off)`);
-  return allPass;
-}).finally(() => { HANDS.team = was; }); }
-
-// ================================================================ the two stands, the page, the knob table
-export async function handsHarness(): Promise<boolean> { return keep(async () => {
-  console.log('\n=== hands-harness: the frozen stand holds the switch off, the page turns it on unless ?nohands, the table is a registered knob table ===');
-  allPass = true; const P = await import(`${ROOT}/src/host/profile.ts`), K = await import(`${ROOT}/src/game/knobs.ts`), E = await import(`${ROOT}/src/host/standEnv.ts`);
-  { const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_HANDS;
-    if (frozen || word !== undefined) HANDS.on = word !== '1';
-    const before = HANDS.on; await standUp(); const want = frozen || word !== undefined ? word === '1' : before;
-    verdict(HANDS.on === want, frozen ? 'standUp() on the frozen stand puts HANDS.on to what TPS_HANDS says (unset: off — every stored digest read the ankle drag and the flung leaf)' : "standUp() on the shipped stand leaves HANDS.on to the page's boot (or to TPS_HANDS where it is given)", `before ${before} · after ${HANDS.on} · TPS_HANDS ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'}`); }
-  { const row = P.FROZEN_HOLDS['HANDS.on']; verdict(typeof row === 'string' && /TPS_HANDS=1/.test(row) && E.STAND_ENV.includes('TPS_HANDS'), 'FROZEN_HOLDS names HANDS.on with the word that turns it on, and STAND_ENV carries that word', `FROZEN_HOLDS['HANDS.on'] = ${JSON.stringify(row)} · in STAND_ENV ${E.STAND_ENV.includes('TPS_HANDS')}`); }
-  { const c = K.knobsCopy(); let a: unknown, b: unknown, o: unknown;
-    try { HANDS.on = false; P.pageSwitches(new URLSearchParams('')); a = HANDS.on; P.pageSwitches(new URLSearchParams('nohands')); b = HANDS.on; P.pageSwitches(new URLSearchParams('noclose&nolightwall')); o = HANDS.on; } finally { K.knobsBack(c); }
-    verdict(a === true && b === false && o === true, "the page's boot (pageSwitches): no flag → on · ?nohands → off · other flags leave it on", `'' → ${a} · 'nohands' → ${b} · 'noclose&nolightwall' → ${o}`); }
-  { const reg = K.knobRegistry(), same = reg.HANDS === HANDS, inJ = K.JOURNAL_KNOBS.includes('HANDS'); const c = K.knobsCopy(), was = HANDS.doorRate; HANDS.doorRate = was + 1; K.knobsBack(c);
-    verdict(same && inJ && HANDS.doorRate === was, 'knobRegistry().HANDS is the table, a recording carries it (JOURNAL_KNOBS), knobsCopy / knobsBack restore it', `registry is the table ${same} · in JOURNAL_KNOBS ${inJ} · doorRate put back ${HANDS.doorRate === was}`); }
+  console.log(`  (pulled to: ${f2(on.open0)} → ${f2(on.end)} rad in two seconds; his hand at most ${f2(on.w)})`);
   return allPass;
 }); }
 
@@ -422,6 +364,5 @@ if (import.meta.main) {
   if (which === 'all' || which === 'body') ok = await handsBody() && ok;
   if (which === 'all' || which === 'door') ok = await handsDoor() && ok;
   if (which === 'all' || which === 'team') ok = await handsTeam() && ok;
-  if (which === 'all' || which === 'harness') ok = await handsHarness() && ok;
   console.log(ok ? '\n=== hands: ALL PASS ===' : '\n=== hands: FAILED ==='); process.exit(ok ? 0 : 1);
 }

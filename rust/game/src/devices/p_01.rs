@@ -125,19 +125,6 @@ pub fn devices_pad_near(g: &mut crate::game::Game, p: V3) -> Option<crate::devic
     }
     best.map(|i| g.devices.keypads[i].clone())
 }
-/// For a checkpoint: each camera's pan, integrator and report state, each beam's counts and clocks, the log.   (devices.ts Devices.snapshot)
-pub fn devices_snapshot(g: &mut crate::game::Game) -> crate::devices::DevicesSnap {
-    use crate::sim_lightshome as h;
-    let mut cameras = Vec::new();
-    for c in g.devices.cameras.clone() {
-        cameras.push(DevicesSnapCamerasItem { yaw: h::camera_machine_yaw(g, c), phase: h::camera_machine_phase(g, c), seen: h::camera_machine_seen(g, c), state: h::camera_machine_state(g, c), reported_at: h::camera_machine_reported_at(g, c), last_seen: h::camera_machine_last_seen(g, c), dead_called: h::camera_machine_dead_called(g, c) });
-    }
-    let mut lasers = Vec::new();
-    for l in g.devices.lasers.clone() {
-        lasers.push(DevicesSnapLasersItem { last_trip_at: h::laser_machine_last_trip_at(g, l), trips: h::laser_machine_trips(g, l), dead_called: h::laser_machine_dead_called(g, l), held: h::laser_machine_held(g, l) });
-    }
-    DevicesSnap { cameras, lasers, log: g.devices.log.clone(), radio_count: g.devices.radio_count, seq: g.devices.seq }
-}
 /// `Number.isFinite(x) ? x : d`, restore's guard on what a save holds
 fn finite_or(x: f64, d: f64) -> f64 { if x.is_finite() { x } else { d } }
 /// From a checkpoint: reset first, then what the save holds; an unfinished code is broken off.   (devices.ts Devices.restore)
@@ -171,32 +158,6 @@ pub fn devices_reset(g: &mut crate::game::Game) {
     g.devices.radio_count = 0.0;
 }
 
-/// The panel's line: every camera's state and integrator, every beam's trips, the codes he knows.   (devices.ts Devices.summary)
-pub fn devices_summary(g: &mut crate::game::Game) -> String {
-    use crate::sim_lightshome as h;
-    let mut cams: Vec<String> = Vec::new();
-    for c in g.devices.cameras.clone() {
-        let (name, target) = (g.tab.devices_camera_rt[c].def.name.clone(), g.tab.devices_camera_rt[c].target);
-        let dark = if alive(g, target) { "" } else { " (dark)" };
-        let saw = if h::camera_machine_saw_this_frame(g, c) { " ◉" } else { "" };
-        cams.push(format!("{}{} {} {}s{}", name, dark, h::camera_machine_state(g, c).as_str(), js::to_fixed(h::camera_machine_seen(g, c), 2), saw));
-    }
-    let mut las: Vec<String> = Vec::new();
-    for l in g.devices.lasers.clone() {
-        let (name, target) = (g.tab.devices_laser_rt[l].def.name.clone(), g.tab.devices_laser_rt[l].target);
-        let dark = if alive(g, target) { "" } else { " (dark)" };
-        las.push(format!("{}{} ×{}", name, dark, js::num_str(h::laser_machine_trips(g, l))));
-    }
-    let pl = g.player;
-    let codes: Vec<String> = g.pl[pl].codes.iter().collect();
-    let (cams, las, codes) = (cams.join(" · "), las.join(" · "), codes.join(" "));
-    format!("devices ▸ {}{} | {} | codes [{}]",
-        if g.tune.devices { "" } else { "OFF · " },
-        if cams.is_empty() { "no cameras" } else { cams.as_str() },
-        if las.is_empty() { "no beams" } else { las.as_str() },
-        if codes.is_empty() { "—" } else { codes.as_str() })
-}
-
 /// Powered, unbroken, not knocked out: the device works this frame.   (devices.ts alive)
 pub fn alive(g: &mut crate::game::Game, t: FixtureId) -> bool {
     crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)
@@ -218,13 +179,6 @@ pub fn lens_dir(yaw: f64, pitch: f64) -> V3 {
     let cp = m::cos(pitch);
     [m::sin(yaw) * cp, m::sin(pitch), m::cos(yaw) * cp]
 }
-/// Where a panning camera points at phase u: eased there and back between the sweep's two yaws.   (devices.ts sweepYaw)
-pub fn sweep_yaw(d: &crate::devices::CameraDef2, phase: f64) -> f64 {
-    let sw = match d.sweep { Some(x) => x, None => return d.yaw };
-    let s = 0.5 - 0.5 * m::cos(phase * m::PI * 2.0);
-    v3::lerp(sw[0], sw[1], s)
-}
-
 /// Pan the cameras, run their pictures, run the beams, key the code being entered.   (devices.ts updateDevices)
 pub fn update_devices(g: &mut crate::game::Game, dt: f64) {
     let live = sensing(g);
@@ -295,16 +249,15 @@ pub fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
         let id = g.guards[i];
         if g.gd[id].state != crate::game::GuardState::Dead && g.gd[id].held.is_none() && g.gd[id].unit.is_none() {
             crate::belief::word(g, id, p);
-            let gd = &mut g.gd[id];
-            gd.awareness = m::max(gd.awareness, 0.5);
-            if gd.state == crate::game::GuardState::Patrol {
-                gd.state = crate::game::GuardState::Suspicious;
-                gd.react_t = 0.8;
-                gd.search_t = 0.0;
-                gd.path = Vec::new();
-                gd.path_serial = gd.path_serial.wrapping_add(1);
-                gd.path_goal = None;
-                gd.path_goal_orbit = false;
+            crate::mind::raise(g, id, 0.5, "devices");
+            if g.gd[id].state == crate::game::GuardState::Patrol {
+                crate::mind::set_state(g, id, crate::game::GuardState::Suspicious, "devices");
+                g.gd[id].react_t = 0.8;
+                g.gd[id].search_t = 0.0;
+                g.gd[id].path = Vec::new();
+                g.gd[id].path_serial = g.gd[id].path_serial.wrapping_add(1);
+                g.gd[id].path_goal = None;
+                g.gd[id].path_goal_orbit = false;
             }
         }
     }
@@ -451,18 +404,16 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
     }
     let id = best?;
     {
-        let gd = &mut g.gd[id];
-        gd.task = Some(crate::game::GuardTask::Arm0(crate::game::GuardTaskArm0 { kind: crate::game::GuardTaskArm0Kind::Device, pos: v3::copy(goal) }));
-        gd.last_known = Some(v3::copy(goal));
-        gd.fix_stamp = gd.fix_stamp.wrapping_add(1);
-        gd.awareness = m::max(gd.awareness, errand().awareness);
-        gd.state = crate::game::GuardState::Suspicious;
-        gd.react_t = errand().react_t;
-        gd.search_t = 0.0;
-        gd.path = Vec::new();
-        gd.path_serial = gd.path_serial.wrapping_add(1);
-        gd.path_goal = None;
-        gd.path_goal_orbit = false;
+        g.gd[id].task = Some(crate::game::GuardTask::Arm0(crate::game::GuardTaskArm0 { kind: crate::game::GuardTaskArm0Kind::Device, pos: v3::copy(goal) }));
+        crate::mind::fix(g, id, Some(v3::copy(goal)), "devices");
+        crate::mind::raise(g, id, errand().awareness, "devices");
+        crate::mind::set_state(g, id, crate::game::GuardState::Suspicious, "devices");
+        g.gd[id].react_t = errand().react_t;
+        g.gd[id].search_t = 0.0;
+        g.gd[id].path = Vec::new();
+        g.gd[id].path_serial = g.gd[id].path_serial.wrapping_add(1);
+        g.gd[id].path_goal = None;
+        g.gd[id].path_goal_orbit = false;
     }
     crate::game::game_say(g, id, "copy, control — on my way", Some(true), None, None);
     let c = g.gd[id].ch;
@@ -701,19 +652,6 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 // ---------------------------------------------------------------- the panel's knobs (their storage is the host's: lights.md trap 12)
 /// `localStorage` is the host's: what it keeps arrives written in `g.tune`, so nothing here reads.   (devices.ts loadDeviceTune)
 pub fn load_device_tune(g: &mut crate::game::Game) {}
-/// `localStorage` is the host's: it keeps `g.tune`'s five rows if it keeps them.   (devices.ts saveDeviceTune)
-pub fn save_device_tune(g: &mut crate::game::Game) {}
-/// The five rows to their defaults; the removal from `localStorage` is the host's.   (devices.ts resetDeviceTune)
-pub fn reset_device_tune(g: &mut crate::game::Game) {
-    let d = device_tune_defaults();
-    let t = &mut g.tune;
-    t.devices = d.devices;
-    t.lasers = d.lasers;
-    t.camera_suspicion_secs = d.camera_suspicion_secs;
-    t.camera_alarm_secs = d.camera_alarm_secs;
-    t.device_cones = d.device_cones;
-}
-
 // ---------------------------------------------------------------- geometry
 /// Closest points between segments p and b: the distance and the point on b.   (devices.ts segSegClosest)
 pub fn seg_seg_closest(p0: V3, p1: V3, b0: V3, b1: V3) -> crate::devices::SegSegClosest {
@@ -788,20 +726,6 @@ mod tests {
             let r = lens_dir(b(*y), b(*p));
             assert_eq!([r[0].to_bits(), r[1].to_bits(), r[2].to_bits()], *o);
         }
-    }
-    #[test]
-    fn sweep_yaw_bits() {
-        let mut d = CameraDef2::zeroed();
-        d.yaw = 0.5;
-        assert_eq!(sweep_yaw(&d, 0.37), 0.5);
-        d.sweep = Some([-1.2, 0.8]);
-        let rows: &[(u64, u64)] = &[
-            (0x0000000000000000, 0xbff3333333333333),
-            (0x3fd0000000000000, 0xbfc999999999999c),
-            (0x3fd7ae147ae147ae, 0x3fdf02d1dd55735c),
-            (0x3feccccccccccccd, 0xbff024ef00ff2d86),
-        ];
-        for (ph, o) in rows { assert_eq!(sweep_yaw(&d, b(*ph)).to_bits(), *o); }
     }
     #[test]
     fn spell_digits() { assert_eq!(spell("7391"), "7-3-9-1"); }

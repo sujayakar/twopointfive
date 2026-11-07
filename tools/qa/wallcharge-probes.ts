@@ -27,6 +27,7 @@
 // page stands him.
 import { standUp, ROOT } from './headless.ts';
 import { samBlows } from './charge-rig.ts';
+import { listen } from './heard.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const WC = await import(`${ROOT}/src/game/wallcharge.ts`);
@@ -75,8 +76,7 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
   const W: any = await quiet(() => standUp(E.level ? { level: levelOfFile(E.level) } : {})); const game = W.game, input = W.input;
   game.godMode = true; game.tune.chaos = o.chaos ?? 0.5;
   if (o.squad ?? true) { const { why } = await quiet(() => startFromQuery(game, new URLSearchParams(scenarioQuery(E)))); if (why) throw new Error(`start refused — ${why}`); }
-  const said: string[] = [], spoke: { who: string; text: string }[] = [];
-  { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(t); msg(t); }; const say = game.say.bind(game); game.say = (gd: any, t: string, ...r: any[]) => { spoke.push({ who: gd?.callsign ?? '?', text: t }); return say(gd, t, ...r); }; }
+  const ears = listen(game);   // (what the log showed and what the men said, read from the game's own state each step: heard.ts. Until 2026-11-07 two wraps on the tools' copy, which the Rust tick never calls)
   const O = game.orders, D = game.doorTools, C = game.wallCharge;
   // (until 2026-11-07 the rig wrote OWNBLOW.on off here, for lines that press the squad's key on a charge set by hand: a settled rule, the write was refused)
   // (A MAN ALONE: the door tools' bag is put as a man alone had it, and nothing is carried. Until 2026-11-07 his own charges' switch was written off here, a settled
@@ -84,12 +84,14 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
   if (!(o.squad ?? true)) { D.alone(DOORTOOLS.charges); C.setCarried(null); }
   const staged: number | null = C.carried; if (C.carried !== null) C.setCarried(null);   // (the kit's slots rule — on on the shipped stand — issues no wall charge and has staged that count: these lines ask about the whole-bag rule they were written on. A restart stages the kit's count again; wallcharge-cost holds that)
   const still = () => { for (const gd of game.guards) if (gd.team !== 'operative') { gd.hold = true; gd.pinned = true; gd.heardUpTo = 1e12; if (gd.flashlight) gd.flashlight.enabled = false; } };
-  const R = { W, game, input, O, D, C, said, spoke, scn, staged,
+  const R = { W, game, input, O, D, C, scn, staged,
+    /** what the log has shown and what the men have said, read now (heard.ts) */
+    get said(): string[] { ears.poll(); return ears.said; }, get spoke(): { who: string; text: string; radio: boolean }[] { ears.poll(); return ears.spoke; },
     get team(): any[] { return O.squad(); }, get up(): any[] { return O.squad().filter((m: any) => m.state !== 'dead'); },
     get hostiles(): any[] { return game.guards.filter((x: any) => x.team !== 'operative' && x.team !== 'civilian'); },
     /** what the rig does before every step (handed to charge-rig.ts, which steps the stand itself) */
-    each() { game.player.visibility = 0.05; if (o.still ?? true) still(); },
-    step(n = 1) { for (let i = 0; i < n; i++) { R.each(); W.step(DT); } },
+    each() { ears.poll(); game.player.visibility = 0.05; if (o.still ?? true) still(); },
+    step(n = 1) { for (let i = 0; i < n; i++) { R.each(); W.step(DT); ears.poll(); } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
     press(code: string) { input.pressed.add(code); R.step(); },
     /** X on p: the menu's first page, the page behind its opener (if any), Esc, Esc */
@@ -335,7 +337,8 @@ async function probeSam(scn: string): Promise<boolean> {
     F.verdict(a1 && off1 && a2 && off2 && busy === 'setting a charge' && C.set.length === 0 && D.charges === DOORTOOLS.charges, 'Space again breaks it off, and so does Esc; while he is at it a checkpoint sees him busy', `started ${a1} → Space: ${off1 ? 'off' : 'STILL ON'} · started ${a2} → Esc: ${off2 ? 'off' : 'STILL ON'} · busy "${busy}" · set ${C.set.length} · charges ${D.charges}`); }
   game.teleportPlayer(foot); R.aim(P.top); game.selectVerb('wall', 'charge'); R.press('Space'); const t0 = game.time;
   const done = R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1);
-  F.verdict(done && Math.abs(game.time - t0 - DOORTOOLS.setSecs) < 0.2 && D.charges === DOORTOOLS.charges - WALLCHARGE.cost && input.keys.size === 0 && R.said.some(s => /charge set on the wall\. press F to blow it/.test(s)) && C.stats.bySam === 1, 'stood on it for setSecs with no key held: the charge is on the wall, one out of the bag, and he is told F blows it',
+  // (until 2026-11-07 the line wanted the words 'press F to blow it': F is not his own charge's key since ownblow.ts, a settled rule this rig used to write off)
+  F.verdict(done && Math.abs(game.time - t0 - DOORTOOLS.setSecs) < 0.2 && D.charges === DOORTOOLS.charges - WALLCHARGE.cost && input.keys.size === 0 && R.said.some(s => /charge set on the wall/.test(s)) && C.stats.bySam === 1, 'stood on it for setSecs with no key held: the charge is on the wall, one out of the bag, and he is told it is set',
     `set after ${f2(game.time - t0)} s (setSecs ${DOORTOOLS.setSecs}) · charges ${D.charges} · keys held ${input.keys.size} · "${R.said.slice(-1)[0]}"`);
   R.step(60 * 5); F.verdict(C.set.length === 1 && !C.holeAt(C.set[0].wall) && R.pathLen(a, b) === before, 'five seconds on: nothing has happened', `set ${C.set.length} · route ${f2(R.pathLen(a, b))} m`);
   const Wc = C.set[0].wall; samBlows(R.W, C.set[0], R.each);   // (his own charge goes off from his own action, out of its blast: the squad's key is not its key — ownblow.ts. Until 2026-11-07 this pressed F, with that rule written off)

@@ -109,21 +109,6 @@ pub fn scaled4(a: f64, b: f64, c_2: f64, d: f64) -> f64 {
     m::sqrt(0.0 + p * p + q * q + r * r + t * t) * max
 }
 
-/// `Math.hypot(a, b)`, which in the game is the game's own. (hyp.ts native2)
-pub fn native2(a: f64, b: f64) -> f64 {
-    m::hyp2(a, b)
-}
-
-/// `Math.hypot(a, b, c)`. (hyp.ts native3)
-pub fn native3(a: f64, b: f64, c_2: f64) -> f64 {
-    m::hyp3(a, b, c_2)
-}
-
-/// `Math.hypot(a, b, c, d)`. (hyp.ts native4)
-pub fn native4(a: f64, b: f64, c_2: f64, d: f64) -> f64 {
-    m::hyp4(a, b, c_2, d)
-}
-
 /// The stream's next draw in [0, 1): the closure `r` of `sample`. (hyp.ts:82)
 fn sample_r(s: &mut u32) -> f64 {
     *s = s.wrapping_add(0x6D2B79F5);
@@ -171,26 +156,6 @@ pub fn sample(n: f64) -> Vec<f64> {
 pub fn same(a: f64, b: f64) -> bool {
     if a == b { a != 0.0 || 1.0 / a == 1.0 / b } else { a != a && b != b }
 }
-
-/// Holds a candidate to `Math.hypot` over the trial's inputs. (hyp.ts agrees)
-pub fn agrees(f: &mut dyn FnMut(Vec<f64>) -> f64, arity: f64) -> bool {
-    let v = sample(TRIALS + 3.0);
-    for i in 0..TRIALS as usize {
-        let (a, b, c, d) = (v[i], v[i + 1], v[i + 2], v[i + 3]);
-        let differs = if arity == 2.0 {
-            !same(f(vec![a, b]), m::hyp2(a, b))
-        } else if arity == 3.0 {
-            !same(f(vec![a, b, c]), m::hyp3(a, b, c))
-        } else {
-            !same(f(vec![a, b, c, d]), m::hyp4(a, b, c, d))
-        };
-        if differs { return false; }
-    }
-    true
-}
-
-/// The game's own maths on or off for lengths: in Rust `crate::m::hyp2/3/4` are always the Kahan sums, so there is nothing to install. (hyp.ts hypExact)
-pub fn hyp_exact(on: bool) {}
 
 /// The Kahan sum for any number of terms: what `Math.hypot` becomes under the game's own maths. (hyp.ts kahanN)
 pub fn kahan_n(v: &[f64]) -> f64 {
@@ -258,12 +223,4 @@ mod tests {
         assert_eq!(over(&v, &|w| if same(w[0], w[1]) { 1.0 } else { 0.0 }), 0xee1837eb9e06a6fd);
     }
 
-    /// `crate::m`'s lengths (rust/sim's) are this file's Kahan sums: the fact `hyp_exact` having nothing to do rests on.
-    #[test]
-    fn the_games_lengths_are_these_sums() {
-        assert!(agrees(&mut |a| kahan2(a[0], a[1]), 2.0));
-        assert!(agrees(&mut |a| kahan3(a[0], a[1], a[2]), 3.0));
-        assert!(agrees(&mut |a| kahan4(a[0], a[1], a[2], a[3]), 4.0));
-        assert!(!agrees(&mut |a| scaled3(a[0], a[1], a[2]), 3.0));
-    }
 }

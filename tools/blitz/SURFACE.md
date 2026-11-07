@@ -31,6 +31,20 @@ LEFT ON THE TABLE though their Rust body is empty, because the nothing is the ga
 
 How the class is found again: every `pub fn` under `rust/game/src` whose doc line says `BOUNDARY NO-OP`, joined to `calls.json` by its `rust` path.
 
+## The save file's road has no row
+
+A checkpoint written by the TypeScript is a FILE OF THE PAGE'S OWN FIELDS: each module's `snapshot` reads the puppet and its `restore` writes it. The Rust
+game keeps its saves as whole states on its own shelf and has no use for a module's slice. With a row, a call between ticks under a host crossed to a
+Rust function nobody had written, and the game stopped with `no body: <name>`; without one the TypeScript body runs on the puppet as it does on the page
+and answers (`canLoad` says the file is the page's own and the game is stepped elsewhere).
+
+Taken off the table (eleven): `WallBreak.restore`, `Furniture.check`, `Furniture.restore`, `RescueEnd.restore`, `RescueFlush.restore`,
+`AirDust.snapshot`, `AirDust.restore`, `canLoad`, `Lesson.restore`, `FogOfWar.snapshot`, `FogOfWar.restore`. None had a guard on disk. Their arms and
+their named panics left the Rust crate with them. 1073 rows are left.
+
+LEFT ON THE TABLE of the functions nobody had written: `openSky`, `underRoofRect` and `SquadOrders.summary`, which have bodies now, and `SquadOrders.hud`,
+which stays a named panic: the orders' panel is built on the page by the TypeScript of that name, and a tool that asks the Rust game for it is told so.
+
 ## Called with no game stood (the census's kind iv-b)
 
 **Stays TypeScript after the deletion**: a reader with no Rust function. A file marked "with tick code" holds a kept reader and code the deletion takes, so it must be split or the reader moved out.

@@ -21,16 +21,13 @@
 //                   row on one man's menu names him; the squad block says 'F blows it' of a set charge only while F would, and a charge on a word that
 //                   is still waiting for the other pair is not blown by a second F; F with a door menu up is the wait row's second key (from the door's first page it
 //                   turns to the tools with the row on)
-//   squadplay-off   the pair build (two teammates) has none of it: no 'go' row, no 'wait' row, the digits past 5 (and 0) do nothing, F is not the word (unless the small squad's word, DOORTOOLS.wordSmall, is on: then it is, from a plain stack); and with four,
-//                   DOORTOOLS.wordOnKey false leaves F as it was
+//   squadplay-off   the pair build (two teammates) has none of it: no 'go' row, no 'wait' row, the digits past 5 (and 0) do nothing, F with the pair stacked is the word (the small squad's word, from a plain stack)
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ORDERS, WORD_HEAD, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { SILENT, squadSilent } = await import(`${ROOT}/src/game/silent.ts`);
-const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
-const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 
 const DT = 1 / 60;
 /** the keys of the door menu since no order is on a digit above 5: 5 on its first page turns to the door tools' page, where the four are 1 to 4 */
@@ -58,8 +55,8 @@ const BREAKROOM = { x0: 28.12, x1: 35.88, z0: 12.26, z1: 23.88 };
 const inBounds = (b: { x0: number; x1: number; z0: number; z1: number }, p: number[], m = 0) => p[0] > b.x0 - m && p[0] < b.x1 + m && p[2] > b.z0 - m && p[2] < b.z1 + m;
 
 /** One game under a seed: the room clear staged with `squad` teammates (default four), Sam in god mode, dark, at `sam`, the defenders dazzled every frame. */
-async function rig(seed: number, sam: number[], o: { squad?: 2 | 4; knobs?: () => void } = {}) {
-  reset(); Object.assign(NIGHTBREACH, { squad: o.squad ?? 4 }); o.knobs?.();
+async function rig(seed: number, sam: number[], o: { squad?: 2 | 4 } = {}) {
+  reset(); Object.assign(NIGHTBREACH, { squad: o.squad ?? 4 });
   Math.random = seeded(seed);
   const W: any = await standUp(); const game = W.game, input = W.input; const RC = game.roomClear, NB = game.nightBreach, O = game.orders, D = game.doorTools;
   game.godMode = true; const why = RC.start(seed);
@@ -166,10 +163,9 @@ export const squadplayGo = guarded(async () => {
     const note = R.notes().filter(s => /waiting/.test(s)).join(' ; ');
     verdict(stacked && red && l?.order === 'go' && l.who.join(' + ') === 'Red One + Red Two' && ops.length === 1 && ops[0].ended === 'in' && still, 'the orders going to red, F: red goes in at its door and blue stays stacked on its own', `${line(l)} · ${ops.map((op: any) => `${op.door.def.name} ended '${op.ended}'`).join(' · ')} · ${R.where('blue')}`);
     // (the squad's only keys, cmdring.ts `only`: there is no who key to turn to blue with, so the word is theirs — it frees whoever stands waiting on it)
-    if (CMDRING.only) verdict(/^\[F\] go · blue waiting/.test(note), '… and with red in, the squad block offers F for blue, who are the ones still waiting (the squad\'s only keys: the word frees whoever waits on it)', `"${note}"`);
-    else verdict(/^blue waiting · T, then F$/.test(note), '… and with red in, the squad block says blue is still waiting and how to reach them (no key offered: F would not be theirs)', `"${note}"`);
-    const toBlue = CMDRING.only ? O.who === 'red' : R.who('blue'); R.press(F); const l2 = R.last(); R.until(() => !D.ops.length, 40);
-    verdict(toBlue && l2?.order === 'go' && l2.who.join(' + ') === 'Blue One + Blue Two' && D.stats.words === 2 && R.held === 0, CMDRING.only ? 'F again, the orders still going to red: blue goes — nothing held' : 'T to blue, F: blue goes — nothing held', `${line(l2)} · words ${D.stats.words} · ${R.keys.join(' ')}`); }
+    verdict(/^\[F\] go · blue waiting/.test(note), '… and with red in, the squad block offers F for blue, who are the ones still waiting (the squad\'s only keys: the word frees whoever waits on it)', `"${note}"`);
+    const toBlue = O.who === 'red'; R.press(F); const l2 = R.last(); R.until(() => !D.ops.length, 40);
+    verdict(toBlue && l2?.order === 'go' && l2.who.join(' + ') === 'Blue One + Blue Two' && D.stats.words === 2 && R.held === 0, 'F again, the orders still going to red: blue goes — nothing held', `${line(l2)} · words ${D.stats.words} · ${R.keys.join(' ')}`); }
   return done();
 });
 
@@ -183,14 +179,11 @@ export const squadplayWait = guarded(async () => {
   const before = R.rows(), w0 = before[before.length - 1];
   R.press(W0); const up1 = !!O.menu, after = R.rows(), w1 = after[after.length - 1], n1 = O.log.length;
   const waits = after.filter(r => /^wait · /.test(r.text)).map(r => r.key).join(','), waits0 = before.filter(r => /^wait · /.test(r.text)).length;
-  // (row 4 by DOORTOOLS.outsidePlain, on in the page: the ONE order 'clear from outside', which waits for the word like the rows above it and says so the
-  //  same way — given on the word further down. With the switch off, as on the harness's older stand, row 4 turns to the threshold's page and says the word is on behind it.)
-  const plain = !!DOORTOOLS.outsidePlain;
-  const row4 = plain ? after[3]?.text === 'wait · clear from outside' && before[3]?.text === 'clear from outside' && waits === '1,2,4,G' : / · on my word: ON$/.test(after[3]?.text ?? '') && !/on my word/.test(before[3]?.text ?? '') && waits === '1,2,G';
+  // (row 4 is the ONE order 'clear from outside', which waits for the word like the rows above it and says so the same way — given on the word further down)
+  const row4 = after[3]?.text === 'wait · clear from outside' && before[3]?.text === 'clear from outside' && waits === '1,2,4,G';
   verdict(red && first.length === 5 && /^door tools ▸ · F: on my word$/.test(opener?.text ?? '') && O.menu?.page === 'tools' && W0 === 'Digit5' && w0?.key === '5' && w0.head === WORD_HEAD && /^wait for my word \(F\) · off$/.test(w0.text) && before.length === 6 && before.slice(0, 4).every((r, i) => r.key === String(i + 1)) && before[4].key === 'G', 'the door menu for the four: row 5 turns to the door tools\' page, whose four tools are 1 to 4 (frag and clear rides its own letter, G) and which ends in a \'wait for my word\' row on digit 5, off, under the word\'s header', `${fmtRows(first)} ▸ ${fmtRows(before)}`);
   verdict(up1 && /^wait for my word \(F\) · ON$/.test(w1?.text ?? '') && row4 && after[2]?.key === '3' && !/^wait · /.test(after[2].text) && waits0 === 0 && n1 === 0,
-    plain ? '5 pressed: the row is ON, the menu is still up, no order has gone, and the rows that will wait say so first (\'wait · …\') — open and clear, bang and clear, clear from outside on row 4, frag and clear (not the charge)'
-      : '5 pressed: the row is ON, the menu is still up, no order has gone, and the rows that will wait say so first (\'wait · …\') — open and clear, bang and clear, frag and clear (not the charge) — and row 4, the turn to the threshold\'s page, says the word is on behind it', `menu up ${up1} · orders logged ${n1} · ${fmtRows(after)}`);
+    '5 pressed: the row is ON, the menu is still up, no order has gone, and the rows that will wait say so first (\'wait · …\') — open and clear, bang and clear, clear from outside on row 4, frag and clear (not the charge)', `menu up ${up1} · orders logged ${n1} · ${fmtRows(after)}`);
   R.press(BANG); const l1 = R.last(), op1 = D.ops[0];
   verdict(l1?.order === 'bangClear' && l1.who.join(' + ') === 'Red One + Red Two' && !!op1?.onWord && !O.menu, '2: bang and clear goes to red ON THE WORD, and the menu is away', `${line(l1)} · the door order waits on the word: ${!!op1?.onWord}`);
   // ---- blue: X on the west door, 5 — the row is off again; the wheel up to it, Space, then 1 (open and clear)
@@ -227,7 +220,7 @@ export const squadplayWait = guarded(async () => {
       sil ? 'a floor menu has no \'wait\' row: 5 there is \'go silent\' — the menu goes away, the squad is silent, nothing is logged (it moves nobody) and the row then reads \'go loud\'; 0 does nothing: the menu stays, no order, Sam\'s slot as it was'
         : 'a floor menu has no \'wait\' row, and 5 and 0 there do nothing: the menu stays, no order, Sam\'s slot as it was', `floor rows: ${fmtRows(fl)} · menu up ${up} / ${up0} · orders logged ${n2 - n0}${sil ? ` · silent ${silent} · then: ${fmtRows(fl2.filter(r => r.key === '5'))}` : ''}`); }
   // ---- 'clear from outside' on the word (DOORTOOLS.outsidePlain: the tools' row 4 is that one order): 5, then 4 — red holds the north door's jambs and waits
-  if (DOORTOOLS.outsidePlain) { const R3 = await rig(5, CORRIDOR); const O3 = R3.O, D3 = R3.D;
+  { const R3 = await rig(5, CORRIDOR); const O3 = R3.O, D3 = R3.D;
     const red = R3.who('red'); R3.toolsOnDoor('breakroom_n'); R3.step(5); R3.press(W0); const r4 = R3.row('4'); R3.press('Digit4'); const l = R3.last(), op = D3.ops[0], away = !O3.menu;
     R3.until(() => D3.ops.length === 1 && D3.ops[0].phase === 'ready', 45); R3.step(180);
     const waiting = D3.ops.length === 1 && D3.ops[0] === op && !R3.beatT(op, 'go') && R3.men('red').every((m: any) => !inBounds(BREAKROOM, m.char.pos, -0.3)), note = R3.notes().filter(s => /waiting/.test(s)).join(' ; ');
@@ -248,7 +241,7 @@ export const squadplayTry = guarded(async () => {
     const blue = R.who('blue'); R.toolsOnDoor('breakroom_w'); R.step(10); const row = R.row('2'); R.press(BANG); const l2 = R.last(), op = D.ops[0];
     let kept = true, strayed = 0; R.post = () => { reds.forEach((m: any, i: number) => { if (m.state === 'dead') return; if (O.of(m)?.order !== 'hold') kept = false; strayed = Math.max(strayed, dist(m.char.pos, posts[i])); }); };
     const ended = R.until(() => !D.ops.length, 50); R.step(60); R.post = null;
-    verdict(red && l0?.order === 'move' && there && l1?.order === 'hold' && l1.who.join(' + ') === 'Red One + Red Two' && arcs.every((s: string) => WORDS.on ? /^holding\b/.test(s) && !/\b(north|south|east|west)\b/.test(s) : /^holding · /.test(s)) && (WORDS.on || arcs[0] !== arcs[1]),   // (the dialogue pass on: the row names the place watched or says 'holding', never a bearing)
+    verdict(red && l0?.order === 'move' && there && l1?.order === 'hold' && l1.who.join(' + ') === 'Red One + Red Two' && arcs.every((s: string) => /^holding\b/.test(s) && !/\b(north|south|east|west)\b/.test(s)),   // (the row names the place watched or says 'holding', never a bearing)
       'T, B on the corridor spot, then X and 4: red goes there and holds, a way out each', `${line(l0)} · ${line(l1)} · ${reds.map((m: any, i: number) => `${m.callsign} [${arcs[i]}]`).join(' · ')}`);
     verdict(blue && /^bang and clear/.test(row?.text ?? '') && !row?.off && l2?.order === 'bangClear' && l2.who.join(' + ') === 'Blue One + Blue Two' && op?.men.length === 2 && ended && op.ended === 'in' && kept && strayed < 1 && R.held === 0, 'T, X on the west door, 5, 2: blue bangs and clears the break room while red keeps its hold from the order to the end — nothing held', `${line(l2)} · blue's order ended '${op?.ended}' · red still on 'hold' throughout ${kept}, never more than ${f2(strayed)} m off · most keys held ${R.held} · ${R.keys.join(' ')}`); }
   // ---- a tool on a held door: T to red, B on the manager's door; T to blue, X on it, 5, 3 (charge); F blows it
@@ -330,10 +323,6 @@ export const squadplayKey = guarded(async () => {
     verdict(stacked && who === 'orders to Blue One' && row?.text === 'go · Blue One' && l?.order === 'go' && l.who.join(' + ') === 'Blue One' && away && D.stats.words === 1, 'both pairs waiting, the orders to gold, X on Blue One: his menu\'s F row reads \'go · Blue One\' — who it would send — and F with that menu up sends him and nobody else (the menu goes away)', `"${who}" · row "${row?.key} ${row?.text}" · ${line(l)} · menu away ${away} · words ${D.stats.words}`); }
   // ---- a charge that is not the addressed men's: the block does not say F blows it while F is their word
   { const R = await rig(5, MANAGER); const { O, D } = R;
-    // (red's door here, the storage door, is locked, and on the SHIPPED stand the first word at a door nobody knew was locked ends 'found shut' with red still
-    // stacked on it — DOORTOOLS.testDoor, a FROZEN_HOLDS row, held by doortest-check.ts. These lines are about what F is and what the block says once red
-    // HAS gone in, so the word boots the door as it did; the next rig and `guarded` put the knob back.)
-    DOORTOOLS.testDoor = false;
     R.who('blue'); R.toolsOnDoor('manager'); R.press(CHARGE); const armed = R.until(() => D.set.length === 1, 45);
     R.who('red'); R.onDoor('storage'); R.press(K.quickKey); const on = R.set('red', 40);
     const n1 = R.notes().filter(s => /charge set|waiting/.test(s)).join(' ; ');
@@ -364,7 +353,7 @@ export const squadplayKey = guarded(async () => {
 
 // ============================================================================================================================ squadplay-off
 export const squadplayOff = guarded(async () => {
-  const { verdict, done } = family('squadplay-off: the pair build has none of it; and with four, wordOnKey off leaves F as it was');
+  const { verdict, done } = family('squadplay-off: the pair build has no menu rows for the word, and F is the small squad\'s word');
   const K = ORDERS, F = DOORTOOLS.blowKey;
   { const R = await rig(5, CORRIDOR, { squad: 2 }); const { O, D, NB } = R;
     R.menuOnDoor('breakroom_n'); R.step(10); const rows = R.rows(), heads = new Set(rows.map(r => r.head)), n0 = O.log.length;
@@ -375,21 +364,9 @@ export const squadplayOff = guarded(async () => {
       'two teammates: the door menu is its five rows under the one header and, behind 5, the four door tools on 1 to 4 with the frag row on G under them — no \'go\', no \'wait for my word\', no key past 5', `${fmtRows(rows)} ▸ ${fmtRows(tools)}`);
     verdict(up && n1 === n0 && up9 && n2 === n0 && backOk && l?.order === 'stack', '0 and 9 with the menu up do nothing (it stays, no order); Esc on the tools page steps back to the first; 1 then stacks the pair', `after 0: menu up ${up}, orders ${n1 - n0} · after 9: menu up ${up9}, orders ${n2 - n0} · back on the first page ${backOk} · ${line(l)}`);
     const st0 = NB.state, pre = R.notes().filter(s => /waiting/.test(s)); R.press(F); R.step(30); const note = R.notes().filter(s => /waiting/.test(s)), go = O.log.filter((x: any) => x.order === 'go').length;
-    // (the small squad's word, DOORTOOLS.wordSmall, on in the page: there the stacked pair DOES wait on F — `probes.ts wordsmall` owns that rule; this line says which of the two a stand has)
-    if (DOORTOOLS.wordSmall) verdict(pre.length === 1 && /^\[F\] go\b/.test(pre[0]) && D.stats.words === 1 && go === 1 && R.last()?.order === 'go' && NB.state === st0 && note.length === 0,
-      'DOORTOOLS.wordSmall on: F with the pair stacked IS the word — the block offered it on F, one \'go\' is filed, the breach drill is not touched and nobody is left waiting', `"${pre.join(' ; ')}" · words ${D.stats.words} · go ${go} · ${line(R.last())} · drill '${st0}' → '${NB.state}' · waiting lines ${note.length}`);
-    else verdict(D.stats.words === 0 && go === 0 && pre.length === 0 && note.length === 0 && NB.state !== st0, 'F with the pair stacked is not the word: it is the breach drill\'s key as before, and the block offers no \'go\'', `words ${D.stats.words} · drill '${st0}' → '${NB.state}' · waiting lines ${note.length}`); }
-  { const R = await rig(9, CORRIDOR, { knobs: () => { DOORTOOLS.wordOnKey = false; } }); const { O, D, NB } = R;
-    const stacked = stackBoth(R); R.who('all'); const note = R.notes().filter(s => /waiting/.test(s)).join(' ; '), st0 = NB.state;
-    R.press(F); R.step(30); const w0 = D.stats.words, st1 = NB.state;
-    // (SILENT.on, as the page has it: the squad's posture row would have the first page's spare digit, but on this build the word keeps 5, as it had it, and
-    //  'go silent' rides no digit — the wheel reaches it. The word's row is told from it by its text.)
-    const sil = !!SILENT.on;
-    R.menuOnFloor(SPOT); const goRow = R.rows().find(r => isGo(r.text)), silRows = R.rows().filter(r => /^go (silent|loud)$/.test(r.text)); R.press('Digit5'); const l = R.last();
-    const silOk = sil ? silRows.length === 1 && silRows[0].text === 'go silent' && silRows[0].key === '' && silRows[0].head === SQUAD_HEAD && !squadSilent(R.game) : silRows.length === 0;
-    verdict(stacked && w0 === 0 && st1 !== st0 && /^red \+ blue waiting for you to say go/.test(note) && goRow?.key === '5' && goRow.head === WORD_HEAD && silOk && l?.order === 'go' && l.who.join(' + ') === 'Blue One + Blue Two' && D.stats.words === 1,
-      sil ? 'four, DOORTOOLS.wordOnKey false: F is not the word (the drill takes it, as before), the block names who is waiting without a key, and the floor menu\'s go row — on digit 5 then, never above it, \'go silent\' beside it on no digit — still gives it (to blue: red is the drill\'s by then) and silences nobody'
-        : 'four, DOORTOOLS.wordOnKey false: F is not the word (the drill takes it, as before), the block names who is waiting without a key, and the floor menu\'s go row — on digit 5 then, never above it — still gives it (to blue: red is the drill\'s by then)', `"${note}" · F: words ${w0}, drill '${st0}' → '${st1}' · go row "${goRow?.key} ${goRow?.text}"${sil ? ` · silent row "${silRows[0]?.key} ${silRows[0]?.text}"` : ''} · then X, 5: ${line(l)} · words ${D.stats.words}`); }
+    // (the small squad's word: the stacked pair waits on F — `probes.ts wordsmall` owns that rule)
+    verdict(pre.length === 1 && /^\[F\] go\b/.test(pre[0]) && D.stats.words === 1 && go === 1 && R.last()?.order === 'go' && NB.state === st0 && note.length === 0,
+      'F with the pair stacked IS the word — the block offered it on F, one \'go\' is filed, the breach drill is not touched and nobody is left waiting', `"${pre.join(' ; ')}" · words ${D.stats.words} · go ${go} · ${line(R.last())} · drill '${st0}' → '${NB.state}' · waiting lines ${note.length}`); }
   // one press sends a breach drill that is set AND a pair waiting on the word
   { const R = await rig(9, CORRIDOR); const { O, D, NB } = R;
     R.press(F); const setOk = R.until(() => NB.state === 'set', 40);

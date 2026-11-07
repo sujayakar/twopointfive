@@ -48,20 +48,6 @@ pub fn load_chaos(g: &mut crate::game::Game) {
     g.tune.chaos = g.k.chaos.def;
 }
 
-/// Nothing of the game's: the TypeScript only writes the browser's storage, the host's.   (destruction.ts saveChaos)
-pub fn save_chaos(g: &mut crate::game::Game) {}
-
-/// The knob and the caps back to the shipped values; the pall's and the mess's switches stay as the page opened. The kept copy's removal is the host's.   (destruction.ts resetChaosKnobs)
-pub fn reset_chaos_knobs(g: &mut crate::game::Game) {
-    let (on, solver, mess) = (g.k.chaos.pall.on, g.k.chaos.pall.solver, g.k.chaos.mess.on);
-    g.k.chaos = chaos_defaults();
-    g.k.chaos.pall.on = on;
-    g.k.chaos.pall.solver = solver;
-    g.k.chaos.mess.on = mess;
-    g.tune.chaos = g.k.chaos.def;
-    g.tune.debris_impulses = true;
-}
-
 /// The impulses' strength scale off the knob.   (destruction.ts impK)
 pub fn imp_k(g: &mut crate::game::Game, chaos: f64) -> f64 {
     if chaos <= 0.5 { 1.0 } else { 1.0 + (g.k.chaos.imp.chaos_k - 1.0) * (chaos - 0.5) * 2.0 }
@@ -378,18 +364,6 @@ pub fn destruction_near(g: &mut crate::game::Game, p: V3, out: &mut Vec<crate::d
     out.clone()
 }
 
-/// Counts by kind, for the panel and the probes.   (destruction.ts Destruction.inventory)
-pub fn destruction_inventory(g: &mut crate::game::Game) -> JsMap<String, f64> {
-    let mut out: JsMap<String, f64> = JsMap::new();
-    for d in g.destr.items.values() {
-        let key = String::from(d.kind.as_str());
-        let n = out.get(key.clone()).copied().unwrap_or(0.0);
-        out.set(key, n + 1.0);
-    }
-    out.set(String::from("hidden"), g.destr.hidden.len() as f64);
-    out
-}
-
 /// The destructible at a static's index.   (destruction.ts Destruction.itemOf)
 pub fn destruction_item_of(g: &mut crate::game::Game, i: f64) -> Option<crate::destruction::Destructible> {
     g.destr.items.get(crate::Num(i)).cloned()
@@ -409,18 +383,6 @@ pub fn destruction_stoke(g: &mut crate::game::Game, p: V3, amount: f64, chaos: f
     let i = destruction_hidx(g, p) as usize;
     g.destr.heat[i] = (g.destr.heat[i] as f64 + amount) as f32;
     g.destr.heat[i] as f64 * 2.0 * chaos
-}
-
-/// The heat at p.   (destruction.ts Destruction.heatAt)
-pub fn destruction_heat_at(g: &mut crate::game::Game, p: V3) -> f64 {
-    let i = destruction_hidx(g, p) as usize;
-    g.destr.heat[i] as f64
-}
-
-/// The escalation at p, as things stand.   (destruction.ts Destruction.escalationAt)
-pub fn destruction_escalation_at(g: &mut crate::game::Game, p: V3) -> f64 {
-    let heat = destruction_heat_at(g, p);
-    heat * 2.0 * chaos_of(g)
 }
 
 /// The module's own hashed choice, counting off its serial.   (destruction.ts Destruction.hash)

@@ -14,7 +14,8 @@ use game::game::Game;
 use game::ids::*;
 use game::scene_boxes::MakeBoxP;
 use game::scene_level::*;
-use game::scene_markings::{MarkFace, MarkPal, MarkRes, MarkingDef};
+use game::scene_level_data::{BoxData, DoorData, FlagName, LightData, LightDataKind, ShapeData, ShapePieceData};
+use game::scene_markings::{MarkPal, MarkRes, MarkingDef};
 use game::scene_materials::DoesWord;
 use crate::read::FromJson;
 use game::scene_stuff::BoxStuff;
@@ -30,93 +31,90 @@ words!(stuff_word, BoxStuff, [Carpet, Grass, Rubber, Metal, Glass, Wood, Plastic
 words!(does_word, DoesWord, [Snow, Carpet, Lino, Stone, Grass, Wood, Plastic, Concrete, Fabric, Steel, Enamel, Tarmac, Casing, Screen, UnnamedDark, Plasterboard, Partition, Ceiling, Laminate, Pane, DarkCarpet, Card, Frame, Plant, PackedSnow, OldSnow, Unnamed, UnnamedGrey, UnnamedLight, UnnamedLightGrey, UnnamedPale, UnnamedPaleGrey, DarkPlastic, GreyPlastic, DarkGlass]);
 words!(prop_kind, game::scene_level_data::PropKindName, [Cardboard, Plant, Chair, Bin]);
 words!(weapon_word, game::weapons::WeaponId, [Fiveseven, Guard9mm, Aks74u, Ak74m, Akms, Fn2000, M870, Mk12, Mp7, Mk46, M1014, Hk45, G18, Pkm, Mk18bare, G19bare]);
-words!(mark_face, MarkFace, [X, X2, Y, Y2, Z, Z2]);
-words!(mark_res, MarkRes, [Base, Fine, Coarse]);
-words!(light_kind, LightDefKind, [Spot, Dir, Point]);
 words!(volume_kind, VolumeDefKind, [Trigger, Hide, Utility]);
 
 
 /// the box flags a file may say, as the bits of `Box.flags` (levelData.ts FLAG_BITS)
-fn flags_to_bits(names: &Json) -> f64 {
+fn flags_to_bits(names: &[FlagName]) -> f64 {
     let f = game::scene_boxes::box_flag();
-    let mut bits = 0u32;
-    for n in names.items() {
-        bits |= match n.str() { Some("NoPrimary") => f.no_primary, Some("NoShadow") => f.no_shadow, Some("Cutaway") => f.cutaway, Some("Gloss") => f.gloss, Some("Glass") => f.glass, w => panic!("unknown box flag '{}'", w.unwrap_or("?")) } as u32;
-    }
-    bits as f64
+    names.iter().fold(0u32, |bits, n| bits | match n { FlagName::NoPrimary => f.no_primary, FlagName::NoShadow => f.no_shadow, FlagName::Cutaway => f.cutaway, FlagName::Gloss => f.gloss, FlagName::Glass => f.glass } as u32) as f64
 }
-
 fn v3(j: &Json, what: &str) -> V3 { j.v3().unwrap_or_else(|| panic!("level: {} is not three numbers", what)) }
 fn num(j: &Json, what: &str) -> f64 { j.num().unwrap_or_else(|| panic!("level: {} is not a number", what)) }
 fn texts(j: &Json, what: &str) -> Vec<String> { j.items().iter().map(|x| text(x, what)).collect() }
 fn text(j: &Json, what: &str) -> String { String::from(j.str().unwrap_or_else(|| panic!("level: {} is not text", what))) }
 fn rect(j: &Json, what: &str) -> [f64; 4] { [num(j.get("x0"), what), num(j.get("x1"), what), num(j.get("z0"), what), num(j.get("z1"), what)] }
 
-/// (markings.ts marking / palEntry: the same structure the generator builds)
-fn copy_markings(ms: &Json) -> Option<Vec<MarkingDef>> {
-    if ms.items().is_empty() { return None; }
-    Some(ms.items().iter().map(|m| MarkingDef {
-        face: mark_face(m.get("face").str().unwrap_or("")).unwrap_or_else(|| panic!("level: a marking's face '{:?}'", m.get("face"))),
-        res: match m.get("res").str() { None | Some("base") => None, Some(w) => Some(mark_res(w).unwrap_or_else(|| panic!("level: a marking's res '{}'", w))) },
-        at: { let a = m.get("at").nums(); [a[0], a[1]] },
-        size: { let a = m.get("size").nums(); [a[0], a[1]] },
-        pal: m.get("pal").items().iter().map(|p| {
-            let mut o = MarkPal { albedo: None, mul: None, rough: None, emit: None };
-            if let Some(a) = p.get("albedo").v3() { o.albedo = Some(a); } else if let Some(x) = p.get("mul").num() { if x != 1.0 { o.mul = Some(x); } }
-            if let Some(x) = p.get("rough").num() { o.rough = Some(x); }
-            if let Some(e) = p.get("emit").v3() { if e[0] > 0.0 || e[1] > 0.0 || e[2] > 0.0 { o.emit = Some(e); } }
-            o
+/// A LIST OF MARKINGS AS THE LOADER LAYS IT (levelLoad.ts copyMarkings; markings.ts marking / palEntry: the same structure the generator builds):
+/// a list of none is no list, the base size goes unsaid, a colour of its own leaves no multiplier and a multiplier of 1 is none, and a colour
+/// that emits nothing emits none.
+fn laid_markings(ms: Option<Vec<MarkingDef>>) -> Option<Vec<MarkingDef>> {
+    let ms = ms.filter(|ms| !ms.is_empty())?;
+    Some(ms.into_iter().map(|m| MarkingDef {
+        res: m.res.filter(|&r| r != MarkRes::Base),
+        pal: m.pal.into_iter().map(|p| MarkPal {
+            mul: if p.albedo.is_some() { None } else { p.mul.filter(|&x| x != 1.0) },
+            emit: p.emit.filter(|e| e[0] > 0.0 || e[1] > 0.0 || e[2] > 0.0),
+            albedo: p.albedo, rough: p.rough,
         }).collect(),
-        cells: m.get("cells").items().iter().map(|c| text(c, "a marking's row")).collect(),
+        face: m.face, at: m.at, size: m.size, cells: m.cells,
     }).collect())
+}
+
+/// WHAT A RECORD SAYS OF ITS PAINT, ITS FINISH AND ITS WORDS: a box, a shape's piece and a prop's part say it in the same six members
+struct Said<'a> { material: Option<&'a str>, albedo: Option<V3>, rough: Option<f64>, metal: Option<bool>, stuff: Option<&'a str>, does: Option<&'a str> }
+impl<'a> From<&'a BoxData> for Said<'a> {
+    fn from(b: &'a BoxData) -> Self { Said { material: b.material.as_deref(), albedo: b.albedo, rough: b.rough, metal: b.metal, stuff: b.stuff.as_deref(), does: b.does.as_deref() } }
+}
+impl<'a> From<&'a ShapePieceData> for Said<'a> {
+    fn from(w: &'a ShapePieceData) -> Self { Said { material: w.material.as_deref(), albedo: w.albedo, rough: w.rough, metal: w.metal, stuff: w.stuff.as_deref(), does: w.does.as_deref() } }
+}
+impl<'a> Said<'a> {
+    /// a prop's part: it has no finish of its own to say (levelLoad.ts: a part carries its paint and its two words)
+    fn of_part(q: &'a Json) -> Self { Said { material: q.get("material").str(), albedo: q.get("albedo").v3(), rough: None, metal: None, stuff: q.get("stuff").str(), does: q.get("does").str() } }
+    fn painted(&self) -> bool { self.material.is_some() || self.albedo.is_some() }
 }
 
 /// the file's paint palette, and the readers of a record's paint, finish and words (levelLoad.ts albedoOf, finishOf, stuffOf, doesOf: ONE reader for a
 /// box, a prop's part and a shape's piece)
 struct Paint<'a> { name: &'a str, mats: &'a Json }
 impl<'a> Paint<'a> {
-    fn row(&self, o: &Json) -> &'a Json { match o.get("material").str() { Some(m) => self.mats.get(m), None => &Json::Null } }
-    fn albedo(&self, o: &Json) -> V3 {
-        match o.get("material").str() {
-            None => v3(o.get("albedo"), "a paint"),
+    fn row(&self, o: &Said) -> &'a Json { match o.material { Some(m) => self.mats.get(m), None => &Json::Null } }
+    fn albedo(&self, o: &Said) -> V3 {
+        match o.material {
+            None => o.albedo.unwrap_or_else(|| panic!("level '{}': a paint is not three numbers", self.name)),
             Some(m) => { let r = self.mats.get(m); if r.is_null() { panic!("level '{}': unknown material '{}'", self.name, m); } v3(r.get("albedo"), "a material's albedo") }
         }
     }
-    fn rough(&self, o: &Json) -> Option<f64> { o.get("rough").num().or_else(|| self.row(o).get("rough").num()) }
+    fn rough(&self, o: &Said) -> Option<f64> { o.rough.or_else(|| self.row(o).get("rough").num()) }
     /// (`metal` is only ever carried as true: false is the default and stays unwritten)
-    fn metal(&self, o: &Json) -> Option<bool> { match o.get("metal").bool().or_else(|| self.row(o).get("metal").bool()) { Some(true) => Some(true), _ => None } }
+    fn metal(&self, o: &Said) -> Option<bool> { match o.metal.or_else(|| self.row(o).get("metal").bool()) { Some(true) => Some(true), _ => None } }
     /// what it is made of: its own word, else its material row's; nothing for plain
-    fn stuff(&self, o: &Json) -> Option<BoxStuff> {
-        match o.get("stuff").str().or_else(|| self.row(o).get("stuff").str()) { None | Some("plain") => None, Some(w) => Some(stuff_word(w).unwrap_or_else(|| panic!("level '{}': '{}' is nothing a box is made of", self.name, w))) }
+    fn stuff(&self, o: &Said) -> Option<BoxStuff> {
+        match o.stuff.or_else(|| self.row(o).get("stuff").str()) { None | Some("plain") => None, Some(w) => Some(stuff_word(w).unwrap_or_else(|| panic!("level '{}': '{}' is nothing a box is made of", self.name, w))) }
     }
     /// what it does: its own word, else its material row's; nothing for the default row or a word that is none (materials.ts doesSaid)
-    fn does(&self, o: &Json) -> Option<DoesWord> {
-        match o.get("does").str().or_else(|| self.row(o).get("does").str()) { None | Some("unnamed") => None, Some(w) => does_word(w) }
+    fn does(&self, o: &Said) -> Option<DoesWord> {
+        match o.does.or_else(|| self.row(o).get("does").str()) { None | Some("unnamed") => None, Some(w) => does_word(w) }
     }
 }
 
-/// a shape's form as the file says it: its planes copied (shapes.ts formOf)
-fn form_of(f: &Json) -> (Option<f64>, Option<game::scene_shapes::ShapeFormArc>, Option<Vec<[f64; 4]>>, Option<bool>) {
-    let round = f.get("round").num().filter(|&r| r != 0.0);
-    let arc = if f.has("arc") { Some(game::scene_shapes::ShapeFormArc { axis: num(f.get("arc").get("axis"), "an arc's axis"), rise: num(f.get("arc").get("rise"), "an arc's rise") }) } else { None };
-    let cut = if f.has("cut") { Some(f.get("cut").items().iter().map(|q| { let q = q.nums(); [q[0], q[1], q[2], q[3]] }).collect()) } else { None };
-    (round, arc, cut, if f.get("old").bool() == Some(true) { Some(true) } else { None })
-}
-/// A BOX'S SHAPE, carried on the box as authored: a piece's paint, finish and word read as a box's are, and a piece that says no paint left
-/// with none (it wears its box's: the shape pass) (levelLoad.ts)
-fn shape_of(s: &Json, paint: &Paint) -> game::scene_shapes::BoxShape {
-    let (round, arc, cut, old) = form_of(s);
-    let with = if s.has("with") { Some(s.get("with").items().iter().map(|w| {
-        let (round, arc, cut, old) = form_of(w);
-        let painted = w.has("material") || w.has("albedo");
+/// A BOX'S SHAPE, carried on the box as authored (shapes.ts formOf, its planes copied): a round of 0 is none and `old` is said only when true; a
+/// piece's paint, finish and word are read as a box's are, and a piece that says no paint is left with none (it wears its box's: the shape pass)
+/// (levelLoad.ts)
+fn shape_of(s: ShapeData, paint: &Paint) -> game::scene_shapes::BoxShape {
+    let (round_of, old_of) = (|r: Option<f64>| r.filter(|&r| r != 0.0), |o: Option<bool>| o.filter(|&o| o));
+    let with = s.with.map(|ws| ws.into_iter().map(|w| {
+        let said = Said::from(&w);
+        let painted = said.painted();
         game::scene_shapes::ShapePiece {
-            off: v3(w.get("off"), "a piece's off"), h: v3(w.get("h"), "a piece's h"), yaw: w.get("yaw").num().filter(|&y| y != 0.0),
-            albedo: if painted { Some(paint.albedo(w)) } else { None }, rough: if painted { paint.rough(w) } else { None }, metal: if painted { paint.metal(w) } else { None },
-            stuff: if painted { paint.stuff(w) } else { None }, does: if painted { paint.does(w) } else { None },
-            round, arc, cut, old,
+            off: w.off, h: w.h, yaw: w.yaw.filter(|&y| y != 0.0),
+            albedo: if painted { Some(paint.albedo(&said)) } else { None }, rough: if painted { paint.rough(&said) } else { None }, metal: if painted { paint.metal(&said) } else { None },
+            stuff: if painted { paint.stuff(&said) } else { None }, does: if painted { paint.does(&said) } else { None },
+            round: round_of(w.round), arc: w.arc, cut: w.cut, old: old_of(w.old),
         }
-    }).collect()) } else { None };
-    game::scene_shapes::BoxShape { with, round, arc, cut, old }
+    }).collect());
+    game::scene_shapes::BoxShape { with, round: round_of(s.round), arc: s.arc, cut: s.cut, old: old_of(s.old) }
 }
 
 /// (levelLoad.ts fitPropFootprint: a loose thing's half size in plan and its height, fitted from its parts)
@@ -196,24 +194,25 @@ fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<
     let mut boxes: Vec<BoxId> = Vec::new();
     for b in file_boxes.iter() {
         b.skip(&PASSED_BY);
-        ids.push(text(b.get("id"), "a box's id"));
-        let mut p = MakeBoxP { c: v3(b.get("c"), "a box's c"), h: v3(b.get("h"), "a box's h"), ..blank_box() };
-        p.yaw = Some(b.get("yaw").num().unwrap_or(0.0));
-        p.albedo = Some(paint.albedo(b));
-        p.emissive = Some(b.get("emissive").v3().unwrap_or([0.0, 0.0, 0.0]));
-        p.flags = Some(flags_to_bits(b.get("flags")));
-        if b.has("rot") { let r = b.get("rot").nums(); p.rot = Some([r[0], r[1], r[2], r[3]]); }
-        if let Some(n) = b.get("name").str() { p.name = Some(String::from(n)); }
-        if let Some(x) = b.get("cutHeight").num() { p.cut_height = Some(x); }
-        p.marks = copy_markings(b.get("markings"));
-        p.rough = paint.rough(b); p.metal = paint.metal(b); p.stuff = paint.stuff(b); p.does = paint.does(b);
-        if b.has("shape") { p.shape = Some(shape_of(b.get("shape"), &paint)); }
+        let b = BoxData::from_json(b, "a box");
+        let said = Said::from(&b);
+        let mut p = MakeBoxP { c: b.c, h: b.h, ..blank_box() };
+        p.yaw = Some(b.yaw.unwrap_or(0.0));
+        p.albedo = Some(paint.albedo(&said));
+        p.emissive = Some(b.emissive.unwrap_or([0.0, 0.0, 0.0]));
+        p.flags = Some(flags_to_bits(b.flags.as_deref().unwrap_or(&[])));
+        p.rough = paint.rough(&said); p.metal = paint.metal(&said); p.stuff = paint.stuff(&said); p.does = paint.does(&said);
+        p.rot = b.rot; p.name = b.name; p.cut_height = b.cut_height;
+        p.marks = laid_markings(b.markings);
+        p.shape = b.shape.map(|s| shape_of(s, &paint));
+        ids.push(b.id);
         boxes.push(game::scene_boxes::make_box(g, &p));
     }
-    let bx = |id: &Json| -> f64 { let id = id.str().unwrap_or(""); ids.iter().position(|x| x == id).unwrap_or_else(|| panic!("level '{}': unknown box '{}'", name, id)) as f64 };
+    let box_named = |id: &str| -> f64 { ids.iter().position(|x| x == id).unwrap_or_else(|| panic!("level '{}': unknown box '{}'", name, id)) as f64 };
+    let bx = |id: &Json| -> f64 { box_named(id.str().unwrap_or("")) };
     // loose props
     let props: Vec<PropDef> = data.get("props").items().iter().filter(keep).map(|p| {
-        let parts: Vec<PropPart> = p.get("parts").items().iter().map(|q| PropPart { off: v3(q.get("off"), "a part's off"), h: v3(q.get("h"), "a part's h"), yaw: q.get("yaw").num().unwrap_or(0.0), albedo: paint.albedo(q), marks: copy_markings(q.get("markings")), stuff: paint.stuff(q), does: paint.does(q) }).collect();
+        let parts: Vec<PropPart> = p.get("parts").items().iter().map(|q| PropPart { off: v3(q.get("off"), "a part's off"), h: v3(q.get("h"), "a part's h"), yaw: q.get("yaw").num().unwrap_or(0.0), albedo: paint.albedo(&Said::of_part(q)), marks: laid_markings(FromJson::from_json(q.get("markings"), "a part's markings")), stuff: paint.stuff(&Said::of_part(q)), does: paint.does(&Said::of_part(q)) }).collect();
         let (half, height) = fit_prop_footprint(&parts);
         PropDef {
             kind: prop_kind(p.get("kind").str().unwrap_or("")).unwrap_or_else(|| panic!("level '{}': a prop of kind {:?}", name, p.get("kind"))),
@@ -222,22 +221,25 @@ fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<
         }
     }).collect();
     // lights
-    let light_of = |l: &Json| LightDef {
-        kind: light_kind(l.get("kind").str().unwrap_or("")).unwrap_or_else(|| panic!("level '{}': a light of kind {:?}", name, l.get("kind"))),
-        pos: v3(l.get("pos"), "a light's pos"), dir: v3(l.get("dir"), "a light's dir"), color: v3(l.get("color"), "a light's color"), intensity: num(l.get("intensity"), "a light's intensity"),
-        range: num(l.get("range"), "a light's range"), inner_deg: num(l.get("innerDeg"), "innerDeg"), outer_deg: num(l.get("outerDeg"), "outerDeg"), name: text(l.get("id"), "a light's id"), group: text(l.get("group"), "a light's group"),
-        enabled: l.get("enabled").bool().unwrap_or(false), volumetric: num(l.get("volumetric"), "volumetric"),
-        fixture_box: if l.has("fixture") { Some(bx(l.get("fixture"))) } else { None }, radius: l.get("radius").num(), mains: l.get("mains").bool(), broad: l.get("broad").bool(),
+    let light_of = |l: &Json| {
+        let l = LightData::from_json(l, "a light");
+        LightDef {
+            kind: match l.kind { LightDataKind::Spot => LightDefKind::Spot, LightDataKind::Dir => LightDefKind::Dir, LightDataKind::Point => LightDefKind::Point },
+            pos: l.pos, dir: l.dir, color: l.color, intensity: l.intensity, range: l.range, inner_deg: l.inner_deg, outer_deg: l.outer_deg, name: l.id, group: l.group,
+            enabled: l.enabled, volumetric: l.volumetric, fixture_box: l.fixture.as_deref().map(&box_named), radius: l.radius, mains: l.mains, broad: l.broad,
+        }
     };
     let lights: Vec<LightDef> = data.get("lights").items().iter().filter(keep).map(light_of).collect();
     let switchables: Vec<LevelSwitchablesItem> = data.get("switchables").items().iter().filter(keep).map(|s| LevelSwitchablesItem {
         name: text(s.get("id"), "a switchable's id"), boxes: s.get("boxes").items().iter().map(&bx).collect(), group: text(s.get("group"), "a switchable's group"), on: s.get("on").bool().unwrap_or(false),
         base_emissive: v3(s.get("baseEmissive"), "baseEmissive"), flicker: s.get("flicker").bool(), mains: s.get("mains").bool(),
     }).collect();
-    let doors: Vec<LevelDoorDef> = data.get("doors").items().iter().map(|o| LevelDoorDef {
-        name: text(o.get("id"), "a door's id"), hinge: { let h = o.get("hinge").nums(); [h[0], h[1]] }, closed_dir: num(o.get("closedDir"), "closedDir"), width: num(o.get("width"), "a door's width"),
-        angle: o.get("angle").num(), exterior: o.get("exterior").bool(), closer: o.get("closer").bool(), min_angle: o.get("minAngle").num(), max_angle: o.get("maxAngle").num(),
-        locked: o.get("locked").bool(), lock: o.get("lock").str().map(String::from), key_side: o.get("keySide").num(), steel: o.get("steel").bool(), swing: o.get("swing").num(),
+    let doors: Vec<LevelDoorDef> = data.get("doors").items().iter().map(|o| {
+        let d = DoorData::from_json(o, "a door");
+        LevelDoorDef {
+            name: d.id, hinge: d.hinge, closed_dir: d.closed_dir, width: d.width, angle: d.angle, exterior: d.exterior, closer: d.closer, min_angle: d.min_angle, max_angle: d.max_angle,
+            locked: d.locked, lock: d.lock, key_side: d.key_side, steel: d.steel, swing: d.swing,
+        }
     }).collect();
     let routes: Vec<RouteId> = data.get("routes").items().iter().map(|r| {
         let route = PatrolRoute {

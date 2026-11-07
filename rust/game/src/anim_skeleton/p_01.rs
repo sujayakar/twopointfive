@@ -168,27 +168,6 @@ pub fn layer_ran(g: &mut crate::game::Game, code: f64, c: CharId) {
     }
 }
 
-/// skeleton.ts:108 `c.get.call(self, ...)`, that is cols_table_get(&c, &g.ch[self_], out, o): the skeleton gives cols_to_bench no g to find the man by.
-fn seam_cols_get(c: ColsTable, self_: CharId, out: &mut [f64], o: usize) {
-    todo!("needs: g in cols_to_bench's signature, to reach g.ch[self_] for cols_table_get")
-}
-/// skeleton.ts:109 `c.put.call(self, ...)`, that is cols_table_put(&c, &mut g.ch[self_], from, o): as seam_cols_get.
-fn seam_cols_put(c: ColsTable, self_: CharId, from: &[f64], o: usize) {
-    todo!("needs: g in cols_from_bench's signature, to reach g.ch[self_] for cols_table_put")
-}
-
-/// Hand a layer's kept columns over to the bench's args, before the ask.   (skeleton.ts colsToBench)
-pub fn cols_to_bench(c_2: crate::anim_skeleton::ColsTable, self_: CharId, at: Option<f64>) {
-    let at = at.unwrap_or(LAYER_COLS_AT);
-    seam_cols_get(c_2, self_, &mut ::sim::skeleton::bench().args, at as usize);
-}
-
-/// Take a layer's kept columns back off the bench's args, after the ask.   (skeleton.ts colsFromBench)
-pub fn cols_from_bench(c_2: crate::anim_skeleton::ColsTable, self_: CharId, at: Option<f64>) {
-    let at = at.unwrap_or(LAYER_COLS_AT);
-    seam_cols_put(c_2, self_, &::sim::skeleton::bench().args, at as usize);
-}
-
 /// The module with `ch`'s rig on the bench, written when another was there; None for a rig the bench cannot hold.   (skeleton.ts benchRig)
 pub fn bench_rig(g: &mut crate::game::Game, ch: RigId, owed: Option<bool>) -> Option<crate::sim_sim::SimExports> {
     let n = g.tab.rig[ch].nodes.len();
@@ -303,11 +282,21 @@ fn pool_at(slot: usize) -> &'static mut [f32] {
     // (single.rs S is repr(transparent) over the single it stores)
     unsafe { core::slice::from_raw_parts_mut(data.as_mut_ptr() as *mut f32, data.len()) }
 }
+/// The same pool, to read.
+fn pool_at_read(slot: usize) -> &'static [f32] {
+    let data = &::sim::state::state_read(slot).poses.data;
+    unsafe { core::slice::from_raw_parts(data.as_ptr() as *const f32, data.len()) }
+}
 
 /// A pose's singles. Never hold two of these for one pose: a body that works on poses that may be one pose uses pool_at and spans.
 fn cols_at(slot: usize, p: Pose) -> &'static mut [f32] {
     let (s, n) = span_of(p);
     &mut pool_at(slot)[s..s + n]
+}
+/// A pose's singles, to read.
+fn cols_at_read(slot: usize, p: Pose) -> &'static [f32] {
+    let (s, n) = span_of(p);
+    &pool_at_read(slot)[s..s + n]
 }
 
 /// A pose's singles WHEREVER THEY ARE, as the TypeScript's `cols`: in the pool, or, for a pose of its own (a function's scratch, a ragdoll's: a plain
@@ -321,6 +310,17 @@ fn cols_of(g: &mut crate::game::Game, p: Pose) -> &'static mut [f32] {
         }
     }
     cols_at(g.sim, p)
+}
+
+/// A pose's singles wherever they are, to read.
+fn cols_of_read(g: &crate::game::Game, p: Pose) -> &'static [f32] {
+    if p.nodes != 0 && p.at >= Pose::LOOSE {
+        let n = ::sim::skeleton::singles(p.nodes as usize);
+        if let Some(r) = g.loose_poses.get((p.at - Pose::LOOSE) as usize) {
+            if r.nodes == p.nodes && r.floats.len() == n { return unsafe { core::slice::from_raw_parts(r.floats.as_ptr(), n) }; }
+        }
+    }
+    cols_at_read(g.sim, p)
 }
 
 /// A pose of `num_nodes` nodes, all zeros, OF ITS OWN: a row of `g.loose_poses`, as the TypeScript's `new Pose` is an array of its own. Only a pose
@@ -587,12 +587,6 @@ pub fn side_of<'g>(g: &'g mut crate::game::Game, clip: ClipId) -> &'g mut crate:
         g.m.anim_skeleton.clip_side.set(clip, ClipSide { lines: l, at: -2.0, need });
     }
     g.m.anim_skeleton.clip_side.get_mut(clip).unwrap()
-}
-
-/// The clip copied into the module the first time it is asked for, and its number there kept (−1: the module does not take it).   (skeleton.ts clipIn)
-pub fn clip_in(g: &mut crate::game::Game, x: crate::sim_sim::SimExports, clip: ClipId) -> crate::anim_skeleton::ClipSide {
-    clip_place(g, clip);
-    g.m.anim_skeleton.clip_side.get(clip).unwrap().clone()
 }
 
 /// clipIn's work, answering the two numbers its callers read and not a copy of the side's lines: (at, need).

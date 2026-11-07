@@ -1,6 +1,8 @@
 //! THE FACE'S EXPORTS FOR A HOST THAT SHOWS THE GAME (the page, src/host/rustgame.ts): the Rust game steps, and after each step only what the picture
 //! reads goes back, as the filtered export (`game::puppet::export_puppet`, tools/blitz/PUPPET.md) with the step's out events on its tail.
 //!
+//!   face_start(p, n, slot, seed, seats, flags) -> h   A GAME STARTED HERE by the game's own start (rust/game_start) from the level file's text, the
+//!                                      address's words and the character's files, handed as one run of bytes; no state crosses
 //!   face_new_at(state, n, slot) -> h   a game from a start (the bridge's bytes) OVER THE BLOCK THAT ALREADY STANDS in rust/sim's slot `slot`: the host's
 //!                                      own code stood the level through this same module's `rust/sim` exports, so the block is not handed over and not
 //!                                      copied anywhere else. The host says which slot (src/sim/state.ts holds the slots); the game is pinned to it.
@@ -64,6 +66,25 @@ fn block_len() -> usize { core::mem::size_of::<sim::state::State>() }
 fn block_of(slot: usize) -> Vec<u8> { unsafe { std::slice::from_raw_parts(sim::state::addr(slot) as *const u8, block_len()).to_vec() } }
 fn keep(k: Kept) -> u32 {
     KEPT.with(|v| { let mut v = v.borrow_mut(); match v.iter().position(|x| x.is_none()) { Some(i) => { v[i] = Some(k); i as u32 + 1 } None => { v.push(Some(k)); v.len() as u32 } } })
+}
+
+/// A GAME STARTED HERE, by the game's own start (rust/game_start `stand`), from what the host hands in one run of bytes (`handed.rs`: the level
+/// file's text, the address's words, the character's files). No state crosses: the level is read, the men are made and the mission is staged on
+/// this side, as the TypeScript start does them (rust/game_start/LEVELS.md holds the two to each other, mission by mission).
+/// `slot`: the slot of rust/sim to stand in, whose block is made anew; below 0 = a free one. `flags`: 1 = the rows that dress the picture are
+/// up (a page), 2 = the senses worked out by the game itself (a host with no GPU). Answers the game, or 0 where no slot is free.
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32, seats: u32, flags: u32) -> u32 {
+    super::hook();
+    let slot = if slot < 0 { match super::free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
+    if slot >= sim::state::GAMES { return 0; }
+    let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, cpu_senses: flags & 2 != 0, ..Default::default() };
+    let stood = game_start::handed::stand_handed(super::bytes(p, n), &o);
+    let h = super::put(super::Held { g: stood.game, cmd: None, cmds: None, after: Vec::new() });
+    crate::memo::forget(h);
+    h
 }
 
 /// # Safety

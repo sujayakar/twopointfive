@@ -156,39 +156,6 @@ pub fn tick_radio(g: &mut crate::game::Game) {
     }
 }
 
-/// A pair line with its tokens at their longest, for the lint's length check and the length report.   (dialogue.ts pairWorst)
-pub fn pair_worst(text: &str) -> String {
-    let table = crate::dialogue::token_worst_table();
-    let pad = table.get(String::from("padDoor")).unwrap();
-    let code = table.get(String::from("code")).unwrap();
-    let t = replace_ascii_ci(text, "{other}", "Lindqvist");
-    let t = replace_ascii_ci(&t, "{code}", code);
-    let t = t.replace("{padDoor}", pad);
-    let mut chars = pad.chars();
-    let mut cap = String::new();
-    if let Some(first) = chars.next() { cap.extend(first.to_uppercase()); cap.push_str(chars.as_str()); }
-    t.replace("{PadDoor}", &cap)
-}
-
-/// `text.replace(/<pat>/gi, by)` for an ASCII `pat` (a non-unicode `i` regex folds no other letter onto an ASCII one here).
-fn replace_ascii_ci(text: &str, pat: &str, by: &str) -> String {
-    let (t, p) = (text.as_bytes(), pat.as_bytes());
-    let mut out = String::with_capacity(text.len());
-    let (mut i, mut from) = (0, 0);
-    while i + p.len() <= t.len() {
-        if t[i..i + p.len()].eq_ignore_ascii_case(p) {
-            out.push_str(&text[from..i]);
-            out.push_str(by);
-            i += p.len();
-            from = i;
-        } else {
-            i += 1;
-        }
-    }
-    out.push_str(&text[from..]);
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -258,15 +225,4 @@ mod tests {
         assert_eq!(d, TS_HANDLER_DIGEST);
     }
 
-    #[test]
-    fn worst_pair_line_has_the_longest_tokens() {
-        assert_eq!(pair_worst("{OTHER} {Code} {padDoor}, {PadDoor} {PADDOOR}"), "Lindqvist 7391 the office side door, The office side door {PADDOOR}");
-    }
-
-    #[test]
-    fn regex_i_replace_matches_javascript() {
-        assert_eq!(replace_ascii_ci("{other} {OTHER} {Other}! {othe} \u{2026}{oThEr}", "{other}", "Lindqvist"), "Lindqvist Lindqvist Lindqvist! {othe} \u{2026}Lindqvist");
-        assert_eq!(replace_ascii_ci("{cod", "{code}", "7391"), "{cod");
-        assert_eq!(replace_ascii_ci("", "{code}", "7391"), "");
-    }
 }

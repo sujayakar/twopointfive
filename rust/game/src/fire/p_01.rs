@@ -45,11 +45,6 @@ pub fn fire_stats(g: &mut crate::game::Game) -> crate::fire::FireStats {
     }
 }
 
-/// The host's book of the fires, for the panel's line and the tools: none before the first frame a fire burns in.   (fire.ts fireShown)
-pub fn fire_shown(g: &mut crate::game::Game) -> Option<crate::fire::FireShown> {
-    g.engine.host_books.as_ref()?.fire.clone()
-}
-
 /// Integer hash to [0, 1). The TypeScript's signed and unsigned steps give these same 32 bits.   (fire.ts h01)
 pub fn h01(x: f64) -> f64 {
     let mut x = (js::to_i32(x) as u32 ^ 0x2545F491).wrapping_mul(0x9E3779B1);
@@ -182,13 +177,6 @@ pub fn wind_at(g: &mut crate::game::Game, mouth: V3) -> crate::fire::WindAt {
     let wl = m::hyp2(wv[0], wv[2]);
     let wk = if wl > wind_max { wind_max / wl } else { 1.0 };
     crate::fire::WindAt { wv, wl, wind: [wv[0] * wk, wv[2] * wk] }
-}
-
-/// The look's numbers as the renderer takes them, fire.wgsl FireLook's sixteen in its order.   (fire.ts lookRow)
-pub fn look_row(g: &mut crate::game::Game) -> Vec<f64> {
-    let fk = &g.k.fire;
-    let l = &fk.look;
-    vec![l.gain, l.core, l.sigma, l.speed, l.tall, l.torn, l.plume, l.shimmer, l.soot, l.breathe, fk.gas.ref_, fk.gas.lo, l.react, l.lean, l.steps, 0.0]
 }
 
 /// Whether a round or a blast leaves `t` burning: to the fixture rules such a fire is no fixture at all.   (fire.ts fireHolds)

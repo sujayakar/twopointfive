@@ -8,14 +8,16 @@
 // round him finds (a door or gate nobody has been beyond, else the longest open run), and two rear men on one side
 // take different things where the floor has two.
 //
-//   bun run tools/qa/rearread-check.ts [--verbose]        (both stands: it raises the switch itself)
-//   REARREAD_BREAK=1 …                                    (the rule left off, the same lines asked: must fail)
+// SINCE 2026-11-07 the rule is settled on and this check does not write it: the "rule off: the fault is there" lines,
+// "no less open line than without the rule" and the stack's "the same with the rule on and off" are out. Each staging
+// is run once and asked what the rear men watch.
+//
+//   bun run tools/qa/rearread-check.ts [--verbose]
+//   REARREAD_BREAK=1 …                                    (the wall charge is never ordered, so there is no stand-off and no rear man: must fail)
 import { ROOT } from './headless.ts';
 import { guarded, family } from './thresholdmenu-probes.ts';
 const { rig } = (await import('./outerwall-probes.ts')) as any;
-const { COVER } = await import(`${ROOT}/src/game/cover.ts`);
-const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
-const { WALL_ORDER, WALLCHARGE } = await import(`${ROOT}/src/game/wallcharge.ts`);
+const { WALL_ORDER } = await import(`${ROOT}/src/game/wallcharge.ts`);
 const BREAK = !!process.env.REARREAD_BREAK, VERBOSE = process.argv.includes('--verbose');
 const fmt = (p: number[]) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
 
@@ -40,13 +42,12 @@ const say = (men: Man[]) => men.map(m => `${m.name} ${fmt(m.pos)}${m.spare ? ' r
 /** the floodlit yard: the four west of their stand-off as on his tape, a wall charge ordered on the guard room's west
  *  wall, the stand-off let settle; `both` = the north side's rear man then stood on the south side beside the other
  *  (his tape had all four south of the charge; the stand-off deals two a side from this staging) */
-async function standOff(on: boolean, both: boolean): Promise<Out> {
+async function standOff(both: boolean): Promise<Out> {
   const R = await rig('floodlit-four', 5), g = R.game, O = R.O, C = R.C;
-  COVER.rearRead = on;   // (after the stand-up: the frozen stand pins it off)
   for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   R.gather([7.6, 0, 12.6], 40); R.step(120);
   const zs = [12.4, 13.3, 14.2, 15.1]; (R.up as any[]).forEach((m, i) => R.put(m, [5.6, 0, zs[i]])); R.step(30);
-  const why = O.give(WALL_ORDER, O.targetAt([8.88, 1.05, 9.0]), 'all');
+  const why = BREAK ? null : O.give(WALL_ORDER, O.targetAt([8.88, 1.05, 9.0]), 'all');
   if (why) return { ok: false, why: `order refused: ${why}`, men: [], reads: 0, say: '' };
   if (!R.until(() => C.ops[0]?.phase === 'armed', 40)) return { ok: false, why: 'the charge was never armed', men: [], reads: 0, say: '' };
   R.step(240);
@@ -56,9 +57,8 @@ async function standOff(on: boolean, both: boolean): Promise<Out> {
   return { ok: true, why: '', men, reads: g.cover.stats.rearRead, say: say(men) };
 }
 /** a plain stack on the front door: its rear men have a door (the stack's own), which the rule never touches */
-async function stack(on: boolean): Promise<Out> {
+async function stack(): Promise<Out> {
   const R = await rig('floodlit-four', 5), g = R.game, O = R.O;
-  COVER.rearRead = on;
   for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const d = g.doors.list.find((x: any) => x.def.name === 'front'); if (!d) return { ok: false, why: 'no front door', men: [], reads: 0, say: '' };
   R.gather([17, 0, 15.5], 40); R.step(120);
@@ -70,37 +70,31 @@ async function stack(on: boolean): Promise<Out> {
 
 export const rearreadCheck = guarded(async () => {
   const F = family('rearread: a rear man with no door behind him watches a way in, not a wall');
-  const keep = { r: COVER.rearRead, rnd: Math.random, d: DESTRUCTION.on, w: WALLCHARGE.on, o: WALLCHARGE.outer };   // (the rig seeds Math.random and raises the destruction switches)
+  const rnd = Math.random;   // (the rig seeds Math.random)
   const WALL = 6, FAR = 10, STILL = 0.2;   // metres of open line that is a wall in his face · that is a watch worth having · radians his gun may swing in five seconds
   const south = (o: Out) => o.men.filter(m => m.spare && !m.door && m.pos[2] > 11);
   try {
     // 1 · the stand-off as the wall charge deals it: one rear man south of the charge
-    const off = await standOff(false, false), on = await standOff(!BREAK, false);
-    if (VERBOSE) console.log(`    off:\n      ${off.say}\n    on:\n      ${on.say}`);
-    const so = south(off), sn = south(on);
-    F.verdict(off.ok && so.length >= 1 && so.every(m => m.rear && m.open < WALL), 'floodlit, a wall charge on the guard room, rule off: the fault is there (the south rear man\'s gun is on the yard wall)',
-      off.ok ? so.map(m => `${m.name} · ${m.job} · ${m.open.toFixed(1)} m of open line`).join(' · ') || 'no rear man south of the charge' : off.why);
-    F.verdict(on.ok && sn.length >= 1 && sn.every(m => m.open >= FAR) && on.reads > 0, 'with the rule his gun is on a gate or a long run of open ground',
+    const on = await standOff(false);
+    if (VERBOSE) console.log(`    one south:\n      ${on.say}`);
+    const sn = south(on);
+    F.verdict(on.ok && sn.length >= 1 && sn.every(m => m.open >= FAR) && on.reads > 0, 'floodlit, a wall charge on the guard room: the south rear man\'s gun is on a gate or a long run of open ground',
       on.ok ? `${sn.map(m => `${m.name} · ${m.job} · ${m.open.toFixed(1)} m of open line`).join(' · ')} · read ${on.reads} times` : on.why);
     F.verdict(on.ok && sn.every(m => m.swing < STILL), 'and it stays there: five seconds watched, the gun does not swing between two things', sn.map(m => `${m.name} swung ${(m.swing * 180 / Math.PI).toFixed(1)}°`).join(' · '));
-    { const worse = on.men.filter((m, i) => m.spare && off.men[i] && m.open < Math.min(off.men[i].open, FAR) - 0.5), same = on.men.filter((m, i) => !m.spare && off.men[i] && Math.abs(m.aim - off.men[i].aim) < 0.05).length, plain = on.men.filter(m => !m.spare).length;
-      F.verdict(on.ok && off.ok && worse.length === 0 && same === plain, 'no rear man has less open line than without the rule, and the men who brace are as they were', `${worse.length} worse · ${same} of ${plain} bracing men on the same line`); }
     // 2 · both rear men on the south side, as on his tape
-    const off2 = await standOff(false, true), on2 = await standOff(!BREAK, true);
-    if (VERBOSE) console.log(`    both south, off:\n      ${off2.say}\n    both south, on:\n      ${on2.say}`);
-    const s2o = south(off2), s2 = south(on2);
-    F.verdict(off2.ok && s2o.length === 2 && s2o.every(m => m.open < WALL), 'both rear men stood south of the charge, rule off: both guns on the yard wall', off2.ok ? s2o.map(m => `${m.name} ${m.open.toFixed(1)} m`).join(' · ') : off2.why);
+    const on2 = await standOff(true);
+    if (VERBOSE) console.log(`    both south:\n      ${on2.say}`);
+    const s2 = south(on2);
     { const apart = s2.length === 2 ? Math.abs(Math.atan2(Math.sin(s2[0].aim - s2[1].aim), Math.cos(s2[0].aim - s2[1].aim))) : 0;
       // a long line, or a way in he has been dealt by name: the foot gate stands shut eight metres off on this stand, and a gun on a gate is a watch, not a wall
       const watch = (m: typeof s2[number]) => m.open >= FAR || (m.open >= WALL && m.job !== '-' && m.job !== 'the rear');
-      F.verdict(on2.ok && s2.length === 2 && s2.every(m => watch(m) && m.swing < STILL) && apart > 0.5, 'with the rule each has a long line or a gate, they hold it, and the two watch different things',
+      F.verdict(on2.ok && s2.length === 2 && s2.every(m => watch(m) && m.swing < STILL) && apart > 0.5, 'both rear men stood south of the charge: each has a long line or a gate, they hold it, and the two watch different things',
         on2.ok ? `${s2.map(m => `${m.name} · ${m.job} · ${m.open.toFixed(1)} m`).join(' · ')} · ${(apart * 180 / Math.PI).toFixed(0)}° apart` : on2.why); }
     // 3 · a door stack's rear men are the stack's own business
-    const st0 = await stack(false), st1 = await stack(true);
-    if (VERBOSE) console.log(`    stack, off:\n      ${st0.say}\n    stack, on:\n      ${st1.say}`);
-    { const eq = st0.ok && st1.ok && st0.men.length === st1.men.length && st0.men.every((m, i) => m.job === st1.men[i].job && Math.abs(m.aim - st1.men[i].aim) < 1e-9 && Math.hypot(m.pos[0] - st1.men[i].pos[0], m.pos[2] - st1.men[i].pos[2]) < 1e-9);
-      F.verdict(eq && st1.reads === 0 && st0.men.some(m => m.spare), 'a plain stack on the front door: every man stands and watches the same with the rule on and off (a rear man with a door is never read)', st0.ok && st1.ok ? `${st0.men.filter(m => m.spare).length} rear men · read ${st1.reads} times` : st0.why || st1.why); }
-  } finally { COVER.rearRead = keep.r; Math.random = keep.rnd; DESTRUCTION.on = keep.d; WALLCHARGE.on = keep.w; WALLCHARGE.outer = keep.o; }
+    const st1 = await stack();
+    if (VERBOSE) console.log(`    stack:\n      ${st1.say}`);
+      F.verdict(st1.ok && st1.reads === 0 && st1.men.some(m => m.spare), 'a plain stack on the front door: a rear man with a door is never read', st1.ok ? `${st1.men.filter(m => m.spare).length} rear men · read ${st1.reads} times` : st1.why);
+  } finally { Math.random = rnd; }
   return F.done();
 });
 

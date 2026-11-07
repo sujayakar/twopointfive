@@ -225,12 +225,6 @@ pub fn drive(g: &mut crate::game::Game, gd: GuardId, dt: f64, rooted: bool) {
     if g.gd[gd].react_t > 0.0 { g.gd[gd].react_t -= dt; }
 }
 
-/// THE BODY'S SEAM (guards.ts updateGuard): the script his body follows this frame, None = he is nobody's but his own (morale.ts moraleScript)
-pub fn morale_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
-    morale_transition(g, gd);
-    morale_propose(g, gd)
-}
-
 /// THE FIRST OF A RULE'S THREE PARTS (control/), for one man: a man the rule drives who is down and folds clutches himself. The rest of its state is
 /// moved by `morale_tick`.
 pub fn morale_transition(g: &mut crate::game::Game, gd: GuardId) {
@@ -247,11 +241,6 @@ pub fn morale_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game:
     let s = g.m.morale.state_of.get(gd)?;
     if !s.drive || s.drive_t != g.time { return None; }
     Some(s.script)
-}
-
-/// his dread, 0 to 1 (0 for a man never met) (morale.ts dreadOf)
-pub fn dread_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
-    match g.m.morale.state_of.get(gd).copied() { Some(s) => dread(g, gd), None => 0.0 }
 }
 
 /// his dread while an event's shock is still on him, 0 otherwise (morale.ts shakenOf)
@@ -276,33 +265,6 @@ pub fn morale_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::morale
         shock: s.shock, rung: s.rung, leader_down: s.leader_down, broke_t: s.broke_t, call_t: s.call_t, baits: s.baits, at_hole: s.at_hole,
         bark: s.bark, shout: s.shout,
     })
-}
-
-/// 'morale ▸ Tango 2 0.85 BROKEN hold (alone, dark) · Tango 4 0.35 jumpy duck': every living man with anything on him (morale.ts moraleSummary)
-pub fn morale_summary(g: &mut crate::game::Game) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    for i in 0..g.guards.len() {
-        let gd = g.guards[i];
-        if !ours(g, gd) { continue; }
-        let Some(s) = g.m.morale.state_of.get(gd).copied() else { continue };
-        if !(s.rung > 0.0 || s.act != MoraleAct::None || s.shock > 0.005) { continue; }
-        let d = dread(g, gd);
-        let word = if s.rung == 2.0 { "BROKEN" } else if s.rung == 1.0 { "jumpy" } else { "steady" };
-        let mut line = alloc::format!("{} {} {}", g.gd[gd].callsign, js::to_fixed(d, 2), word);
-        if s.act != MoraleAct::None { line.push(' '); line.push_str(s.act.as_str()); }
-        if s.alone || s.dark || s.leader_down {
-            let mut why: Vec<&str> = Vec::new();
-            if s.alone { why.push("alone"); }
-            if s.dark { why.push("dark"); }
-            if s.leader_down { why.push("leader down"); }
-            line.push_str(" (");
-            line.push_str(&why.join(", "));
-            line.push(')');
-        }
-        parts.push(line);
-    }
-    let body = parts.join(" · ");
-    alloc::format!("morale ▸ {}", if body.is_empty() { "every man steady" } else { body.as_str() })
 }
 
 /// 'men ▸ S g g g · S g g': who is steady and who green, a band at a time, the living only; men with no band as one last group (morale.ts moraleRoster)

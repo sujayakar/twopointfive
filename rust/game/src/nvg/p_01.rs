@@ -375,38 +375,6 @@ pub fn nvg_sight(g: &mut crate::game::Game, viewer: GuardId, o: GuardId) -> f64 
     tube_vis(g, e)
 }
 
-/// QA / the panel: the team's mode and why, and each man's kit.   (nvg.ts nvgState)
-pub fn nvg_state(g: &mut crate::game::Game) -> crate::nvg::NvgState {
-    let Some(team) = live(g) else {
-        return NvgState { mode: Mode::Off, why: Why::NoRule, quiet_for: m::INF, men: Vec::new() };
-    };
-    let quiet_for = g.time - loud_t(g);
-    let men = team.men.iter().map(|(gd, row)| NvgStateMenItem { gd, down: row.down, dark: row.dark, dim: row.dim, black: row.black }).collect();
-    NvgState { mode: team.mode, why: team.why, quiet_for, men }
-}
-
-/// 'team dark (not compromised) · Blue One goggles · Blue Two light'.   (nvg.ts nvgSummary)
-pub fn nvg_summary(g: &mut crate::game::Game) -> String {
-    let s = nvg_state(g);
-    if s.mode == Mode::Off {
-        return String::from("night vision: no team on the floor");
-    }
-    let mut out = format!("team {} ({}) · ", if s.mode == Mode::Dark { "dark" } else { "lights free" }, s.why.as_str());
-    for (i, row) in s.men.iter().enumerate() {
-        if i > 0 {
-            out.push_str(" · ");
-        }
-        let kit = if row.down {
-            "goggles"
-        } else {
-            let l = g.gd[row.gd].flashlight;
-            if g.tab.light[l].enabled { "light" } else { "bare eyes" }
-        };
-        out.push_str(&format!("{} {}{}", g.gd[row.gd].callsign, kit, if row.black { ", black ahead" } else { "" }));
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

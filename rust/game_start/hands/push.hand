@@ -1,0 +1,7 @@
+# PUSH: the squad is sent at whoever is nearest, again and again, and Sam shoots at him.
+# REACHES: the squad's move order and its walk through doors, contact, the room fight on both sides, guards hearing shots and
+# hunting, reloads, wounds and deaths, the lines men say. On a floor with no squad the order is refused and only the shots are left.
+# DOES NOT REACH: any other order (stack, the door tools, throws, the 40 mm), grenades, Sam walking, a quiet floor left alone.
+unhurt
+every 6 from 1    order move nearest all
+every 10 from 5   fire nearest

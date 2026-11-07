@@ -5,6 +5,7 @@
 import type { Game } from '../game/game';
 import type { PlayerCmd } from '../game/cmd';
 import { hudExpireBubbles } from '../game/journal';   // (called inside netStep only: src/game is one import cycle)
+import { dressAll } from '../game/dress';   // (called inside netStand only)
 import { NET } from './wire';
 
 /** the two things of a host's engine a tick's end touches (the page's engine, the headless stand-in) */
@@ -43,5 +44,8 @@ export function netWord(g: Game, from: number): number {
 export function netWhole(g: Game): { names: string[]; words: number[] } | null { const S = g as unknown as Stepper, A = S.wholeWords?.(); return A ? { names: S.wholeNames?.() ?? [], words: Array.from(A) } : null; }
 /** a quiet run of networked ticks begins / ends (a server between two state words, a client's walk of the ticks its server has confirmed) */
 export function netQuiet(g: Game, on: boolean): void { (g as unknown as Stepper).quietRun?.(on); }
-/** every seat of a networked game is refereed on every machine (wire.ts: the view is worked out again from the pose). Once, when the game is stood */
-export function netSeats(g: Game): void { for (const s of g.seats) s.remote = true; }
+/** A NETWORKED GAME IS STOOD THE SAME WAY ON EVERY MACHINE: once, when the game is stood, by the server, a scripted client and a page alike.
+ *  Every seat is refereed (wire.ts: the view is worked out again from the pose). Every dressing row is up (game/dress.ts): no recipe carries that
+ *  table, a page has it up and a host that draws nothing may have put it down, and in the game that steps the rows are not picture alone (a debris
+ *  chunk and a glass plate are rows of the game's box table; a storm's wind source). So the stand does not leave it to how a host happened to be stood */
+export function netStand(g: Game): void { for (const s of g.seats) s.remote = true; dressAll(true); }
