@@ -28,6 +28,19 @@ program then folds the row:
   rows' only writer, and what it writes is what they hold: the lay is deleted (the count of frames still runs down), and FOG.air and
   FOG.kept fold (four reads in `fogofwar/p_02.rs` and `p_03.rs`). FOG.desat and FOG.edge are numbers and stay numbers.
 
+READING TWINS, for the readers pass (tools/fold/README.md, "Readers"). A block of the sim was handed out as `&'static mut` from a slot
+number whether the caller read it or wrote it, so no function that touched one could be called a reader. Beside each such function now
+stands a twin that hands the same thing out shared, named `…_read`; the pass moves every call that compiles onto the twin.
+- rust/sim: `state::state_read`, `weather::of_read`, `world::world_read`, `skeleton::bench_read`, `clips::table_read`.
+- the bodies' helpers: `lights_read` (sim_lightshome), `cols_read` (sim_slabshome, props), `io_read` (props), `wx_read` (weather),
+  `air_read` (air_dust), `args_read` (character p_08, p_10, p_11), `world_read` (scene_box_mirror), `block_d_read` (sim_weatherhome),
+  `step_io_read` (doors), `slab_par_read` (doorblast), `pool_at_read`, `cols_at_read`, `cols_of_read` (anim_skeleton).
+Not given a twin: `panes::pn` (it tidies an empty pool's counts as it hands it out) and `panes::row_ref` with glassbreak's `row_at`
+(a row is reached through `&mut self`); `air::plan` (it makes the plan it hands out).
+STILL UNSOUND, and not mended here: the `mut` functions can hand out two live `&'static mut` to one block (two `state(slot)` in one
+expression already do), and a `…_read` held across a call that writes the same part aliases a shared reference with a write. One
+thread and "take it, use it, let it go" is the only rule, held by habit. Who owns a block is for the data design.
+
 Left where it is, for whoever reworks those files: with BELIEF.on settled, `fix_stamp`, `pt_stamp`, `roomfight::def_fix_is_pt` and
 `fix_is_pt` (the stand-ins for the TypeScript's object identity of a man's fix) are still written and read by `def_move_pt`,
 `move_pt` and the senses. The program cannot call them dead: they are reached from code that never tested the row.

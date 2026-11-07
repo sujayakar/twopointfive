@@ -12,6 +12,11 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 fn cols(g: &Game) -> &'static mut sim::props::Props {
     &mut sim::state::state(g.sim).props
 }
+/// the same part, to read
+#[inline]
+fn cols_read(g: &Game) -> &'static sim::props::Props {
+    &sim::state::state_read(g.sim).props
+}
 /// where thing `id` is now   (propshome.ts rowOf)
 #[inline]
 fn row(s: &sim::props::Props, id: PropId) -> usize {
@@ -26,6 +31,10 @@ fn set_flag(s: &mut sim::props::Props, r: usize, mask: u32, v: bool) {
 #[inline]
 fn io() -> &'static mut sim::props::Io {
     unsafe { &mut *(sim::props::addr(0) as *mut sim::props::Io) }
+}
+/// the same hand-over, to read
+fn io_read() -> &'static sim::props::Io {
+    unsafe { &*(sim::props::addr(0) as *const sim::props::Io) }
 }
 /// the one target of the TypeScript's stored `emit` (game.ts:1233), called by name
 #[inline]
