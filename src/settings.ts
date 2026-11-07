@@ -137,9 +137,8 @@ export interface RenderSettings {
   skyZenith: Vec3; skyHorizon: Vec3;
   capColor: [number, number, number, number]; // section cap tint (rgb) + albedo mix
   nvAmount: number; nvGain: number; hitFlash: number;
-  // ---- ReSTIR DI (renderer v3 Phase 2a, render/shaders/restir.wgsl; the header there is the estimator's description) ----
-  restir: boolean;             // the direct-light estimator: true = ReSTIR DI (one reservoir per pixel per emitter class, temporal + spatial reuse, a fixed shadow-ray budget per pixel
-                               // whatever the light count); false = direct.wgsl's leader / tail estimator exactly as it was (?norestir). Same four outputs either way
+  // ---- ReSTIR DI, the direct-light estimator (render/shaders/restir.wgsl; the header there is its description): one reservoir per pixel per emitter class, temporal + spatial
+  // reuse, a fixed shadow-ray budget per pixel whatever the light count. The only estimator since 2026-11-07 (the leader / tail one, direct.wgsl, and its switch went) ----
   restirRays: number;          // shadow rays per pixel per frame, 2‥6: 2 = each class alternates re-trace / fresh candidate on a flipping checkerboard · 3 = both temporal samples re-traced +
                                // one fresh candidate alternating between the classes · 4 = re-trace + fresh for both · 5 = + a final visibility ray when spatial reuse picks a neighbour's
                                // sample (spatial reuse then runs everywhere, unbiased) · 6 = + a second fresh candidate per class (presets: ultra 4 · high 4 · medium 4 · low 3 · verylow 2)
@@ -184,12 +183,9 @@ export interface RenderSettings {
                                // dispatches main's program, so at rest the pass is main's byte for byte and costs the same
   restirMotionDither: boolean; // (1)'s pick: false = a per-pixel bilinear draw among the four texels (lineages diffuse; neighbours may adopt one parent and coalesce), true = ONE global sub-pixel offset a frame
                                // (an R2 sequence: a bijective shift whose average over frames is the true flow — nothing duplicated, the pattern registered to ± ½ px)
-  // direct light sampling / reuse knobs (see direct.wgsl, dtemporal.wgsl, softblur.wgsl)
-  directSamplesTop: number;    // stratified emitter samples for each class's strongest light (1-8)
-  directSamplesOther: number;  // samples for the other leaders (1-4)
-  directHistory: number;       // temporal reuse weight for direct light (0 = history-free; 0.7 ≈ 3-frame EMA), depth-validated + variance-clipped, transient lights bypass it
+  // direct light's shadow denoise knobs (render/denoise.ts, the shadow client)
+  directHistory: number;       // the shadow client's temporal switch: 0 = history-free, anything above = its history is on (the number itself is no longer a weight)
   directBlurCap: number;       // max penumbra filter radius in px
-  directAdaptiveMin: number;   // adaptive sampling: stop after this many samples if they all agree (2-4)
   secMinE: number;             // shadow-ray threshold (W/m² unshadowed) for lights at cascade interval hits
   flashlightRadius: number;    // emitter radius used for torches / the rail light (m): a real bezel is ~0.015-0.02; larger = softer torch shadows
   lightReach: boolean;         // direct pass + secondary vertices: per-light CPU reach masks over the level grid (FrameFlags.ReachMask; reach.ts) — a walled-off light never competes for a pixel's leader slots
@@ -206,15 +202,12 @@ export interface RenderSettings {
    *  Off = the gather module exactly as it was. `?gatherStrata`, `__gs.on`, Tab ▸ Indirect light. */
   gatherStrata: boolean;
   // ---- LOSSY trade-offs (all default off; each independently switchable at runtime for A/B — off is exactly the untouched path) ----
-  checkerDirect: boolean;      // direct pass: shadow rays on a checkerboard half of the pixels per frame (parity alternates), the other half rebuilds S = U × its traced neighbours' S/U; hard edges and unsupported pixels still trace (FrameFlags.CheckerDirect)
   gatherThird: boolean;        // final gather (rays, temporal, à-trous) at 1/3 resolution instead of 1/2; the composite's joint-bilateral upsample follows the divisor (frame.lossyCfg.x; targets are recreated on change)
   rcHalfRate: boolean;         // radiance-cascade cache at half rate: upper cascades on even frames, c0 + dice bake on odd ones (rc.halfRate); the dice everyone reads is at most a frame older
   rcAmortize: boolean;         // amortized cascade upkeep (rc.amortize; docs/internal/p0a-cascades.md): upper level n re-traces an interleaved 1/rcPeriods[n] of its probes a frame — constant work per frame, c0 + the dice bake whole every frame, a fresh / rebuilt cache primed with whole bakes and a history-free first dice bake. With rcPeriods all 1 (the default until a preset places them) it dispatches exactly what it always did; false = the original path regardless of rcPeriods
   rcPeriods: readonly number[]; // per cascade level [c0 (ignored: always whole), c1, c2, c3, …]: frames a level takes to refresh all its probes under rcAmortize (quality.ts presets; Tab ▸ Indirect light)
   rcChunks: readonly number[];  // per cascade level [–, c1, c2, c3]: workgroups per upper-cascade probe — occupancy only, the same bits for any value (rc.wgsl rcUpper); Tab ▸ Indirect light for A/B
   volQuarter: boolean;         // volumetrics (haze beams + smoke march) at 1/4 resolution instead of 1/2; the composite's depth-aware upsample follows (frame.lossyCfg.y)
-  dimRays: boolean;            // direct pass: pixels whose total unshadowed luminance (both classes) is under dimRaysBelow spend one emitter sample per leader instead of directSamplesTop/Other (frame.lossyCfg.z = the threshold, 0 when off)
-  dimRaysBelow: number;        // that threshold, in the estimator's irradiance units: 0.01 W/m² unshadowed on a mid-grey surface at exposure 2 lands at ≈2 % of display white after AgX (0.02 ≈ 4 %)
   volLightCap: number;         // volumetrics worst-case cap (Phase 0, volumetrics.wgsl VOL_KMAX): at most this many lights get shadow rays per smoke-march step (the first K by unshadowed bound on that stretch that reach the step) / per haze view ray (the K beams with the largest unshadowed in-scatter, sharing 1.5 × volSteps by it), the rest dropped — and the smoke march walks per-domain stretches with a bounded shortlist. 0 = off: the pass exactly as it was (frame.volCfg.x; presets: ultra 6 · high 4 · medium 3 · low / verylow 2)
   volShadowEvery: number;      // with the cap on: a traced light's shadow ray + self-shadow march is refreshed every N smoke-march steps and reused between (frame.volCfg.y; 2 on every preset — 1 bought nothing visible and cost ultra a third of its march; 3 combs)
   volStepVoxels: number;       // with the cap on: smoke-march step in voxels of the domain walked (frame.volCfg.z in tenths; 1.5 = as ever — ultra / high / medium; 2 — low / verylow)
@@ -249,7 +242,6 @@ export interface RenderSettings {
   particleBirths: number;      // GPU particle births a frame (render/particles.ts maxBirthsPerFrame — Phase 0 cap; the emit queue carries the rest into the next frames, long-lived kinds first, stale sparks shed): presets 512 / 384 / 256 / 192 / 128
   debrisCap: number;           // the destruction lane's rigid-debris pool (game/debris.ts: ceiling tiles, monitor housings, desk clutter as tumbling shadow-casting boxes): presets 64 / 64 / 32 / 32 / 32 — the image-quality program's chaos budget (docs/internal/image-quality.md §4)
   torchBounceCards: boolean;   // final gather: every carried spot light's footprint (torches, weapon lights, Sam's rail light — RtLight.card) on the surface its beam hits is rebuilt each frame as a one-sided analytic emitter (render/shaders/cards.wgsl: axis ray + 64 cone samples → claim disc, flux-weighted centroid / radius, radiance × area from the flux that actually landed there × the albedo it landed on) and the gather takes that patch's bounce analytically with ONE shadow ray instead of finding the hotspot with its cosine rays — which drop that light's direct term wherever they land inside the footprint, so nothing is counted twice (fgather.wgsl). The boil round a torch near a wall goes by construction, and the firefly bound stops eating the bounce there. FrameFlags.BounceCards; off = no card pass, nothing sampled or excluded: bit-identical (docs/internal/perf-2026-08-10.md)
-  directSeedHold: boolean;     // direct pass A/B knob from the torch-shadow boil study: with direct-light history on, advance the per-pixel emitter-sampling pattern every other frame instead of every frame (FrameFlags.DirectSeedHold) — default off
   // ---- EXPERIMENTS (default off, not part of any preset; off is exactly the untouched path) ----
   gloss: boolean;              // traced glossy reflections on the polished floors (BoxFlag.Gloss: lobby stone, corridor + break-room lino): the final gather spends one jittered mirror ray per gloss texel, shades its hit like a gather hit (+ the fixture's own emission), weights it by Schlick Fresnel on the view angle, and composite adds it after the diffuse terms via its own half-res texture with history + one à-trous pass (FrameFlags.Gloss; costs ~1 extra trace per gloss texel at gather res + two half-res filter dispatches)
   decals: boolean;             // decals (experiment E1, this branch: default ON): the marks the encounter leaves — bullet holes, stun scorches, boot scuffs, chips (render/decals.ts, applied in the g-buffer's fragment stage: decals.wgsl) — off = nothing recorded, nothing uploaded, FrameFlags.Decals never raised: the g-buffer exactly as it was (?nodecals boots with it off)
@@ -371,9 +363,9 @@ export const defaultSettings = (): RenderSettings => ({
   skyZenith: [0.015, 0.025, 0.05], skyHorizon: [0.04, 0.05, 0.08],
   capColor: [0.010, 0.012, 0.016, 0.3],
   nvAmount: 0, nvGain: 475, hitFlash: 0,   // nvGain = intensifier tube gain (log curve), not a linear multiplier
-  restir: true, restirRays: 4, restirSpatial: 3, restirHistory: 20, restirRadius: 16, restirGradient: true, restirGradK: 5, restirYoung: 8, restirSpatialAll: false, restirCoherent: false, restirSampleHue: false, restirRatioRaw: false, restirKnownDark: true, restirAudit: 0.25, restirPermute: false, restirPenCap: 0, restirPenRays: false,   // ReSTIR DI on; the presets place rays / taps / cap per tier (quality.ts), these are 'high'
+  restirRays: 4, restirSpatial: 3, restirHistory: 20, restirRadius: 16, restirGradient: true, restirGradK: 5, restirYoung: 8, restirSpatialAll: false, restirCoherent: false, restirSampleHue: false, restirRatioRaw: false, restirKnownDark: true, restirAudit: 0.25, restirPermute: false, restirPenCap: 0, restirPenRays: false,   // ReSTIR DI on; the presets place rays / taps / cap per tier (quality.ts), these are 'high'
   restirMotion: 6, restirMotionV: 1.1, restirMotionMin: 0.35, restirMotionPx: 0.5, restirMotionDither: false, restirMotionTaps: 6, restirMotionStatic: false,   // MOTION (direct-motion lane, docs/internal/direct-motion.md; these are HIGH's — floor .35 / 6 taps since the 08-12 SPRINT take: at three times the walking pan the .1 floor made the light's edge noisier than no cut at all, .35 + taps sits between; the walking pan keeps most of its win): 6 = the motion-scaled confidence (2) + wider spatial reuse under motion (4) — measured at high: the light's edge under a walking pan −43 % flow, the lit floor −27 %, the dark floor −7 % (−46 / −32 with 6 taps), a slow pan and the still picture unchanged, main's 1–3.7 % motion darkening gone; the stochastic reprojection (1) stays an A/B row (a NEGATIVE at slow pans: +12‥34 %); the presets tier Min / Taps; 0 (?norestirmotion) = the estimator's program byte for byte
-  directSamplesTop: 8, directSamplesOther: 4, directHistory: 0.5, directBlurCap: 10, directAdaptiveMin: 3, secMinE: 0.006, flashlightRadius: 0.07,   // adaptive: 8/4 is the budget in penumbrae, `directAdaptiveMin` rays where samples agree
+  directHistory: 0.5, directBlurCap: 10, secMinE: 0.006, flashlightRadius: 0.07,
   lightReach: true,
   giFireflyK: 4,
   tileCull: true,              // proven exact: 4 views × final/direct/indirect bit-identical off vs on under the deterministic capture protocol (08-06); toggle stays in the Direct light panel
@@ -383,7 +375,7 @@ export const defaultSettings = (): RenderSettings => ({
   axisBoxFast: true,           // exact by IEEE identities (1·x − 0·z = x); A/B via the Direct light panel toggle / frame flag 524288
   gridSlabs: true,             // exact with a 5 mm margin over < 0.4 mm of float differences (argument above traceClosest); −40 % slab tests on rays leaving the floor per tools/qa/grid-globals.ts; A/B via the Direct light panel toggle / frame flag 1048576
   gatherStrata: true,          // ON since 08-12 (the maintainer: 'gatherStrata is looking great!'): unbiased, −13‥16 % gather, a different sample pattern (not hash-identical to the iid gather — ?nogatherstrata / __gs.on = false for the module exactly as it was) / Tab ▸ Indirect light for A/B
-  checkerDirect: false, gatherThird: false, rcHalfRate: false, volQuarter: false, dimRays: false, dimRaysBelow: 0.01,
+  gatherThird: false, rcHalfRate: false, volQuarter: false,
   rcAmortize: true, rcPeriods: [1, 1, 1, 1],   // the schedule is on but traces every level whole until a preset (quality.ts) places periods — bit-identical to the original dispatch meanwhile
   rcChunks: [1, 1, 2, 8],                        // c2's items over 2 workgroups per probe, c3's over 8: the cascades 1.77 → 1.05 ms on the M4 Max with the same output bits (docs/internal/p0a-cascades.md §6); [1,1,1,1] = the original one-workgroup-per-probe dispatch
   volLightCap: 0, volShadowEvery: 2, volStepVoxels: 1.5,   // the cap is off until a preset places it (quality.ts: every preset does); Tab ▸ Direct light ▸ CAP rows
@@ -395,7 +387,6 @@ export const defaultSettings = (): RenderSettings => ({
   particleBirths: 6144,        // = MAX_NEW_PER_FRAME, i.e. uncapped, until a preset places it; Tab ▸ Renderer — particles
   debrisCap: 64,               // the chaos budget's upper figure until a preset places it; Tab ▸ Sandbox ▸ chaos rows
   torchBounceCards: false,     // default off until the presets place it (quality.ts); Tab ▸ Indirect light
-  directSeedHold: false,
   gloss: false,
   decals: true,                // decals (E1): bullet holes, scorches, scuffs, chips in the g-buffer's fragment stage — on by default (Tab ▸ Renderer — decals; ?nodecals)
   meshShadowsNear: false,      // (quality.ts apply writes it with meshShadows: high = near-only, ultra = every ray)
