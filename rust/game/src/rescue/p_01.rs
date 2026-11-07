@@ -427,7 +427,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         let n = m::max(0.0, m::min(len, m::round(g.k.rescue.roamers))) as usize;
         for i in 0..n { cast.push(CastRow { role: Role::Roamer, in_room: false, mark: s.roamers[i % s.roamers.len()], name: format!("Roamer {}", i + 1) }); }
     }
-    let budget = 1.0 + cast.len() as f64;
+    let budget = crate::seats::budget_with_seats(g, 1.0 + cast.len() as f64);
     for (k, c) in cast.iter().enumerate() {
         let gd = crate::guards::spawn_unit(g, &crate::guards::UnitOpts {
             team: crate::teams::Team::Hostile, pos: c.mark.pos, yaw: Some(v3::yaw_to(c.mark.pos, c.mark.aim_at)),

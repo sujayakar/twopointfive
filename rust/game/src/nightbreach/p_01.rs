@@ -10,7 +10,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---- private helpers
 
 /// The four-man squad's budget of characters: the seats' men, the four and the layout's five defenders (nightbreach.ts SQUAD4_BUDGET: ten in a game of one).
-pub(crate) fn squad4_budget(g: &crate::game::Game) -> f64 { SQUAD4_BUDGET - 1.0 + crate::seats::seat_count(g) }
+pub(crate) fn squad4_budget(g: &crate::game::Game) -> f64 { crate::seats::budget_with_seats(g, SQUAD4_BUDGET) }
 
 /// `T !== applied`, an identity of the level's own rows (a structure's team start, one of its other ways in, the night breach's own): here the row
 /// whole, by value. Another start with the same place for Sam is ANOTHER start in the TypeScript and writes the knobs again (a knob moved by hand
