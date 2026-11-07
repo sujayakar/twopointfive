@@ -339,8 +339,8 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         if mine { crate::game::game_say(g, gd, "got him!", None, None, None); }
     } else if lost_man && best.is_none() && (g.gd[gd].state == GuardState::Alert || g.gd[gd].state == GuardState::Search) {
         // the man he was fighting is down and no other enemy is in his sight: he comes off the alert to a wary look round
-        g.gd[gd].state = GuardState::Suspicious;
-        g.gd[gd].awareness = 0.45;
+        crate::mind::set_state(g, gd, GuardState::Suspicious, "guards");
+        crate::mind::set(g, gd, 0.45, "guards");
         g.gd[gd].react_t = 1.2;
         g.gd[gd].search_t = 0.0;
         crate::game::guard_set_path(g, gd, Vec::new());

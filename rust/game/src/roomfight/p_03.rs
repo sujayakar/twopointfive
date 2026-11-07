@@ -71,8 +71,8 @@ pub fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, why: &str)
     let c = g.gd[gd].ch;
     let threat = v3::copy(room_fight_threat_of(g, d));
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
-    g.gd[gd].state = crate::game::GuardState::Alert;
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
+    crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "roomfight");
+    crate::mind::raise(g, gd, 0.92, "roomfight");
     crate::control::set_hold(g, gd, true, "roomfight");
     crate::control::set_pinned(g, gd, true, "roomfight");
     let was = g.tab.roomfight_def[d].room;
@@ -174,8 +174,8 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
     }
     crate::control::set_hold(g, gd, false, "roomfight");
     crate::control::set_pinned(g, gd, false, "roomfight");
-    g.gd[gd].state = crate::game::GuardState::Alert;
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
+    crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "roomfight");
+    crate::mind::raise(g, gd, 0.92, "roomfight");
     g.gd[gd].last_known = Some(v3::copy(at));
     g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); // a new object: a whole write of the fix (doze.ts:244)
     g.gd[gd].path = Vec::new();

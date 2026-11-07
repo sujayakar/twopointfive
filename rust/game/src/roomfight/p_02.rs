@@ -731,7 +731,7 @@ pub fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f6
         g.gd[gd].foe = Some(ct);
         crate::aim::aim_state_clear(&mut g.gd[gd].aim);
         room_fight_plant(g, d, "contact");
-        g.gd[gd].awareness = 1.0;
+        crate::mind::set(g, gd, 1.0, "roomfight");
         g.gd[gd].react_t = pick(g, s.react);
         let fp = g.ch[fc].pos;
         crate::guards::eyes_on(g, gd, fp);
