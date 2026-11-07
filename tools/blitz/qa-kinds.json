@@ -300,9 +300,6 @@
 "CLOSE.rmbHold=false",
 "CLOSE.heldClicks=false"
 ],
-"holdglass-loud": [
-"HOLDFIRE.on=false"
-],
 "inhand": [
 "FOG.cone=true",
 "INHAND.on=false"
@@ -1562,7 +1559,6 @@
 "hold-struggle": "iii",
 "holddrop": "iii",
 "holdfire": "iv-a",
-"holdglass-loud": "iv-a",
 "holdglass-open": "iv-a",
 "holdglass-other": "iv-a",
 "holdglass-quiet": "iv-a",
