@@ -72,7 +72,7 @@ pub fn wall_charge_undigit(g: &mut crate::game::Game, d: OrdersOrderDefId) -> Or
         g.tab.orders_order_def[x] = row;
         return x;
     }
-    let x = g.tab.orders_order_def.push(row);
+    let x = g.tab.orders_order_def.push(row);   // (a second row of the same id ON PURPOSE: made once a row, kept in stand_ins, written in place above)
     g.m.wallcharge.stand_ins.set(d, x);
     x
 }
