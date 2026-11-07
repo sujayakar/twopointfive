@@ -1,6 +1,6 @@
 // CUT BOXES — the in-page instrument (tools/qa/cut-cost.js `__cc.run()`) run in ONE headless Chromium page: the same call the maintainer makes in his console, driven
 // from here so it can be checked on a machine without a GPU (SwiftShader: read ratios, not milliseconds). Everything is measured inside one process: cut against
-// plain on the same pieces, and — the calm case — the tracing pipelines' text with CUT_BOXES true against false through a hot swap.
+// plain on the same pieces.
 //   node tools/qa/cut-cost-page.cjs --base http://localhost:5199 --flags cutboxes --cases calm,pool --rounds 2 --n 5 --warm 1 --out docs/perf/cut-cost-sw-page.json [--noswap] [--w 640 --h 360]
 // The page opens with cut pieces ON whether or not --flags names cutboxes; the boxes-as-before baseline is --flags nocutboxes.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -17,7 +17,7 @@ const T0 = Date.now(); const log = (...a) => console.log(`[${((Date.now() - T0) 
   page.on('pageerror', e => errs.push('pageerror ' + String(e).slice(0, 400)));
   await page.goto(`${BASE}/?paused&mute&quality=${A.quality || 'high'}${A.flags ? '&' + A.flags : ''}`);
   const opts = { rounds: Number(A.rounds || 2), n: Number(A.n || 5), warm: Number(A.warm ?? 1), smoke: false };
-  if (A.cases) opts.cases = String(A.cases).split(','); if (A.noswap) opts.swap = false; if (A.gate) opts.gate = true; if (A.mix) opts.pool = { mix: A.mix };
+  if (A.cases) opts.cases = String(A.cases).split(','); if (A.mix) opts.pool = { mix: A.mix };
   const out = await page.evaluate(async o => {
     await window.__ready; window.__testVisible = true; window.__pauseLoop = true; window.__menu.close();
     const dev = window.__engine.device; const gpu = []; dev.addEventListener('uncapturederror', ev => gpu.push(String(ev.error && ev.error.message).slice(0, 300)));
