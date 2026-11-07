@@ -3962,10 +3962,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   to 1, its plain value). On a stop the recorder's own way out runs first, then `takeRead` makes the short read (frame time at the middle, the 95th and
   99th and the worst; counts over 20 / 25 / 33 / 50 / 100 ms; the forty slowest frames outside a sweep's warm-up and settles, each with its CPU parts,
   its GPU cost, the passes that ran over their own middle and what was logged within 0.4 s; every pass as mean and 95th) and shows it in a box with a
-  Copy button. A sweep's rows are NOT priced on the page: `tools/qa/perf-report.ts` prices them off the whole take. `sendTake` hands the read and the
-  whole take (gzipped, base64, 180,000-character parts) to `window.__takeStore.put(path, doc)` as `takes/<id>` and `takes/<id>/parts/<n>`, one take at a
-  time, a failed write tried once more. No page of this repo sets `__takeStore`: a page that hosts the one-file build hands it in, and without it nothing
-  is sent and the read sits in the box. `takeRead` was tried headless on made-up takes only; no take has left a page yet.
+  Copy button. A sweep's rows are NOT priced on the page: `tools/qa/perf-report.ts` prices them off the whole take. `takeRead` was tried headless on made-up takes only.
   Where a store is handed in the recorder's own download is NOT tried (a hosted page starts none, and the try only raises the host's notice over a
   take that did get out). FIRST TAKE FROM THE MAINTAINER'S MAC (10-25, the pass at night, high at half scale, world frozen, 20 rows × 3 rounds): base 15.5
   ms of GPU; every layer of the look together gives back 0.8 ms (5 %), no single layer is outside the noise, the shade row is free. A third button, **Sharp direct**, is `?nosharp` from the panel (`sharpForce.v = false`, then the current preset put on again so its other resolve rows follow; again = as the preset): a hosted page's address takes no flags, and the debugger's own row only holds until the ladder's next preset. Asked for by the performance lane, 10-25, for a take on Auto with it off; not while a take or a sweep runs.
