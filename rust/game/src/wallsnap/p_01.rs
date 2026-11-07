@@ -19,7 +19,7 @@ pub fn ws_take_secs(g: &mut crate::game::Game, dist: f64, turn: f64) -> f64 {
 
 fn take_secs(w: &crate::knobs::WallsnapK, dist: f64, turn: f64) -> f64 {
     let t = w.take_base + w.take_per_m * dist + w.take_per_turn * m::abs(turn) / m::PI;
-    m::min(w.take_max, m::max(w.take_min, t)) * (if w.slow { m::max(0.25, w.slow_take) } else { 1.0 })
+    m::min(w.take_max, m::max(w.take_min, t)) * m::max(0.25, w.slow_take)
 }
 
 /// How far out (m) the key-less take's clock starts for a man closing on the face at `into` m/s. (wallsnap.ts wsPressNear)
@@ -28,7 +28,7 @@ pub fn ws_press_near(g: &mut crate::game::Game, into: f64) -> f64 {
 }
 
 fn press_near(w: &crate::knobs::WallsnapK, into: f64) -> f64 {
-    if w.press_run { m::max(w.press_near, w.press_flow + w.press_secs * m::max(0.0, into)) } else { w.press_near }
+    m::max(w.press_near, w.press_flow + w.press_secs * m::max(0.0, into))
 }
 
 /// Ease-out by power p: 0 to 0, 1 to 1, fastest at the start. (wallsnap.ts wsEase)
@@ -70,27 +70,16 @@ mod tests {
             (0.123, 2.5, 0x3fd56e3b22544036),
         ];
         for (d, t, bits) in on { assert_eq!(take_secs(&w, d, t).to_bits(), bits); }
-        w.slow = false;
-        let off: [(f64, f64, u64); 4] = [
-            (0.7, 0.9, 0x3fcd560e7241d318),
-            (0.0, 0.0, 0x3fbeb851eb851eb8),
-            (3.3, -3.1, 0x3fd3333333333333),
-            (0.25, 1.234, 0x3fc4efc903b94307),
-        ];
-        for (d, t, bits) in off { assert_eq!(take_secs(&w, d, t).to_bits(), bits); }
-        w.slow = true;
         w.slow_take = 0.1; // the floor of a quarter
         assert_eq!(take_secs(&w, 0.25, 1.234).to_bits(), 0x3fa4efc903b94307);
     }
 
     #[test]
     fn press_near_bits() {
-        let mut w = crate::knobs::page_wallsnap();
+        let w = crate::knobs::page_wallsnap();
         for (i, bits) in [(0.0, 0x3fe3333333333333u64), (1.55, 0x3fe3333333333333), (4.7, 0x3ff0bc6a7ef9db23), (-2.0, 0x3fe3333333333333)] {
             assert_eq!(press_near(&w, i).to_bits(), bits);
         }
-        w.press_run = false;
-        assert_eq!(press_near(&w, 4.7).to_bits(), 0x3fe3333333333333);
     }
 
     #[test]
