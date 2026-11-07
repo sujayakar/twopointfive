@@ -1180,6 +1180,25 @@ one stops the tool by name, on an address one does nothing and says so in the co
     two rules' words off 3.61 ms and EVERY RUN TO THE BIT (so the doors' columns and the falls' store cost nothing a tick and change nothing); with
     the page's rules on 3.55 ms (another game: the rules); with the two rows up 3.60 ms, the same game as 3.55. So the doors' row does NOT pay yet
     (its hand-over asks the game about every man every tick): it stays off. NEVER SEEN ON A GPU, never played.
+- **ONE WAY OF SENSING** (`rust/game_rules/src/sense`, `guards::light_estimate_at`, `guards::light_on`; `rust/sim/src/bricks.rs`, `glow.rs`, `light.rs`; the
+  maintainer, 2026-11-07: "we should make one way for sensing"). The rules ask the simulation how lit a point is and how much smoke is on a line, in the tick that
+  wants to know, the same on a page, a server and a bare machine. NOTHING IS READ OF THE PICTURE: `Sensors`, its keys, its record and replay, the probe's table and
+  the queues made for its 64 places are gone from Rust, and the five switches (`SENSE.cpu`, `grid`, `bounce`, `moon`, `drift`) with them; where a bullet below or in
+  replays.md says one of them, it is history. No off-word and no journal key: a recording made on the picture's answers parts from its run.
+  - THE SMOKE IS ALL IN THE BLOCK (cells, emitters, beat). 512 bricks, a place each, so none is refused. A source too small to hide anybody (`SENSE.smoke.least`) and a
+    `look` source are the picture's alone and take no room of `smoke_system_like_budget`, so a fire fight's wisps do not starve the dust.
+  - A TABLE KEPT BESIDE A BLOCK goes by `sim::state::stamp`; `sim::state::put` is the one way a block is written whole (a start, a put-back, a move between slots).
+    Before, nothing in Rust moved the stamp, and after a restart the grid's index and the dust's plans were the abandoned try's.
+  - WHAT OF THE SKY REACHES A CELL (`hours::SkyReach`) is made from the statics (`World.wrote`) and kept off the wire and out of the words. One sky by hour or by night.
+  - A SAVE KEEPS NO SMOKE IN THE AIR (`face_loaded`), because the picture's is cleared with a load; a kept game put back by a rollback does.
+  - WHAT CHANGES FOR A PLAYER: who sees whom goes by neither the graphics setting nor the frame rate; smoke fills the room it is in and stops at a shut door for sight;
+    a searching man knows the dark places from the lit ones where there is no picture too (they read 0.5); smoke dims every pair's line, not only room fighters within
+    18 m, and each eye asks its own line (it was one answer a pair); the fog shows a man any one of the team sees past the smoke, with no latch of 8 or 30 frames;
+    the goggles' place light has the sky's dome and the bounce; a bad tube's dips are not what the place lights (`lights.rs tube`).
+  - HELD BY `rust/game_start/tests/senses.rs` (eight rules; the put-back one is red with the stamp held still) and by `tools/qa/modelerr.ts` (`TPS_GAME=rust`), which asks
+    the Rust game through the one tools' row `senseTool`: against the M4 Max's kept picture, light decides the other way on 1.1 % under a roof and 1.1 % under the sky,
+    smoke at 1.5 m on 9.7 % and 2.7 %. MEASURED, 12 seeds, the same grid before and after: a guard 7 m from a lit man notices in 0.53 s and 0.53 s, through thinning
+    smoke at 20.43 s and 20.43 s; a room fight's first shot after smoke 22.62 s and 22.48 s. Never seen on a GPU, and nobody has played it.
 - **The game's own smoke on a coarse grid** (`src/game/sense.ts SENSE.grid`, `SmokeGrid`; `rust/sim/src/bricks.rs`; the maintainer, 2026-11-02: "rework
   smoke to be on a much simpler simulation on CPU (coarser grid with bricks?) and then have the visuals driven by the current pipeline"). A NEW RULE, not a
   moved one: there is no TypeScript twin and no row of `RUST`. Read only under `SENSE.cpu`. DEFAULT OFF everywhere: the page's `?smokegrid` (with

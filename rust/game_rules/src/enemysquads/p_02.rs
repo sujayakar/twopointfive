@@ -147,33 +147,8 @@ pub fn squads_stage(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
         g.m.enemysquads.states = Some(State { stay_ask: Some(stay_ask), s: s.clone(), squads, of, net: Vec::new(), nc: None, word: None });
     }
 }
-/// the staging is gone: the light meter's and the smoke's keys of its bodies go with it (enemysquads.ts squadsStop)
+/// the staging is gone (enemysquads.ts squadsStop)
 pub fn squads_stop(g: &mut crate::game::Game) {
-    if let Some((squads, nc)) = g.m.enemysquads.states.as_ref().map(|st| (st.squads.clone(), st.nc.is_some())) {
-        for &q in &squads {
-            if g.tab.enemysquads_squad[q].rc.is_none() { continue; }
-            let men = g.tab.enemysquads_squad[q].men.clone();
-            for &a in &men {
-                let ida = g.ch[g.gd[a].ch].id;
-                crate::game::game_light_forget(g, &format!("bodyL{}", ida));
-                for &b in &men { if b != a { let idb = g.ch[g.gd[b].ch].id; crate::game::game_light_forget(g, &format!("bodyS{}_{}", idb, ida)); } }
-            }
-        }
-        if nc {
-            for &q in &squads {
-                let men = g.tab.enemysquads_squad[q].men.clone();
-                for &a in &men {
-                    let ida = g.ch[g.gd[a].ch].id;
-                    crate::game::game_light_forget(g, &format!("bodyL{}", ida));
-                    for &x in &squads {
-                        if x == q { continue; }
-                        let others = g.tab.enemysquads_squad[x].men.clone();
-                        for &b in &others { let idb = g.ch[g.gd[b].ch].id; crate::game::game_light_forget(g, &format!("bodyS{}_{}", idb, ida)); }
-                    }
-                }
-            }
-        }
-    }
     let st0 = states_copy(g);
     squads_let_go(g, st0.as_ref());
     g.m.enemysquads.states = None;

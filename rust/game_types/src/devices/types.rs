@@ -147,12 +147,10 @@ impl LaserDef2Alarm {
 /// (TypeScript: CameraRt, src/game/devices.ts:62)
 #[derive(Clone, Debug)]
 pub struct CameraRt {
-    pub smoke_trans: f64,
     pub def: crate::devices::CameraDef2,
     pub index: f64,
     pub target: FixtureId,
     pub cone: LightId,
-    pub smoke_key: String,
     pub slot: f64,
     pub st: crate::Opaque,
 }
@@ -160,12 +158,10 @@ impl CameraRt {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
     pub fn blank() -> Self {
         CameraRt {
-            smoke_trans: 1.0,
             def: crate::devices::CameraDef2::zeroed(),
             index: 0.0,
             target: FixtureId(0),
             cone: LightId(0),
-            smoke_key: String::new(),
             slot: 0.0,
             st: crate::Opaque,
         }

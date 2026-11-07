@@ -11,10 +11,6 @@ pub struct Need {
     pub k: f64,
     pub t: f64,
     pub fresh: bool,
-    pub t0: f64,
-    pub own: f64,
-    pub pts: Vec<f64>,
-    pub since: Vec<f64>,
 }
 impl Need {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -25,10 +21,6 @@ impl Need {
             k: 0.0,
             t: 0.0,
             fresh: false,
-            t0: 0.0,
-            own: 0.0,
-            pts: Vec::new(),
-            since: Vec::new(),
         }
     }
 }

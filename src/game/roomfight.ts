@@ -198,8 +198,6 @@ export const ROOMFIGHT = {
    *  himself. Only from the dark, by measurement: the same hold by a man whose light was on
    *  stood him still in front of an aimed enemy and lost both teammates most of the time */
   holdShortSecs: 4,
-  /** smoke sight-line segments asked of the renderer per frame (round robin over the pairs in reach) */
-  pairs: 6,
   /** a moving defender stops to fight an enemy seen inside this many metres */
   moveEngageM: 7,
   /** the light read (0‥1, as a meter reads) for a man whose lit weapon light has the watching eye inside its cone: the lens is the brightest thing in view */

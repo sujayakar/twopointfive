@@ -124,6 +124,7 @@ import { FIXEDSTEP } from '../host/loop';
 import { TWEEN } from '../host/tween';
 import { saveFile, savedWords, savedEnd } from '../host/savefile';
 import { ownerSummary } from '../game/owner';
+import { senseTool } from '../game/sense';
 
 /** what the frame loop lends the status strip: its smoothed frame rate and GPU union (main.ts fpsSm / unionSm) */
 export type HudStats = () => { fps: number; union: number };
@@ -417,7 +418,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.slider(sm, 'CALM bricks: voxels per visible step', 0, 1.5, 0.25, () => smoke.params.calmCells, v => { smoke.params.calmCells = v; }, 'a brick whose air is slow steps every p-th frame (1, 2 or 4: the Smoke pool section\'s "calm: wait" row is the longest) with the dt it sat out added on: between two steps you see, its smoke never moves more than this many voxels. A source wakes what it reaches, and a brick never waits longer than any of its 26 neighbours. 0 = every brick in view every frame (out of view the "calm: far, cells" row still holds; "calm: wait" 1 = nothing ever waits)');
   panel.slider(sm, 'shadow rays: smoke samples', 3, 12, 1, () => S.smokeShadowSteps, v => { S.smokeShadowSteps = v; }, 'samples a SHADOW ray takes through 3.5 m of smoke (the direct pass, gather / reflection / probe-meter hits) — 8 = the estimator as it always was; 6 saves ~0.2 ms of the direct pass with three plumes up, 4 ~0.4 but blotches the plume\'s shadow on the floor (docs/internal/smoke-perf.md §4). The plume you look at (the volumetric march) and the guards\' sight lines never read this');
   panel.toggleBox(sm, 'simulate', () => smoke.params.enabled, v => { smoke.params.enabled = v; });
-  panel.buttons(sm, '', [{ text: 'canister at cursor', run: () => smoke.spawnCanister(game.aimPoint) }, { text: 'clear', run: () => smoke.clearAll() }]);
+  panel.buttons(sm, '', [{ text: 'canister at cursor', run: () => { senseTool(game, 2, [game.aimPoint[0], game.aimPoint[1] + 0.12, game.aimPoint[2]]); } }, { text: 'clear', run: () => { senseTool(game, 3, []); } }]);
   panel.slider(sm, 'buoyancy', 0, 6, 0.1, () => smoke.params.buoyancy, v => { smoke.params.buoyancy = v; });
   panel.slider(sm, 'vorticity conf.', 0, 15, 0.25, () => smoke.params.vortConf, v => { smoke.params.vortConf = v; });
   panel.slider(sm, 'turbulence', 0, 10, 0.25, () => smoke.params.turbulence, v => { smoke.params.turbulence = v; });
@@ -802,8 +803,8 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   const gp = panel.section('Sandbox', { open: true, summary: () => `AI ${game.aiEnabled ? 'on' : 'OFF'} · god ${game.godMode ? 'ON' : 'off'} · ammo ${game.infiniteAmmo ? '∞' : 'counted'}${game.spectate >= 0 ? ` · spectating ${game.spectate}` : ''}` });
   panel.buttons(gp, 'sandbox', [
     { text: 'trip / restore mains', run: () => { if (game.blackout.active) game.endBlackout(); else game.setBlackout(30, 'debug'); }, title: 'blackout: everything on the breaker goes dark for 30 s, beacons spin up (again = restore)' },
-    { text: 'smoke at cursor', run: () => { smoke.spawnCanister(game.aimPoint); game.msg('smoke canister deployed'); } },
-    { text: 'clear smoke', run: () => { smoke.clearAll(); game.msg('smoke cleared'); } },
+    { text: 'smoke at cursor', run: () => { senseTool(game, 2, [game.aimPoint[0], game.aimPoint[1] + 0.12, game.aimPoint[2]]); game.msg('smoke canister deployed'); } },
+    { text: 'clear smoke', run: () => { senseTool(game, 3, []); game.msg('smoke cleared'); } },
     { text: 'teleport to cursor', run: () => game.teleportPlayer(game.aimPoint) },
     { text: 'spectate next', run: () => { game.spectate = game.spectate + 1 >= game.guards.length ? -1 : game.spectate + 1; game.msg(game.spectate < 0 ? 'camera: player' : `camera: ${game.guards[game.spectate]?.callsign ?? `man ${game.spectate}`}`); }, title: 'cycle the camera through every man on the floor (teammates included) and back to the player' },
   ]);

@@ -155,6 +155,8 @@ pub struct World {
     pub leaves: [u32; LEAF_SETS],
     pub stamp_id: u32,
     pub panes: u32,
+    /// how many times a static's row was written: whose a table made from the statics is
+    pub wrote: u32,
 }
 
 const BLANK: World = World {
@@ -197,6 +199,7 @@ const BLANK: World = World {
     leaves: [0; LEAF_SETS],
     stamp_id: 0,
     panes: 0,
+    wrote: 0,
 };
 static mut ALL: [World; WORLDS] = [BLANK; WORLDS];
 

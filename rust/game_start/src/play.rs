@@ -28,13 +28,10 @@ pub struct Opts {
     pub seed: u32,
     /// how many teammates a room clear stages beside Sam (2 or 4)
     pub squad: u32,
-    /// THE SENSES WORKED OUT BY THE GAME ITSELF (game/sense.ts SENSE.cpu, with the sky's light in the estimate): what a host with no picture
-    /// has for eyes. On here, because with them off no light meter is ever fed and "lit" and "dark" are one thing. The page plays with them off.
-    pub cpu_senses: bool,
     /// how many players (1 or 2): each has a seat, his own man and his share of the squad. The hand's keys and cursor are the first seat's.
     pub seats: u32,
 }
-impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, cpu_senses: true, seats: 1 } } }
+impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, seats: 1 } } }
 
 /// What stands on a level's floor: its boxes (the round things, the boxes that stand shaped and the pieces of trim among them), and who and what
 /// the game made of the file's civilians, devices and vents.
@@ -79,7 +76,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let one = ONE_GAME.lock().unwrap_or_else(|p| p.into_inner());
     let ch = CHARACTER.get_or_init(files::CharacterFiles::read);
     let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
-    let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), cpu_senses: o.cpu_senses, ..Default::default() });
+    let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
     let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), cursor: None, spoke: Vec::new(), _one: one };

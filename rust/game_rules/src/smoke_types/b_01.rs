@@ -14,10 +14,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // What the HOST'S solver answers (budget with SENSE.cpu off, inSmokeDomain, round, drawing) is input a tick reads: with no solver they are the harness's null
 // object's answers (headless.ts: emit / push / clearAll dropped, inSmokeDomain false, the optional ones absent).  BRIDGE-ASK: the host's answers for these four.
 /// (src/smoke/types.ts:64 SmokeSystemLike.emit; sense.ts:254 the tee)
-pub fn smoke_system_like_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) { if g.smoke_owned { crate::sense::cpu_smoke_emit(g, e); } }
+pub fn smoke_system_like_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) { crate::sense::smoke_emit(g, e); }
 
 /// how many more emitters would still be packed this step: the game's own count where it owns the smoke, else the host's solver's (none here)   (types.ts:74; sense.ts:256)
-pub fn smoke_system_like_budget(g: &crate::game::Game) -> Option<f64> { if g.smoke_owned { Some(crate::sense::cpu_smoke_budget(g)) } else { None } }
+pub fn smoke_system_like_budget(g: &crate::game::Game) -> f64 { crate::sense::smoke_budget(g) }
 /// the host's solver's answer; with no solver, false   (types.ts:67 inSmokeDomain)
 pub fn smoke_system_like_in_smoke_domain(g: &crate::game::Game, p: V3) -> bool { false }
 /// the host's solver's answer; with no solver it did not take the round as a line   (types.ts:70 round)
@@ -28,7 +28,7 @@ pub fn smoke_system_like_drawing(g: &crate::game::Game) -> bool { false }
 
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:80 SmokeSystemLike.clearAll)
-pub fn smoke_system_like_clear_all(g: &mut crate::game::Game) { if g.smoke_owned { crate::sense::cpu_smoke_clear(g); } }   // (sense.ts:255, the tee)
+pub fn smoke_system_like_clear_all(g: &mut crate::game::Game) { crate::sense::smoke_clear(g); }
 
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:86 SmokeSystemLike.setWind)
