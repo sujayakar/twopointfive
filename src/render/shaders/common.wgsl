@@ -108,7 +108,7 @@ struct SmokeBound {                // a loose box round some of the smoke (smoke
   origin: vec3f, voxel: f32,       // world min corner, voxel size (m) of the lattice it bounds
   pad0: vec3u, live: u32,
   dims: vec3u, pad1: u32,          // its size in voxels
-  show: f32, readSkip: f32, pad3: f32, pad4: f32,   // (record 0's readSkip: the solver's knob of that name, smoke_read.wgsl spgSkip · record 0's show: the smoke lab's pictures, 0 anywhere else: composite.wgsl smokeLabOver)
+  pad2: f32, readSkip: f32, pad3: f32, pad4: f32,   // (record 0's readSkip: the solver's knob of that name, smoke_read.wgsl spgSkip)
 };
 
 @group(0) @binding(0) var<uniform> frame: Frame;
