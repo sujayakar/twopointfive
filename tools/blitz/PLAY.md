@@ -104,7 +104,26 @@ QA_PERTURB=<seed> [QA_PERTURB_RATE=K] [QA_PERTURB_ONLY=a,b] [QA_PERTURB_SKIP=a,b
 - **The whole states** are kept every 1,800 ticks and the latest pair both sides have is diffed by path. Two kinds of path are noise there and are
   named in the results: rows the TypeScript's book keeps for the player of before the mission's own fresh deal (`kit.issued_player`, `kit.you_bare`:
   they number two more guns, so every gun after them compares crosswise), and nothing else known.
+- **`--alarm TICK`** (`QA_PERTURB_ALARM`): the response team is called at that tick the way `tools/qa/qrf-squad-check.ts` calls it (`tune.qrfSquad` on,
+  four men fourteen seconds out, the alarm's place on one of the team, `requestQrf(g, 'panel')`) and the alarm's place is put on one of the team again
+  every twenty seconds. WHY: in TypeScript the response team's cast runs its door tools with a VIEW of the game (src/game/squadcast.ts), which is
+  another key than the game for every table keyed by the game object, so it keeps rows of its own in some twenty of them; the Rust game holds one row
+  on Game for each. Only a floor with both casts at doors can show whether a tick reads the difference.
 - **`FUZZ_CAP`** (900 s): a side cut short is reported as "one side stopped" and the ticks both played are still compared.
+
+### What the two fuzzes have found (to cut 7.16)
+
+| what | seen | state |
+|---|---|---|
+| an interrogation, a grab not crossing | the soak on 7.11, 8 seeds of 26 | gone on 7.13 |
+| a QRF man's door tools took the boot at a locked door where the reference worked the handle | the soak, seed 9, tick 9264 | the bodies' mend; seed 9 equal on all 10,800 ticks on 7.16 |
+| the TypeScript's own put-back of a save leaves a pane not the saved moment's | the soak, seeds 7 and 8 | the reference's; equal with the panes left out |
+| a throw in the changed-only apply 617 ticks after a load (`orders::SquadOrdersLogItem.who`) | the squad fuzz, depot-four:2 Hard, frame 5671 | serials colliding after a load; gone on 7.16 |
+| the follow camera after a load is not the reference's (its target 2 mm off), so the cursor's point on the floor is not, and the player's first round after a load is another round | the same run on 7.16: the host's half from tick 5055, the block from tick 5841 | THE HOST'S, OPEN: what `backTo` leaves the puppet's camera at. The soak's aim does not come through the camera and never showed it |
+| a save by hand stood twice in the Rust game's chronicle | every squad run with a save; no tick's line shows it | the host's own; mended (`snapTake` holds the row out of the walk) |
+| a tool outside tools/qa writes the game by name and the walk does not watch the name | perturb.ts's `tune.qrfEta = 14`: the Rust game dealt the response team at 75 s | the file says its names (`__tpsToolWrites`) |
+
+Numbers, seeds and what each green could be wrong about are kept outside the repository with the runs.
 
 ## Two ways
 
@@ -487,8 +506,11 @@ the record is the same as under `ts`. By the host's own clock, a tick:
 WHY: four calls cross every tick on that mission (`Cover.words` twice, `Cover.ready`, `fragStepOff`: reads of the scripted player and of the page's
 own lines). A crossing walks the scan before it (what the tool wrote goes first) and after it (the apply moved the puppet), and exports and applies
 once: ten walks of 3.3 ms and five exports a tick. Before the calls crossed, the whole host was about 12.7 ms a tick. A squad mission on Hard costs
-60 to 85 ms a tick on the Rust side, which is what bounds the fuzz. NOT MENDED HERE: a crossing whose export is empty needs neither the apply nor the
-second walk, and a read that is declared a read needs neither walk; both belong with the surface's rows.
+60 to 85 ms a tick on the Rust side, which is what bounds the fuzz.
+
+SINCE CUT 7.16 a crossing whose apply changed nothing and sent no event is not followed by the second walk (`RH_OFF=skipwalk` walks as before).
+depot-four:1 on Hard, the Rust side alone, 6,216 ticks, the same record both ways, one other heavy process on the box: 664 s with the second walk
+(107 ms a tick), 366 s without (59 ms). One run each. Still open: a read that is declared a read needs no walk before it either.
 
 ## What has been played
 
