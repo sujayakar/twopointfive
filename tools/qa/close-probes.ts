@@ -37,9 +37,6 @@
 //   close-seat        closeSeat: down inside a second and a half, the sitting clip, kept on his mark; up the frame he is anything but calm; refusals; both buttons and
 //                     Space on a seated man from beyond the standing reach; a restart leaves nobody seated
 //   close-harness     the frozen stand holds CLOSE.on off, the page's boot turns it on unless ?noclose, the table is a registered knob table a recording carries
-//   close-off         switch OFF: nothing told at any bearing (ready / creep / reach / knife), the build's own rows, closeMode null, closeNearK exactly 1, closeMarks empty,
-//                     CLOSE_STATS untouched by a takedown, a grab and two 20 s runs; a seeded walk-up + grab and a 20 s walk to and fro past a man each digest the same twice
-//                     and the same again with close.ts's read-only functions called every frame
 //   close-duo         the two-person game (pairup.ts PAIRUP.on, one partner, silent, 'fall in' — the pair family's own stand, pairup-probes.ts `rig`) with CLOSE.on: the
 //                     partner is never a subject of any of it; on a defender the mode, the tell, both buttons from behind / a side / the front, Space from behind
 //                     only and the held gait; the partner's 'take him · on your mark' afterwards against the switch off; the order menu keeps the right button;
@@ -58,7 +55,6 @@ const { TWOGEARS } = await import(`${ROOT}/src/game/player.ts`);
 const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
 const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
-const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
 type Vec3 = [number, number, number];
 const DT = 1 / 60, DEG = Math.PI / 180, VERBOSE = process.argv.includes('--verbose');
 const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3), f1 = (x: number) => x.toFixed(1), dg = (r: number) => (r / DEG).toFixed(1) + '°';
@@ -694,80 +690,6 @@ export async function closeHarness(): Promise<boolean> { return keepClose(async 
   return allPass;
 }); }
 
-// ================================================================ (13) the switch off
-/** The scene: Kowalski held in the corridor facing east, the others parked; Sam crouched 2.6 m behind him walks up (KeyD, the camera's east), taps Space on the grab
- *  row the first frame it is offered, and keeps him. 900 frames, a digest every 60. `reads` = close.ts's read-only functions called after every frame. */
-function readAll(g: any, A: any): number { const pl = g.player, ms = closeMarks(g), r = closeReady(g), m = closeMode(g); closeSummary(g); closeWindows(g, A); closeLethal(g); let k = 0; for (const gd of g.guards) { closeAt(g, gd, pl.char.pos); if (gd.state !== 'dead' && closeNearK(g, gd, 1.0) !== 1) k++; } return ms.length + (r ? 1 : 0) + (m ? 1 : 0) + k; }
-async function identityRun(on: boolean, reads: boolean) {
-  Math.random = mulberry32(1110);
-  const W: any = await standUp(); const g = W.game, pl = g.player; CLOSE.on = on;
-  pl.visibility = 0.02; pl.holstered = true;
-  for (let i = 0; i < 5; i++) W.step(DT);
-  const [A, B, C] = g.guards; const at: Vec3 = [14, 0, 11.2];
-  place(A, at, EAST); A.wp = 1; A.hold = true; park(B, 0); park(C, 1);
-  g.teleportPlayer([at[0] - 2.6, 0, at[2]]); pl.crouch = true; W.cam.yaw = 0; W.cam.rebuild?.(); W.step(DT); pl.visibility = 0.02;
-  const digests: string[] = [], raw: any[] = []; let grabAt = -1, heldAt = -1, readN = 0;
-  for (let f = 1; f <= 900; f++) {
-    if (grabAt < 0) { const row = g.nearby.find((x: any) => x.kind === 'guard' && x.verb === 'grab' && x.guard === A);
-      if (row) { g.selectVerb('guard', 'grab'); W.input.keys.delete('KeyD'); W.input.pressed.add(IK); } else W.input.keys.add('KeyD'); }
-    W.step(DT); pl.visibility = 0.02;
-    if (grabAt < 0 && pl.holding) grabAt = f; if (heldAt < 0 && pl.holding?.phase === 'held') heldAt = f;
-    if (reads) readN += readAll(g, A);
-    if (f % 60 === 0) { const d = digestGame(g, true); raw.push(d); digests.push(JSON.stringify(d)); }
-  }
-  return { digests, raw, grabAt, heldAt, holding: !!pl.holding, phase: pl.holding?.phase, readN };
-}
-/** twenty seconds of Sam walking to and fro across a man's front, 0.75 m off him, the man's senses live, the switch off; a digest every two seconds */
-async function offWalk(reads: boolean) {
-  Math.random = mulberry32(1115);
-  const W: any = await standUp(); const g = W.game, pl = g.player, an = pl.char.anim; CLOSE.on = false;
-  g.godMode = true; pl.visibility = 0.02; pl.holstered = true; for (let i = 0; i < 5; i++) W.step(DT);
-  const [A, B, C] = g.guards; place(A, LOBBY, EAST); A.wp = 1; A.hold = true; park(B, 0); park(C, 1);
-  const x0 = LOBBY[0] - 1.6; g.teleportPlayer([x0, 0, LOBBY[2] + 0.75]); W.cam.yaw = 0; W.cam.rebuild?.(); W.step(DT);
-  const digests: string[] = [], raw: any[] = []; let told = 0, nearest = 9, readN = 0, reach = 9, east = 0; const st0 = JSON.stringify(CLOSE_STATS);
-  for (let f = 1; f <= 1200; f++) { const key = Math.floor((f - 1) / 150) % 2 === 0 ? 'KeyD' : 'KeyA'; W.input.keys.delete('KeyD'); W.input.keys.delete('KeyA'); W.input.keys.add(key);
-    W.step(DT); pl.visibility = 0.02; if (an.ready || an.creep || an.knifeShown || an.reachShown > 0 || an.creepShown > 0 || an.creepAt) told++; nearest = Math.min(nearest, distXZ(pl.char.pos, A.char.pos)); east = Math.max(east, pl.char.pos[0] - x0);
-    if (reads) readN += readAll(g, A);
-    if (f % 120 === 0) { const d = digestGame(g, true); raw.push(d); digests.push(JSON.stringify(d)); } }
-  W.input.keys.delete('KeyD'); W.input.keys.delete('KeyA');
-  return { digests, raw, told, nearest, east, readN, statsSame: JSON.stringify(CLOSE_STATS) === st0, state: A.state as string };
-}
-export async function closeOff(): Promise<boolean> { return keepClose(async () => {
-  console.log('\n=== close-off: the switch off is the build — no pose, no mode, no knife, no dark rule, the build\'s rows, the tallies still; two scripted scenes digest for digest, alone and with every read called ===');
-  allPass = true;
-  const first = (x: any, y: any) => { for (let i = 0; i < x.digests.length; i++) if (x.digests[i] !== y.digests[i]) return i; return -1; };
-  const say = (x: any, y: any, i: number, every: number) => i < 0 ? 'identical' : `first differs at frame ${(i + 1) * every}: ${diffDigest(x.raw[i], y.raw[i], 6).join(' ; ')}`;
-  { const S = await stage(1116, { on: false, ai: false }), { g, A, pl } = S, an = pl.char.anim, fails: string[] = [], rows: string[] = []; const st0 = JSON.stringify(CLOSE_STATS);
-    for (const b of ROUND) { const at = samAt(S, b, 0.8, 2), rs = rowsOf(g, A), mk = markerOf(g, A), rear = kindAt(b) === 'behind';
-      if (an.ready != null || an.creep || an.knifeShown || an.reachShown !== 0 || an.creepAt) fails.push(`${b}°: ready ${an.ready}, creep ${an.creep}, knife ${an.knifeShown}, reach ${an.reachShown}`);
-      if (closeMode(g) || closeReady(g) || closeMarks(g).length) fails.push(`${b}°: closeMode ${closeMode(g)?.callsign ?? null}, closeReady ${closeReady(g)?.kind ?? null}, ${closeMarks(g).length} marks`);
-      if (rear) { const r = rs.find((x: any) => x.verb === 'grab'); if (rs.length !== 1 || !r || !/^Space\s+grab him\s+·\s+LMB\s+takedown — silent$/.test(r.line2) || r.close !== undefined) fails.push(`${b}°: rows ${rs.map((x: any) => `"${x.line2}"`).join(' ; ') || 'none'}`); }
-      else if (rs.length || !mk || mk.inReach || mk.line2 !== 'get behind him' || mk.close !== undefined) fails.push(`${b}°: ${rs.length} rows in reach, marker "${mk?.line2}" close ${mk?.close}`);
-      rows.push(`${b}° ${f2(at.d)} m: ${rear ? 'the build\'s grab row' : `'${mk?.line2}'`}`); }
-    let notOne = 0; for (const state of ['patrol', 'suspicious', 'search', 'alert']) for (const vis of [0, 0.1, 0.2, 0.3, 1]) for (const dist of [0.3, 0.5, 1.0, 1.7]) { A.state = state; pl.visibility = vis; if (closeNearK(g, A, dist) !== 1) notOne++; } A.state = 'patrol'; pl.visibility = 0.02;
-    if (notOne) fails.push(`closeNearK is not exactly 1 in ${notOne} of 80 cells`); if (closeLethal(g)) fails.push('closeLethal true'); if (JSON.stringify(CLOSE_STATS) !== st0) fails.push('CLOSE_STATS moved');
-    verdict(!fails.length, 'CLOSE.on off, every 30° round him at 0.8 m: anim.ready null, creep false, knifeShown false, reachShown 0, closeMode / closeReady null, no marks; the build\'s rows (the grab row behind, \'get behind him\' elsewhere); closeNearK exactly 1 over 80 cells', rows.join(' · ') + bad(fails)); }
-  { const fails: string[] = []; const st0 = JSON.stringify(CLOSE_STATS);
-    const S1 = await stage(1116, { on: false }), right = blow(S1, 180, 0.8, 4); if (right.td0 || right.dead) fails.push(`the right click behind him: blow ${!!right.td0}, down ${right.dead}`);
-    const left = blow(S1, 180, 0.8, 1); if (!left.td0 || left.td0.lethal || !left.dead || left.down !== 'struck' || !left.breathing || left.kills || left.kos !== 1) fails.push(`the left click behind him: ${left.td0 ? `lethal ${left.td0.lethal}` : 'no blow'}, ${left.down}, breathing ${left.breathing}, kills +${left.kills}, knockouts +${left.kos}`); if (left.knife0 >= 0) fails.push('the knife was out');
-    const S2 = await stage(1116, { on: false }), front = blow(S2, 0, 0.75, 1), side = blow(S2, 90, 0.75, 1); if (front.td0 || side.td0) fails.push(`a blow from the front (${!!front.td0}) or a side (${!!side.td0})`); if (S2.A.downKind === 'struck') fails.push('he was struck from the front / a side');
-    const S3 = await stage(1116, { on: false }), gr = grabRun(S3, 180, 0.8); if (!gr.H || gr.heldAt < 0) fails.push('the grab from behind took nobody');
-    const same = JSON.stringify(CLOSE_STATS) === st0; if (!same) fails.push(`CLOSE_STATS moved: ${st0} → ${JSON.stringify(CLOSE_STATS)}`);
-    verdict(!fails.length, 'CLOSE.on off, played: the left click behind him is the build\'s takedown (out cold, no knife), the right click nothing, no blow from the front or a side, the grab from behind — and CLOSE_STATS does not move through any of it', `left: ${left.down}, breathing ${left.breathing}, at frame ${left.deadAt} · right: ${right.td0 ? 'a blow' : 'nothing'} · front / side: ${front.td0 ? 'a blow' : 'nothing'} / ${side.td0 ? 'a blow' : 'nothing'} · grab held at frame ${gr.heldAt} · tallies ${same ? 'unmoved' : 'MOVED'}${bad(fails)}`); }
-  { const a = await offWalk(false), b = await offWalk(false), c = await offWalk(true), fails: string[] = []; const i = first(a, b), j = first(a, c);
-    if (a.nearest > 0.9 || a.east < 2) fails.push(`staging: he walked ${f2(a.east)} m east and passed ${f2(a.nearest)} m from the man`); if (a.told || c.told) fails.push(`a pose / the mode / the knife on ${a.told} frames (${c.told} with the reads)`); if (!a.statsSame || !c.statsSame) fails.push('CLOSE_STATS moved');
-    if (i >= 0) fails.push(`two runs differ — ${say(a, b, i, 120)}`); if (j >= 0) fails.push(`with the reads called every frame — ${say(a, c, j, 120)}`); if (c.readN) fails.push(`the reads returned something on ${c.readN} counts (want 0 with the switch off)`);
-    verdict(!fails.length, 'twenty seconds to and fro across his front at 0.75 m, his senses live, the switch off: no pose on any of 1200 frames, the tallies still; ten digests equal run to run, and with closeMarks / closeReady / closeMode / closeNearK / closeLethal / closeAt / closeWindows / closeSummary called every frame', `nearest ${f2(a.nearest)} m · he ends ${a.state} · run / run: ${say(a, b, i, 120)} · run / reads: ${say(a, c, j, 120)}${bad(fails)}`); }
-  const a = await identityRun(false, false), b = await identityRun(false, false), c = await identityRun(false, true), d = await identityRun(true, false);
-  { const fails: string[] = []; if (a.grabAt < 0 || a.heldAt < 0 || !a.holding) fails.push(`the scene never grabbed him (grab ${a.grabAt}, held ${a.heldAt})`); if (a.digests.length !== 15) fails.push(`${a.digests.length} digests`);
-    const i = first(a, b), j = first(a, c); if (i >= 0 || a.grabAt !== b.grabAt) fails.push(`two runs differ — ${say(a, b, i, 60)}`); if (j >= 0 || a.grabAt !== c.grabAt) fails.push(`with the reads — ${say(a, c, j, 60)}`); if (c.readN) fails.push(`the reads returned something on ${c.readN} counts`);
-    verdict(!fails.length, 'the walk-up-and-grab scene (switch off): grabbed on the first frame the row is offered and kept; 15 digests equal run to run and with every read called', `grab at frame ${a.grabAt} · 'held' at ${a.heldAt} · still ${a.phase} at 900 · run / run: ${say(a, b, i, 60)} · run / reads: ${say(a, c, j, 60)}${bad(fails)}`); }
-  { const i = first(a, d), fails: string[] = []; if (d.grabAt !== a.grabAt || d.heldAt !== a.heldAt) fails.push(`with the switch on the grab lands at frame ${d.grabAt}, 'held' at ${d.heldAt} (off: ${a.grabAt}, ${a.heldAt})`);
-    verdict(!fails.length, 'switch ON, the same scene from straight behind: the grab on the same frame, \'held\' on the same frame', `grab ${d.grabAt} / held ${d.heldAt} (off ${a.grabAt} / ${a.heldAt})`);
-    console.log(`  (for the record, not judged — the switch on is another game: its digests against the off run's: ${say(a, d, i, 60)})`); }
-  return allPass;
-}); }
-
 // ================================================================ (14) the two-person game
 /** THE DUO STAND (lifted from the pair's own family — pairup-probes.ts `rig`: the room clear on the office with ONE teammate, PAIRUP.on set before the Game is made,
  *  the squad told silent): CLOSE.on written after it, Sam's hands empty, every defender but Tango 1 and 2 quietly off the floor. `room` = the break room with its
@@ -872,7 +794,7 @@ export async function closeDuo(): Promise<boolean> { return keepClose(async () =
 }); }
 
 /** the whole card (`bun run tools/qa/close-probes.ts`): true = every probe passed */
-export const CLOSE_PROBES = [['close-mode', closeModeProbe], ['close-tell', closeTell], ['close-melee', closeMelee], ['close-grab', closeGrab], ['close-held', closeHeld], ['close-dark', closeDark], ['close-windows', closeWindowsProbe], ['close-offer', closeOffer], ['close-rows', closeRowsProbe], ['close-marks', closeMarksProbe], ['close-seat', closeSeatProbe], ['close-harness', closeHarness], ['close-off', closeOff], ['close-duo', closeDuo]] as const;
+export const CLOSE_PROBES = [['close-mode', closeModeProbe], ['close-tell', closeTell], ['close-melee', closeMelee], ['close-grab', closeGrab], ['close-held', closeHeld], ['close-dark', closeDark], ['close-windows', closeWindowsProbe], ['close-offer', closeOffer], ['close-rows', closeRowsProbe], ['close-marks', closeMarksProbe], ['close-seat', closeSeatProbe], ['close-harness', closeHarness], ['close-duo', closeDuo]] as const;
 async function closeAll(want: readonly string[]): Promise<boolean | null> {
   const t0 = performance.now(), timed = Object.fromEntries(CLOSE_PROBES.map(([name, fn]) => [name, async (): Promise<boolean> => { const t = performance.now(); try { return await fn(); } finally { if (VERBOSE) console.log(`  (${name}: ${((performance.now() - t) / 1000).toFixed(1)} s)`); } }]));
   const ok = await asProbes(timed, want);

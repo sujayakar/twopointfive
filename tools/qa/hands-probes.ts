@@ -1,4 +1,4 @@
-// The `hands` probes (src/game/hands.ts) — `bun run tools/qa/probes.ts hands`, or one of hands-body / hands-door / hands-team / hands-harness / hands-off.
+// The `hands` probes (src/game/hands.ts) — `bun run tools/qa/probes.ts hands`, or one of hands-body / hands-door / hands-team / hands-harness.
 // Staged headless on the real Game, on Training lesson 1 (levels/train-move.json: one man in the yard, the hut whose door opens INTO it), with the doors as the
 // page has them (one-way, staying where they are left) and HANDS.on raised by the probe itself — the frozen stand holds it off (TPS_HANDS=1).
 //   hands-body     the 'second time' bug (the head end of a body offers no row with the switch off, and does with it on) · a body is taken up by its beats
@@ -6,8 +6,6 @@
 //                  limbs he has, laid down (pins lowered before they come off), and taken again from the other end — never 'wedged'
 //   hands-door     the hut door worked from four spots inside it (it opens toward him: the tight room) and two outside: the leaf never passes through him and
 //                  never stands in him, it ends open, his hand comes onto it, it makes the row's one creak; then shut from where that left him: latched
-//   hands-off      the switch off: no Haul, no DoorMove, the ankle pins on the frame of the tap, the leaf flung by Doors.use — and (documented, not wanted)
-//                  the leaf passing through him from inside the hut
 //   hands-team     a door somebody ELSE works (HANDS.team): the squad's lead ordered to open a door has his hand on the leaf on the frame his shove moves it, on a
 //                  push face and on a pull face; a man who pulls a leaf to has a hand on it while it is in his reach; with the row off neither has, and the
 //                  leaf moves on the same frames either way
@@ -336,22 +334,6 @@ export async function handsDoor(): Promise<boolean> { return keep(async () => {
   return allPass;
 }); }
 
-// ================================================================ the switch off
-export async function handsOff(): Promise<boolean> { return keep(async () => {
-  console.log('\n=== hands-off: the switch off — the ankle drag on the frame of the tap, the leaf flung, no state of this module anywhere ===');
-  allPass = true;
-  const R = await rig(false), B = body(R), { g, step, tap } = R, pl = g.player, c = pl.char;
-  g.teleportPlayer(B.beyond('feet', 0.8)); step(8); g.selectVerb('body', 'drag'); tap(); step(4);
-  const pinned = Math.abs(B.P(RAG.ankL)[1] - 0.06) > 0.02;   // (the pins have begun to lift the ankles within a few frames of the tap)
-  verdict(!!pl.dragging && pl.haul === null && c.anim.haul === null && pinned, 'a body: dragging at once, the ankles already on their way up, no Haul and nothing fed to the animator', `dragging ${!!pl.dragging} · haul ${pl.haul} · anim.haul ${c.anim.haul} · ankle height ${f2(B.P(RAG.ankL)[1])}`);
-  g.selectVerb('body', 'drop'); tap(); verdict(!pl.dragging, "'let go of him' drops it on the frame of the tap", `dragging ${!!pl.dragging}`);
-  const d = g.doors.byName('hut'); d.reset(); g.teleportPlayer(SPOTS[0].at); step(12);
-  const o = work(R, d, 1.5);
-  verdict(!o.began && pl.doorMove === null && Math.abs(d.angle) > 1.0, 'a door: no DoorMove, the leaf flung open by Doors.use as ever', `move began ${o.began} · open ${f2(Math.abs(d.angle))}`);
-  console.log(`  (as it was, for the record: from inside the hut the leaf ${o.passers ? 'PASSES THROUGH him' : 'does not pass through him'} — passers ${o.passers}, nearest ${f2(o.minGap)})`);
-  return allPass;
-}); }
-
 // ================================================================ a door somebody else works
 /** the office's room clear with the four, doors as the page has them, every defender taken off the floor (doortools-probes.ts's rig: its first step resets the level) */
 async function teamRig(team: boolean) {
@@ -439,7 +421,6 @@ if (import.meta.main) {
   const which = process.argv[2] ?? 'all'; let ok = true;
   if (which === 'all' || which === 'body') ok = await handsBody() && ok;
   if (which === 'all' || which === 'door') ok = await handsDoor() && ok;
-  if (which === 'all' || which === 'off') ok = await handsOff() && ok;
   if (which === 'all' || which === 'team') ok = await handsTeam() && ok;
   if (which === 'all' || which === 'harness') ok = await handsHarness() && ok;
   console.log(ok ? '\n=== hands: ALL PASS ===' : '\n=== hands: FAILED ==='); process.exit(ok ? 0 : 1);

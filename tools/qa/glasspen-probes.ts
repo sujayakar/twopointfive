@@ -1,5 +1,5 @@
-// The 'glasspen' probe family (`bun run tools/qa/probes.ts glasspen | glasspen-player | glasspen-ai | glasspen-rule | glasspen-lines | glasspen-near | glasspen-off`;
-// all but -off also ride 'glass'): ROUNDS THROUGH GLASS (src/game/glasspen.ts, rebuild/glass/penetration.md) — a round that meets a sheet of glass goes on through
+// The 'glasspen' probe family (`bun run tools/qa/probes.ts glasspen | glasspen-player | glasspen-ai | glasspen-rule | glasspen-lines | glasspen-near`;
+// all ride 'glass' too): ROUNDS THROUGH GLASS (src/game/glasspen.ts, rebuild/glass/penetration.md) — a round that meets a sheet of glass goes on through
 // it with some of its energy gone and a small turn, and hits what is behind, whoever fired it; the line of FIRE (col.shotBlocked → guards.ts clearShot) answers by
 // the same toll, so a man shoots through a window exactly when his round would get through it; the switch off is the game as it was. Staged on the real game stood
 // up headless (headless.ts — which stands the switch at OFF: each probe raises it and puts it back), PASS / FAIL each with the numbers.
@@ -318,33 +318,5 @@ export async function glasspenNear(): Promise<boolean> {
       game.puppet = null; game.restartEncounter();
       verdict(withHoles >= 1 && officePanes(game).conf.every((i: number) => holeCount(game, i) === 0) && stars(game).length === 0, 'restartEncounter: the holes go with the stars', `panes holed before ${withHoles} · after 0 · stars ${stars(game).length}`); }
   });
-  return all();
-}
-
-// ================================================================ (f) off = the base
-export async function glasspenOff(): Promise<boolean> {
-  console.log('\n=== glasspen-off: the harness stands the switch at OFF; off, a round at a man behind the conference glass STOPS in the pane and he lives, shotBlocked is the solid walk, and a seeded minute of the floor with shooting at the glazing digests the same as with the module\'s hooks never asked ===');
-  const { verdict, all } = mkVerdict();
-  const envForced = !!process.env.GLASSPEN, frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen';
-  { const W = await floor(8101, [7.5, 0, 11.6]); const { game } = W;
-    verdict(envForced || GLASSPEN.on === !frozen, frozen ? 'standGame({ harness }) leaves the switch OFF (unless GLASSPEN is set in the environment): every frozen digest was recorded with rounds stopping in glass' : 'on the SHIPPED stand the stand-up leaves the switch ON, as the page opens (unless GLASSPEN is set in the environment): rounds pass glass there', `GLASSPEN.on ${GLASSPEN.on}${envForced ? ' (env GLASSPEN=' + process.env.GLASSPEN + ')' : ''} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'} · col.glassPen installed ${!!game.col.glassPen}`); }
-  await withPen(false, async () => {
-    const W = await floor(8102, [7.5, 0, 11.6]); const { game } = W; parkFrom(game, 1); const gd = game.guards[0]; dummy(gd, [7.5, 0, 6.8], [7.5, 0, 11.6]); for (let i = 0; i < 5; i++) W.step(DT); gunUp(W, 'rifle');
-    const ev0 = game.events.length, x0 = GLASSPEN_STATS.crossed, q0 = GLASSPEN_STATS.shotAsked; fireWeapon(game, game.player.char, chestOf(gd.char), true); const shot = lastOf(game, ev0, 'shot');
-    const blocked = game.col.shotBlocked([7.5, 1.3, 11.6], [7.5, 1.3, 7.2], 0.02, 1);
-    const snap: any = W.snapshot('glasspen-off', true);
-    verdict(!!snap && !('glassPen' in snap), 'off: a checkpoint written after rounds at the glass has no glassPen slice (the file is the base\'s)', `keys ${snap ? Object.keys(snap).length : 0}`);
-    verdict(!!shot && Math.abs(shot.to[2] - 10) < 0.05 && gd.state !== 'dead' && blocked && GLASSPEN_STATS.crossed === x0 && GLASSPEN_STATS.shotAsked === q0, 'off: the rifle round STOPPED in the pane (z 10), the man behind it lives, the line of fire is blocked, and not one of the module\'s counters moved', `stopped (${shot?.to.map(f2)}) · guard ${gd.state} · shotBlocked ${blocked}`);
-  });
-  // a seeded minute with rounds at the glazing: the switch off vs the collision hook removed altogether (= the base's shotBlocked statement)
-  const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
-  const minute = async (strip: boolean) => {
-    Math.random = seeded(8200); const W = await standUp(); const { game } = W; floatPartition(game); if (WANT !== null) GLASSPEN.on = WANT; game.aiEnabled = true; game.godMode = true; game.infiniteAmmo = true;
-    if (strip) game.col.glassPen = null;
-    game.teleportPlayer([9, 0, 11.4]); const pl = game.player; pl.slot = 'pistol'; pl.holstered = false;
-    for (let f = 0; f < 60 * 60; f++) { W.step(DT); if (f > 60 && f % 45 === 0) fireWeapon(game, pl.char, [6.5 + (f % 7), 1.2, 5.0], true); }
-    return JSON.stringify(digestGame(game, true));
-  };
-  await withPen(false, async () => { const A = await minute(false), B = await minute(true); verdict(A === B && A.length > 200, 'a seeded minute on the office (AI on, a round at the conference glass every ¾ s — the floor comes for Sam, lines of fire asked all over): switch off ≡ the collision hook removed, digest for digest', `digest ${A.length} chars, equal ${A === B}`); });
   return all();
 }

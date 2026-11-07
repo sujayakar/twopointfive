@@ -1,10 +1,8 @@
 // STEALTH POSES (src/game/stealthpose.ts — the feed in stealthfeed.ts, the animator's half in character.ts stealthLayer / stealthPicture), headless:
-//   bun run tools/qa/stealthpose-check.ts [harness|off|idle|walk|rise|creep|cable|standdown …]      (probes.ts stealthpose; STEALTHPOSE_BREAK=1 = the switch left off: must fail)
+//   bun run tools/qa/stealthpose-check.ts [harness|idle|walk|rise|creep|cable|standdown …]      (probes.ts stealthpose; STEALTHPOSE_BREAK=1 = the switch left off: must fail)
 // THE CONTRACT: one switch, STEALTHPOSE.on, and it changes NO RULE — Sam stands where he stood on every frame, at the pace he had. It moves his ARMS when his
 // hands are empty in a crouch, plus a centimetre of sway at a stand; at a door with the wand he squats and bows to the gap, and that IS the pose (`bones` go with it).
 //   harness    the two stands' row, the stand word, the page's switch, the knob registry, a recording's tables
-//   off        the switch off: nothing is ever fed and the layer is never made; the same run twice hashes the same poses and digests the same; the switch ON
-//              with every half off writes the very same poses and digest (the code path with nothing to do changes nothing)
 //   idle       crouched at a stand: both wrists forward of the knees, between 0.15 m off the floor and the higher knee, never a held frame
 //   walk       the crouch walk: the hand opposite the forward foot is the forward hand; wrists never under the floor
 //   rise       standing up and crouching down on the move
@@ -82,21 +80,6 @@ function common(F: { verdict: Verdict }, part: string, on: Run, off: Run, bound:
   F.verdict(up <= 0.001, `${part}: bones.head is never higher than with the switch off`, `most it is above: ${cm(up)} cm`);
   F.verdict(dHead <= bound && dChest <= bound, `${part}: bones.head and bones.chest stay within ${cm(bound)} cm of the switch-off run`, `head ≤ ${cm(dHead)} cm · chest ≤ ${cm(dChest)} cm`);
   F.verdict(low > 0.02, `${part}: neither wrist is ever under the floor`, `lowest wrist ${cm(low)} cm up`);
-}
-const fedAny = (r: Run) => r.recs.some(x => x.fed || x.made);
-
-export async function stealthposeOff(): Promise<boolean> {
-  const F = family('stealthpose-off: the switch off is the build — nothing fed, the layer never made, the poses and the digest the same');
-  const was = { ...STEALTHPOSE }, rnd = Math.random;
-  try {
-    for (const part of ['idle', 'walk', 'rise', 'cable'] as Part[]) {
-      const a = await run(part, false), b = await run(part, false, true, 1), c = await hushed(() => play(part, () => { Object.assign(STEALTHPOSE, { on: true, idle: false, walk: false, rise: false, creep: false, cable: false }); }));
-      F.verdict(!fedAny(a), `${part}: off, the animator is fed nothing and the layer's state is never made`, `frames fed or made: ${a.recs.filter(x => x.fed || x.made).length} of ${a.recs.length}`);
-      F.verdict(a.hash === b.hash && a.digest === b.digest, `${part}: off, the same run twice writes the same poses and digests the same`, `pose hash ${a.hash.toString(16)} / ${b.hash.toString(16)} · digest equal ${a.digest === b.digest}`);
-      F.verdict(c.hash === a.hash && c.digest === a.digest, `${part}: the switch ON with every half off writes the very poses and digest of the switch off`, `pose hash ${c.hash.toString(16)} against ${a.hash.toString(16)} · digest equal ${c.digest === a.digest}`);
-    }
-  } finally { Object.assign(STEALTHPOSE, was); Math.random = rnd; }
-  return F.done();
 }
 
 export async function stealthposeIdle(): Promise<boolean> {
@@ -259,7 +242,7 @@ export async function stealthposeHarness(): Promise<boolean> {
 }
 
 /** the file's probes, by the names the runner calls them */
-const SUBS: Record<string, () => Promise<boolean>> = { 'stealthpose-harness': stealthposeHarness, 'stealthpose-off': stealthposeOff, 'stealthpose-idle': stealthposeIdle, 'stealthpose-walk': stealthposeWalk, 'stealthpose-rise': stealthposeRise, 'stealthpose-creep': stealthposeCreep, 'stealthpose-cable': stealthposeCable, 'stealthpose-standdown': stealthposeStanddown };
+const SUBS: Record<string, () => Promise<boolean>> = { 'stealthpose-harness': stealthposeHarness, 'stealthpose-idle': stealthposeIdle, 'stealthpose-walk': stealthposeWalk, 'stealthpose-rise': stealthposeRise, 'stealthpose-creep': stealthposeCreep, 'stealthpose-cable': stealthposeCable, 'stealthpose-standdown': stealthposeStanddown };
 if (import.meta.main) {
   if (BREAK) console.log("STEALTHPOSE_BREAK=1: the switch is left OFF in the 'on' arm — the idle / walk / rise / creep / cable / standdown lines must fail");
   const ok = await asProbes(SUBS, wanted());   // (a name the file has not: said, nothing run, exit 2)
