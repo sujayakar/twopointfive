@@ -155,8 +155,9 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
    What is left: the page hands `location.search` across once and the Rust game starts from it. Two things to know when that is written.
    An address's words are NOT on the wire (the table declares that arm of a `string | URLSearchParams` argument as holding nothing, and a
    `Query` writes nothing and reads back empty): a host hands the TEXT. And the page reads three more things off the address before the
-   stand-up, which this start does not (`init_weather`, `hour_from_query` at boot, the kit and the words): they take a `&Query` and are
-   ready to be called, and nothing here has called them on a real address.
+   stand-up, which this start does not: the weather and the hour as it boots, the kit and the words. The game crate's readers of those
+   (`init_weather`, the kit's, the words') were called by nothing and went with the dead code; they come back, taking a `&Query`, with the
+   page's start.
 2. **The puppet's objects.** The picture reads TypeScript objects that only the TypeScript start builds, and the apply writes onto objects it
    finds: of a man, his rig, his row of the men's columns, his capsules and his entry in the light probe's table; of the level, the box world
    the GPU is packed from (`BoxWorld`: the pack, the cut and round tables, the glass listed to the GPU), the light set, the marks' texture, the
