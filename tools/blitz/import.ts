@@ -41,7 +41,7 @@ function skipper(b: Uint8Array, I: { p: number; K?: Keep | null }) { const dv = 
     case 'tup': for (const x of n.of) sk(x); return;
     case 'map': { const L = dv.getUint32(I.p, true); I.p += 4; for (let k = 0; k < L; k++) { sk(n.K); sk(n.V); } return; }
     case 'set': { const L = dv.getUint32(I.p, true); I.p += 4; for (let k = 0; k < L; k++) sk(n.K); return; }
-    case 'type': { const T = SCHEMA.types[n.path]; if (T.k === 'struct') { const K = I.K; if (K && !K.desc(n)) { I.K = null; sk(n); I.K = K; return; } if (!K) { for (const f of T.fields) sk(parse(f.ty)); return; } for (const P of planOf(T)) { if (!K.field(P.q, P.f.ty)) continue; if (!K.desc(P.N)) { I.K = null; sk(P.N); I.K = K; continue; } sk(P.N); } return; } if (T.k === 'enum') { I.p += 2; return; } const a = dv.getUint16(I.p, true); I.p += 2; if (T.k === 'wordEnum') { for (const f of T.arms[a].fields) sk(parse(f.ty)); return; } const t = armType(T, a); if (t) sk(parse(t)); return; } }
+    case 'type': { const T = SCHEMA.types[n.path]; if (T.k === 'struct') { const K = I.K; if (K && !K.desc(n)) { I.K = null; sk(n); I.K = K; return; } if (!K) { for (const f of T.fields) sk(parse(f.ty)); return; } for (const P of planOf(T)) { if (!K.field(P.q, P.f.ty)) continue; if (!K.desc(P.N)) { I.K = null; sk(P.N); I.K = K; continue; } sk(P.N); } return; } if (T.k === 'enum') { I.p += 2; return; } const a = dv.getUint16(I.p, true); I.p += 2; if (a === 0xffff) return; if (T.k === 'wordEnum') { for (const f of T.arms[a].fields) sk(parse(f.ty)); return; } const t = armType(T, a); if (t) sk(parse(t)); return; } }
     throw new Error(`import: no way past ${n.k}`); };
   return { I, sk, dv }; }
 type Plan = { f: any; q: string; N: N; way?: Way };
@@ -214,8 +214,8 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
   const fresh = new WeakSet<object>();
   function readType(n: N, cur: any): any { const T = SCHEMA.types[n.path];
     if (T.k === 'struct') { const o = cur && typeof cur === 'object' ? cur : newOf(T); const K = keep; if (K && !K.desc(n)) { keep = null; I.K = null; readStruct(T, o); keep = K; I.K = pup ? K : null; return o; } readStruct(T, o); return o; }
-    if (T.k === 'enum') { const w = dv.getUint16(I.p, true); I.p += 2; return T.words[w]; }
-    const a = dv.getUint16(I.p, true); I.p += 2;
+    if (T.k === 'enum') { const w = dv.getUint16(I.p, true); I.p += 2; return T.words[w] ?? cur; }   /* (0xffff: an arm the schema does not know: the page keeps what it had) */
+    const a = dv.getUint16(I.p, true); I.p += 2; if (a === 0xffff) return cur;
     if (T.k === 'wordEnum') { for (const f of T.arms[a].fields) sk(parse(f.ty)); return cur; }   // (authored: a lesson's test stands in the TypeScript as it was written)
     if (T.k === 'handEnum') { const t = armType(T, a); if (t) { sk(parse(t)); return cur; } return T.words ? T.words[a] : cur; }
     const A = T.vars[a]; if (!A.ty) return A.str ?? (cur && typeof cur === 'object' && (cur.kind ?? cur.type) === A.kw ? cur : A.kw !== undefined ? { kind: A.kw } : cur);
