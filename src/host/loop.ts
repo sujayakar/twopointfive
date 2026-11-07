@@ -7,7 +7,7 @@
 //   exposure, Tab, F9 / F10, P, arrows; on a frozen frame they are shown the keys pressed on it, and only they are) · [view has a size:] demo.update BEFORE game.update (the tour presses THIS frame's keys) · attract.update · game.update(dt, input, cam,
 //   view) · the director's frame + postUpdate (main: the show class, the debrief card) · nvAmount / hitFlash → settings · audio listener + update · smoke.update · spectate
 //   auto-yaw / ease-yaw + the pitch ease · cam.update(dt, look-at, aim lead) · caption + timeline · lights.update(dt, t) · render(cam, t, dt, present) · hud.update ·
-//   bubbles.update (+ hudExpireBubbles inside it) · input.endFrame()
+//   bubbles.update · input.endFrame()
 //
 // THE FIXED STEP (FIXEDSTEP below; engine groundwork for two-player co-op, nothing networked): with the switch on and the host saying this frame is a live one (LoopCtx.fixedStep —
 // main.ts: not a scripted __runFrames frame), the game is stepped in whole ticks of exactly 1 / hz whatever the display's rate: the frame's time goes into an accumulator
