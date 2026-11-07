@@ -1491,7 +1491,7 @@ function rendererFlagsAndHotSwaps(engine: Engine) {
     summary: () => { const S = engine.settings, P = engine.passes; return `rt ${S.rtReflect ? `on ÷${P.rtDiv} ${P.rw}×${P.rh} · ${S.rtRays} ray/px · rough ≤ ${S.rtMaxRough} · ${S.rtAtrous} à-trous` : 'off'} · detail ${S.detail.toFixed(2)} · gloss row ${S.gloss ? (S.rtReflect ? 'set, superseded' : 'on') : 'off'}`; },
   };
   // __hotGather(src?): recompile the gather's three pipelines (gather_split.wgsl's trace and light over the helpers ← /qa/shader/fgather.wgsl, × GATHER_STRATA) against the staged scene
-  (window as any).__hotGather = async (src?: string) => engine.passes.hotSwapGather(src ?? await (await fetch('/qa/shader/fgather.wgsl', { cache: 'no-store' })).text(), await (await fetch('/qa/shader/gather_split_common.wgsl', { cache: 'no-store' })).text());   // (the gather's own common text from disk too: the two move together)
+  (window as any).__hotGather = async (src?: string) => engine.passes.hotSwapGather(src ?? await (await fetch('/qa/shader/fgather.wgsl', { cache: 'no-store' })).text(), await (await fetch('/qa/shader/gather_common.wgsl', { cache: 'no-store' })).text());   // (the gather's own common text from disk too: the two move together)
   // ?gatherStrata / __gs: the gather's tile-coherent STRATIFIED directions (settings.gatherStrata, ported from exp/trace-perf E8 — unbiased, −13‥16 % gather, not hash-identical: default off; flips live)
   { const q = new URLSearchParams(location.search); if (q.has('gatherStrata')) engine.settings.gatherStrata = true; if (q.has('nogatherstrata')) engine.settings.gatherStrata = false; }   // (default ON since 08-12; ?nogatherstrata = the iid gather, hash-identical to the pre-port frame)
   (window as any).__gs = {
@@ -1520,7 +1520,7 @@ function traceLabHooks(engine: Engine, game: Game) {
     const dc = await shader('direct_common');
     const jobs: [string, Promise<{ ok: boolean; messages: string[] }>][] = [
       ['restir', P.hotSwapDirect(await shader('restir'), dc)],
-      ['gather', P.hotSwapGather(await shader('fgather'), await shader('gather_split_common'))],
+      ['gather', P.hotSwapGather(await shader('fgather'), await shader('gather_common'))],
       ['reflect', P.hotSwapReflect(await shader('reflect'))],
       ['vol', P.hotSwapVol(await shader('volumetrics'))],
       ['froxel', P.froxels.hotSwap(await shader('froxel'))],

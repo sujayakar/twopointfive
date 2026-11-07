@@ -41,7 +41,7 @@ const { wgslDecls } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof impo
 /** KB of pasted WGSL a kernel may not pass, by `module / entry` (a cut-set module's `Cut` off its label), the first row that matches; the last is everyone else's */
 const BUDGET: [RegExp, number][] = [
   [/^gatherSplitS? \/ trace$/, 252],   // (the gather is two programs, render/gatherSplit.ts: its rays, then the light at what they hit)
-  [/^gatherSplit \/ light$/, 116],
+  [/^gatherSplit \/ light$/, 58],   // (113 before the gather took the reflections' one-loop writing of the light loop, 2026-11-07)
   [/^composite(R|S|SR)? \/ (fs|cs)$/, 403],
   [/^volumetricsDust \/ main$/, 433],
   [/^volumetricsF? \/ main$/, 382],
