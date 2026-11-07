@@ -593,8 +593,48 @@ once: ten walks of 3.3 ms and five exports a tick. Before the calls crossed, the
 60 to 85 ms a tick on the Rust side, which is what bounds the fuzz.
 
 SINCE CUT 7.16 a crossing whose apply changed nothing and sent no event is not followed by the second walk (`RH_OFF=skipwalk` walks as before).
-depot-four:1 on Hard, the Rust side alone, 6,216 ticks, the same record both ways, one other heavy process on the box: 664 s with the second walk
-(107 ms a tick), 366 s without (59 ms). One run each. Still open: a read that is declared a read needs no walk before it either.
+
+### Where a tally's tick went, and the scan's mend
+
+`RH_TIMES=<file>` (a line a game: the host's clock by part, the walks and crossings counted, the scan's own counts), one process, a box at a load of 3
+to 6, ms A TICK:
+
+| | night-breach:1 (1,464 ticks) | after the mend | room-clear-four:1 (3,003) | after the mend |
+|---|---|---|---|---|
+| the tool's wall, s | 63 | 47 | 196 | 127 |
+| clock a tick, all in | 42.1 | 30.6 | 64.6 | 41.4 |
+| the scan's walks (5.2 and 7.2 as a tick or a crossing opens, 2.4 after an apply) | 23.1 | 9.2 | 35.7 | 13.1 |
+| the every-tick export and its apply (one a tick, one a crossing) | 12.6 | 13.8 | 21.1 | 20.3 |
+| `face_step`, the block's copy, the host's half, the rest | 4.6 | 5.6 | 5.4 | 6.0 |
+
+WHY: 4.15 calls a tick cross the surface on night-breach and 6.15 on room-clear-four (`Cover.words` once a teammate, from the scripted player's own
+line of a man's state, tools/qa/playthrough.ts:508; `Cover.ready`, :466; `fragStepOff`, :775), and every crossing is a full sync point: a walk before
+it (what a tool wrote goes first), the host's half, the call (12 microseconds), an every-tick export and apply (2.3 to 2.8 ms), and a walk again where
+the apply moved the puppet (1.4 a tick). NOT the cost: `PT_DIGEST=series` (+2 ms a tick), the fold, the guards, the kept games; the wide list against
+`TPS_GAME_LIST=page` is 3 to 12 ms a tick of export and apply.
+
+**The scan's walk now** (tools/blitz/scan.ts; a walk is 1.1 to 1.6 ms where it was 3.7 to 4.4):
+- a module's table is asked once a walk, not once for every leaf under it;
+- THE SETTINGS BY A TRAP (the harness only, never the page): each plain row of a knob table is an accessor whose setter bumps the table's count of
+  writes; a walk visits a table's rows only where the count has moved (3,300 of the root's 4,336 leaves are passed over; a row that is a list or an
+  object, or cannot be trapped, is visited every walk). The trap says where to LOOK; what is sent is still what differs from what the walk last saw.
+  A write that goes round a trap (`Object.defineProperty` with a value, a `delete`) is the one way to be missed. `RH_OFF=traps`: every row every walk;
+- A STRUCTURED LEAF IS ENCODED ONLY WHERE ITS CHEAP WORD MOVED: the object it is and its first level (a list's members, an object's keys and what each
+  holds, by identity); a leaf that names a row is held by identity alone. A moved leaf is sent; no copy of its bytes is kept. NOT SEEN: a write two
+  levels down that leaves the first level's objects as they were. So ONE TICK IN 64 (`RH_SCAN_AUDIT=<n>`; 1: every walk, the old way; 0: never) every
+  walk from that tick's apply to the next tick's opening encodes every structured leaf and holds it to the walk before: a write the word did not see
+  is sent then and counted on the exit line (`WRITES THE WALK'S CHEAP WORD DID NOT SEE`, with the fields). It read 0 on both missions;
+- `Game.cmd_buf` (the tick's record, which the game's own update writes on the puppet) is not watched: it goes with the host's half.
+SHOWN EXACT: the tally's record and every tick's line (the die, the host's half, the orders, the block) the same on both missions before and after;
+settings-check.ts all pass and red under its break; a kept fuzz run that writes between ticks by name (the response team on records-pair:1) every
+tick's line equal.
+
+**`tools/blitz/reads.json`**: the keys of calls.json's rows whose Rust function takes the game by a shared borrow and so cannot write it (the
+compiler's proof; made by the program that demotes `&mut Game` wherever the crate still compiles). After a crossing of such a row the host exports
+and applies nothing and walks no second time (`RH_OFF=reads`: as any row). The list is EMPTY today: all three of the tally's rows take `&mut Game`.
+Never a guess from a row's history: a tool that reads the puppet after a call that did write must read what it wrote.
+
+`RH_WHO=1`: the fiftieth crossing of each row is counted with the source lines that led to it.
 
 ## What has been played
 

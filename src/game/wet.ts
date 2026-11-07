@@ -24,7 +24,6 @@ import { INTERIOR, ANNEX } from './weather';
 import './particleFx';
 import { sim, f64 } from '../sim/sim';
 import { WX, WX_WATCH, wxGet, wxScratch } from '../sim/weatherhome';
-import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The knobs (Tab ▸ Weather ▸ wet characters; kept per machine like the whistle's). The first block is the model's, the second the look's — those ride to the
  *  GPU per character instance (anim/characters.ts setInstance) so the shaders need no uniform of their own. */
@@ -127,7 +126,7 @@ export function soak(g: Game, c: Character, wet = 1, beads = wet, rain = 0.8, li
 }
 export function dryAll(g: Game) { for (const c of everyCharacter(g)) { c.wet = 0; c.beads = 0; c.wetRain = 0; } }
 /** 'wet ▸ Sam 0.82 coat / 0.40 beads (indoors, dry air) · Kowalski 0.00 …' */
-export function wetSummary(g: Game): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('wetSummary', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
+export function wetSummary(g: Game): string {
   const rain = rainNow(g);
   const one = (name: string, c: Character) => `${name} ${c.wet.toFixed(2)}/${c.beads.toFixed(2)}${rain > 0.001 && openSky(g, c) ? ' RAIN' : underRoofRect(c.pos, g) ? '' : ' out'}`;
   return `wet ▸ rain ${rain.toFixed(2)} · ${one('Player', g.player.char)} · ${g.guards.map(gd => one(gd.callsign ?? String(gd.char.id), gd.char)).join(' · ')} · prints ${printsOf(g).list.length} live / ${WET_STATS.prints} · drips ${WET_STATS.drips}`;
