@@ -112,3 +112,61 @@ fn asking_of_a_world_that_is_not_changes_nothing() {
         assert!(parts.is_empty() && after == before, "seed {}: asking moved {:?}", seed, parts);
     }
 }
+
+/// BETWEEN TWO TICKS THE COPY STANDS: a host asks of the game SHARED and is answered as a rule would be. A FAILURE MEANS: the camera, the sound and the HUD are
+/// answered from other boxes than the game's, or a question of theirs proves the level again (what a breach cost the page).
+#[test]
+fn between_two_ticks_a_question_of_the_game_shared_is_answered_as_a_rules_is() {
+    use game::ask::{Line, WorldAsk};
+    for seed in [1, 2, 3] {
+        let mut p = two_rooms(seed);
+        let d = p.g.doors.list[0];
+        let c = p.g.dr[d].frame_centre;
+        for round in 0..2 {
+            if round == 1 { for x in [-1.0, 1.0] { if game::doors::door_angle(&p.g, d).abs() < 0.3 { game::doors::doors_kick_in(&mut p.g, d, [c[0] + x, 0.0, c[2]], 0.0, None); p.run(0.4); } } assert!(game::doors::door_angle(&p.g, d).abs() > 0.3, "seed {}: the door stands open", seed); }
+            for k in 0..60 {
+                let th = k as f64 * 0.1047;
+                let (from, dir) = ([c[0] - 3.0, 1.2, c[2] + 0.4], [th.cos(), 0.0, th.sin()]);
+                let to = [from[0] + 9.0 * dir[0], 1.2, from[2] + 9.0 * dir[2]];
+                let (sight, solid, ray, heard) = {
+                    let w = WorldAsk::of(&p.g);
+                    (w.line(from, to, Line::Sight), w.line(from, to, Line::Solid), w.ray(from, dir, 9.0), w.hear(from, to))
+                };
+                let statics = WorldAsk::of(&p.g).over(Over::statics()).line(from, to, Line::Solid);
+                let g = &mut p.g;
+                assert_eq!(sight, game::scene_collision::segment_blocked(g, from, to, None, None, None), "seed {} {}: a line of sight", seed, k);
+                assert_eq!(solid, game::scene_collision::solid_blocked(g, from, to, None), "seed {} {}: a solid line", seed, k);
+                assert_eq!(statics, solid_blocked_over(g, &Over::statics(), from, to, None), "seed {} {}: …of the statics alone", seed, k);
+                let r = game::scene_collision::raycast(g, from, dir, 9.0);
+                assert_eq!(ray.as_ref().map(|h| (h.t.to_bits(), h.index)), r.as_ref().map(|h| (h.t.to_bits(), h.index)), "seed {} {}: a ray", seed, k);
+                let h = game::scene_collision::sound_paths_propagate(g, from, to, Some(false));
+                assert_eq!((heard.path_len.to_bits(), heard.direct, heard.muffle.to_bits(), heard.apparent), (h.path_len.to_bits(), h.direct, h.muffle.to_bits(), h.apparent), "seed {} {}: a path of sound", seed, k);
+            }
+        }
+    }
+}
+
+/// A FAILURE MEANS: an answer is given from boxes that are not this game's, or not of this moment.
+#[test]
+fn a_question_of_boxes_that_are_not_this_moments_is_refused_by_name() {
+    use game::ask::WorldAsk;
+    let mut p = two_rooms(1);
+    assert!(WorldAsk::try_of(&p.g).is_ok(), "after a tick the copy stands");
+    // a game kept, played past, and put back: the rows in the module are the abandoned moment's
+    let kept = p.g.clone();
+    p.run(0.5);
+    let now = std::mem::replace(&mut p.g, kept);
+    assert_eq!(WorldAsk::try_of(&p.g).err(), Some("the copy is another game's, or another moment's of this one"));
+    game::scene_collision::stands(&mut p.g);
+    assert!(WorldAsk::try_of(&p.g).is_ok(), "stood again, it is this moment's");
+    p.g = now;
+    assert!(WorldAsk::try_of(&p.g).is_err(), "…and no longer the other's");
+    game::scene_collision::stands(&mut p.g);
+    // a static written and said, and a copy put down
+    game::scene_collision::wrote(&mut p.g);
+    assert!(WorldAsk::try_of(&p.g).is_err(), "a debt is not answered over");
+    game::scene_collision::stands(&mut p.g);
+    assert!(WorldAsk::try_of(&p.g).is_ok());
+    game::scene_collision::unstand(&mut p.g);
+    assert_eq!(WorldAsk::try_of(&p.g).err(), Some("no copy of the boxes stands"));
+}
