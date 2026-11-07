@@ -5,7 +5,8 @@
 //! that" is read in one place (`control_line`, `control_summary`, and the runner's CONTROL line of `control_tally`).
 //!
 //! A RULE IS FOUR FUNCTIONS AND A ROW, each with one job:
-//!   `Row`         what the rule keeps of one man (`()` where its own module still keeps it). Made by `Default`, cloned with the game.
+//!   `Row`         what the rule keeps of one man (`()` where its own module still keeps it), at `state_mut(g).rows.<rule>.at(gd)`. Made by
+//!                 `Default`, cloned with the game.
 //!   `transition`  moves the rule's own state for this man: a clock runs out, he arrives, a spot is found for him.
 //!   `propose`     what his body should do this tick if the rule has him, or `None`. It takes `&Game`: the compiler holds that asking a rule
 //!                 changes nothing.
@@ -100,7 +101,7 @@ impl<T: Default + Clone> PerMan<T> {
     pub fn iter(&self) -> impl Iterator<Item = (GuardId, &T)> { self.rows.iter().enumerate().map(|(i, r)| (GuardId::from_ix(i), r)) }
 }
 
-/// The list's own code: for each line the rule's module, its id, the table of its rows (`g.ctl.rows.<rule>`) and its row of `RULES`.
+/// The list's own code: for each line the rule's module, its id, the table of its rows (`state_mut(g).rows.<rule>`) and its row of `RULES`.
 macro_rules! rules {
     ($($m:ident: $name:literal, $stage:ident;)*) => {
         $(pub mod $m;)*
@@ -172,7 +173,7 @@ pub struct PostNote {
 pub fn set_hold(g: &mut Game, gd: GuardId, on: bool, by: &'static str) {
     let now = g.time;
     if g.gd[gd].hold != on {
-        let p = g.ctl.post.at(gd);
+        let p = state_mut(g).post.at(gd);
         p.hold_by = by; p.hold_since = now;
     }
     g.gd[gd].hold = on;
@@ -182,7 +183,7 @@ pub fn set_hold(g: &mut Game, gd: GuardId, on: bool, by: &'static str) {
 pub fn set_pinned(g: &mut Game, gd: GuardId, on: bool, by: &'static str) {
     let now = g.time;
     if g.gd[gd].pinned != on {
-        let p = g.ctl.post.at(gd);
+        let p = state_mut(g).post.at(gd);
         p.pinned_by = by; p.pinned_since = now;
     }
     g.gd[gd].pinned = on;
@@ -211,14 +212,18 @@ impl ControlState {
     }
 }
 
+/// this system's state, which the game holds for it and only this module can name (`g.ctl`, crate::owned)
+pub fn state(g: &Game) -> Option<&ControlState> { g.ctl.get() }
+pub fn state_mut(g: &mut Game) -> &mut ControlState { g.ctl.at() }
+
 /// THE ARBITER, over `rules` at one stage of a man's frame: ask from the top; the first that answers has him. The caller acts on the answer
 /// and writes the record (`record`).
 pub fn grant_from(g: &mut Game, gd: GuardId, dt: f64, stage: Stage, rules: &[Rule]) -> Option<(RuleId, Intent)> {
-    if stage == Stage::Body { g.ctl.row(gd).declined = 0; }
+    if stage == Stage::Body { state_mut(g).row(gd).declined = 0; }
     for r in rules.iter().filter(|r| r.stage == stage) {
         (r.transition)(g, gd, dt);
         if let Some(intent) = (r.propose)(g, gd) { return Some((r.id, intent)); }
-        g.ctl.row(gd).declined |= 1 << r.id as u32;
+        state_mut(g).row(gd).declined |= 1 << r.id as u32;
     }
     None
 }
@@ -229,7 +234,7 @@ pub fn grant(g: &mut Game, gd: GuardId, dt: f64, stage: Stage) -> Option<(RuleId
 /// WRITE THE RECORD: `to` has every channel of him this tick. Once a tick a man. A rule that had him and no longer does is told (`lost`).
 pub fn record(g: &mut Game, gd: GuardId, to: Holder) {
     let now = g.time;
-    let c = g.ctl.row(gd);
+    let c = state_mut(g).row(gd);
     let was = c.holder[0];
     let first = c.t < 0.0;
     for ch in 0..3 {
@@ -238,8 +243,9 @@ pub fn record(g: &mut Game, gd: GuardId, to: Holder) {
     c.t = now;
     if let Holder::Rule(r) = to {
         let i = r as usize;
-        if g.ctl.had.len() <= i { g.ctl.had.resize(i + 1, 0); }
-        g.ctl.had[i] += 1;
+        let had = &mut state_mut(g).had;
+        if had.len() <= i { had.resize(i + 1, 0); }
+        had[i] += 1;
     }
     if let Holder::Rule(r) = was {
         if was != to { (RULES[r as usize].lost)(g, gd); }
@@ -249,7 +255,7 @@ pub fn record(g: &mut Game, gd: GuardId, to: Holder) {
 /// The end of a man's frame: where no rule and no script took him this tick, his own state had him.
 pub fn settle(g: &mut Game, gd: GuardId) {
     let now = g.time;
-    if g.ctl.of(gd).map_or(true, |c| c.t != now) { record(g, gd, Holder::Own); }
+    if state(g).and_then(|s| s.of(gd)).map_or(true, |c| c.t != now) { record(g, gd, Holder::Own); }
 }
 
 /// tell rule `r` what his body made of its intent
@@ -271,7 +277,7 @@ fn holder_name(h: Holder) -> &'static str {
 /// one man's line: `Alvarez: startled for 0.4 s · said no: a live grenade, broke and ran, shaken by a blast`
 pub fn control_line(g: &Game, gd: GuardId) -> String {
     let who = &g.gd[gd].callsign;
-    let Some(c) = g.ctl.of(gd) else { return format!("{}: not yet updated", who) };
+    let Some(c) = state(g).and_then(|s| s.of(gd)) else { return format!("{}: not yet updated", who) };
     let [legs, aim, hands] = c.holder;
     let mut s = if legs == aim && aim == hands {
         format!("{}: {} for {:.1} s", who, holder_name(legs), g.time - c.since[0])
@@ -280,7 +286,7 @@ pub fn control_line(g: &Game, gd: GuardId) -> String {
     };
     let no: Vec<&str> = RULES.iter().filter(|r| c.declined & (1 << r.id as u32) != 0).map(|r| r.name).collect();
     if !no.is_empty() { s.push_str(" · said no: "); s.push_str(&no.join(", ")); }
-    let (m, p) = (&g.gd[gd], g.ctl.post.get(gd).copied().unwrap_or_default());
+    let (m, p) = (&g.gd[gd], state(g).and_then(|s| s.post.get(gd)).copied().unwrap_or_default());
     let by = |who: &'static str| if who.is_empty() { "the start" } else { who };
     if m.hold { s.push_str(&format!(" · held to his post by {} for {:.1} s", by(p.hold_by), g.time - p.hold_since)); }
     if m.pinned { s.push_str(&format!(" · pinned by {} for {:.1} s", by(p.pinned_by), g.time - p.pinned_since)); }
@@ -294,7 +300,7 @@ pub fn control_summary(g: &Game) -> String {
 
 /// how many man-ticks each rule has had a man, a rule a clause: `a live grenade 212 · broke and ran 0 · … · head down under fire 31`
 pub fn control_tally(g: &Game) -> String {
-    RULES.iter().map(|r| format!("{} {}", r.name, g.ctl.had.get(r.id as usize).copied().unwrap_or(0))).collect::<Vec<_>>().join(" · ")
+    RULES.iter().map(|r| format!("{} {}", r.name, state(g).and_then(|s| s.had.get(r.id as usize)).copied().unwrap_or(0))).collect::<Vec<_>>().join(" · ")
 }
 
 #[cfg(test)]
@@ -328,7 +334,7 @@ mod tests {
             Some((RuleId::runner, Intent::Script(s))) => assert_eq!(s.speed, Some(7.0)),
             _ => panic!("the second rule should have him"),
         }
-        assert_eq!(g.ctl.of(gd).unwrap().declined, 1 << RuleId::frag as u32);
+        assert_eq!(state(&g).unwrap().of(gd).unwrap().declined, 1 << RuleId::frag as u32);
     }
 
     #[test]
@@ -338,13 +344,13 @@ mod tests {
         g.time = 2.0; set_hold(&mut g, gd, true, "roomfight");
         g.time = 3.0; set_hold(&mut g, gd, true, "orders");      // the same again: not a change
         g.time = 4.0; set_pinned(&mut g, gd, true, "orders");
-        let p = *g.ctl.post.get(gd).unwrap();
+        let p = *state(&g).unwrap().post.get(gd).unwrap();
         assert_eq!((p.hold_by, p.hold_since, p.pinned_by, p.pinned_since), ("roomfight", 2.0, "orders", 4.0));
         assert!(g.gd[gd].hold && g.gd[gd].pinned);
         g.time = 5.0; settle(&mut g, gd);
         assert_eq!(control_line(&g, gd), "Ruiz: his own for 0.0 s · held to his post by roomfight for 3.0 s · pinned by orders for 1.0 s");
         g.time = 6.0; set_hold(&mut g, gd, false, "pressure");
-        assert_eq!(g.ctl.post.get(gd).unwrap().hold_by, "pressure");
+        assert_eq!(state(&g).unwrap().post.get(gd).unwrap().hold_by, "pressure");
         assert!(!g.gd[gd].hold);
     }
 
@@ -362,12 +368,12 @@ mod tests {
         let (mut g, gd) = stand();
         g.time = 1.0; record(&mut g, gd, Holder::Rule(RuleId::duck)); settle(&mut g, gd);
         g.time = 2.0; record(&mut g, gd, Holder::Rule(RuleId::duck)); settle(&mut g, gd);
-        let c = *g.ctl.of(gd).unwrap();
+        let c = *state(&g).unwrap().of(gd).unwrap();
         assert_eq!((c.holder, c.since), ([Holder::Rule(RuleId::duck); 3], [1.0; 3]));
         g.time = 3.0; settle(&mut g, gd);
-        let c = *g.ctl.of(gd).unwrap();
+        let c = *state(&g).unwrap().of(gd).unwrap();
         assert_eq!((c.holder, c.since), ([Holder::Own; 3], [3.0; 3]));
-        assert_eq!(g.ctl.had[RuleId::duck as usize], 2);
+        assert_eq!(state(&g).unwrap().had[RuleId::duck as usize], 2);
     }
 
     #[test]
