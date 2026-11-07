@@ -203,6 +203,8 @@ export function tacticsRestore(g: Game, s: TacticsSnap | null | undefined) {
 }
 /** has this man taken this doorway as a drill already inside its current danger (he walks it freely from then on) */
 function clearedFor(g: Game, gd: Guard, d: Door): boolean { const t = S(g).cleared.get(gd)?.get(d); return t !== undefined && t > g.time; }
+/** QA / panel: has this man already taken this doorway as a drill inside its current danger (the soak's walk-in smell lets him through) */
+export function tacticsCleared(g: Game, gd: Guard, d: Door): boolean { return !!states.get(g) && clearedFor(g, gd, d); }
 function setCleared(g: Game, gd: Guard, d: Door, until: number) { const st = S(g); let m = st.cleared.get(gd); if (!m) { m = new Map(); st.cleared.set(gd, m); } m.set(d, until); }
 
 /** combat.ts killGuard, the frame a man goes down (his state already 'dead'): within DOOR_NEAR_M of a doorway AND in the open view of a living man of his own

@@ -651,7 +651,7 @@ export class SquadOrders {
   /** the player is one of these men's own — nobody stands in his line with a gun up, a can of theirs spares him on their side of the door (Sam's squad: yes) */
   get sams(): boolean { return !this.cast; }
   /** whose side a can of theirs is (combat.ts detonateStun) */
-  get team(): Team { return goneWithTick('SquadOrders.team') as any; }
+  get team(): Team { return this.cast?.team ?? 'operative'; }
   /** the keys a locked door is tried with for them: Sam's ring and the codes he has learned */
   ring(): ReadonlySet<string> { if (this.cast) return this.cast.ring; const P = this.g.player; return P.codes.size ? new Set([...P.keys, ...P.codes]) : P.keys; }
   /** the living men an order would go to: the teammate under the reticle, else `who` */
@@ -915,7 +915,13 @@ export class SquadOrders {
   /** the page's Esc went to the pause (backkey.ts: Esc is only the pause): that press is nobody's in the tick */
 
   /** Open the menu on a target (X / the middle button over the cursor's; the console, a probe): it stays up until pick() or close(). False: no squad to order. */
-  open(target: OrderTarget = this.targetAt(this.g.aimPoint), flat = false, part?: Guard[]): boolean { return goneWithTick('SquadOrders.open') as any; }
+  open(target: OrderTarget = this.targetAt(this.g.aimPoint), flat = false, part?: Guard[]): boolean {
+    if (!this.active || this.g.player.down) return false;
+    const rows = flat ? this.flatRows(target, part) : this.rowsFor(target, null, part);   // (`flat`: ringUp's, under cmdring.ts CMDRING.flat — every order of the target, no pages)
+    this.menu = { target, men: [], rows, why: [], sel: 0, wheelAcc: 0, readT: -1, page: null, wordRow: this.wordRowOf(target, rows), onWord: false, menSide: null, sideKey: '', flat: flat || undefined, ...(part ? { part } : {}) }; this.refresh();   // (the highlight starts on the first row — the target's own order: the button twice gives it)
+    if (this.menu && PLANLAY.on && PLANLAY.sticky && this.menu.wordRow && this.lay.laid.length) this.menu.onWord = true;   // (planlay.ts: a plan is being laid — the next order is for it too)
+    return !!this.menu;
+  }
   close() { this.menu = null; }
   /** The open menu turned to a page of it (null: back to its first): that page's rows, on the same target and for the same men, the highlight on its first
    *  row (back on the first page: on the row that opened the page it came from). `onWord`: with its 'wait for my word' row already on, where it has one.
@@ -1097,6 +1103,31 @@ export class SquadOrders {
    *  he stands once he is within a stride or two of the place and a body's room from the others. One point per assignment, kept while his place and
    *  theirs stand and the point is off every door's frame and lane, so he walks to it once; a deal that found no floor is not searched again for a second */
   private apartOf = new SideMap<Assignment, { at: Vec3; q: Vec3 | null; t: number; m: number; short?: boolean }>();
+  /** the point `back` metres behind Sam along his trail — past its end, on straight the way it was going (behind his back while there is no trail), as far as the floor is free */
+  private slot(back: number): Vec3 {
+    const g = this.g, sam = g.player.char, T = this.trail;
+    let prev: Vec3 = [sam.pos[0], 0, sam.pos[2]], left = back, dir: Vec3 = this.back;
+    for (let i = T.length - 1; i >= 0; i--) {
+      const seg = flat(prev, T[i]); if (seg < 1e-4) continue;
+      const sd: Vec3 = [(T[i][0] - prev[0]) / seg, 0, (T[i][2] - prev[2]) / seg];
+      if (seg > 0.2) dir = sd;
+      if (seg >= left) return [prev[0] + sd[0] * left, 0, prev[2] + sd[2] * left];
+      left -= seg; prev = T[i];
+    }
+    if (left <= 1e-3) return [prev[0], 0, prev[2]];
+    // off the end of the trail: straight on, a quarter metre at a time, while a man can stand there and walk there — and where straight on is cut short (a
+    // partition behind him), the first of a few headings either side of it that has the room (else the longest)
+    const reach = (ang: number): [Vec3, number] => {
+      const c = Math.cos(ang), sn = Math.sin(ang), d: Vec3 = [dir[0] * c + dir[2] * sn, 0, dir[2] * c - dir[0] * sn]; let p = prev, rem = left;
+      while (rem > 1e-3) { const s = Math.min(0.25, rem), nx: Vec3 = [p[0] + d[0] * s, 0, p[2] + d[2] * s];
+        if (g.col.nav.isBlocked(nx[0], nx[2]) || g.col.solidBlocked([p[0], 0.45, p[2]], [nx[0], 0.45, nx[2]])) break;
+        p = nx; rem -= s; }
+      return [p, rem];
+    };
+    let best = reach(0);
+    for (const ang of [0.7, -0.7, 1.4, -1.4]) { if (best[1] <= 1e-3) break; const r = reach(ang); if (r[1] < best[1] - 0.2) best = r; }
+    return [best[0][0], 0, best[0][2]];
+  }
 
   // ------------------------------------------------------------ geometry
   /** the free floor at p, else the nearest within floorSnapM (the candidate nearest Sam among equals: the side of a wall he is looking at) — null: nowhere */

@@ -45,7 +45,7 @@
 // ahead and behind and take nothing — `live` says what went uncovered), a room known clear does not lower its doors' weight, the men's lights stay as their order has them (dark under
 // 'fall in' in the room clear), nobody calls what he takes aloud (the rescue flow's own men still do).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import './seats';
+import { orderOf, teamMen, viewOf } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -53,11 +53,11 @@ import type { Door } from './doors';
 import { doorWords, type Assignment } from './orders';
 import { WORDS } from './words';
 import { watchedPlace } from './dialogue';
-import './doorway';
-import './rearwatch';
+import { DOORMANNERS } from './doorway';
+import { rearPinOf } from './rearwatch';
 import './gunroles';   // (called inside tick only)
 import { type Watchable } from './roomfit';
-import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The knobs (__game.cover.knobs). */
 export const COVER = {
@@ -294,6 +294,29 @@ export class Cover {
     this.openings = [...doors, ...gaps];
   }
 
+  /** is this man free to be dealt an opening: alive, under 'fall in' or a 'hold' that names nothing to watch, on his order's own script (not the fight AI's),
+   *  not in a fight, not blind */
+  /** his order leaves his eyes spare NOW: a stack's rear man (`from`: the way he came) while the switch is on and a living mate's gun is still on that door —
+   *  one man alone on a door keeps his eyes on it — or a man an entry left holding the room */
+  private spare(gd: Guard, A: Assignment): boolean {
+    if (!A.spare || !A.post) return false;
+    if (!A.from) return COVER.inRoom;
+    // (on the walk he keeps up with the file, gun forward: his rear is his for the last steps and on the mark — but a door standing open by the way is his the whole walk: walkOnly)
+    if (flat(gd.char.pos, A.post) > COVER.rearWalkM && !(DOORMANNERS.on && DOORMANNERS.stand && DOORMANNERS.watch)) return false;
+    // (rearwatch.ts: the man an entry left outside on the way behind is not 'alone on a door' — his mates went through it, and their backs are what he keeps)
+    return COVER.stacked && (!!rearPinOf(viewOf(this.g, gd), gd)?.out || teamMen(this.g).some(o => { if (o === gd) return false; const B = orderOf(this.g, o); return !!B && !!B.post && !B.spare && B.door === A.door; }));
+  }
+  private free(gd: Guard): Assignment | null {
+    const g = this.g; if (gd.state === 'dead' || !gd.script || g.time < gd.dazzledUntil || gd.held) return null;
+    const A = orderOf(g, gd); if (!A) return null;
+    if (!(A.order === 'fallIn' || (A.order === 'hold' && !A.watch) || this.spare(gd, A))) return null;   // (… or his order leaves his eyes spare: on its mark, and on the walk to it)
+    if (g.fight.engaged(gd)) return null;
+    // a contact still warm is his before any opening is: a man who had a living enemy in his eyes inside COVER.contactSecs keeps looking where his order and the
+    // fight leave him looking (down the corridor at the man who ducked back), never turned off it to a door behind him
+    const O = g.fight.opOf(gd);
+    if (O) for (const [h, M] of O.meters) if (h.state !== 'dead' && g.time - M.seenT < COVER.contactSecs) return null;
+    return A;
+  }
   private eyeOf(p: Vec3): Vec3 { return [p[0], EYE, p[2]]; }
   /** (rearwatch.ts) the point of this opening a man stood at `p` can watch — sight()'s answer from there */
   sightFrom(p: Vec3, o: Opening): Vec3 | null { return this.sight(this.eyeOf(p), o); }
@@ -323,12 +346,18 @@ export class Cover {
     return `the ${what} ${COMPASS[((Math.round(yaw / (Math.PI / 4)) % 8) + 8) % 8]}`;
   }
   /** has he an opening dealt (and is on it, not running with it behind him) */
-  has(gd: Guard): boolean { return goneWithTick('Cover.has') as any; }
+  has(gd: Guard): boolean { const J = this.onOf(gd); return !!J && !J.off; }
   /** the opening his gun is on: dealt, or let go of and still his for the moment (REAR.settle) */
   private onOf(gd: Guard): CoverJob | undefined { return this.jobs.get(gd) ?? this.kept.get(gd)?.J; }
   /** what he is on, in words ('' with nothing dealt) · the same as the tail of his row in the squad block (orders.ts: 'Red One · with you · on the server door') */
   words(gd: Guard): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cover.words', this, [gd]); if (__r !== RUST_PASS) return __r as any; } } const J = this.onOf(gd); return J && !J.off ? `on ${this.nameOf(J.o, gd.char.pos)}` : ''; }
   tail(gd: Guard): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cover.tail', this, [gd]); if (__r !== RUST_PASS) return __r as any; } } const w = this.words(gd); return w ? ` · ${w}` : ''; }
   /** one line for the console */
-  summary(): string { return crossToRust('Cover.summary', this, []) as any; }
+  summary(): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cover.summary', this, []); if (__r !== RUST_PASS) return __r as any; } }
+    if (!COVER.on) return 'cover: off';
+    if (!this.men.length) return `cover: nobody free · ${this.openings.length} openings on the level`;
+    const on = this.men.map(gd => `${gd.callsign} ${this.jobs.has(gd) ? this.nameOf(this.jobs.get(gd)!.o) : '—'}`).join(' · ');
+    const open = this.live.filter(L => !L.by).map(L => `${this.nameOf(L.o)}${L.sam ? ' (player)' : L.held ? ' (posted)' : ''}`).join(', ');
+    return `cover: ${on} · ${this.live.length} live${open ? ` · nobody on: ${open}` : ''} · ${this.stats.takes} takes, ${this.stats.swaps} swaps`;
+  }
 }

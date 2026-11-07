@@ -48,7 +48,6 @@ import { coverfireOn } from './coverfire';
 import './wallcharge';
 import { WORDS } from './words';
 import './owner';
-import { goneWithTick } from './crossing';
 
 export const WALLREACT = {
   /** the switch (and only ever live under the destruction goal's own) */
@@ -187,6 +186,23 @@ export class WallReact {
     while (list.length > n) { let k = 0, far = -1; list.forEach((x, i) => { const d = rectDist(at, x.rect); if (d >= far) { far = d; k = i; } }); list.splice(k, 1); }
     return list;
   }
+  /** once a second: a man who has SINCE planted himself in front of a breach he knows of (the room fight's own moves, a search, a new mark — none of them
+   *  know of holes) is asked exactly as the men who stood there when it opened were */
+  private sweep() {
+    const g = this.g, K = WALLREACT;
+    const ask = (gd: Guard, at: Vec3, b: Breach) => {
+      if (this.pend.some(P => P.gd === gd)) return;
+      const d = Math.abs((at[0] - b.at[0]) * b.n[0] + (at[2] - b.at[2]) * b.n[1]), l = Math.abs((at[0] - b.at[0]) * b.u[0] + (at[2] - b.at[2]) * b.u[1]);
+      if (d > K.nearM || l > b.half + 0.6) return;   // (in front of it, not merely near its wall)
+      if (!this.beyond(gd, b, at) || !this.openThrough(b, at, gd.team === 'operative' ? 1.2 : 0.9)) return;   // (… and open through it to floor that is not his own side's: the next breach is looked at, not this one asked about for ever)
+      const ax = b.at[0] - b.u[0] * b.half, az = b.at[2] - b.u[1] * b.half, bx = b.at[0] + b.u[0] * b.half, bz = b.at[2] + b.u[1] * b.half;
+      this.pend.push({ gd, rect: [Math.min(ax, bx) - 0.1, Math.min(az, bz) - 0.1, Math.max(ax, bx) + 0.1, Math.max(az, bz) + 0.1], b, who: 0, until: g.time + 1.5, next: g.time });
+    };
+    for (const b of this.breaches) {
+      for (const gd of b.men.keys()) { if (gd.state === 'dead') continue; const D = this.defOf(gd); if (D && D.mode === 'hold' && g.time - (D.movedAt ?? -1e9) > K.retrySecs) ask(gd, gd.char.pos, b); }
+      if (b.ops >= 0) for (const A of this.posts()) if (A.A.arrived) ask(A.gd, A.A.post!, b);
+    }
+  }
   /** the breach a wall's row belongs to: a new one, or the one on that wall it widens */
   private upsert(row: LevelChange): Breach | null {
     const g = this.g, W = g.destr.walls.all().find(x => x.id === row.id); if (!W) return null;
@@ -289,6 +305,12 @@ export class WallReact {
   private dropOpening(o: Opening) { const L = this.g.cover?.openings; if (!L) return; const i = L.indexOf(o); if (i >= 0) L.splice(i, 1); }
   private dropOpenings() { for (const b of this.breaches) if (b.opening) { this.dropOpening(b.opening); b.opening = null; } }
 
+  /** does the plan line p → q go through the breach */
+  private through(b: Breach, p: Vec3, q: Vec3): boolean {
+    const sp = (p[0] - b.at[0]) * b.n[0] + (p[2] - b.at[2]) * b.n[1], sq = (q[0] - b.at[0]) * b.n[0] + (q[2] - b.at[2]) * b.n[1]; if (sp * sq >= 0) return false;
+    const t = sp / (sp - sq), x = p[0] + (q[0] - p[0]) * t, z = p[2] + (q[2] - p[2]) * t;
+    return Math.abs((x - b.at[0]) * b.u[0] + (z - b.at[2]) * b.u[1]) <= b.half + 0.35;
+  }
   /** roomfight.ts applyWatch: `pt` is where his gun and his fix are about to rest (a door of his room, or straight ahead) — a breach he knows, has a line to and
    *  has more against than that door, takes it */
   look(gd: Guard, pt: Vec3) {
@@ -315,12 +337,30 @@ export class WallReact {
     for (const gd of teamMen(g)) { if (gd.state === 'dead') continue; const A = orderOf(g, gd); if (A && A.post) out.push({ gd, A }); }
     return out;
   }
+  /** the floor just beyond a breach from where a man stands — null when it is no danger to him: no floor there, his own side's men on it, or (the team) a room
+   *  their book has cleared */
+  private beyond(gd: Guard, b: Breach, at: Vec3): Vec3 | null {
+    const g = this.g, K = WALLREACT;
+    const s = (at[0] - b.at[0]) * b.n[0] + (at[2] - b.at[2]) * b.n[1] >= 0 ? 1 : -1; let far: Vec3 | null = null;
+    for (const d of [K.beyondM, K.beyondM * 0.7, K.beyondM * 0.45]) { const q: Vec3 = [b.at[0] - b.n[0] * s * d, 0, b.at[2] - b.n[1] * s * d]; if (!g.col.nav.isBlocked(q[0], q[2])) { far = q; break; } }   // (a narrow passage beyond it: nearer the hole)
+    if (!far) return null;
+    const F = far, over = (p: Vec3) => ((p[0] - b.at[0]) * b.n[0] + (p[2] - b.at[2]) * b.n[1]) * s < 0 && flat(p, F) < 2.5;   // (beyond the wall, by that floor)
+    if (gd.team === 'operative') { if (g.cleared.roomAt(far) !== 0 && g.cleared.knownAt(far)) return null; if (g.orders.squad().some(m => m !== gd && m.state !== 'dead' && over(m.char.pos)) || (!g.player.down && over(g.player.char.pos))) return null; }   // (his own side's ground beyond it)
+    else for (const m of g.guards) if (m !== gd && m.state !== 'dead' && m.team === gd.team && over(m.char.pos)) return null;
+    return far;
+  }
+  /** is a chest at `h` over `p` open THROUGH the breach to the floor just beyond it (three points across its width) */
+  private openThrough(b: Breach, p: Vec3, h: number): boolean {
+    const g = this.g, d = (p[0] - b.at[0]) * b.n[0] + (p[2] - b.at[2]) * b.n[1]; if (Math.abs(d) > 8) return false; const s = d >= 0 ? 1 : -1;
+    for (const k of [0, 0.8, -0.8]) { const q: Vec3 = [b.at[0] + b.u[0] * b.half * k - b.n[0] * s * 0.9, 1.15, b.at[2] + b.u[1] * b.half * k - b.n[1] * s * 0.9]; if (this.through(b, q, p) && !g.col.segmentBlocked(q, [p[0], h, p[2]])) return true; }
+    return false;
+  }
 
 
 }
 
 const states = new SideMap<Game, WallReact>('wallreact.states');
 /** this game's (made on first asking: by then the destruction engine stands) */
-export function wallReactOf(g: Game): WallReact { return goneWithTick('wallReactOf') as any; }
+export function wallReactOf(g: Game): WallReact { let s = states.get(g); if (!s) states.set(g, s = new WallReact(g)); return s; }
 /** game.ts resetGuards */
 export function wallReactReset(g: Game) { states.get(g)?.reset(); }

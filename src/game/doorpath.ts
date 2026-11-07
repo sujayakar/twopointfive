@@ -96,6 +96,20 @@ interface Walk {
 }
 
 const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+/** a door blown off its hinges (doors.ts `Door.off`, where a build has that rule): there is no leaf in the frame to walk round, or to keep a gun out of —
+ *  the slab on the floor is nobody's to route by. A build without the rule has no such door, and this is never true */
+const gone = (d: Door) => (d as Door & { off?: boolean }).off === true;
+/** the least distance between segments a→b and c→d on the floor */
+function segSeg(a: Vec3, b: Vec3, c: Vec3, d: Vec3): number {
+  const cross = (ox: number, oz: number, px: number, pz: number, qx: number, qz: number) => (px - ox) * (qz - oz) - (pz - oz) * (qx - ox);
+  const d1 = cross(c[0], c[2], d[0], d[2], a[0], a[2]), d2 = cross(c[0], c[2], d[0], d[2], b[0], b[2]), d3 = cross(a[0], a[2], b[0], b[2], c[0], c[2]), d4 = cross(a[0], a[2], b[0], b[2], d[0], d[2]);
+  if (d1 * d2 < 0 && d3 * d4 < 0) return 0;
+  return Math.min(ptSeg(a, c, d), ptSeg(b, c, d), ptSeg(c, a, b), ptSeg(d, a, b));
+}
+function ptSeg(p: Vec3, a: Vec3, b: Vec3): number {
+  const dx = b[0] - a[0], dz = b[2] - a[2], l2 = dx * dx + dz * dz, t = l2 > 1e-9 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[2] - a[2]) * dz) / l2)) : 0;
+  return Math.hypot(p[0] - a[0] - dx * t, p[2] - a[2] - dz * t);
+}
 
 export class DoorPath {
   walks = new Map<Guard, Walk>();
@@ -110,12 +124,110 @@ export class DoorPath {
   private low = new SideSet<Guard>();
   private lent: { gd: Guard; s: NonNullable<Guard['script']>; mine: Vec3; aimAt: Vec3 | null | undefined; face: number | null | undefined; strafe: boolean | undefined }[] = [];
 
+  /** the leaf as it stands: hinge → free tip */
+  private leaf(d: Door): [Vec3, Vec3] { const u = d.dir(), h = d.def.hinge; return [[h[0], 0, h[1]], [h[0] + u[0] * d.def.width, 0, h[1] + u[1] * d.def.width]]; }
+  private leaves(near: Vec3, far: Vec3): [Vec3, Vec3][] { const out: [Vec3, Vec3][] = []; for (const d of this.g.doors.list) { if (gone(d)) continue; const L = this.leaf(d); if (segSeg(near, far, L[0], L[1]) < 2.5) out.push(L); } return out; }
+  /** a man can stand here: clear of every static at his own width */
+  private free(p: Vec3): boolean { const q: Vec3 = [p[0], 0, p[2]]; this.g.col.collideCircle(q, 0.3, 0.2, 1.5, 3); return flat(q, p) < 0.03; }
+  private open(a: Vec3, b: Vec3): boolean {
+    if (this.g.col.solidBlocked([a[0], 0.45, a[2]], [b[0], 0.45, b[2]])) return false;
+    const d = flat(a, b), n = Math.floor(d / 0.3); for (let i = 1; i < n; i++) { const k = i / n; if (!this.free([a[0] + (b[0] - a[0]) * k, 0, a[2] + (b[2] - a[2]) * k])) return false; }
+    return true;
+  }
 
+  /** from a to b keeping `leafClear` off every leaf nearby: the corners to walk (b last), or null when no way round was found. A point that itself stands nearer
+   *  a leaf than the clearance is asked only for what it has. */
+  private roundLeaves(a: Vec3, b: Vec3): { pts: Vec3[]; round: boolean } | null {
+    const K = DOORPATH, c = K.leafClear, L = this.leaves(a, b);
+    const off = (p: Vec3) => { let m = Infinity; for (const l of L) m = Math.min(m, ptSeg(p, l[0], l[1])); return m; };
+    const ok = (p: Vec3, q: Vec3, dp: number, dq: number) => { const need = Math.max(0.05, Math.min(c, dp, dq) - 0.02); for (const l of L) if (segSeg(p, q, l[0], l[1]) < need) return false; return true; };
+    const da = off(a), db = off(b);
+    if (ok(a, b, da, db)) return { pts: [b], round: false };
+    // the corners: an arc round each leaf's free tip, far enough out (tipM) that the chords between them — and the corner a man cuts walking at a point
+    // ahead of him — keep the clearance
+    const rr = K.tipM, nodes: Vec3[] = [a, b], dist: number[] = [da, db];
+    for (const l of L) { const th = Math.atan2(l[1][2] - l[0][2], l[1][0] - l[0][0]);
+      for (let k = -3; k <= 3; k++) { const p: Vec3 = [l[1][0] + Math.cos(th + k * Math.PI / 4) * rr, 0, l[1][2] + Math.sin(th + k * Math.PI / 4) * rr]; if (this.free(p)) { nodes.push(p); dist.push(off(p)); } } }
+    // the shortest way over them (a dozen points: the plain search)
+    const N = nodes.length, best = new Array<number>(N).fill(Infinity), from = new Array<number>(N).fill(-1), done = new Array<boolean>(N).fill(false); best[0] = 0;
+    for (;;) { let i = -1; for (let k = 0; k < N; k++) if (!done[k] && best[k] < Infinity && (i < 0 || best[k] < best[i])) i = k; if (i < 0 || i === 1) break; done[i] = true;
+      for (let j = 1; j < N; j++) { if (done[j]) continue; const w = best[i] + flat(nodes[i], nodes[j]); if (w >= best[j]) continue; if (!ok(nodes[i], nodes[j], dist[i], dist[j]) || !this.open(nodes[i], nodes[j])) continue; best[j] = w; from[j] = i; } }
+    if (best[1] === Infinity) return null;
+    const pts: Vec3[] = []; for (let i = 1; i > 0; i = from[i]) pts.unshift(nodes[i]);
+    return { pts, round: true };
+  }
 
+  /** from a to b for a man's feet: clear of the leaves (roundLeaves) AND of the level — where the straight leg is not a man's width of open floor (a table
+   *  between the door and his point, a wall between a late man and the lane), the nav grid's own path, each leg of it taken round the leaves */
+  private way(a: Vec3, b: Vec3): { pts: Vec3[]; round: boolean } | null {
+    const R = this.roundLeaves(a, b); if (!R) return null;
+    let prev = a, clear = true; for (const q of R.pts) { if (!this.open(prev, q)) { clear = false; break; } prev = q; }
+    if (clear) return R;
+    const N = this.g.col.nav.findPath(a, b, 3000); if (!N || !N.length) return R;   // (no plan either: the straight leg, as the runner would have walked it)
+    if (flat(N[N.length - 1], b) > 0.05) N.push(b);
+    const pts: Vec3[] = []; let round = false; prev = a;
+    for (const w of N) { if (flat(prev, w) < 0.05) continue; const r = this.roundLeaves(prev, w); if (!r) return null; pts.push(...r.pts); round ||= r.round; prev = w; }
+    this.stats.nav++; return pts.length ? { pts, round } : R;
+  }
 
+  /** his line from where he stands: the lane through the opening while he is outside it, then round the leaves to his point */
+  private lay(W: Walk) {
+    const K = DOORPATH, d = W.door, p = W.gd.char.pos, h = d.def.hinge, ux = Math.cos(d.def.closedDir), uz = Math.sin(d.def.closedDir), wide = d.def.width;
+    const vx = uz * W.op.side, vz = -ux * W.op.side;   // into the room: off the side the men stacked on
+    const at = (s: number): Vec3 => [h[0] + ux * wide * K.at + vx * s, 0, h[1] + uz * wide * K.at + vz * s];
+    const s0 = (p[0] - h[0]) * vx + (p[2] - h[1]) * vz, a0 = (p[0] - h[0]) * ux + (p[2] - h[1]) * uz;
+    const pts: Vec3[] = [[p[0], 0, p[2]]]; W.lane = 0;
+    if (s0 < K.inM - 0.25 && flat(p, W.pod) > 0.6) {
+      let inM = K.inM; const far = at(inM); if (!this.free(far)) inM = 0.45; W.inM = inM;
+      const Pa = at(-K.outM), Pi = at(inM);
+      if (this.free(Pi) && (s0 > -0.15 || this.free(Pa))) { if (s0 < -K.outM - 0.2 || (s0 < -0.15 && Math.abs(a0 - wide * K.at) > 0.15)) { const R0 = this.way(pts[0], Pa); if (R0) pts.push(...R0.pts); else pts.push(Pa); }   // (a leaf standing open on HIS side of the wall is gone round as well)
+        pts.push(Pi); W.lane = pts.length - 1; }
+      else this.stats.noLane++;
+    }
+    const from = pts[pts.length - 1]; let R = this.way(from, W.pod); W.wait = false;
+    if (!R && W.waited < K.cap && this.g.doors.list.some(x => !gone(x) && Math.abs(x.vel) > 0.15 && segSeg(from, W.pod, ...this.leaf(x)) < 2.5)) W.wait = true;   // (a leaf still swinging: no verdict on it yet)
+    else if (!R) { const q = this.stand(W, from); if (q) { this.move(W, q); R = this.way(from, q); } }
+    if (R) { pts.push(...R.pts); if (R.round && !W.round) { W.round = true; this.stats.round++; } } else if (!W.wait) { pts.push(W.pod); this.stats.noRound++; }
+    W.pts = pts; W.len = [0]; for (let i = 1; i < pts.length; i++) W.len.push(W.len[i - 1] + flat(pts[i - 1], pts[i]));
+    W.s = 0; W.laidT = this.g.time; W.arr = null;
+    W.near = []; for (const x of this.g.doors.list) { if (gone(x)) continue; const L = this.leaf(x); let m = Infinity; for (let i = 1; i < pts.length; i++) m = Math.min(m, segSeg(pts[i - 1], pts[i], L[0], L[1])); if (m < 2.5) W.near.push({ d: x, angle: x.angle }); }
+  }
+  /** his point stands where no walk reaches it clear of a leaf: the nearest floor of the same room that one does, a man can stand on, `leafClear` off every
+   *  leaf as it stands and `apartM` off every other point of his order — or null */
+  private stand(W: Walk, from: Vec3, reach = DOORPATH.moveM): Vec3 | null {
+    const K = DOORPATH, pod = W.pod0, L = this.leaves(pod, pod), others: Vec3[] = [], room = this.g.fight?.roomAt(pod) ?? null, down = K.bodyM > 0 ? this.fallen(pod, reach + K.bodyOff + 0.5) : [];
+    for (const [m, q] of W.op.pod) if (m !== W.gd) others.push(q.pos); for (const q of W.op.queue) if (q.gd !== W.gd) others.push(q.pod.pos);
+    for (let r = 0.3; r <= reach + 1e-6; r += 0.3) { let best: Vec3 | null = null, bd = Infinity;
+      for (let k = 0; k < 16; k++) { const c: Vec3 = [pod[0] + Math.cos(k * Math.PI / 8) * r, 0, pod[2] + Math.sin(k * Math.PI / 8) * r];
+        if (!this.free(c) || L.some(l => ptSeg(c, l[0], l[1]) < K.leafClear + 0.05) || others.some(o => flat(o, c) < K.apartM) || down.some(o => flat(o, c) < K.bodyOff) || (this.g.fight?.roomAt(c) ?? null) !== room) continue;
+        const dd = flat(c, from); if (dd >= bd || !this.way(from, c)) continue; best = c; bd = dd; }
+      if (best) return best; }
+    return null;
+  }
+  /** where the men down lie within `r` of a point (hips, chest and head of each: a body is longer than it is wide) */
+  private fallen(at: Vec3, r: number): Vec3[] {
+    const out: Vec3[] = [];
+    for (const x of [...this.g.guards, ...this.g.civilians]) { if (x.state !== 'dead' && !x.char.ragdoll) continue; const b = x.char.bones;
+      for (const q of [b.hips, b.chest, b.head]) if (q && flat(q, at) < r) out.push([q[0], 0, q[2]]); }
+    return out;
+  }
+  /** his point is `q` now: this walk's, the order's (orders.ts Assignment post / goal — the same object, so the door order still knows it for its own),
+   *  the runner's, and the door order's record of where he was sent */
+  private move(W: Walk, q: Vec3) {
+    const gd = W.gd, old = W.pod, A = this.g.orders.of(gd), pod = W.op.pod.get(gd); W.pod = q; this.stats.moved++;
+    if (A && A.post && flat(A.post, old) < 0.1) { A.post = [q[0], A.post[1], q[2]]; A.goal = [q[0], A.post[1], q[2]]; if (gd.script && gd.script.goal && flat(gd.script.goal, old) < 0.1) gd.script.goal = A.goal; }
+    if (pod && flat(pod.pos, old) < 0.1) W.op.pod.set(gd, { ...pod, pos: [q[0], pod.pos[1], q[2]] });
+  }
 
   /** doortools.ts, the entry: may the queue's i-th man be let go now? One at a time, in the order dealt, each once the man before him has his start. */
   mayGo(op: DoorOp, q: { gd: Guard; pod: { pos: Vec3 } }, i: number): boolean { return goneWithTick('DoorPath.mayGo') as any; }
+  /** doortools.ts, the entry: this man has just been handed his point */
+  sent(op: DoorOp, gd: Guard, pod: { pos: Vec3 }) {
+    const L = this.lastOf.get(op) ?? { W: null, n: 0, t: 0 }, t = this.g.time;
+    const W: Walk = { gd, op, door: op.door, pod: [pod.pos[0], 0, pod.pos[2]], n: L.n, t0: t, pts: [], len: [0], s: 0, laidT: t, near: [], lane: 0, via: [], arr: null, arrN: 0, yieldT: -1, yields: 0, held: 0, offT: NaN, round: false, wait: false, waited: 0, inM: DOORPATH.inM, pod0: [pod.pos[0], 0, pod.pos[2]], bodyT: -1 };
+    this.own(W);
+    this.lay(W); this.walks.set(gd, W); this.lastOf.set(op, { W, n: L.n + 1, t }); this.stats.sent++;
+  }
 
   /** the order's own way round (orders.ts route: waypoints to its door) is this walk's while it lasts: taken off the order, kept, and handed back if the
    *  walk is dropped before he is through */

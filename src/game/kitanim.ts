@@ -31,11 +31,12 @@ import type { Firearm, WeaponDef } from './weapons';
 import type { KitDraw } from './rigProps';
 import type { ThrowKind } from './game';
 import './close';   // (read inside functions only — the game's one import cycle)
+import { activeScenario } from './scenarioRun';   // (the same)
 import './rigProps';   // (the same)
 import './workstow';   // (the same: the thing in his hand is on its way to where it lives before a two-handed job — that errand is this file's)
 import './handwork';   // (the same: while his hands are at work on a thing the work has them)
-import './bigkit';   // (the same)
-import './character';   // (the same)
+import { samBigCarry, bigWeighed } from './bigkit';   // (the same)
+import { bigOff, type Character } from './character';   // (the same)
 import { crossToRust, goneWithTick } from './crossing';
 
 export type ReloadKind = 'empty' | 'dry' | 'tactical';
@@ -82,13 +83,34 @@ export const KITANIM = {
 export const KITANIM_STATS = { swaps: 0, draws: { pistol: 0, rifle: 0, can: 0, knife: 0 }, stows: { pistol: 0, rifle: 0, can: 0, knife: 0 }, reloads: { empty: 0, dry: 0, tactical: 0 }, closeFrames: 0, nv: { hand: 0, nod: 0 }, owed: 0 };
 export const KITANIM_LOG: { t: number; what: 'swap' | 'reload'; from?: KitItem | null; to?: KitItem | null; kind?: ReloadKind; secs: number }[] = [];
 
+function live(g: Game): boolean { return KITANIM.on && !g.touring; }
 
 
-export function kitInHand(g: Game): KitItem | null { return goneWithTick('kitInHand') as any; }
+/** What the game's own rules put in Sam's right hand this frame (the drawer's rules, combat.ts handProps, said once): the pistol up, the rifle in the hands, a
+ *  can of the selected kind, the knife of a man held with the hands empty — or nothing. */
+/** a pose has his hands off his own gun: the animator's word, as it stood after its last update — and, the big slot's tool with BIGSLOT.weight on
+ *  (bigkit.ts), the word it WILL give this frame, read off the beat's record as it stands now (character.ts bigOff): the kit's draw then starts the frame the
+ *  tool lets go of his hands, not one later with the gun shown in them for a frame between */
+function handsOff(an: Character['anim']): boolean { return an.bigTool && bigWeighed() ? bigOff(an.bigTool) : an.hideHeldItem; }
+export function kitInHand(g: Game): KitItem | null {
+  const pl = g.player, an = pl.char.anim;
+  if (pl.down) return null;
+  if (pl.holding) return pl.holding.variant === 'arm' && !an.holdGunSide && !an.noKnife ? 'knife' : pl.pistolUp ? 'pistol' : null;
+  if (handsOff(an)) return null;
+  if (samBigCarry(g)) return null;   // (bigkit.ts BIGSLOT.weight: the big slot's tool is asked for — his gun goes to its place by hand before the hand goes for the tool)
+  if (pl.pistolUp) return 'pistol';
+  if (pl.rifleUp) return 'rifle';
+  const k = pl.canisterSel;
+  return k && !pl.holstered && !pl.dragging && g.throwCount(k) > 0 ? 'can' : null;
+}
 
 /** KIT: the rifle hangs in FRONT of him on its sling when it is not in his hands (KITANIM.sling) — the hand's errands (anim.kitFront) and the drawer
  *  (RigOpts.slingFront / KitDraw.front) both ask here. A fact of the mission, not of the picture: the times of his kit changes hang on it. */
-export function kitSlingFront(g: Game): boolean { return goneWithTick('kitSlingFront') as any; }
+export function kitSlingFront(g: Game): boolean {
+  if (!live(g) || !KITANIM.equip) return false;
+  if (KITANIM.sling) return KITANIM.sling === 1;
+  const k = activeScenario(g); return !!k && k !== 'quiet';
+}
 
 /** KIT: how far the rifle hanging in front is swung forward onto his thighs this frame, rad — eased toward what his pose wants (rigProps slingRestWant) on the
  *  game's clock, so asked twice in a frame it answers the same; the state is the Player's (a fresh Player starts on the pose's own answer). undefined = not in front. */

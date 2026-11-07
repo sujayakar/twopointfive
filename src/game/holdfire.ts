@@ -76,6 +76,7 @@ const states = new SideMap<Game, State>('holdfire.states');
 const stateOf = (g: Game): State => { let S = states.get(g); if (!S) states.set(g, S = { liftT: -Infinity, why: null, cast: [], by: null, loudT: -Infinity }); return S; };
 /** which player's squad this is (one place: with a second player this asks whose) */
 const leadOf = (g: Game): Player => g.player;
+const mate = (gd: Guard) => gd.team === 'operative' && !!gd.unit;
 const living = (g: Game) => g.orders.squad().filter(gd => gd.state !== 'dead');
 
 /** THE SQUAD HAS BEEN FOUND — this rule's own test (unseen.ts's `squadFound` also counts a defender who is 'alert' with nobody seen: roomfight.ts `plant`
@@ -137,6 +138,11 @@ export function holdFireLoud(g: Game): boolean { return crossToRust('holdFireLou
 /** the F drill's 'go' (nightbreach.ts: not one of the menu's orders). `by`: which player gave it */
 export function holdFireDrill(g: Game, by: Player = leadOf(g)) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('holdFireDrill', undefined, [g, by]); if (__r !== RUST_PASS) return __r as any; } } if (HOLDFIRE.on) lift(g, 'drill', 'go', by); }
 
+/** is this loud teammate under the hold this frame: the switch, a squad under orders, nobody has started the fight, nobody has found them */
+function held(g: Game, gd: Guard): boolean {
+  if (!mate(gd) || !g.orders.active || holdFireLifted(g)) return false;
+  const men = living(g); return men.length > 0 && !holdFireFound(g, men);
+}
 /** His round at `h` is held: nobody has found the squad, Sam has neither fired nor ordered it, and this man has not noticed anybody (`noticed`: the silent
  *  order's own bar · `quiet`: his gun is a quiet one · `urgent`: a hostage's life is on it). Asked by silent.ts silentHoldsRound for a LOUD man, after unseen.ts. */
 export function holdFireHolds(g: Game, gd: Guard, h: Guard, noticed: number, quiet: boolean, urgent: () => boolean): boolean { return goneWithTick('holdFireHolds') as any; }

@@ -101,6 +101,7 @@ interface Man { beliefs: Map<Door, Belief>; saw: { at: Vec3; t: number; used: bo
 interface State { lastT: number; men: Map<Guard, Man>; kickers: Map<Door, Guard>; boots: Map<number, number> }
 const states = new GameSideMap<Game, State>('doorforce.states');
 
+function log(g: Game, s: string) { DOORFORCE_LOG.push(`${g.time.toFixed(2)} ${s}`); if (DOORFORCE_LOG.length > 400) DOORFORCE_LOG.splice(0, 200); }
 
 
 
