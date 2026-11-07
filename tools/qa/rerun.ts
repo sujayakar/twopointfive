@@ -160,12 +160,15 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   let compared = 0, worst: Drift | null = null, drift: Drift | null = null, castDiffers = '';
   const placeOf = (ci: number): [number, number] | null => { const c = F.cast[ci]; if (c.kind === 'player') return [g.player.char.pos[0], g.player.char.pos[2]];
     const m = (c.kind === 'civ' ? g.civilians : g.guards).find((x: any) => x.char?.id === c.id) ?? [...g.guards, ...g.civilians].find((x: any) => x.char?.id === c.id); return m ? [m.char.pos[0], m.char.pos[2]] : null; };
+  // (a page's restart, off a card or inside a step, is the game as its first step opened: kept here as the page keeps it)
+  const host = (g as unknown as { rustHost?: { keepStart(): void; toStart(): void; startKept: number } }).rustHost; if (want === 'page' || tape.x.some(r => r[1] === 'restart' && r[2] === 'start')) host?.keepStart();
   for (let f = 0; f < toN; f++) {
     // from outside the step, as the page did it
     for (const [, kind, data] of walk.outside()) {
-      if (kind === 'restart') { g.restartEncounter(); labStage(); }
+      if (kind === 'restart') { if (data === 'start' && host?.startKept) host.toStart(); else g.restartEncounter(); labStage(); }
+      else if (kind === 'load') { const why = g.saves.load(g, String(data)); if (why) { warnings.push(`the checkpoint loaded at step ${f} did not load here: ${why}`); drift ??= { r: D.r[F.samples.findIndex(s => s.n > f)] ?? 0, n: f, who: 'the checkpoint', metres: Infinity }; } }
       else if (poses?.row(f, kind, data)) { /* where the player was put from outside a step, or by a restart inside the coming one: runtape.ts */ }
-      else if (kind === 'flags') { const fl = data as any; g.godMode = !!fl.godMode; g.aiEnabled = fl.aiEnabled !== false; g.infiniteAmmo = !!fl.infiniteAmmo; g.playerInvisible = !!fl.playerInvisible; }
+      else if (kind === 'flags') { const fl = data as any; g.godMode = !!fl.godMode; g.aiEnabled = fl.aiEnabled !== false; g.infiniteAmmo = !!fl.infiniteAmmo; g.playerInvisible = !!fl.playerInvisible; if (typeof fl.autosave === 'boolean') g.saves.enabled = fl.autosave; }
       else if (kind === 'tune') K.assignDeep(g.tune, data as any);
       else if (kind === 'table') { const [name, src] = data as [string, any]; const Tb = reg[name]; if (Tb && plain(src)) put(Tb, src); }
       else if (kind === 'kit') kitOf(data); }

@@ -268,6 +268,7 @@ export class TapePlay {
     if (this.first) { this.first = false; this.tables(); g.fogOfWar.pageLook(); this.rs?.tune(g); }   // (the last word over what the boot wrote after the staging: this machine's sandbox row, its kept feel rows)
     for (const [, kind, data] of W.outside()) {
       if (kind === 'restart') g.restartEncounter();
+      else if (kind === 'load') { const why = g.saves.load(g, String(data)); if (why) this.drift ??= { f, who: `the checkpoint (${why})`, metres: Infinity }; }   // (a save this run made: the walk has made it too)
       else if (this.poses?.row(f, kind, data)) { /* where the player was put from outside a step, or by a restart inside the coming one: runtape.ts, as tools/qa/rerun.ts does it */ }
       else if (kind === 'flags') this.fl = data as Plain;
       else if (kind === 'tune') K.assignDeep(g.tune as never, data as Plain);
