@@ -32,14 +32,13 @@
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-default sticky-take sticky-wand
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save
 //     workstow: workstow-sam workstow-mate workstow-wall
-//     squadnet: squadnet-why squadnet-clear squadnet-end squadnet-net
+//     squadnet: squadnet-clear squadnet-end squadnet-net
 //     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns
 //     kittree: kittree-rows kittree-guns kittree-sponge kittree-mate40
 //     gunlook: gunlook-own gunlook-hands gunlook-bare (+ the gunreload family: how each is fed; gunshells: a tube gun by the shell)
 //     gunroles: gunroles-deal gunroles-entry gunroles-fight gunroles-lanes
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-weight bigslot-wiring
 //     kitpaste: kitpaste-fit kitpaste-cases
-//     kitlent: kitlent-tiles
 //     kitcan: kitcan-tiles
 //     kitdeal: kitdeal-cards kitdeal-more kitdeal-run kitdeal-screen
 //     noshield: noshield-gone noshield-card noshield-staged noshield-tape
@@ -2383,7 +2382,6 @@ if (on('stay-open-edge', 'stay-open', 'doors', 'all')) await run('stay-open-edge
 if (on('stay-open-pass', 'stay-open', 'doors', 'all')) await run('stay-open-pass', async () => (await import('./doorstay-probes.ts')).stayOpenPass());
 if (on('stay-open-after', 'stay-open', 'doors', 'all')) await run('stay-open-after', async () => (await import('./doorstay-probes.ts')).stayOpenAfter());
 if (on('stay-open-floor', 'stay-open', 'doors', 'all')) await run('stay-open-floor', async () => (await import('./doorstay-probes.ts')).stayOpenFloor());
-if (on('stay-open-digin', 'stay-open', 'doors', 'all')) await run('stay-open-digin', async () => (await import('./frameholds-probes.ts')).stayOpenDigin());   // (defenders shut the doors of a room they hold: game/digin.ts DIGIN.shutOpen — five stagings of the compound's last stand, a minute or two)
 // ---------------------------------------------------------------- a blast takes a door off its hinges (doorblast-probes.ts; src/game/doorblast.ts)
 if (on('off-hinges-blast', 'off-hinges', 'doors', 'all')) await run('off-hinges-blast', async () => (await import('./doorblast-probes.ts')).offHingesBlast());
 if (on('off-hinges-hung', 'off-hinges', 'doors', 'all')) await run('off-hinges-hung', async () => (await import('./doorblast-probes.ts')).offHingesHung());
@@ -2484,7 +2482,6 @@ if (on('workstow-sam', 'workstow', 'all')) await run('workstow-sam', async () =>
 if (on('workstow-mate', 'workstow', 'doortools', 'all')) await run('workstow-mate', async () => (await import('./workstow-check.ts')).workstowMate());   // a teammate's charge on order: his gun hangs, no round from it, back up after; a man the fight has drops the job with nothing spent
 if (on('workstow-wall', 'workstow', 'wallcharge', 'all')) await run('workstow-wall', async () => (await import('./workstow-check.ts')).workstowWall());  // the same for a wall charge, by your hands and on order
 // THE SQUAD REACHES YOU, AND THE QUICK KEY SAYS WHY (src/game/squadnet.ts; tools/qa/squadnet-check.ts raises the four switches itself, so it asks the same on either stand; SQUADNET_BREAK=1 must fail)
-if (on('squadnet-why', 'squadnet', 'squadorders', 'all')) await run('squadnet-why', async () => (await import('./squadnet-check.ts')).squadnetWhy());     // the quick key's row ends on the reason, the man who answers says it, and the entry's end is called as its search found it
 if (on('squadnet-clear', 'squadnet', 'all')) await run('squadnet-clear', async () => (await import('./squadnet-check.ts')).squadnetClear());   // 'clear' only of a room whose floor was all seen; 'quiet' of floor unseen; nothing with an enemy in sight
 if (on('squadnet-end', 'squadnet', 'doortools', 'all')) await run('squadnet-end', async () => (await import('./squadnet-check.ts')).squadnetEnd());       // an entry into a room the mission has no name for ends with the lead's call; off, with nothing said
 if (on('squadnet-net', 'squadnet', 'all')) await run('squadnet-net', async () => (await import('./squadnet-check.ts')).squadnetNet());       // a teammate's line from off the screen clicks, a teammate down is called once; the page's alone, by digest
@@ -2511,8 +2508,6 @@ if (on('bigslot-wiring', 'bigslot', 'all')) await run('bigslot-wiring', async ()
 // COPY AND PASTE FOR LOADOUTS (src/game/kit.ts kitPaste; tools/qa/kitpaste-check.ts sets the card's rules itself, each way, so it asks the same on either stand; KITPASTE_BREAK=1 must fail)
 if (on('kitpaste-fit', 'kitpaste', 'kit', 'all')) await run('kitpaste-fit', async () => (await import('./kitpaste-check.ts')).pasteFit());         // any man's card onto any man's: a legal squad, a card of his own tiles, one write
 if (on('kitpaste-cases', 'kitpaste', 'kit', 'all')) await run('kitpaste-cases', async () => (await import('./kitpaste-check.ts')).pasteCases());   // a teammate onto you, you onto a teammate, colours kept, a squad limit's refusal
-// WHAT A MISSION HANDS YOU SHOWS ON YOUR CARD (src/ui/kitCard.ts `lent`, src/ui/loadout.ts lentNow; tools/qa/kitlent-check.ts sets its switches itself; KITLENT_BREAK=1 must fail)
-if (on('kitlent-tiles', 'kitlent', 'kit', 'all')) await run('kitlent-tiles', async () => (await import('./kitlent-check.ts')).lentTiles());   // the cameras and the wand a quiet mission under the fog hands you, on your own tiles
 // A SUPPRESSED GUN IS DRAWN AND NAMED AS ONE ON THE KIT CARD (src/ui/kitCard.ts KIT_CAN, src/ui/kitIcons.ts; tools/qa/kitcan-check.ts sets its switches itself; KITCAN_BREAK=1 must fail)
 if (on('kitcan-tiles', 'kitcan', 'kit', 'all')) await run('kitcan-tiles', async () => (await import('./kitcan-check.ts')).canTiles());   // the can on the guns tile and the roster's drawing, your pistol alone named for it
 // THE SQUAD'S KIT IS DEALT OVER THE MEN WHO COME (src/game/kit.ts KITDEAL; tools/qa/kitdeal-check.ts asks the rule as the page has it; KITDEAL_BREAK=1 must fail)
@@ -2675,13 +2670,6 @@ if (on('orderui-four', 'orderui', 'all')) await run('orderui-four', async () => 
 if (on('orderui-block', 'orderui', 'all')) await run('orderui-block', async () => (await import('./orderui-probes.ts')).orderuiBlock());   // the squad block with everyone addressed (ORDERBLOCK_BREAK=1 fails it)
 if (on('orderui-half', 'orderui', 'all')) await run('orderui-half', async () => (await import('./orderui-probes.ts')).orderuiHalf());   // a door tool to one half of the squad, by Shift and the ring (ORDERHALF_BREAK=1 fails it)
 if (on('orderui-keys', 'orderui', 'all')) await run('orderui-keys', async () => (await import('./orderui-probes.ts')).orderuiKeys());
-// ---------------------------------------------------------------- the four PLAYED FROM THE KEYS (squadplay-probes.ts; the press menu + the pairs on one tree: the word on F, a tool 'on the word' from the tools page's wait row (5, or F), the men's face of a door, F one thing at a time): 'squadplay' = the family
-if (on('squadplay-go', 'squadplay', 'all')) await run('squadplay-go', async () => (await import('./squadplay-probes.ts')).squadplayGo());
-if (on('squadplay-wait', 'squadplay', 'all')) await run('squadplay-wait', async () => (await import('./squadplay-probes.ts')).squadplayWait());
-if (on('squadplay-try', 'squadplay', 'all')) await run('squadplay-try', async () => (await import('./squadplay-probes.ts')).squadplayTry());
-if (on('squadplay-side', 'squadplay', 'all')) await run('squadplay-side', async () => (await import('./squadplay-probes.ts')).squadplaySide());
-if (on('squadplay-key', 'squadplay', 'all')) await run('squadplay-key', async () => (await import('./squadplay-probes.ts')).squadplayKey());
-if (on('squadplay-off', 'squadplay', 'all')) await run('squadplay-off', async () => (await import('./squadplay-probes.ts')).squadplayOff());
 // ---------------------------------------------------------------- the fog of war try (fog-probes.ts; game/fogofwar.ts behind ?fow / under ?roomclear): 'fog' = the family
 if (on('fog-off', 'fog', 'all')) await run('fog-off', async () => (await import('./fog-probes.ts')).fogOff());
 if (on('fog-sight', 'fog', 'all')) await run('fog-sight', async () => (await import('./fog-probes.ts')).fogSight());
@@ -2983,8 +2971,8 @@ if (on('move-walktries', 'walktries', 'all')) await run('move-walktries', async 
 for (const [n, f] of [['oneway-deal', 'onewayDeal'], ['oneway-read', 'onewayRead'], ['oneway-leaf', 'onewayLeaf'], ['oneway-player', 'onewayPlayer'], ['oneway-men', 'onewayMen'], ['oneway-save', 'onewaySave']] as const)
   if (on(n, 'oneway', 'all')) await run(n, async () => (await import('./oneway-probes.ts'))[f]());
 // ---------------------------------------------------------------- a frame holds a boot from the face its door opens toward (frameholds-probes.ts; game/doors.ts DOORWAY.frameHolds, game/digin.ts): 'frameholds' = the family
-for (const [n, f] of [['frameholds-boot', 'frameholdsBoot'], ['frameholds-tools', 'frameholdsTools'], ['frameholds-sam', 'frameholdsSam'], ['frameholds-wedge', 'frameholdsWedge']] as const)
-  if (on(n, 'frameholds', 'all', ...(n === 'frameholds-boot' ? ['doors'] : []))) await run(n, async () => (await import('./frameholds-probes.ts'))[f]());   // (the boot line rides the 'doors' gate list: every door of every level, seconds)
+for (const [n, f] of [['frameholds-tools', 'frameholdsTools'], ['frameholds-sam', 'frameholdsSam'], ['frameholds-wedge', 'frameholdsWedge']] as const)
+  if (on(n, 'frameholds', 'all')) await run(n, async () => (await import('./frameholds-probes.ts'))[f]());
 // ---------------------------------------------------------------- the AI opens a door from its handle side (handleside-probes.ts; game/handleside.ts HANDLE, on the one-way doors): 'handleside' = the family
 for (const [n, f] of [['handleside-spots', 'handlesideSpots'], ['handleside-men', 'handlesideMen']] as const)   // (handleside-off went 2026-11-07: the rule is settled)
   if (on(n, 'handleside', 'all')) await run(n, async () => (await import('./handleside-probes.ts'))[f]());

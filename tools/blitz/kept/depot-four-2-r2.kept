@@ -1,6 +1,6 @@
 cmd FUZZ_CAP=2400 tools/blitz/fuzz-squad.sh depot-four 2 --hard --rate 2
-tree a174fbc4f
-layout 2871794000
+tree 51f4c2341
+layout 2223287641
 ticks 8006
 die 225
 lines 600 2ijt7ctiaf6lh
@@ -31,7 +31,7 @@ play 6600 gp5s3thvttd2
 play 7200 2k5rgnwdlhosf
 play 7800 3v3wec7p3xscf
 play 8006 27t1vujbb6kqs
-state 1800 7129256 1dcslmfu5uvxv
-state 3600 7316024 2pvaxpwgndex4
-state 5400 7034042 1ghtpiltibd7n
-state 7200 7415162 1rm28kyqvt51e
+state 1800 7128405 1j5ext1grdamp
+state 3600 7315173 1f9tvt2o1d2dq
+state 5400 7033191 3c5h6t2b1kt1w
+state 7200 7414311 25c1bus4u9ns4

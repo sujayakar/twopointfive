@@ -2,7 +2,10 @@
 import { SCHEMA, parse, bookOf, compiledExpr, helpersOf, leafBytes, forGame, PAST } from './export';
 type Leaf = { q: string; ty: string; N: any; way: number[]; get: ((h: any, g: any, B: any) => any)[]; term: 0 | 1 | 2 | 3; flat: boolean; off?: boolean; /** the plain name its last step reads, where it is one */ key?: string };
 // WHAT IS WATCHED: the fields the tools loaded in this process write, by name (expose.ts reads each file of tools/qa as it loads, `__tpsToolWrites`), and nothing of the picture's or the host's own. A family that writes fifty names walks those fifty
-const NOT_WATCHED = /^(host_api|anim_skeleton|scene_materials|scene_collision|camera|input|scene_boxes)::|^character::Anim|^props::Prop\.def$|^dialogue::DialogueMod\.sam_lines$|^chronicle::Chronicle\.path$|^game::Game\.cmd_buf$/;
+// (A BOX ROW'S OWN FIELDS ARE WATCHED like any other the tools write: the Rust game reads a box's `stuff`, `flags`, `c` and `h`, and a check that writes one
+// expects the game to have it. Under the name rule a row costs the two or three of its fields a loaded file names, not the row. The rest of scene_boxes
+// (a ray's answer, the box world's own lists) stays the host's.)
+const NOT_WATCHED = /^(host_api|anim_skeleton|scene_materials|scene_collision|camera|input)::|^scene_boxes::(?!Box\.)|^character::Anim|^props::Prop\.def$|^dialogue::DialogueMod\.sam_lines$|^chronicle::Chronicle\.path$|^game::Game\.cmd_buf$/;
 const camel = (x: string) => x.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
 const tsName = (f: any): string => f.ts ?? f.expr?.match(/^o\.([\w$]+)$/)?.[1] ?? camel(f.rust);
 // `opts.every`: EVERY CARRIED FIELD IS WATCHED, whatever names the tools write (the host's and the picture's own, `NOT_WATCHED`, still apart). For a PAGE

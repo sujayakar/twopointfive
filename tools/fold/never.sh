@@ -19,8 +19,8 @@ FOLD=tools/fold/target/release/fold
 cargo build --release --manifest-path tools/fold/Cargo.toml > /dev/null 2>&1 || { echo "never.sh: tools/fold does not build"; exit 3; }
 mkdir -p "$S" || exit 3
 
-# lines of the body files, by module
-count() { for d in rust/game/src/*/; do n=$(ls "$d"*.rs 2>/dev/null | grep -v '/mod\.rs$\|/types\.rs$\|/missing\.rs$' | xargs -r cat | wc -l); [ "$n" -gt 0 ] && echo "$(basename "$d") $n"; done; }
+# lines of the body files, by module (in whichever crates hold them: `fold layout body-src`, found by listing rust/)
+count() { for d in $("$FOLD" layout body-src | sed 's|$|/*/|'); do n=$(ls "$d"*.rs 2>/dev/null | grep -v '/mod\.rs$\|/types\.rs$\|/missing\.rs$' | xargs -r cat | wc -l); [ "$n" -gt 0 ] && echo "$(basename "$d") $n"; done; }
 sum() { awk '{ s += $2 } END { print s + 0 }' "$1"; }
 section() { awk -v h="$2" 'index($0, h) == 1 { on = 1; next } /^##/ { on = 0 } on && NF' "$1"; }
 step() { "$@" > "$S/step.out" 2>&1 || { tail -8 "$S/step.out" | cut -c1-300; echo "never.sh: failed: $*"; exit 3; }; }
@@ -50,7 +50,7 @@ count > "$S/after.txt"
 # A function the game never runs but another crate calls is live: a root this missed shows here as an error, and the run stops red.
 for c in rust/*/; do
   [ -f "$c/Cargo.toml" ] || continue
-  T=; [ "$(basename "$c")" = game_face ] && T="--target wasm32-unknown-unknown"
+  T=; case " $("$FOLD" layout page | tr '\n' ' ') " in *" $(basename "$c") "*) T="--target wasm32-unknown-unknown";; esac
   ( cd "$c" && cargo check --all-targets $T > "$S/close-$(basename "$c").log" 2>&1 ) || {
     grep -n '^error' -A 6 "$S/close-$(basename "$c").log" | head -30 | cut -c1-240
     echo "never.sh: $(basename "$c") does not check after the passes ($S/close-$(basename "$c").log): something it uses was deleted. THE TREE IS LEFT AS THE PASSES LEFT IT."; exit 3; }
@@ -63,7 +63,7 @@ N4=0; [ -d "$S/sharp2" ] && N4=$(cat "$S"/sharp2/round-*.md | grep -c '^- .* lin
 {
   echo "# What the Rust game never runs: deleted, and what stays"
   echo
-  echo "Body files of rust/game: $B lines before, $M after the pass by name, $A at the end ($((B - A)) fewer)."
+  echo "Body files of $("$FOLD" layout body-src | tr '\n' ' ' | sed 's/ $//; s/ /, /g'): $B lines before, $M after the pass by name, $A at the end ($((B - A)) fewer)."
   echo
   echo "- deleted, nothing named it: $N1 functions"
   echo "- deleted, only a function deleted here named it: $N2 functions"

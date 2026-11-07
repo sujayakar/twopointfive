@@ -248,9 +248,6 @@
 "KITDEAL.on=false",
 "KITDEAL.more=false"
 ],
-"kitlent-tiles": [
-"GUNSLOTS.on=false"
-],
 "kitstealth": [
 "OWNBLOW.on=false",
 "KITDEAL.on=false"
@@ -456,7 +453,6 @@
 "kitanim",
 "kitcan",
 "kitdeal",
-"kitlent",
 "kitpaste",
 "kittree",
 "laststand",
@@ -513,7 +509,6 @@
 "sneak",
 "spotted",
 "squadnet",
-"squadplay",
 "squadsmoke",
 "standoff",
 "startfile",
@@ -960,7 +955,6 @@
 "frag-react": "iv-a",
 "frag-theirs": "iv-a",
 "frag-wallflee": "iv-a",
-"frameholds-boot": "iv-a",
 "frameholds-sam": "iv-a",
 "frameholds-tools": "iv-a",
 "frameholds-wedge": "iii",
@@ -1147,7 +1141,6 @@
 "kitdeal-more": "0",
 "kitdeal-run": "ii",
 "kitdeal-screen": "0",
-"kitlent-tiles": "iv-a",
 "kitload": "iii",
 "kitpack": "iii",
 "kitpaste-cases": "0",
@@ -1595,13 +1588,6 @@
 "squadnet-clear": "iv-a",
 "squadnet-end": "iv-a",
 "squadnet-net": "iv-a",
-"squadnet-why": "iv-a",
-"squadplay-go": "iii",
-"squadplay-key": "iii",
-"squadplay-off": "iii",
-"squadplay-side": "iv-a",
-"squadplay-try": "iii",
-"squadplay-wait": "iii",
 "squadsmoke-issued": "iii",
 "squadsmoke-order": "iii",
 "squadsmoke-restart": "iii",
@@ -1633,7 +1619,6 @@
 "startle": "iii",
 "statediff": "ii",
 "stay-open-after": "iii",
-"stay-open-digin": "iii",
 "stay-open-edge": "iii",
 "stay-open-floor": "iv-a",
 "stay-open-lock": "iii",

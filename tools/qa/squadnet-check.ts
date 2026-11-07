@@ -1,11 +1,8 @@
-// THE SQUAD REACHES YOU, AND THE QUICK KEY SAYS WHY (src/game/squadnet.ts — SQUADNET.on · .why · .clear), headless:
-//   bun run tools/qa/squadnet-check.ts [why|clear|end|net]  (probes.ts squadnet; SQUADNET_BREAK=1 breaks the staging: the quick key is never pressed,
+// THE SQUAD REACHES YOU (src/game/squadnet.ts — SQUADNET.on · .clear), headless:
+//   bun run tools/qa/squadnet-check.ts [clear|end|net]  (probes.ts squadnet; SQUADNET_BREAK=1 breaks the staging: the quick key is never pressed,
 //   the rooms asked of are staged with a point of floor unseen, the teammate who speaks is never put off the screen: must fail)
-//   why    the room clear on the office with its squad of four, stacked on a door whose far room nobody has stood in: the quick key's row ends on the reason
-//          (a room nobody has been in · the last stun kept back · an enemy in sight inside), says nothing more of a plain open (a silent squad), and the man
-//          who answers the press says the reason in place of the row's own answer.
 //   clear  the lead's call at an entry's end: 'clear' only of a room whose search was not cut short and that nobody stands in; 'quiet' of floor unseen
-//          with nobody in sight; nothing with an enemy in sight. (The entry itself is in `why`: what the lead said is what its search found.)
+//          with nobody in sight; nothing with an enemy in sight. (`why`, the reason the squad gave for the entry it picked, went 2026-11-07: the squad picks none, the command is the door's first row.)
 //   end    an entry into a room the mission has no name for (the office's conference room) ends with the lead's call too: 'room clear.' with all of its
 //          floor seen and nobody in it. Open floor is called 'clear so far.'.
 //   net    a teammate's line said with his head off the screen clicks (a defender's does not, a teammate's on the screen does not); a teammate going down is
@@ -15,12 +12,9 @@
 import { standUp, ROOT } from './headless.ts';
 
 const SN: any = await import(`${ROOT}/src/game/squadnet.ts`);
-const AP: any = await import(`${ROOT}/src/game/autopilot.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
-const SIL: any = await import(`${ROOT}/src/game/silent.ts`);
-const { SQUADNET, whyWords, roomCall, plainCall, netPlace } = SN;
-const { AUTOPILOT, autoPick, autoEntries } = AP;
+const { SQUADNET, roomCall, plainCall, netPlace } = SN;
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -33,8 +27,8 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
 const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** the tables this file writes, put back after `fn` */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const was = { sn: { ...SQUADNET }, ap: { ...AUTOPILOT }, sil: SIL.SILENT.on, squad: NIGHTBREACH.squad, rnd: Math.random };
-  try { return await fn(); } finally { Object.assign(SQUADNET, was.sn); Object.assign(AUTOPILOT, was.ap); SIL.SILENT.on = was.sil; NIGHTBREACH.squad = was.squad; Math.random = was.rnd; }
+  const was = { sn: { ...SQUADNET }, squad: NIGHTBREACH.squad, rnd: Math.random };
+  try { return await fn(); } finally { Object.assign(SQUADNET, was.sn); NIGHTBREACH.squad = was.squad; Math.random = was.rnd; }
 }
 /** a line that calls an entry's end */
 const isCall = (x: string) => (/ clear\.$/.test(x) && !/ and clear\.$/.test(x)) || / quiet\. |^clear so far\.$/.test(x);   // (not an order's own answer: 'bang and clear.')
@@ -52,8 +46,6 @@ async function rig(seed: number) {
     get team(): any[] { return O.squad(); },
     step(n = 1) { for (let i = 0; i < n; i++) { game.player.visibility = 0.05; W.step(DT); for (const m of O.squad()) { const b = m.bubble, k = b ? `${m.callsign}|${b.t}|${b.text}` : ''; if (b && !bubSeen.has(k)) { bubSeen.add(k); bub.push(b.text); } } } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
-    /** the quick key's line on the HUD with the cursor on p */
-    hudQ(p: number[]): string { W.cursorAt([p[0], p[1], p[2]]); R.step(2); const key = String(ORDERS.quickKey).replace(/^Key/, ''); return (O.hud().status?.[0]?.opts ?? []).find((o: any) => o.key === key)?.text ?? ''; },
     stacked() { return R.team.filter((m: any) => m.state !== 'dead').every((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.arrived); },
   };
   R.step(30);
@@ -81,44 +73,6 @@ async function stackedOn(seed: number, named: boolean | 'not' = false, first?: (
     return { R, D: d, t, at, set: R.until(() => R.stacked(), 40) };
   }
   return { R, why: 'no door to stack on with an unknown room behind it' };
-}
-
-export async function squadnetWhy(): Promise<boolean> {
-  const F = family('squadnet-why: the quick key\'s row ends on the reason, and the man who answers says it'); if (BREAK) console.log('  (SQUADNET_BREAK: the staging is broken — the lines must fail)');
-  await kept(async () => {
-    const S: any = await stackedOn(5, true); if (S.why) { F.verdict(false, 'the squad stacks on a door with an unknown room behind it', S.why); return; }
-    const { R, D, at } = S, g = R.game, O = R.O, T = g.doorTools;
-    const tm = { ...S.t, side: O.of(R.team[0])?.post ? sideOf(D, O.of(R.team[0]).post) : S.t.side }, far = farRoom(g, tm), b0 = T.bangs;
-    const tail = (x: string) => x.split(' · ').pop() ?? '';
-    // 1. a room nobody has been in, stuns to spare / the last one kept / none carried
-    T.bangs = 3; const three = R.hudQ(at), p3 = autoPick(g, O.targetAt(at), false);
-    T.bangs = 1; const one = R.hudQ(at), p1 = autoPick(g, O.targetAt(at), false);
-    T.bangs = 0; const none = R.hudQ(at);
-    F.verdict(S.set && /bang and clear/.test(three) && tail(three) === "nobody's been in there" && whyWords(p3)?.row === "nobody's been in there" && /and clear/.test(one) && !/bang and/.test(one) && tail(one) === "they're saving the last bang" && p1.kept === true && !/nobody|saving/.test(none),
-      'a room nobody has been in: the row says so; with one stun left it says the last is kept; with none it says nothing more', `stacked ${S.set} · 3 stuns: "${three}" · 1 stun: "${one}" · none: "${none}"`);
-    // 2. an enemy the team has in sight inside (a staged sight, as autopilot-check stages it)
-    { const foe = g.guards.find((o: any) => o.state !== 'dead' && o.team !== 'operative' && o.team !== 'civilian' && o.team !== 'player'); let seen = '', inRoom = false, why = '';
-      if (foe) { const Fg = g.fogOfWar, seen0 = Fg.seen, was = [...foe.char.pos], on0 = Fg.on, c = D.frameCentre, th = D.def.closedDir, k = -tm.side * 1.5;
-        foe.char.pos[0] = c[0] - Math.sin(th) * k; foe.char.pos[2] = c[2] + Math.cos(th) * k; inRoom = g.cleared.roomAt(foe.char.pos) === far; Fg.on = true; Fg.seen = (o: any) => o === foe || seen0.call(Fg, o);
-        T.bangs = 1; seen = R.hudQ(at); why = autoEntries(g, tm).why;
-        Fg.seen = seen0; Fg.on = on0; foe.char.pos[0] = was[0]; foe.char.pos[1] = was[1]; foe.char.pos[2] = was[2]; }
-      F.verdict(!!foe && inRoom && why === 'contact' && /bang and clear/.test(seen) && tail(seen) === 'they see one inside', 'an enemy in sight inside: the last stun goes, and the row says they see one', `staged ${!!foe}${inRoom ? '' : ' (NOT in the room)'} · why ${why} · "${seen}"`); }
-    // 3. a plain open says nothing more: a silent squad
-    { T.bangs = 3; SIL.SILENT.on = true; SIL.setSilent(g, true); R.step(2); const silent = SIL.squadSilent(g), quiet = R.hudQ(at), w = whyWords(autoPick(g, O.targetAt(at), false))?.row ?? null; SIL.setSilent(g, false); R.step(2);
-      F.verdict(silent && !/nobody|saving|they see/.test(quiet) && w === null, 'a plain open says nothing more (a silent squad opens it quietly)', `silent ${silent} · "${quiet}" · reason ${w}`); }
-    // 4. the press: the man who answers says the reason
-    { T.bangs = b0 > 1 ? b0 : 3; const RC = g.roomClear; let emptied = 0; for (const x of g.guards) if (x.state !== 'dead' && x.team === 'hostile' && g.cleared.roomAt(x.char.pos) === far) { x.state = 'dead'; emptied++; }   // (the room beyond is emptied, so that the call at the entry's end is the search's alone)
-      const want = autoPick(g, O.targetAt(at)), n0 = R.said.length, w0 = g.squadNet.stats.whys; aimOf(R, D); if (!BREAK) R.W.input.pressed.add(ORDERS.quickKey); R.step(); R.step(2);
-      const row = O.log[O.log.length - 1], ans = R.said.slice(n0).find((x: string) => /banging it/.test(x)) ?? R.team.map((m: any) => m.bubble?.text).find((x: any) => /banging it/.test(x ?? '')) ?? '';
-      F.verdict(want.id === 'bangClear' && row?.order === 'bangClear' && /banging it\. nobody's been in there\./.test(ans) && g.squadNet.stats.whys === w0 + 1, 'the press: they go in with a stun and the man who answers says why', `pick ${want.id} (${want.why}) · order ${row?.order} · answer "${ans}" · reasons given ${g.squadNet.stats.whys - w0}`);
-      // 5. the entry's end: what the lead calls is what the search found
-      const n1 = R.bub.length; R.until(() => T.ops.length === 0, 60); R.step(30);
-      const op = T.done[T.done.length - 1], left = op?.search ? op.search.left : NaN, calls = R.bub.slice(n1).filter(isCall);
-      const ok = calls.every((x: string) => / clear\.$/.test(x) ? left === 0 : left > 0), room = RC.rooms.find((r: any) => r.def.id === RC.roomAt(R.team.find((m: any) => m.state !== 'dead').char.pos));
-      F.verdict(!!op && calls.length === 1 && ok && g.squadNet.stats.clears + g.squadNet.stats.quiets === 1, 'the entry\'s end: \'clear\' only with all of the floor seen, \'quiet\' with floor unseen', `${emptied} defenders taken out of the room beyond first · they stand in ${room?.def.name ?? 'no named room'} · floor unseen ${left} of ${op?.search?.pts.length ?? '—'} · called ${JSON.stringify(calls)} · clear ${g.squadNet.stats.clears} · quiet ${g.squadNet.stats.quiets}`); }
-    T.bangs = b0;
-  });
-  return F.done();
 }
 
 export async function squadnetClear(): Promise<boolean> {
@@ -243,7 +197,7 @@ export async function squadnetNet(): Promise<boolean> {
 }
 
 if (import.meta.main) {
-  const which = process.argv[2] ?? 'all', runs: [string, () => Promise<boolean>][] = [['why', squadnetWhy], ['clear', squadnetClear], ['end', squadnetEnd], ['net', squadnetNet]];
+  const which = process.argv[2] ?? 'all', runs: [string, () => Promise<boolean>][] = [['clear', squadnetClear], ['end', squadnetEnd], ['net', squadnetNet]];
   let ok = true; for (const [n, fn] of runs) if (which === 'all' || which === n) ok = (await fn()) && ok;
   process.exit(ok ? 0 : 1);
 }

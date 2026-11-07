@@ -1,0 +1,11 @@
+# WHAT A SECOND START IN ONE PROCESS MAY DIFFER IN FROM THE FIRST (tools/blitz/start-levels.ts --again): a pattern, a tab, the reason. Each is the
+# PROCESS's on purpose, about the Rust module or a pure function, and no game's: nothing here is a rule's to read. What a game leaves behind is put
+# back by a start (tools/qa/fresh.ts), not forgiven here.
+^g\.col\.mirror\.[a-z_0-9]+$	memory: where the box mirror's tables stand in the module's memory (the tables themselves are in the block, compared byte for byte)
+^g\.m\.scene_box_mirror\.	the host's copies of the level's boxes in the module: which game's copy stands in which table, and how often a copy, a leaf or the furniture was written in this process (src/scene/boxMirror.ts: counts by which a copy knows it is old)
+^g\.m\.anim_skeleton\.clip_side\{[^}]*\}\.at$	where a clip stands in the module once a game has posed it: the process's, filled as clips are first used
+^g\.m\.character\.at0	a memo: a clip's pose at its first frame, a pure function of the clip, filled as clips are first used (src/game/character.ts AT0)
+^g\.m\.netquietfeed\.netfeed\.live$	two switches' AND, written at the top of every tick: before a game's first tick it reads as the process's last tick left it, and the first tick writes it
+^g\.m\.scene_collision\.(anytime|both|priced)\.	a tool's switch held with its counts of the questions the module answered (src/scene/collision.ts): a setting, left alone by a start
+^g\.m\.kit\.row_cache	a memo: the kit screen's rows, keyed by the switches that shape them (src/game/kit.ts rowCache), filled as a mission's kit is first asked for
+^g\.m\.kit\.team$	a setting: the team size the Team & kit screen is set to, as the last mission's loadout left it (a mission that brings no team does not write it)
