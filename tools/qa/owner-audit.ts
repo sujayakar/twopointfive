@@ -1,8 +1,8 @@
 // THE OWNER CHECK'S HANDS IN A RUN (tools/qa/owner-check.ts runs a mission with this as a Bun preload; no file of the repo changes): at every read of the record and at the end of every
-// tick, every man's word against what each rule's own state says (`ownerWitness`, one line in the rule's file). At the process's exit what it found is added to OWNER_OUT, a line a process.
+// tick, every man's word against what each rule's own state says (`ownerWitness`, one line in the rule's file). At the process's exit what it found goes to OWNER_OUT.
 // OWNER_DROP=<mask>: claims of those rules are dropped (the check's red path).
 import { plugin } from 'bun';
-import { appendFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { OWNER_QA, ownerDisagrees, ownerWitnessed, OWN } from '../../src/game/owner.ts';
 
 const out: { ticks: number; reads: Record<string, [number, number]>; held: Record<string, number>; bad: number; first: string[] } = { ticks: 0, reads: {}, held: {}, bad: 0, first: [] };
@@ -26,8 +26,7 @@ G.__ownerEnd = g => {
     for (const name of ownerWitnessed()) if (gd.owner & (OWN as Record<string, number>)[name]) out.held[name] = (out.held[name] ?? 0) + 1;
   }
 };
-// (a line a process that stepped a game: a family of probes is a process a probe, and each adds its own — tools/qa/owner-check.ts `auditOf` sums them)
-process.on('exit', () => { if (process.env.OWNER_OUT && G.__ownerGame) appendFileSync(process.env.OWNER_OUT, JSON.stringify(out) + '\n'); });   // (a process that stepped no game says nothing: a family's runner, whose probes are its children)
+process.on('exit', () => { if (process.env.OWNER_OUT) writeFileSync(process.env.OWNER_OUT, JSON.stringify(out)); });
 plugin({ name: 'owner-audit', setup(b) { b.onLoad({ filter: /src\/game\/game\.ts$/ }, async (a: { path: string }) => {
   let t = await Bun.file(a.path).text();
   if (!t.includes('this.ticking = true;') || !t.includes('\n    this.ticking = false;')) throw new Error('owner-audit: game.ts no longer has the lines it hangs on (this.ticking = true / false)');

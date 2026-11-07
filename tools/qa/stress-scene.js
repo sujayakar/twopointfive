@@ -98,12 +98,12 @@
       const st1 = S.state();
       return { frames: got, missed, preset: st1.preset, res: st1.res, sum: stat(sums), passes, ctx: { lights: stat(ctx.lights), smoke: stat(ctx.smoke), pslots: stat(ctx.pslots) }, start: st0, end: st1 };
     },
-    /** the Phase 0 caps off (= the renderer before them: volLightCap 0 is the old volumetric pass bit for bit, 6144 births = the old ceiling; the third cap, smoke domains stepped
+    /** the Phase 0 caps at their widest (six lights a march step, the most the one march traces: the pass with no cap went 2026-11-07; 6144 births = the old ceiling; the third cap, smoke domains stepped
      *  every frame, went with the box solver) or as the pinned preset sets them (re-applies the whole preset) */
     caps(on) {
       const St = E().settings;
       if (on) { window.__quality.apply(window.__quality.current); return `caps on: K ${St.volLightCap} every ${St.volShadowEvery} step ${St.volStepVoxels} · births ${St.particleBirths}`; }
-      St.volLightCap = 0; St.particleBirths = 6144; return 'caps off';
+      St.volLightCap = 6; St.particleBirths = 6144; return 'caps at their widest';
     },
     /** Interleaved A/B over the SAME evolving scene: `blocks` × (`per` frames under A, `per` frames under B), the orbit running throughout; applyA / applyB flip
      *  the settings. → { A: stats, B: stats } shaped like record()'s result (so table() prints either). The scene thins and moves over a minute, so one long take

@@ -16,7 +16,7 @@
 //             not in a dump, so the window phase and the roomy count are tried over their few values and the best fit is named. Exit 1 if no start state reproduces the take.
 //   --selftest  synthetic closed-loop machines: what each aim must do (PASS / FAIL lines, exit 1 on a FAIL).
 import { readFileSync } from 'node:fs';
-import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, SHED, sharpForce, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, ladderAimOf, visitAdaptive, displayRateOf, presetCost, plan, withSmoke, costTable, type QualityName, type Preset } from '../../src/ui/quality.ts';
+import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, SHED, sharpForce, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, ladderAimOf, visitAdaptive, displayRateOf, presetCost, plan, costTable, type QualityName, type Preset } from '../../src/ui/quality.ts';
 import type { PerfDump, PerfFrame } from '../../src/ui/perfrec.ts';
 
 const G = globalThis as unknown as Record<string, any>;
@@ -39,7 +39,7 @@ interface State { preset: QualityName; scale: number; gatherThird: boolean; volQ
 interface Win { cssW: number; cssH: number; dpr: number }
 const rowsOf = (s: State, w: Win) => Math.min(s.maxH, w.cssH * w.dpr) * s.scale;
 function modelCost(s: State, w: Win, base: Record<string, any>): number {
-  const pc = withSmoke(PRESETS[s.preset], typeof base.smokeKeep === 'number' ? base.smokeKeep : 0);   // (a take from before SMOKE KEEP carries no such setting: its presets ran their own smoke rows)
+  const pc = PRESETS[s.preset];   // (a take is priced on the rows the presets have NOW: one from before 2026-11-07 ran the froxel path under high, and its ladder is replayed on today's prices)
   const live: Preset = { ...pc, lossy: { ...pc.lossy, gatherThird: s.gatherThird, volQuarter: s.volQuarter }, maxH: s.maxH, scale: s.scale, iq: { ...pc.iq, sharp: s.sharp && base.taau !== false } };
   const c = presetCost(live, base.oneCacheGrid === true); const rows = rowsOf(s, w); const mpx = rows * rows * (w.cssW / w.cssH) / 1e6;   // (a take from before ONE CACHE GRID carries no such setting: its low and verylow ran the coarse grid and are priced on it, as replay() has the ladder price them)
   return (s.preset === 'high' ? 1 : MODEL.under) * (c.fixed + (MODEL.sharpK - 1) * c.passes.sharp + MODEL.extraFixed + c.pixel * mpx / REF.mpx);
@@ -58,7 +58,7 @@ function mkQuality(w: Win, preset: QualityName, auto: boolean, settings: Record<
   store.clear();
   const E = mkEngine(w, {}); const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never);
   q.auto = auto; q.apply(preset); q.adaptive = true; q.climbAllowed = true; q.calib = { ...q.calib, done: true };
-  for (const k of ['renderScale', 'gatherThird', 'volQuarter', 'ladderClimb', 'capClimb', 'ladderPaced', 'ladderHeld', 'oneCacheGrid', 'smokeKeep', 'taau', 'sharpDirect', 'rcHalfRate', 'maxInternalHeight']) if (k in settings) E.settings[k] = settings[k];
+  for (const k of ['renderScale', 'gatherThird', 'volQuarter', 'ladderClimb', 'capClimb', 'ladderPaced', 'ladderHeld', 'oneCacheGrid', 'taau', 'sharpDirect', 'rcHalfRate', 'maxInternalHeight']) if (k in settings) E.settings[k] = settings[k];
   E.settings.ladderShed = settings.ladderShed === true;   // (SHARP SHED only where a machine or a take says so: every case and every take from before the switch runs the ladder as it was)
   if (shed0 && auto && E.settings.ladderShed && !E.settings.sharpDirect) q.shed = true;   // (a take begun with the shed standing, PerfDump.shedAtStart: the ladder knows sharp direct is its own to bring back)
   E.settings.ladderAim = aim; q.displayHzPin = hz; q.cooldown = 0; q.lastChange = '';
@@ -96,7 +96,6 @@ function replay(d: PerfDump, aim: number, opts: { hz?: number; warm?: Warm } = {
   const { E, q } = mkQuality(w, p0, auto, S0, aim, hz, d.shedAtStart === true); q.adaptive = first.adaptive !== false;   // (the take's own row 'Hold frame rate': a take recorded with it off, `?adapt=0`, is replayed with it off)
   if (pacedForce !== undefined) E.settings.ladderPaced = pacedForce; if (heldForce !== undefined) E.settings.ladderHeld = heldForce; else if (!('ladderHeld' in S0)) E.settings.ladderHeld = false;
   if (shedForce !== undefined) E.settings.ladderShed = shedForce;
-  if (!('smokeKeep' in S0)) E.settings.smokeKeep = 0;   // (… and before SMOKE KEEP: every preset on its own smoke rows)
   if (!('oneCacheGrid' in S0)) E.settings.oneCacheGrid = false;   // (a take from before ONE CACHE GRID: its low and verylow ran the coarse grid — the replayed ladder prices them so, as modelCost does)
   if (opts.warm) { q.sinceClimb = 99; q.acc = opts.warm.acc; q.frames = Math.max(1, Math.round(opts.warm.acc / (first.dt / 1000))); q.roomy = opts.warm.roomy; q.unionAcc = (first.gpuUnion ?? 0) * q.frames; q.unionN = first.gpuUnion ? q.frames : 0; }
   // the recorded ladder's state per frame: the scale off the resolution, the divisors off the 'settings' events, the preset off the label
@@ -115,7 +114,7 @@ function replay(d: PerfDump, aim: number, opts: { hz?: number; warm?: Warm } = {
   const wins: { t: number; n: number; r: number; u: number; rows: number; rT: number; rN: number }[] = [];   // 1-s windows of the scene's timeline: frames shown, time, mean union; the recording's own beside
   for (const f of d.frames) {
     while (se < setEv.length && setEv[se].t <= f.t) applySettings(setEv[se++].text);
-    { const labelNow = presetOfLabel(f.preset).preset; if (labelNow !== rec.preset) { rec.preset = labelNow; rec.maxH = PRESETS[labelNow].maxH; rec.gatherThird = PRESETS[labelNow].lossy.gatherThird; rec.volQuarter = withSmoke(PRESETS[labelNow], typeof S0.smokeKeep === 'number' ? S0.smokeKeep : 0).lossy.volQuarter; } }   // (a recorded preset hop: its rows — the 'settings' event of a hop lists only its first eight keys)
+    { const labelNow = presetOfLabel(f.preset).preset; if (labelNow !== rec.preset) { rec.preset = labelNow; rec.maxH = PRESETS[labelNow].maxH; rec.gatherThird = PRESETS[labelNow].lossy.gatherThird; rec.volQuarter = PRESETS[labelNow].lossy.volQuarter; } }   // (a recorded preset hop: its rows — the 'settings' event of a hop lists only its first eight keys)
     if (f.res?.[1] > 0) rec.scale = +(f.res[1] / Math.min(rec.maxH, w.cssH * w.dpr)).toFixed(2);
     if (!(f.dt < 500)) continue;   // (main.ts feeds no frame of half a second or more)
     const key = gpuKey(f); const stale = key === prevKey; prevKey = key;
@@ -204,7 +203,7 @@ function report(name: string, d: PerfDump, rs: Result[], md: boolean, timeline: 
 // ---- --selftest: synthetic machines ------------------------------------------------------------------------------------------------------------------------------------------------------------
 function selftest(): boolean {
   let fails = 0; const check = (ok: boolean, what: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (!ok) fails++; };
-  const w: Win = { cssW: 1456, cssH: 873, dpr: 2 }; const S0 = { sharpDirect: true, taau: true, oneCacheGrid: true, smokeKeep: 1 };   // (the synthetic machines run the page as it opens: one cache grid, as the ladder's own cost table prices it)
+  const w: Win = { cssW: 1456, cssH: 873, dpr: 2 }; const S0 = { sharpDirect: true, taau: true, oneCacheGrid: true };   // (the synthetic machines run the page as it opens: one cache grid, as the ladder's own cost table prices it)
   /** `secs` on a machine whose union is `k`(t) × the model's cost of what the ladder is rendering, shown on a `hz` display (`vrr`: a frame takes what it takes above the display's interval;
    *  else whole display intervals), with `paceMs` = something else holding every frame to at least that; returns the 1-s fps windows and the moves */
   const run = (q: any, E: any, secs: number, hz: number, k: (t: number) => number, o: { vrr?: boolean; paceMs?: number | ((t: number) => number); timed?: boolean; t0?: number; hitch?: () => number } = {}) => {
@@ -490,39 +489,27 @@ function selftest(): boolean {
     check(offHand.every(v => v === true) && offUp.every(v => v === true), `the switch off = every preset keeps the fire's smoke, as it was, by hand and under auto: ${row(climb, offUp)}`);
     check(hand.every((n, i) => bare[i] === (n !== 'verylow')), 'a settings object with no such key (a tool\'s mock) sheds as the page does');
   }
-  console.log('\nThe smoke keeps high\'s look down the ladder (settings.smokeKeep: under high the march stays at half size with high\'s lights; the rung sheds everything else):');
+  console.log('\nFog and smoke are one march on every tier, and a rung differs by its numbers alone (ui/quality.ts ONE MARCH ON EVERY TIER: medium and low run high\'s march with two lights a step):');
   {
-    const BREAK = process.env.SMOKEKEEP_BREAK === '1';   // SMOKEKEEP_BREAK=1: the 'on' walks run with the switch at 0 and the first two lines must FAIL
-    const SMOKE = ['volQuarter', 'volLightCap', 'volShadowEvery', 'volStepVoxels', 'smokeMarchLights', 'volSteps', 'froxelVol'];
-    const put = (name: QualityName, keep: number) => { store.clear(); const E = mkEngine(w, { smokeKeep: keep, oneSmokeSolve: false }); const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never); q.auto = false; q.apply(name); return { S: { ...E.settings } as Record<string, any>, rb: q.smoke.params.rbIters as number, q, E }; };
-    const diff = (a: Record<string, any>, b: Record<string, any>) => Object.keys({ ...a, ...b }).filter(k => k !== 'smokeKeep' && JSON.stringify(a[k]) !== JSON.stringify(b[k])).sort();
-    const H = put('high', 0).S, under: QualityName[] = ['medium', 'low'];
-    const on = (n: QualityName) => put(n, BREAK ? 0 : 1).S;
-    check(under.every(n => { const S = on(n); return S.volQuarter === false && S.volLightCap === H.volLightCap && S.volStepVoxels === H.volStepVoxels && S.volShadowEvery === H.volShadowEvery && S.smokeMarchLights === H.smokeMarchLights; }),
-      `medium and low march the smoke as high does: ${under.map(n => { const S = on(n); return `${n} ${S.volQuarter ? 'quarter' : 'half'} size, ${S.volLightCap} / ${S.smokeMarchLights} lights a step, step ${S.volStepVoxels}`; }).join(' · ')} (high: ${H.volLightCap} / ${H.smokeMarchLights}, step ${H.volStepVoxels})`);
-    const moved = under.map(n => diff(on(n), put(n, 0).S));
-    check(moved.every(d => d.length > 0 && d.every(k => SMOKE.includes(k))) && under.every(n => on(n).froxelVol === true && on(n).volSteps === put(n, 0).S.volSteps && put(n, BREAK ? 0 : 1).rb === put(n, 0).rb),
-      `… and nothing else of the rung moves (the froxel haze, the beam steps, the solver's iterations, every ray count and size): ${under.map((n, i) => `${n} ${moved[i].join(' ')}`).join(' · ')}`);
-    check(diff(put('verylow', 0).S, put('verylow', 1).S).length === 0 && diff(put('verylow', 0).S, put('verylow', 2).S).length === 0, 'verylow, the floor, keeps its own smoke at 0, 1 and 2: the last thing the ladder sheds');
-    const off = { medium: put('medium', 0).S, low: put('low', 0).S, verylow: put('verylow', 0).S };
-    check(off.medium.volQuarter === true && off.medium.volLightCap === 3 && off.medium.smokeMarchLights === 2 && off.medium.volStepVoxels === 1.5 && off.low.volQuarter === true && off.low.volLightCap === 2 && off.low.smokeMarchLights === 0 && off.low.volStepVoxels === 2 && off.verylow.volQuarter === true && off.verylow.smokeMarchLights === 0 && off.verylow.volStepVoxels === 2,
-      `0 = the rows as they were: medium quarter size, ${off.medium.volLightCap} / ${off.medium.smokeMarchLights} lights, step ${off.medium.volStepVoxels}; low and verylow quarter size, ${off.low.volLightCap} / ${off.low.smokeMarchLights} lights, step ${off.low.volStepVoxels}`);
-    check((['high'] as QualityName[]).every(n => diff(put(n, 0).S, put(n, 1).S).length === 0 && diff(put(n, 0).S, put(n, 2).S).length === 0), 'high is the same rows at 0, 1 and 2');
-    const two = under.map(n => put(n, 2).S);
-    check(two.every(S => S.froxelVol === false && S.volSteps === H.volSteps && S.volQuarter === false), `2 = high's whole path under high: the per-pixel march, ${H.volSteps} beam steps (medium ${two[0].volSteps}, low ${two[1].volSteps})`);
-    const px = (keep: number) => costTable(true, keep).medium.pixel, hop = (keep: number) => { const x = put('medium', keep); x.q.auto = true; return x.q.hopRatio('high') as number; };
-    check(px(0) < px(1) && px(1) < px(2) && hop(0) > hop(1) && Math.abs(costTable(true, 0).high.pixel - costTable(true, 2).high.pixel) < 1e-9,
-      `the ladder prices the smoke that runs: medium's per-pixel part ${px(0).toFixed(1)} · ${px(1).toFixed(1)} · ${px(2).toFixed(1)} model-ms at 0 · 1 · 2, medium → high priced ×${hop(0).toFixed(2)} · ×${hop(1).toFixed(2)} (at 2 ×${hop(2).toFixed(2)}: the model, a calm still, drops the froxel term and does not know a fight); high's own price unmoved`);
-    { const x = put('medium', 0); x.q.climbed = [{ kind: 'vol' }]; x.E.settings.volQuarter = false; x.E.settings.smokeKeep = 1; x.q.resmoke(); const d = diff(x.E.settings, put('medium', 1).S);
-      check(d.length === 0 && x.q.climbed.length === 0, `the Tab row's by-hand step (resmoke) lands on the rows a preset put on at 1 would have, and forgets a climbed quarter-to-half rung${d.length ? `: ${d.join(' ')}` : ''}`); }
-    { const x = put('medium', 1); x.q.lastCut = { from: 0.7 }; x.q.upTrial = { from: 0.55 }; x.q.apply('low'); check(x.q.lastCut === null && x.q.upTrial === null, 'a preset put on still clears the judged cut and the judged step up'); }
+    const BREAK = process.env.FOGROWS_BREAK === '1';   // FOGROWS_BREAK=1: the walk puts verylow on where medium is asked and high where low is, and the first two lines must FAIL
+    const put = (name: QualityName) => { store.clear(); const E = mkEngine(w, { oneSmokeSolve: false }); const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never); q.auto = false; q.apply(BREAK && name === 'medium' ? 'verylow' : BREAK && name === 'low' ? 'high' : name); return { S: { ...E.settings } as Record<string, any>, q, E }; };
+    const H = put('high').S, under: QualityName[] = ['medium', 'low'], V = put('verylow').S;
+    const row = (S: Record<string, any>) => `${S.volQuarter ? 'quarter' : 'half'} size, ${S.volSteps} beam steps, ${S.volLightCap} lights a step, refresh ${S.volShadowEvery}, step ${S.volStepVoxels}`;
+    check(under.every(n => { const S = put(n).S; return S.volQuarter === false && S.volSteps === H.volSteps && S.volStepVoxels === H.volStepVoxels && S.volShadowEvery === H.volShadowEvery; }) && H.volQuarter === false && H.volLightCap === 4,
+      `medium and low march as high does, the pass at half size with its steps, shadow refresh and step length: ${under.map(n => `${n} ${row(put(n).S)}`).join(' · ')} (high: ${row(H)})`);
+    check(under.every(n => put(n).S.volLightCap === 2), `… with two lights a step where high has four: ${under.map(n => `${n} ${put(n).S.volLightCap}`).join(' · ')}`);
+    check(V.volQuarter === true && V.volSteps === 8 && V.volLightCap === 2 && V.volStepVoxels === 2, `verylow, the floor, keeps its own small rows: ${row(V)}`);
+    { const T = costTable(true); check(Math.abs(T.medium.passes.volumetrics - T.high.passes.volumetrics) < 1e-9 && Math.abs(T.low.passes.volumetrics - T.high.passes.volumetrics) < 1e-9 && T.verylow.passes.volumetrics < T.low.passes.volumetrics && !('volFroxel' in T.high.passes),
+      `the ladder prices the one march a pixel alike on high, medium and low (${T.high.passes.volumetrics.toFixed(2)} model-ms), less on verylow (${T.verylow.passes.volumetrics.toFixed(2)}), and no froxel term is left in any rung's fixed part`); }
+    check([H, V, ...under.map(n => put(n).S)].every(S => S.volLightCap >= 1), 'every rung has a light cap: the march has no path without one');
+    { const x = put('medium'); x.q.lastCut = { from: 0.7 }; x.q.upTrial = { from: 0.55 }; x.q.apply('low'); check(x.q.lastCut === null && x.q.upTrial === null, 'a preset put on still clears the judged cut and the judged step up'); }
   }
   console.log('\nAuto lets sharp direct go before it shrinks the picture (settings.ladderShed; the maintainer\'s pick of 10-25. His Mac\'s sweep priced sharp direct at 4.9 of 15.5 ms at High ×0.5, and the machine below is priced so):');
   {
     const ON = process.env.LADDERSHED_BREAK !== '1';   // LADDERSHED_BREAK=1: the 'on' machines run with the switch off and twenty lines must FAIL
     const hi = (scale: number, sharp = true): State => ({ preset: 'high', scale, gatherThird: true, volQuarter: false, maxH: PRESETS.high.maxH, sharp });
     const withK = <T,>(k: number, f: () => T): T => { const k0 = MODEL.sharpK; MODEL.sharpK = k; try { return f(); } finally { MODEL.sharpK = k0; } };
-    const c5 = presetCost({ ...withSmoke(PRESETS.high, 1), scale: 0.5 }, true), mpx5 = (1000 * 0.5) ** 2 * (w.cssW / w.cssH) / 1e6, share = 4.9 / 15.45;
+    const c5 = presetCost({ ...PRESETS.high, scale: 0.5 }, true), mpx5 = (1000 * 0.5) ** 2 * (w.cssW / w.cssH) / 1e6, share = 4.9 / 15.45;
     const macK = share * (c5.fixed - c5.passes.sharp + MODEL.extraFixed + c5.pixel * mpx5 / REF.mpx) / (c5.passes.sharp * (1 - share));   // the sharpK that makes sharp direct that share of High ×0.5 on this window
     const mkS = (on: boolean, o: { auto?: boolean; aim?: number; adaptive?: boolean; hz?: number } = {}) => { const x = mkQuality(w, 'high', o.auto ?? true, { ladderClimb: true, ladderShed: on }, o.aim ?? 60, o.hz ?? 120); if (o.adaptive === false) x.q.adaptive = false; return x; };
     /** `secs` a second at a time: the moves, the fps windows, and the ladder's state at the end of every second */

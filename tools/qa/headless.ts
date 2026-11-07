@@ -14,8 +14,6 @@
 // Usage:  const W = await standUp();  W.step(1/60);  // = game.update + camera + lights + box upload + input.endFrame, as main.ts's step() does
 import { resolve } from 'node:path';
 import './stand.ts';   // (the stand's word, written before anything below reads it)
-import { clockDice, harnessDie } from './die.ts';
-import { listen } from './heard.ts';
 
 export const ROOT = resolve(import.meta.dir, '../..');
 // ONE-WAY DOORS (src/game/doors.ts DOORWAY — the shipped default is ON): ON THE OLD FROZEN STAND (TPS_PROFILE=frozen; a run with no word is the page's, below) the
@@ -180,8 +178,7 @@ export interface Headless {
   cursorAt(p: [number, number, number]): boolean;
 }
 
-/** A fresh level + engine stand-in + Game. A caller that wants a stream of its own seeds Math.random first (Guard / Character constructors draw from it); one that
- *  seeds nothing and names no seed gets the harness's die put there (tools/qa/die.ts): no game stood here rolls the clock's dice.
+/** A fresh level + engine stand-in + Game. Math.random should already be seeded by the caller if determinism matters (Guard / Character constructors draw from it).
  *  `env` (a session journal's EnvSnap — tools/qa/replay.ts): stand the engine up as the RECORDING's was where the simulation can tell — its settings (debris cap,
  *  emissive scale, torch radius, marking lights) before the Game is built, a fake GPU particle system attached if it had one (the effect sites then take the branch
  *  they took), the canister row on the null smoke. Absent = the harness exactly as it always stood.
@@ -226,7 +223,6 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
   // the ONE stand-up (src/host/standup.ts): the level's boxes + lights into the stand-in, then `new Game`, then the harness trio — chaos 0 (the game byte for byte as it was before the
   // destruction lane, which is what every frozen digest and exact-count probe was written against), the autosave slots in a Map (no localStorage in bun), the level script strict
   const seed = opts.seed !== undefined ? opts.seed : process.env.TPS_SEED !== undefined && process.env.TPS_SEED !== '' ? envSeed(process.env.TPS_SEED) : null;
-  if (seed === null && clockDice()) Math.random = harnessDie() ?? Math.random;   // (no game rolls the clock's dice: tools/qa/die.ts)
   // (a start writes all of a game's state: what the TypeScript keeps at a module's top is put back before the game is made — tools/qa/fresh.ts)
   (await import('./fresh.ts')).freshStart();
   const { game, level, cam } = await standMod.standGame(engine, { ch, smoke, harness: true, seed, seats: opts.seats, ...(opts.search !== undefined ? { search: opts.search } : {}), ...(opts.level ? { level: opts.level } : {}) });
@@ -237,25 +233,6 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
     play(n: string, pos: Vec3 | null, gain = 1, opts?: Record<string, unknown>) { audioCounts.set(n, (audioCounts.get(n) ?? 0) + 1); audioLog?.push({ name: n, pos: pos ? [pos[0], pos[1], pos[2]] : null, gain, opts, t: game.time }); },
     footstep(pos: Vec3, loudness: number, isPlayer: boolean, mat?: string) { audioCounts.set('footstep', (audioCounts.get('footstep') ?? 0) + 1); audioLog?.push({ name: 'footstep', pos: [pos[0], pos[1], pos[2]], gain: loudness, opts: { isPlayer, mat }, t: game.time }); },
   };
-  // WHAT IS SAID REACHES A TOOL THAT WRAPPED THE SAYING. A check learns what the player was told, or what a man said, by putting its own function in the place
-  // of `game.msg` / `game.say` and calling the one it found there. The Rust tick calls neither: a line is said inside the Rust game and arrives here as state
-  // (the log's rows, a man's bubble: tools/qa/heard.ts), so every such check read an empty list, whatever the game had said (seventy-three files). The
-  // stand-up therefore reads that state after every step and, where a tool has put a function of its own there, calls it with each new line, exactly once.
-  // What the tool's function then calls back (the one it found) does nothing for the length of that call: the line is already in the game. At any other
-  // time it is the game's own method, as ever. What this cannot give: more than five rows of the log in one tick, or two lines of one man in one tick.
-  const saying = { now: false }, G = Object.getPrototypeOf(game) as { msg: (t: string) => unknown; say: (...a: unknown[]) => unknown };
-  // (a line the tool itself says through the game's method went through its own function already: it is counted here and not told to it again)
-  const mine = new Map<string, number>(), owed = (k: string, d: number): number => { const n = (mine.get(k) ?? 0) + d; if (n > 0) mine.set(k, n); else mine.delete(k); return n; };
-  const msgOwn = function (this: unknown, t: string) { if (saying.now) return undefined; owed(`m|${t}`, 1); return G.msg.call(game, t); };
-  const sayOwn = function (this: unknown, ...a: unknown[]) { if (saying.now) return undefined; owed(`s|${String(a[1])}`, 1); return G.say.apply(game, a); };
-  game.msg = msgOwn; game.say = sayOwn;
-  const heard = listen(game); let nSaid = 0, nSpoke = 0;
-  const tell = (): void => { heard.poll();
-    if (game.msg === msgOwn && game.say === sayOwn) { nSaid = heard.said.length; nSpoke = heard.spoke.length; mine.clear(); return; }   // (nobody listens)
-    saying.now = true;
-    try { if (game.msg !== msgOwn) for (; nSaid < heard.said.length; nSaid++) { const t = heard.said[nSaid]; if (mine.has(`m|${t}`)) owed(`m|${t}`, -1); else game.msg(t); }
-      if (game.say !== sayOwn) for (; nSpoke < heard.spoke.length; nSpoke++) { const s = heard.spoke[nSpoke]; if (mine.has(`s|${s.text}`)) owed(`s|${s.text}`, -1); else game.say(s.man, s.text, s.radio); } }
-    finally { saying.now = false; nSaid = heard.said.length; nSpoke = heard.spoke.length; } };
   const input: any = Input.detached(); input.mouseX = 800; input.mouseY = 500;   // (the real class minus its DOM listeners; the cursor where the harness always put it — the aim ray reads it)
   const canvas = { clientWidth: 1600, clientHeight: 1000, width: 1600, height: 1000 };
   cam.aspect = canvas.width / canvas.height; cam.rebuild();
@@ -266,7 +243,6 @@ export async function standUp(opts: { /** the dressing rows up, as the page has 
     get audioLog() { return audioLog; }, set audioLog(v: AudioCall[] | null) { audioLog = v; },
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
-      tell();   // (what the step said, to a tool that listens: above)
       if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view, look = (game as any).rustHost?.look?.();   // (a game that steps somewhere else, in a quiet run of steps: the camera's two inputs asked of it, tools/blitz/PLAY.md)
         cam.update(dt, follow ?? look?.follow ?? me.followPos(), follow || game.spectate >= 0 ? null : look?.aim ?? me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
