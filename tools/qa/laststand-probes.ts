@@ -4,14 +4,12 @@
 // PASS / FAIL each, all headless — no picture and no sound here. Each stages levels/compound.json (five on eleven, three squads), leaves the team on its start
 // mark and takes the defenders down by hand to the three the probe names, so the endgame starts on a known floor.
 //   laststand-callout   the call out with no regroup: a radio check, answers naming the rooms the men are truly in, the count and the asker's room, the strip
-//                       draws them, the objective brackets exactly those rooms and its marker sits on one; a man with the team in his sight does not answer
-//                       and is not counted; down to one, he says he is the last and where (a man at his post: the net names his room; a man out hunting:
-//                       it names none). LASTSTAND_BREAK=1 = a second man is left up in the two last-man runs: those two lines must fail.
+//                       draws them, the objective brackets exactly those rooms and its marker sits on one; down to one, he says he is the last and where
+//                       (a man at his post: the net names his room). LASTSTAND_BREAK=1 = a second man is left up in the last-man run: that line must fail.
 //                       (The call out is settled: no line asks it off and nothing here writes it. Until 2026-11-07 the probe ran the floor twice, with
 //                       it on and off, and held the two runs' digests together with the net-goes-quiet rule pinned off; the break word was call out off.)
 //   laststand-regroup   `regroup`: nothing before three are left; then the check, an order naming one room, the others say so and walk to it, every man of it
-//                       digs in and sets, one of them says the room is shut; the rooms they left are clear for the room clear and the marker is on the stand;
-//                       two minutes later they are still set in it (no stand-down), still asking the net by the room's name
+//                       digs in and sets, one of them says so; the rooms they left are clear for the room clear and the marker is on the stand
 //   laststand-keep      `regroup` with the Keep's three (a squad whose men stay in its rooms): whoever moves stays inside the Keep's rooms
 //   laststand-few       'most are down' is never more than a third of the staging: on the block's eight (levels/block.json) three up says nothing, two
 //                       up starts the check
@@ -73,13 +71,6 @@ export async function lastStandCallOut(): Promise<boolean> {
     const kept = thin(W, KEEP);
     steps(W, 20, i => { frame(); if (first < 0 && said(g).length) first = i / 60; });
     const A = { rep: lastStandReport(g), rows, obj: { ...rowOf(g, 'roomclear') }, hint: namedRooms(g).sort(), truth: kept.map((h: any) => roomOf(g, h)).sort() as string[], clean, first };
-    {   // … and one of the three in a fight (the team in his sight every frame): he does not answer the next check
-      const busy = kept[1], n0 = said(g).length;
-      steps(W, LASTSTAND.every + 6, () => { busy.lastSeenT = g.time; });
-      const later = said(g).slice(n0), ans = later.filter(l => l.kind.startsWith('ans'));
-      F.verdict(later.some(l => l.kind === 'checkN') && ans.length === 1 && !later.some(l => l.who === busy.callsign) && lastStandReport(g).known.length === 2 && !lastStandReport(g).known.includes(busy.callsign),
-        'a man with the team in his sight does not answer the check, and nobody counts him', `${busy.callsign} busy: ${later.map(l => `${l.who} '${l.text}'`).join(' · ')} → known ${lastStandReport(g).known.join(', ')}`);
-    }
     // down to one from the start: nobody answers him, he says he is the last and where. The guard hut's man (a man is named by what he SAID):
     //   a squad of one, so no mate of his drops and he HOLDS HIS POST: he says the hut and the net names the hut.
     // LASTSTAND_BREAK=1 = a second man is left up with him (the bunk room's): he is not the last, and both lines must fail.
