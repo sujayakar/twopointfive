@@ -129,7 +129,7 @@ pub fn edge_look_update(g: &mut crate::game::Game, dt: f64) {
         bx.c[0] = r.p0[0] + (r.p1[0] - r.p0[0]) * s; bx.c[2] = r.p0[2] + (r.p1[2] - r.p0[2]) * s;
         bx.c[1] = if s >= 1.0 { r.p1[1] } else { m::max(r.p1[1], r.p0[1] + r.vy * r.t - 4.9 * r.t * r.t) };
         bx.rot = Some(if s >= 1.0 { r.q1 } else { quat::slerp(r.q0, r.q1, s * s) });
-        if s < 1.0 { fl += 1.0; }
+        if s < 1.0 { fl += 1.0; } else { let y = crate::debris::debris_rubble_height(g, r.box_, r.p1[1]); g.tab.boxes[r.box_].c[1] = y; }
         g.destr.edge_look.rubble[i].t = r.t;
     }
     g.destr.edge_look.flying = fl; g.stats.edge_look.flying = fl as i32;
@@ -163,9 +163,11 @@ pub fn edge_look_feet(g: &mut crate::game::Game, men: &[crate::debris::FootMan],
     crate::debris::debris_feet(g, men, k, Some(&list), Some(&mut book));
     g.destr.edge_look.foot_book = book;
     let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
-    for &c in list.iter() {
+    let frame = js::to_i32(m::floor(g.time * 60.0));
+    for (i, &c) in list.iter().enumerate() {
         let slid = !g.tab.debris_chunk[c].rest;
         crate::debris::debris_foot_step(g, c, dt);
+        if !slid && (frame + i as i32) & 31 == 0 { crate::debris::debris_resettle(g, c); }
         // a slab that casts a shadow and was slid to a tripwire's beam casts none from here on (shed()'s rule, kept true under the boots)
         let bx = g.tab.debris_chunk[c].box_;
         let (flags, bc, bh) = { let b = &g.tab.boxes[bx]; (js::to_i32(b.flags), b.c, b.h) };
