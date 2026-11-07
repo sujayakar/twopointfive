@@ -11,7 +11,7 @@
 //   grab      the key takes the man out of the stance: he is `held`.
 // STALKWIDE_BREAK=1 = the click is never held, so he never closes on the man: out and grab must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: nothing here says how the stance LOOKS (tools/qa/close-stills.ts scene stalk-rifle draws it on the CPU).
-import { standUp, ROOT } from './headless.ts';
+import { standUp } from './headless.ts';
 
 
 const BREAK = process.env.STALKWIDE_BREAK === '1', DT = 1 / 60, EAST = Math.PI / 2, AT = [10.2, 0, 19.5];   // (the lobby's open floor)

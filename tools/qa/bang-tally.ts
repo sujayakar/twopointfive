@@ -62,8 +62,6 @@ const DEFAULTS: Record<string, any> = Object.fromEntries(Object.entries(TABLES).
 let SET: Record<string, Record<string, unknown>> = {};
 /** knob overrides every later stage() applies over the defaults (the --set flag; a probe's red path) — {} = the build's own */
 export function setKnobs(set: Record<string, Record<string, unknown>>) { SET = set; }
-/** has this build that knob table (a pin for a switch that shipped later is only set where it exists) */
-export const hasKnobs = (k: string) => k in TABLES;
 function resetKnobs() {
   for (const [k, t] of Object.entries(TABLES)) Object.assign(t, clone(DEFAULTS[k]));
   for (const [k, row] of Object.entries(SET)) { if (!TABLES[k]) throw new Error(`--set: no table '${k}' (have ${Object.keys(TABLES).join(', ')})`); for (const key of Object.keys(row)) if (!(key in TABLES[k])) throw new Error(`--set: no knob '${k}.${key}'`); Object.assign(TABLES[k], clone(row)); }
