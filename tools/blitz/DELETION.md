@@ -12,7 +12,7 @@ bun run tools/blitz/delete-tick.ts --why Class.method      # the chain of refere
 bun run tools/blitz/delete-tick.ts --note         # this file's tables, and delete-plan.tsv (a row a function: its class and what keeps it)
 bun run tools/blitz/delete-tick.ts --write        # the deletion, in place
 bun run typecheck && bun run typecheck:qa         # both must pass on the tree it leaves
-bun run tools/blitz/delete-page.ts --at http://localhost:<port>     # the page driven under the Rust game (software adapter)
+bun run tools/blitz/delete-page.ts --at http://localhost:<port> --draw 4 --size 640x360     # the page driven under the Rust game (software adapter)
 ```
 
 The program refuses a tree it has already been through (`src/game/crossing.ts` is there), a census taken on another tree, and a call table
@@ -27,7 +27,8 @@ The simulation's folders are `src/game`, `src/anim`, `src/math`, `src/sim` and `
 
 | root | what it is | what a function it reaches keeps |
 |---|---|---|
-| the page | every file of `src/` outside the simulation's folders | its body. The page has no call surface: what it calls on the puppet runs as TypeScript |
+| the page | every file of `src/` outside the simulation's folders | its body, a rule's too. The page has no call surface: what it names on the puppet runs as TypeScript. What THAT calls is held like anything else |
+| a page with no Rust game | the files a page of the repository's root loads (its script, followed by imports) where that page never loads the host of the Rust game: the workbench with its viewer and editor, the replay viewer, the sound and music pages | its body and every body under it. Nothing crosses there and nothing is applied over |
 | the hosts | the files of `tools/` that a page or a host loads, found by following imports from the entry points in `HOST_ENTRIES` | its body. They run inside the host's own lines (a start, the apply, the out events, the dress step), where nothing crosses |
 | the module | a simulation file's own top-level statements, and the names the bridge's schema reads through its window | all of it |
 | a tool | every other file of `tools/` (the checks) | with a row on the call surface: its signature, and the body becomes the crossing. With no row there is no Rust function to cross to: its body |
@@ -43,10 +44,18 @@ follows every reference the checker finds; it keeps about half as much again.
 
 **Exact and loose references.** A reference the checker resolves to a declaration is exact. So is a member of an interface for every class that says
 it implements it, a name read off a module loaded by a written path (``await import(`${ROOT}/src/game/x.ts`)``, which is how the tools load the game),
-and a name read off a value typed `any` through two or more steps that are a path from the `Game` class (`g.cues.stats`). Two kinds are loose: a single
-name read off a value typed `any`, and a member of a type that a class answers only by its shape. A loose reference could mean every declaration of
-that name, and followed blindly they keep most of the tick, so the census settles them: a candidate it saw run keeps its body; one it never saw is not
-held by the name alone (with a row on the surface it stays as a crossing). With no census at all every loose reference is followed.
+and a name read off a value typed `any` through two or more steps that are a path from the `Game` class (`g.cues.stats`). A cast is a flow, whatever
+the checker thinks of the two types: `g.destr as unknown as { doorsFor?(…): … }` is a use of the class's `doorsFor`, a private member too, and a name
+read off `(x as any)` or off a constant that was given such a cast is that class's member. Two kinds are loose: a single name read off a value typed
+`any`, and a member of a type that a class answers only by its shape. A loose reference could mean every declaration of that name, and followed blindly
+they keep most of the tick, so the census settles them: a candidate it saw run keeps its body; one it never saw is not held by the name alone (with a
+row on the surface it stays as a crossing). With no census at all every loose reference is followed.
+
+**Nothing may go missing quietly.** The census plays ticks and starts, and of the page only what its flows reach; it has not seen every draw or every
+panel. A function that is gone under a plain call throws by name, and a throw is seen by the gates below and by whoever plays. A function that is gone
+under a read that TESTS for it (`x.f?.()`, `typeof x.f === 'function'`, `x.f && x.f()`, `if (x.f)`) is a branch quietly not taken. So a loose read of
+that kind, in the page or in the simulation's own kept code, holds every candidate as an exact reference would, census or no census. In a tool it holds
+nothing, and the place is listed below with the checks that lost a function they called.
 
 ## The gate of starts
 
@@ -67,6 +76,15 @@ On the deleted tree the gate is red on any row that ends another way than it did
 TypeScript body, and on any row that stepped a game with no host of the Rust game on it. A new way to start a game (a mission, a weather kind, a
 lever) is in the table the next time it is written, because the table is the lists. What the table cannot hold is a start only a page can stand: the
 Team & kit page's own small game (`?kitview`) is `tools/blitz/delete-page.ts`'s.
+
+## The page, driven
+
+`tools/blitz/delete-page.ts` plays the page in headless Chromium on the software adapter: the plain night from its start card, a squad mission by its
+address, the title by real key presses to Deploy and the mission that loads, the Team & kit page's small game, and a load of every other page. On the
+census's tree it is counted like any other play; on the deleted tree it must end with no error said by any page. `--draw N` draws the last frame of
+every Nth burst of thirty: what only a draw runs (the smoke's solver, the picture's own reads of the puppet) is run nowhere else, by no headless tool,
+so both the census's plays and the check after the deletion are made with it. A drawn frame takes the software adapter half a minute and the first one
+minutes. NOTHING HERE HAS BEEN SEEN ON A GPU: the frames drawn hold that the draw's code runs and says no error, not that the picture is right.
 
 **What a miss looks like.** A function the census had no play for, reached after the deletion, throws by name: `X: only the Rust game has this rule,
 and this call did not cross`, or a plain `is not a function` for a name that went. Nothing fails silently into a second game. The mend is a row in

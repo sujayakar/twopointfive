@@ -9,7 +9,7 @@ import { appendFileSync } from 'node:fs';
 import type { Cdp as CdpT } from '../qa/cdp.ts';
 
 const A = process.argv.slice(2), opt = (n: string, d?: string) => { const i = A.indexOf(n); return i < 0 ? d : A[i + 1]; };
-const AT = opt('--at', 'http://localhost:5260')!, WORD = opt('--word', 'rust=1')!, FRAMES = Number(opt('--frames', '3600')), CENSUS = opt('--census'), ONLY = new Set((opt('--only', 'solo,squad,title,pages')!).split(',')), SQUAD = opt('--squad', 'room-clear-four')!;
+const AT = opt('--at', 'http://localhost:5260')!, WORD = opt('--word', 'rust=1')!, FRAMES = Number(opt('--frames', '3600')), CENSUS = opt('--census'), ONLY = new Set((opt('--only', 'solo,squad,title,kit,pages')!).split(',')), SQUAD = opt('--squad', 'room-clear-four')!, DRAW = Number(opt('--draw', '0')), [W, H] = (opt('--size', '1280x800')!).split('x').map(Number);
 process.env.CHROME ??= '/usr/bin/chromium';   // (read by cdp.ts as it loads)
 const { Cdp } = await import('../qa/cdp.ts'); type Cdp = CdpT;
 const FLAGS = ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog', '--enable-features=Vulkan'];
@@ -17,14 +17,20 @@ const COUNTER = `window.__tpsN = new Map(); window.__tpsRan = (id) => { window._
 const word = (q: string) => [q, WORD].filter(Boolean).join('&');
 let bad = 0; const say = (s: string) => console.log(s);
 
-async function withPage<T>(port: number, f: (c: Cdp) => Promise<T>): Promise<T> { const c = await Cdp.launch({ port, width: 1280, height: 800, dpr: 1, extraArgs: FLAGS }); try { if (CENSUS) await c.send('Page.addScriptToEvaluateOnNewDocument', { source: COUNTER }); return await f(c); } finally { await c.close(); } }
+async function withPage<T>(port: number, f: (c: Cdp) => Promise<T>): Promise<T> { const c = await Cdp.launch({ port, width: W, height: H, dpr: 1, extraArgs: FLAGS }); try { if (CENSUS) await c.send('Page.addScriptToEvaluateOnNewDocument', { source: COUNTER }); return await f(c); } finally { await c.close(); } }
 /** the page's own errors, but for the ones a headless browser makes of itself */
 const errorsOf = (c: Cdp) => c.errors.filter(e => !/favicon|ERR_FILE_NOT_FOUND.*\.map|AudioContext|autoplay/i.test(e));
 async function census(c: Cdp, what: string, frames: number): Promise<void> { if (!CENSUS) return; const ran = await c.eval<[number, number][]>('[...(window.__tpsN ?? [])]'); appendFileSync(CENSUS, JSON.stringify({ page: true, argv: what, frames, ran }) + '\n'); await c.eval('window.__tpsN && window.__tpsN.clear()'); }
 const state = `(() => { const g = window.__game, r = window.__rust; return { time: g ? +g.time.toFixed(2) : null, rust: r ? { on: r.on, ticks: r.ticks, starts: r.starts } : null, player: g ? { down: !!g.player?.down, x: +g.player.char.pos[0].toFixed(2), z: +g.player.char.pos[2].toFixed(2) } : null, guards: g ? g.guards.length : null, fatal: document.querySelector('.fatal, #fatal')?.textContent?.slice(0, 300) ?? null }; })()`;
 /** frames in bursts, each with the keys its row holds; a row may also run a line of the page's own */
-async function play(c: Cdp, rows: { n: number; keys?: string[]; js?: string }[]): Promise<number> { let done = 0;
-  for (const r of rows) { if (r.js) await c.eval(`(async () => { ${r.js} })()`, { timeoutMs: 60000 }); for (let left = r.n; left > 0; left -= 30) { const k = Math.min(30, left); await c.eval(`window.__runFrames(${k}, 1 / 60, ${JSON.stringify(r.keys ?? [])}, 'none')`, { timeoutMs: 600000 }); /* (UNDRAWN: one drawn frame of the solo night takes minutes on the software adapter, with or without the Rust game) */ done += k; } note(`${done} frames`); }
+let drawn = 0, drawnMs = 0;
+async function play(c: Cdp, rows: { n: number; keys?: string[]; js?: string }[]): Promise<number> { let done = 0, bursts = 0;
+  for (const r of rows) { if (r.js) await c.eval(`(async () => { ${r.js} })()`, { timeoutMs: 60000 }); for (let left = r.n; left > 0; left -= 30) { const k = Math.min(30, left);
+      // (--draw N: the last frame of every Nth burst of 30 is DRAWN, so that what only a draw runs is run; the software adapter needs seconds to minutes for one,
+      // the first above all. The rest are undrawn. The device's errors are awaited after a drawn frame: a validation error is said late.)
+      const draw = DRAW > 0 && bursts++ % DRAW === 0, t = Date.now();
+      await c.eval(`(async () => { window.__runFrames(${k}, 1 / 60, ${JSON.stringify(r.keys ?? [])}, ${draw ? 'false' : "'none'"}); ${draw ? 'await window.__engine?.device?.queue?.onSubmittedWorkDone?.();' : ''} })()`, { timeoutMs: 1800000 });
+      if (draw) { drawn++; drawnMs += Date.now() - t; note(`a drawn frame at ${done + k}: ${((Date.now() - t) / 1000).toFixed(1)} s`); } done += k; } note(`${done} frames`); }
   return done; }
 function verdict(name: string, c: Cdp, before: any, after: any, frames: number): void { const errs = errorsOf(c), stepped = after.time !== null && before.time !== null && after.time > before.time, rustOk = !WORD || (after.rust?.on && after.rust.ticks > 0);
   const ok = stepped && rustOk && !errs.length && !after.fatal; if (!ok) bad++;
@@ -53,19 +59,31 @@ if (ONLY.has('squad')) await withPage(9362, async c => { await c.open(`${AT}/?${
     { n: 60, keys: ['KeyX'] }, { n: 60, keys: ['Escape'] }, { n: 60, keys: ['KeyT'] }, { n: 60, js: `window.__click(0);` }, { n: 240, keys: ['KeyW'] }, { n: 60, keys: ['KeyQ'] }, { n: Math.max(60, FRAMES - 1860) }]);
   const after = await c.eval(state); verdict(`the squad mission ${SQUAD}`, c, before, after, n); await census(c, `the squad mission ${url}`, n); });
 
-// ---- the page as a player opens it: the title, Play, the starting page's two steps, Deploy, and the live loop for a while
+// ---- the page as a player opens it: the title, Play, the starting page's two steps and Deploy, by real key presses (the browser's own, so a focused
+// button gets its Enter). Deploy is a load of the mission's own address: that address is then opened paused and stepped like the flows above, because the
+// live loop DRAWS, and a drawn frame can take the software adapter minutes.
 if (ONLY.has('title')) await withPage(9363, async c => { const url = `${AT}/?${word('quality=verylow&mute&keeppage=0')}`; await c.open(url, 120000); await ready(c);
-  const key = (code: string) => c.eval(`(() => { for (const t of ['keydown', 'keyup']) window.dispatchEvent(new KeyboardEvent(t, { code: ${JSON.stringify(code)}, key: ${JSON.stringify(code === 'Enter' ? 'Enter' : code)}, bubbles: true })); })()`);
-  const menu0 = await c.eval<string>(`String(window.__menu?.mode ?? '')`);
-  for (let i = 0; i < 4; i++) { await key('Enter'); await new Promise(r => setTimeout(r, 2500)); }
-  const before = await c.eval(state); await new Promise(r => setTimeout(r, 20000)); const after = await c.eval(state);
-  say(`      the title: the menu opened on '${menu0}', and is '${await c.eval<string>(`String(window.__menu?.mode ?? '') + (window.__menu?.isOpen ? ' (open)' : ' (closed)')`)}' after Enter four times`);
-  verdict('the title, Play, Deploy, and 20 s of the live loop', c, before, after, Math.round(((after.time ?? 0) - (before.time ?? 0)) * 60)); await census(c, `the title to play ${url}`, Math.max(1, Math.round(((after.time ?? 0) - (before.time ?? 0)) * 60))); });
+  const press = async (code: string, vk: number) => { for (const type of ['rawKeyDown', 'char', 'keyUp']) await c.send('Input.dispatchKeyEvent', { type, code, key: code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, ...(type === 'char' ? { text: '\r' } : {}) }); };
+  const where = () => c.eval<string>(`location.href + ' | ' + [...document.querySelectorAll('#menu.on, .startpage.on, #startpage.on, [data-screen].on')].map(e => e.id || e.className).join(',')`).catch(() => '(the page is loading)');
+  const seen: string[] = [await where()]; let to = '';
+  for (let i = 0; i < 6 && !to; i++) { await press('Enter', 13); for (let k = 0; k < 20 && !to; k++) { await new Promise(r => setTimeout(r, 500)); const h = await c.eval<string>('location.href').catch(() => ''); if (h && h.split('#')[0] !== url) to = h; } seen.push(await where()); }
+  say(`      the title: ${seen.map(s => s.replace(AT, '')).join('  →  ')}`);
+  if (!to) { bad++; say(`FAIL  the title, Play, Deploy: Enter six times loaded no mission`); return; }
+  const paused = to + (to.includes('?') ? '&' : '?') + 'paused'; await c.open(paused, 120000); await ready(c); await c.eval(`window.__menu.close()`); const before = await c.eval(state);
+  const n = await play(c, [{ n: 240, keys: ['KeyW'] }, { n: 60, keys: ['KeyQ'] }, { n: Math.max(60, Math.min(FRAMES, 1200) - 300) }]);
+  const after = await c.eval(state); verdict(`the title, Play, Deploy (${to.replace(AT, '')})`, c, before, after, n); await census(c, `the title to play ${paused}`, n); });
+
+// ---- the Team & kit page's own small game (`?kitview`, src/host/kitView.ts): a game only a page stands. It loads, its own loop runs for a while, no error.
+if (ONLY.has('kit')) await withPage(9371, async c => { const url = `${AT}/?${word('kitview&quality=verylow&mute')}`;
+  try { await c.open(url, 120000); await new Promise(r => setTimeout(r, 20000)); } catch (e) { c.errors.push(String(e)); }
+  const fatal = await c.eval<string | null>(`document.querySelector('.fatal, #fatal')?.textContent?.slice(0, 300) || null`).catch(() => 'the page did not answer');
+  const errs = errorsOf(c); if (errs.length || fatal) bad++; say(`${errs.length || fatal ? 'FAIL' : 'PASS'}  the Team & kit page's small game: loaded and ran 20 s, ${errs.length} errors${fatal ? `, the fatal card: ${fatal}` : ''}`); for (const e of errs.slice(0, 6)) say(`      ${e.slice(0, 400)}`); await census(c, `the kit view ${url}`, 0); });
 
 // ---- the other pages: each loads, and says no error in its first seconds
 if (ONLY.has('pages')) for (const [i, p] of ['workbench.html', 'viewer.html', 'editor.html', 'replay.html', 'sounds.html', 'music.html'].entries()) await withPage(9364 + i, async c => { const url = `${AT}/${p}`;
   try { await c.open(url, 120000); await new Promise(r => setTimeout(r, 8000)); } catch (e) { c.errors.push(String(e)); }
   const errs = errorsOf(c); if (errs.length) bad++; say(`${errs.length ? 'FAIL' : 'PASS'}  /${p}: loaded, ${errs.length} errors in 8 s`); for (const e of errs.slice(0, 6)) say(`      ${e.slice(0, 400)}`); await census(c, `the page ${url}`, 0); });
 
+say(`${drawn} frames were DRAWN${drawn ? ` (${(drawnMs / drawn / 1000).toFixed(1)} s each on the software adapter)` : ': what only a draw runs was not run (--draw N)'}`);
 say(bad ? `${bad} flows FAILED` : 'every flow passed (software adapter: never seen on a GPU)');
 process.exit(bad ? 1 : 0);
