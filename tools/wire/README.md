@@ -13,6 +13,7 @@ Rust uses needs nothing here. This folder is only about what the page reads of t
   `rust/game/src/io.rs`.
 - **It never writes a types file.** `gen` stops if its list ever holds another file, or if a file it makes in whole declares a struct or
   an enum. `gen --check` runs the same checks and exits 1 where a file would change.
+- `add-table` puts a table of the game on the wire under an ID of its own, last, and `add-mix` an ID that names a row of either of two tables (`AnyBoxId`: one number on the wire, the page's book in `tools/blitz/export.ts` answers it). `retype` and `retype-call` say a field or a row of the call surface holds another type now.
 - `cost.ts` says what a tick's export and apply cost now, on the page's list.
 
 Both halves carry the stamp (`LAYOUT`), and a host refuses a module of another stamp. Change the table with the tool, not by hand, and the

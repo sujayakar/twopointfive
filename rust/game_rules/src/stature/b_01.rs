@@ -69,21 +69,21 @@ pub fn drawn_point(g: &crate::game::Game, c_2: CharId, p: V3, s: Option<f64>) ->
 
 /// The boxes out[from‥] that carry a drawn man's owner byte (his rig, a can in his fist): where the picture is to draw them (Box.dc / dh). The box
 /// itself is not moved. (src/game/stature.ts:94 drawnBoxes)
-pub fn drawn_boxes(g: &mut crate::game::Game, men: &[CharId], out: &Vec<BoxId>, from: f64) {
+pub fn drawn_boxes(g: &mut crate::game::Game, men: &[CharId], out: &Vec<AnyBoxId>, from: f64) {
     let mut any = false;
     for &c in men { if stature_of(g, c) != 1.0 { let i = (js::to_i32(g.ch[c].id) & 0xff) as usize; g.m.stature.by_id[i] = Some(c); any = true; } }
     let mut k = from as usize;
     while k < out.len() {
         let b = out[k]; k += 1;
-        let owner = g.tab.boxes[b].owner;
+        let owner = g.tab[b].owner;
         let c = if any && js::truthy(owner) { g.m.stature.by_id[(js::to_i32(owner) & 0xff) as usize] } else { None };
         let Some(c) = c else {   // (a box that outlives the frame, a row of Game.fx, whose man is back at 1)
-            let x = &mut g.tab.boxes[b]; if x.dc.is_some() { x.dc = None; x.dh = None; }
+            let x = &mut g.tab[b]; if x.dc.is_some() { x.dc = None; x.dh = None; }
             continue;
         };
-        let s = stature_of(g, c); let (bc, bh) = { let x = &g.tab.boxes[b]; (x.c, x.h) };
+        let s = stature_of(g, c); let (bc, bh) = { let x = &g.tab[b]; (x.c, x.h) };
         let dc = drawn_point(g, c, bc, Some(s));
-        let x = &mut g.tab.boxes[b]; x.dc = Some(dc); x.dh = Some([bh[0] * s, bh[1] * s, bh[2] * s]);
+        let x = &mut g.tab[b]; x.dc = Some(dc); x.dh = Some([bh[0] * s, bh[1] * s, bh[2] * s]);
     }
     if any { for x in g.m.stature.by_id.iter_mut() { *x = None; } }
 }

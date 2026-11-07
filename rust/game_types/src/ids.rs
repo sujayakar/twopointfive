@@ -141,6 +141,24 @@ id! {
     GameTalkId,
     /// Firearm: g.fa
     FirearmId,
+    /// A box dealt for a frame or kept a while by its maker: g.tab.frame_boxes. A row of this table comes back to be dealt again, so its number says
+    /// how a host has listed the frames gone by and means nothing to any other machine
+    FrameBoxId,
+}
+
+/// A BOX ON A LIST THAT HOLDS BOTH KINDS: the frame's list, the engine's, and what is noted beside a box of either. `BoxId` is a box of the world
+/// (`g.tab.boxes`), which stands for good and has the same number on every host; `FrameBoxId` is the frame's. A place that can hold only one kind names
+/// that kind, so the compiler lists every place the two meet. `g.tab[id]` reads either.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub enum AnyBoxId {
+    World(BoxId),
+    Frame(FrameBoxId),
+}
+impl From<BoxId> for AnyBoxId { #[inline] fn from(b: BoxId) -> Self { AnyBoxId::World(b) } }
+impl From<FrameBoxId> for AnyBoxId { #[inline] fn from(b: FrameBoxId) -> Self { AnyBoxId::Frame(b) } }
+impl AnyBoxId {
+    /// the box of the world this is, if it is one
+    #[inline] pub fn world(self) -> Option<BoxId> { match self { AnyBoxId::World(b) => Some(b), AnyBoxId::Frame(_) => None } }
 }
 
 /// A table of things that never shrinks: `push` gives the new thing's ID, and the ID indexes it for good.

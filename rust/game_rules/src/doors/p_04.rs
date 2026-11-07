@@ -311,12 +311,12 @@ pub fn doors_thread_path(g: &mut crate::game::Game, path: &[V3], start: V3, is_f
 }
 
 /// Every leaf's box and its two handles, for the picture's list (the fog's doorBoxes asks it).   (doors.ts Doors.boxes)
-pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<AnyBoxId>) {
     for d in g.doors.list.iter() {
         let dr = &g.dr[*d];
-        out.push(dr.box_);
-        out.push(dr.handle_boxes[0]);
-        out.push(dr.handle_boxes[1]);
+        out.push(dr.box_.into());
+        out.push(dr.handle_boxes[0].into());
+        out.push(dr.handle_boxes[1].into());
     }
 }
 

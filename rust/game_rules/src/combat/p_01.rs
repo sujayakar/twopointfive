@@ -341,7 +341,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     if lead {
         let card = crate::effects::muzzle_card();
         let bf = crate::scene_boxes::box_flag();
-        let b = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+        let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
             c: v3::mad(muzzle, dir, mf.card_ahead),
             h: mf.card_half,
             yaw: Some(v3::yaw_of(dir)),
