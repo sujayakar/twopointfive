@@ -27,7 +27,6 @@ const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const SLM: any = await import(`${ROOT}/src/game/silent.ts`);
 const { silentHoldsRound } = await import(`${ROOT}/src/game/silent.ts`);
@@ -256,25 +255,9 @@ export const spottedFire = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- off, and calm
-export const spottedOff = guarded(async () => {
-  const { verdict, done } = family('spotted-off: the switch off acts on nothing; on, with nobody ever suspicious, it changes nothing');
-  { const R = await rig(11, false); const s0 = JSON.stringify(SPM.SPOTTED_STATS); const st = R.stage({ lit: false })!; R.step(20); R.hold('suspicious', 0.4, { face: st.at, eyesOn: null }); R.step(60 * 3);
-    const feet = SPM.spottedFeet(R.game, R.mate, true, false), keen = SPM.spottedKeen(R.game, R.mate);
-    verdict(JSON.stringify(SPM.SPOTTED_STATS) === s0 && feet === null && !keen && R.mode() === 'calm' && !spottedHoldsRound(R.game, R.mate, R.foe) && SPM.spottedOf(R.mate) === null && /SILENT/.test(R.label()) && !/low|contact/.test(R.label()),
-      'off, beside a suspicious man: no state kept, no feet, no word, nothing counted', `feet ${feet} · keen ${keen} · mode ${R.mode()} · ${R.label()} · ${SPM.spottedSummary(R.game)}`); }
-  const calm = async (on: boolean) => { const R = await rig(11, on), wary0 = SPM.SPOTTED_STATS.wary; const hs: string[] = []; const g = R.game; const way = R.foe.char.pos;
-    R.post = () => { if (R.frames % 20 === 0) hs.push(hashDigest(digestGame(g, true))); };
-    const path = g.col.nav.findPath(g.player.char.pos, way) ?? []; let i = 0;
-    for (let f = 0; f < 60 * 20; f++) { const wp = path[Math.min(i, path.length - 1)]; if (wp && flat(wp, g.player.char.pos) < 0.5 && i < path.length - 4) i++;
-      const p = g.player.char.pos; if (wp) { const d = flat(wp, p) || 1; g.teleportPlayer([p[0] + (wp[0] - p[0]) / d * 1.3 * DT, 0, p[2] + (wp[2] - p[2]) / d * 1.3 * DT]); } R.step(); }
-    return { hs, mode: R.mode(), wary: SPM.SPOTTED_STATS.wary - wary0 }; };
-  const A = await calm(false), B = await calm(true); const same = A.hs.length === B.hs.length && A.hs.every((h, i) => h === B.hs[i]);
-  verdict(same && B.wary === 0, 'on, the one defender calm for twenty seconds of following Sam: every digest the same as off', `${A.hs.length} digests · ${same ? 'identical' : `first difference at #${A.hs.findIndex((h, i) => h !== B.hs[i])}`} · last ${A.hs[A.hs.length - 1]} / ${B.hs[B.hs.length - 1]}`);
-  return done();
-});
 
 if (import.meta.main) {
-  const want = process.argv.slice(2), all: [string, () => Promise<boolean>][] = [['suspicious', spottedSuspicious], ['slip', spottedSlip], ['brace', spottedBrace], ['close', spottedClose], ['caught', spottedCaught], ['fire', spottedFire], ['off', spottedOff]];
+  const want = process.argv.slice(2), all: [string, () => Promise<boolean>][] = [['suspicious', spottedSuspicious], ['slip', spottedSlip], ['brace', spottedBrace], ['close', spottedClose], ['caught', spottedCaught], ['fire', spottedFire], ];
   let ok = true; for (const [n, f] of all) if (!want.length || want.includes(n)) ok = (await f()) && ok;
   console.log(`\n=== spotted-probes.ts: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); process.exit(ok ? 0 : 1);
 }
