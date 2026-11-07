@@ -78,7 +78,6 @@ fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
 pub fn settle(g: &mut Game) {
     game::math_dice::use_dice(g);
     game::posehome::pose_home_tend(g);
-    game::sense::smoke_home(g);
     // what the TypeScript's stores say of themselves in the block's head as they are made or moved in (state.ts keep, settle), and the Rust stores,
     // which hold their part of the block from the start, do not: the pose pool (2), the doors (4), the furniture (32), the thrown things (128) and the
     // men's columns (256) are at home. No rule reads these bits; the block is then the block the TypeScript start leaves, to the byte.

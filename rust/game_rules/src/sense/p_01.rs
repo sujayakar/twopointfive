@@ -15,7 +15,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 pub fn smoke_home(g: &mut crate::game::Game) {
     if sim::state::state_read(g.sim).smoke.live == 0 {
         sim::bricks::reset(g.sim, true);
-        sim::state::state(g.sim).head.homes |= 16;
     }
 }
 
@@ -73,9 +72,11 @@ pub fn smoke_clear(g: &mut crate::game::Game) {
     }
 }
 
-/// A new encounter: no smoke, on no plan, nothing swept.
+/// A new encounter: no smoke, on no plan, nothing swept. (A game no tick has opened has no smoke's part yet.)
 pub fn smoke_renew(g: &mut crate::game::Game) {
-    sim::bricks::reset(g.sim, true);
+    if sim::state::state_read(g.sim).smoke.live != 0 {
+        sim::bricks::reset(g.sim, true);
+    }
 }
 
 /// The light that comes round on a point: the nearest square metre in clear sight, else 0.

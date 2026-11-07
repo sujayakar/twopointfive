@@ -190,7 +190,9 @@ export class CpuSmoke {
  *  solver object itself, so nobody is left holding an unwatched one; the solver's own working is called as it was. Returns the undo. */
 export function ownSmoke(real: SmokeSystemLike, own: CpuSmoke): () => void { return goneWithTick('ownSmoke') as any; }
 
+/** a page's way to the Rust game by a call's name (host/rustgame.ts rustCall), handed in once by main.ts; null = no page: the call surface carries it */
+export const SENSE_PAGE: { call: ((key: string, self: unknown, args: unknown[]) => unknown) | null } = { call: null };
 /** FOR A TOOL THAT HOLDS THE SENSES TO THE PICTURE (host/modelerr.ts), between ticks: 0 the light on points (`xs`: whose carried lamps are left out, then
  *  x y z each) · 1 how much of the light along lines the smoke lets through (six numbers each) · 2 a canister's smoke let out at x y z, to the game and the
  *  picture alike · 3 the smoke cleared, the same */
-export function senseTool(g: Game, what: 0 | 1 | 2 | 3, xs: number[]): number[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('senseTool', undefined, [g, what, xs]); if (__r !== RUST_PASS) return __r as any; } } return goneWithTick('senseTool') as any; }
+export function senseTool(g: Game, what: 0 | 1 | 2 | 3, xs: number[]): number[] { if (SENSE_PAGE.call) return SENSE_PAGE.call('senseTool', undefined, [g, what, xs]) as number[]; { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('senseTool', undefined, [g, what, xs]); if (__r !== RUST_PASS) return __r as any; } } return goneWithTick('senseTool') as any; }
