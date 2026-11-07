@@ -1,8 +1,13 @@
 //! A JSON reader: text in, a tree of values out. A level file and the character's files are JSON, and the start reads them as the TypeScript start
 //! reads a parsed object: by key, in the file's order. Numbers are read by the core library's decimal reader, which rounds as the language's own
 //! `JSON.parse` does (to the nearest double), so a number here is the number there to the bit.
+//!
+//! AN OBJECT REMEMBERS WHICH OF ITS MEMBERS WERE ASKED FOR (`get`, `has`, `members`; `skip` for a member passed by on purpose). So whoever has
+//! read a file can ask what it did NOT read (`unread`): a member the reader has no line for is found by the reading itself, with no second
+//! list of a record's members to keep beside each reader.
 use alloc::string::String;
 use alloc::vec::Vec;
+use core::sync::atomic::{AtomicBool, Ordering::Relaxed};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Json {
@@ -11,8 +16,20 @@ pub enum Json {
     Num(f64),
     Str(String),
     Arr(Vec<Json>),
-    /// an object's members in the file's order (what `Object.keys` walks for keys that are not whole numbers)
-    Obj(Vec<(String, Json)>),
+    /// an object's members in the file's order (what `Object.keys` walks for keys that are not whole numbers), and which were asked for
+    Obj(Vec<(String, Json)>, Asked),
+}
+
+/// which members of an object a reader asked for, by their place (one flag a member, made with the object: a member pushed onto an object
+/// afterwards has none and reads as never asked for). Not part of the value: two objects are equal by their members alone.
+#[derive(Debug, Default)]
+pub struct Asked(Vec<AtomicBool>);
+impl PartialEq for Asked { fn eq(&self, _: &Asked) -> bool { true } }
+impl Clone for Asked { fn clone(&self) -> Asked { Asked(self.0.iter().map(|b| AtomicBool::new(b.load(Relaxed))).collect()) } }
+impl Asked {
+    fn of(members: usize) -> Asked { Asked((0..members).map(|_| AtomicBool::new(false)).collect()) }
+    fn mark(&self, i: usize) { if let Some(b) = self.0.get(i) { b.store(true, Relaxed); } }
+    fn is(&self, i: usize) -> bool { self.0.get(i).map_or(false, |b| b.load(Relaxed)) }
 }
 
 static NULL: Json = Json::Null;
@@ -20,14 +37,14 @@ static NULL: Json = Json::Null;
 impl Json {
     /// the member `k` of an object; `Null` where this is no object or has no such member (so a chain of asks reads like `a?.b?.c`)
     pub fn get(&self, k: &str) -> &Json {
-        match self { Json::Obj(m) => m.iter().find(|(n, _)| n == k).map(|(_, v)| v).unwrap_or(&NULL), _ => &NULL }
+        match self { Json::Obj(m, asked) => match m.iter().position(|(n, _)| n == k) { Some(i) => { asked.mark(i); &m[i].1 } None => &NULL }, _ => &NULL }
     }
     /// the item `i` of an array; `Null` past its end or where this is no array
     pub fn at(&self, i: usize) -> &Json {
         match self { Json::Arr(a) => a.get(i).unwrap_or(&NULL), _ => &NULL }
     }
     /// is the member there (`k in o`, with `undefined` never written: a JSON file has no such value)
-    pub fn has(&self, k: &str) -> bool { !self.get(k).is_null() || matches!(self, Json::Obj(m) if m.iter().any(|(n, _)| n == k)) }
+    pub fn has(&self, k: &str) -> bool { !self.get(k).is_null() || matches!(self, Json::Obj(m, _) if m.iter().any(|(n, _)| n == k)) }
     pub fn is_null(&self) -> bool { matches!(self, Json::Null) }
     pub fn num(&self) -> Option<f64> { match self { Json::Num(x) => Some(*x), _ => None } }
     pub fn bool(&self) -> Option<bool> { match self { Json::Bool(x) => Some(*x), _ => None } }
@@ -35,7 +52,25 @@ impl Json {
     /// an array's items; none where this is no array
     pub fn items(&self) -> &[Json] { match self { Json::Arr(a) => a.as_slice(), _ => &[] } }
     /// an object's members in the file's order; none where this is no object
-    pub fn members(&self) -> &[(String, Json)] { match self { Json::Obj(m) => m.as_slice(), _ => &[] } }
+    pub fn members(&self) -> &[(String, Json)] { match self { Json::Obj(m, asked) => { for i in 0..m.len() { asked.mark(i); } m.as_slice() } _ => &[] } }
+    /// THESE MEMBERS ARE PASSED BY ON PURPOSE (an author's notes, an id beside a name), with all beneath them: asked for, as far as `unread` goes
+    pub fn skip(&self, keys: &[&str]) { for k in keys { self.get(k).skip_all(); } }
+    /// …and everything under this value is (a table of which only the rows in use are read, a record a switch leaves out)
+    pub fn skip_all(&self) {
+        match self { Json::Obj(..) => for (_, v) in self.members() { v.skip_all(); }, Json::Arr(a) => for v in a { v.skip_all(); }, _ => {} }
+    }
+    /// EVERY MEMBER UNDER THIS VALUE THAT NOBODY ASKED FOR, by its place (`at` = this value's own place). A member not asked for is named and
+    /// not looked into; one asked for is looked into.
+    pub fn unread(&self, at: &str, out: &mut Vec<String>) {
+        match self {
+            Json::Obj(m, asked) => for (i, (k, v)) in m.iter().enumerate() {
+                let place = if at.is_empty() { k.clone() } else { alloc::format!("{}.{}", at, k) };
+                if asked.is(i) { v.unread(&place, out); } else { out.push(place); }
+            },
+            Json::Arr(a) => for (i, v) in a.iter().enumerate() { v.unread(&alloc::format!("{}[{}]", at, i), out); },
+            _ => {}
+        }
+    }
     /// an array of numbers
     pub fn nums(&self) -> Vec<f64> { self.items().iter().map(|x| x.num().expect("json: a number")).collect() }
     /// three numbers
@@ -65,7 +100,7 @@ impl<'a> P<'a> {
                 self.i += 1;
                 let mut m: Vec<(String, Json)> = Vec::new();
                 self.ws();
-                if self.eat(b"}") { return Ok(Json::Obj(m)); }
+                if self.eat(b"}") { let asked = Asked::of(m.len()); return Ok(Json::Obj(m, asked)); }
                 loop {
                     self.ws();
                     if self.b.get(self.i) != Some(&b'"') { return Err(self.err("a key")); }
@@ -78,7 +113,7 @@ impl<'a> P<'a> {
                     match m.iter_mut().find(|(n, _)| *n == k) { Some(e) => e.1 = v, None => m.push((k, v)) }
                     self.ws();
                     if self.eat(b",") { continue; }
-                    if self.eat(b"}") { return Ok(Json::Obj(m)); }
+                    if self.eat(b"}") { let asked = Asked::of(m.len()); return Ok(Json::Obj(m, asked)); }
                     return Err(self.err("a comma or the object's end"));
                 }
             }
@@ -157,6 +192,17 @@ mod tests {
         assert!(v.get("n").is_null() && v.has("n") && !v.has("zz") && v.get("o").members().is_empty());
         assert!(parse("[1,]").is_err() && parse("{} x").is_err());
     }
+    #[test]
+    fn says_what_nobody_asked_for() {
+        let v = parse(r#"{ "name": "x", "boxes": [{ "c": 1, "tint": 2 }, { "c": 3 }], "later": { "deep": 1 }, "notes": "n" }"#).unwrap();
+        v.get("name"); v.skip(&["notes"]);
+        for b in v.get("boxes").items() { b.get("c"); }
+        let mut left = Vec::new(); v.unread("", &mut left);
+        assert_eq!(left, ["boxes[0].tint", "later"]);
+        v.get("later").skip_all();
+        let mut left = Vec::new(); v.unread("", &mut left);
+        assert_eq!(left, ["boxes[0].tint"]);
+    }
 }
 
 // ---- writing: a value as a level file's text
@@ -183,13 +229,13 @@ fn value_text(v: &Json, depth: usize, out: &mut String) {
         Json::Str(s) => str_text(s, out),
         Json::Arr(a) => {
             // (a list of records: one to a line, as a level file is kept; a list of numbers on one line)
-            let lines = depth < 2 && a.iter().any(|x| matches!(x, Json::Obj(_)));
+            let lines = depth < 2 && a.iter().any(|x| matches!(x, Json::Obj(..)));
             out.push('[');
             for (i, x) in a.iter().enumerate() { if i > 0 { out.push_str(if lines { "," } else { ", " }); } if lines { out.push_str("\n    "); } value_text(x, depth + 1, out); }
             if lines && !a.is_empty() { out.push_str("\n  "); }
             out.push(']');
         }
-        Json::Obj(m) => {
+        Json::Obj(m, _) => {
             let lines = depth == 0;
             out.push('{');
             for (i, (k, x)) in m.iter().enumerate() { if i > 0 { out.push_str(if lines { "," } else { ", " }); } if lines { out.push_str("\n  "); } str_text(k, out); out.push_str(": "); value_text(x, depth + 1, out); }
@@ -207,4 +253,4 @@ pub fn s(x: &str) -> Json { Json::Str(String::from(x)) }
 pub fn b(x: bool) -> Json { Json::Bool(x) }
 pub fn nums(x: &[f64]) -> Json { Json::Arr(x.iter().map(|v| Json::Num(*v)).collect()) }
 pub fn arr(x: Vec<Json>) -> Json { Json::Arr(x) }
-pub fn obj(m: Vec<(&str, Json)>) -> Json { Json::Obj(m.into_iter().map(|(k, v)| (String::from(k), v)).collect()) }
+pub fn obj(m: Vec<(&str, Json)>) -> Json { let asked = Asked::of(m.len()); Json::Obj(m.into_iter().map(|(k, v)| (String::from(k), v)).collect(), asked) }
