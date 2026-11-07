@@ -1325,6 +1325,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   clicked (`NOT_CLICKED`: two show a page object the harness fakes; the one box that reloads the page is judged by the row it shows, and a
   '(reloads)' box that is not named there fails the line) and 19 answer no yes or no in the harness (a stand-in of the engine's: not judged).
   `PANELDEAD_BREAK=1` (the probe adds a box over a settled row itself) fails naming it. On the old stand nothing is held and the line is not asked.
+  THE SCENE PANEL ASKS TOO (`?tweak`, `src/ui/sceneLayers.ts`): its `table()` makes no slider for a held row, by the same `rowHeld`. One row went,
+  the fog shade's `FOG.desat` (370 numbers to 369 where rows are held), and `scenetweak` 'round' is green again with no word changed: nothing is
+  left that will not move. Its 'breath' line wrote the hard breath rule's switch both ways; that switch is a settled row, so where it is held the
+  line asks the one side the page plays and writes nothing (both sides where it is still a switch, which no stand that can step a game is today).
+  It is still RED on this tree: the stand-in files no breath record on the Rust game yet (a mend of the call surface, not of this line), as are
+  'oneair' and 'digest'. NOT DONE: a row that is only ever dimmed because its `readWhen` asks a held switch (the breath's four soft rows) still
+  has its slider.
   NOT HELD BY IT: a slider or a select over a held number (it clicks boxes only); the two labs' panels (they ask the same query, unprobed here; the
   sneak lab's page check `stalk-page.cjs` now asks that two of its settled switches have NO box, and was NOT run).
   NUMBERS LEFT INERT, with hover texts pointing at a box that left: the five rows that say 'Does nothing while every mission starts the same is on'
