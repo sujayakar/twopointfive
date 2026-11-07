@@ -106,9 +106,6 @@ async function boot(browser, level, query, look, dir) {
       return { fatal: document.getElementById('fatal')?.textContent || '', boot: window.__boot?.line ?? '', pipelines: window.__boot?.pipelines ?? null, stamps: !!e.timer?.enabled, look: !!window.__look }; });
     R.readySecs = +((Date.now() - t) / 1000).toFixed(1); Object.assign(R, ready); if (ready.fatal) R.errors.push('fatal: ' + ready.fatal);
     log(level, R.page, `ready in ${R.readySecs} s`);
-    // the second set of ray programs (cut boxes that swap in) compiles after ready where the page has one: waited for, so that it is not counted against the switch
-    R.cutSet = await page.evaluate(async (secs) => { const P = window.__cut?.programs, r = P?.swap ? P.ready : null; if (!r) return 'none';
-      const got = await Promise.race([Promise.resolve(r).then(ok => ok ? 'ready' : 'failed', () => 'failed'), new Promise(done => setTimeout(() => done('timed out'), secs * 1000))]); return got; }, 600).catch(e => 'threw: ' + e.message);
     // the start card away, the smoke solver off (a step of it is seconds on this adapter), the mission staged
     await page.evaluate(() => { window.__menu?.close(); if (window.__smoke?.params) window.__smoke.params.enabled = false; });
     const threw = await page.evaluate(PLAY, 2); if (threw) R.errors.push('play threw: ' + threw);

@@ -8,7 +8,6 @@
 // ask the one box its bearing's ray met before it walks the grid itself — a pixel nobody sees costs a box test or two an eye where it cost a walk an eye; 'old'
 // (`?fogpass=old`, or `__fow.frame.pass = 'old'` live) is the kernel as it always was, token for token but for the soft edge's one call (fowEdge: 1 while FOG.edge is 0 or no sight table is written). While the program asked for is still compiling the other
 // one draws the frame — the picture is the same — so a flip never leaves a frame without its fog.
-import { cutSwap, ProgramSet, type CutSwappable } from './cutSwap';
 import { makeShader, laterHold } from '../gpu/device';
 import { scenePrelude } from './frame';
 import fogSrc from './shaders/fogofwar.wgsl' with { type: 'text' };
@@ -100,7 +99,7 @@ const other = (m: FogPassMode): FogPassMode => m === 'old' ? 'hint' : 'old';
 interface FogProgram { main: GPUComputePipeline; pre: GPUComputePipeline | null }
 
 export class FogPass {
-  /** the two programs' pipelines (null until compiled; the cut set swaps these three fields — cutSwap.ts ProgramSet) */
+  /** the two programs' pipelines (null until compiled) */
   private pipeHint: GPUComputePipeline | null = null; private pipePre: GPUComputePipeline | null = null; private pipeOld: GPUComputePipeline | null = null;
   private building: Record<FogPassMode, boolean> = { hint: false, old: false }; private built: Record<FogPassMode, boolean> = { hint: false, old: false };
   private bad: Record<FogPassMode, boolean> = { hint: false, old: false };
@@ -112,8 +111,6 @@ export class FogPass {
   private bg: GPUBindGroup | null = null; private bgKey: unknown[] = [];
   /** what the last dispatched frame was given (QA: qaRun runs it again) */
   private last: { sceneBG: GPUBindGroup; depthView: GPUTextureView; normalView: GPUTextureView; albedoView: GPUTextureView; w: number; h: number; count: number } | null = null;
-  /** which programs have their cut twin in the cut set (while that set is live a program without one would meet cut pieces whole) */
-  private cutHas: Record<FogPassMode, boolean> = { hint: false, old: false }; private cutPrograms: Partial<Record<FogPassMode, Promise<FogProgram>>> = {};
   /** frames the pass has been dispatched (QA: 0 = it never ran) */
   dispatched = 0;
   /** the program the last dispatched frame ran ('' = none yet) */
@@ -162,7 +159,7 @@ export class FogPass {
       return { main, pre };
     } finally { letGo(); }
   }
-  private put(mode: FogPassMode, P: FogProgram, into: Record<string, unknown>) { if (mode === 'old') into.pipeOld = P.main; else { into.pipeHint = P.main; into.pipePre = P.pre; } }
+  private put(mode: FogPassMode, P: FogProgram) { if (mode === 'old') this.pipeOld = P.main; else { this.pipeHint = P.main; this.pipePre = P.pre; } }
   /** ASKED FOR AHEAD OF ITS FIRST USE (engine.ts warmFirstUse, once a page's boot is in): the pass made its program the first frame a mission drew the fog,
    *  so the title never built it and the first squad mission of a visit compiled it under play. Nothing waits for it. */
   warm(mode: FogPassMode = 'hint') { this.build(mode); }
@@ -170,19 +167,9 @@ export class FogPass {
     if (this.built[mode] || this.building[mode] || this.bad[mode]) return;
     this.building[mode] = true; this.resources();
     this.program(mode, FogPass.source(mode), mode === 'old' ? 'fogofwarOld' : 'fogofwar').then(P => {
-      this.put(mode, P, this as unknown as Record<string, unknown>); this.built[mode] = true;
-      cutSwap.remove(this); cutSwap.add(this);   // (a program that came later: the cut set is built again with it in)
+      this.put(mode, P); this.built[mode] = true;
     }, e => { this.bad[mode] = true; console.error(`[fog of war] the '${mode}' program did not compile${this.has(other(mode)) ? ` — the '${other(mode)}' one draws the pass` : ' — nothing is dimmed'}: ${e?.message ?? e}`); }).finally(() => { this.building[mode] = false; });
   }
-  // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): the programs a second time, behind the cut prelude (their eye lines meet a cut piece's cut shape)
-  private cutSet = new ProgramSet(); private cutSerial = 0;
-  async buildCut(): Promise<void> {
-    if (!this.layout) return;
-    const cut: Record<string, unknown> = {}, serial = ++this.cutSerial, modes = (['hint', 'old'] as FogPassMode[]).filter(m => this.built[m]);
-    await Promise.all(modes.map(async m => this.put(m, await (this.cutPrograms[m] ??= this.program(m, scenePrelude(true) + fogSource(m), m === 'old' ? 'fogofwarOldCut' : 'fogofwarCut')), cut)));   // (each twin is compiled once: a later call for one more program reuses the others')
-    if (serial === this.cutSerial) { this.cutSet.set(this, cut); for (const m of modes) this.cutHas[m] = true; }   // (a later call covers more programs: only the newest set goes in)
-  }
-  useCut(on: boolean) { this.cutSet.use(this, on); }
   /** the switch went off: the copy is let go (the pipelines and the hint table are kept — a flip back on costs nothing) */
   release() { this.copy?.destroy(); this.copy = null; this.copyView = null; this.bg = null; this.cw = this.ch = 0; this.last = null; }
 
@@ -193,8 +180,7 @@ export class FogPass {
     if (!F.on || F.count <= 0) return;
     const want: FogPassMode = F.pass === 'old' ? 'old' : 'hint';
     if (!this.has(want)) { this.build(want); if (this.bad[want]) this.build(other(want)); }   // (the one asked for did not compile: the other is made, and draws)
-    const fit = (m: FogPassMode) => this.has(m) && (!this.cutSet.live || this.cutHas[m]);   // (on the cut set, a program whose cut twin is not in yet would meet cut pieces whole)
-    const mode = fit(want) ? want : fit(other(want)) ? other(want) : this.has(want) ? want : this.has(other(want)) ? other(want) : null;   // (the other program draws the same picture while the one asked for compiles, or if it failed to)
+    const mode = this.has(want) ? want : this.has(other(want)) ? other(want) : null;   // (the other program draws the same picture while the one asked for compiles, or if it failed to)
     if (!mode) return;
     const d = this.device;
     if (!this.copy || this.cw !== w || this.ch !== h) {
@@ -232,13 +218,12 @@ export class FogPass {
   // ---- QA (tools/qa/fog-pass-check.cjs): the LAST dispatched frame's inputs — its copy of hdr, its g-buffer, its uniform block, the scene as uploaded — through one
   //      program again into a scratch texture, read back. Nothing of the frame is touched. `count` false = the picture that program stores (rgba16float halves: two
   //      programs compared on the very same inputs); true = its counting twin (per pixel: walks, hint box tests, the walks' box tests, the walks' cells — and for the
-  //      hinted one `pre`: per (bin, eye) the table ray's box tests | cells << 16). Compiled on first use, from the prelude of the set the frame is on (`cut`: with the cut rule
-  //      while a cut piece is alive — render/cutSwap.ts), never part of a frame.
+  //      hinted one `pre`: per (bin, eye) the table ray's box tests | cells << 16). Compiled on first use, never part of a frame.
   private qaPrograms = new Map<string, Promise<FogProgram>>();
-  async qaRun(mode: FogPassMode, count = false, cut = this.cutSet.live): Promise<{ w: number; h: number; halves: Uint16Array; pre: Uint32Array | null; cut: boolean } | null> {
+  async qaRun(mode: FogPassMode, count = false): Promise<{ w: number; h: number; halves: Uint16Array; pre: Uint32Array | null } | null> {
     const L = this.last; if (!L || !this.copy) return null;
-    const d = this.device, key = mode + (count ? '+count' : '') + (cut ? '+cut' : '');
-    let job = this.qaPrograms.get(key); if (!job) { this.qaPrograms.set(key, job = this.program(mode, (cut ? scenePrelude(true) : scenePrelude()) + fogSource(mode, count), 'fogofwarQa')); job.catch(() => this.qaPrograms.delete(key)); }
+    const d = this.device, key = mode + (count ? '+count' : '');
+    let job = this.qaPrograms.get(key); if (!job) { this.qaPrograms.set(key, job = this.program(mode, scenePrelude() + fogSource(mode, count), 'fogofwarQa')); job.catch(() => this.qaPrograms.delete(key)); }
     const P = await job, { w, h } = L, rows = FOG_EYES * 2;
     const out = d.createTexture({ label: 'fogQa', size: [w, h], format: 'rgba16float', usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST });
     const table = this.hintTexture(rows), tableView = table.createView();
@@ -255,7 +240,7 @@ export class FogPass {
     for (let y = 0; y < h; y++) halves.set(raw.subarray(y * stride / 2, y * stride / 2 + w * 4), y * w * 4);
     const pre = P.pre && count ? new Uint32Array(tbuf.getMappedRange().slice(FOG_BINS * 4 * FOG_EYES, FOG_BINS * 4 * (FOG_EYES + L.count))) : null;
     buf.unmap(); tbuf.unmap(); buf.destroy(); tbuf.destroy(); out.destroy(); table.destroy();
-    return { w, h, halves, pre, cut };
+    return { w, h, halves, pre };
   }
 }
 
@@ -269,7 +254,7 @@ const SIGHT_HEAD = FOG_BINS * FOG_EYES * 4, SIGHT_FLOATS_BYTES = FOG_EYES * 32 +
 /** the table's size in bytes (common.wgsl FogSightT) — the engine's stand-in for the pass that writes it is as large */
 export const FOG_SIGHT_BYTES = SIGHT_HEAD + SIGHT_HEAD_BYTES;
 if (FOG_SIGHT_BYTES > 65536 || FOG_SIGHT_BYTES % 16 !== 0) throw new Error(`the fog's sight table: ${FOG_SIGHT_BYTES} B is over a uniform block's 64 KB or off a 16-byte row (FOG_EYES ${FOG_EYES} × FOG_BINS ${FOG_BINS})`);
-export class FogSight implements CutSwappable {
+export class FogSight {
   readonly buf: GPUBuffer;
   private pipe: GPUComputePipeline | null = null; private building = false; private bad = false;
   private layout: GPUBindGroupLayout; private ubuf: GPUBuffer; private bg: GPUBindGroup; private udata = new Float32Array(SIGHT_HEAD_BYTES / 4); private uwords = new Uint32Array(this.udata.buffer);
@@ -278,7 +263,6 @@ export class FogSight implements CutSwappable {
   stand: GPUBuffer | null = null; /** the bits as last written there (null: never) */ private standBits: Uint32Array | null = null;
   /** the box world the frame is drawn from (engine.ts): the thin bits count only while they were read off its list as it now is */
   world: { statics: unknown[]; geomSerial: number } | null = null;
-  private cutSet = new ProgramSet();
   /** the table holds this frame's answer (false = its 'written' word is 0: fogSeenAt answers 'seen' everywhere, and the fog pass does not draw the full picture) */
   live = false;
   /** frames the pass has been dispatched (QA) */
@@ -294,7 +278,7 @@ export class FogSight implements CutSwappable {
     this.bg = d.createBindGroup({ layout: this.layout, entries: [{ binding: 0, resource: { buffer: this.ubuf } }, { binding: 1, resource: { buffer: this.buf } }] });
   }
   /** the program's text as compiled (the compile check reads the same string) */
-  static source(cut?: boolean): string { return (cut === undefined ? scenePrelude() : scenePrelude(cut)) + sightSrc; }
+  static source(): string { return scenePrelude() + sightSrc; }
   private program(text: string, label: string): Promise<GPUComputePipeline> {
     const d = this.device, letGo = laterHold();   // (one of the later set's while it compiles, as the pass's own programs are: FogPass.program)
     return d.createComputePipelineAsync({ label, layout: d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.layout] }), compute: { module: makeShader(d, text, label), entryPoint: 'main' } }).finally(letGo);
@@ -304,11 +288,9 @@ export class FogSight implements CutSwappable {
   private build() {
     if (this.pipe || this.building || this.bad) return;
     this.building = true;
-    this.program(FogSight.source(), 'fogSight').then(p => { this.pipe = p; cutSwap.remove(this); cutSwap.add(this); },
+    this.program(FogSight.source(), 'fogSight').then(p => { this.pipe = p; },
       e => { this.bad = true; console.error(`[fog of war] the sight table's program did not compile — the fog stays the lit one: ${e?.message ?? e}`); }).finally(() => { this.building = false; });
   }
-  async buildCut(): Promise<void> { if (!this.pipe) return; this.cutSet.set(this, { pipe: await this.program(FogSight.source(true), 'fogSightCut') }); }
-  useCut(on: boolean) { this.cutSet.use(this, on); }
   /** At the head of the frame, before anything that lights a pixel. `sceneBGPlain` = the scene group whose binding 11 is the stand-in (this pass writes the
    *  table the frame's own group binds there). `F` null / off / not the full picture / no eye = no pass, and the table is marked unwritten. */
   encode(enc: GPUCommandEncoder, F: FogFrame | null, sceneBGPlain: GPUBindGroup, ts?: (name: string) => GPUComputePassTimestampWrites | undefined) {
