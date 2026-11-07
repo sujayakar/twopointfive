@@ -20,12 +20,37 @@ tools/blitz/rust.sh rust bun run tools/qa/playthrough.ts --scn depot-four --seed
 | `rust.sh` | the harness's word and the bridge's preload in front of any command |
 | `tally-diff.ts` | two `playthrough.ts --json` files side by side, a run a row |
 | `thrice.ts` | one fight stood N times in one process, every game held to the first (the digest a second; `--ticks`, `--dump` to find where two part) |
+| `fuzz.sh`, `fuzz-diff.ts` | THE FUZZ: one seed of tools/qa/soak.ts played on the folded TypeScript tick and on the Rust game, a line a tick each, and the first tick they part with what the schedule did before it |
+| `keep-check.ts` | a snapshot and a save put back, six games in four slots, a refused re-step: the same lines under `ts` and `rust` |
+| `qa-sweep.py` | every family of probes.ts three ways, a probe a row: the table's `sweep` rows and its Rust-only reds by kind |
 | `word.ts` | THE ONE SWITCH: the word asked for (`TPS_GAME`, else `DEFAULT_WORD`), the table, a frozen run, the closing line. No import of src |
 | `preload.ts` | bunfig.toml's preload: nothing unless the word asks; then the bridge's window (`expose.ts`) and the top process's closing line |
 | `qa-kinds.json` | the table `TPS_GAME=table` reads |
 | `table-check.ts` | the table held to `probes.ts list` (by hand): red on a name the table lacks or a row probes.ts lost |
 | `die-check.ts` | the game's die seeded after the stand, the helper and the plain site, a line a word |
 | `rust/game_face/src/harness.rs` | the face's exports a host that plays needs: the filtered export with its memo, the camera's ask, a flooded room, the program stopped before a take |
+
+## Since cut 7.10: what a tool does to the game between two ticks, and how it reaches the Rust game
+
+| what the tool does | how it reaches the Rust game |
+|---|---|
+| calls a rule of the tick that is on the call surface (`game.teleportPlayer(…)`, `fireWeapon`, `game.restartEncounter()`, `orders.give`) | the generated guard crosses it (`surface.ts`, `face_call`), after the host's half and the tool's pending writes; the puppet takes the filtered state |
+| calls a rule that is NOT on the surface (it takes a closure, or has no Rust row: `Game.interrogate`, `interrogate`, `pickLine`, `takeKey`) | IT DOES NOT: the TypeScript runs on the puppet, counted on the exit line. What it wrote by name may still go by the scan |
+| writes a field by name (`game.player.visibility = 0.9`, `gd.path = []`) | the scan (`scan.ts`): the names the loaded tools/qa files write are walked as a tick opens and before a call crosses, and each difference is poked |
+| writes a field that lives in rust/sim's block (`door.vel = 2`, `door.latched = false`, a man's place, the die) | the host holds the puppet's copy of the block to the Rust game's at the same two moments and hands over each part that differs but `poses` (`blockBack`, a stand-in) |
+| takes a snapshot and puts it back (`W.snapshot()` / `W.restore(s)` of tools/qa/headless.ts) | the Rust game is KEPT in the module beside the file (`face_keep`, a clone) and the same file put back unchanged is that game standing again (`face_back`), one whole apply. A file the tool changed, or one of another game, is loaded by the TypeScript on the puppet and the next step is a new start |
+| saves and loads through the save controller (`saves.write`, `saves.load`, the autosave, Enter once down inside the tick) | one path with the page: every save is the Rust game's own clone (`SNAPS.own` while a hosted game's controller runs), the controller's shelf is handed to the Rust game as a step opens (`face_saves_in`), what the tick asked of it is read back (`face_saves_asked`), the controller's own lines round a load are made on the Rust side (`face_loaded`) |
+| calls `loadState(game, file)` itself | the TypeScript runs whole on the puppet (its restart does not cross) and the next step is a new start from the puppet |
+| restarts inside the tick (Enter once down, Shift+Enter) | the Rust game's own; the puppet's mission record is made anew (a run's beginning is known outside the tick by that identity), and the men the restart made take the whole state |
+
+**A new start** is made when the mission's clock began again on the puppet (`mission.t0`), a file was loaded on it, or a snapshot was put back on it
+(the game's own clock no longer the Rust game's). A mission record swapped for a copy of itself (the old tour, src/game/demo.ts) is not one.
+`start()` THROWS, naming the tool's line, for a new start from a puppet that holds a man the apply made (a man the Rust game made has no store row or
+pose store on the TypeScript side).
+
+**A slot given up** (rust/sim has four; a tool that stands a fifth game takes the slot of the game stepped longest ago) keeps a clone of its game in
+the module; stepped again, the game stands again from it (`restep`). Only the last six games that gave a slot up keep theirs: an older one's re-step
+THROWS and names the tool's line. `tools/blitz/keep-check.ts` holds all of this under either word.
 
 ## Two ways
 
