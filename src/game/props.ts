@@ -15,10 +15,11 @@ import { BOTH, StaticCollision } from '../scene/collision';
 import { thingWrote, type BoxMirror } from '../scene/boxMirror';
 import { PropDef, PropKind } from '../scene/level';
 import { EXACT, mathsEpoch } from '../math/exact';   // (the kept cos / sin of a yaw is remade when the game's own maths goes on or off)
-import { RUST, ruleFell, ruleRed } from '../sim/sim';
-import { PropStore, PT, PD, PK, PY, PE, PP, PF, PROP_CAP, PROP_EV, PROP_SOUNDS, PROPS_STEPPED, propIo, propMem, propDiff } from '../sim/propshome';
+import { RUST, ruleFell } from '../sim/sim';
+import { PropStore, PT, PD, PP, PROP_CAP, PROPS_STEPPED, propIo, propMem, propDiff } from '../sim/propshome';
 import { SimState } from '../sim/state';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 /** A character as the prop solver sees it: a kinematic-ish circle whose position may be corrected (held back) in place, like doors do. */
 export interface PropContact { pos: Vec3; vel: Vec3; radius: number; who: number; mass: number; quiet: boolean; }
@@ -45,8 +46,6 @@ const KIND: Record<PropKind, KindTune> = {
   plant: { decel: 4.5, visc: 1.0, rest: 0.1, scrapeRate: 0.8, thudRate: 0.95 },
 };
 const MAX_V = 5, MAX_W = 9;              // speed caps: with 1/60 s substeps a prop moves ≤ 8 cm per step, far below footprint + thinnest static panel → no tunnelling
-const SLEEP_V = 0.04, SLEEP_W = 0.06, SLEEP_T = 0.3;
-const DOOR_GUIDE = 1.2;                    // m/s a shoved prop is slid along the wall toward the middle of a door frame it fits through (PropSystem.doorways)
 const SETTLE_PASSES = 12;                 // the passes of a level's settle (PropSystem.settle; rust/sim/src/props.rs SETTLE_PASSES)
 const Y_MIN = 0.04;                       // static boxes entirely below this are floor finishes, not obstacles
 /** statics one gather round a thing can list (rust/sim/src/props.rs NEAR: tools/qa/rust-check.ts holds the two together) */
@@ -116,7 +115,7 @@ export class Prop {
   /** the cos and sin of its yaw (columns beside it: written where the yaw is) */
   get cs() { freshTrig(this.S); return this.f(this.S.O.cs); } get sn() { freshTrig(this.S); return this.f(this.S.O.sn); }
   /** Refresh the world boxes from the pose. */
-  place() {
+  place() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Prop.place', this, []); if (__r !== RUST_PASS) return __r as any; } }
     const S = this.S; freshTrig(S);
     const O = S.O, d = S.d, r = S.b8 + S.rowOf(this.id), x = d[O.x + r], z = d[O.z + r], yaw = d[O.yaw + r], cs = d[O.cs + r], sn = d[O.sn + r], parts = this.def.parts;   // (its row read once: every part is placed from the same five numbers)
     for (let i = 0; i < parts.length; i++) {
@@ -203,14 +202,14 @@ export class PropSystem {
   boxes(out: Box[]) { for (const p of this.props) for (const b of p.boxes) out.push(b); }
 
   /** A prop leaves the level (game/furnblast.ts: it came apart beside a charge — its parts fly on as debris): no longer drawn, solid, pushed or stepped until reset(). */
-  remove(p: Prop) { const i = this.props.indexOf(p); if (i >= 0) { this.props.splice(i, 1); this.store.leave(p.id); thingWrote(); } }
+  remove(p: Prop) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('PropSystem.remove', this, [p]); if (__r !== RUST_PASS) return __r as any; } } const i = this.props.indexOf(p); if (i >= 0) { this.props.splice(i, 1); this.store.leave(p.id); thingWrote(); } }
   /** Everything back to its rest pose, asleep. */
-  reset() {
+  reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('PropSystem.reset', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (this.props.length !== this.all.length) { this.props.length = 0; for (const p of this.all) this.props.push(p); this.store.homeRows(); thingWrote(); }
     for (const p of this.props) { p.x = p.home[0]; p.z = p.home[1]; p.yaw = p.home[2]; p.vx = p.vz = p.w = 0; p.asleep = true; p.idle = 0; p.noiseT = p.pushT = -10; p.lastWho = 0; p.rolling = false; p.dirty = true; p.place(); }
   }
   /** Debug: give every prop a random shove (panel button — lets you watch the solver without walking into things). */
-  scatter(strength = 1.5) {
+  scatter(strength = 1.5) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('PropSystem.scatter', this, [strength]); if (__r !== RUST_PASS) return __r as any; } }
     for (const p of this.props) { const a = simRandom() * Math.PI * 2, s = strength * (0.5 + simRandom()); p.vx += Math.cos(a) * s; p.vz += Math.sin(a) * s; p.w += (simRandom() - 0.5) * 6 * strength; p.wake(); }
   }
   /** Authoring overlaps (a chair tucked 5 cm under a table edge, a bin grazing a desk corner) are resolved once, silently; the settled pose becomes home.
@@ -260,7 +259,7 @@ export class PropSystem {
    *  THE RAY IS THE RUST MODULE'S where it can be (the row on, the game's own maths standing — a part is met by angles — and the box world's copy
    *  standing with these things' parts in it: collision.ts thingsRay, lines.rs ray_things), and this file's walk otherwise, which is counted (sim.ts
    *  FELL); the same answer to the bit either way (tools/qa/rust-check.ts --both, tools/qa/item-ident.ts). */
-  raycast(ro: Vec3, rd: Vec3, tmax: number): { t: number; n: Vec3; prop: Prop; box: Box } | null {
+  raycast(ro: Vec3, rd: Vec3, tmax: number): { t: number; n: Vec3; prop: Prop; box: Box } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('PropSystem.raycast', this, [ro, rd, tmax]); if (__r !== RUST_PASS) return __r as any; } }
     if (BOTH.on) { const hit = this.raycastHere(ro, rd, tmax); this.col.thingsBoth(this, ro, rd, tmax, hit); return hit; }   // (the check's, whatever the row says: this file's walk, which the game goes on with, and the module's asked the same and compared)
     if (!RUST.props || !EXACT.on || this.props.length === 0) return this.raycastHere(ro, rd, tmax);   // (idle: sim.ts OWN_MATHS; a level with no furniture has no part to meet, here or there)
     const h = this.col.thingsRay(this, ro, rd, tmax);
@@ -282,7 +281,7 @@ export class PropSystem {
   }
 
   /** Planar impulse J (N·s, y ignored) applied at world point `point`; `who` is blamed for the noise. thud=true reports it as an impact (bullet strike). */
-  applyImpulse(p: Prop, point: Vec3, J: Vec3, who: number, thud = false) {
+  applyImpulse(p: Prop, point: Vec3, J: Vec3, who: number, thud = false) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('PropSystem.applyImpulse', this, [p, point, J, who, thud]); if (__r !== RUST_PASS) return __r as any; } }
     const rx = point[0] - p.x, rz = point[2] - p.z;
     p.vx += J[0] * p.invMass; p.vz += J[2] * p.invMass; p.w += (rz * J[0] - rx * J[2]) * p.invI;
     this.clampVel(p); p.wake(); if (who) p.lastWho = who;
@@ -291,12 +290,6 @@ export class PropSystem {
 
 
   private clampVel(p: Prop) { const S = this.store, O = S.O, B = S.b8; clampRow(S.d, B + O.vx, B + O.vz, B + O.w, S.rowOf(p.id)); }
-  /** A castor chair's coast, as something a sound can follow (CASTOR): one 'roll' event with roll 'start' when its speed passes startV, one with 'stop' when it
-   *  falls under stopV (or the switch goes off under it). Nothing is filed for anybody's ears: level 0, and Game.onPropEvent passes the kind over. */
-  private rollNote(p: Prop, speed: number) {
-    if (!p.rolling && speed > CASTOR.startV && !this.muted) { p.rolling = true; this.say({ prop: p, sound: 'roll', roll: 'start', pos: [p.x, 0.05, p.z], who: p.lastWho, level: 0, speed, rolling: true }); }
-    else if (p.rolling && speed < CASTOR.stopV) { p.rolling = false; this.say({ prop: p, sound: 'roll', roll: 'stop', pos: [p.x, 0.05, p.z], who: p.lastWho, level: 0, speed, rolling: false }); }
-  }
   private noise(p: Prop, sound: 'scrape' | 'thud', speed: number, who: number, level: number) {
     if (this.muted || this.time - p.noiseT < (sound === 'thud' ? 0.35 : 0.8)) return;   // per-prop rate limit: a chair rolled along a wall is one scrape and the odd knock, not a machine gun
     p.noiseT = this.time;
@@ -306,47 +299,10 @@ export class PropSystem {
   /** Advance the simulation: characters as circles (positions corrected in place when a prop cannot yield), `leaves` = kinematic boxes (door leaves).
    *  THE STEP RUNS IN THE RUST MODULE where it can (`there`), on the same columns, and here otherwise; what it leaves is the same to the bit either way
    *  (tools/qa/prop-ident.ts, and whole missions in tools/qa/rust-check.ts). The boxes the picture draws are placed here, from the columns, both ways. */
-  update(dt: number, contacts: PropContact[], leaves: Box[]) {
-    const t0 = performance.now();
-    const S = this.store, L = this.props, n = L.length;
-    { const u = S.u, ID = S.b4 + S.O.id; let ok = n === S.n; for (let r = 0; ok && r < n; r++) ok = u[ID + r] === L[r].id;   // (ROW r IS props[r]: the step pairs a row's numbers with that thing's size and weight)
-      if (!ok) throw new Error(`the furniture's list (${n} things) is not its rows (${S.n}) in their order: something wrote PropSystem.props that is not remove() or reset()`); }
-    freshTrig(S);
-    const T = this.there(contacts, leaves);
-    if (T === null) { if (this.all.length) PROPS_STEPPED.here++; this.updateHere(dt, contacts, leaves); }   // (a level with no furniture has no step to count)
-    else if (BOTH.on) { const bad = this.updateBoth(dt, contacts, leaves, T); BOTH.asked++; PROPS_STEPPED.asked++; if (bad) { BOTH.differ++; PROPS_STEPPED.differ++; if (!BOTH.first) BOTH.first = bad; if (!PROPS_STEPPED.first) PROPS_STEPPED.first = bad; } }
-    else this.takeBack(contacts, this.handOver(dt, contacts, T));
-    let awake = 0;
-    { const u = S.u, FL = S.b4 + S.O.flags; for (let r = 0; r < n; r++) { const f = u[FL + r]; if (f & PT.dirty) L[r].place(); if (!(f & PT.asleep)) awake++; } }
-    this.stats.awake = awake; this.stats.ms = performance.now() - t0;
-  }
+  update(dt: number, contacts: PropContact[], leaves: Box[]): void { return goneWithTick('PropSystem.update') as any; }
   /** the step as this file takes it */
-  updateHere(dt: number, contacts: PropContact[], leaves: Box[]) {
-    const n = Math.min(4, Math.max(1, Math.ceil(dt * 60 - 1e-6))); const h = dt / n;   // ≤ 1/60 s per substep (the frame dt is already clamped to 1/20)
-    this.stepping = true;
-    try { for (let s = 0; s < n; s++) { this.time += h; this.step(h, contacts, leaves); } } finally { this.stepping = false; }
-    if (this.said.length) { const said = this.said; this.said = []; for (const e of said) this.emit(e); }
-  }
+  updateHere(dt: number, contacts: PropContact[], leaves: Box[]): void { return goneWithTick('PropSystem.updateHere') as any; }
 
-  // ---------------------------------------------------------------- the step in the Rust module (rust/sim/src/props.rs)
-  /** CAN THIS STEP RUN IN THE MODULE: the row on (the things' columns are in the game's block always); the game's own maths in Math's place (the step works
-   *  its angles and lengths out there); noises being made (a system still settling its level makes none, and is not the game's yet); this file's own step
-   *  not replaced on this instance (a check that puts its own over one gets ITS step); the box world's copy standing with the game's own leaves in it (or
-   *  none in the level), and every leaf handed in one of them; and no more men, leaves or frames than the hand-over holds. → the copy to step over and
-   *  which of its leaves sweep, or null: this file steps, on the same columns. */
-  private there(contacts: PropContact[], leaves: Box[]): { M: BoxMirror; leaves: number[] | null; n: number } | null {
-    if (!RUST.props || this.all.length === 0) return null;   // (a level with no loose furniture has no step, here or there: its columns are no tenant of the block)
-    // (each way back to this file's step is said, for the count of questions the TypeScript took: sim.ts FELL)
-    if (!EXACT.on) return null;   // (idle: a row that works lengths out answers under the game's own maths alone — sim.ts OWN_MATHS)
-    if (ruleRed('props')) return null;
-    if (this.muted) throw new Error('the furniture was stepped while its level was still being settled');   // (the settle is the module's own now, and nothing steps under it)
-    if (this.step !== PropSystem.prototype.step || this.updateHere !== PropSystem.prototype.updateHere) return ruleFell('props', 'a check\'s own step in the rule\'s place');
-    const io = propIo(), dyn = this.col.dynamicBoxes;
-    if (contacts.length > io.maxContacts || leaves.length > io.maxLeaves || this.doorways.length > io.maxWays) throw new Error(`the furniture's step was handed ${contacts.length} men, ${leaves.length} leaves and ${this.doorways.length} door frames: its hand-over holds ${io.maxContacts}, ${io.maxLeaves} and ${io.maxWays}, and a game holds no more men, and a level no more doors, than those (game/levelfit.ts handOverMost)`);   // (cannot happen: tools/qa/copyfit-check.ts holds the arithmetic)
-    let idx: number[] | null = null;
-    if (leaves !== dyn) { idx = []; for (const b of leaves) { const i = dyn.indexOf(b); if (i < 0) return ruleFell('props', 'a leaf handed in that is not in the box world'); idx.push(i); } }
-    const M = this.col.rulesWorld(dyn); return M ? { M, leaves: idx, n: leaves.length } : null;
-  }
   /** the level's facts of each thing, written by row into the hand-over (a step's, and the settle's) */
   private facts(): void {
     const io = propIo(), m = propMem(), L = this.props, n = L.length, C = PROP_CAP;
@@ -354,165 +310,8 @@ export class PropSystem {
       m[o + PD.hx * C] = p.hx; m[o + PD.hz * C] = p.hz; m[o + PD.radius * C] = p.radius; m[o + PD.height * C] = p.height; m[o + PD.mass * C] = p.mass; m[o + PD.invMass * C] = p.invMass; m[o + PD.invI * C] = p.invI;
       m[o + PD.decel * C] = t.decel; m[o + PD.visc * C] = t.visc; m[o + PD.rest * C] = t.rest; m[o + PD.chair * C] = p.def.kind === 'chair' ? 1 : 0; }
   }
-  /** the step's hand-over written (the level's facts of each thing by row, the men, the leaves, the door frames, the rules' numbers) and the step taken:
-   *  how many noises it listed. Nothing of the game outside the things' columns is written until `takeBack`. */
-  private handOver(dt: number, contacts: PropContact[], T: { M: BoxMirror; leaves: number[] | null; n: number }): number {
-    const io = propIo(), m = propMem(), L = this.props, n = L.length, nc = contacts.length, K = io.maxContacts, W = io.maxWays, F = this.doorways;
-    this.facts();
-    for (let c = 0, o = io.con; c < nc; c++, o++) { const k = contacts[c];
-      m[o + PK.x * K] = k.pos[0]; m[o + PK.z * K] = k.pos[2]; m[o + PK.vx * K] = k.vel[0]; m[o + PK.vz * K] = k.vel[2]; m[o + PK.radius * K] = k.radius; m[o + PK.who * K] = k.who; m[o + PK.mass * K] = k.mass; m[o + PK.quiet * K] = k.quiet ? 1 : 0; }
-    for (let l = 0; l < T.n; l++) m[io.leaf + l] = T.leaves ? T.leaves[l] : l;
-    for (let f = 0, o = io.way; f < F.length; f++, o++) { const y = F[f]; m[o + PY.cx * W] = y.cx; m[o + PY.cz * W] = y.cz; m[o + PY.ux * W] = y.ux; m[o + PY.uz * W] = y.uz; m[o + PY.half * W] = y.half; }
-    const P = io.par;
-    m[P + PP.dt] = dt; m[P + PP.props] = n; m[P + PP.contacts] = nc; m[P + PP.leaves] = T.n; m[P + PP.ways] = F.length;
-    m[P + PP.flags] = (this.enabled ? PF.enabled : 0) | (CASTOR.on ? PF.castor : 0); m[P + PP.friction] = this.frictionScale;
-    m[P + PP.casDecel] = CASTOR.decel; m[P + PP.casVisc] = CASTOR.visc; m[P + PP.casSpin] = CASTOR.spin; m[P + PP.casStart] = CASTOR.startV; m[P + PP.casStop] = CASTOR.stopV;
-    const ev = io.x.props_update(this.store.home.bind(), T.M.slot);
-    { const q = propMem(), S = PROPS_STEPPED; S.swept += q[P + PP.swept]; S.guided += q[P + PP.guided]; S.pairs += q[P + PP.pairs]; S.walls += q[P + PP.walls]; S.held += q[P + PP.held]; S.substeps += q[P + PP.substeps]; }
-    const wrong = propMem()[P + PP.wrong]; if (wrong) throw new Error(`the furniture's step in the Rust module could not be what it was handed (${wrong === 1 ? 'more noises than its list holds' : 'more things, men, leaves or frames than its tables hold, or another count of things than its rows'})`);
-    return ev;
-  }
-  /** …and what it did taken back into the game: where the furniture leaves each man, and the noises in the order they were made. WHOEVER HEARS ONE MAY ASK
-   *  THE MODULE (and so grow its memory under a view of it), so everything the step left is read out first. */
-  private takeBack(contacts: PropContact[], ev: number): void {
-    const io = propIo(), m = propMem(), nc = contacts.length, K = io.maxContacts;
-    for (let c = 0, o = io.con; c < nc; c++, o++) { const p = contacts[c].pos; p[0] = m[o + PK.x * K]; p[2] = m[o + PK.z * K]; }
-    PROPS_STEPPED.there++; PROPS_STEPPED.noises += ev;
-    if (ev === 0) return;
-    const E = Array.from(m.subarray(io.ev, io.ev + ev * PROP_EV));
-    for (let e = 0; e < ev; e++) this.emit(this.heard(E, e * PROP_EV));
-  }
-  /** a noise of the module's list as the event this file makes of one */
-  private heard(E: ArrayLike<number>, o: number): PropEvent {
-    const sound = PROP_SOUNDS[E[o + PE.sound]], prop = this.all[E[o + PE.prop]], pos: Vec3 = [E[o + PE.x], E[o + PE.y], E[o + PE.z]], who = E[o + PE.who], level = E[o + PE.level], speed = E[o + PE.speed], rolling = E[o + PE.rolling] !== 0;
-    return sound === 'roll' ? { prop, sound, roll: E[o + PE.roll] !== 0 ? 'start' : 'stop', pos, who, level, speed, rolling } : { prop, sound, pos, who, level, speed, rolling };
-  }
-  /** THE STEP BOTH WAYS, COMPARED (collision.ts BOTH; tools/qa/prop-ident.ts): the module's step with nothing of it kept, then this file's from the same
-   *  columns — which is the step the game goes on with — and every column, every man's place and every noise held against the other. → what differed, in
-   *  words, or '' */
-  updateBoth(dt: number, contacts: PropContact[], leaves: Box[], T: { M: BoxMirror; leaves: number[] | null; n: number }): string {
-    const io = propIo(), S = this.store, nc = contacts.length, K = io.maxContacts;
-    const was = S.bytes();
-    const ev = this.handOver(dt, contacts, T);
-    const m = propMem(), there = S.bytes(), con = m.slice(io.con, io.con + Object.keys(PK).length * K), E = Array.from(m.subarray(io.ev, io.ev + ev * PROP_EV));
-    S.put(was);   // (the columns as they were: this file's step starts where the module's did)
-    const sent: PropEvent[] = [], emit = this.emit;
-    this.emit = e => { sent.push({ ...e, pos: [e.pos[0], e.pos[1], e.pos[2]] }); emit(e); };
-    try { this.updateHere(dt, contacts, leaves); } finally { this.emit = emit; }
-    const is = Object.is, bad: string[] = propDiff(S, S.bytes(), there, 4).map(t => `${t} (here | there)`), say = (t: string) => { if (bad.length < 4) bad.push(t); };
-    for (let c = 0; c < nc; c++) { const p = contacts[c].pos; if (!is(p[0], con[PK.x * K + c]) || !is(p[2], con[PK.z * K + c])) say(`man ${c} (who ${contacts[c].who}) ends at ${p[0]}, ${p[2]} here, ${con[PK.x * K + c]}, ${con[PK.z * K + c]} there`); }
-    if (sent.length !== ev) say(`${sent.length} noises here, ${ev} there`);
-    for (let e = 0; e < sent.length && e < ev; e++) { const a = sent[e], b = this.heard(E, e * PROP_EV);
-      if (a.prop !== b.prop || a.sound !== b.sound || a.roll !== b.roll || !is(a.pos[0], b.pos[0]) || !is(a.pos[1], b.pos[1]) || !is(a.pos[2], b.pos[2]) || !is(a.who, b.who) || !is(a.level, b.level) || !is(a.speed, b.speed) || a.rolling !== b.rolling)
-        say(`noise ${e}: thing ${a.prop.id} ${a.sound} by ${a.who} at ${a.level} (${a.speed}) here, thing ${b.prop.id} ${b.sound} by ${b.who} at ${b.level} (${b.speed}) there`); }
-    PROPS_STEPPED.noises += ev;
-    return bad.length ? `the furniture's step: ${bad.join(' · ')}` : '';
-  }
 
-  /** One substep: integrate → characters push → prop↔prop → door leaves → statics → characters held back. Statics come last among the prop movers so
-   *  nothing ends a substep inside a wall; the final character pass then concedes whatever the props could not.
-   *  IT READS AND WRITES THE COLUMNS BY ROW (`d[X + r]`: sim/propshome.ts; row r is props[r], whose own fields are the level's facts of it), the same
-   *  statements in the same order as when a thing's numbers were its fields. Nothing in a step asks the Rust module (its noises are said after it:
-   *  `say`), so the columns' arrays asked for as it opens stand to its end. */
-  private step(h: number, contacts: PropContact[], leaves: Box[]) {
-    const S = this.store, O = S.O, B = S.b8, W = S.b4, props = this.props, n = props.length, time = S.time; const d = S.d, u = S.u;
-    const X = B + O.x, Z = B + O.z, YAW = B + O.yaw, VX = B + O.vx, VZ = B + O.vz, WW = B + O.w, CS = B + O.cs, SN = B + O.sn, IDLE = B + O.idle, PUSH = B + O.pushT, FL = W + O.flags, WHO = W + O.who;
-    if (this.enabled) {
-      // 1. integrate + ground friction (Coulomb + a little viscous, linear and angular) + sleep
-      for (let r = 0; r < n; r++) {
-        if (u[FL + r] & PT.asleep) continue;
-        const p = props[r];
-        d[X + r] += d[VX + r] * h; d[Z + r] += d[VZ + r] * h; turnRow(d, YAW, CS, SN, r, d[YAW + r] + d[WW + r] * h); u[FL + r] |= PT.dirty;
-        const fs = this.frictionScale; const cas = CASTOR.on && p.def.kind === 'chair';
-        const dec = cas ? CASTOR.decel : p.tune.decel, vis = cas ? CASTOR.visc : p.tune.visc, spin = cas ? CASTOR.spin : 1.5 * p.tune.decel; const sp = Math.hypot(d[VX + r], d[VZ + r]);
-        if (sp > 0) { const ns = Math.max(0, sp - dec * fs * h) * Math.exp(-vis * fs * h); d[VX + r] *= ns / sp; d[VZ + r] *= ns / sp; }
-        const aw = Math.abs(d[WW + r]); if (aw > 0) { const na = Math.max(0, aw - spin * fs / p.radius * h) * Math.exp(-vis * fs * h); d[WW + r] *= na / aw; }
-        if (cas || (u[FL + r] & PT.rolling)) { this.rollNote(p, cas ? Math.hypot(d[VX + r], d[VZ + r]) : 0); }
-        if (sp < SLEEP_V && aw < SLEEP_W) { d[IDLE + r] += h; if (d[IDLE + r] > SLEEP_T) { u[FL + r] |= PT.asleep; d[VX + r] = d[VZ + r] = d[WW + r] = 0; } } else d[IDLE + r] = 0;
-        if (d[YAW + r] > Math.PI * 4 || d[YAW + r] < -Math.PI * 4) turnRow(d, YAW, CS, SN, r, d[YAW + r] % (Math.PI * 2));
-      }
-    }
-    // 2. characters push props (impulse toward the character's velocity, penetration split by mass — heavier props visibly slow you down)
-    for (const c of contacts) {
-      const invMc = 1 / c.mass;
-      for (let r = 0; r < n; r++) {
-        const p = props[r];
-        const dx = c.pos[0] - d[X + r], dz = c.pos[2] - d[Z + r]; const rr = p.radius + c.radius; if (dx * dx + dz * dz > rr * rr) continue;
-        if (!this.circleContact(r, c.pos[0], c.pos[2], c.radius)) continue;
-        const nx = cc.nx, nz = cc.nz, pen = cc.pen;
-        if (!this.enabled) { c.pos[0] += nx * pen; c.pos[2] += nz * pen; continue; }        // frozen props are just obstacles
-        const fresh = time - d[PUSH + r] > 0.25; d[PUSH + r] = time;                         // a new shove (as opposed to leaning on it continuously) — only those are worth a scrape
-        u[FL + r] &= ~PT.asleep; d[IDLE + r] = 0; u[WHO + r] = c.who; u[FL + r] |= PT.dirty;
-        const rx = cc.px - d[X + r], rz = cc.pz - d[Z + r];
-        // relative normal velocity of the prop's contact point w.r.t. the character (n points prop → character; > 0 = closing)
-        const vpx = d[VX + r] + d[WW + r] * rz, vpz = d[VZ + r] - d[WW + r] * rx;
-        const vn = (vpx - c.vel[0]) * nx + (vpz - c.vel[2]) * nz;
-        if (vn > 0) {
-          const cr = rz * nx - rx * nz; const k = p.invMass + p.invI * cr * cr + invMc; const jn = vn / k;
-          d[VX + r] -= jn * nx * p.invMass; d[VZ + r] -= jn * nz * p.invMass; d[WW + r] -= jn * cr * p.invI; clampRow(d, VX, VZ, WW, r);
-          const dv = jn * p.invMass;                                                          // how hard it was set going: a nudge is silent, walking pace scrapes, a sprint into a chair is loud
-          if (fresh && dv > 0.7) this.noise(p, 'scrape', dv, c.who, (0.28 * dv) * (c.quiet ? 0.5 : 1));
-        }
-        const share = p.invMass / (p.invMass + invMc);
-        d[X + r] -= nx * pen * share; d[Z + r] -= nz * pen * share; c.pos[0] += nx * pen * (1 - share); c.pos[2] += nz * pen * (1 - share);
-      }
-    }
-    if (this.enabled) {
-      // 3. prop ↔ prop
-      this.solvePairs(true);
-      // 4. door leaves sweep props aside (one-way and cheap: the door model never feels them; a prop shoved into a standing leaf finds it solid)
-      for (const lb of leaves) {
-        const lcs = Math.cos(lb.yaw), lsn = Math.sin(lb.yaw); const lr = Math.hypot(lb.h[0], lb.h[2]);
-        for (let r = 0; r < n; r++) {
-          const p = props[r];
-          const dx = d[X + r] - lb.c[0], dz = d[Z + r] - lb.c[2]; if (dx * dx + dz * dz > (lr + p.radius) * (lr + p.radius)) continue;
-          if (!satRects(lb.c[0], lb.c[2], lcs, lsn, lb.h[0], lb.h[2], d[X + r], d[Z + r], d[CS + r], d[SN + r], p.hx, p.hz)) continue;
-          d[X + r] += sat.nx * sat.depth; d[Z + r] += sat.nz * sat.depth; u[FL + r] |= PT.dirty; u[FL + r] &= ~PT.asleep; d[IDLE + r] = 0; d[PUSH + r] = time; u[WHO + r] = 0;   // whoever swung the door is unknown here: any clatter that follows is 'somebody', which guards do check out
-          const vn = d[VX + r] * sat.nx + d[VZ + r] * sat.nz; const want = Math.min(2, sat.depth / h * 0.5);   // carried along at about the leaf's speed (from how far it intruded this substep), never launched
-          if (vn < want) { d[VX + r] += (want - vn) * sat.nx; d[VZ + r] += (want - vn) * sat.nz; }
-        }
-      }
-      // 4b. a door frame guides a shoved prop through (doorways, above)
-      for (const F of this.doorways) for (let r = 0; r < n; r++) {
-        if ((u[FL + r] & PT.asleep) || time - d[PUSH + r] > 0.12 || (u[WHO + r] | 0) === 0) continue;   // (… by a body: a leaf's sweep stamps the same clock, and guiding that back at the leaf would be a motor)
-        const p = props[r];
-        const dx = d[X + r] - F.cx, dz = d[Z + r] - F.cz; if (dx * dx + dz * dz > (F.half + p.radius + 0.4) * (F.half + p.radius + 0.4)) continue;
-        const cs = d[CS + r], sn = d[SN + r], along = dx * F.ux + dz * F.uz, off = -dx * F.uz + dz * F.ux;
-        const eu = p.hx * Math.abs(cs * F.ux - sn * F.uz) + p.hz * Math.abs(sn * F.ux + cs * F.uz), en = p.hx * Math.abs(-cs * F.uz - sn * F.ux) + p.hz * Math.abs(-sn * F.uz + cs * F.ux);   // its footprint's reach along the wall and across it
-        const lim = F.half - eu - 0.01; if (lim < 0 || Math.abs(along) > F.half + 0.05 || Math.abs(off) > en + 0.15) continue;   // (wider than the door · its middle not before the opening · not at the frame yet)
-        const over = Math.abs(along) - lim; if (over <= 0) continue;
-        if (Math.abs(-d[VX + r] * F.uz + d[VZ + r] * F.ux) < 0.5 * Math.abs(d[VX + r] * F.ux + d[VZ + r] * F.uz)) continue;   // (shoved ALONG the wall, past the door: not on its way through)
-        const k = Math.min(over, DOOR_GUIDE * h) * (along > 0 ? -1 : 1); d[X + r] += F.ux * k; d[Z + r] += F.uz * k; u[FL + r] |= PT.dirty;
-      }
-      // 5. prop ↔ static scene (last of the prop movers, so nothing ends a substep inside a wall)
-      for (let r = 0; r < n; r++) if (!(u[FL + r] & PT.asleep) || (u[FL + r] & PT.dirty)) this.solveStatics(r, true);
-    }
-    // 6. whatever a prop could not yield (pinned against a wall / another prop), the character gives back: pushed clear of the final prop poses.
-    //    A prop found squeezed here also sheds the momentum step 2 keeps feeding it from the character's commanded velocity — otherwise a chair held
-    //    against a partition by someone still walking into it would rattle between the two every substep (spin building at the corner, knock after knock)
-    for (const c of contacts) for (let r = 0; r < n; r++) {
-      const p = props[r];
-      const dx = c.pos[0] - d[X + r], dz = c.pos[2] - d[Z + r]; const rr = p.radius + c.radius; if (dx * dx + dz * dz > rr * rr) continue;
-      if (!this.circleContact(r, c.pos[0], c.pos[2], c.radius)) continue;
-      c.pos[0] += cc.nx * cc.pen; c.pos[2] += cc.nz * cc.pen;
-      if (cc.pen > 0.004) { d[VX + r] *= 0.3; d[VZ + r] *= 0.3; d[WW + r] *= 0.3; }
-    }
-  }
 
-  /** Circle (character) vs the footprint of the prop in row r: on overlap fills `cc` with the normal (prop → circle), penetration and the contact point on the prop. */
-  private circleContact(r: number, cx: number, cz: number, rad: number): boolean {
-    const S = this.store, O = S.O, d = S.d, B = S.b8, p = this.props[r], px0 = d[B + O.x + r], pz0 = d[B + O.z + r];
-    const cs = d[B + O.cs + r], sn = d[B + O.sn + r]; const dx = cx - px0, dz = cz - pz0;
-    const lx = cs * dx - sn * dz, lz = sn * dx + cs * dz;                                  // circle centre in prop space
-    const qx = lx < -p.hx ? -p.hx : lx > p.hx ? p.hx : lx, qz = lz < -p.hz ? -p.hz : lz > p.hz ? p.hz : lz;
-    const ddx = lx - qx, ddz = lz - qz; const d2 = ddx * ddx + ddz * ddz; if (d2 >= rad * rad) return false;
-    let nlx: number, nlz: number, pen: number;
-    if (d2 > 1e-10) { const dd = Math.sqrt(d2); nlx = ddx / dd; nlz = ddz / dd; pen = rad - dd; }
-    else { const px = p.hx - Math.abs(lx), pz = p.hz - Math.abs(lz); if (px < pz) { nlx = lx < 0 ? -1 : 1; nlz = 0; pen = px + rad; } else { nlx = 0; nlz = lz < 0 ? -1 : 1; pen = pz + rad; } }
-    cc.nx = cs * nlx + sn * nlz; cc.nz = -sn * nlx + cs * nlz; cc.pen = pen;
-    cc.px = px0 + cs * qx + sn * qz; cc.pz = pz0 - sn * qx + cs * qz;
-    return true;
-  }
 
   private solvePairs(dynamic: boolean) {
     const S = this.store, O = S.O, B = S.b8, W = S.b4, props = this.props, n = props.length, time = S.time; const d = S.d, u = S.u;
@@ -583,5 +382,3 @@ export class PropSystem {
     }
   }
 }
-// scratch for circleContact
-const cc = { nx: 0, nz: 0, pen: 0, px: 0, pz: 0 };

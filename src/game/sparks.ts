@@ -5,6 +5,7 @@
 import { Vec3, v3, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import { StaticCollision } from '../scene/collision';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** Motion + colour ramp shared by every spark (the `sparks` block in effects.ts satisfies this). */
 export interface SparkParams {
@@ -45,7 +46,7 @@ export class Sparks {
   private static h(i: number, k: number, seed: number): number { const t = Math.sin((i + 1) * 12.9898 + k * 78.233 + seed * 53.17) * 43758.5453; return t - Math.floor(t); }
 
   /** `count` sparks in a cone of half-angle `cone` about `dir` — uniform over the spherical cap, not in angle (that piles them on the axis). Returns pool indices. */
-  emitCone(at: Vec3, dir: Vec3, o: { count: number; speed: number; cone: number; life: number }, seed: number): number[] {
+  emitCone(at: Vec3, dir: Vec3, o: { count: number; speed: number; cone: number; life: number }, seed: number): number[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Sparks.emitCone', this, [at, dir, o, seed]); if (__r !== RUST_PASS) return __r as any; } }
     const dn = v3.normalize(dir); const up: Vec3 = Math.abs(dn[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
     const U = v3.normalize(v3.cross(up, dn)); const W = v3.cross(dn, U); const cosMax = Math.cos(o.cone);
     const out: number[] = [];
@@ -76,7 +77,7 @@ export class Sparks {
   }
   clear() { for (const s of this.pool) s.alive = false; this.live = 0; }
 
-  update(dt: number, col: StaticCollision | null) {
+  update(dt: number, col: StaticCollision | null) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Sparks.update', this, [dt, col]); if (__r !== RUST_PASS) return __r as any; } }
     const P = this.params; const decay = Math.exp(-P.drag * dt); let live = 0;
     for (const s of this.pool) {
       if (!s.alive) continue;

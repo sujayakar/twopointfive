@@ -51,6 +51,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   not (five today: DESTRUCTION and LIVED by a recording's env, LOOK and PLAN picture only, RECAP reads only); knobs-check is red on a written table that is neither — and on a table `journal.ts` asks a FILE for (`k.tables.X`, the rules that put a key off for a recording from before it) that no recording carries: such a rule reads every file as one from before the key (PAIR's four keys and ROOMFIGHT.doorEars stood so until 10-22).
 
 <!-- was CLAUDE.md lines 319–323 -->
+- **THE GATE BEFORE A BUILD IS NAMED IS UNDER FIVE MINUTES (2026-11-07; the maintainer: "can we slim down the gate? should be no more than 15m", "in
+  general we should try to move fast at this point (maybe <5m for gate checks) and then have async checks that we fix forward").** A change is sent as
+  single-parent commit(s) cut on the named head, and its sender runs the same reads first, from the repository's root: (1) THE SCAN: the diff against
+  the named head read for anything that must not be public, every binary in the diff read with `strings` for machine paths, ids, names and hosts, no registry address in a lock file; (2) THE BAR:
+  `tsc --noEmit -p tsconfig.json`, `tsc --noEmit -p tools/qa/tsconfig.json`, `bun run tools/qa/claude-md-check.ts`, `bun run tools/qa/knobs-check.ts`,
+  `bun run build`, all exit 0; (3) DETERMINISM, SHORT: `bun run tools/blitz/thrice.ts` (three games of one process, one digest at the start and at each of
+  40 seconds); (4) ONE QUICK MISSION: `PT_DIGEST=1 bun run tools/qa/playthrough.ts --scn night-breach --seeds 1 --json out.json` ends with no error or
+  panic and its end, second and men up are the named head's, or the sender names the move. ONLY a change to what the page does at boot (the host, the
+  loader, `src/main.ts`) adds, up to a ceiling of fifteen minutes, one mission stood and played 45 s under real keys in headless Chromium
+  (`PORT=<port> node tools/blitz/page-walk.cjs`). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
+  sender. A read with a memory kill beside it, a time cap or a lost browser is spoiled and is read again, not called. EVERYTHING ELSE IS ASYNC, after the
+  name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the 84 mission tallies
+  (seeds 1 to 4) against the named head, the check families read as a list of reds by kind (not a bar), tour, soak, the two-seat run and the co-op
+  checks, rollback, a build of the Rust module compared with the checked-in one. What the short gate does not see: a page that does not boot (unless the
+  change is of the kind above), a rule that breaks on one die in ten, any mission but one, co-op, a family's red, timing, and a real GPU (no tool has
+  one: "never seen on a GPU" stays in every note).
 - **The gates.** `bun run tools/qa/missions-gate.ts` (`probes.ts missions-shipped`) plays every squad mission of the Missions list × 2 seeds to its end AS SHIPPED and is red on a run
   that throws or stalls (≈ 4 min at four jobs; not judged: who won); the QUIET rows (`QUIET_MISSIONS`) are played by `solo-night.ts`'s ghost on that tool's own stand, × 2 seeds — for
   them the gate holds 'starts and runs to the debrief', not 'as shipped'. `tools/qa/expected-red.ts` = the reds somebody has explained, by probe name; probes.ts prints its reds against it

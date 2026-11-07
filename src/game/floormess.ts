@@ -19,6 +19,7 @@ import { hash01 } from './debris';
 import { lookDecal } from './lookDecals';
 import { CHAOS, chaosOf } from './destruction';
 import { DESTRUCTION } from './destructionSwitch';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** the looks the 'damage' kind draws for these marks (render/shaders/decals.wgsl damageMark: floor(param); 0‥2 are the dent / shred / crack, 3‥5 the wall wear, 9 the crack in solid glass: particleFx.ts SOLID_GLASS_CRACK) */
 export const MESS_LOOK = { film: 6, grit: 7, splinter: 8 };
@@ -112,7 +113,7 @@ export function messBurst(g: Game, at: Vec3, size = 1) {
 
 /** A WALL CHARGE went off (wallcharge.ts blow): `p` on the wall's face at the charge, `n` off that face toward the charge's side, the wall `thick` m, `through`
  *  whether it opened a way (the far side's film goes only then). */
-export function messWall(g: Game, p: Vec3, n: Vec3, thick: number, through: boolean) {
+export function messWall(g: Game, p: Vec3, n: Vec3, thick: number, through: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('messWall', undefined, [g, p, n, thick, through]); if (__r !== RUST_PASS) return __r as any; } }
   if (!on(g)) return; const W = CHAOS.mess.wall;
   spread(g, p[0] + n[0] * W.out, p[2] + n[2] * W.out, W.near, 1, [n[0], n[2]]);
   if (through) spread(g, p[0] - n[0] * (thick + W.out), p[2] - n[2] * (thick + W.out), W.far, 1, [-n[0], -n[2]]);

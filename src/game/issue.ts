@@ -9,9 +9,10 @@
 //   · a level without the field returns on the first line — the game as it was.
 // Nothing here draws a die or reads the camera. Type-only game imports (src/game is one import cycle).
 import type { Game } from './game';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** Called by the night breach's staging right after kitStage: the structure's own wall charges into the bag. Returns the count now carried (null = not this level's rule). */
-export function issueStage(g: Game): number | null {
+export function issueStage(g: Game): number | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('issueStage', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const n = g.roomClear.active ? g.roomClear.structure?.wallCharges : undefined;
   if (!(typeof n === 'number' && n > 0)) return null;
   const W = g.wallCharge; W.raiseCarried(n);   // (raiseCarried reads the count only after the run's own reset: a restart with nothing spent is issued again)

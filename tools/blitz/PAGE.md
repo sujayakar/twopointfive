@@ -44,8 +44,12 @@ each is held at its page value from before the level is built (`rustSettledHold`
 that value, a write of another is refused, and what was refused is named once in the console and stays on the debugger panel's first line ("N kept
 rows or address words are settled in this build and are not applied: …"; `window.__rust.settled`). So the half of the game the page still runs (the
 HUD, the menus, the picture's dressing) and the tick agree. Rows that are still switches (open decisions, the player's own, the difficulty's) cross
-to the Rust game with the knob tables AS A GAME STARTS; one changed in the middle of a mission (the debugger's Difficulty row) does not reach the
-Rust game until the next start.
+to the Rust game with the knob tables as a game starts, and one changed in the middle of a mission reaches it by the settings' walk, which is made
+every sixteenth tick: a quarter of a second at most. Measured on the compound (a row written, n frames stepped, the Rust game's whole state put back on
+the puppet, the row read): the squad ring's two rows, the team pace's two, `PRESSURE.on`, `DIGIN.on` and the fog's cone are there after 16 and after 17
+frames every time, and the debugger's 'hard defenders' box turns all three of the difficulty's rows 17 frames on. A settled row written on the page
+still reads its page value and is named in `window.__rust.settled.refused`. One gap: a row written and then, inside those sixteen ticks, a whole
+apply (a load, a restart) is put back to the Rust game's value, and the write is lost.
 
 ## A game kept: saves, loads, the restart
 
@@ -111,6 +115,15 @@ has not got.
   `__rust.asksRefused`, `__rust.askRefused`.
 - The page's bundle carries the call table for this (about half a megabyte). `tools/blitz/page-plugin.ts` names the bridge's files: after a pull that
   adds one, a running dev server must be started again.
+
+## A tool that writes the game by name
+
+A check that sets a field of `window.__game` between two frames (a lesson's step set back, a man moved) writes the PUPPET. Where the field is one the
+page's own switches (`watched` in `src/host/rustgame.ts`) or the settings' walk carry, it reaches the Rust game; any other field does not, and the puppet
+then shows what the game does not hold until an apply writes the game's value back over it. Seen: `tools/qa/tut-squad-page.cjs` set
+`game.lesson.i = 0` by hand, the line on the screen went back to step 1, and the Rust game stayed on the later step (its ring unlocked). Such a write
+goes through `window.__rust.poke(game, ['lesson', 'i'], 0)`: the puppet and the Rust game at once, or the reason it cannot. (The headless harness walks
+every field its tools write; the page walks the settings only: a walk of them all would cost every frame.)
 
 ## A panic does not end the session
 
@@ -244,6 +257,12 @@ WHAT STILL DIFFERS, each with its cause:
 - a smoke can's and its vent's source does not ride the can while it rolls (no arm for an item in the Rust `Track`).
 
 ## Checking it
+
+`tools/blitz/page-walk.cjs` walks the page in headless Chromium the way a player goes: the title, Play, a squad mission's row, Deploy, an order by the
+command key, the ring held up on a door (its caption must name the door, its first wedge must be the door's own order, a wedge's digit must give that
+wedge's order, on its second page too), a floor spot, a frag; then the solo night to its first checkpoint, a save by hand and its load. `PORT=5173 node
+tools/blitz/page-walk.cjs` with a dev server up; every line is PASS or FAIL and the exit code says which. The tutorial missions by a hand's own keys
+are `tools/qa/tut-*-page.cjs` (and `tut-page.cjs tut-sky`).
 
 A scripted player in the page (the same hands as `tools/qa/lesson-run.ts`, over the page's own Input) plays the address without the word and keeps every
 frame's input; the address with the word plays that input back; the die's count and the hash of each part of the game's block are held together every 60

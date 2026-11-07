@@ -136,7 +136,11 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   //      squad's keys are the command key and the word's (the page as it opens) the menu's own key gives nothing, the line's [X] is drawn "Hold" and the
   //      command key's cap, and that key kept down is the menu as a ring
   { const more = () => page.evaluate(() => { const g = window.__game, l = g.orders.log, m = g.orders.menu; return { n: l.length, last: l.length ? l[l.length - 1].order : null, menu: !!m, ring: !!g.orders.cmdRing, kind: m?.target?.kind ?? null, man: !!m?.target?.man }; });
-    const setStep = async i => { await page.evaluate(i => { const L = window.__game.lesson; L.i = i; L.seen = null; }, i); await run(4); await card(); await run(2); return read(); };
+    // (where the Rust game steps the page, a write on the page's own Game is a write on its puppet and never reaches the game: the lesson is set back
+    //  through the page's write by path, which writes both and starts at the game or at a row of a table. Its answer is the reason where it cannot; the plain write is then made and said)
+    const setStep = async i => { const why = await page.evaluate(i => { const L = window.__game.lesson, R = window.__rust; if (!R || !R.on || typeof R.poke !== 'function') { L.i = i; L.seen = null; return ''; }
+        const no = [R.poke(window.__game, ['lesson', 'i'], i), R.poke(window.__game, ['lesson', 'seen'], null)].filter(Boolean); if (no.length) { L.i = i; L.seen = null; } return no.join(' · '); }, i);
+      if (why) log(`   (the lesson's step was written on the page's Game alone: the write by path answered "${why}")`); await run(4); await card(); await run(2); return read(); };
     const holdQ = async () => { await page.keyboard.down('KeyQ'); await run(30); await page.keyboard.up('KeyQ'); await run(3); };
     // (the cursor on a spot the game's own pick calls bare floor — no man, no door — asked before the key goes down)
     const onFloor = async () => { const s0 = await read();

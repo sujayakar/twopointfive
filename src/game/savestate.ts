@@ -145,7 +145,7 @@ import type { FurnSave } from './furnblast';
 import { barsSnapshot, barsCheck, barsRestore, type BarsSave } from './winbars';
 import type { LaySnap } from './planlay';
 import { PLANLAY, laySnapshot, layRestore } from './planlay';
-import { CMDRING, ringRestore } from './cmdring';
+import { ringRestore } from './cmdring';
 import { dialogueSnapshot, dialogueRestore, peekScript, forceScript, forcedScriptOf, hashStr } from './dialogue';
 import type { DialogueSnap } from './dialogue';
 import { civiliansSnapshot, civiliansRestore, civilianCompromise } from './civilians';
@@ -164,6 +164,7 @@ import { sprintDoorTurning } from './sprintdoor';
 import { seenReset } from './seenwalk';
 import { takeSnapshot, restoreSnapshot, type Snapshot } from './rollback';   // (called inside Checkpoints only)
 import { LIGHT_IN, MAINS } from '../sim/lightshome';
+import { goneWithTick } from './crossing';
 
 // ================================================================================================================================ the schema
 export const SAVE_VERSION = 1;
@@ -884,7 +885,6 @@ class MemShelf extends HostOwned {
   warmed = 0;
   get(key: string): MemSave | null { return this.m.get(key) ?? null; }
   set(key: string, e: MemSave): void { this.m.set(key, e); }
-  remove(key: string): void { this.m.delete(key); }
   all(): MemSave[] { return [...this.m.values()]; }
   clear(): void { this.m.clear(); this.last = null; }
 }
@@ -1093,7 +1093,7 @@ export class Checkpoints {
   keep(label: string) { this.authored = label; }   // (the switch is read HERE: player.ts imports nothing of this module — an import there loads this file early from that door and the cycle then meets wind.ts before weather.ts)
   /** a load asked for INSIDE a step (player.ts: the bare Enter once down): a file is poured in at once, as ever; a save in memory is put back at the end of
    *  this update, where it was taken — never under the feet of the frame that is running */
-  loadInStep(g: Game, key: string): string | null { const e = this.shelf.get(key); if (!e) return this.load(g, key); const why = this.memNo(g, e); if (why) return why; this.due = key; return null; }   // (refused NOW, where the caller can still fall back on a restart)
+  loadInStep(g: Game, key: string): string | null { return goneWithTick('Checkpoints.loadInStep') as any; }   // (refused NOW, where the caller can still fall back on a restart)
   private memNo(g: Game, e: MemSave): string | null { return e.snap.game !== g || e.info.runId !== this.runId ? 'made in another run' : g.touring || g.puppet ? 'a show is running — stop it first' : null; }
   /** SAVETIMELINE with a team on the floor: the game as it stands kept in memory, in its own two rings (this run's only) */
   private writeMem(g: Game, slot: 'auto' | 'manual', label: string, authored = false): SaveResult {

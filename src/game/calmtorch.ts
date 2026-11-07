@@ -26,6 +26,7 @@ import type { Game, Guard } from './game';
 import type { Vec3 } from '../math/vec';
 import { lightEstimateAt, handCarry } from './guards';
 import { hourOf, hourLightAt } from './hours';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?calmtorch=0 = every patrol torch burns, as it did) and by the
  *  shipped stand; the harness's frozen stand leaves it off (TPS_CALMTORCH=1 turns it on). `litAt` is on the meter's 0‥1 scale (by the direct estimate the cubicles
@@ -50,9 +51,9 @@ export const TORCH_STATS = { clicksOn: 0, clicksOff: 0, asks: 0 };
 
 const carried = () => true;   // (the place's own lights only: nothing anybody carries)
 /** the place's steady light at a point of floor, on the meter's scale */
-export function placeLight(g: Game, x: number, z: number): number { return g.visibilityOf(lightEstimateAt(g, [x, 1.2, z], carried, true)); }
+export function placeLight(g: Game, x: number, z: number): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('placeLight', undefined, [g, x, z]); if (__r !== RUST_PASS) return __r as any; } } return g.visibilityOf(lightEstimateAt(g, [x, 1.2, z], carried, true)); }
 /** is this point lit enough to work in: `bar` there, or on floor in plain view of it inside `spillM` (two rings of eight) — by day also daylit floor out to `dayM` */
-export function workLit(g: Game, x: number, z: number, bar = TORCH.litAt): boolean {
+export function workLit(g: Game, x: number, z: number, bar = TORCH.litAt): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('workLit', undefined, [g, x, z, bar]); if (__r !== RUST_PASS) return __r as any; } }
   if (placeLight(g, x, z) >= bar) return true;
   const eye: Vec3 = [x, 1.5, z];
   for (let ring = 1; ring <= 2; ring++) { const r = TORCH.spillM * ring / 2;
@@ -70,7 +71,7 @@ export function workLit(g: Game, x: number, z: number, bar = TORCH.litAt): boole
 /** his place read for the switch: 1 = LIT (where he stands, and the floor `aheadM` / 2 and `aheadM` down the way he faces as far as the first wall, all at
  *  `litAt` × `offK`: nothing he is about to walk into is dark), −1 = DARK (where he stands, or the nearer of the two, under `litAt`), 0 = between the two — the
  *  edge of a pool, dark floor still a few strides off: the torch stays as it is */
-export function placeRead(g: Game, gd: Guard): -1 | 0 | 1 {
+export function placeRead(g: Game, gd: Guard): -1 | 0 | 1 { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('placeRead', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } }
   const c = gd.char, x = c.pos[0], z = c.pos[2]; TORCH_STATS.asks++;
   if (!workLit(g, x, z)) return -1;
   const fx = Math.sin(c.bodyYaw), fz = Math.cos(c.bodyYaw), eye: Vec3 = [x, 1.5, z], hi = TORCH.litAt * TORCH.offK;
@@ -126,4 +127,4 @@ export function calmTorchRestore(g: Game, s: CalmTorchSnap | null | undefined) {
   posing = true;
 }
 /** the load has posed the lights: time counts again */
-export function calmTorchPosed() { posing = false; }
+export function calmTorchPosed() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('calmTorchPosed', undefined, []); if (__r !== RUST_PASS) return __r as any; } } posing = false; }

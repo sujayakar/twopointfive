@@ -26,8 +26,9 @@
 // `on`: ON in the page (src/host/profile.ts pageSwitches; ?nosprintdoor = a run at a door as it was), OFF in the module and on the harness's frozen stand
 // (TPS_SPRINTDOOR=1). Off = no contact carries `run`, nothing here is read: the build as it was. Never under a show or with the puppet's strings on him.
 import type { Game, Player } from './game';
-import type { Door, DoorContact } from './doors';
-import { DOORBLAST } from './doorblast';
+import type { DoorContact } from './doors';
+import './doorblast';
+import { crossToRust, goneWithTick } from './crossing';
 
 export const SPRINTDOOR = { on: false,
   /** the share of his speed he keeps through a shoulder bash taken square on (under about 0.65 it reads as glue) */
@@ -52,65 +53,15 @@ export type DoorStamps = Pick<Player, 'down' | 'doorRipUntil' | 'doorBashAt' | '
 const live = (g: Game, pl: Pick<Player, 'down'>) => SPRINTDOOR.on && !pl.down && !g.puppet && !g.touring;
 
 /** What his door contact carries this frame (game.ts updateDoors): the rule's numbers while he is at a sprint, nothing otherwise. */
-export function sprintDoorRun(g: Game, pl: Player): DoorContact['run'] {
-  return live(g, pl) && pl.sprinting ? { bash: SPRINTDOOR.bashVel, rip: SPRINTDOOR.ripVel, ripLevel: SPRINTDOOR.ripLevel } : undefined;
-}
+export function sprintDoorRun(g: Game, pl: Player): DoorContact['run'] { return goneWithTick('sprintDoorRun') as any; }
 
-/** metres off the leaf a kick is thrown from (Doors.kickSpot), and the rate (1/s) updateKick eases him onto that spot: a kick begun at KICK_OFF + speed / KICK_EASE
- *  off the leaf starts its ease at the speed he is running at */
-const KICK_OFF = 0.76, KICK_EASE = 12;
-/** how much nearer the leaf than the kicking spot a kick may still begin (m): nearer than that he would be reeled back off the leaf to throw it — there it is
- *  the handle (a run begun on top of the door) */
-const KICK_NEAR = 0.06;
 
-/** THE BOOT AT THE RUN (game.ts updateDoors, once the doors are resolved): the leaf his sprint is about to meet from the face it opens toward, when a boot is
- *  the thing to do about it — shut in its frame where the frame would hold an ordinary boot (Doors.bootHolds: hung, not steel, the frame rule live), not locked
- *  against him, a door that can come off, his run square enough to land on the leaf and fast enough into it, floor to plant on. null = no kick this frame
- *  (he runs on, and if he reaches the leaf it is the handle). */
-export function sprintDoorKick(g: Game, pl: Player): Door | null {
-  if (!SPRINTDOOR.kick || !live(g, pl) || !pl.sprinting || pl.kick || pl.picking || pl.coding || pl.takedown || pl.holding || !DOORBLAST.on) return null;
-  const c = pl.char, vx = c.vel[0], vz = c.vel[2];
-  for (const d of g.doors.list) {
-    if (d.locked || !g.doors.bootHolds(d, c.pos)) continue;
-    const a = d.def.closedDir + d.angle, ux = Math.cos(a), uz = Math.sin(a), px = c.pos[0] - d.def.hinge[0], pz = c.pos[2] - d.def.hinge[1];
-    const perp = ux * pz - uz * px, s = perp >= 0 ? 1 : -1, off = Math.abs(perp);
-    const into = (uz * vx - ux * vz) * s;   // his speed INTO the leaf (its normal on his side is (−u.z, u.x)·s)
-    if (into < SPRINTDOOR.kickInto || off > KICK_OFF + into / KICK_EASE || off < KICK_OFF - KICK_NEAR) continue;
-    const meet = px * ux + pz * uz + (vx * ux + vz * uz) * (off / into);   // where along the leaf his run lands
-    if (meet < 0.1 || meet > d.def.width - 0.05) continue;
-    const spot = g.doors.kickSpot(d, c.pos).pos;
-    if (g.col.nav.isBlocked(spot[0], spot[2]) || g.col.solidBlocked([c.pos[0], 0.5, c.pos[2]], [spot[0], 0.5, spot[2]])) continue;
-    return d;
-  }
-  return null;
-}
 
-/** seconds after a shoulder through one leaf in which the next leaf costs nothing more (a pair of leaves, a second door a stride on: one blow, not two) */
-const AGAIN = 0.4;
 /** seconds his body takes to come back square after the turn has run out (player.ts counters it with his head for the turn and this long after) */
 const SETTLE = 0.2;
 
 /** After the doors have been resolved: what the leaf he ran open or ripped round cost him. */
-export function sprintDoorAfter(g: Game, pl: Player, own: DoorContact): void {
-  const c = pl.char; if (!own.run) return;
-  const sp = Math.hypot(c.vel[0], c.vel[2]);
-  if (own.bashed && g.time - pl.doorBashAt >= AGAIN) { const d = own.bashed;
-    // the part of his run that went into the leaf, as it stood when he met it (ajar, less of it does: a leaf half open across his way is a glancing blow)
-    const a = d.def.closedDir + (own.bashedAt ?? 0), nx = -Math.sin(a), nz = Math.cos(a); const sq = sp > 1e-3 ? Math.min(1, Math.abs(c.vel[0] * nx + c.vel[2] * nz) / sp) : 1;
-    const k = 1 - (1 - SPRINTDOOR.keep) * sq;
-    pl.speedSm *= k; c.vel = [c.vel[0] * k, 0, c.vel[2] * k];
-    // the shoulder nearer the latch leads: which way that turns him is the side of his run the hinge is on
-    const hx = d.def.hinge[0] - c.pos[0], hz = d.def.hinge[1] - c.pos[2]; const cross = c.vel[0] * hz - c.vel[2] * hx;
-    pl.doorBashAt = g.time; pl.doorBashLean = cross >= 0 ? -1 : 1;
-    SPRINTDOOR_STATS.bashes++;
-  }
-  if (own.ripped) {
-    const cap = g.tune.playerSprint * SPRINTDOOR.ripPace, now = Math.hypot(c.vel[0], c.vel[2]);
-    if (now > cap) { const k = cap / now; c.vel = [c.vel[0] * k, 0, c.vel[2] * k]; }
-    pl.speedSm = Math.min(pl.speedSm, cap); pl.doorRipUntil = g.time + SPRINTDOOR.ripSecs;
-    SPRINTDOOR_STATS.rips++;
-  }
-}
+export function sprintDoorAfter(g: Game, pl: Player, own: DoorContact): void { return crossToRust('sprintDoorAfter', undefined, [g, pl, own]) as any; }
 
 /** The share of his top speed his run is held to this frame (player.ts): `ripPace` while his hand is ripping a leaf round, else 1. */
 export function sprintDoorPace(g: Game, pl: DoorStamps, now = g.time): number { return live(g, pl) && now < pl.doorRipUntil ? SPRINTDOOR.ripPace : 1; }
@@ -127,7 +78,3 @@ export function sprintDoorLean(g: Game, pl: DoorStamps, now = g.time): number | 
   return t >= 1 ? 0 : pl.doorBashLean * SPRINTDOOR.lean * (1 - t) * (1 - t);
 }
 
-/** The look his head is given while his body is `off` radians off his run (player.ts → CharacterAnimator.lookYawExtra): the same angle back the other way. */
-export function sprintDoorHead(off: number): number { const w = off - Math.round(off / (2 * Math.PI)) * 2 * Math.PI; return Math.abs(w) < 1e-6 ? 0 : HEAD_SIGN * w; }
-/** which way lookYawExtra turns a head against the body's yaw (+ = to his left; the body's yaw is atan2(x, z)) */
-const HEAD_SIGN = -1;

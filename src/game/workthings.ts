@@ -47,7 +47,8 @@ import { drivePulled, rackDist } from './mission';
 import { quietWords, holderStand } from './quiet';
 import { chronObjective } from './chronicle';
 import { sneakLow, SNEAK } from './sneak';
-import { silentHoldsRound } from './silent';
+import './silent';
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 export const WORK = {
   /** the whole of it (false: the menu, the men and lighting.ts as they were) */
@@ -123,12 +124,7 @@ function panelFace(g: Game): { face: Vec3; n: Vec3 } {
 /** SAM'S OWN LINE TO THE PANEL (WORK.samFace): the point just off its real face that his eye needs a clear line to, asked from where he stands. Null: the
  *  switch is off, or he is not in front of that face (the far side of the wall it hangs on is not the breaker). Asked only where the fixed point's line is
  *  blocked, so every level it was right on reads as before. */
-export function samPanelPoint(g: Game, from: Vec3): Vec3 | null {
-  if (!WORK.on || !WORK.samFace || !g.level.breaker) return null;
-  const { face, n } = panelFace(g);
-  if ((from[0] - face[0]) * n[0] + (from[2] - face[2]) * n[2] <= 0) return null;
-  return [face[0] + n[0] * 0.05, face[1], face[2] + n[2] * 0.05];
-}
+export function samPanelPoint(g: Game, from: Vec3): Vec3 | null { return goneWithTick('samPanelPoint') as any; }
 
 /** lighting.ts's 'check the breaker' errand, read off the panel itself: `goal` where the man sent walks to, `mid` the middle of the reach he re-arms it
  *  from, `at` the point just off the panel's face that his chest needs a clear line to. */
@@ -138,7 +134,7 @@ const errands = new SideMap<Game, { t: number; key: string; E: BreakerErrand | n
  *  The fixed spot is KEPT wherever a man can stand on it with a line to the panel (walls only: a door leaf swung across it for a moment does not move the
  *  errand), so every level it was right on walks and times as before; elsewhere it is the spot a teammate told to work the panel stands on (standFor),
  *  and the reach is measured in front of the panel's real face. */
-export function breakerErrand(g: Game): BreakerErrand | null {
+export function breakerErrand(g: Game): BreakerErrand | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('breakerErrand', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   if (!WORK.on || !WORK.ownFace || g.touring || g.quietUtility || !g.level.breaker) return null;
   const bp = g.level.breaker.pos, key = bp.join(','), c = errands.get(g);
   if (c && c.key === key && g.time >= c.t && g.time - c.t < 1) return c.E;
@@ -181,7 +177,7 @@ export class WorkThings {
   // ------------------------------------------------------------ the things
   /** the things that can be worked right now. Read afresh when what places them changes (the level, the mission's rack, a quiet mission's words) and once a
    *  second besides: where a man stands to one moves with a door leaf swung across it. A new second also drops the records of men no longer at it (prune). */
-  things(): WorkThing[] {
+  things(): WorkThing[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WorkThings.things', this, []); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g; if (!WORK.on) return [];
     const B = g.level.breaker, bo = g.blackout, M = g.level.mission, drive = g.mission.stage === 'drive' && !g.quietUtility && !g.puppet, W = drive ? quietWords(g) : null;
     const key = `${B ? B.pos.join(',') : ''}|${B && !(bo.active && bo.permanent)}|${drive && M?.rack ? M.rack.front.join(',') : ''}|${W ? W.holder : ''}|${g.defuse?.key ?? ''}`;
@@ -333,11 +329,8 @@ export class WorkThings {
   }
   /** how long the work on a thing takes from the hand going out, s */
   private needOf(verb: WorkVerb): number { return WORK.handSecs + (verb === 'drive' ? DRIVE_SECS : verb === 'defuse' ? this.g.defuse.workSecs : WORK.breakerSecs); }
-  /** what the hand `hand(c)` has out is doing, for whoever poses it: the verb, the seconds since it went out and the seconds the work takes (null: no hand
-   *  out). `secs` runs on through the fade after the work is done or dropped; a read only, nothing here is written */
-  job(c: Character): WorkJob | null { const H = this.hands.get(c); return H ? { verb: H.verb, secs: Math.max(0, this.g.time - H.t0), need: H.need } : null; }
   /** he is at work and stood on the spot his thing is worked from (workPasses) */
-  atThing(gd: Guard): boolean { const J = this.jobs.get(gd); return !!J && this.working(gd) && !!J.A.arrived && !!J.thing.stand && flat(gd.char.pos, J.thing.stand) < 0.45; }
+  atThing(gd: Guard): boolean { return goneWithTick('WorkThings.atThing') as any; }
   /** is this man working a thing (a probe, the HUD) */
   working(gd: Guard): boolean { const J = this.jobs.get(gd); return !!J && gd.state !== 'dead' && this.g.orders.of(gd) === J.A; }
   /** the man an order has on a defuse mission's charge i (defuse.ts: the objective row's 'charge 1 · Red One on it'): `on` = his hand is on it NOW (his
@@ -360,7 +353,7 @@ export function workOn(g: Game, box: Box | undefined): OrderTarget | null { retu
 /** orders.ts rowsFor */
 export function workRows(g: Game, t: OrderTarget, page: string | null, rows: OrderDef[]): OrderDef[] { return WORK.on && g.work ? g.work.rows(t, page, rows) : rows; }
 /** game.ts handsOnDoors */
-export function workHand(g: Game, c: Character): DoorPush | null { return firstOf(g, v => v.work ? v.work.hand(c) : null); }
+export function workHand(g: Game, c: Character): DoorPush | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('workHand', undefined, [g, c]); if (__r !== RUST_PASS) return __r as any; } } return firstOf(g, v => v.work ? v.work.hand(c) : null); }
 /** roomfight.ts's eyes and what turns a man with nobody in his sight (a mate's call, footfalls), beside the pair's pairPasses: A MAN STOOD AT THE THING HE
  *  WAS SENT TO WORK DOES NOT TAKE AS A TARGET, OR TURN TO LOOK FOR, A MAN HIS ROUND IS HELD FOR — the squad's fire is held and that man has noticed nobody
  *  (silent.ts silentHoldsRound: the silent order, the sneak, the hold nobody has lifted; each wants him neither alert nor searching and under its `noticed` bar).
@@ -370,10 +363,7 @@ export function workHand(g: Game, c: Character): DoorPush | null { return firstO
  *  hand comes off (tick). Only AT the thing: on the walk there his gun goes onto whoever he sees, as it did. NOT passed, his gun staying on them as before:
  *  a man held only by spotted.ts's rule (suspicious, or roused and no danger yet) or only for a pane in the way (silentHoldsGlass) — each has noticed
  *  something, and a back turned on him would be the dumber thing. False with the switch or `heldPass` off. */
-export function workPasses(g: Game, gd: Guard, h: Guard): boolean {
-  if (!WORK.on || !WORK.heldPass || !g.work) return false;
-  return g.work.atThing(gd) && silentHoldsRound(g, gd, h);
-}
+export function workPasses(g: Game, gd: Guard, h: Guard): boolean { return crossToRust('workPasses', undefined, [g, gd, h]) as any; }
 /** sneak.ts's follower and spotted.ts's feet for a silent partner who is FOLLOWING, asked of each suspicious man that is his business: THE MAN IS WALKING
  *  TO THE BREAKER AND HE IS STOOD ON THAT WALK. Their own answers to a man who is looking are to wait short of what he looks at for his back, to step back
  *  the way they came, to kneel and stand still — right for a man who has stopped to listen, wrong for the man sent to the panel when the mains went
@@ -384,20 +374,9 @@ export function workPasses(g: Game, gd: Guard, h: Guard): boolean {
  *  and the teammate is within `walkM` of what is left of that walk — where the man stands, the corners of his route still ahead, the errand's spot — with
  *  nothing solid between him and it (a man in the next room is not on it). A man on that errand whose walk passes nowhere near is waited for and frozen
  *  for as before. False with the switch or `offWalk` off. */
-export function workComing(g: Game, gd: Guard, h: Guard): boolean {
-  if (!WORK.on || !WORK.offWalk || h.task?.kind !== 'breaker' || h.state !== 'suspicious') return false;
-  const p = gd.char.pos, end = h.task.pos, n = h.path.length; if (!h.pathGoal || flat(h.pathGoal, end) > 1) return false;
-  let a: ArrayLike<number> = h.char.pos;
-  for (let i = Math.min(h.pathI, n); i <= n; i++) {
-    const b: ArrayLike<number> = i < n ? h.path[i] : end, dx = b[0] - a[0], dz = b[2] - a[2], L2 = dx * dx + dz * dz;
-    const k = L2 > 1e-6 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[2] - a[2]) * dz) / L2)) : 0, qx = a[0] + dx * k, qz = a[2] + dz * k;
-    if (Math.hypot(p[0] - qx, p[2] - qz) < WORK.walkM && !g.col.solidBlocked([p[0], 0.45, p[2]], [qx, 0.45, qz])) return true;
-    a = b;
-  }
-  return false;
-}
+export function workComing(g: Game, gd: Guard, h: Guard): boolean { return crossToRust('workComing', undefined, [g, gd, h]) as any; }
 /** a pose layer's read beside workHand: what that hand is doing and how far in (null whenever workHand is null) */
-export function workJob(g: Game, c: Character): WorkJob | null { return g.work && g.work.hand(c) ? g.work.job(c) : null; }
+export function workJob(g: Game, c: Character): WorkJob | null { return crossToRust('workJob', undefined, [g, c]) as any; }
 /** lighting.ts: is the breaker none of this man's business unless he is told (a teammate, with the switch on) */
 export function workNotHis(gd: Guard): boolean { return WORK.on && gd.team === 'operative' && !!gd.unit; }
 /** lighting.ts setBlackout: a man who cannot leave where he stands (held on his mark, pinned to it, or walked by a script: a room fight's defenders, a posted response man)

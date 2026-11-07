@@ -32,8 +32,9 @@ import type { Game, Guard } from './game';
 import type { Character } from './character';
 import { Vec3, v3, clamp, lerp } from '../math/vec';
 import { MORALE, trainingOf } from './morale';
-import { RUNNER, runnerBreak } from './runner';
+import { RUNNER } from './runner';
 import { hasHim, OWN } from './owner';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?flinch=0 = nobody ducks at a round but on the suppression
  *  model's own edge, as it was). `least` / `full`: what a round must weigh (suppression.ts: wNear by how near it passed + wHit by how near it struck) to duck a
@@ -62,7 +63,7 @@ export function flinchInside(s: number): boolean { return FLINCH.on && s >= FLIN
 /** ONE ROUND WENT CLOSE TO `c` (suppression.ts noteRound, for every living, free character it weighed anything on): `near` = what it weighs before his
  *  temperament, his cover or whose it was are counted; `from` = the muzzle it left; `hostile` = it was a round of a side hostile to his. `gd` = the man, null
  *  for the player. */
-export function flinchRound(g: Game, c: Character, gd: Guard | null, near: number, from: Vec3, hostile: boolean): void {
+export function flinchRound(g: Game, c: Character, gd: Guard | null, near: number, from: Vec3, hostile: boolean): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('flinchRound', undefined, [g, c, gd, near, from, hostile]); if (__r !== RUST_PASS) return __r as any; } }
   const K = FLINCH; if (!K.on || near < K.least || (!hostile && !K.friendly) || g.quietUtility) return;
   if (gd) { if (hasHim(gd, OWN.runner) || !free(g, gd)) return; }
   else if (g.touring || g.player.down) return;
@@ -85,28 +86,6 @@ export function flinchScale(g: Game, gd: Guard | null): number {
 
 /** is he a man the run is asked of at all: a green defender or night-staff man, free (trainingOf has the response team steady) */
 function green(g: Game, gd: Guard): boolean { return staff(gd) && !gd.held && trainingOf(g, gd) === 'green'; }
-/** has he a man of his side by him who still has his gun: morale.ts hasMate's rule (inside `aloneM`, nothing solid between his eyes and that man's chest),
- *  less the men the runner has — a mate who has dropped it and is running, or low in a corner, is no company */
-function mateBy(g: Game, gd: Guard): boolean {
-  const c = gd.char, eye = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]);
-  for (const o of g.guards) { if (o === gd || o.state === 'dead' || !staff(o) || o.team !== gd.team || o.held || hasHim(o, OWN.runner)) continue;
-    if (v3.distXZ(o.char.pos, c.pos) <= MORALE.aloneM && !g.col.segmentBlocked(eye, o.char.bones.chest ?? v3.add(o.char.pos, [0, 1.2, 0]))) return true; }
-  return false;
-}
-/** ONCE A FRAME (game.ts update, before the runner's own tick): each green man's seconds under close hostile fire counted up or eased back, and the man
- *  over the count who is alone handed to the runner. With the run's own gates down nobody keeps a count. */
-export function flinchTick(g: Game, dt: number): void {
-  const K = FLINCH; if (!K.on) return;
-  const on = runOn(g);
-  for (const gd of g.guards) {
-    const T = stateOf.get(gd); if (!T) continue;
-    if (!on || gd.state === 'dead' || hasHim(gd, OWN.runner) || !green(g, gd)) { stateOf.delete(gd); continue; }
-    if (g.time - T.at > K.hotSecs) { T.under -= dt * K.easeK; if (T.under <= 0) stateOf.delete(gd); continue; }
-    T.under += dt; if (T.under < K.breakSecs) continue;
-    if (!mateBy(g, gd) && runnerBreak(g, gd)) { FLINCH_STATS.broke++; stateOf.delete(gd); }
-    else T.under = K.breakSecs - K.askSecs;   // (a mate by him, or the runner will not have him this frame: asked again shortly — he does not bolt the instant the mate falls unless the fire is still on him then)
-  }
-}
 /** QA: a man's seconds under close fire (0 = none on record) */
 export function flinchUnder(gd: Guard): number { return stateOf.get(gd)?.under ?? 0; }
 

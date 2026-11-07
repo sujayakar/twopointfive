@@ -32,7 +32,7 @@
 // rectangles, statement for statement.
 import { Vec3, v3, quat, clamp } from '../math/vec';
 import type { Quat } from '../math/vec';
-import { Box, BoxFlag, makeBox, wordOf } from '../scene/boxes';
+import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import type { Game } from './game';
 import type { Chunk } from './debris';
 import { hash01 } from './debris';
@@ -45,6 +45,7 @@ import { fallOf } from './falling';
 import { FALL_UNHEARD, FALL_IF_SOUNDED, FALL_HEARD, type FallSound } from '../sim/fallshome';
 import { cutBoxesOn, cutPrism } from '../scene/cut';
 import type { CutPlane } from '../scene/cut';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 /** what the fracture part hands over per fragment (rebuild/glass/fracture.md, 'the release hook' — the same fields, typed structurally so either side can land first) */
 /** what the penetration part hands over per pane a round goes through (its GLASSPEN_HOOKS.crossed — the fields this model reads, typed structurally: that file is not on this branch) */
@@ -183,7 +184,7 @@ export class GlassShards {
 
   // ---------------------------------------------------------------- in: a fragment lets go
   /** One fragment, from the fracture part's release hook (or take() below). Returns false when the model is not live (the caller's own stand-in then applies). */
-  release(f: GlassFragmentLike): boolean {
+  release(f: GlassFragmentLike): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassShards.release', this, [f]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g;
     if (!shardsLive(g)) return false;
     SHARD_STATS.fragments++;
@@ -446,63 +447,6 @@ export class GlassShards {
       this.emit([p[0], Math.max(p[1], b.c[1]) + 0.012, p[2]], [0, 1, 0], Math.min(2, n - 2 * j), { speed: 0.15, speedJit: 0.8, spread: 1.3, life: SHARDS.midLife, lifeJit: 0.3, size: SHARDS.crumbSize, sizeJit: 0.4, aspect: 1.3, tumble: 8, nrmJit: 0.3, posJit: 0.03, color: m.tint }, u32(m.seed ^ (0xC4B5 + j * 131)));
     }
   }
-  /** a plate that landed hard enough comes apart: 2‥3 smaller plates along its long side (those too small are particles), a burst of mids and fines where it struck */
-  private shatter(c: Chunk, speed: number) {
-    const D = this.g.destr.debris; const i = D.list.indexOf(c); if (i < 0) return;
-    const m = c.glass!; const b = c.box; const rot = b.rot ?? quat.yaw(b.yaw);
-    D.list.splice(i, 1); SHARD_STATS.breaks++;
-    // its in-plane axes: the thin one is the pane's thickness, the longer of the other two is cut
-    const cutPlate = !!m.poly && cutBoxesOn();   // (a cut plate is thin along its own z whatever its outline's extents: a sliver's short side can be under the pane's thickness)
-    const ax = cutPlate ? (b.h[0] >= b.h[1] ? [2, 1, 0] : [2, 0, 1]) : [0, 1, 2].sort((p, q) => b.h[p] - b.h[q]); const long = ax[2], short = ax[1];
-    const e: Vec3[] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]; const L = quat.rotate(rot, e[long]);
-    const h = (k: number) => hash01(u32(m.seed + c.serial * 131 + k * 977));
-    const k = 2 + (h(0) > 0.6 ? 1 : 0);
-    const cuts = [0]; for (let j = 1; j < k; j++) cuts.push((j + (h(j) - 0.5) * 0.5) / k); cuts.push(1);
-    let lost = 0;
-    if (cutPlate) {
-      // CUT: the outline itself is broken across its long side by k − 1 slanted lines (each taken off what is left, so the pieces never overlap); every piece a
-      // little smaller than its share (glass is lost along the break), cut along its own edges — the old outline's and the new breaks'
-      let rem: Pt2[] = m.poly!;
-      for (let j = 0; j < k; j++) {
-        let piece = rem;
-        if (j < k - 1) {
-          const ang = (h(90 + j) - 0.5) * 0.9; const ca = Math.cos(ang), sa = Math.sin(ang);
-          const nx = long === 0 ? ca : -sa, ny = long === 0 ? sa : ca; const d = (cuts[j + 1] * 2 - 1) * b.h[long] * (long === 0 ? nx : ny);
-          piece = clipHalf(rem, nx, ny, d); rem = clipHalf(rem, -nx, -ny, -d);
-        }
-        const full = piece.length >= 3 ? polyArea(piece) : 0; const sc = 0.88 + 0.1 * h(10 + j);
-        const cen = polyCentroid(piece); const small: Pt2[] = piece.map(p => [cen[0] + (p[0] - cen[0]) * sc, cen[1] + (p[1] - cen[1]) * sc]);
-        const area = full * sc * sc;
-        if (area < SHARDS.childMinArea) { lost += full; continue; }
-        const pb = cutPlateBox([b.c[0], b.c[1] + 0.004, b.c[2]], [rot[0], rot[1], rot[2], rot[3]], small, b.h[2], v3.copy(b.albedo));
-        if (!pb) { lost += full; continue; }
-        const side = (j - (k - 1) / 2);
-        const vel: Vec3 = v3.add(c.v, v3.add(v3.scale(L, side * (0.5 + 0.5 * h(20 + j))), [(h(30 + j) - 0.5) * 0.5, 0.3 + 0.5 * h(40 + j), (h(50 + j) - 0.5) * 0.5]));
-        const w: Vec3 = [(h(60 + j) - 0.5) * 12, (h(70 + j) - 0.5) * 6, (h(80 + j) - 0.5) * 12];
-        const ch = this.plate(pb.box, vel, w, c.who, { gen: m.gen + 1, area, tint: m.tint, type: m.type, seed: u32(m.seed + 7 + j * 131), littered: m.littered, poly: pb.poly }, pb);
-        if (!ch) lost += full;
-      }
-    } else
-    for (let j = 0; j < k; j++) {
-      const a0 = cuts[j], a1 = cuts[j + 1]; const share = a1 - a0; const hh: Vec3 = [b.h[0], b.h[1], b.h[2]]; hh[long] = b.h[long] * share; hh[short] = b.h[short] * (0.7 + 0.3 * h(10 + j));
-      const area = 4 * hh[long] * hh[short];
-      if (area < SHARDS.childMinArea) { lost += area; continue; }
-      const cc = v3.mad(b.c, L, ((a0 + a1) / 2 - 0.5) * 2 * b.h[long]);
-      const box = makeBox({ c: [cc[0], cc[1] + 0.004, cc[2]], h: hh, yaw: b.yaw, rot: [rot[0], rot[1], rot[2], rot[3]], albedo: v3.copy(b.albedo), ...wordOf(b), flags: BoxFlag.Dynamic });
-      const side = (j - (k - 1) / 2);
-      const vel: Vec3 = v3.add(c.v, v3.add(v3.scale(L, side * (0.5 + 0.5 * h(20 + j))), [(h(30 + j) - 0.5) * 0.5, 0.3 + 0.5 * h(40 + j), (h(50 + j) - 0.5) * 0.5]));
-      const w: Vec3 = [(h(60 + j) - 0.5) * 12, (h(70 + j) - 0.5) * 6, (h(80 + j) - 0.5) * 12];
-      const ch = this.plate(box, vel, w, c.who, { gen: m.gen + 1, area, tint: m.tint, type: m.type, seed: u32(m.seed + 7 + j * 131), littered: m.littered });
-      if (!ch) lost += area;
-    }
-    const A = m.area * 0.35 + lost;
-    const nm = this.budget(clampI(Math.round(A * SHARDS.midPerM2 * 1.5), 3, SHARDS.midMax));
-    this.emit(v3.add(b.c, [0, 0.02, 0]), [0, 1, 0], nm, { speed: 0.6 + 0.25 * speed, speedJit: 0.7, spread: 1.25, life: SHARDS.midLife, lifeJit: 0.3, size: SHARDS.midSize, sizeJit: 0.55, aspect: 1.7, tumble: 25, nrmJit: 1, posJit: b.h[long] * 0.7, vadd: [c.v[0] * 0.5, 0, c.v[2] * 0.5], color: m.tint }, u32(m.seed ^ 0x5A77));
-    const nf = this.budget(clampI(Math.round(A * SHARDS.finePerM2), 8, SHARDS.fineMax));
-    this.emit(v3.add(b.c, [0, 0.02, 0]), [0, 1, 0], nf, { speed: 0.9 + 0.35 * speed, speedJit: 0.85, spread: 1.35, life: SHARDS.fineLife, lifeJit: 0.4, size: SHARDS.fineSize, sizeJit: 0.6, aspect: 1.4, tumble: 45, nrmJit: 1, posJit: b.h[long] * 0.7, color: m.tint }, u32(m.seed ^ 0x5A78));
-    if (!m.littered && !SHARDS.byFall) this.deposit(b.c, A);   // (litter is laid where glass FIRST comes to rest: a plate already counted, knocked on and broken later, adds none and takes none with it)
-    this.note(`plate ${c.serial} (gen ${m.gen}, ${(m.area * 1e4).toFixed(0)} cm²) broke at ${speed.toFixed(1)} m/s into ${k} (+${nm + nf} particles)`);
-  }
 
   /** A round went THROUGH a sheet: the EXIT SPALL — a tight jet of fines off the far face along the round's way out, by what the glass took from it (a round
    *  through a hole a round already made throws a pinch; a laminated sheet holds most of its own). No plate, no sound (the crack is the blow's), a little litter
@@ -601,50 +545,13 @@ export class GlassShards {
   underfoot(pos: Vec3): number { const a = this.g.falls.at(pos[0], pos[2]); return a ? Math.min(1, a / SHARDS.crunchFull) : 0; }
   /** floor.ts tread(): a footfall at `pos` of hearing level `level`. On litter it crunches (anybody's — the ear's cue) and, for the level the caller files, is louder;
    *  the glass there is ground down a little. Off the litter, or with the model not live: `level` back untouched and nothing else. */
-  step(pos: Vec3, level: number): number {
-    const F = this.g.falls;
-    if (!F.any || !SHARDS.underfoot || !shardsLive(this.g)) return level;
-    const r = F.step(pos[0], pos[2], level, SHARDS.crunchFull, SHARDS.grind, SHARDS.crunchGain, SHARDS.crunchAdd), k = r.k;   // (louder by what lies there, and the glass ground down a little: FallStore.step)
-    if (k === 0) return level;
-    SHARD_STATS.crunches++;
-    this.g.audio.play('glassCrunch', [pos[0], 0.02, pos[2]], Math.min(1, (0.35 + 0.65 * k) * Math.min(1.5, 0.5 + level * 2)), { rate: 0.85 + 0.3 * hash01(++this.crunchN * 97) });   // (its own count: a footfall never moves a fragment's seed)
-    return r.level;
-  }
+  step(pos: Vec3, level: number): number { return goneWithTick('GlassShards.step') as any; }
 
   // ---------------------------------------------------------------- per frame
-  update(_dt: number) {
-    const g = this.g;
-    // the fracture part's release hook, when its build is the one running: ours while live, null (its own stand-in) while not — the one-line hookup, made here
-    const gb = g.glassBreak as unknown as { onRelease?: ((f: GlassFragmentLike) => void) | null };
-    const live = shardsLive(g);
-    { const P = gpuFx(g); if (P) P.shardRestFrost = SHARDS.restFrost; }   // (round five: the resting look's switch rides the particle block's flags)
-    // (taken on the edge of going live and only if nobody holds it; given back on the edge of going inert and only if it is still ours — never fought over in between)
-    if ('onRelease' in gb) {
-      if (live && !this.wasLive && gb.onRelease == null) gb.onRelease = this.onRelease;
-      else if (!live && this.wasLive && gb.onRelease === this.onRelease) gb.onRelease = null;
-      this.hooked = gb.onRelease === this.onRelease;
-    }
-    this.wasLive = live;
-    const F = g.falls;
-    if (!live) { if (F.waiting) F.clear(true); this.deferred.length = 0; this.deferredN = 0; this.breaks.length = 0; }   // (the switch off, chaos 0, the tour: nothing still owed sounds, breaks or is born — as glassbreak.ts sheds nothing more)
-    // records that waited a frame go first, inside what this frame's releases left of the cap
-    while (this.deferred.length && this.recsThisFrame < SHARDS.recsPerFrame) { const e = this.deferred.shift()!; this.deferredN -= e.count; this.send(e.pos, e.dir, e.count, e.o, e.seed); }
-    if (!F.waiting && !this.lives.length && !this.breaks.length) { this.recsThisFrame = 0; this.soundsThisFrame = 0; return; }
-    // births whose time is up leave the live estimate
-    if (this.lives.length) { let w = 0; for (const l of this.lives) { if (l.t > g.time) this.lives[w++] = l; else this.liveEst -= l.n; } this.lives.length = w; }
-    // plates that landed hard this frame come apart
-    if (this.breaks.length) { const B = this.breaks; this.breaks = []; for (const b of B) this.shatter(b.c, b.speed); }
-    // landings due: the tinkle, the litter, one hearing event a batch
-    for (const p of F.due(g.time, SHARDS.level, SHARDS.eventGap)) {   // (each one's glass is laid and the floor's one event a gap decided there: FallStore.due)
-      this.sound(p.name, p.pos, p.gain, p.rate);
-      if (p.heard) { SHARD_STATS.events++; g.events.push({ kind: 'prop', pos: [p.pos[0], 0, p.pos[2]], time: g.time, loud: false, level: p.level, who: p.who }); }
-    }
-    // the per-frame caps run from here to the same point next frame: the debris pool's landings, glassBreak's releases and this update's breaks share one count
-    this.recsThisFrame = 0; this.soundsThisFrame = 0;
-  }
+  update(_dt: number): void { return goneWithTick('GlassShards.update') as any; }
   private onRelease = (f: GlassFragmentLike) => { this.release(f); };
   /** a restart / the level reset: nothing pending, no litter (the plates went with the debris pool, the particles with the particle system's clear) */
-  reset() { this.clear(); this.log.length = 0; this.serial = 0; this.crunchN = 0; }
+  reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassShards.reset', this, []); if (__r !== RUST_PASS) return __r as any; } } this.clear(); this.log.length = 0; this.serial = 0; this.crunchN = 0; }
   /** Game.clearAftermath(): the particles and the moving debris have just been wiped (a showcase starting, a tour cut) — nothing of ours is still owed a sound, a hearing
    *  event or a birth, the live estimate is empty, and the litter went with the glass that was it */
   clear() { this.soundAt = {}; this.soundOwed = {}; this.g.falls.clear(); this.deferred.length = 0; this.deferredN = 0; this.paneMem.clear(); this.lives.length = 0; this.liveEst = 0; this.breaks.length = 0; this.lastPlate = null; this.recsThisFrame = 0; this.soundsThisFrame = 0; }
@@ -664,7 +571,7 @@ export class GlassShards {
     return b ? b.albedo : [0.4, 0.4, 0.4];
   }
   /** a hand test (the panel / __shards.test): a fragment of `area` m² let go at `at`, thrown along `dir` */
-  test(at: Vec3, dir: Vec3 = [0, 0, 1], area = 0.06, kind: GlassFragmentLike['kind'] = 'piece', type: GlassFragmentLike['type'] = 'annealed'): boolean {
+  test(at: Vec3, dir: Vec3 = [0, 0, 1], area = 0.06, kind: GlassFragmentLike['kind'] = 'piece', type: GlassFragmentLike['type'] = 'annealed'): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('GlassShards.test', this, [at, dir, area, kind, type]); if (__r !== RUST_PASS) return __r as any; } }
     const n: Vec3 = Math.hypot(dir[0], dir[2]) > 1e-6 ? v3.normalize([dir[0], 0, dir[2]]) : [0, 0, 1]; const s = Math.sqrt(area) / 2; const u: Vec3 = [n[2], 0, -n[0]];   // (a pane stands: its normal is level)
     const out: Vec3[] = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [at[0] + u[0] * a * s, at[1] + b * s, at[2] + u[2] * a * s] as Vec3);
     return this.release({ pane: -1, type, kind, outline: out, centre: v3.copy(at), normal: n, thickness: 0.006, area, velocity: [n[0] * 0.8, -0.3, n[2] * 0.8], spin: [2, 0.5, -1.5], tint: [0.72, 0.8, 0.82], grain: kind === 'clump' ? 0.009 : 0, cause: 'hit', who: NOBODY_ID, seed: u32(Math.imul(++this.serial, 2654435761)) });
