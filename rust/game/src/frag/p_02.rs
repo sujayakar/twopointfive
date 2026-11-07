@@ -299,7 +299,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
                 man.stagger_until = m::max(man.stagger_until, time + secs);
                 man.react_t = m::max(man.react_t, secs);
                 g.fa[w].burst = None;
-                g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
+                crate::mind::raise(g, gd, 0.92, "frag");
                 if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
                 crate::game::guard_set_path(g, gd, Vec::new());
                 g.gd[gd].path_goal = None;

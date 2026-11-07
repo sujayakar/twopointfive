@@ -183,8 +183,8 @@ pub fn breach_drill_start(g: &mut crate::game::Game) {
         g.ch[c].body_yaw = yaw;
         g.ch[c].aim_pitch = 0.0;
         g.gd[gd].speed = 0.0;
-        g.gd[gd].state = crate::game::GuardState::Patrol;
-        g.gd[gd].awareness = 0.0;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "breach");
+        crate::mind::set(g, gd, 0.0, "breach");
         if g.gd[gd].last_known.is_some() { g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); }
         g.gd[gd].last_known = None;
         crate::control::set_hold(g, gd, false, "breach");
@@ -206,8 +206,8 @@ pub fn breach_drill_start(g: &mut crate::game::Game) {
             g.ch[c].vel = [0.0, 0.0, 0.0];
             g.ch[c].aim_yaw = h.yaw;
             g.ch[c].body_yaw = h.yaw;
-            g.gd[gd].state = crate::game::GuardState::Patrol;
-            g.gd[gd].awareness = 0.0;
+            crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "breach");
+            crate::mind::set(g, gd, 0.0, "breach");
             crate::character::character_update(g, c, 0.0);
             crate::squad::order(g, gd, OP { goal: Some(None), face: Some(Some(h.yaw)), aim_at: Some(Some(v3::copy(h.aim_at))), stance: Some(Some(St::None)), upper: Some(Some(Up::Aim)), crouch: Some(Some(h.crouch == Some(true))), light: Some(Some(false)), ..Default::default() });
         }
@@ -345,8 +345,8 @@ pub fn breach_drill_tick(g: &mut crate::game::Game, dt: f64) {
             if dr!(g).t_enter.is_nan() {
                 if t < dr!(g).t_bang + GO_AFTER_BANG { return; }
                 dr!(g).t_enter = t;
-                if !dead(g, a) { g.gd[a].state = crate::game::GuardState::Search; }
-                if !dead(g, b) { g.gd[b].state = crate::game::GuardState::Search; }
+                if !dead(g, a) { crate::mind::set_state(g, a, crate::game::GuardState::Search, "breach"); }
+                if !dead(g, b) { crate::mind::set_state(g, b, crate::game::GuardState::Search, "breach"); }
                 say!(g, a, "going1", breach_lines.going1);
                 breach_drill_beat(g, "enter1");
                 if !dead(g, a) { breach_drill_start_flow(g, 0); }

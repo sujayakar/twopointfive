@@ -299,18 +299,17 @@ pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<cr
     g.gd[gd].muzzle_down = false;
     let an = &mut g.ch[c].anim;
     an.crouch_target = 0.0; an.lean = 0.0; an.reverse = false;
-    let man = &mut g.gd[gd];
-    man.state = match state {
+    crate::mind::set_state(g, gd, match state {
         EndGuardScriptState::Patrol => crate::game::GuardState::Patrol,
         EndGuardScriptState::Suspicious => crate::game::GuardState::Suspicious,
         EndGuardScriptState::Alert => crate::game::GuardState::Alert,
         EndGuardScriptState::Search => crate::game::GuardState::Search,
-    };
+    }, "squad");
     // (`gd.path = []; gd.pathGoal = null`: guard_set_path and guard_set_path_goal, written out for the row in hand)
-    man.path = Vec::new(); man.path_serial = man.path_serial.wrapping_add(1);
-    man.path_goal = None; man.path_goal_orbit = false;
+    g.gd[gd].path = Vec::new(); g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
+    g.gd[gd].path_goal = None; g.gd[gd].path_goal_orbit = false;
     if state == EndGuardScriptState::Patrol {
-        man.awareness = 0.0; man.react_t = 0.0; man.search_t = 0.0; man.last_known = None; man.body_duty = None;
+        crate::mind::set(g, gd, 0.0, "squad"); g.gd[gd].react_t = 0.0; g.gd[gd].search_t = 0.0; g.gd[gd].last_known = None; g.gd[gd].body_duty = None;
     }
 }
 
@@ -424,9 +423,8 @@ pub fn room_clear_start(g: &mut crate::game::Game, id: RoomClearId) {
             g.gd[gd].speed = 0.0;
         }
         crate::control::set_hold(g, gd, false, "squad"); crate::control::set_pinned(g, gd, false, "squad");
-        let man = &mut g.gd[gd];
-        man.state = crate::game::GuardState::Search;
-        man.awareness = 0.0; man.last_known = None; man.react_t = 0.0; man.search_t = 0.0; man.script = None;
+        crate::mind::set_state(g, gd, crate::game::GuardState::Search, "squad");
+        crate::mind::set(g, gd, 0.0, "squad"); g.gd[gd].last_known = None; g.gd[gd].react_t = 0.0; g.gd[gd].search_t = 0.0; g.gd[gd].script = None;
         g.ch[c].anim.stance = if i == 0 { crate::character::Stance::Stack } else { crate::character::Stance::HighReady };
         if !live { crate::character::character_update(g, c, 0.0); }
     }
@@ -828,12 +826,11 @@ pub fn next_door_of(g: &mut crate::game::Game, p: &crate::scene_level::RoomClear
 pub fn break_off(g: &mut crate::game::Game, gd: GuardId, awareness: f64, last_known: Option<V3>) {
     end_guard_script(g, gd, Some(EndGuardScriptState::Suspicious));
     if g.gd[gd].state == crate::game::GuardState::Dead { return; }
-    let man = &mut g.gd[gd];
-    man.state = crate::game::GuardState::Patrol;
-    man.awareness = m::max(man.awareness, awareness);
-    if let Some(k) = last_known { man.last_known = Some(v3::copy(k)); }
-    man.react_t = 0.0;
-    man.search_t = 0.0;
+    crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "squad");
+    crate::mind::raise(g, gd, awareness, "squad");
+    if let Some(k) = last_known { g.gd[gd].last_known = Some(v3::copy(k)); }
+    g.gd[gd].react_t = 0.0;
+    g.gd[gd].search_t = 0.0;
 }
 
 #[cfg(test)]

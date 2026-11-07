@@ -92,7 +92,7 @@ pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
             let b = room(g);
             if crate::squad::in_bounds(p, b, None) { crate::belief::cover(g, by, [aim[0], 0.0, aim[2]]); }
         }
-        g.gd[by].awareness = 1.0;
+        crate::mind::set(g, by, 1.0, "rescue");
         if took { rescue_note(g, "act:blocked"); return; }
         g.rescue.executed.add(v);
         let dir = v3::normalize(v3::sub(chest, g.ch[c].muzzle));

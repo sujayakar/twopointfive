@@ -359,7 +359,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
         }
         crate::belief::word(g, gd, back);
     }
-    g.gd[gd].awareness = m::max(g.gd[gd].awareness, aware);
+    crate::mind::raise(g, gd, aware, "launcher");
     if g.ai_enabled { g.gd[gd].witness.heard.small += 1.0; }
     let all = stagger_lines_table();
     let now: Vec<String> = if g.gd[gd].state == GuardState::Alert { all.iter().filter(|t| !t.contains("who's there")).cloned().collect() } else { all.clone() };
