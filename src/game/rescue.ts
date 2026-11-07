@@ -76,7 +76,7 @@ import { simRandom } from '../math/dice';   // the simulation's die (math/dice.t
 import './owner';
 import './rescuecheck';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
-import { seatCount } from './seats';   // (how many players' men stand: every budget of characters counts it)
+import { seatCount, budgetWithSeats } from './seats';   // (how many players' men stand: every budget of characters counts it)
 
 /** The scenario's knobs (Tab ▸ Sandbox ▸ Hostage rescue, __rescue.knobs). Who stands where, the stun, the lights and the clock's dealt length are read at a staging
  *  ('restage' applies them); the clocks' other numbers, blind fire and the clock's own switch are read as it runs. */
@@ -343,7 +343,7 @@ export class Rescue {
     for (let i = 0; i < Math.max(0, Math.min(MARKS.roamers.length, Math.round(K.roamers))); i++) cast.push({ role: 'roamer', inRoom: false, mark: MARKS.roamers[(i + swap) % MARKS.roamers.length], name: `Roamer ${i + 1}` });
     }
     cast.forEach((c, k) => {
-      const gd = spawnUnit(g, { team: 'hostile', pos: c.mark.pos, yaw: v3.yawTo(c.mark.pos, c.mark.aimAt), name: c.name, light: K.defLights, budget: 1 + cast.length });   // (a level's own cast may be more than the eight the shadow capsules hold: this many, Sam and them)
+      const gd = spawnUnit(g, { team: 'hostile', pos: c.mark.pos, yaw: v3.yawTo(c.mark.pos, c.mark.aimAt), name: c.name, light: K.defLights, budget: budgetWithSeats(g, 1 + cast.length) });   // (a level's own cast may be more than the eight the shadow capsules hold: this many, Sam and them)
       gd.hold = true; gd.pinned = true; this.hostiles.push(gd);
       this.defs.set(gd, { role: c.role, inRoom: c.inRoom, mark: c.mark, learned: NaN, set: false, sawFoe: false, released: false, burst: { until: -1, n: 0, next: 0 }, k, crew: '', look: null, spot: null, noise0: null });
     });
@@ -354,7 +354,7 @@ export class Rescue {
     for (let i = 2; i < K.squad; i++) at.push(S.team.ops?.[i] ? v3.copy(S.team.ops[i]) : g.nightBreach.standBy(at[i - 2], [...at, K.samAt], yaw));   // (the loadout's third and fourth: the level's own marks where it has them, else a stride behind the pair's)
     for (let i = 0; i < K.squad; i++) {
       const m = K.squad > 2 ? SQUAD4[i] : null;   // (up to two: the pair as ever, in no pair of the order menu's — three or four: the four-man squad's roster and colours)
-      const gd = spawnUnit(g, m ? { team: 'operative', pos: at[i], yaw, name: m.name, light: false, pair: m.pair, tint: m.tint, tint2: m.tint2, budget: Math.max(SQUAD4_BUDGET - 1 + seatCount(g), seatCount(g) + 1 + g.guards.length) } : { team: 'operative', pos: at[i], yaw, name: i === 0 ? 'Blue One' : 'Blue Two', light: false, budget: seatCount(g) + 1 + g.guards.length });
+      const gd = spawnUnit(g, m ? { team: 'operative', pos: at[i], yaw, name: m.name, light: false, pair: m.pair, tint: m.tint, tint2: m.tint2, budget: Math.max(budgetWithSeats(g, SQUAD4_BUDGET), seatCount(g) + 1 + g.guards.length) } : { team: 'operative', pos: at[i], yaw, name: i === 0 ? 'Blue One' : 'Blue Two', light: false, budget: seatCount(g) + 1 + g.guards.length });
       gd.hold = true; gd.pinned = true; gd.trained = K.trained; this.ops.push(gd);
     }
     // the hostages: the building's own two civilians' names and clothes when the level has them

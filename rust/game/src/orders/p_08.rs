@@ -281,6 +281,20 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
 
 // ------------------------------------------------------------ the HUD's words
 
+/// The squad's orders in one line, for a panel or a log: who the next order goes to, what the menu is up on, each man with what he is doing.
+/// (src/game/orders.ts:2626 SquadOrders.summary)
+pub fn squad_orders_summary(g: &mut crate::game::Game) -> String {
+    if !squad_orders_active(g) { return String::from("no squad"); }
+    let who = squad_orders_who_words(g, None);
+    let menu = match g.orders.menu.as_ref().map(|m| m.target.clone()) {
+        Some(t) => format!("menu up on {} · ", squad_orders_hover_words(g, Some(&t))),
+        None => String::new(),
+    };
+    let mut men: Vec<String> = Vec::new();
+    for gd in squad_orders_squad(g) { let s = squad_orders_status_of(g, gd); men.push(format!("{}: {}", g.gd[gd].callsign, s)); }
+    format!("orders to {} · {}{}", who, menu, men.join(" · "))
+}
+
 /// What one man is doing, in a few words.   (orders.ts SquadOrders.statusOf)
 pub fn squad_orders_status_of(g: &mut crate::game::Game, gd: GuardId) -> String {
     if g.gd[gd].state == crate::game::GuardState::Dead {

@@ -114,6 +114,10 @@ export const isManId = (id: number): boolean => id === PLAYER_ID || (id > NOBODY
 export const seatCount = (g: Pick<Game, 'seats'>): number => g.seats.length;
 /** how many more men the floor can be given as it stands (`most` = guards.ts MAX_SKINNED): a staging stands its team first and then as many of its
  *  defenders, in the order of their marks, as this leaves — a game of one: all of them (rust/game/src/seats/b_01.rs floor_room) */
+/** A BUDGET OF CHARACTERS WRITTEN FOR ONE PLAYER, with every seat counted: one more for each further seat. The ONE rule every staging's budget goes
+ *  through (the eight a caller gets without asking, the four's ten, a structure's, a rescue's cast): a game of one reads the number as written
+ *  (rust/game/src/seats/b_01.rs budget_with_seats). spawnUnit holds any budget to MAX_SKINNED; past that a staging cuts its defenders (floorRoom) */
+export const budgetWithSeats = (g: Pick<Game, 'seats'>, forOne: number): number => forOne - 1 + g.seats.length;
 export const floorRoom = (g: Pick<Game, 'seats' | 'guards'>, most: number): number => most - g.seats.length - g.guards.length;
 export function men(g: Pick<Game, 'seats' | 'player'>): Player[] { const S = g.seats; if (S.length === 1) return [g.player]; const out: Player[] = []; for (const s of S) out.push(s.view.player); return out; }
 /** the men still up */
