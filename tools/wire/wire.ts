@@ -13,7 +13,8 @@
 //   bun run tools/wire/wire.ts add-enum <mod::Type> <word[:Tag],...>                a plain enum of the table, new: its line on the wire
 //   bun run tools/wire/wire.ts add-event <crate::mod::fn|Name> [field:type,...] (--ts <name> --file <src file> [--no-game] | --host <arm>)   a call the Rust game hands to the host after a step: the event's line on the wire and the host's end. The Rust arm, its struct and the function that pushes it are a person's to write
 //   bun run tools/wire/wire.ts drop-event <Arm>...                                 events off the table: their rows, their structs, their arms on the wire (the Rust arm and what pushed it are a person's)
-//   bun run tools/wire/wire.ts drop-type <mod::Type>...                             a type off the table once no field names it
+//   bun run tools/wire/wire.ts drop-call <key>...                                 rows off the call surface by their keys ('Game.objectivePos'): the row, its arm, its place among the readers; refused while a TypeScript file crosses by it · --idle: every row no TypeScript file names
+//   bun run tools/wire/wire.ts drop-type <mod::Type>...                             a type off the table once no field names it · --idle: every type nothing on the wire comes to
 //   bun run tools/wire/wire.ts add-table <Id> <table> <mod::Type> <ts>              a table of the game, last, under an ID of its own (its lines in io.rs and io_rules.rs are written by hand)
 //   bun run tools/wire/wire.ts add-mix <Mix> <Id>,<Id>                              an ID of either of two tables: one number on the wire, the page's book answers it (io.rs writes the number by hand)
 //   bun run tools/wire/wire.ts retype <mod::Type.field>=<type>...                   fields that now hold another type: the bytes they write are their type's
@@ -165,14 +166,41 @@ function addEvent(what: string, fields: string, ts: string | undefined, file: st
   if (io[k] !== outEventLine(E.arms.slice(0, -1))) die('OutEvent\'s line on the wire is not of the form this tool writes'); io[k] = outEventLine(E.arms);
   if (F.length) io.splice(k + 1, 0, `impl Io for ${path} { fn w(&self, o: &mut W) { ${F.map(x => `self.${x.rust}.w(o);`).join(' ')} } fn r(i: &mut R) -> Self { Self { ${F.map(x => `${x.rust}: Io::r(i),`).join(' ')} } } }`, `impl Poke for ${path} { fn poke(&mut self, i: &mut R) { match u16::r(i) { 0xffff => self.ri(i), ${F.map((x, i) => `${i} => self.${x.rust}.poke(i),`).join(' ')} k => panic!("bridge: no field {} of ${st}", k) } } }`); writeFileSync(ioP, io.join('\n') + '\n');
   gen(false); console.log(`wire: the event ${arm} is on the wire, tag ${tag}. Yours to write in Rust: the arm \`${F.length ? `${arm}(${path})` : arm}\`${F.length ? `, the struct ${st} in out_events/types.rs` : ''}, and the function that pushes it.`); }
-/** a type off the table, once no field names it: its lines on the wire go with it. The Rust type itself is a person's to delete */
-function dropType(Q: string[]): void { const S = readJ(SCHEMA), ioP = rustFile('io.rs'); let io = read(ioP).split('\n');
-  for (const q of Q) { const path = q.startsWith('crate::') ? q : `crate::${q}`, T = S.types[path]; if (!T) die(`${path} is no type of the table`); const named = new RegExp(`\\b${path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
-    const users = Object.entries(S.types).filter(([k, x]: [string, any]) => k !== path && JSON.stringify([x.fields, x.vars]).match(named)).map(([k]) => k); if (users.length) die(`${path} is still named by ${users.slice(0, 5).join(', ')}`);
-    delete S.types[path]; const before = io.length; io = io.filter(l => !l.startsWith(`impl Io for ${path} {`) && !l.startsWith(`impl Poke for ${path} {`)); console.log(`wire: ${path} off the table, ${before - io.length} lines on the wire`); }
+/** the types nothing on the wire comes to: not from the game, a table of rows, the out events, a call's or a tap's words, nor by name in a hand-written crate (the face, the runner, the start) or the bridge */
+function idleTypes(S: any): string[] { const refs = (t: string) => t.match(/crate::[A-Za-z_0-9:]+/g) ?? [], seen = new Set<string>(), queue: string[] = [], add = (m: string) => { if (S.types[m] && !seen.has(m)) { seen.add(m); queue.push(m); } };
+  // (a type's line on the wire may write more than the table says of it: an echo field is bytes to the page and its own type in Rust. So a type comes to whatever its Rust declaration names)
+  const named = new Map<string, string[]>(); for (const k of Object.keys(S.types)) { const n = k.split('::').pop()!; named.set(n, [...named.get(n) ?? [], k]); }   // (a bare name is any type of that name)
+  const files = new Map<string, string>(), declared = (k: string) => { const m = k.match(/^crate::([a-z_0-9]+)::([A-Za-z_0-9]+)$/); if (!m) return ''; if (!files.has(m[1])) files.set(m[1], ['game_types', 'game_rules', 'game_wire', 'game'].map(c => join(ROOT, 'rust', c, 'src', m[1], 'types.rs')).filter(existsSync).map(read).join('\n')); const t = files.get(m[1])!, i = t.search(new RegExp(`pub (struct|enum) ${m[2]}\\b`)); return i < 0 ? '' : t.slice(i, t.indexOf('\n}', i)); };
+  const drain = () => { for (let k = queue.pop(); k !== undefined; k = queue.pop()) { refs(JSON.stringify(S.types[k])).forEach(add); const D = declared(k); refs(D).forEach(add); for (const x of D.match(/\b[A-Z][A-Za-z0-9_]*\b/g) ?? []) (named.get(x) ?? []).forEach(add); } };
+  [S.root, 'crate::out_events::OutEvent', ...refs(JSON.stringify(S.tables)), ...refs(read(join(BLITZ, 'calls.json'))), ...refs(read(join(BLITZ, 'taps.json')))].forEach(add); drain();
+  const walk = (d: string, x: RegExp): string[] => readdirSync(d).flatMap(e => { const p = join(d, e); return statSync(p).isDirectory() ? e === 'node_modules' || e === 'target' ? [] : walk(p, x) : x.test(e) && !/^(puppet-apply|classes)\.ts$/.test(e) ? [read(p)] : []; });
+  const all = [...walk(join(ROOT, 'rust/game_wire/src/type_impls'), /\.rs$/), ...['game_face', 'game_run', 'game_start'].flatMap(c => walk(join(ROOT, 'rust', c), /\.rs$/)), ...walk(BLITZ, /\.ts$/), ...walk(join(ROOT, 'src'), /\.ts$/)].join('\n'); for (const k of Object.keys(S.types)) if (!seen.has(k) && (all.includes(k) || all.includes(k.replace('crate::', 'game::')))) add(k);
+  // (a module whose types have their lines by hand: game_wire's type_impls/parts/<module>.rs)
+  for (const e of readdirSync(join(ROOT, 'rust/game_wire/src/type_impls/parts'))) { const at = join(ROOT, 'rust/game_types/src', e.replace('.rs', ''), 'types.rs'); if (existsSync(at)) refs(read(at)).forEach(add); }
+  drain();
+  return Object.keys(S.types).filter(k => !seen.has(k)); }
+/** a type off the table, once no field names it: its lines on the wire go with it. The Rust type itself is a person's to delete. A list is taken off together, so types that name one another may go in any order */
+function dropType(Q: string[], idle: boolean): void { const S = readJ(SCHEMA), ioP = rustFile('io.rs'); let io = read(ioP).split('\n'); if (idle) { Q = idleTypes(S); if (!Q.length) return console.log('wire: no idle type'); }
+  const paths = Q.map(q => q.startsWith('crate::') ? q : `crate::${q}`), set = new Set(paths); for (const path of paths) if (!S.types[path]) die(`${path} is no type of the table`);
+  for (const [k, x] of Object.entries<any>(S.types)) if (!set.has(k)) for (const m of JSON.stringify([x.fields, x.vars, x.arms]).match(/crate::[A-Za-z_0-9:]+/g) ?? []) if (set.has(m)) die(`${m} is still named by ${k}`);
+  const before = io.length; io = io.filter(l => { const m = l.match(/^impl (?:Io|Poke) for (crate::[A-Za-z_0-9:]+) \{/); return !m || !set.has(m[1]); }); for (const path of paths) delete S.types[path];
   // (its fields' rows on the lists go with it)
-  const L = readJ(FIELDS), gone = Q.map(q => `${q.replace(/^crate::/, '')}.`); for (const k of ['everyTick', 'pageTick', 'atStartOnly']) L[k] = L[k].filter((x: string) => !gone.some(g => x.startsWith(g))); writeFields(L);
-  writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
+  const L = readJ(FIELDS), gone = paths.map(x => `${x.replace(/^crate::/, '')}.`); for (const k of ['everyTick', 'pageTick', 'atStartOnly']) L[k] = L[k].filter((x: string) => !gone.some(g => x.startsWith(g))); for (const q of Object.keys(L.unsent ?? {})) if (gone.some(g => `${q}.`.startsWith(g))) delete L.unsent[q]; writeFields(L);
+  writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); console.log(`wire: ${paths.length === 1 ? paths[0] : `${paths.length} types`} off the table, ${before - io.length} lines on the wire`); }
+/** a row off the call surface: its line of calls.json, its arm of call_gen.rs, its place in reads.json. A row's number is its name, so it leaves a hole and no other moves. The Rust function is a person's to delete */
+function dropCall(keys: string[], idle: boolean): void { const P = join(BLITZ, 'calls.json'), text = read(P), J = JSON.parse(text) as { rows: { id: number; key: string; stub?: string }[] };
+  const form = (v: unknown): string => v === null || typeof v !== 'object' ? JSON.stringify(v) : Array.isArray(v) ? `[${v.map(form).join(', ')}]` : `{${Object.entries(v as object).map(([k, x]) => `${JSON.stringify(k)}: ${form(x)}`).join(', ')}}`;
+  if (form(J) !== text.trimEnd()) die('calls.json is not in the form this tool writes: it would rewrite more than the rows');
+  const walk = (d: string): string[] => readdirSync(d).flatMap(e => { const p = join(d, e); return statSync(p).isDirectory() ? e === 'node_modules' ? [] : walk(p) : /\.(tsx?|cjs)$/.test(e) ? [p] : []; });
+  // (idle: the key stands in quotes in no TypeScript or page check of the tree, as a crossing, a call by hand or a list. No key is built at run time)
+  if (idle) { const all = [...walk(join(ROOT, 'src')), ...walk(join(ROOT, 'tools'))].map(read).join('\n'); keys = J.rows.filter(r => ![r.key, r.stub ?? r.key].some(k => [`'${k}'`, `"${k}"`, `\`${k}\``].some(x => all.includes(x)))).map(r => r.key); if (!keys.length) return console.log('wire: no idle row'); }
+  const gone = keys.map(k => J.rows.find(r => r.key === k) ?? die(`${k} is no row of the call surface`) as never), genP = rustFile('call_gen.rs'); let gen = read(genP).split('\n');
+  for (const f of [...walk(join(ROOT, 'src')), ...walk(BLITZ)]) { const t = read(f); for (const r of gone) if ([`call('${r.key}'`, `'${r.stub ?? r.key}', this`, `crossing('${r.stub ?? r.key}'`].some(x => t.includes(x))) die(`${f.slice(ROOT.length + 1)} still crosses by ${r.key}`); }
+  for (const r of gone) { const n = gen.length; gen = gen.filter(l => !l.startsWith(`${r.id} => `)); if (gen.length !== n - 1) die(`${r.key}: call_gen.rs has ${n - gen.length} arms numbered ${r.id}`); }
+  J.rows = J.rows.filter(r => !gone.includes(r)); writeFileSync(P, form(J) + (text.endsWith('\n') ? '\n' : '')); writeFileSync(genP, gen.join('\n'));
+  const R = join(BLITZ, 'reads.json'), rt = read(R), left = rt.split('\n').filter(l => !keys.some(k => l.trim().replace(/,$/, '') === JSON.stringify(k))), n = rt.split('\n').length - left.length; if (n) { const fixed = left.join('\n').replace(/,(\s*\])/, '$1'); JSON.parse(fixed); writeFileSync(R, fixed); }
+  const C = readJ(join(BLITZ, 'reads-contract.json')).rows, held = keys.filter(k => JSON.stringify(C).includes(JSON.stringify(k))); if (held.length) console.log(`wire: reads-contract.json still names ${held.join(', ')}: that list is written by hand`);
+  console.log(`wire: ${gone.length} rows off the call surface (${gone.map(r => `${r.key} ${r.id}`).join(', ')}), ${n} off the readers; ${J.rows.length} left`); }
 /** a table of the game, last: the table's own number and every row's place stay as they were */
 function addTable(id: string, table: string, ty0: string, ts: string): void { const S = readJ(SCHEMA), ty = `crate::${ty0}`, T = S.types[ty]; if (!T) die(`${ty} is no type of the table`); if (S.ids.includes(id)) die(`${id} is on the table already`); S.ids.push(id); S.tables.push({ id, table, ty, ts, mod: T.mod }); writeFileSync(SCHEMA, JSON.stringify(S)); gen(false); }
 /** an ID that names a row of either of two tables. On the wire it is one number, the first table's row twice over, the second's twice over and one more (io.rs writes it, tools/blitz/export.ts `Book` reads it) */
@@ -193,7 +221,8 @@ switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
   case 'add-enum': addEnum(A[1], A[2]); break;
   case 'add-hand-arm': addHandArm(A[1], A[2]); break;
   case 'add-word-arm': addWordArm(A[1], A[2], A[3], A[4]); break;
-  case 'drop-type': dropType(A.slice(1)); break;
+  case 'drop-call': dropCall(A.slice(1).filter(x => !x.startsWith('--')), A.includes('--idle')); break;
+  case 'drop-type': dropType(A.slice(1).filter(x => !x.startsWith('--')), A.includes('--idle')); break;
   case 'add-table': addTable(A[1], A[2], A[3], A[4]); break;
   case 'add-mix': addMix(A[1], A[2]); break;
   case 'retype': retype(A.slice(1)); break;
