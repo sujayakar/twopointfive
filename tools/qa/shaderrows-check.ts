@@ -69,8 +69,6 @@ async function arm(name: Arm, dump: string | null) {
   const { FrameFlags } = await import(`${ROOT}/src/render/frame.ts`);
   const { PIPE_QUEUE, pipelineProgress, laterIdle } = await import(`${ROOT}/src/gpu/device.ts`) as typeof import('../../src/gpu/device');
   const { Particles } = await import(`${ROOT}/src/render/particles.ts`);
-  const { dustLookVol } = await import(`${ROOT}/src/render/dustLookVol.ts`);
-  const { DUST_DRAW } = await import(`${ROOT}/src/smoke/dustTint.ts`);
   const wantFirst = name === 'first';
   console.log(`\n=== ${name}: ${wantFirst ? 'Start on first frame shaders on' : 'the start waits for every pipeline'} ===`);
   check(SHADER_ROWS.firstFrame === wantFirst && PIPE_QUEUE.later === wantFirst, `the row this arm asked for is the row the modules read`, `later ${PIPE_QUEUE.later}`);
@@ -80,9 +78,8 @@ async function arm(name: Arm, dump: string | null) {
   const engine = new Engine(gpu as never);
   const particles = new Particles(S.device as never, engine.sceneLayout);   // (the page makes it beside the engine and waits for both: src/main.ts)
   let ready = false; const init = Promise.all([engine.init({ sharp: true, gbaa: true }), particles.init()]).then(() => { ready = true; });
-  // THE LATER SET, by name: what the start may leave out with the row on (render/passes.ts traceJobs and init, render/froxels.ts). The dust twin only where it is drawn.
-  const LATER = ['composite', 'froxelCull', 'froxelInject', 'froxelInjectJ', 'froxelTemporal', 'froxelIntegrate',
-    ...(DUST_DRAW.on ? ['volDust'] : []), 'volFroxel'];
+  // THE LATER SET, by name: what the start may leave out with the row on (render/passes.ts traceJobs and init, render/froxels.ts).
+  const LATER = ['composite', 'froxelCull', 'froxelInject', 'froxelInjectJ', 'froxelTemporal', 'froxelIntegrate', 'volFroxel'];
   const later = new Set(wantFirst ? LATER : []);
   for (let turn = 0; turn < 400 && !ready; turn++) { for (const a of S.asked) if (!a.done && !later.has(a.label)) a.let(); await tick(); }
   const out = () => S.asked.filter(a => !a.done).map(a => a.label).sort();
@@ -101,7 +98,7 @@ async function arm(name: Arm, dump: string | null) {
     check(v.length === 1 && v[0].code.includes('const VOL_FROXEL_MARCH: bool = false;') && !v[0].code.includes('const VOL_FROXEL_MARCH: bool = true;'), 'the volumetric pass\'s boot program is compiled without the froxel-lit march');
     check(f.length === 1 && f[0].code.includes('const VOL_FROXEL_MARCH: bool = true;') && has('volFroxel'), 'its froxel twin (volFroxel) carries that march');
     check([...v, ...f].every(m => m.code.includes('const VOL_K0: bool = false;')), 'neither carries the K = 0 smoke march');
-    check(!DUST_DRAW.on || dustLookVol(readFileSync(`${ROOT}/src/render/shaders/volumetrics.wgsl`, 'utf8')) !== null, 'the dust twin still finds the statements it swaps in the march');
+    check([...v, ...f].every(m => m.code.includes('fn dustAlive() -> bool') && m.code.includes('let dl = dustDensity(X, onMask, true);')) && !has('volDust'), 'both carry the dust\'s look behind the frame\'s bit, and no third program is asked for');
   }
 
   // ---- frames: which program each pass is given

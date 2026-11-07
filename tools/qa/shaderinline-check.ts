@@ -21,7 +21,7 @@
 // what a rewrite takes out are what it is for. What it cannot see: a pipeline the page makes on first use, later than its boot (the entry points nobody asked
 // a pipeline for are listed, not sized into the totals), and the switches a URL flag or a trial turns. The fold of constant switches is on, as on the page: a
 // branch a constant decides is not in the text, so a kernel's size follows the switches. The listing is the shipped stand's page on a snow level in its
-// weather (cut boxes, the glass fracture and the dust twin on, as main.ts puts them: tools/qa/pageboot.ts), and the budget is held to that page AND to the
+// weather (cut boxes, the glass fracture and the dust's look on, as main.ts puts them: tools/qa/pageboot.ts), and the budget is held to that page AND to the
 // title's, which a second run of this file sizes. What a word on the address would add (a trial, `?look`) is in neither: `--setting look` lists that page.
 //   bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json out.json]      exit 0 = within the budget, 1 = not, or the boot did not finish
 //   bun run tools/qa/shaderinline-check.ts --setting title|snow|look                                    one page alone, listed and held to the table (pageboot.ts SETTINGS)
@@ -43,8 +43,7 @@ const BUDGET: [RegExp, number][] = [
   [/^gatherSplit \/ trace$/, 252],   // (the gather is two programs, render/gatherSplit.ts: its rays, then the light at what they hit)
   [/^gatherSplit \/ light$/, 58],   // (113 before the gather took the reflections' one-loop writing of the light loop, 2026-11-07)
   [/^composite(R|S|SR)? \/ (fs|cs)$/, 442],   // (403 until 2026-11-07: the snow's glow and sparkle are in every level's text now, asked by the frame's level word, 421 on the look's page)
-  [/^volumetricsDust \/ main$/, 433],
-  [/^volumetricsF? \/ main$/, 382],
+  [/^volumetricsF? \/ main$/, 400],   // (382 until 2026-11-07: the dust's look is in the march's own text, 395 on the look's page, and its second program, 433, is gone)
   [/^particles \/ update$/, 356],
   [/^restir \/ main$/, 336],   // (295 + an opening's light in this writing, 38 KB: as the table above)
   [/^froxel \/ injectJ$/, 210],

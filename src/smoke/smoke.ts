@@ -298,7 +298,7 @@ export class SmokeSystem implements SmokeSystemLike {
     this.stats.live = on ? Math.max(1, Math.round(this.stats.pool / 512)) : 0;
     this.binding.count = on ? 8 : 0;
     this.binding.streaks = this.streak.bands > 0;
-    this.binding.dusty = on && !this.show?.spin && (this.stats.tinted > 0 || this.emitters.some(e => !!e.tint || (this.streak.bands > 0 && e.kind === 'canister')));   // (look only: the volumetric pass takes its dust twin on such frames — render/dustLookVol.ts)
+    this.binding.dusty = DUST_DRAW.on && on && !this.show?.spin && (this.stats.tinted > 0 || this.emitters.some(e => !!e.tint || (this.streak.bands > 0 && e.kind === 'canister')));   // (look only: the volumetric pass draws dust as dust on such frames — shaders/dust_look.wgsl; never with the page's dust look put off)
     if (!on) { this.pushes.length = 0; if (this.stats.pool && this.params.enabled) this.zeroStats(); }   // (switched off the pool still holds what it held, and nothing would read the counts back while the world stands still: they stand, so `dusty` is right the frame it is switched on again)
   }
 
