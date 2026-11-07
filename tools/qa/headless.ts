@@ -31,15 +31,13 @@ if (harnessProfile() === 'shipped') shippedBoot();
 // from here on, in this process and (the words are inherited) its children. Said on stderr by the first process of a tree. On the OLD stand nothing is
 // folded: a tool started there says so and takes QA_FOLD out of what its children inherit (the whole run is unfolded, its page-stand arms too); an arm on the
 // old stand under a folded runner is not folded and says nothing (the runner's notice says it once).
-{ const { foldWanted, foldSettled, foldBefore, foldActive, offAtLayText, settledOf, switchRows, FOLD } = await import('./fold.ts');
+{ const { foldWanted, foldSettled, foldActive, settledOf, switchRows, FOLD } = await import('./fold.ts');
   if (foldWanted()) {
     if (harnessProfile() !== 'shipped') { if (!process.env.QA_FOLD_SAID) console.error('THE SETTLED ROWS ARE NOT FOLDED: this is the old stand, which is the other side of those rows (QA_FOLD and TPS_GAME ask for the fold on the page\'s stand only)'); process.env.QA_FOLD_SAID ??= 'not folded'; if (process.env.QA_FOLD_SAID === 'not folded') delete process.env.QA_FOLD; }
     else { const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`), say = !process.env.QA_FOLD_SAID; process.env.QA_FOLD_SAID = 'folded'; foldSettled(knobRegistry(), settledOf(switchRows()), process.env.FOLD_BREAK === '1');
-      const parents = process.env.QA_FOLD_OFF, off = offAtLayText(), more = parents === undefined ? [] : foldBefore(parents); process.env.QA_FOLD_OFF = off;
       if (say) console.error((foldActive() ? `THE SETTLED ROWS ARE FOLDED: ${FOLD.rows} switch rows are held at their value on the page; a write of any other is refused and counted`
         : `THE SETTLED ROWS' FOLD IS LAID AND OFF, to be put on check by check (fold.ts foldFor; QA_FOLD_ONLY in the runner): for a check it is on for, ${FOLD.rows} switch rows answer their value on the page and a write of any other is refused and counted; for every other check nothing is held`)
-        + ` (tools/qa/fold.ts; an arm on the old stand is not folded)${FOLD.skipped.length ? ` · ${FOLD.skipped.length} with a setter of their own left alone` : ''}${FOLD.missing.length ? ` · ${FOLD.missing.length} of the list are not in the tables: ${FOLD.missing.slice(0, 6).join(', ')}` : ''}${off ? ` · stood off its page value as the fold was laid${foldActive() ? ', and reads it from now on' : ' (folded, it reads its page value)'}: ${off}` : ''}`);
-      else if (more.length) console.error(`THE SETTLED ROWS ARE FOLDED, and this child was given a word its parent was not: ${more.join(', ')} stood off its page value as the fold was laid, and reads it from now on (counted as refused)`); } } }
+        + ` (tools/qa/fold.ts; an arm on the old stand is not folded)${FOLD.skipped.length ? ` · ${FOLD.skipped.length} with a setter of their own left alone` : ''}${FOLD.missing.length ? ` · ${FOLD.missing.length} of the list are not in the tables: ${FOLD.missing.slice(0, 6).join(', ')}` : ''}`); } } }
 /** the stand this file was loaded on. A tool that names its stand (`process.env.TPS_PROFILE ??= 'shipped'`) above a STATIC import of this file names it too late: imports load first, so the pins
  *  were lifted at stand-up and shippedBoot never ran, a stand that is neither of the two. standUp refuses that out loud. */
 const STAND_AT_LOAD: string = harnessProfile();
