@@ -1393,3 +1393,4 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   man down are guesses. The words are lower case like the rows and answers beside them. OPEN: where the reason sits on the quick key's row is
   the commanding work's to settle (its flat wheel and the corner panel draw that row); the reason for a charge is not on the HUD's line (the
   hint does not ask the lock, so it shows the open it will not do).
+- **The silent partner's words (2026-11-07).** The squad line says 'SILENT · low' with a suspicious man about and 'SILENT · contact' once an alert man has them (`spotted_word`, read by `silent posture_word`), as it did before the TypeScript tick went; 'SILENT · compromised' still wins. Seen where the partner is on: a quiet mission with a squad, and `?pair`. Native: `rust/game_start/tests/pair.rs`, red before.

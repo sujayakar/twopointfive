@@ -338,6 +338,23 @@ impl Play {
     pub fn recap_lost(&self) -> Vec<game::deathrecap::LostMan> { self.g.recap.lost_live.clone() }
     /// … and the word a man has over his head of the cues' own (the recap's side call goes there; his own lines do not).
     pub fn cue_over(&self, gd: GuardId) -> Option<String> { self.g.cues.bubbles.get(gd).map(|b| b.text.clone()) }
+    /// A man held where a test wants him, his back the way it says, as suspicious or alert as it says: for a rule that is not about his senses. Each frame.
+    pub fn pin_man(&mut self, gd: GuardId, at: [f64; 2], yaw: f64, state: GuardState, aware: f64) {
+        let c = self.g.gd[gd].ch;
+        self.g.ch[c].pos = [at[0], 0.0, at[1]];
+        self.g.ch[c].vel = [0.0; 3];
+        self.g.ch[c].body_yaw = yaw;
+        self.g.ch[c].aim_yaw = yaw;
+        let h = &mut self.g.gd[gd];
+        (h.hold, h.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
+        h.path.clear();
+    }
+    /// Every man of the other side but these is down.
+    pub fn drop_all_but(&mut self, keep: &[GuardId]) {
+        for gd in self.g.guards.clone() {
+            if self.g.gd[gd].team != game::teams::Team::Operative && !keep.contains(&gd) && self.up(gd) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None, None); }
+        }
+    }
     /// Sam's teammates, in the order the game made them
     pub fn mates(&self) -> Vec<GuardId> { self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team == game::teams::Team::Operative).collect() }
     /// every man of the game's list in a line, for a failure's message
