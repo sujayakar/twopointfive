@@ -30,6 +30,7 @@
 //!                                      until the next call. Once a tick.
 //!   face_frame(h, a, x, y, z) -> p     A FRAME IS DRAWN, `a` of the way from the tick before to the last (1 = where the last left everything), looking at
 //!                                      x y z: the rows that move stand there, and the table again
+//!   face_knobs(h)                      every knob a person may turn, at face_out: its name's length (its top bit: a yes or no), the name, what it is turned to (f64)
 //!   face_draw_name(h, i)               a name that crosses by its number (a sound's), at face_out
 //!   face_draw_look(h, p, n)                 what the page says of its look (game_draw::LOOK numbers), once and when it changes
 //!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
@@ -223,6 +224,19 @@ pub unsafe extern "C" fn face_draw_look(h: u32, p: *const f64, n: usize) {
     if n != game_draw::LOOK { panic!("face_draw_look: {} numbers, and a look is {}", n, game_draw::LOOK); }
     let v = std::slice::from_raw_parts(p, n);
     super::with(h, |k| k.drawn.look(v));
+}
+#[no_mangle]
+pub extern "C" fn face_knobs(h: u32) {
+    let b = super::with(h, |x| {
+        let mut b = Vec::new();
+        for (name, yes, v) in game_run::knobs::all(&x.g) {
+            b.extend_from_slice(&(name.len() as u32 | (yes as u32) << 31).to_le_bytes());
+            b.extend_from_slice(name.as_bytes());
+            b.extend_from_slice(&v.to_le_bytes());
+        }
+        b
+    });
+    super::out(b);
 }
 #[no_mangle]
 pub extern "C" fn face_draw_name(h: u32, i: usize) {

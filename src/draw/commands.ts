@@ -37,4 +37,6 @@ export class Commands extends Writer {
   digIn(on: number): void { this.u32(15); this.u32(on); }
   /** the fog of war's cone, whatever the level says, for a visit */
   fogCone(on: number): void { this.u32(16); this.u32(on); }
+  /** one knob, by its name (knobs.rs); a name no knob has is nothing */
+  knob(name: string, value: number): void { this.u32(17); this.text(name); this.f64(value); }
 }

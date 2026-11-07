@@ -65,5 +65,14 @@ if (!only.length) { const tables = (f: (g: DrawGame) => void): string => { const
     X.face_drop(g.h); return off.filter(x => /^k /.test(x)).join(); };
   const standard = tables(() => { }), hard = tables(g => g.commands.difficulty(1)), lever = tables(g => g.commands.lever('ai', 'hard')), refused = tables(g => g.commands.lever('ai', 'nonsense')), after = tables(() => { });
   line(standard === after && standard === refused && hard !== standard && lever !== standard && lever !== hard, 'hard, and one lever of it, are what a game is staged by; a word that is no rung is nothing, and the next game is its own'); }
+// A KNOB BY ITS NAME: every one turned to what it is turned to is no change, one turned is another game, and turned back it is the same again
+if (!only.length) { const g = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), X = g.X;
+  g.start({ level: bytes('depot.json'), words: '?levelFile=depot.json&roomclear&squad4', mannequin, mannequinBin, cast, castLook, seed: 5 });
+  const word = (): string => { X.face_state_words(g.h); const p = X.face_out_ptr() >>> 0; return new Uint32Array(g.memory.buffer.slice(p, p + (X.face_out_len() >>> 0))).join(); };
+  const send = (f: () => void): void => { f(); const b = g.commands.take(), p = X.face_alloc(b.length) >>> 0; new Uint8Array(g.memory.buffer, p, b.length).set(b); if (!X.face_commands(g.h, p, b.length)) throw new Error('a command was refused'); X.face_free(p, b.length); };
+  const all = g.knobs(), was = word(); send(() => { for (const k of all) g.commands.knob(k.name, k.value); }); const same = word() === was;
+  const one = all.find(k => /pressure\.on$/.test(k.name)) ?? all[0]; send(() => g.commands.knob(one.name, one.yes ? 1 - one.value : one.value + 1)); const turned = word() !== was && g.knobs().find(k => k.name === one.name)!.value !== one.value;
+  send(() => g.commands.knob(one.name, one.value)); send(() => g.commands.knob('no.such', 1));
+  line(all.length > 1000 && same && turned && word() === was, `${all.length} knobs by name: turned to what they are is no change, one turned is, and turned back it is not`); X.face_drop(g.h); }
 console.log(fails ? `=== play: ${fails} FAILED ===` : '=== play: ALL PASS ===');
 process.exit(fails ? 1 : 0);
