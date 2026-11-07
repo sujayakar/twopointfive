@@ -4,7 +4,7 @@
     python3 tools/blitz/sweeps/post-flags.py [--check]
 
 Rewrites every `g.gd[<man>].hold = <value>;` and `g.gd[<man>].pinned = <value>;` in the body files of rust/game/src
-(`p_NN.rs`, `b_NN.rs`) into `crate::control::set_hold(g, <man>, <value>, "<module>");` (`set_pinned`), where
+(`p_NN.rs`, `b_NN.rs`; not a file's tests) into `crate::control::set_hold(g, <man>, <value>, "<module>");` (`set_pinned`), where
 <module> is the folder the file is in. The call writes the same flag at the same place and notes who wrote it
 (control::PostNote), so play is unchanged. A value or a man that reads `g` is taken into a local first, because
 the call borrows the game. Run again on a later tree it rewrites only what is still written the old way.
@@ -39,8 +39,12 @@ def main():
     for path in sorted(glob.glob(os.path.join(ROOT, '*', '[pb]_*.rs'))):
         module = os.path.basename(os.path.dirname(path))
         if module in SKIP: continue
-        text = open(path).read()
+        whole = open(path).read()
+        # (a file's tests set a man up by plain writes, and hold the game in a Box: they are left as they are)
+        cut = re.search(r'^\s*#\[cfg\(test\)\]', whole, re.M)
+        text, tests = (whole[:cut.start()], whole[cut.start():]) if cut else (whole, '')
         new, n = rewrite(module, text)
+        new += tests
         for i, line in enumerate(text.split('\n'), 1):
             if ALIAS.search(line) and 'Guard' not in line: aliases.append('%s/%s:%d: %s' % (module, os.path.basename(path), i, line.strip()[:150]))
         if n and not check: open(path, 'w').write(new)
