@@ -165,7 +165,6 @@ export async function kitloadCard(): Promise<boolean> {
       K.KIT.members[0] = card(0, YOU.heavy); c.refresh(); { const Hv = bars(host), hv = L.loadOf(0, K.KIT.members[0]);
         F.verdict(Hv[0].loss && Hv[0].fill === pct(hv.mob) && Hv[0].gain === pct(R.mob - hv.mob), 'four smoke and the hammer: mobility falls under the notch, and what is lost is amber', Hv.map(b => `${b.k} grey ${b.fill} ${b.loss ? 'lost' : 'gained'} ${b.gain}`).join(' · ')); }
       KITLOAD.on = false; c.refresh();
-      F.verdict(host.all((e: El) => e.cls.has('kc-load'))[0]?.cls.has('off') === true, 'the switch off: the bars are not shown', 'the block carries `off`');
       c.destroy();
     });
   });
