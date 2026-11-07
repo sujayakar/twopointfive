@@ -9,7 +9,7 @@ import { TABKEY, tabFromQuery, tabSettle, tabNow } from './ui/tabkey';
 import { tabCardOf, tabCardHtml } from './ui/tabcard';
 import { bootTextSize } from './ui/textsize';
 import { BACKKEY } from './game/backkey';
-import { loadoutFromQuery, wireMissions } from './ui/loadout';
+import { wireMissions } from './ui/loadout';
 import { sneakLabAsked, sneakLabBoot, sneakLabFrame } from './host/sneaklab';
 import { fireLabAsked, fireLabBoot, fireLabFrame } from './host/firelab';
 import { modelErrAsked, modelErrBoot, modelErrFrame, sceneOf } from './host/modelerr';
@@ -18,7 +18,7 @@ import { CHARLAB, charLabOpen, charLabLeave, charLabWear, charLabWorn, charLabOu
 import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitBoot';
 import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI } from './ui/missions';
-import { START_PAGE, startPage, startPageWanted, openStartPage, openList } from './ui/startpage';
+import { startPage, startPageWanted, openStartPage, openList } from './ui/startpage';
 import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
 import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterProgress, PIPE_QUEUE, FATAL } from './gpu/device';
 import { shaderRowsOn } from './ui/shaderrows';
@@ -281,7 +281,7 @@ async function main() {
   recipeTables();
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   const loading = document.getElementById('loading')!;
-  // The start card's look-alike goes up FIRST (menu.ts bootCard: the real layout with Start / Tour / Breach disabled and a status line), so the visitor reads the controls while the
+  // The title's look-alike goes up FIRST (menu.ts bootCard: with a status line) while the
   // GPU process compiles the renderer's ~100 kernels on its worker threads (engine.init below — gpu/device.ts has why they must never be compiled synchronously); the real Menu
   // re-renders over it, buttons live, when everything is ready. `tick()` yields to the event loop between the CPU-heavy phases so the card and its status line actually paint.
   // THE DIFFICULTY SWITCH (game/difficulty.ts) before the card paints its row: the level this machine keeps, then ?hard / ?hard=0 / ?difficulty=hard|standard for
@@ -639,8 +639,7 @@ async function main() {
       if (!runningScenario(game, levelFileQ)) return;   // (the cards only offer it with a scenario up; the console hook gets the same rule)
       const pick = PICKS_UI.on ? pickOfQuery(location.search) : null, next = PICKS_UI.on ? pickQuitSearch(location.search) : quitSearch(location.search); booted.why = null;   // (pickQuitSearch off a pick's page = quitSearch, less a row's name left on the URL)
       if (net) { net.close(); location.assign(location.pathname + netLeave(next) + location.hash); return; }   // (a networked game is left by leaving its page: the seat is let go, the address loses the game's words)
-      if (pick) { if (START_PAGE.on) reopenMissionsAfterLoad(); location.assign(location.pathname + next + location.hash); return; }   // (a short-list pick: its settings leave the URL with the scenario's, ALWAYS by a page load — its difficulty / hour / weather were read at boot and only a load puts the machine's own back — and onto the start card's rows, not the list)
-      if (q.has('levelFile')) { reopenMissionsAfterLoad(); location.assign(location.pathname + next + location.hash); return; }
+      if (pick || q.has('levelFile')) { reopenMissionsAfterLoad(); location.assign(location.pathname + next + location.hash); return; }
       attract.poke();
       quitScenario(game, plainFog(q));
       try { history.replaceState(null, '', location.pathname + next + location.hash); } catch { /* a sandboxed frame: the URL keeps the flag, a reload re-enters */ }
@@ -1144,8 +1143,8 @@ async function main() {
     requestAnimationFrame(settleStep);
   };
   if (openStartCard) { brief?.off(); menu.open('start');
-    if (START_PAGE.on) { if (openMissionsIfAsked() && !startPage()) openStartPage(); }   // (ui/startpage.ts: the one page was put up by the boot card — `?loadout=` included; left on the list across a load: the page again)
-    else if (missionsBusy() || !loadoutFromQuery(q)) openMissionsIfAsked(); } else if (brief && briefGo) briefSettle(brief); else card.off();   // (?loadout=<mission id>: that mission's loadout screen over the card — ui/loadout.ts; else the mission list if the page was left on it. A screen the visitor opened off the boot card meanwhile stays the one that is up)
+    if (openMissionsIfAsked() && !startPage()) openStartPage();   // (ui/startpage.ts: the one page was put up by the boot card — `?loadout=` included; left on the list across a load: the page again)
+  } else if (brief && briefGo) briefSettle(brief); else card.off();
   loading.style.display = 'none';   // (the backdrop went before the first frame in the old boot too; the card is over the canvas until Start, and ?paused / a script that only __shot()s must not keep it)
   boot.mark('interactive'); boot.span('toInteractive', 0, performance.now()); gpuStory.stage = '';
   if (brief?.held) rustGame?.rustWarm({ input, cam, canvas });   // (?rust=1: the Rust game started, its apply and its tick run once behind the same card: host/rustgame.ts rustWarm)
