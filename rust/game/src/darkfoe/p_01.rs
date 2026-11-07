@@ -310,7 +310,7 @@ pub fn walk(g: &mut crate::game::Game, d: RoomfightDefId, goal: V3) {
     row.stall_at = v3::copy(pos);
     row.stall_t = 0.0;
     row.rally_at = f64::NAN;
-    g.gd[gd].pinned = false;
+    crate::control::set_pinned(g, gd, false, "darkfoe");
     let speed = g.tune.guard_investigate * g.k.darkfoe.stumble_k;
     crate::squad::order(g, gd, crate::squad::OrderPatch {
         goal: Some(Some(v3::copy(goal))),

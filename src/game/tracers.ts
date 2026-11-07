@@ -15,6 +15,7 @@ import type { LightSet, RtLight } from '../render/lights';
 import type { Sparks } from './sparks';
 import type { Firearm, WeaponDef } from './weapons';
 import { tracerFx } from './effects';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** where an ember's sparks go: the CPU pool (game/sparks.ts Sparks satisfies this) or the game's router onto the GPU particles (particleFx.ts sparkSink) */
 export type SparkSink = Pick<Sparks, 'emitCone'>;
@@ -80,7 +81,7 @@ export class Tracers {
   /** fireWeapon's one call, after the round has been traced: `w` is the gun it came out of (its counters decide, isTracerRound) — or null with `force` for a
    *  streak regardless (the viewer's 'tracer every round'); `def` the row (its colour); muzzle, unit dir and the distance it flew; what it stopped in; whose round
    *  (the owner byte on the box and the light: his own capsules never shadow it). Returns whether a streak went. */
-  round(w: Firearm | null, def: WeaponDef, muzzle: Vec3, dir: Vec3, tHit: number, impact: TracerImpact, owner: number, force = false): boolean {
+  round(w: Firearm | null, def: WeaponDef, muzzle: Vec3, dir: Vec3, tHit: number, impact: TracerImpact, owner: number, force = false): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Tracers.round', this, [w, def, muzzle, dir, tHit, impact, owner, force]); if (__r !== RUST_PASS) return __r as any; } }
     const T = def.tracer; if (!T && !force) return false;
     if (!force && !(w && w.def === def && isTracerRound(w))) return false;   // (a round fired off a row the shooter does not carry — a harness poking fireWeapon — has no counters to be the third of anything)
     if (!(tHit >= this.params.minPath) || !Number.isFinite(tHit)) return false;   // the muzzle in the jamb, a contact shot: nothing to see
@@ -124,7 +125,7 @@ export class Tracers {
    *  moved onto the head; a head that reached the end last frame is retired first (it was drawn AT the wall once), one that reaches it now spawns its ember.
    *  `mPerPx` = world size of an internal pixel at the look-at depth (Game.mPerPx; 0 = never widen): a streak thinner than ~a pixel is widened and dimmed by the same
    *  factor so it carries the same light instead of crawling. dt 0 (a frozen still) redraws everything where it is. */
-  update(dt: number, out: Box[], mPerPx = 0) {
+  update(dt: number, out: Box[], mPerPx = 0) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Tracers.update', this, [dt, out, mPerPx]); if (__r !== RUST_PASS) return __r as any; } }
     if (this.live === 0) return;
     const P = this.params; let live = 0, lit = 0;
     const hw = Math.max(P.thickness * 0.5, 0.6 * mPerPx); const gain = (P.thickness * 0.5) / hw * P.emissive;
@@ -159,7 +160,7 @@ export class Tracers {
   }
 
   /** everything gone at once (encounter restart / clearAftermath, the viewer's respawn): lights handed back, slots freed */
-  clear() {
+  clear() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Tracers.clear', this, []); if (__r !== RUST_PASS) return __r as any; } }
     for (const t of this.pool) { if (!t.alive) continue; this.release(t); t.alive = false; }
     this.live = 0; this.lit = 0;
   }

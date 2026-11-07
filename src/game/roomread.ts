@@ -15,6 +15,7 @@ import type { Vec3 } from '../math/vec';
 import type { Game } from './game';
 import type { Opening } from './cover';
 import { doorCells } from './guards';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** One way out of a space. */
 export interface RoomWay {
@@ -38,7 +39,7 @@ const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** The space round `p` and its ways out. `reach`: metres of walking the space is followed for · `hint`: with `p` itself on a frame or a gap's line, the
  *  space is the one on this point's side of it (whoever asks says whose side: the man who gave the order, the man who stands there) · `ring`: the keys a
  *  locked leaf is judged against (default: the team's — Sam's ring and the codes he knows, orders.ts route()'s own rule). */
-export function roomRead(g: Game, p: Vec3, reach = 9, hint: Vec3 = p, ring?: ReadonlySet<string>): RoomRead {
+export function roomRead(g: Game, p: Vec3, reach = 9, hint: Vec3 = p, ring?: ReadonlySet<string>): RoomRead { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('roomRead', undefined, [g, p, reach, hint, ring]); if (__r !== RUST_PASS) return __r as any; } }
   const nav = g.col.nav, W = nav.W, H = nav.H, cs = nav.cell, C = g.cleared, dc = doorCells(g), opens = g.cover.ready();
   // the cells of every leafless opening's own line, near enough to matter: the space stops at them as it stops at a door's frame
   const lineOf = new Map<number, Opening>();

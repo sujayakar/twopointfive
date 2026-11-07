@@ -29,9 +29,9 @@ import type { Game, Guard } from './game';
 import type { OrderDef, OrderTarget } from './orders';
 import { sideOf } from './orders';   // (these five are called inside functions only: src/game is one import cycle)
 import { DOORTOOLS } from './doortools';
-import { wallAt, wallPt } from './wallcharge';
+import { wallAt } from './wallcharge';
 import { workNear } from './workthings';
-import { activeScenario } from './scenarioRun';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 export const PLANLAY = {
   /** the menu's 'wait for my word' row is under every menu, and an order picked with it on is laid: nobody moves until the word's key sends the plan */
@@ -72,8 +72,6 @@ export function layPrune(g: Game): void {
   if (n) { L.laid = L.laid.filter(o => o.who.length > 0); PLANLAY_STATS.dropped += n; }
 }
 
-/** the start a plan is kept for: the scenario that is up, the cast, the mark Sam stands on as the try begins (another way in is another start) */
-const startKey = (g: Game) => { const p = g.player.char.pos; return `${activeScenario(g) ?? 'none'}|${g.orders.squad().map(m => m.callsign).join(',')}|${Math.round(p[0] * 2)},${Math.round(p[2] * 2)}`; };
 /** the living men of the squad a laid order names */
 export function layMen(g: Game, o: LaidOrder): Guard[] { const S = g.orders.squad(); return o.who.map(c => S.find(m => m.callsign === c && m.state !== 'dead')).filter((m): m is Guard => !!m); }
 /** where a laid order is on the floor (null: nowhere — fall in, hold) */
@@ -91,7 +89,6 @@ function targetOf(g: Game, o: LaidWhere): OrderTarget | null {
   if (o.found === 'thing' && o.pick) { const w = workNear(g, o.pick); return w && w.target.kind === 'floor' && w.target.thing ? w.target : null; }
   return { kind: 'floor', at };
 }
-export function layTarget(g: Game, o: LaidWhere): OrderTarget | null { return targetOf(g, o); }
 /** those callsigns taken off every laid order (one with nobody left on it is gone) */
 function strike(L: LayState, names: Set<string>): number {
   let n = 0;
@@ -100,31 +97,10 @@ function strike(L: LayState, names: Set<string>): number {
 }
 
 /** The menu's row `d`, picked with 'wait for my word' on: laid for `men` on `t`. Null = laid, else why not (said by a man, as a refused order is). */
-export function layOrder(g: Game, d: OrderDef, t: OrderTarget, men: Guard[]): string | null {
-  const S = g.orders, L = S.lay;
-  if (t.kind === 'foe' || !d.targets.includes(t.kind)) return 'not here.';
-  let asked = men.filter(m => m.state !== 'dead' && S.mine(m)); if (!asked.length) { g.msg('nobody to take that order'); return 'nobody to take it'; }
-  if (d.only) { const o = d.only(S, asked, t); if (o.length) asked = o; }
-  const tm = S.forMen(t, asked), cant: [Guard, string][] = [];
-  // (as give() has it: a man who cannot do his part says so and is left exactly as he was — on the plan he was on)
-  const all = d.can ? asked.filter(m => { const w = d.can!(S, m, tm); if (w !== true) cant.push([m, w]); return w === true; }) : asked;
-  const no = all.length ? S.whyNot(d, tm, all) : cant[0][1];
-  if (no) { g.say(all.length ? all[0] : cant[0][0], no); PLANLAY_STATS.refused++; return no; }
-  for (const [m, w] of cant) g.say(m, w);
-  asked = all;
-  if (strike(L, new Set(asked.map(m => m.callsign)))) PLANLAY_STATS.replaced++;
-  const o: LaidOrder = { id: d.id, who: asked.map(m => m.callsign), kind: t.kind, at: [t.at[0], 0, t.at[2]], t: g.time };
-  if (t.kind === 'door') o.door = g.doors.list.indexOf(t.door);
-  if (t.kind === 'none' && t.man) o.man = t.man.callsign;
-  if (t.kind === 'floor' && t.thing) { o.found = 'thing'; o.pick = [t.thing.face[0], t.thing.face[1], t.thing.face[2]]; }
-  else if (t.kind === 'floor' && t.wall && d.id !== 'move' && d.id !== 'cover' && d.id !== 'hold' && d.id !== 'fallIn') { o.found = 'wall'; o.pick = wallPt(t.wall, 0, 0); }   // (the floor's own rows on a spot under a wall are the spot's: no wall to find again)
-  L.laid.push(o); PLANLAY_STATS.laid++;
-  g.msg(`you: ${S.whoWords(asked)} — wait · ${(typeof d.label === 'string' ? d.label : d.label(tm)).replace(/ · (\d+ left|uses .+)$/, '')}`);
-  return null;
-}
+export function layOrder(g: Game, d: OrderDef, t: OrderTarget, men: Guard[]): string | null { return crossToRust('layOrder', undefined, [g, d, t, men]) as any; }
 
 /** The word's key with a plan laid: every laid order given, in the order laid. Returns how many were given. */
-export function laySend(g: Game): number {
+export function laySend(g: Game): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('laySend', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const S = g.orders, L = S.lay; if (!L.laid.length) return 0;
   layPrune(g); if (!L.laid.length) return 0;
   if (!L.started && PLANLAY.keep) { L.kept = copy(L.laid); L.keptFor = L.tryKey; }
@@ -152,19 +128,9 @@ export function layGiven(g: Game, men: Guard[]): void {
   if (!L.sending && L.laid.length && strike(L, new Set(men.map(m => m.callsign)))) PLANLAY_STATS.struck++;
 }
 /** a fresh cast (orders.ts sync: a staging, a restart): nothing is laid — but the plan kept from the last try of these men on this level, laid again */
-export function layFresh(g: Game): void {
-  const L = g.orders.lay; L.sending = false;
-  if (L.restoredT >= 0 && g.time >= L.restoredT && g.time - L.restoredT < 0.1) return;   // (the cast a checkpoint's own restart stood up: the file's plan stands)
-  L.restoredT = -1; L.started = false; L.laid = [];
-  if (!PLANLAY.on || !PLANLAY.keep) { L.kept = null; L.keptFor = ''; return; }   // (switched off: nothing kept from before comes back when it is switched on)
-  if (!g.orders.squad().length) return;   // (nobody on the floor yet: the cast is still to come)
-  L.tryKey = startKey(g);
-  if (!L.kept) return;
-  if (L.keptFor !== L.tryKey) { L.kept = null; L.keptFor = ''; return; }
-  L.laid = copy(L.kept).map(o => ({ ...o, t: g.time })); PLANLAY_STATS.relaid++;
-}
+export function layFresh(g: Game): void { return crossToRust('layFresh', undefined, [g]) as any; }
 /** the plan thrown away (the debugger; a tool) — the kept one with it */
-export function layClear(g: Game): void { const L = g.orders.lay; L.laid = []; L.kept = null; L.keptFor = ''; L.started = false; L.sending = false; L.restoredT = -1; }
+export function layClear(g: Game): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('layClear', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } const L = g.orders.lay; L.laid = []; L.kept = null; L.keptFor = ''; L.started = false; L.sending = false; L.restoredT = -1; }
 
 /** the HUD's line for the key while a plan waits (orders.ts hud) */
 export function layNote(g: Game, key: string): { key: string; text: string }[] {

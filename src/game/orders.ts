@@ -62,54 +62,53 @@ import { Vec3, v3, wrapAngle } from '../math/vec';
 import type { Game, Guard, GuardScript, Interactable, PairId } from './game';
 import type { Team } from './teams';
 import type { Input } from './input';
-import { backTake, backName } from './backkey';
+import { backName } from './backkey';
 import type { Door } from './doors';
 import { lostOf, lostShown, type LostMan } from './deathrecap';
 import { BoxFlag } from '../scene/boxes';
 import type { FollowCamera } from './camera';
 import type { View } from '../host/hud';
 import { order } from './squad';
-import { crossesDoor, frameOf } from './guards';
-import { INTERACT_KEY } from './consts';
+import { crossesDoor } from './guards';
 import { NIGHTBREACH } from './nightbreach';
 import { COVER } from './cover';
 import { GLASSPEN, GLASSPEN_STATS, glassPenLive, shotThroughGlass, glassTollSig } from './glasspen';   // (GLASS IS NOT COVER: stackPosts → behindGlass; used at order time only, nothing touched at load)
-import { sneakFollow, sneakWay, sneaking, sneakLow, sneakPost, sneakTick, sneakWord } from './sneak';
-import { underUnseen, unseenLow, unseenFollow, unseenPost, unseenWallSlot, unseenWallLost } from './unseen';
-import { roomKept } from './rearwatch';
+import { sneakWord } from './sneak';
+import './unseen';
+import './rearwatch';
 import { gunFileCost, gunFileRanks } from './gunroles';   // (called inside pair only)
 import { pairUp } from './pairup';
-import { spottedFeet } from './spotted';
+import './spotted';
 import { wallTarget, wallRows, wallPt, skyAside } from './wallcharge';
 import type { WallSpot } from './wallcharge';
 import { workNear, workOn, workRows } from './workthings';
 import type { WorkThing } from './workthings';
 import { SEENWALK, SEENWALK_STATS, seenPrice } from './seenwalk';
-import { DOORMANNERS, DOORMANNERS_STATS, STACK_OWN, doorwayStand, doorwayFile, doorwayLane, doorwayOffLane, doorwayLanePrice, doorwayInWay, doorwayClearNear, doorGateStopped } from './doorway';
-import { PICTURE, PICTURE_STATS, anyIdea, exposedFor, pictureQuiet, pictureStep } from './picture';   // (asked inside stackSeen and the file's pose only: src/game is one import cycle)
-import { stackLinePace } from './stackline';
-import { handleGateStopped } from './handleside';
-import { clearLineFeet, clearLineLive } from './clearline';
-import { fireLineFeet, fireLineLive, fireLineTick } from './fireline';
+import { DOORMANNERS, DOORMANNERS_STATS, STACK_OWN, doorwayLanePrice, doorwayInWay, doorwayClearNear } from './doorway';
+import { PICTURE, PICTURE_STATS, anyIdea, exposedFor, pictureQuiet } from './picture';   // (asked inside stackSeen and the file's pose only: src/game is one import cycle)
+import './stackline';
+import './handleside';
+import './clearline';
+import './fireline';
 import { fitSpots, fitGroups, fitTick, type Fit } from './roomfit';   // (used inside the 'move' order only: nothing of roomfit.ts is touched at load)
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { watchedPlace } from './dialogue';   // (read inside an order's issue only: a cover's row names the place watched)
 import { doorSaidName } from './doornames';   // (a leaf: a shorthand door id's said name)
 import { propGap } from './roomclear';   // (used inside workedMarks only: nothing of roomclear.ts is touched at load)
 import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewOpen, STACKROOM, STACKROOM_STATS } from './stackroom';
-import { HOLDFIRE, holdFireOrder, holdFireSilent, holdFireHoldsTarget } from './holdfire';   // (called / read inside give / tick only)
-import { AUTOPILOT, AUTOPILOT_STATS, RESTACK_LINES, autoQuick, autoHint, autoPick, type AutoPick } from './autopilot';   // (read inside input(), hud() and show() only)
+import { holdFireOrder, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
+import { AUTOPILOT, AUTOPILOT_STATS, autoHint, autoPick, type AutoPick } from './autopilot';   // (read inside input(), hud() and show() only)
 import { whyWords } from './squadnet';   // (read inside hud() and quickFor() only)
-import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, ringPin, ringHoldSecs, ringLatch, ringSeats, flatSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
-import { loneKey } from './ringlone';
+import { CMDRING, CMDRING_STATS, ringZoom, ringHoldSecs, ringSeats, flatSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
 import type { LayState } from './planlay';
-import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
-import { goalInput, goalShift, planGoal, goalsOn, goalMen, goalRingOn, GOAL_NONE, PLAN_STATS } from './planmode';   // (planmode.ts: Shift + the key adds a goal, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
-import { teamFollow, teamDash, teamFight, teamTold, walkLead } from './teampace';   // (read inside update only)
-import { noShoveOwn } from './noshove';   // (read inside update only)
-import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
-import { silentHoldsTarget } from './silent';
+import { PLANLAY, layable, layGiven, layNote, layKey } from './planlay';
+import { goalShift } from './planmode';   // (planmode.ts: Shift + the key adds a goal, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
+import './teampace';   // (read inside update only)
+import './noshove';   // (read inside update only)
+import './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
+import './silent';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
 const NOWHERE: Vec3 = [1e7, 0, 1e7];
 /** … and how near a mark handed out must be to the post a man stands on to be that same mark, metres */
@@ -331,7 +330,6 @@ export const ORDERS = {
    *  is within this of him with a straight walk to it. `trailLong`: the walk is taken only where it is at most this many times his own + SAME_PLUS_M */
   trailDoors: false, trailReachM: 3, trailLong: 1.5,
 };
-const WHEEL_STEP = 60;   // px of wheel travel a row (interact.ts)
 /** the highest digit a row is ever put on: the number row as far as the left hand reaches off W A S D (the head comment) */
 export const ORDER_DIGITS = 5;
 const digitOf = (code: string) => /^Digit[1-9]$/.test(code) ? Number(code.slice(5)) : 0;
@@ -653,7 +651,7 @@ export class SquadOrders {
   /** the player is one of these men's own — nobody stands in his line with a gun up, a can of theirs spares him on their side of the door (Sam's squad: yes) */
   get sams(): boolean { return !this.cast; }
   /** whose side a can of theirs is (combat.ts detonateStun) */
-  get team(): Team { return this.cast?.team ?? 'operative'; }
+  get team(): Team { return goneWithTick('SquadOrders.team') as any; }
   /** the keys a locked door is tried with for them: Sam's ring and the codes he has learned */
   ring(): ReadonlySet<string> { if (this.cast) return this.cast.ring; const P = this.g.player; return P.codes.size ? new Set([...P.keys, ...P.codes]) : P.keys; }
   /** the living men an order would go to: the teammate under the reticle, else `who` */
@@ -688,8 +686,6 @@ export class SquadOrders {
   }
   /** CMDRING.wholeSquad, the player's own squad: every order of his is everyone's, and nothing he does narrows it (a part of the squad is Shift + the key's: planmode.ts) */
   private whole(): boolean { return CMDRING.wholeSquad && !this.cast; }
-  /** T with the cursor on a teammate: the orders go to that one man until T is pressed again (false: not a living man of the squad) */
-  address(gd: Guard): boolean { const k = this.squad().indexOf(gd); if (k < 0 || gd.state === 'dead') return false; this.who = k; return true; }
   /** who these men are, in a word or two: 'gold' (the whole of a squad in pairs; 'all' for the one pair), 'red' / 'blue' (a whole pair of it), else their callsigns */
   whoWords(men: Guard[] = this.recipients()): string { const S = this.squad().filter(gd => gd.state !== 'dead'); if (men.length === S.length && men.length > 1) return this.paired ? 'gold' : 'all';
     const id = men.length > 1 ? this.pairOf(men[0]) : null; if (id && men.every(gd => this.pairOf(gd) === id) && men.length === this.men(id).length) return id;   // (a whole pair of a bigger squad)
@@ -698,12 +694,6 @@ export class SquadOrders {
   toneOf(men: Guard[]): Tone | undefined { if (!this.paired || !men.length) return undefined; const id = this.pairOf(men[0]); return id && men.every(gd => this.pairOf(gd) === id) ? id : 'gold'; }
   has(gd: Guard): boolean { return this.asg.has(gd); }
   of(gd: Guard): Assignment | null { return this.asg.get(gd) ?? null; }
-  /** the tick's one write of a follower's latched word, right after his `arrived`: `d` is how far he is off his place */
-  private followWord(A: Assignment, d: number): void {
-    const t = this.g.time; let W = FOLLOW_WORD.get(A); if (!W) FOLLOW_WORD.set(A, W = { on: false, outT: -1 });
-    if (A.arrived) { W.on = true; W.outT = -1; }
-    else if (W.on) { if (W.outT < 0 || t < W.outT) W.outT = t; if (d > ORDERS.wordFarM || t - W.outT >= ORDERS.wordHoldS) W.on = false; }   // (t < outT: a checkpoint took the clock back)
-  }
   /** is he SHOWN as there: which of `there` / `going` the squad row and the replay trace print. A follower's is the latch; every other order's is `arrived` */
   shownThere(A: Assignment): boolean { return A.post === null ? FOLLOW_WORD.get(A)?.on ?? A.arrived : A.arrived; }
   /** Add an order to the menu: at the foot (or before the row `before`), on the next free digit of its page — from 5 on the first page (the built-in rows keep
@@ -732,7 +722,7 @@ export class SquadOrders {
   /** What a point in the world is, as a target: the nearest of a door (the point within doorPickM of its frame's centre or its leaf), a teammate (manM) and Sam
    *  himself (selfM) — so the reticle on a man stacked beside a door is the man, on the leaf an arm's length ahead of Sam the door; else the free floor at (or
    *  nearest) it; else nothing. (The cursor's own answer is targetUnder: a leaf or a doorway drawn under it is that door.) */
-  targetAt(p: Vec3): OrderTarget {
+  targetAt(p: Vec3): OrderTarget { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.targetAt', this, [p]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g, K = ORDERS, sam = g.player.char.pos, at: Vec3 = [p[0], 0, p[2]];
     let door: Door | null = null, dd = K.doorPickM;
     for (const d of g.doors.list) { const m = Math.min(flat(d.frameCentre, at), flat(d.pos, at)); if (m < dd) { dd = m; door = d; } }
@@ -768,7 +758,7 @@ export class SquadOrders {
    *  (the auto-aim snaps that to a man's chest within 60 px or a light under the cursor: an order for the floor under a ceiling panel's dot would go to the panel) — and where that
    *  is not a door and the cursor is on a door's own leaf, or on the room seen THROUGH a doorway (doorOnRay), that door: what is DRAWN under the cursor (a
    *  teammate's body, Sam's own, a leaf, a doorway) comes before what is only near its point (a teammate within manM, Sam's feet). */
-  targetUnder(input: Input, cam: FollowCamera, canvas: View): OrderTarget {
+  targetUnder(input: Input, cam: FollowCamera, canvas: View): OrderTarget { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.targetUnder', this, [input, cam, canvas]); if (__r !== RUST_PASS) return __r as any; } }
     const t = this.targetUnderOf(input, cam, canvas);
     return t.kind === 'none' && t.man && this.whole() ? { kind: 'none', at: t.at } : t;   // (CMDRING.wholeSquad: a teammate under the cursor is the squad itself, never a man the order is his alone)
   }
@@ -821,7 +811,7 @@ export class SquadOrders {
   }
   /** (cmdring.ts CMDRING.flat) a ring put up now is one of the flat tree — on a tutorial mission only where its level says so (rails.ts flatRing:
    *  a mission's lines teach the menu's pages and their digits until they are written for this tree) */
-  private flatRing(): boolean { return CMDRING.flat && CMDRING.only && (!this.g.rails?.live || !!this.g.rails.flatRing); }
+  private flatRing(): boolean { return goneWithTick('SquadOrders.flatRing') as any; }
   /** … and its rows: EVERY ORDER OF THE TARGET — the first page's, then each page's behind a row of it, in the menu's own order, the rows that open
    *  pages left out and no row twice — less what is not offered there at all (OrderDef.gone); and on a place the squad's own posture row after them
    *  (silent.ts: free, on no key, listed for the squad's own menu — on a door too, where the menu never listed it) */
@@ -856,7 +846,7 @@ export class SquadOrders {
   /** Issue an order by id (the menu's release, the console, a probe): to `who` (default: the standing choice), on `t` (default: what Game.aimPoint is on now —
    *  the auto-aim's snap included; the menu itself uses targetUnder). Returns null when given, else why not. An order that cannot be carried out there must say
    *  so in `valid`, not from `issue`: by the time issue runs, a drill that owned the men has already let go of them. */
-  give(id: string, t: OrderTarget = this.targetAt(this.g.aimPoint), who?: Who, opts?: GiveOpts): string | null {
+  give(id: string, t: OrderTarget = this.targetAt(this.g.aimPoint), who?: Who, opts?: GiveOpts): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.give', this, [id, t, who, opts]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g; if (!this.active) return 'no squad';
     const def = this.defs.find(d => d.id === id); if (!def) return `no such order '${id}'`;
     if (def.opens) return `'${id}' is a page of the menu, not an order`;
@@ -892,15 +882,9 @@ export class SquadOrders {
     const label = this.labelOf(def, t), said = WORDS.on ? label.replace(/ · (\d+ left|uses .+)$/, '').replace('on your mark', 'on my mark') : label;
     return `you: ${this.whoWords(men)} — ${said}${t.kind === 'door' && !(WORDS.on && doorWords(t.door) === 'door') ? ` · ${doorWords(t.door)}` : ''}`;
   }
-  /** An order asked again of men who already stand on it (autopilot.ts AUTOPILOT.restack: the key on a door they are stacked and set on): nobody is
-   *  re-assigned, no row is written — Sam's line is shown and one of them answers, the men and the lines by turns */
-  again(id: string, t: OrderTarget, men: Guard[], lines: string[]): void {
-    const def = this.defs.find(d => d.id === id); if (!def || !men.length || !lines.length) return;
-    const k = this.acks++; this.g.msg(this.givenLine(def, t, men)); this.g.say(men[k % men.length], lines[k % lines.length]);
-  }
   /** Hand a man his assignment (an OrderDef's issue calls this): whatever he was ordered before is replaced, and whatever another owner left on him to keep
    *  him still (Guard.hold / pinned) is lifted — he is ours to move now. */
-  assign(gd: Guard, a: Pick<Assignment, 'order' | 'post' | 'face' | 'going' | 'there'> & Partial<Assignment>) {
+  assign(gd: Guard, a: Pick<Assignment, 'order' | 'post' | 'face' | 'going' | 'there'> & Partial<Assignment>) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.assign', this, [gd, a]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g, p = gd.char.pos, t = g.time, was = this.asg.get(gd), fighting = !gd.script && gd.state === 'alert';
     gd.hold = gd.pinned = false; this.ours.delete(gd);
     const R = a.post ? this.route(gd, a.post, a.shy ?? null, a.thru ?? null) : null, via = R ? R.via : [];
@@ -925,19 +909,13 @@ export class SquadOrders {
   /** Esc (Game.escape, ahead of the pause menu): the menu, if it is up, steps back a page — from its first page it is dismissed. True = the press was used here. */
   /** a memory save put back (savestate.ts loadMem, after the snapshot is restored): a ring that stood when the save was made, a press half made
    *  are the hand's, not the saved moment's — brought back, the ring took the next click for a wedge with nobody having asked for it */
-  loaded(): void { if (this.cmdRing) { this.menu = null; this.cmdRing = null; } this.cmdPress = null; this.tapWas = null; }
+  loaded(): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.loaded', this, []); if (__r !== RUST_PASS) return __r as any; } } if (this.cmdRing) { this.menu = null; this.cmdRing = null; } this.cmdPress = null; this.tapWas = null; }
   escape(): boolean { if (!this.menu) return false; if (this.cmdRing) { this.menu = null; this.cmdRing = null; CMDRING_STATS.cancelled++; }   // (cmdring.ts: Esc gives nothing, whatever page the ring is on)
     else if (!this.pageBack()) this.menu = null; this.escUsed = true; return true; }
   /** the page's Esc went to the pause (backkey.ts: Esc is only the pause): that press is nobody's in the tick */
 
   /** Open the menu on a target (X / the middle button over the cursor's; the console, a probe): it stays up until pick() or close(). False: no squad to order. */
-  open(target: OrderTarget = this.targetAt(this.g.aimPoint), flat = false, part?: Guard[]): boolean {
-    if (!this.active || this.g.player.down) return false;
-    const rows = flat ? this.flatRows(target, part) : this.rowsFor(target, null, part);   // (`flat`: ringUp's, under cmdring.ts CMDRING.flat — every order of the target, no pages)
-    this.menu = { target, men: [], rows, why: [], sel: 0, wheelAcc: 0, readT: -1, page: null, wordRow: this.wordRowOf(target, rows), onWord: false, menSide: null, sideKey: '', flat: flat || undefined, ...(part ? { part } : {}) }; this.refresh();   // (the highlight starts on the first row — the target's own order: the button twice gives it)
-    if (this.menu && PLANLAY.on && PLANLAY.sticky && this.menu.wordRow && this.lay.laid.length) this.menu.onWord = true;   // (planlay.ts: a plan is being laid — the next order is for it too)
-    return !!this.menu;
-  }
+  open(target: OrderTarget = this.targetAt(this.g.aimPoint), flat = false, part?: Guard[]): boolean { return goneWithTick('SquadOrders.open') as any; }
   close() { this.menu = null; }
   /** The open menu turned to a page of it (null: back to its first): that page's rows, on the same target and for the same men, the highlight on its first
    *  row (back on the first page: on the row that opened the page it came from). `onWord`: with its 'wait for my word' row already on, where it has one.
@@ -957,24 +935,7 @@ export class SquadOrders {
   /** Give the open menu's row `i` (default: the highlighted one; the cancel row, or none such: nothing) and take the menu down. Null = given, else why not.
    *  Two rows are not orders and leave the menu UP: the 'wait for my word' row (index rows.length, where it is offered) flips, for the row it is meant for —
    *  and a row that opens a page (OrderDef.opens) turns the menu to it ('opened'). */
-  pick(i: number = this.menu?.sel ?? -1): string | null {
-    const M = this.menu; if (!M) return 'no menu';
-    if (M.wordRow && i === M.rows.length) { M.onWord = !M.onWord; return M.onWord ? 'on the word' : 'at once'; }
-    const page = M.rows[i]?.opens; if (page) { this.turn(page); return this.menu ? 'opened' : 'nobody to take it'; }
-    const there = this.reread(); this.menu = null;
-    if (!there) return 'nobody to take it';
-    if (i < 0 || i >= M.rows.length) return 'cancelled';
-    const d = M.rows[i];
-    if (PLANLAY.on && M.onWord && layable(d)) return layOrder(this.g, d, M.target, M.men);   // (planlay.ts: laid — nobody moves until the word's key sends the plan)
-    if (M.part) return this.partGive(M, () => this.give(d.id, M.target, undefined, { men: M.men, ...(d.onWord && M.onWord ? { onWord: true } : {}) }));   // (CMDRING.goalRing: theirs alone)
-    this.byHand = true; try { return this.give(d.id, M.target, undefined, d.onWord && M.onWord ? { onWord: true } : undefined); } finally { this.byHand = false; }   // (give() works the refusals out afresh)
-  }
-  /** an order of the ring that adds a goal (Menu.part), given by hand to its men alone and counted as the goal it is (planmode.ts PLAN_STATS) */
-  private partGive(M: Menu, give: () => string | null): string | null {
-    const n = this.group; this.byHand = true; let no: string | null; try { no = give(); } finally { this.byHand = false; }
-    if (this.group !== n) { PLAN_STATS.goals++; if (M.split) PLAN_STATS.split++; }
-    return no;
-  }
+  pick(i: number = this.menu?.sel ?? -1): string | null { return goneWithTick('SquadOrders.pick') as any; }
   /** the open menu's target as its men will work it: a door, for the squad of four, with THEIR face of it (null: no menu) */
   private menuTarget(): OrderTarget | null { const M = this.menu; return !M ? null : M.target.kind === 'door' && M.menSide !== null ? { ...M.target, side: M.menSide } : M.target; }
   /** the open menu's cheap half, re-read against the floor as it now stands: the door's face off where Sam is, who it goes to (`who` may have been stepped).
@@ -1005,20 +966,13 @@ export class SquadOrders {
     const later = M.flat && !this.cmdRing?.more ? new Set(this.seats(M, null).over) : null;
     M.why = M.rows.map((d, i) => { if (later?.has(i)) return null; const o = d.only ? d.only(this, M.men, mt) : M.men; return this.whyNot(d, mt, o.length ? o : M.men); }); M.readT = this.g.time;   // (an order for some of them only: as give() asks it)
   }
-  /** is the open menu's list stale NOW, not at the next re-read: a stand-in row (OrderDef.standsIn) has come or gone on its page — or the page itself was
-   *  opened by one, and its rows live and die with what that row stands for (re-read every frame: no path search is behind them) */
-  private due(M: Menu): boolean {
-    if (M.page !== null && this.defs.some(d => d.opens === M.page && !!d.standsIn)) return true;
-    const rows = this.menuRows(M, this.menuTarget()!);
-    return rows.length !== M.rows.length || rows.some((d, i) => d !== M.rows[i]);
-  }
   /** what the cursor is on (null: no squad, or before the first frame) — the HUD's lines under the squad block; the simulation never reads it. Kept while the
    *  cursor has not moved, for a tenth of a second (the page asks every frame) — in the ASKER'S store (`HoverKept`), never on the order book. With no store
    *  nothing is kept and every ask looks again. The pick under it is asked ASIDE: its rays stamp the asker's own tables (`kept.pick`; a throwaway set
    *  with no store), never the collision world's; its list of things to be worked is the asker's own (workthings.ts askAside); and what it makes anew
    *  of a swung leaf's kept centre (doors.ts Door.posAside) or adds to the memo of sky faces (wallcharge.ts skyAside) is put back —
    *  tools/qa/hoverpick-check.ts. */
-  hover(kept?: HoverKept): OrderTarget | null {
+  hover(kept?: HoverKept): OrderTarget | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.hover', this, [kept]); if (__r !== RUST_PASS) return __r as any; } }
     const v = this.view; if (!v.input || !v.cam || !v.canvas || !this.active) return null;
     const c = kept?.hov, x = v.input.mouseX, y = v.input.mouseY, t = this.g.time;
     if (c && c.x === x && c.y === y && t >= c.t && t - c.t < 0.1) return c.v;
@@ -1037,11 +991,6 @@ export class SquadOrders {
     if (menuMan) return 'all';
     const was = this.who, next = this.cycleWho(dir); this.who = was; return next;
   }
-  /** who the next order goes to is stepped (T; the wheel under ORDERS.wheelElement) — and a menu that is up is theirs from here on */
-  private stepWho(dir: 1 | -1, point: OrderTarget | null) {
-    this.who = this.whoAfterT(point, dir);
-    const M = this.menu; if (M) { if (M.target.kind === 'none' && M.target.man) M.target = { kind: 'none', at: M.target.at }; this.refresh(); }
-  }
 
   /** Once a frame right after the aim is known (Game.update, between updateAim and the Space selector): T, B, the press that opens or closes the menu, and —
    *  while it is up — its digits / wheel / arrows / Space / right click / Esc, each taken OUT of the frame's input (a digit is not Sam's weapon slot, the wheel
@@ -1049,170 +998,9 @@ export class SquadOrders {
    *  and fires (ORDERS.clickGives: it gives the highlighted row instead, and fires nothing). */
   /** after a tick (Game.update): whoever asks between ticks what the cursor is on — the HUD, a tool — is answered off the host's live input and camera, not the tick's record */
   hostView(input: Input, cam: FollowCamera, canvas: View): void { const v = this.view; if (v.input) { v.input = input; v.cam = cam; v.canvas = canvas; } }
-  input(_dt: number, input: Input, cam: FollowCamera, canvas: View) {
-    const K = ORDERS;
-    this.sync();
-    if (this.escUsed) { this.escUsed = false; input.pressed.delete('Escape'); }
-    const g = this.g, v = this.view;
-    if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.cmdPress = null; this.tapWas = null; v.input = v.cam = v.canvas = null; return; }
-    if (this.tapWas && (input.pressed.has('Blur') || input.pressed.has('Thawed'))) this.tapWas = null;   // (CMDRING.twice: game time stands still under a pause — the tap after it is a first tap. 'Thawed': host/loop.ts, the first tick after any frozen frame)
-    v.input = input; v.cam = cam; v.canvas = canvas;
-    if (this.lay.laid.length) layPrune(g);   // (planlay.ts: a man who is down is off the plan)
-    if (this.whole()) this.who = 'all';   // (CMDRING.wholeSquad: the orders are everyone's, however the choice was left)
-    else if (input.hit(K.whoKey)) this.stepWho(1, this.targetUnder(input, cam, canvas));   // who: the man under the cursor, else the next element
-    goalInput(this, input, cam, canvas);   // (planmode.ts: Shift + the ring's key where the ring has no hold to wait out; nothing with the switch off)
-    if ((CMDRING.on || this.cmdRing || this.cmdPress) && this.ringInput(input, cam, canvas)) return;   // (cmdring.ts: the ring's key — this frame's order input is the ring's)
-    const key = input.hit(K.key), mid = K.mouseOpens && !CMDRING.only && input.mmbHit();   // (cmdring.ts `only`: the middle button opens nothing)
-    const M = this.menu;
-    if (!M) {   // no menu at the top of the frame: the quick key, or the press that puts it up — and nothing else in this frame is the menu's
-      if (PLANLAY.on && this.lay.laid.length && !!layKey() && input.pressed.delete(layKey())) laySend(g);   // (planlay.ts: the word's key, a plan laid — sent, and the press is nobody else's)
-      else if (input.hit(K.quickKey)) this.tapGive(this.targetUnder(input, cam, canvas), input);   // the target's own order, at once (autopilot.ts: on a door they wait on, they go in — by the entry they pick)
-      else if ((key || mid) && g.player.sel.downT < 0) this.open(this.targetUnder(input, cam, canvas));   // (never over a Space press in hand: one list at a time)
-      return;
-    }
-    // the menu is up: everything it answers to is taken out of the frame FIRST (whichever of them then acts, none is Sam's as well) …
-    const esc = backTake(input), blur = input.pressed.has('Blur'), space = input.pressed.delete(INTERACT_KEY);
-    const rmb = input.rmbHit(); if (rmb) input.clicked &= ~4;
-    const lmb = input.lmbHit(); if (lmb && K.clickGives) { input.clicked &= ~1; input.buttons &= ~1; if (input === g.seat.input) g.seat.swallow(1); }   // (the held button stays taken until he lets go: the seat remembers, cmd.ts)
-    if (g.time - M.readT >= K.refreshSecs || this.due(M)) { this.refresh(); if (!this.menu) return; }   // (before any key of the frame is read against its rows)
-    const waitD = this.waitDigit(M), wordPage = this.wordPage(M);
-    let digit = 0, wait = false; for (let d = 1; d <= 9; d++) if (input.pressed.delete(`Digit${d}`)) { if (d === waitD) wait = true; else if (!digit) digit = d; }
-    if (!digitOf(K.waitKey) && input.pressed.delete(K.waitKey) && M.wordRow) wait = true;   // (the knob on a key that is not a digit)
-    const altRow = PLANLAY.on && (M.rows.some((d, i) => d.hotKey === K.waitAlt && !M.why[i]) || g.doorTools.wordKeyHeld());   // (planlay.ts: a row of this page is on that key and can be given now — 'go' with somebody waiting, a held threshold's word: the key stays that row's. And the pair's held threshold takes the key as its word with a menu up that has no such row — the held door's first page, another menu under DOORTOOLS.thrMenuWord: the word outranks the 'wait' row, the key is left for doortools.ts input())
-    const alt = (M.wordRow || wordPage !== null) && !altRow && !!K.waitAlt && input.pressed.delete(K.waitAlt);   // the word's key, with a door menu of the four's up: 'wait for my word'
-    let dSel = 0; if (input.pressed.delete('ArrowDown')) dSel++; if (input.pressed.delete('ArrowUp')) dSel--;
-    let wheel = 0; if (input.wheel) { M.wheelAcc = Math.max(-2 * WHEEL_STEP, Math.min(2 * WHEEL_STEP, M.wheelAcc + input.wheel)); input.wheel = 0;
-      if (Math.abs(M.wheelAcc) >= WHEEL_STEP) { wheel = Math.sign(M.wheelAcc); M.wheelAcc -= wheel * WHEEL_STEP; } }
-    // … then the first of them, in this order: away with it (the page lost focus, X again, the trigger) · back a page, or away with it (Esc, a right click) ·
-    // a digit · the highlight · give it
-    if (lmb && !K.clickGives && CLOSE.heldClicks && g.player.holding?.variant === 'arm') input.clicked &= ~1;   // (close.ts CLOSE.heldClicks: with a man in the arm the left click is the knife, a commit — the click that shuts the menu is not that click as well)
-    if (blur || key || (lmb && !K.clickGives)) { this.menu = null; return; }
-    if (esc || rmb) { if (!this.pageBack()) this.menu = null; return; }
-    if (alt && wordPage !== null && !(PLANLAY.on && M.wordRow)) { this.turn(wordPage, true); return; }   // on the door's first page: to its tools, 'wait for my word' on
-    if (wait || alt) this.pick(M.rows.length);   // 'wait for my word' flipped: the menu stays, and a digit in the same frame is given that way
-    if (digit) { const i = M.rows.findIndex(r => r.key === digit); if (i >= 0) { this.pick(i); return; } }   // (a row that opens a page: the menu stays, on that page)
-    if (wheel && K.wheelElement) this.stepWho(wheel as 1 | -1, null); else dSel += wheel;
-    const n = M.rows.length + (M.wordRow ? 1 : 0);   // (index n = the cancel row; with the 'wait for my word' row, that is the one before it)
-    if (dSel) M.sel = ((M.sel + dSel) % (n + 1) + (n + 1)) % (n + 1);
-    if (space || mid || lmb) this.pick(M.sel);   // Space, the middle button again, or (clickGives) the left click: the highlighted row
-  }
 
-  // ------------------------------------------------------------ the ring (cmdring.ts — a prototype)
-  /** The ring's input, ahead of the menu's own (CMDRING.on). The key down with no menu up: the menu is opened on what the cursor is on and is a ring from
-   *  here, the first wedge lit. While it is up everything it answers to is taken out of the frame — Esc, the digits, the wheel, a right click, a left click
-   *  on a man — and the key coming up gives the lit wedge. True: the frame's order input was the ring's. */
-  private ringInput(input: Input, cam: FollowCamera, canvas: View): boolean {
-    const g = this.g, C = CMDRING;
-    if (this.cmdRing && !this.menu) this.cmdRing = null;   // (the menu went with the men it was for)
-    const R = this.cmdRing;
-    if (!R) {
-      // (the key is also the back key, backkey.ts: with a Space list, a running verb or the
-      //  launcher's arc to back out of, the press is theirs, as it is the menu's with a menu up)
-      // THE KEY DOWN AND NO RING YET (holdSecs): let go, it was a tap — the quick key's own order on what the cursor was on, and no menu was ever up;
-      // still down when the hold is over, the ring goes up for that thing. Until then nothing of the frame is the ring's: his trigger, his digits, the
-      // quick key and the menu's key are all as they are with no key down. A tap is never lost to another key going down inside it (the next key of a
-      // quick hand: Space, the menu's key) — only the RING is: with a menu, a list or a verb up when the hold is over, none opens
-      const P = this.cmdPress;
-      if (P) {
-        if (!C.on || input.pressed.has('Blur') || input.pressed.has('Paused')) { this.cmdPress = null; return false; }
-        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.tapGive(P.t, input, (P.add || input.down('ShiftLeft') || input.down('ShiftRight')) && goalsOn(this)); return true; }   // (CMDRING.goals: the tap with Shift adds a goal — a part of the squad takes it)
-        const digit = C.stay && C.stayDigit && this.ringDigit(input);   // (a digit inside the press: the ring's wedge, so the ring is up now — CMDRING.stayDigit)
-        if (!digit && g.time - P.t0 < ringHoldSecs() - 1e-6) return false;
-        this.cmdPress = null; if (!this.backFree()) return false;
-        const G = this.goalPart(P.t, P.add || input.down('ShiftLeft') || input.down('ShiftRight')); if (G === null) return true;   // (CMDRING.goalRing, with Shift: the ring for the part that takes a goal there — nobody free: said, and the frame is still the key's, a digit pressed with it is not his weapon slot)
-        if (!this.ringUp(P.t, input, canvas, g.time - C.tapSecs, cam, G)) return false;   // (the hold was the wait: the cursor counts at once · with Shift, CMDRING.goalRing: the ring for the part that takes a goal there)
-        return digit ? this.ringInput(input, cam, canvas) : true;   // (… and the digit is read by the ring it put up, in this frame)
-      }
-      if (!input.hit(C.key) || !this.ringFree(input)) return false;
-      input.pressed.delete(C.key);
-      const add = goalsOn(this) && (input.down('ShiftLeft') || input.down('ShiftRight'));   // (CMDRING.goals: Shift with the key — its tap adds a goal; kept down it is the ring, as ever)
-      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.tapGive(this.targetUnder(input, cam, canvas), input, add); return true; }   // (down and up inside one tick: a tap, given on its own tick)
-      if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas), ...(add ? { add } : {}) };
-        return C.stay && C.stayDigit && this.ringDigit(input) ? this.ringInput(input, cam, canvas) || true : true; }   // (the key and a digit in one tick: the same)
-      const t = this.targetUnder(input, cam, canvas), G = this.goalPart(t, add); return G === null ? true : this.ringUp(t, input, canvas, g.time, cam, G);
-    }
-    const M = this.menu!, away = () => { this.menu = null; this.cmdRing = null; };
-    // (CMDRING.pin) it stays on its point: its middle is put back over the place it was opened on, and a cursor the hand has not moved lights no other wedge
-    let still = false;
-    if (C.pin && R.at) { const [sx, sy, front] = cam.project(R.at, canvas.clientWidth, canvas.clientHeight); if (front) ringPin(R, sx, sy, canvas.clientWidth, canvas.clientHeight);
-      still = R.mx === input.mouseX && R.my === input.mouseY; R.mx = input.mouseX; R.my = input.mouseY; }
-    const stay = C.stay;   // (the ring stays up without its key)
-    input.pressed.delete(INTERACT_KEY);   // (Sam's own ring is not opened under this one: interact.ts)
-    const esc = C.stay && C.key !== 'Tab' ? backTake(input) : input.pressed.delete('Escape'), blur = input.pressed.has('Blur') || input.pressed.has('Paused');   // (a ring that stays: the back key, backkey.ts — Esc, and Tab where Tab backs out, never a ring that is on Tab itself; else Esc, as it was built · 'Paused': the key let go under the pause card gives nothing on the tick play comes back)
-    const rmb = input.rmbHit(); if (rmb) input.clicked &= ~4;
-    const lmb = input.lmbHit(); let click = false;
-    let digit = 0; for (let d = 1; d <= 9; d++) if (input.pressed.delete(`Digit${d}`) && !digit) digit = d;
-    if (C.only) for (const d of this.defs) if (d.hotKey && d.hotKey !== ORDERS.waitAlt) input.pressed.delete(d.hotKey);   // (the squad's only keys: a row's own letter — G, H, V — is nobody's while the ring is up; the word's key stays the word's)
-    let wheel = 0; if (input.wheel) { M.wheelAcc = Math.max(-2 * WHEEL_STEP, Math.min(2 * WHEEL_STEP, M.wheelAcc + input.wheel)); input.wheel = 0;
-      if (Math.abs(M.wheelAcc) >= WHEEL_STEP) { wheel = Math.sign(M.wheelAcc); M.wheelAcc -= wheel * WHEEL_STEP; } }
-    if (g.time - M.readT >= ORDERS.refreshSecs || this.due(M)) { const was = C.only ? this.seats(M, R).row.join() : ''; this.refresh(); if (!this.menu) { this.cmdRing = null; return true; }
-      if (C.only && this.seats(this.menu, R).row.join() !== was) { R.lit = 0; R.armed = false; } }   // (a row came or went under the ring — a carrier down — and the wedges are other rows now: none is lit until the hand lights one)
-    if (blur || esc) { away(); CMDRING_STATS.cancelled++; return true; }
-    if (R.more && !this.seats(M, null).over.length) { R.more = false; R.lit = 0; R.armed = false; }   // ('more' with nothing left for it: the page's own wedges, none lit)
-    if (rmb) { if (R.more) { R.more = false; R.lit = 0; R.armed = false; } else if (!this.pageBack()) { away(); CMDRING_STATS.cancelled++; } return true; }   // (turn(): a page turned lights nothing · 'more' steps back to the page it is the rest of)
-    if (lmb) {   // on a man: the orders are his (again: everyone's), and the ring starts again for him · anywhere else it is Sam's trigger, and the ring goes
-      const k = this.whole() || M.part ? -1 : this.manAt(input, cam, canvas);   // (CMDRING.wholeSquad: a click on a man picks nobody: it is the ring's own click)
-      if (k < 0 && stay) { input.clicked &= ~1; input.buttons &= ~1; if (input === g.seat.input) g.seat.swallow(1); click = true; }   // (a ring that stays: the click gives the lit wedge, below — it is not his trigger)
-      else if (k < 0) { if (CLOSE.heldClicks && g.player.holding?.variant === 'arm') input.clicked &= ~1;   // (close.ts: with a man in the arm the click is the knife — the click that puts the ring away is not that click as well)
-        away(); CMDRING_STATS.fired++; return true; }
-      else {
-      input.clicked &= ~1; input.buttons &= ~1; if (input === g.seat.input) g.seat.swallow(1);
-      this.who = this.who === k ? 'all' : k; CMDRING_STATS.who++;
-      if (M.target.kind === 'none' && M.target.man) M.target = { kind: 'none', at: M.target.at };   // (opened on a man it was his: now it is whose the click says)
-      if (M.page !== null) this.turn(null); else this.refresh();
-      if (!this.menu) { this.cmdRing = null; return true; }
-      R.more = false; R.lit = 1; R.armed = false; this.ringSel();   // (the cursor is out on him: it lights nothing until it has come back to the ring's middle)
-      }
-    } else if (wheel && !C.wheelIdle && !M.part) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
-    // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit — a wedge that opens a page turns the ring to it and lights nothing.
-    // The cursor counts from the ring's own middle, and only once it has been back there since the ring last changed under it (a page, a digit, a man)
-    const want0 = ringWant(R, input, digit, g.time, loneKey(() => this.ringKeys())), want = still && !digit && want0 !== R.lit ? 0 : want0; let turned = false;
-    if (want && want !== R.lit) {
-      const rows = this.menu!.rows, seat = this.seats(this.menu!, R), i = seat.row[want] ?? -1, first = this.menu!.page === null && !R.more;
-      if (first && (want === 1 || (!!digit && seat.same[want] >= 0))) R.lit = 1;   // (the digit of a row that says what wedge 1 says: wedge 1)
-      else if (want === seat.more) { R.more = true; R.lit = 0; R.armed = false; CMDRING_STATS.pages++; turned = true;
-        if (this.menu!.flat) { this.refresh(); if (!this.menu) { this.cmdRing = null; return true; } } }   // (the flat tree: its rows' why-nots are asked now that they are the ring)   // ('more': the rest of this page's rows, a ring of their own)
-      else if (i >= 0 && rows[i].opens) { this.turn(rows[i].opens!); CMDRING_STATS.pages++; turned = true; if (!this.menu) { this.cmdRing = null; return true; } }
-      else if (i >= 0) R.lit = want;
-      this.ringSel();
-    }
-    if (stay) {
-      // IT STAYS UP WITHOUT ITS KEY (cmdring.ts ringLatch): a digit's own wedge is given at once, a left click gives the lit one, and so does the key again
-      // once the press that opened it has come up; that press coming up gives only a wedge the cursor is out on — in the middle, the ring is left up
-      const again = !!R.free && input.pressed.delete(C.key);
-      const latch = ringLatch(R, input.down(C.key), again, !digit && want > 0 && want === R.lit);
-      const byDigit = digit > 0 && !turned && R.lit === digit;
-      if (latch !== 'give' && !byDigit && !(click && !turned)) return true;
-      if (click && !R.lit) return true;   // (a click with nothing lit — a page just turned — gives nothing and puts nothing away)
-    } else if (input.down(C.key)) return true;
-    // the key let go: the lit wedge is given — the first page's first wedge is the quick key's own order (autopilot.ts), every other one its row's
-    const N = this.menu!, lit = R.lit, i = this.seats(N, R).row[lit] ?? -1; this.cmdRing = null;
-    if (N.page === null && !R.more && lit === 1) { const t = N.target; this.menu = null; CMDRING_STATS.quick++; if (N.part) this.partGive(N, () => this.quickFor(N.men, t) ? null : 'refused'); else this.quickGive(t); }
-    else if (lit && i >= 0) { this.pick(i); this.menu = null; CMDRING_STATS.given++; }
-    else { this.menu = null; CMDRING_STATS.cancelled++; }
-    return true;
-  }
-  /** a digit a ring carries went down this frame (CMDRING.stayDigit: inside the press that would put the ring up) */
-  private ringDigit(input: Input): boolean { for (let d = 1; d <= CMDRING.wedges; d++) if (input.pressed.has(`Digit${d}`)) return true; return false; }
   /** the order menu put up on `t` as a ring at the cursor (false: no menu opened there). `t0`: the clock its tap guard counts from */
-  private ringUp(t: OrderTarget, input: Input, canvas: View, t0: number, cam?: FollowCamera, G?: { men: Guard[]; split: boolean }): boolean {
-    if (!this.open(t, this.flatRing(), G?.men)) return false;   // (cmdring.ts flat: every order of the thing, two rings deep · `G`: for a part of the squad, goalPart)
-    if (G) { this.menu!.split = G.split; PLAN_STATS.rings++; }
-    this.menu!.onWord = false;   // (the ring gives at once: 'wait for my word' is the menu's row)
-    // (opened at the edge of the view it stands whole just inside it — and the cursor, then out of its middle, lights nothing until it has come back in)
-    const R = this.cmdRing = ringOpen(input, canvas.clientWidth, canvas.clientHeight, t0); this.ringSel(); CMDRING_STATS.opened++;
-    if (CMDRING.pin && cam) { const [sx, sy, front] = cam.project(t.at, canvas.clientWidth, canvas.clientHeight);   // (it stays on its point: the place, and where its middle stands from it)
-      if (front) { R.at = v3.copy(t.at); R.ox = input.mouseX - sx; R.oy = input.mouseY - sy; R.mx = input.mouseX; R.my = input.mouseY; } }   // (from the CURSOR, not from where the view's edge stood it: the edge is asked again every tick)
-    return true;
-  }
-  /** (CMDRING.goalRing) Shift was down with the key (`add`): the men a tap of it on `t` would have sent — the ring is theirs, and what it gives is
-   *  theirs alone. Undefined: the ring it always was (the switch off, no Shift, or the goal would be everyone's or one teammate's). Null: nobody is
-   *  free — the tap's own line is said and no ring goes up */
-  private goalPart(t: OrderTarget, add: boolean): { men: Guard[]; split: boolean } | undefined | null {
-    if (!add || !goalRingOn(this)) return undefined;
-    const T = goalMen(this, t); if (!T) { this.g.msg(GOAL_NONE); PLAN_STATS.none++; return null; }
-    return T.how === 'same' || T.how === 'idle' || T.how === 'split' ? { men: T.men, split: T.how === 'split' } : undefined;
-  }
+  private ringUp(t: OrderTarget, input: Input, canvas: View, t0: number, cam?: FollowCamera, G?: { men: Guard[]; split: boolean }): boolean { return goneWithTick('SquadOrders.ringUp') as any; }
   /** the ring's key would open a ring now: the key free, and Shift + the key not the goal's own press (planmode.ts goalShift: only where the ring has
    *  no hold to wait out). With goals off Shift is only his sprint, and the key orders as it does at a walk */
   private ringFree(input: Input): boolean { return !goalShift(this, input) && this.backFree(); }
@@ -1222,7 +1010,7 @@ export class SquadOrders {
    *  kind of thing, where the glyph goes — beside the cursor, or in the middle of a ring that is up, whose target it then is — how much larger than its px it
    *  is drawn (ringZoom) and the thing's own outline on the floor: a doorway's line, a stretch of wall, a ring at a man's feet or on the spot; the squad's own
    *  menu (the cursor on nothing an order goes to) is a glyph alone. ui/cmdring.ts draws it; the simulation never reads it. */
-  hintView(kept?: HoverKept): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null; /** the kind's glyph is drawn (cmdring.ts plainHint: false — the outline alone) */ glyph: boolean } | null {
+  hintView(kept?: HoverKept): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null; /** the kind's glyph is drawn (cmdring.ts plainHint: false — the outline alone) */ glyph: boolean } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.hintView', this, [kept]); if (__r !== RUST_PASS) return __r as any; } }
     const v = this.view; if (CMDRING.bareHint || (!CMDRING.on && !CMDRING.hint) || !this.active || !v.input || !v.cam || !v.canvas) return null;   // (`hint` is a setting of its own: the mark is drawn with the ring off too)
     if (!CMDRING.hint && !this.cmdRing && !this.cmdPress) return null;   // (before the key it is drawn only when asked for — `hint`; with the key down it is the press seen to land, and the ring's own middle)
     const R = this.cmdRing && this.menu ? this.cmdRing : null, M = this.menu;
@@ -1245,8 +1033,6 @@ export class SquadOrders {
     }
     return { kind, x: R ? R.ax : v.input.mouseX, y: R ? R.ay : v.input.mouseY, zoom: R ? R.z : ringZoom(v.canvas.clientWidth, v.canvas.clientHeight), held: !!R || !!P, press: !!P, tone: this.toneOf(R ? M!.men : this.recipients(t)), seg, ring, glyph: !CMDRING.plainHint };
   }
-  /** the menu's own highlight follows the lit wedge (what reads the highlighted row — a throw's arc on the floor — reads the ring's) */
-  private ringSel() { const M = this.menu, R = this.cmdRing; if (!M || !R || !R.lit) return; const i = this.seats(M, R).row[R.lit] ?? -1; if (i >= 0) M.sel = i; }
   /** the open menu's rows by wedge (cmdring.ts ringSeats): its page's own — or, the ring on 'more' (`R.more`), the rest of them from wedge 1 */
   private seats(M: Menu, R: RingState | null): { row: number[]; more: number; over: number[]; same: number[] } {
     const s = M.flat ? flatSeats(M.rows, M.target.kind, ORDERS.waitAlt, M.rows.length ? 0 : -1) : ringSeats(M.rows, M.target.kind !== 'none', ORDERS.waitAlt, M.page === null);
@@ -1258,72 +1044,18 @@ export class SquadOrders {
     if (q && mt) for (let d = 2; d <= CMDRING.wedges; d++) { const i = s.row[d]; if (i >= 0 && d !== s.more && this.labelOf(M.rows[i], mt) === q) { same[d] = i; s.row[d] = -1; } }
     return { ...s, same };
   }
-  /** a TAP's order on `t` (the quick key, the ring's key let go inside its hold) — nothing where a tutorial step teaches the key HELD and the hold is there
-   *  to be had (rails.ts tapOff: the step says so under its line). A wedge of the ring that gives the same order is not a tap: it goes to quickGive itself.
-   *  `goal`: the tap was made with Shift and adds a goal (CMDRING.goals, planmode.ts planGoal) — a tap all the same, so the same step refuses it */
-  private tapGive(t: OrderTarget, input: Input, goal = false) { if (CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.tapOff()) return;
-    if (goal) { this.tapWas = null; planGoal(this, t); return; }
-    // (CMDRING.twice: the second plain tap in the same place inside the window is 'fall in' for everyone — the first was given as it came up, as ever.
-    //  THE SAME PLACE is a hand that has not moved (the cursor within `twicePx` of where it was: what a still cursor reads can change between two
-    //  taps, a man walking under it or the view moving with him), or the same door. A hand that moved to another thing, however near, gives that
-    //  thing's order: a tap put right is not a double tap)
-    const W = this.tapWas, now = this.g.time, x = input.mouseX, y = input.mouseY; this.tapWas = null;
-    const same = !!W && (Math.hypot(x - W.x, y - W.y) <= CMDRING.twicePx || (W.t.kind === 'door' && t.kind === 'door' && W.t.door === t.door));
-    if (this.twiceOn() && W && same && now >= W.at && now - W.at <= CMDRING.twiceSecs + 1e-6) { this.allIn(); return; }
-    this.tapWas = { at: now, t, x, y }; this.quickGive(t); }
-  /** CMDRING.twice is asked here: the ring's key, and on a tutorial mission only from a step that lists `twice` (rails.ts `locks`, as the goals ask
-   *  `goal`: a first-timer's double press must not undo the order a step has just asked for, and no mission lists it today) */
-  private twiceOn(): boolean { return CMDRING.twice && CMDRING.on && !this.g.rails?.locks('twice'); }
-  /** CMDRING.twice: every teammate falls in — an order without Shift, so every goal goes with it. Not said twice over a 'fall in' the first tap gave them all. */
-  private allIn() { const men = this.men('all'), p = this.g.player.char.pos; CMDRING_STATS.twice++;
-    if (men.every(m => { const A = this.of(m); return !!A && A.order === 'fallIn' && A.post === null; })) return;
-    this.byHand = true; try { this.give('fallIn', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men }); } finally { this.byHand = false; } }
-  /** the quick key's own order on `t`, given by hand: on a door the men wait on, the entry they pick (autopilot.ts); else the target's first row */
-  private quickGive(t: OrderTarget) { this.byHand = true; try { if (!(AUTOPILOT.on && autoQuick(this.g, t))) { const d = this.defaultFor(t); if (d) this.give(d.id, t); } } finally { this.byHand = false; } }
   /** The quick key's order on `t` for exactly these men (planmode.ts: a goal's men) — the squad's own choice there (autopilot.ts autoPick)
    *  whether or not the quick key's switch is on. 'entry': it was the way in through a door they stand on, or the word · 'first': the target's first row ·
    *  null: nothing was given (refused — a man has said why — or a charge left alone on its word). */
-  quickFor(men: Guard[], t: OrderTarget): 'first' | 'entry' | null {
-    const n = this.group, tail = this.log[this.log.length - 1], A = autoPick(this.g, t, true, men); if (A.why === 'pending') return null;
-    if (A.why === 'set') { this.again('stack', t, A.men ?? men, RESTACK_LINES); AUTOPILOT_STATS.again++; return null; }   // (AUTOPILOT.restack: asked again of men who stand on it — answered, nothing given)
-    const to = A.men ?? men, p = this.g.player.char.pos;
-    this.byHand = true;
-    try { if (A.word) this.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men: to }); else if (A.id) this.give(A.id, t, undefined, { men: to, ack: whyWords(A)?.ack }); } finally { this.byHand = false; }   // (squadnet.ts: the reason, as the quick key's own press answers with)
-    const row = this.log[this.log.length - 1]; if (row && row !== tail) row.auto = true;   // (floorplan.ts draws its men as it does the quick key's)
-    return this.group === n ? null : A.why === 'first' ? 'first' : 'entry';
-  }
-  /** (planmode.ts planGoal) those men cover toward `at` from where they stand, the order book's own 'cover' (true: somebody took it) */
-  coverFor(men: Guard[], at: Vec3): boolean {
-    const n = this.group; this.byHand = true;
-    try { this.give('cover', { kind: 'floor', at }, undefined, { men }); } finally { this.byHand = false; }
-    return this.group !== n;
-  }
+  quickFor(men: Guard[], t: OrderTarget): 'first' | 'entry' | null { return goneWithTick('SquadOrders.quickFor') as any; }
   /** … and its words for the HUD and the ring's first wedge (null: it would give nothing worth a line) */
   private quickWords(t: OrderTarget, P?: AutoPick): string | null { if (AUTOPILOT.on) return autoHint(this.g, t, P); const d = this.defaultFor(t); return d ? this.labelOf(d, t) : null; }
   /** … for the open menu's first wedge: the quick key's words there — for a ring of a part of the squad (Menu.part) what THOSE men would do, as its
    *  first wedge gives it (quickFor) */
   private menuQuick(M: Menu): string | null { return M.part ? autoHint(this.g, M.target, autoPick(this.g, M.target, false, M.men)) : this.quickWords(M.target); }   // (quickFor asks the pick whether or not the quick key's switch is on: so do its words)
-  /** the man of the squad the cursor is on — his drawn body, as the who key reads it (targetUnder) — or whose feet are nearest it on the screen inside
-   *  CMDRING.manPx (his place on the roster; −1: nobody) */
-  manAt(input: Input, cam: FollowCamera, canvas: View): number {
-    const S = this.squad(), t = this.targetUnder(input, cam, canvas);
-    if (t.kind === 'none' && t.man) { const k = S.indexOf(t.man); if (k >= 0 && t.man.state !== 'dead') return k; }
-    const w = canvas.clientWidth, h = canvas.clientHeight; let best = -1, bd = CMDRING.manPx * ringZoom(w, h);
-    S.forEach((gd, k) => { if (gd.state === 'dead') return; const [sx, sy, front] = cam.project(gd.char.pos, w, h); if (!front) return;
-      const d = Math.hypot(sx - input.mouseX, sy - input.mouseY); if (d < bd) { bd = d; best = k; } });
-    return best;
-  }
-  /** the digits the ring has a wedge on, a bit each (bit 1 the first; 0: no ring): what ringView draws, less every word of it — all the game reads of a
-   *  ring's picture (cmdring.ts ringWant `lone`: a ring of one row is a pill, and the cursor on its place is on that row) */
-  ringKeys(): number {
-    const R = this.cmdRing, M = this.menu; if (!R || !M) return 0;
-    const seat = this.seats(M, R); let keys = 0;
-    for (let d = 1; d <= CMDRING.wedges; d++) if (d === seat.more || (M.page === null && !R.more && d === 1 ? !!this.menuQuick(M) : seat.row[d] >= 0 && !!M.rows[seat.row[d]])) keys |= 1 << d;
-    return keys;
-  }
   /** What the ring shows this frame (null: no ring): where it is, the lit wedge, whose colour it wears, and the wedge on each digit — the first page's
    *  first in the quick key's own words. ui/cmdring.ts draws it; the simulation never reads it (ringKeys is what it reads). */
-  ringView(): RingView | null {
+  ringView(): RingView | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.ringView', this, []); if (__r !== RUST_PASS) return __r as any; } }
     const R = this.cmdRing, M = this.menu; if (!R || !M) return null;
     const mt = this.menuTarget()!, wedges: { key: number; text: string; off: boolean; opens: boolean }[] = [];
     const seat = this.seats(M, R);
@@ -1337,383 +1069,34 @@ export class SquadOrders {
     return { x: R.ax, y: R.ay, zoom: R.z, lit: R.lit, tone: this.toneOf(M.men), caption: what && what !== who ? `${who} → ${what}` : who, wedges };
   }
 
-  // ------------------------------------------------------------ the men
-  /** The roster as it stands. A new cast (a staging, a restart, a despawn) starts clean: nothing of the old one's — the choice of man, an open menu, the trail,
-   *  the orders of men no longer on it — carries over. */
-  private sync(): Guard[] {
-    const R = this.roster; let i = 0, same = true;
-    for (const gd of this.g.guards) if (this.mine(gd) && R[i++] !== gd) same = false;
-    if (!same || i !== R.length) { const S = this.roster = this.squad(); this.who = 'all'; this.menu = null; this.trail.length = 0; for (const gd of [...this.asg.keys()]) if (!S.includes(gd)) this.drop(gd); layFresh(this.g); }   // (planlay.ts: nothing laid — or, a restart, the plan kept from the last try)
-    if (typeof this.who === 'number' ? this.roster[this.who]?.state !== 'dead' : this.who === 'all' || this.men(this.who).length > 0) return this.roster;
-    this.who = 'all'; this.menu = null;   // (the man — the pair — the orders went to is down: and a menu that was theirs goes with them, never on to everybody else)
-    return this.roster;
-  }
-  /** Sam is standing (the file's own reading of his pace: tick()) */
-  get samStopped(): boolean { return this.samV <= 0.3; }
   /** a man's order goes: and with it the pin the fight seam put on him */
   private drop(gd: Guard) { this.asg.delete(gd); if (this.ours.delete(gd)) gd.pinned = false; }
-  /** Once a frame before the guards move (Game.update, after the drills that may own them): each man under an order is walked to it and posed on it. */
-  tick() {
-    const g = this.g, K = ORDERS;
-    this.sync();
-    fireLineTick(g);   // (fireline.ts: is the player firing — asked once, before any man is posed)
-    if (!this.asg.size) return;
-    if (!this.active) { this.clear(); return; }   // a show has taken the floor
-    const sam = g.player.char;
-    sneakTick(g);   // (sneak.ts: Sam's trail, kept while the silent squad sneaks — nothing with its switch off)
-    const mates = this.big ? this.men() : [];   // (the squad of four: a teammate in the line of a man's gun lowers it as Sam does)
-    const file = [...this.asg].filter(([, A]) => A.post === null).sort((a, b) => a[1].follow - b[1].follow);
-    file.forEach(([, A], i) => { A.follow = i; });   // (the file closes up when a man ahead of him is taken off it)
-    const followers = file.map(([gd]) => gd);
-    if (followers.length) {
-      this.crumb(sam.pos, followers);
-      const step = this.samT >= 0 ? flat(sam.pos, this.samP) : 0, el = g.time - this.samT;
-      const own = this.samT >= 0 ? noShoveOwn(g, sam.pos[0] - this.samP[0], sam.pos[2] - this.samP[2]) : null;   // (noshove.ts: the step his own legs took — a shove is not his walking; null with its switch off)
-      if (this.samT >= 0 && el > 1e-6 && step < 1) {   // (a jump of a metre is a teleport, not a pace)
-        const ox = own ? own[0] : sam.pos[0] - this.samP[0], oz = own ? own[1] : sam.pos[2] - this.samP[2], st = own ? Math.hypot(ox, oz) : step;
-        this.samV += (st / el - this.samV) * 0.25;
-        if (st > 1e-3) { this.samDir[0] = ox / st; this.samDir[2] = oz / st; } }
-      this.samP[0] = sam.pos[0]; this.samP[2] = sam.pos[2]; this.samT = g.time;
-    } else { this.trail.length = 0; this.samT = -1; this.samV = 0; }
-    for (const [gd, A] of this.asg) {
-      if (gd.state === 'dead') { this.drop(gd); continue; }
-      if (this.owners.some(o => o.owns(gd))) { this.drop(gd); continue; }   // a drill has taken him (the night breach's F): its order stands, ours is dropped
-      if (A.thru && A.post) { const r = g.cleared.roomAt(A.post); if (r && r === g.cleared.roomAt(gd.char.pos)) A.thru = null; }   // (ORDERS.ownDoor: he is in the room — by its door; from here on his point is a short walk, whatever takes him out again)
-      if (!gd.script && gd.state === 'alert') {   // the fight AI has him (the head comment's seam): rooted on his post, or free to move while he follows — until his fight has gone cold
-        if (A.yieldT < 0) { A.yieldT = g.time; this.fight?.yielded?.(gd, A); }
-        if (A.post !== null && K.pinPosted) { gd.pinned = true; this.ours.add(gd); }
-        const hot = this.fight?.engaged ? this.fight.engaged(gd, A) : gd.reloadT >= 0 || g.time - Math.max(gd.lastSeenT, gd.witness?.heard.lastShotT ?? -1e9, A.yieldT) < K.coldSecs;
-        if (hot) continue;
-        gd.state = 'search';
-      }
-      if (A.yieldT >= 0) { A.yieldT = -1; A.arrived = false; FOLLOW_WORD.delete(A); A.movedT = A.markT = g.time; A.mark[0] = gd.char.pos[0]; A.mark[2] = gd.char.pos[2]; this.fight?.retaken?.(gd, A);
-        if (A.post && (K.cleared || (K.ownDoor && A.thru))) { const R = this.route(gd, A.post, A.shy, A.thru ?? null); if (!R.why) { A.via = R.via; if (K.retakeGoal) A.goal = A.via[0] ?? v3.copy(A.post); if (R.how) g.cleared.stats[R.how]++; } }   // (ORDERS.retakeGoal: … and he walks for it, not for a corner of the way he was on before)
-        else if (!A.post) A.viaT = A.viaFor = undefined; }   // back on his order (we took him, or the fight AI let go of him itself) — by the way an order walks him (cleared.ts), from wherever the fight left him
-      if (this.ours.delete(gd)) gd.pinned = false;
-      const def = this.defs.find(x => x.id === A.order); if (def?.tick) { def.tick(this, gd, A); if (this.asg.get(gd) !== A) continue; }   // (it re-assigned him: his new order's turn is next frame)
-      let speed = K.brisk, face = A.face, d: number, sGoal: Vec3 | null = null, low = false, stepping = false, keep = false, must = false;
-      if (A.post === null) {   // fall in: his place back along the trail; a fresh leg whenever it has moved half a metre
-        const p = gd.char.pos, toSam = flat(p, sam.pos), stopped = this.samStopped;
-        const backM = this.backOf(A.follow) + (stopped ? this.clearBack(A.follow) : 0);
-        let slot = this.slot(backM); const onTrail = slot;
-        const onWall = sneaking(g, gd) || roomKept(g, gd) ? null : unseenWallSlot(g, gd, backM, followers); if (onWall) slot = onWall;   // (unseen.ts: Sam on a wall and nobody has found the squad — his place is along that face behind Sam, not back down the trail; null with its switch off)
-        const off = stopped || DOORMANNERS.laneMove ? doorwayOffLane(g, slot, p, A.follow, this.ahead(gd, A)) : null; if (off) { slot = off; if (onWall) unseenWallLost(gd); }   // (doorway.ts STAND, the lane: no place in the file is where a man beyond a door standing open shoots straight down — through the frame on Sam's trail, then off it)
-        let spread = false; if (K.fileSpread && stopped && !off && !onWall) { const q = this.apartSlot(gd, A, slot); spread = q !== slot; slot = q; }   // (two places on one spot: his is dealt again, a body's room from the men ahead of him)
-        const aside = this.aside(gd); stepping = !!aside;   // Sam walking back down the file at him: he steps off Sam's line, lets him through, and falls in behind
-        // Sam stopped and he is near enough already, in plain sight of him: where he stands is his place (no walking round Sam to the exact spot on the trail)
-        const st0 = stopped && !aside && !sneaking(g, gd) && !underUnseen(g, gd) ? g.cover.stepOf(gd, A) : null;   // (cover.ts COVER.step: Sam standing, he is a step or two off his place, where he sees through the open door he was dealt)
-        // (picture.ts PICTURE.step: Sam standing, the place he has in the file — where he stands, when that is his place, else his slot — that he believes is in an
-        //  enemy's line is left for cover a step or two off it. Not a man cover.ts has stepped to watch a door (that is a job), not the silent squad's men, not
-        //  a man keeping a door or held short, never out of Sam's way)
-        let nearV: boolean | null = null;
-        const nearP = () => nearV ??= !aside && !onWall && stopped && toSam > K.nearM && toSam < backM + K.bandM && !this.inFrame(p) && !(doorwayLane(g, p) && (off || !DOORMANNERS.laneLeaf || !doorwayLane(g, slot))) && !g.col.solidBlocked([p[0], 0.45, p[2]], [sam.pos[0], 0.45, sam.pos[2]]) && !(doorwayFile() && this.onTop(gd, A));
-        const ps = !st0 && PICTURE.on && PICTURE.step && stopped && !aside && !onWall && !sneaking(g, gd) && !underUnseen(g, gd) && !roomKept(g, gd) && !g.fight.short(gd)
-          ? pictureStep(g, gd, A, nearP() ? p : slot, q => !(this.inFrame(q) || doorwayInWay(g, q) || !!doorwayLane(g, q)), g.fight.busy(gd, 0.5)) : null;
-        const st = ps?.at ?? st0;
-        const near = !st && nearP();
-        if (st) { if (flat(st, A.goal) > 0.05) A.goal = [st[0], 0, st[2]]; if (K.trailDoors && A.via.length) A.via.length = 0; }   // (ORDERS.trailDoors: where he stands is his place — a corner of a way he was on is dropped, or restClear below, which leaves a man on a way alone, would leave him in a leaf's swing for as long as Sam stands)
-        else if (near) { if (flat(p, A.goal) > 0.4) A.goal = [p[0], 0, p[2]]; if (K.trailDoors && A.via.length) A.via.length = 0; }
-        else { let want = aside ?? slot;
-          // (ORDERS.cleared: a follower a walk away from his place does not cut through a room nobody has been in — round it, a corner at a time, until his place has moved on)
-          if ((K.cleared || K.trailDoors) && !aside) {
-            // (asked when he is a walk from his place — or a wall is between them — and again when his place has moved on from the one the corners were for, or
-            // every few seconds while he walks them: never more than twice a second a man)
-            const since = g.time - (A.viaT ?? -1e9), had = A.via.length > 0;
-            if (had ? !A.viaFor || (flat(A.viaFor, slot) > 2.5 && since > 0.5) || since > 3 : since > 0.75 && (flat(p, slot) > 3 || !g.col.nav.walkable(p, slot))) {
-              A.viaT = g.time; A.via = this.roundRooms(gd, slot); A.viaFor = [slot[0], 0, slot[2]]; if (A.via.length && !had) g.cleared.stats.round++;
-              if (!A.via.length && K.trailDoors && !onWall) A.via = this.trailWay(gd, slot, onTrail, this.slotCrumb(backM)); }   // (no room to go round: the doors Sam took, where his own short way would take others)
-            if (A.via.length && flat(p, A.via[0]) < 0.9) A.via.shift();
-            if (A.via.length) want = A.via[0];
-          } else if (A.via.length) A.via.length = 0;
-          if (flat(want, A.goal) > (aside ? 0.25 : spread ? 0.05 : 0.5)) A.goal = want; }   // (a place dealt again is a kept point: taken to the centimetre, or a deal a short step from his goal would be dropped and the two stay a shove apart)
-        if (DOORMANNERS.on && DOORMANNERS.restClear && !aside && !st) this.restClear(gd, A, near ? [p[0], 0, p[2]] : slot, slot, stopped);   // (doorway.ts REST: he is not left standing in a frame or where a leaf swings)
-        d = flat(p, A.goal);
-        if (A.via.length && !st && !near && !aside) { let q = A.via[0]; for (let i = 1; i < A.via.length; i++) { d += flat(q, A.via[i]); q = A.via[i]; } d += flat(q, slot); }   // (on a way round: his pace and 'in place' are by the whole walk left, not by the next corner)
-        speed = aside ? K.brisk : st ? K.onto : teamFollow(g, gd, this.samV, d, K.gain) ?? Math.max(K.walk, Math.min(K.run, this.samV + K.gain * (d - 0.3)));   // (teampace.ts: closing at the player's walk, running while he runs — null with its switch off)
-        const sn = aside ? null : sneakFollow(g, gd, backM, this.samV, stopped, speed);   // (sneak.ts: the silent squad's follower, low in Sam's own steps, waiting short of a lit stretch somebody is looking at — null with its switch off)
-        if (sn) { must = !!sn.must; speed = sn.speed; low = sn.crouch; if (sn.goal) { sGoal = sn.goal; d = flat(p, sn.goal); } }
-        else { const un = aside ? null : unseenFollow(g, gd, this.samV, d, K.walk, speed);   // (unseen.ts: a squad nobody has found, Sam sneaking — low with him, at his pace plus what closes the gap; null with its switch off)
-          if (un) { speed = un.speed; low = un.crouch; } else low = sneakLow(g, gd) || unseenLow(g, gd); }   // Sam's own pace plus what closes the gap: no gear changes
-        if (ps?.low && d < 0.5) low = true;   // (picture.ts: the cover he stepped to hides a man on a knee)
-        keep = !aside && !sn?.must && roomKept(g, gd);   // (rearwatch.ts REARWATCH.room: he had one of a taken room's other doors when 'fall in' came — he keeps it, where he stands, until the squad is out of the room, and follows last)
-        if (keep) speed = 0;   // (…and STOOD, with no goal: a runner held at speed 0 still steers his chest at his next waypoint, and the twist clamp then drags his gun off the door — and off a man he has seen)
-        // (wallcharge.ts WALLCHARGE.menClear: the place he is being sent to — or kept on — is inside the blast of a charge set on a wall: he walks to a stand-off
-        //  mark instead and keeps it until his place is clear. Asked last, of the place the lines above settled on, so everything above runs as it always
-        //  did; null with its switch off or nothing set. Never out of Sam's way, never a man the sneak has mid-crossing; at the pace he steps aside at — the
-        //  silent squad and a squad nobody has found at a walk, low with Sam)
-        const wb = aside || sn?.must ? null : g.wallCharge?.clearOf(gd, () => keep ? p : sGoal ?? st ?? (near ? p : slot)) ?? null;
-        if (wb) { must = true; if (flat(wb, A.goal) > 0.05) A.goal = [wb[0], 0, wb[2]]; sGoal = null; keep = false; d = flat(p, wb); low = sneakLow(g, gd) || unseenLow(g, gd);
-          speed = sneaking(g, gd) || underUnseen(g, gd) ? (low ? K.onto : K.walk) : K.brisk; }
-        if (!aside && !sn?.must && g.fight.short(gd)) speed = 0;   // (guards.ts LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — he does not close on him; stepping out of Sam's own way still comes first)
-        // stopped: the first man looks on past Sam (never swinging with his reticle), the rest back the way they came
-        face = !stopped || d > 0.6 ? null : toSam < 0.3 ? A.faceNow ?? sam.bodyYaw : A.follow === 0 ? yawTo(p, sam.pos) : yawTo(sam.pos, p);
-        A.arrived = d < 0.8; this.followWord(A, d);
-      } else {
-        const p = gd.char.pos;
-        // (cover.ts COVER.step: a plain holder is walked the step or two to where he sees through an open door — his MARK stays where the order put it, and
-        //  he goes back to it when the step is void)
-        const plain = A.order === 'hold' && !A.watch && !A.spare && !A.via.length, st = plain ? g.cover.stepOf(gd, A) : null, mark = st ?? A.post;
-        if (plain && flat(A.goal, mark) > 0.05) { A.goal = [mark[0], 0, mark[2]]; A.markT = A.movedT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }
-        if (A.via.length) { if (flat(p, A.via[0]) < 0.9) A.via.shift(); A.goal = A.via[0] ?? v3.copy(A.post); }   // (the way round a locked door, a waypoint at a time)
-        d = flat(p, mark); speed = A.pace ?? (d > K.briskIn ? K.brisk : stackLinePace(g, gd, A, d, K.brisk) ?? K.onto);
-        if (A.pace !== undefined) teamFight(g, gd); else if (!A.thru && !A.via.length) speed = teamDash(g, gd, mark, d, A.order === 'stack' && !!A.door) ?? speed;   // (teampace.ts: an entry keeps its pace; a run to cover straight across floor a known man has a line on, the fight's pace when his mark is a place in a stack, TEAMPACE.doorBrisk — nothing with its switch off)
-        if (A.pace === undefined && d > K.briskIn) speed = teamTold(g, gd) ?? speed;   // (… and a leg a tutorial step tells them to run, round its corners too, walked in over its last metres as any leg is: rails.ts runs — nothing off a frame)
-        { const sp = sneakPost(g, gd, A.order) ?? unseenPost(g, gd, A.order); if (sp !== null) { low = true; speed = Math.min(speed, sp); } }   // (sneak.ts: sent to a mark while the silent squad sneaks, he goes there low with Sam — nothing with its switch off)
-        const short = g.fight.short(gd);   // (LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — his walk waits, and so do the clocks that would call a standing man stuck)
-        if (short) { speed = 0; A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }
-        else if (DOORMANNERS.on && DOORMANNERS.shortClear && (doorGateStopped(g, gd) || handleGateStopped(g, gd)) && this.heldWait(A)) { A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }   // (doorway.ts SHORT: held at a frame for a man in it or beyond it, or by the handle rule for the man working the leaf, is a wait, not a shut way — the clocks that would call him stuck start when the hold ends)
-        if (clearLineLive(g, gd) || fireLineLive(g, gd)) { A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }   // (clearline.ts: off his mark on purpose, for a line to the man a friend masks — nobody calls him stuck)
-        // has he MOVED (his commanded speed says nothing: a man grinding on a wall is still told to walk) — at all in the last second, beside his mark; 30 cm in
-        // the last `stuckSecs`, short of it
-        if (flat(p, A.anchor) > 0.05) { A.anchor[0] = p[0]; A.anchor[2] = p[2]; A.movedT = g.time; }
-        let stuck = false; if (g.time - A.markT >= K.stuckSecs) { stuck = flat(p, A.mark) < 0.3; A.mark[0] = p[0]; A.mark[2] = p[2]; A.markT = g.time; }
-        if (d >= 0.35 && (d < 1.0 && !A.via.length ? g.time - Math.max(A.movedT, A.t0) > 1 : stuck) && !(!st && DOORMANNERS.on && DOORMANNERS.shortClear && this.restShort(gd, A, d))) {   // as near his mark as he will get (somebody is standing on it; the way is shut): the mark comes to him — he does not keep lunging at it (doorway.ts REST: never in a frame or where a leaf swings)
-          if (st) g.cover.stepHalt(gd);   // (a step nobody ordered that he cannot make is no failed order: it ends where he stands, and he says nothing)
-          else if (d < 1.0 && A.had === A.post && (A.backN ?? 0) < BACK_TRIES && !A.via.length && DOORMANNERS.on && DOORMANNERS.backOn) {   // (doorway.ts BACK ON: he HAD this mark and was shouldered off it — he steps back onto it; the mark comes to him only once somebody has kept it from him)
-            A.backN = (A.backN ?? 0) + 1; A.goal = v3.copy(A.post); A.movedT = g.time; STACK_OWN.back++; }
-          else { if (d >= 1.0) { A.there = 'stopped short'; g.say(gd, "can't get through."); }
-            A.post = [p[0], 0, p[2]]; A.goal = v3.copy(A.post); A.via.length = 0; d = 0; }
-        }
-        if (!st && d < 0.35) { A.had = A.post; if (d < 0.1) A.backN = 0; }
-        const was = A.arrived;
-        A.arrived = d < 0.35 && (A.watch === null || !!A.fit || (!!A.spare && g.cover.has(gd)) || Math.abs(wrapAngle(gd.char.aimYaw - yawTo(gd.char.pos, A.watch))) < 0.2);   // (… or his gun is on what the cover dealt him; a 'move' is there by his feet, as it was before roomfit.ts gave him a watch)
-        A.heldFire = HOLDFIRE.stackSet && (HOLDFIRE.stackWait || !A.arrived) && d < 0.35 && A.order === 'stack' && holdFireHoldsTarget(g, gd); if (A.heldFire) A.arrived = true;   // (HOLDFIRE.stackSet, off: not asked — he is there by his gun alone, as before the key; stackWait off: asked only of a man his gun has not set, the stamp read by nobody. holdfire.ts: on his mark, his gun on a man nobody may shoot yet and not on the door — he is stacked; false with its switch off. Stamped, as the silent order's below: the handle test runs before this tick and reads the stamp)
-        A.heldSet = !A.arrived && d < 0.35 && A.order === 'stack' && silentHoldsTarget(g, gd); if (A.heldSet) A.arrived = true;   // (silent.ts: the same for a silent man under the order's own fire hold — SILENT.stackSet, false with it off)
-        if (A.arrived && !was) A.arrT = g.time;
-      }
-      let pose: { stance: Assignment['stance']; upper: Assignment['upper'] } = A.move && d > 0.6 ? A.move : A;   // on the way to a mark: the gun up and leading; the mark's own carriage as he settles onto it
-      // UNASKED COVER (cover.ts): a man following, or holding with nothing named to watch, has an opening dealt him — his gun, light and eyes go onto it (stopped:
-      // squared up to it; walking: over his shoulder, or backwards with it in front of him); his feet stay the order's
-      let watch = A.watch, strafe = !!A.strafe && A.post !== null && face !== null;
-      const cov = (A.watch === null && (A.post === null || A.order === 'hold')) || A.spare ? g.cover.poseFor(gd, A.spare ? d < 0.6 : A.post !== null || face !== null || keep, speed) : null;   // (a man with spare eyes: on his mark squared up to it, on the walk there over his shoulder or backwards)
-      if (cov) { watch = cov.at; face = cov.face; strafe = cov.strafe; pose = AIM; }
-      const sp = spottedFeet(g, gd, A.post === null, stepping);   // (spotted.ts: a silent man with a suspicious defender about goes low / still / out of his line; caught, he steps to a line — null with its switch off)
-      if (sp?.watch && !g.pair.finishing(gd)) { watch = sp.watch; face = yawTo(gd.char.pos, sp.watch); strafe = false; pose = AIM; }
-      // (teampace.ts TEAMPACE.walkAim: in the walking carriage — the gun up and LEADING, above — with no line to the order's own watch, the door he is sent to, the
-      //  gun leads the way he walks, not into the wall between; he sees it and it is his again. The cover's point and spotted.ts's are theirs; null with its switch off)
-      if (pose === A.move && watch !== null && watch === A.watch) { const ahead = walkLead(g, gd, watch); if (ahead) { watch = ahead; strafe = false; } }
-      // (doorway.ts DOORMANNERS.watch: the rear man's gun is the cover's for his whole walk now, doors and corners included, and a back-pedal has no stuck
-      //  watchdog — the runner's strafe keeps the path it has. So: his next corner behind a wall — a handle walked him off his way — and the way is found
-      //  again from where he stands; a second without moving, short of his mark, and he walks it the plain way for three: followPath's side-step and re-path)
-      if (strafe && A.post !== null && d > 0.6 && DOORMANNERS.on && DOORMANNERS.stand && DOORMANNERS.watch) {
-        const q = gd.char.pos, wp = gd.path[gd.pathI], t = g.time, W = this.backFix.get(A) ?? { plain: -1, path: -1 };
-        if (wp && t - W.path > 1 && g.col.solidBlocked([q[0], 0.45, q[2]], [wp[0], 0.45, wp[2]])) { gd.path = []; gd.pathGoal = null; W.path = t; }
-        if (t - A.movedT > 1) W.plain = t + 3;
-        this.backFix.set(A, W);
-        if (W.plain > t) { strafe = false; face = null; }
-      }
-      A.faceNow = face;
-      let cl = clearLineFeet(g, gd);   // (clearline.ts: a friend masks his shot at a man he sees — the step to a clear line, to cover, or the knee; null with its switch off)
-      if (cl && A.post === null && this.aside(gd)) cl = null;   // (stepping out of Sam's own way still comes first)
-      if (cl && sp) cl = null;   // (…and so does the silent partner's rule: whenever spotted.ts has his feet, his gun or his knee, this rule neither moves nor turns him)
-      if (cl) { face = cl.face; strafe = cl.strafe; }
-      const fl = sp?.goal || sp?.speed !== undefined || cl ? null : fireLineFeet(g, gd, keep ? null : sGoal ?? A.goal, speed, stepping || must);   // (fireline.ts: the player is firing down a lane his next steps would cross — he waits short of it, or walks a way round; null with its switch off)
-      if (pose.upper === 'aim' || pose.stance === 'stack') {   // Sam in the line of his gun: the muzzle comes down until he is clear of it
-        const p = gd.char.pos, yaw = watch ? yawTo(p, watch) : gd.char.bodyYaw, fx = Math.sin(yaw), fz = Math.cos(yaw), len = watch ? flat(p, watch) : 5;
-        const inLine = (q: Vec3) => { const sx = q[0] - p[0], sz = q[2] - p[2], along = sx * fx + sz * fz; return along > 0.15 && along < len && Math.abs(sx * fz - sz * fx) < (A.low ? K.laneOut : K.laneIn); };
-        A.low = (this.sams && inLine(sam.pos)) || (A.arrived && LANE_ORDERS.includes(A.order) && mates.some(m => m !== gd && this.pairOf(m) !== this.pairOf(gd) && inLine(m.char.pos)));   // (… a man of the OTHER pair, across a gun that is posted — cover / stack / move: never a file's own second man, never an entry under way)
-        if (A.low) pose = LOW;
-      } else A.low = false;
-      // (who has the follower's feet: spotted.ts's freeze / slip / step when it gives a spot — a defender is suspicious of the pair, or has it —, else the sneak's
-      //  step along Sam's trail, else the order's own goal; low if any of the three says low. A take / dark job (pairorders.ts) is not a follower: spotted only kneels him.) Then clearline.ts's step to a clear line of fire when a friend masks his shot (null with its switch off).
-      order(gd, { goal: sp?.goal ?? cl?.goal ?? fl?.goal ?? (keep ? null : sGoal ?? A.goal), speed: sp?.speed ?? cl?.speed ?? fl?.speed ?? speed, face, strafe, aimAt: watch, stance: pose.stance, upper: pose.upper, stackSide: A.stackSide, crouch: (A.crouch ?? false) || low || !!sp?.crouch || !!cl?.crouch, hot: false, light: A.light, ...(A.lean || gd.script?.lean ? { lean: A.lean && A.post && flat(gd.char.pos, A.post) < 0.6 ? A.lean : 0 } : {}) });   // (the lean is written only where one is asked or one is to be taken off: a script patch keeps what it is not told. He leans on his mark, not on the walk to it)
-      if (sGoal && !sp?.goal && !cl?.goal && !fl?.goal) sneakWay(g, gd, sGoal);
-    }
-    for (const A of this.asg.values()) {   // 'set.': once, from the last man on, when everybody the order sent is on his mark
-      if (!A.setLine || A.setSaid || !A.arrived) continue;
-      let all = true, last: Guard | null = null, lastT = -Infinity;
-      for (const [m, B] of this.asg) if (B.group === A.group) { if (!B.arrived || B.tries) { all = false; break; }   // (`tries`, ORDERS.walkTries: a man of them still has a door to try — the order is not set before his hand is on it)
-        if (B.arrT > lastT) { lastT = B.arrT; last = m; } }
-      if (all && last) {
-        let short = false; if (WORDS.on) for (const B of this.asg.values()) if (B.group === A.group && B.there === 'stopped short') { short = true; break; }   // (one of them said "can't get through": the group is not where it was sent, and nobody calls it set)
-        if (!short) g.say(last, A.setLine); for (const B of this.asg.values()) if (B.group === A.group) B.setSaid = true; }
-    }
-  }
-  /** Where a follower stands to let Sam through: Sam is walking AT him (the man ahead of Sam's motion, inside asideM, within asideLane of his line) — a spot
-   *  abreast of where he is, asideOff (or, in a tight place, a shoulder's width) off Sam's line on the side he is already on, else the other. Null: not in the way,
-   *  or no floor either side (he stays put and Sam squeezes by) — or, with ORDERS.asideClear, no spot clear of every doorway (he goes on to his place). */
-  private aside(gd: Guard): Vec3 | null {
-    const g = this.g, K = ORDERS, sam = g.player.char.pos, p = gd.char.pos;
-    const held = (): Vec3 | null => {   // the spot he was already stepping to, while Sam has not got past him (ORDERS.asideHold)
-      const m = this.asideMem.get(gd); if (!m || g.time - m.t > K.asideHold || g.time < m.t) return null;
-      return (p[0] - sam[0]) * m.dir[0] + (p[2] - sam[2]) * m.dir[2] > -0.3 && flat(p, sam) < K.asideM + 0.5 ? m.q : null; };
-    if (this.samV < 0.3) return held();
-    const dir = this.samDir, mx = p[0] - sam[0], mz = p[2] - sam[2];
-    const ahead = mx * dir[0] + mz * dir[2], off = mx * dir[2] - mz * dir[0];
-    if (ahead <= 0 || ahead > K.asideM || Math.abs(off) > K.asideLane) return held();
-    // (ORDERS.asideClear: no spot in a doorway's opening or a leaf's swing · the side he is already stepping to stays his first side, so a spot at a swing's
-    //  edge does not send him back and forth across Sam's line · no clear spot this frame: the one he was stepping to, while it is fresh)
-    const clear = K.asideClear && !ASIDECLEAR_BREAK, was = clear ? this.asideMem.get(gd) : undefined, own = off >= 0 ? 1 : -1;
-    const first = was?.side && g.time >= was.t && g.time - was.t <= K.asideHold ? was.side : own;
-    for (const w of [K.asideOff, 0.65]) for (const side of [first, -first]) {
-      const q: Vec3 = [sam[0] + dir[0] * ahead + dir[2] * side * w, 0, sam[2] + dir[2] * ahead - dir[0] * side * w];
-      if (!g.col.nav.isBlocked(q[0], q[2]) && !g.col.solidBlocked([p[0], 0.45, p[2]], [q[0], 0.45, q[2]]) && !(clear && (this.inFrame(q) || doorwayInWay(g, q)))) { this.asideMem.set(gd, clear ? { q, t: g.time, dir: [dir[0], 0, dir[2]], side } : { q, t: g.time, dir: [dir[0], 0, dir[2]] }); return q; }
-    }
-    return clear ? held() : null;
-  }
   private asideMem = new SideMap<Guard, { q: Vec3; t: number; dir: Vec3; side?: number }>();
-  /** Sam's trail: a crumb every `crumb` metres he has moved, `trailM` metres of it kept (newest last) */
-  private crumb(p: Vec3, men: Guard[]) {
-    const T = this.trail, K = ORDERS, last = T[T.length - 1];
-    if (last && flat(last, p) > 3) T.length = 0;   // (a teleport: the old trail leads nowhere he walked)
-    if (!T.length) {   // no trail yet: 'behind him' is the side his men are on — they close up to him from where they stand and stop short, whichever way he is looking
-      let cx = 0, cz = 0; for (const gd of men) { cx += gd.char.pos[0] - p[0]; cz += gd.char.pos[2] - p[2]; }
-      const l = Math.hypot(cx, cz); const c = this.g.player.char;
-      this.back = l > 0.3 ? [cx / l, 0, cz / l] : [-Math.sin(c.bodyYaw), 0, -Math.cos(c.bodyYaw)];
-    }
-    if (!T.length || flat(T[T.length - 1], p) >= K.crumb) T.push([p[0], 0, p[2]]);
-    let len = 0; for (let i = T.length - 1; i > 0; i--) { len += flat(T[i], T[i - 1]); if (len > K.trailM) { T.splice(0, i - 1); break; } }
-  }
   /** doorway.ts STAND: stopped 'near enough' within a body and a bit of a man ahead of him in the file (or one on a post) — not his place: he walks on to his own */
   /** where the men ahead of him in the fall-in file are bound (doorway.ts doorwayOffLane: his place off a lane keeps clear of theirs) */
   /** (DOORMANNERS.watch) a back-pedalling walker's two clocks: until when he walks the plain way, when his way was last found again */
   private backFix = new SideMap<Assignment, { plain: number; path: number }>();
-  private ahead(gd: Guard, A: Assignment): Vec3[] { const out: Vec3[] = []; for (const [o, B] of this.asg) if (o !== gd && B.post === null && B.follow < A.follow && B.goal && o.state !== 'dead') out.push(B.goal); return out; }
-  private onTop(gd: Guard, A: Assignment): boolean {
-    for (const [o, B] of this.asg) if (o !== gd && o.state !== 'dead' && (B.post !== null || B.follow < A.follow) && flat(o.char.pos, gd.char.pos) < DOORMANNERS.apart) return true;
-    return false;
-  }
-  /** the open doorway `p` stands in, for a place in the file (ORDERS.offDoor of the frame's line, inside its span; a shut leaf is a wall) */
-  private inFrame(p: Vec3): boolean {
-    if (doorwayStand(this.g, p)) return true;   // (doorway.ts STAND: nor in any frame's strip, nor where a leaf swings)
-    const m = ORDERS.offDoor; if (!(m > 0)) return false;
-    for (const d of this.g.doors.list) {
-      if (d.latched || Math.abs(d.angle) < 0.6 || flat(p, d.frameCentre) > d.def.width + m) continue;
-      const F = frameOf(d), along = (p[0] - F.hx) * F.ux + (p[2] - F.hz) * F.uz, off = (p[0] - F.hx) * F.nx + (p[2] - F.hz) * F.nz;
-      if (along > -0.05 && along < F.W + 0.05 && Math.abs(off) < m) return true;
-    }
-    return false;
-  }
   /** doorway.ts REST (DOORMANNERS.restClear): a follower is not left standing in a doorway or where a leaf swings. (1) Sam stopped, and the place he is
    *  walking to — left where it was by the half-metre slack — is in a frame or a swing: his place (`slot`: on the trail, or where he stands when that is
    *  near enough) if that is free, else the nearest clear floor. (2) He has stood `restSecs` where he is, in a frame's strip or a swing, short of his place (held behind the file, his way shut): he steps to
    *  the nearest clear floor, and that is his place until the file's has moved on a metre or four seconds are up. Never on a way round (`via`). */
   private restOf = new SideMap<Assignment, { x: number; z: number; t: number; step: Vec3 | null; until: number; from: Vec3; n: number; hold: Vec3 | null; holdFor: Vec3 }>();
-  private restClear(gd: Guard, A: Assignment, place: Vec3, trail: Vec3, stopped: boolean) {
-    const g = this.g, K = DOORMANNERS, p = gd.char.pos, t = g.time;
-    let R = this.restOf.get(A); if (!R) this.restOf.set(A, R = { x: p[0], z: p[2], t, step: null, until: 0, from: [0, 0, 0], n: 0, hold: null, holdFor: [0, 0, 0] });
-    if (Math.hypot(p[0] - R.x, p[2] - R.z) > 0.2) { R.x = p[0]; R.z = p[2]; R.t = t; }
-    if (A.via.length) { R.step = R.hold = null; return; }
-    if (R.step) { if (t > R.until || flat(trail, R.from) > 1.0) { R.step = null; R.t = t; } else { A.goal = R.step; return; } }   // (the same point every frame: one leg — and when it ends his standing is counted afresh: he gets his walk first)
-    if (R.n && flat(trail, R.from) > 1.0) R.n = 0;
-    const bad = (q: Vec3) => this.inFrame(q) || doorwayInWay(g, q) || !!doorwayLane(g, q);
-    const others = (): Vec3[] => { const out: Vec3[] = [this.samStood]; for (const [o, B] of this.asg) if (o !== gd && o.state !== 'dead') { out.push(o.char.pos); if (B.goal) out.push(B.goal); } return out; };
-    if (!stopped || flat(trail, R.holdFor) > 0.5) R.hold = null;
-    if (stopped && (this.inFrame(A.goal) || doorwayInWay(g, A.goal))) {
-      if (R.hold) { A.goal = R.hold; return; }   // (dealt once for where the file stands: the same point every frame, not a new leg each)
-      const T = others(), q = !bad(place) && T.every(o => flat(o, place) >= K.apart) ? place : doorwayClearNear(g, A.goal, bad, T, K.apart, p);
-      if (q) { A.goal = R.hold = q; R.holdFor = [trail[0], 0, trail[2]]; DOORMANNERS_STATS.rest++; }
-      return;
-    }
-    if (doorGateStopped(g, gd)) { R.t = t; return; }   // (short of a frame for a man in it: the gate's own patience runs, and its own step to a jamb)
-    if (t - R.t >= K.restSecs * (1 + R.n) && flat(p, A.goal) < 1.0 && doorwayInWay(g, p)) {   // (at rest by his place — a man still a walk from it who is slow in a swing is pushing the leaf open, or held by the gate: neither is resting · stepped off and come back to the same stand: each time he waits longer before he steps again)
-      const q = doorwayClearNear(g, p, bad, others(), K.apart, g.player.char.pos);
-      if (q) { R.step = q; R.until = t + 4; R.from = [trail[0], 0, trail[2]]; R.n = Math.min(R.n + 1, 4); A.goal = q; DOORMANNERS_STATS.rest++; } else R.t = t;
-    }
-  }
   /** doorway.ts SHORT: the seconds of one order's walk the PASS gate's holds may keep its stuck clocks from running — `heldCap` in all, so a frame that
    *  never clears still ends in "can't get through" */
   private heldOf = new SideMap<Assignment, { last: number; total: number }>();
-  private heldWait(A: Assignment): boolean {
-    const t = this.g.time; let H = this.heldOf.get(A); if (!H) this.heldOf.set(A, H = { last: t, total: 0 });
-    H.total += Math.min(Math.max(t - H.last, 0), 0.1); H.last = t;
-    return H.total <= DOORMANNERS.heldCap;
-  }
   /** doorway.ts SHORT, a man on his way to a mark who is as near it as he will get: his mark does not come to him while he stands in a frame's strip or where
    *  a leaf swings (a mark there is a man planted in the doorway: whoever is behind him stays behind him, and the fight's step off the opening walks him
    *  straight back onto it). Well short of his mark he first gets `stuckSecs` more (a wait behind a door a mate was working, or behind Sam in its mouth, is
    *  no shut way); still there, his mark goes to the nearest clear floor — on his mark's face of a frame he stands in — and he gives
    *  it up there. True = dealt with here; false = he is not in a doorway's way, or there is no such floor: as it was. */
   private shortOf = new SideMap<Assignment, { x: number; z: number; n: number; k: number }>();
-  private restShort(gd: Guard, A: Assignment, d: number): boolean {
-    const g = this.g, p = gd.char.pos; if (!A.post || d < 1.0 || !doorwayInWay(g, p)) return false;   // (a stride from his mark he has as good as made it: the mark comes to him as ever — a jamb man's mark is by the frame on purpose)
-    let R = this.shortOf.get(A); if (!R) this.shortOf.set(A, R = { x: p[0], z: p[2], n: 0, k: 0 });
-    if (R.k >= 2) return false;   // (his mark has been moved for him twice on this order: the old rule ends it)
-    if (Math.hypot(p[0] - R.x, p[2] - R.z) > 1) R.n = 0;
-    R.x = p[0]; R.z = p[2];
-    if (R.n++ === 0) { A.markT = A.movedT = g.time; return true; }
-    const T: Vec3[] = [this.samStood]; for (const [o, B] of this.asg) if (o !== gd && o.state !== 'dead') { T.push(o.char.pos); if (B.post) T.push(B.post); }
-    const sam = this.samStood, face: Vec3 = flat(sam, p) < 1.3 ? [2 * p[0] - sam[0], 0, 2 * p[2] - sam[2]] : A.post;   // (in a frame Sam stands in the mouth of: back off it, away from him)
-    const q = doorwayClearNear(g, p, x => this.inFrame(x) || doorwayInWay(g, x), T, DOORMANNERS.apart, face);
-    if (!q) return false;
-    R.k++; A.there = 'stopped short'; g.say(gd, "can't get through.");
-    A.post = q; A.goal = v3.copy(q); A.via.length = 0; A.markT = A.movedT = g.time; DOORMANNERS_STATS.rest++;
-    return true;
-  }
-  /** Sam stopped: how much further back along the trail the `follow`-th place stands so that it, and every place ahead of it, is clear of a doorway (the
-   *  frame Sam has just walked through and stopped beyond: his file closes up on the far side of it or the near one, never in it). Worked out once a frame. */
-  private clearBack(follow: number): number {
-    if (!(ORDERS.offDoor > 0)) return 0;
-    if (this.clearT !== this.g.time) { this.clearT = this.g.time; this.clearBy.length = 0; }
-    for (let i = this.clearBy.length; i <= follow; i++) {
-      let e = i > 0 ? this.clearBy[i - 1] : 0; const base = this.backOf(i);
-      for (let k = 0; k < 8; k++) { const q = this.slot(base + e); if (!this.inFrame(q)) break;
-        if (ORDERS.backEnd && flat(q, this.slot(base + e + 0.3)) < 0.01) break;   // (ORDERS.backEnd: further back no longer moves the place — the trail and the floor behind it have run out: the count stops here, and the men behind inherit only what moved a place)
-        e += 0.3; }
-      this.clearBy.push(e);
-    }
-    return this.clearBy[follow];
-  }
   private clearT = -1; private clearBy: number[] = [];
-  /** a follower's place in the file, in metres back along the trail (the third and fourth men 1.1 m apart behind the second) */
-  private backOf(follow: number): number { const K = ORDERS; return K.followBack[Math.min(follow, K.followBack.length - 1)] + Math.max(0, follow - K.followBack.length + 1) * 1.1; }
-  /** the way they came: the point `extra` metres further back along Sam's trail than this follower's own place (cover.ts: the rear a file's last man watches) —
-   *  null: he is not following */
-  trailBack(gd: Guard, extra: number): Vec3 | null { const A = this.asg.get(gd); return A && A.post === null ? this.slot(this.backOf(A.follow) + extra) : null; }
   /** ORDERS.fileSpread: a follower's place that fell within a body's room of where a man ahead of him in the file — or a teammate on a post — will stand
    *  (the trail ran out and the floor with it) → the nearest clear floor to it that is not: in Sam's sight first, else in sight of the place itself, else
    *  (a corner with no such floor) the same two asked with a bare body's width between places; and where the floor has none of it he STOPS SHORT — where
    *  he stands once he is within a stride or two of the place and a body's room from the others. One point per assignment, kept while his place and
    *  theirs stand and the point is off every door's frame and lane, so he walks to it once; a deal that found no floor is not searched again for a second */
   private apartOf = new SideMap<Assignment, { at: Vec3; q: Vec3 | null; t: number; m: number; short?: boolean }>();
-  private apartSlot(gd: Guard, A: Assignment, slot: Vec3): Vec3 {
-    const g = this.g, m = ORDERS.fileApart, sam = g.player.char.pos, p = gd.char.pos, T = this.ahead(gd, A);
-    for (const [o, B] of this.asg) if (o !== gd && o.state !== 'dead' && B.post !== null) T.push(B.goal ?? o.char.pos);   // (the men the manners' 'on top of a mate' counts: the file ahead, and anybody on a post)
-    const open = (a: Vec3, b: Vec3) => !g.col.solidBlocked([a[0], 0.45, a[2]], [b[0], 0.45, b[2]]);
-    if (!T.some(t => flat(t, slot) < m && open(t, slot))) return slot;
-    const bad = (x: Vec3) => this.inFrame(x) || !!doorwayLane(g, x), clear = (x: Vec3, by: number) => T.every(t => flat(t, x) >= by - 0.05);
-    const short = (): Vec3 | null => flat(p, slot) < 1.5 && !bad(p) && clear(p, m) && open(p, slot) ? [p[0], 0, p[2]] : null;
-    const hold = (): Vec3 => { if (!ORDERS.fileHold || flat(p, slot) >= 1.5 || bad(p) || !open(p, slot)) return slot;   // (ORDERS.fileHold: no floor and no stopping short by that bar — within a stride or two of the place he holds where he stands, asked live and never kept, rather than be handed a place inside a body's room of a mate's; a place the far side of a wall from him is not one he is near: he walks on round to it)
-      const here: Vec3 = [p[0], 0, p[2]], by = Math.min(m, ORDERS.fileTight); let t: Vec3 | null = null; for (const o of T) if (flat(o, p) < by - 0.05 && open(o, p) && (!t || flat(o, p) < flat(t, p))) t = o;
-      const d = t ? flat(t, p) : 0; if (!t || d < 1e-3) return here;   // (…and a mate's place nearer him than a bare body's width: the step straight away from it that makes it one — or as much of one as the floor has, 5 cm at a time — where that floor is free, in his sight and no nearer another's)
-      for (let r = by; r > d + 0.02; r -= 0.05) for (const ang of [0, 0.4, -0.4, 0.8, -0.8]) { const c = Math.cos(ang), sn = Math.sin(ang), ux = (p[0] - t[0]) / d, uz = (p[2] - t[2]) / d, x: Vec3 = [t[0] + (ux * c + uz * sn) * r, 0, t[2] + (uz * c - ux * sn) * r];   // (straight away first, then a little either side of it)
-        if (!bad(x) && !g.col.nav.isBlocked(x[0], x[2]) && open(p, x) && T.every(o => o === t || flat(o, x) >= by - 0.05) && flat(sam, x) >= by - 0.05) return x; }   // (…nor onto Sam: the bar the others are held to)
-      return here; };
-    const R = this.apartOf.get(A);
-    if (R && flat(R.at, slot) < 0.5) {
-      if (R.q) { if ((R.short || clear(R.q, R.m)) && !bad(R.q)) return R.q; }
-      else if (Math.abs(g.time - R.t) < 1) { const q = short(); if (!q) return hold(); R.q = q; R.short = true; return q; } }
-    const taken = [...T, [sam[0], 0, sam[2]] as Vec3]; let q: Vec3 | null = null, by = m, stop = false;
-    for (const a of ORDERS.fileTight < m ? [m, ORDERS.fileTight] : [m]) {   // (doorwayClearNear itself wants a clear line from the place to the point)
-      q = doorwayClearNear(g, slot, x => bad(x) || !open(x, sam), taken, a, p) ?? doorwayClearNear(g, slot, bad, taken, a, p); if (q) { by = a; break; } }
-    if (!q) { q = short(); stop = !!q; }
-    this.apartOf.set(A, { at: [slot[0], 0, slot[2]], q, t: g.time, m: by, short: stop }); return q ?? hold();
-  }
-  /** the point `back` metres behind Sam along his trail — past its end, on straight the way it was going (behind his back while there is no trail), as far as the floor is free */
-  private slot(back: number): Vec3 {
-    const g = this.g, sam = g.player.char, T = this.trail;
-    let prev: Vec3 = [sam.pos[0], 0, sam.pos[2]], left = back, dir: Vec3 = this.back;
-    for (let i = T.length - 1; i >= 0; i--) {
-      const seg = flat(prev, T[i]); if (seg < 1e-4) continue;
-      const sd: Vec3 = [(T[i][0] - prev[0]) / seg, 0, (T[i][2] - prev[2]) / seg];
-      if (seg > 0.2) dir = sd;
-      if (seg >= left) return [prev[0] + sd[0] * left, 0, prev[2] + sd[2] * left];
-      left -= seg; prev = T[i];
-    }
-    if (left <= 1e-3) return [prev[0], 0, prev[2]];
-    // off the end of the trail: straight on, a quarter metre at a time, while a man can stand there and walk there — and where straight on is cut short (a
-    // partition behind him), the first of a few headings either side of it that has the room (else the longest)
-    const reach = (ang: number): [Vec3, number] => {
-      const c = Math.cos(ang), sn = Math.sin(ang), d: Vec3 = [dir[0] * c + dir[2] * sn, 0, dir[2] * c - dir[0] * sn]; let p = prev, rem = left;
-      while (rem > 1e-3) { const s = Math.min(0.25, rem), nx: Vec3 = [p[0] + d[0] * s, 0, p[2] + d[2] * s];
-        if (g.col.nav.isBlocked(nx[0], nx[2]) || g.col.solidBlocked([p[0], 0.45, p[2]], [nx[0], 0.45, nx[2]])) break;
-        p = nx; rem -= s; }
-      return [p, rem];
-    };
-    let best = reach(0);
-    for (const ang of [0.7, -0.7, 1.4, -1.4]) { if (best[1] <= 1e-3) break; const r = reach(ang); if (r[1] < best[1] - 0.2) best = r; }
-    return [best[0][0], 0, best[0][2]];
-  }
 
   // ------------------------------------------------------------ geometry
   /** the free floor at p, else the nearest within floorSnapM (the candidate nearest Sam among equals: the side of a wall he is looking at) — null: nowhere */
@@ -1725,7 +1108,7 @@ export class SquadOrders {
     return best;
   }
   /** n spots for a move order round `at`, abreast across the facing; a spot that is not free floor in the same space falls back along the line, then onto `at` itself */
-  spotsAt(at: Vec3, face: number, n: number): Vec3[] {
+  spotsAt(at: Vec3, face: number, n: number): Vec3[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.spotsAt', this, [at, face, n]); if (__r !== RUST_PASS) return __r as any; } }
     if (n <= 1) return [v3.copy(at)];
     const g = this.g, f: Vec3 = [Math.sin(face), 0, Math.cos(face)], r: Vec3 = [-f[2], 0, f[0]], h = ORDERS.moveSpread / 2;
     const ok = (q: Vec3) => !g.col.nav.isBlocked(q[0], q[2]) && !g.col.solidBlocked([at[0], 0.45, at[2]], [q[0], 0.45, q[2]]);
@@ -1751,7 +1134,7 @@ export class SquadOrders {
    *  `lead` = the man on a jamb
    *  (stance 'stack'); the second in a file is at the high ready. `ignore`: teammates whose marks on this door do not count as held (doortools.ts: men about to
    *  step back and make room). */
-  stackPosts(d: Door, side: 1 | -1, men: Guard[], ignore: Guard[] = []): StackPost[] | null {
+  stackPosts(d: Door, side: 1 | -1, men: Guard[], ignore: Guard[] = []): StackPost[] | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.stackPosts', this, [d, side, men, ignore]); if (__r !== RUST_PASS) return __r as any; } }
     return this.ownMarkFirst(d, side, men, () => this.stackSeen(d, side, men, ignore, () => this.stackPostsRoom(d, side, men, ignore)));
   }
   /** the plain 'stack up' on a door (the order below, nothing else): the marks above, and where its leaf STANDS OPEN the ones the floor beyond sees dealt again
@@ -1917,7 +1300,7 @@ export class SquadOrders {
    *  the glass rule alone, so worked out once per place and kept until a pane's toll changes (glasspen.ts glassTollSig). False while rounds stop in glass (the switch off): the stack is then the one it always was. */
   behindGlass(d: Door, side: 1 | -1, pos: Vec3): boolean { return this.glassEyes(d, side, pos) >= GLASSPEN.stackEyes && GLASSPEN.stackEyes > 0; }
   /** … and how many of the lattice's points have such a line onto him (0 while rounds stop in glass, or with the rule off) */
-  glassEyes(d: Door, side: 1 | -1, pos: Vec3, kept = true): number {
+  glassEyes(d: Door, side: 1 | -1, pos: Vec3, kept = true): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.glassEyes', this, [d, side, pos, kept]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g; if (!glassPenLive(g) || GLASSPEN.stackEyes <= 0) return 0;
     const sig = glassTollSig(g); if (sig !== this.glassSig) { this.glassAt.clear(); this.glassSig = sig; }   // (a pane holed, come apart or made whole again since — a restart included: what a round pays there has moved, so the places are asked afresh)
     const key = `${g.doors.list.indexOf(d)}:${side}:${Math.round(pos[0] * 10)}:${Math.round(pos[2] * 10)}`; let v = kept ? this.glassAt.get(key) : undefined; if (v !== undefined) return v;   // (`kept` false: counted for this very point and not kept — the kept answer is the first asker's in its 10 cm cell)
@@ -2247,7 +1630,7 @@ export class SquadOrders {
   /** How he gets there. `why` (the word he says): no nav path at all, or a door locked against Sam on every way (the men carry no keys of their own: Sam's ring
    *  and the codes he knows are the team's). `via`: waypoints, when the plain shortest way runs through such a door but a longer one does not — he is walked
    *  round by them (the script runner's own path would take the short way, and the leaf opens to anybody in uniform). */
-  route(gd: Guard, to: Vec3, shy: Door | null = null, thru: Door | null = null, whyOnly = false): { why: string | null; via: Vec3[]; how?: 'round' | 'through' | 'mouth'; lock?: { door: Door; side: 1 | -1 } } {
+  route(gd: Guard, to: Vec3, shy: Door | null = null, thru: Door | null = null, whyOnly = false): { why: string | null; via: Vec3[]; how?: 'round' | 'through' | 'mouth'; lock?: { door: Door; side: 1 | -1 } } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.route', this, [gd, to, shy, thru, whyOnly]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g, nav = g.col.nav, at = gd.char.pos; if (flat(at, to) < 0.5) return { why: null, via: [] };
     const from = nav.isBlocked(at[0], at[2]) ? this.freeSpot(at) ?? at : at;
     const ring = this.ring();
@@ -2380,26 +1763,6 @@ export class SquadOrders {
     if (!nav.isBlocked(inn[0], inn[2])) via.push(inn);
     return via;
   }
-  /** fall in (ORDERS.cleared): the corners of the way to his place in the file that keeps out of rooms nobody has been in — [] when the short way does, or
-   *  there is no such way (locks are not asked about: a follower's short way is the script runner's, as ever) */
-  private roundRooms(gd: Guard, to: Vec3): Vec3[] {
-    const g = this.g, nav = g.col.nav, C = g.cleared, at = gd.char.pos; if (!ORDERS.cleared) return [];
-    const from = nav.isBlocked(at[0], at[2]) ? this.freeSpot(at) ?? at : at, unk = C.dearFor(from, to, ORDERS.clearedDear); if (!unk) return [];
-    const plain = nav.findPath(from, to); if (!plain) return []; const offM = C.dearAlong(from, plain, unk); if (offM <= OFF_M) return [];
-    const path = nav.findPath(from, to, ROUND_ITER, unk); if (!path) return [];
-    if (C.dearAlong(from, path, unk) > OFF_M) return [];
-    if (ORDERS.roundCap > 0) { const len = (q: Vec3[]) => { let m = 0, a: Vec3 = from; for (const b of q) { m += flat(a, b); a = b; } return m; };
-      if (len(path) > len(plain) * ORDERS.roundCap + ROUND_PLUS_M) return []; }   // (ORDERS.roundCap: nor a way round far longer than the short way — the short way, as with no way round)
-    return path.slice(0, -1).map(q => [q[0], 0, q[2]] as Vec3);
-  }
-  /** the crumb of the trail that a place `back` metres behind the player (slot above, the same walk) lies just past, going the player's way: the index
-   *  of the older end of the stretch it is on. -1 off the trail's end. By the walk, not by what is near: where the player turned about and came back
-   *  over his own steps two passes of the trail lie on one line */
-  private slotCrumb(back: number): number {
-    const sam = this.g.player.char, T = this.trail; let prev: Vec3 = [sam.pos[0], 0, sam.pos[2]], left = back;
-    for (let i = T.length - 1; i >= 0; i--) { const seg = flat(prev, T[i]); if (seg < 1e-4) continue; if (seg >= left) return i; left -= seg; prev = T[i]; }
-    return -1;
-  }
   /** ORDERS.trailDoors — A FOLLOWER GOES BY THE DOORS SAM TOOK. A follower's goal is his place on Sam's trail and his walk to it is the short one, which is
    *  the trail while he keeps up. A man who lost his turn at a door (he gave way to its leaf, or to the men behind him) finds Sam a room on, and where that
    *  room has two ways in his short way is the other one: he walks round a room the file went through, apart from his partner. So, asked with the way
@@ -2410,27 +1773,7 @@ export class SquadOrders {
    *  more than `trailLong` times his own + SAME_PLUS_M. With the trail run out behind Sam (`trailM`), or his place off it (a wall), his own way as ever.
    *  One search a call (his own way); the trail is measured as Sam walked it. `j`: the crumb his place lies just past (slotCrumb), `onTrail` his place
    *  as the trail has it, before a lane or a spread moved it a step. */
-  private trailWay(gd: Guard, slot: Vec3, onTrail: Vec3, j: number): Vec3[] {
-    if (TRAILDOORS_BREAK) return [];
-    const g = this.g, nav = g.col.nav, K = ORDERS, T = this.trail, at = gd.char.pos; if (T.length < 4) return [];
-    const from: Vec3 = nav.isBlocked(at[0], at[2]) ? this.freeSpot(at) ?? at : at; if (nav.walkable(from, slot)) return [];   // (his place is a straight walk off: that is his way)
-    let k = -1; for (let i = j - 1; i >= 0; i--) if (flat(from, T[i]) < K.trailReachM && nav.walkable(from, T[i])) { k = i; break; }   // (the newest crumb he can step straight onto)
-    if (j < 0 || k < 0 || j - k < 3) return [];
-    const own = nav.findPath(from, slot); if (!own) return [];
-    const way: Vec3[] = [from, ...T.slice(k, j + 1), onTrail, slot], mine: Vec3[] = [from, ...own, slot];   // (a path ends on a cell's centre, which by a leaf can be the far side of a frame from the place itself)
-    const len = (w: Vec3[]) => { let m = 0; for (let i = 1; i < w.length; i++) m += flat(w[i - 1], w[i]); return m; };
-    // the doors a walk ends on the far side of (through one and back is no door). A corner of a walk that lies ON a door's line is stepped over: the two
-    // legs that meet there each miss the door (crossesDoor wants a point either side), and a path's corners are cell centres, which some levels' frames lie on
-    const doorsOn = (w: Vec3[]) => { const D = new Set<Door>();
-      for (const d of g.doors.list) { const h = d.def.hinge, nx = -Math.sin(d.def.closedDir), nz = Math.cos(d.def.closedDir), off = (q: Vec3) => (q[0] - h[0]) * nx + (q[2] - h[1]) * nz;
-        let a: Vec3 | null = null; for (const b of w) { if (Math.abs(off(b)) < 1e-6) continue; if (a && crossesDoor(a, b, d)) { if (!D.delete(d)) D.add(d); } a = b; } }
-      return D; };
-    const A = doorsOn(mine), B = doorsOn(way); if (A.size === B.size && [...A].every(d => B.has(d))) return [];   // (the same doors: his own way is the trail's)
-    if (len(way) > len(mine) * K.trailLong + SAME_PLUS_M) return [];
-    const ring = this.ring(); for (let i = 1; i < way.length; i++) for (const d of g.doors.list) if (d.locked && d.latched && crossesDoor(way[i - 1], way[i], d) && g.doors.lockedOut(d, way[i - 1], ring)) return [];
-    const mid: Vec3[] = []; { let a = from; for (let i = k; i < j - 1; i++) if (!nav.walkable(a, T[i + 1]) || flat(a, T[i + 1]) > 3) { mid.push([T[i][0], 0, T[i][2]]); a = T[i]; } }   // (the trail's corners: a crumb is kept where the next cannot be walked to straight, and every few metres)
-    return mid;
-  }
+  private trailWay(gd: Guard, slot: Vec3, onTrail: Vec3, j: number): Vec3[] { return goneWithTick('SquadOrders.trailWay') as any; }
   reach(gd: Guard, to: Vec3): string | null { return this.asked(gd, to).why; }
   /** ORDERS.walkTries: the door his walk to `to` would be refused for, where nobody of the team has tried it on the face he comes to it by (doortools.ts
    *  untried: only where DOORTOOLS.testDoor is on) — null: the key is off, the walk is not refused for a lock, or the team knows that door. Sam's squad only. */
@@ -2454,25 +1797,6 @@ export class SquadOrders {
   walkSend(gd: Guard, T: { door: Door; side: 1 | -1; post: StackPost }, at: Vec3, on: NonNullable<Assignment['tries']>['on']) {
     this.assign(gd, { order: 'move', post: T.post.pos, face: T.post.face, watch: [T.door.frameCentre[0], 1.05, T.door.frameCentre[2]], door: T.door, shy: T.door, stance: T.post.lead ? 'stack' : 'highReady', upper: 'none', move: { stance: 'none', upper: 'aim' }, stackSide: T.post.stackSide, going: 'moving', there: 'moving', tries: { ...T, at: v3.copy(at), on } });
   }
-  /** … and the door they came to turned out free, or stands open (doortools.ts walkTried): the walk is asked again for each of them, as the order would be
-   *  asked fresh. Another door nobody has tried on the way: that door's marks, the next try. Refused (a door the team knows, no way, no room on the next
-   *  door): one of them says why, as a refused order is answered, and they stop where they stand ('stopped short'). Nothing against it: his 'move', as
-   *  it was given. */
-  walkOn(men: Guard[]) {
-    const g = this.g, all = men.filter(m => this.asg.get(m)?.tries); if (!all.length) return;
-    const spot = (m: Guard) => this.asg.get(m)!.tries!.at, held = all.filter(m => flat(spot(m), spot(all[0])) < 1e-6);   // (the men of one order; another order's walkers on the same door: asked after them)
-    if (held.length < all.length) this.walkOn(all.filter(m => !held.includes(m)));
-    this.newGroup();   // (a group of their own from here, each order's men theirs: another order's 'set.' does not wait on them, nor theirs on it)
-    const stop = (m: Guard) => { const p = m.char.pos; this.assign(m, { ...this.asg.get(m)!.tries!.on, post: [p[0], 0, p[2]], there: 'stopped short', setLine: null, fit: undefined }); };
-    const at = this.asg.get(held[0])!.tries!.at, next = this.walkStacks(held, at);
-    if (typeof next === 'string') { g.say(held[this.acks++ % held.length], next); held.forEach(stop); return; }
-    let said = false;
-    for (const m of held) { const T = this.asg.get(m)!.tries!, N = next?.get(m), why = N ? null : this.reach(m, at);
-      if (N) this.walkSend(m, N, at, T.on);
-      else if (why) { if (!said) g.say(m, why); said = true; stop(m); }
-      else this.assign(m, T.on); }
-    if (ORDERS.sameWay && held.length > 1) this.sameWays(held);   // (the walk's second leg is a giving of its own: a pair goes on by one way)
-  }
   /** what route() says of his walk there, for a menu (`whyOnly`): why not, and the lock that is about */
   private asked(gd: Guard, to: Vec3): { why: string | null; lock?: { door: Door; side: 1 | -1 } } {
     if (!ORDERS.cleared) return this.route(gd, to, null, null, true);
@@ -2491,7 +1815,7 @@ export class SquadOrders {
     try { return fn(); } finally { own.r = this.reached; this.reached = mine; }
   }
   /** Has he a line to cover it from where he stands: to a door, the way to it clear at eye height; 'that way', nothing in his face for the first two metres */
-  hasLine(gd: Guard, t: OrderTarget): boolean {
+  hasLine(gd: Guard, t: OrderTarget): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.hasLine', this, [gd, t]); if (__r !== RUST_PASS) return __r as any; } }
     const p = gd.char.pos, d = flat(p, t.at); if (d < 0.6) return true;
     const k = (t.kind === 'door' ? d - 0.6 : Math.min(d, 2)) / d;
     return !this.g.col.segmentBlocked([p[0], 1.5, p[2]], [p[0] + (t.at[0] - p[0]) * k, 1.5, p[2] + (t.at[2] - p[2]) * k]);
@@ -2548,7 +1872,7 @@ export class SquadOrders {
 
   // ------------------------------------------------------------ the HUD
   /** what one man is doing, in a few words */
-  statusOf(gd: Guard): string {
+  statusOf(gd: Guard): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SquadOrders.statusOf', this, [gd]); if (__r !== RUST_PASS) return __r as any; } }
     if (gd.state === 'dead') return gd.wound ? 'wounded' : 'down';
     const A = this.asg.get(gd);
     if (A) { const w = A.post === null && pairUp('word') ? sneakWord(this.g, gd) : null;   // (pairup.ts 'word': why a following partner is not at Sam's shoulder — the sneak's own word for it)
@@ -2622,13 +1946,10 @@ export class SquadOrders {
     if (t.kind === 'foe') return { at: [t.foe.char.pos[0], 1.0, t.foe.char.pos[2]], text: `${this.whoTag().tag} → ${this.hoverWords(t)}`, tone: this.toneOf(M.men) };   // (the ring rides the man)
     return { at: [t.at[0], t.kind === 'door' ? 1.0 : 0.03, t.at[2]], text: `${this.whoTag().tag} → ${this.hoverWords(t)}`, tone: this.toneOf(M.men) };
   }
-  /** one line for the console */
-  summary(): string { return this.active ? `orders to ${this.whoWords()} · ${this.menu ? `menu up on ${this.hoverWords(this.menu.target)} · ` : ''}${this.squad().map(gd => `${gd.callsign}: ${this.statusOf(gd)}`).join(' · ')}` : 'no squad'; }
 }
 
 const LOW = { stance: 'lowReady' as const, upper: 'none' as const };
 const AIM = { stance: 'none' as const, upper: 'aim' as const };
-const LANE_ORDERS = ['cover', 'stack', 'move', 'hold'];
 /** ORDERS.cleared: this much of a walk through an uncleared room is none (a corner clipped) · the search's cap when rooms are priced · ORDERS.ownDoor: how far
  *  either side of the frame line the two steps of 'through the ordered door' lie */
 const OFF_M = 0.3, ROUND_ITER = 30000, MOUTH_M = 0.8;
@@ -2659,8 +1980,6 @@ export function propPenalty(g: Game, gd: Guard, pen: ((ix: number, iz: number) =
   if (!dear.size) return pen;
   const cost = K.propRoundCost; return (ix, iz) => (dear.has(nav.idx(ix, iz)) ? cost : 1) * (pen ? pen(ix, iz) : 1);
 }
-const ASIDECLEAR_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.ASIDECLEAR_BREAK === '1';   // (QA: ORDERS.asideClear's own check must fail with this set)
-const TRAILDOORS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TRAILDOORS_BREAK === '1';   // (QA: ORDERS.trailDoors' own check must fail with this set)
 /** ORDERS.sameWay: how far way `a` gets from way `b` (each a walk's corners, in order), asked every half metre of `a`, and where on `a` that is */
 function farOff(a: Vec3[], b: Vec3[]): { d: number; at: Vec3 } {
   const off = (x: number, z: number) => { let m = Infinity;

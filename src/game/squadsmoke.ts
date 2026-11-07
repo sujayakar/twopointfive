@@ -29,12 +29,12 @@ import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import { v3 } from '../math/vec';
 import type { Game, Guard } from './game';
-import type { Input } from './input';
 import type { OrderDef, OrderNote } from './orders';
 import type { ThrowSolution } from './throwables';
 import { GRAVITY } from './throwables';
 import { bogRun, snowBogAt } from './snowBog';
 import { TOSS_QUICK } from './character';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const SQUADSMOKE = {
   /** the row's own key, read while a menu that lists the row is up (game.ts → squadSmokeKey). Not a digit: the floor menu's five are taken */
@@ -66,7 +66,7 @@ export function squadSmokeBrought(g: Game): number { return states.get(g)?.broug
 
 /** A SCENARIO HAS JUST STAGED ITS TEAM (kit.ts kitStage, every staging): the squad's smoke for this run is `cans`, and the row is on the menu only if that is
  *  one or more. */
-export function squadSmokeStage(g: Game, cans: number) {
+export function squadSmokeStage(g: Game, cans: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('squadSmokeStage', undefined, [g, cans]); if (__r !== RUST_PASS) return __r as any; } }
   const n = Math.max(0, Math.floor(cans) || 0); let s = states.get(g);
   if (!s) { if (!n) return; states.set(g, s = { brought: 0, cans: 0, noted: false, last: new SideMap() }); }   // (never a can on this Game: nothing kept, nothing registered)
   s.brought = s.cans = n; s.last = new SideMap(); SQUADSMOKE_STATS.staged++;
@@ -98,7 +98,7 @@ export function squadHandFree(g: Game, gd: Guard): boolean { return !(gd.state =
 /** ONE MAN'S THROW to a spot: the hand it leaves, the arc that brings the thing to REST on the spot, where it rests (null: he has none — his hand would be in
  *  a wall, the arc's first impact is not the floor by the spot, or something stands in its run). `rollK`: the run of the body thrown (default: a can's);
  *  squadthrow.ts asks it for a frag and a stun canister */
-export function squadArcTo(g: Game, gd: Guard, at: Vec3, rollK = SQUADSMOKE.rollK, stood?: Vec3): { from: Vec3; sol: ThrowSolution; rest: Vec3 } | null {
+export function squadArcTo(g: Game, gd: Guard, at: Vec3, rollK = SQUADSMOKE.rollK, stood?: Vec3): { from: Vec3; sol: ThrowSolution; rest: Vec3 } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('squadArcTo', undefined, [g, gd, at, rollK, stood]); if (__r !== RUST_PASS) return __r as any; } }
   const K = SQUADSMOKE, to: Vec3 = [at[0], at[1] + 0.05, at[2]];
   // (`stood`: the throw he would have standing THERE as he stands now — squadthrow.ts's walk to a throw; absent: from where he is)
   const p = stood ?? gd.char.pos, d = flat(p, at), k = d > 1e-3 ? K.handAhead / d : 0, head = gd.char.bones.head;
@@ -117,7 +117,7 @@ export function squadArcTo(g: Game, gd: Guard, at: Vec3, rollK = SQUADSMOKE.roll
   return { from, sol, rest };
 }
 /** the man of `men` who would throw it, with his throw: the nearest to the spot with an arc that brings the can to rest on it (null: none of them has one) */
-export function squadSmokeThrower(g: Game, men: Guard[], at: Vec3): { gd: Guard; from: Vec3; sol: ThrowSolution; rest: Vec3 } | null {
+export function squadSmokeThrower(g: Game, men: Guard[], at: Vec3): { gd: Guard; from: Vec3; sol: ThrowSolution; rest: Vec3 } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('squadSmokeThrower', undefined, [g, men, at]); if (__r !== RUST_PASS) return __r as any; } }
   const K = SQUADSMOKE, s = states.get(g);
   for (const gd of [...men].sort((a, b) => flat(a.char.pos, at) - flat(b.char.pos, at))) {
     if (!squadHandFree(g, gd)) continue;
@@ -147,13 +147,6 @@ function row(g: Game): OrderDef {
 /** the squad's HUD block: what is left, while this staging brought any */
 function notes(g: Game): OrderNote[] { const s = states.get(g); return s && s.brought > 0 ? [`smoke ${s.cans}`] : []; }
 
-/** The row's key with a menu up that lists it: the press is that row's — given, or refused in the row's words. Called straight after the menu's own input
- *  (game.ts, beside the door tools' menuKey). True: the press was the row's. */
-export function squadSmokeKey(g: Game, input: Input): boolean {
-  const S = g.orders, M = S.menu, key = SQUADSMOKE.orderKey; if (!M || !states.has(g) || !input.hit(key)) return false;
-  const i = M.rows.findIndex(d => d.id === SMOKE_ORDER); if (i < 0) return false;
-  input.pressed.delete(key); S.pick(i); return true;
-}
 export function squadSmokeSummary(g: Game): string {
   const s = states.get(g); return s && s.brought ? `${s.cans} of ${s.brought} left · ${SQUADSMOKE.orderKey.replace('Key', '')} with the menu up on a spot of floor` : 'none brought (no card carries smoke)';
 }

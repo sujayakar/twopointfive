@@ -65,6 +65,7 @@ pub mod cmdring;
 pub mod combat;
 pub mod condition;
 pub mod consts;
+pub mod control;
 pub mod cover;
 pub mod coverfire;
 pub mod cues;
@@ -378,3 +379,6 @@ pub mod teamtally;
 pub mod stealthfeed;
 pub mod autoreload;
 pub mod call_gen;
+/// A function a caller names and nobody has written: the call says which, in the panic the host shows.
+pub fn no_body(name: &str) -> ! { panic!("no body: {}", name) }
+pub mod state_words;

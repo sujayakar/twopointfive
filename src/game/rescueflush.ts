@@ -30,12 +30,11 @@ import type { Vec3 } from '../math/vec';
 import { v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Rescue } from './rescue';
-import { endGuardScript, inBounds } from './squad';
-import { resetChase } from './guards';
-import { laneCovers, laneBars, laneKnownAt } from './lanes';
-import { w, wg } from './words';
+import './squad';
+import './guards';
+import './lanes';
 import { hasHim, OWN } from './owner';
-import { word } from './belief';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const RESCUEFLUSH = {
   on: false,
@@ -57,7 +56,6 @@ export const RESCUEFLUSH = {
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 type Goal = 'room' | 'side' | 'noise' | 'out';
 interface Sent { at: number; n: number; goal: Goal; via: Vec3[] }
-export interface RescueFlushSnap { fellAt: number; nextAt: number; goneAt: number; count: number; sent: { id: number; at: number; n: number; goal: Goal; via: number[][] }[]; barred: number[] }
 
 export class RescueFlush {
   /** when the room fell with the team loud (NaN: not yet) · when the next man is due · when one of them found the room empty (NaN: nobody has) · men sent so far */
@@ -68,12 +66,10 @@ export class RescueFlush {
   private readonly barred = new Set<Guard>();
   constructor(private g: Game, private R: Rescue) {}
 
-  reset() { this.fellAt = NaN; this.nextAt = NaN; this.goneAt = NaN; this.count = 0; this.sent.clear(); this.barred.clear(); }
+  reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('RescueFlush.reset', this, []); if (__r !== RUST_PASS) return __r as any; } } this.fellAt = NaN; this.nextAt = NaN; this.goneAt = NaN; this.count = 0; this.sent.clear(); this.barred.clear(); }
   /** the rule is up on this run */
   private get live(): boolean { const R = this.R, g = this.g; return RESCUEFLUSH.on && R.active && !R.result && g.aiEnabled && g.fight.on; }
   private alive(): Guard[] { return this.R.hostages.filter(h => h.state !== 'dead'); }
-  /** he came for her (rescue.ts clock(): his wait is `killSecs`, not the room's own man's) */
-  came(gd: Guard): boolean { return this.sent.has(gd); }
 
   /** HIS LINE ON HER: inside `reachM`, nothing that stops a round between his eyes and her chest (a pane that would stop it is a wall to this: collision.ts
    *  shotBlocked), and no smoke of the team's hiding her (the renderer's own answer through Game.sensors; headless nothing answers and the air is clear).
@@ -101,112 +97,5 @@ export class RescueFlush {
     return who;
   }
 
-  /** which of `of` (living hostages) a man of theirs HAS: the ones in the hostage room with him, and — while this rule is up and the room has fallen — the ones
-   *  inside `reachM` of him with nothing between his eyes and her chest (rescue.ts clock(): the gun goes on one of these, and the round needs her still to be one) */
-  victims(by: Guard, of: Guard[]): Guard[] {
-    const B = this.R.bounds, here = inBounds(by.char.pos, B), far = this.live && !isNaN(this.fellAt);
-    return of.filter(v => (here && inBounds(v.char.pos, B)) || (far && this.line(by, v) < Infinity));
-  }
-  /** once a frame from rescue.ts tick(), after its defenders() and before its clock() */
-  tick() {
-    if (!this.live) return;
-    const g = this.g, R = this.R, K = RESCUEFLUSH, B = R.bounds, alive = this.alive();
-    if (!alive.length || !R.noiseAt) return;   // nothing loud yet: nobody has been told anything
-    if (isNaN(this.fellAt)) {
-      if (R.cast().some(c => c.inRoom && c.gd.state !== 'dead' && !c.gd.held && !c.gd.fled)) return;   // a man posted with them still stands: the clock is his, and the others have their own jobs
-      this.fellAt = g.time; this.nextAt = g.time + K.afterSecs; R.note('flush:fell');
-    }
-    const inRoom = alive.some(h => inBounds(h.char.pos, B));
-    // one of them stands in the room and nobody is there to shoot: they have been taken out
-    if (isNaN(this.goneAt) && !inRoom) {
-      const by = R.hostiles.find(h => h.state !== 'dead' && !h.held && inBounds(h.char.pos, B));
-      if (by) { this.goneAt = g.time; R.note(`flush:gone:${by.callsign}`); g.say(by, 'the hostages are gone — they\'re moving them! cut them off!', true); this.nextAt = Math.min(this.nextAt, g.time + 1); for (const s of this.sent.values()) s.at = -1e9; }
-    }
-    // a man sent round has reached the side door: on through it, for them (no second word: it is the same errand)
-    for (const [h, S] of this.sent) {
-      if (!S.via.length || h.state === 'dead' || h.held || flat(h.char.pos, S.via[0]) > K.atDoorM) continue;
-      if (g.time - h.lastSeenT < K.busySecs || h.sawFoeThisFrame) continue;   // (one of the team in his sights at the mark: the fight is his, the way round waits)
-      S.via.shift(); const to = S.via[0] ?? this.pointOf('room', alive); if (!to) continue;
-      word(g, h, to); h.path = []; h.pathGoal = null;
-      if (!S.via.length) { S.goal = 'room'; R.note(`flush:through:${h.callsign}`); }   // (at the side door: in by it)
-    }
-    if (g.time < this.nextAt) return;
-    // the next man: never sent before the men who have been, then the nearest to where he would go
-    const free = (h: Guard): boolean => {
-      if (h.state === 'dead' || h.held || g.time < h.dazzledUntil || g.time < h.staggerUntil || hasHim(h, OWN.runner) || hasHim(h, OWN.morale) || hasHim(h, OWN.walk)) return false;
-      if (inBounds(h.char.pos, B) && inRoom) return false;   // in with them: he has them (captor())
-      if (g.time - h.lastSeenT < K.busySecs || h.sawFoeThisFrame) return false;   // one of the team in his sights: he is fighting
-      const F = g.fight.defs.find(d => d.gd === h); if (F && F.mode === 'move') return false;   // on somebody's errand (the room fight's fall-back, Hard's crew on its way): that first
-      const S = this.sent.get(h); if (!S) return true;
-      if (g.time - S.at < K.againSecs) return false;
-      return !F || F.mode === 'hold' || h.state === 'patrol' || h.state === 'suspicious' || h.state === 'search';   // come to rest, or hunting nothing
-    };
-    const room = R.outsidePoint;
-    const pool = R.hostiles.filter(free).sort((a, b) => (this.sent.get(a)?.n ?? 0) - (this.sent.get(b)?.n ?? 0) || flat(a.char.pos, room) - flat(b.char.pos, room));
-    for (const h of pool) {
-      const n = this.sent.get(h)?.n ?? 0, a = this.goalOf(this.count, inRoom), b = this.goalOf(this.count + 1, inRoom);
-      if (!K.lanesChoose) {   // the build before: a man the lanes warned off where he was sent was kept back — at the team's own guns, that was every man
-        let went = false;
-        for (const goal of a === b ? [a] : [a, b]) {
-          const via = goal === 'side' ? R.sideWay : [], at = via[0] ?? this.pointOf(goal, alive); if (!at || laneBars(g, h, at) || laneKnownAt(g, h, at)) continue;
-          this.send(h, goal, at, n, via); this.barred.delete(h); went = true; break;
-        }
-        if (went) { this.nextAt = g.time + K.gapSecs; return; }
-        if (!this.barred.has(h)) { this.barred.add(h); R.note(`flush:lane:${h.callsign}`); }
-        continue;
-      }
-      // his turn's way — or the other one, when the floor outside the DOOR his turn would take him to is in the line of guns his side knows of and the
-      // other door's is not (lanes.ts laneCovers). The lanes only CHOOSE: where he is sent is where the team's guns are, so a man kept back for a lane
-      // at those guns never came at all. Sent, he walks by that rule's own price for covered floor and is stopped short of it by that rule's own gate,
-      // where he looks, goes round or throws as its men do — and a man it already holds at a corridor's mouth is not taken off it for what lies at
-      // that corridor's guns (laneBars, as the press and the rally ask it): his word waits, the next man's turn comes
-      const ways = (a === b ? [a] : [a, b]).map(goal => { const via = goal === 'side' ? R.sideWay : [], at = via[0] ?? this.pointOf(goal, alive); return { goal, via, at, door: goal === 'side' ? via[via.length - 1] ?? null : goal === 'room' ? room : at }; })
-        .filter(w => !!w.at && !laneBars(g, h, w.at));
-      if (!ways.length) continue;
-      const covered = (w: typeof ways[number]) => !!w.door && laneCovers(g, h, w.door);
-      const turned = ways.length > 1 && covered(ways[0]) && !covered(ways[1]), W = ways[turned ? 1 : 0];
-      if (turned && !this.barred.has(h)) { this.barred.add(h); R.note(`flush:lane:${h.callsign}`); }   // (once a man: his turn's door is covered, he takes the other)
-      this.send(h, W.goal, W.at!, n, W.via);
-      this.nextAt = g.time + K.gapSecs; return;
-    }
-    this.nextAt = g.time + 1;   // nobody free this second: asked again the next
-  }
-  /** where the k-th word sends a man: the room by its two doors in turn while they are known to be in it, then the team's noise and the way out in turn */
-  private goalOf(k: number, inRoom: boolean): Goal {
-    if (inRoom || isNaN(this.goneAt)) return k % 2 === 1 && this.R.data?.side ? 'side' : 'room';
-    return k % 2 === 0 ? 'out' : 'noise';
-  }
-  private pointOf(goal: Goal, alive: Guard[]): Vec3 | null {
-    const R = this.R, S = R.data; if (!S) return null;
-    if (goal === 'room' || goal === 'side') {   // (a man sent round walks rescue.sideWay first — tick(): the short way to a point IN the room is the main door)
-      const B = R.bounds, v = alive.find(h => inBounds(h.char.pos, B));   // (where he knows they were kept: the room itself once they are not in it)
-      return v ? [v.char.pos[0], 0, v.char.pos[2]] : B ? [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2] : null;
-    }
-    if (goal === 'noise' && R.noiseAt) return v3.copy(R.noiseAt);
-    return R.ending.out;
-  }
-  /** let go to hunt it, as rescue.ts lets a roamer go to the noise; and his word on the net (the player's cue: it goes to the radio strip) */
-  private send(h: Guard, goal: Goal, at: Vec3, n: number, via: Vec3[] = []) {
-    const g = this.g, R = this.R, F = g.fight.defs.find(d => d.gd === h);
-    R.letGo(h);
-    h.hold = false; h.pinned = false;
-    if (F) { F.mode = 'free'; F.freeAt = g.time; F.rallyAt = NaN; }
-    if (h.script) endGuardScript(h, 'alert');
-    h.state = 'alert'; h.awareness = 1; h.reactT = 0; word(g, h, at); h.path = []; h.pathGoal = null; resetChase(h);
-    this.sent.set(h, { at: g.time, n: n + 1, goal, via: via.map(p => v3.copy(p)) }); this.count++;
-    R.note(`flush:${goal}:${h.callsign}`);
-    if (n > 0) return;   // (a man's second errand is not announced: one line a man)
-    g.say(h, goal === 'room' ? w('it\'s gone quiet in there — I\'m going in for them!', 'it\'s gone quiet in there — i\'m going in for them!')
-      : goal === 'side' ? w(wg('going around — I\'ll take the other door!', 'going round — I\'ll take the other door!'), 'going round — i\'ll take the other door!')
-      : goal === 'out' ? 'on the way out — they don\'t leave with the hostages!'
-      : 'moving on that noise — keep them boxed in!', true);
-  }
 
-  /** the state a save would hold (habit: its pair beside it; no checkpoint is reachable while a rescue is staged, so only the check calls these) */
-  snapshot(): RescueFlushSnap { return { fellAt: this.fellAt, nextAt: this.nextAt, goneAt: this.goneAt, count: this.count, sent: [...this.sent].map(([gd, s]) => ({ id: gd.char.id, at: s.at, n: s.n, goal: s.goal, via: s.via.map(p => [...p]) })), barred: [...this.barred].map(gd => gd.char.id) }; }
-  restore(s: RescueFlushSnap) {
-    this.fellAt = s.fellAt; this.nextAt = s.nextAt; this.goneAt = s.goneAt; this.count = s.count; this.sent.clear(); this.barred.clear();
-    for (const r of s.sent) { const gd = this.R.hostiles.find(h => h.char.id === r.id); if (gd) this.sent.set(gd, { at: r.at, n: r.n, goal: r.goal, via: (r.via ?? []).map(p => [p[0], p[1], p[2]] as Vec3) }); }
-    for (const id of s.barred ?? []) { const gd = this.R.hostiles.find(h => h.char.id === id); if (gd) this.barred.add(gd); }
-  }
 }

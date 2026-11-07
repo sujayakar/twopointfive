@@ -1578,7 +1578,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   pumping fist (a can, or the pistol with RUNREADY down) comes in with its arm; the hand keeps its own turn on the forearm. Sam himself never holds
   a jog (he walks at 1.6 m/s or sprints): the jog's tuck is seen on him only on the way in and out and under a heavy kit, and on a guard or a
   civilian who runs with nothing in both hands. Switch: ON in the page (`?runarms=0` puts it off; the debugger ▸ the move panel ▸ 'running ▸ arms
-  carried close'), OFF in the module and on the frozen stand (`FROZEN_HOLDS['RUNARMS.on']`: `TPS_RUNARMS=1`); the journal carries the table and a
+  carried close' (ROW TAKEN OFF THE PANEL 2026-11-07, its switch ruled settled: menus.md)), OFF in the module and on the frozen stand (`FROZEN_HOLDS['RUNARMS.on']`: `TPS_RUNARMS=1`); the journal carries the table and a
   recording from before it replays the clips' arms. CHECK: `probes.ts runarms` (family player; `tools/qa/runarms-check.ts`; `RUNARMS_BREAK=1`
   fails `arms` and `slowed`), both stands, the lobby, one seed: over a second of the sprint a hand is at most 14 cm out from its shoulder and an
   elbow 15 (35 and 20 with the key down), nothing comes in past the shoulder, each hand travels 43 cm fore and aft (24); at 3.5 m/s a hand 14 and

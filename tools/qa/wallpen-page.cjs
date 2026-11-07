@@ -2,7 +2,7 @@
 // SOFTWARE WebGPU adapter (SwiftShader — no GPU needed, and no GPU's picture), twice — as it opens, and with ?wallpen=0 — stands Sam a stride and a half off
 // a full-height plasterboard partition of the office with floor on its far side, the cursor on that floor, and clicks the trigger through the page's own input.
 // Asked: as it opens, the switch reads on in the page's knob registry, the round's own 'shot' event ends BEYOND the partition's far face and both faces got a
-// mark; with ?wallpen=0 the same click's round ends AT the partition; the Tab panel has the row; no console error on either page.
+// mark; with ?wallpen=0 the same click's round ends AT the partition; the Tab panel has the rule's line and counter; no console error on either page.
 // The partition is found in the page (the first that fits), so the check moves with the level and names what it used.
 //   node tools/qa/wallpen-page.cjs [outDir]      env: PORT (the dev server's, default 5199) · SIZE (960x540) · QUALITY (verylow)
 // exit 0 = every line passed · 1 = one failed. Slow by nature: minutes a boot on the software adapter. Each page is its own run of this file and its own
@@ -86,7 +86,7 @@ function judge() {
   all = ok(!!A && A.on === true && A.men === true && !!B && B.on === false, 'the page opens with the rule on, and ?wallpen=0 puts it off', `WALLPEN.on as the page opens ${A?.on} (men ${A?.men}), with ?wallpen=0 ${B?.on}`) && all;
   all = ok(!!A?.pick && A.pick.far > A.pick.wall + A.pick.thin + 0.3 && A.pick.marks >= 2, 'as it opens: a round clicked at a partition ends beyond its far face and marks both faces', `partition ${A?.pick?.index} (${A?.pick?.thin} m), ${A?.pick?.gun}: the round flew ${A?.pick?.far} m, the wall stands ${A?.pick?.wall} m off, +${A?.pick?.marks} marks${A?.pick ? '' : ' — ' + JSON.stringify(A?.list ?? A)}`) && all;
   all = ok(!!B?.pick && B.pick.index === A?.pick?.index && B.pick.far < B.pick.wall + 0.1, 'with ?wallpen=0 the same click ends at the partition', `partition ${B?.pick?.index}: the round flew ${B?.pick?.far} m, the wall stands ${B?.pick?.wall} m off${B?.pick ? '' : ' — ' + JSON.stringify(B?.list ?? B)}`) && all;
-  all = ok((A?.panel ?? []).some(l => /rounds pass through thin walls and doors/.test(l)) && (A?.panel ?? []).some(l => /crossed/.test(l)), 'the Tab panel has the row and its counter', JSON.stringify(A?.panel ?? []).slice(0, 500)) && all;
+  all = ok((A?.panel ?? []).some(l => /rounds through thin walls and doors ON/.test(l) && /crossed/.test(l)), 'the Tab panel has the rule\'s line, on, with its counter (its box went with the settled switches, 2026-11-07)', JSON.stringify(A?.panel ?? []).slice(0, 500)) && all;
   all = ok(errors.length === 0, 'no console error on either page', errors.slice(0, 6).join(' | ') || 'none') && all;
   console.log('\n=== wallpen-page: rounds through thin walls on the real page (software adapter) ===\n' + lines.join('\n') + `\n=== wallpen-page: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify({ R, errors, pass: all }, null, 1));

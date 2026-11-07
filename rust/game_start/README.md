@@ -1,0 +1,212 @@
+# rust/game_start: the game's own start, and tests that stand a scene
+
+The simulation's tick is Rust (`rust/game`), but until this crate a game could only *begin* in TypeScript: the level was loaded, the men made and
+the `Game` put together by `src/host/standup.ts`, and the result handed across the bridge. Here is the start in Rust. A level file's text and the
+character's files go in, a `Game` the tick can run comes out, and nothing in between was made by TypeScript.
+
+Two things stand on it:
+
+- **A test of a behaviour in ten lines.** A scene (rooms, doors, lamps, men) is said in Rust, stood, run for a few seconds and asked what a man
+  did. `cargo test` in this folder runs them all in about half a minute.
+- **The road to starting every level in Rust.** The scene builder is not a second way to make a game: it WRITES A LEVEL FILE, and one start stands
+  any level file. What the start does not carry yet it refuses by name (below), and a compare holds it to the TypeScript start path by path.
+
+Nothing here has been seen on a GPU: the host these games stand on draws nothing.
+
+## Write a behaviour test
+
+```rust
+use game::game::GuardState;
+use game_start::play::{Opts, Play};
+use game_start::scene::{Axis, Scene};
+
+#[test]
+fn a_guard_who_hears_a_shot_behind_a_shut_door_goes_to_it() {
+    // two lit rooms with a shut door between them; a sentry with his back to it, Sam next door
+    let mut s = Scene::new("shot-next-door");
+    s.room("west", 10.0, 10.0, 18.0, 16.0).room("east", 18.0, 10.0, 26.0, 16.0);
+    s.door("between", Axis::Z, 18.0, 12.4).door("east-yard", Axis::X, 16.0, 21.4);
+    s.bulb(14.0, 13.0).bulb(22.0, 13.0);
+    s.sentry("post", [12.25, 13.25], [10.0, 13.25]).sam(23.75, 13.25);
+
+    let mut p = Play::scene(&s, &Opts { seed: 1, ..Default::default() });
+    let post = p.guard("post");
+    p.run(1.0);
+    p.sam_fires_at([25.9, 13.25], 0.6);                               // one rifle round into the far wall
+    p.until(1.0, |p| p.state(post) == GuardState::Alert).expect("he hears it");
+    p.until(5.0, |p| p.at(post)[0] > 15.0).expect("and goes to the door");
+}
+```
+
+(That example is `tests/readme.rs`, so it is held to compile and pass.) `tests/behaviour.rs` is the worked set. Each test there holds one rule over three seeds, beside a CONTROL that differs in the one thing the rule
+is about, and says above it what a failure would mean. A seed is another SCENE as well as another die: in scenes this small the die is hardly
+drawn, so each test moves a mark, a range, a door or a landing point by the seed (`nudge`).
+
+| test | the rule | its control |
+|---|---|---|
+| `a_calm_guard_sees_a_man_in_light_and_not_in_the_dark` | a sentry with a lit man 6 m in front of him goes suspicious, then alert, his fix is where the man stood, and he calls the contact once | the lamp off: he never notices |
+| `a_defender_runs_from_a_live_grenade_and_gets_down` | he shouts once, runs from it, crouches, and is at his farthest from it when it goes off | no grenade: he stands on his mark and says nothing |
+| `the_pair_ordered_to_a_door_stacks_on_its_two_sides` | the pair given the order ends one man each side of the door, against its wall | the pair given no order does not go with them |
+| `a_posted_defender_holds_his_room_when_a_shot_is_fired_outside` | he hears it, and ten seconds on he is still inside the room he holds | no shot: calm on his mark |
+| `a_guard_who_hears_a_shot_behind_a_shut_door_turns_to_it_and_goes` | he says what he heard, believes the shooter is in the room the shot was fired in, and leaves his post for the door | no shot: calm with his back to it |
+
+### The scene (`src/scene.rs`)
+
+Metres, in the world a level must fit (40 by 28; x east, z south). The pieces are the level kit's own sizes (`src/scene/levelKit.ts`): a wall
+12 cm thick and 3 m high, a real door in a 1.2 m slot with its frame, a bare bulb on its flex.
+
+| call | what it says |
+|---|---|
+| `Scene::new(name)` | an empty lot at night: the ground and no light |
+| `.room(id, x0, z0, x1, z1)` | four walls, a floor and a ceiling; two rooms that share a line share the wall |
+| `.wall_x(z, x0, x1)` · `.wall_z(x, z0, z1)` | a wall on its own |
+| `.door(name, Axis::X \| Axis::Z, line, at)` | a door in the wall on `line`, its slot starting at `at` along it, shut; `.locked(name)` |
+| `.bulb(x, z)` · `.bulb_off(x, z)` · `.moon()` | light. With none, a place is black |
+| `.sam(x, z)` | Sam's spawn |
+| `.patrol(name, points, wait)` · `.sentry(name, at, toward)` | a guard on a route · a guard posted, looking one way |
+| `.team(sam, yaw, marks)` · `.defender(room, at, watch_door)` | a room clear: the team's start (a yaw of 0 looks south along +z, π/2 east, π north), and a defender posted in a room |
+
+A scene is one of two kinds, never both: a NIGHT (Sam and guards on routes, as a level's file has them) or a ROOM CLEAR (a team and posted
+defenders, started by the game's own `startScenario`). The room clear's staging takes every man who is not its own off the floor, so the builder
+refuses a scene that says both. A scene has at least one door (a level's mission names one).
+
+`scene.level_text()` is the level file. It can be saved under `levels/`, opened in the editor, and stood by the TypeScript start.
+
+### The game in a test's hands (`src/play.rs`)
+
+- **Stand:** `Play::scene(&scene, &opts)`, or `Play::level("kit-yard.json", room_clear, &opts)` for a file of `levels/`.
+- **Time:** `p.run(secs)`; `p.until(secs, |p| …)` answers how long it took, or `None`; `p.always(secs, |p| …)` answers `None`, or the second it
+  first failed; `p.frame()` is one sixtieth.
+- **Who:** `p.guard("route name")`, `p.defender_at(mark)`, `p.mates()`, `p.roll()` (every man in a line, for a failure's message).
+- **Ask:** `p.at(man)`, `p.state(man)`, `p.awareness(man)`, `p.fix(man)`, `p.facing(man)`, `p.speed(man)`, `p.low(man)`, `p.stacked(man)`,
+  `p.up(man)`, `p.sam_at()`, `p.sam_light()`, `p.frag_fuse()`, `p.floor()` (what stands on the level: round things, shaped boxes, trim, civilians, devices); `p.lines(man)` and `p.said` are every line a man spoke (read off the speech
+  bubbles after each frame), `p.sounds` every sound the game asked its host to play.
+- **Do:** `p.order("stack", place, Who::Red)` is the order menu's own call; `p.frag_lands(place)` the sandbox's; `p.sam_fires_at(place, settle)`,
+  `p.point_at`, `p.press`, `p.key_down` move Sam as a player's hand does, through the host's Input.
+
+Three rules keep the tests honest and alive:
+
+1. **Ask through `play.rs`, not the game's fields.** When the AI's fields move, one reader follows and no test does. A test needs a new question:
+   add a reader.
+2. **Do through the game's own calls.** An order by the menu's call, a shot by Sam's trigger, a grenade by the sandbox's call. Never a write to
+   a man's awareness or a pushed event: that tests the test.
+3. **Hold a rule, not a run.** Several seeds, a control, and what a man DID (where he went, what he said), not the name of the script he was on.
+
+A game is stood with **the senses worked out by the game itself** (`SENSE.cpu`, and the sky's light in its estimate). A host with no picture has
+no light meter, and with them off every man stands in the dark for good, so "lit" and "dark" would be one thing. The page plays with them off.
+
+**One game at a time in a process.** `rust/sim` keeps a game's block and several tables in statics, so a `Play` holds a lock until it is dropped
+and `cargo test`'s threads take turns. A test that stands a second game drops the first (`drop(p)`), or is told so.
+
+## The start (`src/stand.rs`)
+
+`stand(level, assets, opts)` is `standGame` of `src/host/standup.ts` on a host with no picture, in its order:
+
+| step | who does it |
+|---|---|
+| the block of `rust/sim` the game stands in, zeroed under the layout's word | `stand.rs` |
+| the character: skeleton, skin, clips, the cast's meshes and variants | `gltf.rs`: `src/anim/gltf.ts` in Rust, from the `.gltf` files' bytes |
+| the host: an empty box world and light set, the picture's settings | the game's `box_world_new`; `settings.rs` (a copy of `defaultSettings()`) |
+| the level file read into the `Level`, its boxes and routes as rows | `level.rs`: `src/scene/levelLoad.ts loadLevel` in Rust; the records the game keeps as its own types (a mission's `scenarios`, the footsteps' map, devices, civilians, vents, the drill plans) through `read.rs` and `records.rs`, a line a type |
+| the kit's octagons made one round box each; thin things and window bars marked; each box that says a shape given its record and its trim; statics into the world, lights into the set | `passes.rs` (`scene/round.ts`, `thin.ts`, `bars.ts`, `shapes.ts`); the game's `cut_record`, `box_world_add_static`, `light_from_def` |
+| the die, seeded before the men are made | the game's `sim_dice_new` |
+| collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game/src/game/p_04.rs`), which had never run before this crate |
+| the moving state at home in the block | `settle` (the die, the pose pool, the smoke grid) |
+| the host's Input and camera | the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild` |
+| a mission, where asked | the game's `start_scenario` |
+
+`frame(g, host, dt)` is one frame of that host: the game's `game_update` on the host's Input and camera, the camera after the man, the lights'
+envelopes, the box world listed again. It answers what the step told its host (sounds, marks, lines said).
+
+NOT MADE, because no rule of the tick reads them: the character renderer, the mesh shadows' tree, the proxy fits of the rig.
+
+### What the start reads of a level file, and what it does not
+
+Every file under `levels/` is read whole: `start --lacks levels/*.json` (the bin, below) names for each file what the reader does not carry of
+it, and today it names nothing. `stand` REFUSES a file with anything on that list: a level stood without part of itself is another level.
+
+- **The file's own tree keeps the account** (`json.rs`). An object remembers which of its members were asked for, so when a file has been read,
+  whatever nobody asked for is named by its place (`doors[0].auto`, `elevators`): a record the reader has no line for, a member a record gained
+  since. There is no second list of a record's members to keep beside its reader. What the loader leaves behind by rule, as the TypeScript
+  loader does (a floor, an author's notes, the editor's block), it passes by in so many words (`skip`).
+- **A record the game keeps as its own type is read by that type** (`records.rs`): one line says which member of the file each field is, so a type
+  that gains a field does not compile until its line names the member.
+- NOT READ: `connectors` (a stair or a ladder between floors: the TypeScript loader passes them by too, and no file has one).
+- NOT CHECKED: the file's own rules (`validateLevelData`). A file is taken as one the TypeScript validator has passed; a wrong value stops the
+  reader with its place in the file, a wrong level does not.
+- NOT IN A FILE: **the office's missions.** Every other level carries its `scenarios` in its file; the office's are a TypeScript module
+  (`levels/office.scenarios.ts`) attached to the level by its name (`scene/level.ts withOfficeScript`, `isOfficeFamily`). `levels/office.json`
+  itself is read whole. The compare writes a copy of the file with the block in it, and stands both starts on that (`LEVELS.md`).
+
+Which missions start in Rust equal to the TypeScript start, row by row: [`LEVELS.md`](LEVELS.md), written by `tools/blitz/start-levels.ts`.
+
+## What stands between this and the page starting a level in Rust
+
+A list, not a plan. Today the page stands the game in TypeScript, sends the whole state across once, and keeps the TypeScript `Game` as a puppet
+that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`, "A START").
+
+1. **The address.** The page starts a mission by `startFromQuery(g, search)`: the row's hour and weather, the fog of war, a quiet mission's fog
+   rung and cameras, the team's size, then the mission. In the Rust game an address's words are a type that holds nothing (`crate::Opaque`), so
+   every reader of them stops at its first line: `start_from_query`, `spec_of_query`, `hour_from_query`, `weather_of_search`,
+   `fog_of_query`, `quiet_rung_of_query`, `row_settings`, the loadout's, the gear's, the morale's and the words' (17 functions that take the
+   words, 7 types with an arm for them, a private stand-in for `has` and `get` in each module). This start takes a `ScenarioSpec` (kind, team
+   size, deal) and calls `start_scenario`: what a link adds to that is not started here.
+   THE TYPE THEY WAIT FOR IS WRITTEN: `src/query.rs`, `Query`, the browser's rules for reading the text and the four calls the game makes on
+   it (`has`, `get`, `set`, `delete`), held to the browser's own reader case by case. What is left is in the game crate, whose types are
+   written by a program today: `Query` in place of `crate::Opaque` in those signatures, and each module's stand-ins gone for `q.has` and
+   `q.get`. Then `StartOpts` takes the address's text, the page hands `location.search` across once, and the compare starts a mission from
+   its link on both sides.
+2. **The puppet's objects.** The picture reads TypeScript objects that only the TypeScript start builds, and the apply writes onto objects it
+   finds: of a man, his rig, his row of the men's columns, his capsules and his entry in the light probe's table; of the level, the box world
+   the GPU is packed from (`BoxWorld`: the pack, the cut and round tables, the glass listed to the GPU), the light set, the marks' texture, the
+   fixtures, the wall skin. A game started in Rust has none of them on the page's side. (The same gap shows for a man made while a game runs.
+   This item is from reading `rustgame.ts` and from the host's own notes, not from a page run: nothing here has opened a page.)
+3. **What this start leaves unmade because no rule of the tick reads it:** the character renderer, the mesh shadows' tree, the proxy fits of
+   the rig (`rig_fits`), a snow level's field and prints, the trig memos. `tools/blitz/known-start.txt` is the whole list, each row with its reason.
+   The page needs every one that is the picture's.
+4. **The dress step** (`src/host/rustdress.ts`, `src/game/dress.ts`): what the TypeScript tick did for the picture only still runs in
+   TypeScript on the puppet. This start stands with those rows down.
+5. **The host's own half.** `stand` makes a host that draws nothing: default picture settings (`settings.rs`, a copy of `defaultSettings()`: the
+   page's are the player's own, with his quality preset), a canvas of 1600 by 1000, a detached Input, no smoke solver (the page builds its own
+   between the level's boxes going to the world and the Game), `SENSE.cpu` for eyes where asked. The page would hand each of these in.
+6. **The character's files twice.** `gltf.rs` reads the rig, the clips and the cast's variants for the simulation. The picture's meshes and
+   skins are read from the same files by `src/anim/gltf.ts`. One reader, or two that must agree.
+7. **Which file.** The page loads a level's file in the look that is on (`scene/look.ts lookLevelFile`) and fetches it. Here the caller hands
+   the file's text in. The office is item "NOT IN A FILE" above.
+8. **The file's checks.** `validateLevelData` is TypeScript. A page that starts in Rust still validates in TypeScript, or the rules move.
+9. **What stands a game again from outside a tick.** A mission staged from a menu, a show, a kit view that sinks boxes: each is a TypeScript
+   call on the puppet today, after which the Rust game is started again from the puppet. With a Rust start each becomes a call into the module.
+10. **Two players.** `StartOpts.seats` reaches `game_new`, and the compare runs every mission as a game of two (`LEVELS.md`, the second
+    table): the 23 missions the game stages for two start equal and stay in step with the second seat idle (the other 15 the game
+    itself refuses for two). Nobody at the second seat's controls, no server, no rollback here.
+11. **The module.** This crate is kept out of the crates the page's module is built from. In it, the level reader, the JSON reader and the
+    character's reader are new code for the module to carry, and a level's text and the character's bytes have to cross into it once.
+
+## The compare (`tools/blitz/start.sh`)
+
+```sh
+tools/blitz/start.sh kit-yard.json                                   # a level of levels/, as its file has it
+tools/blitz/start.sh kit-yard.json --scenario roomclear --frames 1800
+tools/blitz/start.sh --mission depot-four --frames 300               # a row of the mission list: its file, kind, team size and deal
+tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --cpu --frames 900
+bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result (--seats 2: as games of two)
+```
+
+1. `tools/blitz/start.ts` stands the file with the TypeScript start on the page's stand and exports the state over the bridge.
+2. `rust/game_start`'s bin `start` stands the same file here and exports its own.
+3. `tools/blitz/diff.ts` lists the paths that differ, minus `known.txt` and `known-start.txt`: what a Rust start may differ in, each with its
+   reason (the picture's tables, memos, addresses). Anything a rule reads is mended in the start, never named there. The diff is BY REACH FROM
+   THE LIVE GAME (`--live`): the TypeScript keeps some tables weakly, by the object, and lists a man a mission took off the floor for as long
+   as its collector leaves him, so compared by key a start was equal or not by when the collector ran. What that rule hides is at the head of
+   `diff.ts` (a strong table keyed by a row nothing else holds).
+4. With `--frames N`, the TypeScript's start is IMPORTED and both games are stepped in Rust by the same host frame with an idle hand: the die's
+   count and every part of the block compared after every frame (the bytes themselves), then the two end states by path. This holds what a path diff of two starts
+   cannot see (state the bridge does not carry, what the import mends as it reads).
+
+`--cpu` raises the game's own senses on both sides, as the tests stand. The tests' scenes are written to `target/scenes/` by
+`cargo test the_scenes_are_level_files`.
+
+`rust/game_start/target/debug/start --lacks levels/*.json` lists, a file a line, what the reader does not carry of it.
+
+Where things stand is [`LEVELS.md`](LEVELS.md). The tests' scenes are held the same way: the three of `tests/behaviour.rs`, each 0 paths not known
+and the block equal to the byte, 900 frames in step.

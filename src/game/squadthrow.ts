@@ -48,18 +48,17 @@
 // Check: tools/qa/squadthrow-check.ts (`probes.ts squadthrow`).
 import { SideMap, rollbackVar, sideRegistry } from '../math/side';
 import type { Vec3 } from '../math/vec';
-import { v3, wrapAngle } from '../math/vec';
+import { v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { isBreathing } from './game';
-import type { Input } from './input';
-import type { Assignment, OrderDef, OrderNote, OrderTarget, SquadOrders } from './orders';
+import type { Assignment, OrderTarget } from './orders';
 import type { ThrowSolution } from './throwables';
 import * as fx from './effects';
-import { TOSS_QUICK } from './character';
+import './character';
 import { FRAG, exposedTo, fleeMates, fleeSpot } from './frag';
-import { FLASH, flashFuse } from './combat';
+import { FLASH } from './combat';
 import { fightLive } from './roomfight';
-import { SAMSTUN } from './samstun';
+import './samstun';
 import { WORDS, wg } from './words';
 import { squadArcTo, squadHandFree } from './squadsmoke';
 import { workHand } from './workthings';
@@ -68,8 +67,9 @@ import { bodyPos, PACE } from './guards';
 import { loadPace, loadPaceOn } from './kitload';
 import { conditionPace } from './condition';
 import { PICTURE_STATS } from './picture';
-import { squad40Word } from './squad40';   // (called inside a row's label only)
+import './squad40';   // (called inside a row's label only)
 import { throwTo, throwWalls, throwFlight, throwHits } from './throwplan';   // (called inside the searches only: src/game is one import cycle)
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 export const SQUADTHROW = {
   on: false,
@@ -163,7 +163,6 @@ const keyOf = (at: Vec3) => `${at[0].toFixed(2)},${at[2].toFixed(2)}`;
 const left = (g: Game, kind: SquadThrowKind) => kind === 'frag' ? (FRAG.on ? g.doorTools.frags : 0) : g.doorTools.bangs;
 const word = (kind: SquadThrowKind) => kind === 'frag' ? 'frag' : 'bang';   // (the order menu's one word for this can: 'bang, then go in' at a door, 'bang there' on the floor, 'bang out!' in his mouth — the kit page and the HUD name the thing, a stun canister)
 const none = (kind: SquadThrowKind) => kind === 'frag' ? (FRAG.on ? 'no frags left.' : 'no frags in this kit.') : 'no bangs left.';
-const rowOf = (kind: SquadThrowKind) => kind === 'frag' ? FRAG_THERE : STUN_THERE;
 const rollOf = (kind: SquadThrowKind) => kind === 'frag' ? SQUADTHROW.fragRollK : undefined;
 /** his own throw is still in the air: the toss has to finish */
 const tossing = (s: State | undefined, g: Game, gd: Guard) => { const t = s?.last.get(gd) ?? -1e9; return g.time >= t && g.time - t < SQUADTHROW.againSecs; };
@@ -178,7 +177,7 @@ export function handsAtWork(g: Game, gd: Guard): boolean {
 }
 
 /** the man of `men` who would throw it, with his throw: the nearest to the spot with a hand free and an arc that brings the thing to rest on it (null: none) */
-export function squadThrower(g: Game, men: Guard[], at: Vec3, kind: SquadThrowKind): { gd: Guard; from: Vec3; sol: ThrowSolution; rest: Vec3 } | null { return standThrow(g, men, at, kind); }
+export function squadThrower(g: Game, men: Guard[], at: Vec3, kind: SquadThrowKind): { gd: Guard; from: Vec3; sol: ThrowSolution; rest: Vec3 } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('squadThrower', undefined, [g, men, at, kind]); if (__r !== RUST_PASS) return __r as any; } } return standThrow(g, men, at, kind); }
 /** what a search under SQUADTHROW.lob carries: the walls by the spot, the flights it has left, `clean` = a frag thrown so catches nobody of ours (the player
  *  apart: the row's own question of him), and `dirty` = the first throw found that did not — what the row is refused by, by name, if nothing clean turns up */
 interface Lob { walls: Vec3[]; lim: { n: number }; clean: (th: SquadThrower) => boolean; dirty: SquadThrower | null }
@@ -345,7 +344,7 @@ function walkSpot(g: Game, men: Guard[], at: Vec3, kind: SquadThrowKind, forced 
 
 /** THE THROW AS IT WOULD BE ORDERED NOW: the nearest man with a throw from where he stands, else (SQUADTHROW.walk) the man with the shortest walk to one, with the
  *  floor he throws from as `post` (null: none). The walk's search is kept SQUADTHROW.keepSecs for the menu's and the picture's re-reads; `fresh` asks again. */
-export function squadThrowPlan(g: Game, men: Guard[], at: Vec3, kind: SquadThrowKind, fresh = false, view = false): SquadThrower | null {
+export function squadThrowPlan(g: Game, men: Guard[], at: Vec3, kind: SquadThrowKind, fresh = false, view = false): SquadThrower | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('squadThrowPlan', undefined, [g, men, at, kind, fresh, view]); if (__r !== RUST_PASS) return __r as any; } }
   const K = SQUADTHROW, th = squadThrower(g, men, at, kind);
   /** (lob) a frag thrown so catches nobody of ours — the thrower where he will stand, his mates where they are: who can duck is not caught (the player apart) */
   const clean = (t: SquadThrower) => kind !== 'frag' || !squadFragCatches(g, t.rest, at, { gd: t.gd, at: t.post ?? t.gd.char.pos }, false, !fresh);
@@ -377,7 +376,7 @@ function walkLine(g: Game, gd: Guard, post: Vec3): Vec3[] {
  *  of ours where he was — the duck rule asks a flee of every man in it, and the rows are read every frame
  *  `burst` (squad40.ts: a round that goes off as it lands): nobody is counted on to duck — there is no fuse to duck in — the reach is the one handed in,
  *  and `no` its own words for 'no frag.' */
-export function squadFragCatches(g: Game, rest: Vec3, at: Vec3, moved?: { gd: Guard; at: Vec3 }, sam = true, kept = false, burst?: { reach: number; no: string }): string | null {
+export function squadFragCatches(g: Game, rest: Vec3, at: Vec3, moved?: { gd: Guard; at: Vec3 }, sam = true, kept = false, burst?: { reach: number; no: string }): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('squadFragCatches', undefined, [g, rest, at, moved, sam, kept, burst]); if (__r !== RUST_PASS) return __r as any; } }
   if (!kept || burst || !SQUADTHROW.lob || !SQUADTHROW.duck) return fragCatches(g, rest, at, moved, sam, burst);
   const q = (p: Vec3) => `${Math.round(p[0] * 4)},${Math.round(p[2] * 4)}`, s = state(g), c = s.caught;
   const key = `${q(rest)}|${q(at)}|${moved ? moved.gd.char.id + ':' + q(moved.at) : ''}|${sam}|${g.player.down ? '' : q(g.player.char.pos)}|${g.guards.map(m => m.team === 'operative' ? `${m.state === 'dead' ? 'x' : ''}${q(m.char.pos)}` : '').join(';')}`;
@@ -404,119 +403,22 @@ function fragCatches(g: Game, rest: Vec3, at: Vec3, moved: { gd: Guard; at: Vec3
 /** WHO OF OURS A STUN CANISTER GOING OFF THERE WOULD CATCH: 'you' and callsigns (none: []). combat.ts detonateStun's own tests — the night game's line inside
  *  the dazzle radius, or the room fight's (a line from the can or from over it; its own side only on top of it, the player in full where he has a line:
  *  SAMSTUN.ownSeen) — asked from where it would rest and from the spot, every reach SQUADTHROW.slackM long. */
-export function squadStunCatches(g: Game, rest: Vec3, at: Vec3): string[] {
-  if (!fx.flags.dazzle) return [];
-  const pts = stunPts(rest, at), caught = (eye: Vec3, full: boolean) => stunIn(g, pts, eye, full);
-  const out: string[] = [], pl = g.player;
-  if (SAMSTUN.on && !pl.down && !g.puppet && !g.touring && caught(pl.char.bones.head ?? v3.add(pl.char.pos, [0, 1.6, 0]), SAMSTUN.ownSeen)) out.push('you');
-  for (const gd of g.guards) if (gd.team === 'operative' && gd.state !== 'dead' && caught(gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]), false)) out.push(gd.callsign);
-  return out;
-}
+export function squadStunCatches(g: Game, rest: Vec3, at: Vec3): string[] { return crossToRust('squadStunCatches', undefined, [g, rest, at]) as any; }
 
 /** SQUADTHROW.samCall: a frag the player has a line to is his call — not refused in his name, named on the row */
 const samCalls = () => SQUADTHROW.lob && SQUADTHROW.samCall;
-/** … is he inside it (where it would go off, or the spot asked for)? */
-export function squadFragOnSam(g: Game, rest: Vec3, at: Vec3): boolean { return !g.player.down && fragIn(g, fragPts(rest, at), g.player.char.pos); }
 /** … and never his call inside what it kills at (`duckMinM`: FRAG.lethalM and a metre): there it is refused as it always was */
 const samNear = (g: Game, pts: Vec3[]) => pts.some(L => flat(g.player.char.pos, L) < SQUADTHROW.duckMinM);
 function state(g: Game): State { let s = states.get(g); if (!s) states.set(g, s = { last: new SideMap(), noted: null, shown: null, warn: null, warnFrag: null, caught: null, asked: new Map(), walks: new Map(), kept: new Map(), scratch: null }); return s; }
 
-/** the thing leaves his hand: the count is taken already. The door tools' own lines for each (doortools.ts, the toss): the frag on its fuse from the hand, the canister on its own from where it lands */
-function throwIt(g: Game, gd: Guard, arc: Arc, kind: SquadThrowKind, at: Vec3) {
-  const s = state(g), who = gd.char.id, heading = v3.yawOf(arc.sol.v0); s.last.set(gd, g.time); s.warn = s.warnFrag = null;
-  const it = kind === 'frag' ? g.items.spawn('frag', arc.from, arc.sol.v0, { fuse: FRAG.orderFuse, who, heading }) : g.items.spawn('flash', arc.from, arc.sol.v0, { fuse: flashFuse(g), who, heading });
-  it.onBounce = (sp, q, g) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
-  gd.char.anim.tossItem(TOSS_QUICK); g.say(gd, kind === 'frag' ? 'frag out!' : WORDS.on ? 'bang out!' : 'bang out.');
-  s.shown = { t: g.time, text: `${gd.callsign} · ${kind === 'frag' ? 'frag' : 'bang'} out` };
-  SQUADTHROW_STATS.thrown++; if (kind === 'frag') SQUADTHROW_STATS.frags++; else SQUADTHROW_STATS.stuns++;
-  SQUADTHROW_LOG.push({ t: g.time, kind, who: gd.callsign, from: arc.from, at: v3.copy(at), land: v3.copy(arc.sol.land), rest: arc.rest }); if (SQUADTHROW_LOG.length > 100) SQUADTHROW_LOG.splice(0, 50);
-}
-export const squadLogRow = (g: Game, S: SquadOrders, gd: Guard, order: string, at: Vec3) => { S.log.push({ t: g.time, order, who: [gd.callsign], target: `floor:${at[0].toFixed(1)},${at[2].toFixed(1)}` }); };   // (a `free` row is not logged by orders.ts: the squad's order log, in its own words for a floor order)
 
-/** the assignment that walks him to his throw: under the row's own id, gun low on the way, facing the spot once there */
-function walkTo(S: SquadOrders, gd: Guard, kind: SquadThrowKind, post: Vec3, at: Vec3, arc?: Arc): Assignment | null {   // (`arc`, SQUADTHROW.lob: he stands facing the way it will leave his hand — a bank is not thrown at the spot)
-  S.assign(gd, { order: rowOf(kind), post: v3.copy(post), face: arc && SQUADTHROW.lob ? v3.yawOf(arc.sol.v0) : v3.yawTo(post, at), stance: 'lowReady', upper: 'none', move: { stance: 'none', upper: 'aim' }, going: `moving to throw · ${word(kind)}`, there: `throwing · ${word(kind)}`, setLine: null });
-  return S.of(gd);
-}
-/** the order's walking case: he is sent to the floor he has a throw from; the can stays in the bag until it is thrown */
-function startWalk(g: Game, S: SquadOrders, th: SquadThrower, t: OrderTarget, kind: SquadThrowKind) {
-  const s = state(g), gd = th.gd, post = th.post!, line = walkLine(g, gd, post);
-  const W: Walk = { ...squadLend(g, S, gd, t), kind, at: v3.copy(t.at), post: v3.copy(post), arc: th, spent: 0, lastT: g.time, onT: -1, thrownT: -1, again: 0, line };
-  W.A = walkTo(S, gd, kind, post, t.at, th); s.walks.set(gd, W); s.warn = null;
-  g.say(gd, 'moving to throw.'); squadLogRow(g, S, gd, rowOf(kind), t.at); SQUADTHROW_STATS.walks++;
-}
-/** what a man is doing NOW, kept so that he can be handed back to it: asked before he is given the assignment that takes him */
-export function squadLend(g: Game, S: SquadOrders, gd: Guard, t: OrderTarget): Lent {
-  const p = gd.char.pos, was = S.of(gd);
-  const back: Lent['back'] = was && RESUMED.includes(was.order) ? { order: was.order, post: was.post ? v3.copy(was.post) : null, follow: was.follow, face: was.face, watch: was.watch, door: was.door, strafe: was.strafe, stance: was.stance, upper: was.upper,
-    stackSide: was.stackSide, move: was.move, going: was.going, there: was.there, shy: was.shy, spare: was.spare, from: was.from, crouch: was.crouch, fit: was.fit, tries: was.tries, setLine: null } : null;   // (`tries`, ORDERS.walkTries: a walker sent off to throw comes back to his jamb still the man who tries the door)
-  const mates = was ? g.guards.filter(m => m !== gd && S.of(m)?.group === was.group && S.of(m)?.order === was.order) : [];   // (who shared the order he leaves: it is his again only while one of them still holds it)
-  return { mates, gd, t, A: null, home: [p[0], 0, p[2]], homeYaw: gd.char.bodyYaw, back };
-}
-/** the throw is made, or will not be: back to where he stood and to what he was doing (`back`: SQUADTHROW.back for a walk; off, or nothing to go back to:
- *  he holds) */
-export function squadHandBack(g: Game, S: SquadOrders, W: Lent, back = SQUADTHROW.back) {
-  const gd = W.gd, p = gd.char.pos, B = back ? W.back : null; if (gd.state === 'dead' || S.of(gd) !== W.A) return;
-  S.newGroup();   // (his return is an order of its own: nobody else's 'set.' waits on it, and his waits on nobody)
-  if (B && B.order === 'fallIn') { const d = S.defs.find(x => x.id === 'fallIn'); if (d) { d.issue(S, [gd], W.t); return; } }
-  // (an order he shared — a stack, a move abreast — is his again only while a man he shared it with still holds it: the stack gone in without him is not gone back to)
-  const stale = !!B && B.order !== 'hold' && W.mates.length > 0 && !W.mates.some(m => m.state !== 'dead' && S.of(m)?.order === B.order);
-  if (B && B.order !== 'fallIn' && !stale) { S.assign(gd, { ...B, post: B.post ?? v3.copy(W.home), face: B.face ?? W.homeYaw }); return; }
-  const at: Vec3 = back ? W.home : [p[0], 0, p[2]];
-  S.assign(gd, { order: 'hold', post: v3.copy(at), face: back ? W.homeYaw : gd.char.bodyYaw, stance: 'lowReady', upper: 'none', move: { stance: 'none', upper: 'aim' }, going: back ? 'moving back' : 'holding', there: 'holding', setLine: null });
-}
-/** A WALKING THROWER'S FRAME (the rows' `tick`: orders.ts calls it while he is under the row's id and the fight does not have him) */
-function walkTick(g: Game, S: SquadOrders, gd: Guard, A: Assignment) {
-  const K = SQUADTHROW, s = state(g), W = s.walks.get(gd), now = g.time, p = gd.char.pos;
-  if (!W || W.A !== A) {   // (under the row's id with no walk of ours behind it — a hand-made assignment: he holds where he is)
-    if (W) s.walks.delete(gd);
-    S.assign(gd, { order: 'hold', post: [p[0], 0, p[2]], face: gd.char.bodyYaw, stance: 'lowReady', upper: 'none', going: 'holding', there: 'holding', setLine: null }); return; }
-  const dt = now - W.lastT; W.lastT = now; if (dt > 0 && dt < 0.25) W.spent += dt;
-  const end = (line: string | null) => { if (line) { g.say(gd, line); SQUADTHROW_STATS.gaveUp++; } s.walks.delete(gd); squadHandBack(g, S, W); };
-  if (W.thrownT >= 0) { if (now < W.thrownT || now - W.thrownT >= K.tossSecs) end(null); return; }
-  if (!K.on || !K.walk) return end(null);
-  if (W.spent > K.walkSecs) return end("can't get a throw.");
-  if (!A.arrived && flat(p, W.post) > 0.4) return;   // (walking)
-  if (!squadHandFree(g, gd) || handsAtWork(g, gd)) return;   // (blinded, reeling, a magazine out: he waits — the walk's clock runs)
-  if (W.onT < 0) W.onT = now;
-  if (K.lob && (now - W.onT < K.settleSecs || gd.speed > 0.3)) return;   // (still coming to a stand: his hand is not yet where he throws from, nor his feet where he ducks from — the walk's clock runs)
-  // (SQUADTHROW.lob: … else the throw he walked here for, made from where his hand now is — one flight — else one he works out afresh; flown once where he
-  //  stops, not again every step of his turn)
-  let arc: Arc | null = squadArcTo(g, gd, W.at, rollOf(W.kind));
-  if (!arc && K.lob) {
-    if (!W.heldAt || flat(p, W.heldAt) > 0.05 || now - W.heldT! > 1) {
-      const from: Vec3 = [W.arc.from[0] + p[0] - W.post[0], W.arc.from[1], W.arc.from[2] + p[2] - W.post[2]], F = g.col.solidBlocked([p[0], from[1], p[2]], from) ? null : throwFlight(g, W.kind, from, W.arc.sol.v0);
-      W.held = F && throwHits(g, F.end, W.at) ? { from, sol: { ...W.arc.sol, points: F.points, land: F.land }, rest: F.end } : throwTo(g, gd, W.at, W.kind, undefined, undefined, { n: K.lobSims });
-      W.heldAt = v3.copy(p); W.heldT = now; if (W.held) A.face = v3.yawOf(W.held.sol.v0);   // (he turns to the way THIS one leaves his hand)
-    }
-    arc = W.held ?? null;
-  }
-  /** one more look, from where he is (twice at most): true = he is walking again */
-  const lookAgain = (): boolean => {
-    const th = W.again < 2 ? walkSpot(g, [gd], W.at, W.kind, true, K.lob ? { walls: throwWalls(g, W.at), lim: { n: K.lobSims }, clean: t => W.kind !== 'frag' || !squadFragCatches(g, t.rest, W.at, { gd, at: t.post! }, false), dirty: null } : undefined) : null; if (!th) return false;
-    W.again++; W.post = v3.copy(th.post!); W.arc = th; W.onT = -1; W.heldAt = undefined; W.line = walkLine(g, gd, W.post); W.A = walkTo(S, gd, W.kind, W.post, W.at, th); return true;
-  };
-  if (!arc) { if (!lookAgain()) end('no throw from here.'); return; }   // (stopped short of his spot, or the floor is not what it was)
-  W.arc = arc;
-  if (Math.abs(wrapAngle(gd.char.bodyYaw - (K.lob ? v3.yawOf(arc.sol.v0) : v3.yawTo(p, W.at)))) > 0.9 && now - W.onT < K.turnSecs) return;   // (turning to it — to the way the thing will leave his hand: a bank is not thrown at the spot)
-  // the order's own sense, asked of the floor as it stands NOW — nothing is spent on a refusal
-  if (left(g, W.kind) <= 0) return end(none(W.kind));
-  if (W.kind === 'frag') {
-    const who = squadFragCatches(g, arc.rest, W.at, { gd, at: p }, !samCalls());
-    // (lob: stopped a stride short of floor he could duck from, the one in it is HIMSELF: floor to look for again, not a throw to call off)
-    if (who && K.lob && who === `${gd.callsign} is in it.` && lookAgain()) return;
-    if (who) { SQUADTHROW_STATS.refused++; return end(who); }
-  }
-  if (!g.doorTools.take(W.kind === 'frag' ? 'frag' : 'bang')) return end(none(W.kind));
-  throwIt(g, gd, arc, W.kind, W.at); W.thrownT = now; SQUADTHROW_STATS.walked++;
-}
 
 /** WHAT THE PICTURE DRAWS (and what a module that draws the squad's plan may read): one entry per throw on its way — `gd` who throws, `from` the floor he
  *  throws from, `points` the arc, `land` where the thing comes to rest, `walk` his way there from where he is (absent: he throws where he stands) — live from
  *  the order until the thing leaves his hand, plus a `preview` entry for the highlighted row while the throw page is up. Empty otherwise. READS ONLY, and
  *  that is held to the whole state (tools/qa/throwview-check.ts): the preview's search is asked aside, on the asker's store `V` (SquadThrowKept). */
 export interface SquadThrowPlan { gd: Guard; from: Vec3; points: Vec3[]; land: Vec3; kind: SquadThrowKind; preview?: true; walk?: Vec3[] }
-export function squadThrowPlans(g: Game, V?: SquadThrowKept): SquadThrowPlan[] {
+export function squadThrowPlans(g: Game, V?: SquadThrowKept): SquadThrowPlan[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('squadThrowPlans', undefined, [g, V]); if (__r !== RUST_PASS) return __r as any; } }
   const s = states.get(g), out: SquadThrowPlan[] = []; if (!s || !SQUADTHROW.on) return out;
   for (const W of s.walks.values()) {
     if (W.thrownT >= 0 || W.gd.state === 'dead' || g.orders.of(W.gd) !== W.A || !g.guards.includes(W.gd)) continue;   // (a walk somebody else's order has ended is swept at the next key read: never drawn meanwhile)
@@ -536,71 +438,5 @@ export function squadThrowPlans(g: Game, V?: SquadThrowKept): SquadThrowPlan[] {
   return out;
 }
 
-function rows(g: Game): OrderDef[] {
-  /** why not (a string), or the throw (with `post`: after a walk) */
-  const ask = (men: Guard[], t: OrderTarget, kind: SquadThrowKind, fresh = false) => {
-    if (left(g, kind) <= 0) return none(kind);
-    // (lob) The row is the thrower's alone (`only`), but the search that named him was the squad's, with one count of flights between them: asked of him
-    // alone it is another search, and may come back with another throw — one that catches a mate where the squad's did not. So the question goes first to
-    // the men `only` was asked of, and that answer stands when it still names him and catches nobody; else he is asked alone, as before.
-    const caught = (th: SquadThrower) => kind === 'frag' ? squadFragCatches(g, th.rest, t.at, { gd: th.gd, at: th.post ?? th.gd.char.pos }, !samCalls(), !fresh) : null;
-    const A = SQUADTHROW.lob && men.length === 1 ? state(g).asked.get(kind) : undefined;
-    if (A && A.key === keyOf(t.at) && A.men.length > 1 && A.men.includes(men[0])) { const th = squadThrowPlan(g, A.men, t.at, kind, fresh); if (th && th.gd === men[0] && !caught(th)) return th; }
-    const th = squadThrowPlan(g, men, t.at, kind, fresh); if (!th) return 'no throw from here.';
-    const who = caught(th); if (who) return who;
-    return th;
-  };
-  const one = (kind: SquadThrowKind): OrderDef => ({ id: rowOf(kind), page: THROW_PAGE, targets: ['floor'], free: true,
-    label: t => { const s = states.get(g), x = kind === 'stun' ? s?.warn : s?.warnFrag, w = x && x.key === keyOf(t.at) ? x.text : ''; return `${word(kind)} there · ${left(g, kind)} left${w}`; },
-    // (the order is one man's — the thrower's: nobody else answers, and no drill is asked to let go of anybody; a man a drill owns is never walked: mayWalk)
-    only: (_S, men, t) => { if (SQUADTHROW.lob) state(g).asked.set(kind, { key: keyOf(t.at), men }); const th = squadThrowPlan(g, men, t.at, kind); return th ? [th.gd] : []; },
-    valid: (_S, t, men) => {
-      const a = ask(men, t, kind);
-      if (kind === 'stun') { const who = typeof a === 'string' ? [] : squadStunCatches(g, a.rest, t.at); state(g).warn = who.length ? { key: keyOf(t.at), text: ` · too close: ${who.join(', ')}` } : null; }
-      else { const on = typeof a !== 'string' && samCalls() && squadFragOnSam(g, a.rest, t.at); state(g).warnFrag = on ? { key: keyOf(t.at), text: ' · too close: you' } : null; }   // (samCall: his call, and the row says so)
-      return typeof a === 'string' ? a : true;
-    },
-    issue: (S, men, t) => {
-      const a = ask(men, t, kind, true);
-      if (typeof a === 'string') { SQUADTHROW_STATS.refused++; return a; }   // (through the menu `valid` has said it first: this is the floor as it stands NOW — nothing is spent)
-      if (a.post) return startWalk(g, S, a, t, kind);
-      if (!g.doorTools.take(kind === 'frag' ? 'frag' : 'bang')) return none(kind);
-      throwIt(g, a.gd, a, kind, t.at); squadLogRow(g, S, a.gd, rowOf(kind), t.at);
-    },
-    tick: (S, gd, A) => walkTick(g, S, gd, A) });
-  const open: OrderDef = { id: THROW_OPEN, opens: THROW_PAGE, hotKey: FRAG.orderKey, targets: ['floor'], free: true,
-    label: () => `throw · frag ${left(g, 'frag')} · bang ${left(g, 'stun')}${squad40Word(g)}`, issue: () => {} };   // (squad40.ts: ' · 40 mm N' while a teammate's card brought one — its row is this page's third)
-  return [open, one('frag'), one('stun')];
-}
-/** the squad's HUD block: the throw just made */
-function notes(g: Game): OrderNote[] { const s = states.get(g), w = s?.shown; return w && g.time >= w.t && g.time - w.t < SQUADTHROW.shownSecs ? [w.text] : []; }
 
-/** the rows on the menu while the switch is on, off it otherwise (asked once a frame: a switch thrown live holds from the next) */
-function sync(g: Game) {
-  const S = g.orders, has = S.defs.some(d => d.id === THROW_OPEN);
-  if (SQUADTHROW.on === has) return;
-  if (!SQUADTHROW.on) { for (const id of [THROW_OPEN, FRAG_THERE, STUN_THERE]) S.unregister(id); if (S.menu) S.close(); return; }
-  const s = state(g), smoke = S.defs.findIndex(d => d.id === 'smokeThere'), hold = S.defs.findIndex(d => d.id === 'hold'), after = smoke >= 0 ? smoke : hold;   // (its place: under the floor's own four and the smoke row)
-  const [open, ...page] = rows(g); S.register(open, after >= 0 ? S.defs[after + 1]?.id : undefined); for (const d of page) S.register(d);
-  if (s.noted !== S) { s.noted = S; S.notes.push(() => notes(g)); }
-}
 
-/** Once a frame straight after the menu's own input (game.ts, beside the door tools' menuKey): the rows kept in step with the switch, and the page's key —
- *  G with a floor menu's first page up turns it to the throws. True: the press was the row's (the caller keeps it from the quick throw). */
-export function squadThrowKey(g: Game, input: Input): boolean {
-  if (!SQUADTHROW.on && !states.has(g)) return false;
-  const st = states.get(g);
-  if (st?.walks.size) for (const [gd, W] of st.walks) {   // (a walk whose man is down or under another order is over: nothing thrown, nothing spent · the switch thrown off: he goes back)
-    if (gd.state === 'dead' || g.orders.of(gd) !== W.A) st.walks.delete(gd);
-    else if (!SQUADTHROW.on) { st.walks.delete(gd); squadHandBack(g, g.orders, W); }
-  }
-  sync(g);
-  const S = g.orders, M = S.menu, key = FRAG.orderKey; if (!M || !input.hit(key)) return false;
-  if (M.page === THROW_PAGE) { input.pressed.delete(key); return true; }   // (G again on its own page: the press is the menu's — never Sam's own quick throw)
-  if (M.page !== null) return false;
-  const i = M.rows.findIndex(d => d.id === THROW_OPEN); if (i < 0) return false;
-  input.pressed.delete(key); S.pick(i); return true;
-}
-export function squadThrowSummary(g: Game): string {
-  return SQUADTHROW.on ? `frag ${left(g, 'frag')} · stun ${left(g, 'stun')} · X on a spot of floor, ${FRAG.orderKey.replace('Key', '')}, then 1 or 2 · thrown ${SQUADTHROW_STATS.thrown}` : 'off';
-}

@@ -12,7 +12,7 @@
 import { readFileSync, appendFileSync, existsSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
-export const DEFAULT_WORD: string = 'none';
+export const DEFAULT_WORD: string = 'rust';
 
 /** HOW A CHECK KEPT ON THE TYPESCRIPT TICK IS STOOD (by the table): `'none'` = exactly as with no word, to the byte, so nothing recorded moves when the
  *  default word becomes `table`; `'ts'` = the word's own stand, the game owning its die and the dress rows down (the stand the Rust game's tallies are held

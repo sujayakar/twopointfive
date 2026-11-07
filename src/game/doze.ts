@@ -45,20 +45,18 @@
 // NEVER SEEN ON A GPU: the slump (character.ts `slump`), the chair under him, the 'z' and the '♪', the screen's light on a seated man's face and in the room,
 // the chair pulled up are numbers nobody has looked at. He makes NO SOUND yet: a breath or a
 // snore is the sound table's to add (dozeBreath below is its phase).
-import { manById } from './seats';
+import './seats';
 import { SideMap } from '../math/side';
 import type { Game, Guard, LightTarget } from './game';
 import type { Prop } from './props';
 import type { Vec3 } from '../math/vec';
-import { v3 } from '../math/vec';
-import { goTo, followPath, escalationOf, lightEstimateAt, notGettingAnywhere, hearingCheck } from './guards';
-import { workLit } from './calmtorch';
-import { darkFoeBlind } from './darkfoe';
-import { CLOSE, closeSeat, closeUnseat, closeSeated, closeHasSeat } from './close';
-import { attentionLend } from './attention';
-import { simRandom } from '../math/dice';
-import { mathsEpoch } from '../math/exact';
-import { LIGHT_IN, ROW_BIT } from '../sim/lightshome';
+import './guards';
+import './calmtorch';
+import './darkfoe';
+import { CLOSE, closeSeat, closeUnseat } from './close';
+import './attention';
+import '../math/exact';
+import { LIGHT_IN } from '../sim/lightshome';
 
 /** the switch and its numbers. `minWait` s: the shortest wait he sits one out for · `maxWait` s: the longest (a man stood somewhere longer than this is POSTED
  *  there: a picket, not a man pausing on his round) · `chairM`: how far from his waypoint the chair may stand (straight; the walk to
@@ -82,31 +80,13 @@ interface Doze { phase: Phase; wp: number; chair: Prop | null; mon: LightTarget 
 const GAMES = new SideMap<Game, Map<Guard, Doze>>('doze.GAMES');
 const REC = new SideMap<Guard, Doze>('doze.REC');
 const SAID = new SideMap<Game, number[]>('doze.SAID');
-const TOUCH = new Int32Array(96);
 /** how far, and which way, a man will pull a chair up: every 5 cm offset inside `pullM`, nearest first (built on first use) */
 let PULLS: [number, number][] | null = null, PULLS_M = -1, PULLS_E = -1;   // (PULLS_E: sorted by lengths, so by the maths of the day — math/exact.ts)
-function pulls(): [number, number][] {
-  if (!PULLS || PULLS_M !== DOZE.pullM || PULLS_E !== mathsEpoch) { PULLS = []; PULLS_M = DOZE.pullM; PULLS_E = mathsEpoch; const n = Math.ceil(DOZE.pullM / 0.05);
-    for (let ix = -n; ix <= n; ix++) for (let iz = -n; iz <= n; iz++) if (Math.hypot(ix, iz) * 0.05 <= DOZE.pullM + 1e-6) PULLS.push([ix * 0.05, iz * 0.05]);
-    PULLS.sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]) || a[0] - b[0] || a[1] - b[1]); }
-  return PULLS;
-}
 const mapOf = (g: Game) => { let m = GAMES.get(g); if (!m) { m = new Map(); GAMES.set(g, m); } return m; };
 export const DOZE_STATS = { sat: 0, slept: 0, worked: 0, lines: 0, rose: 0, woke: { noise: 0, light: 0, bump: 0, alarm: 0, net: 0, taken: 0 } };
 /** QA: every wake, in order */
 export const DOZE_LOG: { t: number; who: string; why: DozeWhy; secs: number }[] = [];
 
-const flat = (a: ArrayLike<number>, x: number, z: number) => Math.hypot(a[0] - x, a[2] - z);
-/** which way a man in this chair faces (levelKit.ts chair: the back is on local +Z) */
-const chairFace = (p: Prop) => Math.atan2(-Math.sin(p.yaw), -Math.cos(p.yaw));
-/** the run is one a man may doze in: somebody home in their heads, the close-in seat there to sit him, not a show, not a lesson, the floor calm */
-function live(g: Game): boolean {
-  return DOZE.on && CLOSE.on && g.aiEnabled && !g.quietUtility && !g.touring && !g.puppet && !g.player.down && !g.level.scenarios?.lesson && escalationOf(g) === 0 && !g.alarm.episode && !g.blackout.active;
-}
-/** HE is a staff man on a calm patrol with nothing on his mind or in his hands */
-function calm(g: Game, gd: Guard): boolean {
-  return gd.team === 'guard' && !gd.unit && !gd.civ && gd.state === 'patrol' && gd.awareness < 0.15 && !gd.held && !gd.script && !gd.task && !gd.bodyDuty && !gd.pinned && !gd.leader && !gd.post && !gd.drawn;
-}
 function put(g: Game, gd: Guard, D: Doze) { mapOf(g).set(gd, D); REC.set(gd, D); }
 function drop(g: Game, gd: Guard) { mapOf(g).delete(gd); REC.delete(gd); gd.char.anim.slump = 0; }
 /** the man at a screen is taken off the books (the switch off, the roster changed, a reset): what he switched on goes off with him */
@@ -115,16 +95,10 @@ function dark(g: Game, D: Doze) { if (D.phase === 'work' && D.mon && !D.monWas) 
  *  dark by itself (`idleSecs`: a screen nobody touches blanks) — sooner if the next man who sits to it gets up at the end of his wait: he switches it off
  *  as if it were his own. In the checkpoint. */
 const LEFT = new SideMap<Game, Map<LightTarget, number>>('doze.LEFT');
-function leftLit(g: Game, D: Doze) { if (D.phase !== 'work' || !D.mon || D.monWas || !D.mon.on || D.mon.broken) return; let L = LEFT.get(g); if (!L) LEFT.set(g, L = new Map()); L.set(D.mon, g.time + DOZE.idleSecs); }
 function leftOff(g: Game) { const L = LEFT.get(g); if (!L) return; for (const t of L.keys()) g.lightHome.in(LIGHT_IN.on, t, 0); LEFT.delete(g); }
-function leftTick(g: Game) { const L = LEFT.get(g); if (!L) return; if (!DOZE.on) { leftOff(g); return; }
-  for (const [t, at] of L) if (g.time >= at || !t.on || t.broken) { if (t.on && !t.broken) g.lightHome.in(LIGHT_IN.on, t, 0); L.delete(t); } if (!L.size) LEFT.delete(g); }
 const blank = (phase: Phase, wp: number, t: number): Doze => ({ phase, wp, chair: null, mon: null, monWas: false, say: -1, to: [0, 0, 0], at: [0, 0, 0], face: 0, cx: 0, cz: 0, cyaw: 0, t: 0, seen: t, until: 0, lit: -1, ask: 0, push: 0, why: null, wokeAt: -1 });
 
-interface Seat { chair: Prop; at: Vec3; face: number; mon: LightTarget | null; to: Vec3 }
-const walkLen = (g: Game, from: ArrayLike<number>, to: Vec3): number => { const path = g.col.nav.findPath(from as Vec3, to); if (!path) return Infinity; let len = 0, prev: ArrayLike<number> = from; for (const q of path) { len += flat(prev, q[0], q[2]); prev = q; } return len; };
 const seated = (D: Doze) => D.phase === 'down' || D.phase === 'asleep' || D.phase === 'work';
-const span = (r: number[]) => r[0] + simRandom() * (r[1] - r[0]);
 /** WHAT HE SAYS TO HIS SCREEN (a bubble over him, nothing on the net, no log row): the night shift's paperwork. `dozeLines()` hands them to the words lint. */
 const SCREEN_LINES = [
   'password expired. of course it has.',
@@ -141,194 +115,20 @@ const SCREEN_LINES = [
   'unread, unread, unread. all him.',
 ];
 export function dozeLines(): string[] { return [...SCREEN_LINES]; }
-/** A CHAIR AT A SCREEN: a monitor of the level's (a switchable in group 'monitors', not shot out, nobody else at it) with this chair near it, on its lit side.
- *  He sits FACING it, `screenM` or nearer — so he pulls the chair up: the seat is the place nearest where the chair stands (that place first, then up to
- *  `pullM` off it) from which a man facing the screen has free floor under him and the screen in his eye. He walks to that floor; the chair comes under him. */
-function screenSeat(g: Game, gd: Guard, p: Prop): Seat | null {
-  for (const t of g.targets) {
-    if (t.group !== 'monitors' || t.kind !== 'emissive' || t.broken) continue;
-    if (flat(t.pos, p.x, p.z) > DOZE.screenM + DOZE.pullM) continue;
-    let used = false; for (const D of mapOf(g).values()) if (D.mon === t && D.phase !== 'no' && D.phase !== 'spent' && D.phase !== 'stir') used = true; if (used) continue;
-    const n = t.areaLights?.[0]?.light.dir, eye = t.areaLights?.[0]?.light.pos ?? t.pos;
-    for (const [ox, oz] of pulls()) {   // (nearest first: the first place that will do is the one)
-      const ax = p.x + ox, az = p.z + oz, dx = ax - t.pos[0], dz = az - t.pos[2], d = Math.hypot(dx, dz); if (d < 0.5 || d > DOZE.screenM) continue;
-      if (n && (n[0] * dx + n[2] * dz) / d < 0.5) continue;
-      const rx = ax - dx / d * 0.33, rz = az - dz / d * 0.33;   // where the seat puts his feet (close.ts SIT_ADVANCE on from the chair): room for him to stand there, and the screen in his eye
-      if (g.col.circleTouches(rx, rz, 0.27, 0.1, 1.5, TOUCH) !== 0 || g.col.segmentBlocked([rx, 1.05, rz], [eye[0], eye[1], eye[2]])) continue;   // (−1 = more boxes there than the list holds: furniture, not floor)
-      // … and floor to walk to: that place itself, or the free floor nearest it with a clear step across (the walking grid is coarser than the gap between a cot and a crate)
-      const to: Vec3 | null = g.col.nav.isBlocked(rx, rz) ? g.col.nav.nearestFreePoint(rx, rz) : [rx, 0, rz];
-      if (!to || flat(to, rx, rz) > 0.8 || g.col.segmentBlocked([to[0], 0.3, to[2]], [rx, 0.3, rz])) continue;
-      if (walkLen(g, gd.char.pos, to) > DOZE.chairM * 1.6) break;
-      return { chair: p, at: [ax, 0, az], face: Math.atan2(-dx, -dz), mon: t, to };
-    }
-  }
-  return null;
-}
-/** the chair for this wait and the way he will sit in it, or null. For a wait under `napWait` a chair at a screen (above) before a chair to sleep in; for a longer one the other way round. The chair: nearest of kind 'chair' inside `chairM`, at rest, in the dark as his waypoint is,
- *  nobody else's (another dozer's, a civilian's desk), a walk of no more than `chairM` × 1.6. The way he faces: as the chair stands if his knees have room that
- *  way, else the first of eight turns that has — he turns the chair to it as he sits. */
-function findChair(g: Game, gd: Guard): Seat | null {
-  const wp = gd.route.points[gd.wp]; let best: Seat | null = null, bd = DOZE.chairM, scr: Seat | null = null, sd = DOZE.chairM;
-  for (const p of g.props.props) {
-    if (p.def.kind !== 'chair' || !p.asleep) continue;
-    const d = flat(wp, p.x, p.z); if (d >= bd && d >= sd) continue;
-    let taken = false; for (const D of mapOf(g).values()) if (D.chair === p && D.phase !== 'no' && D.phase !== 'spent' && D.phase !== 'stir') { taken = true; break; }
-    if (!taken) for (const cv of g.civilians) { const pts = cv.route?.points ?? []; for (let i = 0; i < pts.length; i++) if (cv.civ?.def.tasks?.[i] === 'sit' && flat(pts[i], p.x, p.z) < 0.8) taken = true; }
-    if (taken) continue;
-    if (DOZE.screen && d < sd) { const s = screenSeat(g, gd, p); if (s) { scr = s; sd = d; } }
-    if (d >= bd || workLit(g, p.x, p.z)) continue;
-    const f0 = chairFace(p); let face = NaN;
-    for (let k = 0; k < 8 && isNaN(face); k++) { const f = f0 + (k % 2 ? -1 : 1) * Math.ceil(k / 2) * Math.PI / 4, sx = Math.sin(f), sz = Math.cos(f);
-      if (g.col.nav.isBlocked(p.x + sx * 0.33, p.z + sz * 0.33) || g.col.segmentBlocked([p.x, 0.45, p.z], [p.x + sx * 0.85, 0.45, p.z + sz * 0.85])) continue;
-      face = f; }
-    if (isNaN(face)) continue;
-    const to: Vec3 = [p.x + Math.sin(face) * 0.33, 0, p.z + Math.cos(face) * 0.33];
-    if (walkLen(g, gd.char.pos, to) > DOZE.chairM * 1.6) continue;
-    best = { chair: p, at: [p.x, 0, p.z], face, mon: null, to }; bd = d;
-  }
-  return (gd.route.wait[gd.wp] ?? 0) >= DOZE.napWait ? best ?? scr : scr ?? best;   // (the same chair can be both: a long sit is a sleep, a short one a look at the screen)
-}
 
-/** THE PATROL SEAM (guards.ts, the patrol branch's chain, after the needs): true = his feet are this file's this frame (walking to the chair). A man who has
- *  just come to a long wait in a dark place is asked once whether he has a chair; false at once for everybody else, and always with the switch off. */
-export function dozePatrol(g: Game, gd: Guard, dt: number, walk: number): boolean {
-  if (!DOZE.on) return false;
-  let D = REC.get(gd);
-  if (!D) {
-    if (gd.wait < DOZE.minWait || !live(g) || !calm(g, gd)) return false;
-    const wp = gd.route.points[gd.wp];
-    // not a post (a wait past `maxWait`), not a lit place — and not a watch: a man in the dark with LIT floor before him can see what he is there to see
-    // (darkfoe.ts darkFoeBlind, read as he comes onto the wait facing the way its author walked him onto it); the man who dozes is the one who cannot
-    const c = (gd.route.wait[gd.wp] ?? 0) > DOZE.maxWait || workLit(g, wp[0], wp[2]) || !darkFoeBlind(g, gd) ? null : findChair(g, gd);
-    if (!c) { put(g, gd, blank('no', gd.wp, g.time)); return false; }
-    D = blank('going', gd.wp, g.time); D.chair = c.chair; D.face = c.face; D.at = c.at; D.cx = c.chair.x; D.cz = c.chair.z; D.mon = c.mon; D.to = c.to; put(g, gd, D);
-  }
-  if (D.phase === 'no') { if (gd.wait <= 0 || gd.wp !== D.wp) drop(g, gd); return false; }
-  if (D.phase !== 'going') return false;
-  const ch = D.chair!; D.seen = g.time;
-  if (!live(g) || !calm(g, gd) || gd.hold || gd.wait < DOZE.riseSecs + DOZE.nodSecs + 4 || !ch.asleep && Math.hypot(ch.x - D.cx, ch.z - D.cz) > 0.15 || notGettingAnywhere(gd, dt, 6)) { const wp = D.wp; drop(g, gd); put(g, gd, blank('no', wp, g.time)); return false; }
-  const to = D.to;
-  goTo(g, gd, to);
-  if (followPath(g, gd, dt, walk) || flat(gd.char.pos, to[0], to[2]) < 0.3) {
-    gd.path = []; gd.pathGoal = null;
-    if (!closeSeat(g, gd, D.at, D.face)) { const wp = D.wp; drop(g, gd); put(g, gd, blank('no', wp, g.time)); return false; }
-    D.phase = 'down'; D.t = 0; D.cx = ch.x; D.cz = ch.z; D.cyaw = Math.atan2(-Math.sin(D.face), -Math.cos(D.face)); D.push = ch.pushT; DOZE_STATS.sat++;
-  }
-  gd.wait -= dt;   // (his wait runs while he walks to the chair — here, once: a frame this hands back to the patrol branch is counted there)
-  return true;
-}
 
 /** out of the chair, whatever had him in it */
 function up(g: Game, gd: Guard) { closeUnseat(g, gd); gd.char.anim.slump = 0; }   // (nothing without a seat)
-/** WOKEN: he is up from this frame. Noise, light and a bump leave him suspicious, placed on what woke him (`at`; a noise is placed by hearingCheck) and rooted
- *  while he comes round; the floor's own business (`alarm`, `net`, `taken`) has him by its own rules. Either way he is awake for the rest of the run, and
- *  the chair is anybody's. */
-function wake(g: Game, gd: Guard, D: Doze, why: Exclude<DozeWhy, 'time'>, at: ArrayLike<number> | null) {
-  const slept = D.phase === 'asleep' || D.phase === 'work' ? D.t : 0; leftLit(g, D);
-  up(g, gd); D.why = why; D.wokeAt = g.time; D.phase = 'spent'; D.chair = null; DOZE_STATS.woke[why]++; DOZE_LOG.push({ t: g.time, who: gd.callsign, why, secs: slept }); if (DOZE_LOG.length > 64) DOZE_LOG.shift();
-  if (why === 'noise' || why === 'light' || why === 'bump') {
-    gd.awareness = Math.max(gd.awareness, why === 'bump' ? DOZE.bumpAw : DOZE.wakeAw);
-    if (at) gd.lastKnown = [at[0], 0, at[2]];
-    D.phase = 'stir'; D.until = g.time + DOZE.stirSecs;
-  }
-}
 
-/** THE SENSES SEAM (guards.ts updateGuard, in front of the perception block): true = he is asleep this frame and his senses were run here — his ears by
- *  hearingCheck itself at `hearK` (one copy of the gates: whose shot, whose grenade, which face of a pane), his eyes not at all. A sound that counted at that
- *  bar (it raised him, or gave him a place to look) wakes him. */
-export function dozeDeaf(g: Game, gd: Guard): boolean {
-  if (!DOZE.on) return false;
-  const D = REC.get(gd); if (!D || D.phase !== 'asleep') return false;
-  const aw = gd.awareness, lk = gd.lastKnown, st = gd.state;
-  hearingCheck(g, gd, DOZE.hearK, false);
-  if (gd.awareness > aw || gd.lastKnown !== lk || gd.state !== st) wake(g, gd, D, 'noise', null);
-  gd.sawPlayerThisFrame = false; gd.sawFoeThisFrame = false;
-  return true;
-}
 
-/** ONCE A FRAME, before close.ts's seats and the guards (game.ts): the seated men's clocks, the chair held under them, what wakes a sleeper that is not a sound,
- *  the rise at the end of the wait. Nothing with nobody on a record. */
-export function dozeTick(g: Game, dt: number) {
-  leftTick(g);
-  const M = GAMES.get(g); if (!M || !M.size) return;
-  for (const [gd, D] of M) {   // (a record dropped under the walk is safe: a Map's iterator takes deletes)
-    if (D.phase === 'no' || D.phase === 'spent') { if (!DOZE.on) drop(g, gd); continue; }
-    const c = gd.char;
-    if (!DOZE.on || !g.guards.includes(gd) || gd.state === 'dead') { if (gd.state !== 'dead') dark(g, D); else leftLit(g, D);   /* (killed or put out at his screen: it is left lit like any other he was got away from) */ if (seated(D)) up(g, gd); drop(g, gd); continue; }
-    if (D.phase === 'going') { if (g.time - D.seen > 0.5) drop(g, gd); continue; }   // (something else has his feet: a break, a word with a mate, a noise)
-    if (D.phase === 'stir') { if (g.time >= D.until) D.phase = 'spent'; else gd.reactT = Math.max(gd.reactT, D.until - g.time); continue; }
-    if (D.phase === 'up') { if (g.time >= D.until && (!D.chair || gd.state !== 'patrol' || flat(c.pos, D.chair.x, D.chair.z) > 0.75 || g.time >= D.until + 30)) drop(g, gd); continue; }   // (… and, calm, until he has stepped clear of the chair — `dozeInChair` keeps him no contact for it: a man getting up does not walk his chair across the room, and a chair one man pulled to the screen is not shoved a hand further by every man who sleeps in it after)
-    if (!seated(D)) continue;
-    const ch = D.chair!;
-    if (gd.held) { leftLit(g, D); D.why = 'taken'; D.wokeAt = g.time; D.phase = 'spent'; D.chair = null; c.anim.slump = 0; DOZE_STATS.woke.taken++; continue; }   // (hauled out of the chair: player.ts has unseated him)
-    if (Number.isNaN(D.push)) D.push = ch.pushT;   // (the first frame after a load: the furniture is put back after the men)
-    if (ch.pushT > D.push + 1e-6) { const who = manById(g, ch.lastWho)?.char.pos ?? g.guards.find(x => x.char.id === ch.lastWho)?.char.pos ?? c.pos; wake(g, gd, D, 'bump', who as Vec3); continue; }
-    if (gd.state !== 'patrol' || gd.awareness >= 0.3) { wake(g, gd, D, 'net', null); continue; }
-    if (!live(g) || gd.script || gd.task || gd.bodyDuty || !closeHasSeat(g, gd)) { wake(g, gd, D, 'alarm', null); continue; }   // (… or somebody else has had him up out of it: the panel, a reset of the seats)
-    if (D.mon) { const k = 1 - Math.exp(-4 * dt); D.cx += (D.at[0] - D.cx) * k; D.cz += (D.at[2] - D.cz) * k; }   // (pulled up to his screen: the chair comes under him as he sits)
-    ch.x = D.cx; ch.z = D.cz; ch.vx = ch.vz = ch.w = 0;   // the chair under him stays under him, turned the way he sits
-    if (ch.yaw !== D.cyaw) { let dy = D.cyaw - ch.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); ch.yaw = Math.abs(dy) < 0.02 ? D.cyaw : ch.yaw + dy * Math.min(1, 6 * dt); }
-    ch.dirty = true; ch.place();
-    if (gd.wait - dt <= DOZE.riseSecs) {   // the end of his wait: he stretches, gets up and walks on — and may sit the next one out (this frame of his wait is the patrol branch's to count: he is on his feet for it)
-      if (D.phase === 'work' && D.mon && !D.monWas) g.lightHome.in(LIGHT_IN.on, D.mon, 0);   // (he switches off what he switched on)
-      up(g, gd); c.anim.tell('neck'); D.phase = 'up'; D.until = g.time + 1.2; DOZE_STATS.rose++; DOZE_LOG.push({ t: g.time, who: gd.callsign, why: 'time', secs: D.t }); if (DOZE_LOG.length > 64) DOZE_LOG.shift(); continue;
-    }
-    gd.wait -= dt; D.t += dt;
-    if (D.phase === 'down') { c.anim.slump = D.mon ? 0.15 : 0.35;
-      if (!closeSeated(g, gd) || gd.awareness >= 0.15) continue;   // (a man with something half on his mind neither shuts his eyes on it nor puts his headphones on)
-      if (D.mon) { if (D.t >= DOZE.settleSecs) { D.phase = 'work'; D.t = 0; D.monWas = D.mon.on && !LEFT.get(g)?.delete(D.mon); g.lightHome.in(LIGHT_IN.on, D.mon, 1); D.say = g.time + span(DOZE.sayFirst); DOZE_STATS.worked++; } }
-      else if (D.t >= DOZE.nodSecs) { D.phase = 'asleep'; D.t = 0; D.lit = -1; D.ask = (c.id % 4) / 4 * DOZE.askSecs; DOZE_STATS.slept++; }
-      continue; }
-    if (D.phase === 'work') {   // AT HIS SCREEN: awake, the screen's light on his face, his mind on it — and now and then a word for it
-      c.anim.slump = 0.3;
-      if (D.mon && (D.mon.broken || !D.mon.on || D.t > 1 && D.mon.factor < 0.5)) { wake(g, gd, D, 'light', D.mon.pos); continue; }   // the screen died under his eyes (shot out, the OCP): THAT he notices
-      if (D.mon && DOZE.lend) attentionLend(g, gd, D.mon.pos, { ears: 1, noises: 1 });   // (attention.ts: his attention is the screen's while he sits at it — the narrowed eye, the thread and the ring are that rule's. The HEADPHONES stay here, in dozeEar, so they count once and work with that rule's switch off: 1 and 1, said out loud — left out, `ears` is its own half)
-      if (D.say >= 0 && g.time >= D.say && !(gd.bubble && g.time - gd.bubble.t < gd.bubble.dur + 1)) {
-        let said = SAID.get(g); if (!said || said.length >= SCREEN_LINES.length) SAID.set(g, said = []);   // (the floor's own bag: no line twice until every line has been said — by anybody)
-        const left: number[] = []; for (let i = 0; i < SCREEN_LINES.length; i++) if (!said.includes(i)) left.push(i);
-        const k = left[Math.floor(simRandom() * left.length) % left.length]; said.push(k);
-        D.say = g.time + span(DOZE.sayEvery); g.say(gd, SCREEN_LINES[k], false, false, false); DOZE_STATS.lines++; }
-      continue; }
-    c.anim.slump = 1;
-    D.ask += dt; if (D.ask >= DOZE.askSecs) {   // light on his face from anything but his own side's lamps
-      const head = c.bones.head ?? v3.add(c.pos, [0, 1.15, 0]);
-      const L = faceLight(g, gd, head);
-      D.lit = L < DOZE.lightAt ? -1 : D.lit < 0 ? 0 : D.lit + D.ask; D.ask = 0;   // (−1 = dark at the last read: the first lit read starts the clock, it is not yet time in the light)
-      if (D.lit >= DOZE.lightSecs) { wake(g, gd, D, 'light', lampOn(g, gd, head)); continue; }
-    }
-  }
-}
 
-/** the light on a sleeper's face that is news to him: everything but his own side's lamps — and but the room's screens (a mate sat to one across the room, or
- *  left one on: a glow, not a lamp in his eyes) */
-function faceLight(g: Game, gd: Guard, head: Vec3): number {
-  return g.visibilityOf(lightEstimateAt(g, head, owner => owner === gd.char.id || g.guards.some(x => x.char.id === owner && x.team === gd.team), false, undefined, undefined, ROW_BIT.screen));
-}
-/** where the light on his face comes from: the nearest carried lamp of another side that reaches his head through clear air (whoever carries it), else his own spot */
-function lampOn(g: Game, gd: Guard, head: Vec3): Vec3 {
-  let best: Vec3 | null = null, bd = 14;
-  for (const l of g.engine.lights.lights) {
-    if (!l.enabled || l.intensity <= 0 || !l.owner || l.owner === gd.char.id || g.guards.some(x => x.char.id === l.owner && x.team === gd.team)) continue;
-    const d = v3.dist(l.pos, head); if (d >= bd || d > l.range || g.col.segmentBlocked(head, l.pos)) continue;
-    best = [l.pos[0], 0, l.pos[2]]; bd = d;
-  }
-  return best ?? gd.char.pos;
-}
 
-/** game.ts updateProps: a man on his way down into, in, or just up out of his chair is no contact for the furniture (it must not skate off ahead of him) */
-export function dozeInChair(gd: Guard): boolean {
-  const D = REC.get(gd); if (!D || !D.chair) return false;
-  return seated(D) || D.phase === 'up' || (D.phase === 'going' && flat(gd.char.pos, D.chair.x, D.chair.z) < 1.2);
-}
 /** is he asleep this frame (eyes shut: guards.ts witnessKill, the torch, the HUD) */
 export function dozeAsleep(gd: Guard): boolean { return REC.get(gd)?.phase === 'asleep'; }
 /** his torch is dark: sat down to it, or asleep (guards.ts poseFlashlight) */
 export function dozeDark(gd: Guard): boolean { const D = REC.get(gd); return !!D && seated(D); }
 /** for the neighbours: what he is at in his chair — 'asleep', at his 'screen' (awake, his mind on it), or null */
 export function dozeAt(gd: Guard): 'asleep' | 'screen' | null { const p = REC.get(gd)?.phase; return p === 'asleep' ? 'asleep' : p === 'work' ? 'screen' : null; }
-/** guards.ts, the perception block: his ears this frame — headphones on at his screen (`noises` for a door, a scrape, glass, a far shot; `ears` for a footfall), 1 for everybody else */
-export function dozeEar(gd: Guard): readonly [noises: number, foot: number] { if (DOZE.on && REC.get(gd)?.phase === 'work') { EARS[0] = DOZE.noises; EARS[1] = DOZE.ears; return EARS; } return WHOLE; }
-const EARS: [number, number] = [1, 1], WHOLE: readonly [number, number] = [1, 1];
 /** for the neighbours: was he woken out of a doze inside the last `secs` seconds, and by what (null = no). A man shaken awake in the dark is the one man a
  *  rule about suspicious lamps may want to treat apart. */
 export function dozeWoke(g: Game, gd: Guard, secs = 6): DozeWhy | null { const D = REC.get(gd); return D && D.why && D.why !== 'time' && D.wokeAt >= 0 && g.time - D.wokeAt < secs ? D.why : null; }

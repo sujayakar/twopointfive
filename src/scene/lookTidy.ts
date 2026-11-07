@@ -16,7 +16,6 @@ import { hashStr } from '../math/dice';
 
 interface Tidy { pairs: [decal: number, walls: number[]][]; flags0: number[]; serial: number; rest?: boolean }
 const tidies = new WeakMap<object, Tidy | null>();
-const HIDE = BoxFlag.NoPrimary | BoxFlag.NoShadow;
 
 /** the wall decals of a level and the wall(s) each lies on: a thin upright NoShadow sheet standing on the floor, flat against a BROAD face of a solid box (never
  *  the end face of a wall that meets its plane at a corner); a hand-laid sheet may run along several wall boxes. (A sheet on the GROUND is not this file's: what lies flat follows its ground wet and dry in
@@ -39,9 +38,9 @@ export function lookTidy(world: { statics: Box[]; geomSerial: number }, rest = f
   let T = tidies.get(world.statics); if (T === undefined) { T = find(world.statics); tidies.set(world.statics, T); }   // (found as the level stands when the page first asks, at rest or not: a wall holed since would not be read as a wall)
   if (!T) return;
   if (T.serial === world.geomSerial && T.rest === rest) return;
-  let changed = false; T.rest = rest;
-  T.pairs.forEach(([d, ws], k) => { const box = world.statics[d]; if (!box) return; const want = !rest && ws.some(w => world.statics[w] && world.statics[w].flags & BoxFlag.NoPrimary) ? T!.flags0[k] | BoxFlag.NoPrimary : T!.flags0[k]; if (box.flags !== want) { box.flags = want; changed = true; } });
-  if (changed) world.geomSerial++;
+  T.rest = rest;
+  T.pairs.forEach(([d, ws], k) => { const box = world.statics[d]; if (!box) return; const want = !rest && ws.some(w => world.statics[w] && world.statics[w].flags & BoxFlag.NoPrimary) ? T!.flags0[k] | BoxFlag.NoPrimary : T!.flags0[k]; if (box.flags !== want) box.flags = want; });
+  // (the sheets' flags are the picture's and no reader of the world's serial asks after them: that number is the game's own count of what broke)
   T.serial = world.geomSerial;
 }
 

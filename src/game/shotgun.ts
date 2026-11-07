@@ -31,6 +31,7 @@ import { doorPt, alongOf, offOf } from './doortools';
 import { bigSpots } from './bigkit';   // (asked inside breachSpot only)
 import { kitBig } from './kit';   // (asked inside carriesBreacher only)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** counted since the page (or the harness) stood up — the probes' and the panel's */
 export const SHOTGUN_STATS = { shells: 0, pellets: 0, inMen: 0, dropped: 0, peppered: 0, locks: 0 };
@@ -81,7 +82,7 @@ export function pelletDrops(s: Shell, who: Guard | null, t: number, dir: Vec3): 
 export function pelletEnd(s: Shell, index: number, t: number, at: Vec3) { s.ends.push({ index, t, at }); }
 
 /** One pull of a shotgun's trigger: `def.pellets.n` rounds through fireWeapon, then what the pattern as a whole did — the men it only peppered, the lock it took. */
-export function fireShell(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts, def: WeaponDef) {
+export function fireShell(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts, def: WeaponDef) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('fireShell@src/game/shotgun.ts', undefined, [g, shooter, target, isPlayer, o, def]); if (__r !== RUST_PASS) return __r as any; } }
   const P = def.pellets!, shell: Shell = { def, i: 0, dir: null, men: new Map(), ends: [], glass: new Map(), late: [] };
   SHOTGUN_STATS.shells++; SHOTGUN_STATS.pellets += P.n;
   const muzzle = v3.copy(shooter.muzzle);
@@ -133,7 +134,7 @@ export function lockPoint(d: Door, side: 1 | -1): Vec3 { return doorPt(d, d.def.
  *  `mark` = where the stack stood him — `own` in the answer; none: he has no side) — his mark, else a spot on the hinge side when that is his side — and takes
  *  the list's clean spot, then his mark though a pane sees it, then the list's first one behind glass, only when his side has nothing clean. null: none has
  *  floor and a line. */
-export function breachSpot(g: Game, d: Door, side: 1 | -1, avoid: Vec3[] = [], mark: Vec3 | null = null, close?: 'hammer' | 'shotgun'): { pos: Vec3; yaw: number; at: Vec3; beside: boolean; own: boolean } | null {
+export function breachSpot(g: Game, d: Door, side: 1 | -1, avoid: Vec3[] = [], mark: Vec3 | null = null, close?: 'hammer' | 'shotgun'): { pos: Vec3; yaw: number; at: Vec3; beside: boolean; own: boolean } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('breachSpot', undefined, [g, d, side, avoid, mark, close]); if (__r !== RUST_PASS) return __r as any; } }
   const at = lockPoint(d, side), W = d.def.width, markAlong = mark ? alongOf(d, mark) : NaN;
   type Spot = { pos: Vec3; yaw: number; at: Vec3; beside: boolean; own: boolean };
   const stands = (pos: Vec3) => !g.col.nav.isBlocked(pos[0], pos[2]) && !g.col.solidBlocked([pos[0], 1.2, pos[2]], at);

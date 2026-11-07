@@ -18,16 +18,15 @@
 // the deal, the interrupts); character.ts has the two tells (CharacterAnimator.tell); dialogue.ts the lines (NEEDS_LINES); chronicle.ts the 'needBreak' rows.
 import { allDown } from './seats';
 import { SideMap } from '../math/side';
-import { Vec3, v3, clamp, wrapAngle, approachAngle, damp } from '../math/vec';
+import { Vec3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
-import { goTo, followPath, escalationOf, notGettingAnywhere } from './guards';
-import { hashStr, NEEDS_LINES } from './dialogue';
+import { escalationOf } from './guards';
+import { hashStr } from './dialogue';
 import { isDaylight } from './lighting';
-import { chronicle } from './chronicle';
-import { hearPath } from './weather';
-import { dozeAsleep } from './doze';
-import { WORDS, w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
+import './chronicle';
+import './doze';
 import { claimMan, releaseMan, ownerWitness, OWN } from './owner';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 // ================================================================ the kinds and their places (TODO(LevelData): NEED_SPOTS belongs in the level file beside routes / chokepoints — like qrf.ts
 // QRF_MARKS it is checked headlessly against levels/office.json: free nav cells, reachable from every route, the loop's legs walkable, out of every leaf's sweep)
@@ -85,9 +84,7 @@ export const NEEDS_DEFAULTS = { rateK: 1, maxAway: 1, announceLead: 20, dwell: {
 const FILL_MIN: Record<NeedKind, [number, number]> = { coffee: [6, 9], smoke: [8, 12], water: [6, 10], stretch: [5, 7] };
 const LEVEL0 = [0.3, 0.7];
 /** levels keep filling past full up to this (which of two full needs is the more pressing), and the calm a man must have to fill / to schedule (under the 0.3 'huh?') */
-const LEVEL_CAP = 1.5, CALM_AWARENESS = 0.3, SCHEDULE_AWARENESS = 0.15;
-/** the glance the way he will go: this long after the watch check comes up (so the eyes are off the wrist first), held this long */
-const GLANCE_AT = 1.1, GLANCE_SECS = 2.2;
+const LEVEL_CAP = 1.5, CALM_AWARENESS = 0.3;
 
 // ================================================================ per-man memory (dies with the Guard object: resetGuards / restartEncounter make fresh men with fresh needs)
 export interface Need { kind: NeedKind; level: number; fillMin: number; wp: number; tripM: number; }
@@ -185,35 +182,6 @@ function interruptOf(g: Game, gd: Guard): string | null {
   return null;
 }
 
-// ================================================================ once a frame (game.ts, before the guards move): levels, the after-alert cap, interrupts, the deal of a trip
-export function needsTick(g: Game, dt: number) {
-  if (!g.tune.needs) {   // OFF: nothing, ever — no memory made, no clock run (the identity card) — except that a trip under way when the switch went off is broken off, not left hanging for the day it comes back on
-    for (const gd of g.guards) { const M = memOf.get(gd); if (M?.trip) cancelTrip(g, gd, M, 'switched off'); }
-    return;
-  }
-  const live = needsLive(g), calmFloor = floorCalm(g);
-  if (!g.guards.some(x => memOf.has(x))) floor(g).lastDepartAt = -1e9;   // a fresh roster (boot, resetGuards, restartEncounter): the floor's gap starts clean with the men
-  let away = 0;
-  for (const gd of g.guards) { const M = memOf.get(gd); if (M?.trip) { const why = interruptOf(g, gd); if (why) cancelTrip(g, gd, M, why); else away++; } }
-  for (const gd of g.guards) {
-    if (gd.state === 'dead' || gd.team !== 'guard' || gd.unit) continue;
-    const M = mem(gd); if (!M.dealt) deal(g, gd, M);
-    if (!M.needs.length) continue;
-    // the adrenaline cap: a man who has hunted (or whose floor has been in an alarm) comes back to at most afterAlert on everything, once he is calm again
-    if (gd.state === 'alert' || gd.state === 'search' || g.alarm.episode || escalationOf(g) > 0) M.shaken = true;
-    else if (M.shaken && gd.state === 'patrol') { M.shaken = false; for (const n of M.needs) n.level = Math.min(n.level, NEEDS.afterAlert); log(g, gd, `calm again — needs capped at ${NEEDS.afterAlert}`); }
-    if (!live || !calmFloor || M.trip || !manCalm(g, gd, CALM_AWARENESS)) continue;
-    // filling: only a calm man on a calm floor, walking or waiting on his own route
-    for (const n of M.needs) n.level = Math.min(LEVEL_CAP, n.level + dt / 60 / n.fillMin * NEEDS.rateK);
-    // the deal of a trip: a full need, HIS moment (standing at that need's waypoint), the floor's slot free, his own rest had, no line of his in the air
-    if (away >= NEEDS.maxAway || g.time - floor(g).lastDepartAt < NEEDS.floorGapSecs || g.time - M.lastBackAt < NEEDS.restSecs) continue;
-    if (!(gd.wait > 0) || gd.awareness >= SCHEDULE_AWARENESS || (gd.bubble && g.time - gd.bubble.t < gd.bubble.dur + 0.5)) continue;   // (wait > 0 ⇔ he stands at route.points[wp]: the patrol branch sets it on arrival and advances wp when it runs out — his `speed` is stale through a wait, so it is not asked)
-    let pick: Need | null = null;
-    for (const n of M.needs) if (n.level >= 1 && (NEEDS.fromNearest ? n.wp === gd.wp : (gd.route.wait[gd.wp] ?? 0) >= NEEDS.minWait) && (!pick || n.level > pick.level)) pick = n;
-    if (!pick) continue;
-    if (scheduleTrip(g, gd, M, pick.kind, false)) away++;
-  }
-}
 
 // ================================================================ a trip: scheduled → (telegraph) → going → dwell → returning → back
 /** Put this man on a trip of `kind` from where he stands, the telegraph starting now (the watch check this frame). False if the place cannot be reached from here. */
@@ -234,133 +202,12 @@ function scheduleTrip(g: Game, gd: Guard, M: NeedMem, kind: NeedKind, forced: bo
   return true;
 }
 const pathLen = (from: Vec3, p: Vec3[]) => { let s = 0, prev = from; for (const q of p) { s += Math.hypot(q[0] - prev[0], q[2] - prev[2]); prev = q; } return s; };
-/** Break the trip off wherever he is: the record goes, the need drops to afterCancel, nothing is resumed (the ordinary AI has him from this spot; back on 'patrol'
- *  his route's own logic walks him on). No line — whatever interrupted him has his mouth. */
-function cancelTrip(g: Game, gd: Guard, M: NeedMem, why: string) {
-  const T = M.trip; if (!T) return;
-  releaseMan(gd, OWN.needs, g.time); M.trip = null; M.cancels++; NEEDS_STATS.cancelled++;
-  const n = M.needs.find(x => x.kind === T.kind); if (n) n.level = Math.min(n.level, NEEDS.afterCancel);
-  gd.stallRef = null; gd.char.anim.cancelTell();   // (a tell half-way up comes down now: the arm is the aim's / the flinch's from this frame)
-  if (T.phase === 'telegraph') { const F = floor(g); if (F.lastDepartAt === T.departAt) F.lastDepartAt = T.gapBefore; }                                // nobody walked: the floor's gap is as it was
-  else chronicle(g, 'needBreak', { who: gd.callsign, kind: T.kind, what: 'cancelled', why, phase: T.phase }, gd.char.pos);   // (a telegraph that came to nothing left no window: no row)
-  log(g, gd, `${T.kind} CANCELLED in ${T.phase} — ${why}`);
-}
-/** the line for a slot, dealt off his name and his count so a probe hears the same and a night varies */
-function pickLine(pool: string[], gd: Guard, salt: string): string { return pool[hashStr(`${gd.callsign}|${mem(gd).trips}|${mem(gd).cancels}|${salt}`) % pool.length]; }
-/** the colleague he tells: the nearest living staff man (not in Sam's arm) whose head the words reach inside partnerM by the sound's own path */
-function partnerFor(g: Game, gd: Guard): Guard | null {
-  const mouth = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.6, 0]); let best: Guard | null = null, bd = Infinity;
-  for (const o of g.guards) {
-    if (o === gd || o.state === 'dead' || o.held || o.team !== 'guard' || o.unit) continue;
-    if (v3.dist(o.char.pos, gd.char.pos) > NEEDS.partnerM + 2) continue;   // (straight-line pre-filter: the propagation is the dear part)
-    const pr = hearPath(g, mouth, o.char.bones.head ?? v3.add(o.char.pos, [0, 1.6, 0]));
-    if (pr.pathLen < NEEDS.partnerM * pr.carry && pr.pathLen < bd) { bd = pr.pathLen; best = o; }
-  }
-  return best;
-}
-/** say it: to the partner's face (a bubble; he will answer), else over the net ('radio: …' — the strip the player reads their traffic on) */
-function announce(g: Game, gd: Guard, T: Trip) {
-  T.told = true; NEEDS_STATS.told++;
-  const P = partnerFor(g, gd);
-  if (P) {
-    T.partner = P; T.replyAt = g.time + NEEDS.replyAfter; { const was = (g.level.scenarios?.quiet ? NEEDS_LINES.announceOwn[T.kind] : undefined) ?? NEEDS_LINES.announce[T.kind] ?? NEEDS_LINES.announce.coffee; T.line = pickLine(wg(was.map(t => NEEDS_LINES.now[t] ?? t), was), gd, 'announce'); }   // (a level with places of its own — quiet.ts — hears no 'fire door', no 'lobby')
-    g.say(gd, T.line);
-    log(g, gd, `tells ${P.callsign} (${v3.distXZ(P.char.pos, gd.char.pos).toFixed(1)} m): "${T.line}"`);
-  } else {
-    T.radio = true; NEEDS_STATS.radioed++; T.line = NEEDS_LINES.radio.replace('{who}', gd.callsign).replace('{short}', (WORDS.on && g.level.scenarios?.quiet ? NEEDS_LINES.shortOwn[T.kind] : undefined) ?? NEEDS_LINES.short[T.kind] ?? T.kind);   // (the net hears no 'fire door' either on a level with places of its own)
-    g.say(gd, T.line, true); g.audio.play('radio', gd.char.bones.head ?? gd.char.pos, 0.4, { rate: 1.05 });
-    log(g, gd, `radios it: "${T.line}"`);
-  }
-}
-/** the partner's grumble, if he is still one to give it (alive, free, calm-ish, not mid-line himself) */
-function partnerReply(g: Game, gd: Guard, T: Trip) {
-  T.replied = true; const P = T.partner; if (!P) return;
-  if (P.state === 'dead' || P.held || (P.state !== 'patrol' && P.state !== 'suspicious') || P.awareness >= 0.45 || !g.guards.includes(P) || (P.bubble && g.time - P.bubble.t < P.bubble.dur) || dozeAsleep(P)) {   // (doze.ts: a man asleep in his chair grumbles at nobody)
-    log(g, gd, `${P.callsign} says nothing back (${P.state}, aw ${P.awareness.toFixed(2)})`); return; }
-  const third = g.guards.find(x => x !== gd && x !== P && x.team === 'guard' && !x.unit && x.state !== 'dead') ?? null;
-  const pool = third && (hashStr(`${P.callsign}|${mem(gd).trips}|other`) % 3 === 0) ? NEEDS_LINES.replyOther.map(s => s.replace(/\{other\}/g, third.callsign)) : w(T.kind === 'stretch' ? NEEDS_LINES.reply.filter(s => s !== 'Bring me one.') : NEEDS_LINES.reply, NEEDS_LINES.reply);   // (words.ts: there is nothing to bring back from a stretch of the legs)
-  const line = pool[hashStr(`${P.callsign}|${gd.callsign}|${mem(gd).trips}|reply`) % pool.length];
-  g.say(P, line); NEEDS_STATS.replies++;
-  log(g, gd, `${P.callsign} answers: "${line}"`);
-}
 
-/** guards.ts, the patrol branch, once a frame for a man not held / paired / posted: if a trip owns his feet this frame, run them (stand and telegraph, walk out,
- *  dwell, walk back) and return true — the branch then skips its own route logic (his `wait` clock stands still meanwhile, so the route resumes exactly where it
- *  was); false = not on a trip, the branch walks his route as ever. `walk` = the branch's own patrol pace. */
-export function needsPatrol(g: Game, gd: Guard, dt: number, walk: number): boolean {
-  const M = memOf.get(gd); const T = M?.trip; if (!M || !T) return false;
-  const c = gd.char; const now = g.time;
-  const stand = () => { gd.speed = damp(gd.speed, 0, 8, dt); c.vel = [0, 0, 0]; };
-  const pace = walk * NEEDS.paceK;
-  switch (T.phase) {
-    case 'telegraph': {
-      stand();
-      gd.sweep = damp(gd.sweep, Math.sin(gd.lookPhase * 0.9) * 0.45, 2, dt);   // (the waiting man's look-about, a little quieter: he has somewhere to be)
-      const toGo = T.departAt - now;
-      if (!T.watched) { T.watched = true; c.anim.tell('watch'); }                                             // T−lead: the watch (a second, eyes down on it)…
-      const g0 = now - T.t0 - GLANCE_AT;                                                                       // …then the look the way he will go, held a couple of seconds (eased in and out, the neck's own limit)
-      if (g0 > 0 && g0 < GLANCE_SECS) c.anim.lookYawExtra = clamp(wrapAngle(T.outYaw - c.bodyYaw), -1.1, 1.1) * Math.min(1, g0 / 0.35, (GLANCE_SECS - g0) / 0.45);
-      else c.anim.lookYawExtra = Math.sin(gd.lookPhase * 1.3) * 0.3;
-      if (!T.told && toGo <= NEEDS.sayLead) announce(g, gd, T);                                               // T−12: says so
-      if (T.told && !T.replied && T.replyAt >= 0 && now >= T.replyAt) partnerReply(g, gd, T);                 // …and is grumbled at
-      if (!T.necked && toGo <= NEEDS.stretchLead) { T.necked = true; c.anim.tell('neck'); }                    // T−5: the neck, and he turns to face the way out
-      if (T.necked) c.bodyYaw = approachAngle(c.bodyYaw, T.outYaw, 2.2 * dt);
-      if (toGo <= 0) {                                                                                         // T: off he goes
-        T.phase = 'going'; T.leftAt = now; T.loopI = -1; floor(g).lastDepartAt = Math.max(floor(g).lastDepartAt, now); NEEDS_STATS.departed++;
-        gd.stallRef = null; goTo(g, gd, T.spot.pos, true);
-        chronicle(g, 'needBreak', { who: gd.callsign, kind: T.kind, what: 'left', to: T.spot.name, ...(g.level.scenarios?.quiet ? { own: 1 } : {}) }, c.pos);
-        log(g, gd, `walks (${T.kind})`);
-      }
-      return true;
-    }
-    case 'going': {
-      const goal = T.loopI >= 0 ? T.spot.loop![T.loopI] : T.spot.pos;
-      goTo(g, gd, goal);
-      const arrived = followPath(g, gd, dt, pace);
-      gd.sweep = damp(gd.sweep, Math.sin(gd.lookPhase * 0.7) * 0.25, 2, dt); c.anim.lookYawExtra = 0;
-      if (arrived) {
-        gd.stallRef = null;
-        if (v3.distXZ(c.pos, goal) > 1.2) { NEEDS_STATS.stuck++; cancelTrip(g, gd, M, 'no way through'); return true; }   // (an empty plan reads as arrived: he is not there — and this frame is still his: followPath has moved him once, the route takes him from the next)
-        if (T.spot.loop && T.loopI + 1 < T.spot.loop.length) { if (T.loopI < 0) { T.arrivedAt = now; NEEDS_STATS.arrived++; log(g, gd, `at ${T.spot.name} after ${(now - T.leftAt).toFixed(1)} s — round the loop`); } T.loopI++; goTo(g, gd, T.spot.loop[T.loopI], true); return true; }
-        if (T.spot.loop) { T.phase = 'returning'; T.dwellUntil = now; goTo(g, gd, gd.route.points[T.wp], true); log(g, gd, `loop walked in ${(now - T.arrivedAt).toFixed(1)} s — heading back`); return true; }
-        T.phase = 'dwell'; T.arrivedAt = now; T.dwellUntil = now + (NEEDS.dwell[T.kind] ?? 20); NEEDS_STATS.arrived++;
-        log(g, gd, `at ${T.spot.name} after ${(now - T.leftAt).toFixed(1)} s — ${(T.dwellUntil - now).toFixed(0)} s here`);
-      } else if (notGettingAnywhere(gd, dt, NEEDS.stuckSecs)) { NEEDS_STATS.stuck++; cancelTrip(g, gd, M, 'stuck on the way'); return true; }
-      return true;
-    }
-    case 'dwell': {
-      stand();
-      c.bodyYaw = approachAngle(c.bodyYaw, T.spot.face, 2.5 * dt);
-      gd.sweep = damp(gd.sweep, Math.sin(gd.lookPhase * 0.5) * 0.3, 2, dt); c.anim.lookYawExtra = Math.sin(gd.lookPhase * 0.8) * 0.35;
-      if (now >= T.dwellUntil) { T.phase = 'returning'; gd.stallRef = null; goTo(g, gd, gd.route.points[T.wp], true); log(g, gd, `done — heading back to wp${T.wp}`); }
-      return true;
-    }
-    case 'returning': {
-      const goal = gd.route.points[T.wp];
-      goTo(g, gd, goal);
-      const arrived = followPath(g, gd, dt, pace);
-      gd.sweep = damp(gd.sweep, Math.sin(gd.lookPhase * 0.7) * 0.25, 2, dt); c.anim.lookYawExtra = 0;
-      if (arrived) {
-        gd.stallRef = null;
-        if (v3.distXZ(c.pos, goal) > 1.5) { NEEDS_STATS.stuck++; cancelTrip(g, gd, M, 'no way back'); return true; }
-        T.backAt = now; releaseMan(gd, OWN.needs, g.time); M.trip = null; M.trips++; M.lastBackAt = now; NEEDS_STATS.completed++;
-        const n = M.needs.find(x => x.kind === T.kind); if (n) n.level = 0;
-        const away = Math.round(now - T.leftAt);
-        g.say(gd, pickLine(NEEDS_LINES.back, gd, 'back'));
-        chronicle(g, 'needBreak', { who: gd.callsign, kind: T.kind, what: 'back', away }, c.pos);
-        log(g, gd, `back on wp${T.wp} — away ${away} s (${T.kind}: out ${(T.arrivedAt - T.leftAt).toFixed(0)} s, there ${(T.dwellUntil - T.arrivedAt).toFixed(0)} s, back ${(now - T.dwellUntil).toFixed(0)} s)`);
-        return false;   // (this frame is the route's again: the wait he had left runs on from here)
-      } else if (notGettingAnywhere(gd, dt, NEEDS.stuckSecs)) { NEEDS_STATS.stuck++; cancelTrip(g, gd, M, 'stuck coming back'); return true; }
-      return true;
-    }
-  }
-  return false;
-}
 
 // ================================================================ the panel's button / the probes: send a man now
 /** 'send Kowalski for a coffee now': the full telegraph from this frame wherever he stands (his slot or the floor's gap notwithstanding), then the trip. Returns
  *  a note for the panel: why not, if not. */
-export function needsSend(g: Game, gd: Guard | null | undefined, kind: NeedKind = 'coffee'): string {
+export function needsSend(g: Game, gd: Guard | null | undefined, kind: NeedKind = 'coffee'): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('needsSend', undefined, [g, gd, kind]); if (__r !== RUST_PASS) return __r as any; } }
   if (!gd) return 'no such man';
   if (!g.tune.needs) return 'needs are switched off';
   if (gd.state === 'dead') return `${gd.callsign} is down`;
@@ -375,10 +222,7 @@ export function needsSend(g: Game, gd: Guard | null | undefined, kind: NeedKind 
   return `${gd.callsign}: ${kind} — watch him (walks in ${NEEDS.announceLead} s)`;
 }
 /** the probes: put a man's need at a level (deals him first); false if he does not carry that kind */
-export function needsSetLevel(g: Game, gd: Guard, kind: NeedKind, level: number): boolean {
-  const M = mem(gd); if (!M.dealt) deal(g, gd, M);
-  const n = M.needs.find(x => x.kind === kind); if (!n) return false; n.level = level; return true;
-}
+export function needsSetLevel(g: Game, gd: Guard, kind: NeedKind, level: number): boolean { return crossToRust('needsSetLevel', undefined, [g, gd, kind, level]) as any; }
 
 // ================================================================ persistence (one key, per machine — the switch and the fairness knobs)
 const LS_KEY = 'twopointsix.needs';

@@ -1177,7 +1177,7 @@ pub fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconside
         row.stall_at = v3::copy(c);
         row.stall_t = 0.0;
         row.moved_at = now;
-        g.gd[gd].pinned = false;
+        crate::control::set_pinned(g, gd, false, "wallreact");
         g.m.wallreact.wall_react.watching.delete(gd);
         let patch = crate::squad::OrderPatch {
             goal: Some(Some(to)), speed: Some(Some(g.tune.guard_chase)), face: Some(None), strafe: Some(Some(false)), aim_at: Some(None),

@@ -32,7 +32,7 @@
 // Guards HEAR it through the kinds that exist (debris landing = 'prop' at a level per kind; sheets and dust are silent); the dust dims their eyes by being
 // smoke. Deterministic: nothing draws from Math.random — every choice hashes the module's own counter. Reset with the level (resetLevelState → reset():
 // hidden statics restored, pools emptied, heat zeroed); the tour never sees any of it (chaosOf = 0 while touring).
-import { isManId, menUp } from './seats';
+import { isManId } from './seats';
 import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag, boxOf } from '../scene/boxes';
 import { doesOf } from '../scene/materials';
@@ -50,8 +50,8 @@ import { fireHolds, fireStir, fireStruck } from './fire';   // a blast does not 
 import { Debris, hash01, type ChunkKind } from './debris';
 import { NOBODY_ID } from './consts';
 import { chronLightShot } from './chronicle';
-import { DESTRUCTION, RUBBLE, DEBRIS } from './destructionSwitch';   // THE destruction goal's one switch (off = every line below as it was: the office's rules, the player-only fixture rule)
-import { FALL_PIECES } from '../sim/fallshome';
+import { DESTRUCTION, DEBRIS } from './destructionSwitch';   // THE destruction goal's one switch (off = every line below as it was: the office's rules, the player-only fixture rule)
+import '../sim/fallshome';
 import { WallBreak, WALLS, wallBreakOn, type BlastOpts, type BlastResult, type BlastEvent, type WallOpening } from './wallbreak';
 import { dustTint } from './dustLook';   // look only, and only with the destruction switch on: the dust's colour
 import { EdgeLook, EDGE } from './edgeLook';
@@ -59,7 +59,8 @@ import { Furniture, chargeSource, type BlastSource } from './furnblast';   // fu
 import { Breaks } from './breakTable';
 import { barFlags0 } from './winbars';   // (called inside flags0 only: src/game is one import cycle)
 import { messBurst } from './floormess';   // what a blast leaves on the floor (CHAOS.mess; called inside blast only: src/game is one import cycle)
-import { civiliansShown, civilianSeated } from './civilians';   // (kicked rubble: who is on his feet)
+import './civilians';   // (kicked rubble: who is on his feet)
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 // ------------------------------------------------------------------ knobs
 /** The lane's numbers (Tab ▸ Sandbox ▸ chaos rows edit the first block live; persisted with the switch: twopointsix.chaos). */
@@ -341,37 +342,12 @@ export class Destruction {
   knocks = 0;
   private take(k: keyof Destruction['caps']): boolean { if (k === 'knock' && this.freeKnocks > 0) { this.freeKnocks--; return true; } return this.caps[k].take(this.g.time); }
 
-  // ---------------------------------------------------------------- per frame
-  update(dt: number) {
-    const g = this.g;
-    if (RUBBLE.on && (!g.touring || this.showChaos !== null)) { const men = this.onFoot(); if (this.debris.list.length) this.debris.feet(men, RUBBLE); this.edgeLook.feet(men, RUBBLE, dt); }   // kicked rubble (debris.ts feet; the blown walls' own fragments through edgeLook.ts feet): off = not called; nor under the tour, bar a showcase program running its own chaos (as chaosOf)
-    if (g.falls.waitingIn(FALL_PIECES)) this.debris.landings();   // (DEBRIS.dress: the thrown pieces the simulation has coming down — nothing waits there with the switch off)
-    if (this.debris.list.length) this.debris.update(dt);
-    this.breaks.tick();
-    this.edgeLook.update(dt); this.walls.skins.update();
-    this.thudsThisFrame = 0;
-    if (chaosOf(g) <= 0 && !this.anyHeat) return;
-    const k = Math.exp(-dt / CHAOS.heatTau); let any = false;
-    for (let i = 0; i < this.heat.length; i++) { const h = this.heat[i] * k; this.heat[i] = h < 0.02 ? 0 : h; if (h >= 0.02) any = true; }
-    this.puffsThisFrame = 0; this.freeKnocks = 0;
-    if (chaosOf(g) <= 0) this.dustQueue.length = 0;   // (chaos 0 / the tour: nothing more goes into the solver, whatever was waiting)
-    this.anyHeat = any || this.dustQueue.length > 0;
-    // queued dust (dustBurst): as many as this frame's and this second's caps allow, oldest first; what waited too long is let go
-    while (this.dustQueue.length) { const q = this.dustQueue[0]; if (g.time - q.t > CHAOS.loud.burstSecs) { this.dustQueue.shift(); DESTR_STATS.puffsRefused++; continue; } if (this.puffsThisFrame >= CHAOS.puffsPerFrame) break; const r0 = DESTR_STATS.puffsRefused; if (!this.dustPuff(q.p, q.n, q.scale, q.surf)) { DESTR_STATS.puffsRefused = r0; break; } this.dustQueue.shift(); }   // (a puff the caps hold back this frame WAITS: not counted refused until it is let go)
-  }
-  /** the men on their feet this frame (who shoves the furniture, game.ts updateProps — bar the calm civilian, who is no contact for a chair but does step through rubble) */
-  private onFoot(): Character[] {
-    const g = this.g; const men: Character[] = menUp(g).map(pl => pl.char);
-    for (const gd of g.guards) if (gd.state !== 'dead') men.push(gd.char);
-    for (const cv of civiliansShown(g)) if (cv.state !== 'dead' && !civilianSeated(cv)) men.push(cv.char);
-    return men;
-  }
   private anyHeat = false; private thudsThisFrame = 0;
   private dustQueue: { p: Vec3; n: Vec3; scale: number; surf: Surf; t: number }[] = [];
-  boxes(out: Box[]) { this.debris.boxes(out); this.edgeLook.boxes(out); this.walls.skins.boxes(out); }   // (…and what stands of a holed wall's paint: wallskin.ts)
+  boxes(out: Box[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Destruction.boxes', this, [out]); if (__r !== RUST_PASS) return __r as any; } } this.debris.boxes(out); this.edgeLook.boxes(out); this.walls.skins.boxes(out); }   // (…and what stands of a holed wall's paint: wallskin.ts)
 
   /** Level reset (resetLevelState): every hidden static back as authored, the pools emptied, heat and caps and the counter back to the start. */
-  reset() {
+  reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Destruction.reset', this, []); if (__r !== RUST_PASS) return __r as any; } }
     for (const [i, f] of this.hidden) this.g.col.boxes[i].flags = f;
     this.g.col.wrote();
     this.hidden.clear(); this.debris.clear(); this.heat.fill(0); this.anyHeat = false; this.tilesDown.clear(); this.lastTileT = -100; this.tileCount = 0; this.serial = 1; this.knocks = 0;
@@ -388,7 +364,7 @@ export class Destruction {
   // ---------------------------------------------------------------- the sites
   /** A round from `shooter` stopped at `hitP` travelling `dir` in a static (`index` as col.raycast reports it; ≥ 1e6 = a leaf), a piece of furniture (`prop`)
    *  or nothing solid (both undefined: flesh / sky — nothing here). combat.ts fireWeapon calls it right after the marks and the particle burst it always made. */
-  round(shooter: Character, hitP: Vec3, dir: Vec3, hit: { n: Vec3; index?: number; prop?: Prop; box?: Box }, def: WeaponDef) {
+  round(shooter: Character, hitP: Vec3, dir: Vec3, hit: { n: Vec3; index?: number; prop?: Prop; box?: Box }, def: WeaponDef) { if (RUST_SURFACE?.tapFiring('Destruction.round')) return RUST_SURFACE.tapAnswer() as any;
     const g = this.g; const chaos = chaosOf(g); if (chaos <= 0) return;
     if (hit.index === undefined && !hit.prop) return;
     DESTR_STATS.rounds++;
@@ -438,7 +414,7 @@ export class Destruction {
    *  It hurts nobody, flashes nothing and files no hearing event: the caller does its own. With THE ONE SWITCH off it is the old bang(at, who) and nothing else
    *  (returns zeros; nothing at all with `chaos: false` or at chaos 0), so a grenade that calls this is the grenade it was before the engine;
    *  with only tune.wallBreak off, steps 1 and 3 still run. */
-  blast(at: Vec3, opts: BlastOpts = {}): BlastResult { return this.g.col.window(() => this.g.fogOfWar.doing(opts.who, () => this.blastRaw(at, opts))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (what it throws is its cause's doing: fogofwar.ts FOG.ours)
+  blast(at: Vec3, opts: BlastOpts = {}): BlastResult { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Destruction.blast', this, [at, opts]); if (__r !== RUST_PASS) return __r as any; } } return this.g.col.window(() => this.g.fogOfWar.doing(opts.who, () => this.blastRaw(at, opts))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (what it throws is its cause's doing: fogofwar.ts FOG.ours)
   private blastRaw(at: Vec3, opts: BlastOpts): BlastResult {
     const g = this.g; const chaos = chaosOf(g); const res: BlastResult = { walls: 0, cover: 0, doors: 0, panes: 0, opened: 0, serial: this.walls.serial };
     if (chaos <= 0 || !DESTRUCTION.on) { if (opts.chaos !== false) this.bang(at, opts.who); return res; }   // (off: a caller that used to call bang() and now calls blast() — a grenade — gets exactly the bang() it had; at chaos 0 that returns on its first line)
@@ -512,7 +488,7 @@ export class Destruction {
   /** The stun charge went off at `at` (combat.ts detonateStun), thrown by `who` (blamed for what its knock-offs / tile / shoved chunks are heard doing): a lot of
    *  heat where it lies — the desk over it cleared, papers up in a wide ring, the tile above down, dust off the ceiling — all through the same capped paths.
    *  `stun` (the loud levels; only detonateStun's own canister passes it): the lights are judged by CHAOS.loud.stunFixtureM / stunPanels, not as a blast's. */
-  bang(at: Vec3, who: number = NOBODY_ID, power = 1, stun = false) {
+  bang(at: Vec3, who: number = NOBODY_ID, power = 1, stun = false) { if (RUST_SURFACE?.tapFiring('Destruction.bang')) return RUST_SURFACE.tapAnswer() as any; { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Destruction.bang', this, [at, who, power, stun]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g; const chaos = chaosOf(g); if (chaos <= 0) return;
     if (!who) who = NOBODY_ID;   // (a sandbox-dropped can carries the item default 0 — the dropped-gun 'Sam's clatter' convention elsewhere; here nobody threw it)
     DESTR_STATS.bangs++;
@@ -565,7 +541,7 @@ export class Destruction {
   }
   /** Panel / hook / QA: the IMPULSE of a `kind` event at `at` alone — no heat, nothing converted, knocked off or dropped: only what already lies about moves (a bang's is
    *  judged for reach from just over desk height like the real one; an impact's takes `dir` as the round's travel and pushes off an up face). */
-  testImpulse(at: Vec3, kind: 'bang' | 'impact' | 'thud' = 'bang', dir: Vec3 = [1, 0, 0], who: number = NOBODY_ID) {
+  testImpulse(at: Vec3, kind: 'bang' | 'impact' | 'thud' = 'bang', dir: Vec3 = [1, 0, 0], who: number = NOBODY_ID) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Destruction.testImpulse', this, [at, kind, dir, who]); if (__r !== RUST_PASS) return __r as any; } }
     const chaos = chaosOf(this.g);
     if (kind === 'bang') this.bangImpulse(at, [at[0], Math.max(at[1] + 0.3, 0.95), at[2]], chaos, who);
     else if (kind === 'impact') this.impactImpulse(at, v3.normalize(dir), [0, 1, 0], chaos, who);
@@ -573,7 +549,7 @@ export class Destruction {
   }
   /** A thump on the floor at `pos` — a body landing (game.ts bodyThud), a boot through a door (onDoorEvent 'kick'), furniture knocking into something (onPropEvent
    *  'thud'): the litter within a stride twitches. `scale` 0.5‥1.5 by how hard; `who` = whose thump it was (provenance only: a rocked chunk keeps its blame). Subtle by design; ≤ CHAOS.imp.thud.perFrame a frame. */
-  thud(pos: Vec3, scale = 1, who: number = NOBODY_ID) {
+  thud(pos: Vec3, scale = 1, who: number = NOBODY_ID) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Destruction.thud', this, [pos, scale, who]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g; if (!impulsesOn(g)) return;
     const T = CHAOS.imp.thud;
     if (this.thudsThisFrame >= T.perFrame) { DESTR_STATS.impThudDropped++; return; }
@@ -721,7 +697,7 @@ export class Destruction {
    *  (eight ways, twice, judged over the furniture — `clearY`, or its own height where that is higher — and never into what stands at its own height); and
    *  where it still has no such room its radius comes down, to `minRadius` of its own at the least, its density up for it (never past `maxGain`): by a wall
    *  the pall is a tighter, thicker knot that the solver then carries on into the room it is in. */
-  private pallEmit(R: { radius: number; density: number; ttl: number; speed: number; temp: number; push: number; expand: number }, from: Vec3, pos: Vec3, dir: Vec3, j: number, tint: Vec3, gain = 1): boolean {
+  private pallEmit(R: { radius: number; density: number; ttl: number; speed: number; temp: number; push: number; expand: number }, from: Vec3, pos: Vec3, dir: Vec3, j: number, tint: Vec3, gain = 1): boolean { if (RUST_SURFACE?.tapFiring('Destruction.pallEmit')) return RUST_SURFACE.tapAnswer() as any;
     const g = this.g, K = CHAOS.pall; if ((g.smoke.budget?.() ?? 64) < K.slack) { PALL_STATS.starved++; return false; }
     let p: Vec3 = v3.copy(pos), d = dir;
     if (g.col.solidBlocked(from, p)) { p = [2 * from[0] - pos[0], pos[1], 2 * from[2] - pos[2]]; d = [-dir[0], dir[1], -dir[2]]; if (g.col.solidBlocked(from, p)) { PALL_STATS.shut++; return false; } }
@@ -860,7 +836,7 @@ export class Destruction {
   private fixtureLive(t: LightTarget): boolean { return !t.broken && t.interactive && (t.kind === 'emissive' || t.kind === 'analytic') && (t.on || t.factor > 0 || lampGlass(t)) && !fireHolds(t); }   // (carlamps.ts: a vehicle's lamp is glass whether it burns or not — the same word the player's own round is given, combat.ts)
   /** put `t` out: the light target's own broken bit (updateTargets takes its light and its emissive the same frame; guards with a line to it notice — lighting.ts
    *  lightEvent), the tube's glass coming down, counted against the encounter's cap (`force`: a blast ignores the gap, not the cap). Returns whether it went. */
-  private killFixture(t: LightTarget, from: Vec3, why: string, force = false): boolean {
+  private killFixture(t: LightTarget, from: Vec3, why: string, force = false): boolean { if (RUST_SURFACE?.tapFiring('Destruction.killFixture')) return RUST_SURFACE.tapAnswer() as any;
     const g = this.g; const L = CHAOS.loud;
     if (this.fixtureCount >= L.fixturesPerEncounter || (!force && g.time - this.lastFixtureT < L.fixtureGapSecs)) { DESTR_STATS.fixturesRefused++; return false; }
     if (!this.breakTarget(t)) { if (lampGlass(t) && t.broken) { g.audio.play('lightBreak', t.pos, 0.8); lensShatterFx(g, t, from); dlog(g, `lens ${t.name} broken (${why})`); } return false; }   // (carlamps.ts: a vehicle's dark lens — its glass and its sound, and no light gone out: not counted, nobody told)

@@ -478,7 +478,7 @@ pub fn move_(g: &mut Game, d: RoomfightDefId, goal: V3, speed: f64) {
     row.move_t = 0.0;
     row.stall_at = pos;
     row.stall_t = 0.0;
-    g.gd[gd].pinned = false;
+    crate::control::set_pinned(g, gd, false, "digin");
     crate::squad::order(g, gd, crate::squad::OrderPatch {
         goal: Some(Some(goal)),
         speed: Some(Some(speed)),

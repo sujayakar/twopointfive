@@ -41,6 +41,10 @@ const LIVE = argv.includes('--live');
 // STAND-IN (belongs in schema.json's `serial`, as `<field>{}`): tables keyed by an object's identity serial that the schema does not mark so. A gun hold's
 // key is an object (gunhold.ts `P.key`), written as the serial each side deals it: under --live such a table is compared by place, as the marked ones are.
 const KEYED_BY_SERIAL = new Set(opt('--keyed-by-serial', 'gunhold::GunholdMod.knowns,guards::GuardsMod.holds_called').split(','));
+// STAND-IN (belongs in schema.json's `serial`, as `dialogue::RadioState.run` is there): fields that hold an object's identity serial as a plain number.
+// A mission's own module keeps the mission it last saw (`this.run === g.mission`; the Rust keeps the mission's serial), and each side deals serials by
+// its own count of objects, so the number is not compared; whether one is held still is.
+const SERIAL_COPIES = new Set(opt('--serial-copies', 'rails::Rails.run,defuse::Defuse.run,lesson::Lesson.run,snatch::Snatch.run').split(','));
 /** --live: the entries of maps and sets keyed by a canon row, met by the reach walk and held back until their key is live */
 type Held = { K: Node; V: Node | null; kp: number; vp: number; done: boolean };
 let HELD: Held[] | null = null;
@@ -70,7 +74,7 @@ function skip(n: Node, s: Side, onId: ((id: string, v: number) => void) | null):
     case 'set': { const L = s.u32(); if (onId && HELD && hasId(n.K)) { for (let k = 0; k < L; k++) { const kp = s.p; skip(n.K, s, null); HELD.push({ K: n.K, V: null, kp, vp: 0, done: false }); } return; } for (let k = 0; k < L; k++) skip(n.K, s, onId); return; }
     case 'type': { const t = T(n.path);
       if (t.k === 'struct') { const F = fieldsOf(t); for (let i = 0; i < F.length; i++) {
-          if (HOLES) { const q = `${t.mod}::${t.name}.${t.fields[i].rust}`; if (SCHEMA.serial?.[q] || SCHEMA.scratch?.[q] || SCHEMA.serial?.[`${q}{}`]) { const a = s.p; skip(F[i], s, null); HOLES.push([a, s.p]); continue; } }
+          if (HOLES) { const q = `${t.mod}::${t.name}.${t.fields[i].rust}`; if (SCHEMA.serial?.[q] || SERIAL_COPIES.has(q) || SCHEMA.scratch?.[q] || SCHEMA.serial?.[`${q}{}`]) { const a = s.p; skip(F[i], s, null); HOLES.push([a, s.p]); continue; } }
           skip(F[i], s, onId && (NOREACH.has(t.fields[i].rust) || NOREACH.has(`${t.name}.${t.fields[i].rust}`)) ? null : onId); } return; }
       if (t.k === 'enum') { s.p += 2; return; }
       if (t.k === 'data') { const a = t.vars[s.u16()]; if (a.ty) skip(parse(a.ty), s, onId); return; }
@@ -215,7 +219,7 @@ function cmp(n: Node, A: Side, B: Side, mod: string): void {
       if (t.k === 'struct') { const F = fieldsOf(t); for (let i = 0; i < F.length; i++) { const q = `${t.mod}::${t.name}.${t.fields[i].rust}`;
           if (t.fields[i].echo && t.fields[i].ty === 'Vec<u8>') { skip(F[i], A, null); skip(F[i], B, null); continue; }   // (a blank field: Rust's own bytes, which the TypeScript's walk has none of)
           if (SCHEMA.scratch?.[q]) { const a0 = A.p, b0 = B.p; skip(F[i], A, null); skip(F[i], B, null); if (A.p - a0 !== B.p - b0 || !same(A, a0, B, b0, A.p - a0)) scratchN++; continue; }
-          const s0 = SER, k0 = KEYSER; if (SCHEMA.serial?.[q]) SER = true; KEYSER = !!SCHEMA.serial?.[`${q}{}`] || (LIVE && KEYED_BY_SERIAL.has(q));
+          const s0 = SER, k0 = KEYSER; if (SCHEMA.serial?.[q] || SERIAL_COPIES.has(q)) SER = true; KEYSER = !!SCHEMA.serial?.[`${q}{}`] || (LIVE && KEYED_BY_SERIAL.has(q));
           P.push(`.${t.fields[i].rust}`); cmp(F[i], A, B, t.mod); P.pop(); SER = s0; KEYSER = k0; } return; }
       if (t.k === 'enum') { const a = A.u16(), b = B.u16(); if (DUMP) { const path = P.join(''); if (DUMP.test(path) && dumped++ < DUMP_MAX) console.log(`  ${a === b ? ' ' : '≠'} ${path}\t${t.words[a]}\t${t.words[b]}`); } if (a !== b) rep(mod, `${t.name}::${t.words[a]}`, `${t.name}::${t.words[b]}`); return; }
       if (t.k === 'data') { const a = t.vars[A.u16()], b = t.vars[B.u16()]; if (a !== b) { rep(mod, a.tag, b.tag, '#'); if (a.ty) skip(parse(a.ty), A, null); if (b.ty) skip(parse(b.ty), B, null); return; } if (a.ty) { P.push(`.${a.tag}`); cmp(parse(a.ty), A, B, mod); P.pop(); } return; }

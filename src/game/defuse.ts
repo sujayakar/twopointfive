@@ -19,13 +19,13 @@
 // pair for a checkpoint (savestate.ts). Per-player state is asked through one accessor (who()), so a second player is one place to change.
 //
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
-import type { Game, Guard, Interactable, Player, Verb } from './game';
+import type { Game, Guard, Interactable, Player } from './game';
 import type { DefuseData, DefuseDevice } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
-import { BoxFlag, makeBox } from '../scene/boxes';
-import { blast } from './frag';
-import { samWorkHand, workAt } from './handwork';
+import './frag';
+import './handwork';
 import { WORK } from './workthings';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The knobs. `workSecs` / the blast's numbers stand in where the level's block names none. */
 export const DEFUSE = {
@@ -49,8 +49,6 @@ export type ChargeState = 'armed' | 'safe' | 'blown';
 /** a checkpoint's slice: seconds run on the clock (-1: not started), each charge's state, who made each safe, the end, Sam's seconds at a charge (null: none) */
 export interface DefuseSnap { ran: number; st: ChargeState[]; by?: (string | null)[]; end: 'safe' | 'failed' | null; sam: { dev: number; ran: number } | null }
 
-type RowFn = (base: Interactable, verb: Verb, text: string, hints?: string, over?: Partial<Interactable>) => Interactable;
-type OfferFn = (it: Interactable, verbs: Interactable[]) => void;
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** the player the row is for (one seat today) */
 const who = (g: Game): Player => g.player;
@@ -109,31 +107,6 @@ export class Defuse {
   /** why charge i is no longer there to be worked (null: it is) — the word the man says */
   moot(i: number): string | null { const s = this.active ? this.states[i] : undefined; return s === 'armed' ? null : s === 'safe' ? "it's already safe." : "it's gone."; }
 
-  /** once a frame (game.ts, after the mission's own tick: this frame's Space verb and orders are in) */
-  tick(_dt: number) {
-    const D = this.data; if (!D) { this.sam = null; return; }
-    const g = this.g, pl = who(g), p = pl.char.pos;
-    if (!this.mine) {   // a fresh run
-      this.run = g.mission; this.states = D.devices.map(() => 'armed' as ChargeState); this.safeBy = D.devices.map(() => null); this.end = null; this.t0 = this.tEnd = NaN;
-      this.sam = null; this.offered = -1; this.beat = -1; this.tookSaid = this.wonSaid = false; this.log.length = 0; this.from = [p[0], 0, p[2]];
-      const lg = g.orders?.log ?? []; this.lastOrder = lg[lg.length - 1] ?? null;
-      this.note(`armed: ${D.devices.length} charges, ${D.secs} s`);
-    }
-    this.draw(D);
-    if (this.end === 'safe' && !this.wonSaid && g.roomClear.end === 'taken') { this.wonSaid = true; DEFUSE_STATS.won++; this.note('won'); }
-    if (this.end) { this.sam = null; return; }
-    if (pl.down || g.roomClear.end === 'wiped') { this.end = 'over'; this.tEnd = g.time; this.sam = null; this.note('end: over — the run ended first'); return; }
-    if (!this.tookSaid && g.roomClear.end === 'taken') { this.tookSaid = true; g.msg(this.started ? `the house is taken, but the charges are still live with ${mmss(this.left)} left` : 'the house is taken, but the charges are still live'); }
-    if (!this.started) {   // the clock waits for the team's first move
-      const lg = g.orders?.log ?? [], moved = !!this.from && flat(p, this.from) > DEFUSE.startM, told = lg.length > 0 && lg[lg.length - 1] !== this.lastOrder;
-      if (moved || told) { this.t0 = g.time; DEFUSE_STATS.started++; this.note(`clock: ${told ? 'an order' : 'the player moved'}`); g.msg(`the clock is running, and you have ${mmss(D.secs)} for ${D.devices.length === 2 ? 'both charges' : 'every charge'}`); }
-    }
-    this.samTick(D);
-    if (!this.started) return;
-    const left = this.left;
-    if (left <= 0) { this.blow(D); return; }
-    if (left <= DEFUSE.warnSecs) { const b = Math.ceil(left); if (b !== this.beat) { this.beat = b; g.audio.play('click', null, 0.7, { rate: 1.6 }); } }
-  }
 
   /** a hand has been on charge i long enough (Sam's own row here; a teammate's work order — workthings.ts) */
   makeSafe(i: number, by: Guard | 'Player') {
@@ -147,83 +120,14 @@ export class Defuse {
     g.msg(g.roomClear.end === 'taken' ? `${d.name} is safe. every charge is safe and the house is yours` : `${d.name} is safe. every charge is safe with ${mmss(this.left)} left. now take the house`);
     this.note('end: safe');
   }
-  /** the clock at zero: every charge still live goes off — the game's own blast, in its room */
-  private blow(D: DefuseData) {
-    const g = this.g, B = D.blast ?? {}, gone: string[] = [];
-    this.end = 'failed'; this.tEnd = g.time; this.sam = null; DEFUSE_STATS.failed++;
-    D.devices.forEach((d, i) => {
-      if (this.states[i] !== 'armed') return;
-      this.states[i] = 'blown'; DEFUSE_STATS.blown++; gone.push(d.name);
-      const R = blast(g, [d.pos[0], d.pos[1], d.pos[2]], { who: 0, name: 'charge', serial: 0x5afe + i, lethalM: B.lethalM ?? DEFUSE.lethalM, woundM: B.woundM ?? DEFUSE.woundM,
-        destr: { radius: B.radius ?? DEFUSE.radius, power: B.power ?? DEFUSE.power } });
-      this.note(`blown: ${d.id} — ${R.killed} killed, ${R.wounded} wounded${R.player ? `, the player ${R.player}` : ''}`);
-    });
-    g.msg(`${gone.join(' and ')} went off — mission failed. press Shift+Enter to restart`);
-    this.note('end: failed');
-  }
 
-  // ------------------------------------------------------------ the picture: the charge on its bench
-  /** a pack with a lamp on it — red and blinking faster as the clock runs down while live, steady green once safe; nothing once it has gone off */
-  private draw(D: DefuseData) {
-    const g = this.g, left = this.left;
-    D.devices.forEach((d, i) => {
-      const s = this.states[i]; if (s === 'blown') return;
-      const yaw = Math.atan2(d.n[0], d.n[1]), p = d.pos, cs = Math.cos(yaw), sn = Math.sin(yaw);
-      const at = (lx: number, y: number): Vec3 => [p[0] + lx * cs, p[1] + y, p[2] - lx * sn];   // (a part's place along the pack's own long side: a box's local +X is (cos, 0, −sin))
-      g.fx.push({ box: makeBox({ c: at(0, -0.02), h: [0.17, 0.06, 0.11], yaw, albedo: [0.2, 0.17, 0.11], flags: BoxFlag.Dynamic }), ttl: 1e-3 });
-      g.fx.push({ box: makeBox({ c: at(-0.09, 0.055), h: [0.045, 0.02, 0.07], yaw, albedo: [0.07, 0.07, 0.07], stuff: 'metal', flags: BoxFlag.Dynamic }), ttl: 1e-3 });   // (`stuff`: what the look made of this grey by its COLOUR until 11-04, kept so the picture did not move; nobody chose it. scene/stuff.ts drawnAs)
-      const rate = !this.started ? 1 : left > 30 ? 2 : left > 10 ? 4 : 8, lit = s === 'safe' || Math.floor(g.time * rate) % 2 === 0;
-      if (!lit) return;
-      const safe = s === 'safe';
-      g.fx.push({ box: makeBox({ c: at(0.07, 0.05), h: [0.014, 0.014, 0.014], yaw, albedo: safe ? [0.1, 0.9, 0.2] : [0.9, 0.12, 0.08], emissive: safe ? [0.25, 2.2, 0.4] : [2.4, 0.2, 0.1],
-        flags: BoxFlag.Dynamic | BoxFlag.NoShadow }), ttl: 1e-3 });
-    });
-  }
 
-  // ------------------------------------------------------------ Sam's own hands
-  /** player.ts buildInteractables: each live charge near him is a thing with one row, 'make it safe' */
-  samRows(p: Vec3, busy: boolean, row: RowFn, offer: OfferFn) {
-    this.offered = -1; this.marker = null;
-    const D = this.data; if (!D || !this.mine || this.end) return;
-    const g = this.g, pl = who(g); let best = Infinity;
-    D.devices.forEach((d, i) => {
-      if (this.states[i] !== 'armed') return;
-      const dist = flat(p, d.pos); if (dist > DEFUSE.markerM) return;
-      const front = (p[0] - d.pos[0]) * d.n[0] + (p[2] - d.pos[2]) * d.n[1] > 0;
-      const near = dist < DEFUSE.reach && front && !g.col.solidBlocked([p[0], 1.0, p[2]], [d.pos[0] + d.n[0] * 0.2, 1.0, d.pos[2] + d.n[1] * 0.2]);
-      const free = !pl.sprinting && !pl.dragging && !pl.holding && !pl.takedown, reach = near && free;
-      const it: Interactable = { kind: 'objective', pos: [d.pos[0], d.pos[1] + 0.1, d.pos[2]], line1: `${d.name} · ${mmss(this.left)}`, line2: reach ? '' : near ? 'hands full' : 'step closer', inReach: reach, off: false };
-      if (this.sam?.dev === i) { it.inReach = true; this.marker = it; offer(it, []); return; }   // (the running row is runningRow's)
-      const verbs: Interactable[] = [];
-      if (reach && !busy && !this.sam) { verbs.push(row(it, 'defuse', 'make it safe', `${this.workSecs} s — stay on it`)); if (dist < best) { best = dist; this.offered = i; } }
-      offer(it, verbs);
-    });
-  }
-  /** the row performed (Game.act) starts it; he stays on it workSecs; a step, a sprint, full hands or another verb lets go and the work starts over */
-  private samTick(D: DefuseData) {
-    const g = this.g, pl = who(g), p = pl.char.pos, act = g.act, mine = !!act && act.kind === 'objective' && act.verb === 'defuse';
-    if (mine && !this.sam && this.offered >= 0 && this.states[this.offered] === 'armed') {
-      this.sam = { dev: this.offered, t0: g.time, at: [p[0], 0, p[2]] }; g.audio.play('click', D.devices[this.offered].pos, 0.8); this.note(`the player on ${D.devices[this.offered].id}`); return; }
-    const s = this.sam; if (!s) return;
-    if (this.states[s.dev] !== 'armed') { this.sam = null; return; }
-    if (pl.down || pl.sprinting || !!pl.dragging || !!pl.holding || !!pl.takedown || flat(p, s.at) > DEFUSE.shift || (act && !mine)) { this.cancel(); return; }
-    const d = D.devices[s.dev], need = this.workSecs;
-    workAt(pl.char, 'take', [d.pos[0], d.pos[1], d.pos[2]], n3(d), g.time - s.t0, need, { hand: samWorkHand(g) ? undefined : 0 });   // (handwork.ts: both hands on it while he works — picture only)
-    if (g.time - s.t0 < need) return;
-    this.sam = null; this.makeSafe(s.dev, 'Player');
-  }
   /** is Sam at a charge right now — a sustained verb (interact.ts runningVerb / cancelSustained, savestate.ts playerBusy, player.ts's running row) */
   get working(): boolean { return !!this.sam && this.active; }
   /** handwork.ts samWork: the charge's face he is planted at and squared to while he works it (`at` = the spot he must not shift from, walked in with him) */
   get samJob(): { p: Vec3; n: Vec3; at: Vec3 } | null { const s = this.sam, D = this.data; if (!s || !D || !this.mine) return null; const d = D.devices[s.dev]; return { p: [d.pos[0], d.pos[1], d.pos[2]], n: n3(d), at: s.at }; }
   /** Space again, Esc or a step: let go, the work starts over (true: there was one to let go of) */
   cancel(): boolean { if (!this.sam) return false; this.sam = null; this.g.msg('you let go, so the charge is still live'); return true; }
-  /** player.ts buildInteractables: the one row while he is at it */
-  runningRow(running: (base: Interactable, verb: Verb, text: string, progress: number) => Interactable): Interactable {
-    const s = this.sam!, D = this.data!, d = D.devices[s.dev], k = (this.g.time - s.t0) / this.workSecs;
-    const it: Interactable = this.marker ?? { kind: 'objective', pos: [d.pos[0], d.pos[1] + 0.1, d.pos[2]], line1: d.name, line2: '', inReach: true, off: false };
-    return running(it, 'defuse', `making it safe… ${Math.min(99, Math.round(k * 100))}% — stay on it (Space or a step lets go)`, k);
-  }
 
   // ------------------------------------------------------------ the HUD's row
   /** The objective while a charge is live or one has gone off (mission.ts objectiveText / objectivePos; null = the room clear's own) */
@@ -259,7 +163,7 @@ export class Defuse {
     return { ran: this.started ? (isNaN(this.tEnd) ? g.time : this.tEnd) - this.t0 : -1, st: [...this.states], by: [...this.safeBy], end: this.end === 'over' ? null : this.end, sam: this.sam ? { dev: this.sam.dev, ran: g.time - this.sam.t0 } : null };
   }
   /** a checkpoint loaded (savestate.ts, after the mission slice). A file without the slice on a live level: a fresh clock, as on a restart */
-  restore(s: DefuseSnap | undefined) {
+  restore(s: DefuseSnap | undefined) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Defuse.restore', this, [s]); if (__r !== RUST_PASS) return __r as any; } }
     const D = this.data; this.run = null; this.sam = null; if (!D || !s) return;
     const g = this.g, p = who(g).char.pos, ok = (v: unknown): v is ChargeState => v === 'armed' || v === 'safe' || v === 'blown';
     if (!Array.isArray(s.st) || s.st.length !== D.devices.length || !s.st.every(ok) || !Number.isFinite(s.ran)) return;
@@ -281,5 +185,3 @@ export class Defuse {
   }
 }
 
-/** player.ts buildInteractables */
-export function defuseRows(g: Game, p: Vec3, busy: boolean, row: RowFn, offer: OfferFn) { g.defuse?.samRows(p, busy, row, offer); }

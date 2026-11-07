@@ -54,8 +54,7 @@ import type { Input } from './input';
 import type { Team } from './teams';
 import type { WeaponId } from './weapons';
 import type { Stance } from './character';
-import { KICK_IMPACT, TOSS_QUICK } from './character';
-import { kickScuff } from './marks';
+import { TOSS_QUICK } from './character';
 import type { Level, BreachPlan, RoomClearPlan } from '../scene/level';
 import type { Door } from './doors';
 import { DOORWAY } from './doors';
@@ -66,12 +65,13 @@ import type { Engagement } from './guards';
 import { BreachDrill } from './breach';
 import { setDaylight, isDaylight, setGroup } from './lighting';
 import { cancelActions, teleportPlayer } from './player';
-import { fireWeapon } from './combat';
+import './combat';
 import { learnCode as devicesLearnCode } from './devices';
 import { chronicle, chronRadio, chronObjective, roomOf } from './chronicle';
 import { radioHand } from './handwork';
 import { runnerBreak } from './runner';   // (asked inside the drill's ending check and a beat's `rout` / `routed` only: false with its switch off)
 import { hasHim, OWN } from './owner';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 // ================================================================================================================================ types a script sees
 export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
@@ -437,7 +437,7 @@ export class Director {
    *  main.ts clears the edge sets at the end of the frame — pressed there and then, a beat's key would reach nobody */
   private dueKeys = new Set<string>(); private dueClicks = 0;
   /** Game.update's first business after the journal: the queued synthetic input of a showcase beat becomes this frame's (idempotent with a replayed input stream: a set and an OR) */
-  injectInput(input: Input) { if (!this.dueKeys.size && !this.dueClicks) return; for (const k of this.dueKeys) input.pressed.add(k); input.clicked |= this.dueClicks; this.dueKeys.clear(); this.dueClicks = 0; }
+  injectInput(input: Input) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Director.injectInput', this, [input]); if (__r !== RUST_PASS) return __r as any; } } if (!this.dueKeys.size && !this.dueClicks) return; for (const k of this.dueKeys) input.pressed.add(k); input.clicked |= this.dueClicks; this.dueKeys.clear(); this.dueClicks = 0; }
   constructor(readonly g: Game, readonly script: LevelScriptFn | null) {
     if (!script) { this.manifest = null; return; }
     try { this.manifest = manifestOf(script); }
@@ -450,11 +450,10 @@ export class Director {
   }
   private report() { const errs = this.problems.filter(p => p.level === 'error'); if (errs.length && typeof console !== 'undefined') console.error(`level script NOT armed — ${errs.length} lint error(s):\n  ` + errs.map(p => p.what).join('\n  ')); }
   /** hand the Director the camera and the input before the first tick (main.ts): a program started before any frame can then pin its first shot and lock the keys at once */
-  attach(o: { cam?: FollowCamera | null; input?: Input | null }) { if (o.cam) this.cam = o.cam; if (o.input) this.input = o.input; }
+  attach(o: { cam?: FollowCamera | null; input?: Input | null }) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Director.attach', this, [o]); if (__r !== RUST_PASS) return __r as any; } } if (o.cam) this.cam = o.cam; if (o.input) this.input = o.input; }
   get programs(): string[] { return this.manifest ? [...this.manifest.programs.keys()] : []; }
   /** is a SHOWCASE program holding the frame right now (main.ts: the camera, the listener, the veil, the HUD are its) */
   get showing(): boolean { return !!this.run?.show && !this.run.ended; }
-  get lowerThird(): boolean { return this.showing && !!this.run!.def.opts.lowerThird && !this.run!.show!.handedOver; }   // (handed over: the player's HUD is back, the caption is the top card)
   /** has the running showcase handed the encounter to the player already (c.handover): main.ts leaves the follow camera, the listener and the pitch to him */
   get handedOver(): boolean { return this.showing && this.run!.show!.handedOver; }
   /** why `name` cannot start right now (null = it can) */
@@ -473,11 +472,9 @@ export class Director {
   get running(): string | null { const R = this.run; return R && !R.ended ? R.name : null; }
   /** a tutorial mission's own program is running (roomfight.ts, lanes.ts: a man of the floor's roster that it has in hand is left to it until it lets him go) */
   get lessonRuns(): boolean { const R = this.run; return !!R && !R.ended && !!this.g.rails?.live; }
-  /** frag.ts: the level's script put the defenders' own grenades off (`D.systems.theirFrags(false)`): for the level, whatever program is or is not running */
-  get theirFragsOff(): boolean { return this.armed && this.manifest?.systems.theirFrags === false; }
   get objective(): { text: string; pos: Vec3 | null } | null { return this.run && !this.run.ended ? this.run.objective : null; }
   /** a signal from OUTSIDE a beat (rails.ts: a lesson step's cue, 'lesson:<cue>'): the running program's onSignal triggers and c.on('signal', name) meet it on its next tick. Nothing with no program running. */
-  signal(name: string, data?: Json) { const R = this.run; if (!R || R.ended) return; R.signals.push({ name, t: R.t, data }); this.push({ beat: '', kind: 'note', what: `signal:${name}`, ...(data !== undefined ? { data } : {}) }); }
+  signal(name: string, data?: Json): void { return crossToRust('Director.signal', this, [name, data]) as any; }
   /** has the running program raised, or been sent, this signal (rails.ts: a beat's 'done:<name>') */
   signalled(name: string): boolean { const R = this.run; return !!R && !R.ended && R.signals.some(s => s.name === name); }
   chapters(): { list: { title: string; dur: number }[]; i: number; frac: number } | null {
@@ -516,7 +513,7 @@ export class Director {
   }
   /** Stop the running program: everything it holds let go of (drills ended, showcase: cast despawned, shift and night back, a fresh encounter under it; play: units handed to
    *  the AI), the log noted, onProgramEnd told. finished = it reached its own end (c.finish) rather than being cut off. Idempotent. */
-  stop(finished = false) {
+  stop(finished = false) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Director.stop', this, [finished]); if (__r !== RUST_PASS) return __r as any; } }
     const R = this.run; if (!R || R.ended || this.exiting) return;
     this.exiting = true;
     try {
@@ -541,44 +538,6 @@ export class Director {
   /** Game.restartEncounter under a PLAY program (Shift+Enter, the pause card, a checkpoint load): its men are gone with the reset — the program ends where it stood. A showcase's own restore restarts the encounter itself (exiting): not this. */
   onEncounterRestart() { if (this.run && !this.run.ended && !this.exiting && !this.run.show) { this.push({ beat: '', kind: 'program', what: 'reset' }); this.run.units.clear(); this.stop(false); } }
 
-  // ---------------------------------------------------------------- the tick
-  /** Once a frame from Game.update, immediately before tacticsTick. A return on its first line when nothing runs. */
-  tick(dt: number, input: Input | null, cam: FollowCamera | null) {
-    if (input) this.input = input; if (cam) this.cam = cam;
-    const R = this.run; if (!R || R.ended) return;
-    R.t += dt; R.dt = dt; R.tickN++;
-    if (R.show?.shot) R.show.shot.t += dt;
-    // drills first: the men are sequenced for this frame before any beat reads where a drill has got to
-    for (const d of R.drills) this.tickDrill(R, d, dt);
-    this.tickTracks(R, dt); this.tickBursts(R); this.tickKicks(R); this.tickShown();
-    // this frame's news: hearing events not seen before (pushed since the last tick — the guards' from the end of last frame, Sam's from this one), signals raised since
-    const fresh: EventView[] = [];
-    for (const e of this.g.events) { if (this.seen.has(e)) continue; this.seen.add(e); fresh.push(viewOf(this.g, R, e)); }
-    for (; R.sigSeen < R.signals.length; R.sigSeen++) { const s = R.signals[R.sigSeen]; fresh.push(signalView(this.g, R, s)); }
-    this.fireTriggers(R, fresh);
-    this.resumeAll(R, fresh);
-    if (this.run === R && !R.ended) this.tail(R, dt);
-  }
-  private fireTriggers(R: Run, fresh: EventView[]) {
-    const T = R.def.triggers;
-    for (let i = 0; i < T.length; i++) {
-      if (R.fired.has(i)) continue; const t = T[i]; let go = false; let ev: EventView | undefined;
-      try {
-        switch (t.kind) {
-          case 'start': break;
-          case 'after': go = R.t >= t.secs!; break;
-          case 'event': ev = fresh.find(e => e.kind === t.event && (!t.filter || t.filter(e))); go = !!ev; break;
-          case 'signal': ev = fresh.find(e => e.kind === 'signal' && e.name === t.name); go = !!ev; break;
-          case 'enter': go = this.insideVolume(R, t.volume!, t.who ?? 'sam'); break;
-          case 'when': go = t.pred!(this.queryOf(R)); break;
-        }
-      } catch (e) { R.fired.add(i); this.push({ beat: t.beat, kind: 'error', what: `trigger ${t.kind} → '${t.beat}' threw and is disarmed — ${(e as Error).message ?? e}` }); if (this.strict) throw e; continue; }
-      if (!go) continue;
-      R.fired.add(i);   // (M1: every trigger fires at most once a run — once:false re-arming waits for a beat that can be asked whether it may run again)
-      this.push({ beat: t.beat, kind: 'trigger', what: t.kind + (t.kind === 'after' ? ` ${t.secs}s` : t.kind === 'event' ? ` ${t.event}` : t.kind === 'signal' ? ` ${t.name}` : t.kind === 'enter' ? ` ${t.volume}` : t.kind === 'when' ? ` ${t.label}` : ''), ...(ev ? { data: { at: [+ev.pos[0].toFixed(2), 0, +ev.pos[2].toFixed(2)] } } : {}) });
-      this.startBeat(R, t.beat);
-    }
-  }
   private startBeat(R: Run, name: string): LiveBeat | null {
     const B = R.def.beats.get(name); if (!B) { this.push({ beat: name, kind: 'error', what: `no beat '${name}'` }); return null; }
     const cur = R.byName.get(name); if (cur && cur.state === 'running') return cur;   // (already running: a second trigger for it is a no-op, not a second copy)
@@ -744,27 +703,6 @@ export class Director {
   }
   private restoreSystems(R: Run) { const s = R.systemsSaved; if (!s) return; const g = this.g; if (s.qrf !== undefined) g.tune.qrf = s.qrf; if (s.needs !== undefined) g.tune.needs = s.needs; if (s.civilians !== undefined) g.tune.civilians = s.civilians; if (s.autosave !== undefined) g.saves.enabled = s.autosave; R.systemsSaved = null; }
 
-  // ---------------------------------------------------------------- drills
-  private tickDrill(R: Run, D: DrillRun, dt: number) {
-    const I = D.impl;
-    if (I.kind === 'breach') {   // (ticked past its own 'done' too, as the show always ticked it: its clock runs on for since('done'), its men keep settling on the stack)
-      I.d.tick(dt); D.t = I.d.t; D.phase = I.d.phase;
-      for (; I.forwarded < I.d.beats.length; I.forwarded++) { const b = I.d.beats[I.forwarded]; if (!D.times.has(b.what)) D.times.set(b.what, b.t); this.push({ t: b.t, beat: D.owner, kind: 'drill', what: b.what }); if (b.what === 'abort') D.aborted = true; }
-      if (I.d.phase === 'done' && !D.done) { D.done = true; D.cleared = !D.aborted && I.d.hostiles.every(h => h.state === 'dead' || h.fled); }
-      return;
-    }
-    if (D.done) return;
-    if (I.kind === 'clear') {
-      I.clock += dt; D.t = I.clock; I.d.tick(I.clock, dt);
-      if (I.d.phase !== I.lastPhase) { I.lastPhase = I.d.phase; D.phase = I.d.phase; D.times.set(I.d.phase, I.clock); this.push({ t: I.clock, beat: D.owner, kind: 'drill', what: `${D.ref.name}:${I.d.phase}` }); }
-      if (!I.d.intact) { D.done = true; D.aborted = true; this.push({ beat: D.owner, kind: 'drill', what: `${D.ref.name}:broken` }); }
-      else if (I.d.complete) { D.done = true; D.cleared = true; this.push({ beat: D.owner, kind: 'drill', what: `${D.ref.name}:complete` }); }
-    } else if (I.kind === 'hold') {
-      D.t += dt; if (!D.done && D.men.every(m => m.state === 'dead' || !!m.script?.arrived)) { D.done = true; D.cleared = true; D.phase = 'set'; this.push({ beat: D.owner, kind: 'drill', what: `${D.ref.name}:set` }); }
-    } else {
-      D.t += dt; if (I.e.done && !D.done) { D.done = true; D.phase = I.e.result?.outcome ?? 'done'; D.cleared = D.phase === 'cleared'; D.aborted = D.phase === 'wiped' || D.phase === 'reset'; this.push({ beat: D.owner, kind: 'drill', what: `${D.ref.name}:${D.phase}`, data: I.e.result ? { secs: +I.e.result.secs.toFixed(2), kills: I.e.result.kills.length } : undefined }); }
-    }
-  }
   private endDrill(R: Run, D: DrillRun) {
     const I = D.impl;
     if (I.kind === 'breach') I.d.end();
@@ -776,40 +714,6 @@ export class Director {
    *  failed or was cancelled, taken out of its hand by the game (a door thrown into him), or the program stopped, he is the fog's own again */
   private shown = new Set<Guard>();
   private showMan(gd: Guard, on: boolean) { if (on) this.shown.add(gd); else if (!this.shown.delete(gd)) return; this.g.fogOfWar.show(gd, on); }
-  private tickShown() { for (const gd of [...this.shown]) if (!gd.script || gd.state === 'dead') this.showMan(gd, false); }
-  private tickBursts(R: Run) {
-    for (const B of R.bursts) {
-      if (B.left <= 0) continue;
-      const gd = R.units.get(B.u.id)?.gd ?? this.g.guards.find(x => x.char.id === B.u.id);   // (a man the program spawned, or one of the level's own it took in hand: c.unit)
-      const u = gd ? { gd, ref: B.u } : null; if (!u || u.gd.state === 'dead') { B.left = 0; continue; }
-      if (R.t < B.next || u.gd.weapon.reloading) continue;
-      const at = 'kind' in B.at && B.at.kind === 'unit' ? (() => { const id = (B.at as UnitRef).id, v = R.units.get(id)?.gd ?? this.g.guards.find(x => x.char.id === id); return v ? (v.char.bones.chest ?? v3.add(v.char.pos, [0, 1.1, 0])) : null; })() : (() => { const p = this.placeOf(B.at as Place); return [p[0], (B.at as Vec3)[1] || 1.1, p[2]] as Vec3; })();
-      if (!at) { B.left = 0; continue; }
-      if (u.gd.weapon.fire()) { fireWeapon(this.g, u.gd.char, at, false, { steady: true, spread: B.spread }); B.left--; B.fired++; B.next = R.t + B.cadence; }   // a scripted round is a REAL round: hits, suppression, marks, heat, glass, hearing all follow from combat.ts
-      else u.gd.weapon.rearm();
-      if (B.left <= 0) this.push({ beat: '', kind: 'stimulus', what: 'burst:done', data: { by: u.ref.callsign, rounds: B.fired } });
-    }
-    if (R.bursts.some(B => B.left <= 0)) R.bursts = R.bursts.filter(B => B.left > 0);   // (a beat's cond holds its own record, not the list: the finished leave it — a long program fires hundreds)
-  }
-  /** aim points ordered onto a MAN (c.order aimAt: unit): his chest re-read into the very vector the runner points the gun along, eased at 14/s (the breach drill's own muzzle snap) — dropped
-   *  the moment the tracker is dead, off his script, or has been handed another aim point (the vector is no longer his script's) */
-  private tickTracks(R: Run, dt: number) {
-    if (!R.tracks.length) return;
-    R.tracks = R.tracks.filter(T => T.gd.state !== 'dead' && T.gd.script && T.gd.script.aimAt === T.vec);
-    for (const T of R.tracks) { const ch = T.tgt.char.bones.chest ?? v3.add(T.tgt.char.pos, [0, T.tgt.state === 'dead' ? 0.3 : 1.1, 0]); T.vec[0] = damp(T.vec[0], ch[0], 14, dt); T.vec[1] = damp(T.vec[1], ch[1], 14, dt); T.vec[2] = damp(T.vec[2], ch[2], 14, dt); }
-  }
-  /** kicks in the air (c.doors.kick): on the animator's impact frame (or the instant the clip is somehow over) doors.ts kickIn does the boot's work from where he stands — squad.ts RoomClear's own test */
-  private tickKicks(R: Run) {
-    if (!R.kicks.length) return;
-    R.kicks = R.kicks.filter(K => {
-      const an = K.gd.char.anim; if (K.gd.state === 'dead') return false;
-      if (!(an.kickImpact || an.kickTime >= KICK_IMPACT || !an.kicking)) return true;
-      const g = this.g, c = K.gd.char, d = K.door;
-      g.doors.kickIn(d, c.pos, c.id); kickScuff(g, d, c.pos);   // (kickIn's DoorEvent 'kick' → game.ts puffs the jamb, splinters the keep, files the thud — as for any kick; the sole's scuff on the leaf is the caller's, as in player.ts)
-      this.push({ beat: K.beat, kind: 'stimulus', what: `kick ${d.def.name}`, data: { by: K.by, angle: +d.angle.toFixed(2) } });
-      return false;
-    });
-  }
 
   // ---------------------------------------------------------------- resolving handles
   placeOf(p: Place): Vec3 {
@@ -1089,12 +993,6 @@ function condLabel(c: Cond): string {
     case 'all': case 'any': { const parts = c.of.map(condLabel).filter(Boolean); return parts.length ? `${c.k}(${parts.join(', ')})` : ''; }
   }
 }
-function nearOf(g: Game, self: Director, pos: Vec3) {
-  return (what: DoorRef | Place, within: number): boolean => {
-    const p = 'kind' in (what as object) && (what as DoorRef).kind === 'door' ? (g.doors.byName((what as DoorRef).id)?.frameCentre ?? null) : self.placeOf(what as Place);
-    return !!p && Math.hypot(p[0] - pos[0], p[2] - pos[2]) <= within;
-  };
-}
 /** the read model of Sam (c.view): a fresh snapshot of what his own HUD shows — position, pace, the highlighted row and the rows on offer, the hold, the sustained verbs, the mission's stage
  *  and the drive, codes and keys in his pocket, the reticle's snap, the OCP's charge, the belt */
 export function samViewOf(g: Game): SamView {
@@ -1112,5 +1010,3 @@ export function samViewOf(g: Game): SamView {
     doorPush: c.anim.doorPush && c.anim.doorPush.w > 0 ? 'leaf' : null,
   };
 }
-function viewOf(g: Game, R: Run, e: GameEvent): EventView { void R; return { kind: e.kind, pos: v3.copy(e.pos), level: e.level ?? (e.loud ? 1 : 0.3), loud: e.loud, who: e.who ?? -1, near: nearOf(g, g.director, e.pos) }; }
-function signalView(g: Game, R: Run, s: { name: string; t: number; data?: Json }): EventView { void R; const pos = v3.copy(g.player.char.pos); return { kind: 'signal', name: s.name, data: s.data, pos, level: 0, loud: false, who: -1, near: nearOf(g, g.director, pos) }; }

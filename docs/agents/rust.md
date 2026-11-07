@@ -6,6 +6,8 @@ running this elsewhere". The game's update (`Game.update`, about 100,000 lines o
 time. What is built so far is the ground: the crate, its build, its one way into the page, the server and the tools, the switch table, the checks, and the
 first system across (the game's own maths). No rule of play has changed and nothing a player sees is different.
 
+**THE RUST SOURCE OWNS THE GAME'S TYPES (2026-11-07).** `types.rs`, `knobs.rs`, `ids.rs` and the bodies are plain source: no generator writes them, and the program that used to read the TypeScript for them is retired. To add a field: write it on the struct and in its `blank` / `zeroed` (the compiler points there). To add an enum arm: write it, anywhere in the enum. To add a function: write it in a part of its module; `mod.rs` takes each part's whole public surface. To add a module: a folder and a line in `lib.rs`. None of that touches the wire: a field the table does not name is neither sent nor read, an arm it does not know goes out as the tag 0xffff and the page keeps what it had, a kept game is a clone and keeps everything. A checkpoint written to a FILE goes by the wire's bytes, so a field off the table comes back at its blank. What the page must read goes through `tools/wire/wire.ts` (`add`, `add-struct`, `drop`, `gen`, `gen --check`), which reads `tools/blitz/schema.json` and `tools/wire/fields.json`, and refuses a name nothing under `src/` reads. A function a caller names and nobody wrote is in its module's `missing.rs` and panics with its name. `face_layout` against `schema.layout`: a host refuses a module of another generation in words. `tools/blitz/grow-check.py <kept run>` adds a field, two arms, a module and a function on a scratch copy and holds the run. `face_state_words(h)`: a hash of the whole game a part with the host's half left out (`game::state_words`, written by `wire gen`). `TPS_GAME_RECORD=<file>` records every call into the game, `tools/blitz/replay.ts` plays it alone.
+
 **THE WHOLE TICK IS IN RUST AND THE PAGE PLAYS IT (2026-11-07).** `rust/game` is the game's tick in Rust (hand-written bodies over a generated skeleton),
 `rust/game_face` its WebAssembly face, `rust/game_run` a native runner. The page's game is the Rust game with no address word (`src/host/rustgame.ts`,
 `tools/blitz/PAGE.md`): the TypeScript `Game` stays as a puppet that the picture, the sound, the HUD and the menus read, and the TypeScript tick is not called.
@@ -17,6 +19,22 @@ TypeScript game (`tools/blitz/word.ts DEFAULT_WORD`). A built module is checked 
 fuzz of the solo night and of squad missions on Hard (`fuzz.sh`, `fuzz-squad.sh`), the page walked in headless Chromium on the software adapter, and the
 maintainer played a tutorial and a few levels on his own machine. Not checked: co-op and tapes on the Rust game, a hosted build, most page checks of
 `tools/qa` on the new default, and nothing of it has been seen on a GPU by a tool.
+
+**A GAME CAN START IN RUST, AND A BEHAVIOUR HAS A TEST OF TEN LINES (2026-11-07).** `rust/game_start` is the start in Rust: a level file's text and the
+character's files in, a `Game` the tick runs out, through the game's own constructor (`game_new`, which had never run), with nothing made by
+TypeScript. Its scene builder WRITES A LEVEL FILE (rooms, doors, lamps, men, a room clear's block), so a test's scene goes in by the level format
+and there is one start. `cargo test` in `rust/game_start` stands scenes and holds five behaviours in about half a minute; `rust/game_start/README.md`
+is the how-to. EVERY FILE UNDER `levels/` IS READ WHOLE, round things and box shapes included: the file's tree remembers which members were asked
+for (`src/json.rs`), so a record or a member the reader has no line for is found by the reading itself and the file is refused by name (a test
+holds all of `levels/` to it). The records the game keeps as its own types are read by those types, a line a type (`src/records.rs`). `tools/blitz/start.sh <level file>` or `--mission <id>` holds the Rust start to the TypeScript start, path by path
+(`known-start.txt` is what may differ, each line with its reason), and with `--frames N` steps both starts in Rust and compares every frame.
+`rust/game_start/LEVELS.md` is the mission list row by row (written by `bun run tools/blitz/start-levels.ts --write`), and the README's "What
+stands between this and the page starting a level in Rust" is the list of what a page start still needs: first an address's words as a type
+(`startFromQuery` stops in Rust: a mission is started here by `start_scenario`), then the puppet's objects.
+Checked: every row of the mission list (`LEVELS.md`: no path not known at the start, 300 frames in step with an idle hand, no path not known as
+they end; the office's four on a copy of its file with its scenarios written in), and the tests' scenes for 900 frames. Not checked: a mission
+started as the page starts it (from its address); a hand on the controls in those frames; two seats; a page starting a level this way (the page
+still starts in TypeScript); nothing of it on a GPU.
 
 **The rows and the maths are NOT SWITCHES any more** (the bullet "Not switches", near the end, 2026-11-05). Every `TPS_RUST`, `TPS_RUST<ROW>`, `TPS_EXACT`,
 `?rust`, `?rust<row>` and `?noexact` in the bullets below is how that step was measured on its day. None of them is a word now: in a tool's environment
@@ -2257,3 +2275,15 @@ one stops the tool by name, on an address one does nothing and says so in the co
   has built the crate on a Mac or on Windows.
 
 - **The weather** (`rust/sim/src/wind.rs`, `weather.rs`, `air.rs`, `snow.rs`; a part `weather` of a block, an always-home tenant; asked through `src/sim/weatherhome.ts`, `collision.ts ruleOpen`): what it is, what is gameplay and dressing file by file, and what holds it: `docs/agents/weather.md`, the bullet "The weather that play reads". The hour is not in it yet. A man's place, head and coat are a call's numbers until the men's columns land.
+
+- **The TypeScript tick is deleted** (`tools/blitz/DELETION.md`, written by `tools/blitz/delete-tick.ts`). The Rust game (`rust/game`) is the only game that
+  steps; there is no word for another (`?rust`, `TPS_GAME=ts` name nothing now), and an address that hosts or joins a co-op game or plays a tape back
+  shows a plain card until its own path onto the Rust game is here. What is left under `src/game`, `src/anim`, `src/math`, `src/sim`, `src/scene` is
+  what stands a game before it crosses into Rust, the readers over the puppet, and the workbench's and the menus' own code. A function there is one of
+  five things, and `tools/blitz/delete-plan.tsv` says which: kept; kept behind the call surface's guard (a line of its own source: a tool's call between
+  ticks crosses to the Rust rule, a start's runs the TypeScript); a crossing (its body is the call of the Rust rule: `crossToRust`, `src/game/crossing.ts`);
+  gone with a signature that throws by name (the Rust game has no row for it); or removed. NEW TYPESCRIPT THAT STEPS THE GAME IS A MISTAKE: a rule is
+  written in Rust. A check that named a function which went is a row of `tools/blitz/delete-lost.tsv`: fix it forward from there. Measured before and
+  after on the same tree: both type checks; the missions' tallies under the Rust game by whole record and digest series; every way to start a game
+  (`tools/blitz/starts.ts`, 1,480 rows); the page's flows in a headless browser WITH DRAWN FRAMES on the software adapter (`tools/blitz/delete-page.ts
+  --draw N`: no other headless tool draws, and what only a draw runs is run nowhere else). Not seen: anything on a GPU.
