@@ -688,7 +688,7 @@ export class Editor {
     const c = this.data, sc = scenarioWords(c.scenarios), n = (x: unknown) => Array.isArray(x) ? x.length : 0;
     const head = long ? `${c.boxes.length} boxes · ${c.props.length} props · ${c.lights.length} lights · ${c.switchables.length} switchables · ${c.doors.length} doors · ${c.routes.length} routes · ${c.volumes.length} volumes · ${Object.keys(c.materials).length} materials`
       : `${c.boxes.length} boxes · ${c.lights.length} lights · ${c.doors.length} doors · ${c.routes.length} routes`;
-    return `${head}${long ? '\n' : ' · '}${c.devices.length} devices · ${n(c.civilians)} civilians · ${n(c.vents)} vents · scenarios: ${sc || (c.name === 'office' || c.name.startsWith('office-') ? 'none in the file (the office\'s are levels/office.scenarios.ts)' : 'none')}`;
+    return `${head}${long ? '\n' : ' · '}${c.devices.length} devices · ${n(c.civilians)} civilians · ${n(c.vents)} vents · scenarios: ${sc || 'none'}`;
   }
   /** a structural self-check: serialize → parse → diff against the live document (0 = the file says exactly what the editor holds) */
   roundTripDiffs(): { n: number; first: string[] } { const out: string[] = []; const n = structuralDiff(canonicalLevelData(this.data), canonicalLevelData(parseLevelData(this.serialize())), out, 10); return { n, first: out }; }

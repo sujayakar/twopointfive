@@ -29,7 +29,6 @@ import { rowHour, rowWeather } from '../game/rowset';
 import { WEATHER_KINDS, WEATHER_PRESETS, weatherTitle, weatherWords, weatherOfSearch, weatherSearch, snowLevel, type WeatherKind } from '../game/weatherKinds';
 import { HOUR_IDS, HOURS, hourIdOf, hourHref, hourLive, hourLabel, hourClock, hourWords, type HourId } from '../game/hours';
 import { menuTheme } from './theme';
-import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals, type-only imports: the office's Team & kit block — planOf)
 import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled office — scene/level.ts imports the same module: its plan needs no server)
 import { artFrom, drawSheet, sheetView, type ArtData, type PlanArt } from './planArt';   // (the map sheet's picture: the place as a model)
 import { stillOf, drawStill } from './menuStills';   // (a card's picture: the mission's key art, where one was made)
@@ -490,7 +489,7 @@ function planOf(file: string): Promise<Plan | null> {
   if (!p) {
     p = (async () => {
       try {
-        if (file === OFFICE) return planFrom({ ...(officeData as unknown as PlanData), scenarios: { kitView: OFFICE_SCENARIOS.kitView as NonNullable<PlanData['scenarios']>['kitView'], rescue: { hostages: OFFICE_SCENARIOS.rescue?.hostages, side: { door: OFFICE_SCENARIOS.rescue?.side?.door } } } });   // (the bundled office's scenario data is code — levels/office.scenarios.ts: its Team & kit block is read from there, and of its rescue only what the kit step's brief counts (the hostages, the side door its staging unlocks): no start is passed, so the page's other lines for the office are as they were)
+        if (file === OFFICE) return planFrom(officeData as unknown as PlanData);   // (the bundled office: its file is in the build, block and all, so nothing is fetched)
         if (typeof fetch !== 'function') return null;
         const r = await fetch(`/levels/${file}`); if (!r.ok) return null;
         return planFrom(await r.json() as PlanData);
@@ -511,7 +510,7 @@ export function issuedKit(file: string): Promise<IssuedKit | null> { return plan
 export function placeNeeds(m: Mission): Promise<PlaceNeeds | null> { const kind = m.scenario ? m.scenario.kind : 'solo', rescue = kind === 'rescue';
   return planOf(m.scenario?.level ?? OFFICE).then(P => (P ? { locked: P.needs.locked - (rescue && P.sideLocked ? 1 : 0), steel: P.needs.steel - (rescue && P.sideSteel ? 1 : 0), hostages: rescue ? P.needs.hostages : 0, marked: (P.starts[kind] ?? []).length > 0 } : null)); }
 /** which of this level file's ways in have a Team & kit picture staged for them (none: the file has no scenarios.kitView block, or did not come) — the same fetch,
- *  once per file. No file = a mission on the BUNDLED office (its entry names no level): the office's own block, levels/office.scenarios.ts */
+ *  once per file. No file = a mission on the BUNDLED office (its entry names no level): the block of its own file, levels/office.json */
 export function kitViewWays(file?: string): Promise<boolean[]> { return planOf(file ?? OFFICE).then(P => P?.kv ?? []); }
 const PLAN_W = 40, PLAN_D = 28;   // the canvas's proportions: the levels' footprint today (a plan of another shape is fitted inside it)
 /** where the team starts, for the map sheet: the mission's kind and the way in picked (0 / 1 = the level's own, k = its k-th, −1 = dealt: every way, hollow) */

@@ -67,7 +67,9 @@ import { kitStage } from './kit';
 import { isOffice } from './dialogue';   // (called inside the crew's lines only: nothing of dialogue.ts is touched at load)
 import './cues';
 import type { RescueData, Rect, TeamStart } from '../scene/scenarios';
-import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
+import { sameTeamStart } from '../scene/scenarios';
+import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled level's own file: its scenarios block is where these knobs start from. JSON, so safe at the top of the game's import cycle)
+const OFFICE_RESCUE = (officeData as unknown as { scenarios: { rescue: RescueData } }).scenarios.rescue;
 import { SAMESTART } from './samestart';   // (a leaf)
 import { gunDeal } from './gunroles';   // (called inside the staging only)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -141,15 +143,15 @@ export const RESCUE = {
   squad: 2 as SquadSize,
   /** where the team is staged: the LEVEL's (scene/scenarios.ts RescueData.team — start() writes the team start of the level it stages on here; these are the
    *  office's until it has: the lobby arch at the corridor's west end) */
-  samAt: [...OFFICE_SCENARIOS.rescue.team.sam] as Vec3, samYaw: OFFICE_SCENARIOS.rescue.team.samYaw, opsAt: OFFICE_SCENARIOS.rescue.team.ops!.slice(0, 2).map(p => [...p]) as [Vec3, Vec3],
+  samAt: [...OFFICE_RESCUE.team.sam] as Vec3, samYaw: OFFICE_RESCUE.team.samYaw, opsAt: OFFICE_RESCUE.team.ops!.slice(0, 2).map(p => [...p]) as [Vec3, Vec3],
 };
 /** the team start RESCUE.samAt / samYaw / opsAt were last written from (start()) */
-let applied: TeamStart | null = OFFICE_SCENARIOS.rescue.team;   // (the knobs above ARE the office's: a knob moved by hand before the first start on the office stays moved)
+let applied: TeamStart | null = OFFICE_RESCUE.team;   // (the knobs above ARE the bundled office's: a knob moved by hand before the first start on the office stays moved)
 
-/** WHO STANDS WHERE is level data (scene/scenarios.ts RescueData — Level.scenarios.rescue; the office's: levels/office.scenarios.ts): the hostage room and its
+/** WHO STANDS WHERE is level data (scene/scenarios.ts RescueData — Level.scenarios.rescue): the hostage room and its
  *  doors, the marks of everybody the scenario stands on the floor, the team's start, the route's openings. Rescue.data is the one place it is read from. */
 /** THE OFFICE'S side-door marks, under the name its probes import them by (the game reads the level's own: Rescue.data.side) */
-export const SIDE_MARKS = { stack: OFFICE_SCENARIOS.rescue.side!.stack as Vec3[], standoff: OFFICE_SCENARIOS.rescue.side!.standoff as Vec3[] };
+export const SIDE_MARKS = { stack: OFFICE_RESCUE.side!.stack as Vec3[], standoff: OFFICE_RESCUE.side!.standoff as Vec3[] };
 const NUMBER = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const yawTo = v3.yawTo;
@@ -257,7 +259,7 @@ export class Rescue {
   start(): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Rescue.start', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (this.active) return null;
     const why = this.canStart(); if (why) return why;
-    { const T = this.data!.team; if (T !== applied) { applied = T; RESCUE.samAt = [...T.sam] as Vec3; RESCUE.samYaw = T.samYaw; RESCUE.opsAt = [[...T.ops![0]] as Vec3, [...T.ops![1]] as Vec3]; } }   // (once per team start: a knob moved by hand since stays moved)
+    { const T = this.data!.team; if (!sameTeamStart(T, applied)) { applied = T; RESCUE.samAt = [...T.sam] as Vec3; RESCUE.samYaw = T.samYaw; RESCUE.opsAt = [[...T.ops![0]] as Vec3, [...T.ops![1]] as Vec3]; } }   // (once per team start: a knob moved by hand since stays moved)
     this.bench();
     this.active = true; this.staged = 0; this.log.length = 0; this.failure = null;
     this.g.restartEncounter();   // (the benched shift is off the list and spawnCivilians stands nobody while this is up: the fresh floor is empty) → onEncounterRestart stages

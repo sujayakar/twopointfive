@@ -49,7 +49,6 @@ if (import.meta.main && process.argv.includes('--boot')) {
     const { startFromQuery, runningScenario, activeScenario, teamOf } = await import(`${ROOT}/src/game/scenarioRun.ts`);
     const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
     const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-    const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
     const { PAIRUP } = await import(`${ROOT}/src/game/pairup.ts`);
     const { SILENT, squadSilent } = await import(`${ROOT}/src/game/silent.ts`);
     const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
@@ -57,7 +56,7 @@ if (import.meta.main && process.argv.includes('--boot')) {
     // main.ts's order: the difficulty, the weather and the hour are read before the Game exists; the level the URL names; the Game; the scenario
     initDifficulty(q); initWeather(q); initHour(q);
     Math.random = seeded(0x51c4);
-    const level = levelFile ? (() => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', levelFile), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); })() : undefined;
+    const level = levelFile ? (() => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', levelFile), 'utf8')); return loadLevel(data); })() : undefined;
     const W = await standUp({ uploadEvery: 4, ...(level ? { level } : {}) });
     const g = W.game; g.godMode = true;
     SILENT.on = true;   // (the page's: the harness stands the game up with the silent rows off — src/host/standup.ts)

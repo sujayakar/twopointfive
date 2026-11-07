@@ -8,8 +8,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 const HR: any = await import(`${ROOT}/src/game/hours.ts`);
-const { loadLevel }: any = await import(`${ROOT}/src/scene/levelLoad.ts`), { parseLevelData }: any = await import(`${ROOT}/src/scene/levelData.ts`), { withOfficeScript, isOfficeFamily }: any = await import(`${ROOT}/src/scene/level.ts`);
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };   // (as bang-tally.ts stands a level file)
+const { loadLevel }: any = await import(`${ROOT}/src/scene/levelLoad.ts`), { parseLevelData }: any = await import(`${ROOT}/src/scene/levelData.ts`);
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };   // (as bang-tally.ts stands a level file)
 const arg = (k: string, d: string) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const STEP = +arg('--step', '0.004'), ALL = process.argv.includes('--all'), LEVEL = arg('--level', '');
 const log = console.log; console.log = () => {}; console.warn = () => {};

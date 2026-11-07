@@ -19,7 +19,6 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 const { REARWATCH, roomKept, rearWatchLog } = await import(`${ROOT}/src/game/rearwatch.ts`);
 const { stackRoomProbe } = await import(`${ROOT}/src/game/stackroom.ts`);
 const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
@@ -35,7 +34,7 @@ const MAX = args.includes('--max') ? Number(args[args.indexOf('--max') + 1]) : 6
 const NEED = 0.85, AIM = 0.5, STAY = 3, LEAVE = 20, NEAR = 6, WINDOW = 8;
 const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]), wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a)), pc = (a: number, b: number) => b ? `${Math.round(100 * a / b)} %` : '—';
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 const hush = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (VERBOSE) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const shut = (d: any) => { d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; d.quietT = 10; d.locked = false; d.place(); };
 
