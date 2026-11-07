@@ -48,12 +48,6 @@ fn clear_path(g: &mut Game, gd: GuardId) {
     g.gd[gd].path_goal = None;
     g.gd[gd].path_goal_orbit = false;
 }
-/// `gd.lastKnown = v3.copy(p)`: a new object, so a new fix (doze.ts:244 asks by fix_stamp)
-fn set_fix(g: &mut Game, gd: GuardId, p: V3) {
-    let man = &mut g.gd[gd];
-    man.last_known = Some(v3::copy(p));
-    man.fix_stamp = man.fix_stamp.wrapping_add(1);
-}
 /// `Box.flags` of a row. Skeleton 5 has no table of Box rows (`g.col.boxes` is `Vec<BoxId>`, ids.txt and properties.txt say otherwise)
 fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
 
@@ -295,7 +289,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                 let s = cover_spot(g, gd, bp, if role == Role::Finder { 1.5 } else { 2.1 });
                 spot = Some(s);
                 with_duty(g, gd, |d| d.spot = Some(s));
-                set_fix(g, gd, s);
+                crate::mind::fix(g, gd, Some(v3::copy(s)), "guards");
                 clear_path(g, gd);
                 g.gd[gd].stall_ref = None;
             }
@@ -336,7 +330,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                         with_duty(g, gd, |d| d.spot = s);
                         g.gd[gd].stall_ref = None;
                         g.gd[gd].search_t = 0.0;
-                        if let Some(s) = s { set_fix(g, gd, s); }
+                        if let Some(s) = s { crate::mind::fix(g, gd, Some(v3::copy(s)), "guards"); }
                     }
                 }
             }
@@ -359,7 +353,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                 g.gd[gd].stall_ref = None;
                 g.gd[gd].search_t = 0.0;
                 clear_path(g, gd);
-                if let Some(s) = s { set_fix(g, gd, s); }
+                if let Some(s) = s { crate::mind::fix(g, gd, Some(v3::copy(s)), "guards"); }
             }
         }
         Stage::Fan => {

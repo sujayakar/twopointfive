@@ -31,12 +31,6 @@ fn clear_path(g: &mut Game, gd: GuardId) {
     m.path_goal = None;
     m.path_goal_orbit = false;
 }
-/// `gd.lastKnown = at`: a whole write of the fix.
-fn set_fix(g: &mut Game, gd: GuardId, at: V3) {
-    let m = &mut g.gd[gd];
-    m.last_known = Some(at);
-    m.fix_stamp = m.fix_stamp.wrapping_add(1);
-}
 /// `gd.speed = damp(gd.speed, 0, rate, dt)`
 fn brake(g: &mut Game, gd: GuardId, rate: f64, dt: f64) {
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, rate, dt);
@@ -224,7 +218,7 @@ fn perceive(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                 crate::mind::set(g, gd, v3::clamp(was + rate * dt, 0.0, 1.0), "guards");
                 if !far_faint(g, gd, dist, was) {
                     let gain = g.gd[gd].awareness - was;
-                    if !crate::attention::attention_aside(g, gd, pp, gain) { set_fix(g, gd, pp); }
+                    if !crate::attention::attention_aside(g, gd, pp, gain) { crate::mind::fix(g, gd, Some(pp), "guards"); }
                 }
                 g.gd[gd].sight_pos = pp;
                 g.gd[gd].sight_t = now;
@@ -249,7 +243,7 @@ fn perceive(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                     if eye_blocked(g, gd, eye, head) {
                         let (sp, sv) = (g.gd[gd].sight_pos, g.gd[gd].sight_vel);
                         let led = lead_fix(g, sp, sv);
-                        set_fix(g, gd, led);
+                        crate::mind::fix(g, gd, Some(led), "guards");
                         g.gd[gd].led_at = Some(led);
                     }
                 }
@@ -263,7 +257,7 @@ fn perceive(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                 let eye = eye_of_char(g, c);
                 g.gd[gd].saw_body_t = now;
                 crate::mind::raise(g, gd, 0.7, "guards");
-                set_fix(g, gd, body);
+                crate::mind::fix(g, gd, Some(body), "guards");
                 g.gd[gd].react_t = 1.2;
                 let victim = g.gd[o].callsign.clone();
                 let breathing = crate::game::is_breathing(g, o);
@@ -351,7 +345,7 @@ fn perceive(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                 g.gd[gd].react_t = g.gd[l].react_t + 0.3;
                 g.gd[gd].search_t = 0.0;
                 let fix = if crate::scene_collision::nav_grid_walkable(g, lk, side) { side } else { lk };
-                set_fix(g, gd, fix);
+                crate::mind::fix(g, gd, Some(fix), "guards");
                 clear_path(g, gd);
             }
         }
@@ -385,7 +379,7 @@ fn perceive(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                 crate::mind::raise(g, gd, 0.45, "guards");
                 g.gd[gd].react_t = 1.1;
                 g.gd[gd].search_t = 0.0;
-                set_fix(g, gd, spot);
+                crate::mind::fix(g, gd, Some(spot), "guards");
                 clear_path(g, gd);
                 crate::game::game_say(g, gd, if off { "this door's off its hinges…" } else { "this lock's been kicked in…" }, None, None, None);
                 crate::audio_iface::game_audio_like_play(g, "radio", Some(eye), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
@@ -556,7 +550,7 @@ fn suspicious(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
         };
         if let Some(at) = task_at {
             let off = match g.gd[gd].last_known { Some(lk) => v3::dist(lk, at) > 0.5, None => true };
-            if off && g.gd[gd].awareness < 0.45 { set_fix(g, gd, at); }
+            if off && g.gd[gd].awareness < 0.45 { crate::mind::fix(g, gd, Some(at), "guards"); }
             crate::mind::raise(g, gd, 0.2, "guards");
             if !matches!(g.gd[gd].task, Some(GuardTask::CheckOn(_))) && g.gd[gd].search_t > 4.0 { g.gd[gd].task = None; }
         }
@@ -615,7 +609,7 @@ fn suspicious(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                             advance_check_on(g, gd);
                         } else {
                             let here = g.ch[c].pos;
-                            set_fix(g, gd, here);
+                            crate::mind::fix(g, gd, Some(here), "guards");
                             g.gd[gd].stall_ref = None;
                             clear_path(g, gd);
                         }
@@ -771,7 +765,7 @@ fn alert(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
                 crate::mind::set(g, gd, 0.3, "guards");
                 g.gd[gd].search_t = 0.0;
                 g.gd[gd].react_t = 0.0;
-                set_fix(g, gd, body);
+                crate::mind::fix(g, gd, Some(body), "guards");
             }
         } else {
             aim_at = crate::coverfire::cover_blind(g, gd, dt);
@@ -1011,7 +1005,7 @@ fn search(g: &mut Game, gd: GuardId, dt: f64, f: &mut Frame) {
         let over = search_t > SEARCH_MIN_SECS && (phase_end == Ph::Done || search_t > SEARCH_CAP_SECS);
         if over {
             let here = g.ch[c].pos;
-            set_fix(g, gd, here);
+            crate::mind::fix(g, gd, Some(here), "guards");
             crate::mind::set_state(g, gd, St::Suspicious, "guards");
             crate::mind::set(g, gd, 0.25, "guards");
             g.gd[gd].search_t = 0.0;

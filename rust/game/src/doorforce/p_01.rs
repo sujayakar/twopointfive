@@ -16,9 +16,7 @@ macro_rules! stand { ($g:expr, $gd:expr) => { $g.m.doorforce.states.as_mut().unw
 
 /// `gd.lastKnown = [x, 0, z]`: a whole write of his fix, which doze.ts:244 asks about by identity (Guard.fix_stamp).
 fn set_fix(g: &mut Game, gd: GuardId, at: V3) {
-    let o = &mut g.gd[gd];
-    o.last_known = Some([at[0], 0.0, at[2]]);
-    o.fix_stamp = o.fix_stamp.wrapping_add(1);
+    crate::mind::fix(g, gd, Some([at[0], 0.0, at[2]]), "doorforce");
 }
 
 /// `gd.path = []; gd.pathGoal = null`: a whole write of his path (Guard.path_serial) and no goal, so none the standoff laid.

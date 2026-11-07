@@ -168,8 +168,7 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
     crate::control::set_pinned(g, gd, false, "roomfight");
     crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "roomfight");
     crate::mind::raise(g, gd, 0.92, "roomfight");
-    g.gd[gd].last_known = Some(v3::copy(at));
-    g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); // a new object: a whole write of the fix (doze.ts:244)
+    crate::mind::fix(g, gd, Some(v3::copy(at)), "roomfight"); // a new object: a whole write of the fix (doze.ts:244)
     g.gd[gd].path = Vec::new();
     g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1); // a whole replacement of the path
     g.gd[gd].path_goal = None;
