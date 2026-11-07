@@ -34,14 +34,25 @@ fn is_test_mod(m: &syn::ItemMod) -> bool {
     m.attrs.iter().any(|a| a.path().is_ident("cfg") && a.meta.require_list().map(|l| l.tokens.to_string().contains("test")).unwrap_or(false))
 }
 
-/// The names the unit tests of a body file use.
+fn is_test_item(attrs: &[syn::Attribute]) -> bool {
+    attrs.iter().any(|a| a.path().is_ident("cfg") && a.meta.require_list().map(|l| l.tokens.to_string().contains("test")).unwrap_or(false))
+}
+
+/// The names the unit tests of a body file use: its `#[cfg(test)]` modules and any other item under that word.
 fn test_names(src: &str, out: &mut HashSet<String>) {
     let Ok(f) = syn::parse_file(src) else { return };
     for it in &f.items {
-        if let syn::Item::Mod(m) = it {
-            if is_test_mod(m) {
-                idents(&src[m.span().byte_range()], out);
-            }
+        let test = match it {
+            syn::Item::Mod(m) => is_test_mod(m),
+            syn::Item::Fn(x) => is_test_item(&x.attrs),
+            syn::Item::Const(x) => is_test_item(&x.attrs),
+            syn::Item::Static(x) => is_test_item(&x.attrs),
+            syn::Item::Impl(x) => is_test_item(&x.attrs),
+            syn::Item::Use(x) => is_test_item(&x.attrs),
+            _ => false,
+        };
+        if test {
+            idents(&src[it.span().byte_range()], out);
         }
     }
 }
@@ -51,28 +62,55 @@ fn is_body(p: &Path) -> bool {
     (n.starts_with("p_") || n.starts_with("b_")) && n.ends_with(".rs")
 }
 
-/// `pub` -> `pub(crate)` on every item of a body file whose name is not in `keep`.
+/// `pub` -> `pub(crate)` on every item of a body file whose name is not in `keep`, and on its own `pub use`s.
+/// An item whose name IS in `keep` stays as it is and is told to the compiler as used (`#[allow(dead_code)]`, which
+/// makes it and what it reaches live): a private function only a unit test names would else be called dead.
 fn privatise(src: &str, keep: &HashSet<String>) -> String {
     let Ok(f) = syn::parse_file(src) else { return src.to_string() };
-    let mut at: Vec<usize> = Vec::new();
-    fn vis_at(v: &syn::Visibility, name: &syn::Ident, keep: &HashSet<String>, at: &mut Vec<usize>) {
-        if let syn::Visibility::Public(p) = v {
-            if !keep.contains(&name.to_string()) {
-                at.push(p.span.byte_range().end);
-            }
+    // (where, what to put there)
+    let mut at: Vec<(usize, &'static str)> = Vec::new();
+    fn one(v: &syn::Visibility, name: &syn::Ident, head: usize, keep: &HashSet<String>, at: &mut Vec<(usize, &'static str)>) {
+        if keep.contains(&name.to_string()) {
+            at.push((head, "#[allow(dead_code)] "));
+        } else if let syn::Visibility::Public(p) = v {
+            at.push((p.span.byte_range().end, "(crate)"));
         }
     }
-    fn items(list: &[syn::Item], keep: &HashSet<String>, at: &mut Vec<usize>) {
+    /// where an item's own words begin, after its attributes and comments
+    fn head(v: &syn::Visibility, first: proc_macro2::Span) -> usize {
+        match v {
+            syn::Visibility::Inherited => first.byte_range().start,
+            other => other.span().byte_range().start,
+        }
+    }
+    fn items(list: &[syn::Item], keep: &HashSet<String>, at: &mut Vec<(usize, &'static str)>) {
         for it in list {
             match it {
-                syn::Item::Fn(x) => vis_at(&x.vis, &x.sig.ident, keep, at),
-                syn::Item::Const(x) => vis_at(&x.vis, &x.ident, keep, at),
-                syn::Item::Static(x) => vis_at(&x.vis, &x.ident, keep, at),
+                syn::Item::Fn(x) => {
+                    let first = x.sig.constness.map(|t| t.span).or(x.sig.asyncness.map(|t| t.span)).or(x.sig.unsafety.map(|t| t.span)).unwrap_or(x.sig.fn_token.span);
+                    one(&x.vis, &x.sig.ident, head(&x.vis, first), keep, at)
+                }
+                syn::Item::Const(x) => one(&x.vis, &x.ident, head(&x.vis, x.const_token.span), keep, at),
+                syn::Item::Static(x) => one(&x.vis, &x.ident, head(&x.vis, x.static_token.span), keep, at),
+                syn::Item::Use(x) => {
+                    if let syn::Visibility::Public(p) = &x.vis {
+                        at.push((p.span.byte_range().end, "(crate)"));
+                    }
+                }
                 syn::Item::Impl(x) => {
                     for ii in &x.items {
                         match ii {
-                            syn::ImplItem::Fn(m) => vis_at(&m.vis, &m.sig.ident, keep, at),
-                            syn::ImplItem::Const(m) => vis_at(&m.vis, &m.ident, keep, at),
+                            syn::ImplItem::Fn(m) => {
+                                let first = m.sig.constness.map(|t| t.span).or(m.sig.asyncness.map(|t| t.span)).or(m.sig.unsafety.map(|t| t.span)).unwrap_or(m.sig.fn_token.span);
+                                if x.trait_.is_none() {
+                                    one(&m.vis, &m.sig.ident, head(&m.vis, first), keep, at)
+                                }
+                            }
+                            syn::ImplItem::Const(m) => {
+                                if x.trait_.is_none() {
+                                    one(&m.vis, &m.ident, head(&m.vis, m.const_token.span), keep, at)
+                                }
+                            }
                             _ => {}
                         }
                     }
@@ -89,8 +127,8 @@ fn privatise(src: &str, keep: &HashSet<String>) -> String {
     items(&f.items, keep, &mut at);
     at.sort();
     let mut s = src.to_string();
-    for a in at.into_iter().rev() {
-        s.insert_str(a, "(crate)");
+    for (a, what) in at.into_iter().rev() {
+        s.insert_str(a, what);
     }
     s
 }
@@ -118,6 +156,7 @@ pub fn prep(root: &Path, scratch: &Path, tests: bool) -> Result<String, String> 
     let to = scratch.join("rust");
     let _ = std::fs::remove_dir_all(&to);
     copy_tree(&root.join("rust"), &to).map_err(|e| format!("cannot copy rust/ to {}: {e}", to.display()))?;
+    // names that make an item live from outside the crate's own non-test code
     let mut keep: HashSet<String> = HashSet::new();
     let mut users = Vec::new();
     crate::dead::rs_files(&root.join("rust/game_face"), &mut users);
@@ -223,7 +262,8 @@ fn item_lines(src: &str, r: std::ops::Range<usize>) -> std::ops::Range<usize> {
 pub fn apply(root: &Path, named: &Named, write: bool) -> Result<Applied, String> {
     let mut out = Applied { deleted: Vec::new(), listed: Vec::new(), lines: 0 };
     let game = root.join("rust/game");
-    let mut modrs: BTreeMap<PathBuf, BTreeSet<String>> = BTreeMap::new();
+    // mod.rs -> (name, the part it was in)
+    let mut modrs: BTreeMap<PathBuf, BTreeSet<(String, String)>> = BTreeMap::new();
     for (file, list) in &named.by_file {
         let path = game.join(file);
         if !is_body(&path) {
@@ -310,7 +350,8 @@ pub fn apply(root: &Path, named: &Named, write: bool) -> Result<Applied, String>
             out.deleted.push((format!("{module}::{name}"), kind.to_string(), n));
             let _ = free_fn;
             if kind != "method" && kind != "impl" {
-                modrs.entry(path.parent().unwrap().join("mod.rs")).or_default().insert(name);
+                let part = path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_string();
+                modrs.entry(path.parent().unwrap().join("mod.rs")).or_default().insert((name, part));
             }
         }
         if write {
@@ -322,7 +363,7 @@ pub fn apply(root: &Path, named: &Named, write: bool) -> Result<Applied, String>
         let Ok(mut t) = std::fs::read_to_string(&p) else { continue };
         let was = t.clone();
         for n in &names {
-            t = crate::dead::drop_use_name(&t, n);
+            t = crate::dead::drop_use_name(&t, &n.0, &n.1);
         }
         if write && t != was {
             let _ = std::fs::write(&p, t);
