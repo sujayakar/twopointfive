@@ -1,0 +1,18 @@
+[workspace]
+
+[package]
+name = "game"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+sim = { path = "../sim" }
+prim = { path = "../prim" }
+
+[profile.dev]
+opt-level = 0
+debug = false

@@ -643,6 +643,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
 /** Why this file cannot be loaded into this game (null = it can): version, level. */
 export function canLoad(g: Game, s: SaveState | null | undefined): string | null {
   if (!s || typeof s !== 'object') return 'not a checkpoint';
+  if (SNAPS.own) return 'a file of this page\u2019s own fields, and the game is stepped elsewhere (it keeps its own saves)';   // (never offered, never loaded, never imported there)
   if (s.v !== SAVE_VERSION) return `checkpoint version ${s.v} (this build reads ${SAVE_VERSION})`;
   const L = levelFingerprint(g);
   if (!s.level || s.level.fp !== L.fp) return `made on another level (${s.level?.boxes ?? '?'} boxes / ${s.level?.doors ?? '?'} doors; this one ${L.boxes} / ${L.doors})`;
@@ -891,6 +892,12 @@ interface SlotIndex { v: number; next: number; slots: Record<string, SlotInfo>; 
 export interface SaveResult { ok: boolean; why?: string; info?: SlotInfo; bytes?: number; state?: SaveState; }
 
 // ================================================================================================================================ the controller (Game.saves)
+/** WHOSE THE KEPT GAME IS. A save in memory is the whole game as rollback.ts takes it and puts it back, and those two calls are named here so that a host
+ *  whose game is stepped elsewhere (src/host/rustgame.ts: the Rust game, of which this Game is only what the page reads) keeps THAT game's own state under
+ *  the same slots, labels and rhythm. `own` up: every save is such a save in memory, a run alone included (no file of this module's is written or read: a
+ *  file would be of the fields this Game holds, which are not the game), and no base is taken, since such a take is never one since another. As shipped:
+ *  rollback.ts's two functions and `own` down, and nothing here differs. */
+export const SNAPS: { own: boolean; take: (g: Game, since?: Snapshot) => Snapshot; put: (s: Snapshot) => void } = { own: false, take: (g, since) => takeSnapshot(g, since), put: s => restoreSnapshot(s) };   // (named inside functions: nothing of rollback.ts is used as this module loads)
 let runSerial = 0;
 rollbackVar('savestate.runSerial', () => runSerial, v => { runSerial = v; });
 /** the room region a floor point is in, for the autosave's 'first time in a room' trigger and its label: on a quiet mission the LEVEL's own places (chronicle.ts
@@ -943,7 +950,7 @@ export class Checkpoints {
    *  without it nothing is taken since anything), autosave on (a machine with it off, or a host that never saves, pays for no take it may never use: a
    *  save by hand there is the whole take, as it was), and a save that would be kept in memory and could be made (canSnap: no show, no level program
    *  running, nobody down, the run live) */
-  private basedNow(g: Game): boolean { return SAVETIMELINE.base && SAVETIMELINE.since && SAVETIMELINE.on && this.enabled && squadUp(g) && !canSnap(g); }
+  private basedNow(g: Game): boolean { return !SNAPS.own && SAVETIMELINE.base && SAVETIMELINE.since && SAVETIMELINE.on && this.enabled && squadUp(g) && !canSnap(g); }
   /** THE RUN'S BASE (SAVETIMELINE.base): the game as its first tick left it, kept as the snapshot this run's saves in memory are taken since — the run's
    *  one whole take, made by the tick that begins the run (above) where the first save of play would otherwise make it. Taken under a save's own gate, so
    *  it meets nothing a save does not; a run that cannot be saved in its first tick (a team that comes up later, a program running) has no base and its
@@ -1026,7 +1033,7 @@ export class Checkpoints {
     let s: SaveState;
     this.runId ||= newRunId();   // (a save before the first tick still belongs to a run the cards and the Enter path can match)
     if (slot !== 'harness') g.journal.cut('a checkpoint was saved between frames');   // (off the panel, between two frames: on no tape, and the store is part of what an F10 recording replays on — journal.ts slotRead; inside an update, where every save of play is made, this does nothing)
-    if (SAVETIMELINE.on && slot !== 'harness' && squadUp(g)) return this.writeMem(g, slot, label);
+    if (slot !== 'harness' && (SNAPS.own || (SAVETIMELINE.on && squadUp(g)))) return this.writeMem(g, slot, label);
     try { s = saveState(g, { label, kind: slot, force, runId: this.runId }); }
     catch (e) { const why = (e as Error).message.replace(/^checkpoint refused: /, ''); this.stats.refused++; this.note(g, `refused ${slot}: ${why}`); return { ok: false, why }; }
     if (slot !== 'harness') { this.lastSaveT = g.time; this.quietT = 0; }   // (a harness snapshot leaves the run's autosave cadence alone)
@@ -1060,7 +1067,7 @@ export class Checkpoints {
     return idx;
   }
   /** every stored checkpoint, newest first */
-  slots(): SlotInfo[] { return Object.values(this.index().slots).concat(this.shelf.all().map(e => e.info)).sort((a, b) => b.savedAt - a.savedAt); }
+  slots(): SlotInfo[] { return (SNAPS.own ? [] : Object.values(this.index().slots)).concat(this.shelf.all().map(e => e.info)).sort((a, b) => b.savedAt - a.savedAt); }   // (SNAPS.own: the game is stepped elsewhere and keeps its own saves; a file of this page's fields in the store is another page's, and `canLoad` refuses it: not listed)
   /** SAVETIMELINE — THIS RUN's saves in the mission clock's order, oldest first: the strip the pause and down cards lay out (files and saves in memory alike) */
   timeline(): SlotInfo[] { return this.slots().filter(x => x.runId === this.runId).sort((a, b) => a.missionT - b.missionT || a.savedAt - b.savedAt); }
   /** which of the ring by hand the next save takes: the first that stands empty, else the oldest */
@@ -1099,12 +1106,21 @@ export class Checkpoints {
     const info: SlotInfo = { key, slot, n, label, kind: slot, savedAt: Date.now(), missionT: g.mission.stats.elapsed, stage: g.mission.stage, runId: this.runId, bytes: 0, mem: true };
     // (SAVETIMELINE.since: what has not changed since the last save in memory — or the one last put back — is shared with it, not copied again and not walked;
     //  rollback.ts walks the whole game again by itself when that snapshot's chain has grown stale)
-    const base = SAVETIMELINE.since ? this.shelf.last : null, snap = takeSnapshot(g, base ?? undefined); this.shelf.last = snap;
+    const base = SAVETIMELINE.since ? this.shelf.last : null, snap = SNAPS.take(g, base ?? undefined); this.shelf.last = snap;
     this.shelf.set(key, { info, snap, pic: null, take: g.journal.take });
     if (slot === 'auto') { this.stats.autosaves++; this.flash = { text: 'CHECKPOINT', t: g.time }; this.lastAuto = { key, t: g.time }; } else { this.stats.manual++; this.flash = { text: 'CHECKPOINT SAVED', t: g.time }; }
     this.note(g, `${slot} → ${key.replace(KEY_PREFIX, '')}: ${label || '—'} (in memory)`);
     this.picture?.(info); this.onSaved?.(null, info);
     return { ok: true, info, bytes: 0 };
+  }
+  /** A KEPT GAME MADE ELSEWHERE THAN `writeMem` (SNAPS.own: the host read one from a file) put in the ring of saves by hand, as this run's. Nothing of the
+   *  game is read but its clock's names; nothing is written. */
+  shelve(g: Game, snap: Snapshot, label: string, missionT: number, stage: string): SlotInfo {
+    this.runId ||= newRunId();
+    let n = 0, at = Infinity; for (let i = 0; i < SAVETIMELINE.manual; i++) { const e = this.shelf.get(KEY_MEM('manual', i)); if (!e) { n = i; break; } if (e.info.savedAt < at) { at = e.info.savedAt; n = i; } }
+    const key = KEY_MEM('manual', n), info: SlotInfo = { key, slot: 'manual', n, label, kind: 'manual', savedAt: Date.now(), missionT, stage, runId: this.runId, bytes: 0, mem: true };
+    this.shelf.set(key, { info, snap, pic: null, take: g.journal.take }); this.note(g, `shelved → ${key.replace(KEY_PREFIX, '')}: ${label || '—'} (in memory)`);
+    return info;
   }
   /** …and put back: every object of the game written as it stood (identities stand, the host is left as it is NOW — `onPutBack` is its turn). What the
    *  abandoned future knew and the save cannot is carried over as a file's load carries it: this run's counts of saves and loads, the controller's own books. */
@@ -1120,7 +1136,7 @@ export class Checkpoints {
     const C = g.chronicle.counts, loads = C.loads, saves = C.saves, stats = { ...this.stats }, log = this.log.slice();
     const host = { enabled: this.enabled, picture: this.picture, onPutBack: this.onPutBack, onSaved: this.onSaved }, tune = { ...g.tune }, flags = { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo };
     const st = this.store as { map?: Map<string, string> }, kept = st.map instanceof Map ? [...st.map] : null;   // (the harness's store is a Map the game reaches: the files written since are not the snapshot's to take back)
-    restoreSnapshot(e.snap); this.shelf.last = e.snap;
+    SNAPS.put(e.snap); this.shelf.last = e.snap;
     { const pl = g.player, S = pl.sel; if (S.ring?.free) { S.open = false; S.ring = null; S.downT = -1; S.moved = false; pl.nearSel = 0; } }   // (handring.ts: a ring that merely stood at the save is nothing of the saved moment — a file's load finds none either, and his first click after a load is his trigger, not a wedge)
     g.player.setup = null;   // (slotsetup.ts: a gun's setup that was up at the save is not up after the load — its digits are his slots again)
     g.orders.loaded();   // (a standing squad ring in the save is put away: orders.ts)
