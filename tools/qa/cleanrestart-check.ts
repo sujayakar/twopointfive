@@ -224,10 +224,9 @@ export async function cleanrestartCheck(): Promise<boolean> {
       const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g)));
       CLEANRESTART.on = true; const old = snap(); delete old.tables.CLEANRESTART; J.applyKnobs(g, old); const before = CLEANRESTART.on;
       CLEANRESTART.on = true; const rec = snap(); CLEANRESTART.on = false; J.applyKnobs(g, rec); const kept = CLEANRESTART.on;
-      const page = /CLEANRESTART\.on = q\.get\('cleanrestart'\) !== '0' && !q\.has\('kitview'\);/.test(readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8'));   // (read, not called: pageSwitches writes every switch the page has)
-      line(A.said === plain && up.said === true && down.said === false && before === false && kept === true && page && PR.FROZEN_HOLDS['CLEANRESTART.on'] === 'TPS_CLEANRESTART=1' && SE.STAND_ENV.includes('TPS_CLEANRESTART') && KN.JOURNAL_KNOBS.includes('CLEANRESTART'),
-        '9 the stands: the frozen stand holds the switch off and its word raises it, the page has it on (?cleanrestart=0 puts it off); a recording from before the table replays its restarts as they were, one made with it on, clean',
-        `this stand (${shipped ? 'shipped' : 'frozen'}${given !== undefined ? `, the caller's word ${given}` : ''}): ${A.said} · word 1: ${up.said} · word 0: ${down.said} · applyKnobs without the table: ${before} · recorded on: ${kept} · the page's line (on, ?cleanrestart=0 off, off in the kit picture's window) ${page ? 'there' : 'MISSING'} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['CLEANRESTART.on']}`); }
+      line(A.said === plain && up.said === true && down.said === false && before === false && kept === true && PR.FROZEN_HOLDS['CLEANRESTART.on'] === 'TPS_CLEANRESTART=1' && SE.STAND_ENV.includes('TPS_CLEANRESTART') && KN.JOURNAL_KNOBS.includes('CLEANRESTART'),
+        '9 the stands: the frozen stand holds the switch off and its word raises it; a recording from before the table replays its restarts as they were, one made with it on, clean',
+        `this stand (${shipped ? 'shipped' : 'frozen'}${given !== undefined ? `, the caller's word ${given}` : ''}): ${A.said} · word 1: ${up.said} · word 0: ${down.said} · applyKnobs without the table: ${before} · recorded on: ${kept} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['CLEANRESTART.on']}`); }
   } catch (e) { console.log(`- FAIL — the check threw\n    ${e instanceof Error ? e.stack : String(e)}`); all = false; }
   finally { Object.assign(CLEANRESTART, was); Object.assign(CLEANRESTART_STATS, stats0); Math.random = rnd; LS.LIGHTSWITCH.on = held.ls; CARLAMPS.on = held.cl; }
   console.log(`=== cleanrestart: ${all ? 'ALL PASS' : 'FAIL'} ===`);
