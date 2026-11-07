@@ -368,10 +368,9 @@ pub fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runne
     if g.m.squad.settle_watch.get(gd).map_or(false, |w| w.goal == goal) { g.m.squad.settle_watch.delete(gd); }
     let mut free = |g: &mut Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
     let path = crate::doors::doors_thread_path(g, p.as_deref().unwrap_or(&[]), pos, Some(&mut free));
-    let serial = g.serial();   // (a new array: readers ask by identity)
     let o = &mut g.gd[gd];
     o.path = path;
-    o.path_serial = serial;
+    o.path_serial = o.path_serial.wrapping_add(1);   // (a new array: readers ask by identity. The man's own count, as every other whole write of his path: a number of the game's counter here could come back to one a reader kept)
     o.path_i = 0;
     o.path_goal = Some(v3::copy(goal)); o.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
     o.repath_t = 0.0;
