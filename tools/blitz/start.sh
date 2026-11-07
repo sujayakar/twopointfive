@@ -1,8 +1,8 @@
 #!/bin/bash
 # THE START COMPARE (rust/game_start/README.md, "The compare"): one level file stood by the TypeScript start and by the Rust start, and the two states held
 # to each other path by path.
-#   tools/blitz/start.sh <level file> [--seed N] [--seats 2] [--scenario roomclear|nightbreach|rescue|quiet [--squad N] [--deal N]] [--cpu] [--frames N] [--out DIR] [--show N] [--no-ts] [--no-build]
-#   tools/blitz/start.sh --mission <id> [--seed N] [--seats 2] [--frames N] …      a row of the mission list: the file the page loads for it, and its kind, team size and deal
+#   tools/blitz/start.sh <level file> [--seed N] [--seats 2] [--scenario roomclear|nightbreach|rescue|quiet [--squad N] [--deal N] | --link '?words'] [--cpu] [--frames N] [--out DIR] [--show N] [--no-ts] [--no-build]
+#   tools/blitz/start.sh --mission <id> [--seed N] [--seats 2] [--frames N] …      a row of the mission list: the file the page loads for it, started from the link a click on the row loads
 # 1. the TypeScript start (start.ts): the level on the page's stand through the one stand-up, exported by the bridge (c1.bin, s0.bin);
 # 2. the Rust start (rust/game_start, bin `start`): the same file through `game_start::stand`, exported by the bridge's Rust writer (n1.bin, ns0.bin);
 # 3. the path diff (diff.ts) of the two, minus known.txt and known-start.txt (what a start may differ in, each with its reason);
@@ -18,40 +18,40 @@
 cd "$(dirname "$0")/../.." || exit 64
 unset BUN_OPTIONS
 L=; case "$1" in --mission) ;; ''|--*) sed -n '2,5p' "$0"; exit 64;; *) L=$1; shift;; esac
-SEED=20942; OUT=; SHOW=40; TS=1; BUILD=1; SCN=; SQUAD=; DEAL=; CPU=; FRAMES=; MISSION=; SEATS=
+SEED=20942; OUT=; SHOW=40; TS=1; BUILD=1; SCN=; SQUAD=; DEAL=; CPU=; FRAMES=; MISSION=; SEATS=; LINK=
 while [ $# -gt 0 ]; do case "$1" in
-  --mission|--seed|--seats|--scenario|--squad|--deal|--frames|--out|--show) [ $# -ge 2 ] || { echo "start.sh: $1 needs a value"; exit 64; };; esac
+  --mission|--link|--seed|--seats|--scenario|--squad|--deal|--frames|--out|--show) [ $# -ge 2 ] || { echo "start.sh: $1 needs a value"; exit 64; };; esac
   case "$1" in
-  --mission) MISSION=$2; shift 2;; --seats) SEATS=$2; shift 2;;
+  --mission) MISSION=$2; shift 2;; --link) LINK=$2; shift 2;; --seats) SEATS=$2; shift 2;;
   --seed) SEED=$2; shift 2;; --scenario) SCN=$2; shift 2;; --squad) SQUAD=$2; shift 2;; --deal) DEAL=$2; shift 2;; --cpu) CPU=1; shift;; --frames) FRAMES=$2; shift 2;; --out) OUT=$2; shift 2;; --show) SHOW=$2; shift 2;; --no-ts) TS=; shift;; --no-build) BUILD=; shift;;
   *) echo "start.sh: no option $1"; exit 64;; esac; done
 [ -n "$OUT" ] || OUT="${TMPDIR:-/tmp}/start-${MISSION:-$(basename "$L" .json)${SCN:+-$SCN}}${SEATS:+-seats$SEATS}"
 mkdir -p "$OUT" || exit 3
 OUT=$(cd "$OUT" && pwd) || exit 3   # (said whole: the build below runs from another folder)
-echo "start.sh: ${MISSION:+mission $MISSION}$L, die seed $SEED${SCN:+, scenario $SCN}${SEATS:+, $SEATS seats}; blobs in $OUT"
+echo "start.sh: ${MISSION:+mission $MISSION}$L, die seed $SEED${SCN:+, scenario $SCN}${LINK:+, from $LINK}${SEATS:+, $SEATS seats}; blobs in $OUT"
 if [ -n "$TS" ]; then
   rm -f "${OUT:?}"/*.bin "${OUT:?}"/*.tsv "${OUT:?}"/mission.txt
   if [ -n "$MISSION" ]; then ${CPU:+env TPS_CPUSENSE=1 TPS_MOONLIGHT=1} bun run --preload ./tools/blitz/expose.ts tools/blitz/start.ts --mission "$MISSION" --out "$OUT" --seed "$SEED" ${SEATS:+--seats $SEATS} 2>&1 | tail -4 | cut -c1-330
-  else ${CPU:+env TPS_CPUSENSE=1 TPS_MOONLIGHT=1} bun run --preload ./tools/blitz/expose.ts tools/blitz/start.ts "$L" --out "$OUT" --seed "$SEED" ${SEATS:+--seats $SEATS} ${SCN:+--scenario $SCN} ${SQUAD:+--squad $SQUAD} ${DEAL:+--deal $DEAL} 2>&1 | tail -4 | cut -c1-330; fi
+  else ${CPU:+env TPS_CPUSENSE=1 TPS_MOONLIGHT=1} bun run --preload ./tools/blitz/expose.ts tools/blitz/start.ts "$L" --out "$OUT" --seed "$SEED" ${SEATS:+--seats $SEATS} ${SCN:+--scenario $SCN} ${SQUAD:+--squad $SQUAD} ${DEAL:+--deal $DEAL} ${LINK:+--link "$LINK"} 2>&1 | tail -4 | cut -c1-330; fi
   [ -s "$OUT/c1.bin" ] || { echo "start.sh: the TypeScript start did not finish"; exit 3; }
 fi
-# (a mission's file, kind, team size and deal, as the TypeScript side read them off the list)
+# (a mission's file and the link a click on its row loads, as the TypeScript side read them off the list)
 if [ -n "$MISSION" ]; then
-  [ -s "$OUT/mission.txt" ] || { echo "start.sh: no $OUT/mission.txt (the TypeScript side names a mission's file and kind)"; exit 3; }
-  L=$(sed -n 1p "$OUT/mission.txt"); SCN=$(sed -n 2p "$OUT/mission.txt"); SQUAD=$(sed -n 3p "$OUT/mission.txt"); DEAL=$(sed -n 4p "$OUT/mission.txt")
+  [ -s "$OUT/mission.txt" ] || { echo "start.sh: no $OUT/mission.txt (the TypeScript side names a mission's file and link)"; exit 3; }
+  L=$(sed -n 1p "$OUT/mission.txt"); LINK=$(sed -n 2p "$OUT/mission.txt")
 fi
 MORE="${SCN:+--scenario $SCN} ${SQUAD:+--squad $SQUAD} ${DEAL:+--deal $DEAL}"
 if [ -n "$BUILD" ]; then
   ( cd rust/game_start && cargo build --bin start > "$OUT/build.log" 2>&1 ) || { grep -E '^error' -A 14 "$OUT/build.log" | cut -c1-300 | head -60; echo "start.sh: the Rust start does not build ($OUT/build.log)"; exit 3; }
 fi
 rm -f "${OUT:?}"/n1.bin "${OUT:?}"/ns0.bin "${OUT:?}"/end-*.bin
-rust/game_start/target/debug/start "$L" --out "$OUT" --seed "$SEED" ${SEATS:+--seats $SEATS} $MORE ${CPU:+--cpu} > "$OUT/rust.log" 2>&1 || { tail -30 "$OUT/rust.log" | cut -c1-330; echo "start.sh: the Rust start panicked ($OUT/rust.log)"; exit 2; }
+rust/game_start/target/debug/start "$L" --out "$OUT" --seed "$SEED" ${SEATS:+--seats $SEATS} $MORE ${LINK:+--link "$LINK"} ${CPU:+--cpu} > "$OUT/rust.log" 2>&1 || { tail -30 "$OUT/rust.log" | cut -c1-330; echo "start.sh: the Rust start panicked ($OUT/rust.log)"; exit 2; }
 tail -1 "$OUT/rust.log" | cut -c1-330
 bun run tools/blitz/diff.ts "$OUT/c1.bin" "$OUT/n1.bin" --blocks "$OUT/s0.bin" "$OUT/ns0.bin" --out "$OUT/diff.tsv" --canon-file tools/blitz/canon.txt --known tools/blitz/known.txt,tools/blitz/known-start.txt --live --show "$SHOW" 2>&1 | cut -c1-260 | head -$((SHOW + 3))
 R=${PIPESTATUS[0]}
 if [ -n "$FRAMES" ] && [ "$FRAMES" -gt 0 ]; then
   rm -f "${OUT:?}"/end-*.bin
-  rust/game_start/target/debug/start "$L" --out "$OUT" --seed "$SEED" ${SEATS:+--seats $SEATS} $MORE ${CPU:+--cpu} --frames "$FRAMES" --beside > "$OUT/beside.log" 2>&1; B=$?
+  rust/game_start/target/debug/start "$L" --out "$OUT" --seed "$SEED" ${SEATS:+--seats $SEATS} $MORE ${LINK:+--link "$LINK"} ${CPU:+--cpu} --frames "$FRAMES" --beside > "$OUT/beside.log" 2>&1; B=$?
   grep '^BESIDE' "$OUT/beside.log" | cut -c1-330
   [ "$B" = 0 ] || [ "$B" = 1 ] || { tail -20 "$OUT/beside.log" | cut -c1-330; echo "start.sh: a game panicked in the frames ($OUT/beside.log)"; exit 2; }
   printf 'as the frames end, the Rust start against the TypeScript start, both stepped in Rust: '

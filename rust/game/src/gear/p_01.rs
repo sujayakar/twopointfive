@@ -18,7 +18,7 @@ pub fn plain_short(def: &crate::weapons::WeaponDef) -> String {
 }
 
 /// The page's rule for the switch. `GEAR.on` is settled on, so `?oldgear` is not read and `q` is unused.   (gear.ts gearFromQuery)
-pub fn gear_from_query(g: &mut crate::game::Game, q: crate::Opaque) {
+pub fn gear_from_query(g: &mut crate::game::Game, q: &crate::query::Query) {
     g.k.gear.on = true;
 }
 

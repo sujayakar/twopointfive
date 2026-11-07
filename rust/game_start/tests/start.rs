@@ -36,6 +36,21 @@ fn a_level_stands_as_its_file_has_it() {
     assert!((p.time() - 10.0).abs() < 1e-6 && p.frames == 600);
 }
 
+/// A mission started from the words of its address, as the page starts one: the row of the mission list that owns the level lays its hour, the
+/// link's fog of war goes on, and the mission is staged. The same level with the mission alone started on it stays at the hour a game is made at.
+/// A FAILURE MEANS: the game no longer reads an address's words itself (`game::query`), or a start from them stopped laying what the row says
+/// before it stages the mission (rowset.ts, hours.ts, scenarioRun.ts startFromQuery).
+#[test]
+fn a_mission_starts_from_its_link_as_the_page_starts_it() {
+    use game::hours::HourId;
+    let made_at = { let mut p = Play::level("tut-queue.json", true, &Opts::default()); assert!(!p.g.fog_of_war.on, "no address asked for the fog"); game::hours::hour_of(&mut p.g) };
+    assert_ne!(made_at, HourId::Dusk, "a game is not made at dusk");
+    let mut p = Play::mission("tut-queue.json", "?levelFile=tut-queue.json&roomclear=1&squad4", &Opts::default());
+    assert_eq!(game::hours::hour_of(&mut p.g), HourId::Dusk, "the row of the list that owns this level says dusk");
+    assert!(p.g.fog_of_war.on, "a room clear's link stands in the fog of war");
+    assert_eq!(p.mates().len(), 4, "…and its mission is staged: {}", p.roll());
+}
+
 /// Three of the game's levels that between them hold every kind of record beyond a plain floor: they stand, and what the file says is on the floor.
 /// A FAILURE MEANS: the start stopped making something a level file says (a round thing from the kit's four slabs, a box's shape and its trim, a
 /// civilian, a camera, a laser, a keypad, the vents, the daylight), or stopped standing such a level at all. (That what it makes is what the
