@@ -676,7 +676,7 @@ function toStart(S: Held, said?: string): void {
   // puppet after the start stands, and sent to the Rust game by the write by path (`pokes`).
   const mine = watched(g).filter(w => w[0] === g && w[1][0] !== 'engine');
   stoodAgain(S, S.startKept);
-  if (G.saves) G.saves.missionRef = null;   // (the controller's word for 'a fresh run': a new name, an empty shelf, its triggers from nothing. savestate.ts:983)
+  G.saves?.startedAgain();   // (a fresh run: a new name, an empty shelf, its triggers from nothing)
   apply(S, true); sweep(S);   // (what the filtered export last sent was forgotten with the game that stood: the long list again, the HUD's lines as the start had them)
   for (const [, path, v] of mine) { let o: any = g; for (let i = 0; i < path.length - 1 && o; i++) o = o[path[i]]; if (o && !Object.is(o[path[path.length - 1]], v)) o[path[path.length - 1]] = v; }
   pokes(S);
