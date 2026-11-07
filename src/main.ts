@@ -75,6 +75,7 @@ import { SQUADTHROW, SQUADTHROW_STATS, squadThrowPlan, squadThrowPlans } from '.
 import { AUTOPILOT, AUTOPILOT_STATS, autoPick } from './game/autopilot';
 import { PLANLAY, PLANLAY_STATS, laySummary, laySend, layClear } from './game/planlay';
 import { thinIs, thinAirOf } from './game/thinline';
+import { floorAt } from './game/floor';
 import { PAIRUP, PAIRUP_STATS, pairUpApply, pairUpSummary } from './game/pairup';
 import { SILENT, squadSilent } from './game/silent';
 import { DESTRUCTION, RUBBLE, BLAST_PACE } from './game/destructionSwitch';
@@ -1256,7 +1257,7 @@ function sfxSwitches() { const q = new URLSearchParams(location.search); SFX_TAB
 function pageMuted(): boolean { return new URLSearchParams(location.search).has('mute') || (() => { try { return localStorage.getItem('twopointsix.testMute') === '1'; } catch { return false; } })(); }
 /** the audio engine, the test-rig mute, and the gesture that starts it */
 function pageAudio(game: Game) {
-  const audio = new AudioEngine(game.ask); game.audio = audio;   // (the box world as it stands, its door leaves with it)
+  const audio = new AudioEngine(game.ask); audio.floorAt = floorAt; game.audio = audio;   // (the box world as it stands, its door leaves with it)
   audio.scoreSet = setlistOfQuery(location.search);   // the level's own music (audio/setlist.ts): which pieces of the score this page's level plays, in their order (as the URL names it; the frame loop says it again from the running game at every new mission)
   sfxSwitches();   // every sound as it was before they were redone · every redone one, the ones he picked the old of too (audio.ts SFX_TABLE; the mixer only: no rule reads it)
   // test-rig mute: '?mute' or localStorage twopointsix.testMute=1 (set once in the automation browser's profile) keeps this page silent —

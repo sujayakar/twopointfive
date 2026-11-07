@@ -1,9 +1,9 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 1970668164;
+export const LAYOUT = 4183931019;
 /** each section's place: in the table the module answers with, and its bit in what a host asks for */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, count = 26 }
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, count = 30 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -69,30 +69,32 @@ export const enum Fog {
 export const enum View {
   /** u32: the tick this is of: sixtieths of a second on the game's clock */
   tick = 0,
+  /** u32: moves when the game is another than the one last drawn (a restart, a load, another seat): nothing is drawn or heard through it */
+  stood = 1,
   /** u32: the shown man's id */
-  man = 1,
+  man = 2,
   /** f32 × 3: where he stands, and where the view follows (him, a man spectated, the squad from the sky) */
-  at = 2,
+  at = 3,
   /** f32 × 3 */
-  follow = 5,
+  follow = 6,
   /** f32 × 3: where his aim meets the world */
-  aim = 8,
+  aim = 9,
   /** u32: the view is another man's: nothing leans on the cursor */
-  spectating = 11,
+  spectating = 12,
   /** f32 × 3: the view is held off the follow point by this much (a peek round a wall's end), and kicked for this frame's picture by that much */
-  peek = 12,
+  peek = 13,
   /** f32 × 3 */
-  kick = 15,
+  kick = 16,
   /** u32: the tick cut the view to here: once each time the count moves */
-  cuts = 18,
+  cuts = 19,
   /** f32 × 3 */
-  cut = 19,
+  cut = 20,
   /** f32: night vision's amount, and how hard he has just been hit */
-  night = 22,
+  night = 23,
   /** f32 */
-  hit = 23,
+  hit = 24,
   /** words a row */
-  row = 24,
+  row = 25,
 }
 
 /** the sky: one row */
@@ -541,6 +543,76 @@ export const enum Beam {
   row = 14,
 }
 
+/** a sound */
+export const enum Sound {
+  /** u32 */
+  tick = 0,
+  /** u32 */
+  serial = 1,
+  /** u32: its name's number (`face_draw_name`) */
+  name = 2,
+  /** u32: it has a place; 0 = it is in the ears */
+  placed = 3,
+  /** u32: the roll it follows, one more than the roll's voice (0: none) */
+  follows = 4,
+  /** f32 × 3 */
+  pos = 5,
+  /** f32: NaN: not said */
+  gain = 8,
+  /** f32 */
+  rate = 9,
+  /** f32 */
+  duration = 10,
+  /** f32 */
+  lowpass = 11,
+  /** f32 */
+  pan = 12,
+  /** f32 */
+  wet = 13,
+  /** words a row */
+  row = 14,
+}
+
+/** a footfall */
+export const enum Footfall {
+  /** u32 */
+  tick = 0,
+  /** u32 */
+  serial = 1,
+  /** u32 */
+  own = 2,
+  /** u32: what it landed on, one more than its number in FLOORS (0: not said) */
+  floor = 3,
+  /** f32 × 3 */
+  pos = 4,
+  /** f32 */
+  loud = 7,
+  /** words a row */
+  row = 8,
+}
+
+/** a thing that rolls, and how hard */
+export const enum Roll {
+  /** u32 */
+  voice = 0,
+  /** f32 × 2 */
+  at = 1,
+  /** f32 */
+  hard = 3,
+  /** words a row */
+  row = 4,
+}
+
+/** what is heard all the while: one row */
+export const enum Heard {
+  /** f32: the game's clock */
+  time = 0,
+  /** f32: the rain's level where the listener stands */
+  rain = 1,
+  /** words a row */
+  row = 2,
+}
+
 /** what a box may say it is made of, by its number in Rust */
 export const STUFFS = ['carpet', 'grass', 'rubber', 'metal', 'glass', 'wood', 'plastic', 'fabric', 'steel', 'enamel', 'tarmac', 'mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'sheet', 'cloth', 'paint', 'veneer', 'carpaint', 'stucco', 'skim', 'gloss block', 'board concrete', 'cast panel', 'paver', 'brushed', 'louvre', 'plain', 'waits'] as const;
 
@@ -552,3 +624,6 @@ export const EMIT_SHAPES = ['cone', 'burst', 'ring', 'puff', 'rainDisc'] as cons
 
 /** what smoke comes from, by its number in Rust */
 export const SMOKE_KINDS = ['flash', 'wisp', 'canister', 'burst', 'cloud', 'jet', 'trail', 'vent', 'puff', 'breath'] as const;
+
+/** what a floor is, by its number in Rust */
+export const FLOORS = ['carpet', 'lino', 'stone', 'tile', 'asphalt', 'grass'] as const;
