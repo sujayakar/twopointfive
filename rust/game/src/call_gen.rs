@@ -1089,5 +1089,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 1092 => { let a1: FirearmId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); crate::weapons::firearm_update(g, a1, a2);  }
 1093 => { let a1: FirearmId = Io::r(&mut i); let r = crate::weapons::rifle_cycle_attachment(g, a1); r.w(&mut o);  }
 1094 => { let a1: SeatId = Io::r(&mut i); let a2: Vec<crate::cmd::PlayerCmd> = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let mut a4: Option<Vec<V3>> = Io::r(&mut i); let r = crate::walkahead::walk_ahead(g, a1, &a2, a3, a4.as_mut()); r.w(&mut o); a4.w(&mut o); }
+1095 => { let a1: Option<bool> = Io::r(&mut i); let r = crate::doortools::door_tools_together(g, a1); r.w(&mut o);  }
 _ => panic!("bridge: no call of row {}", f),
 } assert!(i.p == args.len(), "bridge: {} bytes left over in the call of row {}", args.len() - i.p, f); o.b }
