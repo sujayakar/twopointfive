@@ -193,7 +193,6 @@ pub mod par { pub mod types; pub use types::*; }
 pub mod particle_fx { pub mod types; pub use types::*; }
 pub mod peeksight { pub mod types; pub use types::*; }
 pub mod picture { pub mod types; pub use types::*; }
-pub mod planlay { pub mod types; pub use types::*; }
 pub mod planmode { pub mod types; pub use types::*; }
 pub mod player { pub mod types; pub use types::*; }
 pub mod posehome { pub mod types; pub use types::*; }
