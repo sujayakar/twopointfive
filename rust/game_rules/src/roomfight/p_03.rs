@@ -118,17 +118,16 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd;
     let skill = skill_hostile(g);
     let at = match g.tab.roomfight_def[d].noise_at { Some(at) => at, None => return };
-    let own = crate::owner::own();
-    if crate::owner::has_him(g, gd, own.squad) { return; } // a squad's man goes to another squad's fight on his squad's word
-    if crate::owner::has_him(g, gd, own.press) || crate::pressure::press_keeps_home(g, d, None) { return; }
+    if crate::owner::has(g, gd, crate::owner::by::SQUAD) { return; } // a squad's man goes to another squad's fight on his squad's word
+    if crate::owner::has(g, gd, crate::owner::by::PRESS) || crate::pressure::press_keeps_home(g, d, None) { return; }
     if g.k.digin.on && crate::digin::dig_in_stays(g, gd) { return; }
     if crate::lanes::lane_bars(g, gd, Some(at)) || crate::lanes::lane_known_at(g, gd, Some(at)) {
         if g.tab.roomfight_def[d].rally_at != f64::INFINITY { g.tab.roomfight_def[d].rally_at = f64::NAN; }
         return;
     }
-    if crate::owner::has_him(g, gd, own.stand) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
-    if crate::owner::has_him(g, gd, own.last_man) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
-    if crate::owner::has_him(g, gd, own.buddy) || crate::buddy::buddy_paired(g, d) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
+    if crate::owner::has(g, gd, crate::owner::by::STAND) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
+    if crate::owner::has(g, gd, crate::owner::by::LAST_MAN) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
+    if crate::owner::has(g, gd, crate::owner::by::BUDDY) || crate::buddy::buddy_paired(g, d) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
     let noise_t = g.tab.roomfight_def[d].noise_t;
     let fresh = g.time - noise_t < 1.5 && g.time - g.gd[gd].last_seen_t > 3.0;
     if !fresh {
