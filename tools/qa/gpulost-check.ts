@@ -68,7 +68,7 @@ gpuStory.stage = '';
   check(PLAIN_AIR.on === true, 'plain air ships on');
   check(PLAIN_AIR.labels.every(l => plainAirNote(true, true, [l], false, p)), `a real loss with one program in hand, that one the volumetric pass's (${PLAIN_AIR.labels.join(', ')}), leaves the note`);
   check(!plainAirNote(true, true, ['restir'], false, p) && !plainAirNote(true, true, [], false, p), 'one program in hand that is not the pass\'s, or none, leaves no note: there is no plain way to draw those');
-  check(!plainAirNote(true, true, ['vol', 'restir'], false, p) && !plainAirNote(true, true, ['compositeSR', 'restir', 'reflect', 'vol', 'gatherTraceS', 'particlesUpdate'], false, p), 'the pass\'s program among others in hand leaves none: the burst does not say which');
+  check(!plainAirNote(true, true, ['vol', 'restir'], false, p) && !plainAirNote(true, true, ['compositeSR', 'restir', 'reflect', 'vol', 'gatherTrace', 'particlesUpdate'], false, p), 'the pass\'s program among others in hand leaves none: the burst does not say which');
   check(!plainAirNote(false, true, ['vol'], false, p), "the page's own end leaves none");
   check(!plainAirNote(true, false, ['vol'], false, p), 'a page that asked for no retry (a benchmark, a page a script drives) leaves none');
   check(!plainAirNote(true, true, ['vol'], true, p), 'a load in plain air already leaves none (its program of that label is the plain one)');

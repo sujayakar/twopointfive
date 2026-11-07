@@ -38,10 +38,6 @@ export interface RenderSettings {
   sharpDecouple: boolean;    // DECOUPLED JITTER (image-quality program C3j, sharp direct only): the OUTPUT raster — g-buffer, U, composite, GBAA, the 1 : 1 resolve — runs UNJITTERED (a rock-still picture for the
                              // analytic edge AA) while the INTERNAL raster the stochastic terms live on keeps a ±½ internal-px Halton jitter, so a hard shadow edge computed at internal resolution is still
                              // supersampled across frames and settles smooth in the resolve's history instead of a stair-step. Off = one jitter for both rasters (the sharp path as it was)
-  sharpEdgeRays: boolean;    // sharp direct EXPERIMENT (default off): where a hard shadow edge lies within ±2 internal px of an output pixel's taps (sharp_edge.wgsl's mask: the class's visibility ratio ranges by > sharpEdgeSpread
-                             // there while every SHADOWED pixel that holds a penumbra hint holds one under sharpEdgeHintPx), one deterministic shadow ray from the output pixel to the CENTRE of the class's strongest emitter decides that
-                             // light exactly (binary, at the output resolution; the jitter + TAA antialias it) and only the class's live remainder takes the upsampled ratio — a keyboard's contact shadow goes to 1.6 px. Off = the ratio everywhere
-  sharpEdgeSpread: number; sharpEdgeHintPx: number;
   sharpPlaneK: number;       // the ratio upsample's same-plane weight e^(−plane distance ∕ (view distance · k)): 0.01 = a tap a centimetre off this pixel's tangent plane per metre of distance still weighs 0.37
   // ---- DIRECT-QUALITY (lane v3/direct-quality, docs/internal/direct-quality.md): the sharp path's SLIVER rule, GBAA's same-surface clamp, the flash / jump ray budget ----
   sharpSliver: number;       // sharp direct: what an output pixel with NO internal tap on its own surface does (a sliver the internal raster never sampled — a door frame's reveal, a chair leg, a limb's edge):
@@ -75,10 +71,6 @@ export interface RenderSettings {
   // the temporal stage's 5×5 statistics and the pixel's own sample inside the history clamp's box (a thin unlit face no longer shows a hidden lamp as a bright line). Off = the client as it was.
   dnShadowIters: number; dnShadowCap: number; dnShadowClampK: number; dnShadowSigmaL: number; dnShadowPrior: boolean; dnShadowLitAlike: boolean; dnShadowOccl: boolean; dnShadowMoveCap: number; dnShadowMoveThresh: number; dnShadowJump: number;
   dnGiIters: number; dnGiCap: number; dnGiClampK: number; dnGiSigmaL: number; dnGiFast: number; dnGiFirefly: number;
-  // ---- GI IN MOTION (docs/internal/gi-motion.md; the v3 diffuse client only): giFullRes = the diffuse GI is upsampled (guided) to the INTERNAL resolution first and accumulated / clamped / à-trous
-  // filtered there (history at internal res: reprojection error one internal pixel instead of one gather texel, blotch size likewise), composite reading it 1 : 1 — false = the gather-grid chain
-  // exactly as it was; giFullIters = its à-trous iterations at internal res (strides gdiv·1, 2, 4, 8: the same ground reach as the gather-grid chain's)
-  giFullRes: boolean; giFullIters: number;
   // (D) two follow-ups on the diffuse client (both 0 = off, the client as it was): dnGiClampCut = a valid pixel whose long history the clamp had to DRAG (its bounce changed) has its length cut by how far,
   // relative to the box (the reflection chain's rule) — the next frames weigh the fresh estimate more and the young-history rays fire there; dnGiYoungWiden = the à-trous luminance edge-stop × (1 + it) on
   // texels whose history is young (steadier while one or two frames stand behind the estimate)
@@ -153,17 +145,13 @@ export interface RenderSettings {
   restirYoung: number;         // below restirRays 5 (no final ray) spatial reuse runs only where the pixel's own history is younger than this many candidates (disocclusions, resets),
                                // where its visibility bias is transient; at 5+ it runs everywhere with the final ray
   restirSpatialAll: boolean;   // A/B: spatial reuse everywhere even without the final ray (biased near shadow edges: a neighbour's visibility stands in for ours)
-  restirCoherent: boolean;     // the fresh candidate (light + emitter point) is drawn from a random stream shared by the 8×8 tile instead of per pixel: every pixel's draw is still ∝ its own weights, but the tile
                                // traces near-parallel rays (a SIMD group walks one sort of ray: −0.6 ms of 4 at high on the M4) at the price of one-frame noise correlated in 8×8 blocks (the history decorrelates it)
   restirPenCap: number;        // D5 (image-quality program): the temporal M cap INSIDE PENUMBRAE (pixels whose inherited reservoir carries a blocker hint) — shorter memory where the estimate is a coin
                                // flip's EMA turns its slow random walk into per-frame noise the ratio filter + TAA average; 0 = off (the tier's cap everywhere)
   restirPenRays: boolean;      // D1: a second fresh candidate + shadow ray in those penumbra pixels whatever the tier's ray count (+1 ray where it matters; an auditing tile's penumbra lanes skip their audit)
-  restirPermute: boolean;      // D4 (image-quality program): PERMUTATION SAMPLING of the temporal reservoir — each frame the reprojected texel is swapped within a 2×2-ish block by a per-frame XOR pattern (RTXDI's trick), so a
                                // pixel inherits a NEIGHBOUR's history: the reservoirs' slow random walk (temporally red noise the filters cannot average) becomes whiter frame to frame at the price of a
                                // little cross-pixel reuse bias inside penumbrae; the texel's own depth test still rejects across edges. Default off
-  restirRatioRaw: boolean;     // A/B: the temporal confidence cut by the RAW target ratio p̂ now ÷ then (the 08-11 rule: a fluorescent's 15 % ↔ 100 % strokes dropped every reservoir under it to 1–3 samples
                                // twice a flicker period) instead of the ratio with each side ÷ its light's power (intensity / hue changes keep the history; a swept cone or a moved lamp still lets go)
-  restirSampleHue: boolean;    // A/B: shade every traced sample in its OWN light's hue (the first cut — a red / blue per-pixel mosaic under two overlapping panels of different colours) instead of the
                                // class's believed-visible unshadowed mix at the pixel (restir.wgsl BELIEFS: per-tile lit / dark verdicts from the tile's own rays + the pixel's darkSlot)
   restirKnownDark: boolean;    // the lights an 8×8 tile's own rays found dark everywhere last frame leave its fresh draw (known dark like a reach-masked light: no ray, no coin-flip noise from a lamp
                                // behind the wall — the 'dark speckle' on the break-room lino); false = A/B the unbiased first-cut draw over every live light
@@ -181,7 +169,6 @@ export interface RenderSettings {
   restirMotionTaps: number;    // (4)'s tap count at such a pixel when above the tier's restirSpatial (0‥8; 0 = the tier's own k) — wider spatial reuse only where the history was cut
   restirMotionStatic: boolean; // run the twin program under a STILL camera too (object motion — a walking man's own pixels — then gets the levers; +0.2 ms direct at high for the bigger kernel); false = a still camera
                                // dispatches main's program, so at rest the pass is main's byte for byte and costs the same
-  restirMotionDither: boolean; // (1)'s pick: false = a per-pixel bilinear draw among the four texels (lineages diffuse; neighbours may adopt one parent and coalesce), true = ONE global sub-pixel offset a frame
                                // (an R2 sequence: a bijective shift whose average over frames is the true flow — nothing duplicated, the pattern registered to ± ½ px)
   // direct light's shadow denoise knobs (render/denoise.ts, the shadow client)
   directHistory: boolean;      // the shadow client's temporal reuse (off = history-free shadows, for inspection). A weight until 2026-11-07, when the estimator that blended by it went
@@ -190,11 +177,6 @@ export interface RenderSettings {
   flashlightRadius: number;    // emitter radius used for torches / the rail light (m): a real bezel is ~0.015-0.02; larger = softer torch shadows
   lightReach: boolean;         // direct pass + secondary vertices: per-light CPU reach masks over the level grid (FrameFlags.ReachMask; reach.ts) — a walled-off light never competes for a pixel's leader slots
   giFireflyK: number;          // final gather: each ray's radiance is bounded by giFireflyK × what the radiance cache says the shading point plausibly receives (÷π) — outlier rejection against the LOCAL light field instead of a global 24, so a torch hotspot on a wall cannot boil the bounce round it; 0 = off (the old absolute clamp only). A one-sided clamp, so the presets set it like a trade-off (ui/quality.ts: 4 on high‥verylow, 0 on ultra)
-  /** the final gather's rays drawn from tile-coherent STRATA instead of iid (fgather.wgsl cosineDirK — ported from exp/trace-perf E8, docs/internal/trace-perf.md §2.10; passes.gatherStrata picks the second
-   *  pipeline pair, compiled behind `const GATHER_STRATA = true`): UNBIASED stratified directions — the same expectation, temporal noise equal or lower, gather −13‥16 % at high (−0.8 ms at ultra) because
-   *  a tile's k-th rays share a quarter of direction space and walk the grid coherently. NOT hash-identical to off by nature (a different sample pattern), so it defaults off: the maintainer's call.
-   *  Off = the gather module exactly as it was. `?gatherStrata`, `__gs.on`, Tab ▸ Indirect light. */
-  gatherStrata: boolean;
   // ---- LOSSY trade-offs (all default off; each independently switchable at runtime for A/B — off is exactly the untouched path) ----
   gatherThird: boolean;        // final gather (rays, temporal, à-trous) at 1/3 resolution instead of 1/2; the composite's joint-bilateral upsample follows the divisor (frame.lossyCfg.x; targets are recreated on change)
   rcHalfRate: boolean;         // radiance-cascade cache at half rate: upper cascades on even frames, c0 + dice bake on odd ones (rc.halfRate); the dice everyone reads is at most a frame older
@@ -323,11 +305,10 @@ export const defaultSettings = (): RenderSettings => ({
   taau: true, taauAlpha: 0.1, taauClipGamma: 1.0, taauPhases: 8, taauSharpen: 0.25, taauReactive: 0.8, taauKernel: 6.0, taauVelK: 1.0, taauLightJump: 1.0, taauMotionAlpha: 0.4, taauMotionClip: 0, taauSharpenMotion: 0.3, taauHistSharp: 0,   // TAAU on by default (?notaau boots the old FXAA chain); the presets place phases / gamma / sharpen per tier (ui/quality.ts)
   sharpDirect: false,   // sharp direct OFF by default (the presets place it per tier — ui/quality.ts Preset.iq; ?sharp / ?nosharp force it from boot; Tab ▸ Frame; live only under TAAU below scale 1.0 with no debug view — engine.resize)
   sharpSliver: 1, sharpSliverCap: 24, sharpDiag: 0, gbaaClamp: true, heldRays: 6, restirHueSplit: true, portalHole: true, portalWorth: 0, heldAdaptive: false, restirStableRetrace: false, restirDimClass: 0,   // direct-quality lane: same-surface-only slivers with an output-res ray, GBAA's same-surface clamp, the hybrid estimator at high's K 6 (the presets tier it; 0 / false / 0 = each path as it was)
-  sharpDecouple: false, sharpEdgeRays: false, sharpEdgeSpread: 0.3, sharpEdgeHintPx: 2.5, sharpPlaneK: 0.01,   // edge rays OFF by default: they take a keyboard's contact shadow to 1.6 px (crisper than the old renderer's 7) but a binary ray cannot draw the soft penumbra a hard one overlaps, and the fired region's rim shows the estimator's own 1–2 % bias as a faint line — docs/internal/sharp-direct.md §2 (E); Tab ▸ Frame / __sharp.set({edgeRays:true}) to judge
+  sharpDecouple: false, sharpPlaneK: 0.01,
   // (the denoiser's iterations / caps below are 'high's until a preset places them)
   dnShadowIters: 3, dnShadowCap: 12, dnShadowClampK: 1.25, dnShadowSigmaL: 4, dnShadowPrior: true, dnShadowLitAlike: true, dnShadowOccl: true, dnShadowMoveCap: 3, dnShadowMoveThresh: 0.04, dnShadowJump: 0.5,
   dnGiIters: 4, dnGiCap: 24, dnGiClampK: 1.0, dnGiSigmaL: 4, dnGiFast: 3, dnGiFirefly: 0,   // (k 1.0 / fast 3: the sweep in docs/internal/p3-denoise.md §3 — 10 % of a lights-off in 16 frames vs legacy's 14, at half its torch-hotspot boil)
-  giFullRes: false, giFullIters: 4,   // GI in motion: both OFF by default until a preset places them (ui/quality.ts Preset.dn.giFull); Tab ▸ Indirect light rows
   dnGiClampCut: 0, dnGiYoungWiden: 0,                                                     // (D): off until measured (Tab ▸ Denoiser rows)
   ladderClimb: true, capClimb: false, ladderAim: 60, ladderPaced: true, ladderHeld: true, ladderShed: true, oneCacheGrid: true, oneSmokeSolve: true, fireSmokeShed: true, fireSmoke: true, smokeKeep: 1,   // the ladder spends measured headroom on scale + divisors by default (it only ever acts on presented frames with GPU timings that show the room); the output-cap climb is opt-in (Tab ▸ Frame)
   dnSpecIters: 1, dnSpecCap: 16, dnSpecClampK: 1.0, dnSpecSigmaL: 2, dnSpecRough: 0.08,
@@ -337,12 +318,11 @@ export const defaultSettings = (): RenderSettings => ({
   skyZenith: [0.015, 0.025, 0.05], skyHorizon: [0.04, 0.05, 0.08],
   capColor: [0.010, 0.012, 0.016, 0.3],
   nvAmount: 0, nvGain: 475, hitFlash: 0,   // nvGain = intensifier tube gain (log curve), not a linear multiplier
-  restirRays: 4, restirSpatial: 3, restirHistory: 20, restirRadius: 16, restirGradient: true, restirGradK: 5, restirYoung: 8, restirSpatialAll: false, restirCoherent: false, restirSampleHue: false, restirRatioRaw: false, restirKnownDark: true, restirAudit: 0.25, restirPermute: false, restirPenCap: 0, restirPenRays: false,   // ReSTIR DI on; the presets place rays / taps / cap per tier (quality.ts), these are 'high'
-  restirMotion: 6, restirMotionV: 1.1, restirMotionMin: 0.35, restirMotionPx: 0.5, restirMotionDither: false, restirMotionTaps: 6, restirMotionStatic: false,   // MOTION (direct-motion lane, docs/internal/direct-motion.md; these are HIGH's — floor .35 / 6 taps since the 08-12 SPRINT take: at three times the walking pan the .1 floor made the light's edge noisier than no cut at all, .35 + taps sits between; the walking pan keeps most of its win): 6 = the motion-scaled confidence (2) + wider spatial reuse under motion (4) — measured at high: the light's edge under a walking pan −43 % flow, the lit floor −27 %, the dark floor −7 % (−46 / −32 with 6 taps), a slow pan and the still picture unchanged, main's 1–3.7 % motion darkening gone; the stochastic reprojection (1) stays an A/B row (a NEGATIVE at slow pans: +12‥34 %); the presets tier Min / Taps; 0 (?norestirmotion) = the estimator's program byte for byte
+  restirRays: 4, restirSpatial: 3, restirHistory: 20, restirRadius: 16, restirGradient: true, restirGradK: 5, restirYoung: 8, restirSpatialAll: false, restirKnownDark: true, restirAudit: 0.25, restirPenCap: 0, restirPenRays: false,   // ReSTIR DI on; the presets place rays / taps / cap per tier (quality.ts), these are 'high'
+  restirMotion: 6, restirMotionV: 1.1, restirMotionMin: 0.35, restirMotionPx: 0.5, restirMotionTaps: 6, restirMotionStatic: false,   // MOTION (direct-motion lane, docs/internal/direct-motion.md; these are HIGH's — floor .35 / 6 taps since the 08-12 SPRINT take: at three times the walking pan the .1 floor made the light's edge noisier than no cut at all, .35 + taps sits between; the walking pan keeps most of its win): 6 = the motion-scaled confidence (2) + wider spatial reuse under motion (4) — measured at high: the light's edge under a walking pan −43 % flow, the lit floor −27 %, the dark floor −7 % (−46 / −32 with 6 taps), a slow pan and the still picture unchanged, main's 1–3.7 % motion darkening gone; the stochastic reprojection (1) stays an A/B row (a NEGATIVE at slow pans: +12‥34 %); the presets tier Min / Taps; 0 (?norestirmotion) = the estimator's program byte for byte
   directHistory: true, directBlurCap: 10, secMinE: 0.006, flashlightRadius: 0.07,
   lightReach: true,
   giFireflyK: 4,
-  gatherStrata: true,          // ON since 08-12 (the maintainer: 'gatherStrata is looking great!'): unbiased, −13‥16 % gather, a different sample pattern (not hash-identical to the iid gather — ?nogatherstrata / __gs.on = false for the module exactly as it was) / Tab ▸ Indirect light for A/B
   gatherThird: false, rcHalfRate: false, volQuarter: false,
   rcAmortize: true, rcPeriods: [1, 1, 1, 1],   // the schedule is on but traces every level whole until a preset (quality.ts) places periods — bit-identical to the original dispatch meanwhile
   rcChunks: [1, 1, 2, 8],                        // c2's items over 2 workgroups per probe, c3's over 8: the cascades 1.77 → 1.05 ms on the M4 Max with the same output bits (docs/internal/p0a-cascades.md §6); [1,1,1,1] = the original one-workgroup-per-probe dispatch
