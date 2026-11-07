@@ -284,7 +284,7 @@ export const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, 
 
 // ---------------------------------------------------------------- player
 /** the query tables the world is asked aside with (Game.aside): scratch of the host's, in no snapshot */
-class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
+export class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
 export class Player extends PlayerCols {
   char: Character;
   crouch = false; aimHeld = false; lastFireT = -10; fireCd = 0; backpedal = false; sprinting = false; /** Shift held in a crouch this frame (player.ts CROUCHRUN): the fast crouch walk — set where `sprinting` is, false wherever that is not reached */ dash = false;

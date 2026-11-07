@@ -75,6 +75,9 @@ import * as m71 from '../../src/sim/itemshome';
 import * as m72 from '../../src/sim/lightshome';
 import * as m73 from '../../src/sim/propshome';
 import * as m74 from '../../src/sim/slabshome';
+import * as m75 from '../../src/game/verdict';
+import * as m76 from '../../src/sim/dicehome';
+import * as m77 from '../../src/game/par';
 
 import { nameClasses } from './export';
 
@@ -179,6 +182,14 @@ export const classTable = (): Record<string, { prototype: object }> => { nameCla
   "aimweight::AimWeight": (m3 as any).AimWeight,
   "air_dust::AirDust": (m4 as any).AirDust,
   "anim_characters::CharacterRenderer": (m0 as any).CharacterRenderer,
+  "anim_skeleton::SkeletonInstance": (m1 as any).SkeletonInstance,
+  "character::Spring": (m8 as any).Spring,
+  "destruction::RateCap": (m16 as any).RateCap,
+  "wind::PoolList": (m61 as any).PoolList,
+  "game::AsideOwn": (m27 as any).AsideOwn,
+  "par::Par": (m77 as any).Par,
+  "verdict::Verdict": (m75 as any).Verdict,
+  "math_dice::DiceHome": (m76 as any).DiceInBlock,
   "anim_skeleton::Pose": (m1 as any).Pose,
   "anim_skeleton::PoseFK": (m1 as any).PoseFK,
   "anim_skeleton::PoseSet": (m1 as any).PoseSet,
