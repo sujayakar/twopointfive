@@ -598,7 +598,7 @@ pub fn guards_notice(g: &mut crate::game::Game, dt: f64) {
                 let mut i = 0;
                 while i < g.guards.len() {
                     let o = g.guards[i]; i += 1;
-                    if g.gd[o].state == GuardState::Dead || g.gd[o].team != Team::Guard || g.gd[o].held.is_some() || !g.guards.contains(&o) || g.gd[o].state == GuardState::Alert || g.time < g.gd[o].dazzled_until { continue; }
+                    if g.gd[o].state == GuardState::Dead || g.gd[o].team != Team::Guard || g.gd[o].held.is_some() || !g.guards.contains(&o) || g.gd[o].state == GuardState::Alert || crate::control::man::blind(g, o) { continue; }
                     if body_in_view_of(g, o, cv) { found_down(g, cv, o); break; }
                 }
             }

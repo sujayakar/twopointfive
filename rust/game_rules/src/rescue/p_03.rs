@@ -60,7 +60,7 @@ pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
     if g.rescue.t0.is_nan() || rescue_over(g) { return; }
     if let Some(a) = g.rescue.act.clone() {
         let by = a.by;
-        if g.gd[by].state == crate::game::GuardState::Dead || g.time < g.gd[by].dazzled_until || g.time < g.gd[by].stagger_until || g.gd[by].held.is_some() || g.gd[a.victim].state == crate::game::GuardState::Dead {
+        if g.gd[by].state == crate::game::GuardState::Dead || crate::control::man::blind(g, by) || crate::control::man::staggered(g, by) || g.gd[by].held.is_some() || g.gd[a.victim].state == crate::game::GuardState::Dead {
             rescue_end_act(g);
             rescue_note(g, "act:broken");
             return;
@@ -113,7 +113,7 @@ pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         g.rescue.resolve = m::min(g.rescue.resolve, m::max(0.0, 1.0 - g.k.rescue.second_hostage_secs / g.rescue.resolve_secs));
     }
     g.rescue.cap_by = Some(cap);
-    if g.time < g.gd[cap].dazzled_until || g.time < g.gd[cap].stagger_until { return; }
+    if crate::control::man::blind(g, cap) || crate::control::man::staggered(g, cap) { return; }
     g.rescue.resolve = m::min(1.0, g.rescue.resolve + dt / g.rescue.resolve_secs);
     let r = g.rescue.resolve;
     rescue_set_step(g, if r >= 0.8 { RescueStep::AboutTo } else if r >= 0.4 { RescueStep::Counting } else { RescueStep::Shouting });

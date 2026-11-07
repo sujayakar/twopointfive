@@ -390,7 +390,7 @@ fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
         g.tab.roomfight_op[o].feet_sm = Some(crate::aimcost::feet_hold(g, prev, speed, since));
         g.tab.roomfight_op[o].feet_t = Some(g.time);
     }
-    let blind = g.time < g.gd[gd].dazzled_until || g.time < g.gd[gd].stagger_until || g.gd[gd].held.is_some();
+    let blind = crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) || g.gd[gd].held.is_some();
     let since_hot = g.time - m::max(g.tab.roomfight_op[o].hot_t, g.fight.hot_t);
     let hot = since_hot < g.k.roomfight.team_hot || crate::spotted::spotted_keen(g, gd);
     // ---- his eyes: every living hostile through the game's sight test, at the game's rate

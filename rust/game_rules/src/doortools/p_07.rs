@@ -793,7 +793,7 @@ pub fn door_tools_other_doors(g: &mut crate::game::Game, op: DoorOpId, ended: Op
             for x in inside.iter().copied() {
                 let h = g.door_tools.held.get(x).copied();
                 let arrived = dop!(g, op).mine.get(x).copied().map_or(false, |a| asg!(g, a).arrived);
-                if (dop!(g, op).on_pod.has(x) || (ended && arrived)) && !door_tools_on_other(g, op, x) && !h.map_or(false, |h| h.out.unwrap_or(false) || h.door.is_some()) && g.time >= g.gd[x].dazzled_until { free.push(x); }
+                if (dop!(g, op).on_pod.has(x) || (ended && arrived)) && !door_tools_on_other(g, op, x) && !h.map_or(false, |h| h.out.unwrap_or(false) || h.door.is_some()) && !crate::control::man::blind(g, x) { free.push(x); }
             }
         }
         let mut still = 0usize;
