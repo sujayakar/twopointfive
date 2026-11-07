@@ -138,9 +138,7 @@ pub fn attention_step(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     end(g, gd, "step");
     if g.gd[gd].state == crate::game::GuardState::Suspicious {
         if !crate::belief::word_now(g, gd) {
-            let man = &mut g.gd[gd];
-            man.last_known = Some(v3::copy(at));
-            man.fix_stamp = man.fix_stamp.wrapping_add(1);
+            crate::mind::fix(g, gd, Some(v3::copy(at)), "attention");
         }
         let man = &mut g.gd[gd];
         man.path = Vec::new();

@@ -176,8 +176,7 @@ pub fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     }
     if g.gd[gd].state == crate::game::GuardState::Suspicious {
         let wary = g.k.doorthrow.wary;
-        g.gd[gd].last_known = Some(door);
-        g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
+        crate::mind::fix(g, gd, Some(door), "doorthrow");
         crate::mind::raise(g, gd, wary, "doorthrow");
     }
 }

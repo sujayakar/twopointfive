@@ -168,11 +168,6 @@ pub fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f6
     vis
 }
 
-/// `gd.lastKnown = at`, a whole write: the stamp says so (doze.ts asks by identity).
-fn fix_on(g: &mut Game, gd: GuardId, at: V3) {
-    g.gd[gd].last_known = Some(v3::copy(at));
-    g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
-}
 
 /// Perception's share: is a held colleague in his view this frame? If so he is in the standoff and all his eyes-on-Sam is refreshed off the pair. (guards.ts standoffPerceive)
 pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) -> bool {
@@ -211,7 +206,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
         let was = g.gd[gd].awareness;
         crate::mind::set(g, gd, v3::clamp(was + rate * dt, 0.0, 1.0), "guards");
         if !far_faint(g, gd, dist, was) {
-            fix_on(g, gd, pp);
+            crate::mind::fix(g, gd, Some(v3::copy(pp)), "guards");
         }
         if g.gd[gd].awareness < 0.8 {
             return rate > 0.25;
@@ -262,7 +257,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
     }
     crate::gunhold::gun_hold_see(g, gd, p);
     crate::mind::set(g, gd, 1.0, "guards");
-    fix_on(g, gd, pp);
+    crate::mind::fix(g, gd, Some(v3::copy(pp)), "guards");
     let me = &mut g.gd[gd];
     me.last_seen_t = now;
     me.sight_pos = v3::copy(pp);

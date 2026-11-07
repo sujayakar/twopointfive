@@ -145,12 +145,6 @@ pub fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen
     g.m.whistle.res_of.get_mut(key).unwrap()
 }
 
-/// `gd.lastKnown = v3.copy(at)`, a new object in the TypeScript: every whole write bumps `fix_stamp` (doze.ts:244's identity question).
-fn write_fix(g: &mut crate::game::Game, gd: GuardId, at: V3) {
-    let man = &mut g.gd[gd];
-    man.last_known = Some(v3::copy(at));
-    man.fix_stamp = man.fix_stamp.wrapping_add(1);
-}
 
 /// hearingCheck, for a whistle inside the horizon: what it does to THIS man. `small` = hearingCheck's note of a small noise.   (whistle.ts hearWhistle)
 pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent, keen: f64, small: &mut dyn FnMut(&mut crate::game::Game, V3)) {
@@ -168,7 +162,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     if state == GuardState::Alert || state == GuardState::Search || g.gd[gd].awareness >= 0.85 {
         // (a word on the radio this tick stands over what he hears: belief.ts wordNow)
         if !crate::belief::word_now(g, gd) && (state != GuardState::Alert || g.gd[gd].last_known.is_none() || g.time - g.gd[gd].last_seen_t > 1.0) {
-            write_fix(g, gd, h.at);
+            crate::mind::fix(g, gd, Some(v3::copy(h.at)), "whistle");
         }
         crate::mind::raise(g, gd, knob_aw, "whistle");
         let row = mem(g, gd);
@@ -196,7 +190,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     row.responses += 1.0;
     resolve(g, e, keen).answered_by = Some(gd);
     g.stats.whistle.answered += 1;
-    if !crate::belief::word_now(g, gd) { write_fix(g, gd, h.at); }
+    if !crate::belief::word_now(g, gd) { crate::mind::fix(g, gd, Some(v3::copy(h.at)), "whistle"); }
     {
         g.gd[gd].path = Vec::new();
         g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);

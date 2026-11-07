@@ -1111,8 +1111,7 @@ pub fn hand_back(g: &mut crate::game::Game, gd: GuardId, stagger: f64) {
     let seq = g.event_seq;
     {
         crate::mind::set(g, gd, 1.0, "player");
-        g.gd[gd].last_known = Some(v3::copy(pp));
-        g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
+        crate::mind::fix(g, gd, Some(v3::copy(pp)), "player");
         g.gd[gd].last_seen_t = time;
         g.gd[gd].sight_pos = v3::copy(pp);
         g.gd[gd].sight_vel = [0.0, 0.0, 0.0];
