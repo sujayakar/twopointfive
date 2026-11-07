@@ -358,8 +358,8 @@ pub fn loose(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) {
     let now = g.time;
     let de = dfm(g, d);
     de.mode = crate::roomfight::DefMode::Free; de.free_at = now; de.rally_at = m::NAN;
+    crate::control::set_hold(g, gd, false, "pressure"); crate::control::set_pinned(g, gd, false, "pressure");
     let man = &mut g.gd[gd];
-    man.hold = false; man.pinned = false;
     man.state = crate::game::GuardState::Alert;
     man.awareness = m::max(man.awareness, 0.92);
     if now - man.last_seen_t > 1.0 { crate::belief::word(g, gd, at); }
