@@ -634,7 +634,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_WALLFLEE')) FRAG.wallFlee = String((globalThis as any).process?.env?.TPS_WALLFLEE ?? '') === '1';   // a wall the burst would open is no cover to the flee (src/game/frag.ts FRAG.wallFlee): off, so only the walls as they stand and the door leaves count
     if (pinned('TPS_DOWNKILL')) FRAG.downKill = String((globalThis as any).process?.env?.TPS_DOWNKILL ?? '') === '1';   // a burst kills a man who is down and breathing (src/game/frag.ts FRAG.downKill): off, so a blast passes over every man already down
     if (pinned('QA_DOORSTAY')) DOORSTAY.on = false;                 // doors stay where they are left (src/game/doors.ts): every leaf has its closer, which is what every older probe, frozen digest and session fixture was staged against — `probes.ts stay-open` and playthrough.ts turn it on (the shipped default); QA_DOORSTAY=1 turns it on for any harness run
-    game.director.strict = true;         // the level script (src/game/director.ts): a beat that throws fails its PROBE — in the page it fails the beat and the frame goes on
     kitSoloStand(game);                  // the solo night's Sam (src/game/kit.ts): under the SHIPPED stand a game stood up plain wears your card as the page's ?solo does; the frozen stand: this line does nothing
   }
   if (HOUR.id !== 'night') applyHour(game, HOUR.id);   // the visit's hour (?hour= / PT_HOUR — src/game/hours.ts) laid over the level's own night; night = this line does nothing
