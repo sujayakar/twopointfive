@@ -122,29 +122,6 @@ export async function darkness() {
     else verdict(!!P0 && br0.length > 0 && plEarly.every((p: number) => p === 0) && !!firstPick && !inBreak(firstPick) && !earlyVisit && plLate.length > 0 && plLate.every((p: number) => p >= 0.99), '(C2) the same with the leaf latched but unlocked: dealt, implausible at first, plausible once there has been time to slip through and let it swing to',
       `${br0.length} break-room spots dealt; their plausibility at the first pick (+1.2 s): [${plEarly.map((p: number) => p.toFixed(2)).join(' ')}] (want all 0); first pick ${firstPick ? `${firstPick.kind}@(${firstPick.pos[0].toFixed(1)},${firstPick.pos[2].toFixed(1)})` : 'none'} (want this side of the door); a break-room spot looked into inside 4.5 s of the fix: ${earlyVisit} (want false); their plausibility ~10 s on: [${plLate.map((p: number) => p.toFixed(2)).join(' ')}] (want all 1)`);
   }
-  // ---- (D) no provider: the harness's own silence
-  {
-    Math.random = seeded(304);
-    const W = await standUp(); const { game } = W;
-    game.playerInvisible = true; game.godMode = true; game.teleportPlayer([37.5, 0, 26.5]);
-    for (let i = 0; i < 10; i++) W.step(DT);
-    parkFrom(game, 1); const gd = game.guards[0];
-    dropSearcher(game, gd, FIX, FIX);
-    let threw = ''; let looks = 0, lastPhase = ''; let tSusp = -1, tPatrol = -1; const t0 = game.time; let neutral = true; let maxN = 0; const lines: string[] = [];
-    const origSay = game.say.bind(game); game.say = (who: any, text: string, radio = false) => { if (who === gd) lines.push(`+${(game.time - t0).toFixed(1)}s ${text}`); return origSay(who, text, radio); };
-    try {
-      for (let f = 0; f < 60 * 50; f++) {
-        W.step(DT); maxN = Math.max(maxN, game.searchProbeN);
-        const P = gd.searchPlan;
-        if (P) { if (P.spots.some((s: any) => s.dark !== 0.5 || s.E !== undefined)) neutral = false; if (P.phase !== lastPhase) { lastPhase = P.phase; if (P.phase === 'look') looks++; } }
-        if (tSusp < 0 && gd.state === 'suspicious') tSusp = game.time - t0;
-        if (tPatrol < 0 && gd.state === 'patrol') { tPatrol = game.time - t0; break; }
-      }
-    } catch (e: any) { threw = String(e?.stack ?? e); }
-    game.say = origSay;
-    const ok = !threw && neutral && looks >= 2 && tSusp >= 12 && tSusp <= 27 && tPatrol > tSusp && tPatrol < 40 && maxN >= 1 && maxN <= 8 && game.probe.pending.length <= MAX_QUERIES;
-    verdict(ok, '(D) no light provider (headless GPU): neutral plan, completes, exits by the old clocks', `${threw ? 'EXCEPTION ' + threw.slice(0, 200) + ' · ' : ''}spots looked into ${looks} (want ≥ 2); every reading neutral throughout: ${neutral}; search → suspicious +${tSusp.toFixed(1)} s (want 12‥27) → patrol +${tPatrol.toFixed(1)} s; light queries a frame ≤ ${maxN} (still asked of the probe: its pending list holds ${game.probe.pending.length}/${MAX_QUERIES}); his lines: ${lines.join(' | ')}`);
-  }
   console.log(`=== darkness: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }

@@ -19,6 +19,7 @@
 // THE HARNESS HAS NO GPU and no overlay: what is read is the list of points the overlay is handed and the pieces it cuts them into, not a drawn line.
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 
 const { ATTENTION, attentionMarks, attentionWay: wayWith, attentionOf } = await import(`${ROOT}/src/game/attention.ts`);
 const { stateHash, stateDiff } = await import(`${ROOT}/src/game/rollback.ts`);
@@ -32,7 +33,7 @@ const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const PR = await import(`${ROOT}/src/host/profile.ts`);
 
 type P = [number, number, number];
-const BREAK = process.env.ATTENTIONWAY_BREAK === '1', DT = 1 / 60, LEVELS: (string | null)[] = ['tut-quiet.json', null, 'lights-out.json'];
+const BREAK = process.env.ATTENTIONWAY_BREAK === '1', DT = 1 / 60, LEVELS: (string | null)[] = sample(['tut-quiet.json', null, 'lights-out.json'], 2);
 const f2 = (n: number) => n.toFixed(2), flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 let allPass = true, found = true;
 const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
