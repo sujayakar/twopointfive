@@ -84,6 +84,15 @@ pub fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> {
     seats
 }
 
+/// the Game's own field of a seat's name was asked in a game of more than one seat (seats.ts miss)
+pub fn miss(g: &mut crate::game::Game, k: &str) {
+    if g.m.seats.seat_asks.strict {
+        panic!("seats: the Game's own '{}' was asked in a game of more than one seat (a player's code is handed his seat's view; the world asks men(g) / manOf / ordersOf)", k);
+    }
+    g.m.seats.seat_asks.misses += 1.0;
+    g.m.seats.seat_asks.missed.add(String::from(k));
+}
+
 // ---------------------------------------------------------------- the men
 
 /// the character id of seat `i`'s man (seats.ts seatManId)
@@ -234,6 +243,24 @@ pub fn nearest_man(g: &mut crate::game::Game, at: &[f64]) -> Option<PlayerId> {
         if d < bd { bd = d; best = Some(p); }
     }
     best
+}
+
+/// a later seat's man and his light, made as the Game's constructor ends (seats.ts standMen)
+pub fn stand_men(g: &mut crate::game::Game) {
+    for i in 0..g.seats.len() {
+        let s = g.seats[i];
+        let index = g.tab.cmd_seat[s].index;
+        if !js::truthy(index) { continue; }
+        let spawn = v3::copy(g.level.player_spawn);
+        let at = spot_beside(g, spawn, index);
+        let fn2000 = g.fn2000;
+        let (men, rig) = (g.men, g.rig);
+        let p = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
+        crate::seats::with_seat(g, s, &mut |g: &mut Game| g.player = p);
+        let (owner, intensity) = (man_char_id(g, p), g.tune.player_light);
+        let def = crate::rig_props::rail_light_def(g, owner, intensity);
+        g.pl[p].light = crate::render_lights::light_set_add(g, def);
+    }
 }
 
 /// where seat `i`'s man stands when the first stands on `at` (seats.ts spotBeside)

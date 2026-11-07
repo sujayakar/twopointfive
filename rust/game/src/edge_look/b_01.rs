@@ -605,3 +605,5 @@ pub fn edge_look_scorch(g: &mut crate::game::Game, b: &crate::edge_look::BreakLi
     }
 }
 
+/// The look's books, all empty (the TypeScript's field initialisers; its constructor keeps only `g`, here reached by path). (src/game/edgeLook.ts:99 EdgeLook.constructor)
+pub fn edge_look_new(g: &mut crate::game::Game) -> crate::edge_look::EdgeLook { EdgeLook::blank() }

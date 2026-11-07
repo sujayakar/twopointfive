@@ -9,6 +9,32 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- the hours' words
 
+/// The enum of one of HOUR_IDS' words.
+fn hour_word(s: &str) -> Option<HourId> {
+    match s {
+        "dawn" => Some(HourId::Dawn),
+        "midday" => Some(HourId::Midday),
+        "overcast" => Some(HourId::Overcast),
+        "dusk" => Some(HourId::Dusk),
+        "night" => Some(HourId::Night),
+        _ => None,
+    }
+}
+
+/// A word to an hour; empty or unknown = night. (hours.ts hourIdOf)
+pub fn hour_id_of(v: Option<&str>) -> crate::hours::HourId {
+    let s = match v { Some(v) => v.to_lowercase(), None => String::new() };
+    if hour_ids().contains(&s) { return hour_word(&s).unwrap_or(HourId::Night); }
+    match alias().get(s) { Some(a) => hour_word(a).unwrap_or(HourId::Night), None => HourId::Night }
+}
+
+/// The hour off a query handed to a running game; no `hour` key = nothing touched. (hours.ts hourFromQuery)
+pub fn hour_from_query(g: &mut crate::game::Game, q: &crate::query::Query) {
+    if !q.has("hour") { return; }
+    apply_hour(g, hour_id_of(q.get("hour")));
+    if let Some(s) = q.float("sun").filter(|s| s.is_finite()) { set_sun_strength(g, s, None); }
+}
+
 // ---------------------------------------------------------------- the hour on a Game
 
 /// The hour's row, for a body that has already seen it there and calls nothing that deletes it.
@@ -710,6 +736,14 @@ mod tests {
             assert_eq!(b3(r.d), d);
             for k in 0..6 { assert_eq!(r.c6[k].to_bits(), c[k]); }
         }
+    }
+    // the words checked against the TypeScript's own functions under bun
+    #[test]
+    fn hour_words_are_read_as_the_typescript_reads_them() {
+        assert_eq!(hour_id_of(Some("MidDay")), HourId::Midday);
+        assert_eq!(hour_id_of(Some("sunset")), HourId::Dusk);
+        assert_eq!(hour_id_of(Some("constructor")), HourId::Night);
+        assert_eq!(hour_id_of(None), HourId::Night);
     }
     fn lamp(g: &mut Game, kind: f64, dir: V3, intensity: f64) -> LightId {
         let l = g.tab.light.push(crate::render_lights::RtLight { kind, dir, color: [1.0, 1.0, 1.0], intensity, enabled: true, ttl: -1.0, ..crate::render_lights::RtLight::zeroed() });

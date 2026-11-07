@@ -78,6 +78,9 @@ pub fn over_plan(a: crate::furnblast::OverPlanA, q: crate::furnblast::OverPlanQ)
 /// what asks nothing of a stack: the empty `done` (furnblast.ts NONE_DONE.has)
 pub fn has(_j: f64) -> bool { false }
 
+// ---------------------------------------------------------------- class Furniture: g.destr.furn
+/// (furnblast.ts Furniture.constructor)
+pub fn furniture_new(g: &mut crate::game::Game) -> crate::furnblast::Furniture { Furniture::blank() }
 /// its own deterministic stream (furnblast.ts Furniture.hash)
 pub fn furniture_hash(g: &mut crate::game::Game) -> f64 {
     let c = g.destr.furn.counter; g.destr.furn.counter = c + 1.0;

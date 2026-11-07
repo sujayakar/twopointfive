@@ -113,6 +113,15 @@ fn fragment_of(f: &GlassBreakLetGoF) -> GlassFragment {
     }
 }
 
+/// The class's fields as made; its hooks are called by name, so what is hung here is which they are (glassbreak.ts GlassBreak.constructor)
+pub fn glass_break_new(g: &mut crate::game::Game) -> crate::glassbreak::GlassBreak {
+    crate::scene_collision::glass_rule(g, Some(crate::scene_collision::PaneRule::GlassBreak), Some(crate::scene_collision::PaneRows::GlassBreak));
+    g.engine.world.glass_open = Some(crate::scene_collision::PaneRule::GlassBreak);
+    g.col.glass_walkable = Some(crate::scene_collision::GlassWalkable::GlassBreak);
+    crate::destruction::destruction_on_blast(g, crate::destruction::BlastListener::Glass);
+    GlassBreak::blank()
+}
+
 // ---------------------------------------------------------------- the call
 /// a question or a rule of the module's, for a neighbour (glassbreak.ts GlassBreak.asking)
 pub fn glass_break_asking<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> T) -> T {

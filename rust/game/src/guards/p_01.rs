@@ -726,6 +726,9 @@ pub fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dis
     vis >= bar
 }
 
+/// The switch and its numbers as this machine kept them: no storage on this side of the host, so the shipped values stand, the TypeScript's own path with none. (guards.ts loadBodyLight)
+pub fn load_body_light(g: &mut crate::game::Game) {}
+
 /// Panel and QA: what each unfound body on the floor reads now. It eases the meters, as the TypeScript's does. (guards.ts bodyLightSummary)
 pub fn body_light_summary(g: &mut crate::game::Game) -> String {
     let mut parts: Vec<String> = Vec::new();

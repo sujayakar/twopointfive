@@ -24,6 +24,28 @@ pub fn prop_cols(cap: f64) -> crate::sim_propshome::PropCols {
     o
 }
 
+/// The columns of the game's furniture, over its block: every thing in its own row, asleep, to be placed. (propshome.ts PropStore.constructor, colstore.ts ColStore.constructor)
+pub fn prop_store_new(g: &mut crate::game::Game, st: crate::Opaque, total: f64) -> crate::sim_propshome::PropStore {
+    if total > PROP_CAP {
+        panic!("a level of {} loose things of furniture: the game holds {} (sim/propshome.ts PROP_CAP, rust/sim/src/props.rs CAP)", total, PROP_CAP);
+    }
+    let o = store_o(prop_cols(PROP_CAP));
+    let at = js::to_u32(crate::sim_state::sim_part(crate::sim_state::P_PROPS));
+    let p = &mut sim::state::state(g.sim).props;
+    p.n = js::to_u32(total);
+    p.total = js::to_u32(total);
+    let rows = total as usize;
+    for i in 0..rows {
+        p.id[i] = i as u32;
+        p.row[i] = i as u32;
+        p.flags[i] = sim::props::F_ASLEEP | sim::props::F_DIRTY;
+        p.noise_t[i] = -10.0;
+        p.push_t[i] = -10.0;
+        p.cs[i] = 1.0;
+    }
+    crate::sim_propshome::PropStore { epoch: -1.0, total, o, home: st, b8: (at >> 3) as f64, b4: (at >> 2) as f64, cap: PROP_CAP }
+}
+
 /// Rows in the level now. (propshome.ts PropStore.n)
 pub fn prop_store_n(g: &mut crate::game::Game) -> f64 {
     sim::state::state(g.sim).props.n as f64

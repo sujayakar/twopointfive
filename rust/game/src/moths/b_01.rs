@@ -11,8 +11,41 @@ use crate::m;
 use crate::v3::{self, quat, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// integer hash → [0, 1): the module's dice, every choice off its own serial (src/game/moths.ts:28 h01)
+pub fn h01(x: f64) -> f64 {
+    let mut x = m::imul(js::to_i32(x) ^ 0x2545F491, 0x9E3779B1u32 as i32) as u32;
+    x ^= x >> 15;
+    x = m::imul(x as i32, 0x85EBCA77u32 as i32) as u32;
+    x ^= x >> 13;
+    (x >> 8) as f64 / 16777216.0
+}
 /// (src/game/moths.ts:29 smooth)
 pub fn smooth(a: f64, b: f64, x: f64) -> f64 { let t = m::max(0.0, m::min(1.0, (x - a) / (b - a))); t * t * (3.0 - 2.0 * t) }
+
+/// The sodium lamps (exterior spot lights hung high, found once off the light targets) and the moth pool dealt round them. (src/game/moths.ts:37 Moths.constructor)
+pub fn moths_new(g: &mut crate::game::Game) -> crate::moths::Moths {
+    let k = moths(); let mut out = Moths::blank();
+    for t in g.targets.clone() {
+        let (kind, group, light) = { let f = &g.tab.sim_lightshome_fixture[t]; (f.kind, f.group.clone(), f.light) };
+        let Some(l) = light else { continue; };
+        let (lk, lp) = { let x = &g.tab.light[l]; (x.kind, x.pos) };
+        if kind == crate::sim_lightshome::FixtureKind::Analytic && lk == 1.0 && group == "exterior" && lp[1] > 3.5 { out.lamps.push(MothsLampsItem { target: t, light: l, head: [lp[0], lp[1] + 0.08, lp[2]], act: 0.0 }); }
+    }
+    let fl = crate::scene_boxes::box_flag();
+    let mut i = 0.0;
+    while i < k.max && !out.lamps.is_empty() {
+        let hs = |n: f64| h01(i * 7919.0 + n * 131.0);
+        // body along local +X (the heading), the span across local Z: rolling about the body flickers the span seen from above
+        let box_ = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c: [0.0, -50.0, 0.0], h: [0.006, 0.0025, k.wing], albedo: Some(k.albedo),
+            flags: Some((js::to_i32(fl.dynamic) | js::to_i32(fl.no_shadow)) as f64), rough: Some(0.8), mkey: Some(crate::scene_boxes::mkey().test + 16384.0 + i), ..Default::default() });
+        let az = hs(9.0) * m::PI * 2.0;
+        out.moths.push(Moth { lamp: js::rem(i, out.lamps.len() as f64), r: k.r_min + (k.r_max - k.r_min) * hs(1.0),
+            omega: (k.omega_min + (k.omega_max - k.omega_min) * hs(2.0)) * (if hs(3.0) < 0.5 { -1.0 } else { 1.0 }), ph: hs(4.0) * 6.283, bob_f: 0.7 + 1.6 * hs(5.0), bob_ph: hs(6.0) * 6.283,
+            wob: 0.3 + 0.7 * hs(7.0), dart_t: 4.0 + 6.0 * hs(8.0), dart_ph: hs(10.0) * 10.0, flap_ph: hs(11.0) * 6.283, away: [m::cos(az), -0.25 - 0.5 * hs(12.0), m::sin(az)], shown: 0.0, box_ });
+        i += 1.0;
+    }
+    out
+}
 
 /// The deal back as constructed (an encounter restart: a restarted encounter repeats). The host is told too, as before (the out event). (src/game/moths.ts:48 Moths.clear)
 pub fn moths_clear(g: &mut crate::game::Game) {

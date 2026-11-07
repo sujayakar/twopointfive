@@ -7,9 +7,37 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// The rung a word names, if it names one: the narrowing `isRung` gives the TypeScript. (quietfog.ts:64, 143)
+fn rung_of(v: Option<&str>) -> Option<QuietRung> {
+    [QuietRung::Off, QuietRung::Team, QuietRung::Cones, QuietRung::Own].into_iter().find(|r| Some(r.as_str()) == v)
+}
+
+/// The solo night's row is one the lever is live on. (quietfog.ts soloFogRow)
+pub fn solo_fog_row(g: &mut crate::game::Game) -> bool {
+    true
+}
+
+/// A link is the solo night's own, to be read as a quiet row's: `solo` on it, nothing else staged by it. (quietfog.ts soloFogLink)
+pub fn solo_fog_link(g: &mut crate::game::Game, q: &crate::query::Query) -> bool {
+    solo_fog_row(g) && q.has("solo") && !not_solo().iter().any(|k| q.has(k))
+}
+
 /// A quiet mission that hands out its cameras hands the player a wand as well. (quietfog.ts quietWand)
 pub fn quiet_wand(g: &mut crate::game::Game) -> bool {
     crate::stickycam::sticky_visit(g) > 0.0
+}
+
+/// Is this word one of the lever's rungs? (quietfog.ts isRung)
+pub fn is_rung(v: Option<&str>) -> bool {
+    quiet_rungs().iter().any(|r| Some(r.id.as_str()) == v)
+}
+
+/// The line beside the lever for a rung ('' = none). (quietfog.ts quietFogWords)
+pub fn quiet_fog_words(rung: Option<&str>) -> String {
+    match quiet_rungs().into_iter().find(|r| Some(r.id.as_str()) == rung) {
+        Some(r) => r.words,
+        None => String::new(),
+    }
 }
 
 /// Where a quiet mission starts with nothing kept and nothing on its link; the enum is always a rung. (quietfog.ts quietFogDefault)
@@ -55,6 +83,17 @@ pub fn set_quiet_cams(g: &mut crate::game::Game, on: bool, keep: Option<bool>) {
         let rung = if quiet_cams_default(g) { quiet_fog_default(g) } else { QuietRung::Team };
         set_quiet_fog(g, rung, keep);
     }
+}
+
+/// The cameras a quiet mission's query asks to be handed: none named is the default's, `cams=N` is N within what can be carried. (quietfog.ts quietCamsOfQuery)
+pub fn quiet_cams_of_query(g: &mut crate::game::Game, q: &crate::query::Query, lesson: Option<bool>) -> f64 {
+    if lesson.unwrap_or(false) || !(q.has("quiet") || solo_fog_link(g, q)) { return 0.0; }
+    if quiet_fog_of_query(g, q, lesson) == QuietRung::Off { return 0.0; }
+    if !q.has(PARAM_CAMS) {
+        return if quiet_cams_default(g) { g.k.sticky.issue } else { 0.0 };
+    }
+    let n = q.number(PARAM_CAMS).unwrap_or(0.0);   // (`Number(null)` is 0: the name is there, asked above)
+    if n.is_finite() { m::max(0.0, m::min(g.k.sticky.carry, m::floor(n))) } else { 0.0 }
 }
 
 /// Move the lever on a quiet row. On 'off', where the cameras are a button, the press goes too. The store's writes are the host's. (quietfog.ts setQuietFog)
@@ -104,6 +143,16 @@ pub fn quiet_fog_href(g: &mut crate::game::Game, href: &str, quiet: bool) -> Str
     if keys.is_empty() { String::from(path) } else { alloc::format!("{}?{}", path, keys.join("&")) }
 }
 
+/// The rung a query asks its quiet mission to be played under: none named is the default's; 'off' for what is not a quiet mission, or a lesson. (quietfog.ts quietFogOfQuery)
+pub fn quiet_fog_of_query(g: &mut crate::game::Game, q: &crate::query::Query, lesson: Option<bool>) -> crate::quietfog::QuietRung {
+    if lesson.unwrap_or(false) || !(q.has("quiet") || solo_fog_link(g, q)) { return QuietRung::Off; }
+    let v = q.get(PARAM).map(String::from);
+    match rung_of(v.as_deref()) {
+        Some(rung) => rung,
+        None => quiet_fog_default(g),
+    }
+}
+
 /// The rung's hand off the rows: each as it stood, unless moved by hand since, which stays and is the rung's no more. (quietfog.ts lift)
 pub fn lift(g: &mut crate::game::Game, h: &mut crate::quietfog::Held) {
     if let Some(cone) = h.cone {
@@ -119,6 +168,26 @@ pub fn lift(g: &mut crate::game::Game, h: &mut crate::quietfog::Held) {
         } else {
             h.own = None;
         }
+    }
+}
+
+/// The mission's start: the rung on the fog's two rows for the visit; 'off' lets go of an earlier start's. (quietfog.ts quietFogStart)
+pub fn quiet_fog_start(g: &mut crate::game::Game, q: &crate::query::Query, rung: crate::quietfog::QuietRung) {
+    quiet_fog_end(g);
+    if rung == QuietRung::Off { return; }
+    let serial = g.serial();
+    g.m.quietfog.held = Some(Held { cone: None, own: None, serial });
+    if !q.has("fogcone") {
+        let put = rung != QuietRung::Team;
+        let was = crate::difficulty::cone_visit_now(g);
+        if let Some(held) = g.m.quietfog.held.as_mut() { held.cone = Some(HeldCone { was, put }); }
+        crate::difficulty::set_cone_visit(g, Some(put));
+    }
+    if !q.has("fogown") {
+        let put = rung == QuietRung::Own;
+        let was = g.k.fog.own;
+        if let Some(held) = g.m.quietfog.held.as_mut() { held.own = Some(HeldOwn { was, put }); }
+        g.k.fog.own = put;
     }
 }
 
@@ -192,4 +261,13 @@ mod tests {
         assert!(h.own.is_none());
     }
 
+    #[test]
+    fn the_rungs_words() {
+        assert!(is_rung(Some("own")) && is_rung(Some("off")));
+        assert!(!is_rung(Some("0")) && !is_rung(None));
+        assert_eq!(rung_of(Some("cones")), Some(QuietRung::Cones));
+        assert_eq!(rung_of(Some("x")), None);
+        assert_eq!(quiet_fog_words(None), "");
+        assert!(quiet_fog_words(Some("team")).starts_with("you see all around"));
+    }
 }

@@ -19,6 +19,9 @@ fn knobs_here(g: &mut Game) {
     if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); }
 }
 
+/// `console.warn` as the weather stands up (after-snapshot.md: a line, no refusal). The skeleton has no console, so it says nothing yet (notes, Skeleton).
+fn seam_console_warn(_line: String) {}
+
 /// A box's row (Box.* in the TypeScript): the one seam left. Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows; where the table comes back this is the one line `&mut g.<table>[b]`.
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
@@ -77,6 +80,9 @@ pub fn weather_set_kind(g: &mut crate::game::Game, k: Option<crate::weather_kind
     g.weather.kind_now = k;
     wx(g).live = if k.is_some() { 1.0 } else { 0.0 };
 }
+
+/// The no-rain footprints in force. (weather.ts Weather.roofs)
+pub fn weather_roofs(g: &mut crate::game::Game) -> Vec<[f64; 4]> { g.weather.roof_rects.clone() }
 
 /// The footprints, into the table the rules read: its one writer. (weather.ts Weather.roofs)
 pub fn weather_set_roofs(g: &mut crate::game::Game, r: &[[f64; 4]]) {
@@ -170,6 +176,44 @@ pub fn weather_last_bark_t(g: &mut crate::game::Game) -> f64 { wx(g).last_bark_t
 /// (weather.ts Weather.lastBarkT)
 pub fn weather_set_last_bark_t(g: &mut crate::game::Game, v: f64) { wx(g).last_bark_t = v; }
 
+/// The weather a new game is born in. Runs on `g.weather` (every method's path) and returns what the caller stores there. (weather.ts Weather.constructor)
+pub fn weather_new(g: &mut crate::game::Game) -> crate::weather::Weather {
+    g.weather = Weather::blank();
+    // g.sim.keep(WX_BIT, 'weather'): the slot's block stands already, so only the bit and its one check are left (as p_sim_lightshome_01's LightHome)
+    let bit = crate::sim_weatherhome::WX_BIT as u32;
+    let head = &mut ::sim::state::state(g.sim).head;
+    if head.homes & bit != 0 { panic!("two stores of the weather over one game's block: a part of a block is one store's"); }
+    head.homes |= bit;
+    {
+        let ceiling_y = crate::scene_world::world().ceiling_y;
+        let mut items: Vec<crate::sim_weatherhome::RoofsCountedBoxesItem> = Vec::new();
+        for b in level_boxes(g) {
+            let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
+            items.push(crate::sim_weatherhome::RoofsCountedBoxesItem { c: c.to_vec(), h: h.to_vec() });
+        }
+        let (has, most) = (crate::sim_weatherhome::roofs_counted(&items, ceiling_y), ::sim::weather::ROOFS as f64);
+        if has > most { seam_console_warn(format!("the level has {} ceiling slabs and the weather's table holds {}: the biggest {} are its roofs, and rain and wind pass the rest", has, most, most)); }
+    }
+    let l = legacy();
+    weather_set_storm(g, l.storm);
+    weather_set_rain_rate(g, l.rain);
+    weather_set_thunder_until(g, -1e9);
+    weather_set_next_flash_at(g, -1.0);
+    weather_set_last_bark_t(g, -1e9);
+    weather_set_die(g, 20260809.0);
+    weather_set_roofs(g, &[interior(), annex()]);
+    let boot = g.m.weather_kinds.weather_boot;
+    let born = match weather_level_kind(g) {
+        Some(k) => Some(k),
+        None => if boot.kind == Some(crate::weather_kinds::WeatherKind::Snow) { None } else { boot.kind },
+    };
+    if born.is_none() && own_floor(g) { weather_own_night(g); }
+    let wet = if weather_rain_rate(g) > 0.0 { 1.0 } else { 0.0 };
+    weather_set_wet(g, wet);
+    if born.is_some() { set_kind_at(g, born, false); } else { sync_roofs(g, false, false); }
+    g.weather.clone()
+}
+
 /// A level built for snow is born in the kind 'snow' and stays in it; None = any other level. (weather.ts Weather.levelKind)
 pub fn weather_level_kind(g: &mut crate::game::Game) -> Option<crate::weather_kinds::WeatherKind> {
     let name = crate::scene_level_load::level_name_of(g);
@@ -186,6 +230,9 @@ pub fn weather_own_night(g: &mut crate::game::Game) {
     let roofs = weather_own_roofs(g);
     weather_set_roofs(g, &roofs);
 }
+
+/// The level's own storm is in force, cut by the level's own roofs (WX_OWN.roofs). (weather.ts Weather.ownStorm)
+pub fn weather_own_storm(g: &mut crate::game::Game) -> bool { g.weather.own }
 
 /// Do the office's two rectangles fit this level's roofs (asked once). (weather.ts Weather.officeFit)
 pub fn weather_office_fit(g: &mut crate::game::Game) -> bool {
@@ -225,6 +272,9 @@ fn sync_roofs(g: &mut Game, tell_wind: bool, built: bool) {
     let roofs: Option<Vec<[f64; 4]>> = if g.weather.kind_now.is_some() || own { Some(g.weather.roof_rects.clone()) } else { None };
     crate::wind::wind_reroof(g, roofs.as_deref(), Some(own));
 }
+
+/// `roofs` are the level's own and in force. (weather.ts Weather.levelRoofs)
+pub fn weather_level_roofs(g: &mut crate::game::Game) -> bool { g.weather.kind_now.is_some() || g.weather.own }
 
 /// The level's own ceiling slabs as the no-rain footprints (roofs 0 / 1 exact, 2 / 3 as the Frame packs them). (weather.ts Weather.ownRoofs)
 pub fn weather_own_roofs(g: &mut crate::game::Game) -> Vec<[f64; 4]> {

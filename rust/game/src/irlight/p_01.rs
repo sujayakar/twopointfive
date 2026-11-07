@@ -7,6 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// ?irpower and ?irnear read the address, which is the host's: with no page the TypeScript does nothing, and so does this. (irlight.ts irFlags)
+pub fn ir_flags(g: &mut crate::game::Game) {}
+
 /// The kit's row, made if there is none. The TypeScript's literal holds nothing but empty lists, which is what `zeroed` holds. (irlight.ts kitOf)
 pub fn kit_of(g: &mut crate::game::Game) -> &mut crate::irlight::Kit {
     g.m.irlight.kits.get_or_insert_with(Kit::zeroed)

@@ -7,6 +7,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// The pool of thrown things, over the game's block `st`.   (throwables.ts Throwables.constructor)
+pub fn throwables_new(g: &mut crate::game::Game, st: Option<crate::Opaque>) -> crate::throwables::Throwables {
+    let mut t = Throwables::blank();
+    t.store = crate::sim_itemshome::item_store_new(g, st.unwrap_or_default());
+    t
+}
+
 /// Closest hit among statics + door leaves and props.   (throwables.ts Throwables.ray)
 pub fn throwables_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::throwables::ThrowablesRay> {
     let st = crate::scene_collision::raycast(g, ro, rd, tmax);

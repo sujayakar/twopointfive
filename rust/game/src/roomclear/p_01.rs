@@ -453,6 +453,11 @@ pub fn room_clear_scenario_start_now(g: &mut crate::game::Game) -> Option<crate:
     s.team
 }
 
+/// the scenario, its layout named   (roomclear.ts RoomClearScenario.constructor)
+pub fn room_clear_scenario_new(g: &mut crate::game::Game) -> crate::roomclear::RoomClearScenario {
+    crate::roomclear::RoomClearScenario::blank()
+}
+
 /// the layout's budget getter: a structure with maxMen holds Sam, the four and its men   (roomclear.ts:268 layout.budget)
 pub fn room_clear_scenario_budget(g: &mut crate::game::Game) -> Option<f64> {
     let n = match room_clear_scenario_structure(g) {

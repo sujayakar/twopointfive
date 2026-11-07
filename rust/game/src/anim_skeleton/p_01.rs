@@ -440,6 +440,11 @@ pub fn pose_set_make(g: &mut crate::game::Game, id: PoseSetId, n: f64) -> crate:
     p
 }
 
+/// Singles a game's pool holds.   (skeleton.ts posePoolRoom)
+pub fn pose_pool_room() -> f64 {
+    ::sim::poses::POOL as f64
+}
+
 /// Singles of the pool this set fills when it has made every pose it can (none made yet: none, it has no rig to count by).   (skeleton.ts poseSetMost)
 pub fn pose_set_most(g: &mut crate::game::Game, s: PoseSetId) -> f64 {
     let set = &g.tab.pose_set[s];

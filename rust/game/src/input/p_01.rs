@@ -57,6 +57,11 @@ pub fn input_mmb_hit(g: &mut Game, id: InputId) -> bool {
     bit(g.tab.input[id].clicked, 2)
 }
 
+/// The drawn frame is over: every one-frame edge and travel goes.   (input.ts Input.endFrame)
+pub fn input_end_frame(g: &mut Game, id: InputId) {
+    end_frame(&mut g.tab.input[id])
+}
+
 /// Between two game ticks of one drawn frame: the first tick's edges go; what is held stays held, and the camera's travel stays.   (input.ts Input.endTick)
 pub fn input_end_tick(g: &mut Game, id: InputId) {
     end_tick(&mut g.tab.input[id])
@@ -65,6 +70,14 @@ pub fn input_end_tick(g: &mut Game, id: InputId) {
 /// `(word & mask) !== 0` on a JavaScript number
 fn bit(word: f64, mask: i32) -> bool {
     (js::to_i32(word) & mask) != 0
+}
+
+fn end_frame(i: &mut Input) {
+    i.pressed.clear();
+    i.clicked = 0.0;
+    i.wheel = 0.0;
+    i.wheel_ctrl = 0.0;
+    i.orbit_dx = 0.0;
 }
 
 fn end_tick(i: &mut Input) {
@@ -88,6 +101,30 @@ mod tests {
         assert!(bit(4294967297.0, 1)); // 2^32 + 1: ToInt32 wraps it to 1
         assert!(bit(-1.0, 4));
         assert!(bit(1.5, 1)); // truncates
+    }
+
+    #[test]
+    fn a_tick_keeps_the_frames_camera_travel_and_a_frame_does_not() {
+        let mut i = Input::blank();
+        let dirty = |i: &mut Input| {
+            i.keys.add(s("KeyW"));
+            i.pressed.add(s("KeyW"));
+            i.buttons = 1.0;
+            i.clicked = 1.0;
+            i.wheel = 3.0;
+            i.wheel_ctrl = 4.0;
+            i.orbit_dx = 5.0;
+        };
+        dirty(&mut i);
+        end_tick(&mut i);
+        assert!(i.pressed.is_empty() && i.clicked == 0.0 && i.wheel == 0.0);
+        assert!(i.wheel_ctrl == 4.0 && i.orbit_dx == 5.0);
+        assert!(i.keys.has(s("KeyW")) && i.buttons == 1.0);
+        dirty(&mut i);
+        end_frame(&mut i);
+        assert!(i.pressed.is_empty() && i.clicked == 0.0 && i.wheel == 0.0);
+        assert!(i.wheel_ctrl == 0.0 && i.orbit_dx == 0.0);
+        assert!(i.keys.has(s("KeyW")) && i.buttons == 1.0);
     }
 
     #[test]
