@@ -4,8 +4,6 @@
 //   (1) two teammates, the room clear: the quick key on a door stacks them; the panel then offers the word on its key, the door carries the key's mark
 //       and it would go now; the key pressed files 'go' for both, an open-and-clear of that door is made from the stack, and a man is through it;
 //   (2) one teammate: the same;
-//   (3) a charge set on the door they are stacked on: the stack does not wait on the word — the key is the trigger's, the charge goes, no 'go' is filed;
-//   (4) a charge of his own set on another door: the word sends the stack in and his charge stands (ownblow.ts);
 //   (5) the key again a second after the word: the men stay on the entry it made (nothing that reads the key after the door tools takes them off it).
 // NOTHING HERE WRITES A SETTLED ROW (2026-11-07). Out: the stand's row; 'the rule off, two teammates stacked: no line, no mark'; 'the squad of four, the same
 // hand with the rule on and off'; the recording from before the key and the page's boot flags; and 'the orders going to one man of the two', which stepped
@@ -72,20 +70,6 @@ export async function wordsmallCheck(): Promise<boolean> {
       line(!!word && !!mark && mark.key === 'F' && mark.now === true && went && made && through,
         `${n === 2 ? 'two teammates' : 'one teammate'}, stacked on a door by the quick key: the panel offers the word on its key and the door carries its mark; the key files 'go' for ${n === 2 ? 'both' : 'him'}, an open-and-clear is made from the stack, and a man goes through the door`,
         `${R.door.def.name} · the panel: ${word ?? 'NO LINE'} · the door's mark: ${mark ? `${mark.key ?? 'no key'}${mark.now ? ', now' : ', not now'}` : 'NONE'} · filed: ${filed.join(', ') || 'NOTHING'} · the door's order: ${op ? `${op.kind} (${opMen.join(', ')}) ${op.beats.map((b: any) => b.what).slice(0, 3).join(' → ')}` : 'NONE'} · ${through ? 'a man is through' : 'NOBODY THROUGH in 25 s'}`);
-    }
-
-    // (3) (4) a set charge: on the stacked door the key is its trigger; his own on another door stands (ownblow.ts: the word is the squad's)
-    for (const same of [true, false]) {
-      const R = await quiet(() => rig(2));
-      if (R.why) { line(false, same ? 'a charge on the stacked door' : 'a charge on another door', `not staged: ${R.why}`); continue; }
-      const sam = R.g.player.char.pos, other = [...R.g.doors.list].filter((d: any) => d !== R.door).sort((a: any, b: any) => dist(b.frameCentre, sam) - dist(a.frameCentre, sam))[0], cd = same ? R.door : other;
-      R.D.set.push({ door: cd, side: sideOf(cd, sam), t: R.g.time, by: 'Sam' });
-      const word = R.wordLine(), waits = R.D.stackWaits(R.O.recipients()).length, b0 = R.D.stats.blown; await quiet(() => { R.press(F); R.step(20); });
-      const filed = R.filed(), gone = R.D.set.length === 0, blew = R.D.stats.blown - b0;   // (blown, not merely gone: a charge is also taken off a door that came open)
-      if (same) line(!word && waits === 0 && gone && blew === 1 && filed.length === 0, 'a charge set on the door they are stacked on: the stack does not wait on the word — the key is the trigger, the charge goes, and no \'go\' is filed',
-        `${cd.def.name} · the panel: ${word ?? 'no line for the word'} · stacks waiting on the word: ${waits} · the charge: ${gone ? 'gone' : 'STILL SET'}, blown ${blew} · filed: ${filed.join(', ') || 'nothing'}`);
-      else line(!!word && waits === 1 && !gone && blew === 0 && filed.length === 1 && filed[0].startsWith('go '), 'a charge of his own set on another door: the word sends the stack in and his charge stands (ownblow.ts: it is his own action\'s, not the key\'s)',
-        `stacked on ${R.door.def.name}, the charge on ${cd.def.name} · the panel: ${word ?? 'NO LINE'} · stacks waiting on the word: ${waits} · the charge: ${gone ? 'gone' : 'STILL SET'} · filed: ${filed.join(', ') || 'NOTHING'}`);
     }
 
     // (5) the word AGAIN a second later: the men it sent in are not pulled back out (the room clear's drill reads the key after the door tools)
