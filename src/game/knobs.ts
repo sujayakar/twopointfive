@@ -567,7 +567,7 @@ export function knobRegistry(): Record<string, object> {
     BIGSLOT,
     // the squad's kit dealt over the men who come (kit.ts KITDEAL): with three or four teammates the issued and the named kits are shared out, nobody comes with empty pouches; the squad's count is the same
     KITDEAL,
-    // the cut-pieces switch (scene/cut.ts cutConfig: `on` read at boot, `swap` = two sets of ray programs). A recording carries it in its env (env.cutBoxes), not here
+    // the cut-pieces switch (scene/cut.ts cutConfig: `on` read at boot). A recording carries it in its env (env.cutBoxes), not here
     CUT: cutConfig,
   };
   const out: Record<string, object> = {}; for (const [k, T] of Object.entries(all)) if (T && typeof T === 'object') out[k] = T; return out;

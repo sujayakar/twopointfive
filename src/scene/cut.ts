@@ -31,10 +31,6 @@ export const BOX_CUT_BIT = 1 << 16;
 /** the switch (see the head of this file). Mutate only at boot (main.ts initCutSwitch) or in a headless probe. */
 export const cutConfig = {
   on: false,
-  /** UNREAD AND UNWRITTEN since 2026-11-07. It chose between one set of ray programs with the cut rule and two (a second set compiled after the boot and swapped in while a cut
-   *  piece was alive): there is one set now, with the rule, and render/cutSwap.ts is gone. The row stays only because the knob registry, the settled-switch list
-   *  (tools/qa/switches.json) and the Rust game's mirror of the knobs still name it: theirs to drop. */
-  swap: true,
 };
 export const cutBoxesOn = () => cutConfig.on;
 /** read the switch from the page's URL / localStorage (a no-op headless): ON in the page unless ?nocutboxes / ?cutboxes=0, or this machine kept '0'. Call before
