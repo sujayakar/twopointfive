@@ -25,7 +25,6 @@ import { plainShort } from './gear';
 import { civiliansShown } from './civilians';
 import { FOG, gazeOf } from './fogofwar';
 import { BoxFlag } from '../scene/boxes';
-import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const RECAP = {
   on: true,
@@ -205,7 +204,7 @@ function flush(g: Game, S: State, early: boolean): void {
 }
 
 /** Last in Game.step: this frame's rounds, who went down in it, a sample of the floor when one is due. */
-export function recapTick(g: Game): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('recapTick', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
+export function recapTick(g: Game): void {
   if (!live(g)) { const Z = states.get(g); if (Z) Z.primed = false; return; }   // (not watching: whoever goes down meanwhile is not a death seen — the next look starts from the floor as it is)
   const S = stateOf(g); const now = g.time; S.lastT = now;
   // rounds and blasts filed this frame (the game forgets an event after half a second)
