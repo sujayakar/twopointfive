@@ -237,7 +237,7 @@ fn take_row(g: &mut Game, id: &str, mode: crate::pairorders::JobMode, key: f64, 
         only: Some(OrderOnly::PairTake), can: Some(OrderCan::PairTake), valid: Some(OrderValid::PairTake),
         issue: OrderIssue::PairTake { mode }, tick: Some(OrderTick::PairTake), ..Default::default()
     };
-    g.tab.orders_order_def.push(def)
+    crate::orders::squad_orders_row(g, def)
 }
 
 /// mark, watch, now, dark: new rows each time they are seated   (PairOrders.rows)
@@ -245,14 +245,14 @@ pub fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
     use crate::orders::{OrderCan, OrderIssue, OrderLabel, OrderTick, OrderValid, OrderWhen};
     use crate::pairorders::JobMode;
     let mark = take_row(g, "pairMark", JobMode::Mark, 1.0, "take him · on your mark", ["moving up on him.", "on him. your mark."]);
-    let watch = g.tab.orders_order_def.push(crate::orders::OrderDef {
+    let watch = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
         id: String::from("pairWatch"), key: Some(2.0), label: OrderLabel::Text { text: String::from("watch him") }, targets: vec![crate::orders::TargetKind::Foe],
         ack: Some(vec![String::from("eyes on him."), String::from("i've got him.")]),
         can: Some(OrderCan::PairWatch), valid: Some(OrderValid::PairWatch), issue: OrderIssue::PairWatch, tick: Some(OrderTick::PairWatch),
         ..Default::default()
     });
     let now = take_row(g, "pairTake", JobMode::Now, 5.0, "take him now", ["on him.", "moving up on him."]);
-    let dark = g.tab.orders_order_def.push(crate::orders::OrderDef {
+    let dark = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
         id: String::from("pairDark"), key: Some(1.0), label: OrderLabel::Text { text: String::from("move there · hold in the dark") }, targets: vec![crate::orders::TargetKind::Floor],
         ack: Some(vec![String::from("moving."), String::from("on it.")]),
         stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from("move"), when: OrderWhen::PairDark }),
@@ -265,7 +265,7 @@ pub fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
 /// the mark's own row: 'go' under the word's header   (PairOrders.goRow)
 pub fn pair_orders_go_row(g: &mut Game) -> OrdersOrderDefId {
     use crate::orders::{OrderIssue, OrderLabel, OrderOnly, OrderValid};
-    g.tab.orders_order_def.push(crate::orders::OrderDef {
+    crate::orders::squad_orders_row(g, crate::orders::OrderDef {
         id: String::from("pairGo"), head: Some(String::from(crate::orders::WORD_HEAD)), hot_key: Some(String::from("KeyF")), free: Some(true),
         targets: vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::Door, crate::orders::TargetKind::None, crate::orders::TargetKind::Foe],
         label: OrderLabel::PairGo, only: Some(OrderOnly::PairGo), valid: Some(OrderValid::PairGo), issue: OrderIssue::PairGo,
