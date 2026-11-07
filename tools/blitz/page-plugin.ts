@@ -1,0 +1,58 @@
+// THE PAGE'S WAY TO THE STATE BRIDGE (tools/blitz: export.ts, import.ts, classes.ts, puppet-apply.ts, out-dispatch.ts, ask.ts, schema.json, puppet-lists.json), for the
+// one bundle that needs it: the game's page under `?rust=1` (src/host/rustgame.ts). The bridge's files are generated and stay where they are; nothing is copied
+// and nothing of them is edited on disk. This bundler plugin (bunfig.toml [serve.static] for the dev server, tools/build.ts for the static build)
+//   · resolves `tps-bridge/<name>` to tools/blitz/<name> (src/host/rustbridge.d.ts says what each holds, so the type check never walks into tools/);
+//   · loads export.ts and import.ts with the lines a browser cannot run swapped: the schema read from disk becomes an import of the same JSON, and the
+//     tool-only words on `process.env` become `false` (the importer's profile: a global a check may set);
+//   · gives the bridge its window on a module's own variables, as tools/blitz/expose.ts gives a tool: one line at the end of each source file of the
+//     simulation's folders, a getter (and for a `let`, a setter) for each top-level name the schema's walk asks for, on globalThis.__tpsTop[<file>]. Nothing
+//     reads them unless the Rust game is asked for.
+import type { BunPlugin } from 'bun';
+import { readFileSync } from 'node:fs';
+import { resolve, join } from 'node:path';
+
+const HERE = resolve(import.meta.dir), ROOT = resolve(HERE, '../..');
+const SCHEMA = JSON.parse(readFileSync(join(HERE, 'schema.json'), 'utf8'));
+export const FILES: Record<string, string> = { export: 'export.ts', import: 'import.ts', classes: 'classes.ts', 'puppet-apply': 'puppet-apply.ts', 'out-dispatch': 'out-dispatch.ts', ask: 'ask.ts', surface: 'surface.ts', poke: 'poke.ts', scan: 'scan.ts', 'schema.json': 'schema.json', 'puppet-lists.json': 'puppet-lists.json', 'switches.json': '../qa/switches.json' };   // (the last: the list of the switch rows and their kinds, tools/qa: the page holds the settled ones under the word)
+/** a swap that must find its line: a generated file that changed shape is said at build time, not found out in the page */
+function swap(text: string, file: string, from: string | RegExp, to: string): string {
+  const out = text.replace(from, to); if (out === text) throw new Error(`page-plugin: tools/blitz/${file} no longer holds ${String(from)}: the page's bridge needs that line swapped`);
+  return out;
+}
+const plugin: BunPlugin = {
+  name: 'tps-page-bridge',
+  setup(build) {
+    build.onResolve({ filter: /^tps-bridge\// }, a => { const f = FILES[a.path.slice('tps-bridge/'.length)]; if (!f) throw new Error(`page-plugin: no bridge file for ${a.path}`); return { path: join(HERE, f) }; });
+    build.onLoad({ filter: /[\\/]tools[\\/]blitz[\\/](export|import)\.ts$/ }, async ({ path }) => {
+      let text = await Bun.file(path).text();
+      if (path.endsWith('export.ts')) {
+        text = swap(text, 'export.ts', "import { readFileSync } from 'node:fs';", "import SCHEMA_JSON from './schema.json';");
+        text = swap(text, 'export.ts', 'const here = import.meta.dir;', '');
+        text = swap(text, 'export.ts', /export const SCHEMA: any = JSON\.parse\(readFileSync\([^\n]*?\)\);/, 'export const SCHEMA: any = SCHEMA_JSON;');
+      } else {
+        // (the importer's own profile, its count of slow reads a field and its ms a table, is a tool's word on the disk; in the page it is a global a check
+        //  sets before the page loads, `__pupProf`, and nothing otherwise)
+        text = swap(text, 'import.ts', /process\.env\.PUP_PROF/g, '(globalThis as any).__pupProf');
+        text = swap(text, 'import.ts', /process\.env\.PUP_DEBUG/g, 'false');
+      }
+      // (what is left of `process` in import.ts stands behind the words just made `false`: never run)
+      if (/readFileSync|import\.meta\.dir|process\.env/.test(text)) throw new Error(`page-plugin: ${path.slice(ROOT.length + 1)} still names the disk or the process's words after its swaps`);
+      return { contents: text, loader: 'ts' };
+    });
+    build.onLoad({ filter: /[\\/]src[\\/](game|anim|scene|sim|math|smoke)[\\/].*\.ts$/ }, async ({ path }) => {
+      let text = await Bun.file(path).text(); const rel = path.slice(path.lastIndexOf('/src/') + 1).split('\\').join('/'), names: string[] = SCHEMA.top[rel] ?? [];
+      // EVERY CLASS'S OWN NAME, kept beside the class: the bridge tells some classes by `constructor.name` (a firearm's kind, a variant's arm, a side
+      // table of the game's, a once-keyed table's key), and a minified bundle has renamed every class, so on the built page a rifle crossed as a plain
+      // firearm and a whole apply then made the page's rifle one (seen: the weapon card threw after a restart). One line a file that declares classes:
+      // a thunk on globalThis.__tpsClasses that answers [class, name] pairs; the Rust host gives each class its name back as it boots
+      // (src/host/rustgame.ts `rustBoot`), and nothing calls the thunks otherwise.
+      { const classes = [...text.matchAll(/^(?:export )?(?:abstract )?class ([A-Za-z_$][\w$]*)/gm)].map(m => m[1]);
+        if (classes.length) text += `\n;((globalThis as any).__tpsClasses ??= []).push(() => [${classes.map(c => `[${c}, ${JSON.stringify(c)}]`).join(', ')}]);\n`; }
+      if (!names.length) return { contents: text, loader: 'ts' };
+      const isLet = (n: string) => new RegExp(`^(?:export )?let [^\\n]*\\b${n}\\b\\s*(?:[:=,;])`, 'm').test(text);
+      const body = names.map(n => `get ${n}() { return ${n}; }` + (isLet(n) ? `, set ${n}(v) { ${n} = v; }` : '')).join(', ');
+      return { contents: `${text}\n;((globalThis as any).__tpsTop ??= {})[${JSON.stringify(rel)}] = { ${body} };\n`, loader: 'ts' };
+    });
+  },
+};
+export default plugin;

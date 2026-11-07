@@ -1,5 +1,5 @@
 // The `workthings` probes (src/game/workthings.ts: a teammate is sent to work the breaker, or the mission's thing) — `bun run tools/qa/probes.ts workthings`,
-// or one of work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-held / work-walk / work-defuse / work-off / work-harness. All headless on the real Game (nothing is drawn: the menu is read as the data
+// or one of work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-held / work-walk / work-defuse / work-harness. All headless on the real Game (nothing is drawn: the menu is read as the data
 // the panel is built from), every order given THROUGH THE INPUT as the page writes it — the harness cursor on the thing, then one-frame presses. WORK.on is
 // raised by the probe itself: the frozen stand holds it off (TPS_WORKTHINGS=1).
 //   work-breaker    the room clear's pair on the office: X with the cursor on the breaker panel lists the thing's own order on digit 1 where 'move there' is
@@ -21,7 +21,6 @@
 //                   and walks on the way that man is coming. Asserts the fault with WORK.offWalk off (the follower waits for the man's back ON the man's
 //                   walk and is walked into: the alarm) and the rule with it on (he goes on after Sam, low, nobody roused, the mains put back by the man
 //                   sent); WORKWALK_BREAK=1 leaves the rule off for the rule's own lines: must fail
-//   work-off        the switch off: the menu on the panel is the floor's (or nothing), the order cannot be given, no thing is listed
 //   work-harness    the frozen stand holds it off, the page turns it on unless ?noworkthings, the table is a registered knob table a recording carries
 import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
@@ -468,19 +467,6 @@ export const workDefuse = () => keep(async () => {
     const after = R.said.slice(n0);
     verdict(!R.why && !why && on && g.player.down && g.mission.stage === 'failed', 'staged: the partner\'s hands in the holder, then Sam down — the mission has failed', `refusal ${R.why} · order ${why} · hands in ${on} · down ${g.player.down} · stage ${g.mission.stage}`);
     verdict(!g.mission.pulled && !after.some((s: string) => /already (gone|out)|^\w[\w ]*: got /.test(s)) && WORK_STATS.done === done0 && WORK_STATS.moot === moot0 + 1 && !man(), 'he does not take it and does not say it is already gone; his job ended as moot', `pulled ${g.mission.pulled} · said after: ${after.join(' | ') || 'nothing'} · done +${WORK_STATS.done - done0} · moot +${WORK_STATS.moot - moot0} · at work ${man()?.callsign ?? 'nobody'}`); }
-});
-export const workOff = () => keep(async () => {
-  console.log('\n=== work-off: the switch off — the menu and the errand as they were ===');
-  const R = await rig(g => { g.fogOfWar.on = true; return g.roomClear.start(21); }, false);
-  const { g, O } = R; const bp = g.level.breaker.pos;
-  R.gather(); lookAtPanel(R); unlock(g); R.step(70);
-  R.aim = panel(g); R.step(2); R.press('KeyX');
-  const t = O.menu?.target;
-  verdict(!!O.menu && !t.thing && !R.rows().some((d: any) => d.id === 'work') && g.work.things().length === 0, 'X on the panel: no thing on the target, no such row, nothing listed', `target ${t?.kind}${t?.wall ? ' (wall)' : ''} · ${menuWords(R)}`);
-  if (O.menu) O.close();
-  const th = { kind: 'breaker', face: [bp[0], bp[1], bp[2]], n: [0, 0, -1], stand: [bp[0], 0, bp[2] - 0.6], name: 'the breaker' };
-  const why = O.give('work', { kind: 'floor', at: th.stand, thing: th });
-  verdict(typeof why === 'string' && !g.blackout.active && !O.squad().some((o: any) => g.work.working(o)), 'given by hand all the same, it is refused and nobody goes', `"${why}"`);
 });
 
 export const workHarness = () => keep(async () => {

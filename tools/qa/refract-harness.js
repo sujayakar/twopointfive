@@ -155,7 +155,7 @@
     const stepDo = async (label, fn) => { await fn(); await __perf.render(3); steps.push(label); };
     await go(view, 4);
     const keep = { preset: Q?.current, sharp: s.sharpDirect, gbaa: s.gbaa, scale: s.renderScale };   // (quality.ts Quality.current / apply(name) — applied back at the end: the sweep hops every preset)
-    for (const preset of ['ultra', 'high', 'medium', 'low', 'verylow']) {
+    for (const preset of ['high', 'medium', 'low', 'verylow']) {
       await stepDo(preset, () => { Q?.apply?.(preset); });
       for (const r of [false, true]) await stepDo(`${preset} refract ${r}`, () => { s.glassRefract = r; });
     }

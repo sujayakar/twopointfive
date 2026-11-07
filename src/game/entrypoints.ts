@@ -24,13 +24,14 @@
 // rescue flow's authored cover marks; an uncleared opening no point was moved off gets no gun from this (room cover for everybody measured as a loss:
 // cover.ts COVER.inRoom).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { men, teamActive, teamMen } from './seats';
+import './seats';
 import { SideSet } from '../math/side';
 import { Vec3 } from '../math/vec';
 import type { Game } from './game';
 import type { Door } from './doors';
 import type { Opening } from './cover';
 import { wallBetween } from './roomclear';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 /** The knobs (__game.entry.knobs; Team feel rows: teamfeel.ts ENTRY). */
 export const ENTRY = {
@@ -84,24 +85,9 @@ export class EntryPoints {
 
 
   /** four times a second: where the squad stands is known ground */
-  tick() {
-    const g = this.g; if (!teamActive(g)) return;
-    if (this.last >= 0 && Math.abs(g.time - this.last) < 0.25) return; this.last = g.time;
-    for (const gd of teamMen(g)) if (gd.state !== 'dead') this.mark(gd.char.pos);
-    for (const pl of men(g)) this.mark(pl.char.pos);
-  }
+  tick(): void { return goneWithTick('EntryPoints.tick') as any; }
   /** one of ours stands at `p`: the side he is on of every opening near him that he has a line to is known (in the opening itself: both) */
-  mark(p: Vec3) {
-    const K = ENTRY;
-    for (const o of this.g.cover.ready()) {   // (gaps too, whatever the knob says: it can be flipped in the middle of a run)
-      const dx = p[0] - o.at[0], dz = p[2] - o.at[2]; if (dx * dx + dz * dz > K.knownM * K.knownM) continue;
-      const s = dx * o.n[0] + dz * o.n[1], inIt = Math.abs(s) < 0.3 && Math.abs(dx * o.n[1] - dz * o.n[0]) <= o.half + 0.2;   // (standing in the opening itself)
-      const had = this.been.get(o) ?? 0, bits = inIt ? 3 : s > 0 ? 1 : 2; if ((had & bits) === bits) continue;
-      // (his own eyes' line, leaves and all — a side seen only through another door's shut leaf is not known — to the opening's own face, short of its leaf)
-      if (!inIt && !this.sees(p, o, s >= 0 ? 1 : -1, false)) continue;
-      this.been.set(o, had | bits);
-    }
-  }
+  mark(p: Vec3): void { return goneWithTick('EntryPoints.mark') as any; }
   /** a line from a man standing at `p` to the face of `o` on side `sg` (its middle, or either third of its width). `open`: with every leaf out of the way */
   private sees(p: Vec3, o: Opening, sg: 1 | -1, open: boolean): boolean {
     const eye: Vec3 = [p[0], EYE, p[2]], col = this.g.col;
@@ -113,7 +99,7 @@ export class EntryPoints {
 
   /** the uncleared opening that makes `p` a bad place to stand still (the nearest), or null. `skip`: the door this entry comes in by. `gaps`: count the nav
    *  grid's gaps whatever the knob says (the play-throughs' watcher labels a death by either kind) */
-  riskAt(p: Vec3, skip: Door | null = null, gaps = ENTRY.gaps): Opening | null {
+  riskAt(p: Vec3, skip: Door | null = null, gaps = ENTRY.gaps): Opening | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('EntryPoints.riskAt', this, [p, skip, gaps]); if (__r !== RUST_PASS) return __r as any; } }
     const K = ENTRY, nav = this.g.col.nav, tan = Math.tan(K.lineDeg * Math.PI / 180); let best: Opening | null = null, bd = Infinity;
     for (const o of this.g.cover.ready()) {
       if (!gaps && o.kind !== 'door') continue;
@@ -166,8 +152,6 @@ export class EntryPoints {
     return out;
   }
 
-  /** a search point taken over a better-seeing one that stood by an uncleared opening (doortools.ts moveOn): it counts as moved */
-  swapped(pod: Pod) { this.movedSet.add(pod); }
   /** a point an entry has just dealt to a man (the tallies: Game.entry.stats) */
   dealt(pod: Pod, skip: Door | null) { const S = this.stats; S.pods++; const risky = !!this.riskAt(pod.pos, skip); if (risky) S.risky++; if (this.movedSet.has(pod)) S.moved++; else if (risky && ENTRY.offOpenings) S.kept++; }
 

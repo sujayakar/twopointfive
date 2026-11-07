@@ -56,7 +56,7 @@
         G().restartEncounter();   // fresh Player / Guards under the SEEDED dice: every construction-time random (glance clocks, waits) the same on every boot
         window.__runFrames(1, 1 / 60, []); await settle();
         E().settings.debugView = debug;
-        const out = { tag, preset: window.__quality?.current, scale: E().settings.renderScale, views: {}, res: null, settings: { restir: E().settings.restir, taau: E().settings.taau, sharp: E().settings.sharpDirect, mesh: E().settings.meshShadows, rt: E().settings.rtReflect, fitted: !!(window.__sdfrig && window.__sdfrig.live), smooth: E().settings.sdfRigSmooth, soft: E().settings.charSoftShadow, debug } };
+        const out = { tag, preset: window.__quality?.current, scale: E().settings.renderScale, views: {}, res: null, settings: { taau: E().settings.taau, sharp: E().settings.sharpDirect, mesh: E().settings.meshShadows, rt: E().settings.rtReflect, fitted: !!(window.__sdfrig && window.__sdfrig.live), debug } };
         for (const vn of views) { const r = await one(vn, frames, { png: doPng, tag }); out.views[vn] = r.hash; out.res = r.res; out['posted_' + vn] = r.posted; }
         window.__idres = out;
       } catch (e) { window.__iderr = String(e && e.stack || e); }

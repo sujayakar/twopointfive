@@ -15,6 +15,7 @@ import { manOf, manById, facedMan } from './seats';
 import type { Game, Guard } from './game';
 import type { Character } from './character';
 import { WORDS } from './words';   // (a leaf: nothing of the game behind it)
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export type Team = 'guard' | 'operative' | 'hostile' | 'player' | 'civilian';
 export const TEAMS: Team[] = ['guard', 'operative', 'hostile', 'player', 'civilian'];
@@ -38,7 +39,7 @@ export const spokenName = (o: Guard): string | null => defenderWords(o) ? null :
  *  two are NEUTRAL, as the table above is written. Counted — though only ONE Game's run has it at a time: quiet.ts hands the module switches to whichever Game is running (`current()`), so the count is 0 or 1
  *  and two Games in one process (the tools) each get it for their own frames. */
 let staffOps = 0;
-export function staffVsOperatives(on: boolean) {
+export function staffVsOperatives(on: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('staffVsOperatives', undefined, [on]); if (__r !== RUST_PASS) return __r as any; } }
   staffOps = Math.max(0, staffOps + (on ? 1 : -1));
   HOSTILE.guard.operative = HOSTILE.operative.guard = staffOps > 0;
 }
@@ -60,7 +61,3 @@ export function hostileTo(gd: Guard, o: Guard | 'player'): boolean { return isHo
 /** The Character his foe is — Sam's, or the hostile AI man's; null when he has nobody (an operative before a hostile has shown himself, a man whose foe died
  *  with no other in sight). Every place in the AI that used to read g.player.char for "the man I am after" reads this. */
 export function foeChar(g: Game, gd: Guard): Character | null { const f = gd.foe; return f === 'player' ? facedMan(g, gd).char : f ? f.char : null; }   // (the player he has in mind, where there is more than one: seats.ts)
-/** His foe is out of the fight — Sam down, or the man dead. False with nobody. */
-export function foeDown(g: Game, gd: Guard): boolean { const f = gd.foe; return f === 'player' ? facedMan(g, gd).down : !!f && f.state === 'dead'; }
-/** His foe is crouched (the aim point comes down; the sight gain's crouch discount): Sam's crouch, or the AI man's crouch pose (head down under fire, a drill's knee). */
-export function foeCrouched(g: Game, gd: Guard): boolean { const f = gd.foe; return f === 'player' ? facedMan(g, gd).crouch : !!f && f.char.anim.crouch > 0.5; }

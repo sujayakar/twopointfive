@@ -235,7 +235,7 @@ export class SceneTweak {
     const btn = (text: string, title: string, run: (b: HTMLButtonElement, e: MouseEvent) => void) => { const b = document.createElement('button'); b.className = 'stbtn'; b.textContent = text; b.title = title; b.onclick = e => { run(b, e); b.blur(); }; return b; };
     const copy = btn('copy', 'the changed numbers, as text (shift: every number)', (b, e) => { void this.copy(e.shiftKey).then(ok => this.flash(b, ok ? 'copied' : 'see console')); });
     const reset = btn('reset', 'every number back to its shipped value, every switch back where it stood', () => { for (const L of resetAll(this.layers)) this.applied(L); this.refresh(true); lsSet(this.key, JSON.stringify(savedOf(this.layers))); });   // (and the kept copy with it, whole: reset is reset)
-    const none = btn('none', 'every layer of the picture off (not ↻ ones, not ◆ ones, not the two that say how the air runs)', () => this.allTo(false));
+    const none = btn('none', 'every layer of the picture off (not ↻ ones, not ◆ ones, not the one that says how the air runs)', () => this.allTo(false));
     const all = btn('all', 'every layer on', () => this.allTo(true));
     const fold = document.createElement('button'); fold.className = 'stfold'; fold.textContent = this.ui.shut ? '▸' : '▾'; fold.onclick = () => { this.ui.shut = !this.ui.shut; this.el.classList.toggle('shut', !!this.ui.shut); fold.textContent = this.ui.shut ? '▸' : '▾'; fold.blur(); this.saveUi(); };
     h.append(title, this.countEl, gap, none, all, copy, reset, fold);

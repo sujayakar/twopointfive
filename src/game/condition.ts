@@ -18,10 +18,10 @@
 //
 // CONDITION.on: OFF here and on the frozen stand (TPS_CONDITION=1 raises it), ON in the page (?nocondition). Off = no man is ever hurt and every reader below
 // answers as the build did before it. tools/qa/condition-check.ts (probes.ts condition; CONDITION_BREAK=1).
-import { men } from './seats';
+import './seats';
 import type { Game, Guard, Player } from './game';
 import { SUPPRESSION } from './suppression';
-import { clamp } from '../math/vec';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export const CONDITION = {
   on: false,
@@ -63,7 +63,7 @@ export function isHurt(g: Game, m: Man, now = g.time): boolean {   // (`now`: th
 
 /** A blast reached this man and left him up (frag.ts blast, its 'wounded' result): he is hurt from now. Not a civilian, not a man the debugger keeps whole,
  *  not the player in god mode, and nobody under a showcase's choreography (its men walk the marks it was written against). */
-export function conditionHurt(g: Game, m: Man): boolean {
+export function conditionHurt(g: Game, m: Man): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('conditionHurt', undefined, [g, m]); if (__r !== RUST_PASS) return __r as any; } }
   if (!CONDITION.on || g.touring || g.puppet) return false;
   if (isGuard(m) ? m.civ || m.god || m.state === 'dead' : g.godMode || m.down) return false;
   if (!isHurt(g, m)) CONDITION_STATS.hurt++;
@@ -74,7 +74,7 @@ export function conditionHurt(g: Game, m: Man): boolean {
 export function conditionPace(g: Game, gd: Guard, speed: number): number { return isHurt(g, gd) ? Math.min(speed, CONDITION.hurtPace) : speed; }
 
 /** the fire his rounds are opened by: what is on him, and never less than `hurtSup` on a hurt man (anybody else: `v` as it is) */
-export function conditionSup(g: Game, m: Man, v: number): number { return isHurt(g, m) ? Math.max(v, CONDITION.hurtSup) : v; }
+export function conditionSup(g: Game, m: Man, v: number): number { return goneWithTick('conditionSup') as any; }
 
 /** the score leaves this man's wariness at rest out of its tension (one of the player's own, with the switch on) */
 export function conditionCalm(gd: Guard): boolean { return CONDITION.on && CONDITION.ownCalm && gd.team === 'operative'; }
@@ -100,14 +100,3 @@ export function conditionSummary(g: Game): string {
   return `condition ▸ ${parts.length ? parts.join(' · ') : 'all sound'}`;
 }
 
-/** Every frame, after the stun poses are dealt (Game.dealWeapons): each man's condition to his figure — the player's, his men's and the defenders' by the one
- *  rule. Off (and under a showcase): whatever it put on a figure comes off, and a figure it never touched is not touched. */
-export function conditionPose(g: Game): void {
-  const on = CONDITION.on && CONDITION.looks && !g.touring && !g.director?.showing, S = SUPPRESSION;
-  const deal = (m: Man) => { const an = m.char.anim;
-    if (!on) { if (an.hurt !== 0 || an.shaken !== 0 || an.foldToo) { an.hurt = 0; an.shaken = 0; an.foldToo = false; } return; }
-    const down = isGuard(m) ? m.state === 'dead' : m.down;
-    an.foldToo = true; an.hurt = !down && isHurt(g, m) ? 1 : 0; an.hurtSide = -1;   // (his free hand is his left and it goes across to his right ribs: that is the side he favours, every man)
-    an.shaken = down || !g.tune.suppression ? 0 : clamp((m.sup.v - (S.flinch - 0.1)) / Math.max(1e-3, S.pinned - (S.flinch - 0.1)), 0, 1); };
-  for (const pl of men(g)) deal(pl); for (const gd of g.guards) if (!gd.civ) deal(gd);
-}

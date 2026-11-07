@@ -1,7 +1,6 @@
 // The 'selector' probe family (run through probes.ts: `bun run tools/qa/probes.ts selector | selector-rows | selector-input | selector-sustained | selector-noise`):
 // the Space selector (src/game/interact.ts) over the interaction rows (player.ts buildInteractables) — every verb its own row, the highest-priority MAX_NEAR of
-// what is in reach; a TAP does the highlighted row, Space HELD past TAP_SECS opens the list (a cancel row at its foot, the feet frozen, the wheel / arrows
-// choosing) and LETTING GO does the highlighted one; the sustained verbs (ease a leaf, pick a lock, the choke, the whip, the drive) start on their row and run
+// what is in reach; a TAP does the highlighted row (a held key is the hand ring's since handring.ts: its own check); the sustained verbs (ease a leaf, pick a lock, the choke, the whip, the drive) start on their row and run
 // on their own clock until done or stopped by a fresh Space press, Esc, or a step. Everything a verb does once begun — its timing, the leaf's curve, what the
 // floor hears of it — is asserted against what the held-key grammar did before the change (numbers frozen below from that build, 60 Hz, through the same
 // real input path). Each probe stands the full game up headless (headless.ts), stages one situation, drives it through input.keys / pressed / wheel and the
@@ -11,9 +10,8 @@ const IK = 'Space';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const playerMod = await import(`${ROOT}/src/game/player.ts`);
-const { EASE_RATE, EASE_MAX, MAX_NEAR, PACE_STEP } = playerMod;
+const { EASE_RATE, EASE_MAX, MAX_NEAR } = playerMod;
 const { TAP_SECS } = await import(`${ROOT}/src/game/interact.ts`);
-const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const { CLOSE, closeBare } = await import(`${ROOT}/src/game/close.ts`);
 const { HANDSLOT } = await import(`${ROOT}/src/game/handslot.ts`);
@@ -80,7 +78,7 @@ const OLD_EVENTS = {
 };
 
 /** the level up, Sam immortal and dark, everybody parked (or A staged), a couple of settled frames */
-async function world(seed: number) { Math.random = seeded(seed); const W = await standUp(); HANDRING.on = false;   // (handring.ts: these lines read the list on a held Space as it was built — the ring that stays has its own check, probes.ts handring)
+async function world(seed: number) { Math.random = seeded(seed); const W = await standUp();   // (until 2026-11-07 the hand ring was written off here, a settled row: the write was refused, so every line of this family has run with the ring since the fold)
   W.game.godMode = true; W.game.player.visibility = 0.02; for (let i = 0; i < 5; i++) W.step(DT); return W; }
 /** Sam standing on the corridor face of the (shut, unlocked) break-room north door, square to it, in reach */
 async function atShutDoor(seed: number, crouch = false) {
@@ -203,7 +201,7 @@ export async function selectorRows() {
 // ================================================================ (b) the input model: tap = row 0; ↓ + tap = row 1; hold opens (flag, cancel row), the wheel moves the highlight and not the pace, release performs;
 //                                                                    cancel + release = nothing; Esc = cancel; feet frozen while open; the wheel is the pace otherwise — during a hold too
 export async function selectorInput() {
-  console.log('\n=== selector-input: tap does the highlighted row, ↓ then tap the next; held 0.3 s the list opens (cancel row, feet still, wheel scrolls it), let go performs; cancel / Esc do nothing; the wheel is the pace whenever Space is up ===');
+  console.log('\n=== selector-input: tap does the highlighted row, ↓ then tap the next ===');
   let allPass = true; const verdict = (ok: boolean, label: string, detail: string, fails: string[]) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`); };
   {   // tap = push (row 0): the creak, the leaf swings; ↓ then tap = ease (row 1): silent, easing
     const fails: string[] = []; const notes: string[] = [];
@@ -214,67 +212,9 @@ export async function selectorInput() {
       W.input.pressed.add('ArrowUp'); W.step(DT); notes.push(`↓ → ${hv}, tap → easing ${game.player.easing === d} (${f2(d.angle)} rad @0.5 s), rows now [${verbsOf(game).join(',')}]; ↑ while it runs: sel ${game.player.nearSel}`); }
     verdict(fails.length === 0, 'tap does row 0 (push: the creak, it swings); ↓ then tap does row 1 (ease: silent, the leaf inches)', notes.join(' · '), fails);
   }
-  {   // hold: opens at TAP_SECS with the cancel row, hover still row 0; wheel +1 → row 1, pace untouched; wheel back; release performs the highlighted (row 0 → push)
-    const fails: string[] = []; const notes: string[] = [];
-    const { W, game, d } = await atShutDoor(211); const pace0 = game.player.pace;
-    W.input.keys.add(IK); W.input.pressed.add(IK);
-    let openAt = -1; for (let i = 0; i < Math.round(0.4 / DT); i++) { W.step(DT); if (openAt < 0 && game.player.sel.open) openAt = (i + 1) * DT; }
-    const rowsOpen = verbsOf(game); const hv0 = game.hover?.verb;
-    if (openAt < 0 || Math.abs(openAt - TAP_SECS) > DT + 1e-6) fails.push(`the list opened at +${f3(openAt)} s (want TAP_SECS ${TAP_SECS})`);
-    if (rowsOpen.join() !== 'door:push,door:ease,cancel') fails.push(`open rows [${rowsOpen.join(', ')}] (want push, ease, cancel)`);
-    if (hv0 !== 'push') fails.push(`opening moved the highlight to ${hv0}`);
-    if (Math.abs(d.angle) > 1e-6 || game.player.easing) fails.push('something happened on the press itself');
-    W.input.wheel = 120; W.step(DT); const hv1 = game.hover?.verb, pace1 = game.player.pace;
-    W.input.wheel = 120; W.step(DT); const hv2 = game.hover?.kind === 'cancel' ? 'cancel' : game.hover?.verb;
-    W.input.wheel = -120; W.step(DT); W.input.wheel = -120; W.step(DT); const hv3 = game.hover?.verb;
-    if (hv1 !== 'ease' || hv2 !== 'cancel' || hv3 !== 'push') fails.push(`wheel: +1 → ${hv1}, +1 → ${hv2}, −2 → ${hv3} (want ease, cancel, push)`);
-    if (pace1 !== pace0) fails.push(`the wheel with Space down changed the pace ${pace0} → ${pace1}`);
-    // feet frozen while open: W held half a second moves him nowhere
-    const p0 = v3.copy(game.player.char.pos); W.input.keys.add('KeyS'); for (let i = 0; i < 30; i++) W.step(DT); W.input.keys.delete('KeyS'); const drift = v3.distXZ(game.player.char.pos, p0);
-    if (drift > 0.02) fails.push(`walked ${f2(drift)} m with the list open`);
-    // release: performs the highlighted (push)
-    const ev: any[] = []; const t0 = game.time + DT; W.input.keys.delete(IK); collect(W, 60, ev, t0 - DT);
-    if (game.player.sel.open || game.nearby.some((r: any) => r.kind === 'cancel')) fails.push('the list stayed open after Space came up');
-    if (Math.abs(d.angle) < 0.8) fails.push(`release on 'push': leaf ${f2(d.angle)} (want swung)`); const bad = sameEvents(mine(ev), OLD_EVENTS.push); if (bad) fails.push('release → push: ' + bad);
-    notes.push(`open +${f3(openAt)} s [${rowsOpen.join(',')}] hv ${hv0}; wheel → ${hv1} → ${hv2} → ${hv3}, pace ${pace0}→${pace1}; S held while open: ${f3(drift)} m; release → angle ${f2(d.angle)} [${evS(ev)}]`);
-    verdict(fails.length === 0, 'held: opens at TAP_SECS with the cancel row, highlight unmoved; the wheel walks it (push → ease → cancel → back) and leaves the pace alone; feet frozen; letting go performs the highlighted row', notes.join(' · '), fails);
-  }
-  {   // hold, wheel to 'ease', release → easing (the scroll-and-let-go path); hold, wheel to cancel, release → nothing; Esc while open → nothing on release, and the press is spent
-    const fails: string[] = []; const notes: string[] = [];
-    { const { W, game, d } = await atShutDoor(221); W.input.keys.add(IK); W.input.pressed.add(IK); for (let i = 0; i < 5; i++) W.step(DT); W.input.wheel = 100; W.step(DT);
-      const openedEarly = game.player.sel.open; const hv = game.hover?.verb; W.input.keys.delete(IK); const ev: any[] = []; const t0 = game.time; collect(W, 40, ev, t0);
-      if (!openedEarly) fails.push('a scroll 0.1 s into the press did not open the list (a press that scrolls is a choice, never a tap)'); if (hv !== 'ease') fails.push(`scrolled to ${hv}`);
-      if (game.player.easing !== d || mine(ev).length) fails.push(`scroll to ease + let go: easing ${game.player.easing === d}, events [${evS(ev)}]`); notes.push(`hold 0.1 s + wheel → open ${openedEarly}, ${hv}; let go → easing ${game.player.easing === d}`); }
-    { const { W, game, d } = await atShutDoor(222); W.input.keys.add(IK); W.input.pressed.add(IK); for (let i = 0; i < 20; i++) W.step(DT);
-      W.input.wheel = 100; W.step(DT); W.input.wheel = 100; W.step(DT); const onCancel = game.hover?.kind === 'cancel';
-      W.input.keys.delete(IK); const ev: any[] = []; const t0 = game.time; collect(W, 60, ev, t0);
-      if (!onCancel) fails.push(`two notches down landed on ${game.hover?.kind}/${game.hover?.verb} (want the cancel row)`);
-      if (Math.abs(d.angle) > 1e-6 || game.player.easing || mine(ev).length || game.act) fails.push(`cancel + let go DID something: angle ${f3(d.angle)}, easing ${!!game.player.easing}, events [${evS(ev)}]`);
-      if (game.player.nearSel !== 0 || game.hover?.verb !== 'push') fails.push(`after cancelling the highlight is ${game.hover?.verb} @${game.player.nearSel} (want back on row 0)`);
-      notes.push(`cancel + release → angle ${f3(d.angle)}, [${evS(ev)}], highlight ${game.hover?.verb}`); }
-    { const { W, game, d } = await atShutDoor(223); W.input.keys.add(IK); W.input.pressed.add(IK); for (let i = 0; i < 20; i++) W.step(DT); const wasOpen = game.player.sel.open;
-      W.input.pressed.add('Escape'); W.step(DT); const openAfterEsc = game.player.sel.open, spent = game.player.fHeld;
-      for (let i = 0; i < 10; i++) W.step(DT); W.input.keys.delete(IK); const ev: any[] = []; const t0 = game.time; collect(W, 40, ev, t0);
-      if (!wasOpen) fails.push('staging: not open at 0.33 s'); if (openAfterEsc || !spent) fails.push(`Esc: open ${openAfterEsc}, spent ${spent} (want shut, the press spent)`);
-      if (Math.abs(d.angle) > 1e-6 || game.player.easing || mine(ev).length) fails.push(`Esc then let go DID something: angle ${f3(d.angle)}, [${evS(ev)}]`);
-      if (game.player.fHeld) fails.push('the spent flag outlived the key coming up');
-      tap(W); for (let i = 0; i < 30; i++) W.step(DT); if (Math.abs(d.angle) < 0.5) fails.push('a fresh tap after the Esc did nothing (Space never came live again)');
-      notes.push(`Esc while open → shut ${!openAfterEsc}, spent ${spent}; let go → nothing; a fresh tap → angle ${f2(d.angle)}`); }
-    verdict(fails.length === 0, 'hold + scroll + let go performs the scrolled-to row (an early scroll opens it); scrolled to cancel, letting go does nothing and the highlight is back on top; Esc while open backs out — the release does nothing, the next tap works', notes.join(' · '), fails);
-  }
-  {   // the wheel with Space up is the pace — free, and with a man in the arm (the pair's HOLD_PACE × pace); Space down but spent: neither
-    const fails: string[] = []; const notes: string[] = []; const gears = playerMod.TWOGEARS.on;   // (the rule this block holds is the wheel's: two gears — player.ts TWOGEARS, which gives the wheel to nobody — is held off for it AFTER each stand-up, which writes the key where its word is set, and put back below; tools/qa/twogears-check.ts holds the other)
-    try {
-    { const { W, game } = await atShutDoor(231); playerMod.TWOGEARS.on = false; const p0 = game.player.pace; W.input.wheel = 100; W.step(DT); const p1 = game.player.pace; W.input.wheel = -100; W.step(DT); const p2 = game.player.pace;
-      if (Math.abs(p1 - (p0 - PACE_STEP)) > 1e-9 || Math.abs(p2 - p0) > 1e-9) fails.push(`free: pace ${p0} → ${p1} → ${p2} (want −${PACE_STEP} then back)`); notes.push(`free: ${f2(p0)}→${f2(p1)}→${f2(p2)}`); }
-    { const S = await holding(232, false); const { W, game } = S; playerMod.TWOGEARS.on = false; const p0 = game.player.pace; W.input.wheel = 100; W.step(DT); W.input.wheel = 100; W.step(DT); const p1 = game.player.pace;
-      W.input.keys.add('KeyW'); let top = 0; for (let i = 0; i < 90; i++) { W.step(DT); top = Math.max(top, game.player.speedSm); } W.input.keys.delete('KeyW');
-      if (Math.abs(p1 - (p0 - 2 * PACE_STEP)) > 1e-9) fails.push(`holding: pace ${p0} → ${p1} after two notches (want −${2 * PACE_STEP}: the wheel is live in a hold)`);
-      if (top > 0.85 * p1 + 0.03 || top < 0.2) fails.push(`the pair walked at ${f2(top)} m/s (want ≤ HOLD_PACE × pace = ${f2(0.85 * p1)}, and moving)`);
-      if (!game.player.holding) fails.push('the hold ended'); notes.push(`holding: ${f2(p0)}→${f2(p1)}, pair top speed ${f2(top)} m/s`); }
-    } finally { playerMod.TWOGEARS.on = gears; }
-    verdict(fails.length === 0, 'the wheel is his pace whenever Space is up — with a man in the arm too, and the pair slows with it', notes.join(' · '), fails);
-  }
+  // (GONE 2026-11-07, each a line of the build before a settled rule that this file used to write off: 'held: the list opens at TAP_SECS … letting go performs
+  //  the highlighted row' and 'hold + scroll + let go … Esc while open' — a held key opens the hand ring now (handring.ts, its own check `handring`), there is
+  //  no list on a held Space to walk — and 'the wheel is his pace whenever Space is up': two gears (player.ts TWOGEARS, `twogears-check.ts`) gives the wheel to nobody.)
   console.log(`=== selector-input: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }

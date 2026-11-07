@@ -45,7 +45,7 @@
     window.__testVisible = true; window.__shotPort = window.__shPort ?? (parseInt(location.port, 10) + 1);
     seed(); window.__menu?.close();
     if (window.__weather) { try { window.__weather.setEnabled(false); } catch { /* */ } }   // rain off unless a take says otherwise (the storm's dice would otherwise schedule strokes into a capture)
-    return { ok: true, res: [E().width, E().height, E().outWidth, E().outHeight], q: window.__quality?.current, taau: S().taau, restir: S().restir, dn: S().denoiser, froxel: S().froxelVol, rt: S().rtReflect, detail: S().detail, scale: S().renderScale, sharp: S().sharpDirect, hidden: document.hidden };
+    return { ok: true, res: [E().width, E().height, E().outWidth, E().outHeight], q: window.__quality?.current, taau: S().taau, rt: S().rtReflect, detail: S().detail, scale: S().renderScale, sharp: S().sharpDirect, hidden: document.hidden };
   }
   let fixed = null;   // the harness's own fixed spot (V2), added to the engine's light list once and switched per view
   function stage(view, yaw = null) {
@@ -82,7 +82,7 @@
   async function capAll(tag, views = ['v1', 'v2', 'v3']) {
     const out = [];
     for (const v of views) { out.push(await capStatic(tag, v)); out.push(await capMotion(tag, v)); }
-    out.push(JSON.stringify({ tag, res: [E().width, E().height, E().outWidth, E().outHeight], taau: S().taau, sharpen: S().taauSharpen, restir: S().restir, dn: S().denoiser, froxel: S().froxelVol, rt: S().rtReflect, detail: S().detail, scale: S().renderScale, sharp: S().sharpDirect ?? null, errs: (window.__errs || []).slice(0, 3) }));
+    out.push(JSON.stringify({ tag, res: [E().width, E().height, E().outWidth, E().outHeight], taau: S().taau, sharpen: S().taauSharpen, rt: S().rtReflect, detail: S().detail, scale: S().renderScale, sharp: S().sharpDirect ?? null, errs: (window.__errs || []).slice(0, 3) }));
     return out;
   }
   /** one serialized offscreen render → { passes, sum, union } */
@@ -98,7 +98,7 @@
   const med = a => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : NaN; };
   const q95 = a => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.min(b.length - 1, Math.floor(0.95 * b.length))] : NaN; };
   /** n serialized still renders after `warm` → per-pass medians + Σ + union (median, p95) */
-  async function cost(n = 30, warm = 10, passes = ['gbuffer', 'gdown', 'direct', 'softblur', 'gather', 'temporal', 'reflect', 'rdenoise', 'volFroxel', 'volumetrics', 'sharpU', 'compS', 'taau', 'bloom']) {
+  async function cost(n = 30, warm = 10, passes = ['gbuffer', 'gdown', 'direct', 'softblur', 'gather', 'temporal', 'reflect', 'rdenoise', 'volumetrics', 'sharpU', 'compS', 'taau', 'bloom']) {
     const acc = { sum: [], union: [], wall: [], p: {} }; for (const k of passes) acc.p[k] = [];
     for (let i = 0; i < warm + n; i++) { const f = await frame1(); if (i < warm || f.stale) continue; acc.sum.push(f.sum); acc.union.push(f.union); acc.wall.push(f.wall); for (const k of passes) acc.p[k].push(f.passes[k] ?? 0); }
     return { n: acc.sum.length, sumMed: +med(acc.sum).toFixed(2), unionMed: +med(acc.union).toFixed(2), unionP95: +q95(acc.union).toFixed(2), wallMed: +med(acc.wall).toFixed(2), passes: Object.fromEntries(passes.map(k => [k, +med(acc.p[k]).toFixed(3)])), res: `${E().width}×${E().height} → ${E().outWidth}×${E().outHeight}` };
@@ -125,7 +125,7 @@
   /** THE STRESS MINUTE, interleaved: after `await __stress.setup({fight:false})` (tools/qa/stress-scene.js), `blocks` × (`per` frames under A, `per` under B) in ABBA order with the 0.6°/frame orbit
    *  running throughout → per variant: union / Σ compute mean · p50 · p95 · max, per-pass mean / p95, wall. */
   async function stressAB(applyA, applyB, opts = {}) {
-    const { blocks = 4, per = 80, warm = 4, passes = ['direct', 'softblur', 'gather', 'temporal', 'reflect', 'rdenoise', 'volFroxel', 'volumetrics', 'sharpU', 'compS', 'taau', 'smoke', 'particles'] } = opts;
+    const { blocks = 4, per = 80, warm = 4, passes = ['direct', 'softblur', 'gather', 'temporal', 'reflect', 'rdenoise', 'volumetrics', 'sharpU', 'compS', 'taau', 'smoke', 'particles'] } = opts;
     const ST = window.__stress; if (!ST) throw new Error('await import("/qa/stress-scene.js") + __stress.setup() first');
     const cam = window.__cam; if (!cam.pin) cam.pin = { look: [...ST.center], yaw: ST.yaw0, pitch: ST.pitch, dist: ST.dist };
     const pools = [{ union: [], sum: [], wall: [], p: {} }, { union: [], sum: [], wall: [], p: {} }];

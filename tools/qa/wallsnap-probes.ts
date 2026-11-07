@@ -22,7 +22,6 @@ import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { WALLSNAP, wsTakeSecs } = await import(`${ROOT}/src/game/wallsnap.ts`);
-const { AIM } = await import(`${ROOT}/src/game/aim.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60, DEG = Math.PI / 180, wrapA = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -38,7 +37,7 @@ export async function world(on: boolean, seed = 95) {
   Math.random = mulberry32(seed);
   const W: any = await standUp(); const g = W.game, input = W.input;
   WALLSNAP.leanGun = 0;   // (the step-out's share for the rifle has its own card, leangun-check.ts, which sets it after this: these lines ask for the eyes' 0.6 m)
-  WALLSNAP.on = on; AIM.player.level = on ? 1 : 0;   // (with the switch on the gun is carried LEVEL along the cursor's heading, as the page ships it; off = the frozen stand as every older probe has it)
+  WALLSNAP.on = on;   // (the gun carried level along the cursor's heading, AIM.player.level, is settled on and no longer written here: until 2026-11-07 the switch-off stage also asked it at 0)
   g.playerInvisible = true; g.godMode = true; g.aiEnabled = false; W.cam.yaw = 0; W.cam.rebuild();
   for (let i = 0; i < 5; i++) W.step(DT);
   g.guards.forEach((gd: any, i: number) => { gd.hold = true; gd.char.pos = [38.5, 0, 1.5 + i * 1.2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.update(0); });
@@ -412,7 +411,7 @@ async function duo() {
   const TABLES: any[] = await Promise.all(['pairup', 'pairorders', 'sneak', 'spotted'].map(f => import(`${ROOT}/src/game/${f}.ts`)));
   const SNM: any = TABLES[2]; const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
   try {
-    const R: any = await rig({ up: true }); WALLSNAP.on = true; AIM.player.level = 1;
+    const R: any = await rig({ up: true }); WALLSNAP.on = true;
     const g = R.game, pl = g.player, c = pl.char, m = R.mate, input = R.input, W = R.W; W.cam.yaw = 0; W.cam.rebuild();
     if (!m) { verdict(false, 'duo', '(staging) no partner'); return; }
     // every defender but one off the floor, and that one held where he stands behind his room's door: a calm floor
@@ -516,8 +515,9 @@ async function camera() {
 
 /** THE KIT ON THE WALL (the same note: "the transitions here between kit and all that when snapped aren't quite right"): the rifle in his hands on the wall is
  *  the stack, however it got there. 2 — or E with it selected — on the back hold brings it up and he stacks without leaving the wall; another item chosen on the
- *  stack slings it, he is back on the plaster and the words say the item waits for the step off; Q then leaves with what he chose in his hand. With WALLSNAP.stackDraw
- *  (or the stack itself) off, 2 on the wall is the older answer. WALLSNAP_BREAK=1 = stackDraw off for the lines that want the stack: must fail. */
+ *  stack slings it, he is back on the plaster and the words say the item waits for the step off; Q then leaves with what he chose in his hand.
+ *  WALLSNAP_BREAK=1 = the kit's key is never pressed: must fail. (WALLSNAP.stackDraw and the stack are settled on: until 2026-11-07 the last lines asked
+ *  '2 on the wall is the older answer' with each off, and the break word was stackDraw left off.) */
 async function kit() {
   console.log('\n=== wallsnap-kit ===');
   const S = await world(true); const { pl, c, g } = S; const fails: string[] = []; const rows: string[] = [];
@@ -526,7 +526,7 @@ async function kit() {
   const brk = process.env.WALLSNAP_BREAK === '1';
   const hold = (kitIn: 'pistol' | 'rifle' | 'empty', sel: 'pistol' | 'rifle' = 'pistol') => { S.place(21.5, 10.9, 180, kitIn); if (kitIn === 'empty') pl.slot = sel; S.tap('KeyQ'); S.step(50); msgs.length = 0; return !!pl.wall; };
   /** press a key and run `n` frames: was he ever off the wall, how far did he move */
-  const press = (k: string, n = 45) => { const p0 = v3.copy(c.pos); let off = false; S.tap(k); S.step(n, () => { off ||= !pl.wall; }); return { off, d: v3.distXZ(c.pos, p0), said: msgs.splice(0).join(' | ') }; };
+  const press = (k: string, n = 45) => { const p0 = v3.copy(c.pos); let off = false; if (!brk) S.tap(k); S.step(n, () => { off ||= !pl.wall; }); return { off, d: v3.distXZ(c.pos, p0), said: msgs.splice(0).join(' | ') }; };
   const want = (r: { off: boolean; d: number; said: string }, what: string, kind: 'stack' | 'back', inHands: boolean, words?: RegExp) => {
     const k = pl.wall ? (pl.wall.kind ?? 'back') : 'off';
     if (r.off || k !== kind) fails.push(`${what}: ${r.off ? 'he came off the wall' : `the hold is '${k}'`} (want '${kind}', on the wall throughout)`);
@@ -537,7 +537,6 @@ async function kit() {
     if (words && !words.test(r.said)) fails.push(`${what}: the words were "${r.said}"`);
     rows.push(`${what}: ${k}${pl.rifleUp ? ', rifle in hands' : ''} — "${r.said}"`);
   };
-  if (brk) WALLSNAP.stackDraw = false;
   if (hold('empty', 'pistol')) {
     want(press('Digit2'), '2 on the back hold', 'stack', true, /^(?!.*comes out when you leave the wall)/);
     { const bodyAlong = Math.abs(Math.sin(c.bodyYaw)); if (bodyAlong < 0.8) fails.push(`2 on the back hold: his body is ${(Math.asin(bodyAlong) / DEG).toFixed(0)}° round toward the wall's line (want side-on, ≥ 53°)`); }
@@ -571,8 +570,6 @@ async function kit() {
     else if (gap === 6) rows.push(`${what}: stayed on the wall, the stack again${pl.wall.lean ? ', stepped out' : ''}`);
     S.setCursor(null); if (pl.wall) { S.tap('KeyQ'); S.step(30); }
   }
-  // the stack switched off: 2 on the wall is the older answer
-  if (!brk) for (const key of ['stackDraw', 'stack'] as const) { WALLSNAP[key] = false; if (hold('empty', 'pistol')) want(press('Digit2'), `${key} off, 2 on the back hold`, 'back', false, /comes out when you leave the wall/); WALLSNAP[key] = true; }
   g.msg = m0;
   verdict(fails.length === 0, 'the kit on the wall: the rifle in his hands is the stack however it got there, anything else is the back hold, and he never leaves the wall for it', fails.length ? fails.join('\n    ') : rows.join('\n    '));
 }
@@ -580,9 +577,9 @@ async function kit() {
 const FAMILY: Record<string, () => Promise<void>> = { 'wallsnap-camera': camera, 'wallsnap-kit': kit, 'wallsnap-take': take, 'wallsnap-landing': landing, 'wallsnap-reach': reach, 'wallsnap-off': offIt, 'wallsnap-stack': stack, 'wallsnap-cover': cover, 'wallsnap-off-same': offSame, 'wallsnap-duo': duo };
 /** run the family (or one of it by name); true = every check passed. The switch is left as it was found. */
 export async function wallSnapProbes(only?: string): Promise<boolean> {
-  const was = { ...WALLSNAP }, lvl = AIM.player.level; allPass = true;
+  const was = { ...WALLSNAP }; allPass = true;
   try { for (const [name, fn] of Object.entries(FAMILY)) if (!only || only === 'wallsnap' || only === name) await fn(); }
-  finally { Object.assign(WALLSNAP, was); AIM.player.level = lvl; }
+  finally { Object.assign(WALLSNAP, was); }
   return allPass;
 }
 if (import.meta.main) { const ok = await wallSnapProbes(process.argv[2]); console.log(ok ? '\n=== wallsnap: ALL PASS ===' : '\n=== wallsnap: FAILED ==='); process.exit(ok ? 0 : 1); }

@@ -9,7 +9,7 @@
 //            switches main.ts raises), under each setting of the switches (the title, a snow level in its weather, and the look prototype's page where
 //            the tree has one; this file runs itself once for each), folded: no test is left that the constants decide; the dead side of every plain
 //            `if (NAME)` / `if (!NAME)` of the unfolded text is gone from the folded one, and the constant that decided it is still there (both read off the
-//            unfolded text here, not by the fold); the modules the compile queue gives its background lane still carry the line it finds them by; no
+//            unfolded text here, not by the fold); no
 //            statement is left after a return, break or continue in its block; folding twice cuts no branch the first time left; every entry point, override and directive
 //            is kept; nothing left mentions a declaration that was dropped; no module is bigger
 //   size     the text a boot hands the browser, with and without (pasted call site by call site it is tools/qa/shaderinline-check.ts's)
@@ -87,7 +87,7 @@ if (SETTING === null) {
   const noConst = 'fn f() -> f32 { if (OFF) { return 1.0; } return 0.0; }';
   { // THE CONSTANTS STAY: a constant that decided a branch of a kept function is kept with it; one that only a dropped function tested goes with that function
     const t = trimWgsl('const ON: bool = true;\nconst OFF: bool = false;\nconst OFF2: bool = false;\nfn idle() -> f32 { if (OFF2) { return 1.0; } return 0.0; }\nfn heavy() -> f32 { return 1.0; }\n@compute @workgroup_size(1) fn main() { var a = 0.0; if (ON) { a = 1.0; } if (OFF) { a = heavy(); } }', true);
-    check(t.includes('const ON: bool = true;') && t.includes('const OFF: bool = false;') === !BREAK && !t.includes('OFF2') && !t.includes('heavy') && !t.includes('idle'), 'forms — a constant that decided a branch of a kept function stays in the text (the compile queue reads the cut set\'s line there); what only the dead side called goes, and so does a constant only a dropped function tested', squeeze(t)); }
+    check(t.includes('const ON: bool = true;') && t.includes('const OFF: bool = false;') === !BREAK && !t.includes('OFF2') && !t.includes('heavy') && !t.includes('idle'), 'forms — a constant that decided a branch of a kept function stays in the text; what only the dead side called goes, and so does a constant only a dropped function tested', squeeze(t)); }
   check(squeeze(foldWgsl(noConst)) === squeeze(noConst) && squeeze(foldWgsl('const OFF: bool = false;\n// if (OFF) { gone(); }\n' + noConst)) === squeeze('const OFF: bool = false;\nfn f() -> f32 { return 0.0; }'), 'forms — a text with no constant of the name is left alone; a comment that reads like a branch is no branch');
 }
 
@@ -111,19 +111,17 @@ const own = (d: string, n: string) => { const o = Math.max(0, d.indexOf('{')), h
 /** the block that opens at `o` in `t`, braces counted: its text */
 const blockOf = (t: string, o: number): string => { let d = 0; for (let i = o; i < t.length; i++) { if (t[i] === '{') d++; else if (t[i] === '}' && --d === 0) return t.slice(o, i + 1); } return ''; };
 const AFTER = /\b(?:return\b[^;{}]*;|(?:break|continue)\s*;)\s*(?!\}|continuing\b)\S/;   // a statement standing after one that cannot be passed (a loop's continuing block runs)
-const QUEUE_LINE = 'const CUT_BOXES: bool = true;';   // what gpu/device.ts installPipeQueue looks for in a module's text to give it the background lane
 {
   const setting = SETTINGS[SETTING];
   SHADER_TRIM.on = false; const { mods: whole, asked, faults } = await pageBoot(SETTING); SHADER_TRIM.on = true;   // every module as written; the cuts are made here
-  check(faults.length === 0 && whole.length >= 60 && asked.some(a => a.set === 'cut'), `boot, ${setting} — the page's whole boot was recorded: ${whole.length} modules, the cut-box set among them`, faults.join(' · '));
-  { const device = (await import('node:fs')).readFileSync(`${ROOT}/src/gpu/device.ts`, 'utf8'); check(device.includes(`desc.code.includes('${QUEUE_LINE}')`), `boot, ${setting} — the compile queue still finds a cut-set module by the line this check holds (\`${QUEUE_LINE}\`)`); }
+  check(faults.length === 0 && whole.length >= 35 && asked.length >= 100, `boot, ${setting} — the page's whole boot was recorded: ${whole.length} modules, ${asked.length} pipelines`, faults.join(' · '));
   // the switch: shaderText hands out the trim's own cut with SHADER_FOLD down, the folded cut with it up, and the text whole with the trim off
   { let ok = true; const t0 = { ...trimTotals };
     for (const m of whole) { SHADER_FOLD.on = false; const a = shaderText(m.code) === trimWgsl(m.code); SHADER_FOLD.on = true; const b = shaderText(m.code) === trimWgsl(m.code, true); SHADER_TRIM.on = false; const c = shaderText(m.code) === m.code; SHADER_TRIM.on = true; ok &&= a && b && c; }
     Object.assign(trimTotals, t0);
     check(ok, `switch, ${setting} — with SHADER_FOLD down a module is the trim's own cut, character for character; up, it is the folded cut; with the trim off, whole`); }
   const bad = { left: [] as string[], dead: [] as string[], after: [] as string[], twice: [] as string[], roots: [] as string[], open: [] as string[], bigger: [] as string[], consts: [] as string[], lane: [] as string[] };
-  let branches = 0, lane = 0; const falseConsts = new Set<string>(), trueConsts = new Set<string>(); const totals = { whole: 0, plain: 0, folded: 0 };
+  let branches = 0; const falseConsts = new Set<string>(), trueConsts = new Set<string>(); const totals = { whole: 0, plain: 0, folded: 0 };
   for (const m of whole) {
     const W = m.code, plain = trimWgsl(W), text = BREAK ? trimWgsl(turned(foldWgsl(turned(W)))) : trimWgsl(W, true);
     const val = boolConsts(wgslDecls(W)); for (const [n, v] of val) (v ? trueConsts : falseConsts).add(n);
@@ -148,13 +146,11 @@ const QUEUE_LINE = 'const CUT_BOXES: bool = true;';   // what gpu/device.ts inst
     const all = new Set(wgslDecls(W).map(nameOf)); all.delete(null);
     if (F.some(d => (d.match(WORD) ?? []).some(w => all.has(w) && !fNames.has(w)))) bad.open.push(m.label);
     if (text.length > plain.length) bad.bigger.push(m.label);
-    if (plain.includes(QUEUE_LINE)) { lane++; if (!text.includes(QUEUE_LINE)) bad.lane.push(m.label); }
     totals.whole += W.length; totals.plain += plain.length; totals.folded += text.length;
   }
   check(bad.left.length === 0, `boot, ${setting} — no test is left that the constants decide (false here: ${[...falseConsts].sort().join(' ')}; true: ${[...trueConsts].sort().join(' ')})`, bad.left.slice(0, 6).join(' · '));
   check(bad.dead.length === 0 && branches > 20, `boot, ${setting} — the dead side of each of the ${branches} plain branches the unfolded text holds is gone from the folded text`, bad.dead.slice(0, 6).join(' · '));
   check(bad.consts.length === 0, `boot, ${setting} — and the constant that decided each is still in its module's text`, bad.consts.slice(0, 6).join(' · '));
-  check(bad.lane.length === 0 && lane > 10, `boot, ${setting} — every one of the ${lane} modules the compile queue gives its background lane (the cut set's, by their constant's line) still carries that line folded`, bad.lane.slice(0, 6).join(' · '));
   check(bad.after.length === 0, `boot, ${setting} — nothing is left standing after a return, break or continue in its block`, bad.after.slice(0, 6).join(' · '));
   check(bad.twice.length === 0, `boot, ${setting} — folding and cutting a folded cut text takes nothing more out of it but the lines of the constants that decided${bad.twice.length ? ` — not so: ${bad.twice.slice(0, 5).join(', ')}` : ''}`);
   check(bad.roots.length === 0, `boot, ${setting} — every entry point, override, directive and const_assert the plain cut keeps is kept${bad.roots.length ? ` — not so: ${bad.roots.slice(0, 5).join(', ')}` : ''}`);

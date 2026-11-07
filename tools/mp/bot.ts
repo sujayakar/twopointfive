@@ -5,7 +5,7 @@
 //   --lag MS       hold every message, both ways, that long (default 0)   --jitter MS   and up to this much longer, by its own seeded die
 //   --loss PCT     that share of messages waits for a resend, and holds those behind it (src/net/delay.ts wayMs)
 //   --stall MS     once, after tick 150: nothing passes either way for that long (`stalled` in the result: the longest wait between two messages down, ms)
-//   --after MS     connect that long after starting (a late joiner)       --break       after tick 90, flip the last bit of its own man's place (the red path)
+//   --after MS     connect that long after starting (a late joiner)       --break       after tick 90, step one record with another walk key (the red path)
 //   --build NAME   the build it says it is (default: this checkout's, as the server names its own)
 //   --name NAME    what its player calls himself (the hello's `name`; `names` in the result: every seat's as the server last said them)
 //   --predict      look ahead for its own man each beat, as the page does (src/net/foresee.ts), and say how that went: `ahead` in the result —
@@ -14,7 +14,7 @@
 //                  millimetre, `fixes` and `fixMax` the corrections, `records` the records a look played (mean), `ms` what one cost
 //   --no-ahead     (the red path of that) the look ahead plays no record
 //   --why          with --predict: every clean look that was off by a millimetre or more, a line each on stderr (where, by how much, his state)
-// Prints one line: MPBOT {seat, confirmed, heard, wordsOk, bad, word, sent, holds, skips, margin, lead, moved, shots, bye, stoodMs, tickMs}. Exit 0 = it walked its ticks.
+// Prints one line: MPBOT {seat, confirmed, heard, wordsOk, bad, word, watchOk, watchOff, watchFirst (the wider word, watched: src/net/step.ts netWatch), sent, holds, skips, margin, lead, moved, shots, bye, stoodMs, tickMs}. Exit 0 = it walked its ticks.
 // (`moved`: the length of the way its man went, m, tick by tick.)
 import { resolve } from 'node:path';
 import type { PlayerCmd } from '../../src/game/cmd.ts';
@@ -38,7 +38,7 @@ let stood: Stood | null = null, standing = false, stoodMs = 0, closed = false;
 const down: (f: () => void) => void = onWay(WAY, (f: () => void) => f(), roll);   // (what comes down the socket, its close too, in the order it came)
 /** the longest wait between two messages down once the game ran (ms), and when the last one came */
 let gapMax = 0, gapAt = 0, stalledOnce = false;
-const take = (text: string): void => down(() => { const t = performance.now(); if (gapAt && client.confirmed > 60) gapMax = Math.max(gapMax, t - gapAt); gapAt = t; client.message(text, t); if (client.welcome && !stood && !standing) { standing = true; const t0 = performance.now(); standRecipe(client.welcome.recipe).then(s => { stood = s; stoodMs = performance.now() - t0; if (client.seat >= 0) { s.W.game.localSeat = s.W.game.seats[client.seat]; client.ready(); } }, e => { console.error(`bot.ts: ${(e as Error).message}`); process.exit(1); }); } });
+const take = (text: string): void => down(() => { const t = performance.now(); if (gapAt && client.confirmed > 60) gapMax = Math.max(gapMax, t - gapAt); gapAt = t; client.message(text, t); if (client.welcome && !stood && !standing) { standing = true; const t0 = performance.now(); standRecipe(client.welcome.recipe).then(s => { stood = s; stoodMs = performance.now() - t0; if (client.seat >= 0) s.W.game.localSeat = s.W.game.seats[client.seat]; s.begin(); stoodMs = performance.now() - t0; if (client.seat >= 0) client.ready(); }, e => { console.error(`bot.ts: ${(e as Error).message}`); process.exit(1); }); } });
 ws.onopen = () => client.hello();
 ws.onmessage = (ev: { data: unknown }) => take(String(ev.data));
 ws.onclose = () => down(() => { closed = true; });
@@ -57,12 +57,12 @@ function hands(S: Stood): PlayerCmd {
   return sampleCmd(W.game.hostSeat().view, I, W.cam, W.canvas);
 }
 function report(code: number): never {
-  console.log('MPBOT ' + JSON.stringify({ seat: client.seat, names: client.names, confirmed: client.confirmed, heard: client.heard, wordsOk: client.wordsOk, bad: client.bad, word: stood?.word() ?? '', sent: client.sent, holds: client.holds, skips: client.skips, margin: client.margin, lead: client.lead, broken: client.broken, stalled: Math.round(gapMax),
+  console.log('MPBOT ' + JSON.stringify({ seat: client.seat, names: client.names, confirmed: client.confirmed, heard: client.heard, wordsOk: client.wordsOk, bad: client.bad, word: stood?.word() ?? '', watchOk: client.watchOk, watchOff: client.watchOff, watchFirst: client.watchFirst, sent: client.sent, holds: client.holds, skips: client.skips, margin: client.margin, lead: client.lead, broken: client.broken, stalled: Math.round(gapMax),
     moved: +walked.toFixed(3), shots, bye: client.bye, state: client.state, stoodMs: Math.round(stoodMs), tickMs: tickN ? +(tickMs / tickN).toFixed(2) : 0,
     ...(PREDICT ? { ahead: { first: seen.first, firstMoved: seen.gameMoved, n: seen.n, mean: seen.n ? +(seen.sum / seen.n).toFixed(4) : 0, max: +seen.max.toFixed(4), exact: seen.exact, unfree: seen.unfree, clean: seen.clean, cleanMean: seen.clean ? +(seen.cleanSum / seen.clean).toFixed(4) : 0, cleanMax: +seen.cleanMax.toFixed(4), cleanExact: seen.cleanExact, worst: seen.worst, fixes: fore.fixes, fixMax: +fore.fixMax.toFixed(4), records: seen.looks ? +(seen.recs / seen.looks).toFixed(1) : 0, ms: +fore.ms.toFixed(2) } } : {}) }));
   process.exit(code);
 }
-const t0 = performance.now(); let beats = 0, broke = false, walked = 0, at: number[] | null = null;   // (walked: the length of the way its man went, tick by tick — where a square walked by the beat ends is the box's)
+const t0 = performance.now(); let beats = 0, broke = false, walked = 0, at: number[] | null = null;   // (walked: the length of the way its man went, walk by walk — where a square walked by the beat ends is the box's)
 // ---- the look ahead, held against the game: where a look said he would stand after its last record, kept by that tick until the game has run it
 const fore = new Foresee(), said = new Map<number, { pos: number[]; heard: number; from: number }>(), heldBy: number[] = [], lostBy: number[] = [];   // (…and lostBy[t]: ticks up to and with t that ended with his legs not his own, or with him down)   // (heldBy[t]: ticks up to and with t the server ran on a held record for this seat)
 const seen = { first: -1, gameMoved: false, sentAt: -1, n: 0, sum: 0, max: 0, exact: 0, looks: 0, recs: 0, unfree: 0, clean: 0, cleanSum: 0, cleanMax: 0, cleanExact: 0, worst: null as null | { t: number; mm: number; records: number; near: number } };
@@ -74,9 +74,11 @@ function nearest(S: Stood, p: number[]): number {
   for (const gd of g.guards) one(gd.char.pos); for (const cv of g.civilians ?? []) one(cv.char.pos); for (const st of g.seats) if (st.view.player !== me) one(st.view.player.char.pos);
   return d;
 }
-function met(S: Stood): void {   // (inside a confirmed tick's step: the game has just run tick `client.confirmed`)
-  const t = client.confirmed; heldBy[t] = client.heldRun;
-  { const seat = S.W.game.hostSeat(); lostBy[t] = (lostBy[t - 1] ?? 0) + (!seat.view.player.down && legsOwn(seat.view) ? 0 : 1); }
+function met(S: Stood, ran: number[]): void {   // (after a walk: the game has run the ticks `ran`, and this process's copy of it stands at the last of them)
+  // (A WALK OF SEVERAL TICKS is one quiet run, stand.ts `quiet`: the game inside it was never this process's to read. So his legs count for each of its
+  //  ticks as the walk left them, and only a look that ends on the walk's last tick is held against the game)
+  const t = ran[ran.length - 1];
+  { const seat = S.W.game.hostSeat(), lost = !seat.view.player.down && legsOwn(seat.view) ? 0 : 1; for (const u of ran) { lostBy[u] = (lostBy[u - 1] ?? 0) + lost; if (u !== t) said.delete(u + 1); } }
   const was = said.get(t + 1); if (!was) return; said.delete(t + 1);
   const want = was.pos, p = S.W.game.hostSeat().view.player.char.pos as number[], e = Math.hypot(p[0] - want[0], p[1] - want[1], p[2] - want[2]);
   seen.n++; seen.sum += e; if (e > seen.max) seen.max = e; if (e < 0.001) seen.exact++;
@@ -108,11 +110,19 @@ const loop = setInterval(() => {
   if (due > 2) beats += due - 2;
   const a = performance.now();
   const led = () => { const F = PREDICT ? fore.last : null, f = g.followPos() as number[]; S.W.cam.update(1 / NET.hz, F ? [f[0] + F.by[0], f[1] + F.by[1], f[2] + F.by[2]] : f, F?.aim ?? g.aimPoint); };   // (its camera is on its man where he is drawn, as the page's is: host/loop.ts `lead`)
-  const n = client.walk({ step: (cmds: PlayerCmd[]) => { S.step(cmds); { const p = g.hostSeat().view.player.char.pos as number[]; if (at) walked += Math.hypot(p[0] - at[0], p[2] - at[2]); at = [p[0], p[1], p[2]]; } if (PREDICT) met(S); led(); }, word: () => S.word() }, Math.min(8, want - client.confirmed));   // (never past the tick asked for: two bots' last words are held against each other)
+  // (ONE QUIET RUN A WALK, as the page walks: stand.ts `quiet`. What this process reads of its game, it reads as the walk ends.)
+  // (--break, the red path: ONE record stepped with another walk key than the server ran, after tick 90. The man here is then a hair from where the
+  //  server has him, and nothing but the state word can say so. A write to this process's copy of the game would say nothing: the copy is not the game)
+  const ran: number[] = [];
+  S.quiet(true);
+  const n = client.walk({ step: (cmds: PlayerCmd[]) => { const t = client.confirmed; heldBy[t] = client.heldRun; ran.push(t);
+    if (BREAK && !broke && t >= 90) { broke = true; const i = Math.max(0, client.seat), c = cmds[i]; cmds[i] = { ...c, keys: c.keys.includes('KeyA') ? ['KeyD'] : ['KeyA'] }; }
+    S.step(cmds); }, word: () => S.word(), watch: () => S.watch() }, Math.min(8, want - client.confirmed));   // (never past the tick asked for: two bots' last words are held against each other)
+  S.quiet(false);
+  if (n) { { const p = g.hostSeat().view.player.char.pos as number[]; if (at) walked += Math.hypot(p[0] - at[0], p[2] - at[2]); at = [p[0], p[1], p[2]]; } if (PREDICT) met(S, ran); led(); }
   if (n) { tickMs += performance.now() - a; tickN += n; }
   if (PREDICT && due > 0) { lookAhead(S); if (!n) led(); }
   if (stall > 0 && !stalledOnce && client.confirmed >= 150) { stalledOnce = true; WAY.stallUntil = performance.now() + stall; }
-  if (BREAK && !broke && client.confirmed >= 90) { broke = true; const p = g.hostSeat().view.player.char.pos as number[], f = new Float64Array([p[0]]), u = new Uint32Array(f.buffer); u[0] ^= 1; p[0] = f[0]; }
   if (client.confirmed >= want) { clearInterval(loop); ws.close(); report(0); }
 }, 4);
 setTimeout(() => { clearInterval(loop); report(2); }, Number(arg('--timeout', '120')) * 1000);

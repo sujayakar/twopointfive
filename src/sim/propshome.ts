@@ -95,7 +95,6 @@ export const PROP_EV = 10;
 /** the step's numbers, in and out */
 export const PP = { dt: 0, props: 1, contacts: 2, leaves: 3, ways: 4, flags: 5, friction: 6, casDecel: 7, casVisc: 8, casSpin: 9, casStart: 10, casStop: 11, events: 12, wrong: 13,
   swept: 14, guided: 15, pairs: 16, walls: 17, held: 18, substeps: 19 } as const;
-export const PF = { enabled: 1, castor: 2 } as const;
 export const PROP_PARS = 24;
 
 /** where the hand-over's tables are in the module's memory (indices into its doubles), and how much each holds: asked once */

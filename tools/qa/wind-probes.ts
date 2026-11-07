@@ -116,7 +116,7 @@ export async function windSources(): Promise<boolean> {
   await windModule();
   const F = family('wind-sources: the Game\'s vents / storm / door gusts, their cycling, the mains, the hand-off, the master, the dice');
   Math.random = seeded(5101);
-  const W = await standUp(); const { game } = W; const calls = recordSmoke(W);
+  const W = await standUp({ dress: true }); const { game } = W; const calls = recordSmoke(W);
   game.godMode = true; game.playerInvisible = true; for (const gd of game.guards) { gd.hold = true; gd.pinned = true; }
   const wind = game.wind; game.tune.wind = 1;
   { // (1) the roster
@@ -188,7 +188,7 @@ export async function windSources(): Promise<boolean> {
     F.verdict(!fails.length, 'the smoke system is handed the active list once a frame with WIND.smokeRelax; tune.wind 0 → an EMPTY list, no active source, windAt ≡ 0 (still air everywhere); back to 1 → the sources again', fails.join('; ') || `per frame ${perFrame}/5 · on: ${on.n} sources (${on.names.slice(0, 4).join(', ')}…) · off: ${off.n}`);
   }
   { // (7) no dice: a seeded game sequence comes out the same whatever the wind does
-    const draw = async (windK: number, moths: boolean) => { Math.random = seeded(777); const V = await standUp(); V.game.tune.wind = windK; V.game.tune.moths = moths; V.game.weather.setEnabled(true); for (let i = 0; i < 240; i++) V.step(DT); return Math.random(); };
+    const draw = async (windK: number, moths: boolean) => { Math.random = seeded(777); const V = await standUp({ dress: true }); V.game.tune.wind = windK; V.game.tune.moths = moths; V.game.weather.setEnabled(true); for (let i = 0; i < 240; i++) V.step(DT); return Math.random(); };
     const a = await draw(1, true), b = await draw(0, false), c = await draw(1, false);
     F.verdict(a === b && b === c, 'four seconds of a seeded floor with wind 1 + moths, wind 0 without, wind 1 without → the next Math.random() draw is the same number: nothing here touches the game\'s dice', `${a} · ${b} · ${c}`);
   }
@@ -289,7 +289,7 @@ export async function windLevel(): Promise<boolean> {
     F.verdict(same, 'Level → data → Level keeps every vent field (size / period / duty / phase / mains written iff present) and data → Level → data gives the file\'s block back verbatim', same ? `${back.vents.length} vents both ways` : `L ${JSON.stringify(L.vents).slice(0, 120)} vs L2 ${JSON.stringify(L2.vents).slice(0, 120)}`);
   }
   { const d = JSON.parse(JSON.stringify(D)); delete d.vents; const errs: string[] = validateLevelData(d); const L0 = loadLevel(d);
-    Math.random = seeded(5301); const W = await standUp(); const roster0 = new Wind({ level: L0, doors: W.game.doors } as any).all.map((s: any) => s.why);   // (Wind's constructor reads level.vents and doors.list, nothing else)
+    Math.random = seeded(5301); const W = await standUp({ dress: true }); const roster0 = new Wind({ level: L0, doors: W.game.doors } as any).all.map((s: any) => s.why);   // (Wind's constructor reads level.vents and doors.list, nothing else)
     F.verdict(errs.length === 0 && L0.vents === undefined && !roster0.includes('vent') && roster0.includes('storm'), 'a level file with no vents block validates and loads with `vents` absent; a Wind built on it has the storm and the door gusts and no vent', `errors ${errs.length} · vents ${L0.vents} · roster ${roster0.join(',')}`);
   }
   return F.done();

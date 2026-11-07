@@ -101,20 +101,18 @@ export async function sceneTweakCheck(o: { verbose?: boolean } = {}): Promise<bo
       verdict(!drift && mid && !stuck && moved >= vars.length - 2 && back && own === 0 && held && snap() === before, 'round — put where it stands nothing moves; moved and put back, all is as it was; only a hand\'s move is a change',
         `${drift} drifted · ${stuck} would not move · ${moved}/${vars.length} read as changed while moved · moved by the game itself: ${own} changed · past its reach: ${held ? 'held' : 'NOT HELD'} · after: tables ${snap() === before ? 'as they were' : 'CHANGED'}, ${ST.SHADER_TUNE.size} overrides, ${T.changedVars(layers).length} changed`); }
 
-    // ---- one air (the snow thread's switch, read every frame: live here) and the blast's button
-    { const O = layers.find(x => x.id === 'oneair'), G = layers.find(x => x.id === 'grains'), B = layers.find(x => x.id === 'blast');
+    // ---- one air and the blast's button. (Until 2026-11-07 the one-air, marks and blast layers each had a switch, and this line also put one air OFF and read the
+    //      rows again, and told a blast with its switch off. Those three rows of SNOW_LOOK are settled on: the layers have no switch, so only the on side is asked.)
+    { const O = layers.find(x => x.id === 'oneair'), G = layers.find(x => x.id === 'grains'), B = layers.find(x => x.id === 'blast'), M = layers.find(x => x.id === 'marks');
       const row = (id: string) => vars.find(v => v.id === id);
-      // (the grains and the blast's throw of them stand down on the SWITCH; what the wind sim's snow reads is read only while one air is IN FORCE)
+      // (the grains and the blast's throw of them stand down on the ROW; what the wind sim's snow reads is read only while one air is IN FORCE)
       const reads = () => { const oa = FX.oneAirActive(R.g), sw = SNOW_LOOK.oneAir; const dim = (id: string) => !!row(id)?.idle?.();
         return !!G.idle?.() === sw && dim('SNOWBLAST.out') === sw && dim('SNOWBLAST.throwShare') === sw && dim('SNOWWISPS.speedK') === oa && dim('SNOWWISPS.gustPow') === oa && dim('SNOWWISPS.liftLo') === !oa && dim('SNOWFX.airLow') === !oa && dim('SNOWBLAST.flakes') === !oa && !dim('SNOWFX.perM2') && !dim('SNOWBLAST.sizeK'); };
       R.step(3); const on0 = SNOW_LOOK.oneAir, act0 = FX.oneAirActive(R.g), r0 = reads();
-      O.on.set(false); R.step(2); const off = !SNOW_LOOK.oneAir && !FX.oneAirActive(R.g), r1 = reads(), txt = T.tweakText(layers, 'pass');
-      const mode = O.on.mode === true && !O.on.reloads && !O.on.play && layers.find(x => x.id === 'air').on.mode === true;
-      T.resetAll(layers); R.step(2); const back = SNOW_LOOK.oneAir === on0 && FX.oneAirActive(R.g) === act0;
-      const b0 = snowBlastStats(R.g).blasts; B.act.run(); const b1 = snowBlastStats(R.g).blasts, why1 = snowBlastStats(R.g).why;
-      B.on.set(false); B.act.run(); const b2 = snowBlastStats(R.g).blasts; T.resetAll(layers);
-      verdict(on0 && r0 && off && r1 && mode && back && /switched off: .*Snow in one air/.test(txt) && b1 === b0 + 1 && b2 === b1 && SNOW_LOOK.blast && snap() === before, 'oneair — the switch is live and no layer of `none`; the rows nothing reads are the dimmed ones, either way; the button sets one blast off',
-        `opened ${on0 ? 'on' : 'OFF'} (in force: ${act0}) · rows ${r0 ? 'agree' : 'DISAGREE'} · off: ${off ? 'not in force' : 'STILL IN FORCE'}, rows ${r1 ? 'agree' : 'DISAGREE'} · reset: ${back ? 'as it opened' : 'NOT BACK'} · blasts told ${b0} → ${b1} (${why1}), with its switch off ${b2}`); }
+      const noSwitch = !!O && !!B && !!M && !O.on && !B.on && !M.on, mode = layers.find(x => x.id === 'air').on.mode === true;
+      const b0 = snowBlastStats(R.g).blasts; B?.act?.run(); const b1 = snowBlastStats(R.g).blasts, why1 = snowBlastStats(R.g).why; T.resetAll(layers);
+      verdict(on0 && r0 && noSwitch && mode && b1 === b0 + 1 && SNOW_LOOK.blast && SNOW_LOOK.marks && snap() === before, 'oneair — one air, the marks and the blast marks are layers with no switch; the rows nothing reads are the dimmed ones; the button sets one blast off',
+        `opened ${on0 ? 'on' : 'OFF'} (in force: ${act0}) · rows ${r0 ? 'agree' : 'DISAGREE'} · a switch on one air ${!!O?.on}, the marks ${!!M?.on}, the blast ${!!B?.on} · blasts told ${b0} → ${b1} (${why1})`); }
 
     // ---- breath: a blown man's steam reads the hard breath rule's numbers with the rule on and the breath table's own four with it off; the rows nothing
     //      reads are the dimmed ones, and a dimmed row moved changes no record the emitter files (a recording stand-in for the particle pool, as hardbreath-check.ts)
@@ -129,14 +127,20 @@ export async function sceneTweakCheck(o: { verbose?: boolean } = {}): Promise<bo
         finally { e.particles = had.p; e.settings.gpuParticles = had.gp; c.vel[0] = had.v[0]; c.vel[2] = had.v[1]; }
         return recs.length + '|' + recs.join('|'); };
       const moved = (rows: any[], on: boolean) => { rows.forEach(v => T.moveVar(v, v.def === v.max ? v.min : v.max)); try { return fly(on); } finally { T.resetAll(layers); } };
-      let dims = true, a = '', b = '', a1 = '', a2 = '', b1 = '', b2 = '';
+      // (the rule's switch is a settled row wherever rows are held: there the one side the page plays is asked, and no write of the other is tried. Where it is
+      //  still a switch, both sides, as this line always asked)
+      const { rowHeld } = await import(`${ROOT}/src/host/held.ts`);
+      const sides: boolean[] = rowHeld(HARDBREATH, 'on') ? [!!HARDBREATH.on] : [true, false];
+      let dims = true; const rec: { on: boolean; plain: string; soft: string; hard: string }[] = [];
       try {
-        for (const on of [true, false]) { HARDBREATH.on = on; if (!soft.every((v: any) => !!v.idle?.() === on) || !hard.every((v: any) => !!v.idle?.() === !on) || rest.some((v: any) => v.idle?.())) dims = false; }
-        a = fly(true); b = fly(false); a1 = moved(soft, true); a2 = moved(hard, true); b1 = moved(soft, false); b2 = moved(hard, false);
-      } finally { HARDBREATH.on = hb0; SNOW_LOOK.breath = look0; seedBreath(R.g, 1); }
-      const filed = a.length > 2 && b.length > 2;
-      verdict(dims && filed && a !== b && a1 === a && a2 !== a && b1 !== b && b2 === b && snap() === before, 'breath — a blown man\'s steam: the rows the hard breath rule leaves unread are the dimmed ones, either way, and a dimmed row moved files the same records',
-        `rows ${dims ? 'agree' : 'DISAGREE'} · ten seconds at a sprint, records ${a.split('|')[0]} with the rule on / ${b.split('|')[0]} off · rule on: the breath's four moved ${a1 === a ? 'change nothing' : 'CHANGE THE STEAM'}, the rule's eight moved ${a2 !== a ? 'change it' : 'CHANGE NOTHING'} · rule off: the four ${b1 !== b ? 'change it' : 'CHANGE NOTHING'}, the eight ${b2 === b ? 'change nothing' : 'CHANGE THE STEAM'}`); }
+        for (const on of sides) { if (sides.length > 1) HARDBREATH.on = on; if (!soft.every((v: any) => !!v.idle?.() === on) || !hard.every((v: any) => !!v.idle?.() === !on) || rest.some((v: any) => v.idle?.())) dims = false; }
+        for (const on of sides) rec.push({ on, plain: fly(on), soft: moved(soft, on), hard: moved(hard, on) });
+      } finally { if (sides.length > 1) HARDBREATH.on = hb0; SNOW_LOOK.breath = look0; seedBreath(R.g, 1); }
+      const filed = rec.every(r => r.plain.length > 2), apart = rec.length < 2 || rec[0].plain !== rec[1].plain;
+      // with the rule on its own eight are read and the breath's four are not; with it off, the other way about
+      const right = rec.every(r => (r.soft === r.plain) === r.on && (r.hard === r.plain) === !r.on);
+      verdict(dims && filed && apart && right && snap() === before, `breath — a blown man's steam: the rows the hard breath rule leaves unread are the dimmed ones${sides.length > 1 ? ', either way' : ' (the rule is held ' + (sides[0] ? 'on' : 'off') + ' here: that side)'}, and a dimmed row moved files the same records`,
+        `rows ${dims ? 'agree' : 'DISAGREE'} · ten seconds at a sprint` + rec.map(r => ` · rule ${r.on ? 'on' : 'off'}: ${r.plain.split('|')[0]} records, the breath's four moved ${(r.soft === r.plain) === r.on ? (r.on ? 'change nothing' : 'change it') : (r.on ? 'CHANGE THE STEAM' : 'CHANGE NOTHING')}, the rule's eight moved ${(r.hard === r.plain) === !r.on ? (r.on ? 'change it' : 'change nothing') : (r.on ? 'CHANGE NOTHING' : 'CHANGE THE STEAM')}`).join('') + (apart ? '' : ' · THE TWO SIDES FILE THE SAME RECORDS')); }
 
     // ---- mute
     { const L = layers.find(x => x.id === 'grains'); const v = L.vars.find((x: any) => x.id === 'SNOWGRAINS.opacity'); const d = FX.SNOWGRAINS.opacity;
@@ -177,7 +181,7 @@ export async function sceneTweakCheck(o: { verbose?: boolean } = {}): Promise<bo
     // ---- digest
     { let pressed = true; const run = async (tweak: boolean, seed: number) => {
         const X = await rig(seed); const Ls = sceneLayers(X.eng, X.g) as any[]; let n = 0;
-        // (the numbers first, and a blast told off the panel's button while its switch still stands; then every hand switch)
+        // (the numbers first, and a blast told off the panel's button; then every hand switch. One air, the marks and the blast marks are no hand switches since 2026-11-07, so this no longer shows that those three off leave the digest alone)
         // (… but the blast dig's seconds to their SHORT end: at the long end a dig fifty metres wide is asked again every frame of the run, minutes of it on a slow box)
         if (tweak) for (const L of Ls) for (const v of L.vars) if (!v.play) { T.moveVar(v, v.id === 'SNOWBLAST.digS' ? v.min : v.def === v.max ? v.min : v.max); n++; }
         X.step(60); if (tweak) { const b0 = snowBlastStats(X.g).blasts; Ls.find(L => L.id === 'blast').act.run(); if (snowBlastStats(X.g).blasts !== b0 + 1) pressed = false; }

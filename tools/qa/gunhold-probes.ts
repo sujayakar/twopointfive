@@ -20,6 +20,7 @@ const { startGrab, buildInteractables, HOLD_FIRE_CD } = playerMod;
 const PRESS_SECS = 0;
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+const { HANDSLOT } = await import(`${ROOT}/src/game/handslot.ts`);
 const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
 const { handProps, fireWeapon, bodyHit } = await import(`${ROOT}/src/game/combat.ts`);
 const { KNIFE_TAG, SC20K_TAG } = await import(`${ROOT}/src/game/rigProps.ts`);
@@ -153,7 +154,10 @@ export async function gunholdVariant() {
     if (props.knife !== 4) fails.push(`${props.knife} knife boxes in the fist of the arm hold (want 4: hold-pose-probes.ts has the rest of that)`);
     if (lightOn) fails.push('rail light lit in the arm hold');
     if (shots > 0) fails.push('a click fired in the arm hold');
-    if (!/^Space\s+“/.test(row) || !/Space\s+choke him out/.test(row) || !(CLOSE.heldClicks ? /LMB\s+knife — lethal\s+·\s+RMB\s+choke him out\s+·\s+E\s+draw — gun to his head/ : /E\s+draw — gun to his head/).test(row) || (CLOSE.heldClicks ? /pistol-whip/ : /pistol-whip|LMB/).test(row)) fails.push(`held rows: "${row}" (want the question, the choke and E to draw)`);   // (close.ts CLOSE.heldClicks on: the arm hold's two buttons are worded on the choke row, LMB the knife and RMB the choke, ahead of E; off: no LMB on it)
+    // (the key that draws on him is the row's own: 1 where the empty hands have a slot of their own and E is theirs — handslot.ts HANDSLOT.on, as player.ts
+    //  words the row — else E. GUNHOLDKEY_BREAK=1, the red path: the other key is wanted — this line must fail on either stand)
+    const drawKey = (HANDSLOT.on !== (process.env.GUNHOLDKEY_BREAK === '1')) ? '1' : 'E', draw = new RegExp(`${CLOSE.heldClicks ? 'LMB\\s+knife — lethal\\s+·\\s+RMB\\s+choke him out\\s+·\\s+' : ''}${drawKey}\\s+draw — gun to his head`);
+    if (!/^Space\s+“/.test(row) || !/Space\s+choke him out/.test(row) || !draw.test(row) || (CLOSE.heldClicks ? /pistol-whip/ : /pistol-whip|LMB/).test(row)) fails.push(`held rows: "${row}" (want the question, the choke and ${drawKey} to draw)`);   // (close.ts CLOSE.heldClicks on: the arm hold's two buttons are worded on the choke row, LMB the knife and RMB the choke, ahead of E; off: no LMB on it)
     if (phaseDuring !== 'choke' || phaseAfter !== 'held' || A.state === 'dead') fails.push(`the choke chosen, stopped at 1 s: ${phaseDuring} → ${phaseAfter}, A ${A.state} (want choke → held, alive)`);
     const ok = fails.length === 0; allPass &&= ok;
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — (b) HOLSTERED: variant ${H?.variant}/${A.held?.variant}; guard row before: "${rowBefore}"; held rows "${row.split('  ·  ').slice(1).join(' · ')}"; pistol boxes up ${props.n} (knife ${props.knife}), hideHeldItem ${c.anim.hideHeldItem}, light ${lightOn}, click → shots ${shots}; the choke stopped at 1 s: ${phaseDuring} → ${phaseAfter}\n    log: ${msgs.map(m => m.text).join(' | ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);

@@ -30,7 +30,7 @@ import type { Door } from './doors';
 import type { Vec3 } from '../math/vec';
 import type { FogEye } from './fogofwar';
 import { FOG, fieldDeg } from './fogofwar';
-import { STEALTHPOSE } from './stealthpose';   // (read inside a function only)
+import { goneWithTick } from './crossing';
 
 export const WAND = {
   /** the switch (page on, ?nowand; frozen stand off, TPS_WAND=1) */
@@ -89,15 +89,11 @@ export interface Wanding { door: Door; side: 1 | -1; t: number; pan: number; liv
  *  open ends the look within a frame or two, not a quarter radian later), on its hinges, not the steel fire door */
 export function wandFits(d: Door): boolean { return !d.off && Math.abs(d.angle) < WAND.shutRad && !d.def.steel; }
 /** is 'look under it' on this door's rows for this player: the switch, the wand on him, a fog to look through, a door it fits */
-export function wandOffered(g: Game, pl: Player, d: Door): boolean { return WAND.on && pl.wand && g.fogOfWar.active && wandFits(d); }
+export function wandOffered(g: Game, pl: Player, d: Door): boolean { return goneWithTick('wandOffered') as any; }
 
 /** the wait before the lens is through, as the keys stand: `feedSecs` on his knee, or with `quick` the animation's time from the start of the look —
  *  `squat`: the squat at the door is what is drawn (Sam with the stealth poses on), whose own blend in is the time; else the kneel's `quickSecs` */
-export function wandFeedSecs(squat = false): number { return !WAND.quick ? WAND.feedSecs : squat && STEALTHPOSE.on && STEALTHPOSE.cable ? STEALTHPOSE.cableIn : WAND.quickSecs; }
-/** is the lens through this step, for a man the caller has found planted: `t` s on his knee, `age` s since the look began, `crouch` the animator's kneel */
-export function wandThrough(t: number, age: number, crouch: number, squat = false): boolean {
-  return WAND.quick ? age >= wandFeedSecs(squat) - 1e-6 && crouch >= WAND.quickDown : t >= WAND.feedSecs;   // (1e-6: `age` is a sum of steps — 24 sixtieths are a hair under 0.4)
-}
+export function wandFeedSecs(squat = false): number { return goneWithTick('wandFeedSecs') as any; }
 
 /** the wedge in force, degrees */
 export function wandFov(): number { return Math.min(170, Math.max(20, FOG.cone ? fieldDeg() : WAND.fovDeg)); }
@@ -109,13 +105,6 @@ export function wandLens(d: Door, side: 1 | -1): { pos: Vec3; yaw: number } {
   const [hx, hz] = d.def.hinge, u = d.dir(), w = d.def.width * 0.5;
   const nx = u[1] * side, nz = -u[0] * side;   // (doors.ts workSpot's normal, turned round: out of the leaf on the far side)
   return { pos: [hx + u[0] * w + nx * WAND.pastM, WAND.eyeY, hz + u[1] * w + nz * WAND.pastM], yaw: Math.atan2(nx, nz) };
-}
-/** turn the lens toward the frame's aim point, at its rate, inside its stops */
-export function wandTurn(W: Wanding, aim: Vec3, dt: number) {
-  const L = wandLens(W.door, W.side), max = wandPanMax();
-  let want = Math.atan2(aim[0] - L.pos[0], aim[2] - L.pos[2]) - L.yaw; want = Math.atan2(Math.sin(want), Math.cos(want));
-  want = Math.max(-max, Math.min(max, want));
-  const step = WAND.panRate * dt; W.pan += Math.max(-step, Math.min(step, want - W.pan)); W.pan = Math.max(-max, Math.min(max, W.pan));
 }
 /** THE LENS AS ONE OF THE FOG'S EYES (fogofwar.ts update asks it in place of the player's own eye), or null while nobody is looking */
 export function wandEye(g: Game): FogEye | null {

@@ -1,12 +1,12 @@
 // The 'shutdoor' family: A TEAMMATE SHUTS A DOOR WHEN TOLD, AND ONLY THEN (src/game/shutdoor.ts; the maintainer's tap 10-08 "On order": "A shut that door row goes on
 // the door menu and teammates shut one only when told."). Run through probes.ts:
 //   bun run tools/qa/probes.ts shutdoor | shutdoor-menu | shutdoor-refuse | shutdoor-man | shutdoor-who | shutdoor-file | shutdoor-lock | shutdoor-never
-// and again on the shipped doors: ONEWAY=1 QA_DOORSTAY=1 (QA_DOORBLAST=1 QA_DOORMANNERS=1) bun run tools/qa/probes.ts shutdoor
+//   SHUTDOOR_BREAK=1 in front of shutdoor-menu = one tool put on the digit 7: its line of the menu's keys and its line of the page's digits must FAIL
 // PASS / FAIL each, all headless: the Game of headless.ts under the room clear's staging with four teammates, Sam in god mode and dark. A leaf is stood open
 // by hand (its angle set, its closer held off as a showcase holds one) so the family reads the same with the old closers and with doors that stay. Nothing
 // here looks at a picture: there is no hand on a handle to see, and nobody has watched the leaf come to.
 //   shutdoor-menu    X, 5 on a SHUT door: the door tools' page as it was (… 3 breach with a charge …). On a door that stands open (0.6 rad and more, the door
-//                    tools' own line): 3 is 'shut that door', the other rows and every digit as they were, nothing above 5; a leaf only ajar, and a door with
+//                    tools' own line): 3 is 'shut that door', the other rows and every digit as they were, nothing above 5 (row 4 is the stand's: order-keys.ts toolsRow4); a leaf only ajar, and a door with
 //                    a charge set on it, keep the charge's row. X, 5, 3 gives the order
 //   shutdoor-refuse  greyed with its reason, each one: the leaf off its hinges · Sam in its swing · a teammate in its swing · a body in its swing · no place to
 //                    shut it from · an enemy in sight through it. A refusal moves nobody and logs nothing; with the cause gone the same row is given
@@ -22,6 +22,7 @@
 //                    the row is never assigned, its counters and log stay empty, teammates open leaves and none they touched last comes to its latch. The
 //                    same five minutes with the order given once move all of those (so the lines can go red)
 import { standUp, ROOT } from './headless.ts';
+import { leftKey, toolsRow4 } from './order-keys.ts';
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -31,6 +32,7 @@ const { PACE } = await import(`${ROOT}/src/game/guards.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { setSilent, squadSilent, SILENT } = await import(`${ROOT}/src/game/silent.ts`);
 const { SHUTDOOR_STATS, SHUTDOOR_LOG, SHUT_ID, shutSpot } = await import(`${ROOT}/src/game/shutdoor.ts`);
+const FOUR = (): string => toolsRow4(DOORTOOLS);   // (the door tools' fourth row, as the stand has it: order-keys.ts)
 const FRAG_KEY = 'G';   // (the shared build's frag row sits on the door tools' page on a key of its own, never a digit)
 
 const DT = 1 / 60;
@@ -44,7 +46,9 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 }
 const DT_DEFAULTS = JSON.parse(JSON.stringify(DOORTOOLS)), RC_DEFAULTS = { ...ROOMCLEAR }, NB_DEFAULTS = { ...NIGHTBREACH };
 const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-const guarded = (fn: () => Promise<boolean>) => async () => { const silentOn = SILENT.on, stayOn = DOORSTAY.on; try { return await fn(); } finally { SILENT.on = silentOn; DOORSTAY.on = stayOn; Object.assign(DOORTOOLS, JSON.parse(JSON.stringify(DT_DEFAULTS))); Object.assign(ROOMCLEAR, RC_DEFAULTS); Object.assign(NIGHTBREACH, NB_DEFAULTS); } };
+/** an order's target that is no thing: the place is the first teammate's own (the tools' host files every order with its target's place) */
+const nowhere = (O: any) => ({ kind: 'none', at: [...(O.squad()[0]?.char.pos ?? [0, 0, 0])] });
+const guarded = (fn: () => Promise<boolean>) => async () => { const silentOn = SILENT.on; try { return await fn(); } finally { SILENT.on = silentOn; Object.assign(DOORTOOLS, JSON.parse(JSON.stringify(DT_DEFAULTS))); Object.assign(ROOMCLEAR, RC_DEFAULTS); Object.assign(NIGHTBREACH, NB_DEFAULTS); } };
 const logText = () => SHUTDOOR_LOG.map((l: any) => `${l.who}: ${l.what}`).join(' | ');
 const doors = () => `one-way ${DOORWAY.oneWay ? 'on' : 'off'}, stay open ${DOORSTAY.on ? 'on' : 'off'}`;
 
@@ -60,7 +64,7 @@ function inWay(d: any, p: number[], r: number): boolean {
   let th = Math.atan2(perp, along) * (Math.sign(d.angle) || 1); return th >= 0 && th <= Math.abs(d.angle);
 }
 /** stand a leaf open at `a` rad (sign = the face it stands on; one-way doors open one way only) with its closer held off */
-function prop(d: any, a = 1.35, face?: number) { const s = DOORWAY.oneWay ? d.swing : (face ?? 1); d.latched = false; d.off = false; d.angle = s * Math.min(a, Math.abs(s > 0 ? d.maxA : d.minA)); d.vel = 0; d.closing = false; d.quietT = -3600; d.place(); }
+function prop(d: any, a = 1.35, face?: number) { const s = d.swing; d.latched = false; d.off = false; d.angle = s * Math.min(a, Math.abs(s > 0 ? d.maxA : d.minA)); d.vel = 0; d.closing = false; d.quietT = -3600; d.place(); }
 function shut(d: any) { d.off = false; d.angle = 0; d.vel = 0; d.closing = false; d.latched = true; d.quietT = 10; d.place(); }
 function pathLen(g: any, a: number[], b: number[]): number { if (dist(a, b) < 0.5) return dist(a, b); const p = g.col.nav.findPath(a, b); if (!p) return Infinity; let L = 0, q = a; for (const w of p) { L += dist(q, w); q = w; } return L + dist(q, b); }
 
@@ -97,7 +101,7 @@ async function rig(seed: number, o: { fight?: boolean; squad?: 2 | 4; keep?: boo
     target(name: string) { return O.targetAt(R.door(name).frameCentre); },
     give(id: string, name: string, who: any = 'all'): string | null { return O.give(id, R.target(name), who); },
     /** put the teammates at these places, standing, and have them hold there */
-    stand(places: number[][]) { R.ops.forEach((x: any, i: number) => { const p = places[i]; if (!p) return; x.char.pos[0] = p[0]; x.char.pos[2] = p[2]; x.char.vel[0] = x.char.vel[2] = 0; }); R.step(2); O.give('hold', { kind: 'none' }, 'all'); R.step(20); },
+    stand(places: number[][]) { R.ops.forEach((x: any, i: number) => { const p = places[i]; if (!p) return; x.char.pos[0] = p[0]; x.char.pos[2] = p[2]; x.char.vel[0] = x.char.vel[2] = 0; }); R.step(2); O.give('hold', nowhere(O), 'all'); R.step(20); },
     /** X pressed on p: the first page's rows, then the door tools' page behind its opener (ids, digits, words, greyed, reasons), Esc, Esc */
     menuOn(p: number[]) {
       W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(24);
@@ -131,15 +135,18 @@ export const shutdoorMenu = guarded(async () => {
   const { verdict, done } = family(`shutdoor-menu: the row sits on the charge's digit while the door stands open, and nowhere else`);
   const R = await rig(3); const { O, D, game: g } = R; const d = R.door('breakroom_w');
   g.teleportPlayer(SAM_W); R.stand(WEST);
+  if (process.env.SHUTDOOR_BREAK === '1') { const x = O.defs.find((q: any) => q.id === 'bangClear'); if (x) x.key = 7; }   // (the red path of the menu's keys: one tool put on a digit out of reach — the line of the keys and the line of the page's digits must both fail)
   shut(d); R.step(5);
   const a = R.menuOn(d.frameCentre), a3 = a?.tools?.rows[2];
-  verdict(!!a && a.first.ids.join(' ') === 'stack cover fallIn hold tools' && a.tools?.ids.join(' ') === 'openClear bangClear charge thr fragClear' && a3?.key === '3' && /^breach with a charge/.test(a3.text),
+  verdict(!!a && a.first.ids.join(' ') === 'stack cover fallIn hold tools' && a.tools?.ids.join(' ') === `openClear bangClear charge ${FOUR()} fragClear` && a3?.key === '3' && /^breach with a charge/.test(a3.text),
     'a SHUT door: the first page and the door tools\' page as they were — 3 is breach with a charge', `${a?.first.ids.join(' ')} ▸ ${a?.tools?.ids.join(' ')} · 3 "${a3?.text}"`);
   prop(d); R.step(5);
   const b = R.menuOn(d.frameCentre), b3 = b?.tools?.rows[2], keys = [...(b?.first.rows ?? []), ...(b?.tools?.rows ?? [])].map(r => r.key);
-  verdict(!!b && b.first.ids.join(' ') === 'stack cover fallIn hold tools' && b.tools?.ids.join(' ') === `openClear bangClear ${SHUT_ID} thr fragClear` && b3?.key === '3' && b3.text === 'shut that door' && !b3.off && b.tools!.why[2] === null,
+  verdict(!!b && b.first.ids.join(' ') === 'stack cover fallIn hold tools' && b.tools?.ids.join(' ') === `openClear bangClear ${SHUT_ID} ${FOUR()} fragClear` && b3?.key === '3' && b3.text === 'shut that door' && !b3.off && b.tools!.why[2] === null,
     'the same door standing OPEN: 3 is shut that door, lit; rows 1, 2 and 4 of the page and the first page are the ones they were', `${b?.first.ids.join(' ')} ▸ ${b?.tools?.ids.join(' ')} · 3 "${b3?.text}" off ${b3?.off} why ${b?.tools?.why[2]}`);
-  verdict(keys.length >= 9 && keys.every(k => /^[1-5]$/.test(k) || k === FRAG_KEY) && (b?.tools?.rows.map((r: any) => r.key).join('').startsWith('1234')) && JSON.stringify(b?.tools?.rows.map((r: any) => r.key)) === JSON.stringify(a?.tools?.rows.map((r: any) => r.key)), 'no row of either page is on a digit above 5, and the page\'s digits are the ones the shut door\'s page has', `open: ${b?.tools?.rows.map((r: any) => `${r.key} ${r.text}`).join(' | ')} · shut: ${a?.tools?.rows.map((r: any) => `${r.key} ${r.text}`).join(' | ')}`);
+  const toolKeys = (m: typeof b) => m?.tools?.rows.map((r: any) => r.key) ?? [], said = `open: ${b?.tools?.rows.map((r: any) => `${r.key} ${r.text}`).join(' | ')} · shut: ${a?.tools?.rows.map((r: any) => `${r.key} ${r.text}`).join(' | ')}`;
+  verdict(keys.length >= 9 && keys.every(k => leftKey(k, 5)) && keys.includes(FRAG_KEY), 'no row of either page is on a digit above 5: each is on 1 to 5 or on a letter an order may have (order-keys.ts), the frag\'s G among them', said);
+  verdict(toolKeys(b).join('').startsWith('1234') && JSON.stringify(toolKeys(b)) === JSON.stringify(toolKeys(a)), 'the page\'s digits are 1 to 4 in order, and the ones the shut door\'s page has', said);
   // 'stands open' is the door tools' own line (0.6 rad: where a charge is refused "it's open."): past it the row, short of it the charge's row as ever
   prop(d, 0.7); R.step(2); const c = row3(R, d); prop(d, 0.5); R.step(2); const c2 = row3(R, d); prop(d, 0.05); R.step(2); const c3 = row3(R, d);
   verdict(c.id === SHUT_ID && !c.row?.off && c2.id === 'charge' && c3.id === 'charge', 'a leaf 0.7 rad open gets the row; one ajar at 0.5 rad and one a hair off its latch keep the charge row', `0.7 rad: ${c.id} · 0.5 rad: ${c2.id} "${c2.row?.text}" · 0.05 rad: ${c3.id}`);
@@ -177,7 +184,7 @@ export const shutdoorRefuse = guarded(async () => {
   { const x = refused(/you're in its way/); verdict(x.ok, 'Sam standing where the leaf comes round: you\'re in its way', `Sam ${at(g.player.char.pos)} · ${x.text}`); }
   g.teleportPlayer(SAM_W); R.step(3);
   // a teammate in its swing, the order addressed to another man
-  { const a = R.ops[3], p = mid(); a.char.pos[0] = p[0]; a.char.pos[2] = p[2]; R.step(1); O.give('hold', { kind: 'none' }, 3); R.step(3);
+  { const a = R.ops[3], p = mid(); a.char.pos[0] = p[0]; a.char.pos[2] = p[2]; R.step(1); O.give('hold', nowhere(O), 3); R.step(3);
     const before = snap(), n0 = O.log.length, w = O.give(SHUT_ID, O.targetAt(d.frameCentre), 0); R.step(2);
     verdict(new RegExp(`${a.callsign} is in its way`).test(w ?? '') && snap().every((q: any, i: number) => q === before[i]) && O.log.length === n0, 'a teammate standing in it, the order addressed to another man: refused, naming him', `give to ${R.ops[0].callsign}: "${w}"`);
     // … and addressed to all, he is the nearest: he takes it himself and steps out of it
@@ -193,10 +200,10 @@ export const shutdoorRefuse = guarded(async () => {
     const h = R3.hostiles.find((x: any) => x.state !== 'dead'); for (const o of R3.hostiles) if (o !== h) { o.char.pos[0] = 6; o.char.pos[2] = 30; o.dazzledUntil = 1e9; }
     const F = frame(d3), far = pt(d3, F.W / 2, -faceOf(d3, R3.ops[0].char.pos) * 2.6);   // inside the room, on the far face from the corridor men
     h.char.pos[0] = far[0]; h.char.pos[2] = far[2]; h.dazzledUntil = 1e9; h.god = true;
-    const sees = R3.until(() => g3.fight.seenBy(h).length > 0, 6);
+    const t0 = g3.time, sees = R3.until(() => g3.fight.seenBy(h).length > 0, 6), first = g3.fight.seenBy(h).map((x: any) => x.callsign).join(' + '), seenAt = g3.time - t0;
     const r = row3(R3, d3), w = R3.O.give(SHUT_ID, R3.O.targetAt(d3.frameCentre));
     verdict(sees && r.id === SHUT_ID && !!r.row?.off && /contact through that door/.test(r.why ?? '') && /contact through that door/.test(w ?? ''), 'a defender the team has in sight through the doorway: contact through that door',
-      `${h.callsign} at ${at(h.char.pos)} seen by ${g3.fight.seenBy(h).map((x: any) => x.callsign)} · row 3: ${r.id}${r.row?.off ? ' (greyed)' : ''} "${r.why}" · give: "${w}"`); }
+      `${h.callsign} at ${at(h.char.pos)} · ${sees ? `first in sight ${seenAt.toFixed(2)} s on (${first})` : 'NEVER IN SIGHT in 6 s (the staging)'} · in sight as the row was read, ${(g3.time - t0 - seenAt).toFixed(2)} s later: ${g3.fight.seenBy(h).map((x: any) => x.callsign).join(' + ') || 'NOBODY'} · row 3: ${r.id}${r.row?.off ? ' (greyed)' : ''} "${r.why}" · give: "${w}"`); }
   // a body in its swing
   { const R4 = await rig(5, { keep: true }); const g4 = R4.game, d4 = R4.door('breakroom_w'); g4.teleportPlayer(SAM_W); R4.stand(WEST); prop(d4); R4.step(5);
     const F = frame(d4), c = d4.def.closedDir + d4.angle / 2, p = [F.hx + Math.cos(c) * F.W * 0.6, 0, F.hz + Math.sin(c) * F.W * 0.6];
@@ -219,7 +226,7 @@ export const shutdoorRefuse = guarded(async () => {
 async function oneShut(seed: number, name: string, places: number[][], sam: number[], o: { face?: number; who?: any; silent?: boolean; fallIn?: boolean; pre?: (R: Rig, d: any) => void; again?: number } = {}) {
   const R = await rig(seed); const { O, game: g } = R; const d = R.door(name);
   g.teleportPlayer(sam); R.stand(places); if (o.silent) { SILENT.on = true; setSilent(g, true); R.step(5); }
-  if (o.fallIn) { O.give('fallIn', { kind: 'none' }, 'all'); R.step(60 * 4); }
+  if (o.fallIn) { O.give('fallIn', nowhere(O), 'all'); R.step(60 * 4); }
   prop(d, 1.35, o.face); R.step(5); o.pre?.(R, d);
   const before = R.ops.map((x: any) => O.of(x)), spots = [1, -1].map(s => shutSpot(g, d, s)), t0 = g.time, a0 = d.angle, ev0 = R.doorEvents.length;
   const why = O.give(SHUT_ID, O.targetAt(d.frameCentre), o.who ?? 'all');
@@ -248,7 +255,7 @@ export const shutdoorMan = guarded(async () => {
   ];
   for (const c of cases) {
     const x = await oneShut(7, c.name, c.places, c.sam, c); const { R, d, man, O } = x;
-    if (DOORWAY.oneWay && c.face === -1) { console.log(`- (skipped — ${c.label}: a one-way leaf stands on one face only)`); continue; }
+    if (c.face === -1) { console.log(`- (skipped — ${c.label}: a one-way leaf stands on one face only)`); continue; }
     const i = man ? R.ops.indexOf(man) : -1, least = Math.min(...x.walks);
     verdict(x.why === null && !!man && R.most === 1 && R.everHad.size === 1 && x.walks[i] <= least + 1e-6 && O.log.filter((l: any) => l.order === SHUT_ID).length === 1,
       `${c.label}: ONE man takes it, and his is the shortest walk to the place`, `give: ${x.why} · ${man?.callsign} sent to ${x.post ? at(x.post) : '—'} · walks ${R.ops.map((o: any, k: number) => `${o.callsign} ${f2(x.walks[k])}`).join(', ')} · most under it at once ${R.most}`);
@@ -321,8 +328,7 @@ export const shutdoorNever = guarded(async () => {
   const { verdict, done } = family(`shutdoor-never: five minutes of a played room clear with the order never given — nobody shuts a door`);
   /** the commander: each room in turn — stack on its door, open and clear, fall in, walk on — for five minutes of game time. `told`: one shut order on the way */
   const play = async (told: boolean) => {
-    // (doors that stay open, whatever the harness stood up with: with the old closers every leaf comes to by itself and the lines below would say nothing)
-    const R = await rig(21, { fight: true }); const { O, game: g, RC } = R; DOORSTAY.on = true; const ids = new Set(R.ops.map((x: any) => x.char.id));
+    const R = await rig(21, { fight: true }); const { O, game: g, RC } = R; const ids = new Set(R.ops.map((x: any) => x.char.id));
     let assigned = 0, shutBy = 0, opened = 0, restsTo = 0; const wasOpen = new Map<any, boolean>(g.doors.list.map((d: any) => [d, !d.latched])); const wasTo = new Set<any>();   // (restsTo: leaves a body brought to the frame that rest there unlatched — Door.swept: nobody shut them, and the count is what the walk round an open leaf has left to mend)
     R.post = () => { for (const x of R.ops) if (O.of(x)?.order === SHUT_ID) assigned++;
       for (const d of g.doors.list) { const open = !d.latched; if (wasOpen.get(d) && !open && ids.has(d.lastWho)) shutBy++; if (!wasOpen.get(d) && open && ids.has(d.lastWho)) opened++; wasOpen.set(d, open);
@@ -334,11 +340,11 @@ export const shutdoorNever = guarded(async () => {
     for (const room of RC.rooms) { if (left() <= 0) break; const sd = room.def.doors?.[0]; const d = sd ? R.door(typeof sd === 'string' ? sd : (sd.door ?? sd.name ?? sd.id)) : null; if (!d) continue; rooms++;
       const side = faceOf(d, g.player.char.pos), stand = pt(d, d.def.width / 2 + 1.6, side * 2.2);
       if (!g.col.nav.isBlocked(stand[0], stand[2])) g.teleportPlayer(stand);
-      O.give('fallIn', { kind: 'none' }, 'all'); R.until(() => left() <= 0, 6);
+      O.give('fallIn', nowhere(O), 'all'); R.until(() => left() <= 0, 6);
       O.give('stack', O.targetAt(d.frameCentre)); R.until(() => left() <= 0, 8);
       O.give('openClear', O.targetAt(d.frameCentre)); R.until(() => left() <= 0, 25);
-      if (told && given !== null && !d.latched && !d.off) { O.give('hold', { kind: 'none' }, 'all'); R.step(30); prop(d, Math.max(0.8, Math.abs(d.angle))); given = O.give(SHUT_ID, O.targetAt(d.frameCentre)); R.until(() => d.latched || left() <= 0, 25); }
-      O.give('fallIn', { kind: 'none' }, 'all'); R.until(() => left() <= 0, 8); }
+      if (told && given !== null && !d.latched && !d.off) { O.give('hold', nowhere(O), 'all'); R.step(30); prop(d, Math.max(0.8, Math.abs(d.angle))); given = O.give(SHUT_ID, O.targetAt(d.frameCentre)); R.until(() => d.latched || left() <= 0, 25); }
+      O.give('fallIn', nowhere(O), 'all'); R.until(() => left() <= 0, 8); }
     R.until(() => left() <= 0, 300);
     return { R, assigned, shutBy, opened, restsTo, given, rooms, secs: g.time - t0, up: R.ops.filter((x: any) => x.state !== 'dead').length, orders: O.log.length, stats: { ...SHUTDOOR_STATS }, log: SHUTDOOR_LOG.length };
   };

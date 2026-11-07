@@ -18,12 +18,13 @@
 //                · the entry (doortools.ts): a man sent to his point inside goes THROUGH THE ORDERED DOOR — one who is not at it when the word comes (the fight
 //                  had him, he was late to the stack) is walked to its mouth by known floor first, never in by the room's other door.
 // With no operative on the floor nothing here runs. (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { men, teamActive, teamSquad } from './seats';
+import './seats';
 import type { Vec3 } from '../math/vec';
 import type { Game } from './game';
 import type { Door } from './doors';
 import { doorCells } from './guards';
 import { seenReset } from './seenwalk';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 const ROOM_MAX_CELLS = 2400;   // roomfight.ts's own cap: past this a flood is open floor
 
@@ -60,11 +61,11 @@ export class ClearedRooms {
     this.knownRoom = new Uint8Array(this.sizes.length); this.known = 0; this.roomOfCell = M; this.builtFor = nav; return M;
   }
   /** the room `p` stands in (0: none — a doorway, open floor) */
-  roomAt(p: Vec3): number { const nav = this.g.col.nav, M = this.build(), x = Math.floor(p[0] / nav.cell), z = Math.floor(p[2] / nav.cell); return x < 0 || z < 0 || x >= nav.W || z >= nav.H ? 0 : M[nav.idx(x, z)]; }
+  roomAt(p: Vec3): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('ClearedRooms.roomAt', this, [p]); if (__r !== RUST_PASS) return __r as any; } } const nav = this.g.col.nav, M = this.build(), x = Math.floor(p[0] / nav.cell), z = Math.floor(p[2] / nav.cell); return x < 0 || z < 0 || x >= nav.W || z >= nav.H ? 0 : M[nav.idx(x, z)]; }
   /** has the team been in the room `p` stands in (open floor and doorways: yes) */
-  knownAt(p: Vec3): boolean { const r = this.roomAt(p); return !r || !!this.knownRoom[r]; }
+  knownAt(p: Vec3): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('ClearedRooms.knownAt', this, [p]); if (__r !== RUST_PASS) return __r as any; } } const r = this.roomAt(p); return !r || !!this.knownRoom[r]; }
   /** the room on a door's `side` face (orders.ts sideOf's sign), by the very cell its floor was flooded from — 0: open floor, or no floor on that face */
-  roomBy(d: Door, side: 1 | -1): number { const M = this.build(), s = this.seeds.get(d)?.[side > 0 ? 0 : 1] ?? -1; return s < 0 ? 0 : M[s]; }
+  roomBy(d: Door, side: 1 | -1): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('ClearedRooms.roomBy', this, [d, side]); if (__r !== RUST_PASS) return __r as any; } } const M = this.build(), s = this.seeds.get(d)?.[side > 0 ? 0 : 1] ?? -1; return s < 0 ? 0 : M[s]; }
   /** is there floor at all on that face of the door */
   hasFloor(d: Door, side: 1 | -1): boolean { this.build(); return (this.seeds.get(d)?.[side > 0 ? 0 : 1] ?? -1) >= 0; }
   /** the room a mark is in — a mark on a cell that is no room's (a doorway, a wall's cell) is in every room a cell away */
@@ -82,16 +83,9 @@ export class ClearedRooms {
     return out;
   }
   /** one of ours stands at `p` */
-  mark(p: Vec3) { const r = this.roomAt(p); if (r && !this.knownRoom[r]) { this.knownRoom[r] = 1; this.known++; } }
+  mark(p: Vec3): void { return goneWithTick('ClearedRooms.mark') as any; }
   /** how many rooms are known (it only grows inside an encounter: a cheap 'has what is known changed') */
   known = 0;
-  /** four times a second: where the team stands is known ground */
-  tick() {
-    const g = this.g; if (!teamActive(g)) return;
-    if (this.last >= 0 && Math.abs(g.time - this.last) < 0.25) return; this.last = g.time;
-    for (const gd of teamSquad(g)) if (gd.state !== 'dead') this.mark(gd.char.pos);
-    for (const pl of men(g)) if (!pl.down) this.mark(pl.char.pos);
-  }
   /** A WALK'S PRICE LIST: nav.findPath's `penalty` for a walk from `from` to `to` — every cell of a room nobody of the team has been in is `dear` times a
    *  cell of known floor, bar the room he stands in and the room his mark is in; `also`: rooms dear whatever is known of them (the room an entry is FOR,
    *  on the walk to its door's mouth). Null: nothing on this floor is dear for this walk. */
@@ -111,5 +105,5 @@ export class ClearedRooms {
       a = b; }
     return m;
   }
-  summary(): string { this.build(); const k = this.known, S = this.stats; return `cleared rooms: ${k} of ${this.sizes.length - 1} known · routes ${S.round} round, ${S.through} through for want of a way · ${S.face} stacks on the known face · ${S.mouth} walked to the ordered door`; }
+  summary(): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('ClearedRooms.summary', this, []); if (__r !== RUST_PASS) return __r as any; } } this.build(); const k = this.known, S = this.stats; return `cleared rooms: ${k} of ${this.sizes.length - 1} known · routes ${S.round} round, ${S.through} through for want of a way · ${S.face} stacks on the known face · ${S.mouth} walked to the ordered door`; }
 }

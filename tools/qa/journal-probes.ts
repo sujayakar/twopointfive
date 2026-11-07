@@ -12,7 +12,7 @@
 //   journal-knob       (c) the same file replayed by a build whose gameplay differs (a knob nudged after the file's own were applied: the men walk 15 % faster)
 //                          mismatches, naming a guard's field — what an INTENDED change looks like (re-record); while a presentation-only change (the torch's
 //                          emitter radius on the replay's engine — a look, not an input) replays identically;
-//   journal-fixtures   (d) every session under tools/qa/sessions/ (the committed fixtures — the first is this family's own recording) replays identically on
+//   journal-fixtures   (d) every session under tools/qa/sessions/ (the committed fixtures — the first was this family's own recording when it was written, and still throws by the quick-throw key) replays identically on
 //                          this build: the gate a refactor must pass. `--write` files (a)'s recording there as selftest.json.gz.
 import { writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -40,10 +40,18 @@ export function answeringProbe(seed: number) {
   return { probe, tick, results };
 }
 
+/** WHAT THE SCRIPTED SESSION DID, of what its title says it does: a script is input, and input a stand does not take leaves a recording that replays perfectly
+ *  and holds nothing. Twice it did: the canister went by a key the page ignores, and the pistol was holstered before its round on every stand. */
+export interface Deeds { whistled: boolean; thrown: boolean; fired: boolean }
+/** the deeds a recording lacks, as words for a failing line ([] = it did them all) */
+export const undone = (d: Deeds): string[] => [...(d.whistled ? [] : ['never whistled']), ...(d.thrown ? [] : ['never threw its canister']), ...(d.fired ? [] : ['never fired its round'])];
+/** JOURNALSCRIPT_BREAK=1 = the red path of the script's deeds: its trigger is never pulled, as when a stand ignores a key the script presses: the canister is not
+ *  thrown and the round is not fired, and every probe that records the script must say so */
+const SCRIPT_BREAK = process.env.JOURNALSCRIPT_BREAK === '1';
 /** RECORD the scripted session headless → the file (parsed back through JSON, as off a disk) + notes. Everything after request() is INPUT: keys, cursor, clicks.
  *  `page` = as on the game page where the harness can imitate it: a GPU that answers (answeringProbe, a frame late), a ragged rAF dt, the HUD's bubble expiry after
- *  every update (journal.ts hudExpireBubbles) with the file flagged env.hud, and the stop DEFERRED to the end of the next update as F10's is. */
-export async function recordScripted(seed = 6011, page = false, seconds = 90): Promise<{ file: any; notes: string[]; game: any }> {
+ *  every update (it did, until the HUD stopped writing the game: 2026-11-07) with the file flagged env.hud, and the stop DEFERRED to the end of the next update as F10's is. */
+export async function recordScripted(seed = 6011, page = false, seconds = 90): Promise<{ file: any; notes: string[]; game: any; deeds: Deeds }> {
   Math.random = mulberry32(seed);
   const W = await standUp(); const { game, input } = W; const notes: string[] = [];
   const gpu = page ? answeringProbe(seed ^ 0x9e3779b9) : null; if (gpu) game.probe = gpu.probe;
@@ -55,8 +63,10 @@ export async function recordScripted(seed = 6011, page = false, seconds = 90): P
   if (!ok) throw new Error('journal.request refused: ' + game.journal.summary());
   const hold = new Set<string>();
   const press = (k: string) => input.pressed.add(k);
+  /** the trigger, pulled and let go over two frames — or, on the red path, two frames with no trigger */
+  const click = () => { if (!SCRIPT_BREAK) { input.clicked |= 1; input.buttons |= 1; } stepN(2); input.buttons &= ~1; };
   const aimAt = (p: Vec3) => W.cursorAt(p);
-  let f = 0; const stepN = (n: number) => { for (let i = 0; i < n; i++) { for (const k of hold) input.keys.add(k); gpu?.tick(); W.step(dtOf()); if (page) J.hudExpireBubbles(game); f++; } };
+  let f = 0; const stepN = (n: number) => { for (let i = 0; i < n; i++) { for (const k of hold) input.keys.add(k); gpu?.tick(); W.step(dtOf()); f++; } };
   const setHold = (...ks: string[]) => { for (const k of [...input.keys]) if (!ks.includes(k)) input.keys.delete(k); hold.clear(); for (const k of ks) hold.add(k); };
   // t 0–2.5 s: walk east across the lobby
   setHold('KeyD'); stepN(150);
@@ -64,16 +74,24 @@ export async function recordScripted(seed = 6011, page = false, seconds = 90): P
   press('KeyC'); setHold('KeyD', 'KeyW'); stepN(90); setHold(); stepN(20);
   notes.push(`t ${game.time.toFixed(1)}: Sam at (${game.player.char.pos[0].toFixed(1)}, ${game.player.char.pos[2].toFixed(1)}) crouched ${game.player.crouch}`);
   // whistle (Kowalski walks the corridor's west end a few metres north), then slip away south-west
-  press('KeyV'); stepN(20); setHold('KeyS', 'KeyA'); stepN(110); setHold(); stepN(40);
+  const seq0: number = game.eventSeq; press('KeyV'); stepN(20); const whistled = game.eventSeq > seq0 && game.events.some((e: any) => e.kind === 'whistle');
+  setHold('KeyS', 'KeyA'); stepN(110); setHold(); stepN(40);
   notes.push(`t ${game.time.toFixed(1)}: whistled; ${game.guards.map((g: any) => `${g.callsign} ${g.state} ${g.awareness.toFixed(2)}`).join(', ')}`);
-  // a smoke canister lobbed east: select it, hold G with the cursor out on the lobby floor, let go
-  press('Digit3'); stepN(10); aimAt([12.5, 0, 17.5]); setHold('KeyG'); stepN(30); setHold(); stepN(90);
-  notes.push(`t ${game.time.toFixed(1)}: canisters left ${game.player.canisters}, items ${game.items.items.map((it: any) => it.kind).join(',') || 'none'}`);
-  // the pistol out, a lobby ceiling panel shot (the auto-aim snaps to the light), holstered again
-  press('Digit1'); stepN(6); press('KeyE'); stepN(40);
+  // a smoke canister lobbed east, the way every stand throws one: its slot, the cursor out on the lobby floor, the trigger. (It was the quick throw, a held G,
+  // which the page does not take: on the page's stand the session recorded no throw at all and nothing said so. `deeds` says so now.)
+  const cans0: number = game.player.canisters;
+  press('Digit3'); stepN(10); aimAt([12.5, 0, 17.5]); stepN(4); click(); stepN(114);
+  const thrown = game.player.canisters === cans0 - 1;
+  notes.push(`t ${game.time.toFixed(1)}: canisters left ${game.player.canisters}${thrown ? '' : ' (NOT THROWN)'}, items ${game.items.items.map((it: any) => it.kind).join(',') || 'none'}`);
+  // the pistol out, a lobby ceiling panel shot (the auto-aim snaps to the light), holstered again. (The script pressed E after the pistol's digit, which put the
+  // gun AWAY: the round was never fired, on any stand, and the 'light shot out' of the family's title never was. The digit alone draws.)
+  press('Digit1'); stepN(46);
   const panel = game.targets.find((t: any) => t.name === 'panel_lobby_2') ?? game.targets.find((t: any) => t.kind === 'analytic' && t.on);
-  if (panel) { aimAt(panel.pos); stepN(4); input.clicked |= 1; input.buttons |= 1; stepN(2); input.buttons &= ~1; stepN(30); }
-  notes.push(`t ${game.time.toFixed(1)}: shot at ${panel?.name} → on ${panel?.on} broken ${panel?.broken}; pistol ${game.player.pistol.chamber}+${game.player.pistol.mag}`);
+  const rounds0: number = game.player.pistol.roundsReady;
+  if (panel) { aimAt(panel.pos); stepN(4); click(); stepN(30); }
+  const fired = game.player.pistol.roundsReady === rounds0 - 1;
+  const deeds: Deeds = { whistled, thrown, fired };
+  notes.push(`t ${game.time.toFixed(1)}: shot at ${panel?.name}${fired ? '' : ' (NOT FIRED)'} → on ${panel?.on} broken ${panel?.broken}; pistol ${game.player.pistol.chamber}+${game.player.pistol.mag}`);
   press('KeyE'); stepN(30);
   // sprint south-west into the corner, then a long crouched wait while the floor reacts (search, radio, calm)
   if (game.player.crouch) press('KeyC'); setHold('ShiftLeft', 'KeyS', 'KeyA'); stepN(120); setHold(); stepN(10); press('KeyC'); stepN(30);
@@ -85,7 +103,7 @@ export async function recordScripted(seed = 6011, page = false, seconds = 90): P
   else file0 = game.journal.stop('selftest', true);
   if (!file0 || game.journal.state !== 'idle') throw new Error('journal.stop returned no file: ' + game.journal.summary());
   const file = JSON.parse(JSON.stringify(file0));   // (through the disk's eye)
-  return { file, notes, game };
+  return { file, notes, game, deeds };
 }
 /** bytes per stream of a file, per frame */
 function sizeTable(F: any): string {
@@ -111,19 +129,20 @@ function forgeSensor(F: any, re: RegExp, f: number, value: number): number {
   S.recs = recs; return placed;
 }
 
-let cached: { file: any; notes: string[] } | null = null;
-async function theRecording() { return cached ??= await recordScripted(); }
+let cached: { file: any; notes: string[]; deeds: Deeds } | null = null;
+async function theRecording() { if (!cached) { const { file, notes, deeds } = await recordScripted(); cached = { file, notes, deeds }; } return cached; }
 
 // ================================================================================================================================ (a) round trip
 export async function journalRoundtrip() {
   console.log('\n=== journal-roundtrip: a 90 s scripted session recorded headless (walk, crouch, whistle, canister, a light shot out, sprint, wait), the file checked and sized, replayed into a fresh game — identical to the last digest, no sensor read diverging ===');
   const fails: string[] = []; const notes: string[] = [];
-  const t0 = performance.now(); const { file: F, notes: staged } = await theRecording(); notes.push(...staged);
+  const t0 = performance.now(); const { file: F, notes: staged, deeds } = await theRecording(); notes.push(...staged);
+  if (undone(deeds).length) fails.push(`the scripted session ${undone(deeds).join(', ')}: the recording does not hold what its title says`);
   notes.push(`recorded in ${((performance.now() - t0) / 1000).toFixed(1)} s wall: ${F.frames} frames, seed ${F.seed}, ${F.sensors.keys.length} sensor keys [${F.sensors.keys.slice(0, 8).join(', ')}${F.sensors.keys.length > 8 ? ', …' : ''}], ${F.sensors.recs.length} sensor records, ${F.input.length} input records, ${F.cam.length} camera records, ${F.digests.length} digests`);
   const bad = J.checkSessionFile(F); if (bad) fails.push(`the file fails its own check: ${bad}`);
   notes.push('SIZE: ' + sizeTable(F));
   if (F.frames !== 90 * 60) fails.push(`frames ${F.frames} ≠ ${90 * 60}`);
-  if (WRITE && !bad) { mkdirSync(SESSIONS_DIR, { recursive: true }); const p = resolve(SESSIONS_DIR, 'selftest.json.gz'); const gz = Bun.gzipSync(new TextEncoder().encode(JSON.stringify(F))); writeFileSync(p, gz); notes.push(`written → ${p} (${(gz.length / 1024).toFixed(0)} KB gzipped)`); }
+  if (WRITE && !fails.length) { mkdirSync(SESSIONS_DIR, { recursive: true }); const p = resolve(SESSIONS_DIR, 'selftest.json.gz'); const gz = Bun.gzipSync(new TextEncoder().encode(JSON.stringify(F))); writeFileSync(p, gz); notes.push(`written → ${p} (${(gz.length / 1024).toFixed(0)} KB gzipped)`); }
   const R = await replaySession(JSON.parse(JSON.stringify(F)), 'scripted', { invariants: true, quiet: !VERBOSE });
   notes.push(...reportLines(R));
   if (!R.ok) fails.push(`replay not identical: ${R.bad || (R.digestMismatch ? `digest mismatch after frame ${R.digestMismatch.f}: ${R.digestMismatch.diffs.slice(0, 3).join(' · ')}` : R.sensor.first ? `sensor ${R.sensor.first.kind} '${R.sensor.first.key}' frame ${R.sensor.first.f}` : R.violations.length ? `invariant ${R.violations[0].kind}: ${R.violations[0].text}` : 'last digest missing')}`);
@@ -137,7 +156,8 @@ export async function journalRoundtrip() {
 export async function journalPagelike() {
   console.log('\n=== journal-pagelike: the same script recorded as on the game page where the harness can imitate it — a GPU that ANSWERS every meter / sight-line query a frame late (f32s), a ragged rAF dt, the HUD nulling expired bubbles after each update, the stop deferred as F10\'s — replayed in a fresh game with NO probe at all: identical ===');
   const fails: string[] = []; const notes: string[] = [];
-  const t0 = performance.now(); const { file: F, notes: staged } = await recordScripted(6017, true, 60); notes.push(...staged);
+  const t0 = performance.now(); const { file: F, notes: staged, deeds } = await recordScripted(6017, true, 60); notes.push(...staged);
+  if (undone(deeds).length) fails.push(`the scripted session ${undone(deeds).join(', ')}: the recording does not hold what its title says`);
   const vals = F.sensors.recs.filter((r: any[]) => r[0] !== 'K').reduce((s: number, r: any[]) => s + (r.length - 1) / 2, 0);
   notes.push(`recorded in ${((performance.now() - t0) / 1000).toFixed(1)} s wall: ${F.frames} frames, env.hud ${F.env.hud}, ${F.dt.length} dt runs, ${F.sensors.keys.length} sensor keys, ${F.sensors.recs.length} sensor records carrying ${vals} value changes, ${F.digests.length} digests`);
   notes.push('SIZE: ' + sizeTable(F));

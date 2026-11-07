@@ -65,7 +65,7 @@ export const LOOK_SYSTEM = 'Materials prototype';
 // stood over the debugger's own corner, so on this page the debugger's rows (the debug views, the denoiser, the gather) could not be reached while the look's rows
 // were up. Now the rows are the panel's own: its sliders (a dot puts one row back, the section's ↺ puts them all back), its search finds them, its key shuts them.
 // The page still OPENS with them up (panel.show), as the box did.
-export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }): void {
+export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, open: boolean, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }): void {
   const w = window as any;
   const here = () => panel.system(LOOK_SYSTEM, { icon: '◍', short: 'Look', title: 'a slider a layer of the look · plain boxes to compare · the hour, sun and moon · the trials · performance takes · the character lab' });
   here();
@@ -154,7 +154,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   slide(sky, 'Moon height', 'degrees over the horizon: low = long shadows', 5, 85, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.elev : null; }, v => w.__moon?.set({ elev: v }));
   slide(sky, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.bearing : null; }, v => w.__moon?.set({ bearing: v }));
   const qual = panel.section('Quality', { open: true, summary: () => String(w.__quality?.current ?? '') });
-  panel.buttons(qual, 'preset', ['low', 'medium', 'high', 'ultra'].map(p => ({ text: p, run: () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } } })));   // (auto off for the visit: the ladder would move the preset again)
+  panel.buttons(qual, 'preset', ['low', 'medium', 'high'].map(p => ({ text: p, run: () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } } })));   // (auto off for the visit: the ladder would move the preset again)
   // A FRAME CAPTURE (render/framecap.ts): every target the renderer wrote, whole, with the trace of what it changed (F6)
   panel.buttons(qual, 'capture', [
     { text: 'whole picture', run: () => w.__framecap?.start({}), title: 'every render target, whole, over 2 frames, as one file in the dev server\'s captures folder (F6). A big file' },
@@ -236,5 +236,5 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
     return true;
   };
   for (const made of [labRows, perfRows]) if (!made()) { const h = setInterval(() => { if (made()) clearInterval(h); }, 300); }
-  panel.show(LOOK_SYSTEM);
+  if (open) panel.show(LOOK_SYSTEM);   // (the look lab's page opens on its rows, as the box did; on every other page they are a system of the debugger like any other, shut until asked for)
 }

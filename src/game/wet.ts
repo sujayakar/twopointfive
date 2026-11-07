@@ -14,17 +14,16 @@
 // model: a searcher noticing wet prints): a soaked man come indoors DRIPS for a few seconds (GPU water-drop particles off his hands and hem, particleFx's
 // 'debris' kind — nothing with the particles off) and leaves WET FOOTPRINTS, a 'wetprint' decal per step for his next WET.prints steps, fainter each step,
 // each fading out over WET.printFadeSecs (decals.wgsl wetPrintMark; nothing with the decals off).
-import { men, eachSeat, isManId } from './seats';
+import { men, isManId } from './seats';
 import { SideMap, rollbackVar, rollbackRoot, GameSideMap } from '../math/side';
-import { Vec3, v3, clamp } from '../math/vec';
+import { Vec3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { Character } from './character';
 import type { Decal } from '../render/decals';
 import { INTERIOR, ANNEX } from './weather';
-import { gpuFx } from './particleFx';
-import { lookDecal } from './lookDecals';
+import './particleFx';
 import { sim, f64 } from '../sim/sim';
-import { WX, WX_KNOBS, WX_WATCH, wxGet, wxScratch } from '../sim/weatherhome';
+import { WX, WX_WATCH, wxGet, wxScratch } from '../sim/weatherhome';
 
 /** The knobs (Tab ▸ Weather ▸ wet characters; kept per machine like the whistle's). The first block is the model's, the second the look's — those ride to the
  *  GPU per character instance (anim/characters.ts setInstance) so the shaders need no uniform of their own. */
@@ -92,83 +91,9 @@ export function inRain(g: Game, c: Character): boolean { return rainNow(g) > 0.0
 /** every character the game draws: Sam, then the guards (shift, units, the breach's cast — whoever is in Game.guards), living or not */
 export function everyCharacter(g: Game): Character[] { return [...men(g).map(pl => pl.char), ...g.guards.map(gd => gd.char)]; }
 
-/** Once a frame (game.ts, after the weather has written this frame's rain): soak / dry everybody (rust/sim/src/weather.rs wet_step, a man's coat handed in and back as
- *  a call's numbers until the men's columns stand), and Sam's drips + print budget. */
-export function updateWetness(g: Game, dt: number) {
-  if (dt <= 0) return;
-  g.weather.roofsNow(); WX_KNOBS.here();
-  g.col.rule(() => {
-    const M = g.col.ruleOpen(), x = sim(), d = f64(), a = wxScratch(), st = g.sim.bind();
-    for (const c of everyCharacter(g)) {
-      const m = memOf(c), head = headOf(c);
-      d[a] = c.wet; d[a + 1] = c.beads; d[a + 2] = c.wetRain; d[a + 3] = c.wetLine; d[a + 4] = m.skyT; d[a + 5] = m.open ? 1 : 0;
-      x.wet_step(st, M.slot, M.ruleSet, M.rulePanes, g.time, dt, c.pos[0], c.pos[2], head);
-      if (d[a + 6] !== 0) WET_STATS.skyTests++;
-      if (WX_WATCH.on) { const said = [d[a], d[a + 1], d[a + 2], d[a + 3], d[a + 4], d[a + 5]]; WX_WATCH.saidMany('wet.step', said, [g.time, dt, c.pos[0], c.pos[2], head]); for (let i = 0; i < 6; i++) d[a + i] = said[i]; }
-      c.wet = d[a]; c.beads = d[a + 1]; c.wetRain = d[a + 2]; c.wetLine = d[a + 3]; m.skyT = d[a + 4]; m.open = d[a + 5] !== 0;
-    }
-  });
-  eachSeat(g, v => samAftermath(v, dt));
-  agePrints(g);
-}
-// ---------------------------------------------------------------- Sam indoors after the rain: drips and prints (presentation only)
-function samAftermath(g: Game, dt: number) {
-  const pl = g.player; const c = pl.char; const m = memOf(c);
-  const raining = rainNow(g) > 0.001 && openSky(g, c);
-  if (raining) { if (c.wet > 0.5) { m.printsLeft = WET.prints; m.lastOutWetT = g.time; } return; }
-  // drips: water running off a soaked man for a few seconds after he comes in — the beads layer IS that water, so the rate follows it (and stops with it)
-  if (c.beads > 0.02 && c.wet > 0.3 && g.time - m.lastOutWetT < WET.dripSecs && !pl.down) {
-    m.dripAcc += dt * (2 + 10 * c.beads);
-    while (m.dripAcc >= 1) { m.dripAcc -= 1; drip(g, c); }
-  } else m.dripAcc = 0;
-}
-/** one drop off him: from a hand, the chin or the hem of the jacket, falling, gone when it lands (GPU 'debris' particle: lit, collides, short-lived) */
-const DRIP_FROM = ['handL', 'handR', 'head', 'hips', 'hips'] as const;
 let dripN = 0;
 rollbackVar('wet.dripN', () => dripN, v => { dripN = v; });
-function drip(g: Game, c: Character) {
-  const P = gpuFx(g); if (!P) return;
-  const k = DRIP_FROM[dripN++ % DRIP_FROM.length]; const b = c.bones[k]; if (!b) return;
-  const j = dripN * 0.618034; const off: Vec3 = [Math.cos(j * 6.2831853) * 0.09, k === 'head' ? -0.12 : k === 'hips' ? -0.05 : -0.06, Math.sin(j * 6.2831853) * 0.09];   // round the hem / off the fingers / under the chin (dealt, not drawn: nothing here touches Math.random)
-  P.emit('debris', v3.add(b, off), [0, -1, 0], 1, { speed: 0.4, speedJit: 0.5, spread: 0.15, life: 0.55, lifeJit: 0.3, size: 0.0045, sizeJit: 0.3, vadd: c.vel, owner: c.id, color: [0.42, 0.47, 0.55] });
-  WET_STATS.drips++;
-}
 
-/** A footfall of Sam's (player.ts, the step site — after tread()): if he has come in wet, a print under the foot that landed, fainter each step. `leftHint` = which
- *  foot the gait phase says; the foot actually AHEAD along his motion is the one that has just come down, so that wins whenever he is moving. */
-export function wetFootfall(g: Game, leftHint: boolean) {
-  const c = g.player.char; const m = memOf(c);
-  if (m.printsLeft <= 0 || c.wet < 0.15) return;
-  if (rainNow(g) > 0.001 && openSky(g, c)) return;          // still out in it: the ground is wetter than his soles
-  let left = leftHint;
-  { const fl = c.bones.footL, fr = c.bones.footR; if (fl && fr && (Math.abs(c.vel[0]) + Math.abs(c.vel[2]) > 0.2)) left = (fl[0] - fr[0]) * c.vel[0] + (fl[2] - fr[2]) * c.vel[2] > 0; }
-  const foot = c.bones[left ? 'footL' : 'footR'], toe = c.bones[left ? 'toeL' : 'toeR']; if (!foot || !toe) return;
-  const k = (m.printsLeft / Math.max(1, WET.prints)) * clamp(c.wet * 1.3, 0, 1);   // strength: the budget left × how wet he still is
-  m.printsLeft--;
-  const dir = v3.normalize([toe[0] - foot[0], 0, toe[2] - foot[2]]);
-  const centre: Vec3 = [foot[0] * 0.45 + toe[0] * 0.55, 0.005, foot[2] * 0.45 + toe[2] * 0.55];   // mid-sole, on the floor (the decal's plane test takes the finish / rug a few mm either way)
-  // onto whatever he stands on: the floor under the sole (a rug, a runner, the raised floor — the nearest static top face under it)
-  const hit = g.col.raycast([centre[0], 0.4, centre[2]], [0, -1, 0], 0.8);
-  const y = hit ? 0.4 - hit.t : 0; centre[1] = y + 0.003;
-  const d = lookDecal(g.decals.add('wetprint', centre, [0, 1, 0], 0.17, { tangent: dir, param: k, look: true, seed: (left ? 0 : 1) | ((WET_STATS.prints * 37) & 0xffe) }));   // seed bit 0 = which foot (the sole is mirrored), the rest = look. A mark for the picture alone: nothing in play reads a wet print, so it is out of the digest's count of decals (lookDecals.ts)
-  if (!d) return;
-  printsOf(g).list.push({ d, t0: g.time, k0: k }); WET_STATS.prints++;
-}
-/** age the prints four times a second: param falls linearly to nothing over printFadeSecs, then the decal is retired (Decals.remove) */
-function agePrints(g: Game) {
-  const P = prints.get(g); if (!P || !P.list.length) return;
-  if (g.time - P.ageT < 0.25 && g.time >= P.ageT) return;
-  P.ageT = g.time;
-  let changed = false;
-  for (let i = P.list.length - 1; i >= 0; i--) {
-    const r = P.list[i];
-    if (!g.decals.list.includes(r.d)) { P.list.splice(i, 1); continue; }   // recycled by the ring or cleared with the encounter
-    const k = r.k0 * (1 - (g.time - r.t0) / Math.max(1, WET.printFadeSecs));
-    if (k <= 0.01) { g.decals.remove(r.d); P.list.splice(i, 1); changed = true; continue; }
-    if (Math.abs(k - r.d.param) > 0.004) { r.d.param = k; changed = true; }
-  }
-  if (changed) g.decals.touch();
-}
 /** live prints (probes / panel) */
 export function wetPrints(g: Game): readonly PrintRec[] { return printsOf(g).list; }
 /** forget every print record (game.ts resetLevelState, next to decals.clear(): the decals themselves go with every other mark) */

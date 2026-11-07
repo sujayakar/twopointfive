@@ -31,12 +31,18 @@ const WORK = join(ROOT, 'rust'), CRATE = join(WORK, 'sim'), TARGET = join(WORK, 
  *  only makes the picture, and may round as the machine likes. 'both': exact by the standard and stateless, so either side may link it. A crate with no row
  *  here is red (`sides`): nothing joins the workspace without saying which it is. */
 type Side = 'gameplay' | 'dressing' | 'both';
-export const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', dress: 'dressing' };
+export const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', dress: 'dressing', game_types: 'gameplay', game_wire: 'gameplay', game_rules: 'gameplay', game: 'gameplay', game_run: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game: the simulation's tick as Rust · game_run: what a host does round a step · game_start: the game's own start, a level file's text in and a Game out · game_face: the module the page loads under ?rust=1 — tools/blitz/FACE.md)
 /** the modules the build makes: the crate each is the build of, every crate it is made from, the file its bytes go to, and the name its constants carry there */
 interface Mod { name: string; side: 'gameplay' | 'dressing'; crates: string[]; out: string; tag: string }
 export const MODULES: readonly Mod[] = [
   { name: 'sim', side: 'gameplay', crates: ['prim', 'sim'], out: 'src/sim/built.ts', tag: 'SIM' },
   { name: 'dress', side: 'dressing', crates: ['dress'], out: 'src/dress/built.ts', tag: 'DRESS' },
+];
+/** A MODULE SERVED AS A FILE, not as text in a built.ts: the Rust game's face (rust/game_face, its own workspace and lock). It is 12 to 19 MB, so the page
+ *  compiles it off its own thread (src/host/rustgame.ts) and the 6 MB rule below is not its; it is never checked in (tools/blitz/face-build.ts builds it for
+ *  the dev server and the static build). Its row is here so that `sides` reads its crates like any other's. */
+export const FILE_MODULES: readonly Mod[] = [
+  { name: 'game_face', side: 'gameplay', crates: ['prim', 'sim', 'game_types', 'game_wire', 'game_rules', 'game', 'game_run', 'game_start', 'game_face'], out: 'rust/game_face/target/wasm32-unknown-unknown/release/game_face.wasm', tag: 'FACE' },
 ];
 /** the simulation's module (the one the crate rules and the powers' table are about) */
 const SIM = MODULES[0];
@@ -171,6 +177,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/air.rs PLANS': 'COPY · which cells are roofed, the lists over them and which edges a leaf stands across, a set a slot of the blocks, made again from the block\'s roofs and the leaves whenever the block that stands there is another or was written wholesale (the stamp)',
   'sim/src/air.rs NEXT': 'SCRATCH · one step of the dust\'s field, written before any of it is read back',
   'sim/src/weather.rs ROOF_LIST': 'SCRATCH · a level\'s roofs as its boxes are handed over, read back at the end of that one question',
+  'sim/src/glow.rs SWEPT': 'SCRATCH · how many metres the last step of the light field swept; read by a test, by nothing of a game',
   'sim/src/glow.rs NEXT': 'SCRATCH · one pass of the bounce, written before any of it is read back',
   'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };
@@ -208,10 +215,17 @@ function links(): Record<string, string[]> {
     const list = /^dependencies\s*=\s*\[([^\]]*)\]/m.exec(block)?.[1] ?? '';
     out[name] = [...list.matchAll(/"([^"\s]+)[^"]*"/g)].map(m => m[1]);   // ("name" or "name version (source)": the name)
   }
+  // (a crate that is a workspace of its own has a lock of its own: what it and the crates only it names link is read there; the workspace's own word on a crate stands)
+  for (const n of Object.keys(out)) { const own = join(WORK, n, 'Cargo.lock'); if (!existsSync(own)) continue;
+    for (const block of readFileSync(own, 'utf8').split(/^\[\[package\]\]\s*$/m).slice(1)) {
+      const name = /^name\s*=\s*"([^"]+)"/m.exec(block)?.[1]; if (!name || (out[name]?.length ?? 0) > 0) continue;
+      const list = /^dependencies\s*=\s*\[([^\]]*)\]/m.exec(block)?.[1] ?? '';
+      out[name] = [...list.matchAll(/"([^"\s]+)[^"]*"/g)].map(m => m[1]);
+    } }
   return out;
 }
 /** what is wrong with the sides, a line each ('' = nothing) */
-export function sideBreaks(L: Record<string, string[]> = links(), S: Record<string, Side> = SIDES, mods: readonly Mod[] = MODULES): string[] {
+export function sideBreaks(L: Record<string, string[]> = links(), S: Record<string, Side> = SIDES, mods: readonly Mod[] = [...MODULES, ...FILE_MODULES]): string[] {
   const out: string[] = [];
   for (const [c, deps] of Object.entries(L)) {
     const side = S[c]; if (!side) { out.push(`the crate ${c} has no side: say in tools/sim/build.ts SIDES whether it is gameplay, dressing or both (a crate from outside the workspace has none)`); continue; }
@@ -284,6 +298,10 @@ export function checkBuilt(): Verdict[] {
       else if (host !== built.builder) out.push({ ok: true, label: bl, detail: `NOT THE SAME, and not held: here it is ${host}, the file was built by ${built.builder} (${again.length} bytes here, ${built.bytes.length} there)` });
       else out.push({ ok: false, label: bl, detail: `${again.length} bytes here, ${built.bytes.length} in the file, and they differ under the same builder (${host}): the file was edited by hand, or built with other flags` });
     }
+  }
+  for (const m of FILE_MODULES) {   // (a module served as a file is no checked-in bytes: nothing here can be red on it but its sides, above; what is said is whether it is built and how big)
+    const f = join(ROOT, m.out), there = existsSync(f);
+    out.push({ ok: true, label: `${m.name}: a module the page fetches (never checked in; tools/blitz/face-build.ts builds it)`, detail: there ? `${statSync(f).size} bytes, built ${new Date(statSync(f).mtimeMs).toISOString()} · sources ${sourceHash(m).slice(0, 12)} (${sources(m).length} files: the workspace's three and the crates ${m.crates.join(' ')})` : 'NOT BUILT here: the page plays the TypeScript game, and says so under ?rust=1' });
   }
   return out;
 }

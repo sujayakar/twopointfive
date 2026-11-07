@@ -21,7 +21,7 @@
   "label": "quality preset",
   "title": "resolution cap / scale, beam steps, cache probe density, smoke solver iterations (also ?quality=verylow|low|medium|high|ultra)",
   "def": false,
-  "extra": "auto / ultra / high / medium / low / verylow"
+  "extra": "auto / high / medium / low / verylow"
  },
  {
   "path": "Frame ▸ Quality & resolution",
@@ -123,7 +123,7 @@
   "label": "debug view",
   "title": "the renderer's buffers, one at a time, in place of the final picture (this list is the only way to them: no key steps through them). 16 = the gather's resampling reservoirs (ultra, phase 5): red = confidence M ÷ cap, green = the temporal history was found and taken, blue = spatial taps accepted ÷ k — the plain indirect with resampling off; 17 = the reflection pass's output as composite fetches it, before the cutoff fade (mesh hits / hit-lighting reuse are judged here). 14 = the ray-traced reflections' term by itself (renderer v3 phase 4; black with the pass off); 15 = the g-buffer's material: red = roughness (bright = matte), green = metalness — the finish table plus the detail layer's wear. 11 / 12 = the ReSTIR estimator per pixel: history M ÷ cap per class (r / g) + tile gradient resets (b), then rays ÷ 6 (r) / spatial taps (g) / classes shaded from a neighbour (b). 13 = the v3 shadow client per pixel: red / green = σ of the sharp / broad class (the filtered sample variance — lit only in penumbrae), blue = the sharp class's history length (dark = fresh / moving light, bright = long still history). specular = the glossy-floor reflection term and / or what the glass panes add (mirror + glints + dust), alone — whichever is on; black elsewhere. The albedo view washes pixels behind glass faintly teal so the panes can be found",
   "def": false,
-  "extra": "final / albedo / normals / direct light / indirect light / volumetrics / depth / cache irradiance (dice) / lighting only / denoiser blur hints / specular (gloss + glass + RT) / restir: history / gradient / restir: rays / taps / denoiser state (v3 shadow client) / RT reflections alone / material (rough / metal) / gi reservoirs (phase 5) / RT raw (phase 5)"
+  "extra": "final / albedo / normals / direct light / indirect light / volumetrics / depth / cache irradiance (dice) / lighting only / denoiser blur hints / specular (gloss + glass + RT) / restir: history / gradient / restir: rays / taps / denoiser state (v3 shadow client) / RT reflections alone / material (rough / metal) / (16: free) / RT raw (phase 5)"
  },
  {
   "path": "Frame ▸ Debug view & output",
@@ -331,25 +331,6 @@
  },
  {
   "path": "Frame ▸ Sharp direct + GBAA",
-  "kind": "toggle",
-  "label": "sharp: EXPERIMENT output-res edge rays",
-  "title": "where a HARD shadow edge lies between an output pixel's internal taps, one deterministic ray to the strongest emitter's centre decides that light at the output resolution (a keyboard's contact shadow: 4.9 → 1.6 px); off by default — a binary ray cannot draw a soft penumbra that overlaps a hard one, and the fired region's rim shows the estimator's own bias as a faint line (docs/internal/sharp-direct.md §2 E)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Frame ▸ Sharp direct + GBAA",
-  "kind": "slider",
-  "label": "sharp: edge spread",
-  "min": 0.05,
-  "max": 1,
-  "step": 0.05,
-  "title": "the visibility-ratio range within ±2 internal px that flags an edge (0.3)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Frame ▸ Sharp direct + GBAA",
   "kind": "select",
   "label": "sharp: SLIVER rule",
   "title": "an output pixel none of whose 4×4 internal texels lies on its own surface (a door reveal, a chair leg, a limb's edge — 0.01–0.02 % of a frame at the follow camera) has no measured visibility: rule 0 borrowed the neighbours' ratio whatever surface they show (a lit floor lent lit to an occluded sliver: thin bright lines), per channel (their hue with it); rule 1 borrows nothing across surfaces — one deterministic ray per class to the strongest live emitter from the output pixel, the remainder on the neighbours' luminance ratio, both classes alike (docs/internal/direct-quality.md)",
@@ -380,17 +361,6 @@
   "kind": "toggle",
   "label": "GBAA: same-surface clamp",
   "title": "blend an edge pixel toward the neighbour across its edge only when that neighbour is at or behind it — never toward a NEARER third surface standing over the edge (a man before a partition's top edge lent half his colour to every edge pixel his outline crossed). Off = Persson's blend as it was",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Frame ▸ Sharp direct + GBAA",
-  "kind": "slider",
-  "label": "sharp: hard-hint px",
-  "min": 0.5,
-  "max": 12,
-  "step": 0.5,
-  "title": "an edge counts as hard while every shadowed pixel near holds a blocker-distance hint under this many internal px (2.5)",
   "def": false,
   "extra": ""
  },
@@ -566,14 +536,6 @@
  },
  {
   "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
-  "label": "ReSTIR DI (v3 Phase 2a)",
-  "title": "the direct-light ESTIMATOR. On: ReSTIR DI (render/shaders/restir.wgsl) — every light the tile can see is still scored unshadowed per pixel (that is U, exact, and the candidate pdf), but instead of K leaders × stratified rays + a tail ray each pixel keeps ONE reservoir per emitter class (a light + a point on its emitter, with an unbiased contribution weight), re-traces it, draws a fresh candidate ∝ its unshadowed light, MIS-combines them against last frame's light list (a light new this frame enters at full weight — flashes light instantly), taps its neighbours' reservoirs, and shades S = U × the estimated visible fraction: a FIXED shadow-ray budget per pixel however many lights are on. Off (?norestir): direct.wgsl's leader / tail estimator exactly as it was. Same four outputs, same penumbra filter after it",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "slider",
   "label": "restir: HYBRID — held-light rays K (0 = off)",
   "min": 0,
@@ -660,14 +622,6 @@
  {
   "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "toggle",
-  "label": "restir: tile-coherent fresh draws",
-  "title": "the fresh candidate (which light, which point on its emitter) comes from a random stream shared by the 8×8 tile instead of one per pixel — each pixel's draw is still distributed by its OWN weights (unbiased per pixel), but the tile ends up tracing near-parallel rays, which the GPU walks about a third cheaper; the price is one-frame sampling noise correlated in 8×8 blocks where two lights of a class cast different shadows (the history decorrelates it over frames). A/B it on penumbrae",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
   "label": "restir: known-dark lights leave the draw",
   "title": "the lights an 8×8 tile's own shadow rays found dark EVERYWHERE last frame (a street lamp behind the outer wall, the next room's panel behind a shut door — in the unshadowed total, reach level > 0, never visible) leave that tile's fresh candidate draw: known dark like a reach-masked light — no ray, and none of the one-sample all-or-nothing noise that made the dim end of the break-room lino crawl (restir.wgsl BELIEFS). Off = A/B the first cut: every live light in the draw (unbiased; the auditors below then have nothing to do)",
   "def": false,
@@ -714,30 +668,6 @@
  {
   "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "toggle",
-  "label": "restir: D4 permutation sampling (whiter temporal noise)",
-  "title": "each frame a pixel inherits the reservoir of a neighbour within a 2×2-ish block chosen by a per-frame XOR pattern (RTXDI's permutation sampling): the slow random walk of one reservoir per pixel becomes noise the shadow filter and the TAA can average, for a little reuse bias inside penumbrae",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
-  "label": "restir: A/B raw target-ratio cut (flicker drops history)",
-  "title": "the temporal reservoir's confidence is cut by how much its own light's target changed at the pixel since last frame. ON = the 08-11 rule, the RAW ratio: a light that merely dimmed or brightened (the cubicles' flickering tube goes 15 % ↔ 100 % every other frame, a restrike, the lightning's decay) dropped every reservoir under it to a sample or three each stroke — 1–3-spp penumbrae the shadow filter smeared into blotches that pumped with the tube. OFF (the default) = each side of the ratio ÷ its light's power then and now: intensity / hue changes keep the visibility history (MIS weighs the two frames' targets either way), a cone that swept off the pixel or a lamp that moved still lets go (docs/internal/tjank.md)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
-  "label": "restir: A/B per-sample hue (the mosaic)",
-  "title": "shade every traced sample in its OWN light's colour (the estimator's first cut: unbiased per channel, but under two overlapping lights of different colours each pixel wears the colour of the light its reservoir happens to hold — a per-pixel mosaic crawling at the reservoir's rate; the break room's vending fronts show it). Off (the default) = the luminance estimate coloured by the believed-visible unshadowed mix at the pixel: per-tile lit / dark verdicts from the tile's own rays plus the pixel's own dark memory (restir.wgsl BELIEFS)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
   "label": "restir: spatial everywhere (biased)",
   "title": "spatial reuse at every pixel even without the final visibility ray: contact shadows soften by up to the radius. ON by default through Frame ▸ Quality & resolution ▸ motion-calm rows; off = only where the visibility ray runs",
   "def": false,
@@ -748,14 +678,6 @@
   "kind": "toggle",
   "label": "restir: motion — stochastic-bilinear reprojection",
   "title": "under a camera pan the temporal reservoir used to come from the NEAREST texel to the reprojected point: at 2.4 px a frame every pixel inherits from 2 px back while the picture moved 2.4, so the reservoir pattern slides across the floor the TAA holds still and neighbouring pixels share one verdict — 2–7-px blotches crawling under a panning floor. On: the texel is one of the four round the reprojected point, drawn by its bilinear weight per pixel per frame and validated by depth as ever, so a lineage follows the surface (diffusing ± ½ px) instead. Inert at rest by construction (docs/internal/direct-motion.md)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Estimator — ReSTIR DI",
-  "kind": "toggle",
-  "label": "restir: motion — reprojection dither is GLOBAL (bijective shift)",
-  "title": "how the stochastic reprojection above picks its texel: OFF = a per-pixel bilinear draw among the four round the reprojected point (lineages diffuse ± ½ px a frame; two neighbours can adopt one parent, so lineages coalesce into patches that grow with the memory); ON = one sub-pixel offset for the whole raster each frame (an R2 sequence) — a bijective shift, nothing duplicated or dropped, whose average over frames is the true flow, so the pattern stays registered to the surface within ± ½ px",
   "def": false,
   "extra": ""
  },
@@ -812,7 +734,7 @@
   "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "toggle",
   "label": "restir: motion — run under a still camera too",
-  "title": "the motion levers live in a twin of the estimator's program that only frames on which the CAMERA moved dispatch (its levers are inert at rest, but the bigger kernel measured +0.2 ms direct at high doing nothing); on = dispatch it always, so a walking man's own pixels get the levers under a still camera as well",
+  "title": "the motion levers are switched on only on frames the CAMERA moved (their work measured +0.2 ms direct at high doing nothing at rest); on = always, so a walking man's own pixels get the levers under a still camera as well",
   "def": false,
   "extra": ""
  },
@@ -838,58 +760,6 @@
  {
   "path": "Direct light ▸ Shadow rays & penumbra filter",
   "kind": "slider",
-  "label": "rays: strongest light",
-  "min": 1,
-  "max": 8,
-  "step": 1,
-  "title": "stratified emitter samples per pixel for each class's strongest light (noise ~ 1/sqrt(n); cost ~ n). Leader / tail estimator only: nothing while ReSTIR is on (?norestir)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "slider",
-  "label": "rays: other leaders",
-  "min": 1,
-  "max": 4,
-  "step": 1,
-  "title": "samples for the 2nd (and, broad class, 3rd) strongest light. Leader / tail estimator only: nothing while ReSTIR is on",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "slider",
-  "label": "temporal reuse",
-  "min": 0,
-  "max": 0.95,
-  "step": 0.05,
-  "title": "0 = history-free. Otherwise the per-class estimate is blended with reprojected, depth-validated, variance-clipped history (0.7 ≈ 3 frames). Transient lights change the estimate abruptly, which the clip follows — no lingering flashes",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "toggle",
-  "label": "A/B: hold the sampling pattern 2 frames",
-  "title": "torch-shadow boil study knob: with temporal reuse on, the per-pixel emitter-sampling pattern normally advances every frame (so the history integrates different samples); on = it advances every other frame. Default off (frame flag 67108864; docs/internal/perf-2026-08-10.md). Leader / tail estimator only: nothing while ReSTIR is on",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "slider",
-  "label": "spatial passes",
-  "min": 0,
-  "max": 6,
-  "step": 1,
-  "title": "à-trous passes of the ratio (visibility) filter per class: strides 1,2,4,8,16,1 — fewer = sharper/grainier. Legacy denoiser only (?legacydenoise)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "slider",
   "label": "penumbra filter cap (px)",
   "min": 2,
   "max": 32,
@@ -901,30 +771,11 @@
  {
   "path": "Direct light ▸ Shadow rays & penumbra filter",
   "kind": "slider",
-  "label": "adaptive: min agreeing rays",
-  "min": 2,
-  "max": 4,
-  "step": 1,
-  "title": "stop sampling a light after this many stratified samples all came back lit (or all blocked); the full ray budget is only spent where they disagree, i.e. in penumbrae. 2 = cheapest, 4 = safest. Leader / tail estimator only: nothing while ReSTIR is on",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "slider",
   "label": "cascade hit light threshold",
   "min": 0.001,
   "max": 0.1,
   "step": 0.001,
   "title": "W/m² (unshadowed): at cascade interval hits a light dimmer than this gets no shadow ray and is dropped — raises bounce-lighting cost/accuracy trade (default 0.006)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Shadow rays & penumbra filter",
-  "kind": "toggle",
-  "label": "tail: chroma-exact (experimental)",
-  "title": "direct-light tail estimator: off = luminance-unbiased, bounded (the tail keeps its aggregate hue); on = per-channel unbiased E_pick·V/p (two differently coloured lights cast two coloured shadows) at the price of chroma noise where hues mix — the filter's ratio clamp opens to 4× for it. Leader / tail estimator only (?norestir): under ReSTIR the clamp is already 4× and the flag moves nothing",
   "def": false,
   "extra": ""
  },
@@ -981,86 +832,11 @@
  },
  {
   "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "per-tile light culling (lossless)",
-  "title": "each 8×8 pixel tile bounds its shading points and scores only the lights that can reach that box (in range, inside the spot cone, in front of a one-sided panel); a dropped light provably evaluates to zero at every pixel of the tile, so the image is bit-identical — off = every pixel scores every light (A/B, frame flag 4096)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "trace grid: skip empty runs (lossless, all rays)",
-  "title": "every traced ray (shadow rays here, the final gather, cascade intervals, beams, probes) walks the 1 m XZ grid cell by cell; the grid build stores each cell's Chebyshev distance to the nearest occupied cell, so an empty cell at distance d lets the DDA take its next d−1 steps without loading anything (those cells are provably empty too). Same stepping arithmetic, one iteration per cell as before, so hits are bit-identical — off = a load pair per cell (A/B, frame flag 131072)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "trace grid: height cull (lossless, all rays)",
-  "title": "the grid is 2D but the level is not: each cell also stores which 15 cm height slices its boxes occupy and each item its own padded [ymin, ymax]. A cell (or a single box) whose band the REST of the ray — from where it enters the cell to tmax / the current hit — cannot reach is not slab-tested: such a box could only have been hit behind the cell, where the walk already met it, so every dropped test was a miss or a no-op and the result is bit-identical (argument above traceClosest in common.wgsl). Rays skimming over desks toward ceiling panels, cascade intervals at chest height, gather rays under the furniture stop paying for geometry above/below them — off = every registered box tested (A/B, frame flag 262144)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "slab test: unrotated fast path (lossless, all rays)",
-  "title": "a box with yaw 0 packs its rotation as exactly (cos 1, sin 0), and rotating by that is the identity down to the last bit (1·x − 0·z = x however the compiler contracts it), so the ray/box test can use the ray as it is and the inverse direction the traversal already holds instead of two half-float unpacks, two rotations and three divisions — that is two thirds of all grid items and every global. Off = always rotate + divide (A/B, frame flag 524288)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "trace grid: globals by segment + tight spans (lossless, all rays)",
-  "title": "the handful of huge slabs kept out of the grid (ground, carpet base, corridor / break-room finishes, ceiling) used to be slab-tested by every ray whose HEIGHTS came within 4 cm of theirs — so a ray lifted 1–2 cm off the floor tested all four floors, four of its ~ten box tests. Now a global is skipped unless the ray segment's bounds meet its own on all three axes, 5 mm proud; and each cell's height span is judged 3.5 cm tighter at both ends (the packed extents carry 4 cm against < 0.4 mm of float differences), so a ray stops re-testing the desk / floor / wall top it just left. Every dropped test was a provable miss, so hits are bit-identical (argument above traceClosest in common.wgsl; tools/qa/grid-globals.ts: −40 % slab tests for rays off the floor, −60 % outdoors, −19 % cascades) — off = the height cull as it was (A/B, frame flag 1048576)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
   "kind": "text",
   "label": "",
   "title": "",
   "def": false,
   "extra": "grid 1120 cells · 385 empty (mean look-ahead 1.3) · busiest "
- },
- {
-  "path": "Direct light ▸ Culling — lossless A/Bs",
-  "kind": "toggle",
-  "label": "penumbra filter: skip hint-free tiles (lossless)",
-  "title": "the à-trous penumbra filter only ever changes pixels within reach of a blur hint (a shadow-ray blocker measurement); two tiny pre-passes flag the 8×8 tiles holding a hint and measure every tile's distance to the nearest one, and the filter steps copy whole tiles straight through when they are further away than a hint can travel over the entire chain — those provably pass through unchanged anyway, so the image is bit-identical while lit floors, unlit rooms and sky stop paying for the 3×3 hint scan. Off = every pixel decides for itself (A/B, frame flag 8192)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ LOSSY trade-offs",
-  "kind": "toggle",
-  "label": "LOSSY: checkerboard shadow rays",
-  "title": "only the checkerboard half of the pixels with (x + y + frame) even trace shadow rays; the other half keeps its exact unshadowed light U and takes S = U × the visibility ratio S/U of its traced 4-neighbours in the tile (weighted by same plane / same normal / lit alike, hint = the widest in reach). Pixels on a hard shadow edge (neighbour ratios > 0.35 apart under < 2 px hints) or without a usable neighbour trace anyway, after the exchange. Lanes are dealt so whole SIMD groups skip the ray phase. Off = untouched path (frame flag 65536). Read only by the leader / tail estimator: nothing while ReSTIR is on (?norestir)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ LOSSY trade-offs",
-  "kind": "toggle",
-  "label": "LOSSY: 1 ray per leader in near-black",
-  "title": "luminance-adaptive shadow rays: a pixel whose total UNshadowed irradiance (both classes, exact) is under the threshold below takes one stratified emitter sample per leader instead of the strongest/other budgets — its penumbrae come out grainier, but at that level the AgX curve puts the whole pixel within a few 8-bit steps of black. Off = untouched (frame.lossyCfg.z = 0). Read only by the leader / tail estimator: nothing while ReSTIR is on (?norestir)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Direct light ▸ LOSSY trade-offs",
-  "kind": "slider",
-  "label": "near-black threshold (E)",
-  "min": 0.002,
-  "max": 0.05,
-  "step": 0.002,
-  "title": "unshadowed irradiance luminance under which dimRays applies: 0.01 ≈ 2 % of display white for a mid-grey surface at exposure 2 (0.005 ≈ 1 %, 0.02 ≈ 4 %); only read while the toggle above is on",
-  "def": false,
-  "extra": ""
  },
  {
   "path": "Direct light ▸ Lights (level)",
@@ -1313,22 +1089,6 @@
  {
   "path": "Indirect light ▸ Final gather",
   "kind": "toggle",
-  "label": "LOSSY: variance-guided history",
-  "title": "the indirect's temporal pass normally clips the reprojected history to this frame's 3×3 neighbourhood (mean ± σ) and blends it at a fixed 0.86. On: the history is weighed by how CONSISTENT it is with that neighbourhood — within its spread (+5 %) it is kept unclipped at 0.93 (≈ 14 frames: smoother wherever nothing changes, and no energy shaved off the estimate), well outside it is clipped as before and blended at 0.7 (≈ 3 frames: a moved torch or a switched panel converges faster than today). Off = untouched (frame flag 134217728; docs/internal/perf-2026-08-10.md). Legacy denoiser only (?legacydenoise): the v3 denoiser never reads it",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ Final gather",
-  "kind": "toggle",
-  "label": "stratified gather directions (−13 % gather)",
-  "title": "the final gather's k-th ray of four drawn from STRATUM (k + frame) mod 4 of the cosine hemisphere — (azimuth half) × (cos²θ half), each pixel jittering inside it with its own two random numbers as before — instead of independently (the resampling gather's two fresh rays: a Latin square over the same four cells). Every pixel still covers all four strata every frame, so it is plain stratified sampling: the same expectation, temporal noise equal or lower; but the k-th rays of a whole 8×8 tile now share a quarter of direction space and walk the trace grid coherently — the gather pass −13‥16 % at high, −0.8 ms at ultra (exp/trace-perf E8, docs/internal/trace-perf.md §2.10). A different sample pattern, so NOT hash-identical to off. ON by default; off (?nogatherstrata, __gs.on = false) = the gather module exactly as it was. A second pipeline pair compiled at boot; flips live",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ Final gather",
-  "kind": "toggle",
   "label": "LOSSY: gather at 1/3 res (not 1/2)",
   "title": "final gather, its temporal accumulation and the à-trous run at a third of the internal resolution (4/9 of the pixels of half res); fgather / temporal / giblur / the composite upsample read the divisor from frame.lossyCfg.x and the targets are recreated when it changes. Off = the half-res path untouched",
   "def": false,
@@ -1352,58 +1112,6 @@
  },
  {
   "path": "Indirect light ▸ GI in motion",
-  "kind": "toggle",
-  "label": "GI denoised at INTERNAL res",
-  "title": "GI in motion (B): the raw ⅓ / ½-res gather is upsampled (depth + normal guided, the composite's own 3×3) to the INTERNAL resolution first and the diffuse denoiser — history, clamp, moments, à-trous — runs there, composite reading it 1 : 1: a panning camera's reprojection error becomes an internal pixel instead of a gather texel and what residual survives is pixel-sized instead of texel-sized. Its statistics still come from the raw texels (5×5 of them). Costs an internal-res history set (≈ 8 × internal rgba16f) and the à-trous over the internal grid; the v3 denoiser only. Off = the gather-grid chain exactly as it was",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ GI in motion",
-  "kind": "slider",
-  "label": "· internal-res à-trous iterations",
-  "min": 1,
-  "max": 5,
-  "step": 1,
-  "title": "iterations of the diffuse à-trous at internal res under the row above, at strides divisor × 1, 2, 4, 8, 16 (the same reach on the ground as the gather-grid chain's 1, 2, 4, 8): fewer = cheaper, more residual noise between the texel samples",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ GI in motion",
-  "kind": "slider",
-  "label": "young-history gather rays ×",
-  "min": 1,
-  "max": 4,
-  "step": 1,
-  "title": "GI in motion (C): a gather texel whose point had no usable diffuse history last frame — off the screen (a pan's incoming edge), on another surface (what a walking man or the player uncovers), or a history the denoiser calls young — traces this many TIMES the rays for the frames it stays young, so the frames the temporal filter can only show the raw estimate in get a better one; a settled texel costs two loads. First come first served past the cap below; a camera cut stands it down (everything is young then). 1 = off: the gather byte for byte as it was",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ GI in motion",
-  "kind": "slider",
-  "label": "· young cap (share of the grid)",
-  "min": 0.01,
-  "max": 0.3,
-  "step": 0.01,
-  "title": "the most texels a frame may take the extra rays, as a fraction of the gather grid (8 %: a walking pan brings in 1–3 % a frame, a man's wake ~1 %); past it, first come",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ GI in motion",
-  "kind": "slider",
-  "label": "· young = history under (frames)",
-  "min": 1,
-  "max": 8,
-  "step": 1,
-  "title": "a texel counts as young while its diffuse history is shorter than this",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ GI in motion",
   "kind": "text",
   "label": "",
   "title": "",
@@ -1412,77 +1120,9 @@
  },
  {
   "path": "Indirect light ▸ GI in motion",
-  "kind": "buttons",
-  "label": "young texels",
-  "title": "",
-  "def": false,
-  "extra": "[count (last frame) — reads back how many gather texels asked for the extra rays last frame (the counter counts past the cap)]"
- },
- {
-  "path": "Indirect light ▸ GI in motion",
   "kind": "text",
   "label": "",
   "title": "",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "select",
-  "label": "ULTRA: gather resampling (ReSTIR GI)",
-  "title": "renderer v3 phase 5 (docs/internal/p5-ultra.md): each gather texel keeps ONE secondary sample {hit point, normal, its outgoing radiance} in a reservoir chosen by resampled importance sampling (target = the sample's luminance × cos): its own reservoir of last frame (reprojected with the motion vectors, validated by depth + normal, confidence capped, its radiance re-shaded when \"revalidate\" is on) combined with a couple of FRESH cosine rays instead of the plain gather's four — the estimate is the weighted sum over every sample seen, so the luminance carries the history's ~M samples of evidence while the fresh rays keep their chroma. \"+ spatial\" also borrows k neighbours' reservoirs on the same plane (pairwise MIS, Jacobian-reweighted, no extra visibility ray: the biased-but-bounded variant). Feeds the same diffuse denoiser client. Ultra only (2 fresh rays: gather ≈ half the cost at equal-or-better noise); off = the 4-ray gather exactly as it was. Debug view \"gi reservoirs\": r = M ÷ cap, g = history taken, b = spatial taps accepted (the plain indirect with it off)",
-  "def": false,
-  "extra": "off (4 cosine rays) / temporal reservoir reuse / temporal + spatial"
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "slider",
-  "label": "· fresh rays per texel",
-  "min": 1,
-  "max": 4,
-  "step": 1,
-  "title": "cosine rays traced and shaded per gather texel per frame under resampling (2 at ultra; the plain gather traces 4): the pass's cost is nearly linear in it",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "slider",
-  "label": "· confidence cap M",
-  "min": 2,
-  "max": 64,
-  "step": 1,
-  "title": "the temporal reservoir's confidence cap in candidate-equivalents: 20 with 2 fresh rays ≈ ten frames of memory in the resampled luminance — higher = quieter walls, slower where only re-shading (revalidate) or the denoiser's clamp can follow a change",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "toggle",
-  "label": "· revalidate (re-shade the history sample)",
-  "title": "every frame the reused sample's outgoing radiance is recomputed at its stored point (its box's paint and emission, one direct-light estimate + the cache's bounce there — about a third of a traced ray): a light switched on or a torch swept across the wall the samples sit on reaches the history that same frame. Off = the radiance found when the sample was traced is reused as is (plain ReSTIR GI: cheaper; a moving light lags by up to the cap)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "slider",
-  "label": "· spatial taps k",
-  "min": 1,
-  "max": 8,
-  "step": 1,
-  "title": "neighbours combined per texel in \"temporal + spatial\" (3): each is two texture reads + a re-target, no ray",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Indirect light ▸ ULTRA: gather resampling (ReSTIR GI)",
-  "kind": "slider",
-  "label": "· spatial radius (texels)",
-  "min": 2,
-  "max": 32,
-  "step": 1,
-  "title": "radius of the golden-angle disc the spatial taps are drawn on, in gather texels (10 ≈ 20 internal px at half res ≈ 0.3–0.6 m on the floor from up here): wider = smoother and more borrowed light where a neighbour sees round a corner this texel does not",
   "def": false,
   "extra": ""
  },
@@ -1645,11 +1285,11 @@
  {
   "path": "Volumetrics ▸ Beams & haze",
   "kind": "slider",
-  "label": "CAP: lights per smoke step / haze ray (0 = off)",
-  "min": 0,
+  "label": "CAP: lights per smoke step / haze ray",
+  "min": 1,
   "max": 6,
   "step": 1,
-  "title": "volumetric worst-case cap (renderer v3 Phase 0): at most K lights get a shadow ray per smoke-march step (the first K, in order of their unshadowed bound on that stretch of the ray, that reach the step) / per haze view ray (the K beams with the largest unshadowed in-scatter, sharing a step budget by it), the rest dropped — and the smoke march walks each domain's own stretch of the ray with a bounded per-stretch shortlist instead of the hull of all of them at the finest voxel. 0 = OFF: the pass exactly as it was (bit-identical). Set by the quality preset (ultra 6 · high 4 · medium 3 · low / verylow 2); a value moved here sticks until the next preset change",
+  "title": "the volumetric worst-case cap: at most K lights get a shadow ray per smoke-march step (the first K, in order of their unshadowed bound on that stretch of the ray, that reach the step) / per haze view ray (the K beams with the largest unshadowed in-scatter, sharing a step budget by it), the rest dropped. THE lever on what the march costs. Set by the quality preset (high 4 · medium, low and very low 2); a value moved here sticks until the next preset change",
   "def": false,
   "extra": ""
  },
@@ -1660,7 +1300,7 @@
   "min": 1,
   "max": 3,
   "step": 1,
-  "title": "with the cap on: each traced light's shadow ray + self-shadow march is refreshed every N march steps and reused between (a step is 8 cm of a 5.5 cm-voxel plume). 2 on every preset (1 = every step: nothing visible gained, a third dearer at ultra); 3 starts to comb shadow edges inside a plume",
+  "title": "each traced light's shadow ray + self-shadow march is refreshed every N march steps and reused between (a step is 8 cm of a 5.5 cm-voxel plume). 2 on every preset (1 = every step: nothing visible gained, a third dearer); 3 starts to comb shadow edges inside a plume",
   "def": false,
   "extra": ""
  },
@@ -1671,7 +1311,7 @@
   "min": 1,
   "max": 3,
   "step": 0.1,
-  "title": "with the cap on: the smoke march step in voxels of the domain being walked (1.5 = as ever; 2+ combs the shadow edges inside a plume — low / verylow only)",
+  "title": "the smoke march step in voxels of the domain being walked (1.5 on high, medium and low; 2+ combs the shadow edges inside a plume: very low only)",
   "def": false,
   "extra": ""
  },
@@ -1692,145 +1332,6 @@
   "extra": ""
  },
  {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "toggle",
-  "label": "froxel volumetrics",
-  "title": "renderer v3 Phase 2b (render/froxels.ts + shaders/froxel.wgsl): the haze beams and the smoke are lit PER FROXEL of a camera-frustum voxel grid — a per-cluster light list, the k strongest lights there shadow-rayed, the estimate accumulated over frames with reprojection and integrated front to back — and every pixel reads what lies in front of its surface with one fetch (cubic across the screen); the smoke keeps its per-pixel density march but is LIT from the froxels' J volume; the 2D pass keeps that march + the rain. Cost is per froxel, flat in how many beams cross a pixel. Off = the per-pixel volumetric march exactly as it was (?nofroxel)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "grid rows (H)",
-  "min": 24,
-  "max": 180,
-  "step": 1,
-  "title": "froxel rows over the screen (columns follow the aspect); the volumes are re-made and the history restarts on change. Preset: ultra 180 · high 135 · medium 108 · low 80 · verylow 64",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "depth slices (D)",
-  "min": 8,
-  "max": 128,
-  "step": 4,
-  "title": "slices in distance along the pixel ray between near and far, thickening exponentially (curve). Preset: ultra 56 · high 64 · medium 48 · low 32 · verylow 24",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "shadowed lights per froxel (k)",
-  "min": 0,
-  "max": 6,
-  "step": 1,
-  "title": "of the lights the cluster cull says can reach a froxel, the k with the largest UNSHADOWED in-scatter at its sample point get a shadow ray (+ smoke transmittance / self-shadow); the rest are dropped — never credited unshadowed. Preset: 5 / 4 / 3 / 2 / 2. 0 = ambient-lit smoke only",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "shadow rays for the strongest light",
-  "min": 1,
-  "max": 3,
-  "step": 1,
-  "title": "per froxel, its strongest haze light gets this many shadow rays at equal-weight depth strata of its lit chord (unbiased; a light sheet thinner than a slice crawls at 1/N the amplitude). Preset: ultra 3 · high / medium 2 · low / verylow 1",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "history weight",
-  "min": 0,
-  "max": 0.98,
-  "step": 0.01,
-  "title": "exponential accumulation of the injected volume with reprojection into last frame's (0.9 ≈ 10 frames); the reprojected history is clamped to the box of its four neighbours across the screen, so a beam that moved or switched cannot trail (0.93 default; halved where it had to clamp). 0 = every frame stands alone (the jitter shows)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "near floor (m)",
-  "min": 0.1,
-  "max": 10,
-  "step": 0.1,
-  "title": "distance along the pixel ray of the first slice boundary — a floor: the boundary used is max(this, camera height − 8 m), since nothing lit hangs above 8 m and a camera 17 m up would otherwise spend a third of its slices on open air",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "far (m)",
-  "min": 20,
-  "max": 120,
-  "step": 1,
-  "title": "distance of the last slice boundary: nothing is injected past it, and a surface farther off reads the whole column",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "slice curve a",
-  "min": 0,
-  "max": 4,
-  "step": 0.1,
-  "title": "slice thickness grows e^a from the first slice to the last (2 with 64 slices from the follow camera's ~9 m near to 56 m: 0.25 m at the near end, ~0.55 m at 20 m, 2 m at the far end); 0 = uniform",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "toggle",
-  "label": "sharp fetch (trilinear, no B-spline)",
-  "title": "the per-pixel fetch across the screen: off = a cubic B-spline over the froxels (four taps, C² — no crease where froxels meet, half a froxel softer), on = plain trilinear (one tap, sharper, the grid shows as facets along a beam edge)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "lookup depth bias (slices)",
-  "min": 0,
-  "max": 2,
-  "step": 0.05,
-  "title": "the per-pixel fetch reads this many slices NEARER than the surface (default 0): a knob against what was injected in the far part of a surface's own froxel (a beam just behind a wall top) bleeding onto it — each notch costs that much of the last slice of scatter in front of EVERY surface (0.75 took a fifth of a beam lying along a floor)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "toggle",
-  "label": "split timing (measure)",
-  "title": "time cull+inject / temporal / integrate as three GPU passes (volInject · volTemporal · volInteg in the read-out) instead of the one 'volFroxel' beside the 2D pass's 'volumetrics' — measurement only",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "buttons",
-  "label": "history",
-  "title": "",
-  "def": false,
-  "extra": "[restart froxel history — the next frame accumulates from its own estimate (what a grid change does)]"
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "grid 0×0×0 = 0.00 M froxels · smoke J 0 · clusters 0 · 0.0 M"
- },
- {
   "path": "Volumetrics ▸ Smoke solver",
   "kind": "text",
   "label": "",
@@ -1846,17 +1347,6 @@
   "max": 1.5,
   "step": 0.25,
   "title": "a brick whose air is slow steps every p-th frame (1, 2 or 4: the Smoke pool section's \"calm: wait\" row is the longest) with the dt it sat out added on: between two steps you see, its smoke never moves more than this many voxels. A source wakes what it reaches, and a brick never waits longer than any of its 26 neighbours. 0 = every brick in view every frame (out of view the \"calm: far, cells\" row still holds; \"calm: wait\" 1 = nothing ever waits)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Smoke solver",
-  "kind": "slider",
-  "label": "plume: lights lit per step (0 = J only)",
-  "min": 0,
-  "max": 6,
-  "step": 1,
-  "title": "the froxel-lit smoke march lights the K strongest lights on each stretch per step ITSELF — exact cone edge, a shadow ray, the step's own self-shadow — and the froxel J volume then carries only the ambient (docs/internal/smoke-look.md: through J a torch lit every billow of a plume alike, and a plume top under a lamp or a panel was lit through a slice lattice fixed to the screen — banding in motion; +0.1‥0.2 ms with a plume filling a sixth of the frame at high). 0 = every light through J, the march as it was; presets ultra 4 · high 3 · medium 2 · low / verylow 0",
   "def": false,
   "extra": ""
  },
@@ -2237,22 +1727,6 @@
  },
  {
   "path": "Materials ▸ RT reflections",
-  "kind": "toggle",
-  "label": "· ULTRA: characters as their MESH in reflections",
-  "title": "renderer v3 phase 5: a reflection ray that reaches a man walks his skinned triangle mesh to the NEAREST triangle (the mesh-shadow trees of the \"mesh-traced character shadows\" row — render/meshShadows.ts — which must be on: ultra carries it; off / unavailable = the round-cone proxies, cleanly) instead of hitting his 15 round cones, so a guard standing on the lobby stone mirrors as a mannequin — limbs, head, the rifle's silhouette is still boxes — not a blob of pills. Costs a fraction of a millisecond with four men in a polished room; nothing where nobody stands on a mirror. Off = traceClosest's round cones exactly as every other preset (or their smooth union, if that row is on)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Materials ▸ RT reflections",
-  "kind": "toggle",
-  "label": "· ULTRA: 2nd-ray decorrelation + hit-lighting reuse",
-  "title": "renderer v3 phase 5, for the 2-ray tier: (a) the second GGX-VNDF ray takes the first's ANTITHETIC azimuth (same radius on the sampling disc, the far side of the lobe) so the pair straddles the mirror image every frame instead of sometimes landing on one side; (b) each STATIC hit's lighting (direct + bounce irradiance, before the paint) is blended with last frame's record at this texel when the record's hit point lies within the lobe's own footprint on the same face — a short history keyed on where the ray WENT, not on the pixel, so the one-shadow-ray light pick at an off-screen hit stops flickering a rough mirror (a lit corridor wall in brushed steel, the ceiling in the wet lot); on-screen hits already carry this frame's settled light and are left alone; men are never reused (they walk). Off = every ray shaded fresh, the R2 pair as before. Debug view \"rt raw\" shows the pass's output as fetched",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Materials ▸ RT reflections",
   "kind": "text",
   "label": "",
   "title": "",
@@ -2272,14 +1746,6 @@
  },
  {
   "path": "Denoiser ▸ Core",
-  "kind": "toggle",
-  "label": "v3 shared denoiser (off = the three legacy chains)",
-  "title": "ONE core — reprojection with the g-buffer's motion vectors + per-tap depth validation, luminance moments → variance, history length, neighbourhood clamp, variance-guided edge-stopped à-trous — behind the direct pass's shadow ratio (per emitter class, full res), the gather's diffuse irradiance and its specular field. Off = dtemporal + softblur, temporal + giblur and the gloss chain exactly as they were (?legacydenoise). Under v3 Direct light ▸ Shadow rays & penumbra filter ▸ \"temporal reuse\" is the shadow client's temporal switch (0 = none) and \"penumbra filter cap\" its width cap; \"spatial passes\" is legacy only",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Denoiser ▸ Core",
   "kind": "text",
   "label": "",
   "title": "",
@@ -2290,7 +1756,7 @@
   "path": "Denoiser ▸ Core",
   "kind": "toggle",
   "label": "reproject with motion vectors",
-  "title": "the g-buffer's per-pixel object motion (TAAU's gVel) added to the camera reprojection: a walking man's lit side and the bounce on him find their own history. Off = camera-only reprojection (what the legacy chains did); needs TAAU on (the vectors are written for its resolve)",
+  "title": "the g-buffer's per-pixel object motion (TAAU's gVel) added to the camera reprojection: a walking man's lit side and the bounce on him find their own history. Off = camera-only reprojection; needs TAAU on (the vectors are written for its resolve)",
   "def": false,
   "extra": ""
  },
@@ -2300,7 +1766,7 @@
   "label": "histories",
   "title": "",
   "def": false,
-  "extra": "[restart — zero every screen-space history (both denoisers', the reflection chain's, the TAAU resolve's, the ReSTIR reservoirs): the next frame starts from raw estimates (the same button as Frame ▸ Quality & resolution ▸ histories)]"
+  "extra": "[restart — zero every screen-space history (the denoiser's, the reflection chain's, the TAAU resolve's, the ReSTIR reservoirs): the next frame starts from raw estimates (the same button as Frame ▸ Quality & resolution ▸ histories)]"
  },
  {
   "path": "Denoiser ▸ Shadow client",
@@ -3226,103 +2692,8 @@
  {
   "path": "Renderer fx ▸ SDF character rig",
   "kind": "toggle",
-  "label": "(ii) smooth-union closest hit in reflections",
-  "title": "the reflection pass sees a man as the sphere-traced SMOOTH UNION of his round cones (a blend radius per joint, the field's gradient as the normal) — a mannequin in the lino instead of sausage links; rides the phase-5 reflection variant (ultra's mesh hits win when both are on). Off = the round cones' closest hit, as every other ray sees them",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "slider",
-  "label": "joint blend ×",
-  "min": 0,
-  "max": 2,
-  "step": 0.05,
-  "title": "× the per-joint smooth-union radii of render/sdfrig.ts RIG_K (knee / elbow ~4 / 3 cm, shoulder line 5, arms against the trunk 2): 1 = as authored, 0 = the plain union of the cones",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "slider",
-  "label": "closest-hit steps",
-  "min": 4,
-  "max": 64,
-  "step": 1,
-  "title": "sphere-trace step budget from the inflated-cone entry point (the trace ends within a millimetre or two in a handful; the budget only binds on silhouette grazers, which count as hits)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "toggle",
-  "label": "(iii) EXPERIMENT: soft character shadows in the direct light",
-  "title": "the direct estimators' shadow rays skip characters and multiply in an ANALYTIC visibility instead: toward the emitter's centre with its angular radius as the cone, each limb blocks its exact strip share of the light's disc (or, in the march form, the classic SDF soft-shadow query over the union field) — deterministic per pixel per light, so a walking man's penumbra needs no history to converge; the boxes' visibility stays ray-traced. Sharp-class lights only unless the next row",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "toggle",
-  "label": "soft: analytic strip form (else sphere march)",
-  "title": "true = per cone the closest approach of the shadow segment to its axis, the limb as a strip across the disc, two circular-segment areas (exact for one straight limb, thin limbs partial); false = the field marched with iq's h ∕ (t·tan θ) rule + Aaltonen's triangulation, smoothstep remap (one edge per light, thin limbs read solid)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "toggle",
   "label": "character self-shadow",
   "title": "a man's own body shadows him in the direct light: the shadow rays from his pixels test HIS OWN round cones (his mesh under mesh shadows) from an origin lifted 3.5 cm off the surface and 5 cm along the ray, counting only what the ray enters beyond that (common.wgsl selfShadowT) — his hunched trunk darkens the tops of his thighs, boots and tucked forearms that the plain owner skip left glowing under a light behind him. Default ON at every tier; off = every part of him lit as if the rest of him were not there (?noselfshadow from boot)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "toggle",
-  "label": "soft: broad-class lights too",
-  "title": "apply the query to ceiling panels / area lights as well; off = the sharp class only (torches, lamps, the moon) — a panel's character shadow is all penumbra already, and its disc dwarfs a limb, where the one-strip-per-man rule under-counts a whole body's cover",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "toggle",
-  "label": "soft: smooth union in the march",
-  "title": "the march form folds the cones with the smooth union (else their plain min — the blend only shows within a joint's radius of a joint)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "slider",
-  "label": "soft: march steps",
-  "min": 4,
-  "max": 64,
-  "step": 1,
-  "title": "the march form's step budget per character crossed (20; sphere steps floored at 1.2 cm; out of steps keeps the clearance found so far)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "slider",
-  "label": "soft: light angular radius ×",
-  "min": 0.25,
-  "max": 3,
-  "step": 0.05,
-  "title": "× every light's angular radius in the query: 1 = physical (the emitter's authored radius over its distance), 2 = penumbrae twice as wide, ¼ = nearly hard",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "slider",
-  "label": "soft: min half-angle (°)",
-  "min": 0.05,
-  "max": 3,
-  "step": 0.05,
-  "title": "the smallest angular radius a light is given (0.35°): a 1.5 cm bezel two metres off would otherwise draw an edge inside a pixel that the raster then aliases",
   "def": false,
   "extra": ""
  },
@@ -3804,44 +3175,12 @@
  },
  {
   "path": "Weather & wind ▸ Wind",
-  "kind": "toggle",
-  "label": "wind: vents",
-  "title": "the level's HVAC diffusers blow at all (levels/office.json vents[]: six in the office — two over papered cubicle desks, the middle aisle, the corridor by the server door, the break room, the server room's cold aisle; on the mains, so a blackout spins them down; two cycle slowly)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Weather & wind ▸ Wind",
   "kind": "slider",
   "label": "wind: vent speed ×",
   "min": 0,
   "max": 3,
   "step": 0.05,
   "title": "× every vent's authored face speed (2‥2.8 m/s: an office diffuser; the air halves by its reach and is gone by 2.5 × it, a fifth of the face speed on the floor under a ceiling one). 3 = a wind tunnel (default 1)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Weather & wind ▸ Wind",
-  "kind": "toggle",
-  "label": "wind: storm outdoors",
-  "title": "the weather's wind (the rows above) moves the outdoor air: smoke popped in the lot drifts downwind, dust off the facade goes with it, the moths shelter in a gale — nothing inside the two roofed footprints but what comes through an open door",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Weather & wind ▸ Wind",
-  "kind": "toggle",
-  "label": "wind: door gusts",
-  "title": "an exterior door standing open in the storm lets a gust in along its inward normal ∝ how far the leaf is open × how square the wind stands to that face (a third of it whatever the bearing) — reach 2.2 m: the plume by the open fire exit leans into the room",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Weather & wind ▸ Wind",
-  "kind": "toggle",
-  "label": "wind: gusts",
-  "title": "every source × (1 ± amp) on a slow value noise of the game clock (deterministic — nobody's dice): vents ± 0.25, the storm ± 0.35. Off = dead steady jets",
   "def": false,
   "extra": ""
  },
@@ -5546,14 +4885,6 @@
   "kind": "toggle",
   "label": "civilians ▸ a dead civilian fails the mission",
   "title": "Chaos Theory fails some missions for a civilian killed by your hand; here by default it PRICES it instead (−40, 'civilian casualty' on the card, control's fury on the net once they find her, the floor locked down). On: the run ends where you stand — mission failed, Enter restarts. A knockout (−10) never fails it. Kept per machine.",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Sandbox ▸ Civilians",
-  "kind": "toggle",
-  "label": "civilians ▸ passing pleasantries",
-  "title": "'Evening.' — 'Evening, Marta.': a calm patrolling man passing within three metres of a working civilian gets a word and gives one back (at most one exchange a minute on the floor, four minutes per pair). Off = they never speak to each other (the identity probe's setting: the men's own chatter clocks are then untouched by her).",
   "def": false,
   "extra": ""
  },

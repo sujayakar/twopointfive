@@ -18,7 +18,11 @@
 //                    exactly N teammates with the roster's names and pairs on free floor a body apart, the F drill exists only with two or more on a level with
 //                    a breach plan, the pause card's words say the size, ten seconds of play throw nothing, a restart puts the same N back, a quit leaves the
 //                    knobs at the pair; with every defender dropped by the player's hand the scenario ends won at every size, alone too (the room clear: taken; the rescue: Sam holds the hostage room himself; the night breach with fewer than two: 'room clear' — with two or more that end is the F drill's, as ever); and at its OWN size the boot by `squad=N` stands the same men on the same marks as the row's own URL
+// SINCE 2026-11-07 loadout-screen writes no settled switch. GONE BY A LATER SETTLED RULE: 'off the start card over the plain night the solo night's Deploy
+// is Start itself — no page load' put the solo night's fog (QUIETFOG.solo, settled on) down to ask "the start as it was"; under the fog that Deploy is a
+// load of its own link (solofog-check.ts asks that).
 import { standUp, ROOT } from './headless.ts';
+import { pool, jobsOf } from './pool.ts';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { El, withDom } from './scenario-picker-probes.ts';
@@ -33,7 +37,6 @@ const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -43,7 +46,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); }
+function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); }
 const memStore = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); }, m }; };
 
 // ───────────────────────────────────────────────────────────── a boot, in a process of its own ─────────────────────────────────────────────────────────────
@@ -97,17 +100,11 @@ if (import.meta.main && process.argv.includes('--boot')) {
   process.exit(0);
 }
 async function bootChild(query: string): Promise<BootReport> {
-  const p = Bun.spawn(['bun', 'run', import.meta.path, '--boot', query], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+  const p = Bun.spawn(['bun', 'run', import.meta.path, '--boot', query], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });
   const out = await new Response(p.stdout).text(), errText = await new Response(p.stderr).text(); await p.exited;
   const line = out.split('\n').find(l => l.startsWith(TAG));
   if (!line) return { query, spec: null, errors: [], threw: `the boot printed no report (exit ${p.exitCode}): ${(errText || out).trim().split('\n').slice(-3).join(' | ')}` } as unknown as BootReport;
   return JSON.parse(line.slice(TAG.length));
-}
-/** `jobs` at a time */
-async function pool<T, R>(items: T[], jobs: number, fn: (x: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length); let k = 0;
-  await Promise.all(Array.from({ length: Math.min(jobs, items.length) }, async () => { for (;;) { const i = k++; if (i >= items.length) return; out[i] = await fn(items[i]); } }));
-  return out;
 }
 
 // ───────────────────────────────────────────────────────────── loadout-pure ─────────────────────────────────────────────────────────────
@@ -243,10 +240,6 @@ export async function loadoutScreen(): Promise<boolean> {
         S3?.deploy();
         verdict(S3?.entry.kind === 'solo' && S3?.entry.id === 'solo-night' && greyed && refused && still === 0 && cardOf === '0' && poolS === '' && soloHref === '?solo&mute' && loads[1] === '/?solo&mute',
           'the solo night goes through the loadout too: every size but solo is greyed with the reason, your own card is the one mounted, no squad count, and Deploy loads ?solo with the visitor\'s flags', `'${noteS}' · card of member ${cardOf} · loaded ${loads[1]}`);
-        // … and off the real start card over the plain night (MISSIONS.startSolo up) the solo night's Deploy is the card's Start: no load, and the card is to be worn
-        { const QFS = (await import(`${ROOT}/src/game/quietfog.ts`)).QUIETFOG, soloFogWas = QFS.solo; QFS.solo = false;   // (QUIETFOG.solo down for this one: under the fog the solo night off a plain page is a load of its own link — solofog-check.ts; here, the start as it was)
-          let starts = 0; M.MISSIONS.startSolo = () => { starts++; }; const n0 = loads.length; M.openMissions({ select: 'solo-night' }).pick(); UI.loadoutOpen()?.deploy(); const worn = K.KIT_SOLO.on; K.KIT_SOLO.on = false; M.MISSIONS.startSolo = null; QFS.solo = soloFogWas;
-          verdict(starts === 1 && loads.length === n0 && worn && UI.loadoutOpen() === null, 'off the start card over the plain night the solo night\'s Deploy is Start itself — no page load — and the kit is flagged to go on the player', `starts ${starts} · loads ${loads.length - n0} · KIT_SOLO ${worn}`); }
         // one screen at a time: the list opening closes a loadout that is up (nobody's Back called), a loadout opening closes the list; closeMissions takes both down
         { const A = UI.loadoutForMission(M.missionList()[2]); const L2 = M.openMissions(); const aShut = !A.open && UI.loadoutOpen() === null && M.currentMissions() === L2; const B = UI.loadoutForMission(M.missionList()[3]); const lShut = M.currentMissions() === null && UI.loadoutOpen() === B;
           const C = UI.loadoutForMission(M.missionList()[4]); const bShut = !B.open && M.currentMissions() === null && UI.loadoutOpen() === C; const busy = M.missionsBusy(); M.closeMissions(); const gone = UI.loadoutOpen() === null && !M.missionsBusy();
@@ -265,7 +258,7 @@ interface Cell { e: any; n: number; own: boolean; ok: boolean; note: string; r: 
 async function stageAll(only?: string[]): Promise<Cell[]> {
   const cells: Cell[] = [];
   for (const e of SCENARIOS) if (!only || only.includes(e.id)) for (const c of L.squadChoices(e)) cells.push({ e, n: c.n, own: c.own, ok: c.ok, note: c.note, r: null, bad: [] });
-  const jobs = Math.max(1, Math.min(4, Number(process.env.LOADOUT_JOBS ?? 4)));
+  const jobs = jobsOf(process.env.LOADOUT_JOBS, 4, 4);
   await pool(cells, jobs, async c => {
     const own = scenarioQuery(c.e) as string, q = c.own ? own.replace(/&squad4\b/, '') + `&squad=${c.n}` : L.squadSearch(own, c.n, c.e.squad);   // (its own size too is booted BY squad=N: the row's own URL is the reference below)
     c.r = await bootChild(q); if (c.own) c.ref = await bootChild(own);

@@ -163,17 +163,18 @@ export async function wallPose(opts: { report?: boolean } = {}) {
 //      the crouch walk cycle turned 55°: a knee to 12 cm off the floor every stride, a shin laid flat, the feet sliding under him; standing it was the walk cycle turned the same way, the legs crossing
 //      over each other along the plaster. Mended: the arms hang beside the hips, and the sidle, standing and crouched, is a side step of the hold's own — each foot on its own
 //      track along the wall, planted while it bears, the lead foot reaching and the other closing up to it, never past it — that sets off, stops and turns round without a foot
-//      or the trunk jumping. Asked with the feel pass raised here (so it passes on both stands), each line with the mend ON and, where the fault was, with it OFF (the fault
-//      must still be there: the switch is real). `WALLPOSE_BREAK=1` = the ON lines asked with the mend off: must fail.
+//      or the trunk jumping. Asked with the feel pass raised here. The mend is settled on and no longer written: until 2026-11-07 each line was also asked with it
+//      OFF where the fault was ('the old cycle is not back', 'the arms are not the old ones', 'the hands are not the old fanned ones', 'the old turn-round is not back'),
+//      and the sidle's head was held no higher than it rode with the mend off. `WALLPOSE_BREAK=1` = Q is never pressed, so no hold is taken: must fail.
 export async function wallPoseMend() {
-  console.log('\n=== wall-pose-mend: the hold\'s mended poses — arms beside the hips, the sidle a side step on its own tracks that never crosses its feet; the mend off = the poses as they were ===');
+  console.log('\n=== wall-pose-mend: the hold\'s mended poses — arms beside the hips, the sidle a side step on its own tracks that never crosses its feet ===');
   const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);
   Math.random = seeded(93);
   const W = await standUp(); const { game, input } = W;
   game.playerInvisible = true; game.godMode = true; game.aiEnabled = false; W.cam.yaw = 0; W.cam.rebuild();
   for (let i = 0; i < 5; i++) W.step(DT);
   game.guards.forEach((gd: any, i: number) => { gd.hold = true; gd.char.pos = [38.5, 0, 1.5 + i * 1.2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.update(0); });
-  const was = { on: WALLSNAP.on, pose: WALLSNAP.pose }; WALLSNAP.on = true;
+  const was = { on: WALLSNAP.on }; WALLSNAP.on = true;
   const brk = !!process.env.WALLPOSE_BREAK;
   let allPass = true;
   const report = (name: string, fails: string[], extra: string) => { const pass = fails.length === 0; allPass &&= pass; console.log(`- ${pass ? 'PASS' : 'FAIL'} — ${name}\n    ${extra}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`); };
@@ -186,11 +187,10 @@ export async function wallPoseMend() {
   const armLine = (A: Arms) => `upper arm off his side L ${f1(A.upL)}° R ${f1(A.upR)}° · elbow bent L ${f1(A.flexL)}° R ${f1(A.flexR)}° · elbows ${f2(A.elbows)} m apart · hands at ${f2(A.handY)}`;
   type Run = { parked: Arms; parkedPose: WallPoseSample; kneeMin: number; headMax: number; headMin: number; hipsPP: number; travel: [number, number]; stepMax: number; track: [[number, number], [number, number]]; armsWorst: Arms; gapMin: number; slide: string[]; nan: boolean; fan: [number, number]; tipOff: number };
   // one take of the north corridor wall: park 1.5 s, sidle `key` 3 s (sampled from 0.8 s on; the other way after a sidle out to make room); `gapMin` = the least the lead foot was ahead of the other along the wall, from the set-off on (under 0 = they crossed)
-  const take = (crouch: boolean, pose: boolean, key: 'KeyD' | 'KeyA'): Run | null => {
-    WALLSNAP.pose = pose;
+  const take = (crouch: boolean, key: 'KeyD' | 'KeyA'): Run | null => {
     for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'Space']) input.keys.delete(k); input.buttons = 0;
     game.teleportPlayer([20.0, 0, 10.7]); const pl = game.player; pl.crouch = crouch; pl.slot = 'pistol'; pl.holstered = true; pl.char.bodyYaw = pl.char.aimYaw = 0; W.step(DT);
-    input.pressed.add('KeyQ'); W.step(DT); for (let i = 0; i < 90; i++) W.step(DT);
+    if (!brk) input.pressed.add('KeyQ'); W.step(DT); for (let i = 0; i < 90; i++) W.step(DT);
     if (!pl.wall) return null;
     const b = pl.char.bones as Record<string, Vec3>; const parked = arms(b), parkedPose = sampleWallPose(game)!;
     // the HANDS as they lie on the wall: how far the fingers fan (the index and little fingers' last joints apart, over their knuckles apart, per hand: 1 = side by side, over 1 = fanned open) and how deep the deepest fingertip joint is past the wall's plane
@@ -202,7 +202,7 @@ export async function wallPoseMend() {
           for (const x of [q, tp]) tipOff = Math.min(tipOff, x[0] * w.n[0] + x[2] * w.n[2] - w.d); } } }
     const R: Run = { fan, tipOff, parked, parkedPose, kneeMin: 9, headMax: 0, headMin: 9, hipsPP: 0, travel: [0, 0], stepMax: 0, track: [[9, -9], [9, -9]], armsWorst: parked, gapMin: 9, slide: [], nan: false };
     if (key === 'KeyA') { input.keys.add('KeyD'); for (let i = 0; i < 170; i++) W.step(DT); input.keys.delete('KeyD'); for (let i = 0; i < 30; i++) W.step(DT); }   // room behind him: the run of wall ends a few metres that way
-    (pl.char.anim as any).phase = 0;   // the stride clock from the same place every take (a take is compared with its twin, the mend off)
+    (pl.char.anim as any).phase = 0;   // the stride clock from the same place every take
     input.keys.add(key); let prev: { L: number; R: number; fL: number; fR: number } | null = null; let hMin = 9, hMax = 0, worst = -1; const DUTY = 0.6;
     for (let i = 0; i < 180; i++) {
       W.step(DT); const w = pl.wall; if (!w) { R.nan = true; break; }
@@ -228,44 +228,40 @@ export async function wallPoseMend() {
     return R;
   };
   const handLine = (r: Run) => `fingers fanned L ×${f2(r.fan[0])} R ×${f2(r.fan[1])} · deepest fingertip or thumb tip ${(r.tipOff * 100).toFixed(1)} cm off the wall's plane (under 0 = in the plaster)`;
-  // the hands on the wall (the maintainer's still of the standing hold: two fanned gloves out at his hips): fingers side by side, no fingertip joint in the plaster; the mend off = the fanned hand
-  const judgeHands = (a: Run, o: Run): string[] => { const f: string[] = [];
+  // the hands on the wall (the maintainer's still of the standing hold: two fanned gloves out at his hips): fingers side by side, no fingertip joint in the plaster
+  const judgeHands = (a: Run): string[] => { const f: string[] = [];
     if (a.fan[0] > 1.1 || a.fan[1] > 1.1) f.push(`fingers fanned ×${f2(a.fan[0])} / ×${f2(a.fan[1])} (want ≤ ×1.10: side by side; they were ×1.31)`);
     if (a.fan[0] < 0.85 || a.fan[1] < 0.85) f.push(`fingers pinched together ×${f2(a.fan[0])} / ×${f2(a.fan[1])} (want ≥ ×0.85)`);
-    if (a.tipOff < 0.005) f.push(`a fingertip or the thumb's tip ${(a.tipOff * 100).toFixed(1)} cm off the wall's plane (want ≥ 0.5 cm on the room's side; the thumb's was ${(o.tipOff * 100).toFixed(1)}: in the plaster)`);
-    if (!(o.fan[0] > 1.2 && o.fan[1] > 1.2)) f.push(`with the mend off the hands are not the old fanned ones (×${f2(o.fan[0])} / ×${f2(o.fan[1])})`);
+    if (a.tipOff < 0.005) f.push(`a fingertip or the thumb's tip ${(a.tipOff * 100).toFixed(1)} cm off the wall's plane (want ≥ 0.5 cm on the room's side; the thumb's was in the plaster)`);
     return f; };
-  const ON = !brk;
   // (1) crouched, parked: the arms hang beside the hips
   {
-    const a = take(true, ON, 'KeyD'), o = take(true, false, 'KeyD'); const f: string[] = [];
-    if (!a || !o) f.push('Q did not take hold'); else {
+    const a = take(true, 'KeyD'); const f: string[] = [];
+    if (!a) f.push('Q did not take hold'); else {
       if (a.parked.upL > 32 || a.parked.upR > 32) f.push(`an upper arm ${f1(Math.max(a.parked.upL, a.parked.upR))}° out from his side (want ≤ 32; it was 47‥52)`);
       if (a.parked.elbows > 0.68) f.push(`elbows ${f2(a.parked.elbows)} m apart (want ≤ 0.68; it was 0.81)`);
-      f.push(...judgeHands(a, o));
+      f.push(...judgeHands(a));
       if (a.parked.flexL > 55 || a.parked.flexR > 55) f.push(`an elbow bent ${f1(Math.max(a.parked.flexL, a.parked.flexR))}° (want ≤ 55; it was 75‥78)`);
       f.push(...judgeParked(a.parkedPose, true).map(x => `the hold's own bars: ${x}`));
-      if (!(o.parked.upL > 40 && o.parked.upR > 40 && o.parked.elbows > 0.74)) f.push(`with the mend off the arms are not the old ones (${armLine(o.parked)}): the switch does not put the pose back`);
     }
-    report('crouched and parked: the arms beside the hips; the mend off = out from his sides as before', f, a && o ? `mended: ${armLine(a.parked)} · ${handLine(a)}\n    as it was: ${armLine(o.parked)} · ${handLine(o)}` : '—');
+    report('crouched and parked: the arms beside the hips', f, a ? `${armLine(a.parked)} · ${handLine(a)}` : '—');
   }
   // (2) standing, parked: a little closer in, never wider than it was
   {
-    const a = take(false, ON, 'KeyD'), o = take(false, false, 'KeyD'); const f: string[] = [];
-    if (!a || !o) f.push('Q did not take hold'); else {
+    const a = take(false, 'KeyD'); const f: string[] = [];
+    if (!a) f.push('Q did not take hold'); else {
       if (a.parked.elbows > 0.58) f.push(`elbows ${f2(a.parked.elbows)} m apart standing (want ≤ 0.58; it was 0.62)`);
       if (a.parked.flexL > 40 || a.parked.flexR > 40) f.push(`an elbow bent ${f1(Math.max(a.parked.flexL, a.parked.flexR))}° standing (want ≤ 40)`);
-      f.push(...judgeHands(a, o));
+      f.push(...judgeHands(a));
       f.push(...judgeParked(a.parkedPose, false).map(x => `the hold's own bars: ${x}`));
       if (a.armsWorst.flexL < 12 && a.armsWorst.flexR < 12) f.push(`both arms dead straight in the standing sidle (${f1(a.armsWorst.flexL)}° / ${f1(a.armsWorst.flexR)}°)`);
     }
-    report('standing and parked: the arms hang, never wider than they were', f, a && o ? `mended: ${armLine(a.parked)} · ${handLine(a)}\n    as it was: ${armLine(o.parked)} · ${handLine(o)}` : '—');
+    report('standing and parked: the arms hang, never wider than they were', f, a ? `${armLine(a.parked)} · ${handLine(a)}` : '—');
   }
-  // (3) sidling either way, crouched and standing: the bearing foot planted, each foot on its own track, the feet never past each other, the head no higher than it rode;
-  //     crouched, no knee to the floor
+  // (3) sidling either way, crouched and standing: the bearing foot planted, each foot on its own track, the feet never past each other; crouched, no knee to the floor
   for (const crouch of [true, false]) for (const key of ['KeyD', 'KeyA'] as const) {
-    const a = take(crouch, ON, key), o = take(crouch, false, key); const f: string[] = [];
-    if (!a || !o) f.push('Q did not take hold'); else {
+    const a = take(crouch, key); const f: string[] = [];
+    if (!a) f.push('Q did not take hold'); else {
       if (a.nan) f.push('lost the wall or a NaN while sidling');
       if (crouch && a.kneeMin < 0.2) f.push(`a knee ${f2(a.kneeMin)} m off the floor (want ≥ 0.20; it was 0.12‥0.16: a kneel every stride)`);
       if (a.travel[0] > 0.1 || a.travel[1] > 0.1) f.push(`a bearing foot slid ${f2(Math.max(...a.travel))} m along the wall in 2.2 s (want ≤ 0.10: only the roll onto its ball)`);
@@ -274,25 +270,21 @@ export async function wallPoseMend() {
       if (Math.abs((a.track[0][0] + a.track[0][1]) / 2 - (a.track[1][0] + a.track[1][1]) / 2) < 0.1) f.push('the two feet share a track (want ≥ 0.10 m between them)');
       if (Math.min(a.track[0][0], a.track[1][0]) < 0.1) f.push(`a foot ${f2(Math.min(a.track[0][0], a.track[1][0]))} m off the wall plane (want ≥ 0.10: not in the plaster)`);
       if (a.gapMin < 0.02) f.push(`the lead foot was ${f2(a.gapMin)} m ahead of the other at their closest (want ≥ 0.02: a side step closes up, it never crosses)`);
-      if (a.headMax > o.headMax + 0.01) f.push(`the head rides ${f2(a.headMax)} m, higher than the ${f2(o.headMax)} it rode (sight reads his head: no more of him over low cover)`);
       if (a.hipsPP > 0.04) f.push(`the hips bob ${f2(a.hipsPP)} m (want ≤ 0.04)`);
       if (a.armsWorst.upL > 38 || a.armsWorst.upR > 38) f.push(`an upper arm ${f1(Math.max(a.armsWorst.upL, a.armsWorst.upR))}° out sidling (want ≤ 38; crouched it was 39‥57)`);
       if (!crouch && a.armsWorst.flexL < 12 && a.armsWorst.flexR < 12) f.push(`both arms dead straight in the standing sidle (${f1(a.armsWorst.flexL)}° / ${f1(a.armsWorst.flexR)}°)`);
       f.push(...a.slide.map(x => `the hold's own bars: ${x}`));
-      if (crouch && !(o.kneeMin < 0.2)) f.push(`with the mend off the knee is ${f2(o.kneeMin)} m up: the old cycle is not back`);
-      if (!(o.gapMin < 0)) f.push(`with the mend off the feet do not cross (${f2(o.gapMin)} m): the old cycle is not back`);
     }
-    report(`${crouch ? 'crouched' : 'standing'} sidle ${key === 'KeyD' ? 'one way' : 'the other way'}: a side step on its own tracks, the feet never crossing; the mend off = the turned ${crouch ? 'crouch' : 'walk'} cycle`, f,
-      a && o ? `mended: knee ≥ ${f2(a.kneeMin)} · bearing foot travel ${f2(a.travel[0])} / ${f2(a.travel[1])} m (≤ ${(a.stepMax * 1000).toFixed(1)} mm a frame) · tracks ${f2(a.track[0][0])}‥${f2(a.track[0][1])} and ${f2(a.track[1][0])}‥${f2(a.track[1][1])} m off the wall · feet closest ${f2(a.gapMin)} m · head ${f2(a.headMin)}‥${f2(a.headMax)} · hips bob ${f2(a.hipsPP)} · worst ${armLine(a.armsWorst)}\n    as it was: knee ≥ ${f2(o.kneeMin)} · feet closest ${f2(o.gapMin)} m (under 0 = crossed) · head ${f2(o.headMin)}‥${f2(o.headMax)} · hips bob ${f2(o.hipsPP)} · worst ${armLine(o.armsWorst)}` : '—');
+    report(`${crouch ? 'crouched' : 'standing'} sidle ${key === 'KeyD' ? 'one way' : 'the other way'}: a side step on its own tracks, the feet never crossing`, f,
+      a ? `knee ≥ ${f2(a.kneeMin)} · bearing foot travel ${f2(a.travel[0])} / ${f2(a.travel[1])} m (≤ ${(a.stepMax * 1000).toFixed(1)} mm a frame) · tracks ${f2(a.track[0][0])}‥${f2(a.track[0][1])} and ${f2(a.track[1][0])}‥${f2(a.track[1][1])} m off the wall · feet closest ${f2(a.gapMin)} m · head ${f2(a.headMin)}‥${f2(a.headMax)} · hips bob ${f2(a.hipsPP)} · worst ${armLine(a.armsWorst)}` : '—');
   }
   // (4) setting off, stopping at five places in the stride, back the other way, turned round mid-stride, stopped again: no foot POPS (the change of a foot's step from one
   //     frame to the next — a stride's own swing is ~2 cm of it, a foot put somewhere else in one frame is the whole jump) and neither the hips, the head nor a hand jumps
   //     against the body's own travel. The turned clips re-seat a foot by 14‥43 cm when he turns round.
-  const trans = (crouch: boolean, pose: boolean, stopAt: number): { pop: number; popAt: string; jump: number; jumpAt: string; lost: boolean } => {
-    WALLSNAP.pose = pose;
+  const trans = (crouch: boolean, stopAt: number): { pop: number; popAt: string; jump: number; jumpAt: string; lost: boolean } => {
     for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'Space']) input.keys.delete(k); input.buttons = 0;
     game.teleportPlayer([20.0, 0, 10.7]); const pl = game.player; pl.crouch = crouch; pl.slot = 'pistol'; pl.holstered = true; pl.char.bodyYaw = pl.char.aimYaw = 0; W.step(DT);
-    input.pressed.add('KeyQ'); W.step(DT); for (let i = 0; i < 90; i++) W.step(DT);
+    if (!brk) input.pressed.add('KeyQ'); W.step(DT); for (let i = 0; i < 90; i++) W.step(DT);
     const b = pl.char.bones as Record<string, Vec3>; const KEYS = ['footL', 'footR', 'hips', 'head', 'handL', 'handR'];
     type Fr = { pos: Vec3 } & Record<string, Vec3>; let p1: Fr | null = null, p2: Fr | null = null; const T = { pop: 0, popAt: '', jump: 0, jumpAt: '', lost: !pl.wall };
     const seg = (name: string, n: number, keys: string[]) => {
@@ -310,20 +302,18 @@ export async function wallPoseMend() {
     return T;
   };
   for (const crouch of [true, false]) {
-    const f: string[] = []; let pop = 0, popAt = '', jump = 0, jumpAt = '', oPop = 0, oJump = 0;
+    const f: string[] = []; let pop = 0, popAt = '', jump = 0, jumpAt = '';
     for (const stopAt of [31, 37, 43, 49, 55]) {
-      const a = trans(crouch, ON, stopAt), o = trans(crouch, false, stopAt);
+      const a = trans(crouch, stopAt);
       if (a.lost) f.push(`lost the wall (stop after ${stopAt} frames)`);
       if (a.pop > pop) { pop = a.pop; popAt = `${a.popAt}, stopped after ${stopAt} frames`; } if (a.jump > jump) { jump = a.jump; jumpAt = `${a.jumpAt}, stopped after ${stopAt} frames`; }
-      oPop = Math.max(oPop, o.pop); oJump = Math.max(oJump, o.jump);
     }
     if (pop > 0.05) f.push(`a foot popped ${(pop * 100).toFixed(1)} cm in a frame (${popAt}; want ≤ 5: a swing's own change of step is ~2‥3.5)`);
     if (jump > 0.04) f.push(`${jumpAt.split(' ')[0]} jumped ${(jump * 100).toFixed(1)} cm in a frame against the body's travel (${jumpAt}; want ≤ 4)`);
-    if (!(oPop > 0.12)) f.push(`with the mend off the worst foot pop is ${(oPop * 100).toFixed(1)} cm: the old turn-round is not back`);
     report(`${crouch ? 'crouched' : 'standing'}: set off, stop at five places in the stride, back, turn round mid-stride, stop — no foot pops, the trunk does not jump`, f,
-      `mended: worst foot pop ${(pop * 100).toFixed(1)} cm (${popAt}) · worst hips / head / hand jump ${(jump * 100).toFixed(1)} cm (${jumpAt})\n    as it was: worst foot pop ${(oPop * 100).toFixed(1)} cm · worst jump ${(oJump * 100).toFixed(1)} cm`);
+      `worst foot pop ${(pop * 100).toFixed(1)} cm (${popAt}) · worst hips / head / hand jump ${(jump * 100).toFixed(1)} cm (${jumpAt})`);
   }
-  WALLSNAP.on = was.on; WALLSNAP.pose = was.pose;
+  WALLSNAP.on = was.on;
   console.log(`=== wall-pose-mend: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }

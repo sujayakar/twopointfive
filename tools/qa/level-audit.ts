@@ -79,7 +79,7 @@ async function one(level: string) {
   const lv: any = quiet(() => text ? loadLevel(parseLevelData(text)) : buildLevel());
   const fileBoxes = lv.boxes.length;
   const shapes = { rounds: 0, walls: 0, front: 0, lorry: 0, lorryKit: 0, pass: 0, seated: 0 };
-  if (!PLAIN) quiet(() => { cutConfig.on = true; cutConfig.swap = false;
+  if (!PLAIN) quiet(() => { cutConfig.on = true;
     const gt = geoTryLevel(lv, skyPlan(lv.boxes)); shapes.rounds = gt.rounds; shapes.walls = gt.walls;
     // (`front` and `pass` were the house front's and the yard's trials: they are the kit's pieces in the pass's own file since 11-05, counted with its boxes; the two words stay 0 for the rows kept from before)
     if (/^pass\b/.test(rows.file ?? '')) { shapes.lorry = dressLorry(lv); if (shapes.lorry) shapes.lorryKit = kitLorry(lv); }

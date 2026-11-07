@@ -5,7 +5,7 @@
 //   bun run tools/qa/registry-probes.ts trace flow:3            one run in this process with its timeline printed
 // PASS / FAIL each, all headless (the Game of headless.ts stood up on the level — standUp({ level })). No GPU: no light meter (the CPU estimate of the direct
 // light stands in, as it does for the office's tally), no smoke, nothing seen drawn. What the level LOOKS like is untested here.
-//   registry-level   the file is the generator's level (0 diffs), the validator and the lint are clean on it, it is inside the renderer's fixed sizes, the rescue's
+//   registry-level   the file is the generator's level (the exporter's own --check), the validator and the lint are clean on it, it is inside the renderer's fixed sizes, the rescue's
 //                   data sits on its floor (rescue.ts checkRescue, the route's own check included); the two lines to the room measured along the nav grid
 //   registry-stage   the rescue boots on it: the pair, Sam, two hostages, the captor and the door man on the level's marks, every inside door shut but the copy room's hall door (it stands open), ONE roamer —
 //                   in the copy room or the reading room by the scenario's own coin (both seen over the seeds); nobody fires and no clock runs while Sam stands
@@ -30,6 +30,7 @@
 // and dead-centre cursor are not a person's.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { exporterCheck } from './level-file.ts';
 import { Run, Done, BOT, type RunOut, type Grade } from './rescue-tally.ts';
 const { RESCUE, checkRescue } = await import(`${ROOT}/src/game/rescue.ts`);
 const { SAMESTART } = await import(`${ROOT}/src/game/samestart.ts`);   // (while every mission starts the same way the roamer's coin is not thrown: registry-stage reads the rule and asks for the stage it gives)
@@ -38,9 +39,9 @@ const { INTERACT_KEY } = await import(`${ROOT}/src/game/consts.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { SQUAD4_BUDGET } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { parseLevelData, validateLevelData, structuralDiff } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { lintLevel } = await import(`${ROOT}/src/editor/lint.ts`);
-const { build: buildRegistry, REGISTRY_ROOMS } = await import(`${ROOT}/tools/levels/registry.ts`);
+const { REGISTRY_ROOMS } = await import(`${ROOT}/tools/levels/registry.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { BoxFlag, MAX_GLASS } = await import(`${ROOT}/src/scene/boxes.ts`);
 
@@ -255,7 +256,7 @@ async function playAll(styles: string[], seeds: number[], jobs: number, cap: num
   await Promise.all(Array.from({ length: Math.max(1, jobs) }, async () => {
     while (next < todo.length) {
       const job = todo[next++];
-      const proc = Bun.spawn(['bun', 'run', import.meta.path, 'worker', job.style, String(job.seed), String(cap), String(BOT.react)], { stdout: 'pipe', stderr: 'pipe' });
+      const proc = Bun.spawn(['bun', 'run', import.meta.path, 'worker', job.style, String(job.seed), String(cap), String(BOT.react)], { stdout: 'pipe', stderr: 'pipe', env: process.env });
       const kill = setTimeout(() => proc.kill(), 300_000);
       const [text, errText] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]); await proc.exited; clearTimeout(kill);
       const line = text.split('\n').find(l => l.startsWith('RESULT '));
@@ -305,10 +306,7 @@ export const registryLevel = guarded(async () => {
   const { verdict, done } = family('registry-level: the file, the lint, the sizes, the rescue\'s data on its floor, the two lines measured');
   const text = fileText(), data = parseLevelData(text), errs: string[] = validateLevelData(data);
   verdict(errs.length === 0, 'the file validates', errs.length ? errs.slice(0, 6).join(' · ') : `${data.boxes.length} boxes · ${data.doors.length} doors · ${data.props.length} props · ${data.lights.length} light + ${data.switchables.length} switchables · scenarios ${Object.keys(data.scenarios ?? {}).join(', ')}`);
-  const gen = buildRegistry(); gen.level.scenarios = gen.scenarios; { const DS = await import('../../src/scene/doorSize.ts'); DS.fitDoors(gen.level.doors); DS.fitWaysOut(gen.level, (gen.scenarios as any)?.quiet); }   // (as tools/levels/export.ts writes it: the leaves and the ways out fitted to the real doors)
-  { const FL = await import('../levels/flatLayers.ts'), LV = await import('../../src/scene/lived.ts'); FL.layGeneratedFloor(gen.level.boxes, gen.groups, LV.isLived, BoxFlag); }   // (… and its floor swept into order, as the export sweeps it before it writes: flatLayers.ts)
-  const diffs: string[] = []; const n = structuralDiff(gen.level, loadLevel(data, { lived: true, dressing: false }), diffs);   // (the generator builds the lived-in rooms' furniture: src/scene/lived.ts; the wrecking dressing is the loader's, added after it, so it is left out on every stand)
-  verdict(n === 0, 'the file is the generator\'s level (tools/levels/registry.ts build → the same Level, field for field)', n ? `${n} diffs: ${diffs.slice(0, 4).join(' · ')} — bun run tools/levels/export.ts registry` : '0 diffs');
+  { const ex = exporterCheck('registry'); verdict(ex.ok, 'the file is the generator\'s level, and its look twin with it (the exporter\'s own answer: tools/qa/level-file.ts)', ex.said); }
   const lint = lintLevel(data), bad = lint.findings.filter((f: any) => f.severity !== 'info');
   verdict(lint.errors === 0 && lint.warnings === 0, 'the level lint is clean (no error, no warning)', bad.length ? bad.slice(0, 5).map((f: any) => `${f.severity}: ${f.message}`).join(' · ') : `${lint.infos} notes in all`);
   const L = loadLevel(data), glass = L.boxes.filter((b: any) => (b.flags ?? 0) & BoxFlag.Glass).length, out = L.boxes.filter((b: any) => b.c[0] - b.h[0] < WORLD.min[0] - 1e-6 || b.c[0] + b.h[0] > WORLD.max[0] + 1e-6 || b.c[2] - b.h[2] < WORLD.min[2] - 1e-6 || b.c[2] + b.h[2] > WORLD.max[2] + 1e-6 || b.c[1] - b.h[1] < WORLD.min[1] - 1e-6 || b.c[1] + b.h[1] > WORLD.max[1] + 1e-6).length;
@@ -343,8 +341,8 @@ export const registryStage = guarded(async () => {
   }
   verdict(bad.length === 0, 'staged on eight seeds: the pair and Sam inside the front door, two hostages and the captor in the registrar\'s office, the door man behind the hall\'s counter, every inside door shut but the copy room\'s hall door (left standing open)', bad.length ? bad.slice(0, 6).join(' · ') : `${chars} characters at most (the shadow budget is 8)`);
   const nc = where.filter(w => w === 'copy').length, nr = where.filter(w => w === 'reading').length;
-  // (the same start rule on = the roamer on the level's own mark on every seed, no coin; off = the coin, both rooms seen. ROAMER_BREAK=1 asks for the other stand's stage: the line must FAIL)
-  if (SAMESTART.on !== (process.env.ROAMER_BREAK === '1')) verdict(where.length > 0 && (nc === where.length || nr === where.length), 'the one roamer stands in the same room on every seed (every mission starts the same way: the scenario\'s coin is not thrown)', `copy room ${nc} · reading room ${nr} of ${where.length}`);
+  // (every mission starts the same way: the roamer on the level's own mark on every seed, no coin. ROAMER_BREAK=1 asks for the coin's stage, both rooms seen: the line must FAIL)
+  if (process.env.ROAMER_BREAK !== '1') verdict(where.length > 0 && (nc === where.length || nr === where.length), 'the one roamer stands in the same room on every seed (every mission starts the same way: the scenario\'s coin is not thrown)', `copy room ${nc} · reading room ${nr} of ${where.length}`);
   else verdict(nc > 0 && nr > 0, 'the one roamer stands behind the blind wall on some seeds and behind the glass on others (the scenario\'s own coin)', `copy room ${nc} · reading room ${nr} of ${where.length}`);
   verdict(rounds === 0 && clocks === 0, 'five seconds with Sam standing: nobody fires and the captor\'s clock has not started', `${rounds} rounds · the clock running on ${clocks} seeds`);
   return done();

@@ -40,7 +40,8 @@ import { SideMap } from '../math/side';
 import type { Game, Guard, Player } from './game';
 import type { Character } from './character';
 import { hostileTo } from './teams';
-import { SILENT, underSilence, squadSilent, quietGun, urgent } from './silent';   // (asked inside holdFireHoldsTarget / holdFireSilent / holdFireOrder only)
+import { squadSilent, urgent } from './silent';   // (asked inside holdFireHoldsTarget / holdFireSilent / holdFireOrder only)
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 export const HOLDFIRE = {
   /** THE switch: off = the team shoots on sight unless silent or sneaking, as it did */
@@ -100,7 +101,7 @@ function working(g: Game): boolean {
 const WAITS: readonly string[] = ['place', 'standoff', 'armed'];
 /** his shot or his order has started the fight: inside `liftSecs` of the last of them, or a door order still being worked. A stamp from a roster that is
  *  gone, or from AHEAD of the clock (a checkpoint took Game.time back), is no lift. */
-export function holdFireLifted(g: Game): boolean {
+export function holdFireLifted(g: Game): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('holdFireLifted', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   if (!HOLDFIRE.on) return false;
   const S = states.get(g);
   if (S && S.liftT > -Infinity) {
@@ -116,14 +117,14 @@ function lift(g: Game, why: LiftWhy, what: string, by: Player, loud = false) {
   if (!was) { HOLDFIRE_STATS.lifts[why]++; HOLDFIRE_LOG.push({ t: g.time, why, what }); if (HOLDFIRE_LOG.length > 200) HOLDFIRE_LOG.splice(0, 100); }
 }
 /** A round has left a gun (combat.ts fireWeapon, once a pull): a PLAYER's starts the fight for his squad. `shooter`: whose round it was. */
-export function holdFireShot(g: Game, shooter: Character) {
+export function holdFireShot(g: Game, shooter: Character) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('holdFireShot', undefined, [g, shooter]); if (__r !== RUST_PASS) return __r as any; } }
   if (!HOLDFIRE.on || shooter !== leadOf(g).char) return;
   lift(g, 'shot', 'a round of his own', leadOf(g));
 }
 /** An order has been given (orders.ts give, by id — and anybody who gives one of LIFT_ORDERS' by another road): one that means fire starts the fight.
  *  `waits`: it was given on Sam's word (it lifts when the word comes: 'go') · a BLOW_ORDERS id lifts only when asked with `blown` (the charge going off).
  *  `by`: which player gave it · `silent`: what `holdFireSilent` answered before the row was issued (LOUD_ORDER lifts only then). */
-export function holdFireOrder(g: Game, id: string, o: { waits?: boolean; blown?: boolean; why?: LiftWhy; by?: Player; silent?: boolean } = {}) {
+export function holdFireOrder(g: Game, id: string, o: { waits?: boolean; blown?: boolean; why?: LiftWhy; by?: Player; silent?: boolean } = {}) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('holdFireOrder', undefined, [g, id, o]); if (__r !== RUST_PASS) return __r as any; } }
   if (HOLDFIRE.on && HOLDFIRE.loud && o.silent && id === LOUD_ORDER && !squadSilent(g)) { lift(g, o.why ?? 'order', id, o.by ?? leadOf(g), true); return; }   // (the squad WAS silent when he gave it and the row has taken it out: his word for weapons free)
   if (!HOLDFIRE.on || !LIFT_ORDERS.includes(id) || o.waits || (BLOW_ORDERS.includes(id) && !o.blown)) return;
   lift(g, o.why ?? 'order', id, o.by ?? leadOf(g));
@@ -133,45 +134,29 @@ export function holdFireOrder(g: Game, id: string, o: { waits?: boolean; blown?:
 export function holdFireSilent(g: Game, id: string): boolean { return HOLDFIRE.on && HOLDFIRE.loud && id === LOUD_ORDER && squadSilent(g); }
 /** THE LIFT THAT STANDS IS HIS 'GO LOUD' (told to a silent squad, inside `liftSecs` of it — a later shot or order runs the hold's own lift on, not this):
  *  silent.ts asks before the sneak's hold (unseen.ts), which would otherwise answer first for a squad whose Sam is low. False with either switch off. */
-export function holdFireLoud(g: Game): boolean {
-  if (!HOLDFIRE.on || !HOLDFIRE.loud) return false;
-  const S = states.get(g); return !!S && S.loudT > -Infinity && holdFireLifted(g) && g.time - S.loudT < HOLDFIRE.liftSecs;   // (holdFireLifted first: it clears a stamp from ahead of the clock or from a roster that is gone)
-}
+export function holdFireLoud(g: Game): boolean { return crossToRust('holdFireLoud', undefined, [g]) as any; }
 /** the F drill's 'go' (nightbreach.ts: not one of the menu's orders). `by`: which player gave it */
-export function holdFireDrill(g: Game, by: Player = leadOf(g)) { if (HOLDFIRE.on) lift(g, 'drill', 'go', by); }
+export function holdFireDrill(g: Game, by: Player = leadOf(g)) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('holdFireDrill', undefined, [g, by]); if (__r !== RUST_PASS) return __r as any; } } if (HOLDFIRE.on) lift(g, 'drill', 'go', by); }
 
 /** is this loud teammate under the hold this frame: the switch, a squad under orders, nobody has started the fight, nobody has found them */
 function held(g: Game, gd: Guard): boolean {
   if (!mate(gd) || !g.orders.active || holdFireLifted(g)) return false;
   const men = living(g); return men.length > 0 && !holdFireFound(g, men);
 }
-/** this rule's own answer for one man's round at `h`, nothing counted: the man has not noticed anybody, the squad is held, no hostage's life is on it */
-function holds(g: Game, gd: Guard, h: Guard, noticed: number, quiet: boolean, urgent: () => boolean): boolean {
-  if ((quiet && !HOLDFIRE.quiet) || h.state === 'alert' || h.state === 'search' || h.awareness >= noticed) return false;
-  return held(g, gd) && !urgent();
-}
 /** His round at `h` is held: nobody has found the squad, Sam has neither fired nor ordered it, and this man has not noticed anybody (`noticed`: the silent
  *  order's own bar · `quiet`: his gun is a quiet one · `urgent`: a hostage's life is on it). Asked by silent.ts silentHoldsRound for a LOUD man, after unseen.ts. */
-export function holdFireHolds(g: Game, gd: Guard, h: Guard, noticed: number, quiet: boolean, urgent: () => boolean): boolean {
-  if (!HOLDFIRE.on || !holds(g, gd, h, noticed, quiet, urgent)) return false;
-  HOLDFIRE_STATS.held++; return true;
-}
+export function holdFireHolds(g: Game, gd: Guard, h: Guard, noticed: number, quiet: boolean, urgent: () => boolean): boolean { return goneWithTick('holdFireHolds') as any; }
 /** THE MAN THE ROOM FIGHT HAS HIM ON IS ONE THIS RULE WILL NOT LET HIM SHOOT (orders.ts asks, for a stacked man whose gun is not on his door; doortools.ts,
  *  before he tries a handle): a loud teammate with a living man in his sight who has not noticed anybody, the squad held. The rule's own conditions, asked
  *  afresh — no stamp, nothing counted — so it stands through a change of man, Sam in his line and the sneak's hold answering first (unseen.ts, Sam low).
  *  Never a silent man (silent.ts's hold is his own). False with the switch off. Both askers ask only under HOLDFIRE.stackSet. */
-export function holdFireHoldsTarget(g: Game, gd: Guard): boolean {
-  if (!HOLDFIRE.on || underSilence(g, gd)) return false;
-  const h = g.fight.opOf(gd)?.tgt; return !!h && h.state !== 'dead' && holds(g, gd, h, SILENT.noticed, quietGun(gd), () => urgent(g));
-}
+export function holdFireHoldsTarget(g: Game, gd: Guard): boolean { return crossToRust('holdFireHoldsTarget', undefined, [g, gd]) as any; }
 /** … and through standing glass the hold is the silent order's own (until the man is alert or searching): is that rule his this frame */
-export function holdFireGlass(g: Game, gd: Guard): boolean { return HOLDFIRE.on && HOLDFIRE.glass && held(g, gd); }
-/** silent.ts's glass hold held a round under this rule (the count) */
-export function holdFireGlassHeld() { HOLDFIRE_STATS.heldGlass++; }
+export function holdFireGlass(g: Game, gd: Guard): boolean { return crossToRust('holdFireGlass', undefined, [g, gd]) as any; }
 
 /** a fresh encounter (game.ts restartEncounter): nothing lifted */
 export function holdFireReset(g: Game) { states.delete(g); }
-export function holdFireSummary(g: Game): string {
+export function holdFireSummary(g: Game): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('holdFireSummary', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   if (!HOLDFIRE.on) return 'off';
   const S = states.get(g), n = g.orders.active ? living(g).length : 0;
   if (!n) return 'no squad';

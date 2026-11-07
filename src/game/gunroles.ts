@@ -37,6 +37,7 @@ import { simRandom, hashStr, dieOf, roll } from '../math/dice';
 import { SAMESTART } from './samestart';   // (a leaf; read inside the deal only)
 import type { Game, Guard } from './game';
 import { Firearm, WEAPONS, type WeaponDef, type WeaponId } from './weapons';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export const GUNROLES = {
   on: false,
@@ -87,7 +88,7 @@ function lineOf(g: Game, p: Vec3, to: Vec3): number {
   return hit ? hit.t : GUNROLES.lineMax;
 }
 /** a row of the table into a man's hands (nothing for the row he carries, or one that is switched off) */
-export function gunHand(gd: Guard, id: WeaponId) {
+export function gunHand(gd: Guard, id: WeaponId) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('gunHand', undefined, [gd, id]); if (__r !== RUST_PASS) return __r as any; } }
   if (gd.weapon.def.id === id || !WEAPONS[id].enabled) return;
   gd.route.weapon = id; gd.weapon = new Firearm(WEAPONS[id]); gd.reloadT = -1; gd.char.muzzleAhead = WEAPONS[id].muzzleAhead;   // (the row is dealt off his route every frame — game.ts — so the route is where it is written)
 }
@@ -97,7 +98,7 @@ export function gunHand(gd: Guard, id: WeaponId) {
  *  THE SAME FLOOR OPENS WITH THE SAME GUNS (samestart.ts): each man's two draws come off his own mark — where he stands and which man of the cast he is — so
  *  a restart, which stands the same men on the same marks, deals the same guns. With that switch off (the frozen stand) one number off the game's die
  *  salts every man's draws: another seed, other guns. */
-export function gunDeal(g: Game, men: DealMan[]): { gd: Guard; gun: WeaponId; line: number }[] {
+export function gunDeal(g: Game, men: DealMan[]): { gd: Guard; gun: WeaponId; line: number }[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('gunDeal', undefined, [g, men]); if (__r !== RUST_PASS) return __r as any; } }
   const K = GUNROLES; if (!K.on || !K.deal || BREAK || !men.length) return [];
   for (const d of g.doors.list) d.place();   // (a leaf the staging has just shut or opened stands where it says: its box is otherwise set on the next frame, and a line would be measured through a door that is shut)
   const salt = SAMESTART.on ? 0 : Math.floor(simRandom() * 0x7fffffff);
@@ -154,11 +155,7 @@ export function gunTurn(turn: Guard[], first: Guard): Guard[] {
   return out;
 }
 /** wallcharge.ts enter(): the men through a blown wall, nearest the hole first as they were — the long guns' men after the others */
-export function gunLast(men: Guard[]): Guard[] {
-  if (!useOn('entry') || men.length < 2) return men;
-  const back = men.filter(m => rankOf(m) === 2); if (!back.length || back.length === men.length) return men;
-  GUNROLES_STATS.last++; return [...men.filter(m => rankOf(m) !== 2), ...back];
-}
+export function gunLast(men: Guard[]): Guard[] { return goneWithTick('gunLast') as any; }
 /** roomfight.ts: the gap between a blinded defender's rounds fired where the room was — the staging's own for a gun that fires automatic, the gun's own
  *  rate for one that fires a round a pull (a dealt pistol is not emptied at a carbine's rate) */
 export function gunBlindGap(gd: Guard, every: number): number {
@@ -166,18 +163,9 @@ export function gunBlindGap(gd: Guard, every: number): number {
 }
 /** cover.ts tick(): what an opening `d` metres off is worth to HIM over another man, for his gun — the far one to a long gun, the near one to a pistol alone
  *  or a room gun (half as much). On the deal's own scale; 0 for a rifle, and with the switch off. */
-export function gunLane(gd: Guard, d: number, reach: number): number {
-  if (!useOn('lanes')) return 0;
-  const r = gunRole(gd), k = Math.min(1, Math.max(0, d / Math.max(reach, 0.1)));
-  return r === 'reach' || r === 'belt' ? GUNROLES.laneK * k : r === 'pistol' ? -GUNROLES.laneK * k : r === 'room' ? -0.5 * GUNROLES.laneK * k : 0;
-}
+export function gunLane(gd: Guard, d: number, reach: number): number { return goneWithTick('gunLane') as any; }
 /** roomfight.ts tickOp: how many rounds his trigger sends before the beat between strings — the row's own burst (its middle) for a belt-fed gun, 1 for the
  *  Mk 12 (an aimed round, not a pair). 0: the controlled pair, as ever. */
-export function gunString(gd: Guard): number {
-  if (!useOn('strings') || gd.weapon.def !== gunPrimary(gd)) return 0;   // (with the sidearm or the big slot's shotgun in his hands the trigger is that gun's)
-  const r = gunRole(gd), B = gd.weapon.def.burst;
-  return r === 'belt' && B ? Math.round((B.min + B.max) / 2) : r === 'reach' ? 1 : 0;
-}
+export function gunString(gd: Guard): number { return goneWithTick('gunString') as any; }
 /** … the seconds to the next round INSIDE a string (the row's own cyclic rate), and how much wider than his hands the k-th round of it is drawn */
-export function gunStringGap(gd: Guard): number { return gd.weapon.def.burst?.interval ?? gd.weapon.def.cd; }
-export function gunStringGrow(gd: Guard, k: number): number { const B = gd.weapon.def.burst; return B ? Math.min(B.spreadCap, B.spreadPerRound * k) : 0; }
+export function gunStringGap(gd: Guard): number { return goneWithTick('gunStringGap') as any; }

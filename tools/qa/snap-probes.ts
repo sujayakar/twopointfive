@@ -15,13 +15,13 @@
 //                                                               [--trace 'Red Two' --from 16 --to 17.2]   that man's yaws every frame of the stretch
 //   bun run tools/qa/snap-probes.ts --runs room-clear-four:1-8,block-squads:1,block-squads:3 [--turn 1|0|light|medium|heavy] [--jobs 4] [--json f.json]   the table, as the probes make it
 //   bun run tools/qa/probes.ts snap          THE GATE. snap-page (the page's defaults: no swing of 60° in the model's gun yaw; nothing drawn — rifle, trunk,
-//                                            head — comes DRAWN_MIN° round inside a tenth; the bang entries are in the sample) · snap-bites (turn weight off:
-//                                            the watcher finds both, in each mission and after a charge)
+//                                            head — comes DRAWN_MIN° round inside a tenth; the bang entries are in the sample) · snap-bites (the watcher's
+//                                            arithmetic on rows made by hand: what is a swing and what is not; SNAPBITES_BREAK=1 must fail)
 //   bun run tools/qa/probes.ts snap-open     THE OPEN FINDING, red today and so not one of the family's: the gun's own bar of 60° held to what is DRAWN. The model's
 //                                            muzzle keeps it; the drawn rifle, the shoulders and the face pass it, mostly in the tenth a rifle changes carriage
 //                                            (shouldered ↔ low ready) while the gun is swinging. The animator's to fix, and the fight reads those bones: a fix
 //                                            moves where rounds go, so it wants its own switch and paired tally
-// (the environment IS the arm: TPS_MOVES=1 alone = the page under ?noturn; with TPS_TURN=1 = the page as it opens; TPS_CAST=1 = the cast's own meshes, which
+// (the environment IS the arm: TPS_MOVES=1 with TPS_TURN=0 = the page under ?noturn; with TPS_TURN=1 = the page as it opens; TPS_CAST=1 = the cast's own meshes, which
 // the trunk and the head are read off.) THE HARNESS HAS NO GPU: this reads the pose the page would draw, not a picture of it.
 // (tools/qa/turn-rates.ts is the older, narrower watcher the turn weight's numbers were set against: aim yaw only, sided by training.)
 import { resolve } from 'node:path';
@@ -36,7 +36,7 @@ export type Part = typeof PARTS[number];
 export interface Swing { part: Part; who: string; side: string; at: number; deg: number; /** how far the gun stood off his feet when it ended, ° */ gap: number;
   /** over the same frames, signed the swing's own way: what his gun and his feet turned, ° — and what the animator was doing (his upper layer / long-gun carriage at each end, hit / blinded / reloading) */
   gun: number; body: number; note: string; /** seconds since the last stun charge went off (null: none yet) */ bang: number | null; state: string }
-export interface SnapRun { scn: string; seed: number; moves: string; turn: string; cast: boolean; end: string; t: number; team: string; min: number; win: number; bangs: number[]; men: number; frames: number; /** frame-to-frame turns read, per part (the rifle's only while its bore is level) */ read: Record<Part, number>; peak: Record<Part | 'body', number>; /** the furthest any gun stood off its man's feet, ° (the spine's twist ends at 109°) */ gapMax: number; /** man-frames it stood further off them than the AI's own twist limit lets it WISH (squad.ts / guards.ts: 1.5 rad = 86°) */ gapOver: number; swings: Swing[]; why?: string }
+export interface SnapRun { scn: string; seed: number; moves: string; turn: string; /** the turn weight as the run's game had it while it played (character.ts TURN.on, read in the game's first update), not the word it was asked by */ turnOn: boolean; cast: boolean; end: string; t: number; team: string; min: number; win: number; bangs: number[]; men: number; frames: number; /** frame-to-frame turns read, per part (the rifle's only while its bore is level) */ read: Record<Part, number>; peak: Record<Part | 'body', number>; /** the furthest any gun stood off its man's feet, ° (the spine's twist ends at 109°) */ gapMax: number; /** man-frames it stood further off them than the AI's own twist limit lets it WISH (squad.ts / guards.ts: 1.5 rad = 86°) */ gapOver: number; swings: Swing[]; why?: string }
 interface Row { t: number; gun: number; rifle: number; /** the drawn bore is near enough level to have a heading */ level: boolean; trunk: number; head: number; body: number; x: number; z: number; brk: boolean; state: string; pose: string }
 
 /** the swings in one man's rows: every stretch that holds a net turn of `min`° or more inside ANY span of `win` seconds or less (a pop of three frames
@@ -69,7 +69,8 @@ export async function snapRun(scn: string, seed: number, min = 60, win = 0.1, ca
   let now = 0, game: any = null; const bangs: number[] = [], seenBang = new WeakSet<any>();
   const gu = Game.prototype.update, cu = Character.prototype.update;
   const rows = new Map<any, Row[]>(), cut = new WeakSet<any>(), who = new Map<any, { name: string; side: string; gd: any } | null>();
-  Game.prototype.update = function (this: any, ...a: any[]) { now = this.time; game = this; const r = gu.apply(this, a); for (const e of this.events) if (e.kind === 'bang' && !seenBang.has(e)) { seenBang.add(e); bangs.push(+e.time.toFixed(2)); } return r; };
+  let turnOn: boolean | null = null;   // (the turn weight as the game has it WHILE it plays: read in its own update — play() puts every knob table back as it ends)
+  Game.prototype.update = function (this: any, ...a: any[]) { now = this.time; game = this; turnOn ??= !!TURN.on; const r = gu.apply(this, a); for (const e of this.events) if (e.kind === 'bang' && !seenBang.has(e)) { seenBang.add(e); bangs.push(+e.time.toFixed(2)); } return r; };
   Character.prototype.update = function (this: any, dt: number) {
     cu.call(this, dt);
     if (this.id === PLAYER_ID || !(dt > 0) || !game) return;
@@ -84,7 +85,7 @@ export async function snapRun(scn: string, seed: number, min = 60, win = 0.1, ca
   };
   const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { };
   let r: any; try { r = await play(scn, seed, cap); } finally { console.log = l; console.error = e; console.warn = w; Game.prototype.update = gu; Character.prototype.update = cu; }
-  const out: SnapRun = { scn, seed, moves: process.env.TPS_MOVES ?? '', turn: process.env.TPS_TURN ?? '', cast: castStood(), end: r.end, t: r.t, team: `${r.team}/${r.of}`, min, win, bangs, men: 0, frames: 0, read: { gun: 0, rifle: 0, trunk: 0, head: 0 }, peak: { gun: 0, rifle: 0, trunk: 0, head: 0, body: 0 }, gapMax: 0, gapOver: 0, swings: [] };
+  const out: SnapRun = { scn, seed, moves: process.env.TPS_MOVES ?? '', turn: process.env.TPS_TURN ?? '', turnOn: turnOn ?? !!TURN.on, cast: castStood(), end: r.end, t: r.t, team: `${r.team}/${r.of}`, min, win, bangs, men: 0, frames: 0, read: { gun: 0, rifle: 0, trunk: 0, head: 0 }, peak: { gun: 0, rifle: 0, trunk: 0, head: 0, body: 0 }, gapMax: 0, gapOver: 0, swings: [] };
   if (r.end === 'error') out.why = r.why;
   for (const [ch, L] of rows) { const W = who.get(ch)!; out.men++; out.frames += L.length;
     for (let i = 1; i < L.length; i++) { const gap = Math.abs(wrap(L[i].gun - L[i].body)); out.gapMax = Math.max(out.gapMax, Math.round(gap * DEG)); if (gap > 1.5 + 1e-3) out.gapOver++; if (L[i].brk) continue; for (const k of ['gun', 'rifle', 'trunk', 'head', 'body'] as const) if (k !== 'rifle' || L[i].level && L[i - 1].level) out.peak[k] = Math.max(out.peak[k], Math.round(Math.abs(wrap(L[i][k] - L[i - 1][k])) / Math.max(1e-6, L[i].t - L[i - 1].t) * DEG)); }
@@ -113,7 +114,7 @@ export async function snapRuns(runs: { scn: string; seed: number }[], env: Recor
     const file = resolve(tmpdir(), `snap-${process.pid}-${j.scn}-${j.seed}-${Math.random().toString(36).slice(2)}.json`);
     const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.scn}:${j.seed}`, '--out', file, '--min', String(min), '--win', String(win)], { stdout: 'ignore', stderr: 'pipe', env: E });
     const errText = await new Response(pr.stderr).text(); await pr.exited;
-    let r: SnapRun; try { r = JSON.parse(readFileSync(file, 'utf8')); rmSync(file); } catch { r = { scn: j.scn, seed: j.seed, moves: E.TPS_MOVES ?? '', turn: E.TPS_TURN ?? '', cast: !!E.TPS_CAST, end: 'error', t: 0, team: '0/0', min, win, bangs: [], men: 0, frames: 0, read: { gun: 0, rifle: 0, trunk: 0, head: 0 }, peak: { gun: 0, rifle: 0, trunk: 0, head: 0, body: 0 }, gapMax: 0, gapOver: 0, swings: [], why: `the run left no result — ${errText.trim().split('\n').slice(-2).join(' / ').slice(0, 300)}` }; }
+    let r: SnapRun; try { r = JSON.parse(readFileSync(file, 'utf8')); rmSync(file); } catch { r = { scn: j.scn, seed: j.seed, moves: E.TPS_MOVES ?? '', turn: E.TPS_TURN ?? '', turnOn: false, cast: !!E.TPS_CAST, end: 'error', t: 0, team: '0/0', min, win, bangs: [], men: 0, frames: 0, read: { gun: 0, rifle: 0, trunk: 0, head: 0 }, peak: { gun: 0, rifle: 0, trunk: 0, head: 0, body: 0 }, gapMax: 0, gapOver: 0, swings: [], why: `the run left no result — ${errText.trim().split('\n').slice(-2).join(' / ').slice(0, 300)}` }; }
     out.push(r); } }));
   return out.sort((a, b) => a.scn === b.scn ? a.seed - b.seed : runs.findIndex(x => x.scn === a.scn) - runs.findIndex(x => x.scn === b.scn));
 }
@@ -142,8 +143,8 @@ const most = (rs: SnapRun[], part: Part) => Math.max(0, ...rs.flatMap(r => r.swi
 const MEN: Record<string, number> = { 'room-clear-four': 9, 'block-squads': 15 };
 /** the runs' own lines, and the floor under every verdict after it: all of them asked for, each played to its scenario's own end (not an error, not a stall)
  *  in the arm that was asked for, with every armed man read and each part's turns read in their thousands */
-function ran(F: { verdict: Verdict }, rs: SnapRun[], want: number, env: Record<string, string | undefined>): void {
-  const why = (r: SnapRun) => r.end === 'error' || r.end === 'stalled' ? `${r.end} — ${r.why ?? ''}` : r.men < (MEN[r.scn] ?? 5) ? `${r.men} men read of ${MEN[r.scn] ?? 5}` : r.turn !== (env.TPS_TURN ?? '') || r.moves !== (env.TPS_MOVES ?? '') || r.cast !== !!env.TPS_CAST ? `ran as turn '${r.turn}' moves '${r.moves}' cast ${r.cast}` : PARTS.some(p => !(r.read?.[p] > 2000)) ? `turns read: ${PARTS.map(p => `${p} ${r.read?.[p] ?? 0}`).join(' ')}` : '';
+function ran(F: { verdict: Verdict }, rs: SnapRun[], want: number, env: Record<string, string | undefined>, weightOn: boolean): void {
+  const why = (r: SnapRun) => r.end === 'error' || r.end === 'stalled' ? `${r.end} — ${r.why ?? ''}` : r.men < (MEN[r.scn] ?? 5) ? `${r.men} men read of ${MEN[r.scn] ?? 5}` : r.turn !== (env.TPS_TURN ?? '') || r.turnOn !== weightOn || r.moves !== (env.TPS_MOVES ?? '') || r.cast !== !!env.TPS_CAST ? `ran as turn '${r.turn}' (the weight ${r.turnOn ? 'ON' : 'off'}, wanted ${weightOn ? 'on' : 'off'}) moves '${r.moves}' cast ${r.cast}` : PARTS.some(p => !(r.read?.[p] > 2000)) ? `turns read: ${PARTS.map(p => `${p} ${r.read?.[p] ?? 0}`).join(' ')}` : '';
   const bad = rs.filter(r => why(r));
   for (const r of rs) console.log(`  ${line(r)}`);
   F.verdict(rs.length === want && !bad.length, 'every run played to its own end under the watcher, in the arm asked for, every armed man read', bad.length ? bad.map(r => `${r.scn}:${r.seed} ${why(r)}`).join(' · ') : `${rs.length} of ${want} runs, ${rs.reduce((n, r) => n + r.frames, 0)} man-frames · frame-to-frame turns read: ${PARTS.map(p => `${p} ${rs.reduce((n, r) => n + r.read[p], 0)}`).join(' · ')}`); }
@@ -152,7 +153,7 @@ const ALL = parseRuns(`${ROOMS},${SQUADS}`);
 
 export async function snapPage(): Promise<boolean> {
   const F = family(`snap-page: as the page opens, no armed man's gun — the model's own yaw of it — swings 60° or more inside a tenth of a second in a room fight, and nothing DRAWN of him comes ${DRAWN_MIN}° round`);
-  const rs = await snapRuns(ALL, PAGE); ran(F, rs, ALL.length, PAGE);
+  const rs = await snapRuns(ALL, PAGE); ran(F, rs, ALL.length, PAGE, true);
   for (const [label, set] of SETS(rs)) { const g = count(set, isGun), d = count(set, isDrawn);
     F.verdict(g === 0, `${label}: no swing of 60° in the model's gun yaw`, g ? `${g}:\n${worst(set, isGun)}` : peaks(set));
     F.verdict(d === 0, `${label}: no drawn rifle, trunk or head swing of ${DRAWN_MIN}°`, d ? `${d}:\n${worst(set, isDrawn)}` : `the largest: ${(['rifle', 'trunk', 'head'] as const).map(p => `${p} ${most(set, p) ? most(set, p) + '°' : 'under 60°'}`).join(' · ')} (60° and over are snap-open's to count)`); }
@@ -162,8 +163,9 @@ export async function snapPage(): Promise<boolean> {
   return F.done();
 }
 export async function snapBites(): Promise<boolean> {
-  const F = family('snap-bites: the watcher finds the snaps where they are — a turn in one frame, and the page with the turn weight off');
-  { const L: Row[] = []; let y = 0; for (let i = 0; i < 40; i++) { if (i === 20) y += 90 / DEG; L.push({ pose: '', t: i / 60, gun: y, rifle: i >= 10 && i < 22 ? (i - 9) * 20 / DEG : i >= 22 ? 240 / DEG : 0, level: i < 30, trunk: i >= 20 && i < 26 ? (i - 19) * 11 / DEG : i >= 26 ? 66 / DEG : 0, head: i * 9 / DEG, body: 0, x: 0, z: 0, brk: i === 0, state: '' }); }
+  const F = family('snap-bites: the watcher finds the snaps where they are — a turn in one frame');
+  const BRK = process.env.SNAPBITES_BREAK === '1';   // (the red path: the staged quarter turn is never made, so the second line has nothing to find)
+  { const L: Row[] = []; let y = 0; for (let i = 0; i < 40; i++) { if (i === 20 && !BRK) y += 90 / DEG; L.push({ pose: '', t: i / 60, gun: y, rifle: i >= 10 && i < 22 ? (i - 9) * 20 / DEG : i >= 22 ? 240 / DEG : 0, level: i < 30, trunk: i >= 20 && i < 26 ? (i - 19) * 11 / DEG : i >= 26 ? 66 / DEG : 0, head: i * 9 / DEG, body: 0, x: 0, z: 0, brk: i === 0, state: '' }); }
     const g = swingsOf(L, 'gun', 60, 0.1), r = swingsOf(L, 'rifle', 60, 0.1), t = swingsOf(L, 'trunk', 60, 0.1), h = swingsOf(L, 'head', 60, 0.1);
     // (what the watcher must NOT read, and the pop a whole-tenth net would have lost)
     const row = (i: number, o: Partial<Row>): Row => ({ pose: '', t: i / 60, gun: 0, rifle: 0, level: true, trunk: 0, head: 0, body: 0, x: 0, z: 0, brk: i === 0, state: '', ...o });
@@ -172,20 +174,16 @@ export async function snapBites(): Promise<boolean> {
     const cg = swingsOf(cut, 'gun', 60, 0.1), cr = swingsOf(lev, 'rifle', 60, 0.1), lg = swingsOf(lev, 'gun', 60, 0.1), pt = swingsOf(pop, 'trunk', 60, 0.1);
     F.verdict(cg.length === 0 && cr.length === 0 && lg.length === 0 && pt.length === 1 && pt[0].deg === 75, 'a 90° turn across a staging is none, nor is one the bore was not level for; 75° there in three frames between 21° the other way each side is one swing of 75° (the whole tenth nets 33°)', `gun across a staging ${cg.map(s => s.deg + '°').join(' ') || 'none'} · rifle off level ${cr.map(s => s.deg + '°').join(' ') || 'none'} · the pop ${pt.map(s => s.deg + '°').join(' ') || 'none'}`);
     F.verdict(g.length === 1 && g[0].deg === 90 && r.length === 1 && r[0].deg === 120 && t.length === 1 && t[0].deg === 66 && h.length === 0, 'a 90° turn in one frame is one swing of 90°, 20° a frame for twelve frames is one of 120° (its largest tenth, not the first to reach 60°), 66° over six frames is one, a steady 54° a tenth is none', `gun ${g.map(s => s.deg + '°').join(' ') || 'none'} · rifle ${r.map(s => s.deg + '°').join(' ') || 'none'} · trunk ${t.map(s => s.deg + '°').join(' ') || 'none'} · head ${h.length}`); }
-  const OFF = { ...PAGE, TPS_TURN: undefined }, rs = await snapRuns(ALL, OFF); ran(F, rs, ALL.length, OFF);
-  // (the two squad runs hold ONE such turn with the weight off — Red One at 11.5 s of seed 3, after a charge: a thin sample, and a seeded one)
-  for (const [label, set] of SETS(rs)) { const g = count(set, isGun), d = count(set, isDrawn), need = set[0]?.scn === 'room-clear-four' ? 3 : 1;
-    F.verdict(g >= need, `${label}, the turn weight off (the page under ?noturn): the same runs DO hold swings of 60° in the model's gun yaw — snap-page passes because they are gone, not because it cannot see`, `${g}, the largest:\n${worst(set, isGun, 4)}`);
-    F.verdict(d >= need, `${label}: … and drawn rifle, trunk and head swings of ${DRAWN_MIN}°`, `${d}, the largest:\n${worst(set, isDrawn, 4)}`); }
-  const after = (s: Swing) => s.bang !== null && s.bang >= -0.1 && s.bang <= BANG_SECS, ga = count(rs, s => isGun(s) && after(s));
-  F.verdict(ga >= 1, `… and inside the ${BANG_SECS} s after a stun charge`, `${rs.reduce((n, r) => n + r.bangs.length, 0)} charges · gun swings of 60° in those seconds ${ga} · drawn swings of ${DRAWN_MIN}° ${count(rs, s => isDrawn(s) && after(s))}\n${worst(rs, s => isGun(s) && after(s), 3)}`);
+  // (until 2026-11-07 the probe went on to play both missions with the turn weight off, the page under ?noturn, and asked that the watcher DOES find gun
+  //  and drawn swings there, and after a stun charge: five lines on the off side of the turn weight, which is settled on. They are out; what is left is the
+  //  watcher's own arithmetic on rows made here)
   return F.done();
 }
 /** THE OPEN FINDING, as a probe that is RED today (so it is not one of the family's: `probes.ts snap` is the gate, `probes.ts snap-open` this): the gun's own bar —
  *  60° inside a tenth — held to what is drawn of him too. See the head of this file. */
 export async function snapOpen(): Promise<boolean> {
   const F = family('snap-open: (red today, see the head of snap-probes.ts) as the page opens, nothing drawn of an armed man swings 60° or more inside a tenth of a second either');
-  const rs = await snapRuns(ALL, PAGE); ran(F, rs, ALL.length, PAGE);
+  const rs = await snapRuns(ALL, PAGE); ran(F, rs, ALL.length, PAGE, true);
   for (const part of ['rifle', 'trunk', 'head'] as const) { const f = (s: Swing) => s.part === part, n = count(rs, f), by = new Map<string, number>();
     for (const r of rs) for (const s of r.swings) if (f(s)) by.set(s.note, (by.get(s.note) ?? 0) + 1);
     F.verdict(n === 0, `no ${part === 'rifle' ? 'drawn rifle' : part} swing of 60°`, n ? `${n} over ${(rs.reduce((a, r) => a + r.frames, 0) / 3600).toFixed(0)} man-minutes, the largest ${most(rs, part)}° · what the animator was doing (upper layer / carriage): ${[...by].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${v} ${k}`).join(' · ')}\n${worst(rs, f, 5)}` : peaks(rs)); }
@@ -200,7 +198,7 @@ if (import.meta.main) {
     if (flag('--out')) writeFileSync(flag('--out')!, JSON.stringify(r)); else { console.log(line(r)); for (const s of r.swings) console.log(swingLine(r, s)); if (r.why) console.log(r.why); }
     process.exit(0); }
   if (flag('--runs')) { const turn = flag('--turn') ?? '1';
-    const rs = await snapRuns(parseRuns(flag('--runs')!), { ...PAGE, TPS_TURN: turn === '0' ? undefined : turn }, num('--jobs', 4), min, win);
+    const rs = await snapRuns(parseRuns(flag('--runs')!), { ...PAGE, TPS_TURN: turn }, num('--jobs', 4), min, win);
     for (const r of rs) { console.log(line(r)); for (const s of r.swings) console.log(swingLine(r, s)); if (r.why) console.log(r.why); }
     if (flag('--json')) writeFileSync(flag('--json')!, JSON.stringify(rs, null, 1));
     process.exit(rs.some(r => r.end === 'error') ? 1 : 0); }

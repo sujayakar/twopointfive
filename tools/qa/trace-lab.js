@@ -84,7 +84,7 @@
       }
       return { passes: per, union, sum };
     },
-    PASSES: ['direct', 'gather', 'rc c0', 'rc c1', 'rc c2', 'rc c3', 'volFroxel', 'volumetrics', 'reflect', 'particles', 'softblur', 'temporal'],
+    PASSES: ['direct', 'gather', 'rc c0', 'rc c1', 'rc c2', 'rc c3', 'volumetrics', 'reflect', 'particles', 'softblur', 'temporal'],
     /** interleaved K-variant A/B: rounds × (for each variant, in a rotating order: apply(v) → warm → n frames), pooled → per-pass medians per variant + union/sum medians + text */
     async ab(apply, variants, opts = {}) {
       const { rounds = 3, n = 30, warm = 8, still = true, passes = TL.PASSES } = opts;
@@ -349,16 +349,15 @@
   };
   /** POST a JSON result to this lane's shot server (docs/perf/<name>.json) */
   TL.save = async (name, obj) => { const r = await fetch(`http://localhost:${TL.shotPort}/perf?name=${encodeURIComponent(name)}`, { method: 'POST', body: JSON.stringify(obj) }); return r.status; };
-  /** THE SCENE MATRIX: for each preset, for each scene: stage → contention check → interleaved A/B of the named CONFIGS (each = { variant, strata }) → per-pass medians.
-   *  Fire-and-forget: progress in TL.mx.status, results in TL.mx.results (also POSTed as docs/perf/trace-matrix-<preset>.json per preset). On main the two configs are the
-   *  reference walk with iid / stratified gather directions (settings.gatherStrata); a traversal experiment adds { variant: N } rows once its V-suffixed walks exist. */
+  /** THE SCENE MATRIX: for each preset, for each scene: stage → contention check → interleaved A/B of the named CONFIGS (each = { variant }) → per-pass medians.
+   *  Fire-and-forget: progress in TL.mx.status, results in TL.mx.results (also POSTed as docs/perf/trace-matrix-<preset>.json per preset). On main the one config is the
+   *  reference walk; a traversal experiment adds { variant: N } rows once its V-suffixed walks exist. */
   TL.CONFIGS = {
-    ref:      { variant: 0, strata: false, note: 'the reference walk, iid gather directions' },
-    strata:   { variant: 0, strata: true, note: 'E8: tile-coherent stratified gather directions (settings.gatherStrata)' },
+    ref:      { variant: 0, note: 'the reference walk' },
   };
-  TL.applyConfig = async (name) => { const c = TL.CONFIGS[name]; if (!c) throw new Error('config ' + name); window.__gs.on = !!c.strata; if (window.__traceConfig.variant !== c.variant || TL.mxDirty) { await TL.use(c.variant); TL.mxDirty = false; } };
+  TL.applyConfig = async (name) => { const c = TL.CONFIGS[name]; if (!c) throw new Error('config ' + name); if (window.__traceConfig.variant !== c.variant || TL.mxDirty) { await TL.use(c.variant); TL.mxDirty = false; } };
   TL.matrix = (opts = {}) => {
-    const { presets = ['high'], scenes = ['B1', 'B3', 'B2', 'B5'], configs = ['ref', 'strata'], rounds = 3, n = 30, tag = '' } = opts;
+    const { presets = ['high'], scenes = ['B1', 'B3', 'B2', 'B5'], configs = ['ref'], rounds = 3, n = 30, tag = '' } = opts;
     TL.mx = { status: 'starting', results: {}, log: [] };
     (async () => {
       for (const p of presets) {
@@ -372,7 +371,7 @@
             TL.mx.status = `${p} ${sc} ab`;
             const r = await TL.ab(TL.applyConfig, configs, { rounds, n, warm: 8 });
             const pick = (k) => (r.per[k] || []).map(x => x && x.med);
-            TL.mx.results[p].scenes[sc] = { info, aa: aa && aa.aaPct, clean: aa && aa.clean, union: r.union.map(x => x && x.med), unionP25: r.union.map(x => x && x.p25), unionP75: r.union.map(x => x && x.p75), direct: pick('direct'), gather: pick('gather'), rcSum: pick('rcSum'), froxel: pick('volFroxel'), reflect: pick('reflect'), particles: pick('particles'), text: r.text };
+            TL.mx.results[p].scenes[sc] = { info, aa: aa && aa.aaPct, clean: aa && aa.clean, union: r.union.map(x => x && x.med), unionP25: r.union.map(x => x && x.p25), unionP75: r.union.map(x => x && x.p75), direct: pick('direct'), gather: pick('gather'), rcSum: pick('rcSum'), reflect: pick('reflect'), particles: pick('particles'), text: r.text };
             TL.mx.log.push(`${p} ${sc}: union ${r.union.map(x => x && x.med.toFixed(2)).join(' / ')} (aa ${aa && aa.aaPct} %)`);
           } catch (e) { TL.mx.results[p].scenes[sc] = { error: String(e.message || e).slice(0, 300) }; TL.mx.log.push(`${p} ${sc}: ERROR ${String(e.message || e).slice(0, 120)}`); }
           await TL.save(`trace-matrix${tag ? '-' + tag : ''}-${p}`, { preset: p, configs, configNotes: configs.map(c => TL.CONFIGS[c]), rounds, n, ...TL.mx.results[p] }).catch(() => {});

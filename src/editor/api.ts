@@ -193,7 +193,7 @@ export function makeApi(H: ApiHost) {
       /** a new paint from the box's resolved look, the boxes painted with it */
       fromSelection: (boxIds?: string | string[], name?: string) => P.materialFromSelection(ed, boxIds ? ids(boxIds) : ed.selected('box').map(r => r.id), name),
       selectUsers: (name: string) => { const u = P.materialUsers(ed, name); ed.select([...u.boxes.map(b => `box:${b}`), ...u.props.map(p => `prop:${p}`)]); return ed.selection().length; },
-      /** which reflection tiers trace a roughness (ultra ≤ 0.55 · high ≤ 0.45 · medium ≤ 0.35) */
+      /** which reflection tiers trace a roughness (high ≤ 0.45 · medium ≤ 0.35) */
       traceHint: (rough?: number) => P.traceHint(rough),
     },
     /** MARKINGS on a box's faces (paint.ts; scene/markings.ts is the format): every call one undo step, live in the view. (x, y) = (column from the left, row from the TOP) */

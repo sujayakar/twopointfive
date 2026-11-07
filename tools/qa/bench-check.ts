@@ -13,7 +13,7 @@ const GBUF_MS = 0.73;   // the fake page's g-buffer stamp, a frame (a drawn pass
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 
 /** a frame's cost on the fake machine, ms: the preset's own, less what the sweep's flipped row gives back, times how slow the machine is */
-const COST: Record<string, number> = { verylow: 6, low: 9, medium: 14, high: 22, ultra: 40 };
+const COST: Record<string, number> = { verylow: 6, low: 9, medium: 14, high: 22 };
 function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; timers?: boolean; awayDep?: boolean; settled?: boolean; hz?: number; rows?: string[]; stands?: number } = {}) {
   const slow = o.slow ?? 1, born = now;
   const S: any = { renderScale: 0.8, sharpDirect: true, rtReflect: true, rcPeriods: [1, 1, 2, 4], exposure: 1.5 };
@@ -246,13 +246,20 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
       if (l && i < BENCH_SCENES.length - 1) { l.leg.onward({ steps: l.leg.steps, notes: l.leg.notes, scenes: l.leg.scenes, boot: null, away: 0 }); at = searchOf(pg.went[0] ?? ''); } else l?.leg.over(); }
     check(all && seen.length === BENCH_SCENES.length && store.size === 0, `a run asked for on the look prototype's page keeps the look's rows and its boot words on EVERY scene, written plain or percent-coded, and nothing of the visitor's kit, fog, hour or rule switches (${seen[seen.length - 1]})`);
     const tp = tab('?look=plain&hills=0&bench'), ok = benchBegin(false, tp) === null && tp.went.length === 1, up = new URLSearchParams(searchOf(tp.went[0] ?? ''));
-    check(ok && !up.has('look') && !up.has('hills'), `the dress's own word is not the look prototype's: nothing of it rides along, nor a look word beside it (${tp.went[0]})`);
+    check(ok && !up.has('look') && up.get('hills') === '0', `the dress's own word is not the look's and does not ride along; the page is the look's all the same, so a word of the look's beside it does (${tp.went[0]})`);
+    store.clear();
+    // the old picture (`?look=old`, scene/look.ts LOOK_OLD): a run asked for on it is that picture on every scene, and no word of the look's rides along beside it
+    { const to = tab('?look=old&hills=0&geo=1&bench&quality=high'); benchBegin(false, to); let at = searchOf(to.went[0] ?? ''), all = to.went.length === 1; const seen: string[] = [];
+      for (let i = 0; i < BENCH_SCENES.length && all; i++) { const pg = tab(at), l = benchLegOfPage(pg), u = new URLSearchParams(at); seen.push(at);
+        all = !!l && u.getAll('look').join() === 'old' && !u.has('hills') && !u.has('geo') && u.get('quality') === 'high' && u.get('benchrun') === String(i);
+        if (l && i < BENCH_SCENES.length - 1) { l.leg.onward({ steps: l.leg.steps, notes: l.leg.notes, scenes: l.leg.scenes, boot: null, away: 0 }); at = searchOf(pg.went[0] ?? ''); } else l?.leg.over(); }
+      check(all && seen.length === BENCH_SCENES.length && store.size === 0, `a run asked for on the old picture keeps ?look=old on EVERY scene and none of the look's own words (${seen[seen.length - 1]})`); }
     store.clear();
     // a trial the look panel's button keeps off on this machine: the run times the look that page shows, and its address says which
     const kept = new Map<string, string>([['twopointsix.hillrays', '0'], ['twopointsix.geotry', '0'], ['twopointsix.lorrytry', '1'], ['twopointsix.cutboxes', '0']]); (globalThis as any).localStorage = { getItem: (k: string) => kept.get(k) ?? null };
     const tk = tab('?look&geo=1&round=1&bench'), tn = tab('?bench'); benchBegin(false, tk); store.clear(); benchBegin(false, tn); store.clear(); delete (globalThis as any).localStorage;
     const uk = new URLSearchParams(searchOf(tk.went[0] ?? '')), un = new URLSearchParams(searchOf(tn.went[0] ?? ''));
-    check(tk.went.length === 1 && uk.get('hills') === '0' && uk.get('geo') === '1' && uk.get('cutboxes') === '0' && uk.get('round') === '1' && !un.has('cutboxes') && !uk.has('lorry') && tn.went.length === 1 && !un.has('hills') && !un.has('geo'), `a look trial this machine keeps off rides along as its own word (the cut boxes' switch with them), the address's word wins over the store, and a plain run takes nothing of it (${tk.went[0]})`); }
+    check(tk.went.length === 1 && uk.get('hills') === '0' && uk.get('geo') === '1' && uk.get('cutboxes') === '0' && uk.get('round') === '1' && !uk.has('lorry') && tn.went.length === 1 && !un.has('hills') && un.get('cutboxes') === '0' && !un.has('geo') && !un.has('lorry') && !un.has('look'), `a look trial this machine keeps off rides along as its own word (the cut boxes' switch with them) and the address's word wins over the store; a run asked for with no look word is the look's picture too and carries the cut boxes' word and nothing of the lab's three trials, which are off there whatever was kept (${tk.went[0]} · ${tn.went[0]})`); }
   // a run through to the end
   const t1 = tab('?quality=low&bench'); check(benchBegin(false, t1) === null && t1.how[0] === 'replace', 'begun from the address: that address is replaced, so Back does not ask for another run');
   let at = searchOf(t1.went[0]), steps = 0; const closedTo: string[] = [];
@@ -262,19 +269,19 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   check(steps === BENCH_SCENES.length && store.size === 0 && closedTo[0] === '/?quality=low', `every scene got its page, the record is gone at the end, and Close goes back to where the run was started (${closedTo[0]})`);
   check(benchLegOfPage(tab(at)) === null, 'a scene\'s address opened with no run under way is a plain mission page');
   // the shader rows on trial ride along (asked for beside ?bench, a row is what the run was meant to measure: dropped at the first scene, the numbers were the plain build's)
-  { const t2 = tab(`?bench&hour=noon&fogpass=old&pipequeue=0&shadertrim=0&shaderfold=0&downloads=1&cloud=0&cloudfiles=0&cloudprefs=0&${SHADER_ROW_WORDS.map((w, i) => `${w}=${i % 2}`).join('&')}`); benchBegin(false, t2);
+  { const t2 = tab(`?bench&hour=noon&fogpass=old&pipequeue=0&shadertrim=0&shaderfold=0&downloads=1&cloud=0&cloudfiles=0&cloudprefs=0&${SHADER_ROW_WORDS.map((w, i) => `${w}=${(i + 1) % 2}`).join('&')}`); benchBegin(false, t2);
     const u = new URLSearchParams(searchOf(t2.went[0]));
-    check(SHADER_ROW_WORDS.length > 0 && SHADER_ROW_WORDS.every((w, i) => u.get(w) === String(i % 2)) && u.get('pipequeue') === '0' && u.get('shadertrim') === '0' && u.get('shaderfold') === '0' && u.get('downloads') === '1' && u.get('cloud') === '0' && u.get('cloudfiles') === '0' && u.get('cloudprefs') === '0' && !u.has('hour') && !u.has('fogpass'), `every shader row's word, on or off, the compile queue's, the trim's and the fold's are on the first scene's address (${t2.went[0]})`);
+    check(SHADER_ROW_WORDS.length > 0 && SHADER_ROW_WORDS.every((w, i) => u.get(w) === String((i + 1) % 2)) && u.get('pipequeue') === '0' && u.get('shadertrim') === '0' && u.get('shaderfold') === '0' && u.get('downloads') === '1' && u.get('cloud') === '0' && u.get('cloudfiles') === '0' && u.get('cloudprefs') === '0' && !u.has('hour') && !u.has('fogpass'), `every shader row's word, on or off, the compile queue's, the trim's and the fold's are on the first scene's address (${t2.went[0]})`);
     const pg = tab(searchOf(t2.went[0])), l = benchLegOfPage(pg)!;
     check(l.leg.notes.filter(n => /^the scenes were played without hour, fogpass from the address/.test(n)).length === 1, `the words no scene is played with are named in the run's notes (${l.leg.notes.join(' | ')})`);
     const notesOf = (search: string) => { store.clear(); const t = tab(search); benchBegin(false, t); return benchLegOfPage(tab(searchOf(t.went[0])))!.leg.notes.filter(n => /played without/.test(n)); };
     const mission = notesOf('?levelFile=block.json&roomclear=1&squad4&seed=1&difficulty=hard&noverdict&nokeep&bench&hour=dusk&hour=noon&=x&quality=low');
     check(mission.length === 1 && /^the scenes were played without hour from the address/.test(mission[0]), `asked on a mission's own address: only the visitor's flag is named, once, and no word a scene's address says itself (${mission[0]})`);
     const many = notesOf('?bench&' + Array.from({ length: 14 }, (_, i) => `nosomethingquitelong${i}`).join('&'));
-    check(many.length === 1 && many[0].length <= 150 && / and \d+ more from the address/.test(many[0]) && notesOf('?bench&mute&quality=low&compactshaders=1').length === 0, `a long address: the note still fits a line of the report; nothing left behind: no note (${many[0]})`);
+    check(many.length === 1 && many[0].length <= 150 && / and \d+ more from the address/.test(many[0]) && notesOf('?bench&mute&quality=low&firstframe=1').length === 0, `a long address: the note still fits a line of the report; nothing left behind: no note (${many[0]})`);
     l.leg.onward({ steps: [{ id: `scene:${l.scene.id}` } as any], notes: l.leg.notes, scenes: [], boot: null, away: 0 });
     const u1 = new URLSearchParams(searchOf(pg.went[0]));
-    check(u1.get('benchrun') === '1' && SHADER_ROW_WORDS.every((w, i) => u1.get(w) === String(i % 2)), `and on the next scene's (${pg.went[0]})`);
+    check(u1.get('benchrun') === '1' && SHADER_ROW_WORDS.every((w, i) => u1.get(w) === String((i + 1) % 2)), `and on the next scene's (${pg.went[0]})`);
     store.clear(); }
   // …and the word for how a save's picture is taken: `?bench&savepic=0` against `?bench` is the pair that prices the wider canvas (docs/agents/qa.md), and with the
   // word dropped at the first scene that pair was one run twice
@@ -310,13 +317,13 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   // the page's wiring, read as text
   const main = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8'), loop = readFileSync(new URL('../../src/host/loop.ts', import.meta.url), 'utf8');
   check(/new HandsOff\(/.test(main) && /benchLegOfPage\(/.test(main) && /benchBegin\(/.test(main) && /new Bench\([^\n]*\brows: shaderRowsOn\b/.test(main) && /beforeTick/.test(main) && (loop.match(/ctx\.beforeTick(\?\.)?\(/g) ?? []).length === 2, 'the page plays a scene with the hands-off player, ticked before every game tick on either step');
-  check(/lq\.get\('lookkit'\) !== '0' && !runPage\(lq\)/.test(main) && /if \(!gq\.has\(BENCH_RUN_KEY\)\)[^\n]{0,260}buildLookPanel\(/.test(main) && /leg\.index === 0 && lookConfig\.on\) benchPage\.leg\.notes\.push\(/.test(main), 'on a scene\'s address the look prototype\'s page stands its kit, its fog put down and its panel off, and the first scene\'s page says in the notes that the run was played on it (read in main.ts: the page\'s half has no headless stand-in)');
+  check(/LOOK_LAB\.on && lq\.get\('lookkit'\) !== '0' && !runPage\(lq\)/.test(main) && /if \(!gq\.has\(BENCH_RUN_KEY\) && !kitViewOn\)[^\n]{0,300}buildLookPanel\(/.test(main) && /leg\.index === 0 && LOOK_LAB\.on\) benchPage\.leg\.notes\.push\(/.test(main) && /leg\.index === 0 && !lookConfig\.on\) benchPage\.leg\.notes\.push\(/.test(main), 'the kit and the fog put down are the look lab\'s alone and stand off on a scene\'s address, the look\'s panel is not built there, and the first scene\'s page says in the notes when the run was played on the lab\'s page or without the look (read in main.ts: the page\'s half has no headless stand-in)');
   // …and with the machine's sandbox row off, from BEFORE the mission is staged (with 'no AI' kept the room clear refuses to start: nobody would move)
   check(/\n  if \(!benchSceneWaits\(\) && !heldPage\(q\)\) loadSandbox\(game\);/.test(main) && main.indexOf('if (!benchSceneWaits() && !heldPage(q)) loadSandbox(game);') < main.indexOf('const booted = scenarioFromUrl(') && main.indexOf('const booted = scenarioFromUrl(') > 0, 'a scene\'s page does not read this machine\'s sandbox row, and that is settled before its mission is staged');
   // …and "a run's page" is ONE question (host/runpage.ts), asked in each of those places: a benchmark's scene and a priced level (ui/pricerun.ts) both are one, both keep their own page, and only a priced level holds the quality ladder
   { const { runPage, ownPage, heldPage } = await import('../../src/host/runpage'); const Q = (t: string) => new URLSearchParams(t);
     check(runPage(Q('benchrun=0')) && runPage(Q('pricerun=3')) && !runPage(Q('roomclear&squad4')) && ownPage(Q('bench')) && ownPage(Q('pricelevels=pass')) && ownPage(Q('pricerun=1')) && !ownPage(Q('look&roomclear')) && heldPage(Q('pricerun=0')) && !heldPage(Q('benchrun=0'))
-      && /keepPageBoot\(q, ownPage\(q\) \|\| kitViewOn\)/.test(main), 'a run\'s page is one question (host/runpage.ts): a benchmark\'s scene and a priced level are both one and both keep their own page, and only a priced level holds the ladder'); }
+      && /keepPageBoot\(q, ownPage\(q\), kitViewOn\)/.test(main), 'a run\'s page is one question (host/runpage.ts): a benchmark\'s scene and a priced level are both one and both keep their own page, and only a priced level holds the ladder'); }
   { store.clear(); const t = tab('?bench'); benchBegin(false, t); const at = searchOf(t.went[0]);
     const before = benchSceneWaits(tab(at)), plain = benchSceneWaits(tab('?levelFile=pass.json&roomclear=1')), twice = benchSceneWaits(tab(at)); benchLegOfPage(tab(at));
     check(before && twice && !plain && !benchSceneWaits(tab(at)), `asking whether a scene waits takes nothing: yes on the scene's address (twice), no on a plain page, and no once the scene was begun, which is the reload that is a plain mission page (${before} ${twice} ${plain})`); store.clear(); }

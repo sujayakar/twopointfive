@@ -276,7 +276,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   off main), the soak's device invariants; editor tools C / K / J + `__ed.device`.
 - **The wall hold's feel pass + the rifle stack** (`src/game/wallsnap.ts` = the table `WALLSNAP` and its arithmetic, nothing of the game imported; the hold itself is player.ts
   `findWall / wallSnap / moveOnWall / releaseWall`, the pose character.ts `wallBody / stanceBody`; `WALLSNAP.on` ON in the page — `?nowallsnap`, Tab ▸ Sandbox 'wall snap: feel
-  pass + rifle stack' and 'wall snap: the rifle stacks', `__wallsnap` = the live table — OFF in the frozen harness, `TPS_WALLSNAP=1`; off = the hold as it was: no feel-pass field
+  pass + rifle stack' and 'wall snap: the rifle stacks' (ROW TAKEN OFF THE PANEL 2026-11-07, its switch ruled settled: menus.md), `__wallsnap` = the live table — OFF in the frozen harness, `TPS_WALLSNAP=1`; off = the hold as it was: no feel-pass field
   on `Player.wall`, the animator's channels at rest). QUIET (hands empty / the pistol): the take runs one clock sized to the job (`wsTakeSecs`: 0.12‥0.30 s by glide and turn),
   eased OUT, the turn ahead of the glide, the soles anchored in the world and stepped one after the other (`anim.wallTake / wallTakeFeet`), a settle as the back lands
   (`anim.wallHit`: pelvis dip + head back) with one soft scuff for the player's ears only (no event filed); a wall he WALKS AT is in reach from `reachMoving` and outranks a nearer
@@ -335,7 +335,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that was not wanted in real play is unmeasured, since no recorded human session is in the repo and the tour's man is a puppet the rule leaves alone.
 - **A sprint straight into a wall takes it** (`WALLSNAP.pressRun`, wallsnap.ts `wsPressNear`, player.ts `wallPress / pressFace / wallRanOn`; the maintainer,
   11-04, from the pass road's cover lesson: "sprinting straight into a wall should snap to cover"). ON in the page (`?wallrun=0` = never at a run, as it
-  was; debugger row 'wall snap: sprint into a wall to take it'; no Options row of its own — it acts only with the walk-in take, so Options ▸ Game ▸ 'Walk
+  was; debugger row 'wall snap: sprint into a wall to take it' (ROW TAKEN OFF THE PANEL 2026-11-07, its switch ruled settled: menus.md); no Options row of its own — it acts only with the walk-in take, so Options ▸ Game ▸ 'Walk
   into a wall to take it' off puts both off), OFF in the module and on the frozen stand (`TPS_WALLRUN=1`; a `FROZEN_HOLDS` row; the journal carries it and
   a recording from before the key replays with it off). ONE RULE, NOT A SECOND ONE: with the switch on the walk-in take no longer turns a run away, and
   that is all of it — the same stick (`pressDeg` 35° of square), the same clock (`pressSecs`), the same faces, refusals and latch, the same hold (the rifle
@@ -528,7 +528,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   from `litAt`, whole for a man alert / searching and inside `touchM` 0.55; Sam only (the pair's partner keeps sneak.ts's own rule and waits short). `player.visibility` is the GPU
   meter: headless feed it (close-probes do); in the page a room lit only by the men's own torches reads 0.17–0.45 on Sam between them (bounce), 0.85+ in a beam. Floor marks
   (`CLOSE.marks`, overlay `.closewin`) ship off. Tab ▸ 'Closer than ever' section. NOT saved in checkpoints (the mode's hysteresis and the held gait's clock restart on a load). QA:
-  `probes.ts close` (14 probes incl. close-off = the switch off is the build, close-duo = beside a partner under `PAIRUP`; rides all-quick), `bun run tools/qa/ready-pose-probes.ts
+  `probes.ts close` (14 probes incl. close-off (deleted 2026-11-06 with the off side: qa.md) = the switch off is the build, close-duo = beside a partner under `PAIRUP`; rides all-quick), `bun run tools/qa/ready-pose-probes.ts
   poses | ease | identity | knife | creep | gait | strips --out DIR` (the animator alone: identity hash = the base's with nothing asked).
 - **Close-up takedowns as moves** (`src/game/takedown.ts` = the game's half, `character.ts` `BLOW` / `TAKEN` / `KNIFE_SLASH` + `blow() / taken() / takePre / blowTrunk / blowArms /
   takenLayer` = the poses, `Character.fallAs / breathe` + `guideStep / breathFrame` = the fall and the breath; `TAKEDOWN.on` — ON in the page, `?notakedown` = every takedown as it
@@ -746,7 +746,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   table rays beside the spot's bearing, and the exact ray walked only where they disagree (a sight edge, a wall seen along its length), cached per spot;
   `fogSeenBins` = the table alone, for the vertex stage (which does not see the grid). (2) LIGHT CLASSES in the light record's kind word (bits 25 / 26,
   `lights.ts LIGHT_FOG_SEEN / _UNSEEN`), asked by `evalLight` (→ `evalLightRaw` × `lightFogK`) and by the four places that work a light out themselves
-  (`reflect.wgsl` ≡ `reflect_p5.wgsl` glints, `cards.wgsl` — a torch's bounce card, where its footprint falls — `froxel.wgsl`, + the volumetric march's
+  (`reflect.wgsl` ≡ `reflect_p5.wgsl` glints, `cards.wgsl` — a torch's bounce card, where its footprint falls — + the volumetric march's
   K-beam pick): class 1 = lights only what the team sees — every carried light not the team's and every flash / timed light not a teammate's own, DECIDED AT
   THE UPLOAD (`LightSet.fogClass` from `fogTeam`, which `fullBlock` keeps: a tracer's ember or a blast's afterglow born after the fog's turn is classed on its
   first frame); class 2 = lights only what it does not — a lamp OUT that the team last saw lit (`RtLight.fogGhost`: uploaded at its base strength, glass mask
@@ -1210,7 +1210,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   untouched. With this up `reachUp` has nothing to raise, and its check stages with this key down. Switch: ON in the page (`?handslow=0` off; Tab ▸ Closer
   than ever ▸ 'crouched ▸ hands stay low until the move'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` 'CLOSE.handsLow': `TPS_HANDSLOW=1`;
   `TPS_HANDSLOW=0` holds it off on the shipped stand), in the journal's `CLOSE` table, and a recording from before the key replays with it off. CHECK:
-  `bun run tools/qa/handslow-check.ts` (probe `handslow`, families handslow / close / player), both stands; `HANDSLOW_BREAK=1` must fail `low`. Lines: low
+  `bun run tools/qa/handslow-check.ts` (probe `handslow`, families handslow / close / player), both stands; `HANDSLOW_BREAK=1` must fail `low` (the line `low` went 11-07 with the knife it asked of: the word has nothing to fail there now). Lines: low
   (the three gaps above), offer (the grab is still offered and its row is there), stand (standing, and with the pistol up, the pose is the same to the bit),
   harness. One staging, no seeds, and no line stages a low man (the neck bar is read from the code alone). Pictures: `close-stills.ts --scene stops-crouch` with and without `--set '{"CLOSE":{"handsLow":false}}'`. WHAT IT COSTS:
   crouched, nothing on Sam's body now says "the grab is on" before he presses; the row says it. NOT MENDED: the grab still takes him from the crouch to

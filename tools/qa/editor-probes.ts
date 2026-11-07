@@ -355,7 +355,7 @@ export async function editorMaterials() {
     api.material.set('lino', { rough: 0.4, albedo: [0.2, 0.3, 0.4] }); S.step(1);
     const bi = ed.doc.indexOf('boxes', users[0]); const wb = engine.world.statics[bi];
     verdict(ed.data.materials.lino.rough === 0.4 && wb.rough === 0.4 && Math.abs(wb.albedo[2] - 0.4) < 1e-9, 'material.set(lino, {rough, albedo}) → the document AND the engine box painted with it follow on the next sync', JSON.stringify({ doc: ed.data.materials.lino, box: { rough: wb.rough, albedo: wb.albedo } }));
-    verdict(/traced/.test(api.material.get('lino').trace) && /analytic/.test(api.material.traceHint(0.9)) && /fading/.test(api.material.traceHint(0.5)), 'traceHint words the tiers a roughness is traced on (0.4 traced · 0.5 fading on ultra · 0.9 analytic only)', `${api.material.traceHint(0.4)} | ${api.material.traceHint(0.5)} | ${api.material.traceHint(0.9)}`);
+    verdict(/traced/.test(api.material.get('lino').trace) && /analytic/.test(api.material.traceHint(0.9)) && /fading/.test(api.material.traceHint(0.4)) && !/fading|traced/.test(api.material.traceHint(0.5)), 'traceHint words the tiers a roughness is traced on (0.3 traced · 0.4 fading on high · 0.5 and 0.9 analytic only)', `${api.material.traceHint(0.4)} | ${api.material.traceHint(0.5)} | ${api.material.traceHint(0.9)}`);
     api.material.set('lino', { rough: null }); verdict(ed.data.materials.lino.rough === undefined && !('rough' in ed.data.materials.lino), 'rough: null → the key is dropped (matte = ROUGH_DEFAULT, nothing written)');
     api.material.preset('lino', 'metal'); verdict(ed.data.materials.lino.rough === 0.28 && ed.data.materials.lino.metal === true, 'preset(metal) → rough 0.28 + metal');
     api.material.preset('lino', 'lino'); verdict(ed.data.materials.lino.rough === 0.22 && ed.data.materials.lino.metal === undefined, 'preset(lino) → 0.22, metal dropped (never written false)');
@@ -530,7 +530,7 @@ export async function levelLintProbe() {
   { const dir = mkdtempSync(join(tmpdir(), 'tps-lint-')); try {
       const good = join(dir, 'good.json'); writeFileSync(good, serializeLevelData(OFFICE_DATA)); writeFileSync(join(dir, 'good.lint.json'), JSON.stringify({ allow: officeAllow }));
       const bad = join(dir, 'bad.json'); const bd = JSON.parse(base); bd.lights[0].range = 0; writeFileSync(bad, serializeLevelData(bd));
-      const run = (f: string) => Bun.spawnSync({ cmd: [process.execPath, 'run', join(ROOT, 'tools/qa/level-lint.ts'), f, '--quiet'], cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+      const run = (f: string) => Bun.spawnSync({ cmd: [process.execPath, 'run', join(ROOT, 'tools/qa/level-lint.ts'), f, '--quiet'], cwd: ROOT, stdout: 'pipe', stderr: 'pipe', env: process.env });
       const a = run(good), b2 = run(bad); const ao = new TextDecoder().decode(a.stdout), bo = new TextDecoder().decode(b2.stdout);
       verdict(a.exitCode === 0 && /PASS \(0 warnings\)/.test(ao), 'CLI on the office (with sidecar) → exit 0, "PASS (0 warnings)"', ao.trim().split('\n').pop());
       verdict(b2.exitCode === 1 && /light-range/.test(bo) && /FAIL \(1 error\)/.test(bo), 'CLI on a level with a range-0 light → exit 1, the finding printed', bo.trim().split('\n').slice(-2).join(' | ').slice(0, 160));

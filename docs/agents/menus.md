@@ -874,8 +874,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in the Characters / Effects modes and the 'view' list in the level top bar's second row in the Level / Materials modes; `[` `]` are still exposure. The native host: backtick
   toggles its panel, no debug-view key); open page / section / scroll kept in
   localStorage `twopointsix.panel`. Rows for WIND / AIM / WHISTLE / TACTICS / NEEDS / CHAOS / QRF / DEVICES come from
-  `knobRows(spec)`; everything with custom logic stays hand-written. `tools/qa/panel-inventory.ts` (`probes.ts panel-inventory`, family `ui`) freezes the row inventory against
-  fixtures/panel-inventory-main.json — a row may move but never vanish (a row REWORDED on purpose: `--reword [map.json]` rewrites only the fixture rows that went missing, each from the live row of the same kind and label, or the label the map gives); `PORT=<dev server port> node tools/qa/panel-keys.cjs` = the keys pressed for real in headless Chromium (the software
+  `knobRows(spec)` (which builds no row for a key the page holds at one value: the bullet 'THE DEBUGGER HAS NO BOX FOR A SETTLED SWITCH' below); everything with custom logic stays hand-written. `tools/qa/panel-inventory.ts` (`probes.ts panel-inventory`, family `ui`) freezes the row inventory against
+  fixtures/panel-inventory-main.json — a row may move but never vanish (but a box of a SETTLED switch, taken out on purpose: its row leaves the fixture too, as on 2026-11-07, the bullet 'THE DEBUGGER HAS NO BOX FOR A SETTLED SWITCH' below; a row REWORDED on purpose: `--reword [map.json]` rewrites only the fixture rows that went missing, each from the live row of the same kind and label, or the label the map gives); `PORT=<dev server port> node tools/qa/panel-keys.cjs` = the keys pressed for real in headless Chromium (the software
   adapter): backtick opens / shuts the panel from the game, from its search box and from a focused slider, Tab reaches the game, no debug view is stepped (exit 0 / 1, 2 = the script died).
   Every 'Tab ▸ X ▸ Y' path in this file, in code comments and in docs/internal means the debugger's page X, section Y — the key moved, and on 10-10 the old Sandbox page's sections were dealt to the six game pages above (a 'Tab ▸ Sandbox ▸ …' path is that section on Missions / Squad / Enemy AI / Stealth / Player & weapons now, 'Team feel' the Squad page's sections; sections renamed that day: the two called 'Glass' are 'Glass (the picture)' on Renderer fx and 'Glass breaking' on Destruction, 'Renderer — decals / particles' are 'Decals' / 'Particles', the weather's is 'Weather'); a row's label is unchanged unless the page rebuild/debug-tools/read-first.md lists it (some forty were reworded), so the panel's search finds a row by the words after the last ▸.
   `Weather & wind ▸ Wind — field view` (ui/windviz.ts, drawn by overlay.ts on the 2D canvas): arrows on a floor lattice from `wind.at()`, the sources' cones / gusts, the ≤ 8
@@ -1155,7 +1155,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   every stand by the runner (`tools/qa/holds.ts MORE_AS_IT_WAS`: the word and the table, unless whoever runs the tool set the word himself), as the deal's
   own older probes are: `frameholds-tools`, `doortest`, `silent-pick`, `silent-boot` (a locked or wedged door such a four boots is one the tool
   takes), the ones that read a door's tools page row for row against the pair's or count its rows by their digits (`doormenu-rows`,
-  `thresholdmenu-rows`, `shutdoor-menu`, `silent-tools`, `pressorders-squad4`, `pressorders-nightbreach4`), and `kitpaste` (its squads' big slots
+  `thresholdmenu-rows` (deleted 11-06), `shutdoor-menu`, `silent-tools`), and `kitpaste` (its squads' big slots
   are the table's; a paste over a lent tool is a `kitdeal-more` line); the page as it opens is walked, in every scenario, by `orderkeys-walk`. THE PASTE'S TWO PAGE CHECKS READ THE RULE (10-19): `tools/qa/kitpaste-page.cjs` and the slow `kitpaste-deploy-page.cjs` paste a hammer card onto Blue Two of four, the one man the deal lends that hammer, so the store holds his counts and big 'none', his Big slot tile and his card's line read the hammer before and after, and three tiles flash; the first runs its opening part again under `?nokitmore`, where the hammer is written and four tiles flash (both were written to the store's hammer and went red on the page as it opens; headless Chromium, never seen on a GPU). ONE THING THE PLAYER NOW MEETS ON EVERY DOOR, OF FOUR: the big slot's row is on H, a key of its own beside G, since the
   page's five digits are taken; `orderkeys` knows the key now (it never met the row: nobody was issued a tool). The maintainer's call whether H
   is near enough to the left hand.
@@ -1258,7 +1258,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   facts and the job (`.mblurb`), the list's own elements shown by this file's rules and no new sentence. It adds to the facts row WHAT THE PLACE ASKS OF
   A KIT, counted off the level's file by the plan's own fetch AS THE MISSION IS STAGED (`ui/missions.ts placeNeeds`, `Plan.needs`): the doors found
   locked, those of them that are steel, a rescue's hostages — a rescue's side door (`scenarios.rescue.side.door`) is unlocked by its staging and is not
-  counted; the bundled office's rescue is read from `levels/office.scenarios.ts`. The cells are `.mfact.kb`, drawn on this step only; a count is a digit
+  counted; the bundled office's rescue is read from its own file, which is in the build. The cells are `.mfact.kb`, drawn on this step only; a count is a digit
   to five and a word past it (`countWords`), and the list's Defenders cell was drawn AGAIN by this file with its count in words ('eleven'; since 10-23 only under `?mystery=0`), the list's
   own cell hidden on this step. IN A SHORT WINDOW (800 px tall and under: the maintainer's own is about 1000 x 673) THE BAND IS NOT A PIXEL TALLER THAN
   THE NAME ALONE WAS: the map a small mark, the name, the facts under it, and no job sentence (no text is cut to fit: `textsize-page` holds that) — the
@@ -1307,6 +1307,65 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   first-time player. (The Mission step's facts row wrote 'Defenders 11' as digits: since 10-23 no screen draws that cell, `MYSTERY`.) OPEN, for the menus' owners: a named kit a mission
   recommends (a field on its row, a mark on the Kit row's button) is not built for regular missions — only what the place asks is said. OPEN, for the
   squad mission's owner: its frame refuses the player's smoke and stun slots all mission, so of what he packs for himself only the frag is used.
+- **THE DEBUGGER HAS NO BOX FOR A SETTLED SWITCH (2026-11-07; both halves, and a probe that holds it).** On the page every row the switch list calls settled is held at its
+  page value (`src/host/rustgame.ts rustSettledHold`: a read answers that value, a write is refused), so a box that showed one could not be moved. OUT:
+  the 256 boxes written as `panel.toggleBox(…, () => ROW, …)` in `src/ui/bindings.ts` whose getter reads only settled rows of `tools/qa/switches.json`,
+  with the imports only they used. A click test of every row (the review's, headless, the hold laid) found none of the 256 could move. Among them: 'Tab ▸
+  the orders ring', which could not move but, clicked off, put the maintainer's two open ring rows off for good; and the two '(reloads)' boxes.
+  THE SECOND HALF, the rows built from data. THE HOLD SAYS WHAT IT HOLDS: `src/host/held.ts` (import-free), `markHeld` called by the page's hold and by
+  the tools' fold as each lays a row, `rowHeld(table, key)` true for a laid row and for a key the table has not got. Nothing is guessed from a row's
+  shape (`SLOTS.on` and `BIGSLOT.on` answer through accessors of their own and are live). WHO ASKS: `knobRows` (and `feelRows` through it) builds no
+  row, yes/no or number, for a held key, and says so on the console for a key that is not there; the sneak lab's switches (now data, `t` and `key`,
+  like its numbers) and its numbers; the fire lab's one box. A panel built BEFORE the hold is laid would get the rows after all: on the page the
+  hold is laid first (`main.ts`). Out by hand: the nine 'Enemy nerve' rule boxes (all settled; the first, unticked, was refused and still reset every
+  man's morale) and the slider 'way round a room ×'. COUNTS: 283 more boxes and 9 sliders over settled numbers gone from the debugger (1,367 rows to
+  1,075 on the page's stand; 190 boxes left). `panel-keys.cjs` wants more than 1,000 rows: 75 to spare.
+  HELD BY A PROBE: `probes.ts panel-dead` (family `ui`; `tools/qa/panel-inventory.ts panelDead`, also `panel-inventory.ts --dead`) builds the live
+  debugger under the fold, clicks every yes/no box and fails on one whose answer does not change. 190 boxes, 168 judged: three are named and not
+  clicked (`NOT_CLICKED`: two show a page object the harness fakes; the one box that reloads the page is judged by the row it shows, and a
+  '(reloads)' box that is not named there fails the line) and 19 answer no yes or no in the harness (a stand-in of the engine's: not judged).
+  `PANELDEAD_BREAK=1` (the probe adds a box over a settled row itself) fails naming it. On the old stand nothing is held and the line is not asked.
+  THE SCENE PANEL ASKS TOO (`?tweak`, `src/ui/sceneLayers.ts`): its `table()` makes no slider for a held row, by the same `rowHeld`. One row went,
+  the fog shade's `FOG.desat` (370 numbers to 369 where rows are held), and `scenetweak` 'round' is green again with no word changed: nothing is
+  left that will not move. Its 'breath' line wrote the hard breath rule's switch both ways; that switch is a settled row, so where it is held the
+  line asks the one side the page plays and writes nothing (both sides where it is still a switch, which no stand that can step a game is today).
+  It is still RED on this tree: the stand-in files no breath record on the Rust game yet (a mend of the call surface, not of this line), as are
+  'oneair' and 'digest'. NOT DONE: a row that is only ever dimmed because its `readWhen` asks a held switch (the breath's four soft rows) still
+  has its slider.
+  NOT HELD BY IT: a slider or a select over a held number (it clicks boxes only); the two labs' panels (they ask the same query, unprobed here; the
+  sneak lab's page check `stalk-page.cjs` now asks that two of its settled switches have NO box, and was NOT run).
+  NUMBERS LEFT INERT, with hover texts pointing at a box that left: the five rows that say 'Does nothing while every mission starts the same is on'
+  (it is held on, so two sliders there move nothing), 'setup ▸ seconds it stays up unused' (the only row left in Gun setup), 'far line: distance from
+  you (edge off)'; section summaries that print a constant 'on'. THE NOTES WERE NOT SWEPT: where an area note names a debugger box for a settled
+  switch, that box is gone.
+  KNOWN BESIDE IT, NOT THIS CHANGE'S: `?round=0` still puts the PICTURE's half of round things off (`main.ts` reads `ROUND.on` for the GPU before the hold
+  is laid) while the game holds them round; a machine that once unticked a glass box keeps `{on:false}` in its store, read back and refused at every
+  visit, with no box left to rewrite it ('1 kept row … is not applied' on the panel's first line); `wallpen-page.cjs` cannot pass on this tree for its
+  `?wallpen=0` arm, a settled word the hold turns away (its panel line now reads the rule's status line where it read the box; NOT run).
+  CHECKS: `panel-inventory --print` before and after: 256 toggles fewer and nothing else moved (1,622 rows to 1,366, and 1,367 with the kit weight's line; the civilians' pleasantries box left
+  the fixture with it, so the same 5 reference rows are missing as before; the second half took four more with it, the wind's four boxes); `panel-keys.cjs` on the real page
+  in headless Chromium, software adapter: ALL PASS after the first half (the page boots, every page of the panel has rows, no page error); NOT run
+  again after the second. Both typechecks, the knob check and the build clean. 'Kit weight' keeps its
+  read-out as a row of its own (a section with no row is hidden). The one-off script: project files `rebuild/switch-cleanup/scripts/deadbox.cjs`.
+  Never seen on a GPU.
+- **EIGHTEEN SWITCHES RULED SETTLED, TAKEN OFF THE PANELS (2026-11-07).** The port ruled these rows settled at their page value (project files
+  `rebuild/rust-sim/port/cleanup/OPEN-ROWS-RULING.md`); a row with a setter on the page could not be folded, so the setters go first. THIS CHANGE ALONE DOES NOT
+  SETTLE THEM: the rows turn `settled` in `tools/qa/switches.json`, and constants in the Rust game, in the fold this change travels with; until that is in
+  the tree a row here is still a switch its address word can put off, with no box to show it. Fifteen of them the Rust game branches on; the three snow
+  rows are read by the page's own snow code and by nothing in Rust, and their other side stays in that code until the rows are retired. Gone from the debugger
+  (`src/ui/bindings.ts`), fifteen boxes: 'running ▸ arms carried close' (`RUNARMS.on`); 'throw order ▸' a man walks to a throw, works his throw out, frag
+  where men can duck, a frag near you is your call, drawn on the ground (`SQUADTHROW.walk`, `lob`, `duck`, `samCall`, `draw`; THE switch 'teammates throw
+  frag / stun on order' stays); 'teammates ▸' slower than you, run with you, run for a reason, look where they walk (`TEAMPACE.on`, `follow`, `own`,
+  `walkAim`; 'no sprint to a stack' and 'pace themselves on you' stay, the maintainer's to try, and the pace's numbers stay); 'charge order: carried out
+  or answered' (`DOORTOOLS.chargeAnswer`); 'wall snap:' the rifle stacks, sprint into a wall to take it, heard on and off the wall, the take is unhurried
+  (`WALLSNAP.stack`, `pressRun`, `voice`, `slow`; 'wall snap: feel pass + rifle stack' and 'walk into a wall to take it' stay, and every number). Gone from
+  the scene tweak panel (`src/ui/sceneLayers.ts`), three switches: `Snow in one air`, `Things mark the snow` and `Blast marks` keep their layer, numbers,
+  status line and the blast's button, with no box (`SNOW_LOOK.oneAir`, `marks`, `blast`). The rows' address words and stand-up words are not this change's.
+  CHECKS: `scenetweak` 'oneair' now asks that the three layers have no switch and no longer puts one air off and on again, nor tells a blast with its
+  switch off (the off side is asked by nothing now); `scenetweak-page.cjs` step 4b the same, and its step 5 reads the wind sim, the one `mode` switch left,
+  for what `none` leaves on. `panel-inventory`: the same 5 reference rows missing before and after (none of the fifteen is in
+  its fixture). On the tree this was cut on, `scenetweak` is red on 4 lines before and after for the tree's own reasons (the blast button tells the Rust
+  game no blast, among them). Typechecks clean. Never seen on a GPU, and the panel was not opened in a browser for it.
 - **The scene tweak panel (`?tweak`, a ONE OFF tool, 10-15) is not the debugger and not a menu of the game's** (`src/ui/sceneTweak.ts` the panel and its
   bookkeeping, `src/ui/sceneLayers.ts` the list, `src/render/shaderTune.ts` the shader half; the maintainer on a night clip of the snow pass: "could you make
   a one off UI for tweaking a scene like this? i'm curious what all the "layers" are for the effects and what variables we can configure"). Any link with
@@ -1331,7 +1390,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kept copy, the notes fresh, and 300 frames of the pass on two seeds with every picture-only number moved and every hand switch flipped: one digest. The page
   half: `node tools/qa/scenetweak-page.cjs` (software adapter: the DOM, real pipelines rebuilt and drawn with, a reload, a page without the word). Never seen
   on a GPU; nobody has judged a slider's reach by eye.
-  - THE SNOW AS IT STANDS SINCE ONE AIR AND THE BLAST (10-15, after-close step): `Snow in one air` is a layer with a switch and no numbers — `SNOW_LOOK.oneAir`,
+  - THE SNOW AS IT STANDS SINCE ONE AIR AND THE BLAST (10-15, after-close step): `Snow in one air` is a layer with a switch (NO SWITCH since 2026-11-07, as `Things mark the snow` and `Blast marks`: the bullet 'EIGHTEEN SWITCHES RULED SETTLED' above) and no numbers — `SNOW_LOOK.oneAir`,
     read every frame, so LIVE here (shown where the particle shaders were built to read the wind sim). It and `Wind sim` are `mode` switches (how the air
     runs, not layers to hide): `none` / `all` leave both be, the copied text names one that is off. WHAT NOTHING READS IS DIMMED (`TweakVar.idle` /
     `TweakLayer.idle`, asked each refresh; `readWhen` throws on a row it cannot find): with the SWITCH on, the Blown grains layer and the blast's `throwS` /
@@ -1354,7 +1413,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     switch on. `FLAKE_WALL_IN` is a ⟳ row of Falling flakes (the CPU's copy of it in snowFx.ts is a check's, nothing in the page reads it). The check's
     tenth verdict (`oneair`) and the page check's own cover these; headless, one air is never IN FORCE (no pool, no field): the in-force dimming is the
     software page's to prove (its verdict is red unless the page opened with one air in force).
-  - `Things mark the snow` (Ground; the snow goal's own layer, 10-15): the SNOWMARKS table, its switch `SNOW_LOOK.marks` live and a `mode` one; the mark's
+  - `Things mark the snow` (Ground; the snow goal's own layer, 10-15): the SNOWMARKS table, its switch `SNOW_LOOK.marks` live and a `mode` one (no switch since 2026-11-07); the mark's
     forming and kick numbers are SNOWTRACKS rows of Boot prints, the puff's motes WISP_MOTE_* rows of Blown wisps: all came by themselves. The panel step
     after it added only the layer's hover line and reaches held to what the comments say (0‥1 rows, whole-number rows); the check's `notes` verdict is now
     red on a layer with no hover line, so the next layer added by another hand cannot lack one.
@@ -2043,7 +2102,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the two carry notes, the clock stood still under it, Tab took it down and the clock ran, Tab put it up again, Esc took it down with no pause
   card; the same page without the word showed nothing on Tab; no console errors. MEASURED: nothing; it moves no tally. DECLINED, from review: the card as one of
   `overlay.card`'s (those are a lesson's, with its own key and locks) or a page of `#menu` (the menu is the pause, with its own Tab); the
-  objective handed over in parts by `mission.ts` (the line is the one source the top line, the corner and this card all read; the list is cut
+  objective handed over in parts by the Rust game's `mission::objective` (the line is the one source the top line, the corner and this card all read; the list is cut
   from it only under 'objective'); a place in `bubbles.ts BLOCKER_IDS` (the card is above the bubbles by z-index and holds the game); one page-level 'what holds the game' reader
   for the load brief, a lesson's card, the menu and this card (a change to `main.ts` wider than this card; the check pins each site it added);
   `picked` and `kept` as one field (the kept file's two keys are already on machines); the menu's HTML escaper shared (a private one-liner of a

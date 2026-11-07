@@ -9,7 +9,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp } from './headless';
-import { holdOff, heldList } from './holds.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -22,6 +21,8 @@ const { LESSON, checkLesson, lessonLine } = await import(`${ROOT}/src/game/lesso
 const { STALK } = await import(`${ROOT}/src/game/stalk.ts`);
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
+/** the lesson's own row on the Rust game's record of the mission's line */
+const lessonRow = (g: any) => g.view.mission?.of === 'lesson' ? g.view.mission : null;
 const names = process.argv.slice(2).filter(a => !a.startsWith('--')).map(a => a.replace(/\.json$/, ''));
 const list: string[] = names.length ? names : [...new Set((LESSON_MISSIONS as any[]).map(e => String(e.level).replace(/\.json$/, '')))];
 let fails = 0, checks = 0;
@@ -115,7 +116,7 @@ for (const name of list) {
     verdict(entryOfQuery(q)?.id === e.id, `'${e.title}': its link reads back to its own row`, q);
     LESSON.on = true;
     { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
-      const o = g.lesson.objective(), line = g.objectiveText();
+      const o = lessonRow(g), line = g.objectiveText();
       verdict(!r.why && !!r.spec && !!o && g.lesson.i === 0 && line === o.text && line.includes(line0), `'${e.title}': starts, and the objective row is the lesson's first step`, r.why ?? line);
       if (e.squad === 0 && e.kind === 'quiet') {   // (a quiet run alone saves checkpoints: the lesson's place among its steps rides in the file)
         // (a tutorial mission's saves are its authored checkpoints, taken by the frame with the level's program stopped for the snapshot — rails.ts: the
@@ -128,17 +129,17 @@ for (const name of list) {
             const no = kept ? g.saves.loadInStep(g, kept.key) : `no checkpoint was kept when step ${k + 1} came up`; if (no) why = String(no); await quiet(() => { for (let i = 0; i < 3; i++) W.step(1 / 60); }); }
           else { const snap = W.snapshot('lesson-check', true); g.lesson.i = 0; await quiet(() => { W.restore(snap); for (let i = 0; i < 3; i++) W.step(1 / 60); }); }
         } catch (x) { why = String((x as Error).message); }
-        verdict(!why && g.lesson.i >= k && !!g.lesson.objective()?.text.includes(`${g.lesson.i + 1}/${L.steps.length}`), `'${e.title}': a checkpoint carries the step that is up (saved on step ${k + 1}, loaded on step ${g.lesson.i + 1})`, why); }
+        verdict(!why && g.lesson.i >= k && !!lessonRow(g)?.text.includes(`${g.lesson.i + 1}/${L.steps.length}`), `'${e.title}': a checkpoint carries the step that is up (saved on step ${k + 1}, loaded on step ${g.lesson.i + 1})`, why); }
       g.lesson.i = Math.min(1, L.steps.length - 1);   // (the check's own hand again: every row is restarted from a step that is NOT the first)
       // a restart BETWEEN FRAMES: before the lesson's next tick the step it still holds is the last run's — neither a checkpoint nor the row may carry it
-      { let snapI = -1, row = ''; await quiet(() => { g.restartEncounter(); if (!g.lesson.data) startFromQuery(g, q); snapI = g.lesson.data ? g.lesson.snapshot().i : -2; row = g.lesson.objective()?.text ?? ''; });
+      { let snapI = -1, row = ''; await quiet(() => { g.restartEncounter(); if (!g.lesson.data) startFromQuery(g, q); snapI = g.lesson.data ? g.lesson.snapshot().i : -2; row = lessonRow(g)?.text ?? ''; });
         verdict(snapI === 0 && row.includes(line0) && !g.lesson.finished, `'${e.title}': straight after a restart, before any frame, a checkpoint would file step 1 and the row reads step 1 (not the last run's step)`, `snapshot step ${snapI + 1} · row "${row}"`); }
       await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
-      verdict(g.lesson.i === 0 && !!g.lesson.objective()?.text.includes(line0), `'${e.title}': a restart puts the lesson back on its first step`, g.lesson.summary()); }
+      verdict(g.lesson.i === 0 && !!lessonRow(g)?.text.includes(line0), `'${e.title}': a restart puts the lesson back on its first step`, g.lesson.summary()); }
     LESSON.on = false;
     { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
       const line = g.objectiveText();
-      verdict(!r.why && !g.lesson.objective() && !g.lesson.data && !!line && !line.startsWith('training'), `'${e.title}': with the switch off it is its mission alone`, line); }
+      verdict(!r.why && !!g.view.mission && g.view.mission.of !== 'lesson' && !g.lesson.data && !!line && !line.startsWith('training'), `'${e.title}': with the switch off it is its mission alone`, line); }
     LESSON.on = true;
   }
 }
@@ -155,11 +156,8 @@ if (!names.length || names.includes('tut-solo')) { console.log('\n=== lesson-che
     return { W, g: W.game, why: r.why as string | undefined }; };
   const team = (g: any) => g.guards.filter((x: any) => x.unit && x.team === 'operative');
   const lessonOn = LESSON.on; LESSON.on = true;
-  // ONE CARD FOR EVERY MISSION, for this block (kit.ts KITDEAL.stealth): 'the same start off a lesson's page' is a quiet run alone, which on the page's stand wears
-  // your STEALTH card, not the kept card this block sets by hand. The lines here are about the lesson's page wearing the issue kit; the stealth card on such a page
-  // is tools/qa/kitstealth-check.ts's line. Held as a probe of that row is held (tools/qa/holds.ts: the word for a game stood up, the table for now; a word set
-  // by hand wins).
-  const stealthBack = await holdOff(heldList('STEALTH_AS_IT_WAS'));
+  // (Until 2026-11-07 this block held KITDEAL.stealth off, as a probe of the holds table's STEALTH_AS_IT_WAS row was held. That row is settled: the hold was
+  //  refused on the page's stand since the fold and did nothing on the old one, where the row is off already; the hold is gone, not the block.)
   try {
     await withDom('', async () => {
       K.kitLoad(st, ''); const set = K.kitSet(0, 'weapon', 'pistol') && K.kitSet(1, 'light', false); const st0 = m.get(K.KIT_LS);   // (this machine keeps a card with no rifle — the card that left a lesson's 'press 2' unpassable — and a teammate with no weapon light)
@@ -198,7 +196,7 @@ if (!names.length || names.includes('tut-solo')) { console.log('\n=== lesson-che
       const after = K.KIT.members[0].weapon, stored2 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim; const B = await standRow(alone);
       verdict(threw && after === 'pistol' && stored2 && B.g.player.hasRifle === true, 'a staging that throws leaves the kept table and its store in place, and the next lesson start is still the issue kit', `threw ${threw} · table '${after}' · a change written ${stored2} · next start's rifle ${B.g.player.hasRifle}`);
     });
-  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.KIT_SOLO.on = false; K.kitLoad(null, ''); LESSON.on = lessonOn; stealthBack(); }
+  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.KIT_SOLO.on = false; K.kitLoad(null, ''); LESSON.on = lessonOn; }
 }
 console.log(fails ? `\n=== lesson-check: ${fails} FAIL of ${checks} ===` : `\n=== lesson-check: ALL PASS (${checks} checks) ===`);
 process.exit(fails ? 1 : 0);

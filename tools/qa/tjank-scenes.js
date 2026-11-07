@@ -10,9 +10,9 @@
 //   C  a torch-like spot swept ±40° (and slid 1 m) over 60 frames across the tan cluster and the aisle floor, in the level's haze (game steps).
 //   D  the rain by the south-west window band: the wet lot under street_lamp_s seen through the glass + the lamp's patch on the floor inside; 60
 //      still frames (offscreen renders).
-// Variants: v3 (defaults) · noRestir · legacyDn · noFroxel · noTaau (scale 1.0) · allOff (all four off, scale 1.0 = the pre-v3 chain) · taauOnly.
+// Variants: v3 (defaults) · noTaau (scale 1.0). (The old estimator, the old denoiser and the froxel grid are gone: noRestir, legacyDn, taauOnly, noFroxel and allOff went with them.)
 // Per tile per frame: mean luma; per pixel over the window: temporal sd, |Δ|, max−min (boil map), sd WITHIN each drive level (A); RMSE against a
-// reference run of the same frames (allOff by default; every variant renders the same 1777×1000 output grid). Crops ×3 of chosen consecutive
+// reference run of the same frames (noTaau by default; every variant renders the same 1777×1000 output grid). Crops ×3 of chosen consecutive
 // frames + the boil map are posted as tj_<scene>_<variant>_<tile>_f<k>.jpg / _boil.jpg.
 (async () => {
   if (!window.__perf) await import('/qa/perf-harness.js');
@@ -26,24 +26,19 @@
   try { Object.defineProperty(document, 'hidden', { configurable: true, get: () => fakeHidden }); } catch (e) { /* already defined by an earlier import */ }
   const luma = (d, o) => 0.2126 * d[o] + 0.7152 * d[o + 1] + 0.0722 * d[o + 2];
 
-  const DEFAULTS = { restir: true, denoiser: 'v3', froxelVol: true, taau: true };
+  const DEFAULTS = { taau: true };
   const VARIANTS = {
     v3:       {},
-    noRestir: { restir: false },
-    legacyDn: { denoiser: 'legacy' },
-    noFroxel: { froxelVol: false },
     noTaau:   { taau: false, scale1: true },
-    taauOnly: { restir: false, denoiser: 'legacy', froxelVol: false },
-    allOff:   { restir: false, denoiser: 'legacy', froxelVol: false, taau: false, scale1: true },
   };
   let scale0 = null;
   function applyVariant(name, extra = {}) {
     const v = { ...VARIANTS[name], ...extra }; if (!VARIANTS[name]) throw new Error('variants: ' + Object.keys(VARIANTS).join(' '));
     const s = S(); if (scale0 === null) scale0 = s.renderScale;
-    s.restir = v.restir ?? DEFAULTS.restir; s.denoiser = v.denoiser ?? DEFAULTS.denoiser; s.froxelVol = v.froxelVol ?? DEFAULTS.froxelVol; s.taau = v.taau ?? DEFAULTS.taau;
+    s.taau = v.taau ?? DEFAULTS.taau;
     s.renderScale = v.scale1 ? 1.0 : scale0;
     for (const [k, val] of Object.entries(v.settings || {})) s[k] = val;
-    return { name, restir: s.restir, denoiser: s.denoiser, froxelVol: s.froxelVol, taau: s.taau, renderScale: s.renderScale };
+    return { name, taau: s.taau, renderScale: s.renderScale };
   }
 
   // ------------------------------------------------------------------ scenes
@@ -165,7 +160,7 @@
       return `tj ready ${E().width}x${E().height} → ${E().outWidth}x${E().outHeight} scale ${scale0} port ${window.__shotPort}`;
     },
     apply: applyVariant,
-    /** after a preset hop: take the tier's own render scale as the variants' base (noTaau / allOff still pin 1.0) */
+    /** after a preset hop: take the tier's own render scale as the variants' base (noTaau still pins 1.0) */
     rescale() { scale0 = S().renderScale; return scale0; },
     /** stage scene `sc` (pin, park, hygiene) and settle `warm` frames under the current variant */
     async stage(scName, opts = {}) {
@@ -177,7 +172,7 @@
     },
     /** ONE variant of ONE scene: stage, warm, resetClock(+seedOff), the scripted frames with per-frame drive → numbers (+ crops / boil map when opts.shots) */
     async run(scName, variant, opts = {}) {
-      const { shots = true, seedOff = 0, dt = 1 / 60, tag = '', ref = 'allOff', keepFrames = false } = opts;
+      const { shots = true, seedOff = 0, dt = 1 / 60, tag = '', ref = 'noTaau', keepFrames = false } = opts;
       const as = opts.as || variant;   // the result's key (a variant + extra settings under its own name)
       if (opts.extra?.settings) { T.saved = T.saved || {}; for (const k of Object.keys(opts.extra.settings)) if (!(k in T.saved)) T.saved[k] = S()[k]; }
       const vinfo = applyVariant(variant, opts.extra || {});
@@ -251,7 +246,7 @@
     },
     /** every variant of a scene, reference first (fire-and-forget: poll __tj.res / __tj.busy) */
     go(scName, opts = {}) {
-      const { variants = ['allOff', 'v3', 'noRestir', 'legacyDn', 'noFroxel', 'noTaau', 'taauOnly'] } = opts;
+      const { variants = ['noTaau', 'v3'] } = opts;
       T.busy = { scene: scName, at: 'start', done: [] }; T.err = null;
       (async () => { try { for (const v of variants) { const [as, base, extra] = Array.isArray(v) ? v : [v, v, null]; T.busy.at = as; await T.run(scName, base, { ...opts, as, extra: extra ? { settings: extra } : opts.extra }); T.busy.done.push(as); } T.busy.at = 'done'; } catch (e) { T.err = String(e?.stack || e); T.busy.at = 'error'; } })();
       return 'started ' + scName + ' × ' + variants.map(v => Array.isArray(v) ? v[0] : v).join(',');

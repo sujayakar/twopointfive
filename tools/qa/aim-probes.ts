@@ -5,8 +5,8 @@
 //               fouled bore (two short rounds from one spot = no line from there); the cone × at track 0 / 0.5 / 1 against the formula; the feet term (now vs
 //               remembered); the target term off a synthetic bearing rate; Sam's track: caps at a sprint / walking, a new man resets it, off him and straight
 //               back keeps it, crouched climbs quicker; his cone's terms; the ring's pixels follow the cone.
-//   aim-first   a FREE alert man 8.5 m up the corridor from a lit standing god-mode Sam, from first sight: no round before reactT + acquireMin·settleSecs (± a
-//               frame), the first round's cone ≥ 1.8× a settled one's and — over eight seeds — the first rounds miss by more than the settled ones; then the
+//   aim-first   a FREE alert man 8.5 m up the corridor from a lit standing god-mode Sam, from first sight: no round before the beat + acquireMin·settleSecs (± a
+//               frame; the beat is reactT, or the startle's beat and draw where longer: AIMFIRST_BREAK=1 must fail both lines), the first round's cone ≥ 1.8× a settled one's and — over eight seeds — the first rounds miss by more than the settled ones; then the
 //               weapons-identity staging (6.5 m, gun round in 0.3 s) with the man FREE, model off vs on over 45 s: rounds, how many found Sam, first round.
 //   aim-motion  a pinned (settled, planted) man and a god-mode Sam 8 m off: standing / sprinting ACROSS his front / running straight AT him — hit fractions:
 //               across ≤ 0.4 × standing, at him ≥ 0.8 × standing; the cones and bearing rates printed; the three canonical cones before → after.
@@ -16,16 +16,24 @@
 //   aim-off     tune.aimModel = false: tracks rest at 0, the gate is open, guardRound hands { spread } untouched (no steady), samAim 0, no braking, no ◎ —
 //               and weapons-identity (run in the same families) stays green.
 //   aim-snap    what the reticle TAKES (player.ts updateAim): a light only with the cursor on its dot (AIM.player.lightSnapPx) — every aimable light in the lobby
-//               view swept on rings from the dot out to 58 px, against the same sweep at 60 (the reach it had, and what the harness stands at); a man standing
-//               under a ceiling panel's picture with the cursor beside him, nearer the panel's dot than his chest: the reticle is on HIM and the clicked round
-//               drops him — at 60 the panel takes it and the round goes into the ceiling; a light taken is kept while the camera's lead slides its dot from
+//               view swept on rings from the dot out to 58 px; a man standing under a ceiling panel's picture with the cursor beside him, nearer the panel's
+//               dot than his chest: the reticle is on HIM and the clicked round drops him; a light taken is kept while the camera's lead slides its dot from
 //               under a cursor left where it was, the right button then OCPs it, and moving the cursor off lets go; a drawn fixture is taken anywhere on its box.
+// SINCE 2026-11-07 NOTHING HERE WRITES A SETTLED ROW. The reticle's reach for a light is a constant of the game: aim-snap's second sweep and its control
+// man "with the reach back at 60" are cut (the half of two lines), and the reach is no longer written. aim-unit no longer holds the turn weight and the
+// feet's cost off for its stand-ups (both are constants, on): it throws at a function that went with the tick before its one line, and when it runs
+// again five of its numbers are the ones its old red path (AIMUNIT_BREAK, both rules on) failed. That word is gone with the holds. The model's own flag
+// (Game.tune.aimModel) is still a variable of a game: the "model off" lines stand.
 import { standUp, ROOT } from './headless.ts';
 const { v3, DEG, wrapAngle, lerp } = await import(`${ROOT}/src/math/vec.ts`);
 const { updateAim } = await import(`${ROOT}/src/game/player.ts`);
 const { resetChase, playerGroundVel } = await import(`${ROOT}/src/game/guards.ts`);
 const Aim = await import(`${ROOT}/src/game/aim.ts`);
 const { AIM, trackGuard, trackPlayer, aimReady, guardRound, handsCone, aimBrake, playerAim, samAim, guardAcquired, noteBore, boreFouled, AIM_DEBUG } = Aim;
+const { STARTLE, STARTLE_STATS } = await import(`${ROOT}/src/game/startle.ts`);
+/** what the startle holds a man's first round by, from first sight (startle.ts: the beat, then the draw — no round leaves him in either).
+ *  AIMFIRST_BREAK=1, the red path: a second more than the rule says — aim-first's two lines must fail. */
+const startleLead = (): number => STARTLE.beat + STARTLE.draw + (process.env.AIMFIRST_BREAK === '1' ? 1 : 0);
 const { aimRingPx } = await import(`${ROOT}/src/ui/overlay.ts`);
 
 type Vec3 = [number, number, number];
@@ -45,6 +53,10 @@ function missAngle(e: any, at: Vec3): number { const d = v3.normalize(v3.sub(e.t
 const trunkOf = (game: any): Vec3 => { const pc = game.player.char; const t = pc.bones.spine2 ?? pc.bones.hips; return [t ? t[0] : pc.pos[0], pc.pos[1] + (game.player.crouch ? 0.8 : 1.25), t ? t[2] : pc.pos[2]]; };
 
 // ================================================================ (a) the model, driven
+/** THE MODEL'S UNIT NUMBERS WERE ASKED WITHOUT TWO RULES THAT MOVE WHAT THE PROBE STAGES: the turn weight (character.ts TURN.on) keeps a weighted gun
+ *  on the man through the six frames the drain line takes it off him ('drained to 1 (want 0.7)'), and the aim cost of moving (aimcost.ts AIMCOST.move)
+ *  opens every cone the feet touch (the running cone, the remembered run and sprint, the walking feet's term). Both are constants of the game now and
+ *  are no longer held off here: those five numbers are the page's side, to restage on the game as it is. */
 export async function aimUnit() {
   console.log('\n=== aim-unit: the model driven directly — a guard\'s track (climb / drain / hold / gone / jump / capped / pinned), the cone × at track 0 · 0.5 · 1, the feet and target terms; Sam\'s track (caps, a new man, back onto him, crouched) and cone; the ring\'s pixels ===');
   Math.random = seeded(901);
@@ -165,11 +177,11 @@ export async function aimUnit() {
 const f4 = (x: number) => x.toFixed(4);
 
 // ================================================================ (b) first sight → first round; the identity staging free, off vs on
-interface FightRun { rounds: { t: number; miss: number; cone: number; track: number; speed: number; hit: boolean; dist: number }[]; firstT: number; hits: number; exc: string; trace: string[]; }
+interface FightRun { rounds: { t: number; miss: number; cone: number; track: number; speed: number; hit: boolean; dist: number }[]; firstT: number; hits: number; exc: string; trace: string[]; /** startled men who ran for it in this fight (startle.ts STARTLE_STATS.ran, this fight's share) */ ran: number; }
 /** A free (or pinned) alert man at `gPos` facing Sam at `sPos` (lit, god mode, standing still), for `secs`: every round's time from t0, miss angle off Sam's trunk,
  *  the cone / track / speed it left with (aim.lastShot under the model; the row's line otherwise), whether it found him. */
 async function fight(seed: number, o: { model: boolean; gPos: Vec3; sPos: Vec3; secs: number; fireCd: number; reactT: number; pinned?: boolean; carbine?: boolean }): Promise<FightRun> {
-  Math.random = seeded(seed);
+  Math.random = seeded(seed); const ran0: number = STARTLE_STATS.ran;   // (the module's counter runs on from game to game: this fight's share is the difference)
   const W = await standUp(); const { game } = W; const pl = game.player;
   game.godMode = true; game.aiEnabled = true; game.tune.aimModel = o.model; if (o.carbine) game.tune.carbineGuards = 'all';
   for (let i = 0; i < 5; i++) W.step(DT);
@@ -177,7 +189,7 @@ async function fight(seed: number, o: { model: boolean; gPos: Vec3; sPos: Vec3; 
   game.teleportPlayer(v3.copy(o.sPos)); pl.slot = 'pistol'; pl.holstered = false; pl.crouch = false; pl.pistol.lightOn = false;
   place(A, o.gPos, Math.atan2(o.sPos[0] - o.gPos[0], o.sPos[2] - o.gPos[2])); W.step(DT); pl.visibility = 0.9;
   armAlert(A, game, o.fireCd, o.reactT, !!o.pinned);
-  const R: FightRun = { rounds: [], firstT: -1, hits: 0, exc: '', trace: [] }; const t0 = game.time;
+  const R: FightRun = { rounds: [], firstT: -1, hits: 0, exc: '', trace: [], ran: 0 }; const t0 = game.time;
   const dbg: string[] = []; AIM_DEBUG.log = VERBOSE ? (s: string) => dbg.push(`${f2(game.time - t0)} ${s}`) : null;
   try {
     for (let f = 0; f < Math.round(o.secs / DT); f++) {
@@ -194,27 +206,28 @@ async function fight(seed: number, o: { model: boolean; gPos: Vec3; sPos: Vec3; 
   } catch (e: any) { R.exc = String(e?.stack ?? e); }
   AIM_DEBUG.log = null;
   if (VERBOSE) { console.log('    ' + R.trace.join('\n    ')); if (dbg.length) console.log('    debug: ' + dbg.slice(0, 60).join('\n    debug: ')); }
-  return R;
+  R.ran = STARTLE_STATS.ran - ran0; return R;
 }
 const mean = (a: number[]) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
 
 export async function aimFirst() {
-  console.log('\n=== aim-first: a FREE alert man 8.5 m up the corridor from a lit standing Sam, from first sight — no round before reactT + acquireMin·settleSecs, the first round\'s cone ≥ 1.8× a settled one\'s, first rounds miss by more (8 seeds); then the weapons-identity staging FREE, model off vs on over 45 s ===');
+  console.log('\n=== aim-first: a FREE alert man 8.5 m up the corridor from a lit standing Sam, from first sight — no round before the beat (reactT, or the startle\'s) + acquireMin·settleSecs, the first round\'s cone ≥ 1.8× a settled one\'s, first rounds miss by more (8 seeds); then the weapons-identity staging FREE, model off vs on over 45 s ===');
   let allPass = true; const G = AIM.guard;
   const SAM: Vec3 = [24.0, 0, 11.4], GRD: Vec3 = [15.5, 0, 11.3];   // 8.5 m: inside the 9 m he holds and fires from — planted, so only the beat and the gate decide
   const REACT = 0.35;   // the alert transition's own beat
   {
     const runs: FightRun[] = []; for (let s = 0; s < 8; s++) runs.push(await fight(911 + s, { model: true, gPos: GRD, sPos: SAM, secs: 6, fireCd: 0, reactT: REACT }));
-    const fails: string[] = []; const want = REACT + G.acquireMin * G.settleSecs;
+    const fails: string[] = []; const lead = Math.max(REACT, startleLead()), want = lead + G.acquireMin * G.settleSecs;   // (the alert transition's own beat runs inside the startle's, where there is one)
     const firsts = runs.map(r => r.firstT); const firstCones = runs.map(r => r.rounds[0]?.cone ?? NaN), settledCones = runs.flatMap(r => r.rounds.filter(x => x.track >= 0.999).map(x => x.cone));
     const firstMiss = mean(runs.map(r => r.rounds[0]?.miss ?? 0)), settledMiss = mean(runs.flatMap(r => r.rounds.filter(x => x.track >= 0.999).map(x => x.miss)));
-    for (const [i, r] of runs.entries()) { if (r.exc) fails.push(`seed ${911 + i}: exception ${r.exc.split('\n')[0]}`); if (r.firstT < 0) fails.push(`seed ${911 + i}: no round in 6 s`); else if (r.firstT < want - 1.5 * DT) fails.push(`seed ${911 + i}: first round at ${f3(r.firstT)} s — before reactT + acquireMin·settleSecs = ${f3(want)}`); else if (r.firstT > want + 0.35) fails.push(`seed ${911 + i}: first round only at ${f3(r.firstT)} s (want ≈ ${f3(want)}: the beat, the gate, a frame or two for the gun to come round)`); }
+    // (the startle's lead is a man who DRAWS after his beat: one who runs for cover has no draw clock, and the bounds would be the staging's, not the aim's)
+    for (const [i, r] of runs.entries()) { if (r.ran) fails.push(`seed ${911 + i}: THE STAGING — the startled man ran (${r.ran}), where these bounds count on one who draws`); if (r.exc) fails.push(`seed ${911 + i}: exception ${r.exc.split('\n')[0]}`); if (r.firstT < 0) fails.push(`seed ${911 + i}: no round in 6 s`); else if (r.firstT < want - 1.5 * DT) fails.push(`seed ${911 + i}: first round at ${f3(r.firstT)} s — before the beat + acquireMin·settleSecs = ${f3(want)}`); else if (r.firstT > want + 0.35) fails.push(`seed ${911 + i}: first round only at ${f3(r.firstT)} s (want ≈ ${f3(want)}: the beat, the gate, a frame or two for the gun to come round)`); }
     const coneRatio = mean(firstCones) / Math.max(1e-9, mean(settledCones));
     if (!(coneRatio >= 1.8)) fails.push(`first-round cone ${f4(mean(firstCones))} is only ${f2(coneRatio)}× the settled ${f4(mean(settledCones))} (want ≥ 1.8)`);
     if (settledCones.length < 8) fails.push(`only ${settledCones.length} settled rounds across the runs`);
     if (!(firstMiss > 1.3 * settledMiss)) fails.push(`first rounds missed by ${f4(firstMiss)} rad, settled ones by ${f4(settledMiss)} — want the first plainly wider (> 1.3×)`);
     const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — from first sight (reactT ${REACT}, fireCd 0, free, 8.5 m): first round at ${firsts.map(f3).join(' / ')} s (floor ${f3(want)} = ${REACT} + ${G.acquireMin}×${G.settleSecs}); first-round cone ${f4(mean(firstCones))} vs settled ${f4(mean(settledCones))} (×${f2(coneRatio)}); mean miss angle first ${f4(firstMiss)} vs settled ${f4(settledMiss)} rad (${settledCones.length} settled rounds); tracks at the first round ${runs.map(r => f2(r.rounds[0]?.track ?? NaN)).join(' ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — from first sight (reactT ${REACT}, fireCd 0, free, 8.5 m): first round at ${firsts.map(f3).join(' / ')} s (floor ${f3(want)} = ${f2(lead)} + ${G.acquireMin}×${G.settleSecs}; the beat is ${lead > REACT ? 'the startle\'s and its draw' : 'reactT'}); first-round cone ${f4(mean(firstCones))} vs settled ${f4(mean(settledCones))} (×${f2(coneRatio)}); mean miss angle first ${f4(firstMiss)} vs settled ${f4(settledMiss)} rad (${settledCones.length} settled rounds); tracks at the first round ${runs.map(r => f2(r.rounds[0]?.track ?? NaN)).join(' ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
     if (!ok && !VERBOSE) console.log('    ' + runs[0].trace.slice(0, 12).join('\n    '));
   }
   // ---- the identity staging (weapons-probes section 3: 6.5 m up the corridor, fireCd 0.3, reactT 0, 45 s) with the man FREE: off = today, on = the model
@@ -222,11 +235,12 @@ export async function aimFirst() {
     const off = await fight(502, { model: false, gPos: [17.5, 0, 11.3], sPos: SAM, secs: 45, fireCd: 0.3, reactT: 0 });
     const on = await fight(502, { model: true, gPos: [17.5, 0, 11.3], sPos: SAM, secs: 45, fireCd: 0.3, reactT: 0 });
     const pin = await fight(502, { model: true, gPos: [17.5, 0, 11.3], sPos: SAM, secs: 45, fireCd: 0.3, reactT: 0, pinned: true });
-    const fails: string[] = []; const settleAt65 = G.settleSecs * Math.min(1, Math.max(G.nearK, 6.5 / G.rangeRef));   // (6.5 m is inside rangeRef: the man fills more of the sights, the settle is that much quicker — aim.ts settleTime)
+    const fails: string[] = [], lead = startleLead(); const settleAt65 = G.settleSecs * Math.min(1, Math.max(G.nearK, 6.5 / G.rangeRef));   // (6.5 m is inside rangeRef: the man fills more of the sights, the settle is that much quicker — aim.ts settleTime)
     if (off.exc || on.exc || pin.exc) fails.push('exception: ' + (off.exc || on.exc || pin.exc).split('\n')[0]);
-    if (!(on.firstT >= G.acquireMin * settleAt65 - 1.5 * DT)) fails.push(`model on, free: first round at ${f3(on.firstT)} s — under acquireMin·settle(6.5 m) ${f3(G.acquireMin * settleAt65)}`);
-    if (on.firstT > G.acquireMin * settleAt65 + 0.2) fails.push(`model on, free: first round only at ${f3(on.firstT)} s (the gate opens at ${f3(G.acquireMin * settleAt65)})`);
-    if (!(off.firstT < 0.4)) fails.push(`model off: first round at ${f3(off.firstT)} s (today's is 0.30: fireCd 0.3 and nothing else)`);
+    if (off.ran || on.ran || pin.ran) fails.push(`THE STAGING — a startled man ran (off ${off.ran}, on ${on.ran}, pinned ${pin.ran}), where these bounds count on one who draws: 6.5 m is inside the startle's run band, and the man here is the steady one`);
+    if (!(on.firstT >= lead + G.acquireMin * settleAt65 - 1.5 * DT)) fails.push(`model on, free: first round at ${f3(on.firstT)} s — under ${lead ? `the startle's ${f2(lead)} s + ` : ''}acquireMin·settle(6.5 m) ${f3(G.acquireMin * settleAt65)}`);
+    if (on.firstT > lead + G.acquireMin * settleAt65 + 0.2) fails.push(`model on, free: first round only at ${f3(on.firstT)} s (the gate opens at ${f3(lead + G.acquireMin * settleAt65)})`);
+    if (!(off.firstT < lead + 0.4) || off.firstT < lead + 0.3 - 1.5 * DT) fails.push(`model off: first round at ${f3(off.firstT)} s (today's is ${f2(lead + 0.3)}: fireCd 0.3${lead ? ` after the startle's ${f2(lead)} s` : ' and nothing else'})`);
     if (Math.abs(pin.firstT - off.firstT) > DT + 1e-9 || pin.rounds.length !== off.rounds.length || pin.hits !== off.hits) fails.push(`pinned under the model (${f3(pin.firstT)} s, ${pin.rounds.length} rounds, ${pin.hits} hits) is not today's man (${f3(off.firstT)} s, ${off.rounds.length}, ${off.hits}) — the tour's posts would drift`);
     const ok = fails.length === 0; allPass &&= ok;
     const line = (r: FightRun, tag: string) => `${tag}: ${r.rounds.length} rounds in 45 s, ${r.hits} found a standing Sam (${r.rounds.length ? Math.round(100 * r.hits / r.rounds.length) : 0} %), first round +${f3(r.firstT)} s, cones ${f4(r.rounds[0]?.cone ?? NaN)} first / ${f4(mean(r.rounds.slice(2).map(x => x.cone)))} after`;
@@ -450,10 +464,10 @@ export async function aimOff() {
 
 // ================================================================ (g) what the reticle takes: a light only on its dot, a man beside one
 export async function aimSnap() {
-  console.log('\n=== aim-snap: the reticle takes a light only with the cursor on it (its dot ± lightSnapPx, or its own drawn box) — swept over every aimable light in view, against the reach it had (60 px); a man under a ceiling panel\'s picture, the cursor beside him and nearer the panel\'s dot: he is taken and the round drops him; a light taken is kept while the camera settles ===');
-  const L0: number = Aim.AIM_DEFAULTS.player.lightSnapPx, SNAP: number = Aim.SNAP_PX; let allPass = true;   // (the SHIPPED reach: the harness itself stands at SNAP — src/host/standup.ts)
-  const stage = async (seed: number, at: Vec3, reach: number) => {
-    Math.random = seeded(seed); const W = await standUp(); const { game, input, cam, canvas } = W; AIM.player.lightSnapPx = reach;
+  console.log('\n=== aim-snap: the reticle takes a light only with the cursor on it (its dot ± lightSnapPx, or its own drawn box) — swept over every aimable light in view; a man under a ceiling panel\'s picture, the cursor beside him and nearer the panel\'s dot: he is taken and the round drops him; a light taken is kept while the camera settles ===');
+  const L0: number = Aim.AIM_DEFAULTS.player.lightSnapPx, SNAP: number = Aim.SNAP_PX; let allPass = true;   // (L0: the reach as the game has it; SNAP: the men's reach, which a light had too until the rule)
+  const stage = async (seed: number, at: Vec3) => {
+    Math.random = seeded(seed); const W = await standUp(); const { game, input, cam, canvas } = W;
     game.godMode = true; game.player.visibility = 0; for (let i = 0; i < 5; i++) W.step(DT);
     game.guards.forEach((gd: any, i: number) => park(gd, i));
     const pl = game.player; game.teleportPlayer(at); pl.slot = 'pistol'; pl.holstered = false; pl.crouch = false;
@@ -463,13 +477,13 @@ export async function aimSnap() {
     const takes = (x: number, y: number) => { input.mouseX = x; input.mouseY = y; game.aimTarget = null; updateAim(game, input, cam, canvas); return game.aimTarget; };
     return { W, game, input, cam, canvas, pl, px, takes };
   };
-  try {
+  {
     { // ---- the sweep: the camera still, the cursor on rings round each light's dot
-      const { game, input, px, takes } = await stage(941, [8.4, 0, 21.2], L0); const fails: string[] = [];
+      const { game, input, px, takes } = await stage(941, [8.4, 0, 21.2]); const fails: string[] = [];
       const lights = game.targets.filter((t: any) => t.interactive && !t.broken).map((t: any) => ({ t, at: px(t.pos) })).filter((x: any) => x.at[2] && x.at[0] > 80 && x.at[0] < 1520 && x.at[1] > 80 && x.at[1] < 920);
       const radii = [0, L0 - 2, L0 + 2, Math.round((L0 + SNAP) / 2), SNAP - 2];
       const sweep = (reach: number) => {
-        AIM.player.lightSnapPx = reach; const took = radii.map(() => 0), any = radii.map(() => 0), tried = radii.map(() => 0); let ceiling = 0;
+        const took = radii.map(() => 0), any = radii.map(() => 0), tried = radii.map(() => 0); let ceiling = 0;
         for (const { t, at } of lights) radii.forEach((r, k) => { for (let a = 0; a < (r ? 8 : 1); a++) {
           const got = takes(at[0] + r * Math.cos(a * Math.PI / 4), at[1] + r * Math.sin(a * Math.PI / 4)); tried[k]++;
           if (got === t) took[k]++; if (got) any[k]++; if (got && game.aimPoint[1] > 2.5) ceiling++;
@@ -478,16 +492,15 @@ export async function aimSnap() {
         } });
         return { took, any, tried, ceiling };
       };
-      const now = sweep(L0), was = sweep(SNAP);
+      const now = sweep(L0);
       const row = (R: ReturnType<typeof sweep>) => radii.map((r, k) => `${r} px ${R.took[k]}/${R.tried[k]}${R.any[k] > R.took[k] ? ` (+${R.any[k] - R.took[k]} a neighbour's nearer dot)` : ''}`).join(' · ');
       if (lights.length < 3) fails.push(`staging: only ${lights.length} aimable lights in the lobby view`);
       if (now.any[0] !== now.tried[0] || now.any[1] !== now.tried[1]) fails.push('on / just inside the dot a light was not taken'); if (now.took[2] + now.took[3] + now.took[4] !== 0) fails.push('a light taken from outside lightSnapPx');
-      if (was.any[3] !== was.tried[3]) fails.push(`the knob at ${SNAP} does not give the old reach back (${radii[3]} px: a light taken ${was.any[3]}/${was.tried[3]})`);
-      allPass = verdict(!fails.length, `${lights.length} aimable lights in the lobby view (none of them drawn: ceiling panels, a beacon), the cursor on rings round each dot: taken on the dot and at ${radii[1]} px, never at ${radii[2]} / ${radii[3]} / ${radii[4]} px — and the knob back at ${SNAP} takes them from there as it did`, fails.slice(0, 4).join('; ') || `lightSnapPx ${L0}: ${row(now)} (the gun at the ceiling on ${now.ceiling} of ${now.tried.reduce((a, b) => a + b, 0)} cursor spots) · at ${SNAP}: ${row(was)} (${was.ceiling})`) && allPass;
+      allPass = verdict(!fails.length, `${lights.length} aimable lights in the lobby view (none of them drawn: ceiling panels, a beacon), the cursor on rings round each dot: taken on the dot and at ${radii[1]} px, never at ${radii[2]} / ${radii[3]} / ${radii[4]} px`, fails.slice(0, 4).join('; ') || `lightSnapPx ${L0}: ${row(now)} (the gun at the ceiling on ${now.ceiling} of ${now.tried.reduce((a, b) => a + b, 0)} cursor spots)`) && allPass;
     }
     // ---- the man under a panel's picture: his chest L0 + 42 px to the side of the panel's dot, the cursor between them L0 + 8 px from the dot (beside him, not on him)
-    const man = async (reach: number) => {
-      const { W, game, input, cam, canvas, pl, px } = await stage(942, [8.6, 0, 23.3], reach); const A = game.guards[0]; const dDot = L0 + 8;
+    const man = async () => {
+      const { W, game, input, cam, canvas, pl, px } = await stage(942, [8.6, 0, 23.3]); const A = game.guards[0]; const dDot = L0 + 8;
       const panel = game.targets.filter((t: any) => t.interactive && /^panel_/.test(t.name)).sort((a: any, b: any) => v3.distXZ(a.pos, pl.char.pos) - v3.distXZ(b.pos, pl.char.pos))[0];
       const chest = (): Vec3 => A.char.bones.chest ?? v3.add(A.char.pos, [0, 1.2, 0]);
       const spot = (): Vec3 => { const q = px(panel.pos); const r = cam.ray((q[0] - (L0 + 42)) / canvas.clientWidth, q[1] / canvas.clientHeight); const t = (1.2 - r.ro[1]) / r.rd[1]; return [r.ro[0] + r.rd[0] * t, 0, r.ro[2] + r.rd[2] * t]; };
@@ -502,14 +515,13 @@ export async function aimSnap() {
       frame(true); seen(); for (let i = 0; i < 20; i++) { frame(false, false); seen(); }   // (the round away; what the reticle does over a body afterwards is not counted)
       return { panel: panel.name, onHim, onPanel, onBody, n, dDot, dChest, clear: !game.col.segmentBlocked(v3.add(pl.char.pos, [0, 1.3, 0]), chest()), dead: A.state === 'dead', toY: shot?.to ? shot.to[1] : NaN, fired: !!shot, range: v3.distXZ(pl.char.pos, A.char.pos) };
     };
-    { const now = await man(L0), was = await man(SNAP); const fails: string[] = [];
+    { const now = await man(); const fails: string[] = [];
       if (!now.clear || now.onBody || now.dChest < now.dDot + 8 || now.dChest > SNAP - 8) fails.push(`staging: line clear ${now.clear}, cursor on his body ${now.onBody} frames, ${f1(now.dChest)} px off his chest / ${now.dDot} off the dot`);
       if (now.onHim !== now.n || now.onPanel) fails.push(`the reticle on him ${now.onHim}/${now.n} frames, on the panel ${now.onPanel}`); if (!now.fired || !now.dead) fails.push(`fired ${now.fired}, he is ${now.dead ? 'down' : 'standing'} (the round ended at y ${f2(now.toY)})`);
-      if (was.onPanel !== was.n || was.dead || !(was.toY > 2.5)) fails.push(`the control at ${SNAP} px: the panel had the reticle ${was.onPanel}/${was.n} frames, he is ${was.dead ? 'down' : 'standing'}, the round ended at y ${f2(was.toY)} (want the old miss into the ceiling)`);
-      allPass = verdict(!fails.length, `a man ${f1(now.range)} m off under ${now.panel}'s picture, the cursor beside him — ${f1(now.dChest)} px from his chest, ${now.dDot} from the panel's dot: the reticle is on him every frame and the round drops him; with the reach back at ${SNAP} the panel takes it and the round goes into the ceiling`, fails.join('; ') || `lightSnapPx ${L0}: on him ${now.onHim}/${now.n}, down ${now.dead} (round to y ${f2(now.toY)}) · at ${SNAP}: on the panel ${was.onPanel}/${was.n}, down ${was.dead} (round to y ${f2(was.toY)})`) && allPass;
+      allPass = verdict(!fails.length, `a man ${f1(now.range)} m off under ${now.panel}'s picture, the cursor beside him — ${f1(now.dChest)} px from his chest, ${now.dDot} from the panel's dot: the reticle is on him every frame and the round drops him`, fails.join('; ') || `lightSnapPx ${L0}: on him ${now.onHim}/${now.n}, down ${now.dead} (round to y ${f2(now.toY)})`) && allPass;
     }
     { // ---- kept while the camera settles: the cursor flicked onto a panel's dot and LEFT there — the aim point going up to the panel pans the picture under it
-      const { W, game, input, pl, px } = await stage(943, [8.6, 0, 23.3], L0); const fails: string[] = [];
+      const { W, game, input, pl, px } = await stage(943, [8.6, 0, 23.3]); const fails: string[] = [];
       const panel = game.targets.filter((t: any) => t.interactive && /^panel_/.test(t.name)).sort((a: any, b: any) => v3.distXZ(a.pos, pl.char.pos) - v3.distXZ(b.pos, pl.char.pos))[0];
       game.lightHome.stage(panel, true, null); W.step(DT);   // (the lobby's panels are switched off at night: lit, so the OCP below has something to put out)
       const q0 = px(panel.pos); input.mouseX = q0[0]; input.mouseY = q0[1]; let had = 0, drift = 0; const N = 90;
@@ -522,7 +534,7 @@ export async function aimSnap() {
       allPass = verdict(!fails.length, `the cursor put on ${panel.name}'s dot and left there: the camera's lead slides the dot ${f1(drift)} px from under it (reach ${L0}) and the panel keeps the reticle all ${N} frames, the right button OCPs it; the cursor moved ${L0 + 6} px further off lets it go at once`, fails.join('; ') || `kept ${had}/${N} · drift ${f1(drift)} px · OCP ${zapped} · let go ${let_go}`) && allPass;
     }
     { // ---- a DRAWN fixture is taken by pointing at it anywhere: the vending front, well off its dot
-      const { game, input, px, takes } = await stage(944, [29.4, 0, 16.2], L0); const fails: string[] = [];
+      const { game, input, px, takes } = await stage(944, [29.4, 0, 16.2]); const fails: string[] = [];
       const v = game.targets.find((t: any) => t.name === 'vending'), b = W0(game).statics[v.boxes[0]];
       const on: Vec3 = [b.c[0] + b.h[0] * 0.6, b.c[1] + b.h[1], b.c[2] + b.h[2] * 0.6], q = px(on), dot = px(v.pos); const dOn = Math.hypot(q[0] - dot[0], q[1] - dot[1]);
       const got = takes(q[0], q[1]); const beside = takes(dot[0], dot[1] - (dOn + 40));   // on its top face; then the same distance and more off the dot, past the box
@@ -530,7 +542,7 @@ export async function aimSnap() {
       void input;
       allPass = verdict(!fails.length, `the cursor ON the vending machine ${f1(dOn)} px off its dot takes it (it is drawn: pointing at it is pointing at it); off the box it does not`, fails.join('; ') || `on it: ${got?.name} · off it: ${beside?.name ?? 'nothing'}`) && allPass;
     }
-  } finally { AIM.player.lightSnapPx = L0; }
+  }
   console.log(`=== aim-snap: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }

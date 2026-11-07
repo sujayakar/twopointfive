@@ -50,7 +50,7 @@ import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING }
 import { TapeWalk } from './tapewalk';
 import { RecipeStand, layFlags, put, plain, type Plain } from './recipestand';
 import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
-import { viewerUrl, visitWord, visitPairs } from '../ui/replaykey';
+import { onePage, viewerUrl, visitWord, visitPairs } from '../ui/replaykey';
 import { cloudCarries, cloudFile, cloudNotes, cloudSendsFiles } from '../cloud/cloud';
 import { keptStore } from './keptui';
 import { TEXT_EVENT, rectZoom, textZoom } from '../ui/textsize';
@@ -156,6 +156,13 @@ export async function tapeFromUrl(q: URLSearchParams): Promise<TapePlay | 'moved
   const tape = F.rerun as RunTape, want = tapeSearch(tape, q, v);
   if (new URLSearchParams(location.search).toString() !== new URLSearchParams(want).toString()) { location.replace(location.pathname + want + location.hash); return 'moved'; }
   const P = new TapePlay(F, id, v, ''); for (const n of seen) P.onShelf.add(n.id); return P;
+}
+/** where a `?playtape=` address goes on a game page that plays no tapes (format.ts GAME_PAGE): the map viewer on that shelf entry, with the visit's own sending
+ *  words (the viewer sends too, and a visit that said not to still does not). null: a served file, or a build with no viewer page */
+export function tapeMapUrl(q: URLSearchParams): string | null {
+  const v = q.get(PLAYTAPE) ?? ''; if (!/^\d+$/.test(v) || onePage()) return null;
+  const to = new URL(viewerUrl(Number(v))); for (const k of SENDING_WORDS) if (q.has(k)) to.searchParams.set(k, q.get(k) ?? '');
+  return to.href;
 }
 /** the tape's own query, with this visit's keys: what the page must be booted on to be the recording's page */
 export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): string { return recipeSearch(tape.recipe, now, { [PLAYTAPE]: v, ...(now.has('at') ? { at: now.get('at') ?? '' } : {}) }); }
@@ -288,10 +295,10 @@ export class TapePlay {
       if (p && (!this.worst || d > this.worst.metres)) this.worst = row; if (!this.drift && d > TOL) this.drift = row; });
   }
 
-  /** AFTER A STEP THAT IS NOT DRAWN: what the page does between an update and the next — the HUD's one write to the game, and THE WORLD LISTED. The cursor's ray
+  /** AFTER A STEP THAT IS NOT DRAWN: what the page does between an update and the next — THE WORLD LISTED. The cursor's ray
    *  (BoxWorld.raycast) walks the box list as last made, and a step played without it would aim through the boxes of an older tick and part from a recording made
-   *  on a page that listed after every one (the fixed step's betweenTicks, host/loop.ts, is the same two lines). The pack for the GPU is the next draw's. */
-  private between(): void { const h = this.host; if (!h) return; J.hudExpireBubbles(h.game); h.engine.world.relist(); }
+   *  on a page that listed after every one (the fixed step's betweenTicks, host/loop.ts, is the same line). The pack for the GPU is the next draw's. */
+  private between(): void { const h = this.host; if (!h) return; h.engine.world.relist(); }
 
   // ------------------------------------------------------------------------------------------------------------------------ the frame (main.ts step() hands it over)
   /** one frame of the page: as many tape steps as its time asks for, then the picture, the mixer and the HUD — host/loop.ts stepFrame's second half, on the tape's camera */

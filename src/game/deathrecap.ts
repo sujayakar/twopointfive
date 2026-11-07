@@ -15,7 +15,7 @@
  *  Seams: combat.ts fireWeapon → `recapRound` (the round that is about to land on a man: one line), game.ts `recapTick` (last in Game.step), ui/debrief.ts
  *  mounts the panel. */
 import { men, allDown, manOf as playerOf, menUp, playerName } from './seats';
-import { SideMap, SideSet, GameSideMap } from '../math/side';
+import { SideSet, GameSideMap } from '../math/side';
 import type { Game, Guard, GameEvent, Player } from './game';
 import type { Character } from './character';
 import type { Vec3 } from '../math/vec';

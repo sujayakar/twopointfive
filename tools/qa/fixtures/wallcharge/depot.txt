@@ -1,2 +1,2 @@
-# places for a wall charge on levels/depot.json: on the frozen stand, then on the shipped stand (its lived-in rooms in)
-880 752
+# places for a wall charge on levels/depot.json (floor behind them as the nav grid stands; the level with its lived-in rooms in)
+752

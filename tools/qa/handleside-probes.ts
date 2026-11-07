@@ -1,6 +1,7 @@
 // The 'handleside' family: THE AI OPENS A DOOR FROM ITS HANDLE SIDE (src/game/handleside.ts HANDLE; the maintainer, 10-08: "open has to be on the handle side for AI").
-// Every door of every level a mission is played on (the office and each scenario's own level file), from BOTH faces, with the one-way doors on.
-//   bun run tools/qa/probes.ts handleside | handleside-spots | handleside-men | handleside-off
+// Every door of every level a mission is played on (the office and each scenario's own level file), from BOTH faces. The rule and the one-way doors are
+// settled: nothing here writes either, and the probe `off` (the walks with the rule off, opened from the middle of the leaf) went 2026-11-07.
+//   bun run tools/qa/probes.ts handleside | handleside-spots | handleside-men
 // All headless; nothing here looks at a picture.
 //   handleside-spots  the place the rule deals for each face of each door (handleSpot): on that face, in the handle half of the frame, within reach of the
 //                     handle (the long reach only where it says so), and on the face the leaf opens into clear of its sweep. The faces with only a long reach
@@ -10,18 +11,14 @@
 //                     opening as tools/qa/handle-watch.ts judges it must be AT THE HANDLE: the handle half, within reach, out of the sweep on the pull face —
 //                     or, on a face whose only place is the long reach, pulled from the handle half clear of the sweep. The leaf never comes round through
 //                     its own opener, and he gets through
-//   handleside-off    HANDLE.on off: the same walks on the office open doors from the middle of the leaf as they did (so handleside-men can go red), and the
-//                     rule's counters stay at zero
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 import { HandleWatch, HANDLE_REACH, BODY_R, HANDLE_IN, type HandleRow } from './handle-watch.ts';
-const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
-const { HANDLE, HANDLE_STATS, handleSpot } = await import(`${ROOT}/src/game/handleside.ts`);
+const { HANDLE_STATS, handleSpot } = await import(`${ROOT}/src/game/handleside.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { isOfficeFamily, withOfficeScript } = await import(`${ROOT}/src/scene/level.ts`);
 const { order, endGuardScript } = await import(`${ROOT}/src/game/squad.ts`);
 const { spawnUnit, despawnUnit, frameOf } = await import(`${ROOT}/src/game/guards.ts`);
 
@@ -34,12 +31,11 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 }
 const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 /** (headless.ts stands the harness up on the old double-acting leaves, where the rule is inert: the family turns the shipped doors on and puts back what it found) */
-const guarded = (fn: () => Promise<boolean>) => async () => { const was = DOORWAY.oneWay, on = HANDLE.on; try { return await fn(); } finally { DOORWAY.oneWay = was; HANDLE.on = on; } };
 
 const LEVELS: (string | undefined)[] = [undefined, ...new Set<string>(SCENARIOS.map((e: any) => e.level).filter(Boolean))];
 const nameOf = (f?: string) => f ? f.replace(/\.json$/, '') : 'office';
-function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); }
-async function boot(file?: string, rule = true): Promise<any> { DOORWAY.oneWay = true; HANDLE.on = rule; Math.random = seeded(7);
+function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); }
+async function boot(file?: string): Promise<any> { Math.random = seeded(7);
   return quiet(() => standUp({ uploadEvery: 4, ...(file ? { level: levelOfFile(file) } : {}) })); }
 
 /** a point off a door's face: `along` m from the hinge along the closed leaf, `o` m out of face `f` (Doors.side's sign) */
@@ -57,7 +53,7 @@ function seen(g: any, d: any, p: number[]): HandleRow { const A = against(d, p),
 const few = (a: string[], n = 8) => a.slice(0, n).join('\n    ') + (a.length > n ? `\n    … and ${a.length - n} more` : '');
 
 // ---------------------------------------------------------------- handleside-spots
-export const handlesideSpots = guarded(async () => {
+export const handlesideSpots = async (): Promise<boolean> => {
   const F = family('handleside-spots: the place dealt for each face of each door is at its handle, and on the pull face outside the leaf\'s sweep');
   let faces = 0, far = 0, none = 0;
   for (const file of LEVELS) {
@@ -80,7 +76,7 @@ export const handlesideSpots = guarded(async () => {
   }
   F.verdict(none + far <= faces * 0.1, `${faces} faces: ${far} with only a long reach, ${none} with no place`, 'the level\'s corners: at most a tenth of the faces');
   return F.done();
-});
+};
 
 // ---------------------------------------------------------------- handleside-men
 interface Walk { n: number; skipped: number; ok: number; long: number; free: number; fails: string[]; bad: number }
@@ -110,7 +106,7 @@ async function walks(W: any, teams: readonly ('operative' | 'hostile')[]): Promi
   }
   return out;
 }
-export const handlesideMen = guarded(async () => {
+export const handlesideMen = async (): Promise<boolean> => {
   const F = family('handleside-men: a teammate and a defender on the AI\'s own walk open every door from its handle, both faces');
   for (const k of Object.keys(HANDLE_STATS)) HANDLE_STATS[k] = 0;
   let all = 0;
@@ -121,14 +117,4 @@ export const handlesideMen = guarded(async () => {
   }
   F.verdict(HANDLE_STATS.pulls > 0 && HANDLE_STATS.lined > 0, `the rule did the work over ${all} walks`, Object.entries(HANDLE_STATS).map(([k, v]) => `${k} ${v}`).join(' · '));
   return F.done();
-});
-
-// ---------------------------------------------------------------- handleside-off
-export const handlesideOff = guarded(async () => {
-  const F = family('handleside-off: HANDLE.on off, the doors are opened from the middle of the leaf as they were');
-  for (const k of Object.keys(HANDLE_STATS)) HANDLE_STATS[k] = 0;
-  const R = await walks(await boot(undefined, false), ['operative']);
-  F.verdict(R.bad > 0, `office, the rule off: ${R.bad} of ${R.n} walks open a door away from its handle`, R.bad ? few(R.fails.filter(s => !/not through/.test(s)), 3) : 'none: handleside-men could not go red');
-  F.verdict(Object.values(HANDLE_STATS).every(v => v === 0), 'the rule\'s counters stayed at zero', Object.entries(HANDLE_STATS).map(([k, v]) => `${k} ${v}`).join(' · '));
-  return F.done();
-});
+};

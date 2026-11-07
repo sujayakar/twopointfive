@@ -29,6 +29,7 @@ import { type StaticCollision, type GridWind, type LampRows } from '../scene/col
 import { FACE } from '../scene/boxMirror';
 import { sim, simWhyNot } from '../sim/sim';
 import { simTenant, simPart, P_SMOKE, SimState } from '../sim/state';
+import { goneWithTick } from './crossing';
 
 export const SENSE = {
   /** the senses worked out by the game itself (see the head). Off = the renderer's values through Game.sensors, as ever. */
@@ -176,13 +177,14 @@ simTenant({ name: 'smoke', bit: 16,
 /** THE GRID'S OWN NUMBERS as rust/sim/src/bricks.rs has them (tools/qa/smokegrid-check.ts reads that file and is red where one differs): seconds a step, and
  *  the state row's layout for whoever reads it: doubles in the head, emitters and doubles an emitter, bricks, cells a brick, m³ a cell, and where in the head
  *  the book of the smoke is kept (let out · given back with thin bricks, and what the wind carried over the plan's edge · refused for want of a brick) */
-export const GRID = { step: 0.1, head: 8, emitters: 64, emit: 7, bricks: 160, cells: 128, vol: 0.125, out: 4, given: 5, lost: 6,
+export const GRID = { step: 0.1, head: 6, emitters: 64, emit: 7, bricks: 512, cells: 128, vol: 0.125, out: 4, given: 5,
   /** …the plan in squares (the head), a square's side (m), and the light that comes round (glow.rs), a number a square metre: the most metres it holds,
    *  the height it is read at, and where its four columns start: the lamps' light · the bounce · the way open toward +x · toward +z */
-  nbx: 2, nbz: 3, side: 2, glowMax: 2048, chest: 1.2, glowD: 8 + 64 * 7 + 160 * 2, glowB: 8 + 64 * 7 + 160 * 2 + 2048, glowX: 8 + 64 * 7 + 160 * 2 + 2 * 2048,
-  glowZ: 8 + 64 * 7 + 160 * 2 + 3 * 2048,
-  /** …after them the word of the lamps the plan was last swept whole under, and then, last, the cells: a brick's after another's */
-  glowLamps: 8 + 64 * 7 + 160 * 2 + 4 * 2048, rho: 8 + 64 * 7 + 160 * 2 + 4 * 2048 + 1 };
+  nbx: 2, nbz: 3, side: 2, glowMax: 2048, chest: 1.2, glowD: 6 + 64 * 7 + 512 * 2, glowB: 6 + 64 * 7 + 512 * 2 + 2048, glowX: 6 + 64 * 7 + 512 * 2 + 2 * 2048,
+  glowZ: 6 + 64 * 7 + 512 * 2 + 3 * 2048,
+  /** …after them the word of the lamps the plan is swept under, where the sweep is and how much of it is still to go quickly, and then, last, the cells:
+   *  a brick's after another's */
+  glowLamps: 6 + 64 * 7 + 512 * 2 + 4 * 2048, rho: 6 + 64 * 7 + 512 * 2 + 4 * 2048 + 3 };
 /** THE LIGHT MODEL'S FIELD as the estimate of the light on a man takes it (guards.ts lightEstimateAt): a game's own smoke with a grid standing. The grid
  *  holds the light that comes round; the smoke answers what dims a lamp on its way (the grid's cells, and the blobs where the grid cannot answer). */
 export type LightField = CpuSmoke & { grid: SmokeGrid };
@@ -211,8 +213,6 @@ export class CpuSmoke {
     }
     this.blobs.push({ x: e.pos[0], y0: e.pos[1], z: e.pos[2], r2: r * r, rate, ttl: e.ttl, age: 0, mass: 0 });
   }
-  /** how many more emitters there is room for, as the solver counts it (smoke.ts budget) — off the game's own count */
-  budget(): number { const K = SENSE.smoke; return Math.max(0, K.emitters - K.reserve - this.lives.length); }
   step(dt: number): void {
     const K = SENSE.smoke, keep = Math.exp(-K.decay * dt);
     { const L = this.lives; let w = 0; for (let i = 0; i < L.length; i++) { const t = L[i] - dt; if (t > 0) L[w++] = t; } L.length = w; }
@@ -226,10 +226,7 @@ export class CpuSmoke {
   clear(): void { this.blobs.length = 0; this.lives.length = 0; this.grid?.clear(); }
   /** HOW MUCH OF THE LIGHT ALONG a → b COMES THROUGH (1 = clear air), in the game's own box world: the grid's cells where a grid stands and can answer,
    *  else the blobs. */
-  along(col: StaticCollision, a: Vec3, b: Vec3): number {
-    if (this.grid) { const t = this.grid.along(a, b); if (t !== -1) return t; }
-    return this.blobsAlong(col, a, b);
-  }
+  along(col: StaticCollision, a: Vec3, b: Vec3): number { return goneWithTick('CpuSmoke.along') as any; }
   /** …by THE BLOBS, whatever a grid would say (the error tool's own model of them; `along` where no grid answers). The Rust module's sum (rust/sim/src/
    *  smoke.rs) over these blobs, written there for the one question: each blob a gaussian that widens with its age and rises from where it was let out,
    *  its share of the line by the error function, and none of it counted through a wall — a wall between a blob's middle and the line's nearest point
@@ -249,12 +246,4 @@ export class CpuSmoke {
 /** THE GAME'S OWN SMOKE PUT IN FRONT OF THE SOLVER under SENSE.cpu: every emitter the solver is handed — by the game or by anything else that holds it (a panel
  *  button, the page's warm-up) — also feeds `own`, a clear clears both, and what the game asks back to decide how much more to emit is `own`'s answer. Done on the
  *  solver object itself, so nobody is left holding an unwatched one; the solver's own working is called as it was. Returns the undo. */
-export function ownSmoke(real: SmokeSystemLike, own: CpuSmoke): () => void {
-  const R = real as unknown as Record<string, unknown>, had: [string, PropertyDescriptor | undefined][] = [];
-  const emit = real.emit, clearAll = real.clearAll;
-  const set = (k: string, f: unknown) => { had.push([k, Object.getOwnPropertyDescriptor(R, k)]); Object.defineProperty(R, k, { value: f, writable: true, configurable: true, enumerable: false }); };
-  set('emit', (e: SmokeEmitter) => { own.emit(e); emit.call(real, e); });
-  set('clearAll', () => { own.clear(); clearAll?.call(real); });
-  set('budget', () => own.budget());
-  return () => { for (const [k, d] of had) { if (d) Object.defineProperty(R, k, d); else delete R[k]; } };
-}
+export function ownSmoke(real: SmokeSystemLike, own: CpuSmoke): () => void { return goneWithTick('ownSmoke') as any; }

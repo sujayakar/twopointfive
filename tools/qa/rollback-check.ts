@@ -338,7 +338,7 @@ if (!argv.includes('--static')) {
   const todo = ids.flatMap(scn => seeds.flatMap(seed => (['moments', 'plain'] as const).map(arm => ({ scn, seed, arm })))); const res = new Map<string, Out>(); let next = 0;
   const worker = async () => { for (;;) { const j = todo[next++]; if (!j) return;
     const file = resolve(tmpdir(), `rollback-${process.pid}-${j.scn}-${j.seed}-${j.arm}.json`);
-    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.scn}:${j.seed}`, '--arm', j.arm, '--out', file, '--cap', String(CAP), '--every', String(EVERY), '--ticks', String(TICKS)], { stdout: 'ignore', stderr: 'pipe' });
+    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.scn}:${j.seed}`, '--arm', j.arm, '--out', file, '--cap', String(CAP), '--every', String(EVERY), '--ticks', String(TICKS)], { stdout: 'ignore', stderr: 'pipe', env: process.env });
     const errText = await new Response(pr.stderr).text(); await pr.exited;
     let r: Out; try { r = JSON.parse(readFileSync(file, 'utf8')); rmSync(file); } catch { r = { scn: j.scn, seed: j.seed, arm: j.arm, end: 'error', t: 0, digest: '', last: '', frames: 0, moments: [], rawWeak: [], why: [], fns: {}, error: `the run left no result — ${errText.trim().split('\n').slice(-3).join(' / ').slice(0, 400)}` }; }
     res.set(`${j.scn}:${j.seed}:${j.arm}`, r); console.error(`  ${j.scn}:${j.seed} ${j.arm} ${r.end} ${r.t} s · ${r.moments.length} moments${r.error ? ' — ' + r.error.split('\n')[0] : ''}`); } };

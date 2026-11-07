@@ -11,27 +11,27 @@
 //                    men and glass looked past — or the door's own leaf there) must pick THAT door. Counted apart, as the rule has them: a teammate under
 //                    the cursor (his menu), Sam's own body under it (his), another door nearer the landing point (that door's), another door's OWN LEAF seen through this doorway (that door's: a leaf the cursor is on is the
 //                    door, orders.ts targetUnder — two doors swung open in one corner). A door never
-//                    drawn from any spot is a FAIL (nothing was checked on it). The line also says how many the nearness rule alone (ORDERS.doorRay off:
-//                    the build as it was) takes for the door.
+//                    drawn from any spot is a FAIL (nothing was checked on it).
 //   doormenu-open    the same with every door of the level stood open: the cursor through an open doorway is the door, in every scenario
 //   doormenu-rows    in each scenario: X on a shut door and on an open one (the cursor THROUGH the opening), the panel read — the first page's rows and keys,
 //                    the row that opens the tools on 5, then 5 pressed and the tools page read. Every scenario must show the same rows on the same keys (the
 //                    four's 'wait for my word' row counted apart) with at least one tool usable on the shut door; a tool that cannot be used there (a
-//                    charge on an open door, no bangs left) is LISTED, greyed, with its reason — never absent. Row 4 of the tools is read under the
-//                    stand's own rule: the turn to the threshold's page and that page's rows, or (DOORTOOLS.outsidePlain, on in the page) the one order
+//                    charge on an open door, no bangs left) is LISTED, greyed, with its reason — never absent. Row 4 of the tools is the one order
 //                    'clear from outside', which 4 pressed must give
-//   doormenu-man     what the rule leaves alone: a teammate stood in a doorway, the cursor on his chest — X is HIS menu and T is him, the knob on or off
+//   doormenu-man     what the rule leaves alone: a teammate stood in a doorway, the cursor on his chest — X is HIS menu and T is him
 //                    (one door a scenario)
-//   doormenu-knobs   ORDERS.doorRay off is the pick as it was: the same cursor positions, taken by targetAt of the ray's landing point alone — and fewer
-//                    of them the door
-// The family's own red path: DOORMENU_BREAK=1 bun run tools/qa/probes.ts doormenu-drawn must FAIL (the doorway rule switched off under the probe).
+// THE DOORWAY RULE AND THE ONE OUTSIDE ORDER ARE SETTLED (ORDERS.doorRay, DOORTOOLS.outsidePlain; 2026-11-07): nothing here writes either or asks the pick by
+// nearness alone. Out with that: the probe `knobs` (the knob off is the pick as it was), the 'by nearness alone' count beside every line of `drawn` and
+// `open`, the threshold's page behind row 4 in `rows`, and the off pick `man` used to tell a hidden man from a shown one (now read off the scene's own boxes).
+// The family's own red path: DOORMENU_BREAK=1 bun run tools/qa/probes.ts doormenu-drawn must FAIL (the cursor read a quarter of the screen off every sample).
+// And of the door a reading is taken on: DOORMENUFIND_BREAK=1 bun run tools/qa/probes.ts doormenu-rows must FAIL (find, below: a leaf that moved under the stand).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { DOORTOOLS, TOOLS_PAGE, THR_PAGE } = await import(`${ROOT}/src/game/doortools.ts`);
+const { DOORTOOLS, TOOLS_PAGE, THR_PAGE, isOpen } = await import(`${ROOT}/src/game/doortools.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`);
@@ -41,7 +41,6 @@ const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
@@ -58,7 +57,7 @@ const reset = () => { Object.assign(DOORTOOLS, clone(DEFAULTS.DT)); Object.assig
 /** every probe leaves the knob tables as it found them, and one that throws is a FAIL line, not a crash of the runner */
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } finally { reset(); } };
 const quiet = <T>(fn: () => T): T => { if (VERBOSE) return fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 const pct = (a: number, b: number) => b ? `${Math.round(100 * a / b)} %` : '—';
 
 interface Scn { name: string; query: string; level?: string; squad: 2 | 4 }
@@ -73,7 +72,6 @@ async function rig(scn: Scn, seed = 33) {
     try { W = await standUp({ uploadEvery: 1, ...(scn.level ? { level: levelOfFile(scn.level) } : {}) }); W.game.godMode = true; startFromQuery(W.game, new URLSearchParams(scn.query)); }
     finally { console.log = log; console.error = err; console.warn = warn; } }
   const game = W.game, input = W.input, O = game.orders, world = game.engine.world, CW = W.canvas.clientWidth as number, CH = W.canvas.clientHeight as number;
-  if (process.env.DOORMENU_BREAK) ORDERS.doorRay = false;   // the family's red path
   const R = { W, game, input, O, scn, CW, CH,
     hostiles(): any[] { return [...(game.nightBreach.hostiles ?? []), ...(game.rescue.hostiles ?? [])]; },
     step(n = 1) { quiet(() => { for (let i = 0; i < n; i++) { game.player.visibility = 0.05; for (const h of R.hostiles()) if (h.state !== 'dead') h.dazzledUntil = game.time + 5; W.step(DT); } }); },
@@ -127,7 +125,7 @@ async function rig(scn: Scn, seed = 33) {
     /** The same read before whole-squad orders fold a teammate into the squad: it still names the man under the cursor. */
     under(sx: number, sy: number): any { input.mouseX = sx; input.mouseY = sy; return (O as any).targetUnderOf(input, W.cam, W.canvas); },
     /** every door of the level stood open and held there (the closer off, as the Director's doors.open(…, {hold}) does it) */
-    openAll() { for (const d of game.doors.list) { const a = Math.abs(d.maxA) >= Math.abs(d.minA) ? Math.min(d.maxA, 1.3) : Math.max(d.minA, -1.3); d.latched = false; d.closing = false; d.angle = a; d.vel = 0; d.quietT = -3600; d.place(); } R.step(4); },
+    openAll() { for (const d of game.doors.list) standOpen(d); R.step(4); },
     /** X pressed with the cursor at that pixel, a few frames with every key up: the panel's menu (or null) */
     openX(sx: number, sy: number): any { if (O.menu) O.close(); input.mouseX = sx; input.mouseY = sy; R.press(ORDERS.key); R.step(3); return O.hud().menu; },
   };
@@ -137,17 +135,19 @@ async function rig(scn: Scn, seed = 33) {
 type Rig = Awaited<ReturnType<typeof rig>>;
 const what = (t: any, d: any) => t.kind === 'door' ? (t.door === d ? 'door' : `the ${t.door.def.name} door`) : t.kind === 'floor' ? 'floor' : t.man ? 'a teammate' : 'nothing / Sam';
 
+/** DOORMENU_BREAK=1, the red path: the cursor is read a quarter of the screen to the side of every sample, so what X opens on is not the door drawn there */
+const SHIFT = process.env.DOORMENU_BREAK === '1' ? 0.25 : 0;
 /** every door of a rig from every spot round it: the samples where it is drawn, and what each picks */
-interface Sweep { doors: number; spots: number; drawn: number; hit: number; through: number; throughHit: number; was: number; hidden: number; onMan: number; atSam: number; other: number; leaf: number; misses: string[]; unseen: string[] }
+interface Sweep { doors: number; spots: number; drawn: number; hit: number; through: number; throughHit: number; hidden: number; onMan: number; atSam: number; other: number; leaf: number; misses: string[]; unseen: string[] }
 function sweep(R: Rig): Sweep {
-  const S: Sweep = { doors: 0, spots: 0, drawn: 0, hit: 0, through: 0, throughHit: 0, was: 0, hidden: 0, onMan: 0, atSam: 0, other: 0, leaf: 0, misses: [], unseen: [] };
+  const S: Sweep = { doors: 0, spots: 0, drawn: 0, hit: 0, through: 0, throughHit: 0, hidden: 0, onMan: 0, atSam: 0, other: 0, leaf: 0, misses: [], unseen: [] };
   for (const d of R.game.doors.list) {
     S.doors++; let seen = 0;
     for (const p of R.spots(d)) {
       R.stand(p); S.spots++;
       for (const q of R.samples(d)) {
         const L = R.look(d, q); if (!L) continue; if (!L.drawn) { S.hidden++; continue; }
-        const t = R.pick(L.sx, L.sy), ok = t.kind === 'door' && t.door === d;
+        const t = R.pick(L.sx + SHIFT * R.CW, L.sy), ok = t.kind === 'door' && t.door === d;
         // what the rule gives to something else, each counted apart: a teammate under the cursor, Sam's own body, a door nearer the landing point
         // (with whole-squad orders, CMDRING.wholeSquad, a teammate under the cursor is the squad itself and the target names no man, so the man is read a step earlier: orders.ts targetUnder)
         if (!ok && L.man && t.kind === 'none' && (t.man || (CMDRING.wholeSquad && R.under(L.sx, L.sy).man))) { S.onMan++; continue; }
@@ -156,7 +156,6 @@ function sweep(R: Rig): Sweep {
         if (!ok && t.kind === 'door' && L.leafOf === t.door) { S.leaf++; continue; }   // (another door's own leaf shows through this doorway and the cursor is on it: the leaf under the cursor is its door, before any doorway — orders.ts targetUnder)
         S.drawn++; seen++; if (ok) S.hit++; if (L.through) { S.through++; if (ok) S.throughHit++; }
         if (!ok && S.misses.length < 6) S.misses.push(`${d.def.name} from ${p[0].toFixed(1)},${p[2].toFixed(1)} at height ${q[1].toFixed(2)}: ${what(t, d)}${L.at ? ` (the ray lands ${Math.hypot(L.at[0] - d.frameCentre[0], L.at[2] - d.frameCentre[2]).toFixed(2)} m from the doorway)` : ''}`);
-        if (!process.env.DOORMENU_BREAK) { ORDERS.doorRay = false; const t0 = R.pick(L.sx, L.sy); ORDERS.doorRay = true; if (t0.kind === 'door' && t0.door === d) S.was++; }
       }
     }
     if (!seen) S.unseen.push(d.def.name);
@@ -164,19 +163,19 @@ function sweep(R: Rig): Sweep {
   return S;
 }
 const sweepWords = (S: Sweep) => `${S.doors} doors from ${S.spots} spots: the doorway drawn under the cursor ${S.drawn} times, that door's menu ${S.hit} (${pct(S.hit, S.drawn)}); `
-  + `of them through an open doorway ${S.through}, that door's ${S.throughHit}${process.env.DOORMENU_BREAK ? '' : `; by nearness alone, as it was: ${S.was} (${pct(S.was, S.drawn)})`}`
+  + `of them through an open doorway ${S.through}, that door's ${S.throughHit}`
   + `\n    not counted: hidden behind a wall or furniture ${S.hidden} · a teammate's body under the cursor ${S.onMan} · Sam's own body under the cursor ${S.atSam} · another door nearer ${S.other} · another door's own leaf seen through the doorway ${S.leaf}`
   + (S.unseen.length ? `\n    NEVER DRAWN from any spot: ${S.unseen.join(', ')}` : '') + (S.misses.length ? `\n    NOT THE DOOR: ${S.misses.join(' | ')}` : '');
 
 async function drawnFamily(title: string, open: boolean): Promise<boolean> {
-  const F = family(title); let tot = 0, hit = 0, was = 0;
+  const F = family(title); let tot = 0, hit = 0;
   for (const scn of LIST) {
     const R = await rig(scn); if (open) R.openAll();
-    const S = sweep(R); tot += S.drawn; hit += S.hit; was += S.was;
+    const S = sweep(R); tot += S.drawn; hit += S.hit;
     F.verdict(S.drawn > 0 && S.hit === S.drawn && !S.unseen.length, `${scn.name}: the cursor on a door as drawn is that door${open ? ', every door stood open' : ''}`, sweepWords(S));
     reset();
   }
-  console.log(`  all ${LIST.length} scenarios: ${hit} of ${tot} (${pct(hit, tot)}); by nearness alone ${was} (${pct(was, tot)})`);
+  console.log(`  all ${LIST.length} scenarios: ${hit} of ${tot} (${pct(hit, tot)})`);
   return F.done();
 }
 export const doormenuDrawn = guarded(() => drawnFamily("doormenu-drawn: X on a door as it is drawn opens that door's menu, in every scenario", false));
@@ -191,14 +190,23 @@ function panel(R: Rig): { rows: PanelRow[]; wait: boolean; page: string | null }
 }
 const shape = (rows: PanelRow[]) => rows.map(r => `${r.key} ${r.id}${r.opens ? ' ▸' : ''}`).join(' · ');
 /** a door of the rig with a spot and a pixel where the cursor is on it as asked: `through` an open doorway, or on the shut leaf */
+/** A door that stands as asked (`through`: swung wide; else shut, by the door tools' own word for it too) with the cursor on it from a spot by it.
+ *  THE LEAF IS ASKED AGAIN AFTER SAM IS STOOD BY IT: a stand steps the game, and the floor's own men open doors. In the records office on the page's stand
+ *  records_west is swung wide while Sam is put by it; taken as the shut door it was a moment before, its tools page (rightly 'shut that door' on the
+ *  charge's digit) was held to the shut door's shape. A door that moved under the stand is left for the next. DOORMENUFIND_BREAK=1 = the red path: the
+ *  second asking is left out and the door found shut is stood open before it is handed back, as that man did. */
+const FIND_BREAK = process.env.DOORMENUFIND_BREAK === '1';
+const standsAs = (d: any, through: boolean) => (Math.abs(d.angle) > 0.6) === through && (through || !isOpen(d));
+function standOpen(d: any) { const a = Math.abs(d.maxA) >= Math.abs(d.minA) ? Math.min(d.maxA, 1.3) : Math.max(d.minA, -1.3); d.latched = false; d.closing = false; d.angle = a; d.vel = 0; d.quietT = -3600; d.place(); }
 function find(R: Rig, through: boolean): { d: any; sx: number; sy: number } | null {
-  for (const d of R.game.doors.list) { if ((Math.abs(d.angle) > 0.6) !== through) continue;
-    for (const p of R.spots(d)) { R.stand(p); for (const q of R.samples(d)) { const L = R.look(d, q); if (L && L.drawn && L.through === through && (through || L.own)) return { d, sx: L.sx, sy: L.sy }; } } }
+  for (const d of R.game.doors.list) { if (!standsAs(d, through)) continue;
+    for (const p of R.spots(d)) { R.stand(p); if (!FIND_BREAK && !standsAs(d, through)) break;
+      for (const q of R.samples(d)) { const L = R.look(d, q); if (L && L.drawn && L.through === through && (through || L.own)) { if (FIND_BREAK && !through) { standOpen(d); R.step(4); } return { d, sx: L.sx, sy: L.sy }; } } } }
   return null;
 }
 export const doormenuRows = guarded(async () => {
   const F = family('doormenu-rows: the same door menu, the same tools page, the same keys in every scenario — on a shut door and through an open one');
-  let ref: { first: string; tools: string; thr: string; from: string } | null = null as any;
+  let ref: { first: string; tools: string; from: string } | null = null as any;
   for (const scn of LIST) {
     const R = await rig(scn); const bad: string[] = [], said: string[] = [];
     // one door stood open (the first with floor by it), the rest as staged — the level's own shut doors are the shut case
@@ -212,44 +220,33 @@ export const doormenuRows = guarded(async () => {
       const tools = R.O.menu ? panel(R) : null; if (!tools || tools.page !== TOOLS_PAGE) { bad.push(`${label}: 5 did not turn to the tools page`); if (R.O.menu) R.O.close(); return; }
       if (scn.squad === 4 && !tools.wait) bad.push(`${label}: the four's tools page has no 'wait for my word' row`);
       if (scn.squad === 2 && tools.wait) bad.push(`${label}: the pair's tools page has a 'wait for my word' row`);
-      // row 4 of the tools, read under the stand's own rule (as doortools-menu reads it). The pages as they were: the page of threshold work behind it (both
-      // forms of the order, on 1 and 2). DOORTOOLS.outsidePlain (on in the page): no page — row 4 IS the one order, 'clear from outside', and 4 pressed gives it
-      // to the men on that door; nothing of the tools turns to the threshold's page any more
-      let c3 = '', thrSaid = '', thrRows: PanelRow[] = [];
-      if (!DOORTOOLS.outsidePlain) {
-        const deeper = tools.rows.find(r => r.opens === THR_PAGE); if (!deeper) bad.push(`${label}: no row of the tools opens the threshold's page`); else if (deeper.key !== '4') bad.push(`${label}: the threshold row is on "${deeper.key}"`);
-        R.press('Digit4'); R.step(2);
-        const thr = R.O.menu ? panel(R) : null; if (!thr || thr.page !== THR_PAGE) { bad.push(`${label}: 5, 4 did not turn to the threshold's page`); if (R.O.menu) R.O.close(); return; }
-        if ((scn.squad === 4) !== thr.wait) bad.push(`${label}: the threshold's page ${thr.wait ? 'has' : 'has no'} 'wait for my word' row for a squad of ${scn.squad}`);
-        c3 = thrSaid = shape(thr.rows); thrRows = thr.rows;
-      } else {
-        const turn = tools.rows.find(r => r.opens === THR_PAGE), one = tools.rows.find(r => r.id === 'thresholdHold');
-        if (turn) bad.push(`${label}: a row of the tools still turns to the threshold's page ("${turn.key} ${turn.text}")`);
-        if (!one) bad.push(`${label}: no row of the tools is 'clear from outside'`);
-        else if (one.key !== '4') bad.push(`${label}: 'clear from outside' is on "${one.key}"`);
-        else if (!one.text.startsWith('clear from outside')) bad.push(`${label}: row 4 reads "${one.text}"`);
-        const onDoor = () => (R.game.doorTools.ops as any[]).filter(op => op.kind === 'threshold' && op.door === at.d), before = onDoor();
-        R.press('Digit4'); R.step(2);
-        const given = onDoor().filter(op => !before.includes(op)), up = !!R.O.menu;
-        if (one && !one.why) { if (!given.length) bad.push(`${label}: 4 gave no order on ${at.d.def.name}`); if (up) bad.push(`${label}: 4 gave the order and left the menu up (page ${R.O.menu.page ?? 'the first'})`); }
-        else if (one && given.length) bad.push(`${label}: 'clear from outside' is greyed (${one.why}) and 4 gave the order all the same`);
-        thrSaid = given.length ? `4 the order itself (the men to ${at.d.def.name}, from outside)` : `4 the order itself (not given here)`;
-        // the men taken off that door again ('fall in', the first page's 3): the open doorway and the empty pouch below are read with nobody at work
-        if (given.length) { if (R.O.menu) R.O.close(); R.openX(at.sx, at.sy); if (R.O.menu) { R.press('Digit3'); R.step(2); } if (onDoor().length) bad.push(`${label}: 'fall in' left the men on ${at.d.def.name}`); }
-        else if (!R.O.menu) R.openX(at.sx, at.sy);
-      }
+      // row 4 of the tools IS the one order, 'clear from outside', and 4 pressed gives it to the men on that door; nothing of the tools turns to the
+      // threshold's page
+      let thrSaid = '';
+      const turn = tools.rows.find(r => r.opens === THR_PAGE), one = tools.rows.find(r => r.id === 'thresholdHold');
+      if (turn) bad.push(`${label}: a row of the tools still turns to the threshold's page ("${turn.key} ${turn.text}")`);
+      if (!one) bad.push(`${label}: no row of the tools is 'clear from outside'`);
+      else if (one.key !== '4') bad.push(`${label}: 'clear from outside' is on "${one.key}"`);
+      else if (!one.text.startsWith('clear from outside')) bad.push(`${label}: row 4 reads "${one.text}"`);
+      const onDoor = () => (R.game.doorTools.ops as any[]).filter(op => op.kind === 'threshold' && op.door === at.d), before = onDoor();
+      R.press('Digit4'); R.step(2);
+      const given = onDoor().filter(op => !before.includes(op)), up = !!R.O.menu;
+      if (one && !one.why) { if (!given.length) bad.push(`${label}: 4 gave no order on ${at.d.def.name}`); if (up) bad.push(`${label}: 4 gave the order and left the menu up (page ${R.O.menu.page ?? 'the first'})`); }
+      else if (one && given.length) bad.push(`${label}: 'clear from outside' is greyed (${one.why}) and 4 gave the order all the same`);
+      thrSaid = given.length ? `4 the order itself (the men to ${at.d.def.name}, from outside)` : `4 the order itself (not given here)`;
+      // the men taken off that door again ('fall in', the first page's 3): the open doorway and the empty pouch below are read with nobody at work
+      if (given.length) { if (R.O.menu) R.O.close(); R.openX(at.sx, at.sy); if (R.O.menu) { R.press('Digit3'); R.step(2); } if (onDoor().length) bad.push(`${label}: 'fall in' left the men on ${at.d.def.name}`); }
+      else if (!R.O.menu) R.openX(at.sx, at.sy);
       // (through an open doorway the charge's digit holds its stand-in, 'shut that door' — shutdoor.ts: the same page, the same digits)
       const a = shape(first.rows), b = through ? shape(tools.rows).replace('3 shutDoor', '3 charge') : shape(tools.rows);
-      if (!ref) ref = { first: a, tools: b, thr: c3, from: `${scn.name}, ${label}` };
-      if (c3 !== ref.thr) bad.push(`${label}: threshold page "${c3}" ≠ "${ref.thr}" (${ref.from})`);
-      for (const r of thrRows) if (r.why && !(r.off && r.text.includes(r.why.replace(/\.$/, '')))) bad.push(`${label}: '${r.id}' cannot be used (${r.why}) but its row does not say so ("${r.text}"${r.off ? '' : ', not greyed'})`);
+      if (!ref) ref = { first: a, tools: b, from: `${scn.name}, ${label}` };
       if (a !== ref.first) bad.push(`${label}: first page "${a}" ≠ "${ref.first}" (${ref.from})`);
       if (b !== ref.tools) bad.push(`${label}: tools page "${b}" ≠ "${ref.tools}" (${ref.from})`);
       // a tool that cannot be used here is listed with its reason — on the panel too
       for (const r of tools.rows) if (r.why && !(r.off && r.text.includes(r.why.replace(/\.$/, '')))) bad.push(`${label}: '${r.id}' cannot be used (${r.why}) but its row does not say so ("${r.text}"${r.off ? '' : ', not greyed'})`);
       if (!through && !tools.rows.some(r => !r.why)) bad.push(`${label}: no tool can be used on it (${tools.rows.map(r => `${r.id}: ${r.why}`).join(' · ')})`);
       if (through) { const c = tools.rows.find(r => r.id === 'charge' || r.id === 'shutDoor'); if (!c) bad.push(`${label}: neither the charge row nor 'shut that door' is on the page`); else if (c.key !== '3') bad.push(`${label}: '${c.id}' is on "${c.key}"`); else if (c.id === 'charge' && !c.why) bad.push(`${label}: a charge on an open door is offered`); }
-      said.push(`${label} (${at.d.def.name}): ${a} → ${shape(tools.rows)}${tools.wait ? ' + wait' : ''} → ${thrSaid}${[...tools.rows, ...thrRows].filter(r => r.why).map(r => ` [${r.id}: ${r.why}]`).join('')}`);
+      said.push(`${label} (${at.d.def.name}): ${a} → ${shape(tools.rows)}${tools.wait ? ' + wait' : ''} → ${thrSaid}${tools.rows.filter(r => r.why).map(r => ` [${r.id}: ${r.why}]`).join('')}`);
       if (R.O.menu) R.O.close(); R.step(2);
     };
     read('a shut door', false);
@@ -258,15 +255,17 @@ export const doormenuRows = guarded(async () => {
     // and the next one tried. Where a door swings both ways the first is the one, as ever. The line names the door it read.)
     if (!find(R, true)) for (const d of R.game.doors.list) { if (!R.spots(d).length) continue;
       const was = { latched: d.latched, closing: d.closing, angle: d.angle, vel: d.vel, quietT: d.quietT };
-      const a = Math.abs(d.maxA) >= Math.abs(d.minA) ? Math.min(d.maxA, 1.3) : Math.max(d.minA, -1.3); d.latched = false; d.closing = false; d.angle = a; d.vel = 0; d.quietT = -3600; d.place(); R.step(4);
+      standOpen(d); R.step(4);
       if (find(R, true)) break;
       Object.assign(d, was); d.place(); R.step(4); }
     read('an open doorway', true);
     // nothing left to bang with: the row stays, greyed, with the reason
-    { const at = find(R, false); if (at) { R.game.doorTools.bangs = 0; R.openX(at.sx, at.sy); if (R.O.menu) { R.press('Digit5'); R.step(2); const t = R.O.menu ? panel(R) : null, b = t?.rows.find(r => r.id === 'bangClear');
-        if (!b) bad.push('no bangs left: the bang row is absent'); else if (!(b.off && b.why)) bad.push(`no bangs left: the bang row is not greyed with a reason ("${b.text}")`); else said.push(`no bangs left: ${b.key} ${b.text}`);
-        if (t && ref && shape(t.rows) !== ref.tools) bad.push(`no bangs left: the tools page changed shape ("${shape(t.rows)}")`); if (R.O.menu) R.O.close(); } else bad.push('no bangs left: X opened no menu'); } }
-    F.verdict(!bad.length, `${scn.name}: X on a door = the door's menu with the tools on 5, the tools page on 1 to 4, ${DOORTOOLS.outsidePlain ? `'clear from outside' the one order on its 4` : `the threshold's page behind its 4`}`, bad.length ? bad.join('\n    ') : said.join('\n    '));
+    { const at = find(R, false); if (at) { R.game.doorTools.bangs = 0; R.openX(at.sx, at.sy);
+      if (R.O.menu && (R.O.menu.target.kind !== 'door' || R.O.menu.target.door !== at.d)) { bad.push(`no bangs left (${at.d.def.name}): the menu is on ${what(R.O.menu.target, at.d)}`); R.O.close(); }
+      else if (R.O.menu) { R.press('Digit5'); R.step(2); const t = R.O.menu ? panel(R) : null, b = t?.rows.find(r => r.id === 'bangClear');
+        if (!b) bad.push('no bangs left: the bang row is absent'); else if (!(b.off && b.why)) bad.push(`no bangs left: the bang row is not greyed with a reason ("${b.text}")`); else said.push(`no bangs left (${at.d.def.name}, shut): ${b.key} ${b.text}`);
+        if (t && ref && shape(t.rows) !== ref.tools) bad.push(`no bangs left: the tools page changed shape ("${shape(t.rows)}" on ${at.d.def.name}, which stands ${isOpen(at.d) ? 'OPEN: the leaf moved under the probe' : 'shut'})`); if (R.O.menu) R.O.close(); } else bad.push('no bangs left: X opened no menu'); } }
+    F.verdict(!bad.length, `${scn.name}: X on a door = the door's menu with the tools on 5, the tools page on 1 to 4, 'clear from outside' the one order on its 4`, bad.length ? bad.join('\n    ') : said.join('\n    '));
     reset();
   }
   return F.done();
@@ -285,15 +284,17 @@ export const doormenuMan = guarded(async () => {
         man.char.pos[0] = at[0]; man.char.pos[1] = 0; man.char.pos[2] = at[2]; O.give('hold', { kind: 'none', at: [...game.player.char.pos] }, 'all'); R.step(3);   // (put there FIRST: a hold is where he stands — told to hold and then moved, he walks back to where he was told, and at a walk he is still inside the tolerance below when the cursor is read)
         if (Math.hypot(man.char.pos[0] - at[0], man.char.pos[2] - at[2]) > 0.4) continue;   // he walked off it
         const [sx, sy, front] = R.W.cam.project([man.char.pos[0], 1.2, man.char.pos[2]], CW, CH); if (!front) continue;
-        const ray = R.W.cam.ray(sx / CW, sy / CH); if (!(man.char.rayHit(ray.ro, ray.rd, 200) >= 0)) continue;
+        const ray = R.W.cam.ray(sx / CW, sy / CH), t = man.char.rayHit(ray.ro, ray.rd, 200); if (!(t >= 0)) continue;
         if (!O.doorOnRay(ray.ro, ray.rd)) continue;   // his chest is not drawn over the doorway from here: another spot
-        const on = R.pick(sx, sy); ORDERS.doorRay = false; const off = R.pick(sx, sy); ORDERS.doorRay = true;
-        if (!(off.kind === 'none' && off.man === man)) continue;   // something hides him from here
+        // (something hides him from here — a wall, a leaf, another body nearer along the ray: another spot. Asked of the scene, not of the pick)
+        if (game.col.segmentBlocked(ray.ro, [ray.ro[0] + ray.rd[0] * t, ray.ro[1] + ray.rd[1] * t, ray.ro[2] + ray.rd[2] * t])) continue;
+        if ([game.player, ...game.guards].some((o: any) => { if (o === man || !o.char?.rayHit) return false; const u = o.char.rayHit(ray.ro, ray.rd, 200); return u >= 0 && u < t; })) continue;
+        const on = R.pick(sx, sy);
         if (!(on.kind === 'none' && on.man === man)) bad.push(`${d.def.name}: the cursor on ${man.callsign} in the doorway is ${what(on, d)}`);
         R.input.mouseX = sx; R.input.mouseY = sy; R.press(ORDERS.whoKey); if (O.who !== O.squad().indexOf(man)) bad.push(`${d.def.name}: T on him gave who = ${String(O.who)}`);
         R.press(ORDERS.whoKey); R.step(1);
         const hud = R.openX(sx, sy), mt = O.menu?.target; if (!hud || !mt || mt.kind !== 'none' || mt.man !== man) bad.push(`${d.def.name}: X on him opened ${mt ? what(mt, d) : 'no menu'}`);
-        else said = `${man.callsign} stood in the ${d.def.name} doorway, the cursor on his chest (drawn over the doorway): X → his menu (${shape(panel(R).rows)}), T → him; the same with the knob off`;
+        else said = `${man.callsign} stood in the ${d.def.name} doorway, the cursor on his chest (drawn over the doorway): X → his menu (${shape(panel(R).rows)}), T → him`;
         if (O.menu) O.close();
         break search;
       }
@@ -302,28 +303,5 @@ export const doormenuMan = guarded(async () => {
     F.verdict(!bad.length, `${scn.name}: a teammate in a doorway keeps his own menu`, bad.length ? bad.join('\n    ') : said);
     reset();
   }
-  return F.done();
-});
-
-export const doormenuKnobs = guarded(async () => {
-  const F = family('doormenu-knobs: ORDERS.doorRay off is the pick as it was (targetAt of the ray\'s landing point)');
-  const two = [LIST.find(s => /rescue/i.test(s.name) && !s.level)!, LIST.find(s => s.level === 'registry.json')!].filter(Boolean);
-  if (two.length < 2) F.verdict(false, 'the two rescues are on the start card', `found ${two.length}`);
-  let allOff = 0, allOn = 0;
-  for (const scn of two) {
-    const R = await rig(scn); const { game, O } = R; let n = 0, same = 0, fewer = 0, now = 0;
-    for (const d of game.doors.list) for (const p of R.spots(d).slice(0, 3)) { R.stand(p);
-      for (const q of R.samples(d)) { const L = R.look(d, q); if (!L || L.man || !L.at) continue;
-        const old = O.targetAt(L.at);
-        ORDERS.doorRay = false; const off = R.pick(L.sx, L.sy); ORDERS.doorRay = true; const on = R.pick(L.sx, L.sy);
-        n++; if (off.kind === old.kind && off.door === old.door && off.man === old.man) same++;
-        if (L.drawn) { if (off.kind === 'door' && off.door === d) fewer++; if (on.kind === 'door' && on.door === d) now++; } } }
-    // (the rule on never loses the door where the old pick had it; that it FINDS more is asked over the scenarios together below — at a real-size doorway the
-    //  landing point's own pick already has the door at every drawn sample of the registry, 899 of 899, and there is nothing left for the ray to add there)
-    allOff += fewer; allOn += now;
-    F.verdict(n > 0 && same === n && fewer <= now, `${scn.name}: the knob off, the pick is the old rule's`, `${n} cursor positions: ${same} the same as targetAt of the landing point; the door where it is drawn: ${fewer} off, ${now} on`);
-    reset();
-  }
-  F.verdict(allOff < allOn, 'over the two: the ray finds the door where it is drawn more often than the landing point did', `${allOff} off, ${allOn} on`);
   return F.done();
 });

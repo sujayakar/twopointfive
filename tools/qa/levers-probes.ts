@@ -15,6 +15,9 @@
 //                   where the same runs without it have none — the lever plays alone. A defender throws his charge at a door he is coming through, so the
 //                   check plays a floor whose defenders come: The block's, since its rebuild, hold their rooms on standard and throw none either way.
 //                   LEVERS_BREAK=1 plays both arms without the lever: must fail
+// THESE LINES WERE WRITTEN FOR THREE LEVERS and ran, until 2026-11-07, with the fourth lever and the squad fog's off rung held down (told.ts's two switches,
+// by told-check.ts threeLevers). Both are settled up and the hold was refused, so it is out: a line here that counts three levers, or the fog's three rungs,
+// fails by what the game is today. The runs' own pin went the same way (SQUADDEAL.on off, handed to each playthrough).
 import { resolve } from 'node:path';
 import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -28,7 +31,6 @@ const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
 const { QUIETFOG } = await import(`${ROOT}/src/game/quietfog.ts`);   // (a quiet row's fog lever is live while that rule is on: the page, the shipped stand)
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
-const { threeLevers } = await import('./told-check.ts');   // (the fourth lever and the squad's fog-off rung are held down here: these lines count three levers — told-check.ts has them up)
 function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
@@ -48,8 +50,7 @@ async function withStore<T>(init: Record<string, string> | null, fn: (m: Map<str
 function fresh() { D.difficultyHere(''); D.setConeVisit(null); D.setDifficulty('standard', false); FOG.own = false; }
 
 // ───────────────────────────────────────────────────────────── rules ─────────────────────────────────────────────────────────────
-export const leversRules = (): Promise<boolean> => threeLevers(leversRules3);
-async function leversRules3(): Promise<boolean> {
+export async function leversRules(): Promise<boolean> {
   const F = family('levers-rules: the difficulty levers as rules — a level puts every lever on its rung, a lever moved alone writes its own rows and no other\'s');
   const ownWas = FOG.own;
   try {
@@ -133,7 +134,7 @@ async function leversRules3(): Promise<boolean> {
         `${kept.d} · a row's own hard link → ${kept.l}`);
       F.verdict(bare.d === `${plain}&difficulty=standard&fog=own&enemyai=hard` && bare.l === `${plain}&difficulty=hard&fog=own&enemyai=hard`, 'where nothing can be kept the link carries the moved levers itself, in place of whatever it carried', `${bare.d} · ${bare.l}`); }
     // ---- other roads: the kept own-eyes option, a lever the visitor arrived with, rows moved by hand, a lesson's page, a level's own kit
-    { const plain = '?roomclear&squad4&mute', flip = () => { const k = Object.keys(PRESSURE).find(k => typeof (PRESSURE as any)[k] === 'boolean' && k !== 'on')!; (PRESSURE as any)[k] = !(PRESSURE as any)[k]; };
+    { const plain = '?roomclear&squad4&mute', flip = () => { PRESSURE.second = !PRESSURE.second; };   // (a row moved by hand: one a level's own start writes — the table's first, `press`, is settled and takes no write)
       // the Game's constructor reads the kept feel rows back ROUND the fog lever (leversFog): a machine with no kept option, then one that keeps own eyes
       fresh(); D.setLever('fog', 'own', false); D.leversFog(() => { /* nothing kept */ }); const heldOn = FOG.own; D.setDifficulty('standard', false); const a = `${heldOn ? 'own' : 'NOT own'} → ${FOG.own ? 'STILL own' : 'off'}`, aOk = heldOn && !FOG.own;
       fresh(); D.setLever('fog', 'team', false); D.leversFog(() => { FOG.own = true; }); const heldOff = !FOG.own; D.setDifficulty('standard', false); const b = `${heldOff ? 'off' : 'NOT off'} → ${FOG.own ? 'own again' : 'LOST'}`, bOk = heldOff && FOG.own; FOG.own = false;
@@ -185,8 +186,7 @@ async function leversRules3(): Promise<boolean> {
 const leverRowsOf = (root: El) => root.all(e => !!e.attrs['data-lever'] && e.attrs['data-lever'] !== 'cams').map(r => ({ key: r.attrs['data-lever'], el: r, na: r.cls.has('na'), moved: r.cls.has('moved'),
   btns: r.all(e => e.tagName === 'BUTTON'), lit: r.all(e => e.tagName === 'BUTTON' && e.cls.has('on')).map(b => b.attrs['data-rung']).join(','), note: r.all(e => e.tagName === 'SPAN').at(-1)?.textContent ?? '' }));
 const press = (root: El, key: string, rung: string) => { const b = leverRowsOf(root).find(r => r.key === key)?.btns.find(b => b.attrs['data-rung'] === rung); if (!b?.onclick) throw new Error(`no ${key}:${rung} button`); b.onclick(); };
-export const leversScreens = (): Promise<boolean> => threeLevers(leversScreens3);
-async function leversScreens3(): Promise<boolean> {
+export async function leversScreens(): Promise<boolean> {
   const F = family('levers-screens: the lever rows on the mission sheet and the loadout screen (the real screens on a fake DOM)');
   const SEARCH = '?quality=high&mute', G = globalThis as any, ownWas = FOG.own;
   try {
@@ -254,8 +254,7 @@ async function leversScreens3(): Promise<boolean> {
 }
 
 // ───────────────────────────────────────────────────────────── run ─────────────────────────────────────────────────────────────
-export const leversRun = (): Promise<boolean> => threeLevers(leversRun3);
-async function leversRun3(): Promise<boolean> {
+export async function leversRun(): Promise<boolean> {
   const F = family('levers-run: the levers in a run — the fog lever in a Game built after it, the enemy kit playing with the AI on standard');
   const ownWas = FOG.own;
   try {
@@ -268,7 +267,7 @@ async function leversRun3(): Promise<boolean> {
       try {
         for (const kit of ['none', 'stuns']) {
           const file = resolve(dir, `${kit}.json`);
-          const pr = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/qa/playthrough.ts'), '--scn', 'room-clear-four', '--seeds', '1-8', '--jobs', '4', '--cap', '300', '--set', J({ DIFFICULTY: { level: 'standard', kit: broken ? 'none' : kit }, SQUADDEAL: { on: false } }), '--json', file], { stdout: 'ignore', stderr: 'ignore' });
+          const pr = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/qa/playthrough.ts'), '--scn', 'room-clear-four', '--seeds', '1-8', '--jobs', '4', '--cap', '300', '--set', J({ DIFFICULTY: { level: 'standard', kit: broken ? 'none' : kit } }), '--json', file], { stdout: 'ignore', stderr: 'ignore', env: process.env });
           await pr.exited;
           const out = JSON.parse(readFileSync(file, 'utf8')), list: any[] = out.runs ?? out;
           for (const r of list) { const n = r.def?.tactics?.bangs ?? 0; if (kit === 'stuns') bangsOn += n; else bangsOff += n; if (r.end === 'error' || r.error) errs++;

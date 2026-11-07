@@ -20,7 +20,6 @@
 // asks carrying the same light, nothing un-noted may change, and the step's list and its boxes must be handed back unwritten.
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync } from 'node:fs';
-import { hudExpireBubbles } from '../../src/game/journal.ts';
 import { resolve } from 'node:path';
 
 export async function replayfogCheck(): Promise<boolean> {
@@ -32,7 +31,7 @@ export async function replayfogCheck(): Promise<boolean> {
   const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
   const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
   const { thinWant } = await import(`${ROOT}/src/game/thinline.ts`);
-  const { irMade, IR } = await import(`${ROOT}/src/game/irlaser.ts`);
+  const { irMade } = await import(`${ROOT}/src/game/irlaser.ts`);
   const log = console.log;
   const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { const e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = e; console.warn = w; } };
   let fails = 0;
@@ -70,8 +69,8 @@ export async function replayfogCheck(): Promise<boolean> {
   Math.random = seeded(11);
   const W: any = await quiet(() => standUp({ level: lvl })); const g = W.game, world = g.engine.world, FW = g.fogOfWar; g.godMode = true;
   await quiet(() => startFromQuery(g, new URLSearchParams('roomclear&squad4')));
-  if ('teamOff' in IR) (IR as { teamOff: boolean }).teamOff = false;   // (the team's lasers put off, a later default-on switch of the page's: this check reads the squad's infrared lines in the drawn list — held off on either stand)
-  FOG.cone = true; FOG.own = false; FOG.things = true; FOG.doors = true; FOG.squadDoors = false;   // (squadDoors off on either stand: the door the squad works is then a leaf the fog draws where it was last seen — the case the lift must put right)
+  // (the team's lasers put off, IR.teamOff, is settled on and no longer written: until 2026-11-07 this check held it off to read the squad's infrared lines in the drawn list)
+  FOG.cone = true; FOG.own = false;   // (the fog's things, doors and squad doors are settled on and no longer written. Until 2026-11-07 this staging held FOG.squadDoors off so that the door the squad works was a leaf the fog drew where it was last seen: the squad's own door is now drawn as it stands, so 'held a leaf where it was last seen' is asked of whatever leaf the run leaves out of the eyes)
 
   async function arm(lift: boolean, viewer: boolean, tube: boolean | null = null, goggles = false, thin = false): Promise<Arm> {
     const A: Arm = { digests: [], lifted: 0, hiddenMax: 0, more: 0, doors: 0, bad: [], ir: 0, irMax: 0, thin: 0, thinMax: 0, fat: 0 };
@@ -83,10 +82,9 @@ export async function replayfogCheck(): Promise<boolean> {
       const at = (b: any) => JSON.stringify([b.center, b.half, b.yaw ?? 0]);
       for (let f = 0; f < 60 * secs; f++) {
         W.step(DT);
-        if (!lift && tube === null) hudExpireBubbles(g);   // (the HUD's one write to the game, made after every step on a page: here in every arm, in the lift arm inside the lifted draw as the player makes it)
         if (thin) {   // (the picture's own pixel: the same draw twice, at the step's pixel and at another — only the thin lines' width and glow may differ, and only in the drawn list)
           const dyn = world.dynamics, before = dyn.slice(), was = before.map((b: any) => `${b.h}|${b.emissive}`), px = BREAK ? 0 : g.mPerPx * (f % 2 ? 6 : 1 / 8);
-          g.fogLift(false, tube, 0); world.upload(); const LA = world.dynamics.slice(); hudExpireBubbles(g); g.fogBack();
+          g.fogLift(false, tube, 0); world.upload(); const LA = world.dynamics.slice(); g.fogBack();
           g.fogLift(false, tube, px); world.upload(); const LB = world.dynamics; let n = 0;
           if (LB.length !== LA.length) note(f, `the fitted list holds ${LB.length} boxes, the unfitted ${LA.length}`);
           else for (let i = 0; i < LA.length; i++) { const a: any = LA[i], b: any = LB[i], want = thinWant(a, px), same = a.h[0] === b.h[0] && a.h[1] === b.h[1];
@@ -110,7 +108,7 @@ export async function replayfogCheck(): Promise<boolean> {
           const irNow = world.dynamics.filter(irMade).length;
           if (tube) { if (irStep) note(f, 'the step made infrared boxes with the run\'s goggles up'); if (irNow) { A.ir++; A.irMax = Math.max(A.irMax, irNow); if (world.dynamics === dyn) note(f, 'infrared boxes written into the step\'s own list'); } }
           else { if (irStep) { A.ir++; A.irMax = Math.max(A.irMax, irStep); } if (irNow) note(f, 'an infrared box drawn with the viewer\'s tube off'); if (world.dynamics.length !== before.length - irStep) note(f, 'more than the infrared boxes left out'); }
-          hudExpireBubbles(g); g.fogBack();
+          g.fogBack();
           if (world.dynamics !== dyn) note(f, 'the step\'s list not handed back');
           if (dyn.length !== before.length || dyn.some((b: any, i: number) => b !== before[i])) note(f, 'the step\'s list was written to');
           if (g.player.nv !== nv || g.player.nvAmount !== k) note(f, 'the player\'s goggles were touched');
@@ -135,7 +133,6 @@ export async function replayfogCheck(): Promise<boolean> {
               if (FW.doorN !== T.length || T.some((b, i) => at(before[k0 + i]) !== at(b))) A.doors++; }
             if (hid.length && world.dynamics.length < before.length) note(f, `fewer boxes lifted (${world.dynamics.length}) than fogged (${before.length})`);
           } else if (world.dynamics !== dyn || FW.bared) note(f, 'a lift with no viewer raised changed the picture');
-          hudExpireBubbles(g);
           if (!BREAK) g.fogBack(); else { g.fogBack = function () { }; FW.bared = false; FW.frame.on = on; world.dynamics = dyn; g.fogHeld = null; }   // (BREAK: everything put back but the pack)
           if (world.dynamics !== dyn) note(f, 'the step\'s list not handed back');
           if (dyn.length !== before.length || dyn.some((b: any, i: number) => b !== before[i])) note(f, 'the step\'s list was written to');

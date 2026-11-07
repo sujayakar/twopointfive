@@ -9,9 +9,10 @@
 //   hand   SAM'S OWN CAN: the team stacked ('stack up'), the door pushed open, one of his canisters landing inside (combat.ts dropThrowable), and 'open and
 //          clear' given the moment it goes off — the player's two hands doing what the order does
 // THE SITUATION: the room is HOT — a loud noise at this door four seconds before the order, so its men are on it (the case a bang is for; behind a door nobody
-// is watching the plain door has surprise and needs nothing). The team starts a few steps outside the door. The rest of the floor stays in its rooms
-// (ROOMFIGHT.rally off for the run) and any other defender with a line to where the team gathers is taken off the floor first: this counts the ENTRY, not the
-// building. Sam commands unseen and unhurt (the 'hand' arm's can is his; he does not fight).
+// is watching the plain door has surprise and needs nothing). The team starts a few steps outside the door. Any other defender with a line to where the
+// team gathers is taken off the floor first: this counts the ENTRY, not the building. (Until 2026-11-07 the stage also wrote ROOMFIGHT.rally off, to keep the
+// rest of the floor in its rooms. The rally is settled on, the write was refused, and it is out: the floor rallies here as on the page.) Sam commands
+// unseen and unhurt (the 'hand' arm's can is his; he does not fight).
 // COUNTED per arm: teammates lost · the room's men down · room taken (all its men down, a teammate standing; 'emptied' = the rest fell back out of it) · hostile rounds in the three seconds after the
 // bang (what comes back through the doorway) · seconds from the order to the last of the room's men down.
 // --set '{"table":{"knob":value}}' writes the game's knob tables for the run (operative / hostile = FIGHT_SKILL rows, ROOMFIGHT, BLIND, DOORTOOLS, ORDERS,
@@ -45,7 +46,6 @@ const CVM: any = await import(`${ROOT}/src/game/cover.ts`);
 const BDM: any = await import(`${ROOT}/src/game/buddy.ts`).catch(() => null);   // (null in a checkout from before the lone defender's radio call)
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 
 const DT = 1 / 60;
 export type { Arm, Result, Spec } from './bang-tally-row.ts';   // (the row, and the rules that read it, stand no game: bang-tally-row.ts)
@@ -62,13 +62,11 @@ const DEFAULTS: Record<string, any> = Object.fromEntries(Object.entries(TABLES).
 let SET: Record<string, Record<string, unknown>> = {};
 /** knob overrides every later stage() applies over the defaults (the --set flag; a probe's red path) — {} = the build's own */
 export function setKnobs(set: Record<string, Record<string, unknown>>) { SET = set; }
-/** has this build that knob table (a pin for a switch that shipped later is only set where it exists) */
-export const hasKnobs = (k: string) => k in TABLES;
 function resetKnobs() {
   for (const [k, t] of Object.entries(TABLES)) Object.assign(t, clone(DEFAULTS[k]));
   for (const [k, row] of Object.entries(SET)) { if (!TABLES[k]) throw new Error(`--set: no table '${k}' (have ${Object.keys(TABLES).join(', ')})`); for (const key of Object.keys(row)) if (!(key in TABLES[k])) throw new Error(`--set: no knob '${k}.${key}'`); Object.assign(TABLES[k], clone(row)); }
 }
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 const quiet = async <T>(on: boolean, fn: () => T | Promise<T>): Promise<T> => { if (!on) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 
 /** TALLYDIFF_BREAK=1 (tools/qa/bang-tally-diff.ts's own red path): the door an entry is played on has a crate half a metre across laid a stride and a half
@@ -82,7 +80,7 @@ function crateTheWay(level: any, door: string) {
 /** a scenario stood up as its row starts it, stepped until the room fight has its defenders in their rooms */
 export async function stage(scnId: string, seed: number, crated?: string) {
   const E = SCENARIOS.find((e: any) => e.id === scnId); if (!E) throw new Error(`no scenario '${scnId}' — ${SCENARIOS.map((e: any) => e.id).join(', ')}`);
-  resetKnobs(); RFM.ROOMFIGHT.rally = false;
+  resetKnobs();
   Math.random = seeded(0xba46 + seed * 7919);
   const level = E.level ? levelOfFile(E.level) : null;
   if (crated) { if (!level) throw new Error(`TALLYDIFF_BREAK=1: '${scnId}' has no level file of its own to lay a crate in (try a row that has one)`); crateTheWay(level, crated); }
@@ -226,7 +224,7 @@ if (import.meta.main) {
     const chunks: Spec[][] = Array.from({ length: jobs }, () => []); specs.forEach((s, i) => chunks[i % jobs].push(s));
     const tmp = process.env.TMPDIR ?? '/tmp'; const results: Result[] = [];
     await Promise.all(chunks.map(async (chunk, i) => { if (!chunk.length) return; const file = `${tmp}/bang-tally-${process.pid}-${i}.json`; writeFileSync(file, JSON.stringify(chunk));
-      const p = Bun.spawn(['bun', 'run', import.meta.path, 'worker', file, ...(set ? ['--set', set] : [])], { stdout: 'pipe', stderr: 'ignore' });
+      const p = Bun.spawn(['bun', 'run', import.meta.path, 'worker', file, ...(set ? ['--set', set] : [])], { stdout: 'pipe', stderr: 'ignore', env: process.env });
       const text = await new Response(p.stdout).text(); await p.exited;
       for (const line of text.split('\n')) if (line.startsWith('@@')) results.push(JSON.parse(line.slice(2))); }));
     if (results.length !== specs.length) console.error(`bang-tally: ${specs.length - results.length} runs gave no result (a worker died)`);

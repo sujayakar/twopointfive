@@ -18,19 +18,16 @@
 //   key replays so: journal.ts).
 // No dice, no clock but the Game's, nothing read off the picture. STICKY.on: on in the page (?nosticky), off in the module and on the frozen stand
 // (TPS_STICKY=1) — off, no card row, no load on any rifle, no eye: the build as it was.
-import { SideMap, GameSideMap } from '../math/side';
+import { GameSideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
-import { BoxFlag, makeBox, Box, MKEY } from '../scene/boxes';
-import type { Character } from './character';
-import type { Game, Guard, Interactable, Player, Verb } from './game';
-import type { ThrowSolution } from './throwables';
+import { Box } from '../scene/boxes';
+import type { Game, Interactable, Player, Verb } from './game';
 import type { FogEye } from './fogofwar';
 import { FOG, fieldDeg } from './fogofwar';   // (read inside functions only)
-import type { Ballistics } from './launcher';
-import { arcSolve, launchVel, staggerGuard } from './launcher';
-import { bodyHit } from './combat';
-import { civilianBodies, toAlarmed } from './civilians';
-import { NEARBY_M } from './player';   // (read inside functions only)
+import './combat';
+import './civilians';
+import './player';   // (read inside functions only)
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 /** Every number of it (Tab ▸ Player & weapons ▸ Sticky cameras; in the knob registry and a journal's tables).
  *  `carry` = the most a rifle is handed (kit.ts CAMS_MAX: the card's own cap, the same three) · `max` = the most that stay out on their walls (one more sent
@@ -66,7 +63,6 @@ export interface StickyCam { pos: Vec3; n: Vec3; vel: Vec3 | null; age: number; 
 /** a stuck camera as a checkpoint holds it (one in flight refuses the save: savestate.ts) */
 export interface StickySnap { p: number[]; n: number[]; si: number; id: number; }
 
-const B = (): Ballistics => STICKY;
 /** the character ids a camera's eye goes by in the fog's frame (the owner byte of nothing: no man's kit is skipped for it) */
 const EYE_ID = 200;
 
@@ -80,7 +76,7 @@ export function stickyVisitSet(g: Game, n: number) { const k = Math.max(0, Math.
 /** hand a player `n` cameras for his launcher (kit.ts kitPlayer: his card's; scenarioRun.ts: a mission started the 'cameras' way; a checkpoint's count): the
  *  count on the rifle, and 'cam' on its list of loads exactly while the switch is on, the gun has a tube and he was issued any (`listed`: a rifle whose
  *  cameras are all sent keeps the load, dry). Nothing issued = the rifle as it was built. */
-export function stickyIssue(pl: Player, n: number, listed = n > 0) {
+export function stickyIssue(pl: Player, n: number, listed = n > 0) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('stickyIssue', undefined, [pl, n, listed]); if (__r !== RUST_PASS) return __r as any; } }
   const rf = pl.rifle, has = rf.attachments.indexOf('cam');
   const want = STICKY.on && listed && rf.attachments.includes('ring');   // (the shotgun in the rifle's slot has no launcher)
   rf.cams = want ? Math.max(0, Math.min(Math.floor(n), STICKY.carry)) : 0;
@@ -88,92 +84,12 @@ export function stickyIssue(pl: Player, n: number, listed = n > 0) {
   else if (!want && has >= 0) { rf.attachments.splice(has, 1); if (rf.attIdx >= rf.attachments.length) rf.attIdx = rf.attachments.length ? 0 : -1; }
 }
 
-/** where to send one for what the cursor names: over that spot at STICKY.aimY — the flight goes on past it to the first thing it meets, so a point on the
- *  floor in front of a wall puts the camera high on that wall, and a man under the reticle is flown over */
-export function camAimPoint(g: Game, from: Vec3): Vec3 {
-  const ap = g.aimPoint; let x = ap[0], z = ap[2];
-  const dx = x - from[0], dz = z - from[2], d = Math.hypot(dx, dz);
-  if (d < 1.5 && d > 1e-3) { x = from[0] + dx / d * 1.5; z = from[2] + dz / d * 1.5; }   // (a cursor at his feet: the arc is still a throw forward)
-  return [x, STICKY.aimY, z];
-}
-/** the previewed flight (the canisters' polyline through Player.throwPreview): the live flight's own stepping, to the first static / leaf / prop / floor */
-export function camSolve(g: Game, from: Vec3, target: Vec3): ThrowSolution { return arcSolve(g, from, target, B()); }
-/** the launch velocity: dead level through the aim point's height (a camera is shot flat, not lobbed — the preview shows where it ends) */
-function camVel(from: Vec3, target: Vec3): Vec3 { return launchVel(from, target, B()); }
 
 /** One camera leaves `shooter`'s tube (player.ts, the launcher's gesture with the 'cam' load up): in the air from this frame, the tube's sound, and the room
  *  close by hears it go (a 'prop' event at the shooter — not gunfire). The count is the caller's to take. */
-export function fireCam(g: Game, pl: Player, from: Vec3, target: Vec3): StickyCam {
-  const id = ++pl.camSeq;   // (never handed out twice in a run: the fog's smoke sensors key on it, and a retired camera's last answer must not be read as a new one's)
-  const cam: StickyCam = { pos: v3.copy(from), n: [0, 1, 0], vel: camVel(from, target), age: 0, si: -1, id };
-  pl.cams.push(cam); STICKY_STATS.fired++;
-  g.audio.play('launcher', from, 0.5, { rate: 1.25 });
-  g.events.push({ kind: 'prop', pos: v3.copy(pl.char.pos), time: g.time, loud: false, level: STICKY.launchNoise, who: pl.char.id });
-  pl.noise = Math.max(pl.noise, STICKY.launchNoise);
-  return cam;
-}
+export function fireCam(g: Game, pl: Player, from: Vec3, target: Vec3): StickyCam { return crossToRust('fireCam', undefined, [g, pl, from, target]) as any; }
 
-/** it has come to rest: stuck to static `si` with normal `n`, or (si −1) lying on what is under `at` */
-function settle(g: Game, pl: Player, cam: StickyCam, at: Vec3, n: Vec3, si: number) {
-  cam.vel = null; cam.si = si;
-  if (si < 0) {   // dropped: straight down onto whatever is under it (a desk's top, the floor)
-    const o: Vec3 = [at[0], Math.max(at[1], 0.05), at[2]];
-    const dn = g.col.raycast(o, [0, -1, 0], 4), dp = g.props.raycast(o, [0, -1, 0], 4);
-    const t = Math.min(dn && dn.index < 1e6 ? dn.t : Infinity, dp ? dp.t : Infinity);
-    cam.pos = [at[0], Number.isFinite(t) ? Math.max(0, o[1] - t) : 0, at[2]]; cam.n = [0, 1, 0];
-    STICKY_STATS.dropped++;
-  } else { cam.pos = v3.copy(at); cam.n = v3.normalize(n); STICKY_STATS.stuck++; }
-  g.audio.play('canisterBounce', cam.pos, si < 0 ? 0.3 : 0.22, { rate: 2.1 });
-  g.events.push({ kind: 'prop', pos: [cam.pos[0], 0, cam.pos[2]], time: g.time, loud: false, level: STICKY.stickNoise, who: 0 });
-  // the most that stay out: the oldest stuck one retires (only ever reached with unlimited ammo on)
-  let out = 0; for (const c of pl.cams) if (!c.vel) out++;
-  while (out > STICKY.max) { const k = pl.cams.findIndex(c => !c.vel); if (k < 0) break; pl.cams.splice(k, 1); out--; STICKY_STATS.retired++; }
-}
 
-/** One frame of every camera a player has in the air (game.ts, beside the rings): drag and gravity in substeps and, along each, the first thing it meets — a
- *  living man who is not on his side (the ring's body stagger: he is hit by something, and knows from where; the camera drops at his feet and still works),
- *  loose furniture or a door leaf (it drops), a static (it sticks), the floor. And once a second a stuck one asks whether what it is on is still there (a
- *  short ray back into its surface: a wall blown out, a pane shot through where it sat) — if not it drops to the floor. */
-export function updateStickies(g: Game, dt: number) {
-  const pl = g.player; if (!pl.cams.length) return;
-  const R = STICKY;
-  for (const cam of [...pl.cams]) {   // (a copy: a camera coming to rest may retire the oldest out of the list)
-    if (!cam.vel) {
-      const was = Math.floor(cam.age); cam.age += dt;
-      if (cam.si >= 0 && Math.floor(cam.age) !== was && !g.col.raycast(v3.mad(cam.pos, cam.n, 0.05), v3.scale(cam.n, -1), 0.1)) settle(g, pl, cam, cam.pos, [0, 1, 0], -1);
-      continue;
-    }
-    const h = dt / R.substeps; let done = false;
-    for (let s = 0; s < R.substeps && !done; s++) {
-      cam.age += h;
-      const k = Math.exp(-R.drag * h); cam.vel = [cam.vel[0] * k, cam.vel[1] * k - R.gravity * h, cam.vel[2] * k];
-      const seg = v3.scale(cam.vel, h); const len = v3.len(seg); if (len < 1e-6) continue;
-      const dir = v3.scale(seg, 1 / len); const reach = len + R.radius;
-      let best = Infinity; let hitC: Character | null = null; let hitG: Guard | null = null;
-      const tryChar = (c: Character, gd: Guard) => { if (!c.alive) return; const t = bodyHit(c, cam.pos, dir, reach, () => false); if (t >= 0 && t < best) { best = t; hitC = c; hitG = gd; } };
-      for (const gd of g.guards) if (gd.state !== 'dead' && gd.team !== 'operative') tryChar(gd.char, gd);
-      for (const cv of civilianBodies(g)) tryChar(cv.char, cv);
-      const st = g.col.raycast(cam.pos, dir, reach); const ph = g.props.raycast(cam.pos, dir, reach);
-      const tS = st ? st.t : Infinity, tP = ph ? ph.t : Infinity;
-      if (hitC && hitG && best <= tS && best <= tP) {
-        const gd = hitG as Guard, c = hitC as Character, at = v3.mad(cam.pos, dir, Math.max(0, best - 0.1));
-        if (gd.civ) { c.anim.hit(); if (!gd.held) toAlarmed(g, gd, 'noise', [c.pos[0] - dir[0] * 4, 0, c.pos[2] - dir[2] * 4], false); }
-        else staggerGuard(g, gd, dir, pl.char);
-        settle(g, pl, cam, at, [0, 1, 0], -1); done = true; break;
-      }
-      if (ph && tP <= tS) { settle(g, pl, cam, v3.mad(cam.pos, dir, Math.max(0, tP - 0.1)), [0, 1, 0], -1); done = true; break; }
-      if (st) {
-        const at = v3.mad(cam.pos, dir, st.t);
-        if (st.index >= 1e6) settle(g, pl, cam, v3.mad(cam.pos, dir, Math.max(0, st.t - 0.1)), [0, 1, 0], -1);   // a door leaf: nothing to hold to that will not swing
-        else settle(g, pl, cam, at, st.n, st.index);
-        done = true; break;
-      }
-      cam.pos = v3.add(cam.pos, seg);
-      if (cam.pos[1] < R.radius) { settle(g, pl, cam, [cam.pos[0], 0, cam.pos[2]], [0, 1, 0], -1); done = true; break; }
-    }
-    if (!done && cam.age > R.life) settle(g, pl, cam, cam.pos, [0, 1, 0], -1);   // spent in the air (out over a yard): it falls where it is
-  }
-}
 
 const flat = (c: StickyCam) => Math.abs(c.n[1]) > STICKY.flatY;
 /** where a stuck camera's lens stands */
@@ -204,61 +120,17 @@ const NONE: FogEye[] = [], NONE_CAMS: StickyCam[] = [];
 // ---------------------------------------------------------------- taking one back (STICKY.take)
 type RowFn = (base: Interactable, verb: Verb, text: string, hints?: string, over?: Partial<Interactable>) => Interactable;
 type OfferFn = (it: Interactable, verbs: Interactable[]) => void;
-const canTake = (pl: Player) => STICKY.on && STICKY.take && pl.rifle.attachments.includes('ring');   // (no tube on the gun in his hands: nowhere to put it)
-/** the stuck camera of `pl`'s OWN nearest his feet within `r` m on the plan that he has a clear line to from his eyes (one on the far face of a wall is not
- *  his to reach); null = none */
-export function camNear(g: Game, pl: Player, r: number): StickyCam | null {
-  const p = pl.char.pos, eye: Vec3 = [p[0], pl.crouch ? 0.9 : 1.3, p[2]];
-  let best: StickyCam | null = null, bd = r;
-  for (const c of pl.cams) { if (c.vel) continue; const d = v3.distXZ(c.pos, p); if (d < bd && !g.col.solidBlocked(eye, camLens(c))) { best = c; bd = d; } }
-  return best;
-}
-const handsFree = (pl: Player) => !pl.dragging && !pl.sprinting && !pl.takedown && !pl.holding;
 /** the camera `pl` could take back this frame: his nearest stuck one, in reach, hands free (null: none, or the switch is down) */
-export function camToTake(g: Game, pl: Player): StickyCam | null { return canTake(pl) && handsFree(pl) ? camNear(g, pl, STICKY.takeReach) : null; }
+export function camToTake(g: Game, pl: Player): StickyCam | null { return crossToRust('camToTake', undefined, [g, pl]) as any; }
 /** The interaction row of a stuck camera (player.ts buildInteractables): the NEAREST one only (two in reach would be one row to the selector), a marker from
  *  NEARBY_M and 'take it back' in reach. It is listed past the rows Space had before it (player.ts: it takes no row from a door or a man). */
-export function stickyRows(g: Game, pl: Player, busy: boolean, row: RowFn, offer: OfferFn) {
-  if (!canTake(pl)) return;
-  const c = camNear(g, pl, NEARBY_M); if (!c) return;
-  const near = v3.distXZ(c.pos, pl.char.pos) < STICKY.takeReach, reach = near && handsFree(pl);
-  const it: Interactable = { kind: 'cam', pos: camLens(c), line1: 'sticky camera', line2: reach ? '' : near ? 'hands full' : 'step closer', inReach: reach, off: false };
-  offer(it, reach && !busy ? [row(it, 'takeCam', 'take it back')] : []);
-}
-/** Space on that row (game.ts, where a breaker's is acted on): the camera comes off its wall and is one more on his launcher — the load listed again if the
- *  last was sent — with a small tick at his feet. Its picture goes with it: the one sent before it sends again (stickyLive). False = nothing to take. */
-export function takeCam(g: Game, pl: Player): boolean {
-  const c = camToTake(g, pl); if (!c) return false;
-  pl.cams.splice(pl.cams.indexOf(c), 1);
-  stickyIssue(pl, Math.min(STICKY.carry, pl.rifle.cams + 1), true);   // (listed whatever the count: the load he took it for stays on the gun)
-  STICKY_STATS.taken++;
-  g.audio.play('canisterBounce', c.pos, 0.16, { rate: 2.6 });
-  g.events.push({ kind: 'prop', pos: v3.copy(pl.char.pos), time: g.time, loud: false, level: STICKY.takeNoise, who: pl.char.id });
-  pl.noise = Math.max(pl.noise, STICKY.takeNoise);
-  return true;
-}
+export function stickyRows(g: Game, pl: Player, busy: boolean, row: RowFn, offer: OfferFn): void { return goneWithTick('stickyRows') as any; }
 
-const BODY: Vec3 = [0.05, 0.05, 0.055], LENS: Vec3 = [0.012, 0.012, 0.014], LENS_LIVE: Vec3 = [0.42, 0.05, 0.04];
 /** Drawn (game.ts, beside the rings and the 40 mm rounds): a matt dark block the size of a fist flush on its surface and a darker lens proud of it — in
  *  flight, lens first along the line it flies; the lens of a camera that is SENDING — one the fog took as an eye this frame (fogofwar.ts: none with no fog
  *  up, none past the fog's eyes, FOG.eyes) — is a dull red, a dark one's black (paint, never a light).
  *  Picture only: NoShadow dynamics no ray, eye or foot meets. */
-export function stickyBoxes(g: Game, out: Box[]) {
-  const sends = sending(g);
-  for (const c of g.player.cams) {
-    const z = c.vel ? v3.normalize(c.vel) : c.n; const up = Math.abs(z[1]) > 0.9;
-    const yaw = up ? 0 : v3.yawOf(z);
-    const body: Vec3 = up ? [0.035, 0.014, 0.035] : [0.035, 0.035, 0.014], lens: Vec3 = up ? [0.012, 0.006, 0.012] : [0.012, 0.012, 0.006];
-    const c0 = v3.mad(c.pos, z, c.vel ? 0 : 0.014), c1 = v3.mad(c.pos, z, c.vel ? 0.02 : 0.034);
-    // (STICKY.mark: its two boxes carry a wall device's key, in the air and stuck — the fog's rule for loose things lets those through wherever they are,
-    // fogofwar.ts THING_PASS; unkeyed, a box is in the picture only on floor the team sees: one fired into the fog went out of it in flight)
-    const key = STICKY.mark ? MKEY.device + CAM_KEY + (c.id % 4096) * 2 : undefined;
-    out.push(makeBox({ c: c0, h: body, yaw, albedo: v3.copy(BODY), flags: BoxFlag.Dynamic | BoxFlag.NoShadow, mkey: key }));
-    out.push(makeBox({ c: c1, h: lens, yaw, albedo: v3.copy(sends(c) ? LENS_LIVE : LENS), flags: BoxFlag.Dynamic | BoxFlag.NoShadow, mkey: key === undefined ? undefined : key + 1 }));
-  }
-}
-/** where a stuck camera's keys start among the wall devices' (devices.ts numbers its own from 0 by ordinal: a few hundred at most) */
-const CAM_KEY = 0x800000;
+export function stickyBoxes(g: Game, out: Box[]): void { return goneWithTick('stickyBoxes') as any; }
 /** is this camera SENDING this frame: one of the newest STICKY.live stuck, and the fog took it as an eye (none with no fog up, none past the fog's eyes, FOG.eyes) */
 function sending(g: Game): (c: StickyCam) => boolean {
   const live = STICKY.on && g.fogOfWar.active ? stickyLive(g.player) : NONE_CAMS, eyes = g.fogOfWar.eyes;

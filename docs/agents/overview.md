@@ -117,13 +117,13 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      download with no address of the page's making and no `download` spelling (a `data:` link built as an object).
 src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity
                      maps for the reservoirs), rc.ts (cascades), probe.ts (the light meter / smoke probe queries), gbuffer.ts, texpool.ts (pooled targets + history resampling),
-                     denoise.ts (the shared denoiser's pipelines), froxels.ts, particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic
-                     map), meshbvh.ts + meshShadows.ts (mesh-traced character shadows at ultra), sdfrig.ts (round-cone proxy fit) + rigDebug.ts
-src/render/shaders/  common.wgsl (structs, flags, box/grid traversal, glassTrace, round-cone character terms) + sdfrig.wgsl; direct: restir.wgsl (THE estimator + the hybrid held-light path) and
-                     direct.wgsl (the ?norestir leader/tail path), both over direct_common.wgsl; sharp_direct / sharp_edge / gdown / gbaa (output-res direct + edge AA); refract_common.wgsl (pure refraction helpers: glass + rain); denoise.wgsl (one core, three
-                     clients) + softtile; the LEGACY chain dtemporal / softblur / temporal / giblur (only under ?legacydenoise); fgather.wgsl (final gather + mainGi resampling; gatherStrata variant) over
-                     gather_common + lighting_common; rc.wgsl / probe.wgsl (radiance cache, meter); reflect.wgsl + reflect_p5.wgsl (RT reflections; the ultra program), detail.wgsl, markings.wgsl,
-                     decals.wgsl; froxel.wgsl + volumetrics.wgsl over vol_common (haze, smoke march, rain); particles.wgsl / particles_common / particles_draw (+ wind_field.wgsl shared with the solver);
+                     denoise.ts (the shared denoiser's pipelines), particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic
+                     map), meshbvh.ts + meshShadows.ts (mesh-traced character shadows at ultra), sdfrig.ts (round-cone proxy fit)
+src/render/shaders/  common.wgsl (structs, flags, box/grid traversal, glassTrace, round-cone character terms) + sdfrig.wgsl; direct: restir.wgsl (THE estimator + the hybrid held-light path)
+                     over direct_common.wgsl (direct.wgsl, the leader/tail estimator, went 2026-11-07); sharp_direct / sharp_edge / gdown / gbaa (output-res direct + edge AA); refract_common.wgsl (pure refraction helpers: glass + rain); denoise.wgsl (one core, three
+                     clients) + softtile (the old chains dtemporal / softblur / temporal / giblur went 2026-11-07); fgather.wgsl + gather_split.wgsl (the final gather's helpers and its two programs; gatherStrata variant) over gather_split_common
+                     + lighting_common (the reflections over gather_common); rc.wgsl / probe.wgsl (radiance cache, meter); reflect.wgsl + reflect_p5.wgsl (RT reflections; the ultra program), detail.wgsl, markings.wgsl,
+                     decals.wgsl; volumetrics.wgsl over vol_common (haze, smoke march, rain: one march on every tier); particles.wgsl / particles_common / particles_draw (+ wind_field.wgsl shared with the solver);
                      gbuffer.wgsl, cards.wgsl, composite.wgsl (+ its SHARP compute twin) → taau.wgsl (or fxaa.wgsl on ?notaau) → bloom → post (AgX); resample.wgsl (history resampling); trace_lab.wgsl (the traversal lab);
                      smoke_read.wgsl (how every ray and march reads the smoke: appended to the scene prelude after common.wgsl)
 src/smoke/           ONE POOL OF 8³-CELL BRICKS on a level-wide lattice (the *Smoke = one pool of bricks* bullet; the eight 64³ boxes it replaced are in git history before 2026-10-10): smoke.ts
@@ -188,19 +188,18 @@ filter copies hint-free 8×8 tiles through), (bit 32768 is FREE: `SmokeRenderSki
 culling — the big one, ~15 % of the frame — and the unrotated-slab fast path; all exact), `GridSlabs` 1048576 (globals rejected by
 segment bounds + tighter origin-cell spans, exact, ~7 % of the frame), `ReachMask` 32 (per-light CPU reach masks over the 1 m grid,
 `render/reach.ts`: a walled-off light stays in U but is known dark — no leader slot, no tail pick, no ray — and doorway-only light ranks at ¼;
-`settings.lightReach`, −5 % direct); the experiment bits `TailChroma` 16384 and `Gloss` 2097152 (traced glossy reflections on floors
+`settings.lightReach`, −5 % direct); the experiment bit `Gloss` 2097152 (traced glossy reflections on floors
 flagged `BoxFlag.Gloss`: fgather.wgsl `glossReflection` → the passes' own half-res `spec` texture + history + one à-trous pass → composite
-adds it after the diffuse terms; `settings.gloss`, default off, Tab ▸ Indirect light + pause menu; debug view 10 shows the term alone); and
-the LOSSY option bit `CheckerDirect` 65536 mirrored from an `engine.settings` boolean the presets now set; the experiment bit `MeshShadows` 8388608
+adds it after the diffuse terms; `settings.gloss`, default off, Tab ▸ Indirect light + pause menu; debug view 10 shows the term alone); the experiment bit `MeshShadows` 8388608
 (`settings.meshShadows`, on in ultra (every ray) and — since 08-12 — HIGH in its NEAR-ONLY form (`settings.meshShadowsNear`, rigCfg bit 128: a ray walks a man's mesh only when it starts within 0.6 m of
 his cull sphere, his round cones otherwise — the contact seam closed for a bounded cost, docs/internal/render-defects-0812.md §1), off below; `render/meshbvh.ts` = CPU topology + reference, `render/meshShadows.ts` = the one scene storage
 buffer at binding 13 + skin/refit dispatches ('mesh' in the HUD), `common.wgsl meshShadowT` = the walk every `occluded()/occludedT()` takes instead of
 the round-cone proxies; `engine.meshShadowsAvailable` false when the adapter's storage-buffer budget has no 10th slot; `tools/qa/mesh-shadow-ref.ts` = the numbers +
 `--fixture` → `__meshTrace(fixture)` replays it on the GPU; `?meshShadows`); `Decals` 4194304 (up only while a mark exists), `Particles` 16777216
-(informational: the pass graph, not a shader, reads it), the perf lane's `BounceCards` 33554432 / `DirectSeedHold` 67108864 / `GiAdaptiveHist` 134217728,
-`Glass` 268435456 (`settings.glass`), `FroxelVol` 536870912 (`settings.froxelVol`, see the froxel bullet), `Restir` 1073741824 (`settings.restir`, the ReSTIR bullet) — bit 31 (the sign bit: compare with `>>> 0` / `!== 0` on the CPU) and bit 15 (32768, freed 2026-10) are the two left. **`frame.ts FrameFlags` is the one table** (common.wgsl's `FLAG_*` consts must
+(informational: the pass graph, not a shader, reads it), the perf lane's `BounceCards` 33554432,
+`Glass` 268435456 (`settings.glass`) — bit 31 (the sign bit: compare with `>>> 0` / `!== 0` on the CPU) is free, and since 2026-11-07 so are bit 29 (536870912: `FroxelVol`, gone with the froxel grid) and bits 14, 16, 26, 27 and 30 (16384, 65536, 67108864, 134217728, 1073741824: TailChroma, CheckerDirect, DirectSeedHold, GiAdaptiveHist and Restir, the old estimator's and the old denoiser's). Bit 15 (32768) is `RcRoom`, the look's. `bun run tools/qa/frame-layout.ts` prints the free bits. **`frame.ts FrameFlags` is the one table** (common.wgsl's `FLAG_*` consts must
 carry the same values under the same names) and the `Frame` uniform's tail is laid out cards @416 · cardSlots @432 · weatherA/B/C @464/480/496 · glassCfg
-@512 · weatherD @528 · volCfg @544 · froxelA/B/C @560/576/592 · prevCam @608 · rtCfg @624 · matCfg @640 · p5Cfg @656 · jitter @672 · markCfg @688 · sharpCfg @704 · sharpCfgB @720 · sharpCfgC @736 · rigCfg @752 · rigCfgB @768 · giCfg @784 · weatherE @800 · weatherF @816 (the particle rain's two rows) · shadeCfg @832 (the look prototype's shade row, zeros anywhere else) · `FRAME_BYTES` 848 (byte table at the top of frame.ts); `bun run tools/qa/frame-layout.ts` (also `probes.ts frame-layout`, and under
+@512 · weatherD @528 · volCfg @544 · prevCam @560 · rtCfg @576 · matCfg @592 · p5Cfg @608 · jitter @624 · markCfg @640 · sharpCfg @656 · sharpCfgB @672 · sharpCfgC @688 · rigCfg @704 · rigCfgB @720 · giCfg @736 · weatherE @752 · weatherF @768 (the particle rain's two rows) · shadeCfg @784 (the look prototype's shade row, zeros anywhere else) and the look's rows and tables after it (the three froxel rows, froxelA/B/C, went 2026-11-07 and every row after them moved 48 bytes down; the byte table at the top of frame.ts is the whole layout and `FRAME_BYTES`); `bun run tools/qa/frame-layout.ts` (also `probes.ts frame-layout`, and under
 `perf`) recomputes the struct's WGSL layout and fails on any offset / size / bit that disagrees — run it whenever you touch either side. Box flags in `scene/boxes.ts`
 (`NoShadow` = invisible to every ray, `NoPrimary` = not rasterised, `Cutaway` (viewer stage only), `Dynamic`,
 `Emissive` (auto), `AreaLit`, `Rot`, `Gloss` = 128 (polished floor finish: lobby stone, corridor / break-room lino — the last bit of the

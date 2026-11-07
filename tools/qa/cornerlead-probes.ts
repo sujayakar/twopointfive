@@ -2,16 +2,18 @@
 // "need to check their corners"; the footage — Ready or Not, 7:45: the first two men 'are allowed to take a shot at that threat and then immediately collapse
 // their corner'; Door Kickers: 'i'm going to lead with this man because he's already seen most of the room'). Counted headless, on every door of every room a
 // defender holds in every scenario on the start card, from bang-tally.ts's own staging (the room HOT, the team a few steps outside):
-//   bun run tools/qa/cornerlead-probes.ts [--seeds 1-4] [--jobs 3] [--scn id,id] [--tools open,bang,thr] [--arms before,after] [--json out.json] [--md]
-//   bun run tools/qa/cornerlead-probes.ts trace <scenario>:<door>:<tool>:<seed>:<arm>      one run with its timeline (CL_WATCH='Blue Two' adds that man's
+//   bun run tools/qa/cornerlead-probes.ts [--seeds 1-4] [--jobs 3] [--scn id,id] [--tools open,bang,thr] [--json out.json] [--md]
+//   bun run tools/qa/cornerlead-probes.ts trace <scenario>:<door>:<tool>:<seed>            one run with its timeline (CL_WATCH='Blue Two' adds that man's
 //                                                                                           muzzle and chest against his owed corner at 10 Hz)
-//   bun run tools/qa/probes.ts cornerlead | cornerlead-corners | cornerlead-lead             the gate's two verdicts (a fixed handful of doors)
-// TOOLS: open = 'open and clear' · bang = 'bang and clear' · thr = worked from the threshold, then the step in. ARMS: before = DOORTOOLS.cornerOwed, collapse,
-// cornerTurn and leadSeen all off (the entry as it was; the seen-floor record is kept all the same — DoorTools.seenWatch — so the same question can be asked of it) ·
-// after = the build as it ships.
+//   bun run tools/qa/probes.ts cornerlead | cornerlead-lead                                  the gate's verdict (a fixed handful of doors)
+// TOOLS: open = 'open and clear' · bang = 'bang and clear' · thr = worked from the threshold, then the step in.
+// THE FOUR RULES ARE SETTLED (DOORTOOLS.cornerOwed, collapse, cornerTurn, leadSeen; 2026-11-07), and the tally has ONE ARM, the build as it is. Until then every
+// door was run twice, 'before' with the four written off, and the gate's lines held the two side by side. That arm is out with its lines: the probe
+// cornerlead-corners went whole (all it held of corners was 'fewer given up than before'; the counts are still printed by the command line), and
+// cornerlead-lead keeps the line with a number of its own.
 // CORNERS, per man through the frame with corners dealt (doortools.ts cornersOf: the near and the deep corner of his own side): whether the room fight had
 // his muzzle on a man while a corner was still owed ('fought'), whether he FIRED ON THE WAY IN (a round between the entry's go and cornerCap a
-// corner after he crossed — the men counted: one window for both arms), and for each of his corners how the entry left it — LOOKED (his own muzzle within
+// corner after he crossed), and for each of his corners how the entry left it — LOOKED (his own muzzle within
 // DOORTOOLS.cornerRad of its bearing for cornerSecs: this file's own count, whatever the game thought), REACHED (he walked to it), or GIVEN UP (the corner
 // step moved on with neither) — and whether his muzzle, or anybody's, was ever on it before the entry was over. Men who fell before their corners were done
 // are counted apart. COLLAPSE: from the moment a man he shot drops with a corner still owed, the seconds until his muzzle is on that corner.
@@ -20,26 +22,23 @@
 // THE HARNESS HAS NO GPU: sight is the CPU's direct-light estimate; nothing here is drawn.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
-import { stage, discover, setKnobs } from './bang-tally.ts';
+import { stage, discover } from './bang-tally.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const DTM: any = await import(`${ROOT}/src/game/doortools.ts`);
 const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
 
 const DT = 1 / 60;
 type Tool = 'open' | 'bang' | 'thr';
-type Arm = 'before' | 'after';
-interface Spec { scn: string; door: string; room: string; tool: Tool; seed: number; arm: Arm }
+interface Spec { scn: string; door: string; room: string; tool: Tool; seed: number }
 type How = 'looked' | 'reached' | 'gave up' | 'pending';
 interface ManRow { who: string; fought: boolean; fired: boolean; died: boolean; corners: { how: How; own: boolean; any: boolean }[]; collapse: (number | null)[] }
 interface LeadRow { first: string; lead: string; threw: string | null; seen: Record<string, number>; at: string[]; firstN: number; bestN: number; best: string; less: boolean; lessButThrew: boolean }
 interface Out extends Spec { note: string; men: ManRow[]; lead: LeadRow | null; lost: number; team: number; down: number; of: number; held: boolean; secs: number }
-const OFF = { DOORTOOLS: { cornerOwed: false, collapse: false, cornerTurn: false, leadSeen: false } };
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const wrap = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a < 0) a += 2 * Math.PI; return a - Math.PI; };
 const quiet = async <T>(on: boolean, fn: () => T | Promise<T>): Promise<T> => { if (!on) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 
 export async function run(X: Spec, verbose = false): Promise<Out> {
-  setKnobs(X.arm === 'before' ? OFF : {});
   const S = await quiet(!verbose, () => stage(X.scn, X.seed)); const { g, step } = S; const O = g.orders, D = g.doorTools, nav = g.col.nav, K = DTM.DOORTOOLS;
   D.seenWatch = true;
   const out: Out = { ...X, note: '', men: [], lead: null, lost: 0, team: 0, down: 0, of: 0, held: false, secs: NaN };
@@ -74,7 +73,7 @@ export async function run(X: Spec, verbose = false): Promise<Out> {
   const recs = new Map<any, Rec>(); const seenEv = new Set<any>(g.events); const was = new Map<any, string>(g.guards.map((x: any) => [x, x.state])); const ledOps = new Set<any>();
   let lastDown = NaN;
   // FIRED: a round of his between the entry's GO and the last moment the old entry would still have owed him a corner (cornerCap a corner after he crossed) —
-  // one window for both arms, whatever the corner step has made of his corners by then (a round from the doorway on the way in counts: that is the threat met)
+  // one window, whatever the corner step has made of his corners by then (a round from the doorway on the way in counts: that is the threat met)
   const shots = new Map<any, number[]>(); const goT = new Map<any, number>();
   const along = (p: number[]) => { const th = d.def.closedDir; return (p[0] - d.def.hinge[0]) * Math.cos(th) + (p[2] - d.def.hinge[1]) * Math.sin(th); };
   const watch = () => {
@@ -124,7 +123,7 @@ export async function run(X: Spec, verbose = false): Promise<Out> {
     R.row.fired = (shots.get(R.gd) ?? []).some(x => x >= g0 - DT && x <= g1); out.men.push(R.row); }
   out.lost = team.filter(x => x.state === 'dead').length; out.down = men.filter(x => x.state === 'dead').length; out.secs = out.down === out.of && alive() ? lastDown : NaN;
   out.held = (out.down === out.of && alive()) || (alive() && !D.ops.length && !men.some(x => x.state !== 'dead' && g.fight.roomAt(x.char.pos) === room));
-  if (verbose) { console.log(`${X.scn} · ${X.door} · ${X.tool} · seed ${X.seed} · ${X.arm}`); for (const l of log) console.log(l); for (const op of [...D.done, ...D.ops]) for (const b of op.beats ?? []) if (/^first:/.test(b.what)) console.log(`   beat ${b.what}`); }
+  if (verbose) { console.log(`${X.scn} · ${X.door} · ${X.tool} · seed ${X.seed}`); for (const l of log) console.log(l); for (const op of [...D.done, ...D.ops]) for (const b of op.beats ?? []) if (/^first:/.test(b.what)) console.log(`   beat ${b.what}`); }
   return out;
 }
 
@@ -158,51 +157,38 @@ const pct = (n: number, dn: number) => (dn ? `${Math.round(100 * n / dn)} %` : '
 export function cornerLine(T: Tally): string { return `${T.fired} of ${T.entries} men through the frame fired on the way in (${T.fought} had a gun on a man with a corner owed; ${T.fell} more fell first) · of their ${T.fc} corners: ${T.fGave} given up unlooked, ${T.fNotOwn} never under his own muzzle, ${T.fNotAny} never under anybody's · the men who did not fire: ${T.qGave} of ${T.qc} given up, ${T.qNotOwn} never his own, ${T.qNotAny} never anybody's · man down to muzzle on the corner: median ${f2(med(T.collapse))} s over ${T.collapse.length} (${T.collapseNever} never got there)`; }
 export function leadLine(T: Tally): string { return `${T.leads} entries · ${T.less} led by a man who had seen ${Math.max(1, DTM.DOORTOOLS.leadSeenMin)}+ cells less of the room than another man at the frame (${T.lessButThrew} more where the one who had seen more had just thrown the can) · ${T.notLead} led by somebody other than the lead · the first man had seen ${T.leads ? (T.firstN / T.leads).toFixed(1) : '—'} cells on average, the best-placed man at the frame ${T.leads ? (T.bestN / T.leads).toFixed(1) : '—'}`; }
 function report(rs: Out[], md: boolean): string[] {
-  const tools = [...new Set(rs.map(r => r.tool))], arms = [...new Set(rs.map(r => r.arm))].sort((a, b) => (a === 'before' ? -1 : 1) - (b === 'before' ? -1 : 1));
+  const tools = [...new Set(rs.map(r => r.tool))];
   const table = (h: string[], b: string[][]) => md ? [`| ${h.join(' | ')} |`, `|${h.map(() => '---').join('|')}|`, ...b.map(r => `| ${r.join(' | ')} |`)] : (() => { const w = h.map((x, i) => Math.max(x.length, ...b.map(r => r[i].length))); return [h, ...b].map(r => r.map((c, i) => c.padEnd(w[i])).join('  ')); })();
   const groups: [string, (r: Out) => boolean][] = [...tools.map(t => [t === 'open' ? 'open and clear' : t === 'bang' ? 'bang and clear' : 'threshold, then step in', (r: Out) => r.tool === t] as [string, (r: Out) => boolean]), ['all', () => true]];
   const A: string[][] = [], B: string[][] = [], C: string[][] = [];
-  for (const [name, f] of groups) for (const arm of arms) { const T = tally(rs.filter(r => f(r) && r.arm === arm)); if (!T.runs) continue;
-    A.push([name, arm, String(T.runs), `${T.fired} of ${T.entries}`, String(T.fc), `${T.fGave} (${pct(T.fGave, T.fc)})`, `${T.fNotOwn} (${pct(T.fNotOwn, T.fc)})`, `${T.fNotAny} (${pct(T.fNotAny, T.fc)})`, `${T.qGave} of ${T.qc}`, `${T.qNotOwn} of ${T.qc}`, `${f2(med(T.collapse))} (${T.collapse.length}; ${T.collapseNever} never)`]);
-    B.push([name, arm, String(T.leads), String(T.less), String(T.lessButThrew), String(T.notLead), T.leads ? (T.firstN / T.leads).toFixed(1) : '—', T.leads ? (T.bestN / T.leads).toFixed(1) : '—']);
-    C.push([name, arm, String(T.runs), `${T.lost}/${T.team}`, `${T.down}/${T.of}`, `${T.held}/${T.runs}`]); }
+  for (const [name, f] of groups) { const T = tally(rs.filter(r => f(r))); if (!T.runs) continue;
+    A.push([name, String(T.runs), `${T.fired} of ${T.entries}`, String(T.fc), `${T.fGave} (${pct(T.fGave, T.fc)})`, `${T.fNotOwn} (${pct(T.fNotOwn, T.fc)})`, `${T.fNotAny} (${pct(T.fNotAny, T.fc)})`, `${T.qGave} of ${T.qc}`, `${T.qNotOwn} of ${T.qc}`, `${f2(med(T.collapse))} (${T.collapse.length}; ${T.collapseNever} never)`]);
+    B.push([name, String(T.leads), String(T.less), String(T.lessButThrew), String(T.notLead), T.leads ? (T.firstN / T.leads).toFixed(1) : '—', T.leads ? (T.bestN / T.leads).toFixed(1) : '—']);
+    C.push([name, String(T.runs), `${T.lost}/${T.team}`, `${T.down}/${T.of}`, `${T.held}/${T.runs}`]); }
   const skipped = rs.filter(r => r.note).length;
-  return ['CORNERS', ...table(['tool', 'arm', 'runs', 'men who fired on the way in', 'their corners', 'given up unlooked', 'never under his own muzzle', "never under anybody's", 'the other men: given up', 'the other men: never his own', 'man down → muzzle on corner, median s (n)'], A), '',
-    'WHO GOES FIRST', ...table(['tool', 'arm', 'entries', `led by a man who had seen ${Math.max(1, DTM.DOORTOOLS.leadSeenMin)}+ cells less than another at the frame`, 'the same, where that other had just thrown the can', 'led by other than the lead', 'cells seen, first man (mean)', 'cells seen, best man at the frame (mean)'], B), '',
-    'THE ROOMS', ...table(['tool', 'arm', 'runs', 'team lost', "room's men down", 'room taken or emptied'], C), ...(skipped ? ['', `(${skipped} runs not counted: no defender dealt to the room on that seed, no floor outside the door, a man lost before the order, or the order refused)`] : [])];
+  return ['CORNERS', ...table(['tool', 'runs', 'men who fired on the way in', 'their corners', 'given up unlooked', 'never under his own muzzle', "never under anybody's", 'the other men: given up', 'the other men: never his own', 'man down → muzzle on corner, median s (n)'], A), '',
+    'WHO GOES FIRST', ...table(['tool', 'entries', `led by a man who had seen ${Math.max(1, DTM.DOORTOOLS.leadSeenMin)}+ cells less than another at the frame`, 'the same, where that other had just thrown the can', 'led by other than the lead', 'cells seen, first man (mean)', 'cells seen, best man at the frame (mean)'], B), '',
+    'THE ROOMS', ...table(['tool', 'runs', 'team lost', "room's men down", 'room taken or emptied'], C), ...(skipped ? ['', `(${skipped} runs not counted: no defender dealt to the room on that seed, no floor outside the door, a man lost before the order, or the order refused)`] : [])];
 }
 
 // ───────────────────────────────────────────────────────────── the gate's two verdicts ─────────────────────────────────────────────────────────────
-// A fixed handful of doors, both arms, in this process (~2 minutes): enough that the old entry shows what it gave up and the rule can be seen to act. The full
-// count is the command line's.
+// A fixed handful of doors in this process (about a minute). The full count is the command line's.
 const GATE: [string, Tool][] = [['night-breach', 'open'], ['room-clear-four', 'open'], ['depot-four', 'open'], ['records-pair', 'thr'], ['room-clear-four', 'thr'], ['depot-four', 'thr']];
 let gateRuns: Out[] | null = null;
 async function gate(): Promise<Out[]> {
   if (gateRuns) return gateRuns; const rs: Out[] = [];
   const seeds = (process.env.CORNERLEAD_SEEDS ?? '1,2').split(',').map(Number);
   for (const [scn, tool] of GATE) { const ds = (await quiet(true, () => discover(scn))).slice(0, 2);
-    for (const x of ds) for (const seed of seeds) for (const arm of ['before', 'after'] as Arm[]) { try { rs.push(await run({ scn, door: x.door, room: x.room, tool, seed, arm })); } catch (e) { rs.push({ scn, door: x.door, room: x.room, tool, seed, arm, note: `threw ${e instanceof Error ? e.message : e}`, men: [], lead: null, lost: 0, team: 0, down: 0, of: 0, held: false, secs: NaN }); } } }
-  setKnobs({}); return gateRuns = rs;
+    for (const x of ds) for (const seed of seeds) { try { rs.push(await run({ scn, door: x.door, room: x.room, tool, seed })); } catch (e) { rs.push({ scn, door: x.door, room: x.room, tool, seed, note: `threw ${e instanceof Error ? e.message : e}`, men: [], lead: null, lost: 0, team: 0, down: 0, of: 0, held: false, secs: NaN }); } } }
+  return gateRuns = rs;
 }
 function family(title: string) { console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } }; }
-export async function cornerleadCorners(): Promise<boolean> {
-  const F = family('cornerlead-corners: a man who shoots a mid-room threat still finishes his corners');
-  try { const rs = await gate(), threw = rs.filter(r => /^threw/.test(r.note)); const B = tally(rs.filter(r => r.arm === 'before')), A = tally(rs.filter(r => r.arm === 'after'));
-    F.verdict(!threw.length && A.runs > 0 && B.runs > 0, 'the stagings ran', `${B.runs} runs before, ${A.runs} after${threw.length ? ` · ${threw.length} threw: ${threw[0].note}` : ''}`);
-    F.verdict(B.fired > 0 && A.fired > 0 && B.fGave > 0, 'not vacuous: men shot on the way in, and as it was some of their corners went unlooked', `before ${B.fired} of ${B.entries} men through the frame fired (${B.fGave} of their ${B.fc} corners given up), after ${A.fired} of ${A.entries}`);
-    F.verdict(A.fGave * B.fc < B.fGave * A.fc || A.fGave === 0, 'fewer of their corners are given up unlooked', `BEFORE (cornerOwed, collapse off) — ${cornerLine(B)}\n    AFTER (as shipped) — ${cornerLine(A)}`);
-    F.verdict(A.fNotOwn * B.fc <= B.fNotOwn * A.fc, "and no more of them end the entry never having had his own muzzle on them", `before ${B.fNotOwn} of ${B.fc} (${pct(B.fNotOwn, B.fc)}), after ${A.fNotOwn} of ${A.fc} (${pct(A.fNotOwn, A.fc)})`);
-  } catch (e) { F.verdict(false, 'the probe threw', e instanceof Error ? e.stack ?? e.message : String(e)); }
-  return F.done();
-}
 export async function cornerleadLead(): Promise<boolean> {
   const F = family('cornerlead-lead: the man who has seen most of the room goes in first');
-  try { const rs = await gate(); const B = tally(rs.filter(r => r.arm === 'before')), A = tally(rs.filter(r => r.arm === 'after'));
-    F.verdict(B.leads > 0 && A.leads > 0, 'entries were counted', `before ${B.leads}, after ${A.leads}`);
-    F.verdict(B.less > 0, 'not vacuous: as it was, entries are led by a man who had seen less of the room than another at the frame', `BEFORE (leadSeen off) — ${leadLine(B)}`);
-    F.verdict(A.less === 0, 'with the rule, none is', `AFTER (as shipped) — ${leadLine(A)}`);
-    F.verdict(B.notLead === 0, 'and with it off the lead is first, as he was', `before: ${B.notLead} of ${B.leads} entries led by somebody else · after: ${A.notLead} of ${A.leads}`);
+  try { const rs = await gate(), threw = rs.filter(r => /^threw/.test(r.note)), A = tally(rs);
+    F.verdict(!threw.length && A.leads > 0, 'the stagings ran and entries were counted', `${A.runs} runs, ${A.leads} entries${threw.length ? ` · ${threw.length} threw: ${threw[0].note}` : ''}`);
+    F.verdict(A.less === 0, 'no entry is led by a man who had seen less of the room than another at the frame', leadLine(A));
   } catch (e) { F.verdict(false, 'the probe threw', e instanceof Error ? e.stack ?? e.message : String(e)); }
   return F.done();
 }
@@ -216,20 +202,20 @@ if (import.meta.main) {
   try {
     if (mode === 'worker') { const specs: Spec[] = JSON.parse(readFileSync(argv[0], 'utf8'));
       for (const X of specs) { let r: Out; try { r = await run(X); } catch (e) { r = { ...X, note: `threw ${e instanceof Error ? e.message : e}`, men: [], lead: null, lost: 0, team: 0, down: 0, of: 0, held: false, secs: NaN }; } process.stdout.write(`@@${JSON.stringify(r)}\n`); } process.exit(0); }
-    if (mode === 'trace') { const [scn, door, tool, seed, arm, room] = argv[0].split(':'); const ds = (await discover(scn)).filter(x => x.door === door && (!room || x.room === room));
+    if (mode === 'trace') { const [scn, door, tool, seed, room] = argv[0].split(':'); const ds = (await discover(scn)).filter(x => x.door === door && (!room || x.room === room));
       if (!ds.length) throw new Error(`no such door in ${scn}: ${(await discover(scn)).map(x => x.door).join(', ')}`);
-      const r = await run({ scn, door, room: ds[0].room, tool: tool as Tool, seed: +seed, arm: (arm ?? 'after') as Arm }, true); console.log(JSON.stringify(r)); process.exit(0); }
+      const r = await run({ scn, door, room: ds[0].room, tool: tool as Tool, seed: +seed }, true); console.log(JSON.stringify(r)); process.exit(0); }
     const seeds = parseSeeds(flag('seeds') ?? '1-4'), jobs = +(flag('jobs') ?? 3), md = bool('md'), json = flag('json');
-    const only = flag('scn')?.split(','), tools = (flag('tools') ?? 'open,bang,thr').split(',') as Tool[], arms = (flag('arms') ?? 'before,after').split(',') as Arm[];
-    if (argv.length) throw new Error(`unknown flag ${argv.join(' ')} (have --seeds --jobs --scn --tools --arms --json --md)`);
+    const only = flag('scn')?.split(','), tools = (flag('tools') ?? 'open,bang,thr').split(',') as Tool[];
+    if (argv.length) throw new Error(`unknown flag ${argv.join(' ')} (have --seeds --jobs --scn --tools --json --md)`);
     const specs: Spec[] = [];
     for (const E of SCENARIOS as any[]) { if (only && !only.includes(E.id)) continue;
-      for (const x of await discover(E.id)) for (const tool of tools) for (const seed of seeds) for (const arm of arms) specs.push({ scn: E.id, door: x.door, room: x.room, tool, seed, arm }); }
+      for (const x of await discover(E.id)) for (const tool of tools) for (const seed of seeds) specs.push({ scn: E.id, door: x.door, room: x.room, tool, seed }); }
     console.error(`cornerlead: ${specs.length} runs over ${jobs} jobs…`);
     const chunks: Spec[][] = Array.from({ length: jobs }, () => []); specs.forEach((s, i) => chunks[i % jobs].push(s));
     const tmp = process.env.TMPDIR ?? '/tmp'; const results: Out[] = [];
     await Promise.all(chunks.map(async (chunk, i) => { if (!chunk.length) return; const file = `${tmp}/cornerlead-${process.pid}-${i}.json`; writeFileSync(file, JSON.stringify(chunk));
-      const p = Bun.spawn(['bun', 'run', import.meta.path, 'worker', file], { stdout: 'pipe', stderr: 'ignore' });
+      const p = Bun.spawn(['bun', 'run', import.meta.path, 'worker', file], { stdout: 'pipe', stderr: 'ignore', env: process.env });
       const text = await new Response(p.stdout).text(); await p.exited;
       for (const line of text.split('\n')) if (line.startsWith('@@')) results.push(JSON.parse(line.slice(2))); }));
     if (results.length !== specs.length) console.error(`cornerlead: ${specs.length - results.length} runs gave no result (a worker died)`);

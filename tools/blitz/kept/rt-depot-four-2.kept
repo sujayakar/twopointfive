@@ -1,0 +1,46 @@
+cmd FUZZ_CAP=2400 tools/blitz/fuzz-squad.sh depot-four 2 --hard --rate 2 --alarm 130 --god all --skip kill,fire
+tree 51f4c2341
+layout 2223287641
+ticks 10670
+die 1106
+lines 600 o89be5ob0ast
+lines 1200 8d1b4bq49veq
+lines 1800 1ny7roqan3933
+lines 2400 3l8abc73fbewg
+lines 3000 vkttkck85htv
+lines 3600 1fehs4bxe7cm6
+lines 4200 lio37i4c8cgr
+lines 4800 d3ljaiybhf9o
+lines 5400 o3z43q3vfa2m
+lines 6000 hdzc52kxhqo9
+lines 6600 5mkn0lz3u1l8
+lines 7200 2n16pv975zkgi
+lines 7800 3fan188p4w9id
+lines 8400 uooui2scj384
+lines 9000 7os03nszu4zw
+lines 9600 25ghh703lwq65
+lines 10200 2ep69couyzr9r
+lines 10670 1tf97mril4pbd
+play 600 3phljunhi90pl
+play 1200 38c3auvdmcxn1
+play 1800 3fmjh3ldvo2d5
+play 2400 321vbi88lfd8p
+play 3000 1x9vubaxbcdrw
+play 3600 38j8xo320zfun
+play 4200 4nktcnnintvc
+play 4800 9pz1ybmeo3g
+play 5400 24b7pry36kz6t
+play 6000 1t0gfw4eo3be5
+play 6600 1fpee3n4tggol
+play 7200 f8s43apvd3ju
+play 7800 33bvsh5ccp9f8
+play 8400 2wsfad7us9zos
+play 9000 3eg7sgi9jbbwk
+play 9600 1fjo41362el3e
+play 10200 3qmygj9f9wrpw
+play 10670 11hpycuu1hg0s
+state 1800 7496336 j24z5gshdt9z
+state 3600 7782531 1sh2vye9qgsgz
+state 5400 7952156 3u74cnek5qwxg
+state 7200 8050126 38lrbccwbqjlz
+state 9000 8038786 1wcylca44uade

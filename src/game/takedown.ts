@@ -29,10 +29,11 @@
 import { SideSet } from '../math/side';
 import type { Game, Guard } from './game';
 import type { BlowStyle, Character, FallStyle } from './character';
-import { HOLD, HOLD_SHOW } from './character';   // (HOLD_SHOW written inside takedownTick only, HOLD read inside takeFall only: the game's one import cycle)
+import { HOLD } from './character';   // (HOLD_SHOW written inside takedownTick only, HOLD read inside takeFall only: the game's one import cycle)
 import type { CloseKind } from './close';
 import { Vec3, v3 } from '../math/vec';
 import { canStand } from './player';   // (is there headroom over a crouched Sam: the rise out of the crouch is not taken under a duct)
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const TAKEDOWN = {
   /** THE switch — the page: on (`?notakedown` off); the frozen stand: off (`TPS_TAKEDOWN=1` on) */
@@ -49,8 +50,6 @@ export const TAKEDOWN = {
   /** breathing, out cold: breaths a second · m the chest rises · s it takes to come in once the body has settled */
   breathHz: 0.24, breathRise: 0.02, breathIn: 1.2,
 };
-/** the partner's takedown, start to man down (pairorders.ts PAIR.secs, spotted.ts takeSecs): his move is over inside it */
-const PARTNER_SECS = 0.6;
 /** Sam's own blow lands this long after it starts (player.ts updateTakedown's clock: read here, never written) */
 const SAM_HIT = 0.28;
 /** QA: how often each was asked for (probes read them; nothing else does) */
@@ -58,15 +57,6 @@ export const TAKEDOWN_STATS = { blows: 0, falls: 0, partner: 0, breathing: 0 };
 
 type Half = 'blow' | 'victim' | 'fall' | 'partner' | 'breathe' | 'lower' | 'kill' | 'chokeBeats' | 'haul';
 const live = (g: Game, half: Half) => TAKEDOWN.on && TAKEDOWN[half] && !g.touring;
-export const takedownOn = live;
-/** how much of the choke's lowering the hold's two poses show (player.ts holdTail feeds it to both animators): 0 = he is choked standing, as it was */
-export const takeLower = (g: Game): number => live(g, 'lower') ? 1 : 0;
-/** …and whether they show the kill from the hold as a move · the choke's beats (HoldPose / HeldPose .kill / .beats: this Game's, this frame — a pose without
- *  them falls back on HOLD_SHOW, which takedownTick writes once a frame for whoever ran last) */
-export const takeKill = (g: Game): boolean => live(g, 'kill');
-export const takeBeats = (g: Game): boolean => live(g, 'chokeBeats');
-/** …and the choke's haul (HoldPose / HeldPose .haul) */
-export const takeHaul = (g: Game): boolean => live(g, 'haul');
 
 /** which move a blow is: by the side it comes from and the hand that does it (a man in a chair is taken from behind his chair: the rear moves) */
 export function blowStyle(kind: CloseKind | undefined, lethal: boolean): BlowStyle {
@@ -133,45 +123,12 @@ function setFall(g: Game, vic: Character, style: FallStyle, by: Character | null
 /** …AND LANDS (the frame he is put down, before killGuard): how he falls. `how` = a move with no blow of its own: the choke's end, the pistol whip, the kill
  *  from the hold (he is already going forward off his knees: the fold carries on from it; its half off = `how` not given). A man taken in his chair slumps
  *  where he sits. */
-export function takeFall(g: Game, gd: Guard, kind: CloseKind | undefined, lethal: boolean, how?: 'choke' | 'whip' | 'kill') {
+export function takeFall(g: Game, gd: Guard, kind: CloseKind | undefined, lethal: boolean, how?: 'choke' | 'whip' | 'kill') { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('takeFall', undefined, [g, gd, kind, lethal, how]); if (__r !== RUST_PASS) return __r as any; } }
   if (!live(g, 'fall')) return;
   const led = how === 'kill' && !live(g, 'kill') ? undefined : how;
   setFall(g, gd.char, led === 'choke' ? 'sink' : led === 'whip' || led === 'kill' ? 'fold' : kind === 'seat' ? 'slump' : fallStyle(blowStyle(kind, lethal)), g.player.char, led === 'choke' ? HOLD.layAhead : 0);
 }
 
-/** THE PARTNER'S HANDS GO ON (pairorders.ts / spotted.ts, right after his strike): the chop from behind, the palm from the front — landing `partnerHit` in,
- *  the man reacting on his feet from then until the game's own clock puts him out; the move is over when the takedown is */
-export function partnerBegin(g: Game, mate: Guard, foe: Guard, front: boolean) {
-  if (!live(g, 'partner')) return;
-  const style: BlowStyle = front ? 'palm' : 'chop', by = mate.char, vic = foe.char, [at, at2] = marks(by, vic, style);
-  by.anim.blow(style, at, at2, { hit: TAKEDOWN.partnerHit, end: Math.min(TAKEDOWN.partnerEnd, PARTNER_SECS), live: () => marks(by, vic, style) }); TAKEDOWN_STATS.partner++;
-  if (live(g, 'victim')) vic.anim.taken(front ? 'snap' : 'hunch', TAKEDOWN.partnerHit);
-}
-/** …are CALLED OFF before the man is out (he stepped out of them, the line shut): the move and what it was doing to him are let go of, eased */
-export function partnerCancel(g: Game, mate: Guard, foe: Guard) {
-  if (!TAKEDOWN.on) return;
-  mate.char.anim.blowCancel(); foe.char.anim.takenCancel();
-}
-/** …and the man goes down by it (before their killGuard) */
-export function partnerFall(g: Game, foe: Guard, front: boolean, mate?: Guard) {
-  if (!live(g, 'partner') || !live(g, 'fall')) return;
-  setFall(g, foe.char, front ? 'topple' : 'fold', mate ? mate.char : null);
-}
 
 /** games with a body that breathes (so that the switch thrown off lets every one of them go, once, and then costs nothing) */
 const BREATHING = new SideSet<Game>('takedown.BREATHING');
-/** once a frame (game.ts): who breathes — every man and civilian out cold; nobody with the switch off or under a show (a body's breath stops where it is) */
-export function takedownTick(g: Game) {
-  HOLD_SHOW.kill = live(g, 'kill'); HOLD_SHOW.beats = live(g, 'chokeBeats');   // (the fallback for a pose that does not say: the hold's layers have no Game to ask)
-  const on = live(g, 'breathe');
-  if (!on && !BREATHING.has(g)) return;
-  let n = 0;
-  const each = (gd: Guard) => {
-    const c = gd.char;
-    if (on && c.ragdoll && gd.state === 'dead' && (gd.downKind === 'struck' || gd.downKind === 'choked')) { c.breathe = TAKEDOWN; n++; } else if (c.breathe) c.breathe = null;
-  };
-  for (const gd of g.guards) each(gd);
-  for (const gd of g.civilians) each(gd);
-  if (n) BREATHING.add(g); else BREATHING.delete(g);
-  TAKEDOWN_STATS.breathing = n;
-}

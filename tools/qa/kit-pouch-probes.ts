@@ -34,7 +34,6 @@ const { startFromQuery, teamOf, quitScenario } = await import(`${ROOT}/src/game/
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -390,7 +389,7 @@ export async function pouchCard(): Promise<boolean> {
 }
 
 // ───────────────────────────────────────────────────────────── staged ──────────────────────────────────
-function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); }
+function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); }
 async function stageOf(id: string, seed = 0x51c4) {
   const E = (SCENARIOS as any[]).find(e => e.id === id); Math.random = seeded(seed);
   const W: any = await quiet(() => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })); const g = W.game; g.godMode = true;

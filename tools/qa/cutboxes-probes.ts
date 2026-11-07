@@ -4,14 +4,12 @@
 //   cutboxes-ray      ONE MODEL: over seeded random cut boxes (yawed and fully rotated, 1‥8 planes) rayBox ≡ an independent world-space half-space clip (t and normal),
 //                     lineBox's interval ≡ the same clip's, and the rule common.wgsl runs over the very rows packed for the GPU (isectCut transliterated, f32 rows) lands on the
 //                     same face at the same t; BoxWorld.raycast over a world of cut statics + dynamics ≡ the brute minimum
-//   cutboxes-off      the switch OFF: a box carrying a record answers rayBox / lineBox exactly as the same box without one, BoxWorld packs no bit and no rows and lists nothing
-//                     for the cut pipeline, and the scene prelude declares CUT_BOXES false with the tail it had
-//   cutboxes-pack     the switch ON: bit 16 of the geo flags word only on boxes with a record, its CUT_ROWS rows = the planes then the pad row, cut boxes listed after the plain
+//   cutboxes-pack     bit 16 of the geo flags word only on boxes with a record, its CUT_ROWS rows = the planes then the pad row, cut boxes listed after the plain
 //                     ones in `visible`, a static's rows re-packed when its record is REPLACED, the counts in cutStats
 //   cutboxes-lines    SIGHT, SOUND AND LINES OF FIRE through a cut static and a cut door leaf (StaticCollision: segmentBlocked = sight, solidBlocked = sound / a step,
 //                     shotBlocked = a line of fire, raycast = a round, SoundPaths.propagate, segmentBlockedDynamic = the leaves alone): a line through the CUT-AWAY part
 //                     passes and a line through the KEPT part is stopped, every answer set against the half-space reference — over 27 upright walls (3 more tilted), 6
-//                     leaves, and the ragged wall ends real charges leave in a level; switch off, the same lines meet the whole box. THE GATE for the fast paths in
+//                     leaves, and the ragged wall ends real charges leave in a level. THE GATE for the fast paths in
 //                     collision.ts that copy the slab test over scalars (they skip the cut rule unless they hand a cut box to lineBox / rayBox: with that hand-over
 //                     taken out this probe is red — 0 of 27 walls and 0 of 6 leaves let a line through the cut-away part)
 import { ROOT, fake } from './headless.ts';
@@ -211,27 +209,7 @@ export async function cutboxesRay(): Promise<boolean> {
   return F.done();
 }
 
-export async function cutboxesOff(): Promise<boolean> {
-  const F = family('cutboxes-off: the switch off = the record is not there');
-  const was = cutConfig.on; cutConfig.on = false;
-  try {
-    const R = seeded(5); let bad = 0, n = 0, lbad = 0;
-    for (let i = 0; i < 120; i++) { const b = randomCutBox(R, i); if (!b.cut) continue; const plain = { ...b, cut: undefined };
-      for (let k = 0; k < 60; k++) { const o: Vec3 = [b.c[0] + (R() - 0.5) * 5, b.c[1] + (R() - 0.5) * 5, b.c[2] + (R() - 0.5) * 5]; const d = norm([b.c[0] - o[0] + (R() - 0.5) * 0.6, b.c[1] - o[1] + (R() - 0.5) * 0.6, b.c[2] - o[2] + (R() - 0.5) * 0.6]); n++;
-        if (JSON.stringify(rayBox(o, d, b, 1e9)) !== JSON.stringify(rayBox(o, d, plain, 1e9))) bad++;
-        if (JSON.stringify(COL.lineBox(o, [d[0] * 6, d[1] * 6, d[2] * 6], b)) !== JSON.stringify(COL.lineBox(o, [d[0] * 6, d[1] * 6, d[2] * 6], plain))) lbad++; } }
-    F.verdict(bad === 0 && lbad === 0 && n > 5000, 'rayBox and lineBox answer a box with a record exactly as the same box without one', `${n} rays · ${bad} rayBox · ${lbad} lineBox differ`);
-    const mk = (cut: boolean) => { const w = new BoxWorld(fake('device')); const R3 = seeded(31); for (let i = 0; i < 20; i++) { const b = randomCutBox(R3, i, [4 + R3() * 30, 1, 4 + R3() * 18]); if (!cut) b.cut = undefined; if (i >= 14) { b.flags |= BoxFlag.Dynamic; w.dynamics.push(b); } else w.statics.push(b); } w.upload(); return w; };
-    const a = mk(true), p = mk(false);
-    const same = (x: ArrayBufferLike, y: ArrayBufferLike) => { const u = new Uint8Array(x), v = new Uint8Array(y); if (u.length !== v.length) return false; for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) return false; return true; };
-    let visSame = a.visibleCount === p.visibleCount; for (let i = 0; i < a.visibleCount && visSame; i++) visSame = a.visible[i] === p.visible[i];
-    F.verdict(same(a.geoData, p.geoData) && same((a as any).matData.buffer, (p as any).matData.buffer) && visSame && a.visibleCutCount === 0 && (a as any).cutData.length === 0, 'BoxWorld packs the same bytes with and without records: no bit, no rows, nothing listed for the cut pipeline', `geo ${same(a.geoData, p.geoData)} · mat ${same((a as any).matData.buffer, (p as any).matData.buffer)} · visible ${visSame} (${a.visibleCount}) · cut listed ${a.visibleCutCount}`);
-    const pre = scenePrelude();
-    F.verdict(/const CUT_BOXES: bool = false;/.test(pre) && !/const CUT_BOXES: bool = true;/.test(pre), 'the scene prelude declares CUT_BOXES false (the cut code is dead in every module)', pre.match(/const CUT_BOXES[^\n]*/)?.[0].slice(0, 120) ?? 'no const');
-  } finally { cutConfig.on = was; }
-  return F.done();
-}
-
+// (the rule is settled: until 2026-11-07 a probe `cutboxes-off` asked the boxes with the switch off, and `pack` and `lines` each had a line of it)
 export async function cutboxesPack(): Promise<boolean> {
   const F = family('cutboxes-pack: the bit, the rows, the draw list');
   const was = cutConfig.on; cutConfig.on = true;
@@ -248,45 +226,20 @@ export async function cutboxesPack(): Promise<boolean> {
         const ok = c ? cd[q] === Math.fround(c.n[0]) && cd[q + 1] === Math.fround(c.n[1]) && cd[q + 2] === Math.fround(c.n[2]) && cd[q + 3] === Math.fround(c.d) : cd[q] === 0 && cd[q + 1] === 0 && cd[q + 2] === 0 && cd[q + 3] === 1; if (!ok) rowBad++; }
         const q = (i * CUT_STRIDE + CUT_ROWS) * 4, k3 = b.cutCore; if (!(k3 ? cd[q] === Math.fround(k3[0]) && cd[q + 1] === Math.fround(k3[1]) && cd[q + 2] === Math.fround(k3[2]) && cd[q + 3] === 1 : cd[q] === 0 && cd[q + 1] === 0 && cd[q + 2] === 0 && cd[q + 3] === 0)) coreBad++; if (k3) nCore++; } }
     F.verdict(bitBad === 0 && rowBad === 0 && nCut === 16 && coreBad === 0 && nCore > 0 && nCore < nCut, 'bit 16 of the flags word on exactly the boxes with a record; their rows = the planes, then (0, 0, 0, 1); the core row = (colour, 1) or zeros', `${nCut} cut of ${all.length} · ${nCore} with a core colour · ${bitBad} bits wrong · ${rowBad} rows wrong · ${coreBad} core rows wrong`);
-    { // A CALM ROOM PAYS NOTHING (render/cutSwap.ts): what the boot compiles under the switch is the text of the build without it; the cut set asks for the rule by name
-      const swapWas = cutConfig.swap; cutConfig.on = false; const offText = scenePrelude(); cutConfig.on = true;
-      cutConfig.swap = true; const boot = scenePrelude(); cutConfig.swap = false; const whole = scenePrelude(); cutConfig.swap = swapWas;
-      F.verdict(boot === offText && whole === scenePrelude(true) && whole !== offText && /const CUT_BOXES: bool = true;/.test(whole), 'under the swap the boot prelude is the switch-off text, character for character; scenePrelude(true) (and ?cutprograms=boot) carries the rule', `boot = off ${boot === offText} · ${whole.length - offText.length} chars apart with the rule`);
+    { // ONE SET OF RAY PROGRAMS (2026-11-07): the prelude every tracing module is made from carries the rule whenever the switch is on, and is the old text with it off
+      const offText = scenePrelude(false), whole = scenePrelude(true), own = scenePrelude(), RULE = /const CUT_BOXES: bool = true;/;   // (asked by the argument: the switch's row is a settled one, a tool's write of it is refused — tools/qa/fold.ts)
+      F.verdict(own === (cutConfig.on ? whole : offText) && whole !== offText && RULE.test(whole) && !RULE.test(offText), 'the prelude carries the cut rule with the switch on and is the switch-off text without it: one text for every ray program', `switch ${cutConfig.on ? 'on' : 'off'} · the page's own text ${own === whole ? 'has the rule' : 'has none'} · ${whole.length - offText.length} chars apart with the rule`);
       const traced = all.filter(b => b.cut && b.cut.length > 0 && !(b.flags & BoxFlag.NoShadow)).length;
       const w2 = new BoxWorld(fake('device')); const R4 = seeded(78); let want2 = 0;
       for (let i = 0; i < 12; i++) { const b = randomCutBox(R4, i, [4 + R4() * 30, 1, 4 + R4() * 18]); b.flags |= BoxFlag.Dynamic; if (i % 2 === 0) b.flags |= BoxFlag.NoShadow; else if (b.cut && b.cut.length > 0) want2++; w2.dynamics.push(b); }
       w2.upload(); const mid = w2.cutTraced;
-      { // the cut list is the traceable boxes, THEN the picture-only ones: the g-buffer draws the first visibleCutTraced whole on a frame whose ray programs have no cut rule
+      { // the cut list is the traceable boxes, THEN the picture-only ones: an order the two-set build's raster leaned on, kept as the list's contract
         let lead = true, tail = true; const n0 = w2.visibleCount, nT = w2.visibleCutTraced, nC = w2.visibleCutCount;
         for (let k = 0; k < nC; k++) { const b = w2.all[w2.visible[n0 + k] & 0xFFFF]; const plate = !!(b.flags & BoxFlag.NoShadow); if (k < nT ? plate : !plate) { if (k < nT) lead = false; else tail = false; } }
         F.verdict(lead && tail && nT === want2 && nC > nT, 'the cut list leads with the boxes a ray can meet (visibleCutTraced of them) and ends with the picture-only plates', `${nT} traceable, then ${nC - nT} plates · order ${lead && tail}`);
       }
       w2.dynamics.length = 0; w2.upload();
       F.verdict(w.cutTraced === traced && traced > 0 && mid === want2 && want2 > 0 && w2.cutTraced === 0, 'cutTraced counts the cut boxes a ray can meet (a NoShadow plate is picture only) and is 0 again once they are gone', `${w.cutTraced} of ${nCut} · plates apart ${mid} = ${want2} · after they go ${w2.cutTraced}`);
-    }
-    { // THE SWAP'S RULE (render/cutSwap.ts frame / drawsCut / hot), driven with a stand-in owner: when the cut set is on the frame, and that the raster follows it
-      const { cutSwap } = await import(`${ROOT}/src/render/cutSwap.ts`);
-      const swapWas = cutConfig.swap, keep = { state: cutSwap.state, live: cutSwap.live, force: cutSwap.force, idle: cutSwap.idle, swaps: cutSwap.swaps, hot: cutSwap.hotPinned, members: new Set(cutSwap.members) };
-      const warn = console.warn; console.warn = () => { /* hot() says so once */ };
-      try {
-        cutConfig.swap = true; cutSwap.members.clear(); let used = false, calls = 0; const m = { buildCut: async () => { /* nothing to compile */ }, useCut: (on: boolean) => { used = on; calls++; } }; cutSwap.members.add(m);
-        cutSwap.live = false; cutSwap.force = null; cutSwap.idle = 0; cutSwap.swaps = 0; cutSwap.hotPinned = false;
-        cutSwap.state = 'building'; cutSwap.frame(5); const early = !cutSwap.live && !cutSwap.drawsCut && calls === 0;      // a piece born before the second set exists: boot programs, drawn whole
-        cutSwap.state = 'failed'; cutSwap.frame(5); const failed = !cutSwap.live && !cutSwap.drawsCut;
-        cutSwap.state = 'ready'; cutSwap.frame(0); const calm = !cutSwap.live && !used;
-        cutSwap.frame(5); const taken = cutSwap.live && used && cutSwap.drawsCut && cutSwap.swaps === 1;
-        let held = 0; while (cutSwap.live && held < 100000) { cutSwap.frame(0); held++; }                                       // …the last piece gone: held, then the boot's again
-        const back = !cutSwap.live && !used && cutSwap.swaps === 2 && held >= 120;
-        cutSwap.frame(1); let flap = true; for (let r = 0; r < 40; r++) { for (let k = 0; k < held - 1; k++) cutSwap.frame(0); flap &&= cutSwap.live; cutSwap.frame(1); }   // pieces coming and going inside the hold never swap
-        const steady = flap && cutSwap.swaps === 3;
-        while (cutSwap.live) cutSwap.frame(0);
-        cutSwap.force = 'cut'; cutSwap.frame(0); const pinned = cutSwap.live; cutSwap.force = null; cutSwap.frame(0); const released = pinned && !cutSwap.live;   // a pin let go leaves no hold behind (the cost lab's 'ship' row)
-        cutSwap.frame(5); cutSwap.hot(); const hot = !cutSwap.live && !used && !cutSwap.drawsCut && cutSwap.force === 'base'; cutSwap.frame(5); const hotStays = !cutSwap.live && !cutSwap.drawsCut;
-        cutConfig.swap = false; const oneSet = cutSwap.drawsCut;                                                                // ?cutprograms=boot: every program carries the rule, the raster always cuts
-        F.verdict(early && failed, 'a cut piece alive before the second set is in (or with a set that failed) keeps the boot programs AND is drawn whole: picture and rays agree', `building ${early} · failed ${failed}`);
-        F.verdict(calm && taken && back && steady, 'the cut set is taken the frame a traceable piece exists, held after the last one goes, and pieces coming and going inside the hold never flap it', `calm ${calm} · taken ${taken} · back after ${held} frames ${back} · 40 comings and goings: swaps ${steady ? 'none' : 'SOME'}`);
-        F.verdict(released && hot && hotStays && oneSet, 'a pin let go returns to the rule at once; a hot-swapped program pins the boot set (whole for both); the one-set build always draws cut', `release ${released} · hot ${hot} · stays ${hotStays} · one set ${oneSet}`);
-      } finally { console.warn = warn; cutConfig.swap = swapWas; cutSwap.members.clear(); for (const x of keep.members) cutSwap.members.add(x); cutSwap.state = keep.state; cutSwap.live = keep.live; cutSwap.force = keep.force; cutSwap.idle = keep.idle; cutSwap.swaps = keep.swaps; cutSwap.hotPinned = keep.hot; }
     }
     { // the rows land where the shaders read them: boxMat byte (CUT_BASE + bi × CUT_STRIDE) × 16, CUT_BASE as the prelude declares it
       const m = scenePrelude(true).match(/const CUT_BASE: u32 = MAX_BOXES \* 4u \+ (\d+)u;/); const baseRows = m ? w.maxBoxes * 4 + Number(m[1]) : -1;
@@ -382,12 +335,6 @@ export async function cutboxesLines(): Promise<boolean> {
     F.verdict(Tt.passOk === 3 && Tt.stopOk === 3 && Tt.away > 20 && Tt.kept > 20, '3 tilted cut walls (a full rotation: filed by the yawed footprint, asked first)', `${Tt.passOk} / ${Tt.stopOk} of 3 pass / stop (${Tt.away} + ${Tt.kept} lines)${Tt.bad.length ? ' · ' + Tt.bad.join(' · ') : ''}`);
     const Tl = sweep(leaves, i => 1e6 + i, true);
     F.verdict(Tl.passOk === 6 && Tl.stopOk === 6 && Tl.away > 40 && Tl.kept > 40, '6 cut door leaves (shut, ajar, open): the cut-away part is open to sight, fire, the round and the leaf-only sound test; the kept part stops them', `${Tl.passOk} / ${Tl.stopOk} of 6 pass / stop (${Tl.away} + ${Tl.kept} lines)${Tl.bad.length ? ' · ' + Tl.bad.join(' · ') : ''}`);
-    { // the switch OFF: the record is not there — the lines through the cut-away part meet the whole box again
-      cutConfig.on = false; let n = 0, bad = 0; const R2 = seeded(5150);
-      for (const [list, leaf] of [[walls, false], [leaves, true]] as [any[], boolean][]) for (const b of list) { cutConfig.on = true; const L = linesAcross(R2, b, 24, 1.0, leaf ? 1.95 : 2.9, 1.2); cutConfig.on = false;
-        for (const l of L) { if (!l.away) continue; n++; if (!(col.segmentBlocked(l.a, l.b) && col.solidBlocked(l.a, l.b) && col.shotBlocked(l.a, l.b) && col.raycast(l.a, l.d, l.len))) bad++; } }
-      cutConfig.on = true;
-      F.verdict(bad === 0 && n > 300, 'switch off: the same walls and leaves stop the lines through their cut-away part (the whole box)', `${n} lines · ${bad} passed`); }
 
     // ---------------------------------------------------------------- the ragged ends the game itself leaves (a level's partitions blown, its cover shot; the standing pieces asked)
     { const { standUp } = await import('./headless.ts');
@@ -445,6 +392,6 @@ export async function cutboxesLines(): Promise<boolean> {
 }
 
 if (import.meta.main) {
-  let ok = true; for (const f of [cutboxesRecord, cutboxesRay, cutboxesOff, cutboxesPack, cutboxesLines]) ok = (await f()) && ok;
+  let ok = true; for (const f of [cutboxesRecord, cutboxesRay, cutboxesPack, cutboxesLines]) ok = (await f()) && ok;
   process.exit(ok ? 0 : 1);
 }

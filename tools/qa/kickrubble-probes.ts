@@ -1,12 +1,11 @@
 // The 'kickrubble' probe family — MEN KICK RUBBLE ASIDE AS THEY WALK (src/game/debris.ts feet(), behind destructionSwitch.ts RUBBLE.on), run through probes.ts:
-//   bun run tools/qa/probes.ts kickrubble | kickrubble-walk | kickrubble-quiet | kickrubble-off | kickrubble-offman | kickrubble-wall | kickrubble-left | kickrubble-edge | kickrubble-pool [--verbose]
+//   bun run tools/qa/probes.ts kickrubble | kickrubble-walk | kickrubble-quiet | kickrubble-offman | kickrubble-wall | kickrubble-left | kickrubble-edge | kickrubble-pool [--verbose]
 // Headless = the Proxy device; what is asserted is every CPU-side promise, in the office's corridor with one of the shift walking it under orders:
 //   (walk)    the pieces lying in his path are shoved aside as he walks through and come to rest again; a piece off his path keeps its pose to the bit; the same
 //             walk twice lays the same litter (deterministic); Sam, driven by the keys, shoves them too;
 //   (quiet)   the shove is SILENT to the simulation: no hearing event of any kind is filed, no landing is counted, the break table is told nothing (nothing snaps
 //             underfoot), no furniture is pushed, the impulses' hash stream is not advanced, no piece is spawned — and the game's digest after the walk equals
 //             the digest of the same walk with the switch off (the pieces are not in the digest: what it says is that nothing ELSE moved);
-//   (off)     the switch off: the same walk moves nothing, counts nothing, draws nothing;
 //   (offman)  a plank that came to rest through a man standing still is pushed off him, and he has not moved;
 //   (wall)    a piece pinned between a standing man and a wall is never pushed through the wall, and is given up on (bounded tries);
 //   (left)    what a boot leaves alone: a piece lying on a desk top beside him (standing in reach of it, and walking past it), a slab too heavy to shift, a glass
@@ -16,6 +15,9 @@
 //             are on the look's own books); kicked flakes that overlap do not end with their tops in one plane; a shadow caster slid to a beam casts none; Sam
 //             standing in them parts them;
 //   (pool)    a piece sliding off a boot is still evictable and is not 'moving' for the mayhem rule; a blast's impulse takes it over (it flies, lands and sounds).
+// 2026-11-07: the probe 'off' (the switch off: the same walk moves nothing) is deleted, a settled rule's off side. STILL TO RESTAGE: the family lays its litter
+// with RUBBLE.on written off and raises it for the walk, and 'quiet' lays its walk beside the switch-off walk. Those writes are refused now (the rule is
+// settled on), so the pieces are laid under live feet. Not restaged here: on the Rust game no piece is made headless and every probe throws before a line.
 import { standUp, ROOT } from './headless.ts';
 
 const { RUBBLE, DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
@@ -39,7 +41,7 @@ async function quiet<T>(fn: () => Promise<T> | T): Promise<T> { if (VERBOSE) ret
 interface Stage { W: any; game: any; D: any; gd: any; p0: Vec3; dir: [number, number]; free: number; events: any[]; seen: Set<any>; kicked: number; landedHook: number }
 async function stage(on: boolean, seed = 7107): Promise<Stage> {
   Math.random = seeded(seed); RUBBLE.on = on;
-  const W: any = await quiet(() => standUp({ uploadEvery: 1 })); const game = W.game; game.godMode = true; game.playerInvisible = true; game.aiEnabled = true;
+  const W: any = await quiet(() => standUp({ uploadEvery: 1, dress: true })); const game = W.game; game.godMode = true; game.playerInvisible = true; game.aiEnabled = true;
   const gd = game.guards[0]; gd.hold = true; const p0: Vec3 = [gd.char.pos[0], 0, gd.char.pos[2]];
   let dir: [number, number] = [1, 0], free = 0; for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]] as [number, number][]) { const h = game.col.raycast([p0[0], 0.5, p0[2]], [d[0], 0, d[1]], 12); const t = h ? h.t : 12; if (t > free) { free = t; dir = d; } }
   const D = game.destr.debris; const S: Stage = { W, game, D, gd, p0, dir, free, events: [], seen: new Set(game.events), kicked: 0, landedHook: 0 };
@@ -110,15 +112,6 @@ export async function kickQuiet(): Promise<boolean> {
   Fm.verdict(propsOf(S.game) === propsOf(O.S.game), 'no furniture was pushed by a piece', `${S.game.props.props.length} props: poses bit-equal to the switch-off walk's`);
   const da = JSON.stringify(digestGame(S.game)), db = JSON.stringify(digestGame(O.S.game));
   Fm.verdict(da === db, 'the game\'s digest after the walk equals the switch-off walk\'s', da === db ? `${da.length} chars, equal` : `DIFFERS at char ${[...da].findIndex((ch, i) => ch !== db[i])}: …${da.slice(Math.max(0, [...da].findIndex((ch, i) => ch !== db[i]) - 60), [...da].findIndex((ch, i) => ch !== db[i]) + 60)}…`);
-  return Fm.done();
-}
-
-/** The switch off: nothing moves, nothing is counted. */
-export async function kickOff(): Promise<boolean> {
-  const Fm = family('kickrubble-off: the switch off — the same walk moves nothing');
-  const S = await stage(false); const L = litter(S); const before = [...L.path, L.aside].map(pose).join(' '); walk(S);
-  Fm.verdict([...L.path, L.aside].map(pose).join(' ') === before, 'every piece keeps its pose to the bit', `${L.path.length + 1} pieces, he walked through ${L.path.filter(c => offLine(S, c) < 0.3).length} of them`);
-  Fm.verdict(S.D.shoves === 0 && Object.values(S.D.feetStats).every(v => v === 0) && !S.D.list.some((c: any) => c.foot || c.footAt !== undefined), 'nothing counted, nothing drawn, no chunk marked', `${JSON.stringify(S.D.feetStats)} · shoves ${S.D.shoves}`);
   return Fm.done();
 }
 

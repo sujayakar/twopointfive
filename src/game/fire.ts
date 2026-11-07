@@ -41,6 +41,7 @@ import { gpuFx } from './particleFx';
 import { FOG } from './fogofwar';   // (read inside the update only)
 import { lookConfig } from '../render/frame';
 import type { WindGpuSource } from '../smoke/types';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** FIRE.size as the page opens (host/profile.ts puts it back when `?firesize=0` is not on the address) */
 export const FIRE_SIZE = 1.1;
@@ -318,7 +319,7 @@ function plain(t: LightTarget) { const l = t.light!; l.pos[0] = t.pos[0]; l.pos[
 /** Once a frame, straight behind every paint of the lamps (game.ts behind updateTargets; with `dt` 0 behind a checkpoint's load and a clean restart, which paint
  *  them too: the lamp, its place and the coals as this clock has them, and nothing filed) and with the wind this frame's. */
 const NO_JETS: readonly WindGpuSource[] = [];   // (never written: the list a fire that is put off leaves behind)
-export function updateFire(g: Game, dt: number) {
+export function updateFire(g: Game, dt: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('updateFire', undefined, [g, dt]); if (__r !== RUST_PASS) return __r as any; } }
   const E = g.engine;
   if (!FIRE.on) {
     if (states.get(g)) { for (const t of g.targets) if (isFire(t)) { plain(t); g.lightHome.feedBurning(t.light!); } states.delete(g); if (E.fires?.length) E.fires = []; if (E.hostBooks?.fire?.kept) g.smoke.keepHot?.(0); if (E.hostBooks) E.hostBooks.fire = undefined; if (lookConfig.on) gpuFx(g)?.setHeat(NO_JETS); }   // (put off in a running page: the lamp back where the level hung it, its strength is updateTargets' again)

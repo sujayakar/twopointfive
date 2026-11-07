@@ -25,6 +25,7 @@ import { SNOWTRACKS, TRACK_RES } from '../game/snowTracks';
 import { SNOWMARKS } from '../game/snowMarks';
 import { SNOWBREATH, BREATHSTEAM, breathStats, steamOn } from '../game/snowBreath';
 import { HARDBREATH } from '../game/character';   // (read inside a row's own closure only)
+import { rowHeld } from '../host/held';
 import { AIR_SIM, airSimStats } from '../game/airSim';
 import { SNOW_LOOK, snowLevel } from '../game/weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
@@ -99,10 +100,10 @@ const ABOUT: Record<string, string> = {
   sparkle: 'Glints off single ice crystals where a light meets the snow at the mirror angle.',
   glow: 'Light passing through the snow\'s top layer: the cold glow at a drift\'s lit edge.',
   prints: 'Boot prints pressed into the snow: how deep, the rim thrown up, how they scuff when a man runs or turns.',
-  marks: 'What moves over the snow marks it: a pushed chair cuts furrows, a thrown thing dents where it lands and grooves where it rolls, and a mark sinks in over a moment and kicks loose snow up. Off: only boots print, and a print is whole at once.',
+  marks: 'What moves over the snow marks it: a pushed chair cuts furrows, a thrown thing dents where it lands and grooves where it rolls, and a mark sinks in over a moment and kicks loose snow up.',
   blast: 'What a blast does to lying snow: the crater pressed into it, the snow thrown up, the puff of powder, the shove to the air.',
   flakes: 'Snow falling through the air: how many, how fast, how they catch the light.',
-  oneair: 'One snow in one air: the flakes fall through the wind sim among the walls, a wisp is snow that wind lifts where it is fast enough, and there are no grains of their own. Off: flakes on the open wind, wisps in gusts, grains near the view.',
+  oneair: 'One snow in one air: the flakes fall through the wind sim among the walls, a wisp is snow that wind lifts where it is fast enough, and there are no grains of their own. The line beside it says whether this page has it in force.',
   wisps: 'Long low streaks of snow the wind lifts off the ground and carries along it.',
   grains: 'Fine snow picked up off the ground near the view and carried on the air around walls and men. Not drawn while the snow is one snow in one air.',
   breath: 'Steam off each man\'s breath in the cold: more and faster when he has been running. A blown man breathes by the `blown` rows while the hard breath rule is on (the page as it opens), and by everyHard, hardK, effortUp and effortDown with ?hardbreath=0: the rows nothing reads are dimmed. With the breath as real steam (the page as it opens; ?breathsteam=0 = puffs) a breath is gas in the smoke solver, off the mouth as the gun\'s is off the muzzle: the `steam` rows are what it is made of, and the rhythm, the mouth and the pitch rows above still hold.',
@@ -120,6 +121,7 @@ function table(name: string, t: object, src: string, o: { only?: readonly string
   const T = t as Record<string, unknown>; const out: TweakVar[] = [];
   for (const k of Object.keys(T)) {
     if (o.only ? !o.only.includes(k) : o.skip?.includes(k)) continue;
+    if (rowHeld(T, k)) continue;   // (a settled row is held at its page value: a slider over it could not move, so none is made; src/host/held.ts)
     const x = T[k]; const r: Row = { when: o.when, ...o.rows?.[k] };
     if (typeof x === 'number') out.push(mk(`${name}.${k}`, k, src, () => T[k] as number, v => { T[k] = v; }, r, SCENE_NOTES[`${name}.${k}`]));
     else if (Array.isArray(x) && x.length >= 2 && x.length <= 4 && x.every(n => typeof n === 'number')) {
@@ -209,13 +211,13 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
       layers.push({ id: 'prints', name: 'Boot prints', group: 'Ground', vars, on: muting(vars, ['SNOW_SURF.trackDeep', 'SNOW_SURF.trackRim']), apply: relook,
         stat: () => { const T = game.snowTracks; return T ? `${T.prints} prints` : ''; } }); }
     if (SNOW_LOOK.tracks) { const vars = table('SNOWMARKS', SNOWMARKS, 'src/game/snowMarks.ts', { when: 'next', rows: { mess: { max: 1, step: 0.01 }, itemMess: { max: 1, step: 0.01 }, rollDeep: { max: 1, step: 0.01 } } });
-      layers.push({ id: 'marks', name: 'Things mark the snow', group: 'Ground', vars, on: { mode: true, get: () => SNOW_LOOK.marks, set: on => { SNOW_LOOK.marks = on; } },
+      layers.push({ id: 'marks', name: 'Things mark the snow', group: 'Ground', vars,   // (no switch: SNOW_LOOK.marks is ruled settled on; `?snowmarks=0` is its only other side while that word lasts)
         stat: () => { const T = game.snowTracks; return T ? `${T.marks} marks${T.forming.length ? ` · ${T.forming.length} forming` : ''}` : ''; } }); }
     { const vars = table('SNOWBLAST', SNOWBLAST, 'src/game/snowBlast.ts', { when: 'next', rows: { floor: { min: 0.6, max: 1, step: 0.01 }, rim: { min: 0.25 }, lobe: { max: 1 }, rag: { max: 0.5, step: 0.005 }, rays: { step: 1, max: 40 }, clods: { step: 1, max: 200 }, puff: { step: 1, max: 100 }, flakes: { step: 1, max: 600 }, dig: { max: 3, step: 0.05 }, digS: { max: 5, step: 0.1 }, throwShare: { max: 0.98, step: 0.01 } } });
       readWhen(vars, ['SNOWBLAST.throwS', 'SNOWBLAST.throwShare', 'SNOWBLAST.out', 'SNOWBLAST.up'], grainsRun);
       readWhen(vars, ['SNOWBLAST.flakes', 'SNOWBLAST.flakeUp', 'SNOWBLAST.flakeLife'], oneAir);
-      // (the switch is read by every blast as it goes off: live, so the layer stands on a page opened with it off too. The button marks the snow three metres ahead of you as a frag there would — no blast, no sound, nothing the game reads)
-      layers.push({ id: 'blast', name: 'Blast marks', group: 'Ground', vars, on: { get: () => SNOW_LOOK.blast, set: on => { SNOW_LOOK.blast = on; } },
+      // (the layer stands on a page opened with ?snowblast=0 too. The button marks the snow three metres ahead of you as a frag there would — no blast, no sound, nothing the game reads)
+      layers.push({ id: 'blast', name: 'Blast marks', group: 'Ground', vars,   // (no switch: SNOW_LOOK.blast is ruled settled on)
         act: { label: 'blast', note: 'mark the snow three metres ahead of you as a grenade there would (picture only: no blast, no sound)', run: () => { const c = game.player.char; snowBlastAt(game, [c.pos[0] + Math.sin(c.aimYaw) * 3, 0.2, c.pos[2] + Math.cos(c.aimYaw) * 3], 2.5); } },
         stat: () => { const s = snowBlastStats(game); return s.blasts ? `${s.marked} of ${s.blasts} marked${s.why !== 'marked' ? ` · ${s.why}` : ''}` : ''; } }); }
   }
@@ -232,8 +234,8 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
       readWhen(vars, ['FLAKE_TOP_IN'], () => snowLookConfig.under);   // (the shaders this page compiled: nothing reads the row with ?snowunder=0)
       readWhen(vars, ['SNOWFX.past'], () => SNOW_LOOK.past);   // (the snow past the level's rim: nothing reads the metres with ?snowpast=0)
       layers.push({ id: 'flakes', name: 'Falling flakes', group: 'Air', vars, on: muting(vars, ['SNOWFX.gain', 'SNOWFX.skyK']), build: rebuildPart, stat: () => { const s = snowStats(game); return s.active ? `${Math.round(s.pop)} in the air` : s.why; } }); }
-    // (ONE SNOW IN ONE AIR: read every frame, so its switch is live — but only on a page whose particle shaders were built to read the wind sim)
-    if (AIR_SIM.on && (SNOW_LOOK.oneAir || SNOW_LOOK.grains)) layers.push({ id: 'oneair', name: 'Snow in one air', group: 'Air', vars: [], on: { mode: true, get: () => SNOW_LOOK.oneAir, set: on => { SNOW_LOOK.oneAir = on; } },
+    // (ONE SNOW IN ONE AIR: in force only on a page whose particle shaders were built to read the wind sim; the row says which)
+    if (AIR_SIM.on && (SNOW_LOOK.oneAir || SNOW_LOOK.grains)) layers.push({ id: 'oneair', name: 'Snow in one air', group: 'Air', vars: [],   // (no switch: SNOW_LOOK.oneAir is ruled settled on; the row stays to say whether it is in force on this page)
       stat: () => oneAir() ? 'flakes and wisps ride the wind sim' : SNOW_LOOK.oneAir ? 'not in force' : 'flakes on the open wind' });
     if (SNOW_LOOK.wisps) { const live = { speedK: {}, opacity: { max: 1, step: 0.01 }, gain: {} } as Rows;
       const vars = [...table('SNOWWISPS', SNOWWISPS, FX, { when: 'next', rows: { speedK: { when: undefined, ...live.speedK }, opacity: { when: undefined, ...live.opacity }, gain: { when: undefined, ...live.gain }, lifeJit: { max: 1 }, sizeJit: { max: 1 },

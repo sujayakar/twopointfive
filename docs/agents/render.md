@@ -125,8 +125,133 @@ row on his machine is the answer, and the word puts the count back on any machin
 <!-- was CLAUDE.md lines 2403–2406 -->
 - **Markings = object legibility** — palette-indexed bitmaps on box faces, packed in the tail of `boxMat` (no texture); `settings.markings` default ON, `?nomarkings` (+ `?level=relief` = main's frame), `__mark`; emissive markings are LIGHTS; the art rules (flat colour per cell, ≤ 3 entries, no gradients, no baked lighting) — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Materials, RT reflections, the detail layer** (renderer v3 phase 4) — every box carries a finish (`Box.rough / metal / aniso`), `reflect.wgsl` traces under `settings.rtReflect` (`?nortreflect`, `frame.rtCfg.w` 0 = off), the detail layer under `settings.detail` (`?detail=0‥1`; art rule: variation from geometry, never a painted texture); `__rt`, `__hotReflect` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
-- **The ultra-only extras** (renderer v3 phase 5) — `settings.giResample` / `rtMeshHits` / `rtHitReuse`, only the ultra preset raises them, `?nop5` vetoes; `__gi`, `__hotGather`; TRAP kept here: `reflect_p5.wgsl` is a separate program from `reflect.wgsl` on purpose (main's text) — keep the two files in step — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
-- **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments); `__sdfrig`, `__rigTrace` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **ULTRA IS GONE, WHOLE (2026-11-07; the maintainer on the survey's row for it: "I think we can just remove ultra entirely").** Four presets: high, medium, low, verylow
+  (`QUALITY_NAMES`); a kept `ultra` or `?quality=ultra` is a name nobody knows and reads as no pick (auto), and `Quality.apply` of an unknown name throws with the list.
+  With it went everything only it switched on: `reflect_p5.wgsl` (the reflection twin: mesh hits, hit-lighting reuse, the hit records `reflHit`), `settings.rtHitReuse`,
+  `?nop5`, `P5Tier`, the smooth-union closest hit (`sdfRigSmooth`'s program lived in that twin: `rigClosest`, `?sdfsmooth`, `sdfRigSteps`), `traceClosestMesh` and the mesh
+  closest-hit helpers in common.wgsl, the `p5Pack*` helpers and `directOnScreen` in both gather commons, `tools/qa/p5-harness.js` and the rig study harness that stood on it.
+  `settings.rtMeshHits` and `settings.sdfRigSmooth` are still FIELDS, always false, because `game/game.ts` reads them: they go with that read. Frame words `p5Cfg.x‥z` and
+  `rigCfgB.y, .z` are FREE. **Measured:** every module text the boot hands the browser has the hash it had on the title, a snow level and the look's page; only `reflectP5`
+  is no longer asked for (one pipeline less in each set). The options screen has four rows. NOT DONE HERE: mesh shadows on every ray (`meshShadows` without
+  `meshShadowsNear`) was ultra's form and is still a debugger toggle; laminate and varnished wood (0.5, 0.55) now take a ray on no tier (high's cut is 0.45).
+  `tools/qa/shaderdead.ts` (new) lists the declarations no program of the boot contains: it is how the leftovers above were found. **Never seen on a GPU.**
+- **THE GATHER'S LIGHT LOOP HAS ONE WRITING, AND SIX LOSSLESS SWITCHES ARE PLAIN CODE (2026-11-07).** `gather_split_common.wgsl` is deleted: the gather is made from
+  `gather_common.wgsl`, the reflection pass's file, and `directAtPoint` is its one body (the one-loop writing: one evalLight, one shadow ray). The gather's `light`
+  program is 46 KB of pasted text with it (113 before); the reflections' would be 262 KB on the plain writing, 196 on this. `splitrays-check` holds that no second
+  gather common file comes back. **The six**: grid skip, height cull, unrotated fast path, slab reject (every tracer: `gridCell`, `gridItem`, `isectBox`,
+  `globalOutside` take no flag now, in common.wgsl, fogofwar.wgsl and trace_lab.wgsl alike), the tile light list (restir, sharp direct) and the tile pass-through
+  (the shadow client). Each was proven exact when it went in and on in every preset since; their off sides, `globalSkipped`, `globalMissesY`, the six settings, frame
+  flags and debugger rows are gone. Free frame-flag bits: `bun run tools/qa/frame-layout.ts` prints them (eleven). **BOTH CHANGE SHADER TEXT** (the tracers are
+  in every ray program): all 121 boot texts and the four made on first use (fog of war's two, the sight table, the trace lab) compile in Chromium's compiler with no
+  warning. **THE PICTURE IS THE SAME TO THE PIXEL** where it was looked at: `tools/qa/draw-equal.cjs` on the real page, software adapter, the
+  tree before the two against the tree after (958d04a8 against 5ae91c56, both on the Rust game of step 1632): four views (office-night, squad-cast, weather,
+  firefight), two pinned frames each at 640 by 360, all eight EQUAL. What that did not look at: the Rust page of that step drew fewer men than the views ask for
+  (three of the four were "not clean" on BOTH trees for that: no defender in frame, one torch, no muzzle light), a moving camera, glass, the look page, and any
+  GPU's own compiler. **Never seen on a GPU.**
+- **TRIALS NO TIER TURNED ON ARE GONE (2026-11-07; the cleanup's rule: a switch nothing sets is deleted, a switch everything sets is plain code).** Each was a
+  debugger row or an address word only: no preset, no weather, no sweep row and no mission set it. **The drawn soft character shadow** (`charSoftShadow` and its six
+  rows, the smooth-union march, `render/rigDebug.ts`, `__rigTrace`): `sdfrig.wgsl` is the round-cone primitive alone and `frame.rigCfg` holds two bits (64 self
+  shadow, 128 mesh shadows near only). **Bounce light denoised at the internal size** (`giFullRes`, `giFullIters`, `Preset.dn.giFull`, `?nogim`, the eight
+  internal-size textures made on first use, `giUpsample` / `giTemporalF`, the denoiser's third parameter block, the composite's branch for an internal-sized
+  texture): measured at +0.85 ms and +64 MB when it was written and never placed. `__gimo` keeps the ladder's climb and the motion-calm rows. **The gather's plain
+  ray pattern** (`gatherStrata` off, `?nogatherstrata`, `?gatherStrata`, `__gs`, the second `trace` program compiled after every boot): stratified directions were
+  on in every preset since 08-12; `cosineDirK` is the gather's one direction rule, the module is `gatherSplit` and its pipelines `gatherTrace` and `gatherLight`
+  (the label `gatherTraceS` is gone: one program fewer in the boot set and in the cut set, and one fewer compiled after the boot). **The sharp pass's edge rays**
+  (`sharpEdgeRays`, its spread and hint rows, `sharp_edge.wgsl`, the mask texture every sharp frame allocated, binding 11): the sharp kernel's traced twin is
+  the sliver rule's alone and its const is `SLIVER_RAYS`; `frame.sharpCfgB` holds the same-plane k in `.w` and nothing else. **Five A/B bits of the estimator**
+  (`restirCoherent` and its tile-shared random stream, `restirPermute`, `restirRatioRaw`, `restirSampleHue`, `restirMotionDither`): `RestirU.cfg.w` bits 4, 8,
+  32, 64 and `mot.w` are free. **KEPT ON PURPOSE**: every row of the performance sweep (`src/ui/perfsweep.ts`: it is how a slow machine sheds work), the glossy
+  floors (a storm turns them on where the tier has no traced reflections: `game/weather.ts`). **THESE CHANGE SHADER TEXT** (denoise,
+  the four composites, restir and its twin, the gather, both sharp kernels): all 115 boot texts and the four made on first use compile in Chromium's compiler with
+  no warning; the other 31 modules are the same text by hash. The Rust crate's mirror of the settings (`rust/game/src/root_settings`) still lists the removed
+  fields: the port's to regenerate. **Never seen on a GPU.**
+- **THE DIRECT LIGHT IS ONE PROGRAM (2026-11-07; the maintainer's yes on the shader survey's row for it).** `restirM`, the estimator compiled a second time for frames
+  the camera moved, is gone: `restir.wgsl` is compiled once (label `restir`; the lighting trades' twin `restirT` on first use as before) and the direct-motion
+  lane's three levers are the bits of `RestirU.cfg.w` they always were (256, 512, 1024), raised by `engine.ts` on the frames the camera moved
+  (`passes.restirMotionLive`; `settings.restirMotionStatic` raises them under a still camera too). **A still camera's frame does the arithmetic it did**: with no
+  motion bit up the flow is not measured (`MOTION_BITS` in `prevTexelAt`), `mvPx` stays 0 and every lever's branch is not taken, so what differs from the old plain
+  program is untaken branches. A frame the camera moved runs the text `restirM` ran. What it buys: one program of 244 KB pasted is no longer compiled after every
+  boot (38 s with the driver's cache off on the rented NVIDIA card at medium, the compile-time goal's reading), the encode picks nothing, and the stand-in rule
+  (a moved frame on the plain program until the twin landed) is gone with `restirMReady`. `shaderrows-check` holds that a moved frame runs the one program
+  with its taps packed. Boot texts 115 to 113; both compile in Chromium's compiler with no warning. **NOT MEASURED: what the untaken branches cost a still
+  frame on a real GPU** (the old twin run at rest measured +0.2 ms of direct at High on the M4 Max, most of it the flow this writing skips). **Never seen on a GPU.**
+- **ONE FOG MARCH ON EVERY TIER (2026-11-07; the maintainer's pick on a card, "Per-pixel, two lights a step", from stills of both ways and the cloud
+  card's numbers).** WHAT IT WAS: high marched haze and smoke per pixel (`volumetrics.wgsl`, its "classic" march). Medium, low and very low lit the
+  haze through a camera-frustum froxel grid (`render/froxels.ts`, `shaders/froxel.wgsl`: five kernels, three volumes and the smoke's own) and marched
+  the smoke with a second march lit from that grid (`smokeMarchJ`, in a twin program `volFroxel`); SMOKE KEEP (`settings.smokeKeep`, `withSmoke`)
+  chose how much of high's smoke a tier kept; a third march with no light cap (`VOL_K0`) had a twin of its own that no tier ran. A player on high and
+  one on medium saw fog made by different code, and the ladder hopped between the two in play. WHAT IT IS: ONE program, `vol`, on every tier, and a
+  tier differs by its rows alone (`ui/quality.ts` PRESETS): high as it was (half size, 20 beam steps, 4 lights a step, refresh 2, step 1.5); MEDIUM
+  AND LOW = HIGH'S MARCH WITH 2 LIGHTS A STEP; very low, the floor, its own small rows (quarter size, 8 steps, 2 lights, step 2.0).
+  GONE: `render/froxels.ts`, `shaders/froxel.wgsl`, `smokeMarchJ`, the K = 0 march and every `volK > 0` branch (the engine keeps the cap at 1 or
+  more; a settings table no preset has written, 0, is read as high's 4), `volFroxel` and `volK0`, `FrameFlags.FroxelVol` (bit 29 free), the Frame's
+  `froxelA/B/C` (THE FRAME BLOCK IS 48 BYTES SHORTER: every member after `volCfg` moved 12 words down, `FRAME_BYTES` 31168, `FRAME_HEAD_BYTES` 928;
+  `prevCam.w` and `volCfg.w` bits 8‥11 are free), the composite's binding 11 and the particles' binding 4 (the three after it renumbered), `Caps.vol`,
+  `Caps.marchLights`, `FroxelTier`, SMOKE KEEP with `?smokekeep`, `withSmoke`, `Quality.resmoke` and its Tab row, `?froxel`, `?nofroxel`, `__froxel`,
+  `__hotFroxel`, the debugger's Froxels section and 'plume: lights lit per step' row, the sweep's `froxel` and `marchLights` rows,
+  tools/qa/froxel-ab.js and froxel-scenes.js, the froxel ghost proof in rfix-proofs.ts, and the settings `smokeKeep`, `smokeMarchLights` and every
+  `froxel*`, on both sides of the wire. The smoke lab's 'lamps that light each
+  step' row moves `volLightCap` now (it moved `smokeMarchLights`, which high never read).
+  WHAT MOVES FOR A PLAYER. HIGH: nothing. Its smoke march is the same text line for line, and the haze's `volK > 0` wrappers are unwrapped with K
+  never under 1. MEDIUM AND LOW: beams and smoke are marched per pixel, as high's are, with two lights a step: a beam's edge is the pixel's own (no
+  froxel a dozen pixels wide, no fourteen frames of froxel history behind a camera cut), and a plume is lit by its two strongest lamps a step where
+  the froxel-lit march lit it by three (SMOKE KEEP's rows) over the grid's soft light. The smoke march starts at a dither fixed per texel, as high's
+  always has; the froxel-lit one started at one rotated each frame. VERY LOW: the same per-pixel march at its own rows where it had the froxel grid
+  at 64 × 24 and a plume lit by the grid alone.
+  THE COST, on the cloud's NVIDIA card (A10G, a rainy dusk with a smoke can thrown, time frozen, three seconds a row, 2026-11-07), read INSIDE ONE
+  PAGE each time, the tree before with a tier set by hand to the rows it has now. Before the pick: MEDIUM 13.22 ms a frame with the froxel grid,
+  13.70 with this (+3.6 %), 14.73 with four lights; LOW 8.86, 9.08 (+2.5 %), 10.45. After the change was written, another box and another plume,
+  two rounds: MEDIUM 13.14 and 13.23 to 13.48 and 13.52 (+2.4 %); LOW 8.73 to 8.83 (+1.2 %); VERY LOW 6.82 to 6.61 (−3 %: the per-pixel march at
+  its small rows is cheaper there than the grid was), and 6.38 with its march at half size. With no smoke in the frame medium read 12.20 to 12.62.
+  THE NEW COMMIT ON THE CARD (its own pages, six of them): no GPU error, no console line, 93 of 93 pipelines at every tier and 96 of 96 on the look
+  page, smoke in the frame at high, medium, low and very low; its boot came to its first frame in 16.8 and 16.9 s where the tree before took 22.4
+  and 24.1 (six programs fewer, the dearest among them). HIGH COSTS WHAT IT DID: with no smoke the march read 2.28 ms on the new commit against
+  2.25 on the tree before, and with a plume of the same size (the solver's own count of drawn bricks beside each read) 2.40 against 2.50, 3.07
+  against 3.03 and 4.79 against 4.52; a first pair of boxes had read 0.45 ms apart at every tier, and that was the plume, which grows differently
+  run to run (two boxes are never a read of the march's cost with smoke in it: count the bricks).
+  Lights a step is the lever: half the steps or a refresh every 4 moved a frame by under 0.2 ms, and A QUARTER-SIZE MARCH READ SLOWER than the half
+  (14.81 against 14.73 on medium, 11.18 against 10.45 on low, at four lights), which is why medium and low are not at quarter size; very low still
+  is, by its old row (half size read cheaper by 0.23 ms on one box and the same on another), and the ladder's model prices a quarter-size march
+  at × 0.375 (`FACTOR.quarter`), which that card does not bear out.
+  THE LADDER'S MODEL (`presetCost`): the march is priced per pixel on every tier (`REF.vol20` by the beam steps and the size; lights a step are not
+  priced), the froxels' fixed term is gone: medium's per-pixel part 13.5 to 14.0 model-ms and its fixed part 3.8 to 3.4, low 11.7 to 12.2 and 2.4
+  to 2.3. Where auto lands on a machine moves with that; no machine has run it.
+  THE COMPILE: six pipelines and two modules fewer (the title's boot is 35 modules and 100 pipelines), and the froxel-lit twin was the page's
+  dearest program alone (10.7 s on that card against 7.0 for the one left).
+  WHAT WENT WITH THE FROXEL-LIT MARCH AND WAS NOT CARRIED OVER (each would change which steps of HIGH's march trace a ray, so each is a picture call
+  nobody has made; the text is in git before this commit, `volumetrics.wgsl smokeMarchJ`): a start rotated each frame (`jitterS`: a still view
+  converges smooth under the resolve); `MARCH_DIR_TMAX` (a shadow ray toward the sun or the moon stops at 30 m: "the moon's whole price");
+  `MARCH_MINOR_K` (a light under 4 % of the stronger ones at a step spends no ray); `MARCH_REFRESH_W` (a shadow answer is refreshed only at steps
+  that weigh in the pixel). The first three are the likely next cut in what the march costs on every tier.
+  CHECKS: `bun run tools/qa/probes.ts ladder` (six lines of the rows in the ladder's self-test; `FOGROWS_BREAK=1` fails two);
+  `tools/qa/shaderrows-check.ts` (one program, no twin, no froxel kernel asked for; a frame with no cap said draws with the cap at 4);
+  `frame-layout.ts`; `dust-look-check.ts` and the looks probe (the one march's read of the dust); `shaderinline-check` (floors 35 and 100).
+  NOT SEEN: the software adapter draws no smoke, so the card's pages above are the only frames with smoke in them on the new path, and they were
+  read for errors and timed; the stills are in the project's files for the maintainer's eyes (fog5-night-medium-new, fog5-night-verylow-new against
+  fog5-night-verylow-base). No Mac has drawn it. Nobody has looked at medium, low or very low in motion.
+- **ONE SET OF RAY PROGRAMS (2026-11-07; the maintainer's yes on the shader survey's row for it).** The page compiled every program that traces
+  boxes TWICE: the boot's without the cut rule, then a second set with it in the background after every boot, swapped in while a cut piece a ray
+  could meet was alive (`render/cutSwap.ts`, "a calm room pays nothing"). There is ONE set now, with the rule in (`scenePrelude()` carries
+  `const CUT_BOXES: bool = true;` wherever cut boxes are on): what `?cutprograms=boot` compiled. GONE: `render/cutSwap.ts`; `cutSet` / `buildCut` /
+  `useCut` on the lighting passes, the probe, the cascades, the froxels, the particles and the fog of war; the engine's per-frame swap and the
+  raster's "drawn whole until the second set is in" (`gbuffer.ts`: a cut box is drawn cut from the first frame); `__cut.programs`,
+  `__cut.stats.drawnWhole`, `?cutprograms`; the visit's `cut` record; the start's wait on the second set; tools/qa/cut-march.js. `cutConfig.swap`
+  is GONE from the table and from the settled-switch list (11-07; its field on the wire to the Rust game goes with the Rust goal's next batch); the look page's
+  rule that a geometry trial drops the round's GPU half (`main.ts roundConfig.gpu`) asks for the trial itself now, and draws what it drew. THE COMPILE QUEUE's background
+  lane (`gpu/device.ts`) was given by text, to any module holding the cut rule's line; it is now the LATER pipelines' alone, and a module's size is
+  kept beside the module. WHAT MOVES: about twenty programs fewer compiled after each boot (21 s of background compile on the cloud's NVIDIA
+  card; 72 of 141 s of ONE compiler thread by the compile-time work's serial table) and nothing swaps under play. THE BOOT'S OWN SET IS BIGGER
+  by the rule's text: 4,711 to 5,356 KB pasted on a snow page (+14 %; the visit's whole falls 9,065 to 5,356), and a cut twin compiled 5 to 15 %
+  dearer than its boot form on that card: the start card waits that much longer for its programs, a brief's Start (which waits for every
+  program) much less. Not timed on Windows. If the g-buffer's cut pipeline fails to compile, cut pieces are DRAWN whole while rays meet the cut
+  shape (the two-set build drew and traced them whole): said in the console line. A ROUND THING IS ITS PICTURE'S PRISM TO EVERY RAY AT ALL TIMES (`ROUND_AS_CUT`, `docs/agents/levels.md`),
+  where a calm room traced the cylinder; `?roundexact=1` still asks for the cylinder. THE COST, on that card (A10G, the tree before, the two
+  sets pinned in turn in one page, 2026-11-07): the office in rain +1.9 % of a frame on High and +1.7 % on Medium; the squad lesson on the look
+  page +0.5 % and 0 %. The 1.9 x fog pass once read there is not reproduced. HELD: the module list by label and text hash is IDENTICAL to the
+  tree before forced to one set (title 36, snow 36, the look page 37 modules; `shaderinline-check --json`); shaderinline, shaderfold, pipequeue
+  (its background tests ask by LATER now) and the cutboxes probe family re-aimed (the swap's two probes are out, the prelude's verdict stays).
+  NOT SEEN on a GPU as this tree; the card saw the same programs through `__cut.programs.force` on the tree before.
+- **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; the `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments and `__rigTrace` went 2026-11-07); `__sdfrig` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2658–2728 -->
 - **Effects numbers** are tuned by the user in the viewer and pasted back; treat `effects.ts` / `RIG` values as
@@ -136,15 +261,15 @@ row on his machine is the answer, and the word puts the count back on any machin
 - **No dollhouse wall cutaway** in the game — it was removed by user decision (they rotate the camera instead — Ctrl + mouse orbits and Ctrl + wheel zooms now, host/loop.ts; Q / E are the wall hold and the holster);
   don't bring it back. The `Cutaway` box flag + `cutHeight` primitive survives only for the viewer stage's back wall.
   Debug/sandbox actions are debugger (tweak panel) buttons, not hotkeys.
-- **Quality**: `ui/quality.ts` presets (ultra / high / medium / low / verylow) set resolution scale + internal-height cap, beam steps,
-  cache grid, smoke iterations, the direct-light ray budget (8/4/3 · 8/4/3 · 6/3/3 · 4/2/2 · 1/1/2), `directHistory` (0.5; high and verylow 0.7)
-  AND the lossy trade-offs below (ultra none · high checker + third-res gather + dimRays · medium/low/verylow those + quarter-res beams, with
-  staggered cascade refresh `rcPeriods` in place of `rcHalfRate`; low/verylow with `dimRaysBelow` 0.02) AND the final gather's relative firefly bound `settings.giFireflyK` (4 on high‥verylow; 0 = off on ultra:
+- **Quality**: `ui/quality.ts` presets (high / medium / low / verylow; ultra went 2026-11-07) set resolution scale + internal-height cap, beam steps,
+  cache grid, smoke iterations, the estimator's rays per pixel (`Preset.restir`)
+  AND the lossy trade-offs below (ultra none · high third-res gather · medium/low/verylow that + quarter-res beams, with
+  staggered cascade refresh `rcPeriods` in place of `rcHalfRate`) AND the final gather's relative firefly bound `settings.giFireflyK` (4 on high‥verylow; 0 = off on ultra:
   the bound is a one-sided clamp — it cut the boil round a torch on a wall by ~40 % but costs up to a quarter of the bounce within ~0.6 m
   of an intense hotspot — so the reference preset runs without it; Tab ▸ Indirect light slider for A/B) — applying a preset writes those
   settings exactly as the menu rows do; a row flipped by hand sticks until the next preset change. `auto` first CALIBRATES behind the start card (a couple of seconds of GPU compute-pass timings → a per-pass
   cost model, `COST`/`REF`/`FACTOR` in quality.ts: per-pixel and fixed factors per preset → preset AND scale in one step, remembered
-  per machine; ladder verylow‥high, never ultra; 'auto' picked later on the pause card / Tab runs the SAME path — `Quality.startAuto`:
+  per machine; ladder verylow‥high; 'auto' picked later on the pause card / Tab runs the SAME path — `Quality.startAuto`:
   from this machine's remembered pick + scale, re-measured behind that card, the card's note refreshed when it settles), then a runtime ladder trims (proportional scale steps toward LADDER.aimFps 50, cut below 45 / restore above 58, ≥ 2 s apart on a 0.05 grid, preset drop
   once a real cut is off, floor SCALE_FLOOR 0.5). THOSE ARE THE 'AS NOW' BANDS: since 10-10 the ladder's default is HOLD 60 (`settings.ladderAim` 60, the maintainer's pick; `?aim=asnow` or `?aim=0` = the bands above for the visit, `?aim=90|120|display` other targets, Tab ▸ Frame ▸ 'ladder: frame rate to hold'; `ui/quality.ts HOLD / ladderBands`): the same climb, but two 1-s windows under ~58 fps with the GPU the limit cut the scale straight to what the cost model says holds 60 (to the floor, then the preset under auto), and pixels come back on measured GPU room; a page something else paces is left alone (as now: `settings.ladderPaced`, `?ladderpaced=0`; under an aim, since 10-14: `settings.ladderHeld`, default on, `?ladderheld=0` or Tab ▸ Frame ▸ 'ladder: an aim leaves a held page alone' = an aim as it was. The maintainer's Mac on a low battery, 10-14: the browser held the page at 30 fps, the GPU clocked down and read ~1.5× longer, and hold 60 stepped High from 770 to 600 rows for a rate that stayed 30. What cut it (read off the code and the replay, not the budget rule first blamed): the union at High's start read 13.9 ms on the slow clock, over the 13.33 ms back-off band, so the `hot` rule took a step every two windows, and the strict restore (the next step priced under 12.0 ms) never gave one back. On, the as-now paced check runs under an aim too: (a) a slow window is PROVEN paced when the union fits the aim's frame less HOLD.pacedMs (10.67 ms at 60) and the frame is more than those 6 ms over it; (b) slow, not GPU-bound, not proven, no pace known: over the back-off band the band's own step goes first as ever (and is judged like any cut); inside it, a judged cut to the highest scale the cost model prices under that floor (none where the scale floor cannot reach it: a small window, a union far over; a step further if it lands short). Proven there, the frame decides: no shorter = the pixels straight back to where the chain began, the failed-rung marks it left restored, that rate remembered as the page's pace; shorter by PACED.probeGain (15 %: a missed vsync bought back is a whole refresh, less is the rate's own wobble) = the cut stays and the level it left is a failed rung; no step up while a cut waits for its verdict; (c) a cut that proves nothing by the end of its 12 s trial goes back to where it started with no pace learnt, the next held off 60 s, doubling; after a judged take-back the next cut comes no sooner than the re-test would; (d) at the pace: no cut for the union's size, no `hot` step, no preset starved, and a scale under the tier's start comes back a grid step at a time on the frame's own room, each step judged (the frame grew = the step off and the pace forgotten); (e) the pace is dropped for a re-test after PACED.recheckSecs (120 s, doubling), which is those same judged cuts again (about 10 s under the tier's start). Check: `ladder-replay.ts --selftest`, the 'page something else holds' block (sixteen cases: held five minutes, the hold lifting, arriving cut, a fight on a held page, a fixed 60 Hz display missing vsync under and over the band, real load, the re-test, the marks, four never-held machines with other overheads, auto, a cut that tells nothing, a machine the cost model is wrong about, the failed rung after a cut that helped, a CPU-bound frame that wobbles, nothing holding); `LADDERHELD_BREAK=1` in front must FAIL eight of its lines (exit 1). Measured 10-14, headless only, after two reviews (the second found a never-held fixed 60 Hz machine left 25 % short of pixels, a cut / step up / cut loop where the model is wrong, a sawtooth after a cut that helped, and cuts repeating on a wobbling rate: all four mended and now cases above): off = the tree before it move for move (600 fuzz machines, as now either way and an aim with it off, four sets: no outside holds / real ones × overhead inside 6 ms / up to 9); on, machines nothing ever held spend the same seconds under 58 fps with overhead inside 6 ms (within 0.1 s of 400) and fewer past it (a fixed display: 116 → 105 of 400, the judged cut finds a missed vsync the old rule let be); with holds coming and going, about 0.5 s more per machine under 58 fps outside the held spells, fixed 60 Hz +4.6 s of 197 (the limit below). 84 steadily held machines whose GPU time follows the pixels more or less than the model says: 26 keep more pixels, 50 the same, 8 lose under 0.015 of mean scale (the trial dips). His take 5 replayed (`--aim 60 --sweeps`, a sweep take, so read the rows only): mean 573 rows off, 730 on. His two F9 takes: identical moves off and on. The real page on the software adapter at his window size, fed held windows through its own ladder (`Quality.simulate`): ×0.75 at 3 s, ×0.70 at 6 s, ×0.55 at 9 s, ×0.77 again at 12 s and for the rest of two minutes; `?ladderheld=0` ends ×0.70. KNOWN LIMITS: a fight that starts on a held page before its pace is known, or a re-test inside one, is cut as before until it is over (the floor cannot bring 23 ms under 10.7); where the model says the scale floor cannot reach the proof's floor, nothing changes; a hold lifting mid-fight on a fixed 60 Hz display, with no fast second between, waits for the re-test; a hold that lifts and comes back inside the hold-off sits at ×0.70 as before until the next judged cut; a frame rate that wobbles 15 % a second by itself can read as a cut that helped (one step under the tier's start then stays held off); everything rests on HOLD.pacedMs = 6 as the frame's overhead past the union. The replay tool's own held-frame test (`heldOut`) stays apart from `holdProof` on purpose: it re-prices a RECORDED frame and knows the take's display rate, which the ladder does not. Never seen on a GPU or a held browser). `bun run tools/qa/ladder-replay.ts --selftest | <F9 take> --check | --aim 60` = the ladder replayed headless over a recording; quality-plan.ts's ladder checks pin as-now. Since 08-12 the ladder also CLIMBS on measured headroom (`settings.ladderClimb`, default on; `capClimb` off): union-driven,
   0.05 a rung up to ×0.95 (1.0 would drop sharp direct), then gather ⅓ → ½ and beams ¼ → ½, backing off newest-first with doubling holds; 'cruising' is judged from
@@ -357,7 +482,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   booted with 4 pairs at medium; low, verylow and medium applied in turn each left 4; with the setting put off and the same three applied, 3 each; back on, 4; a canister solved
   six frames at `stats.rbPairs` 4 with no GPU or page error. The `?onesolve=0` word itself was not opened on a page (one line beside `?onegrid=0`, read before the first
   preset). Never timed or seen on a GPU.
-- **The smoke keeps high's look down the ladder** (10-23; `settings.smokeKeep` 0 | 1 | 2, 1 in the page and the workbench, `?smokekeep=0|1|2`, Tab ▸ Frame 'smoke under
+- **The smoke keeps high's look down the ladder** (GONE SINCE 2026-11-07: the switch, its Tab row, `?smokekeep`, `withSmoke` and `Quality.resmoke` went with the froxel path, and medium and low carry high's march in their own rows: ONE FOG MARCH ON EVERY TIER above. `settings.smokeKeep` is unread and leaves with the Rust side's copy of the table. What follows is the rule as it was) (10-23; `settings.smokeKeep` 0 | 1 | 2, 1 in the page and the workbench, `?smokekeep=0|1|2`, Tab ▸ Frame 'smoke under
   high'). The maintainer, with auto on medium: "a ton of the smoke became very blocky … the smoke looks so sick in our game that i'd rather we keep it closer to high but
   then tradeoff other things in the frame budget". WHAT WAS BLOCKY: under high the march ran at quarter size (`lossy.volQuarter`: one march texel under 4 × 4 internal
   pixels; high's half-size march has 2 × 2), lit by fewer lights a step (medium 3 / 2, low and verylow 2 / 0 = `caps.volK` / `caps.marchLights`, high 4 / 3) and on low and
@@ -395,20 +520,18 @@ row on his machine is the answer, and the word puts the count back on any machin
   `fullRateDomains` went with the boxes. Measure with `tools/qa/stress-scene.js` (`await import('/qa/stress-scene.js')`
   → `__stress.setup()` / `.record(n)` / `.ab(applyA, applyB)` / `.caps(on)` / `.table(r)`, serialized frames, orbiting camera) and `__hotVol(src?)` (recompile
   volumetrics.wgsl from disk — the dev server serves src/render/shaders under /qa/shader/ — and swap the pipeline in without rebooting a staged scene).
-- **Froxel volumetrics** (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
-- **Lossy options** (engine settings, default OFF in `defaultSettings`, switched ON by the presets as above; pause menu *Graphics —
-  trade-offs* + `LOSSY:` rows in the Tab panel for A/B): `settings.checkerDirect` (frame flag 65536: shadow rays on a checkerboard
-  half per frame, direct.wgsl), `gatherThird` / `volQuarter` (gather at 1/3, volumetrics at 1/4 res: `passes.setDivisors`, divisors
-  in `frame.lossyCfg.xy`), `rcHalfRate` (`rc.halfRate`: uppers even frames, c0 + bake odd), `dimRays` + `dimRaysBelow`
-  (`frame.lossyCfg.z`: one emitter sample per leader under that unshadowed luminance). `engine.render` mirrors the booleans every
+- **Froxel volumetrics** (GONE SINCE 2026-11-07, deleted whole: ONE FOG MARCH ON EVERY TIER above, the settings too) (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **Lossy options** (engine settings, default OFF in `defaultSettings`, switched ON by the presets as above; `LOSSY:` rows in the
+  Tab panel for A/B; `checkerDirect` and `dimRays`, which only the old estimator read, went with it 2026-11-07): `gatherThird` / `volQuarter` (gather at 1/3, volumetrics at 1/4 res: `passes.setDivisors`, divisors
+  in `frame.lossyCfg.xy`), `rcHalfRate` (`rc.halfRate`: uppers even frames, c0 + bake odd). `engine.render` mirrors the booleans every
   frame, so they are the single source of truth. Off must stay the untouched path — A/B them one at a time (pin `?quality=ultra` AND set `settings.volLightCap = 0`
   — every preset, ultra included, carries the Phase 0 volumetric cap; `__stress.caps(false)` puts both caps back to the untouched paths).
-- **ReSTIR DI = the direct-light estimator** (renderer v3 phase 2a) — `settings.restir` default ON, `?norestir` = direct.wgsl's leader / tail path; the hybrid held-light path `settings.heldRays`; the motion twin `settings.restirMotion`, `?norestirmotion`; `__hotRestir` / `__hotDirect`, debug views 11 / 12 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **ReSTIR DI = the direct-light estimator** (renderer v3 phase 2a) — the only one since 2026-11-07 (`settings.restir`, `?norestir` and direct.wgsl's leader / tail path went); the hybrid held-light path `settings.heldRays`; the motion twin `settings.restirMotion`, `?norestirmotion`; `__hotRestir`, debug views 11 / 12 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **TAAU** (renderer v3 phase 1) — `settings.taau` default ON, `?notaau` = the old chain; `__taa`; RULE kept here: `frame.viewProj / invViewProj / prevViewProj` ARE the jittered matrices — never build a screen ray from `cam.*` on the GPU side — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Sharp direct** (decoupled resolution) — `settings.sharpDirect`, switched on per tier by `quality.ts Preset.iq`, `?sharp` / `?nosharp` force it; live only under TAAU below scale 1.0; `__sharp` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **The resolve configuration per tier** (image-quality program) — `quality.ts IqTier` on `Preset.iq` (sharp direct + decoupled jitter + GBAA + history de-blur), `?noiq` = the resolve as it was, `?gbaa`, `?nomv` (`settings.motionIds`); harness `__iq` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Stratified gather directions + the trace lab** (ported from exp/trace-perf; the notebook is docs/internal/trace-perf.md, the page docs/review/trace-perf.html): `settings.gatherStrata`
-  (default ON since 08-12 — the maintainer liked it; `?nogatherstrata` = the iid gather, `__gs {on, summary()}`, Tab ▸ Indirect light ▸ 'EXP: stratified gather directions') draws the final gather's k-th ray of four from
+  (THE ONLY PATTERN since 2026-11-07: the switch, `?nogatherstrata` and `__gs` are gone; before that default ON since 08-12 — the maintainer liked it; `?nogatherstrata` = the iid gather, `__gs {on, summary()}`, Tab ▸ Indirect light ▸ 'EXP: stratified gather directions') draws the final gather's k-th ray of four from
   STRATUM (k + frame) mod 4 of the cosine hemisphere (fgather.wgsl `cosineDirK`: azimuth half × cos²θ half; mainGi's two fresh rays a Latin square over the same cells; the young-history
   extras a complete stratified set of their own) instead of iid — UNBIASED (tile means within ±0.5 %, temporal sd equal or lower) but a whole 8×8 tile's k-th rays share a quarter of direction
   space and walk the grid coherently: gather 2.03 → 1.70 ms at high 1368×770 (−16 %), −0.8 ms at ultra. passes.ts compiles the gather module TWICE behind a prepended `const GATHER_STRATA`
@@ -422,7 +545,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `lighting_common diceIrradianceFrom(Ph, n, P0, N0)` — one probe spacing off the hit face like any dice read, but never past the plane of the surface the ray LEFT (P0, N0), and no trilinear
   neighbour from behind that plane (they collapse to the home cell) — the fix for indirect light 'leaking' behind the manager's shelves (the cartons' backs 12 cm off the wall read the lit
   storage room next door: 26–50 → 5); a new bounce read at a hit takes the receiver's plane the same way, never the bare `diceIrradiance(Ph + n·1 m)`.
-- **The denoiser** (renderer v3 phase 3) — `settings.denoiser` `'v3'` default | `'legacy'`, `?legacydenoise`; one core (`render/shaders/denoise.wgsl`), three clients (shadow / diffuse / specular); `__dn`, `__hotDenoise`, debug view 13 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **The denoiser** (renderer v3 phase 3) — the only one since 2026-11-07 (`settings.denoiser`, `?legacydenoise` and the three old chains went); one core (`render/shaders/denoise.wgsl`), three clients (shadow / diffuse / specular); `__dn`, `__hotDenoise`, debug view 13 — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2979–3015 -->
 - **Smoke = one pool of bricks** (THE smoke solver since 2026-10-10, no switch; the maintainer on the eight 64³ boxes it replaced: "let's just remove the box smoke if this is the way we want to do it" · "we can always revive from
@@ -499,7 +622,7 @@ row on his machine is the answer, and the word puts the count back on any machin
 - **The scene group's binding 11 is the fog of war's sight table, and `evalLight` asks it (10-14, `FOG.full` — `stealth.md`).** `common.wgsl`: `evalLight` =
   `evalLightRaw` (the old body) × `lightFogK` for a light whose kind word carries bit 25 / 26 (none while the rule or the fog is off: one `and` a light);
   `evalLightTrue` = the light as it is, for the game's readings (`probe.wgsl` alone). A NEW PLACE THAT WORKS A LIGHT OUT WITHOUT `evalLight` MUST MULTIPLY BY
-  `lightFogK` (today: the glints in `reflect.wgsl` ≡ `reflect_p5.wgsl`, `cards.wgsl`, `froxel.wgsl`, the march's K-beam pick) — `probes.ts fog-full` reads the
+  `lightFogK` (today: the glints in `reflect.wgsl` ≡ `reflect_p5.wgsl`, `cards.wgsl`, the march's K-beam pick) — `probes.ts fog-full` reads the
   text for these and fails on any other file calling `evalLightRaw`. `fogSeenAt` walks the grid, so the VERTEX stage uses `fogSeenBins`. The table is a 58 KB (41 KB until 10-24, when the fog took five eyes; `FOG.eyes`, `docs/agents/stealth.md`)
   uniform (the 5th of 12 a stage may bind with the composite group's) written as storage by `fogsight.wgsl` at the head of the frame, bound through a second
   scene group (`sceneBGPlain`, a zero stand-in at 11). Sampled textures: the composite stage is at 15 of 16 (13 + the smoke atlas + the smoke page — the note
@@ -671,8 +794,8 @@ row on his machine is the answer, and the word puts the count back on any machin
   (`navigator.webdriver`, or `?paused` on the address: EVERY PAGE TOOL, and the verify recipe's page, loads the page as it always was and reads the page's
   own window), and in a browser that is not of the Chromium family (no `Chrome/` in its name: a frame drawing with its parent's device has been seen
   nowhere else, and a browser that took the device and drew nothing would be a black page with no error to catch). ALWAYS OFF: under `?bench` and on the
-  benchmark's scene pages (their loads are what it times: a frame sent to one sends the tab there, `leave`), in the kit picture's window (a frame of the
-  game's page, with a device of its own as before) and on the one-file page. A frame under a shell of another build (a deploy mid-visit: the module
+  benchmark's scene pages (their loads are what it times: a frame sent to one sends the tab there, `leave`) and on the one-file page (until 11-07 the
+  kit picture's window too, with a device of its own: it now takes the shell's, on a seat beside its page's — the next bullet). A frame under a shell of another build (a deploy mid-visit: the module
   scripts the two pages name differ) sends the tab to its address, once a minute at most (a tab whose two pages can never agree plays on a device of its
   own). ANOTHER PAGE of the site asked for in the frame (the replay viewer, the workbench, the listening pages) is loaded by the TAB (the frame stops the
   load with the Navigation API and the tab makes it; without that API the shell sees the frame land there and follows): such a page has the address bar
@@ -698,7 +821,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   the tab's document the same one throughout (one top-level load, one device opened). The second mission's game after 120 frames is the game a whole load
   of that address plays, by digest, and the first mission's `Game` is collected once the collector runs. **Costs and seams:** the first load parses the
   bundle twice (the shell's page runs the same script and stops at the top of `main()`; `shell` in the record is what that costs on a real machine); the
-  kit picture still compiles its own copy of the shaders in its own window (it could take a lease too: two pages on one device at once, not built); an
+  kit picture compiled its own copy of the shaders in its own window (until 11-07: it takes a lease too now, two pages on one device, the next bullet); an
   uncaught GPU error raised by the last load's work after its lease ended would be reported by the next; in a browser that does not make equal pipelines
   one (Chromium does) the keeper's second making of a pipeline asked for AT ONCE is a second compile (the game asks for nearly all of them the waiting
   way, which is never made twice). **First read on a GPU (2026-10-28, the hosted build's records: an Apple M4 Max, Chrome, three starts in one tab):**
@@ -711,6 +834,189 @@ row on his machine is the answer, and the word puts the count back on any machin
   how Chromium behaves, proven here on the software adapter; Safari and Firefox keep a whole page per load until somebody has seen `?keeppage=1` draw
   there (the refusal path is for a browser that throws; one that draws nothing has no path), and the seconds saved on a real machine are the Windows
   records' to show.
+- **The Team & kit picture draws with the tab's device, and a lease has its own view of it (2026-11-07; `src/gpu/keep.ts` `viewOf`, `Keeper.take(seat)`;
+  `src/host/keeppage.ts` role `beside`; the maintainer: "ideally not needing to recompile for the gear selection screen and levels").** The picture is a
+  second game in a window inside the start page (`ui/kitView.ts`), and it opened a device of its own: all 142 of its programs compiled when the step
+  opened, and went with its window, so the mission it showed compiled its own again at Deploy. Under a shell it now takes a lease on the shell's device
+  BESIDE its page's. **A seat holds one lease:** `take(seat)` ends the lease on that seat and on every seat under it (`a/b` is under `a`); leases of
+  different seats are held at once. The game's page takes `KEEP_PAGE.seat` (`page`), the picture `KEEP_PAGE.pictureSeat` (`page/picture`): the next
+  picture ends the one before it and nothing of the page's, the page's next load (Deploy) ends the picture with its page, and `ui/kitView.ts drop`
+  gives the picture's seat up by name when it drops the frame (`Keeper.release(seat)`: the lease ends, and a take still on its way from a window
+  dropped mid-boot is refused, so no lease is left that nobody can end). A take waits for the GPU's queue only when NOBODY holds the device (what a
+  page that is gone left there): a picture beside its live page does not wait on that page's own frames. `keeperAbove` walks up to the nearest shell (`depth`: 1 = the window above, which is all
+  a page takes; a picture takes any). **A page is never handed the device.** Two holders cannot both write on it, and a page writes on it (the compile
+  queue's makers, the load's clock, the play total on the queue). So `Lease.device` is a VIEW (`viewOf`): a read finds what the page put there, else
+  what the keeper answers for that lease (the makers that keep, the lease's `lost`, its own view of the queue), else the device's own method, bound; a
+  write stays in the view and the end of the lease empties it (`onuncapturederror` is answered by the keeper as a listener of the lease's own: the
+  device has one such property and two holders). The device itself is never written on, so `dress` (which took every own property off the device
+  between leases) is gone. The one call that must be handed the device, a canvas's `configure`, takes `Lease.real`. This is
+  every kept load's path, not the picture's alone. **Where the picture keeps its own device:** no shell above (a driven page, `?paused`, `?keeppage=0`,
+  a browser that is not Chromium's), or a shell of another build; it never sends the tab anywhere and is never a shell. A picture whose `configure` is
+  refused opens its own and does not mark the keeper refused for its page's loads. `KEEP_PAGE.v` is 2 (a frame of this build under a shell of the
+  build before leaves it once, as for any deploy mid-visit). **No switch of its own:** `?keeppage=0` is the page as it was, picture and all.
+  **Checks:** `bun run tools/qa/keeppage-check.ts` (the two seats over a stand-in device: one device, a view each, one compile for a program both ask
+  for, what one puts over a method the other does not call, the picture's end, the next picture, Deploy, a loss told to both; the clock checks now hold
+  that nothing is written on the device or its queue; `KEEPPAGE_BREAK=1` fails 31) and `PORT=… JOBS=picture node tools/qa/keeppage-page.cjs` (the real
+  page: the start page's own clicks to a mission's Team & kit, a second mission's, Deploy; under `KEEPPAGE_BREAK=1` it must fail).
+  **Measured, software adapter, headless Chromium, verylow, `?paused` (2026-11-07):** the start page compiled 148 of 148; the picture of the office's
+  room clear 0 of 151, ready 5 s after the click; the picture of the records office 0 of 151, 3 s; the mission after Deploy 0 of 152, 2 s; one device
+  opened, the tab's document the one that was opened. Before, same tool's count on the tree before (`shader-count-page.cjs`): the title 144, the
+  compound's picture 142 on its own device (135 s here), the mission after it 147 of which 38 to 43 were new to the tab's device. **Never seen on a
+  GPU**, and what two games drawing on one device cost a frame against two devices is not known: the queue is one where it was two. **Seams:** an
+  uncaptured GPU error is the device's, so it is heard by both holders (the game's page files one the picture's work raised as its own, and the other
+  way about); on a device where a fog of war cut twin fails to compile the cut set is pinned off at every boot, where it took a fog frame before.
+- **The look's maps are worked out once a visit (2026-11-07; `gpu/keep.ts Lease.bytes` / `keepBytes`, `render/gbuffer.ts makeLayers`).** With the
+  look on, a load works out the material maps its level names: a third of a second of arithmetic a layer, some twenty a level, which the start card
+  waits for beside the shaders (the boot's span `pipelines_materials`). In the hosted records of 11-05 from the maintainer's M4 Max that was the WHOLE
+  wait of a repeat look-on load, 2.1 to 3.6 s, with every other pipeline span under 0.7 s; the workers of 11-05 (`lookWorkers.ts`) spread it over the
+  cores and every load still paid it, the Team & kit picture too. A map is the same bytes on every level: it depends on its layer, its size, the
+  evening and whose sin and cos made it. So the keeper keeps BYTES by a name that says those four (`look map <layer> <N> <even> <exact>`): a layer
+  this page works out is kept, every size of it (`keepBytes` copies into arrays of the shell's own: an array a page made would hold that page's whole
+  world after it is gone; the first said under a name stands; `KEEP_PAGE.bytesCap` 192 MB in all, the thirty maps being 84), and a later load, or the
+  picture beside it, is handed what the visit has and works out only the rest. The upload, the slots, the order of `lookMade` and the moment a stuff
+  is pointed at its slot are as they were. Not of a device: a device lost keeps them. A page with no lease makes every layer as it did.
+  `__engine.gbuffer.lookBy` gains `kept`, and `lookFresh` names the layers THIS page worked out. No switch: `?keeppage=0` is the page as it was.
+  **Checks:** `keeppage-check` (copies, the first said stands, the next lease and a picture get the same arrays, the cap; under `KEEPPAGE_BREAK=1`
+  nothing is kept) and `PORT=… JOBS=maps node tools/qa/keeppage-page.cjs` (the look's page: the title, two missions, the second again: no map worked
+  out by two loads, the load again works out none). **Measured, software adapter, headless Chromium, four cores under other load (2026-11-07):** the look's title worked out its 20 maps in 9.5 s (all on workers); the compound picked after it worked out 7 of its 17 (the ones the title has none of) in 1.9 s and was handed 10; the records office after that 0 of 16, 95 ms; loaded again 0 of 16, 82 ms. **Never seen on a GPU; no load of the maintainer's
+  from a build with the workers has been read, so what a load pays for its maps there today is not known.**
+- **What a level raises is data: every level is one shader text (2026-11-07; `render/frame.ts LevelSw`, `levelSwitches`, the frame block's `levelCfg`;
+  `shaders/common.wgsl lv`; `render/meshShadows.ts LEVEL_SIZES`).** The kept page compiles only what the visit has not built, and a text that differs
+  by one constant is a text the visit has not built. Nine constants of the scene prelude were a LEVEL's: `WX_KINDS` (any level but the office's
+  family, with the level's own roofs on), `WX_SNOW` and the seven `SNOW_*` rows (the pass and four training levels). So the title (the office) to any
+  mission compiled every program that read one of them a second time: 17 of 47 module texts and about a third of the pipelines between the title and a
+  snow level (`shaderinline-check --json` of the two settings, before). And the mesh shadows' module carried the cast's own nodes, triangles, levels and
+  corner base as constants: two programs more wherever the men were the other cast. NOW the nine are bits of `frame.levelCfg.x` (a new member, the
+  last of the head: FRAME_HEAD_BYTES 976, FRAME_BYTES 31216, the two tables four words on), written by `writeFrame` from the same three tables main.ts
+  always wrote (`weatherKindConfig`, `snowConfig`, `snowLookConfig`: no caller can leave the word out), and a shader asks `lv(WX_KINDS)`: the prelude
+  names each bit by the old name, so every use reads as it did with `lv( )` round it (128 uses in 22 files; comments untouched). The same answer at every
+  use on every pixel, so the picture is the one it was by construction: a branch a level does not raise is not taken, where it was not in the program.
+  Read as pixels too (`tools/qa/draw-equal.cjs`, the tree before against this one, software adapter, 640 by 360, high): the office at night, the rain,
+  the firefight and the squad view EQUAL at both checkpoints, the squad view once the fog's compile is out of the comparison (the next bullet's trap).
+  The cast's four numbers are the last four words of the mesh shadows' level list (read-only there: the refit's barrier needs a uniform loop bound, and
+  the mesh buffer is written by the same kernel). The snow's hills pipeline (`gbufSnow`) is made on every level and drawn where a level has drifts.
+  Nothing in the update reads any of it; `game/snowFx.ts` still asks the three tables what the page's level raised. No switch: one path.
+  **What it costs:** the title's first compile reads the weather's and the snow's code it used to leave out: 6.8 MB pasted for the boot's set where the
+  title had 6.2 and a snow level 6.8 (`shaderinline-check`, the page's rows on), about a tenth more text for the office and nothing more for a snow
+  level (with the fog of war's three: 6.9 MB). A visit that goes on to any mission compiles less in all.
+  **On a cloud NVIDIA card (A10G, Chrome 157 on Vulkan, the benchmark at high with `adapt=0`, the tree before against this change alone, two pairs on four
+  boxes of one kind, 2026-11-07):** the first load's shaders 25.4 and 28.5 s before, 26.1 and 25.5 s after: no change outside what two runs of one build
+  differ by. The second and third scene of the benchmark, each a fresh page with the browser's and the driver's caches on: 8.5 / 9.2 s and 8.7 / 8.4 s
+  before, 7.3 / 7.4 s and 3.0 / 2.8 s after (one text for every level is one cache entry for every level). **What the untaken branches cost a frame:**
+  nothing the compute passes' GPU ms shows (every row inside the spread of two runs: 7.6 | 7.6 as it opened, 10.4 | 10.5 the dark block, 15.7 | 15.9 the
+  storm, 18.6 and 17.8 | 18.1 and 18.9 held still), and about 0.1 ms in the g-buffer pass off snow (0.21 to 0.26 before, 0.32 to 0.35 after, both pairs).
+  One trap in that text: its night snow row follows the FIGHT, not the build (17.3 where the floors line says "0 of 4 up", 19.1 to 19.3 where it says
+  "1 of 4 up", once on each build). With the driver's cache OFF and medium (`shader-count-page.cjs`, 8 cores, two boxes that may not be one kind): the
+  boot's pipelines 41.8 s before, 49.8 s after, and `particlesUpdate` is the last of the boot's programs in where it was the sixth (31.6 to 42.9 s): the particle
+  kernel is the next text to cut. The kept page on that card: the title 152 pipelines, 30 missions none.
+  **ONE OF THE NINE IS NOT A BRANCH: the snow's surface in the boxes' shading is a second text of the g-buffer's module (`render/gbuffer.ts`, `const
+  GBUF_SNOW`; the same day).** As a branch it put `snowBox` and, on the look's page, `lookSnow` into every level's box program: 181 to 294 KB of pasted
+  text on the plain page, 269 to 469 on the look's (its cut twin 539), for two levels' sake, and about 0.1 ms of every frame's g-buffer pass on the cloud
+  card. On another machine the look's page then lost its device at its first drawn frame on the software adapter (`?paused&quality=high&mute&look&
+  firstframe=1`; here the same page drew two frames equal to the tree before, pixel for pixel, at twice the seconds a frame: read it as a routine near
+  what that adapter can build, not as a rule). So `gbuffer` and `gbufferCut` are each made twice, with the snow's surface and without (`gbufferSnow`,
+  `gbufferCutSnow`: word for word what a snow level and any other level compiled before), and `gbuffer.wgsl`, `gbuffer_cut.wgsl`, `look.wgsl
+  lookSurface` and `snow.wgsl` ask the module's own `GBUF_SNOW`. A page draws with its level's own (`GBuffer.init`: `snowLookConfig.surface` picks) and
+  asks for the other through the later lane without keeping it: a page is one level for its whole life, and the ask is for the visit's next one. So the
+  kept page still compiles nothing at any level, the program a level draws with is the size it was, and a visit's first page compiles three programs
+  more (`gbufBoxesSnow`, `gbufBoxesCutSnow`, and `gbufSnow`, the hills, which is of the snow's module), and a fourth for the men (below).
+  **THE MEN'S PROGRAM COMES IN THE TWO WRITINGS TOO, and that was the lost device.** `look.wgsl lookMan` had `let cold = lv(SNOW_SURF) &&
+  snowCfg.p[1].z > 0.5;` (a snow level's men are cold in the face). On the look's page that one line lost the device on the software adapter the first
+  time the men were drawn: the adapter's GPU process exits on signal 11. Placed with a page read that draws unstaged (the men in frame; a staged
+  `draw-equal` view on the Rust build has them out of frame, which is why three reads here were clean): no pass working, the device lives; the g-buffer
+  pass alone, lost; in it the men's pipeline alone, lost, the boxes', the cut boxes' and the down pass clean; and with the line as `false`, as
+  `lv(SNOW_SURF)` alone or as the `snowCfg` read alone, clean. So it is the short-circuit of those two uniform reads in that fragment program, nothing of
+  size or memory. `cold` asks `GBUF_SNOW` now and `gbufSkin` has its `gbufSkinSnow` (`GBuffer.prepareSkin`: the level's own awaited, the other through
+  the later lane, the two asked in one order on every level, which `levelset-check` reads), so NO text of the g-buffer's module asks the level word for the snow's surface, and every one of its programs on a level without snow
+  is the text it was before the level word existed. (`LevelSw.SNOW_SURF` still rides in the word and no shader asks it.) After it: the same unstaged
+  read of the look's page draws two frames and keeps its device, and the snow level under `?look`, which lost its device here too, runs 150 s clean. THE RULE IT LEAVES: a level's switch is a branch where the code is small, and a second program asked for on every page where
+  it is heavy; never a constant of a text a level's start would compile again. The card's numbers above are the branch form's: the second and third
+  level's load stands (the texts a level asks for are still the visit's), the 0.1 ms is gone with the branch.
+  **Checks:** `bun run tools/qa/levelset-check.ts` (the page's boot recorded under the title's switches and a snow level's, rows as written and as the
+  page opens: the same module texts and pipelines; the level word 0 and 511; the mesh shadows' one text for both casts with each cast's numbers in
+  its list; `LEVELSET_BREAK=1` fails three) and `PORT=… JOBS=levels node tools/qa/keeppage-page.cjs` (EVERY mission of the list picked in turn on the
+  kept page from the title: each compiles no pipeline and no module). `shadertrim-check` holds that the weather switch changes no text, the snow
+  checks read the level word's bit where they read the prelude's constant, `frame-layout` has the member's row, `shaderrows-check` was stamped.
+  **Measured, software adapter, headless Chromium, verylow, `?paused` (2026-11-07):** the title compiled 148 pipelines and 68 modules (its boot's own, then the fog of war's and the later twins behind the start); each of the 30 missions of the list picked in turn on that one device then asked for 152 and compiled NONE, nor a module, 2 to 5 s a load (137 and none once the three old denoise chains were out and the Rust game was the page's). Before, by the same pages' text (`shader-count-page.cjs` on the tree before): the compound's mission after the title had 104 of its 142 pipelines' texts made already and compiled the rest. **On a GPU: the counts and the times above on the cloud card, by tools. Nobody has looked at its picture there, and nothing of it was run on an Apple GPU.**
+- **Nothing is compiled at its first use: the fog of war's programs are asked for at every boot (2026-11-07; `engine.ts warmFirstUse`, called by
+  main.ts after the boot's freeze; `render/fogofwar.ts FogPass.warm`, `FogSight.warm`).** The fog's sight table and its pass made their programs the
+  first frame a mission drew the fog. The title draws none, so on the kept page the first squad mission of a visit compiled `fogSight`, `fogofwar` and
+  `fogofwarPre` under play, and their cut twins after them (the maintainer, 10-27: "i think we shouldn't do truly lazy compilation where then have
+  stutters during gameplay"). They are asked for once the boot's own are in, behind the start: not on the start card's count, and the load's record (`made`, frozen at the
+  boot's end) does not count them. While one compiles it is one of the LATER set's (`gpu/device.ts laterHold`, taken in `FogPass.program` and
+  `FogSight.program`): a brief's Start, `__ready` and auto quality's measure wait for it, where a program made at first use was counted by nobody.
+  The look's loose snow (`render/powderField.ts powderWarm`, on the look's page alone) is asked for there too: its step was made the first frame a snow
+  level stood its powder, the one program a snow level under `?look` still compiled at its start. 104 KB pasted for the three, 143 for the cut
+  twins. `tools/qa/pageboot.ts` asks for them as the page does, so the size and compile tools read them. A pass that gains a program of its own asks
+  for it in `warmFirstUse`. Still made at first use: whatever a `?word` trial builds, the save picture's, the debug views'.
+  **A trap for `draw-equal.cjs`:** against a tree from before this, the squad view DIFFERS at both checkpoints (a quarter of the pixels, at the men's
+  and the shadows' edges), because the older tree's fog programs are still compiling at drawn frames 3 and 7 and this one's are in. It is the compile
+  and nothing else: equal with `&nofow` on both sides, and equal with the fog on once both pages are given the time (`DRAW_EQUAL_AFTER_READY` = a module
+  that draws one frame and waits 150 s). The tree with the picture's lease alone is equal to the one before with no help. Never seen on a GPU.
+- **The composite is one program a form, the glass's bend its own statements (2026-11-07; `render/passes.ts compText(sharp, pre)`, `shaders/composite.wgsl`).**
+  The composite was compiled twice for each of its two forms (the fragment one and the sharp path's compute one), behind `const GLASS_REFRACT: bool`: a
+  refracting twin with the glass test ahead of the reads, and one with it after them. A frame drew one of the four, the encode picking by
+  `passes.glassRefract`. The refracting text already kept the older tint rule in an `else` for a frame with the setting off (`frame.glassCfg.w` = 0), and
+  with no pane crossed the two computed the same picture (the page had drawn `compositeSR` on every visit's first frames until `compositeS` was in). So
+  that text is the one kept and the second glass block is deleted: `compositeR`, `compositeSR`, `pCompR`, `pCompSR`, `passes.glassRefract` and the LATER
+  twin of the compute composite are gone, `compositeS` is the boot's own, and the fragment `composite` stays a LATER program under the first-frame row.
+  `settings.glassRefract`, `?norefract` and the panel's row are as they were. Two programs fewer at the boot and two fewer of the cut set: about 0.8 MB
+  of pasted text in each (`shaderinline-check`). **Picture** (`tools/qa/draw-equal.cjs`, the tree before against this one, software adapter, 640 by
+  360, high): the glass view, the squad view and the office at night EQUAL at both checkpoints, and the glass view under `&norefract` EQUAL at both (its
+  frames are not the default's, so the setting still does something). What those frames did not hold: a broken or cracked pane (the rig's staging broke
+  none on this build: its `unmet` says so), so the cracks' statements were moved by reading, not by a picture. Never seen on a GPU.
+- **What each program costs to compile, ALONE (2026-11-07; `tools/qa/shader-serial-page.cjs`).** The boot asks for its hundred programs side by side, so
+  `window.__boot.slowest` and the count tool's times "since asked" say which came in last, not which is dear. The tool boots the real page with every
+  `create…PipelineAsync` held in one line: a program goes to the browser when the one before it is back, and its time is its own. **On a cloud NVIDIA
+  card (A10G, Chrome on Vulkan, the driver's cache off, high, `?firstframe=1`, this tree with the cleanup's deletes to the one direct-light program):**
+  128 programs, 140.9 s of one compiler thread: the first-frame set 97 programs and 41.7 s, the later set 8 and 27.3 s, THE CUT-BOX SET 23 and 72.0 s
+  (the split is mine, by label, off `shaderrows-check`'s LATER list and a label's second program as its cut twin: the tool itself cannot name a
+  program's set, every one of them is asked before the page calls itself ready). The same page booted the usual way on that box: 93 pipelines in 15.5 s (25 to
+  28 s for 119 on the benchmark's first load that morning, before the deletes). So the browser draws under three threads' worth from the box, and a load's wait is the SUM of its
+  programs, not their number: 82 of the first-frame programs are under half a second each and 5.5 s together. Dearest, seconds alone (boot form | cut
+  twin): volDust 10.0 | 10.9 · volFroxel 8.3 | 9.8 · vol 5.9 | 6.9 · particlesUpdate 5.9 | 8.1 · restir 4.8 | 4.9 · compositeS 3.9 | 4.4 · composite
+  3.7 | 4.3 · gatherTrace 3.7 | 4.1 · froxelInjectJ 3.6 | 4.0 · reflect 2.9 | 3.4. A brief's Start waits for every program (`docs/agents/menus.md`),
+  so for a player the whole sum is the wait. What follows from the table: one set of ray programs is half of it; then the march, three writings of one
+  kernel (vol, volFroxel, volDust) and over a third of what is left. On the software adapter the tool's milliseconds are that adapter's and say nothing.
+- **The dust's look is part of the march's text, not a third march program (2026-11-07; `shaders/dust_look.wgsl`, `shaders/volumetrics.wgsl`, `engine.ts
+  smokeDrawWords`).** The march was three programs of one kernel: `vol` (the classic tiers'), `volFroxel` (with the froxel-lit smoke march) and `volDust`,
+  which was `volFroxel`'s text with five statements swapped at eleven sites by string (`render/dustLookVol.ts`, deleted), compiled on every page and
+  chosen by the frame while some brick of smoke held dust. It was the dearest program of the page to build (10.0 s alone on the cloud card, the table
+  above), a third of the march's sum, and until it was in dust was drawn as plain smoke. Now the two lit marches are WRITTEN with the dust's statements
+  (`let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);`, the tint on both in-scatter terms, the dust's
+  self-shadow where `dl.dust > 0`), and `dustDensity` opens on `if (!dustAlive())`: the march's own masked read, no tint, `dust` 0. `dustAlive` is bit 1 of
+  `frame.sideCfg.z`, beside the smoke lab's streak bit, raised by `SmokeBinding.dusty` (never with `?nodustlook`: `smoke.ts` asks `DUST_DRAW` there now).
+  So with no dust alive every sample's density is the read it was, the tint is exactly 1 (`1 + 0 / max(d, 1e-6)`, and a product by exactly 1 is exact
+  however a compiler orders it) and the self-shadow is the plain one: the picture of a frame without dust cannot move by arithmetic. With dust alive the
+  statements run are the twin's own. What changes for a player: dust is dust from its first frame (no wait for a later program), and on a classic tier a
+  dust frame runs `vol` where it ran the froxel text with the froxel march not taken (the same classic march, read off the same text). The K = 0 march
+  (its own program, no row ships it) still draws dust as plain smoke. PASTED SIZE (`shaderinline-check`, with the cut test's text): vol 337 to 364 KB,
+  volFroxel 421 to 474 (it is what volDust was, 470, and four more for the test), volDust's 470 gone; the three together 1,228 to 838 KB. The budget row
+  for the march is 400 (was 382; 395 on the look's page) and volDust's row is out. CHECKS: `tools/qa/dust-look-check.ts` pins the statements and the
+  plain read as text (the wallbreak family's looks probe runs the same pin), `shaderrows-check` reads that both programs carry the look and that no
+  `volDust` is asked for, `fog-air` that the dust's drawn density still goes through `fogSmoke`. NOT READ: the smoke solver does not run on the software
+  adapter (five storage textures in a stage), so no frame with smoke or dust in it was drawn here before or after; frames without smoke were, and are
+  PIXEL-EQUAL to the tree before (`draw-equal`, office-night and firefight at high, both checkpoints). ON THE CLOUD NVIDIA CARD (A10G, Vulkan; the named
+  tree `5dbe0d75` against it with the fold, the benchmark on two boxes of one kind): first load's shaders 21.9 s to 20.9 s, 100 of 100 programs on both
+  (the fold is one fewer and the look page's mend one more), the last program ready on both the froxel march at 20.9 s; the volumetrics pass 3.2 ms on
+  both and every row's GPU ms inside the spread, so the bit costs a frame nothing that reads. A second is inside what two boxes differ by (1.5 s that
+  morning); what is not is the sum: every program alone, driver's cache off, 108 programs and 70.5 s of one compiler thread where the morning's tree was
+  128 and 140.9 s (the ray programs' one set, the composite and this). Dearest alone now: volFroxel 10.7 s, vol 7.0, particlesUpdate 6.9, restir 5.0,
+  composite 4.8, compositeS 4.6, gatherTrace 4.1, froxelInjectJ 3.9, reflect 3.4. The second and third loads of that pair read 10.3 and 7.3 s on the
+  named tree and 3.7 and 3.2 s with the fold; nothing in the fold touches the programs that were built again there (the particle update, the composite),
+  so that is the box's driver cache and no result of this.
+  WHY THE MARCH IS STILL TWO PROGRAMS, MEASURED (OVERTAKEN THE SAME DAY: the froxel-lit march and its twin are deleted, ONE FOG MARCH ON EVERY TIER above, and the one program left is the cheaper of the two) (the same card, the hour after; the one-program form is a commit kept off the build, `Render: the
+  march is one program for every tier`). With `const VOL_FROXEL_MARCH` gone and the one text compiled once, a frame taking the froxel-lit march by
+  `FrameFlags.FroxelVol` alone: 107 programs and 61.4 s alone where the fold left 108 and 70.5 s (the one march 10.0 s alone). But the wait a person
+  sits through first is the boot's set, and on that card it ends when the march does: `?firstframe=1`, 92 programs in 17.6 s with the two programs (the
+  boot's march 7.0 s alone, last in at 17.6 s) and in 19.7 s with the one (10.0 s alone, last in at 19.6 s); every program waited for, 99 in 19.1 s
+  against 98 in 18.2 s. One run each, on boxes that differ by a second or two, so read the direction and not the tenths: the one program takes about
+  nine seconds off the sum and about a second off the whole set, and puts two or three on the first wait, because the boot then holds the dearer
+  text. (The benchmark of the one-program form landed on a box of the slower kind, 42.1 s to its first start, so it says nothing of the load; its
+  volumetrics pass read 3.1 ms against 3.2, so the one text costs a frame at high nothing that reads.) That is what the twin was made for (2026-10-26), and it still holds. So the twin stays until the march itself is cheaper to build, or the
+  froxel-lit smoke march is a program of its own beside the classic one (its result feeds the rain and the beams in `main`, so that is a pass with a
+  target between, not a move of text). What the table says to try first, unmeasured: the march is asked for 1.7 s into the boot and needs 7 s alone, yet
+  is the last program in at 17 to 19 s; where the compile queue is off (everywhere but Windows) nothing asks for the dearest program first.
 - **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
   Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
   had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:
@@ -775,6 +1081,42 @@ row on his machine is the answer, and the word puts the count back on any machin
   fallback frames themselves (a `?nogatherstrata` / `?norestir` / `?norefract` visit, ultra's phase-5 pair, a froxel tier, scale 1 — for the seconds before their twin is in).
   Left: vol's two smoke marches (the classic and the froxel-lit one are one march apart from their light — ~1.2 s of each program), the rain splash's second `rainLight`,
   restir's two `traceSample`s across its barriers, and the page script's own ~0.7 s.
+- **THE TEN BIG KERNELS HAVE ONE WRITING AND THE GATHER IS ITS TWO PROGRAMS (2026-11-07; the maintainer on the shaders: "let's do it", of cleaning up what the
+  survey found; his rule: "single path when possible").** Compact shaders and Separate shadow rays were Shaders rows from 2026-10-26, on in every browser since
+  2026-10-27 ("Everywhere"), and `render/kernels.ts` said the second copy "goes (one set or the other) when the default is decided". It went: `shaders/compact/` is
+  moved up over the ten files it copied (fgather, gather_common, reflect_p5, volumetrics, composite, particles, direct, sharp_direct, restir, sdfrig),
+  `render/kernels.ts` is gone, and `ui/shaderrows.ts` has ONE row left, Start on first frame shaders. **No switch and no word:** `?compactshaders`, `?splitrays`,
+  `TPS_COMPACTSHADERS`, `TPS_SPLITRAYS` and a choice kept under either key do nothing (a kept line loses the two entries the next time a row is moved; a report
+  made before today still names the rows: `shaderRowLabel`). **The harness now compiles what the page compiles**: it had every row off and so sized, trimmed and
+  folded the writing no player ran. **The gather**: `shaders/fgather.wgsl` is the gather's helpers, constants and bindings and has no entry point (843 lines to
+  190: `main`, `mainGi`, the resampling gather's helpers, the young-history rays, and glossReflection / glassShade, which `gather_split.wgsl` writes as
+  glossReflectionX / glassShadeX); `render/gatherSplit.ts` builds `trace` and `light` from it. Ultra's resampling gather was never built beside the two programs
+  (the maintainer, 10-27: "we pretty much have no one using ultra, so i think it's fine?"); its plumbing went the same day: the reservoir textures and
+  their layouts, `setGi`, the young-rays counter and its hold, settings `giResample*` and `giYoungRays / giYoungCap / giYoungLen`, their debugger rows, the `__gi`
+  hook, `P5Tier.gi / giRays` and `Dn.giYoungK`. Frame words `giCfg` (four) and `p5Cfg.x, .y` are FREE: still in the layout, read by no shader. The same module
+  hashes held after it. **THE OLD DENOISER WENT TOO** (same day): dtemporal + softblur, temporal + giblur and the gloss chain, thirteen pipelines and four modules of every
+  boot that ran only under `?legacydenoise`; with them `settings.denoiser`, the debugger's core switch, `__dn.mode`, `directPasses`, the depth history only
+  dtemporal read, `softtile.wgsl markTiles` (the denoiser's pack writes the tile flags) and the adaptive-history trial (`giAdaptiveHistory`, it lived in
+  temporal.wgsl). The tile mask's thresholds come from the shadow client's own strides (`allSkipT`, the same 2, 3, 5). 41 module hashes held, the three tile
+  mask modules lost an entry point. **AND THE OLD DIRECT ESTIMATOR** (same day): `direct.wgsl`, `settings.restir`, `?norestir`, `__hotDirect`, and everything
+  only it read: `directSamplesTop / Other`, `directAdaptiveMin`, `checkerDirect`, `dimRays / dimRaysBelow`, `directSeedHold`, the tail's chroma flag, the presets'
+  `ds` rows and the cost model's leader / tail branch, `LightSet.dirMasks` (the directional masks always ride now). Frame flags Restir, TailChroma, CheckerDirect
+  and DirectSeedHold are gone, so `sharp_direct.wgsl` says `let hiR = 4.0` where it read two of them (the ONLY shader text this changed: sharpU and sharpUE;
+  41 other hashes held) and the denoiser's ratio clamp is 4 always. Frame words `directCfg.x, .y`, `rcJitter.z` and `lossyCfg.z` are FREE; `directCfg.w` is
+  still written and read by nobody. `settings.directHistory` is a switch now (above 0 = the shadow client's history on), not a weight. The debugger lost
+  24 rows: `panel-inventory.ts --gone --only labels.json` takes deleted rows out of its fixture (and `--reword --only` rewords named ones) without touching
+  another lane's missing rows. **THE LAST KERNEL IN TWO WRITINGS** was the gather's light loop (`shaders/gather_split_common.wgsl` beside `shaders/gather_common.wgsl`): one since the
+  same day, the bullet 'THE GATHER'S LIGHT LOOP HAS ONE WRITING' above. **What was measured**: `tools/qa/shaderinline-check.ts --json` before the change with the two rows' words in front and after it with none, on the
+  title, a snow level and the look's page: all 66, 66 and 67 module texts the boot hands the browser are the same by their hashes, in both sets, and the same
+  127, 129 and 130 kernels are asked for at the same sizes. So the page as it opens compiles character for character what it did. **What changed for a
+  tool**: `shaderinline-check` has one budget table; `shaderrows-check` has two arms (off, first) and its store cases are the one row's (its stand-in device
+  now has room for the gather's points buffer); `splitrays-check` holds who reaches the light loop, the buffer's layout, the refusal's report and what a load
+  compiles (`SPLITRAYS_BREAK=1` writes a second call site of the light loop into `light`); `wgsl-compile.cjs` dumps each setting once; `splitrays-twin.cjs` and `fixtures/compact-kernels.json` are gone; the checks that held a rule "in both writings" (highlights, huesplit, reflup,
+  rolled, sunglint, sharpcap, snowglow, wallsides, lookexpo, lookveil, plainair, portal, bouncewalls) read the one, and three of them count the gather's sites
+  in `trace` (bouncewalls: one walled read, its mirror rays keep the old one; portal: one `skyThrough`). Every one passes and its break word bites.
+  **Credit: Stephen Jayakar, from his pull request 1**, which wrote the ten kernels this way in place. **Never seen on a GPU.** Nobody has drawn a frame of
+  this tree on a card: that the picture is the one of the build before rests on the texts being equal, and on a software-adapter boot. A load with the old
+  words at 0 (the plain kernels, the one-kernel gather) no longer exists to compare against.
 - **START ON FIRST FRAME SHADERS STARTS ON IN EVERY BROWSER A PERSON SITS AT (2026-10-27, the third row that starts on, `on: 'person'`; the maintainer:
   "should we do background compiles on all platforms? i'd generally prefer to have a single path when possible", and "i think we shouldn't do truly lazy
   compilation where then have stutters during gameplay").** (10-28: a mission's brief no longer goes live on that card's terms. Its Start waits for the
@@ -804,7 +1146,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   seconds draws whole for longer; (b) a debug view or TAAU off while no fragment composite is in draws black until one lands (no preset and no Options row
   does either); (c) what a page tool draws is no longer the first seconds a player sees: only `shaderrows-page.cjs` looks at those; (d) a later pipeline that
   fails is one error record (the console's line) and its pass keeps the stand-in for the visit, counted nowhere in `__boot.pipelines`.
-- **TWO SHADERS ROWS START ON IN EVERY BROWSER (2026-10-27; `src/ui/shaderrows.ts`, a row's `on: true`): Compact shaders and Separate shadow rays.** The
+- **(SINCE 2026-11-07 NEITHER IS A ROW: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above. What follows is the record of when they were.) TWO SHADERS ROWS START ON IN EVERY BROWSER (2026-10-27; `src/ui/shaderrows.ts`, a row's `on: true`): Compact shaders and Separate shadow rays.** The
   maintainer's pick, asked whether to turn them on in a Windows browser only, everywhere, or not yet ("we pretty much have no one using ultra, so i think it's
   fine?" of Ultra losing its resampling gather under the split, below). **Off:** `?compactshaders=0&splitrays=0` on the address = a load as it was (the address
   for a PLAIN load to set a wait against; with the bullet above, `&firstframe=0` too), or either row turned off in Options > Graphics > Shaders, which is KEPT off (the kept line holds a row only while it
@@ -827,7 +1169,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   browser with no storage shows a row turned off as still on. **Checks:** `shaderrows-check.ts` (cases `starts`, `offkept`, `plain` beside the harness's; `SHADERROWS_BREAK=1` fails `starts` and `offkept`, and `plain`, a load with both words at 0, reads the same under it),
   `splitrays-check.ts` (the refusal's line, and the size tool with both rows on), on the page `shaderrows-page.cjs` (walk `starts`). The ten kernels still exist twice: taking today's writing out
   is the next step, not done here.
-- **Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
+- **(SINCE 2026-11-07 Compact shaders is not a row and its writing is the only one: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above.) Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
   bullet above, each a row that was OFF by default when this was written (Compact shaders has started on in a browser since 2026-10-27: the bullet above) and is the NEXT load's (read once, when its module is imported: the pipelines are made before a menu can open). Kept
   under `twopointsix.shaderrows`; a URL word wins for the visit and is never written; a row is listed only in a build whose code reads it (`useShaderRow`). Switches of
   the page, not rules of the game: no knob, no `FROZEN_HOLDS` row, off on BOTH stands; the harness's words are `TPS_COMPACTSHADERS=1` / `TPS_FIRSTFRAME=1` in front of
@@ -891,7 +1233,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   is the one path: the later set compiled behind the start (the first-frame row above), the cut set built in the background after the boot (`cutSwap.start()`), and
   the ladder's hold while a later program compiles (`ui/quality.ts STANDS_IN`, at most 30 s in one wait; `quality-plan` case D1, `LADDERHOLD_BREAK=1`). **Checked:**
   `shaderrows-check.ts --dump` on the off, compact, first, both and all-three arms is line for line that of the tree before. Nothing of it was run on a page.
-- **Separate shadow rays (a Shaders row, 2026-10-26; OFF on both stands of the harness and, since 2026-10-27, ON in every browser, the bullet above; the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
+- **(SINCE 2026-11-07 this is the only gather and no row: the bullet 'THE TEN BIG KERNELS HAVE ONE WRITING' above.) Separate shadow rays (a Shaders row, 2026-10-26; OFF on both stands of the harness and, since 2026-10-27, ON in every browser, the bullet above; the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
   tool; `render/gatherSplit.ts`, `shaders/gather_split.wgsl`).** A trial for the Windows shader wait: the final gather stops being one megakernel. Today
   `fgather.wgsl`'s `main` lights every point its rays land on inside itself, so `directAtPoint` (the light loop and its three shadow rays, 123 KB a copy as DXC
   pastes it) is written at four places and `main` is 780 KB out of a 92 KB module. With the row on the same frame is two programs made from the same helpers:
@@ -1367,6 +1709,61 @@ row on his machine is the answer, and the word puts the count back on any machin
   pattern, its cut faces are bare. No check holds any of this. SEEN: on the software adapter only (the compound, squad of four, very low, 800×500, one seed,
   night and midday, 118 of 118 pipelines, no GPU or console error, the same two views with and without the word). Never seen on a GPU: the look at the play
   resolution, motion, shimmer under the temporal blend, the noise it adds to bounce light, and the cost (it is raster work, which no trusted timer covers).
+- **THE LOOK IS EVERY PAGE'S PICTURE (2026-11-07; the maintainer: "should we work on merging the new look too?", then "we can also get everything
+  merged and then try to fix forward, especially as we clean everything up and simplify the code").** Until this the look's layers drew only with a
+  `look` row on the address (the bullet below, which still says how they are made). Now `scene/look.ts lookPageOn` is true unless the address says
+  `?look=old`, and `main.ts` raises `lookConfig.on` and what stands on it (the walls' two sides, the men's side rows, the smoke's shorter step, the
+  stirred smoke and the fire's column, the maps made on workers) on every boot of the game's page. `?look=key:value` still
+  opens the page with a row's amount; `?look=plain|0|off` is still the GWOT dress's word, read from any `look` word of the address, and no longer
+  decides the picture's layers. `?look=old` IS A TEMPORARY WORD: it is the second way to draw the picture and goes with the commit that deletes
+  that way (the prelude's `LOOK` constant and every branch on it). A benchmark or a pricing run asked for on it carries it to every page
+  (`ui/benchrun.ts flags`, `ui/pricerun.ts priceSearch`), and the first scene's notes say so.
+  THE PICTURE ONLY. The look's own page did more than draw, and each of those things changes what the page's game PLAYS, which a co-op server, a
+  headless run and every check do not have. They stay with THE LOOK LAB (`scene/look.ts lookLabOn` → `LOOK_LAB.on`, read once at boot): a page
+  that asks for the look BY NAME, exactly the pages that were the look's before (`/look`, `/smokelab`, `?look`, `?look=key:value`, a one-file
+  build's tag). The lab's alone: the debugger opened on the look's rows (`buildLookPanel`'s `open`; on every other page the rows are a system of the
+  debugger, shut until asked for, and the Team & kit picture's window builds none), the kit and the fog put down (`?lookkit=0`), the two trials that
+  rewrite the level as it loads (`geo`: a bite out of a yard wall's top, the kit's octagons as prisms; `lorry`), the hills that rays see (`hills`,
+  below), the seated posts (`seatPosts`,
+  4 mm; `?seat=0`) and a snow level's broken cloud (`LOOK_SNOW_COVER`: the weather's own number, read by the light the men see by). So the lab is as
+  it was, to the word, and the game's own page plays the level as its file has it. With `geo` off a round thing is the build's own
+  (`scene/round.ts`, its GPU half compiled in: `roundConfig.gpu`): the look with that half in is a set of programs the look's page with `geo` on
+  never compiled. WHERE THE LAB'S THINGS BELONG, if they are wanted on every page: a bite, a lorry and a seated post in the level's file, the
+  snow's cloud in the weather's preset. NOT MENDED: without `seatPosts` a post built in a wall's end shares a plane with it and the two faces
+  flicker under the look (the maintainer saw it on a GPU on 10-25, on the look's page before the mend); `tools/qa/zfight-check.ts` lists the
+  pairs in a level file.
+  `hills` WAS ON EVERY PAGE FOR ONE STEP OF THE BUILD AND PARTED CO-OP (step 1906, the same day; mended the step after). The first cut kept it with
+  the picture as "the picture's alone". It is not: `groundRayConfig.on` is read by the game's own box world (`scene/boxes.ts groundOn`, in the Rust
+  game `scene_boxes ground_on`: the rays a sight line and the cursor's point use then meet the ground field) and `game/game.ts` builds the snow
+  field with its roll. A game server stands with no look, so a page had `on: true` beside its server's `false`: co-op's wider word (the parts of
+  the whole game's state a page and a server agree on, `src/net/agreed.ts`, part `m.scene_ground_field`) held on 0 of 282 word ticks with one seat
+  where the step before held 257 of 257. The alarm's narrow word did not part, the office being flat; on a snow level the two would have played
+  different ground. THE RULE THIS TEACHES: before a switch is called the picture's, look for its readers under `src/scene`, `src/game` and
+  `rust/`, and run `PORT=<dev server> node tools/qa/mpclient-page.cjs`: its `wider word` line is the check that a page's game is its server's.
+  If rays should see the hills on every page, that is a rule of the game with its own registered switch, laid on every machine from the recipe.
+  NOT THE LOOK'S YET: the replay viewer (`/replay`, `src/replay/viewer.ts`) and the workbench (`src/workbench.ts`) have their own boots and never
+  raised `lookConfig.on`: they draw the old picture until the constant goes. The headless stands have no picture and are as they were. No
+  `FROZEN_HOLDS` row, no knob table, no journal key: no state a step hashes reads the look (the stirred smoke and the fire's column are the page's
+  smoke, kept on the host). THE TOOLS' PAGE BOOT (`tools/qa/pageboot.ts`) still calls the look-off engine `title` and the page as it opens `look`:
+  its settings are re-named with the deletion, and until then a check that says `title` is reading the old picture's texts.
+  CHECKS: `bench-check` (a run on the old picture carries `look=old` to every scene and no word of the look's; a run with no look word carries the
+  picture's trial and nothing of the lab's; the kit, the panel and the notes are pinned in `main.ts`'s text), `pricerun-check`, `smokelook-check`,
+  `stuff-check`, `kept-check`; both typechecks. No break word of its own: `?look=old` is the off side and it is drawn below.
+  READ ON THE SOFTWARE ADAPTER (headless Chromium 153, 640 by 360, High, the office at night; the merge's `pagedraw.cjs`, two frames drawn and read
+  back): the page with no word draws and keeps its device (158,323 and 159,234 of 230,400 pixels lit), `?look=old` draws the old picture (146,060
+  and 149,491); these two on the tree before the lab was parted from the picture, the page's source otherwise this commit's. On this commit
+  as first cut (on 4b4400a2; it was cut again on 305baa5e, 49 commits on, with one neighbouring line of `main.ts` taken from that head, and
+  there the reads at ready, the typechecks, the checks above and the gate's two reads were run again and say the same; the pixels were not):
+  THE PAGE WITH NO WORD IS, PIXEL FOR PIXEL, the named head's look page with the lab's things put off by their words
+  (`?look&geo=0&lorry=0&lookkit=0&seat=0` on 34cdbcbd): `tools/qa/draw-equal.cjs`, the office at night and the depot's room clear with four at
+  midday, drawn frames 2 and 4, 4 of 4 captures EQUAL (both sides "not clean" alike on the office: two of three torches in frame). And read at
+  ready on the depot's room clear with four: no word = the look, `geo` and `lorry` off (and `hills` on, in that first cut), the debugger shut, the ammunition row down, the
+  fog up, 802 boxes; `&look` = the lab as it was (`geo` on, the debugger open on the look's rows, the ammunition row up, the fog down, 821 boxes,
+  one post seated); `&look=old` = no look, 802 boxes. No console error on any. The gate's own reads on this tree: `thrice` 93c2d1a7, and
+  night-breach seed 1 the named head's file byte for byte.
+  NEVER SEEN ON A GPU as this commit. The look itself was drawn on the cloud's NVIDIA card as the look's page many times and on the maintainer's
+  Mac on earlier builds; the look with the round things' GPU half compiled in was drawn there only as "the look, its trials off" on 11-04, on an
+  older tree. NOT MEASURED HERE: what the look costs a frame (the bar: `rebuild/look-join/bar.md` in the project's files) and a load.
 - **THE LOOK PROTOTYPE** (`?look` at boot, or the page `/look` = the game's page with `look` on the pass at night unless the link names its own `levelFile`; `?look=relief:1.4,air:2` opens it with those
   amounts, each held to 0‥4, and `?look=plain|0|off` stays the GWOT dress's word and does not raise it; `render/frame.ts lookConfig`,
   `shaders/look.wgsl`, `render/lookTex.ts`, the panel `ui/lookpanel.ts`; OFF on every other page). A place to find out how far materials carry a world of boxes,

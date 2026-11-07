@@ -53,8 +53,8 @@ its scene, plays three real floors instead (docs/agents/qa.md 'THE BENCHMARK'). 
   exercised by `probes.ts nightbreach`. Nothing runs it as a Director drill any more.
 - **The Director = level scripting M1** (`src/game/director.ts`, `Game.director`, `__director`; spec docs/design/level-scripting.md, record docs/internal/director.md; merged 54fd23c):
   a level's SCRIPT is a plain function `(D: DirectorApi) => void` in `levels/<name>.script.ts` importing NOTHING from src/ at run time (`import type` only; scene/level.ts
-  `withScript` attaches one as a NON-ENUMERABLE `Level.script`). NO SHIPPED LEVEL HAS ONE: the office's held only the two removed showcases, so `withOfficeScript` now attaches
-  the office's scenario data alone and every Game's Director has no manifest and idles. Define time = handles by name (`D.mark / door / volume / route / plan / loadout / lightGroup /
+  `withScript` attaches one as a NON-ENUMERABLE `Level.script`). NO SHIPPED LEVEL HAS ONE: the office's held only the two removed showcases, so nothing is
+  attached to the office at load (its scenario data is its file's own block) and every Game's Director has no manifest and idles. Define time = handles by name (`D.mark / door / volume / route / plan / loadout / lightGroup /
   variant`) + `D.program(name, P => …, {showcase, lowerThird, endVeil, endHold})` + `D.expect.*` / `D.systems.*` → a MANIFEST linted against the level in the Game constructor
   (`lintManifest`: a missing door / volume / route / plan / group, an unknown weapon, an undeclared beat… = `armed` false, one console error, `start()` refused — the game plays on).
   TRIGGERS per program (`P.onStart / after / onEvent(kind, beat, filter) / onSignal / onEnter(volume, beat, {who}) / when(pred)`, once a run) start BEATS = GENERATORS
@@ -65,10 +65,10 @@ its scene, plays three real floors instead (docs/agents/qa.md 'THE BENCHMARK'). 
   (a CAUSE: an item on its fuse, real fireWeapon rounds; `charge`'s `toss: true` = the thrower plays the animator's quick toss, off = a still hand as before the word) / `objective`; ONLY in `showcase: true` programs `stage / puppet / press / click / camera.pin|release / caption / chapters /
   fade / variant / shift` (`scanShowcaseVerbs` = a lint error in a play program, and they throw at run time). `director.start(name)` is synchronous (a showcase: flags saved, quiet
   + touring + god + invisible, aftermath cleared, doors reset, input locked to P); `stop()` / `c.finish()` tear down (cast despawned, night back, `restartEncounter` under the veil,
-  camera and flags restored; play programs hand their units to the AI). A throwing beat is `failed`, logged with its step, its men released (`strict` — headless.ts — rethrows).
+  camera and flags restored; play programs hand their units to the AI). A throwing beat is `failed`, logged with its step, its men released, and the frame goes on, on every host alike. What a host does with a failed beat is the host's: the harness throws after the step that filed the `error` row (`W.beatsThrow`, tools/qa/headless.ts; the Director's `strict` field, which the harness set and the page did not, is gone from both languages and the wire).
   `director.log` (2500-row ring) is what probes assert on; `director.frame {look, caption, sub, fade, lowerThird, program}` is what main.ts reads while a showcase has the frame.
-  Checkpoints refused while a program runs (`blocksSave`). `Level.volumes` (levelLoad, iff authored) makes `onEnter` real. main.ts hands the Director the camera and the input
-  (`director.attach`) and reads `director.frame` for the veil, the caption, the look-at and the chapter bar; over a running program P / Esc end it to the start card (`endShow`).
+  Checkpoints refused while a program runs (`blocksSave`). `Level.volumes` (levelLoad, iff authored) makes `onEnter` real. The Director reads the camera and the keys off the GAME (`game.hostCam`, `game.hostInput`: handed
+  once, at the stand, by every host; `docs/agents/qa.md`, the host's camera and keys); main.ts reads `director.frame` for the veil, the caption, the look-at and the chapter bar; over a running program P / Esc end it to the start card (`endShow`).
   What main.ts no longer does for a program: seek its chapters (`seekShow` is gone — the bar shows them, a click does nothing), or style a `lowerThird` (the flag is still on the
   frame; `body.breaching` is gone). QA: `probes.ts director` = `director-lint` (the shipped office carries no script and refuses a start by name; a bad script is reported and not
   armed) / `director-showcase-scan` / `director-scheduler` + idle identity, each on a script the probe stages itself; a level with no script = no programs = the game exactly.

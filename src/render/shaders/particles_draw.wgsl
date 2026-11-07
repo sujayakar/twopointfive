@@ -11,10 +11,9 @@ struct PoolR { hdr: array<vec4u, 4>, parts: array<Particle> };
 @group(1) @binding(1) var<uniform> em: EmitBlock;
 @group(1) @binding(2) var gDepth: texture_depth_2d;
 @group(1) @binding(3) var volTex: texture_2d<f32>;   // rgb in-scatter, a transmittance toward the surface (volumetrics.wgsl), 1/frame.lossyCfg.y res
-@group(1) @binding(4) var froxTex: texture_3d<f32>;  // the integrated froxel volume (froxel.wgsl; FLAG_FROXEL_VOL): the haze to the particle's OWN distance in one fetch — volTex then holds the smoke + rain
-@group(1) @binding(5) var sceneTex: texture_2d<f32>;  // PARTICLE RAIN v2: the composite's copy (render/passes.ts hdrCopy, this pass's own size) the rain streaks REFRACT — a 1×1 black stand-in when em.rainCfgC.x is 0
-@group(1) @binding(6) var sceneSamp: sampler;         // … read bilinear
-@group(1) @binding(7) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this text). Zeros = none, on every other page, and never read there
+@group(1) @binding(4) var sceneTex: texture_2d<f32>;  // PARTICLE RAIN v2: the composite's copy (render/passes.ts hdrCopy, this pass's own size) the rain streaks REFRACT — a 1×1 black stand-in when em.rainCfgC.x is 0
+@group(1) @binding(5) var sceneSamp: sampler;         // … read bilinear
+@group(1) @binding(6) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this text). Zeros = none, on every other page, and never read there
 /** A PARTICLE'S LIGHT IS SHOWN BY ITS PLACE, AS THE FLOOR IT LIES ON IS (the look page under the one exposure model; the maintainer on his GPU, 11-04:
  *  "GPU particles (like casings) look like they're not lit"). The composite shows each place's surfaces by the place's gain and the smoke march its air;
  *  the splat came after both with no gain at all, so brass on the floor of a room shown thirty times brighter was drawn at a thirtieth of the floor it
@@ -190,7 +189,7 @@ struct FOut { @location(0) color: vec4f, @location(1) react: vec4f };
     let e = clamp((vec2f(1.0) - abs(v.loc)) / max(fw, vec2f(1e-4)), vec2f(0.0), vec2f(1.0)); prof = e.x * e.y; if (prof <= 0.0) { discard; }
     let rim = max(abs(v.loc.x), abs(v.loc.y)); tone = L * (1.0 - 0.12 * smoothstep(0.82, 1.0, rim));
   }
-  else if (SNOW_WISPS && mode > 2.2) {   // (2.25) a WISP of blowing snow (wispVertex): a puff of fine motes (wispMotes) — or, with none asked for, the older combed streak
+  else if (lv(SNOW_WISPS) && mode > 2.2) {   // (2.25) a WISP of blowing snow (wispVertex): a puff of fine motes (wispMotes) — or, with none asked for, the older combed streak
     let x = d / halfW; if (x >= 1.0) { discard; }
     // A PUFF OF FINE SNOW (the maintainer, 10-15, of the combed streak below: "they just look like stretched out particle billboards"; and with a clip of a ground
     // blizzard: "at the wind speeds we have, we want the gentle, shimmering puffs of very small, a little [glinting] particles"): with motes asked for the streak is
@@ -224,7 +223,6 @@ struct FOut { @location(0) color: vec4f, @location(1) react: vec4f };
     let vol = textureLoad(volTex, clamp(pv, vec2i(0), vd - 1), 0);
     let fr = clamp(zp / max(zs, 1e-3), 0.0, 1.0);
     tp = pow(max(vol.a, 1e-4), fr); insc = vol.rgb * fr;
-    if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let hz = froxelFetch(froxTex, v.pos.xy * frame.invScreen, zp); insc += hz.rgb * tp; tp *= hz.a; }   // + the haze in front of IT (exact at its own depth), behind the smoke's share like the surface's
   }
   let fade = v.prm2.x;
   if (mode < 0.5) {                                                                          // spark: pure add (dst × (1 − 0) + this) — brighter at the head than
@@ -234,8 +232,8 @@ struct FOut { @location(0) color: vec4f, @location(1) react: vec4f };
     fo.react = vec4f(clamp(luminance(rad) * frame.exposure * 4.0, 0.0, 1.0), 0.0, 0.0, 0.0);   // (a quarter of display white already reads as a full streak)
     return fo;
   }
-  let alpha = prof * select(coverage, 1.0, SNOW_WISPS && mode > 2.2 && !sheet) * soft * fade * select(1.0, v.prm2.z, mode > 1.5 && !sheet);   // (a wisp's `coverage` slot carries its pixels to the metre: wispVertex)
-  if (SNOW_WISPS && mode > 2.2 && !sheet) {   // a WISP: nearly all light, hardly any cover (thin blown snow lets the ground through) — many lie over one another as a veil
+  let alpha = prof * select(coverage, 1.0, lv(SNOW_WISPS) && mode > 2.2 && !sheet) * soft * fade * select(1.0, v.prm2.z, mode > 1.5 && !sheet);   // (a wisp's `coverage` slot carries its pixels to the metre: wispVertex)
+  if (lv(SNOW_WISPS) && mode > 2.2 && !sheet) {   // a WISP: nearly all light, hardly any cover (thin blown snow lets the ground through) — many lie over one another as a veil
     fo.color = vec4f(v.shade * (tp * alpha), min(1.0, alpha * WISP_COVER));   // (a glinting mote in a heavy puff can weigh over 3: its cover stops at all of it)
     // (a puff of MOTES moves a few pixels a frame and its grains are a pixel or two: the history must let go of them, or they smear into the haze they are not)
     fo.react = vec4f(clamp(alpha * select(0.6, 3.0, v.prm2.w >= 16.0), 0.0, 1.0), 0.0, 0.0, 0.0);
@@ -256,8 +254,8 @@ fn rainVertex(p: Particle, corner: u32, k0: vec4f, k1: vec4f) -> VOut {
   let cx = select(0.0, 1.0, corner == 1u || corner == 4u || corner == 5u);
   let cy = select(0.0, 1.0, corner == 2u || corner == 3u || corner == 5u);
   let half = frame.screen * 0.5;
-  if (SNOW_GRAINS) { if (grainIs(p.aux)) { return grainVertex(p, cx, cy); } }   // a grain of blown snow near the view (below)
-  if (SNOW_WISPS) { if (wispIs(p.aux)) { return wispVertex(p, cx, cy); } }   // a wisp of blowing snow (below)
+  if (lv(SNOW_GRAINS)) { if (grainIs(p.aux)) { return grainVertex(p, cx, cy); } }   // a grain of blown snow near the view (below)
+  if (lv(SNOW_WISPS)) { if (wispIs(p.aux)) { return wispVertex(p, cx, cy); } }   // a wisp of blowing snow (below)
   var o: VOut;
   if ((p.bits & PB_ASLEEP) != 0u) {   // the splash quad
     let n = pOctDecode(p.ori); let fr = sheetFrame(n, f32(p.seed & 1023u) * 0.00613592);
@@ -495,7 +493,6 @@ fn rainFragment(v: VOut) -> FOut {
     let vol = textureLoad(volTex, clamp(pv, vec2i(0), vd - 1), 0);
     let frc = clamp(v.zlin / max(zs, 1e-3), 0.0, 1.0);
     tp = pow(max(vol.a, 1e-4), frc);
-    if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { tp *= froxelFetch(froxTex, v.pos.xy * frame.invScreen, v.zlin).a; }
   }
   var w = 0.0; var cov = 0.0;
   if (mode < 4.5) {   // the streak: the capsule's 1-px antialiased profile, its coverage (thin → dim), a touch brighter toward the head (mean 0.95; v2: the head / tail LIGHT now does most of what v1's 0.45 → 1.15 ramp stood in for)
@@ -505,7 +502,7 @@ fn rainFragment(v: VOut) -> FOut {
     if (snowNow()) { let r = clamp(1.0 - d / (halfW + 0.5), 0.0, 1.0); prof = r * r * (3.0 - 2.0 * r) * 1.6; }   // a FLAKE (a level built for snow): soft from its centre out, not a hard-edged dot — the same light over the disc (∫ ≈ the capsule's)
     cov = prof * v.prm.w;
     w = cov * mix(0.75, 1.15, clamp(v.loc.x / max(L, 1.0), 0.0, 1.0));
-    if (SNOW_GRAINS) { if (v.prm2.z > 1.5) { let tk = clamp(v.prm2.z - 2.0, 0.0, 1.0); let u = clamp(v.loc.x / max(L, 1.0), 0.0, 1.0); w = cov * 1.15 * mix(1.0 - tk, 1.0, u * u); } }   // a GRAIN (grainVertex): its tail fades toward nothing, its head is the grain
+    if (lv(SNOW_GRAINS)) { if (v.prm2.z > 1.5) { let tk = clamp(v.prm2.z - 2.0, 0.0, 1.0); let u = clamp(v.loc.x / max(L, 1.0), 0.0, 1.0); w = cov * 1.15 * mix(1.0 - tk, 1.0, u * u); } }   // a GRAIN (grainVertex): its tail fades toward nothing, its head is the grain
     let beadA = clamp(em.rainCfgF.w, 0.0, 1.0);                        // v2 BEADS: a big drop oscillates as it falls, so its streak beats bright-dim along its length (phase + 3‥6 beats per drop off the mode's fraction; mean 1)
     if (beadA > 0.0) { let hb = clamp((mode - 4.0) / 0.49, 0.0, 1.0); let cyc = mix(2.5, 6.0, fract(hb * 7.31)); w *= 1.0 + beadA * sin(6.2831853 * (cyc * v.loc.x / max(L, 1.0) + hb)); }
   } else {            // the crown: a ring running out at 0.3 m/s for its first 60 ms (the lattice's splash) + droplets hopping outward, each a short trail, all fading with the splash
@@ -604,7 +601,6 @@ fn shardFragment(v: VOut, fw: vec2f) -> FOut {
     let vol = textureLoad(volTex, clamp(pv, vec2i(0), vd - 1), 0);
     let frc = clamp(zp / max(zs, 1e-3), 0.0, 1.0);
     tp = pow(max(vol.a, 1e-4), frc); insc = vol.rgb * frc;
-    if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let hz = froxelFetch(froxTex, v.pos.xy * frame.invScreen, zp); insc += hz.rgb * tp; tp *= hz.a; }
   }
   // (round five) a resting drift is a soft heap, not a cut shape: it thins toward its edge, brightest in the middle, darker where the cubes shade the floor between them
   let frost = floor(v.prm2.w) / 255.0; let heap = frost * fract(v.prm2.w) / 0.99;

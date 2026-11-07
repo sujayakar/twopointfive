@@ -175,6 +175,9 @@ export async function reviewRoutedShot() {
   const cands: [Vec3, Vec3][] = [
     [[33.2, 0, 8.6], [30.6, 0, 11.2]], [[32.4, 0, 8.8], [30.2, 0, 11.0]], [[16.3, 0, 8.9], [14.3, 0, 11.2]], [[20.8, 0, 8.9], [23.2, 0, 11.2]],
     [[27.4, 0, 8.8], [24.6, 0, 11.1]], [[25.0, 0, 8.8], [22.6, 0, 11.2]], [[10.6, 0, 8.8], [14.6, 0, 11.2]], [[33.6, 0, 13.4], [31.0, 0, 11.3]],
+    // (…and one at the manager's door that is walled and routed whichever way its leaf stands open: where doors open one way the leaf is on the other
+    //  side of the frame and the pair before this one has a straight line past it. Last in the list, so a stand that staged an earlier pair stages it still.)
+    [[25.4, 0, 9.2], [24.6, 0, 11.2]],
   ];
   let pick: { sam: Vec3; gd: Vec3; prop: any } | null = null; const tried: string[] = [];
   for (const [s, gp] of cands) {
@@ -193,6 +196,7 @@ export async function reviewRoutedShot() {
   const wall: Vec3 = [pick.sam[0], 1.0, pick.sam[2] - 3];   // into the room's wall, away from the door
   fireWeapon(game, pl.char, wall, true);
   for (let i = 0; i < 2; i++) { pl.visibility = 0.02; W.step(DT); }
+  if (process.env.ROUTEDSHOT_BREAK === '1' && K.lastKnown) { K.lastKnown = [pick.sam[0], 0, pick.sam[2]]; if (K.witness.heard.smallWhere) K.witness.heard.smallWhere = [pick.sam[0], 0, pick.sam[2]]; }   // (the red path: the fault the probe is for, his fix and his memory at the shooter's feet through the wall — the fix's line and the memory's must fail)
   const lk = K.lastKnown as Vec3 | null;
   ok = verdict(K.awareness >= 0.48 && !!lk, 'the pop reaches him round the jamb: awareness to 0.5 and a fix', `aw ${f2(K.awareness)}, fix ${posS(lk)}`) && ok;
   ok = verdict(!!lk && v3.distXZ(lk, via) < 0.3 && v3.distXZ(lk, pick.sam) > 1.0, 'the fix is the doorway / corner it came round (the path\'s via), not the shooter\'s feet through the wall', `fix ${posS(lk)} · via ${posS(via)} (${lk ? f2(v3.distXZ(lk, via)) : '?'} m off) · Sam ${posS(pick.sam)} (${lk ? f2(v3.distXZ(lk, pick.sam)) : '?'} m off)`) && ok;
@@ -241,21 +245,25 @@ export async function reviewKickLeaf() {
     park(K, 0); park(N, 1); game.playerInvisible = true;
     // an office door authored SHUT off the corridor (storage / server / the break room's north door), the man's spot behind it on free floor
     const off = 0.42;   // where a man about to take the handle stands: by the latch edge, his front a hand off the leaf
-    let d: any = null, manAt: Vec3 = [0, 0, 0], samAt: Vec3 = [0, 0, 0], mid = 0;
-    for (const name of ['storage', 'server', 'breakroom_n', 'fire_exit']) {
+    // SAM KICKS FROM A FACE THE LEAF GIVES AT: the keyed face (the corridor) where a boot drives it from there, else the other. Where a shut leaf opens one
+    // way (doors.ts bootHolds, the frame rule, on in the page) a boot at the face it opens TOWARD lands on the frame and nothing gives: the case, kicking from
+    // the keyed face of the break room's door, read a leaf that never moved. The man stands on the face the leaf is driven into, either way.
+    let d: any = null, manAt: Vec3 = [0, 0, 0], samAt: Vec3 = [0, 0, 0], mid = 0, kickSide: 1 | -1 = 1;
+    pick: for (const name of ['storage', 'server', 'breakroom_n', 'fire_exit']) {
       const x = game.doors.byName(name); if (!x || x.def.steel || Math.abs(x.def.angle ?? 0) > 1e-3) continue;
-      x.reset(); const [hx, hz0] = x.def.hinge; const u = x.dir(); const n: [number, number] = [-u[1], u[0]]; const ks = x.keySide as 1 | -1; mid = x.def.width - 0.1;
-      const m: Vec3 = [hx + u[0] * mid - n[0] * ks * off, 0, hz0 + u[1] * mid - n[1] * ks * off];
-      const sm: Vec3 = [hx + u[0] * x.def.width * 0.6 + n[0] * ks * 0.9, 0, hz0 + u[1] * x.def.width * 0.6 + n[1] * ks * 0.9];
-      if (game.col.nav.isBlocked(m[0], m[2]) || game.col.nav.isBlocked(sm[0], sm[2])) continue;
-      d = x; manAt = m; samAt = sm; break;
+      x.reset(); const [hx, hz0] = x.def.hinge; const u = x.dir(); const n: [number, number] = [-u[1], u[0]]; mid = x.def.width - 0.1;
+      for (const ks of (process.env.REVIEWKICK_BREAK === '1' ? [x.keySide] : [x.keySide, -x.keySide]) as (1 | -1)[]) {   // (REVIEWKICK_BREAK=1 = the staging as it was: the keyed face whatever the frame holds. Red where the frame rule is on, the page's stand; the old stand has no such rule to break)
+        const m: Vec3 = [hx + u[0] * mid - n[0] * ks * off, 0, hz0 + u[1] * mid - n[1] * ks * off];
+        const sm: Vec3 = [hx + u[0] * x.def.width * 0.6 + n[0] * ks * 0.9, 0, hz0 + u[1] * x.def.width * 0.6 + n[1] * ks * 0.9];
+        if (game.col.nav.isBlocked(m[0], m[2]) || game.col.nav.isBlocked(sm[0], sm[2]) || (game.doors.bootHolds(x, sm) && process.env.REVIEWKICK_BREAK !== '1')) continue;
+        d = x; manAt = m; samAt = sm; kickSide = ks; break pick; }
     }
-    if (!d) { ok = verdict(false, `@${hz}: staging`, 'no shut office door with free floor both sides') && ok; continue; }
-    const kickSide = d.keySide as 1 | -1; const u = d.dir(); const n: [number, number] = [-u[1], u[0]];   // Sam kicks from the keyed face (the corridor); the man stands on the room side
+    if (!d) { ok = verdict(false, `@${hz}: staging`, 'no shut office door with free floor both sides and a face a boot drives it from') && ok; continue; }
+    const u = d.dir(); const n: [number, number] = [-u[1], u[0]];
     plant(game, R, manAt, Math.atan2(n[0] * kickSide, n[1] * kickSide)); R.heardUpTo = 1e12;   // facing the door, deaf to the crack of it (this is about the leaf, not his ears)
     game.teleportPlayer(samAt); W.step(DT);
     const side0 = game.doors.side(d, R.char.pos); const p0 = v3.copy(R.char.pos);
-    game.doors.kickIn(d, pl.char.pos, PLAYER_ID);
+    const gave = game.doors.kickIn(d, pl.char.pos, PLAYER_ID);
     let crossed = 0, maxDisp = 0, maxA = 0; const trace: string[] = [];
     const dt = 1 / hz;
     for (let f = 0; f < hz * 1.2; f++) {
@@ -266,8 +274,9 @@ export async function reviewKickLeaf() {
     }
     // the angle at which the leaf's face would reach his near side: he stands 0.55 off the closed line at `mid` along → the leaf touches him about atan((0.55 − r − ht)/mid)
     const touchA = Math.atan2(off - 0.34 - d.thick / 2, mid);
-    const pass = crossed === 0 && maxDisp < 0.3 && d.lockBroken;
-    ok = verdict(pass, `${d.def.name} @${hz} Hz: the leaf never passes his centre, he is moved < 0.3 m, and it stood no wider than a body past first touch`, `crossed on ${crossed} frame(s), moved ${f2(maxDisp)} m, max |angle| ${f2(maxA)} rad (touch ≈ ${f2(touchA)}), lockBroken ${d.lockBroken}${VERBOSE || !pass ? '\n      ' + trace.join('\n      ') : ''}`) && ok;
+    const wide = touchA + 0.34 / mid;   // (first touch and a body's depth more, as an angle at where he stands along the leaf: a leaf that swings free of him goes to 1.5 rad)
+    const pass = gave && maxA > 0 && maxA < wide && crossed === 0 && maxDisp < 0.3 && d.lockBroken;
+    ok = verdict(pass, `${d.def.name} @${hz} Hz: the leaf never passes his centre, he is moved < 0.3 m, and it stood no wider than a body past first touch`, `${gave ? `kicked from the ${kickSide === d.keySide ? 'keyed' : 'far'} face` : 'THE STAGING: the kick was not given'}, crossed on ${crossed} frame(s), moved ${f2(maxDisp)} m, max |angle| ${f2(maxA)} rad (touch ≈ ${f2(touchA)}, a body past it ${f2(wide)}), lockBroken ${d.lockBroken}${VERBOSE || !pass ? '\n      ' + trace.join('\n      ') : ''}`) && ok;
   }
   return done('review-kick-leaf', ok);
 }
@@ -398,12 +407,18 @@ export async function reviewActDown() {
   d.reset(); const spot = game.doors.workSpot(d, [d.frameCentre[0], 0, d.frameCentre[2] + (d.keySide > 0 ? 1 : -1)], 0.6).pos as Vec3;
   game.teleportPlayer(spot); W.step(DT); W.step(DT);
   // downed this frame, the act already chosen: call the doors step by hand with both standing
-  pl.down = true; game.act = { kind: 'door', verb: 'push', door: d, line1: 'push it open', line2: '', pos: d.pos, inReach: true, off: false };
+  // (REVIEWACT_BREAK=1, the red path: the 'downed' Sam is on his feet when the act is read — the first line must fail, on either stand)
+  pl.down = process.env.REVIEWACT_BREAK !== '1'; game.act = { kind: 'door', verb: 'push', door: d, line1: 'push it open', line2: '', pos: d.pos, inReach: true, off: false };
   (game as any).updateDoors(DT, W.input);
-  ok = verdict(d.latched && Math.abs(d.angle) < 1e-6 && d.lastWho !== PLAYER_ID, 'down: the push is not performed — latched, untouched', `latched ${d.latched}, angle ${f3(d.angle)}, lastWho ${d.lastWho}`) && ok;
-  pl.down = false; game.act = { kind: 'door', verb: 'push', door: d, line1: 'push it open', line2: '', pos: d.pos, inReach: true, off: false };
+  // (where his hands work the leaf — hands.ts, on in the page — a push that is taken through the hand does not unlatch on its frame: it begins a move,
+  //  `doorMove`. hands.ts refuses a downed man itself, so the A6.9 fault would still show as the leaf unlatched on the frame; the clause is here so that a
+  //  push taken for a man the check only CALLS down is seen on this stand too — which is what the break word does)
+  ok = verdict(d.latched && Math.abs(d.angle) < 1e-6 && d.lastWho !== PLAYER_ID && !pl.doorMove, 'down: the push is not performed — latched, untouched, no hand begun on it', `latched ${d.latched}, angle ${f3(d.angle)}, lastWho ${d.lastWho}, a hand's move ${pl.doorMove ? 'BEGUN' : 'none'}`) && ok;
+  pl.down = false; pl.doorMove = null; d.reset(); game.act = { kind: 'door', verb: 'push', door: d, line1: 'push it open', line2: '', pos: d.pos, inReach: true, off: false };
   (game as any).updateDoors(DT, W.input);
-  ok = verdict(!d.latched && d.lastWho === PLAYER_ID, 'control — on his feet the same act pushes it open', `latched ${d.latched}, angle ${f3(d.angle)}, lastWho ${d.lastWho}`) && ok;
+  // (…and the control is the leaf open by his hand: at once where the push is the old one-frame use, within two seconds of frames where the hand brings it round)
+  const byHand = !!pl.doorMove; let frames = 0; while (d.latched && frames < 120) { W.step(DT); frames++; }
+  ok = verdict(!d.latched && d.lastWho === PLAYER_ID && (byHand || frames === 0), 'control — on his feet the same act pushes it open: on the frame, or by his hand\'s move begun on it', `latched ${d.latched}, angle ${f3(d.angle)}, lastWho ${d.lastWho} · ${byHand ? `his hand's move, the latch gone ${frames} frames on` : frames ? `NO HAND BEGUN, and unlatched only ${frames} frames on` : 'on the frame'}`) && ok;
   return done('review-act-down', ok);
 }
 

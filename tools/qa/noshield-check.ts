@@ -14,7 +14,7 @@
 //           and where a shield man was in it the replay parts from the file's own digests and says at which frame, as for any file the build has moved past
 //           (the file does not say who carried what: nothing to refuse it by); an F7 run tape made with one is refused in words before a re-run (the map
 //           viewer plays its samples as ever), and a tape made without is not
-// The same lines on either stand (plain, and TPS_PROFILE=shipped): there is no switch left for them to differ in. Nothing here looks at a picture.
+// There is no switch left for the lines to differ in. Nothing here looks at a picture.
 import { resolve } from 'node:path';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
@@ -37,8 +37,8 @@ const rowOf = (i: number, f: string) => K.kitRows(i).find((r: any) => r.field ==
 const bigVals = (i: number): string[] => { const v = ((rowOf(i, 'big')?.values ?? []) as string[]).slice(); return BROKEN && v.length ? [...v, 'shield'] : v; };
 /** the kit table and its switches put back after `fn` */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, big = K.BIGSLOT.on, rule = K.SLOTS.on, issue = K.ISSUE.on, word = process.env.TPS_SHIELD;
-  try { return await fn(); } finally { K.kitLoad(null, ''); K.SLOTS.on = rule; K.BIGSLOT.on = big; K.KIT.on = on; K.ISSUE.on = issue; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; if (word === undefined) delete process.env.TPS_SHIELD; else process.env.TPS_SHIELD = word; }
+  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, big = K.BIGSLOT.on, rule = K.SLOTS.on, word = process.env.TPS_SHIELD;
+  try { return await fn(); } finally { K.kitLoad(null, ''); K.SLOTS.on = rule; K.BIGSLOT.on = big; K.KIT.on = on; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; if (word === undefined) delete process.env.TPS_SHIELD; else process.env.TPS_SHIELD = word; }
 }
 
 export async function noshieldGone(): Promise<boolean> {
@@ -101,17 +101,16 @@ export async function noshieldStaged(): Promise<boolean> {
       const { parseLevelData, parseLevelDataLenient } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
       const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`), { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
       const text = readFileSync(resolve(ROOT, 'levels', 'hall.json'), 'utf8'), data = parseLevelData(text), squad0 = NIGHTBREACH.squad;
-      const seed0 = ROOMCLEAR.seed, way0 = ROOMCLEAR.way; K.kitLoad(null, '');   // (the cards as issued: a staging with no issue block read wears what is in memory)
-      const stage = async (issueOn: boolean) => {
-        ROOMCLEAR.seed = 0; ROOMCLEAR.way = 0; NIGHTBREACH.squad = 4; K.ISSUE.on = issueOn;
+      const seed0 = ROOMCLEAR.seed, way0 = ROOMCLEAR.way; K.kitLoad(null, '');   // (the cards as issued)
+      const stage = async () => {
+        ROOMCLEAR.seed = 0; ROOMCLEAR.way = 0; NIGHTBREACH.squad = 4;
         const W: any = await hushed(() => standUp({ uploadEvery: 4, level: loadLevel(data), seed: 5 })), g = W.game;
         const why = await hushed(() => g.roomClear.start(0)); await hushed(() => { for (let i = 0; i < 6; i++) W.step(1 / 60); });
         const men = g.orders.men('all', { down: true }) as any[];
-        return { why, n: men.length, pool: `${g.doorTools.bangs} stun ${g.doorTools.charges} charges ${g.doorTools.frags} frags`, guns: men.map(m => `${m.callsign} ${m.weapon.def.id}`), pistols: men.filter(m => m.weapon.def.cls === 'pistol').map(m => m.callsign as string), plated: men.filter(m => ['shield', 'shieldW', 'shieldCarry'].some(k => k in m.char.anim)).length };
+        return { why, n: men.length, guns: men.map(m => `${m.callsign} ${m.weapon.def.id}`), pistols: men.filter(m => m.weapon.def.cls === 'pistol').map(m => m.callsign as string), plated: men.filter(m => ['shield', 'shieldW', 'shieldCarry'].some(k => k in m.char.anim)).length };
       };
-      let on, plain; try { on = await stage(true); plain = await stage(false); } finally { NIGHTBREACH.squad = squad0; ROOMCLEAR.seed = seed0; ROOMCLEAR.way = way0; K.ISSUE.on = true; }
+      let on; try { on = await stage(); } finally { NIGHTBREACH.squad = squad0; ROOMCLEAR.seed = seed0; ROOMCLEAR.way = way0; }
       F.verdict(on.why === null && on.n >= 4 && on.pistols.length === 0 && on.plated === 0, 'THE LONG HALL (its issue block handed the first teammate the shield and a pistol): staged, every man holds a long gun and no figure\'s animator has a plate layer', `staged: ${on.why ?? 'ok'}, ${on.n} men · ${on.guns.join(', ')} · a pistol for his gun: ${on.pistols.join(', ') || 'nobody'} · animators with a plate field: ${on.plated}`);
-      F.verdict(on.pool === plain.pool && J(on.guns) === J(plain.guns), 'and the squad carries the plain issue: its issue block read or not, the same guns and the same count of cans and charges', `issue block read: ${on.pool} · not read: ${plain.pool}`);
       // no level file names one…
       const dir = resolve(ROOT, 'levels'), files = readdirSync(dir).filter(f => f.endsWith('.json')), naming: string[] = [];
       for (const f of files) { try { const d = JSON.parse(readFileSync(resolve(dir, f), 'utf8')), mem = d?.scenarios?.issue?.members; if (mem && Object.values(mem as Record<string, any>).some(c => c && typeof c === 'object' && 'shield' in c)) naming.push(f); } catch { /* not a level document: nothing to issue */ } }

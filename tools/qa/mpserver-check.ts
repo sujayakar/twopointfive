@@ -1,7 +1,7 @@
 // THE GAME SERVER, CHECKED (src/net/, tools/mp/; docs/agents/net.md): a server process and scripted clients over REAL WebSockets on this machine, plus the
 // input rule on its own. Not game code: it starts processes and reads what they print.
 //   bun run tools/qa/mpserver-check.ts                    every line below
-//   MPSERVER_BREAK=1 bun run tools/qa/mpserver-check.ts   the red path: the seated client flips the last bit of its own man's place after tick 90 — the lines
+//   MPSERVER_BREAK=1 bun run tools/qa/mpserver-check.ts   the red path: the seated client steps one record with another walk key than the server ran after tick 90 — the lines
 //                                                         that hold its state words against the server's must FAIL
 //   --setup '{"scenario":"?rescue","seed":3}'             another mission (default: the four-man room clear in the office, seed 7)
 // THE LINES:
@@ -25,6 +25,9 @@
 //                 first record went out, before the game had; held against the game once it reached the same tick, the looks were right to the bar below;
 //                 the game they left is still the server's (the line above); what a look cost is printed. Under MPSERVER_BREAK the second client's look
 //                 plays no record, and this line must FAIL too
+//   wider word    those two clients also hold THE WIDER WORD against the server's on every word tick (src/net/step.ts netWatch: the whole game's words of
+//                 the parts on the list net/agreed.ts, which a client only counts and never takes for an alarm): both had it on every one. Under
+//                 MPSERVER_BREAK the first client's parts with its state word, and this line must FAIL too
 //   worse way     the queue a worse connection is made of (src/net/delay.ts, with a die this check throws): all zero = straight through; under jitter nothing
 //                 passes the message in front of it; a lost message is late by a round trip and the resend's wait, and holds the ones behind it; a stall holds everything to its end,
 //                 what was on its way too, and one taken back is over at once; a handler that throws loses its own message and strands none behind it
@@ -120,7 +123,7 @@ type Proc = { stdout: ReadableStream; stderr: ReadableStream; exited: Promise<nu
 const spawn = (cmd: string[], env: Record<string, string> = {}): Proc => Bun.spawn(cmd, { stdout: 'pipe', stderr: 'pipe', cwd: ROOT, env: { ...process.env, ...env } }) as unknown as Proc;
 const text = (s: ReadableStream) => new Response(s).text();
 interface Ahead { first: number; firstMoved: boolean; n: number; mean: number; max: number; exact: number; unfree: number; clean: number; cleanMean: number; cleanMax: number; cleanExact: number; worst: { t: number; mm: number; records: number; near: number } | null; fixes: number; fixMax: number; records: number; ms: number }
-interface BotOut { ahead?: Ahead; names?: string[]; seat: number; confirmed: number; heard: number; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string; sent: number; holds: number; skips: number; margin: number; lead: number; broken: string; stalled: number; moved: number; shots: number; bye: string; state: string; stoodMs: number; tickMs: number }
+interface BotOut { ahead?: Ahead; names?: string[]; seat: number; confirmed: number; heard: number; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string; watchOk?: number; watchOff?: number; watchFirst?: number | null; sent: number; holds: number; skips: number; margin: number; lead: number; broken: string; stalled: number; moved: number; shots: number; bye: string; state: string; stoodMs: number; tickMs: number }
 async function bot(port: number, extra: string[]): Promise<BotOut | null> {
   const p = spawn([process.execPath, 'run', 'tools/mp/bot.ts', '--url', `ws://127.0.0.1:${port}`, '--game', 'check', ...extra]);
   const [out, err] = await Promise.all([text(p.stdout), text(p.stderr), p.exited]);
@@ -213,6 +216,8 @@ gone = false;   // (the stand-in control plane knows this game again)
   const A = [one?.ahead, two?.ahead], said = (a: Ahead | undefined) => a ? `moved ${a.first < 0 ? 'NEVER' : a.first === 0 ? 'on the beat of his first record' : `${a.first} beat${a.first === 1 ? '' : 's'} after his first record`}${a.firstMoved ? ' (the game had moved him already)' : ''}, ${a.n} looks held against the game: ${(a.mean * 1000).toFixed(1)} mm off on average, ${(a.max * 1000).toFixed(0)} mm at most, ${a.exact} within a millimetre${a.unfree ? ` (and ${a.unfree} looks walked nothing: his legs were not his own)` : ''}; ${a.clean} of them CLEAN (every record run as sent, his legs his own all the way, nobody within 1.5 m of him): ${a.cleanExact} right to a millimetre, ${(a.cleanMean * 1000).toFixed(1)} mm off on average, ${(a.cleanMax * 1000).toFixed(0)} mm at most${a.worst && a.worst.mm >= 1 ? ` (the worst after tick ${a.worst.t}: ${a.worst.records} records on, the nearest body ${a.worst.near} m off)` : ''}; ${a.fixes} correction${a.fixes === 1 ? '' : 's'} past a centimetre (the longest ${(a.fixMax * 1000).toFixed(0)} mm); ${a.records} records a look, ${a.ms} ms each` : 'no look ahead reported';
   line(A.every(a => !!a && a.first >= 0 && a.first <= 1 && !a.firstMoved && a.n >= 20) && A.some(a => a!.clean >= 20) && A.every(a => a!.clean < 10 || a!.cleanExact >= a!.clean * AHEAD_EXACT),
     `ahead: each client's own man by its look ahead — the first (60 to 100 ms away): ${said(A[0])} · the second (beside the server): ${said(A[1])} · the bar: half or more of a client's clean looks right to a millimetre (asked of a client with ten or more; one of the two must have twenty)`);
+  { const W = [one, two], said = (b: BotOut | null | undefined) => b ? `${b.watchOk ?? 0} of ${(b.watchOk ?? 0) + (b.watchOff ?? 0)}${b.watchOff ? ` (FIRST DIFFERENT after tick ${b.watchFirst})` : ''}` : 'no report';
+    line(W.every(b => !!b && (b.watchOk ?? 0) > 0 && !b.watchOff), `wider word: the whole game's words of the parts every kind of host agrees on, watched beside the state word: the first client had the server's on ${said(one)} word ticks, the second on ${said(two)}`); }
   const c3 = await Promise.race([srv3.exited, sleep(12000).then(() => -1)]); if (c3 === -1) srv3.kill(); }
 
 // ---- a worse connection (src/net/delay.ts): the queue's own rules with a die this check throws, then a seat that plays over a bad one

@@ -42,6 +42,7 @@
 import { KIT, kitRows, kitWorn } from '../game/kit';
 import { kitViewWays } from './missions';
 import { rectZoom, uiMatch } from './textsize';
+import { KEEP_PAGE, keeperAbove } from '../gpu/keep';   // (a leaf: the picture's seat on the kept page's device)
 import { kitViewQuietKind } from '../host/kitViewSet';   // (pure: the mission's kind, read off its link — the quiet picture's)
 
 /** the switch (UI only: nothing in the game reads it) · the picture is LIVE and the open card's man acts in it (`?stillkit` = off: the still picture, every change a plain restage) · ms after a kit message in which further changes are folded into ONE more */
@@ -140,7 +141,8 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
       top: 1 - ((c.top - f.top) / f.height) * 2, bottom: 1 - ((c.bottom - f.top) / f.height) * 2 });   // (…and the column's own top and foot: the quiet picture is framed down it — host/kitView.ts KIT_VIEW_QUIET.frame)
   };
   const hide = () => { if (shown) { shown = false; root.classList.remove(ROOT_CLASS); } };
-  const drop = () => { if (due) clearTimeout(due); due = 0; want = ''; if (!frame) return; frame.remove(); frame = null; key = ''; live = false; up = false; sent = born = ''; selSent = ''; pauseSent = false; };
+  // (the picture's hold on the kept page's device ends here, by name: its buffers and textures are freed now, not when the browser gets round to its window — gpu/keep.ts)
+  const drop = () => { if (due) clearTimeout(due); due = 0; want = ''; if (!frame) return; try { keeperAbove(window)?.keeper.release(KEEP_PAGE.pictureSeat); } catch { /* */ } frame.remove(); frame = null; key = ''; live = false; up = false; sent = born = ''; selSent = ''; pauseSent = false; };
   /** this query's instance is no picture: gone, and not tried again on this page */
   const fail = (k: string) => { if (!k || k !== key) return; failed.add(k); hide(); drop(); again(); };
   const onMsg = (e: MessageEvent) => {
@@ -166,7 +168,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
       //  'none' where that kind has no team at a way in, which is no picture and not tried again)
       if (!KIT_VIEW.on || was) { hide(); drop(); return false; }
       styles();
-      // (a mission with NO level file is on the bundled office: its block is the office's own data — levels/office.scenarios.ts, through ui/missions.ts — and the
+      // (a mission with NO level file is on the bundled office: its block is its own file's, levels/office.json, through ui/missions.ts — and the
       //  child is asked with the mission's own query, no `levelFile` in it: main.ts builds the office and stages from that same block)
       const lv = ask.level ?? '', q = new URLSearchParams(ask.search.replace(/^[^?]*\?/, '')), k = keyOf(q), W = ways.get(lv);
       quietAsk = KIT_VIEW.quiet && !q.has('kitloud') && kitViewQuietKind(q) !== null;

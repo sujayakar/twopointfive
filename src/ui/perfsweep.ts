@@ -65,10 +65,8 @@ export const SWEEP_ROWS: SweepRow[] = [
   { id: 'meshNear', label: 'mesh shadows off', set: { meshShadows: false, meshShadowsNear: false } },
   { id: 'reflect', label: 'reflections off', set: { rtReflect: false } },
   { id: 'sharp', label: 'sharp direct off', set: { sharpDirect: false, sharpDecouple: false, gbaa: false } },
-  { id: 'marchLights', label: 'smoke march lights 0', set: { smokeMarchLights: 0 }, needs: { froxelVol: true } },   // (the per-pixel path lights its march by the row below: the knob is only read on the froxel path)
-  { id: 'volK', label: 'beams and smoke: 2 lights a step', set: { volLightCap: 2 } },
+  { id: 'volK', label: 'beams and smoke: 2 lights a step', set: { volLightCap: 2 }, or: { label: 'beams and smoke: 4 lights a step', set: { volLightCap: 4 } } },   // (medium, low and very low run two already: there the row prices high's four)
   { id: 'volQuarter', label: 'beams and smoke march at quarter size', set: { volQuarter: true }, or: { label: 'beams and smoke march back at full size', set: { volQuarter: false } } },
-  { id: 'froxel', label: 'beams on the froxel path', set: { froxelVol: true } },
   { id: 'smoke', label: 'dust and smoke not drawn', custom: 'smoke' },
   { id: 'wxAir', label: 'weather dust in the air: 3 steps a ray', set: { wxAirSteps: 3 } },   // (the dust volume's march, a sun shadow ray a step: this row minus the baseline = most of what the volume costs while a weather is in; nothing moves in clear air)
   { id: 'air', label: 'wind sim off', set: { airSim: false }, needs: { airSim: true }, liveOnly: 'a frozen world steps no air', settleAfterMs: SLOW_SNOW_MS },   // (the air solver's compute pass, timed as 'air': a fixed cost on its own grid, stepped only on a frame with time in it that something reads the air on — today the snow. With it off the snow is flakes on the plain storm wind and wisps in gust patches; when it comes back the wisps and the flakes take seconds to stand as they stood (and under ?snowair=0 a whole first set of grains is filed over the ones still in the ring): the baseline after it waits that out. A build from before the solver has no such setting and skips the row)
@@ -383,7 +381,7 @@ export class PerfSweep {
       }
       case 'preset': {   // the next preset down as a whole (from Medium: High) — every row quality.apply writes, then all of it put back. Frozen only: a running game reads some of those rows (the debris cap) and writes others (the sky)
         if (this.opts.live) return 'frozen takes only';
-        const cur = this.quality.current as QualityName; const to: QualityName | null = cur === 'high' || cur === 'ultra' ? 'medium' : cur === 'medium' ? 'high' : null;
+        const cur = this.quality.current as QualityName; const to: QualityName | null = cur === 'high' ? 'medium' : cur === 'medium' ? 'high' : null;
         if (!to) return `no preset row from ${cur}`;
         const Q = this.quality, auto = Q.auto;
         return { row, label: `the whole ${to[0].toUpperCase()}${to.slice(1)} preset`, from: { preset: cur }, to: { preset: to }, apply: () => {

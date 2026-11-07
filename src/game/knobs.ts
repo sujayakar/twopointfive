@@ -69,6 +69,7 @@ import { ENTRY } from './entrypoints';
 import { SILENT } from './silent';
 import { PAIR } from './pairorders';
 import { RESCUE } from './rescue';
+import { tableNotes, type TableNote } from '../math/side';
 import { DIGIN, HAULHOME } from './digin';
 import { PRESSURE } from './pressure';
 import { LANES } from './lanes';
@@ -551,7 +552,7 @@ export function knobRegistry(): Record<string, object> {
     RESCUE, DIGIN, HAULHOME, PRESSURE, LANES, GUNHOLD, HARD, HARD_AT, DRILLED, SQUADS, DRILL_AT, CUES, BUDDY, WX_SIM, WX_OWN, SNOW, SNOW_LOOK, AIR_SIM, LASTSTAND, CLEARLINE, STACKROOM, REARWATCH, STACKLINE,
     // the team's own rules that no other list named (found by tools/qa/knobs-check.ts), and the two scenarios' own tables
     SNEAK, PAIRUP, SPOTTED, NIGHTBREACH, ROOMCLEAR, LESSON, SNATCH, DEFUSE,
-    // a room clear against a clock (par.ts): reads only — off = the level's room clear alone
+    // a room clear against a clock (the Rust game keeps it, rust/game_rules/src/par). A SETTLED row, on: nothing reads it any more, on either side
     PAR, ISSUE,
     // how a run went, said at its end (verdict.ts): reads only — off = no verdict, the end card as it was
     VERDICT,
@@ -567,7 +568,7 @@ export function knobRegistry(): Record<string, object> {
     BIGSLOT,
     // the squad's kit dealt over the men who come (kit.ts KITDEAL): with three or four teammates the issued and the named kits are shared out, nobody comes with empty pouches; the squad's count is the same
     KITDEAL,
-    // the cut-pieces switch (scene/cut.ts cutConfig: `on` read at boot, `swap` = two sets of ray programs). A recording carries it in its env (env.cutBoxes), not here
+    // the cut-pieces switch (scene/cut.ts cutConfig: `on` read at boot). A recording carries it in its env (env.cutBoxes), not here
     CUT: cutConfig,
   };
   const out: Record<string, object> = {}; for (const [k, T] of Object.entries(all)) if (T && typeof T === 'object') out[k] = T; return out;
@@ -589,8 +590,11 @@ export function knobsPlayed(): Record<string, object> { const R = knobRegistry()
 export function knobsCopy(names?: readonly string[]): Record<string, Record<string, unknown>> {
   const out: Record<string, Record<string, unknown>> = {};
   for (const [k, T] of Object.entries(knobsNamed(names))) out[k] = copyOf(T, NOT_KNOBS[k]) as Record<string, unknown>;
+  // (a module's note of where a table's numbers came from is copied with the table, beside its keys and never among them: math/side.ts tableNote)
+  for (const n of tableNotes()) { const s = out[n.table] as { [NOTES]?: [TableNote, unknown][] } | undefined; if (s) (s[NOTES] ??= []).push([n, n.get()]); }
   return out;
 }
+const NOTES: unique symbol = Symbol('the notes of a table');
 /** the live value `a` made equal to the copy `b`, IN PLACE where both are plain objects or both arrays (whoever holds the live object or array still holds
  *  it); otherwise a fresh copy of `b` is what goes in its place */
 function backValue(a: unknown, b: unknown): unknown {
@@ -608,6 +612,8 @@ function putBack(dst: Record<string, unknown>, src: Record<string, unknown>, ski
 export function knobsBack(copy: Record<string, Record<string, unknown>>): void {
   const tuned = FINDTUNED.on;
   for (const [k, T] of Object.entries(knobRegistry())) { const s = copy[k]; if (s) putBack(T as Record<string, unknown>, s, NOT_KNOBS[k]); }
+  // (and each table's note with it: a table put back under a note that names another level would not be written by the next start there)
+  for (const s of Object.values(copy)) for (const [n, v] of (s as { [NOTES]?: [TableNote, unknown][] })[NOTES] ?? []) n.set(v as never);
   if (FINDTUNED.on !== tuned) findMeStarts();   // (host/findme.ts: its rows are not picked off the switch where they are read, so a copy that moves the switch moves their starts with it — a check that boots the page's switches and puts its copy back is not left turning the view the page's way)
 }
 

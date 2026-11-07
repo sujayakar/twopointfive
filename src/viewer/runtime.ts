@@ -20,7 +20,7 @@ import { MeshShadows } from '../render/meshShadows';
 import { fitRig } from '../render/sdfrig';
 import { Character, SignalKind, Stance, UpperMode, THROW_RELEASE, THROW_BY, HOLD, LONG_STANCES, LongStance, defaultAnimParams } from '../game/character';
 import { SmokeSystem } from '../smoke/smoke';
-import { Quality, smokeKeepOf } from '../ui/quality';
+import { Quality } from '../ui/quality';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import { INHAND, IN_PISTOL } from '../game/inhand';
 import { RIG, longHold, torchHold, rigBoxes, holsterBoxes, rigLightPose, rigTorchPos, torchCarryDir, railLightDef, torchLightDef, RigNodeMeta, carbineGrip, carbineMuzzleAhead, carbineLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose } from '../game/rigProps';
@@ -125,7 +125,6 @@ export class Runtime {
     if (!host.input) canvas.addEventListener('mousedown', () => { const ae = document.activeElement; if (ae instanceof HTMLElement && ae.closest('.pnl, #topbar')) ae.blur(); this.input.focusGame(); });   // a field that had focus lets go of the keyboard: a click in the view hands the hotkeys back (Input ignores keys while an input / select has focus)
     this.lastMX = this.input.mouseX; this.lastMY = this.input.mouseY;
     this.gizmo = new RigGizmo(canvas, cam, this.input);
-    { const sk = new URLSearchParams(location.search).get('smokekeep'); if (sk !== null) engine.settings.smokeKeep = smokeKeepOf(sk); }   // ?smokekeep=0|1|2: the smoke under high as each preset had it / high's smoke at half size (the page) / high's whole path (ui/quality.ts SMOKE KEEP) — before the Quality below puts its first preset on
     { const og = new URLSearchParams(location.search).get('onegrid'); if (og !== null) engine.settings.oneCacheGrid = !(og === '0' || og === 'off' || og === 'false'); }   // ?onegrid=0, as on the game page (main.ts): before the Quality below puts its first preset on
     { const os = new URLSearchParams(location.search).get('onesolve'); if (os !== null) engine.settings.oneSmokeSolve = !(os === '0' || os === 'off' || os === 'false'); }   // ?onesolve=0, as on the game page (main.ts)
     { const fs = new URLSearchParams(location.search).get('fireshed'); if (fs !== null) engine.settings.fireSmokeShed = !(fs === '0' || fs === 'off' || fs === 'false'); }   // ?fireshed=0, as on the game page (main.ts)
@@ -476,7 +475,7 @@ export class Runtime {
       if (mats) writeCharPalette(this.matPal, 0, side, c.tint, c.tint2, c.id, !charSlots(this.ch).authored);
       const po = c.parts ? placeholderTints(side) : TINTS_AS_IS;   // (game.ts: the placeholder's two colours, by the side's table)
       this.chars.setInstance(0, c.skel.jointData, po & 1 ? c.tint2 : c.tint, po & 2 ? c.tint2 : c.tint, c.id, undefined, c.parts); this.chars.setMaterials(0, mats ? (f, o) => f.set(this.matPal, o) : undefined); this.chars.finish(1);
-      engine.world.resetCapsules(); { const { caps, bound } = c.capsules(); engine.world.addCharacterCapsules(c.id, mats ? proxyAlbedos(charSlots(this.ch), this.matPal, 0, 1, (engine.settings.rtMeshHits && engine.meshShadowsOn) || engine.settings.sdfRigSmooth, (c as typeof c & { parts?: number }).parts ?? 0) : v3.lerp(c.tint, [0.5, 0.5, 0.5], 0.3), caps, bound); }
+      engine.world.resetCapsules(); { const { caps, bound } = c.capsules(); engine.world.addCharacterCapsules(c.id, mats ? proxyAlbedos(charSlots(this.ch), this.matPal, 0, 1, false, (c as typeof c & { parts?: number }).parts ?? 0) : v3.lerp(c.tint, [0.5, 0.5, 0.5], 0.3), caps, bound); }
 
       // ---- the camera's tracked focus + the studio round it
       if (st.track === 1) this.focus = v3.add(c.pos, [0, 1, 0]);

@@ -14,6 +14,7 @@
 //
 // The record's contract (type, packing, limits) is written up in rebuild/cut-pieces/contract.md; the layout below is version 1.
 import type { Vec3, Quat } from '../math/vec';
+import { RUST_PASS, RUST_SURFACE } from '../game/crossing';
 
 /** one cutting plane in the box's LOCAL frame: the box KEEPS the side n · p ≤ d (n unit, d metres from the box centre along n; what lies beyond is gone) */
 export interface CutPlane { n: Vec3; d: number }
@@ -30,10 +31,6 @@ export const BOX_CUT_BIT = 1 << 16;
 /** the switch (see the head of this file). Mutate only at boot (main.ts initCutSwitch) or in a headless probe. */
 export const cutConfig = {
   on: false,
-  /** A CALM ROOM PAYS NOTHING (render/cutSwap.ts): true = every ray program boots as the build's WITHOUT the cut rule (the scene prelude's CUT_BOXES false: the text
-   *  `?nocutboxes` compiles), a second set with the rule is compiled in the background after boot, and the frame takes that set only while a cut box a ray can meet
-   *  is alive. false (`?cutprograms=boot`) = the one set, compiled with the rule from boot, as the switch first shipped. Read before the first pipeline is compiled. */
-  swap: true,
 };
 export const cutBoxesOn = () => cutConfig.on;
 /** read the switch from the page's URL / localStorage (a no-op headless): ON in the page unless ?nocutboxes / ?cutboxes=0, or this machine kept '0'. Call before
@@ -44,7 +41,6 @@ export function initCutSwitch(): boolean {
   if (q.has('nocutboxes')) cutConfig.on = false;
   else if (q.has('cutboxes')) cutConfig.on = q.get('cutboxes') !== '0';
   else { let kept: string | null = null; try { kept = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no storage: on */ } cutConfig.on = kept !== '0'; }
-  if (q.get('cutprograms') === 'boot') cutConfig.swap = false;   // (the cut rule compiled into every ray program from boot — the A/B against the swap)
   return cutConfig.on;
 }
 
@@ -232,7 +228,7 @@ export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, 
  *  CUT_CLIP: { t0, t1, k = the plane the line ENTERS the solid through at t0 (−1 = t0 was not moved: the box's own face, or the origin) }; false = nothing left.
  *  The same planes in the same order as common.wgsl isectCut, which takes them four at a time with no loop (tools/qa/cut-rule.ts holds the two together). */
 export const CUT_CLIP = { t0: 0, t1: 0, k: -1 };
-export function cutClip(cut: readonly CutPlane[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t0: number, t1: number): boolean {
+export function cutClip(cut: readonly CutPlane[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t0: number, t1: number): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('cutClip', undefined, [cut, ox, oy, oz, dx, dy, dz, t0, t1]); if (__r !== RUST_PASS) return __r as any; } }
   let k = -1;
   for (let i = 0; i < cut.length && i < MAX_CUT_PLANES; i++) {
     const n = cut[i].n; if (n[0] === 0 && n[1] === 0 && n[2] === 0) break;

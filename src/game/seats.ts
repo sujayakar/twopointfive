@@ -20,12 +20,13 @@ import type { Game, Guard, Player } from './game';
 import type { Character } from './character';
 import type { SquadOrders, Assignment } from './orders';
 import { Seat } from './cmd';
-import { RAW, CAST_VIEW } from '../math/side';
+import { RAW, CAST_VIEW, SEAT_TABLES } from '../math/side';
 import { PLAYER_ID, NOBODY_ID } from './consts';
 import { Player as PlayerMan } from './game';
 import { railLightDef } from './rigProps';
 import { v3 } from '../math/vec';
 import type { Vec3 } from '../math/vec';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** `max`: how many seats a game may be stood up with. */
 export const SEATS = {
@@ -56,10 +57,7 @@ export const SEAT_KEYS = ['seat', 'player', 'orders', 'doorTools', 'work', 'wall
   'viewProj', 'threatProximity', 'torchOnT'] as const;
 const IS_SEAT_KEY = new Set<PropertyKey>(SEAT_KEYS);
 
-/** THE NAMED SIDE TABLES THAT ARE A SEAT'S (keyed by the view they were handed: a row a player). A plain table handed a view that is not listed here is a
- *  mistake — world state forked in two — and tools/qa/seats-check.ts is red on it: such a table is a `GameSideMap`. */
-export const SEAT_TABLES: readonly string[] = ['blastFeel.STATE', 'blastLook.STATE', 'close.STATE', 'guards.groundTrack', 'holdfire.states', 'player.lightAt', 'rearwatch.books', 'samlook.STATE',
-  'showwhy.states', 'silent.seats', 'silent.states', 'squad40.states', 'squadsmoke.states', 'squadthrow.states', 'stalk.STATE', 'tapstep.STATE', 'unseen.states', 'wandorder.states'];
+export { SEAT_TABLES };
 
 type Rec = Record<PropertyKey, unknown>;
 
@@ -75,7 +73,7 @@ function seatView(g: Game, own: Rec): Game {
 
 /** THE GAME'S SEATS, made as its constructor begins (before anything is built over a view). One: the Game is its own seat's view. More: each seat a view and a
  *  record; the first takes what the Game's fields hold now, the others a fresh copy of the same, and the Game's own fields of those names answer for the first. */
-export function seatsStand(g: Game, n: number): Seat[] {
+export function seatsStand(g: Game, n: number): Seat[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('seatsStand', undefined, [g, n]); if (__r !== RUST_PASS) return __r as any; } }
   if (!(n >= 1 && n <= SEATS.max) || n !== Math.floor(n)) throw new Error(`a game is stood up with 1 to ${SEATS.max} seats, not ${n}`);
   const G = g as unknown as Rec;
   if (n === 1) { const s = new Seat(0); s.view = g; G.seat = s; return [s]; }
@@ -108,13 +106,21 @@ export const seatManId = (i: number): number => i === 0 ? PLAYER_ID : NOBODY_ID 
 /** is `id` a player's man's (whoever's, whether or not that seat is in this game) */
 export const isManId = (id: number): boolean => id === PLAYER_ID || (id > NOBODY_ID && id < NOBODY_ID + SEATS.max);
 /** every seat's man, in seat order */
+/** HOW MANY PLAYERS' MEN STAND ON THE FLOOR: one a seat. Every budget of characters counts this, never "1": a floor holds at most MAX_SKINNED
+ *  (16, guards.ts) characters with every seat counted — the seats' men, every teammate, every other man stood (rust/game/src/seats/b_01.rs seat_count) */
+export const seatCount = (g: Pick<Game, 'seats'>): number => g.seats.length;
+/** how many more men the floor can be given as it stands (`most` = guards.ts MAX_SKINNED): a staging stands its team first and then as many of its
+ *  defenders, in the order of their marks, as this leaves — a game of one: all of them (rust/game/src/seats/b_01.rs floor_room) */
+/** A BUDGET OF CHARACTERS WRITTEN FOR ONE PLAYER, with every seat counted: one more for each further seat. The ONE rule every staging's budget goes
+ *  through (the eight a caller gets without asking, the four's ten, a structure's, a rescue's cast): a game of one reads the number as written
+ *  (rust/game/src/seats/b_01.rs budget_with_seats). spawnUnit holds any budget to MAX_SKINNED; past that a staging cuts its defenders (floorRoom) */
+export const budgetWithSeats = (g: Pick<Game, 'seats'>, forOne: number): number => forOne - 1 + g.seats.length;
+export const floorRoom = (g: Pick<Game, 'seats' | 'guards'>, most: number): number => most - g.seats.length - g.guards.length;
 export function men(g: Pick<Game, 'seats' | 'player'>): Player[] { const S = g.seats; if (S.length === 1) return [g.player]; const out: Player[] = []; for (const s of S) out.push(s.view.player); return out; }
 /** the men still up */
 export function menUp(g: Game): Player[] { return men(g).filter(p => !p.down); }
 /** is every player down (a game of one: its player is) */
 export function allDown(g: Game): boolean { const S = g.seats; if (S.length === 1) return g.player.down; for (const s of S) if (!s.view.player.down) return false; return true; }
-/** is any player down */
-export function anyDown(g: Game): boolean { const S = g.seats; if (S.length === 1) return g.player.down; for (const s of S) if (s.view.player.down) return true; return false; }
 /** `f` for every seat, over its view — how the world runs a thing written for the one player (the Game it was handed, in a game of one) */
 /** WHICH MISSIONS SEAT TWO: the scenarios whose own rules have been taken through for more than one player. The others are written round one commander (the
  *  hostage rescue's word and its route flow, the quiet mission's one partner) and refuse a game of two until they are. */
@@ -151,12 +157,6 @@ export type SeatTone = 'you' | 'purple';
 export const SEAT_TONES: readonly SeatTone[] = ['you', 'purple'];
 export const seatTone = (seat: number): SeatTone => SEAT_TONES[seat % SEAT_TONES.length];
 export function playerName(g: Game, pl: Player): string { return g.seats.length === 1 ? 'Player' : `Player ${seatOfMan(g, pl).index + 1}`; }
-/** the living man nearest a place (null: every player is down) — what a rule that is about "the player near here" asks */
-export function nearestMan(g: Game, at: ArrayLike<number>): Player | null {
-  let best: Player | null = null, bd = Infinity;
-  for (const s of g.seats) { const p = s.view.player; if (p.down) continue; const d = Math.hypot(p.char.pos[0] - at[0], p.char.pos[2] - at[2]); if (d < bd) { bd = d; best = p; } }
-  return best;
-}
 
 /** A LATER SEAT'S MAN AND HIS LIGHT, made as the Game's constructor ends (the first seat's are made where they always were, so a game of one draws its dice and
  *  adds its lights in the order it always did) */
@@ -186,22 +186,7 @@ export function stageMen(g: Game, at: Vec3, yaw: number, each?: (v: Game, pl: Pl
     v.teleportPlayer(v3.copy(p)); v.player.char.bodyYaw = v.player.char.aimYaw = yaw; each?.(v, v.player); }
 }
 
-/** A SCENARIO'S OPENING CUT: every seat's lens snapped to its own man, not flown (the seat's `takeCut` hands it to whoever hosts that player's picture) */
-export function cutToMen(g: Game): void { for (const s of g.seats) { const c = s.cam; c.target = v3.copy(s.view.followPos()); c.desired = v3.copy(c.target); } }
 
-// ---------------------------------------------------------------- who an enemy is up against
-/** THE MAN AN ENEMY HAS IN MIND. The night staff's and a defender's own code (guards.ts) is up against ONE player: his eye's meter, the place he last had him,
- *  his foe are single. So each of them keeps one of the players in mind at a time (`Guard.faces`: a seat) and is stepped over that seat's view: the man he is
- *  after for as long as that man is up, else the nearest player still up. (What it does not give: one enemy building a sighting of both players at once.
- *  The room fight's own targets, the rounds and the blasts are not his code and take every man as he is: roomfight.ts, combat.ts.) */
-export function facedSeat(g: Game, gd: Guard): Seat {
-  const S = g.seats, cur = S[gd.faces ?? 0] ?? S[0];
-  if (gd.foe === 'player' && !cur.view.player.down) return cur;
-  let best = cur, bd = Infinity;
-  for (const s of S) { const p = s.view.player; if (p.down) continue; const d = v3.distXZ(p.char.pos, gd.char.pos) - (s === cur ? SEATS.keep : 0); if (d < bd) { bd = d; best = s; } }
-  if (best !== cur) gd.faces = best.index;
-  return best;
-}
 /** the player an enemy has in mind as the tick stands (facedSeat chose him as the man's own step began), and the game as that player sees it: what the world's
  *  own code about an enemy and 'the player' asks (the one player, and the Game handed in, in a game of one) */
 export function facedMan(g: Game, gd: Guard): Player { const S = g.seats; return S.length === 1 ? g.player : (S[gd.faces ?? 0] ?? S[0]).view.player; }
@@ -215,13 +200,12 @@ export function viewOfBody(g: Game, c: { id: number }): Game {
   const gd = g.guards.find(x => x.char.id === c.id); if (!gd) return g.seats[0].view;
   return gd.unit && gd.team === 'operative' ? seatOf(g, gd).view : facedView(g, gd);
 }
-export function viewFor(g: Game, gd: Guard): Game { return gd.unit && gd.team === 'operative' ? seatOf(g, gd).view : facedSeat(g, gd).view; }
 
 // ---------------------------------------------------------------- whose teammate
 /** THE DEAL: the team's roster, in its order, is cut into as many runs as there are seats — the squad of four is two pairs, one pair a seat; three are two and
  *  one; a pair is a man each. Written on each man's papers (`Guard.unit.seat`) whenever the roster is not the one last dealt, so a staging, a restart and a man
  *  spawned later are all dealt by the one rule. A game of one seat deals nobody: every teammate is the one seat's. Returns whether it dealt. */
-export function dealSeats(g: Game): boolean {
+export function dealSeats(g: Game): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('dealSeats', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const n = g.seats.length; if (n === 1) return false;
   let fresh = 0; const roster: Guard[] = [], has: number[] = new Array(n).fill(0);
   for (const gd of g.guards) if (gd.unit && gd.team === 'operative') { roster.push(gd); if (gd.unit.seat === undefined) fresh++; else has[Math.min(n - 1, gd.unit.seat)]++; }
@@ -238,8 +222,6 @@ export function inSeat(s: Seat, gd: Guard): boolean { return (gd.unit?.seat ?? 0
 /** ONE BOOK: the game handed in has one squad's orders and they are `g.orders` — a game of one seat, or another cast's view of any game (squadcast.ts: the
  *  response team run through the squad's code). Otherwise the team's orders are in a book a seat, and the functions below read across them. */
 const oneBook = (g: Game): boolean => g.seats.length === 1 || (g as unknown as { [CAST_VIEW]?: boolean })[CAST_VIEW] === true;
-/** the man a teammate follows: his seat's */
-export function leaderOf(g: Game, gd: Guard): Player { return oneBook(g) ? g.player : seatOf(g, gd).view.player; }
 /** the game as a teammate's own player sees it */
 export function viewOf(g: Game, gd: Guard): Game { return oneBook(g) ? g : seatOf(g, gd).view; }
 /** the orders that move a teammate: his seat's book */
@@ -248,8 +230,6 @@ export function ordersOf(g: Game, gd: Guard): SquadOrders { return oneBook(g) ? 
 export function orderOf(g: Game, gd: Guard): Assignment | null { return oneBook(g) ? g.orders.of(gd) : seatOf(g, gd).view.orders.of(gd); }
 /** is there a squad to order at all, any seat's */
 export function teamActive(g: Game): boolean { if (oneBook(g)) return !!g.orders?.active; for (const s of g.seats) if (s.view.orders.active) return true; return false; }
-/** every seat's teammates, in the guard list's order — the TEAM's roster, the down among them (one book: its `squad()`) */
-export function teamSquad(g: Game): Guard[] { return oneBook(g) ? g.orders.squad() : g.guards.filter(gd => !!gd.unit && gd.team === 'operative'); }
 /** … and the living of them (one book: its `men()`) */
 export function teamMen(g: Game): Guard[] { return oneBook(g) ? g.orders.men() : g.guards.filter(gd => !!gd.unit && gd.team === 'operative' && gd.state !== 'dead'); }
 /** is the team in more than one pair (one book: its `paired`) */
@@ -268,5 +248,3 @@ export function lastOrder(g: Game): SquadOrders['log'][number] | null {
   if (oneBook(g)) { const lg = g.orders?.log ?? []; return lg[lg.length - 1] ?? null; }
   let best: SquadOrders['log'][number] | null = null; for (const s of g.seats) { const lg = s.view.orders.log, e = lg[lg.length - 1]; if (e && (!best || e.t > best.t)) best = e; } return best;
 }
-/** every seat's book, in seat order (one book: that one) */
-export function teamBooks(g: Game): SquadOrders[] { return oneBook(g) ? [g.orders] : g.seats.map(s => s.view.orders); }

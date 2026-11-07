@@ -44,7 +44,8 @@ async function fresh(seed: number, opts: { eta?: number; perimeter?: boolean } =
   const W = await standUp(); const { game } = W;
   game.godMode = true; game.aiEnabled = true; game.tune.qrfEta = opts.eta ?? 20; game.tune.perimeter = opts.perimeter ?? false; game.tune.qrf = true; game.tune.qrfSize = 4;
   game.tune.qrfSquad = false;   // (this family measures the element's OWN drill on the level's marks — on either stand; the squad's code under it is qrf-squad-check.ts)
-  RESPONSE.on = false;   // (… and the team as the office's one stairwell on the sandbox's two numbers, in the office's words — on either stand; the level's own team is response-check.ts. The runner puts the table back)
+  // (… and the level's own team, its one stairwell, pinned to the probe's numbers: RESPONSE.on is settled on, and the dice on how many and how soon are response-check.ts's)
+  { const R = game.level.scenarios.response; R.men = [4, 4]; R.eta = [opts.eta ?? 20, opts.eta ?? 20]; }
   step(W, 20, 0.05);
   return W;
 }
@@ -124,7 +125,7 @@ export async function qrfTimeline() {
   for (let f = 0; f < 60 * 52 && Q.state !== 'deployed'; f++) { W.step(DT); if (seenState[Q.state] === undefined) seenState[Q.state] = game.time - t0; }
   step(W, 60 * 4);
   const at = (re: RegExp) => { const l = rx.find(x => re.test(x.text)); return l ? l.t - t0 : NaN; };
-  const tReq = at(/response team/), tCtl = at(/^CONTROL — copy two-six/), t30 = at(/thirty seconds/), t10 = at(/QRF on the stairs/), tDoor = at(/in through the west stairs/);
+  const tReq = at(/response team/), tCtl = at(/^CONTROL — copy two-six/), t30 = at(/thirty seconds/), t10 = at(/ten seconds/), tDoor = at(/in by the west stairwell/);
   const near = (x: number, want: number, tol = 0.55) => Number.isFinite(x) && Math.abs(x - want) <= tol;
   F.verdict(near(tReq, 0, 0.1) && near(tCtl, 1.6, 0.2) && near(t30, 45 - 30) && near(t10, 45 - 10) && near(tDoor, 45), 'the five lines at +0 / +1.6 / ETA−30 / ETA−10 / ETA (±0.5 s), ETA 45', `request +${f2(tReq)} · control +${f2(tCtl)} · thirty +${f2(t30)} · ten +${f2(t10)} · door +${f2(tDoor)}${VERBOSE ? '\n    ' + rx.map(l => `+${f1(l.t - t0)} ${l.text}`).join('\n    ') : ''}`);
   F.verdict(seenState.requested !== undefined && near(seenState.inbound ?? NaN, 1.6, 0.2) && near(seenState.arriving ?? NaN, 35) && near(Q.deployedAt - t0, 45, 0.1), 'the states: requested → inbound (+1.6) → arriving (ETA−10) → deployed (ETA)', `${Object.entries(seenState).map(([k, v]) => `${k} +${f1(v)}`).join(' → ')} → deployed +${f1(Q.deployedAt - t0)}`);
@@ -216,7 +217,7 @@ export async function qrfWave() {
   step(W, 120);
   Q.refusedAt = -100; game.qrf.loudT = game.time; step(W, 5);   // the trigger's own conditions stand again (lockdown, fresh gunfire): still nothing new
   const r3 = requestQrf(game, 'gunfire'); const l3 = rx[rx.length - 1]?.text ?? '';
-  F.verdict(!r1 && /already rolling/.test(l1), 'inbound: refused — "already rolling"', `${r1} · "${l1}"`);
+  F.verdict(!r1 && /already on its way/.test(l1), 'inbound: refused — "already rolling"', `${r1} · "${l1}"`);
   F.verdict(!r2 && /everyone we've got/.test(l2), 'on the floor: refused — "that\'s everyone we\'ve got tonight"', `${r2} · "${l2}"`);
   F.verdict(!r3 && Q.state === 'deployed' && units(game).filter((u: any) => u.state !== 'dead').length === 0 && Q.lost === 4, 'all four dead: still deployed (spent), still refused, the losses counted', `${r3} · state ${Q.state} · lost ${Q.lost} · "${l3}"`);
   return F.done();
@@ -290,13 +291,13 @@ export async function qrfLimits() {
 export async function qrfPerimeter() {
   const F = family('qrf-perimeter: the compound locked down round him — each of its three triggers, control\'s word, the lot\'s lamps up (and back on a restart), men on the outside posts within ETA+10 facing the doors, the fire exit still the way out, nothing spawned past the budget, ids distinct');
   // the three triggers, each on its own run: a QRF man killed; three men down; a running gunfight after they have settled in
-  for (const [k, why] of [[0, 'a QRF man down'], [1, '3 men down'], [2, 'a running gunfight']] as [number, string][]) {
+  for (const [k, why] of [[0, 'one of ours down'], [1, '3 men down'], [2, 'a running gunfight']] as [number, string][]) {
     const W = await fresh(81 + k, { eta: 15, perimeter: true }); const { game } = W; goLoud(W); hideSam(W); const Q = game.qrf;
     for (let f = 0; f < 60 * 20 && Q.state !== 'deployed'; f++) W.step(DT);
     step(W, 60 * 10);   // ten seconds on the floor (past the settle-in) with nothing happening: no perimeter yet
     const before = !!Q.perim;
     if (k === 0) killGuard(game, Q.men[1], [1, 0, 0], false, 'shot', 'player');
-    if (k === 1) { const staff = game.guards.filter((x: any) => !x.unit && x.state !== 'dead'); for (const s of staff.slice(0, 3)) killGuard(game, s, [1, 0, 0], true, 'struck', 'player'); }
+    if (k === 1) { const staff = game.guards.filter((x: any) => !x.unit && x.state !== 'dead'); for (const s of staff.slice(0, 3)) { killGuard(game, s, [1, 0, 0], true, 'struck', 'player'); s.found = true; } }   // (RESPONSE.net: men they have found down)
     if (k === 2) { game.playerInvisible = false; game.teleportPlayer([37, 0, 8]); for (let i = 0; i < 3; i++) { fireWeapon(game, game.player.char, [39.5, 1.0, 8], true); step(W, 20, 0.1); } hideSam(W); }
     step(W, 30);
     F.verdict(!before && !!Q.perim && new RegExp(why.replace(/[()]/g, '.')).test(Q.log.map((l: any) => l.what).join(' ')), `trigger ${k + 1}: ${why} → the perimeter is called (and not before it)`, `before ${before} · after ${!!Q.perim} · ${Q.log.filter((l: any) => /^perimeter/.test(l.what)).map((l: any) => l.what).join(' ')}`);
@@ -310,7 +311,7 @@ export async function qrfPerimeter() {
   const g0 = game.guards.length; const ok = callPerimeter(game, 'panel'); const tCall = game.time;
   const P = Q.perim;
   F.verdict(ok && !!P && P.spawned === 0 && P.peeled === 2 && game.guards.length === g0 && Q.men.filter((m: any) => m.state !== 'dead').length === 2 && game.mission.stats.qrf === 2, 'called on this floor: nothing to spawn into (8 of 8) — the element\'s rear pair peels off, two stay inside; the mission marked for the debrief', `spawned ${P?.spawned} peeled ${P?.peeled} · guards ${g0}→${game.guards.length} · element left ${Q.men.filter((m: any) => m.state !== 'dead').map((m: any) => m.callsign).join(',')} · outside ${P?.men.map((p: any) => `${p.gd.callsign}→${p.post.name}`).join(', ')} · mission.qrf ${game.mission.stats.qrf}`);
-  F.verdict(game.targets.filter((t: any) => t.group === 'exterior').every((t: any) => t.on) && rx.some(l => /lock the compound down/.test(l.text)), 'control says it and the lot\'s lamps all come up (the dark west one too)', `"${rx.find(l => /lock the compound down/.test(l.text))?.text.slice(0, 70) ?? '—'}…" · lamps ${game.targets.filter((t: any) => t.group === 'exterior').map((t: any) => `${t.name}:${t.on ? 1 : 0}`).join(' ')} (authored ${lampsAuth})`);
+  F.verdict(game.targets.filter((t: any) => t.group === 'exterior').every((t: any) => t.on) && rx.some(l => /lock two-six down/.test(l.text)), 'control says it and the lot\'s lamps all come up (the dark west one too)', `"${rx.find(l => /lock two-six down/.test(l.text))?.text.slice(0, 70) ?? '—'}…" · lamps ${game.targets.filter((t: any) => t.group === 'exterior').map((t: any) => `${t.name}:${t.on ? 1 : 0}`).join(' ')} (authored ${lampsAuth})`);
   let tSet = NaN;
   for (let f = 0; f < 60 * 70; f++) { W.step(DT); if (isNaN(tSet) && P!.state === 'set') tSet = game.time - tCall; if (!isNaN(tSet) && game.time - tCall > tSet + 2) break; }
   const posts = P!.men.map((p: any) => ({ name: p.post.name, d: v3.distXZ(p.gd.char.pos, p.post.pos), a: Math.abs(wrapAngle(p.gd.char.bodyYaw - p.post.yaw)) * 180 / Math.PI, arrived: p.arrivedAt >= 0 ? p.arrivedAt - tCall : NaN, pinned: p.gd.pinned, id: p.gd.char.id }));

@@ -26,7 +26,7 @@ const last = (s: string, re: RegExp) => s.split('\n').filter(l => re.test(l)).po
 //  which the frozen stand holds off: every frozen run of it here is given TPS_RAILS=1)
 const scripted = (name: string) => existsSync(resolve(ROOT, 'levels', `${name}.script.ts`));
 // (…and its row's own hour and weather — game/rowset.ts, held off there as well: without the word the frozen run of a mission laid by day was played at night)
-const frame = (name: string): Record<string, string> | undefined => scripted(name) ? { TPS_RAILS: '1', TPS_ROWSET: '1' } : undefined;
+const frame = (name: string): Record<string, string> | undefined => scripted(name) ? { TPS_RAILS: '1', TPS_ROWSET: '1' } : undefined;   // (word left out on purpose: a level with no script has no frame to raise, and the runs these go to name the old stand — OLD below)
 // (the frozen runs say their stand by name since 2026-11-05: with no word a tool stands the game as the page opens it)
 const OLD = { TPS_PROFILE: 'frozen' };
 async function one(name: string) {

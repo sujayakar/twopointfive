@@ -71,6 +71,7 @@ import { loadWear, loadMan } from './kitload';   // (called inside kitPlayer / k
 import { GUNSLOTS, gunPicks, gunsBroken, pickRow, pickWord, sideStage, NO_PRIMARY, type GunSlot } from './gunslots';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
 import { KITTREE, treeOn } from './kittree';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
 import slotsData from './slots.json' with { type: 'json' };   // (plain data: no game module is behind it)
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export type KitWeapon = 'rifle' | 'pistol' | 'shotgun';
 /** (THE BALLISTIC SHIELD IS GONE — the maintainer, 10-15: "we should also probably just get rid of the ballistic shield, doesn't match the vibes (feels more
@@ -169,7 +170,7 @@ const issuedCard = (i: number): MemberKit => (i === 0 && hand ? stealthIssue(han
  *  your STEALTH card and what you are issued is the mission's kit (stealthIssue). Declared here: issuedCard is asked as this module loads. */
 export interface KitHand { rings: number; cams: number; wand: boolean }
 let hand: KitHand | null = null;
-export function kitDefault(i: number): MemberKit { return { ...issuedCard(i) }; }
+export function kitDefault(i: number): MemberKit { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitDefault', undefined, [i]); if (__r !== RUST_PASS) return __r as any; } } return { ...issuedCard(i) }; }
 
 /** The table. `on` false (?nokit, or by hand) = every man as issued whatever the cards say. */
 export const KIT: { on: boolean; members: MemberKit[] } = { on: true, members: ISSUED.map(m => ({ ...m })) };
@@ -401,7 +402,7 @@ const STEALTH_BREAK = envIs('KITSTEALTH_BREAK');
 const stealthOn = (): boolean => KITDEAL.stealth && !STEALTH_BREAK && treeUp();
 export const kitStealthOn = (): boolean => stealthOn();
 /** a run tape's stealth card put back for its replay (null: as the mission issues it) */
-export function kitStealthSet(raw: unknown) { stealthYou = raw && typeof raw === 'object' ? kitSanitize(0, raw) : null; }
+export function kitStealthSet(raw: unknown) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitStealthSet', undefined, [raw]); if (__r !== RUST_PASS) return __r as any; } } stealthYou = raw && typeof raw === 'object' ? kitSanitize(0, raw) : null; }
 /** your stealth card as kept, for a run tape to carry beside the cards (null: as the mission issues it, or the switch off) */
 export const kitStealthCard = (): MemberKit | null => (!stealthOn() ? null : !hand ? stealthYou : sameKit(KIT.members[0], stealthIssue(hand)) ? null : KIT.members[0]);
 /** the loud card as issued, whatever mission the table is for */
@@ -428,7 +429,7 @@ function stealthKept(): { stealth?: MemberKit } { if (hand) { const m = KIT.memb
 /** THE MISSION THE CARDS ARE FOR (the loadout screen as it opens and as its fog lever moves; kitPlayer at a staging): `h` = a stealth mission's kit, null =
  *  a loud mission. The stealth card stands first in the table for the one, the loud card for the other; the two colours go with you across. A stealth card
  *  that is still as issued follows the mission to its new kit. Nothing is written to the store here. With the switch off: nothing at all. */
-export function kitMission(h: KitHand | null) {
+export function kitMission(h: KitHand | null) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitMission', undefined, [h]); if (__r !== RUST_PASS) return __r as any; } }
   const to = h && stealthOn() ? h : null, look = (c: MemberKit): MemberKit => ({ ...c, suit: KIT.members[0].suit, trim: KIT.members[0].trim });
   if (!to) { if (hand && loudYou) { stealthKept(); KIT.members[0] = look(loudYou); } hand = null; loudYou = null; return; }
   if (!hand) { const loud = KIT.members[0]; KIT.members[0] = look(stealthCard(to)); loudYou = loud; hand = to; return; }
@@ -489,7 +490,7 @@ function lend(cards: MemberKit[], t: SlotTable, n: number, of: MemberKit[], mine
 const lendable = (of: MemberKit[], mine: boolean): boolean => dealWord(of) === dealWord(dealTable().kits[0]) || (mine && !dealNamed(of));
 /** THE FIVE CARDS AS THE TEAM WEARS THEM: the table's cards, or — the deal on, three or four coming, the counted things a named kit's — those shared out.
  *  The same array when nothing is dealt. */
-export function kitWorn(n = team, cards: MemberKit[] = KIT.members): MemberKit[] {
+export function kitWorn(n = team, cards: MemberKit[] = KIT.members): MemberKit[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitWorn', undefined, [n, cards]); if (__r !== RUST_PASS) return __r as any; } }
   if (!dealing() || n < 3) return cards;
   return lend(!(dealOwn && cards === KIT.members) && dealNamed(cards) ? deal(cards, SLOTS.table, n) : cards, SLOTS.table, n, cards, cards === KIT.members && !issuing);
 }
@@ -498,10 +499,10 @@ export function kitWorn(n = team, cards: MemberKit[] = KIT.members): MemberKit[]
  *  a squad kit is put on by name, the cards are reset, or they settle back into a kit (dealSettle). */
 let dealOwn = false;
 /** … read, or put back as a recording had it (runtape.ts: who wears what moves a run once a card weighs — kitload.ts) */
-export function kitOwn(v?: boolean): boolean { if (v !== undefined) dealOwn = v; return dealOwn; }
+export function kitOwn(v?: boolean): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitOwn', undefined, [v]); if (__r !== RUST_PASS) return __r as any; } } if (v !== undefined) dealOwn = v; return dealOwn; }
 /** member i's card as he wears it (what the roster and his card show) · and what he is issued, as he would wear that */
-export function kitShown(i: number): MemberKit { return kitWorn()[i]; }
-export function kitIssuedShown(i: number, n = team): MemberKit { return i > 0 && dealing() && n >= 3 ? lend(deal(ISSUED.map((_m, j) => ({ ...issuedCard(j) })), SLOTS.table, n), SLOTS.table, n, ISSUED, false)[i] : { ...issuedCard(i) }; }   // (`n`: the men who come — a staging's own count, kitload.ts)
+export function kitShown(i: number): MemberKit { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitShown', undefined, [i]); if (__r !== RUST_PASS) return __r as any; } } return kitWorn()[i]; }
+export function kitIssuedShown(i: number, n = team): MemberKit { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitIssuedShown', undefined, [i, n]); if (__r !== RUST_PASS) return __r as any; } } return i > 0 && dealing() && n >= 3 ? lend(deal(ISSUED.map((_m, j) => ({ ...issuedCard(j) })), SLOTS.table, n), SLOTS.table, n, ISSUED, false)[i] : { ...issuedCard(i) }; }   // (`n`: the men who come — a staging's own count, kitload.ts)
 /** A CARD IS READ AND CHANGED AS IT IS WORN. `f` runs with the worn cards standing in the table (a teammate's card, while they are dealt), nothing written to
  *  the store. A peek puts the table back. A change that was TAKEN (`taken`) is kept one of two ways: it moved a counted thing — the worn cards are now the
  *  player's own and stay in the table as they stand; or it moved something else (a gun, a look, a big thing) — that is written onto the table's own cards and
@@ -619,7 +620,7 @@ function slotsCheck(raw: unknown): { table: SlotTable } | { why: string } {
 /** the pouches `n` of one item fill (0 for an item the table does not price) */
 export function slotCost(item: string, n: number, t: SlotTable = SLOTS.table): number { return pouchesOf(t.items[item], n); }
 /** Member i's pouches: used of total, and what fills them, a line per thing carried. */
-export function kitCost(i: number, m: MemberKit = kitShown(i)): { used: number; total: number; free: number; lines: { item: string; n: number; pouches: number }[]; /** his big slot (BIGSLOT): filled of how many — null with the switch off */ big: { used: number; total: number } | null } {
+export function kitCost(i: number, m: MemberKit = kitShown(i)): { used: number; total: number; free: number; lines: { item: string; n: number; pouches: number }[]; /** his big slot (BIGSLOT): filled of how many — null with the switch off */ big: { used: number; total: number } | null } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitCost', undefined, [i, m]); if (__r !== RUST_PASS) return __r as any; } }
   const lines: { item: string; n: number; pouches: number }[] = [];
   for (const k of Object.keys(SLOT_AMOUNT)) { const n = SLOT_AMOUNT[k](m), p = slotCost(k, n); if (p) lines.push({ item: k, n, pouches: p }); }
   const used = costOf(m, SLOTS.table), total = SLOTS.table.pouches[i] ?? 0; return { used, total, free: total - used, lines, big: bigOn ? { used: bigUsed(m, SLOTS.table), total: SLOTS.table.big[i] ?? 1 } : null };
@@ -635,7 +636,7 @@ export function kitLegal(cards: MemberKit[] = KIT.members, n = team): string | n
 /** How many teammates come: asked, or SET (the loadout screen, as its size is stepped; 0 = you alone). A team that grew may find the men who now come over
  *  the squad's pouches between them (the cards were cut for a smaller one): they are brought back inside — the last man who added something gives it up
  *  first — and his card says what was left behind. Nothing is written to the store until a row is next changed. */
-export function kitTeam(n?: number): number {
+export function kitTeam(n?: number): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitTeam', undefined, [n]); if (__r !== RUST_PASS) return __r as any; } }
   if (n === undefined) return team;
   team = Math.min(KIT_MEMBERS - 1, Math.max(0, Math.round(n)));
   if (SLOTS.on) kitFitAll(KIT.members, SLOTS.table, team).forEach((left, i) => { if (left.length) KIT_NOTE[i] = `${SLOTS.table.squad !== null ? 'No room in the squad\'s pouches' : 'More than a squad may carry'} with this team: ${left.join(', ')} left behind.`; });   // (a table with no squad limit: only a tool's most-a-squad can be over)
@@ -717,20 +718,20 @@ function loadoutCards(id: string, looks?: MemberKit[]): MemberKit[] | string {
 const QUIET_HAND = (): KitHand => ({ rings: KITTREE.lend, cams: 2, wand: WAND.on });
 /** Put one of the table's named loadouts on all five cards — or 'issued', the issued kit — keeping each man's colours (the tallies; the loadout screen's
  *  squad kit row): null = done and kept, else why not — no such loadout, a tool of it this build has no row for, or (a table edited by hand) not a legal fill. */
-export function kitLoadout(id: string, only?: number): string | null {
+export function kitLoadout(id: string, only?: number): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitLoadout', undefined, [id, only]); if (__r !== RUST_PASS) return __r as any; } }
   const cards = loadoutCards(id, KIT.members); if (typeof cards === 'string') return cards;
   // (`only`: that man's card of the kit and nobody else's — the row of kits pressed by a man going alone must not rewrite four cards he cannot see)
   if (only !== undefined) return onWorn(only, () => { const why = cardWhy(only, cards[only]); if (why) return why; KIT.members[only] = cards[only]; KIT_NOTE[only] = ''; kitSave(); return null; }, r => r === null);
   for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = cards[i]; KIT_NOTE[i] = ''; } dealOwn = false; kitSave(); return null;
 }
 /** the squad kits a press can put on, in the order the screen lists them: as issued, then the table's loadouts this build can carry (none while the rule is off) */
-export function kitLoadouts(only?: number): { id: string; name: string }[] {
+export function kitLoadouts(only?: number): { id: string; name: string }[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitLoadouts', undefined, [only]); if (__r !== RUST_PASS) return __r as any; } }
   if (only !== undefined) { const seen = new Set<string>(), mine = (id: string) => { const c = loadoutCards(id); return typeof c === 'string' ? '' : JSON.stringify({ ...c[only], suit: '', trim: '' }); };   // (for one man: the kits that put a different card on HIM, the first of each)
     return kitLoadouts().filter(l => { const k = mine(l.id); if (!k || seen.has(k)) return false; seen.add(k); return true; }); }
   return [{ id: 'issued', name: 'As issued' }, ...(SLOTS.on ? SLOTS.table.loadouts.filter(L => !loadoutMissing(L).length && typeof loadoutCards(L.id) !== 'string').map(L => ({ id: L.id, name: L.name })) : [])];
 }
 /** which of them the five cards are now, colours aside (null: a mix of your own) */
-export function kitLoadoutOf(only?: number): string | null {
+export function kitLoadoutOf(only?: number): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitLoadoutOf', undefined, [only]); if (__r !== RUST_PASS) return __r as any; } }
   const same = (id: string) => { const cards = loadoutCards(id, KIT.members); return typeof cards !== 'string' && cards.every((c, i) => (only !== undefined && i !== only) || JSON.stringify(c) === JSON.stringify({ ...c, ...KIT.members[i] })); };
   if (only !== undefined) return kitLoadouts(only).find(l => same(l.id))?.id ?? null;
   if (dealOwn && dealing() && team >= 3) return null;   // (cards of the player's own layout are no named kit on a team that would wear one shared out)
@@ -920,10 +921,10 @@ function buildRowsTree(i: number): KitRow[] {
 /** (built once per member, per way the rule stands, per table: a counted row's values are the table's `max`) */
 const rowCache = new Map<string, KitRow[]>();
 /** the rows of member i's card, top to bottom */
-export function kitRows(i: number): KitRow[] { const key = `${i}:${SLOTS.on}:${wallHere()}:${WAND.on}:${WAND.mate}:${OWNCHARGE.on}:${STICKY.on}:${bigOn}:${gunsOn()}:${treeUp()}:${mateShells()}`; let r = rowCache.get(key); if (!r) rowCache.set(key, r = buildRows(i)); return r; }
+export function kitRows(i: number): KitRow[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitRows', undefined, [i]); if (__r !== RUST_PASS) return __r as any; } } const key = `${i}:${SLOTS.on}:${wallHere()}:${WAND.on}:${WAND.mate}:${OWNCHARGE.on}:${STICKY.on}:${bigOn}:${gunsOn()}:${treeUp()}:${mateShells()}`; let r = rowCache.get(key); if (!r) rowCache.set(key, r = buildRows(i)); return r; }
 /** What a row costs member i's pouches as his card stands, and its rate in plain words ('a pouch each', 'the wand takes 2 pouches') — null for a row
  *  that is not a pouch (a light, a colour; a shotgun while the table prices it at nothing), and for every row while the rule is off. */
-export function kitRowCost(i: number, r: KitRow, m: MemberKit = kitShown(i)): { pouches: number; rate: string } | null {
+export function kitRowCost(i: number, r: KitRow, m: MemberKit = kitShown(i)): { pouches: number; rate: string } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitRowCost', undefined, [i, r, m]); if (__r !== RUST_PASS) return __r as any; } }
   const it = r.item ? SLOTS.table.items[r.item] : undefined; if (!SLOTS.on || !r.item || !it || !priceOf(it)) return null;
   const p = it.pouches, rate = it.holds && stealthOn() ? `${it.holds} to a pouch` : r.item === 'wand' ? `the wand takes ${pouchWords(p)}` : r.item === 'shotgun' ? `the shotgun's shells take ${pouchWords(p)}` : p === 1 ? 'a pouch each' : `${p} pouches each`;
   return { pouches: slotCost(r.item, SLOT_AMOUNT[r.item](m)), rate };
@@ -936,7 +937,7 @@ export function kitName(i: number): { title: string; sub: string } {
 }
 /** a card in a line: 'AKS-74U · no light · goggles · 2 stun, 1 charge, 1 frag · olive drab'. Under the pouches rule the line names what fills a pouch — frags too, and your 40 mm
  *  rounds (none without the rifle: homeShells) — so its counts add up to the pouches shown beside it; with the rule off it is the line the build before had (no frags, no 40 mm: the rows fixture holds it) */
-export function kitWords(i: number, m: MemberKit = kitShown(i)): string {   // (`m`: another card in member i's place — the one a man was staged with, kitOf: ui/tabcard.ts)
+export function kitWords(i: number, m: MemberKit = kitShown(i)): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitWords', undefined, [i, m]); if (__r !== RUST_PASS) return __r as any; } }   // (`m`: another card in member i's place — the one a man was staged with, kitOf: ui/tabcard.ts)
   const look = [m.suit !== 'issued' ? SUITS[m.suit].label : '', m.trim !== 'issued' ? `${TRIMS[m.trim].label} trim` : ''].filter(Boolean).join(', ');
   const frags = SLOTS.on && m.frags ? `, ${m.frags} frag${m.frags === 1 ? '' : 's'}` : '';
   // (KITTREE: a gun by its pick's name, as its tile reads — 'bare' after one whose suppressor the card has taken off)
@@ -952,7 +953,7 @@ function bigWords(m: MemberKit): string { return bigOn && !m.walls && m.big !== 
 /** the wall charges of a card's line: 'wall charge', '2 wall charges', or nothing (none carried, or no such row on his card) */
 function wallWords(i: number, m: MemberKit): string { return m.walls && wallRow(i) ? (m.walls === 1 ? 'wall charge' : `${m.walls} wall charges`) : ''; }
 /** member i's card differs from what he is issued (only the rows his card has) */
-export function kitChanged(i: number): boolean { const m = kitShown(i), d = kitIssuedShown(i); return kitRows(i).some(r => rowHas(r, m) && rowGet(r, m) !== rowGet(r, d)); }
+export function kitChanged(i: number): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitChanged', undefined, [i]); if (__r !== RUST_PASS) return __r as any; } } const m = kitShown(i), d = kitIssuedShown(i); return kitRows(i).some(r => rowHas(r, m) && rowGet(r, m) !== rowGet(r, d)); }
 
 /** why member i's card with one row set to `v` is refused — no room in his pouches, or in the squad's — or null: it fits (always null while the rule is off) */
 function overWhy(i: number, row: KitRow, v: KitValue): string | null { if (!SLOTS.on) return null; const m = { ...KIT.members[i] }; rowSet(row, m, v); return cardWhy(i, m); }
@@ -961,7 +962,7 @@ function rowOf(i: number, field: KitField): KitRow | undefined { return kitRows(
 /** What a step of one row of member i's card WOULD do, nothing written: the value it lands on — the next (dir +1) or the last (−1), wrapping — or, when that
  *  has no room in the pouches, `why` and the value as it stands. A COUNTED row is simply refused one more; stepped down off none it comes round to the most
  *  that fits. A row of CHOICES (a weapon) walks on past a choice with no room to the next that has, and says what it passed (`passed`). */
-export function kitPeek(i: number, field: KitField, dir: 1 | -1): { value: KitValue; why: string; passed: string } { return onWorn(i, () => peek(i, field, dir)); }
+export function kitPeek(i: number, field: KitField, dir: 1 | -1): { value: KitValue; why: string; passed: string } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitPeek', undefined, [i, field, dir]); if (__r !== RUST_PASS) return __r as any; } } return onWorn(i, () => peek(i, field, dir)); }
 function peek(i: number, field: KitField, dir: 1 | -1): { value: KitValue; why: string; passed: string } {
   const row = rowOf(i, field); if (!row) throw new Error(`kit: member ${i} has no '${field}' row`);
   const cur = rowGet(row, KIT.members[i]), n = row.values.length, at = Math.max(0, row.values.indexOf(cur)), counted = typeof row.values[0] === 'number';
@@ -977,7 +978,7 @@ function peek(i: number, field: KitField, dir: 1 | -1): { value: KitValue; why: 
   return { value: cur, why, passed: '' };
 }
 /** Step one row of member i's card; kept. `ok` false: refused (`why`), nothing written. `passed`: a choice the step walked past, and why. */
-export function kitTry(i: number, field: KitField, dir: 1 | -1): { ok: boolean; value: KitValue; why: string; passed: string } {
+export function kitTry(i: number, field: KitField, dir: 1 | -1): { ok: boolean; value: KitValue; why: string; passed: string } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitTry', undefined, [i, field, dir]); if (__r !== RUST_PASS) return __r as any; } }
   return onWorn(i, () => {
     const p = peek(i, field, dir); if (p.why) return { ok: false, ...p };
     rowSet(rowOf(i, field)!, KIT.members[i], p.value); KIT_NOTE[i] = ''; kitSave();
@@ -986,10 +987,10 @@ export function kitTry(i: number, field: KitField, dir: 1 | -1): { ok: boolean; 
 }
 /** Step one row of member i's card to its next (dir +1) or last (−1) value, wrapping; kept. Returns the value the row now has (a step that would not fit his
  *  pouches is refused and the value is the one it had: kitTry says why). */
-export function kitStep(i: number, field: KitField, dir: 1 | -1): KitValue { return kitTry(i, field, dir).value; }
+export function kitStep(i: number, field: KitField, dir: 1 | -1): KitValue { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitStep', undefined, [i, field, dir]); if (__r !== RUST_PASS) return __r as any; } } return kitTry(i, field, dir).value; }
 /** Set one row outright (a click on a value); refused — false — for a value the row does not offer, or one his pouches have no room for. ('cans', a split of
  *  six by name, is taken for your card whichever way the rule stands: what the build before it called the row.) */
-export function kitSet(i: number, field: KitField, v: KitValue): boolean { return onWorn(i, () => setRow(i, field, v), ok => ok); }
+export function kitSet(i: number, field: KitField, v: KitValue): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitSet', undefined, [i, field, v]); if (__r !== RUST_PASS) return __r as any; } } return onWorn(i, () => setRow(i, field, v), ok => ok); }
 function setRow(i: number, field: KitField, v: KitValue): boolean {
   if (bigOn && (field === 'walls' || (field === 'weapon' && v === 'shotgun'))) {   // (BIGSLOT: a hand that still names the rows of the build before — a tool, a tally — is given the one big row)
     const now = bigOf(KIT.members[i]), mine: BigPick = field === 'walls' ? 'wall' : 'shotgun';
@@ -1011,21 +1012,21 @@ export const KIT_PRESETS: { id: KitPreset; label: string; line: string }[] = [
 ];
 /** member i's card as a set makes it. Under the pouches rule its guns and looks are the set's and what fills his pouches is the table's loadout of that
  *  name (Quiet: 'quiet'; Loud: 'stun', stun heavy), a legal fill for all five together — slotsCheck holds the table to it. */
-export function kitPresetCard(i: number, p: KitPreset): MemberKit { return setCard(i, p, SLOTS.on ? SLOTS.table : null); }
+export function kitPresetCard(i: number, p: KitPreset): MemberKit { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitPresetCard', undefined, [i, p]); if (__r !== RUST_PASS) return __r as any; } } return setCard(i, p, SLOTS.on ? SLOTS.table : null); }
 /** Put a set on member i's card; kept. `ok` false: refused (`why`), nothing written — the squad's pouches have no room for it as the other cards stand (a
  *  teammate's card holds what this one gave up; kitPresetAll puts a set on everybody at once and is never refused). */
-export function kitPreset(i: number, p: KitPreset): { ok: boolean; why: string } {
+export function kitPreset(i: number, p: KitPreset): { ok: boolean; why: string } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitPreset', undefined, [i, p]); if (__r !== RUST_PASS) return __r as any; } }
   return onWorn(i, () => {
     const c = kitPresetCard(i, p), why = cardWhy(i, c); if (why) return { ok: false, why };
     KIT.members[i] = c; KIT_NOTE[i] = ''; kitSave(); return { ok: true, why: '' };
   }, r => r.ok);
 }
 /** why a press of a set on member i's card would be refused as the cards stand ('' = it would be taken) */
-export function kitPresetWhy(i: number, p: KitPreset): string { return onWorn(i, () => cardWhy(i, kitPresetCard(i, p)) ?? ''); }
+export function kitPresetWhy(i: number, p: KitPreset): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitPresetWhy', undefined, [i, p]); if (__r !== RUST_PASS) return __r as any; } } return onWorn(i, () => cardWhy(i, kitPresetCard(i, p)) ?? ''); }
 /** a set on all five at once (always a legal fill) */
-export function kitPresetAll(p: KitPreset) { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = setCardBase(i, p, SLOTS.on ? SLOTS.table : null); KIT_NOTE[i] = ''; } dealOwn = false; kitSave(); }   // (the table's layout: KITDEAL shares it out as it is worn)
+export function kitPresetAll(p: KitPreset) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitPresetAll', undefined, [p]); if (__r !== RUST_PASS) return __r as any; } } for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = setCardBase(i, p, SLOTS.on ? SLOTS.table : null); KIT_NOTE[i] = ''; } dealOwn = false; kitSave(); }   // (the table's layout: KITDEAL shares it out as it is worn)
 /** which set member i's card is, if it is exactly one */
-export function kitPresetOf(i: number): KitPreset | null {
+export function kitPresetOf(i: number): KitPreset | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitPresetOf', undefined, [i]); if (__r !== RUST_PASS) return __r as any; } }
   const m = kitShown(i);
   return KIT_PRESETS.find(p => { const c = kitPresetCard(i, p.id); return kitRows(i).every(r => (!rowHas(r, c) && !rowHas(r, m)) || rowGet(r, c) === rowGet(r, m)); })?.id ?? null;
 }
@@ -1037,7 +1038,7 @@ const PASTE_BREAK = envIs('KITPASTE_BREAK');
  *  most comes down to it, and a row that cannot show the copied value at all (your cans as one of four splits, the pouches rule off)
  *  keeps what it had. His colours stay his own, as under a squad kit: the trim is how the men are told apart from above. A field his card has no row
  *  for is never written, so the card is one his own tiles could have made. */
-export function kitPasteCard(i: number, from: MemberKit): MemberKit {
+export function kitPasteCard(i: number, from: MemberKit): MemberKit { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitPasteCard', undefined, [i, from]); if (__r !== RUST_PASS) return __r as any; } }
   const m = { ...kitShown(i) };
   if (PASTE_BREAK) return { ...from, suit: m.suit, trim: m.trim };
   for (const r of kitRows(i)) {
@@ -1052,13 +1053,13 @@ export function kitPasteCard(i: number, from: MemberKit): MemberKit {
 const rowsMoved = (i: number, a: MemberKit, b: MemberKit): KitField[] => kitRows(i).filter(r => (rowHas(r, a) || rowHas(r, b)) && rowGet(r, a) !== rowGet(r, b)).map(r => r.field);   // (a row neither card has — KITTREE — moved nothing)
 /** What a paste of `from` onto member i's card WOULD do, nothing written: the card it would make, the rows of his it would move (none: he wears it
  *  already) and why it would be refused as the cards stand ('' = taken) — cardWhy's reasons, as for a set. */
-export function kitPastePeek(i: number, from: MemberKit): { card: MemberKit; changed: KitField[]; why: string } { return onWorn(i, () => pastePeek(i, from)); }
+export function kitPastePeek(i: number, from: MemberKit): { card: MemberKit; changed: KitField[]; why: string } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitPastePeek', undefined, [i, from]); if (__r !== RUST_PASS) return __r as any; } } return onWorn(i, () => pastePeek(i, from)); }
 function pastePeek(i: number, from: MemberKit): { card: MemberKit; changed: KitField[]; why: string } {
   const card = kitPasteCard(i, from);
   return { card, changed: rowsMoved(i, KIT.members[i], card), why: PASTE_BREAK ? '' : cardWhy(i, card) ?? '' };
 }
 /** Paste a copied card onto member i's; kept, in ONE write of his card. `ok` false: refused (`why`), nothing written. `changed`: the rows of his card it moved. */
-export function kitPaste(i: number, from: MemberKit): { ok: boolean; why: string; changed: KitField[] } {
+export function kitPaste(i: number, from: MemberKit): { ok: boolean; why: string; changed: KitField[] } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitPaste', undefined, [i, from]); if (__r !== RUST_PASS) return __r as any; } }
   return onWorn(i, () => {
     const p = pastePeek(i, from); if (p.why) return { ok: false, why: p.why, changed: [] };
     if (p.changed.length || PASTE_BREAK) { KIT.members[i] = p.card; KIT_NOTE[i] = ''; kitSave(); }
@@ -1066,7 +1067,7 @@ export function kitPaste(i: number, from: MemberKit): { ok: boolean; why: string
   }, r => r.ok && (r.changed.length > 0 || PASTE_BREAK));
 }
 /** member i already wears a copied card: a paste of it would move no row of his */
-export function kitWears(i: number, from: MemberKit): boolean { return !kitPastePeek(i, from).changed.length; }
+export function kitWears(i: number, from: MemberKit): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitWears', undefined, [i, from]); if (__r !== RUST_PASS) return __r as any; } } return !kitPastePeek(i, from).changed.length; }
 
 // ------------------------------------------------------------ the store
 interface Store { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem?(k: string): void }
@@ -1079,7 +1080,7 @@ export const KIT_NOTE: string[] = Array.from({ length: KIT_MEMBERS }, () => '');
  *  the pouches and says on the card what stayed behind — dropped to the issued one here, an old '6 smoke, no stun' card came back with one smoke and not a word
  *  about the other five. (A teammate's count over its row is still hand-typed junk: the issued one.) YOUR card from the build before the rule holds its canisters as `cans`, a split of six by name, and no `smoke`: read as that split (its
  *  `bangs` then meant nothing and is not read). */
-export function kitSanitize(i: number, raw: unknown): MemberKit {
+export function kitSanitize(i: number, raw: unknown): MemberKit { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitSanitize', undefined, [i, raw]); if (__r !== RUST_PASS) return __r as any; } }
   const card = kitDefault(i), out = card as unknown as Record<string, KitValue>; if (!raw || typeof raw !== 'object') return card;
   const R = raw as Record<string, unknown>, old = i === 0 && R.smoke === undefined;
   if (old && typeof R.cans === 'string' && Object.hasOwn(CAN_MIXES, R.cans)) { const x = CAN_MIXES[R.cans as CanMix]; card.smoke = x.smoke; card.bangs = x.stun; }
@@ -1146,7 +1147,7 @@ export function kitLoad(s: Store | null, search = '') {
  *  since levels/train-kit.json has you throw a smoke can, a stun can and a frag with nothing to spare for a miss under the one of each the pouches rule issues. kitPlayer
  *  writes no count while `issuing` on such a page (a mission's own issue below, kitIssue, writes them as any card's). */
 let issuedPage = false, issuing: boolean | 'own' = false;   // ('own': under a mission's own issue — kitIssue)
-export function kitIssuedPage(on = true) { issuedPage = on; }
+export function kitIssuedPage(on = true) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitIssuedPage', undefined, [on]); if (__r !== RUST_PASS) return __r as any; } } issuedPage = on; }
 /** A MISSION'S OWN ISSUE (the level file's `scenarios.issue`, scene/scenarios.ts IssueData): on a level that carries the block every staging puts the ISSUE
  *  cards on the men, as a lesson's page does, with the block's fields written over them (the long hall: the plain issue for every man). The table and its store
  *  stay the machine's (asIssued puts them back), so nothing kept is worn or written. `ISSUE.on` false (?noissue), or a level without the block = the staging
@@ -1178,7 +1179,7 @@ export const kitPacks = (e: { packs?: unknown } | null | undefined): boolean => 
  *  one thing of his own, a frag over the sandbags, and the men behind them are held down until it lands, so a card packed with none would leave a line
  *  asking for what he cannot do. His frags are never fewer than that there; the loadout screen shows it on his tile as the mission's (ui/loadout.ts). */
 let lessonRow: { packs?: { frags?: number } } | null = null;
-export function kitLessonPage(row: { packs?: { frags?: number } } | null | undefined) { lessonRow = row ?? null; }
+export function kitLessonPage(row: { packs?: { frags?: number } } | null | undefined) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitLessonPage', undefined, [row]); if (__r !== RUST_PASS) return __r as any; } } lessonRow = row ?? null; }
 /** every staging on this page wears the issue cards (a tool raised it, or the page's lesson is not one he packs for) */
 const pageIssued = (): boolean => issuedPage || (!!lessonRow && !kitPacks(lessonRow));
 /** the least frags he carries on this page (0: no such page) */
@@ -1213,7 +1214,7 @@ function keptNow(): { charges?: number; walls?: number } { const k: { charges?: 
 /** (your card also carries `cans` — the split of six its two counts are, where they are one — for a build from before the pouches rule reading this store) */
 export function kitSave() { try { store?.setItem(KIT_LS, JSON.stringify({ v: 2, ...(dealOwn ? { own: true } : {}), ...stealthKept(), members: KIT.members.map((c, i) => { const m = i === 0 && hand && loudYou ? (loudYou = { ...loudYou, suit: c.suit, trim: c.trim }) : c; return (i === 0 ? { ...m, ...keptNow(), cans: mixOf(m) ?? 'issued' } : wandRow(i) ? (keptWand[i] = m.wand, m) : keptWand[i] ? { ...m, wand: true } : m); }) })); } catch { /* a full or forbidden store: the table still holds for this visit */ } }
 /** every card back as issued (and the store's copy) */
-export function kitReset() { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; } kept0 = null; keptWand = []; dealOwn = false; stealthYou = null; if (hand && loudYou) loudYou = loudIssue(); kitSave(); }
+export function kitReset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitReset', undefined, []); if (__r !== RUST_PASS) return __r as any; } } for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; } kept0 = null; keptWand = []; dealOwn = false; stealthYou = null; if (hand && loudYou) loudYou = loudIssue(); kitSave(); }
 // slots.json, checked once as this module loads (after the issued table above, which the check reads; nothing of another game module is touched)
 { const c = slotsCheck(slotsData); if ('table' in c) SLOTS.table = c.table; else { SLOTS.ok = SLOTS.on = false; SLOTS.why = c.why; console.error(`kit: slots.json refused — ${c.why}. The pouches rule is off: every row is free.`); } }
 
@@ -1241,7 +1242,7 @@ const issuedPlayer = new SideMap<object, { rifle: boolean; gun: Rifle; side: Pis
  *  card on him has an entry (a Player as built has both). */
 const youBare = new SideMap<object, { light: boolean; nvg: boolean }>('kit.youBare');
 export const kitYouLight = (pl: object): boolean => !youBare.get(pl)?.light;
-export const kitYouNvg = (pl: object): boolean => !youBare.get(pl)?.nvg;
+export const kitYouNvg = (pl: object): boolean => goneWithTick('kitYouNvg') as any;
 /** KITTREE: a run that is played quietly — a quiet mission, or the plain night alone off the loadout screen: the mission hands you its sponge rounds */
 const stealthRun = (g: Game): boolean => !!g.quiet?.active || (KIT_SOLO.on && !g.guards.some(gd => !!gd.unit && gd.team === 'operative'));
 /** the sponge rounds a mission of this kind hands you over your card (the loadout screen's tile shows them as the mission's) */
@@ -1253,7 +1254,7 @@ export const kitTreeOn = (): boolean => treeUp();
  *  under the pouches rule you are issued one of each, fewer than a Player's own; and the same literals the build before compared with, so with the rule off
  *  every run is that build's). So with the rule off as issued = nothing written, and with it on as issued = one smoke, one stun, one frag, one round on
  *  him; kitShow puts back what he had. */
-export function kitPlayer(g: Game) {
+export function kitPlayer(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitPlayer', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   if (!KIT.on) return;
   if (kitIssue(g, () => kitPlayer(g))) return;   // (a mission that issues its own kit: kitIssue — a lesson's level that does, too)
   if (pageIssued() && !issuing) return asIssued(() => kitPlayer(g));   // (a lesson's page: the issue card, whatever the table holds — kitIssuedPage)
@@ -1309,10 +1310,10 @@ function kitAlone(g: Game) {
  *  stay the card's. A SHOWCASE's player is the show's: kitShow takes the card off as one starts, and nothing puts it on while one runs. Off = the plain
  *  night is nobody's business here: Start on the card is as it ever was. */
 export const KIT_SOLO = { on: false, stand: false };
-export function kitSolo(g: Game) { KIT_SOLO.on = true; eachSeat(g, kitPlayer); }   // (every player's man — seats.ts)
+export function kitSolo(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitSolo', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } KIT_SOLO.on = true; eachSeat(g, kitPlayer); }   // (every player's man — seats.ts)
 /** THE PAGE'S OWN QUESTION, in one place (main.ts asks it at boot with `solo` = its URL has ?solo): the plain night off the loadout screen, or a quiet mission
  *  alone, and no squad scenario up → your card goes on the player and on every fresh one after (kitSolo). */
-export function kitSoloIf(g: Game, solo: boolean) { if ((solo || (g.quiet?.active && !g.quiet.squad)) && !g.nightBreach?.active && !g.rescue?.active) kitSolo(g); }
+export function kitSoloIf(g: Game, solo: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitSoloIf', undefined, [g, solo]); if (__r !== RUST_PASS) return __r as any; } } if ((solo || (g.quiet?.active && !g.quiet.squad)) && !g.nightBreach?.active && !g.rescue?.active) kitSolo(g); }
 /** … AND THE HARNESS'S SHIPPED STAND ASKS IT TOO (`KIT_SOLO.stand`, raised by src/host/profile.ts shippedBoot and by nothing else: the frozen stand never
  *  comes past the first line, so its Sam is what a Player is built with and nothing is written). A headless game has no URL: stood up plain it IS the solo
  *  night as the mission list deploys it (`?solo`), until a tool starts a scenario on it (scenarioRun.ts startFromQuery: `plain` false) — then the answer is
@@ -1320,10 +1321,10 @@ export function kitSoloIf(g: Game, solo: boolean) { if ((solo || (g.quiet?.activ
  *  down, as on a page that never had ?solo. Without this the shipped stand's solo Sam carried the eleven things a Player is built with where the page's
  *  carries the four he is issued. A TRAINING level (one that carries a lesson) is left alone: its page plays your counts as built (kitIssuedPage), and with
  *  nothing kept on the machine that is the fresh Player as he stands. */
-export function kitSoloStand(g: Game, plain = true) { if (!KIT_SOLO.stand) return; KIT_SOLO.on = false; if (!g.level.scenarios?.lesson?.steps?.length) kitSoloIf(g, plain); }
-export function kitFresh(g: Game) { if (KIT_SOLO.on && !g.touring && !g.director?.showing) kitPlayer(g); }
+export function kitSoloStand(g: Game, plain = true) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitSoloStand', undefined, [g, plain]); if (__r !== RUST_PASS) return __r as any; } } if (!KIT_SOLO.stand) return; KIT_SOLO.on = false; if (!g.level.scenarios?.lesson?.steps?.length) kitSoloIf(g, plain); }
+export function kitFresh(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitFresh', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } if (KIT_SOLO.on && !g.touring && !g.director?.showing) kitPlayer(g); }
 /** a showcase is about to start on this Player (main.ts): his card comes off — what he carried before it is his again */
-export function kitShow(g: Game) {
+export function kitShow(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitShow@src/game/kit.ts', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const pl = g.player, was = issuedPlayer.get(pl); if (!was) return;
   pl.hasRifle = was.rifle; pl.rifle = was.gun; pl.pistol = was.side; pl.slot = was.slot; pl.canisters = was.smoke; pl.flashbangs = was.stun; pl.frags = was.frags; pl.rifle.shells = was.shells; if (treeUp()) pl.rifle.rings = was.rings; youBare.delete(pl); stickyIssue(pl, Math.max(0, was.cams), was.cams >= 0); pl.wand = was.wand; pl.bigKit = was.big; pl.char.tint = [...was.tint] as Vec3; pl.char.tint2 = [...was.tint2] as Vec3; issuedPlayer.delete(pl); loadWear(g, null);
 }
@@ -1331,7 +1332,7 @@ export function kitShow(g: Game) {
  *  canisters and charges moved by what the cards changed. Called once per staging, after the cast stands and Sam is on his mark; every restart stages again
  *  and so calls again. With every card as issued nothing is written on a teammate (but the count, when one man comes alone: kitPool) — and on you only
  *  under the pouches rule, your four counts: kitPlayer. */
-export function kitStage(g: Game, ops: Guard[]) {
+export function kitStage(g: Game, ops: Guard[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitStage', undefined, [g, ops]); if (__r !== RUST_PASS) return __r as any; } }
   if (kitIssue(g, () => kitStage(g, ops))) return;   // (a mission that issues its own kit: kitIssue)
   if (pageIssued() && !issuing) return asIssued(() => kitStage(g, ops));   // (a lesson's page: every man staged with the issue cards — kitIssuedPage)
   if (stealthOn() && !issuing && !staged) return forRun(g, () => kitStage(g, ops));   // (KITDEAL.stealth: the whole staging reads the card this run wears)
@@ -1375,7 +1376,7 @@ export function kitWalls(n: number): number { if (!KIT.on) return 0; let w = 0; 
  *  Deploy) and kitStage (the run) take: the game's own count (`issued`: DOORTOOLS.bangs / .charges, whatever those knobs say) less what the men who stay behind
  *  were issued, moved by what the cards of the men who come changed. The issued three and two ride on members 1 and 2, so with every card as issued a pair, a
  *  three and a four carry exactly the game's count (nothing is written), and one man alone carries his own two and one. Table off (?nokit): the game's count. */
-export function kitPool(n: number, issued = { bangs: DOORTOOLS.bangs, charges: DOORTOOLS.charges }): { bangs: number; charges: number; frags: number } {
+export function kitPool(n: number, issued = { bangs: DOORTOOLS.bangs, charges: DOORTOOLS.charges }): { bangs: number; charges: number; frags: number } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('kitPool', undefined, [n, issued]); if (__r !== RUST_PASS) return __r as any; } }
   let b = issued.bangs, c = issued.charges, f = FRAG.squad;   // (the frags the same way: frag.ts FRAG.squad, one each on members 1 and 2)
   const worn = KIT.on ? kitWorn(n) : KIT.members;   // (KITDEAL: the same sum however the cards are shared out — but for the one canister its key `more` hands a man who came with nothing)
   if (KIT.on) for (let i = 1; i < KIT_MEMBERS; i++) {

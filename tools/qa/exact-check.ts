@@ -1,7 +1,8 @@
 // THE GAME'S OWN MATHS (src/math/exact.ts): do sin, cos, atan2 and the rest come out the same to the bit on every JavaScript engine, and near enough to true?
 //   bun run tools/qa/exact-check.ts                 every check below; exit 0 = all pass, 1 = one failed (named)
 //   EXACT_BREAK=1 bun run tools/qa/exact-check.ts   the red path: the node child folds the ENGINE's sine where the game's own belongs — 'engines' must then FAIL
-// Whole fights across two engines are tools/qa/coop-check.ts (minutes); this is the functions themselves (seconds).
+// Whole fights across two engines are tools/qa/mpclient-page.cjs (a Chromium page on V8 against a bun server on JavaScriptCore, state word by state word;
+// minutes); this is the functions themselves (seconds).
 // WHAT IS HELD:
 //   engines    one fixed stream of inputs through all fourteen functions, every answer's raw bits folded into one word — under bun (JavaScriptCore) and under
 //              node (V8, the engine Chrome runs the page on) the word is the same. No node on the machine = that is said, and the line does not pass.
@@ -47,6 +48,10 @@ if (args[0] === '--load') {
   // (…and EVERY OTHER module of the simulation's folders, one by one: a module only the page imports works its constants out as it loads too, and the
   //  three above never reach it — a tangent at the top of a file src/main.ts alone imports went unseen until 2026-11-05. The folders are the ones
   //  `uncovered` holds. A module that cannot load without a browser is named, and the line is red on one that is not on the list it keeps)
+  // (the page's Rust host, src/host/rustgame.ts, names the state bridge by the bundler's package `tps-bridge/<name>` (tools/blitz/page-plugin.ts): this child
+  //  gives each such name the same file's module, and nothing else of the plugin, so the module loads under the watch as every other does)
+  { const { FILES } = await import(`${ROOT}/tools/blitz/page-plugin.ts`) as { FILES: Record<string, string> };
+    (Bun as unknown as { plugin(p: { name: string; setup(b: { module(name: string, f: () => Promise<{ exports: unknown; loader: 'object' }>): void }): void }): void }).plugin({ name: 'exact-check-bridge', setup(b) { for (const [name, f] of Object.entries(FILES)) b.module(`tps-bridge/${name}`, async () => ({ exports: await import(resolve(ROOT, 'tools/blitz', f)), loader: 'object' })); } }); }
   const files: string[] = [], unloaded: string[] = [];
   const walk = (dir: string) => { for (const f of readdirSync(dir).sort()) { const q = `${dir}/${f}`; if (statSync(q).isDirectory()) walk(q); else if (f.endsWith('.ts') && !f.endsWith('.d.ts')) files.push(q); } };
   for (const d of SIM) walk(`${ROOT}/src/${d}`); for (const f of SIM_FILES) files.push(`${ROOT}/${f}`);

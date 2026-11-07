@@ -123,8 +123,6 @@ export function breathStats(g: Game): BreathStats {
 }
 /** reseed (probes / captures: same seed → the same breaths), every man's rhythm dealt again */
 export function seedBreath(g: Game, n: number) { const s = stateOf(g); s.seed = n >>> 0; s.men = new SideMap(); s.stats = fresh(); if (g.engine.hostBooks) g.engine.hostBooks.breath = undefined; }
-/** does breath steam here (the switch, on a level built for snow — it asks nothing of the lying snow's surface)? */
-export function breathOn(g: Game): boolean { return SNOW_LOOK.breath && snowLevel(levelNameOf(g.level)); }
 
 function manOf(s: BreathState, c: Character): Man {
   let m = s.men.get(c);

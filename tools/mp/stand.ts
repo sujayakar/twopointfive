@@ -9,6 +9,7 @@
 //   buildName()          the build this checkout is: its commit, or '' with uncommitted changes (as tools/build.ts names a build)
 // The server stands its own game from the recipe too, never from the fresh one: every machine comes to its game by the same door.
 import { resolve } from 'node:path';
+import { appendFileSync } from 'node:fs';
 import type { Recipe, Outcome } from '../../src/net/wire.ts';
 import type { Headless } from '../qa/headless.ts';
 import type { PlayerCmd } from '../../src/game/cmd.ts';
@@ -57,7 +58,7 @@ export async function freshRecipe(setup: Setup): Promise<Recipe> {
   const tables = () => { for (const src of [asked, NET_TABLES as Record<string, Record<string, unknown>>]) for (const [name, t] of Object.entries(src)) K.assignDeep(reg[name], t); };
   tables();
   const level = levelFile ? await levelOf(levelFile) : undefined;
-  const W = await standUp({ seed: setup.seed >>> 0, search: setup.search, ...(level ? { level } : {}) });   // (`search`: how many seats — src/game/seats.ts seatsOfSearch)
+  const W = await standUp({ seed: setup.seed >>> 0, search: setup.search, dress: true, ...(level ? { level } : {}) });   // (`search`: how many seats — src/game/seats.ts seatsOfSearch)
   tables();
   const r = startFromQuery(W.game, setup.search); if (r.why) throw new Error(`the mission did not start: ${r.why}`);
   if (!activeScenario(W.game)) throw new Error(`the address ${setup.search} names no mission`);
@@ -69,29 +70,51 @@ export interface Stood {
   W: Headless; warnings: string[];
   /** one tick on the seats' records (src/net/step.ts), the state word folded after it */
   step(cmds: PlayerCmd[]): void;
-  /** the chained state word after the last tick (game/digest.ts rawBits) */
+  /** a run of steps between which the caller reads nothing of `W.game` begins / ends (src/net/step.ts netQuiet): the copy this process holds is brought
+   *  up to the game as the run ends, and `ended()` and anything read off `W.game` are of that moment */
+  quiet(on: boolean): void;
+  /** the chained state word after the last tick (src/net/step.ts netWord) */
   word(): string;
   /** how the mission ended, by the game's own verdict (game/verdict.ts): null while it is being played */
   ended(): Outcome | null;
+  /** the wider word after the last word tick (src/net/step.ts netWatch): null before the first, and where the host has no whole words */
+  watch(): string | null;
+  /** the game that steps makes its start NOW (the host's `startNow`), so that the first tick costs a tick. Called once by whoever stood the game, after
+   *  the last thing it sets on it before play (a client: the seat it shows) */
+  begin(): void;
   ticks: number;
 }
 
 export async function standRecipe(recipe: Recipe): Promise<Stood> {
+  process.env.RH_QUIET = '1';   // (the host's quiet run is asked for by name, tools/blitz/rust-host.ts quietBegin: a networked game's machines step in them)
   const { recipeWhy } = await import(`${ROOT}/src/net/wire.ts`);
   { const why = recipeWhy(recipe) || levelWhy((recipe as { levelFile?: string }).levelFile); if (why) throw new Error(`no networked game can be stood from this recipe: ${why}`); }   // (…a recipe a server sent names its level the same way)
   const { rerun } = await import('../qa/rerun.ts');
   const tape = { v: 1, ticks: 0, recipe, dt: [], view: [], cam: [], input: [], lens: [], sens: { keys: [], rows: [] }, x: [] };
   const F = { v: 1, game: 'twopointsix', kind: 'replay', savedAt: '', why: 'net', level: { fp: '', boxes: 0 }, flags: {}, hz: 60, seconds: 0, samples: [], cast: [], notes: [], map: { doors: [] }, rerun: tape };
-  const R = await rerun(F as never, { toN: 0 });
+  // (`scan: false`: once it is stood NOTHING writes this game between two ticks. Every change comes as a seat's record through netStep, so the host of the
+  //  Rust game does not walk the puppet for a tool's writes before a step or a look ahead: about 3 ms of each on a 4 core box)
+  // (`dress: true`: A NETWORKED GAME STANDS AS A PAGE DOES ON EVERY MACHINE. The harness's own stand puts the dressing rows down (src/game/dress.ts), and
+  //  in the Rust game those rows are not picture alone: with them down the debris pool hands out no chunk and no glass plate, which are rows of the game's
+  //  box table, and a storm's wind source reads nothing. A player's page has them up, and no recipe carries them)
+  //  (`draws: false`: the rows are up for the game's sake. Nothing is drawn here, so the page's dress step, which hands the men, the wind and the air
+  //  to a renderer, is not run on this process's copy: it cost a two-seat client most of its tick)
+  const R = await rerun(F as never, { toN: 0, scan: false, dress: true, draws: false });
   if (R.refuse || !R.W) throw new Error(`the game could not be stood from its recipe: ${R.refuse}`);
   const W = R.W, g = W.game;
   { const S = g.sensors as object; if (Object.hasOwn(S, 'read')) delete (S as { read?: unknown }).read; }   // (the re-run serves the sensors off its tape; this game answers its own, SENSE.cpu)
-  const { netStep, netSeats } = await import(`${ROOT}/src/net/step.ts`), { rawBits, RAW_BITS_SEED } = await import(`${ROOT}/src/game/digest.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+  const { netStep, netStand, netWord, netWatch, netQuiet, netWhole, wordTick, NET_WORD_SEED } = await import(`${ROOT}/src/net/step.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   if (activeScenario(g) !== recipe.scenario) throw new Error(`the recipe's mission (${recipe.scenario}) did not come up here (${activeScenario(g) ?? 'none'} is up): ${(R.report?.warnings ?? []).find((w: string) => w.includes('did not start')) ?? 'another build or level than the recipe\'s'}`);
-  netSeats(g);
-  let word: number = RAW_BITS_SEED;
+  netStand(g);
+  // (MP_WORDS=<a file's path up to its last dot>: this process writes the whole game's words after every word tick to `<that>.<pid>.words`, a line a tick
+  //  with the parts' names first, for two machines' files to be held to each other: tools/mp/words-diff.ts)
+  const WORDS = process.env.MP_WORDS ? `${process.env.MP_WORDS}.${process.pid}.words` : ''; let named = false;
+  const keep = (): void => { const A = netWhole(g); if (!A) return; if (!named) { named = true; appendFileSync(WORDS, `names ${A.names.join(' ')}\n`); } appendFileSync(WORDS, `${out.ticks} ${A.words.map((x: number) => x.toString(36)).join(' ')}\n`); };
+  let word: number = NET_WORD_SEED, watch: string | null = null;
   const out: Stood = { W, warnings: R.report?.warnings ?? [], ticks: 0,
-    step(cmds) { netStep(g, W.engine, cmds); word = rawBits(g, word); out.ticks++; },
+    step(cmds) { netStep(g, W.engine, cmds); word = netWord(g, word); out.ticks++; if (wordTick(out.ticks - 1)) { watch = netWatch(g); if (WORDS) keep(); } },
+    quiet: on => netQuiet(g, on), watch: () => watch,
+    begin: () => { (g as unknown as { rustHost?: { startNow?(): void } }).rustHost?.startNow?.(); },
     word: () => word.toString(36), ended: () => { const V = g.verdict.result; return V ? { won: V.won, end: V.word, why: V.why } : null; } };
   return out;
 }

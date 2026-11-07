@@ -48,33 +48,32 @@ import { eachSeat, seatShare } from './seats';
 import { SideMap } from '../math/side';
 import { holdFireOrder } from './holdfire';   // (called inside blow only)
 import { Vec3, v3, clamp, lerp } from '../math/vec';
-import type { Game, Guard, Interactable, Player, Verb } from './game';
-import type { Input } from './input';
+import type { Game, Guard, Interactable, Player } from './game';
 import type { OrderDef, OrderTarget, OrderNote, SquadOrders, Assignment } from './orders';
 import type { Box } from '../scene/boxes';
-import { BoxFlag, makeBox } from '../scene/boxes';
+import { BoxFlag } from '../scene/boxes';
 import { DOORTOOLS } from './doortools';
 import { wallBreakOn, WALLS } from './wallbreak';
 import { chaosOf } from './destruction';
 import { FURN, chargeSource, type BlastFirst } from './furnblast';
 import { doesOf } from '../scene/materials';
 import { killGuard, detonateStun, hitPlayer } from './combat';
-import { OWNBLOW, SAM_BY, blowKeyWord, blowTail } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
+import { OWNBLOW, SAM_BY, blowKeyWord } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { chronHit } from './chronicle';
 import { civiliansShown } from './civilians';   // (called inside blow only)
-import { NIGHTBREACH } from './nightbreach';
-import { COVER } from './cover';
+import './nightbreach';
 import { isHostile } from './teams';
-import { PACE } from './guards';
+import './guards';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { SAMSTUN, dazzlePlayer } from './samstun';
-import { chargeHands } from './handwork';
-import { samStowing, mateStow, mateStowLead, stowFight } from './workstow';   // (called inside samTick and the 'place' stage only)
+import './handwork';
+import './workstow';   // (called inside samTick and the 'place' stage only)
 import { moraleBlast } from './morale';
 import { messWall } from './floormess';
-import { gunLast } from './gunroles';   // (called inside enter only)
-import { PICTURE, PICTURE_STATS, knownPlaces } from './picture';   // (called inside knownFoes and repick only)
+import './gunroles';   // (called inside enter only)
+import { PICTURE, knownPlaces } from './picture';   // (called inside knownFoes and repick only)
 import { word } from './belief';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const WALLCHARGE = {
   /** THE SWITCH (this module's own; it also needs the destruction goal's — see the head) */
@@ -278,8 +277,6 @@ export interface WallOp {
 }
 
 const flat = v3.distXZ, yawTo = v3.yawTo;
-/** how near a point passes a line on the floor, a to b (m) */
-const nearSeg = (q: Vec3, a: Vec3, b: Vec3): number => { const dx = b[0] - a[0], dz = b[2] - a[2], L = dx * dx + dz * dz, k = L > 1e-9 ? Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[2] - a[2]) * dz) / L)) : 0; return Math.hypot(q[0] - a[0] - dx * k, q[2] - a[2] - dz * k); };
 /** m off a face: where the rays that ask 'is the wall still here' start and end (near enough that what stands by the wall is not taken for it) */
 const FACE = 0.06;
 const thick = (W: WallSpot) => 2 * (W.alongX ? W.box.h[2] : W.box.h[0]);
@@ -304,7 +301,7 @@ const standIns = new SideMap<OrderDef, OrderDef>('wallcharge.standIns'); standIn
 /** THE FACES OF A WALL THE OPEN SKY IS OVER: 0 = neither (a wall inside), 1 = one (a building's outer wall), 2 = both (a yard wall). Asked of the level's own
  *  geometry as the glass asks it of a pane (glassbreak.ts skySide): upward solid rays from chest height at nine places off each face — a canopy or a lamp head
  *  over part of one side does not flip the majority. Kept per static (the authored statics do not move; a hole in the wall changes nothing over it). */
-export function skyFaces(g: Game, index: number): number {
+export function skyFaces(g: Game, index: number): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('skyFaces', undefined, [g, index]); if (__r !== RUST_PASS) return __r as any; } }
   let memo = skyMemo.get(g.col); if (!memo) skyMemo.set(g.col, memo = new Map());
   let n = memo.get(index); if (n !== undefined) return n;
   const b = g.col.boxes[index], alongX = b.h[0] >= b.h[2], hu = alongX ? b.h[0] : b.h[2], ht = alongX ? b.h[2] : b.h[0]; n = 0;
@@ -323,7 +320,7 @@ export function skyAside<T>(g: Game, fn: () => T): T {
 /** IS STRUCTURE STATIC `index` AN OUTER WALL A CHARGE CUTS (WALLCHARGE.outer; wallAt has already found it a full-height unrotated wall in a wall's stuff):
  *  not steel, no thicker than outerThick, at least outerMinLen long, something the engine can take on (wallbreak.ts adoptable: it lights nothing, carries no
  *  fixture) — and the open sky over one face of it, or over both with outerYard. */
-export function outerWall(g: Game, index: number): boolean {
+export function outerWall(g: Game, index: number): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('outerWall', undefined, [g, index]); if (__r !== RUST_PASS) return __r as any; } }
   const K = WALLCHARGE, walls = g.destr?.walls; if (!K.outer || !walls) return false;
   const b = g.col.boxes[index], thin = 2 * Math.min(b.h[0], b.h[2]), long = 2 * Math.max(b.h[0], b.h[2]);
   if (thin > K.outerThick || long < K.outerMinLen || b.metal || doesOf(b).surf === 'metal' || !walls.adoptable(index)) return false;
@@ -333,14 +330,14 @@ export function outerWall(g: Game, index: number): boolean {
 /** IS THE CHARGE'S OWN SIDE INDOORS: a roof over the floor at its foot. The level's own geometry, asked as skyFaces asks it — upward solid rays from chest
  *  height at nine places off the charge's face, a metre either way along the wall from it — so the roof slab's overhang over an outer wall's outside face, a
  *  canopy or a lamp head does not make a yard a room. */
-export function chargeIndoors(g: Game, W: WallSpot): boolean {
+export function chargeIndoors(g: Game, W: WallSpot): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('chargeIndoors', undefined, [g, W]); if (__r !== RUST_PASS) return __r as any; } }
   let roof = 0;
   for (const off of SKY_OFF) for (const du of [-1, 0, 1]) { const p = wallPt(W, du, off, 1.5); if (g.col.solidBlocked(p, [p[0], SKY_TOP, p[2]], 0.02)) roof++; }
   return roof * 2 > SKY_OFF.length * 3;
 }
 /** THE SAFETY RADIUS AT A PLACE: how far the squad stands off from a charge there, and how far its blast reaches on its own side (WALLCHARGE.safe; off: the
  *  numbers as they were — `standoff`'s first, the door charge's backblastM) */
-export function safeRadius(g: Game, W: WallSpot): { standoff: number; reach: number; indoors: boolean } {
+export function safeRadius(g: Game, W: WallSpot): { standoff: number; reach: number; indoors: boolean } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('safeRadius', undefined, [g, W]); if (__r !== RUST_PASS) return __r as any; } }
   const K = WALLCHARGE; if (!K.safe) return { standoff: K.standoff[0], reach: DOORTOOLS.backblastM, indoors: false };
   const indoors = chargeIndoors(g, W), i = indoors ? 1 : 0; return { standoff: K.safeStandoff[i], reach: K.safeReach[i], indoors };
 }
@@ -353,7 +350,7 @@ function roomBeyond(g: Game, W: WallSpot, du: number, T: number): number {
   for (let d = 0.45; d <= 1.95; d += 0.25) for (const s of [0, 0.5, -0.5]) { const r = g.cleared.roomAt(wallPt(W, du + s, -(T + d))); if (r) return r; }
   return 0;
 }
-export function wallAt(g: Game, at: Vec3, from: Vec3 = g.player.char.pos): WallSpot | null {
+export function wallAt(g: Game, at: Vec3, from: Vec3 = g.player.char.pos): WallSpot | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('wallAt', undefined, [g, at, from]); if (__r !== RUST_PASS) return __r as any; } }
   const walls = g.destr?.walls; if (!walls) return null;
   const boxes = g.col.boxes, K = WALLCHARGE, n = Math.min(walls.authored, boxes.length), skip = BoxFlag.Glass | BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Dynamic;
   let best: WallSpot | null = null, bd = K.pickM + 1e-6;
@@ -379,7 +376,7 @@ export function wallAt(g: Game, at: Vec3, from: Vec3 = g.player.char.pos): WallS
   return best;
 }
 /** orders.ts targetAt's last line: a floor target whose point is on a wall carries the wall (nothing when the module is not live) */
-export function wallTarget(g: Game, at: Vec3, base: OrderTarget): OrderTarget {
+export function wallTarget(g: Game, at: Vec3, base: OrderTarget): OrderTarget { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('wallTarget', undefined, [g, at, base]); if (__r !== RUST_PASS) return __r as any; } }
   if (base.kind !== 'floor' || !g.wallCharge || !wallChargeOn(g)) return base;
   const W = wallAt(g, at); return W ? { ...base, wall: W } : base;
 }
@@ -391,10 +388,6 @@ export function wallRows(g: Game, t: OrderTarget, page: string | null, rows: Ord
   if (page === null) return [...rows.filter(d => d.key !== 5), direct ? WC.row : WC.opener, ...rows.filter(d => d.key === 5).map(d => WC.undigit(d))];   // (the floor's own fifth row — 'go silent' — stays on the wall's menu, below, with no digit: the wheel reaches it, as any row past the fifth)
   return page === WALL_PAGE && !direct ? [WC.row] : rows;
 }
-type RowFn = (base: Interactable, verb: Verb, text: string, hints?: string, over?: Partial<Interactable>) => Interactable;
-type OfferFn = (it: Interactable, verbs: Interactable[]) => void;
-/** player.ts buildInteractables: Sam's own row at the foot of a partition his cursor is on */
-export function wallChargeRows(g: Game, p: Vec3, busy: boolean, row: RowFn, offer: OfferFn) { g.wallCharge?.samRows(p, busy, row, offer); }
 
 export class WallCharge {
   readonly knobs = WALLCHARGE;
@@ -424,9 +417,10 @@ export class WallCharge {
   /** a new Player or a new cast is a fresh run; the rows are on the menu only while the module is live. Returns live. */
   private sync(): boolean {
     const g = this.g; let i = 0, same = this.player === g.player;
-    for (const gd of g.guards) if (gd.unit && gd.team === 'operative' && this.roster[i++] !== gd) same = false;
+    // (the roster is this book's own men, by the one roster test, orders.ts mine: another seat's teammate is not on it, as in rust/game wallcharge/p_02.rs)
+    for (const gd of g.guards) if (g.orders.mine(gd) && this.roster[i++] !== gd) same = false;
     if (!same || i !== this.roster.length) {
-      const first = this.player === null, was = this.roster.length; this.roster = g.guards.filter(gd => !!gd.unit && gd.team === 'operative'); this.player = g.player;
+      const first = this.player === null, was = this.roster.length; this.roster = g.guards.filter(gd => g.orders.mine(gd)); this.player = g.player;
       // (the door tools put their counts back when the cast changes; with no cast before or after they never do — what Sam spent alone goes back here)
       if (!first && !was && !this.roster.length && this.alone > 0) { g.doorTools.sync(); while (this.alone-- > 0 && g.doorTools.charges < DOORTOOLS.charges) g.doorTools.refund('charge'); }
       this.reset();
@@ -444,7 +438,7 @@ export class WallCharge {
     this.row.page = page ? WALL_PAGE : undefined; this.row.key = page ? 3 : 5; S.register(this.row); this.seated = true;
   }
   /** a fresh run: nothing set, nothing under way (the counts are the door tools' to put back) */
-  reset() { this.ops = []; this.done = []; this.set = []; this.sam = null; this.offered = null; this.alone = 0; this.carried = this.brought = WALLCHARGE.carried === null ? null : seatShare(this.g, WALLCHARGE.carried); this.log = []; for (const k of Object.keys(this.stats) as (keyof WallCharge['stats'])[]) this.stats[k] = 0; this.lastBlow = null; this.walks = null; this.keep.asks = this.keep.hits = 0; this.away.clear(); this.awayMarks.clear(); this.awayNone.clear(); }
+  reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallCharge.reset', this, []); if (__r !== RUST_PASS) return __r as any; } } this.ops = []; this.done = []; this.set = []; this.sam = null; this.offered = null; this.alone = 0; this.carried = this.brought = WALLCHARGE.carried === null ? null : seatShare(this.g, WALLCHARGE.carried); this.log = []; for (const k of Object.keys(this.stats) as (keyof WallCharge['stats'])[]) this.stats[k] = 0; this.lastBlow = null; this.walks = null; this.keep.asks = this.keep.hits = 0; this.away.clear(); this.awayMarks.clear(); this.awayNone.clear(); }
   /** the switch went off mid-run: what is set comes off the wall and back into the bag, what is under way ends where it stands */
   private stop() { for (const op of [...this.ops]) this.end(op, 'switched off'); for (const c of this.set.splice(0)) this.giveBack(c, 'switched off'); this.sam = null; this.marker = null; this.walks = null; }
   private note(what: string) { this.log.push({ t: this.g.time, what }); if (this.log.length > 300) this.log.splice(0, 100); }
@@ -453,9 +447,9 @@ export class WallCharge {
    *  the knob by reset() — every new cast, restart and load — so whoever sets it sets it again per staging (setCarried) */
   carried: number | null = WALLCHARGE.carried;
   /** the kit's hook (kit.ts kitStage, once per staging after the cast stands): this run carries `n` wall charges of its own — null: back to the cost rule */
-  setCarried(n: number | null) { this.sync(); this.carried = this.brought = n === null ? null : Math.max(0, Math.floor(n)); }
+  setCarried(n: number | null) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallCharge.setCarried', this, [n]); if (__r !== RUST_PASS) return __r as any; } } this.sync(); this.carried = this.brought = n === null ? null : Math.max(0, Math.floor(n)); }
   /** a mission's own issue (issue.ts, after the kit's call in the same staging): this run carries AT LEAST `n` — what the kit gave is never lowered */
-  raiseCarried(n: number) { this.sync(); const k = Math.max(0, Math.floor(n)); if ((this.carried ?? 0) < k) this.carried = this.brought = k; }
+  raiseCarried(n: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallCharge.raiseCarried', this, [n]); if (__r !== RUST_PASS) return __r as any; } } this.sync(); const k = Math.max(0, Math.floor(n)); if ((this.carried ?? 0) < k) this.carried = this.brought = k; }
   /** what setCarried last gave this run (0 = the kit issued none: the refusal says 'carried', not 'left') */
   private brought: number | null = WALLCHARGE.carried;
   /** what a wall takes out of the bag now (0 while they are carried) · can one be set · how many more walls this run could blow */
@@ -489,14 +483,13 @@ export class WallCharge {
     for (const own of [false, true]) { const of = (c: SetWallCharge) => this.keyIs(c) !== own, k = this.set.filter(of).length; if (!k) continue;
       out.push({ key: blowKeyWord(!own, DOORTOOLS.blowKey.replace('Key', '')), text: `blow the charge · the wall${k > 1 ? ` (${k})` : ''}${mark && !own ? ' · after the mark' : ''}${this.closeWords(this.nearest(of), true)}` }); }
     return out; }
-  summary(): string { const s = this.stats; return `${wallChargeOn(this.g) ? `on (${WALLCHARGE.menu})` : 'off'} · ${this.g.doorTools.charges} charges · ${this.set.length} set · ${this.ops.map(o => o.phase).join(',') || 'nothing under way'} · set ${s.set} (${s.bySam} by the player) blown ${s.blown} holes ${s.holes} · knocked ${s.knocked} stunned ${s.stunned} backblast ${s.backblast} · entries ${s.entries}`; }
 
   // ------------------------------------------------------------ the place
   chargeOn(W: WallSpot): SetWallCharge | null { return this.set.find(c => sameWall(c.wall, W)) ?? null; }
   private chargeOnTarget(t: OrderTarget): SetWallCharge | null { return t.kind === 'floor' && t.wall ? this.chargeOn(t.wall) : null; }
   /** the target's wall as these men would work it now: the charge on Sam's side, slid along the wall (WALLCHARGE.slide) to the nearest place with floor to
    *  set it from and floor behind it that is not open already */
-  spot(t: OrderTarget): WallSpot | null {
+  spot(t: OrderTarget): WallSpot | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallCharge.spot', this, [t]); if (__r !== RUST_PASS) return __r as any; } }
     if (t.kind !== 'floor' || !t.wall) return null; const g = this.g, w = t.wall, sam = g.player.char.pos;
     const perp = w.alongX ? sam[2] - w.box.c[2] : sam[0] - w.box.c[0];
     return this.settle({ ...w, side: perp >= 0 ? 1 : -1 });
@@ -508,7 +501,7 @@ export class WallCharge {
     return W;
   }
   /** nothing stands at the charge's place any more (the sill gone: a hole — a port's sill still takes a charge) */
-  openAt(W: WallSpot): boolean { return !this.g.col.solidBlocked(wallPt(W, 0, FACE, 0.35), wallPt(W, 0, -(thick(W) + FACE), 0.35)); }
+  openAt(W: WallSpot): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallCharge.openAt', this, [W]); if (__r !== RUST_PASS) return __r as any; } } return !this.g.col.solidBlocked(wallPt(W, 0, FACE, 0.35), wallPt(W, 0, -(thick(W) + FACE), 0.35)); }
   /** where the man who sets it stands (null: no floor at the wall's foot there) */
   private setSpot(W: WallSpot): Vec3 | null {
     const nav = this.g.col.nav;
@@ -688,50 +681,16 @@ export class WallCharge {
   fireAt(q: Vec3, W: WallSpot | null = null): number { return this.underFire(W).score(q); }
   /** HOW MUCH OF THE BLAST A PLACE ON THE CHARGE'S OWN SIDE TAKES: 0 = none (past the reach, behind the wall, or something solid between it and the charge),
    *  up to 1 at the wall. The one test blow() punishes by and the trigger's rows warn by. */
-  blastShare(W: WallSpot, p: Vec3, R = safeRadius(this.g, W), leaves = true): number {
+  blastShare(W: WallSpot, p: Vec3, R = safeRadius(this.g, W), leaves = true): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallCharge.blastShare', this, [W, p, R, leaves]); if (__r !== RUST_PASS) return __r as any; } }
     const d = flat(p, wallPt(W, 0, 0)); if (d >= R.reach || wallOff(W, p) < -thick(W) / 2) return 0;
     const cut = () => this.g.col.solidBlocked(wallPt(W, 0, 0.5, 1.1), [p[0], 1.1, p[2]]);
     return (leaves ? cut() : this.noLeaves(cut)) ? 0 : 1 - d / R.reach;
-  }
-  /** A FOLLOWER'S PLACE IS IN THE BLAST OF A SET CHARGE (WALLCHARGE.menClear): the stand-off mark he walks to instead — null: his place is clear of every
-   *  charge on a wall (and has been for menClearS), the floor has no mark for him, or the switch is off. Asked by orders.ts of a man on 'fall in', every
-   *  step, with the place he would otherwise take (`where`: read only when a charge is on a wall). */
-  clearOf(gd: Guard, where: () => Vec3): Vec3 | null {
-    const K = WALLCHARGE, g = this.g, t = g.time;
-    if (!K.on || !K.safe || !K.menClear || !this.set.length) { if (this.away.size) this.away.clear(); if (this.awayMarks.size) this.awayMarks.clear(); if (this.awayNone.size) this.awayNone.clear(); return null; }
-    for (const c of this.awayMarks.keys()) if (!this.set.includes(c)) this.awayMarks.delete(c);
-    for (const [m, a] of this.away) if (m.state === 'dead' || !this.set.includes(a.c) || (m !== gd && Math.abs(t - a.t) > 0.5)) this.away.delete(m);   // (the charge gone, or a man no longer on 'fall in': his mark is free)
-    /** the charge's radius, read once while it is on the wall (the roof over it is a handful of rays), and the same with the stand-off distance for its reach */
-    const rOf = (c: SetWallCharge) => { let M = this.awayMarks.get(c); if (!M) { const R = safeRadius(g, c.wall); this.awayMarks.set(c, M = { n: 0, marks: [], t: -1e9, sets: 0, R, pad: { ...R, reach: Math.max(R.reach, R.standoff - K.menClearIn) } }); } return M; };
-    const hit = (c: SetWallCharge, q: Vec3) => this.blastShare(c.wall, q, rOf(c).pad, false) > 0;   // (blastShare: the distance first, the line only inside it)
-    let A = this.away.get(gd); if (A && this.set.some(o => hit(o, A!.at))) { this.away.delete(gd); A = undefined; }   // (another charge has gone on a wall by his mark: dealt again)
-    const place = where(), c = this.set.find(c => hit(c, place));
-    if (A) { A.t = t; if (c || t < A.hitT) A.hitT = t; else if (t - A.hitT >= K.menClearS) { this.away.delete(gd); return null; } return A.at; }
-    if (!c) return null;
-    const none = this.awayNone.get(gd); if (none !== undefined && t >= none && t - none < 1) return null; this.awayNone.delete(gd);   // (the floor had no mark for him: asked again a second on)
-    const p = gd.char.pos, nav = g.col.nav, S = g.orders, taken: Vec3[] = []; for (const [m, a] of this.away) if (m !== gd) taken.push(a.at);
-    for (const op of this.ops) for (const q of op.post.values()) taken.push(q);   // (the marks of the men an order stood off: theirs)
-    const clear = (q: Vec3) => !this.set.some(o => hit(o, q));   // (out of EVERY charge on a wall, not only the one his place is by)
-    const others = S.men().filter(m => m !== gd), free = (q: Vec3) => !taken.some(o => flat(o, q) < 0.8) && !others.some(m => flat(m.char.pos, q) < 0.6) && clear(q);
-    const n = Math.max(1, others.length + 1), M = rOf(c);
-    // (the marks: dealt once for the charge and kept — asked again when more men want one, another charge has gone on a wall, or the deal is two seconds old; two more than the men, where the floor has them)
-    if (M.n < n || M.sets !== this.set.length || Math.abs(t - M.t) > 2) { const spot = this.setSpot(c.wall) ?? wallPt(c.wall, 0, K.setOff), memo = new Map<string, unknown>(), kept: Kept = <T>(key: string, work: () => T): T => { if (!memo.has(key)) memo.set(key, work()); return memo.get(key) as T; };
-      let marks: Vec3[] | null = null; for (let k = n + 2; k >= 1 && !marks; k--) marks = this.safePosts(c.wall, k, spot, clear, kept); M.n = n; M.marks = marks ?? []; M.t = t; M.sets = this.set.length; }
-    let at: Vec3 | null = null; const all: Vec3[] = []; for (const o of this.set) all.push(...rOf(o).marks);
-    for (const q of all.sort((a, b) => flat(p, a) - flat(p, b))) if (free(q) && !S.reach(gd, q)) { at = q; break; }   // (the nearest to him that is nobody's and that he can walk to)
-    if (!at) for (const o of [c, ...this.set.filter(k => k !== c)]) {   // (no mark left for him: straight back from a charge to its stand-off, where that is floor he can walk to and out of every blast)
-      const w = wallPt(o.wall, 0, 0), dx = p[0] - w[0], dz = p[2] - w[2], L = Math.hypot(dx, dz), R = rOf(o).R; if (at || L <= 0.2) continue;
-      for (const d of [0, 0.9, 1.8]) { const q: Vec3 = [w[0] + dx / L * (R.standoff + d), 0, w[2] + dz / L * (R.standoff + d)];
-        if (!nav.isBlocked(q[0], q[2]) && nav.walkable(p, q) && !this.inFrame(q) && free(q)) { at = q; break; } } }
-    if (!at) { this.awayNone.set(gd, t); return null; }
-    A = { c, at: [at[0], 0, at[2]], hitT: t, t }; this.away.set(gd, A); this.stats.cleared++; this.note(`${gd.callsign} steps back from the charge on wall ${c.wall.index}`);
-    return A.at;
   }
   /** a line asked with the door leaves out of the way: BEFORE the blast a leaf standing between a man and the charge is no cover (the blast flings it or takes
    *  it off its hinges) — the stand-off marks and the trigger's warning ask this way; blow() itself asks with the leaves where the blast left them */
   private noLeaves<T>(f: () => T): T { const col = this.g.col, dyn = col.dynamicBoxes; col.dynamicBoxes = []; try { return f(); } finally { col.dynamicBoxes = dyn; } }
   /** WHO IS INSIDE THE RADIUS of a set charge right now (WALLCHARGE.safe): 'you' and the teammates by callsign — [] = nobody, or the switch off */
-  tooClose(c: SetWallCharge | null): string[] {
+  tooClose(c: SetWallCharge | null): string[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallCharge.tooClose', this, [c]); if (__r !== RUST_PASS) return __r as any; } }
     if (!c || !WALLCHARGE.safe) return []; const g = this.g, R = safeRadius(g, c.wall), out: string[] = [];
     if (!g.player.down && this.blastShare(c.wall, g.player.char.pos, R, false) > 0) out.push('you');
     for (const gd of g.orders.men()) if (this.blastShare(c.wall, gd.char.pos, R, false) > 0) out.push(gd.callsign);
@@ -855,213 +814,16 @@ export class WallCharge {
       for (const gd of op.men) { const A = op.mine.get(gd); if (A && S.of(gd) === A && A.going === 'standing off' && !A.spare && A.watch === null && A.post) { A.face = yawTo(A.post, watch); A.watch = watch; } } }
     this.done.push(Object.assign(op, { ended: why })); if (this.done.length > 12) this.done.shift();
   }
-  /** A STAND-OFF MARK THAT HAS COME UNDER KNOWN FIRE IS DEALT AGAIN (picture.ts PICTURE.step; acts with `safe` and `outOfFire` — off, the marks stand as
-   *  they were dealt, which is this rule as it was: 'the men do not re-pick when an enemy shows up later'). While the charge waits for the word, once a
-   *  second: a man whose mark an enemy the team knows of can shoot at two asks running (underFire's own test, knownFoes' own list) is dealt the least under
-   *  that fire of the places safePosts has for this wall, if none can shoot it or it is two steps of underFire's own score under his own (a walk is not worth
-   *  less; the worst off first, the nearest on a tie) — out of the blast by that rule's own tests, a body's room from the marks the others keep, a walk
-   *  he can make that takes him no further into the blast than he stands. ONCE A MAN: nobody is walked back and forth by an enemy who keeps moving, and the
-   *  whole order spends four searches at most (their walks kept). The others keep theirs. No such place: he stays, and it is asked again in three seconds.
-   *  Nobody says anything; a man on his way to the new mark when the word comes is as a man walking to his first. */
-  private repick(op: WallOp) {
-    const g = this.g, K = WALLCHARGE, t = g.time; if (!(PICTURE.on && PICTURE.step && K.safe && K.outOfFire) || op.close) return;
-    if (t < (op.repickT ?? 0) && t >= (op.repickT ?? 0) - 3) return; op.repickT = t + 1;
-    const done = op.redealt ??= new Set(), was = op.repickBad ?? new Set<Guard>(), at = (m: Guard) => op.post.get(m);
-    const open = op.men.filter(gd => !done.has(gd) && !!at(gd)); if (!open.length || (op.repickN ?? 0) >= 4) { op.repickT = t + 3; return; }
-    const fire = this.underFire(op.wall), hot = new Set(open.filter(gd => fire.any(at(gd)!))); op.repickBad = hot;
-    const bad = [...hot].filter(gd => was.has(gd)); if (!bad.length) return;
-    const cache = op.repickKept ??= new Map(), kept: Kept = (key, work) => { if (!cache.has(key)) cache.set(key, work()); return cache.get(key) as ReturnType<typeof work>; };
-    const n = op.men.length, posts = this.safePosts(op.wall, n + 2, op.spot, undefined, kept) ?? this.safePosts(op.wall, n, op.spot, undefined, kept); let moved = 0;
-    op.repickN = (op.repickN ?? 0) + 1;
-    // (the walk: never deeper into the blast than where he stands now — the other side of the charge is no place to be sent across its front)
-    const safeWalk = (gd: Guard, q: Vec3) => { const p0 = gd.char.pos, path = g.col.nav.findPath(p0, q, 4000); if (!path) return false; const lim = this.blastShare(op.wall, p0) + 0.05; let a = p0;
-      for (const b of path) { const m = Math.max(1, Math.ceil(flat(a, b) / 0.5)); for (let i = 1; i <= m; i++) if (this.blastShare(op.wall, v3.lerp(a, b, i / m)) > lim) return false; a = b; } return true; };
-    if (posts) for (const gd of bad.sort((a, b) => fire.score(at(b)!) - fire.score(at(a)!))) {   // (the worst off first; a place another man has, or has just been dealt, is his)
-      const cur = at(gd)!, now = fire.score(cur), held = op.men.filter(m => m !== gd).map(at).filter((q): q is Vec3 => !!q);
-      const q = posts.filter(q => { const f = fire.score(q); return (f === 0 || f <= now - 2) && !held.some(k => flat(k, q) < 0.8); }).sort((a, b) => fire.score(a) - fire.score(b) || flat(a, gd.char.pos) - flat(b, gd.char.pos)).find(q => !g.orders.reach(gd, q) && safeWalk(gd, q));
-      if (!q) continue;
-      op.post.set(gd, q); done.add(gd); if (op.mine.get(gd)?.going === 'standing off') this.standOff(op, gd); moved++; this.beat(op, `${gd.callsign} dealt again: his mark came under known fire`);
-    }
-    if (moved) PICTURE_STATS.stepped += moved; else op.repickT = t + 3;
-  }
-  /** REAR SECURITY while they stand off and wait for the word (the stack's rule at a door — orders.ts spareRear, COVER.stacked): the man stood furthest from
-   *  the charge — with four or more, the two — has his eyes spare for the way a man could come at them (cover.ts deals it; `from`: the way he came). The
-   *  others' guns stay on the wall. One man alone keeps his eyes on it. */
-  private spareRear(op: WallOp) {
-    const at = wallPt(op.wall, 0, 0), live = op.men.filter(m => op.mine.get(m)?.post); for (const m of live) op.mine.get(m)!.spare = false;
-    if (!COVER.stacked || live.length < 2) return;
-    const dist = (m: Guard) => flat(op.mine.get(m)!.post!, at);
-    for (const m of [...live].sort((a, b) => dist(b) - dist(a) || live.indexOf(b) - live.indexOf(a)).slice(0, live.length >= 4 ? 2 : 1)) { const A = op.mine.get(m)!; A.spare = true; A.from ??= op.from.get(m) ?? [A.anchor[0], 0, A.anchor[2]]; }
-  }
-  /** is a walk to the marks still worth waiting on (doortools.ts waiting, with its knobs) */
-  private waiting(op: WallOp, el: number): boolean {
-    const g = this.g, K = DOORTOOLS; if (el >= K.stackCap) return false;
-    return el < K.stillSecs || op.men.some(gd => { const A = op.mine.get(gd)!; return !A.arrived && g.time - A.movedT < K.stillSecs; });
-  }
 
   // ------------------------------------------------------------ Sam's key, the frame
   /** the set charge nearest Sam (null: none) */
   nearest(of: (c: SetWallCharge) => boolean = () => true): SetWallCharge | null { const sam = this.g.player.char.pos; return this.set.filter(of).sort((a, b) => flat(wallPt(a.wall, 0, 0), sam) - flat(wallPt(b.wall, 0, 0), sam))[0] ?? null; }
-  /** Sam's trigger (game.ts, ahead of the door tools' input): the nearest set charge goes — a door's, if that is the nearer, is the door tools' press and this
-   *  one waits for the next. With door orders under way the press is also their word (left in the frame); otherwise it is used up here. */
-  input(input: Input) {
-    this.pressed = false; if (!this.sync() || !this.set.length) return; const g = this.g, S = g.orders, key = DOORTOOLS.blowKey; if (!input.hit(key)) return;
-    if (g.player.down) { if (this.set.some(c => this.keyIs(c))) input.pressed.delete(key); return; }
-    if (S.menu && S.menu.rows.some(d => d.hotKey === key)) return;   // (a menu up with a row on this key: the key IS that row — the door tools' rule)
-    const D = g.doorTools, sam = g.player.char.pos, c = this.nearest(x => this.keyIs(x)); if (!c) return;   // (ownblow.ts: one his own hands set is not this key's, and does not stop the press here)
-    if (D.set.some(x => D.keyIs(x) && flat(x.door.frameCentre, sam) < flat(wallPt(c.wall, 0, 0), sam))) return;
-    this.blow(c);
-    if (D.set.some(x => D.keyIs(x))) input.pressed.delete(key); else this.pressed = true;   // (one charge a press, the nearest first — but men waiting at a door for the word get it on this same press: the wall and the door go together)
-  }
-  /** game.ts, straight after the door tools' input: a press that blew a wall and was nobody's word besides is used up (never the drill's 'stack up' as well) */
-  inputAfter(input: Input) { if (this.pressed) { this.pressed = false; input.pressed.delete(DOORTOOLS.blowKey); } }
   private pressed = false;
-  tick() {
-    if (!this.sync()) return; const g = this.g;
-    this.samTick();
-    for (const c of [...this.set]) { if (this.openAt(c.wall)) { this.set.splice(this.set.indexOf(c), 1); this.giveBack(c, 'the wall came open under it'); } else this.draw(c); }
-    for (const op of [...this.ops]) this.step(op);
-    if (this.done.length && g.time < this.done[this.done.length - 1].t0) this.done = [];   // (the clock went back: a load)
-  }
-  private step(op: WallOp) {
-    const g = this.g, S = g.orders, K = WALLCHARGE, t = g.time, el = t - op.t0, W = op.wall;
-    op.men = op.men.filter(gd => gd.state !== 'dead' && S.of(gd) === op.mine.get(gd));   // (down, or given another order: not this order's any more)
-    if (!op.men.length) { this.end(op, 'nobody left on it'); return; }
-    if (!op.men.includes(op.lead)) {   // (the setter is down, or given another order: the man nearest the charge's place has it — one not yet set starts over with him walking to it, as at a door)
-      op.lead = [...op.men].sort((a, b) => flat(a.char.pos, op.spot) - flat(b.char.pos, op.spot))[0];
-      if (op.phase === 'place') { op.setT = NaN; op.t0 = t; g.say(op.lead, WORDS.on ? "i've got the charge." : "I've got the charge.");
-        this.assign(op, op.lead, { post: op.spot, face: yawTo(op.spot, wallPt(W, 0, 0)), watch: null, stance: 'none', upper: 'none', going: 'charge · the wall', there: 'setting the charge' }); this.beat(op, `setter now ${op.lead.callsign}`); } }
-    const lead = op.lead;
-    if (op.phase === 'standoff' || op.phase === 'armed') { this.repick(op); this.spareRear(op); }   // (set again every frame: an assignment re-made by a step keeps the job)
-    switch (op.phase) {
-      case 'place': {   // he is at the wall for setSecs, then it is on the wall and he walks off to the stand-off
-        const A = op.mine.get(lead)!, near = flat(lead.char.pos, op.spot) < K.setNear;
-        if (stowFight(g, lead, A, op)) { op.setT = NaN; op.t0 = t; break; }   // (workstow.ts: the fight has him — his hands are not on a charge; not set, nothing spent, and he starts over when it lets him go, `fightCap` at most at a stretch)
-        if (isNaN(op.setT)) { if (A.arrived && near) op.setT = t + mateStowLead(); else if (!this.waiting(op, el)) { g.say(lead, "can't get on that wall."); this.end(op, 'never made the wall'); } break; }
-        if (!near) { op.setT = NaN; break; }   // (walked off it: not set)
-        mateStow(g, lead);   // (workstow.ts: his gun is out of his hands for it — the charge's clock began `mateDown` after he came onto it)
-        if (t >= op.setT) chargeHands(g, lead.char, wallPt(W, 0, 0, K.height), wallN(W), t - op.setT, DOORTOOLS.setSecs);   // (handwork.ts: his hands on it while it goes on)
-        if (t - op.setT < DOORTOOLS.setSecs) break;
-        if (this.openAt(W)) { g.say(lead, "it's open."); this.end(op, 'the wall opened'); break; }
-        if (!this.chargeOn(W)) {
-          const paid = this.take(); if (paid < 0) { g.say(lead, this.noneWords()); this.end(op, 'no charges'); break; }
-          this.set.push({ wall: W, t, by: lead.callsign, paid, ...(this.freeSet ? { free: true } : {}) }); g.audio.play('lockPick', wallPt(W, 0, 0, K.height), 0.6); g.destr.furn.warm(); }
-        if (WALLKILL.on) op.owes = true; else g.say(lead, 'charge set.');   // (WALLKILL: his word is what sends a thumb to the trigger, and at the wall the charge kills him — he says it once he is clear of it, below)
-        this.beat(op, 'set');
-        this.standOff(op, lead); op.phase = 'standoff'; op.t0 = t;
-        break;
-      }
-      case 'standoff': {
-        if (!this.chargeOn(W)) { this.end(op, 'the charge is gone'); break; }
-        if (op.owes && flat(lead.char.pos, wallPt(W, 0, 0)) >= WALLKILL.nearM) { op.owes = false; g.say(lead, 'charge set.'); }   // (a man who cannot get that far says only the call below)
-        if (!op.men.every(gd => op.mine.get(gd)!.arrived) && this.waiting(op, el)) break;
-        // (WALLCHARGE.safe: said by the man who calls it, once, where the floor left them inside the radius)
-        g.say(lead, (op.close || WALLCHARGE.safe) && op.men.some(m => this.blastShare(W, m.char.pos, undefined, false) > 0) ? "can't get clear of it. your call." : 'stood off. your call.'); g.msg(`charge set on the wall. press ${DOORTOOLS.blowKey.replace('Key', '')} to blow it`);
-        op.phase = 'armed'; op.t0 = t; this.beat(op, 'armed');
-        break;
-      }
-      case 'armed': if (!this.chargeOn(W)) this.end(op, 'the charge is gone'); break;   // (blow() moves the order on itself)
-      case 'wait': if (el >= this.blowWait(op)) this.enter(op); break;
-      case 'enter': {
-        const T = thick(W), light = g.doorTools.lights ?? NIGHTBREACH.opLights, into = yawTo(wallPt(W, 0, 0), wallPt(W, 0, -1));
-        for (let i = op.queue.length - 1; i >= 0; i--) { const q = op.queue[i]; if (t < q.at) continue; op.queue.splice(i, 1);
-          if (op.men.includes(q.gd)) { op.pod.set(q.gd, q.pod); op.stage.set(q.gd, 'lane');
-            this.assign(op, q.gd, { post: q.lane, face: into, watch: K.laneWatch > 0 ? wallPt(W, op.hole!.du, -(T + K.laneWatch), K.height) : null, pace: S.knobs.entry, stance: 'none', upper: 'aim', light, search: true, going: 'entering · the wall', there: 'entering · the wall' }); } }
-        let settled = op.queue.length === 0;
-        for (const gd of op.men) { const st = op.stage.get(gd), A = op.mine.get(gd)!; if (!st) { if (!op.pod.has(gd) && !op.queue.some(q => q.gd === gd)) continue; settled = false; continue; }
-          const p = gd.char.pos; A.searchT = t; this.cross(op, gd, p);
-          if (st === 'lane') { settled = false;
-            if (wallOff(W, p) < -(T + 0.15) || A.arrived || (A.post !== null && flat(p, A.post) < 0.35)) { const pod = op.pod.get(gd)!; if (!op.crossed.has(gd)) op.crossed.set(gd, wallAlong(W, p)); op.stage.set(gd, 'pod');   // through the hole: on to his own point
-              this.assign(op, gd, { post: pod.pos, face: pod.face, watch: pod.watch ?? null, pace: S.knobs.entry, stance: 'none', upper: 'aim', light, search: true, going: 'entering · the wall', there: pod.watch && !pod.door ? 'holding the hole' : 'holding the room' }); }
-          } else if (!A.arrived && A.yieldT < 0) { if (!op.pod.get(gd)?.took) settled = false; }   // (a man the fight has is not waited for: he is in, and busy — nor one who has taken up his door: 'arrived' then means his gun is ON it, and a threat in the room may have it)
-          else if (K.holdEach && A.arrived && A.yieldT < 0 && t - A.arrT >= K.holdSecs) this.takeHold(op, gd, light);   // (on his point, the room looked over: his door — or the hole — is his from here)
-        }
-        if (settled && isNaN(op.inT)) op.inT = t;
-        if ((settled && t - op.inT >= K.sweepSecs) || el >= K.enterCap) {
-          // (the room is theirs: from here each man's eyes are spare for its ways in — cover.ts deals them, the hole among what it finds; his sector stands where it deals nothing. The door entry's last act)
-          for (const gd of op.men) if (op.stage.get(gd) === 'pod') this.takeHold(op, gd, light);
-          if (COVER.inRoom) for (const gd of op.men) { const A = op.mine.get(gd); if (A && op.stage.get(gd) === 'pod') A.spare = true; }
-          this.beat(op, settled ? 'in' : 'in (cap)'); this.stats.entries++; this.end(op, 'in'); }
-        break;
-      }
-    }
-  }
-  /** a man on his point inside turns to what he was dealt to hold from it — one of the room's doors, or the hole (WALLCHARGE.doors / hole) — once */
-  private takeHold(op: WallOp, gd: Guard, light: boolean | undefined) {
-    const pod = op.pod.get(gd), h = pod?.hold; if (!pod || !h) return; pod.hold = undefined;
-    // (one man always keeps the room — at the deal, and still now: with nobody left alive in it who has no door or hole of his own, this man's eyes stay on the room)
-    const keeps = (o: Guard) => { const q = op.pod.get(o) ?? op.queue.find(x => x.gd === o)?.pod; return o !== gd && o.state !== 'dead' && !!q && !q.hold && !q.took && !q.watch; };   // (a man still on his way to the hole counts: he is coming)
-    if (!op.men.some(keeps)) { this.beat(op, `keeps the room · ${gd.callsign}`); return; }
-    // (from where he STANDS: a point with something on it is given up for his own feet — orders.ts — and the line to his door is tested again from there)
-    const at = op.mine.get(gd)?.post ?? pod.pos, moved = flat(at, pod.pos) > 0.3;
-    if (moved && h.door && this.g.col.shotBlocked([at[0], 1.2, at[2]], h.watch)) { this.beat(op, `no line to ${h.door} from where he stands · ${gd.callsign}`); return; }
-    pod.took = true;
-    this.assign(op, gd, { post: moved ? at : pod.pos, face: moved && h.door ? yawTo(at, h.watch) : h.face, watch: h.watch, pace: this.g.orders.knobs.entry, stance: 'none', upper: 'aim', light, search: true, going: 'entering · the wall', there: h.door ? 'holding the room' : 'holding the hole' });
-    this.beat(op, `holds ${h.door ?? 'the hole'} · ${gd.callsign}`);
-  }
-  /** s the men stand after the blast before the order sends them in: `afterBlow`, less (WALLCHARGE.safeBack, under `safe`) the time the nearest of them needs to
-   *  reach the hole at the team's pace — nobody is AT a hole inside afterBlow of its blast either way, and men stood off at the safe radii no longer stand it out
-   *  on their marks first. */
-  private blowWait(op: WallOp): number {
-    const K = WALLCHARGE, now = this.g.time; if (!K.safe || !K.safeBack || !op.hole || op.men.some(m => m.dazzledUntil > now)) return K.afterBlow;   // (a man the blast caught: the beat as it was)
-    const at = wallPt(op.wall, op.hole.du, 0); let near = Infinity; for (const gd of op.men) near = Math.min(near, flat(gd.char.pos, at));
-    return Math.max(0, K.afterBlow - near / PACE.max);
-  }
-  /** behind the blast: the men nearest the hole first, DOORTOOLS.second apart, each through the hole's far mouth to a point of his own inside */
-  private enter(op: WallOp) {
-    const g = this.g, S = g.orders, nav = g.col.nav, K = WALLCHARGE, W = op.wall, H = op.hole!, T = thick(W), t = g.time;
-    const mouth = wallPt(W, H.du, -(T + K.mouthIn)), free = (q: Vec3) => !nav.isBlocked(q[0], q[2]), seen = (q: Vec3) => !g.col.solidBlocked([mouth[0], 0.45, mouth[2]], [q[0], 0.45, q[2]]);
-    const men = gunLast([...op.men].sort((a, b) => flat(a.char.pos, mouth) - flat(b.char.pos, mouth))), pods: Pod[] = [], into = yawTo(wallPt(W, 0, 0), wallPt(W, 0, -1));
-    for (let i = 0; i < men.length; i++) { const [lat, deep] = K.pods[i % K.pods.length]; let got: Vec3 | null = null;
-      for (const strict of [true, false]) { for (const k of [1, 0.6, 0.3, -1, -0.6, 0]) { for (const dd of [0, 0.6, -0.5, 1.2]) { const q = wallPt(W, H.du + lat * k, -(T + Math.max(0.8, deep + dd))); if (free(q) && seen(q) && !(strict && this.inFrame(q, K.offFramePod)) && !pods.some(o => flat(o.pos, q) < 0.7)) { got = q; break; } } if (got) break; } if (got) break; }   // (a point in one of the room's doorways only when the room has no other floor for him)
-      if (got) pods.push({ pos: got, face: this.lookFrom(got, into, yawTo(mouth, got)) }); }
-    if (!pods.length) { g.say(op.lead, 'no way in.'); this.end(op, 'no floor inside'); return; }
-    const inMen = men.slice(0, pods.length), stay = men.slice(pods.length);
-    if (stay.length) { op.men = op.men.filter(m => !stay.includes(m)); this.beat(op, `outside · ${stay.map(m => m.callsign).join(', ')}`); }   // (no floor for him inside: he keeps the stand-off, and is not this order's any more)
-    const deal = new Map<Guard, Pod>();
-    for (let k = 0; k < inMen.length; k += 2) { const m = inMen.slice(k, k + 2), sp = pods.slice(k, k + 2); for (const [gd, pos] of S.pair(m, sp.map(x => x.pos))) deal.set(gd, sp.find(x => x.pos === pos)!); }
-    const half = Math.max(0, Math.min(K.lane, H.half - 0.4));
-    op.queue = inMen.map((gd, i) => { const pod = deal.get(gd) ?? pods[0], sg = Math.sign(wallAlong(W, pod.pos) - H.du) || (i % 2 ? 1 : -1); let lane = wallPt(W, H.du + sg * half, -(T + K.mouthIn)); if (!free(lane)) lane = free(mouth) ? mouth : pod.pos;
-      return { gd, at: t + i * DOORTOOLS.second, lane, pod }; });
-    // (the door entry's last-out rule, DOORTOOLS.lastOut: three or more going in — the last man through with a line to the hole keeps his gun on the way they
-    //  came in by, his watch point `lastOutM` on out through it: Sam in the hole is in that line, and the gun comes down for him)
-    // (K.holdLate: both are taken up once the room is theirs — on the way in every gun is on the room ahead of it, where the men the blast left standing are)
-    const hold = (pod: Pod, h: NonNullable<Pod['hold']>): Pod => K.holdLate ? { ...pod, hold: h } : { pos: pod.pos, ...h }, has = (pod: Pod) => !!(pod.watch || pod.hold);
-    // (the room's own doors: each, nearest the hole first, is one man's to hold from his point — the nearest man with a line to it who has nothing yet. A man
-    //  with no door keeps the room ahead of him, and one man always does. What the door entry gets from its points of domination and ENTRY.watch; the room model is the room fight's)
-    if (K.doors) { const room = g.fight?.roomAt(mouth) ?? null, free2 = op.queue.filter(q => !has(q.pod));
-      const ins = (room?.entries ?? []).map(e => ({ name: e.door.def.name, p: [e.at[0] - e.out[0] * 0.5, 1.2, e.at[2] - e.out[1] * 0.5] as Vec3, sq: Math.abs(W.alongX ? e.out[1] : e.out[0]) > 0.7 })).filter(e => wallOff(W, e.p) < -T).map(e => ({ ...e, back: e.sq && wallOff(W, e.p) > -(T + 1.2) })).sort((a, b) => (a.back ? 1 : 0) - (b.back ? 1 : 0) || flat(a.p, mouth) - flat(b.p, mouth));   // (`back`: a door in the blown wall's own line opens onto the side they came from — the room's other ways in are dealt first)
-      for (const e of ins) { if (free2.filter(q => !has(q.pod)).length <= 1) break; let pick: typeof free2[number] | null = null, bd = Infinity;   // (the last man free keeps the room)
-        for (const q of free2) { const p = q.pod.pos, d = flat(p, e.p); if (has(q.pod) || d < 0.8 || d >= bd || g.col.shotBlocked([p[0], 1.2, p[2]], e.p) || op.queue.some(o => o !== q && nearSeg(o.pod.pos, p, e.p) < K.mateLine)) continue; pick = q; bd = d; }   // (a line of FIRE: a pane between is no line, and a mate's point on it is a mate down his muzzle)
-        if (pick) { pick.pod = hold(pick.pod, { face: yawTo(pick.pod.pos, e.p), watch: e.p, door: e.name }); this.beat(op, `${e.name} · ${pick.gd.callsign}`); } } }
-    // (… and the hole, after the doors: the last man through whom no door took — while another is left for the room)
-    if (K.hole && DOORTOOLS.lastOut && inMen.length >= 3 && op.queue.filter(q => !has(q.pod)).length >= 2) { const w = wallPt(W, H.du, -T / 2, 1.2);
-      for (let i = op.queue.length - 1; i >= 0; i--) { const q = op.queue[i], p = q.pod.pos; if (has(q.pod) || g.col.segmentBlocked([p[0], 1.2, p[2]], w)) continue;
-        const yaw = yawTo(p, w), far = flat(p, w) + DOORTOOLS.lastOutM; q.pod = hold(q.pod, { face: yaw, watch: [p[0] + Math.sin(yaw) * far, 1.2, p[2] + Math.cos(yaw) * far] }); this.beat(op, `hole · ${q.gd.callsign}`); break; } }
-    op.phase = 'enter'; op.t0 = t; this.beat(op, 'go'); g.say(op.lead, 'going in.');
-  }
-  /** WHERE HE CROSSED THE WALL'S LINE (WallOp.crossed): the point on the wall's middle plane between his last two places, in metres along it from the charge.
-   *  Read by the checks and their words only — nothing in the game steers by it. (Until he has crossed, the entry's own sample stands in: where he was when he
-   *  was sent on to his point — 0.15 m past the far face, as it always was.) */
-  private cross(op: WallOp, gd: Guard, p: Vec3) {
-    const was = op.last.get(gd); if (was === null) return; const W = op.wall, mid = -thick(W) / 2, o1 = wallOff(W, p);
-    if (!was) { op.last.set(gd, o1 < mid ? null : [p[0], p[1], p[2]]); return; }   // (first seen already past it — the fight carried him in: the entry's own sample is his)
-    const o0 = wallOff(W, was); if (o1 < mid) { op.crossed.set(gd, lerp(wallAlong(W, was), wallAlong(W, p), (o0 - mid) / (o0 - o1))); op.last.set(gd, null); return; }
-    was[0] = p[0]; was[1] = p[1]; was[2] = p[2];
-  }
-  /** the way a man on his point inside faces: the way he came (`want`) unless that is a wall within two metres of his chest — then the longest open line within a quarter turn of straight in */
-  private lookFrom(p: Vec3, into: number, want: number): number {
-    const col = this.g.col, open = (yaw: number) => { let d = 0; while (d < 6 && !col.solidBlocked([p[0], 1.2, p[2]], [p[0] + Math.sin(yaw) * (d + 1), 1.2, p[2] + Math.cos(yaw) * (d + 1)])) d++; return d; };
-    if (open(want) >= 2) return want;
-    let best = want, score = -Infinity;
-    for (let a = -90; a <= 90; a += 15) { const yaw = into + a * Math.PI / 180, sc = open(yaw) - 0.4 * Math.abs(Math.atan2(Math.sin(yaw - want), Math.cos(yaw - want))); if (sc > score) { score = sc; best = yaw; } }
-    return best;
-  }
 
   // ------------------------------------------------------------ the blast
   /** Sam's trigger on one charge (F, the menu's 'blow the charge', a probe): the wall opened through the engine's blast entry point, the stun charge's report
    *  and flash with nobody on its list, the door charge's rule for the men near it — and the squad that set it goes in behind it */
-  blow(c: SetWallCharge | null = this.nearest(), pressed = true): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null { return this.g.col.window(() => this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c, pressed))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (the whole blast — the hole, the pall, the mess — is the team's doing: fogofwar.ts FOG.ours)
+  blow(c: SetWallCharge | null = this.nearest(), pressed = true): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallCharge.blow', this, [c, pressed]); if (__r !== RUST_PASS) return __r as any; } } return this.g.col.window(() => this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c, pressed))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (the whole blast — the hole, the pall, the mess — is the team's doing: fogofwar.ts FOG.ours)
   private blowRaw(c: SetWallCharge | null, pressed: boolean): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null {
     if (!c) return null; const g = this.g, K = DOORTOOLS, W = c.wall, i = this.set.indexOf(c); if (i < 0) return null; this.set.splice(i, 1);
     holdFireOrder(g, 'wallCharge', { blown: true });   // (holdfire.ts: a charge starts the fight when it GOES, not when it is set)
@@ -1141,7 +903,7 @@ export class WallCharge {
   /** the gap a man fits through nearest the charge, read off the wall as it now stands (the sill gone, a man's width or more, floor in its far mouth): its
    *  centre along the wall from the charge and half its width — null: none. ONE GAP, NOT THE WHOLE OPENING: the blast often takes more of a partition than
    *  this (a second run of open wall further along, past a stud or a desk at the far face, is no part of the answer), so 'outside holeAt' does not mean 'wall' */
-  holeAt(W: WallSpot): { du: number; half: number } | null {
+  holeAt(W: WallSpot): { du: number; half: number } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WallCharge.holeAt', this, [W]); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g, T = thick(W), step = 0.125, R = 2.5; let best: { du: number; half: number } | null = null, run = NaN;
     const open = (du: number) => !g.col.solidBlocked(wallPt(W, du, FACE, 0.35), wallPt(W, du, -(T + FACE), 0.35)) && !g.col.solidBlocked(wallPt(W, du, FACE, 1.3), wallPt(W, du, -(T + FACE), 1.3));
     const through = (du: number) => !g.col.nav.isBlocked(...xz(wallPt(W, du, -(T + WALLCHARGE.mouthIn)))) && !g.col.nav.isBlocked(...xz(wallPt(W, du, 0.35)));
@@ -1169,66 +931,17 @@ export class WallCharge {
     if (g.aiEnabled) gd.witness.dazzled++;
     gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.char.anim.hit();
   }
-  /** the charge on the wall: the door charge's dark slab and lit tell, chest high on the face it was set from (one-frame boxes) */
-  private draw(c: SetWallCharge) {
-    const W = c.wall, p = wallPt(W, 0, 0.022, WALLCHARGE.height), yaw = W.alongX ? 0 : Math.PI / 2, n = wallPt(W, 0, 1), o = wallPt(W, 0, 0);
-    this.g.fx.push({ box: makeBox({ c: p, h: [0.07, 0.11, 0.02], yaw, albedo: [0.09, 0.1, 0.08], flags: BoxFlag.Dynamic }), ttl: 1e-3 });
-    this.g.fx.push({ box: makeBox({ c: [p[0] + (n[0] - o[0]) * 0.022, p[1] + 0.07, p[2] + (n[2] - o[2]) * 0.022], h: [0.012, 0.012, 0.004], yaw, albedo: [0.9, 0.12, 0.08], emissive: [2.2, 0.2, 0.1], flags: BoxFlag.Dynamic | BoxFlag.NoShadow }), ttl: 1e-3 });
-  }
 
   // ------------------------------------------------------------ Sam's own hands
   /** ownblow.ts: IS THIS SET CHARGE THE SQUAD'S KEY'S to blow — every one with the switch off; with it on, one the squad set, or his own while an order of
    *  theirs is on that wall. The key's press, the notes and the floor plan ask */
   keyIs(c: SetWallCharge): boolean { return !OWNBLOW.on || c.by !== SAM_BY || this.ops.some(o => sameWall(o.wall, c.wall)); }
-  /** ownblow.ts: the nearest charge his own hands set — the one his own row 'blow the charge' is for (null: none); where it is; who stands inside its
-   *  radius, in words (the row's line, asked every frame: the far side's rays are the menu's and the note's); is HE in its blast, either side (asked at a tap) */
-  samSet(): SetWallCharge | null { return this.seated ? this.nearest(c => c.by === SAM_BY) : null; }
-  samAt(c: SetWallCharge): Vec3 { return wallPt(c.wall, 0, 0, WALLCHARGE.height); }
-  samWords(c: SetWallCharge): string { return this.closeWords(c); }
-  /** …and whether it would put HIM down where he stands (WALLKILL, blow()'s own distances: at it on its own side, or past it inside the knock's reach;
-   *  asked without the line, so it may hold a tap the blast would have spared him — the ring's wedge is still his) */
-  samFatal(c: SetWallCharge): boolean { const g = this.g, p = g.player.char.pos, W = c.wall; return WALLKILL.on && !g.godMode && flat(p, wallPt(W, 0, 0)) < (wallOff(W, p) < -thick(W) / 2 ? DOORTOOLS.knockM : WALLKILL.nearM); }
-  /** player.ts buildInteractables: with the cursor on a partition and Sam at its foot, the marker and its row */
-  samRows(p: Vec3, busy: boolean, row: RowFn, offer: OfferFn) {
-    this.offered = null; this.marker = null; if (!wallChargeOn(this.g) || !this.seated) return; const g = this.g, pl = g.player, K = WALLCHARGE, F = DOORTOOLS.blowKey.replace('Key', ''), key = blowKeyWord(!OWNBLOW.on, F);   // (ownblow.ts: what his own hands set is his own actions' to blow)
-    const W = this.sam?.wall ?? (() => { const w = wallAt(g, g.aimPoint, p); return w ? this.settle(w) : null; })(); if (!W || !W.ok) return;   // (structure: nothing to offer — the squad's menu says why)
-    const c = this.chargeOn(W), foot = wallPt(W, 0, K.setOff), d = flat(p, foot); if (d > K.samMarkerM || (!c && !this.sam && this.openAt(W))) return;
-    if (!c && !this.sam && !this.affordable) return;   // (none left in the bag: a partition is not a thing to do anything with — no marker, no row; the squad's menu says 'no charges left.')
-    const near = d < K.samReach && wallOff(W, p) > 0 && !g.col.solidBlocked([p[0], 0.9, p[2]], wallPt(W, 0, 0.1, 0.9)), free = !pl.sprinting && !pl.dragging && !pl.holding && !pl.takedown, reach = near && free;
-    const it: Interactable = { kind: 'wall', pos: wallPt(W, 0, 0.05, K.height), line1: c ? 'wall · charge set' : W.outer ? 'wall · outer wall' : 'wall · partition', line2: reach ? '' : near ? 'hands full' : 'step closer', inReach: reach, off: false };
-    if (this.sam) { it.inReach = true; this.marker = it; offer(it, []); return; }   // (the running row is runningRow's)
-    if (c) { it.line2 = `${blowKeyWord(this.keyIs(c), F)}  blow the charge${this.closeWords(c)}`; offer(it, []); return; }
-    const verbs: Interactable[] = [];
-    if (reach && this.ops.some(o => o.phase === 'place' && sameWall(o.wall, W))) it.line2 = 'a charge is going on it';
-    else if (reach && !busy) { verbs.push(row(it, 'charge', this.rowWords(), `${key}  blows it once set`)); this.offered = W; }
-    offer(it, verbs);
-  }
-  /** the row performed (Game.act) starts it; he stands on it setSecs; a step, a sprint, full hands or another verb breaks it off with nothing spent */
-  private samTick() {
-    const g = this.g, pl = g.player, p = pl.char.pos, K = WALLCHARGE, act = g.act, mine = !!act && act.kind === 'wall' && act.verb === 'charge';
-    if (mine && !this.sam && this.offered) { this.sam = { wall: this.offered, t0: g.time, at: [p[0], 0, p[2]] }; this.note(`the player sets one on wall ${this.offered.index}`); return; }
-    const s = this.sam; if (!s) return;
-    if (pl.down || pl.sprinting || !!pl.dragging || !!pl.holding || !!pl.takedown || flat(p, s.at) > K.samShift || (act && !mine)) { this.cancel(); return; }
-    if (samStowing(g)) { s.t0 = g.time; return; }   // (workstow.ts: what was in his hand is still on its way to where it lives — the charge's clock starts with his hands free)
-    chargeHands(g, pl.char, wallPt(s.wall, 0, 0, K.height), wallN(s.wall), g.time - s.t0, DOORTOOLS.setSecs, pl.pistolUp ? 0 : undefined);   // (handwork.ts: his hands on it while it goes on)
-    if (g.time - s.t0 < DOORTOOLS.setSecs) return;
-    this.sam = null;
-    if (this.openAt(s.wall) || this.chargeOn(s.wall)) return;
-    const paid = this.take(); if (paid < 0) { g.msg(this.noneWords().replace(/\.$/, '')); return; }
-    this.set.push({ wall: s.wall, t: g.time, by: SAM_BY, paid, ...(this.freeSet ? { free: true } : {}) }); this.stats.bySam++; g.audio.play('lockPick', wallPt(s.wall, 0, 0, K.height), 0.6); g.destr.furn.warm();
-    g.msg(`charge set on the wall${blowTail(!OWNBLOW.on, DOORTOOLS.blowKey.replace('Key', ''), '. ')}`); this.note(`set by the player on wall ${s.wall.index}`);
-  }
   /** is Sam setting one right now — a sustained verb (interact.ts runningVerb / cancelSustained, savestate.ts playerBusy, player.ts's running row) */
   get setting(): boolean { return !!this.sam; }
   /** the charge Sam is setting by hand, for whoever stands him at it (handwork.ts): its place on the wall, the wall's normal on his side, and the spot he must not shift from (theirs to move with him) */
   get samJob(): { p: Vec3; n: Vec3; at: Vec3 } | null { const s = this.sam; return s ? { p: wallPt(s.wall, 0, 0, WALLCHARGE.height), n: wallN(s.wall), at: s.at } : null; }
   /** Space again, Esc or a step into it: broken off, nothing spent (true: there was one to break off) */
   cancel(): boolean { if (!this.sam) return false; this.sam = null; this.g.msg('charge not set'); return true; }
-  /** player.ts buildInteractables: the one row while he is at it */
-  runningRow(running: (base: Interactable, verb: Verb, text: string, progress: number) => Interactable): Interactable {
-    const s = this.sam!, it: Interactable = this.marker ?? { kind: 'wall', pos: wallPt(s.wall, 0, 0.05, WALLCHARGE.height), line1: s.wall.outer ? 'wall · outer wall' : 'wall · partition', line2: '', inReach: true, off: false };
-    return running(it, 'charge', 'setting the charge… — Space or a step breaks it off', (this.g.time - s.t0) / DOORTOOLS.setSecs);
-  }
   private marker: Interactable | null = null;
 }
 const xz = (p: Vec3): [number, number] => [p[0], p[2]];

@@ -921,10 +921,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   7, team standing 24 → 23 of 64, 8 of 16 the same. Standard, seeds 1‥8 (squads dig in there too): the compound's wedges 36 → 39, won 4 → 3, team standing
   8 → 4 of 32; the warehouse won 5 and 5. So it gives the compound back wedges its placement was tallied without, and the compound is a little steeper for
   it: a claim to the compound's owner, `?nohaulhome` is the way back.
-  NOT mended, and not this rule's: (1) with the furniture AT the door and the leaf not yet latched, his hand waits `latchSecs` (2.5 s) and then he lets
+  NOT mended, and not this rule's: (1) with the furniture AT the door and the leaf not yet latched, his hand waited `latchSecs` (2.5 s) and then he let
   the brace go without a word — a closing leaf a few frames from home (deal 2: 0.02 rad), or a mate still standing in the doorway (the probe's stay-open
-  arm on deals 4, 7, 8: a mate 0.5 m from the door). That wait is `DIGIN.shutOpen`'s ground (7 s, pushes home, pulls again), which ships off because it
-  overshot the barracks; (2) nothing about which furniture he picks or where he pushes from. Never seen on a GPU, never played by a person.
+  arm on deals 4, 7, 8: a mate 0.5 m from the door). MENDED 2026-11-07 for the closing leaf: `digin hand_waits` holds a man with furniture while `doors_coming_home` says the leaf is still on its
+  way (a pulled leaf from wide open takes about five seconds, and doors stay where they are left, so many doors he brings furniture to are open); he still lets go of a leaf a body has stopped on the clock, and a man who
+  only came to shut it leaves on the clock as before (the pull finishes without him). No switch. Native: `rust/game_start/tests/offers.rs` (red before on the compound's bunk room: 'to cover', no wedge).
+  `DIGIN.shutOpen` (7 s, pushes home, pulls again, other doors) stays off: it overshot the barracks. Not measured: what this does to a tally of wedges or wins on any level. Never seen on a GPU, never played by a person;
+  (2) nothing about which furniture he picks or where he pushes from.
 - **A calm guard with a long wait in the dark sits down and dozes (10-13)** (`src/game/doze.ts`, `DOZE.on`; page on, `?nodoze`; frozen stand off, `TPS_DOZE=1`;
   on the shipped stand `TPS_DOZE=0` puts it off; a `FROZEN_HOLDS` row; table in `knobs.ts` + `JOURNAL_KNOBS`, a recording from before the key replays with it
   off; Tab ▸ Sandbox ▸ Detection & movement 'calm guards doze in the dark' + a read-only line). The maintainer's ask (2026-10-13): 'guards sleeping in dark
@@ -1230,7 +1233,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT BUILT, on purpose: no gun holds its fire for range (a man who will not shoot reads as dumb; range is the rows' own spread and the cover's deal);
   the belt-fed man still falls back or takes cover when the squad is in his room (the room fight's own moves are not gated).
   Check: `bun run tools/qa/gunroles-check.ts` (families `gunroles-deal -entry -fight -lanes -off`, in `all-quick`), 23 lines on each stand (it raises the
-  switch by the stand's own word before a floor is stood up); `GUNROLES_BREAK=1` fails every family. `gunroles-off`: ten seconds of the staged room clear
+  switch by the stand's own word before a floor is stood up); `GUNROLES_BREAK=1` fails every family. `gunroles-off` (deleted 2026-11-06 with the off side: qa.md): ten seconds of the staged room clear
   digest the same off and on with nobody dealt and the cards as issued.
   MEASURED (headless, before = the commit this was built on, after = this one). The mission tally (`command-tally.ts --hands b`, the page's stand,
   room-clear-four, depot-four, warehouse-four and killhouse-four over seeds 1 to 4, sixteen floors): taken 15 → 16, clean 6 → 8, wiped 3 → 3, men lost a
@@ -1335,7 +1338,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `hearingCheck` and the alert branch), `coverfire.ts` (`lane` exported as `coverLane`), `digin.ts` (`digInSetOn`, the question `digInBraced` asks with
   nothing counted), `game.ts` (tick and reset). KNOWN: the trigger in `doorForce` is `coverBlind`'s, copied — one helper for both is that file's to make.
   A locked door of theirs booted by one of them reads as 'forced' to `doorTamper`.
-  CHECK `tools/qa/doorforce-check.ts` (`probes.ts doorforce`, family `doors`; 15 lines green on both stands, `DOORFORCE_BREAK=1` fails 8 on both): on the
+  CHECK `tools/qa/doorforce-check.ts` (`probes.ts doorforce`, family `doors`; 15 lines green on both stands, `DOORFORCE_BREAK=1` fails 8 on both; since 2026-11-06
+  every world of it is on the game's own die, seed 2 or `TPS_SEED=n`: with none one tree said 6 rounds or 7 in its first line; one die is one sample): on the
   office, a posted man hears walked footfalls behind a shut wooden door, becomes sure at 1.83 s, fires at 2.17 s, 7 rounds in 8 s all across the leaf,
   0.00 m off his post, no boot; the same sounds to a calm man, an alert man with nothing known, and a crouched tread: nothing; a free man stands, puts 4
   through, walks 1.9 m up and boots it 5.95 s after he began (the keep torn, the leaf flung; his fix 0.12 m from the player; the boot heard as an

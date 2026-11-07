@@ -8,20 +8,16 @@
 // docs/agents/enemies.md has the rule's words, stands and measurements; tools/qa/belief-check.ts is its check. No top-level statement here uses another module.
 import type { Game, Guard } from './game';
 import { v3, type Vec3 } from '../math/vec';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export const BELIEF = {
   on: false,
 };
 
-/** the tick's first word: what a man covers is said anew each tick by the duty that holds him to it, so a duty that has ended has nothing left in the field. It is
- *  not state: the room fight, a blind man's turn, the rescue say it again before any man's update reads it */
-export function dutiesAnew(g: Game) { if (BELIEF.on) for (const gd of g.guards) gd.covers = null; }
 /** the room fight (and the rules that hand a man back to it): his duty has his gun on `pt`, kept by reference, moved in place as his watch moves */
-export function cover(gd: Guard, pt: Vec3) {
+export function cover(gd: Guard, pt: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('cover', undefined, [gd, pt]); if (__r !== RUST_PASS) return __r as any; } }
   if (BELIEF.on) gd.covers = pt; else gd.lastKnown = pt;
 }
-/** his duty has nothing for his gun after all, this tick: his eyes have it, or he has just been given something else to do */
-export function uncover(gd: Guard) { gd.covers = null; }
 
 /** his fix is the spot his eyes last had the man (guards.ts asks this before it leads a fix; a noise or a word since has moved it off that) */
 export function fixAtSight(gd: Guard): boolean { return !!gd.lastKnown && v3.distXZ(gd.lastKnown, gd.sightPos) < 0.01; }
@@ -36,14 +32,8 @@ export function eyesFix(gd: Guard, pt: Vec3): Vec3 | null {
 
 /** where his gun goes with no man to shoot at: what his own eyes put in his belief this very tick, else what his duty covers, else what he believes. A man off
  *  his post has no duty, whatever was left in the field */
-export function gunPoint(g: Game, gd: Guard): Vec3 | null {
-  const lk = gd.lastKnown, cv = gd.covers;
-  if (!cv || !gd.hold || !gd.pinned) return lk;
-  return lk && g.time - gd.sightT < 1e-6 && fixAtSight(gd) ? lk : cv;
-}
+export function gunPoint(g: Game, gd: Guard): Vec3 | null { return goneWithTick('gunPoint') as any; }
 
 /** a report that reaches him outside his ears and eyes (a blast on him, a mate's word on the net) places his belief. What he hears of that moment or before does
  *  not write over it, however late in the tick order he comes to hear it (wordStands); what he hears after does. His eyes always do: they are the newer */
-export function word(g: Game, gd: Guard, at: Vec3) { gd.lastKnown = v3.copy(at); gd.wordT = g.time; }
-export function wordStands(gd: Guard, at: number): boolean { return BELIEF.on && at <= gd.wordT; }
-export function wordNow(g: Game, gd: Guard): boolean { return wordStands(gd, g.time); }
+export function word(g: Game, gd: Guard, at: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('word', undefined, [g, gd, at]); if (__r !== RUST_PASS) return __r as any; } } gd.lastKnown = v3.copy(at); gd.wordT = g.time; }

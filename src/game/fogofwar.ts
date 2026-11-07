@@ -63,7 +63,7 @@
 //                 nobody has looked into since; a lamp that is LIT but remembered out is class 1. The mains follow at once (told to the whole floor).
 //        no class: the level's own lamps as they stand, the sun, the moon and the lightning, the team's own lights.
 //      WHAT IS NOT LIGHT goes by the same table: with FOG.air off the picture's march of the smoke takes no density over floor the team does not see
-//      (common.wgsl fogSmoke — volumetrics.wgsl and its dust twin; with it on, as the page has it, a plume is drawn wherever it stands), and a spark, a puff, a chip, a case, a sheet or a shard there is not drawn (particles_draw.wgsl; the weather's
+//      (common.wgsl fogSmoke — volumetrics.wgsl, its dust look too; with it on, as the page has it, a plume is drawn wherever it stands), and a spark, a puff, a chip, a case, a sheet or a shard there is not drawn (particles_draw.wgsl; the weather's
 //      drops stay: the same everywhere). Shadow rays and the game's readings take the smoke as it is.
 //      The game's own readings of light (the meter's direct term, the guards' eyes — probe.wgsl) take the lights as they ARE. NOT PICTURE ONLY ON A GPU,
 //      though: the BOUNCE the meter adds is read from the picture's cascades, which hold class 1 as the picture has it — a torch on a wall nobody on the team
@@ -122,7 +122,7 @@ import { type RtLight, packLight } from '../render/lights';
 import type { Character } from './character';
 import { isHostile } from './teams';
 import { placeName } from './dialogue';
-import type { Door, Doors } from './doors';
+import type { Door } from './doors';
 import { type Box, BoxFlag, MKEY, copyBox } from '../scene/boxes';
 import { type FogFrame, makeFogFrame, FOG_EYES, FOG_LIGHTS } from '../render/fogofwar';
 import { WAND, WAND_STATS, wandEye } from './wand';
@@ -132,6 +132,7 @@ import { STICKY_STATS, stickyEyes } from './stickycam';
 import { toldLastSeen } from './told';   // (called inside lastSeen() only)
 import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
 import { gpuFx } from './particleFx';   // (called inside begin() / done() / hush() only)
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 /** The knobs (Tab ▸ Sandbox ▸ Fog of war, __fow.knobs; read every frame). */
 export const FOG = {
@@ -338,7 +339,7 @@ export const FOG_EYES_ON = 7, FOG_EYES_WAS = 5;
 export function fogEyeCount(v: number): number { return Number.isNaN(v) ? FOG_EYES_WAS : Math.max(FOG_EYES_WAS, Math.min(FOG_EYES, Math.floor(v))); }
 /** ?fogown / ?fogown=0 · ?fogcalls=0 — the two options for a visit, over the kept rows (the Game's constructor, right after teamfeel.ts has read those back;
  *  no page — the harness — nothing) */
-export function fogFlags() { try { const q = new URLSearchParams(location.search); if (q.has('fogown')) FOG.own = q.get('fogown') !== '0'; if (q.has('fogcalls')) FOG.calls = q.get('fogcalls') !== '0';
+export function fogFlags() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('fogFlags', undefined, []); if (__r !== RUST_PASS) return __r as any; } } try { const q = new URLSearchParams(location.search); if (q.has('fogown')) FOG.own = q.get('fogown') !== '0'; if (q.has('fogcalls')) FOG.calls = q.get('fogcalls') !== '0';
   if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogours')) FOG.ours = q.get('fogours') !== '0'; if (q.has('fogthin')) FOG.thin = q.get('fogthin') !== '0'; if (q.has('fogkept')) FOG.kept = q.get('fogkept') !== '0'; if (q.has('fogfiled')) FOG.filed = q.get('fogfiled') !== '0'; if (q.has('fogtracks')) FOG.tracks = q.get('fogtracks') !== '0'; if (q.has('fogmates')) FOG.mates = q.get('fogmates') !== '0'; if (q.has('fogeyes')) { const v = parseInt(q.get('fogeyes') ?? '', 10); FOG.eyes = v === 0 ? FOG_EYES_WAS : !Number.isFinite(v) || v === 1 ? FOG_EYES_ON : fogEyeCount(v); } if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; if (q.has('fogkept')) FOG_PAGE.kept = FOG.kept; } catch { /* no page */ } }
 /** THE FOG'S LOOK ON THIS PAGE (`desat`, `edge`, `air`: the picture alone — NOT `ours`: what it hands the renderer is what the cursor's ray meets, so a tape keeps its own), as the module ships it and the address words change it (fogFlags) — never what a tape's knob
  *  tables laid over FOG. THE ENGINE REPLAY SHOWS A TAPE UNDER THIS, not under the look the tape was recorded with (FogOfWar.pageLook, which it alone calls):
@@ -368,7 +369,7 @@ export function thingKeyOf(b: Box): number {
 }
 /** a part this far (m / rad) from where the picture has it counts as moved · the first frames of an encounter everything is taken as it stands (the building as
  *  the team knows it) · a thing held where it was last seen is looked for again every this many frames · remembered things at most */
-const THING_EPS = 1e-3, THING_PRIME = 30, THING_EVERY = 3, THING_CAP = 768;
+const THING_EPS = 1e-3;
 /** WHAT THE FOG HOLDS, IN A CHECKPOINT (FOG.filed; FogOfWar.snapshot / restore; savestate.ts files it under `fog`): only what the picture has another way than
  *  the world stands — a door by its name (as the doors' own slice is poured) with the angle the picture shows it at; a lamp by its name (as the targets' is)
  *  with the state the team knows it in (1 lit) and, for one known lit, its boxes' emission as they glowed; a piece of furniture the picture holds, by its thing
@@ -468,7 +469,7 @@ export class FogOfWar {
   /** fog frames left to put the picture under the page's own fog look (FOG_PAGE) — THE ENGINE REPLAY'S CALL, made as it takes the frame and after every table
    *  of the tape's it lays over FOG (replay/engineplay.ts): a few frames, so that word is the last; after them the Tab rows are the viewer's to move. Never
    *  called by play or the harness: there FOG is what the knobs say. */
-  pageLook(): void { this.lookFrames = 3; }
+  pageLook(): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('FogOfWar.pageLook', this, []); if (__r !== RUST_PASS) return __r as any; } } this.lookFrames = 3; }
   private lookFrames = 0;
   private rawList: Box[] = []; private rawAt = -1; private doorFrom = 0; private doorN = 0;
   constructor(private g: Game) { }
@@ -480,7 +481,7 @@ export class FogOfWar {
 
   /** Once a frame from Game.update, after everybody has moved and before the picture's lists are built: the eyes, then seen / not for every man who is not on
    *  the team. A return on its first line while the switch is off. */
-  update(dt: number) { const col = this.g.col; if (col.mirror.live) this.pass(dt); else col.window(() => this.pass(dt)); }   // (asked outside a tick — a check's own call — the pass stands the copy for itself, as every sense does: collision.ts THE SENSES)
+  update(dt: number): void { return goneWithTick('FogOfWar.update') as any; }   // (asked outside a tick — a check's own call — the pass stands the copy for itself, as every sense does: collision.ts THE SENSES)
   private pass(_dt: number) {
     const F = this.frame;
     if (!this.active) { if (F.on || this.loaded) { this.loaded = false; this.propsLoaded = false; F.on = false; F.count = 0; this.eyes = []; this.hiddenChars.clear(); this.pending.length = 0; this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.fireClock = 0; this.lampRecs.clear(); this.faceRecs.clear(); F.lit = 0; F.lightCount = 0; F.full = false; this.fullClear(); } return; }
@@ -672,15 +673,8 @@ export class FogOfWar {
     const L = Math.hypot(e.look[0], e.look[2]) || 1;
     return (dx * e.look[0] + dz * e.look[2]) / (d * L) > Math.cos(fov * 0.5 * DEG);
   }
-  /** The frame's smoke segments, queued for the probe. Called by Game.update AFTER Sam's own meter and the guards' sight lines have been asked: the probe's table
-   *  drops what does not fit, and the fog's questions are the ones to lose. */
-  flushAsks() {
-    if (!this.pending.length) return; const g = this.g, S = g.sensors;
-    for (const p of this.pending) { const room = S.own ? undefined : (g.probe as { room?: number } | null)?.room;   /* (the senses on the CPU — sense.ts: no table to run out of) */ const full = room !== undefined && room <= 0; S.askSegment(p.key, p.a, p.b); if (full) S.forget(p.key); }   // (an ask the table had no room for: its old answer is not this frame's — no answer, and the man keeps his last verdict a while)
-    this.pending.length = 0;
-  }
   /** A fresh encounter (Game.restartEncounter — a restart, a checkpoint load, the start of an F10 recording and of its replay): nobody has been seen, no pair asked. */
-  reset() { this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.faceRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.propsLoaded = false; this.loaded = false; this.ourLanded.clear(); this.thingSince = -1; this.recs = new SideMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.shown = new SideSet(); this.fireClock = 0;
+  reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('FogOfWar.reset', this, []); if (__r !== RUST_PASS) return __r as any; } } this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.faceRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.propsLoaded = false; this.loaded = false; this.ourLanded.clear(); this.thingSince = -1; this.recs = new SideMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.shown = new SideSet(); this.fireClock = 0;
     this.callClock = 0; this.lastCall = -1e9; this.calledT = new SideMap(); this.knownT = new SideMap(); this.toldStep = new SideMap(); this.callN = 0; this.callLog = []; this.callStats = { contact: 0, heard: 0 }; }
 
   /** THE FOG'S OWN LINE: is anything solid between an eye and a point — the game's sight test (statics and leaves; glass passes), which under FOG.thin also
@@ -765,24 +759,6 @@ export class FogOfWar {
   doorShown(d: Door): number { const r = this.doorRecs.get(d); return r && this.active && FOG.doors ? r.shown : d.angle; }
   /** the door a box in the picture's list is the remembered leaf of (the order menu's cursor: a leaf as drawn is that door), or null */
   doorOfBox(box: Box): Door | null { for (const [d, r] of this.doorRecs) if (r.ghost && r.ghost[0] === box) return d; return null; }
-  /** THE DOORS' BOXES for the picture (Game.update, in place of Doors.boxes): each leaf and its handles where they stand — or, for a leaf that has moved unseen,
-   *  copies posed at the angle the team last saw. The list Doors.boxes writes, box for box, while the fog is off or no leaf is held. */
-  doorBoxes(doors: Doors, out: Box[]) {
-    this.doorN = 0;
-    if (!this.active || !FOG.doors || !this.doorsHeld) { doors.boxes(out); return; }
-    this.doorFrom = out.length;
-    for (const d of doors.list) {
-      const r = this.doorRecs.get(d);
-      if (!r || Math.abs(d.angle - r.shown) <= DOOR_EPS) { out.push(d.box, d.handleBoxes[0], d.handleBoxes[1]); continue; }
-      const P = d.poseAt(r.shown);
-      const G = r.ghost ??= [{ ...d.box }, { ...d.handleBoxes[0] }, { ...d.handleBoxes[1] }];
-      G[0].c = P.c; G[0].yaw = P.yaw; G[0].flags = d.box.flags;
-      if (d.off || G[0].rot) { G[0].h = d.leafH; G[0].marks = d.leafMarks; G[0].rot = undefined; G[1].rot = undefined; G[2].rot = undefined; }   // (a leaf blown off its hinges unseen: remembered HUNG, as last seen — not as the slab its box now is)
-      for (let s = 0; s < 2; s++) { G[1 + s].c = P.handles[s]; G[1 + s].yaw = P.yaw; }
-      out.push(G[0], G[1], G[2]);
-    }
-    this.doorN = out.length - this.doorFrom;
-  }
 
   // ---------------------------------------------------------------- 4f · the fog lit as the team last knew it
   /** HAS THE TEAM A LOOK AT FIXTURE t this frame: an eye has the floor under it (the mask's own test), or — inside its field — a line to the fixture itself (a
@@ -956,11 +932,11 @@ export class FogOfWar {
   // ---------------------------------------------------------------- 4d · nothing moves in the fog
   /** is the floor at (x, z) in the lit part of the picture: some eye has it in its field and a level line to it at the picture's own eye height — the mask's
    *  rule (shaders/fogofwar.wgsl), on the statics and leaves the CPU's sight test walks */
-  spotSeen(x: number, z: number): boolean { this.thingStats.tests++; return this.groundLook(x, z) === 2; }
+  spotSeen(x: number, z: number): boolean { if (RUST_SURFACE?.tapFiring('FogOfWar.spotSeen')) return RUST_SURFACE.tapAnswer() as any; { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('FogOfWar.spotSeen', this, [x, z]); if (__r !== RUST_PASS) return __r as any; } } this.thingStats.tests++; return this.groundLook(x, z) === 2; }
   /** `spotSeen`'s walk, off the things' count, with what it found on the way: 2 = an eye has the spot (within its reach, or in its field with a clear line);
    *  1 = in an eye's field and every such eye's line stopped; 0 = in no eye's field (no line was walked; with no cone every spot is in one). snowTracks.ts
    *  FOG.tracks asks it for the snow a kept mark lies on. */
-  groundLook(x: number, z: number): 0 | 1 | 2 {
+  groundLook(x: number, z: number): 0 | 1 | 2 { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('FogOfWar.groundLook', this, [x, z]); if (__r !== RUST_PASS) return __r as any; } }
     let r: 0 | 1 = 0;
     for (const e of this.eyes) {
       const dx = x - e.at[0], dz = z - e.at[2], d = Math.hypot(dx, dz); if (d < 0.4) return 2;
@@ -980,7 +956,7 @@ export class FogOfWar {
   }
   /** A THING is seen where its middle is, or — a long one (a table, a cabinet) — either end of its long side: it is rigid, so whoever sees a part of it move has seen
    *  it move, and a part in plain view standing still while the thing has gone would be the picture lying about floor the team DOES see. */
-  thingSeen(x: number, z: number, ox: number, oz: number): boolean {
+  thingSeen(x: number, z: number, ox: number, oz: number): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('FogOfWar.thingSeen', this, [x, z, ox, oz]); if (__r !== RUST_PASS) return __r as any; } }
     return this.spotSeen(x, z) || ((ox !== 0 || oz !== 0) && (this.spotSeen(x + ox, z + oz) || this.spotSeen(x - ox, z - oz)));
   }
   /** The long side of boxes i‥j of a list into spanX / spanZ (its biggest box's long axis in plan, 15 cm in from the ends; 0, 0 under 0.9 m long). */
@@ -994,75 +970,11 @@ export class FogOfWar {
     let x = 0, z = 0; for (const b of boxes) { x += b.c[0]; z += b.c[2]; } x /= boxes.length; z /= boxes.length;
     this.span(boxes, 0, boxes.length); return this.thingSeen(x, z, this.spanX, this.spanZ);
   }
-  things(list: Box[]): Box[] {
-    const S = this.thingStats; S.held = S.out = S.tests = 0;
-    if (this.viewer && this.active) {   // (a viewer may ask for the picture without the fog: the list as the game made it, every leaf where it stands — copied, never read by a step)
-      const R = this.rawList; R.length = 0; let i = 0;
-      if (this.doorN) { for (; i < this.doorFrom; i++) R.push(list[i]); this.g.doors.boxes(R); i = this.doorFrom + this.doorN; }
-      for (; i < list.length; i++) R.push(list[i]);
-      this.rawAt = this.frameNo;
-    }
-    if (!this.active || !FOG.things || !this.eyes.length) { if (this.thingRecs.size) this.thingRecs.clear(); this.thingSince = -1; this.propsLoaded = false; return list; }
-    const out = this.thingOut, recs = this.thingRecs, f = this.frameNo; out.length = 0;
-    if (this.thingSince < 0 || f < this.thingSince) this.thingSince = f;
-    const prime = f - this.thingSince < THING_PRIME;   // (the first half second of an encounter — or of the rule: everything is taken as it stands, the building as the team knows it)
-    if (!prime) this.propsLoaded = false; const loadedP = this.propsLoaded;   // (FOG.filed: a load made the furniture's memory, so its opening half second takes none of it as it stands — the rule below asks it like any frame's)
-    this.cellSeen.clear();
-    const ours = this.oursOn, team = this.g.engine.lights.fogTeam.owners;
-    // THE TEAM'S OWN RUBBLE (FOG.ours): a chunk one of the team threw (debris.ts Chunk.who: the round or the charge that set it going) is the team's doing on
-    // its FIRST way down — until the picture has it at rest (the frame it lands unseen would otherwise drop it as 'last seen on the move'). After that it is a
-    // thing like any other: woken where nobody sees (a body falls on it, the chair under it moves — nobody is re-blamed for those) it stays where the picture has
-    // it. A piece a boot slides is nobody's. A kinked panel's second box (Chunk.mate) is a thing of its own key: both are taken.
-    const mineK = this.ourChunks, landed = this.ourLanded; if (mineK.size) mineK.clear();
-    const D = ours && !prime ? this.g.destr?.debris.list : undefined;
-    if (D && D.length) { for (const c of D) { if (c.foot || !team.has(c.who)) continue;
-      const k = thingKeyOf(c.box); if (landed.has(k)) continue;
-      if (c.rest) { const r = recs.get(k); if (r && !r.moving) { landed.add(k); continue; } }
-      mineK.add(k); if (c.mate && c.mate.mkey !== undefined) mineK.add(thingKeyOf(c.mate)); }
-    } else if (landed.size) landed.clear();   // (the pool is empty — a restart, an encounter's end: its serials start a new life)
-    const n = list.length;
-    for (let i = 0; i < n;) {
-      const b = list[i];
-      if (i >= this.rigFrom && i < this.rigTo) { out.push(b); i++; continue; }
-      if (b.mkey === undefined) { if (prime || (ours && b.owner !== 0 && team.has(b.owner)) || this.cellSeenAt(b.c[0], b.c[2])) out.push(b); else S.out++; i++; continue; }   // (a tracer's streak among them: where its middle is seen — a teammate's own, FOG.ours, its whole length)
-      const tk = thingKeyOf(b); if (tk < 0) { out.push(b); i++; continue; }
-      let j = i + 1; while (j < n && list[j].mkey !== undefined && thingKeyOf(list[j]) === tk) j++;
-      let x = 0, z = 0; for (let k = i; k < j; k++) { x += list[k].c[0]; z += list[k].c[2]; } x /= j - i; z /= j - i;
-      this.span(list, i, j); const ox = this.spanX, oz = this.spanZ;
-      let r = recs.get(tk);
-      const live = () => { for (let k = i; k < j; k++) out.push(list[k]); };
-      const take = (moving: boolean) => {   // the picture has it as it stands
-        if (!r) { r = { ghost: [], x, z, ox, oz, f, moving, held: false }; recs.set(tk, r); }
-        const G = r.ghost; G.length = j - i;
-        for (let k = i; k < j; k++) G[k - i] = ghostBox(list[k]);
-        r.x = x; r.z = z; r.ox = ox; r.oz = oz; r.moving = moving; r.held = false;
-      };
-      const mine = mineK.size > 0 && mineK.has(tk);
-      const pr = prime && !(loadedP && isProp(tk));
-      if (!r) { if (pr || mine || this.thingSeen(x, z, ox, oz)) { take(!pr); r!.f = f; live(); } else S.out++; i = j; continue; }   // (first seen in play: nobody knows yet that it is at rest — the next frame it stands unmoved says so; lost to sight before that, it was last seen on the move)
-      r.f = f;
-      let same = r.ghost.length === j - i;
-      for (let k = i; same && k < j; k++) { const s = list[k], q = r.ghost[k - i];
-        same = Math.abs(s.c[0] - q.c[0]) + Math.abs(s.c[1] - q.c[1]) + Math.abs(s.c[2] - q.c[2]) < THING_EPS && Math.abs(s.yaw - q.yaw) < THING_EPS
-          && (!s.rot || !q.rot || Math.abs(s.rot[0] - q.rot[0]) + Math.abs(s.rot[1] - q.rot[1]) + Math.abs(s.rot[2] - q.rot[2]) + Math.abs(s.rot[3] - q.rot[3]) < THING_EPS); }
-      if (same) { r.moving = false; r.held = false; live(); i = j; continue; }   // where the picture has it
-      if (pr || mine || ((!r.held || (f + tk) % THING_EVERY === 0) && this.thingSeen(x, z, ox, oz))) { take(true); live(); i = j; continue; }   // it moved in the team's sight (or is the team's own rubble, on its way down)
-      // it moved (or is still moving) where nobody sees it
-      if (!r.held) { if (r.moving || this.thingSeen(r.x, r.z, r.ox, r.oz)) { recs.delete(tk); S.out++; i = j; continue; } r.held = true; }   // (last seen on the move, or the team is looking at the place it left: it is simply not there)
-      else if ((f + tk) % THING_EVERY === 1 && this.thingSeen(r.x, r.z, r.ox, r.oz)) { recs.delete(tk); S.out++; i = j; continue; }
-      for (const q of r.ghost) out.push(q); S.held++; i = j;
-    }
-    // what has left the list altogether (broken up, picked up, burnt out) out of sight: still in the picture where it was, until somebody looks there
-    if (recs.size) for (const [tk, r] of recs) { if (r.f === f) continue;
-      if (r.moving || recs.size > THING_CAP || ((f + tk) % THING_EVERY === 1 || !r.held) && this.thingSeen(r.x, r.z, r.ox, r.oz)) { recs.delete(tk); continue; }
-      r.held = true; for (const q of r.ghost) out.push(q); S.held++; }
-    if (S.held || S.out) { list.length = out.length; for (let i = 0; i < out.length; i++) list[i] = out[i]; }   // (the frame's own list, rewritten — as the leaves' remembered boxes are written into it: whoever is handed Game.dynBoxes has the picture's)
-    return list;
-  }
+  things(list: Box[]): Box[] { return crossToRust('FogOfWar.things', this, [list]) as any; }
 
   /** THE STRETCHES OF A BEAM THE TEAM CAN SEE: [t0, t1] pairs along `from + dir·t`, 0 ≤ t ≤ L (the whole of it while the fog is off or FOG.lasers is). Looked at
    *  every BEAM_STEP, each end of a seen stretch then found by bisection — a beam is a line in the air: a stretch behind a wall is nobody's to see. */
-  beamRuns(from: Vec3, dir: Vec3, L: number): [number, number][] {
+  beamRuns(from: Vec3, dir: Vec3, L: number): [number, number][] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('FogOfWar.beamRuns', this, [from, dir, L]); if (__r !== RUST_PASS) return __r as any; } }
     if (!this.active || !FOG.lasers) return [[0, L]];
     const at = (t: number): Vec3 => v3.mad(from, dir, Math.min(t, Math.max(0, L - 0.05)));   // (the last of it lies ON what it lands on: looked at a hand short)
     const see = (t: number) => this.eyeOn(at(t));
@@ -1111,7 +1023,7 @@ export class FogOfWar {
     return out;
   }
   /** left out of the picture this frame (what combat.ts handProps, the HUD's markers and the bubbles ask) — false for everybody while it is off */
-  hidden(gd: Guard): boolean { return !this.bared && this.hiddenChars.size > 0 && this.hiddenChars.has(gd.char); }
+  hidden(gd: Guard): boolean { if (RUST_SURFACE?.tapFiring('FogOfWar.hidden')) return RUST_SURFACE.tapAnswer() as any; return !this.bared && this.hiddenChars.size > 0 && this.hiddenChars.has(gd.char); }
   /** this frame's things that are the team's own rubble on its first way down · the ones the picture has since taken at rest (things()) */
   private ourChunks = new Set<number>(); private ourLanded = new Set<number>();
   /** the rule is live: the row on, the fog on, and the full picture's block filled this frame (the team's ids are the lights' own list, fullBlock) */

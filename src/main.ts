@@ -21,16 +21,15 @@ import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI 
 import { START_PAGE, startPage, startPageWanted, openStartPage, openList } from './ui/startpage';
 import { setFigureCast } from './ui/kitFigure';
 import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
-import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterHold, laterProgress, PIPE_QUEUE, FATAL, plainAir } from './gpu/device';
+import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterProgress, PIPE_QUEUE, FATAL } from './gpu/device';
 import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
-import { rigDebugTrace } from './render/rigDebug';
 import { Engine } from './engine';
 import type { HostApi } from './host/api';
 import { SAVED, SAVE_UP, saveFile, savedWords } from './host/savefile';
 import type { IrradianceProbe } from './render/probe';
-import { buildLevel, buildBundledLevel, bootedLocalLevel, withOfficeScript, isOfficeFamily, OFFICE_DATA, OFFICE_SCENARIOS } from './scene/level';
+import { buildLevel, buildBundledLevel, bootedLocalLevel, OFFICE_DATA } from './scene/level';
 import { loadLevel, levelFileOf, levelNameOf } from './scene/levelLoad';
 import { parseLevelData, type LevelData } from './scene/levelData';
 import { kitViewSetLevel, kitViewAddLevel, kitViewWayOfLink, kitViewSetQuery, kitViewSetDress } from './host/kitViewSet';   // (pure, no game module: ?kitview's bespoke set, laid over the level's file before it is built)
@@ -40,7 +39,7 @@ import type { FollowCamera } from './game/camera';
 import { standGame, populateHost } from './host/standup';
 import { pageSwitches, pageRows } from './host/profile';
 import { MARKING_TEXEL } from './scene/markings';
-import { LOOK, LOOK_DOORS, lookLevelFile, lookPageOn, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs, lookKeptOf } from './scene/look';
+import { LOOK, LOOK_DOORS, LOOK_LAB, lookLabOn, lookLevelFile, lookPageOn, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs, lookKeptOf } from './scene/look';
 import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
@@ -69,7 +68,6 @@ import { dressLorry, kitLorry } from './scene/lorryTry';
 import { charLookSides } from './render/charMaterials';
 import { groundRayConfig } from './scene/groundField';
 import { ROUND, ROUND_STATS, roundConfig } from './scene/round';
-import { cutSwap } from './render/cutSwap';
 import { makeBox, BoxFlag, MKEY, BoxWorld } from './scene/boxes';
 import { MESH_MAX_CHARS } from './render/meshbvh';
 import { GLASSBREAK, GB_STATS, glassBreakPersisted, glassBreakLive, saveGlassBreak } from './game/glassbreak';
@@ -116,7 +114,7 @@ import { keptRecord, keptFreeze, startCallClock, CALLS } from './gpu/keep';
 import { bootRecord, laterRecord } from './cloud/loadtime';   // (the load's record: the boot's own timeline and the browser's count of what came down)
 import { tapConsole, reportError, reportWarning } from './cloud/report';   // (the reporter's net: what the page prints as an error or a warning is one of the visit's records)
 import { cloudNote } from './ui/cloudnote';
-import { checkSessionFile, hudExpireBubbles } from './game/journal';
+import { checkSessionFile } from './game/journal';
 import * as digestMod from './game/digest';
 import { requestQrf, callPerimeter, qrfStandDown } from './game/qrf';
 import { needsSend, needsTrip, NEEDS, NEEDS_STATS, NEEDS_LOG, type NeedKind } from './game/needs';
@@ -139,7 +137,6 @@ import { SQUAD40, SQUAD40_STATS, SQUAD40_LOG, squad40Left, squad40Brought, squad
 import { squadSmokeStage } from './game/squadsmoke';   // (the same: game/kit.ts has loaded it)
 import { checkQuiet } from './game/quiet';
 import { LESSON, LESSON_STATS, checkLesson } from './game/lesson';
-import { PAR, type ParResult } from './game/par';
 import { parBest } from './ui/parBest';
 import { VERDICT } from './game/verdict';
 import { verdictKey, recordOf, tryStarted, runEnded, APPROACHES, type MissionRecord } from './ui/verdictStore';
@@ -162,7 +159,7 @@ import { rowSettings } from './game/rowset';
 import { HOUR, HOURS, HOUR_IDS, initHour, applyHour, hourOf, hourSummary, hourLightAt, setSunStrength, sunStrength, sunToCloud, hourSun, hourWorldChanged } from './game/hours';
 import { lightEstimateAt } from './game/guards';
 import { STRESS, standExtra, stressTick, stressSummary, extraSpots } from './game/stress';
-import { Quality, ladderAimOf, smokeKeepOf, rtVeto, p5Veto, sharpForce, gbaaForce, iqForce, gimVeto, froxelVeto, froxelForce } from './ui/quality';
+import { Quality, ladderAimOf, rtVeto, sharpForce, gbaaForce, iqForce } from './ui/quality';
 import { buildPanel } from './ui/bindings';
 import { SceneTweak } from './ui/sceneTweak';
 import { sceneLayers } from './ui/sceneLayers';
@@ -202,7 +199,8 @@ import { ANYTIME } from './scene/collision';
 import { knobRegistry, knobsCopy, knobsBack } from './game/knobs';   // (last on purpose: every game module above is already loaded, so this import changes nobody's load order)
 import type { Gpu } from './gpu/device';
 import { RENDER_PASSES } from './gpu/timer';
-import { PLAYTAPE, tapeFromUrl } from './replay/engineplay';
+import { PLAYTAPE, tapeFromUrl, tapeMapUrl } from './replay/engineplay';
+import { GAME_PAGE } from './replay/format';
 import { NETPLAY, NET_JOIN, netFromUrl, netKeyed, netLeave } from './net/page';
 import { netRows } from './ui/netrows';
 import { COOP } from './net/lobby';
@@ -226,13 +224,20 @@ boot.expose();
 
 async function main() {
   const q = new URLSearchParams(location.search);
+  // A REPLAY'S ADDRESS ON A GAME PAGE THAT PLAYS NO TAPES (replay/format.ts GAME_PAGE) is the map viewer's, which draws the file's trace: this window goes there
+  // before anything boots. A served file, and a build with no viewer page, get a plain card
+  if (q.has(PLAYTAPE) && !GAME_PAGE.playsTapes) { const to = tapeMapUrl(q); if (to === null) throw Object.assign(new Error('this address has no game on this build'), { name: 'NoGameHere' }); location.replace(to); return; }
   // THE KEPT PAGE (gpu/keep.ts, host/keeppage.ts): the tab's own page keeps the GPU device and shows the game in a frame of this address, so a mission start —
   // a load of that frame — compiles no shader this visit has compiled already. A shell boots nothing more; ?keeppage=0 = every load a whole page, as it was
-  const keep = keepPageBoot(q, ownPage(q) || kitViewOn);   // (a run of any kind keeps its own page: host/runpage.ts)
+  const keep = keepPageBoot(q, ownPage(q), kitViewOn);   // (a run of any kind keeps its own page: host/runpage.ts; the Team & kit picture draws with its page's device, on a lease beside it)
   if (keep.role === 'shell') { boot.stopRafProbe(); readyResolve(); return; }
   if (keep.role === 'leave') return;
   // NO MODULE, NO GAME (sim/sim.ts): the simulation is the Rust module's and nothing else works it out, so a page that cannot run it stops here, before
   // anything is built. With no WebAssembly (a browser whose policy turns this site's JIT off) it is the card below; anything else is a fault of the build
+  // THE RUST GAME IS THE PAGE'S GAME (host/rustgame.ts): its module is fetched and compiled here, before anything has asked for the simulation's, and handed to
+  // src/sim as the one instance, so `__ready` waits on it behind the boot card. There is no other game.
+  const rustGame = await import('./host/rustgame');
+  await rustGame.rustBoot();
   { const no = simWhyNot(); if (no) { console.info(simSay()); throw noWasm() ? new NoWasmError(no) : new Error(`the Rust simulation did not start: ${no}`); } }
   if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
   keymap.KEYMAP.handWhen = () => HANDRING.on;   // (…and his own actions on the key that leaves spare, the whistle's row with no key: host/keymap.ts HAND, the rule game/handring.ts)
@@ -295,8 +300,8 @@ async function main() {
   if (q.has('flatfog')) weatherVolConfig.on = false;   // ?flatfog: a picked weather's dust / fog as the flat veil composite laid over the outdoors, the picture as it was (render/frame.ts weatherVolConfig; the men's eyes: game/airDust.ts AIRDUST.on, host/profile.ts)
   if (q.has('norainwalls')) rainWallsConfig.on = false;   // ?norainwalls: the rain hidden from every pixel whose surface is inside a roof's rectangle — it stops dead at an outer wall's face and top, as it was (render/frame.ts rainWallsConfig)
   { const lv = lookPageRows(q);   // (those three words are the GWOT dress's, scene/look.ts lookOfQuery: not this page)
-    if (lookPageOn(q)) { lookConfig.on = true; LOOK_WORKERS.on = q.get('lookworkers') !== '0';   /* (the look's maps are made on workers: render/lookWorkers.ts; ?lookworkers=0 = on this thread, as they were) */ if (q.get('firefit') === '0') lookConfig.fireFit = 0; if (q.get('longfoot') === '0') lookConfig.longFoot = 0; if (q.get('walked') === '0') lookConfig.walked = 0;   /* (render/wear.ts: the traffic map takes every way the level is walked, scene/ways.ts; 0 = its routes and thresholds alone, as every other page has it) */   /* (render/wear.ts: the wall band × how long the face is; 0 = the band as every other page has it) */ if (q.get('firesnow') === '0') lookConfig.fireSnow = 0; if (q.get('emberfog') === '0') fireMod.FIRE_LOOK_SMOKE.emberFog = false; if (q.get('firesoot') === '0') fireMod.FIRE_LOOK_SMOKE.soot = [0.34, 0.31, 0.29]; }   // (?firefit=0: a fire's smoke and embers as they were before they were filed on the flame's own leaning middle, game/fire.ts FIRE_LOOK_SMOKE)
-      // ?look (the page /look; a one-file build of the prototype carries the meta instead, where the address takes no flags): THE LOOK PROTOTYPE — material maps, lit relief, weather, rounded edges (render/frame.ts lookConfig; shaders/look.wgsl; its panel: ui/lookpanel.ts). Off on every other page
+    if (lookPageOn(q)) { lookConfig.on = true; LOOK_LAB.on = lookLabOn(q);   /* (the lab: the page that asks for the look by name, scene/look.ts lookLabOn — its kit, its trials, its panel up) */ LOOK_WORKERS.on = q.get('lookworkers') !== '0';   /* (the look's maps are made on workers: render/lookWorkers.ts; ?lookworkers=0 = on this thread, as they were) */ if (q.get('firefit') === '0') lookConfig.fireFit = 0; if (q.get('longfoot') === '0') lookConfig.longFoot = 0; if (q.get('walked') === '0') lookConfig.walked = 0;   /* (render/wear.ts: the traffic map takes every way the level is walked, scene/ways.ts; 0 = its routes and thresholds alone, as every other page has it) */   /* (render/wear.ts: the wall band × how long the face is; 0 = the band as every other page has it) */ if (q.get('firesnow') === '0') lookConfig.fireSnow = 0; if (q.get('emberfog') === '0') fireMod.FIRE_LOOK_SMOKE.emberFog = false; if (q.get('firesoot') === '0') fireMod.FIRE_LOOK_SMOKE.soot = [0.34, 0.31, 0.29]; }   // (?firefit=0: a fire's smoke and embers as they were before they were filed on the flame's own leaning middle, game/fire.ts FIRE_LOOK_SMOKE)
+      // THE LOOK — material maps, lit relief, weather, rounded edges (render/frame.ts lookConfig; shaders/look.wgsl; its panel: ui/lookpanel.ts). EVERY PAGE'S PICTURE since 2026-11-07 (scene/look.ts lookPageOn; `?look=old` = the picture as it was). A page that asks for it by name (`?look`, the page /look, a one-file build's meta) is THE LOOK LAB as well
     charLookSides.on = lookConfig.on;   // (THE LOOK PROTOTYPE's men, shaders/look.wgsl lookMan: a man's material rows also say whose side he is on)
     if (lookConfig.on) for (const kv of lv.join(',').split(',')) { const [k, v] = kv.split(':'); if (Object.hasOwn(lookAmounts, k) && v !== undefined && v !== '' && isFinite(+v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, +v)); }
     wallSidesConfig.on = lookConfig.on && lookAmounts.walls > 0; smokeLabConfig.on = smokeLabAsked(q); smokeLook.on = lookConfig.on && q.get('smokelook') !== '0'; }   // (WALLS HAVE TWO SIDES: a const of the shaders, so the row is read here, before the engine is made: render/frame.ts wallSidesConfig; ?look=relief:1.4,air:2 opens the page with those amounts: a still without the panel)
@@ -317,7 +322,7 @@ async function main() {
   await tick();
   const tGpu = performance.now();
   const rigPage = q.has('bench') || runPage(q) || navigator.webdriver === true;   // a measurement or a driven page: it keeps its own page and its own timings
-  const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage, canvasRead: SAVEPIC.on && saveMod.SAVETIMELINE.on && !kitViewOn, keeper: keep.keeper });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
+  const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage, canvasRead: SAVEPIC.on && saveMod.SAVETIMELINE.on && !kitViewOn, keeper: keep.keeper, seat: keep.seat });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
   startCallClock(gpu.device);   // (the load's clock on its buffer, texture and submit calls, to the boot's freeze: gpu/keep.ts)
   if (kitViewOn) void gpu.device.lost.then(() => kitViewFatal());   // (?kitview: the device's own card — gpu/device.ts — is seen by nobody in there: the start page is told there is no picture)
   boot.span('gpu', tGpu); boot.mark('gpu');
@@ -351,6 +356,7 @@ async function main() {
   chP.catch(() => { /* awaited below */ });
   void chP.then(setFigureCast, () => { /* the menus' figure of a man stays undrawn */ });
   urlFlagsOnEngine(engine);
+  if (rustGame) rustGame.rustSettledHold();   // (?rust=1: the switch rows that are constants of the Rust game are held at their page values from here, before the level is dressed and the kept rows are read: host/rustgame.ts)
   let level = await bootLevel(q, engine, tick);
 
   await tick();
@@ -371,15 +377,17 @@ async function main() {
   // as __game.dice.seed), ?seed=off = the game on Math.random as before. A script that puts its own die in Math.random's place still gets the game's dice, as ever.
   const seed = ((): number | null => { const v = q.get('seed'); if (v === 'off') return null; const n = v === null || v === '' ? NaN : Number(v); return Number.isFinite(n) ? n >>> 0 : (crypto.getRandomValues(new Uint32Array(1))[0] >>> 0); })();
   recipeTables(); recipe?.env(engine.settings as never);
-  try { ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed })); }   // the ONE stand-up (src/host/standup.ts) — the world / lights were populated above; the harness and the native entry come through the same call
+  const input = Input.detached();   // (made BEFORE the stand, which hands the game its host's camera and keys, once — game.ts hostCam. It listens to nothing yet: its listeners go on below, where the page's Input was always made)
+  try { ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed, input })); }   // the ONE stand-up (src/host/standup.ts) — the world / lights were populated above; the harness and the native entry come through the same call
   catch (e) {   // ?level=local: an editor stash the file validator passed but the game cannot stand on (level.ts bootedLocalLevel) — say so, and boot the bundled office instead of dying on every reload
     if (!bootedLocalLevel) throw e;
     console.error('?level=local: the game could not be built on the editor level — falling back to the bundled office —', e);
     level = buildBundledLevel(); engine.world.statics.length = 0; engine.lights.lights.length = 0;
     hostLevel(engine, level, q);
-    ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed }));
+    ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed, input }));
   }
   boot.span('gameCtor', tGame); boot.mark('game');
+  if (rustGame) { rustGame.rustAttach(game); (window as any).__rust = Object.assign(rustGame.RUST_GAME, { hashes: rustGame.rustHashes, settled: rustGame.RUST_SETTLED, means: rustGame.rustMeans, resync: rustGame.rustResync, whole: rustGame.rustWhole, file: rustGame.rustFile, fileIn: rustGame.rustFileIn, poke: rustGame.rustPoke, call: rustGame.rustCall, state: rustGame.rustState, warmUp: (n?: number) => rustGame.rustWarm({ input, cam, canvas }, n) }); }   // (?rust=1: from here the game's tick is the Rust game's and this Game its puppet)
   if (LOOK.on) lookDoors(game.doors.list, engine.world.statics, LOOK_DOORS[(q.get('levelFile') ?? '').replace(/-gwot(?=\.json$)/, '')]);   // (picture only: under the default look a level that wears it has its door leaves in its own paint and weathered wood, not the office's veneer — scene/lookTidy.ts)
   // … and the maps of what the level stands up with are made before its first frame (render/gbuffer.ts needLook, awaited with the pipelines below): every static,
   // door's leaf and loose prop's part is asked its word, by the one rule (whatever a paint is told by: its colour, or a name) and after the leaves have their paint
@@ -398,14 +406,14 @@ async function main() {
   boot.span('pipelines', tPipe); boot.mark('pipelines');
   pipelineProgress.onChange = null; boot.freezePipelines(); keptFreeze(); gpuStory.stage = 'while setting up';
   pipeQueue.settle();   // THE COMPILE QUEUE (gpu/device.ts PIPE_QUEUE): from here the background set compiles two at a time, leaving the browser's GPU workers free to draw the page
-  cutSwap.start();   // CUT BOXES (render/cutSwap.ts): the second set of the tracing pipelines — the ones with the cut rule — compiled in the background from here, AFTER the boot's count is frozen (they are not the boot's); nothing waits on it, and a calm frame never dispatches it
+  engine.warmFirstUse();   // (…and the programs a pass used to make at its first use are asked for now, behind the start: engine.ts warmFirstUse)
   card.status(`${pipelineProgress.done} shaders ready — setting up`);
   gpu.device.queue.onSubmittedWorkDone().then(() => gpu.device.removeEventListener('uncapturederror', gpuErr)).catch(() => { /* device lost: its own card */ });   // (errors from work queued so far still arrive; later ones are the frame's, not the boot's)
   weatherHourHooks(game, smoke);
 
   const { audio, testMute } = pageAudio(game);
   worldHooks(engine, game, audio);
-  const input = new Input(canvas);
+  input.listen(canvas);
   (window as any).__findme = { table: FINDME, set: setFindMe };   // (host/findme.ts: the Options rows for finding your own man, for a page check to move without the screen)
   bindFindMe(cam); const ctrlTwice = watchCtrlTaps(window, () => !!input.lockExcept, keymap.camKey);   // (host/findme.ts: the player's kept aim pan onto the follow camera; the camera key tapped twice)
   window.__cam = cam;   // (the follow camera standGame put on the spawn)
@@ -414,8 +422,8 @@ async function main() {
   const bubbles = new Bubbles(document.getElementById('overlay')!);
   const demo = new Demo(game, cam, smoke, input); window.__demo = demo;
   // THE DIRECTOR (game/director.ts): level scripting. No shipped level has a script today — the office's two showcases, its only programs, were removed — so it idles, which
-  // is the game exactly. It is handed the camera and the input a program would pin and lock; __director is the Director itself (log, run, manifest, problems, start(name), stop(), summary()).
-  game.director.attach({ cam, input }); (window as any).__director = game.director;
+  // is the game exactly. The camera and the input a program would pin and lock are the game's hostCam / hostInput, handed at the stand; __director is the Director itself (log, run, manifest, problems, start(name), stop(), summary()).
+  (window as any).__director = game.director;
   squadFlagsAndHooks(q, engine, game);
   // game/demo.ts (the old 13-stop tour) stays in the tree for tools/qa/tour.ts's regression lap: __demo.start() by console, reachable from no button.
   /** END whatever hands-off programme has the floor — the old tour, or a level-script program should a level ever carry one — back to the start card (Esc / P while it runs) */
@@ -471,7 +479,6 @@ async function main() {
   giMotionHooks(engine);
   let benchOn: () => boolean = () => false;   // (a benchmark is running: set where it is built, below — ui/bench.ts)
   { let lastHint = -10; input.onLockedInput = () => { const now = performance.now() / 1000; if (show() && !benchOn() && now - lastHint > 3) { lastHint = now; game.msg(demo.active ? 'hands-off tour — P to stop · Esc to pause' : 'hands-off showcase — P to stop · Esc to pause'); } }; }
-  { const sk = new URLSearchParams(location.search).get('smokekeep'); if (sk !== null) engine.settings.smokeKeep = smokeKeepOf(sk); }   // ?smokekeep=0|1|2: the smoke under high as each preset had it / high's smoke at half size (the page) / high's whole path (ui/quality.ts SMOKE KEEP) — before the Quality below puts its first preset on
   { const og = new URLSearchParams(location.search).get('onegrid'); if (og !== null) engine.settings.oneCacheGrid = !(og === '0' || og === 'off' || og === 'false'); }   // ?onegrid=0: low and verylow back on their coarser light-cache grid (ui/quality.ts ONE CACHE GRID) — before the Quality below applies its first preset and parks the ladder's grids
   { const os = new URLSearchParams(location.search).get('onesolve'); if (os !== null) engine.settings.oneSmokeSolve = !(os === '0' || os === 'off' || os === 'false'); }   // ?onesolve=0: each preset back on its own smoke pressure pairs (ui/quality.ts ONE SMOKE SOLVE) — before the Quality below applies its first preset
   { const fs = new URLSearchParams(location.search).get('fireshed'); if (fs !== null) engine.settings.fireSmokeShed = !(fs === '0' || fs === 'off' || fs === 'false'); }   // ?fireshed=0: verylow keeps an open fire's smoke, as every other preset does (ui/quality.ts FIRE SMOKE SHED) — before the Quality below applies its first preset
@@ -488,6 +495,7 @@ async function main() {
   resolveGlassFlagsAndHooks(engine, gpu);
   if (smokeLook.on) putSmokeLook(engine);   // (HOW SMOKE IS DRAWN ON THE LOOK PAGE, render/smokeLook.ts: the lab's tuned numbers; ?smokelook=0 = as the build draws it. Before the panels are built: the smoke lab's "as the page opened" is these)
   const panel = new Panel();
+  if (rustGame) { const set = panel.setStatus.bind(panel); panel.setStatus = (f: () => string) => set(() => { const w = rustGame.rustSettledLine(); return w ? `${w} \u00b7 ${f()}` : f(); }); }   // (?rust=1: what the hold of the settled rows turned away, on the panel's first line: host/rustgame.ts)
   buildPanel(panel, engine, game, smoke, cam, overlay, audio, quality, () => ({ fps: fpsSm, union: unionSm }));   // (the status strip reads the frame loop's own smoothed numbers — only ever called from the panel's refresh, long after they exist)
   if (sneakLabAsked(new URLSearchParams(location.search))) sneakLabBoot(game, panel);   // ?sneaklab: the lab's own system in the panel, open (host/sneaklab.ts) — without the word nothing of it is made
   if (fireLabAsked(new URLSearchParams(location.search))) fireLabBoot(game, panel);   // ?firelab: the fire's numbers live in the panel (host/firelab.ts), nothing of it made without the word
@@ -503,9 +511,9 @@ async function main() {
   if (lookConfig.on) (window as any).__look = { get: () => ({ ...lookAmounts }), set: (o: Partial<typeof lookAmounts>) => { for (const [k, v] of Object.entries(o)) if (Object.hasOwn(lookAmounts, k) && typeof v === 'number' && isFinite(v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, v)); engine.gbuffer.setLook(); lookSync(); } };
   if (lookConfig.on) { lookSync(); lookConfig.exposure = () => { const h = hourOf(game); return h === 'night' ? null : hourExposure(h, HOURS[h].sun.intensity); }; lookConfig.nightSky = () => level.sky; lookConfig.snow = () => !!game.snowTracks; lookConfig.eyeAt = () => { const p = game.player.char.pos; return [p[0], p[2]]; };
     { let gaps: [number, number, number, number][] = [], of: unknown = null;   // the level's doors, as lines on the floor plan (scene/placePlan.ts placeMask `gaps`): made once a level's door list
-      lookConfig.doorGaps = () => { const L = game.doors.list; if (of !== L || gaps.length !== L.length) { of = L; gaps = L.map(d => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, w = d.def.width; return [hx, hz, hx + Math.cos(a) * w, hz + Math.sin(a) * w] as [number, number, number, number]; }); } return gaps; }; } (window as any).__look.powder = POWDER; (window as any).__look.cfg = lookConfig; (window as any).__look.powderField = () => engine.powder; const gq = new URLSearchParams(location.search), gOn = geoTryOn(gq); { const parts = { cut: cutConfig.on, cutFromBoot: cutConfig.on && !cutConfig.swap, geo: gOn, hills: groundRayConfig.on, lorry: lorryTryOn(gq) }; (window as any).__look.parts = () => ({ ...parts }); }   // (the look's trials as this page ASKED for them at boot, read once here — not whether the level had the thing a trial dresses; the address has the rest: seat, lorrykit, roll, round)
-    if (!gq.has(BENCH_RUN_KEY)) /* (a benchmark's scene page is nobody's to tune: no panel open over the picture it times, none of its timers, and the take leaves by the recorder's own way out) */ buildLookPanel(panel, engine, () => fpsSm, cutConfig.on && !gq.has('geo') ? { on: gOn, flip: () => { try { localStorage.setItem(LOOK_TRIALS.geo, gOn ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined, gq.has('hills') ? undefined : { on: groundRayConfig.on, flip: () => { try { localStorage.setItem(LOOK_TRIALS.hills, groundRayConfig.on ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } },
-    cutConfig.on && !gq.has('lorry') && /^pass\b/.test(gq.get('levelFile') ?? '') ? { on: lorryTryOn(gq), flip: () => { try { localStorage.setItem(LOOK_TRIALS.lorry, lorryTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined); }
+      lookConfig.doorGaps = () => { const L = game.doors.list; if (of !== L || gaps.length !== L.length) { of = L; gaps = L.map(d => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, w = d.def.width; return [hx, hz, hx + Math.cos(a) * w, hz + Math.sin(a) * w] as [number, number, number, number]; }); } return gaps; }; } (window as any).__look.powder = POWDER; (window as any).__look.cfg = lookConfig; (window as any).__look.powderField = () => engine.powder; const gq = new URLSearchParams(location.search), gOn = geoTryOn(gq); { const parts = { cut: cutConfig.on, cutFromBoot: cutConfig.on, geo: gOn, hills: groundRayConfig.on, lorry: lorryTryOn(gq) }; (window as any).__look.parts = () => ({ ...parts }); }   // (the look's trials as this page ASKED for them at boot, read once here — not whether the level had the thing a trial dresses; the address has the rest: seat, lorrykit, roll, round)
+    if (!gq.has(BENCH_RUN_KEY) && !kitViewOn) /* (the Team & kit picture's own window shows no panel; a benchmark's scene page is nobody's to tune: no panel open over the picture it times, none of its timers, and the take leaves by the recorder's own way out) */ buildLookPanel(panel, engine, () => fpsSm, LOOK_LAB.on, LOOK_LAB.on && cutConfig.on && !gq.has('geo') ? { on: gOn, flip: () => { try { localStorage.setItem(LOOK_TRIALS.geo, gOn ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined, !LOOK_LAB.on || gq.has('hills') ? undefined : { on: groundRayConfig.on, flip: () => { try { localStorage.setItem(LOOK_TRIALS.hills, groundRayConfig.on ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } },
+    LOOK_LAB.on && cutConfig.on && !gq.has('lorry') && /^pass\b/.test(gq.get('levelFile') ?? '') ? { on: lorryTryOn(gq), flip: () => { try { localStorage.setItem(LOOK_TRIALS.lorry, lorryTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined); }
   const hud = document.getElementById('hud')!;
   const tourVeil = document.getElementById('veil')!;   // black fade the tour raises around its cuts
   // start card now, pause menu on Esc (settings + controls); the simulation freezes while it is open, the frame keeps rendering
@@ -556,13 +564,13 @@ async function main() {
   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it — but not on a benchmark scene's page: its fight is the set's, and with
   // 'no AI' kept the mission below refuses to start at all (nobody would move), so the row has to stand off BEFORE the scenario is staged, not at the scene's start
   if (!benchSceneWaits() && !heldPage(q)) loadSandbox(game);   // (… nor on a level's page of the pricing run, host/runpage.ts: it stands the row off the same way, for its whole life)
-  // THE LOOK PROTOTYPE's kit (the maintainer, 11-01: "unlimited ammo and all equipment? want to play with smoke grenades", and "turning off fog of war would also
+  // THE LOOK LAB's kit (scene/look.ts LOOK_LAB: a page that asks for the look by name, not every page the look draws; the maintainer, 11-01: "unlimited ammo and all equipment? want to play with smoke grenades", and "turning off fog of war would also
   // be good for /look too"; ?lookkit=0 = the kit as dealt, the sandbox row as saved and the fog as the link has it): the unlimited ammunition row is up from the
   // start (not saved from here: the debugger's box still puts it down), Sam is never without two cans of smoke, two stun charges and two frags whatever card he
   // was dealt, and the fog of war is down unless the link asks for it by name (?fow). The page's alone; looked at a frame, since a mission deals its kit and
   // writes its fog late, and again at every restart.
   { const lq = new URLSearchParams(location.search);
-    if (lookConfig.on && lq.get('lookkit') !== '0' && !runPage(lq)) {   // (never on a benchmark's scene page: the set's own kit and fog, ui/benchrun.ts)
+    if (LOOK_LAB.on && lq.get('lookkit') !== '0' && !runPage(lq)) {   // (never on a benchmark's scene page: the set's own kit and fog, ui/benchrun.ts)
       const fog = lq.has('fow') || lq.has('fogofwar');
       game.infiniteAmmo = true;
       const top = () => { const pl = game.player; pl.canisters = Math.max(pl.canisters, 2); pl.flashbangs = Math.max(pl.flashbangs, 2); pl.frags = Math.max(pl.frags, 2);
@@ -646,7 +654,6 @@ async function main() {
   (window as any).__picks = { ui: PICKS_UI, list: PICKS, current: () => pickOfQuery(location.search), href: (id: string) => { const p = PICKS.find(x => x.id === id); return p ? pickHref(p, location.search) : null; }, silent: () => ({ start: SILENT.start, squad: squadSilent(game) }), difficulty: () => difficultyNow() };   // the short list (scene/picks.ts): the table, the row this page is, a row's URL, the team's posture (?silentstart) and the difficulty in force
   (window as any).__scenarios = { list: SCENARIOS, all: ALL_MISSIONS, current: scenario.current, quit: scenario.quit, pick: (id: string) => { const e = ALL_MISSIONS.find(x => x.id === id); if (e) { const to = location.pathname + pickSearch(e, location.search) + location.hash; if (to === location.pathname + location.search + location.hash) location.reload(); else location.assign(to); } return !!e; } };   // the picker for the console / automation: .list, .current(), .pick(id) (a page load), .quit()
   (window as any).__quiet = { get on() { return game.quiet.active; }, get deal() { return game.quiet.deal; }, get ops() { return game.quiet.ops; }, summary: () => game.quiet.summary(), log: game.quiet.log, check: () => checkQuiet(game), restage: () => game.quiet.restage() };   // the quiet mission (game/quiet.ts): what this run was dealt, the level's block against its floor
-  if (q.has('nopar')) PAR.on = false;   // ?nopar: a par level plays as its room clear alone — no clock (game/par.ts reads only: the run is the same either way)
   if (q.has('noissue')) ISSUE.on = false;   // ?noissue: a mission that issues kit of its own (scenarios.issue — game/kit.ts kitIssue) is staged with the cards this machine keeps
   if (q.has('nosnatch')) SNATCH.on = false;   // ?nosnatch: a snatch level plays as its room clear alone (game/snatch.ts)
   (window as any).__snatch = { knobs: SNATCH, get man() { return game.snatch.man; }, get end() { return game.snatch.end; }, get log() { return game.snatch.log; }, summary: () => game.snatch.summary(), check: () => checkSnatch(game), out: SNATCHOUT, get exfil() { return game.snatch.out; } };
@@ -656,7 +663,7 @@ async function main() {
   const openStartCard = !q.has('solo') && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !tape && !net && !kitViewOn;   // (?solo: the mission list's solo night — ui/missions.ts — is the plain night straight in)   // (opened below, once every hook is on window: that is the moment the card's buttons come alive and __ready resolves)
 
   let last = performance.now(); let lastTs = -1, vsDt = -1; let timeAcc = 0; let fpsSm = 60; const pace = pacer(), rate = rateMeter(); let frameCount = 0; let unionSm = 0; let simSm = 0;
-  const debugNames = ['final', 'albedo', 'normals', 'direct', 'indirect', 'volumetrics', 'depth', 'dice', 'lighting', 'denoise hints', 'specular', 'restir history', 'restir rays', 'denoise state', 'rt reflections', 'material', 'gi reservoirs', 'rt raw'];   // (16 = phase 5's gather reservoirs: r M ÷ cap, g temporal taken, b spatial taps; 17 = the reflection pass's output as fetched, before the cutoff fade)   // (specular = the glossy floors' reflection term + what the glass panes add, + the ray-traced reflections, composite debug view 10; rt reflections = the traced term alone, view 14; restir history / rays = views 11 / 12, restir.wgsl's diagnostics; 13 = the v3 shadow client's σ per class + history length)
+  const debugNames = ['final', 'albedo', 'normals', 'direct', 'indirect', 'volumetrics', 'depth', 'dice', 'lighting', 'denoise hints', 'specular', 'restir history', 'restir rays', 'denoise state', 'rt reflections', 'material', '(16: free)', 'rt raw'];   // (16 was the resampling gather's reservoirs; 17 = the reflection pass's output as fetched, before the cutoff fade)   // (specular = the glossy floors' reflection term + what the glass panes add, + the ray-traced reflections, composite debug view 10; rt reflections = the traced term alone, view 14; restir history / rays = views 11 / 12, restir.wgsl's diagnostics; 13 = the v3 shadow client's σ per class + history length)
 
   // scripted stepping for automated testing: __runFrames(n, dt, keys[]) runs n fixed steps with the given keys held
   let scripted = false;
@@ -667,7 +674,7 @@ async function main() {
   // (draw = false: only the burst's last step is rendered; the steps before it list the world their tick left (BoxWorld.relist: what the game reads; the pack is the drawn step's) and draw nothing. For a long scripted run
   //  on a slow adapter: the game steps the same, the GPU's senses are answered at the bursts' ends)
   let leanBurst = false;
-  window.__runFrames = (n: number, dtFixed = 1 / 60, keys: string[] = [], draw: boolean | 'none' = true) => { automated = true; attract.poke(); scripted = true; leanBurst = draw !== true; for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) step(dtFixed, draw !== 'none' && i === n - 1); } finally { for (const k of keys) input.keys.delete(k); leanBurst = false; scripted = false; } };   // (`draw` false: only the burst's last step is drawn — the others pack the world and go on; a step that throws leaves no key held and no burst open)
+  window.__runFrames = (n: number, dtFixed = 1 / 60, keys: string[] = [], draw: boolean | 'none' = true) => { automated = true; attract.poke(); scripted = true; leanBurst = draw !== true; for (const k of keys) input.keys.add(k); rustGame?.rustToolsWrote(); try { for (let i = 0; i < n; i++) step(dtFixed, draw !== 'none' && i === n - 1); } finally { for (const k of keys) input.keys.delete(k); leanBurst = false; scripted = false; rustGame?.rustToolsHold(); } };   // (`draw` false: only the burst's last step is drawn — the others pack the world and go on; a step that throws leaves no key held and no burst open)
   // __stage(pin | null, opts?): automation framing + staging in one call — pin = { look:[x,y,z], yaw, pitch, dist } fixes the camera verbatim (FollowCamera.pin:
   // no damping / aim lead), null releases it; opts.park = true parks every guard far away, torches off, held + pinned (the usual capture hygiene);
   // opts.guards = [{ i, pos, yaw?, torch?, aimPitch?, state? }] then places the listed ones; opts.player = { pos, yaw?, crouch?, holstered?, invisible? }.
@@ -796,7 +803,8 @@ async function main() {
   startBench = () => { attract.poke(); const no = bench.active ? 'it is running' : perfrec.recording ? 'a recording is running' : benchBlocked() ?? benchBegin(true); if (no) { perfNote = `benchmark not now: ${no}`; perfNoteT = 6; console.info(perfNote); } };
   // a scene's page of a run under way: its part starts by itself (the wait for the page to settle, then the scene)
   if (benchPage) { if (benchPage.leg.index === 0 && Object.keys(keptLevers()).length) benchPage.leg.notes.push('this machine keeps difficulty levers of its own: its fights are not the set\'s as dealt');
-    if (benchPage.leg.index === 0 && lookConfig.on) benchPage.leg.notes.push('This run was played on the look prototype, so its fights are not the set\'s as dealt.');   // (its geometry, its seated posts, its stirred smoke: another level and another air than the plain run's)
+    if (benchPage.leg.index === 0 && LOOK_LAB.on) benchPage.leg.notes.push('This run was played on the look lab\'s page, so its fights are not the set\'s as dealt.');   // (its geometry, its seated posts, a snow level's broken cloud: another level and another light than a run's on the game's own page)
+    if (benchPage.leg.index === 0 && !lookConfig.on) benchPage.leg.notes.push('This run was drawn without the look (?look=old): the picture as it was before 2026-11-07.');
     const said = bench.start({ ...benchOpts(benchPage.secs), sceneCapMs: benchPage.cap * 1250, heavyCapMs: Math.min(45, benchPage.cap * 0.6) * 1000, ...benchPage.opts }, benchPage.leg);
     if (!bench.active) { benchPage.leg.over(); perfNote = `benchmark ${said}`; perfNoteT = 6; console.info(perfNote); } }   // (sceneCapMs: the scene's own cap is the hands-off player's, on the game's clock; the benchmark's cut on the wall's clock stands a quarter behind it)
   else if (benchRefused) { perfNote = `benchmark not now: ${benchRefused}`; perfNoteT = 10; }
@@ -834,8 +842,8 @@ async function main() {
     cpu: out => { if (brief?.held || overlay.cardUp || tabUp || perfsweep.active || bench.freezing) { out[2] = NaN; return; } out[0] = perfrec.cpuUpdate; out[1] = perfrec.cpuRender; out[2] = performance.now() - perfrec.cpuFrameStart; out[3] = loop.ticks ?? 0; if (CALLS.play) out[4] = CALLS.play.ms - cloudCallsAt; },
     // (the boot's timeline, as ui/boot.ts took it: sent once the first frame's GPU work is back, or a minute after the page was interactive, or as the page goes)
     boot: last => keptRecord(bootRecord(boot.summary(), performance, last, shaderRowsOn(), location.origin, runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '')),   // (…with the kept page's words on a kept page: gpu/keep.ts)
-    // (…and what the load learnt after that: the later programs in, a mission's START live, and how long the programs with the cut rule took — render/cutSwap.ts builds them behind the boot)
-    later: have => laterRecord(boot.summary(), have, { cut: cutSwap.buildMs > 0 && cutSwap.state !== 'building' ? { ms: Math.round(cutSwap.buildMs), pipelines: cutSwap.pipelines, owners: cutSwap.built, ...(cutSwap.state === 'failed' ? { failed: true } : {}) } : undefined }) });   // (only once the build has ended with its numbers: a set that failed before it was through has none, and its failure is an error record of its own)
+    // (…and what the load learnt after that: the later programs in, a mission's START live)
+    later: have => laterRecord(boot.summary(), have) });
   // (…but what goes WRONG on a tape's page is still said: its reports go up under the records' own words, as a page's and not as a visit's — cloud.ts cloudReports)
   if (tape) void cloudReports(q, { page: 'tape', build: () => replaykey.commit ?? sessionrec.commit, machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now });
   if (cloud) {   // a lost device is one of the visit's error records (a device let go because the page is leaving is not a loss); a GPU error is printed by gpu/device.ts's own listener and reaches the records by the tapped console
@@ -965,7 +973,7 @@ async function main() {
     get time() { return timeAcc; }, set time(v: number) { timeAcc = v; },
     updateMs: 0,
     fixedStep: () => !scripted && !kitViewOn,   // (the fixed 60 Hz game step, host/loop.ts FIXEDSTEP: live frames only — a script's __runFrames names its own dt and gets exactly that; and never ?kitview's picture: host/kitView.ts stands its men round EVERY update from two hooks the loop calls once a frame, and a frame of two ticks or of none would leave updates unattended — it keeps one update a drawn frame under its own pacer, as it was built)
-    betweenTicks: () => { hudExpireBubbles(game); engine.world.relist(); },   // (nothing is drawn between two ticks: the list the cursor's ray reads, not the pack — scene/boxes.ts relist)
+    betweenTicks: () => { engine.world.relist(); },   // (nothing is drawn between two ticks: the list the cursor's ray reads, not the pack — scene/boxes.ts relist)
     ...(net ? { tick: (tdt: number, i: Input, c: FollowCamera, v: LoopCtx['view']) => net.tick(tdt, i, c, v), lead: () => net.lead() } : {}),   // (a networked game: the server's confirmed ticks step the game — net/page.ts)
     ctrlTwice,
     tween,
@@ -1024,7 +1032,6 @@ async function main() {
     fire: (man, at) => { const c = man ? man.char : game.player.char, w = firearmOf(game, c, !man); if (!w.fire()) { w.rearm(); w.fire(); }   // (as every fire site: Firearm.fire() cycles the round out FIRST — the gun's own counters are what tracers.ts isTracerRound reads; a dry or reloading gun is stood up fresh for it. The view tops the magazine up as the row ends)
       fireWeapon(game, c, at, !man, { steady: true }); }, panes: () => glassMod.glassPanes(game).map(i => game.level.boxes[i]),
     mendGlass: () => { glassMod.resetGlass(game); resetGlassPen(game); } }) : null;
-  let parSeen: ParResult | null = null;   // (the par result the page last saw: filed once, the frame it first appears)
   let parCheat = false;   // (a sandbox flag was on at some frame while this run's par clock ran: its time is not filed)
   // the verdict's bookkeeping (game/verdict.ts names how a run went; what this MACHINE keeps of it is the page's: ui/verdictStore.ts): `vRun` = the run the
   // three below belong to, `vKey` = the key it is kept under (mission + difficulty, read when the try starts), `vStreak` = which try of the streak it is
@@ -1057,11 +1064,11 @@ async function main() {
     modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
     // a par run just ended (game/par.ts): this machine's best for THIS run — level file, way in, squad size, difficulty — is filed here, the page's side,
-    // and its words go on the HUD line the game already said. Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —
+    // and its words ride the result where this page shows it (the card, the debrief). Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —
     // and the flag counts if it was on at ANY frame while the clock ran (`parCheat`), not only on the frame the result appears.
     if (!tape && !net && !kitViewOn) { const R = game.par.result();
       if (!game.par.started) parCheat = false; else if (game.godMode || !game.aiEnabled || game.infiniteAmmo) parCheat = true;
-      if (R !== parSeen) { parSeen = R; if (R && !parCheat) game.par.best(parBest(`${levelFileQ ?? 'office'}|way${(game.roomClear.way ?? 0) + 1}|squad${game.nightBreach.ops.length}|${difficultyNow()}`, R.shown)); } }
+      if (R && !game.par.bestSaid) game.par.best(parCheat ? '' : parBest(`${levelFileQ ?? 'office'}|way${(game.roomClear.way ?? 0) + 1}|squad${game.nightBreach.ops.length}|${difficultyNow()}`, R.shown)); }   // (once a run: the words are kept with the run they are about)
     vBooks();   // (the verdict's bookkeeping again, for a try that started this frame and an end no card followed)
     simSm = simSm * 0.95 + loop.updateMs * 0.05;   // (the read-out's 'sim ms': Game.update on the CPU, eased as the fps row is)
 
@@ -1089,7 +1096,7 @@ async function main() {
       unionSm = unionSm * 0.9 + t.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw']) * 0.1;   // the UNION of the compute passes' intervals: what the frame really cost on the GPU — the Σ above double-counts passes Metal ran side by side (direct beside the cascade chain is normal at play cadence: docs/internal/p0a-cascades.md)
       lines.push(row('gpu ∪ ms', `${unionSm.toFixed(2)}`));
       lines.push(row('sim ms', `${simSm.toFixed(2)} · ${1 + game.guards.length + game.civilians.length} characters`));   // (the CPU's half: Game.update, and how many men it is stepping — bodies count; tools/qa/enemy-ceiling.ts measures the same call headless)
-      const order = ['smoke', 'air', 'mesh', 'rc c4', 'rc c3', 'rc c2', 'rc c1', 'rc c0', 'rc dice', 'direct', 'dtemporal', 'softblur', 'gather', 'gatherLight', 'temporal', 'reflect', 'rdenoise', 'volFroxel', 'volInject', 'volTemporal', 'volInteg', 'volumetrics', 'particles', 'pdraw', 'sharpEdge', 'sharpU', 'compS', 'gbaa', 'taau', 'bloom', 'probe'];   // compute passes only (+ sharp direct's kernels while it is live: the edge mask (edge rays only), U, the composite) ('volFroxel' = the froxel kernels, or volInject / volTemporal / volInteg with passes.froxelSplitTiming; 'volumetrics' = the 2D pass): render-pass timestamps (gbuffer / composite / post / fxaa) on Metal span the wait for the drawable and read as ~one frame each, so they are left out rather than mislead ('mesh' = the mesh-shadow skin + refit, only while settings.meshShadows is on)
+      const order = ['smoke', 'air', 'mesh', 'rc c4', 'rc c3', 'rc c2', 'rc c1', 'rc c0', 'rc dice', 'direct', 'dtemporal', 'softblur', 'gather', 'gatherLight', 'temporal', 'reflect', 'rdenoise', 'volumetrics', 'particles', 'pdraw', 'sharpU', 'compS', 'gbaa', 'taau', 'bloom', 'probe'];   // compute passes only (+ sharp direct's kernels while it is live: U, the composite): render-pass timestamps (gbuffer / composite / post / fxaa) on Metal span the wait for the drawable and read as ~one frame each, so they are left out rather than mislead ('mesh' = the mesh-shadow skin + refit, only while settings.meshShadows is on)
       for (const k of order) if (t.results.has(k) && t.ranThisFrame(k)) lines.push(row('  ' + k, t.results.get(k)!.toFixed(2)));
       for (const k of t.results.keys()) if (!order.includes(k) && !RENDER_PASSES.includes(k) && t.ranThisFrame(k)) lines.push(row('  ' + k, t.results.get(k)!.toFixed(2)));   // (… and every other pass the timer holds, after the ones in their order: a pass that is timed has a row, whoever adds it. The fog of war's two passes had none, and the total was more than its rows)   // (only passes that actually ran this frame: a dormant one — particles with nothing alive — used to sit here at its last busy value)
       lines.push(row('boxes', `${engine.world.all.length} (dyn ${engine.world.dynamics.length})`));
@@ -1114,15 +1121,13 @@ async function main() {
   // THE LOAD BRIEF stays up, the world held still behind it (`frozen` below), until the player starts the run — on a page a person sits at. A page a script
   // drives, a benchmark, a show, or a mission whose start was refused (the start card says why) drops it here and goes on as before.
   const briefGo = !openStartCard && !automated && !benchOn() && !demo.active && !game.director.showing;
-  // THE START WAITS FOR THE PICTURE (ui/settle.ts): the brief holds the world, its block not yet live, until every program is in (the later set and the
-  // second, cut set: nothing compiles once the run is live) and the frames behind it have been drawn with them and measured. A press kept from the boot
+  // THE START WAITS FOR THE PICTURE (ui/settle.ts): the brief holds the world, its block not yet live, until every program is in (the later set too:
+  // nothing compiles once the run is live) and the frames behind it have been drawn with them and measured. A press kept from the boot
   // starts the run then. `__boot.marks.settled` is when; a script that takes the page meanwhile drops the brief (briefHolds) and the wait with it.
   const briefSettle = (b: NonNullable<typeof brief>): void => {
     const run = (): void => { audio.start(); input.focusGame(); };
     if (!SETTLE.on) { boot.mark('settled'); b.live(run); return; }
     b.hold(); pipeQueue.rush(true);
-    // (the second set is a program that is out, for this wait and for everyone who asks the same question: auto quality's measure, `__ready`, the load's own `laterReady`)
-    if (cutSwap.state === 'building') void (cutSwap.ready ?? Promise.resolve(false)).finally(laterHold());
     const P = pipelineProgress, S = new Settle(); let laterMost = laterProgress.pending, settleLast = performance.now(), drawnAt = behind.drawn;
     const back = (): void => { settleLast = performance.now(); };   // (a tab that comes back: the time it was away is not the wait's)
     const end = (): void => { settling = false; pipeQueue.rush(false); document.removeEventListener('visibilitychange', back); };
@@ -1143,6 +1148,7 @@ async function main() {
     else if (missionsBusy() || !loadoutFromQuery(q)) openMissionsIfAsked(); } else if (brief && briefGo) briefSettle(brief); else card.off();   // (?loadout=<mission id>: that mission's loadout screen over the card — ui/loadout.ts; else the mission list if the page was left on it. A screen the visitor opened off the boot card meanwhile stays the one that is up)
   loading.style.display = 'none';   // (the backdrop went before the first frame in the old boot too; the card is over the canvas until Start, and ?paused / a script that only __shot()s must not keep it)
   boot.mark('interactive'); boot.span('toInteractive', 0, performance.now()); gpuStory.stage = '';
+  if (brief?.held) rustGame?.rustWarm({ input, cam, canvas });   // (?rust=1: the Rust game started, its apply and its tick run once behind the same card: host/rustgame.ts rustWarm)
   if (brief?.held) game.saves.warm(game);   // (the save's code run once behind a brief that is up and not yet started, where a stall is nobody's — after the boot's own marks, which it is no part of: game/savestate.ts SAVETIMELINE.base)
   setTimeout(() => bootLine(), 5000);   // (the line prints at 'GPU ready'; a paused / hidden page that renders nothing still gets it, first-frame columns blank)
   // (START ON FIRST FRAME SHADERS, on where a person sits and off on a page a script drives: the card above is live while the later set still compiles and its passes draw their stand-ins. A script's
@@ -1156,12 +1162,16 @@ async function main() {
 // ---- main()'s parts: each is a run of main()'s own lines moved out whole and called where it stood, in the same order; nothing inside one was rewritten. What still
 // shares main()'s frame state (the shows, the menus, the automation hooks, the loop) stays in main().
 /** the URL flags the Engine reads while it builds its pipelines — set before `new Engine` */
-// THE LOOK PAGE'S TRIALS (scene/look.ts LOOK_TRIALS, lookTrialOn: the address's word wins, else what the look panel's button last kept on this machine).
-const hillRaysOn = (q: URLSearchParams) => lookConfig.on && lookTrialOn(q, 'hills');   // (GROUND THAT RAYS CAN SEE, A TRIAL — scene/groundField.ts: ?hills= wins; else what the look panel's button last kept on this machine)
+// THE LOOK'S TRIALS (scene/look.ts LOOK_TRIALS, lookTrialOn: the address's word wins, else what the look panel's button last kept on this machine). ALL THREE ARE
+// THE LAB's (scene/look.ts LOOK_LAB): off on every page that does not ask for the look by name, whatever this machine kept. `geo` and `lorry` REWRITE THE LEVEL
+// the page's game then plays. `hills` reads like the picture's and is not: the game's own rays meet the ground field too (scene/boxes.ts `groundOn`: a sight
+// line, the cursor's point) and the snow field is built with its roll (game/game.ts), so with it on a page's game is not its server's. It was on every page
+// for one step of the build (2026-11-07) and co-op's wider word parted on every tick: tools/qa/mpclient-page.cjs `wider word` is the check that holds this.
+const hillRaysOn = (q: URLSearchParams) => LOOK_LAB.on && lookTrialOn(q, 'hills');   // (GROUND THAT RAYS CAN SEE, A TRIAL — scene/groundField.ts: ?hills= wins; else what the look panel's button last kept on this machine)
 /** A LORRY WITH CURVES, A TRIAL (scene/lorryTry.ts): on the look page's pass with cut boxes on, unless ?lorry=0 or the look panel's button put it off. Off everywhere else. */
-const lorryTryOn = (q: URLSearchParams) => lookConfig.on && cutConfig.on && /^pass\b/.test(q.get('levelFile') ?? '') && lookTrialOn(q, 'lorry');   // (only the pass has that lorry; ?lorry= wins, else what the look panel's button last kept on this machine)
+const lorryTryOn = (q: URLSearchParams) => LOOK_LAB.on && cutConfig.on && /^pass\b/.test(q.get('levelFile') ?? '') && lookTrialOn(q, 'lorry');   // (only the pass has that lorry; ?lorry= wins, else what the look panel's button last kept on this machine)
 /** A GEOMETRY TRIAL (scene/geoTry.ts): on the look page (?look) with cut boxes on, unless ?geo=0 or the look panel's Shapes button put it off. Off on every other page. */
-const geoTryOn = (q: URLSearchParams) => lookConfig.on && cutConfig.on && lookTrialOn(q, 'geo');
+const geoTryOn = (q: URLSearchParams) => LOOK_LAB.on && cutConfig.on && lookTrialOn(q, 'geo');
 function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (q.get('roundexact') === '1') roundConfig.exact = true;   // ?roundexact=1: the ray programs with the cut rule test a round thing's cylinder as well, as they did at first (scene/round.ts roundConfig; common.wgsl ROUND_AS_CUT) — a picture comparison only, and more than a newer software adapter runs
   if (q.get('blastpace') === 'old') BLAST_PACE.on = false;   // ?blastpace=old: everything a wall going sets off is done on the frame it goes, as before (game/destructionSwitch.ts BLAST_PACE; same play, same masks and drip lines — one longer frame)
@@ -1171,14 +1181,13 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   { const tv = Number(q.get('trace')); if (q.has('trace') && Number.isFinite(tv) && tv >= 0) traceConfig.variant = tv | 0; }
   if (glassMod.glassFxBoot() && (q.has('glassbreak') ? q.get('glassbreak') !== '0' : glassBreakPersisted())) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline
   groundRayConfig.on = hillRaysOn(q); if (groundRayConfig.on && q.has('roll')) { const r = Number(q.get('roll')); if (Number.isFinite(r)) groundRayConfig.roll = Math.max(0, Math.min(0.25, r)); }   // (?roll=<m>: the open ground's snow swells this deep — the trial's second half, off unless asked)
-  initCutSwitch(); if (geoTryOn(q) || lorryTryOn(q)) cutConfig.swap = false;   // (A GEOMETRY TRIAL, scene/geoTry.ts: its cut boxes stand from the first frame to the last, so the one set of ray programs with the cut rule is compiled at boot)
-  roundConfig.gpu = ROUND.on && cutConfig.on && !(lookConfig.on && !cutConfig.swap && q.get('round') !== '1');   // (ROUND THINGS, scene/round.ts: the GPU's half — the prelude's ROUND_BOXES const, the round bit, the prism's rows — set once, before the first pipeline. It needs the cut switch, whose table and pipeline draw a round: without that one a round is drawn and traced as the box round it, and the game meets the cylinder all the same. THE LOOK PROTOTYPE with a geometry trial on (the cut rule in every ray program from boot, the line above) is compiled WITHOUT the round test unless `?round=1` asks: with it on top the software adapter lost its device on the first drawn frame where the plain page drew, docs/agents/render.md. `ROUND.on` is not moved: the game still plays a round thing round)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
+  initCutSwitch();
+  roundConfig.gpu = ROUND.on && cutConfig.on && !((geoTryOn(q) || lorryTryOn(q)) && q.get('round') !== '1');   // (ROUND THINGS, scene/round.ts: the GPU's half — the prelude's ROUND_BOXES const, the round bit, the prism's rows — set once, before the first pipeline. It needs the cut switch, whose table and pipeline draw a round: without that one a round is drawn and traced as the box round it, and the game meets the cylinder all the same. THE LOOK PROTOTYPE with a geometry trial on (scene/geoTry.ts: its cut boxes stand from the first frame to the last) is compiled WITHOUT the round test unless `?round=1` asks: with it on top the software adapter lost its device on the first drawn frame where the plain page drew, docs/agents/render.md. `ROUND.on` is not moved: the game still plays a round thing round)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
   { const ds = Number(q.get('decalStress')); if (ds > 1) decalDebug.repeat = Math.min(64, ds | 0); }   // measurement only (?decalStress=N): the decal lookup N× per g-buffer fragment (render/decals.ts decalDebug), so its cost can be read above the timer's noise; must be set before the Engine builds the g-buffer shader
 }
 
 /** the URL flags written onto the fresh Engine's settings (before the level loads and any preset applies), and __sharp */
 function urlFlagsOnEngine(engine: Engine) {
-  if (new URLSearchParams(location.search).has('legacydenoise')) engine.settings.denoiser = 'legacy';   // ?legacydenoise: renderer v3 phase 3 off from boot — dtemporal + softblur, temporal + giblur, the gloss chain: the three old denoisers byte for byte
   if (new URLSearchParams(location.search).has('noleakfix')) engine.settings.dnShadowOccl = false;   // ?noleakfix: the shadow denoiser's occluded-light reading off from boot (settings.dnShadowOccl) — a hidden torch's cone can show faintly on a lit floor behind its wall, as it did
   if (new URLSearchParams(location.search).has('notaau')) engine.settings.taau = false;   // ?notaau: renderer v3 phase 1 off from boot — no jitter, output = internal, FXAA + the browser's bilinear: the old chain byte for byte (decided before the presets apply: they start at their TAAU scale only with it on)
   if (new URLSearchParams(location.search).has('nosharp')) { sharpForce.v = false; engine.settings.sharpDirect = false; }   // ?nosharp: sharp direct (decoupled resolution — engine.ts RenderSettings.sharpDirect) off from boot AND for every preset applied: main's frame under TAAU, for A/B and the identity hashes
@@ -1189,20 +1198,17 @@ function urlFlagsOnEngine(engine: Engine) {
   (window as any).__sharp = {   // sharp direct from the console: on / off, what it runs at, its memory
     get on() { return engine.settings.sharpDirect; }, set on(v: boolean) { engine.settings.sharpDirect = !!v; },
     get live() { return engine.sharpOn; },
-    get edgeRays() { return engine.settings.sharpEdgeRays; }, set edgeRays(v: boolean) { engine.settings.sharpEdgeRays = !!v; },
-    knobs: () => { const S = engine.settings; return { edgeRays: S.sharpEdgeRays, edgeSpread: S.sharpEdgeSpread, edgeHintPx: S.sharpEdgeHintPx, planeK: S.sharpPlaneK, sliver: S.sharpSliver, sliverCap: S.sharpSliverCap, diag: S.sharpDiag, gbaaClamp: S.gbaaClamp, heldRays: S.heldRays, hueSplit: S.restirHueSplit }; },
-    set: (k: Partial<{ edgeRays: boolean; edgeSpread: number; edgeHintPx: number; planeK: number; sliver: number; sliverCap: number; diag: number; gbaaClamp: boolean; heldRays: number; hueSplit: boolean }>) => { const S = engine.settings; if (k.edgeRays !== undefined) S.sharpEdgeRays = !!k.edgeRays; if (k.edgeSpread !== undefined) S.sharpEdgeSpread = k.edgeSpread; if (k.edgeHintPx !== undefined) S.sharpEdgeHintPx = k.edgeHintPx; if (k.planeK !== undefined) S.sharpPlaneK = k.planeK;
+    knobs: () => { const S = engine.settings; return { planeK: S.sharpPlaneK, sliver: S.sharpSliver, sliverCap: S.sharpSliverCap, diag: S.sharpDiag, gbaaClamp: S.gbaaClamp, heldRays: S.heldRays, hueSplit: S.restirHueSplit }; },
+    set: (k: Partial<{ planeK: number; sliver: number; sliverCap: number; diag: number; gbaaClamp: boolean; heldRays: number; hueSplit: boolean }>) => { const S = engine.settings; if (k.planeK !== undefined) S.sharpPlaneK = k.planeK;
       if (k.sliver !== undefined) S.sharpSliver = k.sliver; if (k.sliverCap !== undefined) S.sharpSliverCap = k.sliverCap; if (k.diag !== undefined) S.sharpDiag = k.diag; if (k.gbaaClamp !== undefined) S.gbaaClamp = !!k.gbaaClamp; if (k.heldRays !== undefined) S.heldRays = k.heldRays; if (k.hueSplit !== undefined) S.restirHueSplit = !!k.hueSplit; return (window as any).__sharp.knobs(); },   // (+ the direct-quality lane's knobs: the sliver rule / cap / paint, GBAA's clamp, the hybrid estimator's K — docs/internal/direct-quality.md)
     /** the sliver census of the LAST frame: sharpE[0]'s alpha carries the fallback code per output pixel (sharp_direct.wgsl SLIVERS) → counts {px, live, ring, sliver, traced, unshadowedDefault} + the per-row mask if asked (harness: tools/qa/dq-scenes.js) */
     census: async (mask = false) => { const t = engine.passes.sharpE[0]; if (!engine.sharpOn || !t) return null; const dev = engine.device; const w = t.width, h = t.height; const bpr = Math.ceil(w * 8 / 256) * 256; const buf = dev.createBuffer({ size: bpr * h, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ }); const enc = dev.createCommandEncoder(); enc.copyTextureToBuffer({ texture: t }, { buffer: buf, bytesPerRow: bpr }, [w, h]); dev.queue.submit([enc.finish()]); await buf.mapAsync(GPUMapMode.READ); const u16 = new Uint16Array(buf.getMappedRange().slice(0)); buf.unmap(); buf.destroy();
       const f16 = (x: number) => { const e = (x >> 10) & 31, m = x & 1023; return e === 0 ? m * 5.960464477539063e-8 : (1 + m / 1024) * Math.pow(2, e - 15); }; let ring = 0, sliver = 0, traced = 0, unsh = 0; const m8 = mask ? new Uint8Array(w * h) : null;
       for (let y = 0; y < h; y++) { const row = y * bpr / 2; for (let x = 0; x < w; x++) { const c = Math.round(f16(u16[row + x * 4 + 3])); const k = c & 3; if (k === 1) ring++; else if (k === 2) sliver++; if (c & 4) traced++; if (c & 8) unsh++; if (m8) m8[y * w + x] = c; } }
       return { w, h, px: w * h, ring, sliver, traced, unshadowedDefault: unsh, sliverPct: +(100 * sliver / (w * h)).toFixed(3), tracedPct: +(100 * traced / (w * h)).toFixed(3), mask: m8 }; },
-    summary: () => `sharp direct ${engine.settings.sharpDirect ? 'ON' : 'off'}${engine.sharpOn ? ` — live: g-buffer / U / composite / TAA at ${engine.outWidth}×${engine.outHeight}, stochastic terms at ${engine.width}×${engine.height} (+${((engine.passes.sharpBytes + engine.gbuffer.sharpBytes) / 1048576).toFixed(0)} MB: the output-size raster, the direct pair, the larger HDR target, the edge mask)` : engine.settings.sharpDirect ? ` — idle (${!engine.settings.taau ? 'TAAU off' : engine.settings.debugView ? 'debug view' : 'render scale 1.0: nothing to decouple'})` : ''}`,
+    summary: () => `sharp direct ${engine.settings.sharpDirect ? 'ON' : 'off'}${engine.sharpOn ? ` — live: g-buffer / U / composite / TAA at ${engine.outWidth}×${engine.outHeight}, stochastic terms at ${engine.width}×${engine.height} (+${((engine.passes.sharpBytes + engine.gbuffer.sharpBytes) / 1048576).toFixed(0)} MB: the output-size raster, the direct pair, the larger HDR target)` : engine.settings.sharpDirect ? ` — idle (${!engine.settings.taau ? 'TAAU off' : engine.settings.debugView ? 'debug view' : 'render scale 1.0: nothing to decouple'})` : ''}`,
   };
   if (new URLSearchParams(location.search).has('nortreflect')) { rtVeto.on = true; engine.settings.rtReflect = false; }
-  if (new URLSearchParams(location.search).has('nogim')) { gimVeto.on = true; engine.settings.giFullRes = false; engine.settings.giYoungRays = 1; engine.settings.ladderClimb = false; engine.settings.capClimb = false; }   // ?nogim: GI-in-motion's switches off from boot AND its two renderer switches vetoed for the presets — the frame as it was before the lane (the identity hashes, A/B); the Tab rows still flip them by hand
-  if (new URLSearchParams(location.search).has('nop5')) { p5Veto.on = true; engine.settings.giResample = 'off'; engine.settings.rtMeshHits = false; engine.settings.rtHitReuse = false; }   // ?nop5: renderer v3 phase 5's ultra extras off from boot AND vetoed for the presets — ultra's frame as it was before the phase (the identity hashes, A/B); the Tab rows still flip them by hand   // ?nortreflect: renderer v3 phase 4's reflection pass off from boot AND vetoed for the presets (auto's ladder re-applies them) — with ?detail=0 the untouched frame for A/B; the Tab row still flips it by hand
   { const dv = new URLSearchParams(location.search).get('detail'); if (dv !== null && isFinite(parseFloat(dv))) engine.settings.detail = Math.max(0, Math.min(1, parseFloat(dv))); }
   if (new URLSearchParams(location.search).has('nomarkings')) engine.settings.markings = false;   // ?nomarkings: the markings lane's pixel-art signifiers off from boot — nothing evaluated, no marking lights registered (with ?level=relief the frame main draws)
 }
@@ -1228,15 +1234,15 @@ async function bootLevel(q: URLSearchParams, engine: Engine, tick: () => Promise
   const tLv = performance.now();   // the level: parse + validate + load (the bundled office, or ?levelFile= off the dev server)
   let level = null as ReturnType<typeof buildLevel> | null;
   { const lf = q.get('levelFile');
-    if (lf && /^[\w.-]+\.json$/.test(lf)) { try { /* (scene/look.ts: the level's file in the default look where it has one — ?look=plain = the file named; a look file that is not there = the file named) */ const lk = lookLevelFile(lf); let r = await fetch(`/levels/${lk}`, { cache: 'no-store' }); if (!r.ok && lk !== lf) { console.warn(`?levelFile=${lf}: its file in the default look (${lk}) did not load (HTTP ${r.status}) — the plain file`); r = await fetch(`/levels/${lf}`, { cache: 'no-store' }); } if (!r.ok) throw new Error(`HTTP ${r.status}`); const data0 = parseLevelData(await r.text(), kitViewOn ? {} : { kitView: 'drop' }) /* (a mission to PLAY is not refused for its Team & kit picture's block — left out, said once; the picture's own page and every tool refuse it) */, kvWay = kitViewOn ? kitViewWayOfLink(q, data0) /* (the way the mission the link starts stages its team on — a room clear's `way`, every other kind's one start: the child's stagedWay) */ : 0, data1 = kitViewOn ? kitViewSetLevel(data0, kvWay) : data0, data = kitViewOn && data1 === data0 ? kitViewAddLevel(data0, kvWay) /* (…or the level's own way with the pieces and lamps its `add` writes laid in after the level's: the picture's only, the mission as it is) */ : data1; kitSetUp = data1 !== data0;   /* (?kitview, and the way being staged names a bespoke SET: its boxes, doors and lamps instead of the level's, the level's paint, sky, moon and name kept — host/kitViewSet.ts. No set, or no ?kitview: the very data that was parsed) */ level = !kitSetUp && isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data);   /* (a level that is not the office: no office script, its scenarios are its own file's) */ } catch (e) { if (kitViewOn) throw e;   /* (?kitview: no picture of ANOTHER place — main()'s catch tells the start page there is none) */ console.error(`?levelFile=${lf}: falling back to the bundled office —`, e); } } }
-  // (?kitview on the BUNDLED office — a mission with no ?levelFile=: its scenario data is code (levels/office.scenarios.ts), so a way of its block that names a
+    if (lf && /^[\w.-]+\.json$/.test(lf)) { try { /* (scene/look.ts: the level's file in the default look where it has one — ?look=plain = the file named; a look file that is not there = the file named) */ const lk = lookLevelFile(lf); let r = await fetch(`/levels/${lk}`, { cache: 'no-store' }); if (!r.ok && lk !== lf) { console.warn(`?levelFile=${lf}: its file in the default look (${lk}) did not load (HTTP ${r.status}) — the plain file`); r = await fetch(`/levels/${lf}`, { cache: 'no-store' }); } if (!r.ok) throw new Error(`HTTP ${r.status}`); const data0 = parseLevelData(await r.text(), kitViewOn ? {} : { kitView: 'drop' }) /* (a mission to PLAY is not refused for its Team & kit picture's block — left out, said once; the picture's own page and every tool refuse it) */, kvWay = kitViewOn ? kitViewWayOfLink(q, data0) /* (the way the mission the link starts stages its team on — a room clear's `way`, every other kind's one start: the child's stagedWay) */ : 0, data1 = kitViewOn ? kitViewSetLevel(data0, kvWay) : data0, data = kitViewOn && data1 === data0 ? kitViewAddLevel(data0, kvWay) /* (…or the level's own way with the pieces and lamps its `add` writes laid in after the level's: the picture's only, the mission as it is) */ : data1; kitSetUp = data1 !== data0;   /* (?kitview, and the way being staged names a bespoke SET: its boxes, doors and lamps instead of the level's, the level's paint, sky, moon and name kept — host/kitViewSet.ts. No set, or no ?kitview: the very data that was parsed) */ level = loadLevel(data);   /* (its scenarios are its own file's) */ } catch (e) { if (kitViewOn) throw e;   /* (?kitview: no picture of ANOTHER place — main()'s catch tells the start page there is none) */ console.error(`?levelFile=${lf}: falling back to the bundled office —`, e); } } }
+  // (?kitview on the BUNDLED office — a mission with no ?levelFile=: its file is in the build, so a way of its block that names a
   //  bespoke SET goes through the same loader here. No block, no set on that way, or no ?kitview: buildLevel() exactly as before)
-  if (!level && kitViewOn && OFFICE_SCENARIOS.kitView && q.get('level') === null) { try { const data0: LevelData = { ...OFFICE_DATA, scenarios: OFFICE_SCENARIOS }, kvWay = kitViewWayOfLink(q, data0), data = kitViewSetLevel(data0, kvWay); if (data !== data0) { level = loadLevel(data); kitSetUp = true; } else { const more = kitViewAddLevel(data0, kvWay); if (more !== data0) level = withOfficeScript(loadLevel({ ...OFFICE_DATA, boxes: more.boxes, lights: more.lights })); /* (the office's own way with its `add`: the office as buildLevel loads it, the pieces after its boxes — its scenarios are the script's, so THIS Level's block carries no `laid` word: the child never lays, kitView.ts planFor) */ } } catch (e) { console.error('?kitview: the office\'s set did not load — the office itself —', e); } }
+  if (!level && kitViewOn && OFFICE_DATA.scenarios?.kitView && q.get('level') === null) { try { const data0: LevelData = OFFICE_DATA, kvWay = kitViewWayOfLink(q, data0), data = kitViewSetLevel(data0, kvWay); if (data !== data0) { level = loadLevel(data); kitSetUp = true; } else { const more = kitViewAddLevel(data0, kvWay); if (more !== data0) level = loadLevel({ ...OFFICE_DATA, boxes: more.boxes, lights: more.lights }); /* (the office's own way with its `add`: the office as buildLevel loads it, the pieces after its boxes — its scenarios are its FILE's, not `more`'s, so THIS Level's block carries no `laid` word: the child never lays, kitView.ts planFor) */ } } catch (e) { console.error('?kitview: the office\'s set did not load — the office itself —', e); } }
   if (!level) level = buildLevel();
   if (geoTryOn(q)) { const gt = geoTryLevel(level, skyPlan(level.boxes)); console.info(`geometry trial: ${gt.rounds} round things, ${gt.walls} broken wall tops (?geo=0 = the level as its file has it)`); }   // A GEOMETRY TRIAL (scene/geoTry.ts; the look page only): the level's octagons as round prisms, a bite out of each yard wall's top — cut boxes, before the boxes go to the world
   if (lorryTryOn(q)) { const n = dressLorry(level); console.info(n ? `lorry: ${n} pieces placed by hand (?lorry=0 = the lorry as its file has it)` : 'lorry: the level\'s own lorry stands (it says its shapes, or it is not the lorry scene/lorryTry.ts knows): nothing touched');
     if (n && q.get('lorrykit') !== '0') { const kit = kitLorry(level); console.info(`lorry: ${kit} fittings (?lorrykit=0 = the curved lorry without them)`); } }   // A LORRY WITH CURVES, A TRIAL (scene/lorryTry.ts; the look page only, and only the pass's lorry)
-  if (lookConfig.on && new URLSearchParams(location.search).get('seat') !== '0') { const n = seatPosts(level); if (n) console.info(`look: ${n} post${n === 1 ? '' : 's'} seated a hair proud of the wall end they stand in (?seat=0 leaves them)`); }   // (scene/lookMend.ts — the look page only)
+  if (LOOK_LAB.on && new URLSearchParams(location.search).get('seat') !== '0') { const n = seatPosts(level); if (n) console.info(`look: ${n} post${n === 1 ? '' : 's'} seated a hair proud of the wall end they stand in (?seat=0 leaves them)`); }   // (scene/lookMend.ts — the look lab only: it moves a box of the level the game plays by 4 mm, and the mend for every page is in the level's file)
   hostLevel(engine, level, q);
   boot.span('level', tLv); boot.mark('level');
   return level;
@@ -1255,7 +1261,7 @@ function weatherHourHooks(game: Game, smoke: SmokeSystem) {
   // THE LOOK PROTOTYPE opens a snow level under BROKEN cloud (half cover: hours.ts leaves 0.70 of the hour's sun, its own small disc and the sky's colour) where the
   // game's snow falls from a deck (0.9: 0.09 of the sun, a wide disc, no shadows). The maintainer, 10-25, of the pass at midday on that page: "i'd still expect a
   // stronger directional light from the sun in midday". The night is not touched by cloud. The panel's Cloud row moves it.
-  if (lookConfig.on && game.weather?.kind === 'snow') (window as any).__hour.cover(LOOK_SNOW_COVER);
+  if (LOOK_LAB.on && game.weather?.kind === 'snow') (window as any).__hour.cover(LOOK_SNOW_COVER);   // (the lab's alone: the cover is the weather's own number, read by the light the game's men see by as well as by the picture)
   // the night's moon (the level's own steady directional light: hours.ts puts it out by day). __moon.set({ k, elev, bearing }) = its strength, how high it stands and
   // where (degrees; bearing 0 = north = −z, 90 = east, the sun's convention) for the VISIT — the look panel's rows. Not carried by a save or a recording, and the
   // light meter's CPU stand-in (guards.ts lightEstimateAt) reads no directional light but the hour's sun: a raised moon moves the picture and the GPU's meter only.
@@ -1347,11 +1353,7 @@ function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
   const CUT_TEST_KEY = MKEY.test + 0x8000; let cutSerial = 0;   // (clear of the moths' 0x4000s and of a broken fixture's 0x5000‥0x6FFF, game/fixtureBreak.ts: one key, one box — the fog's thing rule reads a fixture's low parts as one body)
   (window as any).__cut = {
     get on() { return cutConfig.on; }, set on(v: boolean) { try { localStorage.setItem('twopointsix.cutboxes', v ? '1' : '0'); } catch { /* no storage */ } },   // (persisted; the build follows at the next boot)
-    get stats() { return { ...engine.world.cutStats, drawn: engine.world.visibleCutCount, drawnWhole: engine.cutWhole, traced: engine.world.cutTraced }; },
-    /** A CALM ROOM PAYS NOTHING (render/cutSwap.ts): which ray programs the frame dispatches — `live` true = the set with the cut rule (taken while a cut piece a ray can meet is alive), false = the boot's;
-     *  `ready` resolves once the second set is compiled; `force` 'cut' | 'base' | null pins a set by hand (the cost lab's rows) */
-    programs: { get swap() { return cutSwap.enabled; }, get state() { return cutSwap.state; }, get live() { return cutSwap.live; }, get ready() { return cutSwap.ready ?? Promise.resolve(false); }, get force() { return cutSwap.force; }, set force(v: 'cut' | 'base' | null) { cutSwap.force = v === 'cut' || v === 'base' ? v : null; },
-      get info() { return { swap: cutSwap.enabled, state: cutSwap.state, live: cutSwap.live, force: cutSwap.force, pipelines: cutSwap.pipelines, owners: cutSwap.built, buildMs: Math.round(cutSwap.buildMs), swaps: cutSwap.swaps, traced: engine.world.cutTraced, drawnWhole: engine.cutWhole, hot: cutSwap.hotPinned, error: cutSwap.error }; } },
+    get stats() { return { ...engine.world.cutStats, drawn: engine.world.visibleCutCount, traced: engine.world.cutTraced }; },
     mod: cutMod,
     test: (at: Vec3, kind: 'wedge' | 'shard' | 'snap' | 'lump' = 'wedge', opts: { yaw?: number; scale?: number; albedo?: Vec3; core?: Vec3; rot?: [number, number, number, number] } = {}) => {
       const k = opts.scale ?? 1, yaw = opts.yaw ?? 0, albedo: Vec3 = opts.albedo ?? [0.62, 0.6, 0.56];
@@ -1383,7 +1385,7 @@ function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
 function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   (window as any).__pairup = { get on() { return PAIRUP.on; }, set on(v: boolean) { PAIRUP.on = v; pairUpApply(!v); }, rules: PAIRUP, stats: PAIRUP_STATS, summary: pairUpSummary };   // the pair's one switch (game/pairup.ts): .on = true turns the three parts on
   (window as any).__pair = game.pair;   // quiet orders for one partner (game/pairorders.ts): .up / .mark() / .jobOf(gd) / .stage(foe) / .darkSpot(p) / .litAt(p) / .summary()
-  (window as any).__orders = game.orders;   // squad orders (game/orders.ts): .give(id, target?, who?) / .targetAt(p) / .who / .cycleWho() / .address(gd) / .open(target?) / .pick(i?) / .turn(page) / .pageBack() / .close() / .menu (.page: null = the first page, 'tools' = a door's tools) / .log / .summary() / .knobs
+  (window as any).__orders = game.orders;   // squad orders (game/orders.ts): .give(id, target?, who?) / .targetAt(p) / .who / .cycleWho() / .address(gd) / .open(target?) / .pick(i?) / .turn(page) / .pageBack() / .close() / .menu (.page: null = the first page, 'tools' = a door's tools) / .log / .knobs
   // FOG OF WAR (game/fogofwar.ts — a try at the Door Kickers rule): on under the room-clear flag, ?fow (or ?fogofwar) forces it on and ?nofow (?nofogofwar) off; the renderer's pass
   // reads the game's FogFrame through engine.fogFrame. __fow = the object: .on, .knobs, .eyes, .seen(guard), .drawn(guard), .hiddenChars, .stats, .summary()
   engine.fogFrame = game.fogOfWar.frame;
@@ -1441,58 +1443,34 @@ function soloNightHooks(game: Game) {
   (window as any).__needs = { send: (i = 0, kind: NeedKind = 'coffee') => needsSend(game, game.guards.filter(x => x.team === 'guard' && !x.unit)[i], kind), trip: (i = 0) => needsTrip(game.guards.filter(x => x.team === 'guard' && !x.unit)[i]), knobs: NEEDS, stats: NEEDS_STATS, log: NEEDS_LOG, summary: () => game.needsSummary() };   // automation / console: the needs (needs.ts) — __needs.send(0) = 'send Kowalski for a coffee' with the whole telegraph, .trip(0) his trip record, .log the last things that happened
 }
 
-/** the renderer URL flags that stood above `new Quality` (?norestir ?norestirmotion ?restirmotion ?nofroxel ?froxel ?nosmokediffuse ?gatherStrata ?nogatherstrata) and the __hot* shader swaps they sat among, __froxel, __rt, __gs */
+/** the renderer URL flags that stood above `new Quality` (?norestirmotion ?restirmotion ?nosmokediffuse) and the __hot* shader swaps they sat among, __rt */
 function rendererFlagsAndHotSwaps(engine: Engine) {
   // __hotVol(src?): recompile the volumetric pass from a volumetrics.wgsl variant against the live device and swap it in (passes.hotSwapVol) — no src = refetch
   // the file as it is on disk from the dev server (/qa/shader/volumetrics.wgsl), so an edit can be timed against a staged stress scene without rebooting it
   (window as any).__hotVol = async (src?: string) => engine.passes.hotSwapVol(src ?? await (await fetch('/qa/shader/volumetrics.wgsl', { cache: 'no-store' })).text());
-  const hotCommon = async () => (await fetch('/qa/shader/direct_common.wgsl', { cache: 'no-store' })).text();   // both direct-light estimators get direct_common.wgsl prepended, as passes.ts builds them
-  (window as any).__hotDirect = async (src?: string) => engine.passes.hotSwapDirect(src ?? await (await fetch('/qa/shader/direct.wgsl', { cache: 'no-store' })).text(), 'direct', await hotCommon());   // the same for the direct-light pass (direct.wgsl variants — the settings.restir OFF path)
-  (window as any).__hotRestir = async (src?: string) => engine.passes.hotSwapDirect(src ?? await (await fetch('/qa/shader/restir.wgsl', { cache: 'no-store' })).text(), 'restir', await hotCommon());   // … and for restir.wgsl (the ON path)
+  const hotCommon = async () => (await fetch('/qa/shader/direct_common.wgsl', { cache: 'no-store' })).text();   // the direct-light estimator gets direct_common.wgsl prepended, as passes.ts builds it
+  (window as any).__hotRestir = async (src?: string) => engine.passes.hotSwapDirect(src ?? await (await fetch('/qa/shader/restir.wgsl', { cache: 'no-store' })).text(), await hotCommon());   // the same for the direct-light pass (restir.wgsl variants)
   (window as any).__hotSharp = async (src?: string) => engine.passes.hotSwapSharp(src ?? await (await fetch('/qa/shader/sharp_direct.wgsl', { cache: 'no-store' })).text(), await hotCommon());   // … sharp_direct.wgsl (both variants; direct-quality lane)
   (window as any).__hotGbaa = async (src?: string) => engine.passes.hotSwapGbaa(src ?? await (await fetch('/qa/shader/gbaa.wgsl', { cache: 'no-store' })).text());   // … gbaa.wgsl
-  if (new URLSearchParams(location.search).has('norestir')) engine.settings.restir = false;   // ?norestir: the leader / tail direct-light estimator (direct.wgsl) from boot — renderer v3 Phase 2a's untouched path, for A/B
   { const q = new URLSearchParams(location.search); if (q.get('holedepth') === '0') engine.settings.portalHole = false;   // &holedepth=0: an opening's daylight is its whole rectangle again (settings.portalHole)
     { const pw = Number(q.get('portalworth')); if (pw > 0) engine.settings.portalWorth = pw; }   // &portalworth=<number>: how far an opening's own light reaches, for the visit (settings.portalWorth; 0.003 = until 11-05)
     if (q.has('norestirmotion')) engine.settings.restirMotion = 0; const rm = q.get('restirmotion'); if (rm !== null && rm !== '') engine.settings.restirMotion = Math.max(0, Math.min(7, parseInt(rm, 10) || 0)); }   // ?norestirmotion / ?restirmotion=N: the direct-motion lane's reservoir-reprojection levers from boot (docs/internal/direct-motion.md; 0 = the estimator's program byte for byte)
-  // __hotFroxel(src?): the same for the froxel kernels (froxel.wgsl → render/froxels.ts hotSwap; the cull / inject / temporal / integrate pipelines swapped together)
-  (window as any).__hotFroxel = async (src?: string) => engine.passes.froxels.hotSwap(src ?? await (await fetch('/qa/shader/froxel.wgsl', { cache: 'no-store' })).text());
-  if (new URLSearchParams(location.search).has('nofroxel')) { froxelVeto.on = true; engine.settings.froxelVol = false; }
   if (new URLSearchParams(location.search).get('nvoval') === '1') engine.passes.nvOval = 1;   // ?nvoval=1: the goggles' dark oval over the picture, as it was (off by default: it hid too much of the screen — picture only, nothing reads it)
   if (new URLSearchParams(location.search).has('nosmokediffuse')) engine.passes.smokeDiffuse = 0;   // ?nosmokediffuse: smoke attenuates only, nothing behind it blurred (the final blit as it was)
-  if (new URLSearchParams(location.search).has('froxel') || plainAir()) { froxelForce.on = true; engine.settings.froxelVol = true; }   // (PLAIN AIR, gpu/device.ts: its program draws no beam, so on every tier the haze's are the froxel kernels')   // ?froxel: the froxel path forced even at ultra / high (their presets ship the classic per-pixel march since 08-12) — the A/B   // ?nofroxel: froxel volumetrics off from boot — the per-pixel volumetric march exactly as it was (Tab ▸ Volumetrics — froxels flips it live)
-  // __froxel: the froxel volume for the console / automation — the grid, memory, history state, the knobs by name, a history restart
-  (window as any).__froxel = {
-    get on() { return engine.settings.froxelVol; }, set on(v: boolean) { engine.settings.froxelVol = !!v; },
-    get grid() { return { ...engine.passes.froxels.grid, clusters: engine.passes.froxels.clusterDims(), k: engine.settings.froxelK, mb: +(engine.passes.froxels.bytes / 1048576).toFixed(1) }; },
-    get state() { const f = engine.passes.froxels; return { allocated: f.allocated, histValid: f.histValid, age: f.age, idle: f.idle, remakes: f.remakes, last: f.lastRemake, split: engine.passes.froxelSplitTiming }; },
-    set(k: string, v: number | boolean) { const S = engine.settings as unknown as Record<string, unknown>; const key = k.startsWith('froxel') ? k : 'froxel' + k[0].toUpperCase() + k.slice(1); if (!(key in S)) return false; S[key] = v; return true; },
-    split(on = true) { engine.passes.froxelSplitTiming = !!on; return engine.passes.froxelSplitTiming; },
-    restart() { engine.passes.froxels.restartHistory(); return true; },
-    summary() { const f = engine.passes.froxels, S = engine.settings; return `froxels ${S.froxelVol ? 'on' : 'OFF'} · ${f.grid.w}×${f.grid.h}×${f.grid.d} k ${S.froxelK} strata ${S.froxelTopRays} hist ${S.froxelHistory} · ${f.allocated ? (f.bytes / 1048576).toFixed(1) + ' MB' : 'no grid'} · near ${S.froxelNear} far ${S.froxelFar} curve ${S.froxelCurve} bias ${S.froxelBias}${f.lastRemake ? ' · last: ' + f.lastRemake : ''}`; },
-  };
   // __hotDenoise(src?): the same for the v3 denoiser core (render/denoise.ts hotSwap ← /qa/shader/denoise.wgsl)
   (window as any).__hotDenoise = async (src?: string) => engine.passes.den.hotSwap(src ?? await (await fetch('/qa/shader/denoise.wgsl', { cache: 'no-store' })).text());
   // __hotReflect(src?): … and for the reflection pass (passes.hotSwapReflect ← /qa/shader/reflect_p5.wgsl while the phase-5 variant is the one dispatched, else reflect.wgsl; a given src goes to whichever its bindings say)
-  (window as any).__hotReflect = async (src?: string) => engine.passes.hotSwapReflect(src ?? await (await fetch(engine.passes.rtP5 ? '/qa/shader/reflect_p5.wgsl' : '/qa/shader/reflect.wgsl', { cache: 'no-store' })).text());
-  // __rt: materials + reflections (renderer v3 phase 4) for the console / automation (+ phase 5's mesh / reuse switches)
+  (window as any).__hotReflect = async (src?: string) => engine.passes.hotSwapReflect(src ?? await (await fetch('/qa/shader/reflect.wgsl', { cache: 'no-store' })).text());
+  // __rt: materials + reflections (renderer v3 phase 4) for the console / automation
   (window as any).__rt = {
     get on() { return engine.settings.rtReflect; }, set on(v: boolean) { engine.settings.rtReflect = !!v; },
     get detail() { return engine.settings.detail; }, set detail(v: number) { engine.settings.detail = Math.max(0, Math.min(1, v)); },
-    get mesh() { return engine.settings.rtMeshHits; }, set mesh(v: boolean) { engine.settings.rtMeshHits = !!v; },
-    get reuse() { return engine.settings.rtHitReuse; }, set reuse(v: boolean) { engine.settings.rtHitReuse = !!v; },
-    knobs: () => { const S = engine.settings; return { on: S.rtReflect, div: S.rtReflectDiv, rays: S.rtRays, maxRough: S.rtMaxRough, atrous: S.rtAtrous, aniso: S.rtAniso, strength: S.rtStrength, glints: S.rtGlints, detail: S.detail, history: S.rtHistory, specClampK: S.dnSpecClampK, mesh: S.rtMeshHits, reuse: S.rtHitReuse }; },
-    set: (k: Partial<{ on: boolean; div: number; rays: number; maxRough: number; atrous: number; aniso: number; strength: number; glints: number; detail: number; history: number; specClampK: number; mesh: boolean; reuse: boolean }>) => { const S = engine.settings; if (k.on !== undefined) S.rtReflect = k.on; if (k.div !== undefined) S.rtReflectDiv = k.div; if (k.rays !== undefined) S.rtRays = k.rays; if (k.maxRough !== undefined) S.rtMaxRough = k.maxRough; if (k.atrous !== undefined) S.rtAtrous = k.atrous; if (k.aniso !== undefined) S.rtAniso = k.aniso; if (k.strength !== undefined) S.rtStrength = k.strength; if (k.glints !== undefined) S.rtGlints = k.glints; if (k.detail !== undefined) S.detail = k.detail; if (k.history !== undefined) S.rtHistory = k.history; if (k.specClampK !== undefined) S.dnSpecClampK = k.specClampK; if (k.mesh !== undefined) S.rtMeshHits = k.mesh; if (k.reuse !== undefined) S.rtHitReuse = k.reuse; return (window as any).__rt.knobs(); },
-    summary: () => { const S = engine.settings, P = engine.passes; return `rt ${S.rtReflect ? `on ÷${P.rtDiv} ${P.rw}×${P.rh} · ${S.rtRays} ray/px · rough ≤ ${S.rtMaxRough} · ${S.rtAtrous} à-trous` : 'off'} · detail ${S.detail.toFixed(2)} · gloss row ${S.gloss ? (S.rtReflect ? 'set, superseded' : 'on') : 'off'} · mesh hits ${S.rtMeshHits ? (engine.meshShadowsOn ? 'on' : 'wanted (mesh shadows off)') : 'off'} · hit reuse ${S.rtHitReuse ? 'on' : 'off'}`; },
+    knobs: () => { const S = engine.settings; return { on: S.rtReflect, div: S.rtReflectDiv, rays: S.rtRays, maxRough: S.rtMaxRough, atrous: S.rtAtrous, aniso: S.rtAniso, strength: S.rtStrength, glints: S.rtGlints, detail: S.detail, history: S.rtHistory, specClampK: S.dnSpecClampK }; },
+    set: (k: Partial<{ on: boolean; div: number; rays: number; maxRough: number; atrous: number; aniso: number; strength: number; glints: number; detail: number; history: number; specClampK: number }>) => { const S = engine.settings; if (k.on !== undefined) S.rtReflect = k.on; if (k.div !== undefined) S.rtReflectDiv = k.div; if (k.rays !== undefined) S.rtRays = k.rays; if (k.maxRough !== undefined) S.rtMaxRough = k.maxRough; if (k.atrous !== undefined) S.rtAtrous = k.atrous; if (k.aniso !== undefined) S.rtAniso = k.aniso; if (k.strength !== undefined) S.rtStrength = k.strength; if (k.glints !== undefined) S.rtGlints = k.glints; if (k.detail !== undefined) S.detail = k.detail; if (k.history !== undefined) S.rtHistory = k.history; if (k.specClampK !== undefined) S.dnSpecClampK = k.specClampK; return (window as any).__rt.knobs(); },
+    summary: () => { const S = engine.settings, P = engine.passes; return `rt ${S.rtReflect ? `on ÷${P.rtDiv} ${P.rw}×${P.rh} · ${S.rtRays} ray/px · rough ≤ ${S.rtMaxRough} · ${S.rtAtrous} à-trous` : 'off'} · detail ${S.detail.toFixed(2)} · gloss row ${S.gloss ? (S.rtReflect ? 'set, superseded' : 'on') : 'off'}`; },
   };
-  // __hotGather(src?): recompile both gather pipeline pairs (fgather.wgsl main + mainGi, × GATHER_STRATA ← /qa/shader/fgather.wgsl) against the staged scene
-  (window as any).__hotGather = async (src?: string) => engine.passes.hotSwapGather(src ?? await (await fetch('/qa/shader/fgather.wgsl', { cache: 'no-store' })).text(), await (await fetch('/qa/shader/gather_common.wgsl', { cache: 'no-store' })).text());   // (gather_common.wgsl from disk too: the two move together)
-  // ?gatherStrata / __gs: the gather's tile-coherent STRATIFIED directions (settings.gatherStrata, ported from exp/trace-perf E8 — unbiased, −13‥16 % gather, not hash-identical: default off; flips live)
-  { const q = new URLSearchParams(location.search); if (q.has('gatherStrata')) engine.settings.gatherStrata = true; if (q.has('nogatherstrata')) engine.settings.gatherStrata = false; }   // (default ON since 08-12; ?nogatherstrata = the iid gather, hash-identical to the pre-port frame)
-  (window as any).__gs = {
-    get on() { return engine.settings.gatherStrata; }, set on(v: boolean) { engine.settings.gatherStrata = !!v; },
-    summary: () => `gather strata ${engine.settings.gatherStrata ? 'ON (stratified, tile-coherent directions: pFGs / pFGRs)' : 'off (iid cosine directions, the gather as it was)'} · gather ${engine.passes.gw}×${engine.passes.gh}${engine.settings.giResample !== 'off' ? ' · resampling ' + engine.settings.giResample : ''}`,
-  };
+  // __hotGather(src?): recompile the gather's two pipelines (gather_split.wgsl's trace and light over the helpers ← /qa/shader/fgather.wgsl) against the staged scene
+  (window as any).__hotGather = async (src?: string) => engine.passes.hotSwapGather(src ?? await (await fetch('/qa/shader/fgather.wgsl', { cache: 'no-store' })).text(), await (await fetch('/qa/shader/gather_common.wgsl', { cache: 'no-store' })).text());   // (the gather's own common text from disk too: the two move together)
 }
 
 /** the ray-traversal lab: __daylight, __scenePrelude, __traceConfig, __commonSource, __hotCommon */
@@ -1500,7 +1478,7 @@ function traceLabHooks(engine: Engine, game: Game) {
   // ---- RAY-TRAVERSAL LAB (ported from exp/trace-perf; tools/qa/trace-lab.js drives these — docs/internal/trace-perf.md §0): __scenePrelude(lighting?) = the prelude every scene shader is
   // compiled behind RIGHT NOW (world consts + TRACE_VARIANT + common.wgsl [+ lighting_common]); __traceConfig = render/frame.ts traceConfig; __commonSource() = the common.wgsl text in
   // use; __hotCommon(src?, variant?) installs an edited common.wgsl text (no arg / null = refetch the file from disk; '' = back to the bundled text) and/or a TRACE_VARIANT, then rebuilds
-  // EVERY pipeline that traces rays — direct + restir, the four gathers, the live reflection kernel, the volumetric march, the froxel kernels, the three cascade kernels, the particles'
+  // EVERY pipeline that traces rays — direct + restir, the four gathers, the live reflection kernel, the volumetric march, the three cascade kernels, the particles'
   // sim — against the staged scene, so a traversal change is timed and pixel-compared without a reboot (composite's wet-coat side ray, the light probe and the bounce cards keep the boot
   // prelude: reboot with ?trace=N for whole-frame identity). __daylight(on?) = the level's daylight swap by hand (lighting.ts setDaylight, bit for bit) for the lab's sun-shadow scene B5.
   (window as any).__daylight = (on?: boolean) => { if (on !== undefined && !!on !== isDaylight(game)) setDaylight(game, !!on); return isDaylight(game); };
@@ -1514,12 +1492,10 @@ function traceLabHooks(engine: Engine, game: Game) {
     const t0 = performance.now(); const P = engine.passes; const out: Record<string, { ok: boolean; messages: string[] }> = {};
     const dc = await shader('direct_common');
     const jobs: [string, Promise<{ ok: boolean; messages: string[] }>][] = [
-      ['direct', P.hotSwapDirect(await shader('direct'), 'direct', dc)],
-      ['restir', P.hotSwapDirect(await shader('restir'), 'restir', dc)],
+      ['restir', P.hotSwapDirect(await shader('restir'), dc)],
       ['gather', P.hotSwapGather(await shader('fgather'), await shader('gather_common'))],
-      ['reflect', P.hotSwapReflect(await shader(P.rtP5 ? 'reflect_p5' : 'reflect'))],
+      ['reflect', P.hotSwapReflect(await shader('reflect'))],
       ['vol', P.hotSwapVol(await shader('volumetrics'))],
-      ['froxel', P.froxels.hotSwap(await shader('froxel'))],
       ['rc', engine.rc.hotSwap()],
     ];
     if (engine.particles) jobs.push(['particles', engine.particles.hotSwapSim()]);
@@ -1530,41 +1506,28 @@ function traceLabHooks(engine: Engine, game: Game) {
   };
 }
 
-/** __gi, __gimo, __dmo */
+/** __gimo, __dmo */
 function giMotionHooks(engine: Engine) {
-  // __gi: the gather's reservoir resampling (renderer v3 phase 5, ultra) for the console / automation — mode + knobs in one object
-  (window as any).__gi = {
-    get mode() { return engine.settings.giResample; }, set mode(v: 'off' | 'temporal' | 'full') { engine.settings.giResample = v === 'full' ? 'full' : v === 'temporal' ? 'temporal' : 'off'; },
-    knobs: () => { const S = engine.settings; return { mode: S.giResample, rays: S.giResampleRays, cap: S.giResampleCap, taps: S.giResampleTaps, radius: S.giResampleRadius, revalidate: S.giResampleRevalidate }; },
-    set: (k: Partial<{ mode: 'off' | 'temporal' | 'full'; rays: number; cap: number; taps: number; radius: number; revalidate: boolean }>) => { const S = engine.settings; if (k.mode !== undefined) S.giResample = k.mode; if (k.rays !== undefined) S.giResampleRays = k.rays; if (k.cap !== undefined) S.giResampleCap = k.cap; if (k.taps !== undefined) S.giResampleTaps = k.taps; if (k.radius !== undefined) S.giResampleRadius = k.radius; if (k.revalidate !== undefined) S.giResampleRevalidate = k.revalidate; return (window as any).__gi.knobs(); },
-    summary: () => { const S = engine.settings, P = engine.passes; return `gi resampling ${S.giResample}${S.giResample !== 'off' ? ` · ${S.giResampleRays} fresh · M ≤ ${S.giResampleCap}${S.giResampleRevalidate ? ' · revalidate' : ''}${S.giResample === 'full' ? ` · ${S.giResampleTaps} taps r ${S.giResampleRadius}` : ''} · ${P.gw}×${P.gh} · ${(P.p5Bytes / 1048576).toFixed(0)} MB` : ''}`; },
-  };
-  // __gimo: GI IN MOTION (docs/internal/gi-motion.md) — the internal-res diffuse chain, the young-history gather rays, the ladder's climb, in one object for the console / automation
+  // __gimo: GI IN MOTION (docs/internal/gi-motion.md) — the ladder's climb and the motion-calm rows, in one object for the console / automation
   (window as any).__gimo = {
-    knobs: () => { const S = engine.settings; return { fullRes: S.giFullRes, fullIters: S.giFullIters, youngRays: S.giYoungRays, youngCap: S.giYoungCap, youngLen: S.giYoungLen, ladderClimb: S.ladderClimb, capClimb: S.capClimb }; },
-    set: (k: Partial<{ fullRes: boolean; fullIters: number; youngRays: number; youngCap: number; youngLen: number; ladderClimb: boolean; capClimb: boolean }>) => { const S = engine.settings; if (k.fullRes !== undefined) S.giFullRes = !!k.fullRes; if (k.fullIters !== undefined) S.giFullIters = k.fullIters; if (k.youngRays !== undefined) S.giYoungRays = k.youngRays; if (k.youngCap !== undefined) S.giYoungCap = k.youngCap; if (k.youngLen !== undefined) S.giYoungLen = k.youngLen; if (k.ladderClimb !== undefined) S.ladderClimb = !!k.ladderClimb; if (k.capClimb !== undefined) S.capClimb = !!k.capClimb; return (window as any).__gimo.knobs(); },
-    get live() { return engine.passes.giFullLive; },
-    young: () => engine.passes.readYoungCount(),
+    knobs: () => { const S = engine.settings; return { ladderClimb: S.ladderClimb, capClimb: S.capClimb }; },
+    set: (k: Partial<{ ladderClimb: boolean; capClimb: boolean }>) => { const S = engine.settings; if (k.ladderClimb !== undefined) S.ladderClimb = !!k.ladderClimb; if (k.capClimb !== undefined) S.capClimb = !!k.capClimb; return (window as any).__gimo.knobs(); },
     calm: (on?: boolean) => { if (on !== undefined) (window.__quality as any)?.applyMotionCalm(!!on); return !!(window.__quality as any)?.motionCalm; },   // the motion-calm rows on / off (quality.ts MOTION_CALM)
-    summary: () => { const S = engine.settings, P = engine.passes; return `gi in motion: full-res ${S.giFullRes ? (P.giFullLive ? `LIVE ${P.width}×${P.height} · ${S.giFullIters} à-trous · ${(P.giFullBytes / 1048576).toFixed(0)} MB` : 'wanted (not live)') : 'off'} · young rays ${S.giYoungRays > 1 ? `×${S.giYoungRays} (cap ${(S.giYoungCap * 100).toFixed(0)} % · len < ${S.giYoungLen})` : 'off'} · climb ${S.ladderClimb ? 'on' : 'off'}${S.capClimb ? ' + cap' : ''} · motion-calm rows ${(window.__quality as any)?.motionCalm ? 'ON' : 'off'}`; },
+    summary: () => { const S = engine.settings; return `gi in motion: climb ${S.ladderClimb ? 'on' : 'off'}${S.capClimb ? ' + cap' : ''} · motion-calm rows ${(window.__quality as any)?.motionCalm ? 'ON' : 'off'}`; },
   };
   // __dmo: DIRECT LIGHT IN MOTION (docs/internal/direct-motion.md) — ReSTIR's temporal reuse under a moving camera: settings.restirMotion (bitmask 1 = stochastic-bilinear reprojection, 2 = motion-scaled
   // confidence, 4 = spatial reuse under motion; 0 = the estimator as it was) and its three knobs, for the console / the harnesses (`__gim.run(tag, {extra: {restirMotion: 3}})` measures it)
   (window as any).__dmo = {
-    knobs: () => { const S = engine.settings; return { motion: S.restirMotion, v: S.restirMotionV, min: S.restirMotionMin, px: S.restirMotionPx, dither: S.restirMotionDither, taps: S.restirMotionTaps, static: S.restirMotionStatic, live: engine.passes.restirMotionLive }; },
-    set: (k: Partial<{ motion: number; v: number; min: number; px: number; dither: boolean; taps: number; static: boolean }>) => { const S = engine.settings; if (k.motion !== undefined) S.restirMotion = Math.max(0, Math.min(7, k.motion | 0)); if (k.v !== undefined) S.restirMotionV = k.v; if (k.min !== undefined) S.restirMotionMin = k.min; if (k.px !== undefined) S.restirMotionPx = k.px; if (k.dither !== undefined) S.restirMotionDither = !!k.dither; if (k.taps !== undefined) S.restirMotionTaps = k.taps; if (k.static !== undefined) S.restirMotionStatic = !!k.static; return (window as any).__dmo.knobs(); },
+    knobs: () => { const S = engine.settings; return { motion: S.restirMotion, v: S.restirMotionV, min: S.restirMotionMin, px: S.restirMotionPx, taps: S.restirMotionTaps, static: S.restirMotionStatic, live: engine.passes.restirMotionLive }; },
+    set: (k: Partial<{ motion: number; v: number; min: number; px: number; taps: number; static: boolean }>) => { const S = engine.settings; if (k.motion !== undefined) S.restirMotion = Math.max(0, Math.min(7, k.motion | 0)); if (k.v !== undefined) S.restirMotionV = k.v; if (k.min !== undefined) S.restirMotionMin = k.min; if (k.px !== undefined) S.restirMotionPx = k.px; if (k.taps !== undefined) S.restirMotionTaps = k.taps; if (k.static !== undefined) S.restirMotionStatic = !!k.static; return (window as any).__dmo.knobs(); },
     get on() { return engine.settings.restirMotion; }, set on(v: number) { engine.settings.restirMotion = Math.max(0, Math.min(7, v | 0)); },
-    summary: () => { const S = engine.settings; const m = S.restirMotion; return m ? `restir motion ${m} = ${[m & 1 ? 'stochastic-bilinear reprojection' : '', m & 2 ? `confidence whole under ${S.restirMotionV} px @1000 rows, × ${S.restirMotionMin} past ${(S.restirMotionV * 1.6).toFixed(2)}` : '', m & 4 ? `spatial past ${S.restirMotionPx} px${S.restirMotionTaps ? ` × ≥ ${S.restirMotionTaps} taps` : ''}` : ''].filter(Boolean).join(' + ')} · ${engine.passes.restirMotionLive ? 'LIVE this frame' : S.restirMotionStatic ? 'live' : 'the camera is still: main\'s program'}${S.restir ? '' : ' (restir itself is OFF)'}` : 'restir motion off — the reservoir reprojection as it was (nearest texel, full confidence)'; },
+    summary: () => { const S = engine.settings; const m = S.restirMotion; return m ? `restir motion ${m} = ${[m & 1 ? 'stochastic-bilinear reprojection' : '', m & 2 ? `confidence whole under ${S.restirMotionV} px @1000 rows, × ${S.restirMotionMin} past ${(S.restirMotionV * 1.6).toFixed(2)}` : '', m & 4 ? `spatial past ${S.restirMotionPx} px${S.restirMotionTaps ? ` × ≥ ${S.restirMotionTaps} taps` : ''}` : ''].filter(Boolean).join(' + ')} · ${engine.passes.restirMotionLive ? 'LIVE this frame' : S.restirMotionStatic ? 'live' : 'the camera is still: main\'s program'}` : 'restir motion off — the reservoir reprojection as it was (nearest texel, full confidence)'; },
   };
 }
 
 /** the SDF rig's and the character materials' URL flags (written over the applied preset, as they were), __charmat, __sdfrig */
 function characterRigFlagsAndHooks(engine: Engine, game: Game) {
-  { // the SDF CHARACTER RIG's two extras from the URL (the fitted round cones themselves are every ray's character test, no switch): ?sdfsmooth = the smooth-union closest hit in reflections ·
-    // ?charsoft = the analytic soft-shadow character visibility in the direct estimators (?charsoftmarch = its sphere-marched form). No preset touches either, so they hold for the visit.
-    const q = new URLSearchParams(location.search); const S = engine.settings;
-    if (q.has('sdfsmooth')) S.sdfRigSmooth = true;
-    if (q.has('charsoft') || q.has('charsoftmarch')) { S.charSoftShadow = true; S.charSoftAnalytic = !q.has('charsoftmarch'); }
+  { const q = new URLSearchParams(location.search); const S = engine.settings;
     if (q.has('noselfshadow')) S.charSelfShadow = false;   // ?noselfshadow: a man's own body never shadows him (the owner skip whole) — the frame as it was before the self-shadow rule, for A/B
     // CHARACTER MATERIALS (render/charMaterials.ts): on by itself for a mesh that carries slot-named materials (the contract with the models), off for the shipped mannequin —
     // ?charmats dresses that one by joint as a stand-in, ?nocharmats holds the two tints whatever the mesh says
@@ -1579,18 +1542,15 @@ function characterRigFlagsAndHooks(engine: Engine, game: Game) {
     get: (i: number | 'sam' = 'sam') => { const c = i === 'sam' || i < 0 ? game.player.char : game.guards[i]?.char; if (!c) return null; const gd = game.guards.find(x => x.char === c); const side = gd ? charLookMod.sideOfTeam(gd.team, gd.trained) : 'operator', suit = charLookMod.sneakSuit(game, c) /* (the black sneaking suit: its rows are `tables.suit`) */; return { ...charMatsMod.describePalette(side, c.tint, c.tint2, c.id, !charMatsMod.meshAuthored(game.ch.mesh), suit), suit }; },
     bump: () => charMatsMod.bumpCharMats(), reset: () => charMatsMod.resetCharMats(), summary: () => charMatsMod.charMatsSummary(game.ch, engine.settings.charMats),
   };
-  // __sdfrig: the SDF character rig for the console / automation — the extras' switches, the knobs, the fit table
+  // __sdfrig: the SDF character rig for the console / automation — self-shadow, the fit table
   (window as any).__sdfrig = {
-    get smooth() { return engine.settings.sdfRigSmooth; }, set smooth(v: boolean) { engine.settings.sdfRigSmooth = !!v; },
-    get soft() { return engine.settings.charSoftShadow; }, set soft(v: boolean) { engine.settings.charSoftShadow = !!v; },
-    get analytic() { return engine.settings.charSoftAnalytic; }, set analytic(v: boolean) { engine.settings.charSoftAnalytic = !!v; },
     get self() { return engine.settings.charSelfShadow; }, set self(v: boolean) { engine.settings.charSelfShadow = !!v; },   // character self-shadow (rigCfg bit 64; default on)
     /** are the proxies the FITTED cones? (a fit attached; false = the game's hand capsules traced as untapered cones) */
     get live() { return engine.sdfRigOn; },
     fit: () => engine.rigFit, table: () => engine.rigFit ? rigTable(engine.rigFit) : '(no fit attached)',
-    knobs: () => { const S = engine.settings; return { smooth: S.sdfRigSmooth, k: S.sdfRigK, steps: S.sdfRigSteps, soft: S.charSoftShadow, analytic: S.charSoftAnalytic, softSteps: S.charSoftSteps, softK: S.charSoftK, minDeg: S.charSoftMinDeg, softSmooth: S.charSoftSmooth, broad: S.charSoftBroad, self: S.charSelfShadow }; },
-    set: (k: Partial<{ smooth: boolean; k: number; steps: number; soft: boolean; analytic: boolean; softSteps: number; softK: number; minDeg: number; softSmooth: boolean; broad: boolean; self: boolean }>) => { const S = engine.settings; if (k.self !== undefined) S.charSelfShadow = !!k.self; if (k.broad !== undefined) S.charSoftBroad = !!k.broad; if (k.smooth !== undefined) S.sdfRigSmooth = !!k.smooth; if (k.k !== undefined) S.sdfRigK = k.k; if (k.steps !== undefined) S.sdfRigSteps = k.steps; if (k.soft !== undefined) S.charSoftShadow = !!k.soft; if (k.analytic !== undefined) S.charSoftAnalytic = !!k.analytic; if (k.softSteps !== undefined) S.charSoftSteps = k.softSteps; if (k.softK !== undefined) S.charSoftK = k.softK; if (k.minDeg !== undefined) S.charSoftMinDeg = k.minDeg; if (k.softSmooth !== undefined) S.charSoftSmooth = !!k.softSmooth; return (window as any).__sdfrig.knobs(); },
-    summary: () => { const S = engine.settings; return `sdf rig: round cones ${engine.sdfRigOn ? 'FITTED' : 'unfitted (no fit attached: hand radii, untapered)'} · reflections ${S.sdfRigSmooth ? `smooth union (k ×${S.sdfRigK}, ${S.sdfRigSteps} steps${engine.settings.rtMeshHits && engine.meshShadowsOn ? ' — superseded by mesh hits' : ''})` : engine.settings.rtMeshHits && engine.meshShadowsOn ? 'mesh hits' : 'round cones'} · direct-light character shadows ${S.charSoftShadow ? `SOFT QUERY (${S.charSoftAnalytic ? 'analytic' : `march ${S.charSoftSteps} steps${S.charSoftSmooth ? ', smooth union' : ''}`}, angular ×${S.charSoftK}, ≥ ${S.charSoftMinDeg}°)` : engine.meshShadowsOn ? 'ray-traced (mesh)' : 'ray-traced'}${S.charSelfShadow ? ' + self-shadow' : ''}`; },
+    knobs: () => ({ self: engine.settings.charSelfShadow }),
+    set: (k: Partial<{ self: boolean }>) => { if (k.self !== undefined) engine.settings.charSelfShadow = !!k.self; return (window as any).__sdfrig.knobs(); },
+    summary: () => `sdf rig: round cones ${engine.sdfRigOn ? 'FITTED' : 'unfitted (no fit attached: hand radii, untapered)'} · character shadows ${engine.meshShadowsOn ? 'ray-traced (mesh)' : 'ray-traced'}${engine.settings.charSelfShadow ? ' + self-shadow' : ''}`,
   };
 }
 
@@ -1728,7 +1688,7 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
   Object.defineProperties((window as any).__snow, { breath: { get: () => breathMod.SNOWBREATH }, steam: { get: () => breathMod.BREATHSTEAM }, breathStats: { get: () => breathMod.breathStats(game) }, breathSummary: { value: () => breathMod.breathSummary(game) } });   // … and the men's breath in its cold (game/snowBreath.ts): the numbers live with the next breath; `steam` = that breath as gas in the smoke solver, BREATHSTEAM
 }
 
-/** __taa, __dn, ?noglass / ?norefract (after the preset, as they were), __rigTrace, __meshTrace */
+/** __taa, __dn, ?noglass / ?norefract (after the preset, as they were), __meshTrace */
 function resolveGlassFlagsAndHooks(engine: Engine, gpu: Gpu) {
   // __taa: the TAAU resolve for the console / automation — on/off, the knobs, this frame's jitter, the reset count and why, the sizes
   (window as any).__taa = {
@@ -1738,13 +1698,12 @@ function resolveGlassFlagsAndHooks(engine: Engine, gpu: Gpu) {
     set: (k: Partial<{ alpha: number; clipGamma: number; phases: number; sharpen: number; reactive: number; kernel: number; velK: number; lightJump: number; motionAlpha: number; motionClip: number; sharpenMotion: number }>) => { const S = engine.settings; if (k.alpha !== undefined) S.taauAlpha = k.alpha; if (k.clipGamma !== undefined) S.taauClipGamma = k.clipGamma; if (k.phases !== undefined) S.taauPhases = k.phases; if (k.sharpen !== undefined) S.taauSharpen = k.sharpen; if (k.reactive !== undefined) S.taauReactive = k.reactive; if (k.kernel !== undefined) S.taauKernel = k.kernel; if (k.velK !== undefined) S.taauVelK = k.velK; if (k.lightJump !== undefined) S.taauLightJump = k.lightJump; if (k.motionAlpha !== undefined) S.taauMotionAlpha = k.motionAlpha; if (k.motionClip !== undefined) S.taauMotionClip = k.motionClip; if (k.sharpenMotion !== undefined) S.taauSharpenMotion = k.sharpenMotion; return (window as any).__taa.knobs(); },
     summary: () => `taau ${engine.settings.taau ? 'on' : 'off'} · ${engine.width}×${engine.height} → ${engine.outWidth}×${engine.outHeight} · jitter ${engine.jitter.map(v => v.toFixed(3)).join(',')} · ${engine.passes.taaStats.frames} resolves, ${engine.taaResets} resets (last: ${engine.lastTaaReset || '—'})`,
   };
-  // __dn: the denoiser (renderer v3 phase 3) for the console / automation — which core, the v3 clients' knobs in one object, the last frame's dispatch counts
+  // __dn: the denoiser for the console / automation — the clients' knobs in one object, the last frame's dispatch counts
   (window as any).__dn = {
-    get mode() { return engine.settings.denoiser; }, set mode(v: 'v3' | 'legacy') { engine.settings.denoiser = v === 'legacy' ? 'legacy' : 'v3'; },
     get stats() { return engine.passes.den.stats; },
     knobs: () => { const S = engine.settings; return { shadowIters: S.dnShadowIters, shadowCap: S.dnShadowCap, shadowClampK: S.dnShadowClampK, shadowSigmaL: S.dnShadowSigmaL, shadowPrior: S.dnShadowPrior, shadowLitAlike: S.dnShadowLitAlike, shadowOccl: S.dnShadowOccl, shadowMoveCap: S.dnShadowMoveCap, shadowMoveThresh: S.dnShadowMoveThresh, giIters: S.dnGiIters, giCap: S.dnGiCap, giClampK: S.dnGiClampK, giSigmaL: S.dnGiSigmaL, giFast: S.dnGiFast, giFirefly: S.dnGiFirefly, specIters: S.dnSpecIters, specCap: S.dnSpecCap, specClampK: S.dnSpecClampK, specSigmaL: S.dnSpecSigmaL, specRough: S.dnSpecRough, depthK: S.dnDepthK, normalPow: S.dnNormalPow, motionVectors: S.dnMotionVectors }; },
     set: (k: Record<string, number | boolean>) => { const S = engine.settings as unknown as Record<string, unknown>; for (const [key, v] of Object.entries(k)) { const name = 'dn' + key[0].toUpperCase() + key.slice(1); if (name in S) S[name] = v; } return (window as any).__dn.knobs(); },
-    summary: () => { const S = engine.settings, st = engine.passes.den.stats; return `denoiser ${S.denoiser} · shadow ${S.dnShadowIters} it / cap ${S.dnShadowCap} · gi ${S.dnGiIters} it / cap ${S.dnGiCap} (fast ${S.dnGiFast}) · spec ${S.dnSpecIters} it / cap ${S.dnSpecCap} · mv ${S.dnMotionVectors && S.taau ? 'on' : 'off'} · last frame ${st.shadow}+${st.gi}+${st.spec} dispatches`; },
+    summary: () => { const S = engine.settings, st = engine.passes.den.stats; return `shadow ${S.dnShadowIters} it / cap ${S.dnShadowCap} · gi ${S.dnGiIters} it / cap ${S.dnGiCap} (fast ${S.dnGiFast}) · spec ${S.dnSpecIters} it / cap ${S.dnSpecCap} · mv ${S.dnMotionVectors && S.taau ? 'on' : 'off'} · last frame ${st.shadow}+${st.gi}+${st.spec} dispatches`; },
   };
   if (new URLSearchParams(location.search).has('noglass')) engine.settings.glass = false;   // ?noglass: the glass panes off from boot (the panes become the empty openings the level had) — for A/B against a plain boot
   if (new URLSearchParams(location.search).has('nobeamreflect')) engine.settings.beamReflect = false;   // ?nobeamreflect: no laser / tracer in the reflections (no segment handed to the reflection pass: its frame as it was)
@@ -1752,13 +1711,6 @@ function resolveGlassFlagsAndHooks(engine: Engine, gpu: Gpu) {
   if (new URLSearchParams(location.search).has('nowetmirror')) engine.settings.wetMirror = false;   // ?nowetmirror: the wet ground's traced reflections at the weight they had (settings.wetMirror)
   if (new URLSearchParams(location.search).has('nowetbreak')) engine.settings.wetBreakup = 0;   // ?nowetbreak: wet ground one even film of water, the frame as it was (rtCfg.z = the anisotropy alone)
   if (new URLSearchParams(location.search).has('norefract')) engine.settings.glassRefract = false;   // ?norefract: the glass boxes' refraction off from boot (the panes' old tint rule, the read under the pixel — the frame byte for byte as it was) for A/B
-  // __rigTrace(rays): the SDF character rig's production WGSL over the live scene for a list of rays (render/rigDebug.ts): rays = [[Po.xyz, tmax, L.xyz, tanHalf], …] →
-  // per ray { vis (charSoftVis), resA / resM (the analytic / marched raw ratios), occ (occludedCapsules), t / idx (traceCapsules), tRig / ch (rigClosest) } — the CPU twin's check
-  (window as any).__rigTrace = async (rays: number[][]) => {
-    const flat = new Float32Array(rays.length * 8); rays.forEach((r, i) => flat.set(r.slice(0, 8), i * 8));
-    const out = await rigDebugTrace(gpu.device, engine.sceneLayout, engine.sceneBindGroup(), flat);
-    return rays.map((_, i) => ({ vis: out[i * 8], resA: out[i * 8 + 1], resM: out[i * 8 + 2], occ: out[i * 8 + 3], t: out[i * 8 + 4], idx: out[i * 8 + 5], tRig: out[i * 8 + 6], ch: out[i * 8 + 7] }));
-  };
   // __meshTrace(fixture): replay tools/qa/mesh-shadow-fixture.json on the GPU — poses skin slot 0 with the fixture's joint matrices, refits, runs the PRODUCTION
   // WGSL walk (common.wgsl meshAnyHitChar via a tiny kernel on the scene bind group) over its 64 rays and compares with the CPU reference's answers ray for
   // ray. Use on a ?paused page (it borrows character slot 0's joints until the next stepped frame rewrites them). Resolves to a summary + the mismatching rays.
@@ -1829,4 +1781,5 @@ FATAL.tell = (r, card) => {
   try { setTimeout(once, 1500); void fetch('/qa/commit', { cache: 'no-store' }).then(x => x.ok ? x.text() : '').then(t => once(t.trim()), () => once()); } catch { once(); }
 };
 
-main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else showFatalError(e); readyReject(e); });
+main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if ((e as Error)?.name === 'NoGameHere') showFatal("This link opens a replay, and this build can't play those yet. You can still play every mission from the title."); else if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stage: 'rust game' } });   // (?rust=1: the Rust game's own failure, in its plain words: host/rustgame.ts)
+  else showFatalError(e); readyReject(e); });

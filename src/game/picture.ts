@@ -17,14 +17,15 @@
 // ONE switch, PICTURE.on: ON in the page (?nopicture = the build as it was), OFF here and on the frozen harness stand (TPS_PICTURE=1; a FROZEN_HOLDS row). The
 // memory alone moves nothing: each rule that asks it has its own key below (off = that rule as it was). No dice, no camera, no graphics setting, nothing off
 // the GPU; state per Game in a WeakMap with a reset and a snapshot / restore pair. Type-only game imports but for functions called inside functions.
-import { isManId, viewOfBody, eachSeat } from './seats';
-import { SideMap, SideSet, GameSideMap } from '../math/side';
+import './seats';
+import { SideSet, GameSideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { isHostile } from './teams';
-import { canSee, canSeeChar, sightGain, sightGainOn, pointInView, bodyPos, lightEstimateAt, teamThrough } from './guards';
-import { squadOf } from './enemysquads';
-import { hasHim, OWN } from './owner';
+import { canSee, canSeeChar, sightGain, sightGainOn, pointInView, bodyPos, lightEstimateAt } from './guards';
+import './enemysquads';
+import './owner';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 /** the switch and every number of it (UNTUNED by play) */
 export const PICTURE = {
@@ -179,95 +180,10 @@ function look(g: Game, P: Pic, gd: Guard) {
     if (!I.lost && now - I.t > 1 && !blind && flat(posOf(g, who), I.at) > 1.2 && pointInView(g, gd, [I.at[0], 1.1, I.at[2]], 14, 58) && pointInView(g, gd, [I.at[0], 0.4, I.at[2]], 14, 58) && madeOut(g, gd, I.at)) { I.lost = true; PICTURE_STATS.lost++; }
   }
 }
-/** Sam's own eyes, for the squad's net: a hostile the fog of war shows him (one model: what the picture shows) with a line from his head — or, with no fog
- *  on this run, a line to a man in front of him who stands in light (his own light meter) or close by */
-function lookSam(g: Game, P: Pic) {
-  const now = g.time, c = g.player.char; if (g.player.down) return;
-  const eye = c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]), fog = g.fogOfWar, fwd = c.forward(), thr = teamThrough();   // (FOG.mates: his line to a man passes the thin things the picture's does)
-  for (const o of g.guards) {
-    if (o.civ || !isHostile('player', o.team) || !isHostile(o.team, 'operative')) continue;   // (the squad's enemies: a quiet floor's staff are Sam's own business)
-    if (!up(g, o)) { if (P.ideas.has(o) && !g.col.segmentBlocked(eye, [o.char.pos[0], 0.3, o.char.pos[2]])) { P.ideas.delete(o); P.downs.set(o, now); } continue; }
-    if (o.fled) continue;
-    const p = o.char.pos, d = flat(p, c.pos); if (d > PICTURE.reachM) continue;
-    const shown = fog?.active ? !fog.hidden(o) : d < PICTURE.madeOutM || ((p[0] - c.pos[0]) * fwd[0] + (p[2] - c.pos[2]) * fwd[2] > 0 && o.visibility >= PICTURE.madeOut);
-    if (shown && (!g.col.segmentBlocked(eye, [p[0], 1.1, p[2]], 0.02, thr) || !g.col.segmentBlocked(eye, [p[0], 1.6, p[2]], 0.02, thr))) learn(g, P, o, p, now, 'seen', null);
-  }
-  for (const [who, I] of P.ideas) if (now - I.t > PICTURE.forgetSecs || gone(g, who)) P.ideas.delete(who);
-}
-/** this frame's gunfire, placed by ear: each man who has not just seen the shooter puts him where the sound came from — the muzzle through open air, the
- *  doorway or corner it came round otherwise (as every noise is placed); a report that reaches him only through solid mass he hears and cannot place.
- *  WHETHER he hears it is guards.ts hearingCheck's own rule: gunfire over the whole floor, a quieter report along the way the sound takes, stretched by a
- *  picked weather's noise at his ear (weather.ts hearPath's two lines, asked of the Game here: an import of weather.ts from this file moves the cycle's order) */
-function hear(g: Game, S: State) {
-  const K = PICTURE, now = g.time;
-  for (const e of g.events) {
-    if ((e.kind !== 'shot' && e.kind !== 'guardShot') || e.who === undefined || S.done.has(e)) continue; S.done.add(e);
-    const who: Who | null = isManId(e.who ?? -1) ? 'player' : g.guards.find(x => x.char.id === e.who) ?? null; if (!who) continue;
-    const team = who === 'player' ? 'player' : who.team, loud = (e.level ?? 0) >= 1;
-    for (const gd of g.guards) {
-      if (gd === who || !fighter(gd) || gd.held || !isHostile(gd.team, team)) continue;
-      const P = picOf(S, gd, now), I = P.ideas.get(who); if (I && I.how === 'seen' && now - I.t < 1) continue;   // (his eyes have the man)
-      if (now - (P.heard.get(who) ?? -1e9) < 0.8) continue; P.heard.set(who, now);   // (… or he placed him by ear a moment ago)
-      if (flat(e.pos, gd.char.pos) > (loud ? 80 : 22)) continue;
-      const ear = v3.add(gd.char.pos, [0, 1.5, 0]), prop = g.col.sound.propagate(v3.add(e.pos, [0, 1, 0]), ear);
-      if (!loud && prop.pathLen * (g.weather ? g.weather.hearMask(ear) : 1) >= K.popM * prop.carry * Math.max(0.3, (e.level ?? 0.6) / 0.6) + 0.5) continue;
-      if (!prop.direct && !prop.routed) continue;
-      // (WHERE: the muzzle through open air. Round a corner, gunfire says roughly where — the two-metre square it came from, as guards.ts places a routed shot
-      // near its source and not at his own doorway; no die here, the memory draws none — and a quieter report only the doorway or corner it came round.)
-      let at: Vec3 = prop.direct ? e.pos : prop.via;
-      if (!prop.direct && loud) { const q: Vec3 = [Math.round(e.pos[0] / 2) * 2, 0, Math.round(e.pos[2] / 2) * 2]; if (!g.col.nav.isBlocked(q[0], q[2])) at = q; }
-      learn(g, P, who, at, now, 'heard', null); PICTURE_STATS.heard++;
-    }
-  }
-}
-/** are two men on one net (a's call reaches b) */
-function onNet(g: Game, a: Pic, b: Pic): boolean {
-  if (a === b || !b.owner) return false;   // (nobody tells Sam: the player's picture is the screen)
-  const B = b.owner; if (!fighter(B) || B.held) return false;
-  if (PICTURE.run && (hasHim(B, OWN.runner) || (!!a.owner && hasHim(a.owner, OWN.runner)))) return false;   // (runner.ts: a man who has dropped his gun and run is off the net, as netquiet.ts and enemysquads.ts have him — what he tells his mates he shouts, that file's own tell)
-  if (!a.owner) return B.team === 'operative';   // Sam's eyes are on the squad's radio
-  const A = a.owner; if (!fighter(A) || A.held || A.team !== B.team) return false;
-  if (A.team !== 'hostile') return true;   // the squad's radio, the staff's
-  const qa = squadOf(g, A), qb = squadOf(g, B); return (!!qa && !!qb && qa.def === qb.def) || flat(A.char.pos, B.char.pos) <= PICTURE.shoutM;
-}
-/** the calls: what a man has SEEN or HEARD himself for `tellSecs` reaches his net, as old as it is (a call is not passed on, and the place his senses work
- *  from is not a man he can name); a man he knows is down reaches it the same way. In roster order, so a loaded game calls as the saved one would have. */
-function tell(g: Game, S: State) {
-  const K = PICTURE, now = g.time, all = [S.sam]; for (const gd of g.guards) { const P = S.men.get(gd); if (P) all.push(P); }
-  for (const a of all) {
-    if (a.owner && (!fighter(a.owner) || a.owner.held)) continue;
-    for (const b of all) {
-      if (!onNet(g, a, b)) continue;
-      for (const [who, I] of a.ideas) {
-        const J = b.ideas.get(who);
-        if (I.lost) { if (J && !J.lost && J.t <= I.t + 1e-6) J.lost = true; continue; }   // ('he is not there': it un-says what the net holds of that same sighting or an older one)
-        if (I.how === 'told' || I.how === 'fix' || now - I.since < K.tellSecs || b.downs.has(who)) continue;
-        if (J && J.t >= I.t - K.tellSecs) continue;
-        learn(g, b, who, I.at, I.t, 'told', a.owner); PICTURE_STATS.told++;
-      }
-      for (const [who, t] of a.downs) if (now - t >= K.tellSecs && !b.downs.has(who)) { b.ideas.delete(who); b.downs.set(who, now); }
-    }
-  }
-}
 
 /** AN IDEA HANDED TO ONE MAN from outside his senses (a check's staging, the page's `__picture.tell`): an enemy put in his picture as told, at `at`, `age`
  *  seconds old. Nothing with the switch off. */
-export function pictureTell(g: Game, gd: Guard, who: Who, at: Vec3, age = 0) { if (!PICTURE.on || !fighter(gd)) return; const S = stateOf(g); learn(g, picOf(S, gd, g.time), who, at, g.time - age, 'told', null); }
-/** once a frame, after everybody has moved (game.ts step) */
-export function pictureTick(g: Game, _dt: number) {
-  if (!PICTURE.on || !g.aiEnabled || g.touring) return;
-  const S = stateOf(g), K = PICTURE, now = g.time;
-  for (const gd of S.men.keys()) if (!g.guards.includes(gd)) S.men.delete(gd);   // (a despawned unit)
-  let ops = false;
-  for (const gd of g.guards) {
-    if (!fighter(gd)) continue; if (gd.team === 'operative') ops = true;
-    const P = picOf(S, gd, now); if (now >= P.lookT) { P.lookT = Math.max(P.lookT + K.lookSecs, now - K.lookSecs); look(viewOfBody(g, gd.char), P, gd); }   // ('the player' to him is the one he has in mind: seats.ts)
-    if ((P.step || P.stepBad) && now - (P.stepAsk ?? -1e9) > 0.25) { P.step = null; P.stepBad = null; P.stepIn = -1; }   // (PICTURE.step: nobody has asked for a while — another order has him, the fight has, Sam walked on: the step is over, and no other man's search steers round it)
-  }
-  if (ops && now >= S.sam.lookT) { S.sam.lookT = now + K.lookSecs; eachSeat(g, v => lookSam(v, S.sam)); }   // (every player's eyes are the squad's net's)
-  if (g.events.length) hear(g, S);
-  if (now - S.tellT >= 0.5) { S.tellT = now; tell(g, S); }
-}
+export function pictureTell(g: Game, gd: Guard, who: Who, at: Vec3, age = 0) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('pictureTell', undefined, [g, gd, who, at, age]); if (__r !== RUST_PASS) return __r as any; } } if (!PICTURE.on || !fighter(gd)) return; const S = stateOf(g); learn(g, picOf(S, gd, g.time), who, at, g.time - age, 'told', null); }
 
 // ---------------------------------------------------------------- what the rules ask
 /** a man's ideas (nothing with the switch off, or of a man with none) */
@@ -298,7 +214,7 @@ function exposedTo(g: Game, I: Idea, p: Vec3, h: number): number {
 }
 /** HOW EXPOSED IS THIS SPOT, AS FAR AS HE KNOWS (0 = no enemy he knows of has a line to it … 1 = one he has eyes on does): the heaviest idea with a line to a
  *  man standing there (`low`: kneeling). 0 with the switch off or no idea at all. */
-export function exposedAt(g: Game, gd: Guard, p: Vec3, low = false): number {
+export function exposedAt(g: Game, gd: Guard, p: Vec3, low = false): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('exposedAt', undefined, [g, gd, p, low]); if (__r !== RUST_PASS) return __r as any; } }
   if (!PICTURE.on) return 0; const P = STATES.get(g)?.men.get(gd); if (!P || !P.ideas.size) return 0;
   if (!VIEWING) PICTURE_STATS.asks++; let e = 0; const h = low ? PICTURE.lowH : PICTURE.chestH;
   for (const I of P.ideas.values()) { if (e >= 1) break; e = Math.max(e, exposedTo(g, I, p, h)); }
@@ -306,7 +222,7 @@ export function exposedAt(g: Game, gd: Guard, p: Vec3, low = false): number {
 }
 /** THE SAME QUESTION ASKED OF MANY SPOTS AT ONE MOMENT (a rule scoring a ring of candidates: frag.ts fleeSpot): each idea's weight and the places its man
  *  may have walked to are dealt once, the heaviest idea asked first, and every answer is exposedAt's own. Null = the switch off or nothing known. */
-export function exposureAsker(g: Game, gd: Guard, low = false): ((p: Vec3) => number) | null {
+export function exposureAsker(g: Game, gd: Guard, low = false): ((p: Vec3) => number) | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('exposureAsker', undefined, [g, gd, low]); if (__r !== RUST_PASS) return __r as any; } }
   if (!PICTURE.on) return null; const P = STATES.get(g)?.men.get(gd); if (!P || !P.ideas.size) return null;
   const h = low ? PICTURE.lowH : PICTURE.chestH, L: { I: Idea; w: number; maybe: Vec3[] | null }[] = [];
   for (const I of P.ideas.values()) { const w = ideaWeight(g, I); if (w > 0) L.push({ I, w, maybe: null }); }
@@ -323,7 +239,7 @@ export function believedOf(g: Game, gd: Guard): Vec3[] { const out: Vec3[] = [];
 /** a rule's dry asks (orders.ts stackSeen, asked from menus many times a second and inside asks that promise to leave nothing behind): no count ticked */
 export function pictureQuiet<T>(fn: () => T): T { const was = VIEWING; VIEWING = true; try { return fn(); } finally { VIEWING = was; } }
 /** the same for several men deciding together (an order's men): the worst any of them knows of the spot */
-export function exposedFor(g: Game, men: readonly Guard[], p: Vec3, low = false): number { let e = 0; for (const gd of men) { if (e >= 1) break; e = Math.max(e, exposedAt(g, gd, p, low)); } return e; }
+export function exposedFor(g: Game, men: readonly Guard[], p: Vec3, low = false): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('exposedFor', undefined, [g, men, p, low]); if (__r !== RUST_PASS) return __r as any; } } let e = 0; for (const gd of men) { if (e >= 1) break; e = Math.max(e, exposedAt(g, gd, p, low)); } return e; }
 /** WHERE THESE MEN, BETWEEN THEM, BELIEVE THEIR ENEMIES TO BE: each enemy once, at the freshest word any of them has of him no older than `maxAge` — a
  *  man's own idea, Sam's own eyes for the squad's men (he is on their net), and for them what the fog of war has shown while it is up (fogofwar.ts sighting:
  *  the squad's shared sight, the one record the player is shown) — and nobody whose freshest place one of them has since seen empty. What they BELIEVE: a man
@@ -343,7 +259,7 @@ export function knownPlaces(g: Game, men: readonly Guard[], maxAge: number): { w
 export function anyIdea(g: Game, men: readonly Guard[]): boolean { if (!PICTURE.on) return false; const S = STATES.get(g); return !!S && men.some(gd => (S.men.get(gd)?.ideas.size ?? 0) > 0); }
 /** SEVERAL WHOLE DEALS OF MARKS (a file past the latch, the file past the hinge), SAFEST FIRST: by the worst any of the men knows of a deal's worst mark, in
  *  tenths; their own order kept among equals. The list as it came with the switch off, nothing known, or one deal. */
-export function safestSets<T extends { pos: Vec3 }>(g: Game, men: readonly Guard[], sets: readonly T[][]): T[][] {
+export function safestSets<T extends { pos: Vec3 }>(g: Game, men: readonly Guard[], sets: readonly T[][]): T[][] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('safestSets', undefined, [g, men, sets]); if (__r !== RUST_PASS) return __r as any; } }
   if (sets.length < 2 || !anyIdea(g, men)) return sets.slice();
   return sets.map((S, i) => { let e = 0; for (const q of S) e = Math.max(e, exposedFor(g, men, q.pos)); return { S, i, e: Math.round(e * 10) }; }).sort((a, b) => a.e - b.e || a.i - b.i).map(x => x.S);
 }
@@ -370,45 +286,7 @@ export function coverNear(g: Game, gd: Guard, around: Vec3, r: number, n = 6, ok
  *  his. Else the cover he has taken and whether he is on a knee there. `ok`: the asker's own word on a spot (a doorway, a leaf's swing); `busy`: he has
  *  a man in his eyes (no new step is looked for). No dice; the looks
  *  are a few lines a quarter second, the search one coverNear when the place has been in a firm line for `stepAfter` s. */
-export function pictureStep(g: Game, gd: Guard, key: object, mark: Vec3, ok?: (q: Vec3) => boolean, busy = false): { at: Vec3; low: boolean } | null {
-  const K = PICTURE; if (!K.on || !K.step) return null;
-  const S = STATES.get(g), P = S?.men.get(gd); if (!S || !P) return null;
-  const now = g.time, asked = P.stepAsk ?? -1e9, gap = now - asked > 0.25 || now < asked; P.stepAsk = now;
-  if (P.step && P.step.key === null) P.step.key = key;   // (a loaded game: the order that has him now is the one that had him)
-  if (P.step && (P.step.key !== key || gap)) P.step = null;   // (another order has him, or nobody asked for a while: Sam walked on)
-  if (gap) { P.stepIn = -1; P.stepBad = null; }
-  if (!P.ideas.size) { P.step = null; P.stepIn = -1; return null; }
-  const X = P.step;
-  if (X) {
-    if (now >= X.lookT) { X.lookT = now + 0.5;
-      if (exposedAt(g, gd, X.mark) < K.stepFree) { P.step = null; P.stepIn = -1; P.stepNext = now + K.stepRest; return null; }   // (nobody he knows of has the place any more: it is his again)
-      // (he cannot get onto it — a chair rolled there, a mate, a leaf: that cover is no cover; another, from the place he left, and never that one again)
-      const off = flat(gd.char.pos, X.at) > 0.6 && now - X.t0 > K.stepSecs; if (off) P.stepBad = X.at;
-      if (off || exposedAt(g, gd, X.at, X.low) >= K.stepAt) { P.step = null; P.stepIn = now - K.stepAfter; P.stepNext = now; mark = X.mark; }   // (… or the cover itself has come into a firm line)
-    }
-    if (P.step) return { at: X.at, low: X.low };
-  }
-  if (busy) { P.stepIn = -1; return null; }   // (a man in his eyes: the step he is on stands, a new one waits)
-  if (!P.stepFor || flat(P.stepFor, mark) > 0.4) { P.stepFor = floor(mark); if (X === P.step) P.stepIn = -1; }   // (the place asked about has moved: he is walking — the count is of one place)
-  if (now < (P.stepNext ?? -1e9)) return null; P.stepNext = now + 0.25;
-  if (exposedAt(g, gd, mark) < K.stepAt) { P.stepIn = -1; return null; }
-  if ((P.stepIn ?? -1) < 0 || now < P.stepIn!) P.stepIn = now;
-  if (now - P.stepIn! < K.stepAfter) return null;
-  const nav = g.col.nav, sam = g.player.char.pos, firm: Vec3[] = [], bad = P.stepBad; for (const I of P.ideas.values()) if (!I.lost && ideaWeight(g, I) >= K.stepAt) firm.push(I.at);
-  const free = (q: Vec3) => {
-    if (flat(q, mark) > 0.05 && !nav.walkable(mark, q)) return false; if (flat(q, sam) < 0.9 || (bad && flat(q, bad) < 0.6)) return false;
-    for (const f of firm) { const d = flat(q, f); if (d < 3 || d < flat(mark, f) - 1) return false; }   // (never up to a man he believes there, and a stride nearer him at most: suppression.ts coverFrom's own rule)
-    // (a body's room from his own side — where each stands, the step each is on, the place each is walking to; of the other side he has only what he believes)
-    for (const o of g.guards) { if (o === gd || o.state === 'dead' || isHostile(gd.team, o.team)) continue; if (flat(o.char.pos, q) < 0.8) return false;
-      const os = S.men.get(o)?.step; if (os && flat(os.at, q) < 0.9) return false; const og = o.script?.goal; if (og && flat(og, q) < 0.8) return false; }
-    return !ok || ok(q); };
-  // (the cover has to hold a foot either way: a man stops within a stride of the spot, not on it — a spot hidden to the centimetre is no cover)
-  const holds = (c: CoverSpot, low: boolean) => [[0.3, 0], [-0.3, 0], [0, 0.3], [0, -0.3]].every(([dx, dz]) => nav.isBlocked(c.at[0] + dx, c.at[2] + dz) || exposedAt(g, gd, [c.at[0] + dx, 0, c.at[2] + dz], low) <= 0);
-  const C = coverNear(g, gd, mark, K.stepM, 8, free), best = C.find(c => c.stand <= 0 && holds(c, false)) ?? C.find(c => c.low <= 0 && holds(c, true));
-  if (!best) { P.stepNext = now + K.stepRest; return null; }
-  P.step = { key, mark: floor(mark), at: floor(best.at), low: !(best.stand <= 0 && holds(best, false)), lookT: now + 0.5, t0: now }; PICTURE_STATS.stepped++;
-  return { at: P.step.at, low: P.step.low };
-}
+export function pictureStep(g: Game, gd: Guard, key: object, mark: Vec3, ok?: (q: Vec3) => boolean, busy = false): { at: Vec3; low: boolean } | null { return goneWithTick('pictureStep') as any; }
 /** the step he is on, if any (the floor view, the check, the panel's line) */
 export function pictureStepOf(g: Game, gd: Guard): { at: Vec3; mark: Vec3; low: boolean } | null { const X = PICTURE.on ? STATES.get(g)?.men.get(gd)?.step : null; return X ? { at: X.at, mark: X.mark, low: X.low } : null; }
 
@@ -436,7 +314,7 @@ function viewOf1(g: Game, gd: Guard, ground: boolean): PictureView {
   return { gd, from: [c[0], 0.05, c[2]], ideas, unsafe, cover: ground ? coverNear(g, gd, c, K.showM, 6) : [] };
 }
 /** what the floor view draws this frame (the ground and the cover re-read four times a second) */
-export function pictureViews(g: Game): PictureView[] {
+export function pictureViews(g: Game): PictureView[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('pictureViews', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   if (!PICTURE.on || PICTURE.show === 'off' || g.touring) return [];
   if (PICTURE.show === 'all') return g.guards.filter(gd => fighter(gd) && gd.team === 'operative').map(gd => viewOf(g, gd, false));
   const gd = pictureShown(g), S = stateOf(g); if (!gd) { S.view = null; return []; }
@@ -490,4 +368,4 @@ export function pictureSummary(g: Game): string {
   return 'picture ▸ ' + parts.join(' · ');
 }
 /** for the check: one man's idea of one enemy */
-export function ideaOf(g: Game, gd: Guard, who: Who): Idea | null { return PICTURE.on ? STATES.get(g)?.men.get(gd)?.ideas.get(who) ?? null : null; }
+export function ideaOf(g: Game, gd: Guard, who: Who): Idea | null { return goneWithTick('ideaOf') as any; }

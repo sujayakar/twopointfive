@@ -27,6 +27,8 @@ const { resetChase, pairOf } = await import(`${ROOT}/src/game/guards.ts`);
 const { SUPPRESSION, noteRound, suppressionLines, SUPPRESSION_DEBUG } = await import(`${ROOT}/src/game/suppression.ts`);
 const { TEMPERAMENT } = await import(`${ROOT}/src/game/game.ts`);
 const { GUNHOLD } = await import(`${ROOT}/src/game/gunhold.ts`);
+const { AIM } = await import(`${ROOT}/src/game/aim.ts`);
+const SCATTER_BREAK = process.env.SUPSCATTER_BREAK === '1';
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -248,40 +250,52 @@ export async function supSam() {
   // ---- (2) dispersion through the real click path
   {
     const FROM: Vec3 = [21.5, 0, 11.5], WALL: Vec3 = [21.5, 1.2, 10.0];   // the weapons probe's own staging: the corridor's north wall 1.5 m in front of him, plainly under the cursor from the camera (a far point down the corridor is roofed over from where the camera sits, and the cursor's ray lands on whatever is between) — the DIRECTION muzzle → impact is what is measured, so the range does not matter
-    const runOne = async (label: string, sup: number, cfg: (game: any) => void) => {
+    const runOne = async (label: string, sup: number, cfg: (game: any) => void, AT: Vec3 = WALL) => {   // (AT: where a puppet's aim is put)
       Math.random = seeded(741);
       const W = await standUp(); const { game, input } = W; const pl = game.player;
       game.godMode = true; game.tune.aimModel = false; for (let i = 0; i < 5; i++) W.step(DT);   // (the aim model off: its settled cone — aim.ts AIM.player.baseStand, ± a third of a degree — is the aim family's to measure; this is suppression's term alone, dead-on under it at rest)
       game.guards.forEach((gd: any, i: number) => park(gd, i));
       game.teleportPlayer(v3.copy(FROM)); pl.slot = 'pistol'; pl.holstered = false; pl.crouch = false; pl.pistol.lightOn = false; game.infiniteAmmo = true;
       W.cam.yaw = 0; W.cam.rebuild?.(); cfg(game);
-      for (let f = 0; f < 120; f++) { if (game.puppet) game.puppet.aim = v3.copy(WALL); else W.cursorAt(WALL); W.step(DT); }   // (two seconds for the follow camera to come over him and settle: the cursor's world point is only the wall once the wall is squarely on the screen)
+      for (let f = 0; f < 120; f++) { if (game.puppet) game.puppet.aim = v3.copy(AT); else W.cursorAt(WALL); W.step(DT); }   // (two seconds for the follow camera to come over him and settle: the cursor's world point is only the wall once the wall is squarely on the screen)
       const onScreen = game.puppet ? true : W.cursorAt(WALL);
-      const log: any[] = []; W.audioLog = log; const hits: Vec3[] = []; const aims: Vec3[] = []; let fired = 0, range = 0;
+      const log: any[] = []; W.audioLog = log; const hits: Vec3[] = [], dirs: Vec3[] = []; const aims: Vec3[] = []; let fired = 0, range = 0, strikes = 0;
       for (let f = 0; f < 60 * 5 && hits.length < 10; f++) {
-        if (game.puppet) { game.puppet.aim = v3.copy(WALL); } else W.cursorAt(WALL);
-        pl.sup.v = sup;   // (held there: what a burst into his cover a moment ago left him with)
+        if (game.puppet) { game.puppet.aim = v3.copy(AT); } else W.cursorAt(WALL);
+        pl.sup.v = SCATTER_BREAK ? 0.8 : sup;   // (held there: what a burst into his cover a moment ago left him with. SUPSCATTER_BREAK=1 = the red path: every arm is held at 0.8, so the arm at rest has a cone the line must see)
         if (f % 16 === 0) input.clicked |= 1;
         const n0 = log.length; W.step(DT);
-        let m: Vec3 | null = null; for (let i = n0; i < log.length; i++) { const a = log[i]; if (a.name === 'pistolSuppressed' && a.pos) { m = a.pos; fired++; aims.push(v3.copy(game.aimPoint)); } if (a.name === 'bulletImpact' && a.pos && m) { hits.push(v3.copy(a.pos)); range += v3.dist(a.pos, m); } }
+        // A ROUND'S IMPACT IS ITS FIRST STRIKE: the nearest to the muzzle of the impacts its frame sounds. Where rounds go through a partition (wallpen.ts, on
+        // in the page) the same round sounds again on what stands behind the wall, turned a little by the wall: ten "impacts" of five rounds, two points
+        // metres apart down each line, read 0.785 rad in every arm.
+        let m: Vec3 | null = null, first: Vec3 | null = null;
+        for (let i = n0; i < log.length; i++) { const a = log[i]; if (a.name === 'pistolSuppressed' && a.pos) { m = a.pos; fired++; aims.push(v3.copy(game.aimPoint)); } if (a.name === 'bulletImpact' && a.pos && m) { strikes++; if (!first || v3.dist(a.pos, m) < v3.dist(first, m)) first = a.pos; } }
+        if (m && first) { hits.push(v3.copy(first)); dirs.push(v3.normalize(v3.sub(first, m))); range += v3.dist(first, m); }
       }
       W.audioLog = null; range /= Math.max(1, hits.length);
-      // the scatter of the IMPACTS about their mean, over the range, as an angle: a round sent dead-on lands on the very point clicked whatever the muzzle was doing
-      // (the arm coming up into the aim, the kick of the round before), so at rest this is zero to the float; a cone shows as impacts strewn about the point
+      // THE SCATTER, AS AN ANGLE, BY THE RULE THAT AIMS THE ROUND (player.ts freeAim). A round sent AT THE POINT under the cursor, or at a puppet's aim, lands on
+      // that point whatever the muzzle was doing (the arm coming up into the aim, the kick of the round before): the scatter of the strikes about their mean
+      // point, over the range, zero to the float at rest. A round sent LEVEL along the cursor's heading (aim.ts AIM.player.level, on in the page, never under a
+      // puppet's aim) leaves from wherever the muzzle is, so the strikes move with the muzzle and the lines do not turn: there it is the scatter of the rounds'
+      // lines, muzzle → first strike, about their mean line. (Each read by the other's measure is the muzzle's own two to five centimetres read as a cone.)
+      const flat = AIM.player.level > 0 && !game.puppet?.aim;
       let mean: Vec3 = [0, 0, 0]; for (const h of hits) mean = v3.add(mean, h); mean = v3.scale(mean, 1 / Math.max(1, hits.length));
-      const off = hits.map(h => v3.dist(h, mean)); const rms = Math.sqrt(off.reduce((s, a) => s + a * a, 0) / Math.max(1, off.length)) / Math.max(0.1, range);
+      const apart = hits.map(h => v3.dist(h, mean));
+      let line: Vec3 = [0, 0, 0]; for (const d of dirs) line = v3.add(line, d); line = v3.normalize(line);
+      const off = flat ? dirs.map(d => Math.acos(Math.min(1, Math.max(-1, v3.dot(d, line))))) : apart.map(a => a / Math.max(0.1, range));
+      const rms = Math.sqrt(off.reduce((s, a) => s + a * a, 0) / Math.max(1, off.length));
       let aimWander = 0; for (const a of aims) aimWander = Math.max(aimWander, v3.dist(a, aims[0]));   // (staging check: the point clicked on must hold still, or the scatter is the camera's)
-      return { label, sup, fired, n: hits.length, rms, max: Math.max(0, ...off) / Math.max(0.1, range), onScreen, aimWander, range };
+      return { label, sup, fired, n: hits.length, strikes, flat, apart: Math.max(0, ...apart), rms, max: Math.max(0, ...off), onScreen, aimWander, range, at: aims[0] ?? WALL };
     };
-    const rest = await runOne('s 0', 0, () => {}), hot = await runOne('s 0.8', 0.8, () => {}), flagOff = await runOne('s 0.8, flag off', 0.8, g => { g.tune.suppression = false; }), puppet = await runOne('s 0.8, puppet', 0.8, g => { g.puppet = { goal: null, aim: v3.copy(WALL) }; });
+    const rest = await runOne('s 0', 0, () => {}), hot = await runOne('s 0.8', 0.8, () => {}), flagOff = await runOne('s 0.8, flag off', 0.8, g => { g.tune.suppression = false; }), puppet = await runOne('s 0.8, puppet', 0.8, g => { g.puppet = { goal: null, aim: v3.copy(rest.at) }; }, rest.at);   // (the puppet aims at the point the cursor's rounds were clicked at, on the wall's face: WALL itself is 6 cm inside the wall, and a round sent at a point behind the face strikes the face where the muzzle's height puts it)
     const want = SUPPRESSION.samSpread * 0.8 / Math.sqrt(6);   // per-axis uniform ± spread/2 on two axes across the line → RMS angle ≈ spread·√(2/12)
     const fails: string[] = [];
-    for (const r of [rest, hot, flagOff, puppet]) { if (r.n < 8) fails.push(`${r.label}: only ${r.n} impacts recorded of ${r.fired} rounds`); if (!r.onScreen) fails.push(`${r.label}: staging — the wall point is not on the screen for the cursor`); if (r.aimWander > 0.02) fails.push(`${r.label}: staging — the aim point wandered ${f3(r.aimWander)} m between rounds (the camera, not the gun)`); }
+    for (const r of [rest, hot, flagOff, puppet]) { if (r.n < 8) fails.push(`${r.label}: only ${r.n} rounds with a strike of ${r.fired} fired`); if (!r.onScreen) fails.push(`${r.label}: staging — the wall point is not on the screen for the cursor`); if (r.aimWander > 0.02) fails.push(`${r.label}: staging — the aim point wandered ${f3(r.aimWander)} m between rounds (the camera, not the gun)`); }
     if (rest.rms > 0.003) fails.push(`at rest the rounds scatter ${f3(rest.rms)} rad RMS (want dead-on, < 0.003)`);
     if (hot.rms < 0.01) fails.push(`at s 0.8 the rounds scatter only ${f3(hot.rms)} rad RMS (want ≥ 0.01; formula ≈ ${f3(want)})`); if (hot.rms > 3 * want) fails.push(`at s 0.8 the scatter ${f3(hot.rms)} is over 3× the formula's ${f3(want)}`);
     if (flagOff.rms > 0.003) fails.push(`flag off: still scattered ${f3(flagOff.rms)} at s 0.8`); if (puppet.rms > 0.003) fails.push(`under the puppet: scattered ${f3(puppet.rms)} at s 0.8 (the tour's double-taps must land)`);
     const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (2) scatter of ten clicked rounds' impacts about the point clicked, over the ${f2(rest.range)} m, as an angle: ${[rest, hot, flagOff, puppet].map(r => `${r.label}: RMS ${f3(r.rms)} max ${f3(r.max)} rad (${r.n}/${r.fired}, aim wander ${f3(r.aimWander)} m)`).join(' · ')}; formula at 0.8 ≈ ${f3(want)} rad${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (2) scatter of ten clicked rounds over the ${f2(rest.range)} m, as an angle: ${[rest, hot, flagOff, puppet].map(r => `${r.label}: RMS ${f3(r.rms)} max ${f3(r.max)} rad (${r.flat ? 'sent level: of the rounds\' lines' : 'sent at the point: of the strikes about it'}; ${r.n} of ${r.fired} rounds, ${r.strikes} strikes sounded, the first ones up to ${f3(r.apart)} m from their mean, aim wander ${f3(r.aimWander)} m)`).join(' · ')}; formula at 0.8 ≈ ${f3(want)} rad${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== sup-sam: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;

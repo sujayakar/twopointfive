@@ -312,7 +312,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   take and at the lay-down — the look now aims a stride beyond the grip and, while `pl.haul` is up, player.ts brings the aim round WITH the body (`hands-body` bounds the head's one-frame turn).
   `clearSpot` = where he must stand for the sweep to miss him (null = where he is, a spot = `handsStep` walks him there, his own movement key cancels it, undefined = none within
   `stepM` → refused). game.ts `handsOnDoors` takes the move's door like an eased one (`DoorPush.reach` = +0.45 m of arm for it). A door move is `playerBusy` for the checkpoints
-  ('working a door'; hauling already was). Nothing rolls a die or reads the camera. QA: `probes.ts hands` (hands-body / hands-door / hands-off / hands-harness — run under
+  ('working a door'; hauling already was). Nothing rolls a die or reads the camera. QA: `probes.ts hands` (hands-body / hands-door / hands-off (deleted 2026-11-06 with the off side: qa.md) / hands-harness — run under
   `TPS_PROFILE=shipped` too: they stage the page's door rules themselves), stills `node tools/qa/hands-look.cjs <dir> [nohands]`.
 - **Hands at work = a hand on the thing he is working, a hand to the radio, the torch ↔ sidearm swap** (`src/game/handwork.ts`; `HANDWORK.on` — ON in the page, `?nohandwork`
   off; the frozen stand pins it off, `TPS_HANDWORK=1`; halves `work / radio / swap`; Tab ▸ Sandbox ▸ Hands at work). THREE small layers of `CharacterAnimator`, each fed on the
@@ -629,7 +629,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `GUNSLOTS_BREAK=1` fails every family. Probes written against the one gun row (`bigslot- kitpaste- kitlent- kitcan- sticky-`) run with the
   switch held off (`tools/qa/holds.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
   on, the third is down to a sidearm round 0.50 s after the guns ran dry; off, he was still standing twelve seconds later (one seed, one room).
-  `gunslots-off`: ten seconds of the staged room clear digest the same with the second guns carried and nobody dry. `TPS_GUNSLOTS=1` alone does nothing on a frozen run: `TPS_BIGSLOT=1` with it. NOT DONE HERE:
+  `gunslots-off` (deleted 2026-11-06 with the off side: qa.md): ten seconds of the staged room clear digest the same with the second guns carried and nobody dry. `TPS_GUNSLOTS=1` alone does nothing on a frozen run: `TPS_BIGSLOT=1` with it. NOT DONE HERE:
   a swap ANIMATION on a teammate (his pose changes with the row in his hands, the equip sound plays, nothing is animated between); the dry man's sense
   beyond range and sight (he does not weigh cover or a mate's line). Headless only; never seen on a GPU, never played.
 
@@ -663,7 +663,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `g19bare` are the issue carbine's and the issue pistol's own rows with what a suppressor changes changed (id, report, flame, a little weight: `bareRow`
   keeps every other field, getters included), and `gunslots.ts PICKS` hands them out as the picks' `bare` — until them a bare carbine was the defenders'
   AKS-74U row and a bare pistol their sidearm (`bareWas`, what the key off still gives). The tile and a man's line name the gun the same either way.
-  Checked: `gunslots-guns` THE SAME GUN, BARE and `gunslots-off`'s second journal verdict, both stands. Drawn with the suppressed row's rig (whether the
+  Checked: `gunslots-guns` THE SAME GUN, BARE and `gunslots-off` (deleted 2026-11-06 with the off side: qa.md)'s second journal verdict, both stands. Drawn with the suppressed row's rig (whether the
   can is drawn is the look's: with `GUNLOOK` on it is not — "A gun with its suppressor off is drawn without one", below); never seen or heard.
 - **Lighter kit moves faster and hides better** (`src/game/kitload.ts`, table `KITLOAD`; the maintainer, 10-18: "we should also model a mobility / concealment score like
   door kickers 2 does -- there should be legitimate reasons to bring less kit"). Every thing on a man's kit card takes a little off TWO SCORES, each 1 for a man with
@@ -697,7 +697,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   pistols only 4 / 12 / 44.8 s on against 4 / 15 / 72.8 s off. Before the gun rows and the deal joined, 12 seeds leaned the same way (a full load: 78 s on against 55 s
   off, 32 men up against 38; rescue-registry over 6: heavy 5 taken on, 6 off; pistols 2 on, 0 off). A full load costs tempo; going light is quicker and does not
   win a loud room (its reason is pace and notice, measured only as rates: no scripted quiet player). A handful of seeds says which way, not how much.
-  KNOWN SHAPES: a door charge you carry weighs on you though you are issued none, set or not (`owncharge-off` holds the weight off in both its runs to ask of the
+  KNOWN SHAPES: a door charge you carry weighs on you though you are issued none, set or not (`owncharge-off` (deleted 2026-11-06 with the off side: qa.md) holds the weight off in both its runs to ask of the
   row alone); two men issued differently are ×1 at different scores (the maintainer's call: one yardstick for everybody; with the deal and a sidearm each a
   four's issue is near even — mobility 0.65‥0.76, concealment 0.54‥0.56); a light player out-walks a silent squad's
   cap; what is thrown or set never lightens a man; a light, goggles and a suit weigh nothing, and a suppressor only where the gun's suppressed row is a heavier row of its own. Never seen on a GPU; nobody has played it.
@@ -1505,7 +1505,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   digest is the same with it on or off by construction, never run to show it). RUN ON THE PAGE after the change: `deathrecap-page` ONLY=live (three cases pass). NOT RUN: `lesson-page`
   after its change, a set door charge or a threshold hold on the page or in a check with the squad of four armed on it, a running verb on the
   page. DECLINED from review, with why: `hudNotes` returning keyed notes under the rule (it would change what the block holds on the shipped
-  stand, which that stand's checks read as strings); `objectiveText` returning its parts (every mission module words that line). Never seen on a GPU. NOBODY HAS PLAYED IT.
+  stand, which that stand's checks read as strings); the objective record returning its parts (the Rust game's `mission::objective` words that line, in the view). Never seen on a GPU. NOBODY HAS PLAYED IT.
 
 - **The gun is put away for a charge, and brought back after** (`src/game/workstow.ts WORKSTOW.on`, 10-23; the maintainer: "characters should fully
   unequip their weapon when planting door charges, etc. -- they can reequip after they're done"). A charge went on with the gun still in the man's
@@ -1578,7 +1578,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   pumping fist (a can, or the pistol with RUNREADY down) comes in with its arm; the hand keeps its own turn on the forearm. Sam himself never holds
   a jog (he walks at 1.6 m/s or sprints): the jog's tuck is seen on him only on the way in and out and under a heavy kit, and on a guard or a
   civilian who runs with nothing in both hands. Switch: ON in the page (`?runarms=0` puts it off; the debugger ▸ the move panel ▸ 'running ▸ arms
-  carried close'), OFF in the module and on the frozen stand (`FROZEN_HOLDS['RUNARMS.on']`: `TPS_RUNARMS=1`); the journal carries the table and a
+  carried close' (ROW TAKEN OFF THE PANEL 2026-11-07, its switch ruled settled: menus.md)), OFF in the module and on the frozen stand (`FROZEN_HOLDS['RUNARMS.on']`: `TPS_RUNARMS=1`); the journal carries the table and a
   recording from before it replays the clips' arms. CHECK: `probes.ts runarms` (family player; `tools/qa/runarms-check.ts`; `RUNARMS_BREAK=1`
   fails `arms` and `slowed`), both stands, the lobby, one seed: over a second of the sprint a hand is at most 14 cm out from its shoulder and an
   elbow 15 (35 and 20 with the key down), nothing comes in past the shoulder, each hand travels 43 cm fore and aft (24); at 3.5 m/s a hand 14 and

@@ -14,18 +14,14 @@
 //     same half second) is not talked down to 'hello?' by it.
 // The player's side (whistleKey / tryWhistle): V, anywhere but down, once per `cooldown` seconds — the event, the sound meter's tick, the synthesized two-note
 // voice at his head (sfx.ts 'whistle'); no HUD line, it is diegetic. The knobs (WHISTLE) sit in Tab ▸ Sandbox and are kept per machine like the aim rows.
-import { isManId, manById } from './seats';
+import './seats';
 import { SideMap } from '../math/side';
-import { Vec3, v3, clamp, wrapAngle } from '../math/vec';
+import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard, GameEvent } from './game';
-import type { Input } from './input';
 import type { UpperMode } from './character';
-import { PLAYER_ID } from './consts';
-import { isHostile } from './teams';
-import { hearPath } from './weather';
-import { w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
-import { wordNow } from './belief';
+import './teams';
+import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
+import { crossToRust } from './crossing';
 
 /** Every number of it (panel-tunable; the QA probes read them rather than copy them). */
 export const WHISTLE = {
@@ -91,8 +87,6 @@ function mem(gd: Guard): WhistleMem {
   if (!M) { M = { respondedAt: NEVER, responses: 0, searches: 0, cues: 0, glances: 0, glanceUntil: -1, glanceAt: null, soft: false, softAt: NEVER, lastLook: -1, lastTwice: -1 }; memOf.set(gd, M); }
   return M;
 }
-/** crane a calm man's head toward a point for `secs` — the whistle's glance lent to any small thing he noticed (a light on the blink: guards.ts hearingCheck); whistlePatrolTick does the craning */
-export function glanceToward(g: Game, gd: Guard, at: Vec3, secs = WHISTLE.glanceSecs) { const M = mem(gd); M.glanceUntil = g.time + secs; M.glanceAt = v3.copy(at); }
 /** read-only peek for the panel / the QA harness (null: no whistle has ever concerned this man) */
 export function whistleMem(gd: Guard): Readonly<WhistleMem> | null { return memOf.get(gd) ?? null; }
 
@@ -106,21 +100,10 @@ export const WHISTLE_STATS = { blown: 0, resolved: 0, heardBy: 0, answered: 0, s
 /** seconds until V will sound again (0 = ready) */
 export function whistleReadyIn(g: Game): number { return Math.max(0, blower(g).readyAt - g.time); }
 
-/** V pressed this frame (player.ts, right after the sound meter's decay — so it runs in the arm lock, at the lock, mid-kick, on the wall: anywhere but down). */
-export function whistleKey(g: Game, input: Input) { if (input.hit('KeyV')) tryWhistle(g); }
 
 /** Blow it if the breath is back: the event at Sam's feet (hearWhistle lifts it to mouth height for the propagation), the meter's tick, the voice at his head.
  *  False = still inside the cooldown (or down): nothing happened. */
-export function tryWhistle(g: Game): boolean {
-  const pl = g.player; if (pl.down) return false;
-  const B = blower(g); if (g.time < B.readyAt) return false;
-  B.readyAt = g.time + WHISTLE.cooldown; B.blown++; B.lastAt = g.time; WHISTLE_STATS.blown++;
-  const c = pl.char;
-  g.events.push({ kind: 'whistle', pos: [c.pos[0], 0, c.pos[2]], time: g.time, loud: false, level: WHISTLE.level, who: c.id });
-  pl.noise = Math.max(pl.noise, WHISTLE.level);
-  g.audio.play('whistle', c.bones.head ?? v3.add(c.pos, [0, pl.crouch ? 1.05 : 1.6, 0]), WHISTLE.gain);
-  return true;
-}
+export function tryWhistle(g: Game): boolean { return crossToRust('tryWhistle', undefined, [g]) as any; }
 
 // ---------------------------------------------------------------- the guards' side
 /** who a whistle reached and how (path length, where it seemed to come from), and which calm man is to answer it — worked out ONCE per event, the first time any
@@ -131,78 +114,9 @@ const resOf = new SideMap<GameEvent, Resolution>('whistle.resOf');
 /** the last few resolutions, newest last (QA: 'only one man answers', 'through the door nobody heard it') */
 export const WHISTLE_LOG: { t: number; pos: Vec3; hearers: string[]; responder: string | null; answered: string | null; search: boolean }[] = [];
 
-/** mouth height off the event's floor position (a crouched Sam whistles from lower — under a counter top it matters to the over-the-partition test) */
-function mouthOf(g: Game, e: GameEvent): Vec3 { const crouched = !!manById(g, e.who ?? PLAYER_ID)?.crouch; return [e.pos[0], crouched ? 1.0 : 1.55, e.pos[2]]; }
 
-/** can this man be the one who ANSWERS (goes to look): calm, free, on nobody's errand, and of a side that minds Sam at all */
-function canAnswer(gd: Guard, who: number): boolean {
-  if (gd.state !== 'patrol' && gd.state !== 'suspicious') return false;
-  if (gd.held || gd.script || gd.task) return false;
-  return isManId(who) ? isHostile(gd.team, 'player') : false;   // (only Sam whistles today; a whistling unit would need its own hostility test here)
-}
 
-function resolve(g: Game, e: GameEvent, keen: number): Resolution {
-  let R = resOf.get(e); if (R) return R;
-  R = { hearers: new Map(), responder: null, answeredBy: null, t: g.time }; resOf.set(e, R);
-  const src = mouthOf(g, e); const who = e.who ?? PLAYER_ID;
-  let best: Guard | null = null, bd = Infinity;
-  for (const gd of g.guards) {
-    if (gd.state === 'dead') continue;
-    if (isManId(who) && !isHostile(gd.team, 'player')) continue;   // an operative does not turn round for Sam's whistle (teams): it is not for him
-    if (v3.dist(e.pos, gd.char.pos) > WHISTLE.horizon) continue;
-    const prop = hearPath(g, src, v3.add(gd.char.pos, [0, 1.5, 0]));
-    const reach = WHISTLE.reachK * prop.carry * keen;
-    if (prop.pathLen >= reach) continue;
-    R.hearers.set(gd, { d: prop.pathLen, at: [prop.via[0], 0, prop.via[2]], direct: prop.direct, carry: prop.carry });
-    if (canAnswer(gd, who) && prop.pathLen < bd) { bd = prop.pathLen; best = gd; }
-  }
-  R.responder = best;
-  WHISTLE_STATS.resolved++; WHISTLE_STATS.heardBy += R.hearers.size; if (!best) WHISTLE_STATS.unanswered++;
-  WHISTLE_LOG.push({ t: g.time, pos: v3.copy(e.pos), hearers: [...R.hearers.keys()].map(x => x.callsign), responder: best?.callsign ?? null, answered: null, search: false });
-  if (WHISTLE_LOG.length > 32) WHISTLE_LOG.shift();
-  return R;
-}
 
-/** guards.ts hearingCheck, for an event of kind 'whistle' inside the horizon: what it does to THIS man (see the header). `keen` = the alarmed floor's ×1.25 on small
- *  noises; `small(where)` = hearingCheck's own note in his witness memory of a small noise and where it seemed to come from. */
-export function hearWhistle(g: Game, gd: Guard, e: GameEvent, keen: number, small: (where: Vec3) => void) {
-  const who = e.who ?? PLAYER_ID;
-  if (isManId(who) && g.playerInvisible) return;   // the tour's unseen Sam whistles at nobody (as his steps reach nobody)
-  const R = resolve(g, e, keen);
-  const h = R.hearers.get(gd); if (!h) return;          // it did not carry to him
-  const M = mem(gd);
-  small(h.at);
-  // already hunting: one more fix on where you are (an alert man with eyes on you a second ago trusts them over a whistle, as over an echo), nothing said. His
-  // awareness is lifted to the whistle's floor all the same — nothing to a free alert or searching man (he is past it), but the lockdown pair clearing a room
-  // are 'searching' under a script with their senses run for them (squad.ts perceive), and a whistle at their backs breaks the clear off the way a creak does.
-  if (gd.state === 'alert' || gd.state === 'search' || gd.awareness >= 0.85) {
-    if (!wordNow(g, gd) && (gd.state !== 'alert' || !gd.lastKnown || g.time - gd.lastSeenT > 1.0)) gd.lastKnown = v3.copy(h.at);
-    gd.awareness = Math.max(gd.awareness, WHISTLE.awareness);
-    M.cues++; M.soft = false; WHISTLE_STATS.cued++; return;
-  }
-  // somebody nearer answers it (or nobody free can): he turns his head that way and carries on
-  if (gd !== R.responder) { M.glanceUntil = g.time + WHISTLE.glanceSecs; M.glanceAt = v3.copy(h.at); M.glances++; WHISTLE_STATS.glanced++; return; }
-  // he answers it
-  const now = g.time; const twice = now - M.respondedAt <= WHISTLE.twiceWindow;
-  M.respondedAt = now; M.responses++; R.answeredBy = gd; WHISTLE_STATS.answered++;
-  if (!wordNow(g, gd)) gd.lastKnown = v3.copy(h.at); gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.stallT = 0; gd.searchT = 0;
-  gd.awareness = Math.max(gd.awareness, WHISTLE.awareness);
-  const log = WHISTLE_LOG[WHISTLE_LOG.length - 1]; if (log && log.t === R.t) log.answered = gd.callsign;
-  if (twice) {   // the second inside the window: a proper search of the place, gun out, no more 'hello?'
-    gd.state = 'search'; gd.searchPlan = null; gd.pieing = null; gd.bodyDuty = null; gd.reactT = 0;
-    M.searches++; M.soft = false; WHISTLE_STATS.searched++; if (log && log.t === R.t) log.search = true;
-    g.say(gd, pick(w(gd.team === 'guard' ? wg(TWICE_NOW, TWICE_LINES) : TWICE_FOE, TWICE_LINES), M, 'lastTwice'));
-  } else {       // the first: over to it for a look, torch in hand
-    if (gd.state === 'patrol') gd.state = 'suspicious';
-    gd.reactT = WHISTLE.reactT; M.soft = true; M.softAt = now;
-    g.say(gd, pick(w(gd.team === 'guard' ? LOOK_LINES : LOOK_FOE, LOOK_LINES), M, 'lastLook'));
-  }
-}
-function pick(pool: string[], M: WhistleMem, key: 'lastLook' | 'lastTwice'): string {
-  let i = Math.floor(simRandom() * pool.length) % pool.length;
-  if (pool.length > 1 && i === M[key]) i = (i + 1) % pool.length;
-  M[key] = i; return pool[i];
-}
 
 /** Is this man's suspicion (still) only a whistle's: he answered one, is walking over or looking about, and nothing since has sharpened it — no footfall, no
  *  glimpse, no slam (any of those lifts his awareness past what the whistle left him), no CONTACT since. guards.ts handCarry keeps the torch in his hand for it. */
@@ -211,16 +125,6 @@ export function whistleSoft(gd: Guard): boolean {
   return !!M && M.soft && gd.state === 'suspicious' && gd.awareness <= WHISTLE.awareness + 0.02 && gd.witness.alertT < M.softAt;
 }
 
-/** guards.ts, the patrol branch, once a frame: back on his route the whistle is behind him (soft off), and a head still turned toward one somebody else answered
- *  is craned that way (written over the branch's own idle look-about; the neck's limit is the animator's). */
-export function whistlePatrolTick(g: Game, gd: Guard) {
-  const M = memOf.get(gd); if (!M) return;
-  M.soft = false;
-  if (g.time < M.glanceUntil && M.glanceAt) {
-    const c = gd.char; const to = Math.atan2(M.glanceAt[0] - c.pos[0], M.glanceAt[2] - c.pos[2]);
-    c.anim.lookYawExtra = clamp(wrapAngle(to - c.bodyYaw), -WHISTLE.glanceMax, WHISTLE.glanceMax);
-  }
-}
 
 // ---------------------------------------------------------------- persistence (one key, per machine — the way the aim rows are kept)
 const LS_KEY = 'twopointsix.whistle';

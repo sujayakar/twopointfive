@@ -7,12 +7,13 @@ import { BoxMirror, MIRRORED, FACE, NAV, type Furniture, type PaneSource } from 
 import { RUST, FELL, RULES_ROW, fell, callers, ruleRed, f64, u32, u8, simWhyNot } from '../sim/sim';
 import type { SimState } from '../sim/state';
 import { EXACT } from '../math/exact';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from '../game/crossing';
 
 /** The parameter interval [t0, t1] over which the LINE a + t·rd (rd unit) lies inside box b — t0 may be negative, behind a — or null if the line misses it; and `depth`:
  *  how far INSIDE the box the origin a sits (its least distance to a face plane; ≤ 0 = on the surface or outside). This is the whole slab picture segmentBlocked judges
  *  a static by, where rayBox() only ever reports an ENTRY ahead of the origin and answers null from inside (boxes.ts: the rule the cursor's pick and every emitter
  *  embedded in its own fixture lean on) — which let a segment born ON a wall's face, or a hair inside it, run clean through that wall (W8.3). */
-export function lineBox(a: Vec3, rd: Vec3, b: Box): { t0: number; t1: number; depth: number } | null {
+export function lineBox(a: Vec3, rd: Vec3, b: Box): { t0: number; t1: number; depth: number } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('lineBox', undefined, [a, rd, b]); if (__r !== RUST_PASS) return __r as any; } }
   let ox: number, oy: number, oz: number, dx: number, dy: number, dz: number;
   if (b.rot) { const qi = quat.conj(b.rot); const o = quat.rotate(qi, v3.sub(a, b.c)); const d = quat.rotate(qi, rd); ox = o[0]; oy = o[1]; oz = o[2]; dx = d[0]; dy = d[1]; dz = d[2]; }
   else {
@@ -194,7 +195,7 @@ export class StaticCollision {
   /** THE RUST MODULE'S COPY OF THIS WORLD (scene/boxMirror.ts, which says whose the boxes are and how the copy is kept): the host's, in no snapshot. */
   readonly mirror = new BoxMirror();
   /** A TICK OPENS (Game.stepSeats): the copy is made the boxes as they stand, and the questions of this tick go to the module. */
-  tickOpen(): void { this.stand(); this.mirror.played = true; }   // (…and from its first tick a box world is a level in play: what the copy says of a table outgrown — boxMirror.ts outgrown)
+  tickOpen(): void { return goneWithTick('StaticCollision.tickOpen') as any; }   // (…and from its first tick a box world is a level in play: what the copy says of a table outgrown — boxMirror.ts outgrown)
   /** …the copy made the boxes as they stand, for whoever opens a stretch of questions: a tick, a window, a question alone (below). Whatever rows are up:
    *  the senses are the module's alone (below, THE SENSES), and the rows say only which questions THIS FILE can still walk go there too. */
   private stand(): void { if (simWhyNot()) { if (this.mirror.live) this.mirror.shut(); return; }   // (no module here: nothing stands, and a sense says why by name — `sense`)
@@ -217,39 +218,46 @@ export class StaticCollision {
   /** THE WINDOW A RULE THAT TAKES `ruleOpen` STANDS IN: `window`, and on the path with no windows at all (ANYTIME off: a check's red path, fn just runs) the copy that ruleOpen stood is shut behind it */
   rule<T>(fn: () => T): T {
     const M = this.mirror, was = M.live;
-    try { return this.window(fn); } finally { if (!was && M.live && !this.windowed) M.shut(); }
+    try { return this.window(fn); } finally { if (!was && M.live && !this.hostWindow) M.shut(); }
   }
   /** …and THE PANE RULE AS A RULE'S STEP TAKES IT (a slab's and a thrown thing's rays ask it; `paneAsk` below): 0 or 1 to hand the module, or −1 — the step
    *  is the TypeScript's, and counted as its own here, once for every rule that asks */
   rulesPanes(): number { const ask = this.paneAsk; if (ask < 0) this.paneFell(RULES_ROW, ask); return ask; }
   /** why the copy is not answering now, for the count of questions the TypeScript took (sim.ts FELL) */
   private fellWhy(): string { const M = this.mirror; return M.live ? 'the row was not up when the tick opened' : 'outside a tick'; }
-  /** the foot of a span as the statics are asked it (footBand), for a rule that asks them in the module */
-  footOf(y0: number): number { return footBand(y0); }
   /** …and shuts */
-  tickShut(): void { if (this.mirror.live) this.mirror.shut(); }
+  tickShut(): void { return goneWithTick('StaticCollision.tickShut') as any; }
   /** A WINDOW ON THE COPY, FOR QUESTIONS ASKED OUTSIDE A TICK. The module answers a row's questions only over a copy that has been PROVEN (every static
    *  compared with its row: tickOpen), and a proof holds only while nobody writes a box without saying so. A tick is one such stretch. `window(fn)` is
    *  another: the copy is proven once, `fn`'s questions go to the module, and it shuts when `fn` returns, however it returns. Inside it the tick's rule
-   *  holds: a rule that writes a static says `wrote()`. Already inside a tick or a window, `fn` just runs. A tick that opens and shuts inside `fn` shuts
-   *  the window with it (a tick's writers answer to the tick alone); what `fn` asks after that is asked alone, below.
+   *  holds: a rule that writes a static says `wrote()`. Already inside a tick or a window, `fn` just runs. A step
+   *  inside `fn` is `writes`, below: what `fn` asks after it is asked of the copy proven again.
    *  A QUESTION OUTSIDE EVERY WINDOW IS ITS OWN (`lone`): the copy is proven for it and shut behind it. That is always right and costs a proof a
    *  question (about 25 ns a static), so code that asks many in a row opens a window (a level's deal, the camera's step of a frame, the sound's
    *  probe, a tool's driver). A window is proven by the first question asked in it: one that asks nothing costs nothing. */
   window<T>(fn: () => T): T {
-    const M = this.mirror; if (M.live || this.windowed) return fn();   // (whatever ANYTIME says: a sense asked in a window has no other answer, and the window is what proves the copy for it)
-    this.windowed = true;
-    try { return fn(); } finally { this.windowed = false; if (M.live) M.shut(); }
+    const M = this.mirror; if (M.live || this.hostWindow) return fn();   // (whatever ANYTIME says: a sense asked in a window has no other answer, and the window is what proves the copy for it)
+    this.hostWindow = true;
+    try { return fn(); } finally { this.hostWindow = false; if (M.live) M.shut(); }
+  }
+  /** THE BOXES ARE WRITTEN BY `fn`, all of them it likes and none of them said (a step of the game put onto the page's objects: tools/blitz/import.ts applyGame): no
+   *  copy stands while it runs, and the window it ran in, if it ran in one, proves the copy again at its next question. So a frame is ONE window whatever it
+   *  steps (host/loop.ts): what is asked behind a step is asked of the boxes as that step left them. */
+  writes<T>(fn: () => T): T {
+    const M = this.mirror, was = this.hostWindow; if (M.live) M.shut(); this.hostWindow = false;
+    try { return fn(); } finally { this.hostWindow = was; }
   }
   /** inside `window(fn)`, outside a tick: the copy is proven by the first question `fn` asks and stands until `fn` returns (a window nobody asks in costs nothing) */
-  private windowed = false;
+  private hostWindow = false;
+  /** the GAME's own window flag, as its state has it (the Rust rules' `window`): the host's window is never written here, so a game exported inside a frame starts in no window */
+  windowed = false;
   /** THE COPY MADE READY FOR A QUESTION OF THE MODULE'S, where every asker passes: inside a window that no question has proven yet it is proven now, and
    *  a debt of the tick (a static written and said, the grid written) is paid */
-  private ready(): BoxMirror { const M = this.mirror; if (!M.live && this.windowed) this.lone(true); if (M.owes) M.again(this.boxes, this.glassWalkable); return M; }
+  private ready(): BoxMirror { const M = this.mirror; if (!M.live && this.hostWindow) this.lone(true); if (M.owes) M.again(this.boxes, this.glassWalkable); return M; }
   /** a question outside a tick: is the copy now standing for it ALONE (true: the caller shuts it behind the answer; false with the copy standing: a
    *  window's, which shuts it). `must`: it stands whatever ANYTIME says (a window's first question; a sense asked alone) */
   private lone(must = false): boolean { if (!ANYTIME.on && !must) return false; this.stand(); if (!this.mirror.live) return false;   // (the module does not run here; a level the copy cannot hold is no case — boxMirror.ts outgrown)
-    if (this.windowed) { ANYTIME.windows++; return false; }
+    if (this.hostWindow) { ANYTIME.windows++; return false; }
     ANYTIME.proofs++; if (ANYTIME.who || FELL.who) { const W = ANYTIME.who ?? (ANYTIME.who = {}), st = callers(4, 2, /scene\/(collision|boxMirror)\.ts/, 3); W[st] = (W[st] ?? 0) + 1; }   // (who asked alone, wherever the count asks who: TPS_FELL=who, ?fell=who)
     return true; }
   /** A STATIC WAS WRITTEN INSIDE A TICK — its place, its size, its flags, its cut — by a rule that may be asked about again before the tick ends (a wall holed,
@@ -416,10 +424,6 @@ export class StaticCollision {
   get glassPanes(): PaneSource | null { return this.paneRows === null ? null : this.paneRows(); }
   private paneRule: ((bi: number, p: Vec3) => boolean) | null = null;
   private paneRows: (() => PaneSource) | null = null;   // (handed to the copy each time it is stood up: a world outlives its game, and holds nothing of it once shut)
-  /** …the glass is being worked on, from here to there (a blow, a blast, a step of what is coming down): the copy's panes are written again before each of
-   *  the module's answers meanwhile, and before the first one after */
-  glassBegin(): void { this.mirror.glassBegin(); }
-  glassEnd(): void { this.mirror.glassEnd(); }
   /** …or it was written with no question of its own between (a pane made another glass, every pane made whole) */
   glassWrote(): void { this.mirror.glassWrote(); }
   /** …and a burst's view of the glass was put on or taken off */
@@ -523,7 +527,7 @@ export class StaticCollision {
    *  b→a disagree for every one of them. The one exemption kept from that rule, on purpose: a box the ORIGIN is embedded in deeper than `shrink` is skipped — a light
    *  inside its fixture's housing, a fixture box asked from its own centre which side is open (game.ts area lights) — it is not in the way of what it emits. (The
    *  END has no such exemption: a target buried in a box is behind that box's face, as it always was — the one asymmetry left, and only for endpoints inside solids.) */
-  segmentBlocked(a: Vec3, b: Vec3, shrink = 0.02, through: number = BoxFlag.Glass, panes: { bi: number; t: number }[] | null = null): boolean {
+  segmentBlocked(a: Vec3, b: Vec3, shrink = 0.02, through: number = BoxFlag.Glass, panes: { bi: number; t: number }[] | null = null): boolean { if (RUST_SURFACE?.tapFiring('StaticCollision.segmentBlocked')) return RUST_SURFACE.tapAnswer() as any;
     if (!this.mirror.live && RUST.lines && this.lone()) { try { return this.segmentBlockedAsk(a, b, shrink, through, panes); } finally { this.mirror.shut(); } }
     return this.segmentBlockedAsk(a, b, shrink, through, panes);
   }
@@ -927,14 +931,14 @@ export class SoundPaths {
   /** up while a picture asks (Collision.aside): no answer is kept, whatever the asker says — the cache is left as it was found */
   asking = false;
   constructor(private col: StaticCollision) {}
-  tick(time: number) { this.now = time; if (this.cache.size > 512) this.cache.clear(); }
+  tick(time: number): void { return goneWithTick('SoundPaths.tick') as any; }
   /** the level changed under the cached routes (a wall holed, cover gone — game/wallbreak.ts): every answer is asked afresh */
-  invalidate() { this.cache.clear(); }
+  invalidate() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SoundPaths.invalidate', this, []); if (__r !== RUST_PASS) return __r as any; } } this.cache.clear(); }
   /** HOW A SOUND REACHES A LISTENER (rust/sim/src/hear.rs), in two questions with this file's own memory of routed answers between them: what the straight
    *  lines say, and — walled off, near enough, and not remembered — the way round by the floor (rust/sim/src/nav.rs over the grid as it stands now).
    *  Sound does not pass a glass pane: it goes round through the door like round any wall, or through the opening once the pane is broken (glass.rs).
    *  `keep` false = the answer is not kept for the next asker (a question that is not the simulation's own — game/cues.ts overheard — leaves the cache as it found it) */
-  propagate(src: Vec3, dst: Vec3, keep = true): Propagation {
+  propagate(src: Vec3, dst: Vec3, keep = true): Propagation { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('SoundPaths.propagate', this, [src, dst, keep]); if (__r !== RUST_PASS) return __r as any; } }
     if (PRICED.waits) throw new Error('a sound was asked for from inside the price of a search: its way round is a search, and the module has one search\'s tables (rust/sim/src/nav.rs find_priced)');   // (every time, not only when the answer is not remembered)
     return this.col.mirror.live ? this.propagateAsk(src, dst, keep) : this.col.window(() => this.propagateAsk(src, dst, keep)); }
   private propagateAsk(src: Vec3, dst: Vec3, keep: boolean): Propagation {

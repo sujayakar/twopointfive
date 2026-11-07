@@ -20,6 +20,7 @@ import type { View } from '../host/hud';
 import { Input } from './input';
 import { FollowCamera } from './camera';
 import type { Game } from './game';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** one player's input for one game tick: plain numbers and strings, nothing else */
 export interface PlayerCmd {
@@ -37,7 +38,7 @@ export interface PlayerCmd {
 
 /** the record for this tick, sampled from the host's live input, camera and view. Game.update calls it once, after the journal and a showcase's injected keys.
  *  (A showcase puppet AIMS by moving the cursor: done here, on the host's input, so the HUD's reticle follows — updateAim finds the cursor already there.) */
-export function sampleCmd(g: Game, input: Input, cam: FollowCamera, canvas: View, into: PlayerCmd | null = null): PlayerCmd {
+export function sampleCmd(g: Game, input: Input, cam: FollowCamera, canvas: View, into: PlayerCmd | null = null): PlayerCmd { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('sampleCmd', undefined, [g, input, cam, canvas, into]); if (__r !== RUST_PASS) return __r as any; } }
   if (g.puppet?.aim) {
     const [sx, sy, front] = cam.project(g.puppet.aim, canvas.clientWidth, canvas.clientHeight, Infinity, 1e-3);
     if (front) { input.mouseX = sx; input.mouseY = sy; }
@@ -77,7 +78,7 @@ let checkLens: FollowCamera | null = null;
  *  CMDCHECK.reach metres of him and the eye, the forward and both matrices are the game's own working from the pose (camera.ts rebuild) — what the record said
  *  of them is never read. A local seat's matrices are the host camera's and are kept as they come while they are whole numbers. Never throws: a record that
  *  cannot be written or read (frozen, an accessor that throws — nothing JSON gives) is answered with a neutral one. */
-export function checkCmd(raw: unknown, near: Vec3 | null = null): { cmd: PlayerCmd; fixed: number } {
+export function checkCmd(raw: unknown, near: Vec3 | null = null): { cmd: PlayerCmd; fixed: number } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('checkCmd', undefined, [raw, near]); if (__r !== RUST_PASS) return __r as any; } }
   try { return checkCmdIn(raw, near); } catch { const r = checkCmdIn(null, near); return r; }
 }
 function checkCmdIn(raw: unknown, near: Vec3 | null): { cmd: PlayerCmd; fixed: number } {
@@ -169,23 +170,8 @@ export class Seat {
   /** buttons the game has swallowed until they are let go (swallow) */
   private mask = 0;
 
-  load(c: PlayerCmd): void {
-    this.cmd = c;
-    const i = this.input, cam = this.cam, cv = this.canvas, v = c.view;
-    i.keys.clear(); for (const k of c.keys) i.keys.add(k);
-    i.pressed.clear(); for (const k of c.pressed) i.pressed.add(k);
-    this.mask &= c.buttons & ~c.clicked;   // (let go, or pressed afresh since the last record: the swallow is over)
-    i.buttons = c.buttons & ~this.mask; i.clicked = c.clicked; i.wheel = c.wheel; i.mouseX = c.mx; i.mouseY = c.my;
-    cv.clientWidth = c.w; cv.clientHeight = c.h; cv.width = c.pw; cv.height = c.ph;
-    loadLens(cam, v);
-  }
-  /** a record waiting for this seat's next tick, from whoever plays it (a second player's client; a check's script): `Game.update` steps a seat its host does not
-   *  play from what was handed, once — and from a still record (no key, no button, the view it last had; `like`'s before it has had one) when nothing was. */
-  hand(c: PlayerCmd): void { this.waiting = c; }
   handed(like: PlayerCmd): PlayerCmd { const c = this.waiting ?? stillCmd(this.cmd ?? like); this.waiting = null; return c; }
   private waiting: PlayerCmd | null = null;
-  /** the game took these held buttons for something of its own (the order menu's click that gives a row): they read as up until the player lets go */
-  swallow(bits: number): void { this.mask |= bits; this.input.buttons &= ~bits; }
   /** OUTPUT: a tick CUT the seat's camera (a scenario's opening: nightbreach.ts / rescue.ts write `target` and `desired` afresh on the lens they are handed) → the look-at to
    *  snap the host's camera to, once; null = no cut since the last call. It waits here until somebody takes it (a game stepped from records has nobody). */
   takeCut(): Vec3 | null { const cam = this.cam; if (cam.desired === this.mark) return null; this.mark = cam.desired; return cam.desired; }   // (`desired` = the cut's own copy: the next record's load overwrites `target`)

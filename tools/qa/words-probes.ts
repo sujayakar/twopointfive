@@ -1,5 +1,5 @@
 // The 'words' family (game/words.ts — THE DIALOGUE PASS: every line fits who says it and where), run through probes.ts:
-//   bun run tools/qa/probes.ts words | words-lint | words-hostage | words-off   [--verbose]
+//   bun run tools/qa/probes.ts words | words-lint | words-hostage   [--verbose]
 // PASS / FAIL each, all headless. The switch (WORDS.on) is OFF on the frozen stand; each probe here raises it for itself and puts it back.
 //   words-lint      the tables the pass added: every hostage line inside a bubble's length, none on the originality blocklist, none shared with the office
 //                   civilians' table, every {other} line with a plain sibling in its pool; the whole of dialogue.ts's own lint still green with the switch on;
@@ -7,8 +7,6 @@
 //   words-hostage   a staged rescue with the switch on, the team standing still: every word out of a hostage's mouth is a hostage's line and never a
 //                   civilian's; she pleads while he shouts, begs with his gun on her, the one beside her cries her name when she is shot; no message calls
 //                   anybody a cleaner; and with the captor dead and a man of the team in the room, one of them speaks and a teammate answers
-//   words-off       the switch off: the same staged run says only the lines the build said before the pass (the cleaner's corner lines), the label stands,
-//                   and the message a shot hostage gets is the old one — off is the build as it was
 //   words-routes    every patrol route of every level file is SAID as plain words with the switch on ('the north side', never 'the north b' off an id with no
 //                   row nor 'the roundW'), and every line that says a route still fits a bubble with each level's two longest names in; the rule is also asked
 //                   about two ids it must be red on. WORDS_BREAK=1 plants such a level in the list: the probe must fail
@@ -113,17 +111,6 @@ export const wordsHostage = guarded(async () => withWords(true, async () => {
     const more = (() => { const n = L.said.length; if (R.result) L.secs(6); else L.secs(20, () => !!R.result); return L.said.slice(n).filter(s => hs.has(s.who)); })();   // (the result already in — the shipped stand's ending: a fixed stretch, not one step)
     F.verdict(!more.length && !T.bad, 'and then they are quiet: the room is held', more.map(s => s.text).join(' | ') || `state ${R.state}`);
   }
-  return F.done();
-}));
-
-export const wordsOff = guarded(async () => withWords(false, async () => {
-  const F = family('words-off: the switch off — every line as it was');
-  const K = { resolveSpread: 0, resolveSecs: 20, secondHostageSecs: 6 };
-  const T = await staged(false, 21, K), R = T.R, L = listen(T); give(T, 'hold'); T.step(); L.secs(40, () => !!R.result);
-  const hs = new Set(R.hostages.map((h: any) => h.callsign)), hers = L.said.filter(s => hs.has(s.who)), mine = new Set<string>(D.hostageLines());
-  const cower: string[] = D.CIV_LINES.cower;
-  F.verdict(hers.length >= 1 && hers.every(s => cower.includes(s.text)) && !hers.some(s => mine.has(s.text)), 'a hostage says the corner lines the build had, and none of the new ones', `${hers.length} lines: ${[...new Set(hers.map(s => s.text))].join(' | ')}`);
-  F.verdict(R.hostages.every((h: any) => h.civ.label !== 'hostage') && L.msgs.some(m => /, the (cleaner|late worker), is down/.test(m)), 'the label and the message of a shot hostage are the old ones', L.msgs.filter(m => /is down|has been shot/.test(m)).join(' | '));
   return F.done();
 }));
 
@@ -307,9 +294,8 @@ export const wordsDoorNames = guarded(async () => {
     // ---- 2, 3 · the level files and the office
     WORDS.doors = !process.env.DOORNAMES_BREAK;
     const files: { file: string; L: any; office: boolean }[] = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json')).sort().map(file => ({ file, L: JSON.parse(readFileSync(`${ROOT}/levels/${file}`, 'utf8')), office: false }));
-    const OS = (await import(`${ROOT}/levels/office.scenarios.ts`)).OFFICE_SCENARIOS;
     for (let i = files.length - 1; i >= 0; i--) if (!Array.isArray(files[i].L.doors)) files.splice(i, 1);   // (a lint list, a look file: not a level)
-    for (const f of files) if (/^office/.test(f.file) && !f.L.scenarios) { f.L = { ...f.L, scenarios: OS }; f.office = true; }
+    for (const f of files) if (/^office/.test(f.file)) f.office = true;   // (the office and its relief: the game's own rule for them is dialogue.ts isOffice, by their routes)
     const bad: string[] = [], twins: string[] = [], owed: Record<string, string> = {}, places: Record<string, string> = {}, letters: Record<string, string> = {}; let written = 0, doorsN = 0;
     for (const { file, L, office } of files) {
       const ids: string[] = (L.doors ?? []).map((d: any) => d.name ?? d.id);

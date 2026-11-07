@@ -1,10 +1,9 @@
-// AN ALERTED MAN DOES NOT WAIT AT A SHUT DOOR — the check behind src/game/doorforce.ts (DOORFORCE.on: on in the page, ?doorforce=0; off on the frozen
-// stand, TPS_DOORFORCE=1).
-//   bun run tools/qa/doorforce-check.ts [--verbose]      (also `probes.ts doorforce`, family doors; run it on BOTH stands: plain, and TPS_PROFILE=shipped in front)
+// AN ALERTED MAN DOES NOT WAIT AT A SHUT DOOR — the check behind src/game/doorforce.ts (a settled rule).
+//   bun run tools/qa/doorforce-check.ts [--verbose]      (also `probes.ts doorforce`, family doors)
 // Headless, on the office: one of its own staff stood a few metres off a shut door, alert; the player stood close behind the leaf, hidden by it. What the
 // man hears is real: footfalls filed where the player stands at the level his own walk files them, through the hearing model and the shut leaf. His rounds
-// are real rounds (combat.ts fireWeapon), his boot the door's own kickIn. The check sets the rule, rounds through thin things (wallpen.ts) and the door
-// splinter rule (doorblast.ts DOORSHOT) itself on either stand, and puts them back.
+// are real rounds (combat.ts fireWeapon), his boot the door's own kickIn. Nothing here writes a settled row (2026-11-07): the rule, rounds
+// through thin things (wallpen.ts) and the door splinter rule (doorblast.ts) are as the page has them. Out: line 11 'the rule off' and line 12 'the journal'.
 //   1  heard, a post    a man holding a post who hears walked footfalls behind a shut wooden leaf becomes sure, fires through it, never leaves his post
 //   2  calm             the same sounds to a man who is not alert: nothing kept, no round
 //   3  nobody           alert with nothing heard or seen behind the door: no round, no boot
@@ -16,34 +15,34 @@
 //   8  seen             a man who SAW him go behind it is sure at once and fires: handed the record a sighting leaves · 8b the real thing, the open leaf shut
 //                       on a man who had the player in his eyes · 8c a place beside the door with the wall in his eyes' line is not behind it
 //   9  a friend         a colleague stood past the door in the line: the rounds are held
-//  10  splinters        with the door splinter rule on (and the boot put off to count them), his rounds take the leaf apart on its own count; none after
-//  11  off              the rule off: the same staging, no state kept, no round, no boot
-//  12  the journal      a recording from before the table replays with the rule off; one that carries it keeps its own word
-// DOORFORCE_BREAK=1 = the module answers as if the switch were off: lines 1, 5, 6, 7, 8, 8b, 9 and 10 must fail.   exit 0 = all hold · 1 = one does not
+//  10  splinters        the boot put off to count them, his rounds take the leaf apart on its own count; none after
+// DOORFORCE_BREAK=1 = a staging break: the man is staged on patrol, not alert, in every line (the word is also an old hook of the TypeScript module, which
+// the Rust tick does not read): the lines that say what an alerted man does must fail.   exit 0 = all hold · 1 = one does not
 type Vec3 = [number, number, number];
 const VERBOSE = process.argv.includes('--verbose');
+/** EVERY WORLD OF THIS CHECK IS STOOD UP ON ONE DIE OF THE GAME'S OWN (src/math/dice.ts), as the page's game is: two runs of one tree say the same numbers.
+ *  With none the game drew the process's Math.random, and one tree said 6 rounds or 7 in line 1 (the men's cooldowns are rolled). `TPS_SEED=n` in front is
+ *  the harness's own word and still names the die (headless.ts): a sweep over dice is that word in a loop. ONE DIE IS ONE SAMPLE: a rule that breaks on one
+ *  stream in ten is green here for ever, where the unseeded check went red now and then. */
+const SEED = 2;
 
 export async function doorforceCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
   const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
+  const { useDice } = await import(`${ROOT}/src/math/dice.ts`);
   const { DOORFORCE, DOORFORCE_STATS, DOORFORCE_LOG, doorForceBelief, doorForceOn, doorForceSaw } = await import(`${ROOT}/src/game/doorforce.ts`);
-  const { DOORSHOT } = await import(`${ROOT}/src/game/doorblast.ts`);
-  const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
   const { COVERFIRE_STATS } = await import(`${ROOT}/src/game/coverfire.ts`);
-  const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
-  const { WALLPEN, WALLPEN_STATS } = await import(`${ROOT}/src/game/wallpen.ts`);
-  const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`);
+  const { WALLPEN_STATS } = await import(`${ROOT}/src/game/wallpen.ts`);
   const DT = 1 / 60; const f2 = (x: number) => x.toFixed(2);
   let failed = false; const line = (ok: boolean, s: string) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}`); };
   const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
-  const was = { on: DOORFORCE.on, pen: WALLPEN.on, men: WALLPEN.men, shot: DOORSHOT.on, destr: DESTRUCTION.on, oneWay: DOORWAY.oneWay, frame: DOORWAY.frameHolds, kickSecs: DOORFORCE.kickSecs };
+  const was = { kickSecs: DOORFORCE.kickSecs }, BREAK = process.env.DOORFORCE_BREAK === '1';
   const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
   const zero = () => { for (const k of Object.keys(DOORFORCE_STATS)) (DOORFORCE_STATS as any)[k] = 0; DOORFORCE_LOG.length = 0; COVERFIRE_STATS.thruShots = 0; };
 
-  /** a fresh office: the rule as asked, rounds through thin things on, the splinter rule as asked, every man but the one staged parked blind and deaf */
-  const world = async (on: boolean, splinter = false) => {
-    const W: any = await quiet(() => standUp()); const g = W.game;
-    DOORFORCE.on = on; WALLPEN.on = true; WALLPEN.men = true; DOORSHOT.on = splinter; if (splinter) DESTRUCTION.on = true;   // AFTER standUp: the stand-up lines would otherwise write them back
+  /** a fresh office, every man but the one staged parked blind and deaf */
+  const world = async () => {
+    const W: any = await quiet(() => standUp(process.env.TPS_SEED ? {} : { seed: SEED })); const g = W.game;
     g.godMode = true; g.aiEnabled = true; g.playerInvisible = false; g.tune.tactics = false; zero();
     return W;
   };
@@ -81,46 +80,46 @@ export async function doorforceCheck(): Promise<boolean> {
   };
 
   try {
-    const W0 = await world(true); const g0 = W0.game;
+    const W0 = await world(); const g0 = W0.game;
     const wood = rigs(g0, false, 0.9, 3.0), steel = rigs(g0, true, 0.9, 3.0);
     line(wood.length > 0, `the office has a shut wooden door with floor both sides and a clear line to its leaf (${wood.length} found${wood.length ? `: '${wood[0].name}'` : ''}; steel ${steel.length ? `'${steel[0].name}'` : 'none with floor both sides'})`);
     if (!wood.length) throw new Error('no door to stand at');
     const R = wood[0];
-    const stage = async (on: boolean, o: { face: 'push' | 'pull'; post: boolean; state?: string; splinter?: boolean; rig?: typeof R } = { face: 'push', post: true }) => {
-      const W = await world(on, !!o.splinter), g = W.game, rig = o.rig ?? R, d = g.doors.byName(rig.name), G = g.guards[0];
+    const stage = async (o: { face: 'push' | 'pull'; post: boolean; state?: string; rig?: typeof R } = { face: 'push', post: true }) => {
+      const W = await world(), g = W.game, state = BREAK ? 'patrol' : o.state ?? 'alert', rig = o.rig ?? R, d = g.doors.byName(rig.name), G = g.guards[0];
       // `face`: the face the MAN stands on — 'push' = the leaf opens away from him (a boot opens it), 'pull' = toward him (the frame holds a boot)
       const gAt = o.face === 'push' ? rig.pushFar : rig.pullFar, pAt = o.face === 'push' ? rig.pull : rig.push;
-      park(g, [G]); g.teleportPlayer(v3.copy(pAt)); man(g, G, gAt, pAt, o.post, o.state ?? 'alert'); W.step(DT); man(g, G, gAt, pAt, o.post, o.state ?? 'alert');
+      park(g, [G]); g.teleportPlayer(v3.copy(pAt)); man(g, G, gAt, pAt, o.post, state); W.step(DT); man(g, G, gAt, pAt, o.post, state);
       return { W, g, d, G, gAt, pAt };
     };
     const tell = () => VERBOSE && DOORFORCE_LOG.length ? `\n      ${DOORFORCE_LOG.join('\n      ')}` : '';
 
     // ------------------------------------------------------------ 1 heard, a post
-    { const { W, g, d, G, gAt, pAt } = await stage(true, { face: 'push', post: true }); const l0 = WALLPEN_STATS.leaves; let sureAt = -1, fireAt = -1; const t0 = g.time;
+    { const { W, g, d, G, gAt, pAt } = await stage({ face: 'push', post: true }); const l0 = WALLPEN_STATS.leaves; let sureAt = -1, fireAt = -1; const t0 = g.time;
       run(W, 8, pAt, 0.26, () => { const B = doorForceBelief(g, G, d); if (sureAt < 0 && B && B.sure >= DOORFORCE.sure) sureAt = g.time - t0; if (fireAt < 0 && DOORFORCE_STATS.shots > 0) fireAt = g.time - t0; });
       const moved = flat(G.char.pos, gAt), through = WALLPEN_STATS.leaves - l0;
       line(sureAt > 0 && DOORFORCE_STATS.shots >= DOORFORCE.rounds && through > 0 && moved < 0.3 && DOORFORCE_STATS.kicks === 0 && !d.off && d.isClosed(),
         `a man on a post, alert, 3 m off '${R.name}', the player walking close behind it: sure after ${f2(sureAt)} s (${Math.max(0, Math.ceil(sureAt / 0.3))} footfalls), his first round at ${f2(fireAt)} s, ${DOORFORCE_STATS.shots} rounds in 8 s of which ${through} crossed the leaf · he moved ${f2(moved)} m off his post · boots ${DOORFORCE_STATS.kicks} (want 0)${tell()}`); }
 
     // ------------------------------------------------------------ 2 calm
-    { const { W, g, d, G, pAt } = await stage(true, { face: 'push', post: true, state: 'patrol' }); let kept = false;
+    { const { W, g, d, G, pAt } = await stage({ face: 'push', post: true, state: 'patrol' }); let kept = false;
       run(W, 6, pAt, 0.26, () => { if (doorForceBelief(g, G, d)) kept = true; if (G.state === 'alert') G.state = 'suspicious'; });
       line(!kept && DOORFORCE_STATS.shots === 0 && DOORFORCE_STATS.stands === 0, `the same footfalls to a man who is not alert: nothing kept of the door (${!kept}), rounds ${DOORFORCE_STATS.shots}, stands ${DOORFORCE_STATS.stands} (he ended '${G.state}')`); }
 
     // ------------------------------------------------------------ 3 nobody
-    { const { W, g, d } = await stage(true, { face: 'push', post: false }); g.guards[0].lastKnown = null; g.guards[0].hold = true;
+    { const { W, g, d } = await stage({ face: 'push', post: false }); g.guards[0].lastKnown = null; g.guards[0].hold = true;
       run(W, 8, null, 0);
       line(DOORFORCE_STATS.shots === 0 && DOORFORCE_STATS.kicks === 0 && DOORFORCE_STATS.stands === 0 && d.isClosed() && !d.lockBroken, `alert with nothing heard or seen behind the door, 8 s: rounds ${DOORFORCE_STATS.shots}, boots ${DOORFORCE_STATS.kicks}, the door shut and whole`); }
 
     // ------------------------------------------------------------ 4 crouched
-    { const { W, g, d, G, pAt } = await stage(true, { face: 'push', post: true }); let top = 0;
+    { const { W, g, d, G, pAt } = await stage({ face: 'push', post: true }); let top = 0;
       run(W, 10, pAt, 0.125, () => { top = Math.max(top, doorForceBelief(g, G, d)?.sure ?? 0); }, 0.4);
       line(top < DOORFORCE.sure && DOORFORCE_STATS.shots === 0, `a crouched tread behind the leaf for 10 s: the surest he got was ${f2(top)} (under ${DOORFORCE.sure}), rounds ${DOORFORCE_STATS.shots}`); }
 
     // ------------------------------------------------------------ 5 a free man boots it in
     // (until he is sure he is kept where he was stood: left to himself a free man walks to his last fix, which is the door's handle — the build as it was.
     //  A colleague stands a few metres behind him with his ears open: the boot is his own side's, not an intruder at a door)
-    { const { W, g, d, G, pAt, gAt } = await stage(true, { face: 'push', post: false }); let standAt = -1, kickAt = -1, shotsAtKick = 0, walked = 0, stoodFor = 0, fix: Vec3 | null = null; const t0 = g.time; let last = v3.copy(gAt);
+    { const { W, g, d, G, pAt, gAt } = await stage({ face: 'push', post: false }); let standAt = -1, kickAt = -1, shotsAtKick = 0, walked = 0, stoodFor = 0, fix: Vec3 | null = null; const t0 = g.time; let last = v3.copy(gAt);
       const M = g.guards[1], back = v3.normalize(v3.sub(gAt, pAt)); let mAt: Vec3 | null = null; for (const r of [4, 3, 5, 2.5]) { const q: Vec3 = [gAt[0] + back[0] * r, 0, gAt[2] + back[2] * r]; if (free(g, q)) { mAt = q; break; } }
       if (mAt) { M.char.pos = v3.copy(mAt); M.char.update(0); M.dazzledUntil = -1; M.heardUpTo = g.eventSeq; M.state = 'patrol'; M.awareness = 0; M.hold = true; M.pinned = true; M.witness.heard.kick = 0; }
       run(W, 16, pAt, 0.26, () => {
@@ -135,32 +134,31 @@ export async function doorforceCheck(): Promise<boolean> {
         `a free man on the face '${R.name}' opens away from: on it at ${f2(standAt)} s, stood (${f2(stoodFor)} m) and put ${shotsAtKick} rounds through it, then walked ${f2(walked)} m up to it and booted it ${f2(wait)} s after he began (no sooner than ${DOORFORCE.kickSecs}): boots ${DOORFORCE_STATS.kicks}, gave ${DOORFORCE_STATS.gave}, the keep broken ${d.lockBroken}, the leaf at ${f2(d.angle)} rad · his fix after it ${fix ? f2(flat(fix, pAt)) : '—'} m from the player · the boot heard as an intruder's by him ${G.witness.heard.kick}, by a colleague ${mAt ? `${f2(flat(mAt, gAt))} m behind him ${theirs}` : '(no floor for one)'} (want 0)${tell()}`); }
 
     // ------------------------------------------------------------ 6 the frame would hold a boot
-    // (the frame rule is the one-way doors' — doors.ts DOORWAY — which the frozen stand holds off: raised here on either stand, AFTER the stand-up)
-    { const { W, g, d, G, pAt } = await stage(true, { face: 'pull', post: false }); DOORWAY.oneWay = true; DOORWAY.frameHolds = true; let left = -1, fix: Vec3 | null = null; const t0 = g.time;
+    { const { W, g, d, G, pAt } = await stage({ face: 'pull', post: false }); let left = -1, fix: Vec3 | null = null; const t0 = g.time;
       run(W, 9, pAt, 0.26, () => { if (left < 0 && DOORFORCE_STATS.noKick > 0) { left = g.time - t0; fix = G.lastKnown ? v3.copy(G.lastKnown) : null; } });
       line(left > 0 && DOORFORCE_STATS.kicks === 0 && !d.lockBroken && !!fix && flat(fix!, pAt) < 1,
         `the same man on the face it opens toward: no boot thrown (${DOORFORCE_STATS.kicks}; the keep whole ${!d.lockBroken}) — at ${f2(left)} s he is left to its handle, his fix ${fix ? f2(flat(fix, pAt)) : '—'} m from where the player stands (rounds first: ${DOORFORCE_STATS.shots})${tell()}`);
-      DOORWAY.oneWay = was.oneWay; DOORWAY.frameHolds = was.frame; }
+ }
 
     // ------------------------------------------------------------ 7 steel
     // (a level's own steel door where one has floor both sides; else the same wooden door with its leaf made steel — DoorDef.steel, read live by every rule that asks)
-    { const own = steel[0]; const { W, g, d, G, pAt, gAt } = await stage(true, { face: 'push', post: false, rig: own ?? R }); const wasSteel = d.def.steel; d.def.steel = true; let sure = 0;
+    { const own = steel[0]; const { W, g, d, G, pAt, gAt } = await stage({ face: 'push', post: false, rig: own ?? R }); const wasSteel = d.def.steel; d.def.steel = true; let sure = 0;
       run(W, 10, pAt, 0.26, () => { if (DOORFORCE_STATS.stands === 0) { G.char.pos = v3.copy(gAt); G.char.vel = [0, 0, 0]; G.path = []; G.pathGoal = null; } sure = Math.max(sure, doorForceBelief(g, G, d)?.sure ?? 0); });
       line(sure >= DOORFORCE.sure && DOORFORCE_STATS.shots === 0 && DOORFORCE_STATS.kicks === 0 && DOORFORCE_STATS.noKick === 1 && !d.lockBroken, `a steel door (${own ? `'${own.name}'` : `'${R.name}' with its leaf made steel`}), a free man as sure as before (${f2(sure)}): rounds ${DOORFORCE_STATS.shots}, boots ${DOORFORCE_STATS.kicks} (want 0 and 0) — left to its handle ${DOORFORCE_STATS.noKick} time(s)${tell()}`);
       d.def.steel = wasSteel; }
 
     // ------------------------------------------------------------ 8 seen
-    { const { W, g, d, G, pAt } = await stage(true, { face: 'push', post: true }); const l0 = WALLPEN_STATS.leaves; doorForceSaw(g, G, pAt, 0.2); W.step(DT); W.step(DT);
+    { const { W, g, d, G, pAt } = await stage({ face: 'push', post: true }); const l0 = WALLPEN_STATS.leaves; doorForceSaw(g, G, pAt, 0.2); W.step(DT); W.step(DT);
       const B = doorForceBelief(g, G, d); run(W, 4, null, 0); const fired = DOORFORCE_STATS.shots + COVERFIRE_STATS.thruShots;
       line(!!B && B.seen && B.sure >= DOORFORCE.sure && DOORFORCE_STATS.stands === 1 && fired > 0 && WALLPEN_STATS.leaves > l0, `a man handed the record a sighting leaves, of the player where he stands behind the leaf: sure ${B ? f2(B.sure) : '—'} at once, on the door ${DOORFORCE_STATS.stands === 1}, rounds through it ${fired} (this rule's ${DOORFORCE_STATS.shots}, coverfire.ts's ${COVERFIRE_STATS.thruShots})${tell()}`); }
     // 8b the tick's own hand-off: his eyes' stamp held on the player for a quarter of a second (Guard.lastSeenT, what the eye test writes — the light meter
     //    that decides a real sighting is not this harness's to drive), then let go with the shut leaf between them
-    { const { W, g, d, G, pAt } = await stage(true, { face: 'push', post: true }); const l0 = WALLPEN_STATS.leaves;
+    { const { W, g, d, G, pAt } = await stage({ face: 'push', post: true }); const l0 = WALLPEN_STATS.leaves;
       for (let i = 0; i < 15; i++) { G.lastSeenT = g.time + DT; W.step(DT); }
       zero(); run(W, 6, null, 0); const fired = DOORFORCE_STATS.shots + COVERFIRE_STATS.thruShots, B = doorForceBelief(g, G, d);
       line(DOORFORCE_STATS.seen === 1 && DOORFORCE_STATS.stands === 1 && fired > 0 && WALLPEN_STATS.leaves > l0, `the game's own hand-off — his eyes' stamp on the player for 15 frames, then lost with the shut leaf in his line to him: sightings put behind it ${DOORFORCE_STATS.seen}, on the door ${DOORFORCE_STATS.stands === 1}, rounds through it ${fired} (this rule's ${DOORFORCE_STATS.shots}, coverfire.ts's ${COVERFIRE_STATS.thruShots})${B ? '' : ' · the belief spent'}${tell()}`); }
     // 8c not behind it: the WALL and not the leaf in his eyes' line to the place he last saw the man — the far side of the same wall is not "behind the door"
-    { const { W, g, d, G, pAt, gAt } = await stage(true, { face: 'push', post: true }); const u = d.dir(); let did = false;
+    { const { W, g, d, G, pAt, gAt } = await stage({ face: 'push', post: true }); const u = d.dir(); let did = false;
       const wallFirst = (from: Vec3, at: Vec3) => { const a: Vec3 = [from[0], 1.5, from[2]], dd = v3.sub([at[0], DOORFORCE.chestY, at[2]], a), L = v3.len(dd), h = g.col.raycast(a, v3.scale(dd, 1 / L), L); return !!h && h.index < 1e6; };
       // (a place beside the door behind its wall, the man where he was; else the place behind the leaf and the man moved along his own side until the wall is in the way)
       const tries: { at: Vec3; from: Vec3 }[] = [];
@@ -172,7 +170,7 @@ export async function doorforceCheck(): Promise<boolean> {
       if (!did) console.log('- note — no place here with the wall in his line to a spot behind the door: line 8c not run'); }
 
     // ------------------------------------------------------------ 9 a friend past the door
-    { const { W, g, G, pAt, gAt } = await stage(true, { face: 'push', post: true }); const M = g.guards[1];
+    { const { W, g, G, pAt, gAt } = await stage({ face: 'push', post: true }); const M = g.guards[1];
       const dir = v3.normalize(v3.sub(pAt, gAt)); const mAt: Vec3 = [pAt[0] + dir[0] * 0.9, 0, pAt[2] + dir[2] * 0.9];
       const ok = free(g, mAt); if (ok) { M.char.pos = v3.copy(mAt); M.char.update(0); }
       run(W, 6, pAt, 0.26, () => { if (ok) { M.char.pos = v3.copy(mAt); M.char.vel = [0, 0, 0]; } });
@@ -182,23 +180,14 @@ export async function doorforceCheck(): Promise<boolean> {
 
     // ------------------------------------------------------------ 10 the leaf splinters under his rounds
     // (the office's staff carry pistols: two dozen of those take a leaf apart, more than he fires before the boot — so the boot is put off here to count them)
-    { DOORFORCE.kickSecs = 60; const { W, g, d, G, pAt, gAt } = await stage(true, { face: 'push', post: false, splinter: true }); g.tune.chaos = 0.5; let offAt = -1, at = 0; const t0 = g.time;
+    { DOORFORCE.kickSecs = 60; const { W, g, d, G, pAt, gAt } = await stage({ face: 'push', post: false }); g.tune.chaos = 0.5; let offAt = -1, at = 0; const t0 = g.time;
       run(W, 45, pAt, 0.26, () => { if (DOORFORCE_STATS.stands === 0) { G.char.pos = v3.copy(gAt); G.char.vel = [0, 0, 0]; G.path = []; G.pathGoal = null; } if (offAt < 0 && d.off) { offAt = g.time - t0; at = DOORFORCE_STATS.shots; } });
       DOORFORCE.kickSecs = was.kickSecs;
-      line(d.off && offAt > 0 && DOORFORCE_STATS.kicks === 0 && DOORFORCE_STATS.shots <= at + 1, `with the door splinter rule on (doorblast.ts) and the boot put off: his rounds take the leaf apart at ${f2(offAt)} s, his ${at}th through it, and with the frame open he lays no more through it (${DOORFORCE_STATS.shots - at} after), boots ${DOORFORCE_STATS.kicks}${tell()}`); }
+      line(d.off && offAt > 0 && DOORFORCE_STATS.kicks === 0 && DOORFORCE_STATS.shots <= at + 1, `the boot put off: his rounds take the leaf apart at ${f2(offAt)} s, his ${at}th through it, and with the frame open he lays no more through it (${DOORFORCE_STATS.shots - at} after), boots ${DOORFORCE_STATS.kicks}${tell()}`); }
 
-    // ------------------------------------------------------------ 11 off
-    { const { W, g, d, G, pAt } = await stage(false, { face: 'push', post: true }); let kept = false;
-      run(W, 8, pAt, 0.26, () => { if (doorForceBelief(g, G, d) || doorForceOn(g, G)) kept = true; });
-      line(!kept && DOORFORCE_STATS.shots === 0 && DOORFORCE_STATS.kicks === 0 && DOORFORCE_STATS.heard === 0 && d.isClosed(), `the rule off, the staging of line 1: nothing kept (${!kept}), sounds counted ${DOORFORCE_STATS.heard}, rounds ${DOORFORCE_STATS.shots}, boots ${DOORFORCE_STATS.kicks}`); }
-
-    // ------------------------------------------------------------ 12 the journal
-    { const g = g0, snap = () => JSON.parse(JSON.stringify(knobsSnapshot(g)));
-      DOORFORCE.on = true; const old = snap(); delete old.tables.DOORFORCE; applyKnobs(g, old); const before = DOORFORCE.on;
-      DOORFORCE.on = false; const own = snap(); own.tables.DOORFORCE.on = true; applyKnobs(g, own); const carried = DOORFORCE.on;
-      line(before === false && carried === true, `a recording from before the table replays with the rule off (journal.ts applyKnobs): ${before} · one that carries it keeps its own word: ${carried}`); }
   } catch (err) { line(false, `threw: ${(err as Error)?.stack ?? err}`); }
-  finally { DOORFORCE.on = was.on; DOORFORCE.kickSecs = was.kickSecs; WALLPEN.on = was.pen; WALLPEN.men = was.men; DOORSHOT.on = was.shot; DESTRUCTION.on = was.destr; DOORWAY.oneWay = was.oneWay; DOORWAY.frameHolds = was.frame; }
+  finally { DOORFORCE.kickSecs = was.kickSecs;
+    useDice(null); }   // (the last world's die is not left as the process's: a tool that builds a man with no stand-up after this draws Math.random, as before the seed)
   console.log(failed ? '=== doorforce-check: FAIL ===' : '=== doorforce-check: ALL PASS ===');
   return !failed;
 }

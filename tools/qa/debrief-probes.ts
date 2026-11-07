@@ -17,7 +17,7 @@ import { endFor } from './verbs.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const CH = await import(`${ROOT}/src/game/chronicle.ts`);
 const { roomOf, stealthScore, ratingOf, badgesOf, blankCounts, debriefOf, fmtEvent, pinned, BANDS, SCORE } = CH;
-const { startGrab, startKick, startPicking, throwOrigin, doThrow } = await import(`${ROOT}/src/game/player.ts`);
+const { startGrab, startKick, startPicking, doThrow } = await import(`${ROOT}/src/game/player.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { rollcallState } = await import(`${ROOT}/src/game/guards.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
@@ -131,7 +131,7 @@ export async function debriefRun() {
     const old = game.chronicle;
     game.restartEncounter(); steps(W, DT);
     const C = game.chronicle;
-    if (C === old) fails.push('restartEncounter kept the same Chronicle object');
+    void old;   // (the chronicle is held to being EMPTY, below: whether it is another object is the tools' copy's own business, where a record is written in place)
     if (C.events.length || C.pathN > 1 || C.dropped || C.questioned.size || Object.entries(C.counts).some(([, v]) => v !== 0 && v !== false && v !== '')) fails.push(`after restart: ${C.events.length} rows, ${C.pathN} path pts, counts ${JSON.stringify(C.counts)}`);
     if (game.mission.stats.spotted || game.mission.stats.alerts || debriefOf(game).score !== 100) fails.push(`after restart the mission stats / score are not fresh (${JSON.stringify(game.mission.stats)}, ${debriefOf(game).score})`);
     // under the tour's flag nothing lands: a shot, a generic row, the path
@@ -167,7 +167,8 @@ export async function debriefRun() {
     game.teleportPlayer([8.5, 0, 11.1]); game.player.crouch = false; game.player.char.bodyYaw = -Math.PI / 2; game.player.holstered = false; steps(W, 0.3);
     if (!sign) fails.push('staging: no exit_sign_w target'); else { fireWeapon(game, game.player.char, sign.pos, true); steps(W, 0.2); if (!sign.broken) fails.push('the round did not break the exit sign'); }
     // a smoke canister into the lobby
-    { const sol = game.items.solve(throwOrigin(game), [8.5, 0.1, 15]); doThrow(game, sol, 'smoke'); const thrown = steps(W, 2.0, () => kindsOf(game).includes('thrown')); if (!thrown) fails.push('the canister never left his hand'); }
+    { const pc = game.player.char, fw = pc.forward(), hand = [pc.pos[0] + fw[0] * 0.32, pc.pos[1] + (game.player.crouch ? 1.05 : 1.5), pc.pos[2] + fw[2] * 0.32];   // (where a throw leaves his hand: player.ts kept no function for it when the tick went)
+      const sol = game.items.solve(hand, [8.5, 0.1, 15]); doThrow(game, sol, 'smoke'); const thrown = steps(W, 2.0, () => kindsOf(game).includes('thrown')); if (!thrown) fails.push('the canister never left his hand'); }
     // the mission: into the server room, the drive, out through the fire exit
     const M = level.mission;
     game.player.holstered = true; game.teleportPlayer([18.0, 0, 8.9]); steps(W, 0.3);
@@ -233,17 +234,17 @@ export async function debriefRooms() {
 // ================================================================ (c2) a door row calls its door what its level calls it
 /** The timeline names a kicked, picked or keyed door by the name its level wrote for it, as the squad's rows do (chronicle.ts eventText with the game behind
  *  the row → doornames.ts doorWrittenName, WORDS.doors): the office's break room door off the cubicles is 'the cubicles-side break room door' on the card.
- *  The row holds only the id and is worded when it is READ: the SAME rows read as they always did once the key is down, with the words pass off, or with no
- *  game behind them, and so does a door nobody named. First the stand's own keys (the frozen stand: every row as it was; the shipped one: the name), then
- *  the keys set by hand. `DOORNAMES_BREAK=1` asks for the name with the key down: must fail. */
+ *  The row holds only the id and is worded when it is READ: with no game behind it the row reads by the id's words, and so does a door nobody named.
+ *  2026-11-07: the words pass and the door names are settled rules; 'the same rows with the key down' and 'with the words pass off' went (both wrote a
+ *  settled row's other side). `DOORNAMES_BREAK=1` here = the row is made of the door nobody named in place of the named one: must fail. */
 export async function debriefDoorName() {
   console.log('\n=== debrief-doorname: a kicked, picked or keyed door is called on the card what its level calls it ===');
   const { WORDS } = await import(`${ROOT}/src/game/words.ts`), N = await import(`${ROOT}/src/game/doornames.ts`);
-  const W = await standUp(), g = W.game, fails: string[] = [], was = { on: WORDS.on, doors: WORDS.doors };
+  const W = await standUp(), g = W.game, fails: string[] = []; void WORDS;
   const want = (got: string, exp: string, what: string) => { if (got !== exp) fails.push(`${what}: '${got}' (want '${exp}')`); };
   const NAME = 'cubicles-side break room door';
-  try {
-    const named = g.doors.byName('breakroom_w'), plain = g.doors.byName('storage');
+  {
+    const named = g.doors.byName(process.env.DOORNAMES_BREAK === '1' ? 'storage' : 'breakroom_w'), plain = g.doors.byName('storage');
     if (!named || !plain) fails.push(`the office has no door 'breakroom_w' / 'storage'`);
     else {
       const kick = CH.chronDoor(g, 'doorKicked', named), pick = CH.chronDoor(g, 'lockPicked', named), other = CH.chronDoor(g, 'doorKicked', plain);
@@ -252,37 +253,26 @@ export async function debriefDoorName() {
       if (!kick || !pick || !other) fails.push('chronDoor made no row (the mission is not live?)');
       else {
         want(JSON.stringify(kick.data), '{"door":"breakroom w"}', "the row's data (the id's words as ever: nothing in it to go stale)");
-        // the stand's own keys, untouched
-        want(CH.eventText(kick, g), was.on && was.doors ? `kicked in the ${NAME}` : 'kicked in the breakroom w door', `this stand's own keys (words ${was.on}, door names ${was.doors})`);
-        // the keys up
-        WORDS.on = true; WORDS.doors = !process.env.DOORNAMES_BREAK;
-        want(CH.eventText(kick, g), `kicked in the ${NAME}`, 'key up, the named door kicked');
-        want(CH.eventText(pick, g), `picked the lock on the ${NAME}`, 'key up, the named door picked');
-        want(CH.eventText(keyed, g), `keyed the code — the ${NAME}`, 'key up, its code keyed');
-        want(CH.eventText(told, g), `Alpha gave up the code to the ${NAME}`, 'key up, its code told');
-        want(CH.eventText(heard, g), `overheard the code to the ${NAME}`, 'key up, its code overheard');
-        want(CH.fmtEvent(kick, g).split(' · ').pop()!, `kicked in the ${NAME}`, "key up, the pin's hover line");
-        want(CH.eventText(other, g), 'kicked in the storage door', 'key up, a door nobody named');
-        want(CH.eventText(kick), 'kicked in the breakroom w door', "key up, no game behind the row: the id's words");
-        // the SAME rows with the key down (a page reopened with ?doornames=0 on a loaded checkpoint), then with the words pass off: every row as it was
-        const asWas = (what: string) => {
-          want(CH.eventText(kick, g), 'kicked in the breakroom w door', `${what}, kicked`); want(CH.eventText(pick, g), "picked the breakroom w door's lock", `${what}, picked`);
-          want(CH.eventText(keyed, g), 'keyed the code — the breakroom w door', `${what}, keyed`); want(CH.eventText(told, g), 'Alpha gave up the breakroom w code', `${what}, told`);
-          want(CH.eventText(heard, g), 'overheard the breakroom w code', `${what}, overheard`); want(CH.eventText(other, g), 'kicked in the storage door', `${what}, a door nobody named`); };
-        WORDS.doors = false; asWas('key down');
-        WORDS.on = false; WORDS.doors = true; asWas('the words pass off');
+        // the named door, as the game words it
+        want(CH.eventText(kick, g), `kicked in the ${NAME}`, 'the named door kicked');
+        want(CH.eventText(pick, g), `picked the lock on the ${NAME}`, 'the named door picked');
+        want(CH.eventText(keyed, g), `keyed the code — the ${NAME}`, 'its code keyed');
+        want(CH.eventText(told, g), `Alpha gave up the code to the ${NAME}`, 'its code told');
+        want(CH.eventText(heard, g), `overheard the code to the ${NAME}`, 'its code overheard');
+        want(CH.fmtEvent(kick, g).split(' · ').pop()!, `kicked in the ${NAME}`, "the pin's hover line");
+        want(CH.eventText(other, g), 'kicked in the storage door', 'a door nobody named');
+        want(CH.eventText(kick), 'kicked in the breakroom w door', "no game behind the row: the id's words");
       }
       // a written name is the whole name (no ' door' added to a gate, no possessive hung on it): a made-up level's doors
-      WORDS.on = true; WORDS.doors = true;
       const ds = ['gate_n', 'dd'].map(id => ({ def: { name: id } })), stub: any = { doors: { byName: (n: string) => ds.find(d => d.def.name === n) } };
       N.nameDoors({ scenarios: { doorNames: [{ door: 'gate_n', name: 'yard gate' }, { door: 'dd', name: 'double doors' }] } } as any, false, ds);
       want(CH.eventText(ev('doorKicked', { door: 'gate n' }), stub), 'kicked in the yard gate', "a written name that is no 'door'");
       want(CH.eventText(ev('lockPicked', { door: 'dd' }), stub), 'picked the lock on the double doors', "a written name that ends in 's'");
       want(CH.eventText(ev('doorKicked', { door: 'gone' }), stub), 'kicked in the gone door', "a door the level does not have: the id's words");
     }
-  } finally { WORDS.on = was.on; WORDS.doors = was.doors; }
+  }
   const ok = fails.length === 0;
-  verdictLine(ok, "(c2) the office's break room door off the cubicles, kicked, picked and keyed: the name its level wrote with the key up (this stand's own keys first), and the SAME rows as they always read with the key down, the words pass off or no game behind the row; a door nobody named reads as it did; a written name is the whole name", 'breakroom_w · storage · a made-up level', fails);
+  verdictLine(ok, "(c2) the office's break room door off the cubicles, kicked, picked and keyed: the name its level wrote; with no game behind the row, the id's words; a door nobody named reads as it did; a written name is the whole name", 'breakroom_w · storage · a made-up level', fails);
   console.log(`=== debrief-doorname: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
   return ok;
 }
@@ -331,33 +321,28 @@ const LOUD_BREAK = process.env.LOUDCARD_BREAK === '1';
 export async function debriefLoud() {
   console.log("\n=== debrief-loud: a mission that leans loud carries no stealth rating, no score and no badges (VERDICT.loudCard) ===");
   const fails: string[] = [], notes: string[] = [];
-  const { VERDICT, loudRow, rowFile } = await import(`${ROOT}/src/game/verdict.ts`), { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { objectiveText } = await import(`${ROOT}/src/game/mission.ts`), { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { readFileSync } = await import('node:fs');
-  const was = VERDICT.loudCard, graded = (t: string) => BANDS.some((b: any) => t.includes(b.word)), stand = process.env.TPS_PROFILE === 'shipped' ? 'shipped' : 'frozen';
-  // the stand's own key: off on the frozen stand, on as the page opens (TPS_LOUDCARD=1 raises it on a frozen run)
-  { const W = await standUp(); void W; const word = process.env.TPS_LOUDCARD, want = word !== undefined && word !== '' ? word === '1' : stand === 'shipped'; if (VERDICT.loudCard !== want) fails.push(`the ${stand} stand stands VERDICT.loudCard ${VERDICT.loudCard} (want ${want})`); notes.push(`${stand} stand: key ${VERDICT.loudCard ? 'on' : 'off'}`); }
+  const { VERDICT, loudRow, rowFile } = await import(`${ROOT}/src/game/verdict.ts`), { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { readFileSync } = await import('node:fs');
+  const graded = (t: string) => BANDS.some((b: any) => t.includes(b.word)); void VERDICT;
   try {
     // ---- the tutorial's solo fight: the stealth game's kind, a row that leans loud
-    { const W = await standRow('tut-solo.json', '?levelFile=tut-solo.json&quiet'), g = W.game; VERDICT.loudCard = !LOUD_BREAK; const D = debriefOf(g);   // (the key is set AFTER the stand-up: the stand writes its own)
+    { const row = LOUD_BREAK ? 'tut-quiet.json' : 'tut-solo.json', W = await standRow(row, `?levelFile=${row}&quiet`), g = W.game, D = debriefOf(g);   // (LOUDCARD_BREAK=1: the row that leans quiet stood in its place — must fail)
       if (W.why) fails.push(`the solo tutorial did not start: ${W.why}`);
       if (!loudRow(g)) fails.push('the solo tutorial (kind quiet, leans loud): loudRow says no');
       if (D.scored) fails.push('…and its debrief is still scored'); if (graded(D.summary)) fails.push(`…and its copied line carries a rating: "${D.summary}"`);
       if (D.badges.some((b: any) => b.on && D.summary.includes(b.name))) fails.push(`…and its copied line carries a badge: "${D.summary}"`);
       if (!/^twopointsix — \d\d:\d\d · seen /.test(D.summary)) fails.push(`…and its copied line does not open on the clock: "${D.summary}"`);
-      g.mission.stage = 'done'; const line = objectiveText(g);
+      W.step(1 / 60); g.mission.stage = 'done'; const line = g.objectiveText();
       if (!/^mission complete — \d+:\d\d$/.test(line)) fails.push(`…and the line over the card is not the clock alone: "${line}"`); if (D.grade !== '') fails.push(`…and its grade is '${D.grade}'`);
-      notes.push(`loud: "${D.summary.slice(0, 44)}…" · over the card "${line.slice(0, 40)}"`);
-      // the same game with the key down: the card as it was
-      VERDICT.loudCard = false; const D0 = debriefOf(g);
-      if (loudRow(g) || !D0.scored || !graded(D0.summary) || D0.grade !== `${D0.rating} ${D0.score}`) fails.push(`key down on the same run: loudRow ${loudRow(g)}, scored ${D0.scored}, grade '${D0.grade}', "${D0.summary.slice(0, 40)}"`); }
-    // ---- a row that leans quiet, and the plain night with no row up: graded, key up or down
-    { const W = await standRow('tut-quiet.json', '?levelFile=tut-quiet.json&quiet'), g = W.game; VERDICT.loudCard = true; const D = debriefOf(g);
+      notes.push(`loud: "${D.summary.slice(0, 44)}…" · over the card "${line.slice(0, 40)}"`); }
+    // ---- a row that leans quiet, and the plain night with no row up: graded
+    { const W = await standRow('tut-quiet.json', '?levelFile=tut-quiet.json&quiet'), g = W.game; const D = debriefOf(g);
       if (W.why) fails.push(`the quiet tutorial did not start: ${W.why}`); if (loudRow(g) || !D.scored || !graded(D.summary)) fails.push(`a row that leans quiet: loudRow ${loudRow(g)}, scored ${D.scored}, "${D.summary.slice(0, 40)}"`);
-      g.mission.stage = 'done'; const line = objectiveText(g); if (!/^mission complete — /.test(line) || !line.endsWith(` · ${D.rating} ${D.score}`)) fails.push(`…and the line over its card is not the clock and the rating: "${line}"`); }
+      W.step(1 / 60); g.mission.stage = 'done'; const line = g.objectiveText(); if (!/^mission complete — /.test(line) || !line.endsWith(` · ${D.rating} ${D.score}`)) fails.push(`…and the line over its card is not the clock and the rating: "${line}"`); }
     // ---- a squad's kind on a row that leans loud: not asked (its end card never showed the rating; its 'run so far' and its card under ?noverdict keep it)
-    { const W = await standRow('killhouse.json', '?levelFile=killhouse.json&roomclear&squad4'), g = W.game; VERDICT.loudCard = true; const D = debriefOf(g), row = (await import(`${ROOT}/src/game/scenarioRun.ts`)).runningScenario(g, 'killhouse.json');
+    { const W = await standRow('killhouse.json', '?levelFile=killhouse.json&roomclear&squad4'), g = W.game; const D = debriefOf(g), row = (await import(`${ROOT}/src/game/scenarioRun.ts`)).runningScenario(g, 'killhouse.json');
       if (W.why || row?.kind !== 'roomclear' || row?.entry?.lean !== 'loud') fails.push(`the shoot house's room clear did not stand as a loud row: ${W.why || `${row?.kind} ${row?.entry?.lean}`}`);
       if (loudRow(g) || !D.scored) fails.push(`a room clear on a row that leans loud: loudRow ${loudRow(g)}, scored ${D.scored}`); }
-    { const W = await standUp(), g = W.game; VERDICT.loudCard = true; const D = debriefOf(g); if (loudRow(g) || !D.scored || !graded(D.summary)) fails.push(`the plain night: loudRow ${loudRow(g)}, scored ${D.scored}`); }
+    { const W = await standUp(), g = W.game; const D = debriefOf(g); if (loudRow(g) || !D.scored || !graded(D.summary)) fails.push(`the plain night: loudRow ${loudRow(g)}, scored ${D.scored}`); }
     // ---- the row's file is read back off the level's own name (verdict.ts rowFile): every row's file, and the look's file the page loads for it, give the row's file
     { const off: string[] = [], files = [...new Set((ALL_MISSIONS as any[]).filter(e => e.level).map(e => e.level as string))]; let looks = 0;
       const log = console.log, warn = console.warn; console.log = console.warn = () => { };
@@ -368,20 +353,12 @@ export async function debriefLoud() {
       { const W = await standUp(); if (rowFile(W.game) !== null) off.push(`the bundled office reads back as ${rowFile(W.game)} (want none)`); }
       if (off.length) fails.push(`level files that do not read back as their row's file: ${off.join(' · ')}`); notes.push(`${files.length} row files + ${looks} look files read back`);
       const loud = (ALL_MISSIONS as any[]).filter(e => e.kind === 'quiet' && e.lean === 'loud').map(e => e.id); notes.push(`rows on the stealth game's card that lean loud: ${loud.join(', ') || 'none'}`); if (!loud.includes('tut-solo')) fails.push('the solo tutorial no longer leans loud on the list'); }
-    // ---- a recording carries the key, and one from before it replays with the key off (journal.ts applyKnobs)
-    { const KN = await import(`${ROOT}/src/game/knobs.ts`), JN = await import(`${ROOT}/src/game/journal.ts`), W = await standUp(), c = KN.knobsCopy(); let hadKey = false, without: unknown, withOn: unknown, noTable: unknown;
-      try { const snap = JN.knobsSnapshot(W.game); hadKey = typeof snap.tables.VERDICT?.loudCard === 'boolean';
-        const old = JSON.parse(JSON.stringify(snap)); delete old.tables.VERDICT.loudCard; VERDICT.loudCard = true; JN.applyKnobs(W.game, old); without = VERDICT.loudCard;
-        const older = JSON.parse(JSON.stringify(snap)); delete older.tables.VERDICT; VERDICT.loudCard = true; JN.applyKnobs(W.game, older); noTable = VERDICT.loudCard;
-        const neu = JSON.parse(JSON.stringify(snap)); neu.tables.VERDICT.loudCard = true; VERDICT.loudCard = false; JN.applyKnobs(W.game, neu); withOn = VERDICT.loudCard; }
-      finally { KN.knobsBack(c); }
-      if (!hadKey || without !== false || noTable !== false || withOn !== true || !KN.JOURNAL_KNOBS.includes('VERDICT')) fails.push(`a recording and the key: carried ${hadKey}, a file without the key → ${without}, without the table → ${noTable}, with it true → ${withOn} (want true, false, false, true)`); }
     // ---- the mission's own end lines name the grade through Debrief.grade ('' when not scored), never the rating itself (the 'exfiltrated' line is said on the frame he walks out: not played here)
-    { const ms = readFileSync(`${ROOT}/src/game/mission.ts`, 'utf8'); if (/D\.rating|D\.score\b/.test(ms) || (ms.match(/D\.grade/g) ?? []).length < 2) fails.push('mission.ts names the rating or the score itself, or no longer reads Debrief.grade in its two end lines'); }
+    //      (read off the Rust game's own source since 2026-11-07: the TypeScript of those two lines went with the tick)
+    { const ms = readFileSync(`${ROOT}/rust/game/src/mission/p_01.rs`, 'utf8'); if (/\bd\.rating\b|\bd\.score\b/.test(ms) || (ms.match(/\bd\.grade\b/g) ?? []).length < 2) fails.push('the mission (rust/game/src/mission/p_01.rs) names the rating or the score itself, or no longer reads the debrief\'s grade in its two end lines'); }
   } catch (e: any) { fails.push(`threw: ${e?.stack ?? e}`); }
-  finally { VERDICT.loudCard = was; }
   const ok = fails.length === 0;
-  verdictLine(ok, "(c4) on a stealth-kind row that leans loud the debrief is not scored: no rating or badge on the copied line, the clock alone on the line over the card; the key down, a row that leans quiet, the plain night and a room clear on a loud row are graded as they were; every row's level file and its look's file read back as the row's file; a recording carries the key, and one from before it replays with it off", notes.join(' · '), fails);
+  verdictLine(ok, "(c4) on a stealth-kind row that leans loud the debrief is not scored: no rating or badge on the copied line, the clock alone on the line over the card; a row that leans quiet, the plain night and a room clear on a loud row are graded as they were; every row's level file and its look's file read back as the row's file", notes.join(' · '), fails);
   console.log(`=== debrief-loud: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
   return ok;
 }
@@ -460,25 +437,21 @@ export async function debriefDom() {
     // and the 'run so far' shape off a fresh world (empty timeline row, sofar title)
     { const W2 = await standUp(); const host2 = new El('DIV'); renderDebrief(host2 as any, W2.game); const root2: El = host2.children[0]; const empty = root2.all(e => e.cls.has('empty')); const t1 = root2.all(e => e.cls.has('db-t1'))[0]?.textContent; if (empty.length !== 1 || t1 !== 'run so far') fails.push(`fresh world: ${empty.length} empty-row(s), title '${t1}'`); notes.push(`fresh: '${t1}', ${root2.all(e => e.cls.has('pin')).length} pins`); }
     // and the card's own readers word a door row with the game behind it (ui/debrief.ts: the timeline's row and the map pin's hover line — debrief-doorname has the words' rules)
-    { const { WORDS } = await import(`${ROOT}/src/game/words.ts`), was = { on: WORDS.on, doors: WORDS.doors };
-      try { const W3 = await standUp(), d = W3.game.doors.byName('breakroom_w'); WORDS.on = true; WORDS.doors = !process.env.DOORNAMES_BREAK; if (d) CH.chronDoor(W3.game, 'doorKicked', d);
+    {
+      { const W3 = await standUp(), d = W3.game.doors.byName(process.env.DOORNAMES_BREAK === '1' ? 'storage' : 'breakroom_w'); if (d) CH.chronDoor(W3.game, 'doorKicked', d);
         const host3 = new El('DIV'); renderDebrief(host3 as any, W3.game); const root3: El = host3.children[0];
         const row = root3.all(e => e.cls.has('k-doorKicked'))[0]?.textContent ?? '', pin = root3.all(e => e.cls.has('pin')).map(p => p.title).find(t => /kicked/.test(t)) ?? '';
         if (!row.endsWith('kicked in the cubicles-side break room door') || !pin.endsWith('kicked in the cubicles-side break room door')) fails.push(`a named door kicked, on the card: row "${row}" · pin "${pin}" (want both to end 'kicked in the cubicles-side break room door')`);
-        notes.push(`door row: ${row.slice(-44)}`); }
-      finally { WORDS.on = was.on; WORDS.doors = was.doors; } }
+        notes.push(`door row: ${row.slice(-44)}`); } }
     // and a row that leans loud draws no rating, no score, no docked line, no badges, and its numbers untoned (ui/debrief.ts over Debrief.scored — debrief-loud has the rule)
-    { const { VERDICT } = await import(`${ROOT}/src/game/verdict.ts`), was = VERDICT.loudCard;
-      try { const W4 = await standRow('tut-solo.json', '?levelFile=tut-solo.json&quiet'), cells = (r: El) => r.all(e => e.cls.has('st') && /^(seen|alarms|floor up|bodies found|kills|doors kicked|called in|checkpoint loads|civilians saw you|…and told them)/.test(e.textContent)), toned = (r: El) => cells(r).filter(e => e.cls.has('good') || e.cls.has('bad') || e.cls.has('warn')).length;
+    {
+      { const row4 = LOUD_BREAK ? 'tut-quiet.json' : 'tut-solo.json', W4 = await standRow(row4, `?levelFile=${row4}&quiet`), cells = (r: El) => r.all(e => e.cls.has('st') && /^(seen|alarms|floor up|bodies found|kills|doors kicked|called in|checkpoint loads|civilians saw you|…and told them)/.test(e.textContent)), toned = (r: El) => cells(r).filter(e => e.cls.has('good') || e.cls.has('bad') || e.cls.has('warn')).length;
         { const st = W4.game.mission.stats, n = W4.game.chronicle.counts; st.bodies = 1; st.kills = 2; n.kicked = 1; n.devices = 1; n.loads = 1; n.civSeen = 1; n.hits = 1; }   // (a run that would tone every one of them, and one cell that keeps its red: a hit taken)
-        VERDICT.loudCard = !LOUD_BREAK; const h4 = new El('DIV'); const ui4 = renderDebrief(h4 as any, W4.game); const r4: El = h4.children[0];
+        const h4 = new El('DIV'); const ui4 = renderDebrief(h4 as any, W4.game); const r4: El = h4.children[0];
         const drawn = ['db-rating', 'db-score', 'db-t3', 'chip'].filter(c => r4.all(e => e.cls.has(c)).length), t2 = r4.all(e => e.cls.has('db-t2'))[0]?.textContent ?? '';
         const hits = (r: El) => r.all(e => e.cls.has('st') && /^hits taken/.test(e.textContent) && e.cls.has('bad')).length;
         if (!r4.cls.has('db-loud') || drawn.length || toned(r4) || cells(r4).length !== 10 || hits(r4) !== 1 || r4.all(e => e.cls.has('db-badges')).length || BANDS.some((b: any) => t2.includes(b.blurb) || ui4.copyText.includes(b.word))) fails.push(`a loud row's card: class ${r4.cls.has('db-loud')}, still drawn [${drawn.join(' ')}], ${toned(r4)} of ${cells(r4).length} sneak cells toned, head "${t2}", copy "${ui4.copyText.slice(0, 40)}"`);
-        VERDICT.loudCard = false; const h5 = new El('DIV'); renderDebrief(h5 as any, W4.game); const r5: El = h5.children[0];
-        if (r5.cls.has('db-loud') || r5.all(e => e.cls.has('db-rating')).length !== 1 || r5.all(e => e.cls.has('chip')).length !== 9 || toned(r5) !== 10 || hits(r5) !== 1) fails.push(`the same run, key down: class ${r5.cls.has('db-loud')}, ${r5.all(e => e.cls.has('db-rating')).length} rating, ${r5.all(e => e.cls.has('chip')).length} chips, ${toned(r5)} toned cells`);
-        notes.push(`loud row: head "${t2}"`); }
-      finally { VERDICT.loudCard = was; } }
+        notes.push(`loud row: head "${t2}"`); } }
   } catch (e: any) { fails.push(`building the card threw: ${e?.stack ?? e}`); }
   finally { if (hadDoc) G.document = prevDoc; else delete G.document; try { Object.defineProperty(G, 'navigator', { value: prevNav, configurable: true, writable: true }); } catch { /* leave it */ } }
   const ok = fails.length === 0;

@@ -24,7 +24,6 @@ const { requestQrf } = await import(`${ROOT}/src/game/qrf.ts`);
 const { DoorTools } = await import(`${ROOT}/src/game/doortools.ts`);
 const { SquadOrders } = await import(`${ROOT}/src/game/orders.ts`);
 const { inBounds } = await import(`${ROOT}/src/game/squad.ts`);
-const { SAMSTUN } = await import(`${ROOT}/src/game/samstun.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60, BREAK = process.env.QRFSQUAD_BREAK === '1';
@@ -37,7 +36,7 @@ async function called(seed: number, fix: Vec3, on: boolean) {
   Math.random = seeded(seed);
   const W = await standUp(); const { game } = W;
   game.godMode = true; game.aiEnabled = true; game.tune.qrf = true; game.tune.qrfEta = 14; game.tune.qrfSize = 4; game.tune.perimeter = false; game.tune.qrfSquad = on;
-  for (let i = 0; i < 20; i++) W.step(DT);
+  W.steps(20, DT);
   hideSam(game); game.alarm.placed = true; game.alarm.pos = [...fix]; game.alarm.raisedAt = game.time;
   requestQrf(game, 'panel');
   return W;
@@ -100,7 +99,7 @@ export async function qrfSquadCheck(): Promise<boolean> {
       if (!isNaN(tShown) && isNaN(tFight) && Q.phase === 'fight') { tFight = game.time; pool = Q.bangs; alert = Q.men.filter((m: any) => m.state === 'alert' && !m.script).length; left = Q.men.filter((m: any) => cast.orders.has(m)).length + cast.tools.ops.length; opLeft = !!Q.op; }
       if (!isNaN(tFight) || (!isNaN(tShown) && game.time - tShown > 6)) break;
     }
-    const ok5 = !!cast && tFight - tShown <= 1.5 && alert === 4 && left === 0 && !opLeft && pool === 4; restart = () => { game.resetGuards(); for (let i = 0; i < 5; i++) W.step(DT); return { built: !!cast, cast: game.qrf.cast, op: game.qrf.op, state: game.qrf.state as string, held: cast ? cast.tools.ops.length + cast.orders.squad().filter((m: any) => cast.orders.has(m)).length : -1 }; };
+    const ok5 = !!cast && tFight - tShown <= 1.5 && alert === 4 && left === 0 && !opLeft && pool === 4; restart = () => { game.resetGuards(); W.steps(5, DT); return { built: !!cast, cast: game.qrf.cast, op: game.qrf.op, state: game.qrf.state as string, held: cast ? cast.tools.ops.length + cast.orders.squad().filter((m: any) => cast.orders.has(m)).length : -1 }; };
     line(ok5, '(5) contact in the stack: all four to the fight inside 1.5 s, the entry let go of, the unthrown can back in the pool', `shown at ${f1(tShown)} · fight ${isNaN(tFight) ? 'NEVER' : `${(tFight - tShown).toFixed(2)} s later`} · alert and off the script ${alert}/4 · still on the cast's books ${left} · entry kept ${opLeft} · cans ${pool}`); }
 
   // ---- (6): Sam's own squad code
@@ -139,8 +138,8 @@ export async function qrfSquadCheck(): Promise<boolean> {
     line(!!far && far.length === 4 && worst < 1e-6, '(10) where Sam stands is not theirs to know: unseen on their rear man\'s stack mark, the four marks they are dealt are the ones dealt with him a street away', `marks dealt ${far?.length ?? 0} · furthest any mark moved with Sam stood on the rear man's ${isNaN(worst) ? '—' : worst.toFixed(3) + ' m'}`); }
 
   // ---- (12): their can and Sam
-  { const was = SAMSTUN.on;
-    try { const W = await called(46, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf; SAMSTUN.on = true;   // (after the stand-up: the frozen stand holds it off)
+  { // (a can on Sam, SAMSTUN.on, is settled on and no longer written here)
+    { const W = await called(46, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf;
       let at: Vec3 | null = null, banged = false, dazzled = 0, far = NaN;
       for (let f = 0; f < 60 * 90 && !(banged && game.time > (Q.log.find((l: any) => l.what === 'bang')?.t ?? 1e9) + 0.5); f++) {
         if (!at) hideSam(game); else { game.teleportPlayer(at); game.player.visibility = 0.02; game.playerInvisible = true; game.player.crouch = false; }
@@ -149,7 +148,7 @@ export async function qrfSquadCheck(): Promise<boolean> {
         if (beats(Q).includes('bang')) { banged = true; dazzled = Math.max(dazzled, game.player.dazzledUntil - game.time); const b = [...game.events].reverse().find((e: any) => e.kind === 'door' && e.loud && e.level === 1.0); if (b && at) far = Math.hypot(b.pos[0] - at[0], b.pos[2] - at[2]); }
       }
       line(banged && dazzled > 0.5, '(12) their can does to Sam what a can does to anyone: stood in the open in the room when it goes, he is dazzled', `the can went ${banged} · ${isNaN(far) ? '—' : far.toFixed(1) + ' m'} from him · dazzled ${dazzled.toFixed(1)} s`);
-    } finally { SAMSTUN.on = was; } }
+    } }
 
   console.log(`=== qrf-squad-check: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

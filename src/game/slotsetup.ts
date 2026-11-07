@@ -37,12 +37,9 @@
 // savestate.ts drops it there (Checkpoints.loadMem).
 // No dice, no clock but the game's.
 import type { Game, Player } from './game';
-import type { Input } from './input';
-import { backTake } from './backkey';
 import { kitYouLight } from './kit';
-import { samWork } from './handwork';
-import { samStaggered } from './samstun';
-import { backableInteract } from './interact';
+import './handwork';
+import './samstun';
 
 export const SLOTSETUP = {
   on: false,
@@ -75,10 +72,6 @@ export interface SetupRow { key: number; kind: SetupKind; opts: { id: string; on
 /** the digit of each row, on every gun */
 const ROW_KEY: Record<SetupKind, number> = { mode: 1, load: 2, light: 3 };
 const SLOT_KEY: Record<SetupGun, number> = { pistol: 1, rifle: 2 };
-/** his press of a gun's digit and that gun found in his hands are one draw when no further apart than this (the slot lines act the frame of the press) */
-const KEYED = 0.1;
-/** his own draw is over this long after its swap's time has run (the two clocks are stepped apart: no press is lost on the swap's last frame) */
-const OWN_SLACK = 0.05;
 /** the hook was not run for this long (something had his hands: a takedown, a man in his arm, a lock): what was up is not up when it runs again */
 const STALE = 0.2;
 
@@ -121,50 +114,5 @@ const lapsed = (g: Game, t: number) => clocked() && g.time - t >= SLOTSETUP.secs
 /** presses of the launcher's own step from the load that is up to the next one he has any of (0: none but the one that is up) */
 function loadSteps(pl: Player): number { const rf = pl.rifle, A = rf.attachments, n = A.length, i0 = rf.attachment ? A.indexOf(rf.attachment) : -1; for (let k = 1; k < n; k++) if (rf.left(A[(i0 + k) % n]) > 0) return k; return 0; }
 
-function stepRow(g: Game, gun: SetupGun, row: SetupRow) {
-  const pl = g.player, f = gun === 'rifle' ? pl.rifle : pl.pistol;
-  if (row.kind === 'mode') f.cycleMode();
-  else if (row.kind === 'load') { for (let k = loadSteps(pl); k > 0; k--) pl.rifle.cycleAttachment(); }
-  else f.lightOn = !f.lightOn;
-  g.audio.play('click', pl.char.muzzle, row.kind === 'light' ? 0.6 : 0.7);
-}
 
-/** a gun's digit still in the frame that is not the gun in his hands: the press the slot lines will draw that gun on (kept for `draw`) */
-function drawPress(g: Game, input: Input, inHand: SetupGun | null): void {
-  for (const G of ['pistol', 'rifle'] as const) if (G !== inHand && input.hit(`Digit${SLOT_KEY[G]}`)) g.player.setupKey = { gun: G, t: g.time };
-}
 
-/** player.ts updatePlayer, ahead of the digits' own lines: the digit of the gun in his hands opens its setup; with it up, a row's digit steps the row.
- *  A digit used here is taken out of the frame, so the slot lines below never see it; every other key is left as it was. */
-export function slotSetupKeys(g: Game, input: Input): void {
-  const pl = g.player;
-  if (!SLOTSETUP.on || BREAK) { if (pl.setup) pl.setup = null; return; }
-  const gun = setupGun(pl);
-  if (!pl.setupHand || pl.setupHand.gun !== gun || pl.setupHand.t > g.time) {   // (the gun came into his hands now — by his own press of its digit, or not)
-    const k = pl.setupKey, mine = !!gun && k?.gun === gun && g.time >= k.t && g.time - k.t <= KEYED;
-    pl.setupHand = { gun, t: g.time, own: mine ? g.time + Math.max(pl.equipT, SLOTSETUP.settle) + OWN_SLACK : 0 };   // (his draw lasts the swap it started and no longer: a later lock on his hands is not it)
-  }
-  let S = pl.setup;
-  if (S && (S.gun !== gun || g.time - S.seen > STALE || lapsed(g, S.t) || samWork(g) || samStaggered(g) || !!g.orders.menu || backableInteract(g))) S = pl.setup = null;   // (…or another list has the digits: the order menu, the Space list)
-  if (S) {
-    S.seen = g.time;
-    if (backTake(input) || input.hit('Paused') || input.lmbHit() || input.rmbHit() || input.hit('KeyR') || (SLOTSETUP.draw && pl.lastFireT >= S.t)) { pl.setup = null; if (SLOTSETUP.draw) input.pressed.delete(`Digit${SLOT_KEY[S.gun]}`); drawPress(g, input, gun); return; }   // (the click and the reload are not taken: they do what they do. With `draw`: a round that left since it opened shuts it too — a click kept through the draw, a trigger held — and the gun's own digit on that frame is nothing, not the load's old key)
-    const rows = setupRows(pl, S.gun);
-    for (let d = 1; d <= 5 && pl.setup; d++) {
-      if (!input.hit(`Digit${d}`)) continue;
-      const row = rows.find(r => r.key === d);
-      if (row) { input.pressed.delete(`Digit${d}`); stepRow(g, S.gun, row); S.t = g.time; if (!SLOTSETUP.stay) pl.setup = null; }
-      else { if (d === SLOT_KEY[S.gun]) input.pressed.delete(`Digit${d}`); pl.setup = null; }   // (no row of this gun: its own digit shuts the setup, another is the slot it always was)
-    }
-    drawPress(g, input, gun); return;
-  }
-  drawPress(g, input, gun);
-  if (!gun) return;
-  const code = `Digit${SLOT_KEY[gun]}`;
-  if (!input.hit(code)) return;
-  input.pressed.delete(code);   // (the gun is in his hands: its digit has nothing to draw, and the launcher's load is the setup's row now)
-  const coming = pl.equipT > 0 || g.time - pl.setupHand.t < SLOTSETUP.settle;   // (just drawn, or still coming round off the sling)
-  if ((coming && !(SLOTSETUP.draw && g.time < (pl.setupHand.own ?? 0))) || !setupRows(pl, gun).length) return;   // (not his own draw of it, or `draw` off: a double-tapped digit draws it and no more; a gun with nothing to set: nothing)
-  pl.setup = { gun, t: g.time, seen: g.time };
-  g.audio.play('click', pl.char.muzzle, 0.35);
-}

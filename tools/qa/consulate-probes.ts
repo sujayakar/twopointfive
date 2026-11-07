@@ -5,10 +5,11 @@
 //   consulate-level   the file is the generator's level (0 diffs), the validator and the lint are clean on it, it is inside the renderer's fixed sizes, the
 //                     rescue's data sits on its floor (rescue.ts checkRescue, the route's own check included), the mission row boots it with four
 //   consulate-stage   the rescue staged with four on eight seeds: the four and Sam on the level's marks, three hostages, the captor and a second gun in the
-//                     consul's office, the door man by its door, THREE roamers on three of the five marks — which three differs seed to seed — every inside
+//                     consul's office, the door man by its door, THREE roamers on three of the five marks, every inside
 //                     door shut but the records room's hall door; nobody fires and no clock runs while Sam stands. With the pair (the Loadout's smaller
-//                     team) it stages too. Where every try starts the same way (src/game/samestart.ts, on where the page's switches are) the eight seeds
-//                     stand the three places written first, and the eight are staged and read again as dealt, behind the switch
+//                     team) it stages too. Every try starts the same way (src/game/samestart.ts, a settled rule): the eight seeds stand the three places
+//                     written first. (Until 2026-11-07 the eight were staged again with that rule written off, to read the deal behind it; that pass
+//                     and its line 'which three differs from staging to staging' are out)
 //   consulate-run     the scripted commander (tools/qa/playthrough.ts as the page ships — ships.ts) on six seeds, both ways in: F at the main door, and F
 //                     from the side door's room (PT_RESCUE=split). Every run ends on the scenario's own result; each way brings hostages out at least once;
 //                     pressed from the side door's room with four, the side door is taken by a PAIR (two men of one colour) and the main door by the other;
@@ -17,16 +18,16 @@
 import { readFileSync, mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { standUp, ROOT } from './headless.ts';
+import { exporterCheck } from './level-file.ts';
 const { RESCUE, checkRescue } = await import(`${ROOT}/src/game/rescue.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { parseLevelData, validateLevelData, structuralDiff } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { lintLevel } = await import(`${ROOT}/src/editor/lint.ts`);
-const { build: buildConsulate, CONSULATE_ROOMS } = await import(`${ROOT}/tools/levels/consulate.ts`);
+const { CONSULATE_ROOMS } = await import(`${ROOT}/tools/levels/consulate.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { BoxFlag, MAX_GLASS } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { SCENARIOS, specOfQuery, entryOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
-const { SAMESTART } = await import(`${ROOT}/src/game/samestart.ts`);
 
 type Rect = { x0: number; x1: number; z0: number; z1: number };
 const DT = 1 / 60, ID = 'rescue-consulate';
@@ -60,10 +61,7 @@ export const consulateLevel = guarded(async () => {
   const { verdict, done } = family("consulate-level: the file, the lint, the sizes, the rescue's data on its floor, the mission row");
   const data = parseLevelData(readFileSync(FILE, 'utf8')), errs: string[] = validateLevelData(data);
   verdict(errs.length === 0, 'the file validates', errs.length ? errs.slice(0, 6).join(' · ') : `${data.boxes.length} boxes · ${data.doors.length} doors · ${data.props.length} props · scenarios ${Object.keys(data.scenarios ?? {}).join(', ')}`);
-  const gen = buildConsulate(); gen.level.scenarios = gen.scenarios; { const DS = await import('../../src/scene/doorSize.ts'); DS.fitDoors(gen.level.doors); DS.fitWaysOut(gen.level, (gen.scenarios as any)?.quiet); }   // (as tools/levels/export.ts writes it: the leaves and the ways out fitted to the real doors)
-  { const FL = await import('../levels/flatLayers.ts'), LV = await import('../../src/scene/lived.ts'); FL.layGeneratedFloor(gen.level.boxes, gen.groups, LV.isLived, BoxFlag); }   // (… and its floor swept into order, as the export sweeps it before it writes: flatLayers.ts)
-  const diffs: string[] = []; const n = structuralDiff(gen.level, loadLevel(data, { lived: true, dressing: false }), diffs);   // (the generator builds the lived-in rooms' furniture: src/scene/lived.ts — and none of the dressing tools/levels/dress.ts appends for the destruction switch, which is on where the page's switches are: left out by name, so the line reads the same on both stands)
-  verdict(n === 0, "the file is the generator's level (tools/levels/consulate.ts build → the same Level, field for field)", n ? `${n} diffs: ${diffs.slice(0, 4).join(' · ')} — bun run tools/levels/export.ts consulate` : '0 diffs (before the dressing export.ts adds)');
+  { const ex = exporterCheck('consulate'); verdict(ex.ok, "the file is the generator's level, and its look twin with it (the exporter's own answer: tools/qa/level-file.ts)", ex.said); }
   const lint = lintLevel(data), bad = lint.findings.filter((f: any) => f.severity !== 'info');
   verdict(lint.errors === 0 && lint.warnings === 0, 'the level lint is clean (no error, no warning)', bad.length ? bad.slice(0, 5).map((f: any) => `${f.severity}: ${f.message}`).join(' · ') : `${lint.infos} notes in all`);
   const L = loadLevel(data), glass = L.boxes.filter((b: any) => (b.flags ?? 0) & BoxFlag.Glass).length;
@@ -81,12 +79,11 @@ export const consulateLevel = guarded(async () => {
 // ---------------------------------------------------------------- consulate-stage
 export const consulateStage = guarded(async () => {
   const { verdict, done } = family('consulate-stage: the rescue boots on the level with four — the cast on its marks, three roamers of five places, nothing moves until Sam does');
-  const bad: string[] = [], SEEDS = [1, 2, 3, 4, 5, 6, 7, 8]; let rounds = 0, clocks = 0, chars = 0, written = '', same = false;
-  /** eight stagings, every one read the same way. `dealt`: with the same-start switch put off for the staging — the deal behind it, what the page plays under ?samestart=0 */
-  const pass = async (dealt: boolean): Promise<string[]> => { const draws: string[] = [];
-    for (const seed of SEEDS) { const tag = dealt ? `seed ${seed}, dealt` : `seed ${seed}`;
+  const bad: string[] = [], SEEDS = [1, 2, 3, 4, 5, 6, 7, 8]; let rounds = 0, clocks = 0, chars = 0, written = '';
+  /** eight stagings, every one read the same way */
+  const pass = async (): Promise<string[]> => { const draws: string[] = [];
+    for (const seed of SEEDS) { const tag = `seed ${seed}`;
       const W = await stand(seed, 4), g = W.game, S = g.level.scenarios.rescue, R = g.rescue;
-      if (dealt) SAMESTART.on = false; else same = SAMESTART.on;   // (read, or put off, AFTER the stand-up: a stand that pins the switch writes it as it stands a Game)
       const why = await quiet(async () => R.start()); if (why) { bad.push(`${tag}: start refused — ${why}`); continue; }
       const near = (who: string, p: number[], m: number[]) => { if (flat(p, m) > 0.6) bad.push(`${tag}: ${who} is ${f1(flat(p, m))} m off the mark`); };
       if (R.ops.length !== 4) bad.push(`${tag}: ${R.ops.length} teammates`); R.ops.forEach((o: any, i: number) => near(o.callsign, o.char.pos, S.team.ops[i])); near('Sam', g.player.char.pos, S.team.sam);
@@ -105,16 +102,10 @@ export const consulateStage = guarded(async () => {
       if (!isNaN(R.t0)) clocks++; if (R.result) bad.push(`${tag}: over before Sam moved — ${R.result.why}`);
     }
     return draws; };
-  const draws = await pass(false);
-  // (src/game/samestart.ts, on where the page's switches are: every try starts the same way — the places written first, whatever the seed. So on such a stand the
-  // eight are read as that rule's, and the eight are staged and read again behind the switch)
-  let dealt = draws;
-  if (same) {
-    verdict(new Set(draws).size === 1 && draws[0] === written, 'every try starts the same way (samestart.ts on): the three places written first hold a man on all eight seeds', `${new Set(draws).size} different draws on eight seeds: ${[...new Set(draws)].join(' · ')} · written first: ${written}`);
-    try { dealt = await pass(true); } finally { SAMESTART.on = same; }
-  }
-  verdict(bad.length === 0, `staged on eight seeds${same ? ' as the stand starts them, and on the eight again as dealt' : ''}: the four (a red pair, a blue pair) and Sam inside the front door, three hostages, the captor and a second gun in the consul's office, the door man by its door, three roamers each in a room of his own, every inside door shut but the records room's hall door`, bad.length ? bad.slice(0, 6).join(' · ') : `${chars} characters at most (the skinning holds 16)`);
-  verdict(new Set(dealt).size >= 3, `which three of the five places hold a man differs from staging to staging (no room is known empty)${same ? ' — the deal behind the switch' : ''}`, `${new Set(dealt).size} different draws on ${dealt.length} stagings: ${[...new Set(dealt)].join(' · ')}`);
+  const draws = await pass();
+  // (src/game/samestart.ts: every try starts the same way — the places written first, whatever the seed)
+  verdict(new Set(draws).size === 1 && draws[0] === written, 'every try starts the same way: the three places written first hold a man on all eight seeds', `${new Set(draws).size} different draws on eight seeds: ${[...new Set(draws)].join(' · ')} · written first: ${written}`);
+  verdict(bad.length === 0, `staged on eight seeds: the four (a red pair, a blue pair) and Sam inside the front door, three hostages, the captor and a second gun in the consul's office, the door man by its door, three roamers each in a room of his own, every inside door shut but the records room's hall door`, bad.length ? bad.slice(0, 6).join(' · ') : `${chars} characters at most (the skinning holds 16)`);
   verdict(rounds === 0 && clocks === 0, "five seconds with Sam standing: nobody fires and the captor's clock has not started", `${rounds} rounds · the clock running on ${clocks} stagings`);
   { const W = await stand(1, 2), R = W.game.rescue, why = await quiet(async () => R.start());
     verdict(!why && R.ops.length === 2 && R.hostiles.length === 6, 'with the pair (the Loadout\'s smaller team) it stages too: two teammates, the same six against them', why ? `refused — ${why}` : `${R.ops.length} teammates · ${R.hostiles.length} of theirs`); }

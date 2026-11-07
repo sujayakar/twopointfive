@@ -67,7 +67,7 @@
   }
   /** interleaved A/B on the current view: rounds × (warm + n) serialized renders per variant; per-pass medians + Σ + union (median and p95) */
   async function costAB(applyA, applyB, opts = {}) {
-    const { rounds = 4, n = 20, warm = 12, passes = ['reflect', 'rdenoise', 'gather', 'temporal', 'direct', 'softblur', 'volumetrics', 'volFroxel'] } = opts;
+    const { rounds = 4, n = 20, warm = 12, passes = ['reflect', 'rdenoise', 'gather', 'temporal', 'direct', 'softblur', 'volumetrics'] } = opts;
     const acc = { A: { sum: [], union: [], p: {} }, B: { sum: [], union: [], p: {} } };
     for (const k of passes) { acc.A.p[k] = []; acc.B.p[k] = []; }
     for (let r = 0; r < rounds; r++) {
@@ -118,7 +118,6 @@
     for (const r of [0, 2, 1]) await stepDo('rays' + r, () => { s.rtRays = r; });
     await stepDo('gloss legacy', () => { s.rtReflect = false; s.gloss = true; }); await stepDo('rt back', () => { s.rtReflect = true; });
     await stepDo('detail0', () => { s.detail = 0; }); await stepDo('detail1', () => { s.detail = 1; }); await stepDo('detail.35', () => { s.detail = 0.35; });
-    await stepDo('legacy dn', () => { s.denoiser = 'legacy'; }); await stepDo('v3 dn', () => { s.denoiser = 'v3'; });
     await stepDo('taau off', () => { s.taau = false; }); await stepDo('taau on', () => { s.taau = true; });
     await stepDo('scale .6', () => { s.renderScale = 0.6; }); await stepDo('scale 1', () => { s.renderScale = 1.0; });
     await stepDo('nv', () => { s.nvAmount = 1; }); await stepDo('nv off', () => { s.nvAmount = 0; });

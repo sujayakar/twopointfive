@@ -7,12 +7,11 @@
 //   flashweight-pace    in each scenario: the team told to fall in behind a Sam who SPRINTS a lap of the floor near the start, then sent to stack on the nearest
 //                       held room's door and through it. Every frame, every living teammate: the speed his legs are asked for never passes guards.ts PACE.max
 //                       (and so never reaches the animator's sprint band, character.ts BLEND.jogAt), it never rises faster than PACE.accel, and the ground he
-//                       actually covers in any quarter second agrees. Not vacuous: somebody must have moved at better than a stroll. The line also says what the
-//                       same script does with PACE off and the order paces as they were (the red path: it must show the old run).
+//                       actually covers in any quarter second agrees. Not vacuous: somebody must have moved at better than a stroll.
 //   flashweight-flash   the canister's rule in a room fight (combat.ts FLASH), on a held room of every scenario: a can let off inside the open door —
 //                       every defender the fireball has a line to is blind for FLASH.secs and doubled over for FLASH.stagger of it, none of them fires a
 //                       round while folded; the team stood outside in plain view of it, past FLASH.ownM, is untouched; the same can behind the SHUT door
-//                       touches nobody inside. And FLASH.on false is the dazzle as it was (the team outside is blinded by Sam's own can: the old rule).
+//                       touches nobody inside.
 //   flashweight-night   the night game's stun canister is as it was: no scenario up, a guard with a line to it is dazzled by effects.ts bang's numbers and
 //                       never folded.
 //   flashweight-entry   what it buys: bang-tally.ts over every held room's every door in every scenario, a few seeds, 'open and clear' against 'bang and
@@ -21,17 +20,22 @@
 //   flashweight-lights  LIGHT DISCIPLINE ("friendlies also need to have flashlight discipline"), every scenario, the floor emptied of hostiles first so nothing
 //                       but the orders decides: the team falls in, stacks on a held room's door, is sent through it, and is called back. Dark while following,
 //                       dark on the stack, every man's light ON as he crosses the frame and while the room is being looked over, dark again within a few
-//                       seconds of 'holding the room' (but for a man the entry left on another door of the room — DOORTOOLS.otherDoorM: a door is held lit), dark following Sam out. LIGHTS.on false must show the old picture (lit long after the entry). A light the rule owes is not owed in a LIT PLACE
-//                       (LIGHTS.litOff: judged by the rule's own reading of the place); none may burn on in one, and with that rule off nothing is spared.
+//                       seconds of 'holding the room' (but for a man the entry left on another door of the room — DOORTOOLS.otherDoorM: a door is held lit), dark following Sam out. A light the rule owes is not owed in a LIT PLACE
+//                       (LIGHTS.litOff: judged by the rule's own reading of the place); none may burn on in one.
 //   flashweight-corners CHECK THE CORNERS ("teammates clearing rooms seem to miss enemies. they need to check their corners"), every scenario: into an emptied
 //                       held room, every man's muzzle is on the near corner of his own side inside DOORTOOLS.cornerCap of crossing, and the entry does not
-//                       end until the room's floor has been looked over (fewer than DOORTOOLS.deadCells cells no muzzle was ever on). Then the count that
-//                       matters, from bang-tally.ts: entries the team walked out of with men of the room still standing in it ('missed'), the search on
-//                       against off, same seeds — on must miss fewer, and lose no more of the team.
+//                       end until the room's floor has been looked over (fewer than DOORTOOLS.deadCells cells no muzzle was ever on).
 //   flashweight-feel    the Tab panel's 'Team feel' rows (game/teamfeel.ts) under a stand-in localStorage: only what differs from the build is stored, a fresh
 //                       Game reads it back, a bad stored value is passed over, the reset drops it. Also in the 'ui' family.
-// The family's own red path: FLASHWEIGHT_BREAK=1 bun run tools/qa/probes.ts flashweight-pace must FAIL (the pace rule switched off under the probe).
-// The lights' own: FLASHLIGHTS_BREAK=1 bun run tools/qa/probes.ts flashweight-lights must FAIL on both stands (every teammate's light read as off: a man is
+// SINCE 2026-11-07 the switches these probes once put off are settled on, and no probe here writes one or hands one to the tally's staging: out are
+// flashweight-pace's hold on the newer pace rule (teampace.ts: its lines now ask the team's legs as the page moves them) and its "PACE off shows the old
+// run"; flashweight-flash's "FLASH.on false is the dazzle as it was"; flashweight-fog's "FOG.doors off draws it live" half and every laser line (an
+// enemy's laser is off on the page, and the line turned it on to measure the fog's cut of it); flashweight-lights' hold on the goggles (its lines now ask
+// the lights of a team that has them), "the place rule off" and "LIGHTS.on false is the old picture"; flashweight-corners' tally with the search and the
+// corners off; and in flashweight-feel the two settled rows among its examples (FLASH.on as a changed row, COVER.on as a key no row wrote).
+// The family's own red path: FLASHWEIGHT_BREAK=1 bun run tools/qa/probes.ts flashweight-pace must FAIL (the squad is taken out of each staging before
+// the lap: no teammate to measure).
+// The lights' own: FLASHLIGHTS_BREAK=1 bun run tools/qa/probes.ts flashweight-lights must FAIL (every teammate's light read as off: a man is
 // then 'lit' only where a rule says his light would help nobody, and in the open no rule says that).
 import { standUp, ROOT } from './headless.ts';
 /** QA: the lights family's red path (see the head) */
@@ -47,8 +51,6 @@ const LTM: any = await import(`${ROOT}/src/game/lighting.ts`);
 const ORM: any = await import(`${ROOT}/src/game/orders.ts`);
 const CHM: any = await import(`${ROOT}/src/game/character.ts`);
 const FXM: any = await import(`${ROOT}/src/game/effects.ts`);
-const FWM: any = await import(`${ROOT}/src/game/fogofwar.ts`);
-const FOG_DEFAULTS = JSON.parse(JSON.stringify(FWM.FOG));
 
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
@@ -79,10 +81,7 @@ interface PaceRun { asked: number; rise: number; covered: number; men: number; m
 /** the script: fall in behind a sprinting Sam, then stack on the nearest held room's door, then through it */
 async function paceRun(scn: string): Promise<PaceRun> {
   const S: any = await quiet(() => stage(scn, 1)); const { g, step } = S; const O = g.orders, nav = g.col.nav;
-  // This is the check of the CAP (guards.ts PACE) — what a teammate's legs do with teampace.ts off, and the floor that rule stands on. With it on the team
-  // walks under the cap and runs for a reason (with a sprinting Sam, from a grenade, to cover): that is teampace-check.ts's, and it is held off here.
-  (await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on = false;
-  const team: any[] = O.squad().filter((x: any) => x.state !== 'dead');
+  const team: any[] = process.env.FLASHWEIGHT_BREAK ? [] : O.squad().filter((x: any) => x.state !== 'dead');   // (FLASHWEIGHT_BREAK: nobody to measure — every scenario's line must fail)
   const out: PaceRun = { asked: 0, rise: 0, covered: 0, men: team.length, moved: false };
   const was = new Map<any, number>(team.map(x => [x, x.speed])); const trail = new Map<any, number[][]>(team.map(x => [x, []]));
   const WIN = 15;   // a quarter second of frames
@@ -114,19 +113,13 @@ async function paceRun(scn: string): Promise<PaceRun> {
 export const flashweightPace = guarded(async () => {
   const F = family('flashweight-pace: the team never runs — every scenario, behind a sprinting Sam, onto a door and through it');
   const P = clone(DEFAULTS.PACE), jogAt = CHM.BLEND.jogAt;
-  if (process.env.FLASHWEIGHT_BREAK) { setKnobs({ PACE: { on: false }, ORDERS: { run: 4.7, brisk: 3.4, briskIn: 2.2, onto: 1.7, entry: 3.4 } }); console.log('  (FLASHWEIGHT_BREAK: the pace rule is OFF under this probe — it must fail)'); }
+  if (process.env.FLASHWEIGHT_BREAK) console.log('  (FLASHWEIGHT_BREAK: the squad is taken out of each staging before the lap — it must fail)');
   F.verdict(P.max < jogAt && ORM.ORDERS.run <= P.max && ORM.ORDERS.brisk <= P.max && ORM.ORDERS.entry <= P.max, 'the knobs: no pace the team is asked for reaches the sprint band',
     `PACE.max ${P.max} m/s, accel ${P.accel} m/s² · orders: fall in ≤ ${ORM.ORDERS.run}, a leg to a mark ${ORM.ORDERS.brisk} then ${ORM.ORDERS.onto} onto it, an entry ${ORM.ORDERS.entry} · the animator's sprint clip starts past ${jogAt} m/s (the walk carries to ${CHM.BLEND.walkTop})`);
   for (const E of SCENARIOS as any[]) {
     const r = await paceRun(E.id);
     const ok = r.men > 0 && r.moved && r.asked <= P.max + 1e-6 && r.rise <= P.accel + 1e-3 && r.covered <= P.max + 0.35;
     F.verdict(ok, `${E.title}: ${r.men} teammates`, `fastest asked of anybody's legs ${f2(r.asked)} m/s (cap ${P.max}) · fastest pick-up ${f2(r.rise)} m/s² (cap ${P.accel}) · most ground covered in any quarter second ${f2(r.covered)} m/s${r.moved ? '' : ' · NOBODY MOVED at better than a stroll: nothing was measured'}`);
-  }
-  // the red path, as a number: the same script with the rule off and the order paces as they were must show the old run
-  if (!process.env.FLASHWEIGHT_BREAK) {
-    setKnobs({ PACE: { on: false }, ORDERS: { run: 4.7, brisk: 3.4, briskIn: 2.2, onto: 1.7, entry: 3.4 } });
-    const E = (SCENARIOS as any[])[0]; const r = await paceRun(E.id); reset();
-    F.verdict(r.asked > jogAt + 0.3, `the probe sees a run when there is one (${E.title}, PACE off, the order paces as they were)`, `fastest asked ${f2(r.asked)} m/s — past the sprint band's ${jogAt}`);
   }
   return F.done();
 });
@@ -176,10 +169,6 @@ export const flashweightFlash = guarded(async () => {
   F.verdict(lined > 0 && reached > 0, 'not vacuous: defenders were reached', `${lined} defenders had a line to the can across the seven scenarios, ${reached} were blinded`);
   { const E = (SCENARIOS as any[])[0]; const r = await flashRun(E.id, { shut: true });
     F.verdict(!!r && r.inside.every(x => x.blind <= 0 && x.folded <= 0), `${E.title}: the same can outside the SHUT door`, r ? `the room's men: ${r.inside.map(x => `${x.gd.callsign} ${x.blind > 0 ? `BLIND ${f2(x.blind)} s` : 'untouched'}`).join(', ')}` : 'the can never went off'); }
-  { setKnobs({ FLASH: { on: false } }); const E = (SCENARIOS as any[])[0]; const r = await flashRun(E.id); reset();
-    const far = r ? r.ours.filter(x => x.d > DEFAULTS.FLASH.ownM && x.d < r.B.dazzleRadius && x.line) : [];
-    F.verdict(!!r && r.inside.filter(x => x.line).every(x => x.folded <= 0 && x.blind > 0 && x.blind <= r.B.dazzleSeconds + 0.05) && (!far.length || far.every(x => x.blind > 0)), `${E.title}: FLASH.on false is the dazzle as it was`,
-      r ? `the room's men with a line: ${r.inside.filter(x => x.line).map(x => `${x.gd.callsign} blind ${f2(x.blind)} s, folded ${x.folded > 0 ? f2(x.folded) : 'no'}`).join(', ') || '—'} · the team in view of Sam's own can: ${far.filter(x => x.blind > 0).length} of ${far.length} blinded (the old rule)` : 'the can never went off'); }
   return F.done();
 });
 
@@ -207,10 +196,10 @@ const leafSeen = (g: any, d: any, ang: number) => leafPts(d, ang).some(p => g.fo
 const doorBoxOf = (g: any, d: any) => g.dynBoxes.find((b: any) => b.name === d.box.name);
 
 export const flashweightFog = guarded(async () => {
-  const F = family('flashweight-fog: a door that opens where the team cannot see, and an enemy\'s laser where nobody looks, are not in the picture');
+  const F = family('flashweight-fog: a door that opens where the team cannot see is not in the picture');
   let fogged = 0;
   for (const E of SCENARIOS as any[]) {
-    reset(); Object.assign(FWM.FOG, clone(FOG_DEFAULTS));
+    reset();
     const S: any = await quiet(() => stage(E.id, 1)); const { g, step } = S; const FW = g.fogOfWar;
     g.aiEnabled = false; step(3);   // (everybody stands where the staging put him: the picture's rule is what is asked, not the fight)
     if (!FW.on) {
@@ -229,7 +218,6 @@ export const flashweightFog = guarded(async () => {
     const open = swing(d), shutPose = d.poseAt(0);
     d.latched = false; d.closing = false; d.vel = 0; d.quietT = -3600; d.angle = open; d.place(); step(2);
     const b1 = doorBoxOf(g, d), held1 = FW.doorHeld(d), asShut = !!b1 && b1 !== d.box && Math.abs(b1.yaw - shutPose.yaw) < 1e-6 && flat(b1.c, shutPose.c) < 1e-6;
-    FWM.FOG.doors = false; step(2); const live = doorBoxOf(g, d) === d.box; FWM.FOG.doors = true;   // (the knob off forgets what was seen: back on, the picture starts from the floor as it stands)
     d.angle = 0; d.place(); step(2); d.angle = open; d.place(); step(2); const again = doorBoxOf(g, d) !== d.box && FW.doorHeld(d);
     // Sam walks to where he can see it: the leaf comes up to date; he leaves, it shuts unseen: the picture keeps it open
     const home = [...g.player.char.pos]; const ent = S.defs.flatMap((x: any) => x.room.entries).find((e: any) => e.door === d);
@@ -241,40 +229,11 @@ export const flashweightFog = guarded(async () => {
     const farAgain = !leafSeen(g, d, d.angle) && !leafSeen(g, d, 0);
     d.angle = 0; d.place(); step(2);
     const b2 = doorBoxOf(g, d), openPose = d.poseAt(open), keptOpen = !!b2 && b2 !== d.box && Math.abs(b2.yaw - openPose.yaw) < 1e-6;
-    F.verdict(held1 && asShut && live && again && seenNow && (!farAgain || keptOpen), `${E.title}: ${d.def.name}, opened where no eye of the team has a line to it`,
-      `drawn still shut: ${asShut ? 'yes' : 'NO'} (the picture's leaf at the shut pose, not the door's own box) · FOG.doors off draws it live: ${live ? 'yes' : 'NO'} · Sam ${stood ? `stood at (${f2(stood[0])}, ${f2(stood[2])}) with a line to it` : 'found no place to see it from'}: drawn as it stands ${seenNow ? 'yes' : 'NO'} · he leaves and it shuts unseen: ${farAgain ? (keptOpen ? 'drawn still open' : 'NOT kept') : 'still in view from the staging — not asked'}`);
+    F.verdict(held1 && asShut && again && seenNow && (!farAgain || keptOpen), `${E.title}: ${d.def.name}, opened where no eye of the team has a line to it`,
+      `drawn still shut: ${asShut ? 'yes' : 'NO'} (the picture's leaf at the shut pose, not the door's own box) · shut and opened unseen once more, still held: ${again ? 'yes' : 'NO'} · Sam ${stood ? `stood at (${f2(stood[0])}, ${f2(stood[2])}) with a line to it` : 'found no place to see it from'}: drawn as it stands ${seenNow ? 'yes' : 'NO'} · he leaves and it shuts unseen: ${farAgain ? (keptOpen ? 'drawn still open' : 'NOT kept') : 'still in view from the staging — not asked'}`);
     d.angle = 0; d.place(); d.quietT = 10; d.latched = true; step(3);
-    // ---- a laser: a defender Sam sees through his room's door, his beam turned eight ways
-    let done = false;
-    for (const x of S.defs) {
-      if (done) break; const gd = x.gd; if (gd.state === 'dead') continue;
-      for (const e of x.room.entries) {
-        if (done) break; const dd = e.door, o = e.out;
-        const sw = swing(dd); dd.latched = false; dd.closing = false; dd.vel = 0; dd.quietT = -3600; dd.angle = sw; dd.place();
-        let at: number[] | null = null;
-        for (const back of [1.6, 2.4, 1.0, 3.2]) for (const lat of [0, 0.6, -0.6, 1.2, -1.2]) { if (at) break; const p = [e.at[0] + o[0] * back - o[1] * lat, 0, e.at[2] + o[1] * back + o[0] * lat]; if (g.col.nav.isBlocked(p[0], p[2])) continue; await quiet(() => g.teleportPlayer(p as any)); step(2); if (FW.seen(gd)) at = p; }
-        if (!at) { dd.angle = 0; dd.place(); dd.quietT = 10; dd.latched = true; step(1); continue; }
-        const c = gd.char, chest = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]]; let full = 0, drawn = 0, wrong = 0, samples = 0, clipped = 0, dots = 0, dotsWrong = 0;
-        for (let k = 0; k < 8; k++) {
-          const dir = [Math.sin(k * Math.PI / 4), 0, Math.cos(k * Math.PI / 4)]; c.gunDir = dir; c.muzzle = [chest[0] + dir[0] * 0.5, chest[1], chest[2] + dir[2] * 0.5];
-          CBM.LASER.enemy = true;   // (the fog's cut of an enemy's beam is measured with the enemies' lasers on, as before combat.ts LASER — off, there is nothing to cut: laser-probes.ts)
-          FWM.FOG.lasers = false; const all: any[] = []; CBM.laserBoxes(g, gd, all); FWM.FOG.lasers = true; const cut: any[] = []; CBM.laserBoxes(g, gd, cut);
-          const len = (l: any[]) => l.filter(b => b.h[2] > 0.02).reduce((a, b) => a + 2 * b.h[2], 0);
-          const La = len(all), Lc = len(cut); full += La; drawn += Lc; if (Lc < La - 0.3) clipped++;
-          for (const b of cut) { if (b.h[2] <= 0.02) { dots++; if (!eyeSees(g, [b.c[0] - dir[0] * 0.05, b.c[1], b.c[2] - dir[2] * 0.05])) dotsWrong++; continue; } for (let t = -b.h[2] + 0.05; t <= b.h[2] - 0.05; t += 0.1) { samples++; if (!eyeSees(g, [b.c[0] + dir[0] * t, b.c[1], b.c[2] + dir[2] * t])) wrong++; } }
-        }
-        // out of sight again: inside the linger he is still drawn, and his beam is not
-        await quiet(() => g.teleportPlayer(home as any)); dd.angle = 0; dd.place(); dd.quietT = 10; dd.latched = true; step(2);
-        const lingering = FW.drawn(gd) && !FW.seen(gd); const none: any[] = []; CBM.laserBoxes(g, gd, none); CBM.LASER.enemy = false;
-        F.verdict(samples > 0 && wrong <= samples * 0.05 && dotsWrong === 0 && clipped > 0 && (!lingering || none.length === 0), `${E.title}: ${gd.callsign}, seen through ${dd.def.name}, his laser turned eight ways`,
-          `${f2(drawn)} m of beam drawn of ${f2(full)} m (cut in ${clipped} of 8 directions) · of the drawn beam, ${wrong} of ${samples} points are where no eye has a line (≤ 5 % allowed: a jamb's width) · ${dots} dot${dots === 1 ? '' : 's'} drawn, ${dotsWrong} out of sight · Sam gone, ${lingering ? `he lingers in the picture and ${none.length ? 'his beam is STILL DRAWN' : 'his beam is not drawn'}` : 'he is out of the picture at once'}`);
-        done = true;
-      }
-    }
-    if (!done) F.verdict(false, `${E.title}: a defender to see through his door`, 'none could be put in Sam\'s sight');
   }
   F.verdict(fogged >= 3, 'the scenarios with the fog of war on were asked', `${fogged} of ${(SCENARIOS as any[]).length}`);
-  Object.assign(FWM.FOG, clone(FOG_DEFAULTS));
   return F.done();
 });
 
@@ -357,9 +316,9 @@ async function emptyEntry(scn: string) {
 export const flashweightLights = guarded(async () => {
   if (LIGHTS_BREAK) console.log('  (FLASHLIGHTS_BREAK: every teammate\'s light is read as off — the lines below must fail)');
   const F = family('flashweight-lights: weapon lights off until they help — every scenario: dark in file behind Sam, lit walking to a door alone, dark stacked on it, lit through the entry and the search, dark holding the room and following out');
-  // (THE LIGHT RULE ALONE: since nvg.ts a quiet team in the dark walks on its goggles with no light at all — probes.ts nvg has that; what LIGHTS does with
-  // the lights when they are its own to burn is measured here with the goggles off, as it was written)
-  const bare = (set: Record<string, Record<string, unknown>> = {}) => setKnobs({ ...set, NVG: { on: false } }); bare();
+  // (until 2026-11-07 these lines were measured with the goggles held off, as they were written: since nvg.ts a quiet team in the dark walks on its
+  // goggles with no light at all — probes.ts nvg has that. The goggles are settled on: the lines ask the team the page fields)
+  const bare = (set: Record<string, Record<string, unknown>> = {}) => setKnobs(set); bare();
   const L = GDM.LIGHTS; let spared = 0, burned = 0, burnDark = 0;
   for (const E of SCENARIOS as any[]) {
     const r = await emptyEntry(E.id); if (!r) { F.verdict(false, `${E.title}`, 'no held room to enter'); continue; }
@@ -371,26 +330,15 @@ export const flashweightLights = guarded(async () => {
   // reading of the floor, not the rule's) and none burns on in a place the rule calls lit
   F.verdict(burnDark > 0 && burned === 0, 'in the dark the lights burn, and none burns on in a place the rule calls lit (LIGHTS.litOff, as shipped)', `${burnDark} man-frames lit on floor the probe itself reads dark · ${spared} man-frames a lit place spared a light · ${burned} burning on in a lit place past the tail`);
   // …and a floor that IS over the bar keeps them off: the four-man room clear with the bar let down to where its corridor passes (0.2), every other check
-  // of the entry still holding — then the same entry with the rule off burns them, as it was
+  // of the entry still holding
   { const E = (SCENARIOS as any[]).find(e => e.id === 'room-clear-four') ?? (SCENARIOS as any[])[0], bound = L.afterSecs + L.hotSecs + L.tail + 0.5;
     const whole = (r: any) => { const crossed = [...r.cross.values()]; return !r.why && r.walkDark === 0 && crossed.length > 0 && crossed.every((c: any) => c.lit) && r.searching > 0 && r.searchLit >= r.searching * 0.95 && r.darkAt <= bound && r.follow === 0 && r.stacked === 0 && r.held === 0 && r.doorDark === 0 && r.out === 0; };
     const words = (r: any) => `spared ${r.spared} · burning on in a lit place ${r.litInLit} · dark walking alone ${r.walkDark} of ${r.walk} · crossed lit (or in a lit place, or dark into the wall at his muzzle) ${[...r.cross.values()].filter((c: any) => c.lit).length} of ${r.cross.size} · lit through the search ${r.searchLit} of ${r.searching} frames · all dark ${f2(r.darkAt)} s after the call · lit in file ${r.follow}, stacked ${r.stacked}, holding ${r.held}, on another door ${r.doorMen}${r.doorMen ? ` (${r.doors}; dark in the dark ${r.doorDark})` : ''}, following out ${r.out}`;
     bare({ LIGHTS: { litAt: 0.2 } }); const on = await emptyEntry(E.id); reset(); bare();
     F.verdict(!!on && on.spared > 0 && on.litInLit === 0 && whole(on), `a place over the bar keeps the lights off (${E.title}, LIGHTS.litAt 0.2)`, on ? words(on) : 'nothing staged');
-    bare({ LIGHTS: { litAt: 0.2, litOff: false } }); const off = await emptyEntry(E.id); reset(); bare();
-    F.verdict(!!off && off.spared === 0 && whole(off), `the place rule off: lit or dark, the lights as they were (${E.title}, LIGHTS.litOff false)`, off ? words(off) : 'nothing staged'); }
-  // the red path: the rule off is the old picture — the lights of the first entry still burning long after it
-  bare({ LIGHTS: { on: false } });
-  const E = (SCENARIOS as any[]).find(e => e.id === 'room-clear-pair') ?? (SCENARIOS as any[])[0]; const r = await emptyEntry(E.id); reset();
-  F.verdict(!!r && r.held > 0 && r.out > 0, `the probe sees the old picture when the rule is off (${E.title}, LIGHTS.on false)`, r ? `lit holding the room ${r.held} of ${r.team - r.doorMen} not on another door of it · following Sam out ${r.out}` : 'nothing staged');
+    }
   return F.done();
 });
-const tallyRows = async (args: string[]): Promise<any[]> => {
-  const file = `${process.env.TMPDIR ?? '/tmp'}/flashweight-${process.pid}-${Math.random().toString(36).slice(2)}.json`;
-  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/bang-tally.ts`, ...args, '--jobs', '4', '--json', file], { stdout: 'ignore', stderr: 'pipe' }); const err = await new Response(p.stderr).text(); const code = await p.exited;
-  if (code > 1) throw new Error(`bang-tally ${args.join(' ')} exited ${code}\n${err.slice(-600)}`);   // (1 = a scenario's own verdict line failed — the rows are whole; anything else = it did not run them)
-  try { const j = JSON.parse(await Bun.file(file).text()); return j.results ?? []; } finally { try { (await import('node:fs')).unlinkSync(file); } catch { } }
-};
 export const flashweightCorners = guarded(async () => {
   const F = family('flashweight-corners: men going in check their corners and look the room over — every scenario');
   const K = DTM.DOORTOOLS;
@@ -400,13 +348,6 @@ export const flashweightCorners = guarded(async () => {
     const ok = !r.why && r.cross.size > 0 && late.length === 0 && r.ended === 'in' && r.unseen < K.deadCells;
     F.verdict(ok, `${E.title}: the ${r.door} door, ${r.cross.size} in`, `${r.why ? `ORDER REFUSED: ${r.why} · ` : ''}muzzle on his near corner after crossing: ${r.withCorner.map(([gd, c]: any) => `${gd.callsign} ${Number.isFinite(c.corner) ? f2(c.corner) + ' s' : 'NEVER'}`).join(', ') || '(no corner to a hand of this door)'} (cap ${K.cornerCap}) · the room: ${Number.isFinite(r.unseen) ? `${r.unseen} of ${r.cells} cells never under a muzzle` : 'NOT SEARCHED'} (dead floor is ${K.deadCells}+), ${r.moves || 0} sent on · ${f2(r.secs)} s from 'going in' to 'holding the room' · ended '${r.ended}'`);
   }
-  // the red path, and what it buys: the same entries behind a bang, with the search and the corners off — men left standing in rooms the team walked into
-  const seeds = process.env.FLASHWEIGHT_SEEDS ?? '1-3';
-  const [on, off] = [await tallyRows(['--seeds', seeds, '--arms', 'bang']), await tallyRows(['--seeds', seeds, '--arms', 'bang', '--set', JSON.stringify({ DOORTOOLS: { search: false, corners: false } })])];
-  const count = (rs: any[]) => { const live = rs.filter(x => x.of > 0 && !x.note); return { n: live.length, missed: live.filter(x => x.still > 0).length, lost: live.reduce((a, x) => a + x.lost, 0), men: live.reduce((a, x) => a + x.team, 0), taken: live.filter(x => x.taken).length }; };
-  const A = count(on), B = count(off);
-  F.verdict(A.n > 0 && A.n === B.n && (A.missed < B.missed || A.missed === 0) && A.lost <= B.lost + Math.ceil(B.men * 0.02), `behind a bang, every held room's every door (seeds ${seeds}): fewer rooms left with men standing in them, and no more of the team lost for it`,
-    `with the corners and the search: ${A.missed} of ${A.n} entries ended with the team alive, its order over and a man of the room still standing IN the room · ${A.taken} rooms taken · ${A.lost} of ${A.men} lost — without: ${B.missed} of ${B.n} · ${B.taken} taken · ${B.lost} of ${B.men} lost`);
   return F.done();
 });
 
@@ -414,7 +355,7 @@ export const flashweightCorners = guarded(async () => {
 export const flashweightEntry = guarded(async () => {
   const F = family('flashweight-entry: behind the bang, every scenario loses fewer and takes or empties as many rooms (bang-tally.ts)');
   const seeds = process.env.FLASHWEIGHT_SEEDS ?? '1-3';
-  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/bang-tally.ts`, '--seeds', seeds, '--arms', 'open,bang', '--jobs', '4'], { stdout: 'pipe', stderr: 'ignore' });
+  const p = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/bang-tally.ts`, '--seeds', seeds, '--arms', 'open,bang', '--jobs', '4'], { stdout: 'pipe', stderr: 'ignore', env: process.env });
   const text = await new Response(p.stdout).text(); const code = await p.exited;
   const lines = text.split('\n'); let n = 0;
   for (const l of lines) { const m = l.match(/^(PASS|FAIL) — ([^:]+): (.*)$/); if (!m) continue; n++; F.verdict(m[1] === 'PASS', `${m[2]} (seeds ${seeds})`, m[3]); }
@@ -438,20 +379,18 @@ export async function flashweightFeel(): Promise<boolean> {
   try {
     TF.resetTeamFeel(); store.clear();
     F.verdict(TF.teamFeelSummary() === 'as shipped' && !store.has(KEY), 'untouched: as shipped, nothing stored', `summary '${TF.teamFeelSummary()}' · stored ${store.get(KEY) ?? 'nothing'}`);
-    T.PACE.max = 1.8; TF.saveTeamFeel('PACE.max'); T.FLASH.on = false; TF.saveTeamFeel('FLASH.on'); T.FLASH.secs[0] = 5; TF.saveTeamFeel('FLASH.secs.0');
-    T.COVER.on = false;   // (a URL flag for a visit, or the console: no row wrote it)
+    T.PACE.max = 1.8; TF.saveTeamFeel('PACE.max'); T.FLASH.secs[0] = 5; TF.saveTeamFeel('FLASH.secs.0');
     T.LIGHTS.hotSecs = 9; TF.saveTeamFeel('LIGHTS.hotSecs'); T.LIGHTS.hotSecs = D.LIGHTS.hotSecs; TF.saveTeamFeel('LIGHTS.hotSecs');   // (a row moved and moved back)
     const stored = JSON.parse(store.get(KEY) ?? '{}');
-    F.verdict(JSON.stringify(Object.keys(stored).sort()) === JSON.stringify(['FLASH.on', 'FLASH.secs.0', 'PACE.max']) && stored['PACE.max'] === 1.8 && stored['FLASH.on'] === false && stored['FLASH.secs.0'] === 5,
-      'three rows changed (a fourth moved and moved back, a fifth key written by no row): exactly those three are stored', `${store.get(KEY)} · summary '${TF.teamFeelSummary()}'`);
-    T.COVER.on = D.COVER.on;
+    F.verdict(JSON.stringify(Object.keys(stored).sort()) === JSON.stringify(['FLASH.secs.0', 'PACE.max']) && stored['PACE.max'] === 1.8 && stored['FLASH.secs.0'] === 5,
+      'two rows changed (a third moved and moved back): exactly those two are stored', `${store.get(KEY)} · summary '${TF.teamFeelSummary()}'`);
     // a page load: the tables as the build ships them, then a Game constructed
-    T.PACE.max = D.PACE.max; T.FLASH.on = D.FLASH.on; T.FLASH.secs[0] = D.FLASH.secs[0];
+    T.PACE.max = D.PACE.max; T.FLASH.secs[0] = D.FLASH.secs[0];
     const W = await standUp({});
-    F.verdict(T.PACE.max === 1.8 && T.FLASH.on === false && T.FLASH.secs[0] === 5 && T.FLASH.secs[1] === D.FLASH.secs[1] && T.PACE.accel === D.PACE.accel && !!W.game,
-      'a fresh Game reads the three back, and nothing else moves', `PACE.max ${T.PACE.max} · FLASH.on ${T.FLASH.on} · FLASH.secs ${JSON.stringify(T.FLASH.secs)} · PACE.accel ${T.PACE.accel}`);
+    F.verdict(T.PACE.max === 1.8 && T.FLASH.secs[0] === 5 && T.FLASH.secs[1] === D.FLASH.secs[1] && T.PACE.accel === D.PACE.accel && !!W.game,
+      'a fresh Game reads the two back, and nothing else moves', `PACE.max ${T.PACE.max} · FLASH.secs ${JSON.stringify(T.FLASH.secs)} · PACE.accel ${T.PACE.accel}`);
     T.PACE.accel = 4; TF.saveTeamFeel('PACE.accel');
-    F.verdict(Object.keys(JSON.parse(store.get(KEY) ?? '{}')).length === 4, 'a row moved after the load: the three read back are still kept beside it', `${store.get(KEY)}`);
+    F.verdict(Object.keys(JSON.parse(store.get(KEY) ?? '{}')).length === 3, 'a row moved after the load: the two read back are still kept beside it', `${store.get(KEY)}`);
     TF.resetTeamFeel();
     F.verdict(T.PACE.max === D.PACE.max && T.FLASH.on === D.FLASH.on && T.FLASH.secs[0] === D.FLASH.secs[0] && T.PACE.accel === D.PACE.accel && !store.has(KEY) && TF.teamFeelSummary() === 'as shipped',
       'reset: the build\'s values back, the stored copy gone', `PACE.max ${T.PACE.max} · FLASH.on ${T.FLASH.on} · stored ${store.get(KEY) ?? 'nothing'}`);

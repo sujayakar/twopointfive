@@ -120,7 +120,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   crosses unknown floor (`route()`: unless at most `ROUND_LESS` 0.5 of the short way's unknown floor — 1 m against 10 m is taken) or is over `roundCap` × the short way + 3 m: the short way, as with no way round. Page `ROUND_CAP` 1.6 (`?roundcap=0`); 0 in the module and frozen
   (`TPS_ROUNDCAP=1`, `FROZEN_HOLDS`, the pin lists; journal: the number rides in a recording's `flags`, no flag = 0). `probes.ts ordereddoor-round`, both stands, `ROUNDCAP_BREAK=1`: the yard staged once, four men 26–31 m → 7–13 m walked by the front door. Never seen on a GPU. **THE CAP SPARES A PAIR'S WAY ROUND TO ITS OWN DOOR (`ORDERS.roundOwn`, 10-15; a claim from the bodies-and-doors goal):** the cap's guard for "the short way runs through his own door" held only for the four (`round` wants `orders.big`), so a PAIR standing behind the ordered door was refused its way round and a man pulled the door open in the stack stage to walk through it. `roundOwn` (true in the module, it does nothing while `roundCap` is 0, so the frozen stand is as it was; page `?roundown=0`; journal: an `ORDERS` table without the key replays false; panel row 'way round ▸ kept off the stack's door') = the cap never refuses a way round that keeps off the door he is to stack on when the short way crosses it (a way round that itself crosses that door — a pair's own door is not priced as a wall, only the four's — is still capped). NOT "never through it": a pair between two KNOWN sides, and one whose way round crosses about as much unknown floor as the short way (`left > offM - OFF_M`), still walks through the ordered door as before the cap (not touched; no walk-length bound but the search's, as for the four). `probes.ts ordereddoor-round`, both stands, `ROUNDOWN_BREAK=1` fails on both: the office, fire exit, Sam outside, the pair inside: its leaf first moves at frame 847 with no man on Sam's side (cap, key off) → 1235 with both there (key on; the same as no cap); frozen with the cap written 845 → 1152. One seed, one door. Never seen on a GPU, nobody has played it.
   The night breach names its own
-  objective (`NightBreach.objective()`), the controls list has the X · B · T · F row, long order rows wrap. **Two QA tools:** `node tools/qa/page-look.cjs <outDir>
+  objective (the Rust game's `mission::objective`, in the view), the controls list has the X · B · T · F row, long order rows wrap. **Two QA tools:** `node tools/qa/page-look.cjs <outDir>
   name='query' …` = the REAL PAGE in headless Chromium on the software WebGPU adapter (SwiftShader; ~2 min boot, ~4 min a scenario at verylow; env PORT SIZE
   QUALITY SECS FRAMES PANEL='<panel search>'; the tool switches the smoke solver off — it compiles there since the brick pool, but a step costs ~3 ms a brick; `bun run dev`'s bundler serves the tree AS IT
   IS at each page load, so do not edit under a running take) — what a bundle-only break, the HUD's words and a drawn frame look like without a GPU; and
@@ -142,7 +142,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   true = the `fallIn` order) · `thrHandsOff` false (true: the step-in-by-itself form gets no held page — `heldOn`) · `thrHeldAll` false (true: with the four the held page only
   when every addressed man holds) · `thrMenuWord` true (false: the pair's F with a menu up that is NOT the held door's own is not the word and falls through to whatever else F is
   — in the room clear that is the drill, which takes the men off the door). `ROOMFIGHT.rallyK` 1 (× `FIGHT_SKILL.*.rallyChance` in `rally()`; the dice are drawn either way, so 1
-  is the game as it was and 0 = nobody leaves his room). `FOG.lastSeen` 0 s (fogofwar.ts `lastSeen()` → a thin fading '(?)' where an enemy now out of the picture was last
+  is the game as it was and 0 = nobody leaves his room. READ 2026-11-06, for this row's owner: `rally()` returns before the knob for a squad's man, and the
+  page deals the rooms' men of a level with no squads block into squads (`squaddeal.ts`), so on the page `rally` and `rallyK` move nothing there; `calls-rally`
+  asks the knob on the floor run as one pool, and holds the dealt floor to nobody going on his own — measured on the pair's floor, one seed). `FOG.lastSeen` 0 s (fogofwar.ts `lastSeen()` → a thin fading '(?)' where an enemy now out of the picture was last
   seen, `.marker.lastseen` in overlay.ts + the native overlay; HUD only, nobody's AI reads it; 0 = off = as shipped — the ready answer if the game reads too hard without enemy
   lasers). Changing a shipped value here moves the scripted tallies and `threshold-identity`: pin the old value in tools/qa/threshold-probes.ts as the rescue part did.
 - **Rescue with goggles on (10-06;** record rebuild/away-build/rescue-goggles.md): the scripted office rescue fell from 22 to 4 of 24 once the team had
@@ -198,7 +200,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 <!-- was CLAUDE.md lines 1308–1391 -->
 - **Night vision for the team** (`src/game/nvg.ts`, 10-06; the maintainer: "the squad members should have night vision and use it accordingly. this could
   either be following your lead or knowing when they haven't been compromised and flashlight would ruin that" — "but the lights make sense too, especially when
-  things are loud"; `NVG.on` default ON, a Team feel switch — **OFF = the build before it frame for frame**: `bun run tools/qa/nvg-probes.ts digest` here and
+  things are loud"; `NVG.on` default ON, a Team feel switch — **OFF = the build before it frame for frame**: `bun run tools/qa/nvg-probes.ts digest` (the file has no main since 11-07: the switch is settled and its off side is not stood) here and
   the same file in a checkout of af55d89 print the same seven hashes). Per frame (`nvgTick`, game.ts right after `fight.tick`), for operative units while
   `fightLive`: the TEAM is `dark` or `free` — THE LEAD (`NVG.lead`): Sam's light switched on with that gun in his hands (the switch, not `pl.light.enabled`: a
   sprint lowers the beam) → free; his goggles down, light off → dark, quiet or loud; else THEIR OWN JUDGEMENT (`NVG.own`): dark until COMPROMISED = a loud thing in
@@ -356,7 +358,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **An IR light on the goggles** (`src/game/irlight.ts`, 10-15; the maintainer, of a depot whose rooms were flat black noise through the tube: "maybe we should
   model IR lights on the nvg so even totally dark rooms are visible. and we can assume enemies never have nvg"). SWITCH `IRLIGHT.on`: ON in the page
   (`?noirlight` puts it off), OFF in the module and on the frozen stand (`TPS_IRLIGHT=1` raises it; `FROZEN_HOLDS`, standup pin, standEnv); registered in
-  knobs.ts and carried by the journal (a recording from before the key replays with it off). **Off = the build before it**: `nvg-probes.ts digest` and
+  knobs.ts and carried by the journal (a recording from before the key replays with it off). **Off = the build before it**: `nvg-probes.ts digest` (gone 11-07 with the off side) and
   `irlaser-probes.ts digest` (both pin it off) print the hashes a checkout of 93bb1005 prints. WHO: Sam, whenever the picture is the tube's (on exactly
   while `Player.nvAmount` > 0.5, post.wgsl's own swap — no tube frame without it, no bare-eyed frame with it; no key, it is part of the goggles; at a
   door with the wand under it and `WAND.nv`, the flood is the lens's); with `IRLIGHT.team` (on) every teammate whose goggles are down (`nvgDown`). Enemies
@@ -1038,7 +1040,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   cap, not walked; whether slowing to 0.8 of his pace is enough for him to catch up comfortably is his to say.
 - **On the walk to a mark a teammate looks where he walks until he can see what he was sent to watch** (`TEAMPACE.walkAim`, 11-04: ON in the page —
   `?walkaim=0` — OFF in the module and on the frozen stand, `TPS_WALKAIM=1`; a `FROZEN_HOLDS` row, `STAND_ENV`; journal: a recording whose TEAMPACE row
-  has no such key replays with it off; the debugger ▸ Team feel ▸ "teammates ▸ look where they walk"; knobs `walkAimOff 0.25, walkAimOn 0.5`). The other
+  has no such key replays with it off; the debugger ▸ Team feel ▸ "teammates ▸ look where they walk" (ROW TAKEN OFF THE PANEL 2026-11-07, its switch ruled settled: menus.md); knobs `walkAimOff 0.25, walkAimOn 0.5`). The other
   half of the weapon lights at a door (the wall rule's floor paragraph, above): with the floor no longer a wall, the compound's night stack still had 1.8
   of its 4 lights out for a REAL wall, because the men walked along the south wall with their guns on the door, through it. WHAT IT WAS: an order that
   sends a man to a mark hands him its watch point from his first step, and `orders.ts tick`'s walking carriage ("the gun up and leading",

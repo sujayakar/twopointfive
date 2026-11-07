@@ -24,9 +24,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Scenario data travels with the level** (`src/scene/scenarios.ts` `LevelScenarios`, `Level.scenarios`; docs/level-format.md *Scenarios*; how-to
   rebuild/scenario-levels/contract.md): what the night breach, the room clear (pair or four) and the hostage rescue take from a level — rooms,
   doors, defenders' marks, the team's start, hostages / captor / door man / roamers, the rescue's route — is a `scenarios` block in the LEVEL FILE, read by
-  roomclear.ts / nightbreach.ts / rescue.ts / rescueflow.ts and by nothing else. The office's file has none: its tables are `levels/office.scenarios.ts` (pure
-  literals — imported at the top of the game's import cycle, so keep it that way), attached non-enumerably by `withOfficeScript` to any `office` / `office-*`
-  level; `STRUCTURE` (roomclear.ts) and `SIDE_MARKS` (rescue.ts) remain as the office's data under the names its probes import, and the team-start knobs
+  roomclear.ts / nightbreach.ts / rescue.ts / rescueflow.ts and by nothing else. The office's file carries its block like any level's (since 2026-11-07: it was a module attached at load by the level's name, `withOfficeScript`, and every
+  tool that loaded a level file had a line for the office): its tables are written in `levels/office.scenarios.ts`, the office generator's input beside
+  `OFFICE_MARKS`, and `tools/level-export.ts` writes them into `levels/office.json` and `office-relief.json`. Nothing but the generator imports that module;
+  `STRUCTURE` (roomclear.ts) and `SIDE_MARKS` (rescue.ts) remain as the office's data under the names its probes import, and the team-start knobs
   (`NIGHTBREACH.samAt / samYaw`, `RESCUE.samAt / samYaw / opsAt`) are the office's until `start()` on another level writes that level's (once per team-start
   object: a knob moved by hand afterwards stays moved). A level with NO `plans.breach` stages the room clear without the F drill (`NightBreach.noDrill`: the
   structure's `team` gives the start, every teammate is the order menu's). New levels are generators over `officeGen.ts officeKit()`:
@@ -388,7 +389,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are caught at the office door as they dig in). Two seeds is a look, not a count. The look page's audit: 4.9 % of the picture with no material to 3.3 %, boxes
   drawn 1102 to 1263, round things 0 to 6, lamps as they were; the file is 1073 boxes where it was 897 (past lived-check's warning at about 900, as five other
   level files are). PARTS FROM THIS STEP: a checkpoint or a recording made on the level with the lived-in rooms on; `tools/qa/fixtures/coop-reference.json`'s
-  records-pair row. SEEN: stills on the software adapter only, night and midday, on the look page and on this build's page, no console or device error. Never
+  records-pair row (that file went with `tools/qa/coop-check.ts`, 2026-11-07). SEEN: stills on the software adapter only, night and midday, on the look page and on this build's page, no console or device error. Never
   seen on a GPU, never played by a person. LEFT: the two cars are the old kit's two boxes (they want the library's curved vehicle, and a base move); bins, stool
   and buckets are square props (a prop's part cannot say it is round); the kit's drum is sealed where a burn drum is open; the lot's edge wants a knee rail the
   library does not have.
@@ -658,7 +659,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   boot (`main.ts`: the switch AND the cut switch); a round box has no `BOX_CUT_BIT`, its prism's eight planes sit in its own rows of the cut
   table with `ROUND_CORE_W` in the core row, it is listed at the cut list's picture-only end, and `BoxWorld.cutTraced` does not count it, so the
   cut swap (`render/cutSwap.ts`, "a calm room pays nothing") is as it was and every ray program holds a round rule from boot (the cylinder's in
-  the calm set, the prism's in the cut set). `GEO_ROUND` is
+  the calm set, the prism's in the cut set). SINCE 2026-11-07 THERE IS ONE SET (`docs/agents/render.md`): every ray meets a round as its prism at all
+  times, and wherever this bullet says "the cut set" read "every ray program". `GEO_ROUND` is
   bit 3 of the GPU flags word, which is the CPU's `Dynamic`: no shader reads that bit, and it is masked out of the word only while the round's
   GPU half is up, so with it down the words are as they were. THE SWITCH IS THE SIMULATION'S: a picture setting may not move it. On a page with
   `?nocutboxes` (or if the cut pipeline fails to compile) a round thing is DRAWN, and traced by the GPU, as the square box round it, while the
@@ -1417,8 +1419,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   clear turns at the side door between the server room and the manager's office (thirteen of thirty-one men fell within two and a half metres of it) and
   nothing in the picture said that door was there; the defenders come out of the break room by two doors; nobody, either side, enters the conference room;
   and the day's people (sixteen desks, a printer, a counter) had no way written to anything. THREE KINDS OF THING, each through the system that owns it.
-  WORN PATHS are data: 31 named marks where a person stands to use a thing (`Level.marks`, attached at load beside the scenarios by `withOfficeScript`, a
-  copy a Level: the level file has no slot for a mark yet) and 75 `walked` rows between them, each name one thing (a mark, a door's id, or a room's name that no door
+  WORN PATHS are data: 31 named marks where a person stands to use a thing (`Level.marks`: the builder puts them on its Level and the exporter writes them into the file's `marks`) and 75 `walked` rows between them, each name one thing (a mark, a door's id, or a room's name that no door
   shares); the look's page wears the floor by the ways field (`?walked=0` = the lanes as they were). Nothing in play reads a mark: `ways.ts` and the
   Director's lookup by a script's own id are the only readers, and the office has no script. The walked check's two count files for the office are gone:
   `--write` dropped `door conference` and `start spawn` (office) and `door conference` (office-relief), each on a way now. PAINT on a surface that was

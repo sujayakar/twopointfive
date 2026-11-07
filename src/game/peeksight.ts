@@ -26,6 +26,7 @@
 import type { Vec3 } from '../math/vec';
 import type { Game } from './game';
 import type { FogEye } from './fogofwar';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** `out` m: how far past the end of the face the eye stands at full peek · `off` m: how far off the wall's plane (his side of it) · `turnDeg`: how far round
  *  from 'along the wall, toward that end' it looks, into the opening (90 = square through it) — read only where an eye is a cone */
@@ -34,7 +35,7 @@ export const PEEKSIGHT = { on: false, out: 0.3, off: 0.1, turnDeg: 90 };
 export const PEEK_STATS = { frames: 0, short: 0 };
 
 /** THE PLAYER'S EYE WHILE HE PEEKS (fogofwar.ts update asks it in place of his own eye, `own`), or null: the switch down, no hold, no peek in. */
-export function peekEye(g: Game, own: FogEye): FogEye | null {
+export function peekEye(g: Game, own: FogEye): FogEye | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('peekEye', undefined, [g, own]); if (__r !== RUST_PASS) return __r as any; } }
   if (!PEEKSIGHT.on) return null;
   const pl = g.player, w = pl.wall; if (!w || !(w.peek > 0) || pl.down) return null;
   const e = w.peek * w.peek * (3 - 2 * w.peek), s = w.peekDir, t = w.along, n = w.n;
@@ -54,9 +55,4 @@ export function peekEye(g: Game, own: FogEye): FogEye | null {
   const ox = (own.look[0] * t[0] + own.look[2] * t[2]) * s, oy = -(own.look[0] * n[0] + own.look[2] * n[2]);
   const from = Math.atan2(oy, ox), a = from + (PEEKSIGHT.turnDeg * Math.PI / 180 - from) * e, cs = Math.cos(a) * s, sn = Math.sin(a);
   return { id: own.id, pos: p, look: [t[0] * cs - n[0] * sn, 0, t[2] * cs - n[2] * sn], at: p };
-}
-/** a line for the debugger */
-export function peekSummary(g: Game): string {
-  const w = g.player.wall;
-  return `${PEEKSIGHT.on ? 'on' : 'off'}${w && w.peek > 0 ? ` · peeking ${(w.peek * 100) | 0}%` : ''} · frames ${PEEK_STATS.frames}, stopped short ${PEEK_STATS.short}`;
 }

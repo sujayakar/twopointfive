@@ -1,16 +1,16 @@
 // A TEAMMATE SHOWS WHY HE IS NOT ACTING (src/game/showwhy.ts SHOWWHY / showWhyTick; the wave is character.ts signalLayer 'aside') — the check.
 //
 //   bun run tools/qa/showwhy-check.ts [--verbose] [--only <case>]      exit 0 = all pass, 1 = a FAIL line
-//   SHOWWHY_BREAK=1 …   = the switch never raised and the same lines asked: must fail
+//   SHOWWHY_BREAK=1 …   = no defender is left on the floor where a case needs one: `line` must fail
 //   bun run tools/qa/probes.ts showwhy
-//   Run it on BOTH stands (TPS_PROFILE=shipped in front for the page's): it puts the switch where each line needs it by the stand's own word, TPS_SHOWWHY,
-//   and raises by hand the rules a case stands on where the frozen stand holds them off (CONDITION for the hurt man, REARWATCH.room for the kept door,
-//   DOORMANNERS for the doorway's hold).
+// 2026-11-07: the rule is settled (on), and a write of its other side is refused. Gone with that: the stand's word set before every rig and the switch
+// written each step, `off` (the stack and the line staged with the switch off), `same` (those runs on against off by digest), `old` (a recording from
+// before the key), and the digest half of `plain`.
 //
 // The harness has no GPU: what is proven HERE is what the game asks of each man's hand and puts over his head, and where the animator then puts the wrist —
 // never a gesture seen. A squad of four in the warehouse, its defenders taken off the floor unless a line needs one:
 //   plain   fallen in behind a walking player, then sent to a spot and stood there: nobody signals, nobody says a line of this file's, every man reads
-//           'nothing holds him' — and the run's digest is the one of the same play with the switch off
+//           'nothing holds him'
 //   stack   'bang and clear' given on the word: once the stack is made a squeeze goes up the file before the lead's fist, the fist comes again while they
 //           wait, the wrist really goes up by his head, no line is added to the door tools' own 'set.' — and after the word no fist follows them in
 //   line    a defender the front man has his gun on, the player stood between them: that man — and not the three in file behind him — waves him off ('aside'), "you're in my line." is over him and still
@@ -21,10 +21,6 @@
 //   keep    a room taken, another of its doors held, 'fall in' given with the player in the room: the man who keeps that door says "I've got this door."
 //           once, and reads 'keep' while he is kept
 //   door    the player stood in the doorway the squad is sent out through: a man held at it points the way, and "after you." once for the whole squad
-//   off     the stack and the line staged with the switch off: no signal, no line, nothing counted
-//   same    those two runs on against off: with the words over the men's heads left out of it, the run digest is the same (nobody's feet, gun, eyes
-//           or rounds moved)
-//   old     a recording from before the key replays with it off (journal.ts applyKnobs)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -38,8 +34,7 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
-  const { SHOWWHY, SHOWWHY_LINES, showWhyOf, showWhyLog, showWhyStats } = await import(`${ROOT}/src/game/showwhy.ts`);
+  const { SHOWWHY_LINES, showWhyOf, showWhyLog, showWhyStats } = await import(`${ROOT}/src/game/showwhy.ts`);
   const { REARWATCH, roomKept } = await import(`${ROOT}/src/game/rearwatch.ts`);
   const { CONDITION, conditionHurt } = await import(`${ROOT}/src/game/condition.ts`);
   const { MOVES } = await import(`${ROOT}/src/game/character.ts`);
@@ -48,37 +43,31 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
   const { stackRoomProbe } = await import(`${ROOT}/src/game/stackroom.ts`);
   const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
   const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
-  const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-  const J = await import(`${ROOT}/src/game/journal.ts`);
   const BREAK = process.env.SHOWWHY_BREAK === '1';
   const MINE = new Set<string>(Object.values(SHOWWHY_LINES) as string[]);
   const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (o.verbose) return await fn(); const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
-  /** the run's digest with every man's words left out: his feet, his gun, his eyes, the rounds, the doors — everything but what is over a head */
-  const bare = (g: any): string => { const D: any = digestGame(g); for (const x of D.guards ?? []) delete x.bubble; return hashDigest(D) as string; };
   let fails = 0, checks = 0;
   const verdict = (ok: boolean, label: string, detail: string) => { checks++; if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   const want = (name: string) => !o.only || o.only === name;
-  const was = { on: SHOWWHY.on, env: process.env.TPS_SHOWWHY, cond: CONDITION.on, room: REARWATCH.room, hf: HOLDFIRE.on, dm: DOORMANNERS.on, rnd: Math.random };
+  const was = { cond: CONDITION.on, room: REARWATCH.room, hf: HOLDFIRE.on, dm: DOORMANNERS.on, rnd: Math.random };
   const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
   const d3 = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
   function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   const E = (ALL_MISSIONS as any[]).find(x => x.id === 'warehouse-four');
-  const levelOf = (): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', E.level), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+  const levelOf = (): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', E.level), 'utf8')); return loadLevel(data); };
   const shut = (d: any) => { d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; d.quietT = 10; d.locked = false; d.place(); };
   const put = (m: any, p: ArrayLike<number>, yaw: number) => { m.char.pos = [p[0], 0, p[2]]; m.char.vel = [0, 0, 0]; m.speed = 0; m.char.bodyYaw = m.char.aimYaw = yaw; m.path = []; m.pathGoal = null; m.char.update(0); };
 
-  /** the warehouse stood up with its four, the switch where `on` says (by the stand's own word); `keepFoe`: one defender is left alive, whole and held */
-  async function rig(on: boolean, keepFoe = false) {
-    const sw = on && !BREAK;
-    process.env.TPS_SHOWWHY = sw ? '1' : '0'; SHOWWHY.on = !sw;   // (the module's switch left the WRONG way round: only the stand's word can put it right)
+  /** the warehouse stood up with its four; `keepFoe`: one defender is left alive, whole and held (SHOWWHY_BREAK=1: never) */
+  async function rig(keepFoe = false) {
+    if (BREAK) keepFoe = false;
     CONDITION.on = was.cond; REARWATCH.room = was.room; HOLDFIRE.on = was.hf; DOORMANNERS.on = was.dm;   // (what an earlier line raised by hand is put back: every rig starts from the stand's own switches)
     Math.random = seeded(0x5709 + 7919);
     const W: any = await quiet(() => standUp({ uploadEvery: 4, level: levelOf() })); const g = W.game;
-    const stood = SHOWWHY.on; SHOWWHY.on = sw;
     g.godMode = true; g.playerInvisible = true;
     const { why } = await quiet(() => startFromQuery(g, new URLSearchParams(scenarioQuery(E) as string))); if (why) throw new Error(`start refused — ${why}`);
     const sig = new Map<any, number>(); let sigFrames = 0;
-    const step = (n = 1, each?: () => void) => { for (let i = 0; i < n; i++) { SHOWWHY.on = sw; g.player.visibility = 0.05; W.step(DT); for (const m of men) if (m.char.anim.signalling) { sigFrames++; sig.set(m, (sig.get(m) ?? 0) + 1); } each?.(); } };
+    const step = (n = 1, each?: () => void) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); for (const m of men) if (m.char.anim.signalling) { sigFrames++; sig.set(m, (sig.get(m) ?? 0) + 1); } each?.(); } };
     let men: any[] = [];
     step(20);
     const O = g.orders; men = O.squad().filter((x: any) => x.state !== 'dead'); for (const m of men) m.god = true;
@@ -87,11 +76,10 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
     step(30);
     const notes = () => showWhyLog(g) as { t: number; who: string; why: string; signal: string | null; line: string | null }[];
     const said = (m: any) => { const b = m.bubble; return b && g.time - b.t <= b.dur ? b.text as string : null; };
-    return { W, g, O, men, foe, step, stood, sw, notes, said, sigFrames: () => sigFrames, sig };
+    return { W, g, O, men, foe, step, notes, said, sigFrames: () => sigFrames, sig };
   }
   type Rig = Awaited<ReturnType<typeof rig>>;
-  /** the on runs of 'stack' and 'line', kept for 'same' (played there when those lines were not asked for) */
-  const kept: { stack?: { bare: string; notes: number }; line?: { bare: string; notes: number } } = {};
+
   /** a door face with floor for the four and the player, every door shut, the men put on it facing the door; null: no such face */
   function face(A: Rig, skip = 0): { d: any; side: 1 | -1; out: V; spots: V[] } | null {
     const g = A.g; let seen = 0;
@@ -118,38 +106,38 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
   }
 
   try {
-    // ---- plain: nothing shown, and the digest of the switch off
+    // ---- plain: nothing shown
     if (want('plain')) {
-      const play = async (on: boolean) => {
-        const A = await rig(on), g = A.g, s0: V = [...g.player.char.pos] as V, far = runway(g, s0, 5); if (!far) throw new Error('plain: no free run of floor from the start');
+      const play = async () => {
+        const A = await rig(), g = A.g, s0: V = [...g.player.char.pos] as V, far = runway(g, s0, 5); if (!far) throw new Error('plain: no free run of floor from the start');
         const refused = A.O.give('fallIn', { kind: 'none', at: [s0[0], 0, s0[2]] }, 'all'); A.step(60);
         let read = 0; const each = () => { for (const m of A.men) if (showWhyOf(g, m)) read++; };
         const L = flat(s0, far), n = Math.floor(L / 0.03); for (let i = 1; i <= n; i++) { g.teleportPlayer([s0[0] + (far[0] - s0[0]) * i / n, 0, s0[2] + (far[2] - s0[2]) * i / n]); A.step(1, each); }   // a walk at 1.8 m/s
         A.step(180, each);
         const sent = A.O.give('move', A.O.targetAt(s0), 'all'); A.step(8 * 60, each);
-        return { A, refused, sent, read, lines: A.men.filter(m => MINE.has(m.bubble?.text ?? '')).length, hash: hashDigest(digestGame(g)) as string };
+        return { A, refused, sent, read, lines: A.men.filter(m => MINE.has(m.bubble?.text ?? '')).length };
       };
-      const X = await play(true), Y = await play(false), T = showWhyStats(X.A.g);
-      verdict(X.A.stood === X.A.sw && !X.refused && X.A.notes().length === 0 && X.read === 0 && X.lines === 0 && X.A.sigFrames() === 0 && X.hash === Y.hash,
-        'plain — fallen in behind a walking player, then sent to a spot: nobody signals or says a line of this file\'s, and the digest is the switch-off run\'s',
-        `the stand stood the switch ${X.A.stood ? 'on' : 'off'} · fall in ${X.refused ? `refused (${X.refused})` : 'given'}, move ${X.sent ? `refused (${X.sent})` : 'given'} · ${X.A.notes().length} notes, ${X.read} frames a man read as held, ${X.A.sigFrames()} frames a hand was signalling, ${T.lines} lines · digest ${X.hash} against ${Y.hash} with it off`);
+      const X = await play(), T = showWhyStats(X.A.g);
+      verdict(!X.refused && X.A.notes().length === 0 && X.read === 0 && X.lines === 0 && X.A.sigFrames() === 0,
+        'plain — fallen in behind a walking player, then sent to a spot: nobody signals or says a line of this file\'s',
+        `fall in ${X.refused ? `refused (${X.refused})` : 'given'}, move ${X.sent ? `refused (${X.sent})` : 'given'} · ${X.A.notes().length} notes, ${X.read} frames a man read as held, ${X.A.sigFrames()} frames a hand was signalling, ${T.lines} lines`);
     }
 
-    // ---- stack, and (the same staging) off
-    const stackPlay = async (on: boolean) => {
-      const A = await rig(on), g = A.g, Fc = face(A); if (!Fc) throw new Error('stack: no door face with floor for the four');
+    // ---- stack
+    const stackPlay = async () => {
+      const A = await rig(), g = A.g, Fc = face(A); if (!Fc) throw new Error('stack: no door face with floor for the four');
       const refused = A.O.give('bangClear', { kind: 'door', door: Fc.d, side: Fc.side, at: [Fc.d.frameCentre[0], 0, Fc.d.frameCentre[2]] }, 'all', { onWord: true });
       let op: any = null; for (let i = 0; i < 30 * 60 && !op; i++) { A.step(); op = g.doorTools.ops.find((x: any) => x.phase === 'ready') ?? null; }
-      if (!op) return { A, refused, op: null as any, tReady: NaN, up: -9, rest: 0, read: 0, after: 0, fistsBefore: 0, added: 0, sigWait: 0, early: 0, bare: '' };
+      if (!op) return { A, refused, op: null as any, tReady: NaN, up: -9, rest: 0, read: 0, after: 0, fistsBefore: 0, added: 0, sigWait: 0, early: 0 };
       const lead = op.lead, tReady = g.time, early = A.notes().length, hd = () => lead.char.bones.head, hl = () => lead.char.bones.handL;
       const rest = hd() && hl() ? hl()[1] - hd()[1] : 0; let up = -9, read = 0;   // (his left wrist's height against his head joint's)
       A.step(12 * 60, () => { if (hd() && hl()) up = Math.max(up, hl()[1] - hd()[1]); if (showWhyOf(g, lead) === 'stack') read++; });
       const fistsBefore = A.notes().filter(n => n.signal === 'hold').length, added = A.notes().filter(n => n.line).length, sigWait = A.sigFrames();   // (hands while it WAITS: after the word a thrower's own sign is the build's)
       g.doorTools.go('all'); A.step(90); const n1 = A.notes().length; A.step(10 * 60);
-      return { A, refused, op, tReady, up, rest, read, after: A.notes().length - n1, fistsBefore, added, sigWait, early, bare: bare(g) };
+      return { A, refused, op, tReady, up, rest, read, after: A.notes().length - n1, fistsBefore, added, sigWait, early };
     };
     if (want('stack')) {
-      const S = await stackPlay(true), N = S.A.notes(); kept.stack = { bare: S.bare, notes: N.length }; const sq = N.filter(n => n.signal === 'squeeze'), fists = N.filter(n => n.signal === 'hold' && n.why === 'stack');
+      const S = await stackPlay(), N = S.A.notes(); const sq = N.filter(n => n.signal === 'squeeze'), fists = N.filter(n => n.signal === 'hold' && n.why === 'stack');
       const lead = S.op?.lead?.callsign, first = fists[0]?.t ?? Infinity;
       verdict(!!S.op && !S.refused && S.early === 0 && (MOVES.on && MOVES.squeeze ? sq.length >= 1 : sq.length === 0) && sq.every(n => n.t < first && n.who !== lead) && S.fistsBefore >= 2 && fists.every(n => n.who === lead) && first - S.tReady < 3 && S.added === 0 && S.up > 0.05 && S.up - S.rest > 0.2 && S.read > 600 && S.after === 0,
         'stack — made and waiting on the word: the squeeze goes up the file, then the lead\'s fist, and again while they wait; no line is added; nothing follows them in',
@@ -158,8 +146,8 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
     }
 
     // ---- line, quiet
-    const linePlay = async (on: boolean, aware: boolean) => {
-      const A = await rig(on, true), g = A.g, h = A.foe; if (!h) throw new Error('line: no defender to stand in front of a man');
+    const linePlay = async (aware: boolean) => {
+      const A = await rig(true), g = A.g, h = A.foe; if (!h) throw new Error('line: no defender to stand in front of a man');
       HOLDFIRE.on = !aware;   // (aware: the fight is on, nothing holds a round · unaware: the squad's own fire hold is the rule the quiet line stands on)
       const m = A.men[0], p0: V = [...m.char.pos] as V, end = runway(g, p0, 7); if (!end) throw new Error('line: no free run of floor in front of a man');
       const yaw = Math.atan2(end[0] - p0[0], end[2] - p0[2]), far: V = [p0[0] + Math.sin(yaw) * LINE_M, 0, p0[2] + Math.cos(yaw) * LINE_M], back = yaw + Math.PI, mid: V = [(p0[0] + far[0]) / 2, 0, (p0[2] + far[2]) / 2];
@@ -176,16 +164,16 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
       const all = A.notes().filter(n => n.why === 'line'), N = all.filter(n => n.who === m.callsign), still = A.men.some(x => A.said(x) === SHOWWHY_LINES.line), voices = all.filter(n => n.line).map(n => n.who), wavers = new Set(all.filter(n => n.signal === 'aside').map(n => n.who)).size, tgt = g.fight.opOf(m)?.tgt === h, lineT = g.fight.opOf(m)?.lineT ?? 0;
       const aside: V = [mid[0] + Math.cos(yaw) * 3.5, 0, mid[2] - Math.sin(yaw) * 3.5]; g.teleportPlayer(g.col.nav.isBlocked(aside[0], aside[2]) ? [mid[0] - Math.cos(yaw) * 3.5, 0, mid[2] + Math.sin(yaw) * 3.5] : aside);
       h.god = true; let gone = -1, n0 = A.notes().length; const shots1 = g.fight.stats.opRounds; for (let i = 0; i < 4 * 60; i++) { pin(); A.step(); if (gone < 0 && !A.men.some(x => A.said(x) === SHOWWHY_LINES.line || showWhyOf(g, x) === 'line')) gone = i / 60; }
-      return { A, m, refused, lat, early, free: g.fight.stats.opRounds - shots1, bare: bare(g), N, still, on1, gap, restGap, sigM, read, rounds, tgt, lineT, gone, later: A.notes().slice(n0).filter(n => n.why === 'line').length, voices, wavers, all: all.length };
+      return { A, m, refused, lat, early, free: g.fight.stats.opRounds - shots1, N, still, on1, gap, restGap, sigM, read, rounds, tgt, lineT, gone, later: A.notes().slice(n0).filter(n => n.why === 'line').length, voices, wavers, all: all.length };
     };
     if (want('line')) {
-      const L = await linePlay(true, true), waves = L.N.filter(n => n.signal === 'aside').length, lines = L.voices.length; kept.line = { bare: L.bare, notes: L.A.notes().length };
+      const L = await linePlay(true), waves = L.N.filter(n => n.signal === 'aside').length, lines = L.voices.length;
       verdict(L.tgt && L.early === 0 && waves >= 2 && L.wavers === 1 && lines >= 1 && lines <= 2 && L.voices.every(v => v === L.m.callsign) && L.still && L.on1 > 240 && L.gap - L.restGap > 0.1 && L.lat > 0.45 && L.sigM > 60 && L.read > 240 && L.gone >= 0 && L.gone < 2.5 && L.later === 0,
         'line — the player between the squad and the defender the front man\'s gun is on: that man alone waves him off, "you\'re in my line." stands while it is true, and goes when it is not',
         `his gun on the defender: ${L.tgt} (round held ${L.lineT.toFixed(1)} s, ${L.rounds} rounds from the team meanwhile) · ${L.early} frames the line was up before the player stepped in · ${waves} waves from him, ${L.wavers} of the four waved (three stand in file behind him: they wait on him) · the line said ${lines}× (${[...new Set(L.voices)].join(', ') || 'nobody'}), up ${L.on1} of 420 frames and still at the end: ${L.still} · his hands ${L.restGap.toFixed(2)} m apart at rest, ${L.gap.toFixed(2)} m at the widest of a wave, the wrist ${L.lat.toFixed(2)} m out to the side of his spine (${L.sigM} frames signalling) · read as 'line' ${L.read} frames · the player out of the line: gone in ${L.gone < 0 ? 'never' : L.gone.toFixed(2) + ' s'}, ${L.later} notes in the four seconds after (${L.free} rounds from the team in them)`);
     }
     if (want('quiet')) {
-      const L = await linePlay(true, false);
+      const L = await linePlay(false);
       verdict(L.tgt && L.lineT > 0 && L.all === 0 && L.on1 === 0 && L.read === 0,
         'quiet — the same with the defender unaware and the squad\'s fire held: no wave and no line (no round was wanted, so none is masked)',
         `his gun on the defender: ${L.tgt} (round held ${L.lineT.toFixed(1)} s, ${L.rounds} rounds) · ${L.all} notes, the line up ${L.on1} frames, read as 'line' ${L.read} frames`);
@@ -193,7 +181,7 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
 
     // ---- hurt
     if (want('hurt')) {
-      const A = await rig(true), g = A.g; CONDITION.on = true;
+      const A = await rig(), g = A.g; CONDITION.on = true;
       const s0: V = [...g.player.char.pos] as V; A.O.give('fallIn', { kind: 'none', at: [s0[0], 0, s0[2]] }, 'all'); A.step(90);
       const m = A.men[1] ?? A.men[0]; m.god = false; const got = conditionHurt(g, m); m.god = true;   // (the debugger's own 'kept whole' is never hurt: lifted for the blast alone)
       let hunch = 0, read = 0; A.step(6 * 60, () => { CONDITION.on = true; if (m.char.anim.hurt === 1) hunch++; if (showWhyOf(g, m) === 'hurt') read++; });
@@ -215,8 +203,8 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
     }
 
     // ---- keep, door: a room taken by 'open and clear'
-    const entry = async (on: boolean, skip: number) => {
-      const A = await rig(on), g = A.g; REARWATCH.room = true; const Fc = face(A, skip); if (!Fc) return null;
+    const entry = async (skip: number) => {
+      const A = await rig(), g = A.g; REARWATCH.room = true; const Fc = face(A, skip); if (!Fc) return null;
       if (A.O.give('openClear', { kind: 'door', door: Fc.d, side: Fc.side, at: [Fc.d.frameCentre[0], 0, Fc.d.frameCentre[2]] }, 'all')) return { A, Fc, ok: false };
       for (let i = 0; i < 25 * 60; i++) { A.step(1, () => { REARWATCH.room = true; }); if (i > 120 && !g.doorTools.ops.length) break; }
       A.step(30); return { A, Fc, ok: true };
@@ -224,7 +212,7 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
     if (want('keep')) {
       let done = false, tried = 0;
       for (let skip = 0; skip < 8 && !done; skip++) {
-        const X = await entry(true, skip); if (!X) break; if (!X.ok) continue; tried++;
+        const X = await entry(skip); if (!X) break; if (!X.ok) continue; tried++;
         const { A, Fc } = X, g = A.g, d = Fc.d, c = d.frameCentre as V, keepers: [any, any, any][] = g.doorTools.doorKeepers(); if (!keepers.length) continue;
         const room = g.fight.roomAt(keepers[0][0].char.pos); if (!room) continue;
         const th = d.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th);
@@ -246,7 +234,7 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
     if (want('door')) {
       let done = false, tried = 0;
       for (let skip = 0; skip < 6 && !done; skip++) {
-        const X = await entry(true, skip); if (!X) break; if (!X.ok) continue;
+        const X = await entry(skip); if (!X) break; if (!X.ok) continue;
         const { A, Fc } = X, g = A.g, d = Fc.d, c = d.frameCentre as V;
         const inMen = A.men.filter(m => sideOf(d, m.char.pos) !== Fc.side); if (inMen.length < 2) continue; tried++;
         DOORMANNERS.on = true;   // (the doorway's own hold: the frozen stand has it off)
@@ -263,29 +251,8 @@ export async function showWhyCheck(o: { verbose?: boolean; only?: string } = {})
       if (!done) verdict(false, 'door — a man held at a doorway the player stands in shows it', `no entry left men whose way out was held at the player's doorway (${tried} tried)`);
     }
 
-    // ---- off, and same: the two stagings with the switch off, and against their runs with it on
-    if (want('off') || want('same')) {
-      const S = await stackPlay(false), T = showWhyStats(S.A.g), any = S.A.men.some(m => MINE.has(m.bubble?.text ?? ''));
-      const L = await linePlay(false, true), T2 = showWhyStats(L.A.g);
-      if (want('off')) verdict(!S.A.sw && S.A.stood === false && !!S.op && S.A.notes().length === 0 && S.sigWait === 0 && !any && T.holds === 0 && L.all === 0 && L.on1 === 0 && L.sigM === 0 && T2.waves + T2.lines === 0 && L.tgt,
-        'off — the stack and the line staged with the switch off: no signal, no line, nothing counted',
-        `the stand stood the switch ${S.A.stood ? 'on' : 'off'} · the stack ${S.op ? 'waited on the word' : 'was never made'}: ${S.A.notes().length} notes, ${S.sigWait} frames a hand signalled while it waited, ${T.holds} waits counted · the line (his gun on the defender: ${L.tgt}, round held ${L.lineT.toFixed(1)} s): ${L.all} notes, up ${L.on1} frames, ${L.sigM} frames signalling`);
-      if (want('same')) { if (!kept.stack) { const X = await stackPlay(true); kept.stack = { bare: X.bare, notes: X.A.notes().length }; } if (!kept.line) { const X = await linePlay(true, true); kept.line = { bare: X.bare, notes: X.A.notes().length }; }
-        const S1 = kept.stack, L1 = kept.line, shown = S1.notes + L1.notes;
-        verdict(shown > 0 && S1.bare === S.bare && L1.bare === L.bare,
-          'same — the stack\'s run (through the wait, the word and the entry) and the line\'s, on against off: with what is over the men\'s heads left out, the digests are equal',
-          `${shown} notes shown with it on · the stack ${S1.bare} against ${S.bare} · the line ${L1.bare} against ${L.bare} (every man's place, facing, state and gun, the rounds, the doors: the rule moved none of it)`); }
-    }
-
-    // ---- old
-    if (want('old')) {
-      const A = await rig(true);
-      SHOWWHY.on = true; const k = (J as any).knobsSnapshot(A.g); (J as any).applyKnobs(A.g, k); const kept = SHOWWHY.on;
-      SHOWWHY.on = true; const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.SHOWWHY; (J as any).applyKnobs(A.g, k2); const none = SHOWWHY.on;
-      verdict(kept === true && none === false, 'old — a recording from before the key replays with it off', `its own snapshot put back: ${kept ? 'on' : 'off'} · one without the table: ${none ? 'on' : 'off'}`);
-    }
-  } finally { SHOWWHY.on = was.on; CONDITION.on = was.cond; REARWATCH.room = was.room; HOLDFIRE.on = was.hf; DOORMANNERS.on = was.dm; Math.random = was.rnd; if (was.env === undefined) delete process.env.TPS_SHOWWHY; else process.env.TPS_SHOWWHY = was.env; }
-  console.log(`\nshowwhy-check: ${checks - fails}/${checks} pass${BREAK ? ' (SHOWWHY_BREAK=1: the switch never raised — this run must fail)' : ''}`);
+  } finally { CONDITION.on = was.cond; REARWATCH.room = was.room; HOLDFIRE.on = was.hf; DOORMANNERS.on = was.dm; Math.random = was.rnd; }
+  console.log(`\nshowwhy-check: ${checks - fails}/${checks} pass${BREAK ? ' (SHOWWHY_BREAK=1: no defender kept — this run must fail)' : ''}`);
   return fails === 0;
 }
 

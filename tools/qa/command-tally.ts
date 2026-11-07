@@ -50,7 +50,6 @@ const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { CMDRING: RINGK } = await import(`${ROOT}/src/game/cmdring.ts`);
@@ -400,7 +399,7 @@ class Run {
   }
 }
 
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', lookLevelFile(file))), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };   // (playthrough.ts's)
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', lookLevelFile(file))), 'utf8')); return loadLevel(data); };   // (playthrough.ts's)
 export async function playOne(hand: Hand, scn: string, seed: number, cap: number, hard: boolean, verbose: boolean, mortal = false): Promise<RunOut> {
   const E = SCENARIOS.find((e: any) => e.id === scn); if (!E || E.kind !== 'roomclear' || E.squad !== 4) throw new Error(`'${scn}' is not a four-man room clear of scene/scenarioList.ts`);
   const out: RunOut = { hand, scn, seed, hard, end: 'error', why: '', t: 0, men: 0, of: 0, left: 0, defenders: 0, hits: 0, lives: 0, cost: 5, b: 0, laid: 0, f: 0, twoDoor: 0, rounds: 0, trace: [], rooms: [] };

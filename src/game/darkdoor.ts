@@ -39,15 +39,16 @@ import type { Game, Guard } from './game';
 import type { Door } from './doors';
 import type { Character } from './character';
 import { Vec3, v3, clamp, damp, approachAngle } from '../math/vec';
-import { crossesDoor, frameOf, dropToSearch } from './guards';
+import { crossesDoor, dropToSearch } from './guards';
 import { placeLight, workLit } from './calmtorch';
 import { hourOf } from './hours';
-import { MORALE, trainingOf } from './morale';
-import { foeDown } from './teams';
+import { MORALE } from './morale';
+import './teams';
 import { w } from './words';
 import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
 import { hasHim, OWN } from './owner';
 import { word } from './belief';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nodarkdoor = every man walks into the dark as he did) and by
  *  the shipped stand; the harness's frozen stand leaves it off (TPS_DARKDOOR=1 turns it on — with TPS_MORALE=1: it acts only under MORALE.on). `who` = who is
@@ -108,21 +109,8 @@ const headOf = (c: Character): Vec3 => c.bones.head ?? [c.pos[0], c.pos[1] + 1.6
 /** a man this file is about at all: a living defender or a man of the night staff — never a civilian, an operative, a body, a man in Sam's arm */
 const ours = (gd: Guard) => gd.state !== 'dead' && !gd.civ && !gd.held && (gd.team === 'hostile' || gd.team === 'guard');
 const rescued = (g: Game, gd: Guard) => !!g.rescue?.active && g.rescue.hostiles.includes(gd);
-const alarmed = (gd: Guard) => gd.state === 'suspicious' || gd.state === 'search' || gd.state === 'alert';
 /** nobody's but his own: no choreography, no order to stand, no standoff, no errand, no body, not morale.ts's, not the rescue's */
 const own = (g: Game, gd: Guard) => !gd.script && !gd.hold && !gd.pinned && !gd.standoff && !gd.task && !gd.bodyDuty && !rescued(g, gd) && !hasHim(gd, OWN.morale) && !hasHim(gd, OWN.lastMan);   // (…nor the last man at his act, netquiet.ts: his hold wins — never stopped at a doorway, never called to one)
-/** may the rule have him at all this frame: the AI on, no show on the floor, alarmed, his own man, not a trained one */
-function able(g: Game, gd: Guard): boolean {
-  if (!g.aiEnabled || g.touring || g.quietUtility || !ours(gd) || !alarmed(gd)) return false;
-  return !gd.trained && own(g, gd);
-}
-/** IN A FIGHT: what his walk this frame is. 'chase' = to his last-known fix with no sighting inside `seenSecs` (the one walk a balk may BEGIN on); 'seen' = he
- *  has a sighting that new (a balk already his holds him at the frame; none begins); 'other' = to cover, to a role, on a foe who is down: never this file's. */
-function fightWalk(g: Game, gd: Guard): 'chase' | 'seen' | 'other' {
-  if (foeDown(g, gd)) return 'other';
-  if (g.time - gd.lastSeenT < DARKDOOR.seenSecs) return 'seen';
-  return gd.pathGoal && gd.lastKnown && flat(gd.pathGoal, gd.lastKnown) < 0.8 ? 'chase' : 'other';
-}
 /** free to come to a mate, or to go in with one: his own man, calm or merely suspicious, not following a leader, holding a post or off on a need of his own,
  *  in no act of this file's */
 function canCome(g: Game, o: Guard): boolean {
@@ -133,12 +121,6 @@ function mind(gd: Guard): Fear {
   let S = stateOf.get(gd);
   if (!S) stateOf.set(gd, S = { act: 'none', t: 0, door: -1, side: 1, spot: null, at: false, other: null, called: false, callT: 0, tried: [], left: -1e9, told: false, lag: 0, armed: -1, armT: -1e9, quits: [], pass: [], said: 0, idle: 0, ask: 0 });
   return S;
-}
-/** IS HE GREEN — morale.ts's own answer (trainingOf: the knob, the squad's key, the difficulty's mix), asked fresh each time and kept nowhere here. `who`
- *  'all' / 'none' overrides. With MORALE.training 'none' (a recording from before a man was green or steady) trainingOf calls every man steady: nobody balks. */
-function greenMan(g: Game, gd: Guard): boolean {
-  if (DARKDOOR.who !== 'rest') return DARKDOOR.who === 'all';
-  return trainingOf(g, gd) === 'green';
 }
 /** the nearest living man of his side inside `pairM` with nothing solid between his eyes and that man's chest (`fit`: of those the test passes) */
 function mateBy(g: Game, gd: Guard, fit?: (o: Guard) => boolean): Guard | null {
@@ -170,7 +152,7 @@ function roomCells(g: Game, room: number): number[] {
  *  on the meter's scale (calmtorch.ts placeLight: lightEstimateAt with every carried lamp and every transient light left out); dark = `darkShare` of them
  *  under `darkAt`; `mean` = their mean. By day a cell under the bar that the hour's daylight reaches (calmtorch.ts workLit: the estimate has no sun in it) is
  *  not dark: it counts at the bar. Kept `askSecs`. Open floor (room 0) is never dark. */
-export function darkRoom(g: Game, room: number): Readonly<Read> {
+export function darkRoom(g: Game, room: number): Readonly<Read> { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('darkRoom', undefined, [g, room]); if (__r !== RUST_PASS) return __r as any; } }
   const K = DARKDOOR; if (!room) return { t: g.time, dark: false, share: 0, mean: 1 };
   let R = readsOf.get(g); if (!R) readsOf.set(g, R = new Map());
   const was = R.get(room); if (was && g.time >= was.t && g.time - was.t < K.askSecs) return was;
@@ -180,11 +162,6 @@ export function darkRoom(g: Game, room: number): Readonly<Read> {
   const share = n > 0 ? under / take : 0, now = { t: g.time, dark: n > 0 && share >= K.darkShare, share, mean: n > 0 ? sum / take : 1 };
   R.set(room, now); DARKDOOR_STATS.asks++;
   return now;
-}
-/** does he stand in the light, against the room ahead: his own place lit on the meter (by day, daylit), or `litBy` brighter than that room's floor */
-function standsLit(g: Game, gd: Guard, R: Readonly<Read>): boolean {
-  const K = DARKDOOR, p = gd.char.pos, here = placeLight(g, p[0], p[2]);
-  return here >= K.darkAt || here >= R.mean + K.litBy || (hourOf(g) !== 'night' && workLit(g, p[0], p[2], K.darkAt));
 }
 /** an open doorway: the leaf off its hinges, or standing `openRad` off its frame */
 const open = (d: Door) => d.off || (!d.latched && Math.abs(d.angle) >= DARKDOOR.openRad);
@@ -198,18 +175,6 @@ function doorAhead(g: Game, gd: Guard, reach: number): { d: Door; side: 1 | -1; 
     run += flat(a, b); a = b; }
   return null;
 }
-/** where he waits: `standM` short of the frame on his face of it, `sideM` off the middle of the opening toward the jamb nearer him (the other one failing
- *  that, then a step further back) — floor that is free, with nothing solid between him and it; null = nowhere but where he stands */
-function standSpot(g: Game, gd: Guard, d: Door, side: 1 | -1): Vec3 | null {
-  const K = DARKDOOR, F = frameOf(d), p = gd.char.pos, along = (p[0] - F.hx) * F.ux + (p[2] - F.hz) * F.uz, s = along <= F.W / 2 ? -1 : 1;
-  for (const off of [K.standM, K.standM + 0.5]) for (const a of [F.W / 2 + s * K.sideM, F.W / 2 - s * K.sideM]) {
-    const x = F.hx + F.ux * a + F.nx * side * off, z = F.hz + F.uz * a + F.nz * side * off;
-    if (g.col.nav.isBlocked(x, z) || g.col.solidBlocked([p[0], 0.45, p[2]], [x, 0.45, z])) continue;
-    if (g.guards.some(o => o !== gd && o.state !== 'dead' && flat(o.char.pos, [x, 0, z]) < 0.6)) continue;
-    return [x, 0, z]; }
-  return null;
-}
-const passes = (S: Fear, door: number, t: number) => S.pass.some(p => p.door === door && t < p.until);
 function pass(g: Game, S: Fear, door: number) { S.pass = S.pass.filter(p => p.door !== door && g.time < p.until); S.pass.push({ door, until: g.time + DARKDOOR.againSecs }); }
 /** a mate is let go where he is (his suspicion wears off on its own) */
 function drop(M: Fear) { M.act = 'none'; M.t = 0; M.other = null; M.told = false; M.spot = null; M.lag = 0; }
@@ -231,40 +196,6 @@ function call(g: Game, gd: Guard, S: Fear, m: Guard) {
   if (!S.called) { S.called = true; bark(g, gd, S, 'call', flat(m.char.pos, gd.char.pos) > DARKDOOR.earM); }
 }
 
-/** THE WALK'S SEAM (guards.ts followPath, beside the other gates): the pace he walks at this frame (≤ `speed`), or null — this file has his feet (he is stepping
- *  to, or standing at, his place by a dark doorway). `speed` back at once with either switch off, and for every man who is not alarmed. */
-export function darkDoorGate(g: Game, gd: Guard, dt: number, speed: number): number | null {
-  const K = DARKDOOR; if (!K.on || !MORALE.on) return speed;
-  const S0 = stateOf.get(gd);
-  if (S0 && (S0.act === 'come' || S0.act === 'with')) return speed;   // a man called, a pair going in: never balked
-  if (!able(g, gd)) return speed;   // (a balk of his outlasts this by `keepSecs`: the tick lets it go)
-  const X = S0 && S0.act === 'balk' ? null : doorAhead(g, gd, K.stopM), di = X ? g.doors.list.indexOf(X.d) : -1;
-  if (S0 && S0.act === 'solo') {   // nerved: the beat at the frame, then in — slowly, until the frame is behind him
-    if (!X || di !== S0.door) { pass(g, S0, S0.door); end(g, S0); return speed; }
-    S0.idle = 0; if (gd.state === 'suspicious') gd.awareness = Math.max(gd.awareness, K.keepAw);   // (he does not talk himself calm a stride short of the frame)
-    S0.t += dt; if (S0.t >= K.nerveSecs) return speed * K.slowK;
-    gd.speed = damp(gd.speed, 0, 8, dt); gd.char.vel = [0, 0, 0]; gd.stallRef = null; gd.alertStallT = 0; gd.chaseT = 0; return null;
-  }
-  const fight = gd.state === 'alert' ? fightWalk(g, gd) : 'chase';
-  if (fight === 'other') return speed;
-  if (S0 && S0.act === 'balk') return hold(g, gd, S0, dt, speed, fight === 'seen');
-  if (!X || fight === 'seen' || g.blackout.active || (S0 && passes(S0, di, g.time))) return speed;
-  const room = g.cleared.roomBy(X.d, -X.side as 1 | -1); if (!room || room === g.cleared.roomAt(gd.char.pos)) return speed;
-  if (!greenMan(g, gd) || mateBy(g, gd)) return speed;
-  const R = darkRoom(g, room); if (!R.dark) return speed;
-  if (!open(X.d)) { if (standsLit(g, gd, R)) { const A = mind(gd); A.armed = di; A.armT = g.time; } return speed; }   // a shut leaf: he opens it as he always did — he cannot know what is behind it — and is owed the balk once it stands open
-  if (!(S0 && S0.armed === di && g.time - S0.armT < K.armSecs) && !standsLit(g, gd, R)) return speed;
-  const S = mind(gd), again = S.door === di && g.time - S.left < K.resumeSecs;   // (the same wait, let go a moment ago for want of his walk asking: taken up where it stood, without a word)
-  S.quits = S.quits.filter(q => g.time - q.t < K.fedUpSecs);
-  S.door = di; S.side = X.side; S.idle = 0; S.ask = 0; S.callT = 0; S.other = null; S.left = -1e9; S.armed = -1;
-  if (!again) { S.t = 0; S.called = false; S.tried = []; DARKDOOR_STATS.balks++; }
-  if (!again && S.quits.filter(q => q.room === room).length >= K.fedUpN - 1) { S.act = 'solo'; bark(g, gd, S, 'alone', false); DARKDOOR_STATS.solos++; return darkDoorGate(g, gd, 0, speed); }
-  S.act = 'balk'; S.spot = standSpot(g, gd, X.d, X.side); S.at = !S.spot;
-  if (!again) {   // say, then do: the line as he stops — the call to the man who can come, or a word to himself
-    const m = freeMate(g, gd, S); if (m) call(g, gd, S, m); else bark(g, gd, S, 'self', false);
-  }
-  return hold(g, gd, S, 0, speed, false);
-}
 /** one frame at the frame: is the wait over (his walk no longer wants this door, the room is lit, a mate is here, nobody came), else his feet. `seen` = he has
  *  a foe in his eyes: the wait's clock stands, and nothing here ends his fight */
 function hold(g: Game, gd: Guard, S: Fear, dt: number, speed: number, seen: boolean): number | null {
@@ -303,51 +234,11 @@ function hold(g: Game, gd: Guard, S: Fear, dt: number, speed: number, seen: bool
   return null;
 }
 
-/** THE EYES' SEAM (guards.ts updateGuard, beside tactics.ts's look): where his aim — and his light with it — goes this frame, null = his own. Stopped at the
- *  frame it sweeps the opening from jamb to jamb and back; going in alone it is held on the middle of the opening, ahead of his feet. */
-export function darkDoorLook(g: Game, gd: Guard): Vec3 | null {
-  if (!DARKDOOR.on || !MORALE.on) return null;
-  const S = stateOf.get(gd); if (!S || (S.act !== 'balk' && S.act !== 'solo') || hasHim(gd, OWN.lastMan)) return null;
-  const d = g.doors.list[S.door]; if (!d) return null;
-  const K = DARKDOOR, F = frameOf(d), a = S.act === 'solo' ? F.W / 2 : F.W * (0.5 - 0.5 * Math.cos(S.t * Math.PI / Math.max(0.2, K.sweepSecs)));
-  return [F.hx + F.ux * a, 1.1, F.hz + F.uz * a];
-}
 
-/** ONCE A FRAME (game.ts update, after morale.ts's tick and before anybody moves): every man of ours is met; the men called and the men
- *  going in with somebody are kept on their man, or dropped; a stopped man whose walk has not asked the gate for `keepSecs` is let go. A return on its first
- *  line with either switch off. */
-export function darkDoorTick(g: Game, dt: number) {
-  if (!DARKDOOR.on || !MORALE.on) return;
-  const K = DARKDOOR;
-  for (const gd of g.guards) {
-    if (!ours(gd)) { const S = stateOf.get(gd); if (S && S.act !== 'none') { if (S.act === 'come' || S.act === 'with') lose(gd, S); else end(g, S); } continue; }
-    const S = mind(gd);
-    if (S.act === 'none') continue;
-    if (!g.aiEnabled) { if (S.act === 'come' || S.act === 'with') lose(gd, S); else end(g, S); continue; }
-    if (S.act === 'balk' || S.act === 'solo') { S.idle += dt; if (S.idle > K.keepSecs || hasHim(gd, OWN.lastMan)) end(g, S, true); continue; }   // (calmed, taken by another script, turned to a fight for good: nothing of this file's holds him)
-    const o = S.other, So = o ? stateOf.get(o) : null; S.t += dt;
-    const goal = !o ? null : S.act === 'come' ? o.char.pos : o.pathGoal ?? o.lastKnown ?? o.char.pos, dG = goal ? flat(gd.char.pos, goal) : 0;
-    if (!S.spot || flat(gd.char.pos, S.spot) > 0.5) { S.spot = v3.copy(gd.char.pos); S.lag = 0; } else S.lag += dt;
-    if (!o || !goal || !ours(o) || gd.state === 'alert' || gd.state === 'search' || !own(g, gd) || S.lag > K.lagSecs) { lose(gd, S); continue; }   // taken by a fight, an order, an errand — or covering no ground
-    if (S.act === 'come') {   // on his way to the man who called: his fix is that man, his suspicion does not wear off under him, and he answers once
-      if (!So || So.act !== 'balk' || So.other !== gd) { drop(S); continue; }
-      if (!S.told && S.t >= K.copySecs) { S.told = true; bark(g, gd, S, 'copy', dG > K.earM); }
-    } else if (S.t >= K.withSecs || !alarmed(o) || dG < 1.5) { drop(S); continue; }   // going in with him: his fix is where that man is going, for `withSecs` or until he is there
-    if (!gd.lastKnown || flat(gd.lastKnown, goal) > 0.5) gd.lastKnown = v3.copy(goal);
-    if (gd.state !== 'suspicious') { gd.state = 'suspicious'; gd.searchPlan = null; gd.pieing = null; gd.path = []; gd.pathGoal = null; }
-    gd.awareness = Math.max(gd.awareness, 0.42); gd.searchT = 0;
-  }
-}
-/** a mate is lost on the way (dead, taken, stuck): dropped, and the man who called him will not call him again for this wait — he calls the next */
-function lose(gd: Guard, S: Fear) {
-  const o = S.other, So = o ? stateOf.get(o) : null;
-  if (So && So.other === gd) { So.other = null; if (So.act === 'balk' && S.act === 'come') { So.tried.push(gd); So.callT = DARKDOOR.callSecs; } }
-  drop(S); DARKDOOR_STATS.drops++;
-}
 /** QA: what the rule has of a man (null = never met) */
 export function darkDoorOf(gd: Guard): Readonly<Fear> | null { return stateOf.get(gd) ?? null; }
 /** QA: is he green as the rule deals it */
-export function darkDoorGreen(g: Game, gd: Guard): boolean { return greenMan(g, gd); }
+export function darkDoorGreen(g: Game, gd: Guard): boolean { return crossToRust('darkDoorGreen', undefined, [g, gd]) as any; }
 /** 'dark door ▸ Novak balk 6.2 s at breakroom_w (Reyes coming) · Reyes come' — every man the rule has; '' with either switch off */
 export function darkDoorSummary(g: Game): string {
   if (!DARKDOOR.on || !MORALE.on) return '';

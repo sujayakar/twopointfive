@@ -74,12 +74,6 @@ const PLAY = (secs) => {
       await page.goto(url);
       const ready = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return { fatal: document.getElementById('fatal')?.textContent || '', pipelines: window.__boot?.pipelines, internal: [window.__engine.width, window.__engine.height] }; });
       log(job.name, 'ready', JSON.stringify(ready)); if (ready.fatal) R.errors.push('fatal: ' + ready.fatal);
-      // CUT PIECES: the second set of ray programs compiles in the background after boot, and on the software adapter the page does not answer a screenshot while
-      // it does (a 30 s timeout). Wait for it, at most CUT_WAIT_S; a build without the hook, the switch off (?nocutboxes) or a wait that runs out carries on as before.
-      const cutSet = await page.evaluate(async (secs) => { const P = window.__cut?.programs, r = P?.swap ? P.ready : null; if (!r) return 'none';
-        const t0 = performance.now(), got = await Promise.race([Promise.resolve(r).then(ok => ok ? 'ready' : 'failed', () => 'failed'), new Promise(done => setTimeout(() => done('timed out'), secs * 1000))]);
-        return `${got} after ${((performance.now() - t0) / 1000).toFixed(0)} s`; }, Number(process.env.CUT_WAIT_S || 300)).catch(e => 'threw: ' + e.message);
-      log(job.name, 'cut programs', cutSet);
       await page.screenshot({ path: path.join(outDir, `${job.name}-card-page.png`) });
       // the start card away, smoke off, the scenario as staged
       const staged = await page.evaluate(() => {

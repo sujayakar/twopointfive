@@ -6,7 +6,7 @@
 //   --level takes a file under levels/, or a path (a level exported to a scratch folder)
 //   --rig double | double-dark (with --trace / --seeds, arm orders): THE DOUBLE'S OWN CHECK, STAGED — see RIG below. Not a run of the mission.
 // THE STAND: the game as the PAGE stands it (solo-night.ts's own list: GLASSFX=on, TPS_MOVES=1, TPS_TURN=1, TPS_CAST=1, TPS_OPENING=1, TPS_QRFSILENT=1, TPS_QRFSQUAD=1, chaos 0.5,
-// destruction on unless SOLO_DESTR=0), the level loaded from its file, the mission started as the page starts it: startFromQuery(g, '?quiet[=N][&squad=1]').
+// destruction on, which is settled), the level loaded from its file, the mission started as the page starts it: startFromQuery(g, '?quiet[=N][&squad=1]').
 // THE PAIR SWITCHES ARE THE MISSION'S (quiet.ts holds PAIRUP / PAIR / SNEAK / SPOTTED and the silent posture on for a run with a partner): nothing here sets them;
 // every run carries `sw` = what they read when it ended.
 // THE SCRIPTED SAM (the same in all three arms; solo-night.ts's `careful` plan with `--out short`, copied): on his own feet and keys (WASD along the nav path, C,
@@ -108,7 +108,6 @@ export interface PairRun {
 
 async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelFile: string): Promise<PairRun> {
   const { standUp, ROOT } = await import('./headless.ts');
-  if (process.env.SOLO_DESTR !== '0') { try { (await import(`${ROOT}/src/game/destructionSwitch.ts`)).DESTRUCTION.on = true; } catch { /* a build from before the destruction goal */ } }
   if (process.env.SOLO_CLEAR_M) { try { (await import(`${ROOT}/src/game/opening.ts`)).OPENING.clearM = Number(process.env.SOLO_CLEAR_M); } catch { /* a build from before the opening rule */ } }
   const { lightEstimateAt, escalationOf, canSeeChar, sightGain, sightGainOn, pointInView } = await import(`${ROOT}/src/game/guards.ts`);
   const { debriefOf, fmtEvent } = await import(`${ROOT}/src/game/chronicle.ts`);
@@ -117,7 +116,6 @@ async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelF
   const { DEVICE_DEFAULTS } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { outThrough } = await import(`${ROOT}/src/game/quiet.ts`);
   let closeLethal: (g: any) => boolean = () => false; try { closeLethal = (await import(`${ROOT}/src/game/close.ts`)).closeLethal ?? closeLethal; } catch { /* a build from before the two-button blow */ }
@@ -132,7 +130,7 @@ async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelF
   try {
     Math.random = seeded(0x9137 + seed * 7919);   // (playthrough.ts's own seeding, solo-night.ts's: a seed is the same dice there and here)
     const file = levelFile.includes('/') ? resolve(levelFile) : resolve(ROOT, 'levels', levelFile);
-    const levelOf = (): any => { const data = parseLevelData(readFileSync(file, 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+    const levelOf = (): any => { const data = parseLevelData(readFileSync(file, 'utf8')); return loadLevel(data); };
     hush(); const W: any = await standUp({ uploadEvery: 4, level: levelOf() }); unhush();
     g = W.game; const I = W.input, cam = W.cam;
     g.godMode = false; g.tune.chaos = 0.5;
@@ -526,7 +524,7 @@ if (has('--one')) {   // a child: one run, its JSON to --outfile
   const seeds = seedsOf(flag('--seeds') ?? '1-12'), jobs = Math.max(1, Number(flag('--jobs') ?? 4)), dir = mkdtempSync(resolve(tmpdir(), 'quiet-pair-'));
   const todo: { arm: Arm; seed: number }[] = arms.flatMap(arm => seeds.map(seed => ({ arm, seed }))), runs: PairRun[] = []; let next = 0; const t0 = Date.now();
   await Promise.all(Array.from({ length: jobs }, async () => { for (;;) { const j = todo[next++]; if (!j) return; const f = resolve(dir, `${j.arm}-${j.seed}.json`);
-    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.arm}:${j.seed}`, '--outfile', f, '--cap', String(cap), '--level', levelFile, ...(QUIET_PIN === null ? [] : ['--quiet', String(QUIET_PIN)]), ...(RIG ? ['--rig', RIG] : [])], { stdout: 'ignore', stderr: 'pipe' }); const errText = new Response(pr.stderr).text(), code = await pr.exited;   // (the pipe is drained while the child runs: a chatty one never blocks on it)
+    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.arm}:${j.seed}`, '--outfile', f, '--cap', String(cap), '--level', levelFile, ...(QUIET_PIN === null ? [] : ['--quiet', String(QUIET_PIN)]), ...(RIG ? ['--rig', RIG] : [])], { stdout: 'ignore', stderr: 'pipe', env: process.env }); const errText = new Response(pr.stderr).text(), code = await pr.exited;   // (the pipe is drained while the child runs: a chatty one never blocks on it)
     let r: PairRun; try { r = JSON.parse(readFileSync(f, 'utf8')); } catch { r = blank(j.arm, j.seed, `the run's process exited ${code}: ${(await errText).slice(-600)}`); }
     runs.push(r); console.log(`  ${r.arm}:${r.seed} ${r.end} ${r.t} s · ${r.noticed}${r.rating ? ` · ${r.rating} ${r.score}` : ''}${r.orders.given ? ` · orders ${r.orders.landed}/${r.orders.given}` : ''}${r.end !== 'done' ? ` — ${r.why.split('\n')[0]}` : ''}`); } }));
   rmSync(dir, { recursive: true, force: true });

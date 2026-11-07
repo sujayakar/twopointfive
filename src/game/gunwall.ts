@@ -1,13 +1,12 @@
 import { SideMap, GameSideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
-import { v3, clamp, lerp, wrapAngle } from '../math/vec';
+import { v3, clamp, lerp } from '../math/vec';
 import { BoxFlag } from '../scene/boxes';
-import type { Game, Guard } from './game';
+import type { Game } from './game';
 import type { Character } from './character';
-import { WALL_TUCK } from './character';
-import { armThrough, solidBetween } from './combat';
+import './character';
+import { solidBetween } from './combat';
 import { glassPenLive } from './glasspen';
-import type { PelletSpec } from './weapons';
 
 /** A RAISED WEAPON COMES DOWN AT A WALL. A shouldered rifle's muzzle stands 0.63 m ahead of the man who holds it and an aimed pistol's 0.64; a man can stand
  *  with his centre 0.3 m off a wall — so every man who turned to cover a line with a wall, a jamb or a door leaf inside that reach was DRAWN with his gun in it
@@ -58,29 +57,10 @@ const st = (c: Character): St => { let s = ST.get(c); if (!s) ST.set(c, s = { lo
 
 const STAND_SH = 1.4, CROUCH_SH = 0.99;   // the gun shoulder's height standing / crouched (the mannequin's, measured): how far down he is, for the carriages' crouched numbers
 const TUCK_REACH = 0.235;                 // where WALL_TUCK leaves the muzzle ahead of his feet at gunWall 1 (measured: 0.21‥0.235 over the FN2000, the AKS-74U and the pistol)
-const SH_REST = -0.07, SH_CARRY = 0.6, REACH_OVER = 0.2;   // the low carriage rides the shoulders: the gun shoulder stands 7 cm behind his feet at rest, and six tenths of every centimetre it comes forward of that (a torso twisted hard round, a lean into the stride: up to ~0.2 m) is added to the muzzle's reach — measured
-const GUN_HALF = 0.04, GUN_HALF_LOW = 0.06;   // half the width the worked-out line is asked over: coming up / once down (wider: it stays down at an edge it only just clears)
-const SETTLED_M = 0.08;                     // the muzzle within this of where the carriage puts it (ahead; twice it in height) = the gun is up: asked as drawn
-const HOLD_M = 0.1, HOLD_RAD = 0.15;        // a gun found in a wall as drawn stays down until he has stepped / turned (or risen, or pitched) this far off the spot
-const HOT_SECS = 0.1;                       // a man in a fight: his settled gun this long in a panel before it comes down (a recoil's kick through a jamb's edge is not a wall)
 const FRESH_S = 0.05;                       // an answer older than this is nobody's (a man nobody asked about this frame or last: dead, held, pinned)
-const TUCK_HALF = 0.07;
 const TELEPORT_M = 0.25;                    // further than this in a frame is not a step (teleportPlayer, a staged man): no speed read off it
-const BREACH_AIM_M = 1.4;                   // breachAim: how far along the raised gun's line, from the hand, the lock may stand (the gun's reach and a stride)
-const AT_IN = 0.03;                         // a muzzle laid ON the surface he aims at may stand this far into the test's line and stay up; deeper, the gun is in the wood whatever he aims at
 /** the floor's fight: when one was last seen, asked once a frame (GUNWALL.fightS) */
 const FIGHT = new GameSideMap<Game, { t: number; until: number }>('gunwall.FIGHT');
-function fightOn(g: Game): boolean {
-  const K = GUNWALL; if (!(K.fightS > 0)) return false;
-  let F = FIGHT.get(g); if (!F) FIGHT.set(g, F = { t: -1, until: -1 });
-  if (F.t !== g.time) {
-    F.t = g.time; F.until = Math.min(F.until, g.time + K.fightS);   // (the clock gone back — a load that carried no word of it: never longer than a fight seen now would keep it)
-    for (const gd of g.guards) if (gd.char.alive && (gd.state === 'alert' || gd.script?.over)) { F.until = g.time + K.fightS; break; }
-  }
-  return g.time < F.until;
-}
-/** a showcase has the floor (the tour, a Director showcase) */
-const showing = (g: Game): boolean => g.touring || !!g.director?.showing;
 
 /** His frame: forward and right on the floor along `yaw`, the gun shoulder's height over his feet, how crouched that says he is (0‥1) */
 function frame(c: Character, yaw: number) {
@@ -114,28 +94,11 @@ function raisedLine(c: Character, up: GunUp, yaw: number, o: Vec3 = c.pos): { a:
   }
   return long ? { a: at(o, F, 0.15, 0.12, F.sh - 0.28), b: at(o, F, 0.44, -0.065, F.sh + 0.13) } : { a: at(o, F, 0, 0.07, F.sh + 0.04), b: at(o, F, 0.465, 0.07, F.sh + 0.07) };
 }
-/** Stood at (x, z) with the long gun in the shoulder on `to`: would the gun lie clear of every static and leaf, and the first `ahead` metres of its round's
- *  way too? The worked-out aim carriage from there, and CLEAR_WIDE outside it (stepped out on the wall the posed gun rides that much wider than the
- *  carriage's own number), each with the arm behind it — the collision rays the rule itself asks. (player.ts stackLean: how far round an end on his gun
- *  side a step-out has to go before a round can leave.) */
-export function gunClearFrom(g: Game, c: Character, x: number, z: number, to: Vec3, ahead: number): boolean {
-  const yaw = Math.atan2(to[0] - x, to[2] - z), F = frame(c, yaw), M = raisedLine(c, 'aim', yaw, [x, c.pos[1], z]);
-  const sh: Vec3 = [x + F.r[0] * 0.14 - F.f[0] * 0.15, M.a[1] + 0.11, z + F.r[2] * 0.14 - F.f[2] * 0.15];
-  const hits = (a: Vec3, b: Vec3, most = Infinity): boolean => { const d = v3.sub(b, a), L = v3.len(d); return L > 1e-3 && !!g.col.raycast(a, v3.scale(d, 1 / L), Math.min(L, most)); };
-  for (const w of [0, CLEAR_WIDE]) {
-    const off: Vec3 = [F.r[0] * w, 0, F.r[2] * w], a = v3.add(M.a, off), b = v3.add(M.b, off);
-    if (hits(sh, b) || hits(a, b) || hits(b, [to[0], b[1], to[2]], ahead)) return false;   // (the way out asked level: a cursor on the floor near him is a heading, not a point to shoot the ground at)
-  }
-  return true;
-}
-const CLEAR_WIDE = 0.1;
 /** how far ahead of his feet the low ready leaves the muzzle (untucked) */
 const lowReach = (c: Character) => c.anim.longGun ? 0.145 + 0.7 * c.muzzleAhead : 0.241 + 0.74 * c.muzzleAhead;
 /** QA (tools/qa/gunwall-probes.ts gun-model): the worked-out carriages, to be held against the posed gun */
 export const gunWallModel = { raisedLine, lowReach, TUCK_REACH };
 
-/** a PANEL on a → b as a round sees one (combat.ts solidBetween: a static, or a leaf standing shut — one standing open yields), and not a pane rounds go through */
-function panel(g: Game, a: Vec3, b: Vec3): boolean { GUNWALL_STATS.asked++; return woodBetween(g, a, b); }
 /** …the same answer with nothing counted (player.ts gunShut: the overlay asks it every frame, and a QA tally is not the picture's to move) */
 export function woodBetween(g: Game, a: Vec3, b: Vec3): boolean {
   if (!solidBetween(g, a, b)) return false;
@@ -144,132 +107,10 @@ export function woodBetween(g: Game, a: Vec3, b: Vec3): boolean {
   return !(h && h.index < 1e6 && (g.col.boxes[h.index].flags & BoxFlag.Glass));
 }
 
-/** Is the gun he wants up (`up`) kept down by a wall this frame? `to`: the point he aims at, if he has one — on the surface itself, the gun stays up
- *  (`deep`: however far in — the breaching shotgun's muzzle is laid where the lock is).
- *  A CALM man — collision rays over the statics and every leaf (collision.ts raycast; loose furniture is not asked, as for rounds and the light), a little
- *  past the muzzle. WHICH line depends on where the gun is:
- *   · up and settled (the aim, the muzzle about where the carriage puts it): the gun AS DRAWN — gun hand → muzzle, and the arm behind it. Exact at a jamb's
- *     edge, which is where men stand: a gun that passes the edge by a finger stays up, one that is in it comes down. The segment that found it is remembered
- *     (`hold`): until he has stepped, turned, risen or pitched off that pose — or that segment is clear again: a leaf swung away, a wall blown — the gun
- *     stays down, whatever the worked-out line below says. It never comes back up into the same wood.
- *   · down for a wall already, on its way up, or the port: the carriage's line worked out from his feet and his aim (and, turning under weight, from where
- *     the gun has got to: Character.gunYaw), a gun's width either side of it.
- *  A man IN A FIGHT (`hot`) — only what would have cost him the round anyway: his settled gun, as drawn, in a panel by armThrough's own test (so an open
- *  leaf's edge or a pane his rounds go through never lowers it) for HOT_SECS; then held as above, and up again once the worked-out line is out of the panel.
- *  None of the calm man's margins: they would cost this one shots he has. */
-function walledNow(g: Game, c: Character, up: GunUp, to: Vec3 | null, S: St, dt: number, hot: boolean, deep: boolean): boolean {
-  const K = GUNWALL, F = frame(c, c.aimYaw), M = raisedLine(c, up, c.aimYaw);
-  const cast = (a: Vec3, b: Vec3, need: number): boolean => {
-    const d = v3.sub(b, a), L = v3.len(d); if (L < 1e-3) return false;
-    const rd = v3.scale(d, 1 / L); GUNWALL_STATS.asked++;
-    const h = g.col.raycast(a, rd, L + need); if (!h) return false;
-    return !(to && (deep || h.t > L - AT_IN) && v3.dist(to, v3.mad(a, rd, h.t)) < K.atM);
-  };
-  if (S.low && S.hold) {   // found in the wood as drawn: down until he is off that pose, or the wood is off that line
-    const H = S.hold;
-    const same = Math.hypot(c.pos[0] - H.x, c.pos[2] - H.z) < HOLD_M && Math.abs(wrapAngle(c.aimYaw - H.yaw)) < HOLD_RAD && Math.abs(F.sh - H.sh) < HOLD_M && Math.abs(c.aimPitch - H.pitch) < HOLD_RAD;
-    if (same && (H.hot ? panel(g, H.a, H.b) : cast(H.a, H.b, 0))) return true;
-    S.hold = null;
-  }
-  const hand = c.bones.handR, sh = c.bones.upperArmR, B = c.bonesAt;   // (the bones are a frame old: they stand where his feet were when they were read)
-  const settled = up === 'aim' && !!hand && !!sh
-    && (c.muzzle[0] - B[0]) * F.f[0] + (c.muzzle[2] - B[1]) * F.f[2] > (M.b[0] - c.pos[0]) * F.f[0] + (M.b[2] - c.pos[2]) * F.f[2] - SETTLED_M && Math.abs(c.muzzle[1] - M.b[1]) < 2 * SETTLED_M;
-  const held = (a: Vec3, b: Vec3): true => { S.hold = { x: c.pos[0], z: c.pos[2], yaw: c.aimYaw, pitch: c.aimPitch, sh: F.sh, a: v3.copy(a), b: v3.copy(b), hot }; return true; };
-  if (hot) {
-    if (S.low) return panel(g, M.a, M.b);   // down already (a calm man's wall, or off a hold): up once the worked-out line is out of the panel
-    S.wood = settled && armThrough(g, c) && panel(g, sh!, c.muzzle) ? S.wood + dt : 0;
-    return S.wood >= HOT_SECS && held(sh!, c.muzzle);
-  }
-  S.wood = 0;
-  const lead = closing(S, F.f) * K.leadS;
-  if (!S.low && settled) {   // up and settled: the gun as drawn, moved on by his step since
-    const dx = c.pos[0] - B[0], dz = c.pos[2] - B[1], mv = (p: Vec3): Vec3 => [p[0] + dx, p[1], p[2] + dz];
-    const h = mv(hand!), m = mv(c.muzzle), s = mv(sh!);
-    return cast(h, m, K.downM + lead) ? held(h, m) : cast(s, h, 0) && held(s, h);
-  }
-  const need = (S.low ? K.upM : K.downM) + lead, w = S.low ? GUN_HALF_LOW : GUN_HALF;
-  for (const L of Math.abs(wrapAngle(c.gunYaw - c.aimYaw)) > 0.1 ? [M, raisedLine(c, up, c.gunYaw)] : [M])
-    for (const o of [0, -w, w]) { const off: Vec3 = [F.r[0] * o, 0, F.r[2] * o]; if (cast(v3.add(L.a, off), v3.add(L.b, off), need)) return true; }
-  return false;
-}
-/** YOUR BREACH SHOT. Where the raised gun's own line — the worked-out aim carriage, gun side and pitch and all — meets a LOCK a shell takes (shotgun.ts
- *  fireShell's own test: a leaf latched and locked, no wedge at its foot, within the pattern's `latchM` of its latch edge — no slack on it: pressed to
- *  the leaf the pattern has no spread, and a gun kept up short of that band would spend its shell on a lock that holds), inside the gun's reach and a stride: that point, to hand to gunWalled as `to` with `deep`; else null. Asked of the gun's line and not of the
- *  cursor's point on the floor: pressed to a door, what he points at is mostly somewhere past it. Null with the rule off. */
-export function breachAim(g: Game, c: Character, B: NonNullable<PelletSpec['breach']>): Vec3 | null {
-  if (!GUNWALL.on) return null;
-  const M = raisedLine(c, 'aim', c.aimYaw), rd = v3.sub(M.b, M.a), L = v3.len(rd); if (L < 1e-3) return null;
-  const dir = v3.scale(rd, 1 / L), h = g.col.raycast(M.a, dir, BREACH_AIM_M);
-  if (!h || h.index < 1e6) return null;
-  const box = g.col.dynamicBoxes[h.index - 1e6], d = box ? g.doors.list.find(x => x.box === box) : undefined;
-  if (!d || !d.latched || !d.locked || d.lockId.startsWith('wedge:')) return null;
-  const p = v3.mad(M.a, dir, h.t), u = d.dir(), along = (p[0] - d.def.hinge[0]) * u[0] + (p[2] - d.def.hinge[1]) * u[1];
-  return along < d.def.width - B.latchM ? null : p;
-}
-/** This frame's answer for a character (asked once a frame, then remembered): `up` = the raised carriage he wants, null = the gun is not wanted up at all;
- *  `hot` = he is in a fight, `deep` = his muzzle belongs on the surface he aims at (walledNow). Nothing while a showcase has the floor. */
-export function gunWalled(g: Game, c: Character, up: GunUp | null, to: Vec3 | null, dt: number, hot = false, deep = false): boolean {
-  if (!GUNWALL.on) return false;
-  const S = st(c);
-  if (S.t !== g.time) {
-    S.t = g.time; track(g, c, S); const was = S.low;
-    S.low = !!up && !showing(g) && walledNow(g, c, up, to, S, dt, hot, deep); if (!S.low) S.hold = null;
-    S.rose = was && !S.low;
-    if (S.low) { GUNWALL_STATS.loweredS += dt; if (!was) GUNWALL_STATS.lowered++; }
-  }
-  return S.low;
-}
 /** the last answer, read only, if it is this frame's or the last's (roomfight.ts: a gun on its man that a wall holds down is no shot from here) */
 export function gunWallIs(g: Game, c: Character): boolean {
   if (!GUNWALL.on) return false;
   const S = ST.get(c); return !!S && S.low && g.time - S.t < FRESH_S;
-}
-/** …and for one of the men (the AI's and the scripts' — guards.ts, squad.ts): a gun kept down by a wall is `muzzleDown`, held there every frame it is asked
- *  (muzzleCheck lets it up again MUZZLE_UP_SECS after the wall — and any colleague — is off the line; a man in a fight, his own or the floor's, at once).
- *  Idempotent within a frame. */
-export function gunWallCheck(g: Game, gd: Guard, up: GunUp | null, to: Vec3 | null, dt: number, hot = false): boolean {
-  if (!GUNWALL.on) return false;
-  hot ||= fightOn(g);
-  const low = gunWalled(g, gd.char, up, to, dt, hot, !!gd.weapon?.def.pellets);
-  if (low) { gd.muzzleDown = true; gd.muzzleClearT = 0; }
-  else if (hot && gd.muzzleDown && ST.get(gd.char)?.rose && gd.muzzleEvalT === g.time && gd.muzzleClearT > 0) { gd.muzzleDown = false; gd.muzzleClearT = 0; }   // (a man in a fight, the wall just off his line and no colleague on it this frame: up now, not after the hysteresis a calm man's gun waits out)
-  return low;
-}
-/** The low carriages pulled in by the room they have: CharacterAnimator.gunWall for this frame, written after the pose is chosen and before the animator runs
- *  (guards.ts, squad.ts, player.ts). A ray along the low carriage's own line (hand → muzzle, on the aim's heading and — where they differ — the body's) says
- *  where the wall is; the muzzle is asked to stand `tuckM` short of it. The carriage rides the shoulders, so its reach is taken from where the gun shoulder
- *  stood ahead of his feet in last frame's pose: a torso twisted hard round or leaning into a stride reaches further than the carriage at rest, and is
- *  pulled in by that much more. Nothing while a gun is up or no gun is in a hand; 0 with the rule off. */
-export function gunWallPose(g: Game, c: Character): void {
-  const an = c.anim;
-  if (!GUNWALL.on || showing(g)) { if (an.gunWall !== 0) an.gunWall = 0; return; }
-  const carry = an.longStance ?? (an.stance === 'lowReady' || an.stance === 'none' ? 'lowLong' : 'portLong');   // (the animator's own choice of long carriage, near enough: the calm patrol carry is pulled in like the low ready)
-  const lowNow = an.upper !== 'aim' && (an.longGun ? carry === 'lowLong' || carry === 'patrolLong' : an.stance === 'lowReady');
-  if (!lowNow || !c.alive) { an.gunWall = 0; return; }
-  const S = st(c); track(g, c, S);
-  const K = GUNWALL, R = lowReach(c), span = R - TUCK_REACH; let w = 0;
-  const one = (yaw: number) => {
-    const F = frame(c, yaw), long = an.longGun, B = c.bonesAt;
-    const sh = c.bones.upperArmR, shF = sh ? (sh[0] - B[0]) * F.f[0] + (sh[2] - B[1]) * F.f[2] : SH_REST;   // the gun shoulder ahead of his feet as the last pose had it
-    const reach = R + clamp((shF - SH_REST) * SH_CARRY, 0, REACH_OVER);
-    const a = long ? at(c.pos, F, 0, 0.18, F.sh - 0.18) : at(c.pos, F, 0, 0.08, F.sh - 0.3), b = long ? at(c.pos, F, R, 0.03, F.sh - 0.51) : at(c.pos, F, R, 0.08, F.sh - 0.49);
-    const d = v3.sub(b, a), L = v3.len(d), rd = v3.scale(d, 1 / L), lead = closing(S, F.f) * K.tuckLeadS;
-    for (const o of [0, -TUCK_HALF, TUCK_HALF]) {   // (a gun's width and the model's error either side: pulling in at an edge it would have cleared costs nothing)
-      GUNWALL_STATS.asked++;
-      const h = g.col.raycast([a[0] + F.r[0] * o, a[1], a[2] + F.r[2] * o], rd, L * (reach + K.tuckM + lead) / R); if (!h) continue;
-      const room = h.t / L * R - K.tuckM - lead;   // how far ahead of his feet the muzzle may stand
-      const k = (reach - room) / span;   // 1 = WALL_TUCK's carriage; past it, the hand drawn further back (character.ts WALL_TUCK.over, gunWall 1‥2)
-      w = Math.max(w, k <= 1 ? Math.max(0, k) : 1 + clamp((k - 1) * span / WALL_TUCK.over, 0, 1));
-    }
-  };
-  one(c.aimYaw); if (Math.abs(wrapAngle(c.aimYaw - c.bodyYaw)) > 0.15) one(c.bodyYaw);
-  an.gunWall = w; if (w > 0) GUNWALL_STATS.tucked++;
-}
-/** Sam's pistol: the low ready this rule put him in is taken off again by it and by nobody else (`set` = it is the rule's this frame). */
-export function gunWallStance(c: Character, set: boolean): void {
-  const S = set ? st(c) : ST.get(c); if (!S) return;
-  if (set) { if (c.anim.stance === 'none') { c.anim.stance = 'lowReady'; S.mine = true; } }
-  else if (S.mine) { if (c.anim.stance === 'lowReady') c.anim.stance = 'none'; S.mine = false; }
 }
 /** checkpoints (savestate.ts): whose gun the wall holds down right now and what holds it — the band's memory, so a loaded game answers as the saved one
  *  would have. A row a man: his character id, then (if he has one) his `hold`'s twelve numbers. Only answers still fresh: nobody dead, held or pinned.

@@ -248,12 +248,11 @@ function levelOf(file: string): { d: Data; file: string } {
   const look = file.replace(/\.json$/, '-gwot.json'), f = existsSync(join(ROOT, 'levels', look)) ? look : file;
   return { d: JSON.parse(readFileSync(join(ROOT, 'levels', f), 'utf8')) as Data, file: f };
 }
-async function officeTeams(): Promise<NonNullable<Data['scenarios']>> { const m = await import('../levels/office.scenarios') as { OFFICE_SCENARIOS: NonNullable<Data['scenarios']> }; return m.OFFICE_SCENARIOS; }
 
 async function render(m: Mission, O: Opts): Promise<Cam> {
   const file = m.scenario?.level ?? 'office.json', { d } = levelOf(file), pin: Pin = { ...(PIN[m.id] ?? {}), ...(O.set[m.id] ?? {}) }, M: Mood = { ...(MOODS[m.group ?? 'raids'] ?? NIGHT), ...pin } as Mood;
   const S = new Scene(), lampsAll = (pin.lamps ?? 'all') === 'all'; men.length = 0; spots.length = 0; areas.length = 0; seed = hash(m.id);
-  const sc = file === 'office.json' ? await officeTeams() : d.scenarios ?? {}, kind = m.scenario?.kind;
+  const sc = d.scenarios ?? {}, kind = m.scenario?.kind;
   // the level: boxes, door leaves (a few ajar: light through an opening door), furniture
   const lit = new Map<string, number[]>(); for (const s of d.switchables ?? []) if (s.on !== false || lampsAll) for (const id of s.boxes) lit.set(id, s.baseEmissive ?? [8, 7.6, 7]);
   const dark = new Set<string>(); for (const s of d.switchables ?? []) if (s.on === false && !lampsAll) for (const id of s.boxes) dark.add(id);
@@ -453,7 +452,7 @@ if (import.meta.main) {
   const kept = was.filter(id => !queue.includes(id) && all.some(m => m.id === id));
   if (kept.length && prev?.w && prev.h && (prev.w !== O.W || prev.h !== O.H)) { console.error(`--size ${O.W}x${O.H}: ${kept.length} pictures this run leaves alone are ${prev.w}x${prev.h}, and stills.json names one size. Use --size ${prev.w}x${prev.h}, or another --out.`); process.exit(2); }
   await Promise.all(Array.from({ length: Math.max(1, jobs) }, async () => { for (;;) { const id = queue.shift(); if (!id) return;
-    const p = Bun.spawn(['bun', 'run', import.meta.path, '--one', id, '--size', `${O.W}x${O.H}`, '--spp', String(spp), '--out', out, '--set', set], { stdout: 'inherit', stderr: 'inherit' }); if (await p.exited !== 0) { bad++; console.error(`FAILED ${id}`); } } }));
+    const p = Bun.spawn(['bun', 'run', import.meta.path, '--one', id, '--size', `${O.W}x${O.H}`, '--spp', String(spp), '--out', out, '--set', set], { stdout: 'inherit', stderr: 'inherit', env: process.env }); if (await p.exited !== 0) { bad++; console.error(`FAILED ${id}`); } } }));
   // the list the menu reads: every picture in the folder that is a mission's (a run that names missions keeps the rest). A picture of a mission that is gone is
   // removed only if the folder's last list named it: nothing else in a folder handed to --out is this tool's to delete.
   const ids: string[] = []; for (const fn of readdirSync(out)) { if (!fn.endsWith('.jpg')) continue; const id = fn.slice(0, -4); if (all.some(m => m.id === id)) ids.push(id); else if (was.includes(id)) unlinkSync(join(out, fn)); }

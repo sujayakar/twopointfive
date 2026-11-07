@@ -28,7 +28,7 @@
 //   THE FLOOR'S TEAM: 'it can be won' is not asked of the PAIR on a level the mission list plays only with the four (fourManRowsOf below reads the list;
 //   the pair's count is still printed, and it still has to stage, walk and finish). A level with a pair row, or with no row, keeps the line.
 //
-// WHAT THIS IS NOT. A balance tally: the commander is the tally's (unseen, unhurt, giving orders only — ROOMCLEAR.pairOnly: the teammates all down = lost), the
+// WHAT THIS IS NOT. A balance tally: the commander is the tally's (unseen, unhurt, giving orders only), the
 // rescue's Sam walks and presses F and never fires (god mode: the pair and the level's data are what is under test, not his aim), the seeds are few.
 // THE HARNESS HAS NO GPU: no light meter (Sam is planted dark; what a man sees of another is guards.ts's direct-light estimate), no smoke sight lines, no picture.
 import { readFileSync, existsSync } from 'node:fs';
@@ -36,7 +36,6 @@ import { resolve, basename } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 const { validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 const { ROOMCLEAR, checkStructure } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { RESCUE, checkRescue } = await import(`${ROOT}/src/game/rescue.ts`);
@@ -78,7 +77,7 @@ function dataOf(file: string): { data: any; errs: string[] } {
   return d;
 }
 /** a fresh Level of the file, as the page's ?levelFile= loads it (the office family gets the office's script and scenario data); null = the file is not a level */
-export function levelOf(file: string): any | null { const { data } = dataOf(file); return data ? (isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data)) : null; }
+export function levelOf(file: string): any | null { const { data } = dataOf(file); return data ? (loadLevel(data)) : null; }
 async function stand(file: string, seed: number): Promise<any> { Math.random = seeded(0x5ce1 + seed * 7919); resetKnobs(); return standUp({ uploadEvery: 4, level: levelOf(file) }); }
 /** a part with nothing to check: said, and no 'ALL PASS' (probes.ts counts check lines: a part that printed none is NO VERDICT). It returns true because a
  *  level that does not carry a scenario has not FAILED it; the command line's closing banner names the parts skipped so its 'ALL PASS' is not read as theirs */
@@ -92,7 +91,7 @@ export async function scenarioData(file: string): Promise<boolean> {
   const { data, errs } = dataOf(file), level = levelOf(file);
   if (!level) { F.verdict(false, 'the file validates', `${errs.length} error(s): ${errs.slice(0, 8).join(' · ')}`); return F.done(); }
   const S = level.scenarios ?? {};
-  F.verdict(true, 'the file validates', `${data.name}: ${data.boxes.length} boxes · ${data.doors.length} doors · ${data.props.length} props · scenarios ${Object.keys(S).join(', ') || 'none'}${isOfficeFamily(data) ? ' (the office family: its data is levels/office.scenarios.ts)' : ''}`);
+  F.verdict(true, 'the file validates', `${data.name}: ${data.boxes.length} boxes · ${data.doors.length} doors · ${data.props.length} props · scenarios ${Object.keys(S).join(', ') || 'none'}`);
   F.verdict(!!(S.roomClear || S.rescue || S.nightBreach), 'it carries scenario data', Object.keys(S).length ? Object.keys(S).map(k => k === 'roomClear' ? `roomClear: ${S.roomClear.rooms.length} rooms, ${S.roomClear.rooms.reduce((n: number, r: any) => n + r.garrison, 0)} defenders, team start ${S.roomClear.team ? `given (${S.roomClear.team.ops?.length ?? 0} teammate marks)` : "the breach plan's"}` : k === 'rescue' ? `rescue: ${S.rescue.hostages.length} hostages in the ${S.rescue.room.name}, ${S.rescue.side ? 'a side door' : 'one door'}, ${S.rescue.flow ? `a route of ${S.rescue.flow.route.length} openings` : 'no flow'}` : `nightBreach: ${level.breach ? 'on the breach plan' : 'NO breach plan'}`).join(' · ') : 'no scenarios block: nothing for a scenario to run on');
   let W: any = null, threw = '';
   try { W = await quiet(true, () => stand(file, 1)); for (let i = 0; i < 120; i++) { W.game.player.visibility = 0.05; W.step(DT); } } catch (e: any) { threw = String(e?.stack ?? e).split('\n').slice(0, 2).join(' | '); }
@@ -236,7 +235,7 @@ async function playClear(file: string, squad: 2 | 4, seed: number, cap: number, 
   let C: Clear | null = null;
   try {
     const W: any = await quiet(!verbose, () => stand(file, seed)); const g = W.game, S = g.level.scenarios.roomClear;
-    ROOMCLEAR.pairOnly = true; NIGHTBREACH.squad = squad;
+    NIGHTBREACH.squad = squad;   // (until 2026-11-07 ROOMCLEAR.pairOnly was written on here, the tally's rule: a settled row at off, the write was refused, so this has run with Sam one of the squad since the fold)
     const log = console.log; if (!verbose) console.log = () => {};
     try {
       const why = g.roomClear.start(seed); if (why) throw new Error(`start refused: ${why}`);
@@ -254,7 +253,7 @@ async function playClear(file: string, squad: 2 | 4, seed: number, cap: number, 
       try { C.step(30); C.run(); } catch (e) { if (e instanceof Done) { out.end = e.end; out.why = e.why; } else throw e; }
     } finally { console.log = log; }
   } catch (e: any) { out.end = 'error'; out.note = String(e?.stack ?? e).split('\n').slice(0, 3).join(' | '); }
-  finally { resetKnobs(); }   // (pairOnly, the squad's size and the seed are module state: the next probe in this process gets the tables as shipped)
+  finally { resetKnobs(); }   // (the squad's size and the seed are module state: the next probe in this process gets the tables as shipped)
   if (C) { out.t = C.t; out.opsUp = C.ops.length; out.rooms = C.rooms.map((r: any) => `${r.def.id} ${r.cleared ? 'clear' : `${up(r.defenders).length}/${r.defenders.length}`}`).join(' · '); out.entered = [...C.entered]; out.walked = Math.max(0, ...C.walked.values()); out.orders = C.orders; out.refused = C.refused; out.trace = C.trace; out.fell = C.fell; }
   if (out.end === 'taken' && C && !C.ops.length) { out.end = 'wiped'; out.why = 'the last defender and the last teammate in the same moment'; }
   return out;

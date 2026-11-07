@@ -16,6 +16,7 @@ import { levelNameOf } from '../scene/levelLoad';
 import { snowLayBare, snowPaintOf, snowThinLay } from '../render/snowField';
 import { sim } from '../sim/sim';
 import { WX_KNOBS, WX_WATCH } from '../sim/weatherhome';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const SNOWBOG = {
   on: false,
@@ -61,7 +62,7 @@ export function snowBogMay(g: Game): boolean { return SNOWBOG.on && snowLevel(le
 export function snowBogKinds(g: Game): Uint8Array { return ground(g).kinds; }
 /** how boggy the ground is where a thing touched down at (x, y, z), 0‥1 (0 = a floor: the bounce as it was). 0 with the switch off. The rule is the module's
  *  (rust/sim/src/items.rs bog_of, by snow.rs), over the one table of the snow in its copy of the box world and the weather's roofs. */
-export function snowBogAt(g: Game, x: number, y: number, z: number): number {
+export function snowBogAt(g: Game, x: number, y: number, z: number): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('snowBogAt', undefined, [g, x, y, z]); if (__r !== RUST_PASS) return __r as any; } }
   if (!SNOWBOG.on || !snowLevel(levelNameOf(g.level))) return 0;
   g.weather.roofsNow(); WX_KNOBS.here();
   return g.col.rule(() => {

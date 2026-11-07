@@ -184,7 +184,7 @@ import { HOUR, HOUR_IDS, hourIdOf } from '../../src/game/hours.ts';
 import { doorCells, frameOf, canSeeChar } from '../../src/game/guards.ts';
 import { pickHover } from '../../src/game/player.ts';
 import { HOLDFIRE_STATS } from '../../src/game/holdfire.ts';
-import { fragStepOff, FRAG_STATS, FRAG_WHY, FRAG_LOG, fragStatsReset } from '../../src/game/frag.ts';
+import { fragStepOff, FRAG_STATS, FRAG_WHY, FRAG_LOG } from '../../src/game/frag.ts';
 import { CONDITION_STATS } from '../../src/game/condition.ts';   // (the JSON's `condition`: how many men a blast left hurt this run)
 import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from '../../src/game/destructionSwitch.ts';
 import { WALLREACT, WALLREACT_STATS, wallReactOf } from '../../src/game/wallreact.ts';
@@ -230,7 +230,6 @@ if (import.meta.main && pinned('PT_POP')) EVICT.on = process.env.PT_POP === '1';
 if (process.env.PT_FURN === '0') FURNBLAST.on = false;   // PT_FURN=0 (with PT_DESTR=1): charges leave the furniture standing (the page's ?nofurnblast) — the A/B of game/furnblast.ts
 if (process.env.PT_STUNLIGHTS === 'old') { const L = (await import(`${ROOT}/src/game/destruction.ts`)).CHAOS.loud; L.stunFixtureM = L.fixtureBlastM; L.stunPanels = true; }   // PT_STUNLIGHTS=old: a stun charge puts the lights out like a blast again (destruction.ts CHAOS.loud.stunFixtureM / stunPanels at their old values) — the build before that rule, by digest
 const { installDustStandin } = await import('./dust-standin.ts');
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
 const { openFloor } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobRegistry, knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);   // THE list of knob tables: what --set reaches and what a run puts back
@@ -269,7 +268,7 @@ const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : '—');
 const at = (p: number[]) => `(${f1(p[0])}, ${f1(p[2])})`;
 const wrap = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a <= 0) a += 2 * Math.PI; return a - Math.PI; };
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', lookLevelFile(file))), 'utf8'));   // (scene/look.ts: under TPS_LOOK=1 a level's file in the default look — the same boxes in other paint)
-  return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+  return loadLevel(data); };
 async function quiet<T>(on: boolean, fn: () => T | Promise<T>): Promise<T> { if (!on) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 
 export const SMELLS = ['stuck', 'hung', 'overlap', 'doorway', 'flag', 'wall', 'snap', 'twitch', 'behind', 'block', 'unaware', 'friendly', 'wrongway'] as const;   // ('wrongway': something stood a door open on the side it does not open into and doors.ts turned it round — Door.mirrored; no opener does)
@@ -1390,7 +1389,7 @@ class Searcher {
   private markT = new Map<any, number>();
   /** … and the bracketed names that are no room of the list (laststand.ts `places`: floor nobody holds — the marker sits on it), by `places` entry */
   private markA = new Map<any, number>();
-  private marks() { const t = this.P.g.time, text: string = this.P.g.roomClear.objective()?.text ?? ''; const on = new Set<string>(); for (const m of text.matchAll(/\[([^\]]+)\]/g)) on.add(m[1]);
+  private marks() { const t = this.P.g.time, M = this.P.g.view.mission, text: string = M?.of === 'roomclear' ? M.text : ''; const on = new Set<string>(); for (const m of text.matchAll(/\[([^\]]+)\]/g)) on.add(m[1]);
     for (const R of this.P.g.roomClear.rooms as any[]) { if (on.has(R.def.name)) { if (!this.markT.has(R)) this.markT.set(R, t); } else this.markT.delete(R); }
     for (const A of this.places) { if (A.R) continue; if ([...on].some(n => `the ${n}`.toLowerCase() === A.name || n.toLowerCase() === A.name)) { if (!this.markA.has(A)) this.markA.set(A, t); } else this.markA.delete(A); } }
   private inArea(A: { rects: { x0: number; x1: number; z0: number; z1: number }[] }, q: number[], pad = 0): boolean { return A.rects.some(b => Math.hypot(Math.max(b.x0 - q[0], 0, q[0] - b.x1), Math.max(b.z0 - q[2], 0, q[2] - b.z1)) <= pad); }
@@ -1614,7 +1613,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
   const out: RunOut & { trace: string[] } = { scn, seed, end: 'error', why: '', t: 0, team: 0, of: 0, hostiles: 0, hostilesOf: 0, orders: 0, refused: [], smells: [], rooms: 0, note: '', trace: [] };
   let P: Player | null = null, cuesOn = true, clOn = false;
   MAINS.length = 0; mainsOut = false;
-  const { FRIENDLYFIRE_STATS: FF } = await import('../../src/game/friendlyfire.ts'); const ff0 = { ...FF }; const { FIRELINE_STATS: FL } = await import('../../src/game/fireline.ts'); const fl0 = { ...FL };   // (friendly fire: this run's own share of the tally, on `ff` below)
+  const { FRIENDLYFIRE_STATS: FF } = await import('../../src/game/friendlyfire.ts'); let ff0 = { ...FF }; const { FIRELINE_STATS: FL } = await import('../../src/game/fireline.ts'); let fl0 = { ...FL };   // (friendly fire: this run's own share of the tally, on `ff` below)
   // (--set reaches the feel tables, the rescue's own, and the harder defenders: THE SWITCH as the game's own row sets it — --set '{"DIFFICULTY":{"level":"hard"}}'
   // (game/difficulty.ts; HARD = what hard is beside both switches on, set first; HARD_AT = hard's own rows on one level, by its structure's name:
   // '{"HARD_AT":{"the block":{}},"DIFFICULTY":{"level":"hard"}}' = the build's hard there) — and then the two tables under it, row by row, over whatever the level wrote)
@@ -1643,12 +1642,10 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     if (rest.OPENING) throw new Error('--set: OPENING is read while the game is built, which is before --set lands: TPS_OPENING=1 turns it on for the frozen stand, TPS_OPENING=0 off under TPS_PROFILE=shipped');
     for (const [name, o] of Object.entries(rest)) put(name, o);
     dug = DIGIN.on; bud = BUDDY.on; clOn = !!CLM?.CLEARLINE?.on; out.difficulty = difficultyNow(); if (leversMixed()) (out as any).levers = leversLine(true); if (HOUR.id !== 'night') out.hour = HOUR.id;
-    Math.random = seeded(0x9137 + seed * 7919); fragStatsReset(); for (const k of Object.keys(TEAMPACE_STATS) as (keyof typeof TEAMPACE_STATS)[]) TEAMPACE_STATS[k] = 0; for (const k of Object.keys(NOSHOVE_STATS) as (keyof typeof NOSHOVE_STATS)[]) NOSHOVE_STATS[k] = 0;   // (teampace.ts: this run's runs by reason — the JSON's `teampace`)
-    for (const k of Object.keys(PICTURE_STATS) as (keyof typeof PICTURE_STATS)[]) PICTURE_STATS[k] = 0;   // (picture.ts: this run's counts — the JSON's `picture`)
-    for (const k of Object.keys(DOORFORCE_STATS) as (keyof typeof DOORFORCE_STATS)[]) DOORFORCE_STATS[k] = 0;   // (doorforce.ts: this run's counts — the JSON's `doorforce`)
-    HOLDFIRE_STATS.held = HOLDFIRE_STATS.heldGlass = 0; HOLDFIRE_STATS.lifts.shot = HOLDFIRE_STATS.lifts.order = HOLDFIRE_STATS.lifts.drill = 0;
+    Math.random = seeded(0x9137 + seed * 7919);   // (this run's counts — the JSON's `frag`, `teampace`, `noshove`, `picture`, `doorforce`, `holdfire` — begin level because every stand-up puts a tally back: tools/qa/fresh.ts)
     WEATHER_BOOT.kind = (wx?.kind as any) ?? null; if (wx?.kind) (out as any).weather = wx.kind;
     let W: any; try { W = await quiet(!verbose, () => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })); } finally { WEATHER_BOOT.kind = null; } const g = W.game;
+    ff0 = { ...FF }; fl0 = { ...FL };   // (this run's share is counted from AFTER its stand-up, which puts a game's tallies back: tools/qa/fresh.ts)
     DOORSTAY.on = (rest.DOORSTAY?.on as boolean | undefined) ?? true;   // (the page's default too: doors stay where they are left — the harness stood the game up with the closers of old; --set '{"DOORSTAY":{"on":false}}' keeps them)
     T.DOORMANNERS.on = (rest.DOORMANNERS?.on as boolean | undefined) ?? true;   // (and the doorway manners as shipped: headless.ts stands every other tool up without them; --set '{"DOORMANNERS":{"on":false}}' plays without)
     DOORBLAST.on = (rest.DOORBLAST?.on as boolean | undefined) ?? true;   // (and a blast takes a leaf off its hinges, as shipped: --set '{"DOORBLAST":{"on":false}}' = a charge flings it in on its hinge)
@@ -1768,7 +1765,7 @@ if (import.meta.main) {
   const todo = ids.flatMap(scn => seeds.map(seed => ({ scn, seed }))), runs: RunOut[] = []; let next = 0; const t0 = Date.now();
   const worker = async () => { for (;;) { const j = todo[next++]; if (!j) return;
     const file = resolve(tmpdir(), `playthrough-${process.pid}-${j.scn}-${j.seed}.json`);
-    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.scn}:${j.seed}`, '--out', file, '--cap', String(cap), '--set', JSON.stringify(set)], { stdout: 'ignore', stderr: 'pipe' });
+    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.scn}:${j.seed}`, '--out', file, '--cap', String(cap), '--set', JSON.stringify(set)], { stdout: 'ignore', stderr: 'pipe', env: process.env });
     const errText = await new Response(pr.stderr).text(); await pr.exited;
     let r: RunOut; try { r = JSON.parse(readFileSync(file, 'utf8')); rmSync(file); } catch { r = { scn: j.scn, seed: j.seed, end: 'error', why: `the run left no result — ${errText.trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`, t: 0, team: 0, of: 0, hostiles: 0, hostilesOf: 0, orders: 0, refused: [], smells: [], rooms: 0, note: '' }; }
     { const c = r as RunOut & { fell?: Record<string, number>; alone?: [number, Record<string, number>, number?]; priced?: [number, number, number] };   // (TPS_FELL: a run is a process of its own, so its count comes home in its file and is added to this one's, which headless.ts prints as the tool ends)

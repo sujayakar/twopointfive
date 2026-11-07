@@ -30,13 +30,11 @@
 // snapshot / restore pair (savestate.ts). Type-only game imports but for functions called inside functions (src/game is one import cycle).
 import { SideMap } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
-import type { Game, Guard, GameEvent } from './game';
-import { isHostile } from './teams';
-import { fightLive } from './roomfight';
-import { whistleMem } from './whistle';
-import { nearKnownBody } from './guards';
-import { simRandom } from '../math/dice';
-import { wordNow } from './belief';
+import type { Game, Guard } from './game';
+import './teams';
+import './whistle';
+import './guards';
+import { crossToRust } from './crossing';
 
 /** the switch and every number of it (UNTUNED by play: nobody has sneaked past a held man on a real page yet) */
 export const ATTENTION = {
@@ -114,7 +112,6 @@ const SPENT = ['no. somebody\'s doing that.', 'that\'s no accident. come out.'],
 const BROKE = ['—wait.', 'what—'];
 const DONE_FOE = ['…nothing.', 'nothing there.'];
 export function attentionLines(): string[] { return [...WARY, ...WARY_FOE, ...SPENT, ...SPENT_FOE, ...BROKE, ...DONE_FOE]; }
-function line(g: Game, gd: Guard, pool: string[]) { const M = mem(gd); let i = Math.floor(simRandom() * pool.length) % pool.length; if (pool.length > 1 && i === M.line) i = (i + 1) % pool.length; M.line = i; g.say(gd, pool[i]); }
 
 // ---------------------------------------------------------------- reading it
 /** the hold on this man's attention right now, or null (always null with the switch off) */
@@ -138,149 +135,16 @@ export function attentionOffDeg(g: Game, gd: Guard, p: Vec3): number | null { co
 export function attentionSideK(g: Game, gd: Guard, p: Vec3): number {
   const H = attentionOf(g, gd); return H && outside(gd, H as Hold, p) ? ATTENTION.sideK : 1;
 }
-/** guards.ts updateGuard, on a glimpse worth `gain` of awareness of a man at `p`: true = it was at the edge of a held eye — it feeds his awareness and writes NO
- *  fix (he has not turned to it). `breakGain` of those in sum and the hold breaks: false from then on, so this glimpse is his fix and his head comes round.
- *  A man still at his own business under it (a lent hold, a turned head: 'patrol') has no sum — what he half-sees drains as it always did, and the hold breaks
- *  when his awareness itself is at `breakGain`, with no line: his own 'huh?' is a moment off. */
-export function attentionAside(g: Game, gd: Guard, p: Vec3, gain: number): boolean {
-  const H = attentionOf(g, gd) as Hold | null; if (!H || !outside(gd, H, p)) return false;
-  if (gd.state === 'patrol') {
-    if (gd.awareness < ATTENTION.breakGain) return true;
-    if (H.mode === 'lent') mem(gd).lentOff = g.time + ATTENTION.lentBackSecs;
-    end(g, gd, 'glimpse'); return false;
-  }
-  H.glimpse += gain;
-  if (H.glimpse < ATTENTION.breakGain) return true;
-  end(g, gd, 'glimpse'); line(g, gd, BROKE); return false;
-}
-/** guards.ts hearingCheck: × a footfall's level at his ear / × any other small noise's (1 but for a lent hold whose lender dulls them) */
-export function attentionEarK(g: Game, gd: Guard): number { return attentionOf(g, gd)?.ears ?? 1; }
-export function attentionNoiseK(g: Game, gd: Guard): number { return attentionOf(g, gd)?.noises ?? 1; }
-/** guards.ts hearingCheck: a footfall DID reach him, placed at `at` — that is a man, not a thing: the hold is over and he turns to it */
-export function attentionStep(g: Game, gd: Guard, at: Vec3) {
-  const H = attentionOf(g, gd); if (!H) return;
-  if (H.mode === 'lent') mem(gd).lentOff = g.time + ATTENTION.lentBackSecs;
-  end(g, gd, 'step'); if (gd.state === 'suspicious') { if (!wordNow(g, gd)) gd.lastKnown = v3.copy(at); gd.path = []; gd.pathGoal = null; }
-}
-/** did he say he was done inside the last few seconds (guards.ts: the walk back's 'must have been nothing' is then already said) */
-export function attentionTold(g: Game, gd: Guard): boolean { if (!ATTENTION.on) return false; const M = memOf.get(gd); return !!M && g.time - M.toldAt < 4; }
-/** guards.ts, a calm man tipped over the 'huh?' line this frame: true = the thing that did it is one more of a trick played on him inside his memory, and this
- *  file's line stands for the 'huh?' ('again?', or the one that is no look at all) — the tick says it, or the 'huh?' itself if it turns out to be no taking */
-export function attentionAgain(g: Game, gd: Guard): boolean {
-  if (!ATTENTION.on) return false;
-  const M = memOf.get(gd), now = g.time; if (!M || !M.cand || M.cand.t !== now || M.cand.kind === 'whistle' || !M.takes.some(t => now - t <= ATTENTION.memorySecs)) return false;
-  M.owed = now; return true;
-}
 
-// ---------------------------------------------------------------- taking it
-/** guards.ts hearingCheck's `small`: a small thing reached this man and he placed it at `where`. Weighed by attentionTick, once his state has answered it. */
-export function attentionHeard(g: Game, gd: Guard, e: GameEvent, where: Vec3) {
-  if (!ATTENTION.on || e.kind === 'step' || e.kind === 'glass' || e.loud) return;
-  const kind: DrawKind = e.kind === 'whistle' ? 'whistle' : e.kind === 'door' ? 'door' : e.kind === 'lightOut' ? 'light' : 'noise';
-  if (e.lure && gd.awareness < ATTENTION.drawAw && able(g, gd)) gd.awareness = ATTENTION.drawAw;   // a knock made to be looked at: he goes and looks at IT
-  mem(gd).cand = { at: [where[0], 0, where[2]], kind, t: g.time };
-}
 /** Another file's standing claim on this man's attention (a lit screen he sits at): call it every update the claim stands, with the place on the floor — a claim
  *  not renewed is over at his next tick or the one after (there is no call to take one back: stop calling). A checkpoint carries it. `ears` /
  *  `noises` = × a footfall / × every other small noise at his ear while it stands (headphones: the lender's numbers). It holds only a calm man on his own
  *  business, shows as any hold does, and a real thing — a noise that makes him look, a glimpse, a step — takes it from the screen like any other. */
-export function attentionLend(g: Game, gd: Guard, at: Vec3, o: { ears?: number; noises?: number } = {}) {
-  if (!ATTENTION.on) return;
-  mem(gd).lent = { at: [at[0], 0, at[2]], t: g.time, ears: o.ears ?? ATTENTION.earK, noises: o.noises ?? 1 };
-}
-/** can this man's attention be held at all this frame: calm, on his own business, against Sam's side, nothing choreographed, and no squad fight on the floor —
- *  the room fight is 'live' whenever a teammate is on the floor at all, so a QUIET mission as two (quiet.ts: sneaking with one partner) counts as no fight;
- *  on a loud squad map the rule stands off (those runs are by digest what they were) */
-function able(g: Game, gd: Guard): boolean {
-  return (gd.state === 'patrol' || gd.state === 'suspicious') && !gd.bodyDuty && !gd.task && gd.awareness < ATTENTION.calmAw && g.time >= gd.dazzledUntil
-    && !g.touring && !g.quietUtility && (!fightLive(g) || !!g.quiet?.active) && isHostile(gd.team, 'player');
-}
-function secsFor(kind: DrawKind): number { return kind === 'whistle' ? ATTENTION.whistleSecs : kind === 'door' ? ATTENTION.doorSecs : kind === 'light' ? ATTENTION.lightSecs : ATTENTION.noiseSecs; }
+export function attentionLend(g: Game, gd: Guard, at: Vec3, o: { ears?: number; noises?: number } = {}): void { return crossToRust('attentionLend', undefined, [g, gd, at, o]) as any; }
 function end(g: Game, gd: Guard, why: string) {
   const M = mem(gd), H = M.hold; if (!H) return;
   M.hold = null; if (why === 'done') ATTENTION_STATS.released++; else if (why !== 'over') ATTENTION_STATS.broken++;
   log(g, gd, why, H);
-}
-/** guards.ts updateGuard, once a frame for a man on his own senses, after his state has answered this frame's perception: break a hold that no longer stands,
- *  weigh a small thing that reached him, keep a lent one. */
-export function attentionTick(g: Game, gd: Guard) {
-  if (!ATTENTION.on) return;
-  const M = mem(gd), now = g.time; const cand = M.cand && M.cand.t === now ? M.cand : null; M.cand = null;
-  if (M.hold && now - M.tick > STALE) { log(g, gd, 'stale', M.hold); M.hold = null; }   // (he was somebody else's for a while — a script, an arm round his neck: what held his attention before is nobody's now)
-  const prev = M.tick; M.tick = now;
-  const owed = M.owed === now;   // (guards.ts left this frame's 'huh?' to the lines below)
-  const lent = M.lent && M.lent.t >= prev && now - M.lent.t <= STALE ? M.lent : null; if (!lent) M.lent = null;   // (renewed since his last tick, whichever of the lender and this runs first in the frame: a claim not renewed is over at once — no quarter second of a narrowed eye on a screen he has got up from)
-  const free = able(g, gd);
-  let H = M.hold;
-  if (H && !free) { end(g, gd, 'roused'); H = null; }
-  if (!free) { if (owed) g.say(gd, 'huh?'); return; }
-  // his suspicion is on the held thing while his fix is the thing (a 'go' hold IS a walk to his fix; a turned head on patrol has no fix to compare)
-  const onIt = (h: Hold) => !!gd.lastKnown && v3.distXZ(gd.lastKnown, h.at) <= 0.6;
-  if (H) {
-    if (H.mode === 'go') { if (gd.state !== 'suspicious' || (!onIt(H) && !cand)) { end(g, gd, 'elsewhere'); H = null; } }
-    else if (H.mode === 'look') {
-      if (gd.state === 'suspicious' && !gd.hold && onIt(H)) { H.mode = 'go'; H.until = -1; H.told = false; }   // (a look that became a walk: a posted man let off his post, a turned head the same thing then tipped into going — the clock starts when he gets there)
-      else if (gd.state === 'suspicious' && !onIt(H) && !cand) { end(g, gd, 'elsewhere'); H = null; }   // (something else has him now — a man in his view, a slam: the look is over and nothing of it is forgiven)
-      else if (now >= H.until) { if (gd.state === 'suspicious') { gd.awareness = Math.min(gd.awareness, 0.1 + H.glimpse); end(g, gd, 'done'); } else end(g, gd, 'over'); H = null; }
-      else if (gd.state === 'suspicious') { gd.awareness = Math.max(gd.awareness, ATTENTION.floor); tell(g, gd, M, H); }
-    }
-    else if (!lent || gd.state !== 'patrol') { end(g, gd, 'over'); H = null; }
-    else { H.at = lent.at; H.ears = lent.ears; H.noises = lent.noises; }
-  }
-  let spoke = false;
-  if (cand) {
-    const same = now - M.heardT < ATTENTION.sameSecs; M.heardT = now; if (!same) M.series = false;   // (the same happening heard again: no new taking, whatever the place)
-    const going = gd.state === 'suspicious' && !!gd.lastKnown && v3.distXZ(gd.lastKnown, cand.at) < 0.6;
-    const G = whistleMem(gd), glancing = gd.state === 'patrol' && !!G && now < G.glanceUntil && !!G.glanceAt && v3.distXZ(G.glanceAt, cand.at) < 0.6;
-    if (H && H.mode !== 'lent' && same) {
-      if (going) { if (H.mode === 'go' && H.until >= 0 && v3.distXZ(H.at, cand.at) > 0.6) { H.until = -1; H.yaw = null; H.told = false; } H.at = v3.copy(cand.at); }   // (it moved: he follows it, and looks at it where it stopped)
-    } else if (going && !(same && M.series)) {
-      if (H) end(g, gd, 'elsewhere');
-      M.takes = M.takes.filter(t => now - t <= ATTENTION.memorySecs); const nth = M.takes.length + 1; M.takes.push(now); M.series = true;
-      if (nth >= ATTENTION.spent && cand.kind !== 'whistle') {   // the trick is spent on him: no look — he draws and searches the place (a whistle has its own 'twice': whistle.ts)
-        gd.state = 'search'; gd.searchT = 0; gd.searchPlan = null; gd.pieing = null; gd.reactT = 0; gd.path = []; gd.pathGoal = null; gd.stallRef = null;
-        ATTENTION_STATS.spent++; log(g, gd, 'spent', { kind: cand.kind, secs: 0, nth }); line(g, gd, gd.team === 'guard' ? SPENT : SPENT_FOE); return;
-      }
-      const secs = secsFor(cand.kind) * Math.pow(ATTENTION.wearK, nth - 1), posted = !!gd.hold;
-      H = M.hold = { at: v3.copy(cand.at), kind: cand.kind, mode: posted ? 'look' : 'go', t0: now, secs, full: secsFor(cand.kind), until: posted ? now + Math.max(0, gd.reactT) + secs : -1, glimpse: 0, told: false, nth, ears: ATTENTION.earK, noises: 1, yaw: null };
-      ATTENTION_STATS.taken++; log(g, gd, 'taken', H);
-      if (nth > 1) { ATTENTION_STATS.worn++; if (cand.kind !== 'whistle') { line(g, gd, gd.team === 'guard' ? WARY : WARY_FOE); spoke = true; } }
-    } else if (glancing && (!H || H.mode === 'lent')) {
-      const secs = G!.glanceUntil - now;
-      H = M.hold = { at: v3.copy(cand.at), kind: cand.kind, mode: 'look', t0: now, secs, full: secs, until: G!.glanceUntil, glimpse: 0, told: true, nth: 1, ears: ATTENTION.earK, noises: 1, yaw: null };
-      ATTENTION_STATS.looks++; log(g, gd, 'look', H);
-    }
-  }
-  if (owed && !spoke) g.say(gd, 'huh?');   // (no taking after all: the 'huh?' he was owed)
-  if (!H && lent && gd.state === 'patrol' && now >= M.lentOff && gd.awareness < ATTENTION.breakGain) {
-    M.hold = { at: lent.at, kind: 'lent', mode: 'lent', t0: now, secs: 0, full: 0, until: -1, glimpse: 0, told: true, nth: 1, ears: lent.ears, noises: lent.noises, yaw: null };
-    ATTENTION_STATS.lent++; log(g, gd, 'lent', M.hold);
-  }
-}
-/** `tellSecs` before the end he says he is done — the staff's own 'must have been nothing', said here instead of on the walk back; a side without one gets a word */
-function tell(g: Game, gd: Guard, M: Mem, H: Hold) {
-  if (H.told || H.until < 0 || g.time < H.until - ATTENTION.tellSecs) return;
-  H.told = true;
-  // (guards.ts's own rules for the calm line: never over a body the floor knows of, never on top of his own radio line of a moment ago, never with Sam down)
-  if (nearKnownBody(g, gd.char.pos, 4) || (gd.bubble?.radio && g.time - gd.bubble.t < 4) || (gd.foe === 'player' && g.player.down)) return;
-  M.toldAt = g.time;
-  if (gd.team === 'guard') g.say(gd, g.escalation >= 1 ? 'clear here — staying on it' : 'must have been nothing'); else line(g, gd, DONE_FOE);
-}
-/** guards.ts, the suspicious branch, still WALKING to his fix: a held attention does not drain away under him short of the thing (and does not outlast `walkCap`) */
-export function attentionWalk(g: Game, gd: Guard) {
-  const H = attentionOf(g, gd) as Hold | null; if (!H || H.mode !== 'go' || H.until >= 0) return;
-  if (g.time - H.t0 > ATTENTION.walkCap) { end(g, gd, 'far'); return; }
-  gd.awareness = Math.max(gd.awareness, ATTENTION.floor);
-}
-/** guards.ts, the suspicious branch, ARRIVED at his fix: true = his attention is on the thing — he looks AT it (the caller swings him `dwellSweep`, not the old
- *  look round the room) and his suspicion stands; the clock on it started the frame he got here. False on the frame it runs out (his suspicion dropped: the
- *  branch's own exit walks him back) and for every man whose attention is his own. */
-export function attentionDwell(g: Game, gd: Guard): boolean {
-  const H = attentionOf(g, gd) as Hold | null; if (!H || H.mode !== 'go') return false;
-  if (H.until < 0) { H.until = g.time + H.secs; H.yaw = gd.char.bodyYaw; }
-  if (g.time >= H.until) { gd.awareness = Math.min(gd.awareness, 0.1 + H.glimpse); end(g, gd, 'done'); return false; }   // (what he half-saw at the edge of it stays with him)
-  gd.awareness = Math.max(gd.awareness, ATTENTION.floor); tell(g, gd, mem(gd), H);
-  return true;
 }
 
 // ---------------------------------------------------------------- showing it (ui/attentionviz.ts draws exactly this list; the check reads it)

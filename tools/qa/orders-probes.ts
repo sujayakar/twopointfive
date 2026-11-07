@@ -32,6 +32,7 @@
 //   orders-seams       what the later parts build on: a man the fight AI has (script ended, alert, eyes on) is left to it on his post and taken back once cold; an
 //                      owner that refuses keeps its men; a show taking the floor drops every order
 import { standUp, ROOT } from './headless.ts';
+import { toolsRow4 } from './order-keys.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS, doorWords } = await import(`${ROOT}/src/game/orders.ts`);   // (doorWords: a door's name as the HUD says it — its id's words, or the rooms it joins where the door names rule is on — so the expected words follow the stand)
 const { COVER } = await import(`${ROOT}/src/game/cover.ts`);
@@ -223,7 +224,7 @@ export const ordersMenu = guarded(async () => {
   R.openX(sam.pos, 0.4); const rN = ids(O.menu.rows); R.esc();
   R.pick(W.frameCentre, 5, 5);
   const regLog = lastOrder(O); O.unregister('testCharge'); O.log.length = 0;
-  verdict(rD === `stack cover fallIn hold tools ▸ openClear bangClear charge ${DOORTOOLS.outsidePlain ? 'thresholdHold' : 'thr'} fragClear testCharge` && kD === '12345' && backD && rF === floor && rN === none && ran === 1 && regLog?.order === 'testCharge' && O.menu === null, 'a door order registered by a later part on the door tools\' page shows on doors only, at the foot of that page on the next digit (5, after the tools\' 1 to 4 — never one above 5) — the built-in rows keep theirs — Esc on the page steps back to the first, and X, 5, 5 runs it', `door: ${rD} (page digits ${kD}, Esc back ${backD}) · floor: ${rF} · nothing: ${rN} · ran ${ran} · ${logLine(regLog)}`);
+  verdict(rD === `stack cover fallIn hold tools ▸ openClear bangClear charge ${toolsRow4(DOORTOOLS)} fragClear testCharge` && kD === '12345' && backD && rF === floor && rN === none && ran === 1 && regLog?.order === 'testCharge' && O.menu === null, 'a door order registered by a later part on the door tools\' page shows on doors only, at the foot of that page on the next digit (5, after the tools\' 1 to 4 — never one above 5) — the built-in rows keep theirs — Esc on the page steps back to the first, and X, 5, 5 runs it', `door: ${rD} (page digits ${kD}, Esc back ${backD}) · floor: ${rF} · nothing: ${rN} · ran ${ran} · ${logLine(regLog)}`);
   const moved0 = Math.max(...[b1, b2].map((m: any, i: number) => dist(m.char.pos, start[i])));
   verdict(moved0 < 0.05 && O.log.length === 0, 'through all of that no order was given and nobody moved', `orders logged ${O.log.length} · most a man moved ${f2(moved0)} m`);
   // a digit picks at once and is not Sam's weapon slot
@@ -267,7 +268,7 @@ export const ordersMove = guarded(async () => {
   verdict(dist(aimed, AISLE) < 0.1 && lastOrder(O)?.order === 'move' && lastOrder(O).target === `floor:${AISLE[0].toFixed(1)},${AISLE[2].toFixed(1)}`, 'the cursor on a floor point, the quick key: "move there", to that point', `reticle ${at(aimed)} for ${at(AISLE)} · ${logLine(lastOrder(O))}`);
   verdict(ack.length === 1 && /moving|on it/.test(ack[0].text), 'the order is acknowledged in a word by one man', `said: ${ack.map(s => `${s.who} "${s.text}"`).join(', ') || 'nothing'}`);
   verdict(early.every(d => d > 0.1) && first.every(d => d > 0), 'they step off at once (a third of a second on, both are moving — a man leans into a move now, guards.ts PACE.accel: it was a quarter metre gone by then)', `moved after 0.33 s: ${early.map(f2).join(' / ')} m${START.fallIn ? ` · off his spot three ticks in ${first.map(d => (d * 1000).toFixed(1)).join(' / ')} mm · each turned to the heading first (they stood fallen in, at ${stood.map(f2).join(' / ')} rad)` : ''}`);
-  verdict(set && dPost.every(d => d < 0.35) && dAt.every(d => d < 2.55) && apart > 0.8, 'both arrive: each on his own mark round the point, a body\'s room and more apart (roomfit.ts deals the marks from the room; it was two abreast at the point — roomfit-off holds that)', `in ${f2(tSet)} s · off his spot ${dPost.map(f2).join(' / ')} m · off the point ${dAt.map(f2).join(' / ')} m · apart ${f2(apart)} m · ${men.map((m: any) => at(m.char.pos)).join(' ')}`);
+  verdict(set && dPost.every(d => d < 0.35) && dAt.every(d => d < 2.55) && apart > 0.8, 'both arrive: each on his own mark round the point, a body\'s room and more apart (roomfit.ts deals the marks from the room; it was two abreast at the point)', `in ${f2(tSet)} s · off his spot ${dPost.map(f2).join(' / ')} m · off the point ${dAt.map(f2).join(' / ')} m · apart ${f2(apart)} m · ${men.map((m: any) => at(m.char.pos)).join(' ')}`);
   R.step(60);
   verdict(men.every((m: any) => { const A = O.of(m); return !!A.watch && Math.abs(wrap(m.char.aimYaw - yawTo(m.char.pos, A.watch))) < 0.3; }) && men.every((m: any) => O.statusOf(m).startsWith('in position · ')), 'each has his gun on what the room dealt him and the HUD says "in position" and what he is on (it was: every man facing the way they were sent)', `off the heading ${dYaw.map(f2).join(' / ')} rad · ${men.map((m: any) => O.statusOf(m)).join(' / ')}`);
   const sets = R.lines(/^set\.$/, t0);

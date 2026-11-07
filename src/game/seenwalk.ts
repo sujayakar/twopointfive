@@ -24,11 +24,12 @@
 //
 // SEENWALK.on: ON in the page (?seenwalk=0), off here and on the frozen stand (TPS_SEENWALK=1). Check: tools/qa/seenwalk-check.ts (SEENWALK_BREAK=1).
 // Headless: the light is the CPU stand-in's and the lines are the collision's. Never seen on a GPU; nobody has played it.
-import { SideMap, GameSideMap } from '../math/side';
+import { GameSideMap } from '../math/side';
 import type { Game } from './game';
 import type { Vec3 } from '../math/vec';
 import { placeLight } from './calmtorch';
 import { eyeReach } from './guards';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const SEENWALK = {
   on: false,
@@ -41,7 +42,6 @@ export const SEENWALK = {
   /** floor is read inside the short way's box grown by this (m); beyond it every block is dear: a way round does not go further out than that */
   margin: 8,
 };
-export const SEENWALK_DEFAULTS: typeof SEENWALK = { ...SEENWALK };
 /** walks asked · blocks of floor read · sight lines cast · walks that had a metre in view · ways round taken */
 export const SEENWALK_STATS = { asks: 0, blocks: 0, lines: 0, inView: 0, round: 0 };
 
@@ -63,7 +63,7 @@ export function seenReset(g: Game): void { shared.delete(g); }
 
 /** the price of the floor to a walk from `from` by `base` (the way he would be walked without this rule): `dear` on lit floor in view of an uncleared room,
  *  1 elsewhere — null when there is no room left uncleared within an eye's reach of that walk */
-export function seenPrice(g: Game, from: Vec3, base: Vec3[]): ((ix: number, iz: number) => number) | null {
+export function seenPrice(g: Game, from: Vec3, base: Vec3[]): ((ix: number, iz: number) => number) | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('seenPrice', undefined, [g, from, base]); if (__r !== RUST_PASS) return __r as any; } }
   const K = SEENWALK, C = g.cleared, nav = g.col.nav, cs = nav.cell, S = sharedOf(g); SEENWALK_STATS.asks++;
   if (!S.eyes.length) return null;
   let x0 = from[0], x1 = from[0], z0 = from[2], z1 = from[2];

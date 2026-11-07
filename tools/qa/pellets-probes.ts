@@ -1,7 +1,9 @@
-// The 'pellets' family (`bun run tools/qa/probes.ts pellets | pellets-arm | pellets-rule | pellets-energy | pellets-identity | pellets-red`):
+// The 'pellets' family (`bun run tools/qa/probes.ts pellets | pellets-arm | pellets-rule | pellets-energy | pellets-red`):
 // A LOAD OF SHOT AND A PANE (src/game/glasspen.ts 'the shell rule', shotgun.ts, glassbreak.ts widen; rebuild/gear-and-glass/pellets.md) — a shell's nine pellets
-// leave one honest set of holes in glass. All headless, on the real game stood up with the glass parts ON (each probe raises them by name and the stand-up of the
-// next game puts them back), PASS / FAIL each with the numbers.
+// leave one honest set of holes in glass. All headless, on the real game stood up as the page has it, the fracture model and the shards raised for each game
+// by name (Game.tune), PASS / FAIL each with the numbers. THE GLASS LOOK AND THE ROUNDS THROUGH GLASS ARE SETTLED (GLASSFX.on, GLASSPEN.on: constants of the
+// game), so since 2026-11-07 nothing here writes them, and `pellets-identity` is deleted: its whole question was the run with the glass parts off (the words
+// frozen on 0ee0094, the look's switch alone moving nothing).
 //   pellets-arm        the muzzle pressed through a pane (shoulder one side, muzzle the other): one shell files ONE crossing at the arm point — one blow in the
 //                      fracture model, one hole remembered, one exit jet, one 'glass' event — and all nine pellets fly on from the muzzle (the man beyond drops);
 //                      a laminated sheet across the arm takes the shell as one mark and lets nothing by
@@ -12,14 +14,11 @@
 //                      limit) is held to the same rule. Prints the table the page quotes: what a shell does to each glass at each range
 //   pellets-energy     GLASSPEN.energy.m870 is written down and means what the page says: one plain or toughened sheet square-on, never a second standing
 //                      one, never laminated; other rows untouched; a man behind plain glass is dropped by a shell, a man behind the laminated sidelight is not
-//   pellets-identity   glass parts off, a shell at each pane = the word frozen on 0ee0094; glass on and no shotgun in anybody's hands (rifle rounds through
-//                      the same panes) = the word frozen on 0ee0094
 //   pellets-red        the red paths: with the rule switched off (GLASSPEN.shellR 0) the arm check DOES go red (nine blows at one point); the record
 //                      checker flags a doctored record; with the m870 entry taken out the energy check goes red
-//   bun run tools/qa/pellets-probes.ts --words     prints the two identity words (run on the base commit to freeze them)
 import { standUp, ROOT, fake } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
-const { glassPanes, isSheet, GLASSFX, GLASS, resetGlass } = await import(`${ROOT}/src/game/glass.ts`);
+const { glassPanes, isSheet, GLASS, resetGlass } = await import(`${ROOT}/src/game/glass.ts`);
 const PEN = await import(`${ROOT}/src/game/glasspen.ts`);
 const { GLASSPEN, GLASSPEN_STATS, GLASSPEN_HOOKS, paneToll, paneType, roundEnergy, holeCount, resetGlassPen, shotPasses } = PEN;
 const { GB_STATS, GLASSBREAK } = await import(`${ROOT}/src/game/glassbreak.ts`);
@@ -28,31 +27,29 @@ const { fireWeapon, armThrough } = await import(`${ROOT}/src/game/combat.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { SHOTGUN_LAST, SHOTGUN_STATS } = await import(`${ROOT}/src/game/shotgun.ts`);
 const PM = await import(`${ROOT}/src/render/particles.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 
 type Vec3 = [number, number, number];
 type PaneKind = 'annealed' | 'tempered' | 'laminated';
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const hashStr = (s: string): number => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; };
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x)), f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : String(x));
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-const PEN_SHIPPED = JSON.parse(JSON.stringify(GLASSPEN)), FX_SHIPPED = GLASSFX.on;
-/** every probe leaves the glass switches and numbers as the module ships them, pass, fail or throw */
-const guarded = (fn: () => Promise<boolean>) => async () => { const hook = GLASSPEN_HOOKS.crossed, stats = { ...SHOTGUN_STATS }; try { return await fn(); } finally { Object.assign(SHOTGUN_STATS, stats); for (const k of Object.keys(GLASSPEN)) if (!(k in PEN_SHIPPED)) delete (GLASSPEN as any)[k]; Object.assign(GLASSPEN, JSON.parse(JSON.stringify(PEN_SHIPPED))); GLASSFX.on = FX_SHIPPED; GLASSPEN_HOOKS.crossed = hook; } };
+const PEN_SHIPPED = JSON.parse(JSON.stringify(GLASSPEN));
+/** every probe leaves the numbers of the rounds-through-glass table as the module ships them, pass, fail or throw */
+const guarded = (fn: () => Promise<boolean>) => async () => { const hook = GLASSPEN_HOOKS.crossed, stats = { ...SHOTGUN_STATS }; try { return await fn(); } finally { Object.assign(SHOTGUN_STATS, stats); for (const k of Object.keys(GLASSPEN)) if (!(k in PEN_SHIPPED)) delete (GLASSPEN as any)[k]; Object.assign(GLASSPEN, JSON.parse(JSON.stringify(PEN_SHIPPED))); GLASSPEN_HOOKS.crossed = hook; } };
 
 interface Pane { bi: number; b: any; kind: PaneKind; /** unit, off the face the shot comes at */ out: Vec3; /** the point of the sheet shot at */ p: Vec3; /** clear metres off that face */ room: number; /** that point is chest high (a man can stand at it), not up in a clerestory */ chest: boolean }
-/** One office under a seed, the glass parts as asked (all on by default), Sam unseen, everybody parked well away, AI off. */
-async function stage(seed: number, parts: { fx?: boolean; pen?: boolean; brk?: boolean; shards?: boolean } = {}) {
+/** One office under a seed, the fracture model and the shards as asked (on by default), Sam unseen, everybody parked well away, AI off. */
+async function stage(seed: number, parts: { brk?: boolean; shards?: boolean } = {}) {
   Math.random = seeded(seed);
   const W: any = await standUp(); const { game, engine } = W;
   engine.particles = new PM.Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
-  // (the stand-up has just put the three parts off and chaos at 0: what a probe needs goes on here, by name)
-  GLASSFX.on = parts.fx ?? true; GLASSPEN.on = parts.pen ?? true; game.tune.glassBreak = parts.brk ?? true; game.tune.glassShards = parts.shards ?? true; game.tune.chaos = 0.5;
+  // (what a probe needs of the game's own dials goes on here, by name)
+  game.tune.glassBreak = parts.brk ?? true; game.tune.glassShards = parts.shards ?? true; game.tune.chaos = 0.5;
   game.godMode = true; game.aiEnabled = false; game.player.visibility = 0.02;
   for (let i = 0; i < 5; i++) W.step(DT);
   const park = () => game.guards.forEach((gd: any, i: number) => { gd.hold = true; gd.pinned = true; gd.char.pos = [37.5, 0, 6 + i * 1.5]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.heardUpTo = 1e12; gd.dazzledUntil = 1e9; gd.flashlight.enabled = false; gd.char.update(0); });
@@ -272,52 +269,6 @@ export const pelletsEnergy = guarded(async () => {
   return done();
 });
 
-// ================================================================ pellets-identity
-/** what was left of a few staged shots — the game's own digest, every crack star, the fracture's record of every pane, the holes, the hearing events, the counters */
-function wordOf(S: Stage): string {
-  const { game, gb } = S; const r3 = (x: number) => Math.round(x * 1000);
-  const decals = game.decals.list.filter((d: any) => d.kind === 'glassHit').map((d: any) => `${d.pane}:${d.pos.map(r3)}:${r3(d.radius)}:${d.param}`).join('|');
-  const panes = [...gb.panes].map(([bi, st]: [number, any]) => `${bi}:${st.hits}:${r3(st.energy)}:${st.sites.length}:${st.nOpen}:${st.run}:${!!st.dice}`).join('|');
-  const holes = (glassPanes(game) as number[]).map(bi => holeCount(game, bi)).join(',');
-  const ev = S.events.filter((e: any) => e.kind !== 'step').map((e: any) => `${e.kind}@${e.pos.map(r3)}:${e.level ?? ''}`).join('|');
-  return hashStr([hashDigest(digestGame(game)), decals, panes, holes, ev, S.jets.length, JSON.stringify(SHOTGUN_STATS)].join('#')).toString(16);
-}
-/** the shotgun at glass: a shell at each kind of pane from 1 m and from 4 m, and one with the muzzle pressed through */
-async function shotgunWord(seed: number, parts: Parameters<typeof stage>[1]): Promise<string> {
-  for (const k of Object.keys(SHOTGUN_STATS)) (SHOTGUN_STATS as any)[k] = 0;
-  const A = await stage(seed, parts);
-  for (const kind of ['annealed', 'tempered', 'laminated'] as PaneKind[]) { const X = A.pane(kind, 4) ?? A.pane(kind, 1); if (!X) continue;
-    for (const D of [1, Math.min(4, X.room - 0.85)]) { A.fire(v3.mad(X.p, X.out, D) as Vec3, v3.mad(X.p, X.out, -6) as Vec3); A.step(20); }
-    const half = Math.min(X.b.h[0], X.b.h[2]); A.fire(v3.mad(X.p, X.out, -(half + 0.12)) as Vec3, v3.mad(X.p, X.out, -6) as Vec3, 'm870', v3.mad([X.p[0], X.p[1] + 0.07, X.p[2]], X.out, half + 0.33) as Vec3); A.step(40); }
-  return wordOf(A);
-}
-async function identityWords(): Promise<{ off: string; look: string; on: string }> {
-  // (a) every glass part off (?glassfx=0, the harness's stand-up), the shotgun fired at glass · (b) the same with only the look's switch up (rounds through glass and the fracture model off)
-  const off = await shotgunWord(71, { fx: false, pen: false, brk: false, shards: false }), look = await shotgunWord(71, { pen: false, brk: false, shards: false });
-  // (c) the glass parts on, no shotgun anywhere: rifle and pistol rounds at the same panes, one pressed through
-  for (const k of Object.keys(SHOTGUN_STATS)) (SHOTGUN_STATS as any)[k] = 0;
-  const B = await stage(72);
-  for (const kind of ['annealed', 'tempered', 'laminated'] as PaneKind[]) { const X = B.pane(kind, 4) ?? B.pane(kind, 1); if (!X) continue; const tan: Vec3 = [X.out[2], 0, -X.out[0]];
-    // (the pressed round FIRST, into whole glass: a round with the arm through glass that has already fallen is the one thing this build changed for every gun — pellets-arm holds that)
-    const half = Math.min(X.b.h[0], X.b.h[2]); B.fire(v3.mad(X.p, X.out, -(half + 0.12)) as Vec3, v3.mad(X.p, X.out, -6) as Vec3, 'fn2000', v3.mad([X.p[0], X.p[1] + 0.07, X.p[2]], X.out, half + 0.33) as Vec3); B.step(20);
-    for (let k = 0; k < 6; k++) { const to = v3.add(v3.mad(X.p, X.out, -6), v3.scale(tan, (k - 2.5) * 0.5)) as Vec3; B.fire(v3.mad(X.p, X.out, Math.min(4, X.room - 0.85)) as Vec3, to, k % 2 ? 'fn2000' : 'fiveseven'); B.step(6); }
-    B.step(60); }
-  return { off, look, on: wordOf(B) };
-}
-/** frozen on the one build at 0ee0094 (`bun run tools/qa/pellets-probes.ts --words` there, this file copied in) */
-const WORDS_0EE0094 = { off: '852e4b4f', look: '852e4b4f', on: 'e44887a2', shotgunOn: 'bafe643' };   // (off / look / on TAKEN A THIRD TIME with `--words`, on the frozen stand, the day a hit's seed became the box's own and not its place in the level's list (glass.ts boxSeed): the word folds every star's reach, which is another roll — before it they were bd326bb7 · bd326bb7 · 5f9627eb. off / look / on TAKEN AGAIN with `--words` on the real-doors step: the word hashes the office's own walls, which that step moved — on 0ee0094's office they were 7538cb56 · 7538cb56 · 1828dc78, and this file passed there until the walls changed; shotgunOn stays 0ee0094's own, the red path's 'not this')
-export const pelletsIdentity = guarded(async () => {
-  const { verdict, done } = family('pellets-identity: glass parts off, and glass on with no shotgun, are the runs they were on 0ee0094');
-  const w = await identityWords();
-  verdict(w.off === WORDS_0EE0094.off, 'EVERY GLASS PART OFF, the shotgun fired at every kind of pane from 1 m, from 4 m and pressed through: the word frozen on 0ee0094 (a pane is the starred wall it was, every third pellet stars it)', `now ${w.off} · 0ee0094 ${WORDS_0EE0094.off}`);
-  verdict(w.look === WORDS_0EE0094.look, 'the same with only the glass look\'s switch up (rounds through glass and the fracture model off): the word frozen on 0ee0094', `now ${w.look} · 0ee0094 ${WORDS_0EE0094.look}`);
-  verdict(w.on === WORDS_0EE0094.on, 'GLASS ON, no shotgun anywhere, a rifle round pressed through each pane and rifle and pistol rounds at it from across the room: the word frozen on 0ee0094', `now ${w.on} · 0ee0094 ${WORDS_0EE0094.on}`);
-  // the red path: the same word taken of the one thing this build DID change — the shotgun at glass with the glass parts on — is not 0ee0094's (frozen there too)
-  const sg = await shotgunWord(71, {});
-  verdict(sg !== WORDS_0EE0094.shotgunOn && sg !== w.off && w.on !== w.off, 'the word is a real one: the shotgun at glass with the glass parts ON — the one thing this build changed — does NOT read as 0ee0094 did', `now ${sg} · 0ee0094 ${WORDS_0EE0094.shotgunOn}`);
-  return done();
-});
-
 // ================================================================ pellets-red
 export const pelletsRed = guarded(async () => {
   const { verdict, done } = family('pellets-red: the red paths — each check above does go red when the thing it checks is taken away');
@@ -334,5 +285,4 @@ export const pelletsRed = guarded(async () => {
   return done();
 });
 
-if (import.meta.main && process.argv.includes('--words')) { console.log(JSON.stringify({ ...(await identityWords()), shotgunOn: await shotgunWord(71, {}) })); process.exit(0); }
 if (import.meta.main && process.argv.includes('--table')) { (GLASSPEN as any).shellR ??= 0; if (process.env.SHELLR) GLASSPEN.shellR = +process.env.SHELLR; if (process.env.M870E) GLASSPEN.energy.m870 = +process.env.M870E; const rows = await rangeRows(41); for (const r of rows) console.log(JSON.stringify({ ...r, bad: r.bad.length })); process.exit(0); }

@@ -30,7 +30,7 @@
 // with the encounter. Deterministic: no dice of its own (a man's bark goes through g.say like any other).
 //
 // NOT here (other pieces'): who decides to shoot at cover or through a wall, who places a charge, doors off their hinges, glass.
-import { isManId, menUp, manById, teamActive, teamMen, orderOf, viewOf } from './seats';
+import { isManId, menUp, teamActive, teamMen, orderOf } from './seats';
 import { SideMap } from '../math/side';
 import { v3, type Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -40,14 +40,14 @@ import type { Assignment } from './orders';
 import type { LevelChange } from './wallbreak';
 import type { Team } from './teams';
 import { isHostile } from './teams';
-import { coverFrom, SUPPRESSION } from './suppression';
-import { order } from './squad';
-import { doorCells } from './guards';
-import { digInSet } from './digin';
+import './suppression';
+import './squad';
+import './guards';
+import './digin';
 import { coverfireOn } from './coverfire';
-import { WALL_ORDER } from './wallcharge';
+import './wallcharge';
 import { WORDS } from './words';
-import { hasHim, OWN } from './owner';
+import './owner';
 
 export const WALLREACT = {
   /** the switch (and only ever live under the destruction goal's own) */
@@ -135,18 +135,7 @@ interface FightBooks { rooms: Room[]; roomOfCell: Map<number, Room>; defs: Def[]
 
 const flat = v3.distXZ;
 const EYE = 1.55, CHEST = 1.1;
-const wrap = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a <= 0) a += 2 * Math.PI; return a - Math.PI; };
 const note = (g: Game, s: string) => { WALLREACT_LOG.push(`${g.time.toFixed(2)} ${s}`); if (WALLREACT_LOG.length > 400) WALLREACT_LOG.splice(0, 200); };
-/** does the plan segment p → q cross the axis-aligned rect (inflated by `pad`) */
-function segRect(p: Vec3, q: Vec3, r: [number, number, number, number], pad: number): boolean {
-  const x0 = r[0] - pad, z0 = r[1] - pad, x1 = r[2] + pad, z1 = r[3] + pad; let t0 = 0, t1 = 1; const dx = q[0] - p[0], dz = q[2] - p[2];
-  for (const [d, o, lo, hi] of [[dx, p[0], x0, x1], [dz, p[2], z0, z1]]) {
-    if (Math.abs(d) < 1e-9) { if (o < lo || o > hi) return false; continue; }
-    let a = (lo - o) / d, b = (hi - o) / d; if (a > b) { const s = a; a = b; b = s; }
-    t0 = Math.max(t0, a); t1 = Math.min(t1, b); if (t0 > t1) return false;
-  }
-  return true;
-}
 const rectDist = (p: Vec3, r: [number, number, number, number]) => Math.hypot(Math.max(r[0] - p[0], 0, p[0] - r[2]), Math.max(r[1] - p[2], 0, p[2] - r[3]));
 
 export class WallReact {
@@ -165,31 +154,12 @@ export class WallReact {
     const W = g.destr?.walls; if (!W) return;
     this.unsub = W.onChange(row => { if (row.kind === 'reset') this.stale = true; if (WALLREACT.on) this.queue.push(row); });
   }
-  get live(): boolean { const g = this.g; return WALLREACT.on && !!this.unsub && g.aiEnabled && !g.quietUtility && !g.touring; }
   private get fight(): FightBooks { return this.g.fight as unknown as FightBooks; }
   private defOf(gd: Guard): Def | null { return this.fight.defs.find(D => D.gd === gd) ?? null; }
 
   /** a restart (Game.resetGuards): nothing known, nobody owed a move. The breaches themselves go when the walls are put back (the feed's 'reset' row). */
   reset() { this.pend.length = 0; this.minds.clear(); this.watching.clear(); this.last = this.lastEv = this.lastSweep = -1; for (const b of this.breaches) { b.ops = -1; b.men.clear(); b.said.clear(); b.tell.length = 0; } this.dropOpenings(); }
 
-  tick() {
-    const g = this.g;
-    if (this.stale || (!WALLREACT.on && (this.breaches.length || this.queue.length))) {   // (the walls are back — or the switch was put off mid-run: every book as the level was built, rows from before it dropped with it)
-      let k = -1; this.queue.forEach((r, i) => { if (r.kind === 'reset') k = i; }); this.queue.splice(0, WALLREACT.on ? k + 1 : this.queue.length);
-      this.stale = false; this.unflood(); this.reset(); this.breaches.length = 0; }   // (the walls are back: every room as it was built — whatever the switch says, a book flooded through a hole must not outlive it)
-    if (!this.live) { this.queue.length = 0; return; }
-    const rows = this.queue.splice(0); this.floodAll = null;
-    if (WALLREACT.blastFlood) { const all = rows.filter(r => r.kind !== 'reset' && r.kind !== 'door' && r.opened.length); this.floodAll = all.length > 1 ? all.flatMap(r => r.opened) : null; }   // (the floor every row of this frame opened: flooded once, at the first of them)
-    for (const row of rows) this.take(row);
-    this.floodAll = null;
-    if (!this.breaches.length && !this.pend.length) return;
-    const now = g.time;
-    if (this.lastEv < 0 || now - this.lastEv >= 0.1 || now < this.lastEv) { const dt = this.lastEv < 0 || now < this.lastEv ? 0.1 : Math.min(0.5, now - this.lastEv); this.lastEv = now; this.evidence(dt); }
-    if (this.last >= 0 && now >= this.last && now - this.last < 0.25) return; this.last = now;
-    this.notice(); this.book();
-    if (now - this.lastSweep >= 1 || now < this.lastSweep) { this.lastSweep = now; this.sweep(); }
-    for (let i = this.pend.length - 1; i >= 0; i--) { const P = this.pend[i]; if (now < P.next) continue; const r = this.reconsider(P); if (r !== 'later' || now > P.until) this.pend.splice(i, 1); else P.next = now + 0.5; }
-  }
 
   // ================================================================ the feed
   private take(row: LevelChange) {
@@ -263,13 +233,6 @@ export class WallReact {
     return b;
   }
 
-  // ================================================================ (c) the room fight's rooms
-  /** the walls are whole again: the rooms are flooded afresh, every defender's is re-read where he stands */
-  private unflood() {
-    const F = this.fight; if (!F?.roomOfCell) return;
-    F.rooms.length = 0; F.roomOfCell.clear();
-    for (const D of F.defs) { D.room = F.roomAt(D.gd.state === 'dead' ? D.station : D.gd.char.pos); D.ev = D.room ? D.room.entries.map(() => 0) : []; D.watch = D.want = D.glanceTo = -1; }
-  }
   /** floor opened: the rooms it touches are flooded again — two rooms joined by a hole are ONE (the lower-numbered Room object lives on, the other becomes
    *  the same cells and entries), and each defender's evidence is carried over by door */
   private reflood(opened: readonly number[]) {
@@ -309,13 +272,6 @@ export class WallReact {
   // ================================================================ (b) noticing
   private head(gd: Guard | 'sam'): Vec3 { const p = gd === 'sam' ? this.g.player.char.pos : gd.char.pos; return [p[0], EYE, p[2]]; }
   private faceOf(b: Breach, from: Vec3, y = 1.3): Vec3 { const s = (from[0] - b.at[0]) * b.n[0] + (from[2] - b.at[2]) * b.n[1] >= 0 ? 1 : -1; return [b.at[0] + b.n[0] * s * 0.3, y, b.at[2] + b.n[1] * s * 0.3]; }
-  private sees(b: Breach, from: Vec3, yaw: number | null): boolean {
-    const K = WALLREACT; if (flat(from, b.at) > K.seeM) return false;
-    if (yaw !== null && Math.abs(wrap(v3.yawTo(from, b.at) - yaw)) > K.fovDeg * Math.PI / 360) return false;
-    const eye: Vec3 = [from[0], EYE, from[2]], s = (from[0] - b.at[0]) * b.n[0] + (from[2] - b.at[2]) * b.n[1] >= 0 ? 1 : -1;
-    for (const k of [0, 0.6, -0.6]) { const q: Vec3 = [b.at[0] + b.u[0] * b.half * k + b.n[0] * s * 0.3, 1.3, b.at[2] + b.u[1] * b.half * k + b.n[1] * s * 0.3]; if (!this.g.col.segmentBlocked(eye, q)) return true; }
-    return false;
-  }
   private opsKnow(b: Breach, by: string) { if (b.ops >= 0) return; b.ops = this.g.time; WALLREACT_STATS.learnedOps++; note(this.g, `the team knows ${b.key} (${by})`); }
   private manKnows(b: Breach, gd: Guard, how: 'heard' | 'saw' | 'made' | 'told') {
     if (b.men.has(gd)) return; const g = this.g, K = WALLREACT; b.men.set(gd, g.time);
@@ -344,49 +300,11 @@ export class WallReact {
       if (gd.team === 'operative') this.opsKnow(b, `${gd.callsign} ${made ? 'made' : 'heard'} it`); else if (gd.team !== 'civilian') this.manKnows(b, gd, made ? 'made' : 'heard');
     }
   }
-  /** four times a second: who sees a breach he did not know; the news passed on */
-  private notice() {
-    const g = this.g, K = WALLREACT, now = g.time;
-    for (const b of this.breaches) {
-      if (b.ops < 0) {
-        if (!g.player.down && this.sees(b, g.player.char.pos, g.player.char.aimYaw)) this.opsKnow(b, 'the player saw it');
-        else for (const gd of g.guards) if (gd.team === 'operative' && gd.state !== 'dead' && now >= gd.dazzledUntil && this.sees(b, gd.char.pos, gd.char.aimYaw)) { this.opsKnow(b, `${gd.callsign} saw it`); if (K.say && gd.unit) g.say(gd, b.walk ? 'hole in the wall.' : 'gap in the wall — watch it.'); break; }
-      }
-      for (const gd of g.guards) { if (gd.state === 'dead' || gd.team === 'operative' || gd.team === 'civilian' || b.men.has(gd) || now < gd.dazzledUntil) continue; if (this.sees(b, gd.char.pos, gd.char.aimYaw)) this.manKnows(b, gd, 'saw'); }
-      for (let i = b.tell.length - 1; i >= 0; i--) { const T = b.tell[i]; if (now < T.at) continue; b.tell.splice(i, 1); if (T.by.state === 'dead') continue;
-        for (const gd of g.guards) { if (gd === T.by || gd.state === 'dead' || gd.team !== T.by.team || b.men.has(gd)) continue; if (flat(gd.char.pos, T.by.char.pos) < K.tellM && g.col.sound.propagate(this.head(T.by), this.head(gd)).pathLen < K.tellM) this.manKnows(b, gd, 'told'); } }
-    }
-  }
 
   // ================================================================ (b) the squad's book
   private dropOpening(o: Opening) { const L = this.g.cover?.openings; if (!L) return; const i = L.indexOf(o); if (i >= 0) L.splice(i, 1); }
   private dropOpenings() { for (const b of this.breaches) if (b.opening) { this.dropOpening(b.opening); b.opening = null; } }
-  /** a breach the team knows is one of its openings: dealt to a free gun like a doorway, counted by the entry points (kept in the list whoever rebuilds it) */
-  private book() {
-    const g = this.g; if (!teamActive(g)) return;
-    let L: Opening[] | null = null;
-    for (const b of this.breaches) {
-      if (b.ops < 0) continue; L ??= g.cover.ready();
-      if (!b.opening) { b.opening = { id: b.key, kind: WALLREACT.entryRisk ? 'door' : 'gap', at: [b.at[0], CHEST, b.at[2]], n: [b.n[0], b.n[1]], half: b.half, door: null, pass: null, far: null }; WALLREACT_STATS.openings++; }
-      if (!L.includes(b.opening)) L.push(b.opening);
-    }
-  }
 
-  // ================================================================ (b) the defenders' watch
-  /** ten times a second: what each man who knows a breach has against it */
-  private evidence(dt: number) {
-    const g = this.g, K = WALLREACT, now = g.time;
-    for (const [gd, M] of this.minds) {
-      if (gd.state === 'dead') { this.minds.delete(gd); this.watching.delete(gd); continue; }
-      const p = gd.char.pos, seen = now - gd.lastSeenT < 0.3 && gd.lastKnown ? gd.lastKnown : null, fire = gd.sup.src && now - gd.sup.srcT < 1.5 ? gd.sup.src : null;
-      for (const [b, m] of M) {
-        if (!this.breaches.includes(b)) { M.delete(b); continue; }
-        m.ev = Math.max(0, m.ev - K.forget * dt);
-        if (seen && this.through(b, p, seen)) m.ev = Math.min(3, m.ev + K.evSeen * dt);
-        if (fire && this.through(b, p, fire)) m.ev = Math.min(3, m.ev + K.evFire * dt);
-      }
-    }
-  }
   /** does the plan line p → q go through the breach */
   private through(b: Breach, p: Vec3, q: Vec3): boolean {
     const sp = (p[0] - b.at[0]) * b.n[0] + (p[2] - b.at[2]) * b.n[1], sq = (q[0] - b.at[0]) * b.n[0] + (q[2] - b.at[2]) * b.n[1]; if (sp * sq >= 0) return false;
@@ -419,35 +337,6 @@ export class WallReact {
     for (const gd of teamMen(g)) { if (gd.state === 'dead') continue; const A = orderOf(g, gd); if (A && A.post) out.push({ gd, A }); }
     return out;
   }
-  private charOf(id: number): { pos: Vec3; team: Team } | null {
-    const g = this.g, pl = manById(g, id); if (pl) return pl.down ? null : { pos: pl.char.pos, team: 'player' };
-    const m = g.guards.find(x => x.char.id === id); return m && m.state !== 'dead' ? { pos: m.char.pos, team: m.team } : null;
-  }
-  /** where the trouble is, for this man, about this change: the man he last saw · where the rounds came from · whoever made it (an enemy of his) · the far side
-   *  of a hole beside him when nobody he trusts is known to be there */
-  private threatFor(gd: Guard, X: Gone, at: Vec3): Vec3 | null {
-    const g = this.g;
-    // (the man he saw, where the rounds come from, whoever made the hole — the first of them whose line to him goes through what went; a man fighting
-    //  somebody down the corridor is still asked about the hole at his elbow)
-    const who = this.charOf(X.who), h = gd.team === 'operative' ? 1.2 : 0.9;
-    for (const c of [g.time - gd.sightT < 6 ? gd.sightPos : null, gd.sup.src && g.time - gd.sup.srcT < SUPPRESSION.srcMemorySecs ? gd.sup.src : null, who && isHostile(gd.team, who.team) ? who.pos : null])
-      if (c && this.openGone(c, at, h, X)) return c;
-    return X.b ? this.beyond(gd, X.b, at) : null;
-  }
-  /** what a question is about, in the order it is asked: the newest thing to go and (WALLREACT.everyGone) each thing that went before it while he was still
-   *  owed the answer. The first of them that has something to say to him is the one he acts on — so wherever the newest does, the answer is the newest row's own,
-   *  as it always was */
-  private things(P: Pend): Gone[] { return WALLREACT.everyGone && P.also ? [P, ...P.also] : [P]; }
-  /** the thing this man has to hide from and where the trouble is: the first thing of the question with a threat he is open to, at `h` over `at`, along a line
-   *  through that thing — else why not, in the newest thing's words */
-  private asks(gd: Guard, P: Pend, at: Vec3, h: number): { X: Gone; threat: Vec3 } | string {
-    let why = '';
-    for (const X of this.things(P)) { const threat = this.threatFor(gd, X, at);
-      if (!threat) { why ||= 'nothing beyond it to hide from'; continue; }
-      if (!this.openGone(threat, at, h, X)) { why ||= 'hidden where he is'; continue; }   // (still hidden crouched, or open by some other line than what went)
-      return { X, threat }; }
-    return why;
-  }
   /** the floor just beyond a breach from where a man stands — null when it is no danger to him: no floor there, his own side's men on it, or (the team) a room
    *  their book has cleared */
   private beyond(gd: Guard, b: Breach, at: Vec3): Vec3 | null {
@@ -460,154 +349,18 @@ export class WallReact {
     else for (const m of g.guards) if (m !== gd && m.state !== 'dead' && m.team === gd.team && over(m.char.pos)) return null;
     return far;
   }
-  /** open to `threat` along a line through what went, a chest at `h` over `at` */
-  private openGone(threat: Vec3, at: Vec3, h: number, X: Gone): boolean {
-    return segRect(threat, at, X.rect, 0.45) && !this.g.col.segmentBlocked([threat[0], 1.15, threat[2]], [at[0], h, at[2]]);
-  }
-  /** a couple of strides to somewhere a chest at `h` is hidden from `threat` (and from the face of the breach), walked to in a straight line */
-  private stepOut(gd: Guard, from: Vec3, threat: Vec3, h: number, b: Breach | null, taken: Vec3[], loosely = false): Vec3 | null {
-    const g = this.g, nav = g.col.nav, K = WALLREACT, T: Vec3 = [threat[0], 1.15, threat[2]], dc = doorCells(g);
-    const depth = b ? Math.abs((from[0] - b.at[0]) * b.n[0] + (from[2] - b.at[2]) * b.n[1]) : 0; let best: Vec3 | null = null, bc = Infinity, alt: Vec3 | null = null, ac = Infinity;
-    const cands: Vec3[] = [];
-    if (b) {   // (beside the hole, against his own side of the wall: the one place nothing beyond it has a line to — nearest end first)
-      const s = (from[0] - b.at[0]) * b.n[0] + (from[2] - b.at[2]) * b.n[1] >= 0 ? 1 : -1, l0 = (from[0] - b.at[0]) * b.u[0] + (from[2] - b.at[2]) * b.u[1];
-      for (const d of [0.8, Math.max(0.8, Math.min(depth, 1.5))]) for (const out of [0.6, 1.0, 1.5, 2.1, 2.7]) for (const e of l0 >= 0 ? [1, -1] : [-1, 1]) { const l = e * (b.half + out); cands.push([b.at[0] + b.u[0] * l + b.n[0] * s * d, 0, b.at[2] + b.u[1] * l + b.n[1] * s * d]); }
-    }
-    for (const r of [1.0, 1.5, 2.0, 2.5, 3.0, K.stepM]) for (let a = 0; a < 16; a++) cands.push([from[0] + Math.sin(a * Math.PI / 8) * r, 0, from[2] + Math.cos(a * Math.PI / 8) * r]);
-    let plans = 0;   // (path searches a question: suppression.ts's own cover search stops at twelve)
-    const dbg = WALLREACT_DEBUG.log, w = (p: Vec3, why: string) => dbg?.(`  step cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): ${why}`);
-    for (const p of cands) {
-      const r = flat(from, p); if (r > K.stepM + 2) continue;
-      if (nav.isBlocked(p[0], p[2]) || dc.has(nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell)))) { w(p, 'no floor'); continue; }
-      let cost = r; if (b) { const s0 = (from[0] - b.at[0]) * b.n[0] + (from[2] - b.at[2]) * b.n[1], s1 = (p[0] - b.at[0]) * b.n[0] + (p[2] - b.at[2]) * b.n[1]; if (s0 * s1 <= 0) continue; cost += 0.6 * Math.abs(Math.abs(s1) - depth); }   // (his own side of the wall; a stack slides along it)
-      if (cost >= bc) continue;
-      if (!g.col.segmentBlocked(T, [p[0], h, p[2]])) { w(p, 'open to the threat'); continue; }
-      const sh: Vec3 = [p[0] + (from[0] - p[0]) / (r || 1) * Math.min(0.35, r), 0, p[2] + (from[2] - p[2]) / (r || 1) * Math.min(0.35, r)];   // (… and a short stride short of it: a man stops where he stops)
-      if (b && (this.openThrough(b, p, h) || this.openThrough(b, sh, h))) { w(p, 'open to the far side of the hole'); continue; }
-      const loose = this.known(gd).some(o => o !== b && this.beyond(gd, o, p) && (this.openThrough(o, p, h) || this.openThrough(o, sh, h)));   // (out of one hole's line into the next one's is a poor move: taken only when there is no better, and not twice running)
-      if (loose && (!loosely || best || cost >= ac)) { w(p, 'open to the far side of another hole'); continue; }
-      if (!nav.walkable(from, p)) { const path = nav.findPath(from, p); let L = 0, q: Vec3 = from; for (const x of path ?? []) { L += flat(q, x); q = x; } if (++plans > 8 || !path?.length || L > 1.5 * r + 1 || flat(q, p) > 0.5) { w(p, 'no short walk'); continue; } }
-      if (taken.some(q => flat(q, p) < 0.9)) { w(p, "somebody's"); continue; }
-      if (loose) { w(p, `fits but for another hole (cost ${cost.toFixed(2)})`); alt = p; ac = cost; continue; }
-      w(p, `fits (cost ${cost.toFixed(2)})`);
-      best = p; bc = cost;
-    }
-    const mv = this.movedT.get(gd);
-    return best ?? (!loosely || (mv !== undefined && g.time >= mv && g.time - mv < 20) ? null : alt);
-  }
   /** is a chest at `h` over `p` open THROUGH the breach to the floor just beyond it (three points across its width) */
   private openThrough(b: Breach, p: Vec3, h: number): boolean {
     const g = this.g, d = (p[0] - b.at[0]) * b.n[0] + (p[2] - b.at[2]) * b.n[1]; if (Math.abs(d) > 8) return false; const s = d >= 0 ? 1 : -1;
     for (const k of [0, 0.8, -0.8]) { const q: Vec3 = [b.at[0] + b.u[0] * b.half * k - b.n[0] * s * 0.9, 1.15, b.at[2] + b.u[1] * b.half * k - b.n[1] * s * 0.9]; if (this.through(b, q, p) && !g.col.segmentBlocked(q, [p[0], h, p[2]])) return true; }
     return false;
   }
-  /** the breaches a man knows of (his side's book for a teammate) */
-  private known(gd: Guard): Breach[] { return this.breaches.filter(b => gd.team === 'operative' ? b.ops >= 0 : b.men.has(gd)); }
-  /** where a crouching man goes: a hole in a wall — a few strides off its line, hidden from everything beyond it (along his own side of the wall for choice),
-   *  else the fight's own cover from the threat; cover shot away — the fight's own cover first */
-  private spot(gd: Guard, threat: Vec3, b: Breach | null, others: Vec3[]): Vec3 | null {
-    const g = this.g, p = gd.char.pos;
-    // (a walking man stops a short stride short of where he was sent: the fight's own cover spot is taken a stride deeper when the floor lets it, and not at
-    //  all when the place he would stop is still open)
-    const kn = this.known(gd).filter(o => o !== b), T: Vec3 = [threat[0], 1.15, threat[2]], hid = (q: Vec3) => !g.col.nav.isBlocked(q[0], q[2]) && g.col.segmentBlocked(T, [q[0], 0.9, q[2]]) && !kn.some(o => this.beyond(gd, o, q) && this.openThrough(o, q, 0.9));
-    const own = (): Vec3 | null => { const c = coverFrom(g, gd, threat); if (!c) return null; const r = flat(p, c) || 1, ux = (c[0] - p[0]) / r, uz = (c[2] - p[2]) / r;
-      const deep: Vec3 = [c[0] + ux * 0.35, 0, c[2] + uz * 0.35]; if (hid(deep)) return deep;
-      return hid([c[0] - ux * 0.35, 0, c[2] - uz * 0.35]) ? c : null; };
-    return (b ? this.stepOut(gd, p, threat, 0.9, b, others) ?? own() : own() ?? this.stepOut(gd, p, threat, 0.9, null, others)) ?? this.runFor(gd, p, threat, others, kn) ?? (b ? this.stepOut(gd, p, threat, 0.9, b, others, true) : null);   // (last: out of this hole's line though in another's — once, not back and forth)
-  }
-  /** nothing within a few strides: the nearest corner he can run to that hides a crouched chest (a man in the open with his crate gone does not kneel there) */
-  private runFor(gd: Guard, from: Vec3, threat: Vec3, taken: Vec3[], kn: Breach[]): Vec3 | null {
-    const g = this.g, nav = g.col.nav, K = WALLREACT, T: Vec3 = [threat[0], 1.15, threat[2]], dc = doorCells(g); let best: Vec3 | null = null, bl = Infinity, plans = 0;
-    for (let r = 4; r <= K.runM; r += 1) { for (let a = 0; a < 16; a++) {
-      const p: Vec3 = [from[0] + Math.sin(a * Math.PI / 8) * r, 0, from[2] + Math.cos(a * Math.PI / 8) * r];
-      if (nav.isBlocked(p[0], p[2]) || dc.has(nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell)))) continue;
-      const w = (why: string) => WALLREACT_DEBUG.log?.(`  run cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): ${why}`);
-      if (!g.col.segmentBlocked(T, [p[0], 0.9, p[2]]) || taken.some(q => flat(q, p) < 0.9)) { w('open or taken'); continue; }
-      if (flat(p, threat) < flat(from, threat) * 0.6) { w('toward him'); continue; }   // (not toward what he is hiding from)
-      if (++plans > 10) return best;
-      const path = nav.findPath(from, p); let L = 0, q: Vec3 = from; for (const x of path ?? []) { L += flat(q, x); q = x; }
-      if (!path?.length || L > 1.6 * r + 2 || flat(q, p) > 0.5 || L >= bl) { w(`no short way (${path?.length ? L.toFixed(1) : 'none'})`); continue; }
-      if (kn.some(o => this.beyond(gd, o, p) && this.openThrough(o, p, 0.9))) { w('open to the far side of a hole'); continue; }
-      best = p; bl = L; }
-      if (best) break; }   // (the nearest ring that has one)
-    return best;
-  }
-  private reconsider(P: Pend): 'moved' | 'fine' | 'later' {
-    const r = this.reconsider1(P); WALLREACT_DEBUG.log?.(`  asked ${P.gd.callsign} at (${P.gd.char.pos[0].toFixed(1)}, ${P.gd.char.pos[2].toFixed(1)}) about ${P.b ? P.b.key : 'cover'}: ${r[1]}`); return r[0];
-  }
-  private reconsider1(P: Pend): ['moved' | 'fine' | 'later', string] {
-    const g = this.g, gd = P.gd; if (gd.state === 'dead') return ['fine', 'dead'];
-    if (g.time < gd.dazzledUntil || g.time < (gd.staggerUntil ?? 0) || gd.held) return ['later', 'blind, staggered or held'];
-    const mv = this.movedT.get(gd); if (mv !== undefined && g.time >= mv && g.time - mv < WALLREACT.retrySecs) return ['later', 'only just moved'];   // (he has only just been moved: let him get there)
-    if (gd.team === 'operative') { const r = gd.unit ? this.opMove(P) : 'fine'; return [r, `his mark: ${r}`]; }
-    if (gd.team === 'civilian') return ['fine', 'a civilian'];
-    const c = gd.char, Q = this.asks(gd, P, c.pos, 0.9); if (typeof Q === 'string') return ['fine', Q];
-    const threat = Q.threat, pb = Q.X.b;
-    const others = g.guards.filter(o => o !== gd && o.state !== 'dead').map(o => o.char.pos);
-    const D = this.defOf(gd);
-    if (D) {
-      if (D.mode !== 'hold') { const r = D.mode === 'move' ? 'fine' : this.shift(gd, threat, pb, others); return [r, `mode ${D.mode}: ${r}`]; }   // (already on his way somewhere · a free hunter: the fight AI's own shift)
-      if (g.time - gd.lastSeenT < 0.6 && gd.lastKnown && flat(gd.lastKnown, c.pos) < 5) return ['later', 'a man at arm\'s length'];   // (a man at arm's length: he fights)
-      let p = this.spot(gd, threat, pb, others);
-      if (p && (hasHim(gd, OWN.stand) || gd.staysInRooms || digInSet(g, gd)) && this.fight.roomAt(p) !== D.room) p = null;   // (a man whose room is his to keep — the last stand, a squad that stays, a man dug in and set — moves inside it or not at all)
-      if (!p) { WALLREACT_STATS.noCover++; P.next = g.time + 1.5; return ['later', 'nowhere to go']; }
-      D.mode = 'move'; D.moveKind = 'cover'; D.cameBy = null; D.moveT = 0; D.stallAt = v3.copy(c.pos); D.stallT = 0; D.movedAt = g.time; gd.pinned = false; this.watching.delete(gd);
-      order(gd, { goal: p, speed: g.tune.guardChase, face: null, strafe: false, aimAt: null, upper: 'aim', stance: 'none', crouch: true });
-      const F = this.fight; F.stats.tookCover++; F.log.push({ t: g.time, who: gd.callsign, what: 'his cover is gone: takes cover' });
-      WALLREACT_STATS.movedDef++; this.movedT.set(gd, g.time); note(g, `${gd.callsign} (holding) leaves (${c.pos[0].toFixed(1)}, ${c.pos[2].toFixed(1)}) for (${p[0].toFixed(1)}, ${p[2].toFixed(1)})`);
-      if (WALLREACT.say) g.say(gd, "cover's gone — moving!");
-      return ['moved', 'moved'];
-    }
-    const r = this.shift(gd, threat, pb, others); return [r, `the fight's own: ${r}`];
-  }
-  /** a man in the fight AI: its own shift to cover (suppression.ts — the alert branch walks him to sup.cover) */
-  private shift(gd: Guard, threat: Vec3, b: Breach | null, others: Vec3[]): 'moved' | 'fine' | 'later' {
-    const g = this.g, sup = gd.sup;
-    if (gd.script || gd.pinned || gd.standoff || !g.tune.suppression) return 'fine';
-    if (gd.state !== 'alert') return gd.state === 'search' || gd.state === 'suspicious' ? 'later' : 'fine';
-    if (sup.cover) return 'fine';
-    const p = this.spot(gd, threat, b, others); if (!p) { WALLREACT_STATS.noCover++; return 'later'; }
-    sup.cover = p; sup.displacedAt = g.time; sup.displaces++; sup.pinnedT = 0; sup.downT = 0; sup.latched = false; gd.path = []; gd.pathGoal = null; gd.stallRef = null;
-    WALLREACT_STATS.movedAI++; this.movedT.set(gd, g.time); note(g, `${gd.callsign} (fighting) shifts to (${p[0].toFixed(1)}, ${p[2].toFixed(1)})`);
-    return 'moved';
-  }
-  /** a teammate on a mark (or walking to one): the mark is moved out of the line */
-  private opMove(P: Pend): 'moved' | 'fine' | 'later' {
-    const g = viewOf(this.g, P.gd), gd = P.gd, A = g.orders.of(gd); if (!A || !A.post) return 'fine';   // (falling in: his place is Sam's trail)
-    if (g.doorTools?.ops.some(op => op.men.includes(gd))) return 'fine';   // (a man of a door order stands where the door tools put him: they keep their own marks and end the order on a man off his — the stack's place is theirs to change)
-    if (g.wallCharge?.ops.some(op => op.men.includes(gd))) return 'fine';   // (…and a man of a wall charge's order where that order puts him — its stand-off, the hole's mouth, his point inside: wallcharge.ts keeps those marks, and the hole it is about to make or has just made is theirs)
-    if (A.order === WALL_ORDER && A.watch) return 'fine';   // (…and after it: the man that order left holding the hole or a door of the room from his point — his mark, his face and his watch point are one piece, the order's)
-    if (A.yieldT >= 0 || g.fight.engaged(gd)) return 'later';
-    const Q = this.asks(gd, P, A.post, 1.2); if (typeof Q === 'string') return 'fine';
-    const threat = Q.threat;
-    const taken: Vec3[] = [g.player.char.pos]; for (const m of g.orders.squad()) { if (m === gd || m.state === 'dead') continue; taken.push(m.char.pos); const B = g.orders.of(m); if (B?.post) taken.push(B.post); }
-    const pb = Q.X.b, p = this.stepOut(gd, A.post, threat, 1.2, pb, taken) ?? this.stepOut(gd, A.post, threat, 1.2, pb, taken, true); if (!p) { WALLREACT_STATS.noCover++; return 'later'; }
-    note(g, `${gd.callsign} (${A.order}) mark (${A.post[0].toFixed(1)}, ${A.post[2].toFixed(1)}) → (${p[0].toFixed(1)}, ${p[2].toFixed(1)})`);
-    A.post = p; A.goal = v3.copy(p); A.via.length = 0; A.arrived = false; A.markT = A.movedT = g.time; A.mark[0] = gd.char.pos[0]; A.mark[2] = gd.char.pos[2];
-    WALLREACT_STATS.movedOp++; this.movedT.set(gd, g.time);
-    if (WALLREACT.say && flat(gd.char.pos, p) > 0.6) g.say(gd, 'moving off the hole.');
-    return 'moved';
-  }
 
-  /** tactics.ts: one of a plan's men has learned, since the plan was dealt, of a hole a man fits through — deal it again (once: the new plan is younger) */
-  replan(team: Team, since: number, men: Guard[]): boolean {
-    for (const b of this.breaches) { if (!b.walk) continue; for (const m of men) { const t = team === 'operative' ? b.ops : b.men.get(m) ?? -1; if (t > since) { WALLREACT_STATS.replans++; return true; } } }
-    return false;
-  }
 
-  summary(): string {
-    const S = WALLREACT_STATS; return `wall react ${this.live ? 'on' : 'off'} · ${this.breaches.length} breaches (${this.breaches.filter(b => b.walk).length} walk-through, team knows ${this.breaches.filter(b => b.ops >= 0).length}) · rows ${S.rows} · rooms joined ${S.merged} · moved: holding ${S.movedDef}, fighting ${S.movedAI}, team ${S.movedOp} (nowhere ${S.noCover}) · watches ${S.watches} · replans ${S.replans}`;
-  }
 }
 
 const states = new SideMap<Game, WallReact>('wallreact.states');
 /** this game's (made on first asking: by then the destruction engine stands) */
 export function wallReactOf(g: Game): WallReact { let s = states.get(g); if (!s) states.set(g, s = new WallReact(g)); return s; }
-/** game.ts, once a frame before the squad's books and the room fight: a return on its first lines with the switch off or nothing broken */
-export function wallReactTick(g: Game) { WALLREACT_TEST.tick?.(g); if (!WALLREACT.on && !states.has(g)) return; wallReactOf(g).tick(); }
 /** game.ts resetGuards */
 export function wallReactReset(g: Game) { states.get(g)?.reset(); }
-/** roomfight.ts applyWatch */
-export function wallReactLook(g: Game, gd: Guard, pt: Vec3) { if (!WALLREACT.on) return; const s = states.get(g); if (s && s.breaches.length) s.look(gd, pt); }
-/** tactics.ts: is this plan stale by a hole one of its men has learned of since it was dealt */
-export function wallReactReplan(g: Game, team: Team, since: number, men: Guard[]): boolean { if (!WALLREACT.on) return false; const s = states.get(g); return !!s && s.breaches.length > 0 && s.replan(team, since, men); }

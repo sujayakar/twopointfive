@@ -7,7 +7,7 @@
 // 0.05 grid), and what the model says each pick really costs; then the fixed points behind the 'does an M1-class GPU hold the budget on low' question. No GPU
 // involved: the absolute numbers are only as good as REF / FACTOR, which the lead corrects from measured pass timings — the point is the decision logic and the ratios.
 //   bun run tools/qa/quality-plan.ts [--budget 15] [--k 4.5 --css 1440x900 --dpr 2]   (the flags add one machine of your own to the table)
-import { plan, COST, PRESETS, QUALITY_NAMES, REF, SCALE_FLOOR, SCALE_STEP, AUTO_LADDER as LADDER_NAMES, type QualityName, type Plan, PLAN_BUDGET_MS, presetCost, withSmoke, SMOKE_KEEP_DEFAULT } from '../../src/ui/quality.ts';
+import { plan, COST, PRESETS, QUALITY_NAMES, REF, SCALE_FLOOR, SCALE_STEP, AUTO_LADDER as LADDER_NAMES, type QualityName, type Plan, PLAN_BUDGET_MS, presetCost } from '../../src/ui/quality.ts';
 
 const argv = process.argv.slice(2);
 const arg = (k: string, d: string) => { const i = argv.indexOf(k); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
@@ -28,7 +28,7 @@ const trueMs = (name: QualityName, scale: number, m: Machine) => msAtEff(name, e
 const fixedMsOf = (name: QualityName, m: Machine) => m.k * COST[name].fixed;
 
 // ---------------------------------------------------------------- plan() as it was until 08-11 (same cost model, old scale semantics), verbatim ----------------------------------------------------------------
-const OLD_SCALE: Record<QualityName, number> = { ultra: 1.0, high: 1.0, medium: 0.8, low: 0.65, verylow: 0.5 }; const OLD_FLOOR = 0.35;
+const OLD_SCALE: Record<QualityName, number> = { high: 1.0, medium: 0.8, low: 0.65, verylow: 0.5 }; const OLD_FLOOR = 0.35;
 function capPlan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS): Plan {
   const pixelMs = Math.max(0.5, gpuMs - fixedMs); const c0 = COST[cur];
   const capOfP = (name: QualityName) => PRESETS[name].maxH / Math.max(1, cssH * dpr);
@@ -52,9 +52,9 @@ const f1 = (v: number) => v.toFixed(1).padStart(5), f2 = (v: number) => v.toFixe
 console.log(`Cost model (src/ui/quality.ts COST): modelled compute ms on the reference M4 Max at ${REF.mpx} Mpx internal, per preset — per-pixel passes | fixed part | ratios plan() uses`);
 console.log(`  preset    direct softbl gather tempor volume bloom | cascad probe |  pixel (rel)   fixed (rel)   what it switches`);
 for (const n of QUALITY_NAMES) {
-  const c = COST[n], P = c.passes, p = withSmoke(PRESETS[n], SMOKE_KEEP_DEFAULT), L = p.lossy;   // (the rows as the page runs them: SMOKE KEEP)
-  const sw = [`${p.ds.join('/')} rays`, `hist ${p.hist}`, `maxH ${p.maxH}`, `scale ${p.scale}`, ...(['checkerDirect', 'gatherThird', 'rcHalfRate', 'volQuarter', 'dimRays'] as const).filter(k => L[k]).map(k => k === 'dimRays' ? `dimRays<${L.dimBelow}` : k)].join(', ');
-  console.log(`  ${n.padEnd(8)} ${f1(P.direct)}  ${f1(P.softblur)}  ${f1(P.gather)}  ${f1(P.temporal)}  ${f1(P.volumetrics)} ${f1(P.bloom)} | ${f1(P.rc)}  ${f1(P.probe)} | ${f1(c.pixel)} (${f2(c.pixel / COST.ultra.pixel)})  ${f1(c.fixed)} (${f2(c.fixed / COST.ultra.fixed)})   ${sw}`);
+  const c = COST[n], P = c.passes, p = PRESETS[n], L = p.lossy;
+  const sw = [`${p.restir.rays} rays`, `maxH ${p.maxH}`, `scale ${p.scale}`, ...(['gatherThird', 'rcHalfRate', 'volQuarter'] as const).filter(k => L[k])].join(', ');
+  console.log(`  ${n.padEnd(8)} ${f1(P.direct)}  ${f1(P.softblur)}  ${f1(P.gather)}  ${f1(P.temporal)}  ${f1(P.volumetrics)} ${f1(P.bloom)} | ${f1(P.rc)}  ${f1(P.probe)} | ${f1(c.pixel)} (${f2(c.pixel / COST.high.pixel)})  ${f1(c.fixed)} (${f2(c.fixed / COST.high.fixed)})   ${sw}`);
 }
 // what each preset renders on the two window classes, old vs new semantics (the visible consequence of 'scale is relative to the cap, presets all 1.0')
 {
@@ -121,7 +121,7 @@ if (gridMisses) console.log(`  *** ${gridMisses} pick(s) off the ${SCALE_STEP} g
   let defaults: () => Record<string, unknown>;
   try { defaults = (await import('../../src/engine.ts')).defaultSettings as unknown as () => Record<string, unknown>; }
   catch (e) { console.log(`  (engine.ts did not import here — ${(e as Error).message}; the stub starts from empty settings instead of defaultSettings())`); defaults = () => ({}); }
-  const KEYS = ['renderScale', 'maxInternalHeight', 'volSteps', 'directSamplesTop', 'directSamplesOther', 'directAdaptiveMin', 'directHistory', 'checkerDirect', 'gatherThird', 'rcHalfRate', 'volQuarter', 'dimRays', 'dimRaysBelow', 'giFireflyK'];
+  const KEYS = ['renderScale', 'maxInternalHeight', 'volSteps', 'restirRays', 'directHistory', 'gatherThird', 'rcHalfRate', 'volQuarter', 'giFireflyK'];
   const engine = { settings: defaults(), rc: { cfg: { ...defaultRcConfig } }, rebuilds: 0, rebuildRc(cfg: Record<string, unknown>) { this.rc.cfg = cfg as typeof this.rc.cfg; this.rebuilds++; }, effectiveScale: 1, capScale: 1 };
   const smoke = { params: { rbIters: 4 } };
   const q = new Quality(engine as never, smoke as never);   // (no localStorage / document here: the constructor's try/catch covers the first, calibration is never ticked)
@@ -188,8 +188,8 @@ let stateFails = 0;
     check(q.auto && q.calibrating && q.current === 'high', `first visit: auto, calibrating from ${q.current}`);
     const d0 = pump(E, q, 100); const first = { preset: q.current, scale: E.settings.renderScale };
     check(d0 === 1 && (AUTO_LADDER as string[]).indexOf(first.preset) < (AUTO_LADDER as string[]).indexOf('high'), `boot calibration: decided ${d0}× → ${first.preset} ×${first.scale.toFixed(2)} (“${q.lastChange}”)`);
-    q.pin('ultra'); const dPinned = pump(E, q, 120);
-    check(!q.auto && q.current === 'ultra' && dPinned === 0, `pin ultra: auto ${q.auto}, ${q.current}, ${dPinned} decisions while pinned`);
+    q.pin('high'); const dPinned = pump(E, q, 120);
+    check(!q.auto && q.current === 'high' && dPinned === 0, `pin high: auto ${q.auto}, ${q.current}, ${dPinned} decisions while pinned`);
     q.setAuto();
     check(q.current === first.preset && Math.abs(E.settings.renderScale - first.scale) < 1e-6 && q.calibrating, `setAuto: starts at ${q.current} ×${E.settings.renderScale.toFixed(2)} = what auto settled on here (not high ×1.00), calibrating ${q.calibrating} (“${q.lastChange}”)`);
     const d3 = pump(E, q, 100);

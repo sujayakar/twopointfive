@@ -5,7 +5,7 @@
 //   · the game's digest (play itself),
 // compared between the two. Also how many frames after the blast each took to land under the pace.
 //   bun run tools/qa/blast-pace-check.ts [--levels depot,block,warehouse,block-squads,office] [--blasts 3] [--frames 240]
-//   exit 0 = equal on every level · 1 = something differs (named) · 2 = unknown flag
+//   exit 0 = equal on every level · 1 = something differs (named), or an arm did not play under its switch (BLASTARM_BREAK=1 makes the off arm so, and must fail) · 2 = unknown flag
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync } from 'node:fs';
 const argv = process.argv.slice(2), KNOWN = ['--levels', '--blasts', '--frames'];
@@ -21,10 +21,15 @@ const LEVELS = arg('--levels', 'depot,block,warehouse,block-squads,office').spli
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const maskOf = (K: any, l: any) => { const m = l.kind === 2 ? K.dirOf(l) : K.of(l); return m ? Array.from(m as Uint32Array).join(',') : ''; };
 
+// (AN ARM IS ONLY AN ARM IF IT PLAYED UNDER ITS SWITCH: a stand-up or a step that moved BLAST_PACE.on back would leave both arms on one pace, equal
+// and proving nothing. Read after the stand-up and after the last frame, and a level with an arm off its switch is a FAIL.)
+const OFF_ITS_SWITCH: string[] = [];
 async function run(level: string, pace: boolean) {
   Math.random = seeded(7); DESTRUCTION.on = true; BLAST_PACE.on = pace;
   const lv = level === 'office' ? undefined : loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${level}.json`, 'utf8')));
   const W = await standUp(lv ? { level: lv, reach: true } : { reach: true }); const { game, engine } = W as any; const K = engine.reach;   // (the picture's keeper of the reach masks, stood up as a page has it and stepped once a frame)
+  if (process.env.BLASTARM_BREAK === '1' && !pace) BLAST_PACE.on = true;   // (the red path of the line below: the off arm plays with the pace on, as a stand-up that put the switch back would have it)
+  if (BLAST_PACE.on !== pace) OFF_ITS_SWITCH.push(`${level}: the arm with the pace ${pace ? 'on' : 'off'} was stood with it ${BLAST_PACE.on ? 'on' : 'off'}`);
   game.godMode = true; game.aiEnabled = false; game.tune.chaos = 0.5; engine.settings.particleRain = true;   // (the drip lines are found whenever the switch is on, drawn or not)
   for (let i = 0; i < 3; i++) W.step(DT);
   const walls = game.destr.walls.all().filter((w: any) => w.kind === 'wall' && Math.max(w.box.h[0], w.box.h[2]) >= 1.6);
@@ -42,11 +47,13 @@ async function run(level: string, pace: boolean) {
     rows.push({ masks: engine.lights.lights.map((l: any) => game.beacons.some((b: any) => b.light === l) ? 'beacon' : maskOf(K, l)).join('|'),   // (a blackout beacon's turning spot is decided for where it points on the frame it is decided: by either pace a mask of its moment — left out, as reach-cost.ts leaves it out)
       drips: JSON.stringify(rainDripPoints(game)), digest: JSON.stringify(digestGame(game, true)), reachFrames, dripFrames });
   }
+  if (BLAST_PACE.on !== pace) OFF_ITS_SWITCH.push(`${level}: the arm with the pace ${pace ? 'on' : 'off'} ended with it ${BLAST_PACE.on ? 'on' : 'off'}`);
   return rows;
 }
 let bad = 0;
 for (const level of LEVELS) {
   const on = await run(level, true), off = await run(level, false); BLAST_PACE.on = true;
+  if (OFF_ITS_SWITCH.length) { console.log(`- FAIL — ${OFF_ITS_SWITCH.join(' · ')}: the two arms are not two paces`); OFF_ITS_SWITCH.length = 0; bad++; continue; }
   if (on.length !== off.length) { console.log(`- FAIL — ${level}: ${on.length} blasts with the pace, ${off.length} without`); bad++; continue; }
   let m = 0, d = 0, g = 0; for (let i = 0; i < on.length; i++) { if (on[i].masks !== off[i].masks || on[i].reachFrames < 0) m++; if (on[i].drips !== off[i].drips || on[i].dripFrames < 0) d++; if (on[i].digest !== off[i].digest) g++; }
   const n = on.length, pts = on.length ? JSON.parse(on[on.length - 1].drips).length : 0;

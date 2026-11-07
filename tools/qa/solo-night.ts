@@ -71,14 +71,13 @@ async function one(seed: number, plan: Plan, cap: number, verbose: boolean, leve
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
   const out: SoloRun = { seed, plan, level: levelFile ?? 'office.json', end: 'error', why: '', t: 0, stage: '', pulledAt: null, roomAt: null, hits: 0, downAt: null, score: null, rating: null, summary: null, counts: null, escalation: 0, qrf: 'idle', firsts: {}, civ: {}, doors: { pushed: 0, eased: 0, picked: 0, kicked: 0, refused: 0 }, held: 0, rounds: 0, qrfLog: [], god: GOD, lit: 0, frames: 0, unseen: UNSEEN, ocp: {}, stuck: 0, timeline: [], trace: [], chars: 0 };
   const log = console.log, err = console.error, warn = console.warn; const hush = () => { if (!verbose) console.log = console.error = console.warn = () => { }; }, unhush = () => { console.log = log; console.error = err; console.warn = warn; };
   let t = 0, standAt = -1, standHits = 0, standDazzled = 0; const say = (s: string) => { const line = `${f1(t).padStart(6)}  ${s}`; out.trace.push(line); if (verbose) log(line); };
   let g: any = null;
   try {
     Math.random = seeded(0x9137 + seed * 7919);   // (playthrough.ts's own seeding)
-    const levelOf = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+    const levelOf = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
     hush(); const W: any = await standUp({ uploadEvery: 4, ...(levelFile ? { level: levelOf(levelFile) } : {}) }); unhush();
     g = W.game; const I = W.input, cam = W.cam, level = W.level; let M = level.mission;
     if (HARD) (await import(`${ROOT}/src/game/difficulty.ts`)).setDifficulty('hard', false);
@@ -303,7 +302,7 @@ if (has('--one')) {   // a child: one run, its JSON to --outfile
   const seeds = seedsOf(flag('--seeds') ?? '1-6'), jobs = Math.max(1, Number(flag('--jobs') ?? 4)), dir = mkdtempSync(resolve(tmpdir(), 'solo-night-'));
   const todo: { plan: Plan; seed: number }[] = plans.flatMap(plan => seeds.map(seed => ({ plan, seed }))), runs: SoloRun[] = []; let next = 0; const t0 = Date.now();
   await Promise.all(Array.from({ length: jobs }, async () => { for (;;) { const j = todo[next++]; if (!j) return; const f = resolve(dir, `${j.plan}-${j.seed}.json`);
-    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.plan}:${j.seed}`, '--outfile', f, '--cap', String(cap), ...(levelFile ? ['--level', levelFile] : []), ...(BASE ? ['--base'] : []), ...(EXIT ? ['--exit', EXIT] : []), ...(UNSEEN ? ['--unseen'] : []), ...(GOD ? ['--god'] : []), ...(GHOST ? ['--ghost'] : []), ...(HARD ? ['--hard'] : []), ...(STAND > 0 ? ['--stand', String(STAND)] : []), ...(STAND_AT ? ['--stand-at', STAND_AT.join(',')] : []), '--out', OUT, '--linger', String(LINGER), ...(QUERY ? ['--query', QUERY] : []), ...(QUIET ? (QUIET_PIN === null ? ['--quiet'] : ['--quiet', String(QUIET_PIN)]) : []), ...(MATE ? ['--squad', '1'] : [])], { stdout: 'ignore', stderr: 'pipe' }); const code = await pr.exited;
+    const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.plan}:${j.seed}`, '--outfile', f, '--cap', String(cap), ...(levelFile ? ['--level', levelFile] : []), ...(BASE ? ['--base'] : []), ...(EXIT ? ['--exit', EXIT] : []), ...(UNSEEN ? ['--unseen'] : []), ...(GOD ? ['--god'] : []), ...(GHOST ? ['--ghost'] : []), ...(HARD ? ['--hard'] : []), ...(STAND > 0 ? ['--stand', String(STAND)] : []), ...(STAND_AT ? ['--stand-at', STAND_AT.join(',')] : []), '--out', OUT, '--linger', String(LINGER), ...(QUERY ? ['--query', QUERY] : []), ...(QUIET ? (QUIET_PIN === null ? ['--quiet'] : ['--quiet', String(QUIET_PIN)]) : []), ...(MATE ? ['--squad', '1'] : [])], { stdout: 'ignore', stderr: 'pipe', env: process.env }); const code = await pr.exited;
     let r: SoloRun; try { r = JSON.parse(readFileSync(f, 'utf8')); } catch { r = { seed: j.seed, plan: j.plan, level: levelFile ?? 'office.json', end: 'error', why: `the run's process exited ${code}: ${(await new Response(pr.stderr).text()).slice(-600)}`, t: 0, stage: '', pulledAt: null, roomAt: null, hits: 0, downAt: null, score: null, rating: null, summary: null, counts: null, escalation: 0, qrf: 'idle', firsts: {}, civ: {}, doors: {}, held: 0, rounds: 0, qrfLog: [], god: GOD, lit: 0, frames: 0, unseen: UNSEEN, ocp: {}, stuck: 0, timeline: [], trace: [], chars: 0 }; }
     runs.push(r); console.log(`  ${r.plan}:${r.seed} ${r.end} ${r.t} s${r.rating ? ` · ${r.rating} ${r.score}` : ''}${r.end !== 'done' ? ` — ${r.why.split('\n')[0]}` : ''}`); } }));
   rmSync(dir, { recursive: true, force: true });

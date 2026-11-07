@@ -26,7 +26,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   hole's far mouth (`floorAfter` → `NavGrid.cellBlockers` → `wouldTake(first, i, mouth)`: in the shatter band, a line from the mouth; of a long run — a LIVED-IN room's cot is one: the bedding and locker dealt onto and beside it are one piece with it — the floor-standing parts in the
   band and what those hold up, fixed()'s own rule with the shorter reach (`rowTake`); never a cover panel). Shared with the blast so they cannot drift: `chargeSource(radius)` (destruction.ts asks it too), `chargeAt(W)`; the hole's columns are NOT shared (the check
   is the link). The barracks' south wall between bunks 3 and 4 (static 52, a cot against it inside each room, a partition between them) was refused along its whole length; now a charge
-  asked at its middle settles half a metre along, over one cot. `bun run tools/qa/wallfurn-check.ts` (`probes.ts wallfurn`, also under `wallcharge`; every squad mission's and squad
+  asked at its middle settles half a metre along, over one cot. (THE CHECK SINCE 2026-11-07: the rule is settled and nothing is switched. A place the rule adds
+  is one the game takes where the nav grid as it stands has no floor behind the wall; on a sample of eight a level, `--cap 9999` for all, Sam really sets a
+  charge there and sets it off (`charge-rig.ts`), and it must open a way in. A place where Sam is offered no row with the cursor on the wall is counted and
+  not judged. Read on the Rust game: every charge set opened a way in, the barracks' 45 and Mousehole's 29 read whole; seven places on four levels gave
+  Sam no row. `WALLFURN_BREAK=1` sets the charges and never sets them off. What follows is the check as it was.)
+  `bun run tools/qa/wallfurn-check.ts` (`probes.ts wallfurn`, also under `wallcharge`; every squad mission's and squad
   lesson's level + the office, twelve, ~40 s: a place the plain rule accepts is the same place with the rule on — 0 moved; EVERY place the rule adds is really blown — 76 on the frozen stand, 85 under `TPS_PROFILE=shipped`: RUN IT ON BOTH, the lived-in furniture is only on the second, where the first cut took half the barracks wall and one place with sandbags across the near mouth — and must leave
   a man-sized hole, floor behind it and a short walk through; the barracks wall off / on, a second charge beside the first's hole, the four ordered through it; `WALLFURN_BREAK=1` must
   fail; `--baseline` = the same asked of the plain rule's own places). Cost: a refused place's `settle` ~40 µs a frame while the cursor is on it, and the furniture index is made on the
@@ -56,7 +61,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 
 - **A LEVEL'S PLACES FOR A WALL CHARGE ARE HELD** (2026-11-04; `tools/qa/wallfurn-check.ts`, the `held` line; `tools/qa/fixtures/wallcharge/<name>.txt` and
   its README; a check, no switch and no rule of play). Why: the compound's dressing stood wood piles at the outside foot of the wall the squad breaches and
-  took 23 of its 891 places, and nobody had counted them; the maintainer: a loss is fine "so long as it's deliberate". Each level's file holds two counts,
+  took 23 of its 891 places, and nobody had counted them; the maintainer: a loss is fine "so long as it's deliberate". (Since 2026-11-07 a file holds ONE
+  count, the level with its lived-in rooms in: the first number was the old test stand's.) Each level's file holds two counts,
   the places the plain rule accepts on the frozen stand and on the shipped one (its lived-in rooms in). The line is red when the level has another number
   on the stand of the run: fewer (something took a place), more (write it: slack would let a later loss pass), no file, a file that is not two counts, a
   file for no level. A run that names no level asks every level a mission on the list plays on, tutorials and quiet missions too (30 files with the
@@ -494,9 +500,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the pixel already shows, ≤ `REFR_MAX_M` 1.5 m, projected with THIS raster's own matrices, offset ≤ `REFR_MAX_PX` 0.12 × height and shrunk continuously to stay on screen, refused
   — the pixel keeps its own read — where the sky shows there or the surface there is nearer than the exit point) → the paint / normal / id / direct / indirect / emissive / RT
   reflection are loaded at that pixel `sPix` (nearest texel; TAAU's jitter dithers it smooth) while the pane's own reflection field, the cracks and the fog stay keyed on the
-  pixel (`zg` / `Ng`). A 12 mm pane moves nothing but a pixel or two at a graze; the bottle bends the cabinet edge behind it by centimetres. `passes.ts` compiles composite (and
-  its sharp twin) a SECOND time behind `const GLASS_REFRACT: bool = true` (`pCompR` / `pCompSR`, boot pipelines) taken while `passes.glassRefract` (= setting ∧ glass ∧ a pane
-  listed); **false = the module exactly as it was — OFF is hash-identical to main**; `frame.glassCfg.w` = the index (0 = off). Cost: +0.07 ms compS at high with the conference
+  pixel (`zg` / `Ng`). A 12 mm pane moves nothing but a pixel or two at a graze; the bottle bends the cabinet edge behind it by centimetres. It is the ONE composite's own text (2026-11-07,
+  `docs/agents/render.md` "the composite is one program"): the glass test runs first, the ray bends while `frame.glassCfg.w` holds an index, and at 0 (the setting
+  off) the same statements keep the read under the pixel and the older tint rule. Until then `passes.ts` compiled composite and its sharp twin a second time behind
+  `const GLASS_REFRACT: bool` (`pCompR` / `pCompSR`) with the glass test after the reads in the false one; with no pane crossed the two computed the same picture. Cost: +0.07 ms compS at high with the conference
   glazing filling the view, 0.00 without glass on screen. The pure helpers live in `render/shaders/refract_common.wgsl` (no bindings: `fresnelSchlick / fresnelF0 / refractDir /
   slabExit / beerLambert / refractProbeDist / screenRefractPx / clampRefractOffset`) so the particle rain's water streaks (exp/prain) share the law. Screen space only: what a bent
   ray sees must already be on screen behind the glass; TAA reprojects the bottle's interior with the motion of the surface behind it (mild ghosting inside it under a fast
@@ -595,7 +602,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ones in `visible` (`BoxWorld.visibleCutCount`). A static re-packs when its `cut` ARRAY is replaced (not edited in place). Builders `cutRecord / cutThrough / cutThrough3 /
   cutPrism / cutFit / fitCutBox`; `__cut` {on, stats, test(at, 'wedge'|'shard'|'snap'|'lump'), clear, ray}; a journal carries `env.cutBoxes`; `CUTBOXES=1|0` (also `CUT_BOXES`) in front of a headless tool forces the switch (headless.ts standUp; a replay's env wins). The switch is table `CUT` in the knob registry (src/game/knobs.ts: put back round every probe; not in a recording's tables) and one of `FROZEN_HOLDS`' rows (src/host/profile.ts): the frozen harness stand leaves it off, the SHIPPED stand (`TPS_PROFILE=shipped`, so the missions gate) raises it as the page does. QA: `probes.ts cutboxes` (record /
   ray / off / pack; also under `perf`). Seen only on SwiftShader so far (rebuild/cut-pieces/renderer/notes.md in the project files); the native .metal twins are NOT ported.
-  **A CALM ROOM PAYS NOTHING (`render/cutSwap.ts`, `cutConfig.swap`, default on with the switch):** the boot compiles EVERY program from the prelude WITHOUT the cut rule
+  **GONE 2026-11-07: there is one set of ray programs, with the cut rule in (`docs/agents/render.md`, ONE SET OF RAY PROGRAMS). What follows is the build before.**
+  **A CALM ROOM PAYS NOTHING (`render/cutSwap.ts`, `cutConfig.swap`, default on with the switch):** the boot compiled EVERY program from the prelude WITHOUT the cut rule
   (`scenePrelude()` = the `?nocutboxes` text character for character; only the g-buffer's cut module takes `scenePrelude(true)`), then, after the pipelines' boot mark,
   `cutSwap.build()` compiles a SECOND set of the programs that trace boxes behind `scenePrelude(true)` in the background (`CutSwappable.buildCut / useCut` on LightingPasses
   — `traceJobs(pre, T, jobs)` is the one list both sets come from: direct, restir ×2, the four gathers, reflect ×2, cards, volumetrics + its dust twin, composite ×2, + the lazily

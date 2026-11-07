@@ -6,14 +6,14 @@ import { Vec3, clamp } from '../math/vec';
 import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
 import { doorLeafMarks } from '../scene/markingDefaults';
 import { LEAF_H } from '../scene/doorSize';
-import { leafWrote, MIRRORED, type BoxMirror } from '../scene/boxMirror';
-import { BOTH, type StaticCollision } from '../scene/collision';
-import { WORLD } from '../scene/world';
+import { leafWrote, type BoxMirror } from '../scene/boxMirror';
+import { type StaticCollision } from '../scene/collision';
 import { EXACT } from '../math/exact';
 import { RUST, ruleFell, ruleRed } from '../sim/sim';
-import { DoorStore, DC, DD, DO, DK, KF, DE, DOOR_EV, DP, DF, MAN_UNASKED, DOOR_CAP, DOOR_COLS, DOOR_OUTS, DOOR_CONS, DOOR_PARS, DRIVE_KINDS, DOOR_SOUNDS, STRIKE_TIERS, DOORS_STEPPED, doorIo, doorMem } from '../sim/doorshome';
+import { DoorStore, DC, DO, DOOR_CAP, DRIVE_KINDS, doorIo, doorMem } from '../sim/doorshome';
 import { SimState } from '../sim/state';
 import { SlabStore, SLF, type SLAB_F64, type SlabNow } from '../sim/slabshome';
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 /** ONE-WAY LEAVES (the maintainer, 10-08: "doors could use some work too. only open one direction"). Every door has a hinge jamb, a handle jamb and ONE side it opens
  *  into (Door.swing): its leaf turns through angles of that sign only, 0 (shut, hard on its frame) to its open stop — whoever opens it, from whichever face.
@@ -426,8 +426,6 @@ export class Door {
   private posAt: Vec3 = [0, 1, 0];
   /** `p` is the kept centre from here on (the array itself: who holds it holds what he always got) */
   keptPos(p: Vec3): void { this.posAt = p; this.p(DC.posX, p[0]); this.p(DC.posZ, p[2]); }
-  /** …the kept centre as it stands, whatever angle the leaf has now (a noise the module listed is placed where the leaf was when it was made) */
-  get keptAt(): Vec3 { return this.posAt; }
   /** `fn` asked aside (a question of the picture's — orders.ts hover): reading `pos` after a leaf has swung makes its kept centre anew; what each of `doors`
    *  kept is put back after, so a game that is drawn keeps what the simulation's own reads left */
   static posAside<T>(doors: readonly Door[], fn: () => T): T {
@@ -440,7 +438,7 @@ export class Door {
   isClosed() { return Math.abs(this.angle) < 0.25; }
   dir(): [number, number] { const a = this.def.closedDir + this.angle; return [Math.cos(a), Math.sin(a)]; }
   /** Back to the level as authored: angle, latch, lock, and everything the encounter did to it (pick progress, a kicked lock, a guard having noticed it). */
-  reset() {
+  reset() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Door.reset', this, []); if (__r !== RUST_PASS) return __r as any; } }
     this.shot = 0;
     if (this.off) { this.off = false; this.slab = null; this.box.h = this.leafH; this.box.marks = this.leafMarks; this.box.rot = undefined; for (const hb of this.handleBoxes) hb.rot = undefined; }   // hung again, as authored
     this.angle = clamp(this.sided(this.def.angle ?? 0), this.minA, this.maxA);   // (one-way: a leaf authored standing open the way it is not dealt stands as wide the way it is — as setSwing left it)
@@ -456,7 +454,7 @@ export class Door {
   keep() { if (this.angle * this.swing < 0) { this.angle = clamp(-this.angle, this.minA, this.maxA); this.vel = -this.vel; this.mirrored++; } }
   /** an angle (or a turn rate) as this door can have it: one-way, the same opening on the side it opens into (savestate.ts: a file from before it had one) */
   sided(a: number): number { return DOORWAY.oneWay && a * this.swing < 0 ? -a : a; }
-  place() {
+  place() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Door.place', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (this.off) return;   // (the slab's box is doorblast.ts's to pose)
     if (DOORWAY.oneWay) this.keep();
     this.p(DC.velSeen, this.vel); this.p(DC.angleSeen, this.angle);
@@ -522,8 +520,6 @@ export interface DoorsHost {
   /** the head of the span the settled man is pushed out of the statics over (player.ts settleSpot: standing or crouched) */
   settleY1(): number;
 }
-/** collision.ts footBand's foot, as the step's floor is asked it (the statics from 0.2 m up) */
-const FLOOR_Y0 = 0.2;
 
 export class Doors {
   list: Door[];
@@ -548,7 +544,7 @@ export class Doors {
   /** THE HOLD TEST for a wedge or dragged furniture put against `d` by a man standing at `from` (digin.ts): it holds only a leaf that opens TOWARD him — the
    *  thing sits in the leaf's path. A door that opens away from him is pulled open from the far side whatever stands behind it. Off (or two-way doors, or a
    *  staged scene) = any door holds, as it was. Read live, never kept: a door's side can be re-dealt under a running game */
-  wedgeHolds(d: Door, from: Vec3): boolean { return !this.frameRule || this.pullFace(d, from); }
+  wedgeHolds(d: Door, from: Vec3): boolean { return goneWithTick('Doors.wedgeHolds') as any; }
   /** THE DOOR AS A HINGED THING, for whoever plans round it (the AI's opener going to the handle, the men keeping out of its swing): where its two jambs are,
    *  which side it opens into and the floor its leaf sweeps getting there. Constant per door (nothing here reads the angle it stands at). */
   swingOf(d: Door): DoorSwing {
@@ -633,14 +629,7 @@ export class Doors {
   }
   /** Resolve contacts (mutates contact positions when a door can't yield), integrate swing, closer, latch — in the Rust module where the step can run there
    *  (RUST.doors: `there`), else here; the same game to the bit either way (tools/qa/door-ident.ts, tools/qa/rust-check.ts). */
-  update(dt: number, contacts: DoorContact[]) {
-    const M = this.there(contacts);
-    if (M === null) { DOORS_STEPPED.here++; this.updateHere(dt, contacts); return; }
-    if (BOTH.on) { const bad = this.updateBoth(dt, contacts, M); BOTH.asked++; DOORS_STEPPED.both++; { const io = doorIo(), m = doorMem(); DOORS_STEPPED.turned += m[io.par + DP.turned]; DOORS_STEPPED.noises += m[io.par + DP.events]; } if (bad) { BOTH.differ++; DOORS_STEPPED.differ++; if (!BOTH.first) BOTH.first = bad; if (!DOORS_STEPPED.first) DOORS_STEPPED.first = bad; } return; }
-    for (const c of contacts) { c.blockedBy = null; if (c.run) { c.bashed = null; c.ripped = null; } if (c.struck) c.struck = null; if (c.moved) c.moved = false; if (c.man !== undefined) c.man = undefined; }
-    const n = this.handOver(dt, contacts, M.slot);
-    this.takeBack(contacts, M, n);
-  }
+  update(dt: number, contacts: DoorContact[]): void { return crossToRust('Doors.update', this, [dt, contacts]) as any; }
 
   // ---------------------------------------------------------------- the step in the Rust module (rust/sim/src/doors.rs)
   /** CAN THIS STEP RUN IN THE MODULE: the row on (the leaves' columns are in the game's block always); the game's own maths in Math's place (the step works its
@@ -659,64 +648,6 @@ export class Doors {
     for (let i = 0; i < n; i++) if (dyn[i] !== L[i].box) return ruleFell('doors', 'the leaves in the box world are not this level\'s doors');
     return H.col.rulesWorld(dyn);
   }
-  /** the step's hand-over written (the level's doors, the contacts, the rules' numbers) and the step taken: how many noises it listed. Nothing of the game
-   *  outside the leaves' columns is written until `takeBack`. */
-  private handOver(dt: number, contacts: DoorContact[], slot: number): number {
-    const io = doorIo(), m = doorMem(), L = this.list, n = L.length, nc = contacts.length, C = DOOR_CAP, K = io.maxContacts, T = DOORTHROW, thr = this.throws, man = thr ? this.man : null;
-    for (let i = 0, o = io.def; i < n; i++, o++) { const d = L[i], f = d.def, S = d.slab;
-      m[o + DD.hx * C] = f.hinge[0]; m[o + DD.hz * C] = f.hinge[1]; m[o + DD.closed * C] = f.closedDir; m[o + DD.width * C] = f.width; m[o + DD.height * C] = d.height; m[o + DD.thick * C] = d.thick;
-      m[o + DD.minAuth * C] = d.minAuth; m[o + DD.maxAuth * C] = d.maxAuth; m[o + DD.keySide * C] = d.keySide; m[o + DD.closer * C] = f.closer !== false ? 1 : 0;
-      m[o + DD.slab * C] = S ? 1 : 0; m[o + DD.slabAng * C] = S ? S.ang : 0; m[o + DD.fcx * C] = d.frameCentre[0]; m[o + DD.fcz * C] = d.frameCentre[2];
-      // (Doors.man of the hand last on it: asked of the game only where a rule of this step can want it — something was written onto the leaf since the last one)
-      m[o + DD.manLast * C] = !thr ? 0 : d.vel !== d.seenVel || d.angle !== d.seenAngle || d.angle * d.swing < 0 ? (man ? man(d.lastWho) : 0) : MAN_UNASKED; }
-    for (let c = 0, o = io.con; c < nc; c++, o++) { const k = contacts[c], p = k.pos, v = k.vel, R = k.run, keys = k.keys;
-      m[o + DK.x * K] = p[0]; m[o + DK.y * K] = p[1]; m[o + DK.z * K] = p[2]; m[o + DK.radius * K] = k.radius; m[o + DK.who * K] = k.who;
-      m[o + DK.flags * K] = (k.bash ? KF.bash : 0) | (k.quiet ? KF.quiet : 0) | (k.weak ? KF.weak : 0) | (k.key ? KF.key : 0) | (k.solid ? KF.solid : 0) | (k.round ? KF.round : 0) | (v ? KF.vel : 0) | (R ? KF.run : 0) | (k.hand !== undefined ? KF.hand : 0);
-      m[o + DK.hand * K] = k.hand ?? 0; m[o + DK.runBash * K] = R ? R.bash : 0; m[o + DK.runRip * K] = R ? R.rip : 0; m[o + DK.runLevel * K] = R ? R.ripLevel : 0; m[o + DK.vx * K] = v ? v[0] : 0; m[o + DK.vz * K] = v ? v[2] : 0;
-      m[o + DK.man * K] = man && !k.weak ? man(k.who) : 0;
-      let lo = 0, hi = 0; if (keys && keys.size) for (let i = 0; i < n; i++) if (keys.has(L[i].lockId)) { if (i < 32) lo |= 1 << i; else hi |= 1 << (i - 32); }
-      m[o + DK.opens * K] = lo >>> 0; m[o + DK.opensHi * K] = hi >>> 0;
-      m[o + DK.blockedBy * K] = -1; m[o + DK.bashed * K] = -1; m[o + DK.ripped * K] = -1; m[o + DK.struck * K] = -1; m[o + DK.moved * K] = 0; m[o + DK.manAsked * K] = 0; }
-    const P = io.par;
-    m[P + DP.dt] = dt; m[P + DP.doors] = n; m[P + DP.contacts] = nc;
-    m[P + DP.flags] = (DOORWAY.oneWay ? DF.oneWay : 0) | (DOORWAY.exitsOut ? DF.exitsOut : 0) | (DOORWAY.leafWay ? DF.leafWay : 0) | (this.stay ? DF.stay : 0) | (thr ? DF.throws : 0) | (T.soft ? DF.soft : 0) | (this.standable ? DF.standable : 0) | (this.settle ? DF.settle : 0);
-    m[P + DP.handRate] = T.handRate; m[P + DP.minSpeed] = T.minSpeed; m[P + DP.floorRad] = T.floorRad; m[P + DP.rate] = T.rate; m[P + DP.slide] = T.slide; m[P + DP.again] = T.again;
-    m[P + DP.wminX] = WORLD.min[0]; m[P + DP.wmaxX] = WORLD.max[0]; m[P + DP.wminZ] = WORLD.min[2]; m[P + DP.wmaxZ] = WORLD.max[2];
-    const H = this.host!; m[P + DP.foot] = H.col.footOf(FLOOR_Y0); m[P + DP.settleY1] = H.settleY1();
-    const ev = io.x.doors_update(this.store.home.bind(), slot);
-    const wrong = doorMem()[P + DP.wrong]; if (wrong) throw new Error(`the doors' step in the Rust module could not be what it was handed (${wrong === 1 ? 'more noises than its list holds' : wrong === 2 ? 'the man of a door\'s last hand was not asked of the game' : 'more doors or contacts than its tables hold'})`);
-    return ev;
-  }
-  /** …and what it did taken back into the game: where each contact ends and what a leaf did to him, the tallies, and — door by door, in the step's own order —
-   *  the noises each leaf made and then its box and handles where the module placed them (so whoever hears a noise finds the leaves as the step had them when
-   *  it was made: the doors before it placed, the rest not yet). */
-  private takeBack(contacts: DoorContact[], M: BoxMirror, ev: number): void {
-    const io = doorIo(), m = doorMem(), L = this.list, n = L.length, nc = contacts.length, C = DOOR_CAP, K = io.maxContacts, man = this.throws ? this.man : null;
-    for (let c = 0, o = io.con; c < nc; c++, o++) { const k = contacts[c], p = k.pos;
-      p[0] = m[o + DK.x * K]; p[2] = m[o + DK.z * K];
-      const by = m[o + DK.blockedBy * K]; if (by >= 0) k.blockedBy = L[by];
-      if (k.run) { const b = m[o + DK.bashed * K], r = m[o + DK.ripped * K]; if (b >= 0) { k.bashed = L[b]; k.bashedAt = m[o + DK.bashedAt * K]; } if (r >= 0) k.ripped = L[r]; }
-      const s = m[o + DK.struck * K]; if (s >= 0) k.struck = { door: L[s], by: m[o + DK.struckBy * K], tier: STRIKE_TIERS[m[o + DK.struckTier * K]], floor: m[o + DK.struckFloor * K] !== 0, dir: [m[o + DK.struckDx * K], m[o + DK.struckDz * K]] };
-      if (m[o + DK.moved * K] !== 0) k.moved = true;
-      if (m[o + DK.manAsked * K] !== 0) k.man = m[o + DK.man * K]; }   // (what handOver asked of the game for him and handed in)
-    const P = io.par, So = this.solids;
-    So.carried += m[P + DP.carried]; So.stopped += m[P + DP.stopped]; So.passed += m[P + DP.passed]; So.reached += m[P + DP.reached]; So.held += m[P + DP.held]; So.aside += m[P + DP.aside]; this.rounds += m[P + DP.rounds];
-    DOORS_STEPPED.there++; DOORS_STEPPED.turned += m[P + DP.turned]; DOORS_STEPPED.noises += ev;
-    if (ev === 0) { for (let i = 0; i < n; i++) this.follow(M, i); return; }
-    // The noises are the game's to hear as they were made, each door's own before its box is placed. A LISTENER MAY ASK THE MODULE (a sound's road, a line):
-    // that copies the leaves from the boxes as they stand — which is what the listener should find, and which writes over the rows the step placed — and may
-    // grow the module's memory under this view of it. So everything the step left is read out FIRST: the noises, where each leaf was placed, its handles.
-    const E = Array.from(m.subarray(io.ev, io.ev + ev * DOOR_EV)), out = m.slice(io.out, io.out + DOOR_OUTS * C), rows: (number[] | null)[] = []; let at = 0;
-    for (let i = 0; i < n; i++) rows.push(out[DO.placed * C + i] !== 0 ? M.leafRow(i) : null);
-    M.leavesTurned();   // (while they are heard a leaf's box may not be its row: a question asked meanwhile copies the leaves as the boxes stand)
-    for (let i = 0; i < n; i++) {
-      for (; at < ev && E[at * DOOR_EV + DE.door] === i; at++) { const e = at * DOOR_EV, d = L[i];
-        if (E[e + DE.fresh] !== 0) d.keptPos([E[e + DE.px], 1.0, E[e + DE.pz]]);
-        this.emit({ door: d, sound: DOOR_SOUNDS[E[e + DE.sound]], pos: d.keptAt, who: E[e + DE.who], level: E[e + DE.level] }); }
-      const r = rows[i]; if (r) { const d = L[i]; this.handles(d, M.followRow(d.box, r), out[DO.h1x * C + i], out[DO.h1z * C + i], out[DO.h2x * C + i], out[DO.h2z * C + i]); }
-    }
-    M.leavesTurned();   // (…and the first question after copies them once more: the rows a listener had copied are older than the boxes now)
-  }
   /** door i's box and handles made what the module's step placed (its row of the box world's leaves, and the handles it handed back): Door.place's writes */
   private follow(M: BoxMirror, i: number): void {
     const io = doorIo(), m = doorMem(), o = io.out + i, C = DOOR_CAP; if (m[o + DO.placed * C] === 0) return;
@@ -726,39 +657,9 @@ export class Doors {
   /** THE STEP BOTH WAYS (collision.ts BOTH: tools/qa/rust-check.ts --both, tools/qa/door-ident.ts): taken in the module with nothing of it kept, then here from
    *  the same columns and the same contacts, and everything the two leave compared to the bit — every column of every door, where each contact ends and what
    *  was done to him, the noises in order, each leaf's box and handles, the tallies. The game goes on with this file's. → '' or the first difference in words. */
-  updateBoth(dt: number, contacts: DoorContact[], M: BoxMirror): string {
-    const io = doorIo(), L = this.list, n = L.length, nc = contacts.length, C = DOOR_CAP, K = io.maxContacts, S = this.store;
-    for (const c of contacts) { c.blockedBy = null; if (c.run) { c.bashed = null; c.ripped = null; } if (c.struck) c.struck = null; if (c.moved) c.moved = false; if (c.man !== undefined) c.man = undefined; }
-    const cols = (): Float64Array => { const d = S.d, out = new Float64Array(DOOR_COLS * n); for (let k = 0; k < DOOR_COLS; k++) for (let i = 0; i < n; i++) out[k * n + i] = d[S.base + k * S.stride + i]; return out; };
-    const was = cols();
-    const ev = this.handOver(dt, contacts, M.slot);
-    let m = doorMem(); const there = cols(), con = m.slice(io.con, io.con + DOOR_CONS * K), E = m.slice(io.ev, io.ev + ev * DOOR_EV), par = m.slice(io.par, io.par + DOOR_PARS), out = m.slice(io.out, io.out + DOOR_OUTS * C), rows = L.map((_, i) => M.leafRow(i));
-    { const d = S.d; for (let k = 0; k < DOOR_COLS; k++) for (let i = 0; i < n; i++) d[S.base + k * S.stride + i] = was[k * n + i]; }   // (the columns as they were: this file's step starts where the module's did)
-    const sent: DoorEvent[] = [], emit = this.emit, So = { ...this.solids }, rounds = this.rounds;
-    this.emit = e => { sent.push({ ...e, pos: [e.pos[0], e.pos[1], e.pos[2]] }); emit(e); };
-    M.leavesTurned();   // (the rows are where the module's step left them and the boxes are not there yet: whoever asks a line while this file's step runs is answered from the boxes, as takeBack has it)
-    try { this.updateHere(dt, contacts); } finally { this.emit = emit; M.leavesTurned(); }
-    m = doorMem();
-    const is = Object.is, name = (k: number) => Object.keys(DC)[k], bad: string[] = [], say = (t: string) => { if (bad.length < 4) bad.push(t); };
-    const here = cols(); for (let k = 0; k < DOOR_COLS; k++) for (let i = 0; i < n; i++) if (!is(here[k * n + i], there[k * n + i])) say(`${L[i].def.name}.${name(k)} ${here[k * n + i]} here, ${there[k * n + i]} there`);
-    const idx = (d: Door | null | undefined) => d ? L.indexOf(d) : -1;
-    for (let c = 0; c < nc; c++) { const k = contacts[c], g = (q: number) => con[q * K + c];
-      if (!is(k.pos[0], g(DK.x)) || !is(k.pos[2], g(DK.z))) say(`contact ${c} (who ${k.who}) ends at ${k.pos[0]}, ${k.pos[2]} here, ${g(DK.x)}, ${g(DK.z)} there`);
-      if (idx(k.blockedBy) !== g(DK.blockedBy)) say(`contact ${c} blocked by door ${idx(k.blockedBy)} here, ${g(DK.blockedBy)} there`);
-      if (k.run && (idx(k.bashed) !== g(DK.bashed) || idx(k.ripped) !== g(DK.ripped) || (k.bashed && !is(k.bashedAt, g(DK.bashedAt))))) say(`contact ${c} bashed ${idx(k.bashed)} ripped ${idx(k.ripped)} here, ${g(DK.bashed)} and ${g(DK.ripped)} there`);
-      const s = k.struck; if (idx(s?.door) !== g(DK.struck) || (s && (s.by !== g(DK.struckBy) || s.tier !== STRIKE_TIERS[g(DK.struckTier)] || s.floor !== (g(DK.struckFloor) !== 0) || !is(s.dir[0], g(DK.struckDx)) || !is(s.dir[1], g(DK.struckDz))))) say(`contact ${c} struck ${s ? `by door ${idx(s.door)} (${s.tier})` : 'by none'} here, door ${g(DK.struck)} there`);
-      if (!!k.moved !== (g(DK.moved) !== 0)) say(`contact ${c} moved ${!!k.moved} here, ${g(DK.moved) !== 0} there`);
-      if ((k.man !== undefined) !== (g(DK.manAsked) !== 0) || (k.man !== undefined && k.man !== g(DK.man))) say(`contact ${c} man ${k.man} here, ${g(DK.manAsked) !== 0 ? g(DK.man) : 'not asked'} there`); }
-    if (sent.length !== ev) say(`${sent.length} noises here, ${ev} there`);
-    for (let e = 0; e < sent.length && e < ev; e++) { const a = sent[e], o = e * DOOR_EV; if (idx(a.door) !== E[o + DE.door] || a.sound !== DOOR_SOUNDS[E[o + DE.sound]] || !is(a.who, E[o + DE.who]) || !is(a.level, E[o + DE.level]) || !is(a.pos[0], E[o + DE.px]) || !is(a.pos[2], E[o + DE.pz])) say(`noise ${e}: ${a.door.def.name} ${a.sound} by ${a.who} at ${a.level} here, door ${E[o + DE.door]} ${DOOR_SOUNDS[E[o + DE.sound]]} by ${E[o + DE.who]} at ${E[o + DE.level]} there`); }
-    for (let i = 0; i < n; i++) { const d = L[i], b = d.box, r = rows[i], placed = out[DO.placed * C + i] !== 0; if (placed !== !d.off) say(`${d.def.name} placed ${!d.off} here, ${placed} there`); if (!placed) continue;
-      if (!is(b.c[0], r[0]) || !is(b.c[1], r[1]) || !is(b.c[2], r[2]) || !is(b.yaw, r[3]) || ((b.flags & MIRRORED) >>> 0) !== r[4]) say(`${d.def.name}'s box at ${b.c} yaw ${b.yaw} here, ${r} there`);
-      const h = d.handleBoxes; if (!is(h[0].c[0], out[DO.h1x * C + i]) || !is(h[0].c[2], out[DO.h1z * C + i]) || !is(h[1].c[0], out[DO.h2x * C + i]) || !is(h[1].c[2], out[DO.h2z * C + i])) say(`${d.def.name}'s handles differ`); }
-    const T = this.solids; if (T.carried - So.carried !== par[DP.carried] || T.stopped - So.stopped !== par[DP.stopped] || T.passed - So.passed !== par[DP.passed] || T.reached - So.reached !== par[DP.reached] || T.held - So.held !== par[DP.held] || T.aside - So.aside !== par[DP.aside] || this.rounds - rounds !== par[DP.rounds]) say('the tallies differ');
-    return bad.length ? `the doors' step: ${bad.join(' · ')}` : '';
-  }
+  updateBoth(dt: number, contacts: DoorContact[], M: BoxMirror): string { return goneWithTick('Doors.updateBoth') as any; }
   /** the step as this file takes it (the TypeScript's own: what the module's is held to) */
-  updateHere(dt: number, contacts: DoorContact[]) {
+  updateHere(dt: number, contacts: DoorContact[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Doors.updateHere', this, [dt, contacts]); if (__r !== RUST_PASS) return __r as any; } }
     for (const c of contacts) { c.blockedBy = null; if (c.run) { c.bashed = null; c.ripped = null; } if (c.struck) c.struck = null; if (c.moved) c.moved = false; if (c.man !== undefined) c.man = undefined; }
     const T = DOORTHROW, thr = this.throws;
     for (const d of this.list) {
@@ -1010,7 +911,7 @@ export class Doors {
   /** Hold-to-crack: ease a (near-)closed leaf open away from `from`, silently, up to `maxAngle`; the closer stays off while it is being held.
    *  The wedge of light through the gap widens as you inch it — and nobody hears a thing unless you let it swing. (A lock against you: nothing gives —
    *  unless one of `keys` fits it, and then the key goes round with the handle as softly as the rest.) */
-  crack(d: Door, from: Vec3, who: number, dt: number, keys?: ReadonlySet<string>, rate = 0.55, maxAngle = 0.6) {
+  crack(d: Door, from: Vec3, who: number, dt: number, keys?: ReadonlySet<string>, rate = 0.55, maxAngle = 0.6) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Doors.crack', this, [d, from, who, dt, keys, rate, maxAngle]); if (__r !== RUST_PASS) return __r as any; } }
     if (d.off || this.lockedOut(d, from, keys)) return;
     const [hx, hz] = d.def.hinge; const u = d.dir(); const px = from[0] - hx, pz = from[2] - hz; const perp = u[0] * pz - u[1] * px;
     const sgn = DOORWAY.oneWay ? d.swing : Math.abs(d.angle) > 0.02 ? Math.sign(d.angle) : (perp >= 0 ? -1 : 1);
@@ -1022,7 +923,7 @@ export class Doors {
   /** Player 'use' (a tap on F): closed → swing open away from the user; open → pull/push it shut (closer takes it the last bit fast); locked against you → just
    *  the rattle — or, with a key that fits on your ring (`keys`), the key's clack (KEY_LEVEL) and it swings open like any other: the bolt bites again behind
    *  you when the leaf next latches — by its closer, or, where doors stay as they are left (DOORSTAY), when a hand shuts it. */
-  use(d: Door, from: Vec3, who: number, keys?: ReadonlySet<string>) {
+  use(d: Door, from: Vec3, who: number, keys?: ReadonlySet<string>) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Doors.use', this, [d, from, who, keys]); if (__r !== RUST_PASS) return __r as any; } }
     if (d.off) return;   // (no leaf to swing: every verb below is nothing to a doorway whose door lies on the floor)
     if (this.lockedOut(d, from, keys)) { this.rattle(d, who); return; }
     if (this.keyOpens(d, from, keys)) this.emit({ door: d, sound: 'unlock', pos: d.pos, who, level: Doors.KEY_LEVEL });
@@ -1042,14 +943,10 @@ export class Doors {
    *  how far open it stands — it has one side, and a fling written against it is turned into a pull (update) — so a leaf left wide open is never shoved again:
    *  the old test read such a leaf as 'not open my way', and the shove, past 1.2 rad a shove toward shut, slammed it on its frame in front of the entry. */
   openFor(d: Door, s: number): number { return DOORWAY.oneWay ? Math.abs(d.angle) : d.angle * s; }
-  pullTo(d: Door, who: number) { if (d.latched || d.off) return; d.closing = true; d.swept = false; d.vel = -Math.sign(d.angle) * 1.2; d.lastWho = who; }
+  pullTo(d: Door, who: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Doors.pullTo', this, [d, who]); if (__r !== RUST_PASS) return __r as any; } } if (d.latched || d.off) return; d.closing = true; d.swept = false; d.vel = -Math.sign(d.angle) * 1.2; d.lastWho = who; }
   /** A hand on the handle from the face it opens into (handleside.ts — the AI's opener, standing at the latch jamb clear of the sweep): exactly what a man
    *  pressing on it there gets in update() — unlatched with its creak, brought round toward him at the pull's pace — asked for outright, without his body in it. */
-  pull(d: Door, who: number, quiet = false) {
-    if (d.off) return;   // (off its hinges: no leaf in the frame for a hand)
-    if (d.latched || d.restsTo) { d.latched = false; if (d.creakArmed) { this.emit({ door: d, sound: 'creak', pos: d.pos, who, level: quiet ? 0.12 : 0.3 }); d.creakArmed = false; } }
-    d.closing = false; d.swept = false; d.vel = d.swing * Math.max(d.vel * d.swing, quiet ? PULL_VEL_QUIET : PULL_VEL); d.pullT = PULL_SECS; d.quietT = Math.min(d.quietT, -1); d.lastWho = who;
-  }
+  pull(d: Door, who: number, quiet = false): void { return crossToRust('Doors.pull', this, [d, who, quiet]) as any; }
 
   // ---------------------------------------------------------------- locks
   /** seconds of actual cylinder work to pick a lock (the plant / hands-up beat before it comes on top: ~4.5 s door to door) */
@@ -1061,7 +958,7 @@ export class Doors {
   static readonly PICK_LEVEL = 0.16; static readonly UNLOCK_LEVEL = 0.3; static readonly KEY_LEVEL = 0.12;
 
   /** Try the lever against the bolt: a clack, the leaf working in its frame, the marker flashing 'won't budge' (Door.rattleT). Rate-limited by the flash itself. */
-  rattle(d: Door, who: number, level = 0.12) {
+  rattle(d: Door, who: number, level = 0.12) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Doors.rattle', this, [d, who, level]); if (__r !== RUST_PASS) return __r as any; } }
     if (d.rattleT > 0 || d.off) return;
     d.rattleT = 0.6; d.lastWho = who; this.emit({ door: d, sound: 'rattle', pos: d.pos, who, level });
   }
@@ -1096,19 +993,7 @@ export class Doors {
   /** One frame of working the lock (the caller keeps the picker planted at workSpot and decides when he has to break off). Advances Door.pick; the pick clicks
    *  in an uneven ~0.7 s rhythm the room can hear (PICK_LEVEL), and when the cylinder goes over the bolt draws with a louder snap (UNLOCK_LEVEL) and the door
    *  is simply unlocked from then on. Progress survives a pause (see update()). Returns true on the frame it opens. */
-  pick(d: Door, who: number, dt: number): boolean {
-    if (!d.locked) return true;
-    if (d.def.steel) return false;   // (no keyway on the keyed face of a steel fire door: nothing here advances — player.ts never plants a man at one)
-    if (d.pick === 0) d.pickClock = 0.3; else if (d.pickIdle > 0.15) d.pickClock = Math.min(d.pickClock, 0.3);   // fresh start, or picked up again after a pause: the first click comes soon
-    d.picking = true; d.lastWho = who; d.quietT = 0;                                                              // (hands on the door: the creak / rattle stay disarmed, the closer has nothing to do anyway)
-    d.pick = Math.min(1, d.pick + dt / Doors.PICK_SECS);
-    d.pickClock -= dt;
-    if (d.pickClock <= 0) { d.pickClock = 0.55 + 0.3 * ((++d.pickN * 0.618034) % 1); this.emit({ door: d, sound: 'pick', pos: d.pos, who, level: Doors.PICK_LEVEL }); }
-    if (d.pick < 1) return false;
-    d.locked = false; d.pick = 0; d.picking = false; d.noticed = false;   // (picked again after they had found it and locked it back up: fresh evidence, worth a fresh remark — guards.ts / squad.ts readDoors)
-    this.emit({ door: d, sound: 'unlock', pos: d.pos, who, level: Doors.UNLOCK_LEVEL });
-    return true;
-  }
+  pick(d: Door, who: number, dt: number): boolean { return goneWithTick('Doors.pick') as any; }
 
   /** A boot beside the lock: the keep tears out of the jamb (lockBroken — it is an unlocked door for the rest of the encounter), the leaf is flung to its stop
    *  harder than any shoulder bash, and the crack of it carries through the whole floor (DoorEvent 'kick' → GameEvent 'kick', heard like a shot). Works on any
@@ -1118,7 +1003,7 @@ export class Doors {
    *  a breaching round): from that face the keep is gone and the leaf not flung — it stands home in its frame, unlocked, for a hand to pull (or for the caller's
    *  own write of Door.vel); from the push face, and with the rule off, the argument changes nothing. Returns whether the door GAVE (false: off its hinges,
    *  steel, or its frame held the boot) — the one answer a caller needs, so nobody asks bootHolds a second time to learn what its kick did. */
-  kickIn(d: Door, from: Vec3, who: number, lock = false): boolean {
+  kickIn(d: Door, from: Vec3, who: number, lock = false): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Doors.kickIn', this, [d, from, who, lock]); if (__r !== RUST_PASS) return __r as any; } }
     if (d.off) return false;
     if (d.def.steel) { d.rattleT = 0.6; d.lastWho = who; this.emit({ door: d, sound: 'clang', pos: d.pos, who, level: 1.0 }); return false; }   // steel in a steel frame: the boot rings off it, the leaf shivers in its frame ('won't budge'), the bolt holds — a loud noise and nothing else
     const held = this.bootHolds(d, from);
@@ -1137,7 +1022,7 @@ export class Doors {
    *  went off at `at`, and takes an ordinary leaf off its hinges inside `tearM` metres of it (0 = this kind of blast never does). Every leaf it reaches by a line
    *  no wall is in comes out of its frame as a loose slab (doorblast.ts doorBlast — steel doors and ones already off are not touched); the doors it took come
    *  back. `who`: the character blamed for the noise. Nothing with the switch off (DOORBLAST.on) or before a Game has given the doors their world. */
-  blast(at: Vec3, tearM: number, who: number): Door[] { return this.blaster ? this.blaster(at, tearM, who) : []; }
+  blast(at: Vec3, tearM: number, who: number): Door[] { if (RUST_SURFACE?.tapFiring('Doors.blast')) return RUST_SURFACE.tapAnswer() as any; return this.blaster ? this.blaster(at, tearM, who) : []; }
   /** set by the Game (doorblast.ts needs its collision world, events and audio — this file knows none of them) */
   blaster: ((at: Vec3, tearM: number, who: number) => Door[]) | null = null;
   /** a noise of d's that is not a leaf's own doing (doorblast.ts: the frame letting go = a 'kick', the slab landing = a 'bang') — heard and played as any other */
