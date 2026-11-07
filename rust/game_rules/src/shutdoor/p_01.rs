@@ -59,10 +59,7 @@ pub fn in_shut_swing(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64, pad: 
 
 /// A wall, a sill or a pane between two floor points at shin height, the level's statics only. (shutdoor.ts walled)
 pub fn walled(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    let keep = core::mem::take(&mut g.col.dynamic_boxes);
-    let blocked = crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None);
-    g.col.dynamic_boxes = keep;
-    blocked
+    crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
 }
 
 /// Can a man stand at p: a cell the walkers' grid calls free, nothing of the level inside his body. (shutdoor.ts stands)

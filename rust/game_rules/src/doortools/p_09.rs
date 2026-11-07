@@ -77,41 +77,41 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
     let (mut knocked, mut stunned, mut backblast) = (0.0_f64, 0.0_f64, 0.0_f64);
     let fc = g.dr[d].frame_centre;
     let mut sam_too = false;
-    crate::doorblast::without_leaf(g, d, &mut |g: &mut Game| {   // (walls and every OTHER shut door stop it; this leaf is what is coming apart)
-        for gd in g.guards.clone() {
-            if dead(g, gd) { continue; }
-            let p = pos_of(g, gd);
-            let far = super::off_of(g, d, p, side) < 0.0;
-            let dist = v3::dist_xz(p, fc);
-            let chest: V3 = [p[0], 1.1, p[2]];
-            if dist > g.k.doortools.stun_m || crate::scene_collision::solid_blocked(g, if far { inn } else { out }, chest, None) { continue; }
-            let bb = g.k.doortools.backblast_secs;
-            if !far {
-                if dist < g.k.doortools.backblast_m {
-                    door_tools_dazzle(g, gd, bb, inn);
-                    if operative(g, gd) { backblast += 1.0; } else { stunned += 1.0; }
-                }
-                continue;
+    // (walls and every OTHER shut door stop it; this leaf is what is coming apart)
+    let others = crate::ask::Over::but_door(g, d);
+    for gd in g.guards.clone() {
+        if dead(g, gd) { continue; }
+        let p = pos_of(g, gd);
+        let far = super::off_of(g, d, p, side) < 0.0;
+        let dist = v3::dist_xz(p, fc);
+        let chest: V3 = [p[0], 1.1, p[2]];
+        if dist > g.k.doortools.stun_m || crate::scene_collision::solid_blocked_over(g, &others, if far { inn } else { out }, chest, None) { continue; }
+        let bb = g.k.doortools.backblast_secs;
+        if !far {
+            if dist < g.k.doortools.backblast_m {
+                door_tools_dazzle(g, gd, bb, inn);
+                if operative(g, gd) { backblast += 1.0; } else { stunned += 1.0; }
             }
-            if operative(g, gd) && crate::orders::squad_orders_big(g, &crate::seats::here(g)) { door_tools_dazzle(g, gd, bb, inn); backblast += 1.0; continue; }
-            if dist < g.k.doortools.knock_m {
-                let dir = v3::normalize([p[0] - fc[0], 0.15, p[2] - fc[2]]);
-                let line = format!("{} down — behind the door when it went", callsign_or(g, gd));
-                crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), Some(&line), None);
-                knocked += 1.0;
-            } else {
-                let (s0, s1, stun_m) = (g.k.doortools.stun_secs[0], g.k.doortools.stun_secs[1], g.k.doortools.stun_m);
-                door_tools_dazzle(g, gd, v3::lerp(s0, s1, v3::clamp(dist / stun_m, 0.0, 1.0)), inn);
-                let until = g.time + g.k.doortools.stagger_secs;
-                g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, until);
-                let wp = g.gd[gd].weapon;
-                g.fa[wp].burst = None;
-                stunned += 1.0;
-            }
+            continue;
         }
-        // …and Sam, as one of ours: dazzled as a teammate there is, never felled (every player's man: eachSeat)
-        crate::seats::each_seat(g, &mut |g: &mut Game| { if blow_seat(g, d, side, fc, inn, out) { sam_too = true; } });
-    });
+        if operative(g, gd) && crate::orders::squad_orders_big(g, &crate::seats::here(g)) { door_tools_dazzle(g, gd, bb, inn); backblast += 1.0; continue; }
+        if dist < g.k.doortools.knock_m {
+            let dir = v3::normalize([p[0] - fc[0], 0.15, p[2] - fc[2]]);
+            let line = format!("{} down — behind the door when it went", callsign_or(g, gd));
+            crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), Some(&line), None);
+            knocked += 1.0;
+        } else {
+            let (s0, s1, stun_m) = (g.k.doortools.stun_secs[0], g.k.doortools.stun_secs[1], g.k.doortools.stun_m);
+            door_tools_dazzle(g, gd, v3::lerp(s0, s1, v3::clamp(dist / stun_m, 0.0, 1.0)), inn);
+            let until = g.time + g.k.doortools.stagger_secs;
+            g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, until);
+            let wp = g.gd[gd].weapon;
+            g.fa[wp].burst = None;
+            stunned += 1.0;
+        }
+    }
+    // …and Sam, as one of ours: dazzled as a teammate there is, never felled (every player's man: eachSeat)
+    crate::seats::each_seat(g, &mut |g: &mut Game| { if blow_seat(g, &others, d, side, fc, inn, out) { sam_too = true; } });
     crate::morale::morale_blast(g, inn, Some(who));
     g.door_tools.stats.blown += 1.0;
     g.door_tools.stats.knocked += knocked;
@@ -142,14 +142,14 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
 }
 
 /// the seat's man and the blast: true where it dazzled him   (the closure handed to eachSeat in blowRaw)
-fn blow_seat(g: &mut Game, d: DoorId, side: f64, fc: V3, inn: V3, out: V3) -> bool {
+fn blow_seat(g: &mut Game, others: &crate::ask::Over, d: DoorId, side: f64, fc: V3, inn: V3, out: V3) -> bool {
     let pl = g.player;
     if g.pl[pl].down || g.puppet.is_some() || g.touring { return false; }
     let p = g.ch[g.pl[pl].ch].pos;
     let far = super::off_of(g, d, p, side) < 0.0;
     let dist = v3::dist_xz(p, fc);
     let reach = if far { g.k.doortools.stun_m } else { g.k.doortools.backblast_m };
-    if !(dist < reach) || crate::scene_collision::solid_blocked(g, if far { inn } else { out }, [p[0], 1.1, p[2]], None) { return false; }
+    if !(dist < reach) || crate::scene_collision::solid_blocked_over(g, others, if far { inn } else { out }, [p[0], 1.1, p[2]], None) { return false; }
     let bb = g.k.doortools.backblast_secs;
     crate::samstun::dazzle_player(g, bb, inn);
     true

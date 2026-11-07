@@ -94,10 +94,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 
 /// A wall, a sill or a pane between two floor points at shin height: the level's statics only. (handleside.ts walled)
 pub fn walled(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    let keep = core::mem::take(&mut g.col.dynamic_boxes);
-    let r = crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None);
-    g.col.dynamic_boxes = keep;
-    r
+    crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
 }
 
 /// Can a man stand at p: nothing of the level inside his body there (and, `nav`, on a cell the walkers' grid calls free). (handleside.ts stands)

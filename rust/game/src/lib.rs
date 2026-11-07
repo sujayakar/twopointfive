@@ -11,6 +11,7 @@ pub use game_rules::air_sim;
 pub use game_rules::anim_characters;
 pub use game_rules::anim_gltf;
 pub use game_rules::anim_skeleton;
+pub use game_rules::ask;
 pub use game_rules::attention;
 pub use game_rules::audio_iface;
 pub use game_rules::autopilot;
